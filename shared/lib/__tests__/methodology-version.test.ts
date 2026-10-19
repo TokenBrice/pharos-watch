@@ -343,15 +343,15 @@ describe("methodology registry", () => {
     expect(release.impact.join(" ")).toMatch(/Morpho/);
   });
 
-  it("aligns current Safety identity with the exact-timestamp admission release", () => {
-    expect(SAFETY_SCORE_METHODOLOGY_VERSION).toBe("10.22");
+  it("aligns current Safety identity with the archive-free attribution release", () => {
+    expect(SAFETY_SCORE_METHODOLOGY_VERSION).toBe("10.23");
     expect(SAFETY_SCORE_POLICY.releaseVersion).toBe(SAFETY_SCORE_METHODOLOGY_VERSION);
     const release = SAFETY_SCORE_METHODOLOGY_CHANGELOG[0];
     expect(release).toMatchObject({
-      version: "10.22", date: "2026-10-18", effectiveAt: 1_792_368_000, reconstructed: false,
+      version: "10.23", date: "2026-10-19", effectiveAt: 1_792_368_000, reconstructed: false,
     });
     expect(getMethodologyVersionAt("safety-score", release.effectiveAt - 1)).toBe("10.21");
-    expect(getMethodologyVersionAt("safety-score", release.effectiveAt)).toBe("10.22");
+    expect(getMethodologyVersionAt("safety-score", release.effectiveAt)).toBe("10.23");
   });
 
 });

@@ -630,6 +630,12 @@ async function observeWithClient(
   if (crossChainBlockSkewSec > params.maxCrossChainBlockSkewSec) {
     return rejected(attemptedAtSec, "block-skew-out-of-range", blocks);
   }
+  ethereumOptions.recentStatePin = { chainId: ETHEREUM, header: ethereumHeader, finalized: ethereumHeader,
+    observedAtSec: attemptedAtSec, maxAgeSec: params.maxFinalizedBlockAgeSec };
+  ethereumOptions.observedHeadBlock = ethereumHeader.number;
+  fraxtalOptions.recentStatePin = { chainId: FRAXTAL, header: fraxtalHeader, finalized: fraxtalHeader,
+    observedAtSec: attemptedAtSec, maxAgeSec: params.maxFinalizedBlockAgeSec };
+  fraxtalOptions.observedHeadBlock = fraxtalHeader.number;
 
   const identities = await verifyContractIdentities({
     manifests: identityManifest(params, sfrxUsdProxyAddress),

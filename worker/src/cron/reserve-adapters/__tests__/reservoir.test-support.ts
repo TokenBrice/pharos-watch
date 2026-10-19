@@ -77,12 +77,11 @@ export function reservoirNetwork(
       BigInt(`0x${call.data.slice(10)}`) * (options.wrapperRate ?? 1_100_000_000_000_000_001n) / 10n ** 18n,
     [`${WSRUSD_ADDRESS}:previewWithdraw(uint256)`]: (call) =>
       BigInt(`0x${call.data.slice(10)}`) * 10n ** 18n / (options.wrapperRate ?? 1_100_000_000_000_000_001n),
-    eth_blockNumber: () => {
-      options.onPin?.();
-      if (options.failPin) throw new Error("Fixture pin unavailable");
-      return 26_142_993;
-    },
-    eth_getBlockByNumber: () => {
+    eth_getBlockByNumber: (call) => {
+      if (call.block === "latest") {
+        options.onPin?.();
+        if (options.failPin) throw new Error("Fixture pin unavailable");
+      }
       options.onHeader?.();
       return { number: 26_142_993, timestamp: options.blockTimestamp ?? Math.floor(Date.now() / 1000) };
     },

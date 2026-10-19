@@ -1,5 +1,5 @@
-// Data-only endpoint authority. Keep consumer profiles separate: consolidation must
-// not add providers or change the order of an existing resolved route.
+// Data-only endpoint authority. Keep consumer profiles and incumbent relative order
+// separate; admitted Dwellir routes precede them only for supported read requirements.
 /** Reviewed public Aptos-framework REST endpoint for fungible-asset reads. */
 export const APTOS_PUBLIC_REST_URL = "https://api.mainnet.aptoslabs.com/v1";
 

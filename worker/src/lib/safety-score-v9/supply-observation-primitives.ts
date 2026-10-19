@@ -1,4 +1,5 @@
 import type { sha256HexFromBytes } from "@shared/lib/sha256";
+import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { throwIfAborted } from "../abort";
 import {
   getChainRpc,
@@ -77,6 +78,7 @@ export async function observeReviewedEvmDeployment<Identity>(input: {
   routeId: string; chainId: string; contractAddress: string; scoringClockSec: number;
   chainRpcs: Map<string, ChainRpcConfig>; dependencies: ReviewedDeploymentEvmObserverDependencies;
   signal?: AbortSignal;
+  observationWindow?: { earliestTimestamp: number; latestTimestamp: number };
   identity: (routeId: string) => Identity | undefined;
   safeBlockLag: (identity: Identity, chainId: string) => number;
   extraRpcUrls: (identity: Identity, chainId: string) => readonly string[] | undefined;
@@ -112,13 +114,21 @@ export async function observeReviewedEvmDeployment<Identity>(input: {
     return rejectDeployment("safe-block-unavailable");
   }
 
-  const blockHeader = await rewindEvmBlockHeaderToScoringClock({
+  let blockHeader = await rewindEvmBlockHeaderToScoringClock({
     initialBlockNumber: headBlockNumber - safetyLag,
     scoringClockSec: input.scoringClockSec,
     signal,
     fetchHeader: (blockNumber) => dependencies.fetchEvmBlockHeader(chainId, blockNumber, options),
   });
   if (blockHeader === null) return rejectDeployment("safe-block-unavailable");
+  if (input.observationWindow) {
+    blockHeader = await findEvmBlockHeaderInTimestampWindow({
+      initialHeader: blockHeader, ...input.observationWindow,
+      latestTimestamp: Math.min(input.observationWindow.latestTimestamp, input.scoringClockSec),
+      signal, fetchHeader: number => dependencies.fetchEvmBlockHeader(chainId, number, options),
+    });
+    if (!blockHeader) return rejectDeployment("deployment-observation-skew");
+  }
   const blockNumber = blockHeader.number;
   const stateOptions = { ...options, stateBlockHash: blockHeader.hash, multicallFallbackBlockHash: blockHeader.hash };
   const calls = [
@@ -259,12 +269,13 @@ export async function observeReviewedDeploymentUnitPartitionAttempt(input: {
   registryFingerprint: string;
   scoringClockSec: number;
   signal?: AbortSignal;
+  alignToSolana?: boolean;
   identityRuntime: (routeId: string) => "evm" | "solana" | null;
   observeEvm: (route: {
     routeId: string;
     chainId: string;
     contractAddress: string;
-  }) => Promise<ReviewedDeploymentObservationResult>;
+  }, observationWindow?: { earliestTimestamp: number; latestTimestamp: number }) => Promise<ReviewedDeploymentObservationResult>;
   observeSolana: (route: {
     routeId: string;
     chainId: string;
@@ -278,7 +289,10 @@ export async function observeReviewedDeploymentUnitPartitionAttempt(input: {
   }
 
   const observations: ReviewedDeploymentSupplyObservation[] = [];
-  for (const route of inventory.routes) {
+  const routes = input.alignToSolana
+    ? [...inventory.routes].sort((a, b) => Number(input.identityRuntime(b.routeId) === "solana") - Number(input.identityRuntime(a.routeId) === "solana"))
+    : inventory.routes;
+  for (const route of routes) {
     throwIfAborted(input.signal);
     const runtime = input.identityRuntime(route.routeId);
     if (!runtime) {
@@ -288,8 +302,14 @@ export async function observeReviewedDeploymentUnitPartitionAttempt(input: {
         failedRouteId: route.routeId,
       };
     }
+    const skew = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.observationMaxSkewSec;
+    const times = observations.map(observation => observation.blockTimeSec);
+    const observationWindow = input.alignToSolana && times.length > 0 ? {
+      earliestTimestamp: Math.max(...times) - skew,
+      latestTimestamp: Math.min(...times) + skew,
+    } : undefined;
     const result = runtime === "evm"
-      ? await input.observeEvm(route)
+      ? await input.observeEvm(route, observationWindow)
       : await input.observeSolana(route).then<ReviewedDeploymentObservationResult>((observation) => observation
           ? { status: "accepted", observation }
           : {

@@ -246,7 +246,7 @@ export const ENV_BINDINGS = [
   {
     key: "DWELLIR_API_KEY",
     valueType: "string",
-    description: "Scheduled-only Dwellir credential for reviewed primary and supplemental-first EVM state routing, supplemental-last elsewhere, allowlisted logs-first and CCIP observer reads, and native state reads; sent only as the X-Api-Key header.",
+    description: "Scheduled-only Dwellir credential for method/pin-aware first preference on configured EVM/native operations; sent only as the X-Api-Key header. Inventory membership and capability limits remain independent.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
       worker: { status: "optional" },
@@ -255,7 +255,7 @@ export const ENV_BINDINGS = [
   {
     key: "DWELLIR_ROUTING_DISABLED_CHAINS",
     valueType: "string",
-    description: "Optional CSV of chain IDs that revert Dwellir to supplemental-last state fallback and exclude it from global log scans and CCIP observer routes. Applied after scheduled key, budget, and circuit admission.",
+    description: "Optional CSV of EVM chain or native network IDs excluding Dwellir from production selection. Applied after scheduled key, budget, and circuit admission; independent parity diagnostics remain enabled.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
       worker: { status: "optional" },

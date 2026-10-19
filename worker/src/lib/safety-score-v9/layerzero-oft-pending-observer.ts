@@ -1,3 +1,4 @@
+import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { z } from "zod";
 import { decodeAbiParameters, encodeAbiParameters, keccak256, parseAbiParameters, toFunctionSelector, toHex } from "viem/utils";
 import { CHAIN_META } from "@shared/types/chain-identity";
@@ -8,7 +9,7 @@ import { rethrowIfAborted, throwIfAborted } from "../abort";
 import type { ChainRpcConfig } from "../chain-registry";
 import { USER_AGENT } from "../constants";
 import { getCache, setCache } from "../db-cache";
-import { fetchEvmBlockHeader, fetchEvmRpcBatch, type EvmBlockHeader } from "../evm-rpc";
+import { fetchEvmBlockHeader, fetchEvmRpcBatch, type EvmBlockHeader, type EvmRpcOptions } from "../evm-rpc";
 import { fetchJsonWithRetry } from "../fetch-retry";
 import type { SupplyAttributionAttemptDiagnostic } from "@shared/types/safety-score-v9-supply-attribution";
 import { emitSupplyAttributionDiagnostic, type SupplyAttributionPhase } from "./supply-attribution-diagnostics";
@@ -61,6 +62,8 @@ type Proof = NonNullable<EconomicSupplyObservation["layerZeroOftPendingProof"]>;
 export async function observeLayerZeroOftPending(input: {
   source: LayerZeroOftPendingRead; headers: readonly EvmBlockHeader[];
   chainRpcs: Map<string, ChainRpcConfig>; signal?: AbortSignal; db?: D1Database;
+  /** Retain the caller's original capture clock, never a renewed read clock. */
+  clockSec: number;
   checkpoint?: LayerZeroOftPendingCheckpoint;
   onDiagnostic?: (diagnostic: SupplyAttributionAttemptDiagnostic) => void;
   onPhase?: (phase: SupplyAttributionPhase) => void;
@@ -74,6 +77,7 @@ export async function observeLayerZeroOftPending(input: {
     input.onPhase?.("pending-authentication");
     if (!LayerZeroOftPendingReadSchema.safeParse(input.source).success) fail("review-invalid");
     const source = input.source, options = { chainRpcs: input.chainRpcs, signal: input.signal };
+    const pinOptions = new Map<string, EvmRpcOptions>();
     const sourceDigest = sha256Hex(stableJsonStringifyV1(source));
     const cacheKey = `safety-score-v9:layerzero-oft-pending:v2:${sourceDigest}`;
     if (input.headers.length !== source.sides.length) fail("pin-missing");
@@ -106,7 +110,7 @@ export async function observeLayerZeroOftPending(input: {
       const key = pinnedKey(chain, method, params);
       if (key !== null && pinnedReads.has(key)) return pinnedReads.get(key);
       context = { ...context, chainId: chain, method, phase: "rpc", providerOrigin: null };
-      const result = await fetchEvmRpcBatch(chain, [{ method, params }], options);
+      const result = await fetchEvmRpcBatch(chain, [{ method, params }], pinOptions.get(chain) ?? options);
       if (!result || result.length !== 1) fail("rpc-unavailable");
       if (key !== null && result[0] !== null && result[0] !== undefined) pinnedReads.set(key, result[0]);
       return result[0];
@@ -124,7 +128,7 @@ export async function observeLayerZeroOftPending(input: {
       // Refresh mutates every lane, so every delivery decision in the serialized
       // checkpoint must bind the destination pin before ANY durable prefix write.
       for (let index = 0; index < source.sides.length; index++) {
-        const pin = input.headers[index]!, rechecked = await fetchEvmBlockHeader(source.sides[index]!.chainId, pin.number, options);
+        const pin = input.headers[index]!, rechecked = await fetchEvmBlockHeader(source.sides[index]!.chainId, pin.number, { ...options, observedHeadBlock: pinOptions.get(source.sides[index]!.chainId)?.observedHeadBlock });
         if (!rechecked || rechecked.hash !== pin.hash || rechecked.timestamp !== pin.timestamp) fail("pin-reorg");
       }
       for (let index = 0; index < cp.pathways.length; index++) {
@@ -159,7 +163,7 @@ export async function observeLayerZeroOftPending(input: {
         !/^0x[0-9a-f]+$/.test(raw.blockNumber) || !Array.isArray(raw.logs) || raw.logs.length > 2048) fail("receipt-unproved");
       const height = Number(BigInt(raw.blockNumber));
       if (!Number.isSafeInteger(height) || height < source.sides[index]!.deploymentBlock || height > maxBlock) fail("receipt-not-finalized");
-      const header = await fetchEvmBlockHeader(source.sides[index]!.chainId, height, options);
+      const header = await fetchEvmBlockHeader(source.sides[index]!.chainId, height, { ...options, observedHeadBlock: pinOptions.get(source.sides[index]!.chainId)?.observedHeadBlock });
       if (!header || header.hash !== raw.blockHash) fail("receipt-anchor");
       for (const log of raw.logs) {
         if (typeof log.address !== "string" || !Array.isArray(log.topics) || log.topics.some(topic => !WORD.test(topic)) ||
@@ -177,12 +181,18 @@ export async function observeLayerZeroOftPending(input: {
     for (let index = 0; index < source.sides.length; index++) {
       const side = source.sides[index]!, pin = input.headers[index]!;
       if (CHAIN_META[side.chainId]?.type !== "evm") fail("unsupported-chain");
-      const finalized = await fetchEvmBlockHeader(side.chainId, "finalized", options);
-      const pinned = await fetchEvmBlockHeader(side.chainId, pin.number, options);
+      const finalized = await fetchEvmBlockHeader(side.chainId, "finalized", { ...options, observedHeadBlock: pinOptions.get(side.chainId)?.observedHeadBlock });
+      const pinned = await fetchEvmBlockHeader(side.chainId, pin.number, { ...options, observedHeadBlock: finalized?.number });
       context = { chainId: side.chainId, phase: "pin-authentication", method: "eth_getBlockByNumber", pinObservedAtSec: pin.timestamp, finalizedLagBlocks: finalized ? Math.max(0, pin.number - finalized.number) : null, operands: { pinNumber: pin.number, finalizedNumber: finalized?.number ?? null, finalizedObservedAtSec: finalized?.timestamp ?? null } };
       emit({});
       if (!finalized || finalized.number < pin.number || pin.number < side.deploymentBlock ||
         !pinned || pinned.hash !== pin.hash || pinned.timestamp !== pin.timestamp) fail("pin-not-finalized");
+      pinOptions.set(side.chainId, { ...options, observedHeadBlock: finalized.number,
+        recentStatePin: {
+          chainId: side.chainId, header: pin, finalized, observedAtSec: input.clockSec,
+          maxAgeSec: V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.observationMaxAgeSec,
+        },
+      });
       // Transport exact current-pin authentication in bounded batches, retaining
       // the validations below and never caching unavailable or cross-attempt state.
       const block = { blockHash: pin.hash, requireCanonical: true };
@@ -214,7 +224,7 @@ export async function observeLayerZeroOftPending(input: {
       for (let from = 0; from < entries.length; from += 32) {
         throwIfAborted(input.signal);
         const chunk = entries.slice(from, from + 32);
-        const values = await fetchEvmRpcBatch(side.chainId, chunk.map(([, request]) => request), options);
+        const values = await fetchEvmRpcBatch(side.chainId, chunk.map(([, request]) => request), pinOptions.get(side.chainId) ?? options);
         if (!values || values.length !== chunk.length) continue;
         for (let i = 0; i < values.length; i++) {
           if (values[i] !== null && values[i] !== undefined) pinnedReads.set(chunk[i]![0], values[i]);
@@ -236,7 +246,7 @@ export async function observeLayerZeroOftPending(input: {
       const key = `${chainId}:${number}`;
       const cached = checkpointHeaders.get(key);
       if (cached) return cached;
-      const header = await fetchEvmBlockHeader(chainId, number, options);
+      const header = await fetchEvmBlockHeader(chainId, number, { ...options, observedHeadBlock: pinOptions.get(chainId)?.observedHeadBlock });
       if (header) checkpointHeaders.set(key, header);
       return header;
     };
@@ -278,7 +288,7 @@ export async function observeLayerZeroOftPending(input: {
         }
       }
       if (checkpoint.sent.anchor === null) {
-        const before = await fetchEvmBlockHeader(a.chainId, a.deploymentBlock - 1, options);
+        const before = await fetchEvmBlockHeader(a.chainId, a.deploymentBlock - 1, { ...options, observedHeadBlock: pinOptions.get(a.chainId)?.observedHeadBlock });
         if (!before || uint(await rpc(a.chainId, "eth_call", [{ to: a.endpointAddress, data: outboundCall }, { blockHash: before.hash, requireCanonical: true }])) !== 0n) fail("history-start-unproved");
       }
       const args = [b.oappAddress, a.eid, addressWord(a.oappAddress)];
@@ -347,7 +357,7 @@ export async function observeLayerZeroOftPending(input: {
         }
         if (pages >= HISTORY_PAGES_PER_ATTEMPT) break;
         const from = cursor.nextBlock, end = Math.min(pin.number, from + pageBlocks - 1);
-        const beginHeader = await fetchEvmBlockHeader(a.chainId, from, options), endHeader = await fetchEvmBlockHeader(a.chainId, end, options);
+        const beginHeader = await fetchEvmBlockHeader(a.chainId, from, { ...options, observedHeadBlock: pinOptions.get(a.chainId)?.observedHeadBlock }), endHeader = await fetchEvmBlockHeader(a.chainId, end, { ...options, observedHeadBlock: pinOptions.get(a.chainId)?.observedHeadBlock });
         if (!beginHeader || !endHeader) fail("history-unavailable");
         // Overlap accommodates indexer ingestion timestamps. Exact receipt
         // heights, not API clocks or block hints, delimit the admitted page.
@@ -430,7 +440,7 @@ export async function observeLayerZeroOftPending(input: {
           checkpoint.sentNonce = message.nonce;
           if (cp.pathways.reduce((sum, lane) => sum + lane.messages.length, 0) > MAX_MESSAGES) fail("checkpoint-capacity");
         }
-        if ((await fetchEvmBlockHeader(a.chainId, end, options))?.hash !== endHeader.hash) fail("history-reorg");
+        if ((await fetchEvmBlockHeader(a.chainId, end, { ...options, observedHeadBlock: pinOptions.get(a.chainId)?.observedHeadBlock }))?.hash !== endHeader.hash) fail("history-reorg");
         cursor.digest = sha256Hex(stableJsonStringifyV1({ previous: cursor.digest, from, end, header: endHeader, messages: messages.map(row => row.message) }));
         cursor.nextBlock = end + 1; cursor.anchor = end; cursor.anchorHash = endHeader.hash;
         // Save only a fully authenticated prefix; a later receipt timeout must

@@ -110,34 +110,48 @@ export async function fetchMoveFungibleAssetSupply(
   const knownEndpoint = DWELLIR_NATIVE_ENDPOINTS.find((entry): entry is DwellirMoveEndpoint =>
     entry.protocol === "aptos-rest" && (options?.expectedChainId !== undefined
       ? entry.expectedChainId === options.expectedChainId
-      : PUBLIC_RPC_URLS[entry.network] === rpcUrl.replace(/\/$/, "")),
+      : PUBLIC_RPC_URLS[entry.network] === rpcUrl.replace(/\/$/, "") || entry.baseUrl === rpcUrl.replace(/\/$/, "")),
   );
   const pin: MoveReadPin = { network: network ?? knownEndpoint?.network };
   let lastError: unknown;
-  const tryIncumbent = async (url: string) => {
+  const tryEndpoint = async (url: string, nativeEndpoint?: DwellirMoveEndpoint) => {
     try {
-      return await fetchMoveSupplyAtEndpoint(metadataAddress, signal, url, ctx, options, pin);
+      return await fetchMoveSupplyAtEndpoint(metadataAddress, signal, url, ctx, options, pin, nativeEndpoint);
     } catch (error) {
       throwIfAborted(signal);
       lastError = error;
       return null;
     }
   };
-  const primary = await tryIncumbent(rpcUrl);
-  if (primary) return primary;
-  if (!pin.network) {
-    if (lastError) throw lastError;
-    return null;
-  }
-  const defaultUrl = PUBLIC_RPC_URLS[pin.network];
-  if (rpcUrl.replace(/\/$/, "") !== defaultUrl) {
-    const fallback = await tryIncumbent(defaultUrl);
-    if (fallback) return fallback;
-  }
   const endpoint = DWELLIR_NATIVE_ENDPOINTS.find((entry): entry is DwellirMoveEndpoint =>
     entry.protocol === "aptos-rest" && entry.network === pin.network,
-  )!;
-  return fetchMoveSupplyAtEndpoint(metadataAddress, signal, endpoint.baseUrl, ctx, options, pin, endpoint);
+  );
+  if (endpoint) {
+    const preferred = await tryEndpoint(endpoint.baseUrl, endpoint);
+    if (preferred) return preferred;
+  }
+  if (rpcUrl.replace(/\/$/, "") !== endpoint?.baseUrl) {
+    const primary = await tryEndpoint(rpcUrl);
+    if (primary) return primary;
+  }
+  // An unknown custom REST origin can establish chain identity, but cannot
+  // select a native route before it has done so.
+  const discoveredEndpoint = endpoint ? undefined : DWELLIR_NATIVE_ENDPOINTS.find((entry): entry is DwellirMoveEndpoint =>
+    entry.protocol === "aptos-rest" && entry.network === pin.network,
+  );
+  if (discoveredEndpoint) {
+    const preferred = await tryEndpoint(discoveredEndpoint.baseUrl, discoveredEndpoint);
+    if (preferred) return preferred;
+  }
+  if (pin.network) {
+    const defaultUrl = PUBLIC_RPC_URLS[pin.network];
+    if (rpcUrl.replace(/\/$/, "") !== defaultUrl) {
+      const fallback = await tryEndpoint(defaultUrl);
+      if (fallback) return fallback;
+    }
+  }
+  if (lastError) throw lastError;
+  return null;
 }
 
 async function fetchMoveSupplyAtEndpoint(
@@ -166,6 +180,9 @@ async function fetchMoveSupplyAtEndpoint(
     )?.network;
   }
   if (nativeEndpoint && ledger.chain_id !== nativeEndpoint.expectedChainId) return null;
+  if (pin?.network && ledger.chain_id !== DWELLIR_NATIVE_ENDPOINTS.find(
+    (entry): entry is DwellirMoveEndpoint => entry.protocol === "aptos-rest" && entry.network === pin.network,
+  )!.expectedChainId) return null;
   const oldest = nativeEndpoint?.requiresRetainedLedgerFloor ? ledger.oldest_ledger_version : "0";
   if (oldest === undefined || !MOVE_INTEGER_RE.test(oldest)) return null;
   let ledgerVersion = pin?.ledgerVersion ?? ledger.ledger_version;

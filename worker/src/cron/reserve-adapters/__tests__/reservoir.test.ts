@@ -355,14 +355,14 @@ describe("adaptReservoirReserves", () => {
   });
 
   it.each([
-    ["rusd-reservoir", 3, 0],
-    ["srusd-reservoir", 4, 0],
-    ["wsrusd-reservoir", 6, 2],
+    ["rusd-reservoir", 2, 0],
+    ["srusd-reservoir", 3, 0],
+    ["wsrusd-reservoir", 5, 2],
   ] as const)("batches pinned %s identities and dependent quotes within %d RPC requests", async (coinId, rpcRequests, ladderReads) => {
     const { result, network } = await runReservoir(coinId, SAMPLE_RESPONSE);
     expect(result.metadata?.redemption).toMatchObject({ capacityUsd: 4, outputAssetKeys: ["usdc-circle"] });
     // Counts actual boundary requests, not decoded aggregate members. Includes
-    // exactly one block-number/header pair in addition to the state batches.
+    // exactly one validated latest header in addition to the state batches.
     expect(network.requests.filter((request) => request.method === "POST")).toHaveLength(rpcRequests);
     const directReads = network.rpcCalls.filter((call) => call.method === "eth_call" && !call.viaMulticall);
     expect(directReads).toHaveLength(ladderReads);

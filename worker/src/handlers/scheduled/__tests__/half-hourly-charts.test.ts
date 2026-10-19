@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ScheduledRuntimeContext } from "../context";
 import { makeScheduledRuntime } from "../../../test-helpers/scheduled-runtime.test-support";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
+import { createDwellirNativeCapability } from "../../../lib/dwellir-native";
 
 const mocks = vi.hoisted(() => ({
   consumeDexLiquidityScoringStage: vi.fn(),
@@ -113,6 +114,7 @@ describe("half-hourly charts scheduling", () => {
 
   it("passes heavy's configured Graph key and inherited deadline to inline recovery", async () => {
     const scheduledRuntime = runtime();
+    scheduledRuntime.dwellirNative = createDwellirNativeCapability("native-test-key-placeholder");
     scheduledRuntime.env.GRAPH_API_KEY = "heavy-graph-key";
     mocks.consumeDexLiquidityScoringStage.mockResolvedValue({
       status: "ok", itemCount: 1,
@@ -130,6 +132,7 @@ describe("half-hourly charts scheduling", () => {
     expect(mocks.prepareSafetyScoreV9Input).toHaveBeenCalledWith(
       scheduledRuntime.db, expect.any(AbortSignal), "dex-liquidity-recovered",
       scheduledRuntime.chainRpcs, scheduledRuntime.env.CF_VERSION_METADATA, scheduledRuntime.deadline,
+      scheduledRuntime.dwellirNative,
     );
   });
 
@@ -311,6 +314,7 @@ describe("half-hourly charts scheduling", () => {
       scheduledRuntime.chainRpcs,
       scheduledRuntime.env.CF_VERSION_METADATA,
       scheduledRuntime.deadline,
+      scheduledRuntime.dwellirNative,
     );
     expect(mocks.syncStablecoinCharts).toHaveBeenCalled();
     expect(mocks.runCronSentinel).toHaveBeenCalledWith(scheduledRuntime.db, {
@@ -382,6 +386,7 @@ describe("half-hourly charts scheduling", () => {
       scheduledRuntime.chainRpcs,
       scheduledRuntime.env.CF_VERSION_METADATA,
       scheduledRuntime.deadline,
+      scheduledRuntime.dwellirNative,
     );
     expect(mocks.runCronSentinel).not.toHaveBeenCalled();
     expect(jobMetadata(results, "cron-sentinel")).toMatchObject({
@@ -442,6 +447,7 @@ describe("half-hourly charts scheduling", () => {
       scheduledRuntime.chainRpcs,
       scheduledRuntime.env.CF_VERSION_METADATA,
       scheduledRuntime.deadline,
+      scheduledRuntime.dwellirNative,
     );
     expect(summary.jobs[2]).toMatchObject({
       job: "prepare-safety-score-v9-input",
@@ -548,6 +554,7 @@ describe("half-hourly charts scheduling", () => {
     expect(mocks.prepareSafetyScoreV9Input).toHaveBeenCalledWith(
       scheduledRuntime.db, expect.any(AbortSignal), "dex-liquidity-late",
       scheduledRuntime.chainRpcs, scheduledRuntime.env.CF_VERSION_METADATA, scheduledRuntime.deadline,
+      scheduledRuntime.dwellirNative,
     );
   });
 
@@ -581,6 +588,7 @@ describe("half-hourly charts scheduling", () => {
     expect(mocks.prepareSafetyScoreV9Input).toHaveBeenCalledExactlyOnceWith(
       scheduledRuntime.db, expect.any(AbortSignal), `dex-liquidity-${960 - 3_600}`,
       scheduledRuntime.chainRpcs, scheduledRuntime.env.CF_VERSION_METADATA, scheduledRuntime.deadline,
+      scheduledRuntime.dwellirNative,
     );
     expect(summary.jobs.map((job) => [job.job, job.outcome])).toEqual([
       ["sync-dex-liquidity", "skipped"], ["cron-sentinel", "skipped"],
