@@ -166,6 +166,9 @@ beforeEach(() => {
 describe("canonical messenger pending liabilities", () => {
   it("carries authenticated messenger pins but never upgrades predecessor state", async () => {
     expect((await observe()).status).toBe("accepted");
+    for (const chain of [source.chainId, source.l2ChainId]) {
+      expect(fetchEvmBlockHeader).toHaveBeenCalledWith(chain, "finalized", expect.objectContaining({ minBlockNumber: pinHeight }));
+    }
     const options = vi.mocked(fetchEvmRpcBatch).mock.calls[0][2]!;
     expect(options.recentStatePin).toEqual({ chainId: source.chainId,
       header: header(source.chainId, pinHeight), finalized: header(source.chainId, finalityHeight),

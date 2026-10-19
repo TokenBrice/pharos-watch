@@ -61,6 +61,8 @@ export interface EvmRpcOptions {
 export interface EvmBlockHeaderOptions extends EvmRpcOptions {
   /** Required observation window; stale but well-formed headers try the next endpoint. */
   minTimestampSec?: number;
+  /** Required finalized coverage; lagging headers try the next endpoint. */
+  minBlockNumber?: number;
 }
 
 export interface EvmRpcBatchCall {
@@ -1097,6 +1099,7 @@ async function readEvmBlockHeader(
           number == null ||
           !Number.isSafeInteger(number) ||
           number < 0 ||
+          (options?.minBlockNumber !== undefined && number < options.minBlockNumber) ||
           (typeof blockNumberOrTag === "number" && number !== blockNumberOrTag) ||
           timestamp == null ||
           !Number.isSafeInteger(timestamp) ||
@@ -1110,7 +1113,7 @@ async function readEvmBlockHeader(
         acceptedHeader = { number, timestamp, hash: block.hash.toLowerCase() as `0x${string}` };
         return true;
       },
-      rejectedReason: () => "block header has invalid number, hash, or timestamp, or is older than the required observation window",
+      rejectedReason: () => "block header has invalid number, hash, or timestamp, or falls below the required observation window or block",
     },
     chainId,
   );

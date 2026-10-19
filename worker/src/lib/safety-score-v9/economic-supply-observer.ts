@@ -163,7 +163,7 @@ export async function observeCurveLzPending(input: {
     // Validate finalized pins and the predecessor of every persisted cursor.
     for (let i = 0; i < 2; i++) {
       const side = input.source.sides[i]!, pin = input.headers[i]!;
-      const finalized = await fetchEvmBlockHeader(side.chainId, "finalized", { ...options, observedHeadBlock: pinOptions.get(side.chainId)?.observedHeadBlock });
+      const finalized = await fetchEvmBlockHeader(side.chainId, "finalized", { ...options, minBlockNumber: pin.number, observedHeadBlock: pinOptions.get(side.chainId)?.observedHeadBlock });
       if (!finalized || finalized.number < pin.number || pin.number < side.deploymentBlock) fail("pin-not-finalized");
       pinOptions.set(side.chainId, { observedHeadBlock: finalized.number,
         recentStatePin: {
@@ -620,7 +620,7 @@ async function observeReviewedEconomicDeploymentPartitionInternal(input: {
       const header = headers.get(source.chainId);
       if (!header) return null;
       const options = { chainRpcs: input.chainRpcs, signal: input.signal };
-      const finalized = await fetchEvmBlockHeader(source.chainId, "finalized", options);
+      const finalized = await fetchEvmBlockHeader(source.chainId, "finalized", { ...options, minBlockNumber: header.number });
       if (!finalized || finalized.number < header.number) return null;
       const stateOptions: EvmRpcOptions = { ...options, observedHeadBlock: finalized.number, recentStatePin: {
         chainId: source.chainId, header, finalized, observedAtSec: input.scoringClockSec,

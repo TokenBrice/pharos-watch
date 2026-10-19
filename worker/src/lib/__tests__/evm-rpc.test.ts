@@ -971,6 +971,26 @@ describe("evm-rpc helpers", () => {
     expect(attemptedUrls()).toEqual(["https://primary.example", "https://fallback.example"]);
   });
 
+  it.each([true, false])("requires finalized coverage of the holding pin across providers (fallback covers pin: %s)", async coversPin => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    fetchWithRetryMock
+      .mockResolvedValueOnce(rpcResponse({
+        result: { number: "0x10", timestamp: "0x64", hash: `0x${"a".repeat(64)}` },
+      }))
+      .mockResolvedValueOnce(rpcResponse({
+        result: { number: coversPin ? "0x11" : "0x10", timestamp: "0x64", hash: `0x${"b".repeat(64)}` },
+      }));
+    const result = await fetchEvmBlockHeader("rootstock", "finalized", {
+      extraRpcUrls: ["https://primary.example", "https://fallback.example"],
+      minBlockNumber: 17,
+    });
+    expect(result).toEqual(coversPin ? { number: 17, timestamp: 100, hash: `0x${"b".repeat(64)}` } : null);
+    expect(attemptedUrls()).toEqual(["https://primary.example", "https://fallback.example"]);
+    for (const call of fetchWithRetryMock.mock.calls) {
+      expect(JSON.parse(String(call[1].body)).params).toEqual(["finalized", false]);
+    }
+  });
+
   it.each(["0x20000000000000", "not-hex"])(
     "rejects an unsafe or malformed numbered finalized header: %s",
     async (number) => {

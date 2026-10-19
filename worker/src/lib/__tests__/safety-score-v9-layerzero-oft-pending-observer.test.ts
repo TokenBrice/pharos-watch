@@ -19,6 +19,7 @@ const address = (value: number): `0x${string}` => `0x${value.toString(16).padSta
 const addressWord = (value: string): `0x${string}` => `0x${value.slice(2).padStart(64, "0")}`;
 const topic = (signature: string) => keccak256(toHex(signature));
 const header = (number: number) => ({ number, hash: word(BigInt(number)), timestamp: CLOCK - 600 + number });
+const fetchHeaderWithAdmission = evmRpc.fetchEvmBlockHeader;
 const SENT = topic("PacketSent(bytes,bytes,address)");
 const DELIVERED = topic("PacketDelivered((uint32,bytes32,uint64),address)");
 const CREDITED = topic("OFTReceived(bytes32,uint32,address,uint256)");
@@ -117,6 +118,38 @@ it("makes authenticated OFT pins recent-state eligible while predecessor state r
     finalized: header(100), observedAtSec: CLOCK, maxAgeSec: 1800 });
   expect(options.observedHeadBlock).toBe(100);
   await expectRecentPinRouting(options);
+});
+
+it.each([true, false])("authenticates a fallback-finalized holding pin only when an endpoint covers it (%s)", async coversPin => {
+  const f = fixture([]);
+  const originalHeader = f.headers.getMockImplementation()!;
+  const originalFetch = f.fetcher.getMockImplementation()!;
+  const urls = ["https://primary.example", "https://fallback.example"];
+  const attempted: string[] = [];
+  vi.spyOn(console, "warn").mockImplementation(() => {});
+  f.headers.mockImplementation(async (chain, block, options) => block === "finalized"
+    ? fetchHeaderWithAdmission(chain, block, { ...options, extraRpcUrls: urls })
+    : originalHeader(chain, block, options));
+  f.fetcher.mockImplementation(async (raw, init) => {
+    const url = String(raw);
+    if (!urls.includes(url)) return originalFetch(raw, init);
+    attempted.push(url);
+    expect(JSON.parse(String(init?.body)).params).toEqual(["finalized", false]);
+    const block = header(url === urls[1] && coversPin ? 100 : 99);
+    return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1,
+      result: { number: toHex(block.number), timestamp: toHex(block.timestamp), hash: block.hash } }));
+  });
+  const result = await f.run();
+  if (coversPin) {
+    expect(result.status).toBe("accepted");
+    expect(attempted).toEqual([...urls, ...urls]);
+    expect(f.batch.mock.calls[0][2]?.recentStatePin?.finalized).toEqual(header(100));
+  } else {
+    expect(result).toEqual({ status: "rejected", reason: "pin-not-finalized" });
+    expect(attempted).toEqual(urls);
+    expect(f.batch).not.toHaveBeenCalled();
+  }
+  expect(f.headers).toHaveBeenCalledWith("ethereum", "finalized", expect.objectContaining({ minBlockNumber: 100 }));
 });
 
 it("batches exact current-pin authentication without reusing state across attempts", async () => {
