@@ -92,7 +92,7 @@ npm run prebuild  # refreshes build artifacts, including live detail snapshots
 
 ### 5. Update docs
 
-- Add a changelog entry under `src/data/changelogs/` for the current week.
+- Record the change in that week's entry under `src/data/changelogs/` once the Monday–Sunday week is complete (Sunday or later); see [Changelog publishing](./process/blog-publishing.md#changelog).
 - Confirm the count of "tracked stablecoins" in `/about` and any docs is current. `/about` reads through `src/lib/stablecoin-static-data.ts`; `npm run bootstrap:generated` materializes its compile-input projection from the validated registry.
 - **Per-domain methodology version constants are NOT bumped.** Frozen status is a lifecycle policy, not a scoring change. If the freeze is tied to a specific methodology revision (rare), bump that constant in a separate commit with its own changelog entry.
 
