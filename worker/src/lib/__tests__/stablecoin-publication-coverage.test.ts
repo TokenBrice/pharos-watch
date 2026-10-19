@@ -558,7 +558,7 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
     const ids = ["tryb-bilira", "pht-pht", "vcred-vcred"];
     const reviews = STABLECOIN_PRICE_GAP_REVIEWS.filter((entry) => ids.includes(entry.stablecoinId));
     expect(reviews.map((review) => review.stablecoinId).sort()).toEqual(["pht-pht", "vcred-vcred"]);
-    const nowSec = Date.UTC(2026, 9, 19) / 1000;
+    const nowSec = Date.UTC(2026, 9, 19, 12) / 1000;
     const coverage = evaluateStablecoinActivePriceCoverage(
       ids.map((id) => ({ id, price: id === "tryb-bilira" ? 0.0203935242416747 : null })),
       ids,
@@ -585,6 +585,31 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
     });
     expect(missingAgain.alertEligibleIds).toEqual(["tryb-bilira"]);
     expect(missingAgain.acknowledgedGapIds).toEqual([]);
+  });
+
+  it.each([
+    ["pht-pht", Date.UTC(2026, 9, 25, 23, 45) / 1000],
+    ["vcred-vcred", Date.UTC(2026, 9, 25, 23, 45) / 1000],
+    ["wusd-worldwide", Date.UTC(2026, 9, 23) / 1000],
+  ] as const)("corrects %s evidence without extending its decision deadline or changing lifecycle", (id, expiresAt) => {
+    const coin = ACTIVE_STABLECOINS.find((entry) => entry.id === id)!;
+    expect(coin).toBeDefined();
+    const review = STABLECOIN_PRICE_GAP_REVIEWS.find((entry) => entry.stablecoinId === id)!;
+    expect(review).toMatchObject({
+      owner: "ops", expiresAt, reviewedAt: Date.UTC(2026, 9, 19, 7, 21, 45) / 1000,
+    });
+    if (id === "wusd-worldwide") {
+      expect(review.reason).toContain("unverified");
+      expect(review.sources).toContain("https://dns.google/resolve?name=wallet.wspn.io&type=A");
+      expect(coin.notices?.[0].message).toContain("historical on-chain evidence at block 112793798");
+      expect(coin.contracts).toHaveLength(3);
+    } else if (id === "vcred-vcred") {
+      expect(coin.mechanismArchetypeReview?.disposition).toBe("unresolved");
+      expect(coin.mechanismArchetype).toBeUndefined();
+    } else {
+      expect(review.reason).toContain("$46,409.29");
+      expect(review.reason).toContain("$9,753.36");
+    }
   });
 
   it("fails closed on malformed review ownership, evidence, identity, and dates", () => {

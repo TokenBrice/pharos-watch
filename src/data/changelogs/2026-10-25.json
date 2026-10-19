@@ -10,10 +10,15 @@
       "tag": "coverage",
       "description": "USDKG leaves active tracking after its October 5 termination announcement under Kyrgyz Cabinet Order 639-t. Its detail history and a single cemetery record remain available. The saved snapshot retains $50M in observed residual supply and no final price; holders were directed to email for fiat or USDT exchange, without evidence that burns or repayment are complete.",
       "href": "/stablecoin/usdkg-gold-dollar/"
+    },
+    {
+      "label": "Missing-price evidence corrected",
+      "tag": "coverage",
+      "description": "PHT's two live Polygon pools are recorded rather than called empty; both remain below the $50K liquidity floor. VCRED retains its unresolved holder-claim review despite live token activity. WUSD's 2024 migration is separated from its 2026 contraction, and corporate redemption is marked unverified after the advertised mainnet portal failed DNS. All three remain active with honest missing prices and unchanged decision deadlines."
     }
   ],
   "stats": {
-    "totalCommits": 1
+    "totalCommits": 2
   },
   "commits": []
 }
