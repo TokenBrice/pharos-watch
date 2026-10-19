@@ -1,10 +1,8 @@
 import { logWorkerEventArgs } from "./structured-log";
 import {
-  ccipRpcEndpoints,
   getChainRpc,
   getRpcAuth,
   getRpcAuthHeaders,
-  logScanRpcEndpoints,
   type ChainRpcConfig,
   type RpcEndpoint,
 } from "./chain-registry";
@@ -39,8 +37,10 @@ export interface EvmRpcOptions {
   beforeRequest?: (url: string) => boolean;
   /** Exclude supplemental endpoints AND the metered Dwellir operator at every position. */
   excludeSupplementalRpc?: boolean;
-  /** Reviewed CCIP archive profile, including admitted Ink/Berachain Dwellir first. */
-  ccipArchiveRpc?: boolean;
+  /** Authenticated pin context; does not authorize any different batch member pin. */
+  recentStatePin?: RecentFinalizedRpcPin;
+  /** Observed head used only to check moving log/header retention. */
+  observedHeadBlock?: number;
   maxRetries?: number;
   /** Gas limit for eth_call (hex string, e.g. "0x7A120"). Needed for cross-contract calls. */
   gas?: string;
@@ -123,6 +123,24 @@ export interface EvmBlockHeader {
   timestamp: number;
   hash: `0x${string}`;
 }
+
+/** Original observation identity, not a fresh clock attached to old state. */
+export interface RecentFinalizedRpcPin {
+  chainId: string;
+  header: EvmBlockHeader;
+  finalized: EvmBlockHeader;
+  observedAtSec: number;
+  maxAgeSec: number;
+  retainedFromBlock?: number;
+}
+
+export type EvmRpcReadRequirement =
+  | { kind: "current-state" }
+  | { kind: "recent-pinned-state"; pin: RecentFinalizedRpcPin; hashPinned: boolean }
+  | { kind: "historical-state"; hashPinned: boolean }
+  | { kind: "headers-receipts"; blockNumber?: number; finalizedTag?: boolean; observedHeadBlock?: number }
+  | { kind: "logs"; fromBlock: number; toBlock: number; observedHeadBlock?: number }
+  | { kind: "unsupported" };
 
 function stripHexPrefix(value: string): string {
   return value.startsWith("0x") ? value.slice(2) : value;
@@ -247,11 +265,8 @@ function resolveMulticallBatchSize(callsLength: number, rawBatchSize: number | u
 }
 
 interface BuildRpcUrlsOptions {
-  /** True when the request can pin a historical block; near-head-only endpoints are then skipped. */
-  historicalBlock?: boolean;
-  /** Exclude supplemental endpoints and Dwellir regardless of placement. */
+  requirements: readonly EvmRpcReadRequirement[];
   excludeSupplementalRpc?: boolean;
-  ccipArchiveRpc?: boolean;
 }
 
 /**
@@ -297,76 +312,146 @@ function demoteFailedDwellirAttempt(
   demotedSupplementalRpcOriginsByRun.set(chainRpcs, demoted);
 }
 
-/**
- * A block number (or its hex quantity form) may be pruned on a near-head-only
- * operator; the JSON-RPC tag strings cannot.
- */
-function isHistoricalBlockTag(blockTag: string | number | undefined): boolean {
-  if (typeof blockTag === "number") return true;
-  return blockTag != null && /^0x[0-9a-fA-F]+$/.test(blockTag);
+/** Recent state is admitted only for the exact authenticated number/hash. */
+function stateReadRequirement(selector: unknown, options?: EvmRpcOptions): EvmRpcReadRequirement {
+  if (selector === "latest" || selector === "safe" || selector === "finalized" || selector === "pending") {
+    return { kind: "current-state" };
+  }
+  const pin = options?.recentStatePin;
+  const hashPinned = typeof selector === "object" && selector !== null && "blockHash" in selector &&
+    "requireCanonical" in selector && selector.requireCanonical === true;
+  if (pin && (selector === toBlockTag(pin.header.number) ||
+      (hashPinned && selector.blockHash === pin.header.hash))) {
+    return { kind: "recent-pinned-state", pin, hashPinned };
+  }
+  return { kind: "historical-state", hashPinned };
 }
 
-/**
- * Registry endpoints, adapter pins, then supplemental endpoints. Operator-level
- * exclusion, pruning guards and run-local demotion apply at every position.
- */
-function buildRpcUrls(
-  chainId?: string,
-  extraRpcUrls?: string[],
-  chainRpcs?: Map<string, ChainRpcConfig>,
-  blockTag?: string | number,
-  options?: BuildRpcUrlsOptions,
-): string[] {
-  const urls: string[] = [];
-  const historicalBlock = options?.historicalBlock ?? isHistoricalBlockTag(blockTag);
-  const chainRpc = chainId && chainRpcs ? getChainRpc(chainRpcs, chainId) : undefined;
-  const demoted = chainRpcs == null ? undefined : demotedSupplementalRpcOriginsByRun.get(chainRpcs);
-  const endpoints = options?.ccipArchiveRpc ? ccipRpcEndpoints(chainRpc) : chainRpc?.endpoints ?? [];
+/** Every batch member contributes its actual method and pin, never a batch-wide archive flag. */
+function rpcReadRequirement(call: EvmRpcBatchCall, options?: EvmRpcOptions): EvmRpcReadRequirement {
+  if (call.method === "eth_call" || call.method === "eth_getCode" || call.method === "eth_getBalance" || call.method === "eth_getTransactionCount") {
+    return stateReadRequirement(call.params[1], options);
+  }
+  if (call.method === "eth_getStorageAt" || call.method === "eth_getProof") {
+    return stateReadRequirement(call.params[2], options);
+  }
+  if (call.method === "eth_getLogs") {
+    const filter = call.params[0];
+    if (!filter || typeof filter !== "object") return { kind: "unsupported" };
+    const from = "fromBlock" in filter ? parseQuantityHex(filter.fromBlock) : null;
+    const to = "toBlock" in filter ? parseQuantityHex(filter.toBlock) : null;
+    if (from === null || to === null || from < 0n || to < from || to > BigInt(Number.MAX_SAFE_INTEGER)) return { kind: "unsupported" };
+    return { kind: "logs", fromBlock: Number(from), toBlock: Number(to), observedHeadBlock: options?.observedHeadBlock };
+  }
+  if (call.method === "eth_blockNumber" || call.method === "eth_chainId" || call.method === "eth_getBlockByNumber" ||
+    call.method === "eth_getBlockByHash" || call.method === "eth_getTransactionReceipt" ||
+    call.method === "eth_getTransactionByHash" || call.method === "eth_getBlockReceipts") {
+    const number = call.method === "eth_getBlockByNumber" ? parseQuantityHex(call.params[0]) : null;
+    return { kind: "headers-receipts", ...(number !== null ? { blockNumber: Number(number) } : {}),
+      finalizedTag: call.params[0] === "finalized", observedHeadBlock: options?.observedHeadBlock };
+  }
+  return { kind: "unsupported" };
+}
 
-  const eligible = (url: string): boolean => {
-    const endpoint = chainRpc?.endpoints.find((row) => row.url === url);
-    if (endpoint?.operator !== "dwellir" && !isDwellirRpcUrl(url)) return true;
-    return !options?.excludeSupplementalRpc
-      && !(historicalBlock && endpoint?.stateHistory === "recent")
-      && !demoted?.has(endpointOrigin(url) ?? url);
-  };
-  for (const endpoint of endpoints) {
-    if ((options?.ccipArchiveRpc || endpoint.position === "registry") && eligible(endpoint.url)) urls.push(endpoint.url);
-  }
-  for (const url of extraRpcUrls ?? []) {
-    if (eligible(url)) urls.push(url);
-  }
-  if (!options?.excludeSupplementalRpc && !options?.ccipArchiveRpc) {
-    for (const endpoint of endpoints) {
-      if (endpoint.position === "supplemental" && eligible(endpoint.url)) urls.push(endpoint.url);
+function validRecentPin(pin: RecentFinalizedRpcPin, chainId?: string): boolean {
+  const { header, finalized, observedAtSec, maxAgeSec } = pin;
+  const now = Math.floor(Date.now() / 1000);
+  return pin.chainId === chainId && Number.isSafeInteger(header.number) && header.number >= 0 &&
+    /^0x[0-9a-fA-F]{64}$/.test(header.hash) && /^0x[0-9a-fA-F]{64}$/.test(finalized.hash) &&
+    Number.isSafeInteger(finalized.number) && finalized.number >= header.number &&
+    Number.isSafeInteger(finalized.timestamp) && finalized.timestamp >= header.timestamp &&
+    (finalized.number !== header.number || finalized.hash === header.hash) &&
+    Number.isSafeInteger(header.timestamp) && header.timestamp > 0 && Number.isSafeInteger(observedAtSec) &&
+    Number.isSafeInteger(maxAgeSec) && maxAgeSec > 0 && header.timestamp <= observedAtSec &&
+    observedAtSec <= now && now - header.timestamp <= maxAgeSec &&
+    (pin.retainedFromBlock === undefined || (Number.isSafeInteger(pin.retainedFromBlock) &&
+      pin.retainedFromBlock >= 0 && header.number >= pin.retainedFromBlock));
+}
+
+function supportsRead(endpoint: RpcEndpoint, requirement: EvmRpcReadRequirement, chainId?: string): boolean {
+  if (endpoint.operator === "dwellir" && (endpoint.routingDisabled || requirement.kind === "unsupported")) return false;
+  if (requirement.kind === "historical-state" || requirement.kind === "recent-pinned-state") {
+    // The reviewed HyperEVM Alchemy numeric-state mispin cannot be cured by retrying it.
+    if (chainId === "hyperevm" && endpoint.operator === "alchemy" && !requirement.hashPinned) return false;
+    if (requirement.kind === "historical-state") {
+      return endpoint.operator === "dwellir" ? endpoint.stateHistory === "archive" : endpoint.stateHistory !== "recent";
     }
   }
-
-  return Array.from(new Set(urls.filter((url) => typeof url === "string" && url.length > 0)));
+  if (requirement.kind === "logs") {
+    if (!Number.isSafeInteger(requirement.fromBlock) || !Number.isSafeInteger(requirement.toBlock) ||
+      requirement.fromBlock < 0 || requirement.toBlock < requirement.fromBlock ||
+      (endpoint.maxLogBlockSpan !== undefined && requirement.toBlock - requirement.fromBlock + 1 > endpoint.maxLogBlockSpan)) return false;
+    if (endpoint.logsHistory === "full") return true;
+    // Unknown incumbent retention permits an attempt, never a completeness claim.
+    if (endpoint.logsHistory === "unknown") return endpoint.operator !== "dwellir";
+    return typeof endpoint.logsHistory === "object" && Number.isSafeInteger(requirement.observedHeadBlock) &&
+      requirement.observedHeadBlock !== undefined && requirement.toBlock <= requirement.observedHeadBlock &&
+      requirement.fromBlock >= requirement.observedHeadBlock - endpoint.logsHistory.retainedBlocks + 1;
+  }
+  if (requirement.kind === "headers-receipts") {
+    if (requirement.finalizedTag && endpoint.finalizedTagUnsupported) return false;
+    if (endpoint.operator === "dwellir" && typeof endpoint.logsHistory === "object" && requirement.blockNumber !== undefined) {
+      return Number.isSafeInteger(requirement.observedHeadBlock) && requirement.observedHeadBlock !== undefined &&
+        requirement.blockNumber >= requirement.observedHeadBlock - endpoint.logsHistory.retainedBlocks + 1;
+    }
+  }
+  return true;
 }
 
-/** CCIP page sizing shares the transport's historical eligibility and run-local demotion. */
+/** Eligible Dwellir first; incumbent registry, adapter, supplemental relative order is unchanged. */
+function buildRpcUrls(
+  chainId: string | undefined,
+  extraRpcUrls: string[] | undefined,
+  chainRpcs: Map<string, ChainRpcConfig> | undefined,
+  options: BuildRpcUrlsOptions,
+): string[] {
+  if (options.requirements.some(requirement => requirement.kind === "recent-pinned-state" &&
+    !validRecentPin(requirement.pin, chainId))) return [];
+  const chainRpc = chainId && chainRpcs ? getChainRpc(chainRpcs, chainId) : undefined;
+  const endpoints = chainRpc?.endpoints ?? [];
+  const demoted = chainRpcs == null ? undefined : demotedSupplementalRpcOriginsByRun.get(chainRpcs);
+  const eligible = (url: string): boolean => {
+    const endpoint = endpoints.find(row => row.url === url);
+    if (endpoint?.operator === "dwellir" || isDwellirRpcUrl(url)) {
+      if (!endpoint || options.excludeSupplementalRpc || demoted?.has(endpointOrigin(url) ?? url)) return false;
+    }
+    return !endpoint || options.requirements.every(requirement => supportsRead(endpoint, requirement, chainId));
+  };
+  const urls = [
+    ...endpoints.filter(endpoint => endpoint.operator === "dwellir").map(endpoint => endpoint.url),
+    ...endpoints.filter(endpoint => endpoint.operator !== "dwellir" && endpoint.position === "registry").map(endpoint => endpoint.url),
+    ...(extraRpcUrls ?? []),
+    ...(!options.excludeSupplementalRpc
+      ? endpoints.filter(endpoint => endpoint.operator !== "dwellir" && endpoint.position === "supplemental").map(endpoint => endpoint.url)
+      : []),
+  ];
+  return [...new Set(urls.filter(url => typeof url === "string" && url.length > 0 && eligible(url)))];
+}
+
+/** Page sizing starts with the first eligible provider, independent of archive state. */
 export function usableCcipRpcEndpoints(
   chainId: string,
   chainRpcs: Map<string, ChainRpcConfig>,
+  requirement: Extract<EvmRpcReadRequirement, { kind: "logs" }>,
 ): readonly RpcEndpoint[] {
   const config = chainRpcs.get(chainId);
   if (!config) return [];
-  return buildRpcUrls(chainId, undefined, chainRpcs, undefined, {
-    historicalBlock: true,
-    ccipArchiveRpc: true,
-  }).map(url => config.endpoints.find(endpoint => endpoint.url === url)!);
+  return buildRpcUrls(chainId, undefined, chainRpcs, { requirements: [requirement] })
+    .map(url => config.endpoints.find(endpoint => endpoint.url === url)!);
 }
 
-/** Url resolution for a read that already knows its block tag. */
 function requestRpcUrls(
   chainId: string | undefined,
   options: EvmRpcOptions | undefined,
   blockTag?: string | number,
+  headerRead = false,
 ): string[] {
-  return buildRpcUrls(chainId, options?.extraRpcUrls, options?.chainRpcs, blockTag, {
-    excludeSupplementalRpc: options?.excludeSupplementalRpc,
-    ccipArchiveRpc: options?.ccipArchiveRpc,
+  const requirement: EvmRpcReadRequirement = headerRead
+    ? { kind: "headers-receipts", ...(typeof blockTag === "number" ? { blockNumber: blockTag } : {}),
+      finalizedTag: blockTag === "finalized", observedHeadBlock: options?.observedHeadBlock }
+    : stateReadRequirement(stateBlockSelector(blockTag as number | "latest", options), options);
+  return buildRpcUrls(chainId, options?.extraRpcUrls, options?.chainRpcs, {
+    requirements: [requirement], excludeSupplementalRpc: options?.excludeSupplementalRpc,
   });
 }
 
@@ -398,6 +483,7 @@ async function fetchJsonRpcResult<T>(
   const maxRetries = options?.maxRetries ?? 1;
   const failures: string[] = [];
   const onRpcRequest = chainId ? options?.chainRpcs?.get(chainId)?.onRpcRequest : undefined;
+  const requirement = options?.recentStatePin ? rpcReadRequirement({ method, params }, options) : undefined;
 
   for (const rpcUrl of urls) {
     if (isTronRpcUrl(rpcUrl) && requiresHistoricalEvmState(method, params)) continue;
@@ -427,6 +513,7 @@ async function fetchJsonRpcResult<T>(
           timeoutMs: Math.min(configuredTimeoutMs, remainingMs),
           deadlineMs: options?.deadlineMs,
           beforeRequest: () => {
+            if (requirement?.kind === "recent-pinned-state" && !validRecentPin(requirement.pin, chainId)) return false;
             if (options?.beforeRequest?.(rpcUrl) === false) return false;
             meterDwellirRpcRequest(rpcUrl, 1);
             onRpcRequest?.({ providerOrigin: new URL(rpcUrl).origin, method, rpcCalls: 1, signal: options?.signal });
@@ -552,24 +639,18 @@ async function runEvmRpcBatch<Value>(
 ): Promise<Value | null> {
   if ((chainId === "tron" || (chainId && options?.chainRpcs?.get(chainId)?.type === "tron")) &&
       calls.some(call => requiresHistoricalEvmState(call.method, call.params))) return null;
-  const urls = buildRpcUrls(chainId, options?.extraRpcUrls, options?.chainRpcs, undefined, {
-    // A batch may carry pinned block parameters, so a near-head-only endpoint
-    // must never be allowed to answer one.
-    historicalBlock: true,
+  const requirements = calls.map(call => rpcReadRequirement(call, options));
+  const urls = buildRpcUrls(chainId, options?.extraRpcUrls, options?.chainRpcs, {
+    requirements,
     excludeSupplementalRpc: options?.excludeSupplementalRpc,
-    ccipArchiveRpc: options?.ccipArchiveRpc,
   });
   if (urls.length === 0 || calls.length === 0) return null;
-  const logEndpoints = calls.some((call) => call.method === "eth_getLogs")
-    ? (options?.ccipArchiveRpc ? ccipRpcEndpoints : logScanRpcEndpoints)(chainId ? options?.chainRpcs?.get(chainId) : undefined)
-    : undefined;
 
   const configuredTimeoutMs = options?.timeoutMs ?? 10_000;
   const maxRetries = options?.maxRetries ?? 1;
   const onRpcRequest = chainId ? options?.chainRpcs?.get(chainId)?.onRpcRequest : undefined;
   endpoints: for (const rpcUrl of urls) {
     if (isTronRpcUrl(rpcUrl) && calls.some(call => requiresHistoricalEvmState(call.method, call.params))) continue;
-    if (logEndpoints && isDwellirRpcUrl(rpcUrl) && !logEndpoints.some((endpoint) => endpoint.url === rpcUrl)) continue;
     const endpoint = chainId ? options?.chainRpcs?.get(chainId)?.endpoints.find(row => row.url === rpcUrl) : undefined;
     if (!fitsRpcLogSpan(calls, endpoint?.maxLogBlockSpan)) continue;
     const noBatch = endpoint?.noBatch === true;
@@ -596,6 +677,8 @@ async function runEvmRpcBatch<Value>(
             timeoutMs: Math.min(configuredTimeoutMs, remainingMs),
             deadlineMs: options?.deadlineMs,
             beforeRequest: () => {
+              if (requirements.some(requirement => requirement.kind === "recent-pinned-state" &&
+                !validRecentPin(requirement.pin, chainId))) return false;
               if (options?.beforeRequest?.(rpcUrl) === false) return false;
               meterDwellirRpcRequest(rpcUrl, noBatch ? 1 : calls.length);
               onRpcRequest?.({ providerOrigin: new URL(rpcUrl).origin,
@@ -942,7 +1025,7 @@ export async function fetchEtherscanUint256AtBlock(
 }
 
 export async function fetchEvmBlockNumber(chainId: string, options?: EvmRpcOptions): Promise<number | null> {
-  const urls = requestRpcUrls(chainId, options, "latest");
+  const urls = requestRpcUrls(chainId, options, "latest", true);
   if (urls.length === 0) return null;
 
   const result = await fetchJsonRpcResult<string>(urls, "eth_blockNumber", [], options, undefined, chainId);
@@ -954,7 +1037,7 @@ export async function fetchEvmBlockTimestamp(
   blockNumber: number,
   options?: EvmRpcOptions,
 ): Promise<number | null> {
-  const urls = requestRpcUrls(chainId, options, blockNumber);
+  const urls = requestRpcUrls(chainId, options, blockNumber, true);
   if (urls.length === 0) return null;
 
   const block = await fetchJsonRpcResult<EvmBlockResult>(
@@ -980,7 +1063,7 @@ export async function fetchEvmBlockHeader(
   blockNumberOrTag: number | "finalized",
   options?: EvmRpcOptions,
 ): Promise<EvmBlockHeader | null> {
-  const urls = requestRpcUrls(chainId, options, blockNumberOrTag);
+  const urls = requestRpcUrls(chainId, options, blockNumberOrTag, true);
   if (
     urls.length === 0 ||
     (typeof blockNumberOrTag === "number" &&

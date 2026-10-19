@@ -7,7 +7,7 @@ import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { rethrowIfAborted, throwIfAborted } from "../abort";
 import { CCIP_MONAD_CANONICAL_HASH_ARCHIVE_REQUIRED_REASON, type ChainRpcConfig } from "../chain-registry";
 import { getCache, setCache } from "../db-cache";
-import { fetchEvmBlockHeader, fetchEvmRpcBatch, usableCcipRpcEndpoints, type EvmBlockHeader } from "../evm-rpc";
+import { fetchEvmBlockHeader, fetchEvmRpcBatch, usableCcipRpcEndpoints, type EvmBlockHeader, type RecentFinalizedRpcPin } from "../evm-rpc";
 import { fetchJsonWithRetry } from "../fetch-retry";
 import type { SupplyAttributionAttemptDiagnostic } from "@shared/types/safety-score-v9-supply-attribution";
 import { emitSupplyAttributionDiagnostic, type SupplyAttributionPhase } from "./supply-attribution-diagnostics";
@@ -188,7 +188,8 @@ export async function observeCcipPending(input: {
   | { status: "accepted"; amount: string; proof: Proof; responseSha256: string; checkpoint: CcipPendingCheckpoint }
   | { status: "rejected"; reason: string; checkpoint?: CcipPendingCheckpoint }
 > {
-  const options = { chainRpcs: input.chainRpcs, signal: input.signal, ccipArchiveRpc: true, maxRetries: 0 };
+  const options = { chainRpcs: input.chainRpcs, signal: input.signal, maxRetries: 0 };
+  const recentPins = new Map<string, RecentFinalizedRpcPin>();
   let checkpoint: CcipPendingCheckpoint | undefined;
   let context: Partial<SupplyAttributionAttemptDiagnostic> = {};
   const emit = (detail: Partial<SupplyAttributionAttemptDiagnostic>) => emitSupplyAttributionDiagnostic(input.onDiagnostic, { observer: "ccip", sourceId: input.source.sourceId, ...context, ...detail });
@@ -205,10 +206,12 @@ export async function observeCcipPending(input: {
       context = { chainId: chain, pinObservedAtSec: pin?.timestamp ?? null, method: "eth_getBlockByNumber", phase: "pin-authentication", operands: { scoringClockSec: input.clockSec, pinNumber: pin?.number ?? null } };
       if (!pin || !Number.isSafeInteger(input.clockSec) || pin.timestamp > input.clockSec || input.clockSec - pin.timestamp > policy.observationMaxAgeSec) fail("pin-stale-or-future");
       const finalized = await fetchEvmBlockHeader(chain, "finalized", options);
-      const canonical = await fetchEvmBlockHeader(chain, pin.number, options);
+      const canonical = await fetchEvmBlockHeader(chain, pin.number, { ...options, observedHeadBlock: finalized?.number });
       context = { ...context, finalizedLagBlocks: finalized ? Math.max(0, pin.number - finalized.number) : null, operands: { scoringClockSec: input.clockSec, pinNumber: pin.number, finalizedNumber: finalized?.number ?? null, finalizedObservedAtSec: finalized?.timestamp ?? null } };
       emit({});
       if (!finalized || finalized.number < pin.number || !canonical || canonical.hash !== pin.hash || canonical.timestamp !== pin.timestamp) fail("pin-not-finalized");
+      recentPins.set(chain, { chainId: chain, header: pin, finalized,
+        observedAtSec: input.clockSec, maxAgeSec: policy.observationMaxAgeSec });
     }
     if (Math.max(...chains.map(chain => input.headers.get(chain)!.timestamp)) - Math.min(...chains.map(chain => input.headers.get(chain)!.timestamp)) > policy.observationMaxSkewSec) fail("pin-skew");
     const cached = input.db && !input.checkpoint ? await getCache(input.db, cacheKey, input.signal) : null;
@@ -243,7 +246,9 @@ export async function observeCcipPending(input: {
       }
       if (missing.length > 0) {
         context = { ...context, chainId: chain, method: missing[0]?.method ?? "unknown", phase: "rpc", providerOrigin: null };
-        const result = await fetchEvmRpcBatch(chain, missing, options);
+        const recentStatePin = recentPins.get(chain);
+        const result = await fetchEvmRpcBatch(chain, missing, { ...options, recentStatePin,
+          observedHeadBlock: recentStatePin?.finalized.number });
         if (!result || result.length !== missing.length || result.some(value => value === undefined || value === null)) fail(chain === "monad" && missing.some(request => (request.method === "eth_call" || request.method === "eth_getCode") && request.params[1] !== null && typeof request.params[1] === "object" && "blockHash" in request.params[1]) ? CCIP_MONAD_CANONICAL_HASH_ARCHIVE_REQUIRED_REASON : "rpc-unavailable");
         for (let i = 0; i < result.length; i++) {
           const position = positions[i]!, key = keys[position]!;
@@ -260,7 +265,7 @@ export async function observeCcipPending(input: {
     const identityHeader = async (chain: string, number: number) => {
       const key = `${chain}:${number}`, cached = identityHeaders.get(key);
       if (cached) return cached;
-      const header = await fetchEvmBlockHeader(chain, number, options);
+      const header = await fetchEvmBlockHeader(chain, number, { ...options, observedHeadBlock: recentPins.get(chain)?.finalized.number });
       if (header) identityHeaders.set(key, header);
       return header;
     };
@@ -347,7 +352,10 @@ export async function observeCcipPending(input: {
       for (let from = 0; from < entries.length; from += 32) {
         throwIfAborted(input.signal);
         const chunk = entries.slice(from, from + 32);
-        const results = await fetchEvmRpcBatch(chain, chunk.map(([, request]) => request), options);
+        const recentStatePin = recentPins.get(chain);
+        const results = await fetchEvmRpcBatch(chain, chunk.map(([, request]) => request), {
+          ...options, recentStatePin, observedHeadBlock: recentStatePin?.finalized.number,
+        });
         if (!results || results.length !== chunk.length) continue;
         for (let i = 0; i < results.length; i++) {
           if (results[i] !== null && results[i] !== undefined) pinnedReads.set(chunk[i]![0], results[i]);
@@ -481,26 +489,24 @@ export async function observeCcipPending(input: {
       const backlog = scansByChain[chainIndex]!.filter(scan => (scan.sent ? scan.cp.sent : scan.cp.executed).nextBlock <= pin.number);
       if (backlog.length === 0) { idleChains++; continue; }
       idleChains = 0;
-      let declaredSpan: number | undefined;
-      for (const endpoint of usableCcipRpcEndpoints(chain, input.chainRpcs)) {
-        if (endpoint.logsHistory !== "full" || endpoint.maxLogBlockSpan === undefined) continue;
-        if (!Number.isSafeInteger(endpoint.maxLogBlockSpan) || endpoint.maxLogBlockSpan < 1) fail("rpc-log-span-invalid");
-        declaredSpan = Math.max(declaredSpan ?? endpoint.maxLogBlockSpan, endpoint.maxLogBlockSpan);
-      }
-      // The RPC transport skips endpoints whose own declaration cannot fit this
-      // interval; a narrow primary must not constrain a reviewed wider fallback.
-      const pageBlocks = Math.min(narrowedSpans.get(chain) ?? Infinity, declaredSpan ?? PAGE_BLOCKS);
-      // One physical log page covers every participating lane/side on this chain.
-      // Later cursors never rescan their prefix; they join when the oldest reaches them.
       const from = Math.min(...backlog.map(scan => (scan.sent ? scan.cp.sent : scan.cp.executed).nextBlock));
+      const observedHeadBlock = recentPins.get(chain)!.finalized.number;
+      const endpoint = usableCcipRpcEndpoints(chain, input.chainRpcs,
+        { kind: "logs", fromBlock: from, toBlock: from, observedHeadBlock })[0];
+      if (!endpoint) fail("history-unavailable");
+      const declaredSpan = endpoint.maxLogBlockSpan;
+      if (declaredSpan !== undefined && (!Number.isSafeInteger(declaredSpan) || declaredSpan < 1)) fail("rpc-log-span-invalid");
+      // Size for the first capable provider, not the widest fallback. Never skip
+      // an unsupported prefix or treat capability refusal as a completed page.
+      const pageBlocks = Math.min(narrowedSpans.get(chain) ?? Infinity, declaredSpan ?? PAGE_BLOCKS);
       const end = Math.min(pin.number, from + pageBlocks - 1);
       const scans = backlog.filter(scan => (scan.sent ? scan.cp.sent : scan.cp.executed).nextBlock <= end);
       const addresses = [...new Set(scans.map(scan => scan.sent ? scan.lane.onRampAddress : scan.lane.offRampAddress))];
       const topics = [...new Set(scans.map(scan => scan.topic))];
-      const endHeader = await fetchEvmBlockHeader(chain, end, options);
+      const endHeader = await fetchEvmBlockHeader(chain, end, { ...options, observedHeadBlock });
       if (!endHeader) fail("history-unavailable");
       const result = await fetchEvmRpcBatch(chain, [{ method: "eth_getLogs", params: [{ address: addresses, topics: [topics],
-        fromBlock: `0x${from.toString(16)}`, toBlock: `0x${end.toString(16)}` }] }], options);
+        fromBlock: `0x${from.toString(16)}`, toBlock: `0x${end.toString(16)}` }] }], { ...options, observedHeadBlock });
       const raw = result?.[0];
       // Provider/body/result caps never advance a cursor. Subdivision consumes
       // the same eight-attempt budget, preserving wall/connection ceilings.
@@ -565,7 +571,7 @@ export async function observeCcipPending(input: {
         if (cp.messages.length > 512) fail("checkpoint-capacity");
         cursor.digest = sha256Hex(stableJsonStringifyV1({ previous: cursor.digest, from: cursor.nextBlock, end, endHeader, logs: laneLogs }));
       }
-      const rechecked = await fetchEvmBlockHeader(chain, end, options);
+      const rechecked = await fetchEvmBlockHeader(chain, end, { ...options, observedHeadBlock });
       if (!rechecked || rechecked.hash !== endHeader.hash) fail("history-reorg");
       for (const scan of scans) {
         const cursor = scan.sent ? scan.cp.sent : scan.cp.executed;
@@ -634,7 +640,8 @@ export async function observeCcipPending(input: {
     if (serialized.length > MAX_CHECKPOINT_BYTES) fail("checkpoint-capacity");
     // Recheck every holding pin before final admission or incomplete return.
     for (const chain of chains) {
-      const pin = input.headers.get(chain)!, rechecked = await fetchEvmBlockHeader(chain, pin.number, options);
+      const pin = input.headers.get(chain)!, rechecked = await fetchEvmBlockHeader(chain, pin.number,
+        { ...options, observedHeadBlock: recentPins.get(chain)?.finalized.number });
       if (!rechecked || rechecked.hash !== pin.hash || rechecked.timestamp !== pin.timestamp) fail("pin-reorg");
     }
     if (input.db) await setCache(input.db, cacheKey, serialized, input.signal);

@@ -120,7 +120,7 @@ function rpcConfig(chainId: string, configured: Map<string, ChainRpcConfig>): Ma
   // Archive supplemental-only configs are usable by the state-read lane.
   // Do not discard their credentials or upgrade near-head endpoints to archive.
   if (hasRegistryRpc(configured.get(chainId)) ||
-      supplementalRpcEndpoints(configured.get(chainId), { historicalBlock: true }).length > 0) return configured;
+      supplementalRpcEndpoints(configured.get(chainId)).some(endpoint => endpoint.stateHistory === "archive")) return configured;
   const meta = CHAIN_META[chainId];
   const extra = TRANSFER_MATERIALITY_EXTRA_RPCS[chainId];
   const rpcUrl = extra?.rpcUrl ?? getPublicRpcUrl(chainId);

@@ -1643,6 +1643,7 @@
         }
       ],
       "background": [
+        { "path": "docs/architecture.md", "anchor": "adr-40" },
         { "path": "docs/worker-infrastructure.md", "anchor": "runtime-feature-contracts" },
         {"path": "docs/worker-and-api-limits.md", "anchor": "connection-budget-operating-assumption"},
         {"path": "docs/process/worker-infrastructure-appendix.md", "anchor": "binding-inventory"},
@@ -1678,6 +1679,7 @@
         { "path": "docs/architecture.md", "anchor": "adr-1" },
         { "path": "docs/architecture.md", "anchor": "adr-2" },
         { "path": "docs/architecture.md", "anchor": "adr-32" },
+        { "path": "docs/architecture.md", "anchor": "adr-40" },
         { "path": "docs/data-flow-map.md", "anchor": "publication-and-consumer-flows" }
       ],
       "alsoRead": ["shared/AGENTS.md"],

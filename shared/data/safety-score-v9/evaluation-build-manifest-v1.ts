@@ -102,7 +102,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/chain-rpc-registry.ts",
-      "sha256": "4f4135cac6637fac5f90bdf08ee44afe265150c0b15f637feef48d8ac163377f"
+      "sha256": "b9eb377cdca2be1e2cd3e43b522941d0e43f7e3a78fd69cbeb020688a77a04a2"
     },
     {
       "path": "shared/lib/circuit-sources.ts",
@@ -1307,7 +1307,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-10-15-block-26196659-shock-coverage.json.gz"
     }
   ],
-  "digest": "95e8e450b2dbe7c852648504185ed831942d9e42cb46a7bb7040274d9069850f"
+  "digest": "89c22fd7cfe96c91e4275648e57ce89ec8a162d02ca0ef41f55b17648e62ae65"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =
