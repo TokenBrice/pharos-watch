@@ -119,7 +119,7 @@ function dependencies() {
           ? null
           : {
               number: blockNumber,
-              timestamp: TIME_BY_CHAIN[chainId]!,
+              timestamp: TIME_BY_CHAIN[chainId]! - Math.max(0, BLOCK_BY_CHAIN[chainId]! - WM_EVM_SAFE_BLOCK_LAG_BY_CHAIN[chainId]! - blockNumber),
               hash: `0x${"a".repeat(64)}` as const,
             },
     ),
@@ -194,7 +194,7 @@ function lineaSkewFixture(repairedTimeSec: number, initialTimeSec = CLOCK_SEC - 
     chain === "linea" ? 1000 + (++lineaReads - 1) * 4 : chain === "monad" ? 2000 : originalHead(chain));
   deps.fetchEvmBlockHeader.mockImplementation(async (chain, number, options) =>
     extraChains.includes(chain) && typeof number === "number"
-      ? { number, timestamp: chain === "linea" ? lineaReads === 1 ? initialTimeSec : repairedTimeSec : CLOCK_SEC - 3,
+      ? { number, timestamp: chain === "linea" ? lineaReads === 1 ? initialTimeSec : repairedTimeSec : CLOCK_SEC - 3 - Math.max(0, 1990 - number),
           hash: `0x${(chain === "linea" && lineaReads > 1 ? "b" : "a").repeat(64)}` as const }
       : originalHeader(chain, number, options));
   deps.fetchEvmMulticall3Aggregate3AtBlock.mockImplementation(async (chain, calls, block) =>
@@ -359,7 +359,7 @@ describe("wM reviewed deployment observer", () => {
     });
   });
 
-  it("waits only for the short maturity deficit while keeping the original clock and sibling snapshots", async () => {
+  it("waits for the Solana-bound deficit and rewinds newer EVM peers without changing the capture clock", async () => {
     vi.useFakeTimers();
     const f = lineaSkewFixture(CLOCK_SEC - 90), startedAtMs = Date.now();
     try {
@@ -369,9 +369,9 @@ describe("wM reviewed deployment observer", () => {
         executionWindow: { slotStartedAtSec: Math.floor(startedAtMs / 1_000), deadlineMs: startedAtMs + 180_000, minimumRemainingMs: 60_000 },
         assetDeadlineMs: startedAtMs + 90_000,
       }, f.deps);
-      await vi.advanceTimersByTimeAsync(46_000);
+      await vi.advanceTimersByTimeAsync(40_000);
       const attempt = await pending;
-      expect(Date.now() - startedAtMs).toBe(46_000);
+      expect(Date.now() - startedAtMs).toBe(40_000);
       expect(attempt.status).toBe("accepted");
       if (attempt.status !== "accepted") throw new Error("Expected repaired wM attribution");
       expect(attempt.attribution.deployments.find(row => row.chainId === "linea")).toMatchObject({
@@ -382,6 +382,41 @@ describe("wM reviewed deployment observer", () => {
       });
       expect(attempt.attribution.deployments.find(row => row.chainId === "solana")).toMatchObject({ blockTimeSec: CLOCK_SEC - 9 });
       expect(attempt.attribution.captureEndedAtSec - attempt.attribution.captureStartedAtSec).toBeLessThanOrEqual(120);
+    } finally {
+      f.metaById.set("wm-m0", f.reviewed);
+      vi.useRealTimers();
+    }
+  });
+
+  it.each(["valid", "unavailable", "identity-drift"] as const)("aligns newer EVM peers backward to the fixed Solana/Linea window: %s", async scenario => {
+    vi.useFakeTimers();
+    const f = lineaSkewFixture(CLOCK_SEC - 154), startedAtMs = Date.now();
+    f.deps.fetchSolanaObservation.mockReset().mockResolvedValue({ ...solanaObservation(), blockTimeSec: CLOCK_SEC - 40 });
+    const code = f.deps.fetchEvmCodeAtBlock.getMockImplementation()!;
+    f.deps.fetchEvmCodeAtBlock.mockImplementation(async (chain, address, block) =>
+      chain === "ethereum" && typeof block === "number" && block < BLOCK_BY_CHAIN.ethereum! - WM_EVM_SAFE_BLOCK_LAG_BY_CHAIN.ethereum!
+        ? scenario === "unavailable" ? null : scenario === "identity-drift" ? "0x6000" : code(chain, address, block)
+        : code(chain, address, block));
+    try {
+      const attempt = await observeWmReviewedDeploymentUnitPartitionAttempt({
+        aggregateSupplyUsd: AGGREGATE_SUPPLY_USD, registryFingerprint: REGISTRY_FINGERPRINT,
+        scoringClockSec: CLOCK_SEC, chainRpcs: chainRpcs(Object.keys(RUNTIME_CODE_BY_CHAIN)),
+      }, f.deps);
+      expect(Date.now()).toBe(startedAtMs);
+      expect(f.deps.fetchSolanaObservation).toHaveBeenCalledTimes(1);
+      expect(f.deps.fetchSolanaObservation.mock.invocationCallOrder[0])
+        .toBeLessThan(f.deps.fetchEvmBlockNumber.mock.invocationCallOrder[0]!);
+      expect(f.deps.fetchEvmBlockNumber.mock.calls.filter(([chain]) => chain === "linea")).toHaveLength(1);
+      if (scenario !== "valid") {
+        expect(attempt).toMatchObject({ status: "rejected",
+          rejectionCode: scenario === "unavailable" ? "deployment-state-unavailable" : "deployment-identity-mismatch" });
+        return;
+      }
+      if (attempt.status !== "accepted") throw new Error("Expected backward-aligned attribution");
+      expect(attempt.attribution.deployments.find(row => row.chainId === "linea")?.blockTimeSec).toBe(CLOCK_SEC - 154);
+      expect(attempt.attribution.deployments.find(row => row.chainId === "solana")?.blockTimeSec).toBe(CLOCK_SEC - 40);
+      expect(attempt.attribution.captureEndedAtSec - attempt.attribution.captureStartedAtSec).toBeLessThanOrEqual(120);
+      expect(attempt.attribution.deployments.find(row => row.chainId === "ethereum")!.blockTimeSec).toBeLessThanOrEqual(CLOCK_SEC - 34);
     } finally {
       f.metaById.set("wm-m0", f.reviewed);
       vi.useRealTimers();
@@ -437,10 +472,10 @@ describe("wM reviewed deployment observer", () => {
 
 
   it.each([
-    ["remaining slot budget of 105999ms", 105_999, undefined],
+    ["remaining slot budget of 99999ms", 99_999, undefined],
     ["no remaining slot budget", undefined, undefined],
     ["asset deadline of 30000ms with slot headroom", 180_000, 30_000],
-    ["asset deadline of 60999ms with slot headroom", 180_000, 60_999],
+    ["asset deadline of 54999ms with slot headroom", 180_000, 54_999],
   ] as const)("refuses a repair without sleeping for %s", async (_label, remainingMs, assetBudgetMs) => {
     vi.useFakeTimers();
     const f = lineaSkewFixture(CLOCK_SEC - 90), startedAtMs = Date.now();
@@ -473,7 +508,7 @@ describe("wM reviewed deployment observer", () => {
       const attempt = await observeWmReviewedDeploymentUnitPartitionAttempt({
         aggregateSupplyUsd: AGGREGATE_SUPPLY_USD, registryFingerprint: REGISTRY_FINGERPRINT,
         scoringClockSec: CLOCK_SEC, chainRpcs: chainRpcs(Object.keys(RUNTIME_CODE_BY_CHAIN)),
-        executionWindow: { slotStartedAtSec: Math.floor(startedAtMs / 1_000), deadlineMs: startedAtMs + 125_999, minimumRemainingMs: 60_000 },
+        executionWindow: { slotStartedAtSec: Math.floor(startedAtMs / 1_000), deadlineMs: startedAtMs + 119_999, minimumRemainingMs: 60_000 },
       }, f.deps);
       expect(attempt).toMatchObject({ status: "rejected", rejectionCode: "deployment-observation-window-insufficient" });
       expect(Date.now() - startedAtMs).toBe(20_000);

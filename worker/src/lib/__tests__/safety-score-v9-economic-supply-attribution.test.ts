@@ -1008,6 +1008,13 @@ describe("reviewed XGLD, srUSD and wiTRY OFT supply plans", () => {
     };
   }
 
+  it("prefers authenticated Ethereum finality for XGLD without changing the fallback lag", () => {
+    const plan = REVIEWED_ECONOMIC_SUPPLY_PLANS.get("xgld-unitas")!;
+    expect(plan.deployments.find(row => row.chainId === "ethereum")?.read).toEqual({
+      kind: "evm-total-supply", safeBlockLag: 145, pinPolicy: "finalized-preferred",
+    });
+  });
+
   it("rejects the issuer's two-chain XGLD subset despite an otherwise valid pending schema", () => {
     const input = cohortFixture("xgld-unitas");
     const source = input.plan.liabilityInFlightSource!;

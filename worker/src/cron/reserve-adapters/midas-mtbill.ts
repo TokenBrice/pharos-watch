@@ -6,6 +6,7 @@ import { LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS } from "@shared/types/live
 import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC, resolveLiveReserveSourceAgeBudget } from "@shared/lib/live-reserve-freshness";
 import { sha256HexFromBytes, sha256HexFromUtf8Chunks } from "@shared/lib/sha256";
 import { stableJsonStringifyChunksV1 } from "@shared/lib/stable-json";
+import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { fetchEvmBlockHeader, fetchEvmBlockNumber, type EvmBlockHeader } from "../../lib/evm-rpc";
 import { throwIfAborted } from "../../lib/abort";
 import { gunzipBytesBounded } from "../../lib/canonical-json-gzip";
@@ -20,7 +21,12 @@ const REGISTRY = "0x2d6e9f608807436de5d9603b00abe3fed1bc809d";
 const PROOF_ID = "0xf65e876f459439e78365c92eb3d47ff358d41b7bec69c9ffb9e624010fb47805";
 const TOKEN = "0xdd629e5241cbc5919847783e6c96b2de4754e438";
 const ORACLE = "0x056339c044055819e8db84e71f5f2e1f536b2e5b";
-const IPFS_GATEWAY = "https://gateway.pinata.cloud/ipfs/";
+const IPFS_GATEWAYS = [
+  "https://gateway.pinata.cloud/ipfs/",
+  "https://ipfs.filebase.io/ipfs/",
+  "https://ipfs.io/ipfs/",
+] as const;
+const IPFS_GATEWAY_TIMEOUT_MS = 5_000;
 const HISTORICAL_URL = "https://api-prod.midas.app/api/transparency/by-timestamp";
 const COMPRESSED_CAP = 128 * 1024;
 const DECOMPRESSED_CAP = 1024 * 1024;
@@ -89,6 +95,15 @@ function fail(reason: string): never {
   throw new Error(`midas-mtbill:${reason}`);
 }
 
+export class MidasIpfsGatewayError extends Error {
+  readonly code = "save-ipfs-gateways-exhausted";
+
+  constructor(readonly failures: readonly { gateway: string; detail: string }[]) {
+    super(`midas-mtbill:save-ipfs-gateways-exhausted: ${failures.map(({ gateway, detail }) => `${gateway}: ${detail}`).join("; ")}`);
+    this.name = "MidasIpfsGatewayError";
+  }
+}
+
 function active(signal: AbortSignal, ctx?: AdapterContext): void {
   throwIfAborted(signal);
   if (ctx?.attemptDeadlineMs != null && Date.now() >= ctx.attemptDeadlineMs) fail("save-deadline-exceeded");
@@ -133,6 +148,35 @@ function singleLeafRoot(file: Uint8Array): string {
   return `0x${sha256HexFromBytes(node)}`;
 }
 
+async function readCheckpointFile(cid: string, hash: string, signal: AbortSignal, ctx?: AdapterContext): Promise<Uint8Array> {
+  const failures: { gateway: string; detail: string }[] = [];
+  // One bounded physical request per gateway; never spend the attempt on
+  // same-host Retry-After/backoff. Each body settles before opening the next.
+  for (const gateway of IPFS_GATEWAYS) {
+    active(signal, ctx);
+    const timeoutMs = Math.min(IPFS_GATEWAY_TIMEOUT_MS,
+      ctx?.attemptDeadlineMs == null ? IPFS_GATEWAY_TIMEOUT_MS : ctx.attemptDeadlineMs - Date.now());
+    const timeout = createTimeoutSignal({ timeoutMs, parentSignal: signal, timeoutReason: "midas-mtbill:save-ipfs-gateway-timeout" });
+    try {
+      const file = await fetchBinaryWithRetry(`${gateway}${cid}`, timeout.signal, timeoutMs, ctx, {
+        maxResponseBytes: COMPRESSED_CAP, maxRetries: 0,
+      });
+      active(signal, ctx);
+      if (file.length > COMPRESSED_CAP) fail("save-compressed-size");
+      // eslint-disable-next-line security/detect-possible-timing-attacks -- both digests are public IPFS/onchain commitments, not secrets.
+      if (singleLeafRoot(file) !== hash) fail("save-cid-layout-or-content-mismatch");
+      return file;
+    } catch (error) {
+      // Cancellation/deadline is not gateway exhaustion and must not admit a fallback.
+      active(signal, ctx);
+      failures.push({ gateway, detail: error instanceof Error ? error.message : String(error) });
+    } finally {
+      timeout.dispose();
+    }
+  }
+  throw new MidasIpfsGatewayError(failures);
+}
+
 async function readMidasMtbillCheckpoint(signal: AbortSignal, ctx?: AdapterContext): Promise<RegistryCheckpoint> {
   active(signal, ctx);
   const rpcOptions = { signal, chainRpcs: ctx?.chainRpcs, timeoutMs: 5_000 };
@@ -174,10 +218,8 @@ async function readMidasMtbillCheckpoint(signal: AbortSignal, ctx?: AdapterConte
   if (decoded.publishedAt <= 0 || decoded.publishedAt > pin.timestamp) fail("save-publication-clock");
   active(signal, ctx);
   const cid = cidForDigest(decoded.hash);
-  const file = await fetchBinaryWithRetry(`${IPFS_GATEWAY}${cid}`, signal, 5_000, ctx, { maxResponseBytes: COMPRESSED_CAP });
+  const file = await readCheckpointFile(cid, decoded.hash, signal, ctx);
   active(signal, ctx);
-  if (file.length > COMPRESSED_CAP) fail("save-compressed-size");
-  if (singleLeafRoot(file) !== decoded.hash) fail("save-cid-layout-or-content-mismatch");
   if (file[0] !== 0x1f || file[1] !== 0x8b || file[2] !== 8) fail("save-unsupported-compression");
   let payload: unknown;
   let jsonDigest: string;
@@ -340,7 +382,7 @@ export async function fetchMidasMtbillReserves(
   active(signal, ctx);
   const checkpoint = decodeMidasMtbillCheckpoint(registry, nowSec, sourceAgeBudgetSec);
   const url = `${HISTORICAL_URL}?token=mTBILL&timestamp=${encodeURIComponent(checkpoint.timestamp)}`;
-  const historical = await fetchJsonWithRetry<unknown>(url, signal, 5_000, ctx, { maxResponseBytes: DECOMPRESSED_CAP, redirect: "error" });
+  const historical = await fetchJsonWithRetry<unknown>(url, signal, 5_000, ctx, { maxResponseBytes: DECOMPRESSED_CAP, redirect: "manual" });
   active(signal, ctx);
   const result = adaptMidasMtbillPortfolio(historical, checkpoint);
   const recheck = await runAdapterIo(ctx, "midas-save-pin-recheck", () => fetchEvmBlockHeader("ethereum", registry.pin.number, { signal, chainRpcs: ctx?.chainRpcs, timeoutMs: 5_000 }));

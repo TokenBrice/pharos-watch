@@ -169,7 +169,9 @@ export async function fetchHiveNativeHbdPrice(parent: HiveUsdParent | undefined,
         let status: number | null = null;
         try {
           const result = await fetchJsonWithRetry(node, {
-            method: "POST", redirect: "error", headers: { "Content-Type": "application/json" },
+            // Workers rejects redirect: "error" before sending; manual keeps
+            // redirects fail-closed via the helper's non-2xx body cleanup.
+            method: "POST", redirect: "manual", headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ jsonrpc: "2.0", id, method: `condenser_api.${method}`, params }), signal: options.signal,
           }, 0, {
             timeoutMs: HIVE_MARKET_POLICY.rpcTimeoutMs, deadlineMs: deadline,

@@ -1049,6 +1049,10 @@
                   "deployer": "0x062f05cd6c835677b05a8658a351969476861316",
                   "nonce": "827",
                   "initcodeSha256": "a9fcb488d41fe991f5cebdba8a4390b49f52786a412e70b6cde17c2939981ba9",
+                  "reviewedReceipt": {
+                    "status": "0x1",
+                    "contractAddress": "0x26f997167d936acd054f2132f03e1cea18044397"
+                  },
                   "initialSequence": "1",
                   "sequenceSemantics": "ccip-2.0.0-constructor-zero",
                   "sourceCodeSha256": "5230269448a4222556534466a475030da19806a7d1b456af369a35e99c642a43",
@@ -1098,6 +1102,10 @@
                   "deployer": "0x062f05cd6c835677b05a8658a351969476861316",
                   "nonce": "36",
                   "initcodeSha256": "fae6dd46495b519a802b38ab058455cd65eb9f6be964a1cdc3e628082e8e7a80",
+                  "reviewedReceipt": {
+                    "status": "0x1",
+                    "contractAddress": "0xcdca5d374e46a6dddab50bd2d9acb8c796ec35c3"
+                  },
                   "initialSequence": "1",
                   "sequenceSemantics": "ccip-1.6-constructor-zero",
                   "sourceCodeSha256": "93b5dcbb8bb095a825aed1ff4c9b8eed1e70962f700f7cf1f6af0652471448c4",
@@ -1147,6 +1155,10 @@
                   "deployer": "0x062f05cd6c835677b05a8658a351969476861316",
                   "nonce": "827",
                   "initcodeSha256": "a9fcb488d41fe991f5cebdba8a4390b49f52786a412e70b6cde17c2939981ba9",
+                  "reviewedReceipt": {
+                    "status": "0x1",
+                    "contractAddress": "0x26f997167d936acd054f2132f03e1cea18044397"
+                  },
                   "initialSequence": "1",
                   "sequenceSemantics": "ccip-2.0.0-constructor-zero",
                   "sourceCodeSha256": "5230269448a4222556534466a475030da19806a7d1b456af369a35e99c642a43",
@@ -1196,6 +1208,10 @@
                   "deployer": "0x062f05cd6c835677b05a8658a351969476861316",
                   "nonce": "36",
                   "initcodeSha256": "fae6dd46495b519a802b38ab058455cd65eb9f6be964a1cdc3e628082e8e7a80",
+                  "reviewedReceipt": {
+                    "status": "0x1",
+                    "contractAddress": "0xcdca5d374e46a6dddab50bd2d9acb8c796ec35c3"
+                  },
                   "initialSequence": "1",
                   "sequenceSemantics": "ccip-1.6-constructor-zero",
                   "sourceCodeSha256": "93b5dcbb8bb095a825aed1ff4c9b8eed1e70962f700f7cf1f6af0652471448c4",
@@ -2780,7 +2796,8 @@
           "routeId": "ethereum:0x77a31a47e8a1dce18cb1772ae1c2157fa080cfde",
           "read": {
             "kind": "evm-total-supply",
-            "safeBlockLag": 145
+            "safeBlockLag": 145,
+            "pinPolicy": "finalized-preferred"
           },
           "claimUnit": "xgld-unitas-token",
           "conversionSourceId": null
