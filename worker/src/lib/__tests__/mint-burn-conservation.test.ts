@@ -115,22 +115,57 @@ describe("pooled conservation boundaries", () => {
     expect(result.get("one")).toEqual({ status: "unavailable", reason: "audit-rpc-unavailable" });
     expect(result.get("two")?.status).toBe("ready");
   });
-  it.each(["hash", "number", "timestamp", "malformed"])("isolates recheck %s changes", async (field) => {
+  it.each(["hash", "number", "timestamp", "malformed", "null"])("isolates recheck %s changes", async (field) => {
     pooledRpc();
     const normal = vi.mocked(fetchEvmRpcBatchDetailed).getMockImplementation()!;
     let pass = 0;
     vi.mocked(fetchEvmRpcBatchDetailed).mockImplementation(async (...args) => {
       const result = (await normal(...args))!;
       if (pass++ === 2) {
-        result.results[0] = { ...generatedHeader(100),
+        result.results[0] = field === "null" ? null : { ...generatedHeader(100),
           ...(field === "hash" ? { hash: word(999n) } : field === "number" ? { number: "0x99" }
             : field === "timestamp" ? { timestamp: "0x999" } : { timestamp: "not-hex" }) };
       }
       return result;
     });
     const result = await fetchConservationBoundaries(boundaryInput(disjointRequests));
-    expect(result.get("one")).toEqual({ status: "unavailable", reason: "boundary-reorg" });
+    expect(result.get("one")).toEqual({ status: "unavailable",
+      reason: field === "hash" || field === "timestamp" ? "boundary-reorg" : "invalid-boundary-header" });
     expect(result.get("two")?.status).toBe("ready");
+  });
+  it.each(["header", "recheck"])("retries a null %s on the next admitted endpoint", async (phase) => {
+    pooledRpc();
+    const normal = vi.mocked(fetchEvmRpcBatchDetailed).getMockImplementation()!;
+    let pass = 0;
+    vi.mocked(fetchEvmRpcBatchDetailed).mockImplementation(async (...args) => {
+      const result = (await normal(...args))!;
+      if (pass++ === (phase === "header" ? 0 : 2)) result.results[0] = null;
+      return result;
+    });
+    const args = boundaryInput();
+    const endpoints = [mintBurnAlchemyEndpoint("https://rpc.example"), mintBurnAlchemyEndpoint("https://fallback.example")];
+    args.rpcEndpointsByChain.set("ethereum", endpoints);
+    const result = await fetchConservationBoundaries(args);
+    expect(result.get("one")?.status).toBe("ready");
+    const calls = vi.mocked(fetchEvmRpcBatchDetailed).mock.calls;
+    expect(calls.map((call) => call[1].length)).toEqual(phase === "header" ? [2, 1, 2, 2] : [2, 2, 2, 1]);
+    expect(calls[phase === "header" ? 1 : 3][2]?.chainRpcs?.get("ethereum")?.endpoints).toEqual([endpoints[1]]);
+    expect(args.budget.count).toBe(4);
+  });
+  it("does not retry away a validated boundary identity change", async () => {
+    pooledRpc();
+    const normal = vi.mocked(fetchEvmRpcBatchDetailed).getMockImplementation()!;
+    let pass = 0;
+    vi.mocked(fetchEvmRpcBatchDetailed).mockImplementation(async (...args) => {
+      const result = (await normal(...args))!;
+      if (pass++ === 2) result.results[0] = { ...generatedHeader(100), hash: word(999n) };
+      return result;
+    });
+    const args = boundaryInput();
+    args.rpcEndpointsByChain.set("ethereum", [mintBurnAlchemyEndpoint("https://rpc.example"), mintBurnAlchemyEndpoint("https://fallback.example")]);
+    const result = await fetchConservationBoundaries(args);
+    expect(result.get("one")).toEqual({ status: "unavailable", reason: "boundary-reorg" });
+    expect(fetchEvmRpcBatchDetailed).toHaveBeenCalledTimes(3);
   });
   it("marks every dependent of a shared failed block, not unrelated ranges", async () => {
     pooledRpc();
@@ -182,8 +217,8 @@ describe("pooled conservation boundaries", () => {
     [null, "invalid-boundary-header"],
     [{ ...generatedHeader(100), number: "0x99" }, "invalid-boundary-header"],
     [{ ...generatedHeader(100), hash: word(0n) }, "invalid-boundary-header"],
-    [{ ...generatedHeader(100), number: "wrong" }, "invalid-rpc-quantity"],
-    [{ ...generatedHeader(100), number: "0x20000000000000" }, "unsafe-rpc-quantity"],
+    [{ ...generatedHeader(100), number: "wrong" }, "invalid-boundary-header"],
+    [{ ...generatedHeader(100), number: "0x20000000000000" }, "invalid-boundary-header"],
     [{ ...generatedHeader(100), timestamp: "0x0" }, "invalid-boundary-time"],
     [{ ...generatedHeader(100), timestamp: "0x999" }, "invalid-boundary-time"],
     [{ ...generatedHeader(100), hash: word(102n) }, "invalid-boundary-time"],

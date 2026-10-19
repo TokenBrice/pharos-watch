@@ -155,13 +155,18 @@ describe("conservation producer publication and cursor fences", () => {
     expect(persistMintBurnRows).toHaveBeenCalledWith(expect.anything(),
       kind === "persisted" ? [row] : [], expect.anything(), expect.anything());
   });
-  it("preserves normal cursor advancement through diagnostic RPC unavailability", async () => {
-    vi.mocked(completeMintBurnConservationAudit).mockReturnValue({ ...audit, status: "unavailable", reason: "audit-rpc-unavailable" });
+  it.each(["audit-rpc-unavailable", "invalid-boundary-header"])("preserves ingestion through diagnostic %s", async (reason) => {
+    vi.mocked(completeMintBurnConservationAudit).mockReturnValue({ ...audit, status: "unavailable", reason });
     const result = await run();
     expect(result.newLastBlock).toBe(102);
     expect(result.summary.errors).toBe(0);
     expect(result.apiErrors).toBe(0);
     expect(result.summary.conservationStatus).toBe("unavailable");
+    expect(result.summary.conservationFailure).toBe(false);
+    expect(result.summary.conservationReason).toBe(reason);
+    expect(persistMintBurnRows).toHaveBeenCalledWith(expect.anything(), [row], expect.anything(), expect.anything());
+    expect(persistMintBurnConservation).toHaveBeenCalledWith(expect.anything(),
+      expect.objectContaining({ status: "unavailable", reason }), undefined);
   });
   it("persists a discrepancy before a row-write failure and fences invalid raw evidence", async () => {
     vi.mocked(completeMintBurnConservationAudit).mockReturnValue({ ...audit, status: "mismatch" });
@@ -175,6 +180,7 @@ describe("conservation producer publication and cursor fences", () => {
     const result = await run();
     expect(result.newLastBlock).toBeNull();
     expect(persistMintBurnRows).toHaveBeenCalledWith(expect.anything(), [], expect.anything(), expect.anything());
+    expect(result.summary.conservationFailure).toBe(true);
   });
   it("propagates cache write failure without returning an advanced cursor", async () => {
     vi.mocked(persistMintBurnConservation).mockRejectedValue(new Error("cache write failed"));

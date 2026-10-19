@@ -97,14 +97,30 @@ describe("completeMintBurnRun", () => {
     expect(result.metadata.apiErrors).toBe(0);
   });
 
-  it("keeps diagnostic-only audit unavailability separate from collection health", async () => {
+  it("immediately degrades the critical lane for a validated boundary reorg", async () => {
     const input = buildRunInput();
-    input.lane = "extended";
+    input.phase.configBreakdown = [{ conservationFailure: true, conservationStatus: "unavailable",
+      conservationReason: "boundary-reorg", key: "test", failedEventDefs: [], errors: 1 } as unknown as MintBurnConfigSummary];
+    const result = await completeMintBurnRun(input);
+    expect(result.status).toBe("degraded");
+    expect(result.metadata.reason).toBe("mint-burn-conservation-failure");
+    expect(result.metadata.conservationFailures).toBe(1);
+  });
+
+  it.each(["extended", "critical"] as const)("keeps diagnostic-only header unavailability separate from %s collection health", async (lane) => {
+    const input = buildRunInput();
+    input.lane = lane;
+    if (lane === "critical") {
+      input.criticalContractsEnabled = 1;
+      input.phase.criticalContractsSatisfied = 1;
+    }
     input.phase.configBreakdown = [{ conservationFailure: false, conservationStatus: "unavailable",
-      key: "test", failedEventDefs: [], errors: 0 } as unknown as MintBurnConfigSummary];
+      conservationReason: "invalid-boundary-header", key: "test", failedEventDefs: [], errors: 0 } as unknown as MintBurnConfigSummary];
     const result = await completeMintBurnRun(input);
     expect(result.status).toBe("ok");
     expect(result.metadata.conservationUnavailable).toBe(1);
+    expect(result.metadata.conservationFailures).toBe(0);
+    expect(result.metadata.reason).toBeUndefined();
     expect(result.metadata.apiErrors).toBe(0);
   });
 
