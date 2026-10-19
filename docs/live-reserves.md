@@ -45,6 +45,8 @@ Instrument identity, complete measurement perimeter and matching units constrain
 
 Forest Road USDfr uses physical token supply plus accrued unissued senior/fee claims as the reserve-liability denominator. Its physical, unissued and effective amounts remain separate diagnostics; this reserve accounting does not replace provider circulating-supply ingestion. See the Forest Road boundary in the linked appendix.
 
+mTBILL's version-two source binding uses an authorized registry-committed SAVE checkpoint plus the matching historical issuer portfolio, disclosed as issuer-reported composition. Its signed date/aggregate does not make API position rows independent assurance. Original checkpoint freshness and the explicit unlinked residual are retained; [source accounting and activation boundaries](process/live-reserves-appendix.md#issuer-balance-sheets-and-reviewed-reports) apply.
+
 Spark Legacy V1 inventory requires all five native Ethereum, Arbitrum, Base, Optimism and Unichain vaults, with chain-qualified holdings and independent block pins; the oldest pin sets aggregate freshness. Spark and Forest Road use version-two reserve bindings so retained Ethereum-only Spark inventory or physical-only Forest Road liability snapshots no longer match the current configuration.
 
 ### Snapshot admission gates

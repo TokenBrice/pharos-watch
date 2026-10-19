@@ -20,6 +20,8 @@ Use shared `src/lib/nav-config.ts`, not a copied menu roster. Peg Tracker links 
 
 `DATA_SOURCE_GROUPS` is the current visible disclosure roster. Adding a major source or externally visible feature updates its runtime copy alongside the owning domain contract. Counts and current memberships derive from shared projections/registries, never a hand-counted doc list. Cemetery uses merged curated-plus-frozen count, matching public export, not curated JSON alone.
 
+Midas mTBILL source disclosure distinguishes its registry-committed issuer checkpoint and aggregate from the matching historical API composition rows. Keep issuer-reported provenance and original-date freshness explicit; SAVE origin verification grants no independent financial assurance, custody allocation or redemption capacity.
+
 Source-family disclosure must remain honest about depth:
 
 - Pricing names market data, oracles, DEX and protocol-redemption/FX-par quotes when publicly surfaced. [Pricing](./pricing-pipeline.md) owns executable guards and current-price admission; [Supply](./supply-snapshot.md) owns curated fail-closed repairs. Positive market cap or configured source never implies active catalog/score admission; [Listing policy](./listing-policy.md) owns quarantine.
