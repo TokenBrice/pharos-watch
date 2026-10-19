@@ -10,11 +10,23 @@
       {
         "label": "USDQ Algorand asset role configuration",
         "url": "https://mainnet-idx.algonode.cloud/v2/assets/2768603795"
+      },
+      {
+        "label": "Pinned Ethereum JSON-RPC reads",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
+      },
+      {
+        "label": "XRPL validated issuer account",
+        "url": "https://xrplcluster.com"
+      },
+      {
+        "label": "Pharos deployment shares observed 2026-10-19",
+        "url": "https://api.pharos.watch/api/stablecoins"
       }
     ],
-    "evidence": "Pinned Ethereum block 26096002 identifies HadronToken implementation 0xbae166f5e8b4b6735341446b1405fa779a92d7c7. Its verified code restricts transfers from blocked senders and lets the owner destroy blocked balances. At validated XRPL ledger 107354828, allowTrustLineClawback is enabled; at Algorand indexer round 65564578, ASA 2768603795 has nonempty issuer freeze and clawback roles. This replaces the former centralized-governance inference with direct implementation and chain evidence.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurM14USDX)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "USDQ resolves Yes on direct holder controls. Ethereum holds 87.4834% and XRPL 12.4976% of supply (2026-10-19 census); both are material. At Ethereum block 26224772 (2026-10-19T06:16:35Z), 0xc83e27f270cce0a3a3a29521173a83f402c1768b is a TransparentUpgradeableProxy over verified HadronToken 0xBaE166F5e8B4B6735341446b1405FA779a92d7C7; owner()=0x284Df7B9d9F471554E9257bD9b116189f7997d45 (nonzero), totalSupply()=7,000,000 USDQ. The verified WithBlockedList code lets the owner add a blocked address, reverts transfers from a blocked sender, and lets destroyBlockedFunds(address) burn the blocked holder's entire balance. At validated XRPL ledger 107755992, issuer rDk1xiArDMjDqnrR2yWypwQAKg4mKnQYvs has Flags 0x80800000, including lsfAllowTrustLineClawback. Algorand ASA 2768603795 has nonempty freeze and clawback roles 3PJ3E3D6XI7YWMJAUX6WDCHWZ4GC2WHTAQIWJBYVJ326LM2I6NSMSLGCDY (sub-threshold).",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "liquidity-or-intent-route",

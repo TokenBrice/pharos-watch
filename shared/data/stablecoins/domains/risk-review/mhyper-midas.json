@@ -10,11 +10,23 @@
       {
         "label": "Midas mHYPER",
         "url": "https://midas.app/mhyper"
+      },
+      {
+        "label": "Ethereum mHYPER verified implementation (mHYPER is mToken)",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3f0ec5b26ec6e50907abea87a798bf395189bcd5"
+      },
+      {
+        "label": "Midas mToken source (blacklist/pause/burn checks)",
+        "url": "https://github.com/midas-apps/contracts/blob/main/contracts/mToken.sol"
+      },
+      {
+        "label": "Midas smart-contract registry",
+        "url": "https://docs.midas.app/resources/smart-contracts-registry"
       }
     ],
-    "evidence": "Explicit Yes: Midas mHYPER is a permissioned liquid-yield token with issuer/admin control surfaces around minting, redemption, transfer administration, and upgradeable protocol contracts.",
-    "reviewer": "Codex 2026-05-14 execution-ready expansion",
-    "reviewedAt": "2026-05-14"
+    "evidence": "At Ethereum block 26224764 (2026-10-19), the mHYPER proxy 0x9b5528528656dbc094765e2abb79f293c21191b9 resolves to verified implementation 0x3f0ec5b26ec6e50907abea87a798bf395189bcd5. mHYPER inherits mToken, whose _beforeTokenTransfer applies _onlyNotBlacklisted to sender and recipient, with role-gated pause (M_HYPER_PAUSE_OPERATOR_ROLE) and privileged burn (M_HYPER_BURN_OPERATOR_ROLE). The token reads shared MidasAccessControl 0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B, where BLACKLIST_OPERATOR_ROLE had 60+ current holders (hasRole true for 0x081bb8ad7f452f916991c17fdfa64d4a25153169 and 0x2facac0cda0225d7acca792821164b398c26bbd2), so an issuer operator can blacklist any holder and stop its transfers. Ethereum held 26,063,069.03 of 26,218,521.44 mHYPER measured across deployments (99.41%), a material deployment. Plasma (115,030.08; 0.44%), Monad (40,418.14; 0.15%) and Katana (4.19) are sub-threshold; Monad and Katana are LayerZero representations reviewed under Bridge Risk.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "oracleless",

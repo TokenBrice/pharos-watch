@@ -10,11 +10,19 @@
       {
         "label": "Pleasing binding Terms of Sale and Service",
         "url": "https://pleasing.gitbook.io/docs/legal/terms-of-sale-and-service"
+      },
+      {
+        "label": "Arbitrum PGOLD proxy and state at block 516203963 (2026-10-19T06:15:56Z)",
+        "url": "https://arb1.arbitrum.io/rpc"
+      },
+      {
+        "label": "Verified PGOLDToken implementation",
+        "url": "https://sourcify.dev/server/v2/contract/42161/0xd81ea1e2179c983a45aa95929f189c2bd59788d7?fields=sources,abi"
       }
     ],
-    "evidence": "The issuer's Token Features disclosure states that specific addresses may be restricted or blacklisted for security and legal compliance. The Terms of Sale and Service reserve freeze/decline powers and emergency restrictions on transfers and wallet addresses. This sourced review retains the existing adverse status; it does not claim that each deployment implements the same blacklist function.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurA60fxSAVE)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "PGOLD's material deployment is Arbitrum 0x3e76bb02286bfeaa89dd35f11253f2cbce634f91 at 94.3089% of supply; Pharos 5.1269%, Ethereum 0.564% and ApeChain 0.0003% are sub-threshold. At Arbitrum block 516203963 (2026-10-19T06:15:56Z) the EIP-1967 implementation is verified PGOLDToken 0xd81ea1e2179c983a45aa95929f189c2bd59788d7, owner() is 0x142a96Da210DeC495a76E56058563549ac12BAB4, and isUseBlackList() is true. PGOLDToken's onlyOwner setBlackList(bool,address[],bool[]) sets per-address flags and _beforeTokenTransfer reverts transfers from or to a blacklisted address while the switch is enabled. A live owner-controlled blacklist is therefore active on the material deployment; the issuer Token Features and Terms of Sale disclosures remain consistent with it but are no longer the verdict basis.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",

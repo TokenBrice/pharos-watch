@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { keccak256, toBytes } from "viem/utils";
 import {
   ACTIVE_STABLECOINS,
   TRACKED_META_BY_ID,
@@ -18,7 +19,7 @@ import {
   getBlacklistEventByTopic,
   getBlacklistTopicHashes,
 } from "../blacklist-contracts";
-import { shouldPreferRpcLogScan } from "../../cron/blacklist/evm-source";
+import { parseEvmLogsWithCoverage, shouldPreferRpcLogScan } from "../../cron/blacklist/evm-source";
 
 const trackedBlacklistStatuses = resolveBlacklistStatuses(TRACKED_STABLECOINS);
 
@@ -73,6 +74,87 @@ describe("blacklist-contracts shared metadata alignment", () => {
       const topicHashes = getBlacklistTopicHashes(config);
       expect(new Set(topicHashes).size).toBe(topicHashes.length);
     }
+  });
+
+  it("matches every configured topic to its canonical ABI signature", () => {
+    for (const config of CONTRACT_CONFIGS) {
+      for (const event of config.events) {
+        expect(event.topicHash, `${config.configKey}: ${event.signature}`).toBe(
+          keccak256(toBytes(event.signature)),
+        );
+      }
+    }
+  });
+
+  it("decodes current and historical PAXG freeze events without duplicating wipe coverage", () => {
+    const config = CONTRACT_CONFIGS.find((entry) => entry.stablecoinId === "paxg-paxos")!;
+    const signatures = [
+      "AddressFrozen(address)",
+      "AddressUnfrozen(address)",
+      "FreezeAddress(address)",
+      "UnfreezeAddress(address)",
+      "FrozenAddressWiped(address)",
+    ];
+    expect(config.events.map((event) => event.signature).sort()).toEqual([...signatures].sort());
+    const address = "0x8a82042fbf41f2cfbb05af8dbaea048adb900637";
+    const parsed = parseEvmLogsWithCoverage(config, signatures.map((signature, index) => ({
+      address: config.contractAddress,
+      topics: [keccak256(toBytes(signature)), `0x${address.slice(2).padStart(64, "0")}`],
+      data: "0x",
+      blockNumber: "0x81938d",
+      transactionHash: "0x78b7566124bb681f854084c2eee7491c739d043015f8d4af2d3417d5c3891f82",
+      logIndex: `0x${index.toString(16)}`,
+      timeStamp: "0x5d716129",
+    })));
+    expect(parsed.failures).toEqual([]);
+    expect(parsed.coverageCeiling).toBeNull();
+    expect(parsed.rows.map((row) => [row.address, row.event_type, row.amount_native])).toEqual([
+      [address, "blacklist", null],
+      [address, "unblacklist", null],
+      [address, "blacklist", null],
+      [address, "unblacklist", null],
+      [address, "destroy", null],
+    ]);
+  });
+
+  it("uses Avalanche USDT's indexed family for freeze, unfreeze, and emitted destroy amounts", () => {
+    const config = getBlacklistConfigsForSymbolAndChain("USDT", "avalanche")[0]!;
+    const signatures = ["BlockPlaced(address)", "BlockReleased(address)", "DestroyedBlockedFunds(address,uint256)"];
+    expect(config.startBlock).toBe(4_663_628);
+    expect(config.events.map((event) => event.signature)).toEqual(signatures);
+    const address = "0xa8ba80e21271742f94bbc2e9937b9b94b6aed1b4";
+    const parsed = parseEvmLogsWithCoverage(config, signatures.map((signature, index) => ({
+      address: config.contractAddress,
+      topics: [keccak256(toBytes(signature)), `0x${address.slice(2).padStart(64, "0")}`],
+      data: index === 2 ? `0x${(12_500_000).toString(16).padStart(64, "0")}` : "0x",
+      blockNumber: "0x1311a04",
+      transactionHash: "0xfe35ceaf6b8a4f3a29dd7a167f8c73b8cc8657deacb3e8dca931d23e86cda464",
+      logIndex: `0x${index.toString(16)}`,
+      timeStamp: "0x6326e69b",
+    })));
+    expect(parsed.failures).toEqual([]);
+    expect(parsed.coverageCeiling).toBeNull();
+    expect(parsed.rows.map((row) => [row.address, row.event_type, row.amount_native])).toEqual([
+      [address, "blacklist", null],
+      [address, "unblacklist", null],
+      [address, "destroy", 12.5],
+    ]);
+  });
+
+  it("does not scan Binance-Peg or legacy Optimism USDT as blacklist emitters", () => {
+    expect(getBlacklistConfigsForSymbolAndChain("USDT", "bsc")).toEqual([]);
+    const optimism = getBlacklistConfigsForSymbolAndChain("USDT", "optimism");
+    expect(optimism).toHaveLength(1);
+    expect(optimism[0].contractAddress.toLowerCase()).toBe("0x01bff41798a0bcf287b996046ca68b395dbc1071");
+    expect(optimism[0].startBlock).toBe(133_193_269);
+    expect(optimism[0].events.map((event) => event.signature)).toEqual([
+      "BlockPlaced(address)", "BlockReleased(address)", "DestroyedBlockedFunds(address,uint256)",
+    ]);
+    const manifest = buildBlacklistCoverageManifest(ACTIVE_STABLECOINS, CONTRACT_CONFIGS);
+    expect(manifest.some((entry) => entry.stablecoinId === "usdt-tether" && entry.chainId === "bsc"
+      && entry.status === "tracked")).toBe(false);
+    expect(manifest.some((entry) => entry.contractAddress?.toLowerCase()
+      === "0x94b008aa00579c1307b0ef2c499ad98a8ce58e58")).toBe(false);
   });
 
   it("keeps the coverage manifest aligned with tracker configs and deferred rows", () => {

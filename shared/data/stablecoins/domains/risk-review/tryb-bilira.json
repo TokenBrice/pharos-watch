@@ -6,11 +6,23 @@
       {
         "label": "Solana finalized TRYB mint observation at slot 452213543 on 2026-10-01",
         "url": "https://api.mainnet-beta.solana.com"
+      },
+      {
+        "label": "TRYB Ethereum proxy and FiatTokenV2 implementation at block 26224768 (2026-10-19T06:15:47Z)",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5f88d1a517b670a14ded5d0cf8b3d37e554d977b"
+      },
+      {
+        "label": "TRYB Ethereum token state",
+        "url": "https://etherscan.io/address/0x2c537e5624e4af88a7ae4060c022609376c8d0eb"
+      },
+      {
+        "label": "TRYB Ethereum public RPC",
+        "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
-    "evidence": "At finalized Solana slot 452213543 on 2026-10-01, getAccountInfo for TRYB mint A94X2fRy3wydNShU4dRaDyap2UuoeWJGWyATtyp61WZf reported SPL Token freezeAuthority 2HSrubRZSb63hjvhjE8bg4JCbCbCgjM9xJ2crKfjSGqP and mintAuthority 33DNQBuPFT3EmyEuqZvGWG2vs29Mfc3HgvgScD32SNDE. A configured freeze authority can freeze individual token accounts; the explicit Yes verdict no longer relies solely on the centralized-governance metadata inference.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurB19spUSD)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "TRYB's largest deployment is Ethereum 0x2c537e5624e4af88a7ae4060c022609376c8d0eb at 35.9963% of supply; Plasma 31.9306% and Polygon 11.8215% are also material, while Solana 5.6421% is not. At Ethereum block 26224768 (2026-10-19T06:15:47Z), the legacy proxy implementation slot resolves to verified FiatTokenV2 0x5f88d1a517b670a14ded5d0cf8b3d37e554d977b. The token exposes blacklist(address)/unBlacklist(address) and seize(address) over its blacklisted mapping, with blacklister() = 0x8cb445F6bD3AB1513e43500Ec41E01bD969f79CE, pauser() = 0x56C747A9A8C828274249E55d3Cb3172B075C740A and paused() = false; nine Blacklisted(address) events have been emitted. An active, non-zero blacklister can therefore block a named holder's transfers on a material deployment. The previously cited Solana mint freezeAuthority 2HSrubRZSb63hjvhjE8bg4JCbCbCgjM9xJ2crKfjSGqP (finalized slot 452213543) remains disclosed as a sub-threshold control.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",

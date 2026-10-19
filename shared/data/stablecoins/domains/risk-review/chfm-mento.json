@@ -1,7 +1,7 @@
 {
   "id": "chfm-mento",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Mento CHFm on Celo documentation",
@@ -30,12 +30,68 @@
       {
         "label": "Mento Reserve dashboard",
         "url": "https://reserve.mento.org/"
+      },
+      {
+        "label": "CHFm Celo verified proxy",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0xb55a79f398e759e43c95b979163f30ec87ee131d"
+      },
+      {
+        "label": "Current verified StableTokenV3 implementation",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x815795c30d0758a297b08cd4e0643620c974c318"
+      },
+      {
+        "label": "Pinned Celo RPC reads",
+        "url": "https://forno.celo.org"
+      },
+      {
+        "label": "Pinned official backing/lockbox configuration",
+        "url": "https://github.com/mento-protocol/mento-analytics-api/blob/36441a61f7ad339fe4998596f6bbed1005342ba8/src/api/v2/config/stablecoin-backing.config.ts"
+      },
+      {
+        "label": "TroveManager active burner/operator verified source",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x4e105fef015db26320c077427bd605acead9262e"
+      },
+      {
+        "label": "BorrowerOperations active burner/operator verified source",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x7fe90cf5a41473179fce89df55bc9afcd1c5c0be"
+      },
+      {
+        "label": "CollateralRegistry active burner/operator verified source",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x8530ee22a4adc37b02d1cd37fc120508663fedf8"
+      },
+      {
+        "label": "StabilityPool active burner/operator verified source",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x8a68CBB2fFF99Ea400FF330DBD1a7904775B4b44"
+      },
+      {
+        "label": "CHFm complete BurnerUpdated(address,bool) role-assignment history",
+        "url": "https://celo.blockscout.com/api/v2/addresses/0xb55a79f398e759e43c95b979163f30ec87ee131d/logs?topic=0xf0e5abe4ab32ea692e3889b4c146fd4ddae5f17bb40ab4feba97fb67a2d4de0f"
+      },
+      {
+        "label": "CHFm complete OperatorUpdated(address,bool) role-assignment history",
+        "url": "https://celo.blockscout.com/api/v2/addresses/0xb55a79f398e759e43c95b979163f30ec87ee131d/logs?topic=0x966c160e1c4dbc7df8d69af4ace01e9297c3cf016397b7914971f2fbfa32672d"
+      },
+      {
+        "label": "CHFm Monad verified proxy",
+        "url": "https://monadscan.com/address/0xf64e91ffef7ef43aa314f0bc2ac39f770797990c#code"
+      },
+      {
+        "label": "Verified Monad StableTokenSpoke implementation",
+        "url": "https://monadscan.com/address/0x6a8ff60a89f3f359fa16f45076d6dd1712b5e62e#code"
+      },
+      {
+        "label": "Pinned Monad RPC reads",
+        "url": "https://rpc.monad.xyz"
+      },
+      {
+        "label": "Mento Safe authority",
+        "url": "https://api.safe.global/tx-service/celo/api/v1/safes/0x58099b74f4acd642da77b4b7966b4138ec5ba458/"
       }
     ],
     "sourceFreeRationale": "Explicit true: the current Celo CHFm owner can authorize a burner that directly burns an arbitrary holder balance. This direct freeze/blacklist-equivalent capability is distinct from the transfer-review lane and does not suppress upstream USDm exposure.",
-    "evidence": "At Celo block 72170200, the verified CHFm StableTokenV3 implementation exposed owner-gated setBurner(address,bool), whose enabled burner can call burn(address account,uint256 value) against an arbitrary holder balance, and owner-gated setOperator(address,bool), whose enabled operator can sendToPool(sender,pool,amount) from an arbitrary holder. Both owner() and the custom proxy owner resolved to the 4-of-6 Mento Safe. The observed burner/operator contracts use constrained protocol paths, but the owner can authorize another burner or operator. This establishes a current direct individual-holder intervention capability even though the ABI has no named blacklist, freeze, or pause function.",
-    "reviewer": "GPT SOL-MENTO wave6",
-    "reviewedAt": "2026-07-22"
+    "evidence": "Celo proxy 0xb55a79f398e759e43c95b979163f30ec87ee131d resolves to StableTokenV3 0x815795c30d0758a297b08cd4e0643620c974c318, owned by the 4-of-6 Safe 0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458 at Celo block 80489715. StableTokenV3 owner-only setBurner/setOperator and role-gated burn(address,uint256)/sendToPool are at L153-L183: https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/tokens/StableTokenV3.sol#L153-L183. Complete BurnerUpdated history (latest assignment block 65399198) lists the four current burners and Broker’s false state: https://celo.blockscout.com/api/v2/addresses/0xb55a79f398e759e43c95b979163f30ec87ee131d/logs?topic=0xf0e5abe4ab32ea692e3889b4c146fd4ddae5f17bb40ab4feba97fb67a2d4de0f. OperatorUpdated history identifies only StabilityPool 0xc415ca43ab6ab246e64559696b8dcacdd08a39e8 as operator: https://celo.blockscout.com/api/v2/addresses/0xb55a79f398e759e43c95b979163f30ec87ee131d/logs?topic=0x966c160e1c4dbc7df8d69af4ace01e9297c3cf016397b7914971f2fbfa32672d. Current minters from complete MinterUpdated history are ActivePool 0x9947CEe121586fC31b0b0a162A40D6516979E7cB and BorrowerOperations 0x7Fe90CF5A41473179fCE89Df55bc9afcd1c5c0be; Broker is false: https://celo.blockscout.com/api/v2/addresses/0xb55a79f398e759e43c95b979163f30ec87ee131d/logs?topic=0xb21afb9ce9be0a676f8f317ff0ca072fb89a4f8ce2d1b6fe80f8755c14f1cb19. Blockscout identifies 0x9947CEe121586fC31b0b0a162A40D6516979E7cB as ActivePool: https://celo.blockscout.com/api/v2/addresses/0x9947CEe121586fC31b0b0a162A40D6516979E7cB. Verified source paths burn msg.sender in BorrowerOperations (L728, L1091), TroveManager (L919), CollateralRegistry (L133, L217); StabilityPool deposits msg.sender (L277), burns address(this) (L490), and returns from address(this) (L616): https://github.com/mento-protocol/bold/blob/858ef07a497d748cdf65c602a56b4de901d4080e/contracts/src/BorrowerOperations.sol#L728-L1091; https://github.com/mento-protocol/bold/blob/858ef07a497d748cdf65c602a56b4de901d4080e/contracts/src/TroveManager.sol#L919; https://github.com/mento-protocol/bold/blob/858ef07a497d748cdf65c602a56b4de901d4080e/contracts/src/CollateralRegistry.sol#L133-L217; https://github.com/mento-protocol/bold/blob/858ef07a497d748cdf65c602a56b4de901d4080e/contracts/src/StabilityPool.sol#L277-L616. On material Monad, StableTokenSpoke exposes only self-burn `burn(uint256)` (L100-L114), and NttManager pulls msg.sender’s tokens before burning its own balance (L409, L429): https://github.com/mento-protocol/mento-core/blob/main/contracts/tokens/StableTokenSpoke.sol#L100-L114; https://github.com/mento-protocol/mento-stabletoken-ntt/blob/main/evm/src/NttManager/NttManager.sol#L404-L429. The same owner Safe can grant a new burner/operator, establishing Possible.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "standard-external",

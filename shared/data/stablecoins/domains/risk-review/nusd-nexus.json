@@ -1,7 +1,7 @@
 {
   "id": "nusd-nexus",
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": false,
     "sources": [
       {
         "label": "Synapse LPToken source (no freeze, blacklist, or transfer pause)",
@@ -22,12 +22,36 @@
       {
         "label": "Ethereum PublicNode RPC",
         "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Exact verified canonical LPToken",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6c8c6e68604e78b549c96907bfe9ebdaac04e3b3"
+      },
+      {
+        "label": "Nexus pool verified implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5a5fff6f753d7c11a56a52fe47a177a87e431655"
+      },
+      {
+        "label": "USDC exact implementation in reviewed graph",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x43506849d7c04f9138d1a2050bbf3a0c054402dd"
+      },
+      {
+        "label": "USDT verified token in reviewed graph",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xdac17f958d2ee523a2206206994597c13d831ec7"
+      },
+      {
+        "label": "Synapse canonical pool configuration",
+        "url": "https://github.com/synapsecns/synapse-contracts/blob/master/script/configs/mainnet/LinkedPool.CCTP.USDC.dc.json"
+      },
+      {
+        "label": "Synapse intermediate token registry",
+        "url": "https://docs.synapseprotocol.com/docs/Contracts/Intermediate-Tokens"
       }
     ],
     "sourceFreeRationale": "Deployment-wide inventory completed: every reviewed NUSD deployment is either the canonical Ethereum nexus-pool LPToken clone or a SynapseERC20 bridge deployment, and neither token implementation exposes holder freeze, denylist, or transfer-pause controls.",
-    "evidence": "Re-verified 2026-08-08 at Ethereum block 25712317: canonical NUSD 0x1b84765de8b7566e4ceaf4d0fd3c5af52d3dde4f remains the fixed 45-byte EIP-1167 clone of LPToken implementation 0x6c8c6e68604e78b549c96907bfe9ebdaac04e3b3, its EIP-1967 slots remain zero, and owner() still returns nexus pool 0x1116898dda4015ed8ddefb84b6e8bc24528af2d8. Verified LPToken source exposes only pool-owner mint, burn, and a self-transfer guard, with no blacklist, freeze, arbitrary holder burn, or pausable transfer path. The twelve reviewed peripheral deployments are fixed SynapseERC20 clones whose verified logic likewise gates mint only and leaves transfers permissionless. The pool admin can pause pool operations but cannot restrict NUSD holder transfers, and no separate issuer has a legal or technical holder-balance freeze power over these fixed contracts.",
-    "reviewer": "Codex C08 control/access audit",
-    "reviewedAt": "2026-08-08"
+    "evidence": "The local Ethereum reserve conclusion can be tightened from the earlier selected-pool figures: at Ethereum block 26224858, hash 0x132f3f673d92d042019d995bbd66ef51bfbd7caafe97c02e84fd3c37a705b91f, timestamp 2026-10-19T06:33:47Z, getToken/getTokenBalance on canonical nexus pool 0x1116898dda4015ed8ddefb84b6e8bc24528af2d8 enumerate exactly DAI 0x6b175474e89094c44da98b954eedeac495271d0f (368448.319060168273660583), USDC 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 (369110.061643), USDT 0xdac17f958d2ee523a2206206994597c13d831ec7 (1236932.824137); index 3 reverts. Actual ERC20 balances are larger (368611.728457617714772667 DAI, 369246.57238 USDC, 1237168.867405 USDT) and must not substitute for redeemable LP book balances. DAI qualifies categorically because its issuer/custodian-terminal Sky backing exceeds 50% under the FreezeWatch decision procedure (docs/blacklist-tracker.md); USDC/USDT qualify directly. The selected LP-book categorical share is therefore 100%, independent of prices. Its nominal 1:1-stablecoin diagnostic is 81.33958165% USDC+USDT and 18.66041835% DAI; pro-rating only DAI at Sky56.1 gives 91.80807635%. These nominal diagnostics are not same-block USD NAV weights and do not establish a global denominator. Canonical LP token 0x1b84765de8b7566e4ceaf4d0fd3c5af52d3dde4f has fixed 45-byte EIP1167 runtime pointing to 0x6c8c6e68604e78b549c96907bfe9ebdaac04e3b3, owner()=the nexus pool and totalSupply()=1971838.9737393188931238. Verified LPToken has only pool-owner minting, self/allowance-authorized ERC20Burnable burns and a self-transfer guard; no mutable token implementation, holder blacklist, transfer pause, confiscation, or arbitrary-holder burner. The verified SwapFlashLoan pool target is 0x5a5fff6f753d7c11a56a52fe47a177a87e431655; proportional removeLiquidity remains available while paused. Bridge redeem calls burnFrom(msg.sender,amount), and peripheral SynapseERC20 inherits allowance-bound burns; mint-only bridge/admin roles do not qualify as holder controls. A bridge-global redemption pause does not count as a token-level holder control, and upgrading that bridge does not bypass the fixed token's allowance checks. Synapse describes nUSD as backed by the Ethereum Nexus pool and deploys satellites as fixed bridge-mintable SynapseERC20 clones: https://docs.synapseprotocol.com/docs/Bridge/ ; https://raw.githubusercontent.com/synapsecns/synapse-contracts/master/deploy/010_deploy_nUSD.ts ; https://raw.githubusercontent.com/synapsecns/synapse-contracts/master/contracts/bridge/SynapseERC20Factory.sol ; https://github.com/synapsecns/synapse-contracts/blob/master/contracts/bridge/SynapseERC20.sol . That supports an explicitly conditional whole-system100% basket conclusion, not a measured all-chain reconciliation. Official rosters disagree: https://docs.synapseprotocol.com/docs/Contracts/Intermediate-Tokens includes DFK but not Canto and warns it may be incomplete, whereas https://api.synapseprotocol.com/tokenlist includes Canto, with official Canto and DFK deployment manifests in the Synapse repository. The decisive missing data are a reconciled deployment roster, every satellite's supply/bridge-held balance and in-flight burn/mint state, matched against canonical LP escrow and priced whole liabilities. Fresh balanceOf(bridge0x2796317b0ff8538f253012862c06787adfb8ceb6) at the same Ethereum pin is 1935287.178494324130853933 LP; nonbridge canonical supply is only 36551.795244994762269867 (1.85369068% of canonical total). Therefore raw canonical supply cannot validate the 69.1155% Ethereum free-circulation share recorded in the supply data, and that figure must not be multiplied by local exposure to invent a global floor. No price/source or wrapper-status assumption can repair the missing global claim weights. Strictly, the verdict remains No, low-confidence and unresolved rather than evidence that actual qualifying exposure is zero. No state-changing calls were submitted.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "liquidity-or-intent-route",

@@ -1,7 +1,7 @@
 {
   "id": "fxusd-f-x-protocol",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "f(x) Protocol risk parameters",
@@ -18,11 +18,23 @@
       {
         "label": "fxUSD Base contract",
         "url": "https://basescan.org/address/0x55380fe7a1910dff29a47b622057ab4139da42c5#code"
+      },
+      {
+        "label": "Current verified FxUSDRegeneracy implementation",
+        "url": "https://etherscan.io/address/0xf729422d68c2cf00574fb5712972454cf402a9b1#code"
+      },
+      {
+        "label": "Current verified PoolManager executable burn paths",
+        "url": "https://etherscan.io/address/0xa70dddb8ddd06b1c26061d998e041748b18ecf85#code"
+      },
+      {
+        "label": "Ethereum fixed-block public RPC",
+        "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
-    "evidence": "The verified Base FxUSD OFT implementation exposes owner-controlled pause() and unpause() functions alongside transfer and transferFrom, so the tracked fxUSD deployment has direct system-wide transfer-pause capability. The official f(x) risk documentation describes protocol halts during peg stress, while the Ethereum deployment is separately upgradeable through the reviewed timelock. USDC, Aave, and collateral dependencies add separate upstream exposure.",
-    "reviewer": "SONG Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "fxUSD is Possible because its material Ethereum token implementation remains admin-upgradeable. Census deployment shares are Ethereum 99.8988% and Base 0.1012%; the Base pause does not set the verdict. At Ethereum block 26224762 (2026-10-19T06:14:35Z), proxy 0x085780639cc2cacd35e474e71f4d000e2405d8f6 resolves to verified FxUSDRegeneracy 0xf729422d68c2cf00574fb5712972454cf402a9b1. EIP-1967 admin is ProxyAdmin 0x9b54b7703551d9d0ced177a78367560a8b2edda4, whose owner is timelock 0x68863fb8855b04509a835082478d6e3d0be4e61a with getMinDelay()=259200 seconds. Direct token upgradeability counts even under DAO governance. Current FxUSDRegeneracy and inherited ERC20 transfers contain no transfer blacklist or token-level pause; paused() reverts, while legacy mint/earn entry points reverting with pause messages do not establish transfer pause. burn(address,uint256) is callable only by poolManager 0x250893ca4ba5d05626c785e8da758026928fcd24. At the same block that proxy resolves to verified PoolManager 0xa70dddb8ddd06b1c26061d998e041748b18ecf85; every fxUSD burn call in its current code burns _msgSender(), not an independently selected victim, so the assigned contract does not establish active arbitrary-holder seizure. Its upgrade authority is the same ProxyAdmin. Base contract 0x55380fe7a1910dff29a47b622057ab4139da42c5 separately has owner-controlled pause/unpause protecting the transfer _update hook; owner()=0x44e4158d93accf19f7b97a28b88a26dff3c3d6d2 at Base block 52800565 (2026-10-19T06:14:37Z), but this peripheral control is disclosed only. Protocol risk documentation describes halts during peg stress, distinct from the token-transfer question. Custodial-collateral and strategy dependencies can add upstream exposure; no new debt-weighted reserve-majority measurement is asserted here, and upstream exposure cannot displace direct Possible.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "redundant-with-failover",

@@ -10,11 +10,35 @@
       {
         "label": "Spiko smart contracts",
         "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+      },
+      {
+        "label": "Spiko Stellar token source",
+        "url": "https://github.com/spiko-tech/stellar-contracts"
+      },
+      {
+        "label": "Stellar GBPSAFO contract and supply",
+        "url": "https://stellar.expert/explorer/public/contract/CAGYRRKPFSWKM6SJOE4QAAVYMOSHMDS5WOQ4T5A2E6XNCU7LZZKUNQKP"
+      },
+      {
+        "label": "Verified Spiko Token implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x60fcb8511db2a7b823cd0f3c6b08da456e18bff1"
+      },
+      {
+        "label": "Ethereum observation block 26224761",
+        "url": "https://etherscan.io/block/26224761"
+      },
+      {
+        "label": "Arbitrum observation block 516204261",
+        "url": "https://arbiscan.io/block/516204261"
+      },
+      {
+        "label": "Polygon observation block 95790196",
+        "url": "https://polygonscan.com/block/95790196"
       }
     ],
-    "evidence": "GBPSAFO is issued through permissioned fund or issuer rails with KYC-gated primary-market access and issuer/admin controls over transfer, mint, redemption, or token administration.",
-    "reviewer": "Codex 2026-05-14 execution-ready expansion",
-    "reviewedAt": "2026-05-14"
+    "evidence": "Re-reviewed 2026-10-19. The decisive deployment is Stellar token CAGYRRKPFSWKM6SJOE4QAAVYMOSHMDS5WOQ4T5A2E6XNCU7LZZKUNQKP (wasm 83bf0a7fbe1502271f2e14d2a5a46c9cde1aa213be97616bd7c6b102b342692f), whose instance binds PERM to PermissionManager CBGHLRSX5D5YMBPNK4ZGMUTJUHFIT7YGXGJURM5LFNZ7B6WNSXLGS26M. Its transfer and safe_transfer methods require WHITELISTED_ROLE on both from and to, burn(account,amount,caller) burns an arbitrary account when called with BURNER_ROLE, pause is PAUSER_ROLE-gated and upgrade is owner-only. At Soroban ledger 65021030 (2026-10-19T06:22:13Z) simulateTransaction has_role returned WLISTER Some(0) for GD2ELXTHZQORSH75SJE6XRTCKXNDGJFIZ4R2SZ4MMXDOBT52GK26X4EO and Some(1) for GAUYO4UAESQD6SGZDPOIG2ADT7EZTR5EJ7HSX4CYCWS2JMMGQOCL4QCX, and BURNER Some(0) for redemption contract CAVZK26ERVGKGXLQGEOKPAQGIZS2YKN4BSXOYDMUY365EV66ZNSFEDBS. The permission-manager event history contains role_revoked|WLISTED, proving holders are de-listed through this path. The EVM deployments use the verified Spiko Token implementation (6,009-byte Token.sol core; Etherscan v2 verified), whose _update requires PermissionManager.canCall(from/to, token, 0xa9059cbb) and which exposes restricted pause(), restricted burn(address,uint256) and restricted UUPS upgrade. At Ethereum block 26224761 (2026-10-19T06:14:23Z) the Ethereum authority 0x344278aff344d6fb960705dc18a4912221608472 returned getRequirements(token,0xa9059cbb)=65 and a holder-to-0x...0001 transfer reverted with UnauthorizedTo 0xb77a4ad1; Arbitrum 0xa925C217e4c1C82Ee721eBD496d3863D5C2d829A and Polygon 0x344278... return the same requirement. Materiality: measured totalSupply at 2026-10-19 is 3,840,818,109,156 raw 5-decimal units: Stellar 3,576,878,729,761 (93.13%), Polygon 144,898,307,707 (3.77%), Arbitrum 106,990,105,722 (2.79%), Base 9,775,582,147 (0.25%), Ethereum 1,265,198,050 (0.03%), Starknet 1,010,185,769 (0.03%). The Stellar deployment is material and directly controlled; the EVM controls remain disclosed at sub-threshold shares. There is no declared parent; the reserve test is not reached because a direct holder control is established.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

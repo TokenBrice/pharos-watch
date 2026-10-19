@@ -6,11 +6,31 @@
       {
         "label": "Securitize VBILL page",
         "url": "https://securitize.io/primary-market/vaneck-vbill"
+      },
+      {
+        "label": "bsc current DSToken implementation",
+        "url": "https://bscscan.com/address/0xcd01d1c5c78ad428cd01913d4664c20ed1e61923"
+      },
+      {
+        "label": "ethereum current DSToken implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xaf88485377cca5e690e7dcb1ba81370f0b575156"
+      },
+      {
+        "label": "Solana Token-2022 mint authority and supply",
+        "url": "https://solscan.io/token/34mJztT9am2jybSukvjNqRjgJBZqHJsHnivArx1P4xy1"
+      },
+      {
+        "label": "Pinned EVM JSON-RPC authority reads",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Solana finalized mint authority reads",
+        "url": "https://solana-rpc.publicnode.com"
       }
     ],
-    "evidence": "Securitize operates VBILL with permissioned token transfers restricted to KYC-onboarded institutional holders and retains transfer-agent freeze and burn authority on behalf of Van Eck Associates.",
-    "reviewer": "Codex RWA expansion review",
-    "reviewedAt": "2026-05-12"
+    "evidence": "VBILL is a Securitize-administered VanEck fund token, with permissioned transfers restricted to KYC-onboarded institutional holders. On 2026-10-19, direct per-deployment reads measured 48695619.069655001163 total outstanding tracked share units: avalanche: 706864.040000000037 shares / 1.451597% at block 97944378 (2026-10-19T06:17:04+00:00); bsc: 21626229.800000000745 shares / 44.411038% at block 128504754 (2026-10-19T06:17:05+00:00); ethereum: 22098781.729655001312 shares / 45.381458% at block 26224774 (2026-10-19T06:16:59+00:00); solana: 4263743.500000000000 shares / 8.755908% at slot 458730399. The denominator is the sum of token totalSupply / mint supply across every catalogued deployment (Aptos ConcurrentSupply for ACRED), not missing census USD market cap, and is not an independent reconciliation of fund NAV liabilities. Material deployments are bsc, ethereum; sub-10% deployments are disclosed but do not set the verdict. bsc@128504754 (2026-10-19T06:17:05+00:00): owner()=0x59c1eacec450c57dcb9b8725d0f96635c2b676ee; getDSService(1)=0x079864f3dab043382f3cab4683fcb2aaa56894a4; trust.getRole(owner)=1 (MASTER); EIP-1967 implementation=0xcd01d1c5c78ad428cd01913d4664c20ed1e61923. https://bscscan.com/address/0xcd01d1c5c78ad428cd01913d4664c20ed1e61923\n\nethereum@26224667 (2026-10-19T05:55:35Z): owner()=0x59c1eacec450c57dcb9b8725d0f96635c2b676ee; getDSService(1)=0x08b9c1f3e2f236890b975dee37ee3579a0d4516b; trust.getRole(owner)=1 (MASTER); EIP-1967 implementation=0xaf88485377cca5e690e7dcb1ba81370f0b575156. https://eth.blockscout.com/api/v2/smart-contracts/0xaf88485377cca5e690e7dcb1ba81370f0b575156\n\nCurrent verified DSToken source has onlyTransferAgentOrAbove seize(from,to,value,reason), onlyIssuerOrTransferAgentOrAbove burn(who,value,reason), and ServiceConsumer allows MASTER for both; no holder allowance required. These are present holder-targeted functions with current nonzero authorized callers, not just an admin's ability to add future burners. Ordinary transfer compliance is also permissioned, but active seizure/arbitrary-holder burn/freeze is sufficient for Yes. No declared parent is needed. Declared reserves are 100% custodial fund shares; that upstream exposure is secondary and does not supersede the direct Yes verdict.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",

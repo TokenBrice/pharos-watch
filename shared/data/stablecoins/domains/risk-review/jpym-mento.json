@@ -1,7 +1,7 @@
 {
   "id": "jpym-mento",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Mento JPYm documentation",
@@ -50,12 +50,52 @@
       {
         "label": "Monad public RPC control reads",
         "url": "https://rpc.monad.xyz"
+      },
+      {
+        "label": "Pinned official backing/lockbox configuration",
+        "url": "https://github.com/mento-protocol/mento-analytics-api/blob/36441a61f7ad339fe4998596f6bbed1005342ba8/src/api/v2/config/stablecoin-backing.config.ts"
+      },
+      {
+        "label": "CollateralRegistry active burner/operator verified source",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x343815db498d60a04ecf666f2ff9e5d6a2ac6d0e"
+      },
+      {
+        "label": "BorrowerOperations active burner/operator verified source",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x4944fc84d675a0cc4758a8098c1619a2e4724a7f"
+      },
+      {
+        "label": "StabilityPool active burner/operator verified source",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x107eCcE37c1FE3C8154B67F9ddD3d5A1446f084B"
+      },
+      {
+        "label": "TroveManager active burner/operator verified source",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0xd2e65af47d927d5e84f384ae6bac4f97c3da65df"
+      },
+      {
+        "label": "JPYm complete BurnerUpdated(address,bool) role-assignment history",
+        "url": "https://celo.blockscout.com/api/v2/addresses/0xc45ecf20f3cd864b32d9794d6f76814ae8892e20/logs?topic=0xf0e5abe4ab32ea692e3889b4c146fd4ddae5f17bb40ab4feba97fb67a2d4de0f"
+      },
+      {
+        "label": "JPYm complete OperatorUpdated(address,bool) role-assignment history",
+        "url": "https://celo.blockscout.com/api/v2/addresses/0xc45ecf20f3cd864b32d9794d6f76814ae8892e20/logs?topic=0x966c160e1c4dbc7df8d69af4ace01e9297c3cf016397b7914971f2fbfa32672d"
+      },
+      {
+        "label": "JPYm Monad verified proxy",
+        "url": "https://monadscan.com/address/0x22f6a6752800eab67b84748fefc3cc658384af72#code"
+      },
+      {
+        "label": "Verified Monad StableTokenSpoke implementation",
+        "url": "https://monadscan.com/address/0x6a8ff60a89f3f359fa16f45076d6dd1712b5e62e#code"
+      },
+      {
+        "label": "Mento Safe authority",
+        "url": "https://api.safe.global/tx-service/celo/api/v1/safes/0x58099b74f4acd642da77b4b7966b4138ec5ba458/"
       }
     ],
     "sourceFreeRationale": "Explicit true: Celo JPYm's live 4-of-6 owner Safe can immediately authorize a burner, and the verified implementation gives every burner an arbitrary-account burn without holder allowance. This direct Celo control does not suppress the separately reviewed USDm reserve exposure.",
-    "evidence": "Celo establishes a direct Yes independently of the Monad route. At Celo block 72188773, JPYm proxy 0xc45ecf20f3cd864b32d9794d6f76814ae8892e20 returned StableTokenV3 implementation 0x815795c30d0758a297b08cd4e0643620c974c318; both proxy _getOwner() and delegated owner() returned 0x58099b74f4acd642da77b4b7966b4138ec5ba458. The deployment registry identifies that address as Mento MigrationMultisig, and the Celo Safe authority observation at block 69291577 records a 4-of-6 Safe with no enabled modules and a zero guard. The verified proxy source gives its owner implementation-change authority; the verified StableTokenV3 source gives the owner setBurner authority, and any burner can call burn(address,uint256) against an arbitrary account without that holder's allowance. JPYm BorrowerOperations and TroveManager both returned isBurner=true at the pinned Celo block. Current zero-value transfer and transferFrom simulations returned true, so this is a live admin-authorizable arbitrary-burn finding rather than a claim that a global transfer stop is currently active. On Monad at block 87842958, tracked 0x22f6a6752800eab67b84748fefc3cc658384af72 reported name Mento Japanese Yen, symbol JPYm, owner 0x58099b74f4acd642da77b4b7966b4138ec5ba458, EIP-1967 implementation slot 0x6a8ff60a89f3f359fa16f45076d6dd1712b5e62e, and ordinary zero-value transfer/transferFrom results. The pinned deployment registry does not map this Monad address, and neither a verified explorer source nor a Sourcify source match was available for its implementation; this direct Celo burn result is not asserted for Monad. Mento's published legal source is a privacy notice rather than token-control authority; live reserve analytics and the archived dashboard establish transparency availability and separate upstream stablecoin exposure, not a holder-control power.",
-    "reviewer": "Codex Safety Score V9 access review",
-    "reviewedAt": "2026-07-15"
+    "evidence": "Celo proxy 0xc45ecf20f3cd864b32d9794d6f76814ae8892e20 resolves to StableTokenV3 0x815795c30d0758a297b08cd4e0643620c974c318, owned by the 4-of-6 Safe 0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458 at Celo block 80489715. StableTokenV3 owner-only setBurner/setOperator and role-gated burn(address,uint256)/sendToPool are at L153-L183: https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/tokens/StableTokenV3.sol#L153-L183. Complete BurnerUpdated history (latest assignment block 65397648) lists the four current burners and Broker’s false state: https://celo.blockscout.com/api/v2/addresses/0xc45ecf20f3cd864b32d9794d6f76814ae8892e20/logs?topic=0xf0e5abe4ab32ea692e3889b4c146fd4ddae5f17bb40ab4feba97fb67a2d4de0f. OperatorUpdated history identifies only StabilityPool 0x62A519b4D0693E976b78b195E34a548BcF1D2355 as operator: https://celo.blockscout.com/api/v2/addresses/0xc45ecf20f3cd864b32d9794d6f76814ae8892e20/logs?topic=0x966c160e1c4dbc7df8d69af4ace01e9297c3cf016397b7914971f2fbfa32672d. Current minters from complete MinterUpdated history are ActivePool 0x90b8A5Ad63bDB2a3DC636DA926aB5c039EA426a4 and BorrowerOperations 0x4944Fc84D675a0Cc4758A8098C1619A2E4724a7F; Broker is false: https://celo.blockscout.com/api/v2/addresses/0xc45ecf20f3cd864b32d9794d6f76814ae8892e20/logs?topic=0xb21afb9ce9be0a676f8f317ff0ca072fb89a4f8ce2d1b6fe80f8755c14f1cb19. Blockscout identifies 0x90b8A5Ad63bDB2a3DC636DA926aB5c039EA426a4 as ActivePool: https://celo.blockscout.com/api/v2/addresses/0x90b8A5Ad63bDB2a3DC636DA926aB5c039EA426a4. Verified source paths burn msg.sender in BorrowerOperations (L728, L1091), TroveManager (L919), and CollateralRegistry (L133, L217); StabilityPool deposits msg.sender (L277), burns address(this) (L490), and returns from address(this) (L616): https://github.com/mento-protocol/bold/blob/858ef07a497d748cdf65c602a56b4de901d4080e/contracts/src/BorrowerOperations.sol#L728-L1091; https://github.com/mento-protocol/bold/blob/858ef07a497d748cdf65c602a56b4de901d4080e/contracts/src/TroveManager.sol#L919; https://github.com/mento-protocol/bold/blob/858ef07a497d748cdf65c602a56b4de901d4080e/contracts/src/CollateralRegistry.sol#L133-L217; https://github.com/mento-protocol/bold/blob/858ef07a497d748cdf65c602a56b4de901d4080e/contracts/src/StabilityPool.sol#L277-L616. On material Monad, StableTokenSpoke exposes only self-burn burn(uint256) (L100-L114), and NttManager pulls msg.sender’s tokens before burning its own balance (L409, L429): https://github.com/mento-protocol/mento-core/blob/main/contracts/tokens/StableTokenSpoke.sol#L100-L114; https://github.com/mento-protocol/mento-stabletoken-ntt/blob/main/evm/src/NttManager/NttManager.sol#L404-L429. Granting a new burner/operator remains Possible.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "standard-external",

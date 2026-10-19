@@ -10,11 +10,23 @@
       {
         "label": "Verified AllUnity implementation: blacklist transfer checks",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x56c19aea2192ff0ac5f6b252776480db601a1482"
+      },
+      {
+        "label": "Verified blacklist manager",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x699be2F931257c6Df3BF39C074b6c3324984f5a7"
+      },
+      {
+        "label": "Pinned Ethereum role and implementation reads",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Solana mint supply and authorities",
+        "url": "https://api.mainnet-beta.solana.com"
       }
     ],
-    "evidence": "Whitepaper clauses 3 and 4 prohibit blacklisted-address transfers and permit the issuer to block transfers to or from blacklisted addresses. The implementation active on all six reviewed EVM chains checks BLACKLISTED_ROLE in _update and supports role-gated burning from blacklisted addresses; Solana finalized slot 452227640 retains a freeze authority and permanent delegate. At Ethereum block 26096138, the token's separate blacklist contract is 0xeafba0d16d6a0ff3c6c5d0a46ca7b8fbff21a9d3 and the recorded EVM admin holds its DEFAULT_ADMIN_ROLE.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurM16cNGN)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "Reviewed 2026-10-19. All eight registered deployments were supply-scoped: Ethereum 382,898.646998, Base 11,530, Arbitrum 205, Tempo 42 and Solana 26 EURAU; OP, Polygon and BSC are zero. The additive registered-token-supply denominator is 394,701.646998 EURAU (cross-chain snapshots 06:16-06:17 UTC; Solana finalized slot 458730415), placing Ethereum at 97.00964% and every other deployment below 10%. This supply cross-check also resolves chains missing from the circulating-supply census, which had Ethereum 97.0664%. At Ethereum block 26224761 (2026-10-19T06:14:23Z), the implementation is 0x56c19aea2192ff0ac5f6b252776480db601a1482 and blacklist() is 0xeafba0d16d6a0ff3c6c5d0a46ca7b8fbff21a9d3. The current registry grants BLACKLISTER_ROLE to EOA 0x72b604de032cb733e18d06d91ccc87bb4a9df637; DEFAULT_ADMIN_ROLE remains with 0xddaca43e3ae3a1485880a835edbf8924ab142b5f. Verified _update blocks blacklisted transfer parties and supports role-gated burning of blacklisted balances. Therefore an active holder-targeted control on the material Ethereum deployment establishes Yes. The reviewed peripheral EVM implementations and Solana freeze/permanent-delegate/pause authorities remain disclosed, but are not status-setting. Whitepaper clauses 3 and 4 authorize blacklisted-address blocking. No declared parent exists; the 100% EUR bank-reserve exposure is secondary and does not replace the direct verdict.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

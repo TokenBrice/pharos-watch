@@ -10,11 +10,23 @@
       {
         "label": "Website",
         "url": "https://www.macropod.com/product/audm"
+      },
+      {
+        "label": "Ethereum AUDM proxy and verified ERC20F implementation",
+        "url": "https://etherscan.io/address/0x081599e4936d12c46bd48913b2329115cd26cbdd#code"
+      },
+      {
+        "label": "AUDM AccessRegistry (DenyListGasless)",
+        "url": "https://etherscan.io/address/0xe97323c3AE72c67a739b3E640fBFfd83C7De0585#code"
+      },
+      {
+        "label": "Pharos AUDM supply (observed 2026-10-19)",
+        "url": "https://api.pharos.watch/api/stablecoin/audm-macropod"
       }
     ],
-    "evidence": "Explicit Yes retained: centralized governance metadata indicates issuer or admin control; registry links were reviewed for direct freeze, blacklist, pause, burn, or upgrade authority.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "Ethereum block 26224795 (2026-10-19): AUDM proxy 0x081599e4936d12c46bd48913b2329115cd26cbdd resolves to the verified ERC20FGasless implementation 0xebadaf3d0ee4bbaa94717bd9029244b1df2f47aa. transfer and transferFrom call _requireHasAccess(from) and _requireHasAccess(to), which query AccessRegistry 0xe97323c3AE72c67a739b3E640fBFfd83C7De0585. That registry is verified DenyListGasless and its hasAccess(account) returns !_accessList.contains(account), so an operator can deny any holder and block both sends and receipts. ACCESS_LIST_ADMIN_ROLE 0x823dfd844b3cee1079828aee01bbe788b5154056f17c46ce6830122b6a4ebaaa currently hasRole(0x53aa38e37ba7b2bedf1a54e833ffdc8f72e06c3e)=true. The token also exposes a PAUSER_ROLE global pause and an upgrade path. Ethereum holds 96.9415% of reported supply; Base (1.7462%) and Redbelly (1.2519%) are sub-threshold. Direct Yes.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

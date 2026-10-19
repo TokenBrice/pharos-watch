@@ -6,11 +6,19 @@
       {
         "label": "Backed Finance documentation",
         "url": "https://docs.backed.fi/"
+      },
+      {
+        "label": "Ethereum bC3M proxy and verified BackedTokenImplementation",
+        "url": "https://etherscan.io/address/0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7#code"
+      },
+      {
+        "label": "Pharos bC3M supply (observed 2026-10-19)",
+        "url": "https://api.pharos.watch/api/stablecoin/bc3m-backed"
       }
     ],
-    "evidence": "Backed Assets retains transfer-agent freeze and burn authority over bC3M balances under its Swiss DLT Act framework and operates KYC-gated primary issuance.",
-    "reviewer": "Codex RWA expansion review",
-    "reviewedAt": "2026-05-12"
+    "evidence": "Ethereum block 26224770 (2026-10-19): bC3M proxy 0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7 resolves to the verified BackedTokenImplementation 0x28a0b491650fe761c8a66528422bc7ca24ecaeda. The implementation enforces a sanctions list on every transfer: _beforeTokenTransfer rejects a sanctioned sender or recipient and _spendAllowance rejects a sanctioned spender through the configured oracle 0x40C57923924B5c5c5455c48D93317139ADDaC8fb, which is non-zero and live. The owner 0x22f2dFE84a2EaCfE5d3cA81d26E610CB94eB1603 can replace that oracle; current enforcement blocks named addresses today. A pauser 0xdD276f57e40D745E09855BA5711613F5Da0C4A71 can additionally set a global transfer pause (isPaused()=false). There is no address freeze function, and burn(address,uint256) requires the burner role but reverts unless account is the burner itself or the token contract, so it cannot burn an arbitrary holder. The Pharos API publishes no per-chain supply for the eight authored deployments, so the Ethereum deployment is treated as material (fail closed). Direct Yes via the enforced sanctions denylist.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

@@ -2,10 +2,32 @@
   "id": "xusd-straitsx",
   "blacklistabilityReview": {
     "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Ethereum XUSD token",
+        "url": "https://etherscan.io/address/0xc08e7e23c235073c6807c2efe7021304cb7c2815"
+      },
+      {
+        "label": "BNB Chain XUSD token",
+        "url": "https://bscscan.com/address/0xf81ac2e1a0373dde1bce01e2fe694a9b7e3bfcb9"
+      },
+      {
+        "label": "Ethereum public RPC (block 26224762)",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "BSC public RPC (block 128504445)",
+        "url": "https://bsc-rpc.publicnode.com"
+      },
+      {
+        "label": "StraitsX XUSD",
+        "url": "https://www.straitsx.com/xusd"
+      }
+    ],
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: XUSD resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "evidence": "XUSD is directly blacklistable on both material deployments. BSC holds 73.67% of circulating supply (2026-10-19 census) at token 0xf81ac2e1a0373dde1bce01e2fe694a9b7e3bfcb9; at BSC block 128504445 the token's blacklister() was 0x21c6a28dCc3192c81E30a3b03D38b4c517F87ee9 (non-zero), owner() was 0x7942337923d89D27e801B6DC05274fA9417968F5, masterMinter() was 0x31b964870f90d25837afC995239273F72931e7A3, and paused() was false. Ethereum holds 26.33% at token 0xc08e7e23c235073c6807c2efe7021304cb7c2815; at Ethereum block 26224762 the blacklister() was 0x7081b2058A879eEcF90F025cFC4dE1B828178CA4 (non-zero), owner() was 0x9bd41d6CAA1Ad2bE20Ea48C5f4Be3C180522F964, masterMinter() was 0x53Cb1e2579DA18e6132dCfb00FD75A0BE0F7C5AB, paused() was false, and isBlacklisted(owner) returned false. The Circle-style FiatToken surface exposes blacklist/unBlacklist to the assigned blacklister, so the issuer can deny named holders transfers and receipts. The Solana deployment (SPL mint/freeze authority a 3-of-11 multisig) carries a negligible census share and is disclosed but does not set the verdict. No parent or reserve test is needed: a direct holder-targeted control is active on both material deployments.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

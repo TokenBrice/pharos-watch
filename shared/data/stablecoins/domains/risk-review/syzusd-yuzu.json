@@ -1,7 +1,7 @@
 {
   "id": "syzusd-yuzu",
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Yuzu syzUSD documentation",
@@ -26,12 +26,24 @@
       {
         "label": "Monad public RPC used for fixed-block reads",
         "url": "https://rpc.monad.xyz"
+      },
+      {
+        "label": "Verified Monad current implementation",
+        "url": "https://monadexplorer.com/address/0xe536b80e7f859e72ad095d769da1da45b7312d53#code"
+      },
+      {
+        "label": "Verified Sei current implementation",
+        "url": "https://seitrace.com/address/0x78b57cc8dacd63c16290f136c60b403163b8d89e?chain=pacific-1"
+      },
+      {
+        "label": "Sei pinned RPC",
+        "url": "https://evm-rpc.sei-apis.com"
       }
     ],
     "sourceFreeRationale": "The current V3 wrapper tracks same-block received shares for redemption eligibility, but the reviewed transfer update does not add a holder blacklist. Upstream yzUSD and reserve-asset access exposure remains inherited.",
-    "evidence": "At Plasma block 33896602 on 2026-10-01, the canonical proxy resolves to verified StakedYuzuUSDV3 implementation 0x4ad9f1db810146b660eb863cc6f56649e0824a6e and ProxyAdmin 0x7392751a860a51694231c7a0b4a9c853f8169cf0; asset() remains yzUSD 0x6695c0f8706c5ace3bdf8995073179cca47926dc. The ProxyAdmin owner is now 48-hour TimelockController 0x2130457539612ae9838e0314cda1a8abbdb7cfbc, with the 4-of-5 Safe acting through proposer/executor/canceller roles. The verified V3 source overrides _update to track received shares for a same-block redemption guard; this is not a selective transfer-freeze mechanism. V3 also introduces role-managed mint/redeem throttles, pause and exit settings, and distribution controls, so the historical V1 claim of no transfer hook is not current. At Monad block 109541441 the implementation and ProxyAdmin remain 0xe536b80e7f859e72ad095d769da1da45b7312d53 and 0x7040b88de8a8e63b9dffe2250f8062dcc1ca7331, owned by the 12-hour timelock. Live upgrade paths can change these access controls. The single direct yzUSD dependency and its issuer-freezable reserve exposure remain inherited; neither the new timelock nor local absence of a blacklist removes that upstream adverse exposure.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurA64syzUSD)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "Material deployments in the October 19 circulation census are Plasma 59.2088%, Monad 17.9782% and Sei 14.4887%; the direct proxy upgrade paths on them make syzUSD Possible, ahead of parent inheritance. At plasma@35449083 (2026-10-19T06:14:23+00:00; hash 0xd69ea5d44c866b167b5821842f992d56b29ea210add10fdb9d12999b97f48667; observed 2026-10-19T06:19:28.531004+00:00) via https://rpc.plasma.to, canonical 0xc8a8df9b210243c55d31c73090f06787ad0a1bf6 still resolves to verified StakedYuzuUSDV3 0x4ad9f1db810146b660eb863cc6f56649e0824a6e, asset()=yzUSD 0x6695c0f8706c5ace3bdf8995073179cca47926dc. ProxyAdmin 0x7392751a860a51694231c7a0b4a9c853f8169cf0 is owned by 48-hour timelock 0x2130457539612ae9838e0314cda1a8abbdb7cfbc; local defaultAdmin is that timelock. The verified V3 _update tracks received shares for a same-block redemption guard, not a holder transfer blacklist. V3 has role-managed mint/redeem throttles, pause, exit and distribution settings; isInstantRedeemEnabled()=true and paused()=false at this pin. At monad@114681057 (2026-10-19T06:14:23+00:00; hash 0x7f286e8b896ff35fad081c7db1df8c78edd9a54df3f3ca48a9dd5f30111ef7f1; observed 2026-10-19T06:19:28.626529+00:00) via https://rpc.monad.xyz, implementation/admin are 0xe536b80e7f859e72ad095d769da1da45b7312d53 / 0x7040b88de8a8e63b9dffe2250f8062dcc1ca7331; ProxyAdmin.owner()=12-hour timelock 0xd32ab76a165f1a716986ba8c58344e3df4397f5e. At sei@238435381 (2026-10-19T06:14:23+00:00; hash 0x3889f1a413ab946bbd9a946a8e5b56b1e85f954c42a01aa202ebb317b024f80b; observed 2026-10-19T06:19:28.694504+00:00) via https://evm-rpc.sei-apis.com, implementation/admin are 0x78b57cc8dacd63c16290f136c60b403163b8d89e / 0xd25d45c640e25f90d3ab70f69856f5494e9415cd; owner is 12-hour timelock 0xd08472b9b2e6c3633d9872863e3fde0daad1ef13. Both satellite implementations verify as BridgeableTokenUpgradeable/MyOFTUpgradeable; CCIP burn burns its caller only, not arbitrary holders. Their current total supplies, 9,654,101.022186762 and 7,780,303.305893897 shares, cross-check materiality at 18.6095%/14.9976% against the current API dollar denominator and syzUSD price. The 100% yzUSD parent claim adds upstream issuer exit-control exposure but cannot demote direct Possible to Upstream. Remaining chains are individually below 10%; no absence-of-controls claim is made for those peripheral routes.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "oracleless",

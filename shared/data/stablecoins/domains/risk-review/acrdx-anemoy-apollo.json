@@ -10,11 +10,47 @@
       {
         "label": "Centrifuge docs",
         "url": "https://docs.centrifuge.io/"
+      },
+      {
+        "label": "Anemoy ACRDX issuer disclosure",
+        "url": "https://www.anemoy.io/news/acrdx-launched"
+      },
+      {
+        "label": "Current Plume ShareToken verified source",
+        "url": "https://explorer.plume.org/api/v2/smart-contracts/0x9477724bb54ad5417de8baff29e59df3fb4da74f"
+      },
+      {
+        "label": "Verified FullRestrictions / BaseTransferHook source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x423322445818be56f8a317adeba0bdb487b71608"
+      },
+      {
+        "label": "Current Monad FullRestrictions verified source",
+        "url": "https://api.etherscan.io/v2/api?chainid=143&module=contract&action=getsourcecode&address=0x8e680873b4c77e6088b4ba0abd59d100c3d224a4"
+      },
+      {
+        "label": "Current Monad ShareToken verified source",
+        "url": "https://api.etherscan.io/v2/api?chainid=143&module=contract&action=getsourcecode&address=0x2fabf1c784b8583d63c00c5c9c0377d8cf1a3245"
+      },
+      {
+        "label": "Verified Spoke restriction dispatch",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab"
+      },
+      {
+        "label": "Verified MessageDispatcher current caller path",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf837a22883e004f705e0d7e1dee08e295df30b27"
+      },
+      {
+        "label": "Protocol deployment registry",
+        "url": "https://docs.centrifuge.io/developer/protocol/deployments/"
+      },
+      {
+        "label": "Solana Token-2022 authority and zero supply",
+        "url": "https://solscan.io/token/ACDR3LGFrMuDZSDRyJjncFCzo5c8xkQxhWx4im4Vmq8G"
       }
     ],
-    "evidence": "ACRDX is issued through permissioned fund or issuer rails with KYC-gated primary-market access and issuer/admin controls over transfer, mint, redemption, or token administration.",
-    "reviewer": "Codex 2026-05-14 execution-ready expansion",
-    "reviewedAt": "2026-05-14"
+    "evidence": "ACRDX is an Anemoy permissioned, NAV-accreting fund share issued through Centrifuge; primary subscriptions/redemptions are KYC-gated. That primary access restriction is not the basis for direct Yes. On 2026-10-19, measured tracked outstanding share supply totals 30472586.069488003850 across every catalogued deployment: ethereum: 237532.676989850268 shares / 0.779496% at block 26224774 (2026-10-19T06:16:59+00:00); plume: 20299759.932350236923 shares / 66.616466% at block 100304563 (2026-10-19T06:17:06+00:00); monad: 9837361.464973825961 shares / 32.282660% at block 114681593 (2026-10-19T06:17:06+00:00); base: 0.000000000000 shares / 0.000000% at block 52800639 (2026-10-19T06:17:05+00:00); optimism: 97931.995174088937 shares / 0.321377% at block 158395924 (2026-10-19T06:17:05+00:00); solana: 0.000000000000 shares / 0.000000% at slot 458730400. The denominator sums totalSupply across EVM share tokens and Solana mint supply, not the absent census USD market cap; it is not an independent fund-liability reconciliation. Material deployments are Plume and Monad, not canonical Ethereum. plume@100304563 (2026-10-19T06:17:06+00:00): ShareToken.hook()=0x423322445818be56f8a317adeba0bdb487b71608; token.wards(Spoke 0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab)=1; hook.wards(Spoke)=1; Spoke.sender()=0xf837a22883e004f705e0d7e1dee08e295df30b27 and Spoke.wards(sender)=1. Verified FullRestrictions blocks transfers from/to frozen addresses and requires target membership; BaseTransferHook.updateRestriction decodes arbitrary named-holder freeze/member messages, and current Spoke.updateRestriction calls that hook. Current assigned MessageDispatcher code calls Spoke.updateRestriction with supplied pool/shareClass/payload, so the ward is not a self-burn-only bridge. Plume hook runtime matches the verified Ethereum hook. Current token source https://explorer.plume.org/api/v2/smart-contracts/0x9477724bb54ad5417de8baff29e59df3fb4da74f; verified hook and Spoke/dispatcher sources https://eth.blockscout.com/api/v2/smart-contracts/0x423322445818be56f8a317adeba0bdb487b71608, https://eth.blockscout.com/api/v2/smart-contracts/0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab, https://eth.blockscout.com/api/v2/smart-contracts/0xf837a22883e004f705e0d7e1dee08e295df30b27. monad@114681593 (2026-10-19T06:17:06+00:00): ShareToken.hook()=0x8e680873b4c77e6088b4ba0abd59d100c3d224a4; token.wards(Spoke 0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab)=1; hook.wards(Spoke)=1; Spoke.sender()=0xf837a22883e004f705e0d7e1dee08e295df30b27 and Spoke.wards(sender)=1. Verified FullRestrictions blocks transfers from/to frozen addresses and requires target membership; BaseTransferHook.updateRestriction decodes arbitrary named-holder freeze/member messages, and current Spoke.updateRestriction calls that hook. Current assigned MessageDispatcher code calls Spoke.updateRestriction with supplied pool/shareClass/payload, so the ward is not a self-burn-only bridge. Plume hook runtime matches the verified Ethereum hook. Current token source https://api.etherscan.io/v2/api?chainid=143&module=contract&action=getsourcecode&address=0x8e680873b4c77e6088b4ba0abd59d100c3d224a4; verified hook and Spoke/dispatcher sources https://eth.blockscout.com/api/v2/smart-contracts/0x423322445818be56f8a317adeba0bdb487b71608, https://eth.blockscout.com/api/v2/smart-contracts/0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab, https://eth.blockscout.com/api/v2/smart-contracts/0xf837a22883e004f705e0d7e1dee08e295df30b27. The active assigned Spoke/MessageDispatcher restriction route can name arbitrary holders in the current implementation; this is not an empty burner list or merely potential future authority. Solana has an active freeze/permanent-delegate authority 3JiU6sJt94WcD6r7EFTUnJo6By9DJ9WJxovRGfY9oseb and default frozen accounts, but zero supply; Ethereum, Base, Optimism and Solana are all sub-threshold and do not set the verdict. There is no declared variant/inherited mint parent. The reserve composition is 100% custodial Apollo Diversified Credit Fund exposure, which would independently satisfy the reserve-majority upstream test but does not displace active direct Yes.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",

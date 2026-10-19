@@ -10,11 +10,23 @@
       {
         "label": "Audits",
         "url": "https://github.com/StartaleGroup/stablecoin-vault-contracts/tree/main/audits"
+      },
+      {
+        "label": "Verified UsdscToken implementation (Soneium)",
+        "url": "https://soneium.blockscout.com/api/v2/smart-contracts/0x38e4713a896efcf253430efd6292515dc13489a1"
+      },
+      {
+        "label": "Soneium proxy",
+        "url": "https://soneium.blockscout.com/address/0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a"
+      },
+      {
+        "label": "Soneium public RPC, block 29628046",
+        "url": "https://rpc.soneium.org"
       }
     ],
-    "evidence": "Explicit Yes retained: centralized governance metadata indicates issuer or admin control; registry links were reviewed for direct freeze, blacklist, pause, burn, or upgrade authority.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "USDSC is a direct freezable M0 extension. At Soneium block 29628046 the proxy 0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a resolves to verified UsdscToken implementation 0x38e4713a896efcf253430efd6292515dc13489a1, which exposes FREEZE_MANAGER_ROLE, freeze(address), freezeAccounts(address[]) and isFrozen. FREEZE_MANAGER_ROLE is held by 0x363c256d368277bbfaf6eaf65bee123a7adba464 (hasRole=true), a non-zero active manager. Soneium holds 100% of reported supply (4,481,101.706642 USDSC at this block), so the control is material. The direct holder-freeze capability supports Yes independently of the 100% M reserve exposure.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",

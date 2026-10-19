@@ -10,11 +10,15 @@
       {
         "label": "Midas current token and access-control registry",
         "url": "https://docs.midas.app/resources/smart-contracts-registry"
+      },
+      {
+        "label": "Midas mToken source (blacklist/pause/burn checks)",
+        "url": "https://github.com/midas-apps/contracts/blob/main/contracts/mToken.sol"
       }
     ],
-    "evidence": "At Ethereum block 26095801, the mRe7YIELD proxy implementation is 0xe084623e02beaca3e8d1e7f356003a9e04417893. Its verified mRE7/mTBILL source checks BLACKLISTED_ROLE for transfer sender and recipient and enforces ERC20Pausable on transfers; pause() is restricted to the token-specific pauser role. This directly supports retained Yes for the Ethereum native deployment without asserting that every bridge representation uses the same local freeze mechanism.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurB16GUSD)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "At Ethereum block 26224764 (2026-10-19), the mRe7YIELD proxy 0x87c9053c819bb28e0d73d33059e1b3da80afb0cf resolves to verified implementation 0xe084623e02beaca3e8d1e7f356003a9e04417893. mRE7 inherits mTBILL/mToken, so _beforeTokenTransfer applies _onlyNotBlacklisted to sender and recipient and pause/unpause is role-gated (M_RE7_PAUSE_OPERATOR_ROLE); privileged burn sits under M_RE7_BURN_OPERATOR_ROLE. The token reads shared MidasAccessControl 0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B, where BLACKLIST_OPERATOR_ROLE had 60+ current holders at that block (hasRole true for 0x081bb8ad7f452f916991c17fdfa64d4a25153169), so an issuer operator can blacklist any holder and stop transfers. Ethereum held 5,956,866.37 of 7,581,004.88 measured native tokens (78.58%). Etherlink is also material at 1,041,331.43 (13.74%; implementation 0xa57d2b40ed3feb4a63eae5ff4cf2ebf4851aca15 at block 55967388, same accessControl address). TAC held 582,807.08 (7.69%) and is sub-threshold; Starknet is a StarkGate lock-mint representation and is excluded from the supply denominator.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "oracleless",

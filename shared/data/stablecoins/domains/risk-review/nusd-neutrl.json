@@ -10,11 +10,27 @@
       {
         "label": "Website",
         "url": "https://www.neutrl.finance/"
+      },
+      {
+        "label": "NUSD token on Etherscan (verified source)",
+        "url": "https://etherscan.io/address/0xe556aba6fe6036275ec1f87eda296be72c811bce#code"
+      },
+      {
+        "label": "NUSD StableMinter",
+        "url": "https://etherscan.io/address/0xFF0B98C0B1d8390b2A7cFFBCcd4e20bFcfb8191D"
+      },
+      {
+        "label": "Neutrl Accountable dashboard API",
+        "url": "https://cache.accountable.capital/dashboard/neutrl"
+      },
+      {
+        "label": "Neutrl Accountable dashboard",
+        "url": "https://accountable.neutrl.finance/"
       }
     ],
-    "evidence": "Explicit Yes retained: reviewed metadata indicates a direct issuer, admin, proxy, pause, burn, or upgrade control surface beyond reserve-only exposure.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "Re-reviewed 2026-10-19 (corrected after TrackerCoverage flagged the denylist ABI). NUSD is 100% on Ethereum 0xe556aba6fe6036275ec1f87eda296be72c811bce. The token is a non-proxy, immutable ERC20 whose verified source exposes a holder denylist: addToDenylist(address)/removeFromDenylist(address) are gated by DENYLIST_MANAGER_ROLE, and _update(from,to,value) reverts UserDenylisted() when from (except a burn to address(0)), to, or msg.sender is denylisted. At Ethereum block 26224823, hasRole(DENYLIST_MANAGER_ROLE, 0xde7259ab94cd04cd5f855b15368bf0549eeb1504) = true; the holder is an EOA (codesize 0). DEFAULT_ADMIN_ROLE can grant the role. This is a direct holder-targeted transfer block independent of reserves. The Accountable type_split snapshot at 2026-08-13T11:02:37.520Z ($54,437,465.43 total reserves) is 57.53% stablecoin reserves, 18.0081% OTC aggregate positions, 16.9557% JLP, 3.5591% other, 3.9404% protocol-owned liquidity and 0.0067% ETH; 75.5381% terminates in issuer or custodian control, so NUSD would also be Upstream on reserves. The Arbitrum and Plasma LayerZero OFT representations add no native control. There is no parent. The direct denylist is the verdict: Yes.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "standard-external",

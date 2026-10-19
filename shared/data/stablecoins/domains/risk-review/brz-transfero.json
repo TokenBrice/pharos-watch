@@ -10,11 +10,27 @@
       {
         "label": "Algorand official BRZ ASA metadata",
         "url": "https://mainnet-idx.algonode.cloud/v2/assets/112866019"
+      },
+      {
+        "label": "Verified BRZ TokenV2_1 implementation on Ethereum",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2c4a809e8d86b1688b65581b6c7f50bd670d1b77"
+      },
+      {
+        "label": "Gnosis JSON-RPC pinned blacklister/blacklist state",
+        "url": "https://gnosis-rpc.publicnode.com"
+      },
+      {
+        "label": "Ethereum JSON-RPC pinned proxy/blacklister state",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Solana RPC token supply",
+        "url": "https://api.mainnet-beta.solana.com"
       }
     ],
-    "evidence": "A fresh observation at Solana finalized context slot 452232837 identifies BRZ mint BRZbFNQDcWLfcdHmAkqEVnLHCAWKTRf6eHyEaWdZp3JN with permanent delegate 6L2wpGtfBxreB94qLPiWygZQo18pzTxxySvjBc1LXuGq. Algorand ASA 112866019 independently exposes nonempty freeze and clawback authorities ROCATE2BKXJ3PHNBRCAHE5HCTOYYKUENUANMMOZHXDVQB2QT5RY6YHUO5Y at indexer round 65563763. The positive control verdict is supported by addressed deployment evidence rather than a centralized-governance inference; this replaces the earlier Solana observation rather than claiming a historical replay.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurA48USTBL)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "Reviewed 2026-10-19. The census has no BRZ chainShares, so supply was measured directly. Measured EVM totalSupply is 392,111,494.22 BRZ across Ethereum (14,005,000), Polygon (57,214,974.87), Gnosis (300,179,191.23), BSC (10,033,152.69), Base (9,142,967.28), Optimism (300,000), Arbitrum (22,291.94), Avalanche (913,816.21) and Celo (300,100); Solana supply is 433,345.01; Algorand total supply is 100,000,000,000, with 99,499,999,990 held by the issuer account ROCATE2BKXJ3PHNBRCAHE5HCTOYYKUENUANMMOZHXDVQB2QT5RY6YHUO5Y and about 499,967,035 in one non-issuer account. On Gnosis, which is 76.55% of measured EVM supply, proxy 0x0a06c8354a6cc1a07549a38701eac205942e3ac6 runs verified TokenV2_1 implementation 0x8070bd3f60e54da7110ab21729a846cca2734f23. At block 48832855, blacklister() returns 0xc6B4af65caCA51974Dd8fC16a17d3FF7A4aAF0B7; a pinned eth_call of blacklist(address) from that address succeeds, the same call from an unrelated account reverts 'caller is not the blacklister', and transfer/transferFrom/approve apply notBlacklisted to sender and recipient. Ethereum's 14,005,000 BRZ proxy 0x01d33fd36ec67c6ada32cf36b31e88ee190b1839 returns blacklister 0x2C64238Ad6DcA38AD373eD24b5DeebfbCaE90f6d at block 26224787. Algorand ASA 112866019 independently exposes freeze and clawback authorities ROCATE2BKXJ3PHNBRCAHE5HCTOYYKUENUANMMOZHXDVQB2QT5RY6YHUO5Y at indexer round 66124763, and Solana mint BRZbFNQDcWLfcdHmAkqEVnLHCAWKTRf6eHyEaWdZp3JN retains permanent delegate 6L2wpGtfBxreB94qLPiWygZQo18pzTxxySvjBc1LXuGq. The verdict is set by the direct blacklist on the material Gnosis deployment and by the freeze/clawback control on Algorand under the fail-closed total-supply reading; Solana and the smaller EVM deployments are disclosed but do not set the verdict.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

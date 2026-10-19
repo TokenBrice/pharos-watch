@@ -6,10 +6,18 @@
       {
         "label": "FIDD Terms, section 12",
         "url": "https://www.fidelitydigitalassets.com/fidd-terms"
+      },
+      {
+        "label": "FIDD implementation verified ABI/source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8ae9cb3d9095da33555494110f567e3d974c6753"
+      },
+      {
+        "label": "Ethereum public RPC, block 26224764",
+        "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
-    "evidence": "FIDD Terms, section 12, expressly permit Fidelity to block certain addresses and freeze associated FIDD when directed by law or when Fidelity considers action appropriate to protect the network or comply with its obligations. This replaces the prior unsourced centralized-token inference without changing the reviewed status.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurB04FIDD)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "FIDD Terms section 12 permit Fidelity to block addresses and freeze associated FIDD. The verified Ethereum implementation (MintableToken behind UUPS proxy 0x7c135549504245b5eae64fc0e99fa5ebabb8e35d; implementation 0x8ae9cb3d9095da33555494110f567e3d974c6753) enforces this on-chain: restrictTransfers(address) is gated by TOKEN_TRANSFER_CONTROLLER_ROLE and transfer, transferFrom, approvals and mint/burn apply whenNotRestricted checks to the named holder; pause() is gated by PAUSER_ROLE. At Ethereum block 26224764 (2026-10-19), TOKEN_TRANSFER_CONTROLLER_ROLE had one member, 0x884970cbA7985e903BcF96B062FD226dB3b66a6A; PAUSER_ROLE had one member, 0x49d2617E57a1eA5d70F3863297e416d81cE0acDE; paused() was false; and getTransferRestrictionCount() returned 124. Ethereum holds 100% of FIDD supply. The assigned controller and 124 restricted addresses establish a direct Yes.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   }
 }

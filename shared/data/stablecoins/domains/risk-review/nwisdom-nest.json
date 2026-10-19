@@ -6,11 +6,39 @@
       {
         "label": "Nest terms: illicit activity screening and vault-token freezing",
         "url": "https://docs.nest.credit/security-and-compliance/terms-and-conditions/"
+      },
+      {
+        "label": "Exact Solana mint deployment",
+        "url": "https://explorer.solana.com/address/77DTSzxisdQWshFYHP9M2JBDuHNojLAVoC7GBNC2yadT"
+      },
+      {
+        "label": "Issuer vault metadata and TVL denominator",
+        "url": "https://api.nest.credit/v1/vaults/nest-wisdom-vault"
+      },
+      {
+        "label": "Pinned share-rate accountant verified source",
+        "url": "https://eth.blockscout.com/address/0x5f57ae7bf41806b2c8f5ddbf1e6a09d7a6d916f6?tab=contract"
+      },
+      {
+        "label": "Plume verified share token source",
+        "url": "https://explorer.plume.org/address/0x29bf22381a5811dec89dc7b46a5ce57ad02c0240?tab=contract"
+      },
+      {
+        "label": "Verified Ethereum BoringVault share token source",
+        "url": "https://eth.blockscout.com/address/0x29bf22381a5811dec89dc7b46a5ce57ad02c0240?tab=contract"
+      },
+      {
+        "label": "Verified transfer blacklist hook",
+        "url": "https://eth.blockscout.com/address/0xb9b833b35640428e09c2d450f36ac4f91f58cb47?tab=contract"
+      },
+      {
+        "label": "Solana freeze authority: getAccountInfo(jsonParsed, finalized) at slot 458730050 confirmed initialized SPL 1-of-2 multisig, consistent with earlier slot 452218956 review",
+        "url": "https://explorer.solana.com/address/9zXJ3JWM1HtUrjgkLstDnHyZjVLgpxeZGbET8cJoea9Y"
       }
     ],
-    "evidence": "Nest's terms state that vault tokens associated with wallets subsequently classified as suspicious may be frozen and identify Kimber Labs Inc.'s limited administrative privileges over that freezing code. At finalized Solana slot 452218955, nWISDOM mint 77DTSzxisdQWshFYHP9M2JBDuHNojLAVoC7GBNC2yadT retained freezeAuthority 9zXJ3JWM1HtUrjgkLstDnHyZjVLgpxeZGbET8cJoea9Y; at slot 452218956 that authority was a 1-of-2 SPL Token multisig.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurM07yvUSDC1.NestReview)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "Supply data omit this token. We therefore measured Ethereum totalSupply=14,562.429384 shares at Ethereum block 26224667 (2026-10-19T05:55:35Z), Plume totalSupply=12,064.562665 shares at block 100304741 (2026-10-19T06:18:16+00:00), and the Ethereum accountant getRate=0.892528 quote units/share. Against issuer API TVL $24,715.666498 retrieved 2026-10-19T06:17:54Z, estimated deployment shares are Ethereum 52.5876% and Plume 43.5673%, both material. [INFERENCE] This converts issuer TVL to a token-supply denominator at the pinned exchange rate; it is not a synchronized all-chain circulating-supply reconciliation. Ethereum 0x29bf22381a5811dec89dc7b46a5ce57ad02c0240 is a verified non-proxy BoringVault. At block 26224667 (2026-10-19T05:55:35Z), owner()=0x8faacdc65de5d78975df4f9dc4b6548979ceb23a; the existing owner-authorized exit(to,asset,assetAmount,from,shareAmount) burns shares from arbitrary from without holder allowance, and assetAmount may be zero. Thus an active arbitrary-holder privileged burn, not merely an upgrade/pause possibility, establishes Yes. A read-only eth_call from the owner to exit with zero amounts succeeded; no transaction was submitted. The token also had hook()=0xb9b833b35640428e09c2d450f36ac4f91f58cb47, a verified BlacklistHook whose beforeTransfer(from) rejects blacklisted senders; hook owner()=0xa08a0dc480bd60d1d56c8eec6c722125eafea982, while isPaused=false (authority active even when not currently pausing). At finalized Solana slot 458729858 (2026-10-19T06:15:02+00:00), mint 77DTSzxisdQWshFYHP9M2JBDuHNojLAVoC7GBNC2yadT retained freezeAuthority 9zXJ3JWM1HtUrjgkLstDnHyZjVLgpxeZGbET8cJoea9Y; measured supply was 1,024.009570 shares (approximately 3.6979% using the same TVL/rate denominator). Nest terms section 6.2 expressly describe freezing suspicious wallets and Kimber Labs limited administration, consistent with these directly verified controls. No parent is declared. Reserve exposure cannot override the higher-priority direct Yes verdict; no reserve-majority measurement is used as its basis.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",

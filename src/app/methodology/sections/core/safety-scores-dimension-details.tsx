@@ -221,9 +221,9 @@ export function SafetyScoresDimensionDetails() {
           <li>Decentralization score is structural, not a value judgment</li>
           <li>
             Blacklist capability is reported descriptively only and does not affect the Resilience score. Explicit
-            mutable-contract overrides still surface as &ldquo;possible&rdquo;. Reserve-side stablecoins, custodied
-            wrappers, issuer-seizable tokenized collateral, custody/CEX rails, and tracked parent-asset exposures now
-            resolve to &ldquo;inherited&rdquo; blacklist risk instead of sharing the &ldquo;possible&rdquo; bucket.
+            mutable-contract controls surface as &ldquo;Possible&rdquo;. Parent and qualifying issuer/custodian
+            reserve exposure instead use &ldquo;Upstream&rdquo; under the{" "}
+            <a href="#blacklist-tracker-methodology" className="text-foreground underline">FreezeWatch decision procedure</a>.
           </li>
         </ul>
       </div>

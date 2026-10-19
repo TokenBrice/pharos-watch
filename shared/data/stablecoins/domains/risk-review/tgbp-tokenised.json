@@ -10,11 +10,23 @@
       {
         "label": "Solana finalized mint authority read",
         "url": "https://api.mainnet-beta.solana.com"
+      },
+      {
+        "label": "BCP Bannable base source",
+        "url": "https://raw.githubusercontent.com/bcp-markets/tGBPv2/main/contracts/Bannable.sol"
+      },
+      {
+        "label": "tGBP Ethereum state at block 26224768 (2026-10-19T06:15:47Z)",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "tGBP Base state at block 52800656 (2026-10-19T06:17:39Z)",
+        "url": "https://mainnet.base.org"
       }
     ],
-    "evidence": "The issuer's StableTokenV1OFT source exposes owner-only pause() for all token transfers. Pinned owner() reads on all seven authored EVM deployments returned 0xaf4fce2984fb307a368f3ff01f900909956595c0. At finalized Solana slot 452213538, the tGBP SPL mint's freezeAuthority was 3NsEdxXZX6QXNtZT2prWQF2c8VFznc9zK1A2BjzAMyjs, an initialized 1-of-2 multisig. Direct transfer impairment is therefore evidenced independently of centralized-governance inference.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurB26MUSD)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "tGBP's material deployments are Ethereum (71.6171%) and Base (26.9206%), both at 0x27f6c8289550fce67f6b50bed1f519966afe5287; Solana is 0.8128% and does not set the verdict. At Ethereum block 26224768 (2026-10-19T06:15:47Z) the proxy resolves to verified StableTokenV1OFT 0x94321d80d3c5cdac63b75f723ae64ca7f94be547 and owner() is 0xAF4fCE2984Fb307a368f3Ff01f900909956595C0; the same owner is set on Base at block 52800656 (2026-10-19T06:17:39Z), where isBanned(address) also resolves. The source's Bannable base lets the owner ban/unban a named account, and transfer, transferFrom, mint and burn apply notBanned checks; the contract also exposes owner-only pause/unpause and UUPS upgrades. An active owner can therefore stop a named holder from transferring on material deployments. The previously cited Solana freeze authority 3NsEdxXZX6QXNtZT2prWQF2c8VFznc9zK1A2BjzAMyjs (finalized slot 452213538) remains disclosed as sub-threshold.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",

@@ -14,11 +14,27 @@
       {
         "label": "Ethereum public RPC",
         "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Verified Celo LatamStable implementation (compliance revision)",
+        "url": "https://celo.blockscout.com/address/0xfbab5dcb1647787ec8402a6509add256fa6c7f9d"
+      },
+      {
+        "label": "Verified Ethereum LatamStable implementation (pause-only revision)",
+        "url": "https://eth.blockscout.com/address/0xfbab5dcb1647787ec8402a6509add256fa6c7f9d"
+      },
+      {
+        "label": "Celo JSON-RPC pinned reads",
+        "url": "https://forno.celo.org"
+      },
+      {
+        "label": "HyperEVM JSON-RPC pinned reads",
+        "url": "https://rpc.hyperliquid.xyz/evm"
       }
     ],
-    "evidence": "Re-reviewed 2026-08-08 across all six deterministic-address ERC-1967 deployments. Ethereum block 25712393, Base 49714331, Worldchain 33441185, BSC 114794465, Polygon 91675323, and Gnosis 47624683 all resolve implementation slot 0xfbab5dcb1647787ec8402a6509add256fa6c7f9d and paused() false; Ripio EOA 0x466c02e2cc67b81a696af5afdb61605c41fe247b holds PAUSER_ROLE on every deployment. Both verified LatamStable revisions route _update through ERC20PausableUpgradeable, so this EOA can halt every holder transfer. The Polygon/BSC/Gnosis revision additionally exposes COMPLIANCE_ROLE-gated blockUser/unblockUser and checks blocked senders and recipients when enforcement is enabled. A live global pause alone is a direct holder restriction and resolves the access verdict to Yes; the compliance-bearing deployments add holder-selective reach.",
-    "reviewer": "OpenAI Codex C09 control/access review",
-    "reviewedAt": "2026-08-08"
+    "evidence": "Re-reviewed 2026-10-19. wBRL is natively issued on eight chains; totalSupply at the pinned reads totals 16,677,452.10 wBRL. Ethereum block 26224803: 7,191,964.22 (43.12%); Celo block 80490220: 3,845,577.95 (23.06%); HyperEVM block 48936544: 2,624,366.24 (15.74%); Base block 52800815: 2,271,615.30 (13.62%); World Chain 457,152.38 (2.74%); BSC 208,310.62 (1.25%); Polygon 45,465.55 (0.27%); Gnosis 32,999.84 (0.20%). The census omits Celo and HyperEVM, so both were measured directly; each exceeds the 10% materiality threshold. Ethereum, Base and World Chain run the pause-only LatamStable revision: PAUSER_ROLE is held by Ripio EOA 0x466c02e2cc67b81a696af5afdb61605c41fe247b and paused() returned false. Celo and HyperEVM run the compliance revision (verified source at Celo implementation 0xfbab5dcb1647787ec8402a6509add256fa6c7f9d): COMPLIANCE_ROLE-gated blockUser(address)/unblockUser(address) and setEnforceBlocklist(bool), with _update rejecting blocked senders or recipients when enforcement is enabled. At the pinned Celo and HyperEVM blocks enforceBlocklist() returned false, but Ripio Safe 0x2b839174fe62466067c22e2a4c8054071f9d8d68 holds COMPLIANCE_ROLE (granted at initialization, never revoked), so a named holder can be blocked and enforcement enabled by that same authority. A holder-targeted denylist is therefore live on material deployments and the status is Yes. The Ethereum/Base global pause is a Possible-level control and does not independently establish Yes.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

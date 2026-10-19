@@ -10,11 +10,23 @@
       {
         "label": "Midas",
         "url": "https://midas.app/mapollo"
+      },
+      {
+        "label": "Ethereum mAPOLLO verified implementation (mAPOLLO imports mTBILL)",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd43cc40e380a59bfc06e80fdea9847556297df0c"
+      },
+      {
+        "label": "Midas mToken source (blacklist/pause/burn checks)",
+        "url": "https://github.com/midas-apps/contracts/blob/main/contracts/mToken.sol"
+      },
+      {
+        "label": "Midas smart-contract registry",
+        "url": "https://docs.midas.app/resources/smart-contracts-registry"
       }
     ],
-    "evidence": "Explicit Yes: Midas mAPOLLO is a permissioned liquid-yield token with issuer/admin control surfaces around minting, redemption, transfer administration, and upgradeable protocol contracts.",
-    "reviewer": "Codex 2026-05-14 execution-ready expansion",
-    "reviewedAt": "2026-05-14"
+    "evidence": "mAPOLLO has a single Ethereum deployment: proxy 0x7cf9dec92ca9fd46f8d86e7798b72624bc116c05, totalSupply 7,042,113.97 (18dp) at block 26224764 (2026-10-19), so the deployment is material by construction. The proxy resolves to verified implementation 0xd43cc40e380a59bfc06e80fdea9847556297df0c; mAPOLLO inherits mTBILL/mToken, whose _beforeTokenTransfer applies _onlyNotBlacklisted to sender and recipient, alongside role-gated pause (M_APOLLO_PAUSE_OPERATOR_ROLE) and privileged burn (M_APOLLO_BURN_OPERATOR_ROLE). The token reads shared MidasAccessControl 0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B, where BLACKLIST_OPERATOR_ROLE had 60+ current holders at that block (hasRole true for 0x081bb8ad7f452f916991c17fdfa64d4a25153169), so an issuer operator can add any holder to BLACKLISTED_ROLE and stop its transfers.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "privileged-internal-pricing",

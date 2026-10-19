@@ -2,10 +2,20 @@
   "id": "usdp-paxos",
   "blacklistabilityReview": {
     "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Ethereum USDP verified implementation (freeze/wipe ABI and role functions)",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf459ff5ec7d1f371cb34754bda5fe5fce2c9054d"
+      },
+      {
+        "label": "Paxos USD Stablecoin Terms",
+        "url": "https://www.paxos.com/terms-and-conditions/stablecoin-terms-conditions"
+      }
+    ],
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: USDP resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "evidence": "At Ethereum block 26224764 (2026-10-19), Pax Dollar proxy 0x8e870d67f660d95d5be530380d0ec0bd388289e1 delegates to verified implementation 0xf459ff5ec7d1f371cb34754bda5fe5fce2c9054d, which exposes freeze(address), freezeBatch(address[]), unfreeze(address) and wipeFrozenAddress(address). ASSET_PROTECTION_ROLE is admin-controlled by DEFAULT_ADMIN_ROLE 0x00 and is currently held by 0x3Af3e85f4f97De7AD0f000B724Fb77fE5ffc024B, which is also defaultAdmin(); hasRole returned true at that block. This is an active address-freeze and balance-wipe control. Ethereum held 21,803,519.32 USDP of 23,459,936.35 reported (91.02%) and is material; Solana (7.21%), BSC (1.77%) and Linea are sub-threshold and disclosed only. Paxos's stablecoin terms also reserve freeze, seizure and destruction powers over holders. The verdict is Yes.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",

@@ -18,11 +18,15 @@
       {
         "label": "Stellar VNXAU issuer",
         "url": "https://horizon.stellar.org/accounts/GCKIYYQVIFBIFDRN7BNDNHL3UZSFHT5NHDAISG2N3MWCZY3WNXL3LXN3"
+      },
+      {
+        "label": "Etherscan VNXAU implementation",
+        "url": "https://etherscan.io/address/0x6b456a9bdc0f6849c0e54306acc56b67a2957a56"
       }
     ],
-    "evidence": "At the 2026-07-13 cutoff, all four EVM deployments assigned asset-protection role 0 to issuer-controlled RBAC bearers that can freeze and unfreeze addresses, reclaim balances, and pause transfers. The Solana mint had a live freeze authority; Tezos role-0 bearers could freeze, unfreeze, and pause; and the Stellar issuer retained AUTH_REVOCABLE and AUTH_CLAWBACK_ENABLED. These are direct on-chain blacklist or equivalent balance-control powers.",
-    "reviewer": "Codex VNX family authority audit",
-    "reviewedAt": "2026-07-13"
+    "evidence": "Freshly measured seven registered deployments rather than failing closed on missing API coverage: Ethereum514.60776@26225081, Polygon107.73577@95792658, Base1817.44706@52802493, Etherlink31722.87423@55970350; Solana9821.777142435@finalized458745379; Stellar0 (Horizon asset balances/pool/contracts/claimable all0, ledger65021714); Tezos0 (TzKT ledger bigmap610341 empty, token/transfers0, head15437833). Denominator 43984.441962435 native token units, Solana 22.330117%, material. Solana mint 9TPL8droGJ7jThsq4momaoz6uhTcvX2SeMqipoPmNa8R owned by SPL Token, executable=false, freezeAuthority=9GpoNWNZ8ZLEh8rKKQ358bngFWHmc6nKVcQ9SzCfvRmw; authority slot458745380 is on-curve, System-owned, executable=false, zero-data. It can sign FreezeAccount for arbitrary holder accounts today. Yes is established directly without relying on un-repinned EVM roles. Sources: https://horizon.stellar.org/assets?asset_code=VNXAU&asset_issuer=GCKIYYQVIFBIFDRN7BNDNHL3UZSFHT5NHDAISG2N3MWCZY3WNXL3LXN3 ; https://api.tzkt.io/v1/contracts/KT1LSH97386CURN9FgRNqdQJoHaHY6e1vxUv/storage ; https://api.tzkt.io/v1/bigmaps/610341/keys?active=true&limit=100 .",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

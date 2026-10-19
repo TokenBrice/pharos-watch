@@ -1,7 +1,7 @@
 {
   "id": "wpen-ripio",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Ripio wFIAT",
@@ -48,9 +48,9 @@
         "url": "https://rpc.gnosischain.com"
       }
     ],
-    "evidence": "Re-verified 2026-08-08 across all six tracked deployments: Ethereum block 25712443, Base 49714630, World Chain 33441485, BSC 114796051, Polygon 91675721, and Gnosis 47624798. Each proxy still resolved to LatamStable implementation 0x9d6266a9167f17ff3dd20f63a474812d0cd47969 and paused() returned false. On Ethereum, Ripio EOA 0x466c02e2cc67b81a696af5afdb61605c41fe247b still held PAUSER_ROLE. The verified implementation routes transfers through ERC20Pausable, so that live issuer role can halt every holder transfer; the Polygon-matched compliance-bearing revision additionally exposes COMPLIANCE_ROLE address blocking, with matching runtime on BSC and Gnosis. This actual global pause (and selective blocking on three deployments) resolves direct access to true even though no current pause was active; UUPS upgrade authority is an additional restrictable path.",
-    "reviewer": "OpenAI Codex C11 access review",
-    "reviewedAt": "2026-08-08"
+    "evidence": "Re-reviewed 2026-10-19. WPEN supply totals 142,600.05 WPEN: World Chain 120,674.14 (84.62%), Ethereum 4,911.07 (3.44%), Polygon 4,172.50 (2.93%), Base 4,171.17 (2.93%), BSC 4,171.17 (2.93%), Gnosis 3,900.05 (2.73%), Celo 599.95 (0.42%). All tracked proxies resolve implementation 0x9d6266a9167f17ff3dd20f63a474812d0cd47969; two revisions share that address. Material World Chain runs the pause-only LatamStable revision: PAUSER_ROLE is held by Ripio EOA 0x466c02e2cc67b81a696af5afdb61605c41fe247b and paused() returned false at block 36527669. The EOA can halt every holder transfer, a direct Possible control. The compliance revision with COMPLIANCE_ROLE-gated blockUser/unblockUser/setEnforceBlocklist exists only on Polygon, BSC, Gnosis and Celo, whose combined share is 9.01%, below the 10% threshold; those peripheral controls are disclosed but do not set the verdict. No holder-selective denylist or other Yes control exists on a material deployment, so the status is Possible.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

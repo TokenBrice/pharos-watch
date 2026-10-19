@@ -1,9 +1,7 @@
 {
   "id": "syrupusdg-maple",
   "blacklistabilityReview": {
-    "evidence": "At exact archived Solana slot 457211351 (2026-10-15T10:54:02Z), the syrupUSDG SPL mint CYB6WRi2YuV4Ui6q1dieP5Raev6ah7qftGsQAxJiZo8f retains freezeAuthority 76QpxAGtsrbwP5nmdCVHyQe2AHVML7cqhxF9FpBxLJjp, decimals 6 and zero supply. This proves direct holder-freeze capability on an authored representation, not a past freeze. Ethereum transfer permissions remain manager-gated; parent USDG issuer freeze exposure is separate.",
-    "reviewer": "Rev_SyrupusdgMaple",
-    "reviewedAt": "2026-10-15",
+    "reviewedStatus": true,
     "sources": [
       {
         "label": "Chainlink exact syrupUSDG deployments and pools",
@@ -16,9 +14,19 @@
       {
         "label": "Verified deployed contract 0x87b65c4aaffa76881f9e96f3e7ed945ddfc3cd7a",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x87b65c4aaffa76881f9e96f3e7ed945ddfc3cd7a"
+      },
+      {
+        "label": "MaplePoolManager verified implementation 0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8"
+      },
+      {
+        "label": "MaplePoolPermissionManager verified implementation 0xc3530358e54bc81efce4a2e12a898e996b091753",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc3530358e54bc81efce4a2e12a898e996b091753"
       }
     ],
-    "reviewedStatus": true
+    "evidence": "The canonical Ethereum MaplePool 0x87b65c4aaffa76881f9e96f3e7ed945ddfc3cd7a held 225,669,422.449087 syrupUSDG (6dp) at block 26224764 (2026-10-19); it is the only measured deployment with supply. Its manager 0x6c48CD22086F3Db3F23E7cEeDD5c429D93FF3327 routes transfer, redeem and withdraw through canCall(), which consults MaplePoolPermissionManager 0xBe10aDcE8B6E3E02Db384E7FaDA5395DD113D8b3. The pool is configured at FUNCTION_LEVEL (permissionLevels=1, not PUBLIC): redemption and withdrawal require lender bitmap bit 0x10, while the transfer bitmap is zero. At that block holders 0x62d63197660c080236193ca60b70e49a08e90368 (45.8M shares) and 0x120391e1512287f0eb8036037d464de2da602543 (178.6M shares) returned hasPermission(pool,holder,\"P:redeem\")=false and hasPermission(...,\"P:transfer\")=true. The pool delegate 0x54e28Bb2D530Ee10386dbcA6E7e84EfaC809292C and the permission-manager admin can change lender allowlist entries and bitmaps, so an existing holder can be denied redemption; this is an active holder-targeted control on the material deployment. The Solana mint CYB6WRi2YuV4Ui6q1dieP5Raev6ah7qftGsQAxJiZo8f retains freezeAuthority 76QpxAGtsrbwP5nmdCVHyQe2AHVML7cqhxF9FpBxLJjp but had zero supply at archived slot 457211351, so it is disclosed and does not set the verdict. The declared parent usdg-paxos is Yes and the pool's reserve claim is USDG-denominated, but a direct control takes precedence.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "privileged-internal-pricing",

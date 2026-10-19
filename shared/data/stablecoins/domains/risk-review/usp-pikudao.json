@@ -10,11 +10,23 @@
       {
         "label": "Website",
         "url": "https://piku.co/"
+      },
+      {
+        "label": "USP proxy (EIP-1967)",
+        "url": "https://eth.blockscout.com/address/0x098697ba3fee4ea76294c5d6a466a4e3b3e95fe6"
+      },
+      {
+        "label": "ERC20IssuanceUpgradeable_Blacklist_v1 implementation",
+        "url": "https://eth.blockscout.com/address/0x9e40b6be5affc984f36cf118c778f0a83be20370?tab=contract"
+      },
+      {
+        "label": "Ethereum RPC reads (block 26224775)",
+        "url": "https://eth-mainnet.g.alchemy.com/v2"
       }
     ],
-    "evidence": "Explicit Yes retained: reviewed metadata indicates a direct issuer, admin, proxy, pause, burn, or upgrade control surface beyond reserve-only exposure.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "FreezeWatch review 2026-10-19. USP is a single Ethereum deployment (100% of supply) at 0x098697ba3fee4ea76294c5d6a466a4e3b3e95fe6, an ERC1967 proxy whose implementation slot is 0x9e40b6be5affc984f36cf118c778f0a83be20370 (ERC20IssuanceUpgradeable_Blacklist_v1). At block 26224775 (Unix 1792390631) name()='USP Yield Optimized Stablecoin', totalSupply=4,350,598.45048, owner()=0x3D7DBEC2f6bEe780f6c5Dad61a7a905239e9E61a. The verified implementation overrides _update to revert when isBlacklisted(from) or isBlacklisted(to), and exposes addToBlacklist/removeFromBlacklist behind onlyBlacklistManager, with setBlacklistManager restricted to the owner. Blacklist manager 0xba20ecff64874cf77604c8bfd890f50e3e5b306f was enabled (BlacklistManagerUpdated true at block 23195674) and isBlacklistManager() returns true; two accounts are currently blacklisted (isBlacklisted=true for 0x2ad3ebf1bc9ea5b844e8f9414e3b68982342f92e and 0x3646173e639baaa652a1f59a50b7e310fd5cbba3, AddedToBlacklist at blocks 26167550 and 26167551). This is an active holder-targeted deny with a live manager, so the verdict is Yes.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "single-source-or-laggy",

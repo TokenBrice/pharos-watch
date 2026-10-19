@@ -1,7 +1,7 @@
 {
   "id": "fpi-frax",
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "FPI Ethereum token verified source (Blockscout)",
@@ -30,11 +30,35 @@
       {
         "label": "Fraxtal public RPC",
         "url": "https://rpc.frax.com"
+      },
+      {
+        "label": "Current Fraxtal FPI implementation",
+        "url": "https://fraxscan.com/address/0xfcc0d30000000000000000000000000000000003#code"
+      },
+      {
+        "label": "Assigned Fraxtal ProxyAdmin",
+        "url": "https://fraxscan.com/address/0xfc00000000000000000000000000000000000009#code"
+      },
+      {
+        "label": "Fraxtal pin",
+        "url": "https://fraxscan.com/block/42789885"
+      },
+      {
+        "label": "Ethereum totalSupply pin",
+        "url": "https://etherscan.io/block/26224762"
+      },
+      {
+        "label": "Current provider FPI deployment census",
+        "url": "https://stablecoins.llama.fi/stablecoin/66"
+      },
+      {
+        "label": "Historical composition source",
+        "url": "https://api.frax.finance/v2/fpifpis/fpi-collateral"
       }
     ],
-    "evidence": "Re-reviewed 2026-08-08. At Ethereum block 25712273, canonical FPI 0x5ca135cb8527d76e932f34b5145575f9d8cbe08e remained a direct, immutable token whose verified transfer and minter paths contain no blacklist, freeze, pause, seize, allowlist, or arbitrary-holder burn. At Fraxtal block 39703046, proxy 0xfc00000000000000000000000000000000000003 used implementation 0xfcc0d30000000000000000000000000000000003 and ProxyAdmin 0xfc0000000000000000000000000000000000000a; current implementation selector and source review likewise found no active holder restriction. The verified ZKsync CrossChainCanonicalV2 deployment has the same restriction-free transfer model. Frax's FPI documentation describes protocol mint/redemption and does not establish a separate issuer legal account-freeze power. Current blacklistability is therefore false; the Fraxtal 3/5 Safe's immediate ability to introduce restrictions by upgrading code is represented separately as a restrictable deployment in the transfer overlay.",
-    "reviewer": "OpenAI Codex C06 access review",
-    "reviewedAt": "2026-08-08"
+    "evidence": "Ethereum FPI 0x5ca135cb8527d76e932f34b5145575f9d8cbe08e is a verified immutable ERC20 with no holder blacklist, pause, allowlist, seizure, or proxy-upgrade surface. Its minter burn uses allowance-checking burnFrom. Ethereum is 95.9283% of the incomplete 2026-10-19 census; ZKsync Era is 4.0717%, and the verified CrossChainCanonicalV2 transfer model has no local holder restriction. The census omits Fraxtal 0xfc00000000000000000000000000000000000003. At Fraxtal@42789885 (2026-10-19T06:14:41+00:00; 0x5e70bf27b856b7350137be47da3b4f399c8d90f771cd2cc6ef5bfd64b6c410cf), that token reports 5,190,426.401808904 FPI, implementation 0xfcc0d30000000000000000000000000000000003 and EIP1967 admin 0xfc0000000000000000000000000000000000000a; admin.owner()=0xc4eb45d80dc1f079045e75d5d55de8ed1c1090e6. Verified ProxyAdmin source exposes owner-controlled upgrade and upgradeAndCall. Pinned Ethereum totalSupply at Ethereum@26224762 (2026-10-19T06:14:35+00:00; 0xef45b71f129dac5f794f4506dee4ca47f3cdd7e41c6e75f53d66512c8c505fc5) is 5,889,909.176125513 FPI; the provider reports 250,000 FPI on ZKsync. Even the conservative gross deployment denominator that adds the full Ethereum, Fraxtal and ZKsync amounts, without deducting bridge escrow, makes Fraxtal 45.8100% and therefore material. This is a gross-supply sensitivity, not a reconciled circulating-share claim; absent a reliable circulation allocation, the controlled route is also material fail-closed. The Fraxtal implementation presently has no blacklist/global pause; minter_burn_from spends allowance, and BRIDGE()=0x4200000000000000000000000000000000000010 supports bridge burns, not evidence of arbitrary seizure by today's bridge. The token proxy's assigned upgrade authority independently sets Possible. There is no declared wrapper parent or established separate legal issuer freeze right. On the historical 2026-08-08 100% reserve book, FRAX alone is 87.05% with issuer/custodian-terminating upstream exposure; the 11.44% FPI/FRAX LP and 1.50% FRAX/FPIS LP stay in the denominator and are not assumed wholly exposed. They need constituent-value splits for a full numerator, but are unnecessary for the conservative majority. The current source also lists unpriced sfrxUSD, so the historical composition is not represented as a current measured portfolio. Direct Possible takes precedence over reserve Upstream.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "standard-external",

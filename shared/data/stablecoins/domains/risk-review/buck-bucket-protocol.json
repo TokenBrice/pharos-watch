@@ -1,7 +1,7 @@
 {
   "id": "buck-bucket-protocol",
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": false,
     "sources": [
       {
         "label": "Sui mainnet GraphQL (object-type enumeration and deny-list scan, checkpoints 304909276-304911372, 2026-07-30)",
@@ -18,11 +18,23 @@
       {
         "label": "Bucket USDB Peg (V2 terms; not a current BUCK reserve disclosure)",
         "url": "https://docs.bucketprotocol.io/mechanism/usdb-peg"
+      },
+      {
+        "label": "Bucket V1 legacy SDK object registry (Reservoir, LP wrapper and pool object IDs)",
+        "url": "https://github.com/Bucket-Protocol/bucket-protocol-sdk/blob/legacy/sdk/src/constants/object.ts"
+      },
+      {
+        "label": "Bucket upgrade and migration documentation (BUCK to USDB 1:1, legacy exit-only phases)",
+        "url": "https://docs.bucketprotocol.io/user-guides/bucket-upgrade-and-migration"
+      },
+      {
+        "label": "Pinned Sui checkpoint 303739938",
+        "url": "https://suiscan.xyz/mainnet/checkpoint/303739938"
       }
     ],
-    "evidence": "Re-reviewed 2026-08-08 using Sui checkpoints 304909276-304911372. BUCK remains an unregulated Sui currency with no RegulatedCoinMetadata, DenyCapV2, legacy DenyCap, holder blacklist, or token-transfer pause. Bucket's official terms describe interface-level restrictions rather than an on-chain power over holder coins. The Peg Stability Module holds Circle USDC and Tether USDT for direct BUCK conversions; those issuers can freeze PSM-held balances and impair redemption liquidity, but cannot restrict transfers of already-held BUCK coin objects. Direct holder freeze is therefore false, with the PSM exposure recorded separately as upstream risk. Source-scope recheck 2026-10-01: the linked USDB Peg page describes V2 USDB conversions, not current BUCK reserves. The migration guide separately permits BUCK-to-USDB conversion 1:1. Current checkpoint 328957880 reads confirm legacy BUCK Reservoir objects and ordinary BUCK CoinMetadata, but a complete current deny-cap census and freeze look-through were not completed; the historical direct-freeze analysis and adverse inherited status are retained without a favorable refresh.",
-    "reviewer": "OpenAI Codex unfreezable-cohort audit",
-    "reviewedAt": "2026-08-08"
+    "evidence": "At Sui checkpoint335657715(2026-10-19T06:36:52.707Z), BUCK0xce7ff77a83ea0cb6fd39bd8748e2ec89a3f41e8efdc3f4eb123e0ca37b184db2::buck::BUCK has no extant typed RegulatedCoinMetadata/DenyCapV2/DenyCap in complete checkpoint-scoped object queries; each returns nodes[] and hasNextPage=false. No token-transfer pause or arbitrary-holder burn is evidenced. Protocol-package upgrades and shared-vault controls do not rewrite sui::coin::Coin<BUCK> ownership checks or grant access to an arbitrary holder's owned input. Source: https://raw.githubusercontent.com/MystenLabs/sui/main/crates/sui-framework/packages/sui-framework/sources/coin.move and sources/registries/coin_registry.move(make_regulated initialization-only; legacy regulated migration requires an already-existing cap/metadata). Reserve test: current LP decomposition replaces the historical91.79% aggregate/50:50 assumption. Enumerate objects by bucketus module0x8d1aee27f8537c06d19c16641f27008caafc42affd2d2fb7adb96919470481ec::bucketus; all10 objects include seven CetusLpVaults, of which only0x6e0b0c324a46d297562120acdb7eabc4034046d90b3d7c763888a102b8e8d01d,0x706a998f7f223b30c32ac3400a63721dae00f1b3e15169defeaafe2756af99c8,0xe94a3bc4e33f240152b8e639dbca7f257f94a2111a8f3bedd584f254ad1d7080 retain liquidity. The dominant nativeUSDC/BUCK vault has liquidity36571983640779882,ticks69068..69098,and pool0x4c50ba9d1e60d229800293a4222851c9c3f797aa5ba8a8d32cc67ec7e79fec60 sqrtPriceX64=583809930153333734433. Standard CLMM constituent amounts L*(sqrtUpper-sqrtPrice)/(sqrtPrice*sqrtUpper),L*(sqrtPrice-sqrtLower),with sqrtPrice=integer/2^64 and sqrtTick=1.0001^(tick/2), yield45852.936826 USDC and1688918.730991 BUCK principal. Remaining active vaults add6.074951 stable units/24.919980 BUCK. Treasury0x781d3060afe9f5427bb865088ab25c8d827ed2b0be71ab140ff9ab5a0d8c9466 dynamic balances add46.548751 USDC/39.613351674 BUCK. Total measured principal plus idle balances45905.560528 stable/1688983.264322 BUCK; stable value share2.646023%, using$1 per stable unit only as the stated reference. Reservoir owns1937877335613590 of1937877335614089 BUCKETUS units, essentially the entire wrapper supply. BluefinLPVault0x6eea87bb28968ac9889d18af7af9e150d4d1b8fe6bd467ca96954d883d00b8c2 uses pool0x9f70edecd4af60ca9ce5544530cc5596a7d3a93d6a8c5207241f206e73384797: ticks-69086..-69081,L35687793268080331,current sqrtPriceX64=582850844957026597 lies below range and gives282157.845845 BUCK/0 USDC principal. The Reservoir owns the entire282087505173162-unit Bluefin wrapper supply. Principal calculations omit uncollected pool fees/rewards rather than inventing their value. Across40 CDPs, minted_buck_amount totals161005.365228 BUCK; across18 Reservoirs,buck_minted_amount totals2221839.550157. On that explicitly partial V1 debt denominator2382844.915385, counting every other branch100% exposed and using the measured principal splits would give at most8.987440% exposure, CONDITIONAL on fee/reward and full-wrapper backing reconciliation. The actual TreasuryCap embedded in protocol0x9e3dab13212b27f5434416939db5dec6a319d15b89a84fd074d03ece6350d3df reports25915900.658461 supply. Full current backing remains unresolved because the23533055.743076 liability gap, V2 conversion claims, uncollected LP fees/rewards, and stale heterogeneous CDP values are not reconciled. Do not replace that missing denominator with either the historical$3349760.65 inventory or a measured-majority claim. Sources: https://graphql.mainnet.sui.io/graphql; https://github.com/Bucket-Protocol/bucket-protocol-sdk/blob/legacy/sdk/src/constants/object.ts; https://docs.bucketprotocol.io/user-guides/bucket-upgrade-and-migration. The historical 47.98% exposure figure must not be represented as measured. Current full-book exposure remains bounded only0..100%; measured V1 principal shows that the assumed50/50 LP split is decisively wrong. No active holder-targeted control is established and no reserve majority is demonstrated, so the verdict is No.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "opaque-or-unknown",

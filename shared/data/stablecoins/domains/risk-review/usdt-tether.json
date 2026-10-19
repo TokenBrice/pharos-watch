@@ -10,11 +10,23 @@
       {
         "label": "Tether Token Terms, updated 2026-02-26",
         "url": "https://tether.to/en/legal/"
+      },
+      {
+        "label": "Verified Ethereum USDT TetherToken source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xdac17f958d2ee523a2206206994597c13d831ec7"
+      },
+      {
+        "label": "Tron USDT contract, bytecode and ABI",
+        "url": "https://api.trongrid.io/wallet/getcontract?value=TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t&visible=true"
+      },
+      {
+        "label": "Ethereum RPC, block 26224760",
+        "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
-    "evidence": "The verified canonical Ethereum source exposes owner-only addBlackList, removeBlackList, destroyBlackFunds, pause, and unpause functions. At Ethereum block 26095839, owner() and getOwner() returned the recorded issuer multisig and paused() was false; an unpaused token still retains its pause and blacklist powers. Tether's Token Terms separately reserve the issuer's power to freeze Tether Tokens. This verifies an issuer and token freeze mechanism, not a classification inference.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurA01USDT)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "At Ethereum block 26224760 (hash 0x2a6c0b20faae49bb23f77a582b517057741efcee5bd423a8552f672144c83b85, 2026-10-19T06:14:11Z), canonical USDT 0xdac17f958d2ee523a2206206994597c13d831ec7 is the verified non-proxy TetherToken. owner() returned 0xC6CDE7C39eB2f0F0095F41570af89eFC2C1Ea828 and paused() returned false. The runtime exposes owner-only addBlackList(address), removeBlackList(address), destroyBlackFunds(address), pause() and unpause(); transfers reject blocked callers and the owner can burn a blocked balance, while the paused state can be re-enabled at will. The Tron deployment TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t carries the same control set and is the largest deployment at 50.6392% of supply: at Tron block 87239195 (2026-10-19T06:16:51Z), owner() returned TBPxhVAsuzoFnKyXtc1o2UySEydPHgATto, getBlackListStatus(owner) returned false with a successful constant call, and addBlackList (0ecb93c0), removeBlackList (e4997dc5), destroyBlackFunds (f3bdc228), getBlackListStatus (59bf1abe), pause (8456cb59) and unpause (3f4ba83a) selectors are present in the TetherToken runtime; the ABI exposes AddedBlackList(address), RemovedBlackList(address) and DestroyedBlackFunds(address,uint256). Ethereum (39.9064%) and Tron (50.6392%) are both material under the 10% deployment rule and each independently carries an active holder-targeted control. BSC (5.0031%) and Solana (1.468%) are sub-threshold and their controls are not relied on. Tether Token Terms separately reserve the issuer power to freeze Tether Tokens. Event signatures: AddedBlackList(address) 0x42e160154868087d6bfdc0ca23d96a1c1cfa32f1b72ba9ba27b69b98a0d819dc; RemovedBlackList(address) 0xd7e9ec6e6ecd65492dce6bf513cd6867560d49544421d0783ddf06e76c24470c; DestroyedBlackFunds(address,uint256) 0x61e6e66b0d6339b2980aecc6ccc0039736791f0ccde9ed512e789a7fbdd698c6; Pause() 0x62e78cea01bee320cd4e420270b5ea74000d11b0c9f74754ebdbfc544b05a258. The verdict is Yes.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",

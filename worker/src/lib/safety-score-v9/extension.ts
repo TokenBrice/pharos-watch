@@ -1723,9 +1723,10 @@ function resolveReserveSliceUpstreamAssetId(
     if (!activeAssetIds.has(upstreamId)) continue;
     const upstream = metaById.get(upstreamId);
     if (upstream === undefined) continue;
+    const upstreamReview = upstream.blacklistabilityReview;
     const directlyFreezeCapable =
-      upstream.blacklistabilityReview?.reviewedStatus === true ||
-      (upstream.blacklistabilityReview === undefined && upstream.flags?.governance === "centralized");
+      upstreamReview?.reviewedStatus === true ||
+      (upstreamReview === undefined && upstream.flags?.governance === "centralized");
     if (!directlyFreezeCapable) continue;
     // Largest share, then lexicographic id: independent of registry order.
     if (best === null || slice.pct > best.pct || (slice.pct === best.pct && upstreamId < best.assetId)) {
@@ -2445,7 +2446,10 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
       let admissionPath = "dependencies";
       try {
         if (dependencyAdmissionErrors.has(assetId)) throw dependencyAdmissionErrors.get(assetId);
-        const meta = metaById.get(assetId)!;
+        // Materialize lazy reviewed fields once for this asset's helper chain.
+        // Do not retain this view in metaById: decoded profiles must be released
+        // after asset admission rather than accumulating across the cohort.
+        const meta = { ...metaById.get(assetId)! };
         const prepared = preparedById.get(assetId)!;
         const cycle = cycleByAsset.get(assetId);
         const dependencies: NonNullable<ExtensionAsset["dependencies"]> = {

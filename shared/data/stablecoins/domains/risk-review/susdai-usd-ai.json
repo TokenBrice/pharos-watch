@@ -82,11 +82,35 @@
       {
         "label": "Current Arbitrum StakedUSDai verified implementation",
         "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0xef07186d90ca00107c4fc73a6fbfcb5ec3d3860d"
+      },
+      {
+        "label": "Current exact-match StakedUSDai v1.14",
+        "url": "https://sourcify.dev/server/v2/contract/42161/0x4637193852df85b7ac05dd052b187460d81551f6?fields=abi,sources"
+      },
+      {
+        "label": "Enforced upstream blacklist implementation",
+        "url": "https://sourcify.dev/server/v2/contract/42161/0xe6ee2cd3e4f2b3844689aa1be176e4dff744a6f9?fields=abi,sources"
+      },
+      {
+        "label": "Current Ethereum adapter code",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xffb20098fd7b8e84762eea4609f299d101427f24"
+      },
+      {
+        "label": "Current Ethereum OToken proxy source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0b2b2b2076d95dda7817e785989fe353fe955ef9"
+      },
+      {
+        "label": "Finalized native Token-2022 authority",
+        "url": "https://solana-rpc.publicnode.com"
+      },
+      {
+        "label": "Arc mainnet RPC",
+        "url": "https://rpc.mainnet.arc.io"
       }
     ],
-    "evidence": "Pinned reads on 2026-10-01 at Ethereum block 26095798, Arbitrum block 510584190, Base block 52024118, and Plasma block 33896599 supersede the July satellite role observations. Current satellite OToken 1.1 implementations restrict mint and arbitrary-holder burn to immutable OAdapter 0xffb20098fd7b8e84762eea4609f299d101427f24, rather than BRIDGE_ADMIN_ROLE. Nonpersistent burn(address,uint256) calls with amount zero succeeded from that adapter and reverted Not authorized from the old DEFAULT_ADMIN Safe on all three satellites. The old role-grant burn path is historical, not current. The adapter's holder-balance burn capability remains adverse access evidence. Arbitrum's current verified StakedUSDai 1.13 implementation 0xef07186d90ca00107c4fc73a6fbfcb5ec3d3860d still checks USDai.isBlacklisted for caller, sender, and recipient. reviewedStatus remains true; no holder protection is inferred from the satellite change.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurA30sUSDai)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "Solana 15.115611892270515% is material; finalized getMultipleAccounts(base64) slot 458745379 (2026-10-19T07:11:01Z), mint sUSDai6Y3GxysDEtA9BVcEFTaog6UZpYUVxJiMhAKYE, owner TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb, executable=false, freezeAuthority=5dnCPcdGKQ5CToUq4AbafWN2aP7aU9UQTENgzbNHjQw8. Authority is an off-curve Squads v4 vault, not a limited issuer-program PDA: vault0 of CrzPtmcfAGwkCsDfnoEbGHSRsWPiVEiPmryXShy9sfsz, derived with [multisig,multisig-key,vault,0]. Multisig account at finalized slot 458745731 is owned by SQDS4ep65T869zMMBKyuUq6aD6EgTu8psMjkvj52pCf, 3-of-3, timelock0; all three on-curve members have permissions7 (initiate/vote/execute). Vault can execute arbitrary SPL freeze or Token-2022 delegate transfer/burn instructions. Independently, material Arbitrum 58.639428% enforces the USDai/USDC/USDT blacklist (Arbitrum blocks 516203561 and 516204274). The active freeze authority and blacklist on material deployments establish Yes.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",

@@ -10,11 +10,39 @@
       {
         "label": "Spiko smart contracts",
         "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+      },
+      {
+        "label": "Verified Spiko Token implementation and restricted pause/burn/upgrade",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74"
+      },
+      {
+        "label": "PermissionManager canCall/remGroup implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e"
+      },
+      {
+        "label": "Ethereum observation block 26224761, 2026-10-19T06:14:23Z",
+        "url": "https://etherscan.io/block/26224761"
+      },
+      {
+        "label": "Arbitrum observation block 516204261, 2026-10-19T06:17:20Z",
+        "url": "https://arbiscan.io/block/516204261"
+      },
+      {
+        "label": "Polygon observation block 95790196, 2026-10-19T06:17:21Z",
+        "url": "https://polygonscan.com/block/95790196"
+      },
+      {
+        "label": "Spiko Stellar token and permission-manager source",
+        "url": "https://github.com/spiko-tech/stellar-contracts"
+      },
+      {
+        "label": "Stellar contract pages and supply",
+        "url": "https://stellar.expert/explorer/public/contract/CDS2GCAQTNQINSCJUJIVBJXILKBWP5PU7LOBGHMP3X47QCQBFKPMTCNT"
       }
     ],
-    "evidence": "SPKCC is issued through permissioned fund or issuer rails with KYC-gated primary-market access and issuer/admin controls over transfer, mint, redemption, or token administration.",
-    "reviewer": "Codex 2026-05-14 execution-ready expansion",
-    "reviewedAt": "2026-05-14"
+    "evidence": "Re-reviewed 2026-10-19. All EVM deployments run verified Spiko Token code (Etherscan v2 verified; the 6,009-byte Token.sol core is identical across implementations 0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74, 0x13ae01cbce8530012516fbc1273803d4995aee71, 0x60fcb8511db2a7b823cd0f3c6b08da456e18bff1 and 0x869dbfc8c578d7af77e0214287bb49d351d3e4e1). Token._update requires PermissionManager.canCall(from, token, 0xa9059cbb) for both sender and receiver (mint/burn exempt the zero side), so an issuer that revokes a holder's group removes that holder's transfer ability. At Ethereum block 26224761 (2026-10-19T06:14:23Z, hash pinned by RPC) the authority 0x344278aff344d6fb960705dc18a4912221608472 (ERC-1967 proxy to PermissionManager 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e) returned getRequirements(token,0xa9059cbb)=65 (groups 0 and 6), canCall(whitelisted holder,token,0xa9059cbb)=true and canCall(0x...0001,token,0xa9059cbb)=false; a holder-to-non-holder transfer reverted with UnauthorizedTo(address,address) 0xb77a4ad1. Group 0 is held by 3/3 Safe 0x4eaa52b6280593a8820c45ce38f974290ae52cea (getGroups=2^255+1), which can remGroup(holder,6); group-5 holder 0x71a1a4165ae953cb80fcd102c28fc5d03beafa24 can also manage group 6. The implementation also exposes restricted pause(), restricted burn(address,uint256) from an arbitrary holder, and restricted UUPS upgrade. Arbitrum authority 0xa925C217e4c1C82Ee721eBD496d3863D5C2d829A (proxy to the same PermissionManager, group-0 3/3 Safe 0x7843225ba488cf780a4fe2c842b5dc2abcf8a03e) and Polygon authority 0x344278... (group-0 3/3 Safe 0xa4196f06fe948b8ca81d3dc77110d3f83d10abd9) returned the same requirement=65 and reverted holder-to-non-holder transfers with 0xb77a4ad1 at Arbitrum block 516204261 (2026-10-19T06:17:20Z) and Polygon block 95790196 (2026-10-19T06:17:21Z). On Stellar, the token requires WHITELISTED_ROLE on both transfer parties and burns an arbitrary account when called with BURNER_ROLE; instance PERM is shared PermissionManager CBGHLRSX5D5YMBPNK4ZGMUTJUHFIT7YGXGJURM5LFNZ7B6WNSXLGS26M. At Soroban ledger 65021030 (2026-10-19T06:22:13Z) has_role returned WLISTER Some(0) for GD2ELXTHZQORSH75SJE6XRTCKXNDGJFIZ4R2SZ4MMXDOBT52GK26X4EO and Some(1) for GAUYO4UAESQD6SGZDPOIG2ADT7EZTR5EJ7HSX4CYCWS2JMMGQOCL4QCX, BURNER Some(0) for redemption contract CAVZK26ERVGKGXLQGEOKPAQGIZS2YKN4BSXOYDMUY365EV66ZNSFEDBS, and its event history includes role_revoked|WLISTED. Materiality: measured totalSupply at 2026-10-19 summed across all seven deployments is 546,582,502,331 raw 5-decimal units: Arbitrum 412,822,130,363 (75.53%), Polygon 62,603,013,388 (11.45%), Starknet 49,436,962,434 (9.04%), Stellar 11,720,296,146 (2.14%), Ethereum 10,000,100,000 (1.83%), Base and Etherlink zero. The material Arbitrum and Polygon deployments are directly controlled; the sub-threshold deployments remain disclosed. There is no declared parent. Reserve composition is a cash-and-carry strategy; the reserve test is not reached because direct holder controls are established.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "standard-external",

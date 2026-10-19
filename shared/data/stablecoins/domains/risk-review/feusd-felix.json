@@ -1,7 +1,7 @@
 {
   "id": "feusd-felix",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Docs",
@@ -10,11 +10,23 @@
       {
         "label": "Website",
         "url": "https://usefelix.xyz/"
+      },
+      {
+        "label": "Felix feUSD CDP documentation",
+        "url": "https://usefelix.gitbook.io/docs/developers/market-1-feusd-cdp"
+      },
+      {
+        "label": "feUSD token on HyperEVMScan",
+        "url": "https://hyperevmscan.io/address/0x02c6a2fa58cc01a18b8d9e00ea48d65e4df26c70"
+      },
+      {
+        "label": "Felix CollateralRegistry",
+        "url": "https://hyperevmscan.io/address/0x9de1e57049c475736289cb006212f3e1dce4711b"
       }
     ],
-    "evidence": "Explicit Yes retained: reviewed metadata or audit notes identify direct seizure, freeze, blacklist, privileged burn, proxy-upgrade, or chain-governance intervention authority despite decentralized governance labeling.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "Re-reviewed 2026-10-19. feUSD is 100% on HyperEVM at 0x02c6a2fa58cc01a18b8d9e00ea48d65e4df26c70. The token is an EIP-1967 proxy (implementation 0x444322c3c54908fa5a7842a4f3ff085ec67f2598 at HyperEVM block 40435040); upgrades run through ProxyAdmin 0x44a600c0, an admin proxy 0xF42fDD95, and a Gnosis Safe 0x699090E7 with threshold 3 of 6, no modules and no guard. Issuance is confined to the four Liquity-v2 CDP branches (HYPE, kHYPE, wstHYPE, UBTC), and no blacklist, address freeze, forced transfer, privileged holder burn or transfer pause exists in the reviewed token. The mutable implementation therefore gives the admin multisig a holder-facing upgrade surface, which resolves to Possible, not Yes. Reserves are 82.7% WHYPE, 8.2% kHYPE, 6% UBTC and 3.1% wstHYPE; only the bridged-Bitcoin UBTC leg (6%) terminates in bridge/custodian control, so the >50% upstream test is not met. There is no parent. The HyperCore representation is linked to the HyperEVM token and adds no separate control.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "standard-external",

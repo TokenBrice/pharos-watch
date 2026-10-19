@@ -1,7 +1,7 @@
 {
   "id": "usdx-kava",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Kava x/cdp params API (live read at height 21878704)",
@@ -30,11 +30,19 @@
       {
         "label": "Kava live CDP inventory",
         "url": "https://api.data.kava.io/kava/cdp/v1beta1/cdps?pagination.limit=10000"
+      },
+      {
+        "label": "Kava bank send_enabled (usdx)",
+        "url": "https://api.kava.io/cosmos/bank/v1beta1/send_enabled?denoms=usdx"
+      },
+      {
+        "label": "Kava gov module account",
+        "url": "https://api.kava.io/cosmos/auth/v1beta1/module_accounts/gov"
       }
     ],
-    "evidence": "Re-verified at Kava height 22013136 on 2026-08-08. USDX is the native Cosmos bank denom usdx; the live send_enabled query returned no override, so sends are currently enabled. Kava nevertheless wires the governance authority into the bank keeper, and the active Cosmos SDK MsgSetSendEnabled path lets that authority disable ordinary bank sends for the individual usdx denom. That live global transfer-pause mechanism resolves the direct access verdict to true even though it is not currently exercised. Custodial collateral remains a separate upstream impairment exposure.",
-    "reviewer": "OpenAI Codex unfreezable-cohort audit",
-    "reviewedAt": "2026-08-08"
+    "evidence": "Re-verified 2026-10-19 at Kava height 23092673 (kava_2222-10, 2026-10-19T06:17:26Z). USDX is the native Cosmos bank denom usdx with total supply 9,257,620.801047; the send_enabled query for usdx returns no override, so transfers are currently enabled. Kava wires on-chain governance (gov module account kava10d07y265gmmuvt4z0w9aw880jnsr700jxh8cq5) into the bank keeper, and the Cosmos SDK MsgSetSendEnabled path lets that authority disable ordinary bank sends for the usdx denom. That is a global transfer pause, which the FreezeWatch decision procedure (docs/blacklist-tracker.md) classifies as direct Possible, not Yes: there is no holder-targeted blacklist or freeze on the denom. Kava holds 100% of supply; the Osmosis IBC denom is a claim on Kava escrow and adds no independent supply. No parent: variantOf and mintAuthority.inheritedFrom are null. CDP collateral (HBTC 81.2%, BTCB 7.8%, XRPB 3.9%) is a separate upstream impairment exposure, not the basis of this verdict.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "standard-external",

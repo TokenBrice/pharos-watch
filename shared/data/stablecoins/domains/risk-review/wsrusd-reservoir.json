@@ -1,7 +1,7 @@
 {
   "id": "wsrusd-reservoir",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "Reservoir wsrUSD product documentation",
@@ -42,11 +42,23 @@
       {
         "label": "Tempo pinned role, pause, and transfer-policy reads",
         "url": "https://rpc.tempo.xyz"
+      },
+      {
+        "label": "Ethereum pinned native share-supply and asset reads",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "rUSD underlying reserve evidence fetched 2026-10-19",
+        "url": "https://fireworks-git-master-fortunafi.vercel.app/api/reserves/raw"
+      },
+      {
+        "label": "Complete asset market feed total and price, captured 2026-10-19",
+        "url": "https://api.pharos.watch/api/stablecoins"
       }
     ],
-    "evidence": "Re-reviewed 2026-10-01. Ethereum Savingcoin remains a constructor-deployed ERC-4626/ERC20 without a local blacklist, freeze, pause, seize, or arbitrary-holder-burn entry point. Solana finalized slot 452226658 reports freezeAuthority = null. However, the subsequently catalogued Tempo wsrUSD TIP-20 representation 0x20c000000000000000000000aeed2ec36a54d0e5 has its own local administrative censorship surface: at pinned Tempo block 42066495, paused() was false, transferPolicyId() was 1 (always-allow), and hasRole(0xb7570e32ded63b25163369d5eb4d8e89e70e5602, DEFAULT_ADMIN_ROLE) was true. The TIP-20 specification directly permits DEFAULT_ADMIN_ROLE to change transferPolicyId, including always-reject or custom policies. Current permissive state does not remove that power. Thus wsrUSD has possible local holder-transfer restriction on Tempo as well as the existing inherited rUSD exposure; the prior inherited-only conclusion no longer describes every authored deployment.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurA55wsrUSD)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "Ethereum 0xd3fd63209fa2d55b07a0f6db36c2f43900be3094 remains a constructor-deployed immutable Savingcoin ERC4626/ERC20 without local holder blacklist, freeze, transfer pause, seizure or arbitrary-holder burn. Its savings-rate/cap/recovery functions are not holder transfer gates; at Ethereum block 26224766 (2026-10-19T06:15:23Z), EIP1967 implementation/admin slots are zero and asset() is rUSD 0x09d4214c03d01f49544c0448dbe3a27f768f2b34. The reviewed EVM representations (Base, Berachain, Sonic, Arbitrum, BSC, Avalanche, Unichain, Plume, Sei, World Chain, Katana, HyperEVM, Linea, Monad, Pharos, Plasma, MegaETH and XDC) match the direct WsrusdOft runtime after only compiler-labelled immutable normalization; they retain ordinary local ERC20 transfers without owner freeze or token-upgrade hooks. Solana finalized slot 452226658 reported freezeAuthority=null, reaffirmed in the later transfer overlay at finalized slot 453407700 as legacy SPL Token without transfer-hook extensions. Tempo 0x20c000000000000000000000aeed2ec36a54d0e5 has a mutable administrative censorship surface, not absence of exposure: at Tempo block 44841241 (2026-10-19T06:15:29Z), paused=false, transferPolicyId=1 and hasRole(Reservoir EOA 0xb7570e32ded63b25163369d5eb4d8e89e70e5602, DEFAULT_ADMIN_ROLE)=true. However totalSupply is only 3.938569 shares (3938569 raw, 6 decimals), against 99954801.45609958 native outstanding shares at the Ethereum pin. Its conservative share upper bound is 3.94034998082e-06%, decisively below the 10% threshold even though chainCirculating is unavailable. Thus Tempo is disclosed but cannot set the verdict. All other catalogued deployments are conservatively in scope despite unknown individual shares and have no evidenced direct Yes/Possible control. wsrUSD is a declared holder claim on rUSD, and is Upstream because its measured reserve book is >50% issuer-exposed. Therefore wsrUSD remains Upstream under the parent test; a separate independent reserve majority is not required. Complete asset feed captured 2026-10-19 also supplies asset total circulating.peggedUSD=111805881.28847106 and price=1.1037698599029802; taking the total as share units gives 3.52268499171e-06%, and even interpreting it as USD and valuing Tempo shares at the quoted native share price gives 3.88823351978e-06%. Both are below the stored conservative upper bound and far below 10%.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",

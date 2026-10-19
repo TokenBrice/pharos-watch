@@ -159,7 +159,7 @@ describe("business-calendar settlement consumers", () => {
       { name: "Cash", pct: 10, risk: "very-low", assetClass: "cash", liquidityHorizon: "unknown", sourceKey: "reserve:ad8f3089c8d58cf408e0be9a" },
     ];
     const input = makeV9FixedInput({ assetId, clockSec: now, reserves: rows });
-    const meta = { ...ACTIVE_META_BY_ID.get(assetId)!, mintAuthority: undefined };
+    const meta = { ...ACTIVE_META_BY_ID.get(assetId)!, mintAuthority: undefined, blacklistabilityReview: undefined };
     const extension = buildSafetyScoreV9BaselineExtension(input, { metaById: new Map([[assetId, meta]]) });
     const withBounds = compileSafetyScoreV9FactSetFromFixedInput(input, extension).assets[0]!;
     const withoutBounds = compileSafetyScoreV9FactSetFromFixedInput(input, {

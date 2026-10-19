@@ -6,11 +6,19 @@
       {
         "label": "Agora Bermuda Limited Terms of Use, September 1, 2026, Upgrades and Asset Freezing",
         "url": "https://static.agora.finance/termsofuse.pdf"
+      },
+      {
+        "label": "AUSD Ethereum proxy, block 26224768",
+        "url": "https://etherscan.io/address/0x00000000efe302beaa2b3e6e1b18d08d69a9012a"
+      },
+      {
+        "label": "AUSD verified implementation",
+        "url": "https://etherscan.io/address/0xc1e3c7d486d6a92fbe920232e439eec2ceb112da"
       }
     ],
-    "evidence": "The September 1, 2026 Terms of Use expressly give Agora the ability and right to freeze individual accounts/addresses and their tokens, prevent sending, receiving or interacting with AUSD, and pause or upgrade AUSD smart contracts. This directly supports the existing positive blacklistability verdict.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurA31YLDS)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "At Ethereum block 26224768 (2026-10-19), the AUSD proxy 0x00000000efe302beaa2b3e6e1b18d08d69a9012a (implementation 0xc1e3c7d486d6a92fbe920232e439eec2ceb112da) exposes a live FREEZER_ROLE with freeze(address), batchFreeze(address[]), batchUnfreeze(address[]) and AccountFrozen/AccountUnfrozen events. getFreezerRoleMembers() returned 0xcF7D2a525057555d7b4816941185b7ae10E94681; getPauserRoleMembers() returned 0x0b8Dd710f0260F16C0fA4F6a92D72d065E532A25; isTransferPaused() and isFreezingPaused() were both false, so the freeze path is live rather than globally paused. Pharos supply shares are Monad 52.2557%, Ethereum 35.4755%, Immutable zkEVM 4.1348% and smaller chains; Ethereum and Monad are material deployments. The Monad deployment uses the same address and implementation but its role holder was not independently re-pinned here. The September 1, 2026 Terms of Use additionally reserve the right to freeze accounts and pause or upgrade AUSD, consistent with the on-chain surface. This is a direct, active holder freeze control and establishes Yes.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",

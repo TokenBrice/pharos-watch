@@ -10,11 +10,23 @@
       {
         "label": "Midas mToken source: sender and recipient blacklist checks",
         "url": "https://github.com/midas-apps/contracts/blob/main/contracts/mToken.sol"
+      },
+      {
+        "label": "Midas Blacklistable source (BLACKLISTED_ROLE check)",
+        "url": "https://github.com/midas-apps/contracts/blob/main/contracts/access/Blacklistable.sol"
+      },
+      {
+        "label": "Ethereum mTBILL verified proxy implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd4998cc1ba435298c521f250b81856b1f25c8455"
+      },
+      {
+        "label": "Midas smart-contract registry",
+        "url": "https://docs.midas.app/resources/smart-contracts-registry"
       }
     ],
-    "evidence": "The issuer's mTBILL source inherits mToken and defines M_TBILL_PAUSE_OPERATOR_ROLE. mToken implements role-gated pause/unpause and calls _onlyNotBlacklisted() for both sender and recipient on transfers. October 1 pinned reads confirmed the recorded mTBILL identities, decimals, access-control addresses, and mint-role constant on the five listed native deployments. The capability is supported by product source, not inferred solely from centralized governance.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurA40apxUSD)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "At Ethereum block 26224764 (2026-10-19), mTBILL proxy 0xdd629e5241cbc5919847783e6c96b2de4754e438 resolves to verified implementation 0xd4998cc1ba435298c521f250b81856b1f25c8455. mTBILL inherits mToken, whose _beforeTokenTransfer applies _onlyNotBlacklisted to both sender and recipient, and exposes pause()/unpause() under M_TBILL_PAUSE_OPERATOR_ROLE plus privileged burn under M_TBILL_BURN_OPERATOR_ROLE. The blacklist is administered through shared MidasAccessControl 0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B: BLACKLIST_OPERATOR_ROLE (0x2fdc6683bc8d03effec5b41d3834f28bd219e06ca0a6a26fc737e44b1c7889ff) had 60+ current holders at that block (hasRole true for 0x081bb8ad7f452f916991c17fdfa64d4a25153169, 0x2facac0cda0225d7acca792821164b398c26bbd2, 0x1202ac80145f26a7d59b3d7a64836dbacd6bd424), so an issuer operator can add any holder to BLACKLISTED_ROLE and stop its transfers. Ethereum held 69,657,307.70 of 71,133,334.91 mTBILL (97.93%) measured across the five deployments at pinned totalSupply reads, a material deployment. Etherlink (1,139,160.06; 1.60%), Base (336,492.09; 0.47%), Plume (374.19) and Rootstock (0.86) are sub-threshold and disclosed, not verdict-setting; their proxies reuse the same mToken design but were not role-verified.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

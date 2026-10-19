@@ -20,9 +20,9 @@
         "url": "https://rpc.soniclabs.com"
       }
     ],
-    "evidence": "At Sonic block 80179059 on 2026-10-01, USSD delegates to implementation 0x155384be16fa171e6d97e4136643a9ac31678d04. Its verified ABI exposes FREEZER_ROLE, freeze(address), freezeMany(address[]) and thaw functions. The correct EIP-1967 admin slot points to ProxyAdmin 0x95081db6a3ae3e1d14d66e68c703e463e4faf912, whose owner is the 3-of-6 Safe 0x87c7a1ef67c67cd57cbf101522a0c3b19d2c3aac. The current FREEZER_ROLE holder set was not exhaustively resolved; the issuer-controlled upgrade path remains evidenced, so the adverse blacklistability verdict is retained.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurB06GBPSAFO)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "At Sonic block 81283187, USSD proxy 0x000000000eccff26b795f73fb0a70d48da657fef (100% of census-measured supply) delegates to verified implementation 0x155384be16fa171e6d97e4136643a9ac31678d04. The implementation's freeze(address) and freezeMany(address[]) are callable by FREEZER_ROLE or DEFAULT_ADMIN_ROLE. hasRole(DEFAULT_ADMIN_ROLE, 0x87c7A1ef67c67cd57CBF101522a0c3B19D2C3aAc) returns true; that 3-of-6 Safe has held the role since deployment block 0x3d2e134 and can freeze any holder directly. thaw/thawMany/pause are DEFAULT_ADMIN_ROLE-gated and isPaused() is false. The EIP-1967 admin is ProxyAdmin 0x95081db6a3ae3e1d14d66e68c703e463e4faf912, owned by the same Safe, so the implementation is also replaceable. No FREEZER_ROLE grant event exists; FACTORY_ROLE is held by 0x63e89638743a409e2389f06a3f778a4570314d7d and MINTER_ROLE by 0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03, neither of which sets the verdict. The direct admin freeze path establishes Yes.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",

@@ -1,11 +1,11 @@
 {
   "id": "usdn-noble",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "possible",
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: USDN resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "evidence": "USDN has an existing native-bank global transfer-stop authority, not a token blacklist and not merely hypothetical chain upgradeability. Noble v11.6.0 assigns bank authority to x/authority, whose assigned owner can execute bank MsgSetSendEnabled for uusdn. Current owner REST response is noble1qq8qvaxyznt4dm64kqy0f9x67mfpu37xk8xw5u; no current uusdn SendEnabled override is returned. The source versions are pinned; the REST state is an adjacent-height observation near 61906534, not falsely claimed historical. Under the FreezeWatch decision procedure (docs/blacklist-tracker.md), a live global transfer pause is Possible and dominates parent inheritance. Generic native-L1 upgradeability alone is excluded by the same procedure; narrow yield-claim/portal pauses are not the decisive control.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",

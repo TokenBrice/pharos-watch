@@ -1,7 +1,7 @@
 {
   "id": "ousd-origin-protocol",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Origin Dollar OUSD.sol (GitHub master)",
@@ -32,9 +32,9 @@
         "url": "https://github.com/OriginProtocol/origin-dollar/blob/master/contracts/contracts/proxies/InitializeGovernedUpgradeabilityProxy.sol"
       }
     ],
-    "evidence": "Re-reviewed 2026-08-08 at Ethereum block 25712273. OUSD 0x2a8e1e676ec238d8a992307b495b45b3feaa5e86 used implementation 0xa7b7c59a1705e4a624ea8a4ad8a06f9de22dcc33 and exposes burn(address,uint256), a live arbitrary-account balance-destruction primitive restricted to the authorized Vault 0xe75d77b1865ae93c7eaa3040b038d7aa7bc02f70. The Vault used implementation 0x8294cbd6dcb1e06b07dc1e93f391f50b514d5145. Both proxies are governed by timelock 0x35918cde7233f2d6a9f6904caccab6b3f0893e69f, whose minimum delay was 172800 seconds. The privileged Vault burn mechanism makes blacklistability true; the governor's ability to replace token or Vault logic independently makes the deployment restrictable. USDC backing freeze exposure remains a reserve/dependency risk rather than the basis for this direct verdict.",
-    "reviewer": "OpenAI Codex C06 access review",
-    "reviewedAt": "2026-08-08"
+    "evidence": "Re-reviewed 2026-08-08 at Ethereum block 25712273; role membership re-evaluated 2026-10-19. OUSD 0x2a8e1e676ec238d8a992307b495b45b3feaa5e86 uses implementation 0xa7b7c59a1705e4a624ea8a4ad8a06f9de22dcc33 and exposes burn(address,uint256) gated by onlyVault, with vaultAddress set to Vault 0xe75d77b1865ae93c7eaa3040b038d7aa7bc02f70. The reviewed VaultCore source (Vault impl 0x8294cbd6dcb1e06b07dc1e93f391f50b514d5145) calls oToken.burn only with msg.sender in redeem() and burnForStrategy(); no current Vault entrypoint burns a third party's balance without allowance. Both token and Vault proxies are governed by timelock 0x35918cde7233f2d6a9f6904caccab6b3f0893e69f with minimum delay 172800 seconds. Under ROLE-ADMIN-BURNER, the current non-zero Vault cannot reach arbitrary holders, so the burn primitive is a governor-addable/upgradeable path rather than an active holder-targeted control: direct Possible. Ethereum holds 100% of supply. USDC backing freeze exposure remains a reserve/dependency risk.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",

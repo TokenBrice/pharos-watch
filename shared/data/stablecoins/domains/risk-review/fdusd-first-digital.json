@@ -6,11 +6,19 @@
       {
         "label": "Solana finalized FDUSD mint account, slot 452212654",
         "url": "https://api.mainnet-beta.solana.com"
+      },
+      {
+        "label": "FDUSD implementation source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa6b2c3d2910246fb0adb02e5f6b39e29026e6d50"
+      },
+      {
+        "label": "FDUSD token (Ethereum)",
+        "url": "https://eth.blockscout.com/address/0xc5f0f7b66764f6ec8c8dff7ba683102295e16409"
       }
     ],
-    "evidence": "A finalized getMultipleAccounts read at Solana slot 452212654 on 2026-10-01 returned freezeAuthority 83HyrPyXfzUoVFHrxBNPQzUKEarBa6HkAtL8z3bYj4QF for FDUSD mint 9zNQRsGLjNKwCUU5Gq5LR8beUCPzQMVMqKAi3SSZh54u. This directly verifies holder-freeze capability on an issuer-listed deployment, replacing the prior inference from centralized governance.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurA03USDS)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "FDUSD is 65.27% on Ethereum and 18.22% on BSC (13.80% Sui, 2.70% Solana). At Ethereum block 26224769 the tracked token 0xc5f0f7b66764f6ec8c8dff7ba683102295e16409 proxies to implementation 0xa6b2c3d2910246fb0adb02e5f6b39e29026e6d50; owner() is Safe 0xfa771871d3d5c85e156D3d379E2FF7699C4d6a66. The verified Stablecoin implementation exposes owner-only freeze(address)/unfreeze(address) and pause(), and _transfer reverts when either endpoint is frozen. The BSC deployment uses the same implementation and the same owner at BSC block 128504967, with paused() false on both chains. The Solana freeze authority (2.70%) is disclosed as a peripheral control but does not set the verdict. Active holder freeze on the material Ethereum and BSC deployments sets Yes.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

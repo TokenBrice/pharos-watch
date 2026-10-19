@@ -10,11 +10,19 @@
       {
         "label": "Deployments",
         "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token"
+      },
+      {
+        "label": "Ethereum FUSD proxy",
+        "url": "https://etherscan.io/address/0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c#code"
+      },
+      {
+        "label": "FUSD KycModule proxy",
+        "url": "https://etherscan.io/address/0x6375413dde6e1aeb006fb61c8ec3e1b573213fd3#code"
       }
     ],
-    "evidence": "FinChain Dollar resolves to Yes because metadata classifies the asset as a centralized, licensed issuer stablecoin and the token is issued through issuer-managed deployments.",
-    "reviewer": "Codex data addition",
-    "reviewedAt": "2026-05-24"
+    "evidence": "Re-verified 2026-10-19 on all three material deployments. FUSD is a TransparentUpgradeableProxy at 0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c on Ethereum, Avalanche and Monad. The token's _update hook calls a KYC module on every transfer (IKycModule(kycModule).validateBanned for msg.sender, from and to). The proxy's kycModule storage slot 0xc5d59dbfc64fc2aca8893c1bca323a8f71c6e9d6f511dd193e3fabd76b952e03 resolves to 0x6375413dde6e1aeb006fb61c8ec3e1b573213fd3 on Ethereum (block 26224773), Avalanche (block 97944426) and Monad (block 114681744). On each chain isKycEnabled()=true and BAN_ROLE is held by 0xa7B5849cDDE66c5c998252a3d4c03e11573A900D (getRoleMember(BAN_ROLE,0)); the module's ban(address[]) action blocks named holders from transferring, a direct holder-targeted denylist. Material deployments: Ethereum 50.01%, Avalanche 26.93%, Monad 22.95%; Sonic is 0.11% and the disputed Solana FUSDLP mint is sub-threshold. The token also exposes a global PAUSER_ROLE pause, which is Possible-class and not the basis. No parent: variantOf and mintAuthority.inheritedFrom are null. Reserves are custodial fund shares (about 25% TKUSD, 25% CUMFU, 50% FUIDL/Bny Mellon MMF) and are not the basis.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",

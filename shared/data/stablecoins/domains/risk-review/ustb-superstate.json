@@ -2,10 +2,36 @@
   "id": "ustb-superstate",
   "blacklistabilityReview": {
     "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Ethereum USTB proxy and verified FundToken implementation",
+        "url": "https://eth.blockscout.com/address/0xB3ac55dd09aA70E9BfBb12F45CD38A1F1597588C"
+      },
+      {
+        "label": "Superstate AllowlistV4 used by USTB",
+        "url": "https://eth.blockscout.com/address/0xBcBC2b4FB2AbE1C598C9ea91E0b03338e4728D1f"
+      },
+      {
+        "label": "Pinned Ethereum JSON-RPC reads",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
+      },
+      {
+        "label": "Pinned Plume JSON-RPC reads",
+        "url": "https://rpc.plume.org"
+      },
+      {
+        "label": "Solana finalized mint state",
+        "url": "https://api.mainnet-beta.solana.com"
+      },
+      {
+        "label": "Pharos supply and deployment shares observed 2026-10-19",
+        "url": "https://api.pharos.watch/api/stablecoins"
+      }
+    ],
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: USTB resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "evidence": "USTB resolves Yes on a direct holder-targeted allowlist. The 2026-10-19 census and measured on-chain supply put 98.4538% of circulating supply on Ethereum; Plume (1.2271%) and Solana (0.3191%) are below the 10% materiality threshold but carry the same controls. At Ethereum block 26224780 (2026-10-19T06:18:11Z, 0x9076bf82c0ff881700033ffa57572090f362c3b3df43d90ac3ce2ef31172a97d), USTB 0x43415eb6ff9db7e26a15b704e7a3edce97d31c4e is a TransparentUpgradeableProxy over verified FundToken 0xB3ac55dd09aA70E9BfBb12F45CD38A1F1597588C. owner()=0xad309BB6f13074128b4F23EF9EA2fe8552AfCA83 (pendingOwner zero), allowlist()=0xBcBC2b4FB2AbE1C598C9ea91E0b03338e4728D1f with allowlist owner()=0x7747940aDBc7191f877a9B90596E0DA4f8deb2Fe, isPublicInstrument()=false, paused()=false. The verified transfer and transferFrom overrides require isAllowed(sender) and isAllowed(recipient), and adminBurn(src,amount) is auth-gated, so the issuer can de-list any holder and burn its balance. The Plume proxy 0xe4fa682f94610ccd170680cc3b045d77d9e528a8 uses the same allowlist and owner. The Solana mint CCz3SGVziFeLYk2xfEstkiqJfYkjaSWb2GCABYsVcjo2 is Token-2022 with freeze authority and permanent delegate 2Yq4T3mPNfjtEyTxSbRjRKqLf1pwbTasuCQrWe6QpM7x and default-frozen accounts. Reserves are 100% short-duration U.S. Treasury securities, which would also qualify as upstream exposure, but the direct allowlist control decides.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

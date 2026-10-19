@@ -1,7 +1,7 @@
 {
   "id": "wcop-ripio",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Ripio wCOP product documentation",
@@ -76,9 +76,9 @@
         "url": "https://archive.org/wayback/available?url=https%3A%2F%2Fwww.ripio.com%2Fen%2Fwfiat&timestamp=20260715"
       }
     ],
-    "evidence": "At fixed 2026-07-15 blocks Ethereum 25534997, Base 48646186, Worldchain 32373046, BSC 110049753, Polygon 90251163, and Gnosis 47208124, every tracked WCOP proxy resolved to 0x6f6206fac28d9f60d221a63aae5fb5c3a9ea6652 and returned paused() = false. On each route, 0x466c02e2cc67b81a696af5afdb61605c41fe247b held both PAUSER_ROLE and UPGRADER_ROLE. Ethereum, Base, and Worldchain run the verified pausable LatamStable variant, so that EOA can halt all ERC-20 updates; BSC, Polygon, and Gnosis run the verified compliance variant, which additionally exposes blockUser, unblockUser, and setEnforceBlocklist and rejects a blocked sender or receiver in _update when enforcement is enabled. This is an asset-wide direct freeze conclusion from all six tracked routes, but address-specific blocklisting is only asserted for BSC, Polygon, and Gnosis. The V9 transfer review is resolved by the direct pause/blocklist mechanisms, not a permissioning-adapter inference. Ripio's public GitHub organization did not expose a wFIAT/LatamStable Solidity repository, and Archive.org returned no snapshot for the reviewed English wFIAT page; deployed explorer source and fixed RPC evidence remain sufficient. The issuer's March 2026 collateral certification was reviewed as transparency evidence, not as access-control proof.",
-    "reviewer": "Codex Wave 8 access review",
-    "reviewedAt": "2026-07-15"
+    "evidence": "Re-reviewed 2026-10-19. wCOP supply totals 1,753,633,810.8 wCOP: Base 977,156,641.29 (55.72%), Ethereum 481,616,647.72 (27.46%), World Chain 196,108,398.75 (11.18%), Celo 34,481,024.16 (1.97%), BSC 22,972,452.04 (1.31%), Polygon 21,977,660.84 (1.25%), Gnosis 19,320,986.00 (1.10%). All tracked proxies resolve implementation 0x6f6206fac28d9f60d221a63aae5fb5c3a9ea6652, but two revisions share that address. Material Base, Ethereum and World Chain run the pause-only LatamStable revision: PAUSER_ROLE is held by Ripio EOA 0x466c02e2cc67b81a696af5afdb61605c41fe247b, paused() returned false at Base block 52800815, Ethereum block 26224803 and World Chain block 36527669. That EOA can halt every holder transfer, which is a direct Possible control. The compliance revision with COMPLIANCE_ROLE-gated blockUser/unblockUser/setEnforceBlocklist exists only on Celo, BSC, Polygon and Gnosis, whose combined share is 5.63%, below the 10% materiality threshold; those controls are disclosed but do not set the verdict. No holder-selective denylist or other Yes control exists on a material deployment, so the status is Possible, not Yes.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

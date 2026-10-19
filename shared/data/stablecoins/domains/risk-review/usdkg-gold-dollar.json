@@ -6,11 +6,19 @@
       {
         "label": "ConsenSys Diligence USDKG audit: owner pause and compliance blacklist/burn authority",
         "url": "https://diligence.security/audits/2025/01/usdkg/"
+      },
+      {
+        "label": "TronGrid USDKG contract ABI and owner/state reads",
+        "url": "https://api.trongrid.io/wallet/getcontract"
+      },
+      {
+        "label": "USDKG Tron contract",
+        "url": "https://tronscan.org/#/contract/TXZo12qvnEVKvU2zbfuQeMXKusWyxonwEG/code"
       }
     ],
-    "evidence": "The ConsenSys Diligence USDKG audit directly identifies owner pause authority and a separate compliance team that can blacklist users and destroy their balances through destroyBlackFunds. These are direct holder-transfer and balance controls, not an inference from centralized governance. The January 2025 audit was reopened on 2026-10-01; current Ethereum ownership was separately observed at block 26095805.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurB03USDKG)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "Reviewed 2026-10-19. USDKG supply is 94% on Tron and 6% on Ethereum (census). At Tron block 87239289, the Tron contract TXZo12qvnEVKvU2zbfuQeMXKusWyxonwEG returns owner()=TEmt2RaL2w6x51Lkx75hsDpBv63aPYA8jd (the verified 3-of-7 multisig), paused()=false and totalSupply()=47,000,000 USDKG. Its TronGrid ABI exposes addBlackList(address), removeBlackList(address), destroyBlackFunds(address) and getBlackListStatus(address), all owner-gated alongside pause/unpause; the owner is non-zero, so the blacklist and blacklisted-balance destruction controls are active. The ConsenSys Diligence USDKG audit independently identifies the compliance blacklist and destroyBlackFunds path. Ethereum holds 6% and is disclosed but sub-threshold; its ownership was observed at block 26095805.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
