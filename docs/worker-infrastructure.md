@@ -75,7 +75,7 @@ Heavy's operator secret inventory and provisioning are owned by [deployment prer
 
 Operational telemetry control: set `REQUEST_SOURCE_ATTRIBUTION_DISABLED=true` on the Worker and/or Pages site-data environment to stop low-value route/source attribution writes. This disables Worker `api_request_consumer_stats` route/source writes and Pages `site_data_request_stats` writes, while preserving API-key authentication, D1-backed rate limiting, last-used metadata updates, and per-key public API load telemetry. During keyed public-API spikes, set `API_KEY_REQUEST_ATTRIBUTION_DISABLED=true` on the Worker to pause only `api_key_request_stats` writes; auth, rate limiting, and last-used metadata still run.
 
-Request-source reads require `measurementVersion=2`. [Request Attribution](process/worker-infrastructure-appendix.md#request-attribution) owns reader-first migration and estimate semantics; writers and retention are unchanged.
+Request-source reads require `measurementVersion=2`. [Request Attribution](process/worker-infrastructure-appendix.md#request-attribution) owns the reader-first migration, sampled-table retention and estimate semantics; writers are unchanged.
 
 The complete key-by-key contract is in [Binding Inventory](process/worker-infrastructure-appendix.md#binding-inventory), generated from the manifest and validated by `check:env-contract`. This reference table does not independently author requirements. Collector, repair, canary, and recovery behavior is separated into [Runtime Feature Contracts](#runtime-feature-contracts); a binding's presence alone does not establish that feature's admission or publication authority.
 
