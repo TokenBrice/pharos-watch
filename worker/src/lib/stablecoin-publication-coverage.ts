@@ -161,6 +161,44 @@ export const STABLECOIN_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview[] =
     expiresAt: Date.UTC(2026, 9, 21) / 1000,
   },
   {
+    stablecoinId: "usdn-noble",
+    owner: "ops",
+    reason:
+      "Reviewed 2026-10-19 02:35 UTC: USDN inherits M, which inherits Wrapped M. CoinGecko wrappedm-by-m0 remains at 2026-10-19 00:39:33 UTC ($97.71 daily volume), beyond the unchanged 15-minute primary budget; its DefiLlama proxies repeat that clock. DefiLlama list assets 213 and 282 have no price, Noble USDN's own CoinGecko quote is dated 2026-05-09, and exact-contract DexScreener reads for M and USDN return no pairs. GeckoTerminal's M Ethereum pools have at most $5,069.62 liquidity and zero daily volume. wM's Solana Raydium pool has $250K-$258K liquidity and about $98 daily volume: it passes the $50K pool floor, but a lone DEX family lacks the independent corroborator required for primary promotion and is below the $1M aggregate TVL floor. Low volume is not itself a DexScreener/GeckoTerminal rejection rule. Production's M contract quote and wM Jupiter/low-volume marks remain fallback evidence; inheritance rejects fallback-confidence parents. Keep USDN missing, preserve all source admission gates, and have ops establish an admissible independent observed market or re-review within seven days. M0 parity and reserve NAV are not observed prices.",
+    sources: [
+      "https://api.coingecko.com/api/v3/simple/price?ids=wrappedm-by-m0,noble-dollar-usdn&vs_currencies=usd&include_24hr_vol=true&include_last_updated_at=true",
+      "https://api.coingecko.com/api/v3/coins/wrappedm-by-m0/tickers",
+      "https://stablecoins.llama.fi/stablecoins?includePrices=true",
+      "https://coins.llama.fi/prices/current/coingecko:wrappedm-by-m0,coingecko:noble-dollar-usdn,ethereum:0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
+      "https://api.dexscreener.com/token-pairs/v1/ethereum/0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
+      "https://api.dexscreener.com/token-pairs/v1/noble/uusdn",
+      "https://api.geckoterminal.com/api/v2/networks/eth/tokens/0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b/pools",
+      "https://api.geckoterminal.com/api/v2/networks/solana/tokens/mzeroXDoBpRVhnEXBra27qzAMdxgpWVY3DzQW7xMVJp/pools",
+      "https://api.jup.ag/price/v3?ids=mzeroXDoBpRVhnEXBra27qzAMdxgpWVY3DzQW7xMVJp,mzerokyEX9TNDoK4o2YZQBDmMzjokAeN6M2g2S3pLJo",
+    ],
+    reviewedAt: Date.UTC(2026, 9, 19, 2, 35, 17) / 1000,
+    expiresAt: Date.UTC(2026, 9, 26, 2, 35, 17) / 1000,
+  },
+  {
+    stablecoinId: "usdk-kast",
+    owner: "ops",
+    reason:
+      "Reviewed 2026-10-19 02:35 UTC: USDK inherits Wrapped M, whose CoinGecko wrappedm-by-m0 observation remains at 2026-10-19 00:39:33 UTC ($97.71 daily volume), beyond the unchanged 15-minute primary budget; DefiLlama's wM proxies repeat that clock. Exact Solana USDK DexScreener returns no pairs, GeckoTerminal returns no exact-token market (404), and Jupiter returns no USDK quote. M/USDN DefiLlama list prices are null. The only substantial exact wM pool is Solana Raydium CsMzKUUJNoAoU7N4zh3hAS6qcByU81TcQMPJqCdmmcEF, with $250K-$258K liquidity and about $98 daily volume: it passes the $50K pool floor, but lacks another DEX family or hard-source corroborator for primary promotion and is below the $1M aggregate TVL floor. Low volume is not itself a DexScreener/GeckoTerminal rejection rule; reviewed EVM pools are below the liquidity floor. wM's Jupiter and low-volume CoinGecko marks are fallback evidence, and inheritance rejects fallback-confidence parents. Keep USDK missing, preserve all source admission gates, and have ops establish an admissible independent observed market or re-review within seven days. M0 parity and reserve NAV are not observed prices.",
+    sources: [
+      "https://api.coingecko.com/api/v3/simple/price?ids=wrappedm-by-m0&vs_currencies=usd&include_24hr_vol=true&include_last_updated_at=true",
+      "https://api.coingecko.com/api/v3/coins/wrappedm-by-m0/tickers",
+      "https://stablecoins.llama.fi/stablecoins?includePrices=true",
+      "https://coins.llama.fi/prices/current/coingecko:wrappedm-by-m0,ethereum:0x437cc33344a0b27a429f795ff6b469c72698b291",
+      "https://api.dexscreener.com/token-pairs/v1/solana/usdkbee86pkLyRmxfFCdkyySpxRb5ndCxVsK2BkRXwX",
+      "https://api.dexscreener.com/token-pairs/v1/solana/mzeroXDoBpRVhnEXBra27qzAMdxgpWVY3DzQW7xMVJp",
+      "https://api.geckoterminal.com/api/v2/networks/solana/tokens/usdkbee86pkLyRmxfFCdkyySpxRb5ndCxVsK2BkRXwX/pools",
+      "https://api.geckoterminal.com/api/v2/networks/solana/tokens/mzeroXDoBpRVhnEXBra27qzAMdxgpWVY3DzQW7xMVJp/pools",
+      "https://api.jup.ag/price/v3?ids=usdkbee86pkLyRmxfFCdkyySpxRb5ndCxVsK2BkRXwX,mzeroXDoBpRVhnEXBra27qzAMdxgpWVY3DzQW7xMVJp",
+    ],
+    reviewedAt: Date.UTC(2026, 9, 19, 2, 35, 17) / 1000,
+    expiresAt: Date.UTC(2026, 9, 26, 2, 35, 17) / 1000,
+  },
+  {
     stablecoinId: "wusd-worldwide",
     owner: "ops",
     reason:
