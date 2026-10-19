@@ -34,27 +34,30 @@ For an abandonment, inspect `metadata.progressStage`, `progressUpdatedAt`, `prog
 
 Use `worker/scripts/replay-blacklist-config-history.ts` after a corrected event-family configuration has shipped but its chain+contract cursor already passed the missed events. It enumerates the **current configured topics**, not every historical implementation's ABI. This is not a cursor reset: the inclusive window must end at or below that deployment's current EVM cursor, and the tool never changes sync state. Do not use `reset-blacklist-sync` for this recovery.
 
-PR #1510 (`acbbb3364`) corrected PAXG/Ethereum's `FreezeAddress(address)` / `UnfreezeAddress(address)` coverage and USDT/Avalanche's `BlockPlaced` / `BlockReleased` / `DestroyedBlockedFunds` family. Replay PAXG from block **25,547,674** (first observed current-family freeze); earlier `AddressFrozen` / `AddressUnfrozen` history was already tracked. Replay Avalanche USDT from deployment block **4,663,628**; the prior legacy-family configuration did not match that deployment.
+PR #1510 (`acbbb3364`) corrected PAXG/Ethereum's `FreezeAddress(address)` / `UnfreezeAddress(address)` coverage and USDT/Avalanche's `BlockPlaced` / `BlockReleased` / `DestroyedBlockedFunds` family. Replay PAXG from block **25,232,808**, where the proxy upgraded to the implementation that emits the current family (first observed current-family freeze: 25,547,674); earlier `AddressFrozen` / `AddressUnfrozen` history was already tracked. Replay Avalanche USDT from deployment block **4,663,628**; the prior legacy-family configuration did not match that deployment.
 
 From the repository root, set `BLACKLIST_REPLAY_RPC_URL` to the appropriate chain's trusted RPC URL (use an archive endpoint for historical amounts). The RPC must support complete `eth_getLogs`, block headers, and hash-pinned EIP-1898 `eth_call` with `requireCanonical`; unsupported historical balance reads remain NULL, never become current-state guesses. The command validates `eth_chainId` before scanning. Do not put keyed URLs in command arguments or committed evidence.
 
 Capture the chosen deployment's current cursor with these **read-only** commands, then run the exact dry-run invocation. Each end block is captured once, remains explicit, and is rechecked against D1 by the replay:
 
 ```bash
+DEPLOYMENT=ethereum-0x45804880de22913dafe09f4980848ece6ecbaf78
 PAXG_TO_BLOCK=$(mise exec -- npx wrangler d1 execute stablecoin-db --config worker/wrangler.toml --remote --json --command \
-  "SELECT COALESCE(cursor_value,last_block) AS to_block FROM blacklist_sync_state WHERE config_key='ethereum-0x45804880de22913dafe09f4980848ece6ecbaf78'" \
+  "SELECT COALESCE(cursor_value,last_block) AS to_block FROM blacklist_sync_state WHERE config_key='$DEPLOYMENT'" \
   | jq -er '.[0].results[0].to_block | select(type == "number")')
 # Export BLACKLIST_REPLAY_RPC_URL for Ethereum before this command.
+# 25,232,808 is the Upgraded(0x7da4c5d9…fa543) block that introduced FreezeAddress/UnfreezeAddress.
 mise exec -- npx tsx worker/scripts/replay-blacklist-config-history.ts \
-  --config-key ethereum-0x45804880de22913dafe09f4980848ece6ecbaf78 \
-  --from-block 25547674 --to-block "$PAXG_TO_BLOCK" --dry-run
+  --config-key "$DEPLOYMENT" \
+  --from-block 25232808 --to-block "$PAXG_TO_BLOCK" --dry-run
 
+DEPLOYMENT=avalanche-0x9702230a8ea53601f5cd2dc00fdbc13d4df4a8c7
 AVALANCHE_USDT_TO_BLOCK=$(mise exec -- npx wrangler d1 execute stablecoin-db --config worker/wrangler.toml --remote --json --command \
-  "SELECT COALESCE(cursor_value,last_block) AS to_block FROM blacklist_sync_state WHERE config_key='avalanche-0x9702230a8ea53601f5cd2dc00fdbc13d4df4a8c7'" \
+  "SELECT COALESCE(cursor_value,last_block) AS to_block FROM blacklist_sync_state WHERE config_key='$DEPLOYMENT'" \
   | jq -er '.[0].results[0].to_block | select(type == "number")')
 # Switch BLACKLIST_REPLAY_RPC_URL to Avalanche before this command.
 mise exec -- npx tsx worker/scripts/replay-blacklist-config-history.ts \
-  --config-key avalanche-0x9702230a8ea53601f5cd2dc00fdbc13d4df4a8c7 \
+  --config-key "$DEPLOYMENT" \
   --from-block 4663628 --to-block "$AVALANCHE_USDT_TO_BLOCK" --dry-run
 ```
 
