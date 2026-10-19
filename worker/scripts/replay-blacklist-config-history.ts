@@ -40,12 +40,12 @@ Options:
   --execute                      Apply one atomic D1 file import (briefly blocks D1 writes)
   --confirm ${SCRIPT_NAME}
                                  Required confirmation for --execute
-  --time-travel-bookmark <value>  Current D1 bookmark, required for --execute
   --dry-run                      Force read-only mode
   --remote                       Remote D1 (default and only target)
   -h, --help                     Show this help
 
 Apply also requires the existing blacklist current-balance writer pause and no active sync-blacklist lease.
+The tool captures a Time Travel restore point immediately before its atomic import; it is not a concurrency token.
 Never changes cursors. Missing historical balances remain NULL; no latest-state event amount fallback.`;
 
 export interface ReplayOptions {
@@ -57,7 +57,6 @@ export interface ReplayOptions {
   rpcEnv: string;
   chunkBlocks: number;
   database: string;
-  timeTravelBookmark: string | null;
 }
 type RpcRequest = (method: string, params: unknown[]) => Promise<unknown>;
 type Header = { number: string; hash: string; timestamp: string };
@@ -66,7 +65,7 @@ export interface ReplayDependencies {
   d1?: RemoteD1Client;
   rpc?: RpcRequest;
   loadLogs?: (config: ContractEventConfig, options: ReplayOptions, rpcUrl: string) => Promise<{ logs: AlchemyLogEntry[]; timestamps: Map<number, number> }>;
-  verifyBookmark?: (database: string, bookmark: string) => boolean;
+  captureRestorePoint?: (database: string) => string;
   now?: () => number;
   log?: (message: string) => void;
 }
@@ -90,7 +89,6 @@ export function parseReplayArgs(argv: string[]): ReplayOptions {
     cliOptions: {
       "config-key": { type: "string" }, "from-block": { type: "string" }, "to-block": { type: "string" },
       "rpc-env": { type: "string" }, "chunk-blocks": { type: "string" }, database: { type: "string" },
-      "time-travel-bookmark": { type: "string" },
     },
   });
   const help = values.help === true;
@@ -98,16 +96,14 @@ export function parseReplayArgs(argv: string[]): ReplayOptions {
   const fromBlock = help ? 0 : integer(values["from-block"], "--from-block");
   const toBlock = help ? 0 : integer(values["to-block"], "--to-block");
   const rpcEnv = String(values["rpc-env"] ?? "BLACKLIST_REPLAY_RPC_URL");
-  const timeTravelBookmark = typeof values["time-travel-bookmark"] === "string" ? values["time-travel-bookmark"] : null;
   if (!help) {
     requireConfig(configKey);
     assertCliUsage(fromBlock <= toBlock, "--from-block must not exceed --to-block");
     assertCliUsage(/^[A-Z_][A-Z0-9_]*$/i.test(rpcEnv), "--rpc-env must be an environment variable name");
-    assertCliUsage(mode.dryRun || !!timeTravelBookmark, "--execute requires --time-travel-bookmark");
   }
   return { help, apply: !mode.dryRun, configKey, fromBlock, toBlock, rpcEnv,
     chunkBlocks: help ? 100_000 : integer(values["chunk-blocks"] ?? "100000", "--chunk-blocks", 1),
-    database: String(values.database ?? "stablecoin-db"), timeTravelBookmark };
+    database: String(values.database ?? "stablecoin-db") };
 }
 function rpcRequest(url: string): RpcRequest {
   return async (method, params) => {
@@ -155,10 +151,13 @@ export async function fetchReplayLogs(config: ContractEventConfig, options: Repl
     { blockHashes: blockHashesForLogs(logs) });
   return { logs, timestamps };
 }
-function verifyCurrentBookmark(database: string, bookmark: string): boolean {
-  const result = JSON.parse(execFileSync("npx", ["wrangler", "d1", "time-travel", "info", database, "--json"],
-    { cwd: WORKER_CWD, encoding: "utf8", stdio: "pipe" })) as { bookmark?: unknown };
-  return result.bookmark === bookmark;
+function captureCurrentTimeTravelBookmark(database: string): string {
+  const result: unknown = JSON.parse(execFileSync("npx", ["wrangler", "d1", "time-travel", "info", database, "--json"],
+    { cwd: WORKER_CWD, encoding: "utf8", stdio: "pipe" }));
+  assert(result != null && typeof result === "object" && "bookmark" in result
+    && typeof result.bookmark === "string" && result.bookmark.trim().length > 0,
+  "Time Travel restore point capture returned no bookmark; no writes");
+  return result.bookmark;
 }
 function loadCursor(d1: RemoteD1Client, config: ContractEventConfig): Cursor {
   // SAFETY: the registry config key is escaped with sqlString, never interpolated as syntax.
@@ -181,13 +180,7 @@ export async function runConfigHistoryReplay(options: ReplayOptions, dependencie
   const cursor = loadCursor(d1, config);
   const cursorBefore = cursor.cursor_value ?? cursor.last_block;
   assert(options.toBlock <= cursorBefore, `Refusing window beyond current cursor ${cursorBefore}; normal sync owns the frontier`);
-  const bookmark = options.timeTravelBookmark;
-  const verifyBookmark = dependencies.verifyBookmark ?? verifyCurrentBookmark;
-  if (options.apply) {
-    assert(bookmark, "--execute requires --time-travel-bookmark");
-    assertBlacklistRebuildWriterGuard(d1);
-    assert(verifyBookmark(options.database, bookmark), "Provided Time Travel bookmark is not the current D1 bookmark");
-  }
+  if (options.apply) assertBlacklistRebuildWriterGuard(d1);
   const rpcUrl = options.rpcEnv === "BLACKLIST_REPLAY_RPC_URL"
     ? process.env.BLACKLIST_REPLAY_RPC_URL
     : process.env[options.rpcEnv];
@@ -295,16 +288,25 @@ export async function runConfigHistoryReplay(options: ReplayOptions, dependencie
         lastAttemptedAt: now, lastErrorClass: amount == null ? "provider_null" : null, consecutiveFailures: amount == null ? 1 : 0 });
     }
   }
+  let timeTravelBookmark: string | null = null;
+  if (options.apply && missing.length > 0) {
+    assertBlacklistRebuildWriterGuard(d1);
+    timeTravelBookmark = (dependencies.captureRestorePoint ?? captureCurrentTimeTravelBookmark)(options.database);
+    assert(typeof timeTravelBookmark === "string" && timeTravelBookmark.trim().length > 0,
+      "Time Travel restore point capture returned no bookmark; no writes");
+    // Print before import so an uncertain/failed import still leaves an operator-visible restore point.
+    dependencies.log?.(JSON.stringify({ status: "restore-point-captured", configKey: config.configKey, timeTravelBookmark }));
+  }
   const evidence = { tool: SCRIPT_NAME, config, fromBlock: options.fromBlock, toBlock: options.toBlock,
     rpcOrigin: new URL(rpcUrl).origin, logs: [...logs].sort((a, b) => Number(a.blockNumber) - Number(b.blockNumber) || Number(a.logIndex) - Number(b.logIndex)),
-    timestamps: [...timestamps].sort(([a], [b]) => a - b), retainedLifecycle, observations, currentHead };
+    timestamps: [...timestamps].sort(([a], [b]) => a - b), retainedLifecycle, observations, currentHead, timeTravelBookmark };
   const evidenceSha256 = createHash("sha256").update(JSON.stringify(evidence)).digest("hex");
   const summary = { mode: options.apply ? "apply" : "dry-run", configKey: config.configKey,
     fromBlock: options.fromBlock, toBlock: options.toBlock, cursorBefore, cursorAfter: cursorBefore,
     currentTopics: getBlacklistTopicHashes(config), fetchedLogCount: logs.length, canonicalEventCount: unique.size,
     existingEventCount: unique.size - missing.length, missingEventCount: missing.length, insertedEventCount: 0,
     affectedBalanceCount: balances.length, unresolvedAmountCount: missing.filter((row) => row.amount_native == null).length,
-    evidenceSha256, missingEventIds: missing.map((row) => row.id), runId: null as string | null,
+    evidenceSha256, timeTravelBookmark, missingEventIds: missing.map((row) => row.id), runId: null as string | null,
     status: "ready" };
   if (!options.apply || missing.length === 0) {
     summary.status = options.apply ? "unchanged" : "ready";
@@ -312,7 +314,7 @@ export async function runConfigHistoryReplay(options: ReplayOptions, dependencie
     return summary;
   }
   const runId = `blacklist-history-replay:${randomUUID()}`;
-  const details = JSON.stringify({ ...summary, tool: SCRIPT_NAME, runId, timeTravelBookmark: bookmark,
+  const details = JSON.stringify({ ...summary, tool: SCRIPT_NAME, runId,
     evidence, balanceIdentities: balances.map((row) => buildBlacklistCurrentBalanceValues(row)[0]) });
   const missingIdentities = missing.map((row) => sqlString(blacklistEventIdentity(row))).join(", ");
   const guard = `(SELECT COUNT(*) FROM blacklist_sync_state WHERE config_key = ${sqlString(config.configKey)}
@@ -350,8 +352,6 @@ export async function runConfigHistoryReplay(options: ReplayOptions, dependencie
       '$.insertedEventCount', (SELECT COUNT(*) FROM blacklist_events WHERE reconciliation_run_id = ${sqlString(runId)}),
       '$.plannedMissingEventCount', ${missing.length}, '$.missingEventCount', 0)
     WHERE action = 'replay-blacklist-config-history' AND intent_key = ${sqlString(runId)};`);
-  assertBlacklistRebuildWriterGuard(d1);
-  assert(verifyBookmark(options.database, bookmark!), "D1 changed after preflight; acquire a fresh Time Travel bookmark and retry");
   // One array entry is one transactional file import even with the remote client's 200-statement batching.
   d1.executeStatements([statements.join("\n")], "blacklist-history-replay");
   // SAFETY: the generated UUID-based run identity is escaped with sqlString.
