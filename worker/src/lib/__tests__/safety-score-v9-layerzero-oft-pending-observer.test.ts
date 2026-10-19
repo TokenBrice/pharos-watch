@@ -109,6 +109,46 @@ function fixture(sends: Send[] = [{ nonce: 1n, amountSD: 1234567n, state: "unver
 const sqliteFixtures = createLatestSchemaFixtureTracker();
 afterEach(() => { sqliteFixtures.closeAll(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
+it("batches exact current-pin authentication without reusing state across attempts", async () => {
+  const f = fixture([]);
+  expect((await f.run()).status).toBe("accepted");
+  const batches = f.batch.mock.calls.filter(([, requests]) => requests.length > 1);
+  expect(batches).toHaveLength(2);
+  for (const [, requests] of batches) {
+    expect(requests.length).toBeLessThanOrEqual(32);
+    expect(new Set(requests.map(request => stableJsonStringifyV1(request))).size).toBe(requests.length);
+    for (const request of requests) expect(request.params[1]).toEqual({ blockHash: header(100).hash, requireCanonical: true });
+  }
+  const before = f.batch.mock.calls.length;
+  expect((await f.run()).status).toBe("accepted");
+  expect(f.batch.mock.calls.length).toBe(before * 2);
+});
+
+it("records a completed prefix commit when the asset expires during the D1 write", async () => {
+  const f = fixture([
+    { nonce: 1n, amountSD: 0n, state: "unverified", height: 100 },
+    { nonce: 2n, amountSD: 0n, state: "unverified", height: 1_500_100 },
+  ]);
+  f.setPin(2_000_099);
+  vi.spyOn(dbCache, "getCache").mockResolvedValue(null);
+  const controller = new AbortController(), onDiagnostic = vi.fn();
+  const saved = vi.spyOn(dbCache, "setCache").mockImplementation(async (_db, _key, _value, signal) => {
+    controller.abort(new Error("asset-timeout-during-commit"));
+    // D1 completed the write; setCache normally checks its signal afterward.
+    signal?.throwIfAborted();
+  });
+  await expect(observeLayerZeroOftPending({
+    source: f.source, headers: [header(2_000_099), header(2_000_099)],
+    chainRpcs: new Map(), db: {} as D1Database, signal: controller.signal, onDiagnostic,
+  })).rejects.toThrow("asset-timeout-during-commit");
+  expect(saved).toHaveBeenCalledTimes(1);
+  expect(onDiagnostic.mock.calls.map(([value]) => value)).toContainEqual(expect.objectContaining({
+    phase: "authenticated-prefix-persisted", afterCursor: "1000100",
+    persisted: true, authenticatedCursorAdvanced: true, incompleteBootstrap: true,
+  }));
+  expect(f.fetcher).toHaveBeenCalledTimes(1);
+});
+
 it("persists an authenticated prefix before a later discovery timeout", async () => {
   const f = fixture([
     { nonce: 1n, amountSD: 0n, state: "unverified", height: 100 },

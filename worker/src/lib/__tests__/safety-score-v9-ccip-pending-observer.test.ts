@@ -381,6 +381,45 @@ describe("authenticated CCIP pending quantities", () => {
     corrupted.lanes[0]!.sent.anchorHash = word(9999);
     expect(await observeCcipPending(input(read, corrupted))).toMatchObject({ status: "rejected", reason: "checkpoint-reorg" });
   });
+  it("retains the durable page receipt when the asset expires during its D1 commit", async () => {
+    pinNumber = 16105; finalized = 100000;
+    const controller = new AbortController(), onDiagnostic = vi.fn();
+    vi.mocked(setCache).mockImplementation(async (_db, _key, value, signal) => {
+      if (JSON.parse(value).lanes[0].sent.nextBlock > 100) {
+        controller.abort(new Error("asset-timeout-during-commit"));
+        signal?.throwIfAborted();
+      }
+    });
+    await expect(observeCcipPending({
+      ...input(), db: {} as D1Database, signal: controller.signal, onDiagnostic,
+    })).rejects.toThrow("asset-timeout-during-commit");
+    expect(onDiagnostic.mock.calls.map(([value]) => value)).toContainEqual(expect.objectContaining({
+      phase: "authenticated-prefix-persisted", beforeCursor: "100", afterCursor: "2100",
+      persisted: true, authenticatedCursorAdvanced: true, incompleteBootstrap: true,
+    }));
+    expect(logRanges).toHaveLength(1);
+  });
+  it("saves authenticated history before slow discovery and resumes it after timeout", async () => {
+    pinNumber = 16105; finalized = 100000;
+    const controller = new AbortController(), onDiagnostic = vi.fn();
+    const discover = vi.mocked(fetchJsonWithRetry).getMockImplementation()!;
+    vi.mocked(fetchJsonWithRetry).mockImplementation(async () => {
+      controller.abort(new Error("discovery-timeout"));
+      throw controller.signal.reason;
+    });
+    await expect(observeCcipPending({
+      ...input(), db: {} as D1Database, signal: controller.signal, onDiagnostic,
+    })).rejects.toThrow("discovery-timeout");
+    const calls = vi.mocked(setCache).mock.calls;
+    const saved: CcipPendingCheckpoint = JSON.parse(calls[calls.length - 1]![2]);
+    expect(saved.lanes[0]!.sent.nextBlock).toBe(16100);
+    expect(onDiagnostic.mock.calls.some(([value]) => value.persisted && value.authenticatedCursorAdvanced)).toBe(true);
+    vi.mocked(fetchJsonWithRetry).mockImplementation(discover);
+    logRanges = [];
+    const resumed = await observeCcipPending(input(source(), saved));
+    expect(resumed.status).toBe("accepted");
+    expect(logRanges.filter(range => range.chain === "ethereum").every(range => range.from >= 16100)).toBe(true);
+  });
   it("re-authenticates runtime at a new attempt's pin instead of trusting the checkpoint", async () => {
     const first = await observeCcipPending(input());
     if (first.status !== "accepted") throw new Error(first.reason);

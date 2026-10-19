@@ -492,6 +492,44 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
     expect(orders).toEqual([["c", "d", "a", "b"], ["c", "d", "a", "b"]]);
   });
 
+  it("finishes the quick cohort before backfill timeouts and leaves maturity waits last", async () => {
+    vi.useFakeTimers();
+    try {
+      const assets = ["quick-a", "quick-b", "history-a", "history-b", "wm"];
+      const order: string[] = [];
+      let active = 0, maximum = 0;
+      const start = Date.now();
+      const pending = runBudgetedSupplyAttributionAssets(assets, async (asset, signal) => {
+        order.push(asset);
+        active++; maximum = Math.max(maximum, active);
+        try {
+          await sleepWithSignal(asset.startsWith("quick") ? 10 : 60_000, signal);
+          return asset;
+        } finally { active--; }
+      }, {
+        startIndex: 3,
+        assetPriority: asset => asset.startsWith("quick") ? 0 : asset === "wm" ? 2 : 1,
+        executionWindow: {
+          slotStartedAtSec: Math.floor(start / 1_000),
+          deadlineMs: start + SUPPLY_ATTRIBUTION_CAPTURE_BUDGET.publicationReserveMs + 30_030,
+          minimumRemainingMs: 0,
+        },
+      });
+      await vi.runAllTimersAsync();
+      expect(order).toEqual(["quick-a", "quick-b", "history-b", "history-a"]);
+      expect(await pending).toEqual([
+        { status: "completed", value: "quick-a" },
+        { status: "completed", value: "quick-b" },
+        { status: "rejected", reason: "asset-timeout" },
+        { status: "rejected", reason: "asset-timeout" },
+        { status: "rejected", reason: "capture-window-exhausted" },
+      ]);
+      expect(maximum).toBe(1);
+      expect(active).toBe(0);
+      expect(Date.now() - start).toBe(30_030);
+    } finally { vi.useRealTimers(); }
+  });
+
   it("gives all ten cold assets first opportunity over consecutive buckets within the same deadline", async () => {
     vi.useFakeTimers();
     try {
@@ -712,7 +750,7 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
     } finally { vi.restoreAllMocks(); vi.useRealTimers(); }
   });
 
-  it("derives capture rotation from the exact source bucket and keeps retry journal order", async () => {
+  it("keeps the quick cohort ahead of wM across source buckets and retries", async () => {
     vi.useFakeTimers();
     try {
       let order: string[] = [];
@@ -734,7 +772,7 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
           const capture = await captureSafetyScoreV9SupplyAttribution(input, new Map([["ethereum", {
             chainId: "ethereum", chainName: "Ethereum", type: "evm", endpoints: [], explorerUrl: "",
           }]]));
-          expect(order).toEqual(bucket % 2 === 0 ? ["xaut-tether", "wm-m0"] : ["wm-m0", "xaut-tether"]);
+          expect(order).toEqual(["xaut-tether", "wm-m0"]);
           expect(capture.journalRecords.map(record => record.assetId)).toEqual(["xaut-tether", "wm-m0"]);
         }
       }

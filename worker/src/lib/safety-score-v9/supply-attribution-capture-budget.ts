@@ -18,6 +18,8 @@ export async function runBudgetedSupplyAttributionAssets<TAsset, TResult>(
     assetTimeoutMs?: (asset: TAsset) => number;
     /** Rotate execution only; results retain their original asset indexes. */
     startIndex?: number;
+    /** Lower-cost observers run first; rotation breaks ties within a priority. */
+    assetPriority?: (asset: TAsset) => number;
   } = {},
 ): Promise<BudgetedSupplyAttributionResult<TResult>[]> {
   if (assets.length > SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_ASSETS) {
@@ -35,11 +37,16 @@ export async function runBudgetedSupplyAttributionAssets<TAsset, TResult>(
     options.executionWindow ? options.executionWindow.deadlineMs - budget.publicationReserveMs : Infinity,
   );
   const results = new Array<BudgetedSupplyAttributionResult<TResult>>(assets.length);
+  const executionOrder = Array.from({ length: assets.length }, (_, offset) => (startIndex + offset) % assets.length);
+  if (options.assetPriority) {
+    const priority = options.assetPriority;
+    executionOrder.sort((a, b) => priority(assets[a]) - priority(assets[b]));
+  }
   let cursor = 0;
   async function worker(): Promise<void> {
     while (cursor < assets.length) {
       throwIfAborted(options.signal);
-      const index = (startIndex + cursor++) % assets.length;
+      const index = executionOrder[cursor++];
       const remainingMs = deadlineMs - Date.now();
       if (remainingMs <= 0) {
         results[index] = { status: "rejected", reason: "capture-window-exhausted" };

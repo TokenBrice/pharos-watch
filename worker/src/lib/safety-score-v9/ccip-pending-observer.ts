@@ -274,7 +274,9 @@ export async function observeCcipPending(input: {
       if (!input.db) return;
       const saved = stableJsonStringifyV1(checkpoint);
       if (saved.length > MAX_CHECKPOINT_BYTES) fail("checkpoint-capacity");
-      await setCache(input.db, cacheKey, saved, input.signal);
+      // Finish the authenticated-prefix commit even if the child expires while
+      // D1 is writing. Never flush partially authenticated in-memory pages.
+      await setCache(input.db, cacheKey, saved);
       for (let i = 0; i < checkpoint!.lanes.length; i++) {
         const cp = checkpoint!.lanes[i]!, lane = input.source.lanes[i]!;
         for (const [name, cursor, side, start] of [["sent", cp.sent, lane.source, lane.sourceStartBlock], ["executed", cp.executed, lane.destination, input.headers.get(lane.destination.chainId)!.number + 1]] as const) {
@@ -284,6 +286,7 @@ export async function observeCcipPending(input: {
           savedCursors.set(key, cursor.nextBlock);
         }
       }
+      throwIfAborted(input.signal);
     };
     const state = async (lane: Lane, messages: readonly Pick<Message, "sequence" | "messageId">[]) => {
       const pin = input.headers.get(lane.destination.chainId)!;
@@ -452,31 +455,6 @@ export async function observeCcipPending(input: {
       }
       savedCursors.set(`${lane.id}:sent`, cp.sent.nextBlock);
       savedCursors.set(`${lane.id}:executed`, cp.executed.nextBlock);
-      const discovery = DiscoverySchema.safeParse(await discover(`${API_BASE}/messages?sourceChainSelector=${lane.source.chainSelector}&destChainSelector=${lane.destination.chainSelector}&sourceTokenAddress=${lane.source.tokenAddress}&limit=${DISCOVERY_LIMIT}`, 128 * 1024));
-      if (!discovery.success) fail("indexer-unavailable");
-      discoveryDigest = sha256Hex(stableJsonStringifyV1({ previous: discoveryDigest, lane: lane.id, discovery: discovery.data }));
-      for (const discovered of discovery.data.data) {
-        const identity = DiscoveryDetailSchema.safeParse(await discover(`${API_BASE}/messages/${discovered.messageId}`, 64 * 1024));
-        if (!identity.success) fail("indexer-invalid");
-        if (identity.data.onramp !== lane.onRampAddress) continue; // Another history, never this lane's evidence.
-        const tx = identity.data.sendTransactionHash;
-        const [receipt] = await rpc(lane.source.chainId, [{ method: "eth_getTransactionReceipt", params: [tx] }]);
-        const parsed = ReceiptSchema.safeParse(receipt);
-        if (!parsed.success || parsed.data.transactionHash !== tx) fail("indexer-send-unproved");
-        const row = parsed.data, height = Number(BigInt(row.blockNumber));
-        const found = row.logs.some(raw => {
-          if (!raw || typeof raw !== "object" || !("address" in raw) || typeof raw.address !== "string" || raw.address.toLowerCase() !== lane.onRampAddress) return false;
-          const log = asLog(raw);
-          if (log.topics[0] !== (lane.version === "2.0.0" ? SEND_20 : lane.version === "1.6" ? SEND_16 : SEND_15)) return false;
-          const message = decodeSend(log, lane);
-          return log.transactionHash === tx && log.blockNumber === row.blockNumber && log.blockHash === row.blockHash && message.messageId === discovered.messageId && message.amount > 0n;
-        });
-        if (!found) fail("indexer-send-unproved");
-        if (height <= sourcePin.number) {
-          const header = await identityHeader(lane.source.chainId, height);
-          if (!header || header.hash !== row.blockHash) fail("indexer-send-unproved");
-        }
-      }
       // Bootstrap is durable before authenticating the next lane. A later
       // cancellation can resume this prefix, never admit it as a census.
       if (initializing) await persistCheckpoint();
@@ -593,8 +571,37 @@ export async function observeCcipPending(input: {
       pages++;
       await persistCheckpoint();
     }
+    // Discovery corroborates the final census; it does not authenticate the
+    // on-chain history cursor. Save verified pages before potentially slow
+    // indexer/receipt work, while retaining every discovery gate for admission.
     for (let i = 0; i < input.source.lanes.length; i++) {
       const lane = input.source.lanes[i]!, cp = checkpoint.lanes[i]!, sourcePin = input.headers.get(lane.source.chainId)!;
+      context = { laneId: lane.id, chainId: lane.source.chainId, pinObservedAtSec: sourcePin.timestamp, phase: "discovery" };
+      const discovery = DiscoverySchema.safeParse(await discover(`${API_BASE}/messages?sourceChainSelector=${lane.source.chainSelector}&destChainSelector=${lane.destination.chainSelector}&sourceTokenAddress=${lane.source.tokenAddress}&limit=${DISCOVERY_LIMIT}`, 128 * 1024));
+      if (!discovery.success) fail("indexer-unavailable");
+      discoveryDigest = sha256Hex(stableJsonStringifyV1({ previous: discoveryDigest, lane: lane.id, discovery: discovery.data }));
+      for (const discovered of discovery.data.data) {
+        const identity = DiscoveryDetailSchema.safeParse(await discover(`${API_BASE}/messages/${discovered.messageId}`, 64 * 1024));
+        if (!identity.success) fail("indexer-invalid");
+        if (identity.data.onramp !== lane.onRampAddress) continue; // Another history, never this lane's evidence.
+        const tx = identity.data.sendTransactionHash;
+        const [receipt] = await rpc(lane.source.chainId, [{ method: "eth_getTransactionReceipt", params: [tx] }]);
+        const parsed = ReceiptSchema.safeParse(receipt);
+        if (!parsed.success || parsed.data.transactionHash !== tx) fail("indexer-send-unproved");
+        const row = parsed.data, height = Number(BigInt(row.blockNumber));
+        const found = row.logs.some(raw => {
+          if (!raw || typeof raw !== "object" || !("address" in raw) || typeof raw.address !== "string" || raw.address.toLowerCase() !== lane.onRampAddress) return false;
+          const log = asLog(raw);
+          if (log.topics[0] !== (lane.version === "2.0.0" ? SEND_20 : lane.version === "1.6" ? SEND_16 : SEND_15)) return false;
+          const message = decodeSend(log, lane);
+          return log.transactionHash === tx && log.blockNumber === row.blockNumber && log.blockHash === row.blockHash && message.messageId === discovered.messageId && message.amount > 0n;
+        });
+        if (!found) fail("indexer-send-unproved");
+        if (height <= sourcePin.number) {
+          const header = await identityHeader(lane.source.chainId, height);
+          if (!header || header.hash !== row.blockHash) fail("indexer-send-unproved");
+        }
+      }
       const states = await state(lane, cp.messages);
       cp.messages = cp.messages.filter((message, j) => {
         if (message.executionState === 3 && states[j] === 0) fail("execution-state-regressed");
