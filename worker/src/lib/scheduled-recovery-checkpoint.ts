@@ -582,7 +582,10 @@ async function prepareCheckpointAttemptForRecovery(
           SET state = 'platform_abandoned', error = ?, completed_at = ?, updated_at = ?,
               child_dispositions_json = ?, recovery_owner = NULL, recovery_lease_until = NULL
         WHERE ${identityWhereSql()}
-          AND state IN ('running', 'recovering')`,
+          AND state IN ('running', 'recovering')
+          AND NOT EXISTS (SELECT 1 FROM reserve_continuation_executions queue_event
+            WHERE queue_event.invocation_id = worker_scheduled_checkpoints.invocation_id
+              AND queue_event.state IN ('running', 'reconciling'))`,
     )
     .bind(
       PLATFORM_ABANDONED_ERROR,
@@ -959,6 +962,12 @@ export async function claimNextLiveReserveCheckpointRecovery(
                   recovery_lease_until = ?, updated_at = ?
             WHERE schedule_key = ? AND slot_started_at = ? AND job = ? AND attempt_no = ?
               AND execution_generation = ? AND invocation_id = ? AND state = 'ready'
+              AND NOT EXISTS (SELECT 1 FROM reserve_continuation_executions queue_event
+                WHERE queue_event.invocation_id = worker_scheduled_checkpoints.invocation_id
+                  AND queue_event.state IN ('running', 'reconciling'))
+              AND NOT EXISTS (SELECT 1 FROM cron_slot_executions executing_slot
+                WHERE executing_slot.invocation_id = worker_scheduled_checkpoints.invocation_id
+                  AND executing_slot.state IN ('running', 'reconciling'))
               AND ${admission.sql}`,
         )
         .bind(

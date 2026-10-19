@@ -77,6 +77,7 @@ const WRANGLER_BINDING_SECTIONS = new Map([
   ["version_metadata", { property: "binding", type: "WorkerVersionMetadata" }],
   ["r2_buckets", { property: "binding", type: "R2Bucket" }],
   ["services", { property: "binding", type: "Fetcher" }],
+  ["queues.producers", { property: "binding", type: "Queue<ReserveContinuationMessage>" }],
 ]);
 
 interface EnvInterfaceBinding {

@@ -62,6 +62,7 @@
 | 0272     | `0272_producer_history_retained_counters.sql`             | Initialize per-identity retained producer counters with one covering-index aggregate; maintain exact counts through history insert/delete/productivity/identity triggers so status reads only heads/counters. |
 | 0273     | `0273_report_cards_v9_materializations.sql`              | Add generation/version/source-digest-bound admitted V9 public JSON manifests and bounded immutable fragments; accepted writes commit atomically, with same-identity lazy rollout backfill. |
 | 0274     | `0274_report_cards_v9_site_representations.sql`          | Add table and coin-scoped Safety Score immutable manifests/fragments, committed under the accepted publication fence with live health composition. |
+| 0276     | `0276_reserve_continuation_executions.sql`                | Add public Queue delivery execution fences and separately foreign-keyed child terminal claims; no fabricated cron slots or checkpoint rewrite. Sequence 0275 is allocated to the independently integrated request-source attribution migration. |
 
 ## Squashed Individual Migrations (absorbed into the 0000 baseline on 2026-07-30)
 

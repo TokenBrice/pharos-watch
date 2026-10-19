@@ -77,6 +77,18 @@ export const ENV_BINDINGS = [
     runtimes: { worker: { status: "optional" } },
   },
   {
+    key: "RESERVE_CONTINUATION_QUEUE",
+    valueType: "Queue<ReserveContinuationMessage>",
+    description: "Public-only bounded reserve continuation/tail wakeup Queue; D1 checkpoint and event fences remain execution authority.",
+    runtimes: { worker: { status: "optional" } },
+  },
+  {
+    key: "WORKER_RESERVE_QUEUE_MODE",
+    valueType: "string",
+    description: "Literal on enables reserve Queue wakeups; off or missing disables sending and consumes hints neutrally while minute cron recovery remains active.",
+    runtimes: { worker: { status: "optional" } },
+  },
+  {
     key: "TELEGRAM_WEBHOOK_PREAUTH_RATE_LIMIT",
     valueType: "RateLimit",
     description: "Cloudflare pre-authentication rate limiter for Telegram webhook requests.",

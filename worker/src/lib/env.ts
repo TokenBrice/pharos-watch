@@ -1,3 +1,4 @@
+import type { ReserveContinuationMessage } from "@shared/types/reserve-continuation";
 import { DWELLIR_CHAINS } from "@shared/lib/dwellir-chains";
 import { logWorkerEvent } from "./structured-log";
 
@@ -24,6 +25,9 @@ export interface Env {
   HEAVY_EXECUTOR?: Fetcher;
   HEAVY_EXECUTOR_SHARED_SECRET?: string;
   PROJECT_TAPE_PLACED_EXECUTOR?: string;
+  /** Public-only; D1 remains reserve execution authority. */
+  RESERVE_CONTINUATION_QUEUE?: Queue<ReserveContinuationMessage>;
+  WORKER_RESERVE_QUEUE_MODE?: string;
   CORS_ORIGIN: string;
   SELF_URL?: string;
   OPS_UI_ORIGIN?: string;

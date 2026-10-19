@@ -1,3 +1,4 @@
+import { ReserveContinuationExecutionStatusSchema } from "./reserve-continuation";
 import { z } from "zod";
 import { ReserveObservationEnvelopeSchema, ReserveBoundedFactsGenerationSchema } from "./safety-score-v9-reserve-scope";
 import { LenderBookObservationSchema, LenderBookFailedAttemptSchema } from "./safety-score-v9-lender-book";
@@ -168,6 +169,7 @@ export const ReserveCohortStatusSchema = /* @__PURE__ */ (() => z.object({
   continuationPending: z.boolean(),
   completionP95Sec: z.number().finite().nonnegative().nullable(),
   completedCohorts: z.number().int().nonnegative(),
+  queueExecution: ReserveContinuationExecutionStatusSchema.nullable().optional(),
 }).strict())();
 export type ReserveCohortStatus = z.output<typeof ReserveCohortStatusSchema>;
 

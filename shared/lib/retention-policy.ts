@@ -79,6 +79,9 @@ export function cronHistoryRetentionPolicies(
     selectorSnapshotDailyQuota: policy("selector_snapshot_daily_quota", "quota_date", 2 * DAY, { clockFormat: "utc-date" }),
     blockTimestampCache: policy("block_timestamp_cache", "updated_at", 14 * DAY),
     slotExecutions: policy("cron_slot_executions", "slot_started_at", 14 * DAY),
+    reserveContinuationExecutions: policy("reserve_continuation_executions", "finished_at", 14 * DAY, {
+      predicate: "state = 'finished'", batchLimit: limits.smallBatchLimit, runLimit: limits.smallRunLimit,
+    }),
     apiRequestConsumerStats: policy("api_request_consumer_stats", "bucket_start", REQUEST_ATTRIBUTION_RETENTION_DAYS * DAY),
     siteDataRequestStats: policy("site_data_request_stats", "bucket_start", REQUEST_ATTRIBUTION_RETENTION_DAYS * DAY),
     apiKeyRequestStats: policy("api_key_request_stats", "bucket_start", REQUEST_ATTRIBUTION_RETENTION_DAYS * DAY),
@@ -230,6 +233,7 @@ const OWNER_MANAGED_TABLES = [
   ["yield_source_decisions", "created_at", "worker/src/cron/yield-sync/history.ts", "AUDIT_DECISION_RETENTION_DAYS (30 days)", "DECISION_RETENTION_DELETE_PREDICATE: retention_reason = 'audit' AND COALESCE(source_switch, 0) != 1; bounded drain"],
   ["yield_source_decision_alternatives", "recorded_at", "worker/src/cron/yield-sync/history.ts", "AUDIT_DECISION_RETENTION_DAYS (30 days)", "only orphan alternatives with no matching selected decision"],
   ["scheduled_child_attempts", "slot_started_at", "worker/migrations/0260_scheduled_child_attempts.sql", "parent cron slot window (14 days)", "ON DELETE CASCADE from executing cron_slot_executions identity"],
+  ["reserve_continuation_child_attempts", "terminal_at", "worker/migrations/0276_reserve_continuation_executions.sql", "parent Queue execution window (14 days after terminal)", "ON DELETE CASCADE from reserve_continuation_executions; active events are retained"],
   ["telegram_webhook_operation_mutations", "applied_at", "worker/migrations/0000_baseline.sql", "parent processed-update window (7 days)", "ON DELETE CASCADE from telegram_processed_updates"],
   ["telegram_processed_updates", "received_at", "worker/src/cron/telegram/maintenance/telegram-retention-cleanup.ts", "7 days", "processed-update eligibility; 5,000 rows and time budget"],
   ["telegram_recap_targets", "updated_at", "worker/src/telegram/recap/recap-store.ts", "90 days", "terminal recap targets only"],
