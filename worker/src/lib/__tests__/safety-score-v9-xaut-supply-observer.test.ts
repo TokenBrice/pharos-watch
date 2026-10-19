@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { uint256, addressWord, chainRpcs } from "./safety-score-v9-supply-observation.test-support";
-import type { EvmMulticall3Call } from "../evm-rpc";
+import type { EvmMulticall3Call, EvmRpcOptions } from "../evm-rpc";
 import {
   buildXautTransparencySource,
   XAUT0_ADAPTER_ADDRESS,
@@ -69,6 +69,7 @@ function observerDependencies(onchain: OnchainSupplyOverrides = {}) {
   });
   const fetchEvmMulticall3Aggregate3AtBlock = vi.fn(async (
     chainId: string | undefined, calls: readonly EvmMulticall3Call[], block?: number | "latest",
+    _options?: EvmRpcOptions,
   ) => {
     if (chainId !== "ethereum" || block !== BLOCK_NUMBER) throw new Error("Unexpected XAUT block");
     const token = "0x68749665ff8d2d112fa859aa293f07a622782f38";

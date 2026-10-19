@@ -122,11 +122,11 @@ export async function observeL2MessengerPending(input: {
     const cacheKey = `safety-score-v9:l2-messenger-pending:v2:${sourceDigest}`;
     const chains = [source.chainId, source.l2ChainId], starts = [source.l1StartBlock, source.l2StartBlock];
     const options = { chainRpcs: input.chainRpcs, signal: input.signal };
-    const pinOptions = new Map<number, EvmRpcOptions>();
+    const pinOptions = new Map<string, EvmRpcOptions>();
     const rpc = async (index: number, calls: EvmRpcBatchCall[]) => {
       throwIfAborted(input.signal);
       context = { ...context, chainId: chains[index]!, method: calls[0]?.method ?? "unknown", phase: "rpc" };
-      const result = await fetchEvmRpcBatch(chains[index]!, calls, pinOptions.get(index) ?? options);
+      const result = await fetchEvmRpcBatch(chains[index]!, calls, pinOptions.get(chains[index]!) ?? options);
       if (!result || result.length !== calls.length) fail("rpc-unavailable");
       return result!;
     };
@@ -135,12 +135,12 @@ export async function observeL2MessengerPending(input: {
     if (input.headers.length !== 2) fail("pin-missing");
     for (let i = 0; i < 2; i++) {
       const pin = input.headers[i]!;
-      const finalized = await fetchEvmBlockHeader(chains[i]!, "finalized", options);
-      const canonical = await fetchEvmBlockHeader(chains[i]!, pin.number, options);
+      const finalized = await fetchEvmBlockHeader(chains[i]!, "finalized", { ...options, observedHeadBlock: pinOptions.get(chains[i]!)?.observedHeadBlock });
+      const canonical = await fetchEvmBlockHeader(chains[i]!, pin.number, { ...options, observedHeadBlock: finalized?.number });
       context = { chainId: chains[i]!, phase: "pin-authentication", method: "eth_getBlockByNumber", pinObservedAtSec: pin.timestamp, finalizedLagBlocks: finalized ? Math.max(0, pin.number - finalized.number) : null, operands: { pinNumber: pin.number, finalizedNumber: finalized?.number ?? null, finalizedObservedAtSec: finalized?.timestamp ?? null } };
       emit({});
       if (!finalized || finalized.number < pin.number || pin.number < starts[i]! || !canonical || canonical.hash !== pin.hash || canonical.timestamp !== pin.timestamp) fail("pin-not-finalized");
-      pinOptions.set(i, { ...options, observedHeadBlock: finalized.number,
+      pinOptions.set(chains[i]!, { ...options, observedHeadBlock: finalized.number,
         recentStatePin: {
           chainId: chains[i]!, header: pin, finalized, observedAtSec: input.clockSec,
           maxAgeSec: V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.observationMaxAgeSec,
@@ -213,12 +213,12 @@ export async function observeL2MessengerPending(input: {
       for (let i = 0; i < 2; i++) {
         const cursor = checkpoint.cursors[i]!;
         if (cursor.nextBlock < starts[i]! || cursor.nextBlock > input.headers[i]!.number + 1 || cursor.anchorHash === null) fail("checkpoint-invalid");
-        const anchor = await fetchEvmBlockHeader(chains[i]!, cursor.nextBlock - 1, options);
+        const anchor = await fetchEvmBlockHeader(chains[i]!, cursor.nextBlock - 1, { ...options, observedHeadBlock: pinOptions.get(chains[i]!)?.observedHeadBlock });
         if (!anchor || anchor.hash !== cursor.anchorHash || await counter(i, anchor) !== BigInt(cursor.nextNonce)) fail("checkpoint-reorg");
-        if (cursor.resume && ((await fetchEvmBlockHeader(chains[i]!, cursor.nextBlock, options))?.hash !== cursor.resume.blockHash ||
+        if (cursor.resume && ((await fetchEvmBlockHeader(chains[i]!, cursor.nextBlock, { ...options, observedHeadBlock: pinOptions.get(chains[i]!)?.observedHeadBlock }))?.hash !== cursor.resume.blockHash ||
           BigInt(cursor.resume.nextNonce) <= BigInt(cursor.nextNonce))) fail("checkpoint-reorg");
         const settlement = checkpoint.settlementPins[i]!;
-        if (settlement.number > input.headers[i]!.number || (await fetchEvmBlockHeader(chains[i]!, settlement.number, options))?.hash !== settlement.hash) fail("checkpoint-reorg");
+        if (settlement.number > input.headers[i]!.number || (await fetchEvmBlockHeader(chains[i]!, settlement.number, { ...options, observedHeadBlock: pinOptions.get(chains[i]!)?.observedHeadBlock }))?.hash !== settlement.hash) fail("checkpoint-reorg");
       }
       if (checkpoint.messages.some(row => {
         const i = row.direction === "deposit" ? 0 : 1;
@@ -232,7 +232,7 @@ export async function observeL2MessengerPending(input: {
         { nextBlock: starts[1]!, anchorHash: null, nextNonce: "0", digest: sha256Hex("l2-messenger-history-v2"), resume: null },
       ];
       for (let i = 0; i < 2; i++) {
-        const anchor = await fetchEvmBlockHeader(chains[i]!, starts[i]! - 1, options);
+        const anchor = await fetchEvmBlockHeader(chains[i]!, starts[i]! - 1, { ...options, observedHeadBlock: pinOptions.get(chains[i]!)?.observedHeadBlock });
         if (!anchor) fail("history-unavailable");
         const balance = i === 0 ? call(source.l1Token, "balanceOf(address)", source.escrowAddress.slice(2).padStart(64, "0")) : call(source.l2Token, "totalSupply()");
         if (word((await read(i, anchor, [balance]))[0]) !== 0n) fail("initial-liabilities-not-empty");
@@ -248,7 +248,7 @@ export async function observeL2MessengerPending(input: {
       const serialized = stableJsonStringifyV1(cp);
       if (new TextEncoder().encode(serialized).length > CHECKPOINT_MAX_BYTES) fail("checkpoint-capacity");
       for (let i = 0; i < 2; i++) {
-        const pin = input.headers[i]!, rechecked = await fetchEvmBlockHeader(chains[i]!, pin.number, options);
+        const pin = input.headers[i]!, rechecked = await fetchEvmBlockHeader(chains[i]!, pin.number, { ...options, observedHeadBlock: pinOptions.get(chains[i]!)?.observedHeadBlock });
         if (!rechecked || rechecked.hash !== pin.hash || rechecked.timestamp !== pin.timestamp) fail("pin-reorg");
       }
       if (input.db) await setCache(input.db, cacheKey, serialized, input.signal);
@@ -282,7 +282,7 @@ export async function observeL2MessengerPending(input: {
     const receipt = async (index: number, tx: string, height: number, hash: string) => {
       const result = (await rpc(index, [{ method: "eth_getTransactionReceipt", params: [tx] }]))[0] as Record<string, unknown> | null;
       if (!result || result.transactionHash !== tx || result.blockHash !== hash || result.blockNumber !== toHex(height) || result.status !== "0x1" || !Array.isArray(result.logs) || result.logs.length > LOGS_PER_PAGE) fail("receipt-unproved");
-      const canonical = await fetchEvmBlockHeader(chains[index]!, height, options);
+      const canonical = await fetchEvmBlockHeader(chains[index]!, height, { ...options, observedHeadBlock: pinOptions.get(chains[index]!)?.observedHeadBlock });
       if (!canonical || canonical.hash !== hash) fail("receipt-unproved");
       return (result!.logs as unknown[]).map(raw => checkedLog(raw, height, height));
     };
@@ -319,10 +319,10 @@ export async function observeL2MessengerPending(input: {
           if (!creation || typeof creation.blockNumber !== "string" || !QUANTITY.test(creation.blockNumber) || typeof creation.blockHash !== "string" || !WORD.test(creation.blockHash) || creation.transactionHash !== message.id) fail("receipt-unproved");
           const height = Number(BigInt(creation.blockNumber));
           if (height <= input.headers[1]!.number) {
-            const header = await fetchEvmBlockHeader(chains[1]!, height, options);
+            const header = await fetchEvmBlockHeader(chains[1]!, height, { ...options, observedHeadBlock: pinOptions.get(chains[1]!)?.observedHeadBlock });
             if (!header || header.hash !== creation.blockHash) fail("receipt-unproved");
             message.redeemNextBlock = Math.max(message.redeemNextBlock, height);
-            if (message.redeemResume && (await fetchEvmBlockHeader(chains[1]!, message.redeemNextBlock, options))?.hash !== message.redeemResume.blockHash) fail("checkpoint-reorg");
+            if (message.redeemResume && (await fetchEvmBlockHeader(chains[1]!, message.redeemNextBlock, { ...options, observedHeadBlock: pinOptions.get(chains[1]!)?.observedHeadBlock }))?.hash !== message.redeemResume.blockHash) fail("checkpoint-reorg");
             while (message.redeemNextBlock <= input.headers[1]!.number && pages < PAGES_PER_ATTEMPT - reservedSourcePages && redemptionEvents < REDEMPTIONS_PER_ATTEMPT) {
               const from = message.redeemNextBlock, to = Math.min(input.headers[1]!.number, from + source.scanPageBlocks[1] - 1);
               const scheduled = await logs(1, source.retryableTx, [REDEEM, message.id], from, to);
@@ -340,13 +340,13 @@ export async function observeL2MessengerPending(input: {
                 const redeemedHeight = Number(BigInt(result.blockNumber));
                 if (redeemedHeight > input.headers[1]!.number) { pendingExecution = true; break; }
                 if (typeof result.blockHash !== "string") fail("receipt-unproved");
-                const header = await fetchEvmBlockHeader(chains[1]!, redeemedHeight, options);
+                const header = await fetchEvmBlockHeader(chains[1]!, redeemedHeight, { ...options, observedHeadBlock: pinOptions.get(chains[1]!)?.observedHeadBlock });
                 if (!header || header.hash !== result.blockHash) fail("receipt-unproved");
                 if (result.status === "0x0") {
                   // Only canonical finalized failures can be skipped. Persist a
                   // within-block prefix before a dense retry page consumes the
                   // attempt; later successful retries must still be inspected.
-                  if ((await fetchEvmBlockHeader(chains[1]!, height, options))?.hash !== log.blockHash) fail("receipt-unproved");
+                  if ((await fetchEvmBlockHeader(chains[1]!, height, { ...options, observedHeadBlock: pinOptions.get(chains[1]!)?.observedHeadBlock }))?.hash !== log.blockHash) fail("receipt-unproved");
                   if (redemptionEvents >= REDEMPTIONS_PER_ATTEMPT) { redemptionPrefix = log; break; }
                   continue;
                 }
@@ -405,7 +405,7 @@ export async function observeL2MessengerPending(input: {
       const directionStart = classified;
       while (pages < PAGES_PER_ATTEMPT && cursor.nextBlock <= input.headers[i]!.number && directionPages < (source.protocol === "arbitrum" ? 2 : PAGES_PER_ATTEMPT / 2)) {
         const from = cursor.nextBlock, to = Math.min(input.headers[i]!.number, from + source.scanPageBlocks[i]! - 1);
-        const end = await fetchEvmBlockHeader(chains[i]!, to, options);
+        const end = await fetchEvmBlockHeader(chains[i]!, to, { ...options, observedHeadBlock: pinOptions.get(chains[i]!)?.observedHeadBlock });
         if (!end) fail("history-unavailable");
         const address = source.protocol === "op-stack" ? (i === 0 ? source.l1Messenger : source.messagePasser) : (i === 0 ? source.rollupBridge : source.arbSys);
         const rows = await logs(i, address, [source.protocol === "op-stack" ? (i === 0 ? SENT : PASSED) : (i === 0 ? DELIVERED : WITHDRAWAL)], from, to);
@@ -492,8 +492,8 @@ export async function observeL2MessengerPending(input: {
         }
         if (stopped) {
           const height = Number(BigInt(stopped.blockNumber));
-          const predecessor = await fetchEvmBlockHeader(chains[i]!, height - 1, options);
-          if (!predecessor || (await fetchEvmBlockHeader(chains[i]!, height, options))?.hash !== stopped.blockHash) fail("history-reorg");
+          const predecessor = await fetchEvmBlockHeader(chains[i]!, height - 1, { ...options, observedHeadBlock: pinOptions.get(chains[i]!)?.observedHeadBlock });
+          if (!predecessor || (await fetchEvmBlockHeader(chains[i]!, height, { ...options, observedHeadBlock: pinOptions.get(chains[i]!)?.observedHeadBlock }))?.hash !== stopped.blockHash) fail("history-reorg");
           cursor.nextBlock = height; cursor.anchorHash = predecessor.hash; cursor.nextNonce = String(await counter(i, predecessor));
           cursor.resume = { blockHash: stopped.blockHash, logIndex: Number(BigInt(stopped.logIndex)), nextNonce: String(eventNonce(decode(stopped)) + 1n) };
           cursor.digest = sha256Hex(stableJsonStringifyV1({ previous: cursor.digest, prefix: cursor.resume, height }));
@@ -503,7 +503,7 @@ export async function observeL2MessengerPending(input: {
         }
 
         cursor.nextNonce = String(census); cursor.resume = null;
-        const canonical = await fetchEvmBlockHeader(chains[i]!, to, options);
+        const canonical = await fetchEvmBlockHeader(chains[i]!, to, { ...options, observedHeadBlock: pinOptions.get(chains[i]!)?.observedHeadBlock });
         if (!canonical || canonical.hash !== end.hash) fail("history-reorg");
         cursor.digest = sha256Hex(stableJsonStringifyV1({ previous: cursor.digest, from, to, hash: end.hash, logs: rows }));
         cursor.nextBlock = to + 1; cursor.anchorHash = end.hash; directionPages++;

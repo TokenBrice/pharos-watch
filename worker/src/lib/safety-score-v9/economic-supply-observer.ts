@@ -162,7 +162,7 @@ export async function observeCurveLzPending(input: {
     // Validate finalized pins and the predecessor of every persisted cursor.
     for (let i = 0; i < 2; i++) {
       const side = input.source.sides[i]!, pin = input.headers[i]!;
-      const finalized = await fetchEvmBlockHeader(side.chainId, "finalized", options);
+      const finalized = await fetchEvmBlockHeader(side.chainId, "finalized", { ...options, observedHeadBlock: pinOptions.get(side.chainId)?.observedHeadBlock });
       if (!finalized || finalized.number < pin.number || pin.number < side.deploymentBlock) fail("pin-not-finalized");
       pinOptions.set(side.chainId, { observedHeadBlock: finalized.number,
         recentStatePin: {
@@ -175,7 +175,7 @@ export async function observeCurveLzPending(input: {
           (cursor.anchor === null) !== (cursor.anchorHash === null) ||
           (cursor.anchor === null ? cursor.nextBlock !== side.deploymentBlock : cursor.anchor !== cursor.nextBlock - 1)) fail("history-gap");
         if (cursor.anchor !== null) {
-          const previous = await fetchEvmBlockHeader(side.chainId, cursor.anchor, options);
+          const previous = await fetchEvmBlockHeader(side.chainId, cursor.anchor, { ...options, observedHeadBlock: pinOptions.get(side.chainId)?.observedHeadBlock });
           if (!previous || previous.hash !== cursor.anchorHash) fail("checkpoint-reorg");
         }
       }
@@ -206,7 +206,7 @@ export async function observeCurveLzPending(input: {
       while (cursor.nextBlock <= pin.number && pages < CURVE_HISTORY_PAGES_PER_ATTEMPT) {
         throwIfAborted(input.signal);
         const from = cursor.nextBlock, end = Math.min(pin.number, from + CURVE_HISTORY_PAGE_BLOCKS - 1);
-        const endHeader = await fetchEvmBlockHeader(side.chainId, end, options);
+        const endHeader = await fetchEvmBlockHeader(side.chainId, end, { ...options, observedHeadBlock: pinOptions.get(side.chainId)?.observedHeadBlock });
         if (!endHeader) fail("history-unavailable");
         const responses = await batch(side.chainId, [{
           method: "eth_getLogs", params: [{
@@ -294,7 +294,7 @@ export async function observeCurveLzPending(input: {
               direction.messages.splice(direction.messages.indexOf(message), 1);
             } else {
               if (topics[0] === CURVE_EVENT_TOPICS[1] && !side.supportsFailed) fail("unexpected-failed-event");
-              const eventHeader = await fetchEvmBlockHeader(side.chainId, height, options);
+              const eventHeader = await fetchEvmBlockHeader(side.chainId, height, { ...options, observedHeadBlock: pinOptions.get(side.chainId)?.observedHeadBlock });
               if (!eventHeader || eventHeader.hash !== blockHash) fail("event-anchor");
               message.state = topics[0] === CURVE_EVENT_TOPICS[0] ? "delayed" : "failed";
               message.timestamp = eventHeader!.timestamp;
@@ -302,7 +302,7 @@ export async function observeCurveLzPending(input: {
           }
           if (direction.messages.length > 512) fail("checkpoint-capacity");
         }
-        const rechecked = await fetchEvmBlockHeader(side.chainId, end, options);
+        const rechecked = await fetchEvmBlockHeader(side.chainId, end, { ...options, observedHeadBlock: pinOptions.get(side.chainId)?.observedHeadBlock });
         if (!rechecked || rechecked.hash !== endHeader!.hash) fail("history-reorg");
         cursor.digest = sha256Hex(stableJsonStringifyV1({ previous: cursor.digest, from, end, header: endHeader, logs }));
         cursor.anchor = end; cursor.anchorHash = endHeader!.hash; cursor.nextBlock = end + 1; pages++;
@@ -369,7 +369,7 @@ export async function observeCurveLzPending(input: {
     }
     if (cp.directions.some(direction => direction.recoveries.length > 0)) fail("recovery-history-missing");
     for (let i = 0; i < 2; i++) {
-      const pin = input.headers[i]!, header = await fetchEvmBlockHeader(input.source.sides[i]!.chainId, pin.number, options);
+      const pin = input.headers[i]!, header = await fetchEvmBlockHeader(input.source.sides[i]!.chainId, pin.number, { ...options, observedHeadBlock: pinOptions.get(input.source.sides[i]!.chainId)?.observedHeadBlock });
       if (!header || header.hash !== pin.hash || header.timestamp !== pin.timestamp) fail("pin-reorg");
     }
     const authenticated = stableJsonStringifyV1(cp);

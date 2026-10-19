@@ -674,7 +674,7 @@ export async function fetchXdaiBridgeReserves(
     })] as const,
     anchor: { observe: async () => ethereumBlock },
     read: (calls, block) => pinnedMulticallReader(
-      ETHEREUM_CHAIN, block, params, signal, ctx, deadlineMs,
+      ETHEREUM_CHAIN, block, params, signal, ctx, deadlineMs, ethereumPin,
     )(calls),
   });
 
