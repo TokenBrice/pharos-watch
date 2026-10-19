@@ -47,8 +47,8 @@ const DIGEST_TASK_POLICY = {
 
 export type ScheduledWorkerRole = "public" | "heavy";
 
-/** Recovery must not load producer graphs beside a live heavy scheduled slot. */
-export const RESERVE_RECOVERY_HEAVY_SLOT_KEYS = [
+/** Reviewed graph-risk candidates; only same-Worker graphs share an isolate. */
+const RESERVE_RECOVERY_GRAPH_SLOT_KEYS = [
   "fourHourlyReserveSync",
   "halfHourlyChartsOffset",
   "v9PublicationOffset",
@@ -170,12 +170,11 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
     // the previous generation before this slot's rows landed. Kinesis supply
     // reads no reserve output and keeps running beside the head. A head the
     // slot fence abandons delays the watchdog instead of losing it: the
-    // five-minute reserve-recovery lane replays the abandoned checkpoint in
+    // one-minute reserve-recovery lane replays the abandoned checkpoint in
     // chain order (chain prerequisites are derived from this plan).
     // Declared peak max(reserve 2, redemption 3, sentinel 1) + Kinesis 1 = 4/6.
     jobChains: [
-      // Redemption can consume prior sealed acceptance after an incomplete head;
-      // only the sentinel requires the current cohort's successful exhaustion.
+      // Consumers require the current cohort's exhaustion and a fresh invocation.
       ["sync-live-reserves", "sync-redemption-backstops", "cron-sentinel"],
       ["sync-kinesis-supply"],
     ],
@@ -303,6 +302,15 @@ export const SCHEDULED_SLOT_PLANS: Readonly<Record<CronScheduleKey, ScheduledSlo
     }),
   ) as Record<CronScheduleKey, ScheduledSlotPlan>,
 );
+
+export function getReserveRecoveryConflictSlotKeys(
+  plans: Readonly<Record<CronScheduleKey, Pick<ScheduledSlotPlan, "worker">>> = SCHEDULED_SLOT_PLANS,
+): readonly CronScheduleKey[] {
+  return RESERVE_RECOVERY_GRAPH_SLOT_KEYS.filter((key) =>
+    plans[key].worker === plans.fiveMinuteReserveRecovery.worker);
+}
+
+export const RESERVE_RECOVERY_CONFLICT_SLOT_KEYS = getReserveRecoveryConflictSlotKeys();
 
 /**
  * One trigger expression dispatches exactly one slot plan. Two plans claiming

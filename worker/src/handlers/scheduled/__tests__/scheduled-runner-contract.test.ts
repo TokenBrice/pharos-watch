@@ -108,7 +108,7 @@ describe("scheduled runner contract", () => {
       }
     }
     expect(getScheduledWorkerRoleForExpression("11 */4 * * *")).toBe("public");
-    expect(getScheduledWorkerRoleForExpression("1,6,11,16,21,26,31,36,41,46,51,56 * * * *")).toBe("public");
+    expect(getScheduledWorkerRoleForExpression("* * * * *")).toBe("public");
     expect(() => getScheduledWorkerRoleForExpression("unknown")).toThrow("Unknown");
   });
 
