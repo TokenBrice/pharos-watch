@@ -1,0 +1,174 @@
+{
+  "_capture": "<!-- captured-at: 2026-10-19T06:27:46Z --> Public HTTP registry-discovered mTBILL SAVE checkpoint and exact official historical portfolio; Dwellir pinned registry responses recaptured at registryCapturedAt. Issuer-reported composition, no financial assurance.",
+  "registryCapturedAt": "2026-10-19T07:20:45Z",
+  "registry": "0x2D6e9F608807436DE5D9603B00Abe3FEd1Bc809d",
+  "proofId": "0xf65e876f459439e78365c92eb3d47ff358d41b7bec69c9ffb9e624010fb47805",
+  "block": {
+    "number": "0x19028b9",
+    "timestamp": "0x6ad5b83f",
+    "hash": "0x4e7838c6153c927f56e6639e8f144004f4a205522ee83c62c551d9c0d956454e"
+  },
+  "registryResponses": {
+    "proofIdToLatestAttestation(bytes32)": "0x47c1850417f4d5ceb1ebe78f0d2b319af6b0bd0b9497f481922f356158c8028c000000000000000000000000230f0b2e321d0e32ea50696710a98ca84503a391000000000000000000000000000000000000000000000000000000006ad22ffb",
+    "proofIdToAuthorizedAttestor(bytes32)": "0x000000000000000000000000230f0b2e321d0e32ea50696710a98ca84503a391",
+    "proofIdToName(bytes32)": "0x0000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000a6d7462696c6c2d706f7200000000000000000000000000000000000000000000",
+    "proofExists(bytes32)": "0x0000000000000000000000000000000000000000000000000000000000000001"
+  },
+  "attestationCid": "QmTAkogvfmoKB5wAns36vx4QwsmHJLDmnaR9qYXcvmvagj",
+  "gzipBase64": "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",
+  "gzipSha256": "e41856ce1cec3e300dc2bd29d159c23936d60cbcb84083b88390f0edfcef7599",
+  "jsonSha256": "61ce52cdf545ae244df774a605ad93218ec8fbfb282db76677aab9a70b1c5a68",
+  "attestation": {
+    "claims": [
+      {
+        "claimType": "inline",
+        "data": {
+          "createdAt": "2026-10-16T13:54:09.725Z",
+          "navReportedByOps": "78572458.22824710000",
+          "navReportedByOpsGross": "78578734.83513920000",
+          "oracleAddress": "0x056339C044055819E8Db84E71f5f2E1F536b2E5b",
+          "oracleChainSelectorName": "ethereum-mainnet",
+          "priceUpdateChainId": 1,
+          "priceUpdateTxHash": "0x704e432a24710e4eebffa9dfbe42cf2c2864bec5fdb6686695c5d0629ed273b0",
+          "token": "mTBILL",
+          "tokenPriceReportedByOps": "1.0753419",
+          "totalSupplyCrossChainReportedByOps": "73067419660093600000000000"
+        },
+        "dataType": "object",
+        "description": "Ops team NAV PoR claim containing cross-chain supply and NAV data",
+        "format": "json",
+        "id": "ops_claim",
+        "proof": {
+          "mechanism": "cre_consensus",
+          "trustModel": "computation"
+        }
+      },
+      {
+        "claimType": "inline",
+        "data": {
+          "chainSelectorName": "ethereum-mainnet",
+          "decimals": 8,
+          "oracleAddress": "0x056339C044055819E8Db84E71f5f2E1F536b2E5b",
+          "oracleLastUpdatedAt": 1792158467,
+          "oracleLastUpdatedAtISO": "2026-10-16T13:47:47.000Z",
+          "priceRaw": "107534190"
+        },
+        "dataType": "object",
+        "description": "On-chain token price from Chainlink AggregatorV3 oracle",
+        "format": "json",
+        "id": "oracle_price",
+        "proof": {
+          "mechanism": "cre_consensus",
+          "trustModel": "computation"
+        }
+      },
+      {
+        "claimType": "source-backed",
+        "dataType": "numeric",
+        "description": "Token price in USD from on-chain oracle (9 decimal places)",
+        "id": "oracle_price_usd",
+        "pointer": "oracle_price#/priceRaw",
+        "resolvedValue": 107534190
+      },
+      {
+        "claimType": "inline",
+        "data": {
+          "navPerToken": "1.075603",
+          "navReportedByOps": "78572458.22824710000",
+          "oneTokenOnchainAUM": "78609324.32",
+          "opsGrossReserveNative": "78578734.83513920000",
+          "oraclePriceFormatted": "1.075341900",
+          "oraclePriceUSD": "1.075341900",
+          "overcollateralizationType": "method-1",
+          "passed": true,
+          "ratio": 1.000243,
+          "supplyTokens": "73083928.175267",
+          "supplyTokensNet": "73083928.175267",
+          "threshold": 0.995,
+          "totalReserveGrossUSD": "78609324.32",
+          "totalReserveNetUSD": "78609324.32",
+          "totalReserveUSD": "78609324.32",
+          "totalSupplyCrossChainReportedByOps": "73067419660093600000000000",
+          "totalSupplyTokens": "73083928.175267",
+          "tvlUSD": "78590210.18"
+        },
+        "dataType": "object",
+        "description": "Overcollateralization verification (gross reserve ≥ TVL, USD)",
+        "format": "json",
+        "id": "overcollateralization",
+        "proof": {
+          "mechanism": "cre_consensus",
+          "trustModel": "computation"
+        }
+      },
+      {
+        "claimType": "source-backed",
+        "dataType": "numeric",
+        "description": "NAV per token / oracle price — overcollateralization ratio (must be > threshold)",
+        "id": "overcollateralization_ratio",
+        "pointer": "overcollateralization#/ratio",
+        "resolvedValue": 1.000243
+      },
+      {
+        "claimType": "inline",
+        "data": {
+          "_metadata": {
+            "anchorISO": "2026-10-16T10:54:09.725Z",
+            "anchorRule": "ops_created_at_minus_3h",
+            "source": "1token",
+            "timestamp": "2026-10-16T10:00",
+            "token": "mTBILL"
+          },
+          "assets": {
+            "total": 78.6093243164,
+            "wallet": 78.6093243164
+          },
+          "equity": {
+            "total": 78.6093243164,
+            "wallet": 78.6093243164
+          },
+          "liabilities": {}
+        },
+        "dataType": "object",
+        "description": "1token portfolio report. Snapshot timestamp resolved by anchorRule from anchorISO.",
+        "format": "json",
+        "id": "onetoken_report",
+        "proof": {
+          "mechanism": "cre_consensus",
+          "trustModel": "computation"
+        }
+      },
+      {
+        "claimType": "source-backed",
+        "dataType": "numeric",
+        "description": "1token equity total for mTBILL",
+        "id": "onetoken_total_nav",
+        "pointer": "onetoken_report#/equity/total",
+        "resolvedValue": 78.6093243164
+      }
+    ],
+    "metadata": {
+      "attestationId": "00240941-7d43-5b92-9f7d-9f269736b1bc",
+      "createdAt": "2026-10-16T14:08:45.429Z",
+      "expiresAt": "2026-10-23T14:08:45.429Z",
+      "issuer": {
+        "identity": "0x03694935b1a7738cef7099932fcd7b35c9a73edeceff58ff634b0256867b902e1d",
+        "name": "Midas",
+        "publicKey": "0x03694935b1a7738cef7099932fcd7b35c9a73edeceff58ff634b0256867b902e1d"
+      },
+      "proofId": "0xf65e876f459439e78365c92eb3d47ff358d41b7bec69c9ffb9e624010fb47805",
+      "schema": "save-v0",
+      "version": "0.1.0"
+    },
+    "signature": {
+      "algorithm": "ECDSA_secp256k1",
+      "publicKey": "0x03694935b1a7738cef7099932fcd7b35c9a73edeceff58ff634b0256867b902e1d",
+      "publicKeySource": "https://midas.app/public/attestation-engine/pubkeys.json",
+      "signature": "0xdf9649eb93a06a6b370c3026c93f2dd7705e353e380a0b21d72ed2773bfe98d315bfbcde2c37513cb86c45d449d9005738bfcf15a35aff59e4e8276b8f41ca45",
+      "signedData": "0x90ba89b682677ca44343140915aa36a45c4a9ccfa4cb9b823b3bd2c3fcea51ec"
+    }
+  },
+  "historicalUrl": "https://api-prod.midas.app/api/transparency/by-timestamp?token=mTBILL&timestamp=2026-10-16T10:00",
+  "historicalBody": "{\"reports\":{\"main_positions\":{\"pv_usd\":{\"('USTB', 'CASH', 'wallet', 'ethereum', 'USTB')\":73.784,\"('BUIDL', 'CASH', 'wallet', 'ethereum', 'BUIDL')\":4.819},\"delta_usd\":{\"('USTB', 'CASH', 'wallet', 'ethereum', 'USTB')\":73.784,\"('BUIDL', 'CASH', 'wallet', 'ethereum', 'BUIDL')\":4.819}},\"assets_by_protocol_chain\":{\"equity\":{\"('wallet', 'base')\":0.0041328237,\"('wallet', 'ethereum')\":78.6041104124,\"('total', '')\":78.6093243164}},\"assets_by_protocol\":{\"assets\":{\"wallet\":78.6093243164,\"total\":78.6093243164},\"equity\":{\"wallet\":78.6093243164,\"total\":78.6093243164},\"equity_pct_nav\":{\"wallet\":100,\"total\":100},\"protocol_type\":{\"wallet\":\"custody\",\"total\":null}},\"asset_values\":{\"pv_usd\":{\"ethereum\":78.604,\"base\":0.004,\"total\":78.61},\"pv_pct_nav\":{\"ethereum\":100,\"base\":0,\"total\":100}},\"assets_by_wallet\":{\"pv_usd\":{\"('0x569d7dccbf6923350521ecbc28a555a500c4f0ec', 'mTBILL_Redemption_Vault_Ethereum')\":73.784,\"('0x225c19beb8f6ad683b1d3a091dca0fcfc603ecde', 'mTBILL_Fireblocks1')\":4.819,\"('0x63e000c7ed1e2036ef7a5297acfdfe6d79606a34', 'mTBILL_Proceeds_Recipient1')\":0.005,\"('total', '')\":78.61},\"pv_pct_nav\":{\"('0x569d7dccbf6923350521ecbc28a555a500c4f0ec', 'mTBILL_Redemption_Vault_Ethereum')\":93.9,\"('0x225c19beb8f6ad683b1d3a091dca0fcfc603ecde', 'mTBILL_Fireblocks1')\":6.1,\"('0x63e000c7ed1e2036ef7a5297acfdfe6d79606a34', 'mTBILL_Proceeds_Recipient1')\":0,\"('total', '')\":100}}}}",
+  "october19Body": "{\"reports\":{\"main_positions\":{\"pv_usd\":{\"('USTB', 'CASH', 'wallet', 'ethereum', 'USTB')\":73.801,\"('BUIDL', 'CASH', 'wallet', 'ethereum', 'BUIDL')\":4.819},\"delta_usd\":{\"('USTB', 'CASH', 'wallet', 'ethereum', 'USTB')\":73.801,\"('BUIDL', 'CASH', 'wallet', 'ethereum', 'BUIDL')\":4.819}},\"assets_by_protocol_chain\":{\"equity\":{\"('wallet', 'base')\":0.0042704077,\"('wallet', 'ethereum')\":78.6215478568,\"('total', '')\":78.626899068}},\"assets_by_protocol\":{\"assets\":{\"wallet\":78.626899068,\"total\":78.626899068},\"equity\":{\"wallet\":78.626899068,\"total\":78.626899068},\"equity_pct_nav\":{\"wallet\":100,\"total\":100},\"protocol_type\":{\"wallet\":\"custody\",\"total\":null}},\"asset_values\":{\"pv_usd\":{\"ethereum\":78.622,\"base\":0.004,\"total\":78.628},\"pv_pct_nav\":{\"ethereum\":100,\"base\":0,\"total\":100}},\"assets_by_wallet\":{\"pv_usd\":{\"('0x569d7dccbf6923350521ecbc28a555a500c4f0ec', 'mTBILL_Redemption_Vault_Ethereum')\":73.801,\"('0x225c19beb8f6ad683b1d3a091dca0fcfc603ecde', 'mTBILL_Fireblocks1')\":4.819,\"('0x63e000c7ed1e2036ef7a5297acfdfe6d79606a34', 'mTBILL_Proceeds_Recipient1')\":0.005,\"('total', '')\":78.627},\"pv_pct_nav\":{\"('0x569d7dccbf6923350521ecbc28a555a500c4f0ec', 'mTBILL_Redemption_Vault_Ethereum')\":93.9,\"('0x225c19beb8f6ad683b1d3a091dca0fcfc603ecde', 'mTBILL_Fireblocks1')\":6.1,\"('0x63e000c7ed1e2036ef7a5297acfdfe6d79606a34', 'mTBILL_Proceeds_Recipient1')\":0,\"('total', '')\":100}}}}"
+}

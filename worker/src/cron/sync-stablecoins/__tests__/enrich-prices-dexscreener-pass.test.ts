@@ -9,7 +9,7 @@ vi.mock("../../../lib/dexscreener", async (importOriginal) => {
   };
 });
 
-import { CIRCUIT_SOURCE } from "../../../lib/constants";
+import { CIRCUIT_SOURCE, DEXSCREENER_MIN_LIQUIDITY_USD } from "../../../lib/constants";
 import { fetchDsTokenPoolsWithStatus } from "../../../lib/dexscreener";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { runDexScreenerPass } from "../enrich-prices-dexscreener-pass";
@@ -184,6 +184,44 @@ describe("runDexScreenerPass", () => {
     expect(asset.price).toBe(1.0);
     expect(asset.priceSource).toBe("dexscreener-exact");
     expect(asset.priceConfidence).toBe("fallback");
+  });
+
+  it.each([
+    { label: "both observed sub-floor Polygon pools", liquidity: 46_409.29, symbol: "PHT", price: "0.01587", resolves: false },
+    { label: "threshold pool with PHP reference despite sparse turnover", liquidity: DEXSCREENER_MIN_LIQUIDITY_USD, symbol: "PHT", price: "0.01587", resolves: true },
+    { label: "wrong token symbol", liquidity: DEXSCREENER_MIN_LIQUIDITY_USD, symbol: "PHOENIX", price: "0.01587", resolves: false },
+    { label: "dollar-par quote for a PHP token", liquidity: DEXSCREENER_MIN_LIQUIDITY_USD, symbol: "PHT", price: "1", resolves: false },
+  ])("applies existing exact-PHT liquidity, identity and FX guards: $label", async ({ liquidity, symbol, price, resolves }) => {
+    const address = "0xe75220cb014dfb2d354bb59be26d7458bb8d0706";
+    const pool = {
+      ...exactPool(address, "0xbfb7ac32af23b8b5d892ef4c6e366dd47484da08", price, liquidity),
+      chainId: "polygon",
+      baseToken: { address, name: "PHT Stablecoin", symbol },
+      volume: { h24: 5.63, h6: 5.63, h1: 0, m5: 0 },
+    };
+    vi.mocked(fetchDsTokenPoolsWithStatus).mockResolvedValueOnce({
+      ok: true,
+      pairs: [
+        pool,
+        { ...pool, pairAddress: "0x9d4d778575160653e331f1597138a71c7c9a2595",
+          liquidity: { usd: 9_753.36, base: 168_307, quote: 7_084.5394 } },
+      ],
+    });
+    const asset = makeMissingAsset({
+      id: "pht-pht", symbol: "PHT", pegType: "peggedPHP", chains: ["Ethereum", "Polygon", "Tron"],
+    });
+    // Pin the ordinary rotation to Polygon; use the real registry deployments/symbol check.
+    const result = await runDexScreenerPass([asset], { peggedPHP: 1 / 60.16 }, undefined, undefined, undefined, 3_600_000);
+    expect(fetchDsTokenPoolsWithStatus).toHaveBeenCalledWith(
+      "polygon", address, expect.any(AbortSignal), expect.any(Number), 0,
+    );
+    expect(result.resolved).toBe(resolves ? 1 : 0);
+    if (resolves) {
+      expect(asset).toMatchObject({ price: 0.01587, priceSource: "dexscreener-exact", priceConfidence: "fallback" });
+    } else {
+      expect(asset.price).toBeNull();
+      expect(asset.priceSource).toBe("missing");
+    }
   });
 
   it("resolves multiple same-chain assets through one address batch", async () => {

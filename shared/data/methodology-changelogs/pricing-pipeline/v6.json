@@ -1,5 +1,21 @@
 [
   {
+    "version": "6.53",
+    "title": "Depth-gated native Hive HBD market cross-rate",
+    "date": "2026-10-19",
+    "effectiveAt": 1792368000,
+    "summary": "Pricing v6.53 admits a bounded HBD/HIVE order-book midpoint crossed with an independently fresh CoinGecko HIVE/USD parent through ordinary primary consensus, without protocol parity or independent CoinGecko votes.",
+    "impact": [
+      "HBD/USD = HIVE/USD / midpoint(HBD/HIVE). Admission requires at least 500 HBD per side within 2% of midpoint, spread at most 1%, at least 1,000 HBD non-self trailing-day turnover, a trade within 15 minutes and within 2% of the book, and fresh non-regressing node heads. Capped or duplicate-ambiguous evidence proves only a conservative lower bound.",
+      "The exact hive parent rides the existing CoinGecko simple-price batch, requires its original upstream clock within 300 seconds and at most 60 seconds future skew, and is never a stablecoin candidate. The derived local-fetch clock is the earlier of book retrieval and parent observation; source age remains capped at 900 seconds.",
+      "hive-native-cg is a soft-aggregator-tier derived source, weight 2, sharing the coingecko family. Equal tier/weight avoids an out-of-bounds direct CG HBD quote erasing the native candidate before peg validation; near-par direct CG can still win over a native depeg. One family remains single-source and confirm_required, never hard depeg authority, replay safety or a validation/pool-challenge exemption.",
+      "Public-node reads are serial after existing primary providers: at most ten RPCs across two nodes, three seconds per RPC, twenty seconds overall, and one MiB per body under inherited cancellation. Failed gates omit only the native candidate with generation-linked evidence. Supply, reserves, low-volume fallback and historical observations are unchanged; no backfill or schema migration.",
+      "Activation: 2026-10-19 00:00 UTC (release date; 1792368000). Production acceptance requires the first actual public sync-stablecoins execution and a full 24-hour capture under unchanged policy. Temporary HBD price-gap acknowledgement is retained until observed acceptance or its existing expiry."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.52",
     "title": "Quarter-hour refresh for short-lived fallback prices",
     "date": "2026-10-16",

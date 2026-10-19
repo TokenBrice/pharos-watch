@@ -5,6 +5,17 @@
   "oneLiner": "USDKG is Gold Dollar's gold-backed dollar token; the issuer has announced termination and offers holders email-based exchange for fiat or USDT.",
   "marketAvailability": "legacy-or-wind-down",
   "windDownSourceUrl": "https://www.usdkg.com/",
+  "status": "frozen",
+  "frozenAt": "2026-10-19",
+  "obituary": {
+    "causeOfDeath": "regulatory",
+    "deathDate": "2026-10-05",
+    "epitaph": "Cabinet order ended the gold-backed dollar",
+    "obituary": "USDKG announced on October 5, 2026 that issuance, circulation and blockchain operations would cease under Kyrgyz Cabinet Order 639-t dated August 20. The order directed liquidation of its issuer, EVA. Holders were directed to hello@usdkg.com to arrange fiat or USDT exchange, with no published payout duration. The issuer announced plans to consolidate and burn tokens and suspend the Ethereum and Tron contracts; completed burns and full holder repayment have not been established. Pharos preserves the token's historical market record as a frozen archive.",
+    "peakMcap": 50345033,
+    "sourceUrl": "https://x.com/USDKG_Official/status/2107193447363010779",
+    "sourceLabel": "USDKG termination announcement, October 5, 2026"
+  },
   "notices": [
     {
       "type": "warning",

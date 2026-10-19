@@ -10,6 +10,21 @@ export const REQUIRED_PROVIDER_SURFACE_FAMILIES = [
 
 export const PROVIDER_RESILIENCE_REGISTRY = [
   {
+    id: "hive-native-hbd-market",
+    family: "primary-pricing",
+    description: "Depth-gated native HBD/HIVE market crossed with the existing CoinGecko HIVE/USD batch dependency.",
+    files: ["worker/src/lib/hive-market-price.ts", "worker/src/cron/sync-stablecoins/enrich-prices-primary-provider-collection.ts"],
+    tests: ["worker/src/lib/__tests__/hive-market-price.test.ts", "worker/src/cron/sync-stablecoins/__tests__/enrich-prices-primary-provider-collection.test.ts"],
+    allowBareFetch: false,
+    resilience: {
+      transport: "fetchJsonWithRetry with zero retries; one whole-sample public-node failover, at most ten serial RPCs.",
+      timeout: "3 seconds per RPC and 20 seconds overall, clipped to the supplied absolute deadline and inherited AbortSignal.",
+      body: "1 MiB streamed JSON cap; shared helper consumes/cancels each body before the next request. No raw book or trade arrays persist.",
+      circuitSources: ["CIRCUIT_SOURCE.HIVE_MARKET"],
+    },
+    requiredMarkers: ["fetchJsonWithRetry", "HIVE_MARKET_POLICY", "deadlineMs", "maxResponseBytes", "throwIfAborted", "recordOutcomeSafe"],
+  },
+  {
     id: "safety-score-cosmos-bank-observer",
     family: "safety-score-attribution",
     description: "Reviewed height-pinned Cosmos bank supply and escrow observations.",

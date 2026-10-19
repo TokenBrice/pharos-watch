@@ -124,6 +124,13 @@ function PipelineSources() {
                   Full source list
                 </summary>
                 <p className="mt-1 text-xs leading-relaxed [overflow-wrap:anywhere]">{group.sources}</p>
+                {"documentation" in group && (
+                  <p className="mt-1 text-xs">
+                    <a className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground" href={group.documentation.href}>
+                      {group.documentation.label}
+                    </a>
+                  </p>
+                )}
               </details>
             </dd>
           ) : (

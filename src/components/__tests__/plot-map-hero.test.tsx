@@ -138,13 +138,20 @@ describe("PlotMapHero keyboard model", () => {
 
   it("walks a section chronologically with ←/→, crosses sections at the nearest date with ↑/↓, and jumps with Home/End", () => {
     const { grave } = renderHero();
-    const section = map.keyboard.sections.find((s) => s.ids.includes(map.newestId))!;
-    const next = map.keyboard.sections[map.keyboard.sections.indexOf(section) + 1];
-    const start = grave(map.newestId);
+    // The newest grave can belong to the final cause lane after a catalog update.
+    // Choose a lane with both an in-lane neighbor and a later nonempty lane.
+    const sectionIndex = map.keyboard.sections.findIndex((s, index) =>
+      s.ids.length > 1 && map.keyboard.sections.slice(index + 1).some((other) => other.ids.length > 0),
+    );
+    expect(sectionIndex).toBeGreaterThanOrEqual(0);
+    const section = map.keyboard.sections[sectionIndex];
+    const next = map.keyboard.sections.slice(sectionIndex + 1).find((s) => s.ids.length > 0)!;
+    const startId = section.ids[section.ids.length - 1];
+    const start = grave(startId);
     act(() => start.focus());
 
     fireEvent.keyDown(start, { key: "ArrowLeft" });
-    const previous = section.ids[section.ids.indexOf(map.newestId) - 1];
+    const previous = section.ids[section.ids.length - 2];
     expect(document.activeElement).toBe(grave(previous));
     expect(grave(previous).tabIndex).toBe(0);
     expect(start.tabIndex).toBe(-1);
@@ -153,8 +160,8 @@ describe("PlotMapHero keyboard model", () => {
     expect(document.activeElement).toBe(start);
 
     fireEvent.keyDown(start, { key: "ArrowUp" });
-    const nearest = [...next.ids].sort((a, b) => Math.abs(time(a) - time(map.newestId)) - Math.abs(time(b) - time(map.newestId)))[0];
-    expect(Math.abs(time((document.activeElement as HTMLElement).dataset.graveId!) - time(map.newestId))).toBe(Math.abs(time(nearest) - time(map.newestId)));
+    const nearest = [...next.ids].sort((a, b) => Math.abs(time(a) - time(startId)) - Math.abs(time(b) - time(startId)))[0];
+    expect(Math.abs(time((document.activeElement as HTMLElement).dataset.graveId!) - time(startId))).toBe(Math.abs(time(nearest) - time(startId)));
 
     fireEvent.keyDown(document.activeElement!, { key: "Home" });
     expect(document.activeElement).toBe(grave(next.ids[0]));

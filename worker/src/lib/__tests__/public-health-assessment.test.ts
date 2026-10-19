@@ -299,6 +299,21 @@ describe("assessPublicHealth Safety Score publication", () => {
 });
 
 describe("assessPublicHealth upstream provider enrichment", () => {
+  it.each([null, 0.98662])("reports HBD coverage from actual publication, not native registration or acknowledgement: %s", async (price) => {
+    const nowSec = 1_792_391_400;
+    const ids = [...ACTIVE_IDS];
+    const assets = ids.map((id) => ({ id, price: id === "hbd-hive" ? price : 1,
+      priceSource: id === "hbd-hive" ? "hive-native-cg" : "coingecko",
+      priceObservedAt: nowSec - 4, priceObservedAtMode: "local_fetch" as const }));
+    const result = await assessPublicHealth(makeMintBurnAssessmentDb(nowSec, {
+      publicationMetadata: {
+        activePublicationCoverage: evaluateStablecoinPublicationCoverage(ids, nowSec),
+        activePriceCoverage: evaluateStablecoinActivePriceCoverage(assets, ids, { nowSec }),
+      },
+    }), nowSec);
+    expect(result.activePriceCoverage.missingActiveIds).toEqual(price == null ? ["hbd-hive"] : []);
+    expect(result.activePriceCoverage.missingPriceCount).toBe(price == null ? 1 : 0);
+  });
   it("propagates rejected FX publication clocks through the public cache boundary", async () => {
     const now = 1_800_000_000;
     const result = await assessPublicHealth(makeMintBurnAssessmentDb(now, { fxFutureSec: 3600 }), now);
@@ -627,7 +642,7 @@ describe("assessPublicHealth upstream provider enrichment", () => {
     expect(result.warnings).toContain(`active-price-coverage-incomplete:${missingId}`);
   });
 
-  it.each(["wusd-worldwide", "pht-pht", "vcred-vcred", "usdkg-gold-dollar", "hbd-hive", "usdn-noble", "usdk-kast"])("keeps %s's acknowledged critical-duration gap visible without warnings, then re-alerts at expiry", async (id) => {
+  it.each(["wusd-worldwide", "pht-pht", "vcred-vcred", "hbd-hive", "usdn-noble", "usdk-kast"])("keeps %s's acknowledged critical-duration gap visible without warnings, then re-alerts at expiry", async (id) => {
     const review = STABLECOIN_PRICE_GAP_REVIEWS.find((entry) => entry.stablecoinId === id)!;
     for (const compact of [false, true]) {
       const nowSec = review.expiresAt - 1;
@@ -653,6 +668,24 @@ describe("assessPublicHealth upstream provider enrichment", () => {
       expect(after.warnings).toContain(`active-price-coverage-critical-duration:${review.stablecoinId}`);
       expect(after.activePriceCoverage.expiredGapReviewIds).toContain(review.stablecoinId);
     }
+  });
+
+  it("does not treat frozen USDKG's unavailable archive price as an active health gap", async () => {
+    const nowSec = Date.UTC(2026, 9, 19, 12) / 1000;
+    expect(ACTIVE_IDS.has("usdkg-gold-dollar")).toBe(false);
+    const coverage = evaluateStablecoinActivePriceCoverage([
+      ...[...ACTIVE_IDS].map((id) => ({ id, price: 1 })),
+      { id: "usdkg-gold-dollar", price: null, circulating: { peggedUSD: 50_000_000 } },
+    ], [...ACTIVE_IDS], { nowSec });
+    const metadata = { ...makePriceCoverageMetadata(nowSec, null), activePriceCoverage: coverage };
+    const result = await assessPublicHealth(makeMintBurnAssessmentDb(nowSec, {
+      publicationMetadata: metadata,
+    }), nowSec, { logPrefix: "test" });
+    expect(result.overallStatus).toBe("healthy");
+    expect(result.activePriceCoverage).toMatchObject({
+      status: "complete", missingPriceCount: 0, missingActiveIds: [],
+    });
+    expect(result.warnings.some((warning) => warning.includes("usdkg-gold-dollar"))).toBe(false);
   });
 
   it("escalates once a material alert-eligible price gap outlives the elevated duration band", async () => {
