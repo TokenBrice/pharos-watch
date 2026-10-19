@@ -161,7 +161,7 @@ describe("YieldDetailSection", () => {
     expect(screen.getAllByText(qualificationText).some((node) => !node.closest("details"))).toBe(true);
   });
 
-  it("never calls a ZCHF deposit holder yield and routes to the existing fallback", () => {
+  it("never calls a ZCHF deposit holder yield and omits the leaderboard fallback link", () => {
     mockRankings([makeRanking({
       id: "zchf-frankencoin", symbol: "ZCHF", sourceRole: "external-opportunity",
       yieldSource: "Frankencoin Savings", yieldSourceUrl: "https://app.frankencoin.com/savings?chain=ethereum",
@@ -171,9 +171,7 @@ describe("YieldDetailSection", () => {
     expect(container.textContent).not.toContain("Holder yield");
     expect(screen.getByText(/not yield from simply holding ZCHF/).closest("details")).toBeNull();
     expect(screen.queryByRole("link", { name: "Warning timeline" })).toBeNull();
-    const destination = new URL(screen.getByRole("link", { name: "View yield opportunities" }).getAttribute("href")!, window.location.origin);
-    expect(destination.pathname.replace(/\/$/, "")).toBe("/yield");
-    expect(destination.searchParams.get("workbenchFallback")).toBe("zchf-frankencoin");
+    expect(screen.queryByRole("link", { name: "View yield opportunities" })).toBeNull();
   });
 
   it("does not invent a destination or missing venue facts", () => {

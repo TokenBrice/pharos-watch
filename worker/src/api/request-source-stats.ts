@@ -11,6 +11,8 @@ import { runAdminRoute, type AdminRouteContext } from "../lib/route-wrappers";
 
 // Every input is bounded by the same [from,to) observation clock. The old and new
 // stores contain disjoint writer contributions, including during same-minute rollout.
+// D1 allows at most five SELECT terms per compound. Expand the seven output
+// dimensions through VALUES, not a second compound SELECT with seven UNION arms.
 const SOURCE_EVENTS_SQL = `WITH raw_events AS (
   SELECT bucket_start, route_key, route_path, lane, consumer_class, '' AS delivery_path,
     '' AS authentication_class, 1 AS inverse_rate, 1 AS legacy, request_count AS observed_count
@@ -32,33 +34,32 @@ const SOURCE_EVENTS_SQL = `WITH raw_events AS (
   FROM raw_events
   GROUP BY CAST(bucket_start / ?3 AS INTEGER), route_key, route_path, lane, consumer_class,
     delivery_path, authentication_class, inverse_rate, legacy
+), dimensions(dimension) AS (
+  VALUES ('total'), ('route'), ('bucket'), ('lane'), ('delivery'), ('legacy-public'), ('unkeyed')
+), dimension_events AS (
+  SELECT dimension,
+    CASE dimension
+      WHEN 'route' THEN route_key
+      WHEN 'bucket' THEN CAST(bucket_start AS TEXT)
+      WHEN 'lane' THEN lane
+      WHEN 'delivery' THEN CASE WHEN lane = 'public-api' THEN 'public-api-site' ELSE delivery_path END
+      ELSE ''
+    END AS dimension_key,
+    CASE WHEN dimension = 'route' THEN route_path ELSE '' END AS route_path,
+    consumer_class, inverse_rate, legacy, observed_count
+  FROM events CROSS JOIN dimensions
+  WHERE CASE dimension
+    WHEN 'lane' THEN lane IN ('public-api', 'site-api')
+    WHEN 'delivery' THEN lane = 'pages' OR (lane = 'public-api' AND consumer_class = 'site')
+    WHEN 'legacy-public' THEN lane = 'public-api' AND legacy = 1
+    WHEN 'unkeyed' THEN lane = 'public-api' AND legacy = 0 AND authentication_class = 'unkeyed'
+    ELSE lane IN ('pages', 'public-api')
+  END
 )
-SELECT 'total' AS dimension, '' AS dimension_key, '' AS route_path, consumer_class,
-  inverse_rate, legacy, SUM(observed_count) AS observed_count
-FROM events WHERE lane IN ('pages', 'public-api') GROUP BY consumer_class, inverse_rate, legacy
-UNION ALL
-SELECT 'route', route_key, route_path, consumer_class, inverse_rate, legacy, SUM(observed_count)
-FROM events WHERE lane IN ('pages', 'public-api') GROUP BY route_key, route_path, consumer_class, inverse_rate, legacy
-UNION ALL
-SELECT 'bucket', CAST(CAST(bucket_start / ?3 AS INTEGER) * ?3 AS TEXT), '', consumer_class,
-  inverse_rate, legacy, SUM(observed_count)
-FROM events WHERE lane IN ('pages', 'public-api')
-GROUP BY CAST(bucket_start / ?3 AS INTEGER), consumer_class, inverse_rate, legacy
-UNION ALL
-SELECT 'lane', lane, '', consumer_class, inverse_rate, legacy, SUM(observed_count)
-FROM events WHERE lane IN ('public-api', 'site-api') GROUP BY lane, consumer_class, inverse_rate, legacy
-UNION ALL
-SELECT 'delivery', CASE WHEN lane = 'public-api' THEN 'public-api-site' ELSE delivery_path END,
-  '', consumer_class, inverse_rate, legacy, SUM(observed_count)
-FROM events WHERE lane = 'pages' OR (lane = 'public-api' AND consumer_class = 'site')
-GROUP BY CASE WHEN lane = 'public-api' THEN 'public-api-site' ELSE delivery_path END, consumer_class, inverse_rate, legacy
-UNION ALL
-SELECT 'legacy-public', '', '', consumer_class, inverse_rate, legacy, SUM(observed_count)
-FROM events WHERE lane = 'public-api' AND legacy = 1 GROUP BY consumer_class, inverse_rate, legacy
-UNION ALL
-SELECT 'unkeyed', '', '', consumer_class, inverse_rate, legacy, SUM(observed_count)
-FROM events WHERE lane = 'public-api' AND legacy = 0 AND authentication_class = 'unkeyed'
-GROUP BY consumer_class, inverse_rate, legacy`;
+SELECT dimension, dimension_key, route_path, consumer_class, inverse_rate, legacy,
+  SUM(observed_count) AS observed_count
+FROM dimension_events
+GROUP BY dimension, dimension_key, route_path, consumer_class, inverse_rate, legacy`;
 
 export function handleRequestSourceStats({ db, trustedAdmin, request }: AdminRouteContext): Promise<Response> {
   return runAdminRoute({ endpoint: "request-source-stats", request, trustedAdmin }, async () => {

@@ -23,7 +23,7 @@ function hasReserveExposureCandidate(
   metaById: ReadonlyMap<string, StablecoinMeta>,
 ): boolean {
   return (coin.reserves ?? []).some((reserve) => {
-    // Self-token legs remain in the denominator, never the exposed numerator.
+    // Candidate guard only; docs/blacklist-tracker.md owns the v4.5 self-leg reserve test.
     if (reserve.pct <= 0 || reserve.coinId === coin.id) return false;
     const reserveStatus = reserve.coinId == null
       ? undefined

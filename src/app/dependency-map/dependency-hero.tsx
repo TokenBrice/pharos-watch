@@ -37,7 +37,7 @@ interface DependencyHeroProps {
 const VIEW_OPTIONS: { value: DependencyMapView; label: string }[] = [{ value: "watershed", label: "Watershed" }, { value: "network", label: "Network" }];
 
 export function DependencyHero({ model, cards, dependencyEdges, mcapMap, logos, methodologyVersion, publishedAt, workspace, commonModeGroups, mobileSummary }: DependencyHeroProps) {
-  const [view, setView] = useState<DependencyMapView>("watershed");
+  const [view, setView] = useState<DependencyMapView>("network");
   const desktop = useMediaQuery("(min-width: 768px)", true);
   useEffect(() => {
     const readUrl = () => setView(readDependencyMapView(window.location.search));

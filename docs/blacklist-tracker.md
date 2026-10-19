@@ -6,7 +6,7 @@ Multi-chain blacklist/freeze event tracker for stablecoins. Every six hours, the
 
 ## Methodology And Ownership
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-blacklist-tracker -->`v4.4`<!-- GENERATED-END: methodology-version-blacklist-tracker -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-blacklist-tracker -->`v4.5`<!-- GENERATED-END: methodology-version-blacklist-tracker -->
 - **Version source:** `shared/lib/methodology-versions/registry.ts`
 - **Public changelog:** `/methodology/blacklist-tracker-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/blacklist-tracker/`
@@ -74,7 +74,7 @@ upstream exposure.
 4. **Upstream: no direct Yes/Possible, and a qualifying parent or reserve basis.** A holder claim
    inherits a declared parent (`variantOf` or `mintAuthority.inheritedFrom`) whose reviewed status is
    Yes, Possible or Upstream. Full CEX custody of reserves also qualifies. Otherwise, **strictly >50%**
-   of the measured reserve composition must terminate in issuer/custodian control under the test below.
+   of measured external backing must terminate in issuer/custodian control under the test below.
 5. **No: none of those tests establishes exposure.** Deposit/entry-only gates and caps, permanently
    abdicated setters, mint-only authority, and increase-only rebases are not holder-facing controls.
    While a primary stablecoin transfers freely, its redemption rails (PSMs, issuer redemption desks,
@@ -93,8 +93,8 @@ not pro-rated by the collateral token's own exposed fraction. DAO/protocol-gover
 (including DAO-only upgrades/pauses and LSTs such as stETH/wstETH or jitoSOL) does not count.
 For CDP/lending coins, weight each market's debt by the qualifying value fraction of its collateral;
 reserve-backed coins use published reserve composition. Split LP/basket rows by constituent value.
-Own-token/self legs remain in the denominator but never the numerator. Self legs are the coin itself
-and its own wrappers/savings shares; a different token from the same issuer counts at its own status.
+Exclude the coin and its own wrappers/savings shares from both numerator and denominator: they are
+not external backing. Different tokens from the same issuer count at their own status.
 State the denominator and qualifying percentage; give pro-rated or alternative-denominator
 sensitivities when they would change the >50% result, without substituting them for the primary metric.
 
@@ -318,7 +318,7 @@ The migration files and `worker/migrations/MANIFEST.md` are the exact schema and
 - `blacklist`, `unblacklist`, and `destroy` transitions;
 - stablecoin, chain, contract/config, transaction, block, and event-signature provenance;
 - authoritative `amount_native` and justified `amount_usd_at_event` values;
-- the deployed legacy `amount` column remains pending a separately operated schema cleanup; normal ingestion/recovery and all three operator tools (`worker/scripts/repair-tron-blacklist-amounts.ts`, `worker/scripts/reconcile-blacklist-events-from-kyc-rip.ts`, `worker/scripts/reconcile-night-watch-blacklist.ts`) now read/write canonical amount fields only;
+- the deployed legacy `amount` column remains pending a separately operated schema cleanup; normal ingestion/recovery and the operator tools (`worker/scripts/repair-tron-blacklist-amounts.ts`, `worker/scripts/reconcile-blacklist-events-from-kyc-rip.ts`, `worker/scripts/reconcile-night-watch-blacklist.ts`, `worker/scripts/replay-blacklist-config-history.ts`) read/write canonical amount fields only;
 - amount source, resolution status, recovery attempts, provider, and bounded error diagnostics;
 - optional suppression reason for audit-only rows.
 
@@ -327,6 +327,8 @@ Canonical repair eligibility ignores legacy `amount`; exact identity, canonical-
 Before any column drop, reconcile/export legacy-only identity/value tuples, obtain external SQL/schema-owner signoff, retain a durable R2 export indefinitely and record a pre-window Time Travel bookmark. The compatible tool/Worker release must establish the rollback floor and pass its first six-hourly sync/API soak. DROP or a rehearsed identity/default/index/FK/repair-queue-preserving rebuild is a separate destructive release, not part of this cutover. Post-drop rollback requires compatible tools or verified schema/data restoration; Worker rollback alone cannot restore the column.
 
 Normal EVM row identity is `{chainId}-{lowercaseTxHash}-{minimalHexLogIndex}`; expanded arrays retain numeric element suffixes. An indexed semantic identity also admits retained decimal/padded-hex spellings without inserting another event generation. The shared public-event predicate excludes equivalent duplicates immediately; reconciliation retains redundant history as `duplicate_log_identity` audit rows without changing event IDs or repair-queue references.
+
+The guarded [config-history replay](./runbooks/blacklist-sync.md#config-scoped-historical-topic-recovery) recovers missing current-family EVM events inside an explicit inclusive window ending at or below the existing cursor; it never rewinds or advances cursors. It reuses the canonical parser, semantic identity and insert builder. A single atomic import records an `admin_action_audit` entry, evidence SHA-256/run/tool provenance on inserted rows, affected contract-scoped lifecycle/balance rebuilds and canonical summary/gap-cache invalidation. The writer pause, inactive sync lease, current Time Travel bookmark and in-transaction cursor-generation/missing-identity guard protect publication; existing events remain untouched.
 
 Tron ingestion, existing-row folds and snapshot keys use validated lowercase `0x` byte identities for Base58/`41`/`0x` inputs. Base58 is never case-folded for account identity; it is derived only for provider calls and exact historical spelling lookups. SQL retains relevant Tron rows for the canonical fold. Snapshot consolidation atomically preserves the newest successful value and removes representation-only aliases, respecting the writer pause.
 

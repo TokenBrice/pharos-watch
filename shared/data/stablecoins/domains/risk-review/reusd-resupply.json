@@ -1,7 +1,7 @@
 {
   "id": "reusd-resupply",
   "blacklistabilityReview": {
-    "reviewedStatus": false,
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "REUSD verified contract source",
@@ -28,16 +28,20 @@
         "url": "https://etherscan.io/block/26224760"
       },
       {
-        "label": "Frax current frxUSD implementation confirmed by B10",
+        "label": "Frax verified frxUSD implementation",
         "url": "https://eth.blockscout.com/address/0x0000000048d2c8baf31742f6765383278bada4d5?tab=contract"
       },
       {
-        "label": "Curve current collateral markets, cross-batch B21 dependency",
+        "label": "Curve collateral market enumeration",
         "url": "https://prices.curve.finance/v1/crvusd/markets/ethereum"
+      },
+      {
+        "label": "crvUSD external-backing observation block",
+        "url": "https://etherscan.io/block/26224667"
       }
     ],
-    "evidence": "Ethereum holds 100% of circulating supply. At ethereum@26224760 (2026-10-19T06:14:11+00:00; hash 0x2a6c0b20faae49bb23f77a582b517057741efcee5bd423a8552f672144c83b85; observed 2026-10-19T06:19:28.419767+00:00) via https://ethereum-rpc.publicnode.com, reUSD 0x57ab1e0003f623289cd798b1824be09a793e4bec exactly matches verified nonproxy Stablecoin runtime; EIP-1967 implementation, admin and beacon slots are zero. The verified source has no delegation/upgrade path, blacklist, transfer pause or arbitrary-holder privileged burn. Owner remains permanently Resupply Core 0xc07e000044f95655c11fda4cd37f70a94d7e0a7d. Owner/operators can mint; burn(from,amount) requires allowance whenever caller differs from from. Core/voter target-selector execution does not replace token code or bypass that allowance. Historical September 29 review pinned Registry as an active mint operator and voter delay/period as 86400/604800 seconds. OFT peer/delegate settings affect cross-chain messages rather than ordinary ERC-20 transfers; msgInspector is zero. No parent or additional deployment is declared. At the current block, Registry.getAllPairAddresses() returned 22 pairs; for every pair collateral().asset() equalled underlying(). getPairAccounting()._totalBorrowAmount totals 52,277,798.621651715835539235 crvUSD-backed and 457,524.196360057267739799 frxUSD-backed debt units, 52,735,322.818011773103279034 total: 99.1324141545% and 0.8675858455%. Converted collateral is 56,893,901.559395113919743726 crvUSD and 540,832.232482291911253602 frxUSD, a secondary 99.0583533747/0.9416466253% split. Applying crvUSD's corrected No verdict (37.2921378710% issuer/custodian exposure on its full debt-weighted LP-split denominator) and frxUSD's Yes verdict categorically leaves 0.8675858455% qualifying exposure, below the strictly-greater-than-50% threshold. No follows, conditional on those crvUSD and frxUSD verdicts. An earlier review's 100% exposed claim used crvUSD's superseded Upstream classification.",
-    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "evidence": "reUSD is Upstream through its external collateral. Ethereum holds 100% of circulating supply. At Ethereum block 26224760 (2026-10-19T06:14:11Z; hash 0x2a6c0b20faae49bb23f77a582b517057741efcee5bd423a8552f672144c83b85), reUSD 0x57ab1e0003f623289cd798b1824be09a793e4bec matches verified nonproxy Stablecoin runtime and has zero EIP-1967 implementation/admin/beacon slots. It exposes no blacklist, transfer pause, upgrade or arbitrary-holder privileged burn. Permanent owner Resupply Core 0xc07e000044f95655c11fda4cd37f70a94d7e0a7d and operators can mint; burn(from,amount) requires allowance when caller differs from from. Core/voter execution does not replace token code or bypass allowance. OFT configuration affects messages rather than ordinary transfers and msgInspector is zero. No parent or additional deployment is declared. Registry.getAllPairAddresses() enumerated all 22 pairs at the pinned block; each collateral().asset() equalled underlying(). The primary getPairAccounting()._totalBorrowAmount denominator is 52,735,322.818011773103279034 debt units: 52,277,798.621651715835539235 crvUSD-backed (99.1324141545%) and 457,524.196360057267739799 frxUSD-backed (0.8675858455%). These are external tokens, not reUSD self legs, so this denominator is unchanged by self-leg exclusion. crvUSD qualifies as Upstream under its external-only reserve test at Ethereum block 26224667, and frxUSD has direct issuer controls. Both collateral branches therefore count categorically, giving 100% qualifying exposure, above 50%, without multiplying by crvUSD's reserve percentage. Converted collateral is a secondary 56,893,901.559395113919743726 crvUSD plus 540,832.232482291911253602 frxUSD, also 100% qualifying. For the v4.4 sensitivity, treating crvUSD as No on its self-inclusive denominator left only the 0.8675858455% frxUSD debt branch qualifying. The changed result comes from crvUSD's external-backing classification, not new local reUSD controls.",
+    "reviewer": "FreezeWatch v4.5 self-leg review 2026-10-19",
     "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
