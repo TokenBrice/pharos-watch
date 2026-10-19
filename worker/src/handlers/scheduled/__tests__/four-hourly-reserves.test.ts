@@ -141,10 +141,10 @@ describe("runFourHourlyReserveSyncSlot", () => {
     return buildRuntime(recoveryCheckpoint({ "sync-live-reserves": "completed" }));
   }
 
-  it("defers a direct checkpoint replay without running producer or consumers beside a heavy slot", async () => {
+  it("defers a direct checkpoint replay beside a same-role graph slot", async () => {
     vi.mocked(getReserveProducerPriority).mockResolvedValue({
-      reason: "heavy-slot-co-tenancy", scheduleKey: "v9PublicationOffset",
-      slotStartedAt: 900, observedAt: 1000, lookaheadSec: 1440, condition: "heavy-slot-running",
+      reason: "same-role-slot-co-tenancy", scheduleKey: "fourHourlyReserveSync",
+      slotStartedAt: 900, observedAt: 1000, lookaheadSec: 1440, condition: "same-role-slot-running",
     });
     const result = await runFourHourlyReserveSyncSlot(buildRuntime(recoveryCheckpoint()));
     expect(result).toMatchObject({ jobsErrored: 0, jobsDegraded: 0, jobsNeutralSkipped: 4 });
@@ -153,7 +153,7 @@ describe("runFourHourlyReserveSyncSlot", () => {
     expect(syncKinesisSupply).not.toHaveBeenCalled();
     expect(finishLiveReserveCheckpoint).not.toHaveBeenCalled();
     expect(logSkippedCronRun).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
-      status: "skipped_neutral", reason: "heavy-slot-co-tenancy",
+      status: "skipped_neutral", reason: "same-role-slot-co-tenancy",
     }));
   });
 
@@ -161,8 +161,8 @@ describe("runFourHourlyReserveSyncSlot", () => {
     "awaits the second guard's release without starting children or concealing a CAS miss (%s)",
     async (disposition) => {
       vi.mocked(getReserveProducerPriority).mockResolvedValue({
-        reason: "heavy-slot-co-tenancy", scheduleKey: "v9PublicationOffset",
-        slotStartedAt: 900, observedAt: 1000, lookaheadSec: 1440, condition: "heavy-slot-running",
+        reason: "same-role-slot-co-tenancy", scheduleKey: "fourHourlyReserveSync",
+        slotStartedAt: 900, observedAt: 1000, lookaheadSec: 1440, condition: "same-role-slot-running",
       });
       let completeRelease!: () => void;
       let releaseStarted!: () => void;
@@ -199,8 +199,8 @@ describe("runFourHourlyReserveSyncSlot", () => {
 
   it.each([undefined, "foreign-invocation"])("does not release another invocation's checkpoint (%s)", async (invocationId) => {
     vi.mocked(getReserveProducerPriority).mockResolvedValue({
-      reason: "heavy-slot-co-tenancy", scheduleKey: "v9PublicationOffset",
-      slotStartedAt: 900, observedAt: 1000, lookaheadSec: 1440, condition: "heavy-slot-running",
+      reason: "same-role-slot-co-tenancy", scheduleKey: "fourHourlyReserveSync",
+      slotStartedAt: 900, observedAt: 1000, lookaheadSec: 1440, condition: "same-role-slot-running",
     });
     const runtime = buildRuntime(recoveryCheckpoint());
     runtime.invocationId = invocationId;

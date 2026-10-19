@@ -33,7 +33,8 @@ export const CRON_SCHEDULE_CADENCES = {
   hourlyYieldSync: { intervalSec: 3600, offsetSec: 55 * 60 },
   fourHourlyYieldSupplemental: { intervalSec: 4 * 3600, offsetSec: 25 * 60 },
   fiveMinuteTelegramAlerts: { intervalSec: 300, offsetSec: 2 * 60 },
-  fiveMinuteReserveRecovery: { intervalSec: 300, offsetSec: 60 },
+  // Historical durable identity; recovery now polls each minute.
+  fiveMinuteReserveRecovery: { intervalSec: 60, offsetSec: 0 },
   digestTriggerPoll: { intervalSec: 300, offsetSec: 0 },
   daily0300Utc: { intervalSec: DAY_SECONDS, offsetSec: 3 * 3600 },
   daily0800Utc: { intervalSec: DAY_SECONDS, offsetSec: 8 * 3600 },
@@ -41,6 +42,14 @@ export const CRON_SCHEDULE_CADENCES = {
   daily0810Utc: { intervalSec: DAY_SECONDS, offsetSec: 8 * 3600 + 10 * 60 },
   monthlyYieldAudit: { intervalSec: 30 * 86400, offsetSec: 6 * 3600 },
 } as const;
+
+// Config/prerequisite recovery retains the original :01/:06/... opportunities.
+export const RESERVE_CONFIG_RECOVERY_CADENCE = { intervalSec: 300, offsetSec: 60 } as const;
+
+export function isReserveConfigRecoverySlot(slotStartedAtSec: number): boolean {
+  const { intervalSec, offsetSec } = RESERVE_CONFIG_RECOVERY_CADENCE;
+  return Number.isSafeInteger(slotStartedAtSec) && (slotStartedAtSec - offsetSec) % intervalSec === 0;
+}
 
 export function isHourlyDexPriceSlot(slotStartedAtSec: number): boolean {
   return new Date(slotStartedAtSec * 1_000).getUTCMinutes() === 16;

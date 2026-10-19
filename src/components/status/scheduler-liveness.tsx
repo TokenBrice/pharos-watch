@@ -74,14 +74,14 @@ export function SchedulerLivenessCard({ observation }: { observation: SchedulerL
         <p className="text-muted-foreground">When scheduled jobs last started, read at request time.</p>
         <dl className="space-y-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <dt className="text-muted-foreground">Five-minute jobs</dt>
+            <dt className="text-muted-foreground">Short-cadence jobs</dt>
             <dd className="flex items-center gap-2">
               <Timestamp epochSec={observation?.lastFiveMinuteStartedAt} fallback="Unavailable" />
               <StatusBadge band={publicBand} />
             </dd>
           </div>
           <div>
-            <dt className="sr-only">Five-minute budget</dt>
+            <dt className="sr-only">Public delivery budget</dt>
             <dd className="pharos-numeric text-xs text-muted-foreground">
               {observation ? budgetText(observation.ageSeconds, observation.warningAfterSec, observation.staleAfterSec) : "Unavailable"}
             </dd>
@@ -111,13 +111,13 @@ export function SchedulerLivenessCard({ observation }: { observation: SchedulerL
           </div>
         </dl>
         {publicStatus === "unavailable" ? (
-          <p>Five-minute delivery evidence is unavailable ({observation?.unavailableReason ?? "Observation not supplied"}). This is not a healthy delivery claim.</p>
+          <p>Public delivery evidence is unavailable ({observation?.unavailableReason ?? "Observation not supplied"}). This is not a healthy delivery claim.</p>
         ) : null}
         {heavyStatus === "unavailable" ? (
           <p>Background computation evidence is unavailable ({observation?.heavy.unavailableReason ?? "Observation not supplied"}). This is not a healthy delivery claim.</p>
         ) : null}
         <p className="text-xs text-muted-foreground">
-          One active five-minute job is enough for the public check; a single quiet job is shown for context only. The
+          One active reserve, Telegram, or digest poll is enough for the public check; a quiet job is diagnostic. The
           background computation lane is checked on its own budget. These are point-in-time readings, not a full
           delivery history.
         </p>

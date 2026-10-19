@@ -72,7 +72,7 @@ Both public and heavy scripts retain the same `300000` ms CPU cap, runtime compa
 
 Cloudflare currently limits each invocation to six simultaneous outbound requests that are still waiting for response headers. A request stops occupying that header-wait slot once headers arrive. Pharos deliberately uses a stricter trigger-wide six-connection model in its static scheduler budget so nested and chained fetch phases cannot accidentally overlap at the platform ceiling. See the [Workers limits](https://developers.cloudflare.com/workers/platform/limits/) and the [April 2026 connection-limit change](https://developers.cloudflare.com/changelog/post/2026-04-09-relaxed-connection-limiting/).
 
-The scheduler is structured around that conservative repo constraint:
+Conservative scheduler rules:
 
 - heavy lanes get isolated trigger slots (`sync-blacklist`, `sync-mint-burn`, `sync-mint-burn-extended`, `sync-dex-discovery`, `sync-dex-liquidity-stage`)
 - shared slots bundle only related work
