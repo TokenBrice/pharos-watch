@@ -286,7 +286,7 @@ export function mockD1(tables: MockTableConfig[] = [], options: MockD1Options = 
 export function makeTestD1Database(
   options: { runChanges?: (sql: string) => number } = {},
 ): MockD1Database {
-  return mockD1([{ match: "site_data_request_stats", rows: [], allowUnused: true }], {
+  return mockD1([{ match: "site_data_request_samples", rows: [], allowUnused: true }], {
     batchMode: "run",
     runChanges: options.runChanges ?? ((sql) => (sql.includes("DELETE") ? 0 : 1)),
   });

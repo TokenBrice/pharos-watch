@@ -2,9 +2,26 @@ import { chunkArray } from "./collections";
 import { findDynamicEndpointDescriptor, getEndpointDefinition } from "./api-endpoints";
 import { PHAROS_WEB_ACCEPT_MARKER } from "./request-source-marker";
 import { SITE_ORIGIN } from "./runtime-origins";
-import type { ApiRequestConsumerClass } from "@pharos/contracts/request-source";
+import {
+  REQUEST_SOURCE_SAMPLE_INVERSE_RATE,
+  type ApiRequestConsumerClass,
+  type SiteDataRequestDeliveryPath,
+} from "@pharos/contracts/request-source";
 
 export const REQUEST_ATTRIBUTION_RETENTION_DAYS = 35;
+export const REQUEST_ATTRIBUTION_BUCKET_SEC = 60;
+
+// Select each eligible event before buffer merging. This is statistical
+// randomness only: no security, auth or quota decision depends on the draw.
+export function selectRequestAttributionSample(inverseRate: number, draw = Math.random()): boolean {
+  return draw < 1 / inverseRate;
+}
+
+export function requestAttributionInverseRate(deliveryPath?: SiteDataRequestDeliveryPath): number {
+  return deliveryPath === "pages-upstream-timeout" || deliveryPath === "pages-upstream-error"
+    ? 1
+    : REQUEST_SOURCE_SAMPLE_INVERSE_RATE;
+}
 export const REQUEST_ATTRIBUTION_PRUNE_INTERVAL_SEC = 3600;
 const REQUEST_SOURCE_ATTRIBUTION_DISABLED_ENV = "REQUEST_SOURCE_ATTRIBUTION_DISABLED";
 

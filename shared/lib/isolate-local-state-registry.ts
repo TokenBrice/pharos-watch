@@ -28,8 +28,8 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     stateNames: ["siteDataRequestRecorder"],
     owner: "Pages site-data attribution",
     kind: "coordination",
-    resetOrTtl: "Batches up to 50 entries after a 10ms delay; prune coordination is hourly and all state resets with the isolate.",
-    durableTruth: "D1 site_data_request_stats rows are authoritative.",
+    resetOrTtl: "Selected events batch up to 50 entries after a request-owned 10ms delay; all state resets with the isolate. Daily bounded retention owns pruning.",
+    durableTruth: "D1 site_data_request_samples rows are authoritative; unselected events are not buffered.",
   },
   {
     sourcePath: "functions/selector-snapshot/[[path]].ts",
@@ -240,8 +240,8 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     stateNames: ["workerRequestRecorder", "apiKeyRequestRecorder"],
     owner: "Worker request attribution",
     kind: "coordination",
-    resetOrTtl: "Each recorder batches up to 50 entries after a 10ms delay; prune coordination is hourly and all state resets with the isolate.",
-    durableTruth: "D1 api_request_consumer_stats and api_key_request_stats rows are authoritative.",
+    resetOrTtl: "Each recorder batches up to 50 entries after a request-owned 10ms delay; all state resets with the isolate. Daily bounded retention owns source and per-key pruning.",
+    durableTruth: "D1 api_request_source_samples and unsampled api_key_request_stats rows are authoritative.",
   },
   {
     sourcePath: "worker/src/lib/safety-score-v9/fact-set.ts",

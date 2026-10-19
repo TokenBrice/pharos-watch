@@ -3,7 +3,7 @@ import type { ErrorDescriptor } from "@shared/types/error";
 import type { CronResultStatus, CronTerminalAccountingStage, ProducerOutcome, ResourcePressure } from "@shared/types/status/cron";
 import { settleAfterAbort, CRON_ABORT_GRACE_MS, CRON_ABORT_OBSERVATION_MARGIN_MS } from "./cron-abort-settlement";
 import {
-  markScheduledChildStarted, writeScheduledChildTerminal, CronChildTerminalSupersededError,
+  markScheduledChildStarted, writeScheduledChildTerminal, CronChildTerminalSupersededError, childAttemptTable,
   type ScheduledChildIdentity,
 } from "./scheduled-child-terminal";
 import type { ScheduledExecutionFence } from "./scheduled-slot-fence";
@@ -490,7 +490,7 @@ export async function logCronRun(
         const owner = lastProgressLeaseOwner;
         progressWriteTail = progressWriteTail.then(async () => {
           await runWithOverloadRetry(() => db.prepare(
-            "UPDATE scheduled_child_attempts SET lease_owner = ? WHERE attempt_key = ? AND terminal_token IS NULL",
+            `UPDATE ${scheduledIdentity ? childAttemptTable(scheduledIdentity.executionFence) : "scheduled_child_attempts"} SET lease_owner = ? WHERE attempt_key = ? AND terminal_token IS NULL`,
           ).bind(owner, scheduledAttemptKey).run());
         });
       }

@@ -61,6 +61,21 @@ describe("retention policy registry", () => {
     }
   });
 
+  it("keeps both sampled stores on the small daily budget and legacy/key stores draining at 35 days", () => {
+    for (const table of ["api_request_source_samples", "site_data_request_samples"]) {
+      expect(registry.find((policy) => policy.table === table)).toMatchObject({
+        owner: "prune-cron-history", windowSec: 35 * 86_400, timestampColumn: "bucket_start",
+        batchLimit: RETENTION_SMALL_DELETE_BATCH_LIMIT, runLimit: RETENTION_SMALL_DELETE_RUN_LIMIT,
+      });
+    }
+    for (const table of ["api_request_consumer_stats", "site_data_request_stats", "api_key_request_stats"]) {
+      expect(registry.find((policy) => policy.table === table)).toMatchObject({
+        owner: "prune-cron-history", windowSec: 35 * 86_400,
+        batchLimit: RETENTION_DELETE_BATCH_LIMIT, runLimit: RETENTION_DELETE_RUN_LIMIT,
+      });
+    }
+  });
+
   it("has no remaining runtime reader or writer of a retired cache version", () => {
     const retired = CACHE_RETENTION_POLICIES.filter((policy) => policy.windowSec == null);
     const files: string[] = [];

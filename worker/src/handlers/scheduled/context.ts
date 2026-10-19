@@ -1,3 +1,4 @@
+import type { ReserveContinuationMessage } from "@shared/types/reserve-continuation";
 import type { CronScheduleKey } from "@shared/lib/cron-jobs";
 import { getScheduledTaskDescriptor, SCHEDULED_SLOT_PLANS, type ScheduledWorkerRole } from "@shared/lib/scheduled-runner-registry";
 import {
@@ -104,6 +105,8 @@ export interface ScheduledRuntimeContext {
   producerKind?: string;
   fetchBudget?: ScheduledFetchBudget;
   recoveryCheckpoint?: ScheduledRecoveryCheckpoint;
+  pendingReserveContinuation?: ReserveContinuationMessage;
+  reserveQueueMetadata?: Record<string, string | number>;
   mintBurnDisabledIds: string[];
   mintBurnDisabledSymbols: string[];
   mintBurnFreshnessConfig: MintBurnFreshnessConfig;
@@ -262,6 +265,7 @@ export function createScheduledRuntimeContext(
               workerVersion,
               attemptNo: jobAttemptNo,
               producerKind,
+              ...(runtime.reserveQueueMetadata ? { reserveQueue: runtime.reserveQueueMetadata } : {}),
             };
             const reserveFamily = job === "sync-live-reserves" || job === "reserve-recovery" || scheduled.recoveryCheckpoint != null;
             const leaseOwner = reserveFamily

@@ -101,6 +101,10 @@ jobs:
         run: npm run check:migrations
       - name: Package both Workers before D1 mutation
         run: npm run check:worker-package
+      - name: Verify pre-provisioned reserve Queue and dead-letter Queue
+        run: |
+          npx --no-install wrangler queues info pharos-reserve-continuation --config worker/wrangler.toml
+          npx --no-install wrangler queues info pharos-reserve-continuation-dlq --config worker/wrangler.toml
       - name: Preflight remote D1 baseline adoption
         run: npm run check:remote-d1-baseline-ledger
       - name: Apply production D1 migrations

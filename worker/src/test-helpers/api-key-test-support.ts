@@ -7,11 +7,7 @@ export interface RequestAttributionTableOptions {
   includeApiKey?: boolean;
   workerChanges?: number;
   apiKeyChanges?: number;
-  workerPruneChanges?: number;
-  apiKeyPruneChanges?: number;
   apiKeyFailure?: unknown;
-  workerPruneFailure?: unknown;
-  apiKeyPruneFailure?: unknown;
 }
 
 function failureOverride(failure: unknown): Pick<MockTableConfig, "throwError"> | Record<string, never> {
@@ -23,7 +19,8 @@ export function makeRequestAttributionTables(
 ): MockTableConfig[] {
   return [
     {
-      match: "INSERT INTO api_request_consumer_stats",
+      match: "INSERT INTO api_request_source_samples",
+      allowUnused: true,
       rows: [],
       runMeta: { changes: options.workerChanges ?? 1 },
     },
@@ -37,18 +34,6 @@ export function makeRequestAttributionTables(
           },
         ]
       : []),
-    {
-      match: "DELETE FROM api_request_consumer_stats",
-      rows: [],
-      runMeta: { changes: options.workerPruneChanges ?? 0 },
-      ...failureOverride(options.workerPruneFailure),
-    },
-    {
-      match: "DELETE FROM api_key_request_stats",
-      rows: [],
-      runMeta: { changes: options.apiKeyPruneChanges ?? 0 },
-      ...failureOverride(options.apiKeyPruneFailure),
-    },
   ];
 }
 

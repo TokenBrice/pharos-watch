@@ -5,6 +5,7 @@ import {
   CRON_CONNECTION_BUDGET_ENTRIES,
   CRON_GROWTH_HEADROOM_POLICY,
   CRON_SCHEDULES,
+  RESERVE_CONTINUATION_CONNECTION_BUDGET,
 } from "@shared/lib/cron-jobs";
 import { SCHEDULED_SLOT_PLANS, type ScheduledWorkerRole } from "@shared/lib/scheduled-runner-registry";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
@@ -52,6 +53,7 @@ export interface CronConnectionBudgetReport {
   missingBudgetJobs: string[];
   missingBudgetScheduleKeys: string[];
   triggerReports: CronConnectionTriggerReport[];
+  nonCronReports: Array<{ surface: string; worker: ScheduledWorkerRole; totalConnections: number; postSettlementSendConnections: number }>;
   workerReports: Record<ScheduledWorkerRole, { slotCount: number; fetchCapableEntryCount: number }>;
 }
 
@@ -155,7 +157,9 @@ export function evaluateCronConnectionBudget(input: {
     const chains = chainResults.map((result) => result.chain);
     const budgetOnlyChain = budgetOnlyResult?.chain ?? null;
     const parallelConnections = chains.reduce((sum, chain) => sum + chain.peak, 0);
-    const totalConnections = Math.max(parallelConnections, budgetOnlyChain?.peak ?? 0);
+    const sendConnections = RESERVE_CONTINUATION_CONNECTION_BUDGET.producerScheduleKeys.some((key) => key === scheduleKey)
+      ? RESERVE_CONTINUATION_CONNECTION_BUDGET.postSettlementSendConnections : 0;
+    const totalConnections = Math.max(parallelConnections, budgetOnlyChain?.peak ?? 0, sendConnections);
     const triggerReport = {
       budgetOnlyChain,
       chains,
@@ -182,6 +186,13 @@ export function evaluateCronConnectionBudget(input: {
     fetchCapableEntryCount > growthPolicy.maxFetchCapableEntriesBeforeRebalance;
   const headroomFullTriggerLimitExceeded =
     headroomFullTriggers.length > growthPolicy.maxHeadroomFullTriggersBeforeRebalance;
+  const queueBudget = RESERVE_CONTINUATION_CONNECTION_BUDGET;
+  const nonCronReports = [{
+    surface: queueBudget.surface, worker: queueBudget.worker,
+    totalConnections: Math.max(queueBudget.maxConnections, queueBudget.postSettlementSendConnections),
+    postSettlementSendConnections: queueBudget.postSettlementSendConnections,
+  }];
+  failed ||= nonCronReports.some((surface) => surface.totalConnections >= budget.failAt);
 
   return {
     budget,
@@ -205,6 +216,7 @@ export function evaluateCronConnectionBudget(input: {
       },
     ])) as CronConnectionBudgetReport["workerReports"],
     triggerReports,
+    nonCronReports,
   };
 }
 
@@ -213,6 +225,9 @@ export function printReport(report: CronConnectionBudgetReport): void {
   for (const worker of ["public", "heavy"] as const) {
     const summary = report.workerReports[worker];
     console.log(`${worker === "public" ? "worker/wrangler.toml" : "worker/wrangler.heavy.toml"}: ${summary.slotCount} logical slots, ${summary.fetchCapableEntryCount} fetch-capable entries`);
+  }
+  for (const surface of report.nonCronReports) {
+    console.log(`Non-cron ${surface.worker}/${surface.surface}: ${surface.totalConnections}/${budget.maxPerTrigger}; post-settlement send ${surface.postSettlementSendConnections}, serialized after children and leases drain`);
   }
   if (report.missingBudgetScheduleKeys.length > 0) {
     console.error(

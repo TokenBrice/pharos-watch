@@ -36,7 +36,7 @@ export function createRequestSourceRecorder(config: {
 
     return () => {
       config.execCtx.waitUntil(
-        recordWorkerRequestAttribution(config.db, route, "site-api", "site"),
+        recordWorkerRequestAttribution(config.db, route, "site-api", "site", "not-applicable"),
       );
     };
   }
@@ -46,7 +46,9 @@ export function createRequestSourceRecorder(config: {
   return () => {
     const attributionWrites: Promise<void>[] = [];
     if (!config.attributionDisabled) {
-      attributionWrites.push(recordWorkerRequestAttribution(config.db, route, "public-api", consumerClass));
+      attributionWrites.push(recordWorkerRequestAttribution(
+        config.db, route, "public-api", consumerClass, config.apiKeyId != null ? "keyed" : "unkeyed",
+      ));
     }
     if (config.apiKeyId != null && !config.apiKeyAttributionDisabled) {
       attributionWrites.push(recordApiKeyRequestAttribution(config.db, config.apiKeyId));
