@@ -224,6 +224,8 @@ Malformed numeric params return `400`; out-of-range numeric params are clamped t
 
 All queries use the same `[from,to)` observation window and preserve minute resolution. Full-window totals do not depend on route/key limits or the UI's latest-eight-bucket display. Shares are derived after summing weighted inputs, not averaged or clamped.
 
+The seven aggregate dimensions share one bounded SQL source read. Dimension expansion uses a `VALUES` relation rather than a seven-arm compound `SELECT`, because production D1 permits at most five terms in a compound `SELECT`; the four legacy/sample source arms remain within that limit.
+
 `ApiRequestAttributionResponse` includes:
 
 - `generatedAt` — Unix seconds when the response was generated

@@ -119,6 +119,52 @@ describe("handleRequestSourceStats", () => {
     expect(body.lanes[0].totalRequests).toBe(2084);
   });
 
+  it.each([
+    { query: "&hours=1", hours: 1 },
+    { query: "", hours: 24 },
+  ])("keeps the real $hours-hour SQL within D1's compound-select limit", async ({ query, hours }) => {
+    const { sqlite, db } = fixtures.open();
+    const prepare = vi.spyOn(db, "prepare");
+    sqlite.exec(`
+      INSERT INTO api_request_consumer_stats VALUES (${FROM}, 'a', '/a', 'public-api', 'site', 5);
+      INSERT INTO api_request_consumer_stats VALUES (${FROM}, 'a', '/a', 'public-api', 'external', 10);
+      INSERT INTO site_data_request_stats (bucket_start, route_key, route_path, delivery_path, request_count) VALUES (${FROM}, 'a', '/a', 'pages-cache-hit', 3);
+      INSERT INTO api_request_source_samples VALUES (${FROM}, 'a', '/a', 'public-api', 'external', 'unkeyed', 64, 2);
+      INSERT INTO api_request_source_samples VALUES (${FROM}, 'a', '/a', 'public-api', 'external', 'keyed', 64, 1);
+      INSERT INTO api_request_source_samples VALUES (${FROM}, 'internal', '/internal', 'site-api', 'site', 'not-applicable', 64, 4);
+      INSERT INTO site_data_request_samples VALUES (${FROM}, 'a', '/a', 'pages-upstream-fetch', 'site-api', 64, 3);
+      INSERT INTO site_data_request_samples VALUES (${FROM}, 'a', '/a', 'pages-upstream-timeout', 'site-api', 1, 2);
+      INSERT INTO api_keys (id, key_prefix, secret_hash, name, created_at, updated_at) VALUES (1, 'prefix', 'secret', 'Partner', ${FROM}, ${FROM});
+      INSERT INTO api_key_request_stats (api_key_id, bucket_start, request_count, source_v2_request_count) VALUES (1, ${FROM}, 100, 94);
+    `);
+    const response = await handleRequestSourceStats({
+      db, trustedAdmin: true,
+      request: new Request(`https://ops-api.pharos.watch/api/request-source-stats?measurementVersion=2${query}`),
+    });
+    const body = ApiRequestAttributionResponseSchema.parse(await readJsonResponse(response, 200));
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(body.measurementVersion).toBe(2);
+    expect(body.window.durationSec).toBe(hours * 3600);
+    expect(body.totals).toMatchObject({ siteRequests: 202, externalRequests: 202, totalRequests: 404 });
+    expect(body.totals.measurement.totalRequests).toMatchObject({
+      kind: "mixed", recordedCount: 18, observedSampleCount: 8,
+      probabilityStrata: [{ inverseRate: 1, observedSampleCount: 2 }, { inverseRate: 64, observedSampleCount: 6 }],
+    });
+    expect(body.routes).toMatchObject([{ routeKey: "a", totalRequests: 404 }]);
+    expect(body.buckets.reduce((sum, bucket) => sum + bucket.totalRequests, 0)).toBe(404);
+    expect(body.siteDelivery).toMatchObject({ pagesCacheHits: 3, pagesUpstreamFetches: 192, pagesUpstreamTimeouts: 2, publicApiSiteRequests: 5 });
+    expect(body.lanes.map(({ lane, totalRequests }) => ({ lane, totalRequests }))).toEqual([
+      { lane: "public-api", totalRequests: 207 }, { lane: "site-api", totalRequests: 256 },
+    ]);
+    expect(body.keyedPublicApi).toMatchObject({ keyedRequests: 100, unkeyedRequests: 137, totalRequests: 237 });
+    const sourceSql = prepare.mock.calls.find(([sql]) => sql.startsWith("WITH raw_events"))?.[0];
+    expect(sourceSql).toBeDefined();
+    // node:sqlite permits 500 compound terms, but production D1 permits five.
+    // A conservative query-wide bound catches the former seven-arm output UNION
+    // while these assertions still execute every dimension against real SQLite.
+    expect(sourceSql!.match(/\bUNION\b/g)?.length ?? 0).toBeLessThanOrEqual(4);
+  });
+
   it("publishes low-sample precision and honest empty observation states", async () => {
     const { sqlite, db } = fixtures.open();
     const empty = await readStats(db);
