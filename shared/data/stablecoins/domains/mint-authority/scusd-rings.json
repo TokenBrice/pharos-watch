@@ -81,6 +81,10 @@
           {
             "label": "Ethereum scUSD RolesAuthority",
             "url": "https://etherscan.io/address/0x7d5f6108e23c0cb2cfd744e5c46f1aaffc30a348"
+          },
+          {
+            "label": "LlamaRisk Aave review (2025-03-27): 4/6 Safes split 3:3 between Veda and Paladin contributors",
+            "url": "https://governance.aave.com/t/arfc-onboard-sceth-scusd-and-scbtc-to-aave-v3-sonic-instance/21446/2"
           }
         ],
         "evidence": "At Ethereum block 25526164, the 4/6 Safe was the TimelockController proposer; the one-day Timelock owned the RolesAuthority that administers BoringVault capabilities. Safe reads returned six owners, no enabled modules, and zero guard and module guard."
@@ -157,6 +161,10 @@
           {
             "label": "Sonic scUSD RolesAuthority",
             "url": "https://sonicscan.org/address/0x7d5f6108e23c0cb2cfd744e5c46f1aaffc30a348"
+          },
+          {
+            "label": "LlamaRisk Aave review (2025-03-27): 4/6 Safes split 3:3 between Veda and Paladin contributors",
+            "url": "https://governance.aave.com/t/arfc-onboard-sceth-scusd-and-scbtc-to-aave-v3-sonic-instance/21446/2"
           }
         ],
         "evidence": "At Sonic block 75897805, the 4/6 Safe was the TimelockController proposer; the one-day Timelock owned the RolesAuthority that administers BoringVault capabilities. Safe reads returned the same six owners as Ethereum, no enabled modules, and zero guard and module guard."

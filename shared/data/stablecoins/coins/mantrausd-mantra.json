@@ -37,7 +37,7 @@
     "disposition": "resolved",
     "reviewedAt": "2026-10-15",
     "reviewer": "Batch64 Rev_MantrausdMantra primary-source review",
-    "rationale": "The exact deployed MYieldToOne extension holds M and issues a fixed-face child claim. It inherits the M parent Treasury-backed archetype; the local token is not a direct Treasury fund share and holders have no automatic yield entitlement.",
+    "rationale": "The exact deployed MYieldToOne extension holds M and issues a fixed-face child claim. It inherits the M parent Treasury-backed archetype; the local token is not a direct Treasury fund share and holders have no automatic yield entitlement. Whitepaper section 6.1 states that holding mantraUSD carries no right to interest or income, and that the Treasury yield is directed through YieldToOne to a MANTRA-controlled address and allocated at MANTRA's discretion to ecosystem participants meeting its qualification criteria.",
     "sources": [
       {
         "label": "Verified mantraUSD implementation",

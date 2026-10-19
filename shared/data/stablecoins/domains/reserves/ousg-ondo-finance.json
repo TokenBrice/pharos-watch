@@ -199,9 +199,13 @@
       {
         "label": "Ondo OUSG proof-of-reserve reports",
         "url": "https://drive.google.com/drive/folders/1Ti8IzoXTibM3B2RWxystT38ISrPH-rRP?usp=sharing"
+      },
+      {
+        "label": "Ondo OUSG Trust & Transparency, daily NAV Consulting financials publication",
+        "url": "https://docs.ondo.finance/qualified-access-products/ousg/trust-and-transparency"
       }
     ],
-    "uncertainty": "Ondo identifies current portfolio positions and the fund administrator, but the reviewed materials do not establish account-level segregation, bankruptcy treatment, or rehypothecation terms for every underlying provider.",
+    "uncertainty": "Ondo identifies current portfolio positions and the fund administrator, but the reviewed materials do not establish account-level segregation, bankruptcy treatment, or rehypothecation terms for every underlying provider. Ondo's Trust & Transparency page says the full set of NAV Consulting financials is published daily, possibly lagging the on-chain price by up to three days, through a linked Google Drive folder; on 2026-10-19 that folder redirected unauthenticated visitors to a Google sign-in page, so the daily administrator reports were not publicly readable.",
     "knownUnknownExposurePct": 100
   }
 }

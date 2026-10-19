@@ -144,7 +144,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Controller verified on-chain 2026-07-20: hasRole(DEPOSITOR_ROLE, 0xA6FA4fB5f76172d178d61B04b0ecd319C5d1C0aa) = true on the DecentralizedEURO(PoS) child token, so the Polygon PoS ChildChainManager is the mint authority for this representation. At Polygon block 90644451, eth_call totalSupply() returned 19,616.618741270895590385 dEURO, equal to 1.2288791387% of the canonical Ethereum supply measured seven seconds earlier.",
+        "reviewNote": "Controller verified on-chain 2026-07-20: hasRole(DEPOSITOR_ROLE, 0xA6FA4fB5f76172d178d61B04b0ecd319C5d1C0aa) = true on the DecentralizedEURO(PoS) child token, so the Polygon PoS ChildChainManager is the mint authority for this representation. At Polygon block 90644451, eth_call totalSupply() returned 19,616.618741270895590385 dEURO, equal to 1.2288791387% of the canonical Ethereum supply measured seven seconds earlier. Upgrade authority re-read 2026-10-19 at Polygon block 95,812,811: proxyOwner() on the child-token proxy returned 0x355b8e02e7f5301e6fac9b7cac1d6d9c86c0343f (implementation() 0xe4025850e6477e3974b0ad85cff1966671678fb6), a legacy MultiSigWallet with required()=1 and sole owner 0x3a635c48836e7c0b9aeb378640b0bfd516985cf5, a Safe v1.4.1 with threshold 5 of 9 owners, no enabled modules and a zero guard slot. No timelock sits on this path, so a 5-of-9 Safe can upgrade the Polygon representation without delay.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "polygon",
         "controllerAddress": "0xA6FA4fB5f76172d178d61B04b0ecd319C5d1C0aa",
@@ -166,6 +166,14 @@
           {
             "label": "Pinned Polygon block 90644451",
             "url": "https://polygonscan.com/block/90644451"
+          },
+          {
+            "label": "dEURO(PoS) proxy owner 0x355b8e02 read at Polygon block 95812811 (2026-10-19)",
+            "url": "https://polygonscan.com/address/0x355b8e02e7f5301e6fac9b7cac1d6d9c86c0343f"
+          },
+          {
+            "label": "5-of-9 Safe owning the proxy-owner wallet, read at Polygon block 95812811 (2026-10-19)",
+            "url": "https://polygonscan.com/address/0x3a635c48836e7c0b9aeb378640b0bfd516985cf5"
           }
         ]
       },

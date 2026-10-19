@@ -56,6 +56,7 @@
         "threshold": 2,
         "signerCount": 3,
         "canRaiseCap": "unknown",
+        "capDescription": "Owner-only fee switch on the wrapper: setFees can raise the deposit entry fee to 500 bps and the swap fee on collateral-to-BOLD conversions to 250 bps, with fees paid in BOLD to an owner-settable vault address; all fee rates read 0 at Ethereum block 26227575 (2026-10-19).",
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
           "threshold": 2,
@@ -83,9 +84,17 @@
           {
             "label": "Safe Transaction Service",
             "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x2df68ea583b8394a8cc71eebcd4fa7c6746027d5/"
+          },
+          {
+            "label": "K3 sBOLD BaseSBold.sol fee setters (commit a5fe08f)",
+            "url": "https://github.com/K3Capital/sBOLD/blob/a5fe08f35342074ceb0a2ac17aa8b59121cdfe47/contracts/base/BaseSBold.sol"
+          },
+          {
+            "label": "K3 sBOLD fee maxima constants (commit a5fe08f)",
+            "url": "https://github.com/K3Capital/sBOLD/blob/a5fe08f35342074ceb0a2ac17aa8b59121cdfe47/contracts/libraries/helpers/Constants.sol"
           }
         ],
-        "evidence": "At Ethereum block 25573280, getOwners() returned the listed three EOAs, getThreshold() returned 2, and getModulesPaginated() returned an empty list. Safe Transaction Service data reports a zero guard and the fallback handler 0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4. Live ERC-4626 asset() also resolves to BOLD at 0x6440f144b7e50d6a8439336510312d2f54beb01d."
+        "evidence": "At Ethereum block 25573280, getOwners() returned the listed three EOAs, getThreshold() returned 2, and getModulesPaginated() returned an empty list. Safe Transaction Service data reports a zero guard and the fallback handler 0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4. Live ERC-4626 asset() also resolves to BOLD at 0x6440f144b7e50d6a8439336510312d2f54beb01d. Fee switch: BaseSBold source gives the owner onlyOwner setFees (entry fee capped at 500 bps by BPS_MAX_DEPOSIT_FEE, swap fee capped at 250 bps by BPS_MAX_FEE), setReward (swap-caller reward capped at 250 bps), and setVault (fee recipient); all three selectors are present in the deployed wrapper bytecode. At Ethereum block 26227575 (2026-10-19), feeBps(), swapFeeBps() and rewardBps() returned 0, and owner() and vault() both returned this Safe."
       }
     ],
     "review": {

@@ -515,7 +515,7 @@
           }
         ],
         "liquidationMechanism": "Exact creation/runtime-matched Morpho Blue liquidate checks oracle-valued health against immutable LLTV, transfers seized collateral and requires loan-token repayment. Independent kind evidence verifies mechanics, not nested feed correctness or executable liquidation availability.",
-        "backstop": "No exact-market funded insurance or discretionary rescue commitment was verified in the cited inventory; that fact remains unknown.",
+        "backstop": "No exact-market funded insurance or discretionary rescue commitment was verified in the cited inventory; that fact remains unknown. The wrapped Wildcat wmtUSDC market is uncollateralized lending to Wintermute. On 2026-07-03 Armitage, the vault's curator, acknowledged in a Summer.fi RFC reply that v-wmtUSDC collateral and the USDC lent against it share the same ultimate counterparty risk, and that the liquidator may not appear to be a strong backstop compared to other markets if Wintermute became insolvent; Armitage argued that the oracle's daily markdown toward $0.01 and third-party economic incentives to buy and redeem discounted claims provide the backstop instead.",
         "shutdownOrBadDebtBehavior": "Exact creation/runtime-matched Morpho Blue writes off remaining debt at zero borrower collateral and subtracts badDebtAssets from totalSupplyAssets. No guaranteed recovery, funded backstop or root-vault assurance is inferred.",
         "sources": [
           {
@@ -539,7 +539,8 @@
             "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
           },
           {"label": "Exact Wildcat Chainlink wrapper and immutable oracle input", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe44dcf74ab26ec2e23c4f0922dcb9765379f0aae"},
-          {"label": "Nested Wildcat oracle partial source, scale-factor and delinquency pricing", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd89124a031f75d5cae29fe15376dfcd86b7cf844"}
+          {"label": "Nested Wildcat oracle partial source, scale-factor and delinquency pricing", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd89124a031f75d5cae29fe15376dfcd86b7cf844"},
+          {"label": "Summer.fi forum RFC thread: Block Analitica assessment and Armitage reply, 2026-07-03, on Wintermute's Wildcat borrowing and shared counterparty risk", "url": "https://forum.summer.fi/t/rfc-onboard-wintermute-usdc-select-morpho-v2-vault-to-usdc-higher-risk-fleet/850"}
         ]
       },
       {

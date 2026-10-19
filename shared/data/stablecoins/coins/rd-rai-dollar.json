@@ -40,7 +40,7 @@
       "date": "2026-07-21",
       "type": "announcement",
       "title": "RAI Dollar announced with public docs and introductory post",
-      "description": "Reflexer's team introduced RD as an immutable, $1-targeting CDP stablecoin on Ethereum with no governance, admin keys, or upgrade path, combining Liquity redemptions and Stability Pool with a RAI-style rate and par controller.",
+      "description": "Reflexer's team introduced RD as an immutable, $1-targeting CDP stablecoin on Ethereum with no governance, admin keys, or upgrade path, combining Liquity redemptions and Stability Pool with a RAI-style rate and par controller. Borrowers can opt a trove into Redemption Shield, paying a surcharge on the branch rate so that the trove is skipped by redemptions outside branch shutdown; unshielded troves on the same branch receive a rate discount, both set from the branch's shield share on one immutable curve. Bad debt left after a branch shutdown is repaid by routing three flows into the shut-down branch until the debt is cleared, with no vote or treasury: 50% of the MOAI-staker share of system-wide interest, the redemption fees from every healthy branch (normally retained), and a 0.5% bad-debt surcharge on redemptions; the team describes MOAI stakers as the protocol's risk capital and says Stability Pool and LP stakers are not diluted.",
       "sourceUrl": "https://docs.raidollar.tech/blog/introducing-rai-dollar"
     },
     {

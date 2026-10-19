@@ -107,6 +107,13 @@
       "sourceUrl": "https://docs.polaris.finance/core-assets/usdp"
     },
     {
+      "date": "2026-08-03",
+      "type": "milestone",
+      "title": "Polaris docs define an immutable core with bounded Stewardship",
+      "description": "The Security Guarantees page states that the core protocol is immutable with no admin privileges, that USDp has no freeze or blacklist function, and that no privileged actor can mint outside the pETH-collateralized process. A bounded Stewardship role can still change interest rate splits, POLAR conversion parameters, flow recipients and weightings, and replace faulty oracle feeds; it cannot upgrade core contracts, add collateral, or change the bonding curve or liquidation mechanics. The docs do not say who holds Stewardship or whether a timelock applies.",
+      "sourceUrl": "https://docs.polaris.finance/risks/security-properties"
+    },
+    {
       "date": "2026-09-04",
       "type": "announcement",
       "title": "Polaris closes $1M angel round with Ethereum Foundation, Liquity, and LI.FI participation",
@@ -119,6 +126,13 @@
       "title": "Polaris consolidates on polaris.finance; former domain now serves only a move notice",
       "description": "A polaris-docs commit repointed documentation at polaris.finance; polarisfinance.io now shows only the move notice and the retired blog survives solely in web.archive.org captures. The Sepolia testnet app remains labelled Alpha, docs state no production addresses, audit status, or launch status may be inferred from testnet values, and no mainnet date or audit announcement accompanied the consolidation.",
       "sourceUrl": "https://docs.polaris.finance/"
+    },
+    {
+      "date": "2026-09-30",
+      "type": "milestone",
+      "title": "Polaris docs rename the USDp Earn Vault to the Earn Pool",
+      "description": "Commit 1c1b0b9 in the public polaris-docs repository replaced the Earn Vaults page with an Earn Pools page, now live at docs.polaris.finance/architecture/earn-pools. USDp deposited in the Earn Pool absorbs liquidations below the 115% minimum collateral ratio and earns a protocol-defined minimum share of minter interest, paid in USDp, plus pETH liquidation gains. As liquidations occur, a deposit's USDp balance falls while its pETH balance rises, so depositors take on ETH exposure. Deposits are transferable NFTs; auto-compounding vaults are third-party products outside the core protocol.",
+      "sourceUrl": "https://github.com/Polaris-Finance/polaris-docs/commit/1c1b0b9b97c6298f4c38028d47a993de42733c12"
     }
   ]
 }

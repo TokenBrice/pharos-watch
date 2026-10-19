@@ -41,9 +41,17 @@
       {
         "label": "StoneYield yield generation",
         "url": "https://docs.stoneyield.io/docs/protocol/yield-generation"
+      },
+      {
+        "label": "StoneYield homepage contract-suite claim of audited BSC contracts, no auditor or report named (accessed 2026-10-19)",
+        "url": "https://stoneyield.io"
+      },
+      {
+        "label": "StoneYield contracts SECURITY.md audit status at commit ef8dcb7 (2026-08-08)",
+        "url": "https://github.com/stoneyield-org/stoneyield-contracts/blob/ef8dcb7065053df103634e1aa5a0e20e7cfa9b3d/SECURITY.md"
       }
     ],
-    "rationale": "The issuer describes a mutable StrategyRouter that routes deposits into Venus and permits the owner to adjust weights and add strategies. At BSC block 125091233 on October 1, 2026, tracked stUSD wrapper() resolved to 0xb4d3c1bb59be7b419af4e10e9b240f425782b22a, its susdcToken() resolved to 0xad66385c6db496258771b5fd8ac376e3dd0d1536, and the documented Venus vault asset() returned Binance-Peg USDC 0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d. These reads identify serial asset lineage, not complete strategy balances or reconciliation to holder liabilities. The 100% row preserves that lineage as contextual metadata under the earlier D3 ruling; D24 does not admit it as measured full backing or infer any missing remainder.",
+    "rationale": "The issuer describes a mutable StrategyRouter that routes deposits into Venus and permits the owner to adjust weights and add strategies. At BSC block 125091233 on October 1, 2026, tracked stUSD wrapper() resolved to 0xb4d3c1bb59be7b419af4e10e9b240f425782b22a, its susdcToken() resolved to 0xad66385c6db496258771b5fd8ac376e3dd0d1536, and the documented Venus vault asset() returned Binance-Peg USDC 0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d. These reads identify serial asset lineage, not complete strategy balances or reconciliation to holder liabilities. The 100% row preserves that lineage as contextual metadata under the earlier D3 ruling; D24 does not admit it as measured full backing or infer any missing remainder. Assurance check on 2026-10-19: the StoneYield homepage describes its contract suite as audited BSC contracts but names no auditor and links no report, while the linked repository's SECURITY.md (latest commit 2026-08-08) lists the external audit as planned for Q2 2025 and the bug bounty as planned post-audit; no audit report was found.",
     "compositionBasis": "Selected strategy-vault asset lineage from issuer documentation and pinned BSC block 125091233 reads on 2026-10-01; no reconciled whole-token backing denominator",
     "compositionAsOf": "2026-09-30",
     "scope": "selected-slices",

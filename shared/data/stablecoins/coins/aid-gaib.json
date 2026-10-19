@@ -8,7 +8,7 @@
     "governance": "centralized",
     "rwa": true
   },
-  "collateral": "U.S. Treasury bills and accepted stablecoins (USDC, USDT, and other approved stable assets); staking into sAID is the separate route into GAIB's AI infrastructure financing portfolio",
+  "collateral": "Issuer documentation describes U.S. Treasury bills and accepted stablecoins (USDC, USDT, and other approved stable assets), with staking into sAID as the separate route into GAIB's AI infrastructure financing portfolio; Pharos's 2026-09-30 reserve review could not verify a Treasury/stablecoin split and records mostly GAIB SPV Ltd. GPU financing principal plus USDC in AID contracts, and the issuer app attributes that GPU financing to staked AID",
   "pegMechanism": "1:1 mint and burn against accepted stablecoins through GAIB AID contracts. Issuer documentation describes direct redemption for whitelisted partners and app/DEX trading for regular users. At Ethereum block 26099923 on 2026-10-01, the issuer-listed Ethereum redeemer 0x52323f33551188f170d8de14fe8d8423a839629d uses redeem(uint256) to burn caller AID and transfer Ethereum USDC 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 after a 10-bps fee, subject to its daily redemption limit, actual USDC balance and AID burn authorization. This atomic contract path is distinct from sAID's funded withdrawal queue and does not establish holder eligibility or an executable capacity certificate.",
   "mechanismArchetype": "fiat-cash",
   "mechanismArchetypeReview": {

@@ -11,7 +11,7 @@
     "backing": "crypto-backed",
     "governance": "centralized-dependent"
   },
-  "collateral": "Rootstock basket of accepted stablecoins: the reviewed composition is 89.4% Sovryn DLLR, 9.7% bridged USDT, and 0.9% Money on Chain DOC. Bridged USDC and DAI variants are admissible in the basket, but no balance is present in the reviewed composition.",
+  "collateral": "Rootstock basket of accepted stablecoins: Sovryn DLLR, Rootstock-, Ethereum-, and BNB-bridged USDT, Ethereum- and BNB-bridged DAI and USDC, and Money on Chain DOC. Pharos reads live branch balances from the basket holder, so weights shift as users mint and redeem against individual branches; DLLR is the largest branch at the latest read.",
   "pegMechanism": "BabelFish mints XUSD 1:1 from accepted stablecoins and allows redemption into accepted bAssets, subject to basket-balance constraints and balancing fees",
   "links": [
     {
