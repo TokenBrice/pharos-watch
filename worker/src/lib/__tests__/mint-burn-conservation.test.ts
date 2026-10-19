@@ -76,8 +76,11 @@ describe("pooled conservation boundaries", () => {
     expect(vi.mocked(fetchEvmRpcBatchDetailed).mock.calls.map((call) => call[1].length)).toEqual([3, 1, 3, 1, 3, 1]);
     expect(args.budget.count).toBe(6);
     expect(vi.mocked(fetchEvmRpcBatchDetailed).mock.calls[0][2]).toMatchObject({
-      extraRpcUrls: ["https://rpc.example"], maxRetries: 0, timeoutMs: 15_000,
+      maxRetries: 0, timeoutMs: 15_000,
     });
+    expect(vi.mocked(fetchEvmRpcBatchDetailed).mock.calls[0][0]).toBe("ethereum");
+    expect(vi.mocked(fetchEvmRpcBatchDetailed).mock.calls[0][2]?.chainRpcs?.get("ethereum")?.endpoints)
+      .toEqual(args.rpcEndpointsByChain.get("ethereum"));
   });
   it("deduplicates shared headers but keeps per-request supply reads", async () => {
     pooledRpc();

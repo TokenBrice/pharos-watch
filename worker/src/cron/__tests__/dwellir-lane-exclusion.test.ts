@@ -139,7 +139,11 @@ describe("blacklist log scan", () => {
 
     expect(result.usedRpcLogs).toBe(true);
     const logScans = fetchMock.getHistory().filter(({ body }) => body?.includes("eth_getLogs"));
-    expect(logScans).toHaveLength(1);
+    expect(logScans.length).toBeGreaterThan(1);
+    expect(logScans.every(({ body }) => {
+      const range = JSON.parse(body!).params[0] as { fromBlock: string; toBlock: string };
+      return Number(range.toBlock) - Number(range.fromBlock) + 1 <= 10_000;
+    })).toBe(true);
     expect([...new Set(hostsOf(fetchMock))]).toEqual([
       new URL(bsc.endpoints.find(endpoint => endpoint.operator === "dwellir")!.url).host,
     ]);
