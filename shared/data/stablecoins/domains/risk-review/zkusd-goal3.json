@@ -3,9 +3,9 @@
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: zkUSD resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "evidence": "zkUSD is 100% ZKsync Era at proxy 0xfc7e56298657b002b3e656400e746b7212912757. At block 72555757 (2026-10-19T06:32:53Z) implementation slot=0xf0e28e2d31231e367d0dfe85da19a2dbc4ebb14b; owner 0x49a67aff9d3807351b8bb450f37ffc98af9def4d has DEFAULT_ADMIN_ROLE=true AND BURNER_ROLE=true; isPaused=false; vestingContract 0xb9ceb24556cc1f047180d16909314a67849657f9. Exact verified implementation source from https://zksync2-mainnet-explorer.zksync.io/contract_verification/info/0xf0e28e2d31231e367d0dfe85da19a2dbc4ebb14b contains contracts/token/zkERC20.sol. It exposes putOnHold(holder,amount) onlyRole(DEFAULT_ADMIN_ROLE), immediately writing holds[holder]; _beforeTokenTransfer enforces freeBalanceBySpender(from,spender)>=amount and lockBalanceBySpender returns max(vesting lock,holds[holder]). This lets the current assigned admin directly freeze existing holder balances without upgrading or appointing a new role. Additional direct controls: current assigned BURNER_ROLE can call burn(from,amount) without allowance; setDefaultSpender can authorize allowance-free operators; setPause is global and currently unpaused. The current implementation therefore has holder-freeze, allowance-free operator and global-pause controls. The verdict is Yes on the direct blacklist/freeze control; current upgrade authority and mint-only role are weaker additional capabilities. Primary reads: https://mainnet.era.zksync.io at block 72555757. No transactions were sent.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "oracleless",

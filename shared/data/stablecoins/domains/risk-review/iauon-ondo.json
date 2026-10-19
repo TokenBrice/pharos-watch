@@ -10,11 +10,35 @@
       {
         "label": "Important Notes",
         "url": "https://docs.ondo.finance/ondo-global-markets/important-notes"
+      },
+      {
+        "label": "IAUon Ethereum token",
+        "url": "https://etherscan.io/address/0x4f0ca3df1c2e6b943cf82e649d576ffe7b2fabcf"
+      },
+      {
+        "label": "IAUon BSC token",
+        "url": "https://bscscan.com/address/0xcb2a0f46f67dc4c58a316f1c008edef5c2311795"
+      },
+      {
+        "label": "Ondo Blocklist Oracle (Ethereum) contract and logs",
+        "url": "https://eth.blockscout.com/address/0xd8c8174691d936E2C80114EC449037b13421B0a8?tab=logs"
+      },
+      {
+        "label": "Ondo compliance registry (Ethereum)",
+        "url": "https://eth.blockscout.com/address/0x156F73fc73197555e950743Cb2B23F411c751002?tab=contract"
+      },
+      {
+        "label": "IAUon Solana mint",
+        "url": "https://solscan.io/token/M77ZvkZ8zW5udRbuJCbuwSwavRa7bGAZYMTwru8ondo"
+      },
+      {
+        "label": "Ondo issuer and holder restrictions",
+        "url": "https://docs.ondo.finance/ondo-stocks/important-notes.md"
       }
     ],
-    "evidence": "IAUon resolves to Yes because it is a centrally issued Ondo GM tokenized ETF product with eligibility restrictions and issuer-controlled subscription, redemption, and transfer infrastructure.",
-    "reviewer": "Codex data addition",
-    "reviewedAt": "2026-05-24"
+    "evidence": "Re-reviewed 2026-10-19. Material deployment measured by on-chain totalSupply at Ethereum block 26224775: Ethereum 106,982.76 IAUon (82.4998%) of a 129,676.35 total; BSC holds 11,863.45 (9.1485%, just below the 10% threshold) and Solana 10,830.14 (8.3517%), with HyperEVM zero. Both sub-threshold deployments still carry the same issuer controls and are disclosed. Ethereum token 0x4f0ca3df1c2e6b943cf82e649d576ffe7b2fabcf routes transfers through Ondo compliance client 0x54a8757c2FEF8649830b158a8C19D3a670e80318, which forwards to registry 0x156F73fc73197555e950743Cb2B23F411c751002. For gmIdentifier 0x428ECB70E90d1527A5f5e177789f51747b883F34 the registry resolves to Blocklist 0xd8c8174691d936E2C80114EC449037b13421B0a8, owned by the 1-of-2 Safe 0x99ca4f54F6Bb1c36C662e7C404f517D150FD1173. The blocklist emitted BlockedAddressesAdded(address[]) at block 26192441, isBlocked(0x00000e130067f648e34b3d0b1cf1b65a2f2d8037)=true, and registry checkIsCompliant reverts for that address. A TokenPauseManager 0xfD48112E448417CA79305a518c4186dF4b0A200a with PAUSE_TOKEN_ROLE held by 0x2e55b738F5969Eea10fB67e326BEE5e2fA15A2CC reports isTokenPaused=false; BURNER_ROLE membership is zero and is not counted. The BSC token 0xcb2a0f46f67dc4c58a316f1c008edef5c2311795 uses the same compliance/blocklist pattern and TokenPauseManager 0x6334924c787Ebd21C881740Ef6237Ef51962638F, and the Solana mint M77ZvkZ8zW5udRbuJCbuwSwavRa7bGAZYMTwru8ondo retains freeze authority 51QVCuHfL1FeNjd8BDeffCKhCcAYoULnVB3yjNhShiuK. Reserves are 100% custodial IAU shares and cash in transit, but the direct blocklist and pause powers set Yes.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",

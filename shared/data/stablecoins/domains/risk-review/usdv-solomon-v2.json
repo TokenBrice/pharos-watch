@@ -12,9 +12,9 @@
         "url": "https://github.com/SolomonLabs/chancery/blob/0dafa95d1aded954de098208f0f515d436aa496c/programs/chancery/src/modules/control/instructions/freeze_issued_token_account.rs"
       }
     ],
-    "evidence": "At finalized Solana slot 447140870, the replacement USDv mint is owned by Token-2022 and retains freeze authority 5iMSLkZdvmYZUb3LPbmvynAujEuyyu7azLeQpRSfjY1p. The separately read Chancery configuration binds this authority to the replacement mint. Published freeze_issued_token_account code permits governance, operations, emergency, enforcement or a narrowly authorized permission holder to freeze an individual USDv token account through the authority PDA. This control is distinct from legacy USDv, whose disabled freeze authority is not inherited. Permanent-delegate and pausable extensions are present, but this verdict does not assume a currently executable forced-seizure path merely from those extensions.",
-    "reviewer": "Pharos replacement USDv control review",
-    "reviewedAt": "2026-09-15"
+    "evidence": "Solana 100% is material; finalized getMultipleAccounts(base64) slot 458745379 (2026-10-19T07:11:01Z), mint USDvUSpnhCr9yBgj3UyVrD239HRUv4RsHwH2FxsWuMk, owner TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb, executable=false, freezeAuthority=5iMSLkZdvmYZUb3LPbmvynAujEuyyu7azLeQpRSfjY1p. Authority is an off-curve PDA of executable Chancery program ChnryP5RcZtMvP8vvVyPGUhwCg6uDJc53vCe3sxr11Sz; live config 5sPq2NzkiVD2SwWhtBh2mjXbVoDdxrYPLFEtYmsJegek binds that PDA to this mint (slot 458746126). CONTROL module 0x09 is ACTIVE=2 (slot 458746368). Admin instruction 0x0905 freeze_issued_token_account successfully simulated at finalized slot 458746443 (2026-10-19T07:14:50Z), err=null, freezing unrelated holder account DmiZB6QqAtcVuaxtLxTKRMyW3KtM1rzRMCzHayu9fRyk; enforcement signer 8aV9vKcUZHzcqHMmSN8HtYkWPviariX7YyfxSRzF5Q3K is Squads vault 0 of E2RkC3FCXPGrDee2w2NuSmbNZ5TQqxPCrmjPhRJaoHXZ (1-of-6, delay 0, all permissions 7 at slot 458746257).",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "privileged-internal-pricing",

@@ -10,11 +10,35 @@
       {
         "label": "Spiko smart contracts",
         "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+      },
+      {
+        "label": "Spiko Stellar token source",
+        "url": "https://github.com/spiko-tech/stellar-contracts"
+      },
+      {
+        "label": "Stellar EURSPKCC contract",
+        "url": "https://stellar.expert/explorer/public/contract/CDWOB6T7SVSMMQN5V3P2OPTBAXOP7DAZHGVW3PYTZIKHVFKN6TBSXR6A"
+      },
+      {
+        "label": "Verified Spiko Token implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74"
+      },
+      {
+        "label": "Ethereum observation block 26224761",
+        "url": "https://etherscan.io/block/26224761"
+      },
+      {
+        "label": "Arbitrum observation block 516204261",
+        "url": "https://arbiscan.io/block/516204261"
+      },
+      {
+        "label": "Polygon observation block 95790196",
+        "url": "https://polygonscan.com/block/95790196"
       }
     ],
-    "evidence": "EURSPKCC is issued through permissioned fund or issuer rails with KYC-gated primary-market access and issuer/admin controls over transfer, mint, redemption, or token administration.",
-    "reviewer": "Codex 2026-05-14 execution-ready expansion",
-    "reviewedAt": "2026-05-14"
+    "evidence": "Re-reviewed 2026-10-19. EVM deployments run the verified Spiko Token implementation (identical 6,009-byte Token.sol core across 0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74 and 0x13ae01cbce8530012516fbc1273803d4995aee71). Token._update requires PermissionManager.canCall(from/to, token, 0xa9059cbb) for both parties (zero side exempt for mint/burn), so revoking a holder's group freezes that holder's transfers. The implementation also exposes restricted pause(), restricted burn(address,uint256) from an arbitrary holder, and restricted UUPS upgrade. At Arbitrum block 516204261 (2026-10-19T06:17:20Z), authority 0xa925C217e4c1C82Ee721eBD496d3863D5C2d829A (proxy to PermissionManager 0x344278aff344d6fb960705dc18a4912221608472) returned getRequirements(token,0xa9059cbb)=65 and a whitelisted-holder-to-0x...0001 transfer reverted with UnauthorizedTo(address,address) 0xb77a4ad1; group 0 is held by 3/3 Safe 0x7843225ba488cf780a4fe2c842b5dc2abcf8a03e. Polygon authority 0x344278... (group-0 3/3 Safe 0xa4196f06fe948b8ca81d3dc77110d3f83d10abd9) and Ethereum authority 0x344278... (group-0 3/3 Safe 0x4eaa52b6280593a8820c45ce38f974290ae52cea) enforce the same requirement at blocks 95790196 (2026-10-19T06:17:21Z) and 26224761 (2026-10-19T06:14:23Z). On Stellar, CDWOB6T7SVSMMQN5V3P2OPTBAXOP7DAZHGVW3PYTZIKHVFKN6TBSXR6A requires WHITELISTED_ROLE on both transfer parties and burns an arbitrary account under BURNER_ROLE; its instance binds permission manager CBGHLRSX5D5YMBPNK4ZGMUTJUHFIT7YGXGJURM5LFNZ7B6WNSXLGS26M. At Soroban ledger 65021030 (2026-10-19T06:22:13Z) has_role returned WLISTER Some(0) for GD2ELXTHZQORSH75SJE6XRTCKXNDGJFIZ4R2SZ4MMXDOBT52GK26X4EO and Some(1) for GAUYO4UAESQD6SGZDPOIG2ADT7EZTR5EJ7HSX4CYCWS2JMMGQOCL4QCX, BURNER Some(0) for CAVZK26ERVGKGXLQGEOKPAQGIZS2YKN4BSXOYDMUY365EV66ZNSFEDBS; role_revoked|WLISTED is present in the permission-manager history. Materiality: totalSupply measured 2026-10-19 is 1,913,223,304,696 raw 5-decimal units: Arbitrum 1,344,469,710,941 (70.27%), Stellar 335,661,881,423 (17.54%), Polygon 203,076,098,243 (10.61%), Ethereum 20,028,128,339 (1.05%), Base 9,987,485,750 (0.52%). All three material deployments are directly controlled. No declared parent; the reserve test is not reached because direct holder controls are established.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "single-source-or-laggy",

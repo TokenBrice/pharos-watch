@@ -6,7 +6,7 @@
 
 For catalog flags, read [Type](#type-governance-field-internally), [Backing](#backing), [Peg Currency](#peg-currency), and [Listing Class And Lifecycle](#listing-class-and-lifecycle). Catalog authors then use the [registry editing rules](https://github.com/TokenBrice/pharos-watch/blob/main/docs/stablecoin-data.md#editing-rules), not a second field glossary.
 
-For reviewed controls, use [Mint Authority Taxonomy](#mint-authority-taxonomy), [Implementation Age Policy](#implementation-age-policy), or [Infrastructure Tagging](#infrastructure-tagging). Price/peg work uses [Non-USD Peg Handling](#non-usd-peg-handling) and [Commodity & Non-DefiLlama Stablecoins](#commodity--non-defillama-stablecoins), not the entire taxonomy.
+Reviewed controls: [FreezeWatch](https://github.com/TokenBrice/pharos-watch/blob/main/docs/blacklist-tracker.md#freezewatch-decision-procedure), [Mint Authority](#mint-authority-taxonomy), [age](#implementation-age-policy), [infrastructure](#infrastructure-tagging). Prices: [non-USD](#non-usd-peg-handling), [commodities](#commodity--non-defillama-stablecoins).
 
 Display taxonomies are owned by `shared/lib/classification.ts` and its typed children: PYS text/gauges share one band ladder, status badges/runway bars share labels, and mint/redemption descriptors retain their compact and coverage variants. PSI chart colors, text classes, and animation timings share one descriptor; methodology tables consume its text styles.
 

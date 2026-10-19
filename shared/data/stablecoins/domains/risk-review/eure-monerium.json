@@ -2,10 +2,36 @@
   "id": "eure-monerium",
   "blacklistabilityReview": {
     "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Ethereum EURe token (proxy)",
+        "url": "https://etherscan.io/address/0x39b8b6385416f4ca36a20319f70d28621895279d"
+      },
+      {
+        "label": "Monerium Token.sol (validator gate and setValidator)",
+        "url": "https://github.com/monerium/smart-contracts/blob/main/src/Token.sol"
+      },
+      {
+        "label": "Gnosis EURe token",
+        "url": "https://gnosisscan.io/address/0x420ca0f9b9b604ce0fd9c18ef134c705e5fa3430"
+      },
+      {
+        "label": "Arbitrum EURe token",
+        "url": "https://arbiscan.io/address/0x0c06ccf38114ddfc35e07427b9424adcca9f44f8"
+      },
+      {
+        "label": "Gnosis public RPC (block 48832807)",
+        "url": "https://rpc.gnosischain.com"
+      },
+      {
+        "label": "Arbitrum public RPC (block 516203870)",
+        "url": "https://arb1.arbitrum.io/rpc"
+      }
+    ],
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: EURE resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "evidence": "EURe is directly restrictable on all three material deployments through a Monerium owner-selected transfer validator. Gnosis holds 59.56% of circulating supply (2026-10-19 census) at 0x420ca0f9b9b604ce0fd9c18ef134c705e5fa3430; at Gnosis block 48832807 owner() was 0x8001EA269cb9715Bf7acFf89c664ffC134A519ec and validator() was 0xfE74A522768547be33A3ad40B999381d57f238A0. Arbitrum holds 16.93% at 0x0c06ccf38114ddfc35e07427b9424adcca9f44f8; at block 516203870 owner() was 0xD4d43A82708261F2995f7Ba65319d8664B992A96 and validator() was 0xbf932187C26222b79943CBB93F78159Fef2743c6. Ethereum holds 12.52% at 0x39b8b6385416f4ca36a20319f70d28621895279d (EIP-1967 implementation 0x6f916c6eaa99073dfafeb7f210235acb6028f437); at block 26224766 owner() was 0x5591A6495d726C7EFafb9a9DAD32695D137b4d9f and validator() was 0x03b15B0FD8dC5fd25D52FE3cF5F82135D80C641b. Monerium's Token.sol routes every transfer() and transferFrom() through validator.validate(from,to,amount), so the owner-chosen validator can deny named senders or recipients; setValidator is onlyOwner. Polygon (9.41%) is just below the materiality threshold and its controls are disclosed but do not set the verdict. No parent or reserve test applies because the direct control is active on every material deployment.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

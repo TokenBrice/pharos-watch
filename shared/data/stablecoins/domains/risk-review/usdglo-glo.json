@@ -10,11 +10,19 @@
       {
         "label": "Website",
         "url": "https://www.glodollar.org/"
+      },
+      {
+        "label": "Stellar Horizon issuer account",
+        "url": "https://horizon.stellar.org/accounts/GBBS25EGYQPGEZCGCFBKG4OAGFXU6DSOQBGTHELLJT3HZXZJ34HWS6XV"
+      },
+      {
+        "label": "Ethereum USDGLO proxy / GloDollarV3",
+        "url": "https://etherscan.io/address/0x4f604735c1cf31399c6e711d5962b2b3e0225ad3#code"
       }
     ],
-    "evidence": "Explicit Yes retained: centralized governance metadata indicates issuer or admin control; registry links were reviewed for direct freeze, blacklist, pause, burn, or upgrade authority.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "Re-verified 2026-10-19. USDGLO has seven native deployments. It is directly freezable on two independent surfaces. On Stellar, issuer account GBBS25EGYQPGEZCGCFBKG4OAGFXU6DSOQBGTHELLJT3HZXZJ34HWS6XV holds flags auth_revocable=true, auth_clawback_enabled=true and auth_immutable=false (Horizon, last modified ledger 65016349, 2026-10-18T23:52:08Z), so the issuer can revoke a holder's trustline authorization or claw back its balance; Stellar carries 29.45% of supply. On the EVM deployments (Ethereum 17.36%, Celo 16.20%, Base 10.64%) the GloDollarV3 proxies at 0x4f604735c1cf31399c6e711d5962b2b3e0225ad3 expose DENYLISTER_ROLE: denylist(address), undenylist(address) and destroyDenylistedFunds(address), enforced on every transfer through _requireBalanceIsNotDenylisted. That role is held by the Brale operator EOA 0xb180f98037a63a3dca66b6b4ddbf250265b65110 on Ethereum, Celo and Base, which also holds PAUSER_ROLE and DEFAULT_ADMIN_ROLE; paused() is false and the proxy is UUPS-upgradeable (Ethereum implementation 0xf8dbe4f52b7d4fe90cd360aa4f49b7a66783c56f). Named holders can therefore be denylisted and their balances destroyed today. Sub-threshold deployments: OP Mainnet 9.90%, Arbitrum 8.13%, Polygon 7.17%, VeChain 1.15%. No parent: variantOf and mintAuthority.inheritedFrom are null.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

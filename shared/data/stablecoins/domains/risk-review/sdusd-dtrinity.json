@@ -1,7 +1,7 @@
 {
   "id": "sdusd-dtrinity",
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "dTRINITY sdUSD documentation",
@@ -46,11 +46,23 @@
       {
         "label": "Fraxtal public RPC fixed-block reads",
         "url": "https://rpc.frax.com"
+      },
+      {
+        "label": "Exact Ethereum proxy source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7cb20517776636ed76b68edb3d99dcce356abf02"
+      },
+      {
+        "label": "Exact current token implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9c278036c3c4529472751502dfc71bb1f0a3bfd4"
+      },
+      {
+        "label": "Exact current incident router and inherited burn paths",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6d4a26fe926e88fee41a9fddeda3b50bf98f1ddb"
       }
     ],
-    "evidence": "Re-verified 2026-07-30. Official documentation lists only the Ethereum and Fraxtal sdUSD vault receipts and states that deployments are chain-isolated. Pinned source re-read (dtrinity/ethereum-solidity-contracts commit d3103f88): DStakeTokenV2 does not override share transfers and is not Pausable; burnFromRouter skips allowance only when initiator equals owner, and the live DStakeRouterV2 passes msg.sender as initiator, so the current router cannot seize third-party shares; router PAUSER_ROLE pauses deposits and redemptions, not share transfers; the only seizure-capable path is DEFAULT_ADMIN_ROLE calling migrateCore() behind the 86400-second timelock (3-of-5 Safe) to install a candidate router. At Ethereum block 25656501 the proxy EIP-1967 implementation slot still resolved to DStakeTokenV2 0x9c278036c3c4529472751502dfc71bb1f0a3bfd4 and hasRole(DEFAULT_ADMIN_ROLE, TimelockController 0x18cb0eb73d953ed20f2157ce6bde2a85e30e681b) returned true; at Fraxtal block 39317837 the proxy still resolved to DStakeToken 0x0f51b15939a42bd995ecd3a2c151dc58621856c6. Neither deployment has a live blacklist, pause, or transfer hook, so the wrapper carries no independent live freeze verdict. The governing live exposure is upstream: dUSD (dusd-dtrinity, recorded in mintAuthority.inheritedFrom) was re-reviewed 2026-07-30 with a true verdict - a live PAUSER_ROLE can halt all dUSD transfers globally, which would block sdUSD mint and redemption flows while sdUSD share transfers themselves stay unpaused. The verdict is therefore inherited from that named upstream; the wrapper's timelock-mutable seizure path above remains documented but requires a 24-hour governance action, not a live call. The Terms describe interface/protocol restrictions and upgrades in general terms but do not establish a current token-holder blacklist.",
-    "reviewer": "Kimi T24 unknown-reduction wave-2 research",
-    "reviewedAt": "2026-07-30"
+    "evidence": "Possible from direct local governance-mutable controls, not merely Upstream. Official documentation lists chain-isolated, non-fungible Ethereum and Fraxtal sdUSD receipts representing dUSD supplied into dLEND. No usable supply shares are available, so both deployments were measured directly: at Ethereum block 26224761 (2026-10-19T06:14:23Z), totalSupply()=480792299440018849696901 and convertToAssets(totalSupply())=492480.64327662665 dUSD; at Fraxtal block 42789902 (2026-10-19T06:15:15Z), totalSupply()=37179813323 and convertToAssets(totalSupply())=42805.735228 dUSD. On the common underlying dUSD-claim denomination, total 535286.3785046267 dUSD implies Ethereum approximately 92.0032% and Fraxtal 7.9968%; Ethereum is material. Ethereum token 0x7cb20517776636ed76b68edb3d99dcce356abf02 has DStakeTokenV2 implementation 0x9c278036c3c4529472751502dfc71bb1f0a3bfd4 and ProxyAdmin 0xbe90db309b80357631069b689fc3481aca2c65be owned by TimelockController 0x18cb0eb73d953ed20f2157ce6bde2a85e30e681b; its getMinDelay()=86400. The same timelock has DEFAULT_ADMIN_ROLE on the token and may call migrateCore() to install a candidate router. DStakeTokenV2 has no share-transfer pause/blacklist, and burnFromRouter requires allowance unless its supplied initiator equals owner. The current router 0x6d4a26fe926e88fee41a9fddeda3b50bf98f1ddb is verified DStakeRouterV2Incident, whose inherited solver withdrawal paths pass msg.sender as initiator, so there is no presently active arbitrary-holder seizure path. Nevertheless proxy upgrades and admin router replacement are direct Possible; a 24-hour delay does not make them upstream-only. The current router also has active PAUSER_ROLE at the same timelock, paused()=false, and can globally stop existing-holder redemptions while share transfers continue. Fraxtal's below-threshold token still uses implementation 0x0f51b15939a42bd995ecd3a2c151dc58621856c6 and ProxyAdmin 0xde914ec384346fea47339e5086d2d399b7f4733b owned by 0x0bafada2a5824864720873ee40cd960b36445212; that peripheral upgrade control is disclosed. Pinned asset() confirms the dUSD parent on each chain. Parent dUSD is independently Possible under the same decision procedure, but local direct Possible takes precedence regardless of inherited exposure. The terms' general interface restrictions do not establish a live token blacklist.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",

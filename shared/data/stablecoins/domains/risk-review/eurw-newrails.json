@@ -35,9 +35,7 @@
     }]
   },
   "blacklistabilityReview": {
-    "reviewedStatus": true,
-    "reviewedAt": "2026-10-15",
-    "reviewer": "Pharos batch64 review Rev_EurwNewrails",
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Hacken Newrails Monad code security audit dated March 12, 2026",
@@ -46,9 +44,19 @@
       {
         "label": "Newrails EMT redemption policy effective February 9, 2026",
         "url": "https://www.newrails.xyz/en/legal/emt-redemption-policy"
+      },
+      {
+        "label": "Monad EURW role and proxy state at block 114682014 (2026-10-19T06:19:14Z)",
+        "url": "https://rpc.monad.xyz"
+      },
+      {
+        "label": "Pharos EURW mint-authority sidecar (ADMIN_ROLE EOA and UUPS admin)",
+        "url": "https://github.com/TokenBrice/pharos-watch/blob/main/shared/data/stablecoins/domains/mint-authority/eurw-newrails.json"
       }
     ],
-    "evidence": "Hacken's March 12 audit identifies BLACKLISTER_ROLE add/remove blacklist powers and restrictions on ordinary transfers and approvals, with accepted exceptions for certain privileged interactions. The redemption policy permits wallet blocking and lawful-order freezing. At Monad block 113592456 (2026-10-15T10:44:07Z), the EURW proxy still points to implementation 0x52778511bec5ff87f9b52c7a2434631edcc157f4 and paused is false. The complete genesis-to-pin role census has no BLACKLISTER_ROLE or PAUSER_ROLE grant; ADMIN_ROLE can grant both immediately, so transfer restrictability remains reactivatable. Hedera key observations are excluded because no issuer exact-token binding was retrieved."
+    "evidence": "Monad 0x1111b3ded9f1fe1801ad4ebef8e2788183a24111 holds 100% of EURW supply. At Monad block 114682014 (2026-10-19T06:19:14Z) the proxy still resolves to implementation 0x52778511bec5ff87f9b52c7a2434631edcc157f4 and paused() is false. Hacken's March 12, 2026 audit and the implementation expose a BLACKLISTER_ROLE-gated blacklist that blocks ordinary transfers and approvals, plus a PAUSER_ROLE. The genesis-to-pin role census has no BLACKLISTER_ROLE or PAUSER_ROLE grant; ADMIN_ROLE is held by EOA 0x1c4f1a908ae8c15c3fef774775b8e897c1fc9ca6, which can grant either immediately. The blacklist is therefore a mutable, issuer-controlled holder-facing surface that is not currently armed: direct Possible, not an active direct blacklist. The redemption policy separately permits wallet blocking and lawful-order freezing. Hedera key observations are excluded because no issuer exact-token binding was retrieved.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",

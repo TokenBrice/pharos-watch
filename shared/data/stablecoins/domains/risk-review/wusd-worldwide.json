@@ -1,11 +1,29 @@
 {
   "id": "wusd-worldwide",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "Ethereum WUSD proxy (ERC1967Proxy)",
+        "url": "https://eth.blockscout.com/address/0x7cd017ca5ddb86861fa983a34b5f495c6f898c41"
+      },
+      {
+        "label": "ERC20F implementation source",
+        "url": "https://eth.blockscout.com/address/0x3ac7b6769c5e4a5c17986bd39d9d8b2e9e09227e?tab=contract"
+      },
+      {
+        "label": "Ethereum PublicNode RPC reads (block 26224775)",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Polygon WUSD supply read (block 95790212)",
+        "url": "https://polygon-mainnet.g.alchemy.com/v2"
+      }
+    ],
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: WUSD resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "evidence": "FreezeWatch re-review 2026-10-19. Materiality: the census supply split is Ethereum 90.3142%, Polygon 9.6858%; on-chain totals at Ethereum block 26224775 (541,238.050674 WUSD) and Polygon block 95790212 (58,045.600231 WUSD) reproduce 9.69%, so Polygon is sub-threshold and does not set the verdict. Ethereum WUSD 0x7cd017ca5ddb86861fa983a34b5f495c6f898c41 is an ERC1967 proxy (implementation slot 0x3ac7b6769c5e4a5c17986bd39d9d8b2e9e09227e, Fireblocks ERC20F). At block 26224775 paused()=false and accessRegistry()=0x0. Verified source gates transfer and transferFrom through _requireHasAccess, which is a no-op while the registry is unset; accessRegistryUpdate(address) is callable by CONTRACT_ADMIN_ROLE (0x26bc37aacc94a56d5b2a641c59a6f7f8880eb3df active), after which any account absent from the registry is rejected as sender or receiver and recoverTokens(address,uint256) by RECOVERY_ROLE (0x36c6d0386c44bb7e95a564ff6d4309d2f6381fee active) can move a de-listed holder's balance to the caller. Transfers are also globally pausable (PAUSER_ROLE 0xa2faa105883af5cbef6f95826db420e5ab5594fc active) and the implementation is UUPS-upgradeable (DEFAULT_ADMIN_ROLE 0x731efdc933464ed81bf3ea961e9fdadc62e83bd1 can grant UPGRADER_ROLE). No holder is currently denied and no blacklist/freeze mapping exists, so the posture is a mutable holder-facing control surface rather than an active holder-targeted control: reviewedStatus is possible. Role grants occurred at blocks 21390703 and 21390890 with no RoleRevoked events.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

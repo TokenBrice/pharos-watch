@@ -1,7 +1,7 @@
 {
   "id": "moveusd-cfx",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Solana mainnet RPC: MOVEUSD mint",
@@ -12,9 +12,9 @@
         "url": "https://solana.com/docs/tokens/basics/freeze-account"
       }
     ],
-    "evidence": "At finalized Solana slot 452212543, the live MOVEUSD mint lists 3AdhVEX6k85yNivHVXDEiY3WyP2WgFQTUZCahGaeC2qm as both freezeAuthority and mintAuthority. Solana's Token Program documentation states that a frozen account cannot receive, transfer, or burn tokens until thawed. The current authority observation confirms the previously reviewed freeze exposure.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurA26JAAA)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "Solana sole material deployment (100%); mint slot 458745379, freezeAuthority=3AdhVEX6k85yNivHVXDEiY3WyP2WgFQTUZCahGaeC2qm is off-curve. Executable issuer program EmiytJ3zWX9koH3emPsWDEs9RqNm6NNFp4CkMLoiA1KC, ProgramData DybKXmycEuZDF4u8EVxr21Ljza9dEHKF6CKJ9G91zMMY finalized slot 458746510, deployed slot 449520764, upgrade authority AiWGaHWRrSAizfXRPGypvxGoMgH714yr6cpRZgdKq2tr; deployed bytes SHA256=68374147fe8a5038882db50120cf61a242394aa8caf6da27d15d1c2ea9210a81. No current admin-callable arbitrary-holder freeze path was established from the registry IDL https://idl-one.vercel.app/api/idl?programId=EmiytJ3zWX9koH3emPsWDEs9RqNm6NNFp4CkMLoiA1KC&cluster=mainnet-beta and deployed binary interface. Authority is the mint PDA itself (mint account owner is SPL Token, not proof it can sign). Current IDL exposes pause_token/unpause_token and binary logs PauseToken/UnpauseToken; transfer moves program-owned ledger accounts, while redeem_external/withdraw_external explicitly require the debited holder signer. Upgrade authority is on-curve System-owned zero-data. The global transfer pause establishes Possible; no per-holder SPL freeze is inferred. IDL/source absence is not a formal bytecode-equivalence proof; confidence medium.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "opaque-or-unknown",

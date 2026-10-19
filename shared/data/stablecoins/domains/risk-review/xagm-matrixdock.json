@@ -2,10 +2,28 @@
   "id": "xagm-matrixdock",
   "blacklistabilityReview": {
     "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Exact current Ethereum proxy",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x123ffe0a3c62878dcbee2742227dc8990058d9e1"
+      },
+      {
+        "label": "Verified current MToken implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5E072c6689610c66e49a3067a4b488b4e27BC744"
+      },
+      {
+        "label": "Ethereum role/supply pin",
+        "url": "https://etherscan.io/block/26224762"
+      },
+      {
+        "label": "Near-contemporaneous global circulating supply",
+        "url": "https://api.coingecko.com/api/v3/coins/matrixdock-silver?localization=false&tickers=false&community_data=false&developer_data=false"
+      }
+    ],
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: XAGm resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "evidence": "At Ethereum@26224762 (2026-10-19T06:14:35+00:00; 0xef45b71f129dac5f794f4506dee4ca47f3cdd7e41c6e75f53d66512c8c505fc5), Ethereum XAGm proxy 0x123ffe0a3c62878dcbee2742227dc8990058d9e1 resolves to verified MTokenMain implementation 0x5e072c6689610c66e49a3067a4b488b4e27bc744. operator()=0x89bb23e4a82e04a253d9f11767fedf321c127799 and owner()=0xb573c94260582f0715fc477928b04a2708dd36d7; eth_getCode returns 0x for both assigned holders, so the restriction roles are currently assigned EOAs, not empty lists or unreachable contracts. Operator-only addToBlockedList sets isBlocked and emits BlockPlaced; transfer rejects a blocked caller, and transferFrom rejects a blocked caller or sender. Receiving transfers is allowed by design; owner-only forcedTransfer can also transfer an arbitrary holder balance without allowance. Pinned Ethereum totalSupply is 33060.767465167999 tokens. CoinGecko's global circulating supply 73056.099112921002 at 2026-10-19T06:16:57Z gives an approximate Ethereum share of 45.2539%, comfortably above the 10% materiality threshold. The Pharos census's zero circulation is therefore not evidence of an inactive deployment. Global supply is a near-contemporaneous provider observation, not an on-chain global pin. Other chain controls need not determine a verdict once this material assigned holder-targeted control is established; no reserve or parent inheritance is used to infer Yes.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "privileged-internal-pricing",

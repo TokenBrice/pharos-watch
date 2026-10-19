@@ -1,16 +1,16 @@
 {
   "id": "usdz-anzen",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "Verified Ethereum USDz source: POOL_MANAGER_ROLE blacklist and transfer checks",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa469b7ee9ee773642b3e93e842e5d9b5baa10067"
       }
     ],
-    "evidence": "The verified USDz source exposes addToBlacklist and removeFromBlacklist under POOL_MANAGER_ROLE. Its _update hook rejects both blacklisted senders and recipients, and deposit and redeem also reject blacklisted callers. The native contract identity and DEFAULT_ADMIN Safe were verified at Ethereum block 26095801.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurB10IUSD)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "USDz is not direct Yes at the review pins. As of Ethereum 26224922 (2026-10-19T06:46:35Z), local native supply is 803233.151756106303620608. At matching/as-of chain timestamps: Base 52801524=6698306.00618381; Arbitrum 516210421=77430.76993616; Blast 41791290=40491.91755985; Manta 9816843 (06:46:29Z, last block before the reference)=500165.777909. All values are 18-decimal token units. Circulating deployment inventory sums to 8119627.623344926303620608; Ethereum is 9.8924875501274513556%, Base 82.49523644317576644%, remaining chains individually below 10%. Even omitting Arbitrum as the census did gives Ethereum 9.98773303361317033%, strictly below 10%. Native OFT and remote OFTExternal burn on debit/mint on credit; their bridge backing is not an extra lockbox asset, so there is no backing leg to add or subtract for those rails. The Ethereum SPCT balance is collateral, and sUSDz/cooldown holdings are local USDz holder balances, not bridge backing to subtract. Native totalPooledSPCT and SPCT balance at 26224922 both equal 8120293.386813636303620608, corroborating the single-SPCT reserve path; the small difference from summed live token inventory is not treated as additional circulating tokens or invented lockbox collateral. The material Base ChildUSDz is verified immutable, Etherscan Proxy=0 and all EIP1967 implementation/admin/beacon slots=0. Its pause only guards OFT _debit/_credit, not ordinary ERC20 transfers, and owner cannot replace token logic in the reviewed source. Under the bridge-rail rule in the FreezeWatch decision procedure (docs/blacklist-tracker.md), a bridge-rail-only pause is not direct holder-facing Possible. Ethereum blacklist is disclosed but sub-threshold. No parent. The published full reserve composition is 100% SPCT, a permissioned representation of U.S. private-credit ABS; Anzen explicitly names Percent for underwriting and custody. Thus 100% of the published reserve book qualifies categorically under the issuer/custodian-exposure rule, strictly above 50%, without inventing Percent account-level allocations or loan-level weights. The verdict is Upstream on reserve majority. Sources: https://docs.anzen.finance/usdz-101/transparency.md ; https://docs.anzen.finance/usdz-101/backing-assets-collateral.md ; https://docs.anzen.finance/welcome-to-anzen/rwa-partner.md ; https://eth.blockscout.com/api/v2/smart-contracts/0xa469b7ee9ee773642b3e93e842e5d9b5baa10067 ; https://basescan.org/address/0x04d5ddf5f3a8939889f11e97f8c4bb48317f1938#code ; https://arbiscan.io/address/0xdd216101d84d513a12cb7bfb109f7abcf330d58e#code (verified source fetched via Etherscan v2).",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "privileged-internal-pricing",

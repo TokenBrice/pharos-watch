@@ -11,6 +11,7 @@ import {
 } from "../../test-helpers/report-cards-fixed-input";
 import { buildSafetyScoreV9BaselineExtensionFromNormalizedInput } from "../safety-score-v9/extension";
 import { compileSafetyScoreV9FactSetFromNormalizedInput } from "../safety-score-v9/fact-set";
+import { capturedAccessMetaById } from "./safety-score-v9-capture.test-support";
 
 const EXPECTED_MARKET_ORDER = [
   "usdt-tether",
@@ -21,9 +22,8 @@ const EXPECTED_MARKET_ORDER = [
 
 // Scoped from the recovered 2026-07-24 exact production capture so the
 // integration test retains USDT's measured Curve routes and real wrapper facts.
-// All epoch fields (clock, freshness, observations, generation ids) are
-// uniformly shifted forward so the fixture clock stays ahead of the newest
-// reviewedAt dates in shared static data; relative ages are unchanged. The
+// Producer epochs retain their relative ages. Access reviews are captured
+// separately so later catalog reviews cannot quarantine this historical input.
 // susdt-spark live rows are refreshed to the erc4626-single-asset adapter's
 // current keyed two-slice emission so the capture tracks the 2026-09-29
 // spUSDT re-curation instead of the retired single unkeyed row.
@@ -33,7 +33,7 @@ describe("Safety Score v9 USDT premium production integration", () => {
       productionCapture.draft as unknown as ReportCardsFixedInputDraft,
     );
     const extension =
-      buildSafetyScoreV9BaselineExtensionFromNormalizedInput(fixedInput);
+      buildSafetyScoreV9BaselineExtensionFromNormalizedInput(fixedInput, { metaById: capturedAccessMetaById });
     const facts = compileSafetyScoreV9FactSetFromNormalizedInput(
       fixedInput,
       extension,

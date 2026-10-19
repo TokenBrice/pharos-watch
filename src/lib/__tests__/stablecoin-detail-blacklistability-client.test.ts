@@ -73,7 +73,6 @@ describe("projectBlacklistabilityClientSummary", () => {
     expect(summary!.status).toBe("possible");
     expect(summary!.statusLabel).toBe("Possible");
     expect(summary!.statusToneClass).toContain("state-warn");
-    expect(summary!.statusNote).toContain("plausible");
   });
 
   it("names the upstream coin for an inherited review when the registry resolves it", () => {
@@ -82,6 +81,7 @@ describe("projectBlacklistabilityClientSummary", () => {
       new Map([["usdc-circle", { id: "usdc-circle", name: "USD Coin" } as unknown as StablecoinMeta]]),
     );
     expect(summary!.status).toBe("inherited");
+    expect(summary!.statusLabel).toBe("Upstream");
     expect(summary!.statusToneClass).toContain("blue");
     expect(summary!.upstreamLabel).toBe("USD Coin");
     expect(summary!.statusNote).toContain("USD Coin");

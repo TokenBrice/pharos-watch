@@ -10,10 +10,26 @@
       {
         "label": "Midas mGLOBAL",
         "url": "https://midas.app/mglobal"
+      },
+      {
+        "label": "mGLOBAL proxy",
+        "url": "https://eth.blockscout.com/address/0x7433806912eae67919e66aea853d46fa0aef98a8"
+      },
+      {
+        "label": "mGLOBAL implementation source",
+        "url": "https://eth.blockscout.com/address/0xd22be883b7194ac2d1751bf8e6e4962d87f2f75a?tab=contract"
+      },
+      {
+        "label": "MidasAccessControl",
+        "url": "https://eth.blockscout.com/address/0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B"
+      },
+      {
+        "label": "Ethereum RPC reads (block 26224775)",
+        "url": "https://eth-mainnet.g.alchemy.com/v2"
       }
     ],
-    "evidence": "Explicit Yes: Midas Fasanara Global is a permissioned tokenized certificate with issuer/admin control surfaces around minting, redemption, transfer administration, and upgradeable protocol contracts.",
-    "reviewer": "Codex 2026-05-14 execution-ready expansion",
-    "reviewedAt": "2026-05-14"
+    "evidence": "FreezeWatch re-review 2026-10-19 at Ethereum block 26224775 (Unix 1792390631). mGLOBAL 0x7433806912eae67919e66aea853d46fa0aef98a8 is an ERC1967 proxy whose implementation slot is 0xd22be883b7194ac2d1751bf8e6e4962d87f2f75a (Midas mGLOBAL), with accessControl()=0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B, name()='Midas Fasanara Global', paused()=false and totalSupply=33,317,410.38028632. The verified inherited stack enforces both lists in _beforeTokenTransfer: mTokenPermissioned requires M_GLOBAL_GREENLISTED_ROLE on both from and to for non-mint/burn transfers, and mToken calls _onlyNotBlacklisted on both sides against BLACKLISTED_ROLE. The controlling roles have current members: hasRole(M_GLOBAL_GREENLISTED_ROLE 0x49a1…0acc, 0x0461bd693cae49be9d030e5c212e080f9c78b846)=true and hasRole(BLACKLIST_OPERATOR_ROLE 0x2fdc…89ff, 0x081bb8ad7f452f916991c17fdfa64d4a25153169)=true, while DEFAULT_ADMIN_ROLE is held by 0xb60842e9dabcd1c52e354ac30e82a97661cb7e89 and 0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227. Because the issuer/operator can de-list a greenlisted holder and can add any holder to the blacklist, reviewedStatus is true.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   }
 }

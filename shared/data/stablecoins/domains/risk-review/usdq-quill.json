@@ -1,7 +1,7 @@
 {
   "id": "usdq-quill",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Quill USDQ documentation",
@@ -38,11 +38,27 @@
       {
         "label": "Scroll public RPC fixed-block reads",
         "url": "https://rpc.scroll.io"
+      },
+      {
+        "label": "Scroll CollateralRegistry implementation source",
+        "url": "https://scroll.blockscout.com/api/v2/smart-contracts/0xe7a22549c0faad72f888b3ef96b2e269ae704584"
+      },
+      {
+        "label": "Scroll branch-0 TroveManager source",
+        "url": "https://scroll.blockscout.com/api/v2/smart-contracts/0x9D2AD9712f3905F3e7803c92d027A197B4c8DA90"
+      },
+      {
+        "label": "Scroll branch-0 BorrowerOperations source",
+        "url": "https://scroll.blockscout.com/api/v2/smart-contracts/0x0F863bd95539d3C7640a7954114051aCa8f19306"
+      },
+      {
+        "label": "Scroll StabilityPool source",
+        "url": "https://scroll.blockscout.com/api/v2/smart-contracts/0x60f8d7CFF7822b564758114a9Ef557a651296604"
       }
     ],
-    "evidence": "Re-verified 2026-08-08 at Scroll block 34599130. USDQ proxy 0xdb9e8f82d6d45fff803161f2a5f75543972b229a still used verified BoldToken implementation 0x4103155fb2dcf8b6138c8eb4be0542facc9a7523 and authority 0xbe589551397d0f28255e429ddb478620b1c2f08a. Current transfer/transferFrom logic rejects only the zero address and USDQ itself and has no blacklist or pause branch. However, burn(address,uint256) lets the configured CollateralRegistry or any registered BorrowerOperations, TroveManager, or StabilityPool destroy an arbitrary account balance without allowance. That live privileged holder-burn primitive resolves direct access to true. AccessManager additionally maps upgradeToAndCall to role 2, held by Safe 0x32fd58b8c4d454ab585dea736b7d2b5929b6676c with a 300-second delay, so implementation replacement is a second restrictable path.",
-    "reviewer": "OpenAI Codex C11 access review",
-    "reviewedAt": "2026-08-08"
+    "evidence": "At Scroll block 35426534 (2026-10-19), USDQ 0xdb9e8f82d6d45fff803161f2a5f75543972b229a still resolves to verified BoldToken implementation 0x4103155fb2dcf8b6138c8eb4be0542facc9a7523 with authority() = 0xBe589551397d0F28255e429DDB478620b1C2f08a and collateralRegistryAddress() = 0x358d90036e70542AE24b3813C0eFECc1f8811442. The CollateralRegistry reports 4 branches; branch 0 uses TroveManager 0x9D2AD9712f3905F3e7803c92d027A197B4c8DA90 and BorrowerOperations 0x0F863bd95539d3C7640a7954114051aCa8f19306. Pinned sources show every burn path reduces only the caller or self: TroveManager burns msg.sender (L1037), BorrowerOperations burns msg.sender (L787/L1363), CollateralRegistry redemption burns msg.sender, and StabilityPool burns address(this) (L424). No current branch reduces a third party's USDQ without their action. Governance can install new branch burners through CollateralRegistry.addCollateral (restricted), and the AccessManager maps upgradeToAndCall to role 2 held by Safe 0x32fd58b8c4d454ab585dea736b7d2b5929b6676c with a 300-second delay, so a new burner or implementation is a direct Possible rather than an active Yes. Ordinary transfers have no blacklist or pause branch.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "standard-external",

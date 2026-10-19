@@ -10,11 +10,39 @@
       {
         "label": "Website",
         "url": "https://app.ondo.finance/"
+      },
+      {
+        "label": "USDon Ethereum token",
+        "url": "https://etherscan.io/address/0xace8e719899f6e91831b18ae746c9a965c2119f1"
+      },
+      {
+        "label": "USDon BSC token",
+        "url": "https://bscscan.com/address/0x1f8955e640cbd9abc3c3bb408c9e2e1f5f20dfe6"
+      },
+      {
+        "label": "Ondo Blocklist Oracle (Ethereum) contract and logs",
+        "url": "https://eth.blockscout.com/address/0xd8c8174691d936E2C80114EC449037b13421B0a8?tab=logs"
+      },
+      {
+        "label": "Ondo compliance registry (Ethereum)",
+        "url": "https://eth.blockscout.com/address/0x156F73fc73197555e950743Cb2B23F411c751002?tab=contract"
+      },
+      {
+        "label": "USDon Solana mint",
+        "url": "https://solscan.io/token/ZPFtoCe7WWqG4N3ZFRccS8T9SMBeHsd1Vmgv2i7ondo"
+      },
+      {
+        "label": "Solana Token-2022 permanent delegate",
+        "url": "https://solana.com/docs/tokens/extensions/permanent-delegate"
+      },
+      {
+        "label": "Ondo issuer and holder restrictions",
+        "url": "https://docs.ondo.finance/ondo-stocks/important-notes.md"
       }
     ],
-    "evidence": "Explicit Yes retained: centralized governance metadata indicates issuer or admin control; registry links were reviewed for direct freeze, blacklist, pause, burn, or upgrade authority.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "Solana 17.1738% is material; finalized getMultipleAccounts(base64) slot 458745379 (2026-10-19T07:11:01Z), mint ZPFtoCe7WWqG4N3ZFRccS8T9SMBeHsd1Vmgv2i7ondo, owner TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb, executable=false, freezeAuthority=51QVCuHfL1FeNjd8BDeffCKhCcAYoULnVB3yjNhShiuK. Authority is off-curve Squads v4 vault 0 of CDCCa8yPj9eyE57ZT4NJ1pbNdeFCcJEoTyy4UjNbC3pF; derivation matches exactly. Finalized slot 458746257: 3-of-8, timelock 0, eight on-curve members with permissions 7, enabling arbitrary FreezeAccount. Permanent delegate 9foMHsSDq7nMg4WPusSz9eY7tyxyukqborA8GyU5cUxD is separately an Ondo-program PDA, not an independently signing key; the verdict does not rely on unproven delegate reachability. Independently, material Ethereum 44.0627% and BSC 38.7635% enforce live holder blocklists (Ethereum block 26224772 / BSC block 128505028). The verdict is Yes.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

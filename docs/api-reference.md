@@ -557,8 +557,8 @@ Normalized issuer freeze, unfreeze, blacklist, and destruction events with optio
 
 ```json
 {
-  "currentVersion": "4.3",
-  "currentVersionLabel": "v4.3"
+  "currentVersion": "4.4",
+  "currentVersionLabel": "v4.4"
 }
 ```
 
@@ -963,7 +963,7 @@ Yield-bearing stablecoin rankings with safety, benchmark-aware context, and opti
 ```json
 {
   "currentVersion": "8.49",
-  "methodologyVersion": "10.22"
+  "methodologyVersion": "10.23"
 }
 ```
 

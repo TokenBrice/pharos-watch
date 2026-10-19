@@ -10,11 +10,23 @@
       {
         "label": "Midas risks",
         "url": "https://docs.midas.app/tokens/mmev/risks"
+      },
+      {
+        "label": "Ethereum mMEV verified implementation (mMEV imports mTBILL)",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4fe7f62b2f4ef077aed8f458c8b4652f5de8080f"
+      },
+      {
+        "label": "Midas mToken source (blacklist/pause/burn checks)",
+        "url": "https://github.com/midas-apps/contracts/blob/main/contracts/mToken.sol"
+      },
+      {
+        "label": "Midas smart-contract registry",
+        "url": "https://docs.midas.app/resources/smart-contracts-registry"
       }
     ],
-    "evidence": "Explicit Yes: Midas mMEV is a permissioned liquid-yield token with issuer/admin control surfaces around minting, redemption, transfer administration, and upgradeable protocol contracts.",
-    "reviewer": "Codex 2026-05-14 execution-ready expansion",
-    "reviewedAt": "2026-05-14"
+    "evidence": "At Ethereum block 26224764 (2026-10-19), mMEV proxy 0x030b69280892c888670edcdcd8b69fd8026a0bf3 resolves to verified implementation 0x4fe7f62b2f4ef077aed8f458c8b4652f5de8080f. mMEV inherits mTBILL/mToken, whose _beforeTokenTransfer applies _onlyNotBlacklisted to sender and recipient, with role-gated pause (M_MEV_PAUSE_OPERATOR_ROLE) and privileged burn (M_MEV_BURN_OPERATOR_ROLE). The shared MidasAccessControl 0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B held 60+ current BLACKLIST_OPERATOR_ROLE members at that block (hasRole true for 0x081bb8ad7f452f916991c17fdfa64d4a25153169), so an issuer operator can blacklist any holder and stop transfers. Ethereum held 1,250,321.76 of 1,269,370.16 mMEV measured across deployments (98.50%), a material deployment. Etherlink (16,015.19; 1.26%) and Plume (3,033.21; 0.24%) are sub-threshold and disclosed; their native deployments were not role-verified.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "oracleless",

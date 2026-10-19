@@ -1,7 +1,7 @@
 {
   "id": "usds-sky",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Sky USDS contract repository",
@@ -14,11 +14,39 @@
       {
         "label": "Solana JSON-RPC API",
         "url": "https://api.mainnet-beta.solana.com"
+      },
+      {
+        "label": "Verified current Ethereum USDS implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x1923DfeE706A8E78157416C29cBCCFDe7cdF4102"
+      },
+      {
+        "label": "Sky Chainlog active governance addresses",
+        "url": "https://chainlog.skyeco.com/api/mainnet/active.json"
+      },
+      {
+        "label": "Measured chain circulation",
+        "url": "https://api.pharos.watch/api/stablecoins"
+      },
+      {
+        "label": "Sky group debt composition",
+        "url": "https://info-sky.blockanalitica.com/groups/?days_ago=1&order=-debt"
+      },
+      {
+        "label": "Grove allocation and custody scope",
+        "url": "https://docs.grove.finance/faqs"
+      },
+      {
+        "label": "Ethereum pinned state",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Grove Data current idle lookup attempted; client-rendered no observed idle figure",
+        "url": "https://data.grove.finance/"
       }
     ],
-    "evidence": "The official Sky USDS repository describes the EVM token as a standard ERC-20 with permit and UUPS upgradeability, without a holder blacklist function. The listed Solana USDS mint was queried through the Solana JSON-RPC API on 2026-07-14 and returned an active freezeAuthority (AYPtjx4Hc8us1ikULUedkmZ3wtiD6tmL7gK3qe4V3oHt). A finalized getMultipleAccounts read at Solana slot 452212654 on 2026-10-01 confirmed the same freeze authority and mintAuthority BEvTHkTyXooyaJzP8egDUC7WQK8cyRrq5WvERZNWhuah, so the multichain asset retains direct holder-freeze capability on Solana.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurA03USDS)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "As observed 2026-10-19, Ethereum holds 99.879115% of USDS circulating supply and is the only material deployment (Pharos per-chain total denominator 7,022,008,496.527328 USDS). At Ethereum@26224760 (2026-10-19T06:14:11+00:00), USDS 0xdc035d45d973e3ec169d2276ddab16f1e407384f has EIP-1967 implementation 0x1923dfee706a8e78157416c29cbccfde7cdf4102 and wards(Sky Pause Proxy 0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB)=1. Its verified Usds implementation has ordinary allowance-based transfer/burn semantics, no live holder blacklist or transfer pause, and ward-gated UUPS upgradeToAndCall. Active DAO-governed token upgradeability is direct Possible under the FreezeWatch decision procedure (docs/blacklist-tracker.md). At finalized Solana slot 458730702 (2026-10-19T06:18:03Z), USDS mint USDSwr9ApdHk5bvJKMjzff41FfuX8bSxdKcR81vTwcA retained freezeAuthority AYPtjx4Hc8us1ikULUedkmZ3wtiD6tmL7gK3qe4V3oHt and mintAuthority BEvTHkTyXooyaJzP8egDUC7WQK8cyRrq5WvERZNWhuah; Solana share 0.067942% is disclosed but cannot set Yes. Base 0.046661%, Arbitrum 0.006272%, Optimism 0.000008%, Unichain 0.000003% and Avalanche <0.000001% are also sub-threshold. USDS has no declared parent. The shared September 29 Sky group-debt book has 39.4% Circle-USDC and 16.7% Grove institutional-credit/RWA allocation. Under the FreezeWatch decision procedure's categorical rule for issuer-backed funds and stablecoin money markets, qualifying reserve exposure is 56.1% of the full 100% debt denominator; Spark 33.6% and other ambiguous categories are not needed or counted. Grove idle USDS/DAI would be self exposure and excluded, but its current idle fraction is unmeasured. A six-point haircut to the total Sky book would leave 50.1%; removing more than 6.1 book percentage points (36.52695% of the Grove sleeve) would lose the strict majority. This uncertainty does not affect the direct Possible verdict. Regardless of upstream backing, direct Possible takes precedence.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "medianized-with-delay",

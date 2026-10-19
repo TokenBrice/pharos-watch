@@ -10,11 +10,27 @@
       {
         "label": "Solana apxUSD mint and freeze authority",
         "url": "https://explorer.solana.com/address/HAYQtfJEQ9DbDbaHEhxfGsWbSZ3ywthdsVB3PuB72DYe"
+      },
+      {
+        "label": "Verified current Ethereum token implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xdd71fd677fde2ed2579a3c45204f41a11016ccb4"
+      },
+      {
+        "label": "Verified deployed shared denylist registry",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2c271ddf484ac0386d216eb7eb9ff02d4dc0f6aa"
+      },
+      {
+        "label": "Verified deployed AccessManager",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe167330e2eac88666de253e9607c6d9ae0ca2824"
+      },
+      {
+        "label": "Ethereum pinned control reads",
+        "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
-    "evidence": "The native Ethereum token source includes ERC20DenyListUpgradable, AccessManager-gated setDenyList(), and pause/unpause controls; October 1 RPC confirmed the recorded native implementation and authority. At finalized Solana slot 452227433, the apxUSD SPL mint retained freezeAuthority 5CcTTUPtSxF1iB5d2fGR7gYHbUBHL1orwzbuZdQGJ1CG. These are deployment-specific controls rather than a governance-category inference.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurA40apxUSD)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "Ethereum holds 90.2541% of circulating apxUSD in the 2026-10-19 Pharos census and alone sets Yes. At Ethereum block 26224761 (2026-10-19T06:14:23Z), proxy 0x98a878b1cd98131b271883b390f68d2c90674665 used implementation 0xdd71fd677fde2ed2579a3c45204f41a11016ccb4 and authority 0xe167330e2eac88666de253e9607c6d9ae0ca2824; paused() was false. Its verified ERC20DenyListUpgradable checks sender and recipient against denyList()=0x2c271ddf484ac0386d216eb7eb9ff02d4dc0f6aa on every _update. The verified registry uses the same AccessManager; getTargetFunctionRole(registry,add(address)) returned 21 and hasRole(21,0xf9862EfC1704aC05e687f66E5cD8c130E5663cE2) returned (true,0), confirming a live operator able to block holders. AccessManager-gated setDenyList, pause/unpause and upgrades remain additional controls. Solana is 5.8537% in the census, Base 3.0744%, and BSC 0.8178%; these are sub-threshold. Finalized Solana slot 458729747 retained freezeAuthority 5CcTTUPtSxF1iB5d2fGR7gYHbUBHL1orwzbuZdQGJ1CG. Total-supply cross-checks measured Ethereum 291723514.8228564, Base 9526254.24787385, BSC 2534060.8395109717 and Solana 5847708.351565 units at blocks 26224761/52800640/128504833/slot458729747; gross supply and bridge-adjusted sensitivities keep only Ethereum above 10%. No parent is declared. DAT preferred-equity and liquidity-buffer reserves are secondary to the active direct control and do not determine Yes. The registry operator is a Safe v1.4.1 with getThreshold()=4 and singleton 0x41675c099f32341bf84bfc5382af534df5c7461a, rather than an unreachable contract role holder. Peripheral Base and BSC proxies retain non-zero implementation pointers and authorities, but exact local holder-control logic was not established: Base denyList() reverted, verified-source requests returned403/404. These unverified peripheral controls are disclosed rather than used to set the verdict.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",

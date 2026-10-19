@@ -952,6 +952,16 @@ export const CRON_CONNECTION_BUDGET_ENTRIES: readonly CronConnectionBudgetMeta[]
     ?? CRON_SCHEDULE_DEFINITIONS[definition.scheduleKey].intervalSec,
 }));
 
+/** ADR-26: one non-cron executor of existing reserve work, not another cron lane. */
+export const RESERVE_CONTINUATION_CONNECTION_BUDGET = {
+  surface: "reserve-continuation",
+  worker: "public",
+  maxConnections: Math.max(...CRON_CONNECTION_BUDGET_ENTRIES
+    .filter((entry) => entry.scheduleKey === "fiveMinuteReserveRecovery").map((entry) => entry.maxConnections)),
+  postSettlementSendConnections: 1,
+  producerScheduleKeys: ["fourHourlyReserveSync", "fiveMinuteReserveRecovery"],
+} as const;
+
 /** Job name → expected interval in seconds, derived from definitions. */
 export const CRON_INTERVALS = Object.freeze(
   Object.fromEntries(CRON_JOB_DEFINITIONS.map((item) => [item.job, item.intervalSec])) as Record<string, number>,

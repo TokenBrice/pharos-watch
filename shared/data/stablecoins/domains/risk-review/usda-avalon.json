@@ -10,11 +10,27 @@
       {
         "label": "Website",
         "url": "https://www.avalonfinance.xyz/"
+      },
+      {
+        "label": "Verified Ethereum USDa current source and ABI",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8a60e489004ca22d775c5f2c657598278d17d9c2"
+      },
+      {
+        "label": "Ethereum USDa role-grant event index (discovery only)",
+        "url": "https://eth.blockscout.com/api/v2/addresses/0x8a60e489004ca22d775c5f2c657598278d17d9c2/logs?topic=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+      },
+      {
+        "label": "Ethereum fixed observation block",
+        "url": "https://etherscan.io/block/26224760"
+      },
+      {
+        "label": "Verified current blacklist-manager SafeProxy",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x12098b516443eb4074a5015ff58bc9f3a1f4c2b5"
       }
     ],
-    "evidence": "Explicit Yes retained: reviewed metadata indicates a direct issuer, admin, proxy, pause, burn, or upgrade control surface beyond reserve-only exposure.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "The October 19 chain-circulation census makes Ethereum 59.5358% and Movement 25.2022% material; BSC 7.6223% and Kaia 5.1561% are below 10%, with all other listed chains smaller. At Ethereum block 26224760 (2026-10-19T06:14:11Z; hash 0x2a6c0b20faae49bb23f77a582b517057741efcee5bd423a8552f672144c83b85) via https://ethereum-rpc.publicnode.com, material Ethereum USDa 0x8a60e489004ca22d775c5f2c657598278d17d9c2 is verified as a nonproxy OFT/AccessControl/Pausable USDa token, with zero EIP-1967 implementation/admin slots. Its current _update enforces whenNotPaused and requires neither sender nor receiver to be isBlackListed. addBlackList/removeBlackList require MANAGER_ROLE; hasRole(keccak256(\"MANAGER_ROLE\"),0x12098b516443eb4074a5015ff58bc9f3a1f4c2b5) returns true at this pin. That current role holder is a verified SafeProxy with Safe singleton 0x41675c099f32341bf84bfc5382af534df5c7461a and getThreshold()=3. Safe execution can reach addBlackList with arbitrary target addresses, so this is an active issuer/team holder blacklist, not merely an admin's power to authorize a future operator. The same Safe retains PAUSE_ROLE. owner() and ADMIN_ROLE resolve to 0xdfb1b1c0e0f697829af500d73364d863cb3c6ce9. The token also exposes burn(user,amount) without allowance to BURN_ROLE; current members 0x1e7dff07b891a40ef08bb7d1d2c4385d4ac39dfc and 0x3f390dd6ef69f68f9877aacc086856a200808693 are proxy contracts whose ability to reach arbitrary holders is not verified here. That burn surface is disclosed but does not set this Yes verdict. Yes follows from the material Ethereum holder blacklist, not generic upgradeability or FBTC/USDT/USDC reserve exposure. Movement contract 0x48b904a97eafd065ced05168ec44638a63e1e3bcaec49699f6b8dabbd1424650 is material, but its control implementation is not independently verified here and no claim of cross-chain control equivalence is made. Its unknown local posture cannot remove the Ethereum Yes finding. No parent is declared; reserve-majority analysis is not needed after direct Yes.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "standard-external",

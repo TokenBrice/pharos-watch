@@ -38,11 +38,19 @@
       {
         "label": "Morpho Gauntlet USDC Prime vault page",
         "url": "https://app.morpho.org/ethereum/vault/0x8c106eedad96553e64287a5a6839c3cc78afa3d0/gauntlet-usdc-prime"
+      },
+      {
+        "label": "Base exact-match full source",
+        "url": "https://sourcify.dev/server/v2/contract/8453/0xee8f4ec5672f09119b96ab6fb59c27e1b7e44b61?fields=abi,sources"
+      },
+      {
+        "label": "Arbitrum matched full source",
+        "url": "https://sourcify.dev/server/v2/contract/42161/0x7c574174da4b2be3f705c6244b4bfa0815a8b3ed?fields=abi,sources"
       }
     ],
-    "evidence": "Re-verified on 2026-10-01 at Ethereum block 26098754, Base block 52041959 and Arbitrum block 510719674. Ethereum sendSharesGate() and receiveSharesGate() are zero; abdicated(selector) is true and timelock(selector) is 604800 seconds for both share-gate setters. The exact deployed VaultV2 source prevents execution of abdicated functions. sendAssetsGate() and receiveAssetsGate() are also zero, but the send-assets gate setter is not abdicated and retains a seven-day timelock, so permissionless share transfer does not prove immutable redemption access. Base MetaMorpho and Arbitrum MetaMorphoV1_1 retain ordinary ERC-20 share transfers in their exact verified sources. Native chain-local USDC asset() and zero EIP-1967 slots were confirmed across all three vaults. Freeze exposure remains inherited from usdc-circle; no upstream blacklist or pause exposure is removed.",
-    "reviewer": "Sol curation pass 2026-10-01 (R2WCircle), exact three-deployment source and pinned gate review",
-    "reviewedAt": "2026-10-01"
+    "evidence": "Upstream from parent USDC, with no active or dormant direct holder-transfer/redemption control on either material vault. Re-verified at ethereum@26224762 (2026-10-19T06:14:35+00:00, hash 0xef45b71f129dac5f794f4506dee4ca47f3cdd7e41c6e75f53d66512c8c505fc5), base@52800568 (2026-10-19T06:14:43+00:00, hash 0xcd3dde2cc9f64776485d2e55a1d634bc06a6679e0453363c669a24f2f35d1dc1) and arbitrum@516203678 (2026-10-19T06:14:42+00:00, hash 0xea3aab11ddf4f49da0170f8473d145648ab5a005ebbe34a275c8fa65ff604ef7). Ethereum VaultV2 0x8c106eedad96553e64287a5a6839c3cc78afa3d0, Base MetaMorpho 0xee8f4ec5672f09119b96ab6fb59c27e1b7e44b61 and Arbitrum MetaMorphoV1_1 0x7c574174da4b2be3f705c6244b4bfa0815a8b3ed have totalAssets() of 116,730,805.278899, 413,388,166.134700 and 464,049.894023 USDC. Their measured NAV shares are 22.0005%, 77.9121% and 0.0875% of $530,583,021.307622 [INFERENCE: aggregate observed NAV is the cross-deployment supply proxy where runtime chain shares are absent]; share-count weights independently yield 23.2410%, 76.6666% and 0.0924%. Ethereum and Base are therefore material and Arbitrum peripheral. Ethereum all four gate getters are zero, and abdicated(selector)=true for BOTH share-gate setters AND setReceiveAssetsGate(address), each with stored 604800-second timelock; exact source prevents executing permanently abdicated functions. setSendAssetsGate remains mutable with a seven-day delay, but is checked only for deposits/mints in enter(), never holder transfers or withdraw/redeem exit(). Base and Arbitrum exact verified implementations retain ordinary ERC-20 transfers and ERC-4626 withdrawals, without mutable holder allowlist/withdrawal limiter, blacklist, freeze or global transfer pause. Corrected EIP-1967 implementation, admin and beacon slots are zero on all three; the immutable exact sources, rather than zero slots alone, establish non-upgradeability. Local asset() reads return native USDC on each chain. The prior October 1 implementation/gate facts remain valid, with the exit-gate abdication now made explicit. The declared parent usdc-circle has active issuer blacklist authority; holder claims remain exposed even when assets are deployed into Morpho strategies. Parent inheritance sets Upstream without requiring an independently measured reserve-majority claim. Permissionless exit logic is not guaranteed immediate liquidity; Circle freeze and ordinary market-liquidity risks are not removed.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",

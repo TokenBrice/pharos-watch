@@ -1,7 +1,7 @@
 {
   "id": "susd-solayer",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Solayer official sUSD mint identity",
@@ -12,8 +12,8 @@
         "url": "https://api.mainnet-beta.solana.com"
       }
     ],
-    "evidence": "At finalized Solana slot 452213349, one getMultipleAccounts response confirmed freezeAuthority FhVcYNEe58SMtxpZGnTu2kpYJrTu2vwCZDGpPLqbd2yG on the official sUSD Token-2022 mint. That account is owned by the Solayer sUSD program s1aysqpEyZyijPybUV89oBGeooXrR22wMNLjnG2SWJA; its ProgramData names upgrade authority 7671j7qpSf9X5KbQDraXReGK8Dxg5xGjr9n913BWhqru. The positive verdict is supported by an explicit freeze authority and mutable program, not governance inference.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurB08CHFAU)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "Solana sole material deployment (100%); mint slot 458745379, freezeAuthority=FhVcYNEe58SMtxpZGnTu2kpYJrTu2vwCZDGpPLqbd2yG is off-curve. Executable issuer program s1aysqpEyZyijPybUV89oBGeooXrR22wMNLjnG2SWJA, ProgramData 7bzcebKDN8qDkftxobwArKJL8xSGaZ6zBPaY4C4wEhkf finalized slot 458746512, deployed slot 377365741, upgrade authority 7671j7qpSf9X5KbQDraXReGK8Dxg5xGjr9n913BWhqru; deployed bytes SHA256=10fe1b39015af509e88e6aa2959ca4c24fba97c53ba7611bbb647d446992ad12. No current admin-callable arbitrary-holder freeze path was established from the registry IDL https://idl-one.vercel.app/api/idl?programId=s1aysqpEyZyijPybUV89oBGeooXrR22wMNLjnG2SWJA&cluster=mainnet-beta and deployed binary interface; the live program upgrade authority is verified. Freeze authority account owner is the Solayer program; emergencyTransferRwaToken concerns pool reserve custody and handleFrozenAccounts takes the signer’s sUSD vault, not arbitrary holder seizure. Upgrade authority is not a plain EOA: it is off-curve Squads v4 vault 0 of Bwp3EMRE3KfmDnhFEwtZ8hty1EhneKLnMczZAu1MQzry, 3-of-5, delay 0, all five on-curve members permissions 7 at slot 458746867. IDL/source absence is not a formal bytecode-equivalence proof; confidence medium.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   }
 }

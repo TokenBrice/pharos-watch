@@ -2,10 +2,24 @@
   "id": "sbc-brale",
   "blacklistabilityReview": {
     "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Solana mint account DBAzBUX… (freeze authority)",
+        "url": "https://explorer.solana.com/address/DBAzBUXaLj1qANCseUPZz4sp9F8d2sc78C4vKjhbTGMA"
+      },
+      {
+        "label": "Polygon SBC proxy",
+        "url": "https://polygonscan.com/address/0xfdcc3dd6671eab0709a4c0f3f53de9a333d80798"
+      },
+      {
+        "label": "Polygon PublicNode/Alchemy RPC reads (block 95790212)",
+        "url": "https://polygon-mainnet.g.alchemy.com/v2"
+      }
+    ],
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: SBC resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "evidence": "FreezeWatch re-review 2026-10-19. Materiality: the census supply split is Solana 62.2147%, Polygon 23.8861%, Ethereum 8.7163%, Base 4.3641% and the remaining chains under 0.3% each; Solana and Polygon are material. Solana mint DBAzBUXaLj1qANCseUPZz4sp9F8d2sc78C4vKjhbTGMA (Tokenkeg, 9 decimals) at slot 458730488 carries freezeAuthority 3mdd4X7wJjWmhF99jfTNGmSr39EXSAXcdEiS47GejduH, which is non-zero and not renounced (mintAuthority 8Dn2V6HX6gTwkCid2MUiv3mXvMkTcyxQeqTychdBRBSj; supply 9,351,252.717502774), so the authority can freeze any holder's token account. Polygon SBC 0xfdcc3dd6671eab0709a4c0f3f53de9a333d80798 (ERC1967 proxy, implementation 0xcab3f6cd6a2786cc8b2018224f48437a27506e35) enforces an AccessControl deny list at block 95790212: role 0x122c3c5f9caf2fe2940018f2188acecda5c38f4da0bc5e215c7a38055432bb6a has 213 RoleGranted members, including OFAC-listed 0x12d66f87a04a9e220743712ce6d9bb1b5616b8fc, and an eth_call transfer(0x…01,0) from that address reverts with 'AccessControl: account 0x12d66f87… does not have controlled access via role 0x122c…' while the same call from 0x…dEaD returns true. Both material deployments therefore carry active holder-targeted controls: reviewedStatus is true. The Ethereum deployment (8.7163%, proxy implementation 0x87603e4388c13a86d5c2c62431ece3e5f8185af5, unverified) is sub-threshold and does not set the verdict.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

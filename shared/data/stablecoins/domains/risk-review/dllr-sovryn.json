@@ -1,7 +1,7 @@
 {
   "id": "dllr-sovryn",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Rootstock Blockscout: verified DLLR MetaAssetToken source and ABI",
@@ -16,9 +16,9 @@
         "url": "https://public-node.rsk.co"
       }
     ],
-    "evidence": "At Rootstock block 9055762 on 2026-07-15, verified DLLR MetaAssetToken source and RPC state show owner() = the Sovryn Timelock 0x967c84b731679e36a344002b8e3ce50620a7f69f and massetManagerProxy() = 0x5f777270259e32f79589fe82269db6209f7b7582. The token gates burn(account, amount) only by equality to massetManagerProxy, allowing the appointed manager to burn an arbitrary holder balance. setMassetManagerProxy(address) is onlyOwner and rejects only the zero address, so the owner can appoint an arbitrary address as manager. On-chain eth_call confirmed the owner setter succeeds and the current manager can call burn. This is direct individual holder-balance control; failure domains are the owner/timelock and an owner-appointed MassetManager.",
-    "reviewer": "Codex Safety Score V9 access review",
-    "reviewedAt": "2026-07-15"
+    "evidence": "The manager proxy is the current operator identity in the W1 pin; its implementation source is unavailable/unverified, so other burn routes cannot be ruled out. The observed redeemTo caller was 0x8544E7d93C901697F3fd469f66505B1F3E9A033F and the trace burns that same caller. Owner-controlled manager replacement is the verified possible path; current timelock/owner state and manager implementation behavior remain unresolved.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "oracleless",

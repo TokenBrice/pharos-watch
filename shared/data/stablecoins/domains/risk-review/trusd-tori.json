@@ -1,7 +1,7 @@
 {
   "id": "trusd-tori",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Tori BVI trUSD Terms and Conditions",
@@ -18,11 +18,59 @@
       {
         "label": "Ethereum observation block 25712112",
         "url": "https://eth.blockscout.com/block/25712112"
+      },
+      {
+        "label": "Accountable Tori dashboard API captured 2026-09-30 (assetBreakdown and reserves.nested_split)",
+        "url": "https://cache.accountable.capital/dashboard/tori"
+      },
+      {
+        "label": "Tori live proof-of-solvency API captured 2026-09-30 (nested token itemization)",
+        "url": "https://app.tori.finance/api/solvency"
+      },
+      {
+        "label": "Accountable proof-of-solvency dashboard for Tori (15-minute cadence, Merkle/enclave/ZK verification)",
+        "url": "https://tori.accountable.capital"
+      },
+      {
+        "label": "Tori docs: strategy overview (money markets usually the largest allocation; futures arbitrage buys spot and sells single-stock futures, e.g. AAPL)",
+        "url": "https://docs.tori.finance/strategy/overview.md"
+      },
+      {
+        "label": "Tori docs: backing and reserves (hedged positions; off-chain assets with qualified institutional custodians)",
+        "url": "https://docs.tori.finance/solution/backing.md"
+      },
+      {
+        "label": "Tori docs: institutional minting and redemption (KYC/AML whitelisting for NAV mint/redeem)",
+        "url": "https://docs.tori.finance/resources/institutional.md"
+      },
+      {
+        "label": "Tori docs: reserve fund (protocol-managed buffer, not third-party insurance)",
+        "url": "https://docs.tori.finance/solution/reserve-fund.md"
+      },
+      {
+        "label": "ToriMinting verified contract source on Blockscout (whitelist-gated mint/redeem; single on-chain custodian address)",
+        "url": "https://eth.blockscout.com/address/0xe16b821b9f6b0a6f06a2c4a61d5d1f71cfa53f1e"
+      },
+      {
+        "label": "Tori current roles and 24-hour timelock",
+        "url": "https://docs.tori.finance/security/roles.md"
+      },
+      {
+        "label": "CCIP escrow/deployment accounting",
+        "url": "https://docs.tori.finance/resources/contracts.md"
+      },
+      {
+        "label": "Pinned Ethereum controller reads",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Pinned missing-chain supply measurement",
+        "url": "https://rpc.pharos.xyz"
       }
     ],
-    "evidence": "At Ethereum block 25712112, the verified current trUSD implementation exposed ordinary ERC-20 transfers with no live blacklist, holder pause, seizure, or transfer-whitelist hook. ToriMinting's whitelist applies only to permissioned mint and redemption orders. Separately, Tori BVI's current primary terms reserve the right to block trUSD addresses associated with illegal activity or Terms violations and state that affected holders may forfeit rights associated with trUSD. The issuer-level legal power therefore makes the asset-level blacklistability review true even though current secondary-transfer bytecode is unrestricted; the one-day UUPS path can also replace that transfer logic.",
-    "reviewer": "OpenAI Codex C03 control review",
-    "reviewedAt": "2026-08-08"
+    "evidence": "Ethereum is material: canonical totalSupply at block 26224761 (2026-10-19T06:14:23Z) was 71562414.07417832 trUSD and the official CCIP escrow held 657245.7444928943. Monad totalSupply was 657243.0437838025 at block 114681599 and Pharos 2.7007090917653973 at block 20634741, exactly reconciling escrow; adjusted shares are Ethereum 99.08157690%, Monad 0.91841933% and Pharos 0.00000377%. The current canonical implementation remains 0xb1d133fe29255eb4ac9b05d647d49cd7f05ff631. Its verified source and ABI expose ordinary ERC-20 transfers and holder/allowance burns, without a present holder blacklist, pause, seizure or transfer allowlist. ToriMinting whitelisting applies to primary mint/redemption orders, not secondary-token transfers. Tori BVI terms reserve address-blocking and forfeiture of repurchase rights and permit surrender of issuer-owned reserve assets; those legal provisions do not establish an active token-level holder-targeted control in this implementation. The proxy retains a live UUPS path: hasRole(TIMELOCK_ADMIN_ROLE,0xA952453E39F77108Ee37C1b92de593F1C59A6ef4)=true and the timelock getMinDelay()=86400. Official role disclosures put the proposer/executor behind the 3-of-5 Safe. This supports direct Possible, not Yes. No parent is declared. Separately, the $78485841.65 full reserve portfolio captured 2026-09-30 is approximately 99.99977% exposed to custodied money-market/equity strategies, cash at banks/exchanges, or verified USDC/USDT (67.59590%, 8.46918%, 9.20155%, 14.21135%, 0.38609%, 0.13569%); native ETH and unidentified dust remain in the denominator. Direct Possible takes precedence over that upstream majority.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "privileged-internal-pricing",

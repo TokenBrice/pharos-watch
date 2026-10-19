@@ -1,7 +1,7 @@
 {
   "id": "thbill-theo",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Blockscout verified thBILL implementation",
@@ -10,11 +10,31 @@
       {
         "label": "Ethereum observation block 25712112",
         "url": "https://eth.blockscout.com/block/25712112"
+      },
+      {
+        "label": "Canonical thBILL UUPS proxy",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5fa487bca6158c64046b2813623e20755091da0b"
+      },
+      {
+        "label": "Ethereum pinned block 26224760",
+        "url": "https://etherscan.io/block/26224760"
+      },
+      {
+        "label": "Sourcify verified direct ThBillOFT (Arbitrum, Base and HyperEVM runtime correspondence)",
+        "url": "https://sourcify.dev/server/v2/contract/42161/0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a?fields=all"
+      },
+      {
+        "label": "Sourcify exact Stable ThBillOFT source",
+        "url": "https://sourcify.dev/server/v2/contract/988/0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a?fields=all"
+      },
+      {
+        "label": "Issuer product and fund-basket description",
+        "url": "https://docs.theo.xyz/products/thbill.md"
       }
     ],
-    "evidence": "At Ethereum block 26095798 on 2026-10-01, the UUPS proxy resolved to verified IToken implementation 0x325478a069b0dbbdfbee909fa3741f84259ba519. hasRole(EMERGENCY_ROLE, 0x7afb1d3308d22639f1ce698a2985cbf22f96d94a) returned true and paused() returned false. Verified source gates the shared _update path with whenNotPaused, so pausing blocks holder transfers as well as mint and redemption. Timelock 0x2bb4b7e6e83fa6b77d0143dad631843cb73dca02 still holds DEFAULT_ADMIN_ROLE and getMinDelay() returns 172800 seconds; UUPS upgrade authorization remains DEFAULT_ADMIN_ROLE-gated.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurA54thBILL)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "At Ethereum block 26224760 (2026-10-19T06:14:11+00:00, hash 0x2a6c0b20faae49bb23f77a582b517057741efcee5bd423a8552f672144c83b85), thBILL 0x5fa487bca6158c64046b2813623e20755091da0b resolves through the EIP-1967 implementation slot to verified IToken 0x325478a069b0dbbdfbee909fa3741f84259ba519; its runtime exactly matches the Blockscout verified implementation. hasRole(EMERGENCY_ROLE,0x7afb1d3308d22639f1ce698a2985cbf22f96d94a)=true and paused()=false. IToken._update is guarded by whenNotPaused, and BaseUpgradeable.pause() is EMERGENCY_ROLE-gated: this is a live global transfer-pause authority, not an active holder-targeted blacklist. The current IToken and inherited source have no address blacklist, transfer allowlist, seizure, privileged arbitrary-holder burn or forced transfer. hasRole(DEFAULT_ADMIN_ROLE,0x2bb4b7e6e83fa6b77d0143dad631843cb73dca02)=true; getMinDelay()=172800 seconds, and UUPS upgrades are DEFAULT_ADMIN_ROLE-gated. Both pause and upgrade surfaces therefore establish direct Possible, not Yes. Materiality: the 2026-10-19 supply data have no distribution. Pinned Ethereum totalSupply=29932237545115 and balanceOf(OFT adapter 0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a)=1645908638659 raw six-decimal units give unescrowed Ethereum supply 28,286,328.906456 thBILL (94.501218% of canonical totalSupply), decisively material. The same-day remote supply reads at Arbitrum 516204028 (2026-10-19T06:16:12+00:00), Base 52800558 (2026-10-19T06:14:23+00:00), HyperEVM 48936020 (2026-10-19T06:14:23+00:00) and Stable 43600771 (2026-10-19T06:16:12+00:00) are respectively 362562666588, 215960991, 1282881899150, and 31912225 raw units. They are all below 10%; their direct non-proxy ThBillOFT runtimes match Sourcify verified source (outside compiler-declared immutable slots where needed). The OFT source has ordinary local ERC20 transfers and no local blacklist, pause, upgrade or arbitrary-holder burn. Remote bridge owner/delegate configuration is not a local transfer freeze. Pins are not synchronized; remote sum differs from Ethereum escrow by 216.199705 thBILL, so these are approximate cross-chain shares, not a fully reconciled supply attestation; this does not threaten Ethereum's >94% materiality. There is no declared parent. Institutional fund/custodial reserves are secondary upstream exposure and cannot override the direct Possible tier.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",

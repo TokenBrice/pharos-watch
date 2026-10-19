@@ -14,11 +14,31 @@
       {
         "label": "Ethereum sUSDe verified deployed source",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9d39a5de30e57443bff2a8307a4256c8797a3497"
+      },
+      {
+        "label": "Ethereum pinned role and adapter escrow reads",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Plasma verified holder blacklist and seizure implementation",
+        "url": "https://plasmascan.to/address/0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2#code"
+      },
+      {
+        "label": "Plasma pinned supply and direct owner path",
+        "url": "https://rpc.plasma.to"
+      },
+      {
+        "label": "Global share estimate and redeem price",
+        "url": "https://api.pharos.watch/api/stablecoins"
+      },
+      {
+        "label": "Ethereum token holders identifying canonical adapter",
+        "url": "https://eth.blockscout.com/api/v2/tokens/0x9d39a5de30e57443bff2a8307a4256c8797a3497/holders"
       }
     ],
-    "evidence": "The verified Ethereum StakedUSDe source grants BLACKLIST_MANAGER_ROLE the addToBlacklist/removeFromBlacklist functions. FULL_RESTRICTED_STAKER_ROLE blocks transfers, staking and unstaking; DEFAULT_ADMIN_ROLE can burn and redistribute an existing restricted holder's shares. At Ethereum block 26095796, owner() returned 0xe8dc0fab349ea169283c48ccfd09d797e6db7c94. The blacklist verdict remains Yes.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurA19sUSDe)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "The current Ethereum StakedUSDeV2 implementation inherits active holder restrictions: BLACKLIST_MANAGER_ROLE can addToBlacklist/removeFromBlacklist, FULL_RESTRICTED_STAKER_ROLE blocks transfers and withdrawals, and DEFAULT_ADMIN_ROLE can redistributeLockedAmount by burning and reminting a restricted holder's shares. At Ethereum@26224760 (2026-10-19T06:14:11+00:00), hasRole(keccak256(\"BLACKLIST_MANAGER_ROLE\"),0x3b0aaf6e6fcd4a7ceef8c92c32dfea9e64dc1862)=true; owner()=0xe8dc0fab349ea169283c48ccfd09d797e6db7c94 and hasRole(DEFAULT_ADMIN_ROLE,owner)=true. Additional currently active blacklist managers0x21f9236e8ee76474284fe8cde6ece6c8d19d781e and0x49e9f81a5ce0d492799c14049aef12df7bc955fe were also confirmed from grant logs and pinned membership reads. Materiality was measured rather than inferred from a missing chain breakdown: totalSupply974,615,217.656517 shares minus the pinned balance280,863,752.149420 held by official StakedUSDeOFTAdapter0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2 leaves693,751,465.507097 canonical shares,71.144736% of the global975,126,902.791292 share estimate (API USD circulating value divided by redeem price1.2533558006916987). Plasma is also material: at block35449291, its StakedUSDeOFT0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2 totalSupply185,695,471.068352 shares is19.043211%. The verified Plasma token checks blackList for both sender and recipient on every _update, and owner0xabd3645ba0bb60c238bede64378826e1206f5072 can directly updateBlackList and seize blacklisted balances with redistributeBlackListedFunds. blackLister()=0 does not remove this direct owner path. Both material implementations therefore independently support Yes. Parent USDe is classified Upstream on issuer/custodial backing, but parent status does not weaken these direct active controls. Other bridged supply is within the approximately9.81% remaining allocation; no unmeasured peripheral deployment is used to set this verdict.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "redundant-with-failover",

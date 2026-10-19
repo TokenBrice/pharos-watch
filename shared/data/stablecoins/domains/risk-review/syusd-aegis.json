@@ -1,11 +1,25 @@
 {
   "id": "syusd-aegis",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "Verified sYUSD implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb0c63bB1667b6e9215AEe562aF2957739B2676fE"
+      },
+      {
+        "label": "Pinned Ethereum JSON-RPC proxy reads",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
+      },
+      {
+        "label": "Pharos deployment shares observed 2026-10-19",
+        "url": "https://api.pharos.watch/api/stablecoins"
+      }
+    ],
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: sYUSD resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "evidence": "sYUSD resolves Possible, not Yes. Ethereum holds 99.9902% of supply (2026-10-19 supply data); BSC 0.0098% is sub-threshold. At Ethereum block 26224780 (2026-10-19T06:18:11Z), sYUSD 0xfe0ccc9942e98c963fe6b4e5194eb6e3baa4cb64 is a TransparentUpgradeableProxy with EIP-1967 implementation 0xb0c63bB1667b6e9215AEe562aF2957739B2676fE and admin 0x5b35fCa1874083000a6Ef64fF27C891f311282a9; the admin contract's owner() is 0x4Fe78eF65BD8EDDED480efaB030BA680646503c8. The verified implementation is an ERC-4626 vault with ADMIN_ROLE-settable cooldown (maximum 90 days), instant-unstaking fee, rescueTokens, and proxy-admin upgradeability; it has no blacklist, freeze, transfer allowlist, or owner/receiver-keyed withdrawal gate. Cooldown and fee changes are global and cannot target a holder, so they do not create Yes. The declared parent YUSD resolves Yes (95.2681% Ethereum deployment with owner blacklist) and sYUSD is a 100% YUSD claim, but a direct Possible surface is not narrowed by upstream exposure.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "oracleless",

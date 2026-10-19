@@ -10,11 +10,27 @@
       {
         "label": "Solana finalized Token-2022 mint observation",
         "url": "https://api.mainnet-beta.solana.com"
+      },
+      {
+        "label": "Current verified CHFAU implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5cad3aaaef687009665d15fed23ded57862ee003"
+      },
+      {
+        "label": "Verified external blacklist manager",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x699be2F931257c6Df3BF39C074b6c3324984f5a7"
+      },
+      {
+        "label": "Pinned Ethereum implementation/roles/supply",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Arc supply RPC",
+        "url": "https://rpc.mainnet.arc.io"
       }
     ],
-    "evidence": "CHFAU whitepaper v1.2, Clause 3(4), reserves the issuer's right to block transfers to or from blacklisted addresses. At finalized Solana slot 452213349, the issuer-listed CHFAU mint had freeze, permanent-delegate, and pause authority APJqyTzEng2jeLoyvRSZYgTpaZDBdxMetkvUSmvRMbTP. This directly verifies issuer-controlled transfer restrictions rather than inferring them from governance classification.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurB08CHFAU)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "Reviewed 2026-10-19. Census circulating-supply coverage is unavailable, so all six registered deployments were measured directly instead of treating a missing chain as material by default. Ethereum totalSupply is 39,353,792.921656 at block 26224773 (2026-10-19T06:16:47Z); Base is 709 at block 52800636; Solana is 521 at finalized slot 458730415; Polygon (block 0x5b5a459), Tempo (44841402) and Arc (26729362) return zero. The full additive registered-token-supply denominator is 39,355,022.921656 CHFAU: Ethereum 99.996875%, Base 0.001802%, Solana 0.001324%. At Ethereum block 26224761 (2026-10-19T06:14:23Z), CHFAU resolves to verified AllUnity implementation 0x5cad3aaaef687009665d15fed23ded57862ee003 and uses external blacklist registry 0xeafba0d16d6a0ff3c6c5d0a46ca7b8fbff21a9d3. Registry BLACKLISTER_ROLE is actively held by EOA 0x72b604de032cb733e18d06d91ccc87bb4a9df637. Current _update checks restrict blacklisted transfer senders and recipients, and the implementation supports role-gated burn from blacklisted holders. Thus the material Ethereum deployment establishes Yes. Whitepaper v1.2 Clause 3(4) expressly reserves blacklisted-address transfer blocking. Solana's current freeze, permanent-delegate and pause authority remains APJqyTzEng2jeLoyvRSZYgTpaZDBdxMetkvUSmvRMbTP, confirming the earlier slot 452213349 observation, but it is immaterial and not verdict-setting. No declared parent; the CHF reserve basket is secondary to this direct control.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

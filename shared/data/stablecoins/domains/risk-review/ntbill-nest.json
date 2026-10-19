@@ -6,11 +6,39 @@
       {
         "label": "Docs",
         "url": "https://docs.nest.credit/"
+      },
+      {
+        "label": "Exact Solana mint deployment",
+        "url": "https://explorer.solana.com/address/2sA2jW9e8EYJkLFpq9hkhxfVUQBwVGJwq6iP4TmTKrL4"
+      },
+      {
+        "label": "Issuer vault metadata and TVL denominator",
+        "url": "https://api.nest.credit/v1/vaults/nest-treasury-vault"
+      },
+      {
+        "label": "Pinned share-rate accountant verified source",
+        "url": "https://eth.blockscout.com/address/0x0b738cd187872b265a689e8e4130c336e76892ec?tab=contract"
+      },
+      {
+        "label": "Plume verified share token source",
+        "url": "https://explorer.plume.org/address/0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9?tab=contract"
+      },
+      {
+        "label": "Verified Ethereum BoringVault share token source",
+        "url": "https://eth.blockscout.com/address/0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9?tab=contract"
+      },
+      {
+        "label": "Nest illicit activity screening / token freezing terms",
+        "url": "https://docs.nest.credit/security-and-compliance/terms-and-conditions/"
+      },
+      {
+        "label": "Verified transfer blacklist hook",
+        "url": "https://eth.blockscout.com/address/0xb9b833b35640428e09c2d450f36ac4f91f58cb47?tab=contract"
       }
     ],
-    "evidence": "Nest retains issuer / admin authority over vault shares with permissioned issuance and freeze surfaces beyond reserve-only exposure.",
-    "reviewer": "Codex RWA expansion review",
-    "reviewedAt": "2026-05-12"
+    "evidence": "Supply data omit this token. We therefore measured Ethereum totalSupply=3,378,761.482640 shares at Ethereum block 26224667 (2026-10-19T05:55:35Z), Plume totalSupply=4,241,336.215137 shares at block 100304741 (2026-10-19T06:18:16+00:00), and the Ethereum accountant getRate=1.060017 quote units/share. Against issuer API TVL $8,077,917.702806 retrieved 2026-10-19T06:17:54Z, estimated deployment shares are Ethereum 44.3375% and Plume 55.6565%, both material. [INFERENCE] This converts issuer TVL to a token-supply denominator at the pinned exchange rate; it is not a synchronized all-chain circulating-supply reconciliation. Ethereum 0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9 is a verified non-proxy BoringVault. At block 26224667 (2026-10-19T05:55:35Z), owner()=0x8faacdc65de5d78975df4f9dc4b6548979ceb23a; the existing owner-authorized exit(to,asset,assetAmount,from,shareAmount) burns shares from arbitrary from without holder allowance, and assetAmount may be zero. Thus an active arbitrary-holder privileged burn, not merely an upgrade/pause possibility, establishes Yes. A read-only eth_call from the owner to exit with zero amounts succeeded; no transaction was submitted. The token also had hook()=0xb9b833b35640428e09c2d450f36ac4f91f58cb47, a verified BlacklistHook whose beforeTransfer(from) rejects blacklisted senders; hook owner()=0xa08a0dc480bd60d1d56c8eec6c722125eafea982, while isPaused=false (authority active even when not currently pausing). At finalized Solana slot 458729857 (2026-10-19T06:15:02+00:00), mint 2sA2jW9e8EYJkLFpq9hkhxfVUQBwVGJwq6iP4TmTKrL4 retained freezeAuthority 2t7oMT4T4EcVyMbsqcPcy6vVf6cctXSdhZA8PD3U3xvX; measured supply was 400.938647 shares (approximately 0.0053% using the same TVL/rate denominator). Nest terms section 6.2 expressly describe freezing suspicious wallets and Kimber Labs limited administration, consistent with these directly verified controls. No parent is declared. Reserve exposure cannot override the higher-priority direct Yes verdict; no reserve-majority measurement is used as its basis.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",

@@ -1,7 +1,7 @@
 {
   "id": "scrvusd-curve",
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "scrvUSD Ethereum contract",
@@ -14,11 +14,23 @@
       {
         "label": "scrvUSD exact-match YearnV3Vault clone",
         "url": "https://sourcify.dev/server/v2/contract/1/0xd8063123bba3b480569244ae66bfe72b6c84b00d"
+      },
+      {
+        "label": "Verified fixed Yearn V3 implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd8063123bba3b480569244ae66bfe72b6c84b00d"
+      },
+      {
+        "label": "Pinned Ethereum authority reads",
+        "url": "https://etherscan.io/block/26224667"
+      },
+      {
+        "label": "OP bridged token source",
+        "url": "https://optimism.blockscout.com/api/v2/smart-contracts/0x289f635106d5b822a505b39ac237a0ae9189335b"
       }
     ],
-    "evidence": "Re-reviewed on 2026-10-01 at Ethereum block 26098749 for the authored canonical vault 0x0655977feb2f289a4ab78af67bab0d17aab84367. Runtime bytecode is an EIP-1167 clone fixed to implementation 0xd8063123bba3b480569244ae66bfe72b6c84b00d; its exact-match Yearn V3 source implements balance/allowance-based share transfers without holder blacklist, freeze, seizure, or privileged transfer hooks. asset() identifies crvUSD, totalDebt() is zero, and totalIdle() equals totalAssets(). Canonical share transfers have no local holder restriction, while upstream collateral restrictions remain inherited: the crvUSD cbBTC controller has positive debt, and cbBTC's current implementation exposes blacklist and pause with nonzero blacklister and pauser addresses. Those upstream controls are not a direct blacklist on scrvUSD or canonical crvUSD transfers. Curve also documents six bridged scrvUSD representations; this review does not establish their controls or transfer materiality and is limited to the authored Ethereum deployment.",
-    "reviewer": "Sol curation pass 2026-10-01 (R2WCurve)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "Canonical scrvUSD0x0655977feb2f289a4ab78af67bab0d17aab84367 is a fixed EIP1167 Yearn V3 clone to0xd8063123bba3b480569244ae66bfe72b6c84b00d, with ordinary share transfers and no direct blacklist, seizure or arbitrary-holder privileged burn. At Ethereum block26224667 (2026-10-19T05:55:35Z), asset() is crvUSD, withdraw_limit_module() and deposit_limit_module() are zero, but role_manager() is the deployed governance contract0x40907540d8a6c65c637785e8f8b742ae6b0b9968. The exact source lets that manager grant WITHDRAW_LIMIT_MANAGER, whose setter can install a module enforcing available_withdraw_limit(owner,max_loss,strategies) inside _redeem. That dormant configurable holder-specific exit restriction is direct Possible, even though current share transfers are permissionless and the implementation itself is fixed. Supply reads around2026-10-19T06:18:55Z found canonical13329782.075484 shares and bridged total184862.568012; subtracting bridged escrow from canonical supply puts canonical end-holder balances at about98.6132% and every peripheral deployment below1%. The XDC endpoint returned a2026-10-16 block and is explicitly stale. Peripheral bridge burners are disclosed but do not determine this verdict. The declared crvUSD parent remains an asset claim, but its reserve test is separately classified No and, regardless of that outcome, direct Possible takes precedence. The prior26098749 observation of zero strategy debt and idle-only assets remains a historical fact, not evidence that holder-facing management is absent.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "standard-external",

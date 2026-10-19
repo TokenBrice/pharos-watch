@@ -9,10 +9,13 @@ import { projectSafetyScoreV9CommonModeGroups } from "@shared/lib/safety-score-v
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { structuralSignalNeedsHardCap } from "@shared/lib/safety-score-v9/formula";
 import { resolveV9PublicWitnessTexts } from "@shared/types/safety-score-v9-public-witness-texts";
+import { capturedAccessMetaById } from "./safety-score-v9-capture.test-support";
 
 function replay() {
   const fixedInput = createReportCardsFixedInput(capture.draft as unknown as ReportCardsFixedInputDraft);
-  const pipeline = buildSafetyScoreV9Candidate({ fixedInput, publishedAtSec: capture.publishedAtSec });
+  const pipeline = buildSafetyScoreV9Candidate({
+    fixedInput, publishedAtSec: capture.publishedAtSec, registry: { metaById: capturedAccessMetaById },
+  });
   const publication = pipeline.candidate;
   const report = projectSafetyScoreV9PublicationToPublicSnapshot(publication, {
     schemaVersion: 2, status: "current", acceptedPublicationGenerationId: publication.publicationGenerationId,

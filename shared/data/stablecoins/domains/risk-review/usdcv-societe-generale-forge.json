@@ -2,10 +2,24 @@
   "id": "usdcv-societe-generale-forge",
   "blacklistabilityReview": {
     "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Verified shared SmartCoin implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf4ccc80c4b831a0d8d1414f2aca82a3d760ff05b"
+      },
+      {
+        "label": "Ethereum USDCV proxy",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5422374b27757da72d5265cc745ea906e0446634"
+      },
+      {
+        "label": "Solana USDCV mint",
+        "url": "https://explorer.solana.com/address/8smindLdDuySY6i2bStQX9o8DVhALCXCMbNxD98unx35"
+      }
+    ],
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: USDCV resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "evidence": "USDCV has active direct holder controls on both material deployments. At Ethereum block26224667 (2026-10-19T05:55:35Z), token0x5422374b27757da72d5265cc745ea906e0446634 resolved through the EIP1967 implementation slot to verified SmartCoin0xf4ccc80c4b831a0d8d1414f2aca82a3d760ff05b. getOperators() returned registrar0x7de0bbdfcd4a6a956f149befcca30d6b5bc5da69; its onlyRegistrar freeze(address[])/unfreeze(address[]) block holder operations and wipeFrozenAddress(address) burns a frozen holder balance. Solana mint8smindLdDuySY6i2bStQX9o8DVhALCXCMbNxD98unx35 at finalized slot458730933 (2026-10-19T06:18:52Z) has nonnull freezeAuthority and permanentDelegate5tg4qRdiXJ7XxYd6KK4UnnNvxgHJqfBUygPqZLwSnhnt. Observed Ethereum supply8936826 and Solana1989380 imply81.7926%/18.2074%, confirming both material census deployments. No parent or reserve-majority inference is needed for Yes; bank reserves do not replace the direct control basis.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

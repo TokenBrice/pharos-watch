@@ -14,11 +14,19 @@
       {
         "label": "YToken exact-match implementation",
         "url": "https://sourcify.dev/server/v2/contract/1/0x5bf44d32260aee6b807c490e92ef0481d15ab493?fields=sources,compilation"
+      },
+      {
+        "label": "Current Administrator verified source and blacklist events",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xccaa27e3db44e06bd9001958de5b41301fd28002"
+      },
+      {
+        "label": "Ethereum fixed-block role and proxy state",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
       }
     ],
-    "evidence": "Re-reviewed 2026-07-22: the exact YToken implementation rejects blacklisted senders and recipients in _update, and its manager can call burnYToken(from, shares) without an allowance. These are direct holder restriction and seizure controls; true replaces the prior possible posture.",
-    "reviewer": "GPT SOL-CORP-C wave6",
-    "reviewedAt": "2026-07-22"
+    "evidence": "YUSD remains direct Yes. On Ethereum block 26224667 (2026-10-19T05:55:35Z), proxy 0x19ebd191f7a24ece672ba13a302212b5ef7f35cb resolved to exact YToken implementation 0x5bf44d32260aee6b807c490e92ef0481d15ab493. Its _update rejects blacklisted senders and recipients using administrator 0x10472f91f67c49260bdd65f016ea0757bb1fc91e. The Administrator implementation 0xccaa27e3db44e06bd9001958de5b41301fd28002 exposes blackListUsers/removeBlackListUsers guarded by ADMIN_ROLE=keccak256(\"ADMIN\"). At the same pin hasRole(ADMIN_ROLE,0x241ac00dc77fc1981e0483de3da3828b787b8764)=true and that controller has empty code (EOA); isBlackListed(0xb1ca4a18aff443656f407fa8be3533ff27dde911)=true. Thus the current holder-blacklist function has a live assigned controller. YToken also contains manager-only burnYToken(from,shares) without allowance, and manager()=0x03acc35286baae6d73d99a9f14ef13752208c8dc, but independent arbitrary-holder burn reach through Manager is not asserted. Missing API supply was resolved with pinned totalSupply reads across all ten registered deployments: aggregate raw 18-decimal outstanding supply 10912390829868101728670281, of which Ethereum 10712859371583353918910978 (98.1715%). Arbitrum 0.0932%, Base 1.0452%, Optimism 0.0923%, Sonic 0.0216%, Plume 0.2439%, Katana 0.0071%, BSC 0.0529%, Avalanche 0.2032%, and Plasma 0.0690% are sub-threshold. Pins span 2026-10-19T05:54:45Z–06:17:20Z and measure outstanding shares, not a USD circulating total. The single material Ethereum deployment suffices for Yes; no verdict relies on peripheral controls. The declared USDC strategy-vault parent remains additive upstream exposure; no unmeasured private-strategy look-through is used.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "single-source-or-laggy",

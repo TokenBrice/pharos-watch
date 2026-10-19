@@ -16,9 +16,9 @@
         "url": "https://api.mainnet-beta.solana.com"
       }
     ],
-    "evidence": "JAAA is issued through permissioned fund or issuer rails with KYC-gated primary-market access and issuer/admin controls over transfer, mint, redemption, or token administration. At finalized Solana slot 452212543, the JAAA Token-2022 mint names BUo4FKP1hSAZ1zcNGzJHTS1V9zcQM8fzUFpYj1NboRK4 as mint authority, freeze authority, and permanent delegate; its default account state is frozen. These current controls directly confirm the reviewed access restrictions.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurA26JAAA)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "RPC https://solana-mainnet.g.alchemy.com/v2/[redacted], finalized getMultipleAccounts(jsonParsed) mint slot 458745419 (2026-10-19T07:11:10Z), individual getAccountInfo(jsonParsed) authorities slots 458747158–458747159; curve check solders.Pubkey.is_on_curve. JAAA mint AAAJXeGjpKu7W3X4QTSU4pm1Wbj4G2LPcdg7A6xJLLyG is Token-2022-owned and has freezeAuthority=permanentDelegate=BUo4FKP1hSAZ1zcNGzJHTS1V9zcQM8fzUFpYj1NboRK4; the authority is on-curve, System-owned, non-executable, zero-data (no issuer PDA signing restriction). defaultAccountState=frozen. Current on-curve authority can freeze/thaw arbitrary token accounts and delegate-burn/transfer. Fresh Solana supply78,659,094.622326; measured EVM supplies Ethereum278,485,698.245540@26225059, Base21,633,262.194233@52802360, BSC970,313.950456@128512399, Avalanche250,000,001@97947733, Monad483,418.078659@114692951. Total630,231,788.091214; Solana12.48098%, material. This is an active Yes holder-freeze authority. The earlier sharePct0 figure is wrong, not evidence of zero supply. No fail-closed materiality assumption is necessary. https://solana.com/docs/tokens/basics/freeze-account",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

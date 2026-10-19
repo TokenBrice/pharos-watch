@@ -1,7 +1,7 @@
 {
   "id": "dusd-standx",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "StandX DUSD minting documentation",
@@ -12,9 +12,9 @@
         "url": "https://api.mainnet-beta.solana.com"
       }
     ],
-    "evidence": "At finalized Solana slot 452230743 on 2026-10-01, the tracked Token-2022 DUSD mint still had mintAuthority and freezeAuthority H4Mp7WL282pdbY9V9N7AJnsQwB5yyrU1E7svfsH2Ur5h, owned by StandX Settler program STANDKqqZERMKosYH2PAtNtnt6mig4CRPycsRwjuVhB. The program is upgradeable: program data 4XNF9sPKbX3SAor8mm8HDbWycw7qGC642NJs6mePqXQe reported authority 8BRbk69F5dnPrxvnnWMhmWVyqECWnGcYDfMT8G96JzBh. The prior immutable-program statement was incorrect. The freeze authority remains present, so centralized freeze exposure is retained.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurA62sUSD1)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "RPC https://solana-mainnet.g.alchemy.com/v2/[redacted], finalized getMultipleAccounts(jsonParsed) mint slot 458745419 (2026-10-19T07:11:10Z), individual getAccountInfo(jsonParsed) authorities slots 458747158–458747159; curve check solders.Pubkey.is_on_curve. DUSD Solana23.917% mintDUSDt4AeLZHWYmcXnVGYdgAzjtzU5mXUVnTMdnSzAttM freezeAuthorityH4Mp7WL282pdbY9V9N7AJnsQwB5yyrU1E7svfsH2Ur5h is off-curve, non-executable608-byte account owned by STANDKqqZERMKosYH2PAtNtnt6mig4CRPycsRwjuVhB. Not an on-curve keypair/SPL multisig/Squads vault. Deployed program getAccountInfo at458747688 and ProgramData4XNF9sPKbX3SAor8mm8HDbWycw7qGC642NJs6mePqXQe at458747721: executable upgradeable-loader program,lastDeploy321082378,upgradeAuthority8BRbk69F5dnPrxvnnWMhmWVyqECWnGcYDfMT8G96JzBh (on-curve,System-owned,non-executable,zero-data). Current ELF SHA2565f218a5d083da689f38c1c49ccffe133f12ea898acded638c3073e5679def050 lists Initialize,GatewayTransferOut,GatewayTokenMint,GatewayTokenBurn,TransferDusdAuth,SetVault,SetGateway,AdminTokenMint,AdminTransferOut; no Freeze/Thaw or identified admin arbitrary-holder seizure/burn entrypoint. Standard Anchor IDLB7mjmtBxeuXF7sxq9uYoJKkVNTsuSZWYXW6Z6c8Kj2n1 absent. Because the authority is off-curve and not a usable signing keypair, this is upgrade-only Possible, not active SPL freeze Yes. Official controller roster https://docs.standx.com/docs/dusd-solutions/key-addresses. The BSC 76.083% burnOnBehalfOf arbitrary-account surface is assigned to contract Settler0x2c02f575cdd0cc87de89ae6a493b05a5ed95065a, not a direct signing EOA; existing role pin128504633 does NOT establish current arbitrary-holder burn reachability. Source: https://www.codeslaw.app/contracts/bnbchain/0x23fD9DfB3F5772034ED677aEb15f048dA53A04eD shows gateway call surface, and older gateway https://www.codeslaw.app/contracts/bnbchain/0xb6820fb2ab3572cdadde31844679d4e9adb66760 routes withdrawal burn with msg.sender (self-burn). Current Gateway behavior is unverified, so cannot count BSC as independently established Yes. Official signed-user redemption flow https://docs.standx.com/docs/dusd-solutions/redeeming-dusd. Live DEFAULT_ADMIN_ROLE Safe0x6c2404092cb1acfe9a06bc7de61bf619933edba5 (3-of-4) can add direct token minters, independently establishing Possible. Limitation: BSC current Gateway source/authorization path not proven; a separately proven current admin arbitrary-burn route would restore Yes.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "redundant-with-failover",

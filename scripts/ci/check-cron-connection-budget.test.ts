@@ -10,6 +10,14 @@ describe("check-cron-connection-budget", () => {
     expect(reviewedReport.triggerReports.find((trigger) => trigger.scheduleKey === "quarterHourly")?.groups.get("quarter-hourly-chain")?.peak).toBe(4);
   });
 
+  it("declares Queue recovery separately with serial send and unchanged cron peaks", () => {
+    expect(reviewedReport.nonCronReports).toEqual([{
+      surface: "reserve-continuation", worker: "public", totalConnections: 3, postSettlementSendConnections: 1,
+    }]);
+    expect(reviewedReport.triggerReports.find((entry) => entry.scheduleKey === "fourHourlyReserveSync")?.totalConnections).toBe(4);
+    expect(reviewedReport.triggerReports.find((entry) => entry.scheduleKey === "fiveMinuteReserveRecovery")?.totalConnections).toBe(3);
+  });
+
   it.each([
     // P2-03 registers the same-day PSI and public-dataset catch-ups in the declared quarter-hourly chain.
     ["quarterHourly", ["sync-fx-rates", "sync-stablecoins", "snapshot-supply", "snapshot-chain-supply", "snapshot-psi", "snapshot-public-dataset"], 4],

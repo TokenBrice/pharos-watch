@@ -6,7 +6,7 @@ Multi-chain blacklist/freeze event tracker for stablecoins. Every six hours, the
 
 ## Methodology And Ownership
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-blacklist-tracker -->`v4.3`<!-- GENERATED-END: methodology-version-blacklist-tracker -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-blacklist-tracker -->`v4.4`<!-- GENERATED-END: methodology-version-blacklist-tracker -->
 - **Version source:** `shared/lib/methodology-versions/registry.ts`
 - **Public changelog:** `/methodology/blacklist-tracker-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/blacklist-tracker/`
@@ -27,30 +27,87 @@ Every stablecoin ID in `CONTRACT_CONFIGS` must resolve to direct `Freezable: Yes
 
 ## Public Exposure Contract
 
-The `/freezewatch/` exposure summary uses `buildBlacklistStatusBuckets()` and the same resolved four-state model as Report Cards:
+The `/freezewatch/` exposure summary uses `buildBlacklistStatusBuckets()` and the same reviewed
+four-state model as Report Cards: **Yes** (`true`), **Possible** (`"possible"`), **Upstream**
+(`"inherited"`), and **No** (`false`). These are exposure classes, not probabilities or evidence of
+an observed freeze. Apply the following procedure in order; a direct verdict takes precedence over
+upstream exposure.
 
-- `yes`: direct issuer blacklist, freeze, seizure, or equivalent holder-facing control.
-- `upstream`: the token has no direct `yes` or `possible` holder-facing freeze control, but strictly more than 50% of its reserve composition is exposed to assets or rails classified `yes`, `upstream`, or `possible`. Tracked parent/wrapper inheritance, full CEX custody, and custodial fiat reserves (per the scoping rules below) still resolve as upstream exposure.
-- `possible`: a curated direct pause, blacklist, freeze, or mutable holder-facing control exists but is not confirmed as an active direct blacklist control.
-- `no`: no exposure resolves under the current model.
+### FreezeWatch Decision Procedure
 
-Review scoping rules:
+1. **Measure material deployments first.** Use each deployment's share of circulating supply against
+   `semantic.materiality.deploymentMaterialSharePct` in the Safety Score policy (currently ≥10%).
+   If a share is missing, measure deployment supply against the asset total with pinned observations
+   before failing closed. A share that still cannot be established is treated as material and flagged.
+   Materiality is per deployment: never sum individually sub-threshold deployments to set a verdict,
+   even under one controller. Disclose their controls and combined share without changing the status.
+2. **Yes: a current holder-targeted control on a material deployment.** This includes blacklist,
+   address freeze, seizure, forced transfer, allowlist-gated transfers, enforced sanctions/denylist
+   oracles, active holder-targeted wrapper/savings-share redemption or withdrawal gates, chain-native freeze/clawback/KYC keys,
+   and privileged burns from arbitrary holders. Verify the current implementation and at least one
+   current, non-renounced authority or role member whose reachable code can target arbitrary holders;
+   an empty blacklist or no past exercise does not negate an assigned power. An admin that can grant
+   the denylist-state role or set the denylist flag directly on a victim already has that power,
+   even if an intermediate blacklist-manager role is empty.
+   A wrapper that can impose or reimpose locks on existing balances without holder consent is also
+   Yes, including a `wrapAndLock` path that revives persistent locks.
+   A Solana/SPL freeze authority or permanent delegate is a current member only when its holder can
+   sign today (a keypair, SPL multisig or Squads-style vault). A program PDA qualifies only if the
+   current program exposes an admin-callable freeze/seize instruction. Otherwise that authority
+   supplies only upgrade exposure: Possible if the program is upgradeable, not an active Yes control.
+3. **Possible: no Yes, but a direct holder-facing surface on a material deployment.** This includes
+   a global transfer pause without address targeting; any admin- or DAO-upgradeable token
+   implementation, regardless of delay; an empty/incapable burner or blacklist-operator role that an
+   admin/governor can populate with an arbitrary-holder-capable operator; a dormant configurable
+   transfer or wrapper/savings exit gate, or unenforced sanctions oracle with a live setter; an upgradeable canonical
+   bridge's holder-burn surface; and qualifying chain-consensus interventions able to halt transfers.
+   Chain-consensus Possible is limited to interventions shipped by the issuer, interventions on a
+   chain the issuer controls (such as Zephyr or Hive/HBD), or host-chain changes specifically targeting
+   the asset or its holders. Generic L1 upgradeability and third-party host-chain-wide rollbacks
+   do not count.
+   A wrapper/savings share whose own redeem/withdraw path can be globally paused is also Possible,
+   on the same footing as a global transfer pause, only when its value is the redemption claim on
+   wrapped underlying. This does not extend to a primary stablecoin's redemption rails.
+   A current burner whose code reaches only itself, callers or protocol pools is not an arbitrary-holder
+   burner. Granting an operator first is Possible; directly assigning a victim's denylist state is Yes.
+   The DAO carve-out below applies only to collateral, never to the token's own upgradeability.
+4. **Upstream: no direct Yes/Possible, and a qualifying parent or reserve basis.** A holder claim
+   inherits a declared parent (`variantOf` or `mintAuthority.inheritedFrom`) whose reviewed status is
+   Yes, Possible or Upstream. Full CEX custody of reserves also qualifies. Otherwise, **strictly >50%**
+   of the measured reserve composition must terminate in issuer/custodian control under the test below.
+5. **No: none of those tests establishes exposure.** Deposit/entry-only gates and caps, permanently
+   abdicated setters, mint-only authority, and increase-only rebases are not holder-facing controls.
+   While a primary stablecoin transfers freely, its redemption rails (PSMs, issuer redemption desks,
+   and CDP/synthetic protocol mint-withdraw paths), protocol-global redemption switches and peripheral
+   swap-facility switches are not holder-facing. A bridge/OFT pause that gates only cross-chain
+   send/receive is not a transfer pause. An immutable burner set with no arbitrary-holder-capable
+   member and a renounced admin supplies no direct control. Unmeasurable reserves never establish
+   Upstream: exhaust the direct-control review, disclose `UNRESOLVED-RESERVE:` and low confidence if
+   the remaining verdict is No, rather than asserting absence of upstream risk.
 
-- **Upstream collateral counts only when an issuer or custodian controls it.** Exposed reserve
-  assets or rails are issuer-freezable tokens (for example USDC, USDT, cbBTC, cbETH), custodian-pausable
-  wrappers (WBTC), CEX custody, and custodial fiat reserves held at banks or fund managers. Collateral
-  whose only control is DAO or protocol governance (an upgradeable or DAO-pausable token such as stETH
-  and therefore wstETH, stake-pool LSTs such as jitoSOL) does not count toward the 50% threshold.
-- **Direct controls on the stablecoin itself are not narrowed by that rule.** An admin-upgradeable
-  token proxy, a governor that can authorize new burners or forced-transfer operators, and an
-  issuer-shipped consensus change that has halted holder transfers all remain `possible` or `yes`.
-  A rebase that can only increase balances is not a holder-facing control.
-- **Deployment scope follows the Safety Score V9 materiality threshold**
-  (`semantic.materiality.deploymentMaterialSharePct`). A control on a deployment below that share of
-  circulating supply is recorded in the review evidence but does not set the verdict.
-  The detail card's `Not freezable` note and static quick answers describe that materiality-scoped
-  verdict, not an absence of controls on every peripheral deployment. Peripheral controls remain
-  disclosed in the review notes even when they do not set the verdict.
+**Reserve test.** Count issuer-freezable tokens, custodian-pausable wrappers, CEX custody, and
+custodial fiat, bank deposits, fund-manager/fund claims, T-bills and allocated physical commodity at
+a custodian/vault operator. A collateral slice counts at its full value when its correct Yes,
+Possible or Upstream basis terminates in issuer/custodian control; nested exposure is categorical,
+not pro-rated by the collateral token's own exposed fraction. DAO/protocol-governance-only collateral
+(including DAO-only upgrades/pauses and LSTs such as stETH/wstETH or jitoSOL) does not count.
+For CDP/lending coins, weight each market's debt by the qualifying value fraction of its collateral;
+reserve-backed coins use published reserve composition. Split LP/basket rows by constituent value.
+Own-token/self legs remain in the denominator but never the numerator. Self legs are the coin itself
+and its own wrappers/savings shares; a different token from the same issuer counts at its own status.
+State the denominator and qualifying percentage; give pro-rated or alternative-denominator
+sensitivities when they would change the >50% result, without substituting them for the primary metric.
+
+**Evidence.** Name the reviewed deployments, supply shares and observation dates; cite verified
+source/implementation and pin chain, block, timestamp, call and result for decisive live reads.
+Identify role members, reachable holder-targeting paths, upgrade/setter authority and oracle
+enforcement, not merely role names or governance labels. Name any parent and claim relationship,
+or CEX/custodian and reserve components, metric, denominator and measured percentage. A No review
+explicitly addresses direct controls on every material deployment, parent and reserve tests.
+Retain peripheral controls and unresolved facts as qualifications; missing/failed reads and
+centralized-governance metadata alone prove neither an active Yes control nor reserve-majority exposure.
+The detail card's `Not freezable` note and quick answers describe this materiality-scoped verdict,
+not an absence of controls on every peripheral deployment.
 
 The public buckets read `blacklistabilityReview.reviewedStatus` through the generated client-registry
 `blacklistStatus`. That reviewed registry value is the sole product-level status authority. Safety
@@ -228,13 +285,23 @@ Live repair requires `--execute --confirm repair-tron-blacklist-amounts`. The co
 6. Circle mirror actions can produce auditable zero-balance EURC rows. `circle_mirror_zero_balance` rows remain stored but are excluded from public events, active records, and frozen-value aggregates.
 7. Seize-only BUIDL coverage records destroy events; it does not create an active blacklist/freeze state.
 
+PAXG Ethereum scans both historical `AddressFrozen` / `AddressUnfrozen` and current
+`FreezeAddress` / `UnfreezeAddress` topics, with one shared amountless `FrozenAddressWiped`
+definition. Avalanche USDT uses indexed `BlockPlaced` / `BlockReleased` /
+`DestroyedBlockedFunds` events from its deployment block; its history does not use the legacy
+Tether family. Arbitrum and Polygon USDT retain both families for historical replay.
+
 Explicit current limitations also remain source-tested:
 
 - RLUSD clawbacks are not event-covered because the verified ABI has no dedicated clawback event. Supporting them would require transaction-input classification.
 - USDA role-gated burns are not mapped to destroy rows because the contract does not emit the configured Tether destroy event.
+- Binance-Peg USDT on BSC and legacy bridged USDT on Optimism are not scanned: their verified
+  contracts do not emit blacklist events. Optimism's separate USDT0 deployment remains scanned.
+  Removing a non-emitting scan does not delete stored event history or cursor rows.
 
 Canonical coverage and parser tests live in:
 
+- `worker/src/lib/__tests__/blacklist-contracts.test.ts`
 - `worker/src/cron/blacklist/__tests__/blacklist-contracts.test.ts`
 - `worker/src/cron/blacklist/__tests__/evm-source.test.ts`
 - `worker/src/cron/blacklist/__tests__/evm-source-coverage.test.ts`

@@ -20,8 +20,8 @@
         "url": "https://rpc.tempo.xyz"
       }
     ],
-    "evidence": "At Tempo block 30043787, pathUSD reported paused() = false and transferPolicyId() = 2. The TIP-20 specification and implementation grant PAUSE_ROLE the ability to halt transfers, allow DEFAULT_ADMIN_ROLE to replace the transfer policy, and grant BURN_BLOCKED_ROLE the ability to burn tokens from accounts blocked by the active policy. The current unpaused state does not remove those privileged transfer-control paths, so direct restriction/freeze capability is established.",
-    "reviewer": "Codex Safety Score V9 access review",
-    "reviewedAt": "2026-07-15"
+    "evidence": "pathUSD is 100% on Tempo in the census. Its live transferPolicyId=2 is a chain-global TIP-403 blacklist policy, not merely an unverified future role surface. At Tempo block 44844395, policyData(2) returns BLACKLIST and nonzero admin 0x251d2711ebeb0a09fdb8992f5506f3d949175246; an eth_call simulation confirms that admin can add a named account without any token-role grant or upgrade. TIP-20 transfers enforce the policy on senders and recipients. Therefore pathUSD is direct Yes even if PAUSE_ROLE and BURN_BLOCKED_ROLE have no members. The same policy/admin independently explains OUSD's Yes. No actual blacklist transaction was sent.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   }
 }

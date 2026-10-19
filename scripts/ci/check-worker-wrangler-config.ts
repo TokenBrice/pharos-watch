@@ -66,6 +66,21 @@ export function evaluateWorkerWranglerConfig(
   if (workflows.length > 0) {
     issues.push(`${role} must not declare retired Workflow bindings.`);
   }
+  const queueAssignments = assignments.filter(({ section }) => section.startsWith("queues."));
+  if (role === "public") {
+    expectValue("queues.producers", "binding", '"RESERVE_CONTINUATION_QUEUE"');
+    expectValue("queues.producers", "queue", '"pharos-reserve-continuation"');
+    expectValue("queues.consumers", "queue", '"pharos-reserve-continuation"');
+    expectValue("queues.consumers", "max_batch_size", "1");
+    expectValue("queues.consumers", "max_batch_timeout", "0");
+    expectValue("queues.consumers", "max_concurrency", "1");
+    expectValue("queues.consumers", "max_retries", "3");
+    expectValue("queues.consumers", "retry_delay", "60");
+    expectValue("queues.consumers", "dead_letter_queue", '"pharos-reserve-continuation-dlq"');
+    if (queueAssignments.length !== 9) issues.push("Public must declare exactly the bounded reserve Queue producer/consumer.");
+    const queueMode = values.get(assignmentKey("vars", "WORKER_RESERVE_QUEUE_MODE"));
+    if (queueMode !== '"on"' && queueMode !== '"off"') issues.push('Public WORKER_RESERVE_QUEUE_MODE must be "on" or "off".');
+  } else if (queueAssignments.length > 0) issues.push("Heavy must not declare Queue bindings or consumers.");
   const services = assignments.filter(({ section }) => section === "services");
   const placement = assignments.filter(({ section }) => section === "placement");
   if (role === "public") {

@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   createBufferedAttributionRecorder,
+  requestAttributionInverseRate,
+  selectRequestAttributionSample,
   type AttributionDb,
   type BufferedAttributionEntry,
   type CreateBufferedAttributionRecorderOptions,
@@ -51,6 +53,22 @@ function persistedDb(beforeCommit: () => Promise<void> = async () => {}) {
   };
   return { db, rows };
 }
+
+describe("request attribution sampling policy", () => {
+  it("selects independently below, but not at, the 1/64 threshold", () => {
+    expect([0, 1 / 64 - Number.EPSILON, 1 / 64, 0.5, 0.999]
+      .map((draw) => selectRequestAttributionSample(64, draw))).toEqual([true, true, false, false, false]);
+  });
+
+  it("uses certainty only for Pages transport failures, not HTTP responses or historical cache hits", () => {
+    expect(requestAttributionInverseRate()).toBe(64);
+    expect(requestAttributionInverseRate("pages-upstream-fetch")).toBe(64);
+    expect(requestAttributionInverseRate("pages-cache-hit")).toBe(64);
+    expect(requestAttributionInverseRate("pages-upstream-timeout")).toBe(1);
+    expect(requestAttributionInverseRate("pages-upstream-error")).toBe(1);
+    expect(selectRequestAttributionSample(1, 0.999)).toBe(true);
+  });
+});
 
 describe("createBufferedAttributionRecorder", () => {
   afterEach(() => {

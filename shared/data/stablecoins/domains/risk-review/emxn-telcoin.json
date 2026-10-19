@@ -6,10 +6,18 @@
       {
         "label": "eMXN verified Polygon Stablecoin implementation",
         "url": "https://sourcify.dev/server/v2/contract/137/0x486b5d5760e8e98df2c9fc24f09b2d76893aa1de?fields=sources"
+      },
+      {
+        "label": "eMXN proxy on Polygon",
+        "url": "https://polygonscan.com/address/0x68727e573d21a49c767c3c86a92d9f24bd933c99#code"
+      },
+      {
+        "label": "Polygon PublicNode RPC block 95790384",
+        "url": "https://polygon-bor-rpc.publicnode.com"
       }
     ],
-    "evidence": "The implementation identified in the correct EIP-1967 implementation slot at Polygon block 94755057 inherits Blacklist. Its _update rejects transfers from or to blacklisted addresses, and _onceBlacklisted transfers the blacklisted account's balance to the caller. Direct blacklist and seizure functionality is confirmed in verified source.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurB27ZeUSD)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "Re-derived at Polygon block 95790384 (2026-10-19): the eMXN proxy 0x68727e573d21a49c767c3c86a92d9f24bd933c99 resolves to verified implementation 0x486b5d5760e8e98df2c9fc24f09b2d76893aa1de (Stablecoin), which inherits Blacklist. _update reverts Blacklisted for transfers from or to a blacklisted address, and addBlackList(address) calls _onceBlacklisted, transferring the blacklisted account's entire balance to the caller before setting the flag; the same function is the seizure path. addBlackList/removeBlackList are gated by BLACKLISTER_ROLE. At that block hasRole(BLACKLISTER_ROLE,0xbf58e5b1ed34031579341c79913cdcb81f76415c)=true; a simulated addBlackList(0x000000000000000000000000000000000000dEaD) from that holder succeeds while the same call from 0x000000000000000000000000000000000000bEEF reverts AccessControlUnauthorizedAccount. Polygon is the only deployment and totalSupply is 1,811,699,105,725 base units (1,811.699105725 eMXN), so the active control is on a 100% deployment. Reviewed true.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   }
 }

@@ -1,7 +1,7 @@
 {
   "id": "cadm-mento",
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Celo Forno fixed-block RPC",
@@ -22,12 +22,36 @@
       {
         "label": "Mento stablecoin backing configuration",
         "url": "https://github.com/mento-protocol/mento-analytics-api/blob/36441a61f7ad339fe4998596f6bbed1005342ba8/src/api/v2/config/stablecoin-backing.config.ts"
+      },
+      {
+        "label": "CADm Celo verified proxy",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0xff4ab19391af240c311c54200a492233052b6325"
+      },
+      {
+        "label": "Current verified StableTokenV2 implementation",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x434563b0604be100f04b7ae485bcafe3c9d8850e"
+      },
+      {
+        "label": "Mento Timelock verified source",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x890db8a597940165901372dd7db61c9f246e2147"
+      },
+      {
+        "label": "Mento Governor verified source",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x47036d78bb3169b4f5560dd77bf93f4412a59852"
+      },
+      {
+        "label": "Official Mento deployment authority table",
+        "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
+      },
+      {
+        "label": "Mento reserve analytics",
+        "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
       }
     ],
     "sourceFreeRationale": "The current holder-facing CADm token has no direct governance-controlled blacklist, freeze, pause, seizure, arbitrary-account burn, or transfer-hook restriction. Broker/exchange burn and Celo-VM gas debiting are protocol-scoped, not governance holder-freeze controls. Timelocked proxy upgrade authority is recorded in mint-authority evidence but is not itself a currently executable holder-freeze surface. This direct conclusion does not suppress reserve-derived upstream exposure.",
-    "evidence": "Re-verified 2026-08-08 at Celo block 74317848. CADm 0xff4ab19391af240c311c54200a492233052b6325 still returned Mento Timelock 0x890db8a597940165901372dd7db61c9f246e2147 as owner, Broker 0x777a8255ca72412f0d706dc03c9d1987306b4cad, validators 0xaeb865bca93ddc8f47b8e29f40c5399ce34d0c58, and a zero exchange; its implementation remained verified StableTokenV2 0x434563b0604be100f04b7ae485bcafe3c9d8850e. Verified transfer paths have no blacklist, freeze, pause, seizure, arbitrary-holder burn, allowlist, or governance transfer hook. Broker/exchange burn is caller-scoped and debitGasFees is Celo-VM scoped. Mento governance can replace implementation only through the observed 172800-second timelock, so current direct blacklistability is false while deployment posture remains restrictable. USDC, USDT, EURC, and related shared-reserve exposures can impair backing but cannot restrict CADm balances and are therefore dependency risk, not an inherited direct-access verdict.",
-    "reviewer": "OpenAI Codex C11 access review",
-    "reviewedAt": "2026-08-08"
+    "evidence": "Celo is the sole tracked deployment and holds 100% of CADm circulating supply in the 2026-10-19 census. At Celo block 80489715 (2026-10-19T06:14:33Z), proxy 0xff4ab19391af240c311c54200a492233052b6325 returned _getImplementation()=0x434563b0604be100f04b7ae485bcafe3c9d8850e, owner()=_getOwner()=0x890db8a597940165901372dd7db61c9f246e2147, broker()=0x777a8255ca72412f0d706dc03c9d1987306b4cad, validators()=0xaeb865bca93ddc8f47b8e29f40c5399ce34d0c58 and exchange()=zero. Verified StableTokenV2 implements ordinary transfer/transferFrom, permissioned mint, onlyBurner burn(uint256) that burns msg.sender only, and Celo-VM-only debitGasFees; it has no blacklist, freeze, global pause, allowlist, arbitrary-account burn or restrictive transfer hook. Nevertheless, the verified proxy's onlyOwner _setImplementation(address) can replace the holder-facing token implementation. Its current owner is the live Mento Timelock: getMinDelay()=172800 seconds, Governor 0x47036d78bb3169b4f5560dd77bf93f4412a59852 has PROPOSER_ROLE, execution is open to address zero, and Governor.timelock() returns 0x890db8a597940165901372dd7db61c9f246e2147. DAO/community governance and a two-day delay do not exempt a direct upgradeable stablecoin under the exposure policy. Therefore direct Possible supersedes the stored Upstream verdict. No variantOf or mint-authority inheritedFrom parent is declared. Official Mento configuration identifies shared reserve backing, including USDC, USDT, EURC and other issuer/custodian-controlled assets; those remain separate reserve censorship risks, not a reason to downgrade a direct Possible to Upstream. No current direct individual-holder freeze is asserted.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "single-source-or-laggy",

@@ -18,11 +18,19 @@
       {
         "label": "Solana mainnet JSON-RPC",
         "url": "https://api.mainnet-beta.solana.com"
+      },
+      {
+        "label": "Pinned Ethereum JSON-RPC reads",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
+      },
+      {
+        "label": "Benchmark RPCs for Base, BSC and Kaia supply reads",
+        "url": "https://mainnet.base.org"
       }
     ],
-    "evidence": "The verified cUSDO implementation blocks a sender when underlying USDO.isBanned(from) is true and blocks transfers while either USDO or cUSDO is paused. At finalized Solana slot 433002244, the Token-2022 mint assigns the same system-account signer as both mintAuthority and freezeAuthority, so that signer can freeze individual Solana token accounts.",
-    "reviewer": "OpenAI Codex control verification",
-    "reviewedAt": "2026-07-15"
+    "evidence": "cUSDO resolves Yes on a direct holder restriction. The 2026-10-19 census has no chain split, so supply was measured at pinned blocks: Ethereum 93.0688%, Solana 5.5567%, BSC 1.1422%, Base 0.2322% and Klaytn negligible. At Ethereum block 26224779 (2026-10-19T06:17:59Z), cUSDO 0xad55aebc9b8c03fc43cd9f62260391c13c23e7c0 is an ERC1967Proxy over verified cUSDO 0xb9413a34f68072a362b6a58f46c6af36c4e5d890, with USDO()=0x8238884ec9668ef77b90c6dff4d1a9f4f4823bfe. The implementation's _beforeTokenTransfer reverts cUSDOBlockedSender(from) when USDO.isBanned(from) is true and reverts when either token is paused; PAUSE_ROLE is held by 0x5eaff7af80488033bc845709806d5fae5291eb88 (hasRole=true), and paused()=false. The underlying USDO BANLIST_ROLE has two current members, so the issuer can stop a named holder's cUSDO transfers. The sub-threshold Solana mint BnANu5CtUogLqcvBNByJuwaRvRxNtVuDcAytwjsUUtqs separately carries freezeAuthority FPyi9yJKNX8y5gkadeFvbC2pDB9VVqxpwfofHxJ6Ed7i.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",

@@ -22,11 +22,23 @@
       {
         "label": "Gnosis xDAI Home Bridge proxy",
         "url": "https://gnosis.blockscout.com/address/0x7301CFA0e1756B71869E93d4e4Dca5c7d0eb0AA6"
+      },
+      {
+        "label": "Pinned Foreign Bridge",
+        "url": "https://etherscan.io/address/0x4aa42145aa6ebf72e164c9bbc74fbd3788045016#readProxyContract"
+      },
+      {
+        "label": "sUSDS assets conversion",
+        "url": "https://etherscan.io/address/0xa3931d71877c0e7a3148cb7eb4463524fec27fbd#readProxyContract"
+      },
+      {
+        "label": "Grove institutional fund and money-market description",
+        "url": "https://docs.grove.finance/faqs"
       }
     ],
-    "evidence": "Re-reviewed 2026-08-08. Native xDAI balances and the WETH-style WXDAI wrapper expose no local issuer blacklist, freeze, pause, or arbitrary seizure path. The canonical bridge backing is approximately 99% sUSDS plus liquid USDS, however, and those tracked Sky assets carry possible/direct freeze reach. A Sky-side freeze can impair the bridge escrow and xDAI exit path, so the resolved posture is Upstream rather than No even though existing native balances are not directly blacklistable.",
-    "reviewer": "OpenAI Codex unfreezable-cohort audit",
-    "reviewedAt": "2026-08-08"
+    "evidence": "xDAI is Upstream. Native Gnosis balances and immutable WXDAI have no identified local holder blacklist, seizure, pause or privileged arbitrary burn. The HomeBridge daily limit can govern outbound bridge requests, including setting limit0, but is a bridge rail control under the bridge-rail rule in the FreezeWatch decision procedure (docs/blacklist-tracker.md), not a direct holder-facing transfer/exit control. At Gnosis 48833312 (2026-10-19T06:58:15Z) dailyLimit 10000000000000000000000001 raw and owner 0x7a48dac683da91e4faa5ab13d91ab5fd170875bd; no observed active halt claimed. Source https://raw.githubusercontent.com/gnosischain/tokenbridge-contracts/f53666fd4f832b1dde479b701d39eddc10b6877c/contracts/upgradeable_contracts/erc20_to_native/HomeBridgeErcToNative.sol . At Ethereum 26224667, ForeignBridge 0x4aa42145aa6ebf72e164c9bbc74fbd3788045016 holds sUSDS convertible to 50,402,798.249933496 USDS and liquid 991,916.2281299006 USDS. Full immediate asset denominator 51,394,714.4780634 is 100% qualifying categorical Sky exposure; 56.1% prorated sensitivity also exceeds 50. This is bridge-asset composition, not a full liability solvency reconciliation.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",

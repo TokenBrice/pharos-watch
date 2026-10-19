@@ -1,7 +1,7 @@
 {
   "id": "dusd-dialectic",
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": true,
     "sources": [
       {
         "label": "Makina deposits and whitelisting",
@@ -30,12 +30,24 @@
       {
         "label": "Makina Recovery Mode",
         "url": "https://docs.makina.finance/concepts/security/recovery-mode"
+      },
+      {
+        "label": "Chainalysis sanctions list verified source and owner-restricted list changes",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x40c57923924b5c5c5455c48d93317139addac8fb"
+      },
+      {
+        "label": "Redeemer beacon oracle replacement authority",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x1f20cdfa19b860f0dd78fefbb052be5aa5003dd9"
+      },
+      {
+        "label": "DUSD current fixed-block exit authority reads",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
       }
     ],
     "sourceFreeRationale": "The MachineShare ERC-20 itself has no reviewed local freeze, blacklist, pause, seizure, or arbitrary holder-burn function.",
-    "evidence": "DUSD holder balances are not reviewed as locally blacklistable by the Dialectic USD share token. The remaining freeze exposure is upstream: the strategy's accounting token is Circle USDC, whose centralized freeze surface reaches idle Machine USDC, finalized-but-unclaimed AsyncRedeemer USDC, Caliber-held USDC, and downstream venues. At Ethereum block 25899375, DirectDepositor 0x94b1828f91c150c5e6776198e170aca4304903d7 and AsyncRedeemer 0x1303c26cfe06bac5bfee29907f37919643def75c both returned isWhitelistEnabled() = false and isSanctionsCheckEnabled() = true. The Risk Manager transaction at block 25826076 emitted WhitelistStatusChanged(false) from both contracts. Deposits, redemption requests, and claims are therefore open at contract level to addresses that pass the sanctions checks. The Risk Manager retains authority to re-enable the whitelists, and the published Machine Terms still define Verified-User eligibility and discretionary buybacks, so the listing records permissionless current on-chain access separately from issuer-discretionary legal eligibility. If USDC is frozen at the Machine, a Caliber, the AsyncRedeemer, or a downstream venue, Recovery Mode can contain additional exposure and unwind supported positions toward USDC, but it cannot move Circle-frozen USDC, replace the settlement asset, or create a migration, in-kind distribution, or holder-recovery right. An ERC-721 redemption request has no observed contract-level expiry and persists through NFT transfer. The current implementation applies sanctions screening to the active NFT owner's claim and would apply a whitelist check if governance re-enabled that control. Finalization and fill remain discretionary; there is no guaranteed remediation or alternate settlement asset.",
-    "reviewer": "OpenAI Codex DUSD listing correction",
-    "reviewedAt": "2026-09-03"
+    "evidence": "DUSD is direct Yes for a holder-targeted exit sanctions gate, not for universal ERC-20 transfer freezing. Census fetched 2026-10-19 puts 99.0253% of tracked circulating supply on Ethereum and 0.9747% on Ink, so Ethereum is material and Ink cannot set the verdict. At Ethereum block 26224667 (2026-10-19T05:55:35Z), AsyncRedeemer 0x1303c26cfe06bac5bfee29907f37919643def75c has isSanctionsCheckEnabled()=true, isWhitelistEnabled()=false and sanctionsOracle()=0x40c57923924b5c5c5455c48d93317139addac8fb. Its verified current implementation 0x49c4762ab838f2e5d8252b69b90a1e8587a74511 applies sanctionsCheck to requestRedeem and claimAssets. claimAssets requires the caller to be the current redemption NFT owner; the Chainalysis oracle can therefore block a named existing holder from claiming finalized assets. The oracle owner() is 0xdf900dc8991474ab9d69f2c3b9c900c055fb36cd, an EOA (eth_getCode=0x), and its verified addToSanctionsList/removeFromSanctionsList functions are onlyOwner. Oracle address is immutable in this redeemer implementation; Machine riskManager()=0x36ba7c92cd68051fb304bd4580c4a51c1d376532 controls whether screening is enabled and can re-enable the dormant holder whitelist. The active assigned oracle owner and claim-level gate satisfy the clarified direct Yes rule. Ordinary DUSD ERC-20 transfers remain unrestricted by these periphery checks. USDC accounting/settlement exposure remains additive and the declared USDC strategy-vault parent remains valid, not a claim that the five strategy allocation rows hold 100% idle USDC. At Ethereum block 25899375, DirectDepositor 0x94b1828f91c150c5e6776198e170aca4304903d7 and AsyncRedeemer 0x1303c26cfe06bac5bfee29907f37919643def75c both returned isWhitelistEnabled() = false and isSanctionsCheckEnabled() = true. The Risk Manager transaction at block 25826076 emitted WhitelistStatusChanged(false) from both contracts. Deposits, redemption requests, and claims are therefore open at contract level to addresses that pass the sanctions checks. The Risk Manager retains authority to re-enable the whitelists, and the published Machine Terms still define Verified-User eligibility and discretionary buybacks, so the listing records permissionless current on-chain access separately from issuer-discretionary legal eligibility. If USDC is frozen at the Machine, a Caliber, the AsyncRedeemer, or a downstream venue, Recovery Mode can contain additional exposure and unwind supported positions toward USDC, but it cannot move Circle-frozen USDC, replace the settlement asset, or create a migration, in-kind distribution, or holder-recovery right. An ERC-721 redemption request has no observed contract-level expiry and persists through NFT transfer. The current implementation applies sanctions screening to the active NFT owner's claim and would apply a whitelist check if governance re-enabled that control. Finalization and fill remain discretionary; there is no guaranteed remediation or alternate settlement asset. At the same Ethereum pin, AsyncRedeemer is a BeaconProxy whose EIP-1967 beacon is 0x1f20cdfa19b860f0dd78fefbb052be5aa5003dd9; beacon.implementation() is 0x49c4762ab838f2e5d8252b69b90a1e8587a74511 and beacon.owner() is 0x0fcefa3f1047f35521a49cd8b06fabd588665d7f. Verified UpgradeableBeacon.upgradeTo is onlyOwner, so this owner can replace the implementation, including its immutable oracle selection. There is no standalone oracle-address setter in the current redeemer implementation.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",

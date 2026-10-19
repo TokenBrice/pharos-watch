@@ -1,7 +1,7 @@
 {
   "id": "usdrif-rif",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Verified current USDRIF implementation and MocRC20 privileged burn/upgrade source",
@@ -12,9 +12,9 @@
         "url": "https://dapp.rifonchain.com/"
       }
     ],
-    "evidence": "At Rootstock block 9286813 on 2026-10-01, the native USDRIF EIP-1967 implementation slot resolved to 0x6d1bb87856a2b2351d87ba5772a93dc911325af9. Its verified MocRC20 source exposes burn(address to,uint256 amount) restricted by BURNER_ROLE, without a holder allowance check, and UUPS _authorizeUpgrade restricted by onlyAuthorizedChanger. The token's two BURNER_ROLE members were the RIF and DOC V3 collateral buckets. These are privileged burn and governed-upgrade capabilities; the explicit Yes verdict is retained without alleging an exercised seizure or freeze.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurB19spUSD)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "At Rootstock block 9337662 (2026-10-19), native USDRIF 0x3a15461d8ae0f0fb5fa2629e9da7d66a794a6e37 resolves to implementation 0x6d1bb87856a2b2351d87ba5772a93dc911325af9. getRoleMemberCount(BURNER_ROLE) returns 2, with members 0xA27024Ed70035E46dba712609fc2Afa1c97aA36A and 0x697535055Aa7AfD2C280523C7B062b1F05284661, both ERC1967Proxy collateral buckets using implementation 0x5316384be99310fdea0da0b3cc0d0bb9e7f0887f. Their reviewed paths are user redemptions; no current burner entrypoint burns a third party's USDRIF without allowance. The token's UUPS _authorizeUpgrade is gated by onlyAuthorizedChanger (MOC governance changers 0x3b8853df65afbd94853e6d77ee0ab5590f41bb08, 0x65a5681be95d212f0c90ead40170d8277de81169, 0x1a1824f39d79937dcb80c9d9938ae77e431c2def, 0x131564703310a294c1bfdc09d10ec0659f18e253), and governance can grant BURNER_ROLE to an arbitrary address. Because the burn role is occupied but cannot currently reach arbitrary holders, the verdict is direct Possible (the governor can add burners and upgrade the token implementation). Rootstock holds 100% of supply.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "standard-external",

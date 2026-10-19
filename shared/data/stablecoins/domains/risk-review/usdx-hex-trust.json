@@ -2,10 +2,32 @@
   "id": "usdx-hex-trust",
   "blacklistabilityReview": {
     "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Flare USDX proxy (verified HexTrustUSDV2)",
+        "url": "https://flarescan.com/address/0x4a771cc1a39fdd8aa08b8ea51f7fd412e73b3d2b"
+      },
+      {
+        "label": "Flare verified implementation 0x35151ba1c19b31cc258787a414c93bbe77251147",
+        "url": "https://api.routescan.io/v2/network/mainnet/evm/14/etherscan/api?module=contract&action=getsourcecode&address=0x35151bA1c19b31cc258787A414c93Bbe77251147"
+      },
+      {
+        "label": "Ethereum USDX proxy",
+        "url": "https://etherscan.io/address/0xf8750b54d86be7ae9e32b4a0c826811198d63313"
+      },
+      {
+        "label": "Ethereum verified implementation 0xce2d107b6046e61a651484b4ee65023d89a42d7b",
+        "url": "https://etherscan.io/address/0xce2d107b6046e61a651484b4ee65023d89a42d7b#code"
+      },
+      {
+        "label": "Pharos supply census (2026-10-19)",
+        "url": "https://api.pharos.watch/api/stablecoins"
+      }
+    ],
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: USDX resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "evidence": "Re-reviewed 2026-10-19. Material deployment: Flare 0x4a771cc1a39fdd8aa08b8ea51f7fd412e73b3d2b holds 95.6029% of supply (Pharos census). At Flare block 72460043, the proxy's verified HexTrustUSDV2 implementation 0x35151ba1c19b31cc258787a414c93bbe77251147 returned hasRole(BLACKLISTER_ROLE, 0x7b30ea52ef44d87acf25dd52f803069676b50ea5) = true and hasRole(BURNER_ROLE, 0xa688c5d5a13f1e5c8103e1b787bfe7d6f9ed6d2c) = true. The implementation exposes addBlacklist(address)/removeBlacklist(address) under BLACKLISTER_ROLE, gates transfers on the blacklist, and exposes burnBlackFunds(address) under BURNER_ROLE, which burns the entire balance of a blacklisted account. DEFAULT_ADMIN_ROLE is held by EOA 0xb8Ce31ad8bAD26e88Db17e68F695C64f67AD31EB on the proxy. pause()/unpause() exist under PAUSER_ROLE. Ethereum 0xf8750b54d86be7ae9e32b4a0c826811198d63313 (0.6086%) independently returned the same active blacklisters at Ethereum block 26224776. Songbird (3.7885%) is a sub-threshold native deployment and is disclosed only. Reserve exposure (100% U.S. Treasuries and cash at Hex Trust) is upstream in principle but is not verdict-setting. The operative holder-targeted controls are the blacklist and privileged burn.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",

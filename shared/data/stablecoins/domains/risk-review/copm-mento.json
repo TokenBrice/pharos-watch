@@ -1,7 +1,7 @@
 {
   "id": "copm-mento",
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Mento COPm documentation",
@@ -34,11 +34,35 @@
       {
         "label": "Celo Forno fixed-block RPC",
         "url": "https://forno.celo.org"
+      },
+      {
+        "label": "COPm Celo verified proxy",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x8a567e2ae79ca692bd748ab832081c45de4041ea"
+      },
+      {
+        "label": "Current verified StableTokenV2 implementation",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x434563b0604be100f04b7ae485bcafe3c9d8850e"
+      },
+      {
+        "label": "Mento Timelock verified source",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x890db8a597940165901372dd7db61c9f246e2147"
+      },
+      {
+        "label": "Mento Governor verified source",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x47036d78bb3169b4f5560dd77bf93f4412a59852"
+      },
+      {
+        "label": "Official Mento deployment authority table",
+        "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
+      },
+      {
+        "label": "Mento reserve analytics",
+        "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
       }
     ],
-    "evidence": "At Celo block 74313815 (2026-08-08T18:42:53Z), the sole tracked COPm deployment 0x8a567e2ae79ca692bd748ab832081c45de4041ea returned owner() = 0x890db8a597940165901372dd7db61c9f246e2147, broker() = 0x777a8255ca72412f0d706dc03c9d1987306b4cad, validators() = 0xaeb865bca93ddc8f47b8e29f40c5399ce34d0c58, and exchange() = zero. Its EIP-1967 implementation and admin slots still resolved to verified StableTokenV2 0x434563b0604be100f04b7ae485bcafe3c9d8850e and the Mento Timelock. The verified implementation exposes ordinary transfer/transferFrom, permissioned mint, broker/exchange-scoped burn, and Celo-VM-only gas debiting; it has no blacklist, freeze, pause, seizure, arbitrary-holder burn, or transfer-hook restriction. Mento's official materials describe direct protocol distribution and community governance with no single controlling entity, not a separate issuer freeze power. Direct holder freeze is therefore false; reserve-leg censorship and the timelocked upgrade path remain measured upstream and restrictability risks.",
-    "reviewer": "OpenAI Codex C12 access review",
-    "reviewedAt": "2026-08-08"
+    "evidence": "Celo is the sole tracked deployment and holds 100% of COPm circulating supply in the 2026-10-19 census. At Celo block 80489715 (2026-10-19T06:14:33Z), proxy 0x8a567e2ae79ca692bd748ab832081c45de4041ea returned _getImplementation()=0x434563b0604be100f04b7ae485bcafe3c9d8850e, owner()=_getOwner()=0x890db8a597940165901372dd7db61c9f246e2147, broker()=0x777a8255ca72412f0d706dc03c9d1987306b4cad, validators()=0xaeb865bca93ddc8f47b8e29f40c5399ce34d0c58 and exchange()=zero. Verified StableTokenV2 implements ordinary transfer/transferFrom, permissioned mint, onlyBurner burn(uint256) that burns msg.sender only, and Celo-VM-only debitGasFees; it has no blacklist, freeze, global pause, allowlist, arbitrary-account burn or restrictive transfer hook. Nevertheless, the verified proxy's onlyOwner _setImplementation(address) can replace the holder-facing token implementation. Its current owner is the live Mento Timelock: getMinDelay()=172800 seconds, Governor 0x47036d78bb3169b4f5560dd77bf93f4412a59852 has PROPOSER_ROLE, execution is open to address zero, and Governor.timelock() returns 0x890db8a597940165901372dd7db61c9f246e2147. DAO/community governance and a two-day delay do not exempt a direct upgradeable stablecoin under the exposure policy. Therefore direct Possible supersedes the stored Upstream verdict. No variantOf or mint-authority inheritedFrom parent is declared. Official Mento configuration identifies shared reserve backing, including USDC, USDT, EURC and other issuer/custodian-controlled assets; those remain separate reserve censorship risks, not a reason to downgrade a direct Possible to Upstream. No current direct individual-holder freeze is asserted.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "single-source-or-laggy",

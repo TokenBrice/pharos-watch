@@ -2,10 +2,28 @@
   "id": "witry-brix",
   "blacklistabilityReview": {
     "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Verified wiTRY wrapper (Ethereum)",
+        "url": "https://etherscan.io/address/0xe346c29b5b60ef870b9724c57ccfbbc631e47dee#code"
+      },
+      {
+        "label": "Verified iTRY implementation",
+        "url": "https://etherscan.io/address/0x0679eaa2443e5fea70eea7ac9508fd357406fdad#code"
+      },
+      {
+        "label": "Ethereum block 26224776",
+        "url": "https://etherscan.io/block/26224776"
+      },
+      {
+        "label": "MegaETH block 29593655",
+        "url": "https://megaeth.blockscout.com/block/29593655"
+      }
+    ],
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: wiTRY resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "evidence": "Re-reviewed 2026-10-19. Census chainShares are absent; measured supplies total 539,605,535.58 wiTRY: Ethereum 269,825,447.4798 (50.0042%, block 26224776), MegaETH 269,779,143.0983 (49.9956%, block 29593655), Robinhood 945.0067 (0.0002%, block 92398927). Ethereum and MegaETH are material. The Ethereum token 0xe346c29b5b60ef870b9724c57ccfbbc631e47dee is the verified StakediTryCrosschain wrapper (StakediTry base). owner() returned 0x15BF1AC31c5b8c0E0960D656de02ba5593b19C47, which is DEFAULT_ADMIN_ROLE and whose owner() is the Brix Safe 0x7aC3bB10225a4eF27134bcF54454d545A1738662. hasRole(BLACKLIST_MANAGER_ROLE, 0x7aC3...) returned true. The verified implementation's addToBlacklist grants FULL_RESTRICTED_STAKER_ROLE; _beforeTokenTransfer reverts for any transfer from or to a FULL_RESTRICTED holder, maxWithdraw/maxRedeem return 0 for them, and redistributeLockedAmount burns the restricted holder's balance and mints it to a target under DEFAULT_ADMIN_ROLE. An active non-zero blacklist manager and an active admin forced-transfer path therefore exist on both material deployments. The underlying iTRY (0xb492b4...) separately exposes BLACKLISTED role and redistribution. Reserve test: the 100% wiTRY claim on iTRY/fund shares terminates in issuer control and would satisfy upstream, but direct Yes outranks it.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",

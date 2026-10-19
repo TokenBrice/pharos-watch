@@ -1,11 +1,41 @@
 {
   "id": "syrupusdt-maple",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "Canonical MaplePool verified source",
+        "url": "https://etherscan.io/address/0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d#code"
+      },
+      {
+        "label": "Current MaplePoolManager implementation",
+        "url": "https://etherscan.io/address/0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8#code"
+      },
+      {
+        "label": "Current MaplePoolPermissionManager implementation",
+        "url": "https://etherscan.io/address/0xc3530358e54bc81efce4a2e12a898e996b091753#code"
+      },
+      {
+        "label": "Official crosschain deployments",
+        "url": "https://docs.maple.finance/integrate/crosschain/syrupusd-crosschain.md"
+      },
+      {
+        "label": "CCIP LockRelease/BurnMint pool directory",
+        "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDT"
+      },
+      {
+        "label": "Plasma verified BurnMintERC20",
+        "url": "https://plasmascan.to/address/0xc4374775489cb9c56003bf2c9b12495fc64f0771#code"
+      },
+      {
+        "label": "Mantle verified BurnMintERC20",
+        "url": "https://mantlescan.xyz/address/0x051665f2455116e929b9972c36d23070f5054ce0#code"
+      }
+    ],
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Explicit Yes retained: syrupUSDT is a tracked strategy-vault variant whose parent USDT has confirmed centralized freeze exposure, so wrapper holders inherit upstream blacklistability.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "evidence": "syrupUSDT has a direct Possible control on material Ethereum, not a Yes verdict derived from its USDT parent. Near-synchronous pinned reads on 2026-10-19 give approximately Ethereum 65.4942%, Plasma 18.1357%, Mantle 14.4076%, Ink 1.7061% and BSC 0.2563% of bridge-adjusted tracked supply. Ethereum block 26224762 (06:14:35Z) reports totalSupply=278033413.888203 syrupUSDT and 95937536.105511 held by the documented CCIP LockRelease pool 0xde76a096c5eadddf97af3fe15ee49d32aeda9822; this locked backing is excluded from Ethereum float before adding remote minted supplies. The canonical MaplePool at 0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d sends transfer and exit checks through manager 0x0cda32e08b48bfddbc7ee96b44b09cf286f9e21a to permission manager 0xbe10adce8b6e3e02db384e7fada5395dd113d8b3. At that block permissionLevels(manager)=1 (FUNCTION_LEVEL), with transfer, transferFrom, redeem and requestRedeem bitmaps all zero; no current holder transfer/redeem blacklist is established. Assigned PPM admin 0xd6d4bcde6c816f17889f1dd3000af0261b03a196, protocol operationalAdmin 0xce1ce7c7f436dcc4e28bc8bf86115514d3dc34e8 and pool-delegate pathways can change the permission bitmaps/level and install holder-sensitive restrictions, establishing direct Possible. withdraw/requestWithdraw bitmap 16 is not used to claim Yes: manager implementations of those routes unconditionally revert NOT_ENABLED. removeShares also has bitmap 16, but it cancels escrowed redemption shares rather than blocking the presently unrestricted requestRedeem/redeem route. Material Plasma and Mantle use non-proxy BurnMintERC20: privileged burns retain holder allowance checks; mint/burn role administration alone is not direct holder seizure. USDT parent exposure remains inherited in addition, but direct Possible takes precedence.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",

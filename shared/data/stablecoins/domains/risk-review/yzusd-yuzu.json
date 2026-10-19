@@ -1,7 +1,7 @@
 {
   "id": "yzusd-yuzu",
   "blacklistabilityReview": {
-    "reviewedStatus": "possible",
+    "reviewedStatus": true,
     "sources": [
       {
         "label": "Yuzu Money overview",
@@ -34,11 +34,15 @@
       {
         "label": "Current YuzuUSDV3 facet source",
         "url": "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x978b32904b361f22d7338692feb6b9cd8ad1887e"
+      },
+      {
+        "label": "Active role-management TimelockController verified source",
+        "url": "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x5f3d29ef17700f8658c566dac7fbd76e0d86b78c"
       }
     ],
-    "evidence": "Re-reviewed 2026-10-01 at Plasma block 33899322: EIP-1967 binds the canonical proxy to YuzuUSDV3 at 0x8e02392855a51d9d5d18d71a7cfc731f56c68ea5. Verified V3 source routes mint/redemption configuration and NAV setters to a facet and tracks same-block received shares for redemption eligibility. Its inherited V2 burn function burns the caller's own tokens subject to BURNER_ROLE. The issuer discloses Hypernative blocking protocol interactions and Sentinel executing withdrawals from the Fordefi wallet; those disclosures do not establish interception of ordinary holder transfers. The August 8 source review remains historical, not a current V3 exclusion. Upstream backing controls remain distinct from native holder access. Possible is retained pending issuer legal terms and a complete mapping of operational controls to the holder-token execution path.",
-    "reviewer": "Sol curation pass 2026-10-01 (ValA58ONyc)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "Plasma accounts for effectively 100% of circulating yzUSD; Monad contributes 23.7481632850 units, about 0.0000403%. At plasma@35449083 (2026-10-19T06:14:23+00:00; hash 0xd69ea5d44c866b167b5821842f992d56b29ea210add10fdb9d12999b97f48667; observed 2026-10-19T06:19:28.531004+00:00) via https://rpc.plasma.to, canonical proxy 0x6695c0f8706c5ace3bdf8995073179cca47926dc still resolves to verified YuzuUSDV3 0x8e02392855a51d9d5d18d71a7cfc731f56c68ea5. The V3 facet is 0x978b32904b361f22d7338692feb6b9cd8ad1887e. Current isRedeemRestricted()=true and paused()=false. Verified inherited YuzuProtoV2.canRedeem/canCreateRedeemOrder deny owners lacking REDEEMER_ROLE; V3 instant exits and facet-created redeem orders enforce the corresponding owner limits. This is an active holder exit allowlist: syzUSD vault 0xc8a8df9b210243c55d31c73090f06787ad0a1bf6 holds 58,545,215.944134340535783031 yzUSD units but has no REDEEMER_ROLE and canRedeem(vault)=false. RESTRICTION_MANAGER_ROLE and ADMIN_ROLE are both assigned to 12-hour TimelockController 0x5f3d29ef17700f8658c566dac7fbd76e0d86b78c; the current 3-of-5 Safe 0xe61ad2de346db42879b6ee3c7cf0c6a2cdc0530d has proposer/executor/canceller roles there, so role revocation can target an existing holder. Under the reviewed exit-gate rule this qualifies as Yes. Ordinary ERC-20 transfers are not blacklisted: V3's _update tracks same-block received shares for redemption eligibility, while V2 burn consumes only the caller's own tokens. Independently, ProxyAdmin 0x6ccfd86ee6f0ceaa4946612a9faae257c064d2aa remains owned by 48-hour timelock 0x2130457539612ae9838e0314cda1a8abbdb7cfbc, so token implementation mutability would be Possible even without the active exit gate. Hypernative interaction blocking and Fordefi Sentinel wallet withdrawals do not prove transfer interception and are not the verdict basis. Upstream reserve controls are separate and do not supersede a direct verdict. Monad's live upgrade controls are below the materiality threshold.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "privileged-internal-pricing",

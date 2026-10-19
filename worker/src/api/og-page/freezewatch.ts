@@ -4,7 +4,7 @@ import { computeFreezableSummary, formatShare } from "@shared/lib/freezewatch/fr
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import { freshnessReason, unavailable, type OgPageLoader, OG_SOURCE_BUDGET_SEC } from "./types";
 
-/** `/freezewatch` hero: the freezable share of tracked supply, from the same buckets and summary as the page. */
+/** `/freezewatch` hero: combined freeze exposure, from the same buckets and summary as the page. */
 export const loadFreezewatchOgPage: OgPageLoader = async (db, nowSec) => {
   const stablecoins = await loadStablecoinsCache(db, { mode: "strict", contract: "published" });
   if (stablecoins.kind !== "ok") return unavailable("cache-missing");
@@ -19,9 +19,9 @@ export const loadFreezewatchOgPage: OgPageLoader = async (db, nowSec) => {
   return {
     kind: "ok",
     hero: formatShare(summary.freezableShare),
-    context: "of tracked stablecoin market cap is under issuer freeze control",
+    context: "of tracked stablecoin market cap is exposed to freezing",
     support: [
-      `${formatCurrency(summary.freezableMarketCap, 1)} freezable`,
+      `${formatCurrency(summary.freezableMarketCap, 1)} exposed`,
       `${summary.freezableCount} stablecoins`,
     ],
     visual: { kind: "share-bar", shares: [summary.freezableShare / 100] },

@@ -10,11 +10,19 @@
       {
         "label": "Paxos USDG asset-protection specification",
         "url": "https://github.com/paxosglobal/usdg-contract"
+      },
+      {
+        "label": "Solana USDG mint at slot 458731257 (2026-10-19)",
+        "url": "https://solana-mainnet.g.alchemy.com/v2/"
+      },
+      {
+        "label": "X Layer USDG token",
+        "url": "https://www.oklink.com/xlayer/address/0x4ae46a509f6b1d9056937ba4500cb143933d2dc8"
       }
     ],
-    "evidence": "The Paxos terms jointly identify PDS and PIE as USDG issuers and section 3.5 gives Paxos freeze, seizure and destruction powers applying to all holders. The USDG contract specification states that ASSET_PROTECTION_ROLE can freeze or unfreeze any on-chain balance and wipe a frozen balance. This confirms the existing Yes verdict from primary evidence rather than from centralized classification.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurA09USDG)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "Paxos USD Stablecoin Terms section 3.5 gives Paxos freeze, seizure and destruction powers over all holders, and the verified PaxosTokenV2 implementation exposes freeze(address), freezeBatch, unfreeze and wipeFrozenAddress under ASSET_PROTECTION_ROLE. On the material Solana deployment, the USDG mint 2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH retained freezeAuthority 2apBGMsS6ti9RyF5TwQTDswXBWskiJP2LD4cUEDqYJjk at slot 458731257 (2026-10-19; supply 623,596,849.996690, 6dp), an active holder-freeze control on 20.59% of reported supply. The materiality scoping uses the 2026-10-19 Pharos supply observation: X Layer 43.6573%, Robinhood Chain 23.0045%, Solana 20.5909%, Ethereum 9.4711%, Ink 2.1298%, Arbitrum 1.0858% and smaller deployments. X Layer's token 0x4ae46a509f6b1d9056937ba4500cb143933d2dc8 exposes the same freeze/wipe selectors and its DEFAULT_ADMIN_ROLE 0x9a74BEc7b416fc907dB9ea9cB2b9619B89bee5d4 can grant ASSET_PROTECTION_ROLE, but the role is not currently assigned there; that deployment is disclosed as an admin-grantable surface rather than the verdict basis. Robinhood Chain and Ethereum deployments were not independently pinned in this review. The active Solana freeze authority is sufficient for Yes.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

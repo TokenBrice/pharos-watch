@@ -39,6 +39,7 @@ describe("createRequestSourceRecorder", () => {
     ["unassigned lane", { requestLane: null }],
     ["uncredentialed site-api", { requestLane: "site-api" }],
     ["disabled site-api", { requestLane: "site-api", isSiteProxy: true, attributionDisabled: true }],
+    ["webhook", { pathname: "/api/telegram-webhook" }],
   ])("does not schedule attribution for %s requests", (_label, overrides) => {
     const options = recorderOptions(overrides);
     createRequestSourceRecorder(options)();
@@ -59,7 +60,7 @@ describe("createRequestSourceRecorder", () => {
     expect(mocks.recordWorkerRequestAttribution).toHaveBeenCalledTimes(routeWrites);
     expect(mocks.recordApiKeyRequestAttribution).toHaveBeenCalledTimes(keyWrites);
     if (routeWrites) expect(mocks.recordWorkerRequestAttribution).toHaveBeenCalledWith(db,
-      { routeKey: "stablecoins", routePath: "/api/stablecoins" }, "public-api", "external");
+      { routeKey: "stablecoins", routePath: "/api/stablecoins" }, "public-api", "external", "keyed");
     if (keyWrites) expect(mocks.recordApiKeyRequestAttribution).toHaveBeenCalledWith(db, 7);
   });
 
@@ -71,8 +72,16 @@ describe("createRequestSourceRecorder", () => {
     createRequestSourceRecorder(options)();
     expect(options.execCtx.waitUntil).toHaveBeenCalledOnce();
     expect(mocks.recordWorkerRequestAttribution).toHaveBeenCalledWith(db,
-      { routeKey: "stablecoins", routePath: "/api/stablecoins" }, lane, source);
+      { routeKey: "stablecoins", routePath: "/api/stablecoins" }, lane, source,
+      lane === "site-api" ? "not-applicable" : "unkeyed");
     expect(mocks.recordApiKeyRequestAttribution).not.toHaveBeenCalled();
+  });
+
+  it("retains normalized unknown public routes and their unkeyed dimension", () => {
+    const options = recorderOptions({ pathname: "/api/unregistered" });
+    createRequestSourceRecorder(options)();
+    expect(mocks.recordWorkerRequestAttribution).toHaveBeenCalledWith(db,
+      { routeKey: "unknown-public-api", routePath: "/api/*" }, "public-api", "external", "unkeyed");
   });
 
 });

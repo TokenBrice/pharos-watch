@@ -10,11 +10,23 @@
       {
         "label": "MUSD account freeze and forced-transfer implementation",
         "url": "https://raw.githubusercontent.com/m0-platform/mUSD/main/src/MUSD.sol"
+      },
+      {
+        "label": "Ethereum MUSD proxy",
+        "url": "https://eth.blockscout.com/address/0xaca92e438df0b2401ff60da7e4337b687a2435da"
+      },
+      {
+        "label": "Monad public RPC, block 114682316",
+        "url": "https://rpc.monad.xyz"
+      },
+      {
+        "label": "Linea public RPC, block 32363695",
+        "url": "https://rpc.linea.build"
       }
     ],
-    "evidence": "The independent mUSD audit identifies privileged roles that can freeze and seize assets, including a Freeze Manager and Forced Transfer Manager. MUSD source implements role-gated forced transfers from frozen accounts. The canonical Ethereum proxy still resolves to implementation 0x37a309611e1d278cddc341e479957ec8bc6256ce at block 26095802; this review replaces the inferred centralized-governance rationale with sourced token-level capability evidence.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurB20MUSD)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "MetaMask USD is a direct issuer-controlled token. The independent Consensys Diligence audit and the verified MUSD implementation expose FREEZE_MANAGER_ROLE, FORCED_TRANSFER_MANAGER_ROLE and PAUSER_ROLE with freeze(address), freezeAccounts(address[]), forceTransfer and pause. All three material deployments carry an active freeze manager 0x363c256d368277bbfaf6eaf65bee123a7adba464 (hasRole=true): Monad block 114682316 (impl 0xc2e2fbcef84dea88025a5b2599039c912ef6b61c, 53.5% of supply, paused=false), Ethereum block 26224792 (impl 0x37a309611e1d278cddc341e479957ec8bc6256ce, 29.4%, paused=false) and Linea block 32363695 (impl 0x58a3a9c561591bab0dd11110eca755ea455f1841, 17.0%). The role can freeze any holder account and force-transfer frozen balances, so the Yes verdict rests on an active direct control rather than governance metadata or reserve inheritance.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",

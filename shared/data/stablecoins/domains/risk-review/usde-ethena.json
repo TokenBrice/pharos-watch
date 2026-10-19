@@ -1,7 +1,7 @@
 {
   "id": "usde-ethena",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "Sourcify USDe.sol",
@@ -42,11 +42,55 @@
       {
         "label": "Aptos deployed USDe OFT freeze-entry ABI at ledger version 7436641924",
         "url": "https://fullnode.mainnet.aptoslabs.com/v1/accounts/0x9674429dcc02d2ed0d50fa24cb25262d349a5722b1a02502cff92e3cc85924b3/module/oft_fa?ledger_version=7436641924"
+      },
+      {
+        "label": "Plasma verified USDeOFT source",
+        "url": "https://plasmascan.to/address/0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34#code"
+      },
+      {
+        "label": "Plasma pinned JSON-RPC",
+        "url": "https://rpc.plasma.to"
+      },
+      {
+        "label": "Full per-chain circulation",
+        "url": "https://api.pharos.watch/api/stablecoins"
+      },
+      {
+        "label": "Current complete collateral positions",
+        "url": "https://app.ethena.fi/api/positions/current/collateral"
+      },
+      {
+        "label": "Current category dollar disclosure",
+        "url": "https://app.ethena.fi/api/collateral-breakdown"
+      },
+      {
+        "label": "Liquid stablecoin issuer exposure",
+        "url": "https://docs.ethena.fi/backing-assets/liquid-stablecoins.md"
+      },
+      {
+        "label": "Institutional lending qualified-custodian and triparty collateral",
+        "url": "https://docs.ethena.fi/backing-assets/institutional-lending.md"
+      },
+      {
+        "label": "Backing asset custody",
+        "url": "https://docs.ethena.fi/backing-custody-and-security/backing-asset-custody.md"
+      },
+      {
+        "label": "Off-exchange custody",
+        "url": "https://docs.ethena.fi/backing-custody-and-security/overview/off-exchange-settlement-in-detail"
+      },
+      {
+        "label": "Pinned Aptos native supply",
+        "url": "https://fullnode.mainnet.aptoslabs.com/v1/accounts/0xf37a8864fe737eb8ec2c2931047047cbaed1beed3fb0e5b7c5526dafd3b9c2e9/resources?ledger_version=7675716304"
+      },
+      {
+        "label": "RWA issuer/fund category definition",
+        "url": "https://docs.ethena.fi/backing-assets/real-world-assets-rwa.md"
       }
     ],
-    "evidence": "POSTURE CHANGE on 2026-07-22: direct holder control is Yes because the material TON USDe jetton can be locked by its administrator. Ethereum USDe exposes owner-set minter authority and ordinary ERC-20 transfers but no holder freeze or blacklist, and a finalized Solana read at slot 434568679 returned freezeAuthority=null. On TON, verified jetton-minter.fc code for EQAIb6KmdfdDR7CN1GBqVJuP25iCnLKCvBlJ07Evuu2dzP5f gives the administrator an upgrade path and an admin-only call_to operation that can send set_status to any derived jetton wallet; the verified source explicitly describes this path as able to lock, unlock, or redeem funds. The 2026-07-22 state was pinned to master code hash a9bfedc76d60b332e8019e405505aadf4d7f870b8d3bae7abcfeb868681e6b2a and last transaction LT 91438387000020 / hash bf7da7303ee7eb1ac66741c08f6ba5146fc6fdde56206118f6801b30673f2727, with administrator EQCrj-smMj6JQCAvb-BPwlMa71IAA7pK3KNaFcVOdeYC6qS7. This TON holder-control path makes the asset-level direct posture true even though the reviewed Ethereum and Solana deployments lack an equivalent active freeze authority. Current 2026-10-01 Aptos state at ledger version 7436641924 additionally shows the USDe OFT object 0x9674429dcc02d2ed0d50fa24cb25262d349a5722b1a02502cff92e3cc85924b3 holding the transfer reference for USDe metadata 0xf37a8864fe737eb8ec2c2931047047cbaed1beed3fb0e5b7c5526dafd3b9c2e9 with freeze_fungible_store_enabled=true and blocklist_enabled=true. Its deployed ABI exposes set_primary_fungible_store_frozen and set_fungible_store_frozen; published Move source restricts these to the OApp admin, currently 0x84c7ac376914733149586b28acf837f3ef20eee7fe8e28a19e1a135ffca676b9. No Aptos materiality share or administrative signer composition is inferred; existing direct holder-control status remains true.",
-    "reviewer": "GPT SOL-CORP-A wave6",
-    "reviewedAt": "2026-07-22"
+    "evidence": "USDe is Upstream on 62.38% published issuer/custodian-terminal backing, not direct Possible. Ethereum 53.0473% and Plasma 12.1967% are material. Ethereum USDe is immutable, with mint-only owner/minter authority and allowance-gated burnFrom. Plasma USDeOFT has owner-configurable per-destination outbound rate limits enforced by _debit; owner can set limit 0, but these govern bridge sends, not ordinary local transfers. Under the bridge-rail rule in the FreezeWatch decision procedure (docs/blacklist-tracker.md), they are disclosed rail controls and do not set direct Possible. Independently read Plasma 35451992 (2026-10-19T07:02:52Z): owner 0xabd3645ba0bb60c238bede64378826e1206f5072, helper rateLimiter zero, supply 571,174,718.254082. Verified source https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 . Published positions timestamp 2026-10-19T06:19:11Z total $4,687,370,857.61; counted Crypto Basis/Institutional Lending/Liquid Stables/RWA subtotal $2,924,053,250=62.38%. Other categories and category gap remain denominator-only. Custody basis https://docs.ethena.fi/backing-custody-and-security/backing-asset-custody.md and https://docs.ethena.fi/backing-assets/institutional-lending.md . No active holder-targeted control identified on material deployments.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "privileged-internal-pricing",

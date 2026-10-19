@@ -1,7 +1,7 @@
 {
   "id": "rusd-reservoir",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "Reservoir rUSD token on Ethereum (verified source)",
@@ -22,11 +22,31 @@
       {
         "label": "Reservoir official contract addresses",
         "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses"
+      },
+      {
+        "label": "Full per-chain circulating supply feed, captured 2026-10-19",
+        "url": "https://api.pharos.watch/api/stablecoins"
+      },
+      {
+        "label": "Current issuer raw reserve composition fetched 2026-10-19",
+        "url": "https://fireworks-git-master-fortunafi.vercel.app/api/reserves/raw"
+      },
+      {
+        "label": "Ethereum pinned supply and proxy-slot reads",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Tempo pinned supply and authority reads",
+        "url": "https://rpc.tempo.xyz"
+      },
+      {
+        "label": "Material Berachain verified RusdOft source",
+        "url": "https://berascan.com/address/0x09d4214c03d01f49544c0448dbe3a27f768f2b34#code"
       }
     ],
-    "evidence": "A freeze/blacklist capability exists now on rUSD's live Tempo deployment: rUSD on Tempo is a TIP-20 protocol precompile at 0x20c0000000000000000000007f7ba549dd0251b9, and the TIP-20 standard ships every token with pause(), TIP-403 whitelist/blacklist transfer policies, and burnBlocked(). The token's DEFAULT_ADMIN_ROLE is actively held by Reservoir operations EOA 0xb7570e32ded63b25163369d5eb4d8e89e70e5602 (granted at creation via TIP20Factory, Tempo block 12113547), which can at any time activate a blacklist policy, pause all transfers, or burn blocked balances; at Tempo block 32485354 the token reads paused() = false and transferPolicyId() = 1 (always-allow), but the control surface is live. By contrast the canonical Ethereum token 0x09d4214c03d01f49544c0448dbe3a27f768f2b34 (verified Blockscout source 'Stablecoin', non-proxy, OpenZeppelin AccessControl + ERC20Burnable only) has no blacklist, pause, freeze, or arbitrary-burn path; its sole privileged function is MINTER-role mint, and every EVM sidechain deployment is verified vanilla LayerZero OFT v2 + Ownable with no freeze surface (Arbitrum RusdOft source re-verified 2026-07-30), while the Solana mint has freezeAuthority unset. The canonical supply therefore carries no freeze reach, but the tracked Tempo TIP-20 deployment carries a real admin-controlled freeze/blacklist surface, making the honest asset-level answer true.",
-    "reviewer": "Kimi V9 gap-clearing re-review (access freeze, 2026-07-30)",
-    "reviewedAt": "2026-07-30"
+    "evidence": "Apply the 10% deployment threshold: the 2026-10-19 full supply feed assigns Berachain 66.5305% and Ethereum 33.3848%; all other chains are individually sub-threshold. Verified Ethereum 0x09d4214c03d01f49544c0448dbe3a27f768f2b34 is immutable Stablecoin (AccessControl, ERC20Burnable), with MINTER-only issuance and allowance-gated burnFrom, no blacklist, freeze, seizure, transfer pause, forced holder burn or proxy upgrade. At Ethereum block 26224766 (2026-10-19T06:15:23Z), EIP1967 implementation/admin slots are zero. Verified direct Berachain RusdOft at the same address is vanilla OFT/ERC20: its owner changes bridge routing, not local-holder transfers or balances; it has no token-upgrade path. Tempo 0x20c0000000000000000000007f7ba549dd0251b9 does retain a direct mutable TIP20 policy/pause/blocked-burn surface: at block 44841241 (2026-10-19T06:15:29Z), paused=false, transferPolicyId=1, and DEFAULT_ADMIN_ROLE is held by Reservoir EOA 0xb7570e32ded63b25163369d5eb4d8e89e70e5602. Its totalSupply is only 10 raw at 6 decimals. The complete circulating feed gives its share as 4.4123353881e-09% and independent native supply reads confirm it is far below 10%, so those peripheral controls do not set the verdict. Other examined EVM OFTs have ordinary ERC20 transfers, and the examined Solana mint has no freeze authority; no material direct holder control is established. rUSD has no declared parent. Its issuer reserve API fetched 2026-10-19 reports totalAssets USD 111301098.149388476156764562, exactly the sum of all 16 disclosed rows. Keeping every row in that denominator, named USDC, USDT, USD1 and AUSD cash/lending/vault claims alone contribute 93.39916506% issuer-freezable exposure. GHO, Agua and the newly observed USDG vault are conservatively excluded from the numerator; no assumption about their controls is needed. Thus reserves strictly exceed 50% and the materiality-scoped verdict is Upstream, not Yes. The API provides no independent composition timestamp.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

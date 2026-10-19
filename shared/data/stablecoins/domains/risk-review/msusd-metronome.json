@@ -1,7 +1,7 @@
 {
   "id": "msusd-metronome",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Metronome Synth contract registry",
@@ -42,11 +42,27 @@
       {
         "label": "Metronome Synth docs",
         "url": "https://docs.metronome.io/metronome-synth/metronome-synth-protocol"
+      },
+      {
+        "label": "msUSD SyntheticToken implementation source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6f22b2f9e0a0ea5e0921ce4e1ba82d04fa94f5ba"
+      },
+      {
+        "label": "Metronome Pool implementation source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe9d1f2124f99f6737cfbaacf3d52f18fc573acd6"
+      },
+      {
+        "label": "Metronome DebtToken implementation source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x1d223bc4d041b67e0e210743f525fcfe52f0db1a"
+      },
+      {
+        "label": "Ethereum RPC pinned reads",
+        "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
-    "evidence": "Re-derived 2026-07-31 across all five tracked EVM deployments (Ethereum block 25648904, Optimism 154927378, Base 49332093, Hemi 4965568, Plasma 28513144). Each proxy resolves to the Metronome SyntheticToken implementation family; the exact verified source exposes seize(address from,address to,uint256) and gates it to registered Pool or DebtToken contracts, with no holder allowance. Its _transfer path moves any holder balance to a beneficiary, so this is direct holder-selective seizure even though there is no blacklist mapping. Live poolRegistry() reads were 0x11ead85c679eaf528c9c1fe094bf538db880048a (Ethereum), 0xe7c65eaeb1ca920f0db73cdfb4915dd31472a6a1 (Optimism), 0x4372a2b9304296c06197a823f25cf03119d2fd82 (Base), 0xdbd9cfb0b54c08e75085f8c8844e8054d13bd39a (Hemi), and 0x1c1c67e52942f4dd20a7262a9d17ea2a2e16acf3 (Plasma); their governor() controls pool registration and returned 0xd1de3f9cd4ae2f23da941a67ca4c739f8dd9af33 (Ethereum), 0xe01df4ac1e1e57266900e62c37f12c986495a618 (Optimism/Base/Plasma), and 0x468f87db090bc61c690cd86430b5407675b99242 (Hemi). Failure domain: Metronome pool/debt-token contracts and each chain's PoolRegistry governor.",
-    "reviewer": "T52 access review (fresh exact replay)",
-    "reviewedAt": "2026-07-31"
+    "evidence": "At Ethereum block 26224761 (2026-10-19), msUSD 0xab5eb14c09d416f0ac63661e57edb7aecdb9befa resolves to verified SyntheticToken implementation 0x6f22b2f9e0a0ea5e0921ce4e1ba82d04fa94f5ba, and poolRegistry() = 0x11eaD85C679eAF528c9C1FE094bF538Db880048A lists pool 0x3364f53cB866762Aef66DeEF2a6b1a17C1F17f46. The verified SyntheticToken exposes seize and burnFor only to registered Pool or DebtToken contracts, but the current members cannot reach arbitrary holders: the Pool's liquidate() burns the liquidator's own msUSD (syntheticToken_.burnFor(_msgSender,...), L603) and burns the liquidated account's DebtToken debt receipts (debtToken 0x480e3178Fa102dF852643d47CAbdb9adf5dB0174), while the DebtToken's burnFor/seize calls use _msgSender (L439/L453/L488/L491). The Pool is itself a transparent proxy (implementation 0xe9d1f2124f99f6737cfbaacf3d52f18fc573acd6), and the PoolRegistry governor can register a new Pool or DebtToken that would be authorised to burn or seize arbitrary balances. That registration/upgrade capability is a direct Possible rather than an active Yes. No blacklist mapping exists, and supply is 61.1% Ethereum and 36.9% Base.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "standard-external",

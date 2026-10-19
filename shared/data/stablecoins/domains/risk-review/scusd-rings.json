@@ -1,7 +1,7 @@
 {
   "id": "scusd-rings",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Veda BoringVault source (BeforeTransferHook)",
@@ -26,11 +26,23 @@
       {
         "label": "Sonic public RPC (hook/teller state)",
         "url": "https://rpc.soniclabs.com"
+      },
+      {
+        "label": "Sonic LayerZeroTeller verified source",
+        "url": "https://sonicscan.org/address/0x358cfacf00d0b4634849821bb3d1965b472c776a#code"
+      },
+      {
+        "label": "Sonic RolesAuthority",
+        "url": "https://sonicscan.org/address/0x7d5f6108e23c0cb2cfd744e5c46f1aaffc30a348"
+      },
+      {
+        "label": "Sonic block 81283198",
+        "url": "https://sonicscan.org/block/81283198"
       }
     ],
-    "evidence": "2026-07-30 re-review of both material deployments (Ethereum block 25648302, Sonic block 76778912). scUSD is the immutable Veda BoringVault share token at 0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae on Ethereum and Sonic (owner()=0; authority=RolesAuthority 0x7D5f6108e23c0CB2cfD744E5c46f1aAfFc30A348). transfer/transferFrom call BeforeTransferHook; on both chains hook() returns the LayerZeroTeller 0x358CFACf00d0B4634849821BB3d1965b472c776a. That Teller bytecode and the public TellerWithMultiAssetSupport source expose denyAll/denyFrom/denyTo/denyOperator (requiresAuth) and beforeTransfer(from,to,operator), which reverts TransferDenied for deny-listed parties and SharesAreLocked during any share-lock window. shareLockPeriod()=0 and isPaused()=false at observation; deny calls from unprivileged callers revert UNAUTHORIZED, so activation is gated by RolesAuthority grants under chain-specific 4/6 Veda/Paladin Safe + one-day TimelockController paths documented in mintAuthority. Failure domain: Veda/Paladin RolesAuthority+Teller deny surface on each chain, plus LayerZero share routing. Upstream USDC/USDT/DAI/GHO freeze exposure remains via reserves and is not the token-level control path. Direct holder freeze/blacklistability is therefore true, not merely possible.",
-    "reviewer": "Grok T34 wave-2 unknown reduction",
-    "reviewedAt": "2026-07-30"
+    "evidence": "Measured supply is 634,623.262155 scUSD on Sonic (99.2842%, block 81283198) and 4,575.427261 on Ethereum (0.7158%, block 26224777); only Sonic is material, contrary to the earlier review's 'both material deployments'. Both tokens are the immutable Veda BoringVault at 0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae; hook() returns LayerZeroTeller 0x358CFACf00d0B4634849821BB3d1965b472c776a on both chains, with shareLockPeriod()=0 and isPaused()=false. The Teller exposes denyAll/denyFrom/denyTo/denyOperator and reverts TransferDenied for listed parties, but on Sonic RolesAuthority 0x7D5f6108e23c0CB2cfD744E5c46f1aAfFc30A348 getRolesWithCapability(Teller, denyAll/denyFrom/denyTo/denyOperator)=0 and isCapabilityPublic=false; canCall(Safe 0x948dd935..., Teller, denyAll)=false, and the same reads are zero on Ethereum. No address can currently execute a deny, so the deny surface is dormant, not an active Yes. The authority owner is TimelockController 0xFB6ec7CCBd77a42922a35D22A94fdF7fd54EE4BC (one-day delay), and the Sonic Safe 0x948dd935... holds the role-5 pause capability (canCall(...,pause())=true). An active redemption/deposit pause plus a governor able to install deny operators is direct Possible under the FreezeWatch decision procedure (docs/blacklist-tracker.md). No reserve test is used: the published reserve row is an unmeasured pooled stablecoin/DeFi basket.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

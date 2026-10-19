@@ -1,8 +1,11 @@
 import {
+  REQUEST_ATTRIBUTION_BUCKET_SEC,
   REQUEST_ATTRIBUTION_PRUNE_INTERVAL_SEC,
   REQUEST_ATTRIBUTION_RETENTION_DAYS,
   createBufferedAttributionRecorder,
   isEnvFlagEnabled,
+  requestAttributionInverseRate,
+  selectRequestAttributionSample,
   type ApiRequestRouteMetric,
   type BufferedAttributionEntry,
 } from "@shared/lib/request-attribution";
@@ -28,6 +31,8 @@ const API_KEY_REQUEST_ATTRIBUTION_DISABLED_ENV = "API_KEY_REQUEST_ATTRIBUTION_DI
 interface BufferedWorkerRequestAttribution extends BufferedAttributionEntry {
   lane: ApiRequestWorkerLane;
   consumerClass: ApiRequestConsumerClass;
+  authenticationClass: "keyed" | "unkeyed" | "not-applicable";
+  sampleInverseRate: number;
 }
 
 interface BufferedApiKeyRequestAttribution extends BufferedAttributionEntry {
@@ -39,31 +44,32 @@ const workerRequestRecorder = createBufferedAttributionRecorder<BufferedWorkerRe
   flushDelayMs: REQUEST_ATTRIBUTION_FLUSH_DELAY_MS,
   pruneIntervalSec: REQUEST_ATTRIBUTION_PRUNE_INTERVAL_SEC,
   retentionSec: API_REQUEST_SOURCE_STATS_RETENTION_SEC,
-  insertSql: `INSERT INTO api_request_consumer_stats (
+  insertSql: `INSERT INTO api_request_source_samples (
            bucket_start,
            route_key,
            route_path,
            lane,
            consumer_class,
-           request_count
+           authentication_class,
+           sample_inverse_rate,
+           sample_count
          )
-         VALUES (?, ?, ?, ?, ?, ?)
-         ON CONFLICT(bucket_start, route_key, lane, consumer_class)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(bucket_start, route_key, lane, consumer_class, authentication_class, sample_inverse_rate)
          DO UPDATE SET
-           request_count = request_count + excluded.request_count,
+           sample_count = sample_count + excluded.sample_count,
            route_path = excluded.route_path`,
-  pruneSql: [
-    "DELETE FROM api_request_consumer_stats WHERE bucket_start < ?",
-    "DELETE FROM api_key_request_stats WHERE bucket_start < ?",
-  ],
+  pruneSql: [],
   logLabel: "worker",
-  buildKey: (entry) => `${entry.bucketStart}\t${entry.route.routeKey}\t${entry.lane}\t${entry.consumerClass}`,
+  buildKey: (entry) => `${entry.bucketStart}\t${entry.route.routeKey}\t${entry.lane}\t${entry.consumerClass}\t${entry.authenticationClass}\t${entry.sampleInverseRate}`,
   bindInsertParams: (entry) => [
     entry.bucketStart,
     entry.route.routeKey,
     entry.route.routePath,
     entry.lane,
     entry.consumerClass,
+    entry.authenticationClass,
+    entry.sampleInverseRate,
     entry.requestCount,
   ],
   mergeBuffered: (existing, incoming) => {
@@ -80,17 +86,21 @@ const apiKeyRequestRecorder = createBufferedAttributionRecorder<BufferedApiKeyRe
   insertSql: `INSERT INTO api_key_request_stats (
        api_key_id,
        bucket_start,
-       request_count
+       request_count,
+       source_v2_request_count
      )
-     VALUES (?, ?, ?)
+     VALUES (?, ?, ?, ?)
      ON CONFLICT(api_key_id, bucket_start)
-     DO UPDATE SET request_count = request_count + excluded.request_count`,
+     DO UPDATE SET
+       request_count = request_count + excluded.request_count,
+       source_v2_request_count = source_v2_request_count + excluded.source_v2_request_count`,
   pruneSql: [],
   logLabel: "api-key",
   buildKey: (entry) => `${entry.bucketStart}\t${entry.apiKeyId}`,
   bindInsertParams: (entry) => [
     entry.apiKeyId,
     entry.bucketStart,
+    entry.requestCount,
     entry.requestCount,
   ],
   mergeBuffered: (existing, incoming) => {
@@ -112,9 +122,12 @@ export async function recordWorkerRequestAttribution(
   route: ApiRequestRouteMetric,
   lane: ApiRequestWorkerLane,
   consumerClass: ApiRequestConsumerClass,
+  authenticationClass: BufferedWorkerRequestAttribution["authenticationClass"],
   nowSec = Math.floor(Date.now() / 1000),
 ): Promise<void> {
-  const bucketStart = nowSec - (nowSec % 60);
+  const sampleInverseRate = requestAttributionInverseRate();
+  if (!selectRequestAttributionSample(sampleInverseRate)) return;
+  const bucketStart = nowSec - (nowSec % REQUEST_ATTRIBUTION_BUCKET_SEC);
   await workerRequestRecorder.record(
     db,
     {
@@ -122,6 +135,8 @@ export async function recordWorkerRequestAttribution(
       route,
       lane,
       consumerClass,
+      authenticationClass,
+      sampleInverseRate,
       requestCount: 1,
     },
     nowSec,
@@ -133,7 +148,7 @@ export async function recordApiKeyRequestAttribution(
   apiKeyId: number,
   nowSec = Math.floor(Date.now() / 1000),
 ): Promise<void> {
-  const bucketStart = nowSec - (nowSec % 60);
+  const bucketStart = nowSec - (nowSec % REQUEST_ATTRIBUTION_BUCKET_SEC);
   await apiKeyRequestRecorder.record(
     db,
     {
@@ -144,8 +159,6 @@ export async function recordApiKeyRequestAttribution(
     },
     nowSec,
   );
-
-  await workerRequestRecorder.maybePrune(db, nowSec);
 }
 
 

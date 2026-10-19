@@ -1,11 +1,45 @@
 {
   "id": "syrupusdc-maple",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "Live Pharos circulating supply/price snapshot",
+        "url": "https://api.pharos.watch/api/stablecoins"
+      },
+      {
+        "label": "Canonical MaplePool verified source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b"
+      },
+      {
+        "label": "Current MaplePoolManager implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8"
+      },
+      {
+        "label": "PoolPermissionManager implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc3530358e54bc81efce4a2e12a898e996b091753"
+      },
+      {
+        "label": "Material Monad token verified source",
+        "url": "https://monadscan.com/address/0xab6e5a0c3799d020c790d34f7b2c02639e238af7#code"
+      },
+      {
+        "label": "Official crosschain deployment registry",
+        "url": "https://docs.maple.finance/integrate/crosschain/syrupusd-crosschain"
+      },
+      {
+        "label": "CCIP pool types and exact canonical escrow",
+        "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDC"
+      },
+      {
+        "label": "Solana mint",
+        "url": "https://explorer.solana.com/address/AvZZF1YaZDziPY2RCK4oJrRVrbN3mTD9NL24hPeaZeUj"
+      }
+    ],
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Explicit Yes retained: syrupUSDC is a tracked strategy-vault variant whose parent USDC has confirmed centralized freeze exposure, so wrapper holders inherit upstream blacklistability.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "evidence": "The 2026-10-19 census lacked syrupUSDC chain shares; materiality was measured rather than assumed. Live Pharos API supplyObservedAt=1792389678 reports $1,050,083,549.6885315 circulating at price 1.1878796180508098, equivalent to 883,998,288.8262805 shares. At ethereum@26224759 (2026-10-19T06:13:59+00:00), canonical MaplePool totalSupply=883,936,013.727161 shares and balanceOf(CCIP LockRelease pool 0x20b79d39bd44deee4f89b1e9d0e3b945fde06491)=241,955,009.020414; non-escrow Ethereum supply is 641,981,004.706747 (~72.6224%). Monad pinned block 114681688 has 129,162,369.822548 (~14.6112%). Solana finalized slot 458730128 (2026-10-19T06:16:00Z) has 68,980,141.531169 (~7.8032%) with non-zero freezeAuthority 76QpxAGtsrbwP5nmdCVHyQe2AHVML7cqhxF9FpBxLJjp: real direct control but sub-threshold, not a Yes setter. Arc is ~4.8921%; Base ~0.0289%, Arbitrum ~0.0351%, Ink, Robinhood and Tempo each <0.001%; all were measured. Ethereum manager 0x7ad5ffa5fdf509e30186f4609c2f6269f4b6158f resolves to implementation 0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8 and permission manager 0xbe10adce8b6e3e02db384e7fada5395dd113d8b3 (implementation 0xc3530358e54bc81efce4a2e12a898e996b091753). Permission manager admin()=0xd6d4bcde6c816f17889f1dd3000af0261b03a196; pool delegate is 0xc1e18ffd8825ffb286d177ddebeba345ec70b49f. permissionLevels(manager)=1 (FUNCTION_LEVEL); transfer, transferFrom, redeem and requestRedeem poolBitmaps are zero (open), while withdraw and requestWithdraw are 16. Verified assigned permission administrators can configure sender/recipient and exit eligibility, so this mutable holder-facing surface sets Possible. Existing restricted withdraw entrypoints do not establish Yes while equivalent redeem and transfer routes remain open. Monad is verified immutable BurnMintERC20 with ordinary transfers and allowance-enforced burnFrom, not arbitrary-holder seizure. USDC parent inheritance remains additional upstream exposure, not direct Yes.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "privileged-internal-pricing",

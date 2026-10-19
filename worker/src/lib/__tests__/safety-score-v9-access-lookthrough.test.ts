@@ -6,7 +6,7 @@ import { buildSafetyScoreV9Candidate } from "../safety-score-v9/candidate";
 import { V9_ACCESS_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/access-posture";
 import { makeAccessReview } from "@shared/lib/__tests__/safety-score-v9-access-lookthrough.test-support";
 import { makeV9Extension, makeV9FixedInput, makeV9TwoAssetFixedInput } from "../../test-helpers/v9-fixed-input";
-import { alphaMeta, metaMap } from "./safety-score-v9-fact-set.test-support";
+import { alphaMeta, immutableMintMeta, metaMap } from "./safety-score-v9-fact-set.test-support";
 import { admitSafetyScoreV9ExtensionAsset, computeSafetyScoreV9ReserveExposureKey } from "../safety-score-v9/fact-set-schema";
 import { buildV9EvidenceGapQueue } from "@shared/lib/safety-score-v9/evidence-gap-queue";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
@@ -16,6 +16,28 @@ function compiledGraph(clockSec: number, reviewedAt: string) {
   return buildSafetyScoreV9AccessClaimGraph({ assetId: "alpha", clockSec, generationId: "fixture-generation", evidence: new ReviewEvidenceBuilder("alpha", clockSec), review: makeAccessReview("alpha", reviewedAt) })!;
 }
 describe("access claim graph compiler", () => {
+  it("materializes lazy reviews once per asset helper chain with exact candidate parity", () => {
+    const fixed = makeV9FixedInput();
+    const eager = immutableMintMeta();
+    const lazy = { ...eager };
+    let mintReads = 0;
+    Object.defineProperty(lazy, "mintAuthority", {
+      enumerable: true,
+      get: () => { mintReads++; return structuredClone(eager.mintAuthority); },
+    });
+    const build = (meta: typeof eager) => buildSafetyScoreV9Candidate({
+      fixedInput: fixed,
+      extension: buildSafetyScoreV9BaselineExtension(fixed, {
+        metaById: metaMap(meta), registryFingerprint: fixed.registryFingerprint,
+      }),
+      publishedAtSec: fixed.clockSec,
+    });
+    const expected = build(eager);
+    const actual = build(lazy);
+    expect(JSON.stringify(actual)).toBe(JSON.stringify(expected));
+    // One asset-local materialization plus the independent issuer ancestry read.
+    expect(mintReads).toBeLessThanOrEqual(2);
+  });
   it("admits exact receipt identities while leaving reserve proportions unpriced", () => {
     const graph = compiledGraph(Date.parse("2026-06-01T00:00:00Z") / 1000, "2026-01-01T00:00:00Z");
     expect(graph.edges.filter((edge) => edge.basis.kind === "reserve-position").map((edge) => edge.weight)).toEqual([null, null, null]);

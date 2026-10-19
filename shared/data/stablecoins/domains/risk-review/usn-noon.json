@@ -34,11 +34,23 @@
       {
         "label": "Noon USN governing terms dated July 31, 2026, Sections 12 and 31; legal freezing powers and verification suspension distinct from transfer, observed 2026-10-09T10:35:23Z by Sol curation campaign 2026-10-09 (Lane46Midas)",
         "url": "https://docs.noon.capital/7.-terms-and-policies/asset-terms-usn-terms-of-service.md"
+      },
+      {
+        "label": "Ethereum USN proxy (current implementation and owner)",
+        "url": "https://etherscan.io/address/0xdA67B4284609d2d48e5d10cfAc411572727dc1eD#code"
+      },
+      {
+        "label": "Verified USN implementation 0x79fd7fe2a8ebcae47798321b2ac97107df3de229",
+        "url": "https://etherscan.io/address/0x79fd7fe2a8ebcae47798321b2ac97107df3de229#code"
+      },
+      {
+        "label": "Ethereum PublicNode RPC, block 26224761",
+        "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
-    "evidence": "On 2026-09-22 the access posture was re-derived on the canonical deployment at Ethereum block 26036288: the USN proxy 0xdA67B4284609d2d48e5d10cfAc411572727dc1eD resolves to implementation 0x961e78b26f6984a2ddac42e4ce5b8014a311608e (Sourcify exact match; the 2026-07-30 review's 0x6bdc8104... was superseded by the timelocked 2026-08-04 upgrade), whose verified source (contracts/USNUpgradeableHyperlane.sol) exposes onlyOwner pause() and unpause() alongside blacklistAccount(address) and unblacklistAccount(address) over a public blacklist mapping, with _update guarded by whenNotPaused and reverting BlacklistedAddress whenever blacklist[from] || blacklist[to]. permissionless() returned true and paused() returned false at head, and no account has ever been blacklisted or the token paused. owner() returned the Noon 3-of-6 admin Safe 0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f, so the live signer set can pause all transfers or blacklist any holder immediately; the 48-hour timelock covers only proxy upgrades, not the pause or blacklist functions. A canonical pause or blacklist also freezes the USN claim leg paid to sUSN withdrawers after their 7-day wait. The same token codebase ran on the bridged representations at the 2026-07-30 probes: the zkSync Era warp 0x0469d9d1de0ee58fa1153ef00836b9bbcb84c0b6 exposes the blacklist(address) view and its blacklistAccount reverts AccessControlUnauthorizedAccount for unauthorized callers, and the Sophon warp 0xc1aa99c3881b26901af70738a7c217dc32536d36 exposes the blacklist view and reverts OwnableUnauthorizedAccount (probes at zkSync Era block 71379660 and Sophon block 29616847); the Starknet representation is owner-administered under the 2026-07-20 bridge-route review. Direct holder-level freeze reach is therefore a current live fact, so the posture is reviewed true (individual reach).",
-    "reviewer": "Kimi T38 unknown-reduction wave 2; Pharos WS-H adverse re-review",
-    "reviewedAt": "2026-09-22"
+    "evidence": "Re-derived at Ethereum block 26224761 (2026-10-19): the USN proxy 0xdA67B4284609d2d48e5d10cfAc411572727dc1eD resolves to verified implementation 0x79fd7fe2a8ebcae47798321b2ac97107df3de229 (USNUpgradeableHyperlane), superseding the 0x961e78b26f6984a2ddac42e4ce5b8014a311608e implementation pinned by the 2026-09-22 review. The verified implementation exposes onlyOwner pause()/unpause() and blacklistAccount(address)/unblacklistAccount(address) over a public blacklist mapping; _update is whenNotPaused and reverts BlacklistedAddress whenever blacklist[from] || blacklist[to]. owner() is the Noon 3-of-6 admin Safe 0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f. At that block paused()=false and blacklist(0x000000000000000000000000000000000000dEaD)=false; a simulated blacklistAccount(0x000000000000000000000000000000000000dEaD) from the Safe succeeds while the same call from 0x000000000000000000000000000000000000bEEF reverts OwnableUnauthorizedAccount, and pause() from the Safe succeeds. The proxy admin slot resolves to 0x55f39512cb43111a13e8440ee3e3602e72628239, owned by 0xE5e412C212B4FBbF550A94e7BD5e83dB0B315A7F, itself owned by the same Safe; pause and blacklist are not timelocked. Ethereum holds 99.9624% of USN supply (Pharos supply census, 2026-10-19), so the control is on a material deployment. A canonical pause or blacklist also freezes the USN claim leg paid to sUSN withdrawers after their 7-day wait. Direct holder-level freeze reach is a current live fact; reviewed true.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",

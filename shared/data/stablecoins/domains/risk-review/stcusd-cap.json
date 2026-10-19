@@ -1,7 +1,7 @@
 {
   "id": "stcusd-cap",
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Cap contract addresses",
@@ -54,11 +54,27 @@
       {
         "label": "Ethereum PublicNode RPC",
         "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Current Cap AccessControl source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6681eb184c876d74ea3ddfae0ecee0c9c0f84bc1"
+      },
+      {
+        "label": "MegaETH fixed-block RPC",
+        "url": "https://mainnet.megaeth.com/rpc"
+      },
+      {
+        "label": "Tempo fixed-block RPC",
+        "url": "https://rpc.tempo.xyz"
+      },
+      {
+        "label": "Katana fixed-block RPC",
+        "url": "https://rpc.katana.network"
       }
     ],
     "sourceFreeRationale": "Explicit inherited: the verified stcUSD wrapper imposes no direct holder restriction, and its material freeze exposure routes through its ERC-4626 claim on the named upstream cusd-cap, whose verified Vault exposes governance-controlled protocol- and asset-level pause. The wrapper's bounded UUPS upgrade path (external AccessControl, one-day TimelockController, 3-of-5 governance Safe) can introduce a future holder control but none is deployed.",
-    "evidence": "Historical July 30, 2026 review at Ethereum block 25570002 identified StakedCap 0x42c0e0ef7c2f35de073f4d6f9c0e4483429c3d31 and parent CapToken 0xa76645e15c267b876999bf7689e0b2c1ee29bfe6. Rechecked October 1, 2026 at Ethereum block 26095797: stcUSD still resolves to that StakedCap implementation and asset() still returns cUSD 0xcccc62962d17b8914c62d74ffb843d73b2a3cccc; cUSD now resolves to CapToken 0xbdaa34082f1a1a3c32190a672bc9dd1b69791b97. The current verified StakedCap source retains standard ERC-4626 share transfers without a deployed direct blacklist or pause function. The current verified parent Vault retains checkAccess-gated pauseProtocol() and pauseAsset(), so the inherited upstream exposure remains. stcUSD's external AccessControl address remains 0x7731129a10d51e18cde607c5c115f26503d2c683; its default admin remains TimelockController 0xd8236031d8279d82e615af2bfab5fc0127a329ab, whose minimum delay remains 86400 seconds and whose proposer, executor, and canceller roles remain assigned to the 3-of-5 governance Safe. No enabled Safe modules were returned. This current observation covers Ethereum only; newly disclosed MegaETH, Tempo, and Katana stcUSD deployments require separate route and control verification before an exhaustive deployment-scope claim.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurA34EURC), Ethereum implementation and inherited control review",
-    "reviewedAt": "2026-10-01"
+    "evidence": "Ethereum is the only material stcUSD deployment after directly measuring official satellite supplies. The API has an empty chainCirculating map despite total circulating value77,994,674.6770 USD, so the zero recorded in the supply data is not proof of zero supply. At ethereum@26224760 (2026-10-19T06:14:11+00:00; hash 0x2a6c0b20faae49bb23f77a582b517057741efcee5bd423a8552f672144c83b85; observed 2026-10-19T06:19:28.419767+00:00) via https://ethereum-rpc.publicnode.com, canonical totalSupply is71,850,674.3900909 shares. Official MegaETH, Tempo and Katana deployments have6,672,058.520565,1,652.353990 and90,917.176288 shares at blocks29593546/44841291/45647747 (2026-10-19T06:15:57-58Z). Their upper-bound shares against canonical supply are9.286007%,0.002300%,0.126536%, all below10%; subtracting all satellites from canonical local supply still leaves Ethereum90.585157%. At the Ethereum pin, proxy 0x88887be419578051ff9f4eb6c858a951921d8888 remains on verified StakedCap0x42c0e0ef7c2f35de073f4d6f9c0e4483429c3d31 and asset() returns cUSD0xcccc62962d17b8914c62d74ffb843d73b2a3cccc. Verified source retains standard ERC-4626 share transfers without a deployed direct blacklist, transfer pause or arbitrary-holder burn. Native withdrawal share burns use ordinary holder allowance rules. StakedCap nevertheless has an active UUPS implementation upgrade path: _authorizeUpgrade checks AccessControl0x7731129a10d51e18cde607c5c115f26503d2c683, and checkAccess(0x00000000,0x88887be419578051ff9f4eb6c858a951921d8888,0xd8236031d8279d82e615af2bfab5fc0127a329ab) returns true. The timelock minimum delay is86400 seconds. This current mutable-token surface makes the wrapper direct Possible; lack of a presently installed blacklist and a one-day delay do not make it merely Upstream. Parent cUSD now resolves to0xbdaa34082f1a1a3c32190a672bc9dd1b69791b97, is itself classified Possible, and its issuer/custodial reserves remain adverse exposure. Those parent facts cannot override direct wrapper Possible. MegaETH/Katana retain proxy implementation paths; Tempo returns transferPolicyId()=1 and paused()=false, all below threshold. Historical July30 and October1 implementation/parent observations remain consistent with these current bindings.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   }
 }

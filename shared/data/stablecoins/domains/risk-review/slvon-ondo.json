@@ -10,11 +10,35 @@
       {
         "label": "Important Notes",
         "url": "https://docs.ondo.finance/ondo-global-markets/important-notes"
+      },
+      {
+        "label": "SLVon Ethereum token",
+        "url": "https://etherscan.io/address/0xf3e4872e6a4cf365888d93b6146a2baa7348f1a4"
+      },
+      {
+        "label": "SLVon BSC token",
+        "url": "https://bscscan.com/address/0x8b872732b07be325a8803cdb480d9d20b6f8d11b"
+      },
+      {
+        "label": "Ondo Blocklist Oracle (Ethereum) contract and logs",
+        "url": "https://eth.blockscout.com/address/0xd8c8174691d936E2C80114EC449037b13421B0a8?tab=logs"
+      },
+      {
+        "label": "Ondo compliance registry (Ethereum)",
+        "url": "https://eth.blockscout.com/address/0x156F73fc73197555e950743Cb2B23F411c751002?tab=contract"
+      },
+      {
+        "label": "SLVon Solana mint",
+        "url": "https://solscan.io/token/iy11ytbSGcUnrjE6Lfv78TFqxKyUESfku1FugS9ondo"
+      },
+      {
+        "label": "Ondo issuer and holder restrictions",
+        "url": "https://docs.ondo.finance/ondo-stocks/important-notes.md"
       }
     ],
-    "evidence": "SLVon resolves to Yes because it is a centrally issued Ondo GM tokenized ETF product with eligibility restrictions and issuer-controlled subscription, redemption, and transfer infrastructure.",
-    "reviewer": "Codex data addition",
-    "reviewedAt": "2026-05-24"
+    "evidence": "Re-reviewed 2026-10-19. Material deployments measured by on-chain totalSupply at Ethereum block 26224775, BSC block 128504789 and finalized Solana slot 458730324: Ethereum 353,646.48 SLVon (75.4502%) and BSC 88,142.78 (18.8052%); Solana holds 26,924.81 (5.7444%) and HyperEVM 1.06 (0.0002%), both sub-threshold but their controls are disclosed. Ethereum token 0xf3e4872e6a4cf365888d93b6146a2baa7348f1a4 and BSC token 0x8b872732b07be325a8803cdb480d9d20b6f8d11b route transfers through Ondo compliance clients (Ethereum 0x54a8757c2FEF8649830b158a8C19D3a670e80318; BSC 0x76be569C94C39a2E2492DE2F4D1C253F348250D0), which forward to registries 0x156F73fc73197555e950743Cb2B23F411c751002 (Ethereum) and 0x62fbBe0312D31823579De46ab1d89fAE0b798E61 (BSC). For gmIdentifier 0x428ECB70E90d1527A5f5e177789f51747b883F34 the registries resolve to Blocklist 0xd8c8174691d936E2C80114EC449037b13421B0a8 (Ethereum) and 0xA8a823584Ac88cb48e7F8F467d1be9c0601E43F8 (BSC), both owned by the 1-of-2 Safe 0x99ca4f54F6Bb1c36C662e7C404F517D150FD1173. The Ethereum blocklist emitted BlockedAddressesAdded(address[]) at block 26192441 and isBlocked(0x00000e130067f648e34b3d0b1cf1b65a2f2d8037)=true; the BSC blocklist returns isBlocked=true for the same address. Both material deployments also have a TokenPauseManager (Ethereum 0xfD48112E448417CA79305a518c4186dF4b0A200a with PAUSE_TOKEN_ROLE held by 0x2e55b738F5969Eea10fB67e326BEE5e2fA15A2CC; BSC 0x6334924c787Ebd21C881740Ef6237Ef51962638F) reporting isTokenPaused=false, and BURNER_ROLE membership is zero. The sub-threshold Solana mint iy11ytbSGcUnrjE6Lfv78TFqxKyUESfku1FugS9ondo retains freeze authority 51QVCuHfL1FeNjd8BDeffCKhCcAYoULnVB3yjNhShiuK and pausable-config authority 9foMHsSDq7nMg4WPusSz9eY7tyxyukqborA8GyU5cUxD. Reserves are 100% custodial SLV shares and cash in transit, but the direct blocklist and pause powers set Yes.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",

@@ -14,11 +14,23 @@
       {
         "label": "Solana mainnet finalized account observation",
         "url": "https://api.mainnet-beta.solana.com"
+      },
+      {
+        "label": "BSC USYC satellite",
+        "url": "https://bscscan.com/address/0x8d0fa28f221eb5735bc71d3a0da67ee5bc821311"
+      },
+      {
+        "label": "USYCSatellite verified source (BSC)",
+        "url": "https://bscscan.com/address/0x191fb6f3ba332f1b8789caf67abbaba56147445b#code"
+      },
+      {
+        "label": "Ethereum USYC",
+        "url": "https://eth.blockscout.com/address/0x136471a34f6ef19fe571effc1ca711fdb8e49f2b"
       }
     ],
-    "evidence": "Issuer documentation explicitly describes allowlist entitlements and a system halt that can freeze all USYC transactions. The verified Ethereum implementation checks transfer permissions through RolesAuthority. At finalized Solana slot 452213698, Token-2022 USYC retained live freezeAuthority DZ7j2YLDq7847t2HtCWaDQUTpLJ4BinPGsY8w9Aai63y, a non-executable account owned by the documented Teller and Permissions program. The prior inferred Yes verdict is now supported by primary documentation and pinned state.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurA11USYC)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "An earlier review recorded the BSC supply as '2,056,937.727947 USYC', which is 1000x too small and inconsistent with its own stated defect ('2.06B vs 34.5M'). The correct figure: at BSC block 128504633 the tracked proxy 0x8d0fa28f221eb5735bc71d3a0da67ee5bc821311 (USYCSatellite implementation 0x191fb6f3ba332f1b8789caf67abbaba56147445b) reported totalSupply 2,056,937,727.947452 USYC (6 decimals), versus 34,464,990.560783 on Ethereum, i.e. 98.3541% of measured supply on BSC. The rest of the earlier evidence (Entitlements authority 0x6B7d54003f73bE979cf92BF369432aC534853692, canCall(0x...dEaD, token, 0xa9059cbb)=false, owner 0xcd636d955a95385Ec5E2776B167B92E89Ef6F70E) is confirmed. The verdict is Yes.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

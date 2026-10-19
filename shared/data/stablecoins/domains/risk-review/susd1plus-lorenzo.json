@@ -2,10 +2,32 @@
   "id": "susd1plus-lorenzo",
   "blacklistabilityReview": {
     "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Exact-match current sUSD1+ implementation",
+        "url": "https://sourcify.dev/server/v2/contract/56/0x972c27ee69b19d7648cef365700c22713a9a31fd?fields=abi,sources"
+      },
+      {
+        "label": "Exact-match CeDeFiManager implementation",
+        "url": "https://sourcify.dev/server/v2/contract/56/0x6e0f4dc0d748e4917b418357d989b2023b8b7a20?fields=abi,sources"
+      },
+      {
+        "label": "sUSD1+ BSC proxy",
+        "url": "https://bscscan.com/address/0x4f2760b32720f013e900dc92f65480137391199b#code"
+      },
+      {
+        "label": "Current CeDeFiManager proxy",
+        "url": "https://bscscan.com/address/0x507ec48ef26919a205a9f3b8aaf69532e20c0987#code"
+      },
+      {
+        "label": "Assigned manager operator Safe",
+        "url": "https://bscscan.com/address/0x60707dfd714c3ac2f086d284145cd8cc6915262f#code"
+      }
+    ],
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Explicit Yes retained: sUSD1+ is a tracked strategy-vault variant whose parent USD1 has confirmed centralized freeze exposure, so wrapper holders inherit upstream blacklistability.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "evidence": "Direct Yes, not merely inherited USD1 exposure. BSC is 100% of reported circulation and the sole authored deployment. At bsc@128504671 (2026-10-19T06:16:28+00:00, hash 0xddea5730f34d00d97f35056d3d8116b2672b8f291772ba9d75509252daa1fa39), sUSD1+ proxy 0x4f2760b32720f013e900dc92f65480137391199b uses exact-match implementation 0x972c27ee69b19d7648cef365700c22713a9a31fd; cedefiManager()=0x507ec48ef26919a205a9f3b8aaf69532e20c0987, whose UUPS implementation is 0x6e0f4dc0d748e4917b418357d989b2023b8b7a20. Exact token source exposes addBlacklist(address[]) and freezeShares(address,uint256) under onlyManager (msg.sender==cedefiManager). transfer() is notBlacklisted and requires sufficient getUsableShares(); transferFrom() additionally checks blacklisted[from] and the sender's usable shares, so these controls can prevent existing holders from moving their own shares. The manager's executeCommand(address,bytes) requires an assigned OPERATOR_ROLE, a registered vault and an allowlisted selector. At the same block getVaultsLength()=2 and getVault(0)=0x4f2760b32720f013e900dc92f65480137391199b; allowedVaultsFuncs for addBlacklist and freezeShares both return true. hasRole(OPERATOR_ROLE,0x60707dfd714c3ac2f086d284145cd8cc6915262f)=true; OPERATOR_ROLE=0xdf8db4b3f0e355fdb17cbf7574c8af9d27ce4756db4efb6006ec8d3f04f391c4 (the source hashes CREATE_VAULT_ROLE). Thus the current nonzero operator can call arbitrary-holder blacklist/freeze now; this is not only a governor able to authorize a future burner. The same Safe holds BOSS_ROLE and ADMIN_ROLE (source ADMIN_ROLE hashes MANAGER_ROLE); upgradeToAndCall and pause selectors are also allowlisted, preserving the separate direct Possible upgrade/pause surfaces. paused()=false and transferable()=true describe current global state, not renunciation of targeted controls. underlying() remains BSC USD1 0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d, so the existing parent exposure is retained as secondary rather than mislabeled the direct basis. The mixed RWA/CeFi/DeFi reserve row is not a measured look-through majority and is unnecessary to this direct verdict. No freeze occurrence, unobserved arbitrary burner member, or new custody/signing architecture is inferred.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "privileged-internal-pricing",
