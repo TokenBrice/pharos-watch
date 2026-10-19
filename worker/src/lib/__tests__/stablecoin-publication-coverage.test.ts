@@ -370,7 +370,7 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
     expect(next.missingActiveAssets[0]).toMatchObject({ consecutiveMissingGenerations: null, alertEligible: true });
   });
 
-  it.each(["wusd-worldwide", "pht-pht", "vcred-vcred", "usdkg-gold-dollar", "hbd-hive"])("keeps %s missing while acknowledged, re-alerts at expiry, and clears on a real price", (id) => {
+  it.each(["wusd-worldwide", "pht-pht", "vcred-vcred", "usdkg-gold-dollar", "hbd-hive", "usdn-noble", "usdk-kast"])("keeps %s missing while acknowledged, re-alerts at expiry, and clears on a real price", (id) => {
     const review = STABLECOIN_PRICE_GAP_REVIEWS.find((entry) => entry.stablecoinId === id)!;
     const ids = [review.stablecoinId, "usdt-tether"];
     const first = evaluateStablecoinActivePriceCoverage(
@@ -419,6 +419,44 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
       previousCoverage: acknowledged,
     });
     expect(priced).toMatchObject({ complete: true, pricedActiveIds: ids, acknowledgedGapCount: 0, missingPriceCount: 0 });
+  });
+
+  it("bounds the M0-family source-gap reviews to seven days without waiving publication or inventing prices", () => {
+    const ids = ["usdn-noble", "usdk-kast"];
+    const reviews = STABLECOIN_PRICE_GAP_REVIEWS.filter((entry) => ids.includes(entry.stablecoinId));
+    expect(reviews.map((review) => review.stablecoinId)).toEqual(ids);
+    for (const review of reviews) {
+      expect(review.owner).toBe("ops");
+      expect(review.reviewedAt).toBe(Date.UTC(2026, 9, 19, 2, 35, 17) / 1000);
+      expect(review.expiresAt).toBeGreaterThan(review.reviewedAt);
+      expect(review.expiresAt - review.reviewedAt).toBeLessThanOrEqual(7 * 86_400);
+      expect(review.reason).toContain("2026-10-19 00:39:33 UTC");
+      expect(review.reason).toContain("15-minute");
+      expect(review.reason).toContain("inherit");
+      expect(review.reason).toContain("fallback-confidence");
+      expect(review.reason).toContain("not observed prices");
+      expect(review.sources.some((source) => source.includes("api.coingecko.com/"))).toBe(true);
+      expect(review.sources.some((source) => source.includes("stablecoins.llama.fi/"))).toBe(true);
+      expect(review.sources.some((source) => source.includes("api.dexscreener.com/"))).toBe(true);
+      expect(review.sources.some((source) => source.includes("api.geckoterminal.com/"))).toBe(true);
+      expect(review.sources.every((source) => /^https:\/\/\S+$/.test(source))).toBe(true);
+    }
+    const assets = ids.map((id) => ({ id, price: null, circulating: { peggedUSD: 100 } }));
+    const nowSec = reviews[0]!.reviewedAt;
+    const coverage = evaluateStablecoinActivePriceCoverage(assets, ids, { nowSec, priceGapReviews: reviews });
+    expect(coverage).toMatchObject({
+      complete: false,
+      missingPriceCount: 2,
+      missingActiveIds: ids,
+      acknowledgedGapIds: ids,
+      alertEligibleIds: [],
+      pricedActiveIds: [],
+      invalidGapReviewIds: [],
+      expiredGapReviewIds: [],
+    });
+    expect(assets.every((asset) => asset.price === null)).toBe(true);
+    const publication = evaluateStablecoinPublicationCoverage([], nowSec, STABLECOIN_PUBLICATION_WAIVERS, ids);
+    expect(publication).toMatchObject({ complete: false, missingActiveIds: ids, waivedActiveIds: [] });
   });
 
   it("acknowledges all five reviewed Mento weekend FX-closure gaps without inventing prices", () => {
