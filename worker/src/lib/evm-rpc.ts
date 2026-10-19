@@ -58,6 +58,11 @@ export interface EvmRpcOptions {
   chainRpcs?: Map<string, ChainRpcConfig>;
 }
 
+export interface EvmBlockHeaderOptions extends EvmRpcOptions {
+  /** Required observation window; stale but well-formed headers try the next endpoint. */
+  minTimestampSec?: number;
+}
+
 export interface EvmRpcBatchCall {
   method: string;
   params: unknown[];
@@ -1065,7 +1070,7 @@ export async function fetchEvmBlockTimestamp(
 async function readEvmBlockHeader(
   chainId: string,
   blockNumberOrTag: number | "latest" | "safe" | "finalized",
-  options?: EvmRpcOptions,
+  options?: EvmBlockHeaderOptions,
 ): Promise<EvmBlockHeader | null> {
   const urls = requestRpcUrls(chainId, options, blockNumberOrTag, true);
   if (
@@ -1096,6 +1101,7 @@ async function readEvmBlockHeader(
           timestamp == null ||
           !Number.isSafeInteger(timestamp) ||
           timestamp <= 0 ||
+          (options?.minTimestampSec !== undefined && timestamp < options.minTimestampSec) ||
           typeof block.hash !== "string" ||
           !/^0x[0-9a-fA-F]{64}$/.test(block.hash)
         ) {
@@ -1104,7 +1110,7 @@ async function readEvmBlockHeader(
         acceptedHeader = { number, timestamp, hash: block.hash.toLowerCase() as `0x${string}` };
         return true;
       },
-      rejectedReason: () => "block header has invalid number, hash, or timestamp",
+      rejectedReason: () => "block header has invalid number, hash, or timestamp, or is older than the required observation window",
     },
     chainId,
   );
@@ -1114,7 +1120,7 @@ async function readEvmBlockHeader(
 export function fetchEvmBlockHeader(
   chainId: string,
   blockNumberOrTag: number | "finalized",
-  options?: EvmRpcOptions,
+  options?: EvmBlockHeaderOptions,
 ): Promise<EvmBlockHeader | null> {
   return readEvmBlockHeader(chainId, blockNumberOrTag, options);
 }
@@ -1123,7 +1129,7 @@ export function fetchEvmBlockHeader(
 export async function fetchEvmBlockHeaderAtTag(
   chainId: string,
   blockNumberOrTag: "latest" | "safe" | "finalized",
-  options?: EvmRpcOptions,
+  options?: EvmBlockHeaderOptions,
 ): Promise<EvmBlockHeader | null> {
   return readEvmBlockHeader(chainId, blockNumberOrTag, options);
 }

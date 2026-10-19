@@ -714,6 +714,90 @@ describe("authenticated CCIP pending quantities", () => {
       { chain: "ethereum", from: 2_000_100, to: 2_000_105 },
     ]);
   });
+  it("converges the Monad moving tail with reviewed ranges and the unchanged eight-page budget", async () => {
+    const read = source(); read.lanes[0]!.destination.chainId = "monad";
+    const chainRpcs = buildChainRpcs("alchemy-key");
+    const first = await observeCcipPending({ ...input(read), chainRpcs });
+    if (first.status !== "accepted") throw new Error(first.reason);
+    pinNumber = 1_000_105; finalized = pinNumber; logRanges = [];
+    const args = { ...input(read, first.checkpoint), chainRpcs, db: {} as D1Database };
+    args.headers.set("ethereum", { number: 105, timestamp: 1000, hash: word(105) });
+    const backfill = await observeCcipPending(args);
+    expect(backfill).toMatchObject({ status: "rejected", reason: "history-incomplete" });
+    expect(backfill).not.toHaveProperty("amount");
+    if (backfill.status !== "rejected" || !backfill.checkpoint) throw new Error("Missing Monad checkpoint");
+    expect(logRanges).toEqual(Array.from({ length: 8 }, (_, i) => ({
+      chain: "monad", from: 106 + i * 100_000, to: 100_105 + i * 100_000,
+    })));
+    // Eight prefix commits plus the existing final checkpoint settlement.
+    expect(vi.mocked(setCache)).toHaveBeenCalledTimes(9);
+    expect(backfill.checkpoint.lanes[0]!.executed.nextBlock).toBe(800_106);
+    // More than the observed half-hour production of 5,948 blocks still fits
+    // the next ordinary attempt; no origin/checkpoint is reseeded.
+    pinNumber += 6000; finalized = pinNumber; logRanges = [];
+    const resumed = { ...input(read, backfill.checkpoint), chainRpcs };
+    resumed.headers.set("ethereum", { number: 105, timestamp: 1000, hash: word(105) });
+    expect(await observeCcipPending(resumed)).toMatchObject({ status: "accepted", amount: "10" });
+    expect(logRanges).toEqual([
+      { chain: "monad", from: 800_106, to: 900_105 },
+      { chain: "monad", from: 900_106, to: 1_000_105 },
+      { chain: "monad", from: 1_000_106, to: 1_006_105 },
+    ]);
+  });
+  it("subdivides a refused Monad range without skipping history or expanding the page budget", async () => {
+    const read = source(); read.lanes[0]!.destination.chainId = "monad";
+    const chainRpcs = buildChainRpcs("alchemy-key");
+    const first = await observeCcipPending({ ...input(read), chainRpcs });
+    if (first.status !== "accepted") throw new Error(first.reason);
+    const original = vi.mocked(fetchEvmRpcBatch).getMockImplementation()!;
+    const refused: Array<{ from: number; to: number }> = [];
+    vi.mocked(fetchEvmRpcBatch).mockImplementation(async (chain, requests, options) => {
+      for (const request of requests) {
+        if (chain !== "monad" || request.method !== "eth_getLogs") continue;
+        const filter = request.params[0] as { fromBlock: string; toBlock: string };
+        const from = Number(BigInt(filter.fromBlock)), to = Number(BigInt(filter.toBlock));
+        if (to - from + 1 > 10_000) { refused.push({ from, to }); return null; }
+      }
+      return original(chain, requests, options);
+    });
+    pinNumber = 200_105; finalized = pinNumber; logRanges = [];
+    const args = { ...input(read, first.checkpoint), chainRpcs };
+    args.headers.set("ethereum", { number: 105, timestamp: 1000, hash: word(105) });
+    const result = await observeCcipPending(args);
+    expect(result).toMatchObject({ status: "rejected", reason: "history-incomplete" });
+    expect(result).not.toHaveProperty("amount");
+    expect(refused).toEqual([{ from: 106, to: 100_105 }]);
+    expect(logRanges).toEqual(Array.from({ length: 7 }, (_, i) => ({
+      chain: "monad", from: 106 + i * 10_000, to: 10_105 + i * 10_000,
+    })));
+    expect(result.checkpoint?.lanes[0]!.executed.nextBlock).toBe(70_106);
+  });
+  it("converges the Monad retained tail without bypassing preferred Dwellir or its 10k limit", async () => {
+    const read = source(); read.lanes[0]!.destination.chainId = "monad";
+    const chainRpcs = buildChainRpcs("alchemy-key", undefined, { dwellirApiKey: "dwellir-key" });
+    const first = await observeCcipPending({ ...input(read), chainRpcs });
+    if (first.status !== "accepted") throw new Error(first.reason);
+    pinNumber = 120_105; finalized = pinNumber; logRanges = [];
+    const args = { ...input(read, first.checkpoint), chainRpcs };
+    args.headers.set("ethereum", { number: 105, timestamp: 1000, hash: word(105) });
+    const backfill = await observeCcipPending(args);
+    expect(backfill).toMatchObject({ status: "rejected", reason: "history-incomplete" });
+    if (backfill.status !== "rejected" || !backfill.checkpoint) throw new Error("Missing retained-tail checkpoint");
+    expect(logRanges).toEqual(Array.from({ length: 8 }, (_, i) => ({
+      chain: "monad", from: 106 + i * 10_000, to: 10_105 + i * 10_000,
+    })));
+    pinNumber += 6000; finalized = pinNumber; logRanges = [];
+    const resumed = { ...input(read, backfill.checkpoint), chainRpcs };
+    resumed.headers.set("ethereum", { number: 105, timestamp: 1000, hash: word(105) });
+    expect(await observeCcipPending(resumed)).toMatchObject({ status: "accepted", amount: "10" });
+    expect(logRanges).toEqual([
+      { chain: "monad", from: 80_106, to: 90_105 },
+      { chain: "monad", from: 90_106, to: 100_105 },
+      { chain: "monad", from: 100_106, to: 110_105 },
+      { chain: "monad", from: 110_106, to: 120_105 },
+      { chain: "monad", from: 120_106, to: 126_105 },
+    ]);
+  });
   it.each(["ink", "berachain"])("uses the admitted Dwellir 10,000-block span for CCIP on %s", async chain => {
     const read = source(); read.lanes[0]!.destination.chainId = chain;
     const chainRpcs = buildChainRpcs("alchemy-key", undefined, { dwellirApiKey: "dwellir-key" });

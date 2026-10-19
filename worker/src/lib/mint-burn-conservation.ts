@@ -633,6 +633,20 @@ function validAuditRange(fromBlock: number, toBlock: number): boolean {
   return Number.isSafeInteger(fromBlock) && fromBlock >= 1 && Number.isSafeInteger(toBlock) && toBlock >= fromBlock;
 }
 
+function conservationBoundaryHeader(value: unknown, block: number): { hash: string; timestamp: number } {
+  const header = value as { number?: unknown; hash?: unknown; timestamp?: unknown } | null;
+  let hash: string;
+  let timestamp: number;
+  try {
+    if (!header || quantity(header.number) !== block || typeof header.hash !== "string" ||
+      !WORD.test(header.hash) || header.hash.toLowerCase() === ZERO) throw new Error("invalid-boundary-header");
+    hash = header.hash.toLowerCase();
+    timestamp = quantity(header.timestamp);
+  } catch { throw new Error("invalid-boundary-header"); }
+  if (timestamp <= 0) throw new Error("invalid-boundary-time");
+  return { hash, timestamp };
+}
+
 export async function fetchConservationBoundaries(input: {
   requests: ConservationBoundaryRequest[];
   rpcEndpointsByChain: ReadonlyMap<string, readonly RpcEndpoint[]>;
@@ -683,7 +697,8 @@ export async function fetchConservationBoundaries(input: {
       }
       let result = null;
       let retryChunk = chunk;
-      const acceptedResults = new Map<BoundaryCall, unknown>();
+      const acceptedResults = new Set<BoundaryCall>();
+      const invalidHeaders = new Set<BoundaryCall>();
       let unavailableReason = "audit-rpc-unavailable";
       for (const endpoint of endpoints) {
         const attemptNow = Date.now();
@@ -711,19 +726,32 @@ export async function fetchConservationBoundaries(input: {
         const failed = new Set(result?.errors.map(({ index }) => index));
         if (result) {
           for (let index = 0; index < retryChunk.length; index++) {
-            if (!failed.has(index)) acceptedResults.set(retryChunk[index], result.results[index]);
+            if (failed.has(index)) continue;
+            const item = retryChunk[index];
+            try {
+              // A JSON-RPC success with a null/malformed header is still a failed
+              // read. Try the next admitted endpoint before accepting the call.
+              item.accept(result.results[index]);
+              acceptedResults.add(item);
+            } catch (error) {
+              const reason = auditReason(error);
+              if (reason === "invalid-boundary-header") invalidHeaders.add(item);
+              else {
+                fail(item.keys, reason);
+                acceptedResults.add(item);
+              }
+            }
           }
         }
-        retryChunk = retryChunk.filter((call) => !acceptedResults.has(call));
+        retryChunk = retryChunk.filter((call) => !acceptedResults.has(call) && call.keys.some((key) => !evidence.has(key)));
         if (retryChunk.length === 0) break;
       }
       for (const item of chunk) {
-        const { keys, accept } = item;
+        const { keys } = item;
         if (!acceptedResults.has(item)) {
-          fail(keys, unavailableReason);
-          continue;
+          fail(keys, unavailableReason === "audit-budget-or-deadline" ? unavailableReason
+            : invalidHeaders.has(item) ? "invalid-boundary-header" : unavailableReason);
         }
-        try { accept(acceptedResults.get(item)); } catch (error) { fail(keys, auditReason(error)); }
       }
     }
   }
@@ -749,10 +777,7 @@ export async function fetchConservationBoundaries(input: {
       call: { method: "eth_getBlockByNumber", params: [`0x${block.toString(16)}`, false] },
       keys,
       accept(value: unknown) {
-        const header = value as { number?: unknown; hash?: unknown; timestamp?: unknown } | null;
-        if (!header || quantity(header.number) !== block || typeof header.hash !== "string" ||
-          !WORD.test(header.hash) || header.hash === ZERO) throw new Error("invalid-boundary-header");
-        headers.set(block, { hash: header.hash.toLowerCase(), timestamp: quantity(header.timestamp) });
+        headers.set(block, conservationBoundaryHeader(value, block));
       },
     }));
     await phase(chainId, endpoints, headerCalls);
@@ -846,11 +871,10 @@ export async function fetchConservationBoundaries(input: {
       call, keys,
       accept(value) {
         const original = headers.get(block)!;
-        const header = value as { hash?: string; number?: unknown; timestamp?: unknown } | null;
-        try {
-          if (!header || header.hash?.toLowerCase() !== original.hash || quantity(header.number) !== block ||
-            quantity(header.timestamp) !== original.timestamp) throw new Error("boundary-reorg");
-        } catch { throw new Error("boundary-reorg"); }
+        // Only compare two validated identities. A missing/null header is not
+        // evidence of a reorg and must not fence otherwise valid ingestion.
+        const header = conservationBoundaryHeader(value, block);
+        if (header.hash !== original.hash || header.timestamp !== original.timestamp) throw new Error("boundary-reorg");
       },
     })));
     for (const request of requests) {

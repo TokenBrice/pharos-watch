@@ -112,6 +112,48 @@ describe("adaptAccountableDashboard", () => {
     }
   });
 
+  it("classifies October 19 Yuzu labels without certifying new claim identities", async () => {
+    // Official exposure_split observed 2026-10-19 includes all four labels,
+    // including both [AAVE]_USDT and [Aave]_USDT. Values are synthetic.
+    const result = await runAccountablePayload(yzusd.liveReservesConfig as LiveReservesConfig, makeTimestampedYuzuPayload({
+      exposure_split: {
+        "[AAVE]_USDT": { "": 350 },
+        "[Global_Dollar]_USDG": { "": 300 },
+        "[Sky]_sUSDS_Loop": { "": 200 },
+        "[Aave]_AUSD": { "": 100 },
+        "[Aave]_USDT": { "": 50 },
+      },
+    }));
+    for (const [sourceKey, name, risk, pct] of [
+      ["accountable:yuzu:deployment:aave-usdt-uppercase", "Aave USDT (uppercase source label)", "medium", 35],
+      ["accountable:yuzu:deployment:global-dollar-usdg", "Global Dollar USDG", "low", 30],
+      ["accountable:yuzu:deployment:sky-susds-loop", "Sky sUSDS loop", "high", 20],
+      ["accountable:yuzu:deployment:aave-ausd", "Aave AUSD", "medium", 10],
+    ] as const) {
+      const slice = result.slices.find((entry) => entry.sourceKey === sourceKey);
+      expect(slice).toMatchObject({ name, risk, pct });
+      expect(slice?.coinId).toBeUndefined();
+      expect(slice?.depType).toBeUndefined();
+    }
+    expect(new Set(result.slices.map((slice) => slice.sourceKey)).size).toBe(5);
+    expect(result.slices).toContainEqual(expect.objectContaining({
+      sourceKey: "accountable:yuzu:deployment:aave-usdt", pct: 5, coinId: "usdt-tether",
+    }));
+    expect(result.warnings ?? []).toEqual([]);
+    expect(result.metadata?.sourceTimestamp).toBe(Date.parse("2026-08-24T07:31:16Z") / 1000);
+  });
+
+  it("still degrades material unseen Yuzu buckets after the reviewed October label additions", async () => {
+    const result = await runAccountablePayload(yzusd.liveReservesConfig as LiveReservesConfig, makeTimestampedYuzuPayload({
+      exposure_split: { "[Sky]_sUSDS_Loop": { "": 800 }, "[Unreviewed]_New_Loop": { "": 200 } },
+    }));
+    expect(result.metadata?.unknownExposurePct).toBe(20);
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "unmapped-bucket", effect: "degraded" }));
+    expect(result.slices).toContainEqual(expect.objectContaining({
+      name: "Unknown / unmapped Accountable buckets", pct: 20, risk: "high",
+    }));
+  });
+
   it("replays Axis's anonymous venue book as unknown locations, not collateral assets", async () => {
     const { result } = await runAdapter("accountable", "usdx-axis", {
       network: { json: { "https://axis.accountable.capital:8443/dashboard": octoberCapture.axis } },

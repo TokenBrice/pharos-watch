@@ -20,9 +20,15 @@ export const RESERVE_FEED_REVIEWS: readonly ReserveFeedReview[] = [
   },
   {
     stablecoinId: "mtbill-midas", adapterKey: "midas-mtbill", failureCategory: "unknown",
-    warningCodes: [], errorPrefix: "primary:http-json: midas-mtbill:stale-portfolio-timestamp",
-    owner: "ops", reason: "2026-10-07 public portfolio check still reports source clock 2026-09-18T12:06:10.121Z, outside the unchanged three-day budget. Today's 04:12Z, 08:15Z and 12:15Z attempts match the explicit stale token again; there is no successful recovery. Future or ambiguous clocks remain unacknowledged.",
-    sources: [{ url: "https://api-prod.midas.app/api/transparency?token=mTBILL", evidenceDate: "2026-09-18" }], reviewedAt, expiresAt,
+    warningCodes: [], errorPrefix: "primary:onchain-evm: midas-mtbill:save-rounded-totals-mismatch",
+    owner: "ops", reason: "2026-10-19 SAVE registry checkpoint at 10:00 UTC and its historical issuer book agree on $78,625,877.4271, but the historical display total is $78,627,000: a $1,122.5729 mismatch beyond the unchanged $1,000 bound. The current failure is upstream report inconsistency, not the separately stale September 18 latest endpoint. Keep the snapshot quarantined pending issuer correction; no freshness, reconciliation, or scoring exception is granted.",
+    sources: [
+      { url: "https://etherscan.io/address/0x2d6e9f608807436de5d9603b00abe3fed1bc809d", evidenceDate: "2026-10-19" },
+      { url: "https://gateway.pinata.cloud/ipfs/QmR98wvJxfE6Sj6EsgQs2ZzaVomRccmDrLcBXoFCYHn8ok", evidenceDate: "2026-10-19" },
+      { url: "https://api-prod.midas.app/api/transparency/by-timestamp?token=mTBILL&timestamp=2026-10-19T10%3A00", evidenceDate: "2026-10-19" },
+    ],
+    reviewedAt: Date.UTC(2026, 9, 19, 18, 48, 40) / 1000,
+    expiresAt: Date.UTC(2026, 9, 26, 18, 48, 40) / 1000,
   },
 ];
 

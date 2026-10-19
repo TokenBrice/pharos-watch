@@ -263,8 +263,7 @@ export function buildUniswapV4ExactPoolQuery(poolIds: readonly string[], chain: 
   ) {
     throw new Error("Invalid Uniswap V4 exact PoolId batch");
   }
-  return `{
-  pools(first: ${poolIds.length}, where: { id_in: ${JSON.stringify(poolIds)} }) {
+  const fields = `
     id
     token0 { id symbol decimals }
     token1 { id symbol decimals }
@@ -274,7 +273,18 @@ export function buildUniswapV4ExactPoolQuery(poolIds: readonly string[], chain: 
     liquidity
     totalValueLockedUSD
     token0Price
-    token1Price
+    token1Price`;
+  // Polygon's indexer stalls on large id_in filters. Batched primary-key
+  // lookups preserve the same identities and one-request/100-pool bound.
+  if (chain === "polygon") {
+    return `{
+${poolIds.map((id, index) => `  pool${index}: pool(id: ${JSON.stringify(id)}) {${fields}
+  }`).join("\n")}
+  _meta { block { number hash } }
+}`;
+  }
+  return `{
+  pools(first: ${poolIds.length}, where: { id_in: ${JSON.stringify(poolIds)} }) {${fields}
   }
   _meta { block { number hash } }
 }`;

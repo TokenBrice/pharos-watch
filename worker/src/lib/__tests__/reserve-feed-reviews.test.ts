@@ -11,16 +11,16 @@ function state(overrides: Partial<ReserveSyncStateRecord> = {}): ReserveSyncStat
   return {
     stablecoinId: review.stablecoinId, adapterKey: review.adapterKey, breakerKey: "live-reserves:mtbill-midas",
     lastAttemptedAt: now, lastSuccessAt: now - 15 * 86400, lastStatus: "error", warningCount: 0,
-    warnings: [], lastError: `${review.errorPrefix} sourceTimestamp=1789733170 nowSec=${now}`,
+    warnings: [], lastError: review.errorPrefix ?? null,
     metadata: { failureCategory: review.failureCategory }, ...overrides,
   };
 }
 
 describe("reserve feed review policy", () => {
-  it.each(RESERVE_FEED_REVIEWS)("matches only the observed October 7 failure for $stablecoinId", async (item) => {
+  it.each(RESERVE_FEED_REVIEWS)("matches only the reviewed failure for $stablecoinId", async (item) => {
     const errorPrefix = item.stablecoinId === "gusd-gemini"
       ? "primary:http-json: gemini-independent-assurance: newer unreviewed report on official index"
-      : "primary:http-json: midas-mtbill:stale-portfolio-timestamp";
+      : "primary:onchain-evm: midas-mtbill:save-rounded-totals-mismatch";
     const observed = state({
       stablecoinId: item.stablecoinId, adapterKey: item.adapterKey,
       lastStatus: "error", lastError: `${errorPrefix} observed failure`,
@@ -51,7 +51,7 @@ describe("reserve feed review policy", () => {
   it.each([
     { reviewedAt: now + 1 }, { owner: " " }, { sources: [{ url: "http://example.com", evidenceDate: "2026-10-06" }] },
     { sources: [{ url: "https://example.com", evidenceDate: "2026-02-30" }] },
-    { sources: [{ url: "https://example.com", evidenceDate: "2026-10-08" }] },
+    { sources: [{ url: "https://example.com", evidenceDate: "2026-10-20" }] },
     { expiresAt: review.reviewedAt }, { failureCategory: "" },
   ])("rejects malformed/future review %j", (overrides) => {
     expect(resolveReserveFeedReviews(now, [{ ...review, ...overrides }]).invalidIds).toEqual([review.stablecoinId]);
@@ -70,23 +70,29 @@ describe("reserve feed review policy", () => {
       { warnings: [{ code: "new-failure", message: "new", severity: "warning", effect: "degraded" }] },
     ] satisfies Partial<ReserveSyncStateRecord>[]) expect(await matchReserveFeedReview(mockD1(), state(overrides), now)).toBeNull();
   });
-  it("leaves October 21 expiry and Gemini dates unchanged and never acknowledges v2 failures", async () => {
-    const expiry = Date.parse("2026-10-21T14:19:23Z") / 1000;
-    expect(review.expiresAt).toBe(expiry);
+  it("keeps Gemini's original expiry while narrowly reviewing the observed Midas v2 report mismatch", async () => {
+    expect(review.reviewedAt).toBe(Date.parse("2026-10-19T18:48:40Z") / 1000);
+    expect(review.expiresAt).toBe(Date.parse("2026-10-26T18:48:40Z") / 1000);
     const gemini = RESERVE_FEED_REVIEWS.find((item) => item.stablecoinId === "gusd-gemini")!;
-    expect(gemini.reviewedAt).toBe(review.reviewedAt);
-    expect(gemini.expiresAt).toBe(expiry);
-    expect(await matchReserveFeedReview(mockD1(), state(), expiry - 1)).toEqual(review);
-    expect(await matchReserveFeedReview(mockD1(), state(), expiry)).toBeNull();
+    expect(gemini.reviewedAt).toBe(Date.parse("2026-10-07T14:19:23Z") / 1000);
+    expect(gemini.expiresAt).toBe(Date.parse("2026-10-21T14:19:23Z") / 1000);
+    expect(await matchReserveFeedReview(mockD1(), state(), review.expiresAt - 1)).toEqual(review);
+    expect(await matchReserveFeedReview(mockD1(), state(), review.expiresAt)).toBeNull();
     for (const reason of ["stale-save-checkpoint", "save-ipfs-gateways-exhausted", "save-proof-identity", "save-signed-content-digest", "save-cid-layout-or-content-mismatch", "save-pin-changed", "save-historical-scope"]) {
       expect(await matchReserveFeedReview(mockD1(), state({ lastError: `primary:onchain-evm: midas-mtbill:${reason}` }), now)).toBeNull();
       // Distinct reason tokens also defend against incorrectly retained v1 transport labels.
       expect(await matchReserveFeedReview(mockD1(), state({ lastError: `primary:http-json: midas-mtbill:${reason}` }), now)).toBeNull();
     }
   });
-  it("does not rebind a stale latest-feed review to Pinata rate limits before its existing expiry", async () => {
-    const productionNow = Date.parse("2026-10-19T11:58:00Z") / 1000;
+  it("does not acknowledge the former stale source, future checkpoints or gateway failures", async () => {
+    const productionNow = now;
     expect(resolveReserveFeedReviews(productionNow).activeById.get(review.stablecoinId)).toEqual(review);
+    for (const lastError of [
+      "primary:http-json: midas-mtbill:stale-portfolio-timestamp",
+      "primary:onchain-evm: midas-mtbill:future-save-checkpoint",
+      "primary:onchain-evm: midas-mtbill:save-exact-totals-mismatch",
+      "primary:http-json: midas-mtbill:save-rounded-totals-mismatch",
+    ]) expect(await matchReserveFeedReview(mockD1(), state({ lastError }), productionNow)).toBeNull();
     for (const failureCategory of ["upstream-http", "unknown"]) {
       expect(await matchReserveFeedReview(mockD1(), state({
         lastError: "primary:onchain-evm: HTTP 429 for gateway.pinata.cloud",

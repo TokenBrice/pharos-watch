@@ -11,7 +11,7 @@ describe("Dwellir Growth endpoint capabilities", () => {
   });
 
   it("defines inclusive measured spans only for admitted full or retained log capabilities", () => {
-    const nodeCaps: Readonly<Record<string, number>> = { monad: 1_000, astar: 1_024 };
+    const nodeCaps: Readonly<Record<string, number>> = { astar: 1_024 };
     for (const entry of DWELLIR_CHAINS) {
       if (entry.logsHistory === "none") {
         expect(entry.maxLogBlockSpan).toBeUndefined();
@@ -46,7 +46,7 @@ describe("Dwellir Growth endpoint capabilities", () => {
 
   it("keeps bounded history distinct from full logs and does not admit zkSync history", () => {
     expect(DWELLIR_CHAINS.find((entry) => entry.chainId === "monad")).toMatchObject({
-      stateHistory: "recent", logsHistory: { retainedBlocks: 1_400_000 },
+      stateHistory: "recent", logsHistory: { retainedBlocks: 1_400_000 }, maxLogBlockSpan: 10_000,
     });
     expect(DWELLIR_CHAINS.find((entry) => entry.chainId === "zksync")).toMatchObject({
       stateHistory: "recent", logsHistory: "none",

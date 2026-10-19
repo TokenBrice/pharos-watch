@@ -110,14 +110,14 @@ describe("buildChainRpcs", () => {
     ]);
   });
 
-  it.each(["monad", "ink", "berachain"])("admits reviewed %s archive logs only with the keyed provider", chainId => {
+  it.each([["monad", 100_000], ["ink", 1000], ["berachain", 1000]] as const)("admits reviewed %s archive logs only with the keyed provider", (chainId, span) => {
     const unkeyed = buildChainRpcs().get(chainId);
     expect(logScanRpcEndpoints(unkeyed).some(endpoint => endpoint.operator === "alchemy")).toBe(false);
     const keyed = buildChainRpcs(ALCHEMY_KEY).get(chainId)!;
     expect(primaryRpcUrl(keyed)).toBe(`https://${chainId}-mainnet.g.alchemy.com/v2/`);
     expect(logScanRpcEndpoints(keyed)[0]).toMatchObject({
       operator: "alchemy", position: "registry", stateHistory: "archive",
-      logsHistory: "full", maxLogBlockSpan: 1000, verifiedAt: "2026-10-05",
+      logsHistory: "full", maxLogBlockSpan: span, verifiedAt: "2026-10-05",
     });
     expect(keyed.endpoints.filter(endpoint => endpoint.operator === "alchemy")).toHaveLength(1);
     expect(getRpcAuthHeaders(primaryRpcUrl(keyed)!)).toBeDefined();

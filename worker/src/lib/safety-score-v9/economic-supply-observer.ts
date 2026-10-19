@@ -419,6 +419,8 @@ async function observeReviewedEconomicDeploymentPartitionInternal(input: {
   let failedRouteId: string | null = null;
   const startedAtMs = Date.now();
   const currentCaptureClock = () => input.scoringClockSec + Math.max(0, Math.floor((Date.now() - startedAtMs) / 1_000));
+  const captureFreshnessClock = () => currentCaptureClock() + (input.assetDeadlineMs === undefined ? 0
+    : Math.max(0, Math.ceil((input.assetDeadlineMs - Date.now()) / 1_000)));
   let bodyOrigin: string | null = null;
   let bodyMethod = "conversion";
   try {
@@ -514,8 +516,15 @@ async function observeReviewedEconomicDeploymentPartitionInternal(input: {
         // trail it. Holdings and in-flight history must share an actually finalized pin.
         const preferFinalized = plan.deployments.filter(other => other.chainId === row.chainId)
           .every(other => other.read.kind === "evm-total-supply" && other.read.pinPolicy === "finalized-preferred");
+        // A valid but stale finalized tag is not usable evidence. Let the RPC
+        // reader try the next endpoint before one lagging provider sets the
+        // oldest pin (and forces every otherwise-fresh chain backward).
+        const minTimestampSec = captureFreshnessClock() -
+          V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.observationMaxAgeSec;
         let finalized = finalizedChains.has(row.chainId) || preferFinalized
-          ? await fetchEvmBlockHeader(row.chainId, "finalized", options) : null;
+          ? await fetchEvmBlockHeader(row.chainId, "finalized", {
+            ...options, ...(finalizedChains.has(row.chainId) ? { minTimestampSec } : {}),
+          }) : null;
         if (finalized && preferFinalized) {
           const canonical = await fetchEvmBlockHeader(row.chainId, finalized.number, options);
           if (!canonical || canonical.hash !== finalized.hash || canonical.timestamp !== finalized.timestamp ||
@@ -553,8 +562,7 @@ async function observeReviewedEconomicDeploymentPartitionInternal(input: {
       // Reserve the rest of this admitted child window, not a wider freshness
       // policy. Near-expiry pins reject before quantities/history are collected.
       const policy = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution;
-      const freshnessClock = currentCaptureClock() + (input.assetDeadlineMs === undefined ? 0
-        : Math.max(0, Math.ceil((input.assetDeadlineMs - Date.now()) / 1_000)));
+      const freshnessClock = captureFreshnessClock();
       for (const [chainId, header] of headers) {
         if (freshnessClock - header.timestamp > policy.observationMaxAgeSec) {
           failedRouteId = `anchor:${chainId}:capture-freshness-window-insufficient`;

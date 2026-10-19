@@ -250,6 +250,7 @@ The retired `compute-safety-score-v9-workflow` observer is no longer a registere
 Scheduled attempt evidence is independent of detailed in-flight progress: every protocol-v1 child has a
 durable `scheduled_child_attempts` start marker before work, including progress-suppressed jobs. Real and
 synthetic terminals arbitrate one deterministic full attempt identity under the executing slot fence.
+Equal repeated lease-owner reports skip the write.
 Replay retains producer source identity while naming its recovery execution fence. Reconciliation proves
 `not_started` only when a due protocol-v1 child has no marker; legacy missing evidence is
 `execution_unknown`, projected as an error/abandoned producer with explicit uncertainty, not success
