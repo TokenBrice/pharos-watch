@@ -56,7 +56,7 @@ const YEAR_RECORD = {
   },
 };
 
-const SIGNED_URL = `https://file.notion.so/f/f/space/${BRLA_NOTION_PIN.attachmentId}/Avenia_-_Transparency_Report_-_20260831_(Audit_Attestation).pdf?table=block&id=${BRLA_NOTION_PIN.reportBlockId}&spaceId=space&expirationTimestamp=1790006400000&signature=signature`;
+const SIGNED_URL = `https://file.notion.com/f/f/space/${BRLA_NOTION_PIN.attachmentId}/Avenia_-_Transparency_Report_-_20260930_(Audit_Attestation).pdf?table=block&id=${BRLA_NOTION_PIN.reportBlockId}&spaceId=space&expirationTimestamp=1792454400000&signature=signature`;
 
 function installFetch(options: { rootRecord?: unknown; yearRecord?: unknown; signedUrl?: string; indexUrl?: string } = {}) {
   const {
@@ -91,7 +91,7 @@ const discoveryArgs = (overrides: Record<string, unknown> = {}) => ({
   manifest: getIndependentAssuranceManifest("BRLA"),
   indexUrl: "https://brladigital.notion.site/BRLA-Transparency-Page-238ba143aa2f4338902ee91ebe50298a",
   indexHost: "brladigital.notion.site",
-  reportHosts: ["file.notion.so"],
+  reportHosts: ["file.notion.so", "file.notion.com"],
   signal: AbortSignal.timeout(1000),
   ...overrides,
 });
@@ -99,11 +99,36 @@ const discoveryArgs = (overrides: Record<string, unknown> = {}) => ({
 describe("BRLA Notion reviewed discovery", () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it("resolves the reviewed August report through pinned block identity", async () => {
+  it("resolves the reviewed September report through pinned block identity", async () => {
     installFetch();
     const result = await verifyBrlaNotionDiscovery(discoveryArgs());
     expect(result.signedUrl).toBe(SIGNED_URL);
-    expect(result.sourceTimestamp).toBe(Math.floor(Date.parse("2026-08-31T23:59:59+00:00") / 1000));
+    expect(result.sourceTimestamp).toBe(Math.floor(Date.parse("2026-09-30T23:59:59+00:00") / 1000));
+  });
+
+  it("retains the original examined instant, conclusion and exact September artifact", () => {
+    const manifest = getIndependentAssuranceManifest("BRLA");
+    expect(manifest).toMatchObject({
+      reportDate: "2026-09-30",
+      reportAsOf: "2026-09-30T23:59:59+00:00",
+      reportIssuedAt: "2026-10-16T13:50:19-03:00",
+      conclusion: "unmodified",
+      assuranceTier: "independent-assurance",
+      reportSha256: "fae95580de235d577bbfd92b384d33b9bde0c8105b16180aeb18edf6ed6602f4",
+      reportByteLength: 887263,
+      extraction: { pageCount: 5 },
+    });
+    expect(manifest.reportUrl).toContain("/6674dccd-e58f-4da9-a3d1-c4ae0d676fea/");
+    expect(BRLA_NOTION_PIN.reportBlockId).toBe("3fb7f28f-0ae4-8083-9016-e7b53db36574");
+    expect(BRLA_NOTION_PIN.attachmentId).toBe("6674dccd-e58f-4da9-a3d1-c4ae0d676fea");
+    expect(manifest.assets.map(({ amount }) => amount)).toEqual(["72064692.29", "60103684.97"]);
+    const { slices, warnings } = buildBrlaReserveSlices(manifest);
+    expect(slices[0]).toMatchObject({ pct: expect.closeTo(54.524913, 6), assetClass: "cash" });
+    expect(slices[1]).toMatchObject({
+      pct: expect.closeTo(45.475087, 6), assetClass: "repo",
+      issuerOrObligor: "BTG Pactual and XP Investimentos; Brazilian corporate debentures as collateral",
+    });
+    expect(warnings).toEqual([]);
   });
 
   it("fails closed when the root page title drifts", async () => {
@@ -152,7 +177,7 @@ describe("BRLA Notion reviewed discovery", () => {
                   type: "file",
                   properties: {
                     title: [[BRLA_NOTION_PIN.attachmentTitle]],
-                    source: [["attachment:drifted:Avenia_-_Transparency_Report_-_20260831_(Audit_Attestation).pdf"]],
+                    source: [["attachment:drifted:Avenia_-_Transparency_Report_-_20260930_(Audit_Attestation).pdf"]],
                   },
                 },
               },
@@ -165,19 +190,19 @@ describe("BRLA Notion reviewed discovery", () => {
   });
 
   it("fails closed when a newer unreviewed report appears in the 2026 tree", async () => {
-    const septemberBlockId = "4d77f28f-0ae4-80fb-bd17-f3ca9b5d3490";
+    const octoberBlockId = "4d77f28f-0ae4-80fb-bd17-f3ca9b5d3490";
     installFetch({
       yearRecord: {
         recordMap: {
           block: {
             ...YEAR_RECORD.recordMap.block,
-            [septemberBlockId]: {
+            [octoberBlockId]: {
               spaceId: "space",
               value: {
                 value: {
-                  id: septemberBlockId,
+                  id: octoberBlockId,
                   type: "file",
-                  properties: { title: [["Avenia - Transparency Report - 20260930 (Audit Attestation).pdf"]] },
+                  properties: { title: [["Avenia - Transparency Report - 20261031 (Audit Attestation).pdf"]] },
                 },
               },
             },
@@ -185,7 +210,7 @@ describe("BRLA Notion reviewed discovery", () => {
         },
       },
     });
-    await expect(verifyBrlaNotionDiscovery(discoveryArgs())).rejects.toThrow("newer unreviewed report 20260930");
+    await expect(verifyBrlaNotionDiscovery(discoveryArgs())).rejects.toThrow("newer unreviewed report 20261031");
   });
 
   it("fails closed when the signed URL identity drifts", async () => {
@@ -201,14 +226,14 @@ describe("BRLA Notion reviewed discovery", () => {
   it("reconciles all four chain liabilities to BRL and rejects an omitted chain", () => {
     const manifest = getIndependentAssuranceManifest("BRLA");
     expect(reconcileIndependentAssuranceManifest(manifest)).toMatchObject({
-      computedAssetTotal: "163450919.38",
-      liabilityTotal: "132765684.39",
+      computedAssetTotal: "132168377.26",
+      liabilityTotal: "129478160.68",
     });
     expect(manifest.liabilities).toContainEqual({ code: "moonbeam", label: "Moonbeam Chain BRLA redeemable tokens", amount: "4294.09" });
     expect(() => reconcileIndependentAssuranceManifest({
       ...manifest,
       liabilities: manifest.liabilities.filter((row) => row.code !== "moonbeam"),
-    })).toThrow("liability total 132761390.3 does not match manifest 132765684.39");
+    })).toThrow("liability total 129473866.59 does not match manifest 129478160.68");
   });
 });
 
@@ -242,7 +267,7 @@ describe("BRLA PDF byte verification", () => {
     const result = await fetchAndVerifyBrlaPdf({
       manifest,
       signedUrl: SIGNED_URL,
-      reportHosts: ["file.notion.so"],
+      reportHosts: ["file.notion.so", "file.notion.com"],
       signal: AbortSignal.timeout(1000),
     });
     expect(result.byteLength).toBe(bytes.length);
@@ -253,7 +278,7 @@ describe("BRLA PDF byte verification", () => {
     await expect(fetchAndVerifyBrlaPdf({
       manifest,
       signedUrl: SIGNED_URL,
-      reportHosts: ["file.notion.so"],
+      reportHosts: ["file.notion.so", "file.notion.com"],
       signal: AbortSignal.timeout(1000),
     })).rejects.toThrow("PDF SHA-256");
   });
