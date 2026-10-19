@@ -60,6 +60,16 @@ describe("registry universes", () => {
     expect(FROZEN_STABLECOINS.every((c) => c.status === "frozen")).toBe(true);
   });
 
+  it("preserves USDKG as a readable frozen identity, not an active producer", () => {
+    expect(FROZEN_IDS.has("usdkg-gold-dollar")).toBe(true);
+    expect(READABLE_IDS.has("usdkg-gold-dollar")).toBe(true);
+    expect(ACTIVE_IDS.has("usdkg-gold-dollar")).toBe(false);
+    expect(FROZEN_STABLECOINS.find((coin) => coin.id === "usdkg-gold-dollar")).toMatchObject({
+      frozenAt: "2026-10-19",
+      obituary: { causeOfDeath: "regulatory", deathDate: "2026-10-05" },
+    });
+  });
+
   it("READABLE = all post-launch lifecycle records", () => {
     expect(READABLE_STABLECOINS.every(isReadableStablecoinMeta)).toBe(true);
     expect(READABLE_STABLECOINS.length).toBe(

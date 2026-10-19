@@ -2,14 +2,15 @@
   "id": "wusd-worldwide",
   "name": "Worldwide USD",
   "symbol": "WUSD",
-  "oneLiner": "WUSD is WSPN's centralized dollar stablecoin, redeemable 1:1 against cash, cash equivalents, and short-term U.S. Treasury bills in segregated accounts.",
+  "oneLiner": "WUSD is WSPN's centralized dollar stablecoin backed under its cash and Treasury reserve policy; advertised corporate redemption is currently unverified.",
+  "marketAvailability": "limited-trading",
   "flags": {
     "backing": "rwa-backed",
     "governance": "centralized",
     "rwa": true
   },
   "collateral": "Cash, cash equivalents, and short-term U.S. Treasury bills under WSPN's reserve policy; the whitepaper describes a 6% buffer on non-cash reserves as a long-term goal, not a verified current balance",
-  "pegMechanism": "Direct 1:1 redemption through WSPN for verified customers; minting and burning follow fiat deposits and withdrawals. WSPN commits to independent reserve attestations, but no dated reserve-liability report was located in the reviewed public disclosures",
+  "pegMechanism": "WSPN documents direct 1:1 conversion for verified corporate customers, with minting and burning following fiat deposits and withdrawals; current redemption availability is unverified after the advertised mainnet portal failed DNS on October 19, 2026. No dated reserve-liability report was located in the reviewed public disclosures",
   "mechanismArchetype": "fiat-cash",
   "llamaId": "234",
   "detailProvider": "defillama",
@@ -56,8 +57,8 @@
   "notices": [
     {
       "type": "danger",
-      "title": "No market exit; 100 WUSD fee per Viction transfer",
-      "message": "WUSD lost every centralized venue between 2026-07-25 and 2026-08-04. MEXC, Bitget, and Coins.ph stated WUSD was no longer able to adhere to their listing standards, and circulating supply fell about 94%, from 9,986,097 on 2026-07-21 to 610,332. Pharos publishes no price because no venue quotes one continuously: the only pool with live trading holds roughly $96k on Viction and absorbs about $490 before moving 2%. Direct redemption remains open but only through WSPN corporate accounts, which qualified businesses must apply and be verified for, so there is no retail exit at par. On Viction the token also charges a flat 100 WUSD fee on token calls, verified on-chain at block 112793798 and independent of the amount sent: a transfer requires the amount plus 100 WUSD, and approve() carries the same fee, so a wallet cannot authorise a swap of any size without holding 100 WUSD. https://issuer.viction.xyz/token/0xBA73E59F11597c1c13B0D9114688Efb6A6D430F6"
+      "title": "Severely limited trading; redemption unverified",
+      "message": "Following its completed December 2024 contract migration, WUSD lost reviewed centralized venues during July/August 2026. Coins.ph ended convert-sell on August 4 while allowing withdrawals; that venue's discontinuation is not a WSPN global-termination notice. DefiLlama supply contracted about 94%, from 9,986,097 on July 21 to 599,283.65 on October 19. The October 19 bounded exact-contract ETH/Polygon/Viction pool scan found no pool meeting the $50K liquidity admission floor, and CoinGecko returned no tickers; this is not proof that no market exists anywhere. WSPN still advertises 1:1 corporate conversion for qualified, verified businesses, but current redemption is unverified: the documented mainnet host wallet.wspn.io returned NXDOMAIN, and no production quote or bank settlement was observed. On Viction, historical on-chain evidence at block 112793798 showed a flat 100 WUSD fee on token calls, including transfers and approve(); this fee was not reverified on October 19 and is not asserted for Ethereum or Polygon. https://issuer.viction.xyz/token/0xBA73E59F11597c1c13B0D9114688Efb6A6D430F6"
     }
   ],
   "liveReservesConfig": {

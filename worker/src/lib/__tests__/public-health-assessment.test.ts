@@ -627,7 +627,7 @@ describe("assessPublicHealth upstream provider enrichment", () => {
     expect(result.warnings).toContain(`active-price-coverage-incomplete:${missingId}`);
   });
 
-  it.each(["wusd-worldwide", "pht-pht", "vcred-vcred", "usdkg-gold-dollar", "hbd-hive", "usdn-noble", "usdk-kast"])("keeps %s's acknowledged critical-duration gap visible without warnings, then re-alerts at expiry", async (id) => {
+  it.each(["wusd-worldwide", "pht-pht", "vcred-vcred", "hbd-hive", "usdn-noble", "usdk-kast"])("keeps %s's acknowledged critical-duration gap visible without warnings, then re-alerts at expiry", async (id) => {
     const review = STABLECOIN_PRICE_GAP_REVIEWS.find((entry) => entry.stablecoinId === id)!;
     for (const compact of [false, true]) {
       const nowSec = review.expiresAt - 1;
@@ -653,6 +653,24 @@ describe("assessPublicHealth upstream provider enrichment", () => {
       expect(after.warnings).toContain(`active-price-coverage-critical-duration:${review.stablecoinId}`);
       expect(after.activePriceCoverage.expiredGapReviewIds).toContain(review.stablecoinId);
     }
+  });
+
+  it("does not treat frozen USDKG's unavailable archive price as an active health gap", async () => {
+    const nowSec = Date.UTC(2026, 9, 19, 12) / 1000;
+    expect(ACTIVE_IDS.has("usdkg-gold-dollar")).toBe(false);
+    const coverage = evaluateStablecoinActivePriceCoverage([
+      ...[...ACTIVE_IDS].map((id) => ({ id, price: 1 })),
+      { id: "usdkg-gold-dollar", price: null, circulating: { peggedUSD: 50_000_000 } },
+    ], [...ACTIVE_IDS], { nowSec });
+    const metadata = { ...makePriceCoverageMetadata(nowSec, null), activePriceCoverage: coverage };
+    const result = await assessPublicHealth(makeMintBurnAssessmentDb(nowSec, {
+      publicationMetadata: metadata,
+    }), nowSec, { logPrefix: "test" });
+    expect(result.overallStatus).toBe("healthy");
+    expect(result.activePriceCoverage).toMatchObject({
+      status: "complete", missingPriceCount: 0, missingActiveIds: [],
+    });
+    expect(result.warnings.some((warning) => warning.includes("usdkg-gold-dollar"))).toBe(false);
   });
 
   it("escalates once a material alert-eligible price gap outlives the elevated duration band", async () => {
