@@ -57,6 +57,8 @@ interface ProtocolCapDiagnostics {
 
 interface ScoreDiagnostics {
   protocolCapReductions: ProtocolCapDiagnostics;
+  /** Report-only excess above external protocol TVL; never subtracted from retained aggregates. */
+  globalProtocolOverCapUsd: number;
   /** Report-only optimistic-default/silent-exclusion counters from the scoring pass. */
   fallbackCounters: LiquidityFallbackCounters;
   /** Pools excluded by the v6.92 dead-pool floor (reason, count, TVL, top coins). */
@@ -200,7 +202,6 @@ export async function computeStablecoinScores(
   const seenPoolTvl = new Map<string, GlobalPoolAggregateEntry>();
   const globalProtocolTvl: Record<string, number> = {};
   const globalChainTvl: Record<string, number> = {};
-  const globalProtoChainTvl: Record<string, number> = {}; // "proto:chain" → TVL
   let globalTotalTvl = 0;
   let globalPoolCount = 0;
   const globalChains = new Set<string>();
@@ -486,7 +487,6 @@ export async function computeStablecoinScores(
       retainedPools,
       globalProtocolTvl,
       globalChainTvl,
-      globalProtoChainTvl,
       globalChains,
       seenPoolTvl,
     );
@@ -545,34 +545,16 @@ export async function computeStablecoinScores(
     results.set(id, fullScoreResult);
   }
 
-  // Global protocol-level TVL cap: when reducing excess, chain TVLs are
-  // distributed proportionally rather than attributed to the chain with the
-  // most excess. Exact chain attribution would require per-pool chain data
-  // which is not available in the global aggregate.
-  //
-  // Clamp deduped protocol totals at DL protocol TVL.
-  // After cross-stablecoin dedup, a protocol can still exceed its real TVL when
-  // CG/GT virtual reserves are inflated across many pools. The per-coin cap allows
-  // up to protocolTvl PER stablecoin, but globally the protocol total must not
-  // exceed DL's reported TVL. Chain TVLs are reduced proportionally.
-  let globalCapReduction = 0;
-  for (const proto of Object.keys(globalProtocolTvl)) {
+  // External protocol TVL remains a fraud-observation diagnostic, not a second
+  // rewrite of the retained graph. Headline, breakdowns and volume coverage must
+  // all describe the same deduped pools after the existing per-coin controls.
+  let globalProtocolOverCapUsd = 0;
+  for (const [proto, tvl] of Object.entries(globalProtocolTvl)) {
     const cap = protocolTvlCaps.get(proto);
-    if (cap != null && cap > 0 && globalProtocolTvl[proto] > cap) {
-      const excess = globalProtocolTvl[proto] - cap;
-      globalCapReduction += excess;
-      // Distribute reduction to chain TVLs proportionally
-      const protoTotal = globalProtocolTvl[proto];
-      for (const [pcKey, pcTvl] of Object.entries(globalProtoChainTvl)) {
-        if (!pcKey.startsWith(`${proto}:`)) continue;
-        const chain = pcKey.slice(proto.length + 1);
-        const chainReduction = (pcTvl / protoTotal) * excess;
-        globalChainTvl[chain] = Math.max(0, (globalChainTvl[chain] ?? 0) - chainReduction);
-      }
-      globalProtocolTvl[proto] = cap;
+    if (cap != null && cap > 0 && tvl > cap) {
+      globalProtocolOverCapUsd += tvl - cap;
     }
   }
-  globalTotalTvl -= globalCapReduction;
 
   // Observed volume over the admitted deduped pools, published beside its
   // admitted share of the deduped pool TVL (never a complete total unless
@@ -602,8 +584,9 @@ export async function computeStablecoinScores(
       protocolCapReductions: {
         cappedPoolCount: protocolCapDiagnostics.cappedPoolCount,
         cappedProtocols: protocolCapDiagnostics.cappedProtocols,
-        reducedTvlUsd: protocolCapDiagnostics.reducedTvlUsd + Math.round(globalCapReduction),
+        reducedTvlUsd: protocolCapDiagnostics.reducedTvlUsd,
       },
+      globalProtocolOverCapUsd: Math.round(globalProtocolOverCapUsd),
       fallbackCounters,
       deadPoolExclusions: summarizeDeadPoolExclusions(deadPoolExclusionsByStablecoin),
       routeSelection: routeSelectionDiagnostics,

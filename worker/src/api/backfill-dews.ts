@@ -16,7 +16,7 @@ import type {
   SourceFailure,
 } from "../lib/dews/contracts";
 import { computeAndStoreDEWS } from "../lib/dews/service";
-import { getDexLiquidityTrendTolerances, selectTrendBaseline } from "../lib/dex-liquidity-response";
+import { getDexLiquidityTrendTolerances, selectLiquidityObservation, selectTrendBaseline } from "../lib/dex-liquidity-response";
 import type { DexHistoryRow } from "../lib/dex-liquidity-response";
 import { parseOptionalDayWindow } from "../lib/backfill-day-window";
 
@@ -361,7 +361,7 @@ async function handleHistoricalBacktest(db: D1Database): Promise<Response> {
 
   const liqRows = await db
     .prepare(
-      `SELECT stablecoin_id, snapshot_date, liquidity_score, total_tvl_usd, coverage_class, coverage_confidence
+      `SELECT stablecoin_id, snapshot_date, liquidity_score, total_tvl_usd, coverage_class, coverage_confidence, methodology_version
        FROM dex_liquidity_history
        WHERE snapshot_date BETWEEN ? AND ?
        ORDER BY snapshot_date ASC`,
@@ -374,6 +374,7 @@ async function handleHistoricalBacktest(db: D1Database): Promise<Response> {
       total_tvl_usd: number | null;
       coverage_confidence: number | null;
       coverage_class: string | null;
+      methodology_version: string | null;
     }>();
 
   const liqIndex = new Map<string, (DexHistoryRow & { liquidity_score: number | null })[]>();
@@ -413,8 +414,11 @@ async function handleHistoricalBacktest(db: D1Database): Promise<Response> {
       }
       if (d > 0 && (prevDay == null || prevWeek == null)) evaluationReasons.add("supply-anchor-unavailable");
 
-      const liqNow = selectTrendBaseline(coinLiq, dayMidnight, liquidityTolerance);
-      const liq7d = selectTrendBaseline(coinLiq, dayMidnight - 7 * DAY_SECONDS, liquidityTolerance);
+      const liqNow = selectLiquidityObservation(coinLiq, dayMidnight, liquidityTolerance);
+      const liq7dScore = selectLiquidityObservation(coinLiq, dayMidnight - 7 * DAY_SECONDS, liquidityTolerance);
+      const liq7d = liqNow
+        ? selectTrendBaseline(coinLiq, dayMidnight - 7 * DAY_SECONDS, liquidityTolerance, liqNow.methodology_version)
+        : null;
 
       const input: DEWSInput = {
         stablecoinId: event.stablecoin_id,
@@ -429,7 +433,7 @@ async function handleHistoricalBacktest(db: D1Database): Promise<Response> {
         avgPoolStress: null,
         topPools: null,
         liquidityScore: liqNow?.liquidity_score ?? null,
-        liquidityScore7dAgo: liq7d?.liquidity_score ?? null,
+        liquidityScore7dAgo: liq7dScore?.liquidity_score ?? null,
         tvlCurrent: liqNow?.total_tvl_usd ?? null,
         tvl7dAgo: liq7d?.total_tvl_usd ?? null,
         priceConfidence: null,

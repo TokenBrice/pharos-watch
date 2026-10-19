@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { McapChart } from "@/components/mcap-chart";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const START = Date.UTC(2026, 0, 1) / 1000;
 const data = [
@@ -26,6 +27,7 @@ vi.mock("@/components/chart-primitives/sync", async (importOriginal) => ({
 afterEach(() => {
   cleanup();
   syncState.brushedRange = null;
+  vi.unstubAllGlobals();
 });
 
 
@@ -58,4 +60,65 @@ it("keeps observed zero supply but withholds a percentage with a zero baseline",
     { ...data[0], circulatingUsd: 0 }, data[1],
   ]} stablecoinId="test" controlledRange="all" />);
   expect(screen.queryByText(/% 24h/)).toBeNull();
+});
+
+it("expands standalone charts with a bounded annual key and an uncapped retained-all key", async () => {
+  const annual = [{ date: START - 200 * 86_400, circulatingUsd: 500_000, price: 1 }, ...data];
+  const all = [{ date: Date.UTC(2017, 0, 1) / 1000, circulatingUsd: 10_000, price: null }, ...annual];
+  const requests: string[] = [];
+  vi.stubGlobal("fetch", vi.fn(async (input: string | URL | Request) => {
+    const url = String(input);
+    requests.push(url);
+    return Response.json(url.includes("range=all") ? all : annual);
+  }));
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const { rerender, unmount } = render(
+    <QueryClientProvider client={client}>
+      <McapChart data={data} stablecoinId="usdt-tether" controlledRange="90d" expandHistoryOnWideRange />
+    </QueryClientProvider>,
+  );
+  expect(requests).toEqual([]);
+  rerender(
+    <QueryClientProvider client={client}>
+      <McapChart data={data} stablecoinId="usdt-tether" controlledRange="1y" expandHistoryOnWideRange />
+    </QueryClientProvider>,
+  );
+  await waitFor(() => expect(screen.getByRole("figure", { name: "Market cap chart showing 4 data points" })).toBeTruthy());
+  rerender(
+    <QueryClientProvider client={client}>
+      <McapChart data={data} stablecoinId="usdt-tether" controlledRange="all" expandHistoryOnWideRange />
+    </QueryClientProvider>,
+  );
+  await waitFor(() => expect(screen.getByRole("figure", { name: "Market cap chart showing 5 data points" })).toBeTruthy());
+  expect(requests).toEqual([
+    expect.stringContaining("stablecoin=usdt-tether&days=365"),
+    expect.stringContaining("stablecoin=usdt-tether&range=all"),
+  ]);
+  unmount();
+  client.clear();
+});
+
+it("uses its own range controls to switch an uncontrolled expandable chart from All to 1Y", async () => {
+  const all = [{ date: Date.UTC(2017, 0, 1) / 1000, circulatingUsd: 10_000, price: 1 }, ...data];
+  const requests: string[] = [];
+  vi.stubGlobal("fetch", vi.fn(async (input: string | URL | Request) => {
+    const url = String(input);
+    requests.push(url);
+    return Response.json(url.includes("range=all") ? all : data);
+  }));
+  const client = new QueryClient();
+  const { unmount } = render(
+    <QueryClientProvider client={client}>
+      <McapChart data={data} stablecoinId="usdt-tether" expandHistoryOnWideRange />
+    </QueryClientProvider>,
+  );
+  await waitFor(() => expect(screen.getByRole("figure", { name: "Market cap chart showing 4 data points" })).toBeTruthy());
+  fireEvent.click(screen.getByRole("button", { name: "1Y" }));
+  await waitFor(() => expect(screen.getByRole("figure", { name: "Market cap chart showing 3 data points" })).toBeTruthy());
+  expect(requests).toEqual([
+    expect.stringContaining("range=all"),
+    expect.stringContaining("days=365"),
+  ]);
+  unmount();
+  client.clear();
 });

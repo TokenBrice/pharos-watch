@@ -139,9 +139,8 @@ export const handleBlacklist = async (db: D1Database, url: URL): Promise<Respons
     filterBindings.push(eventType);
   }
   if (query) {
-    const escaped = query.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_");
-    conditions.push("LOWER(address) LIKE ? ESCAPE '\\'");
-    filterBindings.push(`%${escaped}%`);
+    conditions.push("instr(LOWER(address), ?) > 0");
+    filterBindings.push(query);
   }
 
   return buildPaginatedEventResponse<BlacklistEventRow, BlacklistEvent>(db, {

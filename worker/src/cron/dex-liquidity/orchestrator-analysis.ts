@@ -307,20 +307,11 @@ export interface DexLiquidityPostScoreAnalysis {
     measuredBalanceTvlBySourceFamily: Record<string, number>;
     priceObservationCoinsBySourceFamily: Record<string, number>;
     sourceDegradedFamilies: string[];
+    globalProtocolOverCapUsd: number;
     protocolCapReductions: {
       cappedPoolCount?: number;
       cappedProtocols?: number;
       reducedTvlUsd?: number;
-      topProtocols: Array<{
-        protocol: string;
-        preCapTvlUsd: number;
-        postCapTvlUsd: number;
-        reducedTvlUsd: number;
-      }>;
-      topStablecoins: Array<{
-        stablecoinId: string;
-        reducedTvlUsd: number;
-      }>;
     };
   } & DexLiquidityDriftSummary;
 }
@@ -332,8 +323,8 @@ export async function analyzeDexLiquidityPostScoring(params: {
   globalAgg: GlobalAgg;
   retainedPoolsByStablecoin: Map<string, LiquidityMetrics["topPools"]>;
   priceObservations: Map<string, DexPriceObs[]>;
-  protocolTvlCaps: Map<string, number>;
   diagnostics: {
+    globalProtocolOverCapUsd: number;
     protocolCapReductions: {
       cappedPoolCount?: number;
       cappedProtocols?: number;
@@ -599,8 +590,7 @@ export async function analyzeDexLiquidityPostScoring(params: {
   const retainedPoolCountBySourceFamily: Record<string, number> = {};
   const measuredBalanceTvlBySourceFamily: Record<string, number> = {};
   const priceObservationCoinsBySourceFamily: Record<string, number> = {};
-  const preCapProtocolTvl: Record<string, number> = {};
-  const preCapStablecoinProtocolTvl = new Map<string, Record<string, number>>();
+  const retainedStablecoinProtocolTvl = new Map<string, Record<string, number>>();
   let coinsWithoutMeasuredBalances = 0;
   let coinsCrawlerOnly = 0;
   let coinsGtOnly = 0;
@@ -633,11 +623,10 @@ export async function analyzeDexLiquidityPostScoring(params: {
       }
 
       const protocol = pool.project;
-      preCapProtocolTvl[protocol] = (preCapProtocolTvl[protocol] ?? 0) + pool.tvlUsd;
       stablecoinProtocolTvl[protocol] = (stablecoinProtocolTvl[protocol] ?? 0) + pool.tvlUsd;
     }
 
-    preCapStablecoinProtocolTvl.set(stablecoinId, stablecoinProtocolTvl);
+    retainedStablecoinProtocolTvl.set(stablecoinId, stablecoinProtocolTvl);
     if (pools.length > 0 && !hasMeasuredBalanceLiquidity) coinsWithoutMeasuredBalances++;
     if (pools.length > 0 && !hasPrimaryLiquidity) coinsCrawlerOnly++;
     if (pools.length > 0 && sourceFamilies.size === 1 && hasGeckoTerminalLiquidity) coinsGtOnly++;
@@ -670,7 +659,7 @@ export async function analyzeDexLiquidityPostScoring(params: {
     if (ratio >= 1.25 || ratio <= 0.8) coinTvlStepCount25++;
     let protocol: string | null = null;
     let protocolDeltaUsd: number | null = null;
-    const currentProtocols = preCapStablecoinProtocolTvl.get(previous.stablecoin_id);
+    const currentProtocols = retainedStablecoinProtocolTvl.get(previous.stablecoin_id);
     if (currentProtocols && previous.protocol_tvl_json) {
       try {
         const previousProtocols: unknown = JSON.parse(previous.protocol_tvl_json);
@@ -735,39 +724,6 @@ export async function analyzeDexLiquidityPostScoring(params: {
       priceObservationCoinsBySourceFamily[family] = (priceObservationCoinsBySourceFamily[family] ?? 0) + 1;
     }
   }
-
-  const cappedProtocolBreakdown = Object.entries(preCapProtocolTvl)
-    .map(([protocol, preCapTvl]) => {
-      const cap = params.protocolTvlCaps.get(protocol);
-      if (cap == null || cap <= 0 || preCapTvl <= cap) return null;
-      return {
-        protocol,
-        preCapTvlUsd: Math.round(preCapTvl),
-        postCapTvlUsd: Math.round(cap),
-        reducedTvlUsd: Math.round(preCapTvl - cap),
-      };
-    })
-    .filter(
-      (item): item is { protocol: string; preCapTvlUsd: number; postCapTvlUsd: number; reducedTvlUsd: number } =>
-        item != null,
-    )
-    .sort((a, b) => b.reducedTvlUsd - a.reducedTvlUsd)
-    .slice(0, 6);
-
-  const cappedStablecoinBreakdown = Array.from(preCapStablecoinProtocolTvl.entries())
-    .map(([stablecoinId, protocolTvl]) => {
-      let reducedTvlUsd = 0;
-      for (const [protocol, stablecoinTvl] of Object.entries(protocolTvl)) {
-        const cap = params.protocolTvlCaps.get(protocol);
-        const protocolPreCapTvl = preCapProtocolTvl[protocol] ?? 0;
-        if (cap == null || cap <= 0 || protocolPreCapTvl <= cap || stablecoinTvl <= 0) continue;
-        reducedTvlUsd += ((protocolPreCapTvl - cap) * stablecoinTvl) / protocolPreCapTvl;
-      }
-      return { stablecoinId, reducedTvlUsd: Math.round(reducedTvlUsd) };
-    })
-    .filter((item) => item.reducedTvlUsd > 0)
-    .sort((a, b) => b.reducedTvlUsd - a.reducedTvlUsd)
-    .slice(0, 6);
 
   const driftSummary = computeDexLiquidityDriftSummary({
     previousSummary: previousDriftBaseline.summary,
@@ -854,11 +810,8 @@ export async function analyzeDexLiquidityPostScoring(params: {
       measuredBalanceTvlBySourceFamily,
       priceObservationCoinsBySourceFamily,
       sourceDegradedFamilies: [...new Set(params.criticalSourceFailures)],
-      protocolCapReductions: {
-        ...params.diagnostics.protocolCapReductions,
-        topProtocols: cappedProtocolBreakdown,
-        topStablecoins: cappedStablecoinBreakdown,
-      },
+      globalProtocolOverCapUsd: params.diagnostics.globalProtocolOverCapUsd,
+      protocolCapReductions: { ...params.diagnostics.protocolCapReductions },
       qualityDriftFlags: driftSummary.qualityDriftFlags,
       qualityDriftCandidates: driftSummary.qualityDriftCandidates,
       qualityDriftRebaselined: driftSummary.qualityDriftRebaselined,

@@ -119,9 +119,9 @@ const YieldSourceInputMetaSchema = z.object({
 
 const YieldSafetySnapshotMetaSchema = z.object({
   kind: z.enum(["ok", "degraded"]),
-  coverageRatio: z.number(),
+  coverageRatio: z.number().nullable(),
   coveredCount: z.number(),
-  trackedCount: z.number(),
+  trackedCount: z.number().nullable(),
   reason: z.string().nullable(),
   // The retired cache label remains accepted only for persisted pre-V9 payloads.
   source: z.enum(["safety-score-v9-publication", "report-card-cache"]).optional(),
@@ -137,9 +137,9 @@ const YieldLiveSafetyHydrationMetaSchema = z.object({
   // Present when live hydration is unusable but the response still carries the
   // cached payload's own coherent publish-time safety values instead of NR.
   fallback: z.enum(["publish-time-snapshot"]).optional(),
-  coverageRatio: z.number(),
+  coverageRatio: z.number().nullable(),
   coveredCount: z.number(),
-  trackedCount: z.number(),
+  trackedCount: z.number().nullable(),
   reason: z.string().nullable(),
   // Non-V9 labels are historical readers, not live source choices.
   source: z.enum(["safety-score-v9-publication", "report-card-cache", "report-cards:snapshot", "computed-report-cards"]),

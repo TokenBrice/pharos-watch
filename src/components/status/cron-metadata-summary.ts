@@ -143,7 +143,7 @@ function summarizeDexLiquidity(metadata: Record<string, unknown>): string[] {
   const protocolCapReductions = readRecord(sourceCoverage?.protocolCapReductions);
   const cappedPoolCount = readNumber(protocolCapReductions?.cappedPoolCount);
   const reducedTvlUsd = readNumber(protocolCapReductions?.reducedTvlUsd);
-  const topProtocols = readArray(protocolCapReductions?.topProtocols);
+  const globalProtocolOverCapUsd = readNumber(sourceCoverage?.globalProtocolOverCapUsd);
   const nearCoverageGuard = readBoolean(sourceCoverage?.nearCoverageGuard);
   const skipBreakdown =
     stagedPoolsSkippedByExactIdentity != null || stagedPoolsSkippedByUniqueDerivedIdentity != null
@@ -179,19 +179,8 @@ function summarizeDexLiquidity(metadata: Record<string, unknown>): string[] {
     cappedPoolCount != null && reducedTvlUsd != null && cappedPoolCount > 0
       ? `protocol caps ${cappedPoolCount} pools, ${Math.round(reducedTvlUsd).toLocaleString()} TVL reduced`
       : null,
-    topProtocols && topProtocols.length > 0
-      ? (() => {
-        const parts = topProtocols
-          .slice(0, 2)
-          .map((entry) => {
-            const record = readRecord(entry);
-            const protocol = readString(record?.protocol);
-            const reduction = readNumber(record?.reducedTvlUsd);
-            return protocol && reduction != null ? `${protocol} ${Math.round(reduction).toLocaleString()}` : null;
-          })
-          .filter((part): part is string => part != null);
-        return parts.length > 0 ? `top capped protocols ${parts.join(", ")}` : null;
-      })()
+    globalProtocolOverCapUsd != null && globalProtocolOverCapUsd > 0
+      ? `global protocol TVL excess ${Math.round(globalProtocolOverCapUsd).toLocaleString()} observed (not reduced)`
       : null,
     qualityDriftSeverity && qualityDriftSeverity !== "none"
       ? `quality drift ${qualityDriftSeverity}${qualityDriftFlags ? ` (${qualityDriftFlags})` : ""}`

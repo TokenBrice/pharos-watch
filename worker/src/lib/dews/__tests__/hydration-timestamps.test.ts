@@ -4,6 +4,9 @@ import { hydrateDexLiquidity, hydrateDexLiquidityHistory, hydrateLatestPsiScore 
 import { DEWS_PSI_FRESHNESS_BUDGET_SEC } from "../source-state/budgets";
 import { computeDEWS } from "../../dews";
 import { makeDewsInput } from "../../__tests__/dews.test-support";
+import { makeDexLiquidityRow } from "../../../test-helpers/__shared/fixtures";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import { loadDewsSourceState } from "../source-state";
 
 const RUN_AT = 1_800_000_000;
 afterEach(() => vi.useRealTimers());
@@ -59,10 +62,11 @@ describe("DEWS hydration timestamp admission", () => {
   ])("admits weekly history confidence=%s TVL=%s distance=%s", async (confidence, tvl, distance, admitted) => {
     const target = RUN_AT - 7 * 86400;
     const db = mockD1([{ match: "FROM dex_liquidity_history", rows: [
-      { stablecoin_id: "test", snapshot_date: target - distance, liquidity_score: 73, total_tvl_usd: tvl, coverage_confidence: confidence },
-      { stablecoin_id: "test", snapshot_date: target, liquidity_score: 99, total_tvl_usd: 1000, coverage_confidence: 0.49 },
+      { stablecoin_id: "test", snapshot_date: target - distance, liquidity_score: 73, total_tvl_usd: tvl, coverage_confidence: confidence, methodology_version: null },
+      { stablecoin_id: "test", snapshot_date: target, liquidity_score: 99, total_tvl_usd: 1000, coverage_confidence: 0.49, methodology_version: null },
     ] }]);
-    const hydrated = await hydrateDexLiquidityHistory({ db, nowSec: RUN_AT, registerSourceFailure: vi.fn(), registerMalformedPersistedInput: vi.fn() });
+    const hydrated = await hydrateDexLiquidityHistory({ db, nowSec: RUN_AT, registerSourceFailure: vi.fn(), registerMalformedPersistedInput: vi.fn() },
+      new Map([["test", makeDexLiquidityRow({ stablecoin_id: "test" })]]));
     expect(hydrated.liqHist7dMap.get("test")).toEqual(admitted ? { score: 73, tvl: 100, date: target - distance } : undefined);
     expect(db.getHistory()[0].binds).toEqual([RUN_AT - 8.5 * 86400]);
     expect(db.getHistory()[0].sql).toContain("coverage_confidence");
@@ -72,10 +76,54 @@ describe("DEWS hydration timestamp admission", () => {
     const now = 20000 * 86400 + 12 * 3600;
     const date = (20000 - 8) * 86400;
     const db = mockD1([{ match: "FROM dex_liquidity_history", rows: [
-      { stablecoin_id: "daily", snapshot_date: date, liquidity_score: 80, total_tvl_usd: 100, coverage_confidence: 0.5 },
+      { stablecoin_id: "daily", snapshot_date: date, liquidity_score: 80, total_tvl_usd: 100, coverage_confidence: 0.5, methodology_version: null },
     ] }]);
-    const hydrated = await hydrateDexLiquidityHistory({ db, nowSec: now, registerSourceFailure: vi.fn(), registerMalformedPersistedInput: vi.fn() });
+    const hydrated = await hydrateDexLiquidityHistory({ db, nowSec: now, registerSourceFailure: vi.fn(), registerMalformedPersistedInput: vi.fn() },
+      new Map([["daily", makeDexLiquidityRow({ stablecoin_id: "daily" })]]));
     expect(db.getHistory()[0].binds).toEqual([date]);
     expect(hydrated.liqHist7dMap.get("daily")).toEqual({ score: 80, tvl: 100, date });
   });
+
+  it.each([
+    ["6.95", "6.92", null],
+    ["6.95", "6.94", 100],
+    ["6.92", "6.92", 100],
+    ["3.2", "3.1", 100],
+  ] as const)("hydrates history against the stored current version %s, not runtime (%s)", async (current, historical, tvl) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(RUN_AT * 1000);
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const date = RUN_AT - 7 * 86400;
+    try {
+      sqlite.prepare("INSERT INTO dex_liquidity (stablecoin_id, symbol, total_tvl_usd, liquidity_score, updated_at, methodology_version) VALUES ('usdt-tether', 'USDT', 200, 80, ?, ?)")
+        .run(RUN_AT, current);
+      sqlite.prepare("INSERT INTO dex_liquidity_history (stablecoin_id, total_tvl_usd, liquidity_score, snapshot_date, coverage_class, coverage_confidence, methodology_version) VALUES ('usdt-tether', 100, 73, ?, 'primary', 0.9, ?)")
+        .run(date, historical);
+      const hydrated = await loadDewsSourceState({
+        db, nowSec: RUN_AT, registerSourceFailure: vi.fn(), registerMalformedPersistedInput: vi.fn(),
+      });
+      expect(hydrated.dexLiqMap.get("usdt-tether")?.methodology_version).toBe(current);
+      expect(hydrated.liqHist7dMap.get("usdt-tether")).toEqual({ score: 73, tvl, date });
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it.each(["legacy", "absent-current", "omitted-current", "omitted-history"] as const)(
+    "retains independent historical scores while distinguishing %s identity", async (identity) => {
+      const current = { ...makeDexLiquidityRow(), methodology_version: null as string | null };
+      const history = { stablecoin_id: "usdt-tether", total_tvl_usd: 100, liquidity_score: 73,
+        snapshot_date: RUN_AT - 7 * 86400, coverage_class: "primary", coverage_confidence: 0.9,
+        methodology_version: null };
+      if (identity === "omitted-current") Reflect.deleteProperty(current, "methodology_version");
+      if (identity === "omitted-history") Reflect.deleteProperty(history, "methodology_version");
+      const hydrated = await hydrateDexLiquidityHistory({
+        db: mockD1([{ match: "FROM dex_liquidity_history", rows: [history] }]),
+        nowSec: RUN_AT, registerSourceFailure: vi.fn(), registerMalformedPersistedInput: vi.fn(),
+      }, identity === "absent-current" ? new Map() : new Map([["usdt-tether", current]]));
+      expect(hydrated.liqHist7dMap.get("usdt-tether")).toEqual({
+        score: 73, tvl: identity === "legacy" ? 100 : null, date: history.snapshot_date,
+      });
+    },
+  );
 });

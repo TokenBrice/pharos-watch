@@ -145,6 +145,10 @@ function ageYieldRankings(payload: YieldRankingsResponse, publishedAt: number): 
     provenance: payload.provenance ? {
       ...payload.provenance,
       benchmark: ageBenchmark(payload.provenance.benchmark),
+      dlPools: {
+        ...payload.provenance.dlPools,
+        ageSeconds: age(payload.provenance.dlPools.updatedAt, null),
+      },
       ...(benchmarks ? { benchmarks } : {}),
     } : payload.provenance,
     rankings: payload.rankings.map((row) => {

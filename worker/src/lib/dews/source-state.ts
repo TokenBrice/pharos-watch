@@ -62,10 +62,14 @@ export async function loadDewsSourceState(ctx: HydrationContext): Promise<DewsSo
   // These hydrators are D1/cache-only and each owns its degraded fallback
   // handling. Run them concurrently, then replay diagnostics in legacy order
   // so metadata shape is stable even when D1 reads finish out of order.
+  const liquidityHydration = hydrateSource(ctx, hydration.hydrateDexLiquidity);
   const orderedHydrations = await Promise.all([
-    hydrateSource(ctx, hydration.hydrateDexLiquidity),
+    liquidityHydration,
     hydrateSource(ctx, hydration.hydrateDexPrices),
-    hydrateSource(ctx, hydration.hydrateDexLiquidityHistory),
+    hydrateSource(ctx, async (historyCtx) => hydration.hydrateDexLiquidityHistory(
+      historyCtx,
+      (await liquidityHydration).result.dexLiqMap,
+    )),
     hydrateSource(ctx, hydration.hydrateBlacklistEvents),
     hydrateSource(ctx, hydration.hydratePreviousStressSignals),
     hydrateSource(ctx, hydration.hydrateMintBurn),

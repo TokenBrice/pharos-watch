@@ -18,6 +18,45 @@ function mockDexD1(tables: MockTableConfig[]) {
 describe("handleDexLiquidity", () => {
   const row = makeDexLiquidityRow();
 
+  it.each([
+    ["6.95", "6.92", null, null],
+    ["6.95", "6.94", 100, 300],
+    ["3.2", "3.1", 100, 300],
+  ] as const)("serves only same-epoch day/week TVL trends (%s vs %s)", async (current, historical, day, week) => {
+    const now = 1_790_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      sqlite.prepare("INSERT INTO dex_liquidity (stablecoin_id, symbol, total_tvl_usd, total_volume_24h_usd, liquidity_score, updated_at, coverage_class, coverage_confidence, methodology_version) VALUES ('usdt-tether', 'USDT', 400, 123, 80, ?, 'primary', 0.9, ?)")
+        .run(now, current);
+      const insertHistory = sqlite.prepare("INSERT INTO dex_liquidity_history (stablecoin_id, total_tvl_usd, snapshot_date, coverage_class, coverage_confidence, methodology_version) VALUES ('usdt-tether', ?, ?, 'primary', 0.9, ?)");
+      insertHistory.run(200, now - 86400, historical);
+      insertHistory.run(100, now - 7 * 86400, historical);
+      const body = DexLiquidityMapSchema.parse(await (await handleDexLiquidity(db)).json());
+      expect(body["usdt-tether"]).toMatchObject({
+        tvlChange24h: day, tvlChange7d: week, liquidityScore: 80, totalVolume24hUsd: 123,
+      });
+    } finally {
+      sqlite.close();
+      vi.restoreAllMocks();
+    }
+  });
+
+  it("withholds TVL trends when a current version projection is omitted", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const unprojected = makeDexLiquidityRow();
+    Reflect.deleteProperty(unprojected, "methodology_version");
+    const db = mockDexD1([
+      { match: "dex_liquidity_history", rows: [1, 7].map((days) => ({
+        stablecoin_id: "usdt-tether", total_tvl_usd: 100, snapshot_date: now - days * 86400,
+        coverage_class: "primary", coverage_confidence: 0.9, methodology_version: null,
+      })) },
+      { match: "dex_prices", rows: [] },
+      { match: "dex_liquidity", rows: [unprojected] },
+    ]);
+    const body = await (await handleDexLiquidity(db)).json() as Record<string, { tvlChange24h: number | null; tvlChange7d: number | null }>;
+    expect(body["usdt-tether"]).toMatchObject({ tvlChange24h: null, tvlChange7d: null });
+  });
   it.each([null, "{malformed"] as const)("preserves observed DEX aggregates when protocol attribution JSON is unavailable (%s)", async (protocolJson) => {
     const observed = makeDexLiquidityRow({
       stablecoin_id: "usdc-circle", pool_count: 3, total_tvl_usd: 100_000, protocol_tvl_json: protocolJson,

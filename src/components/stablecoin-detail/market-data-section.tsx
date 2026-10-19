@@ -17,9 +17,9 @@ import { PegDeviationChart } from "@/components/peg-deviation-chart";
 import { useSupplyHistory } from "@/hooks/use-stablecoins";
 import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
 import type { SupplyHistoryPoint } from "@/hooks/use-stablecoins";
-import { STABLECOIN_DETAIL_FULL_SUPPLY_HISTORY_DAYS } from "@/lib/api-query-descriptors";
 import { cn } from "@/lib/utils";
 import { FreshnessIndicator } from "@/components/status/freshness-indicator";
+import { Button } from "@/components/ui/button";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 
 const TIME_RANGE_OPTIONS: TimeRangeOption[] = ["7d", "30d", "90d", "1y", "all"];
@@ -51,16 +51,37 @@ export function MarketDataSection({ stablecoinId, supplyHistory, pegCurrency, up
   // 90d default: recent structure is the read this page optimizes for; "all"
   // compresses a decade of supply into an unreadable first paint.
   const [range, setRange] = useState<TimeRangeOption>("90d");
-  const needsFullHistory = range === "1y" || range === "all";
-  const fullHistoryQuery = useSupplyHistory(stablecoinId, STABLECOIN_DETAIL_FULL_SUPPLY_HISTORY_DAYS, {
-    enabled: needsFullHistory,
+  const needsExpandedHistory = range === "1y" || range === "all";
+  const expandedHistoryQuery = useSupplyHistory(stablecoinId, range === "all" ? "all" : 365, {
+    enabled: needsExpandedHistory,
   });
-  const activeHistory = needsFullHistory && fullHistoryQuery.data.length > 0
-    ? fullHistoryQuery.data
-    : supplyHistory;
-  const activeUpdatedAtMs = needsFullHistory && fullHistoryQuery.data.length > 0
-    ? (fullHistoryQuery.meta?.updatedAt ?? 0) * 1000
+  const hasExpandedHistory = needsExpandedHistory && expandedHistoryQuery.data.length > 0;
+  const activeHistory = hasExpandedHistory ? expandedHistoryQuery.data : supplyHistory;
+  const activeUpdatedAtMs = hasExpandedHistory
+    ? (expandedHistoryQuery.meta?.updatedAt ?? 0) * 1000
     : updatedAtMs;
+  const requestedRange = range === "all" ? "All" : "1Y";
+  const historyStatus = !needsExpandedHistory ? null
+    : expandedHistoryQuery.error ? `${requestedRange} history ${hasExpandedHistory ? "refresh failed" : "could not be loaded"}. Requested coverage is not confirmed.`
+    : expandedHistoryQuery.isLoading || expandedHistoryQuery.isFetching ? `Loading ${requestedRange} history. Requested coverage is not yet confirmed.`
+    : !hasExpandedHistory ? `No observations returned for ${requestedRange} history. Requested coverage is unavailable.`
+    : expandedHistoryQuery.meta.status !== "fresh" ? `${requestedRange} history is ${expandedHistoryQuery.meta.status === "unknown" ? "of unknown freshness" : expandedHistoryQuery.meta.status}.`
+    : null;
+  const historyNotice = historyStatus ? (
+    <div role="status" aria-label="Market history coverage" aria-live="polite" className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
+      <p>
+        {historyStatus}{" "}
+        {hasExpandedHistory
+          ? `Showing retained observations from ${new Date(activeHistory[0].date * 1000).toISOString().slice(0, 10)} to ${new Date(activeHistory[activeHistory.length - 1].date * 1000).toISOString().slice(0, 10)}.`
+          : activeHistory.length > 0 ? "Only the available 90-day window is shown." : "No observations are available to show."}
+      </p>
+      {expandedHistoryQuery.error ? (
+        <Button variant="outline" size="sm" disabled={expandedHistoryQuery.isFetching} onClick={() => void expandedHistoryQuery.refetch()}>
+          Retry {requestedRange} history
+        </Button>
+      ) : null}
+    </div>
+  ) : null;
 
   return (
     <MarketDataChartSyncProvider>
@@ -70,6 +91,7 @@ export function MarketDataSection({ stablecoinId, supplyHistory, pegCurrency, up
         pegCurrency={pegCurrency}
         updatedAtMs={activeUpdatedAtMs}
         frozenNote={frozenNote}
+        historyNotice={historyNotice}
         range={range}
         setRange={setRange}
       />
@@ -79,6 +101,7 @@ export function MarketDataSection({ stablecoinId, supplyHistory, pegCurrency, up
 interface MarketDataSectionBodyProps extends MarketDataSectionProps {
   range: TimeRangeOption;
   setRange: (next: TimeRangeOption) => void;
+  historyNotice: ReactNode;
 }
 
 /**
@@ -91,6 +114,7 @@ function MarketDataSectionBody({
   pegCurrency,
   updatedAtMs,
   frozenNote,
+  historyNotice,
   range,
   setRange,
 }: MarketDataSectionBodyProps) {
@@ -136,6 +160,7 @@ function MarketDataSectionBody({
       </div>
       <div className={cn(DETAIL_MODULE_BODY_CLASS, "space-y-4")}>
         {frozenNote}
+        {historyNotice}
         <div className="overflow-hidden rounded-lg border border-border/50 bg-card/40 animate-in fade-in duration-[220ms] motion-reduce:animate-none">
           <div className="grid grid-cols-1 divide-y divide-border/50 lg:grid-cols-2 lg:divide-x lg:divide-y-0">
             <LazySection className="min-h-[340px] sm:min-h-[420px]">

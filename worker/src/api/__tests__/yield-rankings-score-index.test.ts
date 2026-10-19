@@ -62,6 +62,32 @@ async function fixture(held = false, pipelineGap = false) {
 }
 
 describe("rankings score-index hydration", () => {
+  it.each([NOW - 3687, null])("ages full, summary and warm coin pool evidence from its original clock (%s)", async updatedAt => {
+    const { db, sqlite } = await fixture();
+    sqlite.prepare("UPDATE cache SET value = json_set(value, '$.provenance.dlPools.updatedAt', ?, '$.provenance.dlPools.ageSeconds', 2677) WHERE key = 'yield-rankings'")
+      .run(updatedAt);
+    const coinUrl = new URL("https://site-api.pharos.watch/api/yield-rankings-coin?stablecoin=usdc-circle");
+    expect((await handleYieldRankingsCoin(db, coinUrl)).status).toBe(200);
+    for (const elapsed of [30, 60]) {
+      vi.setSystemTime((NOW + elapsed) * 1000);
+      const responses = [
+        await handleYieldRankings(db),
+        await handleYieldRankings(db, new URL("https://api.pharos.watch/api/yield-rankings?projection=summary")),
+        await handleYieldRankingsCoin(db, coinUrl),
+      ];
+      for (const response of responses) {
+        expect(response.status).toBe(200);
+        const body = await response.json() as YieldRankingsResponse | YieldRankingsSummaryResponse;
+        expect(body.provenance?.dlPools).toMatchObject({
+          updatedAt, ageSeconds: updatedAt === null ? null : 3687 + elapsed,
+          mode: "dex-cache", poolCount: 1, fallbackMode: null,
+        });
+        expect(body.updatedAt).toBe(NOW);
+        expect(body.publication?.updatedAt).toBe(NOW);
+      }
+    }
+  });
+
   it("keeps an asset pipeline gap null rather than substituting default safety or NR", async () => {
     const { db, sqlite } = await fixture(false, true);
     // The hot read cannot fall back to full cards even though the cached

@@ -421,7 +421,6 @@ export function accumulateGlobalAggregate(
   pools: LiquidityMetrics["topPools"],
   globalProtocolTvl: Record<string, number>,
   globalChainTvl: Record<string, number>,
-  globalProtoChainTvl: Record<string, number>,
   globalChains: Set<string>,
   seenPoolTvl: Map<string, GlobalPoolAggregateEntry>,
 ): { totalTvl: number; poolCount: number } {
@@ -439,12 +438,8 @@ export function accumulateGlobalAggregate(
         totalTvl += pool.tvlUsd - prev.tvl;
         globalProtocolTvl[prev.proto] = (globalProtocolTvl[prev.proto] ?? 0) - prev.tvl;
         globalChainTvl[prev.chain] = (globalChainTvl[prev.chain] ?? 0) - prev.tvl;
-        globalProtoChainTvl[`${prev.proto}:${prev.chain}`] =
-          (globalProtoChainTvl[`${prev.proto}:${prev.chain}`] ?? 0) - prev.tvl;
         globalProtocolTvl[proto] = (globalProtocolTvl[proto] ?? 0) + pool.tvlUsd;
         globalChainTvl[chainKey] = (globalChainTvl[chainKey] ?? 0) + pool.tvlUsd;
-        globalProtoChainTvl[`${proto}:${chainKey}`] =
-          (globalProtoChainTvl[`${proto}:${chainKey}`] ?? 0) + pool.tvlUsd;
         globalChains.add(chainKey);
         seenPoolTvl.set(pool.poolId, { tvl: pool.tvlUsd, reading: pool.volumeReading, proto, chain: chainKey });
       }
@@ -457,7 +452,6 @@ export function accumulateGlobalAggregate(
     globalChains.add(chainKey);
     globalProtocolTvl[proto] = (globalProtocolTvl[proto] ?? 0) + pool.tvlUsd;
     globalChainTvl[chainKey] = (globalChainTvl[chainKey] ?? 0) + pool.tvlUsd;
-    globalProtoChainTvl[`${proto}:${chainKey}`] = (globalProtoChainTvl[`${proto}:${chainKey}`] ?? 0) + pool.tvlUsd;
   }
 
   return { totalTvl, poolCount };

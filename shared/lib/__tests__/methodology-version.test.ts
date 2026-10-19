@@ -393,5 +393,6 @@ describe("liquidity TVL-basis break list", () => {
     expect(liquidityTvlBasisEpoch("6.92")).toBeLessThan(liquidityTvlBasisEpoch("6.93"));
     expect(liquidityTvlBasisEpoch("6.94")).toBe(liquidityTvlBasisEpoch("6.93"));
     expect(liquidityTvlBasisEpoch("6.95")).toBe(liquidityTvlBasisEpoch("6.94"));
+    expect(liquidityTvlBasisEpoch("6.95")).toBeLessThan(liquidityTvlBasisEpoch("6.96"));
   });
 });

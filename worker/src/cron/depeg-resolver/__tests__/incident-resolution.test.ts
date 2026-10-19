@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { StablecoinMeta } from "@shared/types/core";
+import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { buildDewsStablecoinIdsDigest } from "../../../lib/dews-publication-pointer";
 import { D1_MAX_BOUND_PARAMETERS } from "../../../lib/d1-primitives";
 import * as activeSafetyScoreSource from "../../../lib/safety-score-active-source";
@@ -466,6 +467,7 @@ describe("loadDdrContext", () => {
             snapshot_date: NOW_SEC - 7 * DAY,
             coverage_class: "primary",
             coverage_confidence: 1,
+            methodology_version: LIQUIDITY_METHODOLOGY_VERSION,
           },
           {
             stablecoin_id: "usdc-circle",
@@ -474,6 +476,7 @@ describe("loadDdrContext", () => {
             snapshot_date: NOW_SEC - 30 * DAY,
             coverage_class: "primary",
             coverage_confidence: 1,
+            methodology_version: LIQUIDITY_METHODOLOGY_VERSION,
           },
         ],
       },
@@ -487,6 +490,7 @@ describe("loadDdrContext", () => {
             total_tvl_usd: 40,
             total_volume_24h_usd: 20,
             updated_at: NOW_SEC - 60,
+            methodology_version: LIQUIDITY_METHODOLOGY_VERSION,
           },
         ],
       },
@@ -777,6 +781,7 @@ describe("resolveDdrIncidents", () => {
             total_tvl_usd: 40,
             total_volume_24h_usd: 20,
             updated_at: NOW_SEC - 60,
+            methodology_version: LIQUIDITY_METHODOLOGY_VERSION,
           },
         ],
       ]),
@@ -825,6 +830,7 @@ describe("resolveDdrIncidents", () => {
             total_tvl_usd: 40,
             total_volume_24h_usd: 20,
             updated_at: NOW_SEC - 60,
+            methodology_version: LIQUIDITY_METHODOLOGY_VERSION,
           },
         ],
       ]),
@@ -866,6 +872,7 @@ describe("resolveDdrIncidents", () => {
             total_tvl_usd: 1_500_000,
             total_volume_24h_usd: 89,
             updated_at: NOW_SEC - 60,
+            methodology_version: LIQUIDITY_METHODOLOGY_VERSION,
           },
         ],
       ]),
@@ -908,6 +915,7 @@ describe("resolveDdrIncidents", () => {
             total_tvl_usd: 100,
             total_volume_24h_usd: 50,
             updated_at: NOW_SEC - 60,
+            methodology_version: LIQUIDITY_METHODOLOGY_VERSION,
           },
         ],
       ]),
@@ -946,6 +954,7 @@ describe("resolveDdrIncidents", () => {
             total_tvl_usd: 100,
             total_volume_24h_usd: 50,
             updated_at: NOW_SEC - 60,
+            methodology_version: LIQUIDITY_METHODOLOGY_VERSION,
           },
         ],
       ]),
@@ -982,6 +991,7 @@ describe("resolveDdrIncidents", () => {
             total_tvl_usd: 10,
             total_volume_24h_usd: 5,
             updated_at: NOW_SEC - 5 * 3600,
+            methodology_version: LIQUIDITY_METHODOLOGY_VERSION,
           },
         ],
       ]),

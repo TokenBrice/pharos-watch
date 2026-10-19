@@ -1,12 +1,35 @@
 import { describe, expect, it } from "vitest";
 import { DAY_SECONDS } from "@/lib/constants";
-import { makePegEvent as makeEvent, type TestPegEvent } from "@shared/test-utils/peg-fixtures";
 import { computePegStability } from "../peg-stability";
+import type { DepegEvent } from "@shared/types";
 
 const NOW = 1_700_000_000;
 
-function computeStability(events: TestPegEvent[], earliestDate: number | null, now = NOW) {
-  return computePegStability(events as never, earliestDate, now);
+function computeStability(events: DepegEvent[], earliestDate: number | null, now = NOW) {
+  return computePegStability(events, earliestDate, now);
+}
+
+function makeEvent(
+  overrides: Partial<DepegEvent> & Pick<DepegEvent, "startedAt" | "peakDeviationBps">,
+): DepegEvent {
+  return {
+    id: 1,
+    stablecoinId: "usdc-circle",
+    symbol: "USDC",
+    pegType: "peggedUSD",
+    direction: "below",
+    endedAt: null,
+    startPrice: 0.985,
+    peakPrice: 0.982,
+    recoveryPrice: null,
+    pegReference: 1,
+    source: "live",
+    confirmationSources: null,
+    pendingReason: null,
+    closeReason: null,
+    provenance: null,
+    ...overrides,
+  };
 }
 
 describe("computePegStability", () => {
@@ -99,7 +122,7 @@ describe("computePegStability", () => {
         peakDeviationBps: -200,
       }),
     ];
-    const result = computeStability(events, earliestDate);
+    const result = computeStability(events.map((event) => ({ ...event, recoveryPrice: 1 })), earliestDate);
     expect(result).not.toBeNull();
     expect(result!.depeggedNow).toBe(false);
     expect(result!.currentStreakDays).toBe(50); // 50 days since most recent endedAt
@@ -138,5 +161,38 @@ describe("computePegStability", () => {
     const result = computeStability([], earliestDate);
     expect(result).not.toBeNull();
     expect(result!.trackingSpan).toBe("5y");
+  });
+
+  it.each([
+    ["recovered-primary", null, "recovered", 10],
+    ["recovered-dex", 1, "recovered", 10],
+    ["recovered-native", 1, "recovered", 10],
+    [null, 1, "legacy_recovered", 10],
+    [undefined, 1, "legacy_recovered", 10],
+    ["coverage-lost-supply", 1, "coverage_lost", null],
+    ["superseded-direction", 1, "superseded", null],
+    ["orphan-tracking-removed", 1, "orphan", null],
+    [null, null, "unknown_closed", null],
+  ] as const)("classifies the newest terminal boundary %s before deriving recovery age", (closeReason, recoveryPrice, latestClosure, days) => {
+    const older = { ...makeEvent({ startedAt: NOW - 60 * DAY_SECONDS, endedAt: NOW - 50 * DAY_SECONDS, peakDeviationBps: -200 }), recoveryPrice: 1 };
+    const latest = makeEvent({ startedAt: NOW - 20 * DAY_SECONDS, endedAt: NOW - 10 * DAY_SECONDS, peakDeviationBps: -300, closeReason: closeReason ?? null, recoveryPrice });
+    for (const events of [[older, latest], [latest, older]]) {
+      expect(computeStability(events, NOW - 100 * DAY_SECONDS)).toMatchObject({
+        currentStreakDays: days, latestClosure, depeggedNow: false,
+      });
+    }
+  });
+
+  it("keeps a zero-day recorded recovery separate from open and absent history", () => {
+    const recovery = makeEvent({ startedAt: NOW - DAY_SECONDS, endedAt: NOW, peakDeviationBps: -200, closeReason: "recovered-primary" });
+    expect(computeStability([recovery], NOW - 10 * DAY_SECONDS)).toMatchObject({
+      currentStreakDays: 0, latestClosure: "recovered", depeggedNow: false,
+    });
+    expect(computeStability([{ ...recovery, endedAt: null }], NOW - 10 * DAY_SECONDS)).toMatchObject({
+      currentStreakDays: null, latestClosure: null, depeggedNow: true,
+    });
+    expect(computeStability([], NOW - 10 * DAY_SECONDS)).toMatchObject({
+      currentStreakDays: null, latestClosure: null, depeggedNow: false,
+    });
   });
 });

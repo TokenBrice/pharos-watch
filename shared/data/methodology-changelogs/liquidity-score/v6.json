@@ -1,5 +1,22 @@
 [
   {
+    "version": "6.96",
+    "title": "One retained population for global TVL and volume coverage",
+    "date": "2026-10-19",
+    "effectiveAt": 1792368000,
+    "summary": "Global DEX headline TVL, protocol and chain breakdowns, and volume-coverage TVL denominators now describe the same retained cross-coin deduped pools. The second global protocol clamp is removed; existing per-pool fraud exclusions, source admission and per-coin secondary-source caps remain unchanged.",
+    "impact": [
+      "Two distinct admitted trusted pools carrying $80M each publish $160M globally even when the external protocol total is $100M. Repeated attribution of the same physical pool across coins still counts once. Neither individual pools nor observed volume are rescaled to force aggregate equality.",
+      "Global retainedTvlUsd matches the headline, protocol sum and chain sum. admittedTvlUsd describes only the subset with admitted readings; partialGrossUsd remains their unscaled observed volume. Complete coverage makes the admitted and retained TVL denominators equal.",
+      "sourceCoverage.globalProtocolOverCapUsd preserves the external-total excess as an observation diagnostic. It is not a reduction or substitute for the aggregate. protocolCapReductions reports only actual per-coin secondary-source reductions; the former cross-coin/pro-rata topProtocols and topStablecoins reduction allocations are retired. The status summary separates observed excess from actual reduced TVL, and existing fraud/source coverage diagnostics remain available.",
+      "The TVL-basis break list appends 6.96 in the same release. Public TVL trends, DEWS 6.35 and DDR 4.8 compare stored measurement epochs rather than interpreting the methodology step as a market move; history is not rewritten. Durability stability series remain epoch-homogeneous.",
+      "This repairs the inconsistent global rewrite only. Residual per-pool raw-TVL rewriting and future named-quarantine policy are not claimed fixed, and retained provider valuations are not certified economically correct. No scoring weights, input cohort, request budget or cron cadence changes.",
+      "Activation is provisionally 2026-10-19 00:00 UTC (1792368000); confirm effectiveAt at release. First accepted production arithmetic and source/fraud diagnostics remain pending; no new live probe, route-equivalence or runtime-health result is claimed."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.95",
     "title": "Reviewed retained-pool targets and missing-row discovery",
     "date": "2026-10-14",

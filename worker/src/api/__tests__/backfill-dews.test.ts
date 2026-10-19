@@ -2,6 +2,7 @@ import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 
 vi.mock("@shared/lib/peg-rates", () => ({
   derivePegRates: vi.fn(() => ({
@@ -223,6 +224,7 @@ describe("handleBackfillDEWS", () => {
             liquidity_score: 81,
             total_tvl_usd: 2_200_000,
             coverage_confidence: 0.5,
+            methodology_version: null,
           },
           {
             stablecoin_id: "usdt-tether",
@@ -230,6 +232,7 @@ describe("handleBackfillDEWS", () => {
             liquidity_score: 77,
             total_tvl_usd: 2_000_000,
             coverage_confidence: 0.5,
+            methodology_version: null,
           },
         ],
       },
@@ -271,9 +274,9 @@ describe("handleBackfillDEWS", () => {
       { match: "FROM depeg_events", rows: [{ stablecoin_id: "usdt-tether", started_at: day + 3600, ended_at: day + 7200, peak_deviation_bps: -150 }] },
       { match: "FROM supply_history", rows: [{ stablecoin_id: "usdt-tether", snapshot_date: evaluation, circulating_usd: 100_000_000 }] },
       { match: "FROM dex_liquidity_history", rows: [
-        { stablecoin_id: "usdt-tether", snapshot_date: day - 15 * 86400, liquidity_score: 70, total_tvl_usd: 100, coverage_confidence: confidence },
-        { stablecoin_id: "usdt-tether", snapshot_date: day - 14 * 86400, liquidity_score: 99, total_tvl_usd: 1000, coverage_confidence: 0.49 },
-        { stablecoin_id: "usdt-tether", snapshot_date: evaluation, liquidity_score: 80, total_tvl_usd: 200, coverage_confidence: 0.5 },
+        { stablecoin_id: "usdt-tether", snapshot_date: day - 15 * 86400, liquidity_score: 70, total_tvl_usd: 100, coverage_confidence: confidence, methodology_version: null },
+        { stablecoin_id: "usdt-tether", snapshot_date: day - 14 * 86400, liquidity_score: 99, total_tvl_usd: 1000, coverage_confidence: 0.49, methodology_version: null },
+        { stablecoin_id: "usdt-tether", snapshot_date: evaluation, liquidity_score: 80, total_tvl_usd: 200, coverage_confidence: 0.5, methodology_version: null },
       ] },
     ]);
     const request = makeApiRequest("/api/backfill-dews", { adminKey: "secret" });
@@ -286,6 +289,34 @@ describe("handleBackfillDEWS", () => {
     const history = db.getHistory();
     expect(history.find((entry) => entry.sql.includes("FROM dex_liquidity_history"))?.binds).toEqual([day - 15.5 * 86400, day + 2 * 86400]);
     expect(history.find((entry) => entry.sql.includes("FROM supply_history"))?.binds).toEqual([day - 14 * 86400, day + 2 * 86400]);
+  });
+
+  it.each([
+    ["6.95", "6.92", null],
+    ["6.95", "6.94", 100],
+    ["6.92", "6.92", 100],
+    ["3.2", "3.1", 100],
+  ] as const)("reconstructs TVL against the historical current anchor %s/%s without losing scores", async (current, historical, tvl7dAgo) => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const day = 20000 * 86400;
+    const evaluation = day - 7 * 86400;
+    vi.mocked(computeDEWS).mockClear();
+    try {
+      sqlite.prepare("INSERT INTO depeg_events (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peg_reference) VALUES ('usdt-tether', 'USDT', 'peggedUSD', 'below', -150, ?, ?, 0.985, 1)")
+        .run(day, day + 3600);
+      sqlite.prepare("INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd) VALUES ('usdt-tether', ?, 100000000)")
+        .run(evaluation);
+      const insert = sqlite.prepare("INSERT INTO dex_liquidity_history (stablecoin_id, snapshot_date, total_tvl_usd, liquidity_score, coverage_class, coverage_confidence, methodology_version) VALUES ('usdt-tether', ?, ?, ?, 'primary', 0.9, ?)");
+      insert.run(evaluation, 200, 80, current);
+      insert.run(evaluation - 7 * 86400, 100, 73, historical);
+      const response = await handleBackfillDEWS({ db, url: makeApiUrl("/api/backfill-dews"), trustedAdmin: true });
+      expect(response.status).toBe(200);
+      expect(computeDEWS).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
+        liquidityScore: 80, liquidityScore7dAgo: 73, tvlCurrent: 200, tvl7dAgo,
+      }));
+    } finally {
+      sqlite.close();
+    }
   });
 
   it("rejects GET repair mutations without dry-run", async () => {

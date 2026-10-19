@@ -56,7 +56,7 @@ export const handleDexLiquidity = async (
       .all<DexLiquidityRow & { publication_generation_id: string | null; projection_total_count?: number }>(),
     tableProjection ? Promise.resolve({ results: [] as DexHistoryRow[] }) : db
       .prepare(
-        `SELECT stablecoin_id, total_tvl_usd, snapshot_date, coverage_class, coverage_confidence
+        `SELECT stablecoin_id, total_tvl_usd, snapshot_date, coverage_class, coverage_confidence, methodology_version
          FROM dex_liquidity_history
          WHERE snapshot_date >= ?${coinFilter}
          ORDER BY stablecoin_id, snapshot_date DESC`,
@@ -182,8 +182,8 @@ export const handleDexLiquidity = async (
 
     // Compute trend changes from history
     const history = histByCoin.get(id) ?? [];
-    const baseline24h = selectTrendBaseline(history, oneDayAgo, trend24hToleranceSec);
-    const baseline7d = selectTrendBaseline(history, sevenDaysAgo, trend7dToleranceSec);
+    const baseline24h = selectTrendBaseline(history, oneDayAgo, trend24hToleranceSec, row.methodology_version);
+    const baseline7d = selectTrendBaseline(history, sevenDaysAgo, trend7dToleranceSec, row.methodology_version);
     const tvlChange24h = baseline24h
       ? ((currentTvl - baseline24h.total_tvl_usd) / baseline24h.total_tvl_usd) * 100
       : null;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Area, ReferenceDot } from "recharts";
 import { StablecoinModuleTitle } from "@/components/stablecoin-detail/module-title";
 import { DETAIL_MODULE_TITLE_CLASS } from "@/components/stablecoin-detail/section-title-class";
@@ -16,7 +16,6 @@ import { MarketDataChartFigure } from "@/components/chart-primitives/market-data
 import { computeChartYDomain } from "@/lib/chart-utils";
 import type { SupplyHistoryPoint } from "@/hooks/use-stablecoins";
 import { useSupplyHistory } from "@/hooks/use-stablecoins";
-import { STABLECOIN_DETAIL_FULL_SUPPLY_HISTORY_DAYS } from "@/lib/api-query-descriptors";
 import { useMarketDataChartFrame } from "@/components/chart-primitives/use-market-data-chart-window";
 import { relativeChangeRatio, ratioToPercentage } from "@shared/lib/stats";
 import { DAY_MS } from "@shared/lib/time-constants";
@@ -37,7 +36,7 @@ interface McapChartProps {
   controlledRange?: TimeRangeOption;
   /** Keep range controls visible while a parent owns data loading for the selected range. */
   onControlledRangeChange?: (range: TimeRangeOption) => void;
-  /** Fetch the detail page's full series only after 1Y or All is selected. */
+  /** Fetch the annual bound or all retained history only after a wide range is selected. */
   expandHistoryOnWideRange?: boolean;
   /** Optional className for the outer `<Card>` (e.g. remove the accent border in grouped layouts). */
   cardClassName?: string;
@@ -53,18 +52,26 @@ export function McapChart({
 }
 
 function ExpandableHistoryMcapChart(props: McapChartProps) {
-  const range = props.controlledRange ?? "all";
+  const [localRange, setLocalRange] = useState<TimeRangeOption>("all");
+  const range = props.controlledRange ?? localRange;
   const needsFullHistory = range === "1y" || range === "all";
   const fullHistoryQuery = useSupplyHistory(
     props.stablecoinId,
-    STABLECOIN_DETAIL_FULL_SUPPLY_HISTORY_DAYS,
+    range === "all" ? "all" : 365,
     { enabled: needsFullHistory },
   );
   const data = needsFullHistory && fullHistoryQuery.data.length > 0
     ? fullHistoryQuery.data
     : props.data;
 
-  return <McapChartBody {...props} data={data} />;
+  return (
+    <McapChartBody
+      {...props}
+      data={data}
+      controlledRange={range}
+      onControlledRangeChange={props.controlledRange ? props.onControlledRangeChange : setLocalRange}
+    />
+  );
 }
 
 function McapChartBody({

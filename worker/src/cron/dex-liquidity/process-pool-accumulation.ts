@@ -115,7 +115,7 @@ export function accumulatePoolMetrics(
       measurement: {
         tvlMeasured: true,
         volumeMeasured: volumeUsd1d != null,
-        balanceMeasured: curveData != null,
+        balanceMeasured: enrichment.hasMeasuredBalance,
         maturityMeasured: poolMaturityDays > 0,
         priceMeasured: poolPrice != null && poolPrice > 0,
         synthetic: false,

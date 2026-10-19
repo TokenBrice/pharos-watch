@@ -33,18 +33,20 @@ export const handleSupplyHistory = async (
   return handleStablecoinHistoryRequest(db, url, {
     query: STABLECOIN_HISTORY_QUERY_CONTRACTS.supply,
     cacheControl: CACHE_PROFILES.slow,
-    fetchRows: async ({ db: database, stablecoinId, cutoff }) => {
+    fetchRows: async ({ db: database, stablecoinId, cutoff, range }) => {
       const completedSnapshot = await loadCompletedSnapshot();
       const latestSnapshotFilter = completedSnapshot == null ? "" : " AND snapshot_date <= ?";
       const latestSnapshotBinds = completedSnapshot == null ? [] : [completedSnapshot.snapshotDate];
+      const lowerFilter = range === "all" ? "" : " AND snapshot_date >= ?";
+      const lowerBinds = range === "all" ? [] : [cutoff];
       const result = await database
         .prepare(
           `SELECT snapshot_date, circulating_usd, price
            FROM supply_history
-           WHERE stablecoin_id = ? AND snapshot_date >= ?${latestSnapshotFilter}
+           WHERE stablecoin_id = ?${lowerFilter}${latestSnapshotFilter}
            ORDER BY snapshot_date ASC`
         )
-        .bind(stablecoinId, cutoff, ...latestSnapshotBinds)
+        .bind(stablecoinId, ...lowerBinds, ...latestSnapshotBinds)
         .all<SupplyHistoryRow>();
       return result.results ?? [];
     },

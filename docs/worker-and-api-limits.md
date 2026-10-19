@@ -243,6 +243,8 @@ Cron persistence helpers retry transient D1 queue pressure through `runWithOverl
 
 ### D1 query budgeting
 
+Tape and blacklist `q` filters use `instr(LOWER(column), ?) > 0` with the normalized query bound directly, preserving literal substring matching without D1's `LIKE` pattern-length ceiling. Tape type/class prefixes use a literal, case-insensitive dot-delimited prefix predicate too. The [event search contract](./api-reference.md#literal-event-search) retains Tape's 200-character limit and blacklist's intentionally unbounded handler-level admission. These substring scans were already non-sargable with leading-wildcard `LIKE`; the change is not an index optimization. Latest-schema SQLite fixtures cover result IDs and exact totals, but do not reproduce Cloudflare's `LIKE` ceiling: authenticated deployed-route boundary requests remain required for runtime acceptance.
+
 Public health/status diagnostics intentionally trade a few minutes of operator telemetry freshness for lower D1 pressure:
 
 - `queryBlacklistGapMetrics()` supports a core diagnostic mode that skips the amount-status and amount-source distribution scans when callers only need total/recoverable/recent gap counts for health scoring.

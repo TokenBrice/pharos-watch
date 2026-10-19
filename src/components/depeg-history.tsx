@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useId, useMemo, useState, type ReactNode } from "react";
 import { useInfiniteDepegEvents } from "@/hooks/use-depeg-events";
 import { useTablePagination } from "@/hooks/use-table-pagination";
 import { DepegProvenanceBadges } from "@/components/depeg-provenance-badges";
@@ -101,6 +101,7 @@ export function DepegHistory({
     autoLoadAll: true,
   });
   const meta = TRACKED_STABLECOINS.find((s) => s.id === stablecoinId);
+  const recentOccupancyBasisId = useId();
   const pegCurrency = meta?.flags.pegCurrency ?? "USD";
   const events = data?.events ?? EMPTY_EVENTS;
   // The cursor API skips the exact count (includeTotal=false); its `total` is then a page
@@ -203,7 +204,7 @@ export function DepegHistory({
         )}
         {metrics ? (
           <div>
-            <span className="text-muted-foreground">Current streak </span>
+            <span className="text-muted-foreground">Recorded recovery </span>
             {metrics.depeggedNow ? (
               <span className="inline-flex items-center gap-1.5 font-semibold text-state-danger">
                 <span className="relative flex h-2 w-2">
@@ -213,8 +214,20 @@ export function DepegHistory({
                 Depegged now
               </span>
             ) : metrics.currentStreakDays !== null ? (
-              <span className="font-mono font-semibold text-state-positive">
-                {metrics.currentStreakDays}d at peg
+              <span className="font-mono font-semibold">
+                {metrics.currentStreakDays}d since last recorded recovery
+              </span>
+            ) : metrics.latestClosure != null ? (
+              <span className="text-muted-foreground">
+                Tracking closed ({{
+                  coverage_lost: "coverage lost",
+                  superseded: "direction superseded",
+                  orphan: "asset removed",
+                  unknown_closed: "recovery unconfirmed",
+                  recovered: "recovered",
+                  legacy_recovered: "legacy recovery",
+                  open: "ongoing",
+                }[metrics.latestClosure]}); recovery continuity unavailable
               </span>
             ) : (
               <span className="font-mono font-semibold text-muted-foreground">—</span>
@@ -223,13 +236,21 @@ export function DepegHistory({
         ) : null}
       </div>
       {recent90d ? (
-        <div className="border-t border-border/50 pt-3 text-xs text-muted-foreground">
+        <div
+          role="group"
+          aria-label="Recent 90-day recorded-window peg occupancy"
+          aria-describedby={recentOccupancyBasisId}
+          className="border-t border-border/50 pt-3 text-xs text-muted-foreground"
+        >
           <span className="font-medium text-foreground">Recent 90d: </span>
-          <span className="font-mono">{formatPegOccupancy(recent90d.pegPct, 1)}</span> at peg across{" "}
-          <span className="font-mono">{Math.floor(recent90d.observedDays)}d</span> observed, with{" "}
+          <span className="font-mono">{formatPegOccupancy(recent90d.pegPct, 1)}</span> recorded-window peg occupancy estimate, using{" "}
+          <span className="font-mono">{Math.floor(recent90d.observedDays)}d</span> as the calculation basis, with{" "}
           <span className="font-mono">{recent90d.incidentCount}</span> incidents and{" "}
           <span className="font-mono">{recent90d.thresholdCrossingCount}</span> threshold crossings
           {recent90d.coverageLimited ? " (partial 90-day coverage)" : ""}.
+          <p id={recentOccupancyBasisId} className="mt-1">
+            Record-derived estimate, not proof of recovery or continuous observation. Tracking closure can leave unobserved time.
+          </p>
         </div>
       ) : null}
       {historyCoverage ? (

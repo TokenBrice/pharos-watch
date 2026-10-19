@@ -126,6 +126,13 @@ export function LiquidityTechnicalDetails() {
             balance/organic/durability inputs are all recomputed from the same retained pool set before the UI
             truncates to the top 10 displayed pools
           </li>
+          <li>
+            <span className="text-foreground">Global population basis</span> &mdash; headline TVL, protocol and
+            chain breakdowns, and volume-coverage TVL denominators use the same retained pools deduplicated
+            across coins. External protocol totals are not a second global clamp, and observed volume is never
+            scaled to fit them. Existing per-pool exclusions and per-coin secondary-source caps still apply;
+            retained upstream valuations are not guaranteed to be economically correct
+          </li>
         </ul>
       </div>
     </MethodologyDetails>

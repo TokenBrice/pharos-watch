@@ -159,6 +159,27 @@ describe("ReservesSection", () => {
     expect(container.querySelectorAll('[role="group"][aria-label="Reserve facts"] > *')).toHaveLength(4);
   });
 
+  it("keeps folded reviewed groups in the visual and the complete slice disclosure", () => {
+    const slices = [50, 20, 10, 8, 6, 4, 2].map((pct, index) => ({
+      ...SUMMARY.slices[0]!,
+      key: `reviewed:${index}`,
+      name: `Reviewed ${index}`,
+      assetClassLabel: `Class ${index}`,
+      pct,
+      risk: index === 6 ? "high" as const : "very-low" as const,
+    }));
+    renderSection({ qualitySummary: { ...SUMMARY, slices, sliceCount: slices.length } });
+    const label = screen.getByRole("figure").getAttribute("aria-label");
+    expect(label).toContain("Reviewed 5 4%, Reviewed 6 2%");
+    expect(label).not.toContain("Unreviewed");
+    const rest = screen.getByLabelText("Remaining reserve slices");
+    expect(within(rest).getAllByRole("listitem")).toHaveLength(2);
+    expect(rest.closest("details")!.querySelector("summary")!.textContent).toContain("6%");
+    const detail = screen.getByLabelText("Reserve slices");
+    expect(within(detail).getAllByRole("listitem")).toHaveLength(7);
+    slices.forEach((slice) => expect(within(detail).getByText(slice.name)).toBeDefined());
+  });
+
   it("adds the reviewed date to the footer and names the source in the as-of fact", () => {
     const { container } = renderSection();
     expect(container.textContent).toContain("Reviewed 2026-07-18");

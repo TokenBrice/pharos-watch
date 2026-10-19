@@ -12,8 +12,8 @@
  * metadata is loaded only when a detail surface asks for it.
  *
  * Modes:
- *   node scripts/build-data/build-client-registry.mjs           # write files
- *   node scripts/build-data/build-client-registry.mjs --check   # CI guard
+ *   node --import tsx scripts/build-data/build-client-registry.mjs           # write files
+ *   node --import tsx scripts/build-data/build-client-registry.mjs --check   # CI guard
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -27,6 +27,8 @@ import {
   STABLECOIN_CLIENT_DETAIL_FIELDS,
   STABLECOIN_CLIENT_LIST_FIELDS,
 } from "../../shared/types/stablecoin-client-meta.ts";
+import { resolveMintAuthorityStatusKind } from "../../shared/lib/classification/mint-authority.ts";
+import { resolveMechanismArchetype } from "../../shared/lib/classification/resolve-mechanism-archetype.ts";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 /** @typedef {import("../../shared/types/stablecoin-client-meta").StablecoinClientMeta} StablecoinClientMeta */
@@ -52,6 +54,7 @@ const WORKER_RUNTIME_OUTPUT_JSON_ABS = resolve(REPO_ROOT, WORKER_RUNTIME_OUTPUT_
 const BLACKLIST_STATUS_FIELD = "blacklistStatus";
 const MINT_AUTHORITY_SUMMARY_FIELD = "mintAuthoritySummary";
 const MINT_AUTHORITY_STATUS_FIELD = "mintAuthorityStatus";
+const EMPTY_SOURCE_BY_ID = new Map();
 const MICA_COMPLIANCE_FIELDS = [
   "status",
   "tokenType",
@@ -131,20 +134,15 @@ export function projectChainIds(coin) {
   return [...chains].sort();
 }
 
-function projectEffectiveMechanismArchetype(coin, sourceById) {
-  if (coin?.archetypeOverride === true || !coin?.variantOf) {
-    return coin?.mechanismArchetype;
-  }
-  return sourceById?.get(coin.variantOf)?.mechanismArchetype ?? coin.mechanismArchetype;
-}
 
 export function projectListCoin(coin, listFields, listingClass, sourceById) {
   const projected = projectRawCoin(coin, listFields);
   for (const field of listFields) {
     if (projected[field] === null) delete projected[field];
   }
-  const mechanismArchetype = projectEffectiveMechanismArchetype(coin, sourceById);
-  if (mechanismArchetype !== undefined) projected.mechanismArchetype = mechanismArchetype;
+  const mechanismArchetype = resolveMechanismArchetype(coin, sourceById ?? EMPTY_SOURCE_BY_ID);
+  if (mechanismArchetype !== null) projected.mechanismArchetype = mechanismArchetype;
+  else delete projected.mechanismArchetype;
   projected[CHAIN_IDS_FIELD] = projectChainIds(coin);
   projected[LISTING_CLASS_FIELD] = listingClass;
   projected.hasAuthoredDependencyEvidence = !!coin?.variantOf ||
@@ -422,43 +420,16 @@ export function projectMintAuthoritySummary(coin) {
 
   return summary;
 }
-function hasActiveMultisigMintControl(summary) {
-  return (summary.controls ?? []).some(
-    (control) =>
-      (control.authorityType === "safe" || control.authorityType === "multisig") &&
-      control.directMintAbility !== "none",
-  );
-}
-
-function hasDirectNonMultisigMintControl(summary) {
-  return (summary.controls ?? []).some(
-    (control) =>
-      control.directMintAbility === "direct" &&
-      control.authorityType !== "safe" &&
-      control.authorityType !== "multisig",
-  );
-}
 
 export function projectMintAuthorityStatus(coin) {
-  const summary = projectMintAuthoritySummary(coin);
-  if (!summary) return undefined;
-  if (summary.mintPath === "wrapped-or-variant-inherited") return "inherited-authority";
+  const profile = coin?.mintAuthority;
   if (
-    summary.mintPath === "immutable-user-collateralized" &&
-    (summary.authorityPosture === "none-resolved" || summary.authorityPosture === "none-resolved-mint")
-  ) {
-    return "no-privileged-mint";
-  }
-  if (summary.mintPath === "bridge-or-oft-synthetic") return "bridge-mint";
-  if (hasActiveMultisigMintControl(summary)) return "multisig-mint";
-  if (
-    summary.mintPath === "issuer-direct-mint" ||
-    summary.mintPath === "offchain-attested-minter" ||
-    hasDirectNonMultisigMintControl(summary)
-  ) {
-    return "issuer-or-backend-mint";
-  }
-  return "governed-mint";
+    !isPlainObject(profile) ||
+    typeof profile.mintPath !== "string" ||
+    typeof profile.authorityPosture !== "string" ||
+    typeof profile.confidence !== "string"
+  ) return undefined;
+  return resolveMintAuthorityStatusKind(profile);
 }
 
 /** @param {readonly string[]} [geniusClientFields] */
@@ -569,7 +540,7 @@ function orderSourceCoins(parsed, canonicalOrder) {
 export function validateListProjection(slim, sourceCoin, index, listFields, listingClass, sourceById) {
   const fieldsToValidate = listFields.filter((field) => field !== "mechanismArchetype");
   validateProjection(slim, sourceCoin, index, fieldsToValidate);
-  if (slim.mechanismArchetype !== projectEffectiveMechanismArchetype(sourceCoin, sourceById)) {
+  if (slim.mechanismArchetype !== (resolveMechanismArchetype(sourceCoin, sourceById ?? EMPTY_SOURCE_BY_ID) ?? undefined)) {
     throw new Error(`[client-registry] entry ${index} (${slim.id}): field mechanismArchetype diverges from source`);
   }
   if (!Array.isArray(slim[CHAIN_IDS_FIELD]) || JSON.stringify(slim[CHAIN_IDS_FIELD]) !== JSON.stringify(projectChainIds(sourceCoin))) {
@@ -892,7 +863,7 @@ export function runCli({ checkMode = process.argv.includes("--check") } = {}) {
       currentWorkerRuntime !== workerRuntimeOutput
     ) {
       console.error(
-        `${LIST_OUTPUT_JSON_REL}, ${DETAIL_OUTPUT_DIR_REL}, ${COMPLIANCE_OUTPUT_JSON_REL}, ${TELEGRAM_MINI_APP_OUTPUT_JSON_REL}, or ${WORKER_RUNTIME_OUTPUT_JSON_REL} is stale. Run: node scripts/build-data/build-client-registry.mjs`,
+        `${LIST_OUTPUT_JSON_REL}, ${DETAIL_OUTPUT_DIR_REL}, ${COMPLIANCE_OUTPUT_JSON_REL}, ${TELEGRAM_MINI_APP_OUTPUT_JSON_REL}, or ${WORKER_RUNTIME_OUTPUT_JSON_REL} is stale. Run: node --import tsx scripts/build-data/build-client-registry.mjs`,
       );
       process.exit(1);
     }

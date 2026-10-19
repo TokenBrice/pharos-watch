@@ -13,6 +13,7 @@ import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import * as priceValidation from "../../lib/price-validation";
 import * as realPoolShaping from "../../lib/dex-api-pool-shaping";
 import { createSlotDeadline } from "../../lib/cron-timeouts";
+import { DexLiquidityCronMetadataSchema } from "../../lib/schemas";
 import * as v2Enrichment from "../dex-liquidity/constant-product-v2";
 import * as quoterEnrichment from "../dex-liquidity/enrich-quoter-v2-targets";
 import * as v4Enrichment from "../dex-liquidity/uniswap-v4-identity";
@@ -78,6 +79,7 @@ const phaseFixtures = vi.hoisted(() => {
         tvlStabilityMap: new Map(),
         diagnostics: {
           protocolCapReductions: { cappedPoolCount: 0, cappedProtocols: 0, reducedTvlUsd: 0 },
+          globalProtocolOverCapUsd: 0,
           fallbackCounters: { tvlDepthMcapFallback: 2, retainedExclusionBlockedDex: 1 },
           measuredTargetFunnel: { stageOrigin: "scheduled", groups: [], groupsOmitted: 0, sourceFailures: [], sourceFailuresOmitted: 0 },
           routeRemovalEvidence: new Map(),
@@ -584,6 +586,7 @@ describe("dex liquidity scoring stage cycle", () => {
       tvlStabilityMap: new Map(),
       diagnostics: {
         protocolCapReductions: { cappedPoolCount: 0, cappedProtocols: 0, reducedTvlUsd: 0 },
+        globalProtocolOverCapUsd: 0,
         measuredTargetFunnel: { stageOrigin: "scheduled", groups: [], groupsOmitted: 0, sourceFailures: [], sourceFailuresOmitted: 0 },
         routeRemovalEvidence: new Map(),
       },
@@ -1303,6 +1306,7 @@ describe("dex liquidity scoring stage cycle", () => {
       tvlStabilityMap: new Map(),
       diagnostics: {
         protocolCapReductions: { cappedPoolCount: 1, cappedProtocols: 1, reducedTvlUsd: 50 },
+        globalProtocolOverCapUsd: 60,
         measuredTargetFunnel: { stageOrigin: "scheduled", groups: [], groupsOmitted: 0, sourceFailures: [], sourceFailuresOmitted: 0 },
         routeRemovalEvidence: new Map(),
       },
@@ -1395,10 +1399,8 @@ describe("dex liquidity scoring stage cycle", () => {
         coinsGtOnly?: number;
         coinsCrawlerOnly?: number;
         coinsPriceOnlyNoMeasuredLiquidity?: number;
-        protocolCapReductions?: {
-          topProtocols?: Array<{ protocol: string; reducedTvlUsd: number }>;
-          topStablecoins?: Array<{ stablecoinId: string; reducedTvlUsd: number }>;
-        };
+        globalProtocolOverCapUsd?: number;
+        protocolCapReductions?: { cappedPoolCount?: number; cappedProtocols?: number; reducedTvlUsd?: number };
         topAssetCoverageDeltas?: Array<{ stablecoinId: string; poolCountPctDelta: number | null }>;
       };
     };
@@ -1411,12 +1413,10 @@ describe("dex liquidity scoring stage cycle", () => {
     expect(metadata.sourceCoverage?.coinsGtOnly).toBe(1);
     expect(metadata.sourceCoverage?.coinsCrawlerOnly).toBe(1);
     expect(metadata.sourceCoverage?.coinsPriceOnlyNoMeasuredLiquidity).toBe(1);
-    expect(metadata.sourceCoverage?.protocolCapReductions?.topProtocols).toEqual([
-      expect.objectContaining({ protocol: "curve", reducedTvlUsd: 50 }),
-    ]);
-    expect(metadata.sourceCoverage?.protocolCapReductions?.topStablecoins).toEqual([
-      expect.objectContaining({ stablecoinId: "usdc-circle", reducedTvlUsd: 50 }),
-    ]);
+    expect(DexLiquidityCronMetadataSchema.parse(metadata).sourceCoverage?.globalProtocolOverCapUsd).toBe(60);
+    expect(metadata.sourceCoverage?.protocolCapReductions).toEqual({
+      cappedPoolCount: 1, cappedProtocols: 1, reducedTvlUsd: 50,
+    });
     expect(metadata.sourceCoverage?.topAssetCoverageDeltas).toEqual([
       expect.objectContaining({ stablecoinId: "usdc-circle", poolCountPctDelta: -0.8 }),
       expect.objectContaining({ stablecoinId: "usdt-tether", poolCountPctDelta: null }),

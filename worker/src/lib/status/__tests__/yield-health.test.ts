@@ -64,6 +64,30 @@ function makeDb(rows: Record<string, unknown>[]) {
 }
 
 describe("loadYieldHealthSummary", () => {
+  it.each([null, 0])("keeps unavailable Safety coverage distinct from measured zero: %s", async (coverageRatio) => {
+    const summary = await loadYieldHealthSummary(makeDb([
+      yieldCacheRow("yield-rankings", NOW, {
+        rankings: [{ id: "usdc-circle" }],
+        provenance: healthyYieldProvenance(NOW, 0, {
+          safetySnapshot: {
+            coveredCount: 0,
+            trackedCount: coverageRatio == null ? null : 1,
+            coverageRatio,
+            reason: "safety-score-publication-missing",
+          },
+        }),
+      }),
+    ]), NOW, { "sync-yield-data": cron() });
+
+    expect(summary.safetyCoverage).toMatchObject({
+      coveredCount: 0,
+      trackedCount: coverageRatio == null ? null : 1,
+      coverageRatio,
+      status: coverageRatio == null ? "unknown" : "degraded",
+      reason: "safety-score-publication-missing",
+    });
+  });
+
   it.each([60, 61])("admits yield ranking clocks only through the %s-second future boundary", async (offset) => {
     const summary = await loadYieldHealthSummary(makeDb([
       yieldCacheRow("yield-rankings", NOW + offset, { rankings: [] }),

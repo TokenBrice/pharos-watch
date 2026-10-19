@@ -15,7 +15,7 @@ import { decodeJsonString } from "../../cache-json";
 import { BLACKLIST_PUBLIC_EVENT_SQL, type BlacklistPersistedRow } from "../../blacklist/shared";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../dex-liquidity";
-import { getDexLiquidityTrendTolerances, selectTrendBaseline } from "../../dex-liquidity-response";
+import { getDexLiquidityTrendTolerances, selectLiquidityObservation, selectTrendBaseline } from "../../dex-liquidity-response";
 import type { DexHistoryRow } from "../../dex-liquidity-response";
 import {
   CONTRACT_CONFIGS,
@@ -201,7 +201,7 @@ export async function hydrateDexLiquidity(ctx: HydrationContext): Promise<DexLiq
   try {
     dexLiqRows = await ctx.db
       .prepare(
-        `SELECT stablecoin_id, weighted_balance_ratio, avg_pool_stress, top_pools_json, liquidity_score, total_tvl_usd, updated_at
+        `SELECT stablecoin_id, weighted_balance_ratio, avg_pool_stress, top_pools_json, liquidity_score, total_tvl_usd, updated_at, methodology_version
          FROM dex_liquidity
          WHERE ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}`,
       )
@@ -312,7 +312,10 @@ export interface DexLiquidityHistoryHydration {
   liqHistRowsRead: number;
 }
 
-export async function hydrateDexLiquidityHistory(ctx: HydrationContext): Promise<DexLiquidityHistoryHydration> {
+export async function hydrateDexLiquidityHistory(
+  ctx: HydrationContext,
+  currentLiquidityById: ReadonlyMap<string, DexLiquidityRow>,
+): Promise<DexLiquidityHistoryHydration> {
   const target7d = ctx.nowSec - 7 * DAY_SECONDS;
   const tolerance = getDexLiquidityTrendTolerances().week;
   const liqHistCutoff = target7d - tolerance;
@@ -322,7 +325,7 @@ export async function hydrateDexLiquidityHistory(ctx: HydrationContext): Promise
     const liqHistRows = await ctx.db
       .prepare(
         `SELECT /* pharos:dews:dex-liquidity-history */
-           stablecoin_id, snapshot_date, liquidity_score, total_tvl_usd, coverage_class, coverage_confidence
+           stablecoin_id, snapshot_date, liquidity_score, total_tvl_usd, coverage_class, coverage_confidence, methodology_version
          FROM dex_liquidity_history
          WHERE snapshot_date >= ?
          ORDER BY snapshot_date ASC`,
@@ -335,6 +338,7 @@ export async function hydrateDexLiquidityHistory(ctx: HydrationContext): Promise
         total_tvl_usd: number | null;
         coverage_confidence: number | null;
         coverage_class: string | null;
+        methodology_version: string | null;
       }>();
     liqHistRowsRead = liqHistRows.results.length;
 
@@ -345,12 +349,16 @@ export async function hydrateDexLiquidityHistory(ctx: HydrationContext): Promise
       byId.set(row.stablecoin_id, history);
     }
     for (const [id, history] of byId) {
-      const baseline = selectTrendBaseline(history, target7d, tolerance);
-      if (baseline) {
+      const scoreBaseline = selectLiquidityObservation(history, target7d, tolerance);
+      const current = currentLiquidityById.get(id);
+      const tvlBaseline = current
+        ? selectTrendBaseline(history, target7d, tolerance, current.methodology_version)
+        : null;
+      if (scoreBaseline) {
         liqHist7dMap.set(id, {
-          score: baseline.liquidity_score ?? null,
-          tvl: baseline.total_tvl_usd,
-          date: baseline.snapshot_date,
+          score: scoreBaseline.liquidity_score ?? null,
+          tvl: tvlBaseline?.total_tvl_usd ?? null,
+          date: scoreBaseline.snapshot_date,
         });
       }
     }

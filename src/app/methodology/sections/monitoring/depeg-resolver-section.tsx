@@ -56,6 +56,12 @@ export function DepegResolverMethodologySection() {
         manufacture an at-peg live input.
       </p>
       <p>
+        Seven-day and 30-day TVL trends compare the stored current and historical liquidity-measurement epochs,
+        not exact minor-version labels. A cross-epoch baseline is unavailable evidence, not an observed exit
+        collapse. Independent liquidity scores and volume trends remain usable. This can change new assessments
+        and future forecasts, never already sealed predictions or their first-publication payloads.
+      </p>
+      <p>
         The Depeg Duration Resolver Reviewer (DDRR) is the companion audit layer. It scores only frozen outcomes that
         reached first publication, while coverage metrics keep no-calls, pre-lock recoveries, missed locks, publication
         retries/failures, data-quality gaps, and invalidated predictions visible. Recovery-likelihood and duration

@@ -2738,7 +2738,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sourceOriginClass: "onchain-observation",
     preferredFreshnessMode: "not-applicable",
     sharedSourceMode: "none",
-    configValidation: CONFIG_COLLATERAL_V1,
+    configValidation: CONFIG_COLLATERAL_V2,
     // System debt/TCR is not an eligible-trove redemption census. Neither
     // redeemable capacity nor the unread baseRate + 0.5% fee is measured.
     redemptionTelemetry: NO_REDEMPTION_TELEMETRY,

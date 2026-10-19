@@ -506,13 +506,12 @@ describe("accumulateGlobalAggregate", () => {
     const seenTvl = new Map<string, GlobalPoolAggregateEntry>();
     const protoTvl: Record<string, number> = {};
     const chainTvl: Record<string, number> = {};
-    const protoChainTvl: Record<string, number> = {};
     const chains = new Set<string>();
 
     const pool = makePool({});
 
-    const a = accumulateGlobalAggregate([pool], protoTvl, chainTvl, protoChainTvl, chains, seenTvl);
-    const b = accumulateGlobalAggregate([pool], protoTvl, chainTvl, protoChainTvl, chains, seenTvl);
+    const a = accumulateGlobalAggregate([pool], protoTvl, chainTvl, chains, seenTvl);
+    const b = accumulateGlobalAggregate([pool], protoTvl, chainTvl, chains, seenTvl);
 
     expect(a.totalTvl + b.totalTvl).toBe(5_000_000);
     expect(a.poolCount + b.poolCount).toBe(1);
@@ -522,15 +521,14 @@ describe("accumulateGlobalAggregate", () => {
     const seenTvl = new Map<string, GlobalPoolAggregateEntry>();
     const protoTvl: Record<string, number> = {};
     const chainTvl: Record<string, number> = {};
-    const protoChainTvl: Record<string, number> = {};
     const chains = new Set<string>();
     const lower = makePool({ chain: "ethereum", tvlUsd: 4_500_000 });
     lower.volumeReading = { volume24hUsd: 900_000, volume7dUsd: null, observedAtSec: 1 };
     const higher = makePool({ chain: "ethereum", tvlUsd: 5_000_000 });
     higher.volumeReading = { volume24hUsd: 1_000_000, volume7dUsd: 7_000_000, observedAtSec: 2 };
 
-    const a = accumulateGlobalAggregate([lower], protoTvl, chainTvl, protoChainTvl, chains, seenTvl);
-    const b = accumulateGlobalAggregate([higher], protoTvl, chainTvl, protoChainTvl, chains, seenTvl);
+    const a = accumulateGlobalAggregate([lower], protoTvl, chainTvl, chains, seenTvl);
+    const b = accumulateGlobalAggregate([higher], protoTvl, chainTvl, chains, seenTvl);
 
     expect(a.totalTvl + b.totalTvl).toBe(5_000_000);
     expect(protoTvl["balancer"]).toBe(5_000_000);

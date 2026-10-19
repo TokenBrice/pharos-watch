@@ -136,16 +136,7 @@ The response includes:
 See [Report schema v8](#report-schema-v8) for cause-aware fields and typed route identity. `/api/report-cards/v9` wraps public publication 7 as body schema 8; old public v6 is rejected rather than inferred current. Completeness reconciles `expectedCount = ratedCount + notRatedCount + pipelineGapCount`, with disjoint sorted NR/pipeline IDs. Index 2 and free-grades 1 preserve compact status/partial metadata; graph/scenario schema 2 preserves technical parent/model nulls separately from NR.
 
 
-Each pillar row on a card carries a `freshness` value: `current`, `stale`, or `unknown`. The Exit
-pillar's value is the age of the DEX liquidity input the exit-route evidence was observed at,
-judged against the lane's 4-hour evidence bound (`DEX_LIQUIDITY_EVIDENCE_MAX_AGE_SEC`, applied by
-the compiler as `routeFreshness.dexMaxAgeSec`): a DEX publication at or under 4 hours reports
-`current`, an older publication reports `stale`, and an asset with no DEX row reports `unknown`.
-It is presentation metadata projected onto the card — it never feeds a score, a cap, or a
-publication identity digest. Backing and Economic Control keep `unknown` until their own lane
-ages are projected (only the Exit lane is wired today). The card-level `evidence.freshness`
-reports `stale` when any wired pillar is stale and `unknown` otherwise, so a stale DEX
-generation is visible downstream instead of anonymously unassessed.
+Pillar `freshness` is `current`, `stale`, or `unknown`. Only Exit is wired: age the DEX liquidity input at route observation against the inclusive 4-hour `DEX_LIQUIDITY_EVIDENCE_MAX_AGE_SEC` bound (compiler `routeFreshness.dexMaxAgeSec`); older evidence is `stale`, absent DEX rows `unknown`. Backing/Economic Control remain `unknown` pending lane-age projection. Card `evidence.freshness` is `stale` if any wired pillar is stale, otherwise `unknown`. This presentation metadata never affects scores, caps or publication identity digests.
 
 See the [public API reference](https://pharos.watch/api/) for the wire contract.
 
@@ -163,6 +154,8 @@ All active safety consumers resolve the canonical V9 publication:
 The stability-index OG consumer renders an explicit unavailable state when no PSI sample exists; absence is never presented as score `0` or the `MELTDOWN` band.
 
 Consumers that require current ratings reject held publications. Display surfaces may show the held accepted snapshot with an explicit notice, and a producer that stamps the accepted identity on its own payload (yield publication) may consume the held accepted ratings inside the same stale-coherent window the yield read path applies. No active consumer uses the V8 compact score cache or computes V8 cards on request.
+
+Yield readers keep null Safety coverage denominators/ratios unavailable, never `0%`/`100%`; held accepted coverage stays measured, distinct from missing evidence. [Yield Public Wire Contract](./yield-intelligence.md#public-wire-contract) owns presentation.
 
 Selector creation recomputes against the live V9 publication (`functions/lib/selector-canonical-snapshot.ts`); a `503` now indicates canonical-source or schema failure, not a policy hold. Existing signed selector snapshots remain readable through their historical contract.
 

@@ -40,6 +40,8 @@ import { useIsMobile } from "@/hooks/use-is-mobile";
 import { resolveCompactLogoSrc } from "@/lib/logo-variants";
 import type { YieldType, YieldBenchmarkRegistry } from "@shared/types";
 import type { YieldWorkbenchRanking } from "@/lib/yield-workbench-row";
+import { formatYieldApyDelta } from "@/lib/yield-presentation";
+import { isOpportunityDerivedSafety, YIELD_OPPORTUNITY_SAFETY_DESCRIPTION } from "@shared/lib/yield-opportunity-provenance";
 
 interface ScatterDataPoint {
   x: number; // safety score (original, for tooltip)
@@ -51,6 +53,7 @@ interface ScatterDataPoint {
   symbol: string;
   yieldType: YieldType;
   safetyGrade: string | null;
+  opportunityDerivedSafety: boolean;
   pharosYieldScore: number | null;
   yieldSource: string;
   benchmarkLabel: string;
@@ -294,7 +297,7 @@ function CustomTooltip({
       <p className="text-muted-foreground">
         Excess:{" "}
         <span className="pharos-numeric">
-          {d.excessYield !== null ? `${d.excessYield >= 0 ? "+" : ""}${d.excessYield.toFixed(2)}%` : "—"}
+          {d.excessYield !== null ? formatYieldApyDelta(d.excessYield) : "—"}
         </span>
       </p>
       {d.isClipped && d.clipThreshold !== null ? (
@@ -304,8 +307,12 @@ function CustomTooltip({
         </p>
       ) : null}
       <p className="text-muted-foreground">
-        Safety: <span className="font-mono tabular-nums">{d.safetyGrade ?? "—"}</span> ({d.x}/100)
+        {d.opportunityDerivedSafety ? "Opportunity safety" : "Safety"}:{" "}
+        <span className="font-mono tabular-nums">{d.safetyGrade ?? "—"}</span> ({d.x}/100)
       </p>
+      {d.opportunityDerivedSafety ? (
+        <p className="text-muted-foreground">{YIELD_OPPORTUNITY_SAFETY_DESCRIPTION}</p>
+      ) : null}
       <p className="text-muted-foreground">Type: {YIELD_TYPE_LABELS[d.yieldType] ?? d.yieldType}</p>
       <p className="text-muted-foreground">
         PYS: <span className="pharos-numeric">{d.pharosYieldScore !== null ? d.pharosYieldScore.toFixed(1) : "—"}</span>
@@ -351,6 +358,7 @@ export function YieldScatterPlot({
           symbol: r.symbol,
           yieldType: r.yieldType,
           safetyGrade: r.safetyGrade,
+          opportunityDerivedSafety: isOpportunityDerivedSafety(r.provenance?.safetyProvenance),
           pharosYieldScore: r.pharosYieldScore,
           yieldSource: r.yieldSource,
           benchmarkLabel: benchmark.label,
@@ -371,8 +379,8 @@ export function YieldScatterPlot({
     [benchmarkRate, rawData],
   );
   const plotYDomain = useMemo<[number, number]>(
-    () => [-SCATTER_Y_VISUAL_PADDING, apyAxis.domainMax + SCATTER_Y_VISUAL_PADDING],
-    [apyAxis.domainMax],
+    () => [apyAxis.domainMin - SCATTER_Y_VISUAL_PADDING, apyAxis.domainMax + SCATTER_Y_VISUAL_PADDING],
+    [apyAxis.domainMin, apyAxis.domainMax],
   );
 
   const safetyDomain = useMemo(
@@ -409,10 +417,12 @@ export function YieldScatterPlot({
   );
   const apyTicks = useMemo(() => {
     // Whole-percent steps ("count" rules): a 2.5 step labels "12.5", which the narrow axis clips.
-    const ticks = niceTicks(0, apyAxis.domainMax, { kind: "count", count: isMobile ? 5 : 7, extend: false }).ticks;
+    const ticks = niceTicks(apyAxis.domainMin, apyAxis.domainMax, { kind: "count", count: isMobile ? 5 : 7, extend: false }).ticks;
+    // Even a small losing tail next to a large positive range needs a negative label.
+    if (apyAxis.domainMin < 0 && !ticks.some((tick) => tick < 0)) ticks.unshift(apyAxis.domainMin);
     if (apyAxis.clipThreshold === null) return ticks;
     // Drop a nice tick that would crowd the rail label.
-    const minGap = (ticks[1] ?? apyAxis.domainMax) * 0.5;
+    const minGap = (ticks.length > 1 ? ticks[ticks.length - 1] - ticks[ticks.length - 2] : apyAxis.domainMax - apyAxis.domainMin) * 0.5;
     return [...ticks.filter((tick) => apyAxis.domainMax - tick >= minGap), apyAxis.domainMax];
   }, [apyAxis, isMobile]);
   const formatApyTick = useCallback(
@@ -443,6 +453,7 @@ export function YieldScatterPlot({
   // E17: rows dropped for a missing safety score are counted and annotated,
   // not silently gone — the doc promises the full tracked universe.
   const droppedUnscoredCount = rankings.length - rawData.length;
+  const safetyAxisLabel = rawData.some((point) => point.opportunityDerivedSafety) ? "Row / opportunity safety" : "Safety Score";
   // E10: the clipped-outlier count renders on every surface — hero viewers see
   // triangles at the rail, so they get the count too (previously legend-only).
   // E13: in mixed-currency views the rail is the chart-wide USD frame, so the
@@ -475,6 +486,7 @@ export function YieldScatterPlot({
         <p className="mt-1 text-xs text-muted-foreground/70">
           Safety scores refresh hourly with the yield publication.
         </p>
+        {unscoredNote ? <p className="mt-1 text-xs">{unscoredNote}</p> : null}
       </div>
     );
   }
@@ -492,7 +504,7 @@ export function YieldScatterPlot({
               : "pharos-chart-stage h-[600px] overflow-hidden p-2 sm:h-[850px] sm:p-4"
         }
         role="figure"
-        aria-label={`Yield vs safety scatter plot with ${data.length} stablecoins.${droppedUnscoredCount > 0 ? ` ${droppedUnscoredCount} row${droppedUnscoredCount === 1 ? "" : "s"} without a safety score not shown.` : ""}${usesDefaultBenchmarkFrame ? " The background benchmark frame uses the default USD benchmark for mixed views." : ""}${compact ? " Compressed mini-map." : ""} Use the leaderboard for accessible row actions.`}
+        aria-label={`Yield vs row safety scatter plot with ${data.length} yield-source rows plotted, including ${apyAxis.clippedCount} on the upper rail.${droppedUnscoredCount > 0 ? ` ${droppedUnscoredCount} row${droppedUnscoredCount === 1 ? "" : "s"} without a safety score not shown.` : ""}${usesDefaultBenchmarkFrame ? " The background benchmark frame uses the default USD benchmark for mixed views." : ""}${compact ? " Compressed mini-map." : ""} Use the leaderboard for accessible row actions.`}
       >
         <div ref={chartContainerRef} className="h-full w-full">
           {isChartReady ? (
@@ -565,12 +577,12 @@ export function YieldScatterPlot({
                 type="number"
                 dataKey="plotX"
                 domain={safetyDomain}
-                name="Safety Score"
+                name={safetyAxisLabel}
                 label={
                   hideAxisLabels
                     ? undefined
                     : {
-                        value: "Safety Score",
+                        value: safetyAxisLabel,
                         position: "insideBottom",
                         offset: 0,
                         ...CHART_AXIS_LABEL,

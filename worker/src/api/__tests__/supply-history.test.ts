@@ -57,6 +57,56 @@ describe("handleSupplyHistory", () => {
     expect(db.getHistory()).toEqual([]);
   });
 
+  it.each(["", "1y", "ALL"])("rejects invalid supply range=%s before reading D1", async (range) => {
+    const db = mockD1([]);
+    const response = await handleSupplyHistory(db, new URL(`https://x/api/supply-history?stablecoin=usdt-tether&range=${range}`));
+    expect(await readJsonResponse(response, 400)).toEqual({ error: "Invalid range: expected 'all'" });
+    expect(db.getHistory()).toEqual([]);
+  });
+
+  it("rejects ambiguous all plus days instead of silently changing the requested window", async () => {
+    const db = mockD1([]);
+    const response = await handleSupplyHistory(db, new URL("https://x/api/supply-history?stablecoin=usdt-tether&range=all&days=365"));
+    expect(await readJsonResponse(response, 400)).toEqual({ error: "Specify either range=all or days, not both" });
+    expect(db.getHistory()).toEqual([]);
+  });
+
+  it.each([
+    ["", 400, "Missing ?stablecoin= parameter"],
+    ["&stablecoin=not-a-tracked-coin", 404, "Unknown stablecoin"],
+  ] as const)("keeps stablecoin admission for range=all (%s)", async (stablecoin, status, error) => {
+    const db = mockD1([]);
+    const response = await handleSupplyHistory(db, new URL(`https://x/api/supply-history?range=all${stablecoin}`));
+    expect(await readJsonResponse(response, status)).toEqual({ error });
+    expect(db.getHistory()).toEqual([]);
+  });
+
+  it.each([
+    ["", [-365, -90, 0]],
+    ["&days=365", [-365, -90, 0]],
+    ["&days=90", [-90, 0]],
+    ["&range=all", [-6000, -366, -365, -90, 0]],
+  ] as const)("serves the requested retained window with the completed-snapshot fence (%s)", async (query, offsets) => {
+    const now = 1_800_000_000;
+    const day = 86_400;
+    vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    const { db, sqlite } = fixtures.open();
+    const insert = sqlite.prepare("INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price) VALUES (?, ?, ?, ?)");
+    for (const offset of [1, 0, -90, -365, -366, -6000]) {
+      insert.run("usdt-tether", now + offset * day, offset === -6000 ? 0 : 100, offset === -6000 ? null : 1);
+    }
+    insert.run("usdc-circle", now - 6001 * day, 999, 1);
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES ('snapshot-supply:last-write', ?, ?)").run(JSON.stringify({ snapshotDate: now }), now - 300);
+    const response = await handleSupplyHistory(db, new URL(`https://x/api/supply-history?stablecoin=usdt-tether${query}`));
+    expect(await readJsonResponse(response, 200)).toEqual(offsets.map((offset) => ({
+      date: now + offset * day,
+      circulatingUsd: offset === -6000 ? 0 : 100,
+      price: offset === -6000 ? null : 1,
+    })));
+    expect(response.headers.get("X-Data-Updated-At")).toBe(String(now - 300));
+    expect(response.headers.get("X-Data-Age")).toBe("300");
+  });
+
   it("accepts long history windows for all-time market structure overlays", async () => {
     const nowSec = 1_765_000_000;
     vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);

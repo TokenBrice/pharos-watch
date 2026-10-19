@@ -5,6 +5,7 @@ import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } fr
 import { getYieldBenchmarkDisplayLabel, resolveYieldBenchmarkAge, type YieldBenchmarkAgeAssessment } from "@/lib/yield-benchmark";
 import { cn } from "@/lib/utils";
 import { formatPercent } from "@shared/lib/format";
+import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
 import { CurrencyFlag } from "@/components/yield/currency-flag";
 import type {
   YieldBenchmarkMeta,
@@ -32,9 +33,8 @@ interface BenchmarkRow {
   age: YieldBenchmarkAgeAssessment;
 }
 
-// Pool input is considered stale once it exceeds 2x the producer cron interval
-// (DEX liquidity sync runs every 30 minutes per Pharos hook timing rule).
-const POOL_STALE_THRESHOLD_SECONDS = 60 * 60;
+// Pool input is considered stale once it exceeds 2x the hourly source producer interval.
+const POOL_STALE_THRESHOLD_SECONDS = 2 * CRON_SCHEDULE_CADENCES.halfHourlyOffset.intervalSec;
 
 // Currency glyph rendered alongside the ISO code. Where a currency shares the
 // "$" mark with USD (AUD, CAD, SGD, BRL, MXN), the prefixed form disambiguates
@@ -114,9 +114,9 @@ export function ReferenceRatesStrip({
   const rows = getBenchmarkRows(benchmarks, fallbackBenchmark);
   if (rows.length === 0 && !poolInputMeta && !safetySnapshot) return null;
 
-  const safetyPct = safetySnapshot ? Math.round(safetySnapshot.coverageRatio * 100) : null;
+  const safetyPct = safetySnapshot?.coverageRatio != null ? Math.round(safetySnapshot.coverageRatio * 100) : null;
   const poolIsStale = poolInputMeta?.ageSeconds != null && poolInputMeta.ageSeconds > POOL_STALE_THRESHOLD_SECONDS;
-  const hasFreshnessRow = !!poolInputMeta || (safetySnapshot && safetyPct !== null);
+  const hasFreshnessRow = !!poolInputMeta || !!safetySnapshot;
   // USD is the implicit baseline: every other currency's risk-free rate is
   // compared against it. If USD isn't in the registry, the spread column
   // shows em-dash for every row.
@@ -258,12 +258,13 @@ export function ReferenceRatesStrip({
                   </TooltipTrigger>
                   <TooltipContent className="max-w-[260px] text-xs">
                     {formatPoolInputMode(poolInputMeta)}
-                    {poolIsStale ? " Older than the 30-minute liquidity cron — treat numbers as lagging." : ""}
+                    {` Warning budget: ${POOL_STALE_THRESHOLD_SECONDS} seconds (2× the pool-input producer interval).`}
+                    {poolIsStale ? " Pool input is stale — treat numbers as lagging." : ""}
                   </TooltipContent>
                 </Tooltip>
               </>
             ) : null}
-            {safetySnapshot && safetyPct !== null ? (
+            {safetySnapshot ? (
               <>
                 <span aria-hidden="true" className="text-muted-foreground/40">
                   ·
@@ -274,13 +275,21 @@ export function ReferenceRatesStrip({
                       tabIndex={0}
                       className="pharos-focus-ring inline-flex min-h-6 items-center cursor-help rounded-sm"
                     >
-                      <span className="pharos-numeric text-foreground">{safetyPct}%</span> scored
+                      {safetyPct === null ? (
+                        "Safety coverage unavailable"
+                      ) : (
+                        <>
+                          <span className="pharos-numeric text-foreground">{safetyPct}%</span> scored
+                        </>
+                      )}
                     </span>
                   </TooltipTrigger>
                   <TooltipContent className="max-w-[260px] text-xs">
-                    {safetySnapshot.kind === "ok"
-                      ? "Confidence-weighted source arbitration coverage across tracked rows."
-                      : (safetySnapshot.reason ?? "Safety snapshot degraded.")}
+                    {safetyPct === null
+                      ? (safetySnapshot.reason ?? "Safety coverage unavailable.")
+                      : safetySnapshot.kind === "ok"
+                        ? "Confidence-weighted source arbitration coverage across tracked rows."
+                        : (safetySnapshot.reason ?? "Safety snapshot degraded.")}
                   </TooltipContent>
                 </Tooltip>
               </>

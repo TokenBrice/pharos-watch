@@ -12,6 +12,13 @@ Solidly stable-only augmentation is diagnostic, not exact Exit admission. Ordina
 - **Structured changelog:** `shared/data/methodology-changelogs/liquidity-score/`
 
 ## DEX Liquidity Score
+
+The scorer builds the global headline, protocol/chain breakdowns and retained/admitted volume TVL denominators from one retained deduped pool graph. It never applies an additional global protocol clamp or scales volume to match external TVL. `sourceCoverage.globalProtocolOverCapUsd` is the report-only sum of positive excesses over available external protocol totals; it does not reduce any published statistic. `sourceCoverage.protocolCapReductions` continues to describe actual per-coin secondary-source reductions only. Those source controls, input admission, pool identity selection and fraud exclusions remain unchanged.
+
+The former `protocolCapReductions.topProtocols` and `topStablecoins` allocations are no longer emitted: they inferred reductions from cross-coin attributed TVL rather than observing actual per-coin reductions. The status summary distinguishes the global observed excess from the scorer's actual reduced TVL; it does not present a pro-rata allocation as measured.
+
+On the first accepted publication after a TVL-basis release, compare the global headline with the protocol sum, chain sum and each volume window's `retainedTvlUsd`; `admittedTvlUsd` must equal that total only for complete coverage. Inspect the separate over-cap observation and existing source/fraud diagnostics. A methodology-driven rise is not evidence of a market inflow, and the coherent aggregate does not resolve residual per-pool raw-TVL rewriting.
+
 ### Published chain-label casing
 
 Persisted labels follow the [public casing contract](../dex-liquidity.md#published-chain-label-casing): canonical chain IDs survive aggregation; display adapters alone apply display names.
@@ -197,6 +204,8 @@ Measured balance/organic denominators and per-pool measurement flags distinguish
 ### Storage
 
 D1 table definitions live in `worker/migrations/0000_baseline.sql` plus migrations; `DEX_LIQUIDITY_ROW_COLUMNS` in `worker/src/cron/dex-liquidity/persistence.ts` owns projection. Current rows hold aggregates, breakdowns and top-ten display pools; unobserved means NULL LiquidityScore, not zero. Safety's exact bridge treats aggregate/balance-measured TVL as proxy evidence, legacy rows neutral until republished, and reserves executable-depth classification for independently validated exact routes.
+
+Trend readers must project the stored `methodology_version` for both sides of a TVL comparison. `selectTrendBaseline` requires the current observation's identity and selects only same-`liquidityTvlBasisEpoch` history with the existing confidence, positivity and nearest-date/tolerance gates. Explicit NULL or unparseable legacy versions belong to epoch 0; absent projections are not legacy observations. `selectLiquidityObservation` selects an anchor or an independent historical score/volume observation without claiming TVL comparability. Historical DEWS first selects its local current anchor, then compares the weekly TVL baseline against that anchor; live DEWS uses the admitted current per-coin row, never the runtime constant. These reads neither rewrite history nor restamp its dates.
 
 Corrected native-case staging/outcome rows supersede older lowercase-equivalent identities only when coin/chain/source/native identity otherwise match and the corrected row is newer. Equal-time or ambiguous case-distinct rows stay separate.
 
@@ -514,7 +523,7 @@ Diagnostics distinguish furthest failure stage, actual refreshed/written, backed
 
 ### Global Deduped Aggregates (`__global__`)
 
-`__global__` counts each canonical physical `poolId` once, never sums coin rows. Highest-TVL occurrence owns each pool's reading. DEC-19 complete/partial/null rules apply over this deduped population; `partialGrossUsd` and admitted/retained TVL coverage are lower-bound evidence (before global protocol clamp), not complete volume. Score-related fields are NULL.
+`__global__` counts each canonical physical `poolId` once, never sums coin rows. Highest-TVL occurrence owns each pool's reading. DEC-19 complete/partial/null rules apply over this deduped population; a partial window's `partialGrossUsd` is lower-bound observed volume with admitted/retained TVL coverage, not a complete total. The headline and protocol/chain breakdowns use that same retained population without a second global clamp. Score-related fields are NULL.
 
 Missing global TVL is unavailable; measured zero stays numeric. Coverage counts positive retained observed markets including NR primary/mixed/fallback, but only rated rows enter the mean; no rated cohort is an uncolored NR mean.
 

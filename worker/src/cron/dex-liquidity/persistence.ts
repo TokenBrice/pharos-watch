@@ -1026,7 +1026,8 @@ export async function persistScores(
     }
     deploymentCensusById.clear();
 
-    // Write __global__ sentinel row with deduped cross-stablecoin aggregates.
+    // Persist one deduped retained population for headline, breakdowns and volume
+    // denominators; external protocol over-cap observations never rewrite it.
     await queueRunRow([
       generationId,
       "__global__",

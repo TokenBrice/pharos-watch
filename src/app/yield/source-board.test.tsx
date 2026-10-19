@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 
-import { render, screen } from "@testing-library/react";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { cleanup, render, screen, within } from "@testing-library/react";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { YieldSourceBoard } from "@/components/yield/yield-source-board";
+import { ReferenceRatesStrip } from "@/components/yield/reference-rates-strip";
 import { buildYieldSourceBoardModel } from "@/lib/yield-source-board-model";
 import { makeAltYieldSource, makeYieldProvenance, makeYieldRanking } from "@shared/test-utils/yield-ranking-fixtures";
 import { projectYieldRankingsSummary } from "@shared/lib/yield-rankings-summary";
@@ -21,6 +22,28 @@ function makeBoardRanking(overrides = {}) {
 }
 
 describe("YieldSourceBoard", () => {
+  afterEach(cleanup);
+
+  it("keeps source mix visible alongside unavailable Safety coverage", () => {
+    const rankings = [makeBoardRanking()];
+    render(<>
+      <YieldSourceBoard model={buildYieldSourceBoardModel(rankings)} />
+      <ReferenceRatesStrip safetySnapshot={{
+        kind: "degraded",
+        coverageRatio: null,
+        coveredCount: 0,
+        trackedCount: null,
+        reason: "safety-score-publication-missing",
+        safetyScoreIdentity: null,
+      }} />
+    </>);
+
+    expect(screen.getByRole("heading", { name: "Source mix in the current view" })).toBeTruthy();
+    const referenceRates = within(screen.getByRole("region", { name: "Risk-free benchmark per currency" }));
+    expect(referenceRates.getByText("Safety coverage unavailable")).toBeTruthy();
+    expect(referenceRates.queryByText(/^(0|100)%$/)).toBeNull();
+  });
+
   beforeAll(() => {
     vi.stubGlobal("ResizeObserver", class {
       observe() {}

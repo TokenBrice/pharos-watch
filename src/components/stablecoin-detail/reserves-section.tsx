@@ -288,15 +288,14 @@ function SliceDetail({ summary }: { summary: ReserveQualityClientSummary }) {
 }
 
 /**
- * The reserve visual for long baskets: the largest groups draw, the remainder
- * folds beneath with its count and share in the summary, so a collapsed fold
- * still accounts for every slice.
+ * The reserve visual for long baskets: every group draws at its full weight;
+ * only labels and details beyond the largest groups fold beneath it.
  */
 function CondensedReserveVisual({ slices, subject }: { slices: readonly ReserveCompositionSlice[]; subject: string }) {
   const { shown, rest, restPct } = condenseReserveSlices(slices);
   return (
     <>
-      <ReserveTreemap slices={shown} subject={subject} />
+      <ReserveTreemap slices={[...shown, ...rest]} subject={subject} labelLimit={shown.length} />
       {rest.length > 0 ? (
         <ModuleDisclosure
           label={`${rest.length} more ${rest.length === 1 ? "slice" : "slices"} · ${formatReserveQualityPct(restPct)}`}

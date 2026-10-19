@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useId, type ReactNode } from "react";
 import { ArrowDown, ArrowUp, RotateCcw } from "lucide-react";
 import { FilterSearchInput } from "@/components/filter-search-input";
 import { ControlPillToggle } from "@/components/control-pill-toggle";
@@ -60,7 +60,7 @@ const BOARD_GRID_CLASS =
 const METRIC_HELP = {
   deviation: "Current deviation from the peg in basis points. 100 bps equals 1%.",
   dews: "DEWS is the Depeg Early Warning Score, a 0-100 stress score. Higher is more stressed.",
-  pegHealth: "Peg Health merges Peg Score, where 100 is best, with the live percent of observations holding peg.",
+  pegHealth: "Peg Health shows Peg Score, where 100 is best, alongside a record-derived peg occupancy estimate, not proof of recovery or continuous observation.",
   events: "Confirmed depeg event count for the asset, over the span Pharos has tracked it.",
   dexCheck: "DEX check compares trusted DEX prices with the primary peg signal when available.",
 };
@@ -123,6 +123,7 @@ function InstrumentRow({
   nowSeconds: number;
 }) {
   const prefetch = usePrefetchStablecoin();
+  const occupancyBasisId = useId();
   const coin = row.coin;
   const absDev = Math.abs(coin.currentDeviationBps ?? 0);
   const trackingSpan = formatTrackingSpanDays(coin.trackingSpanDays);
@@ -149,6 +150,7 @@ function InstrumentRow({
         rowToneClassName(row),
       )}
       aria-label={`Open ${coin.symbol} depeg detail`}
+      aria-describedby={occupancyBasisId}
     >
       <div className="pharos-numeric pt-0.5 text-xs text-muted-foreground lg:text-right">#{rank}</div>
       <div className="min-w-0">
@@ -193,9 +195,12 @@ function InstrumentRow({
         <MetricCell
           label="Peg health"
           value={pegHealthValue}
-          subline={`${formatPegOccupancy(coin.pegPct, 1)} at peg`}
         >
           <LinearGauge value={coin.pegScore} tone={metricTone(coin.pegScore)} ariaLabel={`Peg score for ${coin.symbol}`} />
+          <p id={occupancyBasisId} className="mt-1 text-xs text-muted-foreground">
+            <span className="font-mono">{formatPegOccupancy(coin.pegPct, 1)}</span> recorded-window peg occupancy estimate.
+            {" "}Tracking closure can leave unobserved time; this is not proof of recovery or continuous observation.
+          </p>
         </MetricCell>
         <MetricCell
           label="Events"

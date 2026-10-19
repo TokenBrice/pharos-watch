@@ -5,8 +5,9 @@
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-liquidity-score -->`v6.95`<!-- GENERATED-END: methodology-version-liquidity-score -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-liquidity-score -->`v6.96`<!-- GENERATED-END: methodology-version-liquidity-score -->
 - **TVL-basis breaks:** a liquidity release that changes how retained TVL is measured (not just weighting or volume admission) must also append its version to `LIQUIDITY_TVL_BASIS_BREAK_VERSIONS` in `shared/lib/dex-liquidity-evidence.ts`, which is append-only. The 30-day stability series never mix epochs across a listed break (see Basis homogeneity under Durability Sub-Component Weights); the source owns the current break list.
+- **TVL trend comparability:** public 24-hour/7-day changes and DEWS/DDR TVL evidence compare the stored current and historical `methodology_version` through `liquidityTvlBasisEpoch`. Cross-epoch baselines are skipped, not interpreted as market moves; same-epoch minor releases remain comparable. Explicit legacy identities belong to epoch 0, but an omitted version projection cannot establish comparability. This is TVL-measurement identity, not exact liquidity-score formula identity, and does not suppress independently available scores or volume.
 
 Reviewed execution targets require exact retained-pool identity, current independent references and quote-time factory/token/fee, freshness and execution proof. Supplemental discovery or configured targets alone establish neither zero liquidity nor execution capacity. Component weights, resource budgets and retained-TVL measurement are separate contracts.
 
@@ -17,6 +18,9 @@ The [public changelog](https://pharos.watch/methodology/liquidity-score-changelo
 ## DEX Liquidity Score
 
 Hourly full publication admits recovered quotes at the next `:16` instead of waiting for an even hour. Source requests and the `:46` reuse path keep their existing cadence. Full generation and active-target writes run every hour; each uses the existing bounded persistence buffers and retention. Public history remains one reusable daily snapshot, not an hourly series. The reviewed DEX evidence maximum age remains four hours (`DEX_LIQUIDITY_EVIDENCE_MAX_AGE_SEC`), and measured-history high confidence remains three hours; operational cadence changes do not tighten those scoring bounds.
+
+Global headline TVL, protocol and chain breakdowns, and volume-coverage TVL denominators describe the same retained cross-coin deduped pool population. External protocol totals do not impose a second global clamp or rescale observed volume. Existing per-pool retention and per-coin secondary-source caps still apply before aggregation; this is not a claim that every retained upstream valuation is economically correct.
+
 ### Published chain-label casing
 
 Persisted DEX rows use the canonical internal chain id from `canonicalExitRouteChain()` (lowercase registry/alias keys). The `chain_tvl_json` keys, `PoolEntry.chain`, and `top_pools_json` chain values therefore use one canonical casing per chain; aggregate stages must not re-lowercase or substitute display names. Presentation adapters map those ids to `CHAIN_META` display names only.
@@ -72,7 +76,7 @@ Direct concentrated-liquidity fetchers (PancakeSwap V3, Aerodrome/Velodrome Slip
 
 ### Pool Quality Adjustments
 
-- **Balance health**: Continuous `Math.pow(balanceRatio, 1.5)` instead of binary threshold
+- **Balance health**: Continuous `Math.pow(balanceRatio, 1.5)` instead of binary threshold. Curve `balanceMeasured` uses the same admitted balance evidence as the ratio, details, and quality weighting; the presence of a Curve enrichment row alone does not establish measured balance coverage.
 - **Pair quality**: Co-token scored using Pharos governance classification (CeFi->1.0, DeFi->0.9, CeFi-Dep->0.8) + static map for volatile assets (WETH->0.65, WBTC->0.6, unknown->0.3). Known quote aliases such as `USD₮0`, `USDT0`, `aUSDC`, `aUSDT`, `USDbC`, and `.e` bridged variants are normalized to canonical symbols before scoring. Composite Curve LP aliases such as `3Crv` and `FRAXBP` inherit the best score from their underlying stablecoin basket. Multi-asset pools use best co-token score
 - **MetaPool TVL dedup**: Uses Curve's `usdTotalExcludingBasePool` to prevent double-counting base pool liquidity across metapools; the live Curve response owns the inventory.
 - **Effective TVL**: `poolTvl x mechanismMultiplier x balanceHealth x pairQuality`, summed across all pools
@@ -105,7 +109,7 @@ Pool Quality measures the venue quality retention ratio: the fraction of total T
 
 Where `qualityAdjustedTvl` applies mechanism and balance-health multipliers to raw TVL, and `totalTvlUsd` is the pre-adjustment sum across all pools. Pair quality is already reflected upstream in `effectiveTvl` and the pool-stress diagnostics, but it is not part of this retention-ratio component. The linear rescaling maps the 15–80% retention range to 0–100, so a pool set retaining 15% or less of its raw TVL after quality adjustment scores 0, and one retaining 80% or more scores 100.
 
-Exact Curve metapool joins use retained, base-pool-excluded TVL for both numerator and denominator. Balance evidence carries its own notional scope: a full-pool ratio cannot weight excluded-pool TVL. Mismatches omit measured balance diagnostics and use the existing unmeasured neutral fallback. With a scope-matched ratio 0.5, $2M retained TVL and multiplier 0.85 yield about $601,041 quality TVL (30.05% retention, Pool Quality 23), never a $3.005M full-pool numerator.
+Exact Curve metapool joins use retained, base-pool-excluded TVL for both numerator and denominator. Balance evidence carries its own notional scope: a full-pool ratio cannot weight excluded-pool TVL. Mismatches omit measured balance diagnostics, publish `balanceMeasured: false`, contribute no measured-balance TVL to scoring or source-family telemetry, and use the existing unmeasured neutral fallback without inventing a replacement ratio. With a scope-matched ratio 0.5, $2M retained TVL and multiplier 0.85 yield about $601,041 quality TVL (30.05% retention, Pool Quality 23), never a $3.005M full-pool numerator.
 
 #### Durability Sub-Component Weights
 

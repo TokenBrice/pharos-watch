@@ -92,7 +92,7 @@ describe("adaptHliquityHederaState", () => {
   it("publishes the pinned same-block HBAR census with a market-valued collateralization ratio", () => {
     const result = adaptHliquityHederaState(buildState());
 
-    const totalHbar = Number(TROVE_COLLATERAL + SP_COLLATERAL) / 1e8;
+    const totalHbar = Number(TROVE_COLLATERAL) / 1e8;
     const debtHchf = Number(DEBT) / 1e8;
     expect(result.slices).toEqual([expect.objectContaining({
       sourceKey: "hliquity-hedera:hbar",
@@ -115,6 +115,39 @@ describe("adaptHliquityHederaState", () => {
     expect(result.metadata?.redemption?.capacityUsd).toBeUndefined();
     expect(result.metadata?.immediateRedeemableUsd).toBeUndefined();
     expect(result.warnings).toBeUndefined();
+  });
+
+  it.each([0n, 10_000_000_000n])("keeps %s tinybar of depositor-owned SP gains outside holder backing", (stabilityPoolCollateralRaw) => {
+    const result = adaptHliquityHederaState(buildState({
+      troveCollateralRaw: 10_000_000_000n, stabilityPoolCollateralRaw,
+      debtRaw: 10_000_000_000n, supplyRaw: 10_000_000_000n,
+      hbarPriceUsd: 1, chfUsdRate: 1,
+    }));
+
+    expect(result.slices).toEqual([expect.objectContaining({ pct: 100, assetClass: "cryptoasset" })]);
+    expect(result.metadata?.totalReserveUsd).toBe(100);
+    expect(result.metadata?.collateralizationRatio).toBe(1);
+    expect(result.metadata?.details).toMatchObject({
+      systemTroveCollateralHbar: 100,
+      depositorOwnedStabilityPoolCollateralRaw: stabilityPoolCollateralRaw.toString(),
+    });
+    expect(result.metadata?.details).not.toHaveProperty("totalCollateralHbar");
+  });
+
+  it("does not let depositor-owned SP gains hide an outstanding-holder shortfall", () => {
+    const result = adaptHliquityHederaState(buildState({
+      troveCollateralRaw: 9_000_000_000n, stabilityPoolCollateralRaw: 10_000_000_000n,
+      debtRaw: 10_000_000_000n, supplyRaw: 10_000_000_000n,
+      hbarPriceUsd: 1, chfUsdRate: 1,
+    }));
+
+    expect(result.metadata?.totalReserveUsd).toBe(90);
+    expect(result.metadata?.totalLiabilitiesUsd).toBe(100);
+    expect(result.metadata?.collateralizationRatio).toBe(0.9);
+    expect(result.warnings).toContainEqual(expect.objectContaining({
+      code: "reserve-undercollateralized", effect: "degraded",
+    }));
+    expect(result.metadata?.redemption?.capacityUsd).toBeUndefined();
   });
 
   it("omits valuation and degrades when the HBAR price is unavailable", () => {
@@ -148,7 +181,7 @@ describe("adaptHliquityHederaState", () => {
   });
 
   it("fails closed on a zero collateral or debt census", () => {
-    expect(() => adaptHliquityHederaState(buildState({ troveCollateralRaw: 0n, stabilityPoolCollateralRaw: 0n })))
+    expect(() => adaptHliquityHederaState(buildState({ troveCollateralRaw: 0n, stabilityPoolCollateralRaw: SP_COLLATERAL })))
       .toThrow(/collateral/);
     expect(() => adaptHliquityHederaState(buildState({ debtRaw: 0n }))).toThrow(/debt/);
   });
@@ -183,7 +216,7 @@ describe("fetchHliquityHederaReserves", () => {
     expect(result.metadata?.details).toMatchObject({
       blockNumber: 99_808_682,
       troveCollateralRaw: TROVE_COLLATERAL.toString(),
-      stabilityPoolCollateralRaw: SP_COLLATERAL.toString(),
+      depositorOwnedStabilityPoolCollateralRaw: SP_COLLATERAL.toString(),
       debtRaw: DEBT.toString(),
       supplyRaw: SUPPLY.toString(),
       chfUsdRate: CHF_USD_RATE,

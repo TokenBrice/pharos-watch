@@ -52,7 +52,7 @@
   ],
   "liveReservesConfig": {
     "adapter": "hliquity-hedera",
-    "version": 1,
+    "version": 2,
     "semantics": "collateral-mix",
     "breakerScope": "hchf-hedera-swiss-franc",
     "display": {

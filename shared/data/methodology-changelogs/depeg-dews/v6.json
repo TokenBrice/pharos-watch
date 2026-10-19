@@ -1,5 +1,21 @@
 [
   {
+    "version": "6.35",
+    "title": "TVL erosion compares stored liquidity measurement epochs",
+    "date": "2026-10-19",
+    "effectiveAt": 1792368000,
+    "summary": "DEWS excludes cross-epoch TVL baselines from liquidity erosion while retaining independently eligible historical liquidity scores. Live hydration compares against the actually admitted current per-coin liquidity version; historical diagnostics compare against their selected historical current anchor, never today's runtime version.",
+    "impact": [
+      "Weekly TVL baselines must share liquidityTvlBasisEpoch with the stored current observation. Same-epoch minor versions remain comparable; explicitly unversioned legacy rows retain epoch 0, while an omitted version projection cannot establish comparability.",
+      "Nearest-date selection, positive-TVL admission, confidence >=0.5, inclusive 36-hour tolerance, history read bounds and original observation clocks are unchanged.",
+      "Historical liquidity-score anchors remain independently available when TVL bases differ. No DEWS weights, price trust floors or other signal availability rules change; corrected TVL input availability can change future scores and bands.",
+      "This release accompanies DDR 4.8 and the ordered liquidity hotfix. It does not recompute stored DEWS history, rewrite a calibration corpus, or authorize production-history replay.",
+      "Activation is provisionally 2026-10-19 00:00 UTC (1792368000); confirm effectiveAt at release. Fixed-clock admission/band review and the first admitted production execution remain pending; no equivalence or runtime-health result is claimed."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.34",
     "title": "Comparable depeg evidence and freshness-qualified stress publication",
     "date": "2026-10-10",

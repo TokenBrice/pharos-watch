@@ -8,6 +8,7 @@ import { YieldClient } from "@/components/yield/yield-client";
 import { makeYieldProvenance, makeYieldRanking } from "@shared/test-utils/yield-ranking-fixtures";
 import { projectYieldRankingsSummary } from "@shared/lib/yield-rankings-summary";
 import type { YieldRankingsSummaryResponse } from "@shared/types/yield-summary";
+import { YIELD_OPPORTUNITY_SAFETY_DESCRIPTION } from "@shared/lib/yield-opportunity-provenance";
 
 const {
   useYieldAdapterManifestMock,
@@ -150,6 +151,32 @@ describe("YieldClient", () => {
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
+  });
+
+  it.each([
+    { provenance: "opportunity-safety" as const, label: "B opportunity safety", explained: true },
+    { provenance: "live-report-card" as const, label: "B safety", explained: false },
+  ])("names the hero judgment from $provenance rather than the underlying holder score", ({ provenance, label, explained }) => {
+    const ready = useYieldRankingsSummaryMock();
+    useYieldRankingsSummaryMock.mockReturnValue({
+      ...ready,
+      data: projectYieldRankingsSummary({
+        rankings: [makeYieldRanking({
+          safetyScore: 72,
+          safetyGrade: "B",
+          provenance: makeYieldProvenance({ safetyProvenance: provenance }),
+        })],
+        riskFreeRate: 4.25,
+        scalingFactor: 1,
+        medianApy: 5,
+        updatedAt: 1_776_000_000,
+        warnings: [],
+      }),
+    });
+    render(<YieldClient />);
+    const hero = screen.getByRole("group", { name: "Yield landscape overview" });
+    expect(within(hero).getAllByText((text) => text.includes(label)).length).toBeGreaterThan(0);
+    expect(within(hero).queryAllByTitle(YIELD_OPPORTUNITY_SAFETY_DESCRIPTION).length > 0).toBe(explained);
   });
 
   it("preserves a valid incoming yield-type filter while ranking options load", () => {

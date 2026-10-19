@@ -1,6 +1,8 @@
+import { execFileSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
@@ -14,9 +16,15 @@ import {
   projectListCoin,
   projectBlacklistStatus,
   projectGeniusProfile,
+  projectMintAuthorityStatus,
   validateGeniusComplianceProjection,
+  validateListProjection,
 } from "../build-data/build-client-registry.mjs";
 import { TRACKED_SOURCE_COINS } from "@shared/lib/stablecoins/registry";
+import { resolveMintAuthorityStatusKind } from "@shared/lib/classification/mint-authority";
+import { resolveMechanismArchetype } from "@shared/lib/classification/resolve-mechanism-archetype";
+import { makeStablecoinMeta } from "@shared/test-utils/stablecoin";
+import { GENERATED_ARTIFACT_REGISTRY } from "../lib/automation-registry.mjs";
 import {
   GENIUS_COMPLIANCE_PROFILE_FIELDS,
   GENIUS_COMPLIANCE_SUMMARY_FIELDS,
@@ -24,6 +32,7 @@ import {
   STABLECOIN_CLIENT_LIST_FIELDS,
 } from "@shared/types/stablecoin-client-meta";
 import type { StablecoinClientDetailMeta, StablecoinClientListMeta } from "@shared/types/stablecoin-client-meta";
+import type { MintAuthorityCoverageSummary } from "@shared/types/stablecoin-client-meta";
 
 describe("client registry field contract", () => {
   it("keeps compact yield taxonomy identical to every source and generated detail sidecar", () => {
@@ -239,6 +248,62 @@ describe("client registry field contract", () => {
     expect(JSON.stringify(projected)).not.toContain("0x0000000000000000000000000000000000000002");
   });
 
+  it.each(["unknown", "manual-review"] as const)("publishes Unknown for unresolved mint paths at %s confidence", (confidence) => {
+    const mintAuthority = { mintPath: "unknown", authorityPosture: "unknown", confidence };
+    const projected: Partial<StablecoinClientListMeta> = projectListCoin({ id: "unresolved", mintAuthority }, STABLECOIN_CLIENT_LIST_FIELDS, "core-stablecoin");
+    expect(projected.mintAuthorityStatus).toBe("unknown");
+    expect(projected.mintAuthoritySummary).toEqual(mintAuthority);
+  });
+
+  it("matches canonical mint status and effective archetype for every catalog row", () => {
+    const { listCoins } = buildClientRegistryOutput();
+    const sourceById = new Map(TRACKED_SOURCE_COINS.map((coin) => [coin.id, coin]));
+    for (const source of TRACKED_SOURCE_COINS) {
+      const projected = listCoins.find((coin: StablecoinClientListMeta) => coin.id === source.id);
+      expect(projected.mintAuthorityStatus, source.id).toBe(source.mintAuthority
+        ? resolveMintAuthorityStatusKind(source.mintAuthority) : undefined);
+      expect(projected.mechanismArchetype, source.id).toBe(resolveMechanismArchetype(source, sourceById) ?? undefined);
+    }
+    const unresolvedIds = ["kag-kinesis", "kau-kinesis", "krw-kb-kookmin", "usdb-blast", "xdai-gnosis", "xo-exodus"];
+    const unresolved = listCoins.filter((coin: StablecoinClientListMeta) => unresolvedIds.includes(coin.id));
+    expect(unresolved).toHaveLength(6);
+    expect(unresolved.every((coin: StablecoinClientListMeta) => coin.mintAuthorityStatus === "unknown")).toBe(true);
+    expect(unresolved.filter((coin: StablecoinClientListMeta) => coin.status !== "pre-launch")).toHaveLength(5);
+  });
+
+  it.each([
+    ["immutable-user-collateralized", "none-resolved-mint", [], "no-privileged-mint"],
+    ["permissioned-minter", "bounded-admin", [], "governed-mint"],
+    ["issuer-direct-mint", "bounded-admin", [], "issuer-or-backend-mint"],
+    ["offchain-attested-minter", "bounded-admin", [], "issuer-or-backend-mint"],
+    ["permissioned-minter", "bounded-admin", [{ authorityType: "eoa", directMintAbility: "direct" }], "issuer-or-backend-mint"],
+  ] as const)("keeps the %s projection on the shared classifier branch", (mintPath, authorityPosture, controls, expected) => {
+    const profile: MintAuthorityCoverageSummary = { mintPath, authorityPosture, confidence: "verified", controls: [...controls] };
+    expect(projectMintAuthorityStatus({ mintAuthority: profile })).toBe(expected);
+    expect(projectMintAuthorityStatus({ mintAuthority: profile })).toBe(resolveMintAuthorityStatusKind(profile));
+  });
+
+  it("omits missing-profile mint fields from the serialized browser contract", () => {
+    const projected = JSON.parse(JSON.stringify(projectListCoin({ id: "unreviewed" }, STABLECOIN_CLIENT_LIST_FIELDS, "core-stablecoin")));
+    expect(projected).not.toHaveProperty("mintAuthoritySummary");
+    expect(projected).not.toHaveProperty("mintAuthorityStatus");
+  });
+
+  it("loads the real classifier closure using the registered write/check transport", () => {
+    const artifact = GENERATED_ARTIFACT_REGISTRY.find((entry: { id: string }) => entry.id === "stablecoin-client-registry")!;
+    expect(artifact.checkCommand.split(" ")).toEqual([...artifact.command.split(" "), "--check"]);
+    const [runtime, ...args] = artifact.command.split(" ");
+    expect(runtime).toBe("node");
+    const script = pathToFileURL(resolve(args.pop()!)).href;
+    const output = execFileSync(process.execPath, [...args, "--input-type=module", "--eval", `
+      import { projectMintAuthorityStatus } from ${JSON.stringify(script)};
+      console.log(projectMintAuthorityStatus({ mintAuthority: {
+        mintPath: "unknown", authorityPosture: "unknown", confidence: "manual-review"
+      } }));
+    `], { encoding: "utf8" });
+    expect(output.trim()).toBe("unknown");
+  });
+
   it.each([
     { mintPath: "wrapped-or-variant-inherited", status: "inherited-authority", inheritedFrom: "parent" },
     { mintPath: "bridge-or-oft-synthetic", status: "bridge-mint", inheritedFrom: undefined },
@@ -261,18 +326,25 @@ describe("client registry field contract", () => {
   });
 
   it.each([
-    { archetypeOverride: false, expected: "fiat-cash" },
-    { archetypeOverride: true, expected: "synthetic-delta-neutral" },
-  ])("publishes effective variant archetype with override=$archetypeOverride", ({ archetypeOverride, expected }) => {
-    const parent = { id: "parent", mechanismArchetype: "fiat-cash" };
-    const child = {
+    { parent: "classified", archetypeOverride: false, expected: "fiat-cash" },
+    { parent: "unclassified", archetypeOverride: false, expected: undefined },
+    { parent: "missing", archetypeOverride: false, expected: "synthetic-delta-neutral" },
+    { parent: "classified", archetypeOverride: true, expected: "synthetic-delta-neutral" },
+    { parent: "unclassified", archetypeOverride: true, expected: "synthetic-delta-neutral" },
+    { parent: "missing", archetypeOverride: true, expected: "synthetic-delta-neutral" },
+  ])("publishes canonical archetype with $parent parent and override=$archetypeOverride", ({ parent, archetypeOverride, expected }) => {
+    const parentCoin = makeStablecoinMeta({ id: "parent", mechanismArchetype: parent === "classified" ? "fiat-cash" : undefined });
+    const child = makeStablecoinMeta({
       id: "child", variantOf: "parent", variantKind: "savings-passthrough",
-      ...(archetypeOverride ? { mechanismArchetype: "synthetic-delta-neutral" } : {}), archetypeOverride,
-    };
-    const projected = projectListCoin(child, STABLECOIN_CLIENT_LIST_FIELDS, "stablecoin-variant",
-      new Map<string, typeof parent | typeof child>([[parent.id, parent], [child.id, child]])) as StablecoinClientListMeta;
+      mechanismArchetype: "synthetic-delta-neutral", archetypeOverride,
+    });
+    const registry = new Map(parent === "missing" ? [] : [[parentCoin.id, parentCoin]]);
+    const projected: Partial<StablecoinClientListMeta> = projectListCoin(child, STABLECOIN_CLIENT_LIST_FIELDS, "stablecoin-variant", registry);
     expect(projected.mechanismArchetype).toBe(expected);
+    expect(projected.mechanismArchetype).toBe(resolveMechanismArchetype(child, registry) ?? undefined);
+    if (expected === undefined) expect(JSON.parse(JSON.stringify(projected))).not.toHaveProperty("mechanismArchetype");
     expect(projected.variantOf).toBe("parent");
+    expect(() => validateListProjection(projected, child, 0, STABLECOIN_CLIENT_LIST_FIELDS, "stablecoin-variant", registry)).not.toThrow();
   });
 
   it("projects only the reviewed blacklist status and excludes review evidence", () => {

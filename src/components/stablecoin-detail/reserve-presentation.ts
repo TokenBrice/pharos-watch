@@ -569,13 +569,13 @@ export function liveCompositionDiffers(
   });
 }
 
-/** The Reserves visual draws at most this many slices; the rest fold beneath it. */
+/** The Reserves visual labels at most this many groups; all groups retain geometry. */
 const RESERVE_VISUAL_SLICE_LIMIT = 5;
 
 export interface CondensedReserveSlices {
-  /** Drawn by the visual, largest first. */
+  /** Labelled by the visual, largest first. */
   shown: ReserveCompositionSlice[];
-  /** Folded beneath the visual, largest first; their share is stated, never dropped. */
+  /** Labels/details folded beneath the visual; these groups still occupy their full share. */
   rest: ReserveCompositionSlice[];
   restPct: number;
 }
@@ -584,8 +584,8 @@ export interface CondensedReserveSlices {
  * Long baskets (USDT 11 slices, FRAX 45) drew a treemap of crumbs and
  * near-duplicate tiles. Above the limit, slices sharing an asset class (or,
  * unclassified, the same normalized name) and a risk tier merge into one
- * tile; the largest groups are drawn and the remainder folds with its count
- * and share. Short baskets pass through unchanged.
+ * tile; only labels and details beyond the largest groups fold with their count
+ * and share. Every group remains in the layout. Short baskets pass through unchanged.
  */
 export function condenseReserveSlices(slices: readonly ReserveCompositionSlice[]): CondensedReserveSlices {
   if (slices.length <= RESERVE_VISUAL_SLICE_LIMIT) return { shown: [...slices], rest: [], restPct: 0 };
