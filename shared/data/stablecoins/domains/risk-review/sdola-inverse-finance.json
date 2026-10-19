@@ -1,7 +1,7 @@
 {
   "id": "sdola-inverse-finance",
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": false,
     "sources": [
       {
         "label": "Inverse sDOLA product guide",
@@ -38,11 +38,19 @@
       {
         "label": "Inverse Finance transparency disclosure",
         "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/about/transparency"
+      },
+      {
+        "label": "Pharos parent DOLA freeze review",
+        "url": "https://github.com/TokenBrice/pharos-watch/blob/main/shared/data/stablecoins/domains/risk-review/dola-inverse-finance.json"
+      },
+      {
+        "label": "Pharos deployment-materiality and upstream scoping rules",
+        "url": "https://github.com/TokenBrice/pharos-watch/blob/main/docs/blacklist-tracker.md"
       }
     ],
-    "evidence": "Re-reviewed 2026-08-08. Verified sources and ABIs for Ethereum, Base, Optimism, Arbitrum, and Berachain expose no local holder blacklist, freeze, pause, seizure, or transfer-stop method. sDOLA is nevertheless a tracked 100% DOLA savings-passthrough variant, and its parent DOLA has a confirmed direct holder-control posture. Variant inheritance therefore resolves sDOLA as Upstream; the prior explicit false override incorrectly suppressed the parent relationship. Rechecked parent identity at Ethereum block 26098749 on 2026-10-01: canonical asset() returns DOLA 0x865377367054516e17014ccded1e7d814edc9ce4. At BSC block 125135317, the tracked parent DOLA representation permits burn(address(1),0) from its enabled minter 0x58892974758a4013377a45fad698d2ff1f08d98e and rejects an unrelated caller. The inherited verdict is retained on current parent-control evidence; this does not assert local holder controls on sDOLA.",
-    "reviewer": "OpenAI Codex unfreezable-cohort audit",
-    "reviewedAt": "2026-08-08"
+    "evidence": "Re-reviewed 2026-10-19. Local controls are unchanged from the 2026-08-08 review: verified sources and ABIs for Ethereum, Base, Optimism, Arbitrum and Berachain expose no holder blacklist, freeze, pause, seizure or transfer-stop method, and canonical Ethereum sDOLA 0xb45ad160634c528cc3d2926d9807104fa3157305 is non-proxy Solmate ERC4626 code whose share transfers are balance and allowance arithmetic only. The prior Upstream verdict rested solely on parent DOLA's direct holder-control posture, citing the BSC minter burn surface at block 125135317. Parent DOLA's 2026-10-17 review classifies that surface as a sub-threshold peripheral deployment (BSC 1.592130%, Fantom 0.411624% and Avalanche 0.055162% of supply against the 10% deployment-materiality share) and resolves DOLA as not freezable; its 2026-10-19 reserve look-through puts issuer- or custodian-controlled collateral at 26.395288% of net face claims, below the strict 50% upstream threshold. With no yes, possible or upstream parent and no local control, variant inheritance supplies no freeze path, so sDOLA resolves to No. Parent identity: canonical asset() returned DOLA 0x865377367054516e17014ccded1e7d814edc9ce4 at Ethereum block 26098749. A change to parent DOLA's verdict requires re-reviewing this status.",
+    "reviewer": "FreezeWatch DOLA/sDOLA review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "standard-external",
