@@ -44,6 +44,25 @@ describe("HTTP Warning presentation", () => {
       .toBe(`Classification unavailable\n${plain}`);
   });
 
+  it.each([
+    '199 - "unterminated',
+    '199 - "trailing escape\\',
+    '199 - "message" unexpected',
+    '199 - "message""date"',
+    '199 - "message" "unterminated date',
+    '199 - "message" "date" "extra"',
+  ])("preserves malformed warning syntax: %s", (raw) => {
+    expect(formatDataHealthWarning(raw)).toBe(raw);
+  });
+
+  it("decodes empty and long escaped messages without regex backtracking", () => {
+    expect(formatDataHealthWarning('199 - ""')).toBe("");
+    const escaped = "\\\\".repeat(10_000);
+    expect(formatDataHealthWarning(`199 - "${escaped}"`)).toBe("\\".repeat(10_000));
+    const malformed = `199 - "${escaped}`;
+    expect(formatDataHealthWarning(malformed)).toBe(malformed);
+  });
+
   it("does not mutate raw metadata used by refresh and age classification", () => {
     const raw = '199 - "Latest sync-dex-liquidity run failed; serving last successful dataset (failedSources=a,b)"';
     const inputMeta = meta({ warning: raw });
