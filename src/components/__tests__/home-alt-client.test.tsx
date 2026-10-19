@@ -64,6 +64,14 @@ afterEach(() => {
 });
 
 describe("HomeAltClient", () => {
+  it("places server-rendered media before system status", async () => {
+    render(<HomeAltClient><div data-testid="media">Seen on</div></HomeAltClient>);
+    const media = screen.getByTestId("media");
+    await act(async () => intersections.forEach((intersect) => intersect()));
+    const status = await screen.findByTestId("status");
+    expect(media.compareDocumentPosition(status) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it("keeps rankings unmounted until the real lazy boundary intersects", async () => {
     render(<HomeAltClient />);
     expect(screen.queryByRole("heading", { name: "Loaded rankings" })).toBeNull();

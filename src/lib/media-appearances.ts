@@ -36,6 +36,15 @@ const DEFI_FRONTIER_EPISODE: MediaAppearance = {
   durationMinutes: 69,
 };
 
+const STABLE_SCHOOL_INTERVIEW: MediaAppearance = {
+  host: "Stable School (Stable Summit)",
+  hostLogoSrc: "/media/stable-school.svg",
+  title: "TokenBrice - Polaris & Pharos",
+  description: "TokenBrice joined Stable School for episode 48 to discuss Polaris and Pharos.",
+  href: "https://stableschool.org/podcast/48",
+  date: "2026-10-16",
+};
+
 const LEVIATHAN_NEWS_WALKTHROUGH: MediaAppearance = {
   host: "Leviathan News",
   hostLogoSrc: "/media/leviathan-news.jpg",
@@ -49,6 +58,7 @@ const LEVIATHAN_NEWS_WALKTHROUGH: MediaAppearance = {
 
 export const MEDIA_APPEARANCES: readonly MediaAppearance[] = [
   ETHEREUM_FOUNDATION_BUILDERS_LIVE,
+  STABLE_SCHOOL_INTERVIEW,
   DEFI_FRONTIER_EPISODE,
   LEVIATHAN_NEWS_WALKTHROUGH,
 ];

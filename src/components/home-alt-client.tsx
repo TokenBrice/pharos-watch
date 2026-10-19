@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
@@ -299,7 +299,7 @@ function BelowFold({
   );
 }
 
-export function HomeAltClient() {
+export function HomeAltClient({ children }: { children?: ReactNode }) {
   const hashTargetSection = useHashTargetForceMount();
 
   return (
@@ -354,6 +354,8 @@ export function HomeAltClient() {
           </HomeSectionErrorBoundary>
         </div>
       </BelowFold>
+
+      {children}
 
       <BelowFold forced={hashTargetSection === "status"} reserveClassName="min-h-[83px] lg:min-h-[53px]">
         <div className="mt-8 sm:mt-10">
