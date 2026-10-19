@@ -118,6 +118,30 @@ describe("evm-rpc helpers", () => {
     vi.restoreAllMocks();
   });
 
+  it.each([false, true])("fails over on null receipt evidence only when required=%s", async required => {
+    const dwellir = dwellirEndpoint("https://receipt-dwellir.example");
+    const fallback = registryEndpoint("https://receipt-alchemy.example", "alchemy");
+    const chainRpcs = chainRpcsWith("ethereum", [fallback, dwellir]);
+    const receipt = { transactionHash: `0x${"a".repeat(64)}`, blockNumber: "0x64", status: "0x1", logs: [] };
+    fetchWithRetryMock.mockResolvedValueOnce(rpcResponse([{ id: 1, result: null }]))
+      .mockResolvedValueOnce(rpcResponse([{ id: 1, result: receipt }]));
+    expect(await fetchEvmRpcBatch("ethereum", [
+      { method: "eth_getTransactionReceipt", params: [receipt.transactionHash] },
+    ], { chainRpcs, requireNonNullResults: required })).toEqual([required ? receipt : null]);
+    expect(attemptedUrls()).toEqual(required ? [dwellir.url, fallback.url] : [dwellir.url]);
+  });
+
+  it("keeps required receipt evidence unavailable when every endpoint returns null", async () => {
+    const chainRpcs = chainRpcsWith("ethereum", [
+      registryEndpoint("https://receipt-a.example"), registryEndpoint("https://receipt-b.example"),
+    ]);
+    fetchWithRetryMock.mockResolvedValue(rpcResponse([{ id: 1, result: null }]));
+    expect(await fetchEvmRpcBatch("ethereum", [
+      { method: "eth_getTransactionReceipt", params: [`0x${"a".repeat(64)}`] },
+    ], { chainRpcs, requireNonNullResults: true })).toBeNull();
+    expect(attemptedUrls()).toHaveLength(2);
+  });
+
   it("reports admitted physical requests and batch sizes without URL paths or credentials", async () => {
     const chainRpcs = chainRpcsWith("ethereum", [registryEndpoint("https://rpc.example/private?secret=hidden")]);
     const onRpcRequest = vi.fn();
