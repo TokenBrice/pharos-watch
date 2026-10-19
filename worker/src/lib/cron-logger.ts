@@ -490,8 +490,8 @@ export async function logCronRun(
         const owner = lastProgressLeaseOwner;
         progressWriteTail = progressWriteTail.then(async () => {
           await runWithOverloadRetry(() => db.prepare(
-            `UPDATE ${scheduledIdentity ? childAttemptTable(scheduledIdentity.executionFence) : "scheduled_child_attempts"} SET lease_owner = ? WHERE attempt_key = ? AND terminal_token IS NULL`,
-          ).bind(owner, scheduledAttemptKey).run());
+            `UPDATE ${scheduledIdentity ? childAttemptTable(scheduledIdentity.executionFence) : "scheduled_child_attempts"} SET lease_owner = ? WHERE attempt_key = ? AND terminal_token IS NULL AND lease_owner IS NOT ?`,
+          ).bind(owner, scheduledAttemptKey, owner).run());
         });
       }
     }

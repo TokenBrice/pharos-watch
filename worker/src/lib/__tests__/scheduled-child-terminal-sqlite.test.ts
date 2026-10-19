@@ -162,6 +162,35 @@ describe("scheduled child transactional terminal arbitration", () => {
     expect(sqlite.prepare("SELECT terminal_source FROM scheduled_child_attempts").get()).toEqual({ terminal_source: "real" });
   });
 
+  it("skips identical attempt-owner writes while preserving owner changes and terminal fencing", async () => {
+    const { identity, sqlite, db } = setup();
+    sqlite.exec(`CREATE TABLE owner_write_count (writes INTEGER NOT NULL);
+      INSERT INTO owner_write_count VALUES (0);
+      CREATE TRIGGER count_attempt_owner_writes AFTER UPDATE OF lease_owner ON scheduled_child_attempts
+      BEGIN UPDATE owner_write_count SET writes = writes + 1; END;`);
+    const writes = () => sqlite.prepare("SELECT writes FROM owner_write_count").get();
+    await logCronRun(db, identity.job, async (_signal, report) => {
+      await report({ leaseOwner: null, stage: "started" });
+      expect(writes()).toEqual({ writes: 0 });
+      await report({ leaseOwner: "lease", stage: "started" });
+      expect(writes()).toEqual({ writes: 1 });
+      await report({ leaseOwner: "lease", stage: "lease-acquired" });
+      await report({ leaseOwner: "lease", stage: "completed" });
+      expect(writes()).toEqual({ writes: 1 });
+      await report({ leaseOwner: "replacement" });
+      expect(writes()).toEqual({ writes: 2 });
+      await report({ leaseOwner: null });
+      await report({ leaseOwner: null });
+      expect(writes()).toEqual({ writes: 3 });
+      sqlite.exec("UPDATE scheduled_child_attempts SET terminal_token = 'already-terminal'");
+      await report({ leaseOwner: "late-owner" });
+      expect(writes()).toEqual({ writes: 3 });
+      expect(sqlite.prepare("SELECT lease_owner FROM scheduled_child_attempts").get()).toEqual({ lease_owner: null });
+      sqlite.exec("UPDATE scheduled_child_attempts SET terminal_token = NULL");
+      return {};
+    }, { producer: identity, executionFence: identity.executionFence });
+  });
+
   it("surfaces supersession without writing a second failure and carries publication evidence", async () => {
     const { identity, sqlite, db } = setup();
     await expect(logCronRun(db, identity.job, async () => {
