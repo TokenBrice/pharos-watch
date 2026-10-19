@@ -148,8 +148,7 @@ These records are a living charter: amend in place for precision, scope, or chan
 
 Eight data-integrity rules were adopted on 2026-09-22 after a repo-wide review found each one violated in five or more independent places. ADR-28 to ADR-35 state them; the per-domain contract wording lives in the owning docs named by each record.
 
-Read an individual decision rather than the entire record collection: [ADR-1](#adr-1) · [ADR-2](#adr-2) · [ADR-3](#adr-3) · [ADR-4](#adr-4) · [ADR-6](#adr-6) · [ADR-7](#adr-7) · [ADR-8](#adr-8) · [ADR-9](#adr-9) · [ADR-10](#adr-10) · [ADR-19](#adr-19) · [ADR-20](#adr-20) · [ADR-21](#adr-21) · [ADR-22](#adr-22) · [ADR-23](#adr-23) · [ADR-24](#adr-24) · [ADR-25](#adr-25) · [ADR-26](#adr-26) · [ADR-27](#adr-27) · [ADR-28](#adr-28) · [ADR-29](#adr-29) · [ADR-30](#adr-30) · [ADR-31](#adr-31) · [ADR-32](#adr-32) · [ADR-33](#adr-33) · [ADR-34](#adr-34) · [ADR-35](#adr-35) · [ADR-36](#adr-36) · [ADR-37](#adr-37) · [ADR-38](#adr-38) · [ADR-39](#adr-39) · [ADR-5](#adr-5).
-Method-scoped RPC preference: [ADR-40](#adr-40).
+Read an individual decision rather than the entire record collection: [ADR-1](#adr-1) · [ADR-2](#adr-2) · [ADR-3](#adr-3) · [ADR-4](#adr-4) · [ADR-6](#adr-6) · [ADR-7](#adr-7) · [ADR-8](#adr-8) · [ADR-9](#adr-9) · [ADR-10](#adr-10) · [ADR-19](#adr-19) · [ADR-20](#adr-20) · [ADR-21](#adr-21) · [ADR-22](#adr-22) · [ADR-23](#adr-23) · [ADR-24](#adr-24) · [ADR-25](#adr-25) · [ADR-26](#adr-26) · [ADR-27](#adr-27) · [ADR-28](#adr-28) · [ADR-29](#adr-29) · [ADR-30](#adr-30) · [ADR-31](#adr-31) · [ADR-32](#adr-32) · [ADR-33](#adr-33) · [ADR-34](#adr-34) · [ADR-35](#adr-35) · [ADR-36](#adr-36) · [ADR-37](#adr-37) · [ADR-38](#adr-38) · [ADR-39](#adr-39) · [ADR-40](#adr-40) · [ADR-5](#adr-5).
 
 
 ### Active Records
