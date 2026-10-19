@@ -23,6 +23,7 @@ const PHAROS_FUNDING_ENS = "pharos-watch.eth";
 const GIVETH_URL = "https://giveth.io/project/pharos-watch:-transparent-stablecoins-analytics";
 const GITHUB_URL = "https://github.com/TokenBrice/pharos-watch";
 const DWELLIR_URL = "https://www.dwellir.com";
+const DWELLIR_POST_HREF = "/blog/dwellir-in-kind-sponsorship/";
 const TWITTER_URL = "https://x.com/PharosWatch";
 const TELEGRAM_GROUP_URL = "https://t.me/pharoswatchers";
 const SUPPORTED_CHAINS: FundingChain[] = ["ethereum", "base", "optimism", "arbitrum", "polygon", "gnosis"];
@@ -333,18 +334,6 @@ export function CostBreakdown({ items, currentCommunityUsd, lastReviewedAt }: Co
           TokenBrice also sponsored $5,800 in one-time design expenses for the full website redesign and logo.
           These exceptional expenses are not included in the monthly total above.
         </p>
-        <p className="rounded-lg border border-border/60 bg-muted/25 px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
-          <a
-            href={DWELLIR_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline underline-offset-2 hover:text-foreground"
-          >
-            Dwellir
-          </a>{" "}
-          sponsors Pharos&apos;s multi-chain RPC access on its Growth plan.
-          Thank you, Dwellir.
-        </p>
         <div className="space-y-0.5 text-xs text-muted-foreground">
           <p>
             This month: {formatUsdWhole(currentCommunityUsd)} community ·{" "}
@@ -379,48 +368,85 @@ export function DonorList({ donations, lastUpdatedAt, limit = 20 }: DonorListPro
   return (
     <Card id="supporters" className="pharos-card-shell">
       <CardHeader className="space-y-1">
-        <p className="pharos-label text-muted-foreground">Supporters</p>
-        <CardTitle as="h2">Recent supporters</CardTitle>
+        <p className="pharos-label text-muted-foreground">Where it comes from</p>
+        <CardTitle as="h2">Supporters</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-2">
-        {visible.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            No community donations yet. {lastUpdatedLabel ? `Last checked ${lastUpdatedLabel}.` : ""}
-          </p>
-        ) : (
-          <ul className="space-y-1.5 text-sm">
-            {visible.map((d) => {
-              const explorerUrl = buildExplorerUrl({ chainKey: d.chain, entityType: "tx", value: d.tx_hash });
-              const displayText = d.display || formatAddress(d.from_address);
-              return (
-                <li key={`${d.chain}-${d.tx_hash}`} className="flex items-baseline justify-between gap-3">
-                  <span className="flex-1 truncate font-mono text-xs">{displayText}</span>
-                  <span className="shrink-0 text-xs text-muted-foreground">
-                    <span className="pharos-numeric">{formatUsdWhole(d.usd_at_receipt)}</span>{" "}
-                    {explorerUrl ? (
-                      <a
-                        href={explorerUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="underline underline-offset-2 hover:text-foreground"
-                      >
-                        ↗
-                      </a>
-                    ) : null}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-        {community.length > limit ? (
-          <p className="text-xs text-muted-foreground">
-            Showing most recent {limit} of {community.length} supporters.
-          </p>
-        ) : null}
-        {lastUpdatedLabel ? <p className="text-xs text-muted-foreground">Last refresh: {lastUpdatedLabel}.</p> : null}
+      <CardContent className="space-y-4">
+        <InKindSupporters />
+        <div className="space-y-2 border-t border-border/60 pt-4">
+          <p className="pharos-label">Recent donations</p>
+          {visible.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No community donations yet. {lastUpdatedLabel ? `Last checked ${lastUpdatedLabel}.` : ""}
+            </p>
+          ) : (
+            <ul className="space-y-1.5 text-sm">
+              {visible.map((d) => {
+                const explorerUrl = buildExplorerUrl({ chainKey: d.chain, entityType: "tx", value: d.tx_hash });
+                const displayText = d.display || formatAddress(d.from_address);
+                return (
+                  <li key={`${d.chain}-${d.tx_hash}`} className="flex items-baseline justify-between gap-3">
+                    <span className="flex-1 truncate font-mono text-xs">{displayText}</span>
+                    <span className="shrink-0 text-xs text-muted-foreground">
+                      <span className="pharos-numeric">{formatUsdWhole(d.usd_at_receipt)}</span>{" "}
+                      {explorerUrl ? (
+                        <a
+                          href={explorerUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="underline underline-offset-2 hover:text-foreground"
+                        >
+                          ↗
+                        </a>
+                      ) : null}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          {community.length > limit ? (
+            <p className="text-xs text-muted-foreground">
+              Showing most recent {limit} of {community.length} supporters.
+            </p>
+          ) : null}
+          {lastUpdatedLabel ? <p className="text-xs text-muted-foreground">Last refresh: {lastUpdatedLabel}.</p> : null}
+        </div>
       </CardContent>
     </Card>
+  );
+}
+
+/** Services donated in kind: a disclosure, not revenue (docs/funding-page.md#data-model). */
+function InKindSupporters() {
+  return (
+    <section aria-labelledby="in-kind-supporters" className="space-y-2.5">
+      <p id="in-kind-supporters" className="pharos-label">In-kind supporters</p>
+      <div className="flex items-center justify-between gap-3">
+        <a href={DWELLIR_URL} target="_blank" rel="noopener noreferrer" className="shrink-0 rounded-sm">
+          <Image src="/media/dwellir.svg" alt="Dwellir" width={152} height={32} unoptimized />
+        </a>
+        <span className="text-xs text-muted-foreground">Multi-chain RPC</span>
+      </div>
+      <p className="text-sm leading-relaxed">
+        Dwellir sponsors Pharos&apos;s multi-chain RPC access on its Growth plan, including archive state and wide
+        event-log windows. Thank you, Dwellir.
+      </p>
+      <p className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+        <Link href={DWELLIR_POST_HREF} className="underline underline-offset-2 hover:text-foreground">
+          Read the announcement
+        </Link>
+        <a
+          href={DWELLIR_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 underline underline-offset-2 hover:text-foreground"
+        >
+          dwellir.com
+          <ExternalLink aria-hidden="true" className="h-3 w-3" />
+        </a>
+      </p>
+    </section>
   );
 }
 
