@@ -626,6 +626,14 @@ async function tryGbpBenchmark({ signal }: { signal?: AbortSignal }) {
     : { result: null, responseDiagnostics };
 }
 
+async function tryBrlBenchmark({ signal }: { signal?: AbortSignal }) {
+  const responseDiagnostics: BenchmarkProviderAttemptDiagnostic[] = [];
+  const parsed = await tryBcbSelic(signal, diagnostic => {
+    responseDiagnostics.push({ provider: "bcb-selic", ...diagnostic });
+  });
+  return parsed ? { ...parsed, source: "bcb-selic", responseDiagnostics } : { result: null, responseDiagnostics };
+}
+
 // Descriptor order is the serialized registry/cache order. AUD intentionally fetches
 // before MXN/BRL but degrades after them; USD, credentialed MXN, and unfetched SGD
 // retain their exceptional paths.
@@ -637,7 +645,7 @@ const BENCHMARK_DESCRIPTORS: readonly BenchmarkDescriptor[] = [
   standardBenchmarkDescriptor("GBP", "gbp", 4, 4, tryGbpBenchmark, "fred-sonia-compounded-index", "gbp-sonia-compounded-index-failed"),
   standardBenchmarkDescriptor("JPY", "jpy", 5, 5, ({ signal }) => tryBojCallRate(signal), "boj-call-rate", "jpy-call-rate-failed"),
   { key: "MXN", metadataPrefix: "mxn", fetchOrder: 7, degradationOrder: 6, provider: "MXN", includeInCache: true },
-  standardBenchmarkDescriptor("BRL", "brl", 8, 7, ({ signal }) => tryBcbSelic(signal), "bcb-selic", "bcb-selic-failed"),
+  standardBenchmarkDescriptor("BRL", "brl", 8, 7, tryBrlBenchmark, "bcb-selic", "bcb-selic-failed"),
   standardBenchmarkDescriptor("AUD", "aud", 6, 8, ({ signal }) => tryRbaCashRateTarget(signal), "rba-cash-rate-target", "aud-cash-rate-failed"),
   standardBenchmarkDescriptor("CAD", "cad", 9, 9, ({ signal }) => tryBocCorra(signal), "boc-valet-v122530", "boc-corra-failed"),
   standardBenchmarkDescriptor("RUB", "rub", 10, 10, ({ signal }) => tryCbrKeyRate(signal), "cbr-key-rate", "cbr-key-rate-failed"),
@@ -941,6 +949,7 @@ export async function fetchTbillRate(
         registryCacheWrite,
         resolvedBenchmarkKeys: resolvedKeys,
         ...buildGbpResponseDiagnosticMetadata(resolvedByKey.GBP),
+        brlResponseAttempts: resolvedByKey.BRL.responseDiagnostics ?? [],
       },
     }),
   };

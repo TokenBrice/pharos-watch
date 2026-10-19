@@ -4,6 +4,7 @@ import {
   isValidBenchmarkRate,
   parseRate,
   parseSlashDmyToIso,
+  type BenchmarkResponseDiagnostic,
 } from "./shared";
 
 const BCB_SELIC_ANNUALIZATION_BUSINESS_DAYS = 252;
@@ -23,10 +24,22 @@ function annualizeDailyPercentageRate(rate: number, businessDays: number): numbe
  * BCB SGS series 11 returns SELIC over as a daily percentage, so annualize it
  * before storing the BRL benchmark alongside the other APY-compatible rates.
  */
-export function parseBcbSelicSeries(json: string): { recordDate: string; rate: number } | null {
+export function parseBcbSelicSeries(
+  json: string,
+  onUpstreamError?: (status: number) => void,
+): { recordDate: string; rate: number } | null {
   try {
-    const parsed = JSON.parse(json) as Array<{ data?: unknown; valor?: unknown }>;
-    if (!Array.isArray(parsed) || parsed.length === 0) return null;
+    const parsed: unknown = JSON.parse(json);
+    if (!Array.isArray(parsed)) {
+      if (parsed !== null && typeof parsed === "object" && "erro" in parsed &&
+        parsed.erro !== null && typeof parsed.erro === "object" && "statusCode" in parsed.erro &&
+        typeof parsed.erro.statusCode === "number" && Number.isInteger(parsed.erro.statusCode) &&
+        parsed.erro.statusCode >= 400 && parsed.erro.statusCode <= 599) {
+        onUpstreamError?.(parsed.erro.statusCode);
+      }
+      return null;
+    }
+    if (parsed.length === 0) return null;
     for (let i = parsed.length - 1; i >= 0; i--) {
       const row = parsed[i];
       const rate = parseRate(typeof row?.valor === "string" ? row.valor : null);
@@ -44,12 +57,19 @@ export function parseBcbSelicSeries(json: string): { recordDate: string; rate: n
   }
 }
 
-export async function tryBcbSelic(signal?: AbortSignal): Promise<{ rate: number; recordDate: string } | null> {
+export async function tryBcbSelic(
+  signal?: AbortSignal,
+  onDiagnostic?: (diagnostic: BenchmarkResponseDiagnostic) => void,
+): Promise<{ rate: number; recordDate: string } | null> {
+  let upstreamStatus: number | undefined;
   return fetchAndParseBenchmark({
     url: BCB_SELIC_URL,
     headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
-    parse: parseBcbSelicSeries,
+    parse: body => parseBcbSelicSeries(body, status => { upstreamStatus = status; }),
     warnLabel: "BCB SELIC",
     signal,
+    onDiagnostic: onDiagnostic ? diagnostic => onDiagnostic(
+      upstreamStatus === undefined ? diagnostic : { ...diagnostic, failure: "upstream-error", upstreamStatus },
+    ) : undefined,
   });
 }
