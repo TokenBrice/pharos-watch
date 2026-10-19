@@ -4,7 +4,7 @@ import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-sche
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { getCronSlotStartedAtForSchedule } from "@shared/lib/cron-jobs";
 import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
-import { RESERVE_RECOVERY_HEAVY_SLOT_KEYS } from "@shared/lib/scheduled-runner-registry";
+import { getReserveRecoveryConflictSlotKeys, RESERVE_RECOVERY_CONFLICT_SLOT_KEYS, SCHEDULED_SLOT_PLANS } from "@shared/lib/scheduled-runner-registry";
 import {
   getReserveProducerPriority,
   reserveRecoveryAdmissionSql,
@@ -143,14 +143,14 @@ describe("reserve recovery admission", () => {
     expect(await getReserveProducerPriority(fixture.db)).toBeNull();
   });
 
-  it.each(RESERVE_RECOVERY_HEAVY_SLOT_KEYS)("protects a live controlled heavy slot: %s", async (scheduleKey) => {
+  it.each(RESERVE_RECOVERY_CONFLICT_SLOT_KEYS)("protects a live same-role graph slot: %s", async (scheduleKey) => {
     const fixture = admittedFixture();
     fixture.sqlite.prepare(`INSERT INTO cron_slot_executions
       (slot_key, slot_started_at, state, execution_owner, execution_generation, started_at, updated_at)
       VALUES (?, ?, 'running', 'heavy', 1, ?, ?)`)
       .run(scheduleKey, fixture.now, fixture.now - 1, fixture.now);
     expect(await getReserveProducerPriority(fixture.db)).toMatchObject({
-      reason: "heavy-slot-co-tenancy", scheduleKey, condition: "heavy-slot-running",
+      reason: "same-role-slot-co-tenancy", scheduleKey, condition: "same-role-slot-running",
     });
     const admission = reserveRecoveryAdmissionSql();
     expect(fixture.sqlite.prepare(`SELECT (${admission.sql}) AS admitted`).get(...admission.binds)).toEqual({ admitted: 0 });
@@ -158,6 +158,69 @@ describe("reserve recovery admission", () => {
       .run(fixture.now - SCHEDULED_SLOT_JOB_BUDGET_MS / 1000);
     expect(await getReserveProducerPriority(fixture.db)).toBeNull();
     expect(fixture.sqlite.prepare(`SELECT (${admission.sql}) AS admitted`).get(...admission.binds)).toEqual({ admitted: 1 });
+  });
+
+  it("projects conflicts from Worker ownership, including future role migrations", () => {
+    expect(RESERVE_RECOVERY_CONFLICT_SLOT_KEYS).toEqual(["fourHourlyReserveSync"]);
+    for (const key of ["halfHourlyChartsOffset", "v9PublicationOffset"] as const) {
+      expect(getReserveRecoveryConflictSlotKeys({
+        ...SCHEDULED_SLOT_PLANS, [key]: { worker: "public" },
+      })).toEqual(["fourHourlyReserveSync", key]);
+    }
+    expect(getReserveRecoveryConflictSlotKeys({
+      ...SCHEDULED_SLOT_PLANS,
+      fourHourlyReserveSync: { worker: "heavy" },
+    })).toEqual([]);
+  });
+
+  it.each(["halfHourlyChartsOffset", "v9PublicationOffset"])(
+    "admits separate-Worker %s in preflight, checkpoint CAS and lease CAS", async (scheduleKey) => {
+      const fixture = admittedFixture();
+      fixture.sqlite.prepare(`INSERT INTO cron_slot_executions
+        (slot_key, slot_started_at, state, execution_owner, execution_generation, started_at, updated_at)
+        VALUES (?, ?, 'running', 'heavy', 1, ?, ?)`).run(scheduleKey, fixture.now, fixture.now, fixture.now);
+      expect(await getReserveProducerPriority(fixture.db)).toBeNull();
+      const admission = reserveRecoveryAdmissionSql();
+      expect(fixture.sqlite.prepare(`SELECT (${admission.sql}) AS admitted`).get(...admission.binds)).toEqual({ admitted: 1 });
+      await beginLiveReserveCheckpoint(fixture.db, { slotStartedAt: fixture.current - 14400, invocationId: "old" });
+      fixture.sqlite.prepare("UPDATE worker_scheduled_checkpoints SET state = 'ready'").run();
+      expect(await claimNextLiveReserveCheckpointRecovery(fixture.db, { owner: "new", leaseSec: 900 }))
+        .toMatchObject({ disposition: "claimed" });
+      const work = vi.fn(async () => "published");
+      expect(await runCronWithLease(fixture.db, "sync-live-reserves", work, { reserveRecoveryAdmission: true }))
+        .toMatchObject({ status: "ok", result: "published" });
+      expect(work).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it.each(["fourHourlyReserveSync", "halfHourlyChartsOffset", "v9PublicationOffset"])(
+    "applies role-aware admission at the late lease write: %s", async (scheduleKey) => {
+      const fixture = admittedFixture();
+      const db = createSqliteD1(fixture.sqlite, { onRun: (sql) => {
+        if (sql.includes("INSERT INTO cron_leases")) fixture.sqlite.prepare(`INSERT INTO cron_slot_executions
+          (slot_key, slot_started_at, state, execution_owner, execution_generation, started_at, updated_at)
+          VALUES (?, ?, 'running', 'late-slot', 1, ?, ?)`).run(scheduleKey, fixture.now, fixture.now, fixture.now);
+      } });
+      const work = vi.fn(async () => "published");
+      const result = await runCronWithLease(db, "sync-live-reserves", work, { reserveRecoveryAdmission: true });
+      expect(result.status).toBe(scheduleKey === "fourHourlyReserveSync" ? "skipped_neutral" : "ok");
+      expect(work).toHaveBeenCalledTimes(scheduleKey === "fourHourlyReserveSync" ? 0 : 1);
+    },
+  );
+
+  it("keeps the global recovery lease live across intervening minute polls", async () => {
+    const fixture = admittedFixture();
+    fixture.sqlite.prepare(`INSERT INTO cron_leases (job, lease_owner, lease_until, heartbeat_at, updated_at)
+      VALUES ('reserve-recovery', 'live-continuation', ?, ?, ?)`).run(fixture.now + 900, fixture.now, fixture.now);
+    const work = vi.fn();
+    for (const elapsed of [60, 120, 240, 300]) {
+      vi.setSystemTime((fixture.now + elapsed) * 1000);
+      expect(await runCronWithLease(fixture.db, "reserve-recovery", work)).toMatchObject({ status: "skipped_locked" });
+    }
+    expect(work).not.toHaveBeenCalled();
+    expect(fixture.sqlite.prepare("SELECT lease_owner, lease_until FROM cron_leases").get())
+      .toEqual({ lease_owner: "live-continuation", lease_until: fixture.now + 900 });
+    expect(resolveScheduledSlotPolicy("fiveMinuteReserveRecovery").hardDeadSec).toBeGreaterThan(300);
   });
 
   it("propagates failed slot reads instead of admitting work", async () => {
@@ -192,20 +255,25 @@ describe("reserve recovery admission", () => {
       .toEqual({ state: "recovering", attempt_no: checkpoint.attemptNo });
   });
 
-  it("fences a heavy-slot start between claim selection and mutation", async () => {
+  it.each(["fourHourlyReserveSync", "halfHourlyChartsOffset", "v9PublicationOffset"])(
+    "applies role-aware admission to a late slot start at checkpoint CAS: %s", async (scheduleKey) => {
     const fixture = admittedFixture();
     await beginLiveReserveCheckpoint(fixture.db, { slotStartedAt: fixture.current - 14400, invocationId: "old" });
     fixture.sqlite.prepare("UPDATE worker_scheduled_checkpoints SET state = 'ready'").run();
     const db = createSqliteD1(fixture.sqlite, { onRun: (sql) => {
       if (sql.includes("SET state = 'recovering'")) fixture.sqlite.prepare(`INSERT INTO cron_slot_executions
         (slot_key, slot_started_at, state, execution_owner, execution_generation, started_at, updated_at)
-        VALUES ('halfHourlyChartsOffset', ?, 'running', 'heavy', 1, ?, ?)`)
-        .run(fixture.now, fixture.now, fixture.now);
+        VALUES (?, ?, 'running', 'late-slot', 1, ?, ?)`)
+        .run(scheduleKey, fixture.now, fixture.now, fixture.now);
     } });
-    expect(await claimNextLiveReserveCheckpointRecovery(db, { owner: "new", leaseSec: 900 }))
-      .toMatchObject({ disposition: "priority", producerPriority: { reason: "heavy-slot-co-tenancy" } });
-    expect(fixture.sqlite.prepare("SELECT state, invocation_id FROM worker_scheduled_checkpoints").get())
-      .toEqual({ state: "ready", invocation_id: "old" });
+    const claim = await claimNextLiveReserveCheckpointRecovery(db, { owner: "new", leaseSec: 900 });
+    if (scheduleKey === "fourHourlyReserveSync") {
+      expect(claim).toMatchObject({ disposition: "priority", producerPriority: { reason: "same-role-slot-co-tenancy" } });
+      expect(fixture.sqlite.prepare("SELECT state, invocation_id FROM worker_scheduled_checkpoints").get())
+        .toEqual({ state: "ready", invocation_id: "old" });
+    } else {
+      expect(claim).toMatchObject({ disposition: "claimed" });
+    }
   });
 });
 
