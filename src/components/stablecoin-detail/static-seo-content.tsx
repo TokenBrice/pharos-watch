@@ -224,7 +224,7 @@ function describeFreezeControl(coin: StablecoinMeta): string {
     case true:
       return "issuer or admin freeze controls are recorded";
     case "possible":
-      return "admin controls such as a global pause or an upgradeable contract are recorded, but no current power to freeze or seize a specific holder's balance";
+      return "admin controls such as a global pause or an upgradeable contract are recorded, but the review found no active power to freeze or seize a specific holder's balance on material deployments";
     case "inherited":
       return "freeze exposure is inherited through upstream collateral, custody, or wrapper dependencies";
     case false:

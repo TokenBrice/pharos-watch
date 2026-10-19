@@ -77,7 +77,7 @@ function buildStatusNote(status: BlacklistabilityClientStatus, upstreamLabel: st
     case "not-freezable":
       return "Under the reviewed deployment-materiality scope, no issuer freeze, seizure, or holder blacklist path sets the verdict. Peripheral deployment controls, if any, are described in the review notes.";
     case "possible":
-      return "An admin control could restrict holders, but no one can currently freeze or seize a specific holder's balance. Typical cases are a global transfer pause, an upgradeable token contract, or a blacklist role that exists but is unassigned.";
+      return "An admin control could restrict holders, but the review found no active power to freeze or seize a specific holder's balance on its material deployments. Typical cases are a global transfer pause, an upgradeable token contract, or a blacklist role that exists but is unassigned.";
     case "inherited":
       return upstreamLabel
         ? `Freeze power sits upstream with ${upstreamLabel} rather than in this token's own contract.`
