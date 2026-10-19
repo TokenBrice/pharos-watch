@@ -77,13 +77,13 @@ export function BlacklistTrackerMethodologySection() {
               </p>
               <p>
                 Upstream applies only without direct Yes or Possible: a holder claim on an exposed declared parent,
-                full CEX reserve custody, or strictly more than half of measured reserves terminating in issuer or
+                full CEX reserve custody, or strictly more than half of measured external backing terminating in issuer or
                 custodian control. Qualifying collateral counts categorically at its full share; DAO-only collateral
                 controls do not count. Custodial fiat, bank/fund/T-bill claims and allocated physical commodities count.
                 CDP/lending books use debt-weighted exposure; reserve-backed tokens use published composition.
-                LPs split by constituent value, with self-token legs in the denominator only. Self includes the coin
-                and its own wrappers/savings shares, not different tokens from the same issuer, which count at their
-                own status. Unmeasurable reserves never establish Upstream. No means none of these tests establishes
+                Split LPs by constituent value; exclude the coin and its own wrappers/savings shares from both numerator
+                and denominator because they are not external backing. Different tokens from the same issuer count at
+                their own status. Unmeasurable reserves never establish Upstream. No means none of these tests establishes
                 exposure, not proof that unresolved reserves are free of risk.
               </p>
               <p>
