@@ -177,13 +177,15 @@ function drpcRpcUrl(slug: string, apiKey: string): string {
 
 type RegistryRpcOperator = "alchemy" | "drpc" | "public";
 
-/** Inclusive CCIP ramp-log ranges probed against the keyed endpoints 2026-10-06.
+/** Inclusive CCIP ramp-log ranges probed against the keyed endpoints.
  * Result/body limits still require the observer to subdivide dense pages. */
 const ALCHEMY_LOG_BLOCK_SPANS: Readonly<Record<string, number>> = {
   "eth-mainnet": 10_000,
   "arb-mainnet": 2_000_000,
   "base-mainnet": 100_000,
   "opt-mainnet": 2_000_000,
+  // Historical ramp pages re-probed 2026-10-19; state retention is unchanged.
+  "monad-mainnet": 100_000,
 };
 
 /** Registry membership is not proof of arbitrary state or log retention. */
@@ -347,7 +349,7 @@ export function buildChainRpcs(
         url: buildAlchemyRpcUrl(slug, alchemyApiKey),
         operator: "alchemy", keyed: true, position: "registry",
         stateHistory: "archive", logsHistory: "full",
-        maxLogBlockSpan: 1000, noBatch: false, verifiedAt: "2026-10-05",
+        maxLogBlockSpan: ALCHEMY_LOG_BLOCK_SPANS[slug] ?? 1000, noBatch: false, verifiedAt: "2026-10-05",
       };
       const existing = map.get(chainId);
       map.set(chainId, rpcConfig(chainId, "evm", [

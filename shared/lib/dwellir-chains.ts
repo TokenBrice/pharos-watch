@@ -46,7 +46,8 @@ export const DWELLIR_CHAINS: readonly DwellirChainEntry[] = [
   // Plasma archive history is currently observed; the vendor does not yet guarantee it.
   { chainId: "plasma", host: "api-plasma-mainnet", evmChainId: 9745, stateHistory: "archive", logsHistory: "full", maxLogBlockSpan: 10_000, verifiedAt: "2026-10-11" },
   // Monad's ~5-day retention is a moving estimate, not a guaranteed history floor.
-  { chainId: "monad", host: "api-monad-mainnet-full", evmChainId: 143, stateHistory: "recent", logsHistory: { retainedBlocks: 1_400_000 }, maxLogBlockSpan: 1_000, verifiedAt: "2026-10-11" },
+  // Retained log span re-probed 2026-10-19; larger ranges explicitly refuse at 10k.
+  { chainId: "monad", host: "api-monad-mainnet-full", evmChainId: 143, stateHistory: "recent", logsHistory: { retainedBlocks: 1_400_000 }, maxLogBlockSpan: 10_000, verifiedAt: "2026-10-11" },
   { chainId: "mantle", host: "api-mantle-mainnet", evmChainId: 5000, stateHistory: "archive", logsHistory: "full", maxLogBlockSpan: 10_000, verifiedAt: "2026-10-11" },
   // Vendor: 5,000-log result cap; 100 blocks without an address or topic filter.
   { chainId: "sonic", host: "api-sonic-mainnet-archive", evmChainId: 146, stateHistory: "archive", logsHistory: "full", maxLogBlockSpan: 10_000, verifiedAt: "2026-10-11" },

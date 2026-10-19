@@ -277,8 +277,8 @@ describe("evm-rpc helpers", () => {
     const chainRpcs = buildChainRpcs("alchemy-key", undefined, { dwellirApiKey: "dwellir-key" });
     expect(usableCcipRpcEndpoints("bsc", chainRpcs, { kind: "logs", fromBlock: 1, toBlock: 10 })[0]?.operator).toBe("dwellir");
     expect(usableCcipRpcEndpoints("monad", chainRpcs, { kind: "logs", fromBlock: 1, toBlock: 10, observedHeadBlock: 2_000_000 })[0]?.operator).toBe("alchemy");
-    expect(usableCcipRpcEndpoints("monad", chainRpcs, { kind: "logs", fromBlock: 1_999_001, toBlock: 2_000_000, observedHeadBlock: 2_000_000 })[0]?.operator).toBe("dwellir");
-    expect(usableCcipRpcEndpoints("monad", chainRpcs, { kind: "logs", fromBlock: 1_999_000, toBlock: 2_000_000, observedHeadBlock: 2_000_000 })[0]?.operator).not.toBe("dwellir");
+    expect(usableCcipRpcEndpoints("monad", chainRpcs, { kind: "logs", fromBlock: 1_990_001, toBlock: 2_000_000, observedHeadBlock: 2_000_000 })[0]?.operator).toBe("dwellir");
+    expect(usableCcipRpcEndpoints("monad", chainRpcs, { kind: "logs", fromBlock: 1_990_000, toBlock: 2_000_000, observedHeadBlock: 2_000_000 })[0]?.operator).not.toBe("dwellir");
     expect(usableCcipRpcEndpoints("zksync", chainRpcs, { kind: "logs", fromBlock: 1, toBlock: 10 }).some(endpoint => endpoint.operator === "dwellir")).toBe(false);
   });
 
@@ -939,6 +939,36 @@ describe("evm-rpc helpers", () => {
       extraRpcUrls: ["https://primary.example", "https://fallback.example"],
     })).resolves.toBeNull();
     expect(fetchWithRetryMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("fails over a well-formed stale finalized head without changing the requested tag", async () => {
+    fetchWithRetryMock
+      .mockResolvedValueOnce(rpcResponse({
+        result: { number: "0x10", timestamp: "0x63", hash: `0x${"a".repeat(64)}` },
+      }))
+      .mockResolvedValueOnce(rpcResponse({
+        result: { number: "0x11", timestamp: "0x64", hash: `0x${"b".repeat(64)}` },
+      }));
+    await expect(fetchEvmBlockHeader("rootstock", "finalized", {
+      extraRpcUrls: ["https://primary.example", "https://fallback.example"],
+      minTimestampSec: 100,
+    })).resolves.toEqual({ number: 17, timestamp: 100, hash: `0x${"b".repeat(64)}` });
+    expect(attemptedUrls()).toEqual(["https://primary.example", "https://fallback.example"]);
+    for (const call of fetchWithRetryMock.mock.calls) {
+      expect(JSON.parse(String(call[1].body)).params).toEqual(["finalized", false]);
+    }
+  });
+
+  it("withholds finalized evidence when every endpoint returns a stale head", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    fetchWithRetryMock.mockResolvedValue(rpcResponse({
+      result: { number: "0x10", timestamp: "0x63", hash: `0x${"a".repeat(64)}` },
+    }));
+    await expect(fetchEvmBlockHeader("rootstock", "finalized", {
+      extraRpcUrls: ["https://primary.example", "https://fallback.example"],
+      minTimestampSec: 100,
+    })).resolves.toBeNull();
+    expect(attemptedUrls()).toEqual(["https://primary.example", "https://fallback.example"]);
   });
 
   it.each(["0x20000000000000", "not-hex"])(

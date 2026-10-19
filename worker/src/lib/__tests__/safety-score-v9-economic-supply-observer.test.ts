@@ -408,6 +408,16 @@ describe("reviewed economic supply observation", () => {
     expect(result.attribution.unattributedSupplyUsd).toBe(1);
     expect(result.attribution.inFlight[0]).toMatchObject({ amount: "1000000", anchor: "100", anchorHash: HASH });
   });
+  it("requires mandatory finalized heads to remain fresh through the admitted capture window", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(CLOCK * 1000);
+    const f = pendingFixture();
+    const result = await observeReviewedEconomicDeploymentPartitionAttempt({
+      ...f, assetDeadlineMs: CLOCK * 1000 + 30_000,
+    });
+    expect(result.status).toBe("accepted");
+    expect(evmRpc.fetchEvmBlockHeader).toHaveBeenCalledWith("ethereum", "finalized",
+      expect.objectContaining({ minTimestampSec: CLOCK + 30 - 1800 }));
+  });
   it("propagates only the existing finalized holding pin and original economic clock", async () => {
     const f = pendingFixture();
     expect((await f.run()).status).toBe("accepted");
