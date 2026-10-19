@@ -135,7 +135,7 @@ export interface RecentFinalizedRpcPin {
 }
 
 export type EvmRpcReadRequirement =
-  | { kind: "current-state" }
+  | { kind: "current-state"; finalizedTag?: boolean }
   | { kind: "recent-pinned-state"; pin: RecentFinalizedRpcPin; hashPinned: boolean }
   | { kind: "historical-state"; hashPinned: boolean }
   | { kind: "headers-receipts"; blockNumber?: number; finalizedTag?: boolean; observedHeadBlock?: number }
@@ -315,7 +315,7 @@ function demoteFailedDwellirAttempt(
 /** Recent state is admitted only for the exact authenticated number/hash. */
 function stateReadRequirement(selector: unknown, options?: EvmRpcOptions): EvmRpcReadRequirement {
   if (selector === "latest" || selector === "safe" || selector === "finalized" || selector === "pending") {
-    return { kind: "current-state" };
+    return { kind: "current-state", finalizedTag: selector === "finalized" };
   }
   const pin = options?.recentStatePin;
   const hashPinned = typeof selector === "object" && selector !== null && "blockHash" in selector &&
@@ -370,6 +370,7 @@ function validRecentPin(pin: RecentFinalizedRpcPin, chainId?: string): boolean {
 
 function supportsRead(endpoint: RpcEndpoint, requirement: EvmRpcReadRequirement, chainId?: string): boolean {
   if (endpoint.operator === "dwellir" && (endpoint.routingDisabled || requirement.kind === "unsupported")) return false;
+  if (requirement.kind === "current-state" && requirement.finalizedTag && endpoint.finalizedTagUnsupported) return false;
   if (requirement.kind === "historical-state" || requirement.kind === "recent-pinned-state") {
     // The reviewed HyperEVM Alchemy numeric-state mispin cannot be cured by retrying it.
     if (chainId === "hyperevm" && endpoint.operator === "alchemy" && !requirement.hashPinned) return false;
