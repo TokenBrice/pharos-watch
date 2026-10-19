@@ -10,7 +10,8 @@ export interface BenchmarkResponseDiagnostic {
   bodyBytes: number;
   parsed: boolean;
   recordDate: string | null;
-  failure: "transport-failed" | "http-status" | "empty-body" | "parse-failed" | "upstream-error" | null;
+  failure: "transport-failed" | "http-status" | "empty-body" | "parse-failed" | "upstream-error"
+    | "html-body" | "stale-record" | "future-record" | null;
   upstreamStatus?: number;
 }
 export interface BenchmarkProviderAttemptDiagnostic extends BenchmarkResponseDiagnostic {
@@ -123,6 +124,7 @@ export async function fetchAndParseBenchmark<T>({
   method = "GET",
   body,
   retries = BENCHMARK_FETCH_MAX_RETRIES,
+  maxResponseBytes,
   parse,
   warnLabel,
   signal,
@@ -133,6 +135,7 @@ export async function fetchAndParseBenchmark<T>({
   method?: string;
   body?: BodyInit | null;
   retries?: number;
+  maxResponseBytes?: number;
   parse: (body: string) => T | null;
   warnLabel: string;
   signal?: AbortSignal;
@@ -146,6 +149,7 @@ export async function fetchAndParseBenchmark<T>({
       signal,
     }, retries, {
       timeoutMs: BENCHMARK_FETCH_TIMEOUT_MS,
+      maxResponseBytes,
       returnFinalResponse: onDiagnostic != null,
     });
 
@@ -162,7 +166,7 @@ export async function fetchAndParseBenchmark<T>({
     }
 
     const bodyBytes = new TextEncoder().encode(result.body).length;
-    const contentType = result.response.headers.get("Content-Type");
+    const contentType = result.response.headers.get("Content-Type")?.split(";")[0].trim().slice(0, 100) ?? null;
     if (!result.response.ok) {
       onDiagnostic?.({
         status: result.response.status,

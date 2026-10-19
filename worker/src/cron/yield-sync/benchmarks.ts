@@ -80,7 +80,7 @@ const BENCHMARK_META_BY_KEY: Record<YieldBenchmarkKey, { label: string; currency
     isProxy: false,
   },
   BRL: {
-    // BCB SGS series 11 — SELIC over daily rate, annualized over 252 business days.
+    // Effective SELIC over: SGS11 daily compounded over 252 days, or SGS1178 already annualized.
     label: "BRL SELIC over",
     currency: "BRL",
     isProxy: false,
