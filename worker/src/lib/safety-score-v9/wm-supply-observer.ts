@@ -187,7 +187,7 @@ export async function observeWmReviewedDeploymentUnitPartitionAttempt(
   const dependencies = { ...DEFAULT_DEPENDENCIES, ...dependencyOverrides };
   const evmObservations = new Map<string, ReviewedDeploymentObservationResult>();
   const solanaObservations = new Map<string, ReviewedDeploymentSupplyObservation | null>();
-  let repairWindow: { earliestTimestamp: number; latestTimestamp: number } | undefined;
+  let repairWindow: { earliestTimestamp: number; latestTimestamp: number } | undefined = undefined;
   const observationInput = {
     assetId: "wm-m0",
     aggregateSupplyUsd: input.aggregateSupplyUsd,
