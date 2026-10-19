@@ -283,6 +283,8 @@ Post-merge QuoterV2 capture verifies actual factory/getPool binding, currencies,
 
 Exact V4 read failures expose bounded `uniswap-v4-exact-source-failed` chain/reason/timeout/batch diagnostics, not authenticated URLs/exception text. Repairing identity cannot replace proof/maturity or waive admission/version policy.
 
+Polygon's exact V4 source uses aliased `pool(id: ...)` primary-key reads rather than the indexer's slow `id_in` filter. The existing serialized POST batch bound and chain deadline remain unchanged. Every requested alias must be present: explicit null means an answered missing pool, while omitted/malformed/wrong-ID aliases fail the source. PoolKey verification and unresolved-pool exclusion are unchanged; broad inventory cannot rescue an exact read failure.
+
 #### Curve capture and measured profiles
 
 Reviewed deployment policies own exact pool/factory/index/runtime pins; this section owns proof differences, not duplicate addresses.

@@ -196,7 +196,7 @@ describe("subgraph source families", () => {
     expect(result.failedChains).toEqual([]);
   });
 
-  it("consumes each exact response before requesting the next bounded batch", async () => {
+  it.each(["ethereum", "polygon"])("consumes each %s exact response before requesting the next bounded batch", async (chain) => {
     const rows = Array.from({ length: 101 }, (_, index) => {
       const feePips = index + 100;
       return { ...THUSD_POOL, feeTier: String(feePips),
@@ -213,11 +213,20 @@ describe("subgraph source families", () => {
     vi.stubGlobal("fetch", vi.fn(async (_url: string, init: RequestInit) => {
       const query = (JSON.parse(init.body as string) as { query: string }).query;
       const match = query.match(/id_in: (\[[^\]]+\])/);
-      if (!match) return new Response(JSON.stringify({ data: { pools: [] } }));
-      const ids = JSON.parse(match[1]!) as string[];
+      const aliases = [...query.matchAll(/pool\d+: pool\(id: "(0x[a-f0-9]{64})"\)/g)];
+      if (!match && aliases.length === 0) return new Response(JSON.stringify({ data: { pools: [] } }));
+      const ids = match ? JSON.parse(match[1]!) as string[] : aliases.map((alias) => alias[1]!);
+      if (chain === "polygon") {
+        expect(query).not.toContain("id_in");
+        expect(query).toContain("_meta { block { number hash } }");
+        expect(aliases.length).toBeLessThanOrEqual(100);
+      }
       batches.push(ids.length);
       if (batches.length > 1) expect(firstBodyConsumed).toBe(true);
-      const payload = JSON.stringify({ data: { pools: rows.filter((row) => ids.includes(row.id)) } });
+      const data = chain === "polygon"
+        ? Object.fromEntries(ids.map((id, index) => [`pool${index}`, rows.find((row) => row.id === id)]))
+        : { pools: rows.filter((row) => ids.includes(row.id)) };
+      const payload = JSON.stringify({ data });
       return new Response(new ReadableStream({
         async start(controller) {
           if (batches.length === 1) {
@@ -230,7 +239,7 @@ describe("subgraph source families", () => {
         },
       }));
     }));
-    const pending = fetchUniswapV4Data("graph-key", new Map([["ethereum", rows.map((row) => row.id)]]));
+    const pending = fetchUniswapV4Data("graph-key", new Map([[chain, rows.map((row) => row.id)]]));
     void pending.then(
       () => bodyStarted.reject(new Error("Exact body did not start")),
       (error: unknown) => bodyStarted.reject(error),
@@ -245,6 +254,42 @@ describe("subgraph source families", () => {
     expect(batches).toEqual([100, 1]);
     expect([...result.uniswapV4ExecutionCandidates.values()].flat().map((candidate) => candidate.poolId))
       .toEqual(rows.map((row) => row.id));
+  });
+
+  it.each([
+    { name: "explicit null", aliases: { pool0: null }, failed: false, candidates: 0 },
+    { name: "valid pool", aliases: { pool0: THUSD_POOL }, failed: false, candidates: 1 },
+    { name: "omitted alias", aliases: {}, failed: true, candidates: 0 },
+    { name: "malformed alias", aliases: { pool0: "unavailable" }, failed: true, candidates: 0 },
+    { name: "wrong identity", aliases: { pool0: { ...THUSD_POOL, id: `0x${"a".repeat(64)}` } }, failed: true, candidates: 0 },
+  ])("distinguishes Polygon exact $name from a failed read", async ({ aliases, failed, candidates }) => {
+    mockFetch([{
+      match: "gateway.thegraph.com/api/graph-key/subgraphs/id/",
+      respond: async (request) => {
+        const { query } = await request.json() as { query: string };
+        return { body: { data: query.includes("pool0: pool(") ? aliases : { pools: [] } } };
+      },
+    }], { requireMatch: true });
+    const result = await fetchUniswapV4Data("graph-key", new Map([["polygon", [THUSD_POOL.id]]]));
+    expect(result.failedChains).toEqual(failed ? ["polygon"] : []);
+    if (failed) expect(result.failedChainReasons.polygon).toBe("malformed-response");
+    expect([...result.uniswapV4ExecutionCandidates.values()].flat()).toHaveLength(candidates);
+  });
+
+  it("rejects Polygon aliased GraphQL failures instead of treating null as verified absence", async () => {
+    mockFetch([{
+      match: "gateway.thegraph.com/api/graph-key/subgraphs/id/",
+      respond: async (request) => {
+        const { query } = await request.json() as { query: string };
+        return { body: query.includes("pool0: pool(")
+          ? { data: { pool0: null }, errors: [{ message: "Exact lookup unavailable" }] }
+          : { data: { pools: [] } } };
+      },
+    }], { requireMatch: true });
+    const result = await fetchUniswapV4Data("graph-key", new Map([["polygon", [THUSD_POOL.id]]]));
+    expect(result.failedChains).toEqual(["polygon"]);
+    expect(result.failedChainReasons.polygon).toBe("graphql");
+    expect(result.uniswapV4ExecutionCandidates.size).toBe(0);
   });
 
   it("names a failed exact identity source without accepting a broad copy", async () => {

@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { canonicalEvmAddress } from "@shared/lib/evm-address";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
@@ -56,18 +57,19 @@ type UniV3MessariSubgraphPool = {
   totalValueLockedUSD: string;
 };
 
-type UniswapV4SubgraphPool = {
-  id: string;
-  token0: { id: string; symbol: string; decimals: string };
-  token1: { id: string; symbol: string; decimals: string };
-  feeTier: string | number;
-  tickSpacing: string | number;
-  hooks: string;
-  liquidity: string;
-  totalValueLockedUSD: string;
-  token0Price: string;
-  token1Price: string;
-};
+const UniswapV4SubgraphPoolSchema = z.object({
+  id: z.string(),
+  token0: z.object({ id: z.string(), symbol: z.string(), decimals: z.string() }),
+  token1: z.object({ id: z.string(), symbol: z.string(), decimals: z.string() }),
+  feeTier: z.union([z.string(), z.number()]),
+  tickSpacing: z.union([z.string(), z.number()]),
+  hooks: z.string(),
+  liquidity: z.string(),
+  totalValueLockedUSD: z.string(),
+  token0Price: z.string(),
+  token1Price: z.string(),
+});
+type UniswapV4SubgraphPool = z.infer<typeof UniswapV4SubgraphPoolSchema>;
 
 const UNIV3_EXECUTION_ONLY_CHAINS = new Set(["bsc"]);
 const UNIV3_MAX_ABS_TICK = 887_272;
@@ -431,8 +433,29 @@ export async function fetchUniswapV4Data(
         chain,
         signal: combinedSignal,
         buildQuery: () => buildUniswapV4ExactPoolQuery(batch, chain),
-        extractEntities: (data) =>
-          (data as { pools?: UniswapV4SubgraphPool[] } | undefined)?.pools,
+        extractEntities: (data) => {
+          if (chain !== "polygon") {
+            if (!data || typeof data !== "object" || !("pools" in data)) return undefined;
+            const parsed = z.array(UniswapV4SubgraphPoolSchema).safeParse(data.pools);
+            return parsed.success ? parsed.data : undefined;
+          }
+          if (!data || typeof data !== "object" || Array.isArray(data)) return undefined;
+          const aliases = z.record(z.string(), z.unknown()).safeParse(data);
+          if (!aliases.success) return undefined;
+          const pools: UniswapV4SubgraphPool[] = [];
+          for (let index = 0; index < batch.length; index++) {
+            const alias = `pool${index}`;
+            // An answered null is a missing pool; an omitted alias is not a
+            // successful empty read. Never salvage a malformed batch as absent.
+            if (!Object.prototype.hasOwnProperty.call(aliases.data, alias)) return undefined;
+            const pool = aliases.data[alias];
+            if (pool === null) continue;
+            const parsed = UniswapV4SubgraphPoolSchema.safeParse(pool);
+            if (!parsed.success || parsed.data.id !== batch[index]) return undefined;
+            pools.push(parsed.data);
+          }
+          return pools;
+        },
         mapEntity: (pool) => {
           const id = typeof pool?.id === "string" ? pool.id.trim().toLowerCase() : "";
           if (!batchIds.has(id) || conflicted.has(id)) return [];
