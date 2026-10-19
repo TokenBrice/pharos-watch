@@ -414,13 +414,13 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
       </nav> : null}
 
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-border/50 pt-3 text-xs text-muted-foreground">
-        <Link
+        {hasWorkbench ? <Link
           href={workbenchLink.href}
           className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm font-medium underline-offset-4 transition-colors hover:text-foreground hover:underline"
         >
           {workbenchLink.label}
           <ArrowRight aria-hidden="true" className="h-3.5 w-3.5" />
-        </Link>
+        </Link> : null}
         <EvidenceFooter topic="pys" className="border-t-0 pt-0" />
       </div>
     </YieldDetailSectionFrame>

@@ -527,7 +527,7 @@ export function ContagionGraphSvg({
     </div>
     <svg
       viewBox={viewBox}
-      className={fillHeight ? "block aspect-[4/3] w-full lg:h-full" : "block aspect-[4/3] w-full"}
+      className={fillHeight ? "block aspect-[4/3] max-h-[28rem] w-full lg:h-full" : "block aspect-[4/3] w-full"}
       style={{ cursor: dragId ? "grabbing" : "default", touchAction: "none", aspectRatio: `${WIDTH} / ${HEIGHT}` }}
       onPointerDown={event => {
         if ((event.target as Element).closest("[data-node-id]")) return;
