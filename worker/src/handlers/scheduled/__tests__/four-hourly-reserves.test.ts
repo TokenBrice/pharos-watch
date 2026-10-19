@@ -141,6 +141,23 @@ describe("runFourHourlyReserveSyncSlot", () => {
     return buildRuntime(recoveryCheckpoint({ "sync-live-reserves": "completed" }));
   }
 
+  it.each([[900_000, 300_000], [200_000, 165_000], [35_000, 1]])(
+    "clips continuation plus finalization to the inherited %sms allowance", async (remainingMs, expectedRunBudgetMs) => {
+      const initial = buildRuntime(recoveryCheckpoint());
+      const runtime = { ...initial, deadline: { ...initial.deadline, remainingMs: () => remainingMs } };
+      await runFourHourlyReserveSyncSlot(runtime);
+      expect(syncLiveReserves).toHaveBeenCalledWith(
+        runtime.db, expect.any(AbortSignal), expect.anything(), expect.any(Function),
+        expect.objectContaining({
+          runBudgetMs: expectedRunBudgetMs, maxCoinsPerSlice: 125,
+          adapterTimeoutMs: 20_000, d1FinalizeTimeoutMs: 30_000, finalizationMarginMs: 5_000,
+        }),
+        expect.anything(),
+      );
+      expect(syncRedemptionBackstops).not.toHaveBeenCalled();
+    },
+  );
+
   it("defers a direct checkpoint replay beside a same-role graph slot", async () => {
     vi.mocked(getReserveProducerPriority).mockResolvedValue({
       reason: "same-role-slot-co-tenancy", scheduleKey: "fourHourlyReserveSync",
