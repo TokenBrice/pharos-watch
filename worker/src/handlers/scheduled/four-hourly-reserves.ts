@@ -28,9 +28,9 @@ import {
   loadLiveReserveCheckpoint,
   releaseUnstartedLiveReserveRecoveryClaim,
   setLiveReserveCheckpointChildDisposition,
-  type ScheduledCheckpointIdentity,
   type ScheduledRecoveryCheckpoint,
 } from "../../lib/scheduled-recovery-checkpoint";
+import type { ScheduledCheckpointIdentity } from "../../lib/scheduled-checkpoint-primitives";
 import { createLeaseOwner } from "../../lib/cron-lease-primitives";
 import { getReserveProducerPriority } from "../../lib/reserve-producer-priority";
 import { LIVE_RESERVE_CONTINUATION_BUDGETS, resolveLiveReserveSyncBudgetConfig } from "../../cron/sync-live-reserves-config";

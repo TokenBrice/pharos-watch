@@ -10,7 +10,7 @@ import { shouldAttemptFetch } from "../lib/circuit-breaker";
 import { hasDegradingWarnings, hasFatalWarnings, validateAdapterOutput } from "./reserve-adapters/validate";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { throwIfAborted } from "../lib/abort";
-import type { ScheduledCheckpointIdentity } from "../lib/scheduled-recovery-checkpoint";
+import type { ScheduledCheckpointIdentity } from "../lib/scheduled-checkpoint-primitives";
 import {
   buildReserveSyncStateRecord,
   breakerKeyForConfig,

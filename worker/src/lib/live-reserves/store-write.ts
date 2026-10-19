@@ -15,6 +15,10 @@ import { runWithOverloadRetry } from "../d1-overload-retry";
 import { throwIfAborted } from "../abort";
 import { sha256Hex } from "../hash";
 import {
+  buildLiveReserveCheckpointItemStartedStatement,
+  ScheduledCheckpointOwnershipLostError,
+} from "../scheduled-checkpoint-primitives";
+import {
   LIVE_RESERVE_HISTORY_RETENTION_SEC,
   type LiveReserveHistoryPruneResult,
   type ReserveCompositionRecord,
@@ -67,15 +71,11 @@ export async function beginReserveSyncAttempt(
   const config = WORKER_TRACKED_META_BY_ID.get(record.stablecoinId)?.liveReservesConfig;
   const persisted = { ...record, configFingerprint: record.configFingerprint ?? (config ? computeLiveReserveConfigFingerprint(config) : null) };
   if (record.checkpointProgress && !record.checkpoint) throw new Error("Reserve checkpoint progress requires an owner");
-  // Keep scheduler/dispatch imports off reserve read-only consumers' eager graph.
-  const checkpointWriter = record.checkpointProgress
-    ? await import("../scheduled-recovery-checkpoint")
-    : null;
   await runWithOverloadRetry(async () => {
     if (record.deadlineMs != null && Date.now() >= record.deadlineMs) throw new Error("Reserve attempt start deadline expired");
-    if (record.checkpoint && record.checkpointProgress && checkpointWriter) {
+    if (record.checkpoint && record.checkpointProgress) {
       const [checkpointResult, beginResult] = await db.batch([
-        checkpointWriter.buildLiveReserveCheckpointItemStartedStatement(db, record.checkpoint, {
+        buildLiveReserveCheckpointItemStartedStatement(db, record.checkpoint, {
           ...record.checkpointProgress,
           itemKey: record.stablecoinId,
           domainAttemptId: record.attemptId,
@@ -85,7 +85,7 @@ export async function beginReserveSyncAttempt(
         buildReserveSyncAttemptStartStatement(db, persisted),
       ]);
       if ((checkpointResult.meta.changes ?? 0) !== 1) {
-        throw new checkpointWriter.ScheduledCheckpointOwnershipLostError(record.checkpoint);
+        throw new ScheduledCheckpointOwnershipLostError(record.checkpoint);
       }
       if ((beginResult.meta.changes ?? 0) !== 1) throw new Error("Reserve attempt start lost checkpoint ownership or deadline");
     } else {

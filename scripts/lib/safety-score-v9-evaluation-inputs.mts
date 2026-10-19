@@ -307,6 +307,7 @@ export const V9_SCORE_EVALUATOR_SOURCE_PATHS = [
   "worker/src/lib/safety-score-v9/supply-attribution.ts",
   "worker/src/lib/safety-score-v9/transfer-materiality.ts",
   "worker/src/lib/safety-score-v9/xaut-supply-attribution-contract.ts",
+  "worker/src/lib/scheduled-checkpoint-primitives.ts",
   "worker/src/lib/sensitive-metadata.ts",
   "worker/src/lib/structured-log.ts"
 ] as const;

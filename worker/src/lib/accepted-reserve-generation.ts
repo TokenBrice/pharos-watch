@@ -12,7 +12,7 @@ import type { ReserveSnapshotMetadataRecord } from "./live-reserves/store-shared
 import { assessReserveSnapshotFreshness, evaluateLiveReserveAdmission, hasScoringEligibleLiveReserveFreshness } from "./live-reserves/store-snapshot-state";
 import { parseSnapshotMetadata, parseWarningsStrict } from "./live-reserves/store-row-decoding";
 import { decodeLiveReserveRedemptionTelemetry, LiveReserveDiagnosticsSchema } from "@shared/types/live-reserves";
-import type { ScheduledCheckpointIdentity } from "./scheduled-recovery-checkpoint";
+import type { ScheduledCheckpointIdentity } from "./scheduled-checkpoint-primitives";
 import type { CronResult } from "./cron-logger";
 import { evaluateRedemptionCapacityEvidenceAdmission, readRedemptionBackstopLiveMetadata } from "./redemption-backstop/live-metadata";
 

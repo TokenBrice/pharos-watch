@@ -14,9 +14,9 @@ import {
   prepareLiveReserveCheckpointRecoveryForSlot,
   retireSupersededLiveReserveCheckpoints,
   releaseUnstartedLiveReserveRecoveryClaim,
-  ScheduledCheckpointOwnershipLostError,
   setLiveReserveCheckpointChildDisposition,
 } from "../scheduled-recovery-checkpoint";
+import { ScheduledCheckpointOwnershipLostError } from "../scheduled-checkpoint-primitives";
 import { LIVE_RESERVE_QUEUE_HASH } from "../../cron/sync-live-reserves-shared";
 
 const CHILD_JOBS = [

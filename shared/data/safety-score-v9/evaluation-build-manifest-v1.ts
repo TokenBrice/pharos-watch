@@ -1074,7 +1074,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/live-reserves/store-shared.ts",
-      "sha256": "e1207facada541dd2737abdefef11cc72a6624af328a8b7f2e94eb4c44e2d5a3"
+      "sha256": "f2770aaa1e533ca18b230ca9cc1ba8e55d87a7c32a550da5e49f7fcda8a5a3b8"
     },
     {
       "path": "worker/src/lib/live-reserves/store-snapshot-state.ts",
@@ -1086,7 +1086,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/live-reserves/store-write.ts",
-      "sha256": "25b21d7856206dd60167a11913a48ab6d01586a82ec3137bf7d660c10d7354b8"
+      "sha256": "2bbe64901eba96f54481475f6c306327464f76fe9d995006638c03f410b212f0"
     },
     {
       "path": "worker/src/lib/live-reserves/store.ts",
@@ -1281,6 +1281,10 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "557bb25bd8a7d366a53cc73a21a027cccab066f4f141caf1bcedcd182879bf20"
     },
     {
+      "path": "worker/src/lib/scheduled-checkpoint-primitives.ts",
+      "sha256": "b7d461687b0a001418090aca47b7e835bc46be52d7caa70feb15d3eba37f1052"
+    },
+    {
       "path": "worker/src/lib/sensitive-metadata.ts",
       "sha256": "7c659b57326b702f7004824f0592f8bd7d5be50fab887e787f7aec3ce4287b35"
     },
@@ -1303,7 +1307,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-10-15-block-26196659-shock-coverage.json.gz"
     }
   ],
-  "digest": "7ccfd6bef4b33e74b2da9deee8bfe6fa870367607598d8929adc4551808931e2"
+  "digest": "c5df8825941e359e72e4ccb6b786e9073bd26f53ad0e650ae6d079bc71764724"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

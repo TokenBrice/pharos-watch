@@ -7,7 +7,7 @@ import {
   type MockD1Database,
   type MockTableConfig,
 } from "@shared/test-utils/mock-d1";
-import type { ScheduledCheckpointIdentity } from "../../lib/scheduled-recovery-checkpoint";
+import type { ScheduledCheckpointIdentity } from "../../lib/scheduled-checkpoint-primitives";
 
 export const DEFAULT_LIVE_RESERVE_D1_TABLES: MockTableConfig[] = [
   { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },

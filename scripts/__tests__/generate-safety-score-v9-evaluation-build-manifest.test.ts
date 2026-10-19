@@ -164,6 +164,15 @@ describe("Safety Score v9 evaluation-build manifest", () => {
     expect(V9_SCORE_INPUT_DATA_PATHS).toContain("shared/data/safety-score-v9/mechanism-review-overlays-v1.json");
     expect(paths).not.toContain("scripts/build-data/generate-worker-stablecoin-catalog.ts");
     expect(paths).not.toContain("shared/lib/__tests__/safety-score-v9-matched-invariants.test-support.ts");
+    expect(paths).toContain("worker/src/lib/scheduled-checkpoint-primitives.ts");
+    for (const path of [
+      "worker/src/lib/scheduled-recovery-checkpoint.ts",
+      "worker/src/lib/scheduled-slot-reconciliation.ts",
+      "worker/src/lib/cron-logger.ts",
+      "shared/lib/scheduled-runner-registry.ts",
+    ]) {
+      expect(paths).not.toContain(path);
+    }
     expect(buildV9EvaluationBuildManifest(root)).toEqual(buildV9EvaluationBuildManifest(root));
   });
 
