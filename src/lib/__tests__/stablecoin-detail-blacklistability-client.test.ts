@@ -82,6 +82,7 @@ describe("projectBlacklistabilityClientSummary", () => {
       new Map([["usdc-circle", { id: "usdc-circle", name: "USD Coin" } as unknown as StablecoinMeta]]),
     );
     expect(summary!.status).toBe("inherited");
+    expect(summary!.statusLabel).toBe("Upstream");
     expect(summary!.statusToneClass).toContain("blue");
     expect(summary!.upstreamLabel).toBe("USD Coin");
     expect(summary!.statusNote).toContain("USD Coin");

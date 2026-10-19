@@ -136,7 +136,7 @@ function buildPowerStations(summary: BlacklistabilityClientSummary): Station[] {
       const power: Station = {
         key: "power",
         label: "Power",
-        chips: [{ key: "power", content: "Inherited", icon: Snowflake }],
+        chips: [{ key: "power", content: summary.statusLabel, icon: Snowflake }],
         spoken: summary.upstreamLabel
           ? `Freeze power: inherited from ${summary.upstreamLabel}`
           : "Freeze power: inherited from upstream assets",

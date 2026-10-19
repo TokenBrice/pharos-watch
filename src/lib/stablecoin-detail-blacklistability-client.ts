@@ -36,7 +36,7 @@ const STATUS_LABELS: Record<BlacklistabilityClientStatus, string> = {
   freezable: "Freezable",
   "not-freezable": "Not freezable",
   possible: "Possible",
-  inherited: "Inherited",
+  inherited: "Upstream",
 };
 
 const STATUS_TONES: Record<BlacklistabilityClientStatus, SeverityTone> = {

@@ -121,18 +121,18 @@ describe("FreezeSeizureModule", () => {
 
   it("feeds an inherited power from the named upstream asset", () => {
     renderModule({
-      summary: { ...SUMMARY, status: "inherited", statusLabel: "Inherited", upstreamLabel: "USD Coin" },
+      summary: { ...SUMMARY, status: "inherited", statusLabel: "Upstream", upstreamLabel: "USD Coin" },
     });
     const text = rail().textContent ?? "";
     expect(text).toContain("USD Coin");
-    expect(text.indexOf("USD Coin")).toBeLessThan(text.indexOf("Inherited"));
+    expect(text.indexOf("USD Coin")).toBeLessThan(text.lastIndexOf("Upstream"));
     expect(rail().getAttribute("aria-label")).toContain("USD Coin");
   });
 
   it("keeps an unnamed inherited power to one station rather than inventing an upstream", () => {
-    renderModule({ summary: { ...SUMMARY, status: "inherited", statusLabel: "Inherited", upstreamLabel: null } });
-    expect(rail().textContent).toContain("Inherited");
-    expect(rail().textContent).not.toMatch(/upstream/i);
+    renderModule({ summary: { ...SUMMARY, status: "inherited", statusLabel: "Upstream", upstreamLabel: null } });
+    expect(rail().textContent).toContain("Upstream");
+    expect(rail().textContent).not.toMatch(/via /i);
   });
 
   it("groups the transfer review by scope and posture and lists every deployment in a fold", () => {

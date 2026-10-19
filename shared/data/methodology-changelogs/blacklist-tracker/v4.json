@@ -1,5 +1,24 @@
 [
   {
+    "version": "4.4",
+    "title": "Evidence-led FreezeWatch exposure decision procedure",
+    "date": "2026-10-19",
+    "effectiveAt": 1792368000,
+    "summary": "Codifies the ordered Yes, Possible, Upstream and No decision procedure and applies it in a full-dataset FreezeWatch re-review, separating current holder-targeted powers from mutable direct controls and measured issuer/custodian exposure.",
+    "impact": [
+      "Materiality is measured per deployment before failing closed; individually sub-threshold controlled deployments are disclosed but never aggregated to set a verdict.",
+      "Yes requires a current authority able to target arbitrary holders, including enforced allowlists, sanctions oracles, active exit gates and arbitrary-holder burns. Directly assigning a victim's denylist-state role is an active blacklist power; merely appointing an operator is not.",
+      "Global transfer pauses, all admin/DAO-upgradeable token implementations, grantable empty or incapable operator roles, dormant exit gates, material canonical-bridge burner surfaces and issuer-shipped consensus halts resolve to Possible unless an independent active holder-targeted control establishes Yes.",
+      "Upstream requires a qualifying parent claim, full CEX custody or strictly more than 50% measured issuer/custodian reserve exposure. Categorical collateral counting excludes DAO-only controls and includes custodial fiat, bank/fund/T-bill claims and allocated physical commodities.",
+      "CDP/lending reserve tests use debt-weighted exposure; reserve-backed tokens use published composition. LPs split by constituent value, with the coin and its own wrappers/savings-share legs only in the denominator; different tokens from the same issuer count at their own status. Unmeasurable reserves never establish Upstream.",
+      "The full-dataset re-review of all 397 active coins refreshes deployment, role, control and reserve evidence under the same procedure: 118 statuses change and the active buckets move from 288 Yes / 77 Upstream / 18 Possible / 14 No to 213 Yes / 55 Upstream / 109 Possible / 20 No. Most moves are Yes or Upstream to Possible for pause-only, upgrade-only or grantable-role tokens; 8 Yes move to Upstream, 7 Upstream move to No, and 4 coins move up to Yes on newly verified active controls.",
+      "Tracker configuration restores current PAXG freeze/unfreeze topics while preserving legacy history, corrects Avalanche USDT to its deployment-era indexed block/destroy family, and retires non-emitting Binance-Peg BSC and legacy Optimism USDT scans; the separate Optimism USDT0 scan remains.",
+      "Active parent/status consistency validation rejects No children of exposed declared parents and inherited children supported only by No parents without a separate qualifying reserve/custody candidate; this guard does not substitute for measuring the reserve threshold."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "4.3",
     "title": "Canonical freeze identities and evidence-qualified totals",
     "date": "2026-10-10",
