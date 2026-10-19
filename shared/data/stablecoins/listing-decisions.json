@@ -268,7 +268,7 @@
     "bib01-backed": "cash-equivalent",
     "thbill-theo": "cash-equivalent",
     "thusd-theo": "core-stablecoin",
-    "thgold-theo": "cash-equivalent",
+    "thgold-theo": "core-stablecoin",
     "rusd-reservoir": "stable-value-investment",
     "wsrusd-reservoir": "stablecoin-variant",
     "srusd-reservoir": "stablecoin-variant",

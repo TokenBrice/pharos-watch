@@ -2,7 +2,7 @@
 title: "Tether (USDT) Stablecoin Analytics"
 canonical: "https://pharos.watch/stablecoin/usdt-tether/"
 description: "Build-time stablecoin profile for Tether (USDT). Live price, supply, peg, liquidity, and flow data are served by the Pharos API."
-dateModified: "2026-10-06"
+dateModified: "2026-10-19"
 ---
 
 
