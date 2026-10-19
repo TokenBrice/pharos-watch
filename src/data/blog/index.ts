@@ -28,6 +28,16 @@ export interface BlogPost {
 
 export const BLOG_POSTS: readonly BlogPost[] = [
   {
+    slug: "dwellir-in-kind-sponsorship",
+    title: "Indirect Funding: Dwellir Sponsors Our RPC",
+    description:
+      "Dwellir sponsors Pharos's multi-chain RPC in kind: 37 EVM chains, archive state and wide log windows. How we verify it, and an open invitation to others.",
+    datePublished: "2026-10-19",
+    coverImage: "/blog/dwellir-in-kind-sponsorship-cover.png",
+    coverAlt:
+      "The circular Pharos mark beside the green Dwellir shield and wordmark above the headline “Multi-chain RPC, sponsored in kind.” and the label “Indirect funding”, with a lighthouse beam lighting a constellation of connected nodes over a dark sea.",
+  },
+  {
     slug: "safety-score-v10",
     title: "Safety Score V10: Same Pillars, Sharper Measurements",
     description:
