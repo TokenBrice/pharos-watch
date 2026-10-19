@@ -403,6 +403,8 @@ describe("reviewed economic supply observation", () => {
   it("conserves independently observed finalized pending messages without counting them as free float", async () => {
     const result = await pendingFixture().run();
     expect(result.status).toBe("accepted");
+    expect(evmRpc.fetchEvmBlockHeader).toHaveBeenCalledWith("ethereum", "finalized",
+      expect.objectContaining({ minBlockNumber: 100 }));
     if (result.status !== "accepted") throw new Error("Expected accepted partition");
     expect(result.attribution.deployments.map(row => row.currentSupplyUsd)).toEqual([80, 19]);
     expect(result.attribution.unattributedSupplyUsd).toBe(1);
@@ -973,6 +975,10 @@ describe("nonce-authenticated Curve LayerZero pending history", () => {
   it("passes Curve's authenticated current pin without classifying other history as recent", async () => {
     const f = curveFixture();
     expect((await observeCurveLzPending(f.input)).status).toBe("accepted");
+    for (const side of f.input.source.sides) {
+      expect(evmRpc.fetchEvmBlockHeader).toHaveBeenCalledWith(side.chainId, "finalized",
+        expect.objectContaining({ minBlockNumber: 100 }));
+    }
     const options = vi.mocked(evmRpc.fetchEvmRpcBatch).mock.calls[0][2]!;
     expect(options.recentStatePin).toMatchObject({ chainId: "ethereum",
       header: f.input.headers[0], finalized: f.input.headers[0], observedAtSec: CLOCK, maxAgeSec: 1800 });

@@ -181,7 +181,7 @@ export async function observeLayerZeroOftPending(input: {
     for (let index = 0; index < source.sides.length; index++) {
       const side = source.sides[index]!, pin = input.headers[index]!;
       if (CHAIN_META[side.chainId]?.type !== "evm") fail("unsupported-chain");
-      const finalized = await fetchEvmBlockHeader(side.chainId, "finalized", { ...options, observedHeadBlock: pinOptions.get(side.chainId)?.observedHeadBlock });
+      const finalized = await fetchEvmBlockHeader(side.chainId, "finalized", { ...options, minBlockNumber: pin.number, observedHeadBlock: pinOptions.get(side.chainId)?.observedHeadBlock });
       const pinned = await fetchEvmBlockHeader(side.chainId, pin.number, { ...options, observedHeadBlock: finalized?.number });
       context = { chainId: side.chainId, phase: "pin-authentication", method: "eth_getBlockByNumber", pinObservedAtSec: pin.timestamp, finalizedLagBlocks: finalized ? Math.max(0, pin.number - finalized.number) : null, operands: { pinNumber: pin.number, finalizedNumber: finalized?.number ?? null, finalizedObservedAtSec: finalized?.timestamp ?? null } };
       emit({});

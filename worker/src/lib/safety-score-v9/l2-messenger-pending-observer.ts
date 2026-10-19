@@ -135,7 +135,7 @@ export async function observeL2MessengerPending(input: {
     if (input.headers.length !== 2) fail("pin-missing");
     for (let i = 0; i < 2; i++) {
       const pin = input.headers[i]!;
-      const finalized = await fetchEvmBlockHeader(chains[i]!, "finalized", { ...options, observedHeadBlock: pinOptions.get(chains[i]!)?.observedHeadBlock });
+      const finalized = await fetchEvmBlockHeader(chains[i]!, "finalized", { ...options, minBlockNumber: pin.number, observedHeadBlock: pinOptions.get(chains[i]!)?.observedHeadBlock });
       const canonical = await fetchEvmBlockHeader(chains[i]!, pin.number, { ...options, observedHeadBlock: finalized?.number });
       context = { chainId: chains[i]!, phase: "pin-authentication", method: "eth_getBlockByNumber", pinObservedAtSec: pin.timestamp, finalizedLagBlocks: finalized ? Math.max(0, pin.number - finalized.number) : null, operands: { pinNumber: pin.number, finalizedNumber: finalized?.number ?? null, finalizedObservedAtSec: finalized?.timestamp ?? null } };
       emit({});

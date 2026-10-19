@@ -229,6 +229,9 @@ describe("authenticated CCIP pending quantities", () => {
   it("batches and deduplicates exact hash-pinned authentication without cross-attempt reuse", async () => {
     const first = await observeCcipPending(input());
     expect(first.status).toBe("accepted");
+    for (const chain of ["ethereum", "base"]) {
+      expect(fetchEvmBlockHeader).toHaveBeenCalledWith(chain, "finalized", expect.objectContaining({ minBlockNumber: pinNumber }));
+    }
     const authentication = vi.mocked(fetchEvmRpcBatch).mock.calls.slice(0, 2);
     expect(authentication.map(([chain]) => chain)).toEqual(["ethereum", "base"]);
     for (const [, requests] of authentication) {

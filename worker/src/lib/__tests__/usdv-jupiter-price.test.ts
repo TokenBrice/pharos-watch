@@ -51,11 +51,27 @@ describe("reviewed USDv direct Jupiter route", () => {
     expect(await promise).toEqual({ price: .998882, source: "jupiter-exact", confidence: "fallback", observedAt: NOW - 30, observedAtMode: "upstream" });
   });
   it("treats an RPC min-context-slot error as retryable endpoint lag", async () => {
-    const reads = setup({ stateBody: (read) => (read <= 2 ? { error: { code: -32010 } } : { result: state() }) });
+    const reads = setup({ stateBody: (read) => (read <= 2 ? { error: { code: -32016 } } : { result: state() }) });
     const promise = fetchUsdvJupiterPrice(context());
     await vi.runAllTimersAsync();
     expect(reads()).toBe(3);
     expect(await promise).toEqual({ price: .998882, source: "jupiter-exact", confidence: "fallback", observedAt: NOW - 30, observedAtMode: "upstream" });
+  });
+  it("does not retry an unrelated RPC error as minimum-context-slot lag", async () => {
+    const ctx = context();
+    const reads = setup({ stateBody: () => ({ error: { code: -32010 } }) });
+    expect(await fetchUsdvJupiterPrice(ctx)).toBeNull();
+    expect(reads()).toBe(2);
+    expect(ctx.lastRejectionReason).toBe("jupiter-exact:pool-state");
+  });
+  it("still rejects pool-state when every bounded attempt returns minimum-context-slot lag", async () => {
+    const ctx = context();
+    const reads = setup({ stateBody: () => ({ error: { code: -32016 } }) });
+    const promise = fetchUsdvJupiterPrice(ctx);
+    await vi.runAllTimersAsync();
+    expect(await promise).toBeNull();
+    expect(reads()).toBe(6);
+    expect(ctx.lastRejectionReason).toBe("jupiter-exact:pool-state");
   });
   it("still rejects pool-state when every bounded catch-up attempt stays behind the quotes", async () => {
     const ctx = context();

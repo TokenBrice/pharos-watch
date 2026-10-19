@@ -208,7 +208,7 @@ export async function observeCcipPending(input: {
       const pin = input.headers.get(chain);
       context = { chainId: chain, pinObservedAtSec: pin?.timestamp ?? null, method: "eth_getBlockByNumber", phase: "pin-authentication", operands: { scoringClockSec: input.clockSec, pinNumber: pin?.number ?? null } };
       if (!pin || !Number.isSafeInteger(input.clockSec) || pin.timestamp > input.clockSec || input.clockSec - pin.timestamp > policy.observationMaxAgeSec) fail("pin-stale-or-future");
-      const finalized = await fetchEvmBlockHeader(chain, "finalized", options);
+      const finalized = await fetchEvmBlockHeader(chain, "finalized", { ...options, minBlockNumber: pin.number });
       const canonical = await fetchEvmBlockHeader(chain, pin.number, { ...options, observedHeadBlock: finalized?.number });
       context = { ...context, finalizedLagBlocks: finalized ? Math.max(0, pin.number - finalized.number) : null, operands: { scoringClockSec: input.clockSec, pinNumber: pin.number, finalizedNumber: finalized?.number ?? null, finalizedObservedAtSec: finalized?.timestamp ?? null } };
       emit({});
