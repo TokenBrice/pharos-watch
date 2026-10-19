@@ -11,7 +11,7 @@ import { fetchJsonWithRetry } from "../fetch-retry";
 import { getCache, setCache } from "../db-cache";
 import type { StablecoinMeta } from "@shared/types/core";
 import { deriveReviewedEconomicDeploymentPartition } from "../safety-score-v9/supply-attribution-contract";
-import { buildChainRpcs } from "../chain-registry";
+import { buildChainRpcs, type ChainRpcConfig } from "../chain-registry";
 
 vi.mock("../evm-rpc", async importOriginal => ({
   ...await importOriginal<typeof EvmRpcModule>(),
@@ -95,7 +95,12 @@ function input(read = source(), checkpoint?: CcipPendingCheckpoint) {
   activeRead = read;
   protocol = read.lanes[0]!.version;
   const chains = [...new Set(read.lanes.flatMap(lane => [lane.source.chainId, lane.destination.chainId]))];
-  return { source: read, clockSec: 1000, headers: new Map(chains.map(chain => [chain, { number: pinNumber, timestamp: 1000, hash: word(pinNumber) }])), chainRpcs: new Map(), checkpoint };
+  const chainRpcs = new Map<string, ChainRpcConfig>(chains.map(chainId => [chainId, {
+    chainId, chainName: chainId, type: "evm" as const, explorerUrl: "https://explorer.example",
+    endpoints: [{ url: `https://${chainId}.example`, operator: "public" as const, keyed: false,
+      position: "registry" as const, stateHistory: "archive" as const, logsHistory: "full" as const }],
+  }]));
+  return { source: read, clockSec: 1000, headers: new Map(chains.map(chain => [chain, { number: pinNumber, timestamp: 1000, hash: word(pinNumber) }])), chainRpcs, checkpoint };
 }
 beforeEach(() => {
   vi.resetAllMocks(); sent = [send(1)]; executed = []; states = {}; expectedNext = 2;
@@ -503,7 +508,7 @@ describe("authenticated CCIP pending quantities", () => {
     expect(result).toMatchObject({ status: "accepted", amount: "10", checkpoint: { schemaVersion: 2 } });
     expect(logRanges).toEqual([{ chain: "ethereum", from: 100, to: 105 }]);
   });
-  it("resumes complete history using the widest eligible declared endpoint span", async () => {
+  it("resumes complete history using the first eligible declared endpoint span", async () => {
     pinNumber = 12105; sent = [send(1, 10n, 100), send(2, 20n, 12100)]; expectedNext = 3;
     const args = input();
     const endpoint = { url: "https://rpc.example", operator: "public" as const, keyed: false, position: "registry" as const, stateHistory: "archive" as const, logsHistory: "full" as const };
@@ -513,13 +518,14 @@ describe("authenticated CCIP pending quantities", () => {
     const first = await observeCcipPending(args);
     expect(first).toMatchObject({ status: "rejected", reason: "history-incomplete" });
     if (first.status !== "rejected" || !first.checkpoint) throw new Error("Missing bounded checkpoint");
-    expect(first.checkpoint.lanes[0]!.sent.nextBlock).toBe(12100);
-    expect(logRanges.every(range => range.to - range.from + 1 <= 1500)).toBe(true);
-    expect(logRanges[0]).toEqual({ chain: "ethereum", from: 100, to: 1599 });
+    expect(first.checkpoint.lanes[0]!.sent.nextBlock).toBe(8100);
+    expect(logRanges.every(range => range.to - range.from + 1 <= 1000)).toBe(true);
+    expect(logRanges[0]).toEqual({ chain: "ethereum", from: 100, to: 1099 });
     logRanges = [];
     const resumed = { ...args, checkpoint: first.checkpoint };
     expect(await observeCcipPending(resumed)).toMatchObject({ status: "accepted", amount: "30" });
-    expect(logRanges).toEqual([{ chain: "ethereum", from: 12100, to: 12105 }]);
+    expect(logRanges[0]).toEqual({ chain: "ethereum", from: 8100, to: 9099 });
+    expect(logRanges[logRanges.length - 1]).toEqual({ chain: "ethereum", from: 12100, to: 12105 });
   });
   it("uses a reviewed large endpoint span without the old 2,000-block ceiling", async () => {
     pinNumber = 2_000_105; finalized = pinNumber;
@@ -543,8 +549,8 @@ describe("authenticated CCIP pending quantities", () => {
     expect(logRanges.filter(range => range.chain === chain)).toEqual([
       { chain, from: 106, to: 10105 }, { chain, from: 10106, to: 12106 },
     ]);
-    for (const [, , options] of vi.mocked(fetchEvmRpcBatch).mock.calls) expect(options).toMatchObject({ chainRpcs, ccipArchiveRpc: true });
-    for (const [, , options] of vi.mocked(fetchEvmBlockHeader).mock.calls) expect(options).toMatchObject({ chainRpcs, ccipArchiveRpc: true });
+    for (const [, , options] of vi.mocked(fetchEvmRpcBatch).mock.calls) expect(options).toMatchObject({ chainRpcs });
+    for (const [, , options] of vi.mocked(fetchEvmBlockHeader).mock.calls) expect(options).toMatchObject({ chainRpcs });
   });
   it.each(["unadmitted", "disabled"])("retains the existing Ink CCIP 1,000-block span when Dwellir is %s", async admission => {
     const read = source(); read.lanes[0]!.destination.chainId = "ink";
@@ -576,8 +582,8 @@ describe("authenticated CCIP pending quantities", () => {
     });
     expect(await actualRpc.fetchEvmRpcBatch("ink", [
       { method: "eth_getCode", params: [addr(21), { blockHash: word(105), requireCanonical: true }] },
-    ], { chainRpcs, ccipArchiveRpc: true, maxRetries: 0 })).toEqual([CODE]);
-    expect(actualRpc.usableCcipRpcEndpoints("ink", chainRpcs)).toEqual([alchemy]);
+    ], { chainRpcs, maxRetries: 0 })).toEqual([CODE]);
+    expect(actualRpc.usableCcipRpcEndpoints("ink", chainRpcs, { kind: "logs", fromBlock: 1, toBlock: 1 })).toEqual([alchemy]);
     vi.mocked(fetchJsonWithRetry).mockImplementation(originalFetch);
     const originalBatch = vi.mocked(fetchEvmRpcBatch).getMockImplementation()!;
     vi.mocked(fetchEvmRpcBatch).mockImplementation(async (chain, requests, options) => {
