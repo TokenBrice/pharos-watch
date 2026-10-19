@@ -1,7 +1,7 @@
 {
   "id": "sreusd-resupply",
   "blacklistabilityReview": {
-    "reviewedStatus": false,
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "Resupply savings documentation",
@@ -22,10 +22,18 @@
       {
         "label": "Current observation block",
         "url": "https://etherscan.io/block/26224760"
+      },
+      {
+        "label": "Resupply pair-accounting observation",
+        "url": "https://eth.blockscout.com/address/0x10101010E0C3171D894B71B3400668aF311e7D94?tab=read_contract"
+      },
+      {
+        "label": "crvUSD external-backing observation block",
+        "url": "https://etherscan.io/block/26224667"
       }
     ],
-    "evidence": "Ethereum holds 100% of circulating supply. At ethereum@26224760 (2026-10-19T06:14:11+00:00; hash 0x2a6c0b20faae49bb23f77a582b517057741efcee5bd423a8552f672144c83b85; observed 2026-10-19T06:19:28.419767+00:00) via https://ethereum-rpc.publicnode.com, 0x557ab1e003951a73c12d16f0fea8490e39c33c35 exactly matches the verified nonproxy SavingsReUSD runtime, with zero EIP-1967 implementation/admin/beacon slots. The verified SavingsReUSD, LinearRewardsErc4626 and Solmate ERC-20/ERC-4626 source contain no holder blacklist, transfer pause, seizure, upgrade path or arbitrary-holder burn. Native withdrawals burn holder shares under ordinary allowance rules; maxWithdraw/maxRedeem are balance-based and there is no configurable owner/receiver allowlist or withdrawal-limiter module. Core ownership and reward/bridge configuration do not authorize freezing local holder balances; owner remains 0xc07e000044f95655c11fda4cd37f70a94d7e0a7d, msgInspector is zero, and asset() returns reUSD 0x57ab1e0003f623289cd798b1824be09a793e4bec. The wrapper is a 100% claim on reusd-resupply, not a separate reserve portfolio. With that parent's corrected No verdict, neither parent inheritance nor a >50% issuer/custodian reserve majority qualifies. No is conditional on the reUSD and crvUSD classifications; if reUSD remains Upstream, this wrapper remains Upstream.",
-    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "evidence": "sreUSD is Upstream through its 100% parent claim on reUSD. Ethereum holds 100% of circulating supply. At Ethereum block 26224760 (2026-10-19T06:14:11Z; hash 0x2a6c0b20faae49bb23f77a582b517057741efcee5bd423a8552f672144c83b85), 0x557ab1e003951a73c12d16f0fea8490e39c33c35 matches verified nonproxy SavingsReUSD runtime, with zero EIP-1967 implementation/admin/beacon slots. SavingsReUSD, LinearRewardsErc4626 and Solmate ERC20/ERC4626 code expose no holder blacklist, transfer pause, seizure, upgrade or arbitrary-holder burn. Withdrawals burn shares under ordinary allowance rules; maxWithdraw/maxRedeem are balance-based, without configurable owner/receiver allowlists or withdrawal-limit modules. Owner 0xc07e000044f95655c11fda4cd37f70a94d7e0a7d and reward/bridge configuration do not authorize freezing local holder balances; msgInspector is zero. asset() is reUSD 0x57ab1e0003f623289cd798b1824be09a793e4bec, so the denominator is the entire 100% reUSD parent claim, not a separate portfolio. At the same block reUSD's 22-pair debt denominator is 52,735,322.818011773103279034 debt units: 99.1324141545% crvUSD-backed and 0.8675858455% frxUSD-backed. crvUSD's external-only reserve test at block 26224667 establishes Upstream and frxUSD has direct issuer controls, making reUSD 100% qualifying categorically. sreUSD inherits that parent exposure in full. The v4.4 sensitivity classified crvUSD and consequently reUSD as No and left sreUSD without qualifying parent inheritance; self-leg exclusion changes the upstream chain, not the wrapper's local permissions.",
+    "reviewer": "FreezeWatch v4.5 self-leg review 2026-10-19",
     "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
