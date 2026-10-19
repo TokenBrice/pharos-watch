@@ -134,6 +134,8 @@ Redemption `applyOutputDependencyResolution()` uses a run-local index and immuta
 
 The shared Dwellir registries own capabilities. Scheduled EVM/native reads share credit-ledger/breaker admission; missing key, denial or `DWELLIR_ROUTING_DISABLED_CHAINS` excludes Dwellir. HTTP gets no native capability. Native operations retain exact pins, header credentials and ledger-floor checks, not TRON history or Sui object-history permission.
 
+Native reads use `redirect: "manual"` (Workers rejects `"error"`); non-2xx is rejected, so keys never follow redirects.
+
 The EVM resolver separates recent finalized state, arbitrary historical state, headers/receipts and inclusive log intervals. Recent pins bind chain/number/hash, original clocks, finalized head, age and retained floor; batch eligibility intersects actual members. BSC/Monad/zkSync remain recent-only. Unknown incumbent retention is not archive proof; HyperEVM Alchemy numeric mispins stay excluded. No hash-to-number/latest fallback.
 
 CCIP pages use the first eligible provider's span, independent of state history; Monad retention needs an observed head. Refusal never advances cursors. Serial `noBatch`, exact IDs, per-attempt admission/credits/deadlines and run-local network-failure demotion remain. Unstarted denial is uncharged/undemoted. [Parity](./api-reference-admin.md#get-apirpc-provider-trial) is independent, diagnostic and non-promoting; preference adds no fan-out or evidence of asset acceptance.

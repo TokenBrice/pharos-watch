@@ -112,6 +112,7 @@ function witnessedSource(version: "1.6" | "2.0.0" = "1.6") {
     runtimeCodeSha256: lane.onRampRuntimeCodeSha256, blockNumber: 100, blockHash: word(100),
     blockTimestamp: 1000, transactionHash: word(9000), deployer, nonce,
     initcodeSha256: sha256Hex(initcode), initialSequence: "1", sequenceSemantics: `ccip-${version}-constructor-zero`,
+    reviewedReceipt: { status: "0x1", contractAddress: lane.onRampAddress },
     sourceCodeSha256: sha256Hex("reviewed-constructor"), evidenceUrls: ["https://issuer.example/verified-source"],
     reviewedAtSec: 1000, reviewer: "test-reviewer",
   };
@@ -126,10 +127,9 @@ function witnessedSource(version: "1.6" | "2.0.0" = "1.6") {
         "blockHash" in request.params[1] && request.params[1].blockHash === word(99)) {
         throw new Error("Archive state deliberately unavailable");
       }
-      if (request.method === "eth_getTransactionByHash") {
-        values.push({ hash: word(9000), blockHash: word(100), blockNumber: "0x64", to: null, from: deployer, nonce: "0x3", input: initcode });
-      } else if (request.method === "eth_getTransactionReceipt" && request.params[0] === word(9000)) {
-        values.push({ transactionHash: word(9000), status: "0x1", blockNumber: "0x64", blockHash: word(100), contractAddress: lane.onRampAddress, logs: [] });
+      if (request.method === "eth_getTransactionByHash" ||
+        (request.method === "eth_getTransactionReceipt" && request.params[0] === word(9000))) {
+        throw new Error("Historical creation transactions and receipts are not retained");
       } else if (request.method === "eth_call" && version === "2.0.0" &&
         typeof request.params[0] === "object" && request.params[0] !== null &&
         "data" in request.params[0] && typeof request.params[0].data === "string" &&
@@ -281,10 +281,53 @@ describe("authenticated CCIP pending quantities", () => {
       proof: { lanes: [{ initialSequence: "1", historyOrigin: { method: "reviewed-creation", blockNumber: 100 } }] } });
     expect(logRanges.some(range => range.chain === "ethereum" && range.from === 100)).toBe(true);
   });
-  it.each(["initcode", "nonce", "deployer", "blockHash", "runtime", "initialSequence"] as const)("rejects altered origin %s", async field => {
+  it.each(["1.6", "2.0.0"] as const)("authenticates cold and resumed %s origins without historical transaction retention", async version => {
+    const read = witnessedSource(version);
+    const first = await observeCcipPending(input(read));
+    if (first.status !== "accepted") throw new Error("fixture");
+    const original = vi.mocked(fetchEvmRpcBatch).getMockImplementation()!;
+    vi.mocked(fetchEvmRpcBatch).mockClear().mockImplementation(async (chain, requests, options) =>
+      requests.some(request => request.method === "eth_getTransactionByHash" ||
+        (request.method === "eth_getTransactionReceipt" && request.params[0] === word(9000)))
+        ? null : original(chain, requests, options));
+    vi.mocked(fetchEvmBlockHeader).mockClear();
+    expect(await observeCcipPending(input(read, first.checkpoint))).toMatchObject({ status: "accepted" });
+    expect(fetchEvmBlockHeader).toHaveBeenCalledWith("ethereum", 100, expect.anything());
+    expect(vi.mocked(fetchEvmRpcBatch).mock.calls.flatMap(([, requests]) => requests)
+      .some(request => request.method === "eth_getTransactionByHash")).toBe(false);
+    // Cold and incompatible prefixes authenticate the reviewed origin anew.
+    expect(await observeCcipPending(input(read))).toMatchObject({ status: "accepted" });
+    first.checkpoint.schemaVersion = 2;
+    expect(await observeCcipPending(input(read, first.checkpoint))).toMatchObject({ status: "accepted" });
+  });
+  it.each(["unavailable", "reorg"] as const)("rechecks the canonical creation header on checkpoint reuse: %s", async scenario => {
+    const read = witnessedSource();
+    const first = await observeCcipPending(input(read));
+    if (first.status !== "accepted") throw new Error("fixture");
+    const original = vi.mocked(fetchEvmBlockHeader).getMockImplementation()!;
+    vi.mocked(fetchEvmBlockHeader).mockImplementation(async (chain, number, options) =>
+      chain === "ethereum" && number === 100
+        ? scenario === "unavailable" ? null : { number, hash: word(999), timestamp: 1000 }
+        : original(chain, number, options));
+    expect(await observeCcipPending(input(read, first.checkpoint))).toMatchObject({
+      status: "rejected", reason: scenario === "unavailable" ? "history-unavailable" : "history-origin-reorg",
+    });
+  });
+  it("rejects an altered reviewed witness rather than reusing another source's authenticated origin", async () => {
+    const read = witnessedSource();
+    const first = await observeCcipPending(input(read));
+    if (first.status !== "accepted") throw new Error("fixture");
+    const witness = read.lanes[0]!.sourceStartWitness!;
+    if (witness.kind !== "reviewed-creation") throw new Error("fixture");
+    witness.initcodeSha256 = "0".repeat(64);
+    expect(await observeCcipPending(input(read, first.checkpoint))).toMatchObject({ status: "rejected", reason: "checkpoint-invalid" });
+  });
+  it.each(["receipt-address", "receipt-status", "missing-receipt", "nonce", "deployer", "blockHash", "runtime", "initialSequence"] as const)("rejects altered origin %s", async field => {
     const read = witnessedSource(), witness = read.lanes[0]!.sourceStartWitness!;
     if (witness.kind !== "reviewed-creation") throw new Error("fixture");
-    if (field === "initcode") witness.initcodeSha256 = "0".repeat(64);
+    if (field === "receipt-address") witness.reviewedReceipt.contractAddress = addr(71);
+    if (field === "receipt-status") Object.assign(witness.reviewedReceipt, { status: "0x0" });
+    if (field === "missing-receipt") Reflect.deleteProperty(witness, "reviewedReceipt");
     if (field === "nonce") witness.nonce = "4";
     if (field === "deployer") witness.deployer = addr(71);
     if (field === "blockHash") witness.blockHash = word(101);

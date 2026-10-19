@@ -396,14 +396,14 @@ describe.each(["GET", "POST"] as const)("JSON %s transport identity", (method) =
       json: { [url]: (received: Request) => ({ json: { redirect: received.redirect } }) },
     });
     const ctx = { requestCache: new Map<string, Promise<unknown>>() };
-    const policies = ["follow", "error", "manual"] as const;
+    const policies = ["follow", "manual"] as const;
     const results = await Promise.all(policies.map((redirect) => request(ctx, { redirect })));
     expect(results).toEqual(policies.map((redirect) => ({ redirect })));
     for (const redirect of policies) {
       await expect(request(ctx, { redirect })).resolves.toEqual({ redirect });
     }
     await expect(request(ctx)).resolves.toEqual({ redirect: "follow" });
-    expect(network.fetchSpy).toHaveBeenCalledTimes(3);
+    expect(network.fetchSpy).toHaveBeenCalledTimes(2);
   });
 
   it("replaces default headers with lower-case overrides rather than appending them", async () => {

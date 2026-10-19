@@ -40,7 +40,9 @@ export function createDwellirNativeCapability(
       const url = `${endpoint.baseUrl}${path}`;
       const options = {
         headers: { "X-Api-Key": apiKey },
-        redirect: "error" as const,
+        // Workers has no redirect: "error"; manual keeps the credential on
+        // this origin while the request helpers reject non-2xx responses.
+        redirect: "manual" as const,
         maxResponseBytes: 128 * 1024,
         maxRetries: 0,
         onResponse: () => recordDwellirCredits(1),

@@ -263,6 +263,7 @@ const CcipSourceStartWitnessSchema = z.discriminatedUnion("kind", [
     blockNumber: z.number().int().positive(), blockHash: EvmWordSchema, blockTimestamp: UnixSecondsSchema,
     transactionHash: EvmWordSchema, deployer: EvmAddressSchema, nonce: NonceSchema,
     initcodeSha256: Sha256Schema, initialSequence: z.literal("1"),
+    reviewedReceipt: z.strictObject({ status: z.literal("0x1"), contractAddress: EvmAddressSchema }),
     sequenceSemantics: z.enum(["ccip-1.6-constructor-zero", "ccip-2.0.0-constructor-zero"]),
     sourceCodeSha256: Sha256Schema, evidenceUrls: z.array(z.string().url()).min(1),
     reviewedAtSec: UnixSecondsSchema, reviewer: CanonicalTextSchema,
@@ -301,6 +302,7 @@ export const CcipPendingReadSchema = z.strictObject({
     if (witness.chainId !== lane.source.chainId || witness.tokenAddress !== lane.source.tokenAddress ||
       witness.tokenPoolAddress !== lane.source.tokenPoolAddress || witness.onRampAddress !== lane.onRampAddress ||
       witness.runtimeCodeSha256 !== lane.onRampRuntimeCodeSha256 || witness.blockNumber !== lane.sourceStartBlock ||
+      witness.reviewedReceipt.contractAddress !== lane.onRampAddress ||
       witness.sequenceSemantics !== `ccip-${lane.version}-constructor-zero` ||
       witness.reviewedAtSec < witness.blockTimestamp) {
       ctx.addIssue({ code: "custom", message: "CCIP creation witness must bind the exact source lane, creation origin and reviewed constructor" });

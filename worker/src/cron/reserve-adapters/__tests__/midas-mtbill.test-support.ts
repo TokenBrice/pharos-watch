@@ -65,6 +65,8 @@ export function midasNetwork(options: MidasNetworkOptions = {}): AdapterNetworkS
     },
     json: {
       [`https://gateway.pinata.cloud/ipfs/${cid}`]: () => new Response(new Uint8Array(file), { headers: { "content-type": "application/gzip" } }),
+      [`https://ipfs.filebase.io/ipfs/${cid}`]: () => new Response(new Uint8Array(file), { headers: { "content-type": "application/gzip" } }),
+      [`https://ipfs.io/ipfs/${cid}`]: () => new Response(new Uint8Array(file), { headers: { "content-type": "application/gzip" } }),
       [url]: options.historical ?? JSON.parse(capture.historicalBody),
     },
   };

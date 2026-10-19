@@ -185,16 +185,35 @@ describe("native Dwellir supported-operation preference", () => {
 });
 
 describe("native credential redirect scoping", () => {
-  it("forbids automatic redirects before attaching the header", async () => {
+  it.each(DWELLIR_NATIVE_ENDPOINTS)("uses Worker-supported redirect refusal for $network", async endpoint => {
     const fetcher = vi.fn(async (_url: unknown, init?: RequestInit) => {
-      expect(init?.redirect).toBe("error");
+      expect(init?.redirect).toBe("manual");
       expect(new Headers(init?.headers).get("X-Api-Key")).toBe(KEY);
       return Response.json({ result: ["0x1", "0x0"] });
     });
     vi.stubGlobal("fetch", fetcher);
-    expect(await native.readJson("starknet", "", SIGNAL, ctx, { method: "starknet_call" }))
+    const path = endpoint.protocol === "tron-http" ? endpoint.allowedPath : "";
+    const body = endpoint.protocol === "aptos-rest" ? undefined : { method: "starknet_call" };
+    expect(await native.readJson(endpoint.network, path, SIGNAL, ctx, body))
       .toEqual({ result: ["0x1", "0x0"] });
     expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+  it.each(DWELLIR_NATIVE_ENDPOINTS.flatMap(endpoint =>
+    [301, 302, 303, 307, 308].map(status => ({ endpoint, status })),
+  ))("rejects $status from $endpoint.network without forwarding credentials", async ({ endpoint, status }) => {
+    const response = new Response(JSON.stringify({ result: ["0x1", "0x0"] }), {
+      status, headers: { Location: "https://unapproved.example/native" },
+    });
+    const fetcher = vi.fn(async (_url: unknown, _init?: RequestInit) => response);
+    vi.stubGlobal("fetch", fetcher);
+    const path = endpoint.protocol === "tron-http" ? endpoint.allowedPath : "";
+    const body = endpoint.protocol === "aptos-rest" ? undefined : { method: "starknet_call" };
+    await expect(native.readJson(endpoint.network, path, SIGNAL, ctx, body)).rejects.toThrow(`HTTP ${status}`);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(fetcher.mock.calls[0]?.[0]).toBe(`${endpoint.baseUrl}${path}`);
+    expect(fetcher.mock.calls[0]?.[1]?.redirect).toBe("manual");
+    expect(response.bodyUsed).toBe(true);
+    expect(budget.recordDwellirCredits).toHaveBeenCalledExactlyOnceWith(1);
   });
 });
 

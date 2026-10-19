@@ -78,11 +78,30 @@ describe("reserve feed review policy", () => {
     expect(gemini.expiresAt).toBe(expiry);
     expect(await matchReserveFeedReview(mockD1(), state(), expiry - 1)).toEqual(review);
     expect(await matchReserveFeedReview(mockD1(), state(), expiry)).toBeNull();
-    for (const reason of ["stale-save-checkpoint", "save-proof-identity", "save-signed-content-digest", "save-cid-layout-or-content-mismatch", "save-pin-changed", "save-historical-scope"]) {
+    for (const reason of ["stale-save-checkpoint", "save-ipfs-gateways-exhausted", "save-proof-identity", "save-signed-content-digest", "save-cid-layout-or-content-mismatch", "save-pin-changed", "save-historical-scope"]) {
       expect(await matchReserveFeedReview(mockD1(), state({ lastError: `primary:onchain-evm: midas-mtbill:${reason}` }), now)).toBeNull();
       // Distinct reason tokens also defend against incorrectly retained v1 transport labels.
       expect(await matchReserveFeedReview(mockD1(), state({ lastError: `primary:http-json: midas-mtbill:${reason}` }), now)).toBeNull();
     }
+  });
+  it("does not rebind a stale latest-feed review to Pinata rate limits before its existing expiry", async () => {
+    const productionNow = Date.parse("2026-10-19T11:58:00Z") / 1000;
+    expect(resolveReserveFeedReviews(productionNow).activeById.get(review.stablecoinId)).toEqual(review);
+    for (const failureCategory of ["upstream-http", "unknown"]) {
+      expect(await matchReserveFeedReview(mockD1(), state({
+        lastError: "primary:onchain-evm: HTTP 429 for gateway.pinata.cloud",
+        metadata: { failureCategory },
+      }), productionNow)).toBeNull();
+    }
+    const db = mockD1([{ match: "status != 'skipped'", rows: [], first: {
+      stablecoin_id: review.stablecoinId, attempted_at: productionNow - 1, adapter_key: review.adapterKey,
+      breaker_key: "test", status: "error", warnings: "[]",
+      last_error: "primary:onchain-evm: midas-mtbill:save-ipfs-gateways-exhausted: HTTP 429",
+      metadata: JSON.stringify({ failureCategory: "unknown" }),
+    } }]);
+    expect(await matchReserveFeedReview(db, state({
+      lastStatus: "skipped", metadata: { failureCategory: "circuit-open" },
+    }), productionNow)).toBeNull();
   });
   it("inherits circuit-open only from the latest non-skipped matching attempt", async () => {
     const db = mockD1([{ match: "status != 'skipped'", rows: [], first: {
