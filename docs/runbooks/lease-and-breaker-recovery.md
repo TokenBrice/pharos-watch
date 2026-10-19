@@ -12,9 +12,11 @@ Never clear a lease while `/api/status` shows a fresh matching `crons[*].inFligh
 
 For reserve-family locks, inspect `blockedBy` rather than treating the lease key as the holder job: config repair and checkpoint replay intentionally share `sync-live-reserves`. The requester `leaseOwner` is separate. Versioned holder envelopes name the actual path/invocation/slot; legacy owners are attributed only through exact-owner-matched progress, and unknown fields remain null. The natural producer waits only within its fixed admission budget (approximately 145 seconds for a fresh head); a renewed/long rollout lease can exceed that budget. Do not evict it to force admission.
 
-`producer-slot-priority` and `heavy-slot-co-tenancy` are neutral recovery deferrals, not a stuck lease or evidence of publication. Check the protected slot identity and its finished clock, and the shared heavy-slot policy in `shared/lib/scheduled-runner-registry.ts`. Missing producer delivery remains protected; diagnose delivery rather than manufacture a slot row.
+`producer-slot-priority` and `same-role-slot-co-tenancy` are neutral recovery deferrals, not stuck leases or publication proof. Check the protected slot identity/finished clock and role-qualified registry policy. Historical `heavy-slot-co-tenancy` rows remain evidence, but heavy charts/V9 no longer block public recovery. Missing producer delivery remains protected; diagnose it rather than manufacture a slot row.
 
 Incompatible checkpoint debt requires supersession, not a checkpoint/lease reset: a real newer finished slot must contain a completed current-hash full cohort. Recovery prioritizes active debt within its bounded 25-row drain, records exact `superseded_by_json`, and atomically fences only a matching pending attempt. A successful operator-only cohort without a real slot cannot qualify. Historical debt alone leaves a successful idle poll `ok` with debt telemetry. Never resurrect retired checkpoints, clear live claims or refresh rejected issuer evidence clocks.
+
+Scheduling rollback restores prior public cadence/policy without deleting checkpoints or leases. Preserve history and observe a full root, including consumers, before claiming recovery.
 
 ## Clear A Stuck Cron Lease
 

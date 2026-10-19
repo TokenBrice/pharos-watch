@@ -263,7 +263,7 @@ export async function runFourHourlyReserveSyncSlot(runtime: ScheduledRuntimeCont
   const main = syncTask
     ? runScheduledSlotGroups(runtime, SLOT_LABEL, [{ ...reserveAdapterGroup, tasks: [syncTask] }])
     : Promise.resolve(buildScheduledSlotSummary([]));
-  // The independent five-minute lane declares 3/6, unlike the regular 4/6
+  // The independent one-minute lane declares 3/6, unlike the regular 4/6
   // producer slot. Keep the independent child, but never overlap its fetch.
   if (runtime.recoveryCheckpoint) await main;
   const [mainSummary, kinesisSummary] = await Promise.all([
@@ -279,7 +279,7 @@ export async function runFourHourlyReserveSyncSlot(runtime: ScheduledRuntimeCont
   const mainFailedAfterQueueExhaustion = mainSummary.jobsErrored > 0 && isReserveQueueExhausted(checkpointAfterMain);
   const summaries: ScheduledSlotSummary[] = [mainSummary, kinesisSummary];
   const admissionSkip = [...mainSummary.jobs, ...kinesisSummary.jobs].find((job) =>
-    job.reason === "producer-slot-priority" || job.reason === "heavy-slot-co-tenancy");
+    job.reason === "producer-slot-priority" || job.reason === "same-role-slot-co-tenancy");
   if (runtime.recoveryCheckpoint && admissionSkip) {
     summaries.push(await recordPriorityDeferredReserveTasks(runtime,
       [...redemptionTasks, ...postSyncTasks].map((task) => task.job), admissionSkip.reason!, {}));
@@ -303,7 +303,7 @@ export async function runFourHourlyReserveSyncSlot(runtime: ScheduledRuntimeCont
   if (redemptionTasks.length > 0 && redemptionGroup) {
     summaries.push(await runScheduledSlotGroups(runtime, SLOT_LABEL, [redemptionGroup]));
     const admissionSkip = summaries[summaries.length - 1]?.jobs.find((job) =>
-      job.reason === "producer-slot-priority" || job.reason === "heavy-slot-co-tenancy");
+      job.reason === "producer-slot-priority" || job.reason === "same-role-slot-co-tenancy");
     if (admissionSkip) {
       summaries.push(await recordPriorityDeferredReserveTasks(runtime,
         postSyncTasks.map((task) => task.job), admissionSkip.reason!, {}));

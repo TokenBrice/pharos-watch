@@ -11,6 +11,7 @@ export const REDEMPTION_BACKSTOP_RESOLVE_CONCURRENCY = 3;
 
 export type CronGroupKey =
   | "quarter-hourly"
+  | "one-minute"
   | "five-minute"
   | "half-hourly"
   | "hourly"
@@ -171,7 +172,7 @@ export const CRON_SCHEDULE_DEFINITIONS = {
   },
   fiveMinuteReserveRecovery: {
     cpuPlacement: "sub-hourly-allowed",
-    schedule: "1,6,11,16,21,26,31,36,41,46,51,56 * * * *",
+    schedule: "* * * * *",
     ...CRON_SCHEDULE_CADENCES.fiveMinuteReserveRecovery,
   },
   digestTriggerPoll: { cpuPlacement: "sub-hourly-allowed", schedule: "*/5 * * * *", ...CRON_SCHEDULE_CADENCES.digestTriggerPoll },
@@ -351,6 +352,12 @@ export const CRON_GROUPS: readonly CronGroupDefinition[] = [
     description: "Core ingestion, FX rates, and cache-dependent supply snapshots on the shared 15-minute lane.",
   },
   {
+    key: "one-minute",
+    title: "1-minute slot",
+    badge: "~1 min",
+    description: "Reserve cohort recovery with independently fenced continuation invocations.",
+  },
+  {
     key: "five-minute",
     title: "5-minute slot",
     badge: "~5 min",
@@ -453,7 +460,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
   {
     job: "reserve-recovery",
     label: "Reserve recovery",
-    group: "five-minute",
+    group: "one-minute",
     scheduleKey: "fiveMinuteReserveRecovery",
     triggerMode: "isolated",
     statusImpact: "critical",

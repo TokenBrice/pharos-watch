@@ -1,14 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapter-descriptors";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
+import type { MockD1Database, MockPreparedStatement, MockTableConfig } from "@shared/test-utils/mock-d1";
 import {
   CONFIGURED_COINS,
   SYNC_ORDERED_CONFIGURED_COINS,
   orderConfiguredCoinsForSync,
   type ConfiguredCoin,
 } from "../sync-live-reserves-shared";
-import { resolveLiveReserveSyncBudgetConfig } from "../sync-live-reserves-config";
+import { LIVE_RESERVE_CONTINUATION_BUDGETS, resolveLiveReserveSyncBudgetConfig } from "../sync-live-reserves-config";
 import {
   checkpointIdentity,
   checkpointTable,
@@ -281,6 +281,74 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
     expect(visited).toEqual(SYNC_ORDERED_CONFIGURED_COINS.map((coin) => coin.id));
     expect(new Set(visited).size).toBe(visited.length);
     expect(sealAcceptedReserveGeneration).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([false, true])("packs a 93-coin suffix with the unchanged admission floor (slow tail: %s)", async (slowTail) => {
+    mockAdapterRegistry(async () => ({
+      slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }],
+    }));
+    // Reset modules above installs this test's adapter registry before import.
+    const { syncLiveReserves } = await import("../sync-live-reserves");
+    const frontier = SYNC_ORDERED_CONFIGURED_COINS.length - 93;
+    const identity = checkpointIdentity(1, "packed-suffix");
+    const db = mockD1([checkpointTable({
+      attemptNo: 1, invocationId: identity.invocationId, state: "recovering",
+      nextItemKey: SYNC_ORDERED_CONFIGURED_COINS[frontier]!.id, itemsDone: frontier,
+    })]);
+    let attempted = 0;
+    const startedMs = nowMs;
+    const batch = db.batch.bind(db);
+    vi.spyOn(db, "batch").mockImplementation(async (statements) => {
+      if (statements.some((statement) => (statement as MockPreparedStatement).sql.includes("INSERT INTO reserve_sync_state"))) {
+        attempted++;
+        // Charge elapsed I/O per admitted lifecycle, not per deduplicated fetch.
+        nowMs += attempted <= 88 ? 193_362 / 88 : slowTail ? 14_000 : 29_841 / 5;
+      }
+      return batch(statements);
+    });
+    const result = await syncLiveReserves(db, new AbortController().signal, {}, undefined,
+      LIVE_RESERVE_CONTINUATION_BUDGETS, identity);
+    const completed = slowTail ? 92 : 93;
+    expect(attempted).toBe(completed);
+    expect(result.status).toBe("ok");
+    expect(JSON.parse(result.metadata!)).toMatchObject({
+      cohortItemsDoneAfterRun: frontier + completed,
+      continuationPending: slowTail, maintenanceDeferredToCohortEnd: slowTail,
+      childDisposition: slowTail ? "continuation_pending" : "completed",
+    });
+    const boundary = db.getHistory().find((entry) =>
+      entry.sql.includes("UPDATE worker_scheduled_checkpoints") && entry.sql.includes("current_item_key = NULL"));
+    expect(boundary?.binds.slice(0, 2)).toEqual([
+      SYNC_ORDERED_CONFIGURED_COINS[frontier + completed]?.id ?? null, frontier + completed,
+    ]);
+    expect(sealAcceptedReserveGeneration).toHaveBeenCalledTimes(slowTail ? 0 : 1);
+    expect(db.getHistory().filter((entry) => entry.sql.includes("DELETE FROM reserve_composition_history")))
+      .toHaveLength(slowTail ? 0 : 1);
+    expect(db.getHistory().some((entry) => entry.binds.includes("run-budget-exhausted"))).toBe(false);
+    if (!slowTail) expect(nowMs - startedMs).toBeCloseTo(223_203, 1);
+  });
+
+  it("defers coin 126 even with the full 300-second wall allowance remaining", async () => {
+    mockAdapterRegistry(async () => ({
+      slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }],
+    }));
+    // Reset modules above installs this test's adapter registry before import.
+    const { syncLiveReserves } = await import("../sync-live-reserves");
+    const identity = checkpointIdentity(1, "cpu-capped");
+    const db = mockD1([checkpointTable({
+      attemptNo: 1, invocationId: identity.invocationId, state: "recovering",
+      nextItemKey: SYNC_ORDERED_CONFIGURED_COINS[0]!.id, itemsDone: 0,
+    })]);
+    const result = await syncLiveReserves(db, new AbortController().signal, {}, undefined,
+      LIVE_RESERVE_CONTINUATION_BUDGETS, identity);
+    expect(JSON.parse(result.metadata!)).toMatchObject({
+      attemptedCoins: 125, cohortItemsDoneAfterRun: 125, continuationPending: true,
+      nextCursorStablecoinId: SYNC_ORDERED_CONFIGURED_COINS[125]!.id,
+    });
+    expect(db.getHistory().filter((entry) =>
+      entry.sql.includes("UPDATE worker_scheduled_checkpoints") && entry.sql.includes("current_item_key = ?")))
+      .toHaveLength(125);
+    expect(sealAcceptedReserveGeneration).not.toHaveBeenCalled();
   });
 
   it.each([1, 2])("renews the claimed recovery lease while advancing an authoritative crash item once (attempt %s)", async (attemptNo) => {

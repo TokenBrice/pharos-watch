@@ -1,6 +1,6 @@
 import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
 import { getCronSlotStartedAtForSchedule, type CronScheduleKey } from "@shared/lib/cron-jobs";
-import { RESERVE_RECOVERY_HEAVY_SLOT_KEYS } from "@shared/lib/scheduled-runner-registry";
+import { RESERVE_RECOVERY_CONFLICT_SLOT_KEYS } from "@shared/lib/scheduled-runner-registry";
 import { resolveLiveReserveSyncBudgetConfig } from "../cron/sync-live-reserves-config";
 import { CRON_TIMEOUT_MS, SCHEDULED_SLOT_JOB_BUDGET_MS } from "./cron-timeouts";
 import { runWithOverloadRetry } from "./d1-overload-retry";
@@ -19,12 +19,12 @@ export interface ReserveRecoveryPollIdentity {
 }
 
 export type ReserveProducerPriority = {
-  reason: "producer-slot-priority" | "heavy-slot-co-tenancy";
+  reason: "producer-slot-priority" | "same-role-slot-co-tenancy";
   scheduleKey: CronScheduleKey;
   slotStartedAt: number;
   observedAt: number;
   lookaheadSec: number;
-  condition: "next-slot-lookahead" | "current-slot-unfinished" | "heavy-slot-running" | "producer-slot-live";
+  condition: "next-slot-lookahead" | "current-slot-unfinished" | "same-role-slot-running" | "producer-slot-live";
 };
 
 function getReserveRecoveryLookaheadSec(): number {
@@ -38,17 +38,18 @@ function getReserveRecoveryLookaheadSec(): number {
 export function reserveRecoveryAdmissionSql(clockSql = "unixepoch()") {
   const { intervalSec, offsetSec } = CRON_SCHEDULE_CADENCES.fourHourlyReserveSync;
   const current = `(${clockSql} - ((${clockSql} - ? + ?) % ?))`;
+  const conflicts = RESERVE_RECOVERY_CONFLICT_SLOT_KEYS;
   return {
     sql: `(${current} + ? - ${clockSql} > ?)
       AND EXISTS (SELECT 1 FROM cron_slot_executions
         WHERE slot_key = ? AND slot_started_at = ${current}
           AND state = 'finished' AND finished_at IS NOT NULL)
-      AND NOT EXISTS (SELECT 1 FROM cron_slot_executions
-        WHERE slot_key IN (${RESERVE_RECOVERY_HEAVY_SLOT_KEYS.map(() => "?").join(", ")})
-          AND state = 'running' AND started_at > ${clockSql} - ? AND started_at <= ${clockSql})`,
+      ${conflicts.length === 0 ? "" : `AND NOT EXISTS (SELECT 1 FROM cron_slot_executions
+        WHERE slot_key IN (${conflicts.map(() => "?").join(", ")})
+          AND state = 'running' AND started_at > ${clockSql} - ? AND started_at <= ${clockSql})`}`,
     binds: [offsetSec, intervalSec, intervalSec, intervalSec, getReserveRecoveryLookaheadSec(),
       "fourHourlyReserveSync", offsetSec, intervalSec, intervalSec,
-      ...RESERVE_RECOVERY_HEAVY_SLOT_KEYS, SCHEDULED_SLOT_JOB_BUDGET_MS / 1000],
+      ...(conflicts.length === 0 ? [] : [...conflicts, SCHEDULED_SLOT_JOB_BUDGET_MS / 1000])],
   };
 }
 
@@ -82,15 +83,16 @@ export async function getReserveProducerPriority(
   if (next - observedAt <= lookaheadSec) {
     return { reason: "producer-slot-priority", scheduleKey, slotStartedAt: next, observedAt, lookaheadSec, condition: "next-slot-lookahead" };
   }
-  const heavy = await runWithOverloadRetry(() => db.prepare(
+  if (RESERVE_RECOVERY_CONFLICT_SLOT_KEYS.length === 0) return null;
+  const conflict = await runWithOverloadRetry(() => db.prepare(
     `SELECT slot_key, slot_started_at FROM cron_slot_executions
-      WHERE slot_key IN (${RESERVE_RECOVERY_HEAVY_SLOT_KEYS.map(() => "?").join(", ")})
+      WHERE slot_key IN (${RESERVE_RECOVERY_CONFLICT_SLOT_KEYS.map(() => "?").join(", ")})
         AND state = 'running' AND started_at > ? AND started_at <= ?
       ORDER BY started_at DESC, slot_key ASC LIMIT 1`,
-  ).bind(...RESERVE_RECOVERY_HEAVY_SLOT_KEYS, observedAt - SCHEDULED_SLOT_JOB_BUDGET_MS / 1000, observedAt)
+  ).bind(...RESERVE_RECOVERY_CONFLICT_SLOT_KEYS, observedAt - SCHEDULED_SLOT_JOB_BUDGET_MS / 1000, observedAt)
     .first<{ slot_key: CronScheduleKey; slot_started_at: number }>());
-  return heavy ? { reason: "heavy-slot-co-tenancy", scheduleKey: heavy.slot_key, slotStartedAt: heavy.slot_started_at,
-    observedAt, lookaheadSec, condition: "heavy-slot-running" } : null;
+  return conflict ? { reason: "same-role-slot-co-tenancy", scheduleKey: conflict.slot_key, slotStartedAt: conflict.slot_started_at,
+    observedAt, lookaheadSec, condition: "same-role-slot-running" } : null;
 }
 
 export function createReserveLeaseOwner(
