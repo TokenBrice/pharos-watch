@@ -258,6 +258,22 @@ describe("evm-rpc helpers", () => {
     expect(usableCcipRpcEndpoints("zksync", chainRpcs, { kind: "logs", fromBlock: 1, toBlock: 10 }).some(endpoint => endpoint.operator === "dwellir")).toBe(false);
   });
 
+  it("keeps historical headers independent of state and rejects unsupported finalized tags", async () => {
+    const chainRpcs = buildChainRpcs("alchemy-key", undefined, { dwellirApiKey: "dwellir-key" });
+    const header = { number: "0x1", timestamp: "0x64", hash: `0x${"a".repeat(64)}` };
+    fetchWithRetryMock.mockResolvedValue(rpcResponse({ result: header }));
+    expect(await fetchEvmBlockHeader("bsc", 1, { chainRpcs })).toMatchObject({ number: 1 });
+    expect(attemptedUrls()[0]).toContain("api-bsc-mainnet-full.n.dwellir.com");
+    fetchWithRetryMock.mockClear();
+    expect(await fetchEvmBlockHeader("immutable-zkevm", "finalized", { chainRpcs })).toBeNull();
+    expect(await fetchEvmRpcBatch("immutable-zkevm", [
+      { method: "eth_getCode", params: ["0xContract", "finalized"] },
+    ], { chainRpcs })).toBeNull();
+    expect(attemptedUrls()).toEqual([]);
+    expect(await fetchEvmBlockHeader("immutable-zkevm", 1, { chainRpcs })).toMatchObject({ number: 1 });
+    expect(attemptedUrls()[0]).toContain("api-immutable-zkevm-mainnet.n.dwellir.com");
+  });
+
   it("parses uint256 hex values safely", () => {
     expect(parseUint256Hex("0x64")).toBe(100n);
     expect(parseUint256Hex("0x")).toBeNull();

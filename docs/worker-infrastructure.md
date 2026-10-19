@@ -128,9 +128,9 @@ Two intentional module-state caveats remain: `buildChainRpcs()` registers/clears
 
 Redemption `applyOutputDependencyResolution()` uses a run-local index and immutable completed snapshot/configuration map. No global clock-keyed join may cross-contaminate concurrent runs sharing a clock.
 
-`shared/lib/chain-rpc-registry.ts` keeps registry, supply and attribution profiles separate. `hasRegistryRpc()`/`registryRpcUrls()` establish inventory readability; supplemental presence does not. [ADR-40](./architecture.md#adr-40) prefers admitted Dwellir for supported reads, preserving incumbent order and inventory boundaries.
+`shared/lib/chain-rpc-registry.ts` keeps RPC profiles separate. `hasRegistryRpc()`/`registryRpcUrls()` establish inventory membership; supplemental presence does not. [ADR-40](./architecture.md#adr-40) prefers eligible Dwellir without reordering incumbents or expanding inventory.
 
-`shared/lib/dwellir-chains.ts` and `shared/lib/dwellir-native-endpoints.ts` own capabilities. Scheduled EVM/native reads share memoized credit-ledger/breaker admission; missing key, denial or `DWELLIR_ROUTING_DISABLED_CHAINS` excludes Dwellir. HTTP gets no native capability. Native supported operations retain exact pins, header credentials and ledger-floor checks, not TRON history or Sui object-history permission.
+The shared Dwellir registries own capabilities. Scheduled EVM/native reads share credit-ledger/breaker admission; missing key, denial or `DWELLIR_ROUTING_DISABLED_CHAINS` excludes Dwellir. HTTP gets no native capability. Native operations retain exact pins, header credentials and ledger-floor checks, not TRON history or Sui object-history permission.
 
 The EVM resolver separates recent finalized state, arbitrary historical state, headers/receipts and inclusive log intervals. Recent pins bind chain/number/hash, original clocks, finalized head, age and retained floor; batch eligibility intersects actual members. BSC/Monad/zkSync remain recent-only. Unknown incumbent retention is not archive proof; HyperEVM Alchemy numeric mispins stay excluded. No hash-to-number/latest fallback.
 
