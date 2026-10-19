@@ -53,8 +53,9 @@ function expectAttribution(
   path: string,
   delivery = "pages-upstream-fetch",
 ) {
-  const rows = db.getHistory().filter((entry) => entry.sql.includes("INSERT INTO site_data_request_stats"));
-  expect(rows.map((entry) => entry.binds.slice(1, 6))).toEqual([[route, path, delivery, "site-api", 1]]);
+  const rows = db.getHistory().filter((entry) => entry.sql.includes("INSERT INTO site_data_request_samples"));
+  const inverseRate = delivery === "pages-upstream-timeout" || delivery === "pages-upstream-error" ? 1 : 64;
+  expect(rows.map((entry) => entry.binds.slice(1))).toEqual([[route, path, delivery, "site-api", inverseRate, 1]]);
 }
 
 describe("site-data proxy", () => {
@@ -63,6 +64,7 @@ describe("site-data proxy", () => {
 
   beforeEach(() => {
     resetSiteDataRequestAttributionStateForTests();
+    vi.spyOn(Math, "random").mockReturnValue(0);
     cacheMatch.mockReset();
     cachePut.mockReset();
     vi.stubGlobal("caches", {
@@ -471,6 +473,7 @@ describe("site-data proxy", () => {
   });
 
   it("records upstream fetch errors through site-data attribution", async () => {
+    vi.mocked(Math.random).mockReturnValue(0.9);
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     siteApi.error("/api/stablecoins", new Error("network down"));
     const db = makeTestD1Database();
@@ -485,6 +488,30 @@ describe("site-data proxy", () => {
     await expect(response.json()).resolves.toEqual({ error: "Site API upstream fetch failed" });
     expectAttribution(db, "stablecoins", "/api/stablecoins", "pages-upstream-error");
     expect(warn).toHaveBeenCalledWith("[site-data-proxy] upstream fetch failed (Error): network down");
+  });
+
+  it.each([200, 503])("does not record unselected upstream HTTP %s responses", async (status) => {
+    vi.mocked(Math.random).mockReturnValue(1 / 64);
+    siteApi.json("/api/stablecoins", { status }, status);
+    const db = makeTestD1Database();
+    const ctx = makeWaitUntil();
+    const response = await onRequest(siteDataContext(new Request("https://pharos.watch/_site-data/stablecoins", {
+      headers: { Origin: "https://pharos.watch" },
+    }), makeEnv(db), ctx.waitUntil));
+    await ctx.flush();
+    expect(response.status).toBe(status);
+    await expect(response.json()).resolves.toEqual({ status });
+    expect(db.getHistory()).toEqual([]);
+  });
+
+  it("samples upstream HTTP errors as ordinary responses, not certain transport failures", async () => {
+    siteApi.json("/api/stablecoins", { error: "upstream" }, 503);
+    const db = makeTestD1Database();
+    const response = await onRequest(siteDataContext(new Request("https://pharos.watch/_site-data/stablecoins", {
+      headers: { Origin: "https://pharos.watch" },
+    }), makeEnv(db)));
+    expect(response.status).toBe(503);
+    expectAttribution(db, "stablecoins", "/api/stablecoins");
   });
 
   it("keeps the upstream response when site-data attribution recording fails", async () => {
@@ -509,6 +536,7 @@ describe("site-data proxy", () => {
   });
 
   it.each(["fetch", "binding"])("attributes a stalled %s body to timeout only after the deadline and cancels it", async (transport) => {
+    vi.mocked(Math.random).mockReturnValue(0.9);
     vi.useFakeTimers();
     vi.spyOn(console, "warn").mockImplementation(() => {});
     const cancel = vi.fn();

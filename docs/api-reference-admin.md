@@ -193,7 +193,7 @@ Admin-only per-coin attempt timeline for the live-reserve sync lane, querying `r
 
 ### `GET /api/request-source-stats`
 
-Admin-only, Access-protected, `no-store` operational demand measurement. **Reader-first release:** writers still record existing counters; this reader also understands additive sampled stores for the separately deployed writer cutover. This is not a public scoring methodology change.
+Admin-only, Access-protected, `no-store` operational demand measurement. Worker source events and ordinary Pages upstream responses are sampled independently per eligible request at 1/64; only Pages transport timeout/error observations use certainty capture. Legacy recorded counters remain historical inputs during their 35-day drain. This is not a public scoring methodology change.
 
 The top-line `site` bucket combines:
 
@@ -220,7 +220,7 @@ Malformed numeric params return `400`; out-of-range numeric params are clamped t
 - `kind`: `observed`, `estimated`, `mixed`, or `unavailable`; sampled contributions can never be labeled observed.
 - `recordedCount`: unsampled legacy/per-key observations; `observedSampleCount` and `probabilityStrata[{inverseRate,observedSampleCount}]`: selected observations, not expanded counts. Weighted count = recorded count + `SUM(sample_count * inverse_rate)`; variance estimate = `SUM(sample_count * inverse_rate * (inverse_rate - 1))`.
 - `coverage`: `best-effort` or `unknown`, never a capture-completeness guarantee. `reason` is nullable and machine-readable (`low-sample`, `no-observations`, `invalid-key-regime`, `legacy-keyed-exceeds-source`). `standardError` is null for unavailable or fewer than 30 sampled events; otherwise counts use square-root variance and shares use a delta-method percentage-point error.
-- Empty sampled observations may have point estimate zero with `estimated/low-sample`, not proof of zero requests. Failed reads return an error, never a populated zero response. Pages transport timeout/error observations and per-key counts remain unsampled; ordinary source/delivery contributions may be estimated after writer activation.
+- Empty sampled observations may have point estimate zero with `estimated/low-sample`, not proof of zero requests. Failed reads return an error, never a populated zero response. Pages transport timeout/error observations and per-key counts remain unsampled; upstream HTTP responses, including non-2xx responses, remain ordinary 1/64 delivery observations.
 
 All queries use the same `[from,to)` observation window and preserve minute resolution. Full-window totals do not depend on route/key limits or the UI's latest-eight-bucket display. Shares are derived after summing weighted inputs, not averaged or clamped.
 
@@ -237,7 +237,7 @@ All queries use the same `[from,to)` observation window and preserve minute reso
 - `apiKeys[]` — top API keys by keyed request volume with masked token, traffic class, active/expiry metadata, rate limit, request count, and keyed/public-api share percentages
 - `scope` — measurement-inclusion flags for total site demand, worker load, and retired Pages cache-hit telemetry; `includesPagesProxyCacheHits` is always `true`, not evidence that cache-hit rows exist in the window
 
-Key summaries use recorded `api_key_request_stats.request_count`. The default-zero `source_v2_request_count` identifies the later source writer regime (old writers leave it zero). Legacy unkeyed demand is legacy public traffic minus `SUM(request_count-source_v2_request_count)`; new unkeyed demand comes directly from sampled `authentication_class='unkeyed'` rows. Their sum plus recorded keyed load owns each key's public share denominator, which can differ from the independently estimated Worker lane total. Impossible legacy subtraction or a marker outside `0..request_count` makes unkeyed/total/share values null with typed unavailable metadata; recorded key counts, keyed shares, omission totals and unrelated demand remain visible. No subtraction-and-clamp fallback is used.
+Key summaries use recorded `api_key_request_stats.request_count`. Each new writer increments `request_count` and `source_v2_request_count` atomically in its existing upsert, even when the independent source sample is rejected; old writers leave the default-zero marker unchanged. Legacy unkeyed demand is legacy public traffic minus `SUM(request_count-source_v2_request_count)`; new unkeyed demand comes directly from sampled `authentication_class='unkeyed'` rows. Their sum plus recorded keyed load owns each key's public share denominator, which can differ from the independently estimated Worker lane total. Impossible legacy subtraction or a marker outside `0..request_count` makes unkeyed/total/share values null with typed unavailable metadata; recorded key counts, keyed shares, omission totals and unrelated demand remain visible. No subtraction-and-clamp fallback exists.
 
 ### `GET /api/api-keys`
 

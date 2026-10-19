@@ -108,6 +108,7 @@ describe("worker.fetch", () => {
     resetApiKeyStateForTests();
     resetRequestAttributionStateForTests();
     vi.restoreAllMocks();
+    vi.spyOn(Math, "random").mockReturnValue(0);
     cacheMatch.mockReset();
     cachePut.mockReset();
     vi.mocked(verifyAccessJwt).mockResolvedValue(false);
@@ -438,13 +439,29 @@ describe("worker.fetch", () => {
 
     expect(res.status).toBe(200);
     const history = env.DB.getHistory();
-    expect(history.some((entry) => entry.sql.includes("INSERT INTO api_request_consumer_stats")
-      && entry.binds[1] === "stablecoins"
-      && entry.binds[2] === "/api/stablecoins"
-      && entry.binds[3] === "public-api"
-      && entry.binds[4] === "external")).toBe(true);
+    expect(history.some((entry) => entry.sql.includes("INSERT INTO api_request_source_samples")
+      && entry.binds.slice(1).join("|") === "stablecoins|/api/stablecoins|public-api|external|keyed|64|1")).toBe(true);
+    expect(history.some((entry) => entry.sql.includes("api_request_consumer_stats"))).toBe(false);
     expect(history.some((entry) => entry.sql.includes("INSERT INTO api_key_request_stats")
       && entry.binds[0] === 7)).toBe(true);
+  });
+
+  it.each([true, false])("retains auth, quota and atomic key accounting when source selection rejects (cache hit=%s)", async (cacheHit) => {
+    vi.mocked(Math.random).mockReturnValue(1 / 64);
+    if (cacheHit) cacheMatch.mockResolvedValueOnce(cacheableJson({ ok: true }));
+    else vi.mocked(handleStablecoins).mockResolvedValueOnce(cacheableJson({ ok: true }));
+    const { response, env } = await performStablecoinsFetch();
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ ok: true });
+    const history = env.DB.getHistory();
+    expect(history.some((entry) => entry.sql.includes("INSERT INTO api_key_rate_limit"))).toBe(true);
+    expect(history.some((entry) => entry.sql.includes("UPDATE api_keys SET last_used_at"))).toBe(true);
+    expect(history.filter((entry) => entry.sql.includes("INSERT INTO api_key_request_stats")))
+      .toEqual([expect.objectContaining({
+        sql: expect.stringContaining("source_v2_request_count = source_v2_request_count + excluded.source_v2_request_count"),
+        binds: [7, expect.any(Number), 1, 1],
+      })]);
+    expect(history.some((entry) => entry.sql.includes("api_request_source_samples") || entry.sql.includes("api_request_consumer_stats"))).toBe(false);
   });
 
   it("returns a maintenance response before routing or cache lookup", async () => {
@@ -529,11 +546,8 @@ describe("worker.fetch", () => {
 
     expect(res.status).toBe(200);
     const history = env.DB.getHistory();
-    expect(history.some((entry) => entry.sql.includes("INSERT INTO api_request_consumer_stats")
-      && entry.binds[1] === "stablecoins"
-      && entry.binds[2] === "/api/stablecoins"
-      && entry.binds[3] === "site-api"
-      && entry.binds[4] === "site")).toBe(true);
+    expect(history.some((entry) => entry.sql.includes("INSERT INTO api_request_source_samples")
+      && entry.binds.slice(1).join("|") === "stablecoins|/api/stablecoins|site-api|site|not-applicable|64|1")).toBe(true);
   });
 
   it("denies site-api admin paths even when the site-proxy secret is valid", async () => {

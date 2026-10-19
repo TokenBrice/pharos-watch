@@ -95,6 +95,12 @@ export function cronHistoryRetentionPolicies(
     selfServeIssuanceRateLimits: policy("api_key_self_serve_issuance_limits", "bucket_start", 2 * DAY, {
       batchLimit: limits.smallBatchLimit, runLimit: limits.runLimit, budgetGroup: "selfServeRateLimits",
     }),
+    apiRequestSourceSamples: policy("api_request_source_samples", "bucket_start", REQUEST_ATTRIBUTION_RETENTION_DAYS * DAY, {
+      batchLimit: limits.smallBatchLimit, runLimit: limits.smallRunLimit,
+    }),
+    siteDataRequestSamples: policy("site_data_request_samples", "bucket_start", REQUEST_ATTRIBUTION_RETENTION_DAYS * DAY, {
+      batchLimit: limits.smallBatchLimit, runLimit: limits.smallRunLimit,
+    }),
   };
 }
 
