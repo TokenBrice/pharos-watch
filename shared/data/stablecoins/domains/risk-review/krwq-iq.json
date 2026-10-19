@@ -1,7 +1,7 @@
 {
   "id": "krwq-iq",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "GitHub",
@@ -18,11 +18,23 @@
       {
         "label": "Canonical ProxyAdmin and owner-only upgrade code",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xff85d94fabb650c086c83b112e7126048a5e31bb"
+      },
+      {
+        "label": "Base KRWQ verified implementation (Sourcify)",
+        "url": "https://sourcify.dev/server/v2/contract/8453/0x394b2763895d648abcd84c191c2a12ff9504de27?fields=abi"
+      },
+      {
+        "label": "Base PublicNode RPC (block 52800572)",
+        "url": "https://base-rpc.publicnode.com"
+      },
+      {
+        "label": "Ethereum PublicNode RPC",
+        "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
-    "evidence": "At Ethereum block 0x18e35e2, the canonical proxy implementation is 0x350b6b5cf2bda130a9bee0a3cda86ec88e71dcca. Its current minterBurnFrom delegates to ERC20Burnable.burnFrom and spends holder allowance; the native implementation does not expose direct blacklist, pause or arbitrary seizure functions. Owner 0x56398b89d53e8731bca8c1b06886cfb14bd6b654 can immediately add or restore minters, but those minters remain allowance-gated for burning. The same address owns ProxyAdmin 0xff85d94fabb650c086c83b112e7126048a5e31bb, whose owner-only upgradeAndCall can install new restriction logic. This future-upgrade capability is distinct from currently executable native powers. Historical Yes is retained conservatively without a new claim that direct native freezing is active; the proposed asset-wide downgrade is discarded because native-only evidence does not check every reachable bridge-representation or restriction path.",
-    "reviewer": "Sol curation pass 2026-10-01 (RuleC16)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "At Base block 52800572 (2026-10-19) the KRWQ representation 0x370923d39f139c64813f173a1bf0b4f9ba36a24f (57.5624% of supply) resolves through EIP-1967 to verified LayerZero OFTUpgradeable implementation 0x394b2763895d648abcd84c191c2a12ff9504de27; its owner and ProxyAdmin 0x748e1558937c34c9b503f472bb7b7badc99a3ce0 owner are 0x74986F1Aaa569F09E369eD19E87E388de1976F9b. At the Ethereum latest block (2026-10-19) the canonical proxy 0xc00db6b41473d065027f5ed6fada20fde75f142e (34.3505%) resolves to verified implementation 0x350b6b5cf2bda130a9bee0a3cda86ec88e71dcca under ProxyAdmin 0xff85d94fabb650c086c83b112e7126048a5e31bb, owned by 0x56398b89d53e8731bca8C1B06886CFB14BD6b654 (3-of-5 Safe). Neither verified implementation has a blacklist, freeze, pause or arbitrary-seizure function: burn and burnFrom spend the caller's own balance, and minterBurnFrom is allowance-gated. Both material deployments therefore carry an owner-controlled upgrade surface that could install restriction logic but no currently active holder-targeted control, which is the Possible tier. Polygon (4.8808%) and Fraxtal (3.1486%) remain peripheral and do not set the verdict.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",

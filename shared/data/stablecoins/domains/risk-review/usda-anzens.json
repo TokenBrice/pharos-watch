@@ -1,7 +1,7 @@
 {
   "id": "usda-anzens",
   "blacklistabilityReview": {
-    "reviewedStatus": "possible",
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "Cardano minting-policy execution semantics",
@@ -18,10 +18,14 @@
       {
         "label": "Anzens terms and controls",
         "url": "https://www.anzens.com/landing/terms-and-conditions"
+      },
+      {
+        "label": "Anzens USDA homepage (100% cash and U.S. Treasury reserves)",
+        "url": "https://www.anzens.com/"
       }
     ],
-    "evidence": "Direct review on 2026-09-04: USDA is a Cardano native asset whose PlutusV2 mint policy executes only when minting or burning, so it does not freeze ordinary holder transfers. Anzens' off-chain KYC mint/redemption controls support possible route or account intervention.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-09-04"
+    "evidence": "Reviewed 2026-10-19 against the reserve sidecar and Anzens' current terms. USDA is a Cardano native asset issued under the immutable PlutusV2 mint policy fe7c786ab321f41c654ef6c1af7b3250a613c24e4213e0425a7ae456 (asset name 55534441); the policy executes on mint and burn only, so it cannot freeze or seize ordinary holder transfers. The Anzens terms reserve the right to block wallet addresses and restrict service access, but those are off-chain platform controls, not a token-level holder freeze; the terms themselves state that recorded blockchain transactions are irreversible. No direct Yes or Possible control exists. Upstream reserve test: the reserve sidecar assigns 100% of reserves to cash, cash equivalents, U.S. Treasury bills and Treasury-focused money-market funds, with individual holdings undisclosed and no dated attestation. Every named category is a custodial fiat/bank or T-bill/fund-manager reserve under docs/blacklist-tracker.md, so the measured exposure is 100%, strictly above the 50% threshold. Reviewed upstream.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   }
 }

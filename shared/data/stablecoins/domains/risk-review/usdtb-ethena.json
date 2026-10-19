@@ -10,11 +10,23 @@
       {
         "label": "Solana finalized mint observation",
         "url": "https://api.mainnet-beta.solana.com"
+      },
+      {
+        "label": "Current verified Ethereum AnchorageTokenUSDtb implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9D6d77a21702b9AFcF924983fbFB84AAAAe79589"
+      },
+      {
+        "label": "Ethereum pinned proxy and live role reads",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Measured per-chain circulating shares",
+        "url": "https://api.pharos.watch/api/stablecoins"
       }
     ],
-    "evidence": "Anchorage's covered stablecoin terms expressly permit freezing, blocking, seizure and restrictions for Clients and Non-Clients. The native Solana USDtb Token-2022 mint at finalized slot 452212623 on 2026-10-01 reports freezeAuthority FiV6goxf5fYfw9y7XwuG8bVAG6bqTb1sR1rrLomjkXa3, permanentDelegate C2QJ4HKLWzWRNprAmKoyd6YqXouVHFZuLKujdqtF4ZDt, and an unpaused pausableConfig controlled by fEnXbNWPAkmhVK1nL1H2sQVdkF3y4eh8CuqnCsnDXqx. The affirmative review is now source-backed rather than inferred from centralized governance.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurA28USDTB)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "Ethereum is the material USDtb deployment with91.925518% of measured circulating supply. At Ethereum@26224760 (2026-10-19T06:14:11+00:00), proxy0xc139190f447e929f090edeb554d95abb8b18ac1c resolved to verified AnchorageTokenUSDtb implementation0x9d6d77a21702b9afcf924983fbfb84aaaae79589. Its current blockAccounts/unblockAccounts functions assign/remove BLACKLISTED_ROLE, and _beforeTokenTransfer rejects both blocked senders and recipients except the intentional privileged-burn path. Pinned hasRole checks confirmed BLOCKLISTER_ROLE holder0x8875b3fc7a66d48cdc1cba611a66b3a5ecd75d23, MINTER_BURNER_ROLE holder0x364366a7164fb518eafaa42af0c86eddab78e6f3, and PAUSER_ROLE holder0xc2a24919afb2328bab581dd7748e94906e480812, all non-zero and currently active. burn(address,uint256) can directly burn an arbitrary holder without allowance, including blocked balances. These current material-chain controls independently establish Yes; admin future upgrades or merely centralized governance are not the basis. Anchorage's covered stablecoin terms also expressly permit freezing, blocking, seizure and restrictions for Clients and Non-Clients. The Solana Token-2022 USDtb mint8yXrtJ54jZtE84xEBzTESKuegjcAkAuDrdAhRd8i8n3T was independently re-read at finalized slot458730702(2026-10-19T06:18:03Z): freezeAuthority FiV6goxf5fYfw9y7XwuG8bVAG6bqTb1sR1rrLomjkXa3; permanentDelegate C2QJ4HKLWzWRNprAmKoyd6YqXouVHFZuLKujdqtF4ZDt; unpaused pausableConfig controlled by fEnXbNWPAkmhVK1nL1H2sQVdkF3y4eh8CuqnCsnDXqx. Its current41,809,265.42 units are8.080344% of the global517,419,391.665755 denominator, corroborating the API8.074482% snapshot as sub-threshold. Solana controls remain disclosed, but no longer substitute for the Ethereum evidence. USDtb has no declared parent; reviewed99.017% BUIDL and0.983% custodial bank reserves would qualify for Upstream absent the direct Yes, which takes precedence.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",

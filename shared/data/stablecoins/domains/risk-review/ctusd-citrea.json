@@ -10,11 +10,23 @@
       {
         "label": "Website",
         "url": "https://citrea.xyz/"
+      },
+      {
+        "label": "Verified MYieldToOneForcedTransfer implementation (Citrea)",
+        "url": "https://explorer.mainnet.citrea.xyz/api/v2/smart-contracts/0xf15e4de65adf1d0a5c057f0165a50072fd76804c"
+      },
+      {
+        "label": "Citrea proxy",
+        "url": "https://explorer.mainnet.citrea.xyz/address/0x8d82c4e3c936c7b5724a382a9c5a4e6eb7ab6d5d"
+      },
+      {
+        "label": "Citrea public RPC, block 14144181",
+        "url": "https://rpc.mainnet.citrea.xyz"
       }
     ],
-    "evidence": "Explicit Yes retained: centralized governance metadata indicates issuer or admin control; registry links were reviewed for direct freeze, blacklist, pause, burn, or upgrade authority.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "ctUSD is a direct freezable M0 extension. At Citrea block 14144181 the proxy 0x8d82c4e3c936c7b5724a382a9c5a4e6eb7ab6d5d resolves to verified MYieldToOneForcedTransfer implementation 0xf15e4de65adf1d0a5c057f0165a50072fd76804c, exposing FREEZE_MANAGER_ROLE, freeze, freezeAccounts and forced-transfer management. Deployment block 2372833 granted FREEZE_MANAGER_ROLE, PAUSER_ROLE, DEFAULT_ADMIN_ROLE and FORCED_TRANSFER_MANAGER_ROLE to 0x2a5c3c406dee0e2f1936b9791b998974103c1f32, and hasRole(FREEZE_MANAGER_ROLE,0x2a5c...)=true at the pinned block. Citrea holds 100% of reported supply (3,642,538.694184 ctUSD). The active manager can freeze arbitrary holders, so the Yes verdict is direct; the 100% M reserve exposure is secondary.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",

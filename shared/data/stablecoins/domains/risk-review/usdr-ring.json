@@ -1,7 +1,7 @@
 {
   "id": "usdr-ring",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "USDR AssetToken verified source",
@@ -10,11 +10,15 @@
       {
         "label": "Ring Core and Permissions verified source",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb2799ed78490ea642d2ecb23cb2ce9b8acc087d4"
+      },
+      {
+        "label": "Ethereum RPC pinned role reads",
+        "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
-    "evidence": "The verified deployed AssetToken overrides burnFrom(account, amount) with onlyBurner and directly calls _burn without an allowance check. Core governors can grant BURNER_ROLE, and CoreRef.setCore(address) is onlyGovernor. At Ethereum block 26095797, token core() returned 0xb2799ed78490ea642d2ecb23cb2ce9b8acc087d4 and its GOVERN_ROLE still had Core plus two EOA members. The adverse reviewedStatus=true is retained for privileged holder-balance destruction and replaceable access authority; this is not a claim that an address-blacklist mapping exists.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurB02ACRDX)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "At Ethereum block 26224761 (2026-10-19T06:14:23Z), Ring Core 0xb2799ed78490ea642d2ecb23cb2ce9b8acc087d4 returned getRoleMemberCount(BURNER_ROLE) = 0; GOVERN_ROLE has three members: Core itself, 0xff790875de1f44d4ddc1f905a2b9cf0c11116859 and 0x9336d0c82299da0ab178271792954adfd6f10fd7. The verified AssetToken 0x4ea40dcee961675683e0a2e1721bd49cb9bca913 overrides burnFrom(account,amount) with onlyBurner and burns without allowance, and CoreRef.setCore(address) is onlyGovernor, but no burner is currently assigned. The live control is therefore the governors' ability to grant BURNER_ROLE, a direct Possible rather than an active Yes. USDR has a single Ethereum deployment holding the entire on-chain supply (totalSupply = 100,400,000 at the same block), so that deployment is material.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "oracleless",

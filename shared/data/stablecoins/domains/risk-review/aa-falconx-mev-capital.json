@@ -30,10 +30,18 @@
       {
         "label": "Current verified IdleCDOEpochVariant implementation",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xdd596250f838af8862d30e9c78a143356894a18d"
+      },
+      {
+        "label": "Current verified CDO implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x67f839a44e8b6d2cd403d9cb14f3862f2b85e9f8"
+      },
+      {
+        "label": "CDO ProxyAdmin verified source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9438904abc7d8944a6e2a89671fef51c629af351"
       }
     ],
-    "evidence": "Re-reviewed 2026-09-21 for the sole tracked Ethereum deployment 0xc26a6fa2c37b38e549a4a1807543801db684f99c. Blockscout still identifies the deployed AA_FalconXUSDC contract; the pinned verified IdleCDOTranche source gives its minter an arbitrary burn(address,uint256) path over holder balances, while ordinary transfer and transferFrom contain no independent blacklist hook. The minter remains the IdleCDO proxy 0x433d5b175148da32ffe1e1a37a939e1b7e79be4d, so transfer access is restrictable through holder-selective burn/seizure even though direct ERC-20 transfers are not denylisted. This exact chain/address is the complete authored deployment scope. Validation caveat 2026-10-01 (ValA30sUSDai): at Ethereum block 26095937, minter() returned the CDO proxy and its EIP-1967 implementation slot returned 0xdd596250f838af8862d30e9c78a143356894a18d. The verified tranche burn requires msg.sender == minter; a zero-amount burn call from address(1) reverted with reason 6. The current implementation gates requestWithdraw with isWalletAllowed(msg.sender), while keyring() returned 0x6a6a91c7c7c05f9f6b8bc9f6e5ea231e460450e3 and keyringPolicyId() returned 18. The historical holder-selective seizure assertion above is retained as review history, not independently established by the minter-only burn primitive. A reachable CDO path capable of burning arbitrary holders and the current credential policy's holder-access effects still require adjudication; reviewedStatus remains unchanged.",
-    "reviewer": "Claude curation campaign 2026-09-21 (Ctrl3)",
-    "reviewedAt": "2026-09-21"
+    "evidence": "Ethereum is the sole tracked deployment (100% census supply), receipt 0xc26a6fa2c37b38e549a4a1807543801db684f99c. At ethereum@26224759 (2026-10-19T06:13:59+00:00), minter() remains CDO proxy 0x433d5b175148da32ffe1e1a37a939e1b7e79be4d, whose current implementation is 0x67f839a44e8b6d2cd403d9cb14f3862f2b85e9f8. Verified IdleCDOTranche burn(address,uint256) requires this minter, and current CDO _withdrawOps supplies msg.sender; an allowance-free arbitrary-holder seizure path is not established by that primitive. Ordinary receipt transfer/transferFrom have no blacklist. Nevertheless current CDO requestWithdraw requires isWalletAllowed(msg.sender): keyring()=0x6a6a91c7c7c05f9f6b8bc9f6e5ea231e460450e3, policyId=18, isWalletAllowed(0xdead)=false while isWalletAllowed(CDO owner 0xfb3bd022d5dacf95ee28a6b07825d4ff9c5b3814)=true. Owner/manager can setKeyringParams. This is active address-sensitive redemption control (Yes under the holder-exit gate interpretation), separate from ordinary transfer permissionlessness. allowAAWithdrawRequest() was false at the pin, so the observation does not claim any holder could request a withdrawal at that instant. CDO ProxyAdmin 0x9438904abc7d8944a6e2a89671fef51c629af351 is owned by 0xda86e15d0cda3a05db930b248d7a2f775e575a44, an additional mutable privileged-burn path (Possible independently). Declared USDC parent remains additional upstream risk, not the direct verdict basis.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   }
 }

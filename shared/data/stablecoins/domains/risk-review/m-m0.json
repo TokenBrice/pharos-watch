@@ -1,7 +1,7 @@
 {
   "id": "m-m0",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "M0 Solana docs",
@@ -14,11 +14,31 @@
       {
         "label": "MToken technical specification",
         "url": "https://docs.m0.org/protocol/m-token"
+      },
+      {
+        "label": "Verified Ethereum MToken (non-proxy)",
+        "url": "https://eth.blockscout.com/address/0x866A2BF4E572CbcF37D5071A7a58503Bfb36be1b"
+      },
+      {
+        "label": "MToken.sol",
+        "url": "https://github.com/m0-foundation/protocol/blob/main/src/MToken.sol"
+      },
+      {
+        "label": "MinterGateway.sol burnM",
+        "url": "https://github.com/m0-foundation/protocol/blob/main/src/MinterGateway.sol"
+      },
+      {
+        "label": "Ethereum public RPC, block 26224792",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Solana mainnet RPC, finalized slot 458730689",
+        "url": "https://api.mainnet-beta.solana.com"
       }
     ],
-    "evidence": "M0's current Solana documentation names mint mzerokyEX9TNDoK4o2YZQBDmMzjokAeN6M2g2S3pLJo and describes frozen-by-default accounts with approved-earner thawing. The finalized RPC observation at slot 452226596 on 2026-10-01 instead reports freezeAuthority=null and no defaultAccountState extension for that exact mint. The documentation and deployed mint state conflict, so the existing reviewedStatus=true is retained conservatively pending resolution; the stated direct Solana freeze control is not confirmed by the current mint read. Ethereum MToken still routes native mint and burn through MinterGateway.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurA45M)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "M remains Upstream on its full eligible-collateral category, not a currently measured97.9% UMB allocation. The M0 API retrieval2026-10-19 reports $193,516,539.864742 collateral with source date2026-09-21T15:32:11Z; the protocol documents offchain approved collateral held through eligible custody structures. Internal cash/Treasury/token and provider weights are unavailable, so100% is categorical custody exposure, not a fresh constituent-level audit. Ethereum MToken0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b is immutable, mint/burn restricted to immutable MinterGateway0xf7f9638cb444d65e5a40bf5ff98ebe4ff319f04e; gateway burnM burns caller tokens, not arbitrary holders. Sources https://eth.blockscout.com/api/v2/smart-contracts/0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b and https://raw.githubusercontent.com/m0-platform/protocol/main/src/MinterGateway.sol. Solana mint mzerokyEX9TNDoK4o2YZQBDmMzjokAeN6M2g2S3pLJo at finalized458738579 has freezeAuthority=null and no default frozen-state extension; transferHook has null program but retained update authority. Solana7.4146% and Monad8.721% are sub-material under the census; their dormant hook/upgrade surfaces do not set the asset verdict. Only Ethereum82.9139% is material and has no direct holder-control surface. No declared parent; full collateral category qualifies upstream. Exact historical UMB concentration is not refreshed.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",

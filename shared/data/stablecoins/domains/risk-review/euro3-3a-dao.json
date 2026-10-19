@@ -2,9 +2,6 @@
   "id": "euro3-3a-dao",
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "evidence": "Re-verified 2026-08-10 across both tracked deployments. At Polygon block 91771970 and Linea block 31673704, EURO3 retained the reviewed owner contracts, direct non-proxy bytecode, and zero EIP-1967 implementation/admin slots. Sourcify exact-match MintableToken source is OpenZeppelin ERC-20 plus onlyOwner mint and has no pause, blacklist, freeze, allowlist, seizure, arbitrary-holder burn, or transfer hook, so EURO3 has no direct holder-freeze control. The reserve verdict is nevertheless Upstream: the reviewed all-chain collateral composition assigns 70.1381% to Mendi meUSDC, and a live Linea recheck at block 31673691 put meUSDC at 71.79% of current Linea factory collateral. meUSDC.underlying() returned Circle's official Linea USDC contract 0x176211869ca2b568f2a7d4ee941e073a821ee1ff; meUSDT.underlying() likewise returned Linea USDT. Those named freezable stablecoin dependencies exceed the strict 50% upstream threshold, so the resolved status is inherited rather than direct Yes.",
-    "reviewer": "Codex FreezeWatch upstream audit",
-    "reviewedAt": "2026-08-10",
     "sources": [
       {
         "label": "Sourcify exact-match Polygon MintableToken",
@@ -37,8 +34,19 @@
       {
         "label": "Circle official Linea USDC contract registry",
         "url": "https://developers.circle.com/stablecoins/usdc-contract-addresses"
+      },
+      {
+        "label": "Exact-match Linea factory helper with getAllVaults",
+        "url": "https://sourcify.dev/server/v2/contract/59144/0x045d6078DD0d2436B67bc4050AB8F2a7E7e9B03c?fields=abi,sources"
+      },
+      {
+        "label": "Verified Vault/VaultFactory debt and collateral interfaces",
+        "url": "https://sourcify.dev/server/v2/contract/137/0x4760847023fa0833221ae76E01Db1E483A5D20e0?fields=abi,sources"
       }
-    ]
+    ],
+    "evidence": "Both material deployments are direct non-proxy ERC20s: Linea 62.9551% and Polygon 37.0449% of the 2026-10-19 circulating-supply census. At Linea block 32363658 and Polygon block 95790067 (2026-10-19T06:14Z), owner and zero EIP-1967 implementation/admin slots corroborate the exact-match MintableToken sources: only owner mint and holder self-burn, with no direct holder blacklist, pause, seizure or upgrade path. There is no declared parent. For the required debt-weighted test, at Linea block 32363687 (2026-10-19T06:19:05Z), the issuer-listed helper enumerated all 585 vaults; their debt() sum exactly matched factory totalDebt(), 14395.441032614084 EURO3. Polygon factory totalDebt() at block 95790268 (2026-10-19T06:19:09Z) was 0.473929025601 EURO3. Single-collateral Linea vault debt resolves to meUSDC 10075.926798202378, meUSDT 627.700297063071, USDC 5.939234663446, USDT 0.708650223862, and custodian-controlled WBTC 1971.804837118189. At Linea block 32363685 (2026-10-19T06:18:20Z), meUSDC.underlying()=0x176211869ca2b568f2a7d4ee941e073a821ee1ff and meUSDT.underlying()=0xa219439258ca9da29e9cc4ce5596924745e12b93. Treating all mixed, unclassified and Polygon debt as unexposed gives a conservative 88.094990% issuer/custodian-exposed debt share, above 50%; stablecoins alone give 74.398015%. As a separate reconciliation sensitivity, all circulating token totalSupply is 22866.221116882745 EURO3, larger than current factory debt; counting the entire discrepancy as unexposed still leaves 55.462071% exposure including WBTC. Prior gross-collateral rows were 70.439% stablecoin-linked plus 9.605% WBTC, not the primary metric. Therefore retain Upstream, not direct Yes.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "single-source-or-laggy",

@@ -1,7 +1,7 @@
 {
   "id": "gho-aave",
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": false,
     "sources": [
       {
         "label": "Aave GHO introduction",
@@ -18,11 +18,19 @@
       {
         "label": "Chainlink GHO CCIP directory",
         "url": "https://docs.chain.link/ccip/directory/mainnet/token/GHO"
+      },
+      {
+        "label": "Aave GHO documentation",
+        "url": "https://aave.com/docs/ecosystem/gho"
+      },
+      {
+        "label": "Ethereum PublicNode RPC (blocks 26088256 and 26224763)",
+        "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
-    "evidence": "At Ethereum block 26095800 (2026-10-01), canonical GHO bytecode matched the verified GhoToken and ordinary ERC-20 implementation; the EIP-1967 implementation and correct admin slots were zero. Its transfer paths contain no holder blacklist, freeze, seizure or global pause, and the external burn function burns only the caller's balance. The current Chainlink directory identifies the nine non-Ethereum deployments as BurnMint pools. The prior inherited-status rationale cited obsolete 44.3% mainnet GSM and 7.4% stataUSDT weights. The September 30 reserve review instead records 41.630945892818% unresolved mainnet GSM residual, 2.718124202359% measured stataUSDT and positive USDC dust, plus unresolved remote allocations. Unknown residual issuance is not proof of specific issuer holdings. The adverse inherited verdict is retained pending reconciliation of the opaque exposures and owner review of the greater-than-50% test; no current threshold-satisfaction claim is made.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurA24GHO)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "GHO has no observed direct holder-targeted or upgradeable-token control on its material Ethereum deployment. At Ethereum block26224853, canonical0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f has zero ERC1967 implementation/admin slots; verified GhoToken burn(uint256) reduces only msg.sender's balance. Facilitator management cannot grant arbitrary-holder burn. The reserve-majority test uses branch issuance/debt rather than total collateral TVL, retaining prefunded own-GHO legs only in the denominator. Same-block699m supply reconciles to eight facilitator levels. Mainnet GhoReserve0x54c58157def387a880ae62332d1445f03adbe7e9 holds265992236.825097 own GHO and has only GSM_USDC0x3a3868898305f04bec7fea77becff04c13444112/getUsed0.034676 and GSM_USDT0x882285e62656b9623af136ce3078c6bdcc33f5e3/getUsed44007763.140227. Receipt asset() getters establish Circle USDC and Tether USDT. Arbitrum block516207779/hash0x20f1448b90a7b309eaa3230a67e8b68b79583ae5e8ebb4d578e8c8d8e1a0aa21; Plasma block35450263/hash0xce731766679643718274a4d36cf6d527febc72e5372cd80f54198a17f3f3113d; Monad block114684949/hash0x3b1989c422aa898d0ee2e19eae46d2117aa7b9e3641cead325a3a4f9b97be124, all2026-10-19T06:34:03Z: each remote reserve has exactly one GSM. Uses8041492.167861/42988820.360806/49566534.621521 and idle own-GHO41958507.832139/7011179.639194/433465.378479 reconcile to the50m branch allocations. Remote receipt underlyings are respectively0xaf88d065e77c8cc2239327c5edb3a432268e5831(USDC),0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb(USDT),0x754704bc059f8c67012fed69bc8a327a5aafb603(USDC). Ethereum GhoDirectMinter.POOL/GHO_A_TOKEN identify Core0x00907f9921424583e7ffbfedf84f92b7b2be4977, Lido0x18efe565a5373f430e2f809b97de30335b3ad96a, Horizon0x946281a2d0dd6e650d08f74833323d66ae4c8b12, holding31440874.639186/11297571.695580/35787300.775397 own GHO. Therefore measured issuer-exposed drawn GSM debt is20.68735484%, and the conservative upper bound including every other drawn unit is43.64504481%, using699m including own-token legs. The exact figure inside that interval requires borrower-level debt×collateral-exposure joins; it cannot change the No verdict on this denominator. The earlier 11.158754% current characterization, 55.937098% unresolved-reserve claim, and claim that the Lido market only contains WETH/wstETH are not supported by these current reads: the Lido pool also lists USDC, USDS, sUSDe and other assets. Sources: https://raw.githubusercontent.com/bgd-labs/aave-address-book/main/src/GhoEthereum.sol and GhoArbitrum.sol/GhoPlasma.sol/GhoMonad.sol; https://eth.blockscout.com/api/v2/smart-contracts/0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f; https://ethereum-rpc.publicnode.com; https://arb1.arbitrum.io/rpc; https://rpc.plasma.to; https://rpc.monad.xyz. Headers at all numeric pins were checked for matching hashes. These are near-synchronous cross-chain reads, not one atomic cross-chain snapshot.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "standard-external",

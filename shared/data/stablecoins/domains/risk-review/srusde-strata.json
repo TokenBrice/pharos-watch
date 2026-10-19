@@ -1,7 +1,7 @@
 {
   "id": "srusde-strata",
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "srUSDe verified Tranche implementation (Blockscout)",
@@ -14,11 +14,27 @@
       {
         "label": "Ethena USDe token source (upstream freeze reach)",
         "url": "https://sourcify.dev/server/v2/contract/1/0x4c9EDD5852cd905f086C759E8383e09bff1E68B3?fields=sources"
+      },
+      {
+        "label": "Transparent srUSDe proxy verified source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3d7d6fdf07ee548b939a80edbc9b2256d0cdc003"
+      },
+      {
+        "label": "Active ProxyAdmin verified source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x30a17d6bcbdbf1579d6fbba453acf776d01fbb50"
+      },
+      {
+        "label": "Ethereum pinned state",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Global supply and sole runtime chain",
+        "url": "https://api.pharos.watch/api/stablecoins"
       }
     ],
-    "evidence": "Re-verified 2026-07-30 at Ethereum block 25648480: the srUSDe proxy 0x3d7d6fdf07ee548b939a80edbc9b2256d0cdc003 resolves through its EIP-1967 slot to the Blockscout-verified Tranche implementation 0xe894055ca1c73648927e225f3ca38ed48e30210b, and asset() returned USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3. The ERC-4626 tranche token contains no blacklist, freeze, pause, or holder-selective transfer hook; share transfers are permissionless, while deposit and withdrawal limits route through the CDO and its cooldown and paused-state mechanics, which gate exits rather than transfers. Strata documents srUSDe as the senior ERC-4626 tranche over the Ethena USDe/sUSDe strategy with cooldown-based exits. Holder freeze exposure is therefore inherited from upstream USDe, whose separately reviewed status is directly blacklistable; this direct-code finding remains upgrade-bound by the Strata 2-day timelock.",
-    "reviewer": "Kimi T51 access review",
-    "reviewedAt": "2026-07-30"
+    "evidence": "srUSDe is Ethereum-only in the active deployment set and runtime chain list; its share fraction is100% of known deployment supply. At Ethereum@26224760 (2026-10-19T06:14:11+00:00), srUSDe 0x3d7d6fdf07ee548b939a80edbc9b2256d0cdc003 resolved to verified Tranche implementation0xe894055ca1c73648927e225f3ca38ed48e30210b, with EIP-1967 admin0x30a17d6bcbdbf1579d6fbba453acf776d01fbb50. The admin is a verified ProxyAdmin exposing owner-only upgradeAndCall, and owner() returned0xb2a3cf69c97afd4de7882e5fee120e4efc77b706, a non-zero contract; the tranche owner() returned the same address. totalSupply was16,448,482.151546491 srUSDe; the API global token estimate16,344,234.431773383 is0.6378% lower due snapshot/pricing timing, so no impossible100.64% geography is asserted. asset() returned USDe0x4c9edd5852cd905f086c759e8383e09bff1e68b3. The current Tranche source has ordinary ERC-20 transfers without blacklist/freeze or holder-selective transfer hook; CDO cooldown and exit limits remain separate withdrawal mechanics. However, the live token ProxyAdmin can replace this implementation, independently making srUSDe Possible. The documented senior tranche strategy claims USDe/sUSDe and carries parent issuer/custody exposure; USDe is classified Upstream after the materiality and reserve tests, but direct Possible takes precedence over inheritance.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "oracleless",

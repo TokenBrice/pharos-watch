@@ -1,7 +1,7 @@
 {
   "id": "sbold-k3-capital",
   "blacklistabilityReview": {
-    "reviewedStatus": false,
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "sBOLD documentation",
@@ -34,11 +34,15 @@
       {
         "label": "Ethereum observation block 25712319",
         "url": "https://etherscan.io/block/25712319"
+      },
+      {
+        "label": "Pinned current pause authority and state block",
+        "url": "https://etherscan.io/block/26224795"
       }
     ],
-    "evidence": "Re-reviewed 2026-09-21 for the sole tracked Ethereum deployment 0x50bd66d59911f5e086ec87ae43c811e0d059dd11. Etherscan still reports an exact-match verified sBold implementation. Its ordinary OpenZeppelin transfer and transferFrom paths have no holder blacklist, freeze, seizure, arbitrary-burn, allowlist, or privileged-transfer hook. Owner-only pause affects vault deposit, mint, redeem, withdraw, and swap operations, not sBOLD share transfers or a selected holder. The contract remains a direct non-proxy deployment under K3's Safe, and this exact chain/address is the complete authored deployment scope. The separately reviewed parent BOLD contract likewise exposes no selective transfer restriction.",
-    "reviewer": "Claude curation campaign 2026-09-21 (Ctrl3)",
-    "reviewedAt": "2026-09-21"
+    "evidence": "The sole tracked sBOLD deployment is Ethereum 0x50bd66d59911f5e086ec87ae43c811e0d059dd11, accounting for 100% of circulating supply in the 2026-10-19 supply data. At Ethereum mainnet block 26224795 (2026-10-19T06:21:11+00:00), owner() returned 0x2df68ea583b8394a8cc71eebcd4fa7c6746027d5 and paused() returned false. Exact-match verified sBold/BaseSBold source shows a direct, non-proxy deployment: the nonzero owner can call pause()/unpause(), and whenNotPaused gates deposit, mint, redeem, withdraw, and swap. Because the token’s own redeem/withdraw exits can be globally paused for existing holders, this is direct Possible under the global-pause rule of the FreezeWatch decision procedure (docs/blacklist-tracker.md), even though the pause is not currently engaged. Ordinary inherited OpenZeppelin ERC20 transfer/transferFrom paths remain unrestricted: no selective holder blacklist, address freeze, seizure, arbitrary-holder burn, allowlist, or privileged-transfer hook was found. The independently assessed BOLD parent has no qualifying holder-freeze surface; 100% of the reserve composition is BOLD deployed into Liquity V2 Stability Pools, with 0% qualifying issuer/custodian exposure. Neither the parent nor the reserve test overrides the higher-priority direct Possible control. Conclusion: Possible, not No; no active holder-targeted Yes control is asserted.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "redundant-with-failover",

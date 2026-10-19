@@ -30,11 +30,59 @@
       {
         "label": "Skybase International terms",
         "url": "https://docs.sky.money/legal/skybase-international/terms-of-use"
+      },
+      {
+        "label": "Polygon exact UChildDAI implementation",
+        "url": "https://sourcify.dev/server/v2/contract/137/0x490e379c9cff64944be82b849f8fd5972c7999a7?fields=abi,sources"
+      },
+      {
+        "label": "Pharos current per-chain circulating supply",
+        "url": "https://api.pharos.watch/api/stablecoins"
+      },
+      {
+        "label": "Sky group-debt book",
+        "url": "https://info-sky.blockanalitica.com/groups/?days_ago=1&order=-debt"
+      },
+      {
+        "label": "Sky canonical LitePSM, gem and pocket addresses",
+        "url": "https://chainlog.skyeco.com/api/mainnet/active.json"
+      },
+      {
+        "label": "Grove public historical constituent values; select date 2026-09-29",
+        "url": "https://data.grove.finance/api/trpc/holdings.getAssetCompositionHistory?input=%7B%22json%22%3A%7B%22portfolio%22%3A%22ALL%22%2C%22days%22%3A3650%7D%7D"
+      },
+      {
+        "label": "Grove current constituent classification and underlying assets",
+        "url": "https://data.grove.finance/api/trpc/holdings.getLatestBreakdown?input=%7B%22json%22%3A%7B%22portfolio%22%3A%22ALL%22%7D%7D"
+      },
+      {
+        "label": "Grove fund custody metadata (JTRSY)",
+        "url": "https://data.grove.finance/api/trpc/assets.getBySymbol?input=%7B%22json%22%3A%7B%22symbol%22%3A%22JTRSY%22%7D%7D"
+      },
+      {
+        "label": "Grove fund custody metadata (BUIDLI)",
+        "url": "https://data.grove.finance/api/trpc/assets.getBySymbol?input=%7B%22json%22%3A%7B%22symbol%22%3A%22BUIDLI%22%7D%7D"
+      },
+      {
+        "label": "Janus Henderson/Anemoy JAAA fund manager",
+        "url": "https://www.anemoy.io/news/janus-henderson-anemoy-aaa-clo-onchain"
+      },
+      {
+        "label": "Centrifuge independently describes Grove JAAA/JTRSY allocations",
+        "url": "https://centrifuge.io/blog/grove-centrifuge"
+      },
+      {
+        "label": "Grove infrastructure and issuer-owned Basin distinction",
+        "url": "https://docs.grove.finance/faqs"
+      },
+      {
+        "label": "Shared DAI-USDS conversion book",
+        "url": "https://developers.skyeco.com/protocol/tokens/usds/"
       }
     ],
-    "evidence": "At Ethereum block 25711852 (2026-08-08T17:51:23Z), canonical DAI was live non-proxy bytecode and both EIP-1967 implementation and admin slots were zero. Its exact verified source exposes ordinary holder transfer/transferFrom/permit operations and ward-gated mint. burn(address,uint256) is not auth-gated: a caller may burn another holder's balance only with that holder's allowance, so wards have no arbitrary-holder burn or seizure path. The source contains no blacklist, freeze, or global transfer-pause mechanism. At Polygon block 91670976 (2026-08-08T17:51:31Z), the material child proxy returned proxyOwner() = 0x0000000000000000000000000000000000000001 and implementation() = 0x490e379c9cff64944be82b849f8fd5972c7999a7; paused() and isBlacklisted(address) reverted, and the exact implementation source contains no holder restriction mechanism. Skybase's terms state that its interface is distinct from the Sky Protocol and that Skybase does not control or operate the protocol, so they establish no issuer-level power to freeze DAI holders. Reserve-leg and bridge custody censorship remain upstream risks, not direct DAI holder-freeze powers.",
-    "reviewer": "OpenAI Codex C01 control wave",
-    "reviewedAt": "2026-08-08"
+    "evidence": "DAI is Upstream. Canonical Ethereum Dai0x6b175474e89094c44da98b954eedeac495271d0f is nonproxy and has no holder blacklist, freeze, pause, arbitrary-holder privileged burn or upgrade surface; wards may mint and manage wards but do not bypass holder allowance. Ethereum87.8531% is the only material deployment under the2026-10-19 census; Polygon9.3994% does not set the verdict. The shared DAI/USDS book qualifies under the published reserve test: dated September 29 USDC 39.4% plus Grove 16.7%, both counted categorically at full share, gives 56.1%. The earlier50.872721% constituent-prorated floor is only a conservative sensitivity. A separately retrieved October19T06:51:25.417544 primary Sky group-debt snapshot totals$10,888,315,966.29; stablecoins$4,200,708,257.22 plus Grove$1,886,813,114.22 gives55.90875%, independently above50. No parent applies. Primary sources: https://info-sky.blockanalitica.com/groups/?days_ago=1&order=-debt and https://eth.blockscout.com/api/v2/smart-contracts/0x6b175474e89094c44da98b954eedeac495271d0f. Exact September29 feed snapshot was not refetched;56.1% is the binding dated measurement, independently corroborated by the October book.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "medianized-with-delay",

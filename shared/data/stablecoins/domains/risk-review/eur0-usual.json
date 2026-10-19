@@ -10,10 +10,22 @@
       {
         "label": "Contract deployments",
         "url": "https://tech.usual.money/smart-contracts/contract-deployments"
+      },
+      {
+        "label": "Verified Eur0 implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc3b20caff0bd32c8835659f0c48e0ed341d2016d"
+      },
+      {
+        "label": "EUR0 RegistryAccess and BLACKLIST_ROLE",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x65771978ff9238162a41c77384c9f55c1ec9e9ab"
+      },
+      {
+        "label": "Ethereum RPC, block 26224760",
+        "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
-    "evidence": "Usual's EUR0 token docs describe blacklist checks on transfers and admin-managed blacklist/unblacklist functions, so EUR0 has a direct holder-restriction surface.",
-    "reviewer": "Codex Worker B metadata pass",
-    "reviewedAt": "2026-05-14"
+    "evidence": "At Ethereum block 26224760 (hash 0x2a6c0b20faae49bb23f77a582b517057741efcee5bd423a8552f672144c83b85, 2026-10-19T06:14:11Z), EUR0 0x3c89cd1884e7bef73ca3ef08d2ef6ec338fd8e49 is an ERC-1967 proxy whose implementation slot resolves to 0xc3b20caff0bd32c8835659f0c48e0ed341d2016d (verified Eur0) and is the sole deployment, holding 100% of supply (totalSupply 191,411.059974878129308344 EUR0, 18 decimals; paused() = false). The implementation exposes blacklist(address), unBlacklist(address), pause() and unpause(); its _update hook reverts with Blacklisted when either the sender or the recipient is blacklisted, so a blacklisted holder can neither send nor receive. blacklist and unBlacklist require RegistryAccess.onlyMatchingRole(BLACKLIST_ROLE), where BLACKLIST_ROLE = keccak256(BLACKLIST_ROLE) = 0x22435ed027edf5f902dc0093fbc24cdb50c05b5fd5f311b78c67c1cbaff60e13. The token registryAccess at storage slot 0xb6bec7bca087290fb45074abe5b982fc118a572e48a34abd74583776e6001900 is 0x65771978ff9238162a41c77384c9f55c1ec9e9ab; hasRole(BLACKLIST_ROLE, 0xfbae315cfb0a6c770a397bd6e597d245ba858648) returned true at the pin (non-zero contract; RoleGranted at block 23496139), so an active role can directly restrict individual holders. pause is gated by PAUSING_CONTRACTS_ROLE and that role did not return true for the verified blacklist holder, so the pause surface is disclosed but not relied on. The reserve sidecar is 100% Spiko EUTBL (registry status Yes), so reserve-based upstream exposure would also exceed 50%, but the direct blacklist control makes the verdict Yes. Event signatures: Blacklist(address) 0x7811ed4e4b787e4f0f046ffb4a5ec1e064b0eb6d191ffabb66270ed8be89b325; UnBlacklist(address) 0xc653d95790bb2472667b557ef27642a37cac57b69d6d5fddcaacef8f62589dcb; Paused(address) 0x62e78cea01bee320cd4e420270b5ea74000d11b0c9f74754ebdbfc544b05a258.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   }
 }

@@ -6,11 +6,15 @@
       {
         "label": "AUDF verified Stablecoin implementation and blacklist extension",
         "url": "https://sourcify.dev/server/v2/contract/1/0xc9357d8fb84dd3041612dc5b2a2cd914d9405572?fields=sources,abi,metadata"
+      },
+      {
+        "label": "Pharos AUDF supply (observed 2026-10-19)",
+        "url": "https://api.pharos.watch/api/stablecoin/audf-forte"
       }
     ],
-    "evidence": "At Ethereum block 26095831, the tracked AUDF proxy resolves implementation 0xc9357d8fb84dd3041612dc5b2a2cd914d9405572. Its verified Stablecoin source inherits ERC20BlacklistableUpgradeable and defines BLACKLIST_ROLE as keccak256(\"BLACKLIST_ROLE\"). Current hasRole confirms the Admin Safe 0x6929fd915b0755efdc255ea841b68a263a362c5a holds BLACKLIST_ROLE. The retained Yes verdict is now supported by contract and role evidence rather than centralization inference.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurB30hyUSD)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "Ethereum block 26095831 (2026-10-01) and Polygon block 95790354 (2026-10-19): the AUDF proxy 0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b resolves on Ethereum to verified Stablecoin implementation 0xc9357d8fb84dd3041612dc5b2a2cd914d9405572, which inherits ERC20BlacklistableUpgradeable and defines BLACKLIST_ROLE as keccak256(\"BLACKLIST_ROLE\"). hasRole(BLACKLIST_ROLE, Admin Safe 0x6929fd915b0755efdc255ea841b68a263a362c5a) is true on both material deployments; paused() is false on Polygon. Ethereum holds 83.1747% and Polygon 13.1201% of reported supply; Base (2.7963%) and Redbelly (0.9089%) are below the 10% materiality threshold. Direct Yes.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",

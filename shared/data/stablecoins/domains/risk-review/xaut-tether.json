@@ -10,11 +10,19 @@
       {
         "label": "Tether Gold Terms of Service",
         "url": "https://gold.tether.to/legal/termsofservice"
+      },
+      {
+        "label": "Verified XAUT implementation (TetherToken)",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4c0d2c74a8d26f1e4f5653021c521f5471f9e566"
+      },
+      {
+        "label": "Ethereum RPC, block 26224760",
+        "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
-    "evidence": "The verified XAUT implementation exposes owner-only addToBlockedList, removeFromBlockedList, and destroyBlockedFunds. transfer blocks the caller and transferFrom additionally blocks the source address. Tether Gold's terms also disclose transfer-freeze and token-destruction powers.",
-    "reviewer": "Codex C01 control/access review",
-    "reviewedAt": "2026-08-08"
+    "evidence": "At Ethereum block 26224760 (hash 0x2a6c0b20faae49bb23f77a582b517057741efcee5bd423a8552f672144c83b85, 2026-10-19T06:14:11Z), XAUT 0x68749665ff8d2d112fa859aa293f07a622782f38 proxies through the EIP-1967 slot to implementation 0x4c0d2c74a8d26f1e4f5653021c521f5471f9e566 (verified TetherToken). owner() returned 0xC6CDE7C39eB2f0F0095F41570af89eFC2C1Ea828, the same non-zero 3-of-6 issuer multisig that owns Ethereum USDT, and totalSupply was 827,417.630000 XAUT. The implementation exposes onlyOwner addToBlockedList(address)/removeFromBlockedList(address) and onlyOwner destroyBlockedFunds(address); transfer() is onlyNotBlocked and transferFrom() additionally rejects a blocked sender, so the owner can stop a named holder's outgoing transfers and burn a blocked balance. Tether Gold Terms of Service separately disclose transfer-freeze and token-destruction powers. Materiality: on 2026-10-19 the measured supplies were Ethereum 827,417.63, HyperEVM 4,161.259760, BSC 13,669.679194, Monad 3,780.075853, Avalanche 408.440896, Ink 136.539162, Arbitrum 129.521008, Celo 84.295605 and Conflux 23.531462 XAUT, totalling 849,810.972940; Ethereum therefore holds 97.36% of measured supply, far above the 10% materiality threshold. Polygon and five other deployments were not measured; their combined supply is [INFERENCE] too small to displace Ethereum as material. Event signatures: BlockPlaced(address) 0x406bbf2d8d145125adf1198d2cf8a67c66cc4bb0ab01c37dccd4f7c0aae1e7c7; BlockReleased(address) 0x665918c9e02eb2fd85acca3969cb054fc84c138e60ec4af22ab6ef2fd4c93c27; DestroyedBlockedFunds(address,uint256) 0x6a2859ae7902313752498feb80a014e6e7275fe964c79aa965db815db1c7f1e9. The verdict is Yes.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",

@@ -6,11 +6,35 @@
       {
         "label": "Spiko website",
         "url": "https://www.spiko.io/"
+      },
+      {
+        "label": "Verified Spiko Token implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74"
+      },
+      {
+        "label": "Spiko Stellar token source",
+        "url": "https://github.com/spiko-tech/stellar-contracts"
+      },
+      {
+        "label": "Stellar EUTBL contract and supply",
+        "url": "https://stellar.expert/explorer/public/contract/CBGV2QFQBBGEQRUKUMCPO3SZOHDDYO6SCP5CH6TW7EALKVHCXTMWDDOF"
+      },
+      {
+        "label": "Ethereum observation block 26224761",
+        "url": "https://etherscan.io/block/26224761"
+      },
+      {
+        "label": "Arbitrum observation block 516204261",
+        "url": "https://arbiscan.io/block/516204261"
+      },
+      {
+        "label": "Polygon observation block 95790196",
+        "url": "https://polygonscan.com/block/95790196"
       }
     ],
-    "evidence": "Spiko acts as transfer agent for EUTBL with permissioned ERC-1967 upgradeable proxy and KYC-gated transfers, retaining freeze and burn authority over fund shares.",
-    "reviewer": "Codex RWA expansion review",
-    "reviewedAt": "2026-05-12"
+    "evidence": "Re-reviewed 2026-10-19. Two deployments are material. Arbitrum 0xcbeb19549054cc0a6257a77736fc78c367216ce7 runs verified Token implementation 0xa0769f7a8fc65e47de93797b4e21c073c117fc80; Token._update requires PermissionManager.canCall(from/to, token, 0xa9059cbb), and the implementation exposes restricted pause(), restricted burn(address,uint256) from an arbitrary holder and restricted UUPS upgrade. At Arbitrum block 516204261 (2026-10-19T06:17:20Z) authority 0xa925C217e4c1C82Ee721eBD496d3863D5C2d829A returned getRequirements(token,0xa9059cbb)=65 and a holder-to-0x...0001 transfer reverted with UnauthorizedTo 0xb77a4ad1; group 0 is held by 3/3 Safe 0x7843225ba488cf780a4fe2c842b5dc2abcf8a03e. Ethereum 0x344278aff344d6fb960705dc18a4912221608472 (Safe 0x4eaa52b6280593a8820c45ce38f974290ae52cea) and Polygon 0x344278... (Safe 0xa4196f06fe948b8ca81d3dc77110d3f83d10abd9) enforce the same requirement at blocks 26224761 and 95790196. Stellar EUTBL CBGV2QFQBBGEQRUKUMCPO3SZOHDDYO6SCP5CH6TW7EALKVHCXTMWDDOF requires WHITELISTED_ROLE on both transfer parties, burns an arbitrary account under BURNER_ROLE, and is the issuer's registered production EUTBL contract. At Soroban ledger 65021030 (2026-10-19T06:22:13Z) has_role returned WLISTER Some(0) for GD2ELXTHZQORSH75SJE6XRTCKXNDGJFIZ4R2SZ4MMXDOBT52GK26X4EO and Some(1) for GAUYO4UAESQD6SGZDPOIG2ADT7EZTR5EJ7HSX4CYCWS2JMMGQOCL4QCX, BURNER Some(0) for CAVZK26ERVGKGXLQGEOKPAQGIZS2YKN4BSXOYDMUY365EV66ZNSFEDBS, and its permission-manager history includes role_revoked|WLISTED. Materiality: measured totalSupply at 2026-10-19 is 53,717,915,988,424 raw 5-decimal units: Arbitrum 23,410,859,628,969 (43.58%), Stellar 22,065,243,429,547 (41.08%), Polygon 4,206,882,098,317 (7.83%), Ethereum 2,274,676,382,288 (4.23%), Base 1,611,469,654,523 (3.00%), Etherlink 144,104,822,691 (0.27%), Starknet 4,679,972,089 (0.01%). Both material deployments are directly controlled. There is no declared parent; the reserve test (100% Spiko EU T-Bills fund NAV) is not reached because direct holder controls are established.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",

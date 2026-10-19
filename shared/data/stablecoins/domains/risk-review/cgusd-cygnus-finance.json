@@ -1,16 +1,28 @@
 {
   "id": "cgusd-cygnus-finance",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Verified cgUSD and StToken source (Blockscout)",
         "url": "https://base.blockscout.com/api/v2/smart-contracts/0xca72827a3d211cfd8f6b00ac98824872b72cab49"
+      },
+      {
+        "label": "Verified CgUSD source and ABI (Base)",
+        "url": "https://api.etherscan.io/v2/api?chainid=8453&module=contract&action=getsourcecode&address=0xca72827a3d211cfd8f6b00ac98824872b72cab49"
+      },
+      {
+        "label": "BaseScan contract",
+        "url": "https://basescan.org/address/0xca72827a3d211cfd8f6b00ac98824872b72cab49"
+      },
+      {
+        "label": "Base public RPC, block 52800750",
+        "url": "https://mainnet.base.org"
       }
     ],
-    "evidence": "The verified CgUSD source exposes pause() and resume() as onlyOwner functions; inherited StToken._transferShares() calls _requireNotPaused(), so the owner can stop ordinary token and share transfers globally. At Base block 52024130 on 2026-10-01, owner() is 0xfecab866b450b97db38500898e9272c1d18918b7 and paused() is false. The true access verdict records a demonstrated global transfer-pause capability, not an inferred address blacklist.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurA63cgUSD)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "cgUSD has a direct but non-targeted control surface. The verified CgUSD contract at 0xca72827a3d211cfd8f6b00ac98824872b72cab49 on Base exposes pause() and resume() as onlyOwner functions, and inherited StToken._transferShares() calls _requireNotPaused(), so the owner can stop ordinary token and share transfers globally. At Base block 52800750, owner() is 0xfecab866b450b97db38500898e9272c1d18918b7 (a contract without Safe getThreshold/getOwners methods) and paused() is false. The ABI contains no blacklist, freeze, seize, forced-transfer or arbitrary-holder burn function, so the issuer cannot target an individual holder. A global transfer pause is a direct Possible control, not a Yes blacklist. There is no declared parent; reserve composition (Treasury bills plus an undisclosed on-chain stablecoin portfolio) is not measured and does not decide the verdict.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",

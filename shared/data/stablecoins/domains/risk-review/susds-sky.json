@@ -1,7 +1,7 @@
 {
   "id": "susds-sky",
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Sky sUSDS documentation",
@@ -86,11 +86,15 @@
       {
         "label": "Pinned Unichain implementation read at block 60518930",
         "url": "https://api-unichain-mainnet.n.dwellir.com"
+      },
+      {
+        "label": "Global circulating value and redeem price",
+        "url": "https://api.pharos.watch/api/stablecoins"
       }
     ],
-    "evidence": "All five tracked sUSDS deployments have reviewed local transfer posture. The existing Ethereum, Base, Optimism and Arbitrum implementation reviews identify ordinary holder transfers and ward-gated UUPS upgrades, with no current holder blacklist, pause or transfer whitelist. The newly covered Unichain proxy 0xa06b10db9f390990364a3984c04fadf1c13691b5 resolved at block 60518930 (hash 0xbf80e4f4bcaf5b5d4a2dcfa878d63d6a11365675faefe388d7e9253c77d9e234, timestamp 2026-10-06T06:14:49Z) to verified SUsds implementation 0x15c2a564b987470fafcab0b036029532bd168e10. Its transfer and transferFrom enforce invalid-address, balance and allowance checks only; _authorizeUpgrade, rely and deny are ward-gated. Thus local holder transfers are presently unrestricted but every tracked proxy is restrictable by upgrade authority, not immutable permissionless. The pinned Unichain observation was made 2026-10-09T10:40:44.018Z; the explorer independently reports the same implementation. No complete Unichain ward/controller closure is asserted. Mint/burn and bridge authority are separate economic controls. Inherited upstream USDS and reserve-side freeze exposure remains carried through variantOf and mintAuthority.inheritedFrom; this supplemental local-transfer review does not erase that inherited exposure.",
-    "reviewer": "Sol curation campaign 2026-10-09 (Lane11Sky)",
-    "reviewedAt": "2026-10-09"
+    "evidence": "All five tracked sUSDS implementations have ordinary holder transfers and ward-gated UUPS upgrades, without current holder blacklist, transfer pause or transfer whitelist. At Ethereum@26224760 (2026-10-19T06:14:11+00:00), Ethereum sUSDS 0xa3931d71877c0e7a3148cb7eb4463524fec27fbd resolved to verified SUsds implementation0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0 and wards(Sky Pause Proxy 0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB)=1. Ethereum totalSupply was4,433,048,272.166628 shares. The API total4,939,453,155.372567 USD divided by redeem price1.1132855178241543 is4,436,825,123.735027 global share units. Pinned peripheral supply reads were Base10,829,128.842209 shares(0.244074%), Optimism4,621,771.164540(0.104168%), Arbitrum326,995,432.173788(7.370032%), and Unichain149,319.487138(0.003365%). Subtracting all four from canonical issued shares gives an approximate tracked-bridge-adjusted Ethereum92.193235%; issuance/price timing and additional custody escrows are not silently treated as exact circulating geography, but Ethereum is unambiguously material. Their current implementation addresses remain0x982f2df63fe38ab8d55f4b1464e8cfdc8ea5dec8,0x6f0888dda6a5e35451d5be0fabb20171715788b3,0x5aee6b37d6e31860804575aee3e2f368a0a428e7,and0x15c2a564b987470fafcab0b036029532bd168e10 respectively, preserving the prior Unichain verified-source conclusion. Parent USDS is directly Possible, and savings shares claim USDS, but direct upgradeability on this token takes precedence over parent/reserve inheritance. Verdict:Possible, not Upstream.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "privileged-internal-pricing",

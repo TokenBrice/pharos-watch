@@ -1,7 +1,7 @@
 {
   "id": "autousd-auto-finance",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Auto Finance autoUSD contract-address documentation",
@@ -44,9 +44,9 @@
         "url": "https://ethereum.publicnode.com"
       }
     ],
-    "evidence": "At Ethereum block 25535156 on 2026-07-15, autoUSD proxy 0xa7569a44f348d3d70d8ad5889e50f78e33d80d35 resolved to verified AutopoolETH implementation 0xfb2ebdedc38a7d19080e44ab1d621bc9afad0695 and EIP-1967 ProxyAdmin 0x84a317a45248d6d3f92f40102680ffeda2ab95c0. The implementation applies whenNotPaused to both transfer and transferFrom. Its inherited pause and unpause functions require the Auto Finance AccessController EMERGENCY_PAUSER role, and SystemSecurity's same-role pauseSystem can pause every connected pool. At the pinned block, autoUSD paused() and isShutdown() were false, SystemSecurity was not paused, and the AccessController enumerated four EMERGENCY_PAUSER accounts. Any one of those role holders can block all current autoUSD holder transfers; no per-address blacklist is required for this direct Yes. Issuer documentation, audit, GitHub, archive, legal-route, and transparency review supplied no narrower legal exception or independent PoR claim. The separate underlying-USDC exposure remains additive.",
-    "reviewer": "Codex Safety Score V9 access review",
-    "reviewedAt": "2026-07-15"
+    "evidence": "At Ethereum block 25535156 on 2026-07-15, autoUSD proxy 0xa7569a44f348d3d70d8ad5889e50f78e33d80d35 resolved to verified AutopoolETH implementation 0xfb2ebdedc38a7d19080e44ab1d621bc9afad0695 and EIP-1967 ProxyAdmin 0x84a317a45248d6d3f92f40102680ffeda2ab95c0. The implementation applies whenNotPaused to both transfer and transferFrom. Its inherited pause and unpause functions require the Auto Finance AccessController EMERGENCY_PAUSER role, and SystemSecurity's same-role pauseSystem can pause every connected pool. At the pinned block, autoUSD paused() and isShutdown() were false, SystemSecurity was not paused, and the AccessController enumerated four EMERGENCY_PAUSER accounts. Any one of those role holders can block all current autoUSD holder transfers. This is a global transfer pause, not a confirmed holder-targeted blacklist; under the four-state exposure contract it supports Possible, not Yes. Issuer documentation, audit, GitHub, archive, legal-route, and transparency review supplied no narrower legal exception or independent PoR claim. The separate underlying-USDC exposure remains additive. Census fetched 2026-10-19 puts 100% of tracked circulating supply on Ethereum. At Ethereum block 26224667 (2026-10-19T05:55:35Z), the implementation and ProxyAdmin addresses remained the same, ProxyAdmin.owner() was 0x6c4d843d9d075c4f8971e64dea16181b2cfa38f8, and paused() was false. No active holder-targeted blacklist/seizure surface was identified in the reviewed implementation. The USDC parent claim remains upstream exposure; direct Possible takes precedence.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",

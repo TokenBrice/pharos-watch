@@ -1,7 +1,7 @@
 {
   "id": "stusds-sky",
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Sky stUSDS documentation",
@@ -26,11 +26,19 @@
       {
         "label": "usds-sky blacklistabilityReview (Solana freezeAuthority)",
         "url": "https://solscan.io/token/USDSwr9ApdHk5bvJKMjzff41FfuX8bSxdKcR81vTwcA"
+      },
+      {
+        "label": "Current verified stUSDS implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7A61B7adCFD493f7CF0F86dFCECB94b72c227F22"
+      },
+      {
+        "label": "Material chain supply",
+        "url": "https://api.pharos.watch/api/stablecoins"
       }
     ],
-    "evidence": "Re-verified 2026-10-01 at Ethereum block 26095796. stUSDS retained implementation 0x7a61b7adcfd493f7cf0f86dfcecb94b72c227f22; asset() returned USDS and wards(Sky Pause Proxy) returned 1. The pinned implementation has ordinary transfers without a direct live blacklist, freeze or pause path, while wards gate future upgrades. At finalized Solana slot 452213453, parent USDS mint USDSwr9ApdHk5bvJKMjzff41FfuX8bSxdKcR81vTwcA retained freezeAuthority AYPtjx4Hc8us1ikULUedkmZ3wtiD6tmL7gK3qe4V3oHt. This confirms inherited upstream exposure, not a direct Ethereum stUSDS freeze function or cross-chain freeze propagation.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurA43KAG)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "Ethereum holds100% of tracked stUSDS circulating supply. At Ethereum@26224760 (2026-10-19T06:14:11+00:00), stUSDS 0x99cd4ec3f88a45940936f469e4bb72a2a701eeb9 retained implementation0x7a61b7adcfd493f7cf0f86dfcecb94b72c227f22 and wards(Sky Pause Proxy 0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB)=1. The verified implementation has ordinary allowance-based share transfers without an active direct holder blacklist, freeze or transfer pause; _authorizeUpgrade is ward-gated and permits replacing the token implementation. That active governance-controlled direct surface is Possible, including when the controller is a DAO. The previously verified asset is USDS, and99.99900071050182% of the reviewed reserve composition is idle USDS plus0.00099928949818% strategy positions; parent claim exposure would otherwise be Upstream, but direct Possible takes precedence. Parent USDS itself is Possible on material Ethereum. Its Solana SPL freezeAuthority AYPtjx4Hc8us1ikULUedkmZ3wtiD6tmL7gK3qe4V3oHt is still active at finalized slot458730702, but only0.067942% of USDS supply and does not imply cross-chain freezing of stUSDS. Verdict:Possible.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "medianized-with-delay",

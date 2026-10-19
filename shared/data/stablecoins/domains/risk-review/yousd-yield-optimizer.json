@@ -1,11 +1,33 @@
 {
   "id": "yousd-yield-optimizer",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "Verified current YoVault implementation (Ethereum; Base deployed bytecode independently equal)",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc84a6e01bff58996540f1abc22355a9dfe0d78dc"
+      },
+      {
+        "label": "Verified Ethereum yoUSD transparent proxy",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0000000f2eb9f69274678c76222b35eec7588a65"
+      },
+      {
+        "label": "Ethereum pinned RPC",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
+      },
+      {
+        "label": "Base pinned RPC",
+        "url": "https://base-mainnet.g.alchemy.com/v2/"
+      },
+      {
+        "label": "Arbitrum pinned supply RPC",
+        "url": "https://arb-mainnet.g.alchemy.com/v2/"
+      }
+    ],
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Explicit Yes retained: yoUSD is a tracked strategy-vault variant whose parent USDC has confirmed centralized freeze exposure, so wrapper holders inherit upstream blacklistability.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "evidence": "yoUSD is Possible, not direct Yes. On 2026-10-19, totalSupply() was 7,211,154,701,570 raw six-decimal shares on Base block 52799969 (2026-10-19T05:54:45Z), 1,674,816,128,712 on Ethereum block 26224667 (2026-10-19T05:55:35Z), and 222,114,637,031 on Arbitrum block 516200785 (2026-10-19T06:01:12Z). The 9,108,085,467,313 aggregate outstanding-share denominator gives Base 79.1731%, Ethereum 18.3882%, and Arbitrum 2.4387%; this is a measured outstanding-share proxy for missing circulating-chain shares, not a measured USD circulating total. Base and Ethereum are material. Both material proxies resolve to YoVault 0xc84a6e01bff58996540f1abc22355a9dfe0d78dc and ProxyAdmin 0x12e81209d180ff0b3fbfbfe8fa9ffdb5990e1073. Implementation bytecode is identical on the two chains at the pins. YoVault _update enforces whenNotPaused for all share movements, pause() is requiresAuth, and owner()=0x67b6f699f1c8040414032a3c2c88a54db144fcd2 on each; paused()=false records present state, not renunciation. Each ProxyAdmin owner()=0x38ce5e45d0f5d03e83863bb19b3b1a272c186f48, so token implementation mutability is also active. No current per-holder blacklist or arbitrary-holder burn was identified in the reviewed YoVault source; global pause and proxy upgrades support Possible. Arbitrum is sub-threshold; no verdict relies on its controls. yoUSD remains a USDC strategy-vault claim and the declared reserve book is 100% USDC-linked strategies/idle assets, so parent USDC issuer freeze exposure is additive rather than the basis for Yes.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",

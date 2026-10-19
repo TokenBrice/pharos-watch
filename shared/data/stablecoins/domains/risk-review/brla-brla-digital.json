@@ -10,11 +10,19 @@
       {
         "label": "Website",
         "url": "https://avenia.io/brla"
+      },
+      {
+        "label": "Celo BRLA proxy and verified BRLAV1_1 implementation",
+        "url": "https://celo.blockscout.com/address/0xfecb3f7c54e2caae9dc6ac9060a822d47e053760"
+      },
+      {
+        "label": "Celo block 80489818",
+        "url": "https://celo.blockscout.com/block/80489818"
       }
     ],
-    "evidence": "Explicit Yes retained: centralized governance metadata indicates issuer or admin control; registry links were reviewed for direct freeze, blacklist, pause, burn, or upgrade authority.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "Re-reviewed 2026-10-19 at Celo block 80489818 (2026-10-19T06:16:16Z), the material deployment holding 90.06% of 41,217,012.27 BRLA (Polygon 8.8014%, Gnosis 1.1386%, Moonbeam 0%). The Celo proxy 0xfecb3f7c54e2caae9dc6ac9060a822d47e053760 resolves to verified BRLAV1_1 implementation 0xe6a537a407488807f0bbeb0038b79004f19dddfb. complianceWallet() returned 0x08AbF5F6E956b7DE8B2880d0E5897F67F181De76 and hasRole(COMPLIANCE_ROLE, that address) returned true; paused() returned false. The verified implementation grants BLACKLISTED via blockAddress(address) onlyRole(COMPLIANCE_ROLE), and _beforeTokenTransfer requires !hasRole(BLACKLISTED, from) and !hasRole(BLACKLISTED, to) under whenNotPaused. That is an active holder-targeted blacklist on the material deployment. The Polygon 8.8014% deployment carries the same control and is disclosed but sub-threshold. Reserves are 54.52% BRL cash and 45.48% overnight repo, entirely custodial bank/fiat exposure, which would satisfy the upstream test, but a direct Yes outranks it.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

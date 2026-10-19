@@ -10,10 +10,18 @@
       {
         "label": "Goldfish Cyfrin smart-contract audit",
         "url": "https://goldfishgold.com/Goldfish-Cyfrin.pdf"
+      },
+      {
+        "label": "Goldfish FREEZER_ROLE Safe",
+        "url": "https://etherscan.io/address/0xd0022c3ed6a11bf6791ba2c9d0b394021a6096e4"
+      },
+      {
+        "label": "Goldfish DEFAULT_ADMIN_ROLE TimelockController",
+        "url": "https://etherscan.io/address/0xe7a2eb2ad0a168ec287c5dec64b333adafa587c5"
       }
     ],
-    "evidence": "The pinned token implementation at Ethereum block 26,095,795 exposes FREEZER_ROLE-controlled freezeAccount and DEFAULT_ADMIN-controlled setBlacklisted and forceTransfer. Its _update rejects frozen or blacklisted senders, recipients, and spenders. The recorded 2-of-3 Safe currently holds DEFAULT_ADMIN_ROLE. Cyfrin's October 10, 2025 report explicitly describes administrator seizure powers and excludes centralization risks from its audit scope.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurA37JTRSY)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "The pinned GoldfishToken implementation 0x35fef16fea897dd6ca2e28041dbfb8d56e2978d6 behind proxy 0x7e2ac793f3e692f388e66c7dc28f739d13b0b71a exposes FREEZER_ROLE freezeAccount/unfreezeAccount and DEFAULT_ADMIN_ROLE setBlacklisted and forceTransfer; _update rejects frozen or blacklisted senders, recipients and spenders. At Ethereum block 26224768 (2026-10-19T06:15:47Z), FREEZER_ROLE is held by the 2-of-3 Safe 0xd0022c3ed6a11bf6791ba2c9d0b394021a6096e4 (owners 0x69E91940154bBDBAbca6CA0B0eC3cb2a59AEBF2b, 0xdFbB0b971A9f1915A083D5555ce20a36DD0B7aeB and 0x19a1fD04761c9a0b873BEC440caF02aB0dBa056E), while DEFAULT_ADMIN_ROLE was revoked from that Safe and is now held by TimelockController 0xe7a2eb2ad0a168ec287c5dec64b333adafa587c5 (getMinDelay 172800 seconds). Both paths remain active: the Safe can freeze a holder immediately and the timelocked admin can blacklist or force-transfer after its delay. Cyfrin's October 10, 2025 report independently describes administrator seizure powers and excludes centralization risks from its audit scope.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   }
 }

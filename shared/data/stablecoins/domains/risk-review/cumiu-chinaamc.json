@@ -12,9 +12,9 @@
         "url": "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/E-CleanProspectus-ChinaAMCDigitalOFC-CN(September2026)_1789336483417.pdf"
       }
     ],
-    "evidence": "CMTAT ENFORCER freezes and unfreezes individual accounts, PAUSER halts transfers and the rule engine restricts transfers. DEFAULT_ADMIN holds all roles. Legal KFS also forbids peer-to-peer trading and permits record correction.",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02"
+    "evidence": "CUMIU is a single Ethereum deployment at 0x85d38585c3ac08268f598282a84b7c0ddfc0d04f (UUPS implementation 0x37686928ddf77be20fc4199f03f0638d90d9907e), holding 100% of measured supply. At Ethereum block 26224780, EOA 0x407374be435ed278fca44be695d32f0230fe46e3 returned true for DEFAULT_ADMIN_ROLE, ENFORCER_ROLE and PAUSER_ROLE; paused() was false. The verified implementation exposes freeze(address,string)/unfreeze(address) under ENFORCER_ROLE and pause/unpause under PAUSER_ROLE, and validateTransfer routes through a rule engine, so the enforcer can freeze an individual holder and the pauser can halt all transfers. The legal KFS forbids peer-to-peer trading and permits record correction. Direct holder freeze on the only material deployment sets Yes.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "privileged-internal-pricing",

@@ -8,9 +8,9 @@
         "url": "https://explorer.plume.org/api/v2/smart-contracts/0xdddd73f5df1f0dc31373357beac77545dc5a6f3f"
       }
     ],
-    "evidence": "Pinned Plume block 96626677: the BoringVault owner remains the 3-of-6 Safe and hook() is zero. The verified source nevertheless permits the owner to setBeforeTransferHook(address) through requiresAuth; transfers and transferFrom invoke the configured hook's beforeTransfer(from), which can reject a holder's transfer. Yes denotes this configurable holder restriction, not an assertion that a blacklist hook is currently installed. Separate OFAC mint-gateway checks do not alone establish holder freezing.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurM16cNGN)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "At plume@100304125 (2026-10-19T06:14:06+00:00), Plume totalSupply()=2,003,230.061263 pUSD; Ethereum at ethereum@26224759 (2026-10-19T06:13:59+00:00) has 13,751.152236, so Plume is 99.3182% and Ethereum 0.6818% of tracked receipt supply. Both BoringVaults use 0xdddd73f5df1f0dc31373357beac77545dc5a6f3f; owner()=0xa08a0dc480bd60d1d56c8eec6c722125eafea982 and authority()=0x97bc6151fc501e6e2ec2acba3d4261d4bc7a6f90. Verified BoringVault.exit(to,asset,assetAmount,from,shareAmount) requiresAuth then _burn(from,shareAmount) without holder allowance; the owner is authorized by Auth independently of authority. Owner-impersonated read-only zero-amount exit targeting 0xdead succeeded on Plume, confirming authorization without broadcasting. This current arbitrary-holder burn surface on the material Plume deployment sets Yes. hook()=0 on both chains: setBeforeTransferHook could introduce future address-sensitive transfer restrictions (Possible in isolation), but no installed blacklist hook is claimed. Separate OFAC mint-gateway checks are not the holder-freeze basis. Ethereum has the same disclosed controls below materiality. Parent USDC and all declared native/bridged USDC reserves add upstream exposure, lower precedence than direct Yes.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",

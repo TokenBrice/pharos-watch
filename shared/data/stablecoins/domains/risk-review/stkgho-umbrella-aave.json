@@ -1,7 +1,7 @@
 {
   "id": "stkgho-umbrella-aave",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Sourcify exact-match Umbrella StakeToken implementation (pause + whenNotPaused _update)",
@@ -24,9 +24,9 @@
         "url": "https://etherscan.io/token/0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f"
       }
     ],
-    "evidence": "Re-reviewed 2026-07-30. Sole catalogued deployment is the Ethereum upgradeable proxy 0x4f82…5033. At Ethereum block 25648452: EIP-1967 implementation 0x75e8…0197, admin ProxyAdmin 0xde9f…6a9a whose owner is Aave Governance V3 Level-1 Executor 0x5300…192A; asset()=GHO 0x40d1…c2f; paused()=false; owner() on the stake token = 0xd400…a8. Sourcify exact-match StakeToken.sol inherits PausableUpgradeable, exposes onlyOwner pause()/unpause(), and gates _update (and therefore transfer/transferFrom) with whenNotPaused, so the owner can block all holder share transfers while paused. No isBlacklisted/blacklist/freeze/burn(account) selectors on the implementation. Freeze reach is therefore direct (global pause) under Aave governance-controlled ownership, not inherited-only; GHO remains an additional upstream exposure. Transfer categorical posture matches restrictable via the same pause surface; material-scope publication of the transfer overlay still requires chainCirculatingById for this asset.",
-    "reviewer": "Grok T55 access review",
-    "reviewedAt": "2026-07-30"
+    "evidence": "At Ethereum block 26224772 (2026-10-19), the sole catalogued deployment is the Ethereum upgradeable proxy 0x4f827a63755855cdf3e8f3bcd20265c833f15033 (100% of supply; material). The EIP-1967 implementation is Sourcify-verified UmbrellaStakeToken 0x75e8ac0c063b6966e2a9954adedf39bde9370197, asset() is canonical GHO 0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f, owner() is Aave Umbrella 0xD400fc38ED4732893174325693a63C30ee3881a8 and paused()=false; the ProxyAdmin 0xde9f8379a5a972100d0373103a849e8abdf56a9a is owned by Aave Governance V3 Level-1 Executor 0x5300a1a15135ea4dc7ad5a167152c01efc9b192a. The implementation exposes no blacklist, denylist, freeze, seizure, forced-transfer or arbitrary-holder burn selector. pause()/unpause() are onlyOwner and _update is whenNotPaused, so the owner can halt all holder share transfers; the Umbrella owner's DEFAULT_ADMIN and PAUSE_GUARDIAN roles are held by non-zero Aave-governance Safes. This is a direct global pause (direct Possible under the FreezeWatch decision procedure, docs/blacklist-tracker.md), not a holder-targeted freeze. slash() is permissionless deficit coverage under the configured GHO slashing config and cannot target an individual holder; rescue functions reach only unaccounted contract balances. Parent GHO's 2026-10-19 assessment finds no direct control and no measured >50% upstream exposure, so the 100% GHO reserve claim adds no issuer/custodian exposure.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "standard-external",

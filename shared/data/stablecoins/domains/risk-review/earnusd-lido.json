@@ -1,9 +1,7 @@
 {
   "id": "earnusd-lido",
   "blacklistabilityReview": {
-    "evidence": "The exact earnUSD implementation has account-level isBlacklisted checks and role-gated setAccountInfo, plus configurable mint/burn/transfer pause and whitelist flags. At Ethereum block 26196064 (2026-10-15T06:16:59Z), all six decoded share flags remain zero. The full 15-role top-level vault census and eight unpaused queues were re-read; zero current flags do not remove configurable restrictions or the 5-of-8 Safe's proxy-upgrade power. Complete alternate execution and downstream control scope remains unclosed. Holder blacklisting therefore remains possible, not an observed historical freeze or an inference from USDC.",
-    "reviewer": "Rev_EarnusdLido",
-    "reviewedAt": "2026-10-15",
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Lido ShareManager holder controls",
@@ -20,9 +18,23 @@
       {
         "label": "Ethereum block 26196064, 2026-10-15T06:16:59Z; share flags, roles and queues",
         "url": "https://api-ethereum-mainnet.n.dwellir.com"
+      },
+      {
+        "label": "Exact vault ACL implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0000000615b2771511daa693ac07be5622869e01"
+      },
+      {
+        "label": "Fresh pinned flags, role members and upgrade authority",
+        "url": "https://etherscan.io/block/26224759"
+      },
+      {
+        "label": "Earlier 15-role and queue observation at block 26196064",
+        "url": "https://etherscan.io/block/26196064"
       }
     ],
-    "reviewedStatus": "possible"
+    "evidence": "Reviewed 2026-10-19. The sole catalogued deployment is Ethereum 0x4ce1ac8f43e0e5bd7a346a98af777bf8fbea1981; although the census returned no circulation figure, totalSupply()=54907107424502271722527317 raw share units at Ethereum block 26224759 (2026-10-19T06:13:59+00:00), hash 0x2e777b94fc023c9fffa581f3cac554f363407ab8706bc77304323de6ba0f7993, so Ethereum contains 100% of observed native shares. Its current BurnableTokenizedShareManager implementation is 0x000000000c79d2b5cd58ae545afc83030233d7b6. ShareManager.updateChecks unconditionally rejects blacklisted senders/recipients; zero flags do not disable that check. SET_ACCOUNT_INFO_ROLE currently has zero members on vault 0x014e6da8f283c4af65b2aa0f201438680a004452, and SET_FLAGS_ROLE also has zero members at that pin (getRoleMemberCount=0); the default-admin holder 0x0dd73341d6158a72b4d224541f1094188f57076e holds neither role, but can grant either. All six decoded share flags are zero. The token proxy admin 0x98a876b68eecb730e692d0ec699b3378bdc71d6f is owned by 5-of-8 Safe 0x81698f87c6482bf1ce9bfcfc0f103c4a0adf0af0. Therefore direct configurable restrictions, the grantable empty blacklist/flag roles, and token upgrades set Possible, not an active role-assigned direct blacklist verdict or an observed historical freeze. Earlier block 26196064 (2026-10-15T06:16:59Z) recorded zero flags, a 15-role top-level census and eight unpaused queues. USDC remains the declared parent claim, but direct Possible takes precedence; the pooled protocol-strategy reserve row is not treated as measured USDC/USDT/USDe reserve weights.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "privileged-internal-pricing",

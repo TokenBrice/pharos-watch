@@ -1,16 +1,28 @@
 {
   "id": "steakusdt-steakhouse",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "Website",
         "url": "https://app.morpho.org/ethereum/vault/0xbeef003c68896c7d2c3c60d363e8d71a49ab2bf9/steakhouse-prime-instant"
+      },
+      {
+        "label": "Verified Ethereum Steakhouse Prime Instant USDT VaultV2",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeef003c68896c7d2c3c60d363e8d71a49ab2bf9"
+      },
+      {
+        "label": "Ethereum RPC, block 26224760",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Pharos USDT parent review",
+        "url": "https://github.com/TokenBrice/pharos-watch/blob/main/shared/data/stablecoins/domains/risk-review/usdt-tether.json"
       }
     ],
-    "evidence": "Explicit Yes retained: reviewed metadata indicates a direct issuer, admin, proxy, pause, burn, or upgrade control surface beyond reserve-only exposure.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "The force-deallocation ambiguity raised in an earlier review is a source-reading error, not a policy ambiguity. The caller may choose an onBehalf parameter, but a nonzero penalty cannot burn another holder’s shares without that holder’s pre-existing share allowance. The public withdraw call inside forceDeallocate preserves the external caller, and exit checks/subtracts allowance before burning; failure rolls back prior deallocation too. The curator-settable penalty is capped at 2% by ConstantsLib.sol and is an allowance-bound exit cost, not a privileged arbitrary-holder burn. At ethereum block 26224922, the three share/exit gates are zero with setters permanently abdicated, asset()=0xdac17f958d2ee523a2206206994597c13d831ec7, and the configured adapter penalty is 0. No direct Yes/Possible follows from this path; shares retain Upstream through usdt-tether.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",

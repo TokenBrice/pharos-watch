@@ -1,7 +1,7 @@
 {
   "id": "pht-pht",
   "blacklistabilityReview": {
-    "reviewedStatus": "possible",
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "APACX PHT overview",
@@ -26,11 +26,31 @@
       {
         "label": "Tron observation block 85182167",
         "url": "https://tronscan.org/#/block/85182167"
+      },
+      {
+        "label": "PHT Vat CDP engine",
+        "url": "https://etherscan.io/address/0xEE0CDe42Bb6841736d809d2Bb63EbF59dB6E336c#code"
+      },
+      {
+        "label": "Ethereum PublicNode RPC block 26224783 (Vat ilks)",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Tronscan PHT contract metadata",
+        "url": "https://tronscan.org/#/address/TXdN5fvFjCdqjWJRvWmBzSRLBN7JLYmmrs"
+      },
+      {
+        "label": "TronGrid getcontract/triggerconstantcontract reads",
+        "url": "https://api.trongrid.io"
+      },
+      {
+        "label": "APACX mint, redeem and bridge guide (apcxUSDT backed 1:1 by USDT)",
+        "url": "https://docs.apacx.io/user-guides/mint-redeem-and-bridge-pht"
       }
     ],
-    "evidence": "Re-reviewed all three tracked deployments on 2026-08-08. Ethereum 0xbe370ad45d44eb45174c4ec60b88839fef32c077 is a direct, non-proxy MakerDAO Dai-source token: transferFrom requires holder allowance, authorized wards may mint, and no pause, blacklist, freeze, seizure, or arbitrary holder-burn path exists. Polygon 0xe75220cb014dfb2d354bb59be26d7458bb8d0706 still resolved to exact-match PhtOFTUpgradeable implementation 0x98210a4b34eafd668838108c99ad13a2b4340618 at block 91674718. Its current implementation adds no transfer restriction to LayerZero OFT ERC-20 behavior, but owner 0xc6f1cfa1b5840e5afe56f7b7ef3c52c3bcda06c5 can replace that implementation through UUPS. Tron TXdN5fvFjCdqjWJRvWmBzSRLBN7JLYmmrs remained material and unresolved: at block 85182167, Tronscan returned name=PhtOFT, is_proxy=false, verify_status=0, and a method map containing transfer, transferFrom, send, lzReceive, setPeer, and setDelegate but no visible pause/freeze selector; owner() returned EOA hex 0xfb99a0af49941ec1ca2fc726be1e287f4c70f5ee (base58 TYuYeSqxFF5CjtpFjv46nWWeiAWjVe2iY4). Because the Tron runtime is unverified, selector absence cannot prove that its transfer path lacks a fallback or indirect holder restriction. The prior inherited verdict had no resolvable variantOf or mintAuthority.inheritedFrom parent and was therefore structurally invalid for the V9 freeze adapter. It is corrected to possible, which honestly preserves the unresolved material Tron deployment rather than asserting false.",
-    "reviewer": "OpenAI Codex C07 access review; SONG-5 Safety Score V9 access review",
-    "reviewedAt": "2026-08-08"
+    "evidence": "Reviewed 2026-10-19. Material deployments are Ethereum 74.9018% and Tron 19.7721% of supply. Ethereum 0xbe370ad45d44eb45174c4ec60b88839fef32c077 is a direct, non-proxy Dai-source token: transferFrom requires holder allowance, burn(uint256) burns only msg.sender, and the ABI has no pause, blacklist, freeze, seizure or arbitrary-holder burn path. Tron TXdN5fvFjCdqjWJRvWmBzSRLBN7JLYmmrs is a 31,102-byte PhtOFT runtime with owner 0xfb99a0af49941ec1ca2fc726be1e287f4c70f5ee (EOA) and no proxy/upgrade selectors; its bytecode contains no pause(), paused(), blacklist(address), isBlacklisted(address), freeze, addBlackList, seize, burn(address,uint256) or upgrade selector, and triggerconstantcontract calls to those selectors revert. OFT setPeer/setDelegate are bridge configuration, not holder transfer controls. Polygon 5.3261% is a UUPS representation whose owner 0xc6f1cfa1b5840e5afe56f7b7ef3c52c3bcda06c5 can replace the implementation, but it is sub-threshold and does not set the verdict. Upstream reserve test: at Ethereum block 26224783 the Vat's five ilks carried 225,012,041.05 PHT of debt (Art x rate / 1e27), against a 225,011,899.76 PHT totalSupply. ApcxUSDT-A is 99.994649% of debt; USDT-A 0.003128%, cPHP-A 0.001334%, USDC-A 0.000445% and demoUSDT-A 0.000444%. ApcxUSDT is APACX's issuer-issued stablecoin backed 1:1 by USDT, so all five branches terminate in issuer/custodian control; exposed share is 100%, strictly above 50%. Reviewed upstream.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "single-source-or-laggy",

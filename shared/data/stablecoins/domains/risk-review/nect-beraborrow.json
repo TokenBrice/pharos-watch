@@ -1,7 +1,7 @@
 {
   "id": "nect-beraborrow",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Berachain NECT verified debt-token contract",
@@ -18,11 +18,23 @@
       {
         "label": "Berachain public RPC (block 24601923 whitelist and burn-path reads)",
         "url": "https://rpc.berachain.com"
+      },
+      {
+        "label": "Berachain DenManager verified source",
+        "url": "https://api.etherscan.io/v2/api?chainid=80094&module=contract&action=getsourcecode&address=0xf1356cb726c2988c65c5313350c9115d9af0f954"
+      },
+      {
+        "label": "Berachain LiquidationManager verified source",
+        "url": "https://api.etherscan.io/v2/api?chainid=80094&module=contract&action=getsourcecode&address=0x965dA3f96dCBfcCF3C1d0603e76356775b5afD2E"
+      },
+      {
+        "label": "Berachain BorrowerOperations verified source",
+        "url": "https://api.etherscan.io/v2/api?chainid=80094&module=contract&action=getsourcecode&address=0xDB32cA8f3bB099A76D4Ec713a2c2AACB3d8e84B9"
       }
     ],
-    "evidence": "Re-verified at Berachain block 24601923 (2026-08-08T19:49:22Z) against the verified multi-collateral DebtToken source. The canonical NECT deployment remained direct bytecode with a zero EIP-1967 implementation slot. Ordinary transfer and transferFrom have no blacklist or pause check, but burn(address _account,uint256 _amount) calls _burn(_account,_amount) without allowance for any caller in denManagers or PSMBonds. The WBERA DenManager 0xf1356cb726c2988c65c5313350c9115d9af0f954 remained actively whitelisted, and a fixed-block eth_call from that address to burn an unrelated address with amount zero succeeded, proving the live authorization path; the constructor PSMBond placeholder 0x000000000000000000000000000000000000dead also remained whitelisted. The reviewed 4-of-7 Safe behind the three-day owner path can additionally whitelist another PSM bond. NECT therefore has a current direct arbitrary-holder burn capability even though ordinary transfers remain open and the present DenManager uses it for protocol mechanics.",
-    "reviewer": "Codex C10 wave1 control review; Kimi T44 unknown-reduction wave-2",
-    "reviewedAt": "2026-08-08"
+    "evidence": "Pinned current state identifies WBERA DenManager 0xf1356Cb726C2988c65c5313350C9115D9Af0f954 as enabled; placeholder PSMBonds 0x000000000000000000000000000000000000dEaD has no code. The owner is a 4-of-7 Safe behind a three-day owner path. Official address documentation lists DenManager candidates WBERA 0xf1356Cb726C2988c65c5313350C9115D9Af0f954, PumpBTC 0xFec9F8cd6F7B7a6674CD846938Fe44b001f7a568, solvBTC 0xb6Ab580B36ed2DEF692dc608aFAc0A27C725CD0E, solvBTC.bbn 0xcEDEFfec2860409E3ccB0D798C71dD1239259d8A, uniBTC 0xE66E9873E5851b25a3b539879265F554c50f2f8c, BeraETH 0xA0f32354419c2e02cd5D535edd5Fd7F5e81Fbe96, Stakestone ETH 0x2016885fC46E879Aa3D170C7472Ce623090D4c1a, WETH 0x9A3549ef882584a687C1FF1843e3B3C07a2A0cB2, ylstETH 0xc3Ad34f9fe5C4634C9e723682a0FEdB5103cd667, rsETH 0xC94CD2ADB51E5CbE2d9fa0d09481a24929d7B7fF, WBTC-HONEY 0xEe49c5FF02b70c4099EA63B1792d963ABD9947f0, WETH-HONEY 0x1d2A3141BE9a5D4c785A56A01C53Fd02fA4eAa04, and WETH-WBTC 0x8Ed442f8A10d046b2Bd9A5866B2ecd7eE0e2aBEe. Documentation: https://beraborrow.gitbook.io/docs/additional-resources/contract-addresses.\nSource and member detail (unresolved until all live membership/source matching is independently closed):\nIndependent source and pin confirmation remains outstanding. The pinned members are DenManager `0xf1356cb726c2988c65c5313350c9115d9af0f954` and `PSMBonds(0x000000000000000000000000000000000000dEaD) = true`; the latter is a dead placeholder, not a live contract. The source analysis says the active DenManager burns `msg.sender`, gas pool, or StabilityPool balance; the owner-only `whitelistPSMBond` can grant another burner, implying Possible. **Missing identity:** the exact current token-owner Safe address was not independently recovered; only “4-of-7 Safe behind a three-day owner path” is reported. The member calls and source could not be independently confirmed: Routescan API reported chain unsupported, Berascan 403, Etherscan v2 required an API key, and the attempted GitHub source paths returned 404. These are leads, not fresh confirmations.\n\nSource leads (not successfully fetched): [NECT token API](https://api.routescan.io/v2/network/mainnet/evm/80094/etherscan/api?module=contract&action=getsourcecode&address=0x1ce0a25d13ce4d52071ae7e02cf1f6606f4c79d3), [DenManager API](https://api.etherscan.io/v2/api?chainid=80094&module=contract&action=getsourcecode&address=0xf1356cb726c2988c65c5313350c9115d9af0f954), [LiquidationManager API](https://api.etherscan.io/v2/api?chainid=80094&module=contract&action=getsourcecode&address=0x965dA3f96dCBfcCF3C1d0603e76356775b5afD2E), and [BorrowerOps API](https://api.etherscan.io/v2/api?chainid=80094&module=contract&action=getsourcecode&address=0xDB32cA8f3bB099A76D4Ec713a2c2AACB3d8e84B9). The pinned block was Berachain block 27687926.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "standard-external",

@@ -1,7 +1,7 @@
 {
   "id": "usdm-monetrix",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "USDM implementation on HyperEVM explorer",
@@ -18,11 +18,23 @@
       {
         "label": "HyperEVM public RPC",
         "url": "https://rpc.hyperliquid.xyz/evm"
+      },
+      {
+        "label": "USDM proxy on HyperEVM explorer",
+        "url": "https://hyperevmscan.io/address/0xe2d2959f89b6389deb624bf076fe7d9e5401f377"
+      },
+      {
+        "label": "Monetrix ACL",
+        "url": "https://hyperevmscan.io/address/0x301024E319191495146AB3627fe3Fc1FfE586595"
+      },
+      {
+        "label": "HyperEVM block 48936367",
+        "url": "https://hyperevmscan.io/block/48936367"
       }
     ],
-    "evidence": "Re-verified 2026-08-08 at HyperEVM block 42660392: proxy 0xe2d2959f89b6389deb624bf076fe7d9e5401f377 still resolves through its EIP-1967 implementation slot to 0x05faf9cfa7143804e7fb0db423fde8330cd586df, paused() returned false, and vault() returned 0x5586c2c8223c73ec0b41d6352748e6c173372e11. The verified implementation exposes pause(), unpause(), paused(), and OpenZeppelin's transfer-path pause errors, so the MonetrixAccessController pause role can halt every USDM holder transfer system-wide. The ABI has no per-address blacklist, but a live global pause is itself a direct transfer restriction. Pause authority and UUPS upgrades route through the central ACL whose UPGRADER sits behind the reviewed 48-hour timelock; USDC backing remains a separate upstream Circle exposure.",
-    "reviewer": "Codex C08 control/access audit",
-    "reviewedAt": "2026-08-08"
+    "evidence": "Re-reviewed 2026-10-19 at HyperEVM block 48936367 (2026-10-19T06:20:04Z). USDM is the sole catalogued deployment at 100% of 2,924,098.61 supply. Proxy 0xe2d2959f89b6389deb624bf076fe7d9e5401f377 resolves to implementation 0x05faf9cfa7143804e7fb0db423fde8330cd586df; paused()=false and vault()=0x5586c2c8223c73ec0b41d6352748e6c173372e11. The verified implementation has no per-address blacklist, freeze, seizure or arbitrary-holder burn: mint/burn are onlyVault and burn is self-only. It exposes pause()/unpause() onlyGuardian and UUPS upgrades gated by the ACL UPGRADER role. The 48-hour TimelockController 0xDe54E1F99752062ef448Dcc6C7636f90214C789e held UPGRADER at the pin, so the implementation can be replaced by an active administrator; the global pause is a further system-wide transfer control. Under the FreezeWatch decision procedure (docs/blacklist-tracker.md), these are direct Possible, not Yes. Reserve composition is a single unreconciled protocol-position row and is not used.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "standard-external",

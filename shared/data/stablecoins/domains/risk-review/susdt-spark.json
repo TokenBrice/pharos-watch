@@ -1,11 +1,25 @@
 {
   "id": "susdt-spark",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "Verified Ethereum spUSDT implementation (SparkVault)",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x1b992302652a92611dcd5090d1cb388c6377f455"
+      },
+      {
+        "label": "Ethereum RPC, block 26224760",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Arbitrum RPC, block 516204467",
+        "url": "https://arb1.arbitrum.io/rpc"
+      }
+    ],
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "spUSDT retains upstream Tether freeze exposure: asset() on the Ethereum vault returned native USDT and asset() on Arbitrum returned USDT0 at pinned blocks 26095794 and 510584053 on 2026-10-01. Spark also documents full USDS economic backing and downstream strategy deployment, so USDT is the deposit asset rather than the only reserve exposure.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurA35spUSDT)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "At Ethereum block 26224760 (hash 0x2a6c0b20faae49bb23f77a582b517057741efcee5bd423a8552f672144c83b85, 2026-10-19T06:14:11Z), Spark Savings USDT 0xe2e7a17dff93280dec073c995595155283e3c372 is an ERC-1967 proxy whose implementation is 0x1b992302652A92611DCd5090D1Cb388C6377f455 (verified SparkVault). asset() returned native USDT 0xdac17f958d2ee523a2206206994597c13d831ec7; totalSupply was 670036303097896 base units (670,036,303.097896 spUSDT) and totalAssets was 692703873048052 base units (692,703,873.048052 USDT). The implementation imports UUPSUpgradeable and _authorizeUpgrade(address) is restricted to DEFAULT_ADMIN_ROLE. getRoleMemberCount(0x00) returned 1 and getRoleMembers(0x00) returned 0x3300f198988e4C9C63F75dF86De36421f06af8c4, a non-zero contract, so the implementation can be replaced at will by that authority. No blacklist, freeze, pause, forced-transfer or holder-specific withdrawal gate exists in the current implementation: the privileged surface is setDepositCap, setVsrBounds, setVsr (SETTER_ROLE), take (TAKER_ROLE) and accrueInterest, while share transfers are ordinary ERC-20 arithmetic. The active UUPS upgrade authority is a direct Possible holder-facing control because a replacement implementation could add a freeze or blacklist. The vault also carries upstream USDT exposure as a redeemable USDT claim: Ethereum is 99.1365% of supply; the Arbitrum vault 0x45d91340b3b7b96985a72b5c678f7d9e8d664b62 returned asset() 0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9 at Arbitrum block 516204467 (2026-10-19T06:18:19Z), and X Layer is 0.8406% and Arbitrum 0.0228%, both sub-threshold. The direct Possible control sets the verdict even with that upstream exposure. A Yes verdict is not supported: the direct evidence describes only upstream Tether freeze exposure.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",

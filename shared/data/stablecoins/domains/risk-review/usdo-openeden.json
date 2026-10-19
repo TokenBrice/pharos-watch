@@ -2,10 +2,24 @@
   "id": "usdo-openeden",
   "blacklistabilityReview": {
     "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Verified USDO implementation",
+        "url": "https://eth.blockscout.com/address/0x87e3Ba929c71c0e28fC1C817D107A888A59C523e"
+      },
+      {
+        "label": "Pinned Ethereum JSON-RPC role reads",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
+      },
+      {
+        "label": "Pharos deployment shares observed 2026-10-19",
+        "url": "https://api.pharos.watch/api/stablecoins"
+      }
+    ],
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: USDO resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "evidence": "USDO resolves Yes on a direct holder blacklist. Ethereum holds 98.7332% of circulating supply (2026-10-19 census); BSC 1.0233%, Base 0.2434% and Plasma 0.0001% are sub-threshold. At Ethereum block 26224762 (2026-10-19T06:14:35Z), proxy 0x8238884ec9668ef77b90c6dff4d1a9f4f4823bfe delegates to verified USDO implementation 0x87e3Ba929c71c0e28fC1C817D107A888A59C523e. BANLIST_ROLE was held by 0x5eaff7af80488033bc845709806d5fae5291eb88 and 0xbc1aae6c5ac2dbacf92eabcb68948576d04991f6 (both hasRole=true). banAddresses(address[]) is BANLIST_ROLE-gated and _beforeTokenTransfer reverts USDOBannedSender(from); burn(address,uint256) is BURNER_ROLE-gated; pause()/unpause() are PAUSE_ROLE-gated. paused()=false and totalSupply()=14,352,712.448087 USDO. The 2026-10-19 role scan found current members for the blacklist role, so this is an active Yes, not an admin-grantable Possible. Reserves (78.95% OpenEden TBILL, 9.64% BlackRock BUIDL, plus RLUSD) would independently exceed the >50% upstream threshold, but the direct control decides.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",

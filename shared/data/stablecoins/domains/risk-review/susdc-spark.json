@@ -1,7 +1,7 @@
 {
   "id": "susdc-spark",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Spark Savings Vaults V2: underlying asset and strategy accounting",
@@ -10,11 +10,31 @@
       {
         "label": "Circle Blacklistable contract source",
         "url": "https://raw.githubusercontent.com/circlefin/stablecoin-evm/master/contracts/v1/Blacklistable.sol"
+      },
+      {
+        "label": "Exact Ethereum SparkVault implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x1b992302652a92611dcd5090d1cb388c6377f455"
+      },
+      {
+        "label": "Exact-match X Layer SparkVault implementation",
+        "url": "https://sourcify.dev/server/v2/contract/196/0xdce929a335c75a1676ef5957a4d7a3b928c48820?fields=abi,sources"
+      },
+      {
+        "label": "Spark address registry / governance path",
+        "url": "https://github.com/sparkdotfi/spark-address-registry"
+      },
+      {
+        "label": "X Layer pinned RPC",
+        "url": "https://rpc.xlayer.tech"
+      },
+      {
+        "label": "Avalanche pinned RPC",
+        "url": "https://api.avax.network/ext/bc/C/rpc"
       }
     ],
-    "evidence": "Pinned Ethereum block 26095794 and Avalanche block 96511142 on 2026-10-01 confirmed asset() is local USDC on both tracked vaults. Ethereum USDC blacklister() returned 0x0a06be16275b95a7d2567fbdae118b36c7da78f9, and Circle's source documents its blacklist authority. The wrapper retains upstream USDC freeze exposure; this does not assert that all deployed strategy positions are held as USDC.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurA20USDf)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "Direct Possible, not Yes: exact verified SparkVault implementations expose ordinary ERC-20 share transfers and no active holder blacklist/freeze or arbitrary-holder burn, but _authorizeUpgrade is restricted to assigned DEFAULT_ADMIN_ROLE. At ethereum@26224762 (2026-10-19T06:14:35+00:00, hash 0xef45b71f129dac5f794f4506dee4ca47f3cdd7e41c6e75f53d66512c8c505fc5), Ethereum spUSDC 0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d uses implementation 0x1b992302652a92611dcd5090d1cb388c6377f455; getRoleMemberCount(bytes32(0))=1 and getRoleMember(0,0)=0x3300f198988e4c9c63f75df86de36421f06af8c4 (the existing Spark/Sky governance review identifies the SubProxy/48-hour DSPause path). At xlayer@73621689 (2026-10-19T06:18:45+00:00, hash 0xc9b913e415700edec90708aeacc6b06ef6454535784a9a626be7720cfb820cbc), issuer-documented X Layer spUSDC 0xf90e63079d97a0a1f479b2b168457f420caff6ba, missing from the prior authored contract list/census, uses exact-match implementation 0xdce929a335c75a1676ef5957a4d7a3b928c48820 and has one nonzero DEFAULT_ADMIN_ROLE holder, 0xcf5af6f53cec74b791cb4182ac778ca9cd323510; its signing architecture is not inferred. totalAssets() values are 298,054,049.018072 USDC on Ethereum, 92,214,073.038816 on X Layer and 1,989,061.353980 on Avalanche at block 97944254, respectively 75.9843%, 23.5086% and 0.5071% of the measured $392,257,183.410868 aggregate across these three issuer-listed vaults [INFERENCE: NAV-weighted deployment supply proxy]. Both material implementations are therefore mutable even under DAO governance; the collateral DAO carve-out does not apply to token upgrades. Peripheral Avalanche implementation 0xc2c0582d1cce30449cf561c7b9c4d6d527547f12 has sole admin 0x7566debc906c17338524a414343fa61bca26a843. asset() returns local USDC on all three, preserving the previously pinned 2026-10-01 USDC-asset relationship and underlying Circle freeze exposure; it does not establish that deployed strategies all hold USDC. The historical reserve rows measure 3.2579% idle USDC and 96.7421% unresolved deployed strategy claims, not a measured current issuer-freezable majority. Parent exposure remains secondary; direct upgradeability sets Possible.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

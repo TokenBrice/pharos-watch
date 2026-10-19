@@ -2,8 +2,6 @@
   "id": "chfsafo-spiko",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "reviewedAt": "2026-10-15",
-    "reviewer": "Batch64 primary-source review (Rev_ChfsafoSpiko)",
     "sources": [
       {
         "label": "Spiko allowlisted holder controls",
@@ -36,9 +34,27 @@
       {
         "label": "Verified Ethereum token implementation observed at block 26197328",
         "url": "https://eth.blockscout.com/address/0x869dbfc8c578d7af77e0214287bb49d351d3e4e1?tab=contract"
+      },
+      {
+        "label": "Verified Ethereum Token implementation observed at block 26224761",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x869dbfc8c578d7af77e0214287bb49d351d3e4e1"
+      },
+      {
+        "label": "Spiko Stellar token source",
+        "url": "https://github.com/spiko-tech/stellar-contracts"
+      },
+      {
+        "label": "Stellar CHFSAFO contract and supply",
+        "url": "https://stellar.expert/explorer/public/contract/CAJD2IBSP7VO2VYJQUYJSOGPJINTUYV7MQITINXVPTIH3CCLCUENNMW4"
+      },
+      {
+        "label": "Ethereum observation block 26224761",
+        "url": "https://etherscan.io/block/26224761"
       }
     ],
-    "evidence": "The September 2026 SICAV prospectus page 10 requires shares to be held and transferred only between allowlisted investors; its page 49 and the current exact CHF API bind ISIN FR0014015LG6 to all eight catalog registers. Spiko Finance operates the shareholder register under the Management Company's responsibility. The verified Ethereum Token implementation observed at block 26197328 enforces authority.canCall allowlisting in _update and permits restricted pause and forced burn; this does not establish every administrator. A fresh finalized Solana bank-context observation at slot 457209716, block hash HHF31Fm7P3XqeiPpMMvoBEkUXrkoP51Kk68wr4dCTq4A, timestamp 1792061294 (2026-10-15T10:48:14Z), confirms Token-2022 ownership and freeze authority 9Sf6f8r63A86FEzbzkY4MXNjCX17B49fVizduLrZ7DyG. The earlier slot 452748326 default-frozen, permanent-delegate and pausable-extension observations remain historical evidence; no complete current ACL execution or material-supply closure is claimed. No underlying-reserve freeze exposure is inferred from holder restrictions."
+    "evidence": "Re-reviewed 2026-10-19, preserving the prior documentary findings. The September 2026 SICAV prospectus page 10 requires shares to be held and transferred only between allowlisted investors; page 49 and the exact CHF API bind ISIN FR0014015LG6 to all eight catalog registers, and Spiko Finance operates the shareholder register under the Management Company's responsibility. Ethereum token 0x18b5c15e5196a38a162b1787875295b76e4313fb resolves to verified Token implementation 0x869dbfc8c578d7af77e0214287bb49d351d3e4e1; Token._update requires PermissionManager.canCall(from/to, token, 0xa9059cbb), and the implementation exposes restricted pause(), restricted burn(address,uint256) and restricted UUPS upgrade. At Ethereum block 26224761 (2026-10-19T06:14:23Z) authority 0x344278aff344d6fb960705dc18a4912221608472 returned getRequirements(token,0xa9059cbb)=65, canCall(whitelisted holder)=true and canCall(0x...0001)=false, and a holder-to-non-holder transfer reverted with UnauthorizedTo 0xb77a4ad1; group 0 is held by 3/3 Safe 0x4eaa52b6280593a8820c45ce38f974290ae52cea. The second material deployment is Stellar CAJD2IBSP7VO2VYJQUYJSOGPJINTUYV7MQITINXVPTIH3CCLCUENNMW4 (wasm 83bf0a7f...), whose transfer requires WHITELISTED_ROLE on both parties and whose burn(account,amount,caller) burns an arbitrary account under BURNER_ROLE. At Soroban ledger 65021030 (2026-10-19T06:22:13Z) has_role returned WLISTER Some(0) for GD2ELXTHZQORSH75SJE6XRTCKXNDGJFIZ4R2SZ4MMXDOBT52GK26X4EO and Some(1) for GAUYO4UAESQD6SGZDPOIG2ADT7EZTR5EJ7HSX4CYCWS2JMMGQOCL4QCX, BURNER Some(0) for CAVZK26ERVGKGXLQGEOKPAQGIZS2YKN4BSXOYDMUY365EV66ZNSFEDBS; role_revoked|WLISTED appears in the permission-manager history. Materiality: measured totalSupply at 2026-10-19 is 1,007,277,937,971 raw 5-decimal units: Ethereum 600,935,528,609 (59.66%) and Stellar 406,342,409,362 (40.34%); Polygon, Arbitrum, Etherlink, Base, Starknet and Solana are zero. Both material deployments are directly controlled. There is no declared parent; the reserve test (100% Spiko Amundi fund shares) is not reached because direct holder controls are established.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "privileged-internal-pricing",

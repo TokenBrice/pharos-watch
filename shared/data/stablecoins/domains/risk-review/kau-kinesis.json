@@ -6,11 +6,23 @@
       {
         "label": "KMS Labs terms section 11: freezing and recovery powers",
         "url": "https://kmslabs.money/kms-labs-tcs/"
+      },
+      {
+        "label": "Verified ERC20F implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0f25045d15c163478bb67c56c5d9d602628f4f62"
+      },
+      {
+        "label": "Verified DenyList implementation and events",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0D7D2f28AB186CD706878c9943221B001bcFC3D7"
+      },
+      {
+        "label": "Pinned live role and registry calls",
+        "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
-    "evidence": "KMS Labs terms section 11 expressly permits freezing, blacklisting, restriction, seizure and recovery of ERC-20 tokens or addresses without advance notice. This verifies the existing Yes verdict directly rather than inferring it from centralized governance.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurA29KAU)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "Reviewed 2026-10-19 for the KMS Labs Ethereum ERC20 KAU, not the separate Kinesis-native asset. Official KMS terms identify 0x14dab79fd7b7b3f748d434812fd6a9aac460ea52 and section 11 reserves freezing, blacklisting, restriction, seizure and recovery without advance notice. Ethereum block 26224761 (2026-10-19T06:14:23Z) confirms ERC20F implementation 0x0f25045d15c163478bb67c56c5d9d602628f4f62, accessRegistry 0xbdac11e1b2bb8d61bdef18ece5d1bc88387ab458, and supply 1,640,000 KAU on the only registered deployment (100% material). Its verified ERC20F transfer paths consult the registry for sender and recipient; the registry resolves to DenyList 0x0d7d2f28ab186cd706878c9943221b001bcfc3d7. At the same pin, registry ACCESS_LIST_ADMIN_ROLE is held by 0x6eff1bb0073c9b00fb6e090a19f8ac201a4f9138, with DEFAULT_ADMIN_ROLE retained by 0xe584e152bed254a177351cea587aa44c2a83a8ae. Therefore current active token-level holder denial, not merely contractual rights or centralized reserves, establishes Yes. The ERC20 is backed by Kinesis-native KAU held by KMS Labs; no tracked parent is declared, and reserve look-through cannot lower the direct verdict.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "opaque-or-unknown",

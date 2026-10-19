@@ -3,9 +3,9 @@
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: USDh resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "evidence": "USDh is 100% native Stacks at SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.usdh-token-v1. Current immutable published token source (publish_height166579) implements burn-for-protocol(amount,sender), guarded only by HQ check-is-minting-contract(contract-caller), and directly ft-burn?s the supplied holder without their consent. Published emergency-recover-v1 (height166579) recover-usdh(address,recipient) checks hq-v1 check-is-enabled and check-is-protocol(tx-sender), reads the arbitrary address balance, burns it through burn-for-protocol and mints the same amount to recipient. At pinned Stacks tip height9249522, hash 0xa11a1073e6d0bfce74bfb7e8f4d07bf7aab8483f0a04f7f1062a622b68bdc3c3 (burn height972112), HQ get-minting-contract(emergency-recover-v1).active=true; contracts-enabled=true; minting-enabled=true; token migration-start-height=0 and migration-manager=none. HQ owner serialized principal 0x0514259de8124cc4d9d117e7731edb7af5a4bd918c2d is active protocol member: get-contract-active(owner)=true and check-is-protocol(owner)=(ok true). Thus CURRENT assigned actors can seize an arbitrary existing holder balance without adding roles, replacing code, or obtaining allowance. The verdict is Yes: an arbitrary-burn-or-seize control is active. Prior custody/upstream evidence cannot supersede this direct control. Token also exposes owner-started global migration transfer stop, but it is weaker than the current seizure path. Primary source/state endpoints: https://api.hiro.so/v2/contracts/source/SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG/usdh-token-v1 ; https://api.hiro.so/v2/contracts/source/SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG/emergency-recover-v1 ; https://api.hiro.so/v2/contracts/source/SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG/hq-v1 ; /v2/data_var and /v2/contracts/call-read with tip=0xa11a1073e6d0bfce74bfb7e8f4d07bf7aab8483f0a04f7f1062a622b68bdc3c3. No transactions were sent.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "opaque-or-unknown",

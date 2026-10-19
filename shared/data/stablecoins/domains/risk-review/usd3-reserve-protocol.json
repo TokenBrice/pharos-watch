@@ -1,7 +1,7 @@
 {
   "id": "usd3-reserve-protocol",
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Reserve Protocol pause/freeze states documentation",
@@ -30,11 +30,43 @@
       {
         "label": "Reserve Protocol terms and conditions",
         "url": "https://reserve.org/terms-and-conditions"
+      },
+      {
+        "label": "Verified RTokenP1 and ComponentP1 UUPS authorization",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x258ce833cf9ad19208372763a00aa1565dd40b3c"
+      },
+      {
+        "label": "Verified MainP1 component upgrade process",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc5bf686cfb85786fcfff557297d4aff8f4e15e44"
+      },
+      {
+        "label": "USD3 governance timelock",
+        "url": "https://eth.blockscout.com/address/0x848b923b5d99d5963608ff55acdfee51c443cca6"
+      },
+      {
+        "label": "Fixed-block Ethereum RPC",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Base canonical bridge",
+        "url": "https://basescan.org/address/0x4200000000000000000000000000000000000010"
+      },
+      {
+        "label": "Exact Aave USDC wrapper",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0adc69041a2b086f8772acce2a754f410f211bed"
+      },
+      {
+        "label": "Exact Compound USDC wrapper",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x27f2f159fe990ba83d57f39fd69661764bebf37a"
+      },
+      {
+        "label": "Exact Steakhouse V1 USDC vault",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeef01735c132ada46aa9aa4c54623caa92a64cb"
       }
     ],
-    "evidence": "Re-reviewed 2026-08-08. At Ethereum block 25712317, the USD3 proxy still resolved to verified RTokenP1 implementation 0x258ce833cf9ad19208372763a00aa1565dd40b3c. That implementation and the verified Base OptimismMintableERC20 representation expose ordinary ERC-20 transfers with no holder blacklist, seizure, arbitrary holder burn, or transfer pause. Reserve Protocol's Main freeze controls halt issue, redeem, and protocol trading while explicitly leaving ERC-20 functions open. Reserve's terms describe ABC Labs as a non-custodial interface contributor and reserve only the ability to restrict access to the services, not an issuer right to freeze USD3 balances.",
-    "reviewer": "OpenAI Codex unfreezable-cohort audit",
-    "reviewedAt": "2026-08-08"
+    "evidence": "USD3 is Possible because its material Ethereum token implementation remains upgradeable through active Reserve governance. Ethereum is 99.0488% of circulating supply and Base 0.9512% in the 2026-10-19 census. At Ethereum block 26224766 (hash 0x145ea9178e23ad8cd883936cd58e34efc30874615214763b1ce57cd4cb8dcede; 2026-10-19T06:15:23Z), token 0x0d86883faf4ffd7aeb116390af37746f45b6f378 has EIP-1967 implementation 0x258ce833cf9ad19208372763a00aa1565dd40b3c and main()=0x81117e3e98910c3dcf956b5fc97a7212e047acf4. Main has implementation 0xc5bf686cfb85786fcfff557297d4aff8f4e15e44; hasRole(bytes32('OWNER'),0x848b923b5d99d5963608ff55acdfee51c443cca6) returns true and that timelock returns getMinDelay()=259200 seconds. Verified RTokenP1 inherits UUPS through ComponentP1, whose upgrade authorization is onlyMain; verified MainP1 exposes OWNER-authorized upgradeRTokenTo through its version-registry process. Governance can therefore replace the token's implementation; the three-day delay and DAO controller do not remove direct Possible. Today's RToken transfer hook only rejects transfers to the token itself, and no active holder blacklist, seizure, arbitrary-holder burn or transfer pause was found. Reserve Main freeze controls halt issuance, redemption and protocol trading while leaving ERC20 transfers open, so those operation controls are not independently called token freezes. The peripheral Base OptimismMintableERC20 is a fixed token with canonical-bridge burn authority; the existing bridge review identifies its upgradeable L2 StandardBridge and ProxyAdmin path. Under the bridge-burner rule, this is a mutable holder-facing path rather than confirmed live arbitrary-holder confiscation, and at 0.9512% it cannot set the verdict. No parent is declared. The reviewed basket retains four 25% allocations: sUSDS, static Aave USDC, wrapped Compound USDCv3 and exact Steakhouse USDC V1 shares. The three USDC-ending claims establish at least 75% qualifying issuer exposure over the full four-slice denominator; sUSDS may raise it to 100% under categorical qualifying upstream inheritance but is unnecessary to that threshold. Direct Possible takes precedence over reserve-majority Upstream. Reserve terms restricting interface/service access do not independently grant a token-balance freeze right.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "canonical-rollup-bridge",

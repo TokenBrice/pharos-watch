@@ -6,11 +6,19 @@
       {
         "label": "YUSD Ethereum token contract",
         "url": "https://sourcify.dev/server/v2/contract/1/0x4274cd7277c7bb0806bd5fe84b9adae466a8da0a?fields=sources"
+      },
+      {
+        "label": "Pinned Ethereum JSON-RPC reads",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
+      },
+      {
+        "label": "Pharos deployment shares observed 2026-10-19",
+        "url": "https://api.pharos.watch/api/stablecoins"
       }
     ],
-    "evidence": "The verified Ethereum YUSD source gives the owner addBlackList and removeBlackList authority. Its _update hook rejects transfers where either the sender or recipient is blacklisted, establishing a direct holder-level transfer restriction on the tracked token.",
-    "reviewer": "SONG Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "YUSD resolves Yes on a direct holder blacklist. Ethereum holds 95.2681% of circulating supply (2026-10-19 census); BSC 4.7319% is sub-threshold. At Ethereum block 26224780 (2026-10-19T06:18:11Z, 0x9076bf82c0ff881700033ffa57572090f362c3b3df43d90ac3ce2ef31172a97d), the verified non-proxy YUSD contract 0x4274cd7277c7bb0806bd5fe84b9adae466a8da0a has owner()=0x4Fe78eF65BD8EDDED480efaB030BA680646503c8 (nonzero) and totalSupply()=32,791,189.401057 YUSD. addBlackList(address) and removeBlackList(address) are onlyOwner, and _update reverts when either the sender or the recipient isBlackListed, so the issuer can stop a named holder's transfers. Reserves are 71.9% Copper and 27.9% Fireblocks custody, which would also exceed the >50% upstream threshold, but the direct control decides.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "privileged-internal-pricing",

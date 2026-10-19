@@ -14,11 +14,19 @@
       {
         "label": "Solana freeze account docs",
         "url": "https://solana.com/docs/tokens/basics/freeze-account"
+      },
+      {
+        "label": "Solana mainnet RPC (mint and multisig reads)",
+        "url": "https://api.mainnet-beta.solana.com"
+      },
+      {
+        "label": "Solscan ISC mint",
+        "url": "https://solscan.io/token/J9BcrQfX4p9D1bvLzRNCbMDv8f44a9LFdeqNE4Yk2WMD"
       }
     ],
-    "evidence": "ISC's Solana mint has a non-null freeze authority, and Solana token accounts can be frozen when a mint retains freeze authority. That is direct holder-account freeze capability.",
-    "reviewer": "Codex FreezeWatch audit",
-    "reviewedAt": "2026-05-25"
+    "evidence": "Re-verified 2026-10-19 on Solana mainnet at slot 458729686: the Token-program mint J9BcrQfX4p9D1bvLzRNCbMDv8f44a9LFdeqNE4Yk2WMD (6 decimals, supply 1,116,455.895338 ISC) has non-null freeze authority 3XM6WqYLx5gKpRNwnCcUrBmJAhRHx3imktwEvbRwXavZ, which is also its mint authority. At slot 458730572 that address is an initialized SPL Token multisig with numRequiredSigners=2 and numValidSigners=3 (signers B6PG7xN8W1G3PA8XoTzUEAdzNzWfDXQeWud5axWtHCPi, FUPe37ryYxB2J8Ckvq3pzpw7EMahYyeT8WtzJqh3Ge3f, 3kHz9pTwSeCz6JemWsKoKMPS8E1RUbwbU2xg1b1ajFGF). Solana freezes individual token accounts through the mint's freeze authority, so the 2-of-3 issuer multisig can freeze any holder's account: direct holder-account freeze. ISC is a single Solana deployment holding 100% of supply. No parent: variantOf and mintAuthority.inheritedFrom are null. Reserve composition (RWA fund shares and cash) is not the basis of this verdict.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",

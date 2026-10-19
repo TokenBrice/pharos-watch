@@ -1,7 +1,7 @@
 {
   "id": "hbd-hive",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Docs",
@@ -12,9 +12,9 @@
         "url": "https://hive.io/"
       }
     ],
-    "evidence": "Explicit Yes retained: reviewed metadata or audit notes identify direct seizure, freeze, blacklist, privileged burn, proxy-upgrade, or chain-governance intervention authority despite decentralized governance labeling.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "HBD is a native Hive balance without a token proxy or reserve custodian. Nevertheless, the claim that the official implementation contains no seizure/forced transfer path is false: HF23 calls clear_accounts on the shipped Steemit-account set, and clear_account transfers HBD savings, liquid balances and rewards to the treasury. This is demonstrated shipped holder intervention at pinned commit dab219074fd146d07305bccd4a9f869c9d94d301. Under the same consensus class as Zephyr’s shipped transfer halt, HBD is Possible. No current live key able to choose arbitrary new victims is asserted, so not Yes. Parent absent; endogenous HIVE conversion backing does not independently create custodial upstream exposure.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "medianized-with-delay",

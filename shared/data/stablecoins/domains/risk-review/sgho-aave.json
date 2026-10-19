@@ -1,7 +1,7 @@
 {
   "id": "sgho-aave",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Aave sGHO documentation",
@@ -28,9 +28,9 @@
         "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
-    "evidence": "Corrected 2026-08-08 at Ethereum block 25712116. The EIP-1967 implementation slot still resolved to Sourcify-verified sGho implementation 0xff229a0bbb614a284de8ae0e41e5974878fd7c04. Its pause() and unpause() entrypoints are gated by PAUSE_GUARDIAN_ROLE, and its ERC-20 _update override is whenNotPaused, so pausing blocks holder transfers, deposits, withdrawals, mints, and burns. paused() was false and hasRole(PAUSE_GUARDIAN_ROLE, 0x5300a1a15135ea4dc7ad5a167152c01efc9b192a) was true at the observation block. This is a live direct system-wide transfer-freeze mechanism, not only inherited GHO exposure.",
-    "reviewer": "OpenAI Codex C03 control review",
-    "reviewedAt": "2026-08-08"
+    "evidence": "At Ethereum block 26224772 (2026-10-19), the sole catalogued deployment is the Ethereum upgradeable proxy 0xe1753f2e00940cc31213dd92013cf019dfe4ca1d (100% of supply; material). The EIP-1967 implementation is Sourcify-verified sGho 0xff229a0bbb614a284de8ae0e41e5974878fd7c04 and the ProxyAdmin is 0xc15700631020eba02317964550365b95a9a28adb. The verified implementation exposes no blacklist, denylist, freeze, seizure, forced-transfer or arbitrary-holder burn entrypoint; TOKEN_RESCUER_ROLE emergencyTokenTransfer can move only unaccounted tokens held by the contract, not user share balances. Its pause()/unpause() entrypoints are gated by PAUSE_GUARDIAN_ROLE and the ERC-20 _update hook is whenNotPaused, so the guardian can halt all holder transfers, deposits, withdrawals, mints and burns. At block 26224772, hasRole(PAUSE_GUARDIAN_ROLE, 0x5300a1a15135ea4dc7ad5a167152c01efc9b192a)=true and paused()=false. That is a direct system-wide transfer pause (direct Possible under the FreezeWatch decision procedure, docs/blacklist-tracker.md), not a holder-targeted freeze. Parent GHO's 2026-10-19 assessment finds no direct control and no measured >50% upstream exposure, so the 100% GHO reserve claim adds no issuer/custodian exposure and inheritance supplies no additional path. Any change to the parent does not remove the local pause.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "privileged-internal-pricing",

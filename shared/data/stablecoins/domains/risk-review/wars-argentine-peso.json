@@ -1,7 +1,7 @@
 {
   "id": "wars-argentine-peso",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Ripio local stablecoins",
@@ -46,11 +46,27 @@
       {
         "label": "Worldchain RPC fixed-block reads",
         "url": "https://worldchain-mainnet.gateway.tenderly.co"
+      },
+      {
+        "label": "Ethereum WARS proxy and implementation",
+        "url": "https://etherscan.io/address/0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d#code"
+      },
+      {
+        "label": "Verified LatamStable implementation",
+        "url": "https://etherscan.io/address/0xba0030bba7112171a8a5bcc417ee1994051321b9#code"
+      },
+      {
+        "label": "Ethereum block 26224779",
+        "url": "https://etherscan.io/block/26224779"
+      },
+      {
+        "label": "Base block 52800672",
+        "url": "https://base.blockscout.com/block/52800672"
       }
     ],
-    "evidence": "The verified Ethereum LatamStable implementation inherits ERC20PausableUpgradeable, grants PAUSER_ROLE, and exposes pause() and unpause(); its transfer path is halted while paused. At Ethereum block 25534802, Base block 48645001, BSC block 110044458, Polygon block 90249572, Gnosis block 47207655, and Worldchain block 32371857, hasRole(PAUSER_ROLE, 0x466c02e2cc67b81a696af5afdb61605c41fe247b) returned true on each tracked WARS contract. This EOA can halt token transfers system-wide across every tracked deployment; this is active pause authority, not mint or upgrade exposure alone.",
-    "reviewer": "Codex Safety Score V9 access review",
-    "reviewedAt": "2026-07-15"
+    "evidence": "Re-reviewed 2026-10-19. Material deployments are Ethereum 85.3556% (7,907,397.31 wARS) and Base 10.9665% (1,015,947.75); World Chain 2.7651%, BSC 0.5694%, Polygon 0.2807% and Gnosis 0.0627% are sub-threshold. The verified LatamStable implementation at 0xba0030bba7112171a8a5bcc417ee1994051321b9 inherits ERC20PausableUpgradeable and exposes pause()/unpause() onlyRole(PAUSER_ROLE), plus UUPS upgrades gated by UPGRADER_ROLE. At Ethereum block 26224779 and Base block 52800672, hasRole(PAUSER_ROLE, 0x466c02e2cc67b81a696af5afdb61605c41fe247b) returned true and paused() returned false; the same EOA holds UPGRADER_ROLE on Ethereum. There is no blacklist, denylist, address freeze, seizure or arbitrary-holder burn function; burn(uint256) is self-only and burnFrom requires allowance. A system-wide transfer pause and an EOA-held upgrade authority are direct holder-facing controls but are Possible under the FreezeWatch decision procedure (docs/blacklist-tracker.md), not Yes. Reserve test: 100% Argentine-peso deposits at Argentine financial institutions would satisfy the upstream test, but direct Possible stays Possible.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

@@ -1,16 +1,32 @@
 {
   "id": "usdf-astherus",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Aster USDF BNB Chain token contract",
         "url": "https://bscscan.com/address/0x5a110fc00474038f6c02e89c707d638602ea44b5#code"
+      },
+      {
+        "label": "Astherus official USDF source",
+        "url": "https://github.com/astherus-contract/ass-usdf-earn-contract/blob/752903309d775b12d6583c879d1f64db88e051ee/contracts/oft/USDF.sol"
+      },
+      {
+        "label": "Astherus official USDFEarn source",
+        "url": "https://github.com/astherus-contract/ass-usdf-earn-contract/blob/752903309d775b12d6583c879d1f64db88e051ee/contracts/USDFEarn.sol"
+      },
+      {
+        "label": "BSC JSON-RPC pinned role reads",
+        "url": "https://bsc-dataseed.binance.org"
+      },
+      {
+        "label": "Aster smart-contract registry (USDF minting contract)",
+        "url": "https://docs.asterdex.com/overview/smart-contracts"
       }
     ],
-    "evidence": "The verified USDF token source exposes an ADMIN_ROLE-gated pause() function. Its paused transfer hook makes the contract-wide transfer path directly restrictable by the administrator, regardless of the separate inferred upstream exposure.",
-    "reviewer": "OpenAI Codex Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "At BSC block 128506866 (2026-10-19T06:32:57Z), USDF 0x5a110fc00474038f6c02e89c707d638602ea44b5 is a direct nonproxy token with 100% BSC supply, global ERC20Pausable transfer control and role-gated burn(from,amount). Complete RoleGranted/RoleRevoked logs to that block reconstruct exactly one MINTER_AND_BURN_ROLE member, USDFEarn proxy 0xc271fc70dd9e678ac1ab632f797894fe4be2c345, current implementation 0x9be60400d043864a99a8fe1be479c9eb299198c1. An earlier review stated that USDFEarn never calls USDF.burn; in fact its inherited contracts/libraries/Withdrawable.sol::_distributeWithdraw explicitly calls asToken.burn(address(this),requestWithdrawInfo.withdrawAmount). This is a SELF-burn of tokens first transferred into the redemption escrow, not arbitrary-holder burn. The public minting paths only mint; no callable executor or other arbitrary-from burn route was found in the current implementation and inherited base. Current ADMIN_ROLE can globally pause; grantable burner authority and upgradeable role member are Possible under the FreezeWatch decision procedure (docs/blacklist-tracker.md). No holder blacklist exists. Sources: https://sourcify.dev/server/v2/contract/56/0x5a110fc00474038f6c02e89c707d638602ea44b5?fields=sources,abi,compilation ; https://sourcify.dev/server/v2/contract/56/0x9be60400d043864a99a8fe1be479c9eb299198c1?fields=sources,abi,compilation ; https://bnb-mainnet.g.alchemy.com (authenticated pinned reads/logs). Direct Possible dominates reserve exposure.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "opaque-or-unknown",

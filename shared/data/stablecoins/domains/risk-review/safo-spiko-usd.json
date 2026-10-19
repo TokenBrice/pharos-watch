@@ -10,11 +10,19 @@
       {
         "label": "Spiko smart contracts",
         "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+      },
+      {
+        "label": "Ethereum SAFO proxy and verified implementation",
+        "url": "https://etherscan.io/address/0xcbade7d9bdee88411cb6cbcbb29952b742036992#code"
+      },
+      {
+        "label": "Pharos SAFO supply (observed 2026-10-19)",
+        "url": "https://api.pharos.watch/api/stablecoin/safo-spiko-usd"
       }
     ],
-    "evidence": "SAFO is issued through permissioned fund or issuer rails with KYC-gated primary-market access and issuer/admin controls over transfer, mint, redemption, or token administration.",
-    "reviewer": "Codex 2026-05-14 execution-ready expansion",
-    "reviewedAt": "2026-05-14"
+    "evidence": "Ethereum block 26224795, Arbitrum latest and Solana mainnet (2026-10-19): SAFO supply measured across deployments totals 20,357,890.84233 tokens — Ethereum 6,329,453.129907 (31.091%), Arbitrum 2,750,071.217719 (13.509%), Solana 9,854,459.48782 (48.406%), Polygon 1,123,879.780512 (5.521%), Base 300,027.225352 (1.474%) and Etherlink 0. Ethereum proxy 0xcbade7d9bdee88411cb6cbcbb29952b742036992 resolves to verified Token 0xbf5fb9284c9cf2798d5f18a9702af620cd4351be with authority() = PermissionManager 0x344278aff344d6fb960705dc18a4912221608472; Token._update requires authority.canCall(from/to, token, transfer.selector), getRequirements(token, 0xa9059cbb) returns mask 65, and canCall(holder 0x748D…, transfer)=true while canCall(0x…dEaD)=false. The same authority gates burn(address,uint256) (arbitrary supplied holder, no allowance check), pause() and upgrades. Arbitrum proxy 0x0c709396739b9cfb72bcea6ac691ce0ddf66479c resolves to verified Token 0x324125c549c107c2bba7a1d25bbbd307d3570794 with authority() = 0xa925C217e4c1C82Ee721eBD496d3863D5C2d829A (non-zero) and paused()=false. The Solana mint BYwEFWHUQp7Biqye6TvcjSF1ZYbL1StE5BuFRkKejexo has an active freezeAuthority 9nBpKhs8XyqoG3h2TtNabAS44LB1reYMGsgWwbX31FJy. Direct Yes on all three material deployments (Ethereum 31.091%, Arbitrum 13.509%, Solana 48.406%).",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

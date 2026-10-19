@@ -42,11 +42,23 @@
       {
         "label": "frxUSD AccountThawed log query through review block",
         "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&fromBlock=21543360&toBlock=25730449&address=0xcacd6fd266af91b8aed52accc382b4e165586e29&topic0=0x74bb8c2778db9c683c274e7bfdcb56dba4f1c737411c8182363097eec281eea4"
+      },
+      {
+        "label": "Supply adapter reveals migrated Fraxtal token",
+        "url": "https://raw.githubusercontent.com/DefiLlama/peggedassets-server/master/src/adapters/peggedAssets/frax/index.ts"
+      },
+      {
+        "label": "Current Fraxtal frxUSD implementation",
+        "url": "https://fraxscan.com/address/0x0000000083bdf23788585d499eab0d92a8befb1d#code"
+      },
+      {
+        "label": "Fraxtal observation block",
+        "url": "https://fraxscan.com/block/42789885"
       }
     ],
-    "evidence": "Re-reviewed 2026-08-11 at Ethereum block 25730449 and Fraxtal block 39812404. Canonical Ethereum FRAX 0x853d955acef822db058eb8505911ed77f175b99e remained a direct non-proxy FRAXStablecoin deployment with no holder blacklist, freeze/thaw, pause, seize, or allowance-free arbitrary-burn selectors; current eth_call probes for isFrozen(address) and paused() reverted. pool_burn_from is onlyPools but delegates to allowance-checking ERC20Custom._burnFrom. Frax CrossChainCanonical-style FRAX deployments expose exchange, bridge-token, minter, and mint-cap controls but no holder blacklist/freeze/pause path. The former Fraxtal contract entry in the FRAX data was Wrapped Frax (WFRAX) at 0xfc00000000000000000000000000000000000002, a ProxyAdmin-upgradeable native gas-token wrapper treated in the review as sub-material for the legacy FRAX stablecoin rather than as the canonical L1 FRAX token; it is not a tracked FRAX route. The explicit freeze/freezeMany/thaw/pause surface is on frxUSD implementation 0x0000000048d2c8baf31742f6765383278bada4d5 behind proxy 0xcacd6fd266af91b8aed52accc382b4e165586e29; Blockscout log queries from the frxUSD start block through 25730449 returned no AccountFrozen or AccountThawed events. Legacy FRAX therefore remains Upstream through freezable reserve/frxUSD exposure, not Direct.",
-    "reviewer": "OpenAI Codex unfreezable-cohort audit",
-    "reviewedAt": "2026-08-11"
+    "evidence": "Legacy Ethereum FRAX 0x853d955acef822db058eb8505911ed77f175b99e is the verified immutable FRAXStablecoin. Its pool_burn_from delegates to allowance-checking _burnFrom; there is no privileged blacklist/freeze/pause/seizure or proxy-upgrade path. Ethereum is 86.1245% of the uncorrected 2026-10-19 census. Fraxtal's reported 10.3924% is not an identified legacy-FRAX route: the upstream DefiLlama adapter queries 0xfc00000000000000000000000000000000000001, whose name/symbol at Fraxtal@42789885 (2026-10-19T06:14:41+00:00; 0x5e70bf27b856b7350137be47da3b4f399c8d90f771cd2cc6ef5bfd64b6c410cf) are Frax USD/frxUSD and implementation is 0x0000000083bdf23788585d499eab0d92a8befb1d. Excluding that migrated route makes Ethereum approximately 96.11% of identified legacy FRAX; all other reported chains are individually below 10%. WFRAX at 0xfc00000000000000000000000000000000000002 is a distinct upgradeable native-gas wrapper, not the adapter's FRAX measurement. CrossChainCanonical transfers have mint/bridge/exchange administration but no privileged arbitrary-holder restriction; peripheral controls do not set this verdict. There is no declared parent. The official balance-sheet response as of 2026-10-19T06:03:47Z totals $274469214.90 across all asset rows, including own FRAX and sFRAX. WTGXX 24.6125%, frxUSD 14.3731%, USTB 7.2943% and BUIDL 5.7798% alone total 52.0598% in issuer/custodian-controlled assets. Including sfrxUSD 7.4864% gives a conservative 59.5461%, with all remaining holdings excluded from the numerator. Own-token/wrapper legs remain in the denominator. The >50% test therefore passes even without the sfrxUSD nested claim or smaller exposed positions. Upstream is retained through measured reserve exposure, not through a direct legacy token freeze. Historical frxUSD freeze/thaw-log absence through block 25730449 does not remove its active owner freeze/burn capability.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

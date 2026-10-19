@@ -10,11 +10,35 @@
       {
         "label": "Paxos USD stablecoin terms, section 3.5",
         "url": "https://www.paxos.com/terms-and-conditions/stablecoin-terms-conditions"
+      },
+      {
+        "label": "Exact live Ethereum PYUSD implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8c35caa5fd5bdc64b6b11344ad57594a3676256a"
+      },
+      {
+        "label": "Ethereum block 26224761, 2026-10-19T06:14:23Z",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Solana finalized mint state, slot 458729885",
+        "url": "https://solana-rpc.publicnode.com"
+      },
+      {
+        "label": "Arbitrum block 516204190",
+        "url": "https://arb1.arbitrum.io/rpc"
+      },
+      {
+        "label": "Stellar PYUSD supply and authority flags",
+        "url": "https://horizon.stellar.org/assets?asset_code=PYUSD&asset_issuer=GDQE7IXJ4HUHV6RQHIUPRJSEZE4DRS5WY577O2FY6YQ5LVWZ7JZTU2V5"
+      },
+      {
+        "label": "Live circulating supply per chain",
+        "url": "https://api.pharos.watch/api/stablecoins"
       }
     ],
-    "evidence": "Paxos documents that ASSET_PROTECTION_ROLE can freeze and unfreeze any address and wipe a frozen balance. Section 3.5 of its USD stablecoin terms applies freeze, upgrade and legal-seizure powers to all holders; this confirms the existing Yes verdict without relying on centralized-governance inference.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurA10PYUSD)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "Yes: holder-targeted issuer controls are live on material Ethereum and Solana deployments. The 2026-10-19 live supply snapshot gives Ethereum 63.4253%, Solana 23.9378%, Arbitrum 9.7301%, Flow 2.4673%, Polygon 0.3683%, Sei 0.0666% and every other census chain below 0.01%. At Ethereum block 26224761 (2026-10-19T06:14:23Z), proxy 0x6c3ea9036406852006290770bedfcaba0e23a0e8 resolves through its verified legacy implementation slot to PYUSD implementation 0x8c35caa5fd5bdc64b6b11344ad57594a3676256a, and hasRole(ASSET_PROTECTION_ROLE,0x3af3e85f4f97de7ad0f000b724fb77fe5ffc024b)=true. Exact verified PaxosTokenV2 source permits that role to freeze/unfreeze arbitrary addresses and wipe frozen balances. Solana finalized getAccountInfo at context slot 458729885 (getBlockTime=2026-10-19T06:15:08Z) shows mint 2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo has nonzero freezeAuthority and permanentDelegate 2apBGMsS6ti9RyF5TwQTDswXBWskiJP2LD4cUEDqYJjk. Arbitrum is below 10%; at block 516204190 the same EVM ASSET_PROTECTION_ROLE holder remains assigned. Stellar is omitted from the census: Horizon ledger-header 65020967 reports 11936800.1579915 PYUSD across balances, pools, contracts and claimable balances, approximately 0.4226% of the census denominator; authorization revocation and clawback flags are enabled, so these peripheral powers are disclosed but do not set the verdict. Other peripheral bridge representations remain subject to their separately reviewed route controls. Paxos terms section 3.5 expressly preserves freeze, upgrade and legal seizure powers for all holders. No declared parent applies, and custodial cash/Treasury/repo reserves are secondary exposure, not the direct-Yes basis.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",

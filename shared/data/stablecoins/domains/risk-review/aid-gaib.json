@@ -6,11 +6,19 @@
       {
         "label": "AID current implementation verified source",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2db74834f556e1f19ed397e5f935a983e4c2f38b"
+      },
+      {
+        "label": "RoleGranted history identifies role-holder candidates, followed by current hasRole reads",
+        "url": "https://eth.blockscout.com/api/v2/addresses/0x18f52b3fb465118731d9e0d276d4eb3599d57596/logs?topic=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+      },
+      {
+        "label": "Pinned role, runtime and implementation reads",
+        "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
-    "evidence": "At Ethereum block 26095946, the AID proxy's implementation slot resolved to 0x2db74834f556e1f19ed397e5f935a983e4c2f38b. Its fetched verified source implements addToDenyList(address[]) under DENY_LIST_GUARD_ROLE; _update rejects transfers from denied senders, while denied recipients may still receive. DEFAULT_ADMIN_ROLE can authorize deny-list guards and can pause the contract. This is a native token-level blacklist surface, not an inference from centralized backing.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurM01ZCHF)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "Reviewed 2026-10-19. Ethereum holds 99.917% of observed circulating AID; Base 0.0496%, Arbitrum 0.0216% and BSC 0.0117% are sub-threshold and do not set this verdict. Ethereum block 26224761 (2026-10-19T06:14:23Z) confirms implementation 0x2db74834f556e1f19ed397e5f935a983e4c2f38b, unchanged from block 26095946. The current verified implementation exposes addToDenyList(address[]) under DENY_LIST_GUARD_ROLE and _update rejects denied senders while intentionally allowing denied recipients. At the current pin, Safe 0x32793f6b11820fa9c7039dfa640b751f491a027d has both DENY_LIST_GUARD_ROLE and DEFAULT_ADMIN_ROLE. Current adminBurn(address,uint256) also permits that active admin to burn an arbitrary holder's balance without allowance, while ordinary redemption burn remains allowance-constrained. DEFAULT_ADMIN_ROLE additionally controls pause and upgrades. Therefore active blacklist and arbitrary-holder burn on a material deployment establish direct Yes, not merely a possibility of role admission or an inference from centralized backing. No declared parent exists. Reserve-based classification is not needed to reach the direct verdict; the declared book contains USDC/USDT plus GPU-financing private credit rather than a measured freezable-token majority.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",

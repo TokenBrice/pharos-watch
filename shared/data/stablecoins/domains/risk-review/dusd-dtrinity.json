@@ -1,7 +1,7 @@
 {
   "id": "dusd-dtrinity",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Official ERC20StablecoinUpgradeable source (PAUSER_ROLE + ERC20Pausable; no holder blacklist)",
@@ -42,11 +42,35 @@
       {
         "label": "Sonic public RPC used for paused()/PAUSER_ROLE reads at block 76782957",
         "url": "https://rpc.soniclabs.com"
+      },
+      {
+        "label": "Exact Ethereum token implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6f83cbdf37863eaf43d11b3af1d024c336814d1b"
+      },
+      {
+        "label": "Exact Fraxtal implementation with dormant compliance role",
+        "url": "https://fraxscan.com/address/0xaf2d757bfbded5f84f71d28223acda06352fddb6#code"
+      },
+      {
+        "label": "Exact Sonic implementation",
+        "url": "https://sonicscan.org/address/0xa140c97eff565d50cfd320fe66d27c466cc0d327#code"
+      },
+      {
+        "label": "Sonic block 81283161",
+        "url": "https://sonic-rpc.publicnode.com"
+      },
+      {
+        "label": "Katana block 45647923",
+        "url": "https://katana.drpc.org"
+      },
+      {
+        "label": "Supply shares",
+        "url": "https://api.pharos.watch/api/stablecoins"
       }
     ],
-    "evidence": "Re-opened 2026-07-31. Official ERC20StablecoinUpgradeable inherits OpenZeppelin ERC20Pausable and exposes PAUSER_ROLE-gated pause()/unpause(); _update is whenNotPaused, so a live PAUSER can halt all holder transfers globally. Verified source and ABI expose no isBlacklisted/blacklist/freeze selectors. Fresh public-RPC reads at the latest observed blocks (2026-07-31 UTC) returned paused()=false and PAUSER_ROLE=true for the listed emergency/governance authority: Ethereum block 25648892 (Emergency Governance 5-of-5 Safe 0x04401537CA997a43EBCFEc8194c7e88c7ee79804), Fraxtal block 39321334 (Emergency Governance 5-of-5 Safe 0xABfBcf92986B4Ba43FaAecf545F0b2Cc45067af9), Katana block 38710567 (Emergency Governance 5-of-5 Safe 0x04401537CA997a43EBCFEc8194c7e88c7ee79804), and Sonic block 76782957 (Governance Safe 0xE83c188a7BE46B90715C757A06cF917175f30262). Reach is token-level global pause, not per-address freeze. Residual: reserve assets include freezable upstream stablecoins (USDC/USDT/etc.), which is reserve-asset exposure rather than a dUSD token blacklist.",
-    "reviewer": "Codex T13 access review 2026-07-31",
-    "reviewedAt": "2026-07-31"
+    "evidence": "Possible, not Yes. The 2026-10-19 supply census/live API reports Ethereum 64.7252%, Sonic 16.1395%, Fraxtal 10.0079%, Katana 9.1270% and Ronin 0.0003%. A direct raw-supply cross-check of authored Ethereum, Sonic, Fraxtal and Katana deployments at the pins below totals 1310650.787209937 dUSD units; Fraxtal 131169.293222 / that total =10.00795%, confirming materiality (the tiny Ronin remainder does not affect it). Ethereum block 26224761 (2026-10-19T06:14:23Z) confirms token 0x07fff99e1664d9b116fbc158c0e99785f81ca236 uses implementation 0x6f83cbdf37863eaf43d11b3af1d024c336814d1b and hasRole(PAUSER_ROLE,0x04401537CA997a43EBCFEc8194c7e88c7ee79804)=true, paused()=false; the Safe threshold is 3. Sonic block 81283161 (2026-10-19T06:16:06Z) confirms implementation 0xa140c97eff565d50cfd320fe66d27c466cc0d327 and active PAUSER_ROLE at 0xE83c188a7BE46B90715C757A06cF917175f30262, paused()=false. Their exact verified token sources implement global transfer pause; standard burnFrom spends allowance, not privileged seizure. Fraxtal block 42789902 (2026-10-19T06:15:15Z) confirms implementation 0xaf2d757bfbded5f84f71d28223acda06352fddb6 and active PAUSER_ROLE at 0xABfBcf92986B4Ba43FaAecf545F0b2Cc45067af9, paused()=false. Unlike Ethereum/Sonic, that exact implementation has COMPLIANCE_ROLE-gated freeze/unfreeze/seize. No COMPLIANCE_ROLE grant exists in complete proxy RoleGranted history through the pin (15 grants for other roles), so no active direct freeze role is established; DEFAULT_ADMIN_ROLE holder 0x0bafada2a5824864720873ee40cd960b36445212 can grant it, which is a mutable holder-facing Possible path. Katana at block 45647923 also has a live global pauser but is below 10%. No declared parent applies. Upstream freezable reserves remain secondary exposure; the aggregate reserve row does not establish a measured >50%, and no reserve-majority claim is used. Global pause and role-admin activation are direct Possible under the public exposure contract, irrespective of governance delay.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "standard-external",

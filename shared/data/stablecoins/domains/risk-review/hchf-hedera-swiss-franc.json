@@ -12,9 +12,9 @@
         "url": "https://docs.hliquity.org/overview/overview"
       }
     ],
-    "evidence": "Hedera Mirror Node metadata retrieved on 2026-10-01 for HCHF token 0.0.6070123 reports no admin, freeze, KYC, wipe, pause, fee, or metadata key. The supply key remains ContractID 0.0.6070122 and supports the fixed collateralized protocol mint path; it does not grant holder-level freeze or wipe authority.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurM07yvUSDC1.HchfReview)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "Hedera Mirror Node metadata retrieved on 2026-10-01 for HCHF token 0.0.6070123 reports no admin, freeze, KYC, wipe, pause, fee, or metadata key. The supply key remains ContractID 0.0.6070122 and supports the fixed collateralized protocol mint path; it does not grant holder-level freeze or wipe authority. The same public Mirror Node endpoint reopened on 2026-10-19 continues to return admin_key, freeze_key, kyc_key, wipe_key, pause_key, fee_schedule_key and metadata_key all null, pause_status NOT_APPLICABLE and freeze_default false. The census assigns 100% of circulation to Hedera; no other catalogued deployment exists. The supply key is not a holder wipe authority. No variantOf or inherited mint parent is declared. HLiquity documentation identifies an immutable, governance-free borrowing protocol using HBAR as its sole collateral; the reserve composition is 100% native HBAR in protocol Troves/pools, making issuer/custodian-exposed reserves 0% over the full 100% reserve denominator. The 2026-10-01 reserve record pins ActivePool/DefaultPool/StabilityPool reads and zero pool owners at Hedera block 100587413 (2026-10-01T07:20:31Z). Neither direct, parent nor reserve-majority exposure sets a higher verdict; retain No.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "redundant-with-failover",

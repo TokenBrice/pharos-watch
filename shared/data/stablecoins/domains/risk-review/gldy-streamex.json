@@ -2,9 +2,19 @@
   "id": "gldy-streamex",
   "blacklistabilityReview": {
     "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Base GLDY proxy and verified GLDYTokenERC20",
+        "url": "https://basescan.org/address/0x632db1aaace73401a5dc8cde6e9062b8ec0fd819#code"
+      },
+      {
+        "label": "Pharos GLDY supply (observed 2026-10-19)",
+        "url": "https://api.pharos.watch/api/stablecoin/gldy-streamex"
+      }
+    ],
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: GLDY resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "evidence": "Base block 52800765 (2026-10-19): GLDY proxy 0x632db1aaace73401a5dc8cde6e9062b8ec0fd819 resolves to the verified GLDYTokenERC20 implementation 0xd3a66bf0ecbf910afcc91bd2af3e724656448cb5. The implementation maps _frozen and exposes setAddressFrozen(address,bool) restricted to OPERATOR_ROLE; _update rejects a frozen sender or recipient. OPERATOR_ROLE (0x97667070c54ef182b0f5858b034beac1b6f3089aa2d3188bb1e8929f4fa9b929) currently hasRole(0xa50fc96f444c2922ca80cc7e56fd8e10633ce983)=true. whitelistEnabled() is true, so canReceive(to) also requires whitelist membership and the operator can remove a holder through removeFromWhitelist; paused() is false. Base is the only authored deployment (totalSupply 3,360.805284 GLDY), so it holds 100% of supply and is material. Direct Yes.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   }
 }

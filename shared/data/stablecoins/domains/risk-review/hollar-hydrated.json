@@ -1,7 +1,7 @@
 {
   "id": "hollar-hydrated",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Pinned official GhoToken source",
@@ -16,9 +16,9 @@
         "url": "https://rpc.hydradx.cloud"
       }
     ],
-    "evidence": "Re-verified 2026-07-30 at Hydration EVM block 13389205 via rpc.hydradx.cloud: hasRole(DEFAULT_ADMIN_ROLE, 0xaa7e0000000000000000000000000000000aa7e0) returns true and delegatedToken() returns the configured 0x0000000000000000000000000000000001000000. The official GhoToken source gates setDelegatedToken behind DEFAULT_ADMIN_ROLE, and its ERC20.transferFrom accepts the delegated token's allowance in place of holder approval, so the role holder can point delegatedToken at a contract returning arbitrary allowances and move any individual holder's HOLLAR without holder consent. Hydration OpenGov's root track can additionally replace runtime logic wholesale. Holder-level seizure reach over individual accounts is therefore a live governance-controlled capability, not a hypothetical one.",
-    "reviewer": "Kimi T27 Safety Score V9 access review",
-    "reviewedAt": "2026-07-30"
+    "evidence": "HOLLAR is Possible, not direct Yes. Census fetched 2026-10-19 puts 100% of tracked supply on Hydration (12,922,652 HOLLAR). At Hydration EVM block 15966310, hasRole(DEFAULT_ADMIN_ROLE, 0xaa7e0000000000000000000000000000000aa7e0)=true and delegatedToken()=0x0000000000000000000000000000000100000000. The pinned GhoToken source (commit 7bbf3e1dc03313db72c1ad488aaa56c55b6e299c, src/contracts/gho/GhoToken.sol) gates setDelegatedToken(address) behind DEFAULT_ADMIN_ROLE; src/contracts/gho/ERC20.sol transferFrom consults delegatedToken.allowance(from, msg.sender) only for the caller and only when that allowance exceeds the amount. The currently configured precompile therefore provides no arbitrary-holder transfer. Arbitrary seizure requires the admin/OpenGov to retarget delegatedToken to an allowance-returning contract, or to replace runtime logic through the OpenGov root track. That is an admin/DAO-upgradable control surface: Possible. The current implementation has no direct blacklist, per-account freeze, or forced-transfer entry point. Hydration OpenGov root track retains runtime-upgrade authority.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "standard-external",

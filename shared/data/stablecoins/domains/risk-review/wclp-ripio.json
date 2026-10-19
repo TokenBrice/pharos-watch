@@ -22,11 +22,31 @@
       {
         "label": "Base public RPC fixed-block reads",
         "url": "https://base-rpc.publicnode.com"
+      },
+      {
+        "label": "Sourcify exact-match LatamStable implementation (Base)",
+        "url": "https://sourcify.dev/server/v2/contract/8453/0x8898786f1e1e9ed77def940a2ecb7cf07af8d6ba?fields=sources"
+      },
+      {
+        "label": "Polygon Blockscout verified implementation",
+        "url": "https://polygon.blockscout.com/address/0x8898786f1e1e9ed77def940a2ecb7cf07af8d6ba"
+      },
+      {
+        "label": "Polygon role grant/revoke logs",
+        "url": "https://polygon.blockscout.com/address/0x61d450a098b6a7f69fc4b98ce68198fe59768651"
+      },
+      {
+        "label": "World Chain JSON-RPC pinned reads",
+        "url": "https://worldchain-mainnet.g.alchemy.com/public"
+      },
+      {
+        "label": "Polygon JSON-RPC pinned reads",
+        "url": "https://polygon-bor-rpc.publicnode.com"
       }
     ],
-    "evidence": "Re-verified 2026-07-30. The Sourcify exact-match LatamStable implementation 0x8898786f1e1e9ed77def940a2ecb7cf07af8d6ba (source re-opened 2026-07-30) inherits ERC20PausableUpgradeable with _update gated whenNotPaused, so a live PAUSER_ROLE can halt every holder transfer globally; it exposes no per-address blacklist, freeze, or seize mapping. All six deployments share this implementation: the Ethereum and Base proxy EIP-1967 implementation slots re-read at Ethereum block 25656501 and Base block 49328608 both resolve to it, and the 2026-07-20 deployment-scoped transfer review verified code-hash identity on worldchain, bsc, polygon, and gnosis. Role history from RoleGranted/RoleRevoked logs on Ethereum: deployer 0x5ca3f8eeba12d83408fc097c2dad79212456f20f held all roles from initialization (block 23891029) and was fully revoked at block 24995207, when DEFAULT_ADMIN, PAUSER, MINTER, and UPGRADER all moved to Ripio EOA 0x466c02e2cc67b81a696af5afdb61605c41fe247b. Fixed-block reads confirm hasRole(PAUSER_ROLE, that EOA) = true and paused() = false at Ethereum block 25656501 and Base block 49328608; UPGRADER_ROLE (UUPS, no timelock) is held by the same EOA, with the 4-of-7 Safe 0x2b839174fe62466067c22e2a4c8054071f9d8d68 as second DEFAULT_ADMIN. Reach is a token-level global pause controlled by a single EOA, not a per-address blacklist, and transfers are currently open; true reflects that live pause capability (same verdict basis as the dusd-dtrinity 2026-07-30 review). No wrapper or bridge inheritance applies - issuance is issuer-native burn-mint on every chain.",
-    "reviewer": "Kimi T24 unknown-reduction wave-2 research",
-    "reviewedAt": "2026-07-30"
+    "evidence": "Re-reviewed 2026-10-19. wCLP supply totals 96,565,100 wCLP across nine deployments: World Chain 55,636,323.58 (57.62%), Polygon 20,031,787.96 (20.74%), Base 5,330,702.89 (5.52%), BSC 4,965,209.16 (5.14%), Ethereum 4,854,988.41 (5.03%), Gnosis 4,646,014.00 (4.81%), Celo 1,000,087.00 (1.04%), Arc 99,987.00 (0.10%), HyperEVM 0. All deployments resolve implementation 0x8898786f1e1e9ed77def940a2ecb7cf07af8d6ba, but two revisions share that address. World Chain, Ethereum and Base run the pause-only LatamStable revision: PAUSER_ROLE is held by Ripio EOA 0x466c02e2cc67b81a696af5afdb61605c41fe247b and paused() returned false. Polygon, BSC, Gnosis, Celo and HyperEVM run the compliance revision, which exposes COMPLIANCE_ROLE-gated blockUser(address)/unblockUser(address) and setEnforceBlocklist(bool); _update rejects blocked senders or recipients when enforcement is enabled. On material Polygon (20.74%), enforceBlocklist() was false at block 95790421, but COMPLIANCE_ROLE is held by 0x5ca3f8eeba12d83408fc097c2dad79212456f20f (granted at initialization; PAUSER/MINTER/UPGRADER/DEFAULT_ADMIN were revoked from it at block 0x536339f, COMPLIANCE_ROLE was not), so a named holder can be blocked and enforcement enabled by that authority. That material holder-targeted denylist makes the status Yes. World Chain's 57.62% pause is Possible-level and does not independently establish Yes.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

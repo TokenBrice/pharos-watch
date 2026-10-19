@@ -10,11 +10,39 @@
       {
         "label": "Website",
         "url": "https://frax.com/"
+      },
+      {
+        "label": "Exact current Ethereum proxy",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xcf62f905562626cfcdd2261162a51fd02fc9c5b6"
+      },
+      {
+        "label": "Verified SfrxUSD implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xAad4A1D92053a62cE7a787641d8b4E5883e96700"
+      },
+      {
+        "label": "Ethereum pin",
+        "url": "https://etherscan.io/block/26224762"
+      },
+      {
+        "label": "Verified current Fraxtal implementation",
+        "url": "https://sourcify.dev/server/v2/contract/252/0xba026e978eb1b11d72adabf33b7cf6f3e321ca83?fields=all"
+      },
+      {
+        "label": "Fraxtal pin",
+        "url": "https://fraxscan.com/block/42789885"
+      },
+      {
+        "label": "Global circulating-supply cross-check",
+        "url": "https://api.coingecko.com/api/v3/coins/staked-frax-usd?localization=false&tickers=false&community_data=false&developer_data=false"
+      },
+      {
+        "label": "Assigned active burner Safe",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4b45d73b83686e69d08e61105fdb7f7b51f41bc1"
       }
     ],
-    "evidence": "Explicit Yes retained: reviewed metadata indicates a direct issuer, admin, proxy, pause, burn, or upgrade control surface beyond reserve-only exposure.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "At Ethereum@26224762 (2026-10-19T06:14:35+00:00; 0xef45b71f129dac5f794f4506dee4ca47f3cdd7e41c6e75f53d66512c8c505fc5), Ethereum sfrxUSD proxy 0xcf62f905562626cfcdd2261162a51fd02fc9c5b6 points to verified SfrxUSD implementation 0xaad4a1d92053a62ce7a787641d8b4e5883e96700. Its minter_burn_from(address,uint256) executes super._burn on an arbitrary holder, not allowance-spending burnFrom. minters_array(0) and timelockAddress() both return 0x4b45d73b83686e69d08e61105fdb7f7b51f41bc1, and minters(0x4b45d73b83686e69d08e61105fdb7f7b51f41bc1)=true; minters_array(1)=0x7311cea93ccf5f4f7b789ee31eba5d9b9290e126 is also active. The first minter is a verified SafeProxy with masterCopy()=0x41675c099f32341bf84bfc5382af534df5c7461a, getThreshold()=3 and six current nonzero owners, able to execute arbitrary token calls. Thus Yes is supported by an assigned arbitrary-holder burner, irrespective of governance classification; no blacklist selector needs to be inferred. EIP1967 admin is 0xea0a6ec8114a0af6cf74ca0036ab31d892df13cb with owner()=0xb1748c79709f4ba2dd82834b8c82d4a505003f27. At Fraxtal@42789885 (2026-10-19T06:14:41+00:00; 0x5e70bf27b856b7350137be47da3b4f399c8d90f771cd2cc6ef5bfd64b6c410cf), Fraxtal 0xfc00000000000000000000000000000000000008 has verified implementation 0xba026e978eb1b11d72adabf33b7cf6f3e321ca83 and ProxyAdmin 0xfc0000000000000000000000000000000000000a owned by 0xc4eb45d80dc1f079045e75d5d55de8ed1c1090e6, a separate direct Possible surface. Supply attribution is unresolved: the Pharos data have no supply, pinned Ethereum totalSupply is 33,921,732.2508261 shares and Fraxtal totalSupply is 14,390,995.305281019 shares, whereas CoinGecko reports circulating/total supply 31,270,126.25214879/31,270,199.942918643 at 2026-10-19T06:16:57Z. These incompatible totals do not permit a truthful circulating chain percentage; the controlled Ethereum route is treated as material under the fail-closed rule of the FreezeWatch decision procedure (docs/blacklist-tracker.md), not assigned an invented share. Other deployments have not been needed to establish an affirmative control. Parent frxUSD is independently issuer-freezable, but the direct active burner sets this verdict before the parent/reserve tests.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",

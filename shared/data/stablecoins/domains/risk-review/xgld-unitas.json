@@ -1,7 +1,7 @@
 {
   "id": "xgld-unitas",
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": true,
     "sources": [
       {
         "label": "XGLD primary mechanism",
@@ -20,9 +20,9 @@
         "url": "https://gold.tether.to/faq"
       }
     ],
-    "evidence": "XGLD carries upstream XAUt holder-freeze exposure. The verified equal BNB/Base token runtime has local mint/burn roles and OFT administration, but those are not direct holder freezing. The tracked parent remains blacklistable; no separate XGLD freeze verdict is inferred from mint administration.",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02"
+    "evidence": "XGLD has a live holder-targeted exit-seizure capability on its material BSC deployment. The underlying token remains a fixed non-proxy XGLDToken: its authorized burn(uint256) destroys only msg.sender's balance, and mint/bridge administration does not itself prove arbitrary-holder token burn. However the exact verified XGLDRedeemer at 0x2Ac5abD45FeA3D72AFC1c68500Ba4a677153003C first transfers approved XGLD from the redeeming holder to itself, burns its own tokens and creates a holder-specific XAUt redemption request. Its DEFAULT_ADMIN_ROLE can call overridePendingClaimRecipient(requestId,newRecipient) on any existing unclaimed request, rewriting the payout address without the holder's permission; claim subsequently pays that address. This is active pending-claim redirection and sets Yes under the holder-exit rule. At BSC block 128514672 (2026-10-19T07:31:30Z; hash 0x3f71418fcddcabfa1e1d359af3708f3dea33e78ff5cfc4451d22f0d3c5a7b4d4), the redeemer runtime exactly matched Sourcify, its xgld() was 0xe60106a5cab7e7c64830919d36ab20caaf50ac91, paused() was false, owner()/DEFAULT_ADMIN_ROLE was live timelock 0x99997b18733ff4a9d8e0b9c7d9dec59625f87228, redemptionNonce was 1307 and totalPendingXaut was nonzero. The verified XGLDTimelockController permits scheduled arbitrary CALL execution. At the same pin, Safe 0x939657ed1e743bb825528563a3a102ed254f150f held both PROPOSER_ROLE and EXECUTOR_ROLE, reported threshold 3 and five owners; the timelock minimum delay was 172800 seconds. That live signing authority can reach the recipient override after the delay; delay does not remove an already implemented holder-targeted capability. The redeemer also permits grantable PAUSER_ROLE/GATEKEEPER_ROLE global redeem/claim pause, a secondary Possible control. Inherited near-synchronous supply reads from 2026-10-19T06:14Z sum 939397320 raw XGLD units: BSC 939377962 (99.9979393171%), Base 18813 (0.00200266699%), Mantle 545 (0.00005801592%), Ethereum 0. These peripheral deployments do not set the verdict. Declared XAUt parent issuer exposure remains secondary to direct Yes; no new measured whole-book reserve-majority claim is made.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "privileged-internal-pricing",

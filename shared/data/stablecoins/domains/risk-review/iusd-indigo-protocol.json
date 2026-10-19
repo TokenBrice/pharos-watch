@@ -1,7 +1,7 @@
 {
   "id": "iusd-indigo-protocol",
   "blacklistabilityReview": {
-    "reviewedStatus": "possible",
+    "reviewedStatus": false,
     "sources": [
       {
         "label": "Cardano native-token transfer model",
@@ -26,11 +26,19 @@
       {
         "label": "Indigo Protocol disclaimer",
         "url": "https://indigoprotocol.io/disclaimer.html"
+      },
+      {
+        "label": "Indigo analytics CDP attribution",
+        "url": "https://analytics.indigoprotocol.io/api/cdps"
+      },
+      {
+        "label": "Koios iUSD supply",
+        "url": "https://api.koios.rest/api/v1/asset_info?_asset_policy=f66d78b4a3cb3d37afa0ec36461e51ecbde00f26c8f0a68f94b69880&_asset_name=69555344"
       }
     ],
-    "evidence": "Indigo's V3 documentation, last updated 2026-06-25, describes an iUSD/USDCx Peg Stabilization Module: USDCx-to-iUSD minting and iUSD-to-USDCx redemption. It states that the DAO can enable or disable each direction of a stable pair and that the Indigo Foundation controlled loan redemptions at V3 launch. The official V3 configuration identifies PSM reference output 5a3581c7623683ca7a458f368d215816390c9cdaa8b5748deb7904b571889005#0; a Koios POST to utxo_info on 2026-07-15 returned PlutusV3 script hash 245425bb49411414dca4af8f25097c5a27f923249c0779ffaa2bc5a3, whose serialized validation messages include 'Minting is not enabled' and 'Redeeming is not enabled'. The current iUSD policy reference 8fac023fd9556f66ffdac8cb71879fabd6995480f7ad976213d1e1ee85de75cd#0 is PlutusV2, so the earlier policy was not treated as current PSM source evidence. Cardano documents that ordinary native-token transfers do not execute a policy, and no holder-address blacklist or direct iUSD transfer freeze was established. USDCx terms state that Circle may delay or deny xReserve USDC release and bridge parties may pause the bridge. This establishes possible governed PSM and upstream redemption-route access exposure, not a claim that an issuer can freeze standalone iUSD balances. Re-verified 2026-07-30: the live V3 documentation still describes the iUSD/USDCx PSM with DAO per-direction enable/disable and Foundation-controlled loan redemptions at launch; the mainnet system parameters still name stableswapHash 245425bb49411414dca4af8f25097c5a27f923249c0779ffaa2bc5a3 with the same reference output; a Koios address_assets query on the derived stableswap payment credential (enterprise address addr1wyj9gfdmf9q3g9xu5jhc7fgf03dz07fryjwqw70l4g4utgcsp3cwd) shows a single UTXO holding 4,400 iUSD and no stablecoin; and the USDCx Portal Terms of Use PDF and Indigo disclaimer both still resolve (HTTP 200).",
-    "reviewer": "Codex Safety Score V9 access review; re-verified by Kimi T21 unknown-reduction wave 2",
-    "reviewedAt": "2026-07-30"
+    "evidence": "iUSD's sole catalogued deployment is Cardano native asset f66d78b4a3cb3d37afa0ec36461e51ecbde00f26c8f0a68f94b6988069555344, representing 100% of the 2026-10-19 census supply. Cardano native tokens move through ordinary ledger transactions without executing their minting policy; no mutable token-wide holder-transfer hook, address blacklist, seizure or arbitrary-holder burn is established. Indigo V3 documentation, retrieved 2026-10-19, confirms that the DAO can enable or disable minting/redemption for each PSM pair and that the Indigo Foundation controlled loan redemptions at launch through an optional signer. These restrict protocol redemption routes, not standalone iUSD holder balances or transfers, and are disclosed as exit controls rather than FreezeWatch controls. The earlier 2026-07-15/30 review identified PSM reference output 5a3581c7623683ca7a458f368d215816390c9cdaa8b5748deb7904b571889005#0, script hash 245425bb49411414dca4af8f25097c5a27f923249c0779ffaa2bc5a3, and the separate PlutusV2 iUSD policy reference 8fac023fd9556f66ffdac8cb71879fabd6995480f7ad976213d1e1ee85de75cd#0; these are retained as dated observations, not new pinned reads. No parent is declared. The reviewed 2026-09-04 issuance composition attributes 91.9622% to ADA-backed debt and 0.3472% to NIGHT-backed debt, with 7.6906% unallocated USDCx/USDM or other issuance retained in the denominator. No qualifying issuer/custodian control is established for the native-collateral branches. Even conservatively counting the entire residual as exposed gives only 7.6906%, below strictly more than 50%. USDCx terms permit Circle to delay/deny underlying USDC release and bridge parties to pause the bridge; that route exposure does not establish direct iUSD freeze authority or a majority reserve exposure. Under these scoped tests the verdict is No.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "single-source-or-laggy",

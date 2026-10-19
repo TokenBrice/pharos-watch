@@ -1,7 +1,7 @@
 {
   "id": "cusd-cap",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Cap protocol documentation",
@@ -10,11 +10,23 @@
       {
         "label": "Current verified CapToken implementation at Ethereum block 26095806",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbdaa34082f1a1a3c32190a672bc9dd1b69791b97"
+      },
+      {
+        "label": "Cap AccessControl current verified source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6681eb184c876d74ea3ddfae0ecee0c9c0f84bc1"
+      },
+      {
+        "label": "Cap official deployments",
+        "url": "https://docs.cap.app/developers/addresses"
+      },
+      {
+        "label": "Ethereum pinned block",
+        "url": "https://etherscan.io/block/26224760"
       }
     ],
-    "evidence": "At Ethereum block 26095806, the cUSD proxy resolves to CapToken implementation 0xbdaa34082f1a1a3c32190a672bc9dd1b69791b97. Its verified Vault source applies whenNotPaused to mint, burn, redeem, borrow and repay, while pauseAsset restricts reserve-asset operations. ERC20 transfers are inherited without that pause modifier, so pauseProtocol alone does not establish direct cUSD transfer-freeze capability. The existing conservative Yes verdict is retained pending a full multi-deployment and upstream access review.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurA07USD1)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "Ethereum holds 99.9076% of circulating cUSD; Tempo0.0631% and MegaETH0.0293% are sub-threshold. At ethereum@26224760 (2026-10-19T06:14:11+00:00; hash 0x2a6c0b20faae49bb23f77a582b517057741efcee5bd423a8552f672144c83b85; observed 2026-10-19T06:19:28.419767+00:00) via https://ethereum-rpc.publicnode.com, proxy 0xcccc62962d17b8914c62d74ffb843d73b2a3cccc resolves to verified CapToken0xbdaa34082f1a1a3c32190a672bc9dd1b69791b97. The current Vault source applies whenNotPaused to mint/burn/redeem/borrow/repay, and pauseAsset restricts reserve operations; inherited ordinary ERC-20 transfers are not paused. Redemption burn consumes msg.sender, not arbitrary holder balances. No active blacklist, selective holder transfer freeze or arbitrary-holder privileged burn was identified on the material deployment, so these protocol-operation pauses do not establish Yes. CapToken inherits UUPSUpgradeable and authorizes upgrades through checkAccess(bytes4(0)). The token's Access storage is 0x7731129a10d51e18cde607c5c115f26503d2c683, whose verified current implementation0x6681eb184c876d74ea3ddfae0ecee0c9c0f84bc1 returns true for checkAccess(0x00000000,0xcccc62962d17b8914c62d74ffb843d73b2a3cccc,0xd8236031d8279d82e615af2bfab5fc0127a329ab) at this pin. Timelock getMinDelay()=86400. That live token implementation upgrade path establishes direct Possible irrespective of the governance delay. The complete stored reserve book is91.7% USDC/8.3% WTGXX, both issuer/custodian exposures, but this reserve majority cannot replace direct Possible with Upstream. Current MegaETH and Katana proxies have nonzero implementations and the documented timelock owner; Tempo returns transferPolicyId()=1 and paused()=false. Official Katana cUSD is absent from the registry/census but its measured totalSupply=2.413876 is far below10%. Peripheral controls do not set the verdict.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

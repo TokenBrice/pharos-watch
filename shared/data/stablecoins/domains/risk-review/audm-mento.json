@@ -1,7 +1,7 @@
 {
   "id": "audm-mento",
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Mento Celo mainnet deployment inventory",
@@ -54,11 +54,19 @@
       {
         "label": "Mento direct-distribution model",
         "url": "https://www.mento.org/blog/the-evolution-of-mento-direct-distribution-and-modularity-for-enhanced-stability"
+      },
+      {
+        "label": "TimelockController verified implementation; runtime matched at Celo 80489704",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x3efad8f997f705675924470ec84677db68c5a2d0"
+      },
+      {
+        "label": "Pharos live supply endpoint; shares captured in review census 2026-10-19",
+        "url": "https://api.pharos.watch/api/stablecoins"
       }
     ],
-    "evidence": "At Celo block 74313815 (2026-08-08T18:42:53Z), the sole tracked AUDm deployment 0x7175504c455076f15c04a2f90a8e352281f492f9 returned owner() = 0x890db8a597940165901372dd7db61c9f246e2147, broker() = 0x777a8255ca72412f0d706dc03c9d1987306b4cad, validators() = 0xaeb865bca93ddc8f47b8e29f40c5399ce34d0c58, and exchange() = zero. Its EIP-1967 implementation and admin slots still resolved to verified StableTokenV2 0x434563b0604be100f04b7ae485bcafe3c9d8850e and the Mento Timelock. The verified implementation exposes ordinary transfer/transferFrom, permissioned mint, broker/exchange-scoped burn, and Celo-VM-only gas debiting; it has no blacklist, freeze, pause, seizure, arbitrary-holder burn, or transfer-hook restriction. Mento's official materials describe direct protocol distribution and community governance with no single controlling entity, not a separate issuer freeze power. Direct holder freeze is therefore false; reserve-leg censorship and the timelocked upgrade path remain measured upstream and restrictability risks.",
-    "reviewer": "OpenAI Codex C12 access review",
-    "reviewedAt": "2026-08-08"
+    "evidence": "The sole registered AUDm deployment is Celo 0x7175504c455076f15c04a2f90a8e352281f492f9; the 2026-10-19 Pharos supply census assigns Celo 100% of circulation, so its controls are material against the 10% threshold. At Celo block 80489704 (2026-10-19T06:14:22Z; hash 0x42bb9d8457a53082b049e0fed7918070b4c9523bc772880c172d4337cf2c9ebf), the EIP-1967 implementation was 0x434563b0604be100f04b7ae485bcafe3c9d8850e and the proxy admin and token owner() were the nonzero Mento Timelock 0x890db8a597940165901372dd7db61c9f246e2147. The proxy exposes owner-gated _setImplementation(address) and _setAndInitializeImplementation(address,bytes). Both proxy and StableTokenV2 runtime matched their verified source bytecode at the pinned block. The Timelock implementation was 0x3efad8f997f705675924470ec84677db68c5a2d0, its runtime matched the verified TimelockController, and getMinDelay() returned 172800 seconds. At the same pinned block, timelock hasRole(PROPOSER_ROLE 0xb09aa5aeb3702cfd50b6b62bc4532604938f21248a27a1d5ca736082b6819cc1, Governor 0x47036d78bb3169b4f5560dd77bf93f4412a59852) returned true; hasRole(EXECUTOR_ROLE 0xd8aa0f3194971a2a116679f7c2090f6939c8d4e01a2a8d7e41d55e5351469e63, address(0)) returned true (open execution). Governor.timelock() returned 0x890db8a597940165901372dd7db61c9f246e2147, closing a live governance scheduling and execution path rather than assuming a nonzero but unusable admin. This admin-upgradeable token is direct Possible even when the administrator is DAO governance and changes wait two days; the DAO-only exclusion applies to collateral, not the token itself. The current StableTokenV2 implementation has ordinary transfer/transferFrom and no blacklist, holder freeze, global transfer pause, seizure, allowlist or arbitrary-holder administrative burn. broker() returned 0x777a8255ca72412f0d706dc03c9d1987306b4cad, validators() 0xaeb865bca93ddc8f47b8e29f40c5399ce34d0c58, and exchange() zero. Permissioned burn(uint256) burns msg.sender only, mint authority increases balances, and debitGasFees(address,uint256) is restricted to the zero-address VM rather than a privileged issuer holder, so these do not establish Yes. Neither variantOf nor mintAuthority.inheritedFrom declares a parent. The issuer reserve API observed 2026-10-19T06:16Z reports collateral.total_usd of $16,826,760.601825558 and asset weights summing to 100%. Against that complete collateral denominator, issuer stablecoins excluding sUSDS alone account for 58.2518%; counting the full 28.0181% sUSDS leg categorically through USDS gives 86.2698%. CELO, stETH and ETH/WETH are excluded from the numerator. This is the issuer collateral.assets denominator, not gross holdings plus separately reported LP/operational portfolios. This ancillary majority does not displace the direct Possible verdict.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "single-source-or-laggy",

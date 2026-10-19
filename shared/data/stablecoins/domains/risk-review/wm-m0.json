@@ -10,11 +10,23 @@
       {
         "label": "M0 Wrapped M documentation",
         "url": "https://docs.m0.org/raw/protocol/wrapped-m.md"
+      },
+      {
+        "label": "Verified WrappedMToken implementation",
+        "url": "https://eth.blockscout.com/address/0x6d9db63afccf515f393d5e65be69d38bb3b29d13"
+      },
+      {
+        "label": "Ethereum public RPC, block 26224792",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Solana mainnet RPC, finalized slot 458730689",
+        "url": "https://api.mainnet-beta.solana.com"
       }
     ],
-    "evidence": "Ethereum block 26095800 resolves wM to WrappedMToken implementation 0x6d9db63afccf515f393d5e65be69d38bb3b29d13. Its verified source initializes freeze-manager, pauser, and forced-transfer-manager roles and checks account freeze and pause state on wrapping. Solana finalized response context slot 452212995 identifies freeze authority 9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW on the Token-2022 wM mint. Blacklistability remains true; centralized metadata alone is no longer the justification.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurA61wM)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "wM is a direct freezable wrapper. At Ethereum block 26224792 the proxy 0x437cc33344a0b27a429f795ff6b469c72698b291 resolves to verified WrappedMToken implementation 0x6d9db63afccf515f393d5e65be69d38bb3b29d13, exposing FREEZE_MANAGER_ROLE, freeze, freezeAccounts, FORCED_TRANSFER_MANAGER_ROLE/forceTransfer and PAUSER_ROLE/pause; wrapping checks account freeze and pause state. RoleGranted at block 25653477 assigned all three roles to 0x4f1cf2449b4d07bd86fd57709b1695c11d8314f2 with no revocations, and hasRole(FREEZE_MANAGER_ROLE,0x4f1c...)=true at the pinned block. Ethereum holds 75,605,651.361060 wM of 77,697,599.821 reported circulating (97.3%), so the control is material. The Solana mint mzeroXDoBpRVhnEXBra27qzAMdxgpWVY3DzQW7xMVJp separately retains freezeAuthority 9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW (2.6%, sub-material). The active manager can freeze arbitrary holders, so the verdict is Yes.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-lock-mint",

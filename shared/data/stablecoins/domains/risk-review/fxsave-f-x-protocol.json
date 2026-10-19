@@ -1,7 +1,7 @@
 {
   "id": "fxsave-f-x-protocol",
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "f(x) fxSAVE integration documentation",
@@ -26,11 +26,23 @@
       {
         "label": "Ethereum public RPC fixed-block reads",
         "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Current verified SavingFxUSD implementation",
+        "url": "https://etherscan.io/address/0xe4031e271809d20074e4bef1caeefec5f710e8a6#code"
+      },
+      {
+        "label": "Current parent FxUSDRegeneracy implementation",
+        "url": "https://etherscan.io/address/0xf729422d68c2cf00574fb5712972454cf402a9b1#code"
+      },
+      {
+        "label": "Current parent PoolManager executable burn source",
+        "url": "https://etherscan.io/address/0xa70dddb8ddd06b1c26061d998e041748b18ecf85#code"
       }
     ],
-    "evidence": "fxSAVE is the documented tokenized ERC-4626 Stability Pool vault over fxUSD/fxSP, so its parent fxUSD transfer-risk remains the applicable inherited exposure. Re-verified 2026-07-30 at Ethereum block 25648480: proxy 0x7743e50f534a7f9f1791dde7dcd89f7783eefc39 still resolves through its EIP-1967 implementation slot to SavingFxUSD implementation 0xe4031e271809d20074e4bef1caeefec5f710e8a6, which retains a Sourcify exact match, and asset() returned fxSP 0x65c9a641afceb9c0e6034e558a319488fa0fa3be. The verified current implementation contains ordinary ERC20/ERC4626 transfers and no pause, blacklist, freeze, recipient-blocklist, or arbitrary-holder-burn path. CLAIM_FOR_ROLE gates claimFor() for a previously initiated redemption claim; it does not bypass the ERC20/ERC4626 allowance and share-burn checks for outstanding fxSAVE shares. ProxyAdmin 0x9b54b7703551d9d0ced177a78367560a8b2edda4 is owned by timelock 0x68863fb8855b04509a835082478d6e3d0be4e61a with a 259200-second delay, so this direct-code finding is upgrade-bound. No direct override is authored. At Ethereum block 26095981 on 2026-10-01, parent fxUSD resolves to exact-match FxUSDRegeneracy at 0xf729422d68c2cf00574fb5712972454cf402a9b1, with PoolManager-only mint(address,uint256) and burn(address,uint256) functions; paused() reverted. The verified token implementation and inherited ERC20 transfer hooks contain no token-level transfer pause. Legacy mint and earn entry points revert with pause messages, which does not establish a transfer-pause capability. The inherited access disposition is retained pending the parent owner's reconciliation of PoolManager burn authority, USDC strategy exposure and the published parent access review.",
-    "reviewer": "Codex Safety Score V9 access review; Kimi T51 re-verification",
-    "reviewedAt": "2026-07-30"
+    "evidence": "fxSAVE is Possible because its tokenized ERC4626 Stability Pool share implementation remains admin-upgradeable on its sole registered Ethereum deployment (100% of tracked deployment supply; census circulating supply unavailable). At Ethereum block 26224762 (2026-10-19T06:14:35Z), proxy 0x7743e50f534a7f9f1791dde7dcd89f7783eefc39 resolves to verified SavingFxUSD implementation 0xe4031e271809d20074e4bef1caeefec5f710e8a6; asset() returns fxSP 0x65c9a641afceb9c0e6034e558a319488fa0fa3be. The current implementation retains ordinary ERC20/ERC4626 transfers without pause, blacklist, freeze, recipient blocklist or arbitrary-outstanding-holder-share-burn paths. CLAIM_FOR_ROLE permits claimFor() only for an already initiated redemption claim; it does not bypass share-burn/allowance checks on outstanding fxSAVE. EIP-1967 admin is ProxyAdmin 0x9b54b7703551d9d0ced177a78367560a8b2edda4; owner() is timelock 0x68863fb8855b04509a835082478d6e3d0be4e61a, with getMinDelay()=259200 seconds. That direct implementation mutability is Possible regardless of DAO governance or absence of present freeze hooks. Parent fxUSD/fxSP exposure remains additional: at the same block fxUSD proxy 0x085780639cc2cacd35e474e71f4d000e2405d8f6 resolves to FxUSDRegeneracy 0xf729422d68c2cf00574fb5712972454cf402a9b1, with no token transfer pause and PoolManager-only mint/burn. Its current PoolManager implementation 0xa70dddb8ddd06b1c26061d998e041748b18ecf85 uses _msgSender() as the from address for every fxUSD burn call, not arbitrary victims; legacy mint/earn pause reverts do not establish transfer pause. Parent token upgradeability also qualifies as Possible. Neither parent status nor unmeasured USDC/strategy exposure can displace fxSAVE's own direct Possible surface.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "redundant-with-failover",

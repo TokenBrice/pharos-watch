@@ -22,11 +22,23 @@
       {
         "label": "frxUSD AccountThawed log query through review block",
         "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&fromBlock=21543360&toBlock=25730449&address=0xcacd6fd266af91b8aed52accc382b4e165586e29&topic0=0x74bb8c2778db9c683c274e7bfdcb56dba4f1c737411c8182363097eec281eea4"
+      },
+      {
+        "label": "Fraxtal current verified implementation",
+        "url": "https://fraxscan.com/address/0x0000000083bdf23788585d499eab0d92a8befb1d#code"
+      },
+      {
+        "label": "Ethereum role/implementation pin",
+        "url": "https://etherscan.io/block/26224762"
+      },
+      {
+        "label": "Fraxtal role/implementation pin",
+        "url": "https://fraxscan.com/block/42789885"
       }
     ],
-    "evidence": "Re-reviewed 2026-08-11 at Ethereum block 25730449. Ethereum frxUSD proxy 0xcacd6fd266af91b8aed52accc382b4e165586e29 resolves as Frax USD / frxUSD and delegates to verified FrxUSD implementation 0x0000000048d2c8baf31742f6765383278bada4d5. The implementation ABI exposes freeze, freezeMany, thaw, thawMany, pause/unpause, isFrozen, and freezer-role administration. Current reads returned isPaused() = false and isFrozen(0x0000000000000000000000000000000000000001) = false, while Blockscout log queries from start block 21543360 through 25730449 returned no AccountFrozen or AccountThawed events. The direct freeze capability is present even though no freeze/thaw event has been observed yet.",
-    "reviewer": "OpenAI Codex frax freeze posture review",
-    "reviewedAt": "2026-08-11"
+    "evidence": "At Ethereum@26224762 (2026-10-19T06:14:35+00:00; 0xef45b71f129dac5f794f4506dee4ca47f3cdd7e41c6e75f53d66512c8c505fc5), Ethereum proxy 0xcacd6fd266af91b8aed52accc382b4e165586e29 uses verified FrxUSD implementation 0x0000000048d2c8baf31742f6765383278bada4d5 and owner()=0xffffff4f3bac444b2c0ecf2a1840d018be783937. The implementation permits this owner, independently of isFreezer, to call freeze/freezeMany, and permits owner-only arbitrary-holder burn/burnMany without holder allowance. Ethereum is 77.4463% of the 2026-10-19 circulating-supply census. Fraxtal (15.7963%) proxy 0xfc00000000000000000000000000000000000001 at Fraxtal@42789885 (2026-10-19T06:14:41+00:00; 0x5e70bf27b856b7350137be47da3b4f399c8d90f771cd2cc6ef5bfd64b6c410cf) uses verified implementation 0x0000000083bdf23788585d499eab0d92a8befb1d; owner()=0xc4eb45d80dc1f079045e75d5d55de8ed1c1090e6, and its current source likewise exposes owner/freezer account freezes and owner-only arbitrary-holder burns. Both material deployments therefore have active direct holder-targeted controls. Existing 2026-08-11 Ethereum observations at block 25730449 returned isPaused=false and isFrozen(0x0000000000000000000000000000000000000001)=false, and no AccountFrozen/AccountThawed events had been observed from deployment through that historical block. Those observations do not negate an assigned current owner or its freeze powers; they are not claims about today's event history. No parent or reserve-only argument is needed for Yes.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",

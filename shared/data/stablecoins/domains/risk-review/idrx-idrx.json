@@ -10,11 +10,27 @@
       {
         "label": "Website",
         "url": "https://idrx.co/"
+      },
+      {
+        "label": "Verified IDRX implementation (Base)",
+        "url": "https://base.blockscout.com/address/0x36aa37a29378cd3fe12fa67b7e1f0a7558ec8693?tab=contract"
+      },
+      {
+        "label": "Base block 52800693",
+        "url": "https://base.blockscout.com/block/52800693"
+      },
+      {
+        "label": "Polygon block 95790265",
+        "url": "https://polygon.blockscout.com/block/95790265"
+      },
+      {
+        "label": "Solana current IDRX mint",
+        "url": "https://solscan.io/token/idrxZcP8xiKkYk6XGD4uz1dxEYCWSgKDHqgjsBbwDur"
       }
     ],
-    "evidence": "Explicit Yes retained: centralized governance metadata indicates issuer or admin control; registry links were reviewed for direct freeze, blacklist, pause, burn, or upgrade authority.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "Re-reviewed 2026-10-19. Census chainShares are absent; measured totalSupply at pinned blocks sums to 9,604,988,109.88 IDRX across catalogued deployments: Base 47.1068% (block 52800693), Polygon 24.0669% (95790265), BSC 13.7809% (128505018), Kaia 10.7090% (230187953), Solana 3.9816%, Gnosis 0.3475%, Worldchain 0.0071%, Etherlink 0. Base, Polygon, BSC and Kaia are material. On each of the four, hasRole(BLACKLIST_ROLE, 0x5515be1db2a513888f5cf375bf5c7956ee93c779) and hasRole(PAUSER_ROLE, same) returned true at the same pins; paused()=false and getBlackListStatus(0x...dEaD)=false. Verified Base implementation 0x36aa37a29378cd3fe12fa67b7e1f0a7558ec8693 exposes addBlackList/removeBlackList (BLACKLIST_ROLE), destroyBlackFunds(address) (zeroes a blacklisted balance) and a _beforeTokenTransfer that requires !isBlackListed[msg.sender]. The 0x5515be... EOA is a current non-zero role member on every material chain. Solana's current mint idrxZcP8xiKkYk6XGD4uz1dxEYCWSgKDHqgjsBbwDur has no freeze authority (freezeAuthority null); its 3.9816% is sub-threshold and carries no holder control. The deprecated Solana mint (77,853,244.28 IDRX) is outside the catalogued deployment set and is excluded from the denominator; including it changes no materiality outcome. Pharos reports only 1,032,108 peggedIDR circulating, inconsistent with measured on-chain supply, so the denominator is the measured catalogued total. Reserves are 100% IDR bank deposits, government securities and exchange cash balances, which would satisfy the upstream test; direct Yes outranks it.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

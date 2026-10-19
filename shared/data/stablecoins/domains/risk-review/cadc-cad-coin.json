@@ -6,11 +6,27 @@
       {
         "label": "Solana mainnet RPC (finalized slot 452218719)",
         "url": "https://api.mainnet-beta.solana.com"
+      },
+      {
+        "label": "CADC Ethereum implementation (FiatTokenV2_2)",
+        "url": "https://etherscan.io/address/0x0c9b0169a23087a5edb566d4b1ea39b6b276332a#code"
+      },
+      {
+        "label": "CADC Base implementation (FiatTokenV2_2)",
+        "url": "https://basescan.org/address/0xdd022586a7700e2480838350554b0db8b9ff6502#code"
+      },
+      {
+        "label": "Ethereum public RPC pinned reads, block 26224762",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Base public RPC pinned reads, block 52800567",
+        "url": "https://base-rpc.publicnode.com"
       }
     ],
-    "evidence": "At finalized Solana slot 452218719, CADC SPL mint 9ewjJpmD1ES83RDRFnHs7V2hUdH76WAVjdvu6UV6WNo7 retained a non-null freezeAuthority, 5qxWg4NfA6iUMNC4TqzFyWue3BE6bHZGEVu2sz2wbWvg. Direct SPL account-freeze capability establishes holder-level transfer restriction without inferring it from centralized governance.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurM02USDK)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "At Ethereum block 26224762 and Base block 52800567, canonical CADC deployments 0xcadc0acd4b445166f12d2c07eac6e2544fbe2eef (34.7741% of circulating supply) and 0x043eb4b75d0805c43d7c834902e335621983cf03 (61.8122%) resolve to FiatTokenV2_2 implementations 0x0c9b0169a23087a5edb566d4b1ea39b6b276332a and 0xdd022586a7700e2480838350554b0db8b9ff6502. blacklister() returns 0x3E30d340C83d068d632e11B5a30507ce973D7700 and 0x3de3405801F7f6a2fE348A365e07Dc4f83C7a6a8 respectively; paused() is false on both. The verified implementation exposes blacklist(address) gated by onlyBlacklister and enforces the blacklist on transfer/transferFrom, so both material deployments carry an active holder-targeted control. Polygon (2.7977%) and Arbitrum (0.6161%) are sub-threshold. The Solana SPL mint 9ewjJpmD1ES83RDRFnHs7V2hUdH76WAVjdvu6UV6WNo7 retained freezeAuthority 5qxWg4NfA6iUMNC4TqzFyWue3BE6bHZGEVu2sz2wbWvg at finalized slot 452218719; Solana is absent from the 2026-10-19 census chainShares and is disclosed as a sub-threshold control that does not set the verdict.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",

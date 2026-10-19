@@ -1,7 +1,7 @@
 {
   "id": "cjpy-yamato",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Yamato documentation",
@@ -30,11 +30,19 @@
       {
         "label": "Ethereum PublicNode RPC (block 25712439 storage and controller reads)",
         "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Pinned YamatoRepayer source",
+        "url": "https://github.com/DeFiGeek-Community/yamato/blob/f0eb294909f9d95c60a7eabba6ca783842f0153b/contracts/YamatoRepayer.sol"
+      },
+      {
+        "label": "Pinned YamatoRedeemerV4 source",
+        "url": "https://github.com/DeFiGeek-Community/yamato/blob/f0eb294909f9d95c60a7eabba6ca783842f0153b/contracts/YamatoRedeemerV4.sol"
       }
     ],
-    "evidence": "Re-verified at Ethereum block 25712439 (2026-08-08T19:49:11Z). Direct storage reads bind CJPY's private currencyOS slot 6 to 0xe69c6bf0a6ea2f12abe054988a3e2091a8a3784f, while private governance slot 7 and the EIP-1967 implementation slot are zero; the token route is fixed and non-proxy. The pinned Currency source gives that CurrencyOS exclusive burn(address,uint256) authority and burns the supplied address without allowance. CurrencyOS exposes burnCurrency(address,uint256) to registered Yamato contracts and resolves governance() to 0x0b0a167a0b6800207c89544d2ebdc98dcdd33bec, whose live Safe remained 2-of-4. That governance can add Yamato callers and upgrade CurrencyOS, while the already-bound route can destroy an arbitrary CJPY holder balance. This is a direct individual-holder intervention capability even though CJPY has no named blacklist, freeze, or pause function.",
-    "reviewer": "Codex C10 wave1 control review",
-    "reviewedAt": "2026-08-08"
+    "evidence": "The 2026 repay trace establishes one current caller-self path, not that every configured Yamato dependency is self-only. YamatoV4.getDeps/setDeps includes multiple modules; their current addresses and burn paths were not all independently read. CurrencyOS governance was last observed set to 0x0b0A167a0b6800207c89544D2eBdC98DCdD33bec, but that 2023 event is not a fresh current-state read. Governance-grantability and the existing path are source/trace verified; current registered-module completeness remains unresolved.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "standard-external",
