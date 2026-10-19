@@ -2,7 +2,7 @@ import { toErrorMessage } from "@shared/lib/error-utils";
 import type { LiveReserveWarning } from "@shared/types/live-reserves";
 import type { Abi } from "abitype";
 import { decodeFunctionResult, encodeFunctionData } from "viem/utils";
-import { fetchEvmBlockHeader, fetchEvmBlockNumber, type EvmRpcOptions } from "../../lib/evm-rpc";
+import { fetchEvmBlockHeaderAtTag, type EvmRpcOptions } from "../../lib/evm-rpc";
 import type { AdapterContext } from "./types";
 import { runAdapterIo } from "./concurrency";
 import { decodeStrictAddressWord, decodeStrictBoolWord, decodeUint256Word } from "./abi-decode";
@@ -35,12 +35,9 @@ export async function pinnedBlockPlan(options: {
     ),
   };
   const observedBlock = await runAdapterIo(options.ctx, `evm-block:${options.chain}`, async () => {
-    // A head-number/header anchor does not authenticate finalized state.
-    const number = await fetchEvmBlockNumber(options.chain, rpcOptions);
-    if (number == null || !Number.isSafeInteger(number) || number < 0) {
-      throw new Error(`Unable to pin ${options.chain} observation block`);
-    }
-    const header = await fetchEvmBlockHeader(options.chain, number, rpcOptions);
+    // A validated latest header supplies both coordinates in one round trip.
+    // Dependent reads use its concrete number; this does not prove finality.
+    const header = await fetchEvmBlockHeaderAtTag(options.chain, "latest", rpcOptions);
     if (header == null) {
       throw new Error(`Unable to read ${options.chain} observation block header`);
     }

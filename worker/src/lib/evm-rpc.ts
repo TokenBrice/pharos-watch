@@ -1059,9 +1059,9 @@ export async function fetchEvmBlockTimestamp(
   return parseHexInteger(block?.timestamp);
 }
 
-export async function fetchEvmBlockHeader(
+async function readEvmBlockHeader(
   chainId: string,
-  blockNumberOrTag: number | "finalized",
+  blockNumberOrTag: number | "latest" | "safe" | "finalized",
   options?: EvmRpcOptions,
 ): Promise<EvmBlockHeader | null> {
   const urls = requestRpcUrls(chainId, options, blockNumberOrTag, true);
@@ -1077,7 +1077,7 @@ export async function fetchEvmBlockHeader(
   await fetchJsonRpcResult<EvmBlockResult>(
     urls,
     "eth_getBlockByNumber",
-    [toBlockTag(blockNumberOrTag), false],
+    [typeof blockNumberOrTag === "number" ? toBlockTag(blockNumberOrTag) : blockNumberOrTag, false],
     options,
     {
       acceptResult: (result): result is EvmBlockResult => {
@@ -1108,14 +1108,21 @@ export async function fetchEvmBlockHeader(
   return acceptedHeader;
 }
 
-/** Header lookup for the JSON-RPC safe tag. Kept separate so existing
- * finalized-only observer dependency contracts remain source-compatible. */
-export async function fetchEvmBlockHeaderAtTag(
+export function fetchEvmBlockHeader(
   chainId: string,
-  blockNumberOrTag: "safe" | "finalized",
+  blockNumberOrTag: number | "finalized",
   options?: EvmRpcOptions,
 ): Promise<EvmBlockHeader | null> {
-  return fetchEvmBlockHeader(chainId, blockNumberOrTag as "finalized", options);
+  return readEvmBlockHeader(chainId, blockNumberOrTag, options);
+}
+
+/** Symbolic-head lookup stays separate from numbered/finalized observer contracts. */
+export async function fetchEvmBlockHeaderAtTag(
+  chainId: string,
+  blockNumberOrTag: "latest" | "safe" | "finalized",
+  options?: EvmRpcOptions,
+): Promise<EvmBlockHeader | null> {
+  return readEvmBlockHeader(chainId, blockNumberOrTag, options);
 }
 
 export async function resolveClosestBlockAtOrBeforeTimestamp(

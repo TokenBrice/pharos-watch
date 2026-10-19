@@ -32,7 +32,29 @@ describe("installAdapterNetwork block-method routing", () => {
       number: `0x${(12_345).toString(16)}`,
       timestamp: `0x${(1_700_000_000).toString(16)}`,
     });
+    const latest = await rpc(ETHEREUM_RPC_URL, "eth_getBlockByNumber", ["latest", false]);
+    expect(latest.result).toEqual(header.result);
 
     expect(network.unmatched).toEqual([]);
+  });
+
+  it("routes latest headers independently of numbered headers", async () => {
+    const hash = `0x${"a".repeat(64)}`;
+    const network = installAdapterNetwork({
+      block: { number: 12_345, timestamp: 1_700_000_000 },
+      rpc: { "eth_getBlockByNumber:latest": { number: 456, timestamp: 1_700_000_123, hash } },
+    });
+    const latest = await rpc(ETHEREUM_RPC_URL, "eth_getBlockByNumber", ["latest", false]);
+    expect(latest.result).toMatchObject({ number: "0x1c8", timestamp: `0x${(1_700_000_123).toString(16)}`, hash });
+    const numbered = await rpc(ETHEREUM_RPC_URL, "eth_getBlockByNumber", ["0x3039", false]);
+    expect(numbered.result).toMatchObject({ number: "0x3039", timestamp: `0x${(1_700_000_000).toString(16)}` });
+    expect(network.unmatched).toEqual([]);
+  });
+
+  it("never auto-answers an intentionally unavailable latest header", async () => {
+    installAdapterNetwork({ rpc: { "eth_getBlockByNumber:latest": null } });
+    const latest = await rpc(ETHEREUM_RPC_URL, "eth_getBlockByNumber", ["latest", false]);
+    expect(latest.result).toBeUndefined();
+    expect(latest.error).toBeDefined();
   });
 });

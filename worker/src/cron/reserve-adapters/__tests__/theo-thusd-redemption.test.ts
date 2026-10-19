@@ -5,7 +5,7 @@ import type * as OnchainModule from "../onchain";
 import type * as EvmRpcModule from "../../../lib/evm-rpc";
 import { fetchTheoThusdRedemptionReserves } from "../theo-thusd-redemption";
 import { fetchOnchainMulticall3 } from "../onchain";
-import { fetchEvmBlockNumber, fetchEvmBlockHeader } from "../../../lib/evm-rpc";
+import { fetchEvmBlockHeaderAtTag } from "../../../lib/evm-rpc";
 
 vi.mock("../onchain", async (importOriginal) => ({
   ...await importOriginal<typeof OnchainModule>(),
@@ -13,8 +13,7 @@ vi.mock("../onchain", async (importOriginal) => ({
 }));
 vi.mock("../../../lib/evm-rpc", async (importOriginal) => ({
   ...await importOriginal<typeof EvmRpcModule>(),
-  fetchEvmBlockNumber: vi.fn(),
-  fetchEvmBlockHeader: vi.fn(),
+  fetchEvmBlockHeaderAtTag: vi.fn(),
 }));
 const word = (value: bigint | number) => `0x${BigInt(value).toString(16).padStart(64, "0")}` as `0x${string}`;
 const addressWord = (address: string) => `0x${address.slice(2).padStart(64, "0")}` as `0x${string}`;
@@ -29,8 +28,8 @@ const config: LiveReservesConfig = {
 };
 let reads: Record<string, `0x${string}` | null>;
 beforeEach(() => {
-  vi.mocked(fetchEvmBlockNumber).mockResolvedValue(26088429);
-  vi.mocked(fetchEvmBlockHeader).mockResolvedValue({
+  vi.clearAllMocks();
+  vi.mocked(fetchEvmBlockHeaderAtTag).mockResolvedValue({
     number: 26088429, timestamp: 1790748096, hash: `0x${"11".repeat(32)}`,
   });
   reads = {
@@ -57,6 +56,7 @@ describe("Theo allowance-limited executed rail", () => {
     expect(result.metadata?.totalReserveUsd).toBeUndefined();
     expect(result.metadata?.collateralizationRatio).toBeUndefined();
     expect(result.metadata?.sourceTimestamp).toBeUndefined();
+    expect(fetchEvmBlockHeaderAtTag).toHaveBeenCalledWith("ethereum", "latest", expect.any(Object));
   });
   it("takes minima per asset before summing, preserving six-decimal amounts", async () => {
     reads["USDC:balance"] = word(1_000001n);
@@ -100,8 +100,9 @@ describe("Theo allowance-limited executed rail", () => {
     reads[label] = value;
     await expect(run()).rejects.toThrow("theo-thusd-redemption");
   });
-  it("fails before capacity publication when the numbered block header is unavailable", async () => {
-    vi.mocked(fetchEvmBlockHeader).mockResolvedValue(null);
+  it("fails before capacity publication when the latest block header is unavailable", async () => {
+    vi.mocked(fetchEvmBlockHeaderAtTag).mockResolvedValue(null);
     await expect(run()).rejects.toThrow(/observation block header/);
+    expect(fetchOnchainMulticall3).not.toHaveBeenCalled();
   });
 });

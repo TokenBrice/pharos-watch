@@ -274,6 +274,28 @@ describe("evm-rpc helpers", () => {
     expect(attemptedUrls()[0]).toContain("api-immutable-zkevm-mainnet.n.dwellir.com");
   });
 
+  it("meters one latest-header read through Dwellir without granting historical state capability", async () => {
+    const chainRpcs = buildChainRpcs("alchemy-key", undefined, { dwellirApiKey: "dwellir-key" });
+    const dwellir = chainRpcs.get("bsc")!.endpoints.find(endpoint => endpoint.operator === "dwellir")!;
+    const onRpcRequest = vi.fn();
+    chainRpcs.get("bsc")!.onRpcRequest = onRpcRequest;
+    const hash = `0x${"a".repeat(64)}`;
+    fetchWithRetryMock.mockResolvedValueOnce(rpcResponse({ result: { number: "0x64", timestamp: "0x64", hash } }));
+    expect(await fetchEvmBlockHeaderAtTag("bsc", "latest", { chainRpcs })).toEqual({ number: 100, timestamp: 100, hash });
+    expect(attemptedUrls()).toEqual([dwellir.url]);
+    expect(JSON.parse(String(fetchWithRetryMock.mock.calls[0][1].body)).params).toEqual(["latest", false]);
+    expect(recordDwellirCreditsMock.mock.calls).toEqual([[1]]);
+    expect(onRpcRequest.mock.calls.map(([request]) => request)).toEqual([
+      { providerOrigin: new URL(dwellir.url).origin, method: "eth_getBlockByNumber", rpcCalls: 1, signal: undefined },
+    ]);
+    fetchWithRetryMock.mockClear();
+    fetchWithRetryMock.mockResolvedValue(rpcResponse({ result: "0x6000" }));
+    await fetchEvmCodeAtBlock("bsc", "0xContract", 100, { chainRpcs });
+    expect(attemptedUrls().length).toBeGreaterThan(0);
+    expect(attemptedUrls()).not.toContain(dwellir.url);
+    expect(recordDwellirCreditsMock.mock.calls).toEqual([[1]]);
+  });
+
   it("parses uint256 hex values safely", () => {
     expect(parseUint256Hex("0x64")).toBe(100n);
     expect(parseUint256Hex("0x")).toBeNull();
@@ -918,7 +940,7 @@ describe("evm-rpc helpers", () => {
     },
   );
 
-  it("resolves an explicitly finalized block header without relabeling latest state", async () => {
+  it.each(["latest", "finalized"] as const)("resolves a validated header at the requested %s tag", async (tag) => {
     fetchWithRetryMock.mockResolvedValueOnce(
       rpcResponse({
         result: {
@@ -930,7 +952,7 @@ describe("evm-rpc helpers", () => {
     );
 
     await expect(
-      fetchEvmBlockHeader("ethereum", "finalized", {
+      fetchEvmBlockHeaderAtTag("ethereum", tag, {
         extraRpcUrls: ["https://rpc.example"],
       }),
     ).resolves.toEqual({
@@ -943,7 +965,7 @@ describe("evm-rpc helpers", () => {
     const body = JSON.parse(String(lastCall?.[1]?.body)) as {
       params: unknown[];
     };
-    expect(body.params).toEqual(["finalized", false]);
+    expect(body.params).toEqual([tag, false]);
   });
 
   it("resolves a canonical block header at the safe tag", async () => {

@@ -4,12 +4,12 @@ import type * as Rpc from "../../../lib/evm-rpc";
 vi.mock("../../../lib/evm-rpc", async (importOriginal) => ({
   ...await importOriginal<typeof Rpc>(),
   fetchEvmBlockNumber: vi.fn(),
-  fetchEvmBlockHeader: vi.fn(),
+  fetchEvmBlockHeaderAtTag: vi.fn(),
   fetchEvmMulticall3Aggregate3AtBlock: vi.fn(),
   fetchEvmUint256AtBlock: vi.fn(),
 }));
 
-import { fetchEvmBlockNumber, fetchEvmBlockHeader, fetchEvmMulticall3Aggregate3AtBlock, fetchEvmUint256AtBlock } from "../../../lib/evm-rpc";
+import { fetchEvmBlockNumber, fetchEvmBlockHeaderAtTag, fetchEvmMulticall3Aggregate3AtBlock, fetchEvmUint256AtBlock } from "../../../lib/evm-rpc";
 import { pinnedBlockPlan } from "../evm-observation-plan";
 import { fetchOnchainMulticall3, makeOnchainCallers } from "../onchain";
 
@@ -19,8 +19,7 @@ const calls = [{ label: "quantity", contract, data: "0x18160ddd" }];
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.mocked(fetchEvmBlockNumber).mockResolvedValue(100);
-  vi.mocked(fetchEvmBlockHeader).mockResolvedValue({
+  vi.mocked(fetchEvmBlockHeaderAtTag).mockResolvedValue({
     number: 100, timestamp: 1_800_000_000, hash: `0x${"11".repeat(32)}`,
   });
 });
@@ -46,8 +45,6 @@ describe("pinnedBlockPlan", () => {
     const caller = makeOnchainCallers({ chain }, { signal, ctx: plan.ctx });
     expect(await caller.uint256(contract, calls[0].data)).toBe(100n);
     expect((await pinnedBlockPlan({ chain, signal, ctx: plan.ctx })).observedBlock).toEqual(plan.observedBlock);
-    expect(fetchEvmBlockNumber).toHaveBeenCalledTimes(1);
-    expect(fetchEvmBlockHeader).toHaveBeenCalledWith(chain, 100, expect.objectContaining({ signal }));
     expect(plan.ctx).not.toHaveProperty("recentStatePin");
     for (const [, , , , options] of vi.mocked(fetchEvmUint256AtBlock).mock.calls) {
       expect(options?.recentStatePin).toBeUndefined();
@@ -55,10 +52,13 @@ describe("pinnedBlockPlan", () => {
     for (const [, , , options] of vi.mocked(fetchEvmMulticall3Aggregate3AtBlock).mock.calls) {
       expect(options?.recentStatePin).toBeUndefined();
     }
+    expect(fetchEvmBlockNumber).not.toHaveBeenCalled();
+    expect(fetchEvmBlockHeaderAtTag).toHaveBeenCalledTimes(1);
+    expect(fetchEvmBlockHeaderAtTag).toHaveBeenCalledWith(chain, "latest", expect.objectContaining({ signal }));
   });
 
-  it("fails closed when the numbered anchor header cannot be established", async () => {
-    vi.mocked(fetchEvmBlockHeader).mockResolvedValue(null);
+  it("fails closed when the anchor header cannot be established", async () => {
+    vi.mocked(fetchEvmBlockHeaderAtTag).mockResolvedValue(null);
     await expect(pinnedBlockPlan({ chain, signal: new AbortController().signal })).rejects.toThrow(/observation block header/);
     expect(fetchEvmMulticall3Aggregate3AtBlock).not.toHaveBeenCalled();
   });
