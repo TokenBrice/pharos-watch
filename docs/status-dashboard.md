@@ -102,7 +102,7 @@ Shared raw-status evaluator: `worker/src/lib/status-evaluation.ts`
 
 Shared public-health floor: `worker/src/lib/public-health-assessment.ts`, backed by the pure helpers in `shared/lib/cache-health.ts` and `shared/lib/public-health.ts`
 
-The assessment exposes its already-computed `safetyScoreImpactStatus` to the raw admin availability rules. `getPublicSafetyScoreStatus()` remains the sole Safety availability authority: accepted publication age, not attempted age, controls the floor using the existing public budget and outage grace. Admin causes distinguish `safety_score_publication_unavailable`, `safety_score_publication_missing`, `safety_score_publication_held`, and `safety_score_publication_stale`; available accepted generations retain their identity, clock and freshness budget in the cause. These warning/critical causes are public-impacting in Triage. A held publication names the actual hold reason codes. Raw availability and raw overall inherit this floor; persisted effective status still follows the existing hysteresis.
+The assessment's existing `safetyScoreImpactStatus` floors raw admin availability and overall; effective status retains hysteresis. Sole authority `getPublicSafetyScoreStatus()` uses accepted-publication age, never attempt age, with the existing public budget/outage grace. Public-impacting warning/critical Triage causes distinguish `safety_score_publication_unavailable`, `safety_score_publication_missing`, `safety_score_publication_held` and `safety_score_publication_stale`, retaining available generation identity, clock and budget, plus actual hold reason codes.
 
 `PUBLIC_CIRCUIT_IMPACT_QUORUM` in `shared/lib/public-health.ts` is the sole source-wide circuit quorum
 authority (3), shared by public grading and admin cause thresholds. Public circuit reasons retain the full
@@ -213,7 +213,7 @@ The admin detail summary prefers that column over legacy metadata and appends a 
 unknown jobs or column-only rows; canonical quality findings append without replacing specialized
 summaries. `degradedCrons` counts fresh degraded execution statuses only (including inheritance
 behind neutral skips), never successful `metadata.quality` findings or legacy blacklist maintenance
-warnings. The counted finding describes fresh degraded terminal attempts reporting incomplete required work, not output-quality findings on successful attempts. Errors and freshness remain independently evaluated.
+warnings. Errors and freshness remain independently evaluated.
 
 ### Cron metadata persistence budget
 

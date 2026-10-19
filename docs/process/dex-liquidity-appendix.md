@@ -480,6 +480,10 @@ Cosmos routing requires both exact chain and supported IBC/bank/factory denom sh
 
 `evaluatePoolPriceCoherence()` in `worker/src/cron/dex-liquidity/pool-price-coherence.ts` owns frozen `POOL_PRICE_COHERENCE_POLICY` (500bps) and reasons. Both GT-shaped paths compare tracked USD with pair ratio × counter USD. Published leg prices with every ratio/native-price input null/zero reject `pool-pair-ratio-unavailable`; conflicting usable ratio rejects `pool-pair-price-incoherent`. Drop the **whole row** before TVL/price/staging because reserve valuation is broken too. Count reasons in bounded warnings. Zero volume/transactions never reject; omitted ratio fields keep unrelated transports unchecked.
 
+#### Fingerprint-only UniV3 diagnostics
+
+Fingerprint-only UniV3 diagnostics use `fetchUniV3Data`, `reconcileUniV3CandidateSnapshots` and `buildQuoterV2RegisteredExecutionTarget`, not address-bound enrichment: a token-pair fingerprint is not a physical address. Successful chain reads replace candidate snapshots; only failed reads allow bounded carry-forward. Missing targets may reflect rejected source rows, omitted candidates or a non-unique pair/fee census. Target counts/enrichment-cap totals cannot distinguish them; prior route contribution does not authorize injecting its former physical pool as the sole candidate.
+
 #### Scheduling and resumable windows
 
 Tier order is refresh → T1 → T2 → T3 → dormant, staleness only within tier. Source owns exact roster/backoff constants. Zero pools get T1; narrow/broad cohorts T2/T3 are weekly sharded rather than all due together. Miss backoff floors the tier; any hit resets it. A fully verified-empty supported footprint stops at T3 instead of dormant, but maintenance must still refresh before evidence expiry. Unsupported remainder neither spoils that test nor triggers extra crawling.
