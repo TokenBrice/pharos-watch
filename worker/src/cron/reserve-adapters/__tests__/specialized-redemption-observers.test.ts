@@ -7,6 +7,7 @@ import { MONETRIX_FUNDED_QUEUE_OBSERVER, observeMonetrixRedeemRequest } from "..
 import { SATURN_V2_QUEUE_OBSERVER, observeSaturnV2Queue } from "../saturn-v2-queue-observer";
 import { APYUSD_UNLOCK_RECEIPT_OBSERVER, observeApyusdUnlockReceipt } from "../apyusd-unlock-receipt-observer";
 import forest from "./fixtures/forest-road-observer-pinned.json";
+import forestLive from "./fixtures/forest-road-observer-live-2026-10-19.json";
 import monetrix from "./fixtures/monetrix-observer-pinned.json";
 import saturn from "./fixtures/saturn-observer-pinned.json";
 import apyusd from "./fixtures/apyusd-observer-pinned.json";
@@ -156,6 +157,25 @@ describe("native quote guards remain independent of all-in USD admission", () =>
   }
 });
 describe("USDfr exact par controller", () => {
+  it("replays the live October 19 controller response without inventing all-in capacity", async () => {
+    const observation = await observe(FOREST_ROAD_USDFR_OBSERVER, forestLive);
+    expect(observation).toMatchObject({
+      blockNumber: 26223068, routeStatus: "open", capacityState: "measured",
+      capacityRaw: 618894406506n, underlyingDecimals: 6, allInFeeBps: null,
+    });
+    const config = getRedemptionBackstopConfig("usdfr-forest-road")!;
+    const entry = await buildRedemptionBackstopEntry(mockD1Strict([]), "usdfr-forest-road",
+      config, 5_670_077, null, forestLive.block.timestamp + 30, {
+        executableRedemptionObservation: observation,
+        executableObserverValuation: { outputAssetKey: "usdc-circle", priceUsd: 1, observedAt: forestLive.block.timestamp },
+      });
+    expect(entry).toMatchObject({
+      provider: "executable-observer", routeStatus: "open", resolutionState: "missing-capacity",
+      capacityRejectionReason: "all-in-cost-unobserved", immediateCapacityUsd: null,
+    });
+    expect(observation?.diagnostics.observedBlockHash).toBe(forestLive.block.hash);
+  });
+
   it("measures only guarded cash and only the KYC holder cohort", async () => {
     const r = await observe(FOREST_ROAD_USDFR_OBSERVER, forest);
     expect(r).toMatchObject({ capacityRaw: 138874406506n, capacityState: "measured", feeBps: 0, holderEligibility: "whitelisted-primary", underlyingDecimals: 6 });

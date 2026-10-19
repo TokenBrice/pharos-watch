@@ -38,6 +38,7 @@ import { throwIfAborted } from "../lib/abort";
 import { mapWithConcurrency } from "../lib/concurrency";
 import { fnv1aHash } from "../lib/hash";
 import type { EvmRpcOptions } from "../lib/evm-rpc";
+import { safeErrorMessage } from "../lib/safe-error-message";
 
 const MISSING_CAPACITY_OK_RATIO = 0.01;
 
@@ -208,6 +209,7 @@ export async function syncRedemptionBackstops(
   const results = await mapWithConcurrency(configuredIds, REDEMPTION_BACKSTOP_RESOLVE_CONCURRENCY, async (stablecoinId) => {
     let resolved: RedemptionBackstopEntry | null = null;
     let failed = false;
+    let failureReason: { code: string; message: string } | null = null;
     try {
       const asset = stablecoinAssetById.get(stablecoinId);
       const dexLiquidityScore = dexLiquidityMap[stablecoinId]?.liquidityScore ?? null;
@@ -242,6 +244,7 @@ export async function syncRedemptionBackstops(
       throwIfAborted(signal);
       logWorkerEventArgs("handler", "error", `[sync-redemption-backstops] Failed for ${stablecoinId}:`, error);
       failed = true;
+      failureReason = { code: "route-resolution-failed", message: safeErrorMessage(error, 200).slice(0, 240) };
       const config = configById.get(stablecoinId);
       if (config) {
         resolved = buildFailedRedemptionBackstopEntry(stablecoinId, config, now);
@@ -258,7 +261,7 @@ export async function syncRedemptionBackstops(
       }));
       await progressReporting;
     }
-    return { snapshot: resolved, failed };
+    return { snapshot: resolved, failed, failureReason };
   }, { signal });
   throwIfAborted(signal);
   const collectedSnapshots = results.flatMap(({ snapshot }) => snapshot ? [snapshot] : []);
@@ -346,6 +349,12 @@ export async function syncRedemptionBackstops(
     ...(preloadWarnings.length > 0 ? { preloadWarnings: capStringList(preloadWarnings) } : {}),
     ...registryMetadata,
     ...(failedIds.length > 0 ? { failedIds: capStringList(failedIds), failedIdsTruncated: failedIds.length > 25 } : {}),
+    ...(failedIds.length > 0 ? {
+      sourceFailureReasons: Object.fromEntries(results.flatMap(({ failureReason }, index) =>
+        failureReason ? [[configuredIds[index], failureReason]] : [],
+      ).slice(0, 25)),
+      sourceFailureReasonsTruncated: failedIds.length > 25,
+    } : {}),
     ...(availabilityDegradedIds.length > 0
       ? {
           availabilityDegradedIds: capStringList(availabilityDegradedIds),

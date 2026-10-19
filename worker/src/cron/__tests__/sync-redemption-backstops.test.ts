@@ -7,6 +7,7 @@ import type * as SourcesModule from "../../lib/redemption-backstop/sources";
 import type * as RedemptionConfigsModule from "@shared/lib/redemption-backstops";
 import { CRON_INTERVALS, REDEMPTION_BACKSTOP_RESOLVE_CONCURRENCY } from "@shared/lib/cron-jobs";
 import { createDeferredPromise } from "../../lib/__tests__/deferred.test-support";
+import { compactCronMetadataForPersistence } from "../../lib/cron-metadata-persistence";
 
 const DEFAULT_REDEMPTION_BACKSTOP_D1_TABLES: MockTableConfig[] = [
   { match: "FROM depeg_events", rows: [] },
@@ -268,6 +269,38 @@ describe("syncRedemptionBackstops", () => {
     await expect(syncRedemptionBackstops(mockD1(), controller.signal)).rejects.toThrow("abort before write");
     expect(resolveRedemptionBackstopEntryMock).toHaveBeenCalledTimes(2);
     expect(upsertRedemptionBackstopSnapshotsMock).not.toHaveBeenCalled();
+  });
+
+  it("persists bounded per-route failure reasons through cron metadata compaction", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    configuredIdsMock = Array.from({ length: 30 }, (_, index) => `failure-${index}`);
+    loadStablecoinsCacheMock.mockResolvedValue({
+      kind: "ok", updatedAt: now,
+      payload: { peggedAssets: configuredIdsMock.map(id => makeAsset({ id })) },
+    });
+    resolveRedemptionBackstopEntryMock.mockRejectedValue(new Error(
+      `USDfr par observer: route state unavailable https://rpc.example/private-key token=private-token ${"x".repeat(400)}`,
+    ));
+    // Non-hoisted suite mocks must initialize before loading the cron module.
+    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+    const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
+    const metadata = JSON.parse(result.metadata ?? "{}");
+    expect(result.status).toBe("error");
+    expect(Object.keys(metadata.sourceFailureReasons)).toEqual(configuredIdsMock.slice(0, 25));
+    expect(metadata.sourceFailureReasonsTruncated).toBe(true);
+    for (const reason of Object.values(metadata.sourceFailureReasons) as { code: string; message: string }[]) {
+      expect(reason.code).toBe("route-resolution-failed");
+      expect(reason.message).toContain("USDfr par observer: route state unavailable");
+      expect(reason.message.length).toBeLessThanOrEqual(240);
+      expect(reason.message).not.toContain("private-key");
+      expect(reason.message).not.toContain("private-token");
+    }
+    expect(upsertRedemptionBackstopSnapshotsMock.mock.calls[0][2].metadata.sourceFailureReasons)
+      .toEqual(metadata.sourceFailureReasons);
+    const oversized = { ...metadata, adapterLatency: { payload: "x".repeat(30_000) } };
+    const compacted = compactCronMetadataForPersistence(JSON.stringify(oversized), oversized, "sync-redemption-backstops");
+    expect(compacted.compacted).toBe(true);
+    expect(JSON.parse(compacted.metadata ?? "{}").sourceFailureReasons).toEqual(metadata.sourceFailureReasons);
   });
 
   it("bounds independent resolvers, publishes input order and isolates failures while advancing progress", async () => {
