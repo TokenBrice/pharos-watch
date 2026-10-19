@@ -547,6 +547,14 @@ describe("authenticated CCIP pending quantities", () => {
     expect(resumed.status).toBe("accepted");
     expect(logRanges.filter(range => range.chain === "ethereum").every(range => range.from >= 16100)).toBe(true);
   });
+  it("requires non-null indexed receipt evidence before accepting discovery", async () => {
+    indexed = [word(1001)];
+    expect(await observeCcipPending(input())).toMatchObject({ status: "accepted", amount: "10" });
+    const receipts = vi.mocked(fetchEvmRpcBatch).mock.calls.filter(([, requests]) =>
+      requests.some(request => request.method === "eth_getTransactionReceipt"));
+    expect(receipts).toHaveLength(1);
+    expect(receipts[0]![2]).toMatchObject({ requireNonNullResults: true });
+  });
   it("commits a dense page after one header batch and resumes every deferred log", async () => {
     pinNumber = 199;
     sent = Array.from({ length: 200 }, (_, i) => send(i + 1, 10n, 100 + Math.floor(i / 2)));

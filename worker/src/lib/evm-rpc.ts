@@ -42,6 +42,8 @@ export interface EvmRpcOptions {
   /** Observed head used only to check moving log/header retention. */
   observedHeadBlock?: number;
   maxRetries?: number;
+  /** Reject null batch members at this endpoint when the caller requires observed evidence. */
+  requireNonNullResults?: boolean;
   /** Gas limit for eth_call (hex string, e.g. "0x7A120"). Needed for cross-contract calls. */
   gas?: string;
   /** Maximum number of calls per Multicall3 aggregate3 request. Defaults to one request for the full input. */
@@ -737,6 +739,7 @@ export async function fetchEvmRpcBatch(
     for (let index = 0; index < calls.length; index += 1) {
       const row = rowsById.get(index + 1);
       if (!row || row.error || !("result" in row) || row.result === undefined) return null;
+      if (options?.requireNonNullResults && row.result === null) return null;
       values.push(row.result);
     }
     return values;

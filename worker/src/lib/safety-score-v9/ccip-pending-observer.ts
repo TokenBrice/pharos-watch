@@ -252,7 +252,7 @@ export async function observeCcipPending(input: {
         context = { ...context, chainId: chain, method: missing[0]?.method ?? "unknown", phase: "rpc", providerOrigin: null };
         const recentStatePin = recentPins.get(chain);
         const result = await fetchEvmRpcBatch(chain, missing, { ...options, recentStatePin,
-          observedHeadBlock: recentStatePin?.finalized.number });
+          observedHeadBlock: recentStatePin?.finalized.number, requireNonNullResults: true });
         if (!result || result.length !== missing.length || result.some(value => value === undefined || value === null)) fail("rpc-unavailable");
         for (let i = 0; i < result.length; i++) {
           const position = positions[i]!, key = keys[position]!;
