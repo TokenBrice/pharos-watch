@@ -78,12 +78,20 @@ export async function scheduledChildAttemptKey(identity: ScheduledChildIdentity)
 
 function prepareAttempt(db: D1Database, identity: ScheduledChildIdentity, key: string, startedAt: number | null, leaseOwner: string | null, guard: string, bindings: (string | number | null)[]): D1PreparedStatement {
   const f = identity.executionFence;
-  return db.prepare(`INSERT INTO ${childAttemptTable(f)} (
-    attempt_key, schedule_key, slot_started_at, job, producer_path, producer_kind, invocation_id, attempt_no,
-    execution_schedule_key, execution_slot_started_at, execution_invocation_id, execution_generation,
-    execution_owner, worker_version, started_at, lease_owner${f.kind === "reserve-continuation" ? ", delivery_id" : ""}
-  ) SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?${f.kind === "reserve-continuation" ? ", ?" : ""} WHERE ${guard}
-  ON CONFLICT(attempt_key) DO NOTHING`).bind(
+  const sql = f.kind === "reserve-continuation"
+    ? `INSERT INTO reserve_continuation_child_attempts (
+        attempt_key, schedule_key, slot_started_at, job, producer_path, producer_kind, invocation_id, attempt_no,
+        execution_schedule_key, execution_slot_started_at, execution_invocation_id, execution_generation,
+        execution_owner, worker_version, started_at, lease_owner, delivery_id
+      ) SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? WHERE ${guard}
+      ON CONFLICT(attempt_key) DO NOTHING`
+    : `INSERT INTO scheduled_child_attempts (
+        attempt_key, schedule_key, slot_started_at, job, producer_path, producer_kind, invocation_id, attempt_no,
+        execution_schedule_key, execution_slot_started_at, execution_invocation_id, execution_generation,
+        execution_owner, worker_version, started_at, lease_owner
+      ) SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? WHERE ${guard}
+      ON CONFLICT(attempt_key) DO NOTHING`;
+  return db.prepare(sql).bind(
     key, identity.scheduleKey, identity.slotStartedAt, identity.job, identity.producerPath, identity.producerKind,
     identity.invocationId, identity.attemptNo, f.scheduleKey, f.slotStartedAt, f.invocationId, f.generation,
     f.owner, identity.workerVersion ?? null, startedAt, leaseOwner,
@@ -115,8 +123,12 @@ export async function markScheduledChildStarted(
     f.scheduleKey, f.slotStartedAt, "running", f.owner, f.generation, f.invocationId];
   const guard = currentFenceSql(f);
   await runWithOverloadRetry(() => prepareAttempt(db, identity, key, startedAt, leaseOwner, guard, bindings).run());
-  const row = await runWithOverloadRetry(() => db.prepare(`SELECT attempt_key FROM ${childAttemptTable(f)}
-    WHERE attempt_key = ? AND started_at IS NOT NULL AND terminal_token IS NULL AND ${guard}`)
+  const sql = f.kind === "reserve-continuation"
+    ? `SELECT attempt_key FROM reserve_continuation_child_attempts
+        WHERE attempt_key = ? AND started_at IS NOT NULL AND terminal_token IS NULL AND ${guard}`
+    : `SELECT attempt_key FROM scheduled_child_attempts
+        WHERE attempt_key = ? AND started_at IS NOT NULL AND terminal_token IS NULL AND ${guard}`;
+  const row = await runWithOverloadRetry(() => db.prepare(sql)
     .bind(key, ...bindings).first<{ attempt_key: string }>());
   if (!row) throw new CronChildTerminalSupersededError(key, undefined, null, false);
   return key;
@@ -142,20 +154,27 @@ export async function writeScheduledChildTerminal(
     ...(parseJsonObject(input.metadata) ?? {}), schedulerAttemptKey: key,
     schedulerTerminalSource: input.source, schedulerTerminalToken: token, childDisposition: input.disposition,
   }), undefined, input.identity.job).metadata;
+  const terminalUpdateSql = f.kind === "reserve-continuation"
+    ? `UPDATE reserve_continuation_child_attempts SET terminal_source = ?, terminal_token = ?, terminal_at = ?
+        WHERE attempt_key = ? AND terminal_token IS NULL
+          ${input.source === "real" ? "AND started_at IS NOT NULL" : ""} AND ${guard}`
+    : `UPDATE scheduled_child_attempts SET terminal_source = ?, terminal_token = ?, terminal_at = ?
+        WHERE attempt_key = ? AND terminal_token IS NULL
+          ${input.source === "real" ? "AND started_at IS NOT NULL" : ""} AND ${guard}`;
+  const terminalClaimSql = f.kind === "reserve-continuation"
+    ? "SELECT 1 FROM reserve_continuation_child_attempts WHERE attempt_key = ? AND terminal_token = ?"
+    : "SELECT 1 FROM scheduled_child_attempts WHERE attempt_key = ? AND terminal_token = ?";
   const statements = [
     ...(input.source === "real" ? [] : [prepareAttempt(db, input.identity, key,
       input.disposition === "abandoned" || input.disposition === "interrupted-by-deploy" ? input.startedAt : null,
       null, guard, bindings)]),
-    db.prepare(`UPDATE ${childAttemptTable(f)} SET terminal_source = ?, terminal_token = ?, terminal_at = ?
-      WHERE attempt_key = ? AND terminal_token IS NULL
-        ${input.source === "real" ? "AND started_at IS NOT NULL" : ""} AND ${guard}`)
-      .bind(input.source, token, input.completedAt, key, ...bindings),
+    db.prepare(terminalUpdateSql).bind(input.source, token, input.completedAt, key, ...bindings),
     db.prepare(`INSERT INTO cron_runs (
       job, started_at, duration_ms, status, item_count, metadata, slot_started_at, error, idempotency_key,
       schedule_key, producer_path, producer_kind, invocation_id, worker_version,
       productive, publication_count, calendar_period, degraded_reason
     ) SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
-    WHERE EXISTS (SELECT 1 FROM ${childAttemptTable(f)} WHERE attempt_key = ? AND terminal_token = ?)
+    WHERE EXISTS (${terminalClaimSql})
       AND ${guard} ON CONFLICT DO NOTHING`).bind(
       input.identity.job, input.startedAt, input.durationMs, input.status, input.itemCount ?? null,
       metadata, input.identity.slotStartedAt, input.error ?? null, key,
@@ -174,7 +193,10 @@ export async function writeScheduledChildTerminal(
   ];
   const results = await runWithOverloadRetry(() => db.batch(statements));
   if (results.some((result) => !result.success)) throw new Error("scheduled-child-terminal-batch-failed");
-  const row = await runWithOverloadRetry(() => db.prepare(`SELECT terminal_token FROM ${childAttemptTable(f)} WHERE attempt_key = ?`)
+  const terminalReadSql = f.kind === "reserve-continuation"
+    ? "SELECT terminal_token FROM reserve_continuation_child_attempts WHERE attempt_key = ?"
+    : "SELECT terminal_token FROM scheduled_child_attempts WHERE attempt_key = ?";
+  const row = await runWithOverloadRetry(() => db.prepare(terminalReadSql)
     .bind(key).first<{ terminal_token: string | null }>());
   return { accepted: row?.terminal_token === token, attemptKey: key, token };
 }

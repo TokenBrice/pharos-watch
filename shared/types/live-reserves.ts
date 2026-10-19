@@ -1,4 +1,3 @@
-import { ReserveContinuationExecutionStatusSchema } from "./reserve-continuation";
 import { z } from "zod";
 import { ReserveObservationEnvelopeSchema, ReserveBoundedFactsGenerationSchema } from "./safety-score-v9-reserve-scope";
 import { LenderBookObservationSchema, LenderBookFailedAttemptSchema } from "./safety-score-v9-lender-book";
@@ -161,6 +160,18 @@ export const ReserveFeedReviewSchema = /* @__PURE__ */ (() => z.object({
   expiresAt: z.number().int().positive(),
 }).strict())();
 export type ReserveFeedReview = z.output<typeof ReserveFeedReviewSchema>;
+
+export const ReserveContinuationExecutionStatusSchema = /* @__PURE__ */ (() => z.object({
+  deliveryId: z.string(),
+  phase: z.enum(["reserve", "tail"]),
+  state: z.enum(["running", "reconciling", "finished"]),
+  generation: z.number().int().positive(),
+  startedAt: z.number().int(),
+  updatedAt: z.number().int(),
+  deadlineMs: z.number().int(),
+  finishedAt: z.number().int().nullable(),
+  resultStatus: z.enum(["ok", "degraded", "error"]).nullable(),
+}).strict())();
 
 export const ReserveCohortStatusSchema = /* @__PURE__ */ (() => z.object({
   slotStartedAt: z.number().int().nonnegative(),

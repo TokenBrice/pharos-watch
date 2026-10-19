@@ -14,15 +14,3 @@ export const ReserveContinuationMessageSchema = z.object({
   sourceInvocationId: z.string().min(1).max(256),
 }).strict();
 export type ReserveContinuationMessage = z.output<typeof ReserveContinuationMessageSchema>;
-
-export const ReserveContinuationExecutionStatusSchema = z.object({
-  deliveryId: z.string(),
-  phase: z.enum(["reserve", "tail"]),
-  state: z.enum(["running", "reconciling", "finished"]),
-  generation: z.number().int().positive(),
-  startedAt: z.number().int(),
-  updatedAt: z.number().int(),
-  deadlineMs: z.number().int(),
-  finishedAt: z.number().int().nullable(),
-  resultStatus: z.enum(["ok", "degraded", "error"]).nullable(),
-}).strict();
