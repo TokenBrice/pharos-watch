@@ -525,7 +525,7 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
       expect(await pending).toEqual([
         { status: "completed", value: "quick-a" },
         { status: "completed", value: "quick-b" },
-        { status: "rejected", reason: "asset-timeout" },
+        { status: "rejected", reason: "capture-window-clipped" },
         { status: "rejected", reason: "asset-timeout" },
         { status: "rejected", reason: "capture-window-exhausted" },
       ]);
@@ -566,7 +566,7 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
         const results = await pending;
         expect(observed).toEqual([bucket % 10, (bucket + 1) % 10]);
         expect(results[bucket % 10]).toEqual({ status: "completed", value: bucket % 10 });
-        expect(results[(bucket + 1) % 10]).toEqual({ status: "rejected", reason: "asset-timeout" });
+        expect(results[(bucket + 1) % 10]).toEqual({ status: "rejected", reason: "capture-window-clipped" });
         expect(results.filter(result => result.status === "completed")).toHaveLength(1);
         expect(results.filter(result => result.status === "rejected" && result.reason === "capture-window-exhausted")).toHaveLength(8);
         admitted.add(bucket % 10);
@@ -613,6 +613,22 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
     } finally { vi.useRealTimers(); }
   });
 
+  it.each([1_476, 120_000])("distinguishes wM global clipping from its local deadline with %ims remaining", async windowMs => {
+    vi.useFakeTimers();
+    try {
+      const start = Date.now();
+      const pending = runBudgetedSupplyAttributionAssets(["wm-m0"], async (_asset, signal) => {
+        await sleepWithSignal(180_000, signal);
+      }, {
+        assetTimeoutMs: () => SUPPLY_ATTRIBUTION_CAPTURE_BUDGET.wmAssetTimeoutMs,
+        executionWindow: { slotStartedAtSec: Math.floor(start / 1_000),
+          deadlineMs: start + SUPPLY_ATTRIBUTION_CAPTURE_BUDGET.publicationReserveMs + windowMs, minimumRemainingMs: 0 },
+      });
+      await vi.runAllTimersAsync();
+      expect(await pending).toEqual([{ status: "rejected", reason: windowMs === 1_476 ? "capture-window-clipped" : "asset-timeout" }]);
+      expect(Date.now() - start).toBe(Math.min(windowMs, 90_000));
+    } finally { vi.useRealTimers(); }
+  });
   it("does not turn parent cancellation into a published per-asset rejection", async () => {
     const controller = new AbortController();
     const error = new Error("lease-lost");
@@ -786,6 +802,39 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
     } finally { vi.restoreAllMocks(); vi.useRealTimers(); }
   });
 
+  it.each(["capture-window-clipped", "asset-timeout"] as const)(
+    "promotes wM only for shared-window starvation, not %s as a local failure",
+    async reason => {
+      const order: string[] = [];
+      try {
+        vi.spyOn(wmObserver, "observeWmReviewedDeploymentUnitPartitionAttempt").mockImplementation(async () => {
+          order.push("wm-m0");
+          return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: null };
+        });
+        vi.spyOn(xautObserver, "observeXautRepresentationGroupSupplyAttributionAttempt").mockImplementation(async () => {
+          order.push("xaut-tether");
+          return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: null, rejectedSourceObservedAtSec: null };
+        });
+        const input = withWmAggregate(fixtures.acceptedFixture.fixedInput, WM_SOURCE_AGGREGATE_USD);
+        const rpcs = new Map([["ethereum", {
+          chainId: "ethereum", chainName: "Ethereum", type: "evm" as const, endpoints: [], explorerUrl: "",
+        }]]);
+        const capture = await captureSafetyScoreV9SupplyAttribution(input, rpcs, undefined, { clockMode: "source" });
+        capture.failureReasonById = { "wm-m0": reason };
+        const priorGeneration = parseSafetyScoreV9SupplyAttributionGeneration(
+          serializeSafetyScoreV9SupplyAttributionGeneration(createSafetyScoreV9SupplyAttributionGeneration({
+            fixedInput: input, capture, capturedAtSec: input.clockSec,
+          })),
+        );
+        expect(priorGeneration.outcomesById["wm-m0"]).toMatchObject({ captureFailureReason: reason });
+        order.length = 0;
+        await captureSafetyScoreV9SupplyAttribution(input, rpcs, undefined, { clockMode: "source", priorGeneration });
+        expect(order).toEqual(reason === "capture-window-clipped"
+          ? ["wm-m0", "xaut-tether"] : ["xaut-tether", "wm-m0"]);
+      } finally { vi.restoreAllMocks(); }
+    },
+  );
+
   it.each([180_000, 1])("attempts every tier within N=cohort-size runs under sustained %ims exhaustion", async windowMs => {
     vi.useFakeTimers();
     try {
@@ -842,7 +891,7 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
           expect(capture.journalRecords.map(record => record.assetId)).toEqual(canonicalIds);
           expect(Object.values(capture.failureReasonById ?? {})).toContain("capture-window-exhausted");
           for (const id of order.filter(id => historyIds.includes(id))) {
-            expect(capture.failureReasonById?.[id]).toBe("asset-timeout");
+            expect(["asset-timeout", "capture-window-clipped"]).toContain(capture.failureReasonById?.[id]);
           }
           if (retryOrder) expect(order).toEqual(retryOrder);
           retryOrder = [...order];

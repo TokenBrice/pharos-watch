@@ -1,5 +1,22 @@
 [
   {
+    "version": "10.23",
+    "title": "Archive-free CCIP origins and coherent attribution captures",
+    "date": "2026-10-19",
+    "effectiveAt": 1792454400,
+    "summary": "Safety Score v10.23 admits reviewed immutable CCIP creation and initial-sequence witnesses instead of unavailable predecessor state, while still requiring complete historical logs and current canonical liability evidence. It aligns Centrifuge observations to finalized Solana time and admits an explicitly reviewed finalized-first Robinhood pin for wiTRY.",
+    "impact": [
+      "Monad OnRamp 2.0.0 creation at block 97598317 and OnRamp 1.6 creation at block 29585544 were authenticated against live canonical headers, successful deployment receipts, exact creation input and verified constructor source. Both constructors leave destination counters zero, with the first send using sequence 1. The older ramp predates the token pool: its complete ramp history must be replayed from creation, including foreign-token sequences, not from the later pool deployment.",
+      "Witness-bearing CCIP sources use checkpoint schema 3 and source-bound witness digests. Incompatible v1/v2 checkpoints rebuild rather than imply zero pending; unchanged predecessor-state sources retain authenticated schema-2 progress. Current runtimes, token/pool peers, finalized pins, complete contiguous sends and exact execution/conservation checks remain required. Missing witnesses, unavailable old logs and incomplete bootstrap remain explicit rejections; no archive provider purchase or latest-state substitution is authorized.",
+      "Centrifuge captures non-rewindable finalized Solana identity and supply first, then selects each safe EVM pin inside the shared actual observation interval. Every deployment, including observed zero, remains required. wiTRY's reviewed Robinhood pin prefers independently rechecked finalized state over its heuristic 15059-block lag; that lag remains the fallback only where finalized evidence is unavailable, and pending-history finality gates still apply.",
+      "Economic captures reserve freshness headroom for the admitted child window and age original observations through final derivation. The 1800-second age and 120-second cross-chain skew limits, source/base generation bindings and original reference clocks are unchanged. Globally clipped started children now retain capture-window-clipped and gain next-run priority; genuine local timeouts do not. The serial 30/90-second child and 180-second capture limits remain unchanged.",
+      "Retained production sync-v9-supply-attribution metadata at 2026-10-19 06:08:45 UTC recorded wM at only 1476ms, wiTRY at 26729ms with persisted history progress, and XAUT at 1014ms with zero EVM requests. These diagnose separate causes, not successful post-change acceptance. XAUT transparency-stale remains an upstream rejection until a genuinely current original-dated issuer report exists.",
+      "Previously rejected partitions may become admissible and affect attribution, scores or availability; formulas, weights and grade gates are unchanged. Activation is provisionally 2026-10-20 00:00 UTC (1792454400); re-date effectiveAt at release. Fixed-clock comparison and fresh production convergence/accepted-publication evidence remain release requirements; no deployment or recovery is claimed."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "10.22",
     "title": "Exact UTC admission for mechanism-review evidence",
     "date": "2026-10-18",

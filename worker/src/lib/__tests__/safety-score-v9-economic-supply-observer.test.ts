@@ -89,6 +89,52 @@ describe("reviewed economic supply observation", () => {
     expect(vi.mocked(evmRpc.fetchEvmMulticall3Aggregate3AtBlock).mock.calls[0][3]?.recentStatePin).toBeUndefined();
   });
 
+  it("replaces the reviewed heuristic with authenticated finalized state, never a latest substitution", async () => {
+    const f = fixture();
+    f.plan.deployments[0]!.read = { kind: "evm-total-supply", safeBlockLag: 15059, pinPolicy: "finalized-preferred" };
+    vi.mocked(evmRpc.fetchEvmBlockNumber).mockResolvedValue(20000);
+    vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (_chain, number) => {
+      const height = number === "finalized" ? 19000 : number;
+      return { number: height, hash: HASH, timestamp: height === 4941 ? CLOCK - 1847 : CLOCK - 900 };
+    });
+    const result = await f.run();
+    expect(result).toMatchObject({ status: "accepted", attribution: {
+      baseInputGenerationId: f.fixedInput.baseInputGenerationId,
+      aggregate: { observedAtSec: CLOCK - 60 },
+      observations: [expect.objectContaining({ anchor: "19000", observedAtSec: CLOCK - 900 })],
+    } });
+    expect(evmRpc.fetchEvmBlockHeader).not.toHaveBeenCalledWith("ethereum", 4941, expect.anything());
+  });
+  it("retains the reviewed lag fallback when finalized proof is unavailable", async () => {
+    const f = fixture();
+    f.plan.deployments[0]!.read = { kind: "evm-total-supply", safeBlockLag: 2, pinPolicy: "finalized-preferred" };
+    vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (_chain, number) =>
+      number === "finalized" ? null : { number, timestamp: CLOCK - 60, hash: HASH });
+    expect(await f.run()).toMatchObject({ status: "accepted", attribution: {
+      observations: [expect.objectContaining({ anchor: "100" })],
+    } });
+    expect(vi.mocked(evmRpc.fetchEvmMulticall3Aggregate3AtBlock).mock.calls[0][3]?.recentStatePin).toBeUndefined();
+  });
+  it.each([1847, 1790])("rejects %is-old pins without enough capture headroom before reading quantities", async age => {
+    const f = fixture();
+    vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (_chain, number) =>
+      ({ number: number === "finalized" ? 100 : number, timestamp: CLOCK - age, hash: HASH }));
+    const result = await observeReviewedEconomicDeploymentPartitionAttempt({ ...f, assetDeadlineMs: Date.now() + 30_000 });
+    expect(result).toMatchObject({ status: "rejected" });
+    expect(evmRpc.fetchEvmMulticall3Aggregate3AtBlock).not.toHaveBeenCalled();
+  });
+  it("ages original observations through final derivation instead of renewing their clocks", async () => {
+    const f = fixture();
+    let elapsed = 0;
+    vi.spyOn(Date, "now").mockImplementation(() => CLOCK * 1000 + elapsed);
+    vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (_chain, number) =>
+      ({ number: number === "finalized" ? 100 : number, timestamp: CLOCK - 1790, hash: HASH }));
+    vi.mocked(evmRpc.fetchEvmMulticall3Aggregate3AtBlock).mockImplementation(async (_chain, calls) => {
+      elapsed = 20_000;
+      return calls.map(call => ({ label: call.label, success: true, returnData: word(call.label.endsWith(":decimals") ? 6n : 100000000n) }));
+    });
+    expect(await f.run()).toMatchObject({ status: "rejected", rejectionCode: "deployment-observation-skew" });
+  });
   it("batches same-chain supplies and balance exclusions at one pin without mixing amounts", async () => {
     const f = fixture();
     const first = f.plan.deployments[0]!;
@@ -281,7 +327,8 @@ describe("reviewed economic supply observation", () => {
     const f = fixture(); f.plan.referencePriceSource = apiSource("reference");
     const body = apiBody(); body.data.observedAt = time;
     vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify(body)));
-    expect(await f.run()).toMatchObject({ status: "rejected", rejectionCode: "packet-reconciliation-failed" });
+    expect(await f.run()).toMatchObject({ status: "rejected", rejectionCode:
+      time === CLOCK - 86400 ? "deployment-observation-skew" : "packet-reconciliation-failed" });
   });
 
   it.each(["malformed JSON", "HTTP error"])("fails closed on reviewed API %s", async failure => {
@@ -754,7 +801,7 @@ describe("validated XRPL issued-currency observations", () => {
     expect(result.attribution.observations[0]!.responseSha256).toBe(sha256Hex(gatewayText + ledgerText));
   });
   it.each(["malformed", "negative", "unvalidated", "hash mismatch", "missing time", "stale time"])("rejects XRPL %s", async failure => {
-    expect(await xrplFixture(failure).run()).toMatchObject({ status: "rejected", rejectionCode: failure === "stale time" ? "packet-reconciliation-failed" : "deployment-state-unavailable" });
+    expect(await xrplFixture(failure).run()).toMatchObject({ status: "rejected", rejectionCode: failure === "stale time" ? "deployment-observation-skew" : "deployment-state-unavailable" });
   });
   it.each(["gateway_balances", "ledger"])("rejects capped XRPL %s bodies and cancels HTTP errors before parsing", async method => {
     for (const failure of ["overflow", "http-error"]) {

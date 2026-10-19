@@ -873,7 +873,8 @@ describe("reviewed CCIP vault-share plans", () => {
     const escrow = plan.escrows[0]!;
     const source = escrow.inFlightSource;
     if (!source || !("kind" in source) || source.kind !== "evm-ccip-pending") throw new Error("Expected a reviewed CCIP vault plan");
-    const clockSec = plan.reviewedAtSec + 60;
+    const clockSec = Math.max(plan.reviewedAtSec, ...source.lanes.map(lane =>
+      lane.sourceStartWitness?.kind === "reviewed-creation" ? lane.sourceStartWitness.reviewedAtSec : 0)) + 60;
     const meta = ACTIVE_META_BY_ID.get(assetId)!;
     const canonical = plan.deployments.find(row => row.deploymentKey === escrow.canonicalDeploymentKey)!;
     const raw = (units: number, decimals: number) => (BigInt(units) * 10n ** BigInt(decimals)).toString();
@@ -899,6 +900,14 @@ describe("reviewed CCIP vault-share plans", () => {
         sourceChainSelector: lane.source.chainSelector, destinationChainSelector: lane.destination.chainSelector,
         initialSequence: "1", lastSequence: "1", pendingCount: index === 0 ? 1 : 0,
         failedCount: index === 0 ? 1 : 0, amount: index === 0 ? amount : "0",
+        ...(lane.sourceStartWitness?.kind === "reviewed-creation" ? {
+          historyOrigin: {
+            method: "reviewed-creation" as const,
+            witnessDigest: sha256Hex(stableJsonStringifyV1(lane.sourceStartWitness)),
+            blockNumber: lane.sourceStartWitness.blockNumber, blockHash: lane.sourceStartWitness.blockHash,
+            reviewedAtSec: lane.sourceStartWitness.reviewedAtSec,
+          },
+        } : {}),
       })),
     };
     return {
@@ -927,6 +936,22 @@ describe("reviewed CCIP vault-share plans", () => {
         .toEqual(input.plan.escrows[0]!.receiptDeploymentKeys.map(() => 10));
       expect(packet.unattributedSupplyUsd).toBe(1);
       expect(packet.deployments.reduce((sum, row) => sum + row.currentSupplyUsd, packet.unattributedSupplyUsd)).toBe(100);
+    },
+  );
+
+  it.each(["missing", "digest", "review-clock", "initial-sequence"] as const)(
+    "rejects a %s origin certificate even with a self-consistent response digest",
+    mismatch => {
+      const input = reviewedFixture("susdat-saturn");
+      const observation = input.inFlight[0]!;
+      const proof = observation.ccipPendingProof!;
+      const lane = proof.lanes.find(row => row.historyOrigin)!;
+      if (mismatch === "missing") delete lane.historyOrigin;
+      if (mismatch === "digest") lane.historyOrigin!.witnessDigest = "0".repeat(64);
+      if (mismatch === "review-clock") lane.historyOrigin!.reviewedAtSec--;
+      if (mismatch === "initial-sequence") lane.initialSequence = "2";
+      observation.responseSha256 = sha256Hex(stableJsonStringifyV1({ proof, amount: observation.amount }));
+      expect(deriveReviewedEconomicDeploymentPartition(input)).toBeNull();
     },
   );
 

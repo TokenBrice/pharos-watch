@@ -36,7 +36,7 @@ export const SupplyAttributionAttemptDiagnosticSchema = z.strictObject({
 export type SupplyAttributionAttemptDiagnostic = z.infer<typeof SupplyAttributionAttemptDiagnosticSchema>;
 export const SUPPLY_ATTRIBUTION_ATTEMPT_DIAGNOSTICS_MAX = 128;
 export const SupplyAttributionAttemptDiagnosticsSchema = z.array(SupplyAttributionAttemptDiagnosticSchema).max(SUPPLY_ATTRIBUTION_ATTEMPT_DIAGNOSTICS_MAX);
-export const SupplyAttributionCaptureFailureReasonSchema = z.enum(["asset-timeout", "capture-window-exhausted", "observer-failed"]);
+export const SupplyAttributionCaptureFailureReasonSchema = z.enum(["asset-timeout", "capture-window-exhausted", "capture-window-clipped", "observer-failed"]);
 export type SupplyAttributionCaptureFailureReason = z.infer<typeof SupplyAttributionCaptureFailureReasonSchema>;
 export const V9SupplyAttributionPolicySchema = z.strictObject({
   amountBases: z.array(EconomicSupplyAmountBasisSchema).min(1),
@@ -65,7 +65,7 @@ export const CosmosBankSupplyReadSchema = z.strictObject({
 export type CosmosBankSupplyRead = z.infer<typeof CosmosBankSupplyReadSchema>;
 const ReadSchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("provider-chain"), sourceChain: CanonicalTextSchema }),
-  z.strictObject({ kind: z.literal("evm-total-supply"), safeBlockLag: z.number().int().positive() }),
+  z.strictObject({ kind: z.literal("evm-total-supply"), safeBlockLag: z.number().int().positive(), pinPolicy: z.literal("finalized-preferred").optional() }),
   z.strictObject({ kind: z.literal("evm-balance"), safeBlockLag: z.number().int().positive(), account: z.string().regex(/^0x[0-9a-f]{40}$/) }),
   z.strictObject({ kind: z.literal("solana-mint"), programOwner: CanonicalTextSchema }),
   z.strictObject({ kind: z.literal("move-fa-supply"), identityKind: z.enum(["metadata-address", "oft-package"]), metadataAddress: z.string().regex(/^0x[0-9a-f]{1,64}$/), ledgerChainId: z.number().int().positive() }),
@@ -255,6 +255,23 @@ const CcipSideSchema = z.strictObject({
   // authenticates that peer binding; quantities still use current finalized pins.
   peerBindingPin: z.strictObject({ number: z.number().int().positive(), hash: EvmWordSchema }).optional(),
 });
+const CcipSourceStartWitnessSchema = z.discriminatedUnion("kind", [
+  z.strictObject({
+    kind: z.literal("reviewed-creation"),
+    chainId: CanonicalChainIdSchema, tokenAddress: EvmAddressSchema, tokenPoolAddress: EvmAddressSchema,
+    onRampAddress: EvmAddressSchema, runtimeCodeSha256: Sha256Schema,
+    blockNumber: z.number().int().positive(), blockHash: EvmWordSchema, blockTimestamp: UnixSecondsSchema,
+    transactionHash: EvmWordSchema, deployer: EvmAddressSchema, nonce: NonceSchema,
+    initcodeSha256: Sha256Schema, initialSequence: z.literal("1"),
+    sequenceSemantics: z.enum(["ccip-1.6-constructor-zero", "ccip-2.0.0-constructor-zero"]),
+    sourceCodeSha256: Sha256Schema, evidenceUrls: z.array(z.string().url()).min(1),
+    reviewedAtSec: UnixSecondsSchema, reviewer: CanonicalTextSchema,
+  }),
+  z.strictObject({
+    kind: z.literal("unavailable"),
+    reason: z.literal("history-origin-witness-unavailable"),
+  }),
+]);
 export const CcipPendingReadSchema = z.strictObject({
   kind: z.literal("evm-ccip-pending"), sourceId: CanonicalTextSchema,
   chainId: CanonicalChainIdSchema, finality: z.literal("finalized"),
@@ -267,6 +284,7 @@ export const CcipPendingReadSchema = z.strictObject({
     // Start at deployment of this OnRamp OR this source pool. The producer
     // proves predecessor code absence and reads the initial lane sequence.
     sourceStartBlock: z.number().int().positive(),
+    sourceStartWitness: CcipSourceStartWitnessSchema.optional(),
   })).min(1).max(128),
 }).superRefine((source, ctx) => {
   const identities = source.lanes.map(lane => `${lane.source.chainId}:${lane.onRampAddress}:${lane.destination.chainSelector}:${lane.source.tokenPoolAddress}`);
@@ -277,10 +295,21 @@ export const CcipPendingReadSchema = z.strictObject({
     !source.lanes.some(lane => lane.source.chainId === source.chainId || lane.destination.chainId === source.chainId)) {
     ctx.addIssue({ code: "custom", message: "CCIP requires unique directed pool/lane identities and an exact canonical amount anchor" });
   }
+  for (const lane of source.lanes) {
+    const witness = lane.sourceStartWitness;
+    if (witness?.kind !== "reviewed-creation") continue;
+    if (witness.chainId !== lane.source.chainId || witness.tokenAddress !== lane.source.tokenAddress ||
+      witness.tokenPoolAddress !== lane.source.tokenPoolAddress || witness.onRampAddress !== lane.onRampAddress ||
+      witness.runtimeCodeSha256 !== lane.onRampRuntimeCodeSha256 || witness.blockNumber !== lane.sourceStartBlock ||
+      witness.sequenceSemantics !== `ccip-${lane.version}-constructor-zero` ||
+      witness.reviewedAtSec < witness.blockTimestamp) {
+      ctx.addIssue({ code: "custom", message: "CCIP creation witness must bind the exact source lane, creation origin and reviewed constructor" });
+    }
+  }
 });
 export type CcipPendingRead = z.infer<typeof CcipPendingReadSchema>;
 export const CcipPendingCheckpointSchema = z.strictObject({
-  schemaVersion: z.literal(2), sourceDigest: Sha256Schema,
+  schemaVersion: z.union([z.literal(2), z.literal(3)]), sourceDigest: Sha256Schema,
   nextChainIndex: z.number().int().nonnegative().max(31),
   lanes: z.array(z.strictObject({
     id: CanonicalTextSchema, sent: CurveHistoryCursorSchema, executed: CurveHistoryCursorSchema,
@@ -303,6 +332,11 @@ const CcipPendingProofSchema = z.strictObject({
     id: CanonicalTextSchema, sourcePoolAddress: EvmAddressSchema, destinationPoolAddress: EvmAddressSchema,
     sourceChainSelector: NonceSchema, destinationChainSelector: NonceSchema,
     initialSequence: NonceSchema, lastSequence: NonceSchema,
+    historyOrigin: z.strictObject({
+      method: z.literal("reviewed-creation"), witnessDigest: Sha256Schema,
+      blockNumber: z.number().int().positive(), blockHash: EvmWordSchema,
+      reviewedAtSec: UnixSecondsSchema,
+    }).optional(),
     pendingCount: z.number().int().nonnegative().max(512), failedCount: z.number().int().nonnegative().max(512),
     amount: z.string().regex(/^(0|[1-9][0-9]*)$/).max(78),
   })).min(1).max(128),
