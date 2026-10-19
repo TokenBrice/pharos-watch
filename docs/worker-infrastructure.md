@@ -124,9 +124,9 @@ The unqualified V9 guard and memory-evidence boundary are owned by the [memory a
 
 Worker scripts must be Latin-1-only: escape source code units above U+00FF as `\uXXXX`, including regex literals. One such raw character doubles V8's retained bundle source. `npm run check:worker-package` rejects these and warns on other non-ASCII; escape first-party Latin-1 too, since UTF-8 loading can retain two-byte source.
 
-Handler factories derive Env-dependent values per invocation and pass them as parameters: `worker/src/handlers/scheduled/context.ts`, `worker/src/handlers/http/context.ts`, and per-endpoint `worker/src/routes/dependency-hydrators.ts`. They normalize credentials, build RPC capability maps and resolve freshness settings; module initialization must not capture an invocation's Env.
+Derive Env per invocation and pass values as parameters, never at initialization: `worker/src/handlers/scheduled/context.ts`, `worker/src/handlers/http/context.ts`, and `worker/src/routes/dependency-hydrators.ts` normalize credentials, build RPC capability maps and resolve freshness settings.
 
-Two intentional module-state caveats remain: `buildChainRpcs()` registers/clears credentials in module-scoped `RPC_AUTH_BY_ORIGIN` (`worker/src/lib/chain-registry.ts`) and is not pure; `shared/lib/cloudflare-access-jwt.ts` retains the one-hour JWKS cache. The [isolate registry](process/worker-infrastructure-appendix.md#isolate-local-state-registry) owns all mutable-state inventory.
+Module state: `buildChainRpcs()` registers/clears credentials in `RPC_AUTH_BY_ORIGIN` (`worker/src/lib/chain-registry.ts`); `shared/lib/cloudflare-access-jwt.ts` keeps a one-hour JWKS cache. The [isolate registry](process/worker-infrastructure-appendix.md#isolate-local-state-registry) owns mutable-state inventory.
 
 Redemption `applyOutputDependencyResolution()` uses a run-local index and immutable completed snapshot/configuration map. No global clock-keyed join may cross-contaminate concurrent runs sharing a clock.
 
