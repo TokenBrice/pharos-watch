@@ -1,7 +1,7 @@
 {
   "id": "eusd-electronic-usd",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Reserve Protocol documentation",
@@ -22,11 +22,27 @@
       {
         "label": "eUSD RTokenP1 verified implementation",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x258ce833cf9ad19208372763a00aa1565dd40b3c"
+      },
+      {
+        "label": "eUSD RTokenP1 verified implementation",
+        "url": "https://etherscan.io/address/0x258ce833cf9ad19208372763a00aa1565dd40b3c#code"
+      },
+      {
+        "label": "eUSD Main (proxy) on Etherscan",
+        "url": "https://etherscan.io/address/0x7697aE4dEf3C3Cd52493Ba3a6F57fc6d8c59108a"
+      },
+      {
+        "label": "eUSD upgrade TimelockController",
+        "url": "https://etherscan.io/address/0xd979cf15f7275a3df838513ab911587d23b6d29e#code"
+      },
+      {
+        "label": "Base eUSD OptimismMintableERC20",
+        "url": "https://basescan.org/address/0xcfa3ef56d303ae4faaba0592388f19d7c3399fb4#code"
       }
     ],
-    "evidence": "Re-reviewed 2026-07-30 against the verified RTokenP1 implementation, Reserve documentation, and live Ethereum state. The deployed RToken transfer path rejects transfer-to-self but has no holder blacklist, freeze, seizure, or transfer-pause function, and the reserve basket's inherited USDC/USDT freeze exposure is unchanged. At Ethereum block 25,652,077, however, the Central Auth 0xe1ec57c8ee970280f237863910b606059e9641c9 still reported exactly one DEFAULT_ADMIN_ROLE member, the 3-of-5 Gnosis Safe 0xe8259842e71f4E44F2F68D6bfbC15EDA56E63064 (getThreshold() = 3 over the same five owners, no timelock), and the eUSD proxy 0xa0d69e286b938e21cbf7e51d71f6a4c8918f482f still resolved to the upgradeable RTokenP1 implementation 0x258ce833cf9ad19208372763a00aa1565dd40b3c. That Safe can grant itself OWNER and replace the token implementation with no delay, so holder-control functionality can be introduced instantly. The Yes result is therefore an established upgrade-control capability, not a claim that a blacklist is presently deployed.",
-    "reviewer": "Kimi safety-v9 W2 T54 access review",
-    "reviewedAt": "2026-07-30"
+    "evidence": "Re-reviewed 2026-10-19. Two deployments are material. Base 0xcfa3ef56d303ae4faaba0592388f19d7c3399fb4 holds 76.0432% of supply; at Base block 52800630 it is a verified OptimismMintableERC20 (totalSupply 17,393,265.635455 eUSD) whose burn(address,uint256) is restricted to the canonical L2 bridge 0x4200000000000000000000000000000000000010; the token is not itself a proxy, so arbitrary-holder burn would require a bridge upgrade. Ethereum 0xa0d69e286b938e21cbf7e51d71f6a4c8918f482f (23.6908%) is a UUPS proxy whose implementation slot resolved to RTokenP1 0x258ce833cf9ad19208372763a00aa1565dd40b3c at block 26224773. RTokenP1 has no per-holder blacklist, freeze, seizure or forced transfer, but it does have system-wide freezeForever/freezeShort/freezeLong and trading/issuance pause (all false at that block). Upgrades are authorized only by Main 0x7697aE4dEf3C3Cd52493Ba3a6F57fc6d8c59108a; its OWNER_ROLE is held by the verified TimelockController 0xd979cf15f7275a3df838513ab911587d23b6d29e with a 259,200-second minimum delay. The basket is three USDC/USDT protocol positions (100% issuer-freezable) and would independently satisfy upstream, but the operative basis for Possible is the mutable holder-facing surface: the upgradeable implementation on Ethereum and the bridge-only burn path on the material Base deployment. The Arbitrum deployment (0.2661%) is peripheral and not analyzed.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "standard-external",

@@ -6,11 +6,27 @@
       {
         "label": "Ripple RLUSD user terms, section 11.5",
         "url": "https://ripple.com/legal/stablecoin/"
+      },
+      {
+        "label": "Ethereum RLUSD proxy",
+        "url": "https://eth.blockscout.com/address/0x8292bb45bf1ee4d140127049757c2e0ff06317ed"
+      },
+      {
+        "label": "Verified StablecoinUpgradeableV2 implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9747a0d261c2d56eb93f542068e5d1e23170fa9e"
+      },
+      {
+        "label": "Verified MultiSign role-holder contract",
+        "url": "https://eth.blockscout.com/address/0x83f7f1c6a1547afe2841943f428cf6ff28541fa9"
+      },
+      {
+        "label": "XRPL validated ledger 107756018 account_info/account_objects",
+        "url": "https://s1.ripple.com:51234/"
       }
     ],
-    "evidence": "Section 11.5 expressly permits Ripple to blacklist addresses from sending or receiving RLUSD, freeze balances, and burn RLUSD in a wallet under applicable law or internal compliance policies. Ethereum's verified StablecoinUpgradeableV2 exposes pauseAccounts and clawback; the pinned XRPL issuer flags retain freeze capability. This replaces an inference from centralized governance with direct issuer terms.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurA12RLUSD)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "Re-reviewed 2026-10-19. RLUSD supply is split Ethereum 57.90% and XRPL 42.10%. On Ethereum, the proxy at 0x8292bb45bf1ee4d140127049757c2e0ff06317ed resolves implementation 0x9747a0d261c2d56eb93f542068e5d1e23170fa9e (verified StablecoinUpgradeableV2). At Ethereum block 26224803, paused() returned false; PAUSER_ROLE and CLAWBACKER_ROLE were both held by MultiSign 0x83f7f1c6a1547afe2841943f428cf6ff28541fa9. The verified token source exposes pauseAccounts(address[]), unpauseAccount(address), accountPaused(address), _update and permit checks that reject paused accounts, and clawback(address,uint256); the verified MultiSign execute() calls an arbitrary destination with supplied calldata after a signature-weight quorum. That multisig can therefore freeze or claw back named holders, an active holder-targeted control on the material Ethereum deployment. On XRPL the issuer account rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De had Flags 2174353408 at validated ledger 107,756,018: lsfNoFreeze and lsfGlobalFreeze are unset, but lsfDisableMaster is set and no RegularKey, SignerList or Delegate exists, so the ledger-level freeze capability is not currently exercisable and is not counted. Ripple's user terms section 11.5 independently reserve blacklist, freeze and burn rights. Status is Yes on the Ethereum pause/clawback controls.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",

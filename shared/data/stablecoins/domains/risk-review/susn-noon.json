@@ -14,11 +14,31 @@
       {
         "label": "Pinned Ethereum Dwellir RPC block 26154579",
         "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+      },
+      {
+        "label": "Etherscan RoleGranted/RoleRevoked logs for BLACKLIST_MANAGER_ROLE on the Ethereum proxy",
+        "url": "https://etherscan.io/address/0xe24a3dc889621612422a64e6388927901608b91d#events"
+      },
+      {
+        "label": "Base sUSN proxy and StakedUSNHyperlane implementation",
+        "url": "https://basescan.org/address/0x34a2798d47b238a7cba9d87d49618dee6c4d999f#code"
+      },
+      {
+        "label": "Base sUSN verified implementation source (Sourcify)",
+        "url": "https://sourcify.dev/server/v2/contract/8453/0xa02ca8c6130b75b320faa785034e95d4374a8942?fields=sources"
+      },
+      {
+        "label": "Ethereum PublicNode RPC block 26224761; Base RPC block 52800812",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Noon USN and sUSN documentation",
+        "url": "https://docs.noon.capital"
       }
     ],
-    "evidence": "Re-derived at Ethereum block 26154579 (0xaeb74e22f56f812a995351bb758eea9cfb274344c7b0fd438042e8c595ba7c21, 2026-10-09T11:33:35Z), observed from 2026-10-09T11:49:28.516Z. The proxy 0xe24a3dc889621612422a64e6388927901608b91d reports sUSN and now resolves to 0xef2ea4250b7ce4d0aa9ca70607ecef278c6eab15, replacing the implementation observed on September 22. Its pinned runtime equals the Sourcify exact-match StakingVaultOFTUpgradeableHyperlane runtime. blacklistAccount(address) is BLACKLIST_MANAGER_ROLE-gated; _update() rejects blacklisted senders or recipients and is whenNotPaused, so ordinary holder transfers remain restrictable. owner()=0x1ea169ecccf7714e7ba04900e1a3357cca77327f, hasRole(DEFAULT_ADMIN_ROLE,owner)=true, hasRole(BLACKLIST_MANAGER_ROLE,owner)=false, getRoleAdmin(BLACKLIST_MANAGER_ROLE)=DEFAULT_ADMIN_ROLE, and paused()=false. This positively proves the owner can grant the blacklist role and exercise global pause; no complete census of other role holders, independent-key topology, or timelock protection is asserted. Ethereum lock/unlock logic still preserves canonical shares for representations. Four newly identity-verified HyperEVM/Base/Citrea/Berachain representations have separate pinned blacklist/pause observations in bridgeRouteRisk.routes and the transfer-review fragment. zkSync, deprecated Sophon and Starknet holder-transfer source coverage remains unresolved; this is not an aggregate all-deployment access certificate. Upstream USN reserve access is separate.",
-    "reviewer": "Sol curation campaign 2026-10-09 (W2L28Hydrated)",
-    "reviewedAt": "2026-10-09"
+    "evidence": "Measured at Ethereum block 26224761 and Base block 52800812 (2026-10-19). The canonical Ethereum sUSN proxy 0xe24a3dc889621612422a64e6388927901608b91d reports sUSN and resolves to 0xef2ea4250b7ce4d0aa9ca70607ecef278c6eab15, whose pinned runtime equals the Sourcify exact-match StakingVaultOFTUpgradeableHyperlane runtime; _update is whenNotPaused and rejects blacklisted senders or recipients. owner()=0x1ea169ecccf7714e7ba04900e1a3357cca77327f, hasRole(DEFAULT_ADMIN_ROLE,owner)=true, hasRole(BLACKLIST_MANAGER_ROLE,owner)=false. The BLACKLIST_MANAGER_ROLE has no current member: Etherscan logs show one RoleGranted at block 21130318 (2024-11-06) to 0x173806021b18c4e60170e412dc88f991eb00d699 and one RoleRevoked at block 21836233 (2025-02-12); hasRole for that account and for the owner both return false, and a simulated blacklistAccount call from the owner reverts AccessControlUnauthorizedAccount. The owner can grant the role and pause() succeeds in simulation, so the Ethereum deployment is a direct Possible (global pause plus admin-authorizable blacklist), not a Yes. The asset verdict is set on Base: proxy 0x34a2798d47b238a7cba9d87d49618dee6c4d999f reports symbol sUSN and resolves to verified StakedUSNHyperlane 0xa02ca8c6130b75b320faa785034e95d4374a8942; its owner 0xf56d33ef52642ce226A566610A979DC8d954592D (3-of-N Safe) holds BLACKLIST_MANAGER_ROLE and DEFAULT_ADMIN_ROLE, a simulated blacklistAccount(0x000000000000000000000000000000000000dEaD) from that Safe succeeds, paused()=false, and _update reverts BlacklistedAddress for blacklisted from/to. Supply measured across six deployments totals 34,785,785.28 sUSN: Ethereum 27,416,373.28, Base 6,236,386.24, Berachain 1,007,004.91, HyperEVM 125,658.47, zkSync 215.59, Sophon 146.79. Base is 22.75% of the canonical Ethereum supply and 17.93% of the six-deployment sum; either reading is material. Unread Starknet/Citrea/Tac coverage remains unresolved, and the zkSync and deprecated Sophon deployments are not aggregated into an all-deployment certificate. Upstream USN reserve access is separate.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",

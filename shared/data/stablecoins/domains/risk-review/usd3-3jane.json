@@ -1,7 +1,7 @@
 {
   "id": "usd3-3jane",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "3Jane USD3 source",
@@ -10,10 +10,22 @@
       {
         "label": "Circle USDC smart contract",
         "url": "https://www.circle.com/multi-chain-usdc/ethereum"
+      },
+      {
+        "label": "Exact USD3 proxy",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x056b269eb1f75477a8666ae8c7fe01b64dd55ecc"
+      },
+      {
+        "label": "Current USD3 implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd1f1c3f485063712873285bf4ef25ab068f13893"
+      },
+      {
+        "label": "USD3 ProxyAdmin",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x41c838664a9c64905537ff410333b9f5964cc596"
       }
     ],
-    "evidence": "The reviewed USD3 implementation does not expose a native holder blacklist, but redemptions and reserve liquidity depend on Circle-controlled USDC. A Circle freeze can therefore block the wrapper's reserve or redemption flow, and the upgradeable USD3 implementation is an additional admin surface.",
-    "reviewer": "OpenAI Codex blacklistability review",
-    "reviewedAt": "2026-07-13"
+    "evidence": "Ethereum holds 100% of census supply. At ethereum@26224759 (2026-10-19T06:13:59+00:00), USD3 proxy 0x056b269eb1f75477a8666ae8c7fe01b64dd55ecc has implementation 0xd1f1c3f485063712873285bf4ef25ab068f13893 and ProxyAdmin 0x41c838664a9c64905537ff410333b9f5964cc596, whose owner() is non-zero 0x3d3c41419ab401cd25055e8f9421d7d96d887885. Verified USD3 and inherited transfer code do not establish a native holder blacklist or arbitrary-holder burn. _burnSharesFromSusd3 is specific protocol-account accounting, not unrestricted seizure from arbitrary holders. The assigned transparent-proxy upgrade authority is a direct mutable holder-facing control, therefore Possible rather than Yes. Redemptions and liquidity still depend on Circle-controlled USDC, the declared strategy-vault parent. Published reserve composition is 90.8% private-credit receivables and 9.2% Aave USDC buffer; only the latter is conclusively counted toward the reserve freeze numerator here (9.2/100), without assuming all credit receivables are custodial fiat. Direct Possible takes precedence regardless of additional upstream exposure.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   }
 }

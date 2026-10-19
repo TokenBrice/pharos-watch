@@ -10,11 +10,35 @@
       {
         "label": "Website",
         "url": "https://www.blox.my"
+      },
+      {
+        "label": "Solana SPL mint account (2026-10-19)",
+        "url": "https://explorer.solana.com/address/myrcAs6bpP2g5oGHZ3qpgrfZQAFkbo9KUHdqYDXMjGv"
+      },
+      {
+        "label": "MYRC Squads v4 multisig",
+        "url": "https://explorer.solana.com/address/96eSyXBfZiDmGVgU5VcGxQuoCsWcxXpNQeaG7ECWaraA"
+      },
+      {
+        "label": "Squads v4 vault PDA derivation",
+        "url": "https://raw.githubusercontent.com/Squads-Protocol/v4/main/sdk/multisig/src/pda.ts"
+      },
+      {
+        "label": "Ethereum PublicNode RPC",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Arbitrum PublicNode RPC",
+        "url": "https://arbitrum-one-rpc.publicnode.com"
+      },
+      {
+        "label": "Base PublicNode RPC",
+        "url": "https://base-rpc.publicnode.com"
       }
     ],
-    "evidence": "At finalized Solana slot 452347437 on 2026-10-01, MYRC SPL mint myrcAs6bpP2g5oGHZ3qpgrfZQAFkbo9KUHdqYDXMjGv retained freezeAuthority Df8T8pvEx7WmC4RjBmzcDqLfuKDLf9wWxSzMvQ95Ln4z. This establishes holder-level SPL account-freeze capability on Solana. The off-curve authority derives as vault index 0 of Squads v4 multisig 96eSyXBfZiDmGVgU5VcGxQuoCsWcxXpNQeaG7ECWaraA, with threshold 2-of-4 voting members (seven total members), zero timelock and zero external configuration authority. The controlling Squads program is immutable (ProgramData upgrade authority None); full governance evidence is recorded in the mint-authority sidecar.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurM02USDK)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "At finalized Solana slot 452347437 (2026-10-01) and re-read on 2026-10-19, the MYRC SPL mint myrcAs6bpP2g5oGHZ3qpgrfZQAFkbo9KUHdqYDXMjGv has mintAuthority=freezeAuthority=Df8T8pvEx7WmC4RjBmzcDqLfuKDLf9wWxSzMvQ95Ln4z. The address re-derives as vault index 0, bump 255, of Squads v4 multisig 96eSyXBfZiDmGVgU5VcGxQuoCsWcxXpNQeaG7ECWaraA under program SQDS4ep65T869zMMBKyuUq6aD6EgTu8psMjkvj52pCf; the parsed multisig has threshold 2, time_lock 0, config_authority zero (autonomous configuration), seven members of whom four hold Vote. The freeze authority is therefore an active non-zero holder-targeted SPL control. Deployment materiality: census carries no chainShares, so shares were measured from totalSupply on 2026-10-19 - Ethereum 1,054,500 of 6,365,298.20 MYRC (16.57%), Arbitrum 4,099,598.66 (64.41%), Base 500,000 (7.86%), Solana 711,199.54 (11.17%); the 1,299,856.82 MYR API circulating figure would put Solana at 54.7%. Solana is material under either denominator, so the Solana freeze authority sets the Yes verdict; the immutable non-proxy Ethereum, Arbitrum and Base deployments carry no holder-targeted control and are disclosed, with Base sub-threshold.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",

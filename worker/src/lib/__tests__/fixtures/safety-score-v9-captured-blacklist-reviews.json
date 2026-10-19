@@ -1,0 +1,77 @@
+{
+  "usdt-tether": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Sourcify verified Ethereum USDT source",
+        "url": "https://sourcify.dev/server/v2/contract/1/0xdac17f958d2ee523a2206206994597c13d831ec7?fields=compilation,sources,proxyResolution"
+      },
+      {
+        "label": "Tether Token Terms, updated 2026-02-26",
+        "url": "https://tether.to/en/legal/"
+      }
+    ],
+    "evidence": "The verified canonical Ethereum source exposes owner-only addBlackList, removeBlackList, destroyBlackFunds, pause, and unpause functions. At Ethereum block 26095839, owner() and getOwner() returned the recorded issuer multisig and paused() was false; an unpaused token still retains its pause and blacklist powers. Tether's Token Terms separately reserve the issuer's power to freeze Tether Tokens. This verifies an issuer and token freeze mechanism, not a classification inference.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA01USDT)",
+    "reviewedAt": "2026-10-01"
+  },
+  "usdc-circle": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Circle USDC Terms: Blocklisting",
+        "url": "https://www.circle.com/legal/usdc-terms"
+      },
+      {
+        "label": "Circle Blacklistable reference contract",
+        "url": "https://raw.githubusercontent.com/circlefin/stablecoin-evm/master/contracts/v1/Blacklistable.sol"
+      }
+    ],
+    "evidence": "Circle's USDC Terms reserve the right to block on-chain transfers under its blocklisting policy. At Ethereum block 26095807 on 2026-10-01, blacklister() returned 0x0a06be16275b95a7d2567fbdae118b36c7da78f9 and pauser() returned 0x4914f61d25e5c567143774b76edbf4d5109a8566; paused() was false. This establishes issuer freeze authority, not a current token-wide pause or the key-custody arrangement.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA02USDC)",
+    "reviewedAt": "2026-10-01"
+  },
+  "dai-makerdao": {
+    "reviewedStatus": "inherited",
+    "sources": [
+      {
+        "label": "Ethereum DAI verified source and ABI",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6b175474e89094c44da98b954eedeac495271d0f"
+      },
+      {
+        "label": "Pinned Sky DSS Dai source",
+        "url": "https://github.com/sky-ecosystem/dss/blob/fa4f6630afb0624d04a003e920b0d71a00331d98/src/dai.sol"
+      },
+      {
+        "label": "Sourcify Polygon DAI proxy",
+        "url": "https://sourcify.dev/server/v2/contract/137/0x8f3cf7ad23cd3cadbd9735aff958023239c6a063?fields=all"
+      },
+      {
+        "label": "Sourcify Polygon UChildDAI implementation",
+        "url": "https://sourcify.dev/server/v2/contract/137/0x490e379c9cff64944be82b849f8fd5972c7999a7?fields=abi,metadata,sources"
+      },
+      {
+        "label": "Ethereum PublicNode RPC",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Polygon PublicNode RPC",
+        "url": "https://polygon-bor-rpc.publicnode.com"
+      },
+      {
+        "label": "Skybase International terms",
+        "url": "https://docs.sky.money/legal/skybase-international/terms-of-use"
+      }
+    ],
+    "evidence": "At Ethereum block 25711852 (2026-08-08T17:51:23Z), canonical DAI was live non-proxy bytecode and both EIP-1967 implementation and admin slots were zero. Its exact verified source exposes ordinary holder transfer/transferFrom/permit operations and ward-gated mint. burn(address,uint256) is not auth-gated: a caller may burn another holder's balance only with that holder's allowance, so wards have no arbitrary-holder burn or seizure path. The source contains no blacklist, freeze, or global transfer-pause mechanism. At Polygon block 91670976 (2026-08-08T17:51:31Z), the material child proxy returned proxyOwner() = 0x0000000000000000000000000000000000000001 and implementation() = 0x490e379c9cff64944be82b849f8fd5972c7999a7; paused() and isBlacklisted(address) reverted, and the exact implementation source contains no holder restriction mechanism. Skybase's terms state that its interface is distinct from the Sky Protocol and that Skybase does not control or operate the protocol, so they establish no issuer-level power to freeze DAI holders. Reserve-leg and bridge custody censorship remain upstream risks, not direct DAI holder-freeze powers.",
+    "reviewer": "OpenAI Codex C01 control wave",
+    "reviewedAt": "2026-08-08"
+  },
+  "susdt-spark": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
+    "evidence": "spUSDT retains upstream Tether freeze exposure: asset() on the Ethereum vault returned native USDT and asset() on Arbitrum returned USDT0 at pinned blocks 26095794 and 510584053 on 2026-10-01. Spark also documents full USDS economic backing and downstream strategy deployment, so USDT is the deposit asset rather than the only reserve exposure.",
+    "reviewer": "Sol curation pass 2026-10-01 (CurA35spUSDT)",
+    "reviewedAt": "2026-10-01"
+  }
+}

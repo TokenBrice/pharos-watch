@@ -10,11 +10,27 @@
       {
         "label": "Monerium Token.sol: owner-selected transfer validator",
         "url": "https://github.com/monerium/smart-contracts/blob/main/src/Token.sol"
+      },
+      {
+        "label": "Gnosis GBPe token",
+        "url": "https://gnosisscan.io/address/0x8e34bfec4f6eb781f9743d9b4af99cd23f9b7053"
+      },
+      {
+        "label": "Arbitrum GBPe token",
+        "url": "https://arbiscan.io/address/0x2d80dbf04d0802abd7a342dafa5d7cb42bfbb52f"
+      },
+      {
+        "label": "Base GBPe token",
+        "url": "https://basescan.org/address/0xc4759ed641da77cbdc9fa2f37e9260a29bf7cc52"
+      },
+      {
+        "label": "Polygon GBPe token",
+        "url": "https://polygonscan.com/address/0x646beea7a02fdada34c8e118949fe32350ab2206"
       }
     ],
-    "evidence": "Monerium's issuer repository explicitly documents administrator blacklisting that prevents addresses from transferring or receiving tokens, shared between its tokens within a deployment environment. Its current Token.sol invokes an owner-selected validator before transfer and transferFrom. This supports the retained Yes review from a primary issuer disclosure rather than inference from centralized governance. On 2026-10-01, owner and implementation-slot reads across all six tracked GBPe deployments matched the recorded issuer-controlled owner paths. The public repository describes the control design; it is not an independently reproduced bytecode-to-source match for every historical v1/v2 deployment, nor a census of currently frozen holders. Failure domain is Monerium's token/validator administration, distinct from offchain safeguarding-provider failures.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "evidence": "GBPe is directly restrictable through Monerium's owner-selected transfer validator on four of its six deployments, and GBPe's live supply has no published chain split, so every deployment is treated as material fail-closed. At 2026-10-19 the asset's live circulating supply was 674,435.71 GBPe. Pinned reads: Gnosis 0x8e34bfec4f6eb781f9743d9b4af99cd23f9b7053 at block 48832865 has owner()=0x8001EA269cb9715Bf7acFf89c664ffC134A519ec and validator()=0xfE74A522768547be33A3ad40B999381d57f238A0; Arbitrum 0x2d80dbf04d0802abd7a342dafa5d7cb42bfbb52f at block 516204969 has owner()=0xD4d43A82708261F2995f7Ba65319d8664B992A96 and validator()=0xbf932187C26222b79943CBB93F78159Fef2743c6; Base 0xc4759ed641da77cbdc9fa2f37e9260a29bf7cc52 at block 52800746 has owner()=0x8001EA269cb9715Bf7acFf89c664ffC134A519ec and validator()=0xb84a88F60C9d67e2c83846F2efEcBc00F534fc51; Polygon 0x646beea7a02fdada34c8e118949fe32350ab2206 at block 95790330 has owner()=0x8001EA269cb9715Bf7acFf89c664ffC134A519ec and validator()=0x1A5C1C937B9b594b1f02077829678fbe169DdB5f. Monerium's Token.sol routes transfer() and transferFrom() through validator.validate(from,to,amount), so the owner-chosen validator can deny named senders and recipients; setValidator is onlyOwner. The Ethereum 0x7ba92741bf2a568abc6f1d3413c58c6e0244f8fd and Linea 0x3bce82cf1a2bc357f956dd494713fe11dc54780f deployments expose owner() (0x5591A6495d726C7EFafb9a9DAD32695D137b4d9f and 0x8001EA269cb9715Bf7acFf89c664ffC134A519ec respectively) but not the validator() getter, consistent with older v1 deployments. The 100% GBP safeguarded-funds reserve base would independently resolve upstream if the direct control were absent, but it is not needed for this verdict. Direct holder-targeted control on material deployments therefore keeps the status Yes.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

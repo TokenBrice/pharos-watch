@@ -1,7 +1,7 @@
 {
   "id": "usdcx-movement",
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "USDCx live TransferRef and admin at ledger 220370475; re-observed 2026-10-09T10:36:29Z by Sol curation campaign 2026-10-09 (Lane15Securitize)",
@@ -30,11 +30,15 @@
       {
         "label": "Movement USDCx admin multisig resources (3-of-6) re-read 2026-10-01",
         "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0x98ebb7985c84a89972022edf391bdaa7d95f061d9742efb3703de368413431e1/resources?ledger_version=220370475"
+      },
+      {
+        "label": "USDCx actual deployed package ABI at ledger 220370475",
+        "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0x4989d2b05833820092401455cb689460b861e7f34b761f58b07a4910bd847f83/modules?ledger_version=220370475"
       }
     ],
-    "evidence": "At Movement ledger version 220370475 (block height 97379184), the token's Roles.admin and its actual package 0x4989d2b05833820092401455cb689460b861e7f34b761f58b07a4910bd847f83 ObjectCore.owner resolve to 0x98ebb7985c84a89972022edf391bdaa7d95f061d9742efb3703de368413431e1. That account now requires 3 signatures over 6 owners, replacing the historical 4-of-6 observation. PackageRegistry records compatible upgrade policy 1, upgrade_number 0, published source, and source_digest 780F94E9BB25259CB190418FB9D76BE1CBC8E0DB4353BD8E671A3456CF4E864B. The deployed ABI exposes no holder-selective freeze or seizure entry point; the published source stores TransferRef without using it and gates mint/burn on pause. Source publication alone is not bytecode equivalence proof. The 100% USDC collateral retains the named upstream Circle blacklist exposure, so the inherited verdict is preserved; compatible upgrades remain an adverse local control.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurM07yvUSDC1.MovementReview)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "The sole authored Movement deployment is USDCx metadata 0xba11833544a2f99eec743f41a228ca6ffa7f13c3b6b04681d5a79a8b75ff225e, so its control surface is material (100% of this exact native token liability; the market feed has no per-chain circulation). At Movement ledger version 220370475, block height 97379184 (2026-10-01T07:20:38.443072+00:00), Roles.admin and actual package 0x4989d2b05833820092401455cb689460b861e7f34b761f58b07a4910bd847f83 ObjectCore.owner are 0x98ebb7985c84a89972022edf391bdaa7d95f061d9742efb3703de368413431e1; its MultisigAccount requires 3 signatures from 6 owners, replacing the historical 4-of-6 observation. PackageRegistry records compatible upgrade policy 1, upgrade_number 0 and source_digest 780F94E9BB25259CB190418FB9D76BE1CBC8E0DB4353BD8E671A3456CF4E864B. This non-renounced package-upgrade authority is a direct mutable holder-facing token surface, so the verdict is Possible, not inherited. The deployed ABI exposes no holder-selective freeze or seizure entry point; published source stores TransferRef without using it and pause gates mint/burn rather than ordinary transfers. Published source is not a source-to-bytecode equivalence proof, so no active direct freeze is asserted. The declared USDC mint parent and 100% Circle USDC backing in xReserve retain upstream issuer-freeze exposure, but direct Possible takes precedence.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

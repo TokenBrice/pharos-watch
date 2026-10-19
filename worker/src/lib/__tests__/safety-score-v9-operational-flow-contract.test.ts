@@ -868,7 +868,9 @@ describe("v10.05 source-bound operational and voting compilation", () => {
 
   it("keeps GHO's chosen-recipient Council mint at 25 with no operational grant", () => {
     const profile = MintAuthorityProfileSchema.parse(ghoSidecar.mintAuthority);
-    const { asset, process } = compile(profile, "gho-aave", [], ACTIVE_META_BY_ID.get("gho-aave")!);
+    const { asset, process } = compile(profile, "gho-aave", [], {
+      ...ACTIVE_META_BY_ID.get("gho-aave")!, blacklistabilityReview: undefined,
+    });
     expect(process).toBeUndefined();
     const result = evaluateV9EconomicControl(makeEconomicControlArgs({ facts: asset, mint: asset.economicControlReview.mint }));
     expect(result.components.filter((component) => component.kind === "mint").map((component) => ({ score: component.score }))).toEqual(expect.arrayContaining([expect.objectContaining({ score: 25 })]));

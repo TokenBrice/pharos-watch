@@ -1,8 +1,7 @@
 {
   "id": "xusd-babelfish",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
-    "evidence": "Re-verified 2026-08-08 at Rootstock block 9134338: direct non-proxy XUSD token 0xb5999795be0ebb5bab23144aa5fd6a02d080299f returned owner 0x1440d19436beeaf8517896bffb957a88ec95a00f. The token's owner-only burn(address,uint256) path destroys the supplied holder balance without an allowance check. The owner is the masset manager proxy, whose current EIP-1967 implementation and admin slots resolve to 0x92d7ad53b2d824277d22877d5299c2af479da322 and 0x37a706259f5201c03f6cb556a960f30f86842d01. The live manager route and its upgrade admin can therefore exercise or preserve arbitrary holder burns; that direct seizure mechanism is independently sufficient for true.",
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "BabelFish XUSD overview",
@@ -21,7 +20,8 @@
         "url": "https://public-node.rsk.co"
       }
     ],
-    "reviewer": "Codex C08 control/access audit",
-    "reviewedAt": "2026-08-08"
+    "evidence": "The traced redeemToBridge route is caller-self only; it does not establish that every current manager route is self-only. The manager implementation has no verified source at the explorer/Sourcify endpoints, so arbitrary-holder reachability through current code and current proxy-admin membership remain unresolved. The upgradeable manager control makes Possible under the binding policy.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   }
 }

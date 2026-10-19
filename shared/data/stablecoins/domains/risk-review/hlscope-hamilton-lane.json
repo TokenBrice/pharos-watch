@@ -10,11 +10,39 @@
       {
         "label": "Hamilton Lane",
         "url": "https://www.hamiltonlane.com/"
+      },
+      {
+        "label": "Verified Polygon current DSToken implementation",
+        "url": "https://polygonscan.com/address/0x5e98857d4bd2b3569a87c0f226e2c961aae02e0b#code"
+      },
+      {
+        "label": "Polygon HLSCOPE token",
+        "url": "https://polygonscan.com/address/0x4c5ca366e26409845624e29b62c388a06961a792"
+      },
+      {
+        "label": "Pinned Polygon role and supply state",
+        "url": "https://polygonscan.com/block/95790138"
+      },
+      {
+        "label": "Ethereum exact current DSToken implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa2f6ef3144753f31fcd728910b96a92bbbb462c9"
+      },
+      {
+        "label": "HLSCOPE Securitize fund announcement",
+        "url": "https://www.hamiltonlane.com/en-us/news/scope-available-via-securitize"
+      },
+      {
+        "label": "Multichain issuer announcement",
+        "url": "https://wormhole.com/blog/hamilton-lane-expands-scope-fund-multichain-with-securitize-and-wormhole"
+      },
+      {
+        "label": "Tron head reads and block context",
+        "url": "https://api.trongrid.io/wallet/triggerconstantcontract"
       }
     ],
-    "evidence": "HLSCOPE is issued through permissioned fund or issuer rails with KYC-gated primary-market access and issuer/admin controls over transfer, mint, redemption, or token administration.",
-    "reviewer": "Codex 2026-05-14 execution-ready expansion",
-    "reviewedAt": "2026-05-14"
+    "evidence": "Reviewed 2026-10-19. HLSCOPE is a permissioned Securitize fund share, but KYC-only primary access is not the basis for Yes. All five catalogued native contracts were measured: Polygon totalSupply 3,131,897,107 raw units at block 95790138 (2026-10-19T06:15:54Z), Ethereum 148,249,194 at block 26224768 (06:15:47Z), Optimism 0 at block 158395888 (06:15:53Z), Plume 16,267,368 at block 100304388 (06:15:54Z), and Tron 20,008,680 in an adjacent head observation at approximately 06:15:56Z (not a pinned eth_call). The 3,316,422,349-unit gross native-supply denominator places Polygon at approximately 94.436%, with each other deployment below 10%; no separately reconciled circulating or bridge-lock-adjusted denominator is available from census. On material Polygon token 0x4c5ca366e26409845624e29b62c388a06961a792, implementation 0x5e98857d4bd2b3569a87c0f226e2c961aae02e0b is verified DSToken. At the pinned Polygon block, owner 0x59c1eacec450c57dcb9b8725d0f96635c2b676ee held MASTER role 1 in trust service 0xe55ef49e8c205bd4b640f30beb70e00fe1b877ee. The current implementation authorizes MASTER to seize arbitrary holder balances with seize(from,to,value,reason) and burn selected holders via burn(who,value,reason), without allowance. transfer/transferFrom additionally call issuer-controlled compliance validation. Those active material holder-targeted controls establish Yes independently of fund-reserve custody. Ethereum, Optimism, Plume and Tron issuer-native controls are disclosed as sub-threshold rather than verdict-setting. There is no tracked parent; the declared reserve book is 100% the custodial SCOPE feeder/Main Fund claim. No historical freeze event is asserted.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",

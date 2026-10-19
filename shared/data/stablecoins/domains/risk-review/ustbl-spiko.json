@@ -6,11 +6,35 @@
       {
         "label": "Spiko website",
         "url": "https://www.spiko.io/"
+      },
+      {
+        "label": "Verified Ethereum Spiko Token implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74"
+      },
+      {
+        "label": "Spiko Stellar token source",
+        "url": "https://github.com/spiko-tech/stellar-contracts"
+      },
+      {
+        "label": "Stellar USTBL contract and supply",
+        "url": "https://stellar.expert/explorer/public/contract/CARUUX2FZNPH6DGJOEUFSIUQWYHNL5AVDV7PMVSHWL7OBYIBFC76F4TO"
+      },
+      {
+        "label": "Ethereum observation block 26224761",
+        "url": "https://etherscan.io/block/26224761"
+      },
+      {
+        "label": "Arbitrum observation block 516204261",
+        "url": "https://arbiscan.io/block/516204261"
+      },
+      {
+        "label": "Polygon observation block 95790196",
+        "url": "https://polygonscan.com/block/95790196"
       }
     ],
-    "evidence": "Spiko acts as transfer agent for USTBL with permissioned ERC-1967 upgradeable proxy and KYC-gated transfers, retaining freeze and burn authority over fund shares.",
-    "reviewer": "Codex RWA expansion review",
-    "reviewedAt": "2026-05-12"
+    "evidence": "Re-reviewed 2026-10-19. Three deployments are material. Ethereum 0xe4880249745eac5f1ed9d8f7df844792d560e750 runs verified Token implementation 0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74; Token._update requires PermissionManager.canCall(from/to, token, 0xa9059cbb), and the implementation exposes restricted pause(), restricted burn(address,uint256) from an arbitrary holder and restricted UUPS upgrade. At Ethereum block 26224761 (2026-10-19T06:14:23Z) authority 0x344278aff344d6fb960705dc18a4912221608472 returned getRequirements(token,0xa9059cbb)=65, canCall(whitelisted holder)=true and canCall(0x...0001)=false; a holder-to-non-holder transfer reverted with UnauthorizedTo 0xb77a4ad1, and group 0 is held by 3/3 Safe 0x4eaa52b6280593a8820c45ce38f974290ae52cea. Arbitrum 0xa925C217e4c1C82Ee721eBD496d3863D5C2d829A (group-0 Safe 0x7843225ba488cf780a4fe2c842b5dc2abcf8a03e) and Polygon 0x344278... (group-0 Safe 0xa4196f06fe948b8ca81d3dc77110d3f83d10abd9) enforce the same requirement at blocks 516204261 and 95790196. Stellar USTBL CARUUX2FZNPH6DGJOEUFSIUQWYHNL5AVDV7PMVSHWL7OBYIBFC76F4TO requires WHITELISTED_ROLE on both transfer parties, burns an arbitrary account under BURNER_ROLE, and its production address is the issuer's registered USTBL contract. At Soroban ledger 65021030 (2026-10-19T06:22:13Z) has_role returned WLISTER Some(0) for GD2ELXTHZQORSH75SJE6XRTCKXNDGJFIZ4R2SZ4MMXDOBT52GK26X4EO and Some(1) for GAUYO4UAESQD6SGZDPOIG2ADT7EZTR5EJ7HSX4CYCWS2JMMGQOCL4QCX, BURNER Some(0) for CAVZK26ERVGKGXLQGEOKPAQGIZS2YKN4BSXOYDMUY365EV66ZNSFEDBS, and its permission-manager history includes role_revoked|WLISTED. Materiality: measured totalSupply at 2026-10-19 is 15,007,405,390,587 raw 5-decimal units: Ethereum 7,371,958,305,153 (49.12%), Stellar 2,974,633,877,350 (19.82%), Arbitrum 1,952,610,891,628 (13.01%), Polygon 1,270,414,223,786 (8.47%), Starknet 995,586,823,897 (6.63%), Etherlink 286,890,570,200 (1.91%), Base 155,310,698,573 (1.03%) and Solana zero. The three material deployments are directly controlled. There is no declared parent; the reserve test (100% Spiko US T-Bills fund NAV) is not reached because direct holder controls are established.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",

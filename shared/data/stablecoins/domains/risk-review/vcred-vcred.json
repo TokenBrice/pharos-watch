@@ -14,11 +14,15 @@
       {
         "label": "Hemi public RPC observation block 4965111",
         "url": "https://rpc.hemi.network/rpc"
+      },
+      {
+        "label": "VCRED linked product website",
+        "url": "https://vcred.trade/"
       }
     ],
-    "evidence": "Re-reviewed 2026-07-30. Sole catalogued deployment is Hemi 0x7188…0aa1. Verified source (explorer API) is OpenZeppelin ERC20 + ERC20Burnable + Ownable and states free transferability; onlyOwner mint(address,uint256) is the sole privileged path; burn paths are the stock holder/allowance burns (burn(uint256) present; no burn(address,uint256) onlyOwner seize). At Hemi block 4965111: non-proxy (EIP-1967 implementation/admin slots zero); owner()=Safe 0x3ede…75Be; bytecode lacks pause/paused/isBlacklisted/blacklist/freeze/setOperator selectors. No upstream stablecoin wrapper inheritance. Freeze reach is none; transfer posture is permissionless. Transfer categorical publication still requires chainCirculatingById for material deployment scope.",
-    "reviewer": "Grok T55 access review",
-    "reviewedAt": "2026-07-30"
+    "evidence": "Re-reviewed 2026-07-30. Sole catalogued deployment is Hemi 0x7188…0aa1. Verified source (explorer API) is OpenZeppelin ERC20 + ERC20Burnable + Ownable and states free transferability; onlyOwner mint(address,uint256) is the sole privileged path; burn paths are the stock holder/allowance burns (burn(uint256) present; no burn(address,uint256) onlyOwner seize). At Hemi block 4965111: non-proxy (EIP-1967 implementation/admin slots zero); owner()=Safe 0x3ede…75Be; bytecode lacks pause/paused/isBlacklisted/blacklist/freeze/setOperator selectors. No upstream stablecoin wrapper inheritance. Freeze reach is none; transfer posture is permissionless. Transfer categorical publication still requires chainCirculatingById for material deployment scope. The 2026-10-19 census now assigns 100% of circulation to Hemi, resolving the deployment-scope caveat. Reopened verified VCRED source confirms the only privileged token method is onlyOwner mint(address,uint256), with standard holder/allowance burns and no collateral or redemption implementation. At Hemi block 5543658 (2026-10-19T06:16:47Z), owner() returned 0x3edeef3ae2e9aa5b55e5ce4d324f9c24165c75be. Neither variantOf nor inherited mint parent is declared. The 2026-10-02 reserve review states that the exact Hemi token has no verified reserve assets, custody, weights, or token-to-vault claim. Therefore reserve exposure is unmeasured, bounded 0%-100%, not proven zero and not proven strictly above 50%. Under the strict unresolved-reserve reading, retain No with low confidence pending evidence; do not infer Upstream from missing composition.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "opaque-or-unknown",

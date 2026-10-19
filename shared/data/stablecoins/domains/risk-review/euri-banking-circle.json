@@ -2,10 +2,28 @@
   "id": "euri-banking-circle",
   "blacklistabilityReview": {
     "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Verified EURI Stablecoin implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x039a26c8239d6D0C8d8fbDc6e60A6cC465D6712d"
+      },
+      {
+        "label": "Pinned Ethereum JSON-RPC reads",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
+      },
+      {
+        "label": "Pinned BSC JSON-RPC reads",
+        "url": "https://bsc-dataseed.binance.org"
+      },
+      {
+        "label": "Pharos deployment shares observed 2026-10-19",
+        "url": "https://api.pharos.watch/api/stablecoins"
+      }
+    ],
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: EURI resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "evidence": "EURI resolves Yes on a direct holder freeze. Ethereum holds 91.0504% of circulating supply (2026-10-19 census); BSC 8.9496% is sub-threshold. At Ethereum block 26224780 (2026-10-19T06:18:11Z, 0x9076bf82c0ff881700033ffa57572090f362c3b3df43d90ac3ce2ef31172a97d), EURI 0x9d1a7a3191102e9f900faa10540837ba84dcbae7 is a TransparentUpgradeableProxy over verified Stablecoin implementation 0x039a26c8239d6D0C8d8fbDc6e60A6cC465D6712d; owner()=0xfCa77c0891578E371EE9ff34d6F653d8EC3d9e9d (nonzero), paused()=false, totalSupply()=30,172,855.04 EURI. freeze(address) and unfreeze(address) are onlyOwner, frozen[] is checked in both _transfer and _approve, and pause()/unpause() are onlyOwner, so the issuer can stop a named holder's transfers. The BSC deployment at the same address has the same owner, is unpaused, and holds 2,965,762.4499 EURI. Reserves are 100% EUR cash and cash equivalents in Banking Circle's fiduciary estate, which would independently qualify as custodial upstream exposure, but the direct control decides.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

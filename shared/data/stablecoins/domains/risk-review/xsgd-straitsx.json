@@ -2,10 +2,36 @@
   "id": "xsgd-straitsx",
   "blacklistabilityReview": {
     "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Ethereum XSGD token",
+        "url": "https://etherscan.io/address/0x70e8de73ce538da2beed35d14187f6959a8eca96"
+      },
+      {
+        "label": "Polygon XSGD token",
+        "url": "https://polygonscan.com/address/0xdc3326e71d45186f113a2f448984ca0e8d201995"
+      },
+      {
+        "label": "Avalanche XSGD token",
+        "url": "https://snowtrace.io/address/0xb2f85b7ab3c2b6f62df06de6ae7d09c010a5096e"
+      },
+      {
+        "label": "Ethereum public RPC (block 26224762)",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Polygon public RPC (block 95790102)",
+        "url": "https://polygon-bor-rpc.publicnode.com"
+      },
+      {
+        "label": "Avalanche public RPC (block 97944258)",
+        "url": "https://api.avax.network/ext/bc/C/rpc"
+      }
+    ],
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: XSGD resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "evidence": "XSGD is directly blacklistable on all three material deployments. Ethereum holds 69.36% of circulating supply (2026-10-19 census) at 0x70e8de73ce538da2beed35d14187f6959a8eca96; at Ethereum block 26224762 blacklister() was 0x7081b2058A879eEcF90F025cFC4dE1B828178CA4 (non-zero), owner() 0x9bd41d6CAA1Ad2bE20Ea48C5f4Be3C180522F964, masterMinter() 0x4a423F581dF9A7575FBe9cf22013638E8DbbE273, and paused() false. Polygon holds 12.11% at 0xdc3326e71d45186f113a2f448984ca0e8d201995; at Polygon block 95790102 blacklister() was 0x0ebC01bA1cFcca0f502c2968E0f08890C210815d (non-zero), owner() 0x0Abf5f8cF954E174310B63BD1571eF6ae64CD5C4, masterMinter() 0xd75c83E8A0fB2bAb20AC89aEaaeb1B2f6FAa1878, and paused() false. Avalanche holds 10.52% at 0xb2f85b7ab3c2b6f62df06de6ae7d09c010a5096e; at Avalanche block 97944258 blacklister() was 0x5862AA12dD265bC8687A07Ecc18ED8221362eA2c (non-zero), owner() 0x76bD5f5B1cef12637Ef876D018B5DEF4A031eA01, masterMinter() 0x9290A4C35217e0a6b67A48596867C58A8D467787, and paused() false. These are Circle-style FiatToken surfaces that expose blacklist/unBlacklist to the assigned blacklister, enabling the issuer to deny named holders. Zilliqa (7.53%), Hedera (0.30%), Arbitrum (0.13%) and XRPL (0.06%) are below the 10% materiality threshold; their issuer controls are disclosed but do not set the verdict. No parent or reserve test applies because a direct holder-targeted control is active on every material deployment.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

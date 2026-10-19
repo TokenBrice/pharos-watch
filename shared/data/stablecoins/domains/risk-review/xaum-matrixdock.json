@@ -6,11 +6,27 @@
       {
         "label": "Verified Ethereum MToken implementation",
         "url": "https://sourcify.dev/server/v2/contract/1/0x3194e478b6d3ebee969470295f271727b62adf7b?fields=sources,compilation,abi"
+      },
+      {
+        "label": "Exact current Ethereum proxy",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2103e845c5e135493bb6c2a4f0b8651956ea8682"
+      },
+      {
+        "label": "Verified current MToken implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3194e478b6D3eBEe969470295F271727B62Adf7b"
+      },
+      {
+        "label": "Ethereum role/supply pin",
+        "url": "https://etherscan.io/block/26224762"
+      },
+      {
+        "label": "Near-contemporaneous global circulating supply",
+        "url": "https://api.coingecko.com/api/v3/coins/matrixdock-gold?localization=false&tickers=false&community_data=false&developer_data=false"
       }
     ],
-    "evidence": "At Ethereum block 26095797, the XAUm proxy still resolves to implementation 0x3194e478b6d3ebee969470295f271727b62adf7b. Its verified MToken source exposes operator-only addToBlockedList and removeFromBlockedList. transfer blocks a listed caller; transferFrom blocks a listed caller or sender. Receiving transfers and NFT pack/unpack bypass those checks by design, so this is a scoped outgoing-transfer freeze rather than a universal address lock.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurA47sGHO)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "At Ethereum@26224762 (2026-10-19T06:14:35+00:00; 0xef45b71f129dac5f794f4506dee4ca47f3cdd7e41c6e75f53d66512c8c505fc5), Ethereum XAUm proxy 0x2103e845c5e135493bb6c2a4f0b8651956ea8682 resolves to verified MTokenMain implementation 0x3194e478b6d3ebee969470295f271727b62adf7b. operator()=0x89bb23e4a82e04a253d9f11767fedf321c127799 and owner()=0xb573c94260582f0715fc477928b04a2708dd36d7; eth_getCode returns 0x for both assigned holders, so the restriction roles are currently assigned EOAs, not empty lists or unreachable contracts. Operator-only addToBlockedList sets isBlocked and emits BlockPlaced; transfer rejects a blocked caller, and transferFrom rejects a blocked caller or sender. NFT pack/unpack can bypass those checks; receiving transfers is allowed by design, so this is a scoped outgoing-transfer freeze rather than a universal address lock. Pinned Ethereum totalSupply is 5410.617319052064 tokens. CoinGecko's global circulating supply 17006.285626846999 at 2026-10-19T06:16:57Z gives an approximate Ethereum share of 31.8154%, comfortably above the 10% materiality threshold. The Pharos census's zero circulation is therefore not evidence of an inactive deployment. Global supply is a near-contemporaneous provider observation, not an on-chain global pin. Other chain controls need not determine a verdict once this material assigned holder-targeted control is established; no reserve or parent inheritance is used to infer Yes.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",

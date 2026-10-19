@@ -1,16 +1,36 @@
 {
   "id": "usdx-axis",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "possible",
     "sources": [
-      { "label": "Axis token restrictions and transfer enforcement", "url": "https://docs.axis.to/reference/access-control.md" },
-      { "label": "Axis canonical USDx deployment", "url": "https://docs.axis.to/reference/contract-addresses.md" },
-      { "label": "Verified USDx transfer enforcement", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7c4ba7477f180b0370338f722c3717b3fbfda1c6" },
-      { "label": "Complete token role census, Ethereum 26197360 at 2026-10-15T10:37:11Z", "url": "https://etherscan.io/block/26197360" }
+      {
+        "label": "Axis token restrictions and transfer enforcement",
+        "url": "https://docs.axis.to/reference/access-control.md"
+      },
+      {
+        "label": "Axis canonical USDx deployment",
+        "url": "https://docs.axis.to/reference/contract-addresses.md"
+      },
+      {
+        "label": "Verified USDx transfer enforcement",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7c4ba7477f180b0370338f722c3717b3fbfda1c6"
+      },
+      {
+        "label": "Complete token role census, Ethereum 26197360 at 2026-10-15T10:37:11Z",
+        "url": "https://etherscan.io/block/26197360"
+      },
+      {
+        "label": "Ethereum observation block 26224761, 2026-10-19T06:14:23Z",
+        "url": "https://etherscan.io/block/26224761"
+      },
+      {
+        "label": "Role history and admin grant surface",
+        "url": "https://etherscan.io/address/0xa1fa7777974312f7d801a8880714a218f76233f8#events"
+      }
     ],
-    "evidence": "Canonical V2 USDx gates blacklist/unBlacklist with RESTRICTION_ROLE. All balance changes pass through _update restriction and pause checks; transferFrom also checks the spender. The runtime at Ethereum block 26197360 (2026-10-15T10:37:11Z) matches the verified implementation. Complete deployment-to-pin role history finds no active RESTRICTION_ROLE or PAUSER_ROLE holder, contrary to the issuer's generic Compliance-role description, but the governance Safe can grant either immediately. The verdict records admin-grantable direct transfer-freeze capability, not an active staffed restriction role or token seizure. Pinned RPC: https://api-ethereum-mainnet.n.dwellir.com.",
-    "reviewer": "Batch-64 review 2026-10-15 (Rev_UsdxAxis)",
-    "reviewedAt": "2026-10-15"
+    "evidence": "Re-reviewed 2026-10-19. USDx has one canonical deployment, Ethereum 0xa1fa7777974312f7d801a8880714a218f76233f8, with totalSupply 67,043,373.720829 USDx (18 decimals) at block 26224761 (2026-10-19T06:14:23Z): 100% of supply, so the deployment is material. The runtime resolves through the EIP-1967 implementation slot to verified USDx 0x7c4ba7477f180b0370338f722c3717b3fbfda1c6; the proxy admin slot holds 0xde4552a601e0424bdf5407b2b465d63a3df6a271 (ProxyAdmin, owner 0xd6BB04711E41aa41b9130Ad41eE6884755914c0b), so the implementation is admin-replaceable. USDx._update reverts while _paused and reverts for a blacklisted from or to; blacklist(address) and unBlacklist(address) are gated onlyRole(RESTRICTION_ROLE), pause()/unpause() onlyRole(PAUSER_ROLE), and transferFrom/burnFrom additionally reject a blacklisted spender. At block 26224761, hasRole(RESTRICTION_ROLE,0xdeb538917b1c1ae6b81550a6c42a66d818cc6d6d)=false and hasRole(PAUSER_ROLE,0xdeb538...)=false; the deployment's RoleGranted history contains no grant of either role, and paused()=false. DEFAULT_ADMIN_ROLE is held by 0xdeb538917b1c1ae6b81550a6c42a66d818cc6d6d (3/3 Safe). A grantRole(RESTRICTION_ROLE,0xdeb538...) call simulated from that admin succeeds, while blacklist(...) from the admin reverts AccessControlUnauthorizedAccount, and pause() from a random caller reverts. The active holder-targeted blacklist and pause functions therefore exist but have no assigned operator; the governance Safe can install one immediately, and the proxy admin can replace the implementation. Under the FreezeWatch decision procedure (docs/blacklist-tracker.md), this is a direct Possible, not Yes: no active holder-targeted control on the material deployment, but an admin-grantable freeze surface and an admin-upgradeable token. No declared parent; reserve composition is not determinative because a direct Possible surface is established.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "privileged-internal-pricing",

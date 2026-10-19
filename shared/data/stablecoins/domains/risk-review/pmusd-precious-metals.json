@@ -1,7 +1,7 @@
 {
   "id": "pmusd-precious-metals",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Current FractionalToken implementation",
@@ -14,11 +14,15 @@
       {
         "label": "Current permissioned Market implementation",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x11b21afa735e24683f0912d9f6f8a8bfabbeb10e"
+      },
+      {
+        "label": "Ethereum pinned proxy and ProxyAdmin state",
+        "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
-    "evidence": "At Ethereum block 0x18e35e4, the deployed token, Treasury and Market resolve to the cited implementations. Current Market redemption requires MANAGER_ROLE and burns only msg.sender through Treasury; the token's treasury-only burn primitive alone does not establish arbitrary third-party seizure. The RAAC Safe holds Market DEFAULT_ADMIN_ROLE and can directly grant/revoke manager access. It does not currently hold EMERGENCY_DAO_ROLE, but its admin can regrant that role for the current pauseRedeem path without an upgrade. Arbitrary transfer freezing or seizure added through replacement logic is a separate future-upgrade capability of the Safe-owned ProxyAdmin. The adverse access verdict is retained for the executable permissioning and restorable pause paths, not a centralization-only inference.",
-    "reviewer": "Sol curation pass 2026-10-01 (RuleC15)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "Reviewed 2026-10-19. pmUSD is 100% on Ethereum (census). At Ethereum block 26224787, proxy 0xc0c17dd08263c16f6b64e772fb9b723bf1344ddf resolves to verified FractionalToken implementation 0x32d93b015562cc8da0ef3ccbccc3f8e1da8541d8; the ProxyAdmin 0x89ab60d8fcd674b2b0b308e7fa63ff84a2682ce2 is owned by RAAC Safe 0xCa3144AAD1f75557E68B16C8C7e893112418f13C. The current token exposes no blacklist, denylist, freeze, seizure, transfer-pause or arbitrary-burn selector. Its burn(address,uint256) is onlyTreasury; Treasury.redeem is onlyMarket and Market.redeem passes msg.sender as the burn owner, so manager redemption cannot burn another holder's balance. The RAAC Safe can still replace the token implementation at will, and it can regrant EMERGENCY_DAO_ROLE to re-enable the Market's pauseRedeem path. Those are direct holder-facing Possible controls, not an active Yes.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "single-source-or-laggy",

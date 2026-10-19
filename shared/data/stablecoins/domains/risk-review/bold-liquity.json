@@ -16,9 +16,9 @@
         "url": "https://docs.chain.link/ccip/directory/mainnet/token/BOLD"
       }
     ],
-    "evidence": "The immutable Ethereum BOLD token has renounced ownership and limits minting and burning to registered Liquity branch contracts; its verified source exposes no holder blacklist, freeze, seizure, or global pause. Non-Ethereum BOLD is transported through reviewed Chainlink CCIP lock/release and burn/mint pools, which control bridge supply but do not establish an issuer-operated holder blacklist on the canonical token.",
-    "reviewer": "SONG Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "Ethereum 0x6440f144b7e50d6a8439336510312d2f54beb01d accounts for 99.5097% of circulating BOLD in the 2026-10-19 census and is the sole material deployment (10% threshold). At Ethereum block 26224667 (2026-10-19T05:55:35Z), owner() was zero. The verified non-proxy BoldToken has no administrative holder blacklist, freeze, seizure, global transfer pause, or token-upgrade path; mint/burn and pool transfers are restricted to fixed Liquity settlement contracts, not an issuer-controlled arbitrary-holder operator. Non-Ethereum BOLD uses Chainlink CCIP lock/release and burn/mint pools; reviewed Optimism BurnMintERC20 (0.4%) has mint/burn roles, but burnFrom spends holder allowance, and the source has no transfer pause/denylist. All satellite supply totals 0.4903%, below materiality individually. There is no declared parent. Against 100% of curated reserves, wstETH 56.1%, WETH 27.2%, and rETH 16.7% contribute 0% issuer/custodian exposure: DAO/protocol governance on LST collateral does not count. Therefore neither direct nor parent/reserve upstream exposure qualifies: No. The primary CDP test is debt-weighted: every collateral branch has zero qualifying issuer/custodian exposure, so sum(branch debt × exposed collateral fraction)/total debt is 0% irrespective of branch debt weights; quoted reserve percentages are contextual, not a substitute denominator.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "redundant-with-failover",

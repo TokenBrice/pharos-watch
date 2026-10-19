@@ -6,11 +6,19 @@
       {
         "label": "A7A5 Ethereum verified source and ABI",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6fa0be17e4bea2fcfa22ef89bf8ac9aab0ab0fc9"
+      },
+      {
+        "label": "TronGrid ABI/state (block 119726873)",
+        "url": "https://api.trongrid.io/wallet/getcontract?value=TLeVfrdym8RoJreJ23dAGyfJDygRtiWKBZ&visible=true"
+      },
+      {
+        "label": "TronScan token",
+        "url": "https://tronscan.org/#/token20/TLeVfrdym8RoJreJ23dAGyfJDygRtiWKBZ"
       }
     ],
-    "evidence": "At Ethereum block 26095800 (2026-10-01), compliance() returned 0x760e226fe0767c5db016ef0e55a4ac677ae869c0. The verified native token source gates addBlackList(address), removeBlackList(address), and destroyBlackFunds(address) with onlyCompliance. This establishes an addressed blacklist and seizure capability directly, replacing the earlier centralized-governance inference without changing the Yes verdict.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurA27A7A5)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "A7A5 is 98.75% on Tron and 1.25% on Ethereum. On Tron at block 119726873 the tracked token TLeVfrdym8RoJreJ23dAGyfJDygRtiWKBZ exposes addBlackList(address), removeBlackList(address), destroyBlackFunds(address), getBlackListStatus(address) and isBlackListed(address); owner() is the 3-of-5 multisig contract TML1DbrPXYDDwatGxw66iEwECnXCG54uJy and compliance() is TQuxc7KAjZSCQxVdzHsJaGXuBTgNHMWibG, both active contract accounts. The control has been used: Blacklisted(address) was emitted at Tron block 82297288 and DestroyedBlackFunds(address,uint256) at block 75389892. On Ethereum, compliance() returned 0x760e226fe0767c5db016ef0e55a4ac677ae869c0 at block 26095800 and the verified source gates addBlackList/removeBlackList/destroyBlackFunds with onlyCompliance. An addressed blacklist plus arbitrary-holder fund destruction on the material Tron deployment is a direct Yes control.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

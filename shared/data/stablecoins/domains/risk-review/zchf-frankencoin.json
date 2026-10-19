@@ -30,11 +30,23 @@
       {
         "label": "Frankencoin collateral positions API",
         "url": "https://api.frankencoin.com/ecosystem/collateral/positions/details"
+      },
+      {
+        "label": "Ethereum pinned RPC reads",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Avalanche pinned supply",
+        "url": "https://avalanche-c-chain-rpc.publicnode.com"
+      },
+      {
+        "label": "Sonic pinned supply",
+        "url": "https://sonic-rpc.publicnode.com"
       }
     ],
-    "evidence": "Re-reviewed 2026-08-08. Ethereum Frankencoin exposes minterOnly burnFrom(owner, amount), which calls the internal burn path without spending holder allowance; BridgedFrankencoin likewise documents admitted modules as able to move or burn arbitrary addresses. Current active minters are protocol contracts whose reviewed public entrypoints constrain the payer, so no immediately callable human/admin seizure was established. Governance can, however, admit a new minter after the protocol delay unless vetoed, leaving a concrete token-level arbitrary-holder burn surface and supporting Possible rather than No. Current positions also contain issuer-freezable XAUT, PAXG, WBTC, cbBTC, and tokenized-equity collateral, providing independent Upstream exposure.",
-    "reviewer": "OpenAI Codex unfreezable-cohort audit",
-    "reviewedAt": "2026-08-08"
+    "evidence": "Reviewed 2026-10-19. Ethereum is material at 87.8304% of observed circulating supply; all other census deployments are below 10%. Direct supply reads also put missing Avalanche and Sonic deployments far below 10%. The pinned non-upgradeable Frankencoin source exposes minterOnly burnFrom(owner,amount) without spending holder allowance and privileged infinite allowances. Existing protocol-minter entrypoint review found constrained payers rather than an immediately callable human/admin arbitrary seizure. However suggestMinter can admit a new module after the protocol delay unless qualified equity holders veto it. This mutable arbitrary-holder burner admission is direct Possible. BridgedFrankencoin's admitted modules similarly have move/burn reach, disclosed on the sub-threshold deployments; the prior CCIP review recorded allowlists disabled. No declared parent exists. The full stored collateral denominator includes 34.382% cbBTC/WBTC and 2.910% XAUt/PAXG, an identifiable issuer/custodian-exposed lower bound of 37.292%. Other tokenized securities and LsETH require control-termination verification before asserting an independent >50% reserve-majority result. The direct Possible verdict takes precedence regardless of that reserve-only counterfactual.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "oracleless",

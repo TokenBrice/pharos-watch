@@ -1,7 +1,7 @@
 {
   "id": "money-defi-money",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "defi.money deployment registry",
@@ -18,11 +18,15 @@
       {
         "label": "MONEY BridgeToken exact source on Arbitrum",
         "url": "https://sourcify.dev/server/v2/contract/42161/0x69420f9e38a4e60a62224c489be4bf7a94402496?fields=sources,compilation"
+      },
+      {
+        "label": "MONEY BridgeToken exact source (Sourcify)",
+        "url": "https://sourcify.dev/server/v2/contract/42161/0x69420f9e38a4e60a62224c489be4bf7a94402496?fields=sources"
       }
     ],
-    "evidence": "Re-reviewed 2026-07-22: the exact BridgeToken source lets the owner set an arbitrary minter, and any enabled minter can call burn(account, amount) without holder approval. That is a direct arbitrary-holder seizure surface; true replaces the prior bounded possible posture. The same deployment pattern is tracked on Arbitrum, Optimism, and Base.",
-    "reviewer": "GPT SOL-CORP-C wave6",
-    "reviewedAt": "2026-07-22"
+    "evidence": "Re-verified 2026-10-19 on all three material deployments (Optimism 35.76%, Arbitrum 35.73%, Base 28.52%). MONEY is the native BridgeToken at 0x69420f9e38a4e60a62224c489be4bf7a94402496 on each chain. Its owner is the same 3-of-7 Safe 0x222d2B30EcD382a058618d9F1ee01F147666E48b on all three (Arbitrum block 516204004; Optimism block 158395979; Base block 52800622), and setMinter(address,bool) is onlyOwner. burn(address,uint256) lets an address with isMinter burn another account's balance. The currently enabled minters are protocol contracts, not arbitrary burners: the MainController 0x1337F001E280420EcCe9E7B934Fa07D67fdb62CD (isMinter=true on all three; its burn paths target msg.sender or the AMM after transferFrom) and, on Arbitrum only, the PegKeeperRegulator 0xf2b12abebf522d4a0f195ac21a6c9af196ed1595 (isMinter=true; burns only peg-keeper balances). No EOA or arbitrary-holder burner is currently installed. The owner Safe can add one immediately; a governor that can add burners is a direct Possible surface, not Yes. No parent: variantOf and mintAuthority.inheritedFrom are null. Reserve exposure is not majority custodial: ETH 63.9%, wstETH 26.5% (DAO-governed, excluded), WBTC 4.8%, cbBTC 4.8%.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "single-source-or-laggy",

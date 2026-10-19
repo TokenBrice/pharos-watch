@@ -36,7 +36,7 @@ const STATUS_LABELS: Record<BlacklistabilityClientStatus, string> = {
   freezable: "Freezable",
   "not-freezable": "Not freezable",
   possible: "Possible",
-  inherited: "Inherited",
+  inherited: "Upstream",
 };
 
 const STATUS_TONES: Record<BlacklistabilityClientStatus, SeverityTone> = {
@@ -77,7 +77,7 @@ function buildStatusNote(status: BlacklistabilityClientStatus, upstreamLabel: st
     case "not-freezable":
       return "Under the reviewed deployment-materiality scope, no issuer freeze, seizure, or holder blacklist path sets the verdict. Peripheral deployment controls, if any, are described in the review notes.";
     case "possible":
-      return "A freeze or seizure path is plausible but was not established across the reviewed deployments.";
+      return "An admin control could restrict holders, but no one can currently freeze or seize a specific holder's balance. Typical cases are a global transfer pause, an upgradeable token contract, or a blacklist role that exists but is unassigned.";
     case "inherited":
       return upstreamLabel
         ? `Freeze power sits upstream with ${upstreamLabel} rather than in this token's own contract.`

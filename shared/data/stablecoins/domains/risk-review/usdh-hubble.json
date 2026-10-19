@@ -14,11 +14,23 @@
       {
         "label": "Hubble USDH documentation (censorship-resistant, decentralized stablecoin)",
         "url": "https://docs.hubbleprotocol.io/faq/usdh-stablecoin"
+      },
+      {
+        "label": "Hubble technical resources and proof-of-reserve vaults",
+        "url": "https://docs.hubbleprotocol.io/resources/technical-resources"
+      },
+      {
+        "label": "Hubble Peg Stability Module documentation",
+        "url": "https://docs.hubbleprotocol.io/faq/usdh-peg-stability/peg-stability-module"
+      },
+      {
+        "label": "Scope Hubble feed OraclePrices account",
+        "url": "https://explorer.solana.com/address/3NJYftD5sjVfxSnUdZ1wVML8f3aC6mp1CXCL6L7TnU8C"
       }
     ],
-    "evidence": "Re-reviewed 2026-08-08 at finalized Solana slot 438054830. USDH remains an 82-byte legacy SPL Token mint owned by Tokenkeg with freezeAuthority null. Pinned Tokenkeg logic requires holder/delegate authorization for transfers and burns, requires a current freeze authority to freeze an account, and prevents a disabled freeze authority from being restored. Hubble positively documents USDH as a censorship-resistant, decentralized stablecoin minted by users through the protocol and held in any Solana wallet; it identifies no off-chain issuer account-control rail. Hubble governance can upgrade the borrowing program but cannot replace immutable Tokenkeg or restore the mint's disabled freeze authority. Circle can freeze USDC held by the PSM and thereby impair reserves or exits, but it cannot freeze or seize a holder's USDH balance. The direct holder-seizure verdict is therefore No.",
-    "reviewer": "OpenAI Codex C09 control/access review",
-    "reviewedAt": "2026-08-08"
+    "evidence": "Solana is the sole material deployment (100% in the 2026-10-19 census). At finalized Solana slot 458729831 (2026-10-19T06:14:56Z), USDH1SM1ojwWUga67PGrgFWUHibbjqMvuMaDkRJTgkX remains an 82-byte legacy Tokenkeg SPL mint with freezeAuthority=null and supply 1,128,212.239999 USDH. Immutable Tokenkeg requires holder/delegate authorization for transfers and burns and cannot restore a disabled mint freeze authority. Borrowing-program upgrade authority and the remaining mint authority are not controls over existing holder transfers. Hubble documents USDH as censorship-resistant; no declared parent exists. The reserveReview's pinned issuance-path reconciliation at slot 434386680 measured 1,069,376.821209 USDC deposited/minted by the PSM plus 62,876.204453 CDP-backed USDH, normalizing to 94.4468% and 5.5532% of the debt denominator. Hubble's own PSM documentation explicitly acknowledges that its USDC reserve can be frozen. Even excluding the entire CDP branch from the numerator, including all native/LST collateral and the USDH self-leg of kUSDH-USDC LP, the exposed debt share is at least 94.4468%, strictly above 50%. Thus there is no direct holder freeze control, but retain Upstream, not No. The majority measurement is the existing pinned reserve capture, not a claim that every reserve balance was remeasured in this review.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "standard-external",

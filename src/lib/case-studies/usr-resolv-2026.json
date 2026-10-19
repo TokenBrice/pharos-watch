@@ -84,7 +84,7 @@
       "heading": "The single-key attack surface",
       "paragraphs": [
         "The decisive weakness was governance plumbing, not financial engineering. A role with authority to release minted tokens was held by one externally owned account, and the code path it drove lacked the checks that would have made the authority survivable: an oracle to sanity-check deposit value against tokens issued, a per-call amount limit, and a hard cap on supply growth per interval. Any one of those would have bounded the damage; together their absence turned a single credential into an unlimited mint.",
-        "Privileged minting is exactly the control surface Pharos treats as a first-class risk. FreezeWatch tracks whether an issuer holds freeze, blacklist, and supply controls precisely because those powers cut both ways: Resolv used its freeze and burn authority to destroy roughly 46M, then a further ~36.7M, of counterfeit tokens, which is the same class of privileged control that, on the issuance side, allowed the unbacked mint in the first place. The asset's flags already marked it centralized-dependent on governance; the incident is what that dependency looks like when the key fails.",
+        "Privileged minting is exactly the control surface Pharos treats as a first-class risk. FreezeWatch tracks holder-facing freeze, blacklist, and seizure controls, including privileged burns from arbitrary holders; mint-only authority is outside its status model. Those holder-facing powers cut both ways: Resolv used its freeze and burn authority to destroy roughly 46M, then a further ~36.7M, of counterfeit tokens. The unbacked issuance came through a separate privileged mint path. The asset's flags already marked it centralized-dependent on governance; the incident is what that dependency looks like when the key fails.",
         "Containment also showed the limits of after-the-fact control. Burns reduced the net loss from the headline ~$80M minted toward roughly $34M, and an allowlist let pre-exploit holders redeem first, but the burns could not reach tokens already swapped into ETH and the redemption queue could only pay out the reserve that remained. The arithmetic was fixed once the supply was created."
       ]
     },
@@ -108,7 +108,7 @@
   "watchpoints": [
     "Who controls the mint role on a synthetic-delta-neutral dollar, single key versus multisig versus guarded module, and whether the mint path enforces an oracle check, a per-transaction amount limit, and a supply-growth cap.",
     "Whether an insurance or junior tranche is sized only for market risk such as funding and liquidation, leaving unbacked-supply events uncovered.",
-    "FreezeWatch status: freeze, blacklist, and supply controls aid recovery after a compromise but are themselves privileged surfaces that can be turned against holders.",
+    "FreezeWatch status: holder-facing freeze, blacklist, and seizure controls can aid recovery after a compromise but are themselves privileged surfaces that can be turned against holders; mint-only authority is assessed separately.",
     "Downstream exposure: lending markets and integrators that price the asset at a hardcoded $1 can convert one issuer's failure into systemic bad debt before the depeg is reflected on-chain."
   ],
   "crossLinks": [

@@ -14,11 +14,27 @@
       {
         "label": "Djed technical review",
         "url": "https://raw.githubusercontent.com/tweag/tweag-audit-reports/main/Djed-2023-01.pdf"
+      },
+      {
+        "label": "Official DJED BNB bridge disclosure",
+        "url": "https://faq.coticommunity.com/djed-and-shen/djed/djed-on-bnb-chain"
+      },
+      {
+        "label": "DJED BNB verified proxy",
+        "url": "https://bscscan.com/address/0x157a74bba219b3a2e6c0a5732f84a3e372031cfe#code"
+      },
+      {
+        "label": "Pharos circulating denominator",
+        "url": "https://api.pharos.watch/api/stablecoins"
+      },
+      {
+        "label": "Official ADA collateral disclosure",
+        "url": "https://faq.coticommunity.com/djed-and-shen/djed/overcollateralization"
       }
     ],
-    "evidence": "Djed is a Cardano native asset. Cardano's native-token model routes ordinary transfers through the ledger rather than an ERC-20-style token contract; the minting policy controls mint and burn operations, not arbitrary holder transfers. The official Djed documentation and technical review describe the ADA reserve, DJED mint/burn, and SHEN mechanisms without a holder blacklist or freeze path. Direct holder-balance blacklistability remains false.",
-    "reviewer": "SONG-5 Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "Djed is a Cardano native asset. Cardano's native-token model routes ordinary transfers through the ledger rather than an ERC-20-style token contract; the minting policy controls mint and burn operations, not arbitrary holder transfers. The official Djed documentation and technical review describe the ADA reserve, DJED mint/burn, and SHEN mechanisms without a holder blacklist or freeze path. Direct holder-balance blacklistability remains false. Native identity is policy 8db269c3ec630e06ae29f74bc39edd1f87c819f1056206e879a1cd61 / asset name 446a65644d6963726f555344. Official COTI FAQ also documents a ChainPort BNB wrapper, 0x157a74bba219b3a2e6c0a5732f84a3e372031cfe. BNB block 128504545 (2026-10-19T06:15:31Z) returned name DjedMicroUSD [via ChainPort.io], decimals 6 and totalSupply 22745.361806 DJED; block 128504791 (2026-10-19T06:17:22Z) has EIP-1967 implementation 0x104f3152d8ebfc3f679392977356962ff36566ac and nonzero admin 0xe317bf1cf456875f37f1d1c5a63848d0ab25653c. Its verified proxy is upgradeable, but wrapper supply is approximately 1.571588% of the Pharos API circulating quantity 1447285.368673238 DJED observed 2026-10-19, far below the 10% threshold. This denominator includes canonical circulation backing bridged tokens, rather than adding the wrapped liability a second time. Exact circulating classification is not independently reconciled, but the wrapper would require circulating supply below 227453.61806 DJED to become material. Native Cardano therefore represents approximately 98.428412% on this wrapper-adjusted measure. No declared parent or inherited mint parent exists. COTI identifies exogenous ADA as the sole reserve asset; the reserve test is 0% issuer/custodian exposed over 100% ADA. Retain No; BNB upgradeability is disclosed, not used to set the verdict.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "standard-external",

@@ -1,7 +1,7 @@
 {
   "id": "xofm-mento",
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Celo Forno fixed-block RPC",
@@ -34,12 +34,44 @@
       {
         "label": "Mento reserve transparency dashboard",
         "url": "https://reserve.mento.org/"
+      },
+      {
+        "label": "Mento official deployment inventory identifies Governor and Timelock",
+        "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
+      },
+      {
+        "label": "XOFm verified proxy and owner-gated upgrade source; runtime matched at Celo 80489704",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x73f93dcc49cb8a239e2032663e9475dd5ef29a08"
+      },
+      {
+        "label": "StableTokenV2 verified implementation; runtime matched at Celo 80489704",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x434563b0604be100f04b7ae485bcafe3c9d8850e"
+      },
+      {
+        "label": "TimelockController verified implementation; runtime matched at Celo 80489704",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x3efad8f997f705675924470ec84677db68c5a2d0"
+      },
+      {
+        "label": "Mento voting process and two-day timelock",
+        "url": "https://docs.mento.org/mento-v3/dive-deeper/governance-and-mento/participating-in-governance/voting-process"
+      },
+      {
+        "label": "Mento direct proxy-upgrade governance example",
+        "url": "https://forum.mento.org/t/mgp-16-copm-and-brlm-renaming/105"
+      },
+      {
+        "label": "Mento reserve API; observed 2026-10-19T06:16Z",
+        "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+      },
+      {
+        "label": "Pharos live supply endpoint; shares captured in review census 2026-10-19",
+        "url": "https://api.pharos.watch/api/stablecoins"
       }
     ],
     "sourceFreeRationale": "The current holder-facing XOFm token has no direct governance-controlled blacklist, freeze, pause, seizure, arbitrary-account burn, or transfer-hook restriction. Broker/exchange burn and Celo-VM gas debiting are protocol-scoped, not governance holder-freeze controls. Timelocked proxy upgrade authority is a governance surface but is not itself a currently executable holder-freeze surface. This direct conclusion does not suppress reserve-derived upstream exposure.",
-    "evidence": "Re-verified 2026-08-08 at Celo block 74317848. XOFm 0x73f93dcc49cb8a239e2032663e9475dd5ef29a08 still returned Mento Timelock 0x890db8a597940165901372dd7db61c9f246e2147 as owner, Broker 0x777a8255ca72412f0d706dc03c9d1987306b4cad, validators 0xaeb865bca93ddc8f47b8e29f40c5399ce34d0c58, and a zero exchange; its implementation remained verified StableTokenV2 0x434563b0604be100f04b7ae485bcafe3c9d8850e. Verified transfer paths have no blacklist, freeze, pause, seizure, arbitrary-holder burn, allowlist, or governance transfer hook. Broker/exchange burn is caller-scoped and debitGasFees is Celo-VM scoped. Mento governance can replace implementation only through the observed 172800-second timelock, so current direct blacklistability is false while deployment posture remains restrictable. USDC, USDT, EURC, and related shared-reserve exposures can impair backing but cannot restrict XOFm balances and are therefore dependency risk, not an inherited direct-access verdict.",
-    "reviewer": "OpenAI Codex C11 access review",
-    "reviewedAt": "2026-08-08"
+    "evidence": "The sole registered XOFm deployment is Celo 0x73f93dcc49cb8a239e2032663e9475dd5ef29a08; the 2026-10-19 Pharos supply census assigns Celo 100% of circulation, so its controls are material against the 10% threshold. At Celo block 80489704 (2026-10-19T06:14:22Z; hash 0x42bb9d8457a53082b049e0fed7918070b4c9523bc772880c172d4337cf2c9ebf), the EIP-1967 implementation was 0x434563b0604be100f04b7ae485bcafe3c9d8850e and the proxy admin and token owner() were the nonzero Mento Timelock 0x890db8a597940165901372dd7db61c9f246e2147. The proxy exposes owner-gated _setImplementation(address) and _setAndInitializeImplementation(address,bytes). Both proxy and StableTokenV2 runtime matched their verified source bytecode at the pinned block. The Timelock implementation was 0x3efad8f997f705675924470ec84677db68c5a2d0, its runtime matched the verified TimelockController, and getMinDelay() returned 172800 seconds. At the same pinned block, timelock hasRole(PROPOSER_ROLE 0xb09aa5aeb3702cfd50b6b62bc4532604938f21248a27a1d5ca736082b6819cc1, Governor 0x47036d78bb3169b4f5560dd77bf93f4412a59852) returned true; hasRole(EXECUTOR_ROLE 0xd8aa0f3194971a2a116679f7c2090f6939c8d4e01a2a8d7e41d55e5351469e63, address(0)) returned true (open execution). Governor.timelock() returned 0x890db8a597940165901372dd7db61c9f246e2147, closing a live governance scheduling and execution path rather than assuming a nonzero but unusable admin. This admin-upgradeable token is direct Possible even when the administrator is DAO governance and changes wait two days; the DAO-only exclusion applies to collateral, not the token itself. The current StableTokenV2 implementation has ordinary transfer/transferFrom and no blacklist, holder freeze, global transfer pause, seizure, allowlist or arbitrary-holder administrative burn. broker() returned 0x777a8255ca72412f0d706dc03c9d1987306b4cad, validators() 0xaeb865bca93ddc8f47b8e29f40c5399ce34d0c58, and exchange() zero. Permissioned burn(uint256) burns msg.sender only, mint authority increases balances, and debitGasFees(address,uint256) is restricted to the zero-address VM rather than a privileged issuer holder, so these do not establish Yes. Neither variantOf nor mintAuthority.inheritedFrom declares a parent. The issuer reserve API observed 2026-10-19T06:16Z reports collateral.total_usd of $16,826,760.601825558 and asset weights summing to 100%. Against that complete collateral denominator, issuer stablecoins excluding sUSDS alone account for 58.2518%; counting the full 28.0181% sUSDS leg categorically through USDS gives 86.2698%. CELO, stETH and ETH/WETH are excluded from the numerator. This is the issuer collateral.assets denominator, not gross holdings plus separately reported LP/operational portfolios. This ancillary majority does not displace the direct Possible verdict.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "single-source-or-laggy",

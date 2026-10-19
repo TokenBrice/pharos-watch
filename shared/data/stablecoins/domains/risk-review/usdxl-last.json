@@ -30,11 +30,31 @@
       {
         "label": "Hyperliquid spot token-details API documentation",
         "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/info-endpoint/spot"
+      },
+      {
+        "label": "HypurrFi lending market",
+        "url": "https://app.hypurrfi.com/"
+      },
+      {
+        "label": "Last (USDXL) website",
+        "url": "https://www.last.net/"
+      },
+      {
+        "label": "HypurrFi USDXL agent reference (debt positions and partial USDT0 reserve)",
+        "url": "https://docs.hypurrfi.com/agents/usdxl"
+      },
+      {
+        "label": "HyperCore/EVM system-account supply accounting",
+        "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/hyperevm/hypercore-less-than-greater-than-hyperevm-transfers"
+      },
+      {
+        "label": "Current Hyperliquid spotMeta/tokenDetails",
+        "url": "https://api.hyperliquid.xyz/info"
       }
     ],
-    "evidence": "Re-reviewed both tracked deployments on 2026-08-08. The pinned GHO-style HyperEVM implementation retains ordinary ERC-20 transfer and transferFrom, and facilitator burn destroys only the caller's balance; it has no current holder blacklist, transfer pause, seizure, arbitrary holder burn, or transfer hook. At HyperEVM block 42660797 the proxy still used implementation 0xce23355599cdbe5dca05186c5d9d5b37d959b27f, while an admin-only admin() call from 0xf050623d497be7ea6653fd205a537d10300b4c6e returned that same 2-of-2 Safe. The Safe can replace the implementation, so a future transfer restriction remains technically possible even though none exists now. Hyperliquid's live tokenDetails response for token 0xf448c3cad413cdf0feb1746d7b057967 reported the linked USDXL token, deployer 0x67a6d918c3adfc36b047a8684491481114f6b3a6, and an empty genesis.blacklistUsers array; HIP-1 defines capped native balances and user transfers, with genesis blacklisting confined to the deployment sequence. No current HyperCore holder restriction was identified. HypurrFi documents upstream USDT0 reserve/PSM exposure, but USDXL has no variantOf or mintAuthority.inheritedFrom parent, so the prior inherited verdict was not resolvable by the V9 adapter and is corrected. Because the live HyperEVM admin can still change token logic and no current issuer terms conclusively waive holder-control powers, reviewedStatus remains the honest possible verdict rather than false.",
-    "reviewer": "OpenAI Codex C07 access review; OpenAI Codex unfreezable-cohort audit",
-    "reviewedAt": "2026-08-08"
+    "evidence": "USDXL has a material direct mutable token implementation. At HyperEVM block48936031 (2026-10-19T06:14:34Z), proxy0xca79db4b49f608ef54a5cb813fbed3a6387bc645 retained implementation0xce23355599cdbe5dca05186c5d9d5b37d959b27f and EIP-1967 admin0xf050623d497be7ea6653fd205a537d10300b4c6e; that Safe returned getThreshold()=2, consistent with the prior2-of-2 review. The pinned GHO-style source retains ordinary transfer/transferFrom; facilitator burn destroys the caller's own balance. No current holder blacklist, transfer pause, seizure, arbitrary-holder burn or transfer hook was identified. The live admin can replace implementation, giving direct Possible. The census Hyperliquid L1 label aggregates the deployment family rather than proving100% HIP-1 holder supply. Hyperliquid spotMeta identifies token239, tokenId0xf448c3cad413cdf0feb1746d7b057967, linked to this ERC-20 with11 extra decimals. HyperEVM totalSupply was112051.72122775436 and balanceOf(system address0x20000000000000000000000000000000000000ef) was2029.3204620043523. Under documented Core/EVM accounting this puts98.18894307% outside bridge escrow on HyperEVM and1.81105693% backing HyperCore balances, so the proxy deployment is unambiguously material. tokenDetails retains the88b genesis system allocation and empty genesis.blacklistUsers; that genesis reserve is not a circulating-denominator substitute. HIP-1 exposes no current issuer-specific holder restriction. No variantOf or inheritedFrom parent is declared. USDT0 reserve/PSM exposure is documented, but no complete current debt-weighted backing composition establishes a strict>50% upstream share; pool cash or eligible collateral lists cannot supply that denominator. Direct Possible takes precedence regardless.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "single-source-or-laggy",

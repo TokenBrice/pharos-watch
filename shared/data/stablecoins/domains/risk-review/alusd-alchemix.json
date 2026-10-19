@@ -1,7 +1,7 @@
 {
   "id": "alusd-alchemix",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Alchemix on L2 documentation",
@@ -36,9 +36,9 @@
         "url": "https://mainnet.optimism.io"
       }
     ],
-    "evidence": "At Arbitrum block 0x1cd87f90, the tracked proxy 0xcb8fa9a76b8e203d8c3797bf438d8fb81ea3326a stored implementation 0x37704b70cba0ffd12eb039274ff46992544a1f16 and ProxyAdmin 0xa44f69aeac480e23c0abfa9a55d99c9f098beac6, whose owner() was 0x7e108711771dfdb10743f016d46d75a9379ca043. At Optimism block 0x9318364, the same proxy address stored implementation 0x29ef9f2fa6f636eafe74e5fba057c7949a37ffa6 and the same ProxyAdmin, whose owner() was 0xc224bf25dcc99236f00843c7d8c4194abe8aa94a. Sourcify exactly verifies both material L2 implementations and the owner-only OpenZeppelin ProxyAdmin. Those owners can replace holder-facing token implementations and introduce per-holder transfer or balance restrictions. The current L2 source has standard transfer paths and only pauses minters; Ethereum's setBlacklist likewise targets a minter rather than an alUSD holder. This is an upgrade-control finding, not an assertion of a live or uniform holder blacklist across every deployment.",
-    "reviewer": "Codex Safety Score V9 access review",
-    "reviewedAt": "2026-07-15"
+    "evidence": "At Ethereum block 26224762 (2026-10-19), the canonical alUSD token 0xbc6da0fe9ad5f3b0d58160288917aa56653660e9 is a direct, non-proxy AlToken: its EIP-1967 implementation and admin slots are zero, and its verified source applies setBlacklist/blacklist only to minters (mint() checks blacklist[msg.sender]); transfers, approvals and burn/burnFrom expose no holder-level restriction or pause. Ethereum holds 64.9312% of supply. At Optimism block 158395857 (29.9677%, material), proxy 0xcb8fa9a76b8e203d8c3797bf438d8fb81ea3326a stored implementation 0x29ef9f2fa6f636eafe74e5fba057c7949a37ffa6 and ProxyAdmin 0xa44f69aeac480e23c0abfa9a55d99c9f098beac6, whose owner() is 0xC224bf25Dcc99236F00843C7D8C4194abE8AA94a. At Arbitrum block 516203716 (3.4754%, sub-threshold), the same proxy stored exactly verified implementation 0x37704b70cba0ffd12eb039274ff46992544a1f16 under the same ProxyAdmin, owner 0x7e108711771DfdB10743F016D46d75A9379cA043. Both material and sub-threshold L2 implementations have standard transfer paths that only pause minters. The owner-only ProxyAdmin can replace the holder-facing Optimism implementation and introduce per-holder transfer or balance restrictions, which is a direct Possible control surface; no active blacklist, freeze, seizure or privileged holder burn exists on a material deployment. The Arbitrum and Fantom (1.6257%) controls are disclosed but do not set the verdict.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "oracleless",

@@ -6,11 +6,23 @@
       {
         "label": "Blockscout verified deployed ApyUSD implementation",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfd616567ecc1607f61073951a1e822f7315bb112"
+      },
+      {
+        "label": "Verified deployed shared denylist registry",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2c271ddf484ac0386d216eb7eb9ff02d4dc0f6aa"
+      },
+      {
+        "label": "Verified deployed AccessManager",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe167330e2eac88666de253e9607c6d9ae0ca2824"
+      },
+      {
+        "label": "Ethereum pinned control reads",
+        "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
-    "evidence": "At Ethereum block 26095809, the canonical apyUSD proxy implementation slot returned 0xfd616567ecc1607f61073951a1e822f7315bb112 and paused() returned false. Its verified ApyUSD source enforces ERC20DenyListUpgradable and ERC20PausableUpgradeable in _update, applies checkNotDenied to deposit and withdrawal paths, and restricts setDenyList, pause and unpause through AccessManager. This directly supports blacklistability rather than inferring it from centralized governance.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurA46apyUSD)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "The canonical Ethereum vault itself has active holder blacklisting, so apyUSD is Yes independently of upstream apxUSD. At Ethereum block 26224761 (2026-10-19T06:14:23Z), proxy 0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a used verified implementation 0xfd616567ecc1607f61073951a1e822f7315bb112; paused() was false and authority() returned 0xe167330e2eac88666de253e9607c6d9ae0ca2824. _update enforces ERC20DenyListUpgradable and ERC20PausableUpgradeable; checkNotDenied also applies to deposit and withdrawal paths. denyList() returned registry 0x2c271ddf484ac0386d216eb7eb9ff02d4dc0f6aa. That registry uses the same manager, getTargetFunctionRole(registry,add(address))=21, and hasRole(21,0xf9862EfC1704aC05e687f66E5cD8c130E5663cE2)=(true,0): an assigned live operator can blacklist holders. Manager-restricted setDenyList, pause and unpause remain. With census chain shares unavailable, pinned totalSupply reads measured Ethereum 108693331.6241827 at block 26224761, Base 398562.7427727262 at 52800640, BSC 843604.0285831871 at 128504833 and Solana 3989855.126703 at finalized slot 458729747. Ethereum is 95.4075% of the gross aggregate; deducting all remote supply as Ethereum bridge escrow instead gives 95.1864%, still material. Each peripheral deployment remains below 10% under either denominator. The Solana mint retained freezeAuthority 5CcTTUPtSxF1iB5d2fGR7gYHbUBHL1orwzbuZdQGJ1CG. The declared apxUSD parent and its 100% immediate reserve exposure are additional upstream links, not the cause of the direct Yes verdict. The registry operator is a Safe v1.4.1 with getThreshold()=4 and singleton 0x41675c099f32341bf84bfc5382af534df5c7461a, rather than an unreachable contract role holder. Peripheral Base and BSC proxies retain non-zero implementation pointers and authorities, but exact local holder-control logic was not established: Base denyList() reverted, verified-source requests returned403/404. These unverified peripheral controls are disclosed rather than used to set the verdict.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",

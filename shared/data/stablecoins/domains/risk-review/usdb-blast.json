@@ -1,7 +1,7 @@
 {
   "id": "usdb-blast",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Blast USDB implementation source",
@@ -36,9 +36,9 @@
         "url": "https://rpc.blast.io"
       }
     ],
-    "evidence": "At Blast block 37633619, the USDB proxy at 0x4300000000000000000000000000000000000003 resolved to implementation 0x4ef0d788470e2feb6559b93075ec5be51dba737d, with bridge() = 0x4300000000000000000000000000000000000005 and REPORTER = L1 USDYieldManager 0xa230285d5683C74935aD14c446e137c8c8828438. The verified implementation exposes ordinary transfer and transferFrom and has no active pause, blacklist, or freeze function; its mint and burn functions are restricted to the L2 bridge, and fixed-block calls from an unrelated account reverted. However, admin() is L2 ProxyAdmin 0x4200000000000000000000000000000000000018, whose owner is 3-of-5 Safe 0xb9ca260493a0a6f9cfc1c2931faca48ac4af0937 with no enabled modules. The verified ProxyAdmin source permits its owner to replace the USDB implementation, so this known control can make holder transfers or balances restrictable even though the live implementation has no direct blacklist function.",
-    "reviewer": "TERRA-ULTRA access review",
-    "reviewedAt": "2026-07-15"
+    "evidence": "At Blast block 41790405 (2026-10-19T06:17:05Z), the USDB proxy 0x4300000000000000000000000000000000000003 resolved to implementation 0x4ef0d788470e2feb6559b93075ec5be51dba737d with admin() = L2 ProxyAdmin 0x4200000000000000000000000000000000000018, owned by the 3-of-5 Safe 0xb9ca260493a0a6f9cfc1c2931faca48ac4af0937. The verified implementation exposes ordinary transfer and transferFrom and has no pause, blacklist, or freeze function; its mint and burn paths are restricted to the L2 bridge. The only holder-facing control is the ProxyAdmin owner's ability to replace implementation logic, which is a direct Possible rather than a confirmed direct freeze. USDB is 100% of supply on Blast (census 2026-10-19), so that control sits on the material deployment.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "privileged-internal-pricing",

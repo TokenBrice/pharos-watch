@@ -1,11 +1,33 @@
 {
   "id": "yvusdc-yearn",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "Verified fixed Yearn v3 implementation and withdrawal limiter",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x1ab62413e0cf2ebeb73da7d40c70e7202ae14467"
+      },
+      {
+        "label": "Verified Yearn role manager",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb3bd6b2e61753c311efbcf0111f75d29706d9a41"
+      },
+      {
+        "label": "Pinned Ethereum observations",
+        "url": "https://etherscan.io/block/26224759"
+      },
+      {
+        "label": "Yearn v3 vault documentation",
+        "url": "https://docs.yearn.fi/getting-started/products/yvaults/v3"
+      },
+      {
+        "label": "Circle blacklist implementation",
+        "url": "https://github.com/circlefin/stablecoin-evm/blob/master/contracts/v1/Blacklistable.sol"
+      }
+    ],
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: yvUSDC-1 resolves to Upstream because Yearn v3 strategies hold USDC across whitelisted protocols, inheriting Circle's blacklist surface.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "evidence": "Reviewed 2026-10-19. Ethereum is 100% of census circulating supply. The sole share token 0xbe53a109b494e5c9f97b9cd39fe969be68bf6204 is a fixed EIP-1167 clone of verified YearnV3Vault 0x1ab62413e0cf2ebeb73da7d40c70e7202ae14467, not an admin-upgradeable token. At Ethereum block 26224759 (2026-10-19T06:13:59+00:00), hash 0x2e777b94fc023c9fffa581f3cac554f363407ab8706bc77304323de6ba0f7993, asset() was canonical USDC, withdraw_limit_module() and deposit_limit_module() were zero, isShutdown() was false, and role_manager() was 0xb3bd6b2e61753c311efbcf0111f75d29706d9a41 (manager governance 0x88ba032be87d5ef1fbe87336b7090767f367bf73). The implementation has no current holder blacklist, arbitrary-holder seizure, forced burn or share-transfer pause; shutdown_vault stops deposits, not ERC20 transfers. However, role_manager can assign WITHDRAW_LIMIT_MANAGER, whose set_withdraw_limit_module can install an owner-sensitive limiter enforced by _redeem and maxWithdraw. This mutable holder-facing redemption surface sets Possible even while unset. USDC exposure remains inherited through variantOf/mintAuthority and the declared 100% USDC strategy book, but direct Possible takes precedence. The old true/Yes flag was unsupported and contradicted its own Upstream prose.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",

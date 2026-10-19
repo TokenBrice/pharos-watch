@@ -10,11 +10,23 @@
       {
         "label": "USD0 Ethereum token contract",
         "url": "https://etherscan.io/address/0x73A15FeD60Bf67631dC6cd7Bc5B6e8da8190aCF5#code"
+      },
+      {
+        "label": "Verified Usd0 implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xae12f6f805842e6dafe71a6d2b41b28ba5fc821e"
+      },
+      {
+        "label": "USD0 RegistryAccess and BLACKLIST_ROLE",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0d374775e962c3608b8f0a4b8b10567df739bb56"
+      },
+      {
+        "label": "Ethereum RPC, block 26224760",
+        "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
-    "evidence": "Usual's USD0 token documentation describes blacklist and unBlacklist functions restricted to BLACKLIST_ROLE, rejects transfers when either party is blacklisted, and permits PAUSING_CONTRACTS_ROLE to halt all transfers. The documented token is the Ethereum USD0 deployment tracked here, so an authorized role can directly restrict individual holder transfers and pause the token system-wide.",
-    "reviewer": "Codex Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "At Ethereum block 26224760 (hash 0x2a6c0b20faae49bb23f77a582b517057741efcee5bd423a8552f672144c83b85, 2026-10-19T06:14:11Z), USD0 0x73a15fed60bf67631dc6cd7bc5b6e8da8190acf5 is an ERC-1967 proxy whose implementation slot resolves to 0xae12f6f805842e6dafe71a6d2b41b28ba5fc821e (verified Usd0), 99.9998% of supply. The implementation exposes blacklist(address), unBlacklist(address), pause() and unpause(); its _update hook reverts with Blacklisted when either the sender or the recipient is blacklisted, so a blacklisted holder can neither send nor receive. blacklist and unBlacklist require RegistryAccess.onlyMatchingRole(BLACKLIST_ROLE), where BLACKLIST_ROLE = keccak256(BLACKLIST_ROLE) = 0x22435ed027edf5f902dc0093fbc24cdb50c05b5fd5f311b78c67c1cbaff60e13. The token registryAccess at storage slot 0x1d0cf51e4a8c83492710be318ea33bb77810af742c934c6b56e7b0fecb07db00 is 0x0d374775e962c3608b8f0a4b8b10567df739bb56; hasRole(BLACKLIST_ROLE, 0xd327773e970c1561db68cbdcd8055200f39904f0) and hasRole(BLACKLIST_ROLE, 0xfbae315cfb0a6c770a397bd6e597d245ba858648) both returned true at the pin. Both holders are non-zero contracts and RoleGranted logs exist at blocks 21589693 and 22231374 with no RoleRevoked, so an active role can directly restrict individual holders. paused() returned false; pause is gated by PAUSING_CONTRACTS_ROLE and its membership was not separately read, so the pause surface is disclosed but not relied on. The reserve sidecar is 100% Hashnote USYC (registry status Yes), so reserve-based upstream exposure would also exceed 50%, but the direct blacklist control sets the verdict. Event signatures: Blacklist(address) 0x7811ed4e4b787e4f0f046ffb4a5ec1e064b0eb6d191ffabb66270ed8be89b325; UnBlacklist(address) 0xc653d95790bb2472667b557ef27642a37cac57b69d6d5fddcaacef8f62589dcb; Paused(address) 0x62e78cea01bee320cd4e420270b5ea74000d11b0c9f74754ebdbfc544b05a258. The verdict is Yes.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",

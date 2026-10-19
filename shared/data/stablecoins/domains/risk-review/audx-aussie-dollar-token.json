@@ -14,11 +14,23 @@
       {
         "label": "AUDX website",
         "url": "https://www.audxtoken.com/"
+      },
+      {
+        "label": "Verified AussieDollarToken implementation and state at Ethereum block 26224768 (2026-10-19T06:15:47Z)",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbe3865c3d9291ad3ce0a7a7db922b2e6e2e2680d"
+      },
+      {
+        "label": "AUDX Ethereum proxy",
+        "url": "https://etherscan.io/address/0xd687759f35bb747a29246a4b9495c8f52c49e00c"
+      },
+      {
+        "label": "AUDX role grants on Ethereum",
+        "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0xd687759f35bb747a29246a4b9495c8f52c49e00c"
       }
     ],
-    "evidence": "The reviewed AUDX ERC1967 deployment evidence identifies a BLACKLISTER role alongside DEFAULT_ADMIN_ROLE, PAUSER, MINTER_ROLE, SALVAGER, and UPGRADER on the Ethereum and Polygon token contracts. That role is issuer-controlled through the deployment admin, so AUDX has direct holder-level transfer restriction capability; the issuer also describes AUDX as an issuer-managed token available on Ethereum and Polygon.",
-    "reviewer": "SONG Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "At Ethereum block 26224768 (2026-10-19T06:15:47Z), AUDX proxy 0xd687759f35bb747a29246a4b9495c8f52c49e00c resolves to verified AussieDollarToken implementation 0xbe3865c3d9291ad3ce0a7a7db922b2e6e2e2680d. The implementation exposes addToBlacklist/removeFromBlacklist, isBlacklisted, forceTransfer, pause and UUPS upgradeToAndCall. BLACKLISTER_ROLE is held by 0xc9d8603bcf23d148a56980e6a7e3e0d375ea3e28, an EIP-7702 delegated EOA that also holds DEFAULT_ADMIN_ROLE; hasRole returned true and paused() is false. On-chain total supply at the same measurement puts Ethereum at 51.0599% (1,735,050) and Polygon at 47.4098% (1,611,016) of 3,398,066 AUDX, both material; XDC 1.4714% and Conflux 0.0589% are not. A live BLACKLISTER can block a named holder's transfers on a material deployment, so Yes rests on current contract state rather than the earlier role-name inventory.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

@@ -10,10 +10,18 @@
       {
         "label": "Website",
         "url": "https://gaib.ai/"
+      },
+      {
+        "label": "Current verified AID deny-list implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2db74834f556e1f19ed397e5f935a983e4c2f38b"
+      },
+      {
+        "label": "Pinned asset, implementation and AID guard reads",
+        "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
-    "evidence": "The implementation observed in the Ethereum EIP-1967 slot at block 26095936 is 0xe2986b3e5b3e77896ae0509f6740d1106273374d. Its verified _update hook rejects sending from an address denied by the underlying AID contract, while intentionally allowing denied addresses to receive sAID. This is a direct holder-level transfer restriction, not an inference from centralized governance.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurM02USDK)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "Reviewed 2026-10-19. Ethereum is the sole registered sAID deployment and holds 100% of observed circulating supply. At Ethereum block 26224761 (2026-10-19T06:14:23Z), its EIP-1967 implementation remains 0xe2986b3e5b3e77896ae0509f6740d1106273374d, previously observed at block 26095936; asset() returns AID 0x18f52b3fb465118731d9e0d276d4eb3599d57596. The verified sAID _update hook blocks transfers from an address on AID's denied-address role while intentionally permitting denied recipients. At the same pin, Safe 0x32793f6b11820fa9c7039dfa640b751f491a027d actively holds AID's DENY_LIST_GUARD_ROLE and DEFAULT_ADMIN_ROLE and can deny arbitrary nonzero holders. Thus current sAID token-transfer logic directly enforces an active holder-targeted restriction: Yes, not merely Upstream from AID or an inference from centralized governance. Transfer pause and UUPS upgrade capability are additional Possible surfaces but do not lower the active direct verdict. Mints/burns are exempt from this transfer deny check; denied users may initiate an unstake whose resulting AID settles into the denied account, so withdrawal is not falsely described as an absolute burn prohibition. Declared parent AID and the full AID vault-claim reserve would establish categorical Upstream in the absence of the direct enforcement, but direct Yes has priority.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   }
 }

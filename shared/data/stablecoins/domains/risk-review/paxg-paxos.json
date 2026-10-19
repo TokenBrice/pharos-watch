@@ -6,11 +6,19 @@
       {
         "label": "PAX Gold terms and conditions, section 14",
         "url": "https://www.paxos.com/terms-and-conditions/pax-gold-terms-conditions"
+      },
+      {
+        "label": "Ethereum PAXG verified implementation (freeze/freezeBatch/pause)",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7da4c5d9eca180a03765a6d27196f2a0380fa543"
+      },
+      {
+        "label": "Solana PAXG mint at slot 458731257 (2026-10-19)",
+        "url": "https://solana-mainnet.g.alchemy.com/v2/"
       }
     ],
-    "evidence": "Section 14.1 explicitly grants Paxos the ability and right to freeze and upgrade all PAXG tokens regardless of where they are held. Sections 14.2-14.5 cover legal directives, discretionary freezes, seizure, forfeiture, and destruction. Finalized Solana slot 452212686 also reports Paxos admin 2apBGMsS6ti9RyF5TwQTDswXBWskiJP2LD4cUEDqYJjk as freeze authority and permanent delegate.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurA15PAXG)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "PAX Gold terms section 14.1 grants Paxos the ability and right to freeze and upgrade all PAXG tokens regardless of where they are held; sections 14.2-14.5 cover legal directives, discretionary freezes, seizure, forfeiture and destruction. At Ethereum block 26224764 (2026-10-19), the PAXG proxy 0x45804880de22913dafe09f4980848ece6ecbaf78 resolves to verified implementation 0x7da4c5d9eca180a03765a6d27196f2a0380fa543, which exposes freeze(address), freezeBatch(address[]) and pause(). ASSET_PROTECTION_ROLE is currently held by Paxos admin 0x3Af3e85f4f97De7AD0f000B724Fb77fE5ffc024B (hasRole=true). Ethereum held 437,521.997785 PAXG (18dp), 99.2969% of reported supply, so the control is active on a material deployment. The Solana mint 5GgRAEmv8ZxF2PR5hY72Qs5x1bnQ6UK2RbTPoqJ3wSwW also retains freezeAuthority 2apBGMsS6ti9RyF5TwQTDswXBWskiJP2LD4cUEDqYJjk at slot 458731257 (supply 3,098.026862), but at 0.7031% it is disclosed and does not set the verdict. The material Ethereum deployment therefore establishes Yes.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "opaque-or-unknown",

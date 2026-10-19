@@ -16,9 +16,9 @@
         "url": "https://gnosis.blockscout.com/block/48768019"
       }
     ],
-    "evidence": "Complete immutable SavingsXDai and imported ERC-4626 source has no holder blacklist, pause, seizure or privileged arbitrary-holder burn. Inherited xDAI bridge and Sky dependencies remain exposed.",
-    "reviewer": "Rev_SdaiGnosis primary-source batch64 review",
-    "reviewedAt": "2026-10-15"
+    "evidence": "SavingsXDai is Upstream through its100% WXDAI/xDAI parent claim. Independent Gnosis48833312 asset() confirms WXDAI underlying. Verified nonproxy SavingsXDai source exposes ordinary share-balance and allowance-based ERC4626 transfers/withdrawals, no local holder blacklist, transfer pause, seizure, privileged holder burn or upgrade. xDAI is Upstream on qualifying Sky-denominated immediate bridge collateral. Its owner-configurable bridge daily limit is disclosed as a rail control and does not change the parent status to Possible under the FreezeWatch decision procedure (docs/blacklist-tracker.md). Gnosis is100% material. Source https://gnosis.blockscout.com/api/v2/smart-contracts/0xaf204776c7245bf4147c2612bf6e5972ee483701 .",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "oracleless",

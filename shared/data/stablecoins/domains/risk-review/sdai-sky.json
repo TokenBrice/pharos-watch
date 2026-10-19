@@ -70,11 +70,27 @@
       {
         "label": "Pinned World Chain sDAI runtime read at block 35966146",
         "url": "https://api-worldchain-mainnet.n.dwellir.com"
+      },
+      {
+        "label": "Canonical SavingsDai verified source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x83f20f44975d03b1b09e64809b757c47f942beea"
+      },
+      {
+        "label": "Pharos independent circulating observation",
+        "url": "https://api.pharos.watch/api/stablecoins"
+      },
+      {
+        "label": "World Chain RPC",
+        "url": "https://worldchain-mainnet.g.alchemy.com/public"
+      },
+      {
+        "label": "DAI parent review",
+        "url": "https://github.com/TokenBrice/pharos-watch/blob/main/shared/data/stablecoins/domains/risk-review/dai-makerdao.json"
       }
     ],
-    "evidence": "All four tracked sDAI deployments have reviewed local transfer posture. The prior Ethereum SavingsDai review identifies immutable non-proxy code with ordinary transfer/transferFrom and no holder blacklist, pause, privileged arbitrary-holder burn or upgrade entrypoint. Base and Optimism remain immutable OptimismMintableERC20 representations whose local transfers inherit ordinary ERC20 checks; onlyBridge mint/burn authority is a distinct economic control. The newly covered World Chain sDAI 0x859dbe24b90c9f2f7742083d3cf59ca41f55be5d has exact-match verified OptimismMintableERC20 1.3.0 source on Worldscan. Its immutable REMOTE_TOKEN is canonical Ethereum sDAI and immutable BRIDGE is 0x4200000000000000000000000000000000000010, both embedded in the runtime. No token-level blacklist, pause, upgrade or holder-transfer permissioning is present; ERC20 transfer hooks are empty. Pinned eth_getCode at World Chain block 35966146 (hash 0xf294a8c1cd77abb22c920b18164a3c9e69cb0de25ceaa775a26785ac9e847924, timestamp 2026-10-06T06:25:31Z), observed 2026-10-09T10:40:50.894Z, returned direct runtime matching the explorer's deployed bytecode. The bridge alone can mint/burn, including an arbitrary from argument at the token interface; this review does not certify all bridge execution paths or current route supply shares. Historical three-deployment supply fractions are not used as current materiality evidence. sDAI retains upstream-only exposure through the DAI dependency and its backing rather than erasing parent exposure.",
-    "reviewer": "Sol curation campaign 2026-10-09 (Lane11Sky)",
-    "reviewedAt": "2026-10-09"
+    "evidence": "All four tracked deployments have reviewed local transfer posture. Canonical Ethereum SavingsDai 0x83f20f44975d03b1b09e64809b757c47f942beea has immutable, non-proxy verified source, ordinary transfer/transferFrom, holder/allowance-gated withdrawals and no blacklist, pause, privileged arbitrary-holder burn, configurable withdrawal gate or upgrade entrypoint. Its DAI, DaiJoin and Pot references are immutable. World Chain 0x859dbe24b90c9f2f7742083d3cf59ca41f55be5d remains exact-match OptimismMintableERC20 1.3.0, with immutable REMOTE_TOKEN=canonical Ethereum sDAI and BRIDGE=0x4200000000000000000000000000000000000010; historical runtime correspondence at World Chain block 35966146 (2026-10-06T06:25:31Z), observed 2026-10-09, remains valid. Base 0x99ac4484e8a1dbd6a185380b3a811913ac884d87 and OP Mainnet 0x2218a117083f5b482b0bb821d27056ba9c04b1d3 are also immutable OptimismMintableERC20 tokens. Each bridge can call burn(from,amount) at the token interface, but the current standard bridge's withdrawal path burns the withdrawing caller, not an arbitrary victim. The bridge is upgradeable, so this is a mutable privileged burn path (Possible), not an active Yes blacklist. Current pinned materiality resolves its scope: Ethereum block 26224773 (2026-10-19T06:16:47Z) totalSupply()=139,167,802.65762588 shares; Base block 52800638, OP block 158395923 and World Chain block 36527492 (all 2026-10-19T06:17:03Z) supplies are 77.01338133901676, 78,699.64770768755 and 1,501,957.4121714479 shares. Against canonical minted shares, the bridge shares are 0.0000553385%, 0.0565501835% and 1.0792420254%, all far below 10%; subtracting those representations from canonical minted shares leaves approximately 98.8641524526% on Ethereum. The independently fetched Pharos market-cap/price denominator is 139,167,424.00087732 shares and gives effectively identical sub-threshold results; it is not added to bridge supplies, avoiding escrow double counting. The common bridge admin is ProxyAdmin 0x4200000000000000000000000000000000000018; pinned owner() values are Base 0x8cc51c3008b3f03fe483b28b8db90e19cf076a6d, OP 0x6b1bae59d09fccbddb6c6cceb07b7279367c4e3b and World Chain 0xb2aa0c2c4fd6bfcbf699d4c787cd6cc0dc461a9d. These peripheral Possible paths are disclosed but do not set the verdict. With no direct Yes/Possible on the material Ethereum deployment, sDAI inherits Upstream from DAI, whose shared Sky reserve book has a separately measured conservative issuer/custodian exposure floor above 50%.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "medianized-with-delay",

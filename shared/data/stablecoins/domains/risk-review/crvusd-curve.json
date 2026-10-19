@@ -1,7 +1,7 @@
 {
   "id": "crvusd-curve",
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": false,
     "sources": [
       {
         "label": "Curve crvUSD source repository",
@@ -46,11 +46,35 @@
       {
         "label": "Verified cbBTC collateral implementation",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7458bfdc30034eb860b265e6068121d18fa5aa72"
+      },
+      {
+        "label": "Pinned Ethereum block",
+        "url": "https://etherscan.io/block/26224667"
+      },
+      {
+        "label": "ControllerFactory",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xC9332fdCB1C491Dcc683bAe86Fe3cb70360738BC"
+      },
+      {
+        "label": "YieldBasis factory",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x370a449febb9411c95bf897021377fe0b7d100c0"
+      },
+      {
+        "label": "YieldBasis LP constituent source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6095a220c5567360d459462a25b1ad5aead45204"
+      },
+      {
+        "label": "WBTC owner-pausable source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2260fac5e5542a773aa44fbcfedf7c193bc2c599"
+      },
+      {
+        "label": "PegKeeper enumeration policy",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x07491D124ddB3Ef59a8938fCB3EE50F9FA0b9251"
       }
     ],
-    "evidence": "Re-verified 2026-10-01 at Ethereum block 26095803. Canonical crvUSD's verified Vyper implementation has ordinary transfers and allowance-gated transferFrom/burnFrom, with no blacklist or global transfer-pause path; the zero EIP-1967 slots are consistent with this direct deployment but are not themselves proof of immutability. Inherited collateral restrictions remain material: Curve's current markets API identifies debt-bearing cbBTC controller 0xf8c786b1064889ffd3c8a08b48d5e0c159f4cbe3, backed by token 0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf. Its legacy Zeppelinos implementation slot resolves to 0x7458bfdc30034eb860b265e6068121d18fa5aa72, whose verified FiatTokenV2_1 source exposes blacklist and pause. Pinned cbBTC reads resolve nonzero blacklister 0x5130bf38bf5342aa06cc79b8cc198cce832b01af and pauser 0x7399168043b684b57f198c42fc31558467cf2d6a. The inherited reviewedStatus is retained; canonical-holder restrictions and upstream collateral impairment are distinct, and no collateral-issuer risk is removed. Earlier bridge-source observations remain historical rather than a new assertion that every bridge lacks restrictions.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurA25EUTBL)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "At Ethereum block26224667 (2026-10-19T05:55:35Z), canonical crvUSD0xf939e0a03fb07f59a73314e73794be0e57ac1b4e has ordinary Vyper transfers and allowance-gated transferFrom/burnFrom, no blacklist, pause, arbitrary-holder privileged burn or upgrade surface. Its minter can mint/set_minter but cannot reduce existing balances. Ethereum holds99.0159% of census circulating supply; all other chains combined hold0.9841%, so peripheral bridge controls do not set the verdict. There is no declared parent. The reserve test covers all9 ControllerFactory controllers,11 YieldBasis markets and5 PegKeepers at the pinned block. Total debt212332450.297769crvUSD comprises LLAMMA67299424.891940, YieldBasis111283025.405828 and USDT PegKeeper33750000; USDC/PYUSD/TUSD/GHO PegKeepers have zero debt. Each branch debt is multiplied by its issuer/custodian-controlled constituent value divided by total collateral value, retaining self-crvUSD legs only in the denominator. Qualifying exposure is37.29213735% (37.29213787% if negligible unclosed LBTC is included), below strictly>50%. WBTC owner0xca06411bd7a7296d7dbdd0050dfc846e95febeb7 can pause; cbBTC blacklister0x5130bf38bf5342aa06cc79b8cc198cce832b01af and pauser0x7399168043b684b57f198c42fc31558467cf2d6a are nonzero. WBTC/cbBTC external legs and PegKeeper USDT count; wstETH/sfrxETH/weETH governance-only controls and tBTC/WETH do not. YieldBasis collateral is LP exposure, not100% its BTC/ETH label. Gross-collateral sensitivity is35.8065%; external-only aggregation54.5582% is not the policy denominator. Direct, parent and reserve tests resolve No. The cbBTC controller0xf8c786b1064889ffd3c8a08b48d5e0c159f4cbe3 remains debt-bearing and uses collateral0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf, whose previously observed legacy Zeppelinos implementation0x7458bfdc30034eb860b265e6068121d18fa5aa72 contains blacklist/pause. This establishes a qualifying component, not a reserve-majority verdict.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "standard-external",

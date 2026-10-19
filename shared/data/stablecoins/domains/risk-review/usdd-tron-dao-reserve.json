@@ -30,11 +30,39 @@
       {
         "label": "USDD Smart Allocator live positions and debt",
         "url": "https://app-api.usdd.io/smart-allocator/detail-overview"
+      },
+      {
+        "label": "Tron verified non-proxy metadata and method map",
+        "url": "https://apilist.tronscanapi.com/api/contract?contract=TXDk8mbtRbXeYuMNS83CfKPaYYT8XWv9Hz"
+      },
+      {
+        "label": "Current Tron branch debt and gross collateral",
+        "url": "https://app-api.usdd.io/data-platform/latest-collateral?chain=tron"
+      },
+      {
+        "label": "Current Ethereum branch debt and gross collateral",
+        "url": "https://app-api.usdd.io/data-platform/latest-collateral?chain=eth"
+      },
+      {
+        "label": "Current BSC branch debt and gross collateral",
+        "url": "https://app-api.usdd.io/data-platform/latest-collateral?chain=bsc"
+      },
+      {
+        "label": "Global allocator constituents and origin-chain debt",
+        "url": "https://openapi.usdd.io/api/v1/smart-allocator/detail-overview"
+      },
+      {
+        "label": "Current Pharos deployment shares",
+        "url": "https://api.pharos.watch/api/stablecoins"
+      },
+      {
+        "label": "Shared DAI-USDS book and conversion",
+        "url": "https://developers.skyeco.com/protocol/tokens/usds/"
       }
     ],
-    "evidence": "USDD's canonical Tron, Ethereum, and BSC direct implementations expose wards for mint, rely, and deny, but transfer and burn require holder authority or allowance and contain no blacklist, holder freeze, seizure, or pause mechanism; the Ethereum and BSC deployments are non-proxy. The upstream result instead comes from the debt-weighted all-chain reserve review captured 2026-08-10: 62.2% of minted USDD debt is backed through Smart Allocator positions itemized as USDS, USDT, USDT0, and USDC, and another 8.3% uses direct USDT PSM/vault issuance rails. That 70.5% freeze-exposed majority exceeds the v3.9973 threshold and resolves USDD as Upstream rather than direct Yes. The historical debt-weighted percentages are not recertified by the October 1 fetch: current global allocator holdings are not attributed to origin-chain debt at a shared checkpoint, so current chain-envelope percentages remain unknown.",
-    "reviewer": "Codex USDD upstream exposure audit",
-    "reviewedAt": "2026-08-10"
+    "evidence": "USDD remains Upstream, not direct Yes. Current Pharos /api/stablecoins confirms Tron 73.7507094961% and Ethereum 25.0922994129%, both material, and BSC 1.1569566505% below 10% (Bittorrent dust is 0.0000344404%). The official deployment inventory identifies Tron TXDk8mbtRbXeYuMNS83CfKPaYYT8XWv9Hz, Ethereum 0x4f8e5de400de08b164e7421b3ee387f461becd1a and BSC 0x45e51bc23d592eb2dba86da3985299f7895d66ba. The prior verified-source review finds mint/rely/deny wards, ordinary holder transfers and allowance-gated burn, but no blacklist, holder freeze, seizure, pause or token upgrade path. The current exact-match Ethereum Sourcify source independently confirms that ward authority does not bypass holder allowance for burn or transfer; proxyResolution.isProxy=false. Current Tronscan identifies the canonical Tron token as verified non-proxy and its method map retains only the reviewed holder-transfer, allowance-burn and mint/ward methods. USDD's official freeze-free disclosure is consistent with, not a substitute for, these code findings. There is no declared parent. The 2026-08-10 review's historical 62.2% allocator plus 8.3% direct USDT =70.5% all-chain debt exposure remains historical, not a current reserve recertification. A new official API observation fetched 2026-10-19T06:17:38.420806Z measures $1,779,349,938.04 of all-chain vault debt, with SA001-A $814,431,711 on Tron plus $435,509,896 on Ethereum (BSC zero), totaling $1,249,941,607 or 70.2470930691%. Direct USDT PSM/vault debt adds $66,500,366.22 or 3.7373405196%. The global allocator discloses $509,922,380.7224389 USDT, $45,914,606.725523 USDT0, $1,031.962399 USDC and $724,556,815.6491401 USDS, totaling $1,280,394,835.059501; all destination chains/operators are included, with no unsupported attribution of global positions to Tron alone. USDT/USDT0/USDC terminate in issuer/custodian control. USDS is counted categorically because its shared Sky book independently exceeds 50% issuer/custodian exposure (the conservative DAI review floor is 50.8727210615%), not merely because DAO governance can upgrade USDS. Consequently the debt-weighted exposure is 73.9844335887%, strictly above 50%. TRX debt 25.7128092445% and sTRX debt 0.3027571668% remain in the denominator and do not count. Pro-rating USDS instead of categorical transitive counting gives a conservative 54.4554518301% debt exposure and still does not flip the primary verdict. Secondary gross-collateral sensitivity: official all-chain lockedValue totals $2,482,787,324.57; allocator debt plus direct USDT lockedValue gives 53.0271104178%. Replacing allocator lockedValue with its actual holdings gives a $2,513,240,552.629501 denominator and 53.5962863837% categorical exposure; pro-rating USDS at the conservative Sky floor instead gives 39.4330958559%. The gross sensitivity is not the primary debt-weighted test. The dated Tron-only reserve scaffold cannot be substituted for the all-chain primary denominator. APIs have no common block/checkpoint, so these are contemporaneous issuer disclosures, not fabricated pinned on-chain reserve totals.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "medianized-with-delay",

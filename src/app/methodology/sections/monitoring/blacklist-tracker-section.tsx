@@ -58,10 +58,41 @@ export function BlacklistTrackerMethodologySection() {
                 Blacklistability uses the report-card four-status model: Yes, Upstream, Possible, and No. The sourced
                 `blacklistabilityReview.reviewedStatus` is the sole status authority; the generated client status is a
                 direct projection, while Safety Score V10 consumes the review as evidence rather than a fallback verdict.
-                Upstream applies when a token has no direct Yes or Possible holder-facing freeze control and strictly
-                more than half of its reserves are exposed to Yes, Upstream, or Possible upstream assets or rails.
-                Possible is reserved for curated direct token or vault controls that are not confirmed direct blacklist
-                controls.
+              </p>
+              <p>
+                Reviews measure each deployment against the Safety Score material-supply threshold (currently 10%),
+                never adding sub-threshold deployments together. Missing shares are measured before an unresolved
+                deployment is treated as material. Yes requires a current holder-targeted power: blacklist, freeze,
+                seizure, forced transfer, enforced transfer allowlist or sanctions oracle, active holder-targeted exit
+                gate, or a current role member able to burn arbitrary holders&apos; balances. An admin able to assign
+                denylist state directly to a victim already has an active blacklist power.
+              </p>
+              <p>
+                Without Yes, Possible covers global transfer pauses, any admin- or DAO-upgradeable token implementation
+                regardless of delay, grantable empty/incapable operator roles, dormant configurable transfer/exit gates,
+                material canonical-bridge burner surfaces and issuer-shipped consensus halts. A vault/share&apos;s own
+                globally pausable redemption or withdrawal is Possible too. Deposit-only gates, permanently abdicated
+                setters, protocol-global redemption or peripheral PSM/swap switches, mint-only authority and
+                increase-only rebases are not holder-facing controls.
+              </p>
+              <p>
+                Upstream applies only without direct Yes or Possible: a holder claim on an exposed declared parent,
+                full CEX reserve custody, or strictly more than half of measured reserves terminating in issuer or
+                custodian control. Qualifying collateral counts categorically at its full share; DAO-only collateral
+                controls do not count. Custodial fiat, bank/fund/T-bill claims and allocated physical commodities count.
+                CDP/lending books use debt-weighted exposure; reserve-backed tokens use published composition.
+                LPs split by constituent value, with self-token legs in the denominator only. Self includes the coin
+                and its own wrappers/savings shares, not different tokens from the same issuer, which count at their
+                own status. Unmeasurable reserves never establish Upstream. No means none of these tests establishes
+                exposure, not proof that unresolved reserves are free of risk.
+              </p>
+              <p>
+                Reviews name deployments, measured shares, current authorities and reachable controls, pin decisive
+                on-chain reads, and cite the parent or measured reserve basis and denominator. Upstream and Possible
+                describe exposure, not an asserted active blacklist on this token. See the{" "}
+                <a href="https://github.com/TokenBrice/pharos-watch/blob/main/docs/blacklist-tracker.md#freezewatch-decision-procedure" className="text-foreground underline">
+                  full FreezeWatch decision procedure
+                </a>.
               </p>
               <MethodologyFacts
                 facts={[

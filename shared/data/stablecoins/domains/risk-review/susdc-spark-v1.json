@@ -1,7 +1,7 @@
 {
   "id": "susdc-spark-v1",
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Spark Savings documentation distinguishes Legacy V1 from V2",
@@ -76,9 +76,9 @@
         "url": "https://api-unichain-mainnet.n.dwellir.com"
       }
     ],
-    "evidence": "Ethereum block 26197387, hash 0x530cc1059f89d04e8a499a738ba8a4983a6a5695ffe0fa29d5bd25934b8dd702, timestamp 2026-10-15T10:42:35.000Z. Exact Ethereum implementation is unchanged; native USDC blacklister remains 0x0a06be16275b95a7d2567fbdae118b36c7da78f9. The four added native L2 sUSDC contracts resolve to the official UsdcVaultL2 implementations. Both source families implement ordinary invalid-address, balance and allowance checks for transfer/transferFrom, without a local receipt blacklist or pause list. All five receipts are UUPS-upgradeable. This describes current holder-transfer code, not immunity from upgrades, USDC issuer blocking, sUSDS representation controls or PSM exit impairment.",
-    "reviewer": "Rev_SusdcSparkV1",
-    "reviewedAt": "2026-10-15"
+    "evidence": "2026-10-19 supply data: Arbitrum 63.3636% and Ethereum 34.9074% are material; Base 1.1808%, Optimism 0.5226% and Unichain 0.0257% are peripheral. At ethereum@26224759 (2026-10-19T06:13:59+00:00), Ethereum implementation remains 0xf943cb8d5f06f2bbf352878ebef3ec5c537a20ba and wards(Spark Proxy 0x3300f198988e4c9c63f75df86de36421f06af8c4)=1. At arbitrum@516203553 (2026-10-19T06:14:05+00:00), implementation is 0xdc8df20be448e41fde88e2478d6bc4d3c9a092d6 and wards(Spark Executor 0x65d946e533748a998b1f0e430803e39a6388f7a1)=1. Verified legacy L1/L2 source implements ordinary invalid-address, balance and allowance checks for transfer/transferFrom, with no current local receipt blacklist or transfer pause; it also implements auth-gated UUPS upgrades. All five receipts are UUPS-upgradeable, including the disclosed sub-threshold deployments. Therefore Possible, not Upstream: active mutable receipt implementations are direct holder-facing control surfaces. USDC issuer blocking, sUSDS representation controls and PSM exit impairment remain additional upstream risk through the declared USDC parent, but do not override direct Possible.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "privileged-internal-pricing",

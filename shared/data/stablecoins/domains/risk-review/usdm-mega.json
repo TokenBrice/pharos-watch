@@ -6,11 +6,23 @@
       {
         "label": "MegaUSD Ethereum token contract",
         "url": "https://etherscan.io/address/0xec2af1c8b110a61fd9c3fa6a554a031ca9943926#code"
+      },
+      {
+        "label": "MegaETH USDM proxy (Blockscout)",
+        "url": "https://megaeth.blockscout.com/api/v2/smart-contracts/0xfafddbb3fc7688494971a79cc65dca3ef82079e7"
+      },
+      {
+        "label": "MegaETH USDM implementation (Blockscout)",
+        "url": "https://megaeth.blockscout.com/api/v2/smart-contracts/0xac37677261885fdb372a37ac8d5d47044196073c"
+      },
+      {
+        "label": "MegaETH RPC pinned reads",
+        "url": "https://mainnet.megaeth.com/rpc"
       }
     ],
-    "evidence": "The verified Ethereum MegaUSD proxy source exposes blacklister administration, an address blacklist, and rescueBlacklistedTokens. Its _update hook rejects transfers involving a blacklisted caller, sender, or recipient, establishing direct holder-level transfer restriction capability.",
-    "reviewer": "SONG Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "USDM supply is 99.8% on MegaETH (census 2026-10-19). At MegaETH block 29593494 (2026-10-19T06:15:05Z), the proxy 0xfafddbb3fc7688494971a79cc65dca3ef82079e7 resolved to verified implementation 0xac37677261885fdb372a37ac8d5d47044196073c (xUSDOFTUpgradeable). Its owner() is the 4-of-8 Safe 0x141C03abC062a9d5d4238E1666B849c929E53cb2, which isBlacklister = true; the implementation exposes addToBlacklist/removeFromBlacklist, isBlacklisted, and rescueBlacklistedTokens, so the issuer can block or seize named holders. The Ethereum deployment 0xec2af1c8b110a61fd9c3fa6a554a031ca9943926 (0.19% of supply) has the same owner and blacklist surface. The direct blacklist control therefore sits on the material MegaETH deployment.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",

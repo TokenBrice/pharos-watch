@@ -2,9 +2,23 @@
   "id": "usdpt-western-union",
   "blacklistabilityReview": {
     "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Solana mainnet RPC (Token-2022 mint read)",
+        "url": "https://api.mainnet-beta.solana.com"
+      },
+      {
+        "label": "Solscan USDPT mint",
+        "url": "https://solscan.io/token/HVWf8JmLoHs99Lw8Psf3fyqAtA4crWxCPkrmSdNjhNH3"
+      },
+      {
+        "label": "Western Union USDPT disclosure",
+        "url": "https://www.westernunion.com/global/en/digital-assets-stablecoin.html"
+      }
+    ],
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: USDPT resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "evidence": "Re-verified 2026-10-19 on Solana mainnet at slot 458729688. The Token-2022 mint HVWf8JmLoHs99Lw8Psf3fyqAtA4crWxCPkrmSdNjhNH3 (6 decimals, supply 17,503,010.056497 USDPT) has non-null freeze authority FiV6goxf5fYfw9y7XwuG8bVAG6bqTb1sR1rrLomjkXa3 (a system-owned key account) and a permanent delegate C2QJ4HKLWzWRNprAmKoyd6YqXouVHFZuLKujdqtF4ZDt that is also the mint authority; the mint also carries a pausable extension with authority fEnXbNWPAkmhVK1nL1H2sQVdkF3y4eh8CuqnCsnDXqx (paused=false). The freeze authority can freeze any holder's token account and the permanent delegate can move or burn any holder's tokens, so this is a direct Yes seizure/freeze surface. USDPT is a single Solana deployment holding 100% of supply; Anchorage Digital Bank is the issuer. No parent: variantOf and mintAuthority.inheritedFrom are null. The 100% custodial reserve book (83.1% money market funds, 16.9% bank deposits) is not the basis of this verdict.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   }
 }

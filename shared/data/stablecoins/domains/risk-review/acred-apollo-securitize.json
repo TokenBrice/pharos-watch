@@ -6,11 +6,47 @@
       {
         "label": "Securitize ACRED page",
         "url": "https://www.securitize.io/primary-market/apollo-diversified-credit-securitize-fund"
+      },
+      {
+        "label": "ethereum current DSToken implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfc8a9000c161e3c6e073e967107ce926a44a06e2"
+      },
+      {
+        "label": "ink current DSToken implementation",
+        "url": "https://explorer.inkonchain.com/api/v2/smart-contracts/0xaa48c328ae9f12882347eed3c511c01d2746b418"
+      },
+      {
+        "label": "sei current DSToken implementation",
+        "url": "https://api.etherscan.io/v2/api?chainid=1329&module=contract&action=getsourcecode&address=0xa12c20a072002951f86246daa5f5a1aa5f3bef4b"
+      },
+      {
+        "label": "Solana Token-2022 mint authority and supply",
+        "url": "https://solscan.io/token/FubtUcvhSCr3VPXEcxouoQjKQ7NWTCzXyECe76B7L3f8"
+      },
+      {
+        "label": "Aptos metadata and supply at ledger 7675718812",
+        "url": "https://fullnode.mainnet.aptoslabs.com/v1/accounts/0xe528f4df568eb9fff6398adc514bc9585fab397f478972bcbebf1e75dee40a88/resources?ledger_version=7675718812"
+      },
+      {
+        "label": "Aptos on-chain DS protocol source in PackageRegistry",
+        "url": "https://fullnode.mainnet.aptoslabs.com/v1/accounts/0x13816cd4562c9cf260a0471615451253ab96cca6d6adf746969c52c78480f06a/resources?ledger_version=7675724072"
+      },
+      {
+        "label": "Aptos active trust roles",
+        "url": "https://fullnode.mainnet.aptoslabs.com/v1/accounts/0x904f16acd72ba779f6a9ba91cef1d5e4b4d16e6f3a7f4556446836cc8b318edf/resources?ledger_version=7675728660"
+      },
+      {
+        "label": "Pinned EVM JSON-RPC authority reads",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Solana finalized mint authority reads",
+        "url": "https://solana-rpc.publicnode.com"
       }
     ],
-    "evidence": "Securitize operates ACRED with permissioned token transfers restricted to KYC-onboarded qualified purchasers and retains transfer-agent freeze and burn authority on behalf of Apollo.",
-    "reviewer": "Codex RWA expansion review",
-    "reviewedAt": "2026-05-12"
+    "evidence": "ACRED is a Securitize-administered Apollo fund token, with permissioned transfers restricted to KYC-onboarded qualified purchasers. On 2026-10-19, direct per-deployment reads measured 86064.207886999997 total outstanding tracked share units: avalanche: 4413.846004000000 shares / 5.128550% at block 97944378 (2026-10-19T06:17:04+00:00); ethereum: 26061.347705000000 shares / 30.281285% at block 26224774 (2026-10-19T06:16:59+00:00); ink: 9999.344330000000 shares / 11.618470% at block 58892214 (2026-10-19T06:17:05+00:00); polygon: 818.632417000000 shares / 0.951188% at block 95790186 (2026-10-19T06:17:06+00:00); sei: 14096.732652999999 shares / 16.379321% at block 238435738 (2026-10-19T06:17:05+00:00); solana: 16526.675787000000 shares / 19.202728% at slot 458730399; aptos: 14147.628991000000 shares / 16.438458% at ledger 7675718812. The denominator is the sum of token totalSupply / mint supply across every catalogued deployment (Aptos ConcurrentSupply for ACRED), not missing census USD market cap, and is not an independent reconciliation of fund NAV liabilities. Material deployments are ethereum, ink, sei, solana, aptos; sub-10% deployments are disclosed but do not set the verdict. ethereum@26224667 (2026-10-19T05:55:35Z): owner()=0x59c1eacec450c57dcb9b8725d0f96635c2b676ee; getDSService(1)=0xc397436742eaf7c325ddbfc4dc63d95822b27101; trust.getRole(owner)=1 (MASTER); EIP-1967 implementation=0xfc8a9000c161e3c6e073e967107ce926a44a06e2. Ethereum role/implementation independently pinned at block 26224667 (2026-10-19T05:55:35Z). Current verified DSToken source has onlyTransferAgentOrAbove seize(from,to,value,reason), onlyIssuerOrTransferAgentOrAbove burn(who,value,reason), and ServiceConsumer allows MASTER for both; no holder allowance required. https://eth.blockscout.com/api/v2/smart-contracts/0xfc8a9000c161e3c6e073e967107ce926a44a06e2 ink@58892214 (2026-10-19T06:17:05+00:00): owner()=0x59c1eacec450c57dcb9b8725d0f96635c2b676ee; getDSService(1)=0x38c680c3832be7accd673b18420820e61d1b8f39; trust.getRole(owner)=1 (MASTER); EIP-1967 implementation=0xaa48c328ae9f12882347eed3c511c01d2746b418. Ethereum role/implementation independently pinned at block 26224667 (2026-10-19T05:55:35Z). Current verified DSToken source has onlyTransferAgentOrAbove seize(from,to,value,reason), onlyIssuerOrTransferAgentOrAbove burn(who,value,reason), and ServiceConsumer allows MASTER for both; no holder allowance required. https://explorer.inkonchain.com/api/v2/smart-contracts/0xaa48c328ae9f12882347eed3c511c01d2746b418 sei@238435738 (2026-10-19T06:17:05+00:00): owner()=0x59c1eacec450c57dcb9b8725d0f96635c2b676ee; getDSService(1)=0x4a0f56f8151f09888545a066efc2f05083f355dc; trust.getRole(owner)=1 (MASTER); EIP-1967 implementation=0xa12c20a072002951f86246daa5f5a1aa5f3bef4b. Ethereum role/implementation independently pinned at block 26224667 (2026-10-19T05:55:35Z). Current verified DSToken source has onlyTransferAgentOrAbove seize(from,to,value,reason), onlyIssuerOrTransferAgentOrAbove burn(who,value,reason), and ServiceConsumer allows MASTER for both; no holder allowance required. https://api.etherscan.io/v2/api?chainid=1329&module=contract&action=getsourcecode&address=0xa12c20a072002951f86246daa5f5a1aa5f3bef4b Solana finalized getAccountInfo(jsonParsed) slot 458730399, observed 2026-10-19: freezeAuthority=Fr3R4632hv5LU2YNXYMnErnLE1XYMe1KPjR8q91KTYbH; active Token-2022 permanentDelegate and transferHook extensions; source https://solana-rpc.publicnode.com and https://solscan.io/token/FubtUcvhSCr3VPXEcxouoQjKQ7NWTCzXyECe76B7L3f8 Aptos metadata resources at ledger 7675718812 (2026-10-19T06:17:21.639292Z) retain burn_ref/transfer_ref; on-chain PackageRegistry at ledger 7675724072 contains gzip Move source ds_token::burn(who,value,reason) with trust_service::assert_only_issuer_or_transfer_agent_or_above and seize(from,to,value,reason) with assert_only_transfer_agent_or_above. Trust Roles read at ledger 7675728660 has nonzero master 0xc35dd2252c745bac5aced78b9087a1165ecf5003723d29dcc41bb8c88206aec7, 2 issuers, 2 transfer agents. MASTER is permitted by both assertions. https://fullnode.mainnet.aptoslabs.com/v1/accounts/0x904f16acd72ba779f6a9ba91cef1d5e4b4d16e6f3a7f4556446836cc8b318edf/resources?ledger_version=7675728660 These are present holder-targeted functions with current nonzero authorized callers, not just an admin's ability to add future burners. Ordinary transfer compliance is also permissioned, but active seizure/arbitrary-holder burn/freeze is sufficient for Yes. No declared parent is needed. Declared reserves are 100% custodial fund shares; that upstream exposure is secondary and does not displace direct Yes.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
@@ -36,11 +72,11 @@
         "url": "https://wormhole.com/case-studies/securitize"
       },
       {
-        "label": "Wave-2 Securitize ACRED authoritative deployment and bridge-address feed",
+        "label": "Securitize ACRED authoritative deployment and bridge-address feed",
         "url": "https://public-feed.securitize.io/asset-info?symbol=ACRED"
       },
       {
-        "label": "Wave-2 publicly verified SecuritizeBridge implementation source (not a pinned proxy-state certificate)",
+        "label": "Publicly verified SecuritizeBridge implementation source (not a pinned proxy-state certificate)",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xA42A23Db258666aDE7A40F52Ea55819DA4FA9853"
       },
       {

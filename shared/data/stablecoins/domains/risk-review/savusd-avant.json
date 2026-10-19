@@ -28,9 +28,9 @@
         "url": "https://api.avax.network/ext/bc/C/rpc"
       }
     ],
-    "evidence": "READY_FOR_REPLAY: the official registry identifies Avalanche 0x06d47f3fb376649c3a9dafe069b3d6e35572219e as native Staked avUSD. At Avalanche block 90341316, its verified non-proxy StakedAvUSDV2 runtime had owner() 0xd4d23209aaE8630bf386b7393763a5b7865e57cb, which held DEFAULT_ADMIN_ROLE; BLACKLIST_MANAGER_ROLE was administered by DEFAULT_ADMIN_ROLE. The verified source lets a blacklist manager assign FULL_RESTRICTED_STAKER_ROLE through addToBlacklist(), blocks a fully restricted holder's transfers, transferFrom, deposits, and withdrawals in _update/_deposit/_withdraw, and lets DEFAULT_ADMIN_ROLE burn or redirect that holder's entire balance with redistributeLockedAmount(). Because the current default admin can grant itself BLACKLIST_MANAGER_ROLE, this is an active direct holder-control path, so the review is Yes. The official registry labels the other tracked savUSD contracts Bridged. This direct finding is limited to the native Avalanche deployment and does not assert that any bridged representation shares its blacklist, restriction, or seizure code; route-specific bridge controls remain separately scoped bridge-risk evidence. Avant's Terms govern interface/protocol access but do not replace the on-chain finding; the transparency page is available, and Archive.org returned no snapshot for the reviewed contract registry or Terms URLs.",
-    "reviewer": "SONG Safety Score V9 access review",
-    "reviewedAt": "2026-07-15"
+    "evidence": "The Avalanche deployment (25.4515% of supply, material) has no BLACKLIST_MANAGER_ROLE grant in its indexed full history through block 97945563; owner/admin is not a member. Current DEFAULT_ADMIN_ROLE holder 0xd4d23209aae8630bf386b7393763a5b7865e57cb can call public grantRole directly on FULL_RESTRICTED_STAKER_ROLE, which IS the enforced deny-state, without appointing any intermediate operator. A non-mutating eth_call of that grant succeeds at the pin. That immediately blocks a named existing holder from transferring/withdrawing; admin-only redistributeLockedAmount then burns/remints the restricted balance. A directly grantable enforced deny role is a direct Yes. Ethereum/Monad satellites need not set the verdict because Avalanche alone is material.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "oracleless",

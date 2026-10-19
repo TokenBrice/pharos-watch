@@ -1,7 +1,7 @@
 {
   "id": "sreusd-resupply",
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": false,
     "sources": [
       {
         "label": "Resupply savings documentation",
@@ -18,11 +18,15 @@
       {
         "label": "Ethereum block 26197384, 2026-10-15T10:41:59Z; runtime correspondence and fixed local custody via https://ethereum-rpc.publicnode.com",
         "url": "https://etherscan.io/block/26197384"
+      },
+      {
+        "label": "Current observation block",
+        "url": "https://etherscan.io/block/26224760"
       }
     ],
-    "evidence": "Verified nonproxy SavingsReUSD and its ERC-20/ERC-4626 source contain no direct holder blacklist, transfer pause, seizure or arbitrary-holder burn. Native ERC-4626 withdrawals burn the holder's shares under ordinary allowance rules. Core ownership and reward/bridge configuration are separate control powers, not proof of a native freeze. Freeze exposure remains inherited from reusd-resupply and its backing dependencies.",
-    "reviewer": "Rev_SreusdResupply batch-64 primary-source review",
-    "reviewedAt": "2026-10-15"
+    "evidence": "Ethereum holds 100% of circulating supply. At ethereum@26224760 (2026-10-19T06:14:11+00:00; hash 0x2a6c0b20faae49bb23f77a582b517057741efcee5bd423a8552f672144c83b85; observed 2026-10-19T06:19:28.419767+00:00) via https://ethereum-rpc.publicnode.com, 0x557ab1e003951a73c12d16f0fea8490e39c33c35 exactly matches the verified nonproxy SavingsReUSD runtime, with zero EIP-1967 implementation/admin/beacon slots. The verified SavingsReUSD, LinearRewardsErc4626 and Solmate ERC-20/ERC-4626 source contain no holder blacklist, transfer pause, seizure, upgrade path or arbitrary-holder burn. Native withdrawals burn holder shares under ordinary allowance rules; maxWithdraw/maxRedeem are balance-based and there is no configurable owner/receiver allowlist or withdrawal-limiter module. Core ownership and reward/bridge configuration do not authorize freezing local holder balances; owner remains 0xc07e000044f95655c11fda4cd37f70a94d7e0a7d, msgInspector is zero, and asset() returns reUSD 0x57ab1e0003f623289cd798b1824be09a793e4bec. The wrapper is a 100% claim on reusd-resupply, not a separate reserve portfolio. With that parent's corrected No verdict, neither parent inheritance nor a >50% issuer/custodian reserve majority qualifies. No is conditional on the reUSD and crvUSD classifications; if reUSD remains Upstream, this wrapper remains Upstream.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "oracleless",

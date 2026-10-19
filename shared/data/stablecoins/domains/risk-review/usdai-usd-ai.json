@@ -26,11 +26,27 @@
       {
         "label": "USD.AI documentation",
         "url": "https://docs.usd.ai/"
+      },
+      {
+        "label": "Exact-match USDai v1.7 current code and enforced blacklist",
+        "url": "https://sourcify.dev/server/v2/contract/42161/0xe6ee2cd3e4f2b3844689aa1be176e4dff744a6f9?fields=abi,sources"
+      },
+      {
+        "label": "Native Arbitrum USDC issuer deployment",
+        "url": "https://developers.circle.com/stablecoins/usdc-contract-addresses"
+      },
+      {
+        "label": "Current Solana Token-2022 mint RPC",
+        "url": "https://solana-rpc.publicnode.com"
+      },
+      {
+        "label": "Arc mainnet supply RPC",
+        "url": "https://rpc.mainnet.arc.io"
       }
     ],
-    "evidence": "Re-reviewed at Arbitrum block 510584307 (2026-10-01): the hub proxy now uses verified USDai v1.7 implementation 0xe6ee2cd3e4f2b3844689aa1be176e4dff744a6f9. setBlacklist(address,bool) remains gated by BLACKLIST_ADMIN_ROLE, and transfers check sender/from/to through isBlacklisted. On Arbitrum, that function combines its local blacklist with USDC and USDT lists, but explicitly exempts sUSDai, OUSDaiUtility 0x5d6f3b27d1464a02be5ada30ca0703ef0e5c8e2c, and the sUSDai admin-fee recipient from those external checks. isBlacklisted(address(0)) returned false. Ethereum, Base, and Plasma currently use OToken v1.1 bridge representations, whose reviewed source exposes pause control but no holder-level blacklist function. The Yes verdict remains established by the canonical hub.",
-    "reviewer": "Grok T49 Safety Score V9 access review; Sol curation pass 2026-10-01 (CurA27A7A5)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "Arbitrum is the sole material USDai deployment: 99.608695% of measured six-chain token supply on 2026-10-19, consistent with the census's 99.6574%. At Arbitrum block 516203561 (2026-10-19T06:14:07Z), the hub proxy remains on USDai v1.7 implementation 0xe6ee2cd3e4f2b3844689aa1be176e4dff744a6f9. Its _update enforces isBlacklisted on caller/from/to; on Arbitrum that includes its local blacklist plus native USDC and bridged USDT issuer lists, with explicit external-list exemptions for sUSDai, OUSDaiUtility 0x5d6f3b27d1464a02be5ada30ca0703ef0e5c8e2c, and the sUSDai admin-fee recipient. At block 516204274 (2026-10-19T06:17:24Z), USDC.blacklister()=0xac5b4946a8c29eafb42e1742b3ab82e6d5771329, an EOA (eth_getCode=0x), confirming an active issuer controller for the enforced holder-targeted list. setBlacklist(address,bool) exists behind BLACKLIST_ADMIN_ROLE, but local-role membership was not enumerated: at block 516204054, known Safe 0x5f0bc72fb5952b2f3f2e11404398ed507b25841f has DEFAULT_ADMIN_ROLE=true and BLACKLIST_ADMIN_ROLE=false, so this review does not presume a current local blacklister. The active external issuer list is independently sufficient for Yes. Ethereum, Base, Plasma and Arc OToken v1.1 representations remain individually sub-threshold; adapter-only bridge burn is not treated as issuer arbitrary-holder seizure merely because an adapter-impersonated eth_call succeeds. Finalized Solana slot 458729831 (2026-10-19T06:14:56Z) also shows assigned freezeAuthority/permanentDelegate 5dnCPcdGKQ5CToUq4AbafWN2aP7aU9UQTENgzbNHjQw8 and a pausable extension, but only 590.514634 USDai supply (sub-threshold). There is no declared parent. PYUSD reserve exposure is additional upstream risk, not the basis for the direct Yes verdict.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",

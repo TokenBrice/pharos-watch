@@ -1,7 +1,7 @@
 {
   "id": "brlm-mento",
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Mento BRLm Celo availability documentation",
@@ -46,11 +46,27 @@
       {
         "label": "Mento direct-distribution model",
         "url": "https://www.mento.org/blog/the-evolution-of-mento-direct-distribution-and-modularity-for-enhanced-stability"
+      },
+      {
+        "label": "Current verified StableTokenV2 implementation",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x434563b0604be100f04b7ae485bcafe3c9d8850e"
+      },
+      {
+        "label": "Pinned official backing/lockbox configuration",
+        "url": "https://github.com/mento-protocol/mento-analytics-api/blob/36441a61f7ad339fe4998596f6bbed1005342ba8/src/api/v2/config/stablecoin-backing.config.ts"
+      },
+      {
+        "label": "Mento Timelock verified source",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x890db8a597940165901372dd7db61c9f246e2147"
+      },
+      {
+        "label": "Mento Governor verified source",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x47036d78bb3169b4f5560dd77bf93f4412a59852"
       }
     ],
-    "evidence": "At Celo block 74318085 (2026-08-08T19:54:03Z; hash 0x4f92837c8e7a0c52346e7727cf0aef289de42f4a06786ffb498a2f3f96701433), the sole tracked BRLm proxy returned owner/admin 0x890db8a597940165901372dd7db61c9f246e2147, broker 0x777a8255ca72412f0d706dc03c9d1987306b4cad, validators 0xaeb865bca93ddc8f47b8e29f40c5399ce34d0c58, exchange zero, and implementation 0x434563b0604be100f04b7ae485bcafe3c9d8850e; the Mento Timelock delay remained 172800 seconds. Verified StableTokenV2 exposes ordinary transfers, permissioned mint, broker/exchange-scoped burn, and Celo-VM-only gas debiting, with no blacklist, freeze, pause, seizure, arbitrary-holder burn, or transfer-hook restriction. Official Mento materials describe community governance and direct protocol distribution rather than a separate issuer freeze power. Direct holder freeze is therefore false; reserve controls and the two-day upgrade path remain upstream and restrictability risks.",
-    "reviewer": "OpenAI Codex C10 access review; OpenAI Codex unfreezable-cohort audit",
-    "reviewedAt": "2026-08-08"
+    "evidence": "Celo is the sole tracked deployment and holds 100% of BRLm circulating supply in the 2026-10-19 census. At Celo block 80489715 (2026-10-19T06:14:33Z), proxy 0xe8537a3d056da446677b9e9d6c5db704eaab4787 returned _getImplementation()=0x434563b0604be100f04b7ae485bcafe3c9d8850e, owner()=_getOwner()=0x890db8a597940165901372dd7db61c9f246e2147, broker()=0x777a8255ca72412f0d706dc03c9d1987306b4cad, validators()=0xaeb865bca93ddc8f47b8e29f40c5399ce34d0c58 and exchange()=zero. Verified StableTokenV2 implements ordinary transfer/transferFrom, permissioned mint, onlyBurner burn(uint256) that burns msg.sender only, and Celo-VM-only debitGasFees; it has no blacklist, freeze, global pause, allowlist, arbitrary-account burn or restrictive transfer hook. Nevertheless, the verified proxy's onlyOwner _setImplementation(address) can replace the holder-facing token implementation. Its current owner is the live Mento Timelock: getMinDelay()=172800 seconds, Governor 0x47036d78bb3169b4f5560dd77bf93f4412a59852 has PROPOSER_ROLE, execution is open to address zero, and Governor.timelock() returns 0x890db8a597940165901372dd7db61c9f246e2147. DAO/community governance and a two-day delay do not exempt a direct upgradeable stablecoin under the exposure policy. Therefore direct Possible supersedes the stored Upstream verdict. No variantOf or mint-authority inheritedFrom parent is declared. Official Mento configuration identifies shared reserve backing, including USDC, USDT, EURC and other issuer/custodian-controlled assets; those remain separate reserve censorship risks, not a reason to downgrade a direct Possible to Upstream. No current direct individual-holder freeze is asserted.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "single-source-or-laggy",

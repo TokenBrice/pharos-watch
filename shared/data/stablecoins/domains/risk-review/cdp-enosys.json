@@ -1,7 +1,7 @@
 {
   "id": "cdp-enosys",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Enosys Loans official documentation",
@@ -42,11 +42,15 @@
       {
         "label": "Archive.org availability check for Enosys Loans docs",
         "url": "https://archive.org/wayback/available?url=https%3A%2F%2Fhelp.enosys.global%2Fenosys%2Fenosys-ecosystem%2Fenosys-loans&timestamp=20260715"
+      },
+      {
+        "label": "Flare explorer branch-registration logs (TroveManager/StabilityPool/BorrowerOperations/ActivePool)",
+        "url": "https://flare-explorer.flare.network/address/0x6cd3a5ba46fa254d4d2e3c2b37350ae337e94a0f?tab=logs"
       }
     ],
-    "evidence": "CoinGecko and the tracked catalog list one CDP route: Flare proxy 0x6cd3a5ba46fa254d4d2e3c2b37350ae337e94a0f. At historical block 65060608 and fixed 2026-07-15 block 65092269, its EIP-1967 implementation was 0x03dc7269d65018516133987de01104cf2607c884 and admin was 0xd6363e03cf93d35103592f11ae7160179e0be3ff. The verified BoldToken ABI/source has no pause, unpause, holder blacklist, freeze, or dynamic recipient-list function; paused() reverts. However, the token owner was the unchanged 2-of-6 Safe 0xdedda08961216adb9ca09b88986d110127b24270 and its onlyOwner setBranchAddresses can register arbitrary addresses as StabilityPool, TroveManager, BorrowerOperations, and ActivePool. A registered StabilityPool can call sendToPool(sender,pool,amount), and registered StabilityPool, TroveManager, or BorrowerOperations addresses can call burn(account,amount), both without holder approval. setCollateralRegistry supplies another owner-configurable burn caller. The owner can therefore establish direct holder-level forced-transfer or burn authority; this is a resolved Yes even without an active named blacklist or global pause. The ProxyAdmin owner EOA can also replace token logic. Enosys documentation and archive limitations do not alter the on-chain control finding.",
-    "reviewer": "TERRA-III Safety Score V9 access review",
-    "reviewedAt": "2026-07-15"
+    "evidence": "Current owner and branch memberships remain unresolved. The previously identified owner is Safe 0xDEddA08961216adB9Ca09B88986d110127b24270, while the verified proxy creation transaction (2025-12-09) shows initialOwner 0xfc75F3c7DBA8DeCd0F5C923fE577Bf2FF111bcE4; this does not establish the current owner. The deployed verified BoldToken source’s setCollateralRegistry does not renounce ownership, unlike a different upstream Liquity source variant. The API confirms the current EIP-1967 proxy/implementation; current admin and operator mappings were not re-read. No current arbitrary-holder caller is confirmed, but owner configuration or upgrade control makes Possible under the binding policy.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "single-source-or-laggy",

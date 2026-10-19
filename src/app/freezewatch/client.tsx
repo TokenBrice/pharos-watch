@@ -186,12 +186,12 @@ export default function FreezeWatchClient() {
       <SafetyScoreV9StatusNotice response={reportCardsResponse} />
 
       <section
-        aria-label="Freezable supply overview"
+        aria-label="Freeze exposure overview"
         className="pharos-card-shell overflow-hidden animate-in fade-in duration-300"
       >
         <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4 border-b border-border/50 p-5 sm:p-6">
           <div className="min-w-0 space-y-1.5">
-            <p className="text-sm font-medium text-muted-foreground">Freezable share of tracked supply</p>
+            <p className="text-sm font-medium text-muted-foreground">Freeze-exposed share of tracked supply</p>
             {heroLoading && !heroUnavailable ? (
               <Skeleton className="h-10 w-32" />
             ) : (
@@ -204,7 +204,7 @@ export default function FreezeWatchClient() {
               </RailHeroFigureTransition>
             )}
             <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
-              of {freezableSummary.coverage === "partial" ? "observed" : "tracked"} stablecoin market cap sits under direct, upstream, or possible issuer freeze control.
+              of {freezableSummary.coverage === "partial" ? "observed" : "tracked"} stablecoin market cap is exposed to freezing: the issuer can freeze holders (Yes), holds admin controls that could restrict them (Possible), or depends on freezable assets (Upstream).
             </p>
             {heroUnavailable || heroLoading ? null : (
               <UniverseChip universe="active" value={`${classifiedCount} coins classified`} />
@@ -212,12 +212,12 @@ export default function FreezeWatchClient() {
           </div>
           <dl className="flex flex-wrap items-end gap-x-8 gap-y-3">
             <HeroStat
-              label="Freezable value"
+              label="Freeze-exposed value"
               value={heroUnavailable || !supplyAvailable ? "—" : formatCurrency(freezableMarketCap, 0)}
               loading={heroLoading && !heroUnavailable}
             />
             <HeroStat
-              label="Freezable coins"
+              label="Freeze-exposed coins"
               value={heroUnavailable ? "—" : `${freezableCount} / ${classifiedCount}`}
               loading={heroLoading && !heroUnavailable}
             />

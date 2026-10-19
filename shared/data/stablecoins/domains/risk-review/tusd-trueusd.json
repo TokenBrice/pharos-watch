@@ -6,11 +6,19 @@
       {
         "label": "Verified Ethereum TUSD implementation, owner-controlled blacklist and transfer restrictions",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xdbc97a631c2fee80417d5d69f32b198c8c39c27e"
+      },
+      {
+        "label": "TronGrid ABI/state",
+        "url": "https://api.trongrid.io/wallet/getcontract?value=TUpMhErZL2fhh4sVNULAbNKLokS4GjC1F4&visible=true"
+      },
+      {
+        "label": "TronScan token",
+        "url": "https://tronscan.org/#/token20/TUpMhErZL2fhh4sVNULAbNKLokS4GjC1F4"
       }
     ],
-    "evidence": "At Ethereum block 26095796, implementation() returned 0xdbc97a631c2fee80417d5d69f32b198c8c39c27e. Its verified source exposes owner-only setBlacklisted(address,bool), prohibits blacklisted senders and recipients from transferring, and permits destruction of blacklisted funds. The Yes verdict is directly evidenced rather than inferred solely from centralization; redemption-address exceptions do not remove the general blacklist power.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurA18U)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "TUSD is 64.69% on Ethereum and 34.78% on Tron, both material. At Ethereum block 26095796 implementation() returned 0xdbc97a631c2fee80417d5d69f32b198c8c39c27e; its verified source exposes owner-only setBlacklisted(address,bool), rejects blacklisted senders and recipients in _transfer, and permits destruction of blacklisted funds. On Tron the tracked TRC20 TUpMhErZL2fhh4sVNULAbNKLokS4GjC1F4 exposes setBlacklisted(address); owner() and proxyOwner() both return the active controller contract TTfLBC7hVJMbHxiBqmKFUaW5dtoPfUWaMA, and the token has emitted Blacklisted(address,bool) at block 56327500 and DestroyedBlackFunds() at block 63118350. An active addressed blacklist on both material deployments sets Yes.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

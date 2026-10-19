@@ -2,10 +2,24 @@
   "id": "vchf-vnx",
   "blacklistabilityReview": {
     "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Solana VCHF mint at slot 458729789",
+        "url": "https://explorer.solana.com/address/AhhdRu5YZdjVkKR3wbnUDaymVQL2ucjMQ63sZ3LFHsch"
+      },
+      {
+        "label": "Verified VNXCToken implementation",
+        "url": "https://eth.blockscout.com/address/0xd1d7193ce1aa7808d577058f48ef8289fc2f81fc"
+      },
+      {
+        "label": "VNXCToken source (freeze, reclaim, pause, RBAC)",
+        "url": "https://gitlab.com/vnx/smart-contracts/ethereum-contracts/-/blob/947c79a7/contracts/vnxc.sol"
+      }
+    ],
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: VCHF resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "evidence": "At Solana slot 458729789 (2026-10-19), the VCHF mint AhhdRu5YZdjVkKR3wbnUDaymVQL2ucjMQ63sZ3LFHsch reported freezeAuthority 51b5UJs8hyyDunrZMWL6ACDXY8FQc1hLLA3M54UksxaY and mintAuthority 51b5UJs8hyyDunrZMWL6ACDXY8FQc1hLLA3M54UksxaY, both non-zero; supply was 988129095780753 base units. Pharos supply shares are Solana 45.9053%, Base 26.6016%, Avalanche 25.4112%, Ethereum 1.2129% and smaller deployments; the Solana deployment alone crosses the 10% materiality threshold, so the live SPL freeze authority is a direct holder-freeze control regardless of the EVM role assignment. The EVM deployments are upgradeable TransparentUpgradeableProxy contracts running verified VNXCToken code (Ethereum proxy 0x79d4f0232a66c4c91b76362016a1707cfbf4f -> implementation 0xd1d7193ce1aa7808d577058f48ef8289fc2f81fc), whose freeze, reclaimTokensFromFrozenAddress and pause functions are gated on an RBAC asset-protection role; the current role-0 holder was not re-pinned in this review. This is direct freeze capability, not a governance inference.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

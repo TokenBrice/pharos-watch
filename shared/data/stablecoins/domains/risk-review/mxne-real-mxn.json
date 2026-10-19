@@ -2,10 +2,28 @@
   "id": "mxne-real-mxn",
   "blacklistabilityReview": {
     "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Solana MXNe mint",
+        "url": "https://solscan.io/token/6zYgzrT7X2wi9a9NeMtUvUWLLmf2a8vBsbYkocYdB9wa"
+      },
+      {
+        "label": "Base MXNe BraleToken proxy",
+        "url": "https://base.blockscout.com/address/0x269cae7dc59803e5c596c95756faeebb6030e0af"
+      },
+      {
+        "label": "Base block 52800645",
+        "url": "https://base.blockscout.com/block/52800645"
+      },
+      {
+        "label": "Stellar issuer account",
+        "url": "https://horizon.stellar.org/accounts/GCQCNWT22JDLENQAVIE6DRJGHWAQ6EX2H5ABGPV55EJUPPZM5UA7KHZR"
+      }
+    ],
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: MXNe resolves to Yes because existing metadata classifies the asset as centrally issued by Brale and no manual override narrows that status.",
-    "reviewer": "Codex Worker B metadata pass",
-    "reviewedAt": "2026-05-14"
+    "evidence": "Re-reviewed 2026-10-19. Census chainShares are absent; measured supplies total 7,945,689.85 MXNe: Solana 98.7154% (7,843,617.462493547 at finalized slot 458730413), Base 1.2846% (102,072.383683 at block 52800645), Stellar 0 (asset record exists with auth_revocable and auth_clawback_enabled true, but no trustlines or issued amount). Solana is the material deployment. Its SPL mint 6zYgzrT7X2wi9a9NeMtUvUWLLmf2a8vBsbYkocYdB9wa returned mintAuthority and freezeAuthority both 3mdd4X7wJjWmhF99jfTNGmSr39EXSAXcdEiS47GejduH at that slot; the authority account is System-Program-owned, non-executable and zero-data in the reviewed mint-authority census. The assigned freeze authority can freeze any holder token account, so the material deployment carries an active holder-targeted control. Base is sub-threshold but independently exposes BraleToken ControlledAccessType.Deny: at block 52800645 isAllowed(0x...dEaD)=true with hasRole(CONTROLLED_ACCESS_ROLE,0x...dEaD)=false, and MODERATOR_ROLE holder 0xb180f98037a63a3dca66b6b4ddbf250265b65110 returned true. Stellar controls are disclosed but have no supply. Pharos reports 78,180.4 peggedMXN circulating, inconsistent with measured on-chain supply; the denominator is the measured total.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

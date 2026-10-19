@@ -10,11 +10,19 @@
       {
         "label": "Website",
         "url": "https://www.nest.credit/"
+      },
+      {
+        "label": "Verified Ethereum BoringVault share token source",
+        "url": "https://eth.blockscout.com/address/0x64ab176c545bb85eca75d53c3ffcb361deafb855?tab=contract"
+      },
+      {
+        "label": "Nest illicit activity screening / token freezing terms",
+        "url": "https://docs.nest.credit/security-and-compliance/terms-and-conditions/"
       }
     ],
-    "evidence": "Explicit Yes retained: reviewed metadata indicates a direct issuer, admin, proxy, pause, burn, or upgrade control surface beyond reserve-only exposure.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "The census has no runtime supply denominator. Direct reads found Ethereum totalSupply=1.979688 shares at block 26224667 and Plume totalSupply=0 at block 100304741 (2026-10-19T06:18:16+00:00); within the two authored deployments Ethereum is 100% of outstanding supply. This is the legacy inALPHA address, not the new nALPHA address listed by the current Nest API. Ethereum 0x64ab176c545bb85eca75d53c3ffcb361deafb855 is a verified non-proxy BoringVault. At block 26224667 (2026-10-19T05:55:35Z), owner()=0xa08a0dc480bd60d1d56c8eec6c722125eafea982; the existing owner-authorized exit(to,asset,assetAmount,from,shareAmount) burns shares from arbitrary from without holder allowance, and assetAmount may be zero. Thus an active arbitrary-holder privileged burn, not merely an upgrade/pause possibility, establishes Yes. A read-only eth_call from the owner to exit with zero amounts succeeded; no transaction was submitted. hook() was zero: no active transfer blacklist is claimed for this deployment; the existing arbitrary-holder burn is independently sufficient.  Nest terms section 6.2 expressly describe freezing suspicious wallets and Kimber Labs limited administration, consistent with these directly verified controls. No parent is declared. Reserve exposure cannot displace the higher-priority direct Yes verdict; no reserve-majority measurement is used as its basis.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "opaque-or-unknown",

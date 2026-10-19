@@ -1,7 +1,7 @@
 {
   "id": "meusd-mezo",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Pinned Mezo MUSD token source",
@@ -30,11 +30,23 @@
       {
         "label": "Mezo RPC authority read",
         "url": "https://jsonrpc-mezo.boar.network"
+      },
+      {
+        "label": "Pinned Mezo TroveManager source",
+        "url": "https://github.com/mezo-org/musd/blob/43ef44123753fa3e28425beffde42c86693fd03c/solidity/contracts/TroveManager.sol"
+      },
+      {
+        "label": "Pinned Mezo BorrowerOperations source",
+        "url": "https://github.com/mezo-org/musd/blob/43ef44123753fa3e28425beffde42c86693fd03c/solidity/contracts/BorrowerOperations.sol"
+      },
+      {
+        "label": "Pinned Mezo StabilityPool source",
+        "url": "https://github.com/mezo-org/musd/blob/43ef44123753fa3e28425beffde42c86693fd03c/solidity/contracts/StabilityPool.sol"
       }
     ],
-    "evidence": "The exact MUSD source and Ethereum ABI show that addToBurnList(address) is onlyOwner and burn(account, amount) checks only burnList[msg.sender], then burns the specified account without that account's approval or allowance. At Ethereum block 25534618, Base block 48643892, and Mezo block 10403815, owner() returned 0x98D8899c3030741925BE630C710A98B57F397C7a and burnList(owner) returned false on all three deployments; their 6,436-byte runtime layouts differ only in a 34-byte chain-specific range. The current owner can therefore grant arbitrary-account burn ability on each deployment. transfer and transferFrom have no separate blacklist or pause check, but this owner-grantable burn path is direct individual holder impairment.",
-    "reviewer": "Codex Safety Score V9 access review",
-    "reviewedAt": "2026-07-15"
+    "evidence": "Verified MUSD source: MUSD.burn(account,amount) can burn an arbitrary account, but only when msg.sender is in burnList (MUSD.sol lines 51–54); owner can add burners (addToBurnList, lines 93–99). The pinned read reports owner 0x98D8899c3030741925BE630C710A98B57F397C7a and burners TroveManager 0x94afb503dbca74ac3e4929baceedfce19b93c193, StabilityPool 0x73245eff485ab3aac1158b3c4d8f4b23797b0e32, BorrowerOperations 0x44b1bac67dda612a41a58aaf779143b181dee031. Verified paths observed in source burn caller/self or pool balances, not arbitrary third parties: TroveManager redemption burns msg.sender (line 428) and gas pool (1188); StabilityPool burns address(this) (line 481); BorrowerOperations burns _caller (lines 523, 997). Sources: https://api.explorer.mezo.org/api/v2/smart-contracts/0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186 ; https://raw.githubusercontent.com/mezo-org/musd/main/solidity/contracts/token/MUSD.sol ; https://raw.githubusercontent.com/mezo-org/musd/main/solidity/contracts/TroveManager.sol ; https://raw.githubusercontent.com/mezo-org/musd/main/solidity/contracts/StabilityPool.sol ; https://raw.githubusercontent.com/mezo-org/musd/main/solidity/contracts/BorrowerOperations.sol\nAn independent complete read found FOUR (not three) current burners. Complete Mezo indexed BurnListAddressAdded history (next_page_params=null) contains the three launch members plus EnclaveDebtManager proxy0x2c5e9afbb670c4a61ac2dcad62c258ee2391389a added at block8550826; complete Removed history is empty. At Mezo@12612903 timestamp1792394055, burnList=true for all four, false for owner0x98d8899c3030741925be630c710a98b57f397c7a; owner() independently returned that address. New member has verified implementation0x3ea98a11d349b515e628c1cc74ca999230744c43, contracts/musd/EnclaveDebtManager.sol:665-694 repay/repayAll -> _repay; line731 musd.burn(msg.sender,_amount). Thus the omitted member is also caller-only; Possible stands, but the earlier member-count evidence is corrected. Sources https://api.explorer.mezo.org/api/v2/addresses/0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186/logs?topic=0xf806078be68dc31d3b56fd84d312cfcc20506c622ff006a10151b7643da8d288 and https://api.explorer.mezo.org/api/v2/smart-contracts/0x3ea98a11d349b515e628c1cc74ca999230744c43 .",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "standard-external",

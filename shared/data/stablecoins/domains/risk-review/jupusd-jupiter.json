@@ -1,15 +1,15 @@
 {
   "id": "jupusd-jupiter",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Solana RPC finalized mint observation, slot 452212935",
         "url": "https://api.mainnet-beta.solana.com"
       }
     ],
-    "evidence": "At finalized Solana slot 452212935 on 2026-10-01, the JupUSD SPL mint JuprjznTrTSp2UFa3ZBUFgwdAmtZCq4MQCwysN55USD had freezeAuthority CkzLnD9r4d4ZZofsgNVo2VNunxDmte5YJ4vfAgMfBZNA. This is a direct token-account freeze capability, separate from upstream reserve exposure; the program remains upgradeable by the disclosed Squads vault.",
-    "reviewer": "Pharos curation pass 2026-10-01 (CurB09JUPUSD)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "Solana sole material deployment (100%); mint slot 458745379, freezeAuthority=CkzLnD9r4d4ZZofsgNVo2VNunxDmte5YJ4vfAgMfBZNA is off-curve. Executable issuer program JUPUSDecMzAVgztLe6eGhwUBj1Pn3j9WAXwmtHmfbRr, ProgramData GF7fyG3MC28FzpNVH1rm9AAoDBR9kHTSvGcCoV9a8wkz finalized slot 458746508, deployed slot 405232560, upgrade authority 31wgH9Czzd3qgquTGxVxtxJuzBd8Fm4xEo8rPX7CNfhM; deployed bytes SHA256=9a133ced34676d94bd0b9e16d6e49f6b98a11c7bef5134568b8223241e7109cd. No current admin-callable arbitrary-holder freeze path was established from the registry IDL https://idl-one.vercel.app/api/idl?programId=JUPUSDecMzAVgztLe6eGhwUBj1Pn3j9WAXwmtHmfbRr&cluster=mainnet-beta and deployed binary interface; the live program upgrade authority is verified. Upgrade signer is live Squads v4 vault 0 of H4siPbdsgRDoNHyWb1UsTzNhDRAVNoV5MNKjxtL4chzX, 4-of-9, delay 0, all members on-curve/permissions 7 (slot 458746772). Public program interface https://github.com/jup-ag/jupusd-program/blob/main/programs/jup-stable/src/lib.rs likewise has no freeze/thaw entrypoint; config/benefactor controls concern mint/redeem, not SPL wallet transfers. IDL/source absence is not a formal bytecode-equivalence proof; confidence medium.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   }
 }

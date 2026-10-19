@@ -1,11 +1,29 @@
 {
   "id": "audd-novatti",
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "Ethereum AUDD proxy and verified implementation",
+        "url": "https://etherscan.io/address/0x4cce605ed955295432958d8951d0b176c10720d5#code"
+      },
+      {
+        "label": "Stellar issuer account flags",
+        "url": "https://horizon.stellar.org/accounts/GDC7X2MXTYSAKUUGAIQ7J7RPEIM7GXSAIWFYWWH4GLNFECQVJJLB2EEU"
+      },
+      {
+        "label": "Pharos AUDD supply (observed 2026-10-19)",
+        "url": "https://api.pharos.watch/api/stablecoin/audd-novatti"
+      },
+      {
+        "label": "XRPL issuer account",
+        "url": "https://livenet.xrpl.org/accounts/rUN5Zxt3K1AnMRJgEWywDJT8QDMMeLH5ok"
+      }
+    ],
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: AUDD resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "evidence": "Ethereum block 26224795 and Base block 52800765 (2026-10-19): AUDD is a verified StableCoin implementation behind AdminUpgradeabilityProxy 0x4cce605ed955295432958d8951d0b176c10720d5 (implementation 0xc6114a25f69c8115b1778c1c301efa9bd7154e72) and Base proxy 0x449b3317a6d1efb1bc3ba0700c9eaa4ffff4ae65. The implementation has no address blacklist, freeze, seizure or forced-transfer path; the only holder-facing control is a threshold-gated global pause created through createTransactionControlRequest/execute (TRANSACTION_CONTROL threshold 1). paused() is false and owner()/getSignatoryList() are active and non-zero on both chains (owner 0x59A50CBD643347296E2CF5573b40EDa3099d0C54 with seven signatories on Ethereum; owner 0xa375adBC3B5497f1c3Eb20CBe986E115Bd2B9127 on Base). On Stellar (31.0124%), issuer GDC7X2MXTYSAKUUGAIQ7J7RPEIM7GXSAIWFYWWH4GLNFECQVJJLB2EEU reports auth_revocable=false and auth_clawback_enabled=false at the current ledger, so no active trustline freeze or clawback exists; auth_immutable=false leaves enabling those flags as a future configurable control. The XRPL issuer rUN5Zxt3K1AnMRJgEWywDJT8QDMMeLH5ok has NoFreeze unset but holds 3.1693%, below the 10% materiality threshold. On the three material deployments the result is a direct global pause, not an address-targeted freeze: direct Possible.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

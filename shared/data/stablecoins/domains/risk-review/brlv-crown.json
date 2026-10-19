@@ -10,11 +10,27 @@
       {
         "label": "Website",
         "url": "https://www.crown-brlv.com/en/"
+      },
+      {
+        "label": "BRLV Base token verified implementation",
+        "url": "https://base.blockscout.com/address/0x1750731729b27cfd00ea55bc61e9dcfade2273f3"
+      },
+      {
+        "label": "BRLV Base proxy",
+        "url": "https://basescan.org/address/0xd2047ebdb205ee6862b69ae9fb3501652cc97d36#code"
+      },
+      {
+        "label": "BRLV verified source (Sourcify)",
+        "url": "https://sourcify.dev/server/v2/contract/8453/0x1750731729b27cfd00ea55bc61e9dcfade2273f3?fields=sources"
+      },
+      {
+        "label": "Base RPC role census at block 52800615",
+        "url": "https://mainnet.base.org"
       }
     ],
-    "evidence": "Explicit Yes retained: centralized governance metadata indicates issuer or admin control; registry links were reviewed for direct freeze, blacklist, pause, burn, or upgrade authority.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "Re-derived at Base block 52800615 (2026-10-19). BRLV's canonical issuance is the Base ERC-1967 proxy 0xd2047ebdb205ee6862b69ae9fb3501652cc97d36, which resolves to verified implementation 0x1750731729b27cfd00ea55bc61e9dcfade2273f3 (BRLV, Sourcify exact match) and holds 367,945,556.06 BRLV, 99.69% of the 369,099,914.90 measured across Base and Ethereum; the Ethereum bridgedBRLV 0xd7ca0e2c36d647446b782d1b72308e598373e2f5 holds 1,154,358.84 (0.31%). The verified implementation exposes burn(address,uint256) and burnShares(address,uint256), both onlyRole(BURNER_ROLE), and burnShares calls _burn(from,shares) with no allowance or from==msg.sender check, so a role holder can destroy an arbitrary holder's shares. At the pin hasRole(BURNER_ROLE,0x09dd8946662a9d60dbba9538d211cf45f819faba)=true (the address carries an EIP-7702 delegation designator) and hasRole(BURNER_ROLE,0x5315c03f8cf027d1b67dac72ef9eec8988d80f88)=true; paused()=false. The implementation is also UUPS-upgradeable: hasRole(UPGRADE_ROLE,0xcdfc7264f7eda78c1e4368a5f291e6a16738cb5a)=true. Reserve sidecar assigns 95.54% Brazilian federal bonds, 4.46% Brazilian Treasury ETFs and a negligible cash row, i.e. custodial government-security/fund exposure, but the direct arbitrary-holder burn already sets Yes. Reviewed true.",
+    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
+    "reviewedAt": "2026-10-19"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

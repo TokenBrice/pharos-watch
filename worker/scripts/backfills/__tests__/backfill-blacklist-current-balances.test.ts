@@ -1,9 +1,32 @@
 import { readJsonResponse } from "../../../src/test-helpers/__shared/auth";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../../src/test-helpers/__shared/auth";
 import { handleBackfillBlacklistCurrentBalances } from "../backfill-blacklist-current-balances";
 import { getBlacklistConfigsForSymbolAndChain } from "../../../src/lib/blacklist-contracts";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import type * as BlacklistContractsModule from "../../../src/lib/blacklist-contracts";
+
+vi.mock("../../../src/lib/blacklist-contracts", async (importOriginal) => {
+  const actual = await importOriginal<typeof BlacklistContractsModule>();
+  const [currentOptimismUsdt] = actual.getBlacklistConfigsForSymbolAndChain("USDT", "optimism");
+  // Retain the retired deployment only in this historical-row isolation fixture,
+  // not in the live tracker registry; it has no blacklist events to scan.
+  const legacyAddress = "0x94b008aa00579c1307b0ef2c499ad98a8ce58e58";
+  const configs = [...actual.CONTRACT_CONFIGS, {
+    ...currentOptimismUsdt,
+    configKey: `optimism-${legacyAddress}`,
+    contractAddress: legacyAddress,
+    startBlock: 2_595,
+    events: [],
+  }];
+  return {
+    ...actual,
+    CONTRACT_CONFIGS: configs,
+    getBlacklistConfigsForSymbolAndChain: (
+      stablecoin: BlacklistContractsModule.ContractEventConfig["stablecoin"], chainId: string,
+    ) => configs.filter((config) => config.stablecoin === stablecoin && config.chain.chainId === chainId),
+  };
+});
 
 stubCryptoForAuth();
 const fixtures = createLatestSchemaFixtureTracker();
