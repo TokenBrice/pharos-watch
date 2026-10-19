@@ -178,6 +178,37 @@ beforeEach(() => {
 });
 
 describe("authenticated CCIP pending quantities", () => {
+  it("batches and deduplicates exact hash-pinned authentication without cross-attempt reuse", async () => {
+    const first = await observeCcipPending(input());
+    expect(first.status).toBe("accepted");
+    const authentication = vi.mocked(fetchEvmRpcBatch).mock.calls.slice(0, 2);
+    expect(authentication.map(([chain]) => chain)).toEqual(["ethereum", "base"]);
+    for (const [, requests] of authentication) {
+      expect(requests.length).toBeGreaterThan(4);
+      expect(requests.length).toBeLessThanOrEqual(32);
+      expect(new Set(requests.map(request => stableJsonStringifyV1(request))).size).toBe(requests.length);
+      expect(requests.every(request => stableJsonStringifyV1(request.params[1]) ===
+        stableJsonStringifyV1({ blockHash: word(pinNumber), requireCanonical: true }))).toBe(true);
+    }
+    const firstRequest = authentication[0]![1][0]!;
+    const count = () => vi.mocked(fetchEvmRpcBatch).mock.calls.flatMap(([chain, requests]) =>
+      chain === "ethereum" ? requests : []).filter(request =>
+      stableJsonStringifyV1(request) === stableJsonStringifyV1(firstRequest)).length;
+    expect(count()).toBe(1);
+    expect((await observeCcipPending(input())).status).toBe("accepted");
+    expect(count()).toBe(2);
+  });
+
+  it("keeps unavailable batch prefetch out of the cache and retains exact lane rejection", async () => {
+    vi.mocked(fetchEvmRpcBatch).mockResolvedValue(null);
+    const onDiagnostic = vi.fn();
+    expect(await observeCcipPending({ ...input(), onDiagnostic })).toEqual({ status: "rejected", reason: "rpc-unavailable" });
+    expect(onDiagnostic).toHaveBeenLastCalledWith(expect.objectContaining({
+      laneId: "eth-base", chainId: "ethereum", method: "eth_getCode",
+      hardEvidenceFailure: true, failurePredicate: "rpc-unavailable",
+    }));
+  });
+
   it.each(["schema", "topics", "payload"])("retains the exact rejected log %s branch and shape", async branch => {
     const log = sent[0]!;
     if (branch === "schema") log.removed = true;
