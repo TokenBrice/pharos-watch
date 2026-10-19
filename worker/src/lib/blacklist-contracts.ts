@@ -84,7 +84,7 @@ const TRON      = requireChainConfig("tron");
 const USDC_BLACKLISTED_TOPIC = "0xffa4e6181777692565cf28528fc88fd1516ea86b56da075235fa575af6a4b855"; // Blacklisted(address)
 const USDC_UNBLACKLISTED_TOPIC = "0x117e3210bb9aa7d9baff172026820255c6f6c30ba8999d1c2fd88e2848137c4e"; // UnBlacklisted(address)
 
-// USDT events (legacy: Ethereum, Tron, and pre-USDT0 L2 contracts)
+// USDT legacy events (Ethereum, Tron, and historical pre-USDT0 implementations)
 const USDT_ADDED_BLACKLIST_TOPIC = "0x42e160154868087d6bfdc0ca23d96a1c1cfa32f1b72ba9ba27b69b98a0d819dc"; // AddedBlackList(address)
 const USDT_REMOVED_BLACKLIST_TOPIC = "0xd7e9ec6e6ecd65492dce6bf513cd6867560d49544421d0783ddf06e76c24470c"; // RemovedBlackList(address)
 const USDT_DESTROYED_FUNDS_TOPIC = "0x61e6e66b0d6339b2980aecc6ccc0039736791f0ccde9ed512e789a7fbdd698c6"; // DestroyedBlackFunds(address,uint256)
@@ -193,27 +193,6 @@ const PAXG_FROZEN_TOPIC = "0x90811a8edd3b3c17eeaefffc17f639cc69145d41a359c984399
 const PAXG_UNFROZEN_TOPIC = "0xc3776b472ebf54114339eec9e4dc924e7ce307a97f5c1ee72b6d474e6e5e8b7c"; // AddressUnfrozen(address)
 const PAXG_WIPED_TOPIC = "0xfc5960f1c5a5d2b60f031bf534af053b1bf7d9881989afaeb8b1d164db23aede"; // FrozenAddressWiped(address)
 
-const PAXG_EVENT_FAMILY = defineEventFamily("paxos-freeze", [
-  {
-    signature: "AddressFrozen(address)",
-    topicHash: PAXG_FROZEN_TOPIC,
-    eventType: "blacklist",
-    hasAmount: false,
-  },
-  {
-    signature: "AddressUnfrozen(address)",
-    topicHash: PAXG_UNFROZEN_TOPIC,
-    eventType: "unblacklist",
-    hasAmount: false,
-  },
-  {
-    signature: "FrozenAddressWiped(address)",
-    topicHash: PAXG_WIPED_TOPIC,
-    eventType: "destroy",
-    hasAmount: false, // Amount not in event; fetched via balanceOf at blockNumber-1
-  },
-]);
-
 // --- pyUSD event definitions (Paxos PaxosTokenV2 contract) ---
 // FreezeAddress/UnfreezeAddress/FrozenAddressWiped — address is indexed (in topics[1])
 
@@ -240,6 +219,24 @@ export const PYUSD_EVENT_FAMILY = defineEventFamily("paxos-pyusd-freeze", [
     eventType: "destroy",
     hasAmount: false, // Amount not in event; fetched via balanceOf at blockNumber-1
   },
+]);
+
+// PAXG upgraded to the current Paxos freeze names. Retain both historical
+// address-freeze topics; FrozenAddressWiped is shared and must appear only once.
+const PAXG_EVENT_FAMILY = defineEventFamily("paxos-freeze", [
+  {
+    signature: "AddressFrozen(address)",
+    topicHash: PAXG_FROZEN_TOPIC,
+    eventType: "blacklist",
+    hasAmount: false,
+  },
+  {
+    signature: "AddressUnfrozen(address)",
+    topicHash: PAXG_UNFROZEN_TOPIC,
+    eventType: "unblacklist",
+    hasAmount: false,
+  },
+  ...PYUSD_EVENT_FAMILY.events,
 ]);
 
 // --- USD1 event definitions (World Liberty Financial Stablecoin contract) ---
@@ -713,11 +710,11 @@ const CONTRACT_CONFIG_SPECS: ContractEventConfigSpec[] = [
   // USDT (EVM)
   { chain: ETHEREUM, stablecoinId: "usdt-tether", events: USDT_EVENT_FAMILY.events },
   { chain: ARBITRUM, stablecoinId: "usdt-tether", events: USDT_UPGRADED_EVENT_FAMILY.events },
-  { chain: OPTIMISM, stablecoinId: "usdt-tether", startBlock: 2_595, events: USDT_EVENT_FAMILY.events },
   { chain: OPTIMISM, stablecoinId: "usdt-tether", contractSource: "traded", startBlock: 133_193_269, events: USDT0_EVENT_FAMILY.events },
   { chain: POLYGON, stablecoinId: "usdt-tether", events: USDT_UPGRADED_EVENT_FAMILY.events },
-  { chain: AVALANCHE, stablecoinId: "usdt-tether", startBlock: 4_663_628, events: USDT_EVENT_FAMILY.events },
-  { chain: BSC, stablecoinId: "usdt-tether", startBlock: 176_416, events: USDT_EVENT_FAMILY.events },
+  // Avalanche has emitted the indexed family since deployment, not the legacy family.
+  { chain: AVALANCHE, stablecoinId: "usdt-tether", startBlock: 4_663_628, events: USDT0_EVENT_FAMILY.events },
+  // Binance-Peg BSC and legacy Optimism USDT have no blacklist event surface.
 
   // USDT (Tron)
   { chain: TRON, stablecoinId: "usdt-tether", events: USDT_EVENT_FAMILY.events },
