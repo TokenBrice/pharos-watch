@@ -23,7 +23,6 @@ import {
 import { readMintBurnSyncStateBatch } from "../../lib/mint-burn-pipeline/sync-state";
 import {
   computeFlowIntensity,
-  detectFlightToQuality,
   FLOW_INTENSITY_MIN_DATA_DAYS,
   detectFlightToQualityFromValuedNets,
   type FlightToQualityResult,
@@ -397,7 +396,7 @@ export function buildCoinSummaries(
 ): {
   coins: CoinFlowSummary[];
   gaugeInputs: Array<{ intensity: number | null; mcap: number }>;
-  /** `null` when missing valuation can alter the decision; inactive when classification is unavailable. */
+  /** `null` when classification is unavailable or missing valuation can alter the decision. */
   flightToQuality: FlightToQualityResult | null;
   trackedMcapUsd: number;
   mcapUnavailableCoins: number;
@@ -538,7 +537,7 @@ export function buildCoinSummaries(
 
   const flightToQuality = gradeClassification
     ? detectFlightToQualityFromValuedNets({ safe: safeFlows, risky: riskyFlows })
-    : detectFlightToQuality({ safeNet24h: 0, riskyNet24h: 0 });
+    : null;
 
   return {
     coins,

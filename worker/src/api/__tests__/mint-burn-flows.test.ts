@@ -8,7 +8,7 @@ import {
 } from "../../test-helpers/report-cards-v9";
 import { mintBurnScenario } from "../../test-helpers/__shared/mint-burn";
 import { makeFlowHourlyRow, makeFlowFallbackScenario, makeValidCachedAggregateFixture } from "./mint-burn-flows.test-support";
-import { handleMintBurnFlows } from "../mint-burn-flows";
+import { handleMintBurnFlows, refreshAggregateMintBurnFlowCache } from "../mint-burn-flows";
 import { MintBurnFlowsResponseSchema, type MintBurnValuationCompleteness } from "@shared/types/mint-burn";
 
 function cachedCoinValuation(window24h: MintBurnValuationCompleteness) {
@@ -25,6 +25,18 @@ function cachedCoinValuation(window24h: MintBurnValuationCompleteness) {
     netFlow30d: window24h,
     netFlow90d: window24h,
   };
+}
+
+function mockFtqPublication(updatedAt: number) {
+  const snapshot = makeWorkerReportCardsV9Response({
+    updatedAt,
+    cards: [
+      makeWorkerV9Card({ id: "usdc-circle", score: 80, grade: "A" }),
+      makeWorkerV9Card({ id: "usdai-usd-ai", score: 30, grade: "D" }),
+    ],
+  });
+  vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreIndex").mockResolvedValue({ kind: "v9", snapshot });
+  return snapshot;
 }
 
 // ---------------------------------------------------------------------------
@@ -482,17 +494,17 @@ describe("handleMintBurnFlows contract tests", () => {
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toMatchObject({
       gauge: {
-        flightToQuality: false,
-        flightIntensity: 0,
+        flightToQuality: null,
+        flightIntensity: null,
         classificationSource: "unavailable",
         safetyScoreIdentity: null,
       },
       sync: {
         lastSuccessfulSyncAt: now - 120,
-        classificationWarning: expect.stringContaining("identity-missing"),
+        classificationWarning: expect.stringContaining("v9-snapshot-unavailable"),
       },
     });
-    expect(res.headers.get("Warning")).toContain("identity-missing");
+    expect(res.headers.get("Warning")).toContain("v9-snapshot-unavailable");
 
     const history = cachedDb.getHistory();
     expect(history.some((entry) => entry.sql.includes("FROM mint_burn_hourly"))).toBe(false);
@@ -512,60 +524,56 @@ describe("handleMintBurnFlows contract tests", () => {
     const body = MintBurnFlowsResponseSchema.parse(await readJsonResponse(res, 200));
 
     expect(body.gauge).toMatchObject({
-      flightToQuality: false,
-      flightIntensity: 0,
+      flightToQuality: null,
+      flightIntensity: null,
       classificationSource: "unavailable",
       safetyScoreIdentity: null,
     });
     expect(body.sync?.classificationWarning).toContain("cache-read-failed");
   });
 
-  it("preserves an explicitly unavailable cached FTQ state without revalidation", async () => {
+  it.each([24, 168])("recovers an explicitly unavailable cached FTQ state at %sh without renewing flow evidence", async (hours) => {
     const now = Math.floor(Date.now() / 1000);
-    const cachedBody = {
-      gauge: {
-        score: 0,
-        band: "NEUTRAL",
-        intensitySemantics: "signed-v2",
-        flightToQuality: false,
-        flightIntensity: 0,
-        classificationSource: "unavailable",
-        safetyScoreIdentity: null,
-        trackedCoins: 1,
-        trackedMcapUsd: 0,
-      },
-      coins: [],
-      hourly: [],
-      updatedAt: now - 60,
-      sync: {
-        lastSuccessfulSyncAt: now - 120,
-        freshnessStatus: "fresh",
-        warning: null,
-        classificationWarning: "Report-card FTQ classification unavailable (identity-missing)",
-        criticalLaneHealthy: true,
-      },
-    };
+    const snapshot = mockFtqPublication(now);
+    const cachedBody = makeValidCachedAggregateFixture(now, null);
+    cachedBody.gauge.classificationSource = "unavailable";
+    cachedBody.gauge.flightToQuality = false; // Legacy unavailable representation must be re-admitted.
+    cachedBody.gauge.flightIntensity = 0;
+    const value = JSON.stringify({
+      ...cachedBody,
+      sync: { ...cachedBody.sync, classificationWarning: "Old classification unavailable (source-stale)" },
+    });
     const db = mintBurnScenario({
       nowSec: now,
-      flowCache: {
-        key: "mint-burn-flows:v4:aggregate:24",
-        value: JSON.stringify(cachedBody),
-        updatedAt: now,
-      },
+      flowCache: { key: `mint-burn-flows:v4:aggregate:${hours}`, value, updatedAt: now },
     });
 
-    const res = await handleMintBurnFlows(db, new URL("https://x/api/mint-burn-flows"));
-
-    expect(res.status).toBe(200);
-    await expect(res.json()).resolves.toEqual(cachedBody);
-    expect(db.getHistory().some((entry) => entry.binds.includes("report_card_cache"))).toBe(false);
+    const res = await handleMintBurnFlows(db, new URL(`https://x/api/mint-burn-flows?hours=${hours}`));
+    const body = MintBurnFlowsResponseSchema.parse(await readJsonResponse(res, 200));
+    expect(body.gauge).toMatchObject({
+      flightToQuality: false,
+      flightIntensity: 0,
+      classificationSource: "safety-score-v9-publication",
+      classificationReason: null,
+      safetyScoreIdentity: snapshot.safetyScoreIdentity,
+    });
+    expect(body.sync?.classificationWarning).toBeNull();
+    expect(res.headers.get("Warning")).toBeNull();
+    expect(body.updatedAt).toBe(cachedBody.updatedAt);
+    expect(body._meta?.updatedAt).toBe(cachedBody.sync.lastSuccessfulSyncAt);
+    expect(body._meta?.dependencies?.flightToQuality).toMatchObject({
+      status: "fresh", reason: null, updatedAt: now, freshBudgetSec: 3600,
+      generationId: snapshot.safetyScoreIdentity.publicationGenerationId,
+    });
+    expect(db.getHistory().some((entry) => entry.sql.includes("FROM mint_burn_hourly"))).toBe(false);
+    expect(db.getHistory().some((entry) => /INSERT|UPDATE|DELETE/.test(entry.sql))).toBe(false);
   });
 
   it.each([
     { safeNet: 200_000_000, invalid: false, gatedNet: false, legacy: false, sourceUnavailable: false, stale: false, hours: 24, expectedIntensity: 40 },
     { safeNet: -200_000_000, invalid: false, gatedNet: false, legacy: false, sourceUnavailable: false, stale: true, hours: 168, expectedIntensity: 0 },
-    { safeNet: 200_000_000, invalid: true, gatedNet: false, legacy: false, sourceUnavailable: false, stale: false, hours: 24, expectedIntensity: 0 },
-    { safeNet: 200_000_000, invalid: false, gatedNet: false, legacy: false, sourceUnavailable: true, stale: false, hours: 24, expectedIntensity: 0 },
+    { safeNet: 200_000_000, invalid: true, gatedNet: false, legacy: false, sourceUnavailable: false, stale: false, hours: 24, expectedIntensity: null },
+    { safeNet: 200_000_000, invalid: false, gatedNet: false, legacy: false, sourceUnavailable: true, stale: false, hours: 24, expectedIntensity: null },
     // A partial (null) safe net could still exceed the threshold: FTQ is null, never inactive.
     { safeNet: null, invalid: false, gatedNet: true, legacy: false, sourceUnavailable: false, stale: false, hours: 24, expectedIntensity: null },
     // A cached coin without `valuation` predates completeness: unknown, so no decision is re-derived.
@@ -670,7 +678,7 @@ describe("handleMintBurnFlows contract tests", () => {
       safetyScoreIdentity: unavailable ? null : activeSnapshot.safetyScoreIdentity,
     });
     if (unavailable) {
-      const reason = sourceUnavailable ? "publication-held" : "identity-mismatch";
+      const reason = sourceUnavailable ? "publication-held" : "cached-flow-contract-invalid";
       expect(body.sync?.classificationWarning).toContain(reason);
       expect(res.headers.get("Warning")).toContain(reason);
     } else {
@@ -718,8 +726,8 @@ describe("handleMintBurnFlows contract tests", () => {
     const body = MintBurnFlowsResponseSchema.parse(await readJsonResponse(res, 200));
 
     expect(body.gauge).toMatchObject({
-      flightToQuality: false,
-      flightIntensity: 0,
+      flightToQuality: null,
+      flightIntensity: null,
       classificationSource: "unavailable",
       safetyScoreIdentity: null,
     });
@@ -737,13 +745,13 @@ describe("handleMintBurnFlows contract tests", () => {
     expect(state.cacheReads).toBe(2);
     expect(body).toMatchObject({
       gauge: {
-        flightToQuality: false,
-        flightIntensity: 0,
+        flightToQuality: null,
+        flightIntensity: null,
         classificationSource: "unavailable",
         safetyScoreIdentity: null,
       },
     });
-    expect(res.headers.get("Warning")).toContain("identity-missing");
+    expect(res.headers.get("Warning")).toContain("v9-snapshot-unavailable");
   });
 
   it("strips FTQ when a held publication becomes unavailable during fallback revalidation", async () => {
@@ -796,8 +804,8 @@ describe("handleMintBurnFlows contract tests", () => {
     expect(state.cacheReads).toBe(2);
     expect(state.hourlyFailed).toBe(true);
     expect(body.gauge).toMatchObject({
-      flightToQuality: false,
-      flightIntensity: 0,
+      flightToQuality: null,
+      flightIntensity: null,
       classificationSource: "unavailable",
       safetyScoreIdentity: null,
     });
@@ -863,8 +871,8 @@ describe("handleMintBurnFlows contract tests", () => {
     expect(body.gauge.classificationSource).toBe("unavailable");
     expect(body.gauge.safetyScoreIdentity).toBeNull();
     expect(body.sync?.classificationWarning).toContain("safety-score-index-missing");
-    expect(body.gauge.flightToQuality).toBe(false);
-    expect(body.gauge.flightIntensity).toBe(0);
+    expect(body.gauge.flightToQuality).toBeNull();
+    expect(body.gauge.flightIntensity).toBeNull();
   });
 
   it("keeps freshness healthy through one missed critical-lane slot", async () => {
@@ -872,6 +880,7 @@ describe("handleMintBurnFlows contract tests", () => {
     vi.setSystemTime(new Date("2026-03-11T12:00:00Z"));
 
     const now = Math.floor(Date.now() / 1000);
+    mockFtqPublication(now);
     const thirtyMinutesAgo = now - 30 * 60;
     const cache = JSON.stringify({
       peggedAssets: [{ id: "usdt-tether", symbol: "USDT", circulating: { peggedUSD: 100_000_000_000 } }],
@@ -904,13 +913,14 @@ describe("handleMintBurnFlows contract tests", () => {
     expect(res.headers.get("X-Data-Age")).toBe(String(30 * 60));
   });
 
-  it("warns once mint/burn freshness exceeds the shared status grace window", async () => {
+  it("keeps flow-generation freshness independent of the tighter Safety Score consumer budget", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-03-11T12:00:00Z"));
 
     const now = Math.floor(Date.now() / 1000);
-    // 75 min old → ratio 1.25 vs the 60-min SLA (MAX_AGE = 2× 30-min lane),
-    // firmly inside the "degraded" band (1.0 < ratio ≤ 1.5) and outside "fresh".
+    mockFtqPublication(now);
+    // The observed flow clock stays inside its served 8h availability budget;
+    // Safety Score classification has its own independent 1h budget.
     const seventyFiveMinutesAgo = now - 75 * 60;
     const cache = JSON.stringify({
       peggedAssets: [{ id: "usdt-tether", symbol: "USDT", circulating: { peggedUSD: 100_000_000_000 } }],
@@ -947,8 +957,7 @@ describe("handleMintBurnFlows contract tests", () => {
     vi.setSystemTime(new Date("2026-03-11T12:00:00Z"));
 
     const now = Math.floor(Date.now() / 1000);
-    // 75 min old → ratio 1.25 vs the 60-min SLA; see the previous test for the
-    // rationale behind the band math.
+    // A recent attempt cannot replace an unavailable confirmed-output lookup.
     const seventyFiveMinutesAgo = now - 75 * 60;
     const cache = JSON.stringify({
       peggedAssets: [{ id: "usdt-tether", symbol: "USDT", circulating: { peggedUSD: 100_000_000_000 } }],
@@ -1007,5 +1016,138 @@ describe("handleMintBurnFlows contract tests", () => {
     expect(response.headers.get("Cache-Control")).toBe("no-store");
     expect(response.headers.get("X-Data-Freshness-Reason")).toBe("producer-history-missing");
     expect(await response.json()).toMatchObject({ sync: { lastSuccessfulSyncAt: null }, _meta: { updatedAt: null } });
+  });
+
+  it.each(["source-stale", "publication-held", "safety-score-index-missing", "safety-score-index-read-failed"])(
+    "publishes identical FTQ state and warnings for materialized and cached reads: %s",
+    async (reason) => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-10-19T23:00:00Z"));
+      const now = Math.floor(Date.now() / 1000);
+      const snapshot = mockFtqPublication(reason === "source-stale" ? now - 3601 : now);
+      if (reason === "publication-held") {
+        vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreIndex").mockResolvedValue({
+          kind: "held", reason: "v9-publication-held", detail: "held for test", snapshot,
+        });
+      } else if (reason !== "source-stale") {
+        vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreIndex").mockResolvedValue({
+          kind: "error", reason, detail: "missing or unreadable canonical index", snapshot: null,
+        });
+      }
+      const db = mintBurnScenario({
+        nowSec: now,
+        rows: { hourly: [makeFlowHourlyRow(now)], latestSuccessfulSync: [{ started_at: now - 120 }] },
+      });
+      const fresh = await refreshAggregateMintBurnFlowCache(db, 24);
+      const materialized = MintBurnFlowsResponseSchema.parse(await readJsonResponse(fresh, 200));
+      const cachedDb = mintBurnScenario({
+        nowSec: now,
+        flowCache: {
+          key: "mint-burn-flows:v4:aggregate:24",
+          value: JSON.stringify(materialized),
+          updatedAt: now,
+        },
+      });
+      const cached = await handleMintBurnFlows(cachedDb, new URL("https://x/api/mint-burn-flows"));
+      const reread = MintBurnFlowsResponseSchema.parse(await readJsonResponse(cached, 200));
+      for (const body of [materialized, reread]) {
+        expect(body.gauge).toMatchObject({
+          classificationSource: "unavailable", classificationReason: reason,
+          flightToQuality: null, flightIntensity: null, safetyScoreIdentity: null,
+        });
+        expect(body._meta).toMatchObject({
+          status: "fresh", updatedAt: now - 120, freshBudgetSec: 28800,
+          dependencies: { flightToQuality: {
+            reason, freshBudgetSec: 3600,
+            status: reason === "source-stale" ? "stale" : "unavailable",
+            updatedAt: reason === "source-stale" || reason === "publication-held" ? snapshot.updatedAt : null,
+            generationId: reason === "source-stale" || reason === "publication-held"
+              ? snapshot.safetyScoreIdentity.publicationGenerationId : null,
+          } },
+        });
+        expect(body.sync?.classificationWarning).toContain("Safety Score");
+        expect(body.sync?.classificationWarning).toContain("1h");
+      }
+      expect(reread).toEqual(materialized);
+      expect(cached.headers.get("Warning")).toBe(fresh.headers.get("Warning"));
+      expect(cached.headers.get("Warning")).toContain(reason);
+      const writes = db.getHistory().filter((entry) => entry.sql.includes("INSERT INTO cache"));
+      expect(writes.some((entry) => entry.binds.some((value) => typeof value === "string"
+        && value.includes('"flightToQuality":null') && value.includes('"flightIntensity":null')))).toBe(true);
+    },
+  );
+
+  it("revalidates the same accepted identity at the inclusive Safety Score budget boundary", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-19T23:00:00Z"));
+    const now = Math.floor(Date.now() / 1000);
+    const snapshot = mockFtqPublication(now - 3600);
+    const cachedBody = makeValidCachedAggregateFixture(now, snapshot.safetyScoreIdentity);
+    const db = mintBurnScenario({
+      nowSec: now,
+      flowCache: { key: "mint-burn-flows:v4:aggregate:24", value: JSON.stringify(cachedBody), updatedAt: now },
+    });
+    const url = new URL("https://x/api/mint-burn-flows");
+    const admitted = MintBurnFlowsResponseSchema.parse(await readJsonResponse(await handleMintBurnFlows(db, url), 200));
+    expect(admitted.gauge.classificationSource).toBe("safety-score-v9-publication");
+    expect(admitted.gauge.classificationReason).toBeNull();
+    vi.setSystemTime((now + 1) * 1000);
+    const expired = await handleMintBurnFlows(db, url);
+    const body = MintBurnFlowsResponseSchema.parse(await readJsonResponse(expired, 200));
+    expect(body.gauge).toMatchObject({
+      classificationSource: "unavailable", classificationReason: "source-stale",
+      flightToQuality: null, flightIntensity: null,
+    });
+    expect(body._meta?.dependencies?.flightToQuality).toMatchObject({
+      updatedAt: snapshot.updatedAt, ageSeconds: 3601, freshBudgetSec: 3600,
+      generationId: snapshot.safetyScoreIdentity.publicationGenerationId,
+    });
+    expect(body._meta?.updatedAt).toBe(cachedBody.sync.lastSuccessfulSyncAt);
+    expect(expired.headers.get("Warning")).toContain("source-stale");
+  });
+
+  it("keeps fresh per-coin flow evidence independent of a stale Safety Score publication", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    mockFtqPublication(now - 4000);
+    const db = mintBurnScenario({
+      nowSec: now,
+      rows: { hourly: [makeFlowHourlyRow(now)], latestSuccessfulSync: [{ started_at: now - 120 }] },
+    });
+    const response = await handleMintBurnFlows(db, new URL("https://x/api/mint-burn-flows?stablecoin=usdt-tether"));
+    const body = await readJsonResponse<{ _meta: { status: string; dependencies?: Record<string, unknown> } }>(response, 200);
+    expect(body._meta.status).toBe("fresh");
+    expect(body._meta.dependencies?.flightToQuality).toBeUndefined();
+    expect(response.headers.get("Warning")).toBeNull();
+    expect(activeSafetyScoreSource.loadActiveSafetyScoreIndex).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { failedRead: false, reason: "v9-snapshot-unavailable" },
+    { failedRead: true, reason: "safety-score-index-read-failed" },
+  ])("distinguishes absent accepted publication from failed index reads: $reason", async ({ failedRead, reason }) => {
+    const now = Math.floor(Date.now() / 1000);
+    const cachedBody = makeValidCachedAggregateFixture(now, null);
+    const db = mintBurnScenario({
+      nowSec: now,
+      flowCache: {
+        key: "mint-burn-flows:v4:aggregate:24",
+        value: JSON.stringify(cachedBody),
+        updatedAt: now,
+      },
+      overrides: failedRead ? [{
+        match: "i.value AS score_index", rows: [],
+        throwError: new Error("canonical index D1 read failed"),
+      }] : [],
+    });
+    const response = await handleMintBurnFlows(db, new URL("https://x/api/mint-burn-flows"));
+    const body = MintBurnFlowsResponseSchema.parse(await readJsonResponse(response, 200));
+    expect(body.gauge).toMatchObject({
+      flightToQuality: null, flightIntensity: null, classificationSource: "unavailable", classificationReason: reason,
+    });
+    expect(body._meta?.dependencies?.flightToQuality).toMatchObject({
+      status: "unavailable", updatedAt: null, generationId: null, reason,
+    });
+    expect(body._meta?.updatedAt).toBe(cachedBody.sync.lastSuccessfulSyncAt);
+    expect(response.headers.get("Warning")).toContain(reason);
   });
 });

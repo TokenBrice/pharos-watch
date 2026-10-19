@@ -27,6 +27,8 @@ import type {
 } from "@shared/types";
 import { BLACKLIST_STABLECOINS } from "@shared/types/market";
 import type { ReportCardsV9DetailResponse } from "@shared/types/report-cards-v9-projections";
+import { MINT_BURN_FTQ_DEPENDENCY_KEY } from "@shared/types/mint-burn";
+import { parseDataHealthWarnings } from "@/lib/data-health";
 
 const YEAR_SECONDS = 365 * DAY_SECONDS;
 const YEARLY_PERFORMANCE_ANCHOR_TOLERANCE_SECONDS = 14 * DAY_SECONDS;
@@ -269,14 +271,39 @@ export function buildDetailStaleQueries(
       isLoading: queries.annualPriceHistory.isLoading,
     });
   }
-  if (supplemental.flows.enabled) {
+  const flows = supplemental.flows;
+  const flowEntry = flows.data?.coins.find((coin) => coin.stablecoinId === stablecoinId);
+  if (flows.enabled && (flowEntry != null || flows.isLoading || flows.error != null)) {
+    let meta = flows.meta;
+    if (meta?.dependencies?.[MINT_BURN_FTQ_DEPENDENCY_KEY]) {
+      // This section renders coin totals, not the market-wide FTQ verdict.
+      // Remove only its typed dependency and matching transport advisory; leave
+      // unknown/legacy warnings, flow clocks and other dependencies untouched.
+      const dependencies = { ...meta.dependencies };
+      delete dependencies[MINT_BURN_FTQ_DEPENDENCY_KEY];
+      const classificationWarning = flows.data?.sync?.classificationWarning;
+      const warning = meta.warning && classificationWarning
+        ? parseDataHealthWarnings(meta.warning)
+          .filter((entry) => entry.message !== classificationWarning)
+          .map((entry) => entry.raw).join(", ") || null
+        : meta.warning;
+      meta = { ...meta, dependencies, warning };
+    }
+    const syncWarning = flows.data?.sync?.warning;
+    if (syncWarning) {
+      const warnings = meta?.warning ? parseDataHealthWarnings(meta.warning) : [];
+      if (!warnings.some((entry) => entry.message === syncWarning)) {
+        const warning = [...warnings.map((entry) => entry.raw), syncWarning].join(", ");
+        meta = meta ? { ...meta, warning } : { status: "degraded", warning };
+      }
+    }
     result.push({
       preset: "mintBurnFlows",
-      dataUpdatedAt: supplemental.flows.dataUpdatedAt,
-      error: supplemental.flows.error,
-      hasData: supplemental.flows.data !== undefined,
-      meta: supplemental.flows.meta,
-      isLoading: supplemental.flows.isLoading,
+      dataUpdatedAt: flows.dataUpdatedAt,
+      error: flows.error,
+      hasData: flowEntry != null,
+      meta,
+      isLoading: flows.isLoading,
     });
   }
   if (supplemental.blacklist.enabled) {

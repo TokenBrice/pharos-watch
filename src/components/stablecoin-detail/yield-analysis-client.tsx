@@ -26,6 +26,7 @@ import {
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import type { StablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
 import { toTimestampMs } from "@/lib/time";
+import { formatDataHealthWarning } from "@/lib/data-health";
 import { classifyApyChange } from "@/lib/yield-change-attribution";
 import {
   buildYieldPeerRailModel,
@@ -448,7 +449,7 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
     () => deriveSourceSwitchEvents(historyQuery.data?.history ?? []),
     [historyQuery.data],
   );
-  const historyWarning = historyQuery.meta?.warning ?? null;
+  const historyWarning = historyQuery.meta?.warning ? formatDataHealthWarning(historyQuery.meta.warning) : null;
 
   const apyChangeAttribution = useMemo(
     () =>
@@ -536,7 +537,7 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
       <QueryErrorNotice error={rankingsQuery.error} hasData onRetry={() => { void rankingsQuery.refetch(); }} />
       {rankingsQuery.meta?.warning ? (
         <div className="rounded-lg border border-state-warn-solid/25 bg-state-warn-solid/5 px-3 py-2 text-xs text-state-warn-bright">
-          {rankingsQuery.meta.warning}
+          {formatDataHealthWarning(rankingsQuery.meta.warning)}
         </div>
       ) : null}
       {peerRailModel ? <YieldPeerRail model={peerRailModel} currentId={id} /> : null}

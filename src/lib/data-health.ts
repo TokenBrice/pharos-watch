@@ -48,6 +48,43 @@ const STATE_PRIORITY: Record<DataHealthState, number> = {
   fresh: 1,
 };
 
+/** Keep transport syntax in metadata, never in reader-facing warning copy. */
+export function parseDataHealthWarnings(warning: string): { raw: string; message: string }[] {
+  if (!/^\s*\d{3}\s+\S+\s+"/.test(warning)) return [{ raw: warning, message: warning }];
+  const entries: string[] = [];
+  let start = 0;
+  let quoted = false;
+  let escaped = false;
+  let protocolEntry = true;
+  for (let index = 0; index < warning.length; index += 1) {
+    const char = warning[index];
+    if (escaped) {
+      escaped = false;
+    } else if (quoted && char === "\\") {
+      escaped = true;
+    } else if (char === '"') {
+      quoted = !quoted;
+    } else if (!quoted && (char === "," || char === "\n")) {
+      const nextIsProtocol = /^\s*\d{3}\s+\S+\s+"/.test(warning.slice(index + 1));
+      if (protocolEntry || nextIsProtocol) {
+        entries.push(warning.slice(start, index).trim());
+        start = index + 1;
+        protocolEntry = nextIsProtocol;
+      }
+    }
+  }
+  entries.push(warning.slice(start).trim());
+  return entries.filter(Boolean).map((raw) => {
+    // The optional final quoted string is an HTTP warn-date, not product copy.
+    const match = raw.match(/^\d{3}\s+\S+\s+"((?:[^"\\]|\\.)*)"(?:\s+"(?:[^"\\]|\\.)*")?\s*$/s);
+    return { raw, message: match ? match[1].replace(/\\(.)/gs, "$1") : raw };
+  });
+}
+
+export function formatDataHealthWarning(warning: string): string {
+  return parseDataHealthWarnings(warning).map(({ message }) => message).join("\n");
+}
+
 function isUnavailableError(error: unknown): boolean {
   return error instanceof ApiFetchError && error.status === 503;
 }

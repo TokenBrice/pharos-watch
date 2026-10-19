@@ -135,6 +135,9 @@ export function mintBurnScenario({
     cacheRowForStablecoins(stablecoinsCache, nowSec),
     ...normalizeCacheEntries(flowCache, nowSec),
     ...safetyCache.map((entry) => cacheRow(entry.key, entry.value, entry.updatedAt ?? nowSec)),
+    // A successful empty canonical-index join means no accepted publication.
+    // Without this match mockD1 throws, incorrectly simulating a failed D1 read.
+    { match: "i.value AS score_index", rows: [], first: null },
     { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
     { match: "INSERT INTO cache (key, value, updated_at)", rows: [] },
   ]);

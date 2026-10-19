@@ -49,11 +49,14 @@ export const MintBurnSignedNetBoundSchema = z.object({
 });
 export type MintBurnSignedNetBound = z.infer<typeof MintBurnSignedNetBoundSchema>;
 
+/** Market-wide FTQ dependency; coin flow totals do not consume Safety Scores. */
+export const MINT_BURN_FTQ_DEPENDENCY_KEY = "flightToQuality";
+
 const MintBurnGaugeSchema = z.object({
   score: SignedFlowIntensitySchema.nullable(),
   band: z.string().nullable(),
   intensitySemantics: z.literal("signed-v2"),
-  /** Nullable for valuation gating: `null` means missing valuation can alter the flight-to-quality conclusion. */
+  /** `null` when classification is unavailable or missing valuation can alter the conclusion. */
   flightToQuality: z.boolean().nullable(),
   flightIntensity: z.number().finite().nullable(),
   // The retired cache label is accepted for rolling/historical payload reads.
@@ -61,6 +64,8 @@ const MintBurnGaugeSchema = z.object({
     .enum(["safety-score-v9-publication", "report-card-cache", "unavailable"])
     .optional(),
   safetyScoreIdentity: SafetyScorePublicationIdentitySchema.nullable().optional(),
+  /** Machine-readable classification failure, independent of USD valuation gating. */
+  classificationReason: z.string().nullable().optional(),
   trackedCoins: z.number().int().nonnegative(),
   /** Sum of observed tracked-chain supply; coins counted in `mcapUnavailableCoins` are excluded, not zeroed. */
   trackedMcapUsd: z.number().finite().nonnegative(),

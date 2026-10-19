@@ -13,7 +13,7 @@ import {
 } from "../lib/mint-burn-scoring";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import type { StablecoinData } from "@shared/types/market";
-import { MintBurnFlowsResponseSchema } from "@shared/types/mint-burn";
+import { MINT_BURN_FTQ_DEPENDENCY_KEY, MintBurnFlowsResponseSchema } from "@shared/types/mint-burn";
 import {
   addMintBurnValuationTally,
   emptyMintBurnValuationTally,
@@ -28,15 +28,12 @@ import {
 } from "../lib/flight-to-quality-classification";
 import { buildInClause } from "../lib/db";
 import { isRecord } from "@shared/lib/type-guards";
-import { cloneResponse } from "@shared/lib/http-response";
-import { safetyScorePublicationIdentitiesMatch } from "@shared/lib/safety-score-publication";
+import { formatElapsedSeconds } from "@shared/lib/format";
+import type { ApiDependencyMeta } from "@pharos/contracts/api-meta";
 import { tryParseJson } from "../lib/json-parse";
 import { logWorkerEvent } from "../lib/structured-log";
-import {
-  SafetyScorePublicationIdentitySchema,
-  type SafetyScorePublicationIdentity,
-} from "@shared/types/safety-score-publication";
 import { loadActiveSafetyScoreIndex } from "../lib/safety-score-index";
+import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../lib/safety-score-v9/consumer-freshness";
 import {
   aggregateFlowCacheKey,
   aggregateHourlyRowsByChain,
@@ -93,42 +90,8 @@ export async function refreshAggregateMintBurnFlowCache(db: D1Database, hours: n
   const syncStartSec = nowSec;
   const params = buildAggregateQueryParams(nowSec, hours);
 
-  // Load grade-based classification (FTQ disabled when cache unavailable)
-  let classification:
-    { kind: "ok"; classification: FlightToQualityClassification } | { kind: "unavailable"; reason: string };
-  try {
-    const active = await loadActiveSafetyScoreIndex(db);
-    if (active.kind !== "error") {
-      classification =
-        buildFlightToQualityClassificationFromV9Snapshot(
-          active.snapshot,
-        );
-    } else {
-      classification = {
-        kind: "unavailable",
-        reason: active.reason,
-      };
-    }
-  } catch (error) {
-    logWorkerEvent({
-      scope: "api",
-      level: "warn",
-      event: "ftq_classification_load_failed",
-      route: "mint-burn-flows",
-      message: "Failed to load report-card FTQ classification",
-      error,
-    });
-    classification = { kind: "unavailable", reason: "cache-read-failed" };
-  }
-  const gradeClassification = classification.kind === "ok" ? classification.classification : null;
-  const classificationWarning =
-    classification.kind === "ok" ? null : `Report-card FTQ classification unavailable (${classification.reason})`;
-  const classificationSource =
-    classification.kind === "ok"
-      ? "safety-score-v9-publication"
-      : "unavailable";
-  const safetyScoreIdentity = classification.kind === "ok" ? classification.classification.safetyScoreIdentity : null;
-  if (classificationWarning) logWorkerEventArgs("api", "warn", `[mint-burn-flows] ${classificationWarning}`);
+  const ftqSource = await loadAggregateFtqSource(db);
+  const gradeClassification = ftqSource.classification;
 
   // Load stablecoins cache for mcap lookup. Only observed weights enter the map;
   // an absent id is an unavailable weight, counted by buildCoinSummaries.
@@ -194,8 +157,8 @@ export async function refreshAggregateMintBurnFlowCache(db: D1Database, hours: n
       intensitySemantics: "signed-v2",
       flightToQuality: flightToQuality?.active ?? null,
       flightIntensity: flightToQuality?.intensity ?? null,
-      classificationSource,
-      safetyScoreIdentity,
+      classificationSource: gradeClassification ? "safety-score-v9-publication" : "unavailable",
+      safetyScoreIdentity: gradeClassification?.safetyScoreIdentity ?? null,
       trackedCoins: coins.length,
       trackedMcapUsd,
       mcapUnavailableCoins,
@@ -213,146 +176,145 @@ export async function refreshAggregateMintBurnFlowCache(db: D1Database, hours: n
     sync: {
       ...data.sync,
       warning: appendSyncWarning(data.sync.warning, data.freshnessLookupWarning),
-      classificationWarning,
+      classificationWarning: null,
     },
   };
 
-  return finalizeMintBurnFlowResponse(db, cacheKey, syncStartSec, body, data.freshnessLookup);
-}
-
-function cachedAggregateNeedsSafetyValidation(payload: unknown): boolean {
-  if (!isRecord(payload) || !isRecord(payload.gauge)) return false;
-  // A fully degraded cache entry is already fail-closed. Legacy and partial
-  // entries must be revalidated before exposing any FTQ state.
-  return !(
-    payload.gauge.classificationSource === "unavailable" &&
-    payload.gauge.flightToQuality === false &&
-    payload.gauge.flightIntensity === 0 &&
-    payload.gauge.safetyScoreIdentity === null &&
-    isRecord(payload.sync) &&
-    typeof payload.sync.classificationWarning === "string" &&
-    payload.sync.classificationWarning.length > 0
+  return finalizeMintBurnFlowResponse(
+    db, cacheKey, syncStartSec, applyAggregateFtqState(body, ftqSource), data.freshnessLookup,
   );
 }
 
-function cachedAggregateSafetyIdentity(payload: Record<string, unknown>): SafetyScorePublicationIdentity | null {
-  const gauge = payload.gauge;
-  if (!isRecord(gauge)) return null;
-  const parsed = SafetyScorePublicationIdentitySchema.safeParse(
-    gauge.safetyScoreIdentity,
-  );
-  return parsed.success ? parsed.data : null;
+interface AggregateFtqSource {
+  classification: FlightToQualityClassification | null;
+  dependency: ApiDependencyMeta;
+}
+
+/** The compact accepted index is re-admitted on every read, including unavailable caches. */
+async function loadAggregateFtqSource(db: D1Database): Promise<AggregateFtqSource> {
+  let classification: FlightToQualityClassification | null = null;
+  let reason: string | null = null;
+  let updatedAt: number | null = null;
+  let generationId: string | null = null;
+  try {
+    const active = await loadActiveSafetyScoreIndex(db);
+    if (active.kind === "error") {
+      reason = active.reason;
+    } else {
+      updatedAt = Number.isFinite(active.snapshot.updatedAt) && active.snapshot.updatedAt > 0
+        ? active.snapshot.updatedAt : null;
+      generationId = active.snapshot.safetyScoreIdentity.publicationGenerationId;
+      const current = buildFlightToQualityClassificationFromV9Snapshot(active.snapshot);
+      if (active.kind === "held") reason = "publication-held";
+      else if (current.kind === "ok") classification = current.classification;
+      else reason = current.reason;
+    }
+  } catch (error) {
+    logWorkerEvent({
+      scope: "api",
+      level: "warn",
+      event: "ftq_classification_load_failed",
+      route: "mint-burn-flows",
+      message: "Failed to load Safety Score FTQ classification",
+      error,
+    });
+    reason = "cache-read-failed";
+  }
+  return {
+    classification,
+    dependency: {
+      updatedAt,
+      ageSeconds: updatedAt == null ? null : Math.floor(Date.now() / 1000) - updatedAt,
+      generationId,
+      freshBudgetSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC,
+      status: classification ? "fresh" : reason === "source-stale" ? "stale" : "unavailable",
+      reason,
+    },
+  };
+}
+
+function ftqClassificationWarning(reason: string | null): string | null {
+  if (reason == null) return null;
+  const budget = formatElapsedSeconds(SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC);
+  const cause = reason === "source-stale"
+    ? `the Safety Score source is outside its ${budget} freshness budget`
+    : reason === "publication-held"
+      ? `the Safety Score publication is held; its freshness budget is ${budget}`
+      : reason === "cached-flow-contract-invalid"
+        ? "the cached coin flow inputs are invalid"
+        : `the Safety Score source could not be admitted; its freshness budget is ${budget}`;
+  return `Flight-to-quality classification is unavailable because ${cause} (${reason}).`;
+}
+
+/** One availability/warning projection for materialized, cached and fallback responses. */
+function applyAggregateFtqState(
+  payload: Record<string, unknown>,
+  source: AggregateFtqSource,
+  reason: string | null = source.dependency.reason ?? null,
+): Record<string, unknown> {
+  const gauge = isRecord(payload.gauge) ? payload.gauge : {};
+  const unavailable = reason != null;
+  const warning = ftqClassificationWarning(reason);
+  const meta = isRecord(payload._meta) ? payload._meta : {};
+  return {
+    ...payload,
+    gauge: {
+      ...gauge,
+      ...(unavailable ? { flightToQuality: null, flightIntensity: null } : {}),
+      classificationSource: unavailable ? "unavailable" : "safety-score-v9-publication",
+      classificationReason: reason,
+      safetyScoreIdentity: unavailable ? null : source.classification?.safetyScoreIdentity ?? null,
+    },
+    ...(isRecord(payload.sync) ? { sync: { ...payload.sync, classificationWarning: warning } } : {}),
+    _meta: {
+      ...meta,
+      warning,
+      dependencies: {
+        ...(isRecord(meta.dependencies) ? meta.dependencies : {}),
+        [MINT_BURN_FTQ_DEPENDENCY_KEY]: source.dependency,
+      },
+    },
+  };
 }
 
 /**
- * Aggregate flow cache rows retain their FTQ cohort identity. A cache may be
- * served for flow freshness, but never with an FTQ decision from another
- * report-card publication. Reclassify cached 24h flows when that publication
- * advances; this does not refresh the underlying flow snapshot.
+ * Reclassifying stored coin nets never renews the flow generation. In particular,
+ * an unavailable cached classification must recover without waiting for a flow write.
  */
 async function reconcileCachedAggregateSafetyResponse(
   db: D1Database,
   cached: { value: string; updatedAt: number },
 ): Promise<Response> {
-  const fallback = cachedFlowFallbackResponse(cached);
-  if (!fallback.ok) return fallback;
-
   const payload = tryParseJson(cached.value, { onFailure: () => undefined });
-  if (payload === null) return fallback;
-  if (!cachedAggregateNeedsSafetyValidation(payload) || !isRecord(payload)) return fallback;
-
-  const cachedIdentity = cachedAggregateSafetyIdentity(payload);
-  let reason: string | null = cachedIdentity ? null : "identity-missing";
-  if (cachedIdentity) {
-    try {
-      const active = await loadActiveSafetyScoreIndex(db);
-      if (active.kind !== "error") {
-          const current =
-            buildFlightToQualityClassificationFromV9Snapshot(
-              active.snapshot,
-            );
-          reason =
-            current.kind !== "ok"
-              ? current.reason
-              : safetyScorePublicationIdentitiesMatch(
-                    cachedIdentity,
-                    current.classification.safetyScoreIdentity,
-                  )
-                ? null
-                : "identity-mismatch";
-          if (reason === "identity-mismatch" && current.kind === "ok") {
-            const coins = MintBurnFlowsResponseSchema.shape.coins.safeParse(payload.coins);
-            if (coins.success) {
-              // Same valuation rule as the producer: a cached coin without `valuation`
-              // predates completeness and reads as `unknown`, never complete.
-              const safe: ValuedNetFlow24h[] = [];
-              const risky: ValuedNetFlow24h[] = [];
-              for (const coin of coins.data) {
-                const flow = {
-                  knownNetUsd: coin.netFlow24hUsd,
-                  valuation: resolveMintBurnValuation(coin.valuation?.window24h),
-                };
-                if (current.classification.safeIds.has(coin.stablecoinId)) safe.push(flow);
-                else if (current.classification.riskyIds.has(coin.stablecoinId)) risky.push(flow);
-              }
-              const ftq = detectFlightToQualityFromValuedNets({ safe, risky });
-              return cloneResponse(fallback, {
-                body: JSON.stringify({
-                  ...payload,
-                  gauge: {
-                    ...(isRecord(payload.gauge) ? payload.gauge : {}),
-                    flightToQuality: ftq?.active ?? null,
-                    flightIntensity: ftq?.intensity ?? null,
-                    classificationSource: "safety-score-v9-publication",
-                    safetyScoreIdentity: current.classification.safetyScoreIdentity,
-                  },
-                  ...(isRecord(payload.sync) ? { sync: { ...payload.sync, classificationWarning: null } } : {}),
-                }),
-              });
-            }
-          }
-      } else {
-        reason = active.reason;
+  if (!isRecord(payload) || !isRecord(payload.gauge)) return cachedFlowFallbackResponse(cached);
+  const source = await loadAggregateFtqSource(db);
+  let reason = source.dependency.reason ?? null;
+  if (source.classification) {
+    const coins = MintBurnFlowsResponseSchema.shape.coins.safeParse(payload.coins);
+    if (!coins.success) {
+      reason = "cached-flow-contract-invalid";
+    } else {
+      const safe: ValuedNetFlow24h[] = [];
+      const risky: ValuedNetFlow24h[] = [];
+      for (const coin of coins.data) {
+        const flow = {
+          knownNetUsd: coin.netFlow24hUsd,
+          valuation: resolveMintBurnValuation(coin.valuation?.window24h),
+        };
+        if (source.classification.safeIds.has(coin.stablecoinId)) safe.push(flow);
+        else if (source.classification.riskyIds.has(coin.stablecoinId)) risky.push(flow);
       }
-    } catch (error) {
-      logWorkerEvent({
-        scope: "api",
-        level: "warn",
-        event: "cached_ftq_validation_failed",
-        route: "mint-burn-flows",
-        message: "Failed to validate cached FTQ classification",
-        error,
-      });
-      reason = "cache-read-failed";
+      const ftq = detectFlightToQualityFromValuedNets({ safe, risky });
+      payload.gauge = {
+        ...payload.gauge,
+        flightToQuality: ftq?.active ?? null,
+        flightIntensity: ftq?.intensity ?? null,
+      };
     }
   }
-  if (reason == null) return fallback;
-
-  const gauge = isRecord(payload.gauge) ? payload.gauge : {};
-  const warning = `Report-card FTQ classification unavailable (${reason})`;
-  const sync = isRecord(payload.sync)
-    ? {
-        ...payload.sync,
-        classificationWarning: appendSyncWarning(
-          typeof payload.sync.classificationWarning === "string" ? payload.sync.classificationWarning : null,
-          warning,
-        ),
-      }
-    : payload.sync;
-  const degraded = {
-    ...payload,
-    gauge: {
-      ...gauge,
-      flightToQuality: false,
-      flightIntensity: 0,
-      classificationSource: "unavailable",
-      safetyScoreIdentity: null,
-    },
-    ...(isRecord(sync) ? { sync } : {}),
-  };
-  return cloneResponse(fallback, {
-    body: JSON.stringify(degraded),
-    mutateHeaders: (headers) => headers.append("Warning", `199 - "${warning}"`),
+  return cachedFlowFallbackResponse({
+    ...cached,
+    value: JSON.stringify(applyAggregateFtqState(payload, source, reason)),
   });
 }
 

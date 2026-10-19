@@ -18,7 +18,7 @@ import {
   tallyMintBurnHourlyBucket,
   type MintBurnValuationTally,
 } from "@shared/lib/mint-burn-valuation";
-import type { MintBurnValuationCompleteness } from "@shared/types/mint-burn";
+import { MINT_BURN_FTQ_DEPENDENCY_KEY, type MintBurnValuationCompleteness } from "@shared/types/mint-burn";
 import { type MintBurnValuationTallyRow, readMintBurnValuationTallyRow } from "./mint-burn-hourly-valuation";
 
 import { FLOW_CACHE_PREFIX } from "./mint-burn-flow-cache-keys";
@@ -355,26 +355,49 @@ function parseMintBurnCronMetadata(
 
 
 export function cachedFlowFallbackResponse(cached: { value: string; updatedAt: number }): Response {
-  const parsed = readCachedJsonOr503<{
-    sync?: { lastSuccessfulSyncAt?: number | null };
-    _meta?: { reason?: string | null };
-    updatedAt?: number;
-  }>("mint-burn-flows", "mint-burn-flows", cached);
+  const parsed = readCachedJsonOr503<Record<string, unknown>>("mint-burn-flows", "mint-burn-flows", cached);
   if (!parsed.ok) {
     return parsed.response;
   }
   const timestamp = resolveCachedFlowFreshnessTimestamp(parsed.data, cached.updatedAt);
+  const meta = isRecord(parsed.data._meta) ? parsed.data._meta : {};
   const freshness: CronTimestampLookupResult = {
     timestamp,
-    status: parsed.data._meta?.reason === "freshness-lookup-failed"
+    status: meta.reason === "freshness-lookup-failed"
       ? "lookup_failed" : timestamp == null ? "missing" : "ok",
   };
 
-  const headers = {
-    "Content-Type": "application/json",
-    ...buildCronFreshnessHeaders(freshness, MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC, CACHE_PROFILES.standard),
+  return buildMintBurnFlowResponse(parsed.data, freshness).response;
+}
+
+/** All response paths age the flow clock and expose the same optional FTQ advisory. */
+function buildMintBurnFlowResponse(body: Record<string, unknown>, freshness: CronTimestampLookupResult) {
+  const headers = new Headers(
+    buildCronFreshnessHeaders(freshness, MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC, CACHE_PROFILES.standard),
+  );
+  const meta = isRecord(body._meta) ? body._meta : {};
+  const dependencies = isRecord(meta.dependencies) ? meta.dependencies : null;
+  const sync = isRecord(body.sync) ? body.sync : null;
+  // Only aggregate payloads carry this typed dependency. Per-coin responses do
+  // not acquire a market-wide classification warning.
+  const classificationWarning = typeof sync?.classificationWarning === "string"
+    ? sync.classificationWarning : typeof meta.warning === "string" ? meta.warning : null;
+  if (dependencies?.[MINT_BURN_FTQ_DEPENDENCY_KEY] && classificationWarning) {
+    const warning = classificationWarning.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+    headers.append("Warning", `199 - "${warning}"`);
+  }
+  const responseBody = {
+    ...body,
+    _meta: {
+      ...buildCronFreshnessMeta(freshness, MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC),
+      ...(dependencies ? { dependencies } : {}),
+      ...(headers.has("Warning") ? { warning: headers.get("Warning") } : {}),
+    },
   };
-  return new Response(cached.value, { headers });
+  return {
+    responseBody,
+    response: jsonResponseWithHeaders(responseBody, Object.fromEntries(headers.entries())),
+  };
 }
 
 export async function finalizeMintBurnFlowResponse(
@@ -384,12 +407,9 @@ export async function finalizeMintBurnFlowResponse(
   body: Record<string, unknown>,
   freshness: CronTimestampLookupResult,
 ): Promise<Response> {
-  const responseBody = { ...body, _meta: buildCronFreshnessMeta(freshness, MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC) };
+  const { responseBody, response } = buildMintBurnFlowResponse(body, freshness);
   await setCacheIfNewer(db, cacheKey, JSON.stringify(responseBody), syncStartSec);
-  return jsonResponseWithHeaders(
-    responseBody,
-    buildCronFreshnessHeaders(freshness, MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC, CACHE_PROFILES.standard),
-  );
+  return response;
 }
 
 export async function withMintBurnFlowFallback(
