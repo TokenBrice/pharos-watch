@@ -93,7 +93,7 @@ Completed informational `skipped` findings are intentional non-measurements: the
 
 **Deployed-override gate (2026-10-08):** status-only/no-paging policy is approved, but the complete inventory of deployed Workers/environments, dashboard/config/secret overrides and private tooling has not been recorded. Until that inventory intentionally migrates every selection to `status` or `off`, `shadow` (hidden collection/unconditional-success policy) and `alert` (stronger terminal-error policy, not an alert sender) remain accepted. After inventory closure, remove those branches and normalize obsolete selections to `off`; never remap retained historical modes into current evidence. No paging activation is planned.
 
-Reserve recovery: `WORKER_RESERVE_RECOVERY_MODE` defaults to `off`; checked-in config uses `recover`. Checkpoints are always written. The five-minute `3/6` lane claims compatible interrupted suffixes and runs bounded config recovery under the reserve lease; redemption's three-worker resolver pool sets the replay peak. [Deploy-time configuration recovery](process/live-reserves-appendix.md#deploy-time-configuration-recovery) owns targeting, one-opportunity consumption, release visibility and acceptance.
+Reserve recovery: `WORKER_RESERVE_RECOVERY_MODE` defaults to `off`; checked-in config uses `recover`. Checkpoints are always written. The one-minute `3/6` lane retains historical key `fiveMinuteReserveRecovery`, claims compatible suffixes, and keeps config recovery on its original five-minute opportunities under the reserve lease. Redemption's three-worker pool sets the replay peak. [Deploy-time configuration recovery](process/live-reserves-appendix.md#deploy-time-configuration-recovery) owns targeting, one-opportunity consumption and acceptance.
 
 ### Project-tape placed-fetch canary
 
@@ -189,7 +189,7 @@ Interval / offset are logical-slot seconds, not job freshness or delivery eviden
 | `hourlyYieldSync` | `55 * * * *` | 3600 / 3300 | `55 * * * *` | public |
 | `fourHourlyYieldSupplemental` | `25 */4 * * *` | 14400 / 1500 | `25 */4 * * *` | public |
 | `fiveMinuteTelegramAlerts` | `2,7,12,17,22,27,32,37,42,47,52,57 * * * *` | 300 / 120 | `2,7,12,17,22,27,32,37,42,47,52,57 * * * *` | public |
-| `fiveMinuteReserveRecovery` | `1,6,11,16,21,26,31,36,41,46,51,56 * * * *` | 300 / 60 | `1,6,11,16,21,26,31,36,41,46,51,56 * * * *` | public |
+| `fiveMinuteReserveRecovery` | `* * * * *` | 60 / 0 | `* * * * *` | public |
 | `digestTriggerPoll` | `*/5 * * * *` | 300 / 0 | `*/5 * * * *` | public |
 | `daily0300Utc` | `0 3 * * *` | 86400 / 10800 | `3 3 * * *` | public |
 | `daily0800Utc` | `0 8 * * *` | 86400 / 28800 | `0 8 * * *` | public |

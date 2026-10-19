@@ -1,4 +1,5 @@
 import { CRON_SCHEDULES } from "@shared/lib/cron-jobs";
+import { isReserveConfigRecoverySlot } from "@shared/lib/cron-cadences";
 import {
   claimNextLiveReserveCheckpointRecovery,
   prepareEligibleLiveReserveCheckpointRecoveries,
@@ -30,7 +31,7 @@ function priorityPollStatus(priority: ReserveProducerPriority | null): "ok" | "s
   // Expected waiting completes the poll only with positive bounded evidence.
   return priority?.condition === "producer-slot-live"
     || priority?.condition === "next-slot-lookahead"
-    || priority?.condition === "heavy-slot-running"
+    || priority?.condition === "same-role-slot-running"
     ? "ok" : "skipped_neutral";
 }
 
@@ -85,6 +86,25 @@ async function runReserveRecovery(
     leaseSec: RESERVE_RECOVERY_CLAIM_SEC,
   });
   if (claim.disposition !== "claimed") {
+    // Exact scheduled minute, not wall-clock time: duplicate old/new expressions
+    // share the slot fence and global recovery lease. Never catch up config work
+    // on the four intervening minute polls or load its graph on those ticks.
+    if (!isReserveConfigRecoverySlot(runtime.slotStartedAt)) {
+      const priority = claim.disposition === "priority" ? claim.producerPriority : null;
+      const recoveryBlocked = preparation.inspection.incompatibleCheckpointCount > 0
+        && preparation.inspection.eligibleCheckpointCount === 0
+        && preparation.inspection.readyCheckpointCount === 0;
+      return createReserveRecoveryResult({
+        status: priority ? priorityPollStatus(priority) : "ok", itemCount: 0,
+        metadata: {
+          mode, disposition: priority ? "recovery-priority" : "no-recovery-due",
+          configRecovery: { disposition: "not-due" }, checkpointsClaimed: 0,
+          retiredCheckpoints, sweep: { ...sweep }, preparation,
+          ...(recoveryBlocked ? { statusCause: "reserve-recovery-zero-eligible-incompatible" } : {}),
+          ...(priority ? { reason: priorityPollReason(priority), producerPriority: priority } : {}),
+        } as CronMetadataRecord,
+      });
+    }
     // Keep changed-config work off the normal cohort's wall/CPU budget.
     // Lazy import also keeps config-only polls free of the consumer graph.
     await reportProgress({ stage: "recovering-reserve-config" });
@@ -162,7 +182,7 @@ async function runReserveRecovery(
   const { runFourHourlyReserveSyncSlot } = await import("./four-hourly-reserves");
   const summary = await runFourHourlyReserveSyncSlot(recoveryRuntime);
   const admissionReason = summary.jobs?.find((job) =>
-    job.reason === "producer-slot-priority" || job.reason === "heavy-slot-co-tenancy")?.reason;
+    job.reason === "producer-slot-priority" || job.reason === "same-role-slot-co-tenancy")?.reason;
   const admissionPriority = admissionReason && summary.jobsErrored === 0 && summary.jobsDegraded === 0
     ? await getReserveProducerPriority(runtime.db) : null;
   const admissionPollReason = admissionReason

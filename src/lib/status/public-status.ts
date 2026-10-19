@@ -95,7 +95,7 @@ export function getPublicHealthWarningPresentation(
 ): PublicHealthWarningPresentation {
   if (warning === "scheduled_delivery_stalled") return {
     title: "Scheduled delivery stalled",
-    detail: `No five-minute lane has started within the delivery budget${healthData.schedulerLiveness?.ageSeconds != null ? ` (${healthData.schedulerLiveness.ageSeconds}s since delivery)` : ""}. Cached data may remain reachable while new updates stop.`,
+    detail: `No canonical short-cadence lane has started within the delivery budget${healthData.schedulerLiveness?.ageSeconds != null ? ` (${healthData.schedulerLiveness.ageSeconds}s since delivery)` : ""}. Cached data may remain reachable while new updates stop.`,
   };
   if (warning === "scheduler_liveness_unavailable") return {
     title: "Scheduled delivery evidence unavailable",

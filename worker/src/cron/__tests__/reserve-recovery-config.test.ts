@@ -171,14 +171,14 @@ describe("quarantined supply-prerequisite reserve bootstrap", () => {
     expect(selectReserveSupplyAdmissionBootstrapTargets([coin], new Map(), new Map([[coin.id, fingerprint]]), () => true, Date.now())).toEqual([]);
   });
 
-  it.each(["producer", "heavy"] as const)("keeps an untouched opportunity after %s priority deferral", async (lane) => {
+  it.each(["producer", "same-role"] as const)("keeps an untouched opportunity after %s priority deferral", async (lane) => {
     const { db, sqlite, fetch } = await seed(0);
     const coin = bootstrapCoin();
     registerBootstrapCoin(coin);
     if (lane === "producer") sqlite.prepare("UPDATE cron_slot_executions SET state = 'running'").run();
     else sqlite.prepare(`INSERT INTO cron_slot_executions
       (slot_key, slot_started_at, state, execution_owner, execution_generation, started_at, updated_at)
-      VALUES ('halfHourlyChartsOffset', ?, 'running', 'heavy', 1, ?, ?)`)
+      VALUES ('fourHourlyReserveSync', ?, 'running', 'overlapping-producer', 1, ?, ?)`)
       .run(Math.floor(Date.now() / 1000), Math.floor(Date.now() / 1000), Math.floor(Date.now() / 1000));
     expect(await recoverLiveReserveConfigChanges(db, signal(), {})).toMatchObject({ disposition: "config-recovery-priority", attempted: [] });
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM reserve_sync_state WHERE stablecoin_id = ?").get(coin.id)).toEqual({ count: 0 });
@@ -214,25 +214,35 @@ describe("deploy config reserve recovery", () => {
     expect(fetch).toHaveBeenCalledTimes(1);
   });
 
-  it.each(["producer", "heavy"])("does not consume a changed fingerprint when direct config recovery is protected by %s", async (lane) => {
+  it.each(["producer", "same-role"])("does not consume a changed fingerprint when direct config recovery is protected by %s", async (lane) => {
     const { db, sqlite, fetch } = await seed();
     if (lane === "producer") sqlite.prepare("UPDATE cron_slot_executions SET state = 'running'").run();
     else sqlite.prepare(`INSERT INTO cron_slot_executions
       (slot_key, slot_started_at, state, execution_owner, execution_generation, started_at, updated_at)
-      VALUES ('halfHourlyChartsOffset', ?, 'running', 'heavy', 1, ?, ?)`)
+      VALUES ('fourHourlyReserveSync', ?, 'running', 'overlapping-producer', 1, ?, ?)`)
       .run(Math.floor(Date.now() / 1000), Math.floor(Date.now() / 1000), Math.floor(Date.now() / 1000));
     getReserveAdapterMock.mockClear();
     expect(await recoverLiveReserveConfigChanges(db, signal(), {}, {
       invocationId: "poll", scheduleKey: "fiveMinuteReserveRecovery", slotStartedAt: Math.floor(Date.now() / 1000),
     })).toMatchObject({
       disposition: "config-recovery-priority", attempted: [], attemptedCount: 0,
-      reason: lane === "producer" ? "producer-slot-priority" : "heavy-slot-co-tenancy",
+      reason: lane === "producer" ? "producer-slot-priority" : "same-role-slot-co-tenancy",
     });
     expect(fetch).not.toHaveBeenCalled();
     expect(getReserveAdapterMock).not.toHaveBeenCalled();
     expect(sqlite.prepare("SELECT config_fingerprint FROM reserve_sync_state WHERE stablecoin_id = 'coin-0'").get())
       .toEqual({ config_fingerprint: "previous-config" });
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM cron_leases").get()).toEqual({ count: 0 });
+  });
+
+  it.each(["halfHourlyChartsOffset", "v9PublicationOffset"])("admits config repair beside separate-Worker %s", async (slotKey) => {
+    const { db, sqlite, fetch } = await seed();
+    const now = Math.floor(Date.now() / 1000);
+    sqlite.prepare(`INSERT INTO cron_slot_executions
+      (slot_key, slot_started_at, state, execution_owner, execution_generation, started_at, updated_at)
+      VALUES (?, ?, 'running', 'heavy', 1, ?, ?)`).run(slotKey, now, now, now);
+    expect(await recoverLiveReserveConfigChanges(db, signal(), {})).toMatchObject({ healed: ["coin-0"] });
+    expect(fetch).toHaveBeenCalledTimes(1);
   });
 
   it("consumes one opportunity after stale evidence rejection across ten minutes, four hours and isolate restarts", async () => {

@@ -64,13 +64,13 @@ function runtime(mode: string | undefined): ScheduledRuntimeContext {
   const value = makeScheduledRuntime({
     db: {} as D1Database,
     env: { WORKER_RESERVE_RECOVERY_MODE: mode } as ScheduledRuntimeContext["env"],
-    cron: "1,6,11,16,21,26,31,36,41,46,51,56 * * * *",
+    cron: "* * * * *",
     scheduleKey: "fiveMinuteReserveRecovery",
-    scheduledTimeMs: 1_000_000,
-    slotStartedAt: 1_000,
+    scheduledTimeMs: 960_000,
+    slotStartedAt: 960,
     invocationId: "recovery-poll",
     executionFence: {
-      scheduleKey: "fiveMinuteReserveRecovery", slotStartedAt: 1_000, invocationId: "recovery-poll",
+      scheduleKey: "fiveMinuteReserveRecovery", slotStartedAt: 960, invocationId: "recovery-poll",
       owner: "executing-owner", generation: 7, workerRole: "public",
     },
     runLeasedCron: vi.fn(async (
@@ -105,8 +105,8 @@ describe("reserve recovery mode", () => {
     expect(mocks.reserveSlotInitialized).toBe(false);
     expect(mocks.configRecoveryInitialized).toBe(false);
     mocks.priority.mockResolvedValueOnce({
-      reason: "heavy-slot-co-tenancy", scheduleKey: "halfHourlyChartsOffset", slotStartedAt: 900,
-      observedAt: 1000, lookaheadSec: 1440, condition: "heavy-slot-running",
+      reason: "same-role-slot-co-tenancy", scheduleKey: "fourHourlyReserveSync", slotStartedAt: 900,
+      observedAt: 1000, lookaheadSec: 1440, condition: "same-role-slot-running",
     });
     await runFiveMinuteReserveRecoverySlot(runtime("recover"));
     expect(latestLeasedResult).toMatchObject({ status: "ok" });
@@ -116,22 +116,47 @@ describe("reserve recovery mode", () => {
     expect(mocks.claim).not.toHaveBeenCalled();
     expect(mocks.sweep).not.toHaveBeenCalled();
 
+    const fastPoll = runtime("recover");
+    fastPoll.slotStartedAt = 1020;
+    await runFiveMinuteReserveRecoverySlot(fastPoll);
+    expect(mocks.configRecoveryInitialized).toBe(false);
+    expect(mocks.reserveSlotInitialized).toBe(false);
+
     await runFiveMinuteReserveRecoverySlot(runtime("recover"));
     expect(mocks.configRecoveryInitialized).toBe(true);
     expect(mocks.reserveSlotInitialized).toBe(false);
     expect(mocks.runReserveSlot).not.toHaveBeenCalled();
   });
 
+  it.each([0, 2, 3, 4, 5, 7, 8, 9, 10])("keeps config recovery off intervening minute %s", async (minute) => {
+    const value = runtime("recover");
+    value.slotStartedAt = minute * 60;
+    await runFiveMinuteReserveRecoverySlot(value);
+    expect(mocks.claim).toHaveBeenCalledTimes(1);
+    expect(mocks.configRecovery).not.toHaveBeenCalled();
+    expect(mocks.runReserveSlot).not.toHaveBeenCalled();
+    expect(JSON.parse((latestLeasedResult as CronResult).metadata ?? "{}")).toMatchObject({
+      disposition: "no-recovery-due", configRecovery: { disposition: "not-due" },
+    });
+  });
+
+  it.each([1, 6, 11, 56, 61])("retains config opportunity at scheduled minute %s despite delayed delivery", async (minute) => {
+    const value = runtime("recover");
+    value.slotStartedAt = minute * 60;
+    await runFiveMinuteReserveRecoverySlot(value);
+    expect(mocks.configRecovery).toHaveBeenCalledTimes(1);
+  });
+
   describe.each(["preflight", "config", "claim", "post-claim", "child-summary"])("priority during %s", (phase) => {
     it.each([
       ["next-slot-lookahead", "producer-slot-priority", "ok"],
-      ["heavy-slot-running", "heavy-slot-co-tenancy", "ok"],
+      ["same-role-slot-running", "same-role-slot-co-tenancy", "ok"],
       ["producer-slot-live", "producer-slot-live", "ok"],
       ["current-slot-unfinished", "producer-slot-priority", "skipped_neutral"],
     ])("reports %s as %s/%s without admitting more work", async (condition, reason, status) => {
       const priority = {
         reason: condition === "producer-slot-live" ? "producer-slot-priority" : reason,
-        condition, scheduleKey: condition === "heavy-slot-running" ? "halfHourlyChartsOffset" : "fourHourlyReserveSync",
+        condition, scheduleKey: "fourHourlyReserveSync",
         slotStartedAt: 900, observedAt: 1000, lookaheadSec: 1440,
       };
       if (phase === "preflight") mocks.priority.mockResolvedValueOnce(priority);
@@ -298,8 +323,8 @@ describe("reserve recovery mode", () => {
       });
       mocks.claim.mockResolvedValue({ disposition: "claimed", checkpoint });
       const priority = {
-        reason: "heavy-slot-co-tenancy", scheduleKey: "halfHourlyChartsOffset", slotStartedAt: 900,
-        observedAt: 1000, lookaheadSec: 1440, condition: "heavy-slot-running",
+        reason: "same-role-slot-co-tenancy", scheduleKey: "fourHourlyReserveSync", slotStartedAt: 900,
+        observedAt: 1000, lookaheadSec: 1440, condition: "same-role-slot-running",
       };
       mocks.priority.mockResolvedValueOnce(null).mockResolvedValueOnce(priority);
       let completeRelease!: () => void;
