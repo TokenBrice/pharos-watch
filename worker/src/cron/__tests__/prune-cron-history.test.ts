@@ -34,15 +34,15 @@ function toUtcDateString(timestampSec: number): string {
 }
 
 describe("runPruneCronHistory", () => {
-  it("executes the eighteen registry entries in four binding calls and reports every cap", async () => {
+  it("executes the nineteen registry entries in five binding calls and reports every cap", async () => {
     const { db } = createTestDb();
     const batch = vi.spyOn(db, "batch");
     const result = await runPruneCronHistory(db);
-    expect(batch).toHaveBeenCalledTimes(4);
+    expect(batch).toHaveBeenCalledTimes(5);
     const metadata = JSON.parse(result.metadata!);
     expect(Object.keys(metadata.retentionTruncated)).toEqual(expect.arrayContaining([
       "cronRuns", "producerHistory", "repairTasks", "canaryRuns", "recoveryCheckpoints",
-      "selectorSnapshotDailyQuota", "blockTimestampCache", "slotExecutions",
+      "selectorSnapshotDailyQuota", "blockTimestampCache", "slotExecutions", "reserveContinuationExecutions",
       "apiRequestConsumerStats", "siteDataRequestStats", "apiKeyRequestStats",
       "apiRequestSourceSamples", "siteDataRequestSamples",
       "safetyScoreJournal", "safetyScoreAttempts", "safetyScoreCaptureArchive",
@@ -69,6 +69,43 @@ describe("runPruneCronHistory", () => {
     });
     expect(sqlite.prepare(`SELECT COUNT(*) AS count FROM ${table} WHERE bucket_start < ?`).get(cutoff)).toEqual({ count: 1 });
     expect(sqlite.prepare(`SELECT route_key FROM ${table} WHERE bucket_start = ?`).all(cutoff)).toEqual([{ route_key: "boundary" }]);
+  });
+
+  it("prunes only expired finished Queue executions and cascades their child attempts", async () => {
+    const { db, sqlite } = createTestDb();
+    const now = Math.floor(Date.now() / 1000);
+    const cutoff = now - TWO_WEEKS_SEC;
+    const executions = [
+      ["expired", "finished", cutoff - 1],
+      ["boundary", "finished", cutoff],
+      ["recent", "finished", now],
+      ["running", "running", null],
+      ["reconciling", "reconciling", null],
+    ] as const;
+    for (const [id, state, finishedAt] of executions) {
+      insert(sqlite, `INSERT INTO reserve_continuation_executions
+        (delivery_id, schedule_key, slot_started_at, attempt_no, checkpoint_generation, queue_hash,
+         items_done, phase, source_invocation_id, execution_owner, execution_generation, invocation_id,
+         state, started_at, updated_at, deadline_ms, finished_at)
+        VALUES (?, 'fourHourlyReserveSync', ?, 1, 1, 'hash', 1, 'reserve', 'head', ?, 1, ?, ?, ?, ?, ?, ?)`,
+      id, cutoff - 100, id, id, state, cutoff - 100, cutoff - 100, (cutoff - 1) * 1000, finishedAt);
+      insert(sqlite, `INSERT INTO reserve_continuation_child_attempts
+        (attempt_key, delivery_id, schedule_key, slot_started_at, job, producer_path, producer_kind,
+         invocation_id, attempt_no, execution_schedule_key, execution_slot_started_at,
+         execution_invocation_id, execution_generation, execution_owner)
+        VALUES (?, ?, 'fourHourlyReserveSync', ?, 'sync-live-reserves', 'fourHourlyReserveSync',
+          'queue-recovery', ?, 1, 'fourHourlyReserveSync', ?, ?, 1, ?)`,
+      id, id, cutoff - 100, id, cutoff - 100, id, id);
+    }
+
+    const result = await runPruneCronHistory(db);
+    const retained = [{ id: "boundary" }, { id: "recent" }, { id: "reconciling" }, { id: "running" }];
+    expect(select(sqlite, "SELECT delivery_id AS id FROM reserve_continuation_executions ORDER BY delivery_id")).toEqual(retained);
+    expect(select(sqlite, "SELECT attempt_key AS id FROM reserve_continuation_child_attempts ORDER BY attempt_key")).toEqual(retained);
+    expect(result.itemCount).toBe(1);
+    expect(JSON.parse(result.metadata!)).toMatchObject({
+      retentionTruncated: { reserveContinuationExecutions: false },
+    });
   });
 
   it("surfaces a missing repair table rather than treating the failed batch as empty", async () => {

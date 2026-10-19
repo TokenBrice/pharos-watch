@@ -33,6 +33,19 @@ database_id = "8f3f54ca-e035-4cdf-9ec5-a4fbbe48b27a"
 binding = "HEAVY_EXECUTOR"
 service = "stablecoin-heavy"
 
+[[queues.producers]]
+binding = "RESERVE_CONTINUATION_QUEUE"
+queue = "pharos-reserve-continuation"
+
+[[queues.consumers]]
+queue = "pharos-reserve-continuation"
+max_batch_size = 1
+max_batch_timeout = 0
+max_concurrency = 1
+max_retries = 3
+retry_delay = 60
+dead_letter_queue = "pharos-reserve-continuation-dlq"
+
 [limits]
 cpu_ms = 300000
 
@@ -47,6 +60,7 @@ invocation_logs = true
 [vars]
 ADDRESS_PRICE_PROVIDERS_ENABLED = "coingecko-onchain-address"
 PROJECT_TAPE_PLACED_EXECUTOR = "on"
+WORKER_RESERVE_QUEUE_MODE = "on"
 
 [[rules]]
 type = "Data"
@@ -60,6 +74,25 @@ fallthrough = true
 `;
 
 describe("check-worker-wrangler-config", () => {
+  it("bounds public Queue consumption and permits mode-only rollback", () => {
+    expect(evaluateWorkerWranglerConfig(VALID_CONFIG.replace(
+      'WORKER_RESERVE_QUEUE_MODE = "on"', 'WORKER_RESERVE_QUEUE_MODE = "off"',
+    )).failed).toBe(false);
+    for (const [before, after] of [
+      ["max_batch_size = 1", "max_batch_size = 2"],
+      ["max_batch_timeout = 0", "max_batch_timeout = 1"],
+      ["max_concurrency = 1", "max_concurrency = 2"],
+      ["max_retries = 3", "max_retries = 100"],
+      ["retry_delay = 60", "retry_delay = 0"],
+      ['WORKER_RESERVE_QUEUE_MODE = "on"', 'WORKER_RESERVE_QUEUE_MODE = "maybe"'],
+      ['binding = "RESERVE_CONTINUATION_QUEUE"', 'binding = "OTHER"'],
+      ['dead_letter_queue = "pharos-reserve-continuation-dlq"', 'dead_letter_queue = "other"'],
+    ]) expect(evaluateWorkerWranglerConfig(VALID_CONFIG.replace(before, after)).failed).toBe(true);
+    expect(evaluateWorkerWranglerConfig(
+      `${readFileSync("worker/wrangler.heavy.toml", "utf8")}\n[[queues.consumers]]\nqueue = "other"\n`,
+      { workerRole: "heavy" },
+    ).failed).toBe(true);
+  });
   it("validates the private heavy configuration with fetch-only placement", () => {
     const toml = readFileSync("worker/wrangler.heavy.toml", "utf8");
     expect(evaluateWorkerWranglerConfig(toml, { workerRole: "heavy" })).toEqual({ failed: false, issues: [] });

@@ -1,4 +1,4 @@
-import { emptyReserveCompositionOverview } from "@shared/types/live-reserves";
+import { emptyReserveCompositionOverview, ReserveContinuationExecutionStatusSchema } from "@shared/types/live-reserves";
 import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
 import { STATUS_RESERVE_COHORT_SLO } from "@shared/lib/status-thresholds";
 import { percentileNearestRank } from "@shared/lib/stats";
@@ -38,6 +38,7 @@ interface LiveReserveResumePointer {
   producer_disposition: string | null;
   producer_state: string | null;
   producer_finished_at: number | null;
+  queue_execution_json: string | null;
 }
 
 async function loadLatestLiveReserveResumePointer(db: D1Database): Promise<LiveReserveResumePointer | null> {
@@ -46,7 +47,13 @@ async function loadLatestLiveReserveResumePointer(db: D1Database): Promise<LiveR
       `SELECT c.state, c.slot_started_at, c.next_item_key, c.items_done, c.items_total, c.updated_at,
               c.completed_at, c.recovery_lease_until,
               json_extract(c.child_dispositions_json, '$."sync-live-reserves"') AS producer_disposition,
-              s.state AS producer_state, s.finished_at AS producer_finished_at
+              s.state AS producer_state, s.finished_at AS producer_finished_at,
+              (SELECT json_object('deliveryId', q.delivery_id, 'phase', q.phase, 'state', q.state,
+                'generation', q.execution_generation, 'startedAt', q.started_at, 'updatedAt', q.updated_at,
+                'deadlineMs', q.deadline_ms, 'finishedAt', q.finished_at, 'resultStatus', q.result_status)
+               FROM reserve_continuation_executions q
+               WHERE q.schedule_key = c.schedule_key AND q.slot_started_at = c.slot_started_at
+               ORDER BY q.started_at DESC, q.delivery_id DESC LIMIT 1) AS queue_execution_json
          FROM worker_scheduled_checkpoints c
          LEFT JOIN cron_slot_executions s
            ON s.slot_key = c.schedule_key AND s.slot_started_at = c.slot_started_at
@@ -333,6 +340,8 @@ export async function computeReserveCompositionOverview(
     completedAt,
     ageSec: (completedAt ?? now) - checkpoint.slot_started_at,
     continuationPending: checkpoint.state !== "completed" && checkpoint.state !== "failed",
+    queueExecution: checkpoint.queue_execution_json
+      ? ReserveContinuationExecutionStatusSchema.parse(JSON.parse(checkpoint.queue_execution_json)) : null,
     ...cohortCompletions,
   } : null;
   const reviews = resolveReserveFeedReviews(now);

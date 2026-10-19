@@ -7,6 +7,7 @@ import type { SlotRunnerLoader } from "./scheduled/runner-types";
 import { waitForV9MemoryLaneRelease } from "../lib/v9-slot-window";
 import { recordScheduledWorkerVersionFirstSeen } from "../lib/worker-version-first-seen";
 import { settleAfterAbort } from "../lib/cron-abort-settlement";
+import { sendReserveContinuation } from "../lib/reserve-continuation-send";
 
 import { createScheduledRuntimeContext } from "./scheduled/context";
 
@@ -100,6 +101,7 @@ export async function handleScheduledEvent(
         const summary = await runner(runtime);
         slotSignal.throwIfAborted();
         if (!summary) return;
+        runtime.pendingReserveContinuation = summary.reserveContinuation ?? runtime.pendingReserveContinuation;
         return {
           ...summary,
           fetchBudget: runtime.fetchBudget?.snapshot() ?? null,
@@ -128,6 +130,11 @@ export async function handleScheduledEvent(
   if (slotResult.status === "skipped_running") {
     logWorkerEventArgs("handler", "info", `[cron-slot] Slot already running ${scheduleKey}@${slotStartedAt}`);
     return;
+  }
+  // The executing slot terminal CAS, child accounting and job leases have all
+  // settled. Sending from continueLiveReserveCheckpoint would race this fence.
+  if (slotResult.resultStatus !== "error") {
+    await sendReserveContinuation(env, runtime.pendingReserveContinuation, runtime.deadline);
   }
   if (slotResult.resultStatus === "error") {
     throw new ScheduledSlotAggregateError(scheduleKey, slotStartedAt, slotResult.metadata);

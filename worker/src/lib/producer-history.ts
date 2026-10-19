@@ -13,6 +13,7 @@ export interface ProducerTerminalGuard {
   attemptNo: number;
   executionSlotStartedAt: number;
   executionGeneration: number;
+  attemptTable?: "scheduled_child_attempts" | "reserve_continuation_child_attempts";
 }
 
 export interface CronPublicationRecord {
@@ -158,7 +159,7 @@ function prepareGenericSurfacePublications(
            producer_schedule_key, producer_job, producer_path, producer_kind,
            invocation_id, worker_version
          ) SELECT ?, ?, ?, ?, ?, 'published', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
-         WHERE ${guard ? "EXISTS (SELECT 1 FROM scheduled_child_attempts WHERE attempt_key = ? AND terminal_token = ?)" : "1"}
+         WHERE ${guard ? `EXISTS (SELECT 1 FROM ${guard.attemptTable ?? "scheduled_child_attempts"} WHERE attempt_key = ? AND terminal_token = ?)` : "1"}
          ON CONFLICT(surface, generation_id) DO UPDATE SET
            validated_at = COALESCE(surface_publication_generations.validated_at, excluded.validated_at),
            published_at = COALESCE(surface_publication_generations.published_at, excluded.published_at),
@@ -237,7 +238,7 @@ export function prepareProducerOutcomeStatements(
          outcome, productive, item_count, publication_count, publications_json,
          calendar_period, metadata_json, error, created_at
        ) SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
-       WHERE ${guard ? "EXISTS (SELECT 1 FROM scheduled_child_attempts WHERE attempt_key = ? AND terminal_token = ?)" : "1"}
+       WHERE ${guard ? `EXISTS (SELECT 1 FROM ${guard.attemptTable ?? "scheduled_child_attempts"} WHERE attempt_key = ? AND terminal_token = ?)` : "1"}
        ON CONFLICT(idempotency_key) DO UPDATE SET
          completed_at = excluded.completed_at,
          outcome = excluded.outcome,
@@ -309,7 +310,7 @@ export function prepareProducerOutcomeStatements(
        ) SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
        WHERE ${guard ? `EXISTS (
          SELECT 1 FROM worker_producer_history WHERE idempotency_key = ?
-       ) AND EXISTS (SELECT 1 FROM scheduled_child_attempts WHERE attempt_key = ? AND terminal_token = ?)` : "1"}
+       ) AND EXISTS (SELECT 1 FROM ${guard.attemptTable ?? "scheduled_child_attempts"} WHERE attempt_key = ? AND terminal_token = ?)` : "1"}
        ON CONFLICT(schedule_key, job, producer_path, producer_kind) DO UPDATE SET
          last_invocation_id = CASE
            WHEN excluded.last_completed_at >= worker_producer_heads.last_completed_at

@@ -161,6 +161,18 @@ export const ReserveFeedReviewSchema = /* @__PURE__ */ (() => z.object({
 }).strict())();
 export type ReserveFeedReview = z.output<typeof ReserveFeedReviewSchema>;
 
+export const ReserveContinuationExecutionStatusSchema = /* @__PURE__ */ (() => z.object({
+  deliveryId: z.string(),
+  phase: z.enum(["reserve", "tail"]),
+  state: z.enum(["running", "reconciling", "finished"]),
+  generation: z.number().int().positive(),
+  startedAt: z.number().int(),
+  updatedAt: z.number().int(),
+  deadlineMs: z.number().int(),
+  finishedAt: z.number().int().nullable(),
+  resultStatus: z.enum(["ok", "degraded", "error"]).nullable(),
+}).strict())();
+
 export const ReserveCohortStatusSchema = /* @__PURE__ */ (() => z.object({
   slotStartedAt: z.number().int().nonnegative(),
   completedAt: z.number().int().nonnegative().nullable(),
@@ -168,6 +180,7 @@ export const ReserveCohortStatusSchema = /* @__PURE__ */ (() => z.object({
   continuationPending: z.boolean(),
   completionP95Sec: z.number().finite().nonnegative().nullable(),
   completedCohorts: z.number().int().nonnegative(),
+  queueExecution: ReserveContinuationExecutionStatusSchema.nullable().optional(),
 }).strict())();
 export type ReserveCohortStatus = z.output<typeof ReserveCohortStatusSchema>;
 

@@ -5,7 +5,7 @@ import { logWorkerEventArgs } from "../../lib/structured-log";
  *   sync-kinesis-supply (1)
  *
  * Redemption is a cohort tail, never a consumer of a partially drained head.
- * A producer slice yields to the existing five-minute continuation lane; even
+ * A producer slice yields to a Queue wakeup (minute cron remains the fallback); even
  * the final slice hands off its consumers to a fresh wall/CPU budget.
  *
  * Reserve and redemption phases are serial; redemption resolves three assets at a time.
@@ -298,7 +298,20 @@ export async function runFourHourlyReserveSyncSlot(runtime: ScheduledRuntimeCont
         state: "failed", error: "live reserve queue exhausted without a successful result",
       });
     }
-    return mergeScheduledSlotSummaries(summaries);
+    const summary = mergeScheduledSlotSummaries(summaries);
+    // Only successful, durably ready producer handoffs may chain immediately.
+    // Failed tails below remain cron-recoverable, never a hot Queue retry loop.
+    if (mainSummary.jobsErrored === 0 && mainSummary.jobsSkipped === 0 && summary.jobsErrored === 0) {
+      summary.reserveContinuation = {
+        version: 1, scheduleKey: "fourHourlyReserveSync", slotStartedAt: checkpoint.slotStartedAt,
+        attemptNo: checkpoint.attemptNo, executionGeneration: checkpoint.executionGeneration,
+        queueHash: checkpoint.queueHash, nextItemKey: checkpointAfterMain.nextItemKey,
+        itemsDone: checkpointAfterMain.itemsDone,
+        phase: isReserveQueueExhausted(checkpointAfterMain) ? "tail" : "reserve",
+        sourceInvocationId: checkpoint.invocationId,
+      };
+    }
+    return summary;
   }
   if (redemptionTasks.length > 0 && redemptionGroup) {
     summaries.push(await runScheduledSlotGroups(runtime, SLOT_LABEL, [redemptionGroup]));

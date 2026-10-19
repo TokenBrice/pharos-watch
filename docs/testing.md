@@ -368,6 +368,7 @@ No waiver or enumerated path is relaxed to accommodate deletion; migrate every e
 - Use `makeStablecoin()` / `makeStablecoinMeta()` from `shared/test-utils/stablecoin.ts` (see `shared/lib/__tests__/supply.test.ts`) for partial `StablecoinData` mocks — avoids `as any` casts.
 - Use shared fixtures from `worker/src/test-helpers/__shared/fixtures.ts` for DB row mocks.
 - Keep cases focused and parameterize repeated scenario scaffolding. Canonical ownership, independent expectations and deletion evidence follow [Test evidence rules](#test-evidence-rules); shared setup follows [sibling test-support modules](#sibling-test-support-modules).
+- Keep real-child CLI rejection cases separate from successful multi-command round trips. Share fixture construction, not mutable execution state, so process-startup costs for independent failure scenarios do not accumulate inside one test deadline; retain the existing command limits and every rejection assertion.
 - Mock lazily loaded frontend sections by module (`vi.mock("./detail-lazy-sections", …)` with one stub per exported section name), never by `next/dynamic` loader source text or `dynamic()` call order — an ordering-keyed mock silently mis-assigns stubs when a section is added or reordered.
 
 ### Test evidence rules
