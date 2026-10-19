@@ -1,5 +1,6 @@
-import { existsSync, readFileSync } from "node:fs";
-import { dirname } from "node:path";
+import { existsSync, mkdtempSync, readFileSync, rmSync, statSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const execFileSyncMock = vi.hoisted(() => vi.fn((_file: string, _args: readonly string[]) => "[]"));
@@ -63,6 +64,54 @@ describe("remote-d1 helpers", () => {
       .executeStatements(["SELECT 1;", "SELECT 2;"], "test-remote-d1")).toThrow(failure);
     expect(execFileSyncMock).toHaveBeenCalledTimes(1);
     expect(existsSync(dirname(sqlPath))).toBe(false);
+  });
+
+  it("retains opted-in failed SQL and exposes Wrangler stdout/stderr without executing later batches", () => {
+    const scratch = mkdtempSync(join(tmpdir(), "d1-import-failure-test-"));
+    const failure = Object.assign(new Error("wrangler import exited 1"), {
+      stdout: JSON.stringify({ success: false, errors: [{ code: 7500, message: "statement too long" }] }),
+      stderr: Buffer.from("SQLITE_TOOBIG: statement exceeds 100000 bytes"),
+    });
+    let sqlPath = "";
+    execFileSyncMock.mockImplementation((_file, args) => {
+      sqlPath = args[args.indexOf("--file") + 1]!;
+      throw failure;
+    });
+    try {
+      const client = createD1Client("stablecoin-db", { batchSize: 1, failedSqlDirectory: scratch });
+      let caught: unknown;
+      try {
+        client.executeStatements(["SELECT 'diagnostic evidence';", "SELECT 'must not run';"], "replay-failed");
+      } catch (error) {
+        caught = error;
+      }
+      expect(caught).toBeInstanceOf(Error);
+      expect(caught).toMatchObject({ cause: failure });
+      expect((caught as Error).message).toContain('"message":"statement too long"');
+      expect((caught as Error).message).toContain("SQLITE_TOOBIG: statement exceeds 100000 bytes");
+      expect((caught as Error).message).toContain(`SQL retained at ${sqlPath}`);
+      expect(sqlPath.startsWith(scratch)).toBe(true);
+      expect(readFileSync(sqlPath, "utf8")).toBe("SELECT 'diagnostic evidence';");
+      expect(statSync(sqlPath).mode & 0o777).toBe(0o600);
+      expect(execFileSyncMock).toHaveBeenCalledTimes(1);
+    } finally {
+      rmSync(scratch, { recursive: true, force: true });
+    }
+  });
+
+  it("cleans successful SQL imports even when failure retention is enabled", () => {
+    const scratch = mkdtempSync(join(tmpdir(), "d1-import-success-test-"));
+    let sqlPath = "";
+    execFileSyncMock.mockImplementation((_file, args) => {
+      sqlPath = args[args.indexOf("--file") + 1]!;
+      return "[]";
+    });
+    try {
+      createD1Client("stablecoin-db", { failedSqlDirectory: scratch }).executeStatements(["SELECT 1;"], "replay-ok");
+      expect(existsSync(sqlPath)).toBe(false);
+    } finally {
+      rmSync(scratch, { recursive: true, force: true });
+    }
   });
 
   it("retains a single remote import envelope without chunking an atomic statement group", () => {

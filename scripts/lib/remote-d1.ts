@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -13,6 +13,8 @@ export type D1ClientOptions = {
   cwd?: string;
   maxBuffer?: number;
   target?: D1Target;
+  /** Opt in only for secret-free SQL; failed imports retain their SQL and Wrangler diagnostics here. */
+  failedSqlDirectory?: string;
 };
 
 export type D1Client = {
@@ -54,18 +56,38 @@ function executeSqlFile(
   databaseName: string,
   statements: string[],
   prefix: string,
-  options: Required<Pick<D1ClientOptions, "cwd" | "maxBuffer" | "target">>,
+  options: Required<Pick<D1ClientOptions, "cwd" | "maxBuffer" | "target">> & Pick<D1ClientOptions, "failedSqlDirectory">,
 ): string {
   if (statements.length === 0) return "[]";
 
-  const tmpDir = mkdtempSync(join(tmpdir(), `${prefix}-`));
+  const parent = options.failedSqlDirectory ?? tmpdir();
+  if (options.failedSqlDirectory) mkdirSync(parent, { recursive: true, mode: 0o700 });
+  const tmpDir = mkdtempSync(join(parent, `${prefix}-`));
+  const sqlFile = join(tmpDir, "statements.sql");
+  let succeeded = false;
   try {
-    const sqlFile = join(tmpDir, "statements.sql");
-    // Temp SQL file is created under mkdtempSync() and never leaves this function.
-    writeFileSync(sqlFile, statements.join("\n"));
-    return executeWrangler(["d1", "execute", databaseName, `--${options.target}`, "--file", sqlFile, "--json"], options);
+    writeFileSync(sqlFile, statements.join("\n"), { mode: 0o600 });
+    const receipt = executeWrangler(["d1", "execute", databaseName, `--${options.target}`, "--file", sqlFile, "--json"], options);
+    succeeded = true;
+    return receipt;
+  } catch (cause) {
+    if (!options.failedSqlDirectory) throw cause;
+    const diagnostics: string[] = [];
+    if (cause != null && typeof cause === "object") {
+      const output = cause as { stdout?: unknown; stderr?: unknown };
+      for (const key of ["stdout", "stderr"] as const) {
+        const value = output[key];
+        const text = typeof value === "string" ? value : Buffer.isBuffer(value) ? String(value) : "";
+        if (text.trim()) diagnostics.push(`Wrangler ${key}:\n${text.trim()}`);
+      }
+    }
+    throw Object.assign(new Error([
+      cause instanceof Error ? cause.message : String(cause),
+      ...diagnostics,
+      `Failed D1 import SQL retained at ${sqlFile}`,
+    ].join("\n")), { cause });
   } finally {
-    rmSync(tmpDir, { recursive: true, force: true });
+    if (succeeded || !options.failedSqlDirectory) rmSync(tmpDir, { recursive: true, force: true });
   }
 }
 
@@ -75,7 +97,8 @@ export function createD1Client(databaseName: string, options: D1ClientOptions = 
     cwd: options.cwd ?? process.cwd(),
     maxBuffer: options.maxBuffer ?? DEFAULT_MAX_BUFFER,
     target: options.target ?? "remote",
-  } satisfies Required<D1ClientOptions>;
+    failedSqlDirectory: options.failedSqlDirectory,
+  } satisfies Required<Omit<D1ClientOptions, "failedSqlDirectory">> & Pick<D1ClientOptions, "failedSqlDirectory">;
   const queryRaw = (sql: string): string =>
     executeWrangler(
       ["d1", "execute", databaseName, `--${resolvedOptions.target}`, "--command", sql, "--json"],
