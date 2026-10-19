@@ -99,6 +99,7 @@ export function buildPrimaryConsensusResults(params: {
       curveOraclePrice: params.quoteMaps.curveOraclePrice,
       curveOracleObservedAt: params.quoteMaps.curveOracleObservedAt,
       navQuote: params.quoteMaps.navPrices.get(asset.id),
+      hiveNativeQuote: asset.id === "hbd-hive" ? params.quoteMaps.hiveNativeQuote ?? undefined : undefined,
       protocolSources: params.dexPriceSources.get(asset.id),
       dexAggregateQuote: undefined,
     };

@@ -2,6 +2,23 @@ import { describe, it, expect } from "vitest";
 import { computePriceConsensus, type SourcePrice } from "../price-consensus";
 
 describe("computePriceConsensus", () => {
+  it.each([[2.25, 0.98662, "hive-native-cg"], [0.98663, 0.98662, "coingecko"], [1, 0.9, "coingecko"]])("reduces direct CG %s and derived native %s to one conservative family", (cg, native, source) => {
+    const result = computePriceConsensus([
+      { source: "coingecko", price: Number(cg), weight: 2 },
+      { source: "hive-native-cg", price: Number(native), weight: 2 },
+    ], 1, 50);
+    expect(result).toMatchObject({ source, confidence: "single-source" });
+  });
+
+  it("allows an actually independent venue to corroborate the derived quote", () => {
+    const result = computePriceConsensus([
+      { source: "coingecko", price: 2.25, weight: 2 },
+      { source: "hive-native-cg", price: 0.98662, weight: 2 },
+      { source: "kraken", price: 0.98663, weight: 2 },
+    ], 1, 50);
+    expect(result?.confidence).toBe("high");
+    expect(result?.agreeSources).toEqual(["hive-native-cg", "kraken"]);
+  });
   it("returns high confidence when 2+ sources agree within threshold", () => {
     const sources: SourcePrice[] = [
       { source: "coingecko", price: 1.0001, weight: 1 },

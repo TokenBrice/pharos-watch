@@ -1,4 +1,5 @@
 import type { PriceObservationEffectiveness } from "./price-corroboration-observations";
+import { HiveMarketDiagnosticSchema } from "@shared/types/hive-market-price";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { hasMissingPrice, type PeggedAsset } from "./enrich-prices";
@@ -129,7 +130,12 @@ function compactDiagnosticValue(value: unknown, depth = 0): unknown {
     const entries = Object.entries(value as Record<string, unknown>);
     const compacted: Record<string, unknown> = {};
     for (const [key, entry] of entries.slice(0, MAX_DIAGNOSTIC_OBJECT_KEYS)) {
-      compacted[key] = compactDiagnosticValue(entry, depth + 1);
+      if (key === "nativeMarket") {
+        const packet = HiveMarketDiagnosticSchema.safeParse(entry);
+        compacted[key] = packet.success ? packet.data : { evidenceOmitted: true, reason: "invalid-native-market-packet" };
+      } else {
+        compacted[key] = compactDiagnosticValue(entry, depth + 1);
+      }
     }
     if (entries.length > MAX_DIAGNOSTIC_OBJECT_KEYS) {
       compacted.truncatedKeys = entries.length - MAX_DIAGNOSTIC_OBJECT_KEYS;
@@ -376,6 +382,7 @@ function sizeGuardMetadataForRung(
       rung.coverageDetailCount,
     ),
     priceSourceAttemptLedger: sizeGuardLedgerForRung(guard.priceSourceAttemptLedger, rung),
+    nativeMarket: guard.metadata.nativeMarket,
     metadataCompactedBySizeGuard: true,
     originalMetadataBytes: guard.originalMetadataBytes,
   };
@@ -393,6 +400,7 @@ function sizeGuardTerminalMetadata(guard: StablecoinsMetadataSizeGuardInput): Re
     reason: "stablecoins-metadata-over-budget",
     metadataCompactedBySizeGuard: true,
     sizeGuardEvidenceDropped: true,
+    nativeMarket: guard.metadata.nativeMarket ? { evidenceOmitted: true, reason: "metadata-size-guard" } : undefined,
     originalMetadataBytes: guard.originalMetadataBytes,
     rowsRead: guard.metadata.rowsRead,
     rowsWritten: guard.metadata.rowsWritten,
@@ -555,6 +563,7 @@ export function buildStablecoinsSyncResult(input: {
     gtProbe: compactDiagnosticValue(input.gtProbe.stats),
     priceValidation: compactDiagnosticValue(input.priceValidationStats),
     providerDiagnostics: compactDiagnosticValue(input.providerDiagnostics ?? []),
+    nativeMarket: input.providerDiagnostics?.find((diagnostic) => diagnostic.nativeMarket)?.nativeMarket,
     rejectedPrices: input.rejectedCount,
     nativePegCorrections: input.nativePegCorrectionCount ?? 0,
     nativePegFills: input.nativePegFillCount ?? 0,
@@ -712,6 +721,7 @@ export function buildFallbackStablecoinsSyncResult(input: {
       validationFailures: 0,
       enrichment: input.enrichStats,
       providerDiagnostics: input.providerDiagnostics,
+      nativeMarket: input.providerDiagnostics.find((diagnostic) => diagnostic.nativeMarket)?.nativeMarket,
       rejectedPrices: input.rejectedCount,
       nativePegCorrections: input.nativePegCorrectionCount,
       nativePegFills: input.nativePegFillCount,

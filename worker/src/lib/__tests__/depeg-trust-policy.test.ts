@@ -14,6 +14,13 @@ import {
 
 describe("classifyPrimaryDepegTrust", () => {
   const nowSec = 1_700_000_000;
+  it.each([60, 901])("requires confirmation for local-fetch native Hive at age %i", (age) => {
+    const input = { price: 0.98662, priceSource: "hive-native-cg", priceConfidence: "single-source" as const,
+      priceObservedAt: nowSec - age, priceObservedAtMode: "local_fetch" as const, agreeSources: ["hive-native-cg", "coingecko"] };
+    expect(classifyPrimaryDepegTrust(input, nowSec)).toBe("confirm_required");
+    expect(hasFreshMultiSourcePrimaryAgreement(input, nowSec)).toBe(false);
+    expect(resolveDepegSourceFamily("hive-native-cg")).toBe("coingecko");
+  });
   it.each([
     { priceSource: "pyth", priceObservedAtMode: "nominal_reference" as const },
     { priceSource: "protocol-par", priceObservedAtMode: "upstream" as const },

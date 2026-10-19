@@ -21,6 +21,36 @@ import {
   compactCronMetadataForPersistence,
   MAX_CRON_METADATA_BEFORE_SCHEDULER_ENRICHMENT_BYTES,
 } from "../../../lib/cron-metadata-persistence";
+import { fetchHiveNativeHbdPrice } from "../../../lib/hive-market-price";
+
+it.each([false, true])("preserves bounded native evidence for successful and unavailable attempts (success=%s)", async (success) => {
+  const { diagnostic } = await fetchHiveNativeHbdPrice(undefined, { generation: 1_777_000_000 });
+  if (success) {
+    diagnostic.rejectionReason = null;
+    diagnostic.price = 0.98662;
+    diagnostic.parent = { id: "hive", source: "coingecko", price: 0.04872914, observedAt: 1_776_999_996, ageSec: 4 };
+  }
+  const result = buildStablecoinsSyncResult({
+    ...syncInput(ACTIVE_STABLECOINS.map((coin) => ({
+      id: coin.id, name: coin.name, symbol: coin.symbol, price: coin.id === "hbd-hive" ? diagnostic.price : 1,
+    }))),
+    providerDiagnostics: [{ source: "hive-native-cg", stage: "primary", endpoint: "api.hive.blog",
+      status: null, ok: true, success, nativeMarket: diagnostic }],
+  });
+  const metadata = JSON.parse(result.metadata!);
+  expect(metadata.providerDiagnostics[0].nativeMarket).toEqual(diagnostic);
+  expect(metadata.nativeMarket).toEqual(diagnostic);
+  expect(metadata.nativeMarket.bidDepthHbd).toBeNull();
+  expect(metadata.nativeMarket.policy.parentMaxAgeSec).toBe(300);
+  expect(metadata.nativeMarket.generation).toBe(1_777_000_000);
+  expect(metadata.nativeMarket).not.toHaveProperty("bids");
+  const { guard } = allMissingSizeGuardFixture();
+  guard.metadata.nativeMarket = diagnostic;
+  const compact = JSON.parse(buildSizeGuardedStablecoinsSyncMetadata(guard));
+  expect(compact.nativeMarket).toEqual(diagnostic);
+  const terminal = JSON.parse(buildSizeGuardedStablecoinsSyncMetadata(guard, 2000));
+  expect(terminal.nativeMarket).toEqual({ evidenceOmitted: true, reason: "metadata-size-guard" });
+});
 
 function syncInput(
   assets: PeggedAsset[],
