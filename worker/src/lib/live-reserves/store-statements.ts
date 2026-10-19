@@ -209,6 +209,7 @@ export function buildReserveSyncAttemptStartStatement(
          config_fingerprint
        ) SELECT ?, ?, ?, ?, NULL, 'skipped', 0, NULL, NULL, '{}', ?, ?, NULL, ?
        WHERE ${SQLITE_NOW_MS_EXPRESSION} <= ?
+         ${record.checkpointProgress ? "AND changes() = 1" : ""}
          ${record.checkpoint ? `AND EXISTS (
            SELECT 1 FROM worker_scheduled_checkpoints
            WHERE schedule_key = ? AND slot_started_at = ? AND job = ?

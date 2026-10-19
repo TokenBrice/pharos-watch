@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   finalizeReserveSuccess,
   reserveSyncAttemptInput,
@@ -13,6 +13,8 @@ import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { createD1CostTracker } from "../d1-cost";
+import { beginLiveReserveCheckpoint, loadLiveReserveCheckpoint } from "../scheduled-recovery-checkpoint";
 
 describe("live-reserves-store", () => {
   it("requires a pending attempt and records repeated finalization exactly once", async () => {
@@ -99,6 +101,97 @@ describe("live-reserves-store", () => {
     } finally {
       sqlite.close();
     }
+  });
+
+  it("uses two binding calls per scheduled success while checkpointing before pending state", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const checkpoint = await beginLiveReserveCheckpoint(db, {
+        slotStartedAt: 1000, invocationId: "owner",
+      });
+      const cost = createD1CostTracker(db);
+      await beginReserveSyncAttempt(cost.db, {
+        ...reserveSyncAttemptInput("batched"), checkpoint,
+        checkpointProgress: { itemsDone: 0, itemsTotal: 1 },
+        deadlineMs: Date.now() + 30_000,
+      });
+      expect(cost.snapshot()).toMatchObject({ bindingCalls: 1, batchCalls: 1, queries: 2 });
+      expect(await loadLiveReserveCheckpoint(db, checkpoint)).toMatchObject({
+        currentDomainAttemptId: "batched", currentItemKey: "iusd-infinifi", itemsDone: 0,
+      });
+      expect(sqlite.prepare("SELECT pending_attempt_id FROM reserve_sync_state").get())
+        .toEqual({ pending_attempt_id: "batched" });
+      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM reserve_composition").get()).toEqual({ count: 0 });
+      await expect(finalizeReserveSuccess(cost.db, "batched")).resolves.toEqual({ finalized: true });
+      expect(cost.snapshot()).toMatchObject({ bindingCalls: 2, batchCalls: 2, queries: 6 });
+      expect(sqlite.prepare("SELECT fetched_at, attempt_id FROM reserve_composition").get())
+        .toEqual({ fetched_at: 1000, attempt_id: "batched" });
+    } finally { sqlite.close(); }
+  });
+
+  it("rolls back checkpoint and begin together, and rejects stale generation/owner and expired batches", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const checkpoint = await beginLiveReserveCheckpoint(db, {
+        slotStartedAt: 1000, invocationId: "owner",
+      });
+      const start = { ...reserveSyncAttemptInput("batched"), checkpoint,
+        checkpointProgress: { itemsDone: 0, itemsTotal: 1 }, deadlineMs: Date.now() + 30_000 };
+      sqlite.exec(`CREATE TRIGGER reject_begin BEFORE INSERT ON reserve_sync_state
+        BEGIN SELECT RAISE(ABORT, 'begin unavailable'); END`);
+      await expect(beginReserveSyncAttempt(db, start)).rejects.toThrow("begin unavailable");
+      expect(await loadLiveReserveCheckpoint(db, checkpoint)).toMatchObject({ currentDomainAttemptId: null });
+      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM reserve_sync_state").get()).toEqual({ count: 0 });
+      sqlite.exec("DROP TRIGGER reject_begin");
+      for (const denied of [
+        { ...checkpoint, invocationId: "late-owner" },
+        { ...checkpoint, executionGeneration: checkpoint.executionGeneration + 1 },
+      ]) {
+        await expect(beginReserveSyncAttempt(db, { ...start, checkpoint: denied })).rejects.toThrow();
+      }
+      await expect(beginReserveSyncAttempt(db, { ...start, deadlineMs: Date.now() - 1 })).rejects.toThrow("deadline");
+      expect(await loadLiveReserveCheckpoint(db, checkpoint)).toMatchObject({ currentDomainAttemptId: null });
+      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM reserve_sync_state").get()).toEqual({ count: 0 });
+    } finally { sqlite.close(); }
+  });
+
+  it("never exposes untracked pending state when the domain begin is a no-op after checkpoint CAS", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const checkpoint = await beginLiveReserveCheckpoint(db, { slotStartedAt: 1000, invocationId: "owner" });
+      sqlite.exec(`CREATE TRIGGER ignore_begin BEFORE INSERT ON reserve_sync_state
+        BEGIN SELECT RAISE(IGNORE); END`);
+      await expect(beginReserveSyncAttempt(db, {
+        ...reserveSyncAttemptInput("not-started"), checkpoint,
+        checkpointProgress: { itemsDone: 0, itemsTotal: 1 },
+      })).rejects.toThrow("Reserve attempt start lost checkpoint ownership or deadline");
+      // As with the old crash between checkpoint and begin, the only possible
+      // partial state is a harmless frontier reference, never an orphan pending.
+      expect(await loadLiveReserveCheckpoint(db, checkpoint)).toMatchObject({ currentDomainAttemptId: "not-started" });
+      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM reserve_sync_state").get()).toEqual({ count: 0 });
+    } finally { sqlite.close(); }
+  });
+
+  it("keeps an ambiguously acknowledged begin exactly linked for crash recovery, without publishing success", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const checkpoint = await beginLiveReserveCheckpoint(db, {
+        slotStartedAt: 1000, invocationId: "owner",
+      });
+      const batch = db.batch.bind(db);
+      vi.spyOn(db, "batch").mockImplementationOnce(async (statements) => {
+        await batch(statements);
+        throw new Error("ack lost after commit");
+      });
+      await expect(beginReserveSyncAttempt(db, {
+        ...reserveSyncAttemptInput("ambiguous"), checkpoint,
+        checkpointProgress: { itemsDone: 0, itemsTotal: 1 },
+      })).rejects.toThrow("ack lost after commit");
+      expect(await loadLiveReserveCheckpoint(db, checkpoint)).toMatchObject({ currentDomainAttemptId: "ambiguous" });
+      expect(sqlite.prepare("SELECT pending_attempt_id, last_success_at FROM reserve_sync_state").get())
+        .toEqual({ pending_attempt_id: "ambiguous", last_success_at: null });
+      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM reserve_composition").get()).toEqual({ count: 0 });
+    } finally { vi.restoreAllMocks(); sqlite.close(); }
   });
 
 

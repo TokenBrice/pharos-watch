@@ -260,14 +260,19 @@ export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): 
 
   await recordBreakerOutcomesForRun(args, finalizationBudget);
 
+  // Partial slices settle breaker outcomes but do not rescan/prune the same
+  // cohort's durable artifacts. Exhaustion owns maintenance before the seal.
+  const maintenanceDue = !args.checkpointOwned || args.counts.deferredCoins === 0;
   throwIfAborted(args.signal);
   try {
-    await recoverNoCandidateLiveReserveBreakers(
-      args.db,
-      args.signal,
-      finalizationBudget,
-      () => hasD1FinalizationWindow(args, finalizationBudget),
-    );
+    if (maintenanceDue) {
+      await recoverNoCandidateLiveReserveBreakers(
+        args.db,
+        args.signal,
+        finalizationBudget,
+        () => hasD1FinalizationWindow(args, finalizationBudget),
+      );
+    }
   } catch (error) {
     await recordFinalizationWarning(
       args.db,
@@ -280,7 +285,7 @@ export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): 
   let artifactCleanup: LiveReserveArtifactCleanupResult | null = null;
   const artifactCleanupWarnings: LiveReserveFinalizationWarning[] = [];
   throwIfAborted(args.signal);
-  if (hasD1FinalizationWindow(args, finalizationBudget)) {
+  if (maintenanceDue && hasD1FinalizationWindow(args, finalizationBudget)) {
     try {
       artifactCleanup = await cleanupStaleLiveReserveArtifacts(
         args.db,
@@ -297,7 +302,7 @@ export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): 
         ),
       );
     }
-  } else {
+  } else if (maintenanceDue) {
     finalizationBudget.artifactCleanupSkipped = true;
     artifactCleanupWarnings.push({
       eventType: "live-reserve-artifact-cleanup-skipped",
@@ -308,7 +313,7 @@ export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): 
 
   let historyPrune: Awaited<ReturnType<typeof pruneLiveReserveHistory>> | null = null;
   throwIfAborted(args.signal);
-  if (hasD1FinalizationWindow(args, finalizationBudget)) {
+  if (maintenanceDue && hasD1FinalizationWindow(args, finalizationBudget)) {
     try {
       historyPrune = await pruneLiveReserveHistory(args.db, args.runStartedAt, {
         signal: args.signal,
@@ -322,7 +327,7 @@ export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): 
         error,
       );
     }
-  } else {
+  } else if (maintenanceDue) {
     finalizationBudget.historyPruneSkipped = true;
     await recordFinalizationWarning(
       args.db,
@@ -345,6 +350,7 @@ export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): 
     status: runStatus,
     productivity: { productive: args.counts.latestPublishedAt != null },
     metadata: JSON.stringify({
+      maintenanceDeferredToCohortEnd: !maintenanceDue,
       ...(args.counts.latestPublishedAt != null ? { outputPublishedAt: args.counts.latestPublishedAt } : {}),
       ...(runStatus !== "ok"
         ? {

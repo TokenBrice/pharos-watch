@@ -22,6 +22,7 @@ import {
   fetchEvmBlockHeaderAtTag,
   fetchEvmCodeStatusAtBlock,
   fetchEvmMulticall3Aggregate3AtBlock,
+  MULTICALL3_ADDRESS,
   type EvmBlockHeader,
   type EvmMulticall3Call,
   type EvmRpcOptions,
@@ -30,6 +31,7 @@ import { encodeBalanceOfCallData, encodeUint256 } from "../../lib/evm-selectors"
 import { decodeAbiWordAt, decodeStrictAddressWord, decodeUint256Word } from "./abi-decode";
 import { runAdapterIo } from "./concurrency";
 import type { AdapterContext } from "./types";
+import { getCachedRequest } from "./request";
 
 const ZERO = "0x0000000000000000000000000000000000000000";
 const WAD = 10n ** 18n;
@@ -81,6 +83,18 @@ function call(target: string, signature: string, args = ""): EvmMulticall3Call {
   return { target, callData, label: `${target}:${callData}`, allowFailure: true };
 }
 
+function marketCalls(core: string, marketId: string, account: string, direct: boolean): EvmMulticall3Call[] {
+  return [
+    call(core, "idToMarketParams(bytes32)", marketId.slice(2)),
+    call(core, "market(bytes32)", marketId.slice(2)),
+    call(core, "position(bytes32,address)", `${marketId.slice(2)}${account.slice(2).padStart(64, "0")}`),
+    ...(direct ? [
+      call(account, "expectedSupplyAssets(bytes32)", marketId.slice(2)),
+      call(account, "supplyShares(bytes32)", marketId.slice(2)),
+    ] : []),
+  ];
+}
+
 async function awaitPhaseRead<T>(read: () => Promise<T>, signal: AbortSignal): Promise<T> {
   if (signal.aborted) fail("aborted");
   let abort!: () => void;
@@ -123,6 +137,8 @@ class PinnedReader {
   readonly codeHashes: Record<string, string> = {};
   readonly marketIds = new Set<string>();
   readonly claims = new Set<string>();
+  private readonly localReads = new Map<string, Promise<unknown>>();
+  private readonly transportCodeHashes: Record<string, string | null> = {};
   constructor(
     readonly chain: string,
     readonly pin: EvmBlockHeader,
@@ -150,24 +166,50 @@ class PinnedReader {
     this.options();
     return result;
   }
+  async readCodeHash(target: string): Promise<string | null> {
+    if (Object.prototype.hasOwnProperty.call(this.transportCodeHashes, target)) return this.transportCodeHashes[target];
+    // Only a successful hash-pinned observation is reusable. Null here is
+    // observed absent code, never an unavailable RPC or a "latest" assumption.
+    const hash = await awaitPhaseRead(() => getCachedRequest(
+      `morpho-book-code:${this.chain}:${this.pin.hash}:${target}`,
+      async () => {
+        const result = await this.io(`lender-book-code:${this.chain}:${target}`, options =>
+          fetchEvmCodeStatusAtBlock(this.chain, target, this.pin.number, options));
+        if (result.status === "unavailable") fail("rpc-unavailable");
+        const value = result.status === "absent" ? null : keccak256(result.code).toLowerCase();
+        return { value, cacheBytes: value == null ? 4 : value.length * 2, basis: "declared-estimate" as const };
+      },
+      this.ctx,
+    ), this.signal);
+    this.options();
+    this.transportCodeHashes[target] = hash;
+    return hash;
+  }
   async code(target: string): Promise<void> {
     if (this.codeHashes[target]) return;
-    const result = await this.io(`lender-book-code:${this.chain}:${target}`, options =>
-      fetchEvmCodeStatusAtBlock(this.chain, target, this.pin.number, options));
-    if (result.status === "unavailable") fail("rpc-unavailable");
-    if (result.status === "absent") fail("identity-mismatch");
-    this.codeHashes[target] = keccak256(result.code).toLowerCase();
+    const hash = await this.readCodeHash(target);
+    if (hash == null) fail("identity-mismatch");
+    this.codeHashes[target] = hash;
   }
   async read(calls: EvmMulticall3Call[]): Promise<(string | null)[]> {
     for (const row of calls) this.selectors.add(row.callData.slice(0, 10));
-    const cache = this.ctx?.requestCache;
+    const cache = this.ctx?.requestCache ?? this.localReads;
     const key = (row: EvmMulticall3Call) => `morpho-book:${this.chain}:${this.pin.hash}:${row.target}:${row.callData}`;
-    const missing = [...new Map(calls.filter(row => !cache?.has(key(row))).map(row => [key(row), row])).values()];
+    const missing = [...new Map(calls.filter(row => !cache.has(key(row))).map(row => [key(row), row])).values()];
     const local = new Map<string, string | null>();
+    const multicallPresent = missing.length > 0
+      ? (await this.readCodeHash(MULTICALL3_ADDRESS)) !== null
+      : false;
     for (let start = 0; start < missing.length; start += bounds.rpcBatchCalls) {
       const batch = missing.slice(start, start + bounds.rpcBatchCalls);
       const results = await this.io(`lender-book-batch:${this.chain}`, options =>
-        fetchEvmMulticall3Aggregate3AtBlock(this.chain, batch, this.pin.number, options));
+        fetchEvmMulticall3Aggregate3AtBlock(this.chain, batch, this.pin.number, {
+          ...options,
+          // Present code was positively read at this hash. Avoid repeating its
+          // eth_getCode before every wave; EIP-1898 state pinning stays enabled.
+          // Absent deployments retain the transport's direct-call + recheck path.
+          multicallFallbackBlockHash: multicallPresent ? undefined : this.pin.hash,
+        }));
       if (!results) fail("rpc-unavailable");
       if (results.length !== batch.length || new Set(results.map(row => row.label)).size !== batch.length) fail("incomplete-census");
       const byLabel = new Map(results.map(row => [row.label, row]));
@@ -176,12 +218,12 @@ class PinnedReader {
         if (!result) fail("incomplete-census");
         const value = result.success ? result.returnData.toLowerCase() : null;
         local.set(key(row), value);
-        if (cache) cache.set(key(row), Promise.resolve(value));
+        cache.set(key(row), Promise.resolve(value));
       }
     }
     return Promise.all(calls.map(async row => {
       if (local.has(key(row))) return local.get(key(row)) ?? null;
-      const cached = await cache?.get(key(row));
+      const cached = await cache.get(key(row));
       if (cached !== null && typeof cached !== "string") fail("malformed");
       return cached;
     }));
@@ -195,6 +237,31 @@ class PinnedReader {
     const count = boundedCount(length, max);
     return this.required(Array.from({ length: count }, (_, i) => call(target, itemSignature, encodeUint256(i))));
   }
+  async prefetchMarkets(core: string, ids: string[], account: string, direct: boolean): Promise<void> {
+    // Enumeration fixes the complete set first. Read all known independent
+    // market/position tuples in bounded waves, then dependent IRM probes.
+    // market() still validates every claim and performs the exact accounting.
+    const marketKeys = new Set(this.marketIds);
+    for (const id of ids) marketKeys.add(`${core}:${id}`);
+    if (marketKeys.size > bounds.maxMarketsPerDeployment) fail("census-limit");
+    const width = direct ? 5 : 3;
+    const results = await this.required(ids.flatMap(id => marketCalls(core, id, account, direct)));
+    if (direct) return;
+    const rates: EvmMulticall3Call[] = [];
+    for (let index = 0; index < ids.length; index++) {
+      const paramsRaw = results[index * width];
+      const stateRaw = results[index * width + 1];
+      const params = words(paramsRaw, 5);
+      const state = words(stateRaw, 6).map(uint);
+      const irm = address(params[3]);
+      if (state[2] > 0n && this.pin.timestamp > safeNumber(state[4]) && irm !== ZERO) {
+        rates.push(call(irm,
+          "borrowRateView((address,address,address,address,uint256),(uint128,uint128,uint128,uint128,uint128,uint128))",
+          `${paramsRaw.slice(2)}${stateRaw.slice(2)}`));
+      }
+    }
+    await this.required(rates, "unsupported-irm");
+  }
   async market(core: string, marketId: string, account: string, adapter: string | null, loan: string, direct: boolean): Promise<LenderMarketObservation | null> {
     const key = `${core}:${marketId}`;
     const claimKey = `${key}:${account}`;
@@ -203,15 +270,8 @@ class PinnedReader {
     this.marketIds.add(key);
     if (this.marketIds.size > bounds.maxMarketsPerDeployment) fail("census-limit");
     await this.code(core);
-    const [paramsRaw, stateRaw, positionRaw, expectedRaw, internalSharesRaw] = await this.required([
-      call(core, "idToMarketParams(bytes32)", marketId.slice(2)),
-      call(core, "market(bytes32)", marketId.slice(2)),
-      call(core, "position(bytes32,address)", `${marketId.slice(2)}${account.slice(2).padStart(64, "0")}`),
-      ...(direct ? [
-        call(account, "expectedSupplyAssets(bytes32)", marketId.slice(2)),
-        call(account, "supplyShares(bytes32)", marketId.slice(2)),
-      ] : []),
-    ]);
+    const [paramsRaw, stateRaw, positionRaw, expectedRaw, internalSharesRaw] =
+      await this.required(marketCalls(core, marketId, account, direct));
     const p = words(paramsRaw, 5);
     const s = words(stateRaw, 6).map(uint);
     const pos = words(positionRaw, 3).map(uint);
@@ -268,15 +328,22 @@ class PinnedReader {
 interface Partition { idle: bigint; markets: LenderMarketObservation[]; total: bigint }
 async function metaMorpho(reader: PinnedReader, vault: string, loan: string, adapter: string | null): Promise<Partition> {
   await reader.code(vault);
-  const [assetRaw, coreRaw, totalRaw, cashRaw] = await reader.required([
+  const [assetRaw, coreRaw, totalRaw, cashRaw, withdrawLengthRaw, supplyLengthRaw] = await reader.required([
     call(vault, "asset()"), call(vault, "MORPHO()"), call(vault, "totalAssets()"),
     { target: loan, callData: encodeBalanceOfCallData(vault), label: `${loan}:cash:${vault}`, allowFailure: true },
+    call(vault, "withdrawQueueLength()"), call(vault, "supplyQueueLength()"),
   ]);
   if (address(assetRaw) !== loan) fail("identity-mismatch");
   const core = address(coreRaw);
   if (core === ZERO) fail("identity-mismatch");
-  const withdraw = await reader.enumerate(vault, "withdrawQueueLength()", "withdrawQueue(uint256)", bounds.maxMarketsPerDeployment);
-  const supply = await reader.enumerate(vault, "supplyQueueLength()", "supplyQueue(uint256)", bounds.maxMarketsPerDeployment);
+  const withdrawLength = boundedCount(withdrawLengthRaw, bounds.maxMarketsPerDeployment);
+  const supplyLength = boundedCount(supplyLengthRaw, bounds.maxMarketsPerDeployment);
+  const queues = await reader.required([
+    ...Array.from({ length: withdrawLength }, (_, i) => call(vault, "withdrawQueue(uint256)", encodeUint256(i))),
+    ...Array.from({ length: supplyLength }, (_, i) => call(vault, "supplyQueue(uint256)", encodeUint256(i))),
+  ]);
+  const withdraw = queues.slice(0, withdrawLength);
+  const supply = queues.slice(withdrawLength);
   const ids = [...new Set([...withdraw, ...supply])].sort();
   if (new Set(withdraw).size !== withdraw.length || new Set(supply).size !== supply.length) fail("incomplete-census");
   if (ids.length > bounds.maxMarketsPerDeployment) fail("census-limit");
@@ -288,6 +355,7 @@ async function metaMorpho(reader: PinnedReader, vault: string, loan: string, ada
   // Still require and decode the balance read; it is not book-accounted idle.
   uint(cashRaw);
   let idle = 0n;
+  await reader.prefetchMarkets(core, ids, vault, false);
   for (const id of ids) {
     const row = await reader.market(core, id, vault, adapter, loan, false);
     if (row) {
@@ -312,7 +380,12 @@ async function metaMorpho(reader: PinnedReader, vault: string, loan: string, ada
 
 async function deployment(reader: PinnedReader, vault: string, kind: Kind, parentTokens: string[]): Promise<LenderDeploymentObservation> {
   await reader.code(vault);
-  const [loanRaw, totalRaw, supplyRaw] = await reader.required([call(vault, "asset()"), call(vault, "totalAssets()"), call(vault, "totalSupply()")]);
+  const [loanRaw, totalRaw, supplyRaw] = await reader.required([
+    call(vault, "asset()"), call(vault, "totalAssets()"), call(vault, "totalSupply()"),
+    ...(kind === "vault-v2"
+      ? [call(vault, "adaptersLength()"), call(vault, "_totalAssets()"), call(vault, "lastUpdate()"), call(vault, "maxRate()")]
+      : [call(vault, "MORPHO()"), call(vault, "withdrawQueueLength()"), call(vault, "supplyQueueLength()")]),
+  ]);
   const loan = address(loanRaw);
   if (!parentTokens.includes(loan)) fail("identity-mismatch");
   await reader.code(loan);
@@ -332,6 +405,13 @@ async function deployment(reader: PinnedReader, vault: string, kind: Kind, paren
   } else {
     const adapters = (await reader.enumerate(vault, "adaptersLength()", "adapters(uint256)", bounds.maxAdapters)).map(address);
     if (new Set(adapters).size !== adapters.length) fail("incomplete-census");
+    // These probes depend only on the now-complete adapter enumeration. Keep
+    // unsupported-kind disambiguation and parent/amount checks below unchanged.
+    await reader.read(adapters.flatMap(adapter => [
+      call(adapter, "parentVault()"), call(adapter, "realAssets()"),
+      { target: loan, callData: encodeBalanceOfCallData(adapter), label: `${loan}:cash:${adapter}`, allowFailure: true },
+      call(adapter, "asset()"), call(adapter, "morpho()"), call(adapter, "marketIdsLength()"), call(adapter, "morphoVaultV1()"),
+    ]));
     let realAssets = idle;
     for (const adapter of adapters) {
       await reader.code(adapter);
@@ -354,6 +434,7 @@ async function deployment(reader: PinnedReader, vault: string, kind: Kind, paren
         const count = boundedCount(lengthRaw, bounds.maxMarketsPerDeployment);
         const ids = await reader.required(Array.from({ length: count }, (_, i) => call(adapter, "marketIds(uint256)", encodeUint256(i))));
         if (new Set(ids).size !== ids.length) fail("incomplete-census");
+        await reader.prefetchMarkets(address(coreRaw), ids, adapter, true);
         for (const id of ids) {
           const row = await reader.market(address(coreRaw), id, adapter, adapter, loan, true);
           if (!row) fail("unsupported-adapter");

@@ -134,6 +134,8 @@ export interface ReserveSyncAttemptStartRecord {
   configFingerprint?: string | null;
   deadlineMs?: number;
   checkpoint?: ScheduledCheckpointIdentity;
+  /** Scheduled begin batches the exact frontier CAS before exposing pending state. */
+  checkpointProgress?: { itemsDone: number; itemsTotal: number; recoveryLeaseUntil?: number };
 }
 
 export interface LiveReserveHistoryPruneResult {

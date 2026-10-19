@@ -324,7 +324,7 @@ export async function loadLiveReserveCheckpoint(
 
 // Starting the next item also acknowledges the prior item. Persist its domain
 // attempt in the same write so recovery can fence any crash before domain work.
-export async function markLiveReserveCheckpointItemStarted(
+export function buildLiveReserveCheckpointItemStartedStatement(
   db: D1Database,
   identity: ScheduledCheckpointIdentity,
   input: {
@@ -336,12 +336,9 @@ export async function markLiveReserveCheckpointItemStarted(
     recoveryLeaseUntil?: number | null;
     deadlineMs?: number;
   },
-): Promise<void> {
+): D1PreparedStatement {
   const timestamp = input.nowSec ?? nowSec();
-  await requireChanged(
-    runWithOverloadRetry(() =>
-      db
-        .prepare(
+  return db.prepare(
           `UPDATE worker_scheduled_checkpoints
               SET next_item_key = ?, current_item_key = ?, current_domain_attempt_id = ?,
                   items_done = ?, items_total = ?, updated_at = ?,
@@ -361,9 +358,16 @@ export async function markLiveReserveCheckpointItemStarted(
           ...identityBinds(identity),
           input.deadlineMs ?? null,
           input.deadlineMs ?? null,
-        )
-        .run(),
-    ),
+        );
+}
+
+export async function markLiveReserveCheckpointItemStarted(
+  db: D1Database,
+  identity: ScheduledCheckpointIdentity,
+  input: Parameters<typeof buildLiveReserveCheckpointItemStartedStatement>[2],
+): Promise<void> {
+  await requireChanged(
+    runWithOverloadRetry(() => buildLiveReserveCheckpointItemStartedStatement(db, identity, input).run()),
     identity,
   );
 }

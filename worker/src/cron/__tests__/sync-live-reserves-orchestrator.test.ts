@@ -163,7 +163,7 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
     })).toBe("degraded");
   });
 
-  it("uses one checkpoint update per attempted coin plus one terminal boundary write", async () => {
+  it("batches each checkpoint/begin pair and bulk-reads closed breakers without changing frontier order", async () => {
     mockAdapterRegistry(async () => ({
       slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }],
     }));
@@ -219,6 +219,10 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
     expect(boundaryWrites).toHaveLength(1);
     expect(checkpointUpdates).toHaveLength(CONFIGURED_COIN_COUNT + 1);
     expect(domainAttemptBegins).toHaveLength(CONFIGURED_COIN_COUNT);
+    const cost = JSON.parse(result.metadata!).d1Cost;
+    expect(cost.batchCalls).toBeGreaterThanOrEqual(2 * CONFIGURED_COIN_COUNT);
+    expect(cost.bindingCalls).toBeLessThan(3 * CONFIGURED_COIN_COUNT);
+    expect(shouldAttemptFetchMock).not.toHaveBeenCalled();
     expect(boundaryWrites[0]?.binds.slice(0, 2)).toEqual([null, CONFIGURED_COIN_COUNT]);
     for (const begin of domainAttemptBegins) {
       const checkpointStart = itemStarts.find((entry) => entry.binds[2] === begin.binds[4]);
@@ -252,6 +256,7 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
         cohortItemsDoneBeforeRun: frontier, cohortItemsDoneAfterRun: expectedDone,
         continuationPending: slice < 2, runBudgetTruncated: false,
         childDisposition: slice < 2 ? "continuation_pending" : "completed",
+        maintenanceDeferredToCohortEnd: slice < 2,
       });
       // Count lifecycle admission, not adapter calls (source-invariant
       // adapters legitimately share one fetch across multiple coin lifecycles).
@@ -267,6 +272,10 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
       ]);
       expect(db.getHistory().some((entry) =>
         entry.sql.includes("last_status = 'skipped'") || entry.binds.includes("run-budget-exhausted"))).toBe(false);
+      expect(db.getHistory().some((entry) =>
+        entry.sql.includes("DELETE FROM reserve_composition_history"))).toBe(slice === 2);
+      expect(db.getHistory().some((entry) =>
+        entry.sql.includes("SELECT key FROM cache WHERE key LIKE"))).toBe(slice === 2);
       frontier = expectedDone;
     }
     expect(visited).toEqual(SYNC_ORDERED_CONFIGURED_COINS.map((coin) => coin.id));
@@ -352,7 +361,7 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
     expect(metadata.historyPruneSkipped).toBe(true);
     expect(metadata.artifactCleanup).toBeNull();
     expect(db.getHistory().some((entry) => (
-      entry.sql.includes("INSERT OR REPLACE INTO cache")
+      entry.sql.includes("INSERT INTO cache")
       && entry.binds[0] === "cron:event:sync-live-reserves:live-reserve-history-prune-skipped"
     ))).toBe(true);
   });
