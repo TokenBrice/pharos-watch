@@ -154,6 +154,29 @@ describe("trade and parent clocks", () => {
 });
 
 describe("bounded serial transport", () => {
+  it("uses the Worker-supported manual redirect mode for every RPC", async () => {
+    const fetcher = mockSample(sample());
+    const result = await fetchHiveNativeHbdPrice(parent());
+    expect(result.quote?.price).toBe(1);
+    expect(fetcher).toHaveBeenCalledTimes(5);
+    for (const [, init] of fetcher.mock.calls) expect(init.redirect).toBe("manual");
+  });
+  it.each([301, 302, 303, 307, 308])("rejects HTTP %i without following or retaining its body", async (status) => {
+    const cancel = vi.fn();
+    const fetcher = vi.fn(async () => new Response(new ReadableStream({ cancel }), {
+      status, headers: { Location: "https://unapproved.example/hive" },
+    }));
+    vi.stubGlobal("fetch", fetcher);
+    const result = await fetchHiveNativeHbdPrice(parent());
+    expect(result.quote).toBeNull();
+    expect(result.diagnostic).toMatchObject({ rpcCount: 2, preHead: null, rejectionReason: "rpc_error" });
+    expect(result.transportHealthy).toBe(false);
+    expect(fetcher.mock.calls).toEqual([
+      ["https://api.hive.blog", expect.objectContaining({ redirect: "manual" })],
+      ["https://api.deathwing.me", expect.objectContaining({ redirect: "manual" })],
+    ]);
+    expect(cancel).toHaveBeenCalledTimes(2);
+  });
   it("fails over as a whole sample and never joins bodies across nodes", async () => {
     const data = sample(); const healthy = mockSample(data);
     const seen: string[] = [];
