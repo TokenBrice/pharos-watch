@@ -3,11 +3,18 @@ import { compileNativeV3FactSet, coreFixture, V9_CANDIDATE_POLICY_V1, AS_OF_SEC 
 import { evaluateValidatedV9FactSet, evaluateValidatedV9FactSetForPublication, projectV9EffectiveBackingPillarScore } from "../safety-score-v9/evaluate-set";
 import { createV9ContagionScenarioEvaluator, evaluateV9ContagionScenario } from "../safety-score-v9/contagion";
 import { ContagionResultSchema, type ContagionShock } from "../../types/contagion";
-import { V9FactSetCoreV3Schema } from "../../types/safety-score-v9-facts";
+import { V9FactSetCoreV3Schema, type V9AssetFactsV2 } from "../../types/safety-score-v9-facts";
 import { stableJsonStringifyV1 } from "../stable-json";
 
-function fixture() {
-  const compiled = compileNativeV3FactSet(coreFixture());
+function fixture(adverseUpgrade = true) {
+  const core = coreFixture();
+  if (!adverseUpgrade) {
+    // NR propagation needs no independently adverse local upgrade path.
+    const alpha = core.assets.find((asset) => asset.assetId === "alpha")! as unknown as V9AssetFactsV2;
+    alpha.controls = alpha.controls.filter((control) => control.controlKey !== "control:admin");
+    alpha.economicControlReview.mint.upgrade = { state: "immutable", controlKey: null };
+  }
+  const compiled = compileNativeV3FactSet(core);
   const { v9FactSetDigest: _digest, ...rawCompileInput } = compiled;
   return { compiled, input: { rawCompileInput, policy: V9_CANDIDATE_POLICY_V1, clock: AS_OF_SEC, publicationGenerationId: "fixture-publication" } };
 }
@@ -89,7 +96,10 @@ describe("hypothetical V9 contagion reruns", () => {
   });
 
   it("keeps an unattributed danger-grade serial result NR with a nullable delta", () => {
-    const result = evaluate([{ kind: "score-limit", assetId: "gamma", dimension: "final", limit: 5 }]);
+    const result = evaluateV9ContagionScenario(fixture(false).input, {
+      id: "unattributed-serial-limit",
+      shocks: [{ kind: "score-limit", assetId: "gamma", dimension: "final", limit: 5 }],
+    });
     expect(result.rows.find((row) => row.coinId === "alpha")).toMatchObject({ scenarioScore: null, scenarioGrade: "NR", scenarioRatingStatus: "not-rated", delta: null, nr: true, bindingCause: "parent" });
     expect(result.manifest.nr).toBe(1);
   });
@@ -149,7 +159,7 @@ describe("hypothetical V9 contagion reruns", () => {
   });
 
   it("isolates a failed upstream intervention instead of retaining its successful-looking card", () => {
-    const { compiled, input } = fixture();
+    const { compiled, input } = fixture(false);
     const baseline = evaluateValidatedV9FactSet(compiled, input.policy);
     const failures: string[] = [];
     const result = evaluateValidatedV9FactSet(compiled, input.policy, {

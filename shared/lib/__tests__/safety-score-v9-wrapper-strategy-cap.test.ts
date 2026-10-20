@@ -106,6 +106,10 @@ describe("wrapper discounts propagate through the production set evaluator", () 
     parent.dependencies.edges = [];
     parent.reserveExposures = parent.reserveExposures.filter((row) => row.trackedAssetId === null);
     parent.reserveExposures[0].weight = 1;
+    // Fix the parent-quality premise without retaining the generic fixture's
+    // independently adverse, globally unbounded upgrade authority.
+    parent.controls = parent.controls.filter((control) => control.controlKey !== "control:admin");
+    parent.economicControlReview.mint.upgrade = { state: "immutable", controlKey: null };
     const wrapper = minimalAsset("wrapper") as unknown as V9AssetFactsV2;
     wrapper.dependencies.source = "variant";
     wrapper.variantKind = variantKind;

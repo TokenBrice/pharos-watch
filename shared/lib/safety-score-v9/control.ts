@@ -343,7 +343,9 @@ function evaluateMintPhase(context: ControlEvaluationContext): void {
             control.controlKind === "bridge" ||
             control.status.applicability.state === "not-applicable" ||
             !isControlEconomicallyRelevant(control) ||
-            (!control.capabilities.includes("mint") && control.controlKey !== mint.controlKey)
+            (!control.capabilities.includes("mint") &&
+              !control.capabilities.includes("upgrade") &&
+              control.controlKey !== mint.controlKey)
           ) return false;
           const posture = deriveV9MintPosture(control, mint, false, policy, issuanceFacts);
           return posture === "unknown" ||
@@ -402,14 +404,16 @@ function evaluateMintPhase(context: ControlEvaluationContext): void {
     }
 
     // The review key anchors admission; it is not an exhaustive mint inventory.
-    // Every non-bridge durable-mint path must compete, including separate
-    // deployment observations of the same authority.
+    // Every non-bridge durable-mint or mint-logic upgrade path must compete,
+    // including separate deployment observations of the same authority.
     const mintControls = isKnownRequired(mint.status)
       ? controls.filter(
           (control) =>
             control.controlKind !== "bridge" &&
             control.status.applicability.state !== "not-applicable" &&
-            (control.capabilities.includes("mint") || control === mintControl),
+            (control.capabilities.includes("mint") ||
+              control.capabilities.includes("upgrade") ||
+              control === mintControl),
         )
       : retainedAdverseMintControls;
     for (const mintControl of mintControls.length > 0 ? mintControls : [null]) {

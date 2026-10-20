@@ -377,6 +377,121 @@ describe("Safety Score v9 economic control", () => {
     });
   });
 
+  it("grades every native upgrade path independently of an inherited share-accounting anchor", () => {
+    const share = control("mint:share-accounting", "mint", {
+      capabilities: [],
+      capSemantics: { kind: "not-applicable", bound: null },
+      claimImpairment: "none",
+      economicLossScope: "access-only",
+    });
+    const selectedUpgrade = control("upgrade:selected-bounded", "upgrade");
+    const unilateralUpgrade = control("upgrade:unilateral", "upgrade", {
+      capSemantics: { kind: "not-applicable", bound: null },
+      claimImpairment: "unbounded",
+      authority: { authorityKey: "authority:upgrade-eoa", model: "eoa", threshold: null },
+    });
+    const input = args({
+      facts: facts([share, selectedUpgrade, unilateralUpgrade]),
+      mint: makeReviewedMintInput(share.controlKey, {
+        upgrade: { state: "reviewed", controlKey: selectedUpgrade.controlKey },
+      }),
+    });
+    const result = evaluateV9EconomicControl(input);
+
+    expect(result.score).toBe(CONTROL_POLICY.mintPostureQuality["unbounded-adverse"]);
+    expect(result.components.find((component) => component.componentKey === "mint")).toMatchObject({
+      posture: "unbounded-adverse",
+      binding: true,
+      controlKeys: expect.arrayContaining([unilateralUpgrade.controlKey]),
+    });
+    expect(result.structuralFailures).toContainEqual(expect.objectContaining({
+      kind: "centralized-mint",
+      binding: true,
+      controlKeys: [unilateralUpgrade.controlKey],
+    }));
+    expect(evaluateV9EconomicControl({
+      ...input,
+      facts: { ...input.facts, controls: [...input.facts.controls].reverse() },
+    })).toEqual(result);
+  });
+
+  it("retains a known adverse upgrade-only path under an unresolved aggregate mint review", () => {
+    const upgrade = control("upgrade:retained-adverse", "upgrade", {
+      capSemantics: { kind: "not-applicable", bound: null },
+      claimImpairment: "unbounded",
+    });
+    const result = evaluateV9EconomicControl(args({
+      facts: facts([upgrade]),
+      mint: makeReviewedMintInput(upgrade.controlKey, {
+        status: boundedUnknown("mint"),
+        controlKey: null,
+        reconciliation: "unknown",
+        upgrade: { state: "reviewed", controlKey: upgrade.controlKey },
+      }),
+    }));
+
+    expect(result.components).toContainEqual(expect.objectContaining({
+      kind: "mint",
+      posture: "unbounded-adverse",
+      score: CONTROL_POLICY.mintPostureQuality["unbounded-adverse"],
+      binding: true,
+      controlKeys: [upgrade.controlKey],
+    }));
+    expect(result.reasons.map((reason) => reason.code)).toContain("unresolved-mint-authority");
+    expect(result.reasons.map((reason) => reason.code)).toContain("missing-mint-authority");
+  });
+
+  it.each(["access-only", "deployment"] as const)(
+    "preserves %s scope when an upgrade-only row enters mint competition",
+    (economicLossScope) => {
+      const share = control("mint:scope-share", "mint", {
+        capabilities: [],
+        capSemantics: { kind: "not-applicable", bound: null },
+        claimImpairment: "none",
+        economicLossScope: "access-only",
+      });
+      const upgrade = control("upgrade:scoped", "upgrade", {
+        capSemantics: { kind: "not-applicable", bound: null },
+        claimImpairment: economicLossScope === "access-only" ? "none" : "unbounded",
+        economicLossScope,
+        scope: "deployment",
+        materialSupplyShare: 0.001,
+      });
+      const result = evaluateV9EconomicControl(args({
+        facts: facts([share, upgrade]),
+        mint: makeReviewedMintInput(share.controlKey, {
+          upgrade: { state: "reviewed", controlKey: upgrade.controlKey },
+        }),
+      }));
+
+      expect(result.score).toBe(CONTROL_POLICY.bridgeTierQuality["single-chain-or-native"]);
+      expect(result.components.filter((component) => component.kind === "mint").every(
+        (component) => !component.binding,
+      )).toBe(true);
+      expect(result.structuralFailures.every((failure) => !failure.binding)).toBe(true);
+    },
+  );
+
+  it("does not import bridge upgrade capability into native mint scoring", () => {
+    const bridgeUpgrade = control("bridge:upgrade-only", "bridge", {
+      capabilities: ["upgrade"],
+      capSemantics: { kind: "not-applicable", bound: null },
+      claimImpairment: "unbounded",
+    });
+    const result = evaluateV9EconomicControl(args({
+      facts: facts([bridgeUpgrade]),
+      mint: noMint(),
+      bridge: noBridge(),
+    }));
+
+    expect(result.score).toBe(CONTROL_POLICY.bridgeTierQuality["single-chain-or-native"]);
+    expect(result.components.find((component) => component.kind === "mint")).toMatchObject({
+      posture: "none-resolved",
+      controlKeys: [],
+    });
+    expect(result.structuralFailures).toEqual([]);
+  });
+
   it("keeps immutable mint administration not applicable while evaluating all CDP oracle branches", () => {
     const oracleControl = control("oracle:core", "oracle");
     const oracle: V9OracleControlReview = {

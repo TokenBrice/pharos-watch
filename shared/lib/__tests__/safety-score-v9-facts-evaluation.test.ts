@@ -298,6 +298,12 @@ describe("Safety Score v9 fact evaluation", () => {
     const asset = core.assets.find((row) => row.assetId === "alpha")!;
     asset.dependencies.edges = [];
     asset.reserveExposures = [];
+    // Isolate missing research from independently adverse upgrade economics.
+    // The generic fixture's raiseable, unbounded admin is now correctly graded
+    // as a competing mint path, which would make this a danger-signal case.
+    const upgrade = asset.controls.find((control) => control.controlKey === asset.economicControlReview.mint.upgrade.controlKey)!;
+    upgrade.capSemantics = { kind: "bounded", bound: { amount: 10_000_000, unit: "token-units" } };
+    upgrade.claimImpairment = "bounded";
     const reserveGap = createV9FactGapV3({
       gapId: "alpha:reserve-composition", reasonCode: "missing-reserve-composition", ownerDomain: "backing",
       policyRuleId: "backing.reserve.review", observationState: "bounded-unknown",
