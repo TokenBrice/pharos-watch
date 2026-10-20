@@ -127,6 +127,13 @@ const AAVE_TARGETS: AaveV3RateTarget[] = [
 describe("optional RPC family endpoint pacing", () => {
   beforeEach(() => {
     vi.useFakeTimers();
+    for (const target of AAVE_TARGETS) {
+      target.usdPriceEvidence = {
+        price: 1, priceSource: "coingecko", priceObservedAt: Math.floor(Date.now() / 1000),
+        priceUpdatedAt: Math.floor(Date.now() / 1000),
+        priceObservedAtMode: "upstream",
+      };
+    }
   });
 
   afterEach(() => {

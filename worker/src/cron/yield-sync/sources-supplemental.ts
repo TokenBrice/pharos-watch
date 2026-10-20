@@ -1,3 +1,5 @@
+import { STABLECOINS_GENERATION_CONSUMER_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import {
   isFixedDecimalDeployment,
 } from "@shared/lib/deployment-amounts";
@@ -585,7 +587,19 @@ async function runCompoundFamily(
 async function runAaveFamily(
   context: SupplementalSourceFamilyContext,
 ): Promise<SupplementalSourceFamilyResult> {
-  const targets = buildAaveTargets(context.startSec);
+  const stablecoins = context.db ? await loadStablecoinsCache(context.db, { mode: "lenient" }) : null;
+  const prices = new Map(
+    stablecoins && stablecoins.kind !== "error" && stablecoins.payload &&
+    stablecoins.updatedAt != null && Number.isSafeInteger(stablecoins.updatedAt) &&
+    stablecoins.updatedAt > 0 && stablecoins.updatedAt <= context.startSec &&
+    context.startSec - stablecoins.updatedAt <= STABLECOINS_GENERATION_CONSUMER_MAX_AGE_SEC
+      ? stablecoins.payload.peggedAssets.map((asset) => [asset.id, asset] as const)
+      : [],
+  );
+  const targets = buildAaveTargets(context.startSec).map((target) => ({
+    ...target,
+    usdPriceEvidence: prices.get(target.stablecoinId),
+  }));
   if (targets.length === 0) {
     return {
       key: "aaveV3",

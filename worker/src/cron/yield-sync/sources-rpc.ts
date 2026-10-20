@@ -1,3 +1,7 @@
+import { isObservedPrice } from "@shared/lib/pricing-source-policy";
+import type { StablecoinData } from "@shared/types/market";
+import { hasPublishableCurrentPrice } from "../../lib/price-publication-state";
+import { validateCompositePricingSourceFreshness } from "../../lib/pricing-source-freshness";
 import {
   registryRpcEndpoints,
   type ChainRpcConfig,
@@ -818,6 +822,7 @@ export interface AaveV3RateTarget {
   chain: string;
   assetAddress: string;
   assetDecimals?: number;
+  usdPriceEvidence?: Pick<StablecoinData, "price" | "priceSource" | "priceObservedAt" | "priceUpdatedAt" | "priceObservedAtMode">;
 }
 
 function buildAaveTargetLabel(target: AaveV3RateTarget): string {
@@ -987,12 +992,35 @@ export async function fetchAaveV3SupplyRates(
               accountedTargets.add(targetLabel);
               return;
             }
-            const sourceTvlUsd = finiteDecimalNumberFromBigInt(
+            const underlyingQuantity = finiteDecimalNumberFromBigInt(
               aTokenSupplyRaw,
               target.assetDecimals ?? inferStablecoinDecimals(target.symbol),
             );
-            if (sourceTvlUsd == null || sourceTvlUsd <= 0) {
+            if (underlyingQuantity == null || underlyingQuantity <= 0) {
               recordOptionalRpcMiss(telemetry, target.chain, targetLabel, "invalid-tvl");
+              accountedTargets.add(targetLabel);
+              return;
+            }
+            const price = target.usdPriceEvidence;
+            const observedAt = price?.priceObservedAt ?? price?.priceUpdatedAt;
+            const nowSec = Math.floor(Date.now() / 1000);
+            if (!price || !hasPublishableCurrentPrice(price) || !isObservedPrice(price) ||
+                typeof price.price !== "number" || !Number.isFinite(price.price) || price.price <= 0 ||
+                !Number.isSafeInteger(observedAt) || observedAt! <= 0 || observedAt! > nowSec ||
+                !validateCompositePricingSourceFreshness({
+                  source: price.priceSource ?? "",
+                  observedAt,
+                  observedAtMode: price.priceObservedAtMode,
+                  nowSec,
+                  requireObservedAt: true,
+                }).accepted) {
+              recordOptionalRpcMiss(telemetry, target.chain, targetLabel, "usd-price-unavailable");
+              accountedTargets.add(targetLabel);
+              return;
+            }
+            const sourceTvlUsd = underlyingQuantity * price.price;
+            if (!Number.isFinite(sourceTvlUsd) || sourceTvlUsd <= 0) {
+              recordOptionalRpcMiss(telemetry, target.chain, targetLabel, "invalid-usd-tvl");
               accountedTargets.add(targetLabel);
               return;
             }
