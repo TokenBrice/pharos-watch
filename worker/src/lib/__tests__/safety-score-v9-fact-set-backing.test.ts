@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import type mechanismReviewOverlaysAsset from "@shared/data/safety-score-v9/mechanism-review-overlays-v1.json";
 import {
   buildSafetyScoreV9BaselineExtension,
   type V9ExtensionRegistryMeta,
@@ -79,6 +80,34 @@ vi.mock("@shared/data/safety-score-v9/evidence-gap-classifications-v1.json", () 
       excerpt: "Every deposit's maximum term is listed.", assertion: "The exact required maturity datum is public." } },
   ], searchedSurfaceObservations: [{ id: "usdt-report", value: "https://example.com/usdt-report" }] },
 }));
+vi.mock("@shared/data/safety-score-v9/mechanism-review-overlays-v1.json", async (importOriginal) => {
+  const original = await importOriginal<{ default: typeof mechanismReviewOverlaysAsset }>();
+  const source = { label: "Pinned recovery terms", url: "https://example.com/recovery-terms" };
+  return {
+    default: {
+      ...original.default,
+      overlays: [
+        ...original.default.overlays,
+        ...[
+          { assetId: "fixture-instant-recovery", reviewedAt: "2026-10-20T22:23:27Z" },
+          { assetId: "fixture-date-recovery", reviewedAt: "2026-10-20" },
+          { assetId: "fixture-expired-recovery", reviewedAt: "2026-10-18T00:00:00Z" },
+        ].map(({ assetId, reviewedAt }) => ({
+          assetId, archetype: "tbill", reviewedAt: "2026-10-19", sources: [source],
+          notes: "A separately timed recovery review does not refresh historical financial assurance.",
+          metrics: {},
+          components: {
+            lossRecoveryDesign: {
+              quality: "adequate",
+              review: { reviewedAt, reviewer: "Fixture reviewer",
+                rationale: "Dated regulatory filing establishes a component-scoped recovery commitment.", sources: [source] },
+            },
+          },
+        })),
+      ],
+    },
+  };
+});
 const ASSET_ID = "alpha";
 /** Far past the fixture composition, so its published evidence has expired. */
 const EXPIRED_HISTORY_CLOCK_SEC = Date.UTC(2027, 7, 1) / 1_000;
@@ -127,6 +156,54 @@ function compileWithEmptyLiveReserves(
     },
   };
 }
+
+describe("mechanism component evidence clocks and diagnostic history", () => {
+  function compileRecovery(assetId: string, clock: string) {
+    const fixed = makeV9FixedInput({ assetId, clockSec: Date.parse(clock) / 1_000, reserves: [] });
+    const extension = buildSafetyScoreV9BaselineExtension(fixed, {
+      metaById: new Map([[assetId, eligibleReserveMeta({ id: assetId, mechanismArchetype: "tbill" })]]),
+    });
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension);
+    const asset = compiled.assets[0]!;
+    if (asset.mechanismRiskReview.review?.archetype !== "tbill") throw new Error("Expected T-bill mechanism fixture");
+    return { extension: extension.assets[0]!, asset, recovery: asset.mechanismRiskReview.review.lossRecoveryDesign };
+  }
+
+  it.each([
+    { assetId: "fixture-instant-recovery", state: "missing" },
+    { assetId: "fixture-date-recovery", state: "unsupported" },
+  ])("retains report history without credit or an orphan for an inadmissible $assetId review", ({ assetId, state }) => {
+    const { asset, recovery } = compileRecovery(assetId, "2026-10-20T22:23:26Z");
+    expect(recovery).toMatchObject({ quality: null, status: { observationState: state, evidenceRefIds: [] } });
+    const gap = asset.gaps.find((row) => row.gapId === `${assetId}:gap:mechanism-review:lossRecoveryDesign`)!;
+    const reportEvidence = asset.evidence.filter((row) => row.sourceId === "stablecoin.proof-of-reserves.latest-report");
+    expect(reportEvidence).not.toHaveLength(0);
+    expect(gap.evidenceHistory?.evidenceRefIds).toEqual(expect.arrayContaining(reportEvidence.map((row) => row.evidenceId)));
+    expect(asset.evidence.some((row) => row.sourceId === "safety-score-v9.mechanism-review-overlay:lossRecoveryDesign")).toBe(false);
+  });
+
+  it.each([
+    { assetId: "fixture-instant-recovery", clock: "2026-10-20T22:23:27Z" },
+    { assetId: "fixture-date-recovery", clock: "2026-10-21T00:00:00Z" },
+  ])("lets the current explicit $assetId review govern without stale-report poisoning", ({ assetId, clock }) => {
+    const { extension, asset, recovery } = compileRecovery(assetId, clock);
+    expect(recovery).toMatchObject({ quality: "adequate", status: { observationState: "known", gapIds: [] } });
+    const report = extension.researchEvidence.find((row) => row.sourceId === "stablecoin.proof-of-reserves.latest-report")!;
+    expect(report).toBeDefined();
+    expect(extension.componentEvidence.find((row) => row.componentKey === "mechanism-risk-review-history")?.evidenceKeys).toContain(report.evidenceKey);
+    expect(extension.componentEvidence.find((row) => row.componentKey === "mechanism-risk-review:lossRecoveryDesign")?.evidenceKeys).not.toContain(report.evidenceKey);
+    expect(recovery.status.evidenceRefIds.every((id) => asset.evidence.find((row) => row.evidenceId === id)?.freshness.state === "current")).toBe(true);
+    expect(asset.gaps.some((row) => row.gapId === `${assetId}:gap:mechanism-review:lossRecoveryDesign`)).toBe(false);
+  });
+
+  it("withdraws an expired explicit review without orphaning its historical report", () => {
+    const { asset, recovery } = compileRecovery("fixture-expired-recovery", "2027-10-18T00:00:00Z");
+    expect(recovery).toMatchObject({ quality: null, status: { observationState: "stale" } });
+    const reportEvidence = asset.evidence.filter((row) => row.sourceId === "stablecoin.proof-of-reserves.latest-report");
+    expect(reportEvidence).not.toHaveLength(0);
+    expect(recovery.status.evidenceRefIds).toEqual(expect.arrayContaining(reportEvidence.map((row) => row.evidenceId)));
+  });
+});
 
 describe("Safety Score v9 backing fact-set reserve history", () => {
   it("retains keyed zero-balance classifications without emitting zero-weight backing facts or quarantining the asset", () => {

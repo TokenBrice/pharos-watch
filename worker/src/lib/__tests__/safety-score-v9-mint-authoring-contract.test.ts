@@ -78,8 +78,9 @@ const UNRESOLVED_INHERITED_MINT_CONTROL = {
  *     create durable unbacked supply is economically "unbounded" (D14).
  *     Bounded, raiseable and collateral-gated issuance powers require a sourced
  *     capSemanticsReview. Never edit directMintAbility to express this.
- *   reconciliation:        supply-vs-reserve attestation cadence ("continuous" |
- *     "periodic"); supersedes the engine's proof-of-reserves inference.
+ *   reconciliation:        reviewer-established supply-vs-backing process;
+ *     every explicit value is authoritative, including "unknown". PoR metadata
+ *     cannot supply positive reconciliation credit.
  *   supervision:           prudential-supervision regime ("prudential" for a named
  *     financial regulator per registry evidence, else "attestation-only" | "none").
  */
@@ -203,7 +204,7 @@ function fixedInput(
   });
 }
 
-function metaWith(profile: MintAuthorityProfile | undefined) {
+function metaWith(profile: MintAuthorityProfile | undefined, overrides: Partial<V9ExtensionRegistryMeta> = {}) {
   // Reviewed profiles name the deployments their controls govern; mirror those refs as authored
   // contracts so the fixture satisfies the mint/bridge ownership contract like a real catalog entry.
   const refs = new Set<string>([
@@ -214,7 +215,7 @@ function metaWith(profile: MintAuthorityProfile | undefined) {
     const separator = ref.indexOf(":");
     return { chain: ref.slice(0, separator), address: ref.slice(separator + 1), decimals: 18 };
   });
-  return new Map([
+  return new Map<string, V9ExtensionRegistryMeta>([
     [
       ASSET_ID,
       {
@@ -222,13 +223,14 @@ function metaWith(profile: MintAuthorityProfile | undefined) {
         mechanismArchetype: "fiat-cash" as const,
         mintAuthority: profile,
         ...(contracts.length > 0 ? { contracts } : {}),
+        ...overrides,
       },
     ],
   ]);
 }
 
-function mintReviewFor(profile: MintAuthorityProfile | undefined) {
-  const extension = buildSafetyScoreV9BaselineExtension(fixedInput(), { metaById: metaWith(profile) });
+function mintReviewFor(profile: MintAuthorityProfile | undefined, overrides: Partial<V9ExtensionRegistryMeta> = {}) {
+  const extension = buildSafetyScoreV9BaselineExtension(fixedInput(), { metaById: metaWith(profile, overrides) });
   const asset = extension.assets[0]!;
   const review = asset.economicControlReview!.mint;
   const controlReview = asset.controlReview;
@@ -318,8 +320,11 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
   });
 
   it.each([
-    { authorityType: "issuer-backend", reconciliation: undefined, cadence: "monthly", expected: "periodic", score: 55 },
-    { authorityType: "issuer-backend", reconciliation: "unknown", cadence: "monthly", expected: "periodic", score: 55 },
+    { authorityType: "issuer-backend", reconciliation: undefined, cadence: "monthly", expected: "unknown", score: 25 },
+    { authorityType: "issuer-backend", reconciliation: "unknown", cadence: "monthly", expected: "unknown", score: 25 },
+    { authorityType: "issuer-backend", reconciliation: "unknown", cadence: "real-time", expected: "unknown", score: 25 },
+    { authorityType: "issuer-backend", reconciliation: "unknown", cadence: "ad-hoc", expected: "unknown", score: 25 },
+    { authorityType: "issuer-backend", reconciliation: "periodic", cadence: "none", expected: "periodic", score: 55 },
     { authorityType: "issuer-backend", reconciliation: "none", cadence: "monthly", expected: "none", score: 25 },
     { authorityType: "issuer-backend", reconciliation: "unknown", cadence: "none", expected: "unknown", score: 25 },
     { authorityType: "issuer-backend", reconciliation: "unknown", cadence: "undisclosed", expected: "unknown", score: 25 },
@@ -359,6 +364,56 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
         .toBe(expected !== "unknown");
     },
   );
+
+  it.each([
+    undefined, "unknown", "continuous", "periodic", "internal-ledger", "none", "not-applicable",
+  ] as const)("preserves the reviewed reconciliation %s with reserve-only cadence metadata", (reconciliation) => {
+    const { review } = mintReviewFor({
+      ...AUTHORING_CONTRACT_MINT_AUTHORITY_EXAMPLE,
+      reconciliation,
+    }, {
+      proofOfReserves: {
+        type: "real-time", url: "https://example.com/reserve-only-feed", cadence: "daily",
+        latestReport: {
+          periodEnd: "2026-07-01", assuranceMethod: "onchain-proof",
+          scope: "assets-only", liabilityReconciliation: "none", reviewer: "fixture",
+          confidence: "verified", sources: [{ label: "Reserve balance feed", url: "https://example.com/reserve-only-feed" }],
+        },
+      },
+    });
+    expect(review.reconciliation).toBe(reconciliation ?? "unknown");
+  });
+
+  it.each([undefined, "unknown"] as const)(
+    "does not infer periodic from a dated full-liability report when reconciliation is %s",
+    (reconciliation) => {
+      const { review } = mintReviewFor({
+        ...AUTHORING_CONTRACT_MINT_AUTHORITY_EXAMPLE,
+        reconciliation,
+      }, {
+        proofOfReserves: {
+          type: "attestation", url: "https://example.com/report", cadence: "monthly",
+          latestReport: {
+            periodEnd: "2026-07-01", publishedAt: "2026-07-02", assuranceMethod: "attestation",
+            scope: "assets-and-liabilities", liabilityReconciliation: "full", reviewer: "fixture",
+            confidence: "verified", sources: [{ label: "Dated report", url: "https://example.com/report" }],
+          },
+        },
+      });
+      // A report's existence alone does not establish a current recurring
+      // whole-liability process; that scope/currency decision belongs to review.
+      expect(review.reconciliation).toBe("unknown");
+    },
+  );
+
+  it("does not replace an explicit unknown with the immutable no-control applicability fallback", () => {
+    const { review } = mintReviewFor({
+      ...AUTHORING_CONTRACT_MINT_AUTHORITY_EXAMPLE,
+      controls: [], reconciliation: "unknown",
+      upgradeability: { model: "immutable", canChangeMintLogic: false, sources: [] },
+    });
+    expect(review.reconciliation).toBe("unknown");
+  });
 
   it("applies R3 to a prudential reconciled mint without a centralized-mint cap", () => {
     const input = fixedInput();
@@ -643,11 +698,20 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
       expect(localMintControls).toHaveLength(profile.controls?.length ?? 0);
       const selectedUpgradeControlKey = asset.economicControlReview!.mint.upgrade.controlKey!;
       expect(
-        evaluatedById.get(assetId)!.control.components.find((component) => component.kind === "mint"),
+        evaluatedById.get(assetId)!.control.components.find(
+          (component) => component.kind === "mint" && component.controlKeys.includes(shareControl!.controlKey),
+        ),
       ).toMatchObject({
         posture: "none-resolved",
         controlKeys: expect.arrayContaining([shareControl!.controlKey, selectedUpgradeControlKey]),
       });
+      const scoredUpgrade = evaluatedById.get(assetId)!.control.components.find(
+        (component) => component.kind === "mint" &&
+          !component.controlKeys.includes(shareControl!.controlKey) &&
+          upgradeControls.some((control) => component.controlKeys.includes(control.controlKey)),
+      );
+      expect(scoredUpgrade).toBeDefined();
+      expect(scoredUpgrade!.score).toBeLessThan(V9_CANDIDATE_POLICY_V1.policy.semantic.control.mintPostureQuality["none-resolved"]);
       expect(evaluatedById.get(assetId)!.control.reasons.map((reason) => reason.code)).not.toContain(
         "missing-mint-authority",
       );

@@ -3,6 +3,7 @@ import { resolvedExitRouteOutputAssetKeys } from "@shared/lib/exit-route-output"
 import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import { resolveReviewedRouteSuspension } from "@shared/lib/redemption-route-suspension";
 import type { RedemptionRouteSuspension } from "@shared/types/redemption";
+import { allocationReviewClockSec as reviewAdmissionClockSec } from "@shared/types/safety-score-v9-allocation";
 import { isDexExitRouteCoverageWithinRouteBudget } from "@shared/lib/p4-exit-route-capacity";
 import { isDexExitRouteScoreEligible } from "@shared/lib/p4-exit-route-capability-policy";
 import { canonicalV9RouteKey } from "@shared/lib/safety-score-v9/facts";
@@ -20,6 +21,7 @@ import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { resolveChainId } from "@shared/types/chain-identity";
+import { canonicalExitRouteScopedKey } from "@shared/types/exit-route-identity";
 import { hasCompleteEligibleProviderSupply, REVIEWED_ECONOMIC_SUPPLY_PLANS } from "./supply-attribution-contract";
 import { safetyScoreV9ChainSupplyObservedAtSec, safetyScoreV9ChainSupplyMaxAgeSec } from "./supply-attribution";
 import { evaluateV9Exit, isV9CreditableNonAtomicRedemption, projectV9ExitEvaluationRoute, selectV9ExitCirculatingUsd, selectV9ExitStressRequest } from "@shared/lib/safety-score-v9/exit";
@@ -98,7 +100,11 @@ function scopeFailureDomains(
       { kind: "chain", key: scope.chain },
       {
         kind: lane === "dex" ? "dex-protocol" : "redemption-rail",
-        key: scope.protocol,
+        // A producer/model family is not a shared redemption endpoint.
+        // Match execution certificates' exact provider identity instead.
+        key: lane === "dex"
+          ? scope.protocol
+          : `provider:${canonicalExitRouteScopedKey(scope.chain, scope.contractOrPoolId)}`,
       },
     ];
   }
@@ -846,6 +852,35 @@ export function buildRoutes(context: AssetBuildContext, supply: V9AssetFactsV3["
         path: optionalExitV9Path(routeKey), message: quarantine.evidence.rejection!.reason,
         evidenceRefIds: [evidenceId], causeScope: quarantineScope, causeProof: quarantine.verdict.proof,
       })),
+    };
+  } else if (
+    config?.reviewedAt && config.docs?.length &&
+    reviewAdmissionClockSec(config.reviewedAt) <= context.fixedInput.clockSec &&
+    !suspension && !routes.some((route) => route.lane === "redemption")
+  ) {
+    // An empty DEX census says nothing about this documented primary channel.
+    // Keep its unavailable measurement visible without synthesizing a quote,
+    // funded capacity, cost, output valuation or completion guarantee.
+    const routeId = `redemption:${context.asset.assetId}:${config.routeFamily}`;
+    const routeKey = canonicalV9RouteKey("redemption", generationId, routeId);
+    const evidenceId = addEvidence(context, createV9EvidenceReference({
+      evidenceId: `${context.asset.assetId}:redemption-configured-channel`,
+      sourceId: "safety-score-v9-redemption-configured-channel",
+      sourceGenerationId: context.extension.sources.researchOverlays.generationId,
+      disposition: "observed",
+      observedAtSec: Date.parse(config.reviewedAt) / 1_000,
+      url: config.docs[0]!.url,
+      contentSha256: domainDigest("safety-score-v9.redemption-configured-channel.v1", config),
+      maxAgeSec: context.extension.routeFreshness.documentedTermsMaxAgeSec,
+    }, context.fixedInput.clockSec));
+    unavailableRail = {
+      routeId,
+      routeFamily: config.routeFamily === "offchain-issuer" ? "issuer-redemption" : "protocol-redemption",
+      evidenceId,
+      capacityGapId: routeGap(context, routeKey, "capacity", "missing",
+        "missing-runtime-route-evidence", "unresearched",
+        "The reviewed redemption channel has no admitted same-notional capacity observation; an empty DEX census does not establish its exhaustion.",
+        [evidenceId]),
     };
   }
   if (unavailableRail) {

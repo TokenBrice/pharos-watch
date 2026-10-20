@@ -14,7 +14,10 @@ import { capturedAccessMetaById } from "./safety-score-v9-capture.test-support";
 function replay() {
   const fixedInput = createReportCardsFixedInput(capture.draft as unknown as ReportCardsFixedInputDraft);
   const pipeline = buildSafetyScoreV9Candidate({
-    fixedInput, publishedAtSec: capture.publishedAtSec, registry: { metaById: capturedAccessMetaById },
+    fixedInput, publishedAtSec: capture.publishedAtSec,
+    // Common-mode publication uses the captured blacklist evidence, not optional
+    // transfer overlays researched after this historical capture's clock.
+    registry: { metaById: capturedAccessMetaById, reviewedTransferFacts: new Map() },
   });
   const publication = pipeline.candidate;
   const report = projectSafetyScoreV9PublicationToPublicSnapshot(publication, {

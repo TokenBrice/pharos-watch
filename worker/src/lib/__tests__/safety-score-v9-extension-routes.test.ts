@@ -9,6 +9,7 @@ import {
   resolveReviewedRedemptionSettlement,
   type RedemptionBackstopConfig,
 } from "@shared/lib/redemption-backstops";
+import { fixedFee } from "@shared/lib/redemption-backstop-configs/shared";
 import type { ExitExecutionCertificate, ExitRouteObservation } from "@shared/types/exit-route";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
@@ -408,6 +409,26 @@ describe("certified execution route outputs", () => {
   });
 });
 
+describe("reviewed undisclosed output valuation", () => {
+  it.each(["mixed-collateral", "stable-single"] as const)(
+    "does not assign implicit collateral or fiat par to undisclosed %s output", (outputAssetType) => {
+      const assetId = "usdc-circle";
+      const row = makeSupplyFullRedemption({ stablecoinId: assetId, outputAssetType });
+      withRedemptionBackstopConfig(assetId, {
+        outputAssetType, outputAssets: undefined, unresolvedOutputAssetKeys: undefined,
+        unresolvedOutputDisposition: "issuer-undisclosed", reviewedAt: "2026-07-01",
+      }, () => {
+        const fixed = fixedInputStub(row);
+        const retained = buildSafetyScoreV9RetainedRedemptionRoutes(fixed, assetId);
+        expect(retained[0]!.observation.output).toEqual({ kind: "unresolved-asset" });
+        const review = buildSafetyScoreV9RouteReviews(fixed, assetId)[0]!;
+        expect(review.output).toBeNull();
+        expect(review.unresolvedOutputResponsibility).toBe("issuer-undisclosed");
+      });
+    },
+  );
+});
+
 describe("buildSafetyScoreV9RouteReviews physical-commodity outputs", () => {
   it("admits physical verified customers without an institutional discount but labels terms capacity as modelled", () => {
     const id = "paxg-paxos";
@@ -623,6 +644,17 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
     });
     const frozenRow = structuredClone(row);
     const fixedInput = fixedInputStub(row, Date.UTC(2026, 9, 7) / 1_000);
+    // Freeze the single-gap scenario independently of current XO curation.
+    withRedemptionBackstopConfig(row.stablecoinId, {
+      costModel: fixedFee(0, "Fixture same-request cost bound"),
+      v9RouteReviewTerms: {
+        scoringDisposition: "bounded-terms-gap",
+        missingScoringFields: ["settlement"],
+        reviewedAt: "2026-07-01",
+        rationale: "Fixture terms establish cost but not a completed settlement bound.",
+        docs: [{ label: "Fixture terms", url: "https://issuer.example/terms", supports: ["settlement"] }],
+      },
+    }, () => {
     const retained = buildSafetyScoreV9RetainedRedemptionRoutes(fixedInput, row.stablecoinId)[0]!;
     const review = buildSafetyScoreV9RouteReviews(fixedInput, row.stablecoinId)[0]!;
 
@@ -645,6 +677,7 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
     expect(row).toEqual(frozenRow);
     expect(row).not.toHaveProperty("v9RouteReviewTerms");
     expect(row).not.toHaveProperty("scoringDisposition");
+    });
   });
 
   it.each([
@@ -1868,8 +1901,19 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
 });
 
 describe("buildSafetyScoreV9RetainedRoutes composed DEX exits", () => {
-  it("composes M's reviewed atomic wrap with captured wM market depth", () => {
+  it("composes a reviewed atomic wrap with captured intermediate market depth", () => {
     const fixedInput = fixedInputStub(undefined);
+    // Synthetic admitted route: current M curation no longer asserts public wrapping.
+    withRedemptionBackstopConfig("m-m0", {
+      v9ComposedDexExit: {
+        intermediateAssetId: "wm-m0",
+        conversionModel: "permissionless-atomic-wrap",
+        chain: "ethereum",
+        wrapperContract: "0x437cc33344a0B27A429f795ff6B469C72698B291",
+        reviewedAt: "2026-07-01",
+        docs: [{ label: "Fixture wrap", url: "https://issuer.example/wrap", supports: ["route", "fees", "access", "settlement"] }],
+      },
+    }, () => {
     const source: ExitRouteObservation = {
       routeId: "dex:wm-m0:uniswap-v3:wm-usdc",
       routeFamily: "dex-amm",
@@ -1947,6 +1991,7 @@ describe("buildSafetyScoreV9RetainedRoutes composed DEX exits", () => {
         ],
       }),
     ]);
+    });
   });
 });
 

@@ -6,6 +6,7 @@
 
 import { describe, expect, it, vi } from "vitest";
 import { fixedFee, type RedemptionBackstopConfig } from "@shared/lib/redemption-backstop-configs/shared";
+import * as redemptionBackstops from "@shared/lib/redemption-backstops";
 import { deriveReportCardsBaseInputGenerationId } from "@shared/lib/report-cards-base-input-identity";
 import { DEX_ROUTE_CAPABILITY_MATRIX_VERSION } from "@shared/lib/p4-exit-route-capability-policy";
 import { buildV9DependencyEvaluationPlan } from "@shared/lib/safety-score-v9/dependencies";
@@ -70,6 +71,117 @@ describe("route compiler policy reuse", () => {
     } finally {
       loadPolicy.mockRestore();
       validateReviews.mockRestore();
+    }
+  });
+});
+
+describe("configured redemption channel census", () => {
+  const clockSec = Date.parse("2026-10-20T12:00:00Z") / 1_000;
+  const config: RedemptionBackstopConfig = {
+    routeFamily: "offchain-issuer", accessModel: "issuer-api", settlementModel: "days",
+    executionModel: "rules-based-nav", outputAssetType: "stable-single",
+    capacityModel: { kind: "unquantified" },
+    costModel: { kind: "dynamic-or-unclear", confidence: "undisclosed-reviewed" },
+    reviewedAt: "2026-10-03",
+    docs: [{ label: "Issuer redemption terms", url: "https://example.com/redemption", supports: ["route"] }],
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap", missingScoringFields: ["capacity", "cost", "settlement"],
+      rationale: "A real primary channel exists but funded capacity, all-in cost and completed payout are unquantified.",
+      reviewedAt: "2026-10-03",
+      docs: [{ label: "Issuer redemption terms", url: "https://example.com/redemption", supports: ["route"] }],
+    },
+  };
+
+  function emptyDexContext(withMeasuredZeroDex = false, rowState?: "missing-capacity" | "impaired") {
+    const draft = exactFixedInput({ clockSec });
+    if (withMeasuredZeroDex) {
+      const observation = draft.dexLiqMap.alpha!.exitRouteObservations![0]!;
+      observation.executableUsd = 0;
+      observation.completionRatio = 0;
+      observation.capacityCurve = observation.capacityCurve!.map((point) => ({
+        ...point, executableUsd: 0, completionRatio: 0,
+      }));
+    } else {
+      draft.dexLiqMap.alpha!.exitRouteObservations = [];
+      draft.dexLiqMap.alpha!.exitRouteObservationCoverage = {
+        status: "populated", capabilityMatrixVersion: DEX_ROUTE_CAPABILITY_MATRIX_VERSION,
+        retainedPoolCount: 0, observationCount: 0, scoreEligibleObservationCount: 0,
+        scoreEligiblePoolCount: 0, unsupportedPoolCount: 0, evidenceCounts: {}, unsupportedReasons: {},
+      };
+    }
+    draft.dexDeploymentSupplyCoverageById.alpha = {
+      totalSupplyUsd: 10_000_000, verifiedNoPoolsSupplyUsd: 10_000_000, verifiedNoPoolsSupplyRatio: 1,
+      observedSupplyUsd: 0, observedSupplyRatio: 0, providerInaccessibleSupplyUsd: 0,
+      providerInaccessibleSupplyRatio: 0, unknownSupplyUsd: 0, unknownSupplyRatio: 0, unknownChains: [],
+    };
+    if (rowState) {
+      draft.redemptionBackstopMap.alpha = makeSupplyFullRedemption({
+        stablecoinId: "alpha", resolutionState: rowState, capacityProfile: undefined, updatedAt: clockSec,
+      });
+      draft.redemptionGenerationId = "redemption:configured-channel-census";
+      draft.redemptionStale = false;
+      draft.inputFreshness.redemptionBackstops = { updatedAt: clockSec, ageSeconds: 0, stale: false };
+    }
+    const fixed = rebuildFixed(draft);
+    const reviewed = structuredClone(extension({ clockSec, registryFingerprint: fixed.registryFingerprint }));
+    if (withMeasuredZeroDex) reviewed.assets[0]!.routeReviews[0]!.coverageClass = "exact-complete";
+    else reviewed.assets[0]!.routeReviews = [];
+    return factBuilderContext(fixed, reviewed);
+  }
+
+  it.each(["unquantified-row", "absent-row", "impaired-row", "measured-zero-dex"] as const)(
+    "retains unavailable primary-channel evidence without capacity credit: %s", (scenario) => {
+      const getConfig = vi.spyOn(redemptionBackstops, "getRedemptionBackstopConfig").mockReturnValue(config);
+      try {
+        const context = emptyDexContext(scenario === "measured-zero-dex",
+          scenario === "unquantified-row" ? "missing-capacity" : scenario === "impaired-row" ? "impaired" : undefined);
+        const compiled = buildRoutes(context, buildSupply(context));
+        const channel = compiled.exitRoutes.find((route) => route.lane === "redemption")!;
+        expect(channel).toMatchObject({
+          routeId: "redemption:alpha:offchain-issuer", routeFamily: "issuer-redemption",
+          scoreEligible: false, coverageClass: "diagnostic", request: null, capacityCurve: [],
+          settlementSlaSec: null, status: { observationState: "missing" },
+          output: { kind: "unknown", valuation: null },
+        });
+        expect(context.evidence.get("alpha:redemption-configured-channel")).toMatchObject({
+          observedAtSec: Date.parse("2026-10-03") / 1_000,
+          sourceGenerationId: context.extension.sources.researchOverlays.generationId,
+        });
+        expect(compiled.exitStatus.observationState).toBe("bounded-unknown");
+        const evaluated = evaluateV9Exit({
+          circulatingUsd: 10_000_000, portfolioFactStatus: compiled.exitStatus,
+          gaps: [...context.gaps.values()], routes: compiled.exitRoutes.map(projectV9ExitEvaluationRoute),
+        }, V9_CANDIDATE_POLICY_V1);
+        expect(evaluated.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore);
+        expect(evaluated.reasons).toContain("missing-same-notional-route");
+        expect(evaluated.reasons).not.toContain("no-viable-exit-path");
+        expect(evaluated.routes.find((route) => route.routeKey === channel.routeKey)).toMatchObject({
+          included: false, capacityPoint: null,
+        });
+        if (scenario === "measured-zero-dex") {
+          expect(evaluated.routes.find((route) => route.lane === "dex")).toMatchObject({ included: true, score: 0 });
+        }
+      } finally {
+        getConfig.mockRestore();
+      }
+    },
+  );
+
+  it.each([
+    { name: "absent config", value: null },
+    { name: "uncited config", value: { ...config, docs: [] } },
+    { name: "same-day review", value: { ...config, reviewedAt: "2026-10-20" } },
+    { name: "future review", value: { ...config, reviewedAt: "2026-10-21" } },
+  ])("does not create a channel from $name", ({ value }) => {
+    const getConfig = vi.spyOn(redemptionBackstops, "getRedemptionBackstopConfig").mockReturnValue(value);
+    try {
+      const context = emptyDexContext();
+      const compiled = buildRoutes(context, buildSupply(context));
+      expect(compiled.exitRoutes).toEqual([]);
+      expect(compiled.exitStatus.observationState).toBe("known");
+      expect(context.evidence.has("alpha:redemption-configured-channel")).toBe(false);
+    } finally {
+      getConfig.mockRestore();
     }
   });
 });
@@ -685,8 +797,51 @@ describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage"
     const redemptionRoute = compiled.assets[0]!.exitRoutes.find((candidate) => candidate.lane === "redemption")!;
 
     expect(redemptionRoute.failureDomains).toContainEqual({ kind: "chain", key: "ethereum" });
-    expect(redemptionRoute.failureDomains).toContainEqual({ kind: "redemption-rail", key: "frax" });
+    expect(redemptionRoute.failureDomains).toContainEqual({
+      kind: "redemption-rail", key: "provider:ethereum:0x2397321b301b80a1c0911d6f9ed4b6033d43cf51",
+    });
+    expect(redemptionRoute.failureDomains).not.toContainEqual({ kind: "redemption-rail", key: "frax" });
     expect(redemptionRoute.failureDomains).not.toContainEqual({ kind: "dex-protocol", key: "frax" });
+  });
+
+  it.each([
+    ["different contracts", "ethereum", "0x2222222222222222222222222222222222222222", false],
+    ["different chains", "base", "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", false],
+    ["the same canonical endpoint", "Ethereum", "0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", true],
+  ] as const)("does not conflate a redemption model across %s", (_label, chain, contractOrPoolId, shared) => {
+    const compileEndpoint = (endpointChain: string, endpoint: string) => {
+      const fixed = queuedRedemptionFixedInput();
+      const observation = fixed.redemptionBackstopMap.alpha!.capacityProfile!.exitRouteObservations![0]!;
+      observation.routeFamily = "protocol-redemption";
+      observation.scope = {
+        kind: "chain-contract", chain: endpointChain, contractOrPoolId: endpoint, protocol: "erc4626-instant",
+      };
+      const reviewed = extension();
+      reviewed.assets[0]!.routeReviews.push({
+        ...routeReview(observation.routeId), lane: "redemption",
+        failureDomains: [{ kind: "oracle-feed", key: "reviewed-shared-oracle" }],
+      });
+      return compileSafetyScoreV9FactSetFromFixedInput(rebuildFixed(fixed), reviewed).assets[0]!;
+    };
+    const alpha = compileEndpoint("ethereum", "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+    const beta = { ...compileEndpoint(chain, contractOrPoolId), assetId: "beta" };
+    const plan = buildV9DependencyEvaluationPlan({ activeAssetIds: ["alpha", "beta"], assets: [alpha, beta] });
+    const rails = plan.commonModeGroups.filter((group) => group.failureDomain.kind === "redemption-rail");
+    expect(rails.some((group) => group.failureDomain.key === "erc4626-instant")).toBe(false);
+    expect(rails.some((group) =>
+      group.failureDomain.key === "provider:ethereum:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" &&
+      new Set(group.members.map((member) => member.assetId)).size === 2,
+    )).toBe(shared);
+    // Exact reviewed dependencies survive even when the redemption endpoints differ.
+    expect(plan.commonModeGroups).toContainEqual(expect.objectContaining({
+      failureDomain: { kind: "oracle-feed", key: "reviewed-shared-oracle" },
+      members: expect.arrayContaining([
+        expect.objectContaining({ assetId: "alpha", owner: "exit" }),
+        expect.objectContaining({ assetId: "beta", owner: "exit" }),
+      ]),
+    }));
+    expect(alpha.exitRoutes.filter((route) => route.lane === "dex").flatMap((route) => route.failureDomains))
+      .toContainEqual({ kind: "dex-protocol", key: "fixture-dex" });
   });
 
   it("keeps shaped diagnostic pools out of the DEX completeness denominator without hiding exact gates", () => {

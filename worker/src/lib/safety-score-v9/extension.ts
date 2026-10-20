@@ -1965,34 +1965,6 @@ function latestResolvedMintIncidentAtSec(
   return latest;
 }
 
-/**
- * Whether the curated proof-of-reserves block evidences a *published* periodic
- * reconciliation of issued supply to reserves.
- *
- * This used to be a truthiness read of `cadence`, which made the sentinel
- * values self-defeating: `"none"` and `"undisclosed"` are non-empty strings, so
- * an issuer that publishes no reconciliation at all was inferred to have a
- * `"periodic"` one. That is the same absence-as-fact defect the 9.25 access
- * posture work fixed, inverted — here the missing evidence flattered the issuer
- * instead of accusing it.
- *
- * `"unknown"` is the correct fallback rather than a known negative: an
- * undisclosed cadence tells us nothing about whether the issuer reconciles
- * internally, only that it publishes nothing we can check. MINT-LADDER 9.32
- * (2026-08-21) adds explicit reviewed `"none"` reconciliation; unlike this
- * inference helper, `adaptMintReview` passes that reviewed value through
- * alongside the other non-unknown cadences.
- */
-export function hasPublishedReserveReconciliationEvidence(
-  proof: StablecoinMeta["proofOfReserves"] | undefined,
-): boolean {
-  // A scoped appendix is not whole-token operational/mint reconciliation.
-  if (proof?.latestReport?.coverage != null) return false;
-  if (proof?.latestReport) return true;
-  const cadence = proof?.cadence;
-  return cadence != null && cadence !== "none" && cadence !== "undisclosed";
-}
-
 function adaptMintReview(
   meta: V9ExtensionRegistryMeta,
   metaById: ReadonlyMap<string, V9ExtensionRegistryMeta>,
@@ -2161,28 +2133,13 @@ function adaptMintReview(
         ? "not-applicable"
         : "unknown"
       : issuerBackendMint
-        ? hasPublishedReserveReconciliationEvidence(meta.proofOfReserves)
-          ? "periodic"
-          : "unknown"
-        : "not-applicable";
-  // A reviewed reconciliation cadence supersedes the inferred one; an ABSENT
-  // field keeps the inference (fail-closed inertness). MINT-LADDER 9.32
-  // (2026-08-21): reviewed "none" is intentionally passed through here, and a
-  // reviewer's EXPLICIT "unknown" on a reviewed non-issuer-backend mint control
-  // now also passes through instead of being swallowed by the not-applicable
-  // inference — the reviewer looked and could not establish a cadence. Preserve
-  // that scoped unanswered factor independently of the base rung determined by
-  // known economic authority and qualifying process evidence.
-  // Issuer-backend, inherited-share-fallback, and absent-mint-control paths
-  // keep the inference: PoR evidence may establish "periodic" for a backend
-  // minter, a share wrapper's cadence is structurally not-applicable by the
-  // wrapper convention, and a missing control is not a cadence finding.
-  const reconciliation =
-    profile.reconciliation && profile.reconciliation !== "unknown"
-      ? profile.reconciliation
-      : profile.reconciliation === "unknown" && directMintControl !== null && !issuerBackendMint
         ? "unknown"
-        : inferredReconciliation;
+        : "not-applicable";
+  // Reconciliation is a reviewed process fact, including an explicit unknown.
+  // PoR cadence/report metadata alone cannot establish recurring whole-supply
+  // reconciliation or override the reviewer's scope and currency assessment.
+  // Only an absent field retains the structural applicability fallback.
+  const reconciliation = profile.reconciliation ?? inferredReconciliation;
   const immutableWithoutMint = mintControl === null && upgrade.state === "immutable";
   // A reviewed no-local-issuance exception is a measured fact, not missing data: the
   // product genuinely holds no canonical issuance authority. It is granted only when
@@ -2490,7 +2447,10 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
         );
         admissionPath = "componentEvidence.mechanism-risk-review";
         const mechanismOverlayEvidence = getSafetyScoreV9MechanismOverlayEvidence(assetId, archetype, clockSec);
-        if (mechanismRiskReview && mechanismOverlayEvidence) {
+        const mechanismComponentEvidence = mechanismRiskReview && mechanismOverlayEvidence
+          ? getSafetyScoreV9MechanismComponentEvidence(assetId, archetype, clockSec)
+          : null;
+        if (mechanismRiskReview && mechanismOverlayEvidence && mechanismComponentEvidence) {
           reviewEvidence.add({
             componentKeys: ["mechanism-risk-review"],
             sourceId: "safety-score-v9.mechanism-review-overlay",
@@ -2501,7 +2461,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
             payload: mechanismOverlayEvidence.payload,
             maxAgeSec: mechanismOverlayEvidence.maxAgeSec,
           });
-          for (const component of getSafetyScoreV9MechanismComponentEvidence(assetId, archetype, clockSec)) {
+          for (const component of mechanismComponentEvidence) {
             reviewEvidence.add({
               componentKeys: [`mechanism-risk-review:${component.componentKey}`],
               sourceId: `safety-score-v9.mechanism-review-overlay:${component.componentKey}`,
@@ -2545,6 +2505,13 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
             : archetype === "fiat-cash" || archetype === "commodity-claim"
               ? "assuranceAndReconciliation"
               : null;
+        const assuranceFact = mechanismRiskReview?.archetype === "tbill"
+          ? mechanismRiskReview.lossRecoveryDesign
+          : mechanismRiskReview?.archetype === "fiat-cash" || mechanismRiskReview?.archetype === "commodity-claim"
+            ? mechanismRiskReview.assuranceAndReconciliation
+            : null;
+        const hasGoverningComponentReview = assuranceFact?.status.observationState === "known"
+          && mechanismComponentEvidence?.some((component) => component.componentKey === assuranceComponent);
         if (
           mechanismRiskReview &&
           assuranceReport?.periodEnd &&
@@ -2555,7 +2522,11 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
         ) {
           admissionPath = `componentEvidence.mechanism-risk-review:${assuranceComponent}`;
           reviewEvidence.add({
-            componentKeys: [`mechanism-risk-review:${assuranceComponent}`],
+            // An admitted explicit component governs its own quality and clock.
+            // Retain the separate report diagnostically, not as a second current source.
+            componentKeys: [hasGoverningComponentReview
+              ? "mechanism-risk-review-history"
+              : `mechanism-risk-review:${assuranceComponent}`],
             sourceId: "stablecoin.proof-of-reserves.latest-report",
             reviewedAt: assuranceReport.publishedAt,
             observedAt: assuranceReport.periodEnd,
