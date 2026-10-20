@@ -34,3 +34,46 @@ describe("native XRPL issued-currency exact amounts", () => {
     }
   });
 });
+
+describe("fixed-decimal override deployment identity", () => {
+  const primary = { chain: "ethereum", address: "0xabcdef0000000000000000000000000000000001", decimals: 6 };
+  const second = { ...primary, address: "0xabcdef0000000000000000000000000000000002", decimals: 8 };
+  const traded = { ...primary, address: "0xabcdef0000000000000000000000000000000003", decimals: 9 };
+  const coin = { contracts: [primary, second], tradedContracts: [traded] };
+
+  it("binds scale to the exact address, including non-first primary and any-source traded deployments", () => {
+    expect(resolveTrackedContractConfigCore(coin, "ethereum", {
+      addressOverride: "0xABCDEF0000000000000000000000000000000002",
+    })).toEqual({ contractAddress: "0xABCDEF0000000000000000000000000000000002", decimals: 8 });
+    expect(resolveTrackedContractConfigCore(coin, "ethereum", {
+      source: "any", addressOverride: traded.address,
+    })).toEqual({ contractAddress: traded.address, decimals: 9 });
+    expect(resolveTrackedContractConfigCore(coin, "ethereum", {
+      source: "traded", addressOverride: primary.address,
+    })).toBeNull();
+  });
+
+  it("requires explicit decimals for a foreign address, chain or empty inventory", () => {
+    for (const [inventory, chainId, addressOverride] of [
+      [coin, "ethereum", "foreign"],
+      [coin, "arbitrum", primary.address],
+      [{}, "ethereum", primary.address],
+    ] as const) {
+      expect(resolveTrackedContractConfigCore(inventory, chainId, { addressOverride })).toBeNull();
+      expect(resolveTrackedContractConfigCore(inventory, chainId, { addressOverride, decimalsOverride: 0 }))
+        .toEqual({ contractAddress: addressOverride, decimals: 0 });
+    }
+    expect(resolveTrackedContractConfigCore(coin, "ethereum", {
+      addressOverride: primary.address, decimalsOverride: 12,
+    })?.decimals).toBe(12);
+  });
+
+  it("does not fold case-sensitive native identities or borrow an unrelated unknown scale", () => {
+    const native = { contracts: [{ chain: "solana", address: "MintAbC", decimals: 6 }] };
+    expect(resolveTrackedContractConfigCore(native, "solana", { addressOverride: "Mintabc" })).toBeNull();
+    expect(resolveTrackedContractConfigCore(native, "solana", { addressOverride: "MintAbC" })?.decimals).toBe(6);
+    expect(resolveTrackedContractConfigCore({
+      contracts: [{ chain: "ethereum", address: "unknown", decimals: null }, primary],
+    }, "ethereum", { addressOverride: primary.address })?.decimals).toBe(6);
+  });
+});

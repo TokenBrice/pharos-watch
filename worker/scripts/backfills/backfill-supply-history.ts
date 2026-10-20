@@ -4,6 +4,8 @@ import { PSI_ELIGIBLE_STABLECOINS, PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/p
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { bucketUnixMillisecondsToUtcDay, bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
+import { isCommodityPeg } from "@shared/lib/filter-tags";
+import { isDedicatedSingleTokenGoldProtocolSlug } from "@shared/lib/commodity-protocols";
 import { toTokenUnits } from "@shared/lib/math";
 import type { ContractDeployment } from "@shared/types/core";
 import { onchainSupplyProbeFamily } from "@shared/lib/onchain-supply-probe";
@@ -707,6 +709,9 @@ async function backfillCommodity(
   if (!config.protocolSlug) {
     return { rows: 0, error: `${fallthroughReason}; no protocolSlug for TVL fallback` };
   }
+  if (!isCommodityPeg(meta.flags.pegCurrency) || !isDedicatedSingleTokenGoldProtocolSlug(config.protocolSlug)) {
+    return { rows: 0, error: `${fallthroughReason}; protocol TVL fallback requires a dedicated commodity-token mapping` };
+  }
 
   const priceRange = config.window ? backfillWindowToFetchRange(config.window) : null;
   const priceStart = priceRange?.startSec ?? 0;
@@ -737,14 +742,16 @@ async function backfillCommodity(
     return { rows: 0, error: "no TVL history and CoinGecko unavailable" };
   }
 
-  // Skip TVL if it diverges from mcap (same 15% threshold as sync code)
+  // Require usable equivalence evidence before admitting any protocol-TVL history.
   const currentMcap = protocolData.mcap;
-  if (currentMcap && tvlHistory.length > 0) {
-    const latestTvl = tvlHistory[tvlHistory.length - 1].totalLiquidityUSD;
-    const ratio = currentMcap / latestTvl;
-    if (ratio < 0.85 || ratio > 1.15) {
-      return { rows: 0, error: `TVL/mcap divergence (ratio=${ratio.toFixed(3)}), CoinGecko also unavailable` };
-    }
+  const latestTvl = tvlHistory[tvlHistory.length - 1].totalLiquidityUSD;
+  if (typeof currentMcap !== "number" || !Number.isFinite(currentMcap) || currentMcap <= 0 ||
+      !Number.isFinite(latestTvl) || latestTvl <= 0) {
+    return { rows: 0, error: "TVL/mcap equivalence unavailable, CoinGecko also unavailable" };
+  }
+  const ratio = currentMcap / latestTvl;
+  if (ratio < 0.85 || ratio > 1.15) {
+    return { rows: 0, error: `TVL/mcap divergence (ratio=${ratio.toFixed(3)}), CoinGecko also unavailable` };
   }
 
   let prices: { timestamp: number; price: number }[] = [];
@@ -763,7 +770,7 @@ async function backfillCommodity(
   const stmts: D1PreparedStatement[] = [];
   for (const point of tvlHistory) {
     const mcap = point.totalLiquidityUSD;
-    if (mcap <= 0) continue;
+    if (!Number.isFinite(mcap) || mcap <= 0) continue;
     const snapshotDate = bucketUnixSecondsToUtcDay(point.date);
     const price = findPrice(point.date);
     if (!isWithinBackfillWindow(snapshotDate, config.window)) continue;
@@ -933,7 +940,7 @@ async function executeBackfillSupplyHistory(
     }
 
     // Commodity tokens: backfill from CoinGecko market_chart (primary) or protocol TVL (fallback)
-    const isCommodity = meta.flags.pegCurrency === "GOLD" || meta.flags.pegCurrency === "SILVER";
+    const isCommodity = isCommodityPeg(meta.flags.pegCurrency);
     if (isCommodity && meta.geckoId) {
       await runCoinGeckoMarketChartBackfill(meta, "commodity backfill failed");
       continue;
@@ -987,8 +994,13 @@ async function executeBackfillSupplyHistory(
       skipped.push(meta.symbol);
       continue;
     }
+    const needsValuation = needsConversion && tokens.some((entry) => {
+      const supply = getCirculatingRawOrNull(entry);
+      return supply != null && supply > 0 &&
+        isWithinBackfillWindow(bucketUnixSecondsToUtcDay(entry.date), supplyBackfillWindow);
+    });
 
-    if (needsConversion && historicalPrices.length === 0) {
+    if (needsValuation && historicalPrices.length === 0) {
       const windowedTokens = tokens.filter((entry) =>
         isWithinBackfillWindow(bucketUnixSecondsToUtcDay(entry.date), supplyBackfillWindow),
       );
@@ -1002,21 +1014,21 @@ async function executeBackfillSupplyHistory(
     // For non-USD coins: require historical price data by default.
     // Optional emergency fallback can use current price for only a short recent window.
     const fallbackPrice = needsConversion && detail?.price ? detail.price : null;
-    if (needsConversion && historicalPrices.length === 0) {
+    if (needsValuation && historicalPrices.length === 0) {
       if (!allowConstantPriceFallback) {
         errors.push(
           `${meta.symbol}: non-USD coin missing historical prices (set allow-constant-price-fallback=true for emergency short-window fallback)`,
         );
-        continue;
-      }
-      if (!fallbackPrice) {
+      } else if (!fallbackPrice) {
         errors.push(`${meta.symbol}: non-USD coin missing historical prices and fallback price`);
-        continue;
+      } else {
+        const reason = !geckoId ? "no geckoId" : "price API returned no data";
+        logWorkerEventArgs("api", "warn",
+          `[backfill] ${meta.symbol}: ${reason}, using emergency constant fallback price $${fallbackPrice} for recent window only`,
+        );
       }
-      const reason = !geckoId ? "no geckoId" : "price API returned no data";
-      logWorkerEventArgs("api", "warn",
-        `[backfill] ${meta.symbol}: ${reason}, using emergency constant fallback price $${fallbackPrice} for recent window only`,
-      );
+      // Do not skip the coin: admitted zero buckets still need no valuation.
+      // The bucket loop withholds unpriceable positives while preserving those zeros.
     }
 
     const priceBySnapshotDate = new Map<number, number>();
@@ -1054,7 +1066,7 @@ async function executeBackfillSupplyHistory(
       // non-USD token history is native units, so the conversion below remains
       // intentional. List-endpoint circulating values are already USD.
       const rawSum = getCirculatingRawOrNull(entry);
-      if (rawSum === null || rawSum <= 0) continue;
+      if (rawSum === null || rawSum < 0) continue;
 
       // Floor to UTC midnight
       const snapshotDate = bucketUnixSecondsToUtcDay(entry.date);
@@ -1062,7 +1074,10 @@ async function executeBackfillSupplyHistory(
       let marketCapUsd: number;
       let price = findHistoricalPrice(snapshotDate);
 
-      if (needsConversion) {
+      if (rawSum === 0) {
+        // Observed zero needs no valuation, including native non-USD history.
+        marketCapUsd = 0;
+      } else if (needsConversion) {
         // Non-USD: multiply native supply by USD price to get market cap
         if (price == null && allowConstantPriceFallback && fallbackPrice && entry.date >= fallbackWindowStart) {
           price = fallbackPrice;

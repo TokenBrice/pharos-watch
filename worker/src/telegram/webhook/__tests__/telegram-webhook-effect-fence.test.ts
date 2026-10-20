@@ -15,6 +15,7 @@ import { parseStoredCommandSelectionIntent } from "../../store/telegram-webhook-
 import { clearPendingDisambiguation } from "../../store/telegram-webhook-store";
 import { resumeStoredPendingClearIntent } from "../telegram-webhook-pending-gate";
 import {
+  fetchSpy,
   handleTelegramWebhook,
   makeWebhookRequest,
   resetTelegramWebhookTest,
@@ -246,6 +247,71 @@ describe("TelegramWebhookEffectFence", () => {
     expect(sqlite.prepare("SELECT effect_state FROM telegram_processed_updates WHERE update_id = 4").get())
       .toEqual({ effect_state: "execution_unknown" });
   });
+
+  it.each(["accepted", "uncertain"] as const)(
+    "does not resend an %s invalid-selection reminder when terminal markers fail",
+    async (sendOutcome) => {
+      resetTelegramWebhookTest();
+      const { sqlite, db } = createLatestSchemaSqlite();
+      fixtures.push(sqlite);
+      await handleTelegramWebhook(
+        db,
+        makeWebhookRequest(42, "/subscribe dews USDF", "test-secret", { updateId: 28 }),
+        "test-secret",
+        "bot-token",
+      );
+      const pendingBefore = sqlite.prepare(
+        "SELECT * FROM telegram_pending_disambiguation WHERE chat_id = '42'",
+      ).get();
+      expect(pendingBefore).toMatchObject({ action_type: "subscribe", initiator_user_id: "999" });
+      const interruptedDb = createSqliteD1(sqlite, {
+        onRun(sql) {
+          if (sql.includes("SET status = 'processed'") || sql.includes("SET status = 'failed'")) {
+            throw new Error("D1_ERROR: terminal marker unavailable");
+          }
+        },
+      });
+      fetchSpy.mockClear();
+      const sendMarkers: unknown[] = [];
+      fetchSpy.mockImplementation(async (url) => {
+        if (String(url).endsWith("/sendMessage")) {
+          sendMarkers.push(sqlite.prepare(
+            "SELECT effect_state, effect_started_at FROM telegram_processed_updates WHERE update_id = 29",
+          ).get());
+          if (sendOutcome === "uncertain") throw new Error("Connection lost after sending request");
+        }
+        return new Response(JSON.stringify({ ok: true, result: { message_id: 1 } }));
+      });
+
+      const interrupted = await handleTelegramWebhook(
+        interruptedDb,
+        makeWebhookRequest(42, "1.5", "test-secret", { updateId: 29 }),
+        "test-secret",
+        "bot-token",
+      );
+      expect(interrupted.status).toBe(500);
+      expect(sendMarkers).toEqual([{ effect_state: "started", effect_started_at: expect.any(Number) }]);
+      expect(sqlite.prepare("SELECT effect_state FROM telegram_processed_updates WHERE update_id = 29").get())
+        .toEqual({ effect_state: "started" });
+      sqlite.prepare("UPDATE telegram_processed_updates SET received_at = ? WHERE update_id = 29")
+        .run(Math.floor(Date.now() / 1000) - 600);
+
+      const duplicate = await handleTelegramWebhook(
+        db,
+        makeWebhookRequest(42, "1.5", "test-secret", { updateId: 29 }),
+        "test-secret",
+        "bot-token",
+      );
+      expect(duplicate.status).toBe(200);
+      expect(fetchSpy.mock.calls.filter(([url]) => String(url).endsWith("/sendMessage"))).toHaveLength(1);
+      expect(sqlite.prepare("SELECT effect_state FROM telegram_processed_updates WHERE update_id = 29").get())
+        .toEqual({ effect_state: "execution_unknown" });
+      expect(sqlite.prepare("SELECT * FROM telegram_pending_disambiguation WHERE chat_id = '42'").get())
+        .toEqual(pendingBefore);
+      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_subscriptions WHERE chat_id = '42'").get())
+        .toEqual({ count: 0 });
+    },
+  );
 
   it("rejects non-finite intent values and quarantines corrupt normalized payloads", async () => {
     const { sqlite, db } = createFixture();

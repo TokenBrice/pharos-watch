@@ -62,6 +62,7 @@ describe("normalizeDefiLlamaDetailBody", () => {
       price: 1.25,
       tokens: [
         {
+          date: 1_700_000_000,
           circulating: {
             peggedEUR: 80,
           },
@@ -77,6 +78,7 @@ describe("normalizeDefiLlamaDetailBody", () => {
       price: 1.25,
       tokens: [
         {
+          date: 1_700_000_000,
           totalCirculating: {
             peggedEUR: 80,
           },
@@ -107,6 +109,7 @@ describe("normalizeDefiLlamaDetailBody", () => {
       price: 0.99,
       tokens: [
         {
+          date: 1_700_000_000,
           circulating: { peggedUSD: 100 },
           totalCirculatingUSD: { peggedUSD: 100 },
         },
@@ -123,6 +126,7 @@ describe("normalizeDefiLlamaDetailBody", () => {
       price: 0.99,
       tokens: [
         {
+          date: 1_700_000_000,
           totalCirculatingUSD: { peggedUSD: 100 },
           totalCirculating: { peggedUSD: 100 },
           circulating: { peggedUSD: 100 },
@@ -131,7 +135,7 @@ describe("normalizeDefiLlamaDetailBody", () => {
     });
   });
 
-  it.each(["circulating", "totalCirculating"])("fills missing USD totals from %s and the detail price", (field) => {
+  it.each(["circulating", "totalCirculating"])("preserves native-only USD history from %s despite today's depeg", (field) => {
     const body = JSON.stringify({
       price: 0.99,
       tokens: [
@@ -146,12 +150,15 @@ describe("normalizeDefiLlamaDetailBody", () => {
       date: 1_700_000_000 + index * 86_400,
       [field]: { peggedUSD: supply },
       totalCirculating: { peggedUSD: supply },
-      totalCirculatingUSD: { peggedUSD: supply * 0.99 },
     })));
+    const repriced = JSON.parse(normalizeDefiLlamaDetailBody(
+      JSON.stringify({ ...JSON.parse(body), price: 0.5 }), { flags: { pegCurrency: "USD" } },
+    ));
+    expect(repriced.tokens).toEqual(normalized.tokens);
   });
 
   it.each([undefined, 0, "1"])("does not invent USD totals with invalid price %s", (price) => {
-    const body = JSON.stringify({ price, tokens: [{ circulating: { peggedUSD: 100 } }] });
+    const body = JSON.stringify({ price, tokens: [{ date: 1_700_000_000, circulating: { peggedUSD: 100 } }] });
     const normalized = JSON.parse(normalizeDefiLlamaDetailBody(body, { flags: { pegCurrency: "USD" } }));
     expect(normalized.tokens[0].totalCirculatingUSD).toBeUndefined();
   });
@@ -159,7 +166,7 @@ describe("normalizeDefiLlamaDetailBody", () => {
   it("preserves explicit zero USD totals", () => {
     const body = JSON.stringify({
       price: 0.99,
-      tokens: [{ circulating: { peggedUSD: 100 }, totalCirculatingUSD: { peggedUSD: 0 } }],
+      tokens: [{ date: 1_700_000_000, circulating: { peggedUSD: 100 }, totalCirculatingUSD: { peggedUSD: 0 } }],
     });
     const normalized = JSON.parse(normalizeDefiLlamaDetailBody(body, { flags: { pegCurrency: "USD" } }));
     expect(normalized.tokens[0].totalCirculatingUSD).toEqual({ peggedUSD: 0 });
@@ -171,6 +178,7 @@ describe("normalizeDefiLlamaDetailBody", () => {
       price: 0.99,
       tokens: [
         {
+          date: 1_700_000_000,
           circulating: { peggedUSD: 100 },
           totalCirculatingUSD: { peggedUSD: 100 },
         },
@@ -194,6 +202,7 @@ describe("normalizeDefiLlamaDetailBody", () => {
       address: "0x57ab1e0003f623289cd798b1824be09a793e4bec",
       tokens: [
         {
+          date: 1_700_000_000,
           totalCirculatingUSD: { peggedUSD: 100 },
           totalCirculating: { peggedUSD: 100 },
           circulating: { peggedUSD: 100 },
@@ -202,12 +211,14 @@ describe("normalizeDefiLlamaDetailBody", () => {
     });
   });
 
-  it("preserves non-USD USD-only history without inventing native units from today's quote", () => {
+  it.each(["USD", "EUR"])("preserves %s USD-only history without inventing native units from today's quote", (pegCurrency) => {
+    const pegType = `pegged${pegCurrency}`;
     const body = JSON.stringify({
       price: 2,
       tokens: [
         {
-          totalCirculatingUSD: { peggedEUR: 120 },
+          date: 1_700_000_000,
+          totalCirculatingUSD: { [pegType]: 120 },
         },
       ],
     });
@@ -215,14 +226,15 @@ describe("normalizeDefiLlamaDetailBody", () => {
     expect(
       JSON.parse(
         normalizeDefiLlamaDetailBody(body, {
-          flags: { pegCurrency: "EUR" },
+          flags: { pegCurrency },
         }),
       ),
     ).toEqual({
       price: 2,
       tokens: [
         {
-          totalCirculatingUSD: { peggedEUR: 120 },
+          date: 1_700_000_000,
+          totalCirculatingUSD: { [pegType]: 120 },
         },
       ],
     });
@@ -236,7 +248,7 @@ describe("normalizeDefiLlamaDetailBody", () => {
       pegMechanism: "fiat-backed",
       currentChainBalances: { Ethereum: { peggedUSD: 50 } },
       chainBalances: { Ethereum: { tokens: [{ date: 1, circulating: { peggedUSD: 100 } }] } },
-      tokens: [{ totalCirculating: { peggedUSD: 100 } }],
+      tokens: [{ date: 1_700_000_000, totalCirculating: { peggedUSD: 100 } }],
     });
 
     const normalized = JSON.parse(
@@ -248,16 +260,10 @@ describe("normalizeDefiLlamaDetailBody", () => {
     expect(normalized.currentChainBalances).toEqual({ Ethereum: { peggedUSD: 50 } });
   });
 
-  it("strips chainBalances even when the payload has no tokens array", () => {
-    const body = JSON.stringify({
-      price: 1,
-      chainBalances: { Ethereum: { tokens: [] } },
-    });
-
-    const normalized = JSON.parse(normalizeDefiLlamaDetailBody(body, undefined)) as Record<string, unknown>;
-
-    expect(normalized.chainBalances).toBeUndefined();
-    expect(normalized.price).toBe(1);
+  it("rejects missing required history even when optional passthrough data exists", () => {
+    expect(() => normalizeDefiLlamaDetailBody(JSON.stringify({
+      price: 1, chainBalances: { Ethereum: { tokens: [] } },
+    }), undefined)).toThrow("Invalid DefiLlama detail history");
   });
 });
 
@@ -267,7 +273,7 @@ function makeDetailHelpers(): DetailResponseHelpers {
     createFreshResponseFromBody: vi.fn((body: string) => new Response(body)),
     createFreshResponseFromTokens: vi.fn((tokens) => new Response(JSON.stringify({ tokens }))),
     createFallbackResponseFromTokens: vi.fn((tokens) => new Response(JSON.stringify({ tokens }))),
-    createResponseFromResolvedTokens: vi.fn((history) => new Response(JSON.stringify({ tokens: history.tokens }))),
+    createResponseFromResolvedTokens: vi.fn((history, body) => new Response(JSON.stringify({ ...body, tokens: history.tokens }))),
     resolveTokensWithSupplyHistoryFallback: vi.fn(async (tokens) => ({ tokens, observedAt: null, fallback: false })),
     staleCacheOrError: vi.fn((status: number, message: string) =>
       new Response(JSON.stringify({ error: message }), { status })),
@@ -326,12 +332,34 @@ describe("DefiLlama detail bounded materialization", () => {
       date: now,
       circulating: { peggedUSD: 100 },
       totalCirculating: { peggedUSD: 100 },
-      totalCirculatingUSD: { peggedUSD: 100 },
     }]);
     expect(detailCircuitWrites(db)).toEqual([
       expect.objectContaining({ state: "half-open" }),
       expect.objectContaining({ state: "closed", consecutiveFailures: 0, openedAt: null }),
     ]);
+  });
+
+  it.each([
+    { tokens: "error" },
+    {},
+    { tokens: [{ circulating: { peggedUSD: 100 } }] },
+    { tokens: [{ date: "yesterday", circulating: { peggedUSD: 100 } }] },
+    { tokens: [{ date: 1_700_000_000, circulating: { peggedUSD: -1 } }] },
+    { tokens: [{ date: 1_700_000_000, totalCirculatingUSD: { peggedUSD: "100" } }] },
+    { tokens: [{ date: 1_700_000_000, totalCirculatingUSD: {} }] },
+    { tokens: [{ date: 1_700_000_000 }] },
+  ])("rejects malformed required history before success or publication: %j", async (upstream) => {
+    const db = mockD1([{ match: "cache", rows: [] }]);
+    mockFetch([{ match: "https://stablecoins.llama.fi/stablecoin/1", body: upstream }]);
+    const detail = makeDetailHelpers();
+    const response = await handleDefiLlamaDetail({
+      db, stablecoinId: "usdt-tether", llamaId: "1", meta: undefined,
+    }, detail);
+    expect(response.status).toBe(502);
+    expect(detail.trySupplyHistoryFallback).toHaveBeenCalledWith("defillama-parse-failure");
+    expect(detail.createFreshResponseFromBody).not.toHaveBeenCalled();
+    expect(detail.createResponseFromResolvedTokens).not.toHaveBeenCalled();
+    expect(detailCircuitWrites(db)).toEqual([expect.objectContaining({ consecutiveFailures: 1 })]);
   });
 
   it.each(["declared", "streamed"])("fails closed and cancels %s bodies beyond the detail-specific cap", async (mode) => {
@@ -364,7 +392,7 @@ describe("DefiLlama detail bounded materialization", () => {
     const db = mockD1([{ match: "cache", rows: [] }]);
     const fetch = mockFetch([
       { match: "https://stablecoins.llama.fi/stablecoin/missing", status: 404, body: "Not Found" },
-      { match: "https://stablecoins.llama.fi/stablecoin/118", body: { tokens: [], price: 1 } },
+      { match: "https://stablecoins.llama.fi/stablecoin/118", body: { tokens: [{ date: Math.floor(Date.now() / 1000), circulating: { peggedUSD: 100 } }], price: 1 } },
     ]);
     for (let index = 0; index < 4; index++) {
       const response = await handleDefiLlamaDetail({
@@ -385,7 +413,7 @@ describe("DefiLlama detail bounded materialization", () => {
     const db = mockD1([{ match: "cache", rows: [] }]);
     const fetch = mockFetch([
       { match: "https://stablecoins.llama.fi/stablecoin/1", respond: () => new Response("{") },
-      { match: "https://stablecoins.llama.fi/stablecoin/118", body: { tokens: [], price: 1 } },
+      { match: "https://stablecoins.llama.fi/stablecoin/118", body: { tokens: [{ date: Math.floor(Date.now() / 1000), circulating: { peggedUSD: 100 } }], price: 1 } },
     ], { strictUrl: true });
     const invalid = await handleDefiLlamaDetail({
       db, stablecoinId: "usdt-tether", llamaId: "1", meta: undefined,
@@ -407,7 +435,9 @@ describe("DefiLlama detail bounded materialization", () => {
     const firstBody = new ReadableStream<Uint8Array>({
       start(controller) {
         finishBody = () => {
-          controller.enqueue(new TextEncoder().encode('{"tokens":[],"price":1}'));
+          controller.enqueue(new TextEncoder().encode(JSON.stringify({
+            tokens: [{ date: Math.floor(Date.now() / 1000), circulating: { peggedUSD: 100 } }], price: 1,
+          })));
           controller.close();
         };
       },
@@ -419,7 +449,7 @@ describe("DefiLlama detail bounded materialization", () => {
         match: "https://stablecoins.llama.fi/stablecoin/1",
         respond: () => { firstFetched(); return new Response(firstBody); },
       },
-      { match: "https://stablecoins.llama.fi/stablecoin/2", body: { tokens: [], price: 1 } },
+      { match: "https://stablecoins.llama.fi/stablecoin/2", body: { tokens: [{ date: Math.floor(Date.now() / 1000), circulating: { peggedUSD: 100 } }], price: 1 } },
     ]);
     const first = handleDefiLlamaDetail({
       db, stablecoinId: "usdt-tether", llamaId: "1", meta: undefined,
@@ -445,8 +475,8 @@ describe("DefiLlama detail bounded materialization", () => {
       { match: "INSERT", rows: [], delayMs: 2 * DETAIL_UPSTREAM_TIMEOUT_MS },
     ]);
     const fetch = mockFetch([
-      { match: "https://stablecoins.llama.fi/stablecoin/1", body: { tokens: [], price: 1 } },
-      { match: "https://stablecoins.llama.fi/stablecoin/118", body: { tokens: [], price: 1 } },
+      { match: "https://stablecoins.llama.fi/stablecoin/1", body: { tokens: [{ date: Math.floor(Date.now() / 1000), circulating: { peggedUSD: 100 } }], price: 1 } },
+      { match: "https://stablecoins.llama.fi/stablecoin/118", body: { tokens: [{ date: Math.floor(Date.now() / 1000), circulating: { peggedUSD: 100 } }], price: 1 } },
     ]);
     const first = handleDefiLlamaDetail({
       db, stablecoinId: "usdt-tether", llamaId: "1", meta: undefined,

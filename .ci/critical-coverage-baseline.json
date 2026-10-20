@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-19",
+  "generatedAt": "2026-10-20",
   "files": {
     "functions/lib/pages-proxy-harness.ts": 100,
     "functions/lib/proxy-paths.ts": 100,
@@ -26,6 +26,7 @@
     "shared/lib/safety-score-v9-input-identity.ts": 100,
     "shared/lib/safety-score-v9-research.ts": 100,
     "shared/lib/safety-score-v9-supply-attribution-journal.ts": 100,
+    "shared/lib/status-dataset-freshness.ts": 100,
     "shared/lib/yield-benchmark-freshness.ts": 100,
     "shared/lib/yield-scoring.ts": 100,
     "worker/src/api/safety-score-history-v2.ts": 100,

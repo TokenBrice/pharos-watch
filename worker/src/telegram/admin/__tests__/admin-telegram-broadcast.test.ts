@@ -4,6 +4,7 @@ import { handleAdminTelegramBroadcast } from "../admin-telegram-broadcast";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import { TELEGRAM_ALERT_TYPES } from "@shared/types/status";
 
 let fetchSpy: ReturnType<typeof mockFetch>;
 let telegramOutcomes: Response[];
@@ -107,6 +108,22 @@ describe("handleAdminTelegramBroadcast canary gate", () => {
     expect(await global.json()).toMatchObject({ targetChatCount: 1, sample: ["10"] });
     expect(await deliverable.json()).toMatchObject({ targetChatCount: 2, sample: ["10", "20"] });
   });
+  it.each(TELEGRAM_ALERT_TYPES)("includes %s direct and global follows without inactive watchers", async (family) => {
+    const { sqlite, db } = latestDb();
+    sqlite.prepare(`INSERT INTO telegram_subscribers (chat_id, global_alert_${family}, created_at, last_active_at)
+      VALUES ('10', 1, 1, 1), ('20', 0, 1, 1), ('30', 0, 1, 1)`).run();
+    sqlite.prepare(`INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, alert_${family})
+      VALUES ('20', 'usdc-circle', 1), ('30', 'usdc-circle', 0)`).run();
+    for (const scope of ["global-subscribers", "deliverable-watchers"] as const) {
+      const response = await handleAdminTelegramBroadcast({
+        db, request: request({ messageHtml: "ok", scope, dryRun: true }), trustedAdmin: true,
+      });
+      expect(await readJsonResponse(response, 200)).toMatchObject(scope === "global-subscribers"
+        ? { targetChatCount: 1, sample: ["10"] }
+        : { targetChatCount: 2, sample: ["10", "20"] });
+    }
+  });
+
 
   it("dry-run reports the mandatory private canary and material TTL reserve", async () => {
     const { sqlite, db } = latestDb();
@@ -245,6 +262,49 @@ describe("handleAdminTelegramBroadcast canary gate", () => {
       expect.objectContaining({ chat_id: "20", source_type: "admin_broadcast" }),
       expect.objectContaining({ chat_id: "30", source_type: "admin_broadcast" }),
     ]);
+  });
+
+  it("canaries independently valid long multiline HTML before queueing identical versioned fleet chunks", async () => {
+    const { sqlite, db } = latestDb();
+    sqlite.prepare(
+      "INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at) VALUES ('20', 1, 1)",
+    ).run();
+    const open = '<blockquote expandable><u><a href="https://pharos.watch/?a=1&amp;b=2">';
+    const close = "</a></u></blockquote>";
+    const line = "Maintenance &amp; recovery \u{1F680}\n\n";
+    const messageHtml = `${open}${line.repeat(240)}${close}`;
+    const canaryChunks: string[] = [];
+    fetchSpy.mockImplementation(async (_input, init) => {
+      expect(sqlite.prepare("SELECT COUNT(*) AS n FROM telegram_pending_alerts").get()).toMatchObject({ n: 0 });
+      const sent = JSON.parse(String(init?.body)) as { text: string; chat_id: string; disable_notification: boolean };
+      expect(sent).toMatchObject({ chat_id: "10", disable_notification: true });
+      expect(sent.text.length).toBeLessThanOrEqual(4000);
+      expect(sent.text.startsWith(open)).toBe(true);
+      expect(sent.text.endsWith(close)).toBe(true);
+      const stack: string[] = [];
+      for (const tag of sent.text.matchAll(/<(\/?)([a-z-]+)[^>]*>/g)) {
+        if (tag[1]) expect(stack.pop()).toBe(tag[2]);
+        else stack.push(tag[2]);
+      }
+      expect(stack).toEqual([]);
+      canaryChunks.push(sent.text);
+      return new Response(JSON.stringify({ ok: true }), { status: 200 });
+    });
+    const response = await handleAdminTelegramBroadcast({
+      db, request: request({ messageHtml, scope: "all", dryRun: false, canaryChatId: "10" }),
+      trustedAdmin: true, telegramBotToken: "token",
+    });
+    expect(await readJsonResponse(response, 200)).toMatchObject({
+      enqueued: canaryChunks.length, canary: { chunksSent: canaryChunks.length },
+    });
+    expect(canaryChunks.length).toBeGreaterThan(1);
+    expect(canaryChunks.map((chunk) => chunk.replace(/<[^>]*>/g, "").replace(/&amp;/g, "&")).join(""))
+      .toBe("Maintenance & recovery \u{1F680}\n\n".repeat(240));
+    const queued = sqlite.prepare(
+      "SELECT message_html, dedupe_key FROM telegram_pending_alerts WHERE chat_id = '20' ORDER BY chunk_index",
+    ).all();
+    expect(queued.map((row) => row.message_html)).toEqual(canaryChunks);
+    expect(queued.every((row) => String(row.dedupe_key).startsWith("20:v4:"))).toBe(true);
   });
 
   it("replays an idempotent live response without a second canary or duplicate fanout", async () => {

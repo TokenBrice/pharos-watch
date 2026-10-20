@@ -9,7 +9,7 @@ import { buildNotFoundMessage } from "../webhook/telegram-webhook-messages";
 import { PENDING_OWNERSHIP_CONFLICT_MESSAGE } from "../store/telegram-webhook-store";
 import type { WebhookCommandHandler } from "./context";
 import {
-  BULK_CONFIRM_REPLY_MARKUP,
+  buildBulkConfirmReplyMarkup,
   buildBulkConfirmMessage,
   dedupePresetIds,
   buildTelegramActionContext,
@@ -66,7 +66,7 @@ export const handleSubscribe: WebhookCommandHandler = async (ctx, args) => {
     }
     await ctx.replyToChatWithMarkup(
       buildBulkConfirmMessage("subscribe", subscribableCoinCount(), [...parsed.alertTypes], []),
-      { replyMarkup: BULK_CONFIRM_REPLY_MARKUP },
+      { replyMarkup: buildBulkConfirmReplyMarkup(persisted) },
     );
     return;
   }

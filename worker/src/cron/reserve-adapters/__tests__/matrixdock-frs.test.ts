@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { adaptMatrixdockFrsState } from "../matrixdock-frs";
+import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "@shared/lib/live-reserve-freshness";
+import { LIVE_RESERVE_FRESHNESS_SEC } from "../../../lib/live-reserves/store-shared";
 
 const PARAMS = {
   label: "Physical silver bars (LBMA Good Delivery, Asian vault custody)",
@@ -41,6 +43,47 @@ describe("adaptMatrixdockFrsState", () => {
     expect(result.metadata?.freshnessMode).toBe("not-applicable");
     expect(result.metadata?.observedBlock).toEqual({ chain: "ethereum", number: 12_345, timestamp: NOW });
     expect(result.warnings).toBeUndefined();
+  });
+
+  it.each([
+    ["stale", NOW - LIVE_RESERVE_FRESHNESS_SEC - 1],
+    ["future", NOW + MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC + 1],
+    ["missing", Number.NaN],
+  ] as const)("withholds the global observation for a %s Sui clock", (_label, suiCheckpointTimestamp) => {
+    expect(() => adaptMatrixdockFrsState({ ...STATE, suiCheckpointTimestamp }, PARAMS))
+      .toThrow("Sui checkpoint timestamp");
+  });
+
+  it("uses the tighter coin age budget rather than the reserve-feed ceiling", () => {
+    expect(() => adaptMatrixdockFrsState({
+      ...STATE, suiCheckpointTimestamp: NOW - 3601,
+    }, PARAMS, 3600)).toThrow("Sui checkpoint timestamp");
+    expect(adaptMatrixdockFrsState({
+      ...STATE, suiCheckpointTimestamp: NOW - 3600,
+    }, PARAMS, 3600).metadata?.supplyTokens).toBeCloseTo(73_032.046081582, 6);
+  });
+
+  it("admits six-hour cross-chain skew and rejects a greater skew", () => {
+    const coherent = { ...STATE, suiCheckpointTimestamp: NOW - 6 * 3600 };
+    expect(adaptMatrixdockFrsState(coherent, PARAMS).metadata?.collateralizationRatio)
+      .toBeCloseTo(0.998561644, 8);
+    expect(() => adaptMatrixdockFrsState({
+      ...coherent, suiCheckpointTimestamp: coherent.suiCheckpointTimestamp - 1,
+    }, PARAMS)).toThrow("Ethereum/Sui observation skew");
+    expect(() => adaptMatrixdockFrsState({
+      ...STATE, observedBlock: { ...STATE.observedBlock, timestamp: NOW - 6 * 3600 - 1 },
+    }, PARAMS)).toThrow("Ethereum/Sui observation skew");
+  });
+
+  it("admits the latest-state age boundary and keeps reserve-round age separate", () => {
+    const boundary = NOW - LIVE_RESERVE_FRESHNESS_SEC;
+    const result = adaptMatrixdockFrsState({
+      ...STATE, suiCheckpointTimestamp: boundary,
+      observedBlock: { ...STATE.observedBlock, timestamp: boundary },
+      feedUpdatedAt: NOW - 60 * 86400 - 1,
+    }, PARAMS);
+    expect(result.metadata?.supplyTokens).toBeCloseTo(73_032.046081582, 6);
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "stale-reserve-feed" }));
   });
 
   it("degrades when the reserve unit diverges from ozPerToken × supply", () => {

@@ -112,6 +112,13 @@ function runEligibilityPhase(
     const exclusion = evaluateExclusions(row, input, selectedRow);
     if (exclusion) {
       excluded.push(exclusion);
+      if (exclusion.reason === "insufficient-control-evidence") {
+        skippedForCoverage.push({
+          id: row.id,
+          symbol: row.symbol,
+          missingSignals: ["insufficient-control-evidence"],
+        });
+      }
       continue;
     }
     const coverage = hasRequiredSignals(row, input.profile, selectedRow);

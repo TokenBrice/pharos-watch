@@ -43,7 +43,7 @@ function MiniSparkline({ values }: { values: (number | null)[] }) {
     fill={false}
     decorative
     positiveColor={trending ? "var(--p-green-500, #22c55e)" : "var(--p-red-500, #ef4444)"}
-    ariaLabel="7-day circulating supply trend"
+    ariaLabel="7-day USD market-cap trend"
     className="mr-1"
     emptyContent={null}
   />;

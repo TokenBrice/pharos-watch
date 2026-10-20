@@ -14,6 +14,13 @@ import {
 } from "../methodology-shared";
 import { PRICING_PIPELINE_SECTION_CONTENT } from "@/lib/methodology-content";
 import { METHODOLOGY_SECTION_ACCENT_CLASSES, CONFIDENCE_LEVEL_COLORS, METHODOLOGY_TABLE_ACCENT_CLASSES } from "@shared/lib/classification";
+import { PRICING_SOURCE_REGISTRY, type PricingSourceKey } from "@shared/lib/pricing-source-registry";
+
+type AddressProviderAvailability = { key: PricingSourceKey; enabled: boolean };
+// Public inventory only; runtime admission remains owned by the Worker resolver/config.
+const ADDRESS_PROVIDER_AVAILABILITY: readonly AddressProviderAvailability[] = [
+  { key: "coingecko-onchain-address", enabled: true },
+];
 
 const CONSENSUS_EXAMPLE_SOURCES = [
   { label: "CoinGecko", price: 1.0001, weight: 2 },
@@ -29,7 +36,11 @@ if (consensusExampleMedian === null) {
 }
 const CONSENSUS_EXAMPLE_MEDIAN = consensusExampleMedian.toFixed(5);
 
-export function PricingPipelineMethodologySection() {
+export function PricingPipelineMethodologySection({
+  addressProviderAvailability = ADDRESS_PROVIDER_AVAILABILITY,
+}: {
+  addressProviderAvailability?: readonly AddressProviderAvailability[];
+} = {}) {
   return (
     <MethodologySectionShell
       id={PRICING_PIPELINE_SECTION_CONTENT.id}
@@ -83,9 +94,9 @@ export function PricingPipelineMethodologySection() {
           and are attributed only to configured canonical stablecoin IDs.
           The primary promoted DEX bridge now spans Fluid, Balancer, Curve, Uniswap V3, Uniswap V4, Raydium, Orca,
           Meteora, PancakeSwap, Aerodrome Slipstream, and Velodrome Slipstream, with structured source-filter telemetry and DEX lane confidence
-          profiles attached when those lanes participate. CoinGecko Onchain is the retained exact-address
-          augmentation lane for assets with missing prices or below-target source depth; the retired DexScreener,
-          DexPaprika, Alchemy, Moralis, and Birdeye address adapters no longer participate. DEX bridge and address-provider identity are canonical-only at runtime, so
+          profiles attached when those lanes participate. CoinGecko Onchain is the sole enabled exact-address
+          augmentation lane, key-gated and allowlisted, for assets with missing prices or below-target source depth.
+          DexScreener exact-pool fallback remains a separate live enrichment path. DEX bridge and address-provider identity are canonical-only at runtime, so
           addressed unknown tokens are dropped instead of being reinterpreted by symbol. Reviewed provider-specific
           deployment narrowing applies only while the exact address remains in current metadata; stale configuration
           produces no target, and eligible exact reviewed CoinGecko Onchain overrides reserve one bounded network request
@@ -372,7 +383,14 @@ export function PricingPipelineMethodologySection() {
                 ["DEX pools", "1", "On-chain", "Aggregate DEX voice, withheld only when an overlapping protocol-level DEX bridge lane is admitted; the reviewed VUSD route may enter primary publication at the existing $250K UI floor while remaining soft and non-depeg-authoritative"],
                 ["Protocol DEX APIs", "2-3", "On-chain / pool-state API", "Primary-consensus protocol promotion currently supports Fluid, Balancer, Curve, Uniswap V3, Uniswap V4, Raydium, Orca, Meteora, PancakeSwap, Aerodrome Slipstream, and Velodrome Slipstream when the protocol lane survives registry, TVL, freshness, and corroboration gates."],
                 ["GeckoTerminal", "1", "On-chain", <>Pool-level cross-check for weak CG / DL-list soft-source outcomes (&ge;$10K TVL)</>],
-                ["Exact-address providers", "1", "Market / on-chain", "Optional targeted DexScreener, DexPaprika, CoinGecko Onchain, Alchemy Prices, Moralis, and Solana Birdeye quotes; currently disabled in production Worker config for quarter-hour sync headroom"],
+                ...PRICING_SOURCE_REGISTRY
+                  .filter(({ key }) => addressProviderAvailability.some((provider) => provider.key === key && provider.enabled))
+                  .map(({ label, defaultWeight }) => [
+                    label,
+                    String(defaultWeight),
+                    "Exact-address augmentation",
+                    "Key-gated and allowlisted; canonical deployments only, targeting missing prices or below-target source depth. Hourly corroboration plus quarter-hour refresh of missing/address-priced rows retains freshness, liquidity and request-budget gates. DexScreener exact-pool fallback is separate.",
+                  ]),
               ].map(([source, weight, type, notes]) => ({ id: String(source), cells: { source, weight, type, notes } }))}
             />
           </div>

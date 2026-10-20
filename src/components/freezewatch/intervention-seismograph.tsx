@@ -2,6 +2,8 @@
 
 import { useId, useMemo } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { QueryStateNotice } from "@/components/query-state-notice";
+import { resolveQueryViewState } from "@/lib/query-view-state";
 import { EVENT_CHART_COLORS, EVENT_LABELS } from "@shared/lib/classification";
 import { formatCompactCount } from "@shared/lib/format";
 import type { BlacklistSummaryResponse } from "@shared/types";
@@ -11,6 +13,8 @@ interface InterventionSeismographProps {
   stats: BlacklistSummaryResponse["stats"] | undefined;
   chart: BlacklistSummaryResponse["chart"] | undefined;
   isLoading: boolean;
+  error?: unknown;
+  onRetry?: () => void;
 }
 
 interface QuarterPoint {
@@ -84,11 +88,13 @@ export function buildQuarterPoints(stats: BlacklistSummaryResponse["stats"] | un
     }));
 }
 
-export function InterventionSeismograph({ stats, chart, isLoading }: InterventionSeismographProps) {
+export function InterventionSeismograph({ stats, chart, isLoading, error, onRetry }: InterventionSeismographProps) {
   const titleId = useId();
   const points = useMemo(() => buildQuarterPoints(stats), [stats]);
+  const hasData = stats != null && chart != null;
+  const state = resolveQueryViewState({ hasData, isLoading, error });
 
-  if (isLoading) {
+  if (state === "loading") {
     return (
       <section className="pharos-card-shell p-4 sm:p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -99,6 +105,14 @@ export function InterventionSeismograph({ stats, chart, isLoading }: Interventio
           <Skeleton className="h-10 w-44" />
         </div>
         <Skeleton className="mt-5 h-44 w-full rounded-xl" />
+      </section>
+    );
+  }
+
+  if (!hasData) {
+    return (
+      <section className="pharos-card-shell p-4 sm:p-5">
+        <QueryStateNotice state="unavailable" label="Intervention seismograph" onRetry={onRetry} />
       </section>
     );
   }
@@ -117,6 +131,9 @@ export function InterventionSeismograph({ stats, chart, isLoading }: Interventio
 
   return (
     <section aria-labelledby={titleId} className="pharos-card-shell p-4 animate-in fade-in duration-300 sm:p-5">
+      {state === "stale-with-data" ? (
+        <QueryStateNotice state={state} label="Intervention seismograph" onRetry={onRetry} />
+      ) : null}
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-1">
           <p className="pharos-label">Intervention seismograph</p>

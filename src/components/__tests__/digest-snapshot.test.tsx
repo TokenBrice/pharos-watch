@@ -152,6 +152,60 @@ describe("DigestSnapshot", () => {
     expect(screen.queryByText(/\+0\.00%/)).toBeNull();
   });
 
+  it.each([
+    ["unobserved", 0, { complete: false, observedCount: 0, unavailableCount: 2 }, null, "Not captured for this edition"],
+    // Currency labels follow the shared two-decimal compact formatter.
+    ["partial", 100e9, { complete: false, observedCount: 1, unavailableCount: 1 }, "$100.00B", "1/2 coins observed"],
+    ["legacy", 100e9, undefined, "$100.00B", "coverage unproven"],
+    ["observed zero", 0, { complete: true, observedCount: 2, unavailableCount: 0 }, "$0", "2/2 coins observed"],
+  ])("qualifies %s supply without inventing a complete total or delta", (_name, totalMcapUsd, supplyCoverage, amount, qualifier) => {
+    mockSnapshot({ totalMcapUsd, supplyCoverage, mcap7dDelta: 10e9 });
+    render(<DigestSnapshot date="2026-09-01" />);
+    const market = screen.getByText("Market Snapshot").closest("h3")!.parentElement!;
+    expect(market.textContent).toContain(qualifier);
+    if (amount) expect(market.textContent).toContain(amount);
+    else expect(market.textContent).not.toContain("$0");
+    expect(market.textContent).not.toContain("from yesterday");
+    if (!supplyCoverage?.complete) expect(market.textContent).not.toContain("Total mcap:");
+  });
+
+  it.each([
+    [{ coveredCoins: 1, totalCoins: 2, coveredMcapUsd: 100e9 }, 10e9, "11.11%"],
+    [undefined, 10e9, null],
+    [{ coveredCoins: 1, totalCoins: 2, coveredMcapUsd: 10e9 }, 10e9, null],
+    [{ coveredCoins: 0, totalCoins: 2, coveredMcapUsd: 0 }, 0, null],
+  ])("uses the matched-cohort seven-day denominator and withholds unproven percentages", (mcap7dDeltaCoverage, mcap7dDelta, percent) => {
+    mockSnapshot({ totalMcapUsd: 1e12, mcap7dDelta, mcap7dDeltaCoverage });
+    render(<DigestSnapshot date="2026-09-01" />);
+    const market = screen.getByText("Market Snapshot").closest("h3")!.parentElement!;
+    if (percent) expect(market.textContent).toContain(percent);
+    else expect(market.textContent).not.toContain("%");
+  });
+
+  it.each([
+    ["2026-08-29", "2026-09-01", true],
+    ["2026-08-24", "2026-08-30", true],
+    ["2026-08-29", "2026-09-01", false],
+    [null, null, true],
+  ])("labels only proven supply comparisons with their actual captured endpoints", (fromDate, toDate, supplyComparable) => {
+    const supplyCoverage = { complete: true, observedCount: 2, unavailableCount: 0, memberFingerprint: "a".repeat(64) };
+    useDigestSnapshotMock.mockReturnValue({
+      data: {
+        date: "2026-09-01-weekly",
+        inputData: { totalMcapUsd: 100e9, aggregateUniverse: "core-stablecoins-v1", supplyCoverage },
+        prevInputData: { totalMcapUsd: 90e9, aggregateUniverse: "core-stablecoins-v1", supplyCoverage },
+        comparison: fromDate ? { fromDate, toDate, supplyComparable } : null,
+        depegEvents: [], blacklistEvents: [],
+      },
+      isLoading: false, isError: false,
+    });
+    render(<DigestSnapshot date="2026-09-01-weekly" />);
+    const market = screen.getByText("Market Snapshot").closest("h3")!.parentElement!;
+    if (fromDate && supplyComparable) expect(market.textContent).toContain(`+$10.00B from ${fromDate} to ${toDate}`);
+    else expect(market.textContent).not.toContain(" from ");
+    expect(market.textContent).not.toContain("yesterday");
+  });
+
   it.each([null, 0])("renders a failed depeg read unavailable, not an observed %s or day-overlap count", (activeDepegCount) => {
     mockSnapshot({
       totalMcapUsd: 1e9, activeDepegCount, resolvedDepegCount: null,

@@ -130,7 +130,7 @@ export async function computeRawStatus(
   // budget applies to fetch phases, not these D1 reads; none is scheduled via
   // waitUntil.
   const [cronHealth, budgetOnlySurfaceResult, dataQuality, supplements, transitionsLast24h] = await Promise.all([
-    loadCronHealth(db, now),
+    loadCronHealth(db, now, { readNow: Math.floor(Date.now() / 1000) }),
     loadBudgetOnlySurfaceStatuses(db, now),
     getDataQuality(db, now, {
       blacklistMetrics: publicHealth.blacklistMetrics,

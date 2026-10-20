@@ -23,7 +23,14 @@ interface JsonRpcEnvelope<T> {
 interface JsonRpcResultPolicy<T> {
   acceptResult?: (value: unknown) => value is T;
   rejectedReason?: (value: unknown) => string;
+  /** Direct optional probes stop at a proven revert; ordinary calls retain provider failover. */
+  stopOnExecutionRevert?: boolean;
 }
+
+type JsonRpcOutcome<T> =
+  | { status: "data"; value: T }
+  | { status: "reverted" }
+  | { status: "unavailable" };
 
 export interface EvmRpcOptions {
   extraRpcUrls?: string[];
@@ -481,14 +488,14 @@ function describeRpcFailure(result: { response: Response } | null, rpcUrl: strin
   return `HTTP ${result.response.status}`;
 }
 
-async function fetchJsonRpcResult<T>(
+async function fetchJsonRpcOutcome<T>(
   urls: string[],
   method: string,
   params: unknown[],
   options?: EvmRpcOptions,
   policy?: JsonRpcResultPolicy<T>,
   chainId?: string,
-): Promise<T | null> {
+): Promise<JsonRpcOutcome<T>> {
   const configuredTimeoutMs = options?.timeoutMs ?? 10_000;
   const maxRetries = options?.maxRetries ?? 1;
   const failures: string[] = [];
@@ -549,6 +556,10 @@ async function fetchJsonRpcResult<T>(
         failures.push(`${rpcUrl}: RPC error ${body.error.code ?? ""} ${body.error.message ?? ""}`);
         if (options?.stopOnExecutionBudgetError &&
             body.error.code === -32000 && /\bout of gas\b/i.test(body.error.message ?? "")) break;
+        if (policy?.stopOnExecutionRevert && method === "eth_call" &&
+            (body.error.code === 3 || /\bexecution reverted\b/i.test(body.error.message ?? ""))) {
+          return { status: "reverted" };
+        }
         continue;
       }
       if (body.result == null) {
@@ -563,7 +574,7 @@ async function fetchJsonRpcResult<T>(
         continue;
       }
 
-      return body.result as T;
+      return { status: "data", value: body.result as T };
     } catch (err) {
       rethrowIfAborted(err, options?.signal);
       if (err instanceof FetchRequestNotStartedError) {
@@ -580,7 +591,19 @@ async function fetchJsonRpcResult<T>(
   if (failures.length > 0) {
     logWorkerEventArgs("lib", "warn", `[evm-rpc] ${method} failed across ${urls.length} RPCs: ${failures.join("; ")}`);
   }
-  return null;
+  return { status: "unavailable" };
+}
+
+async function fetchJsonRpcResult<T>(
+  urls: string[],
+  method: string,
+  params: unknown[],
+  options?: EvmRpcOptions,
+  policy?: JsonRpcResultPolicy<T>,
+  chainId?: string,
+): Promise<T | null> {
+  const outcome = await fetchJsonRpcOutcome(urls, method, params, options, policy, chainId);
+  return outcome.status === "data" ? outcome.value : null;
 }
 
 export function toBlockTag(blockNumberOrTag: number | "latest" | "finalized"): string {
@@ -600,6 +623,10 @@ function parseHexInteger(value: string | undefined): number | null {
   if (parsed == null) return null;
   const parsedNumber = Number(parsed);
   return Number.isFinite(parsedNumber) ? parsedNumber : null;
+}
+
+function isHexBytes(value: unknown): value is `0x${string}` {
+  return typeof value === "string" && value.length % 2 === 0 && /^0x[0-9a-fA-F]*$/.test(value);
 }
 
 export function isHexResult(value: string | null | undefined): value is `0x${string}` {
@@ -784,12 +811,8 @@ export async function fetchEvmRpcBatchDetailed(
 }
 
 export function parseUint256Hex(value: unknown): bigint | null {
-  if (!isHexResult(typeof value === "string" ? value : null)) return null;
-  try {
-    return BigInt(value as `0x${string}`);
-  } catch {
-    return null;
-  }
+  if (typeof value !== "string" || !/^0x[0-9a-fA-F]{1,64}$/.test(value)) return null;
+  return BigInt(value);
 }
 
 export async function fetchJsonRpcHexAtUrl(
@@ -798,13 +821,41 @@ export async function fetchJsonRpcHexAtUrl(
   params: unknown[],
   options?: Pick<EvmRpcOptions, "signal" | "timeoutMs">,
 ): Promise<`0x${string}` | null> {
-  const result = await fetchJsonRpcResult<string>([rpcUrl], method, params, options);
-  return isHexResult(result ?? undefined) && result !== "0x" ? (result as `0x${string}`) : null;
+  return fetchJsonRpcResult<`0x${string}`>([rpcUrl], method, params, options, {
+    acceptResult: (value): value is `0x${string}` => isHexBytes(value) && value !== "0x",
+  });
 }
 
 function stateBlockSelector(blockNumberOrTag: number | "latest", options?: EvmRpcOptions) {
   const blockHash = options?.stateBlockHash ?? options?.multicallFallbackBlockHash;
   return blockHash ? { blockHash: blockHash.toLowerCase(), requireCanonical: true } : toBlockTag(blockNumberOrTag);
+}
+
+async function fetchEvmCallOutcome(
+  chainId: string | undefined,
+  to: string,
+  data: string,
+  blockNumberOrTag: number | "latest" = "latest",
+  options?: EvmRpcOptions,
+  acceptResult: (value: `0x${string}`) => boolean = (value) => value !== "0x",
+  stopOnExecutionRevert = false,
+): Promise<JsonRpcOutcome<`0x${string}`>> {
+  if ((chainId === "tron" || (chainId && options?.chainRpcs?.get(chainId)?.type === "tron")) &&
+      (blockNumberOrTag !== "latest" || options?.stateBlockHash || options?.multicallFallbackBlockHash)) return { status: "unavailable" };
+  const urls = requestRpcUrls(chainId, options, blockNumberOrTag);
+  if (urls.length === 0) return { status: "unavailable" };
+
+  const callObj: Record<string, string> = { to, data };
+  if (options?.gas) {
+    const normalizedGas = normalizeJsonRpcQuantityHex(options.gas);
+    if (normalizedGas) callObj.gas = normalizedGas;
+  }
+  const blockTag = stateBlockSelector(blockNumberOrTag, options);
+  return fetchJsonRpcOutcome<`0x${string}`>(urls, "eth_call", [callObj, blockTag], options, {
+    acceptResult: (value): value is `0x${string}` => isHexBytes(value) && acceptResult(value),
+    rejectedReason: () => "invalid call result",
+    stopOnExecutionRevert,
+  }, chainId);
 }
 
 export async function fetchEvmCallHexAtBlock(
@@ -814,25 +865,8 @@ export async function fetchEvmCallHexAtBlock(
   blockNumberOrTag: number | "latest" = "latest",
   options?: EvmRpcOptions,
 ): Promise<`0x${string}` | null> {
-  if ((chainId === "tron" || (chainId && options?.chainRpcs?.get(chainId)?.type === "tron")) &&
-      (blockNumberOrTag !== "latest" || options?.stateBlockHash || options?.multicallFallbackBlockHash)) return null;
-  const urls = requestRpcUrls(chainId, options, blockNumberOrTag);
-  if (urls.length === 0) return null;
-
-  const callObj: Record<string, string> = { to, data };
-  if (options?.gas) {
-    const normalizedGas = normalizeJsonRpcQuantityHex(options.gas);
-    if (normalizedGas) callObj.gas = normalizedGas;
-  }
-  const blockTag = stateBlockSelector(blockNumberOrTag, options);
-  const result = await fetchJsonRpcResult<string>(urls, "eth_call", [callObj, blockTag], options, {
-    acceptResult: (value): value is `0x${string}` => isHexResult(value as string) && value !== "0x",
-    rejectedReason: () => {
-      return "null result";
-    },
-  }, chainId);
-
-  return result as `0x${string}` | null;
+  const outcome = await fetchEvmCallOutcome(chainId, to, data, blockNumberOrTag, options);
+  return outcome.status === "data" ? outcome.value : null;
 }
 
 export async function fetchEvmCodeStatusAtBlock(
@@ -852,8 +886,7 @@ export async function fetchEvmCodeStatusAtBlock(
     [address, stateBlockSelector(blockNumberOrTag, options)],
     options,
     {
-      acceptResult: (value): value is `0x${string}` =>
-        value === "0x" || isHexResult(value as string),
+      acceptResult: isHexBytes,
       rejectedReason: () => "invalid bytecode",
     },
     chainId,
@@ -896,7 +929,7 @@ export async function fetchEvmStorageAtBlock(
     [address, position, stateBlockSelector(blockNumberOrTag, options)],
     options,
     {
-      acceptResult: (value): value is `0x${string}` => isHexResult(value as string) && value !== "0x",
+      acceptResult: (value): value is `0x${string}` => isHexBytes(value) && value !== "0x",
       rejectedReason: () => "null storage",
     },
     chainId,
@@ -920,20 +953,15 @@ export async function fetchEvmMulticall3Aggregate3AtBlock(
     );
     if (code.status === "unavailable") return null;
     if (code.status === "absent") {
-      const urls = requestRpcUrls(chainId, options, blockNumberOrTag);
-      const blockTag = stateBlockSelector(blockNumberOrTag, options);
-      const gas = options.gas ? normalizeJsonRpcQuantityHex(options.gas) : null;
       const results: EvmMulticall3Result[] = [];
       for (const call of calls) {
-        const callObject: Record<string, string> = { to: call.target, data: call.callData };
-        if (gas) callObject.gas = gas;
-        const returnData = await fetchJsonRpcResult<`0x${string}`>(
-          urls, "eth_call", [callObject, blockTag], options,
-          { acceptResult: (value): value is `0x${string}` => typeof value === "string" && value.length % 2 === 0 && /^0x[0-9a-fA-F]*$/.test(value) },
-          chainId,
+        const outcome = await fetchEvmCallOutcome(
+          chainId, call.target, call.callData, blockNumberOrTag, options, () => true, true,
         );
-        if (returnData === null && call.allowFailure === false) return null;
-        results.push({ label: call.label, success: returnData !== null, returnData: returnData ?? "0x" });
+        if (outcome.status === "unavailable" ||
+            (outcome.status === "reverted" && call.allowFailure === false)) return null;
+        results.push({ label: call.label, success: outcome.status === "data",
+          returnData: outcome.status === "data" ? outcome.value : "0x" });
       }
       const header = await fetchEvmBlockHeader(chainId, blockNumberOrTag, options);
       return header?.number === blockNumberOrTag &&
@@ -947,21 +975,21 @@ export async function fetchEvmMulticall3Aggregate3AtBlock(
 
   for (let start = 0; start < calls.length; start += batchSize) {
     const batch = calls.slice(start, start + batchSize);
-    const result = await fetchEvmCallHexAtBlock(
+    const labels = batch.map((call) => call.label);
+    const outcome = await fetchEvmCallOutcome(
       chainId,
       MULTICALL3_ADDRESS,
       encodeMulticall3Aggregate3CallData(batch),
       blockNumberOrTag,
       options,
+      (value) => {
+        const decoded = decodeMulticall3Aggregate3Result(value, labels);
+        if (decoded == null) return false;
+        decodedResults.push(...decoded);
+        return true;
+      },
     );
-    if (result == null) return null;
-
-    const decoded = decodeMulticall3Aggregate3Result(
-      result,
-      batch.map((call) => call.label),
-    );
-    if (decoded == null) return null;
-    decodedResults.push(...decoded);
+    if (outcome.status !== "data") return null;
   }
 
   return decodedResults;
@@ -974,8 +1002,10 @@ export async function fetchEvmUint256AtBlock(
   blockNumberOrTag: number | "latest" = "latest",
   options?: EvmRpcOptions,
 ): Promise<bigint | null> {
-  const result = await fetchEvmCallHexAtBlock(chainId, to, data, blockNumberOrTag, options);
-  return parseUint256Hex(result);
+  const outcome = await fetchEvmCallOutcome(
+    chainId, to, data, blockNumberOrTag, options, (value) => value !== "0x" && value.length <= 66,
+  );
+  return outcome.status === "data" ? parseUint256Hex(outcome.value) : null;
 }
 
 export async function fetchEtherscanProxyHex(request: EtherscanProxyRequest): Promise<`0x${string}` | null> {
@@ -1048,25 +1078,7 @@ export async function fetchEvmBlockTimestamp(
   blockNumber: number,
   options?: EvmRpcOptions,
 ): Promise<number | null> {
-  const urls = requestRpcUrls(chainId, options, blockNumber, true);
-  if (urls.length === 0) return null;
-
-  const block = await fetchJsonRpcResult<EvmBlockResult>(
-    urls,
-    "eth_getBlockByNumber",
-    [toBlockTag(blockNumber), false],
-    options,
-    {
-      acceptResult: (result): result is EvmBlockResult => {
-        const timestamp = parseHexInteger((result as EvmBlockResult)?.timestamp);
-        return timestamp != null && Number.isSafeInteger(timestamp) && timestamp > 0;
-      },
-      rejectedReason: () => "block has no valid positive timestamp",
-    },
-    chainId,
-  );
-
-  return parseHexInteger(block?.timestamp);
+  return (await fetchEvmBlockHeader(chainId, blockNumber, options))?.timestamp ?? null;
 }
 
 async function readEvmBlockHeader(

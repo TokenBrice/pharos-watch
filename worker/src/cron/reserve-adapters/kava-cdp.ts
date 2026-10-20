@@ -2,12 +2,12 @@ import { z } from "zod";
 import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import {
-  buildUnknownExposureWarning,
   fetchJsonWithRetry,
   notApplicableFreshnessMetadata,
   parseBoundedDecimals,
   requireJsonInput,
   reserveDegradedWarning,
+  reserveFatalWarning,
   reserveInfoWarning,
   slicesFromValues,
   valueUsdFromBigIntPrice,
@@ -199,6 +199,9 @@ export function adaptKavaCdpState(state: KavaCdpState): AdapterResult {
   const principalTokensByType = new Map<string, number>();
   let principalTokens = 0;
   for (const row of state.principal.total_principal) {
+    if (principalTokensByType.has(row.collateral_type)) {
+      throw new Error(`${ADAPTER_KEY}: duplicate principal row for type ${row.collateral_type}`);
+    }
     if (row.amount.denom !== USDX_DENOM) {
       throw new Error(`${ADAPTER_KEY}: principal row for ${row.collateral_type} is denominated in ${row.amount.denom}, expected ${USDX_DENOM}`);
     }
@@ -217,14 +220,21 @@ export function adaptKavaCdpState(state: KavaCdpState): AdapterResult {
   const collateralTypes = new Set<string>();
 
   for (const row of state.collateral.total_collateral) {
+    if (collateralTypes.has(row.collateral_type)) {
+      throw new Error(`${ADAPTER_KEY}: duplicate collateral row for type ${row.collateral_type}`);
+    }
     collateralTypes.add(row.collateral_type);
+    const rawAmount = parseAmountUnits(row.amount.amount, `collateral(${row.collateral_type})`);
     const param = paramsByType.get(row.collateral_type);
     if (param == null) {
+      if (rawAmount === 0n) continue;
       unpricedTypes.push(row.collateral_type);
       unpricedPrincipalTokens += principalTokensByType.get(row.collateral_type) ?? 0;
       continue;
     }
-    const rawAmount = parseAmountUnits(row.amount.amount, `collateral(${row.collateral_type})`);
+    if (row.amount.denom !== param.denom) {
+      throw new Error(`${ADAPTER_KEY}: collateral row for ${row.collateral_type} is denominated in ${row.amount.denom}, expected ${param.denom}`);
+    }
     if (rawAmount === 0n) continue;
     const price = priceMap.get(param.spotMarketId);
     const valueUsd = price == null ? Number.NaN : valueUsdFromBigIntPrice(rawAmount, param.decimals, price);
@@ -253,41 +263,29 @@ export function adaptKavaCdpState(state: KavaCdpState): AdapterResult {
     }
   }
 
-  // A collateral type present in the totals but missing from the CDP params is
-  // a data anomaly: surface it rather than silently dropping its backing.
-  const missingParamTypes = [...collateralTypes].filter((type) => !paramsByType.has(type));
-  for (const type of missingParamTypes) {
-    warnings.push(reserveDegradedWarning(
-      "missing-collateral-param",
-      `${ADAPTER_KEY}: collateral type ${type} has no row in /kava/cdp/v1beta1/params`,
-    ));
+  for (const [type, tokens] of principalTokensByType) {
+    if (!collateralTypes.has(type) && tokens > 0) {
+      unpricedTypes.push(type);
+      unpricedPrincipalTokens += tokens;
+    }
   }
-  const orphanPrincipalTypes = [...principalTokensByType.keys()].filter((type) => !collateralTypes.has(type));
-  for (const type of orphanPrincipalTypes) {
-    warnings.push(reserveDegradedWarning(
-      "missing-collateral-total",
-      `${ADAPTER_KEY}: principal row for ${type} has no matching collateral total`,
-    ));
-  }
-
   const totalCollateralUsd = [...pricedByDenom.values()].reduce((sum, row) => sum + row.valueUsd, 0);
+  if (unpricedTypes.length > 0) {
+    return {
+      slices: [],
+      warnings: [reserveFatalWarning("collateral-coverage-incomplete",
+        `${ADAPTER_KEY}: collateral value unavailable for type(s): ${unpricedTypes.sort().join(", ")}`)],
+      metadata: { details: {
+        measuredCollateralUsd: totalCollateralUsd,
+        measuredCollateral: [...pricedByDenom.values()],
+        unpricedCollateralTypes: unpricedTypes,
+        unpricedPrincipalTokens,
+        unpricedPrincipalPct: principalTokens > 0 ? (unpricedPrincipalTokens / principalTokens) * 100 : undefined,
+      } },
+    };
+  }
   if (!(totalCollateralUsd > 0)) {
     throw new Error(`${ADAPTER_KEY}: no priced collateral value could be measured`);
-  }
-
-  // ── Unknown exposure from unpriced collateral types ──────────────────────
-  // Without a live pricefeed market the USD value of that collateral cannot be
-  // measured, so the unknown share is quantified as the share of USDX
-  // principal (debt) those types back - the only precise per-type weight the
-  // CDP ledger exposes.
-  const unknownExposurePct = principalTokens > 0
-    ? (unpricedPrincipalTokens / principalTokens) * 100
-    : 0;
-  if (unpricedTypes.length > 0) {
-    warnings.push(buildUnknownExposureWarning({ adapterKey: "kava-cdp", code: "unpriced-collateral-type",
-    message:
-      `${ADAPTER_KEY}: collateral type(s) ${unpricedTypes.sort().join(", ")} have no live pricefeed market and back ${unknownExposurePct.toFixed(2)}% of USDX principal; their composition is unmeasured`,
-    unknownExposurePct, }));
   }
 
   // ── Supply and ratios ────────────────────────────────────────────────────
@@ -348,7 +346,6 @@ export function adaptKavaCdpState(state: KavaCdpState): AdapterResult {
       supplyTokens,
       supplyUsd: supplyTokens * usdxPrice,
       ...(collateralizationRatio !== undefined ? { collateralizationRatio } : {}),
-      ...(unpricedTypes.length > 0 && unknownExposurePct > 0 ? { unknownExposurePct } : {}),
     },
   };
 }

@@ -53,12 +53,18 @@ describe("retention policy registry", () => {
   });
 
   it("keeps permanent product histories but preserves existing yield and DEX age pruners", () => {
-    for (const table of ["supply_history", "tape_events", "depeg_events"]) {
+    for (const table of ["supply_history", "tape_events", "depeg_events", "mint_burn_scan_coverage"]) {
       expect(registry.find((policy) => policy.table === table)).toMatchObject({ permanent: true, windowSec: null });
     }
     for (const table of ["yield_source_decisions", "dex_liquidity_history", "yield_history"]) {
       expect(registry.find((policy) => policy.table === table)).toMatchObject({ permanent: false, execution: "owner" });
     }
+  });
+
+  it("keeps unresolved materialization debt outside age-based retention", () => {
+    // Debt protects raw siblings until the atomic rebuild consumes its key.
+    expect(registry.some((policy) => policy.table === "mint_burn_dirty_hours")).toBe(false);
+    expect(RETENTION_NON_APPEND_TABLES.mint_burn_dirty_hours).toContain("atomic rebuild");
   });
 
   it("keeps both sampled stores on the small daily budget and legacy/key stores draining at 35 days", () => {

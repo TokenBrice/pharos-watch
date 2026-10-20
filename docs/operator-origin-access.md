@@ -339,6 +339,14 @@ responses and directive drift fail with endpoint/profile evidence. This is
 representative response evidence, not proof about every route or Cache Rule.
 The accepted 60-second floor still lifts 10-second realtime/per-coin browser
 profiles; do not lengthen producer budgets or relabel retained generations.
+Live OG route cards can now have an origin TTL below 60 seconds, bounded by
+post-render admission lifetime. That same account floor can extend their delivered
+browser lifetime beyond the figure's expiry. The JSON-only cache-policy canary
+does not cover PNG OG responses: before accepting this policy, retain real
+uncached and cached `/api/og/page/:slug` headers (`Cache-Control`, `Age`,
+`CF-Cache-Status`, and the `X-Og-*` generation/budget/assessment headers), including
+a near-expiry card. A lifted TTL is not compliant merely because origin tests
+pass; correcting the external floor requires the explicit policy change below.
 A future **Respect Existing Headers** choice needs an explicit manifest/fixture
 update (floor zero) and successful direct/proxied response checks.
 

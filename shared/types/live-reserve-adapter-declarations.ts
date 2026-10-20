@@ -63,14 +63,15 @@ function configPolicy<
 
 const CONFIG_COLLATERAL_V1 = configPolicy(["collateral-mix"], [1]);
 const CONFIG_COLLATERAL_V2 = configPolicy(["collateral-mix"], [2]);
-const CONFIG_COLLATERAL_V2_V3_V4 = configPolicy(["collateral-mix"], [2, 3, 4]);
+const CONFIG_COLLATERAL_V5 = configPolicy(["collateral-mix"], [5]);
 const CONFIG_COLLATERAL_V1_V2 = configPolicy(["collateral-mix"], [1, 2]);
 const CONFIG_ATTESTATION_V1 = configPolicy(["attestation-mix"], [1]);
 const CONFIG_ATTESTATION_V1_V2 = configPolicy(["attestation-mix"], [1, 2]);
 const CONFIG_ATTESTATION_V2 = configPolicy(["attestation-mix"], [2]);
 const CONFIG_ATTESTATION_V3 = configPolicy(["attestation-mix"], [3]);
 const CONFIG_PROTOCOL_V1 = configPolicy(["protocol-reserve"], [1]);
-const CONFIG_PROTOCOL_V1_V2 = configPolicy(["protocol-reserve"], [1, 2]);
+const CONFIG_PROTOCOL_V2 = configPolicy(["protocol-reserve"], [2]);
+const CONFIG_PROTOCOL_V3 = configPolicy(["protocol-reserve"], [3]);
 const CONFIG_SINGLE_ASSET_V1 = configPolicy(["single-asset"], [1]);
 const CONFIG_SINGLE_ASSET_V2 = configPolicy(["single-asset"], [2]);
 const CONFIG_SINGLE_ASSET_V1_V2 = configPolicy(["single-asset"], [1, 2]);
@@ -2442,7 +2443,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     evidenceClass: "independent",
     preferredFreshnessMode: "not-applicable",
     sharedSourceMode: "none",
-    configValidation: CONFIG_COLLATERAL_V2_V3_V4,
+    configValidation: CONFIG_COLLATERAL_V5,
     redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: TIMESTAMPLESS_WITH_UNKNOWN_CAP_VALIDATION,
   },
@@ -2472,6 +2473,8 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
   },
   "usdai-hub": declareAdapter(usdaiHubParamsSchema, ONCHAIN_SINGLE_ASSET_V1, {
     sourceOriginClass: "onchain-observation",
+    // V2 excludes legacy mixed-head reserve and implementation observations.
+    configValidation: CONFIG_SINGLE_ASSET_V2,
     redemptionTelemetry: DIRECT_CAPACITY_CURRENT_FEE_TELEMETRY,
   }),
   "dola-inverse": {
@@ -2533,7 +2536,8 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sharedSourceMode: "none",
-    configValidation: CONFIG_COLLATERAL_V1,
+    // V2 binds each deployment's dependent waves to one chain-local block.
+    configValidation: CONFIG_COLLATERAL_V2,
     redemptionTelemetry: DIRECT_CAPACITY_TELEMETRY,
     validation: LATEST_STATE_WITH_UNKNOWN_CAP_VALIDATION,
   },
@@ -2577,7 +2581,8 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     evidenceClass: "weak-live-probe",
     sourceOriginClass: "issuer-attested",
     sharedSourceMode: "none",
-    configValidation: CONFIG_COLLATERAL_V1,
+    // V2 excludes retained reviewed-only books after an unreviewed chain appeared.
+    configValidation: CONFIG_COLLATERAL_V2,
     redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: DASHBOARD_VERIFIED_NO_UNKNOWN_VALIDATION,
   },
@@ -2603,7 +2608,8 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sourceOriginClass: "issuer-attested",
     displayBadgeKind: "proof",
     sharedSourceMode: "none",
-    configValidation: CONFIG_COLLATERAL_V2,
+    // V3 excludes retained normalized books with unavailable material collateral.
+    configValidation: configPolicy(["collateral-mix"], [3]),
     redemptionTelemetry: PROXY_CAPACITY_TELEMETRY,
     validation: DASHBOARD_WITH_UNKNOWN_CAP_VALIDATION,
   },
@@ -2712,7 +2718,8 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     evidenceClass: "independent",
     preferredFreshnessMode: "verified",
     sharedSourceMode: "none",
-    configValidation: CONFIG_COLLATERAL_V1,
+    // Reject legacy packets that normalized only the readable holdings.
+    configValidation: CONFIG_COLLATERAL_V2,
     redemptionTelemetry: DIRECT_CAPACITY_TELEMETRY,
     validation: DASHBOARD_VALIDATION,
   },
@@ -2724,7 +2731,8 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sourceOriginClass: "onchain-observation",
     preferredFreshnessMode: "not-applicable",
     sharedSourceMode: "none",
-    configValidation: CONFIG_COLLATERAL_V1,
+    // Complete valuation and typed collateral amounts are required by v2.
+    configValidation: CONFIG_COLLATERAL_V2,
     // The legacy CDP's exit is borrower repay-only (no holder-facing
     // redemption route), so capacity/fee telemetry would fabricate a route.
     redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
@@ -2824,7 +2832,9 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     // of publishing unbounded position-accounting freshness.
     // v3: pinned Machine AUM takes precedence over the issuer API anchors,
     // with global-accounting time also bounding source freshness.
-    configValidation: configPolicy(["collateral-mix"], [1, 2, 3]),
+    // v4: explicit positive-position debt signs and chain-qualified canonical
+    // USDC identities. Older packets cannot prove those input boundaries.
+    configValidation: configPolicy(["collateral-mix"], [4]),
     redemptionTelemetry: PROXY_CAPACITY_TELEMETRY,
     validation: {
       maxSourceAgeSec: MAKINA_POSITION_SOURCE_MAX_AGE_SEC,
@@ -2956,9 +2966,13 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
   },
   "saturn-pyusdx": declareAdapter(saturnPyusdxParamsSchema, ONCHAIN_SINGLE_ASSET_V1, {
     sourceOriginClass: "onchain-observation",
+    // V2 binds the implementation slot and wrapper state to the same block.
+    configValidation: CONFIG_SINGLE_ASSET_V2,
   }),
   "sbc-independent-assurance": declareAdapter(sbcAssuranceParamsSchema, HTTP_DISCLOSURE_ATTESTATION_V2),
   "solstice-attestation": declareAdapter(noParamsSchema, HTTP_PROTOCOL_V1, {
+    // v2 requires the selected reserve point's own clock, never envelope time.
+    configValidation: CONFIG_PROTOCOL_V2,
     validation: {
       // Weekly attestations with observed publication gaps of 5-9 days (SO1);
       // 14 days admits two missed weekly attestations before the proof reads
@@ -2987,7 +3001,8 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     evidenceClass: "independent",
     preferredFreshnessMode: "verified",
     sharedSourceMode: "source-invariant",
-    configValidation: CONFIG_COLLATERAL_V1_V2,
+    // V3 excludes unpinned LitePSM identity, fee and pocket-balance packets.
+    configValidation: configPolicy(["collateral-mix"], [3]),
     redemptionTelemetry: DIRECT_CAPACITY_TELEMETRY,
     validation: DASHBOARD_WITH_UNKNOWN_CAP_VALIDATION,
   },
@@ -3043,6 +3058,8 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     HTTP_DISCLOSURE_ATTESTATION_V3,
   ),
   "river-protocol-info": declareAdapter(noParamsSchema, HTTP_PROTOCOL_V1, {
+    // V2 requires chain-local pins across app enumeration and manager reads.
+    configValidation: CONFIG_PROTOCOL_V2,
     redemptionTelemetry: DIRECT_CAPACITY_CURRENT_FEE_TELEMETRY,
   }),
   // NOTE(owner-review): evidenceClass "independent" mirrors the frax-balance-sheet
@@ -3177,10 +3194,10 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: LATEST_STATE_WITH_UNKNOWN_CAP_VALIDATION,
   },
-  // v2: a snapshot carrying none of the four ZSD circulating-supply encodings
-  // fails closed instead of publishing a supply-less snapshot.
+  // v3 retains v2's required supply and binds freshness to every used clock.
+  // Older packets cannot distinguish capture time from material pricing time.
   "zephyr-scanner": declareAdapter(noParamsSchema, HTTP_PROTOCOL_V1, {
-    configValidation: CONFIG_PROTOCOL_V1_V2,
+    configValidation: CONFIG_PROTOCOL_V3,
   }),
 
   "djed-cardano": {

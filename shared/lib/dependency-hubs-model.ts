@@ -1,5 +1,5 @@
 import type { ReportCardsV9DependencyEdge } from "../types/report-cards-v9";
-import { buildDirectHubExposures, mappedDependentSupply, type ExposureTotals, type HubExposure, type SupplyOf, type WrapperClaimForm } from "./dependency-exposure";
+import { buildDirectHubExposures, exposureKnown, mappedDependentSupply, type ExposureTotals, type HubExposure, type SupplyOf, type WrapperClaimForm } from "./dependency-exposure";
 import { CLIENT_TRACKED_META_BY_ID } from "./stablecoins/client-registry";
 
 export interface DependencyHubCard {
@@ -9,13 +9,21 @@ export interface DependencyHubCard {
   isDefunct?: boolean;
   sharedBookId?: string | null;
 }
+export interface DependencyClaimAvailability {
+  known: boolean;
+  complete: boolean;
+}
 export interface DependencyWrapperSplit {
   unknownFormUsd: number | null;
   unknownFormCount: number;
   passThroughCount: number;
   vaultClaimCount: number;
+  claimAvailability: Record<"pass-through" | "vault-claim" | "classified", DependencyClaimAvailability>;
 }
-export interface DependencyHub extends HubExposure, DependencyWrapperSplit {
+export interface DependencyHubExposure extends HubExposure {
+  directKnown: boolean;
+}
+export interface DependencyHub extends DependencyHubExposure, DependencyWrapperSplit {
   id: string;
   label: string;
   symbol: string;
@@ -28,7 +36,7 @@ export interface DependencyHubsModel {
   upstreamHubCount: number;
   directEdgeCount: number;
   uniqueDirectDependentCount: number;
-  mappedSupply: ExposureTotals & DependencyWrapperSplit & { passThroughUsd: number; vaultClaimUsd: number };
+  mappedSupply: ExposureTotals & DependencyWrapperSplit & { known: boolean; passThroughUsd: number; vaultClaimUsd: number };
   marketCapAsOf: number | null;
 }
 
@@ -71,8 +79,15 @@ export function buildDependencyHubsModel({ cards, edges, mcapMap, marketCapAsOf 
   };
   // Serial supply is counted once per dependent, just like the exposure aggregates.
   // A missing published form is unavailable classification, not a zero-dollar category.
+  const claimAvailability = (relationships: readonly ReportCardsV9DependencyEdge[], form: "pass-through" | "vault-claim" | "classified"): DependencyClaimAvailability => {
+    const claims = relationships.filter(edge => edge.kind === "serial" && edge.wrapperForm != null
+      && (form === "classified" || ((edge.wrapperForm === "pure" || edge.wrapperForm === "native-staked") === (form === "pass-through"))));
+    return { known: claims.length === 0 || claims.some(edge => supplyOf(edge.to) !== null),
+      complete: claims.every(edge => supplyOf(edge.to) !== null) };
+  };
   const wrapperSplit = (relationships: readonly ReportCardsV9DependencyEdge[]) => {
-    const split: DependencyWrapperSplit & { classifiedOwnFamilyUsd: number } = { unknownFormUsd: null, unknownFormCount: 0, passThroughCount: 0, vaultClaimCount: 0, classifiedOwnFamilyUsd: 0 };
+    const split: DependencyWrapperSplit & { classifiedOwnFamilyUsd: number } = { unknownFormUsd: null, unknownFormCount: 0, passThroughCount: 0, vaultClaimCount: 0, classifiedOwnFamilyUsd: 0,
+      claimAvailability: { "pass-through": claimAvailability(relationships, "pass-through"), "vault-claim": claimAvailability(relationships, "vault-claim"), classified: claimAvailability(relationships, "classified") } };
     const seen = new Set<string>();
     for (const edge of relationships) {
       if (edge.kind !== "serial" || seen.has(edge.to)) continue;
@@ -97,6 +112,7 @@ export function buildDependencyHubsModel({ cards, edges, mcapMap, marketCapAsOf 
     const serialCount = hubEdges.filter(edge => edge.kind === "serial").length;
     const split = wrapperSplit(hubEdges);
     return { ...exposure, ...split, ownFamilyUsd: split.classifiedOwnFamilyUsd, id: exposure.hubId, label: card.name, symbol: card.symbol,
+      directKnown: exposureKnown(exposure.direct, hubEdges),
       hubMcapUsd: supplyOf(card.id)?.usd ?? null,
       topDependentSymbol: exposure.topDependent ? cardById.get(exposure.topDependent.id)?.symbol ?? exposure.topDependent.id : null,
       edgeTypeBreakdown: [
@@ -105,7 +121,8 @@ export function buildDependencyHubsModel({ cards, edges, mcapMap, marketCapAsOf 
       ],
     };
   });
+  const mappedSupply = mappedDependentSupply(liveEdges, supplyOf, opts);
   return { hubs, upstreamHubCount: hubs.length, directEdgeCount: liveEdges.length,
     uniqueDirectDependentCount: new Set(liveEdges.map(edge => edge.to)).size,
-    mappedSupply: { ...mappedDependentSupply(liveEdges, supplyOf, opts), ...wrapperSplit(liveEdges) }, marketCapAsOf };
+    mappedSupply: { ...mappedSupply, ...wrapperSplit(liveEdges), known: exposureKnown(mappedSupply, liveEdges) }, marketCapAsOf };
 }

@@ -821,9 +821,15 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
         }]]);
         const capture = await captureSafetyScoreV9SupplyAttribution(input, rpcs, undefined, { clockMode: "source" });
         capture.failureReasonById = { "wm-m0": reason };
+        // Journals complete on wall time even when scoring uses the source clock.
+        const capturedAtSec = Math.max(
+          input.clockSec,
+          Math.floor(Date.now() / 1_000),
+          ...capture.journalRecords.map(record => record.completedAtSec),
+        );
         const priorGeneration = parseSafetyScoreV9SupplyAttributionGeneration(
           serializeSafetyScoreV9SupplyAttributionGeneration(createSafetyScoreV9SupplyAttributionGeneration({
-            fixedInput: input, capture, capturedAtSec: input.clockSec,
+            fixedInput: input, capture, capturedAtSec,
           })),
         );
         expect(priorGeneration.outcomesById["wm-m0"]).toMatchObject({ captureFailureReason: reason });

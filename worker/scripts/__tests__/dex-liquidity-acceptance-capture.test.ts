@@ -3,6 +3,7 @@ import {
   buildAcceptanceReport,
   buildCaptureQueries,
   buildInventoryTransitions,
+  executeCaptureQuery,
   stratifyRuns,
   summarize,
   type AcceptanceCapture,
@@ -29,6 +30,26 @@ function run(id: number, at: number, version = "build-a", overrides: Partial<Cro
 }
 
 describe("DEX acceptance aggregation", () => {
+  it("retains failed raw envelopes and query evidence instead of converting them to zero rows", () => {
+    for (const raw of [{}, [], { success: false, results: [], error: "unavailable" },
+      { result: [{ results: [] }, { success: false, results: [] }] }]) {
+      const result = executeCaptureQuery("SELECT evidence;", () => JSON.stringify(raw), 2);
+      expect(result).toMatchObject({ sql: "SELECT evidence;", raw, rows: null, rowCount: null, limit: 2, truncated: false });
+      expect(result.error).toMatch(/d1-/);
+      expect(Number.isFinite(Date.parse(result.queriedAt))).toBe(true);
+    }
+    expect(executeCaptureQuery("SELECT evidence;", () => { throw new Error("wrangler exited 1"); }))
+      .toMatchObject({ raw: null, rows: null, rowCount: null, error: "wrangler exited 1" });
+  });
+
+  it("captures valid empty evidence and all nested results without losing truncation", () => {
+    const empty = { success: true, results: [] };
+    expect(executeCaptureQuery("SELECT evidence;", () => JSON.stringify({ result: empty })))
+      .toMatchObject({ rows: [], rowCount: 0, error: null, truncated: false, raw: { result: empty } });
+    const raw = { result: [{ success: true, results: [{ id: 1 }] }, { results: [{ id: 2 }] }] };
+    expect(executeCaptureQuery("SELECT evidence;", () => JSON.stringify(raw), 2))
+      .toMatchObject({ raw, rows: [{ id: 1 }, { id: 2 }], rowCount: 2, limit: 2, truncated: true, error: null });
+  });
   it("uses ordinary sample median and nearest-rank p95 without converting absent values to zero", () => {
     expect(summarize([1, 4, 3, 2, null, undefined, "0", NaN])).toEqual({ n: 4, unavailable: 4, median: 2.5, p95: 4, min: 1, max: 4 });
     expect(summarize(Array.from({ length: 20 }, (_, i) => i + 1)).p95).toBe(19);

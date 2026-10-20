@@ -91,9 +91,9 @@ describe("fetchFluidPools", () => {
     expect(pools.pools[0].feeRate).toBeCloseTo(0.0001);
   });
 
-  it("keeps Fluid source healthy when retained-pool enrichment fails", async () => {
+  it.each(["all", "collateral", "debt"])("keeps Fluid source healthy when retained-pool enrichment fails (%s)", async (failedRead) => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    mockFetch.mockImplementation((input) => {
+    mockFetch.mockImplementation((input, init) => {
       const url = String(input);
       if (url === "https://api.fluid.instadapp.io/v2/1/dexes/stats/tickers") {
         return Promise.resolve(jsonResponse([
@@ -104,6 +104,18 @@ describe("fetchFluidPools", () => {
         return Promise.resolve(jsonResponse([]));
       }
       if (url === "https://rpc.example") {
+        // Malformed bytes now become null at the strict RPC boundary. A single
+        // failed half must still follow the pre-existing enrichment failure path.
+        const body = String(init?.body ?? "");
+        if (failedRead !== "all") {
+          if (body.includes("0x957755e6") && failedRead !== "collateral") {
+            return Promise.resolve(makeFluidRpcResponse([1_500_000, 500_000, 0, 0]));
+          }
+          if (body.includes("0x55181f11") && failedRead !== "debt") {
+            return Promise.resolve(makeFluidRpcResponse([0, 0, 500_000, 2_500_000, 0, 0]));
+          }
+          if (body.includes("0x42fcc6fb")) return Promise.resolve(makeFluidRpcResponse([100]));
+        }
         return Promise.resolve(jsonResponse({ jsonrpc: "2.0", id: 1, result: `0x${"z".repeat(64)}` }));
       }
       return Promise.resolve(new Response("unexpected", { status: 500 }));
@@ -121,6 +133,12 @@ describe("fetchFluidPools", () => {
     const pools = await fetchFluidPools(undefined, chainRpcs);
 
     expect(pools.pools.map((pool) => pool.poolAddress)).toEqual([FLUID_POOL_ADDRESS]);
+    expect(pools.pools[0]).toMatchObject({
+      balances: null,
+      feeRate: failedRead === "all" ? null : 0.0001,
+      tvlUsd: 500_000,
+      tokenVolumes24h: [100_000, 100_000],
+    });
     expect(pools.ok).toBe(true);
     expect(pools.degraded).toBe(false);
     expect(pools.errors).toEqual([]);

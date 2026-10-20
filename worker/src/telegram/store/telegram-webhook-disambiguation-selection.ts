@@ -11,7 +11,7 @@ import { makeActionRunner } from "../commands/action-runner";
 
 type SelectablePendingAction = Exclude<PendingAction, { actionType: "confirm-bulk" | "forget-confirm" }>;
 
-export type NormalizedPendingSelection =
+export type NormalizedPendingSelection = { flowId?: string } & (
   | {
       actionType: "subscribe";
       alertTypes: string[];
@@ -37,7 +37,7 @@ export type NormalizedPendingSelection =
       remainingTickers: string[];
       initiatorUserId: string | null;
       clearPending: boolean;
-    };
+    });
 
 export interface PendingSelectionOperationContext extends TelegramPendingWriteContext {
   operationNowSec?: number;
@@ -63,6 +63,7 @@ function normalizePendingDisambiguationSelection(
   if (pending.actionType === "subscribe") {
     return {
       actionType: "subscribe",
+      flowId: pending.flowId,
       alertTypes: [...pending.alertTypes].sort(),
       presetIds: [...pending.presetIds],
       depegWorseningBpsStep: pending.depegWorseningBpsStep,
@@ -75,6 +76,7 @@ function normalizePendingDisambiguationSelection(
   if (pending.actionType === "unsubscribe") {
     return {
       actionType: "unsubscribe",
+      flowId: pending.flowId,
       presetIds: [...pending.presetIds],
       initialCoinIds,
       remainingTickers,
@@ -84,6 +86,7 @@ function normalizePendingDisambiguationSelection(
   }
   return {
     actionType: "set",
+    flowId: pending.flowId,
     command: pending.command,
     initialCoinIds,
     remainingTickers,
@@ -133,7 +136,15 @@ export function parseStoredCommandSelectionIntent(
   intent: TelegramWebhookOperationIntent | null | undefined,
 ): NormalizedPendingSelection | null {
   if (!intent || intent.mutation !== "required") return null;
-  const payload = intent.payload;
+  const saved = intent.payload;
+  const payload: Record<string, unknown> = saved.stage === "bulk-confirm-prompt"
+    ? { ...(saved.payload as Record<string, unknown>), clearPending: saved.clearPending ?? true,
+        initiatorUserId: saved.initiatorUserId, flowId: saved.sourceFlowId }
+    : saved.stage === "disambiguation-prompt"
+      ? { ...(saved.actionPayload as Record<string, unknown>), coinIds: saved.resolvedCoinIds,
+          setting: saved.actionPayload, clearPending: saved.clearPending,
+          initiatorUserId: saved.initiatorUserId, flowId: saved.sourceFlowId }
+      : saved;
   const coinIds = parseStoredCoinIds(payload.coinIds);
   if (coinIds == null || typeof payload.clearPending !== "boolean") return null;
 
@@ -145,6 +156,7 @@ export function parseStoredCommandSelectionIntent(
       || !payload.presetIds.every((entry) => typeof entry === "string")
       || !(
         payload.depegWorseningBpsStep === null
+        || payload.depegWorseningBpsStep === undefined
         || payload.depegWorseningBpsStep === 100
         || payload.depegWorseningBpsStep === 250
         || payload.depegWorseningBpsStep === 500
@@ -154,6 +166,7 @@ export function parseStoredCommandSelectionIntent(
     }
     return {
       actionType: "subscribe",
+      flowId: typeof payload.flowId === "string" ? payload.flowId : undefined,
       alertTypes: [...payload.alertTypes] as string[],
       presetIds: [...payload.presetIds] as string[],
       depegWorseningBpsStep: payload.depegWorseningBpsStep,
@@ -173,6 +186,7 @@ export function parseStoredCommandSelectionIntent(
     }
     return {
       actionType: "unsubscribe",
+      flowId: typeof payload.flowId === "string" ? payload.flowId : undefined,
       presetIds: [...payload.presetIds] as string[],
       initialCoinIds: coinIds,
       remainingTickers: [],
@@ -182,10 +196,11 @@ export function parseStoredCommandSelectionIntent(
   }
 
   if (intent.kind === "command:set" && isStoredSetCommand(payload.setting)) {
-    const firstCoin = TRACKED_META_BY_ID.get(coinIds[0] ?? "");
+    const firstCoin = TRACKED_META_BY_ID.get(coinIds[0] ?? (saved.candidateIds as string[] | undefined)?.[0] ?? "");
     if (!firstCoin) return null;
     return {
       actionType: "set",
+      flowId: typeof payload.flowId === "string" ? payload.flowId : undefined,
       command: { ticker: firstCoin.symbol, ...payload.setting } as ParsedSetCommand,
       initialCoinIds: coinIds,
       remainingTickers: [],
@@ -218,6 +233,7 @@ export async function executeNormalizedPendingSelection(
     chatId,
     username,
     initiatorUserId: normalized.initiatorUserId,
+    flowId: normalized.flowId,
     ...operation,
   };
   if (normalized.actionType === "subscribe") {

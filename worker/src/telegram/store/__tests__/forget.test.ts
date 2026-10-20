@@ -3,6 +3,7 @@ import { DatabaseSync } from "node:sqlite";
 import { mockTelegramD1 as mockD1 } from "../../../test-helpers/__shared/telegram";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { forgetSubscriber, migrateTelegramChatId, unsubscribeAll } from "../subscriber-lifecycle";
+import { acquireTelegramMiniAppMutationBurst } from "../../mini-app/telegram-mini-app-rate-limit";
 
 const fixtures = createLatestSchemaFixtureTracker({ uncached: true });
 afterEach(() => fixtures.closeAll());
@@ -176,6 +177,7 @@ describe("forgetSubscriber", () => {
       ) VALUES (?, ?, ?, ?, ?)
     `).run(chatId, "expired", 100, 200, "ttl_expired");
     const deletedCacheKeys = [
+      `telegram:chat-send-backoff:${chatId}`,
       `telegram:command-flood:${chatId}`,
       `telegram:command-flood:${chatId}:actor:99`,
       `telegram:command-cooldown:${chatId}:/status`,
@@ -183,8 +185,10 @@ describe("forgetSubscriber", () => {
       `telegram:chat-admins:${chatId}`,
       `telegram:group-welcome:${chatId}`,
       `telegram:re-engagement-warned:${chatId}`,
+      `telegram:mini-app-mutation-burst:${chatId}`,
     ];
     const neighboringCacheKeys = [
+      "telegram:chat-send-backoff:420",
       "telegram:command-flood:420",
       "telegram:command-flood:420:actor:99",
       "telegram:command-cooldown:420:/status",
@@ -209,6 +213,27 @@ describe("forgetSubscriber", () => {
     }
     expect(sqlite.prepare("SELECT key FROM cache ORDER BY key").all())
       .toEqual([...neighboringCacheKeys].sort().map((key) => ({ key })));
+  });
+
+  it("erases the profile and watchlist without erasing its remaining anonymous admission budget", async () => {
+    const { sqlite, db } = setupChatMigrationSqlite();
+    insertRow(sqlite, "telegram_subscribers", {
+      chat_id: "42", username: "alice", created_at: 100, last_active_at: 100,
+    });
+    insertRow(sqlite, "telegram_subscriptions", { chat_id: "42", stablecoin_id: "usdc-circle", alert_depeg: 1 });
+    await acquireTelegramMiniAppMutationBurst(db, { userId: "42", botToken: "quota-secret", nowSec: 1_000 });
+    const budgetBefore = sqlite.prepare("SELECT key, value, updated_at FROM cache").all();
+
+    await forgetSubscriber(db, "42");
+    await forgetSubscriber(db, "42");
+
+    expect(sqlite.prepare("SELECT chat_id FROM telegram_subscribers").all()).toEqual([]);
+    expect(sqlite.prepare("SELECT chat_id FROM telegram_subscriptions").all()).toEqual([]);
+    expect(sqlite.prepare("SELECT key, value, updated_at FROM cache").all()).toEqual(budgetBefore);
+    expect(budgetBefore).toEqual([{
+      key: expect.stringMatching(/^telegram:mini-app-mutation-burst:anon:[a-f0-9]{64}$/),
+      value: "1", updated_at: 1_000,
+    }]);
   });
 
   it("deletes chat-prefixed job-target item lineage while preserving other chats", async () => {
@@ -268,6 +293,20 @@ describe("forgetSubscriber", () => {
 });
 
 describe("migrateTelegramChatId", () => {
+  it.each([[900, 600], [600, 900]])("preserves the greatest chat deadline across migration (%s, %s)", async (oldDeadline, newDeadline) => {
+    const { sqlite, db } = setupChatMigrationSqlite();
+    for (const chatId of ["-123", "-100123"]) {
+      insertRow(sqlite, "telegram_subscribers", { chat_id: chatId, created_at: 100, last_active_at: 100 });
+    }
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+      .run("telegram:chat-send-backoff:-123", String(oldDeadline), 100);
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+      .run("telegram:chat-send-backoff:-100123", String(newDeadline), 200);
+    await migrateTelegramChatId(db, "-123", "-100123");
+    expect(sqlite.prepare("SELECT key, value FROM cache WHERE key GLOB 'telegram:chat-send-backoff:*'").all())
+      .toEqual([{ key: "telegram:chat-send-backoff:-100123", value: "900" }]);
+  });
+
   it("touches every chat-owned Telegram table discovered in migrations", async () => {
     const chatTables = discoverTelegramChatIdTablesFromMigrations();
     // Table-coverage discovery: every chat-owned table must appear in history,

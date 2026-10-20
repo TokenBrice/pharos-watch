@@ -388,13 +388,18 @@ function summarizeTelegramWatchdog(metadata: Record<string, unknown>): string[] 
   ].filter((line): line is string => line != null);
 }
 
-function summarizeCronDurationWatchdog(metadata: Record<string, unknown>): string[] {
-  const runtimeBreaching = readStringArray(metadata.runtimeBreaching);
-  const slotBreaching = readStringArray(metadata.slotAbandonmentBreaching);
+function formatBreachList(value: unknown): string {
+  const items = readArray(value);
+  if (!items || !items.every((item): item is string => typeof item === "string" && item.trim().length > 0)) {
+    return "unavailable";
+  }
+  return items.length > 0 ? items.join(", ") : "none";
+}
 
+function summarizeCronDurationWatchdog(metadata: Record<string, unknown>): string[] {
   return [
-    runtimeBreaching.length > 0 ? `runtime breaches ${runtimeBreaching.join(", ")}` : "runtime breaches none",
-    slotBreaching.length > 0 ? `slot abandonment ${slotBreaching.join(", ")}` : "slot abandonment none",
+    `runtime breaches ${formatBreachList(metadata.runtimeBreaching)}`,
+    `slot abandonment ${formatBreachList(metadata.slotAbandonmentBreaching)}`,
   ];
 }
 
@@ -403,8 +408,10 @@ function summarizeCronSentinel(metadata: Record<string, unknown>): string[] {
   const sources = readRecord(metadata.sources);
   const sourceStatuses = sources
     ? Object.entries(sources).map(([source, value]) => {
-        const status = readString(readRecord(value)?.status);
-        return status ? `${source} ${status}` : source;
+        const record = readRecord(value);
+        const status = readString(record?.status);
+        const reason = readString(record?.reason) ?? readString(readRecord(record?.metadata)?.reason) ?? readString(record?.error);
+        return `${source}${status ? ` ${status}` : ""}${reason ? ` (${reason})` : ""}`;
       })
     : [];
   const durationMetadata = readRecord(readRecord(sources?.duration)?.metadata);

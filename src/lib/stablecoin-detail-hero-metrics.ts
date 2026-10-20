@@ -1,7 +1,6 @@
 import type {
   DexLiquidityData,
   PegSummaryCoin,
-  StablecoinData,
   StressSignalEntry,
   YieldRanking,
 } from "@shared/types";
@@ -166,7 +165,7 @@ export function buildDewsAccent(stressSignal: StressSignalEntry | null): string 
 }
 
 export function buildLimitedDepegCoverageNote(
-  coinData: StablecoinData,
+  coinData: { pegType: string },
   isNavToken: boolean,
   pegScoreResult: PegSummaryCoin | null,
   deviationBps: number | null,

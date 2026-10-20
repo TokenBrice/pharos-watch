@@ -24,8 +24,8 @@ export type MintBurnNetWindow = "24h" | "7d" | "30d" | "90d";
 const PRESSURE_PARTIAL_VALUATION_NOTE =
   "Partial valuation: unpriced events in the 24h window or 30-day baseline; pressure shift unavailable";
 
-/** Canonical activity inference — checks explicit flag first, then derives from fields. */
-export function inferHas24hActivity(coin: MintBurnCoinFlow): boolean {
+/** Preserve explicit unknown activity; only older payloads without a flag infer from fields. */
+export function inferHas24hActivity(coin: MintBurnCoinFlow): boolean | null {
   if (coin.has24hActivity !== undefined) return coin.has24hActivity;
   return Boolean(
     coin.mintCount24h
@@ -38,6 +38,13 @@ export function inferHas24hActivity(coin: MintBurnCoinFlow): boolean {
 
 /** Signed net for one window, gated by that window's valuation completeness (absent → `unknown`). */
 export function resolveCoinNetFlow(coin: MintBurnCoinFlow, window: MintBurnNetWindow): MintBurnSignedNetView {
+  if (window === "24h" && coin.has24hActivity === null) {
+    return {
+      valueUsd: null,
+      completeness: resolveMintBurnValuation(coin.valuation?.window24h).completeness,
+      note: "24h scan coverage unknown; signed net unavailable",
+    };
+  }
   switch (window) {
     case "24h":
       // The 24h bound derives from the published known subtotals and per-side completeness.
@@ -64,6 +71,7 @@ export function resolveCoinNetFlow(coin: MintBurnCoinFlow, window: MintBurnNetWi
  * pressure shift; `null` when the published score stands.
  */
 export function resolvePressureUnavailableNote(coin: MintBurnCoinFlow): string | null {
+  if (coin.has24hActivity === null) return "24h scan coverage unknown; pressure shift unavailable";
   return coin.valuation?.window24h.completeness === "partial" || coin.valuation?.baseline === "partial"
     ? PRESSURE_PARTIAL_VALUATION_NOTE
     : null;
@@ -89,11 +97,13 @@ export function resolveBaselineDailyNetUsd(coin: MintBurnCoinFlow): number | nul
  * proven-direction helper; a `null` wire direction is never replaced by a derived one.
  */
 export function resolveNetDirection(coin: MintBurnCoinFlow): NetFlowDirection24h | null {
+  const has24hActivity = inferHas24hActivity(coin);
+  if (has24hActivity === null) return null;
   const valuation = resolveMintBurnValuation(coin.valuation?.window24h);
   if (valuation.completeness === "partial" && coin.netFlow24hUsd != null) {
     return provenNetFlowDirection24h({
       knownNetUsd: coin.netFlow24hUsd,
-      has24hActivity: inferHas24hActivity(coin),
+      has24hActivity,
       valuation,
     });
   }
@@ -101,7 +111,7 @@ export function resolveNetDirection(coin: MintBurnCoinFlow): NetFlowDirection24h
   if (coin.netFlow24hUsd == null) return null;
   return getNetFlowDirection24h({
     netFlow24hUsd: coin.netFlow24hUsd,
-    has24hActivity: inferHas24hActivity(coin),
+    has24hActivity,
   });
 }
 
@@ -115,7 +125,7 @@ export interface MintBurnCoinsAggregate24h {
   unpricedBurnEventCount: number;
   /** Summed signed net; unavailable when any coin's 24h net is null or partial. */
   net: MintBurnSignedNetView;
-  has24hActivity: boolean;
+  has24hActivity: boolean | null;
   /** Aggregate direction; `null` when missing valuation leaves it unproven. */
   direction: NetFlowDirection24h | null;
 }
@@ -127,7 +137,8 @@ export function aggregateCoinFlows24h(coins: readonly MintBurnCoinFlow[]): MintB
   let unpricedMintEventCount = 0;
   let unpricedBurnEventCount = 0;
   let knownNetUsd: number | null = 0;
-  let has24hActivity = false;
+  let has24hActivity: boolean | null = false;
+  let activityUnknown = false;
   const mintSides: MintBurnValuationCompleteness[] = [];
   const burnSides: MintBurnValuationCompleteness[] = [];
   const nets: MintBurnSignedNetView[] = [];
@@ -143,16 +154,19 @@ export function aggregateCoinFlows24h(coins: readonly MintBurnCoinFlow[]): MintB
     nets.push(resolveCoinNetFlow(coin, "24h"));
     // A partial coin publishes no signed net; its known subtotals still bound the aggregate range.
     const coinKnownNetUsd = coin.netFlow24hUsd
-      ?? (valuation.completeness === "partial" ? coin.mintVolume24hUsd - coin.burnVolume24hUsd : null);
+      ?? (coin.has24hActivity !== null && valuation.completeness === "partial" ? coin.mintVolume24hUsd - coin.burnVolume24hUsd : null);
     knownNetUsd = knownNetUsd == null || coinKnownNetUsd == null ? null : knownNetUsd + coinKnownNetUsd;
-    if (inferHas24hActivity(coin)) has24hActivity = true;
+    const activity = inferHas24hActivity(coin);
+    if (activity === null) activityUnknown = true;
+    if (activity) has24hActivity = true;
+    else if (activity === null && has24hActivity === false) has24hActivity = null;
   }
 
   const summed = sumMintBurnSignedNets(nets);
   const mintCompleteness = combineMintBurnValuationCompleteness(...mintSides);
   const burnCompleteness = combineMintBurnValuationCompleteness(...burnSides);
   // The aggregate bound uses the same per-side range as the direction, so the two never disagree.
-  const bound = summed.valueUsd == null && summed.completeness === "partial" && knownNetUsd != null
+  const bound = !activityUnknown && summed.valueUsd == null && summed.completeness === "partial" && knownNetUsd != null
     ? mintBurnSignedNetBound(knownNetUsd, { mintCompleteness, burnCompleteness })
     : null;
   const net: MintBurnSignedNetView = bound
@@ -163,14 +177,16 @@ export function aggregateCoinFlows24h(coins: readonly MintBurnCoinFlow[]): MintB
       }
     : summed;
   let direction: NetFlowDirection24h | null;
-  if (knownNetUsd != null) {
+  if (activityUnknown) {
+    direction = null;
+  } else if (knownNetUsd != null && has24hActivity !== null) {
     direction = provenNetFlowDirection24h({
       knownNetUsd,
       has24hActivity,
       valuation: { mintCompleteness, burnCompleteness },
     });
   } else {
-    direction = has24hActivity ? null : "inactive";
+    direction = has24hActivity === false ? "inactive" : null;
   }
 
   return {

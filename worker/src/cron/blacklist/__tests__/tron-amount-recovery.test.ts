@@ -1,5 +1,5 @@
 import { DatabaseSync } from "node:sqlite";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../../lib/blacklist/tron-replay-provider", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../../lib/blacklist/tron-replay-provider")>()),
@@ -37,6 +37,8 @@ import { getBlacklistConfigByKey } from "../../../lib/blacklist-contracts";
 import { refreshBlacklistAmountRepairQueue } from "../../../lib/blacklist/amount-repair-queue";
 import { tronBase58ToHex, tronHexAddressToBase58 } from "../../../lib/tron-address";
 import { mockD1 } from "@shared/test-utils/mock-d1";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import type * as TronReplayProvider from "../../../lib/blacklist/tron-replay-provider";
 
 const TRON_USDT_CONFIG_ID = "tron-tr7nhqjekqxgtci8q8zy4pl8otszgjlj6t";
 const FREEZE_ADDRESS = "0x6f566c6d608550fb50c9365bdb6665e1c8e53caa";
@@ -185,6 +187,10 @@ beforeEach(() => {
   vi.mocked(fetchTronRawTokenBalance).mockReset();
   vi.mocked(fetchTronDestroyWindowClear).mockReset().mockResolvedValue(destroyResult("clear"));
   vi.mocked(recordOutcomeSafe).mockClear().mockResolvedValue(null);
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
 });
 
 describe("proven-zero repair queue", () => {
@@ -485,6 +491,78 @@ describe("recoverTronFreezeAmountForRow", () => {
 });
 
 describe("backfillTronBlacklistAmounts", () => {
+  it.each([
+    ["ledger", "full"],
+    ["settle", "full"],
+    ["ledger", "wrong-account"],
+    ["settle", "wrong-account"],
+    ["ledger", "short"],
+  ] as const)("admits only complete same-account %s evidence (%s)", async (window, shape) => {
+    const actual = await vi.importActual<typeof TronReplayProvider>(
+      "../../../lib/blacklist/tron-replay-provider",
+    );
+    const prepareEvidence = async () => {
+      await stubEvidence([{ timestampMs: FREEZE_MS - 60_000, value: 2_000_000n, direction: "in" }]);
+      vi.mocked(fetchTronTransferWindow).mockImplementation(actual.fetchTronTransferWindow);
+    };
+    await prepareEvidence();
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url);
+      const ledger = url.searchParams.get("min_timestamp") === "0";
+      const targeted = ledger === (window === "ledger");
+      const account = url.pathname.split("/")[3]!;
+      const data = ledger && !url.searchParams.has("fingerprint") ? [{
+        transaction_id: "initial-inflow", block_timestamp: FREEZE_MS - 60_000,
+        from: "T-Counterparty", to: account, type: "Transfer", value: "2000000",
+      }] : [];
+      if (targeted && shape === "full") {
+        while (data.length < 200) data.push({
+          transaction_id: `approval-${data.length}`, block_timestamp: ledger ? FREEZE_MS - 30_000 : ANCHOR_MS + 1,
+          from: account, to: "T-Counterparty", type: "Approval", value: "0",
+        });
+      }
+      let next: string | undefined;
+      if (targeted && shape === "wrong-account" && !url.searchParams.has("fingerprint")) {
+        url.pathname = `/v1/accounts/${config.contractAddress}/transactions/trc20`;
+        url.searchParams.set("fingerprint", "foreign-empty-terminal");
+        next = url.toString();
+      }
+      return new Response(JSON.stringify({
+        success: true, data,
+        meta: { at: SETTLE_HEAD_MS + 60_000, ...(next ? { links: { next } } : {}) },
+      }), { headers: { "content-type": "application/json" } });
+    }));
+    const admitted = shape === "short";
+    expect(await recoverTronFreezeAmountForRow(await makeRow(), config, provider()))
+      .toMatchObject({ amount: admitted ? 2 : null, lastErrorClass: admitted ? null : "provider_null" });
+
+    await prepareEvidence();
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const row = await makeRow();
+      sqlite.prepare(`INSERT INTO blacklist_events
+        (id, stablecoin, chain_id, chain_name, event_type, address, tx_hash, block_number,
+         timestamp, explorer_tx_url, explorer_address_url, contract_address, config_key)
+        VALUES (?, 'USDT', 'tron', 'Tron', 'blacklist', ?, ?, ?, ?, '', '', ?, ?)`)
+        .run(row.id, row.address, row.tx_hash, row.block_number, row.timestamp, config.contractAddress, TRON_USDT_CONFIG_ID);
+      expect(await backfillTronBlacklistAmounts(db, {
+        trongridApiKey: "tron-key", limiter: provider().limiter, runBudget: makeRunBudget(),
+      })).toMatchObject({ attempted: 1, resolved: admitted ? 1 : 0, retried: admitted ? 0 : 1, parked: 0 });
+      expect(sqlite.prepare(`SELECT amount_native, amount_status, amount_last_error_class
+        FROM blacklist_events WHERE id = ?`).get(row.id)).toEqual({
+        amount_native: admitted ? 2 : null,
+        amount_status: admitted ? "resolved" : "provider_failed",
+        amount_last_error_class: admitted ? null : "provider_null",
+      });
+      expect(sqlite.prepare(`SELECT status, last_error_class FROM blacklist_amount_repair_queue
+        WHERE event_id = ?`).get(row.id)).toEqual({
+        status: admitted ? "resolved" : "retry", last_error_class: admitted ? null : "provider_null",
+      });
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it("keeps stale primary history queued without persisting an amount or an attempt", async () => {
     const row = await makeRow();
     await stubEvidence([

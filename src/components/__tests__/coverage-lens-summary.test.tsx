@@ -10,7 +10,7 @@ import { cleanupFrontendTest } from "@/test-utils/frontend";
 function row(id: string, cap: number | null) {
   return buildCoverageRow({
     coin: makeStablecoinMeta({ id }), marketCapUsd: cap ?? 0, marketCapAvailable: cap != null,
-    hasPegCoverage: true, safetyScore: null, dexCoverageClass: null,
+    hasPegCoverage: true, safetyScore: null, safetyRatingStatus: "not-rated", dexCoverageClass: null,
     hasYieldCoverage: false, flowCoverageStatus: null,
   });
 }

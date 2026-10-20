@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { encodeAddress, encodeUint256 } from "../../../lib/evm-selectors";
 
 import { adaptCapVaultState } from "../cap-vault";
@@ -172,7 +172,7 @@ describe("adaptCapVaultState", () => {
     expectValidAdapterOutput("cap-vault", result);
   });
 
-  it("marks the route paused when no unpaused capacity remains", () => {
+  it("retains measured zero float without inventing a pause", () => {
     const result = adaptCapVaultState({
       contractAddress: "0xcccc62962d17b8914c62d74ffb843d73b2a3cccc",
       supplyUsd: 100,
@@ -181,8 +181,9 @@ describe("adaptCapVaultState", () => {
 
     expect(result.metadata?.redemption).toMatchObject({
       capacityUsd: 0,
-      routeStatus: "paused",
+      routeStatus: "degraded",
     });
+    expect(result.warnings?.some((warning) => warning.code === "cap-asset-paused")).toBe(false);
   });
 
   it("emits cap-vault-peg-assumed info warning when any active asset lacks priceUsd", () => {
@@ -416,15 +417,59 @@ describe("fetchCapVaultReserves", () => {
     })).rejects.toThrow(/expected safe integer 0-36/);
   });
 
-  it("treats paused() undecodable value as paused (conservative) and emits an info warning", async () => {
+  it.each([null, "0x", "0x1234", `0x${encodeUint256(2)}`, () => { throw new Error("RPC failed"); }])(
+    "withholds direct telemetry when paused() is unavailable or malformed (%s)", async (paused) => {
+      const spec = capNetwork();
+      spec.rpc[`${CAP_VAULT}:0x2e48152c`] = paused;
+      const network = installAdapterNetwork(spec);
+      if (typeof paused === "string") {
+        // The harness pads short hex as uint words. Inject actual malformed
+        // wire bytes after routing so empty/truncated bools reach the decoder.
+        const fetch = globalThis.fetch;
+        vi.stubGlobal("fetch", async (...args: Parameters<typeof fetch>) => {
+          const request = new Request(...args);
+          const body = await request.clone().json() as { method: string; params: { data?: string }[] };
+          const response = await fetch(request);
+          if (body.method === "eth_call" && body.params[0]?.data?.startsWith("0x2e48152c")) {
+            const payload = await response.json() as Record<string, unknown>;
+            return Response.json({ ...payload, result: paused });
+          }
+          return response;
+        });
+      }
+      const { result } = await runAdapter("cap-vault", "cusd-cap", { network, nowSec: CAP_NOW });
+      expect(result.metadata?.totalReserveUsd).toBe(50);
+      expect(result.metadata?.pausedAssetCount).toBe(0);
+      expect(result.metadata?.redemption).toBeUndefined();
+      expect(result.metadata?.assets).toMatchObject([{ paused: null }]);
+      expect(result.warnings).toContainEqual(expect.objectContaining({ code: "cap-vault-asset-status-unavailable" }));
+      expect(result.warnings?.some((warning) => warning.code === "cap-asset-paused")).toBe(false);
+      expectValidAdapterOutput("cap-vault", result);
+    },
+  );
+
+  it("withholds the whole capacity claim for mixed readable and unreadable active assets", async () => {
+    const network = capNetwork({ assets: [USDC, WTGXX] });
+    network.rpc[`${CAP_VAULT}:0x2e48152c`] = (call) =>
+      argumentAddress(call.data) === WTGXX.toLowerCase() ? null : false;
+    const { result } = await runAdapter("cap-vault", "cusd-cap", { network, nowSec: CAP_NOW });
+    expect(result.slices.map((slice) => slice.pct)).toEqual([50, 50]);
+    expect(result.metadata?.totalReserveUsd).toBe(100);
+    expect(result.metadata?.pausedAssetCount).toBe(0);
+    expect(result.metadata?.redemption).toBeUndefined();
+    expectValidAdapterOutput("cap-vault", result);
+  });
+
+  it.each([true, false])("distinguishes an observed pause from measured zero available float (%s)", async (paused) => {
     const { result } = await runAdapter("cap-vault", "cusd-cap", {
-      network: capNetwork({ paused: null }),
-      nowSec: CAP_NOW,
+      network: capNetwork({ paused, available: { [USDC]: 0n } }), nowSec: CAP_NOW,
     });
-    const warning = result.warnings?.find((w) => w.code === "cap-vault-asset-status-unavailable");
-    expect(warning).toBeDefined();
-    // Paused-treated-as-true must exclude from immediateRedeemable.
-    expect(result.metadata?.redemption?.capacityUsd).toBe(0);
+    expect(result.metadata?.redemption).toMatchObject({
+      capacityUsd: 0, routeStatus: paused ? "paused" : "degraded", routeStatusSource: "onchain",
+    });
+    expect(result.metadata?.pausedAssetCount).toBe(paused ? 1 : 0);
+    expect((result.warnings ?? []).some((warning) => warning.code === "cap-asset-paused")).toBe(paused);
+    expectValidAdapterOutput("cap-vault", result);
   });
 
   it("reads getRedeemFee() and converts the ray value to bps", async () => {

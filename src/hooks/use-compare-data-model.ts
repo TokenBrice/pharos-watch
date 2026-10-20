@@ -222,6 +222,7 @@ export function useCompareDataModel({
       dexData,
       cardMap,
       flowCoinMap,
+      // Preserve absent vs empty publications, including retained data after a failed refresh.
       bluechipMap: bluechip.data,
       redemptionMap: redemption.data?.coins,
       yieldMap,

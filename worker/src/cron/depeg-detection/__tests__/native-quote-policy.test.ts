@@ -52,6 +52,7 @@ describe("native quote mutation policy", () => {
     })).toEqual({ type: "update-peak", id: 7, peakDeviationBps: -900, peakPrice: 0.91 });
     expect(resolveDirectRecovery({
       existing, nativeSignal: signal(-400), nativePegPrice: 0.96, primaryPrice: 1,
+      primarySignal: signal(0),
       recoveryThreshold: 50, primarySupportsRecovery: true, primaryRecoveryContradicted: false,
     })).toEqual({ recoveryPrice: 1, closeReason: "recovered-primary" });
     expect(recoveryPriceForEvent(existing, 1)).toBe(1);
@@ -59,6 +60,7 @@ describe("native quote mutation policy", () => {
 
   it("requires an available native quote at the inclusive raw recovery boundary", () => {
     const input = { existing: event(), nativeSignal: signal(-50), nativePegPrice: 0.995,
+      primarySignal: signal(0),
       primaryPrice: 1, recoveryThreshold: 50, primarySupportsRecovery: true, primaryRecoveryContradicted: false };
     expect(resolveDirectRecovery(input)).toEqual({ recoveryPrice: 0.995, closeReason: "recovered-native" });
     expect(resolveDirectRecovery({ ...input, nativeSignal: signal(-50.01) })).toBeNull();
@@ -66,10 +68,25 @@ describe("native quote mutation policy", () => {
     expect(resolveDirectRecovery({ ...input, nativePegPrice: null })).toBeNull();
     const primary = { ...input, existing: event(false) };
     expect(resolveDirectRecovery(primary)).toEqual({ recoveryPrice: 1, closeReason: "recovered-primary" });
-    expect(resolveDirectRecovery({ ...primary, primarySupportsRecovery: false })).toBeNull();
+    expect(resolveDirectRecovery({ ...primary, nativeSignal: null, primarySupportsRecovery: false })).toBeNull();
     expect(resolveDirectRecovery({ ...primary, primaryRecoveryContradicted: true })).toBeNull();
     expect(recoveryPriceForEvent(event(), 0.18)).toBeNull();
     expect(recoveryPriceForEvent(event(false), 1)).toBe(1);
+  });
+
+  it("never labels an off-band primary as recovered and leaves USD prices absent for native-only recovery", () => {
+    const input = { existing: event(false), nativeSignal: signal(0), nativePegPrice: 1,
+      primarySignal: signal(-200), primaryPrice: 0.98, recoveryThreshold: 50,
+      primarySupportsRecovery: true, primaryRecoveryContradicted: false };
+    expect(resolveDirectRecovery(input)).toEqual({ recoveryPrice: null, closeReason: "recovered-native" });
+    expect(resolveDirectRecovery({ ...input, primarySupportsRecovery: false }))
+      .toEqual({ recoveryPrice: null, closeReason: "recovered-native" });
+    expect(resolveDirectRecovery({ ...input, nativeSignal: null })).toBeNull();
+    expect(resolveDirectRecovery({ ...input, nativePegPrice: null })).toBeNull();
+    expect(resolveDirectRecovery({ ...input, primarySignal: signal(-50), primaryPrice: 0.995 }))
+      .toEqual({ recoveryPrice: 0.995, closeReason: "recovered-primary" });
+    expect(resolveDirectRecovery({ ...input, primarySignal: signal(-50.01), nativeSignal: null })).toBeNull();
+    expect(resolveDirectRecovery({ ...input, primaryRecoveryContradicted: true })).toBeNull();
   });
 
   it("vetoes a false opening but passes an existing event to native recovery handling", () => {

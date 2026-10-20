@@ -307,12 +307,13 @@ export interface YieldSyncLoadedState {
   stablecoinSupplyMapState: StablecoinSupplyMapState;
   safetySnapshot: PublishedSafetyScoresResultMap;
   safetyScores: PublishedSafetyScoresResultMap["scores"];
-  safetyCoverageRatio: number;
-  /** A score map can be used: a current publication, or a held accepted one inside the read-path budget. */
+  safetyCoverageRatio: number | null;
+  /** Current and held accepted publications share the original safety-clock budget. */
   safetySnapshotAvailable: boolean;
+  safetySnapshotUnavailableReason: string | null;
   /** True when the canonical publication health is held (accepted generation still served). */
   safetySnapshotHeld: boolean;
-  /** Age of the accepted publication, or null when no publication identity is published. */
+  /** Age of the original accepted publication, or null when its clock is invalid. */
   acceptedSafetyPublicationAgeSeconds: number | null;
   safetySnapshotDegraded: boolean;
 }
@@ -605,17 +606,20 @@ export async function loadYieldSyncState(params: {
   // inside the same budget the read path uses before it blanks safety to NR.
   const safetySnapshotIdentityPresent = safetySnapshot.safetyScoreIdentity != null;
   const acceptedSafetyPublicationAgeSeconds =
-    safetySnapshot.publishedAt == null ? null : Math.max(0, params.startSec - safetySnapshot.publishedAt);
+    safetySnapshot.publishedAt != null && Number.isFinite(safetySnapshot.publishedAt) && safetySnapshot.publishedAt <= params.startSec
+      ? params.startSec - safetySnapshot.publishedAt : null;
   const safetySnapshotHeld = safetySnapshot.kind === "degraded" && safetySnapshotIdentityPresent;
-  const safetySnapshotWithinHeldBudget =
-    safetySnapshotHeld &&
+  const safetySnapshotWithinBudget =
     isYieldSafetyFallbackWithinWindow(params.startSec, safetySnapshot.publishedAt, params.startSec);
-  const safetySnapshotAvailable =
-    safetySnapshotIdentityPresent &&
-    (safetySnapshot.kind === "ok" || safetySnapshotWithinHeldBudget);
+  const safetySnapshotAvailable = safetySnapshotIdentityPresent && safetySnapshotWithinBudget;
+  const safetySnapshotUnavailableReason = safetySnapshotAvailable ? null
+    : safetySnapshotIdentityPresent ? "safety-publication-clock-out-of-budget"
+      : safetySnapshot.reason ?? "safety-score-v9-publication:identity-missing";
   // Held accepted evidence is advisory, but still suppresses destructive cleanup.
   const safetySnapshotDegraded =
-    !safetySnapshotAvailable || safetyCoverageRatio < STATUS_YIELD_HEALTH_THRESHOLDS.safetyCoverageRatio;
+    !safetySnapshotAvailable ||
+    safetyCoverageRatio == null ||
+    safetyCoverageRatio < STATUS_YIELD_HEALTH_THRESHOLDS.safetyCoverageRatio;
 
   return {
     dlPools,
@@ -641,6 +645,7 @@ export async function loadYieldSyncState(params: {
     safetyScores,
     safetyCoverageRatio,
     safetySnapshotAvailable,
+    safetySnapshotUnavailableReason,
     safetySnapshotHeld,
     acceptedSafetyPublicationAgeSeconds,
     safetySnapshotDegraded,

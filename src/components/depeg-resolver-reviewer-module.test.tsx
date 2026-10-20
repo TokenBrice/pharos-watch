@@ -12,6 +12,7 @@ import {
 import { summarizeDdrrRows } from "@shared/lib/depeg-resolver-review";
 import type { DdrrResponse, DdrrResponseRow, DdrrSummary } from "@shared/types";
 import { RatioSchema } from "@shared/types/ratio";
+import { DdrrResponseSchema } from "@shared/types/depeg-resolver-review";
 
 vi.mock("@/lib/feature-flags", () => ({
   isDepegResolverReviewerEnabled: () => true,
@@ -43,7 +44,7 @@ const summary: DdrrSummary = makeSummary({
   durationScoredCount: 2,
   meanSignedDurationErrorSec: 3600,
   meanAbsoluteDurationErrorSec: 5400,
-  pendingLockCount: 1,
+  pendingRecoveryLikelihoodCount: 1,
 });
 
 function response(overrides: Partial<DdrrResponse> = {}): DdrrResponse {
@@ -83,7 +84,76 @@ function response(overrides: Partial<DdrrResponse> = {}): DdrrResponse {
   };
 }
 
+function pendingPrediction(overrides: Partial<typeof row> = {}): typeof row {
+  return {
+    ...row,
+    incidentKey: "pending-forecast",
+    sourceEventState: "active",
+    verdictReview: "pending",
+    actual: { ...row.actual, kind: "still_open", actualEndedAt: null, actualRemainingSec: null },
+    durationReview: "duration_unscored",
+    actualRemainingSec: null,
+    medianReview: null,
+    signedDurationErrorSec: null,
+    absoluteDurationErrorSec: null,
+    withinIqr: null,
+    ...overrides,
+  };
+}
+
 describe("DepegResolverReviewerModule", () => {
+  it.each([false, true])("counts only published pending forecasts with browse truncation=%s", (truncated) => {
+    const pending = pendingPrediction();
+    const cohort = [row, pending];
+    const data = response({ summary: summarizeDdrrRows(cohort), rows: truncated ? [row] : cohort });
+    data._meta.publicRowLimit = truncated ? 1 : 100;
+    data._meta.publicRowsTruncated = truncated;
+    render(<DepegResolverReviewerModule data={data} />);
+    expect(screen.getByRole("img", { name: "1 scored of 2, 1 still maturing" })).toBeTruthy();
+    expect(screen.getByText("1 scored · 1 maturing")).toBeTruthy();
+  });
+
+  it("keeps an unpublished pending lock out of maturing forecasts and in coverage", () => {
+    const pendingLock: DdrrResponseRow = { ...coverageRow, predictionState: "pending_lock",
+      coverageCause: "active_pending_lock", operationalCoverageCause: null,
+      sourceEventState: "active", actualOutcome: "still_open", actualEndedAt: null };
+    const fullSummary = summarizeDdrrRows([pendingLock]);
+    render(<DepegResolverReviewerModule data={response({ summary: fullSummary, rows: [pendingLock] })} />);
+    expect(screen.getByRole("img", { name: "0 scored of 0, 0 still maturing" })).toBeTruthy();
+    expect(screen.getByText("1 policy-universe incidents")).toBeTruthy();
+    expect(fullSummary.headline.pendingLockCount).toBe(1);
+  });
+
+  it.each([19, 20])("keeps maturing counts in the headline accuracy scope at %i outcomes", (count) => {
+    const current = Array.from({ length: count }, (_, index) => ({
+      ...row, incidentKey: `current-${index}`, eventId: index + 1,
+    }));
+    const old = { ...row, incidentKey: "old-scored", predictionPolicyVersion: "legacy-policy" };
+    const cohort = [...current, old, pendingPrediction(),
+      pendingPrediction({ incidentKey: "old-pending", predictionPolicyVersion: "legacy-policy" })];
+    const fullSummary = summarizeDdrrRows(cohort);
+    render(<DepegResolverReviewerModule data={response({ summary: fullSummary, rows: [row] })} />);
+    expect(fullSummary.headlineScope).toBe(count === 20 ? "current_policy" : "all_ddrv2");
+    expect(screen.getByRole("img", { name: count === 20
+      ? "20 scored of 21, 1 still maturing" : "20 scored of 22, 2 still maturing" })).toBeTruthy();
+    expect(fullSummary.byStablecoin?.[0].pendingCount).toBe(2);
+  });
+
+  it("admits old and new cached bodies while withholding an absent maturing count", () => {
+    const current = DdrrResponseSchema.parse(response());
+    expect(current.summary.headline.pendingRecoveryLikelihoodCount).toBe(1);
+    const { rerender } = render(<DepegResolverReviewerModule data={current} />);
+    expect(screen.getByRole("img", { name: "4 scored of 5, 1 still maturing" })).toBeTruthy();
+    const retainedBody = JSON.parse(JSON.stringify(response(), (key, value) =>
+      key === "pendingRecoveryLikelihoodCount" ? undefined : value));
+    const retained = DdrrResponseSchema.parse(retainedBody);
+    expect(retained.summary.headline.pendingRecoveryLikelihoodCount).toBeUndefined();
+    rerender(<DepegResolverReviewerModule data={retained} />);
+    expect(screen.getByText("4 scored · maturing unavailable")).toBeTruthy();
+    expect(screen.queryByRole("img", { name: /scored of/ })).toBeNull();
+    expect(screen.queryByText("4 scored · 0 maturing")).toBeNull();
+  });
+
   it("renders full-summary breakdowns when an incorrect outcome is beyond the 400-row browse cap", () => {
     const predictions = Array.from({ length: 401 }, (_, index): DdrrResponseRow => ({
       ...row,

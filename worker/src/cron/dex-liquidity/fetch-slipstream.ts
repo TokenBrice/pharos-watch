@@ -2,21 +2,16 @@ import { logWorkerEventArgs, logWorkerEvent } from "../../lib/structured-log";
 import { decodeFunctionResult, encodeFunctionData, parseAbi } from "viem/utils";
 import { makeDexApiFetchResult, type DexApiFetchResult, type DexApiPool } from "../../lib/dex-api-common";
 import { throwIfAborted } from "../../lib/abort";
-import {
-  fetchEvmCallHexAtBlock,
-  fetchEvmMulticall3Aggregate3AtBlock,
-} from "../../lib/evm-rpc";
+import { fetchEvmCallHexAtBlock } from "../../lib/evm-rpc";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { buildChainAddressKey, resolveTrackedStablecoinId } from "./token-resolution";
 import { classifyClPoolType, normalizeFeeRateFromBps } from "./direct-source-helpers";
 import { DIRECT_API_REQUEST_TIMEOUT_MS } from "./direct-api-policy";
 import {
-  decodeStagedMulticallResult,
-  erc20RecoveryCalls,
-  ERC20_RECOVERY_ABI,
-  loadStagedPoolRecoveryRows,
-  mapStagedMulticallResults,
+  captureClSourcePools,
   rawAmountToDecimal,
+  sqrtRatioToSpotPrice,
+  loadStagedPoolRecoveryRows,
   type StagedPoolRecoveryRowWithFeeTier,
 } from "./staged-pool-recovery";
 import { toErrorMessage } from "@shared/lib/error-utils";
@@ -32,16 +27,6 @@ const POOL_COUNT_ABI = parseAbi([
 const SUGAR_ABI = parseAbi([
   "function all(uint256 _limit, uint256 _offset, uint256 _filter) view returns ((address lp,string symbol,uint8 decimals,uint256 liquidity,int24 type,int24 tick,uint160 sqrt_ratio,address token0,uint256 reserve0,uint256 staked0,address token1,uint256 reserve1,uint256 staked1,address gauge,uint256 gauge_liquidity,bool gauge_alive,address fee,address bribe,address factory,uint256 emissions,address emissions_token,uint256 emissions_cap,uint256 pool_fee,uint256 unstaked_fee,uint256 token0_fees,uint256 token1_fees,uint256 locked,uint256 emerging,uint32 created_at,address nfpm,address alm,address root)[])",
   "function tokens(uint256 _limit, uint256 _offset, address _account, address[] _addresses) view returns ((address token_address,string symbol,uint8 decimals,uint256 account_balance,bool listed,bool emerging)[])",
-]);
-const SLIPSTREAM_POOL_ABI = parseAbi([
-  "function factory() view returns (address)",
-  "function token0() view returns (address)",
-  "function token1() view returns (address)",
-  "function tickSpacing() view returns (int24)",
-  "function slot0() view returns (uint160 sqrtPriceX96,int24 tick,uint16 observationIndex,uint16 observationCardinality,uint16 observationCardinalityNext,bool unlocked)",
-]);
-const SLIPSTREAM_FACTORY_ABI = parseAbi([
-  "function getPool(address tokenA,address tokenB,int24 tickSpacing) view returns (address pool)",
 ]);
 
 type SlipstreamProtocol = "aerodrome-slipstream" | "velodrome-slipstream";
@@ -107,125 +92,41 @@ async function recoverSlipstreamPoolsFromStaging(input: {
   });
   if (candidates.length === 0) return [];
 
-  const calls = candidates.flatMap((candidate, index) => {
-    const prefix = `slipstream-recovery-${index}`;
-    const poolCall = (functionName: "factory" | "token0" | "token1" | "tickSpacing" | "slot0") => ({
-      label: `${prefix}-${functionName}`,
-      target: candidate.poolAddress,
-      callData: encodeFunctionData({ abi: SLIPSTREAM_POOL_ABI, functionName }),
+  try {
+    const capture = await captureClSourcePools({
+      chain: config.chain,
+      factoryAddress: config.clFactoryAddress,
+      parameterName: "tickSpacing",
+      maxParameter: 32_767,
+      valuation: "tracked-positive",
+      candidates,
+      chainAddressToId: input.chainAddressToId,
+      trackedStablecoinPrices: input.trackedStablecoinPrices,
+      options: {
+        signal: input.signal,
+        timeoutMs: DIRECT_API_REQUEST_TIMEOUT_MS,
+        chainRpcs: input.chainRpcs,
+        multicallBatchSize: 60,
+      },
     });
-    return [
-      poolCall("factory"),
-      poolCall("token0"),
-      poolCall("token1"),
-      poolCall("tickSpacing"),
-      poolCall("slot0"),
-      ...erc20RecoveryCalls(prefix, candidate.poolAddress, candidate.expectedTokens),
-    ];
-  });
-  const rawResults = await fetchEvmMulticall3Aggregate3AtBlock(config.chain, calls, "latest", {
-    signal: input.signal,
-    timeoutMs: DIRECT_API_REQUEST_TIMEOUT_MS,
-    chainRpcs: input.chainRpcs,
-    multicallBatchSize: 60,
-  });
-  if (!rawResults) return [];
-  const results = mapStagedMulticallResults(rawResults);
-  const factoryCalls = candidates.flatMap((candidate, index) => {
-    const prefix = `slipstream-recovery-${index}`;
-    const tickSpacing = Number(decodeStagedMulticallResult<number>(results.get(`${prefix}-tickSpacing`), SLIPSTREAM_POOL_ABI, "tickSpacing"));
-    if (!Number.isInteger(tickSpacing) || tickSpacing <= 0 || tickSpacing > 32_767) return [];
-    const [token0, token1] = [...candidate.expectedTokens] as [`0x${string}`, `0x${string}`];
-    return [{
-      label: `${prefix}-membership`,
-      target: config.clFactoryAddress,
-      callData: encodeFunctionData({ abi: SLIPSTREAM_FACTORY_ABI, functionName: "getPool", args: [token0, token1, tickSpacing] }),
-    }];
-  });
-  if (factoryCalls.length === 0) return [];
-  const factoryResults = await fetchEvmMulticall3Aggregate3AtBlock(config.chain, factoryCalls, "latest", {
-    signal: input.signal,
-    timeoutMs: DIRECT_API_REQUEST_TIMEOUT_MS,
-    chainRpcs: input.chainRpcs,
-    multicallBatchSize: 60,
-  });
-  if (!factoryResults) return [];
-  const memberships = mapStagedMulticallResults(factoryResults);
-  const pools: DexApiPool[] = [];
-  for (let index = 0; index < candidates.length; index++) {
-    const candidate = candidates[index]!;
-    const prefix = `slipstream-recovery-${index}`;
-    const factory = decodeStagedMulticallResult<string>(results.get(`${prefix}-factory`), SLIPSTREAM_POOL_ABI, "factory")?.toLowerCase();
-    const token0 = decodeStagedMulticallResult<string>(results.get(`${prefix}-token0`), SLIPSTREAM_POOL_ABI, "token0")?.toLowerCase();
-    const token1 = decodeStagedMulticallResult<string>(results.get(`${prefix}-token1`), SLIPSTREAM_POOL_ABI, "token1")?.toLowerCase();
-    const tickSpacing = Number(decodeStagedMulticallResult<number>(results.get(`${prefix}-tickSpacing`), SLIPSTREAM_POOL_ABI, "tickSpacing"));
-    const slot0 = decodeStagedMulticallResult<readonly [bigint, number, number, number, number, boolean]>(
-      results.get(`${prefix}-slot0`),
-      SLIPSTREAM_POOL_ABI,
-      "slot0",
-    );
-    if (
-      factory !== config.clFactoryAddress.toLowerCase() ||
-      decodeStagedMulticallResult<string>(memberships.get(`${prefix}-membership`), SLIPSTREAM_FACTORY_ABI, "getPool")?.toLowerCase() !== candidate.poolAddress ||
-      !token0 ||
-      !token1 ||
-      !candidate.expectedTokens.has(token0) ||
-      !candidate.expectedTokens.has(token1) ||
-      token0 === token1 ||
-      !Number.isInteger(tickSpacing) ||
-      tickSpacing <= 0 ||
-      !slot0 ||
-      slot0[0] <= 0n
-    ) continue;
-
-    const stagedTokens = [...candidate.expectedTokens];
-    const tokenRows = [token0, token1].flatMap((address) => {
-      const stagedIndex = stagedTokens.indexOf(address);
-      const decimals = Number(decodeStagedMulticallResult<number>(
-        results.get(`${prefix}-token-${stagedIndex}-decimals`),
-        ERC20_RECOVERY_ABI,
-        "decimals",
-      ));
-      const rawBalance = decodeStagedMulticallResult<bigint>(
-        results.get(`${prefix}-token-${stagedIndex}-balance`),
-        ERC20_RECOVERY_ABI,
-        "balanceOf",
-      );
-      const stablecoinId = input.chainAddressToId.get(buildChainAddressKey(config.chain, address));
-      const priceUsd = stablecoinId ? input.trackedStablecoinPrices.get(stablecoinId) : null;
-      if (
-        !stablecoinId ||
-        priceUsd == null ||
-        priceUsd <= 0 ||
-        !Number.isInteger(decimals) ||
-        decimals < 0 ||
-        decimals > 255 ||
-        rawBalance == null ||
-        rawBalance <= 0n
-      ) return [];
-      const balance = rawAmountToDecimal(rawBalance, decimals);
-      return [{ address, symbol: stablecoinId, decimals, priceUsd, balance }];
-    });
-    if (tokenRows.length !== 2) continue;
-    const tvlUsd = tokenRows.reduce((sum, token) => sum + token.balance * token.priceUsd, 0);
-    const price = sqrtRatioToSpotPrice(slot0[0], tokenRows[0]!.decimals, tokenRows[1]!.decimals);
-    if (!Number.isFinite(tvlUsd) || tvlUsd <= 0 || !Number.isFinite(price) || price <= 0) continue;
-    pools.push({
+    return capture.pools.map((pool) => ({
       source: input.protocol,
       chain: config.chain,
-      poolAddress: candidate.poolAddress,
-      poolType: classifyClPoolType(input.protocol, candidate.feeBps),
-      tokens: tokenRows.map(({ balance: _balance, ...token }) => token),
-      price,
-      tvlUsd,
-      // On-chain pool state carries no trailing volume: no observation, not zero.
+      poolAddress: pool.candidate.poolAddress,
+      poolType: classifyClPoolType(input.protocol, pool.candidate.feeBps),
+      tokens: pool.tokens,
+      price: pool.price,
+      tvlUsd: pool.tvlUsd,
+      // On-chain state carries no trailing volume: no observation, not zero.
       volume24hUsd: null,
-      feeRate: normalizeFeeRateFromBps(candidate.feeBps),
-      tickSpacing,
-      balances: tokenRows.map((token) => token.balance),
-    });
+      feeRate: normalizeFeeRateFromBps(pool.candidate.feeBps),
+      tickSpacing: pool.parameter,
+      balances: pool.balances,
+    }));
+  } catch (error) {
+    if (input.signal?.aborted) throw error;
+    return [];
   }
-  return pools;
 }
 
 export function projectSugarPoolPage(decoded: readonly SugarPool[]): SugarPool[] {
@@ -308,31 +209,6 @@ export function getSlipstreamPoolFeeBps(poolFee: bigint): number | null {
   return asNumber;
 }
 
-/**
- * Convert a Uniswap V3-style sqrtPriceX96 (Q64.96) to a decimal-adjusted
- * spot price: the amount of token1 you receive per 1 token0 (in human
- * decimal units). Equivalent to: given 1 unit of token0, how many token1.
- * Consumers: `USD(token0) = spotPrice * USD(token1)`.
- *
- *   sqrtRatio   = sqrt(reserve1_wei / reserve0_wei) * 2^96   (Uniswap V3 convention)
- *   ratio_raw   = (sqrtRatio / 2^96)^2                         (reserve1_wei / reserve0_wei)
- *   spotPrice   = ratio_raw * 10^(token0Decimals - token1Decimals)
- *
- * Convert the bounded uint160 ratio to a floating-point significand before
- * squaring, then apply token decimals. Squaring the BigInt first and retaining
- * only 32 raw-ratio fractional bits loses legitimate pools whenever the raw
- * ratio is tiny but the decimal adjustment brings the human price back near
- * one (for example an 18-decimal token paired with 6-decimal USDC).
- */
-export function sqrtRatioToSpotPrice(
-  sqrtRatio: bigint,
-  token0Decimals: number,
-  token1Decimals: number,
-): number {
-  if (sqrtRatio <= 0n) return 0;
-  const normalizedSqrtRatio = Number(sqrtRatio) / Math.pow(2, 96);
-  return normalizedSqrtRatio * normalizedSqrtRatio * Math.pow(10, token0Decimals - token1Decimals);
-}
 
 function normalizeAddress(address: string): string {
   return canonicalEvmAddress(address) ?? address.trim().toLowerCase();

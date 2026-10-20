@@ -1,6 +1,6 @@
 import { logWorkerEventArgs } from "../lib/structured-log";
 import type { CronProgressReporter, CronResult } from "../lib/cron-logger";
-import { createCronResult } from "../lib/cron-result";
+import { createCronResult, createNeutralSkippedCronResult } from "../lib/cron-result";
 import { throwIfAborted } from "../lib/abort";
 import type { TwitterCreds } from "../lib/twitter";
 import type { TelegramCreds } from "../telegram/delivery/telegram";
@@ -120,7 +120,7 @@ export async function generateDailyDigest(
           ageSec,
         },
       });
-      return { metadata: "skipped: recent digest exists" };
+      return createNeutralSkippedCronResult("recent-digest", { ageSec });
     }
     if (isBroken) {
       logWorkerEventArgs("handler", "info", "[daily-digest] Latest digest is malformed (code-block response), regenerating");
@@ -238,8 +238,7 @@ export async function generateDailyDigest(
     },
   });
   if (digestCopy.kind === "circuit-open") {
-    await reportDigestCircuitOpen(reportProgress, "daily digest");
-    return { status: "degraded", itemCount: 0, metadata: "skipped: anthropic circuit open" };
+    return reportDigestCircuitOpen(reportProgress, "daily digest");
   }
   if (digestCopy.kind === "refusal") {
     return reportDigestRefusal(

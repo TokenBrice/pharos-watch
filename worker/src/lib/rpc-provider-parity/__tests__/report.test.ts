@@ -790,6 +790,18 @@ describe("rpc provider trial report", () => {
     expect(report.circuit?.updatedAtSec).toBeGreaterThan(PARITY_NOW_SEC);
   });
 
+  it("reports the newest observation after a late run is persisted", async () => {
+    const { db } = fixtures.open();
+    for (const atSec of [PARITY_NOW_SEC - 100, PARITY_NOW_SEC, PARITY_NOW_SEC - 50]) {
+      await recordRpcParityRun(db, fullParityRun(atSec, () => ({ dwellirHead: atSec })));
+    }
+    const report = await loadRpcProviderTrialReport(db, {}, PARITY_NOW_SEC);
+    expect(report.observationError).toBeNull();
+    expect(report.observation).toMatchObject({ runsRetained: 3, lastRunAtSec: PARITY_NOW_SEC });
+    const base = report.observation?.chains.find((chain) => chain.chainId === PARITY_REGISTRY_CHAIN);
+    expect(base).toMatchObject({ runs: 3, last: { atSec: PARITY_NOW_SEC, dwellirHead: PARITY_NOW_SEC } });
+  });
+
   it("surfaces an unreadable window as an error instead of throwing", async () => {
     const { db } = fixtures.open();
     await db.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")

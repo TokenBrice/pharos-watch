@@ -4,7 +4,7 @@ import { DataHealthBanner } from "@/components/data-health-banner";
 import { deriveDataHealth, type DataHealthCatchUp, type DataHealthInfo } from "@/lib/data-health";
 import { DATA_HEALTH_PRESETS } from "@/lib/data-health-config";
 import type { ApiMeta } from "@/lib/api";
-import { useHydrated } from "@/hooks/use-hydrated";
+import { useFreshnessBoundary } from "@/hooks/use-freshness-boundary";
 
 /**
  * Compatibility wrapper around DataHealthBanner.
@@ -59,22 +59,23 @@ export function StaleDataBanner({
   persistent?: boolean;
   onRetry?: () => void;
 }) {
-  const hydrated = useHydrated();
-  const refreshingEntries: DataHealthInfo[] = [];
-  const health = queries.filter((q) => !isFirstFetchInFlight(q)).flatMap((q) => {
+  const inputs = queries.filter((q) => !isFirstFetchInFlight(q)).map((q) => {
     const preset = q.preset ? DATA_HEALTH_PRESETS[q.preset] : null;
-    const label = q.label ?? preset?.label ?? "Data";
-    const staleTime = q.staleTime ?? preset?.staleTime ?? 15 * 60_000;
-    // Initial markup describes the saved query; browser-clock aging begins after hydration.
-    const info = deriveDataHealth({
-      label,
+    return {
+      query: q,
+      label: q.label ?? preset?.label ?? "Data",
       dataUpdatedAt: q.dataUpdatedAt,
-      staleTime,
+      staleTime: q.staleTime ?? preset?.staleTime ?? 15 * 60_000,
       hasData: q.hasData ?? q.dataUpdatedAt > 0,
       error: q.error,
       meta: q.meta ?? null,
       catchUp: q.catchUp,
-    }, hydrated ? undefined : q.dataUpdatedAt);
+    };
+  });
+  const nowMs = useFreshnessBoundary(inputs);
+  const refreshingEntries: DataHealthInfo[] = [];
+  const health = inputs.flatMap(({ query: q, ...input }) => {
+    const info = deriveDataHealth(input, nowMs ?? q.dataUpdatedAt);
     if (persistent && q.isSnapshot && q.isFetching && q.isFetchedAfterMount === false
       && !q.error && info.dataUpdatedAt > 0 && (q.hasData ?? q.dataUpdatedAt > 0)
       && info.degradationReason !== "source" && !info.catchUp

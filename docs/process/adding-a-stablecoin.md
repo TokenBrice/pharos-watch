@@ -582,8 +582,12 @@ editorial metadata retained in the source asset):
 }
 ```
 
-Use a full UTC ISO timestamp instead of the date-only form for sub-day
-precision. `kind` must be one of the values in `CHART_ANNOTATION_KINDS`,
+Use a full UTC ISO timestamp (`YYYY-MM-DDTHH:MM:SS[.SSS]Z`, with one to
+three optional fractional digits) instead of the date-only form for sub-day
+precision. The shared strict date parser rejects impossible calendar days and
+out-of-range clock components at module initialization; admitted timestamps
+retain millisecond precision without rounding to whole seconds.
+`kind` must be one of the values in `CHART_ANNOTATION_KINDS`,
 `label` is limited to 80 characters, `href` should be a primary source, and
 `note` retains the editorial rationale. For a new corpus file, also add its import and ID mapping in `shared/data/annotations/curated-annotations.ts`; the corpus test checks file/loader parity.
 

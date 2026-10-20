@@ -68,7 +68,7 @@ export function PegHealthCard(): React.JSX.Element {
             {/* The active-depeg count already answers on the market-state line and
                 its own card; this card speaks in deviation bands. */}
             <p className="pharos-meta mt-1.5">
-              At peg (per-coin threshold) · <span className="pharos-numeric">{summary.medianDeviationBps.toFixed(0)}</span> bps median
+              At peg (per-coin threshold) · <span className="pharos-numeric">{summary.medianDeviationBps === null ? "—" : `${summary.medianDeviationBps.toFixed(0)} bps`}</span> median
             </p>
           </div>
 

@@ -943,7 +943,7 @@ describe("pruneYieldTables", () => {
   it("surfaces a missing mandatory decision column during cleanup", async () => {
     const db = mockD1([
       {
-        match: "ranked_linked_generations",
+        match: "ranked_generations",
         rows: [],
         throwError: new Error("D1_ERROR: no such column: retention_reason"),
       },

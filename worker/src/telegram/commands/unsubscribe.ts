@@ -6,7 +6,7 @@ import {
 import { PENDING_OWNERSHIP_CONFLICT_MESSAGE } from "../store/telegram-webhook-store";
 import type { WebhookCommandHandler } from "./context";
 import {
-  BULK_CONFIRM_REPLY_MARKUP,
+  buildBulkConfirmReplyMarkup,
   buildTelegramActionContext,
   dedupePresetIds,
   makeActionRunner,
@@ -73,7 +73,7 @@ export const handleUnsubscribe: WebhookCommandHandler = async (ctx, args) => {
       // The destructive scope is per-chat (direct subscriptions, preset
       // follows, global alert settings, snoozes), never the catalog size.
       "This will remove all coin subscriptions, preset follows, global alert settings and snoozes for this chat. Confirm?",
-      { replyMarkup: BULK_CONFIRM_REPLY_MARKUP },
+      { replyMarkup: buildBulkConfirmReplyMarkup(persisted) },
     );
     return;
   }

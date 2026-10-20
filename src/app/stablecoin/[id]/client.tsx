@@ -190,16 +190,6 @@ function StablecoinDetailClientContent({
       </div>
     );
   }
-  if (viewModel.status === "not-found") {
-    return (
-      <div className="space-y-4">
-        <Button variant="ghost" asChild>
-          <Link href="/"><ArrowLeft className="mr-2 h-4 w-4" />Back to Dashboard</Link>
-        </Button>
-        <p className="text-muted-foreground">This stablecoin is not part of the tracked Pharos universe.</p>
-      </div>
-    );
-  }
 
   return (
     <StablecoinDetailIdentityProvider symbol={viewModel.coin.symbol} logoSrc={viewModel.logoSrc}>

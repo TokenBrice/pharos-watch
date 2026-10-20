@@ -32,15 +32,41 @@ export function sqlString(value: string | null): string {
   return `'${value.replace(/'/g, "''")}'`;
 }
 
-function decodeD1Rows<T>(stdout: string): T[] {
-  const parsed = JSON.parse(stdout);
-  const envelopes = Array.isArray(parsed) ? parsed : [parsed];
-  return envelopes.flatMap((envelope) => {
-    if (Array.isArray(envelope?.results)) return envelope.results;
-    if (Array.isArray(envelope?.result?.[0]?.results)) return envelope.result[0].results;
-    if (Array.isArray(envelope?.result?.results)) return envelope.result.results;
-    return [];
-  });
+export type D1QueryEnvelope = Record<string, unknown> & {
+  results: unknown[];
+};
+
+/** Admit the full Wrangler response before exposing rows or statement receipts. */
+export function decodeD1Envelopes(payload: unknown): D1QueryEnvelope[] {
+  const envelopes: D1QueryEnvelope[] = [];
+  const visit = (value: unknown): void => {
+    if (Array.isArray(value)) {
+      if (value.length === 0) throw new Error("d1-envelope-unavailable");
+      for (const entry of value) visit(entry);
+      return;
+    }
+    if (value === null || typeof value !== "object") throw new Error("d1-envelope-invalid");
+    const envelope = value as Record<string, unknown>;
+    if ((envelope.success !== undefined && envelope.success !== true) ||
+        (envelope.error !== undefined && envelope.error !== null) ||
+        (envelope.errors !== undefined && (!Array.isArray(envelope.errors) || envelope.errors.length > 0))) {
+      throw new Error(`d1-query-failed: ${JSON.stringify(envelope.errors ?? envelope.error ?? envelope.success)}`);
+    }
+    if ("results" in envelope) {
+      if (!Array.isArray(envelope.results) || "result" in envelope) throw new Error("d1-result-invalid");
+      envelopes.push(envelope as D1QueryEnvelope);
+    } else if ("result" in envelope) {
+      visit(envelope.result);
+    } else {
+      throw new Error("d1-result-unavailable");
+    }
+  };
+  visit(payload);
+  return envelopes;
+}
+
+export function decodeD1Rows<T>(stdout: string): T[] {
+  return decodeD1Envelopes(JSON.parse(stdout)).flatMap((envelope) => envelope.results as T[]);
 }
 
 function executeWrangler(args: string[], options: Required<Pick<D1ClientOptions, "cwd" | "maxBuffer">>): string {

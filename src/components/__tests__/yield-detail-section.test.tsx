@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import YieldDetailSection from "@/components/yield-detail-section";
 import { YieldChangeAttributionCard } from "@/components/yield-change-attribution-card";
@@ -37,16 +37,22 @@ vi.mock("@/components/yield-history-chart", () => ({
     availableSources,
     hideSourceSelector,
     externalSourceKeys,
+    benchmarkRate,
+    benchmarkLabel,
   }: {
     availableSources: Array<{ sourceKey: string; yieldSource: string }>;
     hideSourceSelector: boolean;
     externalSourceKeys?: string[];
+    benchmarkRate?: number | null;
+    benchmarkLabel?: string;
   }) => (
     <div
       data-testid="yield-history-chart"
       data-available-sources={availableSources.map((source) => source.sourceKey).join(",")}
       data-hide-source-selector={String(hideSourceSelector)}
       data-external-source-keys={(externalSourceKeys ?? []).join(",")}
+      data-benchmark-rate={benchmarkRate}
+      data-benchmark-label={benchmarkLabel}
     />
   ),
 }));
@@ -97,7 +103,7 @@ function makeRanking(overrides: Partial<YieldRanking> = {}): YieldRanking {
   });
 }
 
-function altSource(sourceKey: string, yieldSource: string, currentApy: number, apy30d: number, sourceTvlUsd: number) {
+function altSource(sourceKey: string, yieldSource: string, currentApy: number, apy30d: number, sourceTvlUsd: number | null) {
   return makeAltYieldSource({
     sourceKey,
     yieldSource,
@@ -210,6 +216,32 @@ describe("YieldDetailSection", () => {
     expect(screen.getByRole("link", { name: "Shared venue (selected-key)" }).closest("details")).toBeNull();
   });
 
+  it("keeps unavailable alternate TVL last in both directions without changing APY sorting or counts", () => {
+    mockRankings([makeRanking({ altSources: [
+      altSource("unknown", "Unknown TVL", 9, 9, null),
+      altSource("zero", "Zero TVL", 8, 8, 0),
+      altSource("small", "Small TVL", 7, 7, 1_000_000),
+      altSource("large", "Large TVL", 6, 6, 2_000_000),
+    ] })]);
+    render(<YieldDetailSection stablecoinId="usdn-smardex" />);
+    const table = screen.getByTestId("yield-detail-alt-sources-table");
+    const labels = () => Array.from(table.querySelectorAll("tbody tr")).map((row) => row.querySelector("a")?.textContent);
+    expect(labels()).toEqual(["Unknown TVL", "Zero TVL", "Small TVL"]);
+    fireEvent.click(screen.getByRole("button", { name: "Show 1 more source" }));
+    expect(labels()).toEqual(["Unknown TVL", "Zero TVL", "Small TVL", "Large TVL"]);
+    fireEvent.click(within(table).getByRole("button", { name: "Sort alternate sources by TVL descending" }));
+    expect(labels()).toEqual(["Large TVL", "Small TVL", "Zero TVL", "Unknown TVL"]);
+    fireEvent.click(within(table).getByRole("button", { name: "Sort alternate sources by TVL ascending" }));
+    expect(labels()).toEqual(["Zero TVL", "Small TVL", "Large TVL", "Unknown TVL"]);
+    expect(Array.from(screen.getByRole("list", { name: "Compact retained yield sources" }).querySelectorAll("li"))
+      .map((row) => row.querySelector("a")?.textContent)).toEqual(["Zero TVL", "Small TVL", "Large TVL", "Unknown TVL"]);
+    fireEvent.click(within(table).getByRole("button", { name: "Sort alternate sources by APY 30d descending" }));
+    expect(labels()).toEqual(["Unknown TVL", "Zero TVL", "Small TVL", "Large TVL"]);
+    fireEvent.click(within(table).getByRole("button", { name: "Sort alternate sources by APY 30d ascending" }));
+    expect(labels()).toEqual(["Large TVL", "Small TVL", "Zero TVL", "Unknown TVL"]);
+    expect(screen.queryByRole("button", { name: /Show .* more source/ })).toBeNull();
+  });
+
   it("does not infer a missing chain for a published venue", () => {
     mockRankings([makeRanking({ sourceRole: "external-opportunity", sourceRisk: { venueProtocol: "Published venue" } })]);
     render(<YieldDetailSection stablecoinId="usdn-smardex" />);
@@ -221,6 +253,22 @@ describe("YieldDetailSection", () => {
     mockRankings([makeRanking({ excessYield: 3.55, benchmarkLabel: "CHF 3M compounded SARON", benchmarkRate: -0.05 })]);
     render(<YieldDetailSection stablecoinId="usdn-smardex" />);
     expect(screen.getByLabelText(/3.55 pp above CHF 3M compounded SARON \(-0.05%\)/).textContent).toContain("+3.55 pp");
+  });
+
+  it("keeps a USD history display fallback separate from the published foreign scoring hurdle", () => {
+    mockRankings([makeRanking({
+      benchmarkKey: "CHF",
+      benchmarkLabel: "CHF 3M compounded SARON",
+      benchmarkRate: undefined,
+      benchmarkSelectionMode: "native",
+      excessYield: 3.55,
+    })]);
+    render(<YieldDetailSection stablecoinId="usdn-smardex" />);
+    const chart = screen.getByTestId("yield-history-chart");
+    expect(chart.getAttribute("data-benchmark-rate")).toBe("0.03");
+    expect(chart.getAttribute("data-benchmark-label")).toBe("USD benchmark (display fallback)");
+    const spread = screen.getByLabelText(/3.55 pp above CHF 3M compounded SARON/);
+    expect(spread.getAttribute("aria-label")).not.toContain("0.03%");
   });
 
   it("exposes the published reason when PYS is unavailable", () => {

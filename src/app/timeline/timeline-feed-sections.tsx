@@ -1,19 +1,23 @@
 "use client";
 
 import type { ReactNode } from "react";
+import Link from "next/link";
+import { StablecoinLogo } from "@/components/stablecoin-logo";
+import { buildStablecoinUrl } from "@shared/lib/urls";
+import type { DepegEvent } from "@shared/types";
 import { AlertTriangle, Radar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { EventCard, SEVERITY_GLYPH } from "@/components/tape/event-card";
+import { SEVERITY_GLYPH } from "@/components/tape/event-card";
 import { ClassDigestRow } from "@/components/tape/class-digest-row";
 import { timeAgo } from "@shared/lib/format";
 import { formatRelativeTimeMs } from "@shared/lib/relative-time";
 import type { DigestedDay } from "@/lib/tape-digest";
-import type { TapeEvent, TapeEventSeverity } from "@shared/types/tape-event";
+import type { TapeEventSeverity } from "@shared/types/tape-event";
 import type { ActiveFilterChip } from "./timeline-controller";
 import { getLogoSrc } from "@/lib/logos";
 import type { ApiMeta } from "@/lib/api";
-import { deriveDataHealth } from "@/lib/data-health";
+import { deriveDataHealth, type DataHealthInfo } from "@/lib/data-health";
 import { CRON_TAPE } from "@/lib/cron-intervals";
 import {
   eventDomId,
@@ -81,7 +85,7 @@ interface SummaryBandProps {
   loadedCount: number;
   totalCount: number | null;
   droppedRows: number;
-  openCount: number;
+  openCount: number | null;
   windowLabel: string;
   severityLabel: string;
   dataUpdatedAt: number;
@@ -106,7 +110,7 @@ export function SummaryBand({ loadedCount, totalCount, droppedRows, openCount, w
     </span>
   );
   const parts: ReactNode[] = [];
-  if (openCount > 0) {
+  if (openCount != null && openCount > 0) {
     parts.push(
       <span key="open" className="font-semibold text-amber-700 dark:text-amber-400">
         {openCount} open {openCount === 1 ? "incident" : "incidents"}
@@ -176,12 +180,16 @@ export function SummaryBand({ loadedCount, totalCount, droppedRows, openCount, w
 }
 
 interface OpenIncidentsSectionProps {
-  incidents: readonly TapeEvent[];
+  incidents: readonly DepegEvent[] | null;
+  status: "available" | "loading" | "incomplete" | "unavailable";
+  health: DataHealthInfo;
+  onRetry: () => void;
   logos: Record<string, string>;
   nowMs: number;
 }
 
-export function OpenIncidentsSection({ incidents, logos, nowMs }: OpenIncidentsSectionProps) {
+export function OpenIncidentsSection({ incidents, status, health, onRetry, logos, nowMs }: OpenIncidentsSectionProps) {
+  if (status === "available" && incidents?.length === 0) return null;
   return (
     <section
       role="region"
@@ -193,23 +201,47 @@ export function OpenIncidentsSection({ incidents, logos, nowMs }: OpenIncidentsS
         className="flex min-w-0 flex-wrap items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider text-amber-700 dark:text-amber-400"
       >
         <AlertTriangle className="h-3 w-3" aria-hidden="true" />
-        Currently open · {incidents.length} {incidents.length === 1 ? "incident" : "incidents"}
+        {incidents ? `Currently open · ${incidents.length} ${incidents.length === 1 ? "incident" : "incidents"}` : "Active incident status"}
       </h2>
-      <div className="border-y border-amber-500/30">
-        {incidents.map((event) => (
-          <div key={event.id}>
-            <p className="px-3 pt-2 font-mono text-[11px] uppercase tracking-wider text-amber-700 dark:text-amber-400">
-              <span className="font-semibold">[OPEN]</span>
-              {" · "}
-              {openIncidentPrefix(event, nowMs)}
-            </p>
-            <EventCard
-              event={event}
-              logoSrc={event.coinId ? getLogoSrc(logos, event.coinId) : undefined}
-            />
-          </div>
-        ))}
-      </div>
+      {!incidents ? (
+        <div role="status" className="border-y border-amber-500/30 px-3 py-2 font-mono text-xs text-muted-foreground">
+          {status === "loading" ? "Loading current activity…"
+            : status === "incomplete" ? "Current activity incomplete; the active incident census has not finished."
+            : "Current activity unavailable; active incidents cannot be confirmed."}
+          {health.dataUpdatedAt > 0 ? (
+            <span title={health.message}> Last source update {timeAgo(Math.floor(health.dataUpdatedAt / 1000), nowMs / 1000)}.</span>
+          ) : null}
+          {status !== "loading" ? (
+            <Button variant="ghost" size="sm" onClick={onRetry}>Retry active incidents</Button>
+          ) : null}
+        </div>
+      ) : (
+        <div className="border-y border-amber-500/30">
+          <p className="px-3 py-1 font-mono text-[11px] text-muted-foreground">
+            All active incidents · independent of feed filters
+            {health.dataUpdatedAt > 0 ? ` · Updated ${timeAgo(Math.floor(health.dataUpdatedAt / 1000), nowMs / 1000)}` : ""}
+          </p>
+          {incidents.map((event) => (
+            <Link
+              key={event.id}
+              href={`${buildStablecoinUrl(event.stablecoinId)}#peg-history`}
+              data-depeg-event-id={event.id}
+              aria-label={`${event.symbol} active depeg incident ${event.id}`}
+              className="pharos-focus-ring flex flex-wrap items-center gap-2 border-b border-border/60 px-3 py-2 font-mono text-xs hover:bg-muted/30"
+            >
+              <StablecoinLogo src={getLogoSrc(logos, event.stablecoinId)} name={event.symbol} size={22} />
+              <span className="font-semibold">{event.symbol}</span>
+              <span className="text-amber-700 dark:text-amber-400">{openIncidentPrefix(event, nowMs)}</span>
+              <time dateTime={new Date(event.startedAt * 1000).toISOString()} className="text-muted-foreground">
+                Started {new Date(event.startedAt * 1000).toISOString().replace("T", " ").slice(0, 16)} UTC
+              </time>
+              {event.constituentEventCount != null ? (
+                <span className="text-muted-foreground">{event.constituentEventCount} threshold {event.constituentEventCount === 1 ? "crossing" : "crossings"}</span>
+              ) : null}
+            </Link>
+          ))}
+        </div>
+      )}
     </section>
   );
 }
@@ -219,10 +251,9 @@ interface DayDigestSectionProps {
   nowMs: number;
   logos: Record<string, string>;
   highlightedId: string | null;
-  openCount: number;
 }
 
-export function DayDigestSection({ day, nowMs, logos, highlightedId, openCount }: DayDigestSectionProps) {
+export function DayDigestSection({ day, nowMs, logos, highlightedId }: DayDigestSectionProps) {
   const { primary, secondary } = formatDayLabel(day.dayKey, nowMs);
   const classCount = day.classes.length;
   const maxSev: TapeEventSeverity = day.classes[0]?.maxSeverity ?? "info";
@@ -233,6 +264,7 @@ export function DayDigestSection({ day, nowMs, logos, highlightedId, openCount }
     <ClassDigestRow
       key={`${day.dayKey}-${digest.classSlug}`}
       digest={digest}
+      nowMs={nowMs}
       logos={logos}
       highlightedId={highlightedId}
       eventDomId={eventDomId}
@@ -250,7 +282,6 @@ export function DayDigestSection({ day, nowMs, logos, highlightedId, openCount }
           <span className="max-w-full break-words leading-snug tabular-nums text-muted-foreground sm:shrink-0">
             <span aria-hidden="true" className="hidden sm:inline">· </span>
             {day.totalCount} EVT · {classCount} CLS · MAX {glyph}
-            {openCount > 0 ? ` · ${openCount} OPEN` : ""}
           </span>
           <span aria-hidden="true" className="w-full border-t border-border/60 sm:flex-1" />
         </div>

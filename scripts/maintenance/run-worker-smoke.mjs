@@ -132,8 +132,9 @@ async function runHeavyRuntimeSmoke() {
   let parent;
   let child;
   for (let attempt = 0; attempt < 60; attempt++) {
-    // SAFETY: Both queries interpolate only the integer Unix timestamp derived above from the local smoke window.
+    // SAFETY: This query interpolates only the integer Unix timestamp derived above from the local smoke window.
     [parent] = localD1(`SELECT state, result_status, worker_version FROM cron_slot_executions WHERE slot_key = 'v9SupplyAttributionOffset' AND slot_started_at = ${slotStartedAt}`);
+    // SAFETY: This query also interpolates only that local integer Unix timestamp.
     [child] = localD1(`SELECT status, productive, item_count, degraded_reason, metadata FROM cron_runs WHERE job = 'sync-v9-supply-attribution' AND slot_started_at = ${slotStartedAt} ORDER BY started_at DESC LIMIT 1`);
     if (parent?.state === "finished" && child) break;
     await new Promise((resolveWait) => setTimeout(resolveWait, 1000));

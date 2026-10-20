@@ -11,8 +11,8 @@ export type PublishedSafetyScoresResultMap = {
   mode: "map";
   reason?: string;
   coveredCount: number;
-  trackedCount: number;
-  coverageRatio: number;
+  trackedCount: number | null;
+  coverageRatio: number | null;
   scores: Map<string, SafetyResult>;
   source: "safety-score-v9-publication";
   safetyScoreIdentity: SafetyScoreV9PublicationIdentity | null;
@@ -34,7 +34,7 @@ function result(
     source: "safety-score-v9-publication",
     coveredCount,
     coverageRatio:
-      input.trackedCount > 0 ? coveredCount / input.trackedCount : 1,
+      input.trackedCount == null ? null : input.trackedCount > 0 ? coveredCount / input.trackedCount : 1,
   };
 }
 
@@ -61,7 +61,7 @@ export async function computeSafetyScoresSnapshot(
       kind: "degraded",
       reason: active.reason,
       scores: new Map(),
-      trackedCount: 0,
+      trackedCount: null,
       safetyScoreIdentity: null,
       publicationGenerationId: null,
       methodologyVersion: null,

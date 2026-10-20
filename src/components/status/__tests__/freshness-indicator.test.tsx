@@ -2,14 +2,21 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, act } from "@testing-library/react";
+import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { FreshnessIndicator } from "../freshness-indicator";
 
 beforeEach(() => {
   vi.useFakeTimers();
+  vi.stubGlobal("ResizeObserver", class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  });
 });
 
 afterEach(() => {
   vi.useRealTimers();
+  vi.unstubAllGlobals();
   // Restore jsdom's prototype getter if a test overrode document.visibilityState.
   Reflect.deleteProperty(document, "visibilityState");
 });
@@ -22,6 +29,11 @@ describe("FreshnessIndicator", () => {
     const timestamp = screen.getByRole("time");
     expect(timestamp.getAttribute("tabindex")).toBe("0");
     expect(timestamp.className).toContain("min-h-6");
+    act(() => {
+      timestamp.focus();
+      vi.advanceTimersByTime(220);
+    });
+    expect(screen.getByRole("tooltip").textContent).toContain("more than 2m old");
   });
 
   it("increments age via internal timer", () => {
@@ -85,14 +97,33 @@ describe("FreshnessIndicator", () => {
     const updatedAtMs = 1_700_000_000_000 - 90_000;
     const { rerender } = render(<FreshnessIndicator updatedAtMs={updatedAtMs} staleAfterMs={60_000} compact />);
     expect(screen.getByRole("time").getAttribute("data-stale")).toBe("false");
+    expect(screen.getByRole("time").getAttribute("datetime")).toBe("2023-11-14T22:11:50.000Z");
+    expect(screen.getByRole("time").getAttribute("data-stale-after-ms")).toBe("120000");
+    expect(screen.getByRole("time").querySelector(".sr-only")?.textContent).toContain("more than 2m old");
 
     rerender(<FreshnessIndicator updatedAtMs={updatedAtMs} staleAfterMs={60_000} />);
     expect(screen.getByRole("time").getAttribute("data-stale")).toBe("true");
+    expect(screen.getByRole("time").getAttribute("datetime")).toBe("2023-11-14T22:11:50.000Z");
+    expect(screen.getByRole("time").getAttribute("data-stale-after-ms")).toBe("60000");
+    expect(screen.getByRole("time").querySelector(".sr-only")?.textContent).toContain("more than 1m old");
 
     rerender(<FreshnessIndicator updatedAtMs={updatedAtMs} staleAfterMs={60_000} compact />);
     expect(screen.getByRole("time").getAttribute("data-stale")).toBe("false");
     rerender(<FreshnessIndicator updatedAtMs={updatedAtMs - 45_000} staleAfterMs={60_000} compact />);
     expect(screen.getByRole("time").getAttribute("data-stale")).toBe("true");
+  });
+
+  it("discloses the already doubled redemption budget without multiplying it again", () => {
+    vi.setSystemTime(new Date(1_700_000_000_000));
+    const updatedAtMs = 1_700_000_000_000 - 57_600_000;
+    const staleAfterMs = API_FRESHNESS_MAX_AGE_SEC.redemptionBackstops * 2000;
+    const { rerender } = render(<FreshnessIndicator updatedAtMs={updatedAtMs} staleAfterMs={staleAfterMs} />);
+    expect(screen.getByRole("time").getAttribute("datetime")).toBe("2023-11-14T06:13:20.000Z");
+    expect(screen.getByRole("time").getAttribute("data-stale-after-ms")).toBe("57600000");
+    expect(screen.getByRole("time").querySelector(".sr-only")?.textContent).toContain("more than 16h old");
+    expect(screen.getByRole("time").getAttribute("data-state")).toBe("current");
+    rerender(<FreshnessIndicator updatedAtMs={updatedAtMs - 1} staleAfterMs={staleAfterMs} />);
+    expect(screen.getByRole("time").getAttribute("data-state")).toBe("stale");
   });
 
   it("announces recovery when stale data is replaced by a fresh timestamp", () => {

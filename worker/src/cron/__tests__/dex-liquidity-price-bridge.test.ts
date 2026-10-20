@@ -37,6 +37,14 @@ describe("loadDexPrices", () => {
     expect(all).toHaveBeenCalledOnce();
   });
 
+  it("preserves additive writer clocks without activating a different source-admission policy", async () => {
+    const clocked = { ...source(), observedAt: NOW - 6 * 3600, aggregateObservedAt: NOW - 6 * 3600 };
+    const { db } = database([{ ...aggregate("usdc"), price_sources_json: JSON.stringify([clocked]) }]);
+    const result = await loadDexPrices(db, NOW);
+    // Writer-only rollout: the strict quote-age gate belongs to the subsequent reader activation.
+    expect(result.dexPriceSources.get("usdc")).toEqual([{ ...clocked, updatedAt: NOW }]);
+  });
+
   it("returns both empty maps only for a missing table", async () => {
     const all = vi.fn().mockRejectedValue(new Error("no such table: dex_prices"));
     const db = makeNoopD1({ prepare: vi.fn(() => ({ all })) });

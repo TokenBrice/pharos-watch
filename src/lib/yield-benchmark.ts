@@ -232,27 +232,24 @@ export function resolveYieldDisplayRebaseReferenceRate(
 // ---------------------------------------------------------------------------
 
 export interface YieldResolvedRowBenchmark {
-  /** Rate the row is judged against; null only when nothing resolves. */
+  /** Display comparison rate; not a replacement for the published PYS hurdle. */
   rate: number | null;
-  /** Display label, including the (fallback) marker when the row proxies USD. */
+  /** Identity of the rate actually displayed; null when unavailable. */
+  key: YieldBenchmarkKey | null;
   label: string;
+  /** Published selection/feed fallback evidence, independent of display fallback. */
   isFallback: boolean;
   selectionMode: YieldBenchmarkSelectionMode | null;
-}
-
-function firstFiniteNumber(...values: Array<number | null | undefined>): number | null {
-  for (const value of values) {
-    if (typeof value === "number" && Number.isFinite(value)) return value;
-  }
-  return null;
+  /** True only when incomplete row/keyed evidence uses a USD display frame. */
+  displayFallback: boolean;
+  /** Original scoring hurdle, never filled from a display-only fallback. */
+  publishedRate: number | null;
 }
 
 /**
- * One resolution for "which benchmark is this row judged against": the row's
- * published rate, else the registry entry for its benchmark key, else the USD
- * frame, else the chart-wide risk-free rate. The (fallback) marker follows the
- * row's selection mode — `benchmarkIsFallback` is false on documented proxy
- * selections, so the marker would otherwise drop off scatter tooltips.
+ * Resolve the first finite display rate together with its own identity.
+ * Row/keyed evidence wins; a legacy USD display frame is explicitly labelled
+ * without rewriting the published selection mode or PYS hurdle.
  */
 export function resolveYieldRowBenchmark(
   row: YieldWorkbenchRanking,
@@ -261,19 +258,30 @@ export function resolveYieldRowBenchmark(
 ): YieldResolvedRowBenchmark {
   const benchmarkKey = getYieldRankingBenchmarkKey(row);
   const meta = getYieldBenchmarkForKey(registry, benchmarkKey);
+  const usd = getYieldBenchmarkForKey(registry, "USD");
   const selectionMode = row.benchmarkSelectionMode ?? null;
   const isFallback = selectionMode === "fallback-usd" || row.benchmarkIsFallback === true;
-  const rate = firstFiniteNumber(
-    row.benchmarkRate,
-    meta?.rate,
-    getYieldBenchmarkForKey(registry, "USD")?.rate,
-    riskFreeRate,
-  );
-  const label = getYieldBenchmarkDisplayLabel({
-    benchmarkLabel: row.benchmarkLabel ?? meta?.label,
-    benchmarkKey,
-    benchmarkSelectionMode: selectionMode ?? undefined,
-    benchmarkIsFallback: isFallback,
-  });
-  return { rate, label, isFallback, selectionMode };
+  const resolved = [
+    { rate: row.benchmarkRate, key: benchmarkKey, label: row.benchmarkLabel ?? meta?.label, displayFallback: false },
+    { rate: meta?.rate, key: benchmarkKey, label: meta?.label, displayFallback: false },
+    { rate: usd?.rate, key: "USD" as const, label: usd?.label, displayFallback: true },
+    { rate: riskFreeRate, key: "USD" as const, label: usd?.label ?? "USD benchmark", displayFallback: true },
+  ].find((candidate) => typeof candidate.rate === "number" && Number.isFinite(candidate.rate));
+  const label = resolved
+    ? getYieldBenchmarkDisplayLabel({
+      benchmarkLabel: resolved.label,
+      benchmarkKey: resolved.key,
+      benchmarkSelectionMode: resolved.displayFallback ? undefined : selectionMode ?? undefined,
+      benchmarkIsFallback: !resolved.displayFallback && isFallback,
+    }) + (resolved.displayFallback ? " (display fallback)" : "")
+    : "Benchmark unavailable";
+  return {
+    rate: resolved?.rate ?? null,
+    key: resolved?.key ?? null,
+    label,
+    isFallback,
+    selectionMode,
+    displayFallback: resolved?.displayFallback ?? false,
+    publishedRate: typeof row.benchmarkRate === "number" && Number.isFinite(row.benchmarkRate) ? row.benchmarkRate : null,
+  };
 }

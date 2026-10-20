@@ -31,8 +31,8 @@ export function multicallResultByLabel(
 }
 
 /**
- * Reads the EIP-1967 implementation slot at `contractAddress` and decodes the
- * stored address. Throws when the slot read fails or returns a malformed word.
+ * Reads the EIP-1967 implementation slot at the same chain-local pin as the
+ * dependent state reads. Missing/foreign pins and malformed slot words reject.
  */
 export async function readImplementationSlotAddress(options: {
   adapterKey: string;
@@ -40,14 +40,19 @@ export async function readImplementationSlotAddress(options: {
   contractAddress: string;
   params: { rpcUrl?: string; fallbackRpcUrl?: string };
   signal: AbortSignal;
-  ctx?: AdapterContext;
+  ctx: AdapterContext;
 }): Promise<string> {
   const { adapterKey, input, contractAddress, params, signal, ctx } = options;
+  const observedBlock = ctx.observedBlock;
+  if (!observedBlock) throw new Error(`${adapterKey}: implementation slot requires a pinned block`);
+  if (observedBlock.chain !== input.chain) {
+    throw new Error(`Pinned block chain ${observedBlock.chain} does not match ${input.chain}`);
+  }
   const raw = await runAdapterIo(
     ctx,
     `${adapterKey}:implementation-slot`,
     () =>
-      fetchEvmStorageAtBlock(input.chain, contractAddress, EIP1967_IMPLEMENTATION_SLOT, "latest", {
+      fetchEvmStorageAtBlock(input.chain, contractAddress, EIP1967_IMPLEMENTATION_SLOT, observedBlock.number, {
         extraRpcUrls: [params.rpcUrl, params.fallbackRpcUrl].filter((url): url is string => url != null),
         signal,
         timeoutMs: 10_000,

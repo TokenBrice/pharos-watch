@@ -20,7 +20,11 @@ import {
   observeSfrxusdCrosschainRedemptionRoute,
   type SfrxusdCrosschainRouteReadClient,
 } from "../sfrxusd-crosschain-redemption";
-import { buildSfrxusdCrosschainV9ExitRouteObservation } from "../../../lib/sfrxusd-crosschain-redemption-route";
+import {
+  buildSfrxusdCrosschainV9ExitRouteObservation,
+  parseAcceptedSfrxusdCrosschainV9RouteState,
+  SfrxusdCrosschainV9RouteStateSchema,
+} from "../../../lib/sfrxusd-crosschain-redemption-route";
 import { readRedemptionBackstopLiveMetadata } from "../../../lib/redemption-backstop/live-metadata";
 import { buildRedemptionBackstopEntry } from "../../../lib/redemption-backstop/sources";
 import * as crosschainObserver from "../sfrxusd-crosschain-redemption";
@@ -728,6 +732,42 @@ describe("observeSfrxusdCrosschainRedemptionRoute", () => {
       .mocked(readClient.multicall)
       .mock.calls.flatMap((call) => call[1].map((item) => item.label));
     expect(labels).not.toContain("remote-num-dvns");
+  });
+
+  it("rejects a retained zero oracle denominator without throwing in schema, parser or builder", async () => {
+    const attempt = await observe(client());
+    if (attempt.status !== "accepted") throw new Error("expected accepted packet");
+    expect(SfrxusdCrosschainV9RouteStateSchema.safeParse(attempt.state).success).toBe(true);
+    expect(parseAcceptedSfrxusdCrosschainV9RouteState(attempt)).toEqual(attempt.state);
+
+    attempt.state.vaultOracle.answerE18 = "0";
+    const parsed = SfrxusdCrosschainV9RouteStateSchema.safeParse(attempt.state);
+    expect(parsed.success).toBe(false);
+    if (parsed.success) throw new Error("expected rejected packet");
+    expect(parsed.error.issues).toEqual(expect.arrayContaining([
+      expect.objectContaining({ path: ["vaultOracle", "answerE18"] }),
+    ]));
+    expect(parseAcceptedSfrxusdCrosschainV9RouteState(attempt)).toBeNull();
+    expect(buildSfrxusdCrosschainV9ExitRouteObservation({
+      state: attempt.state,
+      modeledExitSizeUsd: 1_000_000,
+      routeStatus: "open",
+      resolutionState: "resolved",
+      now: NOW,
+    })).toBeNull();
+  });
+
+  it("keeps zero redemption fees and zero native inventory valid when return quotes are zero", async () => {
+    const attempt = await observe(client({ state: { feeRaw: 0n } }));
+    if (attempt.status !== "accepted") throw new Error("expected accepted packet");
+    expect(attempt.state.mintRedeemerFeeRaw).toBe("0");
+    expect(attempt.state.mintRedeemerFeeBps).toBe(0);
+    attempt.state.fraxtalHopNativeBalanceRaw = "0";
+    for (const point of attempt.state.protocolCostCurve) {
+      point.fraxtalToEthereumNativeFeeRaw = "0";
+    }
+    expect(SfrxusdCrosschainV9RouteStateSchema.safeParse(attempt.state).success).toBe(true);
+    expect(parseAcceptedSfrxusdCrosschainV9RouteState(attempt)).toEqual(attempt.state);
   });
 
   it.each(Object.keys(proxyImplementations))(

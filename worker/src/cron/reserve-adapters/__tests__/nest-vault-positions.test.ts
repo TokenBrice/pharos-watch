@@ -45,6 +45,62 @@ function runNest(
 }
 
 describe("fetchNestVaultPositionsReserves", () => {
+  it.each(["nopal-nest", "nbasis-nest", "inalpha-nest"] as const)(
+    "rejects publisher position errors without pending withdrawals for %s",
+    async (coinId) => {
+      for (const errors of [["yield backend unavailable"], null, {}, "unavailable"]) {
+        await expect(runNest(
+          coinId,
+          { data: { errors, positions: {
+            liquidAssets: [{ symbol: "USDC", position: { value: 100 }, pendingTransactions: [] }],
+            yieldAssets: [],
+          } } },
+          { data: { nav: 100 } },
+          { data: { lastPriceUpdates: [{ updatedAt: FIXTURE_NOW }] } },
+        )).rejects.toThrow("positions-errors");
+      }
+    },
+  );
+
+  it.each(["liquidAssets", "yieldAssets", "tokens"] as const)(
+    "rejects absent or malformed %s before accepting the surviving holdings",
+    async (collection) => {
+      for (const value of [undefined, null, {}]) {
+        const positions = {
+          liquidAssets: [{ symbol: "USDC", position: { value: 100 }, pendingTransactions: [] }],
+          yieldAssets: [{ slug: "superstate-ustb", tokens: [] }],
+        };
+        if (collection === "tokens") {
+          Reflect.set(positions.yieldAssets[0], "tokens", value);
+        } else {
+          Reflect.set(positions, collection, value);
+        }
+        await expect(runNest(
+          "inalpha-nest", { data: { positions } }, { data: { nav: 100 } },
+          { data: { lastPriceUpdates: [{ updatedAt: FIXTURE_NOW }] } },
+        )).rejects.toThrow(/missing or invalid .*array/);
+      }
+    },
+  );
+
+  it("accepts explicit empty liquid and yield-token legs with a clean publisher error list", async () => {
+    const { result } = await runNest(
+      "inalpha-nest",
+      { data: { errors: [], positions: {
+        liquidAssets: [],
+        yieldAssets: [
+          { slug: "empty-vault", tokens: [] },
+          { slug: "superstate-ustb", tokens: [{ symbol: "USTB", position: { value: 100 } }] },
+        ],
+      } } },
+      { data: { nav: 100 } },
+      { data: { lastPriceUpdates: [{ updatedAt: FIXTURE_NOW }] } },
+    );
+    expect(result.slices).toMatchObject([{ coinId: "ustb-superstate", pct: 100 }]);
+    expect(result.metadata).toMatchObject({ totalReserveUsd: 100, unknownExposurePct: 0 });
+    expectWarnings(result, []);
+  });
+
   it("keys USDG liquid balances specifically while keeping unfamiliar symbols unknown", async () => {
     const { result } = await runNest(
       "nopal-nest",
@@ -286,7 +342,7 @@ describe("fetchNestVaultPositionsReserves", () => {
       network: installAdapterNetwork(network), nowSec: FIXTURE_NOW,
     });
     if (!fixture.accepted) {
-      await expect(attempt).rejects.toThrow(/reconcil/);
+      await expect(attempt).rejects.toThrow(fixture.positionErrors.length > 0 ? "positions-errors" : /reconcil/);
       return;
     }
     const { result } = await attempt;
@@ -537,6 +593,6 @@ describe("fetchNestVaultPositionsReserves", () => {
       { data: { nav: 100, price: 1, totalSupply: 100 } },
       { data: { lastPriceUpdates: [{ updatedAt: FIXTURE_NOW }] } },
       false,
-    )).rejects.toThrow("produced zero reserve value");
+    )).rejects.toThrow("missing or invalid liquidAssets array");
   });
 });

@@ -154,6 +154,34 @@ describe("selector-snapshot Pages Function", () => {
   });
 
   describe("POST storage", () => {
+    it("POST/GET preserves named insufficient-control coverage in current-engine output", async () => {
+      const input = makeInput({ decentralization: "required" });
+      const row = makeMergedRowWithIdentity(
+        { id: "usdc-circle", symbol: "USDC", name: "USD Coin" },
+        { governance: "decentralized", canBeBlacklisted: "possible" },
+      );
+      recomputeVerifiedSelectorSnapshotMock.mockImplementationOnce(() => createVerifiedSelectorSnapshot(
+        runSelector(input, { rows: new Map([[row.id, row]]) }, {
+          ...FIXTURE_DATASET, datasetHash: "a".repeat(64),
+        }),
+      ));
+      const env = makeEnv();
+      const created = await onRequest(snapshotContext(postRequest({ input }), env));
+      expect(created.status).toBe(200);
+      const { sid } = await created.json() as { sid: string };
+      const replay = await onRequest(snapshotContext(getRequest(sid), env));
+      expect(replay.status).toBe(200);
+      const body = await replay.json();
+      expect(validateVerifiedSelectorSnapshot(body).ok).toBe(true);
+      expect(body).toMatchObject({
+        recommended: [],
+        coverageWarnings: {
+          skippedForCoverage: [{ id: row.id, missingSignals: ["insufficient-control-evidence"] }],
+        },
+        exclusionSummary: [{ reason: "insufficient-control-evidence", count: 1, severity: "info" }],
+      });
+    });
+
     it.each([0, 1])("POST/GET shares canonical relaxed output with %i strict survivors", async (strictCount) => {
       const input = makeInput({ profile: "trading" });
       const strict = makeMergedRowWithIdentity({ id: "usdc-circle", symbol: "USDC", name: "USD Coin" });
@@ -205,6 +233,34 @@ describe("selector-snapshot Pages Function", () => {
       expect(kv.__getPutCalls()[0]?.options?.metadata).toEqual({
         trust: SELECTOR_SNAPSHOT_VERIFICATION_KIND,
       });
+    });
+
+    it("persists stale server provenance and ignores caller freshness on verified replay", async () => {
+      const env = makeEnv();
+      const canonical = createVerifiedSelectorSnapshot(buildVerifiedSnapshot(), [{
+        source: "stablecoins",
+        freshness: {
+          updatedAt: 1_699_990_000, ageSeconds: 10_000, status: "stale",
+          assessedAt: 1_700_000_000, freshBudgetSec: 777, degradedBudgetSec: 1_554,
+        },
+      }]);
+      recomputeVerifiedSelectorSnapshotMock.mockResolvedValueOnce(canonical);
+      const created = await onRequest(snapshotContext(postRequest({
+        input: canonical.input,
+        verification: { canonicalSources: [{ source: "stablecoins", freshness: { status: "fresh" } }] },
+      }), env));
+      expect(created.status).toBe(200);
+      const { sid } = await created.json() as { sid: string };
+      const kv = env.SELECTOR_SNAPSHOTS as TestKVNamespace;
+      expect(JSON.parse(kv.__getStore().get(`s:${sid}`)!).verification.canonicalSources)
+        .toEqual(canonical.verification!.canonicalSources);
+      for (let read = 0; read < 2; read++) {
+        const replay = await onRequest(snapshotContext(getRequest(sid), env));
+        expect(replay.status).toBe(200);
+        const body = await replay.json();
+        expect(validateVerifiedSelectorSnapshot(body)).toEqual({ ok: true, snapshot: canonical });
+        expect(body.verification.canonicalSources[0].freshness.status).toBe("stale");
+      }
     });
 
     it("accepts an input-only request and ignores caller-authored output fields", async () => {

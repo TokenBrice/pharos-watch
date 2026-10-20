@@ -3,6 +3,7 @@ import type { StablecoinMeta } from "@shared/types/core";
 import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { buildDewsStablecoinIdsDigest } from "../../../lib/dews-publication-pointer";
 import { D1_MAX_BOUND_PARAMETERS } from "../../../lib/d1-primitives";
+import { makeRealisticRedemptionRow } from "../../../lib/__tests__/redemption-backstops-store.test-support";
 import * as activeSafetyScoreSource from "../../../lib/safety-score-active-source";
 import {
   makeWorkerReportCardsV9Response,
@@ -513,6 +514,7 @@ describe("loadDdrContext", () => {
         match: "FROM redemption_backstop_run_rows",
         rows: [
           {
+            ...makeRealisticRedemptionRow(),
             stablecoin_id: "usdc-circle",
             immediate_capacity_ratio: 0.4,
             route_family: "offchain-issuer",

@@ -38,7 +38,7 @@ import {
   resolveRedemptionCapacity,
   type RedemptionBackstopBuildOptions,
 } from "./capacity";
-import { mergeRedemptionRouteStatus, type RedemptionRouteStatusEvidence } from "./route-status";
+import { mergeRedemptionRouteStatus, type DirectObserverExecutionEvent, type RedemptionRouteStatusEvidence } from "./route-status";
 import { resolveRedemptionStaticFields } from "./cost";
 import {
   readRedemptionBackstopLiveMetadata,
@@ -52,6 +52,10 @@ import { buildFpiControllerV9ExitRouteObservation } from "../fpi-controller-rede
 import { buildSfrxusdCrosschainV9ExitRouteObservation } from "../sfrxusd-crosschain-redemption-route";
 import { deriveCurrentPegObservationMap } from "../current-peg-observations";
 import type { RedemptionFiatReferenceContext } from "@shared/lib/redemption-fiat-reference";
+
+type RedemptionSourceOptions = RedemptionBackstopBuildOptions & {
+  onDirectObserverExecution?: (event: DirectObserverExecutionEvent) => void;
+};
 
 // Complete the disclosure join only after a snapshot has collected every
 // success/failure row. The local index captures states, not mutable row references.
@@ -122,7 +126,7 @@ export async function resolveRedemptionBackstopEntry(
   asset: StablecoinData,
   dexLiquidityScore: number | null,
   now = Math.floor(Date.now() / 1000),
-  options: RedemptionBackstopBuildOptions = {},
+  options: RedemptionSourceOptions = {},
 ): Promise<RedemptionBackstopEntry | null> {
   const config = getRedemptionBackstopConfig(asset.id);
   if (!config) return null;
@@ -145,7 +149,7 @@ export async function buildRedemptionBackstopEntry(
   supplyUsd: number | null,
   dexLiquidityScore: number | null,
   now = Math.floor(Date.now() / 1000),
-  options: RedemptionBackstopBuildOptions = {},
+  options: RedemptionSourceOptions = {},
 ): Promise<RedemptionBackstopEntry> {
   if (options.signal?.aborted) throw options.signal.reason ?? new Error("Redemption run aborted");
   const observerModel = config.capacityModel.kind === "executable-observer" ? config.capacityModel : null;
@@ -164,6 +168,9 @@ export async function buildRedemptionBackstopEntry(
   const contractAddress = descriptor && meta ? resolveCoinContractAddress(meta, descriptor.chain) : null;
   if (descriptor && (!contractAddress || contractAddress.toLowerCase() !== descriptor.inputContract.toLowerCase())) {
     throw new Error(`${stablecoinId} executable observer tracked contract mismatch`);
+  }
+  if (descriptor && contractAddress && !options.executableRedemptionObservation) {
+    options.onDirectObserverExecution?.("attempted");
   }
   const directObservation = descriptor && contractAddress
     ? options.executableRedemptionObservation ?? await observeExecutableRedemptionRoute(
@@ -566,6 +573,10 @@ export async function buildRedemptionBackstopEntry(
       ...(finalizedEntry.capacityProfile ?? { scoringHorizon: "unknown", capacityProfileConfidence: "heuristic" }),
       exitRouteObservations: routeObservations,
     } };
+  }
+  if (directObservation && finalizedEntry.routeStatusSource === directObservation.routeStatusSource &&
+      finalizedEntry.routeStatus === directObservation.routeStatus) {
+    options.onDirectObserverExecution?.("consumed");
   }
   return finalizedEntry;
 }

@@ -4,25 +4,41 @@ import { normalizeCronMetadataWithLease } from "../cron-metadata";
 import { compactCronMetadataForPersistence, DEFAULT_CRON_METADATA_BUDGET_BYTES } from "../cron-metadata-persistence";
 
 describe("normalizeCronMetadataWithLease", () => {
-  it("applies row defaults and merges lease meta when job metadata is absent", () => {
+  it("keeps measurements unknown and merges lease meta when job metadata is absent", () => {
     const result = normalizeCronMetadataWithLease(null, { owner: "test" });
     expect(JSON.parse(result)).toEqual({
       rowsRead: null,
       rowsWritten: null,
-      rowsDropped: 0,
+      rowsDropped: null,
       sourceCoverage: null,
       fallbackMode: null,
-      validationFailures: 0,
+      validationFailures: null,
       owner: "test",
     });
   });
 
-  it("merges parsed job metadata with lease meta and defaults itemCount to rowsWritten", () => {
+  it("merges producer metadata without inferring writes from itemCount", () => {
     const result = normalizeCronMetadataWithLease(
       { status: "ok", itemCount: 5, metadata: JSON.stringify({ items: 5 }) } as CronResult,
       { owner: "test" },
     );
-    expect(JSON.parse(result)).toMatchObject({ items: 5, rowsWritten: 5, owner: "test" });
+    expect(JSON.parse(result)).toMatchObject({
+      items: 5, rowsRead: null, rowsWritten: null, rowsDropped: null, validationFailures: null, owner: "test",
+    });
+  });
+
+  it.each([null, 0, 7])("preserves producer measurements (%s) and scheduler lease identity", (measurement) => {
+    const measurements = {
+      rowsRead: measurement, rowsWritten: measurement, rowsDropped: measurement, validationFailures: measurement,
+    };
+    const result = normalizeCronMetadataWithLease(
+      { itemCount: 99, metadata: JSON.stringify({ ...measurements, reason: "producer-evidence", leaseOwner: "producer" }) },
+      { leaseOwner: "scheduler", scheduleKey: "quarterHourly", slotStartedAt: 600 },
+    );
+    expect(JSON.parse(result)).toMatchObject({
+      ...measurements, reason: "producer-evidence", leaseOwner: "scheduler",
+      scheduleKey: "quarterHourly", slotStartedAt: 600,
+    });
   });
 
   it("keeps unparseable job metadata as rawMetadata alongside the lease meta", () => {

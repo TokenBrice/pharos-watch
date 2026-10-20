@@ -160,9 +160,9 @@ export function buildComparisonAnchorFreshnessMeta(input: {
 
 export function buildYieldSafetySnapshotMeta(input: {
   kind: "ok" | "degraded";
-  coverageRatio: number;
+  coverageRatio: number | null;
   coveredCount: number;
-  trackedCount: number;
+  trackedCount: number | null;
   reason: string | null;
   source: "safety-score-v9-publication";
   safetyScoreIdentity: SafetyScorePublicationIdentity | null;
@@ -172,7 +172,7 @@ export function buildYieldSafetySnapshotMeta(input: {
 }): YieldSafetySnapshotMeta {
   return {
     kind: input.kind,
-    coverageRatio: Number(input.coverageRatio.toFixed(4)),
+    coverageRatio: input.coverageRatio == null ? null : Number(input.coverageRatio.toFixed(4)),
     coveredCount: input.coveredCount,
     trackedCount: input.trackedCount,
     reason: input.reason,
@@ -186,7 +186,7 @@ export function buildYieldSafetySnapshotMeta(input: {
 }
 
 export function buildYieldDegradationReasons(params: {
-  safetyCoverageRatio: number;
+  safetyCoverageRatio: number | null;
   defaultBenchmarkMeta: YieldBenchmarkMeta;
   riskFreeRateRegistryCacheState?: string;
   selectedSources: readonly EvaluatedYieldSource[];
@@ -203,7 +203,9 @@ export function buildYieldDegradationReasons(params: {
   // All-rejected arbitration retains a diagnostic winner, never a public row.
   const selectedSources = params.selectedSources.filter((source) => !source.rejected);
 
-  if (params.safetyCoverageRatio < STATUS_YIELD_HEALTH_THRESHOLDS.safetyCoverageRatio) {
+  if (params.safetyCoverageRatio == null) {
+    degradationReasons.push("safety-snapshot-unavailable");
+  } else if (params.safetyCoverageRatio < STATUS_YIELD_HEALTH_THRESHOLDS.safetyCoverageRatio) {
     degradationReasons.push("safety-snapshot-coverage");
   }
   if (params.riskFreeRateRegistryCacheState === "invalid") {
@@ -827,7 +829,7 @@ export async function runYieldCoordinatorFetchStage(params: YieldCoordinatorFetc
   // stale-coherent budget is not unusable, so it does not reach this branch.
   if (!loadedState.safetySnapshotAvailable) {
     const safetySnapshotReason =
-      loadedState.safetySnapshot.reason ?? "safety-score-v9-publication:identity-missing";
+      loadedState.safetySnapshotUnavailableReason ?? "safety-score-v9-publication:identity-missing";
     const reason = `safety-snapshot-unavailable:${safetySnapshotReason}`;
     await reportYieldProgress(
       "safety-snapshot-unavailable",
@@ -858,6 +860,7 @@ export async function runYieldCoordinatorFetchStage(params: YieldCoordinatorFetc
           safetyScoresExpected: loadedState.safetySnapshot.trackedCount,
           safetyScoreIdentity: loadedState.safetySnapshot.safetyScoreIdentity,
           safetySnapshotHeld: loadedState.safetySnapshotHeld,
+          safetyPublishedAt: loadedState.safetySnapshot.publishedAt,
           acceptedPublicationAgeSeconds: loadedState.acceptedSafetyPublicationAgeSeconds,
         },
       }),

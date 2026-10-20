@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import path from "node:path";
 import {
   appendGscReportPreamble,
   appendGscReportSection,
@@ -186,6 +187,13 @@ function normalizeSourceLabel(value) {
 }
 
 function parsePerformanceRows(entry, table) {
+  // Standalone CSVs share their export directory; ZIP members retain their archive and directory.
+  const containerExtension = path.extname(entry.containerPath).toLowerCase();
+  const captureKey = containerExtension === ".zip"
+    ? `${entry.containerPath}:${path.posix.dirname(entry.relativePath)}`
+    : containerExtension === ".csv" ? path.dirname(entry.containerPath)
+    : path.resolve(entry.containerPath, path.posix.dirname(entry.relativePath));
+  const grain = table.pageHeader ? (table.queryHeader ? "page-query" : "page") : "query";
   const rows = [];
   let skippedMetricRows = 0;
   for (const record of table.records) {
@@ -210,6 +218,8 @@ function parsePerformanceRows(entry, table) {
       page,
       query,
       sourceLabel: normalizeSourceLabel(entry.sourceLabel),
+      captureKey,
+      grain,
     });
   }
   return { rows, skippedMetricRows };
@@ -220,12 +230,24 @@ function aggregatePerformanceRows(rows, targetCtr, minImpressions, topCount) {
   const pages = new Map();
   const queries = new Map();
   const families = new Map();
+  const captures = new Set(rows.map((row) => row.captureKey));
+  if (captures.size > 1) {
+    throw new Error(`Ambiguous GSC performance captures: ${[...captures].join(", ")}. Analyze each export separately; date-window overlap is not proven.`);
+  }
+  const pageTotals = new Set();
+  for (const row of rows.filter((row) => row.grain === "page" && row.page)) {
+    if (pageTotals.has(row.page.path)) {
+      throw new Error(`Ambiguous duplicate page totals for ${row.page.path}; retain one coherent export.`);
+    }
+    pageTotals.add(row.page.path);
+  }
 
   // Separate query totals are authoritative for overlapping combined rows.
   const queryTotals = new Set(rows.filter((row) => !row.page && row.query).map((row) => row.query));
   for (const row of rows) {
     if (row.page) {
-      addMetrics(siteAggregate, row);
+      const authoritative = row.grain === "page" || !pageTotals.has(row.page.path);
+      if (authoritative) addMetrics(siteAggregate, row);
 
       const family = pageFamilyForPath(row.page.path);
       if (!families.has(family)) {
@@ -239,7 +261,7 @@ function aggregatePerformanceRows(rows, targetCtr, minImpressions, topCount) {
       const familyAggregate = families.get(family);
       familyAggregate.pages.add(row.page.path);
       familyAggregate.sources.add(row.sourceLabel);
-      addMetrics(familyAggregate, row);
+      if (authoritative) addMetrics(familyAggregate, row);
 
       if (!pages.has(row.page.path)) {
         pages.set(row.page.path, {
@@ -256,7 +278,7 @@ function aggregatePerformanceRows(rows, targetCtr, minImpressions, topCount) {
       if (row.query) pageAggregate.queries.add(row.query);
       for (const queryKey of row.page.queryKeys) pageAggregate.queryKeys.add(queryKey);
       pageAggregate.sources.add(row.sourceLabel);
-      addMetrics(pageAggregate, row);
+      if (authoritative) addMetrics(pageAggregate, row);
     }
     if (row.query && (!row.page || !queryTotals.has(row.query))) {
       if (!queries.has(row.query)) {
@@ -380,6 +402,7 @@ export async function analyzeGscPerformanceInputs(inputPaths, options = {}) {
       queryOnlyRows,
       skippedMetricRows,
     },
+    rows,
     ...aggregatePerformanceRows(rows, targetCtr, minImpressions, topCount),
   };
 }

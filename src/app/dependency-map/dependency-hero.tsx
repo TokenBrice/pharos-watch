@@ -14,6 +14,7 @@ import type { DependencyHubsModel } from "@shared/lib/dependency-hubs-model";
 import { DependencyExposureWorkspace, type DependencyExposureWorkspaceState } from "./dependency-exposure-workspace";
 import { stablecoinLabel } from "@/lib/stablecoin-label";
 import type { SharedFailureDomainGroups } from "@/lib/shared-failure-domains-model";
+import { formatClaimSubtotal } from "@/lib/dependency-watershed/known";
 
 const ContagionGraph = dynamic(
   () => import("@/components/contagion-graph-root").then((module) => module.ContagionGraph),
@@ -57,7 +58,7 @@ export function DependencyHero({ model, cards, dependencyEdges, mcapMap, logos, 
   const network = <ContagionGraph cards={cards} dependencyEdges={dependencyEdges} mcapMap={mcapMap} logos={logos} syncUrlState modeControls={<div className="flex flex-wrap">{workspace.modeControls}{viewControls}</div>} exposureOverlay={workspace.overlay} onUseAsExposureRoot={workspace.addRoot} hubExposures={model.hubs} commonModeGroups={commonModeGroups} />;
   const publication = workspace.exposure.publication;
   const supply = model.mappedSupply;
-  const hasKnownSupply = model.uniqueDirectDependentCount > supply.excludedSupplyUnknownIds.length;
+  const hasKnownSupply = supply.known;
   return (
     <div className="space-y-4">
       <section className="pharos-card-shell px-5 py-5 sm:px-6 sm:py-6" aria-label="Mapped direct exposure summary">
@@ -66,7 +67,7 @@ export function DependencyHero({ model, cards, dependencyEdges, mcapMap, logos, 
           <div className="space-y-2">
             <p className="pharos-label">Mapped direct exposure</p>
             <p className="pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-foreground sm:text-[2.45rem]">
-              {model.directEdgeCount === 0 ? "No mapped dependencies" : hasKnownSupply ? formatCurrency(supply.knownUsd, 2) : "Supply data unavailable"}
+              {model.directEdgeCount === 0 ? "No mapped dependencies" : hasKnownSupply ? `${formatCurrency(supply.knownUsd, 2)}${supply.complete ? "" : " (known only)"}` : supply.excludedSupplyUnknownIds.length === model.uniqueDirectDependentCount ? "Supply data unavailable" : "Exposure unavailable"}
             </p>
             <p className="pharos-meta">Dependents&apos; supply mapped to tracked upstreams (gross, market-cap proxy basis)</p>
             <p className="text-xs text-muted-foreground">V10 {methodologyVersion} · published {formatEventTimestamp(publishedAt, true)}</p>
@@ -78,7 +79,7 @@ export function DependencyHero({ model, cards, dependencyEdges, mcapMap, logos, 
           </dl>
         </div>
         {model.directEdgeCount > 0 && <p className="text-sm text-muted-foreground">
-          {hasKnownSupply ? <>Includes {formatCurrency(supply.overlapUsd, 2)} counted in more than one layer. {supply.unknownFormCount > 0 && supply.passThroughCount + supply.vaultClaimCount === 0 ? "Wrapper/vault split unavailable." : <>Wrapper claims {supply.unknownFormCount > 0 && supply.passThroughCount === 0 ? "unavailable" : formatCurrency(supply.passThroughUsd, 2)}, vault claims {supply.unknownFormCount > 0 && supply.vaultClaimCount === 0 ? "unavailable" : formatCurrency(supply.vaultClaimUsd, 2)}{supply.unknownFormCount > 0 ? " (classified claims only)" : ""}.</>} {supply.unknownFormCount > 0 && <>Wrapper/vault split unavailable{supply.unknownFormUsd === null ? "; supply unavailable" : ` for ${formatCurrency(supply.unknownFormUsd, 2)} of known serial exposure`}; {supply.unknownFormCount} claims have no published form.</>}</> : <>Layer overlap unavailable. Wrapper claims unavailable, vault claims unavailable.</>} {supply.excludedSupplyUnknownIds.length > 0 && <>Excludes {supply.excludedSupplyUnknownIds.length} coins without supply data.</>}
+          {hasKnownSupply ? <>Includes {formatCurrency(supply.overlapUsd, 2)} counted in more than one layer. {supply.unknownFormCount > 0 && supply.passThroughCount + supply.vaultClaimCount === 0 ? "Wrapper/vault split unavailable." : <>Wrapper claims {supply.unknownFormCount > 0 && supply.passThroughCount === 0 ? "unavailable" : formatClaimSubtotal(supply.passThroughUsd, supply.claimAvailability["pass-through"])}, vault claims {supply.unknownFormCount > 0 && supply.vaultClaimCount === 0 ? "unavailable" : formatClaimSubtotal(supply.vaultClaimUsd, supply.claimAvailability["vault-claim"])}{supply.unknownFormCount > 0 ? " (classified claims only)" : ""}.</>} {supply.unknownFormCount > 0 && <>Wrapper/vault split unavailable{supply.unknownFormUsd === null ? "; supply unavailable" : ` for ${formatCurrency(supply.unknownFormUsd, 2)} of known serial exposure`}; {supply.unknownFormCount} claims have no published form.</>}</> : <>Layer overlap unavailable. Wrapper claims unavailable, vault claims unavailable.</>} {supply.excludedSupplyUnknownIds.length > 0 && <>Excludes {supply.excludedSupplyUnknownIds.length} coins without supply data.</>}
         </p>}
         {supply.unknownShareEdgeCount > 0 && <p className="text-sm text-muted-foreground">Excludes {supply.unknownShareEdgeCount} links with unknown mapped shares.</p>}
         {supply.integrityFlag && <p role="alert" className="text-sm text-muted-foreground">Published basket shares exceed 100%. Exposure totals require review.</p>}

@@ -19,7 +19,7 @@ import {
   type TelegramAlertTargetStatusUpdate,
 } from "./telegram-alert-target-status";
 import { pendingBackoffSec, readTelegramGlobalBackoff } from "./backoff";
-import { PENDING_DELETE_CHUNK_SIZE } from "./dead-letter";
+import { PENDING_DELETE_CHUNK_SIZE, pendingLifecycleGuard, settleUnstartedPendingRows } from "./dead-letter";
 import {
   flushChatSuccessResets,
   handleBlockedChat,
@@ -112,14 +112,15 @@ function buildPendingPreSendSkip(): PreSendBatchResult {
 
 function appendPendingTargetStatus(
   targetStatusUpdates: TelegramAlertTargetStatusUpdate[],
-  row: Pick<PendingAlertRow, "dedupe_key"> | undefined,
+  row: Pick<PendingAlertRow, "dedupe_key" | "source_event_id"> | undefined,
   status: TelegramAlertTargetStatusUpdate["status"],
   at: number,
   errorClass?: string | null,
 ): void {
-  if (!row?.dedupe_key) return;
+  if (!row?.dedupe_key || !row.source_event_id) return;
   const update: TelegramAlertTargetStatusUpdate = {
     targetKey: row.dedupe_key,
+    sourceEventId: row.source_event_id,
     status,
     at,
   };
@@ -147,7 +148,8 @@ async function reconcileTerminalTargetRows(db: D1Database, nowSec: number): Prom
                  SELECT 1
                    FROM telegram_alert_job_targets t
                   WHERE t.pending_dedupe_key = p.dedupe_key
-                    AND t.status IN ('sent', 'expired')
+                    AND t.source_event_id = p.source_event_id
+                    AND t.status = 'sent'
                )
              ORDER BY p.id ASC
              LIMIT ?
@@ -176,6 +178,7 @@ async function selectPendingClaimCandidateIds(
               SELECT 1
                 FROM telegram_alert_job_targets t
                WHERE t.pending_dedupe_key = p.dedupe_key
+                 AND t.source_event_id = p.source_event_id
                  AND t.status IN ('sent', 'expired')
             )
           )
@@ -253,6 +256,7 @@ async function loadClaimedPendingRows(
               p.markup_policy_json, p.delivery_state, p.delivery_owner,
               p.delivery_generation, p.delivery_started_at, p.delivery_completed_at,
               p.delivery_claim_expires_at,
+              p.processing_owner, p.processing_started_at, p.processing_expires_at,
               u.alert_snooze_until_ts, u.quiet_hours_enabled,
               u.quiet_hours_start_utc, u.quiet_hours_end_utc, u.timezone
          FROM telegram_pending_alerts p
@@ -329,6 +333,9 @@ async function markPendingRowsSending(
                 updated_at = ?
           WHERE id = ?
             AND processing_owner = ?
+            AND processing_expires_at > ?
+            AND COALESCE(expires_at, created_at + ?) > ?
+            AND (not_before_at IS NULL OR not_before_at <= ?)
             AND delivery_state = 'pending'
             AND delivery_generation = ?
             AND (
@@ -348,6 +355,10 @@ async function markPendingRowsSending(
         nowSec,
         row.id,
         owner,
+        nowSec,
+        PENDING_TTL_SEC,
+        nowSec,
+        nowSec,
         row.deliveryGeneration,
         row.validatedPreferenceGeneration,
         row.validatedPreferenceGeneration,
@@ -549,6 +560,8 @@ export async function drainPendingQueue(
   const disabledChatIds = new Set<string>();
   const migratedChatIds = new Map<string, string>();
   const sendingClaims = new Map<number, PendingDeliveryClaim>();
+  const expiredBeforeSend = new Map<number, DeadLetterPendingRow>();
+  const leaseExpiredBeforeSend = new Set<number>();
   const checkpointedAttemptedOutcomes = new Map<number, PendingOutcomeProjection>();
   const softDeadlineAtMs = Number.isFinite(options.softDeadlineAtMs)
     ? options.softDeadlineAtMs
@@ -588,11 +601,13 @@ export async function drainPendingQueue(
     const row = outcome.row;
     if (outcome.kind === "cancel") {
       preferenceRowsToDelete.push({ ...row, last_error_class: outcome.reason });
-      if (row.dedupe_key) {
+      if (row.dedupe_key && row.source_event_id) {
         targetCancellations.push({
           targetKey: row.dedupe_key,
+          sourceEventId: row.source_event_id,
           at: nowSec,
           reason: outcome.reason,
+          pendingGuard: pendingLifecycleGuard(row, nowSec, "preference_changed", claimOwner),
         });
       }
       completedIds.add(row.id);
@@ -696,6 +711,36 @@ export async function drainPendingQueue(
           claimOwner,
           Math.floor(Date.now() / 1000),
         );
+        // A delayed D1 response must not admit a request after TTL or lease.
+        // Nothing external has started: release only that unattempted generation.
+        let boundaryNowSec = Math.floor(Date.now() / 1000);
+        for (;;) {
+          const expiredMarked = entries.filter(({ item }) =>
+            marked.has(item.row.id) && (
+              (item.row.expires_at ?? item.row.created_at + PENDING_TTL_SEC) <= boundaryNowSec ||
+              (item.row.processing_expires_at != null && item.row.processing_expires_at <= boundaryNowSec)
+            )
+          );
+          if (expiredMarked.length === 0) break;
+          await persistPendingDeferrals(db, expiredMarked.map(({ item }) => ({
+            id: item.row.id,
+            notBeforeAt: boundaryNowSec,
+            deliveryClaim: marked.get(item.row.id)!,
+          })), claimOwner, boundaryNowSec);
+          for (const { item } of expiredMarked) {
+            const claim = marked.get(item.row.id)!;
+            if ((item.row.expires_at ?? item.row.created_at + PENDING_TTL_SEC) <= boundaryNowSec) {
+              expiredBeforeSend.set(item.row.id, {
+                ...item.row, delivery_generation: claim.generation,
+                processing_owner: null, processing_started_at: null, processing_expires_at: null,
+              });
+            } else {
+              leaseExpiredBeforeSend.add(item.row.id);
+            }
+            marked.delete(item.row.id);
+          }
+          boundaryNowSec = Math.floor(Date.now() / 1000);
+        }
         for (const [id, claim] of marked) sendingClaims.set(id, claim);
         if (marked.size > 0) options.markTelegramDeliveryStarted?.();
         if (marked.size === entries.length) return;
@@ -706,6 +751,14 @@ export async function drainPendingQueue(
             continue;
           }
           if (!marked.has(entry.item.row.id)) {
+            if ((entry.item.row.expires_at ?? entry.item.row.created_at + PENDING_TTL_SEC) <= boundaryNowSec &&
+                !expiredBeforeSend.has(entry.item.row.id)) {
+              expiredBeforeSend.set(entry.item.row.id, entry.item.row);
+            }
+            if (entry.item.row.processing_expires_at != null &&
+                entry.item.row.processing_expires_at <= boundaryNowSec) {
+              leaseExpiredBeforeSend.add(entry.item.row.id);
+            }
             skipped.set(entry.index, buildPendingPreSendSkip());
           }
         }
@@ -778,6 +831,11 @@ export async function drainPendingQueue(
         continue;
       }
       if (result.skippedReason === "pre_send") {
+        if (expiredBeforeSend.has(result.id)) {
+          completedIds.add(result.id);
+          continue;
+        }
+        if (leaseExpiredBeforeSend.has(result.id)) continue;
         counters.deferred++;
         deferUpdates.push({
           id: result.id,
@@ -867,6 +925,9 @@ export async function drainPendingQueue(
   ];
   await deleteSentPendingAlerts(db, sentClaimsToDelete.map(({ claim }) => claim));
   await deadLetterAndDeleteTerminalPendingGroups(db, terminalDeleteGroups, nowSec, claimOwner);
+  await settleUnstartedPendingRows(
+    db, [...expiredBeforeSend.values()], Math.floor(Date.now() / 1000), "ttl_expired", claimOwner,
+  );
   await persistPendingDeferrals(db, deferUpdates, claimOwner, nowSec);
   for (const [oldChatId, newChatId] of migratedChatIds) {
     await migrateTelegramChatId(db, oldChatId, newChatId);

@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1, type MockD1Database } from "@shared/test-utils/mock-d1";
 import type { CronProgressUpdate } from "../../lib/cron-logger";
@@ -33,6 +34,8 @@ import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker
 import { ANTHROPIC_OK_TEXT, getInsertDigestBinds, makeDailyDigestScenario, makeRefusalResponse, makeStreamResponse, styleGateModeTables, VALID_CAPTURE_MAP_SUMMARY, VALID_DAILY_EXTENDED, withClauseDash, type DailyDigestScenario } from "./daily-digest.test-support";
 import { publishedGaugePayload, publishedGaugeTable } from "./daily-digest.test-support";
 
+const supplyMemberFingerprint = createHash("sha256")
+  .update('["core-stablecoins-v1",["usdc-circle","usdt-tether"]]').digest("hex");
 const CREDS = { apiKey: "x", apiSecret: "y", accessToken: "z", accessTokenSecret: "w" };
 const TG = { botToken: "tg-token", chatId: "tg-chat" };
 const SOFT_WARNING_TEXT = JSON.stringify({ title: "Drift", extended: VALID_DAILY_EXTENDED, text: "USDT's fixture depeg led the queue while PSI stayed at 91.2 BEDROCK.", meta: { leadSignalId: "depeg:usdt-tether:active", lead: "depeg", tone: "dry", coins: ["USDT", "USDC"], usedCandidateIds: ["depeg:usdt-tether:active"] } });
@@ -104,7 +107,7 @@ describe("generateDailyDigest publication contract", () => {
 
   it("keeps soft quality findings publishable and gates daily mode independently", async () => {
     vi.mocked(fetchWithRetry).mockImplementation(async () => makeStreamResponse(SOFT_WARNING_TEXT));
-    const soft = await invoke(); expect(soft.itemCount).toBe(1); expect(soft.status).toBeUndefined(); expect(fetchWithRetry).toHaveBeenCalledTimes(1); expect(postDigestTweet).toHaveBeenCalledTimes(1);
+    const soft = await invoke(); expect(soft.itemCount).toBe(1); expect(soft.status, soft.metadata).toBeUndefined(); expect(fetchWithRetry).toHaveBeenCalledTimes(1); expect(postDigestTweet).toHaveBeenCalledTimes(1);
     expect(bindJson(scenario.db as MockD1Database, 3).dataQuality.degradedSources).toContain("mint-burn-gauge-missing");
     vi.clearAllMocks();
     vi.mocked(fetchWithRetry).mockReset().mockImplementation(async () => makeStreamResponse(withClauseDash(ANTHROPIC_OK_TEXT)));
@@ -193,6 +196,31 @@ describe("generateDailyDigest publication contract", () => {
     expect(enqueueTelegramDigestEdition).toHaveBeenCalledTimes(1);
   });
 
+  it.each([false, true])("binds an invented but self-consistent numeric pair to the observation; corrected=%s", async (corrected) => {
+    const response = JSON.parse(ANTHROPIC_OK_TEXT);
+    const falseCopy = JSON.stringify({ ...response, text: "USDT trades at $0.90, 1,000 bps below peg." });
+    const repairedCopy = JSON.stringify({ ...response, text: "USDT trades at $0.99, 150 bps below peg." });
+    vi.mocked(fetchWithRetry)
+      .mockResolvedValueOnce(makeStreamResponse(falseCopy))
+      .mockResolvedValueOnce(makeStreamResponse(corrected ? repairedCopy : falseCopy));
+    const result = await invoke();
+    expect(fetchWithRetry).toHaveBeenCalledTimes(2);
+    const retryBody = JSON.parse(String(vi.mocked(fetchWithRetry).mock.calls[1]?.[1]?.body));
+    expect(JSON.stringify(retryBody.messages)).toContain("price-bps-observation-mismatch");
+    if (corrected) {
+      expect(result.itemCount).toBe(1);
+      expect(getInsertDigestBinds(scenario.db as MockD1Database)?.[1]).toBe("USDT trades at $0.99, 150 bps below peg.");
+      expect(postDigestTweet).toHaveBeenCalledTimes(1);
+      expect(enqueueTelegramDigestEdition).toHaveBeenCalledTimes(1);
+    } else {
+      expect(result.status).toBe("degraded");
+      expect(bindJson(scenario.db as MockD1Database, 5)).toMatchObject({ qualityGate: "blocked" });
+      expect(postDigestTweet).not.toHaveBeenCalled();
+      expect(enqueueTelegramDigestEdition).not.toHaveBeenCalled();
+      expect(deliverTelegramDigestEdition).not.toHaveBeenCalled();
+    }
+  });
+
   it("repairs malformed model output once, but skips repair after the time budget is spent", async () => {
     const malformed = '```json\n{"title":"Broken", "text":\n```';
     vi.mocked(fetchWithRetry).mockResolvedValueOnce(makeStreamResponse(malformed));
@@ -203,9 +231,15 @@ describe("generateDailyDigest publication contract", () => {
 
   it("bounds both legs by one LLM deadline so a slow corrective leg cannot outlive the lease", async () => {
     const malformed = '```json\n{"title":"Broken", "text":\n```';
+    let markFirstRequestStarted!: () => void;
+    const firstRequestStarted = new Promise<void>((resolve) => { markFirstRequestStarted = resolve; });
     vi.mocked(fetchWithRetry).mockReset()
       // First pass spends just under the corrective-retry time gate.
-      .mockImplementationOnce(async () => { vi.advanceTimersByTime(ANTHROPIC_TIMEOUT_MS * 0.5 - 30_000); return makeStreamResponse(malformed); })
+      .mockImplementationOnce(async () => {
+        vi.advanceTimersByTime(ANTHROPIC_TIMEOUT_MS * 0.5 - 30_000);
+        markFirstRequestStarted();
+        return makeStreamResponse(malformed);
+      })
       // The corrective leg stalls until its signal aborts. (Worker lib is
       // ES2021, so Promise.withResolvers is unavailable here.)
       .mockImplementationOnce(((_url: string, init?: RequestInit) => new Promise((_resolve, reject) => {
@@ -213,8 +247,12 @@ describe("generateDailyDigest publication contract", () => {
       })) as never);
     const started = Date.now();
     let settledAfterMs: number | null = null;
-    void invoke().catch(() => undefined).finally(() => { settledAfterMs = Date.now() - started; });
-    await vi.advanceTimersByTimeAsync(ANTHROPIC_TIMEOUT_MS);
+    const generation = invoke().catch(() => undefined).finally(() => { settledAfterMs = Date.now() - started; });
+    // Input fingerprinting uses real Web Crypto. Wait for collection to reach
+    // the LLM before advancing its fake deadline, and always drain this run.
+    await firstRequestStarted;
+    await vi.advanceTimersByTimeAsync(ANTHROPIC_TIMEOUT_MS - (Date.now() - started));
+    await generation;
     expect(fetchWithRetry).toHaveBeenCalledTimes(2);
     // A per-leg budget would let the corrective leg run to 17.5 minutes, past
     // the 14-minute cron lease; the shared deadline stops both legs at 12.
@@ -223,23 +261,32 @@ describe("generateDailyDigest publication contract", () => {
   });
 
   it("retries bounded HTTP failures and records the circuit outcome", async () => {
-    vi.mocked(fetchWithRetry).mockImplementation(async () => new Response("anthropic overloaded", { status: 529 }));
+    let markFirstRequestStarted!: () => void;
+    const firstRequestStarted = new Promise<void>((resolve) => { markFirstRequestStarted = resolve; });
+    vi.mocked(fetchWithRetry).mockImplementation(async () => {
+      markFirstRequestStarted();
+      return new Response("anthropic overloaded", { status: 529 });
+    });
     const generation = expect(invoke()).rejects.toThrow("Claude API error 529: anthropic overloaded");
+    await firstRequestStarted;
     await vi.runAllTimersAsync(); await generation;
     expect(recordOutcomeSafe).toHaveBeenCalledWith(scenario.db, CIRCUIT_SOURCE.ANTHROPIC, false); expect(fetchWithRetry).toHaveBeenCalledTimes(3);
   });
 
   it("handles missing keys, circuit open, refusal, and preflight cache gates", async () => {
     const progress: CronProgressUpdate[] = []; const result = await generateDailyDigest(scenario.db, null, null, false, null, undefined, async (update) => { progress.push(update); });
-    expect(result.metadata).toBe("skipped: no API key"); expect(progress).toEqual(expect.arrayContaining([expect.objectContaining({ stage: "preflight" }), expect.objectContaining({ stage: "skipped" })]));
-    vi.mocked(shouldAttemptFetch).mockResolvedValue(false); expect(await invoke()).toEqual({ status: "degraded", itemCount: 0, metadata: "skipped: anthropic circuit open" });
+    expect(result).toMatchObject({ status: "skipped_neutral", itemCount: 0 }); expect(JSON.parse(result.metadata!)).toEqual({ reason: "missing-api-key" }); expect(progress).toEqual(expect.arrayContaining([expect.objectContaining({ stage: "preflight" }), expect.objectContaining({ stage: "skipped" })]));
+    expect(fetchWithRetry).not.toHaveBeenCalled(); expect(getInsertDigestBinds(scenario.db as MockD1Database)).toBeUndefined();
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false); const circuit = await invoke();
+    expect(circuit).toMatchObject({ status: "degraded", itemCount: 0 }); expect(JSON.parse(circuit.metadata!)).toEqual({ reason: "anthropic-circuit-open" });
+    expect(fetchWithRetry).not.toHaveBeenCalled(); expect(getInsertDigestBinds(scenario.db as MockD1Database)).toBeUndefined(); expect(postDigestTweet).not.toHaveBeenCalled(); expect(enqueueTelegramDigestEdition).not.toHaveBeenCalled();
     vi.mocked(shouldAttemptFetch).mockResolvedValue(true); vi.mocked(fetchWithRetry).mockResolvedValueOnce(makeRefusalResponse()); const refusal = await invoke(); expect(refusal).toMatchObject({ status: "degraded", itemCount: 0 }); expect(refusal.metadata).toContain("anthropic-refusal"); expect(recordOutcomeSafe).not.toHaveBeenCalled();
     vi.clearAllMocks(); vi.mocked(loadStablecoinsCache).mockResolvedValueOnce({ kind: "error", reason: "missing-cache", updatedAt: null }); expect((await invoke()).itemCount).toBe(0); expect(fetchWithRetry).not.toHaveBeenCalled();
   });
 
   it("skips a recent valid edition but regenerates an unpublishable recent row", async () => {
     const recent = mockD1([{ match: "SELECT generated_at, digest_text FROM daily_digest\n       WHERE", rows: [], first: { generated_at: Math.floor(Date.now() / 1000) - 20 * 60, digest_text: "Already generated" } }]);
-    expect(await invoke(recent)).toMatchObject({ metadata: "skipped: recent digest exists" }); expect(fetchWithRetry).not.toHaveBeenCalled();
+    const skipped = await invoke(recent); expect(skipped).toMatchObject({ status: "skipped_neutral", itemCount: 0 }); expect(JSON.parse(skipped.metadata!)).toEqual({ reason: "recent-digest", ageSec: 20 * 60 }); expect(fetchWithRetry).not.toHaveBeenCalled();
     const malformedDb = makeDailyDigestScenario({ db: { prependTables: [{ match: "SELECT generated_at, digest_text FROM daily_digest\n       WHERE", rows: [], first: { generated_at: Math.floor(Date.now() / 1000) - 20 * 60, digest_text: "```json" } }] } }).db;
     expect((await invoke(malformedDb)).itemCount).toBe(1); expect(fetchWithRetry).toHaveBeenCalled();
   });
@@ -266,9 +313,9 @@ describe("generateDailyDigest publication contract", () => {
   });
 
   it("keeps persistence when collectors, wrappers, or social channels degrade", async () => {
-    const brokenDb = makeDailyDigestScenario({ db: { transformTables: (tables) => tables.map((table) => table.match === "FROM depeg_events WHERE ended_at IS NULL" ? { ...table, throwError: new Error("d1 unavailable") } : table) } }).db;
+    const brokenDb = makeDailyDigestScenario({ db: { transformTables: (tables) => tables.map((table) => table.match === "FROM depeg_events e LEFT JOIN depeg_event_provenance" ? { ...table, throwError: new Error("d1 unavailable") } : table) } }).db;
     const degraded = await invoke(brokenDb); expect(degraded).toMatchObject({ itemCount: 1, status: "degraded" }); expect(degraded.metadata).toContain("active-depegs-query");
-    vi.mocked(prepareTelegramDigestAppendices).mockRejectedValueOnce(new Error("appendix store down")); expect((await invoke()).itemCount).toBe(1); expect((await invoke()).status).toBeUndefined();
+    vi.mocked(prepareTelegramDigestAppendices).mockRejectedValueOnce(new Error("appendix store down")); expect((await invoke()).itemCount).toBe(1); const recovered = await invoke(); expect(recovered.status, recovered.metadata).toBeUndefined();
     vi.mocked(postDigestTweet).mockRejectedValueOnce(new Error("twitter down")); vi.mocked(deliverTelegramDigestEdition).mockRejectedValueOnce(new Error("telegram down")); const social = await invoke(); expect(social).toMatchObject({ itemCount: 1, status: "degraded" }); expect(getInsertDigestBinds(scenario.db as MockD1Database)).toBeDefined();
   });
 
@@ -324,8 +371,8 @@ describe("delivery boundaries and resume", () => {
 
   it("does not degrade forced already-sent editions and leaves pending appendix actions uncommitted", async () => {
     vi.mocked(enqueueTelegramDigestEdition).mockResolvedValueOnce({ created: false, payloadMatched: false, editionKey: "daily:2026-03-06", state: "sent", chunks: ["previous exact edition"] }); vi.mocked(deliverTelegramDigestEdition).mockResolvedValueOnce({ editionKey: "daily:2026-03-06", state: "sent", outcome: "skipped", chunksSent: 0, nextChunkIndex: 1, chunkCount: 1, errorClass: null, retryAfterSec: null });
-    const result = await invoke(scenario.db, true); expect(result.status).toBeUndefined(); expect(result.metadata).toContain("telegram: skipped: already-sent");
-    const successActions = [{ key: "telegram:cemetery-snapshot", value: '["terrausd"]' }]; vi.mocked(prepareTelegramDigestAppendices).mockResolvedValueOnce({ ...scenario.deliveryMocks.appendices, appendixHtml: "<b>New Cemetery Entries</b>", metadata: { ...scenario.deliveryMocks.appendices.metadata, hasAppendix: true, cemeteryDetected: 1 }, successActions, commitSuccess: vi.fn(async () => undefined) }); vi.mocked(deliverTelegramDigestEdition).mockResolvedValueOnce({ editionKey: "daily:2026-03-06", state: "pending", outcome: "pending", chunksSent: 0, nextChunkIndex: 0, chunkCount: 1, errorClass: "server_error", retryAfterSec: null });
+    const result = await invoke(scenario.db, true); expect(result.status, result.metadata).toBeUndefined(); expect(result.metadata).toContain("telegram: skipped: already-sent");
+    const successActions = [{ key: "telegram:cemetery-snapshot", value: '["terrausd"]' }]; vi.mocked(prepareTelegramDigestAppendices).mockResolvedValueOnce({ ...scenario.deliveryMocks.appendices, appendixHtml: "<b>New Cemetery Entries</b>", metadata: { ...scenario.deliveryMocks.appendices.metadata, hasAppendix: true, cemeteryDetected: 1 }, successActions }); vi.mocked(deliverTelegramDigestEdition).mockResolvedValueOnce({ editionKey: "daily:2026-03-06", state: "pending", outcome: "pending", chunksSent: 0, nextChunkIndex: 0, chunkCount: 1, errorClass: "server_error", retryAfterSec: null });
     const pending = await invoke(); expect(pending.metadata).toContain("telegram: failed:"); expect(enqueueTelegramDigestEdition).toHaveBeenCalledWith(scenario.db, expect.objectContaining({ successActions }), undefined);
   });
 
@@ -342,7 +389,7 @@ describe("enrichment and ancillary publication", () => {
     const result = await invoke(db);
     const input = bindJson(db as MockD1Database, 3);
     expect(result.itemCount).toBe(1);
-    expect(input.supplyCoverage).toEqual({ complete: true, observedCount: 2, unavailableCount: 0 });
+    expect(input.supplyCoverage).toEqual({ complete: true, observedCount: 2, unavailableCount: 0, memberFingerprint: supplyMemberFingerprint });
     expect(input.totalMcapAth).toMatchObject({ value: 330e9 });
     expect(firstRequestBody().messages[0].content).toContain("Digest-window ATH");
   });
@@ -359,7 +406,7 @@ describe("enrichment and ancillary publication", () => {
       })) },
     });
     await invoke(db);
-    expect(bindJson(db, 3).supplyCoverage).toEqual({ complete: false, observedCount: 1, unavailableCount: 1 });
+    expect(bindJson(db, 3).supplyCoverage).toEqual({ complete: false, observedCount: 1, unavailableCount: 1, memberFingerprint: supplyMemberFingerprint });
     expect(firstRequestBody().messages[0].content).not.toContain("Digest-window ATH");
     vi.mocked(fetchWithRetry).mockClear();
     const zeroDb = makeDailyDigestScenario({ db: { prependTables: [{ match: "ORDER BY CAST(json_extract(input_data, '$.totalMcapUsd') AS REAL) DESC", first: { ath_value: 330e9, ath_date: 1_772_150_400 }, rows: [] }] } }).db;
@@ -371,7 +418,7 @@ describe("enrichment and ancillary publication", () => {
       })) },
     });
     await invoke(zeroDb);
-    expect(bindJson(zeroDb, 3).supplyCoverage).toEqual({ complete: true, observedCount: 2, unavailableCount: 0 });
+    expect(bindJson(zeroDb, 3).supplyCoverage).toEqual({ complete: true, observedCount: 2, unavailableCount: 0, memberFingerprint: supplyMemberFingerprint });
     expect(firstRequestBody().messages[0].content).toContain("Digest-window ATH");
   });
 

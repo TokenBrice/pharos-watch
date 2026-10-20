@@ -36,11 +36,17 @@ Count and market-cap denominators name the full active or feature-eligible popul
 
 Source-depth tiles/filters share observed `sourceCount` with row detail. Market-source/authoritative-override categories remain distinct. Override-only data does not create a market-source card. Input-coverage explanations name the actual missing-data owner (issuer reporting cadence, for example), not a generic Pharos delay; a held publication replaces counts with hold context.
 
+Score-input coverage calls the complete mixed-status cohort assets assessed, not assets scored. Its expanded breakdown separately reconciles rated (including partial), not-rated and pipeline-gap counts; held-publication context still takes precedence.
+
 ### Unavailable versus uncovered
 
 Data n/a is neither covered nor uncovered: exclude it from feature count/cap denominators and ordinary gap filters, except intentionally inclusive No Dependency (Gap or Data n/a, not no upstream dependencies). All-unavailable features have null reach and cannot win insight tiles.
 
+Safety membership comes from each published card's `ratingStatus`, not score presence: a rated zero remains Rated and genuine not-rated remains NR in the known population. Per-card pipeline gaps retain published machine reasons and use Data n/a, as do absent cards/publications; they have their own unavailable breakdown and leave known count/cap reach and the No Safety gap filter. Stacked bars retain those unavailable rows as visible segments without treating them as known coverage.
+
 Omitted source arrays/counts mean unknown; explicit empty arrays measure zero. Cap aggregation carries observation count/completeness. Partial subtotals/ratios say known market cap; no observations is n/a; measured zero stays $0 while zero-denominator ratios remain n/a. Cap skew requires measured count and cap shares; no valid candidate means n/a. An observed uncovered denominator cannot manufacture a zero covered numerator when no covered row has observed cap.
+
+Shared mobile/table coin identities use market-cap availability, not positivity: an observed zero displays $0, while an unavailable placeholder displays Mcap -.
 
 ## UX Contract
 

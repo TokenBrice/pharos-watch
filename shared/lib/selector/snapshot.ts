@@ -1,7 +1,7 @@
 import { BluechipGradeSchema, YIELD_TYPE_VALUES } from "../../types/core";
 import { isFiniteNumber, isRecord } from "../type-guards";
 import { canonicalizeForSid } from "./canonicalize";
-import { normalizeSelectorInput, normalizeSelectorSnapshot } from "./snapshot-normalize";
+import { normalizeSelectorCanonicalSources, normalizeSelectorInput, normalizeSelectorSnapshot } from "./snapshot-normalize";
 import { sha256Hex } from "../sha256";
 import {
   BASE_CONFIDENCE_REASON_KEYS,
@@ -24,6 +24,7 @@ import {
   YIELD_VENUE_VALUES,
   type SelectorInput,
   type SelectorOutput,
+  type SelectorCanonicalSourceEvidence,
 } from "./types";
 
 export const SELECTOR_SNAPSHOT_SID_PATTERN = /^[0-9a-f]{32}$/;
@@ -148,7 +149,10 @@ export function validateSelectorSnapshot(value: unknown): SelectorSnapshotValida
     : { ok: false, error: "shape" };
 }
 
-function attachVerifiedSnapshotBinding(snapshot: SelectorOutput): SelectorOutput {
+function attachVerifiedSnapshotBinding(
+  snapshot: SelectorOutput,
+  canonicalSources?: SelectorCanonicalSourceEvidence[],
+): SelectorOutput {
   return {
     ...snapshot,
     provenance: "pharos-verified",
@@ -157,16 +161,22 @@ function attachVerifiedSnapshotBinding(snapshot: SelectorOutput): SelectorOutput
       kind: SELECTOR_SNAPSHOT_VERIFICATION_KIND,
       datasetHash: snapshot.datasetHash,
       engineVersion: snapshot.engineVersion,
+      ...(canonicalSources === undefined ? {} : { canonicalSources }),
     },
   };
 }
 
-export function createVerifiedSelectorSnapshot(output: SelectorOutput): SelectorOutput {
+export function createVerifiedSelectorSnapshot(
+  output: SelectorOutput,
+  canonicalSources?: SelectorCanonicalSourceEvidence[],
+): SelectorOutput {
   const validation = validateSelectorSnapshot(output);
   if (!validation.ok) {
     throw new Error("Server-recomputed selector output failed snapshot validation");
   }
-  return attachVerifiedSnapshotBinding(validation.snapshot);
+  const evidence = canonicalSources === undefined ? undefined : normalizeSelectorCanonicalSources(canonicalSources);
+  if (evidence === null) throw new Error("Server-fetched selector source evidence failed snapshot validation");
+  return attachVerifiedSnapshotBinding(validation.snapshot, evidence);
 }
 
 export function validateVerifiedSelectorSnapshot(value: unknown): SelectorSnapshotValidationResult {
@@ -188,7 +198,11 @@ export function validateVerifiedSelectorSnapshot(value: unknown): SelectorSnapsh
 
   const normalized = normalizeSelectorSnapshot(value);
   if (!normalized) return { ok: false, error: "shape" };
-  const verified = attachVerifiedSnapshotBinding(normalized);
+  const evidence = value.verification.canonicalSources === undefined
+    ? undefined
+    : normalizeSelectorCanonicalSources(value.verification.canonicalSources);
+  if (evidence === null) return { ok: false, error: "shape" };
+  const verified = attachVerifiedSnapshotBinding(normalized, evidence);
   return canonicalizeForSid(value) === canonicalizeForSid(verified)
     ? { ok: true, snapshot: verified }
     : { ok: false, error: "shape" };

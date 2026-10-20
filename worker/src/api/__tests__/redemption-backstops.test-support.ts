@@ -54,7 +54,7 @@ export function makeRedemptionRow(overrides: Record<string, unknown> = {}) {
 export const COMPLETED_RUNS_SQL =
   "SELECT run_id, completed_at, expected_count, written_count, min_updated_at, max_updated_at, methodology_version, status, metadata_json FROM redemption_backstop_runs WHERE status = 'completed' ORDER BY completed_at DESC LIMIT ?";
 export const RUN_ROWS_BY_RUN_ID_SQL =
-  "SELECT stablecoin_id, score, dex_liquidity_score, access_score, settlement_score, execution_certainty_score, capacity_score, output_asset_quality_score, cost_score, route_family, access_model, settlement_model, execution_model, output_asset_type, provider, source_mode, immediate_capacity_usd, immediate_capacity_ratio, fee_bps, queue_enabled, updated_at, methodology_version, details_json, snapshot_run_id FROM redemption_backstop_run_rows WHERE snapshot_run_id = ?";
+  "SELECT stablecoin_id, score, dex_liquidity_score, access_score, settlement_score, execution_certainty_score, capacity_score, output_asset_quality_score, cost_score, route_family, access_model, settlement_model, execution_model, output_asset_type, provider, source_mode, immediate_capacity_usd, immediate_capacity_ratio, fee_bps, queue_enabled, updated_at, methodology_version, details_json, snapshot_run_id FROM redemption_backstop_run_rows WHERE snapshot_run_id = ? ORDER BY stablecoin_id LIMIT ? OFFSET ?";
 
 export function completedRun(run_id: string, overrides: Record<string, unknown> = {}) {
   return {
@@ -71,7 +71,7 @@ export function makeCompletedRunsDb(
   return mockD1Strict([
     { match: COMPLETED_RUNS_SQL, matchBinds: [5], rows: manifests },
     ...Object.entries(rowsByRun).map(([runId, rows]) => ({
-      match: RUN_ROWS_BY_RUN_ID_SQL, matchBinds: [runId], rows,
+      match: RUN_ROWS_BY_RUN_ID_SQL, matchBinds: [runId, 50, 0], rows,
     })),
   ]);
 }

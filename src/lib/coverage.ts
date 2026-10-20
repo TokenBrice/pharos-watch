@@ -25,6 +25,7 @@ import type {
 import type { GeniusClientProfile, MintAuthorityCoverageSummary } from "@shared/types/stablecoin-client-meta";
 import type { DependencyCoverageFact } from "@/lib/dependency-coverage-facts";
 import type { PublishedMintComponent } from "@/lib/mint-authority-display";
+import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
 
 export type {
   CoverageBreakdownItem,
@@ -63,6 +64,8 @@ interface BuildCoverageRowInput {
   consensusSources?: string[];
   priceConfidence?: string;
   safetyScore: number | null | undefined;
+  safetyRatingStatus: SafetyScoreV9CurrentCard["ratingStatus"] | null | undefined;
+  safetyReasonCodes?: readonly string[];
   dexCoverageClass: LiquidityCoverageClass | null | undefined;
   redemptionEntry?: RedemptionBackstopEntry | null | undefined;
   hasYieldCoverage: boolean;
@@ -177,6 +180,8 @@ export function buildCoverageRow({
   consensusSources,
   priceConfidence,
   safetyScore,
+  safetyRatingStatus,
+  safetyReasonCodes,
   dexCoverageClass,
   redemptionEntry,
   hasYieldCoverage,
@@ -191,7 +196,7 @@ export function buildCoverageRow({
   const hasData = (key: CoverageFeatureKey) => dataAvailability?.[key] !== false;
   const statuses = {
     price: modules.price.resolve(coin, hasPegCoverage, consensusSources, priceConfidence, hasData("price")),
-    safety: modules.safety.resolve(safetyScore, hasData("safety")),
+    safety: modules.safety.resolve(safetyScore, safetyRatingStatus, hasData("safety"), safetyReasonCodes),
     dex: modules.dex.resolve(dexCoverageClass, hasData("dex")),
     reserves: modules.reserves.resolve(coin, liveReserveFresh, hasData("reserves")),
     redemption: modules.redemption.resolve(redemptionEntry, hasData("redemption")),

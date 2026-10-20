@@ -26,7 +26,7 @@ function FollowedPresetCard({ preset, canMutate, isMutating, pendingOperation, o
       kind: "follow-preset",
       presetId: preset.id,
       alertTypes: nextAlertTypes,
-      depegStepBps: preset.depegStepBps,
+      depegStepBps: nextAlertTypes.depeg === false ? null : preset.depegStepBps,
     });
   };
   const enabledAlertTypeCount = PRESET_ALERT_TYPES.filter((type) => preset.alertTypes[type]).length;

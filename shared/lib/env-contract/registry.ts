@@ -459,7 +459,7 @@ export const ENV_BINDINGS = [
   {
     key: "TELEGRAM_RECAP_ROLLOUT_MODE",
     valueType: "string",
-    description: "Personalized recap availability: `off` (default when unset, malformed, or a retired mode) or `public`.",
+    description: "Personalized recap availability: `off` (default when unset, malformed, or a retired mode), `public`, or temporary `retirement-notice` for the final opted-in cohort notice with enrolment disabled.",
     example: { section: "workerOptional", value: "off" },
     runtimes: {
       worker: { status: "optional" },

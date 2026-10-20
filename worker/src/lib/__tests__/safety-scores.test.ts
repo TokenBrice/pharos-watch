@@ -78,7 +78,24 @@ describe("canonical published safety scores", () => {
     expect(result.reason).toBe("v9-publication-held");
     expect(result.safetyScoreIdentity).toEqual(heldSnapshot.safetyScoreIdentity);
     expect(result.coveredCount).toBe(1);
+    expect(result.trackedCount).toBe(2);
+    expect(result.coverageRatio).toBe(0.5);
     expect([...result.scores]).toEqual([["rated", { score: 80, grade: "A-" }]]);
+  });
+
+  it("reports measured zero coverage when an accepted publication has no rated cards", async () => {
+    const snapshot = makeReportCardsV9Response({
+      cards: [
+        makeWorkerV9Card({ id: "unrated", score: null, grade: "NR" }),
+        makeWorkerV9Card({ id: "pipeline-gap", score: null, grade: null, ratingStatus: "pipeline-gap" }),
+      ],
+    });
+    mockLoadActiveSafetyScoreSource.mockResolvedValue({ kind: "v9", snapshot });
+
+    expect(await computeSafetyScoresSnapshot({} as D1Database)).toMatchObject({
+      kind: "ok", scores: new Map(), coveredCount: 0, trackedCount: 2, coverageRatio: 0,
+      safetyScoreIdentity: snapshot.safetyScoreIdentity, publishedAt: snapshot.updatedAt,
+    });
   });
 
   it("returns no scores or publication identity when the source errors", async () => {
@@ -86,7 +103,7 @@ describe("canonical published safety scores", () => {
     const result = await computeSafetyScoresSnapshot({} as D1Database);
     expect(result).toMatchObject({
       kind: "degraded", reason: "unavailable", scores: new Map(),
-      coveredCount: 0, trackedCount: 0, coverageRatio: 1,
+      coveredCount: 0, trackedCount: null, coverageRatio: null,
       safetyScoreIdentity: null, publicationGenerationId: null,
       methodologyVersion: null, publishedAt: null,
     });

@@ -1,7 +1,7 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import satoriStandalone from "satori/standalone";
-import { API_CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
+import { API_CACHE_PROFILES, buildOgImageCacheControl } from "@shared/lib/api-cache-profiles";
 import { OG_ROUTE_CARDS, type OgRouteCardKey } from "@shared/lib/og-route-cards";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { RouteCard } from "../../lib/og-templates/route-card";
@@ -19,9 +19,14 @@ vi.mock("../og-page", async () => ({
 
 import { handleOg, resetOgWasmInitializationForTests } from "../og";
 
+beforeEach(() => {
+  vi.spyOn(Date, "now").mockReturnValue(NOW * 1000);
+});
+
 afterEach(() => {
   resetOgWasmInitializationForTests();
   vi.clearAllMocks();
+  vi.restoreAllMocks();
 });
 
 function lastRenderedElement() {
@@ -29,7 +34,7 @@ function lastRenderedElement() {
   return calls[calls.length - 1]?.[0] as React.ReactElement;
 }
 
-const NOW = Math.floor(Date.now() / 1000);
+const NOW = 1_790_000_060;
 
 describe("/api/og/page/:slug", () => {
   it("returns 404 for a slug outside the live registry", async () => {
@@ -54,16 +59,50 @@ describe("/api/og/page/:slug", () => {
     expect(markup).toContain("As of 21 Sep 2026, 14:13 UTC");
   });
 
-  it("never lets a live card be cached past its source's admission budget", async () => {
-    const live = (asOfSec: number) => ({
-      kind: "ok", hero: "$1B", context: "x", support: [], asOfSec, budgetSec: 1800, generation: "g",
+  it.each([1740, 900, 200, 60, 30, 1])("bounds a live card to %s seconds of source freshness", async (remaining) => {
+    loaders.home.mockResolvedValue({
+      kind: "ok", hero: "$1B", context: "x", support: [],
+      asOfSec: NOW - 1800 + remaining, budgetSec: 1800, generation: "g",
     });
-    loaders.home.mockResolvedValue(live(NOW - 60));
-    expect((await handleOg(mockD1([]), "/api/og/page/home"))?.headers.get("Cache-Control")).toBe(API_CACHE_PROFILES.ogImage);
-    loaders.home.mockResolvedValue(live(NOW - 1600));
-    expect((await handleOg(mockD1([]), "/api/og/page/home"))?.headers.get("Cache-Control")).toMatch(/^public, max-age=(19\d|200), s-maxage=(19\d|200)$/);
-    loaders.home.mockResolvedValue(live(NOW - 1799));
-    expect((await handleOg(mockD1([]), "/api/og/page/home"))?.headers.get("Cache-Control")).toBe("public, max-age=60, s-maxage=60");
+    const res = await handleOg(mockD1([]), "/api/og/page/home");
+    const ttl = Math.min(900, remaining);
+    expect(res?.headers.get("X-Og-Status")).toBe("live");
+    expect(res?.headers.get("Cache-Control")).toBe(`public, max-age=${ttl}, s-maxage=${ttl}`);
+  });
+
+  it.each([0, -1])("serves timeless instead of a live figure with %s seconds remaining", async (remaining) => {
+    loaders.home.mockResolvedValue({
+      kind: "ok", hero: "$1B", context: "x", support: [],
+      asOfSec: NOW - 1800 + remaining, budgetSec: 1800, generation: "g",
+    });
+    const res = await handleOg(mockD1([]), "/api/og/page/home");
+    expect(res?.headers.get("X-Og-Status")).toBe("timeless");
+    expect(res?.headers.get("X-Og-Reason")).toBe("stale-cache");
+    expect(res?.headers.get("Cache-Control")).toBe(API_CACHE_PROFILES.custom);
+    expect(renderToStaticMarkup(lastRenderedElement())).not.toContain("$1B");
+  });
+
+  it.each([29, 29.5, 30, 31])("reassesses an explicit expiry after a %s-second render", async (elapsed) => {
+    loaders.home.mockResolvedValue({
+      kind: "ok", hero: "$1B", context: "x", support: [],
+      asOfSec: NOW, budgetSec: 1800, freshUntilSec: NOW + 30, generation: "g",
+    });
+    vi.mocked(satoriStandalone).mockImplementationOnce(async () => {
+      vi.mocked(Date.now).mockReturnValue((NOW + elapsed) * 1000);
+      return "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1200\" height=\"628\"></svg>";
+    });
+    const res = await handleOg(mockD1([]), "/api/og/page/home");
+    expect(res?.headers.get("X-Og-Assessed-At")).toBe(String(Math.floor(NOW + elapsed)));
+    if (elapsed < 30) {
+      const ttl = Math.floor(30 - elapsed);
+      expect(res?.headers.get("X-Og-Status")).toBe("live");
+      expect(res?.headers.get("Cache-Control")).toBe(`public, max-age=${ttl}, s-maxage=${ttl}`);
+    } else {
+      expect(res?.headers.get("X-Og-Status")).toBe("timeless");
+      expect(res?.headers.get("X-Og-Reason")).toBe("stale-cache");
+      expect(res?.headers.get("Cache-Control")).toBe(API_CACHE_PROFILES.custom);
+      expect(renderToStaticMarkup(lastRenderedElement())).not.toContain("$1B");
+    }
   });
 
   it("serves the figure-free timeless card with a named reason when the source is unavailable", async () => {
@@ -114,6 +153,14 @@ describe("/api/og/page/:slug", () => {
     expect(failed?.headers.get("X-Og-Status")).toBe("timeless");
     expect(failed?.headers.get("X-Og-Reason")).toBe("render-error");
     expect(renderToStaticMarkup(lastRenderedElement())).not.toContain("$1");
+  });
+});
+
+describe("buildOgImageCacheControl", () => {
+  it.each([
+    [-1, 0], [0, 0], [0.5, 0], [1, 1], [30, 30], [60, 60], [900, 900], [901, 900],
+  ])("bounds %s seconds of freshness to a %s-second TTL", (remaining, ttl) => {
+    expect(buildOgImageCacheControl(remaining)).toBe(`public, max-age=${ttl}, s-maxage=${ttl}`);
   });
 });
 

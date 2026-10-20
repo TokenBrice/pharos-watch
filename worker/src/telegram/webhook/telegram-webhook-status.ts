@@ -4,13 +4,13 @@ import {
   assessTelegramContextClock,
   projectTelegramSupplyContext,
 } from "../common/context-freshness";
-import { YieldRankingsResponseSchema } from "@shared/types/yield";
+import { YieldRankingsResponseSchema, type YieldRanking } from "@shared/types/yield";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER, normalizeDexLiquidityEvidence } from "../../lib/dex-liquidity";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import { getMintBurnConfigsForStablecoin } from "../../lib/mint-burn-contracts";
 import { perCoinFlowCacheKey } from "../../lib/mint-burn-flows-service";
 import { getCache } from "../../lib/db-cache";
-import { handleYieldRankings } from "../../api/cache-handlers";
+import { handleYieldRankings } from "../../api/yield-rankings-cache";
 import { safeJsonParse } from "../../lib/api-cache-read";
 import {
   loadActiveSafetyScoreIndex,
@@ -71,8 +71,10 @@ export interface StatusForCoin {
     source: string;
     pharosYieldScore: number | null;
     pysUnavailableReason?: string | null;
-    updatedAt: number;
+    provenance: YieldRanking["provenance"];
+    generationId: string | null;
   } | null;
+  yieldUnavailableReason?: string | null;
   flow: { netFlowUsd: number; updatedAt: number; stale: boolean; assessedAt: number; freshBudgetSec: number } | null;
   depeg:
     | { status: "stable" }
@@ -90,25 +92,33 @@ interface TelegramSafetyState {
   source: Extract<ActiveSafetyScoreIndex, { kind: "v9" }> | null;
 }
 
-async function loadTelegramPysState(
+async function loadTelegramYieldState(
   db: D1Database,
   stablecoinId: string,
-): Promise<{ score: number | null; unavailableReason: string | null }> {
+): Promise<{ yield: StatusForCoin["yield"]; unavailableReason: string | null }> {
   try {
     const response = await handleYieldRankings(db);
-    if (!response.ok) return { score: null, unavailableReason: "yield-rankings-unavailable" };
+    if (!response.ok) return { yield: null, unavailableReason: "yield-rankings-unavailable" };
     const parsed = YieldRankingsResponseSchema.safeParse(await response.json());
-    if (!parsed.success) return { score: null, unavailableReason: "yield-rankings-malformed" };
+    if (!parsed.success) return { yield: null, unavailableReason: "yield-rankings-malformed" };
     const ranking = parsed.data.rankings.find((row) => row.id === stablecoinId);
-    if (!ranking) return { score: null, unavailableReason: "yield-ranking-not-found" };
+    if (!ranking) return { yield: null, unavailableReason: "yield-ranking-not-found" };
     return {
-      score: ranking.pharosYieldScore,
-      unavailableReason: ranking.pharosYieldScore == null
-        ? ranking.pysNullReason ?? "pys-unavailable"
-        : null,
+      yield: {
+        currentApy: ranking.currentApy,
+        apy30d: ranking.apy30d,
+        source: ranking.yieldSource,
+        pharosYieldScore: ranking.pharosYieldScore,
+        pysUnavailableReason: ranking.pharosYieldScore == null
+          ? ranking.pysNullReason ?? "pys-unavailable"
+          : null,
+        provenance: ranking.provenance,
+        generationId: parsed.data.publication?.generationId ?? null,
+      },
+      unavailableReason: null,
     };
   } catch {
-    return { score: null, unavailableReason: "yield-rankings-unavailable" };
+    return { yield: null, unavailableReason: "yield-rankings-unavailable" };
   }
 }
 
@@ -138,7 +148,7 @@ async function loadTelegramSafetyState(db: D1Database): Promise<TelegramSafetySt
 export async function loadStatusForCoin(db: D1Database, stablecoinId: string): Promise<StatusForCoin> {
   const nowSec = Math.floor(Date.now() / 1000);
   const isMintBurnTracked = getMintBurnConfigsForStablecoin(stablecoinId).length > 0;
-  const [dewsRow, safetyState, depegRow, priceRow, liquidityRow, yieldRow, stablecoinsCache, flowCache] =
+  const [dewsRow, safetyState, depegRow, priceRow, liquidityRow, yieldState, stablecoinsCache, flowCache] =
     await Promise.all([
       loadStressSignalCurrentRowForCoin(db, stablecoinId, nowSec, { staleAfterSec: 30 * 60 }),
       loadTelegramSafetyState(db),
@@ -167,22 +177,7 @@ export async function loadStatusForCoin(db: D1Database, stablecoinId: string): P
         .bind(stablecoinId)
         .first<{ liquidity_score: number | null; total_tvl_usd: number; updated_at: number;
           coverage_class: string | null; coverage_confidence: number | null }>(),
-      db
-        .prepare(
-          `SELECT current_apy, apy_30d, yield_source, updated_at
-           FROM yield_data
-          WHERE stablecoin_id = ? AND is_best = 1
-            AND (publication_generation_id IS NULL OR publication_state = 'published')
-          ORDER BY apy_30d DESC, updated_at DESC
-          LIMIT 1`,
-        )
-        .bind(stablecoinId)
-        .first<{
-          current_apy: number;
-          apy_30d: number;
-          yield_source: string;
-          updated_at: number;
-        }>(),
+      loadTelegramYieldState(db, stablecoinId),
       loadStablecoinsCache(db, { mode: "strict" }).catch(() => null),
       isMintBurnTracked ? getCache(db, perCoinFlowCacheKey(stablecoinId, 24)).catch(() => null) : Promise.resolve(null),
     ]);
@@ -222,7 +217,6 @@ export async function loadStatusForCoin(db: D1Database, stablecoinId: string): P
       ? safetyState.source.snapshot.cards.find((card) => card.id === stablecoinId)
       : null;
 
-  const pysState = yieldRow ? await loadTelegramPysState(db, stablecoinId) : null;
   let liquidityUnavailableReason: StatusForCoin["liquidityUnavailableReason"] = null;
   if (liquidityRow) {
     try {
@@ -269,16 +263,8 @@ export async function loadStatusForCoin(db: D1Database, stablecoinId: string): P
           ).current,
         }
       : null,
-    yield: yieldRow
-      ? {
-          currentApy: yieldRow.current_apy,
-          apy30d: yieldRow.apy_30d,
-          source: yieldRow.yield_source,
-          pharosYieldScore: pysState?.score ?? null,
-          pysUnavailableReason: pysState?.unavailableReason ?? null,
-          updatedAt: yieldRow.updated_at,
-        }
-      : null,
+    yield: yieldState.yield,
+    yieldUnavailableReason: yieldState.unavailableReason,
     flow,
     depeg: depegRow
       ? {

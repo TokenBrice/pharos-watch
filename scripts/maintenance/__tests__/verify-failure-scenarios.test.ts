@@ -83,3 +83,89 @@ describe("Sky structural governance bar and live figure", () => {
     for (const check of structuralChecks) expect((await check.run(skyContext({ currentCode: "0x6001" }))).verdict).toBe("changed");
   });
 });
+
+const capChecks = FAILURE_SCENARIO_CHECKS["cusd-cap"]!.checks;
+const capZeroWord = `0x${"0".repeat(64)}`;
+const capCloneTarget = "d8063123bba3b480569244ae66bfe72b6c84b00d";
+const capCloneCode = `0x363d3d373d3d3d363d73${capCloneTarget}5af43d82803e903d91602b57fd5bf3`;
+
+function capContext(overrides: {
+  storage?: { slot: "guard" | "module"; value: string | undefined };
+  bytecode?: { value: string | undefined };
+  supply?: bigint;
+  borrows?: bigint;
+} = {}): ScenarioCheckContext {
+  const client = {
+    getStorageAt: vi.fn(async ({ slot }: { slot: string }) => {
+      const kind = slot === "0x4a204f620c8c5ccdca3fd54d003badd85ba500436a431f0cbda4f558c93c34c8" ? "guard" : "module";
+      return overrides.storage?.slot === kind ? overrides.storage.value : capZeroWord;
+    }),
+    getBytecode: vi.fn(async () => overrides.bytecode ? overrides.bytecode.value : capCloneCode),
+    readContract: vi.fn(async ({ functionName }: { functionName: string }) => {
+      switch (functionName) {
+        case "getThreshold": return 3n;
+        case "getOwners": return Array.from({ length: 5 }, (_, i) => `0x${(i + 2).toString(16).padStart(40, "0")}`);
+        case "roles": return 16383n;
+        case "totalSupply": return overrides.supply ?? 100n * 10n ** 18n;
+        case "totalBorrows": return overrides.borrows ?? 76n * 10n ** 6n;
+        default: throw new Error(`Unexpected Cap read ${functionName}`);
+      }
+    }),
+  } as unknown as ScenarioReadClient;
+  return { record: records["cusd-cap"]!, chains: { 1: { client, blockNumber: 26176412n } }, memo: new Map() };
+}
+
+function runCapCheck(id: string, overrides: Parameters<typeof capContext>[0] = {}) {
+  return capChecks.find((check) => check.id === id)!.run(capContext(overrides));
+}
+
+describe("Cap pinned falsifier evidence", () => {
+  it.each(["guard", "module"] as const)("rejects unavailable or malformed %s storage rather than inventing zero", async (slot) => {
+    for (const value of [undefined, "", "0x", "0x00", `0x${"0".repeat(63)}`, `0x${"g".repeat(64)}`, `0x${"0".repeat(66)}`]) {
+      await expect(runCapCheck("safe-composition", { storage: { slot, value } })).rejects.toMatchObject({
+        name: "ScenarioReadUnavailableError",
+        message: expect.stringContaining("Storage word unavailable"),
+      });
+    }
+  });
+
+  it("retains complete zero words as observed empty Safe state", async () => {
+    const result = await runCapCheck("safe-composition");
+    expect(result).toMatchObject({
+      verdict: "holds",
+      observed: { threshold: 3, ownerCount: 5, guard: `0x${"0".repeat(40)}`, moduleHead: "none" },
+    });
+  });
+
+  it.each([
+    { borrows: 24_999_999n, verdict: "changed", displayed: 24.99 },
+    { borrows: 25_000_000n, verdict: "changed", displayed: 25 },
+    { borrows: 25_000_001n, verdict: "holds", displayed: 25 },
+  ])("uses exact quarter comparison for $borrows raw USDC units", async ({ borrows, verdict, displayed }) => {
+    const result = await runCapCheck("operator-lending-share", { borrows });
+    expect(result).toMatchObject({ verdict, observed: { borrowSharePct: displayed } });
+  });
+
+  it("accepts only the complete reviewed minimal proxy with the required roles", async () => {
+    expect(await runCapCheck("fr-vault-roles")).toMatchObject({
+      verdict: "holds",
+      observed: { roleMask: "16383", missingRequiredBits: [], cloneTarget: `0x${capCloneTarget}` },
+    });
+  });
+
+  it.each([
+    `0x003d3d373d3d3d363d73${capCloneTarget}5af43d82803e903d91602b57fd5bf3`,
+    `0x363d3d373d3d3d363d73${capCloneTarget}5af43d82803e903d91602b57fd5bf2`,
+    `0x613fff5f5260205ff300${capCloneTarget}${"00".repeat(15)}`,
+    `0x363d3d373d3d3d363d73${"0".repeat(40)}5af43d82803e903d91602b57fd5bf3`,
+  ])("detects a runtime or target change even with all role bits: %s", async (value) => {
+    expect((await runCapCheck("fr-vault-roles", { bytecode: { value } })).verdict).toBe("changed");
+  });
+
+  it.each([undefined, "", "0x", "0x0", "0xzz"])("preserves missing or malformed runtime as unavailable: %s", async (value) => {
+    await expect(runCapCheck("fr-vault-roles", { bytecode: { value } })).rejects.toMatchObject({
+      name: "ScenarioReadUnavailableError",
+      message: expect.stringContaining("Bytecode unavailable"),
+    });
+  });
+});

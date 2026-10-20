@@ -3,6 +3,7 @@ import { buildAlchemyUrl, fetchAlchemyLogs, getAlchemyBlockNumber, resolveBlockT
 import type { ChainRpcConfig, RpcEndpoint } from "../chain-registry";
 import { throwIfAborted } from "../abort";
 import { budgetExhausted, type SubrequestBudget } from "../evm-logs";
+import { fetchEvmBlockHeader, type EvmBlockHeader } from "../evm-rpc";
 
 export function mintBurnAlchemyEndpoint(url: string): RpcEndpoint {
   return { url, operator: "alchemy", keyed: true, position: "registry", stateHistory: "archive", logsHistory: "full" };
@@ -17,20 +18,38 @@ export function mintBurnRpcEndpoints(chainId: string, apiKey: string,
     && !endpoint.routingDisabled && endpoint.logsHistory === "full");
   // Log/header support does not imply arbitrary historical state. Conservation
   // filters its separate hash-pinned state phase by stateHistory.
-  return dwellir ? [dwellir, mintBurnAlchemyEndpoint(url)] : [mintBurnAlchemyEndpoint(url)];
+  const incumbent = chainRpcs?.get(chainId)?.endpoints.find((endpoint) => endpoint.url === url);
+  const alchemy = { ...mintBurnAlchemyEndpoint(url),
+    ...(incumbent?.finalizedTagUnsupported ? { finalizedTagUnsupported: true } : {}) };
+  return dwellir ? [dwellir, alchemy] : [alchemy];
 }
 
-export async function getMintBurnBlockNumber(endpoints: readonly RpcEndpoint[], budget: SubrequestBudget,
-  signal?: AbortSignal, endpointHeads?: Map<string, number>): Promise<number | null> {
-  for (const endpoint of endpoints) {
-    throwIfAborted(signal);
-    const head = endpointHeads?.get(endpoint.url) ?? await getAlchemyBlockNumber(endpoint.url, budget, signal);
-    if (head != null) {
-      endpointHeads?.set(endpoint.url, head);
-      return head;
-    }
-  }
-  return null;
+/** CHAIN owns tag capability admission and strict number/hash/timestamp validation. */
+export async function getMintBurnFinalizedHead(chainId: string, endpoints: readonly RpcEndpoint[],
+  budget: SubrequestBudget, signal?: AbortSignal): Promise<EvmBlockHeader | null> {
+  return fetchEvmBlockHeader(chainId, "finalized", {
+    chainRpcs: new Map([[chainId, { chainId, chainName: chainId, type: "evm", endpoints, explorerUrl: "" }]]),
+    signal,
+    maxRetries: 0,
+    beforeRequest: () => {
+      throwIfAborted(signal);
+      if (budgetExhausted(budget)) return false;
+      budget.count++;
+      return true;
+    },
+  });
+}
+
+function boundLogRange(result: AlchemyLogsFetchResult | null, fromBlock: number, toBlock: number): AlchemyLogsFetchResult | null {
+  if (!result) return null;
+  const inRange = (log: AlchemyLogsFetchResult["logs"][number]) => {
+    const block = Number(log.blockNumber);
+    return Number.isSafeInteger(block) && block >= fromBlock && block <= toBlock;
+  };
+  // No replacement allocation for the ordinary, already range-validated response.
+  const logs = result.logs.some((log) => !inRange(log)) ? result.logs.filter(inRange) : result.logs;
+  const scannedToBlock = Math.max(fromBlock - 1, Math.min(toBlock, result.scannedToBlock));
+  return logs === result.logs && scannedToBlock === result.scannedToBlock ? result : { ...result, logs, scannedToBlock };
 }
 
 /** Resume only at the proven contiguous frontier, discarding logs beyond an unproven gap. */
@@ -38,8 +57,8 @@ export async function fetchMintBurnLogs(endpoints: readonly RpcEndpoint[], contr
   topics: AlchemyTopicFilter[], fromBlock: number, toBlock: number, budget: SubrequestBudget,
   signal?: AbortSignal, options?: { deadlineMs?: number; endpointHeads?: Map<string, number> }): Promise<AlchemyLogsFetchResult | null> {
   if (endpoints.length === 1) {
-    return fetchAlchemyLogs(endpoints[0].url, contractAddress, topics, fromBlock, toBlock, budget, signal,
-      options?.deadlineMs != null ? { deadlineMs: options.deadlineMs } : undefined);
+    return boundLogRange(await fetchAlchemyLogs(endpoints[0].url, contractAddress, topics, fromBlock, toBlock, budget, signal,
+      options?.deadlineMs != null ? { deadlineMs: options.deadlineMs } : undefined), fromBlock, toBlock);
   }
   let combined: AlchemyLogsFetchResult | null = null;
   let start = fromBlock;
@@ -58,8 +77,9 @@ export async function fetchMintBurnLogs(endpoints: readonly RpcEndpoint[], contr
         failureReason: "provider-head-lag" };
       continue;
     }
-    const result = await fetchAlchemyLogs(endpoint.url, contractAddress, topics, start, endpointTo, budget, signal,
-      endpoint.operator === "dwellir" ? { ...options, endpoint } : options?.deadlineMs != null ? { deadlineMs: options.deadlineMs } : undefined);
+    const result = boundLogRange(await fetchAlchemyLogs(endpoint.url, contractAddress, topics, start, endpointTo, budget, signal,
+      endpoint.operator === "dwellir" ? { ...options, endpoint } : options?.deadlineMs != null ? { deadlineMs: options.deadlineMs } : undefined),
+      start, endpointTo);
     if (!result) continue;
     if (result.complete && endpointTo < toBlock) {
       result.complete = false;

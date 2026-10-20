@@ -53,7 +53,7 @@ export function verifyGeminiContentfulIndex(json: string, manifest: IndependentA
       throw new Error("gemini-independent-assurance: official index contains a non-HTTPS asset URL");
     }
   }
-  const entries: Array<{ url: string; reportDate: string }> = [];
+  const entries: Array<{ url: string; reportTimestamp: number }> = [];
   for (const item of root.items as unknown[]) {
     const entry = item as ContentfulEntry;
     if (entry?.sys?.contentType?.sys?.id !== GEMINI_ATTESTATION_CONTENT_TYPE) {
@@ -68,20 +68,21 @@ export function verifyGeminiContentfulIndex(json: string, manifest: IndependentA
     if (!url) {
       throw new Error("gemini-independent-assurance: official index entry has no resolvable PDF asset");
     }
-    entries.push({ url, reportDate });
+    entries.push({ url, reportTimestamp: Date.parse(reportDate) });
   }
   const newestDate = entries.reduce(
-    (max, entry) => (entry.reportDate > max ? entry.reportDate : max),
-    entries[0].reportDate,
+    (max, entry) => Math.max(entry.reportTimestamp, max),
+    entries[0].reportTimestamp,
   );
-  const newest = entries.filter((entry) => entry.reportDate === newestDate);
+  const newest = entries.filter((entry) => entry.reportTimestamp === newestDate);
   if (newest.length !== 1) {
     throw new Error("gemini-independent-assurance: ambiguous newest report on official index");
   }
-  if (newestDate > GEMINI_REVIEWED_ENTRY_REPORT_DATE) {
+  const reviewedTimestamp = Date.parse(GEMINI_REVIEWED_ENTRY_REPORT_DATE);
+  if (newestDate > reviewedTimestamp) {
     throw new Error("gemini-independent-assurance: newer unreviewed report on official index");
   }
-  if (newestDate < GEMINI_REVIEWED_ENTRY_REPORT_DATE) {
+  if (newestDate < reviewedTimestamp) {
     throw new Error("gemini-independent-assurance: reviewed report missing from official index");
   }
   if (newest[0].url !== manifest.reportUrl) {

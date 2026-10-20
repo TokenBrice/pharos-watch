@@ -25,7 +25,7 @@ export function OffMapShelf({ groups }: { groups: readonly ShelfGroup[] }) {
                   <CohortCoinEmblems
                     coins={[coin]}
                     cohortRank={group.rank}
-                    summary={summarizeCohort(group.coins)}
+                    summary={summarizeCohort(group.coins, group.cohort)}
                     variant="shelf"
                     loading="eager"
                     hoverCardYPlacement="below"

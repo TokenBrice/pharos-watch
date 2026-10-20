@@ -4,8 +4,6 @@ import {
   TELEGRAM_ALERT_TYPES,
 } from "../types/status";
 import type {
-  PerAlertTypeDelivery,
-  PerAlertTypeDeliveryStats,
   TelegramDispatchCronMetadata,
 } from "../types/status";
 import { coerceFiniteNumber } from "./type-guards";
@@ -64,32 +62,14 @@ function readMetadataEnum<const TValue extends string>(
     : null;
 }
 
-function parsePerAlertTypeStats(value: unknown): PerAlertTypeDeliveryStats {
-  const record = readMetadataRecord(value);
-  return {
-    sent: readMetadataNumber(record?.sent) ?? 0,
-    enqueued: readMetadataNumber(record?.enqueued) ?? 0,
-    failed: readMetadataNumber(record?.failed) ?? 0,
-    blocked: readMetadataNumber(record?.blocked) ?? 0,
-    firstSendLatencyMs: readMetadataNumber(record?.firstSendLatencyMs),
-  };
-}
-
-function parsePerAlertTypeDelivery(value: unknown): PerAlertTypeDelivery | null {
-  const record = readMetadataRecord(value);
-  if (!record) return null;
-  const result = {} as PerAlertTypeDelivery;
-  for (const type of TELEGRAM_ALERT_TYPES) {
-    result[type] = parsePerAlertTypeStats(record[type]);
-  }
-  return result;
-}
-
 export function parseTelegramDispatchCronMetadata(value: unknown): TelegramDispatchCronMetadata | null {
   const record = readMetadataRecord(value);
   if (!record) return null;
 
   const eventsRecord = readMetadataRecord(record.eventsDetected);
+  const planning = readMetadataRecord(record.authoritativePlanning);
+  const sourceEventFamilies = planning?.sourceEventFamilies;
+  const plannedTargetCount = readMetadataNumber(planning?.plannedTargetCount);
   return {
     subscribersNotified: readMetadataNumber(record.subscribersNotified),
     messagesSent: readMetadataNumber(record.messagesSent),
@@ -99,14 +79,7 @@ export function parseTelegramDispatchCronMetadata(value: unknown): TelegramDispa
     snapshotSeeded: readMetadataBoolean(record.snapshotSeeded),
     eventlessFastPath: readMetadataBoolean(record.eventlessFastPath),
     skipped: readMetadataString(record.skipped) ?? readMetadataString(record.skippedReason),
-    freshAttempted: readMetadataNumber(record.freshAttempted),
-    freshSent: readMetadataNumber(record.freshSent),
-    freshRetryQueued: readMetadataNumber(record.freshRetryQueued),
-    freshPermanentFailures: readMetadataNumber(record.freshPermanentFailures),
-    freshDeferredPerChat: readMetadataNumber(record.freshDeferredPerChat),
-    freshCandidateChats: readMetadataNumber(record.freshCandidateChats),
     freezeTargetCount: readMetadataNumber(record.freezeTargetCount),
-    freshCandidateCount: readMetadataNumber(record.freshCandidateCount),
     pendingAttempted: readMetadataNumber(record.pendingAttempted),
     pendingDrained: readMetadataNumber(record.pendingDrained),
     pendingRetryQueued: readMetadataNumber(record.pendingRetryQueued),
@@ -146,6 +119,14 @@ export function parseTelegramDispatchCronMetadata(value: unknown): TelegramDispa
           suppressedMethodologyChanges: readMetadataNumber(eventsRecord.suppressedMethodologyChanges),
         }
       : null,
-    perAlertType: parsePerAlertTypeDelivery(record.perAlertType),
+    authoritativePlanning: planning ? {
+      sourceEventId: readMetadataString(planning.sourceEventId),
+      sourceEventFamilies: Array.isArray(sourceEventFamilies) &&
+        sourceEventFamilies.every((family): family is (typeof TELEGRAM_ALERT_TYPES)[number] =>
+          typeof family === "string" && (TELEGRAM_ALERT_TYPES as readonly string[]).includes(family))
+        ? sourceEventFamilies : null,
+      plannedTargetCount: plannedTargetCount != null && Number.isInteger(plannedTargetCount) && plannedTargetCount >= 0
+        ? plannedTargetCount : null,
+    } : null,
   };
 }

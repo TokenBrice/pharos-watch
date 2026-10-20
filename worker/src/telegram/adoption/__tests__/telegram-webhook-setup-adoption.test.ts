@@ -32,11 +32,11 @@ describe("setup adoption state", () => {
       adoptionToken: entry.token,
     });
     const buttons = inlineButtons(latestSendMessageBody());
-    expect(buttons.map((button) => button.callback_data)).toEqual(["setup:confirm", "setup:cancel"]);
+    expect(buttons.map((button) => button.callback_data)).toEqual([`setup:confirm:${state?.flowId}`, `setup:cancel:${state?.flowId}`]);
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_preset_subscriptions").get()).toEqual({ count: 0 });
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_subscriptions").get()).toEqual({ count: 0 });
 
-    await handleTelegramWebhook(db, makeCallbackRequest("setup:confirm", { updateId: 2 }), "test-secret", "bot-token");
+    await handleTelegramWebhook(db, makeCallbackRequest(`setup:confirm:${state?.flowId}`, { updateId: 2 }), "test-secret", "bot-token");
     expect(sqlite.prepare("SELECT preset_id, alert_dews, alert_depeg, alert_safety FROM telegram_preset_subscriptions WHERE chat_id = '123'").get())
       .toEqual({ preset_id: "usd-top25", alert_dews: 1, alert_depeg: 1, alert_safety: 0 });
     expect(sqlite.prepare("SELECT campaign, placement, stage, count FROM telegram_adoption_daily ORDER BY stage").all()).toEqual([

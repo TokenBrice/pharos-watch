@@ -172,7 +172,6 @@ describe("syncYieldData", () => {
       testSafetyScoresSnapshot({
         kind: "degraded",
         reason,
-        trackedCount: 4,
         safetyScoreIdentity: null,
       }),
     );
@@ -182,7 +181,7 @@ describe("syncYieldData", () => {
       reason: string;
       safetySnapshotSource: string;
       safetyScoresComputed: number;
-      safetyScoresExpected: number;
+      safetyScoresExpected: number | null;
       safetyScoreIdentity: unknown;
     };
 
@@ -196,7 +195,7 @@ describe("syncYieldData", () => {
     expect(metadata.reason).toBe(`safety-snapshot-unavailable:${reason}`);
     expect(metadata.safetySnapshotSource).toBe("safety-score-v9-publication");
     expect(metadata.safetyScoresComputed).toBe(0);
-    expect(metadata.safetyScoresExpected).toBe(4);
+    expect(metadata.safetyScoresExpected).toBeNull();
     expect(metadata.safetyScoreIdentity).toBeNull();
     expect(getYieldRankingsCachePayload(db)).toBeUndefined();
     expect(findPublishedYieldRow(db, "lusd-liquity", () => true)).toBeUndefined();
@@ -309,7 +308,7 @@ describe("syncYieldData", () => {
     const metadata = JSON.parse(result.metadata ?? "{}") as { quality: { degraded: boolean; reasons: string[]; advisoryReasons: string[] } };
     const payload = getYieldRankingsCachePayload(db) as {
       rankings: Array<{ id: string; safetyScore: number | null; safetyGrade: string }>;
-      provenance: { safetySnapshot: { safetyScoreIdentity: { publicationGenerationId: string } | null } };
+      provenance: { safetySnapshot: { safetyScoreIdentity: { publicationGenerationId: string } | null; trackedCount: number | null; coverageRatio: number | null; reason: string | null } };
     } | undefined;
 
     expect(result.status).toBe("ok");
@@ -318,6 +317,9 @@ describe("syncYieldData", () => {
     expect(payload).toBeDefined();
     expect(payload?.provenance.safetySnapshot.safetyScoreIdentity?.publicationGenerationId)
       .toBe(acceptedPublicationGenerationId);
+    expect(payload?.provenance.safetySnapshot).toMatchObject({
+      trackedCount: 4, coverageRatio, reason: "v9-publication-held",
+    });
     // The accepted generation's safety reached the row instead of the old
     // all-NR collapse that withheld the publication.
     expect(findPublishedYieldRow(db, "lusd-liquity", (row) => row.source_key === "pool-lusd-aave"))
@@ -354,7 +356,7 @@ describe("syncYieldData", () => {
     };
 
     expect(result.status).toBe("degraded");
-    expect(metadata.reason).toBe("safety-snapshot-unavailable:v9-publication-held");
+    expect(metadata.reason).toBe("safety-snapshot-unavailable:safety-publication-clock-out-of-budget");
     expect(metadata.safetySnapshotHeld).toBe(true);
     if (clock === "expired") expect(metadata.acceptedPublicationAgeSeconds).toBe(24 * 3600 + 1);
     expect(getYieldRankingsCachePayload(db)).toBeUndefined();

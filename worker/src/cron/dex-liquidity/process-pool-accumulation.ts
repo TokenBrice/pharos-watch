@@ -92,6 +92,7 @@ export function accumulatePoolMetrics(
     poolType: resolvedPoolType,
     source: "dl",
     ...(poolPrice != null ? { price: poolPrice } : {}),
+    ...(poolPrice != null ? { priceObservedAt: curveData?.priceObservedAt ?? null } : {}),
     extra: {
       ...(curveData
         ? {

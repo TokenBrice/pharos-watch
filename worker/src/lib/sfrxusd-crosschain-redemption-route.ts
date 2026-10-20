@@ -287,6 +287,14 @@ export const SfrxusdCrosschainV9RouteStateSchema = z
     }
 
     const latestVaultPrice = BigInt(state.vaultOracle.answerE18);
+    if (latestVaultPrice <= 0n) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["vaultOracle", "answerE18"],
+        message: "Vault oracle answer must be positive before computing price deviation",
+      });
+      return;
+    }
     const storedVaultPrice = BigInt(state.vaultOracle.storedPriceE18);
     const expectedDeviationBps =
       Number(

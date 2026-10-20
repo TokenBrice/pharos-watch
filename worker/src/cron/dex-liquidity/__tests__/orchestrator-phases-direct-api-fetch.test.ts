@@ -104,6 +104,27 @@ describe("runDirectApiFetchPhase", () => {
     vi.restoreAllMocks();
   });
 
+  it("captures each provider's live read clock without renewing an explicitly dated quote", async () => {
+    const now = vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000);
+    const pool: DexApiPool = {
+      source: "balancer", chain: "ethereum", poolAddress: "0xpool", poolType: "balancer-stable",
+      tokens: [], price: 1, tvlUsd: 100_000, volume24hUsd: null, feeRate: null, balances: null,
+    };
+    const phase = await runDirectApiFetchPhase({} as D1Database, [
+      makeFetcher("first", async () => {
+        now.mockReturnValue(1_700_000_100_000);
+        return makeDexApiFetchResult([pool], { ok: true, degraded: false, errors: [] });
+      }),
+      makeFetcher("second", async () => makeDexApiFetchResult([
+        { ...pool, poolAddress: "0xdated", priceObservedAt: 1_699_978_400 },
+        { ...pool, poolAddress: "0xundated", priceObservedAt: undefined },
+      ], { ok: true, degraded: false, errors: [] })),
+    ]);
+    expect(phase.results.map((entry) => entry.result.pools.map((quote) => quote.priceObservedAt))).toEqual([
+      [1_700_000_000], [1_699_978_400, 1_700_000_100],
+    ]);
+  });
+
   it.each([
     { declared: "bounded-sample" as const, reported: "exhaustive" as const },
     { declared: "exhaustive" as const, reported: "bounded-sample" as const },

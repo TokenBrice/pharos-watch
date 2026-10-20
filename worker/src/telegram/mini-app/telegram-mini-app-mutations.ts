@@ -40,6 +40,10 @@ import { SNOOZE_SECONDS } from "../common/constants";
 import { isValidIanaTimezone } from "../common/quiet-hours";
 import { DEFAULT_QUIET_END_HOUR, DEFAULT_QUIET_START_HOUR } from "../webhook/telegram-webhook-settings-shared";
 import { prepareCoinSettingStatements } from "../webhook/telegram-webhook-settings-mutations";
+import { buildDepegStepUpsert, buildDewsUpsert, buildSafetyUpsert, type BuiltSubscriptionUpsert } from "../store/subscriptions";
+import { prepareSubscriberAndPresetPatchStatements } from "../store/presets";
+import { prepareUpsertSubscriberRow, prepareTelegramFirstFollowStatements, type TelegramFollowOptions } from "../store/subscribers";
+import { telegramAdoptionDimensionsForMiniApp } from "../adoption/adoption-analytics";
 import {
   clearAlertSnooze,
   forgetSubscriber,
@@ -93,8 +97,6 @@ export class TelegramMiniAppMutationError extends Error {
   }
 }
 
-const DEWS_BAND_TO_CODE = { ALERT: "A", WARNING: "W", DANGER: "D" } as const;
-const SAFETY_MODE_TO_CODE = { all: "a", "downgrade-only": "d", "upgrade-only": "u" } as const;
 const PORTABLE_DIRECT_ALERT_TYPES = ["dews", "depeg", "safety", "launch", "reserve", "freeze"] as const;
 const PORTABLE_PRESET_ALERT_TYPES = ["dews", "depeg", "safety"] as const;
 
@@ -137,15 +139,6 @@ function assertPreset(presetId: string): asserts presetId is TelegramPresetId {
 
 function alertTypeSet(values: readonly string[]): Set<string> {
   return new Set(values);
-}
-
-function alertTypesFromPatch(patch: { dews?: boolean; depeg?: boolean; safety?: boolean }): Set<string> {
-  const out = new Set<string>();
-  if (patch.dews) out.add("dews");
-  if (patch.depeg) out.add("depeg");
-  if (patch.safety) out.add("safety");
-  if (out.size === 0) throw new TelegramMiniAppMutationError("empty-alert-types");
-  return out;
 }
 
 function enabledDirectAlertTypes(row: WatchlistTokenDirectState): PortableDirectAlertType[] {
@@ -332,20 +325,6 @@ function fromBulkDirectRow(row: BulkUndoRow): WatchlistTokenDirectState {
   };
 }
 
-async function directSnoozesById(
-  db: D1Database,
-  chatId: string,
-  stablecoinIds: readonly string[],
-): Promise<Map<string, number | null>> {
-  if (stablecoinIds.length === 0) return new Map();
-  const result = await db.prepare(`
-    SELECT stablecoin_id, alert_snooze_until_ts
-      FROM telegram_subscriptions
-     WHERE chat_id = ? AND stablecoin_id IN (${stablecoinIds.map(() => "?").join(", ")})
-  `).bind(chatId, ...stablecoinIds).all<{ stablecoin_id: string; alert_snooze_until_ts: number | null }>();
-  return new Map((result.results ?? []).map((row) => [row.stablecoin_id, row.alert_snooze_until_ts]));
-}
-
 async function sourceImpactAfter(
   db: D1Database,
   chatId: string,
@@ -385,17 +364,17 @@ async function presetCoins(db: D1Database, presetId: TelegramPresetId): Promise<
   return preset.stablecoinIds;
 }
 
-async function setGlobal(db: D1Database, chatId: string, username: string | null, operation: Extract<TelegramMiniAppOperation, { kind: "set-global" }>): Promise<void> {
+async function setGlobal(db: D1Database, chatId: string, username: string | null, operation: Extract<TelegramMiniAppOperation, { kind: "set-global" }>, options: TelegramFollowOptions): Promise<void> {
   await upsertSubscriberRow(db, {
     chatId,
     username,
     nowSec: unixNow(),
     globalAlertOverrides: { [operation.alertType]: operation.enabled ? 1 : 0 } as NonNullable<UpsertSubscriberInput["globalAlertOverrides"]>,
-  });
+  }, options);
 }
 
-async function setGlobalDepegStep(db: D1Database, chatId: string, username: string | null, operation: Extract<TelegramMiniAppOperation, { kind: "set-global-depeg-step" }>): Promise<void> {
-  await setGlobalDepegWorseningStep(db, chatId, username, operation.depegStepBps);
+async function setGlobalDepegStep(db: D1Database, chatId: string, username: string | null, operation: Extract<TelegramMiniAppOperation, { kind: "set-global-depeg-step" }>, options: TelegramFollowOptions): Promise<void> {
+  await setGlobalDepegWorseningStep(db, chatId, username, operation.depegStepBps, options);
 }
 
 async function setQuietHours(db: D1Database, chatId: string, username: string | null, operation: Extract<TelegramMiniAppOperation, { kind: "set-quiet-hours" }>): Promise<void> {
@@ -404,22 +383,38 @@ async function setQuietHours(db: D1Database, chatId: string, username: string | 
     username,
     nowSec: unixNow(),
     quietHours: operation.enabled
-      ? { enabled: true, startHourUtc: operation.startHourUtc ?? DEFAULT_QUIET_START_HOUR, endHourUtc: operation.endHourUtc ?? DEFAULT_QUIET_END_HOUR }
+      ? {
+          enabled: true,
+          startHourUtc: operation.startHourUtc ?? DEFAULT_QUIET_START_HOUR,
+          endHourUtc: operation.endHourUtc ?? DEFAULT_QUIET_END_HOUR,
+          preserveSavedWindow: operation.startHourUtc == null && operation.endHourUtc == null,
+        }
       : { enabled: false },
   });
 }
 
-async function setCoin(db: D1Database, chatId: string, username: string | null, operation: Extract<TelegramMiniAppOperation, { kind: "set-coin" }>): Promise<void> {
+async function setCoin(db: D1Database, chatId: string, username: string | null, operation: Extract<TelegramMiniAppOperation, { kind: "set-coin" }>, options: TelegramFollowOptions): Promise<void> {
   assertCoinCanSubscribe(operation.stablecoinId);
   const patch = operation.patch;
   let appliedCount = 0;
+  let enablesFollow = false;
+  const nestedOptions = { ...options, recordFirstFollow: false };
   const statements: D1PreparedStatement[] = [];
 
   const apply = (setting: TelegramAlertSettingCode, value: string): void => {
-    const prepared = prepareCoinSettingStatements(db, chatId, username, operation.stablecoinId, setting, value);
+    const prepared = prepareCoinSettingStatements(db, chatId, username, operation.stablecoinId, setting, value, nestedOptions);
     if (prepared.description == null) throw new TelegramMiniAppMutationError("invalid-coin-patch");
+    if (value !== "0") enablesFollow = true;
     statements.push(...prepared.statements);
     appliedCount += 1;
+  };
+  const applyTuning = (alertType: TelegramAlertType, upsert: BuiltSubscriptionUpsert): void => {
+    statements.push(
+      prepareUpsertSubscriberRow(db, { chatId, username, nowSec: unixNow(), perCoinAlertBumps: { [alertType]: 1 } }),
+      db.prepare(upsert.sql).bind(...upsert.binds),
+    );
+    appliedCount += 1;
+    enablesFollow = true;
   };
 
   if (patch.alertTypes) {
@@ -434,21 +429,22 @@ async function setCoin(db: D1Database, chatId: string, username: string | null, 
     }
     if (enabled.size > 0) {
       statements.push(
-        ...prepareSubscriberAndSubscriptionStatements(db, chatId, username, enabled, [operation.stablecoinId]),
+        ...prepareSubscriberAndSubscriptionStatements(db, chatId, username, enabled, [operation.stablecoinId], nestedOptions),
       );
       appliedCount += 1;
+      enablesFollow = true;
     }
   }
   const explicitlyDisabled = (alertType: TelegramAlertType): boolean =>
     patch.alertTypes?.[alertType] === false;
   if (Object.prototype.hasOwnProperty.call(patch, "dewsMinBand") && !explicitlyDisabled("dews")) {
-    apply(TELEGRAM_ALERT_PERSISTENCE.dews.settingCode, patch.dewsMinBand == null ? "0" : DEWS_BAND_TO_CODE[patch.dewsMinBand]);
+    applyTuning("dews", buildDewsUpsert(chatId, operation.stablecoinId, true, patch.dewsMinBand ?? null));
   }
   if (Object.prototype.hasOwnProperty.call(patch, "depegStepBps") && !explicitlyDisabled("depeg")) {
-    apply(TELEGRAM_ALERT_PERSISTENCE.depeg.settingCode, patch.depegStepBps == null ? "0" : String(patch.depegStepBps));
+    applyTuning("depeg", buildDepegStepUpsert(chatId, operation.stablecoinId, patch.depegStepBps ?? null));
   }
   if (Object.prototype.hasOwnProperty.call(patch, "safetyMode") && !explicitlyDisabled("safety")) {
-    apply(TELEGRAM_ALERT_PERSISTENCE.safety.settingCode, patch.safetyMode == null ? "0" : SAFETY_MODE_TO_CODE[patch.safetyMode]);
+    applyTuning("safety", buildSafetyUpsert(chatId, operation.stablecoinId, true, patch.safetyMode ?? null));
   }
   if (Object.prototype.hasOwnProperty.call(patch, "launch") && !explicitlyDisabled("launch")) {
     apply(TELEGRAM_ALERT_PERSISTENCE.launch.settingCode, patch.launch ? "1" : "0");
@@ -460,6 +456,11 @@ async function setCoin(db: D1Database, chatId: string, username: string | null, 
     apply(TELEGRAM_ALERT_PERSISTENCE.freeze.settingCode, patch.freeze ? "1" : "0");
   }
   if (appliedCount === 0) throw new TelegramMiniAppMutationError("invalid-coin-patch");
+  if (enablesFollow) {
+    statements.unshift(...prepareTelegramFirstFollowStatements(db, {
+      chatId, username, nowSec: unixNow(), feature: "direct", adoption: options.adoption,
+    }));
+  }
   await executeAtomicBatch(db, statements);
 }
 
@@ -535,6 +536,7 @@ export async function executeTelegramMiniAppPortabilityOperation(
 
   const outcome = await applyWatchlistImportV2(db, {
     chatId,
+    adoption: telegramAdoptionDimensionsForMiniApp(auth.startParam),
     ...(current.preferenceGeneration == null ? { ensureSubscriber: { username: auth.username } } : {}),
     expectedPreferenceGeneration,
     generationLease: importGenerationLease(),
@@ -580,11 +582,10 @@ export async function executeTelegramMiniAppBulkWatchlistPreview(
     ...current.state.direct.filter((row) => !removes.includes(row.stablecoinId)),
     ...adds.map(directDefault),
   ];
-  const removedSnoozes = await directSnoozesById(db, chatId, removes);
   const inheritedSources = await sourceImpactAfter(db, chatId, [...adds, ...removes]);
   const restoreDirectRows: BulkUndoRow[] = removes.map((stablecoinId) => ({
     ...directById.get(stablecoinId)!,
-    snoozeUntilTs: removedSnoozes.get(stablecoinId) ?? null,
+    snoozeUntilTs: current.directSnoozes.get(stablecoinId) ?? null,
   }));
   const removeStablecoinIds = adds;
   return {
@@ -646,6 +647,7 @@ async function confirmBulkWatchlist(
   }
   const outcome = await applyWatchlistDirectPatch(db, {
     chatId,
+    adoption: telegramAdoptionDimensionsForMiniApp(auth.startParam),
     ...(current.preferenceGeneration == null ? { ensureSubscriber: { username: auth.username } } : {}),
     expectedPreferenceGeneration,
     generationLease: importGenerationLease(),
@@ -679,6 +681,7 @@ async function undoBulkWatchlist(
   }
   const outcome = await applyWatchlistDirectPatch(db, {
     chatId,
+    adoption: telegramAdoptionDimensionsForMiniApp(auth.startParam),
     ...(current.preferenceGeneration == null ? { ensureSubscriber: { username: auth.username } } : {}),
     expectedPreferenceGeneration,
     generationLease: importGenerationLease(),
@@ -695,6 +698,7 @@ async function undoBulkWatchlist(
 export async function applyTelegramMiniAppMutation(db: D1Database, auth: TelegramMiniAppAuthContext, operation: TelegramMiniAppOperation): Promise<TelegramMiniAppBulkWatchlistResponse["result"]["undo"] | void> {
   const chatId = privateChatId(auth);
   const username = auth.username;
+  const followOptions = { adoption: telegramAdoptionDimensionsForMiniApp(auth.startParam) };
   switch (operation.kind) {
     case "export-watchlist":
     case "preview-watchlist-import":
@@ -712,15 +716,15 @@ export async function applyTelegramMiniAppMutation(db: D1Database, auth: Telegra
       const alertTypes = alertTypeSet(operation.alertTypes);
       await executeAtomicBatch(
         db,
-        prepareSubscriberAndPresetStatements(db, chatId, username, [operation.presetId], [], alertTypes),
+        prepareSubscriberAndPresetStatements(db, chatId, username, [operation.presetId], [], alertTypes, followOptions),
       );
       return;
     }
     case "set-global":
-      await setGlobal(db, chatId, username, operation);
+      await setGlobal(db, chatId, username, operation, followOptions);
       return;
     case "set-global-depeg-step":
-      await setGlobalDepegStep(db, chatId, username, operation);
+      await setGlobalDepegStep(db, chatId, username, operation, followOptions);
       return;
     case "set-quiet-hours":
       await setQuietHours(db, chatId, username, operation);
@@ -790,7 +794,7 @@ export async function applyTelegramMiniAppMutation(db: D1Database, auth: Telegra
       await forgetSubscriber(db, chatId);
       return;
     case "set-coin":
-      await setCoin(db, chatId, username, operation);
+      await setCoin(db, chatId, username, operation, followOptions);
       return;
     case "remove-coin": {
       assertCoin(operation.stablecoinId);
@@ -798,8 +802,7 @@ export async function applyTelegramMiniAppMutation(db: D1Database, auth: Telegra
       const removed = current.state.direct.find((row) => row.stablecoinId === operation.stablecoinId);
       if (!removed) return;
       const expectedPreferenceGeneration = current.preferenceGeneration ?? 0;
-      const snoozes = await directSnoozesById(db, chatId, [operation.stablecoinId]);
-      const restoreDirectRows = [{ ...removed, snoozeUntilTs: snoozes.get(operation.stablecoinId) ?? null }];
+      const restoreDirectRows = [{ ...removed, snoozeUntilTs: current.directSnoozes.get(operation.stablecoinId) ?? null }];
       const outcome = await applyWatchlistDirectPatch(db, {
         chatId,
         expectedPreferenceGeneration,
@@ -823,12 +826,16 @@ export async function applyTelegramMiniAppMutation(db: D1Database, auth: Telegra
     case "follow-preset": {
       assertPreset(operation.presetId);
       await presetCoins(db, operation.presetId);
-      const alertTypes = alertTypesFromPatch(operation.alertTypes);
-      const options = operation.alertTypes.depeg && "depegStepBps" in operation ? { depegWorseningBpsStep: operation.depegStepBps ?? null } : undefined;
-      await executeAtomicBatch(
+      const results = await executeAtomicBatch(
         db,
-        prepareSubscriberAndPresetStatements(db, chatId, username, [operation.presetId], [], alertTypes, options),
+        prepareSubscriberAndPresetPatchStatements(
+          db, chatId, username, operation.presetId, operation.alertTypes, operation.depegStepBps, followOptions,
+        ),
+        { returnResults: true },
       );
+      if (Number(results[results.length - 1]?.meta?.changes ?? 0) === 0) {
+        throw new TelegramMiniAppMutationError("empty-alert-types");
+      }
       return;
     }
     case "unfollow-preset": {

@@ -6,10 +6,8 @@ import { TableBody, TableCaption, TableCell, TableFrame, TableHead, TableHeader,
 import { Button } from "@/components/ui/button";
 import {
   allMeasuredZero,
-  formatFirstSendLatency,
   formatOldestBacklogAge,
   type CommsDeliveryHealth,
-  type CommsPerAlertDeliveryRow,
   type CommsPriorityMetric,
   type CommsWorkbenchModel,
 } from "@/lib/comms-workbench-model";
@@ -56,49 +54,6 @@ function formatDuration(value: number | null): string {
 function formatMilliseconds(value: number | null): string {
   return value == null ? "Unknown" : `${value.toLocaleString()}ms`;
 }
-
-type PerAlertMetricDescriptor = {
-  key: "sent" | "enqueued" | "failed" | "blocked" | "firstSendLatencyMs";
-  label: string;
-  render: (row: CommsPerAlertDeliveryRow) => string;
-  desktop: {
-    width: string;
-    alignment: "text-left" | "text-right";
-  };
-};
-
-const PER_ALERT_METRICS = [
-  {
-    key: "sent",
-    label: "Sent",
-    render: (row) => formatCount(row.sent),
-    desktop: { width: "w-[12%]", alignment: "text-right" },
-  },
-  {
-    key: "enqueued",
-    label: "Enqueued",
-    render: (row) => formatCount(row.enqueued),
-    desktop: { width: "w-[14%]", alignment: "text-right" },
-  },
-  {
-    key: "failed",
-    label: "Failed",
-    render: (row) => formatCount(row.failed),
-    desktop: { width: "w-[12%]", alignment: "text-right" },
-  },
-  {
-    key: "blocked",
-    label: "Blocked",
-    render: (row) => formatCount(row.blocked),
-    desktop: { width: "w-[12%]", alignment: "text-right" },
-  },
-  {
-    key: "firstSendLatencyMs",
-    label: "First send latency",
-    render: (row) => formatFirstSendLatency(row.firstSendLatencyMs, row.sent),
-    desktop: { width: "w-[26%]", alignment: "text-right" },
-  },
-] as const satisfies readonly PerAlertMetricDescriptor[];
 
 function formatBoolean(value: boolean | null): string {
   return value == null ? "Unknown" : value ? "Yes" : "No";
@@ -358,20 +313,16 @@ function RetryTelemetry({ model }: { model: CommsWorkbenchModel }) {
       <ZeroCollapsible
         allZero={
           allMeasuredZero([
-            permanentFailures.fresh,
             permanentFailures.pendingNonRetryable,
             permanentFailures.maxAttempts,
-            retries.freshQueued,
             retries.pendingQueued,
           ]) && retries.rateLimited === false
         }
         summary="No permanent failures, queued retries, or rate limiting."
       >
       <dl className="mt-2 min-w-0 divide-y divide-border/40">
-        <MetricRow label="Fresh permanent" value={formatCount(permanentFailures.fresh)} />
         <MetricRow label="Pending non-retryable" value={formatCount(permanentFailures.pendingNonRetryable)} />
         <MetricRow label="Max-attempt drops" value={formatCount(permanentFailures.maxAttempts)} />
-        <MetricRow label="Fresh retries queued" value={formatCount(retries.freshQueued)} />
         <MetricRow label="Pending retries queued" value={formatCount(retries.pendingQueued)} />
         <MetricRow label="Rate limited" value={formatBoolean(retries.rateLimited)} />
         <MetricRow label="Retry after" value={formatDuration(retries.retryAfterSec)} />
@@ -443,10 +394,6 @@ function LatestDispatch({ model }: { model: CommsWorkbenchModel }) {
         <MetricRow label="Messages sent" value={formatCount(dispatch.messagesSent)} />
         <MetricRow label="Subscribers notified" value={formatCount(dispatch.subscribersNotified)} />
         <MetricRow
-          label="Fresh attempted / sent"
-          value={`${formatCount(dispatch.freshAttempted)} / ${formatCount(dispatch.freshSent)}`}
-        />
-        <MetricRow
           label="Pending attempted / sent"
           value={`${formatCount(dispatch.pendingAttempted)} / ${formatCount(dispatch.pendingDrained)}`}
         />
@@ -476,111 +423,34 @@ function LatestDispatch({ model }: { model: CommsWorkbenchModel }) {
   );
 }
 
-function MobilePerAlertRow({ row }: { row: CommsPerAlertDeliveryRow }) {
+function DeliveryOutcomes({ model }: { model: CommsWorkbenchModel }) {
+  const sli = model.delivery.sli;
+  const rollup = sli?.rollup;
+  const outcomes = rollup?.authoritativeTargetOutcomes;
   return (
-    <div className="min-w-0 border-t border-border/60 py-3 first:border-t-0" data-alert-type={row.type}>
-      <div className="text-sm font-medium text-foreground">{row.label}</div>
-      <dl className="grid min-w-0 grid-cols-2 gap-x-3 gap-y-2 pt-2 text-xs">
-        {PER_ALERT_METRICS.map((metric) => (
-          <div
-            key={metric.key}
-            className={cn("min-w-0", metric.key === "firstSendLatencyMs" && "col-span-2")}
-            data-metric-key={metric.key}
-          >
-            <dt className="text-muted-foreground">{metric.label}</dt>
-            <dd
-              className={cn(
-                "font-mono tabular-nums",
-                metric.key === "firstSendLatencyMs" && "min-w-0 break-words [overflow-wrap:anywhere]",
-              )}
-            >
-              {metric.render(row)}
-            </dd>
-          </div>
-        ))}
-      </dl>
-    </div>
-  );
-}
-
-function PerAlertDelivery({ model }: { model: CommsWorkbenchModel }) {
-  const rows = model.delivery.perAlertType;
-  return (
-    <section aria-labelledby="comms-per-alert-title" className="min-w-0 border-t border-border/60 pt-4">
-      <h3 id="comms-per-alert-title" className="text-sm font-semibold text-foreground">
-        Per-alert delivery
+    <section aria-labelledby="comms-target-outcomes-title" className="min-w-0 border-t border-border/60 pt-4">
+      <h3 id="comms-target-outcomes-title" className="text-sm font-semibold text-foreground">
+        Authoritative target outcomes
       </h3>
-      {rows.length === 0 ? (
-        <p className="mt-2 text-sm text-muted-foreground">Per-alert delivery telemetry is Unknown.</p>
-      ) : (
+      {sli && rollup && outcomes ? (
         <>
-          <div className="mt-2 min-w-0 sm:hidden" data-testid="telegram-delivery-mobile">
-            {rows.map((row) => (
-              <MobilePerAlertRow key={row.type} row={row} />
-            ))}
-          </div>
-          <div
-            className="mt-2 hidden min-w-0 max-w-full overflow-x-auto sm:block"
-            data-testid="telegram-delivery-desktop"
-          >
-            <TableFrame
-              tableId="telegram-per-alert-delivery"
-              chrome="bare"
-              density="compact"
-              tableClassName="table-fixed border-collapse text-left text-xs tabular-nums"
-              viewportProps={{ mobileScrollHint: false, scrollShadow: false, compactBottomPadding: false }}
-            >
-              <TableCaption className="sr-only">Per-alert Telegram delivery results</TableCaption>
-              <TableHeader className="text-muted-foreground">
-                <TableRow rowIntent="static">
-                  <TableHead scope="col" className="h-auto w-[24%] whitespace-normal px-0 pb-2 pr-2 font-medium">
-                    Alert type
-                  </TableHead>
-                  {PER_ALERT_METRICS.map((metric) => (
-                    <TableHead
-                      key={metric.key}
-                      scope="col"
-                      aria-label={metric.label}
-                      data-metric-key={metric.key}
-                      className={cn(
-                        "h-auto whitespace-normal px-0 pb-2 font-medium",
-                        metric.desktop.width,
-                        metric.desktop.alignment,
-                      )}
-                    >
-                      {metric.label}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.map((row) => (
-                  <TableRow key={row.type} rowIntent="static" className="border-t border-border/60">
-                    <TableHead
-                      scope="row"
-                      className="h-auto min-w-0 whitespace-normal px-0 py-2 pr-2 text-sm font-medium"
-                    >
-                      {row.label}
-                    </TableHead>
-                    {PER_ALERT_METRICS.map((metric) => (
-                      <TableCell
-                        key={metric.key}
-                        data-metric-key={metric.key}
-                        className={cn(
-                          "whitespace-normal px-0 py-2 font-mono",
-                          metric.desktop.alignment,
-                          metric.key === "firstSendLatencyMs" && "min-w-0 [overflow-wrap:anywhere]",
-                        )}
-                      >
-                        {metric.render(row)}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </TableFrame>
-          </div>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Bounded {formatDuration(rollup.window.lookbackSec)} window; evidence {sli.freshness}, quality {sli.quality}.
+            Acceptance means Telegram Bot API acceptance, not recipient delivery or read.
+          </p>
+          <dl className="mt-2 min-w-0 divide-y divide-border/40">
+            <MetricRow label="Targets" value={formatCount(outcomes.total)} />
+            <MetricRow label="Telegram accepted" value={formatCount(outcomes.telegramAccepted)} />
+            <MetricRow label="Failed" value={formatCount(outcomes.failed)} />
+            <MetricRow label="Cancelled" value={formatCount(outcomes.cancelled)} />
+            <MetricRow label="Expired" value={formatCount(outcomes.expired)} />
+            <MetricRow label="Execution unknown" value={formatCount(outcomes.executionUnknown)} />
+            <MetricRow label="Unresolved" value={formatCount(outcomes.unresolved)} />
+            <MetricRow label="Mixed-family targets" value={formatCount(rollup.familyAttribution.mixed)} />
+          </dl>
         </>
+      ) : (
+        <p className="mt-2 text-sm text-muted-foreground">Row-backed delivery outcomes are unavailable.</p>
       )}
     </section>
   );
@@ -740,7 +610,7 @@ export function TelegramBotStats({ model }: TelegramBotStatsProps) {
           <LatestDispatch model={model} />
         </div>
 
-        <PerAlertDelivery model={model} />
+        <DeliveryOutcomes model={model} />
       </section>
 
       <AudienceCoverage model={model} />

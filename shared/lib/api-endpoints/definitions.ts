@@ -494,7 +494,6 @@ const BASE_ENDPOINT_DEFINITIONS = [
   publicGet({
     key: "digest-archive",
     path: API_PATHS.digestArchive(),
-    cacheKeyIgnoresQuery: true,
     probeGroup: "public",
   }),
   publicGet({

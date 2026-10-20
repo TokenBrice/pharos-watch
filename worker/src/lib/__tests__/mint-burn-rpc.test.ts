@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildChainRpcs, type RpcEndpoint } from "../chain-registry";
 import { createBudget } from "../evm-logs";
-import { fetchMintBurnLogs, getMintBurnBlockNumber, mintBurnRpcEndpoints, resolveMintBurnBlockTimestamps } from "../mint-burn-pipeline/rpc";
+import { fetchMintBurnLogs, getMintBurnFinalizedHead, mintBurnRpcEndpoints, resolveMintBurnBlockTimestamps } from "../mint-burn-pipeline/rpc";
 import { fetchConservationBoundaries, getMintBurnConservationRuntimeEntry } from "../mint-burn-conservation";
 import { MINT_BURN_CONFIGS } from "../mint-burn-contracts";
 import { classifyBridgeBurnRows } from "../mint-burn-pipeline/classification";
@@ -80,7 +80,6 @@ describe("mint/burn ordered RPC fallback", () => {
     const fetcher = recorder((_, call) => ({ result: call.method === "eth_blockNumber" ? "0xc350" : [] }));
     const endpointHeads = new Map<string, number>();
     const budget = createBudget(1000);
-    expect(await getMintBurnBlockNumber(endpoints, budget, undefined, endpointHeads)).toBe(50_000);
     for (let i = 0; i < 65; i++) {
       for (let event = 0; event < 2; event++) {
         expect(await fetchMintBurnLogs(endpoints, "0xabc", [], 1, 50_000, budget, undefined, { endpointHeads }))
@@ -124,9 +123,9 @@ describe("mint/burn ordered RPC fallback", () => {
     expect(pages.map((call) => Number(logRange(call).fromBlock))).toEqual([1, 10_001, 10_001]);
   });
 
-  it.each(["ethereum", "arbitrum", "base"])("does not advance %s's empty-scan cursor past a fallback head lagging by more than the safety margin", async (chain) => {
+  it.each(["ethereum", "arbitrum", "base"])("does not advance %s's finalized scan cursor past a lagging fallback head", async (chain) => {
     const endpoints = admitted(chain);
-    const fallbackHead = 49_900; // Primary head is 100 blocks ahead; the lane safety margin is only 75.
+    const fallbackHead = 49_900;
     const fetcher = recorder((url, call) => {
       if (call.method === "eth_blockNumber") {
         return { result: `0x${(url === endpoints[0].url ? 50_000 : fallbackHead).toString(16)}` };
@@ -139,7 +138,7 @@ describe("mint/burn ordered RPC fallback", () => {
       db: mockD1([{ match: "INSERT INTO cache", rows: [] }]), config, key: `${chain}-fixture`, tier: "critical", fromBlock: 1, scanTo: 50_000,
       chainHead: 50_000, rpcEndpoints: endpoints, configBudgetLimit: 60, runTimestamp: 1100,
       priceContext: { priceObservations: new Map(), priceHistory: new Map() }, chainTimestampCache: new Map(),
-      txContextCache: new Map(), affectedHours: new Map(), safetyMarginBlocks: 75,
+      txContextCache: new Map(), affectedHours: new Map(),
     });
     expect(result.newLastBlock).toBe(fallbackHead);
     expect(result.summary.advanceReason).toBe("partial-frontier");
@@ -154,7 +153,7 @@ describe("mint/burn ordered RPC fallback", () => {
     const endpoints = mintBurnRpcEndpoints(chain, "alchemy-test", map);
     expect(endpoints).toHaveLength(1);
     const fetcher = recorder(() => unavailable);
-    expect(await getMintBurnBlockNumber(endpoints, createBudget(20))).toBeNull();
+    expect(await getMintBurnFinalizedHead(chain, endpoints, createBudget(20))).toBeNull();
     await fetchMintBurnLogs(endpoints, "0xabc", [], 1, 50_000, createBudget(20));
     expect(fetcher.mock.calls.every(([url]) => !url.includes("dwellir"))).toBe(true);
   });
@@ -179,7 +178,7 @@ describe("mint/burn ordered RPC fallback", () => {
       if (url === endpoints[0].url) return unavailable;
       return { result: call.method === "eth_blockNumber" ? "0x66" : { number: "0x66", timestamp: "0x400", hash: word(12) } };
     });
-    expect(await getMintBurnBlockNumber(endpoints, createBudget(20))).toBe(102);
+    expect(await getMintBurnFinalizedHead("base", endpoints, createBudget(20))).toMatchObject({ number: 102 });
     expect(await resolveMintBurnBlockTimestamps(endpoints, [102], createBudget(20), { blockHashes: new Map([[102, word(12)]]) })).toEqual(new Map([[102, 1024]]));
     expect(await resolveMintBurnBlockTimestamps(endpoints, [102], createBudget(20), { blockHashes: new Map([[102, word(13)]]) })).toEqual(new Map());
     expect(meter).toHaveBeenCalled();
@@ -275,4 +274,38 @@ describe("mint/burn ordered RPC fallback", () => {
       { blockHashesByTx: new Map([[txHash, word(12)]]) })).toMatchObject({ txContextShortfalls: shortfalls, deferredTxHashes: shortfalls ? [txHash] : [] });
     expect(fetcher.mock.calls.some(([url]) => url === endpoints[1].url)).toBe(true);
   });
+
+  it.each([...new Set(MINT_BURN_CONFIGS.filter(config => config.enabled !== false).map(config => config.chain.chainId))])
+    ("uses %s's validated finalized header, not its raw tip or a common block margin", async (chain) => {
+      const endpoints = admitted(chain);
+      const fetcher = recorder((_url, call) => ({ result: call.method === "eth_blockNumber" ? "0xffff"
+        : { number: "0x1234", timestamp: "0x400", hash: word(12) } }));
+      expect(await getMintBurnFinalizedHead(chain, endpoints, createBudget(20))).toEqual({
+        number: 4660, timestamp: 1024, hash: word(12),
+      });
+      const calls = fetcher.mock.calls.map(([, options]) => JSON.parse(String(options.body)) as Call);
+      expect(calls.every(call => call.method === "eth_getBlockByNumber" && call.params[0] === "finalized")).toBe(true);
+    });
+
+  it("skips finalizedTagUnsupported endpoints and uses only a supported admitted fallback", async () => {
+    const endpoints = admitted().map((endpoint, index) => index === 0 ? { ...endpoint, finalizedTagUnsupported: true } : endpoint);
+    const fetcher = recorder(() => ({ result: { number: "0x66", timestamp: "0x400", hash: word(12) } }));
+    expect(await getMintBurnFinalizedHead("base", endpoints, createBudget(20))).toMatchObject({ number: 102 });
+    expect(fetcher.mock.calls.map(([url]) => url)).toEqual([endpoints[1]!.url]);
+    fetcher.mockClear();
+    expect(await getMintBurnFinalizedHead("base", endpoints.map(endpoint => ({ ...endpoint, finalizedTagUnsupported: true })),
+      createBudget(20))).toBeNull();
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it.each([null, { number: "0x66", timestamp: "0x400", hash: "0xbad" },
+    { number: "0x20000000000000", timestamp: "0x400", hash: word(12) }])
+    ("refuses a missing or invalid finalized head without any tip fallback (%j)", async (header) => {
+      const fetcher = recorder(() => ({ result: header }));
+      expect(await getMintBurnFinalizedHead("base", admitted(), createBudget(20))).toBeNull();
+      expect(fetcher.mock.calls.every(([, options]) => {
+        const call = JSON.parse(String(options.body)) as Call;
+        return call.method === "eth_getBlockByNumber" && call.params[0] === "finalized";
+      })).toBe(true);
+    });
 });

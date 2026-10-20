@@ -1,14 +1,16 @@
 import { describe, expect, it, vi } from "vitest";
 import searchableCoinsAsset from "@shared/data/stablecoins/coins.telegram-mini-app.generated.json";
 import { mockD1 as baseMockD1 } from "@shared/test-utils/mock-d1";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { splitMessage } from "../../common/alerts-formatting";
 import { TELEGRAM_MESSAGE_CHUNK_LIMIT } from "../../common/constants";
 import { packWatchlistDirectState } from "../../mini-app/watchlist-token";
 import type { ConfirmBulkPayload } from "../../webhook/telegram-webhook-shared";
 import type { WebhookCommandContext } from "../context";
-import { buildV2PreviewMessageForTest, persistImportPreviewForTest } from "../import";
+import { buildV2PreviewMessageForTest, handleImport, persistImportPreviewForTest } from "../import";
 import { makeCommandContext } from "./webhook-commands.test-support.ts";
-import { BULK_CONFIRM_REPLY_MARKUP } from "../action-runner";
+import { buildBulkConfirmReplyMarkup } from "../action-runner";
+import { sendAuditedTelegramReply } from "../../webhook/telegram-webhook-replies";
 
 const payload: ConfirmBulkPayload = {
   kind: "subscribe",
@@ -44,7 +46,26 @@ function context(db: D1Database, overrides: Partial<WebhookCommandContext> = {})
 }
 
 describe("watchlist import preview effect fencing", () => {
-  it("lists every changed registry id across bounded deterministic preview messages", () => {
+  it("preserves the stored import flow identity and bounded callback bytes during preview recovery", async () => {
+    const db = mockD1([{ match: "INSERT INTO telegram_usage_daily", rows: [] }]);
+    const replyToChatWithMarkup = vi.fn().mockResolvedValue(undefined);
+    const flowId = "ffffffffffffffff";
+    const ctx = context(db, {
+      wasMutationApplied: true,
+      replyToChatWithMarkup,
+      storedIntent: { version: 1, kind: "command:import", mutation: "required",
+        payload: { stage: "bulk-confirm-prompt", expiresAt: 1_783_680_300, payload: { ...payload, flowId } } },
+    });
+    await handleImport(ctx, "the already-normalized token need not be decoded");
+    const data = replyToChatWithMarkup.mock.calls[0]?.[1].replyMarkup.inline_keyboard.flat()
+      .map((button: { callback_data: string }) => button.callback_data);
+    expect(data).toEqual([`confirm:bulk:${flowId}`, `cancel:bulk:${flowId}`]);
+    for (const callback of data) {
+      expect(new TextEncoder().encode(callback).length).toBeGreaterThanOrEqual(1);
+      expect(new TextEncoder().encode(callback).length).toBeLessThanOrEqual(64);
+    }
+  });
+  it("lists every changed registry id across bounded deterministic preview messages with confirmation only last", async () => {
     const ids = searchableCoinsAsset.map((coin) => coin.stablecoinId);
     const first = Math.floor(ids.length / 3);
     const second = first * 2;
@@ -88,10 +109,26 @@ describe("watchlist import preview effect fencing", () => {
     expect(chunks.length).toBeGreaterThanOrEqual(3);
     expect(chunks.every((chunk) => chunk.length <= TELEGRAM_MESSAGE_CHUNK_LIMIT)).toBe(true);
     expect(chunks[chunks.length - 1]).toContain("Confirm only if");
-    expect(BULK_CONFIRM_REPLY_MARKUP.inline_keyboard.flat().map((button) => button.callback_data)).toEqual([
-      "confirm:bulk",
-      "cancel:bulk",
+    expect(buildBulkConfirmReplyMarkup("0123456789abcdef").inline_keyboard.flat().map((button) => button.callback_data)).toEqual([
+      "confirm:bulk:0123456789abcdef",
+      "cancel:bulk:0123456789abcdef",
     ]);
+    expect(chunks.map((chunk) => chunk.replace(/<[^>]*>/g, "")).join(""))
+      .toBe(message.replace(/<[^>]*>/g, ""));
+    const replyMarkup = buildBulkConfirmReplyMarkup("0123456789abcdef");
+    const fetchSpy = mockFetch([{ match: () => true, body: { ok: true } }]);
+    try {
+      expect(await sendAuditedTelegramReply(mockD1(), "123", message, "token", {
+        replyMarkup, recordReplyOutcome: false,
+      })).toEqual({ ok: true, errorClass: null });
+      const sent = fetchSpy.mock.calls.map((call) =>
+        JSON.parse(String((call[1] as RequestInit).body)) as { text: string; reply_markup?: unknown });
+      expect(sent.map((chunk) => chunk.text)).toEqual(chunks);
+      expect(sent.slice(0, -1).every((chunk) => chunk.reply_markup == null)).toBe(true);
+      expect(sent[sent.length - 1]?.reply_markup).toEqual(replyMarkup);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it("never confirms the in-memory mutation fence when another owner wins, including retry", async () => {

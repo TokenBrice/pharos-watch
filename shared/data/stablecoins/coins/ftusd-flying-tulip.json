@@ -66,7 +66,7 @@
   "governanceQuality": "multisig",
   "liveReservesConfig": {
     "adapter": "flying-tulip-ftusd",
-    "version": 1,
+    "version": 2,
     "semantics": "collateral-mix",
     "breakerScope": "ftusd-flying-tulip",
     "display": {

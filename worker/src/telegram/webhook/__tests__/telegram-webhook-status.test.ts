@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 as baseMockD1 } from "@shared/test-utils/mock-d1";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
-import { makeYieldRanking } from "@shared/test-utils/yield-ranking-fixtures";
+import { makeYieldRanking, makeYieldProvenance } from "@shared/test-utils/yield-ranking-fixtures";
 import { loadStatusForCoin } from "../telegram-webhook-status";
 import { buildDewsStablecoinIdsDigest } from "../../../lib/dews-publication-pointer";
 import {
@@ -19,7 +19,7 @@ vi.mock("../../../lib/safety-score-index", () => ({
   loadActiveSafetyScoreIndex: mocks.loadActiveSafetyScoreSource,
 }));
 
-vi.mock("../../../api/cache-handlers", () => ({
+vi.mock("../../../api/yield-rankings-cache", () => ({
   handleYieldRankings: mocks.handleYieldRankings,
 }));
 
@@ -83,6 +83,13 @@ describe("loadStatusForCoin", () => {
 
   it("returns DEWS + safety + depeg=stable when no active event", async () => {
     const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?", matchBinds: ["dews:published-generation"],
+        rows: [{
+          value: JSON.stringify({ updatedAt: 1700000000, source: "compute-dews", publishStatus: "published" }),
+          updated_at: 1700000000,
+        }],
+      },
       { match: "FROM stress_signals", rows: [{ band: "ALERT", score: 42, computed_at: 1700000000 }] },
       { match: "FROM safety_grade_history", rows: [{ grade: "B+", score: 66, recorded_at: 1700000000 }] },
       { match: "FROM depeg_events WHERE stablecoin_id = ? AND ended_at IS NULL", rows: [] },
@@ -141,7 +148,6 @@ describe("loadStatusForCoin", () => {
 
   it("surfaces an active depeg event with direction and deviation", async () => {
     const db = mockD1([
-      { match: "FROM stress_signals", rows: [{ band: "WATCH", score: 30, computed_at: 1700000000 }] },
       { match: "FROM safety_grade_history", rows: [{ grade: "A", score: 80, recorded_at: 1700000000 }] },
       {
         match: "FROM depeg_events WHERE stablecoin_id = ? AND ended_at IS NULL",
@@ -169,7 +175,7 @@ describe("loadStatusForCoin", () => {
     expect(status.safety).toBeNull();
     expect(status.priceUsd).toBeNull();
     expect(status.yield).toBeNull();
-    expect(mocks.handleYieldRankings).not.toHaveBeenCalled();
+    expect(status.yieldUnavailableReason).toBe("yield-ranking-not-found");
     expect(status.depeg.status).toBe("stable");
   });
 
@@ -231,27 +237,53 @@ describe("loadStatusForCoin", () => {
     expect(status).toMatchObject({ supplyUsd: 0, supplyObservedAt: nowSec - 60, supplyCurrent: true });
   });
 
-  it("returns yield status from published or legacy rows only", async () => {
+  it("takes APY, venue, PYS and observation evidence from one canonical row despite a different raw best source", async () => {
     const sqlite = createLatestSchemaSqlite().sqlite;
+    const observedAt = 1_792_000_000;
+    const ranking = makeYieldRanking({
+      currentApy: 4.4, apy30d: 4.2, yieldSource: "Canonical venue", pharosYieldScore: 73,
+      provenance: makeYieldProvenance({ sourceObservedAt: observedAt, sourceAgeSeconds: 60,
+        sourceMaxAgeSeconds: 7200, sourceFreshness: "fresh" }),
+    });
+    mocks.handleYieldRankings.mockImplementationOnce(async () => new Response(JSON.stringify({
+      rankings: [ranking], riskFreeRate: 4.25, scalingFactor: 8, medianApy: 4.2, updatedAt: observedAt + 60,
+    })));
     try {
-            const insertYield = sqlite.prepare(
-        `INSERT INTO yield_data (
-          stablecoin_id, source_key, symbol, is_best, current_apy, apy_7d, apy_30d, yield_source,
-          yield_type, data_source,
-          pharos_yield_score, updated_at, publication_generation_id, publication_state
-        ) VALUES (?, ?, 'USDC', ?, ?, ?, ?, ?, 'lending', 'defillama', ?, ?, ?, ?)`,
-      );
-      insertYield.run("usdc-circle", "failed-source", 1, 9, 9, 9, "Failed source", 90, 3, "gen-failed", "failed");
-      insertYield.run("usdc-circle", "staged-source", 1, 8, 8, 8, "Staged source", 80, 2, "gen-staged", "staged");
-      insertYield.run("usdc-circle", "published-source", 1, 4.4, 4.3, 4.2, "Published source", 31, 1, "gen-published", "published");
-
+      sqlite.prepare(`INSERT INTO yield_data (
+        stablecoin_id, source_key, symbol, is_best, current_apy, apy_7d, apy_30d, yield_source,
+        yield_type, data_source, pharos_yield_score, updated_at, publication_generation_id, publication_state
+      ) VALUES ('usdc-circle', 'raw-source', 'USDC', 1, 99, 99, 99, 'Raw venue',
+        'lending', 'defillama', 999, ?, NULL, 'published')`).run(observedAt);
       const status = await loadStatusForCoin(createSqliteD1(sqlite), "usdc-circle");
-
-      expect(status.yield?.source).toBe("Published source");
       expect(status.yield).toMatchObject({
-        pharosYieldScore: 73,
+        currentApy: 4.4, apy30d: 4.2, source: "Canonical venue", pharosYieldScore: 73,
         pysUnavailableReason: null,
+        provenance: { sourceObservedAt: observedAt, sourceAgeSeconds: 60, sourceFreshness: "fresh" },
       });
+      expect(mocks.handleYieldRankings).toHaveBeenCalledTimes(1);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it.each([
+    ["missing cache", () => new Response("unavailable", { status: 503 }), "yield-rankings-unavailable"],
+    ["missing accepted row", () => new Response(JSON.stringify({
+      rankings: [], riskFreeRate: 4.25, scalingFactor: 8, medianApy: 0, updatedAt: 123,
+    })), "yield-ranking-not-found"],
+    ["malformed cache", () => new Response("{}"), "yield-rankings-malformed"],
+  ] as const)("withholds seven-day-old generationless yield with %s", async (_label, response, reason) => {
+    const sqlite = createLatestSchemaSqlite().sqlite;
+    mocks.handleYieldRankings.mockImplementationOnce(async () => response());
+    try {
+      sqlite.prepare(`INSERT INTO yield_data
+        (stablecoin_id, source_key, symbol, is_best, current_apy, apy_7d, apy_30d,
+         yield_source, yield_type, data_source, updated_at, publication_generation_id)
+        VALUES ('usdc-circle', 'legacy', 'USDC', 1, 99, 99, 99, 'Legacy venue',
+          'lending', 'defillama', ?, NULL)`).run(Math.floor(Date.now() / 1000) - 7 * 86400);
+      const status = await loadStatusForCoin(createSqliteD1(sqlite), "usdc-circle");
+      expect(status.yield).toBeNull();
+      expect(status.yieldUnavailableReason).toBe(reason);
     } finally {
       sqlite.close();
     }

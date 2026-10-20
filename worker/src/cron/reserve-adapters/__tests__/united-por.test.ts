@@ -80,6 +80,24 @@ describe("adaptUnitedPorPayload", () => {
     expectWarningEffect(result, "united-por-reserve-under-token", "degraded");
   });
 
+  it("publishes observed zero backing as a degraded loss", () => {
+    const result = adaptUnitedPorPayload({ ...UNITED_POR_PAYLOAD, totalReserve: "0" }, SLICE);
+    expect(result.metadata).toMatchObject({ totalReserveUsd: 0, collateralizationRatio: 0 });
+    expectWarningEffect(result, "united-por-reserve-under-token", "degraded");
+  });
+
+  it.each([undefined, null, "-1", "", "Infinity"])("rejects unavailable or invalid reserves (%s)", (totalReserve) => {
+    expect(() => adaptUnitedPorPayload({ ...UNITED_POR_PAYLOAD, totalReserve } as UnitedPorPayload, SLICE))
+      .toThrow("invalid totalReserve");
+  });
+
+  it("preserves zero liabilities without publishing an undefined ratio", () => {
+    const result = adaptUnitedPorPayload({ ...UNITED_POR_PAYLOAD, totalToken: "0" }, SLICE);
+    expect(result.metadata).toMatchObject({ supplyUsd: 0 });
+    expect(result.metadata).not.toHaveProperty("collateralizationRatio");
+    expectWarningEffect(result, "united-por-zero-supply", "degraded");
+  });
+
   it("throws on a malformed payload with an invalid totalReserve", () => {
     const malformed: UnitedPorPayload = { ...UNITED_POR_PAYLOAD, totalReserve: "not-a-number" };
 
@@ -87,7 +105,7 @@ describe("adaptUnitedPorPayload", () => {
   });
 
   it("throws on a malformed payload with an invalid totalToken", () => {
-    const malformed: UnitedPorPayload = { ...UNITED_POR_PAYLOAD, totalToken: "0" };
+    const malformed: UnitedPorPayload = { ...UNITED_POR_PAYLOAD, totalToken: "-1" };
 
     expect(() => adaptUnitedPorPayload(malformed, SLICE)).toThrow("invalid totalToken");
   });

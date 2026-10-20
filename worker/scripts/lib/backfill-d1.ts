@@ -1,3 +1,4 @@
+import { decodeD1Envelopes } from "../../../scripts/lib/remote-d1";
 import { sqlString } from "./remote-d1";
 
 type Client = {
@@ -52,16 +53,16 @@ export function createBackfillDatabase(client: Client, options: {
   onUncertainAtomicOutcome?: (receipt: string) => void;
 } = {}): D1Database {
   const decode = (raw: string, expected?: number): D1Result<Record<string, unknown>>[] => {
-    const envelopes: unknown = JSON.parse(raw);
-    if (!Array.isArray(envelopes) || (expected !== undefined && envelopes.length !== expected)) {
+    const envelopes = decodeD1Envelopes(JSON.parse(raw));
+    if (expected !== undefined && envelopes.length !== expected) {
       throw new Error("backfill-d1-envelope-invalid");
     }
-    return envelopes.map((value) => {
-      const row = value as D1Result<Record<string, unknown>>;
-      if (row?.success !== true || !Array.isArray(row.results) || !row.meta) {
+    return envelopes.map((row) => {
+      if (row.success !== true || row.meta === null || typeof row.meta !== "object" || Array.isArray(row.meta)) {
         throw new Error("backfill-d1-query-failed");
       }
-      return row;
+      // Wrangler metadata is transport-shaped; the success/results/meta checks above admit this adapter result.
+      return row as unknown as D1Result<Record<string, unknown>>;
     });
   };
   const statements = new WeakMap<D1PreparedStatement, () => string>();

@@ -43,6 +43,7 @@ export interface AuditEventOutcome {
   attemptedCgFetch: boolean;
   upstreamError: boolean;
   rejectedByValidationCount: number;
+  rejectedByTimestampCount: number;
   falsePositiveFound: boolean;
   provenanceVerdict: DepegAuditVerdict | null;
   invalidatesProvenance: boolean;
@@ -111,6 +112,7 @@ function buildAuditEventOutcome(
     attemptedCgFetch?: boolean;
     upstreamError?: boolean;
     rejectedByValidationCount?: number;
+    rejectedByTimestampCount?: number;
     falsePositiveFound?: boolean;
   } = {},
 ): AuditEventOutcome {
@@ -120,6 +122,7 @@ function buildAuditEventOutcome(
     attemptedCgFetch: options.attemptedCgFetch ?? verdict !== "skipped",
     upstreamError: options.upstreamError ?? false,
     rejectedByValidationCount: options.rejectedByValidationCount ?? 0,
+    rejectedByTimestampCount: options.rejectedByTimestampCount ?? 0,
     falsePositiveFound: options.falsePositiveFound ?? false,
     provenanceVerdict:
       verdict === "no_data" || verdict === "confirmed" || verdict === "disputed" || verdict === "false_positive"
@@ -152,6 +155,7 @@ async function auditSingleEventWithCoinGecko(
   const from = event.started_at - 3600;
   const to = (event.ended_at ?? event.started_at) + 3600;
   let rejectedByValidationCount = 0;
+  let rejectedByTimestampCount = 0;
 
   try {
     await waitForCgFetchStart();
@@ -161,7 +165,7 @@ async function auditSingleEventWithCoinGecko(
       coingeckoApiKey,
     );
     const cgFetchHeaders = cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }, coingeckoApiKey);
-    const cgResult = await fetchJsonWithRetry<{ prices?: [number, number][] }>(
+    const cgResult = await fetchJsonWithRetry<unknown>(
       cgEndpoint,
       { headers: cgFetchHeaders },
       1,
@@ -181,12 +185,23 @@ async function auditSingleEventWithCoinGecko(
       return buildAuditEventOutcome(event, "error", {
         upstreamError: true,
         rejectedByValidationCount,
+        rejectedByTimestampCount,
       });
     }
 
     const cgData = cgResult.body;
-    const rawPrices = cgData.prices ?? [];
-    const validatedPrices = rawPrices.filter(([, cgPrice]) => {
+    if (typeof cgData !== "object" || cgData === null || !("prices" in cgData) || !Array.isArray(cgData.prices)) {
+      throw new Error("Invalid CoinGecko audit prices envelope");
+    }
+    const rawPrices: unknown[] = cgData.prices;
+    const validatedPrices = rawPrices.filter((sample): sample is [number, number] => {
+      if (!Array.isArray(sample) || sample.length !== 2 ||
+          typeof sample[0] !== "number" || !Number.isSafeInteger(sample[0]) || sample[0] < 0 ||
+          sample[0] < from * 1000 || sample[0] > to * 1000) {
+        rejectedByTimestampCount++;
+        return false;
+      }
+      const [, cgPrice] = sample;
       if (typeof cgPrice !== "number" || !Number.isFinite(cgPrice) || cgPrice <= 0) {
         rejectedByValidationCount++;
         return false;
@@ -205,8 +220,11 @@ async function auditSingleEventWithCoinGecko(
     });
 
     if (validatedPrices.length === 0) {
-      return buildAuditEventOutcome(event, "no_data", {
+      const invalidClocksOnly = rawPrices.length > 0 && rejectedByTimestampCount === rawPrices.length;
+      return buildAuditEventOutcome(event, invalidClocksOnly ? "error" : "no_data", {
+        upstreamError: invalidClocksOnly,
         rejectedByValidationCount,
+        rejectedByTimestampCount,
       });
     }
 
@@ -233,6 +251,7 @@ async function auditSingleEventWithCoinGecko(
           cgMaxOppositeDirectionBps: maxOppositeDirectionBps,
         },
         rejectedByValidationCount,
+        rejectedByTimestampCount,
       });
     }
 
@@ -244,6 +263,7 @@ async function auditSingleEventWithCoinGecko(
           cgMaxOppositeDirectionBps: maxOppositeDirectionBps,
         },
         rejectedByValidationCount,
+        rejectedByTimestampCount,
       });
     }
 
@@ -254,6 +274,7 @@ async function auditSingleEventWithCoinGecko(
         cgMaxOppositeDirectionBps: maxOppositeDirectionBps,
       },
       rejectedByValidationCount,
+      rejectedByTimestampCount,
       falsePositiveFound: true,
     });
   } catch (err) {
@@ -270,6 +291,7 @@ async function auditSingleEventWithCoinGecko(
     return buildAuditEventOutcome(event, "error", {
       upstreamError: true,
       rejectedByValidationCount,
+      rejectedByTimestampCount,
     });
   }
 }

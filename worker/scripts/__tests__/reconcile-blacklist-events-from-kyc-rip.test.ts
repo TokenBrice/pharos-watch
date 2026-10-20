@@ -3,6 +3,9 @@ import { parseEventArgs, runEventReconciliation } from "../reconcile-blacklist-e
 import { createRemoteD1Mock } from "../../../scripts/test-utils/d1";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import type { RemoteD1Client } from "../lib/remote-d1";
+import { buildBlacklistActiveRecords } from "@shared/lib/blacklist-active-records";
+import { mapBlacklistEventRow, type BlacklistEventRow } from "../../src/lib/blacklist-api";
+import { getBlacklistConfigsForSymbolAndChain } from "../../src/lib/blacklist-contracts";
 
 const databases = createLatestSchemaFixtureTracker();
 afterEach(() => databases.closeAll());
@@ -23,7 +26,7 @@ const eventRows = [
 ];
 
 describe("event kyc.rip reconciliation", () => {
-  it.each(["matching", "address", "transaction", "event", "partial-failure"])(
+  it.each(["matching", "address", "transaction", "event", "contract", "partial-failure"])(
     "persists only matching blacklist receipts: %s",
     async (scenario) => {
       const { sqlite } = databases.open();
@@ -34,7 +37,7 @@ describe("event kyc.rip reconciliation", () => {
       const receipt = {
         blockNumber: 20_000_000n,
         logs: [{
-          address: contract,
+          address: scenario === "contract" ? "0x0000000000000000000000000000000000000002" as const : contract,
           topics: [scenario === "event"
             ? "0xd7e9ec6e6ecd65492dce6bf513cd6867560d49544421d0783ddf06e76c24470c"
             : "0x42e160154868087d6bfdc0ca23d96a1c1cfa32f1b72ba9ba27b69b98a0d819dc"] as `0x${string}`[],
@@ -176,24 +179,79 @@ describe("event kyc.rip reconciliation", () => {
     expect(receiptFailureLog).not.toContain("LEAKED_QUERY_SECRET");
   });
 
-  it("queries D1 in apply mode and skips inserts for already-known addresses", async () => {
+  it("queries D1 in apply mode and skips the exact known contract/transaction/address freeze", async () => {
     const fetchImpl = vi.fn().mockResolvedValue(okPayload(eventRows));
     const d1 = createRemoteD1Mock([
       {
         stablecoin: "USDT",
         chain_id: "ethereum",
         address: "0x0000000000000000000000000000000000000001",
+        contract_address: "0xDAC17F958D2EE523A2206206994597C13D831EC7",
+        tx_hash: eventRows[0]!.tx_hash,
       },
     ]);
+    const client = { getTransactionReceipt: vi.fn(), getBlock: vi.fn() };
 
     const summary = await runEventReconciliation(
       { apply: true, remote: true, database: "stablecoin-db", timeoutMs: 1000, minRows: 1 },
-      { fetchImpl, d1 },
+      { fetchImpl, d1, client },
     );
 
     expect(summary.mode).toBe("apply");
     expect(summary.candidates).toBe(0);
     expect(d1.queryMock).toHaveBeenCalledTimes(1);
     expect(d1.executeStatementsMock).not.toHaveBeenCalled();
+    expect(client.getTransactionReceipt).not.toHaveBeenCalled();
+  });
+
+  it("repairs freeze A/release B/refreeze C and keeps repeated C idempotent", async () => {
+    const { sqlite } = databases.open();
+    const candidate = eventRows[0]!;
+    const config = getBlacklistConfigsForSymbolAndChain("USDT", "ethereum")[0]!;
+    const contract = "0xdac17f958d2ee523a2206206994597c13d831ec7" as const;
+    const freezeA = `0x${"a".repeat(64)}`;
+    const releaseB = `0x${"b".repeat(64)}`;
+    const insert = sqlite.prepare(`INSERT INTO blacklist_events
+      (id, stablecoin, chain_id, chain_name, event_type, address, contract_address, config_key,
+       tx_hash, block_number, timestamp, explorer_tx_url, explorer_address_url)
+      VALUES (?, 'USDT', 'ethereum', 'Ethereum', ?, ?, ?, ?, ?, ?, ?, '', '')`);
+    insert.run(`ethereum-${freezeA}-0x1`, "blacklist", candidate.address, contract, config.configKey, freezeA, 100, 100);
+    insert.run(`ethereum-${releaseB}-0x1`, "unblacklist", candidate.address, contract, config.configKey, releaseB, 200, 200);
+    // A matching transaction at a different contract must not suppress the requested freeze.
+    insert.run(`ethereum-${candidate.tx_hash}-0x8`, "blacklist", candidate.address, "0xother", "other-contract", candidate.tx_hash, 300, 300);
+    const history = () => (sqlite.prepare("SELECT * FROM blacklist_events").all() as BlacklistEventRow[]).map(mapBlacklistEventRow);
+    expect(buildBlacklistActiveRecords(history()).filter((row) => row.key.includes(config.configKey))).toEqual([]);
+    const retained = sqlite.prepare("SELECT * FROM blacklist_events ORDER BY id").all();
+    const d1: RemoteD1Client = {
+      query: <T,>(sql: string) => sqlite.prepare(sql).all() as T[],
+      queryRaw: () => "[]",
+      executeStatements: (statements) => { for (const sql of statements) sqlite.exec(sql); },
+    };
+    const client = {
+      getTransactionReceipt: vi.fn().mockResolvedValue({
+        blockNumber: 300n,
+        logs: [{
+          address: contract,
+          topics: ["0x42e160154868087d6bfdc0ca23d96a1c1cfa32f1b72ba9ba27b69b98a0d819dc"],
+          data: `0x${"0".repeat(63)}1`, blockNumber: 300n,
+          transactionHash: candidate.tx_hash, logIndex: 7,
+        }],
+      }),
+      getBlock: vi.fn().mockResolvedValue({ timestamp: 300n }),
+    };
+    const options = { apply: true, remote: true, database: "stablecoin-db", timeoutMs: 1000, minRows: 1 } as const;
+    const run = () => runEventReconciliation(options, {
+      d1, client, fetchImpl: vi.fn().mockResolvedValue(okPayload([candidate, candidate])),
+    });
+    expect(await run()).toMatchObject({ candidates: 2, inserted: 2 });
+    const addedId = `ethereum-${candidate.tx_hash}-0x7`;
+    expect(sqlite.prepare("SELECT id, event_type, tx_hash FROM blacklist_events WHERE id = ?").get(addedId))
+      .toEqual({ id: addedId, event_type: "blacklist", tx_hash: candidate.tx_hash });
+    expect(sqlite.prepare("SELECT * FROM blacklist_events WHERE id != ? ORDER BY id").all(addedId)).toEqual(retained);
+    expect(buildBlacklistActiveRecords(history()).filter((row) => row.key.includes(config.configKey)))
+      .toMatchObject([{ address: candidate.address, blacklistedAt: 300, destroyedAt: null }]);
+    expect(await run()).toMatchObject({ candidates: 0, inserted: 0 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM blacklist_events").get()).toEqual({ count: 4 });
+    expect(client.getTransactionReceipt).toHaveBeenCalledTimes(2);
   });
 });

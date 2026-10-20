@@ -1,4 +1,4 @@
-import { RedemptionBackstopDetailsSchema, type RedemptionBackstopEntry } from "@shared/types/redemption";
+import { RedemptionBackstopDetailsSchema, RedemptionBackstopEntrySchema, type RedemptionBackstopEntry } from "@shared/types/redemption";
 import { RedemptionReserveRunMetadataSchema } from "@shared/types/reserve-input";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { bucketUnixMillisecondsToUtcDay } from "@shared/lib/time-buckets";
@@ -70,6 +70,7 @@ function buildDetailsJson(record: RedemptionBackstopSnapshotRecord): string {
     RedemptionBackstopDetailsSchema.parse({
       ...(record.reserveInput ? { reserveInput: record.reserveInput } : {}),
       resolutionState: record.resolutionState,
+      ...(record.outputDependencyResolution ? { outputDependencyResolution: record.outputDependencyResolution } : {}),
       capacityConfidence: record.capacityConfidence,
       ...(record.capacityRejectionReason ? { capacityRejectionReason: record.capacityRejectionReason } : {}),
       ...(record.capacityBasis ? { capacityBasis: record.capacityBasis } : {}),
@@ -112,7 +113,14 @@ function buildDetailsJson(record: RedemptionBackstopSnapshotRecord): string {
   );
 }
 
+/** Admit both the public row and its deliberately selected persisted details. */
+export function validateRedemptionBackstopSnapshot(record: RedemptionBackstopSnapshotRecord): void {
+  RedemptionBackstopEntrySchema.parse(record);
+  buildDetailsJson(record);
+}
+
 function buildSnapshotRowValues(record: RedemptionBackstopSnapshotRecord): unknown[] {
+  RedemptionBackstopEntrySchema.parse(record);
   return [
     record.stablecoinId,
     record.score,

@@ -16,7 +16,7 @@ import {
 } from "./helpers";
 import type { AdapterContext, AdapterResult } from "./types";
 import { decodeStrictBoolWord, decodeUint256Word } from "./abi-decode";
-import { addressObservation, customObservation, executeEvmObservationPlan } from "./evm-observation-plan";
+import { addressObservation, customObservation, executeEvmObservationPlan, pinnedBlockPlan } from "./evm-observation-plan";
 
 const ADAPTER_KEY = "parallelizer-balances";
 const SELECTORS = {
@@ -86,12 +86,17 @@ async function readDeployment(
   deployment: ParallelizerDeployment,
   signal: AbortSignal,
   ctx?: AdapterContext,
-): Promise<ParallelizerBalanceObservation[]> {
+): Promise<{ observations: ParallelizerBalanceObservation[]; observedBlock: NonNullable<AdapterContext["observedBlock"]> }> {
   const input = { chain: deployment.chain, rpcMode: primaryInput.rpcMode };
+  const plan = await pinnedBlockPlan({
+    chain: input.chain, signal,
+    ctx: { ...ctx, observedBlock: ctx?.observedBlock?.chain === input.chain ? ctx.observedBlock : undefined },
+    rpcUrl: deployment.rpcUrl, fallbackRpcUrl: deployment.fallbackRpcUrl,
+  });
   const callOptions = {
     chain: input.chain,
     signal,
-    ctx,
+    ctx: plan.ctx,
     rpcUrl: deployment.rpcUrl,
     fallbackRpcUrl: deployment.fallbackRpcUrl,
   };
@@ -191,7 +196,7 @@ async function readDeployment(
     },
   });
 
-  return collateralAddresses.map((address, index) => {
+  const observations = collateralAddresses.map((address, index) => {
     const descriptor = configuredByAddress.get(address);
     // Decimals are always read from the vault (addCollateral stores the
     // token's on-chain decimals), so a configured descriptor is verified
@@ -226,6 +231,7 @@ async function readDeployment(
       paused,
     };
   });
+  return { observations, observedBlock: plan.observedBlock };
 }
 
 export async function fetchParallelizerBalancesReserves(
@@ -236,9 +242,10 @@ export async function fetchParallelizerBalancesReserves(
 ): Promise<AdapterResult> {
   const primaryInput = requireOnchainInput(config.inputs.primary, ADAPTER_KEY);
   const params = parseLiveReserveAdapterParams(ADAPTER_KEY, config.params);
-  const observations = (await Promise.all(
+  const deployments = await Promise.all(
     params.deployments.map((deployment) => readDeployment(primaryInput, deployment, signal, ctx)),
-  )).flat();
+  );
+  const observations = deployments.flatMap((deployment) => deployment.observations);
 
   const positiveObservations = observations.filter((observation) => observation.value > 0);
   if (positiveObservations.length === 0) {
@@ -313,10 +320,12 @@ export async function fetchParallelizerBalancesReserves(
     ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
       ...notApplicableFreshnessMetadata({ proofKind: "onchain-parallelizer-balances" }),
-      parallelizerDeployments: params.deployments.map((deployment) => ({
+      observedBlocks: deployments.map((deployment) => deployment.observedBlock),
+      parallelizerDeployments: params.deployments.map((deployment, index) => ({
         chain: deployment.chain,
         vaultAddress: deployment.vaultAddress,
         assetCount: deployment.assets.length,
+        observedBlock: deployments[index].observedBlock,
       })),
       parallelizerBalanceObservations: positiveObservations.map((observation) => ({
         chain: observation.chain,

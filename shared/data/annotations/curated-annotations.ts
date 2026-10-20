@@ -8,6 +8,7 @@
  */
 import canonicalOrderAsset from "../stablecoins/canonical-order.json";
 import { isRecord } from "@shared/lib/type-guards";
+import { parseIsoDateOrUtcInstantSec } from "@shared/types/date-primitives";
 import {
   CHART_ANNOTATION_KINDS,
   type ChartAnnotation,
@@ -342,37 +343,17 @@ const KNOWN_STABLECOIN_IDS = new Set(canonicalOrderAsset as readonly string[]);
 const ALLOWED_KINDS = new Set<string>(CHART_ANNOTATION_KINDS);
 const ALLOWED_SEVERITIES = new Set(["low", "med", "high"]);
 const ALLOWED_FIELDS = new Set(["date", "kind", "label", "severity", "href", "note", "quoted"]);
-const DATE_ONLY_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
-// eslint-disable-next-line security/detect-unsafe-regex -- anchored fixed-shape ISO timestamp; finite quantifiers, no backtracking ambiguity.
-const ISO_UTC_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/;
 
 function invalid(coinId: string, index: number, message: string): never {
   throw new Error('Invalid curated annotation ' + coinId + '[' + index + ']: ' + message);
 }
 
 function toTimestamp(value: unknown, coinId: string, index: number): number {
-  if (typeof value !== "string") invalid(coinId, index, "date must be an ISO string");
-  const dateOnly = DATE_ONLY_RE.exec(value);
-  if (dateOnly) {
-    const timestamp = Date.UTC(
-      Number(dateOnly[1]),
-      Number(dateOnly[2]) - 1,
-      Number(dateOnly[3]),
-    );
-    if (
-      !Number.isFinite(timestamp) ||
-      new Date(timestamp).toISOString().slice(0, 10) !== value
-    ) {
-      invalid(coinId, index, "date is not a valid calendar date");
-    }
-    return timestamp;
+  const timestampSec = parseIsoDateOrUtcInstantSec(value);
+  if (!Number.isFinite(timestampSec)) {
+    invalid(coinId, index, "date must be a valid YYYY-MM-DD or full UTC ISO timestamp");
   }
-  if (!ISO_UTC_RE.test(value)) {
-    invalid(coinId, index, "date must be YYYY-MM-DD or a full UTC ISO timestamp");
-  }
-  const timestamp = Date.parse(value);
-  if (!Number.isFinite(timestamp)) invalid(coinId, index, "date is invalid");
-  return timestamp;
+  return timestampSec * 1_000;
 }
 
 function resolveAnnotation(

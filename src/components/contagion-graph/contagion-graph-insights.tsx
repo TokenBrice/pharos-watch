@@ -13,6 +13,7 @@ interface ContagionGraphInsightsProps {
   visibleLinks: readonly ResolvedLink[];
   fullLinks: readonly ResolvedLink[];
   directExposureById: ReadonlyMap<string, HubExposure>;
+  directExposureKnownIds: ReadonlySet<string>;
   nodeMap: ReadonlyMap<string, GraphNode>;
   logos?: Record<string, string>;
   onTraceNode: (nodeId: string) => void;
@@ -73,6 +74,7 @@ export function ContagionGraphInsights({
   visibleLinks,
   fullLinks,
   directExposureById,
+  directExposureKnownIds,
   nodeMap,
   logos,
   onTraceNode,
@@ -96,6 +98,7 @@ export function ContagionGraphInsights({
   const dependentCount = new Set(fullLinks.filter(link => link.tgtId === inspectedNode.id).map(link => link.srcId)).size;
   const upstreamCount = new Set(fullLinks.filter(link => link.srcId === inspectedNode.id).map(link => link.tgtId)).size;
   const exposure = directExposureById.get(inspectedNode.id)?.direct;
+  const directKnown = dependentCount === 0 || directExposureKnownIds.has(inspectedNode.id);
 
   return (
     <aside
@@ -138,7 +141,7 @@ export function ContagionGraphInsights({
         <div className="grid grid-cols-2 gap-1.5">
           <MiniMetric label="Dependents" value={`${dependentCount} (${dependentSummary.count} visible)`} />
           <MiniMetric label="Upstream" value={`${upstreamCount} (${upstreamSummary.count} visible)`} />
-          <MiniMetric label="Direct dependent exposure" value={`${formatCurrency(exposure?.knownUsd ?? 0, 1)}${exposure && !exposure.complete ? " known" : ""}`} />
+          <MiniMetric label="Direct dependent exposure" value={directKnown ? `${formatCurrency(exposure?.knownUsd ?? 0, 1)}${exposure && !exposure.complete ? " (known only)" : ""}` : "Unavailable"} />
         </div>
         {exposure && !exposure.complete && (
           <p className="text-2xs text-muted-foreground">

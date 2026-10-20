@@ -204,8 +204,6 @@ interface MakeDbOptions {
   signalIds?: string[];
   historyIds?: string[];
   historySnapshotIds?: string[];
-  currentGenerationRows?: number;
-  latestGenerationRows?: number;
   dexPublicationLatest?: {
     generation_id: string;
     state: string;
@@ -232,6 +230,10 @@ function makeDb(sqlSeen: string[], opts: MakeDbOptions = {}): D1Database {
   const stmt = (sql: string) => {
     sqlSeen.push(sql);
     const all = async <T>() => {
+      if (sql.includes("pharos:dews:publication-generation-ids")
+        || sql.includes("pharos:dews:stress-latest-generation-ids")) {
+        return { results: [...computedSnapshotIds].map((stablecoin_id) => ({ stablecoin_id })) as T[] };
+      }
       if (sql.includes("pharos:dews:stress-history-daily-ids")) {
         return {
           results: (opts.historySnapshotIds ?? [...computedSnapshotIds])
@@ -356,12 +358,6 @@ function makeDb(sqlSeen: string[], opts: MakeDbOptions = {}): D1Database {
           value: JSON.stringify(opts.yieldRankingsPayload),
           updated_at: opts.yieldRankingsUpdatedAt ?? Math.floor(Date.now() / 1000),
         } as T;
-      }
-      if (sql.includes("pharos:dews:publication-generation-count")) {
-        return { cnt: opts.currentGenerationRows ?? 1 } as T;
-      }
-      if (sql.includes("pharos:dews:stress-latest-generation-count")) {
-        return { cnt: opts.latestGenerationRows ?? opts.currentGenerationRows ?? 1 } as T;
       }
       if (sql.includes("stress_signal_history")) return null as T | null;
       if (sql.includes("stability_index_samples")) return (opts.psiSample ?? null) as T | null;
@@ -832,11 +828,14 @@ describe("computeAndStoreDEWS", () => {
   it("quarantines malformed previous stress signals while publishing a healthy peer", async () => {
     const sqlSeen: string[] = [];
     const nowSec = Math.floor(Date.now() / 1000);
-    vi.mocked(getCache).mockImplementation(async (_db, key) =>
-      key === "dews:bootstrap-complete" || key === "dews:published-generation" ? null : dewsCache([
-        dewsCoin(), dewsCoin({ id: "pyusd-paypal", symbol: "PYUSD" }),
-      ]) as never,
-    );
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "dews:bootstrap-complete") return null;
+      if (key === "dews:published-generation") return {
+        value: JSON.stringify({ updatedAt: nowSec - 900, source: "compute-dews", publishStatus: "published" }),
+        updatedAt: nowSec - 900,
+      };
+      return dewsCache([dewsCoin(), dewsCoin({ id: "pyusd-paypal", symbol: "PYUSD" })]) as never;
+    });
     const db = makeDb(sqlSeen, {
       prevSignalRows: [
         {
@@ -1098,6 +1097,30 @@ describe("computeAndStoreDEWS", () => {
     }));
   });
 
+  it.each([
+    [60, null],
+    [61, "future-timestamp"],
+    [86400, "future-timestamp"],
+    [Number.POSITIVE_INFINITY, "invalid-timestamp"],
+  ] as const)("withholds the cohort for inadmissible yield generation offset %s", async (offset, reason) => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const result = await computeAndStoreDEWS(makeDb([], {
+      yieldRankingsPayload: { rankings: [{ id: "usdt-tether", sourceRisk: { rewardShare: 0.9 } }] },
+      yieldRankingsUpdatedAt: nowSec + offset,
+    }));
+    const metadata = JSON.parse(result.metadata ?? "{}");
+    expect(metadata.publicationPointerWritten).toBe(reason == null);
+    expect(metadata.freshnessSentinelPublished).toBe(reason == null);
+    expect(metadata.reason).toBe(reason == null ? "dews-generation-published" : "dews-cohort-dependency-unavailable");
+    if (reason != null) {
+      expect(metadata.sourceFailures).toContainEqual({ source: "yield-rankings-freshness", reason: `yield-rankings ${reason}` });
+      expect(writeFreshnessSentinel).not.toHaveBeenCalled();
+    }
+    expect(computeDEWS).toHaveBeenCalledWith(expect.objectContaining({
+      yieldSourceRisk: expect.objectContaining({ rewardShare: 0.9 }),
+    }));
+  });
+
   it("degrades on a missing mandatory source table", async () => {
     vi.mocked(getCache).mockImplementation(async (_db, key) => {
       if (key === "dews:bootstrap-complete") {
@@ -1296,6 +1319,14 @@ describe("computeAndStoreDEWS", () => {
   it("does not smooth with stale previous stress-signal rows", async () => {
     const sqlSeen: string[] = [];
     const nowSec = Math.floor(Date.now() / 1000);
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "dews:bootstrap-complete") return null;
+      if (key === "dews:published-generation") return {
+        value: JSON.stringify({ updatedAt: nowSec - 3 * 3600, source: "compute-dews", publishStatus: "published" }),
+        updatedAt: nowSec - 3 * 3600,
+      };
+      return dewsCache([dewsCoin()], { fxFallbackRates: { peggedEUR: 1.08 } }) as never;
+    });
     const db = makeDb(sqlSeen, {
       prevSignalRows: [
         {
@@ -1510,8 +1541,6 @@ describe("computeAndStoreDEWS", () => {
           timestamp: nowSec - 3 * 86400,
         },
       ],
-      currentGenerationRows: 2,
-      latestGenerationRows: 2,
     });
 
     await computeAndStoreDEWS(db);

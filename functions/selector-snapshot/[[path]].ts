@@ -173,6 +173,7 @@ interface SelectorSnapshotEnv {
 interface SelectorSnapshotKvMetadata {
   extended?: boolean;
   legacySid?: string;
+  /** Certifies server recomputation, not freshness; source evidence stays in the body. */
   trust?: typeof SELECTOR_SNAPSHOT_VERIFICATION_KIND;
 }
 

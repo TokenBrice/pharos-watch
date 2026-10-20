@@ -484,6 +484,7 @@ export async function crawlTezosPoolsStage(input: {
       input.context.addPriceObs({
         stablecoinId: input.context.stablecoinId,
         price: evaluation.pool.priceUsd,
+        observedAt: evaluation.pool.refreshedAt,
         tvl: evaluation.pool.tvlUsd,
         chain: target.chain,
         protocol: evaluation.pool.dexId ?? evaluation.pool.protocol,

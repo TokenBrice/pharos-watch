@@ -9,6 +9,8 @@ import { logosById } from "@/lib/logos";
 import { buildDataCoverageModel } from "@/lib/safety-score-data-coverage";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
 import type { StablecoinMeta } from "@shared/types";
+import { CoverageCoinIdentity } from "@/components/coverage/coverage-coin-identity";
+import { makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
 
 vi.mock("next/link", async () => {
   const { createNextLinkMock } = await import("@/test-utils/frontend");
@@ -35,6 +37,7 @@ function makeCoverageRow(index: number, overrides: Partial<Parameters<typeof bui
     consensusSources: ["a", "b", "c"],
     priceConfidence: "high",
     safetyScore: 80,
+    safetyRatingStatus: "rated",
     dexCoverageClass: "primary",
     hasYieldCoverage: true,
     flowCoverageStatus: "full",
@@ -65,6 +68,25 @@ function makeMatrixModel(overrides: Partial<CoverageMatrixModel> = {}): Coverage
     ...overrides,
   };
 }
+
+describe("CoverageCoinIdentity", () => {
+  it.each(["mobile", "table"] as const)("preserves observed cap, including zero, in the %s identity", (variant) => {
+    const cases = [
+      { marketCapUsd: 100, marketCapAvailable: true, label: "$100" },
+      { marketCapUsd: 0, marketCapAvailable: true, label: "$0" },
+      { marketCapUsd: 0, marketCapAvailable: false, label: "Mcap -" },
+    ];
+    for (const fixture of cases) {
+      const { container, unmount } = render(
+        <CoverageCoinIdentity row={makeCoverageRow(1, fixture)} logoSize={24} variant={variant} />,
+      );
+      expect(container.textContent).toContain(fixture.label);
+      if (fixture.marketCapAvailable) expect(container.textContent).not.toContain("Mcap -");
+      else expect(container.textContent).not.toContain("$0");
+      unmount();
+    }
+  });
+});
 
 describe("CoverageMatrixCard", () => {
   it("renders unavailable feed warnings without counting them as ordinary gaps", () => {
@@ -105,6 +127,20 @@ describe("CoverageMatrixCard", () => {
 });
 
 describe("CoverageSafetyScoreDataCard", () => {
+  it.each([true, false])("labels a mixed-status cohort as assessed with rated membership %s", (hasRated) => {
+    const cards = [
+      ...(hasRated ? [makeV9Card({ id: "rated" })] : []),
+      makeV9Card({ id: "nr", score: null, ratingStatus: "not-rated" }),
+      makeReportCardsV9PipelineGapCard("control", "A", { id: "gap" }),
+    ];
+    const model = buildDataCoverageModel(makeReportCardsV9Response({ cards }));
+    const { container } = render(<CoverageSafetyScoreDataCard safetyScoreDataCoverage={model} />);
+    expect(container.textContent).toContain(`${hasRated ? 3 : 2} assets are assessed`);
+    expect(container.textContent).not.toMatch(/assets? (?:is|are) scored|Assets scored/);
+    expect(container.textContent).toContain(`${hasRated ? 1 : 0} rated (0 partial) · 1 not rated · 1 pipeline gap`);
+    expect(screen.getByText("Assets assessed")).toBeTruthy();
+  });
+
   it("renders the score-input summary and expandable detail on the coverage page", () => {
     const safetyScoreDataCoverage = buildDataCoverageModel(
       makeReportCardsV9Response({ cards: [makeV9Card({ id: "asset-a" })] }),
@@ -115,7 +151,7 @@ describe("CoverageSafetyScoreDataCard", () => {
     );
 
     expect(screen.getByRole("heading", { name: "Score input coverage" })).toBeTruthy();
-    expect(container.textContent).toContain("1 asset is scored");
+    expect(container.textContent).toContain("1 asset is assessed");
     expect(screen.getByText(/Coverage detail|Which inputs are missing/)).toBeTruthy();
     expect(screen.getByText("Inputs evaluated")).toBeTruthy();
   });

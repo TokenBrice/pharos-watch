@@ -175,6 +175,8 @@ function mapTrackedSubgraphPriceObservations(config: {
       stablecoinId: resolved.stablecoinId,
       obs: {
         price: usdPrice,
+        // These queries expose current state, but no upstream quote timestamp.
+        observedAt: Math.floor(Date.now() / 1000),
         tvl: observationTvl ?? tvl,
         chain,
         protocol,

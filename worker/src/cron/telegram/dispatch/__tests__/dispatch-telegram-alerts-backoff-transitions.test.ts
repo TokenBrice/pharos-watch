@@ -3,7 +3,7 @@ import { TELEGRAM_TARGET_PLAN_HORIZON_PAGE_SIZE, TELEGRAM_TARGET_PLAN_MAX_STEPS_
 import { seedDispatchSnapshots } from "./dispatch-telegram-snapshots.test-support";
 import {
   cleanupDispatchTelegramAlertsTest,
-  createDispatchHarness,
+  createDispatchHarness as createBaseDispatchHarness,
   dispatchTelegramAlerts,
   formatConsolidatedMessageSpy,
   mockSendToChat,
@@ -17,6 +17,25 @@ import {
   TELEGRAM_MAX_MESSAGES_PER_RUN,
   type CronProgressUpdate,
 } from "./dispatch-telegram-alerts.test-support";
+
+// These transport scenarios need accepted DEWS, not pointerless diagnostic rows.
+// Keep acceptance local to this suite so unavailable-source fixtures stay explicit.
+function createDispatchHarness() {
+  const harness = createBaseDispatchHarness();
+  const seed = harness.seed;
+  harness.seed = (input) => {
+    seed(input);
+    if (input.dews?.length) {
+      const computedAt = Math.max(...input.dews.map((row) => row.computedAt ?? Math.floor(Date.now() / 1000)));
+      harness.cache("dews:published-generation", {
+        updatedAt: computedAt,
+        source: "compute-dews",
+        publishStatus: "published",
+      }, computedAt);
+    }
+  };
+  return harness;
+}
 
 
 function dewsSubscribers(count: number, prefix = "chat") {
@@ -209,9 +228,12 @@ describe("dispatchTelegramAlerts", () => {
     expect(metadata).toMatchObject({
       cappedAtLimit: true,
       pendingEnqueued: 0,
-      freshCandidateChats: 0,
-      freshCandidateCount: 0,
+      authoritativePlanning: { plannedTargetCount: 0, sourceEventFamilies: ["dews"] },
     });
+    expect(metadata.authoritativePlanning.sourceEventId).toEqual(expect.any(String));
+    expect(metadata).not.toHaveProperty("freshCandidateChats");
+    expect(metadata).not.toHaveProperty("freshCandidateCount");
+    expect(metadata).not.toHaveProperty("freshOverflow");
     expect(captured.count).toBeGreaterThan(0);
     expect(captured.count).toBeLessThan(subscriberCount);
     expect(metadata.fanoutQueryMs).toBeGreaterThanOrEqual(0);
@@ -238,27 +260,23 @@ describe("dispatchTelegramAlerts", () => {
       dews: [{ stablecoinId: "usdc-circle", score: 55, band: "WARNING" }],
       ...dewsSubscribers(subscriberCount),
     });
-    let metadata: Record<string, number | boolean> | undefined;
+    let metadata: { cappedAtLimit: boolean; authoritativePlanning: { plannedTargetCount: number } } | undefined;
     for (let cycle = 0; cycle < 10; cycle++) {
       if (cycle > 0) vi.advanceTimersByTime(121_000);
       const formattedBefore = formatConsolidatedMessageSpy.mock.calls.length;
-      const runMetadata = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata) as Record<
-        string,
-        number | boolean
-      >;
+      const runMetadata = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata) as NonNullable<typeof metadata>;
       metadata = runMetadata;
       const formatted = formatConsolidatedMessageSpy.mock.calls.length - formattedBefore;
       expect(formatted).toBeLessThanOrEqual(TELEGRAM_MAX_MESSAGES_PER_RUN + TELEGRAM_FORMAT_BUDGET_ALLOWANCE);
-      if (runMetadata.freshCandidateChats === 0) expect(formatted).toBe(0);
+      if (runMetadata.authoritativePlanning.plannedTargetCount === 0) expect(formatted).toBe(0);
       if (!runMetadata.cappedAtLimit) break;
     }
-    const completed = metadata as Record<string, number | boolean>;
+    const completed = metadata!;
     expect(completed).toMatchObject({
       cappedAtLimit: false,
-      freshCandidateChats: subscriberCount,
-      freshCandidateCount: subscriberCount,
-      freshOverflow: 0,
+      authoritativePlanning: { plannedTargetCount: subscriberCount, sourceEventFamilies: ["dews"] },
     });
+    expect(completed).not.toHaveProperty("freshOverflow");
     expect(formatConsolidatedMessageSpy).toHaveBeenCalledTimes(subscriberCount);
     expect(readCacheValue(harness.sqlite, "telegram:dispatch-overflow-plan")).toBeNull();
     for (let cycle = 0; cycle < 10 && telegramDeliveryTranscript.length < subscriberCount; cycle++) {
@@ -352,9 +370,7 @@ describe("dispatchTelegramAlerts", () => {
       pendingAttempted: 1,
       pendingRetryQueued: 1,
       pendingEnqueued: 1,
-      freshAttempted: 0,
-      freshSent: 0,
-      freshDeferredPerChat: 0,
+      authoritativePlanning: { plannedTargetCount: 1, sourceEventFamilies: ["dews"] },
     });
     expect(telegramDeliveryTranscript.map((entry) => entry.chatId)).toEqual(["old-chat"]);
 
@@ -364,9 +380,6 @@ describe("dispatchTelegramAlerts", () => {
     expect(metadata).toMatchObject({
       pendingAttempted: 2,
       pendingRetryQueued: 0,
-      freshAttempted: 0,
-      freshSent: 0,
-      freshDeferredPerChat: 0,
     });
     expect(telegramDeliveryTranscript.map((entry) => entry.chatId).sort()).toEqual([
       "fresh-chat",

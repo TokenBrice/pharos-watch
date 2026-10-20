@@ -107,6 +107,27 @@ describe("summarizeDexVolumeWindow", () => {
     const parsed = parseDexVolumeAvailabilityRecord(JSON.stringify({ "24h": legacy24h }));
     expect(parsed).toMatchObject({ status: "recorded", record: { "24h": { completeness: "partial", partialGrossUsd: 40_000 } } });
   });
+
+  it.each([false, true])("rejects a nonempty measured window whose admitted sum is absent (partial=%s)", (partial) => {
+    const pools = [{ ...at(1), tvlUsd: 100 }, ...(partial ? [{ ...at(1, null), tvlUsd: 50 }] : [])];
+    const availability = { ...summarizeDexVolumeWindow(pools, "24h", CLOCK).availability, partialGrossUsd: null };
+    expect(parseDexVolumeAvailabilityRecord(JSON.stringify({ "24h": availability }))).toEqual({ status: "unreadable" });
+    expect(resolveVolumeActivityComponent(availability)).toEqual({
+      status: "unavailable", score: null, reason: "activity-completeness-unknown",
+    });
+  });
+
+  it.each([{ pools: [] }, { pools: [at(1, 0)] }])("round-trips empty and explicit measured-zero windows ($pools)", ({ pools }) => {
+    const availability = summarizeDexVolumeWindow(pools, "24h", CLOCK).availability;
+    expect(DexVolumeAvailabilityRecordSchema.safeParse({ "24h": availability }).success).toBe(true);
+    expect(resolveVolumeActivityComponent(availability)).toEqual({ status: "measured", score: 0 });
+  });
+
+  it("does not infer an empty window from unknown counts or absent legacy TVL", () => {
+    const empty = summarizeDexVolumeWindow([], "24h", CLOCK).availability;
+    expect(resolveVolumeActivityComponent({ ...empty, measuredPoolCount: null }).status).toBe("unavailable");
+    expect(resolveVolumeActivityComponent({ ...empty, admittedTvlUsd: undefined }).status).toBe("unavailable");
+  });
 });
 
 describe("readStoredDexVolumeWindow", () => {

@@ -69,6 +69,21 @@ describe("Gemini Contentful attestation index verification", () => {
       .toThrow("ambiguous newest report");
   });
 
+  it("orders offset-formatted reports by instant rather than lexical date", () => {
+    const later = { ...olderEntry(), date: "2026-08-31T00:30:00-05:00" };
+    expect(() => verifyGeminiContentfulIndex(contentfulIndex([reviewedEntry(), later]), manifest))
+      .toThrow("newer unreviewed report");
+    expect(() => verifyGeminiContentfulIndex(contentfulIndex([later]), manifest))
+      .toThrow("newer unreviewed report");
+  });
+
+  it("accepts an equivalent reviewed instant but rejects equivalent newest-entry ties", () => {
+    const equivalent = { ...reviewedEntry(), date: "2026-08-31T01:00:00-04:00" };
+    expect(() => verifyGeminiContentfulIndex(contentfulIndex([equivalent]), manifest)).not.toThrow();
+    expect(() => verifyGeminiContentfulIndex(contentfulIndex([reviewedEntry(), equivalent]), manifest))
+      .toThrow("ambiguous newest report");
+  });
+
   it("rejects an index with an unresolvable PDF asset or invalid content", () => {
     const malformed = JSON.stringify({ ...JSON.parse(contentfulIndex([reviewedEntry()])), items: [{ sys: { contentType: { sys: { id: "other" } } } }] });
     expect(() => verifyGeminiContentfulIndex(malformed, manifest)).toThrow("unexpected content types");

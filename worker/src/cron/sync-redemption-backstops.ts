@@ -1,4 +1,5 @@
 import { logWorkerEventArgs } from "../lib/structured-log";
+import { ZodError } from "zod";
 import { getConfiguredRedemptionBackstopIds, getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import { REDEMPTION_SEVERE_ACTIVE_DEPEG_BPS } from "@shared/lib/report-card-active-depeg";
 import { DEX_LIQUIDITY_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/cron-cadences";
@@ -20,7 +21,7 @@ import type { CronProgressReporter, CronResult } from "../lib/cron-logger";
 import { createCronResult, type CronMetadataRecord } from "../lib/cron-result";
 import { loadDexLiquidityScores } from "../lib/dex-liquidity";
 import { AcceptedReserveViewError, acceptedReserveMetadataMap, consumedReserveInput, loadAcceptedReserveGeneration } from "../lib/accepted-reserve-generation";
-import { upsertRedemptionBackstopSnapshots } from "../lib/redemption-backstops-store-write";
+import { upsertRedemptionBackstopSnapshots, validateRedemptionBackstopSnapshot } from "../lib/redemption-backstops-store-write";
 import {
   applyOutputDependencyResolution,
   buildFailedRedemptionBackstopEntry,
@@ -32,7 +33,7 @@ import {
   formatUtcDate,
   loadSevereActiveDepegAvailabilityMap,
 } from "../lib/redemption-backstop/availability";
-import { REDEMPTION_ROUTE_STATUS_PRODUCER } from "../lib/redemption-backstop/route-status";
+import { REDEMPTION_ROUTE_STATUS_PRODUCER, type DirectObserverExecutionEvent } from "../lib/redemption-backstop/route-status";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { throwIfAborted } from "../lib/abort";
 import { mapWithConcurrency } from "../lib/concurrency";
@@ -42,6 +43,23 @@ import { safeErrorMessage } from "../lib/safe-error-message";
 import { EvmCodeIdentityError } from "../lib/evm-code-identity-error";
 
 const MISSING_CAPACITY_OK_RATIO = 0.01;
+
+interface RouteFailureReason {
+  code: string;
+  message: string;
+  schemaPath?: string;
+  schemaReason?: string;
+}
+
+function describeRouteFailure(error: unknown): RouteFailureReason {
+  const issue = error instanceof ZodError ? error.issues[0] : undefined;
+  return {
+    code: issue ? "redemption-snapshot-schema-invalid" :
+      error instanceof EvmCodeIdentityError ? error.rejectionCode : "route-resolution-failed",
+    message: safeErrorMessage(error, 240).slice(0, 240),
+    ...(issue ? { schemaPath: issue.path.join(".") || "$", schemaReason: issue.code } : {}),
+  };
+}
 
 const DEX_LIQUIDITY_FRESHNESS_SEC = DEX_LIQUIDITY_EVIDENCE_MAX_AGE_SEC;
 
@@ -210,7 +228,13 @@ export async function syncRedemptionBackstops(
   const results = await mapWithConcurrency(configuredIds, REDEMPTION_BACKSTOP_RESOLVE_CONCURRENCY, async (stablecoinId) => {
     let resolved: RedemptionBackstopEntry | null = null;
     let failed = false;
-    let failureReason: { code: string; message: string } | null = null;
+    let failureReason: RouteFailureReason | null = null;
+    let directObserverAttempted = false;
+    let directObserverConsumed = false;
+    const onDirectObserverExecution = (event: DirectObserverExecutionEvent) => {
+      if (event === "attempted") directObserverAttempted = true;
+      else directObserverConsumed = true;
+    };
     try {
       const asset = stablecoinAssetById.get(stablecoinId);
       const dexLiquidityScore = dexLiquidityMap[stablecoinId]?.liquidityScore ?? null;
@@ -225,6 +249,7 @@ export async function syncRedemptionBackstops(
           routeAvailability,
           rpcOptions,
           stablecoinsCache, exitExecutionEnvelope, exitExecutionReviews,
+          onDirectObserverExecution,
         });
       } else {
         const config = configById.get(stablecoinId);
@@ -236,19 +261,19 @@ export async function syncRedemptionBackstops(
             routeAvailability,
             rpcOptions,
             stablecoinsCache, exitExecutionEnvelope, exitExecutionReviews,
+            onDirectObserverExecution,
           });
         }
       }
 
+      if (!resolved) throw new Error(`Configured redemption route ${stablecoinId} returned no snapshot`);
+      validateRedemptionBackstopSnapshot(resolved);
       throwIfAborted(signal);
     } catch (error) {
       throwIfAborted(signal);
       logWorkerEventArgs("handler", "error", `[sync-redemption-backstops] Failed for ${stablecoinId}:`, error);
       failed = true;
-      failureReason = {
-        code: error instanceof EvmCodeIdentityError ? error.rejectionCode : "route-resolution-failed",
-        message: safeErrorMessage(error, 240).slice(0, 240),
-      };
+      failureReason = describeRouteFailure(error);
       const config = configById.get(stablecoinId);
       if (config) {
         resolved = buildFailedRedemptionBackstopEntry(stablecoinId, config, now);
@@ -265,12 +290,41 @@ export async function syncRedemptionBackstops(
       }));
       await progressReporting;
     }
-    return { snapshot: resolved, failed, failureReason };
+    return { snapshot: resolved, failed, failureReason, directObserverAttempted, directObserverConsumed };
   }, { signal });
   throwIfAborted(signal);
-  const collectedSnapshots = results.flatMap(({ snapshot }) => snapshot ? [snapshot] : []);
+  const collectedSnapshots = results.map(({ snapshot }, index) => {
+    if (!snapshot) throw new Error(`Missing redemption placeholder for ${configuredIds[index]}`);
+    return snapshot;
+  });
+  let snapshots: RedemptionBackstopEntry[];
+  for (;;) {
+    snapshots = applyOutputDependencyResolution(collectedSnapshots, configById);
+    let quarantined = false;
+    for (let index = 0; index < snapshots.length; index++) {
+      try {
+        validateRedemptionBackstopSnapshot(snapshots[index]);
+      } catch (error) {
+        throwIfAborted(signal);
+        const stablecoinId = configuredIds[index];
+        const config = configById.get(stablecoinId);
+        // A broken placeholder/config is a global hold, never a short census.
+        if (!config || results[index].failed) throw error;
+        logWorkerEventArgs("handler", "error", `[sync-redemption-backstops] Final admission failed for ${stablecoinId}:`, error);
+        results[index].failed = true;
+        results[index].failureReason = describeRouteFailure(error);
+        collectedSnapshots[index] = buildFailedRedemptionBackstopEntry(stablecoinId, config, now);
+        validateRedemptionBackstopSnapshot(collectedSnapshots[index]);
+        quarantined = true;
+      }
+    }
+    if (!quarantined) break;
+    // Rebuild disclosures against explicit failed members before final admission.
+  }
+  throwIfAborted(signal);
   const failedIds = configuredIds.filter((_id, index) => results[index].failed);
-  const snapshots = applyOutputDependencyResolution(collectedSnapshots, configById);
+  const directObserverAttemptedCount = results.filter((result) => result.directObserverAttempted).length;
+  const directObserverConsumedCount = results.filter((result) => result.directObserverConsumed && !result.failed).length;
 
   const dynamicCount = snapshots.filter((entry) => entry.sourceMode === "dynamic").length;
   const estimatedCount = snapshots.filter((entry) => entry.sourceMode === "estimated").length;
@@ -348,7 +402,12 @@ export async function syncRedemptionBackstops(
     static: staticCount,
     liquidityStale,
     routeStatusProducer: REDEMPTION_ROUTE_STATUS_PRODUCER.model,
-    routeStatusProducerFetches: REDEMPTION_ROUTE_STATUS_PRODUCER.fetchesDuringRedemptionSync,
+    routeStatusProducerFetches: directObserverAttemptedCount > 0,
+    directObserverAttemptedCount,
+    directObserverConsumedCount,
+    directObserverUnavailableCount: results.filter((result) =>
+      result.directObserverAttempted && (!result.directObserverConsumed || result.failed),
+    ).length,
     preloadDegraded: preloadWarnings.length > 0,
     ...(preloadWarnings.length > 0 ? { preloadWarnings: capStringList(preloadWarnings) } : {}),
     ...registryMetadata,

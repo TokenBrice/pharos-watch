@@ -70,7 +70,7 @@ export function LiquidityClient() {
     { getParam, setParam },
   );
 
-  const { leaderboardRows, unobservedRows, summaryStats } = useMemo(
+  const { leaderboardRows, unobservedRows, unavailableRows, summaryStats } = useMemo(
     () => buildLiquidityViewModel(liquidityMap, pegFilter, deferredSearch),
     [liquidityMap, pegFilter, deferredSearch],
   );
@@ -148,6 +148,9 @@ export function LiquidityClient() {
           // Remounts open while a search is active so matching coins are visible.
           <UnobservedFold key={searchActive ? "search" : "browse"} rows={unobservedRows} defaultOpen={searchActive} />
         ) : null}
+        {unavailableRows.length > 0 ? (
+          <UnavailableFold key={searchActive ? "unavailable-search" : "unavailable-browse"} rows={unavailableRows} defaultOpen={searchActive} />
+        ) : null}
       </div>
 
       {meta?.updatedAt != null ? (
@@ -223,6 +226,34 @@ function UnobservedFold({ rows, defaultOpen }: { rows: LiquidityViewModel["unobs
               </li>
             );
           })}
+        </ul>
+      </div>
+    </ModuleDisclosure>
+  );
+}
+
+/** Unavailable evidence is neither an admitted market nor proof that no pools exist. */
+function UnavailableFold({ rows, defaultOpen }: { rows: LiquidityViewModel["unavailableRows"]; defaultOpen: boolean }) {
+  return (
+    <ModuleDisclosure id="unavailable" label="DEX evidence unavailable" count={rows.length} defaultOpen={defaultOpen}>
+      <div className="space-y-2 pt-2">
+        <p className="pharos-meta max-w-3xl">
+          These coins have unavailable DEX coverage evidence. Their raw pool data is excluded from the leaderboard
+          and coverage, trend, and pool-quality statistics.
+        </p>
+        <ul className="space-y-1 text-sm">
+          {rows.map(({ meta, liq }) => (
+            <li key={meta.id} data-unavailable-reason={liq.unavailableReason ?? liq.liquidityScoreUnavailableReason ?? undefined}>
+              <Link href={buildStablecoinUrl(meta.id)} className="pharos-focus-ring rounded-sm hover:underline">
+                {meta.symbol} <span className="text-muted-foreground">({meta.name})</span>
+              </Link>
+              <span className="ml-1.5 text-xs text-muted-foreground">
+                {liq.unavailableReason === "invalid-coverage-evidence" || liq.liquidityScoreUnavailableReason === "invalid-coverage-evidence"
+                  ? LIQUIDITY_NR_REASON_LABELS["invalid-coverage-evidence"]
+                  : "Coverage evidence unavailable"}
+              </span>
+            </li>
+          ))}
         </ul>
       </div>
     </ModuleDisclosure>

@@ -30,6 +30,8 @@ export interface TableExportMenuProps<T> {
   endpoint: string;
   /** Methodology label written into the preamble, e.g. "safety-score v7.25". */
   methodologyLabel: string;
+  /** Participating producer clocks; null means the source generation is unknown. */
+  sourceGenerations?: ExportPreamble["sourceGenerations"];
   /** Optional trigger label override; defaults to "Export". */
   triggerLabel?: string;
   /** Optional class override for the trigger button. */
@@ -42,12 +44,14 @@ function buildPreamble(
   endpoint: string,
   methodologyLabel: string,
   asOfISO: string,
+  sourceGenerations?: ExportPreamble["sourceGenerations"],
 ): ExportPreamble {
   return {
     endpoint,
     asOfISO,
     sourceUrl: typeof window === "undefined" ? "" : window.location.href,
     methodologyLabel,
+    ...(sourceGenerations ? { sourceGenerations } : {}),
   };
 }
 
@@ -58,6 +62,7 @@ export function TableExportMenu<T>({
   asOfISO,
   endpoint,
   methodologyLabel,
+  sourceGenerations,
   triggerLabel = "Export",
   triggerClassName,
   disabled = false,
@@ -85,9 +90,9 @@ export function TableExportMenu<T>({
       data,
       columns,
       filename,
-      buildPreamble(endpoint, methodologyLabel, asOfISO),
+      buildPreamble(endpoint, methodologyLabel, asOfISO, sourceGenerations),
     );
-  }, [asOfISO, columns, data, disabled, endpoint, filename, methodologyLabel]);
+  }, [asOfISO, columns, data, disabled, endpoint, filename, methodologyLabel, sourceGenerations]);
 
   const handleNdjson = useCallback(() => {
     if (disabled) return;
@@ -95,21 +100,21 @@ export function TableExportMenu<T>({
       data,
       columns,
       filename,
-      buildPreamble(endpoint, methodologyLabel, asOfISO),
+      buildPreamble(endpoint, methodologyLabel, asOfISO, sourceGenerations),
     );
-  }, [asOfISO, columns, data, disabled, endpoint, filename, methodologyLabel]);
+  }, [asOfISO, columns, data, disabled, endpoint, filename, methodologyLabel, sourceGenerations]);
 
   const handleMarkdown = useCallback(async () => {
     if (disabled) return;
     const ok = await copyMarkdownWithPreamble(
       data,
       columns,
-      buildPreamble(endpoint, methodologyLabel, asOfISO),
+      buildPreamble(endpoint, methodologyLabel, asOfISO, sourceGenerations),
     );
     if (!mounted.current) return;
     setStatus(ok ? "copied" : "error");
     resetStatusAfterDelay();
-  }, [asOfISO, columns, data, disabled, endpoint, methodologyLabel, resetStatusAfterDelay]);
+  }, [asOfISO, columns, data, disabled, endpoint, methodologyLabel, resetStatusAfterDelay, sourceGenerations]);
 
   const triggerText =
     status === "copied" ? "Copied!" : status === "error" ? "Copy failed" : triggerLabel;

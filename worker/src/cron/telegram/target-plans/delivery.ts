@@ -1,7 +1,8 @@
 import type { TelegramAlertType } from "@shared/types/status";
 import { executeAtomicBatch } from "../../../lib/db";
-import { PENDING_TTL_SEC } from "../../../telegram/common/constants";
+import { PENDING_TTL_SEC, TELEGRAM_CHAT_BACKOFF_CACHE_PREFIX } from "../../../telegram/common/constants";
 import { parseTelegramTargetPlan } from "./telegram-alert-target-plan-contract";
+import { retainedPlanMismatchSql } from "./materialization";
 import { reconcileTelegramAlertJobCounters } from "../delivery/telegram-alert-job-target-outcomes";
 import {
   buildPendingAlertUpsertSql,
@@ -145,8 +146,7 @@ export function buildSetBasedPendingHandoffStatements(
     db
       .prepare(
         `UPDATE telegram_pending_alerts AS pending INDEXED BY idx_tpa_dedupe_key
-            SET not_before_at = CASE
-              WHEN pending.not_before_at IS NULL THEN (
+            SET not_before_at = NULLIF(MAX(COALESCE(pending.not_before_at, 0), COALESCE((
                 SELECT MAX(existing.not_before_at)
                   FROM telegram_pending_alerts existing INDEXED BY idx_telegram_pending_alerts_chat_id
                  WHERE existing.chat_id = pending.chat_id
@@ -154,17 +154,10 @@ export function buildSetBasedPendingHandoffStatements(
                    AND existing.delivery_state = 'pending'
                    AND COALESCE(existing.expires_at, existing.created_at + ?) > ?
                    AND existing.not_before_at > ?
-              )
-              ELSE MAX(pending.not_before_at, COALESCE((
-                SELECT MAX(existing.not_before_at)
-                  FROM telegram_pending_alerts existing INDEXED BY idx_telegram_pending_alerts_chat_id
-                 WHERE existing.chat_id = pending.chat_id
-                   AND existing.id <> pending.id
-                   AND existing.delivery_state = 'pending'
-                   AND COALESCE(existing.expires_at, existing.created_at + ?) > ?
-                   AND existing.not_before_at > ?
-              ), pending.not_before_at))
-            END
+              ), 0), COALESCE((
+                SELECT CAST(value AS INTEGER) FROM cache
+                 WHERE key = ? || pending.chat_id AND CAST(value AS INTEGER) > ?
+              ), 0)), 0)
           WHERE pending.source_event_id = ?
             AND pending.dedupe_key IN (SELECT value FROM json_each(?))
             AND pending.delivery_state = 'pending'`,
@@ -173,8 +166,7 @@ export function buildSetBasedPendingHandoffStatements(
         PENDING_TTL_SEC,
         nowSec,
         nowSec,
-        PENDING_TTL_SEC,
-        nowSec,
+        TELEGRAM_CHAT_BACKOFF_CACHE_PREFIX,
         nowSec,
         sourceEventId,
         targetKeysJson,
@@ -233,6 +225,71 @@ export async function expireTelegramAuthoritativeTargets(
   return expired;
 }
 
+// Sealed page totals survive privacy deletion; surviving plan/target counts alone
+// must never redefine a previously complete manifest.
+const sealedManifestIntactSql = `
+  NOT EXISTS (
+    SELECT 1 FROM telegram_alert_target_plan_pages page
+     WHERE page.source_event_id = telegram_alert_source_events.source_event_id
+       AND page.plan_generation = telegram_alert_source_events.target_plan_generation
+       AND (page.status <> 'complete'
+         OR page.expected_plan_count <> page.materialized_plan_count
+         OR page.expected_target_count <> page.materialized_target_count
+         OR page.expected_plan_count <> (
+           SELECT COUNT(*) FROM telegram_alert_target_plans plan
+            WHERE plan.source_event_id = page.source_event_id AND plan.plan_generation = page.plan_generation
+              AND plan.page_index = page.page_index)
+         OR page.expected_target_count <> (
+           SELECT COALESCE(SUM(plan.expected_target_count), 0) FROM telegram_alert_target_plans plan
+            WHERE plan.source_event_id = page.source_event_id AND plan.plan_generation = page.plan_generation
+              AND plan.page_index = page.page_index)
+         OR page.expected_plan_count <> (
+           SELECT COUNT(*) FROM telegram_alert_planning_subscribers member
+            WHERE member.source_event_id = page.source_event_id AND member.plan_generation = page.plan_generation
+              AND member.chat_id >= page.first_chat_id AND member.chat_id <= page.last_chat_id
+              AND member.planning_outcome = 'target_planned'))
+  )
+  AND (SELECT COALESCE(SUM(page.expected_plan_count), 0) FROM telegram_alert_target_plan_pages page
+        WHERE page.source_event_id = telegram_alert_source_events.source_event_id
+          AND page.plan_generation = telegram_alert_source_events.target_plan_generation) = (
+    SELECT COUNT(*) FROM telegram_alert_target_plans plan
+     WHERE plan.source_event_id = telegram_alert_source_events.source_event_id
+       AND plan.plan_generation = telegram_alert_source_events.target_plan_generation)
+  AND (SELECT COALESCE(SUM(page.expected_target_count), 0) FROM telegram_alert_target_plan_pages page
+        WHERE page.source_event_id = telegram_alert_source_events.source_event_id
+          AND page.plan_generation = telegram_alert_source_events.target_plan_generation) = (
+    SELECT COUNT(*) FROM telegram_alert_job_targets target
+     WHERE target.source_event_id = telegram_alert_source_events.source_event_id
+       AND target.plan_generation = telegram_alert_source_events.target_plan_generation)
+  AND NOT EXISTS (
+    SELECT 1 FROM telegram_alert_planning_subscribers member
+     WHERE member.source_event_id = telegram_alert_source_events.source_event_id
+       AND member.plan_generation = telegram_alert_source_events.target_plan_generation
+       AND (member.planning_outcome IN ('pending', 'snapshot_missing', 'expired')
+         OR member.initially_eligible IS NULL OR member.planned_at IS NULL))
+  AND NOT EXISTS (
+    SELECT 1 FROM telegram_alert_target_plans plan
+     WHERE plan.source_event_id = telegram_alert_source_events.source_event_id
+       AND plan.plan_generation = telegram_alert_source_events.target_plan_generation
+       AND (plan.status <> 'materialized' OR plan.chat_id <> json_extract(plan.plan_payload_json, '$.chatId')
+         OR plan.expected_target_count <> plan.materialized_target_count
+         OR plan.expected_target_count <> json_array_length(plan.plan_payload_json, '$.messages')
+         OR plan.expected_target_count <> (
+           SELECT COUNT(*) FROM telegram_alert_job_targets target
+            WHERE target.source_event_id = plan.source_event_id AND target.plan_generation = plan.plan_generation
+              AND target.plan_key = plan.plan_key)
+         OR json_array_length(plan.plan_payload_json, '$.itemKeys') <> (
+           SELECT COUNT(*) FROM telegram_alert_target_plan_items item
+            WHERE item.source_event_id = plan.source_event_id AND item.plan_generation = plan.plan_generation
+              AND item.plan_key = plan.plan_key)
+         OR ${retainedPlanMismatchSql}
+         OR NOT EXISTS (
+           SELECT 1 FROM telegram_alert_planning_subscribers member
+            WHERE member.source_event_id = plan.source_event_id AND member.plan_generation = plan.plan_generation
+              AND member.chat_id = plan.chat_id AND member.planning_outcome = 'target_planned'
+              AND member.planned_preference_generation = plan.preference_generation))
+  )`;
+
 export async function finalizeTelegramTargetPlanning(
   db: D1Database,
   claim: TelegramTargetPlanningClaim,
@@ -253,7 +310,9 @@ export async function finalizeTelegramTargetPlanning(
          (SELECT COALESCE(SUM(expected_target_count), 0) FROM telegram_alert_target_plans
            WHERE source_event_id = ? AND plan_generation = ?) AS expected_targets,
          (SELECT COUNT(*) FROM telegram_alert_job_targets
-           WHERE source_event_id = ? AND plan_generation = ?) AS targets`,
+           WHERE source_event_id = ? AND plan_generation = ?) AS targets,
+         (${sealedManifestIntactSql}) AS manifest_intact
+       FROM telegram_alert_source_events WHERE source_event_id = ?`,
     )
     .bind(
       claim.sourceEventId,
@@ -266,6 +325,7 @@ export async function finalizeTelegramTargetPlanning(
       claim.generation,
       claim.sourceEventId,
       claim.generation,
+      claim.sourceEventId,
     )
     .first<{
       pending_subscribers: number;
@@ -273,13 +333,14 @@ export async function finalizeTelegramTargetPlanning(
       plans: number;
       expected_targets: number;
       targets: number;
+      manifest_intact: number;
     }>();
   const pendingSubscribers = Number(counts?.pending_subscribers ?? -1);
   const pendingPages = Number(counts?.pending_pages ?? -1);
   const plans = Number(counts?.plans ?? -1);
   const expectedTargets = Number(counts?.expected_targets ?? -1);
   const targets = Number(counts?.targets ?? -1);
-  if (pendingSubscribers !== 0 || pendingPages !== 0 || expectedTargets !== targets) {
+  if (pendingSubscribers !== 0 || pendingPages !== 0 || expectedTargets !== targets || counts?.manifest_intact !== 1) {
     await markTelegramTargetPlanDegraded(db, claim, "target_plan_final_reconcile_failed", nowSec);
     throw new Error("Telegram target plan cannot become ready before exact reconciliation");
   }
@@ -291,7 +352,8 @@ export async function finalizeTelegramTargetPlanning(
               target_plan_claim_expires_at = ?
         WHERE source_event_id = ? AND target_plan_generation = ?
           AND target_plan_owner = ?
-          AND target_plan_state IN ('planning', 'materializing')`,
+          AND target_plan_state IN ('planning', 'materializing')
+          AND ${sealedManifestIntactSql}`,
     )
     .bind(
       plans,
@@ -331,7 +393,8 @@ export async function openTelegramTargetPlanDelivery(
             SELECT COUNT(*) FROM telegram_alert_job_targets target
              WHERE target.source_event_id = telegram_alert_source_events.source_event_id
                AND target.plan_generation = telegram_alert_source_events.target_plan_generation
-          )`,
+          )
+          AND ${sealedManifestIntactSql}`,
     )
     .bind(nowSec, claim.sourceEventId, claim.generation, claim.owner)
     .run();

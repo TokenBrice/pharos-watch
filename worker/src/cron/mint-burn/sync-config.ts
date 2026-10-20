@@ -11,6 +11,7 @@ import { classifyBridgeBurnRows } from "../../lib/mint-burn-pipeline/classificat
 import { parseMintBurnLogs } from "../../lib/mint-burn-pipeline/parse";
 import { DECODE_QUARANTINE_REASON, mintBurnSuccessfulScanFrontier, shouldQuarantineDecodeFailure } from "../../lib/mint-burn-pipeline/scan-policy";
 import { persistMintBurnRows } from "../../lib/mint-burn-pipeline/persistence";
+import { mintBurnScanFingerprint, type MintBurnScanCoverage } from "../../lib/mint-burn-pipeline/scan-coverage";
 import type {
   MintBurnAffectedHour,
   MintBurnPriceContext,
@@ -55,7 +56,7 @@ export interface MintBurnConfigSummary {
   failedEventDefs: string[];
   eventCoverage: Array<{
     eventDef: string;
-    status: "ok" | "partial" | "fetch-failed" | "budget";
+    status: "ok" | "partial" | "fetch-failed" | "budget" | "finality-head-unavailable";
     complete: boolean;
     scannedToBlock: number;
     rowsRead: number;
@@ -92,7 +93,6 @@ export interface SyncMintBurnConfigInput {
   chainTimestampCache: Map<string, number>;
   txContextCache: Map<string, MintBurnTxContext | null>;
   affectedHours: Map<string, MintBurnAffectedHour>;
-  safetyMarginBlocks: number;
   deadlineMs?: number;
   conservationBoundary?: ConservationBoundaryEvidence;
 }
@@ -105,6 +105,7 @@ export interface SyncMintBurnConfigResult {
   reviewBurns: number;
   atomicRoundtripsDetected: number;
   newLastBlock: number | null;
+  scanCoverage?: MintBurnScanCoverage;
 }
 
 export function createMintBurnConfigSummary(
@@ -195,7 +196,6 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
     key,
     tier,
     fromBlock,
-    scanTo,
     chainHead,
     rpcEndpoints,
     endpointHeads,
@@ -206,9 +206,9 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
     chainTimestampCache,
     txContextCache,
     affectedHours,
-    safetyMarginBlocks,
     deadlineMs,
   } = input;
+  const scanTo = Math.min(input.scanTo, chainHead);
   const configBudget = createBudget(configBudgetLimit);
   const summary = createMintBurnConfigSummary(config, key, tier, {
     attempted: true,
@@ -551,12 +551,10 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
     summary.missingTimestampCount === 0 &&
     summary.txContextShortfalls === 0
   ) {
-    newLastBlock = mintBurnSuccessfulScanFrontier(fromBlock, scanTo, chainHead, summary.maxBlockSeen, safetyMarginBlocks);
+    newLastBlock = mintBurnSuccessfulScanFrontier(fromBlock, scanTo, chainHead);
     if (summary.maxBlockSeen > 0) {
-      // Keep event-containing scans anchored to the newest event we actually
-      // parsed. A successful eth_getLogs response is not independently
-      // provable as exhaustive, so advancing across later empty-looking blocks
-      // could permanently skip provider-omitted events in the same window.
+      // The range was bounded to admitted finality before any log/state read.
+      // Complete quiet and eventful ranges therefore share one scan frontier.
       summary.advanceReason = "full-success-events";
     } else {
       summary.advanceReason = "full-success-empty";
@@ -576,6 +574,30 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
   if (newLastBlock != null) {
     summary.advancedTo = newLastBlock;
   }
+  let scanCoverage: MintBurnScanCoverage | undefined;
+  if (newLastBlock === scanTo && fullEventCoverage && config.events.length > 0
+    && summary.rowsDroppedDecode === 0 && summary.missingTimestampCount === 0
+    && summary.txContextShortfalls === 0 && !conservationFence) {
+    // Quiet scans need boundary headers too; neither event age nor the cursor is proof.
+    // These are the same strictly validated header reads used for event timestamps.
+    const boundaries = [...new Set([fromBlock, scanTo])];
+    const missingBoundaries = boundaries.filter((block) => !blockTimestamps.has(block));
+    const resolved = missingBoundaries.length > 0
+      ? await resolveMintBurnBlockTimestamps(rpcEndpoints, missingBoundaries, configBudget, {
+          signal, localCache: chainTimestampCache, deadlineMs,
+        })
+      : blockTimestamps;
+    const fromTimestamp = blockTimestamps.get(fromBlock) ?? resolved.get(fromBlock);
+    const toTimestamp = blockTimestamps.get(scanTo) ?? resolved.get(scanTo);
+    if (fromTimestamp != null && toTimestamp != null && Number.isSafeInteger(fromTimestamp)
+      && Number.isSafeInteger(toTimestamp) && fromTimestamp > 0
+      && toTimestamp >= fromTimestamp && toTimestamp <= runTimestamp) {
+      scanCoverage = {
+        configKey: key, configFingerprint: mintBurnScanFingerprint(config), chainId: config.chain.chainId,
+        fromBlock, toBlock: scanTo, fromTimestamp, toTimestamp, finalizedBlock: chainHead, acceptedAt: runTimestamp,
+      };
+    }
+  }
   summary.requestBudgetUsed = configBudget.count;
 
   return {
@@ -586,5 +608,6 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
     reviewBurns,
     atomicRoundtripsDetected: persistResult.roundtripsDetected,
     newLastBlock,
+    ...(scanCoverage ? { scanCoverage } : {}),
   };
 }

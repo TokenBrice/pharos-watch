@@ -8,6 +8,9 @@ import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { recomputeVerifiedSelectorSnapshot } from "../lib/selector-canonical-snapshot";
 import { makeAltYieldSource, makeYieldRanking } from "@shared/test-utils/yield-ranking-fixtures";
 import { computeSelectorSnapshotSid, validateVerifiedSelectorSnapshot } from "@shared/lib/selector/snapshot";
+import { onRequest } from "../selector-snapshot/[[path]]";
+import { makeKV } from "./helpers/mock-kv";
+import { makePagesProxyContext } from "./helpers/pages-context";
 
 const input = {
   profile: "treasury",
@@ -86,6 +89,7 @@ describe("canonical selector snapshot recomputation", () => {
   afterEach(() => {
     // The shared helper installs a global fetch spy by default.
     vi.unstubAllGlobals();
+    vi.restoreAllMocks();
   });
 
   it("recomputes a verified selector snapshot from canonical V9 sources", async () => {
@@ -115,12 +119,59 @@ describe("canonical selector snapshot recomputation", () => {
       datasetHash: output.datasetHash,
       engineVersion: output.engineVersion,
     });
+    expect(output.verification?.canonicalSources).toEqual([{ source: "stablecoins", freshness: null }]);
     const reportCardsFetch = fetchMock.getHistory().find(({ url }) => url.endsWith(API_PATHS.reportCardsV9()));
     expect(reportCardsFetch).toMatchObject({
       url: "https://site-api.pharos.watch/api/report-cards/v9",
       method: "GET",
     });
     expect(reportCardsFetch?.headers[SITE_DATA_PROXY_SECRET_HEADER.toLowerCase()]).toBe("test-secret");
+  });
+
+  it("retains stale-200 supply evidence through canonical recomputation, KV storage and replay", async () => {
+    const payloads = canonicalPayloads();
+    const freshness = {
+      updatedAt: 1_699_990_000, ageSeconds: 10_000, status: "stale",
+      assessedAt: 1_700_000_000, freshBudgetSec: 777, degradedBudgetSec: 1_554,
+    };
+    payloads.set(API_PATHS.stablecoins(), {
+      ...(payloads.get(API_PATHS.stablecoins()) as object), _meta: freshness,
+    });
+    mockFetch([...payloads].map(([path, body]) => ({
+      match: `https://site-api.pharos.watch${path}`, body,
+    })), { requireMatch: true, strictUrl: true });
+    const env = {
+      SITE_API_ORIGIN: "https://site-api.pharos.watch", SITE_API_SHARED_SECRET: "test-secret",
+      SELECTOR_SNAPSHOT_IP_HASH_SECRET: "snapshot-test-secret", SELECTOR_SNAPSHOTS: makeKV(),
+    };
+    const output = await recomputeVerifiedSelectorSnapshot(
+      input, new Request("https://pharos.watch/selector-snapshot"), env, 1_700_000_000_000,
+    );
+    const evidence = [{ source: "stablecoins", freshness }];
+    expect(output.timestamp).toBe(1_700_000_000_000);
+    expect(output.verification?.canonicalSources).toEqual(evidence);
+    expect(output.recommended.map((coin) => coin.id)).toEqual(["usdc-circle"]);
+    const created = await onRequest(makePagesProxyContext({
+      mountPath: "/selector-snapshot", env,
+      request: new Request("https://pharos.watch/selector-snapshot", {
+        method: "POST", headers: { Origin: "https://pharos.watch" },
+        body: JSON.stringify({ input }),
+      }),
+    }));
+    expect(created.status).toBe(200);
+    const { sid } = await created.json() as { sid: string };
+    const stored = JSON.parse(env.SELECTOR_SNAPSHOTS.__getStore().get(`s:${sid}`)!);
+    expect(stored.verification.canonicalSources).toEqual(evidence);
+    const replay = await onRequest(makePagesProxyContext({
+      mountPath: "/selector-snapshot", env,
+      request: new Request(`https://pharos.watch/selector-snapshot/${sid}`, {
+        headers: { Origin: "https://pharos.watch" },
+      }),
+    }));
+    expect(replay.status).toBe(200);
+    const replayed = await replay.json();
+    expect(validateVerifiedSelectorSnapshot(replayed).ok).toBe(true);
+    expect(replayed.verification.canonicalSources).toEqual(evidence);
   });
 
   it.each([
@@ -135,6 +186,7 @@ describe("canonical selector snapshot recomputation", () => {
       rankings: [makeYieldRanking({
         apy30d: 10, benchmarkRate: 4, pharosYieldScore: 80,
         yieldType: "nav-appreciation",
+        provenance: { ...makeYieldRanking().provenance!, sourceObservedAt: 1_699_999_700 },
         sourceRisk: {
           venueProtocol: "Issuer savings", venueChain: "ethereum", venueRiskTier: "low",
           deploymentPlace: "issuer-savings", sourceRiskScore: 10, observationCount30d: 30,
@@ -178,6 +230,57 @@ describe("canonical selector snapshot recomputation", () => {
     expect(replay.snapshot).toEqual(output);
     expect(computeSelectorSnapshotSid(replay.snapshot)).toBe(computeSelectorSnapshotSid(output));
   });
+
+  it.each(["primary", "alternate"] as const)(
+    "retains the yield-only acquisition clock during canonical recomputation (%s)",
+    async (rail) => {
+      const acquiredAt = 1_700_000_000_000;
+      vi.spyOn(Date, "now").mockReturnValue(acquiredAt);
+      const payloads = canonicalPayloads();
+      payloads.set(API_PATHS.yieldRankings(), {
+        rankings: [makeYieldRanking({
+          apy30d: 5, benchmarkRate: 0, pharosYieldScore: 80,
+          // Disjoint rail types make the venue preference select the intended clock.
+          yieldType: "rebase",
+          provenance: {
+            ...makeYieldRanking().provenance!,
+            sourceObservedAt: acquiredAt / 1000 - 60, sourceAgeSeconds: 7,
+          },
+          sourceRisk: {
+            venueProtocol: "Issuer savings", venueChain: "ethereum", venueRiskTier: "low",
+            deploymentPlace: "issuer-savings", sourceRiskScore: 20, sourceAgeSeconds: 7,
+          },
+          altSources: [makeAltYieldSource({
+            sourceKey: "alternate", apy30d: 5,
+            sourceRisk: {
+              venueProtocol: "Lending", venueChain: "arbitrum", venueRiskTier: "low",
+              deploymentPlace: "lending-market", sourceRiskScore: 20, sourceAgeSeconds: 120,
+            },
+          })],
+        })],
+        riskFreeRate: 0, scalingFactor: 1, medianApy: 5,
+        updatedAt: acquiredAt / 1000 - 86_400, methodology: methodology("yield-v8"),
+      });
+      mockFetch([...payloads].map(([path, body]) => ({
+        match: `https://site-api.pharos.watch${path}`, body,
+      })), { requireMatch: true, strictUrl: true });
+      const output = await recomputeVerifiedSelectorSnapshot(
+        { ...input, profile: "yield", venuePreferences: rail === "primary" ? ["wrap"] : ["lend"] },
+        new Request("https://pharos.watch/selector-snapshot"),
+        { SITE_API_ORIGIN: "https://site-api.pharos.watch", SITE_API_SHARED_SECRET: "test-secret" },
+        acquiredAt + 3_600_000,
+      );
+      const expected = rail === "primary"
+        ? { capturedAt: 1_699_999_940, ageSeconds: 3_660 }
+        : { capturedAt: 1_699_999_880, ageSeconds: 3_720 };
+      expect(output.recommended[0]?.recommendedSource?.chain).toBe(rail === "primary" ? "ethereum" : "arbitrum");
+      expect(output.recommended[0]?.recommendedSource?.freshness).toEqual(expected);
+      const replay = validateVerifiedSelectorSnapshot(JSON.parse(JSON.stringify(output)));
+      expect(replay).toMatchObject({
+        ok: true, snapshot: { recommended: [{ recommendedSource: { freshness: expected } }] },
+      });
+    },
+  );
 
   it("changes selection when canonical supply falls below eligibility and accepts source metadata", async () => {
     for (const supply of [32_000_000_000, 4_000_000]) {

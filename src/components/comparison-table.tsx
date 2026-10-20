@@ -193,7 +193,7 @@ function buildSections(pegRates: Record<string, number>): ComparisonSection[] {
     {
       key: "overview",
       title: "Overview",
-      description: "The compact substitution view: peg, scale, safety, liquidity, and design.",
+      description: "The compact substitution view: peg, scale, safety, liquidity, and design. Market-cap changes use USD-valued circulation, not token counts or price returns.",
       metrics: [
         {
           key: "price",
@@ -207,9 +207,9 @@ function buildSections(pegRates: Record<string, number>): ComparisonSection[] {
         { key: "deviation", label: "Peg deviation", numeric: true, render: (coin) => formatComparisonBps(isObservedPrice(coin.data) ? coin.pegDetails?.currentDeviationBps : null) },
         { key: "peg-score", label: <MethodologyLabel topic="pegScore">Peg Score</MethodologyLabel>, numeric: true, render: (coin) => formatScore100(coin.pegDetails?.pegScore) },
         { key: "market-cap", label: "Market cap", numeric: true, render: formatCurrentSupply },
-        { key: "supply-24h", label: "Supply change · 24h", numeric: true, render: (coin) => formatSupplyChange(coin, getPrevDayRawOrNull(coin.data)) },
-        { key: "supply-7d", label: "Supply change · 7d", numeric: true, render: (coin) => formatSupplyChange(coin, getPrevWeekRawOrNull(coin.data)) },
-        { key: "supply-30d", label: "Supply change · 30d", numeric: true, render: (coin) => formatSupplyChange(coin, getPrevMonthRawOrNull(coin.data)) },
+        { key: "supply-24h", label: "Market-cap change · 24h", numeric: true, render: (coin) => formatSupplyChange(coin, getPrevDayRawOrNull(coin.data)) },
+        { key: "supply-7d", label: "Market-cap change · 7d", numeric: true, render: (coin) => formatSupplyChange(coin, getPrevWeekRawOrNull(coin.data)) },
+        { key: "supply-30d", label: "Market-cap change · 30d", numeric: true, render: (coin) => formatSupplyChange(coin, getPrevMonthRawOrNull(coin.data)) },
         { key: "safety", label: <MethodologyLabel topic="safetyScore">Safety</MethodologyLabel>, numeric: true, render: safetyGradeLabel },
         { key: "liquidity", label: <MethodologyLabel topic="liquidityScore">Liquidity</MethodologyLabel>, numeric: true, render: (coin) => formatScore100(coin.liquidity?.liquidityScore) },
         {
@@ -265,7 +265,7 @@ function buildSections(pegRates: Record<string, number>): ComparisonSection[] {
           key: "bluechip",
           label: "External Bluechip",
           render: (coin) => {
-            if (!coin.bluechipRating) return "Not rated";
+            if (!coin.bluechipRating) return coin.bluechipPublicationAvailable ? "Not rated" : NULL_VALUE;
             const audit = coin.bluechipRating.smartContractAudit == null
               ? "audit not reported"
               : coin.bluechipRating.smartContractAudit

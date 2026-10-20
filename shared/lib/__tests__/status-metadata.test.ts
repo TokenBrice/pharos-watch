@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   parseTelegramDispatchCronMetadata,
 } from "@shared/lib/status-metadata";
-import { TELEGRAM_ALERT_TYPES } from "../../types/status";
 
 describe("status-metadata", () => {
   it("preserves missing source ages and rejects unknown source states", () => {
@@ -27,8 +26,6 @@ describe("status-metadata", () => {
     expect(parseTelegramDispatchCronMetadata({
       subscribersNotified: "12",
       messagesSent: 10,
-      freshAttempted: "4",
-      freshSent: 3,
       pendingAttempted: "2",
       pendingDrained: 1,
       pendingRetryAfterSec: "bad",
@@ -38,8 +35,6 @@ describe("status-metadata", () => {
     })).toMatchObject({
       subscribersNotified: 12,
       messagesSent: 10,
-      freshAttempted: 4,
-      freshSent: 3,
       pendingAttempted: 2,
       pendingDrained: 1,
       pendingRetryAfterSec: null,
@@ -70,45 +65,42 @@ describe("status-metadata", () => {
     expect(parseTelegramDispatchCronMetadata(value)).toBeNull();
   });
 
-  it("distinguishes malformed containers from malformed category records", () => {
-    expect(parseTelegramDispatchCronMetadata({ eventsDetected: [], perAlertType: [] })).toMatchObject({
-      eventsDetected: null, perAlertType: null,
-    });
-    const metadata = parseTelegramDispatchCronMetadata({
-      eventsDetected: {},
-      perAlertType: { dews: [], depeg: { sent: "bad", firstSendLatencyMs: false } },
-    });
-    expect(metadata?.eventsDetected).toEqual({
+  it("distinguishes malformed event containers from unavailable event counts", () => {
+    expect(parseTelegramDispatchCronMetadata({ eventsDetected: [] })?.eventsDetected).toBeNull();
+    expect(parseTelegramDispatchCronMetadata({ eventsDetected: {} })?.eventsDetected).toEqual({
       dews: null, depeg: null, depegTriggered: null, depegResolved: null,
       depegWorsening: null, safety: null, launch: null, reserve: null, freeze: null, suppressedMethodologyChanges: null,
     });
-    expect(metadata?.perAlertType?.dews).toEqual({
-      sent: 0, enqueued: 0, failed: 0, blocked: 0, firstSendLatencyMs: null,
-    });
-    expect(metadata?.perAlertType?.depeg).toEqual({
-      sent: 0, enqueued: 0, failed: 0, blocked: 0, firstSendLatencyMs: null,
-    });
   });
 
-  it("parses perAlertType delivery stats per category with defensive defaults", () => {
+  it("parses row-backed source workload without reviving historical fresh or family counters", () => {
     const metadata = parseTelegramDispatchCronMetadata({
-      perAlertType: {
-        dews: { sent: "3", enqueued: 1, failed: 0, blocked: "0", firstSendLatencyMs: "240" },
-        depeg: { sent: 1, enqueued: "2", failed: 1, blocked: 0, firstSendLatencyMs: null },
-        // safety omitted — should fall back to zeroed stats with null latency.
-        launch: {},
-      },
+      authoritativePlanning: { sourceEventId: "source-17", sourceEventFamilies: ["dews", "depeg"], plannedTargetCount: "4" },
+      freshCandidateChats: 9,
+      freshSent: 0,
+      perAlertType: { dews: { sent: 0 } },
     });
+    expect(metadata?.authoritativePlanning).toEqual({
+      sourceEventId: "source-17", sourceEventFamilies: ["dews", "depeg"], plannedTargetCount: 4,
+    });
+    expect(metadata).not.toHaveProperty("freshCandidateChats");
+    expect(metadata).not.toHaveProperty("freshSent");
+    expect(metadata).not.toHaveProperty("perAlertType");
+  });
 
-    expect(Object.keys(metadata?.perAlertType ?? {})).toEqual([...TELEGRAM_ALERT_TYPES]);
-    expect(metadata?.perAlertType).toEqual({
-      dews: { sent: 3, enqueued: 1, failed: 0, blocked: 0, firstSendLatencyMs: 240 },
-      depeg: { sent: 1, enqueued: 2, failed: 1, blocked: 0, firstSendLatencyMs: null },
-      safety: { sent: 0, enqueued: 0, failed: 0, blocked: 0, firstSendLatencyMs: null },
-      launch: { sent: 0, enqueued: 0, failed: 0, blocked: 0, firstSendLatencyMs: null },
-      reserve: { sent: 0, enqueued: 0, failed: 0, blocked: 0, firstSendLatencyMs: null },
-      freeze: { sent: 0, enqueued: 0, failed: 0, blocked: 0, firstSendLatencyMs: null },
+  it.each([undefined, null, -1, 0.5, "bad"])("keeps invalid planned target counts unavailable (%s)", (plannedTargetCount) => {
+    expect(parseTelegramDispatchCronMetadata({
+      authoritativePlanning: { sourceEventId: "source-17", sourceEventFamilies: ["dews"], plannedTargetCount },
+    })?.authoritativePlanning?.plannedTargetCount).toBeNull();
+  });
+
+  it("preserves observed zero workload and rejects unknown family scope", () => {
+    expect(parseTelegramDispatchCronMetadata({
+      authoritativePlanning: { sourceEventId: "source-17", sourceEventFamilies: ["future-family"], plannedTargetCount: 0 },
+    })?.authoritativePlanning).toEqual({
+      sourceEventId: "source-17", sourceEventFamilies: null, plannedTargetCount: 0,
     });
+    expect(parseTelegramDispatchCronMetadata({})?.authoritativePlanning).toBeNull();
   });
 
 });

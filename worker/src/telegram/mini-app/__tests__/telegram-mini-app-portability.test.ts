@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { TELEGRAM_MINI_APP_CATALOG_VERSION } from "@shared/lib/telegram-mini-app-contract";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import type { SqliteD1Options } from "@shared/test-utils/sqlite-d1";
 import {
   encodeWatchlistTokenV3,
   type WatchlistTokenDirectState,
@@ -61,8 +62,8 @@ function preset(presetId: "usd-top10" | "usd-top25" | "eur-top10", overrides: Pa
   };
 }
 
-function setup(): ReturnType<typeof createLatestSchemaSqlite> {
-  const fixture = createLatestSchemaSqlite();
+function setup(options: SqliteD1Options = {}) {
+  const fixture = createLatestSchemaSqlite(options);
   databases.push(fixture.sqlite);
   const { sqlite } = fixture;
   sqlite.prepare(`
@@ -105,6 +106,135 @@ afterEach(() => {
 });
 
 describe("Telegram Mini App portable watchlist lifecycle", () => {
+  it.each(["remove", "bulk"] as const)("fences a later write after the %s snapshot and restores only the newer settings", async (mode) => {
+    let armed = false;
+    const { db, sqlite } = setup({
+      onAll: () => {
+        if (!armed) return;
+        armed = false;
+        // Interleave after the first read statement, not inside a simulated D1 batch.
+        // Separate row/generation reads would capture DANGER with the newer generation.
+        sqlite.exec("BEGIN");
+        sqlite.prepare(`
+          UPDATE telegram_subscriptions SET dews_min_band = 'WARNING', alert_snooze_until_ts = ?
+          WHERE chat_id = ? AND stablecoin_id = 'usdc-circle'
+        `).run(NOW + 7_200, AUTH.userId);
+        sqlite.prepare("UPDATE telegram_subscribers SET preference_generation = preference_generation + 1 WHERE chat_id = ?")
+          .run(AUTH.userId);
+        sqlite.exec("COMMIT");
+      },
+    });
+    sqlite.prepare("UPDATE telegram_subscriptions SET dews_min_band = 'DANGER' WHERE chat_id = ? AND stablecoin_id = 'usdc-circle'")
+      .run(AUTH.userId);
+    armed = true;
+    const bulkTargets = { addStablecoinIds: [], removeStablecoinIds: ["usdc-circle"] };
+    let undo;
+    if (mode === "remove") {
+      await expect(applyTelegramMiniAppMutation(db, AUTH, { kind: "remove-coin", stablecoinId: "usdc-circle" }))
+        .rejects.toMatchObject({ code: "stale-bulk-preview" });
+    } else {
+      const stale = await executeTelegramMiniAppBulkWatchlistPreview(db, AUTH, {
+        kind: "preview-bulk-watchlist", ...bulkTargets,
+      });
+      expect(stale.result).toMatchObject({
+        expectedPreferenceGeneration: 7,
+        undo: { restoreDirectRows: [{ stablecoinId: "usdc-circle", dewsMinBand: "DANGER", snoozeUntilTs: NOW + 3_600 }] },
+      });
+      await expect(applyTelegramMiniAppMutation(db, AUTH, {
+        kind: "confirm-bulk-watchlist", ...bulkTargets,
+        expectedPreferenceGeneration: stale.result.expectedPreferenceGeneration,
+        previewFingerprint: stale.result.previewFingerprint,
+      })).rejects.toMatchObject({ code: "stale-bulk-preview" });
+    }
+    const latest = { dews_min_band: "WARNING", alert_snooze_until_ts: NOW + 7_200 };
+    const readCoin = () => sqlite.prepare(`
+      SELECT dews_min_band, alert_snooze_until_ts FROM telegram_subscriptions
+      WHERE chat_id = ? AND stablecoin_id = 'usdc-circle'
+    `).get(AUTH.userId);
+    expect(readCoin()).toEqual(latest);
+    expect(sqlite.prepare("SELECT preference_generation FROM telegram_subscribers WHERE chat_id = ?").get(AUTH.userId))
+      .toEqual({ preference_generation: 8 });
+    if (mode === "remove") {
+      undo = await applyTelegramMiniAppMutation(db, AUTH, { kind: "remove-coin", stablecoinId: "usdc-circle" });
+    } else {
+      const fresh = await executeTelegramMiniAppBulkWatchlistPreview(db, AUTH, {
+        kind: "preview-bulk-watchlist", ...bulkTargets,
+      });
+      await applyTelegramMiniAppMutation(db, AUTH, {
+        kind: "confirm-bulk-watchlist", ...bulkTargets,
+        expectedPreferenceGeneration: fresh.result.expectedPreferenceGeneration,
+        previewFingerprint: fresh.result.previewFingerprint,
+      });
+      undo = fresh.result.undo;
+    }
+    if (!undo) throw new Error("Expected fresh removal undo");
+    expect(undo).toMatchObject({
+      expectedPreferenceGeneration: 9,
+      restoreDirectRows: [{ stablecoinId: "usdc-circle", dewsMinBand: "WARNING", snoozeUntilTs: NOW + 7_200 }],
+    });
+    expect(readCoin()).toBeUndefined();
+    await applyTelegramMiniAppMutation(db, AUTH, { kind: "undo-bulk-watchlist", ...undo });
+    expect(readCoin()).toEqual(latest);
+  });
+
+  it("enables preset depeg from a step-only edit while retaining omitted families", async () => {
+    const { db, sqlite } = setup();
+    await applyTelegramMiniAppMutation(db, AUTH, {
+      kind: "follow-preset", presetId: "usd-top25", alertTypes: {}, depegStepBps: 250,
+    });
+    expect(sqlite.prepare(`
+      SELECT alert_dews, alert_depeg, alert_safety, depeg_worsening_bps_step
+      FROM telegram_preset_subscriptions WHERE chat_id = ? AND preset_id = 'usd-top25'
+    `).get(AUTH.userId)).toEqual({ alert_dews: 1, alert_depeg: 1, alert_safety: 0, depeg_worsening_bps_step: 250 });
+  });
+
+  it.each(["tuned", "inherited-off"] as const)("keeps all three families enabled when %s tuning resets to Default or Any", async (scenario) => {
+    const { db, sqlite } = setup();
+    sqlite.prepare(`
+      UPDATE telegram_subscriptions SET
+        alert_dews = ?, alert_depeg = ?, alert_safety = ?,
+        alert_dews_override = ?, alert_depeg_override = ?, alert_safety_override = ?,
+        dews_min_band = 'DANGER', safety_mode = 'downgrade-only', depeg_worsening_bps_step = 250
+      WHERE chat_id = ? AND stablecoin_id = 'usdc-circle'
+    `).run(...Array(6).fill(scenario === "tuned" ? 1 : 0), AUTH.userId);
+    await applyTelegramMiniAppMutation(db, AUTH, {
+      kind: "set-coin", stablecoinId: "usdc-circle",
+      patch: { dewsMinBand: null, safetyMode: null, depegStepBps: null },
+    });
+    expect(sqlite.prepare(`
+      SELECT alert_dews, alert_depeg, alert_safety,
+        alert_dews_override, alert_depeg_override, alert_safety_override,
+        dews_min_band, safety_mode, depeg_worsening_bps_step, alert_snooze_until_ts
+      FROM telegram_subscriptions WHERE chat_id = ? AND stablecoin_id = 'usdc-circle'
+    `).get(AUTH.userId)).toEqual({
+      alert_dews: 1, alert_depeg: 1, alert_safety: 1,
+      alert_dews_override: 1, alert_depeg_override: 1, alert_safety_override: 1,
+      dews_min_band: null, safety_mode: null, depeg_worsening_bps_step: null,
+      alert_snooze_until_ts: NOW + 3_600,
+    });
+  });
+
+  it("keeps explicit Off authoritative over null tuning and marks inherited families off", async () => {
+    const { db, sqlite } = setup();
+    await applyTelegramMiniAppMutation(db, AUTH, {
+      kind: "set-coin", stablecoinId: "usdc-circle",
+      patch: {
+        alertTypes: { dews: false, depeg: false, safety: false },
+        dewsMinBand: null, depegStepBps: null, safetyMode: null,
+      },
+    });
+    expect(sqlite.prepare(`
+      SELECT alert_dews, alert_depeg, alert_safety,
+        alert_dews_override, alert_depeg_override, alert_safety_override,
+        dews_min_band, safety_mode, depeg_worsening_bps_step
+      FROM telegram_subscriptions WHERE chat_id = ? AND stablecoin_id = 'usdc-circle'
+    `).get(AUTH.userId)).toEqual({
+      alert_dews: 0, alert_depeg: 0, alert_safety: 0,
+      alert_dews_override: 1, alert_depeg_override: 1, alert_safety_override: 1,
+      dews_min_band: null, safety_mode: null, depeg_worsening_bps_step: null,
+    });
+  });
+
   it("keeps snooze-only rows outside portability while allowing exact direct undo", async () => {
     const { db, sqlite } = setup();
     sqlite.prepare("DELETE FROM telegram_subscriptions WHERE chat_id = ?").run(AUTH.userId);
@@ -140,6 +270,9 @@ describe("Telegram Mini App portable watchlist lifecycle", () => {
     const { db, sqlite } = setup();
     const exported = await executeTelegramMiniAppPortabilityOperation(db, AUTH, { kind: "export-watchlist" });
     expect(exported).toMatchObject({ result: { kind: "watchlist-export", directCount: 2, presetCount: 2 } });
+    sqlite.prepare("UPDATE telegram_subscriptions SET alert_snooze_until_ts = ? WHERE chat_id = ? AND stablecoin_id = 'usdc-circle'")
+      .run(NOW + 7_200, AUTH.userId);
+    expect(await executeTelegramMiniAppPortabilityOperation(db, AUTH, { kind: "export-watchlist" })).toEqual(exported);
 
     const token = await encodeWatchlistTokenV3({
       registryVersion: exported!.catalogVersion,

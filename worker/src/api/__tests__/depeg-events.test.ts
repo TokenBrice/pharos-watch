@@ -2,11 +2,17 @@ import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { DepegEventsResponseSchema } from "@shared/types/market";
 import { afterEach, describe, it, expect, vi } from "vitest";
 import { mockD1, type MockD1Database } from "@shared/test-utils/mock-d1";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { makeDepegRow } from "../../test-helpers/__shared/fixtures";
 import { registerStablecoinParameterContract } from "../../test-helpers/__shared/endpoint-contracts";
 import { handleDepegEvents } from "../depeg-events";
 
-afterEach(() => vi.useRealTimers());
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(() => {
+  vi.useRealTimers();
+  fixtures.closeAll();
+});
 
 describe("handleDepegEvents", () => {
   const row = makeDepegRow();
@@ -27,7 +33,6 @@ describe("handleDepegEvents", () => {
       reason: "incident-projection-read-failed",
     });
     expect(res.headers.get("Cache-Control")).toBe("no-store");
-    expect(db.getHistory().some(({ sql }) => sql.includes("pharos:depeg-events"))).toBe(false);
   });
 
   it.each([
@@ -38,13 +43,16 @@ describe("handleDepegEvents", () => {
     { current_event_id: 2, first_started_at: 1_700_000_000, first_start_price: 0.97, first_peg_reference: 1, constituent_event_count: 0 },
     { current_event_id: 2, first_started_at: 1_700_000_000, first_start_price: 0.97, first_peg_reference: 1, constituent_event_count: 1.5 },
   ])("withholds raw history when an incident projection row is malformed: %j", async (projection) => {
-    const db = mockD1([{ match: "pharos:depeg-event-projection:active-incidents", rows: [projection] }]);
+    const db = mockD1([
+      { match: "pharos:depeg-event-projection:active-incidents", rows: [{ references_valid: 1, ...projection }] },
+      { match: "pharos:depeg-events:count", rows: [{ total: 0 }] },
+      { match: "pharos:depeg-events:page", rows: [] },
+    ]);
     const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events"));
     expect(await readJsonResponse(res, 503)).toEqual({
       error: "Canonical incident history unavailable", reason: "incident-projection-invalid",
     });
     expect(res.headers.get("Cache-Control")).toBe("no-store");
-    expect(db.getHistory().some(({ sql }) => sql.includes("pharos:depeg-events"))).toBe(false);
   });
 
   it("keeps a successful empty incident projection readable", async () => {
@@ -57,6 +65,153 @@ describe("handleDepegEvents", () => {
     const body = await readJsonResponse(res, 200) as { events: unknown[]; total: number };
     expect(body.total).toBe(1);
     expect(body.events).toHaveLength(1);
+  });
+
+  function seedIncident(firstId: number, currentId: number, eventIds: number[], linkIds = [firstId, currentId]) {
+    const { sqlite, db } = fixtures.open();
+    const key = `ddr2:${"a".repeat(32)}`;
+    for (const id of eventIds) {
+      sqlite.prepare(`INSERT INTO depeg_events
+        (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price, peg_reference)
+        VALUES (?, 'usdt-tether', 'USDT', 'peggedUSD', 'below', 300, ?, ?, 1)`)
+        .run(id, 1_700_000_000 + (id - firstId) * 1_000, id === firstId ? 0.97 : 0.96);
+    }
+    for (const id of new Set(linkIds)) {
+      sqlite.prepare(`INSERT INTO depeg_resolver_incident_event_links (incident_key, event_id, relation, linked_at)
+        VALUES (?, ?, 'observed', 1700000000)`).run(key, id);
+    }
+    // Seed unsealed dangling pointers directly: no duplicate-deletion trigger or disabled seal guard.
+    sqlite.prepare(`INSERT INTO depeg_resolver_incidents
+      (incident_key, stablecoin_id, peg_currency, direction, first_event_id, current_event_id,
+       first_started_at, current_started_at, first_observed_peak_bucket_bps, source_fingerprint, created_at, updated_at)
+      VALUES (?, 'usdt-tether', 'USD', 'below', ?, ?, 1700000000, 1700001000, 300, ?, 1700000000, 1700001000)`)
+      .run(key, firstId, currentId, "b".repeat(64));
+    return { sqlite, db, key };
+  }
+
+  it.each([
+    { name: "first event", first: 101, current: 102, events: [102], links: [101, 102] },
+    { name: "current event", first: 101, current: 102, events: [101], links: [101, 102] },
+    { name: "singleton event", first: 101, current: 101, events: [], links: [101] },
+    { name: "constituent event", first: 101, current: 102, events: [101, 102], links: [101, 102, 103] },
+    { name: "first membership", first: 101, current: 102, events: [101, 102], links: [102] },
+  ])("returns named 503 for dangling $name references in migrated SQLite", async ({ first, current, events, links }) => {
+    const { db } = seedIncident(first, current, events, links);
+    for (const query of ["?active=true", "?active=true&stablecoin=usdt-tether"]) {
+      const res = await handleDepegEvents(db, new URL(`https://x/api/depeg-events${query}`));
+      expect(await readJsonResponse(res, 503)).toEqual({
+        error: "Canonical incident history unavailable", reason: "incident-projection-dangling-reference",
+      });
+      expect(res.headers.get("Cache-Control")).toBe("no-store");
+    }
+  });
+
+  it.each([101, 102])("publishes valid canonical cohorts with current event %s in migrated SQLite", async (current) => {
+    const { db } = seedIncident(101, current, current === 101 ? [101] : [101, 102]);
+    const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events?active=true&stablecoin=usdt-tether"));
+    const body = await readJsonResponse(res, 200) as { events: Array<Record<string, unknown>>; total: number };
+    expect(body.total).toBe(1);
+    expect(body.events).toEqual([expect.objectContaining({
+      id: current, startedAt: 1_700_000_000, startPrice: 0.97, constituentEventCount: current === 101 ? 1 : 2,
+    })]);
+  });
+
+  it("keeps canonical active identity distinct from closed same-coin episodes", async () => {
+    const { sqlite, db } = seedIncident(101, 102, [101, 102]);
+    for (const [id, reason] of [[103, "recovered-primary"], [104, "coverage-lost-supply"], [105, "superseded-direction"]] as const) {
+      sqlite.prepare(`INSERT INTO depeg_events
+        (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at,
+         start_price, peg_reference, recovery_price, close_reason, source)
+        VALUES (?, 'usdt-tether', 'USDT', 'peggedUSD', 'below', 300, ?, 1699991000,
+          .97, 1, ?, ?, 'live')`).run(id, 1_699_990_000 + id, reason === "recovered-primary" ? 1 : null, reason);
+    }
+    const response = await handleDepegEvents(db, new URL("https://x/api/depeg-events?active=true&includeTotal=false&limit=1"));
+    const body = DepegEventsResponseSchema.parse(await readJsonResponse(response, 200));
+    expect(body.events.map(({ id }) => id)).toEqual([102]);
+    expect(body.events[0]).toMatchObject({ startedAt: 1_700_000_000, constituentEventCount: 2, endedAt: null });
+    expect(body.events[0]).not.toHaveProperty("constituentEventIds");
+    expect(body.nextCursor).toBeNull();
+  });
+
+  it("publishes a genuinely empty active cohort in migrated SQLite", async () => {
+    const { db } = fixtures.open();
+    const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events?active=true"));
+    expect(await readJsonResponse(res, 200)).toMatchObject({ events: [], total: 0 });
+  });
+
+  it.each([true, false])("pages interleaved public onsets with stable ties and methodology asOf (includeTotal=%s)", async (includeTotal) => {
+    const { sqlite, db } = seedIncident(101, 102, [101, 102]);
+    for (const [id, onset] of [[103, 1_700_000_500], [104, 1_700_000_000], [105, 1_699_999_000]]) {
+      sqlite.prepare(`INSERT INTO depeg_events
+        (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price, peg_reference, source)
+        VALUES (?, 'usdt-tether', 'USDT', 'peggedUSD', 'below', 200, ?, .98, 1, ?)`)
+        .run(id, onset, id === 104 ? "backfill" : "live");
+    }
+    for (const filter of ["", "&stablecoin=usdt-tether&active=true"]) {
+      let cursor: string | null = null;
+      const ids: number[] = [];
+      for (const [id, onset] of [[103, 1_700_000_500], [104, 1_700_000_000], [102, 1_700_000_000], [105, 1_699_999_000]]) {
+        const res = await handleDepegEvents(db, new URL(`https://x/api/depeg-events?limit=1&includeTotal=${includeTotal}${filter}${cursor ? `&cursor=${cursor}` : ""}`));
+        const body = DepegEventsResponseSchema.parse(await readJsonResponse(res, 200));
+        expect(body.events.map((event) => event.id)).toEqual([id]);
+        expect(body.events[0]?.startedAt).toBe(onset);
+        expect(body.methodology?.asOf).toBe(onset);
+        expect(body.totalExact).toBe(includeTotal);
+        if (includeTotal) expect(body.total).toBe(4);
+        if (id === 102) expect(body.events[0]?.constituentEventCount).toBe(2);
+        ids.push(body.events[0]!.id);
+        cursor = body.nextCursor ?? null;
+        expect(cursor === null).toBe(id === 105);
+      }
+      expect(ids).toEqual([103, 104, 102, 105]);
+      const offset = await handleDepegEvents(db, new URL(`https://x/api/depeg-events?limit=1&offset=2&includeTotal=${includeTotal}${filter}`));
+      expect(DepegEventsResponseSchema.parse(await readJsonResponse(offset, 200)).events[0]?.id).toBe(102);
+    }
+  });
+
+  it.each([
+    { includeTotal: true, nextId: 103 }, { includeTotal: false, nextId: 103 },
+    { includeTotal: true, nextId: 999 }, { includeTotal: false, nextId: 999 },
+  ])("keeps pointer advance coherent or fails closed (includeTotal=$includeTotal, current=$nextId)", async ({ includeTotal, nextId }) => {
+    const { sqlite, key } = seedIncident(101, 102, [101, 102, 103], [101, 102, 103]);
+    let advanced = false;
+    const advance = () => {
+      if (advanced) return;
+      sqlite.exec("BEGIN IMMEDIATE");
+      // The migrated current-pointer guard requires membership even when the
+      // referenced event itself is missing; preserve that real schema guard.
+      sqlite.prepare(`INSERT OR IGNORE INTO depeg_resolver_incident_event_links
+        (incident_key, event_id, relation, linked_at) VALUES (?, ?, 'observed', 1700002000)`).run(key, nextId);
+      sqlite.prepare(`UPDATE depeg_resolver_incidents SET current_event_id = ?, current_started_at = 1700002000
+        WHERE incident_key = ?`).run(nextId, key);
+      sqlite.exec("COMMIT");
+      advanced = true;
+    };
+    // Before the fix this commits after the standalone projection read. With an
+    // atomic batch the writer can commit only before or after the whole snapshot.
+    const db = createSqliteD1(sqlite, { onAll: (sql) => {
+      if (sql.includes("pharos:depeg-event-projection:active-incidents")) advance();
+    } });
+    const batch = db.batch.bind(db);
+    vi.spyOn(db, "batch").mockImplementation((statements) => {
+      advance();
+      return batch(statements);
+    });
+    const res = await handleDepegEvents(db, new URL(`https://x/api/depeg-events?active=true&includeTotal=${includeTotal}`));
+    expect(advanced).toBe(true);
+    if (nextId === 999) {
+      expect(await readJsonResponse(res, 503)).toEqual({
+        error: "Canonical incident history unavailable", reason: "incident-projection-dangling-reference",
+      });
+      expect(res.headers.get("Cache-Control")).toBe("no-store");
+    } else {
+      const body = DepegEventsResponseSchema.parse(await readJsonResponse(res, 200));
+      expect(body.events).toEqual([expect.objectContaining({
+        id: 103, startedAt: 1_700_000_000, startPrice: .97, constituentEventCount: 3,
+      })]);
+      expect(body.total).toBe(1);
+      expect(body.methodology?.asOf).toBe(1_700_000_000);
+    }
   });
 
   it("returns 200 with events and total", async () => {
@@ -197,6 +352,7 @@ describe("handleDepegEvents", () => {
             first_start_price: startPrice,
             first_peg_reference: 1,
             constituent_event_count: 4,
+            references_valid: 1,
           },
         ],
       },
@@ -251,7 +407,8 @@ describe("handleDepegEvents", () => {
     "offset=50001",
     "offset=-1",
     "cursor=invalid",
-    `cursor=${btoa(JSON.stringify({ v: 1, values: [1_700_000_000, 1] }))}&offset=1`,
+    `cursor=${btoa(JSON.stringify({ v: 1, values: [1_700_000_000, 1] }))}`,
+    `cursor=${btoa(JSON.stringify({ v: 2, values: [1_700_000_000, 1] }))}&offset=1`,
   ])("rejects invalid query %s before reading an unavailable incident projection", async (query) => {
     const db = mockD1([{
       match: "pharos:depeg-event-projection:active-incidents",
@@ -289,14 +446,15 @@ describe("handleDepegEvents", () => {
   });
 
   it("emits and accepts a keyset cursor", async () => {
-    const first = makeDepegRow({ id: 3, started_at: 1_700_000_003 });
-    const second = makeDepegRow({ id: 2, started_at: 1_700_000_002 });
+    const first = { ...makeDepegRow({ id: 3, started_at: 1_700_000_003 }), effective_started_at: 1_700_000_003 };
+    const second = { ...makeDepegRow({ id: 2, started_at: 1_700_000_002 }), effective_started_at: 1_700_000_002 };
     const db = mockD1([{ match: "pharos:depeg-event-projection:active-incidents", rows: [] }, { match: "depeg_events", rows: [first, second] }, ]) as MockD1Database;
 
     const firstRes = await handleDepegEvents(db, new URL("https://x/api/depeg-events?limit=1&includeTotal=false"));
     const firstBody = (await firstRes.json()) as { events: unknown[]; nextCursor: string | null };
     expect(firstBody.events).toHaveLength(1);
     expect(firstBody.nextCursor).toBeTypeOf("string");
+    expect(JSON.parse(atob(firstBody.nextCursor!))).toEqual({ v: 2, values: [1_700_000_003, 3] });
 
     const cursorDb = mockD1([{ match: "pharos:depeg-event-projection:active-incidents", rows: [] }, { match: "depeg_events", rows: [second] }, ]) as MockD1Database;
     const cursorRes = await handleDepegEvents(
@@ -306,7 +464,7 @@ describe("handleDepegEvents", () => {
 
     expect(cursorRes.status).toBe(200);
     const dataQuery = cursorDb.getHistory().find((entry) => entry.sql.includes("FROM depeg_events"));
-    expect(dataQuery?.sql).toContain("started_at < ?");
+    expect(dataQuery?.sql).toContain("effective_started_at < ?");
     expect(dataQuery?.sql).toContain("id < ?");
     expect(dataQuery?.binds).toContain(first.started_at);
     expect(dataQuery?.binds).toContain(first.id);

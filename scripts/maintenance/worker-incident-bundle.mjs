@@ -37,10 +37,13 @@ export function joinIncidentEvidence(deliveries, children, deployments, publicat
     const scheduleKeys = Object.entries(scheduleDefinitions).filter(([, definition]) => (definition.triggerSchedules ?? [definition.schedule]).includes(delivery.cron)).map(([key]) => key);
     const peers = deliveries.filter((candidate) => candidate.scriptName === delivery.scriptName && candidate.cron === delivery.cron && candidate.scheduledDatetime === delivery.scheduledDatetime);
     const candidates = children.filter((child) => child.slot_started_at === slot && scheduleKeys.includes(child.schedule_key));
-    const invocationIds = new Set(candidates.map((child) => child.invocation_id ?? child.synthetic_invocation).filter(Boolean));
-    const versions = new Set(candidates.map((child) => child.worker_version).filter(Boolean));
+    const childInvocations = candidates.map((child) => child.invocation_id ?? child.synthetic_invocation);
+    const childVersions = candidates.map((child) => child.worker_version);
+    const fullyIdentified = [...childInvocations, ...childVersions].every((value) => typeof value === "string" && value.trim().length > 0);
+    const invocationIds = new Set(childInvocations);
+    const versions = new Set(childVersions);
     const matchedDeployment = deployments.filter((deployment) => deployment.scriptName === delivery.scriptName && deployment.versions?.some((version) => versions.has(version.id)));
-    const joined = peers.length === 1 && scheduleKeys.length === 1 && invocationIds.size === 1 && versions.size === 1 && matchedDeployment.length === 1;
+    const joined = fullyIdentified && peers.length === 1 && scheduleKeys.length === 1 && invocationIds.size === 1 && versions.size === 1 && matchedDeployment.length === 1;
     return { ...delivery, join: joined ? "singleton-version-match" : "unattributed", reason: joined ? null : "missing-or-ambiguous-identity",
       deployment: joined ? matchedDeployment[0].id : null, invocationId: joined ? [...invocationIds][0] : null,
       children: joined ? candidates : [],

@@ -208,18 +208,18 @@ describe("adaptChronicleNavResponse", () => {
     )).toThrow("zero or negative NAV");
   });
 
-  it("degrades a mixed-decimals aggregate instead of publishing a meaningless raw total", () => {
+  it.each([false, true])("withholds mixed-scale aggregate units independently of incomplete reads (%s)", (incomplete) => {
     const result = adaptChronicleNavResponse(
       {
         navPerToken: 1_000_000_000_000_000_000n,
         supply: {
           contributions: [
             { chain: "ethereum", tokenAddress: BUIDL_TOKEN, raw: 1_000_000n, decimals: 6 },
-            { chain: "bsc", tokenAddress: BUIDL_TOKEN, raw: 1_000_000n, decimals: 18 },
+            { chain: "bsc", tokenAddress: BUIDL_TOKEN, raw: 1_000_000_000_000_000_000n, decimals: 18 },
           ],
           omittedNonEvmChains: [],
           omittedNoRpcChains: [],
-          omittedReadFailureChains: [],
+          omittedReadFailureChains: incomplete ? ["base"] : [],
         },
         tokenDecimals: 6,
         updatedAt: NOW_SEC,
@@ -234,5 +234,35 @@ describe("adaptChronicleNavResponse", () => {
     );
 
     expectWarningEffect(result, "mixed-supply-decimals", "degraded");
+    expect(result.metadata).not.toHaveProperty("totalSupplyRaw");
+    expect(result.metadata).not.toHaveProperty("totalSupplyFormatted");
+    expect(result.metadata).not.toHaveProperty("tokenDecimals");
+    expect(result.metadata?.supplyReadComplete).toBe(!incomplete);
+    expect(result.metadata?.supplyCoverageComplete).toBe(!incomplete);
+    expect(result.metadata?.supplyContributions).toEqual([
+      { chain: "ethereum", tokenAddress: BUIDL_TOKEN, supplyRaw: "1000000", decimals: 6 },
+      { chain: "bsc", tokenAddress: BUIDL_TOKEN, supplyRaw: "1000000000000000000", decimals: 18 },
+    ]);
+  });
+
+  it.each([0n, 1_000_000n])("preserves equal-scale aggregates including an observed zero deployment (%s)", (second) => {
+    const result = adaptChronicleNavResponse({
+      navPerToken: 10n ** 18n, tokenDecimals: 6, updatedAt: NOW_SEC,
+      supply: {
+        contributions: [
+          { chain: "ethereum", tokenAddress: BUIDL_TOKEN, raw: 1_000_000n, decimals: 6 },
+          { chain: "bsc", tokenAddress: BUIDL_TOKEN, raw: second, decimals: 6 },
+        ],
+        omittedNonEvmChains: [], omittedNoRpcChains: [], omittedReadFailureChains: [],
+      },
+    }, {
+      navScope: "native-fund-share", consumerAddress: BUIDL_CONSUMER, tokenAddress: BUIDL_TOKEN,
+      assetLabel: "BlackRock BUIDL fund shares", assetRisk: "low",
+    });
+    expect(result.metadata).toMatchObject({
+      totalSupplyRaw: second === 0n ? "1000000" : "2000000",
+      totalSupplyFormatted: second === 0n ? "1" : "2", tokenDecimals: 6,
+      supplyReadComplete: true, supplyCoverageComplete: true,
+    });
   });
 });

@@ -1,6 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { WORKER_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
+import { getCirculatingRawOrNull, getPrevDayRawOrNull, getPrevWeekRawOrNull, getPrevMonthRawOrNull } from "@shared/lib/supply";
+import type { PeggedAsset } from "../enrich-prices";
+import * as fetchRetry from "../../../lib/fetch-retry";
+import * as onchain from "../supplemental-assets/onchain-supply";
+import { reconcileTrackedSupplyGaps } from "../supply-gap-reconciliation";
 import { makePeggedAsset } from "./_fixtures";
 import * as phase from "../phase-helpers";
 import * as runtime from "../runtime";
@@ -19,6 +24,137 @@ import {
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => { fixtures.closeAll(); vi.restoreAllMocks(); });
+
+async function publishSupplyPacket(asset: PeggedAsset, path: "main" | "fallback"): Promise<PeggedAsset> {
+  const { db, sqlite } = fixtures.open();
+  const now = Math.floor(Date.now() / 1000);
+  const ordinary = makePeggedAsset({
+    id: "usdc-circle", price: 1, priceSource: "coingecko", pegMechanism: "fiat-backed",
+    circulating: { peggedUSD: 100 }, chainCirculating: {}, chains: [], supplySource: "coingecko",
+  });
+  const healthy = WORKER_ACTIVE_STABLECOINS.filter((meta) => meta.id !== asset.id && meta.id !== ordinary.id)
+    .map((meta) => makePeggedAsset({
+      id: meta.id, name: meta.name, symbol: meta.symbol, price: 1, priceSource: "coingecko",
+      pegMechanism: "fiat-backed", circulating: { peggedUSD: 1000 }, chainCirculating: {}, chains: [],
+    }));
+  const assets = [...healthy, ordinary, asset];
+  const date = new Date();
+  for (const row of [ordinary, asset]) {
+    for (const days of [1, 7, 30]) {
+      const snapshotDate = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() - days) / 1000;
+      sqlite.prepare("INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd) VALUES (?, ?, ?)")
+        .run(row.id, snapshotDate, getCirculatingRawOrNull(row)! * 0.95);
+    }
+  }
+  vi.spyOn(runtime, "checkStablecoinsPriceStaleness").mockResolvedValue({
+    state: "ok", stalenessWarning: false, stalenessSummary: { compared: 1, identical: 0, identicalRatio: 0 }, stalenessCheckFailed: false,
+  });
+  vi.spyOn(post, "runDepegPipeline").mockResolvedValue({ depegErrorCount: 0, depegErrors: [], providerDiagnostics: [] });
+  vi.spyOn(notices, "queueTrackedAdditionsNotice").mockResolvedValue(undefined);
+  const circuitRecord = {
+    state: "closed", consecutiveFailures: 0, lastFailureAt: null, lastSuccessAt: now, openedAt: null,
+  } satisfies circuit.CircuitRecord;
+  vi.spyOn(circuit, "recordOutcome").mockResolvedValue({ before: circuitRecord, after: circuitRecord });
+  const base = {
+    db, assets, syncStartSec: now, previousAssetsById: new Map<string, PeggedAsset>(),
+    previousCacheState: { state: "ok" }, previousActivePriceCoverage: null, priceCacheEntries: [], providerDiagnostics: [],
+    returnIfAborted: () => null, abortResult: () => ({ aborted: true, metadata: "aborted" }),
+  } satisfies Omit<StablecoinsPostIntakePublicationContext, "metadata" | "policy">;
+  const input: StablecoinsPostIntakePublicationContext = path === "main" ? {
+    ...base, policy: buildMainStablecoinsPublicationPolicy({ assets, rawAssetCount: assets.length, droppedMalformedAssets: 0 }),
+    metadata: { path: "main", input: {
+      rawAssetCount: assets.length, droppedMalformedAssets: 0,
+      canonicalDeduplication: { dedupedAssets: assets, duplicateRows: 0, affectedIds: [] },
+      enrichStats: {}, priceValidationStats: {}, rejectedCount: 0, gtProbe: { stats: createEmptyGtProbeStats() },
+    } },
+  } : {
+    ...base, policy: buildFallbackStablecoinsPublicationPolicy(assets),
+    metadata: { path: "fallback", input: { enrichStats: {}, authoritativeOverrideCount: 0, rejectedCount: 0,
+      cachedFallbackCount: 0, nativePegCorrectionCount: 0, nativePegFillCount: 0 } },
+  };
+  await runStablecoinsPostIntakePublication(input);
+  const cached: { peggedAssets: PeggedAsset[] } = JSON.parse((await getCache(db, "stablecoins"))!.value);
+  expect(cached.peggedAssets.find((row) => row.id === ordinary.id)).toMatchObject({
+    circulatingPrevDay: { peggedUSD: 95 }, circulatingPrevWeek: { peggedUSD: 95 }, circulatingPrevMonth: { peggedUSD: 95 },
+  });
+  const published = cached.peggedAssets.find((row) => row.id === asset.id);
+  expect(published).toBeDefined();
+  return published!;
+}
+
+describe("source-owned supply history publication", () => {
+  it.each([
+    ["day", "circulatingPrevDay", getPrevDayRawOrNull],
+    ["week", "circulatingPrevWeek", getPrevWeekRawOrNull],
+    ["month", "circulatingPrevMonth", getPrevMonthRawOrNull],
+  ] as const)("preserves unavailable %s through fresh and carried CoinGecko publication", async (bucket, field, readHistory) => {
+    const nowMs = Date.now();
+    const original = makePeggedAsset({
+      id: "eurcv-societe-generale-forge", name: "EUR CoinVertible", symbol: "EURCV",
+      pegType: "peggedEUR", pegMechanism: "fiat-backed", price: 1, priceSource: "coingecko",
+      supplySource: "defillama", circulating: { peggedEUR: 100 },
+      circulatingPrevDay: { peggedEUR: 90 }, circulatingPrevWeek: { peggedEUR: 80 }, circulatingPrevMonth: { peggedEUR: 70 },
+      chainCirculating: {
+        Ethereum: { current: 60, circulatingPrevDay: 54, circulatingPrevWeek: 48, circulatingPrevMonth: 42 },
+        Solana: { current: 30, circulatingPrevDay: 27, circulatingPrevWeek: 24, circulatingPrevMonth: 21 },
+        Stellar: { current: 10, circulatingPrevDay: 9, circulatingPrevWeek: 8, circulatingPrevMonth: 7 },
+      }, chains: ["Ethereum", "Solana", "Stellar"],
+    });
+    original[field] = null;
+    vi.spyOn(fetchRetry, "fetchTextWithRetry").mockImplementation(async (url) => ({
+      response: new Response(null, { status: 200 }),
+      body: JSON.stringify(String(url).includes("/simple/price")
+        ? { "societe-generale-forge-eurcv": { usd_market_cap: 130, last_updated_at: Math.floor(nowMs / 1000) } }
+        : { market_caps: [[nowMs - 30 * 86400_000, 70], [nowMs - 7 * 86400_000, 80], [nowMs - 86400_000, 90], [nowMs, 130]] }),
+    }));
+    expect((await reconcileTrackedSupplyGaps([original])).totalReconciled).toBe(1);
+    expect(original[field]).toBeNull();
+    const freshPacket = structuredClone(original);
+    const published = await publishSupplyPacket(original, "main");
+    expect(readHistory(published)).toBeNull();
+    expect(published.circulating).toEqual({ peggedEUR: 130 });
+    expect(published.chainCirculating).toEqual(freshPacket.chainCirculating);
+    expect(published.supplyGapFill).toEqual(freshPacket.supplyGapFill);
+
+    vi.mocked(fetchRetry.fetchTextWithRetry).mockResolvedValue({ response: new Response(null, { status: 429 }), body: "" });
+    const carried = makePeggedAsset({ ...freshPacket, supplySource: "defillama", circulating: { peggedEUR: 100 },
+      chainCirculating: { Ethereum: { current: 100 } } });
+    await reconcileTrackedSupplyGaps([carried], undefined, null, undefined, undefined, new Map([[original.id, freshPacket]]));
+    expect(carried.supplyRestored).toBe(true);
+    const carriedPacket = structuredClone(carried);
+    const publishedCarry = await publishSupplyPacket(carried, "fallback");
+    expect(readHistory(publishedCarry)).toBeNull();
+    expect(publishedCarry.circulating).toEqual({ peggedEUR: 130 });
+    expect(publishedCarry.chainCirculating).toEqual(carriedPacket.chainCirculating);
+    expect(publishedCarry.supplyGapFill).toEqual({
+      ...freshPacket.supplyGapFill, carryForwardRuns: 1,
+      withheldHistoricalBuckets: [bucket], withheldHistoricalBucketReasons: { [bucket]: "history-unobserved" },
+    });
+    expect(publishedCarry.supplyObservedAt).toBe(freshPacket.supplyObservedAt);
+  });
+
+  it.each(["onchain-total-supply", "onchain-circulating-supply"] as const)(
+    "preserves current-only %s history through reconciliation and publication", async (supplySource) => {
+      const now = Math.floor(Date.now() / 1000);
+      const asset = makePeggedAsset({
+        id: "cadd-cad-digital", name: "CAD Digital", symbol: "CADD", pegType: "peggedCAD",
+        pegMechanism: "fiat-backed", price: 1, priceSource: "coingecko", supplySource: "defillama",
+        circulating: { peggedCAD: 0 }, chainCirculating: {}, chains: [],
+      });
+      vi.spyOn(fetchRetry, "fetchTextWithRetry").mockResolvedValue({ response: new Response(null, { status: 200 }), body: "[]" });
+      vi.spyOn(onchain, "fetchCuratedAggregateOnChainMcap").mockResolvedValue({
+        mcap: 3_000_000, supplySource, observedAt: now, chainCirculating: { Ethereum: { current: 3_000_000, chainId: "ethereum" } },
+      });
+      expect((await reconcileTrackedSupplyGaps([asset], undefined, null, undefined, { peggedCAD: 0.72 })).totalReconciled).toBe(1);
+      const published = await publishSupplyPacket(asset, "main");
+      expect([getPrevDayRawOrNull(published), getPrevWeekRawOrNull(published), getPrevMonthRawOrNull(published)]).toEqual([null, null, null]);
+      expect(published).toMatchObject({
+        circulating: { peggedCAD: 3_000_000 }, supplySource, supplyObservedAt: now,
+        chainCirculating: { Ethereum: { current: 3_000_000, chainId: "ethereum" } },
+      });
+    },
+  );
+});
 
 describe("stablecoins publication cohort", () => {
   it.each(["main", "fallback"] as const)("uses admitted %s rows for coverage, continuity, attempts and replay generations", async (path) => {

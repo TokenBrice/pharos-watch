@@ -78,6 +78,45 @@ async function enqueueDaily(
   });
 }
 
+async function enqueueWeeklyWithActions(db: D1Database, sqlite: DatabaseSync) {
+  const generatedAt = Math.floor(Date.now() / 1000);
+  const digestMeta = JSON.stringify({
+    type: "weekly",
+    telegramDelivered: false,
+    telegramDeliveryStatus: "pending",
+  });
+  sqlite.prepare(
+    "INSERT INTO daily_digest (generated_at, digest_text, input_data, digest_meta) VALUES (?, '', '{}', ?)",
+  ).run(generatedAt, digestMeta);
+  sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+    .run("telegram:appendix-pointer", "previous-edition", generatedAt - 60);
+  const successActions = [
+    { key: "telegram:appendix-pointer", value: "weekly-edition" },
+    { key: "telegram:new-appendix-pointer", value: "new-weekly-edition" },
+  ];
+  await enqueueTelegramDigestEdition(db, {
+    editionKey: "weekly:2026-07-10",
+    digestKind: "weekly",
+    digestGeneratedAt: generatedAt,
+    targetChatId: creds.chatId,
+    title: "Weekly Recap",
+    extended: "The exact weekly payload.",
+    date: "2026-07-10-weekly",
+    safetyContext,
+    successActions,
+  });
+  return { generatedAt, digestMeta };
+}
+
+function loadFinalizationEffects(sqlite: DatabaseSync, generatedAt: number) {
+  return {
+    appendix: sqlite.prepare(
+      "SELECT key, value, updated_at FROM cache WHERE key IN (?, ?) ORDER BY key",
+    ).all("telegram:appendix-pointer", "telegram:new-appendix-pointer"),
+    weekly: sqlite.prepare("SELECT digest_meta FROM daily_digest WHERE generated_at = ?").get(generatedAt),
+  };
+}
+
 function telegramRequestText(call: unknown[]): string {
   const init = call[1] as RequestInit;
   const body = JSON.parse(String(init.body)) as { text: string };
@@ -372,7 +411,8 @@ describe("Telegram digest outbox", () => {
 
   it("fences network ambiguity and never replays it automatically", async () => {
     const { sqlite, db } = fixtures.open();
-    await enqueueDaily(db);
+    const successActions = [{ key: "telegram:appendix-pointer", value: "uncertain-edition" }];
+    await enqueueDaily(db, { successActions });
     const fetchMock = mockFetch([{ match: () => true, outcomes: [new DOMException("timed out after request start", "TimeoutError")] }]);
 
     const result = await deliverTelegramDigestEdition(db, creds, "daily:2026-07-10");
@@ -383,6 +423,7 @@ describe("Telegram digest outbox", () => {
     const retry = await drainTelegramDigestOutbox(db, creds);
     expect(retry).toMatchObject({ due: 0, attempted: 0, retainedExecutionUnknown: 1 });
     expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(successActions[0]!.key)).toBeUndefined();
   });
 
   it("bounds retained review counts to the terminal operator-review window while keeping forensic totals", async () => {
@@ -591,6 +632,22 @@ describe("Telegram digest outbox", () => {
     expect(JSON.parse(loadEdition(sqlite).payload_chunks_json)).toEqual(first.chunks);
   });
 
+  it("delivers an earlier policy's immutable chunks without re-splitting or replacing them", async () => {
+    const { sqlite, db } = fixtures.open();
+    await enqueueDaily(db);
+    const retained = ["<b>Retained first chunk</b>", "<u>Retained second chunk</u>"];
+    sqlite.prepare("UPDATE telegram_digest_outbox SET payload_chunks_json = ? WHERE edition_key = ?")
+      .run(JSON.stringify(retained), "daily:2026-07-10");
+    const candidate = await enqueueDaily(db);
+    expect(candidate).toMatchObject({ created: false, payloadMatched: false });
+    expect(JSON.parse(loadEdition(sqlite).payload_chunks_json)).toEqual(retained);
+    const fetchMock = mockFetch([{ match: () => true, body: { ok: true } }]);
+    expect(await deliverTelegramDigestEdition(db, creds, "daily:2026-07-10"))
+      .toMatchObject({ outcome: "sent", chunksSent: 2 });
+    expect(fetchMock.mock.calls.map(telegramRequestText)).toEqual(retained);
+    expect(JSON.parse(loadEdition(sqlite).payload_chunks_json)).toEqual(retained);
+  });
+
   it("includes the typed map identity in immutable edition equality", async () => {
     const { sqlite, db } = fixtures.open();
     const first = await enqueueDaily(db, {
@@ -720,26 +777,69 @@ describe("Telegram digest outbox", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("updates weekly compatibility metadata only after the exact edition is sent", async () => {
+  it.each([
+    ["owner", "delivery_owner = 'new-owner'"],
+    ["generation", "delivery_generation = delivery_generation + 1"],
+    ["state", "state = 'execution_unknown'"],
+    ["media", "media_state = 'pending'"],
+    ["cursor", "next_chunk_index = next_chunk_index - 1"],
+  ])("leaves appendix, weekly metadata and edition unchanged when finalization loses its %s fence", async (_name, mutation) => {
     const { sqlite, db } = fixtures.open();
-    const generatedAt = Math.floor(Date.now() / 1000);
-    sqlite.prepare(
-      "INSERT INTO daily_digest (generated_at, digest_text, input_data, digest_meta) VALUES (?, '', '{}', ?)",
-    ).run(
-      generatedAt,
-      JSON.stringify({ type: "weekly", telegramDelivered: false, telegramDeliveryStatus: "pending" }),
-    );
-    await enqueueTelegramDigestEdition(db, {
-      editionKey: "weekly:2026-07-10",
-      digestKind: "weekly",
-      digestGeneratedAt: generatedAt,
-      targetChatId: creds.chatId,
-      title: "Weekly Recap",
-      extended: "The exact weekly payload.",
-      date: "2026-07-10-weekly",
-      safetyContext,
+    const { generatedAt } = await enqueueWeeklyWithActions(db, sqlite);
+    const beforeEffects = loadFinalizationEffects(sqlite, generatedAt);
+    const batch = db.batch.bind(db);
+    let beforeEdition: StoredEdition | undefined;
+    vi.spyOn(db, "batch").mockImplementationOnce(async (statements) => {
+      sqlite.prepare(
+        `UPDATE telegram_digest_outbox SET ${mutation} WHERE edition_key = ?`,
+      ).run("weekly:2026-07-10");
+      beforeEdition = loadEdition(sqlite, "weekly:2026-07-10");
+      return batch(statements);
     });
-    mockFetch([{ match: () => true, body: { ok: true } }]);
+    const fetchMock = mockFetch([{ match: () => true, body: { ok: true } }]);
+
+    await expect(deliverTelegramDigestEdition(db, creds, "weekly:2026-07-10"))
+      .rejects.toThrow("terminal batch strict statement failed");
+
+    expect(beforeEdition).toBeDefined();
+    expect(loadEdition(sqlite, "weekly:2026-07-10")).toEqual(beforeEdition);
+    expect(loadFinalizationEffects(sqlite, generatedAt)).toEqual(beforeEffects);
+    const replay = await deliverTelegramDigestEdition(db, creds, "weekly:2026-07-10");
+    expect(replay.outcome).toBe("skipped");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("rolls back every success action and weekly metadata on terminal SQL failure without replaying acceptance", async () => {
+    const { sqlite, db } = fixtures.open();
+    const { generatedAt } = await enqueueWeeklyWithActions(db, sqlite);
+    const beforeEffects = loadFinalizationEffects(sqlite, generatedAt);
+    sqlite.exec(`
+      CREATE TRIGGER fail_digest_terminal BEFORE UPDATE OF state ON telegram_digest_outbox
+      WHEN NEW.state = 'sent'
+      BEGIN SELECT RAISE(ABORT, 'terminal SQL failure'); END;
+    `);
+    const fetchMock = mockFetch([{ match: () => true, body: { ok: true } }]);
+
+    await expect(deliverTelegramDigestEdition(db, creds, "weekly:2026-07-10"))
+      .rejects.toThrow("terminal SQL failure");
+
+    expect(loadFinalizationEffects(sqlite, generatedAt)).toEqual(beforeEffects);
+    expect(loadEdition(sqlite, "weekly:2026-07-10")).toMatchObject({
+      state: "execution_unknown",
+      next_chunk_index: 1,
+      last_error_class: expect.stringContaining("accepted_edition_persistence_failed:"),
+    });
+    sqlite.exec("DROP TRIGGER fail_digest_terminal");
+    const replay = await deliverTelegramDigestEdition(db, creds, "weekly:2026-07-10");
+    expect(replay.outcome).toBe("skipped");
+    expect(loadFinalizationEffects(sqlite, generatedAt)).toEqual(beforeEffects);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("commits exact-owner appendix actions and weekly metadata once with sent, without replay or timestamp extension", async () => {
+    const { sqlite, db } = fixtures.open();
+    const { generatedAt } = await enqueueWeeklyWithActions(db, sqlite);
+    const fetchMock = mockFetch([{ match: () => true, body: { ok: true } }]);
 
     await deliverTelegramDigestEdition(db, creds, "weekly:2026-07-10");
 
@@ -751,6 +851,25 @@ describe("Telegram digest outbox", () => {
       telegramDeliveryStatus: "ok",
       telegramDeliveredAt: Math.floor(Date.now() / 1000),
     });
+    expect(loadEdition(sqlite, "weekly:2026-07-10")).toMatchObject({
+      state: "sent",
+      next_chunk_index: 1,
+      delivery_generation: 1,
+      media_state: "none",
+    });
+    expect(loadFinalizationEffects(sqlite, generatedAt).appendix).toEqual([
+      { key: "telegram:appendix-pointer", value: "weekly-edition", updated_at: generatedAt },
+      { key: "telegram:new-appendix-pointer", value: "new-weekly-edition", updated_at: generatedAt },
+    ]);
+    const committed = loadFinalizationEffects(sqlite, generatedAt);
+    await enqueueDaily(db, {
+      successActions: [{ key: "telegram:appendix-pointer", value: "newer-pending-edition" }],
+    });
+    vi.setSystemTime(Date.now() + 60_000);
+    const replay = await deliverTelegramDigestEdition(db, creds, "weekly:2026-07-10");
+    expect(replay).toMatchObject({ outcome: "skipped", state: "sent" });
+    expect(loadFinalizationEffects(sqlite, generatedAt)).toEqual(committed);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it("keeps the claim TTL above one Bot API timeout", () => {

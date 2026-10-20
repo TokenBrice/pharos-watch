@@ -1,16 +1,41 @@
 // @vitest-environment jsdom
 
 import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   GENERATED_AT,
   getApiKeyAuditLogMock,
+  keyResponse,
   makeKey,
   renderPanel,
   setAuditLog,
 } from "./api-keys-panel-harness";
 
 describe("ApiKeysPanel editor and audit history", () => {
+  it("preserves donor tier when renaming and saving a supporter key", async () => {
+    const donor = makeKey({ tier: "donor", expiresAt: null });
+    const renamed = { ...donor, name: "Renamed supporter" };
+    const fetchMock = vi.mocked(fetch).mockResolvedValueOnce(keyResponse({ key: renamed }, { status: 200 }));
+    renderPanel([donor]);
+
+    fireEvent.click(screen.getByRole("button", { name: /^Edit Ops Key/ }));
+    expect((screen.getByLabelText("Tier") as HTMLSelectElement).value).toBe("donor");
+    fireEvent.change(screen.getByLabelText("Name"), { target: { value: renamed.name } });
+    fireEvent.click(screen.getByRole("button", { name: /^Save changes to Ops Key/ }));
+
+    expect(await screen.findByText("Updated Renamed supporter.")).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledOnce();
+    const [url, init] = fetchMock.mock.calls[0]!;
+    expect(String(url)).toContain("/api/admin/api-keys/1/update");
+    expect(JSON.parse(String(init?.body))).toEqual({
+      name: renamed.name,
+      ownerEmail: donor.ownerEmail,
+      tier: "donor",
+      rateLimitPerMinute: donor.rateLimitPerMinute,
+      expiresAt: null,
+    });
+  });
+
   it("mounts one focused selected-key editor with selected disclosure semantics and audit history", async () => {
     setAuditLog({
       data: {

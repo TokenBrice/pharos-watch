@@ -347,7 +347,7 @@ describe("Telegram alert source-event resolution", () => {
     let planCountSql: string | undefined;
     harness.db = createSqliteD1(harness.sqlite, {
       onAll(sql) {
-        if (sql.startsWith("SELECT plan.plan_key,")) planCountSql = sql;
+        if (sql.startsWith("SELECT plan.*,")) planCountSql = sql;
       },
     });
     for (let index = 0; index < count; index += 1) {
@@ -417,9 +417,11 @@ describe("Telegram alert source-event resolution", () => {
       .toEqual([{ chat_id: "direct" }, { chat_id: "global" }]);
     // Index choice is part of the scale contract: each plan must seek its own
     // chunks, rather than scan every target captured for the source.
+    // Retained-manifest verification now reads the full immutable plan and binds
+    // the optional expected-key filter twice.
     expect(planCountSql).toBeDefined();
     const plan = harness.sqlite.prepare(`EXPLAIN QUERY PLAN ${planCountSql!}`)
-      .all(source.sourceEventId, 1, 0, "[]")
+      .all(source.sourceEventId, 1, 0, "[]", "[]")
       .map((row) => row.detail).join("\n");
     expect(plan).toContain("SEARCH target USING COVERING INDEX idx_tajt_source_generation_plan");
     expect(plan).toContain("(source_event_id=? AND plan_generation=? AND plan_key=?)");
@@ -638,7 +640,7 @@ describe("Telegram alert source-event resolution", () => {
     const owner = "lineage-test";
     harness.sqlite.prepare(
       `UPDATE telegram_alert_source_events
-          SET status = 'planned', target_plan_state = 'planning',
+          SET status = 'planned', target_plan_state = 'capturing',
               target_plan_owner = ?, target_plan_claim_expires_at = ?
         WHERE source_event_id = ?`,
     ).run(owner, NOW + 120, source.sourceEventId);
@@ -654,6 +656,23 @@ describe("Telegram alert source-event resolution", () => {
       subscriberCursorChatId: null,
       planningCursorChatId: null,
     };
+    // Materialization admits only captured members with a live subscriber at
+    // the observed generation; lineage fixtures must preserve that evidence.
+    for (const chatId of ["direct-chat", "global-chat"]) {
+      harness.sqlite.prepare(
+        `INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at)
+         VALUES (?, ?, ?)`,
+      ).run(chatId, NOW, NOW);
+      harness.sqlite.prepare(
+        `INSERT INTO telegram_alert_planning_subscribers (
+           source_event_id, plan_generation, chat_id, preference_generation,
+           last_active_at, captured_at, initially_eligible
+         ) VALUES (?, 0, ?, 0, ?, ?, 1)`,
+      ).run(source.sourceEventId, chatId, NOW, NOW);
+    }
+    harness.sqlite.prepare(
+      "UPDATE telegram_alert_source_events SET target_plan_state = 'planning' WHERE source_event_id = ?",
+    ).run(source.sourceEventId);
     const authoritativeRoutes = [routed("direct-chat"), routed("global-chat")].map((entry) => ({
       ...entry,
       sourceEventId: source.sourceEventId,

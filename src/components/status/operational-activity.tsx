@@ -193,13 +193,6 @@ export function OperationalActivity({ adminActions, credentialAudit, nowSeconds 
         <SourceStatus label="Credential audit" state={credentialAudit} />
       </div>
 
-      {view.deduplicatedCount > 0 ? (
-        <p className="text-xs text-muted-foreground">
-          {view.deduplicatedCount} cross-source lifecycle {view.deduplicatedCount === 1 ? "duplicate" : "duplicates"}{" "}
-          reconciled.
-        </p>
-      ) : null}
-
       {awaitingAnySource ? (
         <p role="status" aria-live="polite" className="py-6 text-center text-sm text-muted-foreground">
           Loading operational activity...

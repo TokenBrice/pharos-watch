@@ -437,6 +437,8 @@ function EventCardEnrichment({ event }: { event: TapeEvent }) {
 
 interface EventCardProps {
   event: TapeEvent;
+  /** Parent-owned presentation clock; independent of the feed's query anchor. */
+  nowMs?: number;
   /** Optional stablecoin logo lookup for `event.coinId`. */
   logoSrc?: string | undefined;
   /** Renders a focus ring + highlight when truthy. Used by `?event=` permalinks. */
@@ -447,7 +449,7 @@ interface EventCardProps {
   count?: number;
 }
 
-function EventCardImpl({ event, logoSrc, highlighted = false, domId, count = 1 }: EventCardProps) {
+function EventCardImpl({ event, nowMs, logoSrc, highlighted = false, domId, count = 1 }: EventCardProps) {
   const severityLabel = SEVERITY_LABEL[event.severity];
   const severityText = SEVERITY_TEXT_CLASS[event.severity];
   const href = event.sourceUrl ?? `/timeline/?event=${encodeURIComponent(event.id)}`;
@@ -474,7 +476,7 @@ function EventCardImpl({ event, logoSrc, highlighted = false, domId, count = 1 }
   const severityGlyph = SEVERITY_GLYPH[event.severity];
   const typeSlug = event.type.toLowerCase();
   const absoluteHhMm = formatHhMm(event.ts);
-  const relativeShort = formatRelativeTimeMs(event.ts, { withSuffix: false });
+  const relativeShort = formatRelativeTimeMs(event.ts, { now: nowMs, withSuffix: false });
   const summarySentence = displaySummary ? firstSentence(displaySummary) : "";
   const ariaParts = [
     ticker,
@@ -541,7 +543,7 @@ function EventCardImpl({ event, logoSrc, highlighted = false, domId, count = 1 }
         >
           {copied ? <Check className="h-3 w-3" aria-hidden="true" /> : <Link2 className="h-3 w-3" aria-hidden="true" />}
         </button>
-        <span className="shrink-0 tabular-nums text-muted-foreground">{formatRelativeTimeMs(event.ts)}</span>
+        <span className="shrink-0 tabular-nums text-muted-foreground">{formatRelativeTimeMs(event.ts, { now: nowMs })}</span>
       </div>
       {summaryLine ? (
         <p className="mt-0.5 pl-[calc(5ch+2.75rem)] text-muted-foreground/90 line-clamp-2">

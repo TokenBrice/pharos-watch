@@ -11,6 +11,10 @@ Use this policy for every file added to `worker/migrations/`. The active and his
 
 Additive migrations do not need data-migration metadata.
 
+Migration `0280_mint_burn_dirty_hours.sql` is an additive debt-table example: apply it before the maintenance writer, without baseline changes, migration-time legacy seeding, or a business-row rewrite. Worker rollback retains the schema and queued debt; keep the verified pre-window Time Travel bookmark, migration ledger and Worker versions, and observe source enqueue plus the first atomic rebuild separately from migration application. Restore D1 only for unexpected schema/data mutation.
+
+Migration `0281_mint_burn_scan_coverage.sql` follows the same additive ordering for prospective evidence: install the empty table before the writer and observe durable proof roundtrips before activating public coverage readers. Existing cursors, event ages and cron metadata must not seed historical coverage. Keep all fingerprinted proof on Worker rollback; an old writer's intervening cursor advances do not establish scanned intervals. Retain the pre-window bookmark, ledger and Worker identities; schema application alone is not writer-soak acceptance.
+
 ## Reviewed data migrations
 
 `DELETE FROM`, `UPDATE` (including `UPDATE OR REPLACE` and `schema.table`-qualified targets), `REPLACE INTO` (SQLite's spelling of `INSERT OR REPLACE`), and `INSERT ... ON CONFLICT ... DO UPDATE` can mutate rows used by the still-running old Worker. A new migration containing one of these statements must include both headers:

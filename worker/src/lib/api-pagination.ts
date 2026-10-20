@@ -8,12 +8,14 @@ import {
   type ParamSpec,
 } from "./api-params";
 import { errorResponse, jsonFreshResponse } from "./api-response";
+import { PUBLIC_DEPEG_EVENTS_SQL } from "./depeg-event-projection";
 
 const PAGINATED_TABLES = new Set([
   "blacklist_events",
   "mint_burn_events",
   "depeg_events",
   "depeg_events_with_provenance",
+  "depeg_events_public",
 ]);
 
 const PAGINATED_INDEXES_BY_TABLE: Readonly<Record<string, ReadonlySet<string>>> = {
@@ -32,6 +34,7 @@ const PAGINATED_ORDER_COLS = new Set([
   "created_at",
   "detected_at",
   "started_at",
+  "effective_started_at",
   "stablecoin",
   "chain_name",
   "event_type",
@@ -52,6 +55,7 @@ interface PaginatedEventQueryConfig<TRow, TEvent> {
   includeTotal?: boolean;
   /** Atomic count preparation; the final statement must return one { total } row. */
   countStatements?: readonly D1PreparedStatement[];
+  snapshot?: PaginatedEventSnapshot;
   mapRow: (row: TRow) => TEvent;
   cursor?: PaginatedEventCursorConfig<TRow>;
   cursorValues?: CursorPrimitive[] | null;
@@ -76,6 +80,7 @@ interface PaginatedEventCursorColumn<TRow> {
 }
 
 interface PaginatedEventCursorConfig<TRow> {
+  version?: number;
   parameterName?: string;
   columns: readonly PaginatedEventCursorColumn<TRow>[];
 }
@@ -88,6 +93,7 @@ interface PaginatedEventResponseConfig<TRow, TEvent, TExtra extends Record<strin
   conditions: string[];
   filterBindings: (string | number)[];
   countStatements?: readonly D1PreparedStatement[];
+  snapshot?: PaginatedEventSnapshot;
   mapRow: (row: TRow) => TEvent;
   searchParams: URLSearchParams;
   pagination: PaginatedEventPaginationConfig;
@@ -108,8 +114,14 @@ interface ParsedPagination {
   cursorValues: CursorPrimitive[] | null;
 }
 
-function encodeCursor(values: CursorPrimitive[]): string {
-  return encodeJsonCursor({ v: 1, values });
+interface PaginatedEventSnapshot {
+  statement: D1PreparedStatement;
+  onResult: (result: D1Result) => void;
+  onError: (error: unknown) => never;
+}
+
+function encodeCursor(values: CursorPrimitive[], version: number): string {
+  return encodeJsonCursor({ v: version, values });
 }
 
 function parseCursorValues<TRow>(
@@ -122,7 +134,7 @@ function parseCursorValues<TRow>(
   return parseJsonCursorParam(rawCursor, (parsed) => {
     if (parsed === null || typeof parsed !== "object") return null;
     const payload = parsed as { v?: unknown; values?: unknown };
-    if (payload.v !== 1 || !Array.isArray(payload.values) || payload.values.length !== config.columns.length) {
+    if (payload.v !== (config.version ?? 1) || !Array.isArray(payload.values) || payload.values.length !== config.columns.length) {
       return null;
     }
 
@@ -196,7 +208,7 @@ function buildNextCursor<TRow>(
     if (value == null) return null;
     values.push(value);
   }
-  return encodeCursor(values);
+  return encodeCursor(values, cursor.version ?? 1);
 }
 
 function buildSqlComment(comment: string | undefined, suffix: string): string {
@@ -206,6 +218,7 @@ function buildSqlComment(comment: string | undefined, suffix: string): string {
 }
 
 function buildFromClause(tableName: string, indexName: string | undefined): string {
+  if (tableName === "depeg_events_public" && !indexName) return PUBLIC_DEPEG_EVENTS_SQL;
   if (!indexName) return tableName;
   if (!PAGINATED_INDEXES_BY_TABLE[tableName]?.has(indexName)) {
     throw new Error(`Invalid pagination index ${indexName} for table ${tableName}`);
@@ -264,22 +277,31 @@ export async function fetchPaginatedEvents<TRow, TEvent>(
 
   let total: number | null = null;
   let dataBatch: D1Result<TRow>;
-  if (config.includeTotal ?? true) {
-    const { where: countWhere } = buildPaginatedQuery({
-      conditions: config.conditions,
-      limit: 0,
-      offset: 0,
+  const includeTotal = config.includeTotal ?? true;
+  const countWhere = includeTotal && !config.countStatements ? buildPaginatedQuery({
+    conditions: config.conditions,
+    limit: 0,
+    offset: 0,
+  }).where : "";
+  const countStatements = includeTotal ? config.countStatements ?? [
+    // SAFETY: `tableName` has already passed the explicit `PAGINATED_TABLES` allowlist check above.
+    db.prepare(
+      `SELECT ${buildSqlComment(config.queryComment, "count")}COUNT(*) as total FROM ${fromClause}${countWhere}`,
+    ).bind(...config.filterBindings),
+  ] : [];
+  if (includeTotal && countStatements.length === 0) throw new Error("Pagination count statements must not be empty");
+  if (includeTotal || config.snapshot) {
+    const results = await executeAtomicBatch(db, [
+      ...(config.snapshot ? [config.snapshot.statement] : []), ...countStatements, dataStatement,
+    ], { returnResults: true }).catch((error: unknown) => {
+      if (config.snapshot) config.snapshot.onError(error);
+      throw error;
     });
-    const countStatements = config.countStatements ?? [
-      // SAFETY: `tableName` has already passed the explicit `PAGINATED_TABLES` allowlist check above.
-      db.prepare(
-        `SELECT ${buildSqlComment(config.queryComment, "count")}COUNT(*) as total FROM ${fromClause}${countWhere}`,
-      ).bind(...config.filterBindings),
-    ];
-    if (countStatements.length === 0) throw new Error("Pagination count statements must not be empty");
-    const results = await executeAtomicBatch(db, [...countStatements, dataStatement], { returnResults: true });
-    const countBatch = results[countStatements.length - 1]!;
-    total = ((countBatch.results ?? []) as { total: number }[])[0]?.total ?? 0;
+    if (config.snapshot) config.snapshot.onResult(results.shift()!);
+    if (includeTotal) {
+      const countBatch = results[countStatements.length - 1]!;
+      total = ((countBatch.results ?? []) as { total: number }[])[0]?.total ?? 0;
+    }
     dataBatch = results[countStatements.length] as D1Result<TRow>;
   } else {
     dataBatch = await dataStatement.all<TRow>();
@@ -373,6 +395,7 @@ export async function buildPaginatedEventResponse<
     offset: pagination.offset,
     includeTotal: pagination.includeTotal,
     countStatements: config.countStatements,
+    snapshot: config.snapshot,
     mapRow: config.mapRow,
     cursor: config.cursor,
     cursorValues: pagination.cursorValues,

@@ -49,10 +49,16 @@ const EMPTY_ARGS: BuildSelectorRowsArgs = {
   stressData: null, dexData: null, yieldData: null, bluechipData: null, now: 1_700_000_000_000,
 };
 
-function adaptYield(ranking: Record<string, unknown>, response: Record<string, unknown> = {}, now = NOW) {
+function adaptYield(
+  ranking: Record<string, unknown>,
+  response: Record<string, unknown> = {},
+  now = NOW,
+  yieldAgeAssessedAt: number | null = NOW,
+) {
   return buildSelectorRows({
     ...EMPTY_ARGS,
     now,
+    yieldAgeAssessedAt,
     yieldData: { rankings: [{ id: "usdc-circle", yieldType: "lending", yieldSource: "Aave",
       apy30d: 5, pharosYieldScore: 80, ...ranking }], ...response } as unknown as BuildSelectorRowsArgs["yieldData"],
   }).rows.get("usdc-circle")!;
@@ -289,24 +295,59 @@ describe("yield ingestion", () => {
       .toMatchObject({ sourceKey: "Aave:ethereum:lending" });
   });
 
-  it("prefers observed freshness and derives risk freshness equally from seconds and milliseconds", () => {
-    for (const now of [NOW, NOW / 1000]) {
-      expect(adaptYield({ provenance: { sourceObservedAt: 123, sourceAgeSeconds: 7 },
-        sourceRisk: { sourceAgeSeconds: 60 } }, {}, now).yieldFreshness)
-        .toEqual({ capturedAt: 123, ageSeconds: 7 });
-      const row = adaptYield({ sourceRisk: { sourceAgeSeconds: 60 },
-        altSources: [{ sourceKey: "alt", sourceRisk: { sourceAgeSeconds: 120 } }] }, {}, now);
-      expect(row.yieldFreshness).toEqual({ capturedAt: 1_699_999_940, ageSeconds: 60 });
-      expect(row.yieldSources![1]!.freshness).toEqual({ capturedAt: 1_699_999_880, ageSeconds: 120 });
+  it("ages explicit observations at the dataset clock even when the published age is absent or frozen", () => {
+    for (const sourceAgeSeconds of [7, null]) {
+      for (const now of [NOW, NOW / 1000]) {
+        expect(adaptYield({ provenance: { sourceObservedAt: NOW / 1000 - 60, sourceAgeSeconds } }, {}, now)
+          .yieldFreshness).toEqual({ capturedAt: 1_699_999_940, ageSeconds: 60 });
+      }
     }
   });
 
-  it("does not replace unknown observation provenance with source-risk freshness", () => {
-    for (const provenance of [
-      { sourceObservedAt: null, sourceAgeSeconds: 60 },
-      { sourceObservedAt: 123, sourceAgeSeconds: null },
-    ]) {
-      expect(adaptYield({ provenance, sourceRisk: { sourceAgeSeconds: 0 } }).yieldFreshness).toBeNull();
+  it.each([NOW / 1000 + 60, NOW / 1000 + 0.1, Number.NaN, Number.POSITIVE_INFINITY])("keeps invalid/future provenance %s freshness unknown", sourceObservedAt => {
+    const row = adaptYield({ provenance: { sourceObservedAt }, sourceRisk: { sourceAgeSeconds: 0 } });
+    expect(row.yieldFreshness).toBeNull();
+    expect(row.yieldSources![0].freshness).toBeNull();
+  });
+
+  it("keeps future age-only primary and alternate source instants unknown", () => {
+    const row = adaptYield({
+      sourceRisk: { sourceAgeSeconds: 0 },
+      altSources: [{ sourceKey: "alt", sourceRisk: { sourceAgeSeconds: 0 } }],
+    }, {}, NOW, NOW + 60_000);
+    expect(row.yieldFreshness).toBeNull();
+    expect(row.yieldSources!.map(source => source.freshness)).toEqual([null, null]);
+    expect(adaptYield({ provenance: { sourceObservedAt: NOW / 1000 } }).yieldFreshness)
+      .toEqual({ capturedAt: NOW / 1000, ageSeconds: 0 });
+  });
+
+  it.each([false, true])("retains primary and alternate source instants across unrelated refreshes (legacy=%s)", (legacy) => {
+    const ranking = {
+      ...(legacy ? {} : { provenance: { sourceObservedAt: NOW / 1000 - 60, sourceAgeSeconds: 60 } }),
+      sourceRisk: { sourceAgeSeconds: 60 },
+      altSources: [{ sourceKey: "alt", sourceRisk: { sourceAgeSeconds: 120 } }],
+    };
+    const first = adaptYield(ranking);
+    for (const now of [NOW + 3_600_000, NOW / 1000 + 3_600]) {
+      const later = adaptYield(ranking, {}, now);
+      expect(first.yieldFreshness).toEqual({ capturedAt: 1_699_999_940, ageSeconds: 60 });
+      expect(later.yieldFreshness).toEqual({ capturedAt: 1_699_999_940, ageSeconds: 3_660 });
+      expect(later.yieldSources![0]!.freshness).toEqual(later.yieldFreshness);
+      expect(first.yieldSources![1]!.freshness).toEqual({ capturedAt: 1_699_999_880, ageSeconds: 120 });
+      expect(later.yieldSources![1]!.freshness).toEqual({ capturedAt: 1_699_999_880, ageSeconds: 3_720 });
     }
+  });
+
+  it("leaves age-only evidence unavailable without a yield assessment clock, regardless of publication time", () => {
+    const row = adaptYield({
+      sourceRisk: { sourceAgeSeconds: 60 },
+      altSources: [{ sourceKey: "alt", sourceRisk: { sourceAgeSeconds: 120 } }],
+    }, { updatedAt: NOW / 1000 }, NOW, null);
+    expect(row.yieldFreshness).toBeNull();
+    expect(row.yieldSources!.map((source) => source.freshness)).toEqual([null, null]);
+    expect(adaptYield({
+      provenance: { sourceObservedAt: null, sourceAgeSeconds: 60 },
+      sourceRisk: { sourceAgeSeconds: 0 },
+    }).yieldFreshness).toBeNull();
   });
 });

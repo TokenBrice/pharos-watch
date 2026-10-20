@@ -141,8 +141,7 @@ describe("prepareTelegramDigestAppendices", () => {
       JSON.stringify(["dusd-fluid"]),
     ]);
 
-    await prepared.commitSuccess();
-    expect(mockSetCache).toHaveBeenCalledTimes(3);
+    expect(prepared.successActions).toEqual([]);
   });
 
   it("queues newly tracked active coins from the previous stablecoins cache baseline", async () => {
@@ -199,18 +198,12 @@ describe("prepareTelegramDigestAppendices", () => {
       JSON.stringify(["dusd-fluid"]),
     ]);
 
-    await prepared.commitSuccess();
-
-    expect(mockSetCache).toHaveBeenCalledTimes(3);
-    expect(mockSetCache.mock.calls[1]).toEqual([
-      {},
-      "telegram:tracked-stablecoins-snapshot",
-      JSON.stringify(["usdt-tether", "usdx-example", "eurx-example"]),
-    ]);
-    expect(mockSetCache.mock.calls[2]).toEqual([
-      {},
-      "telegram:tracked-stablecoins-pending",
-      JSON.stringify([]),
+    expect(prepared.successActions).toEqual([
+      {
+        key: "telegram:tracked-stablecoins-snapshot",
+        value: JSON.stringify(["usdt-tether", "usdx-example", "eurx-example"]),
+      },
+      { key: "telegram:tracked-stablecoins-pending", value: "[]" },
     ]);
   });
 
@@ -233,15 +226,17 @@ describe("prepareTelegramDigestAppendices", () => {
       trackedSymbols: ["USDX"],
     });
     expect(prepared.appendixHtml).toContain("<code>USDX</code> Example USD");
-    await prepared.commitSuccess();
-    expect(mockSetCache).toHaveBeenCalledWith(
-      {},
-      "telegram:tracked-stablecoins-pending",
-      JSON.stringify([]),
-    );
+    expect(mockSetCache).not.toHaveBeenCalled();
+    expect(prepared.successActions).toEqual([
+      {
+        key: "telegram:tracked-stablecoins-snapshot",
+        value: JSON.stringify(["usdt-tether", "usdx-example", "eurx-example"]),
+      },
+      { key: "telegram:tracked-stablecoins-pending", value: "[]" },
+    ]);
   });
 
-  it("builds cemetery and tracking appendices, then advances snapshots only after commit", async () => {
+  it("builds cemetery and tracking appendices with exact deferred snapshot actions", async () => {
     mockCachedValues({
       "telegram:cemetery-snapshot": JSON.stringify(["llama:315"]),
       "telegram:cemetery-footer-index": "8",
@@ -279,32 +274,21 @@ describe("prepareTelegramDigestAppendices", () => {
       JSON.stringify(["dusd-fluid"]),
     ]);
 
-    await prepared.commitSuccess();
-
-    expect(mockSetCache).toHaveBeenCalledTimes(5);
-    expect(mockSetCache.mock.calls[1]).toEqual([
-      {},
-      "telegram:cemetery-snapshot",
-      JSON.stringify([
-        "pusd-palm-usd-2026-01",
-        "eura-angle-eura-2026-03",
-        "usda-angle-usda-2026-03",
-      ]),
-    ]);
-    expect(mockSetCache.mock.calls[2]).toEqual([
-      {},
-      "telegram:cemetery-footer-index",
-      "9",
-    ]);
-    expect(mockSetCache.mock.calls[3]).toEqual([
-      {},
-      "telegram:tracked-stablecoins-snapshot",
-      JSON.stringify(["usdt-tether", "usdx-example", "eurx-example"]),
-    ]);
-    expect(mockSetCache.mock.calls[4]).toEqual([
-      {},
-      "telegram:tracked-stablecoins-pending",
-      JSON.stringify([]),
+    expect(prepared.successActions).toEqual([
+      {
+        key: "telegram:cemetery-snapshot",
+        value: JSON.stringify([
+          "pusd-palm-usd-2026-01",
+          "eura-angle-eura-2026-03",
+          "usda-angle-usda-2026-03",
+        ]),
+      },
+      { key: "telegram:cemetery-footer-index", value: "9" },
+      {
+        key: "telegram:tracked-stablecoins-snapshot",
+        value: JSON.stringify(["usdt-tether", "usdx-example", "eurx-example"]),
+      },
+      { key: "telegram:tracked-stablecoins-pending", value: "[]" },
     ]);
   });
 
@@ -367,8 +351,9 @@ describe("prepareTelegramDigestAppendices", () => {
     ).toEqual([]);
 
     expect(mockSetCache).not.toHaveBeenCalled();
-    await prepared.commitSuccess();
-    expect(mockSetCache).toHaveBeenCalledWith({}, "frozen_ids_snapshot", JSON.stringify(["dusd-fluid"]));
+    expect(prepared.successActions).toEqual([
+      { key: "frozen_ids_snapshot", value: JSON.stringify(["dusd-fluid"]) },
+    ]);
   });
 });
 

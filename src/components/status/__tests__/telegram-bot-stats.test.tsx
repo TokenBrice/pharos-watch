@@ -3,9 +3,8 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import type { CronStatus, StatusResponse } from "@shared/types";
-import { TELEGRAM_ALERT_TYPES } from "@shared/types/status";
 import { buildCommsWorkbenchModel } from "@/lib/comms-workbench-model";
-import { makeCompleteTelegramBotStatus, makeDispatchMetadata } from "@/test-utils/status-fixtures";
+import { makeAvailableTelegramDeliverySli, makeCompleteTelegramBotStatus, makeDispatchMetadata } from "@/test-utils/status-fixtures";
 import { TelegramBotStats } from "../telegram-bot-stats";
 
 const NOW_SECONDS = 1_771_858_200;
@@ -146,60 +145,34 @@ describe("TelegramBotStats", () => {
     );
   });
 
-  it("renders independently specified per-alert metrics identically in both layouts", () => {
-    const { model } = renderWorkbench({
-      cron: dispatchCron(
-        makeDispatchMetadata({
-          perAlertType: {
-            dews: { sent: 7, enqueued: 5, failed: 3, blocked: 1, firstSendLatencyMs: 240 },
-            depeg: { sent: 6, enqueued: 4, failed: 2, blocked: 8, firstSendLatencyMs: null },
-          },
-        }),
-      ),
+  it("renders row-backed outcomes rather than synthetic family zeroes", () => {
+    renderWorkbench({
+      bot: { ...telegramBot(), deliverySli: makeAvailableTelegramDeliverySli() },
+      cron: dispatchCron(makeDispatchMetadata({
+        pendingAttempted: 4, pendingDrained: 3,
+        perAlertType: { dews: { sent: 0 } },
+      })),
     });
+    const section = screen.getByRole("region", { name: "Authoritative target outcomes" });
+    const observed = Object.fromEntries([...section.querySelectorAll("dl > div")].map((row) => [
+      row.querySelector("dt")?.textContent, row.querySelector("dd")?.textContent,
+    ]));
+    expect(observed).toEqual({
+      Targets: "28", "Telegram accepted": "7", Failed: "5", Cancelled: "4",
+      Expired: "3", "Execution unknown": "2", Unresolved: "7", "Mixed-family targets": "5",
+    });
+    expect(section.textContent).toContain("evidence stale, quality partial");
+    expect(section.textContent).toContain("not recipient delivery or read");
+    expect(screen.queryByText("Per-alert delivery")).toBeNull();
+    expect(screen.queryByText("Fresh attempted / sent")).toBeNull();
+    expect(screen.getByText("4 / 3")).toBeTruthy();
+  });
 
-    // Independent oracle: every value is unique across fields and rows, so an
-    // accessor or formatter wired to the wrong field cannot reproduce them.
-    const metricKeys = ["sent", "enqueued", "failed", "blocked", "firstSendLatencyMs"];
-    const metricLabels = ["Sent", "Enqueued", "Failed", "Blocked", "First send latency"];
-    const expectedByType = {
-      dews: ["7", "5", "3", "1", "240ms"],
-      depeg: ["6", "4", "2", "8", "Unknown"],
-    } as const;
-
-    const mobile = screen.getByTestId("telegram-delivery-mobile");
-    const desktop = screen.getByTestId("telegram-delivery-desktop");
-    const desktopTable = desktop.querySelector("table");
-    expect(mobile.querySelectorAll("dl")).toHaveLength(TELEGRAM_ALERT_TYPES.length);
-    expect(desktopTable).toBeTruthy();
-    expect(desktopTable?.querySelectorAll("tbody tr")).toHaveLength(TELEGRAM_ALERT_TYPES.length);
-    if (!desktopTable) return;
-
-    expect(
-      [...desktopTable.querySelectorAll("thead [data-metric-key]")].map((element) =>
-        element.getAttribute("data-metric-key"),
-      ),
-    ).toEqual(metricKeys);
-    expect([...desktopTable.querySelectorAll("thead [data-metric-key]")].map((element) => element.textContent)).toEqual(
-      metricLabels,
-    );
-
-    for (const type of ["dews", "depeg"] as const) {
-      const expectedValues = expectedByType[type];
-      const mobileRow = mobile.querySelector(`[data-alert-type="${type}"]`);
-      const desktopRow = desktopTable.querySelectorAll("tbody tr")[
-        model.delivery.perAlertType.findIndex((row) => row.type === type)
-      ];
-      expect(mobileRow).toBeTruthy();
-      expect(desktopRow).toBeTruthy();
-      if (!mobileRow || !desktopRow) continue;
-
-      expect([...mobileRow.querySelectorAll("dt")].map((element) => element.textContent)).toEqual(metricLabels);
-      expect([...mobileRow.querySelectorAll("dd")].map((element) => element.textContent)).toEqual(expectedValues);
-      expect([...desktopRow.querySelectorAll("[data-metric-key]")].map((element) => element.textContent)).toEqual(
-        expectedValues,
-      );
-    }
+  it("keeps unavailable row-backed delivery outcomes unavailable", () => {
+    renderWorkbench({ cron: dispatchCron(makeDispatchMetadata({ perAlertType: { dews: { sent: 0 } } })) });
+    expect(screen.getByText("Row-backed delivery outcomes are unavailable.")).toBeTruthy();
+    const section = screen.getByRole("region", { name: "Authoritative target outcomes" });
+    expect(section.querySelector("dl")).toBeNull();
   });
 
   it("renders long unbroken diagnostics verbatim and exposes real recovery cross-links on failure", () => {
@@ -214,9 +187,8 @@ describe("TelegramBotStats", () => {
       },
       cron: dispatchCron(
         makeDispatchMetadata({
-          freshPermanentFailures: 1,
-          freshRetryQueued: 2,
-          pendingRetryQueued: 0,
+          pendingDroppedPermanentFailure: 1,
+          pendingRetryQueued: 2,
           pendingRateLimited: true,
           pendingRetryAfterSec: 45,
         }),

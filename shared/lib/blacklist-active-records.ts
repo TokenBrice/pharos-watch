@@ -116,7 +116,8 @@ function resolveBlacklistAmount(
 ): Pick<BlacklistActiveRecord, "frozenAmountUsd"> {
   const currentBalance = findCurrentBalanceSnapshot(event, currentBalances);
 
-  if (currentBalance?.status === "resolved") {
+  // A failed refresh retains the successful ledger value and its original clock.
+  if (currentBalance?.amountUsd != null) {
     return { frozenAmountUsd: currentBalance.amountUsd };
   }
 

@@ -40,7 +40,7 @@
   "governanceQuality": "multisig",
   "liveReservesConfig": {
     "adapter": "jupusd",
-    "version": 1,
+    "version": 2,
     "semantics": "collateral-mix",
     "breakerScope": "jupusd-jupiter",
     "display": {

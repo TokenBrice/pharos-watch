@@ -31,7 +31,7 @@ export interface MintBurnSignedNetView {
 
 export const MINT_BURN_COVERAGE_UNKNOWN_NOTE =
   "Coverage unknown: aggregated before valuation completeness was recorded";
-const NET_UNAVAILABLE_NOTE = "Signed net unavailable: valuation incomplete";
+const NET_UNAVAILABLE_NOTE = "Signed net unavailable: window evidence incomplete";
 const PARTIAL_SUM_NOTE =
   "Partial valuation: a component has unpriced events; summed signed net unavailable";
 const SUM_UNAVAILABLE_NOTE = "Summed signed net unavailable: a component net is unavailable";

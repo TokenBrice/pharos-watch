@@ -1,12 +1,80 @@
 import { DatabaseSync } from "node:sqlite";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
-import { readJsonResponse } from "../../test-helpers/__shared/auth";
-import { describe, it, expect } from "vitest";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import { DigestArchiveResponseSchema } from "@shared/types/digest";
+import { PUBLIC_STATIC_ROUTES } from "../../routes/public-routes";
+import { createEdgeCacheContext } from "../../handlers/http/edge-cache";
+import { makeExecutionContext, readJsonResponse } from "../../test-helpers/__shared/auth";
+import { describe, it, expect, vi } from "vitest";
+import { readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { withTempRepo } from "../../../../scripts/__tests__/helpers/test-state";
+import { findMissingDigestArchiveDates, runDigestSync } from "../../../../scripts/maintenance/sync-digests";
+import type { DigestContentEntry } from "@shared/types/digest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { EDITORIAL_STYLE_HASH, EDITORIAL_STYLE_VERSION } from "@shared/lib/editorial-style";
 import { makeDigestRow } from "../../test-helpers/__shared/fixtures";
 import { handleDigestArchive } from "../digest-archive";
 import { handleDailyDigest } from "../daily-digest";
+
+it("forwards history/cursors through the lazy route and traverses tied timestamps at a stable insertion horizon", async () => {
+  const { sqlite, db } = createLatestSchemaSqlite();
+  try {
+    const insert = sqlite.prepare("INSERT INTO daily_digest (digest_text, generated_at, input_data, digest_meta) VALUES (?, ?, '{}', ?)");
+    for (let edition = 1; edition <= 400; edition++) {
+      insert.run(`Daily ${edition}`, 1_700_000_000 + Math.floor((edition - 1) / 2), null);
+    }
+    insert.run("Hidden", 1_699_999_999, '{"internal":true,"type":"weekly"}');
+    const route = PUBLIC_STATIC_ROUTES.find((entry) => entry.endpoint.key === "digest-archive")!;
+    const load = async (cursor: string | null) => {
+      const url = new URL("https://api.example.com/api/digest-archive?history=all");
+      if (cursor) url.searchParams.set("cursor", cursor);
+      expect(createEdgeCacheContext(new Request(url), url).cacheKey.url).toBe(url.toString());
+      const response = await route.handler({
+        url, db, request: new Request(url), trustedAdmin: false,
+        execCtx: makeExecutionContext().ctx,
+      });
+      expect(response.status).toBe(200);
+      return DigestArchiveResponseSchema.parse(await response.json());
+    };
+    const first = await load(null);
+    expect(first.digests).toHaveLength(365);
+    expect(first.pagination).toMatchObject({ total: 401, scanned: 365 });
+    expect(first.pagination?.nextCursor).toEqual(expect.any(String));
+    // Neither a newer publication nor a later backdated insert belongs to this run.
+    insert.run("Concurrent newest", 1_800_000_000, null);
+    insert.run("Concurrent backdated", 1_700_000_000, null);
+    const second = await load(first.pagination!.nextCursor);
+    expect(second.pagination).toEqual({
+      horizon: first.pagination!.horizon, total: 401, scanned: 401, nextCursor: null,
+    });
+    const archive = [...first.digests, ...second.digests];
+    expect(archive.map((row) => row.digestText)).toEqual(
+      Array.from({ length: 400 }, (_, index) => `Daily ${400 - index}`),
+    );
+    expect(archive.map((row) => row.editionNumber)).toEqual(
+      Array.from({ length: 400 }, (_, index) => 400 - index),
+    );
+    // A deletion inside the captured history must not look like a complete page.
+    sqlite.prepare("DELETE FROM daily_digest WHERE digest_text = 'Daily 1'").run();
+    const continuation = new URL("https://api.example.com/api/digest-archive?history=all");
+    continuation.searchParams.set("cursor", first.pagination!.nextCursor!);
+    const interrupted = await handleDigestArchive(db, continuation);
+    expect(interrupted.status).toBe(409);
+    expect(interrupted.headers.get("Cache-Control")).toBe("no-store");
+  } finally {
+    sqlite.close();
+  }
+});
+
+it.each(["?cursor=1.2.3.4.5", "?history=all&cursor=bad", "?history=all&cursor=1.1.1.1.1", "?history=partial"])(
+  "rejects invalid archive traversal parameters %s",
+  async (query) => {
+    const response = await handleDigestArchive(mockD1([]), new URL(`https://api.example.com/api/digest-archive${query}`));
+    expect(response.status).toBe(400);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+  },
+);
 
 describe("handleDigestArchive", () => {
   it("returns 200 with empty digests when no data", async () => {
@@ -14,6 +82,11 @@ describe("handleDigestArchive", () => {
     const res = await handleDigestArchive(db);
     const body = (await readJsonResponse(res, 200)) as { digests: unknown[] };
     expect(body.digests).toEqual([]);
+    expect(body).not.toHaveProperty("pagination");
+    const history = await handleDigestArchive(db, new URL("https://api.example.com/api/digest-archive?history=all"));
+    expect(await history.json()).toMatchObject({
+      digests: [], pagination: { horizon: 0, total: 0, scanned: 0, nextCursor: null },
+    });
   });
 
   it("returns 200 with digests array", async () => {
@@ -61,6 +134,25 @@ describe("handleDigestArchive", () => {
     expect(body.digests[0].riskSignal).toMatchObject({ symbol: "PMUSD", bps: -5284, severity: "critical" });
     expect(body.digests[0].riskTape).toHaveLength(1);
     expect(body.digests[0].nextTriggers).toHaveLength(1);
+  });
+
+  it.each([
+    [0, { complete: false, observedCount: 0, unavailableCount: 2 }, null],
+    [100e9, { complete: false, observedCount: 1, unavailableCount: 1 }, 100e9],
+    [100e9, undefined, 100e9],
+    [0, { complete: true, observedCount: 2, unavailableCount: 0 }, 0],
+    [100e9, { complete: true, observedCount: 2, unavailableCount: 1 }, 100e9],
+  ])("projects validated coverage while keeping legacy proof absent", async (totalMcapUsd, supplyCoverage, expectedAmount) => {
+    const db = mockD1([{ match: "daily_digest", rows: [makeDigestRow({
+      input_data: JSON.stringify({ totalMcapUsd, supplyCoverage }),
+    })] }]);
+    const body = DigestArchiveResponseSchema.parse(await (await handleDigestArchive(db)).json());
+    expect(body.digests[0].totalMcapUsd).toBe(expectedAmount);
+    if (supplyCoverage && !(supplyCoverage.complete && supplyCoverage.unavailableCount > 0)) {
+      expect(body.digests[0].supplyCoverage).toEqual(supplyCoverage);
+    } else {
+      expect(body.digests[0]).not.toHaveProperty("supplyCoverage");
+    }
   });
 
   it("projects editorial style provenance and marks legacy rows without rewriting them", async () => {
@@ -221,6 +313,7 @@ describe("handleDigestArchive", () => {
     const sharedEditions = [...editionsAt300].filter(([title]) => editionsAt400.has(title));
 
     expect(sharedEditions).toHaveLength(265);
+    expect(editionsAt400.size).toBe(365);
     for (const [title, editionNumber] of sharedEditions) {
       expect(editionsAt400.get(title)).toBe(editionNumber);
     }
@@ -244,4 +337,40 @@ it("credits the model that produced the copy when a heavy audit attempt ran last
   ] }]);
   const body = await (await handleDigestArchive(db)).json() as { digests: { llm?: { servedModel: string } }[] };
   expect(body.digests[0].llm).toEqual({ servedModel: "claude-opus-5-5" });
+});
+// This API-plus-mirror test belongs on the Worker side of ADR-2: scripts
+// must not import Worker handlers merely to exercise the full traversal.
+it("refreshes more than 365 editions from the API without losing permanent slugs", async () => {
+  await withTempRepo("digest-archive-sync", {}, async (root) => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const output = join(root, "digests.json");
+      const start = Date.parse("2025-01-01") / 1000;
+      const previous: DigestContentEntry[] = Array.from({ length: 400 }, (_, index) => ({
+        date: new Date((start + index * 86_400) * 1000).toISOString().slice(0, 10),
+        generatedAt: start + index * 86_400, editionNumber: index + 1,
+        title: `Edition ${index + 1}`, text: "Summary", extended: "", digestType: "daily",
+      }));
+      writeFileSync(output, JSON.stringify(previous));
+      const insert = sqlite.prepare("INSERT INTO daily_digest (digest_text, generated_at, input_data) VALUES (?, ?, '{}')");
+      for (let index = 0; index <= 400; index++) insert.run(`Edition ${index + 1}`, start + index * 86_400);
+      const requests: URL[] = [];
+      vi.stubGlobal("fetch", vi.fn(async (input: string) => {
+        const url = new URL(input);
+        requests.push(url);
+        return handleDigestArchive(db, url);
+      }));
+      await runDigestSync(["--api-url", "https://api.example.com", "--output", output]);
+      const current = JSON.parse(readFileSync(output, "utf8")) as DigestContentEntry[];
+      expect(current).toHaveLength(401);
+      expect(findMissingDigestArchiveDates(previous, current)).toEqual([]);
+      expect(current[0]).toMatchObject({ date: "2026-02-05", editionNumber: 401, text: "Edition 401" });
+      expect(current[current.length - 1]).toMatchObject({ date: "2025-01-01", editionNumber: 1 });
+      expect(requests).toHaveLength(2);
+      expect(requests[1].searchParams.get("cursor")).toEqual(expect.any(String));
+    } finally {
+      sqlite.close();
+      vi.unstubAllGlobals();
+    }
+  });
 });

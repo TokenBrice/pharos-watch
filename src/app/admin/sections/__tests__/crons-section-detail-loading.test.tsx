@@ -61,8 +61,9 @@ afterEach(() => {
 describe("cron detail request gating", () => {
   it("fetches nothing before selection and requests each selected job only once", async () => {
     const fetchSpy = renderWorkbench();
-    expect(screen.getByText("Select this job to load run history and metadata.")).toBeTruthy();
-    expect(screen.queryByText("Loading run history and metadata…")).toBeNull();
+    // The disabled detail state now explicitly includes resource evidence.
+    expect(screen.getByText("Select this job to load run history, metadata and resource evidence. Resource evidence not requested.")).toBeTruthy();
+    expect(screen.queryByText(/Loading run history and metadata/)).toBeNull();
     // Allow mounted query effects and another event-loop tick to run before asserting network silence.
     await act(async () => {
       const tick = Promise.withResolvers<void>();
@@ -88,7 +89,7 @@ describe("cron detail request gating", () => {
     expect(fetchSpy).toHaveBeenCalledTimes(2);
 
     await act(async () => { window.history.replaceState(null, "", "/"); });
-    await waitFor(() => expect(screen.getByText("Select this job to load run history and metadata.")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Select this job to load run history, metadata and resource evidence. Resource evidence not requested.")).toBeTruthy());
     expect(screen.queryByText(`Full detail for ${JOBS[0]}`)).toBeNull();
     expect(fetchSpy).toHaveBeenCalledTimes(2);
   });

@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const execFileSyncMock = vi.hoisted(() => vi.fn((_file: string, _args: readonly string[]) => "[]"));
+const execFileSyncMock = vi.hoisted(() => vi.fn((_file: string, _args: readonly string[]) => '[{"success":true,"results":[]}]'));
 
 vi.mock("node:child_process", () => ({
   execFileSync: execFileSyncMock,
@@ -11,18 +11,18 @@ vi.mock("node:child_process", () => ({
 
 import { createRemoteD1Client } from "../../worker/scripts/lib/remote-d1";
 
-const { createD1Client, sqlString } = await import("../lib/remote-d1");
+import { createD1Client, decodeD1Envelopes, sqlString } from "../lib/remote-d1";
 
 describe("remote-d1 helpers", () => {
   beforeEach(() => {
     execFileSyncMock.mockClear();
-    execFileSyncMock.mockReturnValue("[]");
+    execFileSyncMock.mockReturnValue('[{"success":true,"results":[]}]');
   });
 
   it("executes D1 queries without shell interpolation", () => {
     const output = createD1Client("stablecoin-db").queryRaw("SELECT 1");
 
-    expect(output).toBe("[]");
+    expect(output).toBe('[{"success":true,"results":[]}]');
     expect(execFileSyncMock).toHaveBeenCalledWith(
       "npx",
       ["wrangler", "d1", "execute", "stablecoin-db", "--remote", "--command", "SELECT 1", "--json"],
@@ -39,7 +39,7 @@ describe("remote-d1 helpers", () => {
       const path = args[args.indexOf("--file") + 1]!;
       files.push(path);
       contents.push(readFileSync(path, "utf8"));
-      return "[]";
+      return '[{"success":true,"results":[]}]';
     });
     createD1Client("stablecoin-db", { batchSize: 2, target: "local" })
       .executeStatements(["SELECT 'first';", "SELECT 'second';", "SELECT 'third';"], "test-remote-d1");
@@ -104,7 +104,7 @@ describe("remote-d1 helpers", () => {
     let sqlPath = "";
     execFileSyncMock.mockImplementation((_file, args) => {
       sqlPath = args[args.indexOf("--file") + 1]!;
-      return "[]";
+      return '[{"success":true,"results":[]}]';
     });
     try {
       createD1Client("stablecoin-db", { failedSqlDirectory: scratch }).executeStatements(["SELECT 1;"], "replay-ok");
@@ -141,6 +141,9 @@ describe("remote-d1 helpers", () => {
       [{ results: [{ id: 3 }] }, [{ id: 3 }]],
       [{ result: [{ results: [{ id: 4 }] }] }, [{ id: 4 }]],
       [{ result: { results: [{ id: 5 }] } }, [{ id: 5 }]],
+      [{ success: true, result: [{ success: true, results: [{ id: 6 }] }, { results: [{ id: 7 }] }] }, [{ id: 6 }, { id: 7 }]],
+      [{ result: [{ result: { success: true, results: [] } }] }, []],
+      [{ success: true, results: [], error: null, errors: [] }, []],
     ] as const;
 
     for (const [envelope, expected] of envelopes) {
@@ -149,10 +152,42 @@ describe("remote-d1 helpers", () => {
     }
     expect(execFileSyncMock.mock.calls[0]![1]).toContain("--local");
     expect(execFileSyncMock.mock.calls[0]![1]).not.toContain("--remote");
-    execFileSyncMock.mockReturnValueOnce("[]");
+    execFileSyncMock.mockReturnValueOnce('[{"success":true,"results":[]}]');
     expect(client.query("SELECT id FROM assets")).toEqual([]);
     execFileSyncMock.mockReturnValueOnce("not JSON");
     expect(() => client.query("SELECT id FROM assets")).toThrow(SyntaxError);
+  });
+
+  it.each([
+    null, {}, [], { success: true }, { results: null }, { results: {} },
+    { success: false, results: [] }, { success: "true", results: [] },
+    { success: true, results: [], errors: [{ message: "read failed" }] },
+    { results: [], error: "read failed" }, { result: [] }, { result: [{}] },
+    { success: true, results: [], error: "" },
+    { success: true, result: [{ results: [] }], error: "" },
+    { result: [{ results: [{ id: 1 }] }, { results: [], error: "" }] },
+    [{ success: true, results: [{ id: 1 }] }, { success: false, results: [] }],
+    { success: false, result: [{ success: true, results: [] }] },
+    { result: [{ results: [] }, { result: { success: false, results: [] } }] },
+    { result: [{ results: [{ id: 1 }] }, { results: "truncated" }] },
+  ].map((payload) => [payload] as const))("rejects failed or unrecognized query evidence: %j", (payload) => {
+    execFileSyncMock.mockReturnValueOnce(JSON.stringify(payload));
+    expect(() => createD1Client("stablecoin-db").query("SELECT id FROM assets")).toThrow(/d1-/);
+  });
+
+  it("retains complete ordered envelopes and metadata for statement receipt consumers", () => {
+    const first = { success: true, results: [], meta: { changes: 2 }, finalBookmark: "bookmark" };
+    const second = { success: true, results: [{ changes: 3 }], meta: { changes: 0 } };
+    const decoded = decodeD1Envelopes({ success: true, result: [first, { result: second }] });
+    expect(decoded).toEqual([first, second]);
+    expect(decoded[0]).toBe(first);
+    expect(decoded[1]).toBe(second);
+  });
+
+  it("propagates process failures instead of decoding them as empty queries", () => {
+    const failure = Object.assign(new Error("wrangler exited 1"), { stdout: '[{"success":true,"results":[]}]' });
+    execFileSyncMock.mockImplementationOnce(() => { throw failure; });
+    expect(() => createD1Client("stablecoin-db").query("SELECT 1")).toThrow(failure);
   });
 
   it("executes Worker wrapper queries without shell interpolation from the Worker root", () => {
@@ -178,7 +213,7 @@ describe("remote-d1 helpers", () => {
     let sqlFileContents = "";
     execFileSyncMock.mockImplementation(((_command: string, args: string[]) => {
       sqlFileContents = readFileSync(args[args.length - 2]!, "utf8");
-      return "[]";
+      return '[{"success":true,"results":[]}]';
     }) as typeof execFileSyncMock);
 
     client.executeStatements(["SELECT 1;"], "worker-remote-d1-test");

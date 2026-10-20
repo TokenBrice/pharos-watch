@@ -4,6 +4,7 @@ import { buildHardcodedUsdBenchmark } from "../yield-sync/benchmarks";
 import { buildComparisonAnchorFreshnessMeta, buildYieldDegradationReasons, buildYieldSafetySnapshotMeta, buildYieldSyncMetadata } from "../yield-sync/coordinator";
 import type { EvaluatedYieldSource } from "../yield-sync/evaluation";
 import type { YieldEnvelopeRejection } from "../yield-sync/types";
+import { makeReportCardsV9Response } from "../../test-helpers/report-cards-v9";
 
 const START_SEC = 1_800_000_000;
 const STALE_THRESHOLD_SEC = COMPARISON_ANCHOR_STALE_THRESHOLD_MS / 1000;
@@ -72,6 +73,30 @@ describe("buildComparisonAnchorFreshnessMeta", () => {
   });
 });
 
+describe("buildYieldSafetySnapshotMeta", () => {
+  it.each([
+    { kind: "degraded" as const, coverageRatio: null, trackedCount: null, coveredCount: 0, reason: "safety-score-index-missing", expectedRatio: null },
+    { kind: "ok" as const, coverageRatio: 0, trackedCount: 4, coveredCount: 0, reason: null, expectedRatio: 0 },
+    { kind: "degraded" as const, coverageRatio: 374 / 396, trackedCount: 396, coveredCount: 374, reason: "v9-publication-held", expectedRatio: 0.9444 },
+  ])("preserves $reason coverage as $expectedRatio in serialized metadata", ({ expectedRatio, ...coverage }) => {
+    const identity = coverage.trackedCount == null ? null : makeReportCardsV9Response().safetyScoreIdentity;
+    const metadata = JSON.parse(JSON.stringify(buildYieldSafetySnapshotMeta({
+      ...coverage,
+      source: "safety-score-v9-publication",
+      safetyScoreIdentity: identity,
+      publicationGenerationId: identity?.publicationGenerationId ?? null,
+      methodologyVersion: identity?.methodologyVersion ?? null,
+      publishedAt: coverage.trackedCount == null ? null : START_SEC - 3600,
+    })));
+    expect(metadata).toMatchObject({
+      ...coverage,
+      coverageRatio: expectedRatio,
+      maxAgeSeconds: 86400,
+      safetyScoreIdentity: identity,
+    });
+  });
+});
+
 describe("buildYieldDegradationReasons", () => {
   const baseParams = {
     safetyCoverageRatio: 1,
@@ -105,9 +130,15 @@ describe("buildYieldDegradationReasons", () => {
     previousTvlRowsTruncated: false,
   };
 
-  it.each([0.7499, 0.75, 0.7501])("uses raw coverage %s against the shared floor", (safetyCoverageRatio) => {
+  it.each([0, 0.7499, 0.75, 0.7501])("uses raw coverage %s against the shared floor", (safetyCoverageRatio) => {
     expect(buildYieldDegradationReasons({ ...baseParams, safetyCoverageRatio }).includes("safety-snapshot-coverage"))
       .toBe(safetyCoverageRatio < 0.75);
+  });
+
+  it("names unavailable safety separately from measured low coverage", () => {
+    const reasons = buildYieldDegradationReasons({ ...baseParams, safetyCoverageRatio: null });
+    expect(reasons).toContain("safety-snapshot-unavailable");
+    expect(reasons).not.toContain("safety-snapshot-coverage");
   });
 
   it("retains default benchmark fallback health when no source row is selected", () => {

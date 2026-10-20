@@ -86,4 +86,36 @@ describe("FlowSummaryCard", () => {
     // Complete 7d window keeps its value.
     expect(container.textContent).toContain("-$5.00M");
   });
+
+  it.each([null, true])("withholds a literal dial for an unavailable scan window (activity=%s)", (has24hActivity) => {
+    useMintBurnFlowsMock.mockReturnValue({
+      data: {
+        coins: [makeMintBurnFlowCoin({
+          has24hActivity,
+          netFlowDirection24h: null,
+          pressureShiftScore: null,
+          pressureShiftState: "nr",
+          netFlow24hUsd: null,
+          netFlow7dUsd: null,
+          netFlow30dUsd: null,
+          netFlow90dUsd: null,
+          mintVolume24hUsd: 0,
+          burnVolume24hUsd: 0,
+          mintCount24h: 0,
+          burnCount24h: 0,
+        })],
+      },
+      dataUpdatedAt: 1_700_000_000_000,
+      error: null,
+      isLoading: false,
+      refetch: vi.fn(),
+    });
+    const { container } = render(<FlowSummaryCard stablecoinId="usdc-circle" />);
+    expect(screen.getByText("Direction unavailable")).toBeTruthy();
+    expect(container.querySelector('[data-reason-codes="window-unavailable"]')).toBeTruthy();
+    expect(screen.queryByRole("img", { name: /Minting pressure gauge at/ })).toBeNull();
+    expect(screen.queryByText("No 24h mint or burn volume")).toBeNull();
+    expect(container.textContent).not.toContain("-$3.00M");
+    expect(container.textContent).not.toContain("-$5.00M");
+  });
 });

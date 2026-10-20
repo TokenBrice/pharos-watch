@@ -82,6 +82,28 @@ describe("scheduled runtime context", () => {
     expect(startedProgressIndex).toBeGreaterThan(leaseIndex);
   });
 
+  it.each([null, 0])("persists measured or unknown producer counters (%s) without itemCount inference", async (measurement) => {
+    const { db, sqlite } = fixtures.open();
+    const slotStartedAt = getCronSlotStartedAtForSchedule("quarterHourly", Date.now());
+    const runtime = createScheduledRuntimeContext(
+      { DB: db } as Parameters<typeof createScheduledRuntimeContext>[0], {} as ExecutionContext,
+      { cron: "*/15 * * * *", scheduleKey: "quarterHourly", scheduledTimeMs: Date.now(), slotStartedAt },
+    );
+    const measurements = {
+      rowsRead: measurement, rowsWritten: measurement, rowsDropped: measurement, validationFailures: measurement,
+    };
+    await runtime.runLeasedCron("sync-stablecoins", async () => ({
+      itemCount: 99, metadata: JSON.stringify({ ...measurements, reason: "observed-producer-evidence" }),
+    }));
+    const rows = sqlite.prepare("SELECT item_count, metadata FROM cron_runs WHERE job = 'sync-stablecoins'").all();
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.item_count).toBe(99);
+    expect(JSON.parse(rows[0]!.metadata as string)).toMatchObject({
+      ...measurements, reason: "observed-producer-evidence", leaseOwner: expect.any(String),
+      scheduleKey: "quarterHourly", slotStartedAt,
+    });
+  });
+
   it("waits for the genuine scheduled reserve head and emits only one final cron row", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-10-07T01:00:00Z"));

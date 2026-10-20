@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { makeReportCardsV9PartialCard, makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
 import { NUMERIC_INPUT_STATES } from "@shared/test-utils/boundary-contract-vectors.test-support";
+import { projectV9TableCard } from "@shared/lib/report-cards-v9-projections";
 import {
   buildSafetyMcapMap,
   buildV9GradeCounts,
@@ -26,7 +27,7 @@ describe("Safety Scores V9 view model", () => {
         control: { ...makeV9Card().pillars.control, score: 60 },
       },
     }),
-  ];
+  ].map(projectV9TableCard);
 
   it("groups and counts V9 grades using the existing grade sections", () => {
     expect(buildV9GradeCounts(cards)).toMatchObject({ A: 1, B: 1, C: 1 });
@@ -55,7 +56,7 @@ describe("Safety Scores V9 view model", () => {
   });
 
   it("excludes unobserved and unrated supply from the supply mix instead of counting zero", () => {
-    const input = [...cards, makeV9Card({ id: "nr", score: null, grade: "NR" })];
+    const input = [...cards, projectV9TableCard(makeV9Card({ id: "nr", score: null, grade: "NR" }))];
     expect(buildV9SupplyMix(input, new Map([["asset-a", 30], ["asset-c", 70], ["nr", 900]]))).toEqual({
       supplyByGrade: { A: 30, B: 0, C: 70, D: 0, F: 0 },
       totalSupply: 100,
@@ -63,7 +64,7 @@ describe("Safety Scores V9 view model", () => {
       ratedCount: 3,
     });
     expect(buildV9SupplyMix(cards, buildSafetyMcapMap())).toMatchObject({ totalSupply: 0, observedCount: 0, ratedCount: 3 });
-    expect(buildV9SupplyMix([makeV9Card({ score: null, grade: "NR" })], new Map())).toBeNull();
+    expect(buildV9SupplyMix([projectV9TableCard(makeV9Card({ score: null, grade: "NR" }))], new Map())).toBeNull();
   });
 
   it("averages all three pillars over rated cards and flags the weakest", () => {
@@ -72,15 +73,15 @@ describe("Safety Scores V9 view model", () => {
       { pillar: "exit", label: "Exit", average: 68, scoredCount: 3, isLowest: true },
       { pillar: "control", label: "Economic Control", average: 76, scoredCount: 3, isLowest: false },
     ]);
-    expect(buildV9PillarAverages([makeV9Card({ score: null, grade: "NR" })])).toEqual([]);
+    expect(buildV9PillarAverages([projectV9TableCard(makeV9Card({ score: null, grade: "NR" }))])).toEqual([]);
   });
 
   it("omits headline statistics for an entirely unrated universe", () => {
-    expect(buildV9HeadlineStats([makeV9Card({ score: null, grade: "NR" })], new Map())).toEqual([]);
+    expect(buildV9HeadlineStats([projectV9TableCard(makeV9Card({ score: null, grade: "NR" }))], new Map())).toEqual([]);
   });
 
   it("excludes unrated supply from the headline denominator", () => {
-    const input = [...cards, makeV9Card({ id: "nr", score: null, grade: "NR" })];
+    const input = [...cards, projectV9TableCard(makeV9Card({ id: "nr", score: null, grade: "NR" }))];
     const stats = buildV9HeadlineStats(input, new Map([["asset-a", 30], ["asset-c", 70], ["nr", 900]]));
     expect(stats[0]).toMatchObject({ value: "77" });
     expect(stats[1]).toMatchObject({ value: "30%" });
@@ -139,7 +140,8 @@ describe("Safety Scores V9 view model", () => {
     const gap = makeReportCardsV9PipelineGapCard("control", "A", { id: "gap" });
     const partial = makeReportCardsV9PartialCard("exit", "B", { id: "partial", score: 75 });
     const nr = makeV9Card({ id: "nr", score: null, grade: "NR", ratingStatus: "not-rated" });
-    const input = [gap, nr, partial];
+    // The page now consumes the table projection, including its published mint seam.
+    const input = [gap, nr, partial].map(projectV9TableCard);
     expect(buildV9GradeCounts(input)).toMatchObject({ B: 1, NR: 1, F: 0, "pipeline-gap": 1 });
     expect(groupV9CardsByGrade(input).map(group => group.grade)).toEqual(["B", "NR", "pipeline-gap"]);
     const options = { gradeFilter: "pipeline-gap" as const, pegFilter: "all" as const, pegTypeMap: new Map<string, string>(), sortKey: "overall" as const, mcapMap: new Map([["partial", 100], ["gap", 900]]) };

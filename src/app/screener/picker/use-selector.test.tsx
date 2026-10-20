@@ -84,6 +84,35 @@ describe("useSelector", () => {
     expect(buildSelectorRowsMock).toHaveBeenCalledTimes(3);
   });
 
+  it("retains the yield response clock when an unrelated source refreshes", () => {
+    const acquiredAt = 1_700_000_000_000;
+    const queries = makePickerQueryData();
+    for (const [name, query] of Object.entries(queries)) {
+      vi.mocked(apiHooks[name as keyof typeof queries]).mockReturnValue(query() as never);
+    }
+    const yieldQuery = { ...queries.useYieldRankings(), dataUpdatedAt: acquiredAt };
+    vi.mocked(apiHooks.useYieldRankings).mockReturnValue(yieldQuery as never);
+    useStablecoinsMock.mockReturnValue({ data: { peggedAssets: [] }, dataUpdatedAt: acquiredAt, error: null });
+    const { rerender } = renderHook(() => useSelector(INPUT, null));
+    expect(buildSelectorRowsMock).toHaveBeenLastCalledWith(expect.objectContaining({
+      yieldData: yieldQuery.data, yieldAgeAssessedAt: acquiredAt, now: acquiredAt,
+    }));
+    useStablecoinsMock.mockReturnValue({
+      data: { peggedAssets: [] }, dataUpdatedAt: acquiredAt + 3_600_000, error: null,
+    });
+    rerender();
+    expect(buildSelectorRowsMock).toHaveBeenLastCalledWith(expect.objectContaining({
+      yieldData: yieldQuery.data, yieldAgeAssessedAt: acquiredAt, now: acquiredAt + 3_600_000,
+    }));
+    vi.mocked(apiHooks.useYieldRankings).mockReturnValue({
+      ...yieldQuery, dataUpdatedAt: acquiredAt + 1_800_000,
+    } as never);
+    rerender();
+    expect(buildSelectorRowsMock).toHaveBeenLastCalledWith(expect.objectContaining({
+      yieldAgeAssessedAt: acquiredAt + 1_800_000, now: acquiredAt + 3_600_000,
+    }));
+  });
+
 
   it("reaches the existing error UI when a critical query rejects", () => {
     useStablecoinsMock.mockReturnValue({

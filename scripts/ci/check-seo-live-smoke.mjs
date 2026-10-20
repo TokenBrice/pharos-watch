@@ -135,7 +135,7 @@ export async function checkSitemapUrls(locs, limit, errors) {
         errors.push(`${loc}: sitemap URL is noindexed by X-Robots-Tag (${headerRobots})`);
       }
       const contentType = response.headers.get("content-type") ?? "";
-      if (contentType.includes("text/html")) {
+      if (/^text\/html(?:\s*;|$)/i.test(contentType)) {
         const html = await response.text();
         const robots = [
           ...getMetaContents(html, "name", "robots"),
@@ -148,6 +148,8 @@ export async function checkSitemapUrls(locs, limit, errors) {
         if (canonical !== loc) {
           errors.push(`${loc}: sitemap URL canonical must match itself (got ${canonical || "missing"})`);
         }
+      } else {
+        errors.push(`${loc}: sitemap URL has unexpected Content-Type (${contentType || "missing"})`);
       }
     } finally {
       await cancelResponseBody(response);

@@ -46,6 +46,19 @@ function renderHero(data: HarborSceneInput = LIVE) {
 }
 
 describe("HarborHero keyboard and pin contract", () => {
+  it("pins observed supply with an unavailable global share without rendering a zero share", () => {
+    const { berth } = renderHero({
+      ...LIVE, globalTotalUsd: null, chainAttributedTotalUsd: null,
+      unattributedTotalUsd: null, attributionDiscrepancyUsd: null,
+      chains: LIVE.chains.map((chain) => ({ ...chain, dominanceShare: null })),
+    });
+    expect(berth("ethereum").getAttribute("aria-label")).toContain("global share unavailable");
+    fireEvent.keyDown(berth("ethereum"), { key: "Enter" });
+    const card = screen.getByRole("region", { name: "Ethereum" });
+    expect(card.textContent).toContain("Unavailable");
+    expect(card.textContent).not.toContain("0.00%");
+  });
+
   it("has one tab stop on the largest ship and moves in rank order", () => {
     const { berth } = renderHero();
     const stops = [...document.querySelectorAll("[data-berth]")].filter((el) => el.getAttribute("tabindex") === "0");

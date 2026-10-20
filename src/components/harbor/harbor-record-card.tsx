@@ -111,7 +111,7 @@ export function HarborRecordCard({ vessel, names, focusChainId, onClose, onShowI
         <dt>Supply</dt>
         <dd>{formatCompactUsd(vessel.totalUsd)}</dd>
         <dt>Global share</dt>
-        <dd>{(chain.dominanceShare * 100).toFixed(2)}%</dd>
+        <dd>{chain.dominanceShare == null ? "Unavailable" : `${(chain.dominanceShare * 100).toFixed(2)}%`}</dd>
         <dt>Chain Health</dt>
         <dd>{flag.kind === "band" ? `${CHAIN_HEALTH_LABELS[flag.band]}${flag.score == null ? "" : ` ${flag.score}`}` : "NR"}</dd>
         <dt>7d</dt>

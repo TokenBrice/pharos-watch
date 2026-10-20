@@ -18,7 +18,6 @@ import {
   TELEGRAM_PRESET_IDS,
 } from "@shared/lib/telegram-presets";
 import {
-  recordTelegramFirstFollow,
   recordTelegramFirstSetupComplete,
   telegramAdoptionDimensionsForStart,
 } from "../adoption/adoption-analytics";
@@ -37,6 +36,8 @@ import {
 } from "./telegram-webhook-messages";
 import {
   canActOnPendingOwner,
+  bindPendingKeyboard,
+  pendingFlowId,
   SETUP_PENDING_ACTION_TYPE,
   WIZARD_INTRO_MESSAGE,
   type SetupWizardState,
@@ -86,7 +87,7 @@ const PRESET_PICKER_DEFINITIONS = [
     .sort((a, b) => (a.minMarketCapUsd ?? 0) - (b.minMarketCapUsd ?? 0)),
 ];
 
-function buildBranchKeyboard(options: { includeMiniAppButton?: boolean } = {}): InlineKeyboardMarkup {
+function buildBranchKeyboard(flowId: string, options: { includeMiniAppButton?: boolean } = {}): InlineKeyboardMarkup {
   const rows: InlineKeyboardButton[][] = [
     [{ text: "Use recommended (DEWS + Depeg, usd-top25)", callback_data: "setup:branch:recommended" }],
     [{ text: "Custom setup", callback_data: "setup:branch:custom" }],
@@ -105,10 +106,10 @@ function buildBranchKeyboard(options: { includeMiniAppButton?: boolean } = {}): 
       },
     ]);
   }
-  return { inline_keyboard: rows };
+  return bindPendingKeyboard({ inline_keyboard: rows }, flowId);
 }
 
-function buildTypeToggleKeyboard(selected: Set<string>): InlineKeyboardMarkup {
+function buildTypeToggleKeyboard(selected: Set<string>, flowId: string): InlineKeyboardMarkup {
   const rows = ALERT_TYPE_ORDER.map((type) => {
     const checked = selected.has(type) ? "✓ " : "";
     return [{ text: `${checked}${ALERT_TYPE_LABELS[type]}`, callback_data: `setup:type-toggle:${type}` }];
@@ -117,34 +118,34 @@ function buildTypeToggleKeyboard(selected: Set<string>): InlineKeyboardMarkup {
     { text: "Cancel", callback_data: "setup:cancel" },
     { text: "Next →", callback_data: "setup:next" },
   ]);
-  return { inline_keyboard: rows };
+  return bindPendingKeyboard({ inline_keyboard: rows }, flowId);
 }
 
-function buildTargetKeyboard(): InlineKeyboardMarkup {
+function buildTargetKeyboard(flowId: string): InlineKeyboardMarkup {
   const rows: InlineKeyboardButton[][] = PRESET_PICKER_DEFINITIONS.map((preset) => [
     { text: preset.label, callback_data: `setup:target:${preset.id}` },
   ]);
   rows.push([{ text: "All tracked coins", callback_data: "setup:target:all" }]);
   rows.push([{ text: "Type a ticker", callback_data: "setup:target:type" }]);
   rows.push([{ text: "Cancel", callback_data: "setup:cancel" }]);
-  return { inline_keyboard: rows };
+  return bindPendingKeyboard({ inline_keyboard: rows }, flowId);
 }
 
-function buildConfirmKeyboard(): InlineKeyboardMarkup {
-  return {
+function buildConfirmKeyboard(flowId: string): InlineKeyboardMarkup {
+  return bindPendingKeyboard({
     inline_keyboard: [
       [
         { text: "Confirm", callback_data: "setup:confirm" },
         { text: "Cancel", callback_data: "setup:cancel" },
       ],
     ],
-  };
+  }, flowId);
 }
 
-function buildTickerPromptKeyboard(): InlineKeyboardMarkup {
-  return {
+function buildTickerPromptKeyboard(flowId: string): InlineKeyboardMarkup {
+  return bindPendingKeyboard({
     inline_keyboard: [[{ text: "Cancel", callback_data: "setup:cancel" }]],
-  };
+  }, flowId);
 }
 
 function buildForceReplyKeyboard(): ForceReplyMarkup {
@@ -180,6 +181,7 @@ async function persistSetupState(
     step: state.step,
     alertTypes: state.alertTypes,
     target: state.target,
+    flowId: state.flowId,
     ...(state.adoptionToken ? { adoptionToken: state.adoptionToken } : {}),
   };
   return persistPendingDisambiguationRow(db, {
@@ -242,7 +244,8 @@ export function parseSetupState(
     && parseTelegramAdoptionToken(record.adoptionToken)?.destination === "setup"
     ? record.adoptionToken
     : null;
-  return { step, alertTypes, target, initiatorUserId, adoptionToken };
+  return { step, alertTypes, target, initiatorUserId, adoptionToken,
+    flowId: typeof record.flowId === "string" ? record.flowId : undefined };
 }
 
 export async function sendWizardIntro(
@@ -250,7 +253,7 @@ export async function sendWizardIntro(
   botToken: string,
   chatId: string,
   initiatorUserId: string | null,
-  options: Omit<TelegramMutationContext, "storedIntent"> & {
+  options: TelegramMutationContext & {
     adoptionToken?: string | null;
     includeMiniAppButton?: boolean;
     clearPending?: boolean;
@@ -284,6 +287,7 @@ export async function sendWizardIntro(
     target: recommended ? { kind: "preset", presetId: RECOMMENDED_PRESET_ID } : null,
     initiatorUserId,
     adoptionToken: adoptionEntry?.destination === "setup" ? adoptionEntry.token : null,
+    flowId: pendingFlowId((options.storedIntent?.payload.nextState as Record<string, unknown> | undefined)?.flowId),
   };
   await options.planIntent?.(createTelegramWebhookIntent("command:start", {
     stage: "setup-intro",
@@ -305,7 +309,7 @@ export async function sendWizardIntro(
     ? escapeHtml(`You'll get DEWS and Depeg alerts for these ${preview.count} coins:\n${preview.symbolPreview}`)
     : WIZARD_INTRO_MESSAGE, botToken, {
     actionDetail: "setup",
-    replyMarkup: recommended ? buildConfirmKeyboard() : buildBranchKeyboard(options),
+    replyMarkup: recommended ? buildConfirmKeyboard(state.flowId!) : buildBranchKeyboard(state.flowId!, options),
   });
 }
 
@@ -316,6 +320,7 @@ interface CallbackContext extends TelegramMutationContext {
   actorUserId: string | null;
   username: string | null;
   resumedSetup?: { action: string; state: SetupWizardState };
+  flowId?: string;
 }
 
 async function recordSetupAdoptionMilestones(
@@ -331,12 +336,6 @@ async function recordSetupAdoptionMilestones(
     feature,
     nowSec,
   });
-  await recordTelegramFirstFollow(context.db, {
-    ...dimensions,
-    chatId: context.chatId,
-    feature,
-    nowSec,
-  });
 }
 
 function setupIntentState(state: SetupWizardState): Record<string, unknown> {
@@ -344,6 +343,7 @@ function setupIntentState(state: SetupWizardState): Record<string, unknown> {
     step: state.step,
     alertTypes: [...state.alertTypes],
     target: state.target,
+    flowId: state.flowId,
     ...(state.adoptionToken ? { adoptionToken: state.adoptionToken } : {}),
   };
 }
@@ -385,8 +385,10 @@ async function persistSetupTransition(
   action: string,
   nextState: SetupWizardState,
 ): Promise<boolean> {
+  if (!context.resumedSetup) nextState.flowId = pendingFlowId();
   await context.planIntent?.(createTelegramWebhookIntent("callback:setup", {
     action,
+    sourceFlowId: context.flowId ?? null,
     nextState: setupIntentState(nextState),
   }, "required"));
   if (context.wasMutationApplied) return true;
@@ -405,6 +407,7 @@ async function clearSetupTransition(
 ): Promise<void> {
   await context.planIntent?.(createTelegramWebhookIntent("callback:setup", {
     action,
+    sourceFlowId: context.flowId ?? null,
     previousState: setupIntentState(state),
   }, "required"));
   if (context.wasMutationApplied) return;
@@ -460,7 +463,7 @@ export async function handleSetupBranch(
         "- Safety — Safety grade changes\n" +
         "- Launch — pre-launch coin goes live on Pharos",
       {
-        replyMarkup: buildTypeToggleKeyboard(new Set(nextState.alertTypes)),
+        replyMarkup: buildTypeToggleKeyboard(new Set(nextState.alertTypes), nextState.flowId!),
       },
     );
     return { text: "Pick alert types." };
@@ -501,7 +504,7 @@ async function openRecommendedConfirm(
   const head = `You'll get DEWS and Depeg alerts for these ${preview.count} coins:`;
   const body = preview.symbolPreview;
   await sendSetupReply(context, escapeHtml(`${head}\n${body}`), {
-    replyMarkup: buildConfirmKeyboard(),
+    replyMarkup: buildConfirmKeyboard(nextState.flowId!),
   });
   return { text: "Review and confirm." };
 }
@@ -547,7 +550,7 @@ export async function handleSetupTypeToggle(
   await sendSetupReply(
     context,
     `Selected: ${alertTypesSummary(nextAlertTypes)}`,
-    { replyMarkup: buildTypeToggleKeyboard(selected) },
+    { replyMarkup: buildTypeToggleKeyboard(selected, nextState.flowId!) },
   );
   return { text: isAllowedAlertType(arg) ? ALERT_TYPE_LABELS[arg] : "Alert types updated." };
 }
@@ -573,7 +576,7 @@ export async function handleSetupNext(
   await sendSetupReply(
     context,
     `Selected alerts: ${alertTypesSummary(state.alertTypes)}\nPick a target watchlist:`,
-    { replyMarkup: buildTargetKeyboard() },
+    { replyMarkup: buildTargetKeyboard(nextState.flowId!) },
   );
   return { text: "Pick a target." };
 }
@@ -599,7 +602,7 @@ export async function handleSetupTarget(
     await sendSetupReply(
       context,
       "Reply with a ticker (e.g. USDC) or send /cancel to abort.",
-      { replyMarkup: buildTickerPromptKeyboard() },
+      { replyMarkup: buildTickerPromptKeyboard(nextState.flowId!) },
     );
     return { text: "Type a ticker." };
   }
@@ -638,7 +641,7 @@ async function advanceToCustomConfirm(
     return { text: "Setup changed. Send /start to begin again." };
   }
   await sendSetupReply(context, escapeHtml(summary), {
-    replyMarkup: buildConfirmKeyboard(),
+    replyMarkup: buildConfirmKeyboard(nextState.flowId!),
   });
   return { text: "Review and confirm." };
 }
@@ -693,6 +696,7 @@ export async function handleSetupConfirm(
   const alertTypes = new Set(state.alertTypes);
   await context.planIntent?.(createTelegramWebhookIntent("callback:setup", {
     action: "confirm",
+    sourceFlowId: context.flowId ?? state.flowId ?? null,
     state: setupIntentState(state),
   }, "required"));
   const operationStatements = context.prepareMutationAppliedStatement
@@ -704,6 +708,7 @@ export async function handleSetupConfirm(
       await upsertGlobalAlertTypes(context.db, context.chatId, context.username, alertTypes, {
         clearPending: true,
         operationStatements,
+        adoption: telegramAdoptionDimensionsForStart(state.adoptionToken),
       });
       if (operationStatements) context.confirmAtomicMutationApplied?.();
     }
@@ -742,6 +747,7 @@ export async function handleSetupConfirm(
         presetIds: [state.target.presetId as TelegramPresetId],
         clearPending: true,
         operationStatements,
+        adoption: telegramAdoptionDimensionsForStart(state.adoptionToken),
       });
       if (operationStatements) context.confirmAtomicMutationApplied?.();
     }
@@ -777,6 +783,7 @@ export async function handleSetupConfirm(
       directStablecoinIds: [state.target.coinId],
       clearPending: true,
       operationStatements,
+      adoption: telegramAdoptionDimensionsForStart(state.adoptionToken),
     });
     if (operationStatements) context.confirmAtomicMutationApplied?.();
   }

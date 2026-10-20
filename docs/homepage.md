@@ -67,6 +67,8 @@ Before hydration, a real leading-core profile directory plus Screener link remai
 
 Deviation text/severity uses published `peg-summary.currentDeviationBps`, not a second calculation from independently refreshed price. Liquidity zero remains measured/coloured; only missing data is `—`. Mint is the published Economic Control component, never a second score lane; missing breakdowns show NR. Curated route describes review coverage, not score. Shared table/export owners define headers and band keys; homepage suppresses header methodology hints while Screener retains them.
 
+Pinning moves rows without renumbering their rank in the current filtered sort. CSV exports retain those same per-asset ranks and the complete displayed order, not only the paginated or virtualized slice, alongside the original source-generation preamble.
+
 ## Loading Strategy
 
 The eager summary preserves first-paint content. Idle/viewport gates defer the live SVG history chart; heavier sections use shape-matched progressive fallbacks. Each lazy section retains measured responsive height until offscreen; update reserves when layout height changes so mounting does not shift the footer.

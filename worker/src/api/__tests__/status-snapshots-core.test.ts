@@ -250,7 +250,10 @@ describe("handleStatus", () => {
     const db = fixtureMockD1([
       { match: "FROM cache WHERE key = ?", matchBinds: [STATUS_RAW_SNAPSHOT_CACHE_KEY], rows: [
         makeRawStatusSnapshotRow(now, 120, {
-          sectionErrors: { scheduledSlots: { code: "old-slot-error", message: "old snapshot error" } },
+          sectionErrors: {
+            scheduledSlots: { code: "old-slot-error", message: "old snapshot error" },
+            crons: { code: "cron-history-read-failed", message: "Cron history unavailable." },
+          },
         }),
       ] },
       { match: "cron_runs", rows: [{ job, started_at: now - 30, duration_ms: 1000,
@@ -265,8 +268,10 @@ describe("handleStatus", () => {
     expect(body.crons[job].telemetryUnknown).toBe(readFails);
     if (!readFails) expect(body.crons[job].runs[0]?.startedAt).toBe(now - 30);
     expect(body.sectionErrors.scheduledSlots).toBeUndefined();
-    expect(body.summary.unhealthyCrons).toBe(Object.values(body.crons)
+    expect(body.summary.unhealthyCrons).toBe(readFails ? null : Object.values(body.crons)
       .filter((cron) => cron.healthy === false).length);
+    expect(body.summary.cronHistoryUnavailableReason).toBe(readFails ? "cron-history-read-failed" : null);
+    expect(body.sectionErrors.crons?.code).toBe(readFails ? "cron-history-read-failed" : undefined);
     expect(db.getHistory().some((entry) => entry.sql.includes("blacklist_events"))).toBe(false);
   });
 
@@ -811,6 +816,8 @@ describe("handleStatus", () => {
                 previousGlobalTvl: 125_000_000,
                 currentTop10CoveredTvl: 100_000_000,
                 previousTop10CoveredTvl: 102_000_000,
+                currentTop10GuardTvl: 100_000_000,
+                previousTop10GuardTvl: 102_000_000,
                 nearCoverageGuard: false,
                 nearValueGuard: false,
                 nearMajorCoverageGuard: false,
@@ -938,15 +945,51 @@ describe("handleStatus", () => {
     expect(["healthy", "degraded", "stale"]).toContain(body.overallStatus);
   });
 
-  it("coerces malformed liquidity coverage-class metadata to zero", async () => {
+  it("preserves named unavailable DEX baselines instead of projecting empty populations", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = fixtureMockD1([
+      { match: "FROM cache WHERE key = ?", matchBinds: [STATUS_RAW_SNAPSHOT_CACHE_KEY],
+        rows: [makeRawStatusSnapshotRow(now, 60)] },
+      { match: "cron_runs", rows: [{ job: "sync-dex-liquidity", started_at: now - 30,
+        duration_ms: 1000, status: "degraded", error: null, item_count: 120,
+        metadata: JSON.stringify({ failedSources: [], sourceCoverage: {
+          currentCoverage: 120, previousCoverage: null,
+          currentGlobalTvl: 100, previousGlobalTvl: null,
+          currentTop10CoveredTvl: null, previousTop10CoveredTvl: null,
+          currentTop10GuardTvl: null, previousTop10GuardTvl: null,
+          nearCoverageGuard: false, nearValueGuard: false, nearMajorCoverageGuard: false,
+          currentCoverageClasses: { primary: 120, mixed: 0, fallback: 0, legacy: 0, unobserved: 0 },
+          previousCoverageClasses: null,
+          baselineReadFailures: ["cron-history-read-failed", "top-ten-read-failed", "coverage-classes-read-failed"],
+        } }),
+      }] },
+    ]);
+    const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
+    const res = await handleStatus({ db, trustedAdmin: true, request });
+    const body = await readJsonResponse<{ liquidityHealth: unknown }>(res, 200);
+    expect(body.liquidityHealth).toMatchObject({
+      currentCoverage: 120, previousCoverage: null,
+      currentGlobalTvl: 100, previousGlobalTvl: null,
+      currentTop10CoveredTvl: null, previousTop10CoveredTvl: null,
+      currentTop10GuardTvl: null, previousTop10GuardTvl: null,
+      previousCoverageClasses: null,
+      baselineReadFailures: ["cron-history-read-failed", "top-ten-read-failed", "coverage-classes-read-failed"],
+    });
+  });
+
+  it("rejects malformed liquidity coverage-class metadata without inventing counts", async () => {
     const now = Math.floor(Date.now() / 1000);
     const db = fixtureMockD1([
       { match: "FROM cache WHERE key = ?", matchBinds: [STATUS_RAW_SNAPSHOT_CACHE_KEY],
         rows: [makeRawStatusSnapshotRow(now, 60)] },
       { match: "cron_runs", rows: [{ job: "sync-dex-liquidity", started_at: now - 30,
         duration_ms: 1000, status: "ok", error: null, item_count: 120,
-        metadata: JSON.stringify({ sourceCoverage: {
-          currentCoverage: 120,
+        metadata: JSON.stringify({ failedSources: [], sourceCoverage: {
+          currentCoverage: 120, previousCoverage: 0,
+          currentGlobalTvl: 0, previousGlobalTvl: 0,
+          currentTop10CoveredTvl: 0, previousTop10CoveredTvl: 0,
+          currentTop10GuardTvl: 0, previousTop10GuardTvl: 0,
+          nearCoverageGuard: false, nearValueGuard: false, nearMajorCoverageGuard: false,
           currentCoverageClasses: { primary: "12", mixed: "not-a-number", fallback: "NaN", legacy: [] },
           previousCoverageClasses: { primary: "Infinity", mixed: "-Infinity", fallback: {}, legacy: "", unobserved: "7" },
         } }),
@@ -956,28 +999,12 @@ describe("handleStatus", () => {
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
     const res = await handleStatus({ db, trustedAdmin: true, request });
 
-    const body = (await readJsonResponse(res, 200)) as {
-      liquidityHealth: {
-        currentCoverageClasses: Record<string, number>;
-        previousCoverageClasses: Record<string, number>;
-      } | null;
-    };
-
-    expect(body.liquidityHealth).not.toBeNull();
-    expect(body.liquidityHealth?.currentCoverageClasses).toEqual({
-      primary: 12,
-      mixed: 0,
-      fallback: 0,
-      legacy: 0,
-      unobserved: 0,
-    });
-    expect(body.liquidityHealth?.previousCoverageClasses).toEqual({
-      primary: 0,
-      mixed: 0,
-      fallback: 0,
-      legacy: 0,
-      unobserved: 7,
-    });
+    const body = await readJsonResponse<{
+      liquidityHealth: unknown;
+      sectionErrors: Record<string, { code: string }>;
+    }>(res, 200);
+    expect(body.liquidityHealth).toBeNull();
+    expect(body.sectionErrors.liquidityHealth?.code).toBe("liquidity_health_extraction_failed");
   });
 
   it("omits retired diagnostics from the status response", async () => {
@@ -1110,13 +1137,17 @@ describe("handleStatus", () => {
 
     const body = (await readJsonResponse(res, 200)) as {
       availabilityStatus: string;
-      summary: { unhealthyCrons: number };
+      summary: { unhealthyCrons: number | null; cronErrors: number | null; cronHistoryUnavailableReason?: string | null };
+      sectionErrors: Record<string, { code: string }>;
       crons: Record<string, { healthy: boolean | null; telemetryUnknown?: boolean; telemetryUnknownReason?: string }>;
       causes: { availability: Array<{ code: string }> };
     };
 
     expect(body.availabilityStatus).toBe("degraded");
-    expect(body.summary.unhealthyCrons).toBe(0);
+    expect(body.summary.unhealthyCrons).toBeNull();
+    expect(body.summary.cronErrors).toBeNull();
+    expect(body.summary.cronHistoryUnavailableReason).toBe("cron-history-read-failed");
+    expect(body.sectionErrors.crons?.code).toBe("cron-history-read-failed");
     expect(Object.values(body.crons).some((cron) => cron.healthy === true)).toBe(false);
     expect(body.crons["sync-stablecoins"]?.healthy).toBeNull();
     expect(body.crons["sync-stablecoins"]?.telemetryUnknown).toBe(true);

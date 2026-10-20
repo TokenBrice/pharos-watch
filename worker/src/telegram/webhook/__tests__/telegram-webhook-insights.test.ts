@@ -7,7 +7,8 @@ import {
   buildTopMessage,
   buildWhyMessage,
 } from "../telegram-webhook-insights";
-import type { StatusForCoin } from "../telegram-webhook-status";
+import { loadStatusForCoin, type StatusForCoin } from "../telegram-webhook-status";
+import { buildStatusMessage } from "../telegram-webhook-messages";
 import { buildDewsStablecoinIdsDigest } from "../../../lib/dews-publication-pointer";
 import {
   makeWorkerReportCardsV9Response,
@@ -471,7 +472,8 @@ describe("buildCoverageMessage", () => {
         apy30d: 4.2,
         source: 'Pendle: PT-USDC <a href="https://attacker.example/phish">CLAIM</a> & <i>boost</i>',
         pharosYieldScore: 42,
-        updatedAt: Math.floor(Date.now() / 1000),
+        provenance: makeYieldProvenance({ sourceFreshness: "fresh" }),
+        generationId: "yield-test",
       },
       flow: null,
       depeg: { status: "stable" },
@@ -484,6 +486,37 @@ describe("buildCoverageMessage", () => {
     );
     expect(message).not.toContain('<a href="https://attacker.example/phish">');
     expect(message).not.toContain("<i>boost</i>");
+  });
+
+  it("keeps status and coverage aligned with the served rankings row and stale source clock", async () => {
+    const { sqlite, db } = fixtures.open();
+    const nowSec = Math.floor(Date.now() / 1000);
+    const source = activeV9();
+    mocks.loadActiveSafetyScoreSource.mockResolvedValue(source);
+    const observedAt = nowSec - 7 * 86400;
+    const payload = makeTelegramYieldCachePayload(nowSec, [makeYieldRanking({
+      id: "usdc-circle", currentApy: 4.8, apy30d: 4.2, yieldSource: "Accepted venue",
+      yieldType: "nav-appreciation",
+      provenance: makeYieldProvenance({ sourceObservedAt: observedAt, sourceAgeSeconds: 7 * 86400 }),
+    })], source.snapshot.safetyScoreIdentity);
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES ('yield-rankings', ?, ?)")
+      .run(JSON.stringify(payload), nowSec);
+    const response = await handleYieldRankings(db);
+    expect(response.status).toBe(200);
+    const canonical = YieldRankingsResponseSchema.parse(await response.json()).rankings[0];
+    const status = await loadStatusForCoin(db, "usdc-circle");
+    expect(canonical.pysNullReason).toBe("source-stale");
+    expect(status.yield).toMatchObject({
+      currentApy: canonical.currentApy, apy30d: canonical.apy30d, source: canonical.yieldSource,
+      pharosYieldScore: canonical.pharosYieldScore, pysUnavailableReason: "source-stale",
+      provenance: { sourceObservedAt: observedAt, sourceFreshness: "stale" },
+      generationId: `yield-${nowSec}`,
+    });
+    for (const message of [buildStatusMessage("USDC", status), buildCoverageMessage("USDC", status)]) {
+      expect(message).toContain("4.20% 30d at Accepted venue, PYS unavailable (source-stale)");
+      expect(message).toContain(`source observed ${new Date(observedAt * 1000).toISOString()}`);
+      expect(message).toContain("stale: source-stale");
+    }
   });
 });
 

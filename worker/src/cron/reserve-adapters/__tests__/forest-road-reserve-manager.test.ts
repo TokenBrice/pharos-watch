@@ -6,6 +6,7 @@ import { fetchForestRoadReserveManagerReserves } from "../forest-road-reserve-ma
 import type { OnchainMulticall3Call } from "../onchain";
 import type * as EvmRpc from "../../../lib/evm-rpc";
 import type * as Onchain from "../onchain";
+import { validateAdapterOutput } from "../validate";
 
 const transport = vi.hoisted(() => ({ storage: vi.fn(), multicall: vi.fn() }));
 vi.mock("../../../lib/evm-rpc", async (importOriginal) => ({
@@ -116,6 +117,7 @@ describe("Forest Road measured accounting", () => {
     expect(result.slices.reduce((sum, slice) => sum + slice.pct, 0)).toBe(100);
     expect(result.metadata?.redemption).toBeUndefined();
     expect(result.metadata?.immediateRedeemableUsd).toBeUndefined();
+    expect(validateAdapterOutput(result, { now: BLOCK.timestamp }).valid).toBe(true);
   });
 
   it("subtracts impairment exactly once from accrued deployed face and retains adverse CR", async () => {
@@ -177,15 +179,21 @@ describe("Forest Road measured accounting", () => {
     const credit = BigInt(RAW_ACCOUNTING["0x6fa4a33b"]);
     overrides = { idleUSDC: word(0n), actualUSDC: word(0n), idleReserve: word(0n), totalBacking: word(credit), recognizedBacking: word(credit) };
     const result = await run();
-    expect(result.slices.find((slice) => slice.coinId === "usdc-circle")?.pct).toBe(0);
-    expect(result.slices.find((slice) => slice.assetClass === "private-credit")?.pct).toBe(100);
+    expect(result.slices).toHaveLength(1);
+    expect(result.slices[0]).toMatchObject({ assetClass: "private-credit", pct: 100 });
+    expect(result.metadata?.details).toMatchObject({ idleUSDC6Raw: "0", idleReserve18Raw: "0" });
+    expect(result.metadata?.totalReserveUsd).toBeCloseTo(5025209.449802362, 6);
+    expect(validateAdapterOutput(result, { now: BLOCK.timestamp }).valid).toBe(true);
   });
 
   it("retains observed zero credit after complete impairment instead of inventing assets", async () => {
     const idle = BigInt(RAW_ACCOUNTING["0x6af2fa06"]) * SCALE;
     overrides = { impairment: RAW_ACCOUNTING["0x6fa4a33b"], totalBacking: word(idle), recognizedBacking: word(idle) };
     const result = await run();
-    expect(result.slices.find((slice) => slice.assetClass === "private-credit")?.pct).toBe(0);
+    expect(result.slices).toHaveLength(1);
+    expect(result.slices[0]).toMatchObject({ coinId: "usdc-circle", pct: 100 });
+    expect(result.metadata?.totalReserveUsd).toBeCloseTo(138874.406506, 6);
+    expect(validateAdapterOutput(result, { now: BLOCK.timestamp }).valid).toBe(true);
     expect(result.metadata?.details?.netPrivateCredit18Raw).toBe("0");
     expect(result.metadata?.collateralizationRatio).toBeLessThan(1);
   });

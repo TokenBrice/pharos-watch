@@ -237,7 +237,7 @@ describe("splitMessage", () => {
     expect(splitMessage("short")).toEqual(["short"]);
   });
 
-  it("splits long messages at section boundaries", () => {
+  it("preserves section separators when splitting long messages", () => {
     const sections = Array.from({ length: 100 }, (_, i) => `Section ${i} text here`);
     const long = sections.join("\n\n");
     const chunks = splitMessage(long, 200);
@@ -246,7 +246,7 @@ describe("splitMessage", () => {
       expect(chunk.length).toBeGreaterThan(0);
       expect(chunk.length).toBeLessThanOrEqual(200);
     }
-    expect(chunks.join("\n\n")).toBe(long);
+    expect(chunks.join("")).toBe(long);
   });
 });
 
@@ -280,7 +280,7 @@ describe("splitMessage HTML safety", () => {
     // Build a long line with an HTML tag near the split boundary
     const longText = "<b>" + "x".repeat(3990) + "</b>" + "\n\n" + "<b>second</b>";
     const chunks = splitMessage(longText, 4000);
-    expect(chunks.map((chunk) => chunk.replace(/<\/?b>/g, "")).join("\n\n"))
+    expect(chunks.map((chunk) => chunk.replace(/<\/?b>/g, "")).join(""))
       .toBe("x".repeat(3990) + "\n\nsecond");
     // Every chunk with a <b> must also have </b>
     for (const chunk of chunks) {
@@ -292,8 +292,8 @@ describe("splitMessage HTML safety", () => {
     }
   });
 
-  it("strips tags from chunks that would have broken HTML", () => {
-    // A single long line that forces character-boundary splitting mid-tag
+  it("preserves tags and text near hard boundaries", () => {
+    // A tag near the limit must move intact, never lose its contents.
     const visible = "PREFIX" + "x".repeat(3989) + "boldSUFFIX";
     const longLine = "PREFIX" + "x".repeat(3989) + "<b>bold</b>SUFFIX";
     const chunks = splitMessage(longLine, 4000);
@@ -340,6 +340,84 @@ describe("splitMessage HTML safety", () => {
       expect(hasDanglingOpen).toBe(false);
       expect(chunk).not.toMatch(/^expandable>/);
     }
+  });
+
+  function decodeValidChunk(chunk: string): string {
+    const stack: string[] = [];
+    const text = chunk.replace(/<[^>]*>/g, (raw) => {
+      const tag = raw.match(/^<(\/?)\s*([a-zA-Z][a-zA-Z0-9-]*)[^>]*>$/);
+      expect(tag, `Malformed tag: ${raw}`).not.toBeNull();
+      if (tag![1]) expect(stack.pop(), `Misnested tag: ${raw}`).toBe(tag![2].toLowerCase());
+      else stack.push(tag![2].toLowerCase());
+      return "";
+    });
+    expect(stack, "Every chunk closes its own tags").toEqual([]);
+    expect(text).not.toMatch(/[<>]|&(?!(?:amp|lt|gt|quot|apos|#[0-9]+|#x[0-9a-fA-F]+);)/);
+    expect(text).not.toMatch(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/);
+    return text.replace(/&(amp|lt|gt|quot|apos|#[0-9]+|#x[0-9a-fA-F]+);/g, (_, entity: string) => {
+      const named: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'" };
+      return named[entity] ?? String.fromCodePoint(entity.startsWith("#x")
+        ? parseInt(entity.slice(2), 16) : Number(entity.slice(1)));
+    });
+  }
+
+  it.each(["", "b"])("keeps boundary separators with visible text (%s)", (tag) => {
+    const text = "x".repeat(tag ? 3992 : 3999) + "\n\n" + "y".repeat(4000);
+    const html = tag ? `<${tag}>${text}</${tag}>` : text;
+    const chunks = splitMessage(html, 4000);
+    const rendered = chunks.map(decodeValidChunk);
+    expect(chunks.every((chunk) => chunk.length <= 4000)).toBe(true);
+    expect(rendered.every((chunk) => chunk.trim().length > 0)).toBe(true);
+    expect(rendered.join("")).toBe(text);
+  });
+
+  it.each([" \n\t", "<b>\n\n</b>", "&#10;&#32;", "&#xA;&#x20;"])(
+    "rejects content without non-whitespace rendered text rather than emitting it: %s",
+    (html) => {
+      expect(() => splitMessage(html)).toThrow(RangeError);
+    },
+  );
+
+  it.each(["b", "strong", "i", "em", "u", "ins", "s", "strike", "del", "code", "pre", "tg-spoiler"])(
+    "keeps independently valid multiline %s spans and all decoded text",
+    (tag) => {
+      const text = "first line\nsecond line\n\nthird line\n".repeat(12);
+      const chunks = splitMessage(`<${tag}>${text}</${tag}>`, 96);
+      expect(chunks.length).toBeGreaterThan(1);
+      expect(chunks.every((chunk) => chunk.length <= 96)).toBe(true);
+      expect(chunks.map(decodeValidChunk).join("")).toBe(text);
+      expect(chunks.every((chunk) => chunk.startsWith(`<${tag}>`))).toBe(true);
+    },
+  );
+
+  it("reopens nested links and expandable blockquotes in order with their attributes", () => {
+    const open = '<blockquote expandable><b><a href="https://pharos.watch/?a=1&amp;b=2"><i>';
+    const text = "line one\nline two\n\nline three\n".repeat(20);
+    const chunks = splitMessage(`${open}${text}</i></a></b></blockquote>`, 180);
+    expect(chunks.length).toBeGreaterThan(1);
+    expect(chunks.every((chunk) => chunk.length <= 180 && chunk.startsWith(open))).toBe(true);
+    expect(chunks.map(decodeValidChunk).join("")).toBe(text);
+  });
+
+  it.each([17, 18, 19, 20, 21, 22, 23])("keeps entities and surrogate pairs indivisible at limit %i", (limit) => {
+    const encoded = "x&amp;&lt;&gt;&quot;&apos;&#128640;&#x1F680;\u{1F680}".repeat(20);
+    const chunks = splitMessage(`<b>${encoded}</b>`, limit);
+    expect(chunks.every((chunk) => chunk.length > 0 && chunk.length <= limit)).toBe(true);
+    expect(chunks.map(decodeValidChunk).join("")).toBe("x&<>\"'\u{1F680}\u{1F680}\u{1F680}".repeat(20));
+  });
+
+  it("makes bounded forward progress while preserving a deep but representable tag envelope", () => {
+    const text = "payload ".repeat(1200);
+    const chunks = splitMessage(`${"<b>".repeat(100)}${text}${"</b>".repeat(100)}`);
+    expect(chunks.length).toBeGreaterThan(1);
+    expect(chunks.every((chunk) => chunk.length <= 4000)).toBe(true);
+    expect(chunks.map(decodeValidChunk).join("")).toBe(text);
+  });
+
+  it("fails rather than dropping an indivisible token or its formatting context", () => {
+    expect(() => splitMessage("&amp; rest", 4)).toThrow(RangeError);
+    expect(() => splitMessage("<b>\u{1F680}</b>suffix", 8)).toThrow(RangeError);
+    expect(() => splitMessage('<a href="https://pharos.watch/">text</a>', 20)).toThrow(RangeError);
   });
 });
 
@@ -469,10 +547,10 @@ describe("resolveAlertLinkPreviewOptions", () => {
   });
 });
 
-it("splits deeply nested HTML with forward progress and rejects invalid limits", () => {
+it("rejects impossible nested envelopes without discarding formatting and rejects invalid limits", () => {
   const html = "<b>".repeat(1500) + "payload" + "</b>".repeat(1500);
-  const chunks = splitMessage(html);
-  expect(chunks.length).toBeGreaterThan(0);
-  expect(chunks.every((chunk) => chunk.length <= 4000)).toBe(true);
-  expect(() => splitMessage("x", 0)).toThrow(RangeError);
+  expect(() => splitMessage(html)).toThrow(RangeError);
+  for (const limit of [0, -1, 1.5, NaN, Infinity]) {
+    expect(() => splitMessage("x", limit)).toThrow(RangeError);
+  }
 });

@@ -28,6 +28,9 @@ export interface PendingAlertRow {
   delivery_started_at: number | null;
   delivery_completed_at: number | null;
   delivery_claim_expires_at: number | null;
+  processing_owner?: string | null;
+  processing_started_at?: number | null;
+  processing_expires_at?: number | null;
   alert_snooze_until_ts: number | null;
   quiet_hours_enabled: number | null;
   quiet_hours_start_utc: number | null;
@@ -72,6 +75,10 @@ export interface DeadLetterPendingRow {
   delivery_started_at?: number | null;
   delivery_completed_at?: number | null;
   delivery_claim_expires_at?: number | null;
+  expires_at?: number | null;
+  processing_owner?: string | null;
+  processing_started_at?: number | null;
+  processing_expires_at?: number | null;
 }
 
 export interface PendingDrainResult {

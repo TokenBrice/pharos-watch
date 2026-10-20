@@ -1,3 +1,4 @@
+import { DigestGradeTransitionAccountingSchema, type DigestEventPeriod } from "@shared/types/digest";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type {
   DigestInputData,
@@ -134,6 +135,7 @@ export function depegSignalKey(
 export function rollupDigestInputs(
   inputs: DigestInputData[],
   expectedDays: number = WEEKLY_ROLLUP_EXPECTED_DAYS,
+  gradeTransitionPeriod?: DigestEventPeriod,
 ): RollupSummary {
   const coreInputs = inputs.filter((input) => input.aggregateUniverse === "core-stablecoins-v1");
   const aggregateInputs = coreInputs.length > 0 ? coreInputs : inputs;
@@ -176,7 +178,36 @@ export function rollupDigestInputs(
   // accounting cannot establish an observed zero for a weekly total.
   const blacklistObserved = observed("blacklistEvents", ["blacklist-activity-query"], (input) => input.blacklistActivity == null);
   const blacklistUsdObserved = observed("blacklistUsd", ["blacklist-activity-query"], (input) => input.blacklistActivity == null);
-  const gradesObserved = observed("gradeTransitions", ["grade-transitions-query", "safety-canonical-snapshot"]);
+  const gradesObserved = observed("gradeTransitions", ["grade-transitions-query", "safety-canonical-snapshot"], (input) =>
+    !DigestGradeTransitionAccountingSchema.safeParse(input.gradeTransitionAccounting).data?.complete &&
+      !(input.degradedSources ?? []).some((source) => source.startsWith("safety-canonical-snapshot")));
+  const gradeIds = new Set<string>();
+  if (!gradeTransitionPeriod && gradesObserved) {
+    unavailableReasons.gradeTransitions = [
+      ...(unavailableReasons.gradeTransitions ?? []), "grade-transition-period-missing",
+    ];
+  } else if (gradesObserved && gradeTransitionPeriod) {
+    for (const input of aggregateInputs) {
+      const accounting = input.gradeTransitionAccounting;
+      if (!accounting?.complete) continue;
+      for (const entry of accounting.identities) {
+        if (entry.recordedAt >= gradeTransitionPeriod.start && entry.recordedAt < gradeTransitionPeriod.end) {
+          gradeIds.add(entry.historyId);
+        }
+      }
+    }
+    let coveredUntil = gradeTransitionPeriod.start;
+    const windows = aggregateInputs.flatMap((input) =>
+      input.gradeTransitionAccounting?.complete ? [input.gradeTransitionAccounting.window] : [])
+      .sort((a, b) => a.start - b.start);
+    for (const window of windows) {
+      if (window.start > coveredUntil) break;
+      coveredUntil = Math.max(coveredUntil, window.end);
+    }
+    if (coveredUntil < gradeTransitionPeriod.end) {
+      unavailableReasons.gradeTransitions = ["grade-transition-period-coverage-incomplete"];
+    }
+  }
   if (mcapEnd == null) unavailableReasons.mcapEnd = ["supply-coverage-incomplete"];
   return {
     mcapEnd,
@@ -189,7 +220,7 @@ export function rollupDigestInputs(
     blacklistUsd: blacklistUsdObserved ? aggregateInputs.reduce((s, d) => s + d.blacklistActivity!.totalAmountUsd, 0) : null,
     blacklistUnpricedEvents: blacklistObserved ? aggregateInputs.reduce((s, d) => s + (d.blacklistActivity!.unpricedEventCount ?? 0), 0) : null,
     unavailableReasons,
-    gradeTransitions: gradesObserved ? aggregateInputs.reduce((s, d) => s + (d.gradeTransitions?.length ?? 0), 0) : null,
+    gradeTransitions: gradesObserved && gradeTransitionPeriod && !unavailableReasons.gradeTransitions ? gradeIds.size : null,
     gaugeMid: gauges.length >= 3 ? gauges.reduce((s, v) => s + v, 0) / gauges.length : null,
     days: aggregateInputs.length,
     expectedDays,

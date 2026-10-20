@@ -10,8 +10,8 @@ export interface StabilityIndexCardData {
   bands: Array<{ name: string; active: boolean }>;
   // New fields
   avg7d: number | null;
-  allTimeHigh: number | null;
-  allTimeLow: number | null;
+  retainedSampleHigh: number | null;
+  retainedSampleLow: number | null;
   flightToQuality: boolean;
   flightIntensity: number | null;
   lastUpdated?: string;
@@ -85,7 +85,7 @@ export function StabilityIndexCard({
         )}
       </div>
 
-      {/* Context row: ATH/ATL + Flight to Quality */}
+      {/* Context row: retained sample bounds + Flight to Quality */}
       <div
         style={{
           display: "flex",
@@ -95,11 +95,12 @@ export function StabilityIndexCard({
         }}
       >
         <div style={{ display: "flex", gap: 16 }}>
+          <span style={{ color: TEXT_SECONDARY }}>Retained samples (up to 90 days)</span>
           <span style={{ color: TEXT_SECONDARY }}>
-            ATH: <span style={{ color: SEMANTIC_COLORS.positive, fontWeight: 600 }}>{data.allTimeHigh == null ? "—" : data.allTimeHigh.toFixed(1)}</span>
+            High: <span style={{ color: SEMANTIC_COLORS.positive, fontWeight: 600 }}>{data.retainedSampleHigh == null ? "—" : data.retainedSampleHigh.toFixed(1)}</span>
           </span>
           <span style={{ color: TEXT_SECONDARY }}>
-            ATL: <span style={{ color: SEMANTIC_COLORS.negative, fontWeight: 600 }}>{data.allTimeLow == null ? "—" : data.allTimeLow.toFixed(1)}</span>
+            Low: <span style={{ color: SEMANTIC_COLORS.negative, fontWeight: 600 }}>{data.retainedSampleLow == null ? "—" : data.retainedSampleLow.toFixed(1)}</span>
           </span>
         </div>
         {data.flightToQuality && (

@@ -35,7 +35,16 @@ function buildDepegPersistenceStatement(
         .prepare("UPDATE depeg_events SET recovery_first_seen_at = NULL, recovery_last_seen_at = NULL WHERE id = ? AND (recovery_first_seen_at IS NOT NULL OR recovery_last_seen_at IS NOT NULL)")
         .bind(command.id);
     case "delete-event":
-      return db.prepare("DELETE FROM depeg_events WHERE id = ?").bind(command.id);
+      // Retain canonical source rows, including unsealed incidents. Evaluate
+      // references in the delete itself so a concurrent link cannot be missed.
+      return db.prepare(`DELETE FROM depeg_events WHERE id = ?
+        AND NOT EXISTS (
+          SELECT 1 FROM depeg_resolver_incidents
+          WHERE first_event_id = depeg_events.id OR current_event_id = depeg_events.id
+        )
+        AND NOT EXISTS (
+          SELECT 1 FROM depeg_resolver_incident_event_links WHERE event_id = depeg_events.id
+        )`).bind(command.id);
   }
 }
 

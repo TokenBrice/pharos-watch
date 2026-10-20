@@ -185,6 +185,14 @@ export function applyCronHealthSectionErrors(
   sectionErrors: StatusResponse["sectionErrors"],
   cronHealth: CronHealthSnapshot,
 ): void {
+  if (cronHealth.cronHistoryQueryFailed) {
+    sectionErrors.crons = {
+      code: "cron-history-read-failed",
+      message: getStatusSectionMessage("crons"),
+    };
+  } else {
+    delete sectionErrors.crons;
+  }
   const scheduledSlotErrorCode = getScheduledSlotSectionErrorCode(cronHealth);
   if (scheduledSlotErrorCode) {
     sectionErrors.scheduledSlots = {

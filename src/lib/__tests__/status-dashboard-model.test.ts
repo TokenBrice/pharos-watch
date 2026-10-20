@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { EndpointProbeResult, StatusCause, StatusResponse } from "@shared/types";
+import { StatusResponseSchema } from "@shared/types/status";
 import { buildReliabilityWorkspaceModel } from "@/lib/reliability-workspace-model";
 import {
   makeActivePriceCoverage,
@@ -81,6 +82,53 @@ describe("triage and detailed cache parity", () => {
 });
 
 describe("status dashboard model", () => {
+  it("admits failed cron history as unavailable Crons attention with its named reason", () => {
+    const data = makeHealthyStatusResponse();
+    Object.assign(data.summary, {
+      unhealthyCrons: null, availabilityImpactingUnhealthyCrons: null, watchUnhealthyCrons: null,
+      degradedCrons: null, cronErrors: null, availabilityImpactingCronErrors: null,
+      availabilityImpactingConsecutiveCronErrors: null, cronHistoryUnavailableReason: "cron-history-read-failed",
+    });
+    data.sectionErrors.crons = { code: "cron-history-read-failed", message: "Cron history unavailable." };
+    const admitted = StatusResponseSchema.parse(data);
+    expect(admitted.summary.cronHistoryUnavailableReason).toBe("cron-history-read-failed");
+    const crons = buildModel(admitted).attentionSections.find((section) => section.id === "crons");
+    expect(crons?.value).toBe("Unavailable");
+    expect(crons?.summary).toContain("cron-history-read-failed");
+    expect(crons?.summary).not.toContain("0 watch unhealthy");
+    expect(crons?.summary).not.toContain("0 degraded jobs");
+    expect(buildModel(makeHealthyStatusResponse()).attentionSections.some((section) => section.id === "crons")).toBe(false);
+  });
+
+  it.each([
+    ["stablecoins", { stablecoinsCacheStatus: "error" }, "Price coverage unavailable", "0 missing prices"],
+    ["blacklist", { blacklistGapStatus: "failed" }, "Blacklist gap evidence unavailable", "0 blacklist gaps"],
+    ["onchain read", { onchainSupplyQueryStatus: "failed" }, "On-chain feed evidence unavailable", "0 stale on-chain feeds"],
+    ["onchain monitor", { onchainSupplyMonitoring: "unavailable" }, "On-chain feed evidence unavailable", "0 stale on-chain feeds"],
+  ] as const)("keeps failed %s counts out of the Triage Pipeline summary", (_source, failure, unavailable, falseZero) => {
+    const data = makeHealthyStatusResponse();
+    Object.assign(data.dataQuality!, {
+      stablecoinsCacheStatus: "ok", blacklistGapStatus: "ok", onchainSupplyQueryStatus: "ok",
+      onchainSupplyMonitoring: "active", missingPrices: 0, blacklistMissingAmounts: 0, staleOnchainSupply: 0,
+      ...failure,
+    });
+    const summary = buildModel(data).attentionSections.find((section) => section.id === "pipeline")?.summary;
+    expect(summary).toContain(unavailable);
+    expect(summary).not.toContain(falseZero);
+    expect(summary).toContain(_source === "blacklist" ? "0 missing prices" : "0 blacklist gaps");
+  });
+
+  it("retains independently observed zero Pipeline measurements", () => {
+    const data = makeHealthyStatusResponse();
+    Object.assign(data.dataQuality!, {
+      stablecoinsCacheStatus: "ok", blacklistGapStatus: "ok", onchainSupplyQueryStatus: "ok",
+      onchainSupplyMonitoring: "active", missingPrices: 0, blacklistMissingAmounts: 0, staleOnchainSupply: 0,
+    });
+    data.dataQualityStatus = "degraded";
+    expect(buildModel(data).attentionSections.find((section) => section.id === "pipeline")?.summary)
+      .toBe("0 missing prices, 0 stale on-chain feeds, 0 blacklist gaps");
+  });
+
   it("treats semantic degradation as an unhealthy browser probe", () => {
     const probes: EndpointProbeResult[] = [
       {

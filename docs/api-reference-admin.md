@@ -115,9 +115,9 @@ For hysteresis and DB-sentinel behavior, see [overall status](./status-dashboard
 
 **Cron summary contract.** Each `crons[job]` entry is a per-job summary: verdict (`healthy`, `telemetryUnknown`/`telemetryUnknownReason`, `bootstrap`), `confirmedOutputAt` (newest confirmed output clock in the bounded history read; `null` is not proof of no output), `inFlight` without progress metadata, `staleArtifacts`, `latestEvent`, and `runs` — newest first, `runs[0]` is the latest attempt (there is no `lastRun`/`recentRuns`). `runs` holds the ten-row display window plus appended inheritance evidence (latest required attempts, fresh proven-satisfied readback). Each run is a lightweight outcome: `startedAt`, `durationMs`, `status`, `error` bounded to 500 chars, `degradedReason`, `itemCount`, `rawStatus`, `reason`, `skippedReason`, `childDisposition`, `workerVersion`, `qualityReasons`, and abandonment timing (`activeDurationMs`, `progressUpdatedAt`, `reconciledAt`, `reconciliationDelayMs`). Runs carry **no metadata**. `latestRunFacts` carries only the registry-selected keys of the latest attempt's metadata (`CRON_STATUS_LATEST_FACT_KEYS`, `worker/src/lib/status/cron-status-summary.ts`): dispatch delivery counters for `dispatch-telegram-alerts`, `synced`/`total`/`nextCursorStablecoinId` for `sync-live-reserves`, `slowestProbes` for `status-self-check`. Full metadata is served per job by [`GET /api/status-cron-detail`](#get-apistatus-cron-detail). Projected on the 2026-10-18 baseline (3,421,068 B), the default response drops to ~555 KB.
 
-In the detail response for `dispatch-telegram-alerts`, `cron.runs[0].metadata` carries a richer delivery breakdown, including fields such as `freshAttempted`, `freshSent`, `freshRetryQueued`, `freshPermanentFailures`, `pendingAttempted`, `pendingDrained`, `pendingRetryQueued`, `pendingDeferred`, `pendingRateLimited`, `pendingRetryAfterSec`, `pendingDropped`, `pendingEnqueued`, and expanded `eventsDetected` counters (`depegTriggered`, `depegResolved`, `depegWorsening`, `launch`, `suppressedMethodologyChanges`). Rows written before this breakdown (and recovery re-writes of them) can lack the fresh-side counters while still carrying the pending-side ones; the admin comms model reads an absent `freshRetryQueued` as `0` only when that dispatch completed `ok` and `pendingRetryQueued` is present, and keeps delivery `Unknown` for any other incomplete shape.
+In the detail response for `dispatch-telegram-alerts`, `cron.runs[0].metadata` carries current pending-transport evidence: `pendingAttempted`, `pendingDrained`, `pendingRetryQueued`, `pendingDeferred`, `pendingRateLimited`, `pendingRetryAfterSec`, `pendingDropped`, `pendingEnqueued`, and expanded `eventsDetected` counters (`depegTriggered`, `depegResolved`, `depegWorsening`, `launch`, `suppressedMethodologyChanges`). Retired fresh-send, fresh-candidate and per-family counters are not emitted or projected as current summary facts. Retained raw metadata may still contain those historical fields; absence is not a synthetic zero. Use `telegramBot.deliverySli` for bounded row-authoritative delivery outcomes.
 
-Source-event runs also include `authoritativePlanning`. It identifies `sourceEventId` and `sourceEventFamilies`; splits source-preset resolution, candidate-horizon, fan-out input loaders, preference-generation validation, routing, target materialization, duplicate suppression, queue handoff, and pending-drain duration; and reports capture/planning/handoff pages, fan-out load/cache counts, captured/planned/duplicate-suppressed/enqueued targets, and coordinator steps. Eventless runs return the same object with a null source ID and zero counts/timings so status consumers do not need a second shape.
+Source-event runs also include `authoritativePlanning`. It identifies `sourceEventId` and `sourceEventFamilies`; splits source-preset resolution, candidate-horizon, fan-out input loaders, preference-generation validation, routing, target materialization, duplicate suppression, queue handoff, and pending-drain duration; and reports capture/planning/handoff pages, fan-out load/cache counts, captured/planned/duplicate-suppressed/enqueued targets, and coordinator steps. Eventless runs return the same object with a null source ID and zero counts/timings. Those defaults are not workload evidence for an observed source: zero-send monitoring admits `plannedTargetCount` only for the evaluated source scope, plus applicable durable `freezeTargetCount`, or preserves explicit unknown.
 
 The same cron metadata also exposes the live safety-alert source contract:
 
@@ -332,6 +332,8 @@ Accepted fields:
 
 `trafficClass` is ignored, not writable; a body with no recognized update fields returns `400`. The request lane is derived in `worker/src/handlers/http/gates.ts`, so issuance writes `"external"` and existing rows retain their attribution label.
 
+`tier` uses the canonical `API_KEY_TIER_VALUES` vocabulary from `@pharos/contracts/api-keys`. The API Management editor preserves a key's canonical tier during unrelated metadata edits, including donor keys; intentional operator tier changes remain available. Only an unknown historical free-form tier defaults to standard in the editor.
+
 **Response shape:** `ApiKeyMutationResponse`
 
 Send `expiresAt: null` only for a deliberate non-expiring exception. Existing keys created before the expiry migration keep `expiresAt = null` until an operator changes them.
@@ -372,17 +374,28 @@ Use `GET /api/backfill-dews?mode=backtest-metrics` for the curated anchor fixtur
 
 ### `GET /api/backfill-dews?mode=backtest-metrics`
 
-Backtest harness that replays DEWS over a curated set of historical depeg onsets (the `BACKTEST_ANCHORS` fixture). Reports detection rate and lead-time percentiles sourced from `stress_signal_history` daily snapshots.
+Read-only calibration harness over curated historical depeg onsets (`BACKTEST_ANCHORS`), using retained `stress_signal_history` daily observations rather than rerunning today's live scoring formula.
 
 **Authentication:** admin only (same Cloudflare Access gate as the rest of `/api/backfill-dews`).
 
-**Granularity:** `"daily"`. The harness reads `stress_signal_history` over the inclusive interval `[onsetAt - 14 days, onsetAt]` and selects the first `ALERT` / `WARNING` / `DANGER` snapshot. An onset-time snapshot counts, with zero lead time.
+**Granularity and coverage:** `"daily"`. The inclusive interval `[onsetAt - 14 days, onsetAt]` requires a valid observation at every UTC midnight inside its exact bounds. Intraday onsets require 14 daily observations; midnight onsets include both endpoints (15 observations). A valid observation has a finite score in `[0, 100]` and a recognized threat band. Only fully observed windows are scored: `detected=true` means at least one `ALERT` / `WARNING` / `DANGER`, `false` means a fully observed non-alert window, and `null` means missing/partial coverage, even if a partial window contains an alert. A midnight onset's snapshot counts with zero lead time.
+
+**Denominators:** `evaluableAnchors` excludes all null outcomes; `excludedAnchors` includes absent and partial windows, with `partialAnchors` disclosed separately. Overall and peg-cohort recall use only evaluable anchors and are `null` when none are evaluable. `falseNegativeIncidents` counts only fully observed misses (zero when no anchors are evaluable). Lead-time percentiles and aggregate churn use scored anchors only; churn is `null` without evaluable anchors.
+
+**Negative controls:** the production control registry intentionally remains empty until independently verified calm windows are admitted. Every control uses the same complete-daily-coverage requirement. Its `falsePositiveDays` is `null` for missing/partial coverage, otherwise the observed alert-day count, including measured zero. Aggregate `falsePositiveDays` and `precision` are unavailable (`null`) without fully observed negative-control exposure; `precisionUnavailableReason` is `no-observed-negative-control-exposure`. `cohortMetrics` discloses `negativeControlCount`, `evaluableNegativeControlCount` and `observedNegativeControlDays` (only scored exposure).
+
+With controls, the legacy diagnostic precision ratio is detected incident anchors divided by detected incident anchors plus control alert-days. These are different sampling units, not a statistically validated incident-level precision model. A zero denominator yields `precision=null` with `no-positive-outcomes`; otherwise the unavailable reason is null. No new negative controls or live DEWS methodology changes are implied.
 
 **Response excerpt** (additional metrics/cohorts and negative controls come from `handleBacktestMetrics` in `worker/src/api/backfill-dews.ts`)
 
 ```json
 {
   "detectionRate": 0.75,
+  "precision": null,
+  "precisionUnavailableReason": "no-observed-negative-control-exposure",
+  "falsePositiveDays": null,
+  "evaluableAnchors": 4,
+  "excludedAnchors": 0,
   "leadTimeDaysP50": 4,
   "leadTimeDaysP90": 11,
   "granularity": "daily",
@@ -392,7 +405,13 @@ Backtest harness that replays DEWS over a curated set of historical depeg onsets
       "onsetAt": 1679400000,
       "detected": true,
       "leadTimeDays": 2,
-      "firstAlertBand": "WARNING"
+      "firstAlertBand": "WARNING",
+      "evaluation": {
+        "availability": "available",
+        "reasons": [],
+        "observedDays": 14,
+        "expectedDays": 14
+      }
     }
   ]
 }
@@ -400,7 +419,7 @@ Backtest harness that replays DEWS over a curated set of historical depeg onsets
 
 | Field             | Type                         | Description                                                                                     |
 | ----------------- | ---------------------------- | ----------------------------------------------------------------------------------------------- |
-| `detectionRate`   | `number`                     | Fraction of anchors with at least `ALERT` in the inclusive lookback ending at `onsetAt` (`0` if no anchors) |
+| `detectionRate`, `recall` | `number \| null` | Fraction of fully observed anchors with at least `ALERT`; `null` without evaluable anchors |
 | `leadTimeDaysP50` | `number \| null`             | 50th-percentile lead time in days across detected anchors; `null` when no anchors were detected |
 | `leadTimeDaysP90` | `number \| null`             | 90th-percentile lead time in days across detected anchors; `null` when no anchors were detected |
 | `granularity`     | `"daily"`                    | Snapshot granularity used to compute lead time                                                  |
@@ -412,12 +431,15 @@ Backtest harness that replays DEWS over a curated set of historical depeg onsets
 | ---------------- | ------------------------------------------ | --------------------------------------------------------------------------------- |
 | `stablecoinId`   | `string`                                   | Pharos stablecoin ID of the anchor                                                |
 | `onsetAt`        | `number`                                   | Unix seconds of the curated depeg onset                                           |
-| `detected`       | `boolean`                                  | Whether DEWS reached at least `ALERT` in the inclusive 14-day interval ending at onset |
-| `leadTimeDays`   | `number \| null`                           | Days between the first elevated band and `onsetAt`; `null` if `detected=false`    |
-| `firstAlertBand` | `"ALERT" \| "WARNING" \| "DANGER" \| null` | Band of the first elevated snapshot inside the window; `null` if `detected=false` |
+| `detected`       | `boolean \| null`                          | Scored detection outcome; `null` for all incomplete daily windows |
+| `leadTimeDays`   | `number \| null`                           | Days from first elevated snapshot to onset; populated only when `detected=true` |
+| `firstAlertBand` | `"ALERT" \| "WARNING" \| "DANGER" \| null` | First observed elevated band, including in partial windows; null if none observed |
 | `alertDays`      | `number`                                   | Count of elevated (`ALERT`/`WARNING`/`DANGER`) snapshots inside the 14-day window  |
 | `bandTransitions`| `number`                                   | Number of band changes across those elevated snapshots                            |
 | `pegType`        | `string \| null`                           | `pegged<PEG_CURRENCY>` for PSI-eligible anchors; `null` otherwise                  |
+| `evaluation`     | `object`                                   | `availability` (`available`, `partial`, `unavailable`), `reasons`, `observedDays`, `expectedDays` |
+
+`evaluation.reasons` is empty for complete coverage, `history-unavailable` for no retained rows, or `incomplete-daily-history` when rows exist but do not cover all required midnights with valid observations. Per-anchor `alertDays`, `firstAlertBand` and `bandTransitions` describe retained observations, not a scored outcome for excluded windows.
 
 ### `GET /api/backfill-dews?repair=refresh-current&dry-run=true`
 
@@ -616,7 +638,7 @@ The Dwellir-only latest check keeps an explicit chain-local block-number sentine
 
 The sentinel sequence is head H1 → `eth_call(latest)` yielding served block R → head H2, with no numeric references. The sole tolerance authority is `headLagThresholdBlocks(blockTimeSec)` in `worker/src/lib/rpc-provider-parity/report.ts`: T = `max(3, ceil(6 / blockTimeSec))`, the same six-second/minimum-three-block policy used by the head-lag gate. It is discriminating and `fresh` / `served-block-in-range` when H1−T ≤ R ≤ H2+T, or `stale` / `served-block-behind` below H1−T. This gives Arbitrum 24 blocks (0.25 seconds/block), Robinhood and HyperEVM six (one second/block), and Base three (two seconds/block). A fixed two-block allowance was insufficient for fast-chain/load-balanced skew: an Arbitrum served block 11 ahead of H2 is now inside its shared 24-block budget, not missing evidence. Ahead-of-budget results, any regressing head (which could be a reorg), or a failed step remain indeterminate; a fast advancing head does not exhaust a numeric bracket. Each sample preserves the `toleranceBlocks` actually used when acquired; summary `blockTolerance` reports the current chain's shared sentinel budget, without rewriting historical verdicts.
 
-Every target also reads its own token contract's `totalSupply(latest)` (selector `0x18160ddd`), because a fresh block-number sentinel does not establish freshness for another `(to,data)` pair. Using the first chain head H1, the post-token-call head H2, and same-probe sentinel block R when available, its numeric Dwellir-only window is `[max(0,H1−T), max(H2,R)]`, with the same shared T as the sentinel. Including R avoids falsely declaring stale a moving HyperEVM value served at H2+2. Every block in the window must be read, capped at ten (`RPC_PARITY_LATEST_MAX_NUMERIC_CALLS`); wider windows are inconclusive with no partial sampling. Any match is `fresh` / `matched-numeric-block`, but unchanged window values are `discriminating: false`: quiet-token matches are inconclusive about a token-specific stale cache, not negative freshness evidence. Discriminating token coverage is opportunistic and not a sufficiency requirement where a sentinel exists; it remains the floor on XDC. A complete stable-hash H1=H2 window without a match is `stale` / `no-bracket-match`; advancing-head misses stay indeterminate / `moving-bracket-no-match`. H1 and H2 headers fence the known head bracket, with H2 checked again after numeric reads; references through R do not require a separate future header. Detected reorgs, regressing heads, failed reads, or an unavailable numeric block above H2 remain indeterminate, never stale. Arbitrum, Monad, MegaETH and Cronos already exceed the token cap with stationary heads; their sentinel evidence can still satisfy freshness sufficiency.
+Every target also reads its own token contract's `totalSupply(latest)` (selector `0x18160ddd`), because a fresh block-number sentinel does not establish freshness for another `(to,data)` pair. Using the first chain head H1, the post-token-call head H2, and same-probe sentinel block R when available, its numeric Dwellir-only window is `[max(0,H1−T), max(H2,R)]`, with the same shared T as the sentinel. Including R avoids falsely declaring stale a moving HyperEVM value served at H2+2. Before numeric reads, H2 > H1+1 is indeterminate / `bracket-ancestry-gap`: no extra ancestry RPCs are made, and a fresh sentinel cannot turn that token bracket into a positive combined claim. Otherwise, every block in the window must be read, capped at ten (`RPC_PARITY_LATEST_MAX_NUMERIC_CALLS`); wider windows are inconclusive with no partial sampling. A match in a proven same-head hash or adjacent-head parent-hash bracket is `fresh` / `matched-numeric-block`, but unchanged window values are `discriminating: false`: quiet-token matches are inconclusive about a token-specific stale cache, not negative freshness evidence. Discriminating token coverage is opportunistic and not a sufficiency requirement where a sentinel exists; it remains the floor on XDC. A complete stable-hash H1=H2 window without a match is `stale` / `no-bracket-match`; advancing-head misses stay indeterminate / `moving-bracket-no-match`. H1 and H2 headers fence the known head bracket, with H2 checked again after numeric reads; references through R do not require a separate future header. Detected reorgs, regressing heads, failed reads, or an unavailable numeric block above H2 remain indeterminate, never stale. Arbitrum, Monad, MegaETH and Cronos already exceed the token cap with stationary heads; their sentinel evidence can still satisfy freshness sufficiency.
 
 Samples retain `sentinelFreshness` and `tokenFreshness`, including both sub-verdicts, the exact contract/selector read, acquired tolerance, heads, latest/numeric values, and token `referenceEndBlock`. The combined `latestFreshness` is stale if either check is stale; otherwise a deployed sentinel must be fresh and the token check matched or was `bracket-too-wide`. On XDC without a deployed sentinel, the combined verdict uses the actual token verdict. A failed token read or regressing/reorg bracket never becomes a positive combined claim. A discriminating fresh sentinel remains discriminating in the combined report when a quiet token matches; token-specific discrimination remains visible separately in `.tokenState`. `lastStale` names the selected failing check's actual method, run clock, budget, heads and value/reference payload.
 

@@ -1,5 +1,6 @@
 import { executeAtomicBatch } from "../../lib/db";
 import { unixNowSec as unixNow } from "@shared/lib/time-constants";
+import { TELEGRAM_CHAT_BACKOFF_CACHE_PREFIX } from "../common/constants";
 import {
   appendTelegramOperationStatements,
   type TelegramOperationBatchOptions,
@@ -92,6 +93,8 @@ export async function purgeInactiveTelegramSubscriber(
 /**
  * Delete every row this subscriber owns across the Telegram tables. Retains
  * `telegram_processed_updates` so replay-ack idempotency survives a re-/start.
+ * Anonymous Mini App admission is independent of the profile and expires at
+ * its original <=30-second deadline; legacy raw-chat burst keys are erased.
  */
 export async function forgetSubscriber(
   db: D1Database,
@@ -147,11 +150,13 @@ function prepareSubscriberPurge(
 }
 
 const CHAT_CACHE_EXACT_KEY_BUILDERS = [
+  (chatId: string) => `${TELEGRAM_CHAT_BACKOFF_CACHE_PREFIX}${chatId}`,
   (chatId: string) => `telegram:command-flood:${chatId}`,
   (chatId: string) => `telegram:re-engagement-warned:${chatId}`,
   (chatId: string) => `telegram:chat-admins:${chatId}`,
   (chatId: string) => `telegram:group-welcome:${chatId}`,
   (chatId: string) => `telegram:adoption-mini-app-session:${chatId}`,
+  // Legacy raw-chat keys only; active admission now uses anonymous epoch keys.
   (chatId: string) => `telegram:mini-app-mutation-burst:${chatId}`,
 ] as const;
 
@@ -188,25 +193,35 @@ function prepareChatMigrationCacheStatements(
   oldChatId: string,
   newChatId: string,
 ): D1PreparedStatement[] {
-  return CHAT_MIGRATION_CACHE_KEY_BUILDERS.flatMap((buildKey) => {
-    const oldKey = buildKey(oldChatId);
-    const newKey = buildKey(newChatId);
-    return [
-      db.prepare(`
-        INSERT INTO cache (key, value, updated_at)
-        SELECT ?, value, updated_at
-          FROM cache
-         WHERE key = ?
-        ON CONFLICT(key) DO UPDATE SET
-          value = CASE
-            WHEN cache.updated_at <= excluded.updated_at THEN excluded.value
-            ELSE cache.value
-          END,
-          updated_at = MAX(cache.updated_at, excluded.updated_at)
-      `).bind(newKey, oldKey),
-      db.prepare("DELETE FROM cache WHERE key = ?").bind(oldKey),
-    ];
-  });
+  return [
+    db.prepare(`
+      INSERT INTO cache (key, value, updated_at)
+      SELECT ?, value, updated_at FROM cache WHERE key = ?
+      ON CONFLICT(key) DO UPDATE SET
+        value = CAST(MAX(CAST(cache.value AS INTEGER), CAST(excluded.value AS INTEGER)) AS TEXT),
+        updated_at = MAX(cache.updated_at, excluded.updated_at)
+    `).bind(`${TELEGRAM_CHAT_BACKOFF_CACHE_PREFIX}${newChatId}`, `${TELEGRAM_CHAT_BACKOFF_CACHE_PREFIX}${oldChatId}`),
+    db.prepare("DELETE FROM cache WHERE key = ?").bind(`${TELEGRAM_CHAT_BACKOFF_CACHE_PREFIX}${oldChatId}`),
+    ...CHAT_MIGRATION_CACHE_KEY_BUILDERS.flatMap((buildKey) => {
+      const oldKey = buildKey(oldChatId);
+      const newKey = buildKey(newChatId);
+      return [
+        db.prepare(`
+          INSERT INTO cache (key, value, updated_at)
+          SELECT ?, value, updated_at
+            FROM cache
+           WHERE key = ?
+          ON CONFLICT(key) DO UPDATE SET
+            value = CASE
+              WHEN cache.updated_at <= excluded.updated_at THEN excluded.value
+              ELSE cache.value
+            END,
+            updated_at = MAX(cache.updated_at, excluded.updated_at)
+        `).bind(newKey, oldKey),
+        db.prepare("DELETE FROM cache WHERE key = ?").bind(oldKey),
+      ];
+    }),
+  ];
 }
 
 /**

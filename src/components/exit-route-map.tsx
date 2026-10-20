@@ -135,12 +135,12 @@ function ExitRouteInstrumentScene({
   onSelect: (selection: LiquidityExitRouteSelection) => void;
 }) {
   const throat = throatGeometry(model);
-  const crowding = model.concentrationHhi == null ? null : getHhiBand(model.concentrationHhi);
+  const crowding = getHhiBand(model.concentrationHhi);
   const routeSummary = [
     `${formatCurrency(model.totalTvlUsd)} DEX TVL`,
     model.topProtocol ? `${model.topProtocol.label} leading protocol` : null,
     model.topChain ? `${model.topChain.label} leading chain` : null,
-    model.concentrationHhi == null ? null : `${model.concentrationHhi.toFixed(2)} crowding index`,
+    !crowding ? null : `${model.concentrationHhi!.toFixed(2)} crowding index`,
   ].filter(Boolean).join(", ");
 
   const throatSelection = aggregateThroatSelection(model);
@@ -277,7 +277,7 @@ function ExitRouteInstrumentScene({
             className={`exit-route-instrument__throat ${selected.kind === "throat" ? "exit-route-instrument__route-selected" : ""}`}
             data-testid="exit-throat"
             data-crowding-band={throat.band}
-            aria-label={`Aggregate exit throat, ${formatCurrency(model.totalTvlUsd)} total DEX TVL, crowding index ${model.concentrationHhi == null ? "not scored" : `${model.concentrationHhi.toFixed(2)}, ${crowding?.concentrationLabel.toLowerCase()} crowding`}`}
+            aria-label={`Aggregate exit throat, ${formatCurrency(model.totalTvlUsd)} total DEX TVL, crowding index ${!crowding ? "not scored" : `${model.concentrationHhi!.toFixed(2)}, ${crowding.concentrationLabel.toLowerCase()} crowding`}`}
             onFocus={() => onSelect(throatSelection)}
             onMouseEnter={() => onSelect(throatSelection)}
             onClick={() => onSelect(throatSelection)}
@@ -302,7 +302,7 @@ function ExitRouteInstrumentScene({
             ))}
             {/* The throat is drawn from HHI, so it carries the crowding index; the depth it passes is the hero beam above. */}
             <text x={EXIT_ROUTE_SCENE.throatX} y="212" textAnchor="middle" fill="var(--route-hero)" fontSize="30" fontWeight="700" fontFamily="var(--font-geist-mono)" style={{ fontVariantNumeric: "tabular-nums slashed-zero" }} aria-hidden="true">
-              {model.concentrationHhi == null ? "NR" : model.concentrationHhi.toFixed(2)}
+              {!crowding ? "NR" : model.concentrationHhi!.toFixed(2)}
             </text>
             <text x={EXIT_ROUTE_SCENE.throatX} y="231" textAnchor="middle" fill="var(--route-caption)" fontSize="10.5" fontWeight="500" fontFamily="var(--font-sans), ui-sans-serif, system-ui, sans-serif" aria-hidden="true">
               Crowding index
@@ -351,14 +351,14 @@ function FallbackRouteColumn({
  * lists, and the throat's crowding index (shown nowhere else) leads them.
  */
 function ExitRouteFallbackList({ model }: { model: LiquidityExitRouteModel }) {
-  const crowding = model.concentrationHhi == null ? null : getHhiBand(model.concentrationHhi);
+  const crowding = getHhiBand(model.concentrationHhi);
   return (
     <div className="exit-route-fallback-list" data-testid="exit-route-fallback-list" aria-label="Exit routes as a list">
       <p className="col-span-2 flex items-baseline justify-between gap-3 border-b border-border/50 pb-2 text-sm" data-testid="exit-route-fallback-crowding">
         <span className="text-muted-foreground">Crowding index</span>
         <span>
           <span className="pharos-numeric font-semibold">
-            {model.concentrationHhi == null ? "NR" : model.concentrationHhi.toFixed(2)}
+            {!crowding ? "NR" : model.concentrationHhi!.toFixed(2)}
           </span>
           <span className="ml-2 text-xs text-muted-foreground">
             {crowding ? `${crowding.concentrationLabel} crowding` : "Not scored"}

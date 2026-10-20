@@ -80,7 +80,6 @@ export async function fetchIcrcLedgerTotalSupply(options: {
 // ---------------------------------------------------------------------------
 
 const IC_BOUNDARY_BASE_URLS = ["https://icp0.io", "https://ic0.app"] as const;
-const ICP_CANISTER_PRINCIPAL_TAG = 1;
 const ICP_ANONYMOUS_PRINCIPAL = 0x04;
 
 const BASE32_ALPHABET = "abcdefghijklmnopqrstuvwxyz234567";
@@ -144,9 +143,8 @@ export function icpPrincipalBytes(text: string): Uint8Array {
   return base32Decode(text.toLowerCase().replace(/-/g, "")).slice(4);
 }
 
-/** Render a raw principal (with 0x01 tag) back to its text form. */
-export function icpPrincipalText(bytes: Uint8Array): string {
-  const data = bytes[0] === ICP_CANISTER_PRINCIPAL_TAG ? bytes.slice(1) : bytes;
+/** Render raw principal identity bytes (no Candid reference marker) as text. */
+export function icpPrincipalText(data: Uint8Array): string {
   const checksum = new Uint8Array(4);
   new DataView(checksum.buffer).setUint32(0, crc32(data), false);
   const encoded = base32Encode(Uint8Array.from([...checksum, ...data]));
@@ -270,36 +268,37 @@ function cborEncode(value: CborValue): Uint8Array {
   return Uint8Array.from(chunks);
 }
 
-function cborDecode(buf: Uint8Array, offset: { i: number } = { i: 0 }): CborValue {
-  const b = buf[offset.i++];
-  if (b === undefined) throw new Error("icp: truncated cbor");
+function cborDecode(buf: Uint8Array, offset: { i: number } = { i: 0 }, depth = 0): CborValue {
+  if (depth > 64) throw new Error("icp: cbor nesting limit exceeded");
+  function requireBytes(n: number): void {
+    if (!Number.isSafeInteger(n) || n < 0 || n > buf.length - offset.i) {
+      throw new Error("icp: truncated cbor");
+    }
+  }
+  function readByte(): number {
+    requireBytes(1);
+    return buf[offset.i++];
+  }
+  const b = readByte();
   const major = b >>> 5;
   const info = b & 0x1f;
-  function readLen(): number | bigint {
-    if (info < 24) return info;
-    if (info === 24) return buf[offset.i++];
-    if (info === 25) { const v = (buf[offset.i++] << 8) | buf[offset.i++]; return v; }
-    if (info === 26) {
-      const v = ((buf[offset.i++] << 24) | (buf[offset.i++] << 16) | (buf[offset.i++] << 8) | buf[offset.i++]) >>> 0;
-      return v;
-    }
-    if (info === 27) {
-      let v = 0n;
-      for (let k = 0; k < 8; k++) v = (v << 8n) | BigInt(buf[offset.i++]);
-      return v;
-    }
-    throw new Error("icp: unsupported cbor length");
+  function readLen(lengthInfo = info): number | bigint {
+    if (lengthInfo < 24) return lengthInfo;
+    if (lengthInfo > 27) throw new Error("icp: unsupported cbor length");
+    const width = 2 ** (lengthInfo - 24);
+    requireBytes(width);
+    let value = 0n;
+    for (let k = 0; k < width; k++) value = (value << 8n) | BigInt(readByte());
+    return lengthInfo === 27 ? value : Number(value);
   }
-  function readLenDefinite(): number {
-    const info2 = buf[offset.i++] & 0x1f;
-    if (info2 < 24) return info2;
-    if (info2 === 24) return buf[offset.i++];
-    if (info2 === 25) { const v = (buf[offset.i++] << 8) | buf[offset.i++]; return v; }
-    if (info2 === 26) {
-      return ((buf[offset.i++] << 24) | (buf[offset.i++] << 16) | (buf[offset.i++] << 8) | buf[offset.i++]) >>> 0;
-    }
-    if (info2 === 27) { let v = 0n; for (let k = 0; k < 8; k++) v = (v << 8n) | BigInt(buf[offset.i++]); return Number(v); }
-    throw new Error("icp: unsupported cbor length");
+  function readCount(lengthInfo = info, bytesPerItem = 1): number {
+    const n = Number(readLen(lengthInfo));
+    requireBytes(n * bytesPerItem);
+    return n;
+  }
+  function atBreak(): boolean {
+    requireBytes(1);
+    return buf[offset.i] === 0xff;
   }
   switch (major) {
     case 0: return readLen();
@@ -307,53 +306,59 @@ function cborDecode(buf: Uint8Array, offset: { i: number } = { i: 0 }): CborValu
     case 2: {
       if (info === 31) {
         const parts: number[] = [];
-        while (buf[offset.i] !== 0xff) {
-          const n = readLenDefinite();
-          parts.push(...buf.slice(offset.i, offset.i + n));
-          offset.i += n;
+        while (!atBreak()) {
+          const chunk = readByte();
+          if (chunk >>> 5 !== 2 || (chunk & 0x1f) === 31) {
+            throw new Error("icp: invalid cbor byte-string chunk");
+          }
+          const n = readCount(chunk & 0x1f);
+          for (let k = 0; k < n; k++) parts.push(readByte());
         }
         offset.i++;
         return Uint8Array.from(parts);
       }
-      const n = Number(readLen());
+      const n = readCount();
       const out = buf.slice(offset.i, offset.i + n);
       offset.i += n;
       return out;
     }
-    case 3: { const n = Number(readLen()); const out = new TextDecoder().decode(buf.slice(offset.i, offset.i + n)); offset.i += n; return out; }
+    case 3: {
+      const n = readCount();
+      const out = new TextDecoder().decode(buf.subarray(offset.i, offset.i + n));
+      offset.i += n;
+      return out;
+    }
     case 4: {
+      const out: CborValue[] = [];
       if (info === 31) {
-        const out: CborValue[] = [];
-        while (buf[offset.i] !== 0xff) out.push(cborDecode(buf, offset));
+        while (!atBreak()) out.push(cborDecode(buf, offset, depth + 1));
         offset.i++;
         return out;
       }
-      const n = Number(readLen());
-      const out: CborValue[] = [];
-      for (let k = 0; k < n; k++) out.push(cborDecode(buf, offset));
+      const n = readCount();
+      for (let k = 0; k < n; k++) out.push(cborDecode(buf, offset, depth + 1));
       return out;
     }
     case 5: {
+      const out: Record<string, CborValue> = {};
       if (info === 31) {
-        const out: Record<string, CborValue> = {};
-        while (buf[offset.i] !== 0xff) {
-          const key = cborDecode(buf, offset);
-          const val = cborDecode(buf, offset);
+        while (!atBreak()) {
+          const key = cborDecode(buf, offset, depth + 1);
+          const val = cborDecode(buf, offset, depth + 1);
           if (typeof key === "string") out[key] = val;
         }
         offset.i++;
         return out;
       }
-      const n = Number(readLen());
-      const out: Record<string, CborValue> = {};
+      const n = readCount(info, 2);
       for (let k = 0; k < n; k++) {
-        const key = cborDecode(buf, offset);
-        const val = cborDecode(buf, offset);
+        const key = cborDecode(buf, offset, depth + 1);
+        const val = cborDecode(buf, offset, depth + 1);
         if (typeof key === "string") out[key] = val;
       }
       return out;
     }
-    case 6: { readLen(); return cborDecode(buf, offset); }
+    case 6: { readLen(); return cborDecode(buf, offset, depth + 1); }
     case 7:
       if (info === 20) return false;
       if (info === 21) return true;
@@ -446,14 +451,17 @@ function decodeCandidValue(buf: Uint8Array, offset: { i: number }, types: Candid
       const size = { [-9]: 1, [-10]: 2, [-11]: 4, [-12]: 8 }[typeRef]!;
       let v = 0n;
       for (let k = 0; k < size; k++) v |= BigInt(buf[offset.i++]) << BigInt(8 * k);
-      return v;
+      return BigInt.asIntN(size * 8, v);
     }
     case -15: { const n = Number(lebDecode(buf, offset)); const out = new TextDecoder().decode(buf.slice(offset.i, offset.i + n)); offset.i += n; return out; }
     case -16: return undefined;
     case -17: return undefined;
     case -24: {
-      offset.i += 1; // reference marker (always 1)
+      if (buf[offset.i++] !== 1) throw new Error("icp: invalid candid principal marker");
       const n = Number(lebDecode(buf, offset));
+      if (!Number.isSafeInteger(n) || n > buf.length - offset.i) {
+        throw new Error("icp: truncated candid principal");
+      }
       const out = buf.slice(offset.i, offset.i + n);
       offset.i += n;
       return out;
@@ -487,8 +495,8 @@ export function decodeCandidReply(bytes: Uint8Array): unknown[] {
 export interface IcpQueryResult {
   /** Decoded reply argument (the Candid-encoded return value) or null on rejection. */
   reply: Uint8Array | null;
-  /** Certified state time in nanoseconds since the epoch, when the node attests it. */
-  certifiedTimeNanos: bigint | null;
+  /** Unverified query-signature timestamp in nanoseconds; not a state/freshness proof. */
+  querySignatureTimeNanos: bigint | null;
   rejectMessage: string | null;
 }
 
@@ -544,7 +552,7 @@ export async function queryIcpCanister(options: {
       const responseMap = decoded as CborMap;
       const status = responseMap["status"];
       const signatures = responseMap["signatures"];
-      const certifiedTimeNanos = extractCertifiedTimeNanos(signatures);
+      const querySignatureTimeNanos = extractQuerySignatureTimeNanos(signatures);
 
       if (status === "replied") {
         const reply = responseMap["reply"];
@@ -552,10 +560,10 @@ export async function queryIcpCanister(options: {
           ? (reply as Record<string, CborValue>)["arg"]
           : undefined;
         if (!(arg instanceof Uint8Array)) throw new Error(`icp: missing reply arg from ${baseUrl}`);
-        return { reply: arg, certifiedTimeNanos, rejectMessage: null };
+        return { reply: arg, querySignatureTimeNanos, rejectMessage: null };
       }
       if (status === "rejected") {
-        return { reply: null, certifiedTimeNanos, rejectMessage: String(responseMap["reject_message"] ?? "rejected") };
+        return { reply: null, querySignatureTimeNanos, rejectMessage: String(responseMap["reject_message"] ?? "rejected") };
       }
       throw new Error(`icp: unknown query status from ${baseUrl}`);
     } catch (error) {
@@ -567,10 +575,10 @@ export async function queryIcpCanister(options: {
   throw lastError instanceof Error ? lastError : new Error(String(lastError));
 }
 
-function extractCertifiedTimeNanos(signatures: CborValue): bigint | null {
+function extractQuerySignatureTimeNanos(signatures: CborValue): bigint | null {
   if (!Array.isArray(signatures) || signatures.length === 0) return null;
   const first = signatures[0];
   if (typeof first !== "object" || first === null || Array.isArray(first)) return null;
   const timestamp = (first as Record<string, CborValue>)["timestamp"];
-  return typeof timestamp === "bigint" ? timestamp : null;
+  return typeof timestamp === "bigint" && timestamp > 0n ? timestamp : null;
 }

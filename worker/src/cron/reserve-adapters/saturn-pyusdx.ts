@@ -27,6 +27,7 @@ import { ERC4626_TOTAL_ASSETS_SELECTOR } from "./erc4626";
 import { reserveDegradedWarning } from "./warnings";
 import type { AdapterContext, AdapterResult } from "./types";
 import { readWrapperCoverage, wrapperCoverageResult } from "./wrapper-coverage";
+import { pinnedBlockPlan } from "./evm-observation-plan";
 
 const ADAPTER_KEY = "saturn-pyusdx";
 const PYUSDX_SELECTOR = "0xda6b76b8"; // pyusdx()
@@ -55,6 +56,8 @@ export async function fetchSaturnPyusdxReserves(
   const input = requireOnchainInput(config.inputs.primary, ADAPTER_KEY);
   const params = parseLiveReserveAdapterParams(ADAPTER_KEY, config.params);
   const wrapperAddress = params.wrapperAddress.toLowerCase();
+  const plan = await pinnedBlockPlan({ chain: input.chain, signal, ctx, ...params });
+  ctx = plan.ctx;
 
   const [results, implementation] = await Promise.all([
     fetchOnchainMulticall3({
@@ -165,6 +168,7 @@ export async function fetchSaturnPyusdxReserves(
     metadata: {
       ...notApplicableFreshnessMetadata({ proofKind: "saturn-pyusdx-wrapper-balance" }),
       chain: input.chain,
+      observedBlock: plan.observedBlock,
       wrapperAddress,
       implementationAddress: implementation,
       pyusdxAddress,

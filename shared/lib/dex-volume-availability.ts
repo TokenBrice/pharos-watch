@@ -387,9 +387,13 @@ export function resolveVolumeActivityComponent(
     // A record without admitted TVL cannot reproduce the activity denominator.
     return { status: "unavailable", score: null, reason: "activity-completeness-unknown" };
   }
-  // No admitted pool (vacuous complete window) is a measured zero flow.
-  const admittedVolumeUsd = availability24h.partialGrossUsd ?? 0;
-  return { status: "measured", score: computeVolumeActivityScore(admittedVolumeUsd, admittedTvlUsd) };
+  const emptyComplete = completeness === "complete" && availability24h.measuredPoolCount === 0 &&
+    availability24h.missingPoolCount === 0 && availability24h.stalePoolCount === 0;
+  const admittedVolumeUsd = availability24h.partialGrossUsd;
+  if (admittedVolumeUsd == null && !emptyComplete) {
+    return { status: "unavailable", score: null, reason: "activity-completeness-unknown" };
+  }
+  return { status: "measured", score: computeVolumeActivityScore(admittedVolumeUsd ?? 0, admittedTvlUsd) };
 }
 
 type OtherComponentKey = Exclude<LiquidityScoreComponentKey, "volumeActivity">;

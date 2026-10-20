@@ -193,12 +193,13 @@ describe("parseRbaF1MoneyMarketCsv", () => {
     const payload = [
       "Title,Cash Rate Target,Change in the Cash Rate Target,Interbank Overnight Cash Rate",
       "03-Jun-2026,4.35,,4.35",
-      "04-Jun-2026,4.35,,4.35",
+      "04-Jun-2026,4.35,,4.36",
       "05-Jun-2026,,,,",
     ].join("\n");
     expect(parseRbaF1MoneyMarketCsv(payload)).toEqual({
       rate: 4.35,
       recordDate: "2026-06-04",
+      source: "rba-cash-rate-target",
     });
   });
 
@@ -210,7 +211,18 @@ describe("parseRbaF1MoneyMarketCsv", () => {
     expect(parseRbaF1MoneyMarketCsv(payload)).toEqual({
       rate: 4.36,
       recordDate: "2026-06-04",
+      source: "rba-interbank-overnight",
     });
+  });
+
+  it("uses the interbank series when the target is invalid and rejects two invalid series", () => {
+    expect(parseRbaF1MoneyMarketCsv("04-Jun-2026,NaN,,4.36")).toEqual({
+      rate: 4.36,
+      recordDate: "2026-06-04",
+      source: "rba-interbank-overnight",
+    });
+    expect(parseRbaF1MoneyMarketCsv("04-Jun-2026,,,,")).toBeNull();
+    expect(parseRbaF1MoneyMarketCsv("04-Jun-2026,NaN,,NaN")).toBeNull();
   });
 });
 

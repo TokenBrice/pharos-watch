@@ -18,9 +18,11 @@ import {
 } from "@shared/lib/mint-burn-valuation";
 import {
   MintBurnValuationCompletenessSchema,
+  MintBurnFlowsResponseSchema,
   MintBurnValuationSchema,
   type MintBurnValuation,
   type MintBurnValuationCompleteness,
+  type MintBurnFlowsResponse,
 } from "@shared/types/mint-burn";
 import { getCache } from "./db-cache";
 import { aggregateFlowCacheKey } from "./mint-burn-flow-cache-keys";
@@ -83,6 +85,11 @@ export interface PublishedMintBurnGauge {
   coins: PublishedGaugeCoin[];
   /** Per-chain 24 h net flow, sorted by absolute net flow (descending). */
   chains: PublishedGaugeChain[];
+  /** Exact producer window; legacy or unreadable provenance is unavailable. */
+  window: NonNullable<MintBurnFlowsResponse["window"]> | null;
+  /** Producer body clock, independent of the cache publication clock. */
+  updatedAt: number | null;
+  /** Producer cache publication timestamp, not a unique generation ID or read clock. */
   publishedAt: number;
   /** Publication older than {@link PUBLISHED_GAUGE_STALE_AFTER_SEC}. */
   stale: boolean;
@@ -193,7 +200,16 @@ export function parsePublishedMintBurnGauge(
   if (!coins) return null;
   const chains = parseChains(payload.chains);
   if (!chains) return null;
-  return { score, partialValuationInputs, partialValuationMcapUsd, scoredMcapUsd, coins, chains, publishedAt, stale };
+  const parsedWindow = MintBurnFlowsResponseSchema.shape.window.safeParse(payload.window);
+  const window = parsedWindow.success && parsedWindow.data
+    && parsedWindow.data.end - parsedWindow.data.start === PUBLISHED_GAUGE_WINDOW_HOURS * 60 * 60
+    && parsedWindow.data.start % 3600 === 0 && parsedWindow.data.end % 3600 === 0
+    ? parsedWindow.data : null;
+  const producerClock = finiteNumber(payload.updatedAt);
+  const updatedAt = producerClock !== null && Number.isInteger(producerClock) && producerClock >= 0
+    ? producerClock : null;
+  return { score, partialValuationInputs, partialValuationMcapUsd, scoredMcapUsd, coins, chains,
+    window, updatedAt, publishedAt, stale };
 }
 
 /** Read the single published gauge. Fails closed rather than recomputing. */

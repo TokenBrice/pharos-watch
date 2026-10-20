@@ -20,7 +20,7 @@ import {
 } from "@/components/depeg-board-model";
 import { DeviationBar, LinearGauge, EventLoadMeter } from "@/components/depeg-board-primitives";
 import type { PegCurrency, GovernanceType } from "@shared/types";
-import { GOVERNANCE_FILTER_OPTIONS, PEG_FILTER_OPTIONS } from "@shared/lib/classification";
+import { GOVERNANCE_FILTER_OPTIONS, PEG_FILTER_OPTIONS, THREAT_BAND_ORDER, isThreatBand } from "@shared/lib/classification";
 import { formatCurrency, formatElapsedSeconds, formatPegOccupancy, formatTrackingSpanDays } from "@shared/lib/format";
 import type { ThreatBand } from "@shared/lib/classification";
 
@@ -235,7 +235,8 @@ export function DepegControlBoard({
   nowSeconds,
   eventFloorCount,
 }: DepegControlBoardProps) {
-  const warningCount = rows.filter((row) => row.coin.activeDepeg || row.pendingIncident || (row.dews?.score ?? 0) >= 36).length;
+  const warningCount = rows.filter((row) => row.coin.activeDepeg || row.pendingIncident ||
+    (row.dews != null && isThreatBand(row.dews.band) && THREAT_BAND_ORDER[row.dews.band] >= THREAT_BAND_ORDER.ALERT)).length;
   const filtersActive = pegFilter !== "all" || typeFilter !== "all" || searchQuery.length > 0;
 
   const {

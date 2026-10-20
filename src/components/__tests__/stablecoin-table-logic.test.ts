@@ -58,7 +58,7 @@ describe("nominal price consumers", () => {
       effectiveSortKey: "price",
     });
     expect(sorted.map((coin) => coin.id)).toEqual(["market", "nominal"]);
-    exportStablecoinsCsv(sorted);
+    exportStablecoinsCsv(sorted, new Map([["market", 1], ["nominal", 2]]));
     const [, columns] = downloadCsvMock.mock.calls[0]! as [StablecoinData[], CsvColumn<StablecoinData>[], string];
     const priceColumn = columns.find((column) => column.header === "Price")!;
     expect(priceColumn.accessor(nominal, 1)).toBeNull();
@@ -74,7 +74,7 @@ describe("stablecoin export provenance", () => {
       makeCoin("unknown", "Unknown", { circulating: {} }),
     ];
     const sourceTime = Date.parse("2026-09-01T12:00:00Z") / 1000;
-    exportStablecoinsCsv(rows, new Map(), {}, {}, { stablecoins: sourceTime, pegSummary: sourceTime - 60, reportCards: null });
+    exportStablecoinsCsv(rows, new Map([["zero", 1], ["unknown", 2]]), new Map(), {}, {}, { stablecoins: sourceTime, pegSummary: sourceTime - 60, reportCards: null });
     const [exported, columns, , preamble] = downloadCsvMock.mock.calls[0] as [StablecoinData[], CsvColumn<StablecoinData>[], string, ExportPreamble];
     expect(exported).toBe(rows);
     expect(preamble.asOfISO).toBe("2026-09-01T12:00:00.000Z");
@@ -85,7 +85,7 @@ describe("stablecoin export provenance", () => {
     const supply = columns.find((column) => column.header === "Market Cap (USD)")!;
     expect(supply.accessor(rows[0], 0)).toBe(0);
     expect(supply.accessor(rows[1], 1)).toBeNull();
-    exportStablecoinsCsv(rows);
+    exportStablecoinsCsv(rows, new Map([["zero", 1], ["unknown", 2]]));
     expect(downloadCsvMock.mock.calls[1][3].asOfISO).toBe("unknown");
   });
 });
@@ -122,7 +122,7 @@ describe("supply availability consumers", () => {
 
   it("exports absent supply and deltas as empty cells but explicit zero as zero and -100", () => {
     downloadCsvMock.mockReset();
-    exportStablecoinsCsv([unavailable, missingDay, zero]);
+    exportStablecoinsCsv([unavailable, missingDay, zero], new Map([["unavailable", 1], ["missing-day", 2], ["zero", 3]]));
     const [rows, columns] = downloadCsvMock.mock.calls[0]! as [StablecoinData[], CsvColumn<StablecoinData>[], string];
     const supplyColumns = columns.filter((column) =>
       ["Market Cap (USD)", "24h Change (%)", "7d Change (%)"].includes(column.header));
@@ -189,6 +189,39 @@ describe("prioritizePinnedStablecoins", () => {
     const result = prioritizePinnedStablecoins(rows, ["missing", "usdc-circle"]);
 
     expect(result.map((coin) => coin.id)).toEqual(["usdc-circle", "usdt-tether"]);
+  });
+
+  it.each([
+    { direction: "asc", filtered: false, pinned: false, expected: ["1,Alpha", "2,Beta", "3,Gamma"] },
+    { direction: "asc", filtered: false, pinned: true, expected: ["2,Beta", "1,Alpha", "3,Gamma"] },
+    { direction: "desc", filtered: false, pinned: false, expected: ["1,Gamma", "2,Beta", "3,Alpha"] },
+    { direction: "desc", filtered: false, pinned: true, expected: ["2,Beta", "1,Gamma", "3,Alpha"] },
+    { direction: "asc", filtered: true, pinned: false, expected: ["1,Alpha", "2,Beta"] },
+    { direction: "asc", filtered: true, pinned: true, expected: ["2,Beta", "1,Alpha"] },
+    { direction: "desc", filtered: true, pinned: false, expected: ["1,Beta", "2,Alpha"] },
+    { direction: "desc", filtered: true, pinned: true, expected: ["1,Beta", "2,Alpha"] },
+  ] as const)("exports pre-pin ranks in full displayed order ($direction, filtered=$filtered, pinned=$pinned)", ({
+    direction, filtered, pinned, expected,
+  }) => {
+    downloadCsvMock.mockReset();
+    const rows = [
+      makeCoin("alpha", "Alpha", { circulating: { peggedUSD: 10 } }),
+      makeCoin("beta", "Beta", { circulating: { peggedUSD: 20 } }),
+      makeCoin("gamma", "Gamma", { circulating: { peggedUSD: 30 } }),
+    ];
+    const eligibleIds = new Set(filtered ? ["alpha", "beta"] : ["alpha", "beta", "gamma"]);
+    const sorted = sortStablecoins({
+      filtered: filterStablecoins(rows, eligibleIds, ""),
+      sort: { key: "mcap", direction },
+      effectiveSortKey: "mcap",
+    });
+    const sortedRankById = new Map(sorted.map((row, index) => [row.id, index + 1]));
+    const displayed = prioritizePinnedStablecoins(sorted, pinned ? ["beta"] : []);
+    exportStablecoinsCsv(displayed, sortedRankById);
+    const [exported, columns] = downloadCsvMock.mock.calls[0]! as [StablecoinData[], CsvColumn<StablecoinData>[]];
+    expect(exported).toBe(displayed);
+    expect(buildCsvBody(exported, columns.filter((column) => ["Rank", "Name"].includes(column.header))))
+      .toEqual(["Rank,Name", ...expected]);
   });
 });
 
@@ -408,7 +441,7 @@ describe("blacklistable projection", () => {
     downloadCsvMock.mockReset();
     const lusd = makeCoin("lusd-liquity", "Liquity USD");
 
-    exportStablecoinsCsv([lusd], undefined, undefined, safetyTableRows([freezePossible("lusd-liquity")]));
+    exportStablecoinsCsv([lusd], new Map([["lusd-liquity", 1]]), undefined, undefined, safetyTableRows([freezePossible("lusd-liquity")]));
 
     const [, columns] = downloadCsvMock.mock.calls[0]! as [
       StablecoinData[],
@@ -445,7 +478,7 @@ describe("supply-change semantics", () => {
     expect(sorted.map((coin) => coin.id)).toEqual(["grow", "shrink", "missing"]);
 
     downloadCsvMock.mockReset();
-    exportStablecoinsCsv([missing]);
+    exportStablecoinsCsv([missing], new Map([["missing", 1]]));
     const [, columns] = downloadCsvMock.mock.calls[0]! as [
       StablecoinData[],
       CsvColumn<StablecoinData>[],

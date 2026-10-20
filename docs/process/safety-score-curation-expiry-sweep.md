@@ -165,6 +165,12 @@ Do not build another classifier from the evidence queue's coarse `action` field.
 Task rows, claim groups, and dispatch reachability are routing counts, not estimates of
 closable facts. No registry row closes a fact mechanically.
 
+The census has three disjoint buckets from the replay's admitted completeness:
+`rateableStablecoinCount` (`ratingStatus: "rated"`), `notRatedStablecoinCount`
+(economic `"not-rated"`), and `pipelineGapStablecoinCount` (technical `"pipeline-gap"`).
+Their sum reconciles to the full census and `ratingStatusCounts`. A pipeline gap's
+null grade is neither a rating nor economic NR; do not infer rateability from `grade !== "NR"`.
+
 Registry schema 2 stores each distinct path-scoped context once per stablecoin in
 `currentFactContexts`. Resolve a task's context with
 `stablecoin.currentFactContexts[task.currentFactContextRef]`; an explicit `null`

@@ -78,6 +78,49 @@ describe("usdai-hub adapter", () => {
     });
   });
 
+  it("keeps bridge-safe coverage at one while a transfer advances the head", async () => {
+    let head = 100;
+    const spec = usdaiNetwork({ balance: 100_000000n, totalSupply: 100n * 10n ** 18n, bridgedSupply: 0n });
+    spec.block = { number: 100, timestamp: 1_757_000_000 };
+    spec.rpc!["eth_getBlockByNumber:latest"] = () => ({ number: head++, timestamp: 1_757_000_000 });
+    spec.rpc![`${ADDRESSES.hub}:0x18160ddd`] = ({ block }) => {
+      const number = block === "latest" ? head : Number.parseInt(block.slice(2), 16);
+      head += 1;
+      return (number === 100 ? 100n : 80n) * 10n ** 18n;
+    };
+    spec.rpc![`${ADDRESSES.hub}:0x11c301e0`] = ({ block }) =>
+      (block === "0x64" ? 0n : 20n) * 10n ** 18n;
+    const { result, network } = await runAdapter("usdai-hub", "usdai-usd-ai", { network: spec, nowSec: 1_757_000_000 });
+    expect(head).toBeGreaterThan(100);
+    expect(result.metadata).toMatchObject({
+      collateralizationRatio: 1,
+      supplyUsd: 100,
+      observedBlock: { chain: "arbitrum", number: 100, timestamp: 1_757_000_000 },
+    });
+    expect(network.rpcCalls.some((call) => call.method === "eth_getStorageAt")).toBe(true);
+    expect(new Set(network.rpcCalls.map((call) => call.block))).toEqual(new Set(["0x64"]));
+  });
+
+  it("retains the original implementation and adverse pause when latest crosses an upgrade", async () => {
+    const spec = usdaiNetwork();
+    spec.block = { number: 100, timestamp: 1_757_000_000 };
+    spec.rpc![`${ADDRESSES.hub}:${IMPLEMENTATION_SLOT}`] = ({ block }) =>
+      block === "0x64" ? ADDRESSES.implementation : ADDRESSES.otherToken;
+    spec.rpc![`${ADDRESSES.hub}:0x5c975abb`] = ({ block }) => block === "0x64" ? 1n : 0n;
+    const { result } = await runAdapter("usdai-hub", "usdai-usd-ai", { network: spec, nowSec: 1_757_000_000 });
+    expect(result.metadata?.details).toMatchObject({ implementationAddress: ADDRESSES.implementation, paused: true });
+    expect(result.metadata?.redemption?.routeStatus).toBe("paused");
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "route-paused", effect: "degraded" }));
+  });
+
+  it("withholds the observation when its numeric supply read is unavailable", async () => {
+    const spec = usdaiNetwork();
+    spec.block = { number: 100, timestamp: 1_757_000_000 };
+    spec.rpc![`${ADDRESSES.hub}:0x18160ddd`] = ({ block }) => block === "latest" ? TOTAL_SUPPLY : null;
+    await expect(runAdapter("usdai-hub", "usdai-usd-ai", { network: spec, nowSec: 1_757_000_000 }))
+      .rejects.toThrow("totalSupply() returned malformed");
+  });
+
   it("fails closed when baseToken() does not resolve to the pinned PYUSD", async () => {
     await expect(fetchFixture({ baseToken: ADDRESSES.otherToken })).rejects.toThrow("baseToken() identity mismatch");
   });

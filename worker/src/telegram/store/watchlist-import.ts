@@ -16,8 +16,7 @@ import {
   type WatchlistTokenV2State,
 } from "../mini-app/watchlist-token";
 import type { PresetSubscriptionRow, SubscriptionRow } from "../webhook/telegram-webhook-shared";
-import { loadPresetSubscriptions } from "./presets";
-import { loadSubscriberByChat, unixNow } from "./subscribers";
+import { unixNow, prepareTelegramFirstFollowStatements, type TelegramFollowOptions } from "./subscribers";
 import { pendingDisambiguationClearStatement } from "./disambiguation";
 
 export interface WatchlistImportPreview {
@@ -40,6 +39,12 @@ interface PortableSubscriptionRow extends SubscriptionRow {
   alert_freeze: number;
   alert_freeze_override: number;
 }
+
+type PortableSnapshotRow = { preference_generation: number } & (
+  | (PortableSubscriptionRow & { row_kind: "direct" })
+  | (PresetSubscriptionRow & { row_kind: "preset" })
+  | { row_kind: null }
+);
 
 function directFromRow(row: PortableSubscriptionRow): WatchlistTokenDirectState {
   return {
@@ -92,10 +97,16 @@ export async function loadWatchlistPortableState(
 ): Promise<{
   state: WatchlistTokenV2State;
   preferenceGeneration: number | null;
+  directSnoozes: Map<string, number | null>;
 }> {
-  const [directResult, presets, subscriber] = await Promise.all([
-    db.prepare(`
-      SELECT stablecoin_id,
+  // One statement captures generation, both intent sources and raw snoozes.
+  // UNION ALL avoids multiplying direct rows by preset rows; the LEFT JOIN
+  // retains an empty subscriber without treating an absent one as generation 0.
+  const result = await db.prepare(`
+    WITH subscriber AS (
+      SELECT chat_id, preference_generation FROM telegram_subscribers WHERE chat_id = ?
+    ), watchlist AS (
+      SELECT 'direct' AS row_kind, stablecoin_id, NULL AS preset_id,
              alert_dews, alert_depeg, alert_safety, alert_launch, alert_reserve,
              alert_dews_override, alert_depeg_override, alert_safety_override,
              alert_launch_override, alert_reserve_override,
@@ -104,24 +115,40 @@ export async function loadWatchlistPortableState(
              alert_snooze_until_ts
         FROM telegram_subscriptions
        WHERE chat_id = ?
-       ORDER BY stablecoin_id
-    `).bind(chatId).all<PortableSubscriptionRow>(),
-    loadPresetSubscriptions(db, chatId),
-    loadSubscriberByChat(db, chatId),
-  ]);
+      UNION ALL
+      SELECT 'preset', NULL, preset_id,
+             alert_dews, alert_depeg, alert_safety, NULL, NULL,
+             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+             NULL, NULL, depeg_worsening_bps_step, NULL
+        FROM telegram_preset_subscriptions
+       WHERE chat_id = ?
+    )
+    SELECT subscriber.preference_generation, watchlist.*
+      FROM subscriber LEFT JOIN watchlist ON 1 = 1
+     ORDER BY row_kind, stablecoin_id, preset_id
+  `).bind(chatId, chatId, chatId).all<PortableSnapshotRow>();
+  const rows = result.results ?? [];
+  const direct: WatchlistTokenDirectState[] = [];
+  const presets: WatchlistTokenPresetState[] = [];
+  const directSnoozes = new Map<string, number | null>();
+  for (const row of rows) {
+    if (row.row_kind === "preset") {
+      presets.push(presetFromRow(row));
+    } else if (row.row_kind === "direct") {
+      directSnoozes.set(row.stablecoin_id, row.alert_snooze_until_ts ?? null);
+      if (TELEGRAM_ALERT_TYPES.some((alertType) => Boolean(
+        row[TELEGRAM_ALERT_PERSISTENCE[alertType].subscriptionColumn]
+        || row[TELEGRAM_ALERT_PERSISTENCE[alertType].overrideColumn],
+      )) || Boolean(row.dews_min_band || row.safety_mode || row.depeg_worsening_bps_step)
+        || (includeSnoozeOnlyRows && row.alert_snooze_until_ts != null)) {
+        direct.push(directFromRow(row));
+      }
+    }
+  }
   return {
-    state: {
-      registryVersion,
-      direct: (directResult.results ?? [])
-        .filter((row) => TELEGRAM_ALERT_TYPES.some((alertType) => Boolean(
-          row[TELEGRAM_ALERT_PERSISTENCE[alertType].subscriptionColumn]
-          || row[TELEGRAM_ALERT_PERSISTENCE[alertType].overrideColumn],
-        )) || Boolean(row.dews_min_band || row.safety_mode || row.depeg_worsening_bps_step)
-          || (includeSnoozeOnlyRows && row.alert_snooze_until_ts != null))
-        .map(directFromRow),
-      presets: presets.map(presetFromRow),
-    },
-    preferenceGeneration: subscriber?.preference_generation ?? null,
+    state: { registryVersion, direct, presets },
+    preferenceGeneration: rows[0]?.preference_generation ?? null,
+    directSnoozes,
   };
 }
 
@@ -320,6 +347,7 @@ export async function applyWatchlistImportV2(
   db: D1Database,
   input: {
     chatId: string;
+    adoption?: TelegramFollowOptions["adoption"];
     /**
      * A Mini App preview is intentionally read-only. When its confirmation is
      * the first write for a chat, create the subscriber in this same atomic
@@ -392,6 +420,15 @@ export async function applyWatchlistImportV2(
         `).bind(input.chatId, input.ensureSubscriber.username, nowSec, nowSec)]
       : []),
     guard,
+    ...(directRows.some((row) => row.alertDews || row.alertDepeg || row.alertSafety || row.alertLaunch || row.alertReserve || row.alertFreeze)
+      || presetRows.some((row) => row.alertDews || row.alertDepeg || row.alertSafety)
+      ? prepareTelegramFirstFollowStatements(db, {
+          chatId: input.chatId, username: null, nowSec, adoption: input.adoption,
+          ensureSubscriber: false,
+          feature: presetRows.some((row) => row.alertDews || row.alertDepeg || row.alertSafety) ? "preset" : "direct",
+          guard: { sql: "preference_generation = ?", binds: [input.generationLease] },
+        })
+      : []),
     ...prepareGuardedDeletes("telegram_subscriptions", "stablecoin_id", input.directRemoveIds),
     ...prepareGuardedDeletes("telegram_preset_subscriptions", "preset_id", input.presetRemoveIds),
     db.prepare(`
@@ -446,6 +483,7 @@ export async function applyWatchlistDirectPatch(
   db: D1Database,
   input: {
     chatId: string;
+    adoption?: TelegramFollowOptions["adoption"];
     ensureSubscriber?: { username: string | null };
     expectedPreferenceGeneration: number;
     generationLease: number;
@@ -502,6 +540,13 @@ export async function applyWatchlistDirectPatch(
         `).bind(input.chatId, input.ensureSubscriber.username, nowSec, nowSec)]
       : []),
     guard,
+    ...(directRows.some((row) => row.alertDews || row.alertDepeg || row.alertSafety || row.alertLaunch || row.alertReserve || row.alertFreeze)
+      ? prepareTelegramFirstFollowStatements(db, {
+          chatId: input.chatId, username: null, nowSec, feature: "direct", adoption: input.adoption,
+          ensureSubscriber: false,
+          guard: { sql: "preference_generation = ?", binds: [input.generationLease] },
+        })
+      : []),
     ...deletes,
     ...prepareWatchlistDirectInsertStatements(db, input.chatId, input.generationLease, directRows),
     ...(snoozeValues.length === 0 ? [] : [db.prepare(`

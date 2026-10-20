@@ -522,7 +522,7 @@ describe("handleYieldRankings", () => {
     expect(res.headers.get("Warning")).toBeNull();
   })
 
-  it("keeps unavailable safety null once an incompatible publish-time snapshot expires", async () => {
+  it("keeps unavailable safety null once live and incompatible publish-time snapshots expire", async () => {
     const updatedAt = Math.floor(Date.now() / 1000) - (24 * 3600 + 60);
     const db = makeCacheDb(v748RankingsPayload, updatedAt);
     loadActiveSafetyScoreIndexMock.mockResolvedValueOnce(makeIndexSource(new Map([["usdc-circle", { score: 88, grade: "A" }]]), {
@@ -533,16 +533,18 @@ describe("handleYieldRankings", () => {
     const res = await handleYieldRankings(db);
     const body = await readJsonResponse(res, 200) as YieldRankingsResponse;
 
+    // WS05-B3 admits the original live clock before comparing identities:
+    // this expired snapshot is unavailable even though its identity also differs.
     expect(body.rankings[0]).toMatchObject({
       safetyScore: null,
       safetyGrade: null,
-      safetyReason: "safety-identity-mismatch",
+      safetyReason: "safety-snapshot-unavailable",
       pharosYieldScore: null,
       pysNullReason: "opportunity-evidence-missing",
     });
     expect(body.provenance?.liveSafetyHydration).toMatchObject({
       kind: "degraded",
-      reason: "safety-identity-mismatch",
+      reason: "safety-snapshot-unavailable,safety-publication-clock-out-of-budget",
       source: "safety-score-v9-publication",
     });
     expect(body.provenance?.liveSafetyHydration?.fallback).toBeUndefined();

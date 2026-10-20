@@ -624,8 +624,9 @@ export function generateV9MissingDataRegistry(input: GenerateV9MissingDataRegist
     summary: {
       stablecoinCount: stablecoins.length,
       affectedStablecoinCount: stablecoins.filter((asset) => asset.missingItems.length > 0).length,
-      rateableStablecoinCount: candidate.cards.filter((card) => card.grade !== "NR").length,
-      notRatedStablecoinCount: candidate.cards.filter((card) => card.grade === "NR").length,
+      rateableStablecoinCount: candidate.completeness.ratedCount,
+      notRatedStablecoinCount: candidate.completeness.notRatedCount,
+      pipelineGapStablecoinCount: candidate.completeness.pipelineGapCount,
       openItemCount: registryItems.length,
       compiledFactItemCount: queue.entries.length,
       supplementalScoreItemCount: registryItems.filter((item) => item.taskSource === "score-projection-gap").length,

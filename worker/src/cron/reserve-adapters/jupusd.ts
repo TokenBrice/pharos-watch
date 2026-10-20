@@ -17,6 +17,7 @@ import {
   parseTimestampLikeToUnixSeconds,
   requireJsonInput,
   reserveDegradedWarning,
+  reserveFatalWarning,
 } from "./helpers";
 
 const ADAPTER_KEY = "jupusd";
@@ -126,18 +127,14 @@ export function adaptJupUsdData(
   const unknownHoldingNames = new Set<string>();
   const warnings: LiveReserveWarning[] = [];
   let unknownValue = 0;
-  let holdingsComplete = true;
-  for (const [holdingIndex, holding] of (payload.holdings ?? []).entries()) {
+  const unavailableHoldingNames: string[] = Array.isArray(payload.holdings) ? [] : ["holdings"];
+  for (const [holdingIndex, holding] of (Array.isArray(payload.holdings) ? payload.holdings : []).entries()) {
     const name = typeof holding.name === "string" && holding.name.trim().length > 0
       ? holding.name.trim()
       : "Unmapped reserve holding";
     const value = parseAmount(holding.amount, holding.decimals);
     if (value == null) {
-      holdingsComplete = false;
-      warnings.push(reserveDegradedWarning(
-        "unparseable-holding",
-        `JupUSD holding ${holdingIndex} (${name}) has an unparseable amount or decimal scale`,
-      ));
+      unavailableHoldingNames.push(`${holdingIndex}:${name}`);
       continue;
     }
     if (value <= 0) continue;
@@ -157,6 +154,18 @@ export function adaptJupUsdData(
     });
   }
 
+  if (unavailableHoldingNames.length > 0) {
+    return {
+      slices: [],
+      warnings: [reserveFatalWarning("holdings-incomplete",
+        `JupUSD holding amounts or scales unavailable: ${unavailableHoldingNames.join(", ")}`)],
+      metadata: { details: {
+        unavailableHoldingNames,
+        measuredHoldingsUsd: [...values.values()].reduce((sum, entry) => sum + entry.value, 0),
+        measuredHoldings: [...values.values()],
+      } },
+    };
+  }
   const totalReserveUsd = [...values.values()].reduce((sum, entry) => sum + entry.value, 0);
   if (totalReserveUsd <= 0) {
     throw new Error("jupusd transparency payload returned zero reserve holdings");
@@ -179,16 +188,14 @@ export function adaptJupUsdData(
   }
   // True assets ÷ liability: never clamped, so genuine overcollateralization
   // shows and a shortfall degrades per the undercollateralization policy.
-  const collateralizationRatio = holdingsComplete ? totalReserveUsd / totalSupply : undefined;
+  const collateralizationRatio = totalReserveUsd / totalSupply;
   // Redemption capacity is clamped to the supply that can actually be redeemed.
   const capacityUsd = Math.min(totalReserveUsd, totalSupply);
   const ratio = capacityUsd / totalSupply;
-  const unknownExposurePct = holdingsComplete ? (unknownValue / totalReserveUsd) * 100 : undefined;
+  const unknownExposurePct = (unknownValue / totalReserveUsd) * 100;
   if (unknownValue > 0) {
     const message = `JupUSD reserve feed included unmapped holding(s): ${Array.from(unknownHoldingNames).sort().join(", ")}`;
-    warnings.push(unknownExposurePct != null
-      ? buildUnknownExposureWarning({ adapterKey: "jupusd", code: "unknown-holding", message, unknownExposurePct })
-      : reserveDegradedWarning("unknown-holding", `${message}; complete-book exposure is unavailable`));
+    warnings.push(buildUnknownExposureWarning({ adapterKey: "jupusd", code: "unknown-holding", message, unknownExposurePct }));
   }
   if (options.extraWarnings?.length) {
     warnings.push(...options.extraWarnings);
@@ -215,7 +222,9 @@ export function adaptJupUsdData(
     ),
     ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
-      ...(holdingsComplete ? { totalReserveUsd, collateralizationRatio, unknownExposurePct } : {}),
+      totalReserveUsd,
+      collateralizationRatio,
+      unknownExposurePct,
       supplyUsd: totalSupply,
       ...(unknownHoldingNames.size > 0 ? { unknownHoldingNames: Array.from(unknownHoldingNames).sort() } : {}),
       ...buildRedemptionSnapshotMetadata({

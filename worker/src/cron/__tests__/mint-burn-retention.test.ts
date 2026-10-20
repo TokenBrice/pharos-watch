@@ -12,6 +12,11 @@ import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
 import { mintBurnConfigKey } from "../../lib/mint-burn-pipeline/sync-state";
 import { recalcAffectedHours } from "../../lib/mint-burn-pipeline/persistence";
 import { repairHistoricalMintBurnPrices } from "../../lib/mint-burn-historical-price-repair";
+import {
+  drainMintBurnMaterializationDebt,
+  rebuildMintBurnMaterializationHours,
+  seedMintBurnLegacyMaterializationDebt,
+} from "../../lib/mint-burn-pipeline/materialization-debt";
 
 const NOW_SEC = 1_800_000_000;
 const HOUR_SEC = 3600;
@@ -158,6 +163,108 @@ describe("mint/burn retention", () => {
     });
     expect(result.error).toBeNull();
     expect(MINT_BURN_EVENT_RETENTION_SEC).toBeGreaterThan(7 * 24 * HOUR_SEC);
+  });
+
+  it("protects every priced sibling of a dirty hour, then releases only rebuilt debt", async () => {
+    const { sqlite, db } = setupDb();
+    openDb = sqlite;
+    const hour = hourFor(NOW_SEC - MINT_BURN_EVENT_RETENTION_SEC - 2 * HOUR_SEC);
+    insertEvent(sqlite, { id: "dirty-first", timestamp: hour + 1 });
+    insertEvent(sqlite, { id: "dirty-sibling", timestamp: hour + 2 });
+    insertEvent(sqlite, { id: "clean-next-hour", timestamp: hour + HOUR_SEC + 1 });
+    sqlite.prepare(`INSERT INTO mint_burn_dirty_hours VALUES ('usdc-circle', 'ethereum', ?)`).run(hour);
+    const protectedRun = await pruneMintBurnRetention(db, NOW_SEC);
+    expect(eventIds(sqlite)).toEqual(["dirty-first", "dirty-sibling"]);
+    expect(protectedRun.eventRows.deletedRows).toBe(1);
+    expect(protectedRun.aggregationRepair.repairedRows).toBe(0);
+    await rebuildMintBurnMaterializationHours(db, new Map([
+      ["dirty", { stablecoinId: "usdc-circle", chainId: "ethereum", hourTs: hour }],
+    ]));
+    expect(sqlite.prepare("SELECT mint_count, mint_volume_usd FROM mint_burn_hourly WHERE hour_ts = ?").get(hour))
+      .toEqual({ mint_count: 2, mint_volume_usd: 2 });
+    expect((await pruneMintBurnRetention(db, NOW_SEC)).eventRows.deletedRows).toBe(2);
+    expect(eventIds(sqlite)).toEqual([]);
+  });
+
+  it.each([
+    ["drain", 1], ["drain", 2], ["historical", 1], ["historical", 2],
+  ] as const)("preserves settled history when stale %s resumes after retention deletes %i siblings", async (caller, deleted) => {
+    const { sqlite, db } = setupDb();
+    openDb = sqlite;
+    const hour = hourFor(NOW_SEC - MINT_BURN_EVENT_RETENTION_SEC - 2 * HOUR_SEC);
+    insertEvent(sqlite, { id: "race-first", timestamp: hour + 1, amountUsd: 10, priceRepairStatus: "pending_aggregate" });
+    insertEvent(sqlite, { id: "race-sibling", timestamp: hour + 2, amountUsd: 20 });
+    sqlite.prepare("INSERT INTO mint_burn_dirty_hours VALUES ('usdc-circle', 'ethereum', ?)").run(hour);
+    const staleDb = createSqliteD1(sqlite);
+    const batch = staleDb.batch.bind(staleDb);
+    let interleaved = false;
+    staleDb.batch = async <T = unknown>(statements: D1PreparedStatement[]) => {
+      if (!interleaved) {
+        interleaved = true;
+        // Both callers selected the same key. The first settles it and releases
+        // raw retention before the stale caller submits its rebuild transaction.
+        expect(await drainMintBurnMaterializationDebt(db)).toBe(1);
+        const retention = await pruneMintBurnRetention(db, NOW_SEC, undefined, {
+          eventBatchLimit: deleted, eventRunLimit: deleted,
+        });
+        expect(retention.error).toBeNull();
+        expect(retention.eventRows.deletedRows).toBe(deleted);
+      }
+      return batch<T>(statements);
+    };
+    if (caller === "historical") {
+      const result = await repairHistoricalMintBurnPrices(staleDb, {
+        dryRun: false, operatorRunId: "stale-repair", timeTravelBookmark: "stale-bookmark",
+        nowSec: NOW_SEC,
+      });
+      expect(result.aggregateCoinsRebuilt).toEqual([]);
+      expect(result.aggregateVerificationPassed).toBe(true);
+    } else {
+      await drainMintBurnMaterializationDebt(staleDb);
+    }
+    expect(interleaved).toBe(true);
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM mint_burn_events").get()).toEqual({ count: 2 - deleted });
+    expect(sqlite.prepare("SELECT mint_count, mint_volume_usd FROM mint_burn_hourly WHERE hour_ts = ?").get(hour))
+      .toEqual({ mint_count: 2, mint_volume_usd: 30 });
+    expect(sqlite.prepare("SELECT * FROM mint_burn_dirty_hours").all()).toEqual([]);
+  });
+
+  it("does not mistake dirty-hour raw rows for missing aggregation evidence", async () => {
+    const { sqlite, db } = setupDb();
+    openDb = sqlite;
+    const hour = hourFor(NOW_SEC - MINT_BURN_EVENT_RETENTION_SEC - 2 * HOUR_SEC);
+    insertEvent(sqlite, { id: "dirty-no-bucket", timestamp: hour + 1, withHourly: false });
+    sqlite.prepare(`INSERT INTO mint_burn_dirty_hours VALUES ('usdc-circle', 'ethereum', ?)`).run(hour);
+    const result = await pruneMintBurnRetention(db, NOW_SEC);
+    expect(result.aggregationRepair).toMatchObject({ repairedRows: 0, oldestRepairableAt: null, error: null });
+    expect(result.eventRows.deletedRows).toBe(0);
+    expect(eventIds(sqlite)).toEqual(["dirty-no-bucket"]);
+    expect(sqlite.prepare("SELECT * FROM mint_burn_hourly").all()).toEqual([]);
+  });
+
+  it("seeds retained legacy repairs idempotently and drains only a bounded set before retention", async () => {
+    const { sqlite, db } = setupDb();
+    openDb = sqlite;
+    const hour = hourFor(NOW_SEC - MINT_BURN_EVENT_RETENTION_SEC - 4 * HOUR_SEC);
+    for (let index = 0; index < 3; index++) {
+      insertEvent(sqlite, { id: `legacy-${index}`, timestamp: hour + index * HOUR_SEC + 1,
+        amountUsd: 10, priceRepairStatus: "pending_aggregate" });
+      insertEvent(sqlite, { id: `sibling-${index}`, timestamp: hour + index * HOUR_SEC + 2, amountUsd: 5 });
+    }
+    await seedMintBurnLegacyMaterializationDebt(db, { limit: 2 });
+    await seedMintBurnLegacyMaterializationDebt(db, { limit: 2 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM mint_burn_dirty_hours").get()).toEqual({ count: 3 });
+    expect((await pruneMintBurnRetention(db, NOW_SEC)).eventRows.deletedRows).toBe(0);
+    expect(await drainMintBurnMaterializationDebt(db, { limit: 1 })).toBe(1);
+    expect(sqlite.prepare("SELECT mint_count, mint_volume_usd FROM mint_burn_hourly WHERE hour_ts = ?").get(hour))
+      .toEqual({ mint_count: 2, mint_volume_usd: 15 });
+    expect((await pruneMintBurnRetention(db, NOW_SEC)).eventRows.deletedRows).toBe(2);
+    expect(eventIds(sqlite)).toEqual(["legacy-1", "legacy-2", "sibling-1", "sibling-2"]);
+    expect(await drainMintBurnMaterializationDebt(db, { limit: 1 })).toBe(1);
+    expect(await drainMintBurnMaterializationDebt(db, { limit: 1 })).toBe(1);
+    expect(await drainMintBurnMaterializationDebt(db, { limit: 1 })).toBe(0);
+    expect((await pruneMintBurnRetention(db, NOW_SEC)).eventRows.deletedRows).toBe(4);
+    expect(eventIds(sqlite)).toEqual([]);
   });
 
   it("never deletes an event ahead of the persisted tape watermark", async () => {

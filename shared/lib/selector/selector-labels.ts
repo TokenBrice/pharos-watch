@@ -27,6 +27,7 @@ const SELECTOR_EXCLUSION_REASON_LABELS: Readonly<Record<ExclusionReason, string>
   "peg-currency-mismatch": "peg currency",
   "yield-native-only-violation": "native yield",
   "decentralization-required-violation": "decentralization",
+  "insufficient-control-evidence": "reviewed freeze-control evidence",
   "custody-regulated-only-violation": "custody model",
   "custody-onchain-only-violation": "custody model",
   "howey-uncertain": "regulatory uncertainty",

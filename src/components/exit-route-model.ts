@@ -169,14 +169,12 @@ function routePacketCount(sharePct: number): number {
   return 1;
 }
 
-export function throatLabelForCrowding(concentrationHhi: number | null): string {
-  const hhi = finiteNumber(concentrationHhi, Number.NaN);
-  return Number.isFinite(hhi) ? getHhiBand(hhi).throatLabel : "Crowding not scored";
+export function throatLabelForCrowding(concentrationHhi: number | null | undefined): string {
+  return getHhiBand(concentrationHhi)?.throatLabel ?? "Crowding not scored";
 }
 
-export function crowdingBand(concentrationHhi: number | null): ExitRouteCrowdingBand {
-  const hhi = finiteNumber(concentrationHhi, Number.NaN);
-  return Number.isFinite(hhi) ? getHhiBand(hhi).key : "unknown";
+export function crowdingBand(concentrationHhi: number | null | undefined): ExitRouteCrowdingBand {
+  return getHhiBand(concentrationHhi)?.key ?? "unknown";
 }
 
 const THROAT_HALF_WIDTH_BY_BAND: Record<ExitRouteCrowdingBand, number> = {
@@ -399,9 +397,7 @@ export function buildLiquidityExitRouteModel(
       ? (aggregateStats?.avgOrganic ?? null)
       : Math.round(globalData.organicFraction * 100);
   const interpretation =
-    concentrationHhi == null
-      ? "Route concentration is not scored for this snapshot."
-      : getHhiBand(concentrationHhi).interpretation;
+    getHhiBand(concentrationHhi)?.interpretation ?? "Route concentration is not scored for this snapshot.";
 
   return {
     totalTvlUsd: globalData.totalTvlUsd,

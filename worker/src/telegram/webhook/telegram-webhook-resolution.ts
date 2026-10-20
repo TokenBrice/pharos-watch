@@ -11,6 +11,7 @@ import {
   persistPendingDisambiguation,
 } from "../store/telegram-webhook-store";
 import { dedupeCoins } from "../common/coin-dedupe";
+import { bindPendingKeyboard, pendingFlowId } from "./telegram-webhook-shared";
 
 export function resolveCoinTargets(
   tickers: string[],
@@ -70,7 +71,9 @@ interface RunCoinResolutionFlowOptions<TActionPayload extends object> {
   initialCoins?: ResolvedCoin[];
   clearPendingOnTerminal?: boolean;
   resolutionScope?: TickerResolutionScope;
-  persistAmbiguous?: (resolution: Extract<CoinResolution, { kind: "ambiguous" }>) => Promise<boolean>;
+  persistAmbiguous?: (resolution: Extract<CoinResolution, { kind: "ambiguous" }>, flowId: string) => Promise<boolean>;
+  flowId?: string;
+  recoveredResolution?: Extract<CoinResolution, { kind: "ambiguous" }>;
 }
 
 function buildDisambiguationKeyboard(candidates: readonly ResolvedCoin[]): {
@@ -99,8 +102,10 @@ export async function runCoinResolutionFlow<TActionPayload extends object>({
   clearPendingOnTerminal = false,
   resolutionScope = "subscribable",
   persistAmbiguous,
+  flowId: storedFlowId,
+  recoveredResolution,
 }: RunCoinResolutionFlowOptions<TActionPayload>): Promise<void> {
-  const resolution = resolveCoinTargets(tickers, initialCoins, resolutionScope);
+  const resolution = recoveredResolution ?? resolveCoinTargets(tickers, initialCoins, resolutionScope);
 
   if (resolution.kind === "not_found") {
     await reply(buildNotFoundMessage(resolution.ticker, resolution.suggestion));
@@ -108,12 +113,13 @@ export async function runCoinResolutionFlow<TActionPayload extends object>({
   }
 
   if (resolution.kind === "ambiguous") {
+    const flowId = pendingFlowId(storedFlowId);
     const persisted = persistAmbiguous
-      ? await persistAmbiguous(resolution)
+      ? await persistAmbiguous(resolution, flowId)
       : await persistPendingDisambiguation(db, {
       chatId,
       actionType,
-      actionPayload,
+      actionPayload: { ...actionPayload, flowId },
       alertTypes,
       resolvedCoins: resolution.coins,
       ambiguousTicker: resolution.ticker,
@@ -126,7 +132,8 @@ export async function runCoinResolutionFlow<TActionPayload extends object>({
       return;
     }
     const message = escapeHtml(formatDisambiguation(resolution.ticker, resolution.candidates));
-    const replyMarkup = buildDisambiguationKeyboard(resolution.candidates);
+    const keyboard = buildDisambiguationKeyboard(resolution.candidates);
+    const replyMarkup = keyboard ? bindPendingKeyboard(keyboard, flowId) : null;
     if (replyMarkup && replyWithMarkup) {
       await replyWithMarkup(message, { replyMarkup });
       return;

@@ -69,6 +69,37 @@ describe("21-day incident evidence", () => {
     expect(joinIncidentEvidence([delivery, delivery], [child], [deployment], [], definitions)[0].children).toEqual([]);
   });
 
+  it.each([
+    { invocation_id: null }, { invocation_id: undefined }, { invocation_id: "" }, { invocation_id: " " },
+    { worker_version: null }, { worker_version: undefined }, { worker_version: "" }, { worker_version: " " },
+    { invocation_id: "other-invocation" }, { worker_version: "other-version" },
+  ])("leaves the whole delivery unattributed when a child has incomplete or mixed identity %j", (unknownIdentity) => {
+    const delivery = { scriptName: "stablecoin-api", cron: "0 * * * *", scheduledDatetime: "2026-10-18T00:00:00Z" };
+    const child = { job: "first", schedule_key: "lane", slot_started_at: Date.parse(delivery.scheduledDatetime) / 1000,
+      invocation_id: "invocation", worker_version: "version", output_published_at: 100 };
+    const children = [child, { ...child, job: "second", ...unknownIdentity }];
+    const deployment = { scriptName: delivery.scriptName, id: "deploy", versions: [{ id: "version" }] };
+    const joined = joinIncidentEvidence([delivery], children, [deployment], [{ published_at: 100 }], { lane: { schedule: delivery.cron } });
+    expect(joined[0]).toMatchObject({
+      join: "unattributed", reason: "missing-or-ambiguous-identity",
+      deployment: null, invocationId: null, children: [], publications: [],
+    });
+  });
+
+  it("joins multiple fully identified children of one invocation and exact deployment version", () => {
+    const delivery = { scriptName: "stablecoin-api", cron: "0 * * * *", scheduledDatetime: "2026-10-18T00:00:00Z" };
+    const children = ["first", "second"].map((job) => ({
+      job, schedule_key: "lane", slot_started_at: Date.parse(delivery.scheduledDatetime) / 1000,
+      invocation_id: "invocation", worker_version: "version", output_published_at: 100,
+    }));
+    const deployment = { scriptName: delivery.scriptName, id: "deploy", versions: [{ id: "version" }] };
+    const joined = joinIncidentEvidence([delivery], children, [deployment], [{ published_at: 100 }], { lane: { schedule: delivery.cron } });
+    expect(joined[0]).toMatchObject({ join: "singleton-version-match", invocationId: "invocation", deployment: "deploy", children });
+    expect(joined[0].publications).toEqual([{ published_at: 100, correlation: "timestamp-only-not-causal-proof" }]);
+    expect(joinIncidentEvidence([delivery], children, [{ ...deployment, versions: [{ id: "other-version" }] }], [],
+      { lane: { schedule: delivery.cron } })[0].join).toBe("unattributed");
+  });
+
   it("writes partial evidence after source failures without retaining error secrets or arbitrary metadata", async () => {
     const outDir = mkdtempSync(join(tmpdir(), "worker-incidents-"));
     try {
@@ -85,6 +116,9 @@ describe("21-day incident evidence", () => {
       expect(text).not.toContain("secret-");
       expect(text).toContain("scheduled-invocations-unavailable");
       expect(JSON.parse(text).days[0].summary.counts.error).toBe(1);
+      expect(JSON.parse(text).days[0].sources.children.rows).toEqual([
+        expect.objectContaining({ job: "job", status: "error", invocation_id: null, worker_version: null }),
+      ]);
     } finally { rmSync(outDir, { recursive: true, force: true }); }
   });
 });

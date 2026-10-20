@@ -485,4 +485,25 @@ describe("derivePegAnalyticsSnapshot", () => {
       delete coin.pegScoreCoverage;
     }
   });
+
+  it.each(["2026-02-30", "2025-02-29"])("does not claim audited coverage for legacy invalid startDate %s", async (startDate) => {
+    const coin = STABLECOINS_MOCK[0] as typeof STABLECOINS_MOCK[0] & {
+      pegScoreCoverage?: { startDate: string };
+    };
+    coin.pegScoreCoverage = { startDate };
+    try {
+      const snapshot = await derivePegAnalyticsSnapshot(db, {
+        peggedAssets: [makeStablecoin({ id: "usdt-tether", price: 1 })],
+        methodologyAsOf: 1_783_000_000,
+      });
+      expect(snapshot.pegDataById.get("usdt-tether")?.historyCoverage).toMatchObject({
+        source: "asset-age", status: "assumed",
+      });
+      expect(vi.mocked(coinTrackingStart)).toHaveBeenCalledWith(
+        expect.any(Array), expect.any(Number), 1_563_494_400,
+      );
+    } finally {
+      delete coin.pegScoreCoverage;
+    }
+  });
 });

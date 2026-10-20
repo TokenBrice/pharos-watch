@@ -46,6 +46,23 @@ function hasGuardedInterpolation(template: ts.TemplateExpression): boolean {
   return template.templateSpans.every((span) => ts.isIdentifier(span.expression) && span.expression.text === checked.text);
 }
 
+function hasSafetyReview(template: ts.TemplateExpression, sourceFile: ts.SourceFile): boolean {
+  const hasReviewAt = (position: number): boolean => (
+    ts.getLeadingCommentRanges(sourceFile.text, position) ?? []
+  ).some((comment) => comment.kind === ts.SyntaxKind.SingleLineCommentTrivia
+    && SQL_SAFETY_PATTERN.test(sourceFile.text.slice(comment.pos, comment.end)));
+  let node: ts.Node = template;
+  while (!ts.isBlock(node) && !ts.isSourceFile(node)) {
+    if (hasReviewAt(node.getFullStart())) return true;
+    // A review before `.prepare(...)` belongs to this call, not the receiver's statement.
+    if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)
+      && hasReviewAt(node.expression.expression.end)) return true;
+    if (ts.isStatement(node) || !node.parent) break;
+    node = node.parent;
+  }
+  return false;
+}
+
 export function scanSqlInterpolationSafety(
   roots: readonly string[] = DEFAULT_SQL_SAFETY_ROOTS,
   cwd = process.cwd(),
@@ -75,9 +92,8 @@ export function scanSqlInterpolationSafety(
       for (const match of content.matchAll(pattern)) {
         const index = match.index;
         const lineIndex = content.slice(0, index).split("\n").length - 1;
-        const context = lines.slice(Math.max(0, lineIndex - 5), lineIndex + 6).join("\n");
         const template = templates.get(index);
-        if (SQL_SAFETY_PATTERN.test(context) || (template && hasGuardedInterpolation(template))) continue;
+        if (template && (hasSafetyReview(template, sourceFile) || hasGuardedInterpolation(template))) continue;
 
         violations.push({
           file: relativePath,

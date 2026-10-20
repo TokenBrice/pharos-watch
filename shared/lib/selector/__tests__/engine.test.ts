@@ -85,6 +85,33 @@ describe("runSelector — Treasury happy path", () => {
     expect(ids).toContain("usdc-circle");
   });
 
+  it.each(["centralized", "centralized-dependent", "decentralized", null] as const)(
+    "pins strict control evidence and recommendation outcomes under %s governance",
+    (governance) => {
+      for (const canBeBlacklisted of [null, "possible", true, "inherited", false] as const) {
+        const row = makeMergedRowWithIdentity(
+          { id: "usdc-circle", symbol: "USDC", name: "USD Coin" },
+          { governance, canBeBlacklisted },
+        );
+        const data = { rows: new Map([[row.id, row]]) };
+        const out = runSelector(makeInput({ decentralization: "required" }), data, FIXTURE_DATASET);
+        const violation = governance === "centralized" || canBeBlacklisted === true || canBeBlacklisted === "inherited";
+        const unavailable = !violation && canBeBlacklisted !== false;
+        expect(out.recommended.map((rec) => rec.id)).toEqual(!violation && !unavailable ? [row.id] : []);
+        expect(out.usedRelaxedFallback).toBe(false);
+        expect(out.coverageWarnings.skippedForCoverage).toEqual(unavailable ? [{
+          id: row.id, symbol: row.symbol, missingSignals: ["insufficient-control-evidence"],
+        }] : []);
+        expect(out.exclusionSummary).toEqual(violation || unavailable ? [{
+          reason: unavailable ? "insufficient-control-evidence" : "decentralization-required-violation",
+          severity: unavailable ? "info" : "hard", count: 1, sampleIds: [row.id],
+        }] : []);
+        const unrestricted = runSelector(makeInput({ decentralization: "any" }), data, FIXTURE_DATASET);
+        expect(unrestricted.recommended.map((rec) => rec.id)).toEqual([row.id]);
+      }
+    },
+  );
+
   it("output includes engineVersion + methodologyVersions + datasetHash", () => {
     const out = runSelector(input, buildFixtureData(), FIXTURE_DATASET);
     expect(out.engineVersion).toBe(ENGINE_VERSION);

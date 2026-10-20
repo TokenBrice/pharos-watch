@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { makeApiRequest } from "../test-helpers/__shared/auth";
-import type * as AlchemyLogs from "../lib/alchemy-logs";
+import type * as MintBurnRpc from "../lib/mint-burn-pipeline/rpc";
 
 // Keep the real registry derivation and lifecycle predicates; replace only its input catalog.
 vi.mock("@shared/data/stablecoins/canonical-order.json", () => ({ default: ["fixture-active", "fixture-frozen"] }));
@@ -34,9 +34,14 @@ vi.mock("../lib/mint-burn-contracts", () => ({
     contractAddress: "0x0000000000000000000000000000000000000001",
   }],
 }));
-vi.mock("../lib/alchemy-logs", async (importOriginal) => ({
-  ...await importOriginal<typeof AlchemyLogs>(),
-  getAlchemyBlockNumber: vi.fn(async () => 22_000_000),
+// Backfills now require an admitted finalized head, not the raw chain tip.
+vi.mock("../lib/mint-burn-pipeline/rpc", async (importOriginal) => ({
+  ...await importOriginal<typeof MintBurnRpc>(),
+  getMintBurnFinalizedHead: vi.fn(async () => ({
+    number: 22_000_000,
+    timestamp: 1_700_000_000,
+    hash: `0x${"a".repeat(64)}`,
+  })),
 }));
 
 import { shouldCloseOrphanedDepeg } from "../cron/depeg-detection/repair";

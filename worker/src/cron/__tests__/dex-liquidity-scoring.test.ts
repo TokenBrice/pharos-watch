@@ -236,6 +236,20 @@ describe("dex-liquidity scoring", () => {
     vi.clearAllMocks();
   });
 
+  it("retains original price clocks while scoring a mixed-age pool graph", async () => {
+    const metrics = initMetrics("usdc-circle", "USDC");
+    metrics.topPools = withReadings([
+      makePool({ poolId: "base:old", price: 0.998, priceObservedAt: SCORING_CLOCK_SEC - 6 * 3600 }),
+      makePool({ poolId: "base:fresh", price: 1, priceObservedAt: SCORING_CLOCK_SEC - 60 }),
+    ]);
+    const result = await computeStablecoinScores(
+      makeQueryDb([]), new Map([["usdc-circle", metrics]]), new Map(), undefined, SCORING_CLOCK_SEC,
+    );
+    expect(result.retainedPoolsByStablecoin.get("usdc-circle")?.map((pool) => pool.priceObservedAt)).toEqual([
+      SCORING_CLOCK_SEC - 6 * 3600, SCORING_CLOCK_SEC - 60,
+    ]);
+  });
+
   it("quarantines invalid durability history without losing valid samples", async () => {
     const rows = Array.from({ length: 8 }, (_, index) => ({
       stablecoin_id: "usdc-circle", snapshot_date: index + 1,

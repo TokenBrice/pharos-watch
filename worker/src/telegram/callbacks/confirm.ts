@@ -17,6 +17,7 @@ import { parsePendingDisambiguation, parseStoredConfirmBulkPayload } from "../we
 import { sendAuditedTelegramReply } from "../webhook/telegram-webhook-replies";
 import { createTelegramWebhookIntent } from "../webhook/telegram-webhook-effect-fence";
 import type { ConfirmBulkPayload } from "../webhook/telegram-webhook-shared";
+import { isPendingFlowId } from "../webhook/telegram-webhook-shared";
 import {
   callbackChatType,
   callbackUsername,
@@ -33,24 +34,27 @@ interface NormalizedConfirmation {
   action: ConfirmationAction;
   kind: ConfirmationKind;
   expiresAt: number;
+  flowId: string;
   payload: ConfirmBulkPayload | null;
 }
 
 function parseStoredConfirmation(ctx: CallbackContext): NormalizedConfirmation | null {
   const intent = ctx.storedIntent;
   if (!intent || intent.kind !== `callback:${ctx.parsed.action}` || intent.mutation !== "required") return null;
-  const { action, kind, expiresAt, payload } = intent.payload;
+  const { action, kind, expiresAt, payload, flowId } = intent.payload;
   if (
     (action !== "confirm" && action !== "cancel")
     || (kind !== "bulk" && kind !== "forget")
     || typeof expiresAt !== "number"
+    || !isPendingFlowId(flowId)
+    || flowId !== ctx.parsed.parts[2]
   ) {
     return null;
   }
-  if (kind === "forget") return { action, kind, expiresAt, payload: null };
+  if (kind === "forget") return { action, kind, expiresAt, flowId, payload: null };
   if (typeof payload !== "object" || payload == null || Array.isArray(payload)) return null;
   const bulk = parseStoredConfirmBulkPayload(payload as Record<string, unknown>);
-  return bulk ? { action, kind, expiresAt, payload: bulk } : null;
+  return bulk ? { action, kind, expiresAt, flowId, payload: bulk } : null;
 }
 
 async function loadFreshConfirmation(
@@ -67,12 +71,16 @@ async function loadFreshConfirmation(
     });
     return null;
   }
-  const pending = parsePendingDisambiguation(pendingRow);
+  const pending = parsePendingDisambiguation(pendingRow, ctx.parsed.parts[2]);
   const expectedType = kind === "forget" ? "forget-confirm" : "confirm-bulk";
   if (!pending || pending.actionType !== expectedType) {
     await ctx.answerCallback({
-      text: kind === "forget" ? "No forget confirmation is pending." : "No bulk confirmation is pending.",
+      text: kind === "forget" ? "No forget confirmation is pending. Re-run /forget." : "No bulk confirmation is pending. Re-run the command.",
     });
+    return null;
+  }
+  if (!isPendingFlowId(pending.flowId) || pending.flowId !== ctx.parsed.parts[2]) {
+    await ctx.answerCallback({ text: "This keyboard is no longer current. Re-run the command." });
     return null;
   }
   const actorUserId = ctx.cb.from?.id != null ? String(ctx.cb.from.id) : null;
@@ -84,6 +92,7 @@ async function loadFreshConfirmation(
     action,
     kind,
     expiresAt: pendingRow.expires_at,
+    flowId: pending.flowId,
     payload: pending.actionType === "confirm-bulk" ? pending.payload : null,
   };
 }
@@ -168,6 +177,7 @@ async function applyConfirmation(ctx: CallbackContext, normalized: NormalizedCon
     action: normalized.action,
     kind: normalized.kind,
     expiresAt: normalized.expiresAt,
+    flowId: normalized.flowId,
     payload: normalized.payload,
   }, "required"));
   let importOutcome: "applied" | "stale" = "applied";
@@ -180,6 +190,7 @@ async function applyConfirmation(ctx: CallbackContext, normalized: NormalizedCon
         expected: {
           actionType: normalized.kind === "forget" ? "forget-confirm" : "confirm-bulk",
           expiresAt: normalized.expiresAt,
+          actionPayload: JSON.stringify(normalized.payload ?? { flowId: normalized.flowId }),
         },
         operationStatements,
       });
@@ -232,9 +243,14 @@ async function applyConfirmation(ctx: CallbackContext, normalized: NormalizedCon
 
 export const handleBulkActionCallback: CallbackHandler = async (ctx) => {
   const { parsed } = ctx;
+  if (parsed.parts.length === 2) {
+    await ctx.answerCallback({ text: "This keyboard is no longer current. Re-run the command." });
+    return;
+  }
   if (
     (parsed.action !== "confirm" && parsed.action !== "cancel")
-    || !hasExactParts(parsed.parts, 2)
+    || !hasExactParts(parsed.parts, 3)
+    || !isPendingFlowId(parsed.parts[2])
     || (parsed.arg !== "bulk" && parsed.arg !== "forget")
   ) {
     await ctx.answerCallback({ text: "Action not recognized." });
@@ -258,9 +274,13 @@ export const handleBulkActionCallback: CallbackHandler = async (ctx) => {
     return;
   }
 
-  const normalized = parseStoredConfirmation(ctx)
-    ?? await loadFreshConfirmation(ctx, parsed.action, parsed.arg);
-  if (!normalized) return;
+  const normalized = ctx.storedIntent
+    ? parseStoredConfirmation(ctx)
+    : await loadFreshConfirmation(ctx, parsed.action, parsed.arg);
+  if (!normalized) {
+    if (ctx.storedIntent) await ctx.answerCallback({ text: "This keyboard is no longer current. Re-run the command." });
+    return;
+  }
   try {
     await applyConfirmation(ctx, normalized);
   } catch (err) {

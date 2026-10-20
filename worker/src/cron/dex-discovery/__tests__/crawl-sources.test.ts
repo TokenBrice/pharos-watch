@@ -48,12 +48,6 @@ vi.mock("../../../lib/dexscreener", async (importOriginal) => ({
   fetchDsTokenPoolsWithStatus: fetchDsTokenPoolsWithStatusMock,
   fetchDsTokenPairsWithStatus: fetchDsTokenPairsWithStatusMock,
   dsRateLimit: vi.fn().mockResolvedValue(undefined),
-  getDsTrackedTokenPriceUsd: vi.fn(
-    (pair: { baseToken: { address: string }; priceUsd: string | null }, trackedAddress: string) => ({
-      side: pair.baseToken.address?.toLowerCase() === trackedAddress.toLowerCase() ? "base" : null,
-      priceUsd: pair.priceUsd != null ? Number(pair.priceUsd) : null,
-    }),
-  ),
 }));
 
 vi.mock("../../../lib/circuit-breaker", () => ({
@@ -80,6 +74,7 @@ vi.mock("../crawl-kava-swap-pools", () => ({
 import { crawlCoin } from "../crawl-sources";
 import { crawlCoinGeckoPoolsStage } from "../crawl-coingecko-pools";
 import {
+  crawlDexScreenerPoolsStage,
   createDexScreenerDiscoveryRunState,
   finalizeDexScreenerDiscoveryRun,
 } from "../crawl-dexscreener-pools";
@@ -146,6 +141,34 @@ describe("crawlCoin DexScreener hardening", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it.each([
+    { chainId: "ethereum", tokenAddress: "MintCase", count: 0, degraded: true },
+    { chainId: "solana", tokenAddress: "mintCase", count: 0, degraded: false },
+    { chainId: "solana", tokenAddress: "MintCase", count: 1, degraded: true },
+  ])("keeps chain/case-scoped DexScreener discovery: %j", async ({ chainId, tokenAddress, count, degraded }) => {
+    vi.mocked(fetchDsTokenPairsWithStatus).mockResolvedValueOnce({
+      ok: true, degraded,
+      pairs: [{
+        chainId, dexId: "raydium", pairAddress: "PoolCase",
+        baseToken: { address: tokenAddress, name: "USD", symbol: "USD" },
+        quoteToken: { address: "QuoteCase", name: "Quote", symbol: "USDC" },
+        priceUsd: "1", liquidity: { usd: 75_000, base: 0, quote: 0 },
+        volume: { h24: 1000, h6: 0, h1: 0, m5: 0 }, pairCreatedAt: null,
+      }],
+    });
+    const context = createCrawlStageContext({
+      stablecoinId: "test-coin", knownPoolIds: new Set(), nowSec: 1_800_000_000, pools: [], priceObs: [],
+    });
+    const result = await crawlDexScreenerPoolsStage({
+      db: createMockDb(), targets: [["solana", "MintCase"]], context,
+      runState: createDexScreenerDiscoveryRunState(),
+    });
+    expect(context.pools).toHaveLength(count);
+    expect(result.providerChecks).toEqual(expect.arrayContaining([
+      expect.objectContaining({ provider: "dexscreener", status: degraded ? "degraded" : "success", observedPoolCount: count }),
+    ]));
   });
 
   it("skips malformed DexScreener pairs and keeps valid pairs in the same response", async () => {

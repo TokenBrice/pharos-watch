@@ -1,6 +1,8 @@
 import { safeJsonParse } from "../lib/api-cache-read";
 import { errorResponse, jsonResponse } from "../lib/api-response";
 import type { DigestInputData } from "@shared/types/digest";
+import { DigestMcap7dDeltaCoverageSchema, DigestSupplyCoverageSchema } from "@shared/types/digest";
+import { isValidIsoDateOnly } from "@shared/types/date-primitives";
 import { isRecord } from "@shared/lib/type-guards";
 import { NON_BLOCKED_DIGEST_SQL_FILTER, NON_INTERNAL_DIGEST_SQL_FILTER, NON_WEEKLY_DIGEST_SQL_FILTER } from "../lib/digest-sql-filters";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
@@ -39,7 +41,9 @@ const DATE_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
 // checks the always-present required numeric anchor field rather than the full
 // shape (the response/consumer tolerate optional fields being absent).
 function isDigestInputDataLike(value: unknown): value is DigestInputData {
-  return isRecord(value) && typeof value.totalMcapUsd === "number";
+  return isRecord(value) && typeof value.totalMcapUsd === "number" && Number.isFinite(value.totalMcapUsd)
+    && (value.supplyCoverage === undefined || DigestSupplyCoverageSchema.safeParse(value.supplyCoverage).success)
+    && (value.mcap7dDeltaCoverage === undefined || DigestMcap7dDeltaCoverageSchema.safeParse(value.mcap7dDeltaCoverage).success);
 }
 
 export const handleDigestSnapshot = async (
@@ -106,10 +110,16 @@ export const handleDigestSnapshot = async (
 
   let inputData: DigestInputData | null = null;
   let prevInputData: DigestInputData | null = null;
+  let fromDate: string | null = null;
+  let toDate: string | null = null;
 
   const pickInputData = (entry: unknown): DigestInputData | null => {
     const candidate = isRecord(entry) ? entry.inputData : undefined;
     return isDigestInputDataLike(candidate) ? candidate : null;
+  };
+  const pickDate = (entry: unknown): string | null => {
+    const date = isRecord(entry) ? entry.date : null;
+    return isValidIsoDateOnly(date) ? date : null;
   };
 
   if (rawInputData && Array.isArray(rawInputData.dailyDigests)) {
@@ -119,6 +129,8 @@ export const handleDigestSnapshot = async (
       prevInputData = dailyDigests.length > 1
         ? pickInputData(dailyDigests[0])
         : null;
+      toDate = pickDate(dailyDigests[dailyDigests.length - 1]);
+      fromDate = dailyDigests.length > 1 ? pickDate(dailyDigests[0]) : null;
     }
   } else {
     inputData = isDigestInputDataLike(rawInputData) ? rawInputData : null;
@@ -130,7 +142,20 @@ export const handleDigestSnapshot = async (
         )
       : null;
     prevInputData = isDigestInputDataLike(rawPrev) ? rawPrev : null;
+    toDate = new Date(targetRow.generated_at * 1000).toISOString().slice(0, 10);
+    fromDate = prevRow ? new Date(prevRow.generated_at * 1000).toISOString().slice(0, 10) : null;
   }
+
+  const coverage = inputData?.supplyCoverage;
+  const prevCoverage = prevInputData?.supplyCoverage;
+  const comparison = inputData && prevInputData && fromDate && toDate && fromDate < toDate ? {
+    fromDate,
+    toDate,
+    supplyComparable: coverage?.complete === true && prevCoverage?.complete === true
+      && coverage.observedCount > 0 && coverage.observedCount === prevCoverage.observedCount
+      && coverage.memberFingerprint !== undefined && coverage.memberFingerprint === prevCoverage.memberFingerprint
+      && inputData.aggregateUniverse !== undefined && inputData.aggregateUniverse === prevInputData.aggregateUniverse,
+  } : null;
 
   // Depeg episodes active on that date
   const depegResult = await db
@@ -194,6 +219,7 @@ export const handleDigestSnapshot = async (
     date,
     inputData,
     prevInputData,
+    comparison,
     depegEvents,
     blacklistEvents,
     blacklistSummary,

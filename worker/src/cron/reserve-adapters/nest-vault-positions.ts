@@ -96,6 +96,13 @@ function asArray(value: unknown): unknown[] {
   return Array.isArray(value) ? value : [];
 }
 
+function requirePositionArray(value: unknown, label: string): unknown[] {
+  if (!Array.isArray(value)) {
+    throw new Error(`nest-vault-positions missing or invalid ${label} array`);
+  }
+  return value;
+}
+
 function readValue(token: NestPositionToken): number {
   const symbol = typeof token.symbol === "string" ? token.symbol : "Unknown";
   const value = parsePositionValue(token.position?.value, `${symbol} position value`);
@@ -301,13 +308,20 @@ export async function fetchNestVaultPositionsReserves(
     fetchJsonWithRetry<NestLastPriceUpdatePayload>(params.lastPriceUpdateUrl, signal, 12_000, ctx),
   ]);
 
-  const liquidTokens = asArray(positions.data?.positions?.liquidAssets)
-    .map((token) => token as NestPositionToken);
-  const yieldAssets = asArray(positions.data?.positions?.yieldAssets)
-    .map((asset) => asset as NestYieldAsset);
+  const errors = positions.data?.errors;
+  if (errors !== undefined && (!Array.isArray(errors) || errors.length > 0)) {
+    throw new Error("nest-vault-positions positions-errors");
+  }
+  const liquidTokens = requirePositionArray(positions.data?.positions?.liquidAssets, "liquidAssets") as NestPositionToken[];
+  const yieldAssets = requirePositionArray(positions.data?.positions?.yieldAssets, "yieldAssets") as Array<
+    NestYieldAsset & { tokens: NestPositionToken[] }
+  >;
+  for (const asset of yieldAssets) {
+    requirePositionArray(asset?.tokens, "yield asset tokens");
+  }
   const liquidValues = liquidTokens.map(bucketLiquidToken);
-  const yieldValues = yieldAssets.flatMap((asset) => asArray(asset.tokens)
-    .map((token) => bucketYieldToken(asset, token as NestPositionToken)));
+  const yieldValues = yieldAssets.flatMap((asset) => asset.tokens
+    .map((token) => bucketYieldToken(asset, token)));
   const settledValues = mergeSliceValues([...liquidValues, ...yieldValues]);
   const settledPositionUsd = settledValues.reduce((sum, value) => sum + value.value, 0);
   if (settledPositionUsd <= 0) {
@@ -327,8 +341,8 @@ export async function fetchNestVaultPositionsReserves(
         ...liquidTokens.flatMap((token) => readPendingTransactions(token, "liquid")),
         ...yieldAssets.flatMap((asset) => {
           const assetSlug = typeof asset.slug === "string" ? asset.slug : undefined;
-          return asArray(asset.tokens)
-            .flatMap((token) => readPendingTransactions(token as NestPositionToken, "yield", assetSlug));
+          return asset.tokens
+            .flatMap((token) => readPendingTransactions(token, "yield", assetSlug));
         }),
       ]
     : [];
@@ -376,8 +390,7 @@ export async function fetchNestVaultPositionsReserves(
     // separately from /positions. Require the explicit nonnegative amount,
     // including an observed zero; gross reconciliation admits it exactly once.
     unrealizedDividendsUsd = readNonNegativeNumericLike(data?.unrealizedDividends, "unrealized dividends");
-    const hasErrors = [positions.data?.errors, data?.errors]
-      .some((errors) => errors !== undefined && (!Array.isArray(errors) || errors.length > 0));
+    const hasErrors = data?.errors !== undefined && (!Array.isArray(data.errors) || data.errors.length > 0);
     if (hasErrors || grossNavUsd == null || calculatedNavUsd == null
       || claimableFeesUsd == null || claimableFeesUsd < 0 || data?.claimableFeesAdjusted !== true
       || Math.abs(grossNavUsd - settledPositionUsd - pendingDepositUsd - pendingWithdrawalUsd - unrealizedDividendsUsd) > 0.01

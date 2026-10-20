@@ -24,7 +24,7 @@ function pendingRowFromSetup(
 ): Record<string, unknown> {
   return {
     action_type: "setup-step",
-    action_payload: JSON.stringify(payload),
+    action_payload: JSON.stringify({ ...payload, flowId: "0123456789abcdef" }),
     expires_at: Math.floor(Date.now() / 1000) + 60,
     initiator_user_id: options.initiator_user_id ?? null,
   };
@@ -61,7 +61,7 @@ describe("handleCallbackQuery", () => {
           first: { value: makeCacheStablecoins(), updated_at: 1_700_000_000 },
         },
       ]);
-      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("setup:branch:recommended", { id: "cb-rec", from: { id: 999, username: "alice" }, message: { chat: { id: 42 }, message_id: 1 } }));
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("setup:branch:recommended:0123456789abcdef", { id: "cb-rec", from: { id: 999, username: "alice" }, message: { chat: { id: 42 }, message_id: 1 } }));
 
       const history = db.getHistory();
       const persist = history.filter(
@@ -74,8 +74,8 @@ describe("handleCallbackQuery", () => {
       const body = lastSentMessageBody();
       expect(body.text).toContain("DEWS and Depeg alerts");
       const callbacks = (body.reply_markup?.inline_keyboard ?? []).flat().map((b) => b.callback_data);
-      expect(callbacks).toContain("setup:confirm");
-      expect(callbacks).toContain("setup:cancel");
+      expect(callbacks).toContainEqual(expect.stringMatching(/^setup:confirm:[a-f0-9]{16}$/));
+      expect(callbacks).toContainEqual(expect.stringMatching(/^setup:cancel:[a-f0-9]{16}$/));
     });
 
     it("setup:branch:custom shows the alert-type toggle keyboard", async () => {
@@ -83,23 +83,23 @@ describe("handleCallbackQuery", () => {
         pendingDisambiguationTable(pendingRowFromSetup({ step: "branch", alertTypes: [], target: null })),
         { match: "INSERT INTO telegram_pending_disambiguation", rows: [] },
       ]);
-      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("setup:branch:custom", { id: "cb-custom", from: { id: 999 }, message: { chat: { id: 42 } } }));
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("setup:branch:custom:0123456789abcdef", { id: "cb-custom", from: { id: 999 }, message: { chat: { id: 42 } } }));
 
       const body = lastSentMessageBody();
       const callbacks = (body.reply_markup?.inline_keyboard ?? []).flat().map((b) => b.callback_data);
-      expect(callbacks).toContain("setup:type-toggle:dews");
-      expect(callbacks).toContain("setup:type-toggle:depeg");
-      expect(callbacks).toContain("setup:type-toggle:safety");
-      expect(callbacks).toContain("setup:type-toggle:launch");
-      expect(callbacks).toContain("setup:next");
-      expect(callbacks).toContain("setup:cancel");
+      expect(callbacks).toContainEqual(expect.stringMatching(/^setup:type-toggle:dews:[a-f0-9]{16}$/));
+      expect(callbacks).toContainEqual(expect.stringMatching(/^setup:type-toggle:depeg:[a-f0-9]{16}$/));
+      expect(callbacks).toContainEqual(expect.stringMatching(/^setup:type-toggle:safety:[a-f0-9]{16}$/));
+      expect(callbacks).toContainEqual(expect.stringMatching(/^setup:type-toggle:launch:[a-f0-9]{16}$/));
+      expect(callbacks).toContainEqual(expect.stringMatching(/^setup:next:[a-f0-9]{16}$/));
+      expect(callbacks).toContainEqual(expect.stringMatching(/^setup:cancel:[a-f0-9]{16}$/));
     });
 
     it("setup:branch:skip clears state and sends the legacy /start message", async () => {
       const db = mockTelegramD1([
         pendingDisambiguationTable(pendingRowFromSetup({ step: "branch", alertTypes: [], target: null })),
       ]);
-      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("setup:branch:skip", { id: "cb-skip", from: { id: 999 }, message: { chat: { id: 42 } } }));
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("setup:branch:skip:0123456789abcdef", { id: "cb-skip", from: { id: 999 }, message: { chat: { id: 42 } } }));
 
       const history = db.getHistory();
       expect(history.some((h) => h.sql.includes("DELETE FROM telegram_pending_disambiguation"))).toBe(true);
@@ -111,7 +111,7 @@ describe("handleCallbackQuery", () => {
       const db = mockTelegramD1([
         pendingDisambiguationTable(pendingRowFromSetup({ step: "branch", alertTypes: [], target: null }, { initiator_user_id: "7" })),
       ]);
-      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("setup:branch:skip", { id: "cb-skip-group", from: { id: 7, username: "member" }, message: { chat: { id: -42, type: "supergroup" }, message_id: 1 } }));
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("setup:branch:skip:0123456789abcdef", { id: "cb-skip-group", from: { id: 7, username: "member" }, message: { chat: { id: -42, type: "supergroup" }, message_id: 1 } }));
 
       expect(fetchSpy.mock.calls.some((call) => String(call[0]).includes("getChatMember"))).toBe(false);
       expect(db.getHistory().some((h) => h.sql.includes("DELETE FROM telegram_pending_disambiguation"))).toBe(true);
@@ -128,7 +128,7 @@ describe("handleCallbackQuery", () => {
         })),
         { match: "INSERT INTO telegram_pending_disambiguation", rows: [] },
       ]);
-      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("setup:type-toggle:safety", { id: "cb-toggle", from: { id: 999 }, message: { chat: { id: 42 } } }));
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("setup:type-toggle:safety:0123456789abcdef", { id: "cb-toggle", from: { id: 999 }, message: { chat: { id: 42 } } }));
 
       const persist = db.getHistory().filter((h) => h.sql.includes("INSERT INTO telegram_pending_disambiguation"));
       const payload = String(persist[persist.length - 1].binds[2] ?? "");
@@ -139,7 +139,7 @@ describe("handleCallbackQuery", () => {
       const db = mockTelegramD1([
         pendingDisambiguationTable(pendingRowFromSetup({ step: "custom-types", alertTypes: [], target: null })),
       ]);
-      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("setup:next", { id: "cb-next-empty", from: { id: 999 }, message: { chat: { id: 42 } } }));
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("setup:next:0123456789abcdef", { id: "cb-next-empty", from: { id: 999 }, message: { chat: { id: 42 } } }));
 
       // No sendMessage on this path — only an ack with a hint.
       expect(fetchSpy.mock.calls.filter((c) => String(c[0]).includes("sendMessage")).length).toBe(0);
@@ -156,13 +156,13 @@ describe("handleCallbackQuery", () => {
         })),
         { match: "INSERT INTO telegram_pending_disambiguation", rows: [] },
       ]);
-      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("setup:next", { id: "cb-next", from: { id: 999 }, message: { chat: { id: 42 } } }));
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("setup:next:0123456789abcdef", { id: "cb-next", from: { id: 999 }, message: { chat: { id: 42 } } }));
 
       const body = lastSentMessageBody();
       const callbacks = (body.reply_markup?.inline_keyboard ?? []).flat().map((b) => b.callback_data);
-      expect(callbacks).toContain("setup:target:usd-top25");
-      expect(callbacks).toContain("setup:target:all");
-      expect(callbacks).toContain("setup:target:type");
+      expect(callbacks).toContainEqual(expect.stringMatching(/^setup:target:usd-top25:[a-f0-9]{16}$/));
+      expect(callbacks).toContainEqual(expect.stringMatching(/^setup:target:all:[a-f0-9]{16}$/));
+      expect(callbacks).toContainEqual(expect.stringMatching(/^setup:target:type:[a-f0-9]{16}$/));
     });
 
     it("setup:target:usd-top10 advances to confirm-custom with preview", async () => {
@@ -180,7 +180,7 @@ describe("handleCallbackQuery", () => {
           first: { value: makeCacheStablecoins(), updated_at: 1_700_000_000 },
         },
       ]);
-      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("setup:target:usd-top10", { id: "cb-target", from: { id: 999 }, message: { chat: { id: 42 } } }));
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("setup:target:usd-top10:0123456789abcdef", { id: "cb-target", from: { id: 999 }, message: { chat: { id: 42 } } }));
 
       const persist = db.getHistory().filter((h) => h.sql.includes("INSERT INTO telegram_pending_disambiguation"));
       const payload = String(persist[persist.length - 1].binds[2] ?? "");
@@ -208,7 +208,7 @@ describe("handleCallbackQuery", () => {
       ], {
         fallbackTables: [{ match: "FROM telegram_subscriptions", rows: [] }],
       });
-      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("setup:confirm", { id: "cb-confirm", from: { id: 999, username: "alice" }, message: { chat: { id: 42 } } }));
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("setup:confirm:0123456789abcdef", { id: "cb-confirm", from: { id: 999, username: "alice" }, message: { chat: { id: 42 } } }));
 
       const history = db.getHistory();
       expect(history.some((h) => h.sql.includes("INSERT INTO telegram_subscribers"))).toBe(true);
@@ -226,7 +226,7 @@ describe("handleCallbackQuery", () => {
         })),
         { match: "INSERT INTO telegram_subscribers", rows: [] },
       ]);
-      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("setup:confirm", { id: "cb-confirm-all", from: { id: 999, username: "alice" }, message: { chat: { id: 42 } } }));
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("setup:confirm:0123456789abcdef", { id: "cb-confirm-all", from: { id: 999, username: "alice" }, message: { chat: { id: 42 } } }));
 
       const history = db.getHistory();
       const subscriberUpsert = history.find(
@@ -240,7 +240,7 @@ describe("handleCallbackQuery", () => {
       const db = mockTelegramD1([
         pendingDisambiguationTable(pendingRowFromSetup({ step: "custom-types", alertTypes: ["dews"], target: null })),
       ]);
-      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("setup:cancel", { id: "cb-cancel", from: { id: 999 }, message: { chat: { id: 42 } } }));
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("setup:cancel:0123456789abcdef", { id: "cb-cancel", from: { id: 999 }, message: { chat: { id: 42 } } }));
 
       const history = db.getHistory();
       expect(history.some((h) => h.sql.includes("DELETE FROM telegram_pending_disambiguation"))).toBe(true);
@@ -251,19 +251,19 @@ describe("handleCallbackQuery", () => {
       const db = mockTelegramD1([
         pendingDisambiguationTable(pendingRowFromForget({ action_type: "confirm-bulk", initiator_user_id: "999" })),
       ]);
-      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("setup:cancel", { id: "cb-cancel-unrelated", from: { id: 7, username: "member" }, message: { chat: { id: -42, type: "supergroup" }, message_id: 1 } }));
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("setup:cancel:0123456789abcdef", { id: "cb-cancel-unrelated", from: { id: 7, username: "member" }, message: { chat: { id: -42, type: "supergroup" }, message_id: 1 } }));
 
       expect(fetchSpy.mock.calls.some((call) => String(call[0]).includes("getChatMember"))).toBe(false);
       expect(db.getHistory().some((h) => h.sql.includes("DELETE FROM telegram_pending_disambiguation"))).toBe(false);
       expect(fetchSpy.mock.calls.some((call) => String(call[0]).includes("sendMessage"))).toBe(false);
-      expect(lastAckBody().text).toBe("Setup expired. Send /start to begin again.");
+      expect(lastAckBody().text).toMatch(/begin again/i);
     });
 
     it("setup:branch:recommended from a non-initiator user is refused", async () => {
       const db = mockTelegramD1([
         pendingDisambiguationTable(pendingRowFromSetup({ step: "branch", alertTypes: [], target: null }, { initiator_user_id: "111" })),
       ]);
-      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("setup:branch:recommended", { id: "cb-other", from: { id: 222 }, message: { chat: { id: 42, type: "private" } } }));
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("setup:branch:recommended:0123456789abcdef", { id: "cb-other", from: { id: 222 }, message: { chat: { id: 42, type: "private" } } }));
 
       // Should not have invoked the preset cache lookup or persisted any new state.
       const history = db.getHistory();

@@ -111,6 +111,15 @@ export type CronInFlight = z.output<typeof CronInFlightSchema>;
 /** Current progress in the default summary; progress metadata is detail-only. */
 const CronInFlightSummarySchema = CronInFlightSchema.omit({ metadata: true });
 
+/** Rejected progress is diagnostic evidence, never an admitted live heartbeat. */
+const CronInFlightUnavailableSchema = CronInFlightSummarySchema
+  .omit({ startedAt: true, updatedAt: true })
+  .extend({
+    startedAt: z.unknown(),
+    updatedAt: z.unknown(),
+    timestampReason: z.enum(["missing-timestamp", "invalid-timestamp", "future-timestamp"]),
+  });
+
 const CronStaleArtifactSchema = z.object({
   kind: z.enum(["expired-lease", "orphaned-progress"]),
   job: z.string(),
@@ -143,6 +152,7 @@ const CronStatusVerdictShape = {
   healthy: z.boolean().nullable(),
   telemetryUnknown: z.boolean().optional(),
   telemetryUnknownReason: z.string().optional(),
+  inFlightUnavailable: CronInFlightUnavailableSchema.optional(),
   /**
    * Newest confirmed output clock (`confirmedCronOutputAt`) among the bounded
    * history read for this response. `null` means none was found in that read

@@ -322,6 +322,53 @@ describe("mento adapter", () => {
     ]);
   });
 
+  it.each([
+    { collateral_usd: undefined }, { collateral_usd: -1 }, { collateral_usd: 0 },
+    { debt_usd: "900" }, { debt_usd: null }, { collateral_token: undefined },
+    { collateral_token: "" }, { status: undefined }, { status: 1 },
+  ])("rejects malformed relevant CDP rows rather than publishing a readable subset: %j", (invalid) => {
+    const valid = { stablecoin: "JPYm", status: "active", collateral_token: "USDm", collateral_usd: 200, debt_usd: 100 };
+    const payload = { cdp_troves: { troves: [valid, { ...valid, collateral_usd: 800, debt_usd: 900, ...invalid }] } };
+    expect(() => adaptMentoCdpComposition(payload, "JPYm")).toThrow(/mento: invalid/);
+  });
+
+  it("ignores malformed amounts in explicitly inactive and unrelated-currency CDP rows", () => {
+    const result = adaptMentoCdpComposition({ cdp_troves: { troves: [
+      { stablecoin: "JPYm", status: "active", collateral_token: "USDm", collateral_usd: 200, debt_usd: 100 },
+      { stablecoin: "JPYm", status: "closed", collateral_usd: "unavailable" },
+      { stablecoin: "CHFm", status: null, debt_usd: "unavailable" },
+    ] } }, "JPYm");
+    expect(result.slices).toMatchObject([{ coinId: "cusd-celo", pct: 100 }]);
+    expect(result.metadata).toMatchObject({ cdpActiveTroves: 1, totalCollateralUsd: 200, totalDebtUsd: 100, collateralizationRatio: 2 });
+  });
+
+  it.each([{ collateral_usd: "800" }, { debt_usd: undefined }, { collateral_usd: -1 }])(
+    "rejects malformed relevant dashboard backing rows even beside valid totals: %j",
+    async (invalid) => {
+      await expect(runAdapter("mento", "jpym-mento", {
+        network: mentoNetwork({ dashboardHtml: dashboardHtmlWithCdpBackings([
+          { stablecoin: "JPYm", ...SAMPLE_CDP_TOTALS.JPYm },
+          { stablecoin: "JPYm", collateral_usd: 800, debt_usd: 900, ...invalid },
+        ]) }),
+        params: { redemption: undefined },
+        nowSec: OVERRIDE_DASHBOARD_NOW_SEC,
+      })).rejects.toThrow("dashboard CDP backing amounts");
+    },
+  );
+
+  it("ignores malformed dashboard rows outside the requested currency", async () => {
+    const { result } = await runAdapter("mento", "jpym-mento", {
+      network: mentoNetwork({ dashboardHtml: dashboardHtmlWithCdpBackings([
+        { stablecoin: "JPYm", ...SAMPLE_CDP_TOTALS.JPYm },
+        { stablecoin: "CHFm", collateral_usd: "unavailable" },
+      ]) }),
+      params: { redemption: undefined },
+      nowSec: OVERRIDE_DASHBOARD_NOW_SEC,
+    });
+    expect(result.metadata?.totalCollateralUsd).toBe(171_960.48);
+    expectWarnings(result, []);
+  });
+
   it("maps CDP troves into USDm reserve slices and collateralization metadata", () => {
     const result = adaptMentoCdpComposition(SAMPLE_PAYLOAD, "GBPm");
     expect(result.warnings).toBeUndefined();

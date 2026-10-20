@@ -1,4 +1,5 @@
 import type { TelegramAlertType } from "@shared/types/status";
+import { TELEGRAM_ALERT_PERSISTENCE } from "@shared/lib/telegram-alert-families";
 import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
 import { buildInClause, chunkArray } from "../../../lib/db";
 import {
@@ -23,17 +24,16 @@ import type { PendingAlertRow } from "./types";
 
 const INVALID_PROVENANCE_RETRY_SEC = 15 * 60;
 const PRESET_UNAVAILABLE_RETRY_SEC = 5 * 60;
+const SAFETY_UNAVAILABLE_RETRY_SEC = 5 * 60;
 const SUBSCRIPTION_PAIR_CHUNK_SIZE = 40;
 const VALID_PRESET_IDS = new Set(listTelegramPresets().map((preset) => preset.id));
 
-const FAMILY_COLUMN = {
-  dews: { direct: "alert_dews", override: "alert_dews_override", global: "global_alert_dews" },
-  depeg: { direct: "alert_depeg", override: "alert_depeg_override", global: "global_alert_depeg" },
-  safety: { direct: "alert_safety", override: "alert_safety_override", global: "global_alert_safety" },
-  launch: { direct: "alert_launch", override: "alert_launch_override", global: "global_alert_launch" },
-  reserve: { direct: "alert_reserve", override: "alert_reserve_override", global: "global_alert_reserve" },
-  freeze: { direct: "alert_freeze", override: "alert_freeze_override", global: "global_alert_freeze" },
-} as const satisfies Record<TelegramAlertType, { direct: string; override: string; global: string }>;
+const GLOBAL_COLUMNS_SQL = Object.values(TELEGRAM_ALERT_PERSISTENCE)
+  .map((spec) => spec.globalColumn).join(", ");
+const SUBSCRIPTION_COLUMNS_SQL = Object.values(TELEGRAM_ALERT_PERSISTENCE)
+  .flatMap((spec) => [spec.subscriptionColumn, spec.overrideColumn]).join(", ");
+const PRESET_COLUMNS_SQL = (["dews", "depeg", "safety"] as const)
+  .map((family) => TELEGRAM_ALERT_PERSISTENCE[family].subscriptionColumn).join(", ");
 
 interface PreferenceSubscriberRow {
   chat_id: string;
@@ -237,15 +237,6 @@ function parseIntent(
   };
 }
 
-async function loadCurrentSafetyIdentity(
-  db: D1Database,
-  nowSec: number,
-): Promise<SafetyScorePublicationIdentity | null> {
-  const assessment = await loadActiveAlertSafetySourceAssessment(db, nowSec);
-  return assessment.state === "ok"
-    ? (assessment.envelope?.safetyScoreIdentity ?? null)
-    : null;
-}
 
 async function revalidatePersonalizedRecap(
   db: D1Database,
@@ -308,9 +299,9 @@ async function loadPreferenceSubscribers(
     const inClause = buildInClause(chatChunk);
     const rows = await db
       .prepare(
+        // SAFETY: column projections derive only from TELEGRAM_ALERT_PERSISTENCE.
         `SELECT chat_id, preference_generation, alert_snooze_until_ts,
-                global_alert_dews, global_alert_depeg, global_alert_safety,
-                global_alert_launch, global_alert_reserve, global_alert_freeze
+                ${GLOBAL_COLUMNS_SQL}
            FROM telegram_subscribers
           WHERE chat_id IN (${inClause.sql})`,
       )
@@ -340,10 +331,8 @@ async function loadPreferenceSubscriptions(
     const binds = pairChunk.flatMap((pair) => [pair.chatId, pair.stablecoinId]);
     const rows = await db
       .prepare(
-        `SELECT chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety,
-                alert_launch, alert_reserve, alert_freeze, alert_dews_override, alert_depeg_override,
-                alert_safety_override, alert_launch_override, alert_reserve_override, alert_freeze_override,
-                alert_snooze_until_ts
+        // SAFETY: column projections derive only from TELEGRAM_ALERT_PERSISTENCE.
+        `SELECT chat_id, stablecoin_id, ${SUBSCRIPTION_COLUMNS_SQL}, alert_snooze_until_ts
            FROM telegram_subscriptions
           WHERE ${predicate}`,
       )
@@ -361,10 +350,10 @@ function directEligibility(
   subscription: PreferenceSubscriptionRow | undefined,
   family: TelegramAlertType,
 ): "eligible" | "disabled" | "preset-needed" {
-  const columns = FAMILY_COLUMN[family];
-  if (subscription?.[columns.direct] === 1) return "eligible";
-  if (subscription?.[columns.override] === 1) return "disabled";
-  if (subscriber[columns.global] === 1) return "eligible";
+  const columns = TELEGRAM_ALERT_PERSISTENCE[family];
+  if (subscription?.[columns.subscriptionColumn] === 1) return "eligible";
+  if (subscription?.[columns.overrideColumn] === 1) return "disabled";
+  if (subscriber[columns.globalColumn] === 1) return "eligible";
   return "preset-needed";
 }
 
@@ -377,7 +366,8 @@ async function loadPreferencePresets(
     const inClause = buildInClause(chatChunk);
     const rows = await db
       .prepare(
-        `SELECT chat_id, preset_id, alert_dews, alert_depeg, alert_safety
+        // SAFETY: column projections derive only from TELEGRAM_ALERT_PERSISTENCE.
+        `SELECT chat_id, preset_id, ${PRESET_COLUMNS_SQL}
            FROM telegram_preset_subscriptions
           WHERE chat_id IN (${inClause.sql})`,
       )
@@ -397,7 +387,7 @@ function enabledPresetIdsForFamily(
   family: TelegramAlertType,
 ): TelegramPresetId[] {
   if (family === "launch" || family === "reserve" || family === "freeze") return [];
-  const column = FAMILY_COLUMN[family].direct as "alert_dews" | "alert_depeg" | "alert_safety";
+  const column = TELEGRAM_ALERT_PERSISTENCE[family].subscriptionColumn;
   return rows.flatMap((row) =>
     row[column] === 1 && VALID_PRESET_IDS.has(row.preset_id as TelegramPresetId)
       ? [row.preset_id as TelegramPresetId]
@@ -425,25 +415,28 @@ export async function revalidatePendingAlertPreferences(
   const safetyIntents = intents.filter((intent) =>
     intent.scope.some((item) => item.family === "safety"));
   if (safetyIntents.length > 0) {
-    const currentSafetyIdentity = await loadCurrentSafetyIdentity(db, nowSec);
+    const safetyAssessment = await loadActiveAlertSafetySourceAssessment(db, nowSec);
+    const currentSafetyIdentity = safetyAssessment.envelope?.safetyScoreIdentity;
     const retained: ParsedPendingIntent[] = [];
     for (const intent of intents) {
       if (!intent.scope.some((item) => item.family === "safety")) {
         retained.push(intent);
         continue;
       }
-      const reason = intent.safetyScoreIdentity == null
-        ? "safety_identity_missing"
-        : currentSafetyIdentity == null
-          ? "safety_identity_unavailable"
-          : !alertSafetyIdentitiesAreComparable(
-              intent.safetyScoreIdentity,
-              currentSafetyIdentity,
-            )
-            ? "safety_identity_changed"
-            : null;
-      if (reason) {
-        outcomes.set(intent.row.id, { kind: "cancel", row: intent.row, reason });
+      if (intent.safetyScoreIdentity == null) {
+        outcomes.set(intent.row.id, { kind: "cancel", row: intent.row, reason: "safety_identity_missing" });
+      } else if (
+        currentSafetyIdentity != null &&
+        !alertSafetyIdentitiesAreComparable(intent.safetyScoreIdentity, currentSafetyIdentity)
+      ) {
+        outcomes.set(intent.row.id, { kind: "cancel", row: intent.row, reason: "safety_identity_changed" });
+      } else if (safetyAssessment.state !== "ok" || currentSafetyIdentity == null) {
+        outcomes.set(intent.row.id, {
+          kind: "defer",
+          row: intent.row,
+          notBeforeAt: nowSec + SAFETY_UNAVAILABLE_RETRY_SEC,
+          reason: safetyAssessment.failureReason ?? "safety_identity_unavailable",
+        });
       } else {
         retained.push(intent);
       }

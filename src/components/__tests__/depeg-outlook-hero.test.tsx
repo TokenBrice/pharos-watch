@@ -27,6 +27,16 @@ describe("DepegOutlookHero source availability", () => {
     expect(markup).not.toContain("all pegs holding");
   });
 
+  it("renders an unavailable median independently of observed cohort and historical counts", () => {
+    const markup = renderHero({ ...observedZero, medianDeviationBps: null, depegEventsToday: 2 }, 0, 0);
+    expect(markup).toContain("live peg status unavailable");
+    expect(markup).toMatch(/Median deviation<\/p><p[^>]*><span[^>]*>—<\/span>/);
+    expect(markup).toContain("0 / 0");
+    expect(markup).not.toContain("0 bps");
+    expect(markup).not.toContain("null bps");
+    expect(markup).not.toContain("peg summary unavailable");
+  });
+
   it("renders independently unavailable event and DEWS counts with reasons", () => {
     const markup = renderHero(observedZero, null, null);
     expect(markup).toContain("event data unavailable");

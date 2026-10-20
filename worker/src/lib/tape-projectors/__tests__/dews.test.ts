@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { DatabaseSync } from "node:sqlite";
 import { type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
@@ -41,6 +41,28 @@ function seedStressSignal(
 }
 
 describe("dews projector", () => {
+  it.each([
+    { timestamp: 1777636800, version: "5.95" },
+    { timestamp: 1792497600, version: "6.35" },
+  ])("persists the DEWS methodology at source time $timestamp during later replay", async ({ timestamp, version }) => {
+    const { sqlite, db } = openDewsProjectorSqlite();
+    try {
+      seedStressSignal(sqlite, timestamp - 900, 10, "CALM");
+      seedStressSignal(sqlite, timestamp, 60, "WARNING");
+      await writeDewsPublishedGeneration(db, timestamp - 900, ["usdt-tether"]);
+      await writeDewsPublishedGeneration(db, timestamp, ["usdt-tether"]);
+      for (const clock of [1792497600, 1824033600]) {
+        vi.spyOn(Date, "now").mockReturnValue(clock * 1000);
+        await projectDewsBandTransitions(db, { since: timestamp - 900, until: timestamp });
+        expect(sqlite.prepare("SELECT methodology_version FROM tape_events").get())
+          .toEqual({ methodology_version: version });
+      }
+    } finally {
+      vi.restoreAllMocks();
+      sqlite.close();
+    }
+  });
+
   it("single-pass band-transition projector emits both directions from one scan", async () => {
     // Same batch as the independent test: one escalation (coin A), one
     // deescalation (coin B). A single fetchSamplesSince call covers both.

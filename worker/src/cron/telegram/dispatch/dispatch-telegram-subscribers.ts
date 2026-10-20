@@ -1,31 +1,12 @@
 import type { TelegramAlertType } from "@shared/types/status";
 import { mergeTelegramDepegWorseningSteps } from "@shared/lib/telegram-delivery-policy";
+import { TELEGRAM_ALERT_PERSISTENCE } from "@shared/lib/telegram-alert-families";
 import { buildInClause, chunkArray, D1_MAX_BOUND_PARAMETERS } from "../../../lib/db";
-import { GLOBAL_ALERT_COLUMN_BY_TYPE } from "../../../telegram/delivery/broadcast-targets";
 import type { SubscriberRow } from "./dispatch-telegram-routing";
-import {
-  TELEGRAM_FANOUT_FAMILIES,
-  type LegacyFanoutAlertType,
-} from "./dispatch-telegram-alerts-fanout";
 
-function fanoutColumns(key: "directColumn" | "globalColumn" | "overrideColumn") {
-  return Object.fromEntries(TELEGRAM_FANOUT_FAMILIES.map((spec) => [spec.family, spec[key]])) as
-    Record<LegacyFanoutAlertType, string>;
-}
-
-const ALERT_COLUMN_BY_TYPE = { ...fanoutColumns("directColumn"), freeze: "alert_freeze" };
-const GLOBAL_COLUMN_BY_TYPE = {
-  ...fanoutColumns("globalColumn"),
-  freeze: GLOBAL_ALERT_COLUMN_BY_TYPE.freeze,
-};
-const ALERT_OVERRIDE_COLUMN_BY_TYPE = {
-  ...fanoutColumns("overrideColumn"),
-  freeze: "alert_freeze_override",
-};
-
-const VALID_ALERT_COLUMNS = new Set(Object.values(ALERT_COLUMN_BY_TYPE));
-const VALID_GLOBAL_ALERT_COLUMNS = new Set(Object.values(GLOBAL_COLUMN_BY_TYPE));
-const VALID_ALERT_OVERRIDE_COLUMNS = new Set(Object.values(ALERT_OVERRIDE_COLUMN_BY_TYPE));
+const VALID_ALERT_COLUMNS = Object.values(TELEGRAM_ALERT_PERSISTENCE).map((spec) => spec.subscriptionColumn);
+const VALID_GLOBAL_ALERT_COLUMNS = Object.values(TELEGRAM_ALERT_PERSISTENCE).map((spec) => spec.globalColumn);
+const VALID_ALERT_OVERRIDE_COLUMNS = Object.values(TELEGRAM_ALERT_PERSISTENCE).map((spec) => spec.overrideColumn);
 
 type LoadedSubscriberRow = Omit<SubscriberRow, "isGlobal" | "hasLocalOverride"> & {
   stablecoin_id: string;
@@ -88,8 +69,8 @@ export async function loadSubscriberRowsBatch(
   options: TelegramSubscriberLoadOptions = {},
 ): Promise<Map<string, SubscriberRow[]>> {
   if (stablecoinIds.length === 0) return new Map();
-  const alertColumn = ALERT_COLUMN_BY_TYPE[type];
-  if (!VALID_ALERT_COLUMNS.has(alertColumn)) {
+  const alertColumn = TELEGRAM_ALERT_PERSISTENCE[type]?.subscriptionColumn;
+  if (!VALID_ALERT_COLUMNS.includes(alertColumn)) {
     throw new Error(`Invalid alert subscription column for ${type}`);
   }
   const map = new Map<string, SubscriberRow[]>();
@@ -102,8 +83,8 @@ export async function loadSubscriberRowsBatch(
       const chatClause = chatChunk.length > 0 ? buildInClause(chatChunk) : null;
       const result = await db
       .prepare(
-        // SAFETY: alertColumn comes from ALERT_COLUMN_BY_TYPE and is validated
-        // against the hardcoded allowlist above before interpolation.
+        // SAFETY: alertColumn comes from the canonical persistence manifest
+        // and is validated against its allowlist before interpolation.
         // The membership sub-select keeps the family flag on the primary-key
         // projection so SQLite resolves candidates through the per-family
         // partial covering index (idx_tg_sub_<family>_coin_chat) instead of
@@ -165,16 +146,16 @@ export async function loadGlobalSubscriberRows(
   nowSec: number,
   options: TelegramSubscriberLoadOptions = {},
 ): Promise<SubscriberRow[]> {
-  const alertColumn = GLOBAL_COLUMN_BY_TYPE[type];
-  if (!VALID_GLOBAL_ALERT_COLUMNS.has(alertColumn)) {
+  const alertColumn = TELEGRAM_ALERT_PERSISTENCE[type]?.globalColumn;
+  if (!VALID_GLOBAL_ALERT_COLUMNS.includes(alertColumn)) {
     throw new Error(`Invalid global alert subscription column for ${type}`);
   }
   const loaded: SubscriberRow[] = [];
   await forEachSubscriptionPage(null, options, 1, async ({ chatIds: chatChunk }) => {
     const chatClause = chatChunk.length > 0 ? buildInClause(chatChunk) : null;
     const result = await db.prepare(
-      // SAFETY: alertColumn comes from GLOBAL_ALERT_COLUMN_BY_TYPE and is
-      // validated against the hardcoded allowlist above before interpolation.
+      // SAFETY: alertColumn comes from the canonical persistence manifest
+      // and is validated against its allowlist before interpolation.
       `SELECT chat_id,
               last_active_at,
               quiet_hours_enabled,
@@ -265,9 +246,9 @@ export async function loadPerCoinExplicitlyOffMap(
 ): Promise<Map<string, Set<string>>> {
   const map = new Map<string, Set<string>>();
   if (stablecoinIds.length === 0) return map;
-  const alertColumn = ALERT_COLUMN_BY_TYPE[type];
-  const overrideColumn = ALERT_OVERRIDE_COLUMN_BY_TYPE[type];
-  if (!VALID_ALERT_COLUMNS.has(alertColumn) || !VALID_ALERT_OVERRIDE_COLUMNS.has(overrideColumn)) {
+  const alertColumn = TELEGRAM_ALERT_PERSISTENCE[type]?.subscriptionColumn;
+  const overrideColumn = TELEGRAM_ALERT_PERSISTENCE[type]?.overrideColumn;
+  if (!VALID_ALERT_COLUMNS.includes(alertColumn) || !VALID_ALERT_OVERRIDE_COLUMNS.includes(overrideColumn)) {
     throw new Error(`Invalid alert subscription column for ${type}`);
   }
   await forEachSubscriptionPage(stablecoinIds, options, 0, async ({
@@ -278,8 +259,8 @@ export async function loadPerCoinExplicitlyOffMap(
       const chatClause = chatChunk.length > 0 ? buildInClause(chatChunk) : null;
       const result = await db
       .prepare(
-        // SAFETY: alertColumn/overrideColumn come from hardcoded maps and are
-        // validated against hardcoded allowlists above before interpolation.
+        // SAFETY: columns come from the canonical persistence manifest
+        // and are validated against its allowlists before interpolation.
         `SELECT stablecoin_id, chat_id
           FROM telegram_subscriptions
           WHERE stablecoin_id IN (${inClause.sql})

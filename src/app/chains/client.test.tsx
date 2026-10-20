@@ -26,6 +26,31 @@ const coverage = (assets: number, observations: number, ids: string[] = []) => (
 });
 
 describe("ChainsLeaderboardClient", () => {
+  it("renders unavailable global supply and shares while retaining observed chain supply", () => {
+    mockChains({
+      chains: [makeChain({ dominanceShare: null })],
+      globalTotalUsd: null,
+      chainAttributedTotalUsd: null,
+      unattributedTotalUsd: null,
+    });
+    render(<ChainsLeaderboardClient />);
+    expect(screen.getAllByText("Unavailable").length).toBeGreaterThanOrEqual(3);
+    expect(screen.getByText("Largest chain's share")).toBeTruthy();
+    expect(screen.queryByText("0.0%")).toBeNull();
+    expect(screen.getByText(formatCompactUsd(makeChain().totalUsd))).toBeTruthy();
+  });
+
+  it("does not identify a largest chain from an incomplete set of global shares", () => {
+    mockChains({
+      chains: [makeChain({ dominanceShare: null }), makeChain({ id: "tron", name: "Tron", dominanceShare: 0.3 })],
+      globalTotalUsd: 1_000_000_000,
+    });
+    render(<ChainsLeaderboardClient />);
+    expect(screen.getByText("Largest chain's share")).toBeTruthy();
+    expect(screen.queryByText("Largest chain's share · Tron")).toBeNull();
+    expect(screen.getAllByText("Unavailable").length).toBeGreaterThanOrEqual(2);
+  });
+
   it("beams the largest dominanceShare, not the first row, and labels partial inputs on the beam and chip", () => {
     mockChains({
       chains: [

@@ -48,6 +48,7 @@ type MainMetadataInput = Omit<
   | "stalenessCheckFailureReason"
   | "depegErrorCount"
   | "depegErrors"
+  | "depegHeldReason"
   | "cacheKey"
   | "syncStartSec"
   | "responseReadyCacheError"
@@ -65,6 +66,7 @@ type FallbackMetadataInput = Omit<
   | "stalenessCheckFailed"
   | "stalenessCheckFailureReason"
   | "depegErrorCount"
+  | "depegHeldReason"
   | "cacheKey"
   | "syncStartSec"
   | "activePriceCoverage"
@@ -483,10 +485,11 @@ export async function runStablecoinsPostIntakePublication(
         stalenessCheckFailureReason: staleness.stalenessCheckFailureReason,
         depegErrorCount: depegResult.depegErrorCount,
         depegErrors: depegResult.depegErrors,
+        depegHeldReason: depegResult.depegHeldReason,
         cacheKey: cacheResult.cacheKey,
         syncStartSec: cacheResult.syncStartSec,
         responseReadyCacheError: cacheResult.responseReadyCacheError,
-        depegPipelineSucceeded: depegResult.depegErrorCount === 0,
+        depegPipelineSucceeded: !depegResult.depegHeldReason && depegResult.depegErrorCount === 0,
         previousActivePriceCoverage: input.previousActivePriceCoverage,
         activePriceCoverage,
       })
@@ -499,6 +502,7 @@ export async function runStablecoinsPostIntakePublication(
         stalenessCheckFailed: staleness.stalenessCheckFailed,
         stalenessCheckFailureReason: staleness.stalenessCheckFailureReason,
         depegErrorCount: depegResult.depegErrorCount,
+        depegHeldReason: depegResult.depegHeldReason,
         cacheKey: cacheResult.cacheKey,
         syncStartSec: cacheResult.syncStartSec,
         activePriceCoverage,

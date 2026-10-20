@@ -88,6 +88,24 @@ describe("public verdict", () => {
     expect(screen.queryByText(/Public surface/)).toBeNull();
   });
 
+  it("keeps Checked on the assessment clock across cached response requests", () => {
+    const health = makeHealthyHealthResponse();
+    health.assessedAt = health.timestamp - 600;
+    mockHealth(health);
+    const { rerender } = render(<StatusClient faqItems={[]} />);
+    const checkedTime = () => screen.getByText(/Checked/).querySelector("time")!.getAttribute("datetime");
+    const assessedTime = new Date(health.assessedAt * 1000).toISOString();
+    expect(checkedTime()).toBe(assessedTime);
+    health.timestamp += 60;
+    mockHealth({ ...health });
+    rerender(<StatusClient faqItems={[]} />);
+    expect(checkedTime()).toBe(assessedTime);
+    delete health.assessedAt;
+    mockHealth({ ...health });
+    rerender(<StatusClient faqItems={[]} />);
+    expect(checkedTime()).toBe(new Date(health.timestamp * 1000).toISOString());
+  });
+
   it("derives the headline from the shared projection when an older payload has none", () => {
     mockHealth({ ...makeHealthyHealthResponse(), status: "degraded", warnings: [] });
     render(<StatusClient faqItems={[]} />);

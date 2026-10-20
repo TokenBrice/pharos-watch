@@ -20,18 +20,18 @@ const supplies = new Map([["susds-sky", 200], ["unknown", 500], ["vault", 100]])
 function serial(to: string, wrapperForm?: ReportCardsV9DependencyEdge["wrapperForm"]): ReportCardsV9DependencyEdge {
   return { from: "usds-sky", to, kind: "serial", materiality: "serial", weight: null, upstreamScore: 80, wrapperForm };
 }
-function Hero({ model, edges }: { model: DependencyHubsModel; edges: ReportCardsV9DependencyEdge[] }) {
+function Hero({ model, edges, mcapMap = supplies }: { model: DependencyHubsModel; edges: ReportCardsV9DependencyEdge[]; mcapMap?: Map<string, number> }) {
   const workspace = useDependencyExposureWorkspace(undefined);
-  return <DependencyHero model={model} cards={cards} dependencyEdges={edges} mcapMap={supplies} methodologyVersion="9.98" publishedAt={1790716625} workspace={workspace} />;
+  return <DependencyHero model={model} cards={cards} dependencyEdges={edges} mcapMap={mcapMap} methodologyVersion="9.98" publishedAt={1790716625} workspace={workspace} />;
 }
 
 for (const surface of ["hero", "desktop", "mobile"] as const) {
-  function show(edges: ReportCardsV9DependencyEdge[]) {
-    const model = buildDependencyHubsModel({ cards, edges, mcapMap: supplies });
-    if (surface === "hero") render(<Hero model={model} edges={edges} />);
+  function show(edges: ReportCardsV9DependencyEdge[], mcapMap = supplies) {
+    const model = buildDependencyHubsModel({ cards, edges, mcapMap });
+    if (surface === "hero") render(<Hero model={model} edges={edges} mcapMap={mcapMap} />);
     else if (surface === "desktop") render(<DependencyHubsBoard model={model} />);
     else {
-      const nodes = cards.map(card => ({ id: card.id, grade: "A", ratingStatus: "rated", partialEvidence: null, score: 80, circulatingUsdAtEvaluation: supplies.get(card.id) ?? null, supplyAsOfSec: null, sharedBookId: null, roles: [], dependencyCoverageCount: null }));
+      const nodes = cards.map(card => ({ id: card.id, grade: "A", ratingStatus: "rated", partialEvidence: null, score: 80, circulatingUsdAtEvaluation: mcapMap.get(card.id) ?? null, supplyAsOfSec: null, sharedBookId: null, roles: [], dependencyCoverageCount: null }));
       const publication = { methodologyVersion: "9.98", publicationGenerationId: "g", asOfSec: 0, publicationStatus: "current", nodes, edges } as unknown as DependencyGraphResponse;
       render(<DependencyMapBasinList model={model} publication={publication} labelOf={id => id} />);
       fireEvent.click(screen.getByRole("button", { name: /^usds-sky/ }));
@@ -71,6 +71,18 @@ for (const surface of ["hero", "desktop", "mobile"] as const) {
       else if (surface === "desktop") expect(within(content).getAllByRole("row")[1]!.querySelectorAll("td")[3]!.textContent).not.toContain("$0.00");
       else expect(content.querySelectorAll("dd")[1]!.textContent).not.toContain("$0.00");
       expect(content.textContent).toContain("$500.00 of known serial exposure");
+    });
+    it("does not turn classified but unavailable serial supplies into zero-dollar subtotals", () => {
+      const content = show([serial("susds-sky", "pure"), serial("vault", "strategy-vault")], new Map());
+      expect(content.textContent).not.toContain("$0.00");
+      if (surface === "desktop") {
+        const cells = within(content).getAllByRole("row")[1]!.querySelectorAll("td");
+        expect(cells[2]!.textContent).toBe("Unavailable");
+        expect(cells[3]!.textContent).toBe("Unavailable");
+      } else if (surface === "mobile") {
+        expect(content.querySelectorAll("dd")[0]!.textContent).toBe("Unavailable");
+        expect(content.querySelectorAll("dd")[1]!.textContent).toBe("Unavailable");
+      }
     });
   });
 }

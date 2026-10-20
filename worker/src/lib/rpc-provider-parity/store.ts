@@ -901,6 +901,7 @@ export function mergeRpcParityRun(
   }
 
   for (const sample of incoming) {
+    if (latest[sample.chainId] && latest[sample.chainId].atSec > run.atSec) continue;
     latest[sample.chainId] = {
       atSec: run.atSec,
       dwellirHead: sample.dwellirHead,

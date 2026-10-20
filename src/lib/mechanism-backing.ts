@@ -184,7 +184,9 @@ function formatFactValue(key: string, value: number): string {
   if (/(Usd|USD)$/.test(key)) {
     // Sign leads the currency mark: "-$9.7M", never "$-9.7M".
     const sign = value < 0 ? "-" : "";
-    const { short, suffix } = abbreviateNumberParts(Math.abs(value));
+    const parts = abbreviateNumberParts(Math.abs(value));
+    if (!parts) return "—";
+    const { short, suffix } = parts;
     return `${sign}$${short.toFixed(FACT_USD_SUFFIX_DECIMALS[suffix])}${suffix}`;
   }
   if (/(Share|Pct)$/.test(key)) {
@@ -201,7 +203,9 @@ function formatFactValue(key: string, value: number): string {
   }
   if (/Days$/.test(key)) return `${value < 10 ? value.toFixed(1) : Math.round(value)}d`;
   if (/Count$/.test(key)) return Math.round(value).toLocaleString("en-US");
-  const { short, suffix } = abbreviateNumberParts(value);
+  const parts = abbreviateNumberParts(value);
+  if (!parts) return "—";
+  const { short, suffix } = parts;
   if (suffix === "T" || suffix === "B") return `${short.toFixed(2)}${suffix}`;
   if (suffix === "M") return `${short.toFixed(1)}M`;
   if (suffix === "K") return Math.round(value).toLocaleString("en-US");

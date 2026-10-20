@@ -9,6 +9,10 @@ import {
 } from "@shared/types/market";
 import { ACTIVE_IDS, PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { API_FRESHNESS_MAX_AGE_SEC, STRESS_SIGNALS_DEGRADED_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import { persistDewsResults } from "../../lib/dews/persistence";
+import { computeDEWS } from "../../lib/dews";
+import { makeDewsInput } from "../../lib/__tests__/dews.test-support";
 
 afterEach(() => vi.restoreAllMocks());
 const nowSec = Math.floor(Date.now() / 1000);
@@ -23,16 +27,6 @@ const signalsJson = JSON.stringify({
   price: { value: 5, available: true },
 });
 
-const AGGREGATE_STRESS_SIGNALS_SQL = `
-  SELECT /* pharos:stress-signals:legacy-latest-all */
-    s.stablecoin_id, s.score, s.band, s.signals_json, s.computed_at
-  FROM stress_signals s
-  INNER JOIN (
-    SELECT stablecoin_id, MAX(computed_at) AS max_at
-    FROM stress_signals GROUP BY stablecoin_id
-  ) latest ON s.stablecoin_id = latest.stablecoin_id AND s.computed_at = latest.max_at
-`;
-
 const AGGREGATE_STRESS_SIGNALS_CUTOFF_SQL = `
   SELECT /* pharos:stress-signals:legacy-latest-all */
     s.stablecoin_id, s.score, s.band, s.signals_json, s.computed_at
@@ -45,12 +39,6 @@ const AGGREGATE_STRESS_SIGNALS_CUTOFF_SQL = `
   ) latest ON s.stablecoin_id = latest.stablecoin_id AND s.computed_at = latest.max_at
 `;
 
-const LATEST_AGGREGATE_STRESS_SIGNALS_SQL = `
-  SELECT /* pharos:stress-signals:latest-all */
-    stablecoin_id, score, band, signals_json, computed_at
-  FROM stress_signals_latest
-`;
-
 const LATEST_AGGREGATE_STRESS_SIGNALS_CUTOFF_SQL = `
   SELECT /* pharos:stress-signals:latest-all */
     stablecoin_id, score, band, signals_json, computed_at
@@ -58,26 +46,11 @@ const LATEST_AGGREGATE_STRESS_SIGNALS_CUTOFF_SQL = `
   WHERE computed_at <= ?
 `;
 
-const LATEST_STRESS_SIGNAL_SQL = `
-  SELECT /* pharos:stress-signals:latest-one */
-    score, band, signals_json, computed_at
-  FROM stress_signals_latest
-  WHERE stablecoin_id = ?
-`;
-
 const LATEST_STRESS_SIGNAL_CUTOFF_SQL = `
   SELECT /* pharos:stress-signals:latest-one */
     score, band, signals_json, computed_at
   FROM stress_signals_latest
   WHERE stablecoin_id = ? AND computed_at <= ?
-  ORDER BY computed_at DESC LIMIT 1
-`;
-
-const LEGACY_STRESS_SIGNAL_SQL = `
-  SELECT /* pharos:stress-signals:legacy-latest-one */
-    score, band, signals_json, computed_at
-  FROM stress_signals
-  WHERE stablecoin_id = ?
   ORDER BY computed_at DESC LIMIT 1
 `;
 
@@ -147,12 +120,12 @@ function invalidDewsPublicationPointerMatch() {
   };
 }
 
-function makeStrictAggregateDb(rows: Record<string, unknown>[], completedAt: number | null = null) {
+function makeStrictAggregateDb(rows: Record<string, unknown>[], completedAt = nowSec) {
   return mockD1([
     dewsPublicationPointerMatch(completedAt),
     {
-      match: completedAt == null ? AGGREGATE_STRESS_SIGNALS_SQL : AGGREGATE_STRESS_SIGNALS_CUTOFF_SQL,
-      ...(completedAt == null ? {} : { matchBinds: [completedAt] }),
+      match: AGGREGATE_STRESS_SIGNALS_CUTOFF_SQL,
+      matchBinds: [completedAt],
       rows,
     },
   ], { strict: true });
@@ -161,18 +134,18 @@ function makeStrictAggregateDb(rows: Record<string, unknown>[], completedAt: num
 function makeStrictLatestAggregateDb(
   rows: Record<string, unknown>[],
   legacyRows: Record<string, unknown>[] = [],
-  completedAt: number | null = null,
+  completedAt = nowSec,
 ) {
   return mockD1([
     dewsPublicationPointerMatch(completedAt),
     {
-      match: completedAt == null ? LATEST_AGGREGATE_STRESS_SIGNALS_SQL : LATEST_AGGREGATE_STRESS_SIGNALS_CUTOFF_SQL,
-      ...(completedAt == null ? {} : { matchBinds: [completedAt] }),
+      match: LATEST_AGGREGATE_STRESS_SIGNALS_CUTOFF_SQL,
+      matchBinds: [completedAt],
       rows,
     },
     {
-      match: completedAt == null ? AGGREGATE_STRESS_SIGNALS_SQL : AGGREGATE_STRESS_SIGNALS_CUTOFF_SQL,
-      ...(completedAt == null ? {} : { matchBinds: [completedAt] }),
+      match: AGGREGATE_STRESS_SIGNALS_CUTOFF_SQL,
+      matchBinds: [completedAt],
       rows: legacyRows,
     },
   ], { strict: true });
@@ -181,13 +154,13 @@ function makeStrictLatestAggregateDb(
 function makeStrictSingleCoinDb(
   current: Record<string, unknown> | null,
   historyRows: Record<string, unknown>[] = [],
-  completedAt: number | null = null,
+  completedAt = nowSec,
 ) {
   return mockD1([
     dewsPublicationPointerMatch(completedAt),
     {
-      match: completedAt == null ? LEGACY_STRESS_SIGNAL_SQL : LEGACY_STRESS_SIGNAL_CUTOFF_SQL,
-      ...(completedAt == null ? {} : { matchBinds: ["usdt-tether", completedAt] }),
+      match: LEGACY_STRESS_SIGNAL_CUTOFF_SQL,
+      matchBinds: ["usdt-tether", completedAt],
       rows: current ? [current] : [],
       first: current,
     },
@@ -201,13 +174,13 @@ function makeStrictSingleCoinDb(
 function makeStrictMaterializedSingleCoinDb(
   current: Record<string, unknown>,
   historyRows: Record<string, unknown>[] = [],
-  completedAt: number | null = null,
+  completedAt = nowSec,
 ) {
   return mockD1([
     dewsPublicationPointerMatch(completedAt),
     {
-      match: completedAt == null ? LATEST_STRESS_SIGNAL_SQL : LATEST_STRESS_SIGNAL_CUTOFF_SQL,
-      ...(completedAt == null ? {} : { matchBinds: ["usdt-tether", completedAt] }),
+      match: LATEST_STRESS_SIGNAL_CUTOFF_SQL,
+      matchBinds: ["usdt-tether", completedAt],
       rows: [current],
       first: current,
     },
@@ -370,6 +343,55 @@ describe("handleStressSignals contract tests", () => {
       entry.binds[0] === completedDewsAt
     )).toBe(true);
     expect(() => db.assertAllMatchesUsed()).not.toThrow();
+  });
+
+  it("never exposes rejected daily candidates before recovery or after a healthy acceptance", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const scored = computeDEWS(makeDewsInput())!;
+    const persist = (clock: number, score: number, degradedSources: string[] = [], ids = ["usdt-tether"]) =>
+      persistDewsResults({
+        db, results: ids.map((stablecoinId) => ({ ...scored, stablecoinId, score })),
+        eligibleIds: new Set(["usdt-tether", "usdc-circle"]), degradedSources, nowSec: clock,
+      });
+    const readDetail = async () => {
+      const response = await handleStressSignals(db, new URL("https://x/api/stress-signals?stablecoin=usdt-tether"));
+      return StressSignalDetailResponseSchema.parse(await readJsonResponse(response, 200));
+    };
+    try {
+      await persist(nowSec - 180, 70, ["yield-rankings-freshness"]);
+      expect(await readDetail()).toMatchObject({
+        current: null, currentStatus: "unavailable", history: [],
+        currentReasons: expect.arrayContaining(["single-coin-current-row-missing"]),
+      });
+      const unavailableResponse = await handleStressSignals(db, new URL("https://x/api/stress-signals"));
+      expect(StressSignalsAllResponseSchema.parse(await readJsonResponse(unavailableResponse, 200))).toMatchObject({
+        signals: {}, computedCount: 0, coverageStatus: "unavailable",
+        coverageReasons: expect.arrayContaining(["no-current-rows"]),
+      });
+      expect(unavailableResponse.headers.get("X-Data-Age")).toBeNull();
+      expect(unavailableResponse.headers.get("Warning")).toContain("DEWS current rows unavailable");
+      await persist(nowSec - 120, 25);
+      const accepted = await readDetail();
+      expect(accepted.current?.score).toBe(25);
+      expect(accepted.history.map((row) => row.score)).toEqual([25]);
+      const recoveredResponse = await handleStressSignals(db, new URL("https://x/api/stress-signals"));
+      expect(StressSignalsAllResponseSchema.parse(await readJsonResponse(recoveredResponse, 200))).toMatchObject({
+        computedCount: 1, signals: { "usdt-tether": { score: 25 } },
+      });
+      expect(recoveredResponse.headers.get("Warning")).toBeNull();
+      await persist(nowSec - 60, 80, ["dex-liquidity-freshness"], ["usdt-tether", "usdc-circle"]);
+      expect((await readDetail()).history).toEqual(accepted.history);
+      sqlite.exec(`CREATE TRIGGER reject_candidate AFTER INSERT ON stress_signal_publication_rows
+        BEGIN DELETE FROM stress_signal_publication_rows
+          WHERE stablecoin_id = NEW.stablecoin_id AND computed_at = NEW.computed_at; END;`);
+      await expect(persist(nowSec, 90, [], ["usdt-tether", "usdc-circle"]))
+        .rejects.toThrow("DEWS publication incomplete");
+      const afterFailure = await readDetail();
+      expect(afterFailure.current?.score).toBe(25);
+      expect(afterFailure.history).toEqual(accepted.history);
+    } finally {
+      sqlite.close();
+    }
   });
 
   it("single-coin mode returns shape matching StressSignalDetailResponseSchema", async () => {

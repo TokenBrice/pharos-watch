@@ -196,6 +196,9 @@ def load_assets(repo_root: Path) -> list[dict[str, Any]]:
     missing = [coin_id for coin_id in order if coin_id not in assets]
     if missing:
         unavailable(f"ERROR: canonical-order.json references unknown id: {missing[0]}")
+    extra = sorted(assets.keys() - set(order))
+    if extra:
+        unavailable(f"ERROR: canonical-order.json omits stablecoin id: {extra[0]}")
     return [assets[coin_id] for coin_id in order]
 
 

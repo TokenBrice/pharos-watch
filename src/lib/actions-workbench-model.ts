@@ -63,8 +63,10 @@ export interface ActionCatalogFilters {
 export interface SessionActionExecutionLike {
   action: Pick<StatusPageAction, "path" | "label">;
   intentId: string;
+  idempotencyKeyHash: string;
   scopeLabel: string;
   status: "ready" | "running" | "accepted" | "queued" | "succeeded" | "failed" | "unknown";
+  requestInFlight: boolean;
   ok: boolean;
   createdAt: number;
   startedAt: number | null;
@@ -82,6 +84,7 @@ export interface ActionActivity {
   status: SessionActionExecutionLike["status"] | "error";
   httpStatus: number | null;
   source: "session" | "persisted";
+  session: Pick<SessionActionExecutionLike, "status" | "requestInFlight" | "scopeLabel" | "startedAt" | "completedAt"> | null;
 }
 
 export interface ActionReadinessItem extends ActionReadinessCheck {
@@ -193,23 +196,16 @@ function findCatalogAction(
   return actions.find((action) => auditEntryMatchesAction(entry, action)) ?? null;
 }
 
-function activityFingerprint(activity: ActionActivity): string {
-  return [
-    normalize(activity.actionPath ?? activity.actionLabel),
-    normalize(activity.target ?? ""),
-    Math.round(activity.at / 5_000),
-  ].join("|");
-}
-
 export function reconcileActionActivity(
   actions: readonly StatusPageAction[],
   sessionExecutions: readonly SessionActionExecutionLike[],
   persistedEntries: readonly AdminActionAuditEntry[],
 ): ActionActivity[] {
-  const session: ActionActivity[] = sessionExecutions
-    .filter((execution) => execution.status !== "ready")
-    .map((execution) => ({
-      id: `session:${execution.intentId}`,
+  const sessionByIdentity = new Map<string, ActionActivity>();
+  for (const execution of sessionExecutions) {
+    if (execution.status === "ready") continue;
+    sessionByIdentity.set(`${execution.action.path}\u0000${execution.idempotencyKeyHash}`, {
+      id: `session:${execution.idempotencyKeyHash}`,
       actionPath: execution.action.path,
       actionLabel: execution.action.label,
       at: execution.completedAt ?? execution.startedAt ?? execution.createdAt,
@@ -218,10 +214,34 @@ export function reconcileActionActivity(
       status: execution.status,
       httpStatus: execution.httpStatus,
       source: "session",
-    }));
-  const persisted: ActionActivity[] = persistedEntries.map((entry) => {
+      session: {
+        status: execution.status,
+        requestInFlight: execution.requestInFlight,
+        scopeLabel: execution.scopeLabel,
+        startedAt: execution.startedAt,
+        completedAt: execution.completedAt,
+      },
+    });
+  }
+  const persisted: ActionActivity[] = [];
+  const persistedIdentities = new Set<string>();
+  for (const entry of persistedEntries) {
     const action = findCatalogAction(entry, actions);
-    return {
+    const details = readRecord(entry.details);
+    // Only canonical path + SHA-256 evidence establishes shared intent identity.
+    const identity =
+      typeof details?.path === "string" &&
+      typeof details.idempotencyKeyHash === "string" &&
+      /^[a-f0-9]{64}$/u.test(details.idempotencyKeyHash)
+        ? `${details.path}\u0000${details.idempotencyKeyHash}`
+        : null;
+    if (identity && persistedIdentities.has(identity)) continue;
+    const session = identity ? sessionByIdentity.get(identity) : undefined;
+    if (identity) {
+      persistedIdentities.add(identity);
+      sessionByIdentity.delete(identity);
+    }
+    persisted.push({
       id: `persisted:${entry.id}`,
       actionPath: action?.path ?? null,
       actionLabel: action?.label ?? entry.action,
@@ -231,23 +251,11 @@ export function reconcileActionActivity(
       status: persistedStatus(entry),
       httpStatus: entry.httpStatus,
       source: "persisted",
-    };
-  });
-
-  const unmatchedSessionByFingerprint = new Map<string, number>();
-  for (const activity of session) {
-    const fingerprint = activityFingerprint(activity);
-    unmatchedSessionByFingerprint.set(fingerprint, (unmatchedSessionByFingerprint.get(fingerprint) ?? 0) + 1);
+      session: session?.session ?? null,
+    });
   }
-  const unmatchedPersisted = persisted.filter((activity) => {
-    const fingerprint = activityFingerprint(activity);
-    const matchingSessions = unmatchedSessionByFingerprint.get(fingerprint) ?? 0;
-    if (matchingSessions === 0) return true;
-    unmatchedSessionByFingerprint.set(fingerprint, matchingSessions - 1);
-    return false;
-  });
 
-  return [...session, ...unmatchedPersisted].sort((a, b) => {
+  return [...sessionByIdentity.values(), ...persisted].sort((a, b) => {
     if (a.at !== b.at) return b.at - a.at;
     if (a.source !== b.source) return a.source === "session" ? -1 : 1;
     return a.id.localeCompare(b.id);

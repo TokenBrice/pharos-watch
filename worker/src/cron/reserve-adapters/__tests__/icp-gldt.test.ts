@@ -1,8 +1,10 @@
+import { execFile } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { decodeCandidReply, icpLabelId, icpLebEncode } from "../icp";
+import { decodeCandidReply, icpLabelId, icpLebEncode, icpPrincipalBytes, icpPrincipalText, queryIcpCanister } from "../icp";
 import { jsonResponse, mockFetch } from "@shared/test-utils/mock-fetch";
 import { decodeIcpQueryFixture, icpReplyFixtureResponse } from "./icp-gldt.test-support";
 import { expectValidAdapterOutput, resolveAdapterCoin } from "./reserve-adapter.test-support";
@@ -57,10 +59,96 @@ function state(overrides: Partial<IcpGldtState> = {}): IcpGldtState {
     swapConfigs: SWAP_CONFIGS,
     balances: BALANCES,
     supplyBaseUnits: SUPPLY,
-    certifiedTimeNanos: 1_752_600_000_000_000_000n,
+    querySignatureTimeNanos: 1_752_600_000_000_000_000n,
     ...overrides,
   };
 }
+
+describe("ICP wire codecs", () => {
+  it("rejects malformed CBOR under an external process deadline and preserves boundary fallback", async () => {
+    // A synchronous decoder hang cannot be interrupted by a Vitest/AbortSignal timer
+    // in that same process. The parent owns this child's kill deadline.
+    const source = new URL("../icp.ts", import.meta.url).href;
+    const script = `
+      import assert from "node:assert/strict";
+      import { once } from "node:events";
+      import { queryIcpCanister } from ${JSON.stringify(source)};
+      const malformed = [
+        "", "5f", "5f58", "5f5801", "5f4100", "5f6100ff", "5f5fff",
+        "58", "5900", "5a000000", "5bffffffffffffffff", "5b0000000000000002ff",
+        "7bffffffffffffffff", "9bffffffffffffffff", "bbffffffffffffffff",
+        "9f", "bf6161", "81", "a100", "81".repeat(10000) + "00",
+      ];
+      const options = {
+        canisterId: ${JSON.stringify(SWAP)}, methodName: "get_swap_configs",
+        arg: new Uint8Array(), signal: new AbortController().signal,
+      };
+      const controller = new AbortController();
+      const aborted = once(controller.signal, "abort");
+      // Real timer integration: fake timers cannot expose event-loop starvation.
+      setTimeout(() => controller.abort(), 0);
+      for (const hex of malformed) {
+        let calls = 0;
+        globalThis.fetch = async () => {
+          calls++;
+          return new Response(Buffer.from(hex, "hex"));
+        };
+        await assert.rejects(queryIcpCanister(options), /icp:/);
+        assert.equal(calls, 2);
+      }
+      const valid = Buffer.from("a266737461747573677265706c696564657265706c79a1636172674144", "hex");
+      let fallbackCalls = 0;
+      globalThis.fetch = async () => new Response(++fallbackCalls === 1 ? Buffer.from("5f", "hex") : valid);
+      assert.deepEqual(Array.from((await queryIcpCanister(options)).reply), [68]);
+      assert.equal(fallbackCalls, 2);
+      // Indefinite maps and chunked byte strings remain valid envelopes.
+      globalThis.fetch = async () => new Response(Buffer.from(
+        "bf66737461747573677265706c696564657265706c79bf636172675f4144ffffff", "hex"));
+      assert.deepEqual(Array.from((await queryIcpCanister(options)).reply), [68]);
+      await aborted;
+      assert.equal(controller.signal.aborted, true);
+      console.log(JSON.stringify({ rejected: malformed.length, fallbackCalls, abortTimerRan: true }));
+    `;
+    const { stdout } = await promisify(execFile)(process.execPath,
+      ["--import", "tsx", "--input-type=module", "--eval", script],
+      { timeout: 10_000, killSignal: "SIGKILL", cwd: fileURLToPath(new URL("../../../../../", import.meta.url).href) });
+    expect(JSON.parse(stdout)).toEqual({ rejected: 20, fallbackCalls: 2, abortTimerRan: true });
+  }, 15_000);
+
+  it.each([1, 2, 4, 8])("decodes signed %i-byte boundaries without changing unsigned values", (width) => {
+    const index = [1, 2, 4, 8].indexOf(width);
+    const decode = (payload: number[], opcode = 0x77 - index) => decodeCandidReply(
+      Uint8Array.from([0x44, 0x49, 0x44, 0x4c, 0, 1, opcode, ...payload]),
+    )[0];
+    const signBit = 1n << BigInt(width * 8 - 1);
+    expect(decode(Array(width).fill(0xff))).toBe(-1n);
+    expect(decode([...Array(width - 1).fill(0), 0x80])).toBe(-signBit);
+    expect(decode([...Array(width - 1).fill(0xff), 0x7f])).toBe(signBit - 1n);
+    expect(decode(Array(width).fill(0))).toBe(0n);
+    expect(decode(Array(width).fill(0xff), 0x7b - index)).toBe(signBit * 2n - 1n);
+  });
+
+  it.each([
+    { identity: [0x01, 0x02, 0x03] }, { identity: [0x00, 0x01] },
+    { identity: [0x01] }, { identity: [0x04] },
+  ])(
+    "preserves every raw principal byte ($identity)", ({ identity }) => {
+      const raw = Uint8Array.from(identity);
+      expect(icpPrincipalBytes(icpPrincipalText(raw))).toEqual(raw);
+      const reply = Uint8Array.from([0x44, 0x49, 0x44, 0x4c, 0, 1, 0x68, 1, raw.length, ...raw]);
+      expect(decodeCandidReply(reply)).toEqual([raw]);
+      expect(icpPrincipalBytes(icpPrincipalText(decodeCandidReply(reply)[0] as Uint8Array))).toEqual(raw);
+      reply[7] = 0;
+      expect(() => decodeCandidReply(reply)).toThrow(/principal marker/);
+    },
+  );
+
+  it("round-trips the recorded NFT principal census and ledger identities", () => {
+    for (const principal of [SWAP, LEDGER, ...SWAP_CONFIGS.map((config) => config.canisterId)]) {
+      expect(icpPrincipalText(icpPrincipalBytes(principal))).toBe(principal);
+    }
+  });
+});
 
 describe("parseIcpGldtSwapConfigs", () => {
   it("reads the live reply by candid field label", () => {
@@ -108,7 +196,9 @@ describe("adaptIcpGldtState", () => {
     expect(result.metadata?.collateralizationRatio).toBeCloseTo(1.0000005, 6);
     expect(result.metadata?.details?.lockedGrams).toBeCloseTo(5945, 6);
     expect(result.metadata?.details?.supplyGrams).toBeCloseTo(5944.997, 6);
-    expect(result.metadata?.details?.certifiedStateTimeSec).toBe(1_752_600_000);
+    expect(result.metadata?.details?.querySignatureTimeSec).toBe(1_752_600_000);
+    expect(result.metadata?.details?.querySignatureTimeVerification).toBe("unverified");
+    expect(result.metadata?.sourceTimestamp).toBeUndefined();
     expect(result.warnings).toBeUndefined();
   });
 
@@ -140,6 +230,66 @@ describe("fetchIcpGldtReserves query boundary", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
+  });
+
+  it.each(["identical", "conflicting"])("rejects %s duplicate canister configs before balance reads", async (kind) => {
+    const hex = SWAP_CONFIG_REPLY.replyHex;
+    const firstOffset = hex.indexOf("010004010a") + 6;
+    const secondOffset = hex.indexOf("010a0000000001c045c60101");
+    const first = hex.slice(firstOffset, secondOffset);
+    const repeated = kind === "identical" ? first : first.replace("00e40b5402000000", "00e8764817000000");
+    const reply = Buffer.from(hex.slice(0, firstOffset - 2) + "02" + first + repeated, "hex");
+    let balanceReads = 0;
+    mockFetch([
+      { match: `https://icrc-api.internetcomputer.org/api/v1/ledgers/${LEDGER}`,
+        respond: () => jsonResponse({ icrc1_metadata: { icrc1_total_supply: SUPPLY.toString() } }) },
+      { match: (request) => new URL(request.url).pathname.endsWith("/query"),
+        respond: (request) => {
+          if (!request.url.includes(`/canister/${SWAP}/`)) balanceReads++;
+          return icpReplyFixtureResponse(reply);
+        } },
+    ], { requireMatch: true });
+    const { coin, config } = resolveAdapterCoin("icp-gldt", "gldt-gold-dao");
+    await expect(fetchIcpGldtReserves(coin, config, new AbortController().signal)).rejects.toThrow(/duplicate NFT canister/);
+    expect(balanceReads).toBe(0);
+  });
+
+  it("rejects a signed-negative NFT balance through the real query transport", async () => {
+    mockFetch([
+      { match: `https://icrc-api.internetcomputer.org/api/v1/ledgers/${LEDGER}`,
+        respond: () => jsonResponse({ icrc1_metadata: { icrc1_total_supply: SUPPLY.toString() } }) },
+      { match: (request) => new URL(request.url).pathname.endsWith("/query"),
+        respond: (request) => icpReplyFixtureResponse(Uint8Array.from(Buffer.from(
+          request.url.includes(`/canister/${SWAP}/`) ? SWAP_CONFIG_REPLY.replyHex : "4449444c016d77010001ff",
+          "hex",
+        ))) },
+    ], { requireMatch: true });
+    const { coin, config } = resolveAdapterCoin("icp-gldt", "gldt-gold-dao");
+    await expect(fetchIcpGldtReserves(coin, config, new AbortController().signal)).rejects.toThrow(/is negative/);
+  });
+
+  it.each([
+    ["81a16974696d657374616d701b18527c6a11598000", 1_752_600_000_000_000_000n],
+    ["80", null], ["81a16974696d657374616d7063626164", null],
+    ["81a16974696d657374616d703b0000000000000000", null],
+    ["81a0", null], ["f6", null],
+  ])("keeps query-signature evidence diagnostic-only (%s)", async (signatureHex, expectedTime) => {
+    const envelope = Buffer.from(
+      "a366737461747573677265706c696564657265706c79a16361726741446a7369676e617475726573" + signatureHex,
+      "hex",
+    );
+    mockFetch([{ match: (request) => new URL(request.url).pathname.endsWith("/query"),
+      respond: () => new Response(envelope) }], { requireMatch: true });
+    const query = await queryIcpCanister({
+      canisterId: SWAP, methodName: "get_swap_configs", arg: new Uint8Array(), signal: new AbortController().signal,
+    });
+    expect(query).toEqual({ reply: Uint8Array.of(0x44), querySignatureTimeNanos: expectedTime, rejectMessage: null });
+    const metadata = adaptIcpGldtState(state({ querySignatureTimeNanos: query.querySignatureTimeNanos }), PARAMS).metadata;
+    expect(metadata?.freshnessMode).toBe("not-applicable");
+    expect(metadata?.sourceTimestamp).toBeUndefined();
+    expect(metadata?.totalReserveQuantity).toBe(5945);
+    expect(Object.keys(metadata?.details ?? {}).some((key) => key.startsWith("certified"))).toBe(false);
+    expect(metadata?.details?.querySignatureTimeVerification).toBe(expectedTime === null ? undefined : "unverified");
   });
 
   it.each(["icp0.io", "ic0.app"])("preserves exact uint64 ingress expiry through the GLDT fetch boundary (%s)", async (boundaryHost) => {

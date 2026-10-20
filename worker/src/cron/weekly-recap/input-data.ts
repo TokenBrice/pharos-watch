@@ -4,6 +4,8 @@ import { findDigestSignalQuarantineBySymbol } from "@shared/lib/digest-signal-qu
 import { safetyScorePublicationIdentitiesAreComparable } from "@shared/lib/safety-score-publication";
 import {
   DigestSafetyContextSchema,
+  DigestGradeTransitionAccountingSchema,
+  type DigestEventPeriod,
   type DigestEditorialCandidate,
   type DigestInputData,
   type DigestSafetyContext,
@@ -339,13 +341,12 @@ function parseAuthoredSafetyIdentity(inputData: DigestInputData): SafetyScorePub
 function sanitizeSafetyForWeekly(
   parsed: WeeklyParsedRow[],
   safetyContext: DigestSafetyContext | undefined,
+  period: DigestEventPeriod | undefined,
 ): WeeklyParsedRow[] {
-  if (!safetyContext) return parsed;
-  const activeIdentity = safetyContext.status === "available" ? safetyContext.identity : null;
-  const seenTransitionIds = new Set<string>();
+  const activeIdentity = safetyContext?.status === "available" ? safetyContext.identity : null;
   return parsed.map((row) => {
     const inputData = { ...row.inputData };
-    if (safetyContext.status === "unavailable") {
+    if (safetyContext?.status === "unavailable") {
       // Both weekly rollups must see failed canonical evidence before counting
       // the transitions removed below; unavailable is not an observed zero.
       inputData.degradedSources = [
@@ -368,6 +369,13 @@ function sanitizeSafetyForWeekly(
     ) {
       delete inputData.safetyScores;
     }
+    const accounting = DigestGradeTransitionAccountingSchema.safeParse(inputData.gradeTransitionAccounting).data;
+    if (!accounting?.complete || !activeIdentity ||
+        !safetyScorePublicationIdentitiesAreComparable(accounting.safetyScoreIdentity, activeIdentity)) {
+      delete inputData.gradeTransitionAccounting;
+    } else {
+      inputData.gradeTransitionAccounting = accounting;
+    }
     inputData.gradeTransitions = (inputData.gradeTransitions ?? []).filter((transition) => {
       const transitionIdentity = SafetyScorePublicationIdentitySchema.safeParse(
         transition.safetyScoreIdentity,
@@ -376,11 +384,11 @@ function sanitizeSafetyForWeekly(
         !activeIdentity ||
         !transitionIdentity ||
         !safetyScorePublicationIdentitiesAreComparable(transitionIdentity, activeIdentity) ||
-        seenTransitionIds.has(transition.historyId)
+        !period || !Number.isFinite(transition.recordedAt) ||
+        transition.recordedAt < period.start || transition.recordedAt >= period.end
       ) {
         return false;
       }
-      seenTransitionIds.add(transition.historyId);
       return true;
     });
     if (inputData.gradeTransitions.length === 0) delete inputData.gradeTransitions;
@@ -512,10 +520,17 @@ function collectWeeklyTopSignals(parsed: WeeklyParsedRow[]): WeeklyTopSignals {
       })),
     (row) => row.mcapUsd * 1000 + row.score,
   );
-  const maxAlertPlusMcapUsd = Math.max(
-    0,
-    ...parsed.map((d) => (d.inputData.dewsStress?.elevatedCoins ?? []).reduce((sum, coin) => sum + coin.mcapUsd, 0)),
-  );
+  const fullAlertPlusMcaps = parsed.map(({ inputData }) => {
+    const dews = inputData.dewsStress;
+    return dews?.alertPlusSupplyCoverage?.complete === true ? dews.alertPlusMcapUsd : null;
+  });
+  const maxAlertPlusMcapUsd = fullAlertPlusMcaps.every((value): value is number => value != null)
+    ? Math.max(...fullAlertPlusMcaps)
+    : null;
+  const bandChangeCounts = parsed.map(({ inputData }) => inputData.dewsStress?.bandChangeCount);
+  const totalDewsBandChanges = bandChangeCounts.every((value): value is number => value != null)
+    ? bandChangeCounts.reduce((sum, count) => sum + count, 0)
+    : null;
   const topPressureSignals = topSignals(
     parsed,
     (d) =>
@@ -600,6 +615,7 @@ function collectWeeklyTopSignals(parsed: WeeklyParsedRow[]): WeeklyTopSignals {
     topSupplySignals,
     topDewsChanges,
     maxAlertPlusMcapUsd,
+    totalDewsBandChanges,
     topPressureSignals,
     topBlacklistEvents,
     topGradeTransitions,
@@ -659,9 +675,10 @@ function buildWeeklySpikeMetrics(parsed: WeeklyParsedRow[], allDepegObservations
 function buildWeeklyWowDeltas(
   current: RollupSummary,
   priorParsed: WeeklyParsedRow[],
+  priorPeriod: DigestEventPeriod | undefined,
 ): WeeklyInputData["weekOverWeekDeltas"] {
   if (priorParsed.length < 5) return null;
-  const prior = rollupDigestInputs(priorParsed.map((d) => d.inputData));
+  const prior = rollupDigestInputs(priorParsed.map((d) => d.inputData), undefined, priorPeriod);
   return {
     mcap: {
       current: current.mcapEnd,
@@ -690,11 +707,12 @@ export function buildWeeklyInputData(
   currentDailyRows: DailyDigestSourceRow[],
   priorDailyRows: DailyDigestSourceRow[] = [],
   safetyContext?: DigestSafetyContext,
+  gradeTransitionPeriods?: WeeklyInputData["gradeTransitionPeriods"],
 ): WeeklyInputData | null {
   const currentParsed = parseDailyRows(currentDailyRows);
   const prior = parseDailyRows(priorDailyRows);
-  const parsed = sanitizeSafetyForWeekly(currentParsed.parsed, safetyContext);
-  const priorParsed = sanitizeSafetyForWeekly(prior.parsed, safetyContext);
+  const parsed = sanitizeSafetyForWeekly(currentParsed.parsed, safetyContext, gradeTransitionPeriods?.current);
+  const priorParsed = sanitizeSafetyForWeekly(prior.parsed, safetyContext, gradeTransitionPeriods?.prior);
   if (parsed.length < 5) return null;
 
   const psiScores = parsed.map((d) => d.inputData.stabilityIndex?.score).filter((s): s is number => s != null);
@@ -707,7 +725,7 @@ export function buildWeeklyInputData(
 
   if (psiScores.length === 0) return null;
 
-  const current = rollupDigestInputs(parsed.map((d) => d.inputData));
+  const current = rollupDigestInputs(parsed.map((d) => d.inputData), undefined, gradeTransitionPeriods?.current);
   const dominantBand = current.psiDominantBand!;
 
   const { allDepegObservations, ...topSignalsResult } = collectWeeklyTopSignals(parsed);
@@ -716,6 +734,7 @@ export function buildWeeklyInputData(
     topSupplySignals,
     topDewsChanges,
     maxAlertPlusMcapUsd,
+    totalDewsBandChanges,
     topPressureSignals,
     topBlacklistEvents,
     topGradeTransitions,
@@ -730,7 +749,7 @@ export function buildWeeklyInputData(
     depegs: topDepegSignals,
   });
 
-  const weekOverWeekDeltas = buildWeeklyWowDeltas(current, priorParsed);
+  const weekOverWeekDeltas = buildWeeklyWowDeltas(current, priorParsed, gradeTransitionPeriods?.prior);
   // Forward-look accountability: publishing the hit rate creates pressure
   // toward falsifiable near-term triggers (the corpus ran at ~4% hits).
   const outcomeCounts = { hit: 0, missed: 0, pending: 0, expired: 0, unavailable: 0 };
@@ -754,6 +773,7 @@ export function buildWeeklyInputData(
     weekStartDate: parsed[0].date,
     weekEndDate: parsed[parsed.length - 1].date,
     periodType: "trailing-daily-editions",
+    ...(gradeTransitionPeriods ? { gradeTransitionPeriods } : {}),
     ...(safetyContext ? { safetyContext } : {}),
     ...(degradedSources.length > 0 ? { degradedSources: [...new Set(degradedSources)] } : {}),
     dailyDigests: parsed,
@@ -786,6 +806,7 @@ export function buildWeeklyInputData(
       topSupplySignals,
       topDewsChanges,
       maxAlertPlusMcapUsd,
+      totalDewsBandChanges,
       topPressureSignals,
       topBlacklistEvents,
       topGradeTransitions,

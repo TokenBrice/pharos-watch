@@ -14,6 +14,7 @@ import { makeYieldProvenance, makeYieldRanking } from "@shared/test-utils/yield-
 import { classifyYieldBenchmarkFreshness } from "@shared/lib/yield-benchmark-freshness";
 import { projectYieldRankingsSummary } from "@shared/lib/yield-rankings-summary";
 import { getYieldBenchmarkSelectionMode } from "@/lib/yield-workbench-row";
+import { resolveYieldZone } from "@/lib/yield-scatter";
 
 // Age markers resolve against the wall clock; pin it so day counts are exact.
 beforeEach(() => {
@@ -183,6 +184,8 @@ describe("resolveYieldRowBenchmark", () => {
     expect(resolved.label).toBe("EUR 3M compounded €STR");
     expect(resolved.isFallback).toBe(false);
     expect(resolved.selectionMode).toBe("native");
+    expect(resolved.displayFallback).toBe(false);
+    expect(resolved.publishedRate).toBe(1.94);
   });
 
   it("resolves a missing row rate from the registry by benchmark key before the USD frame", () => {
@@ -192,11 +195,46 @@ describe("resolveYieldRowBenchmark", () => {
     expect(resolved.label).toBe("EUR 3M compounded €STR");
   });
 
-  it("falls back to the USD registry entry only when the row's key is missing", () => {
-    const { benchmarkRate: _drop, ...row } = buildRanking("chf-b", "CHF");
+  it.each(["CHF", "EUR"] as const)("identifies a USD display fallback separately from the published %s selection", (key) => {
+    const { benchmarkRate: _drop, ...row } = buildRanking("foreign", key);
     const usdOnly: YieldBenchmarkRegistry = { USD: BENCHMARKS.USD };
-    const resolved = resolveYieldRowBenchmark(row as YieldRanking, usdOnly, null);
+    const resolved = resolveYieldRowBenchmark(row, usdOnly, null);
     expect(resolved.rate).toBe(4.25);
+    expect(resolved.key).toBe("USD");
+    expect(resolved.label).toBe("USD 3M T-Bill (display fallback)");
+    expect(resolved.selectionMode).toBe("native");
+    expect(resolved.isFallback).toBe(false);
+    expect(resolved.displayFallback).toBe(true);
+    expect(resolved.publishedRate).toBeNull();
+    expect(resolveYieldZone(80, 3, resolved.rate)).toBe("play-it-safe");
+    expect(resolveYieldZone(80, 5, resolved.rate)).toBe("sweet-spot");
+    expect(row.benchmarkSelectionMode).toBe("native");
+  });
+
+  it.each([0, -0.05])("retains a finite published local rate of %s before USD fallback", (rate) => {
+    const row = { ...buildRanking("chf", "CHF"), benchmarkRate: rate };
+    const resolved = resolveYieldRowBenchmark(row, { USD: BENCHMARKS.USD }, 4.25);
+    expect(resolved.rate).toBe(rate);
+    expect(resolved.key).toBe("CHF");
+    expect(resolved.label).toBe("CHF 3M compounded SARON");
+    expect(resolved.displayFallback).toBe(false);
+  });
+
+  it("takes identity from the first finite registry entry, not an unavailable row label", () => {
+    const row = { ...buildRanking("eur", "EUR"), benchmarkRate: Number.NaN, benchmarkLabel: "Old EUR label" };
+    const resolved = resolveYieldRowBenchmark(row, BENCHMARKS, 4.25);
+    expect(resolved.rate).toBe(1.94);
+    expect(resolved.label).toBe("EUR 3M compounded €STR");
+    expect(resolved.displayFallback).toBe(false);
+    const noFiniteRegistry = {
+      CHF: { ...BENCHMARKS.CHF!, rate: Number.NaN },
+      USD: { ...BENCHMARKS.USD!, rate: Number.POSITIVE_INFINITY },
+    };
+    const usdFrame = resolveYieldRowBenchmark({ ...buildRanking("chf", "CHF"), benchmarkRate: Number.NaN }, noFiniteRegistry, 3);
+    expect(usdFrame.rate).toBe(3);
+    expect(usdFrame.key).toBe("USD");
+    expect(usdFrame.label).toBe("USD 3M T-Bill (display fallback)");
+    expect(usdFrame.displayFallback).toBe(true);
   });
 
   it("labels a fallback-usd proxy selection even though benchmarkIsFallback is false", () => {
@@ -222,8 +260,15 @@ describe("resolveYieldRowBenchmark", () => {
 
   it("resolves to a null rate only when nothing resolves at all", () => {
     const { benchmarkRate: _drop, ...row } = makeYieldRanking({ benchmarkKey: "CHF" });
-    expect(resolveYieldRowBenchmark(row as YieldRanking, null, 4.25).rate).toBe(4.25);
-    expect(resolveYieldRowBenchmark(row as YieldRanking, null, null).rate).toBeNull();
+    const display = resolveYieldRowBenchmark(row, null, 4.25);
+    expect(display.rate).toBe(4.25);
+    expect(display.label).toBe("USD benchmark (display fallback)");
+    const unavailable = resolveYieldRowBenchmark(row, null, null);
+    expect(unavailable.rate).toBeNull();
+    expect(unavailable.key).toBeNull();
+    expect(unavailable.label).toBe("Benchmark unavailable");
+    expect(unavailable.displayFallback).toBe(false);
+    expect(resolveYieldZone(80, 3, unavailable.rate)).toBeNull();
   });
 });
 

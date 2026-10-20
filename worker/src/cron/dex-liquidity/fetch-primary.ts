@@ -432,14 +432,17 @@ export async function fetchDataSources(
   const curveCircuitAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.CURVE_LIQUIDITY_API);
 
   if (curveCircuitAllowed) {
-    const curveResults = await mapWithConcurrency(CURVE_CHAINS, CURVE_API_FETCH_CONCURRENCY, (chain) =>
-      fetchJsonWithRetry<CurveApiPayload>(
+    const curveResults = await mapWithConcurrency(CURVE_CHAINS, CURVE_API_FETCH_CONCURRENCY, async (chain) => {
+      const observedAt = Math.floor(Date.now() / 1000);
+      const result = await fetchJsonWithRetry<CurveApiPayload>(
         `${CURVE_API_BASE}/${CURVE_API_CHAIN_PATHS[chain] ?? chain}`,
         { headers: { "User-Agent": USER_AGENT }, signal },
         2,
         { timeoutMs: PRIMARY_SOURCE_JSON_TIMEOUT_MS, maxResponseBytes: CURVE_MAX_RESPONSE_BYTES },
-      ),
-    );
+      );
+      if (result?.body) result.body.observedAt = observedAt;
+      return result;
+    });
     curvePayloads = curveResults.map((result) => result?.body ?? null);
     const curveSuccess = curvePayloads.some((payload) => payload != null);
     await recordOutcome(db, CIRCUIT_SOURCE.CURVE_LIQUIDITY_API, curveSuccess);
@@ -641,6 +644,7 @@ export async function buildCurveLookups(
           creationTs: pool.creationTs ?? 0,
           balanceDetails,
           tokenPrices,
+          priceObservedAt: json.observedAt ?? null,
           ...(poolIdentityComplete && retainCompositePoolIdentity
             ? { poolCoins: poolCoins as NonNullable<CurvePoolEntry["poolCoins"]> }
             : {}),
@@ -722,6 +726,7 @@ export async function buildCurveLookups(
             const obs = priceObservations.get(resolved.stablecoinId) ?? [];
             obs.push({
               price: coin.usdPrice,
+              observedAt: json.observedAt ?? null,
               tvl: metapoolAdjustedTvl,
               chain,
               protocol: "curve",

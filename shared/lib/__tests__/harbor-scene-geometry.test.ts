@@ -33,6 +33,20 @@ function synthetic(count: number): HarborSceneInput {
 describe("buildHarborGeometry", () => {
   const scene = buildHarborScene(LIVE);
 
+  it.each(PRESETS)("keeps observed berths drawable with unavailable global accounting (%s)", (preset) => {
+    const input = synthetic(3);
+    const scene = buildHarborScene({
+      ...input, globalTotalUsd: null, chainAttributedTotalUsd: null,
+      unattributedTotalUsd: null, attributionDiscrepancyUsd: null,
+      chains: input.chains.map((chain) => ({ ...chain, dominanceShare: null })),
+    });
+    const geometry = buildHarborGeometry(scene, preset);
+    expect(geometry.berths.map((berth) => berth.id)).toEqual(scene.vessels.map((vessel) => vessel.id));
+    expect(JSON.stringify(geometry)).not.toMatch(/NaN|Infinity/);
+    expect(validateHarborCapacity(scene, preset).ok).toBeNull();
+    expect(scene.conservation.ok).toBeNull();
+  });
+
   it("tints wakes only from the hue threshold; smaller moves stay neutral ink", () => {
     const wakeClasses = (pct: number) => {
       const input = synthetic(3);

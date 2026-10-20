@@ -2,6 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { buildRiskTape } from "../daily-digest/digest-risk-tape";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import { mockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
+import { PSI_NATIVE_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/depeg-quote-domain";
+import { NATIVE_EVENT_QUOTE_CACHE_PREFIX } from "../../lib/native-peg-quote-cache";
+import { PSI_CONDITION_BAND_VALUES } from "@shared/types/stability-constants";
 
 vi.mock("@shared/lib/stablecoins/registry", async () => (await import("./daily-digest.test-support")).mockDailyDigestRegistryModule());
 vi.mock("../../lib/stablecoins-cache", async () => (await import("./daily-digest.test-support")).mockDailyDigestStablecoinsCacheModule());
@@ -22,34 +27,38 @@ vi.mock("../digest/telegram-transport", async (importOriginal) => {
 vi.mock("../../lib/circuit-breaker", async () => (await import("./daily-digest.test-support")).mockDailyDigestCircuitBreakerModule());
 
 import { buildUserPrompt } from "../daily-digest/prompt";
-import { buildDigestSafetyMapCapture } from "../daily-digest/input";
+import { buildDailyDigestInput, buildDigestSafetyMapCapture } from "../daily-digest/input";
+import { insertDigestRecord } from "../digest/platform";
 import { DAILY_EXEMPLAR, SYSTEM_PROMPT } from "../daily-digest/prompt/policy";
 import { classifyRegime } from "../daily-digest/prompt/regime";
 import { ALLOWED_TONES, hasBlockingDigestQualityIssues, parseDigestModelResponse, validateDigestModelOutput, type DigestValidationProfile, type ParsedDigestResponse } from "../daily-digest/response";
 import { collectActiveDepegs, collectLiquidityShifts, collectMintBurnFlows, collectResolvedDepegs, collectSupplyVelocity } from "../daily-digest/collectors-market";
 import { collectDewsStress, collectGradeTransitions, collectSafetyScores, collectYieldAnomalies } from "../daily-digest/collectors-risk";
 import { collectCrossDayTrends, collectHistoricalContext, collectPsiContributors } from "../daily-digest/collectors-history";
-import { buildDigestIntelligence } from "../daily-digest/digest-intelligence";
+import { buildDigestIntelligence, parseStoredDigestInput } from "../daily-digest/digest-intelligence";
+import { buildEditorialCandidates } from "../daily-digest/editorial-candidates";
 import { buildForwardLookOutcomes, buildNextTriggers } from "../daily-digest/digest-next-triggers";
 import { buildEditorialPrompt, scanEditorialText } from "@shared/lib/editorial-style";
 import { getPsiBandStreak } from "@shared/lib/psi-view-model";
 import type { DigestInputData } from "@shared/types/digest";
 import { loadActiveSafetyScoreSource } from "../../lib/safety-score-active-source";
-import { BASE_DIGEST_INPUT, BASE_SAFETY_CONTEXT, canonicalSafetySource, makeCollectorCtx, makeDigestRow, makePublishedDewsTables, missingPublishedGaugeTable, PUBLISHED_GAUGE_SCORE, publishedGaugePayload, publishedGaugeTable, VALID_CAPTURE_MAP_SUMMARY } from "./daily-digest.test-support";
+import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
+import { BASE_DIGEST_INPUT, BASE_SAFETY_CONTEXT, canonicalSafetySource, makeCollectorCtx, makeDailyDigestScenario, makeDigestRow, makePublishedDewsTables, missingPublishedGaugeTable, PUBLISHED_GAUGE_SCORE, publishedGaugePayload, publishedGaugeTable, VALID_CAPTURE_MAP_SUMMARY } from "./daily-digest.test-support";
 
 const DEFAULT_EXTENDED = "T. T. T.\n\nT. T. T.\n\nT. T. T.";
 const fixture = (opts: { extended?: string; text?: string; lead?: string; leadSignalId?: string; tone?: string } = {}): ParsedDigestResponse => ({ digestTitle: "T", digestText: opts.text ?? "T.", digestExtended: opts.extended ?? DEFAULT_EXTENDED, digestMeta: JSON.stringify({ leadSignalId: opts.leadSignalId, lead: opts.lead ?? "depeg", tone: opts.tone ?? "dry", coins: ["USDT"] }), strippedDashCount: 0, usedRawTextFallback: false });
 const issueCodes = (parsed: ParsedDigestResponse, profile: DigestValidationProfile) => validateDigestModelOutput(parsed, profile).map((issue) => issue.code);
 const first = (match: string, value: Record<string, unknown> | null): MockTableConfig => ({ match, rows: [], first: value });
 const ctxFor = (tables: MockTableConfig[]) => makeCollectorCtx(mockD1(tables));
-const depegTable = (rows: Record<string, unknown>[]): MockTableConfig[] => [{ match: "FROM depeg_events WHERE ended_at IS NULL", rows }];
+const depegTable = (rows: Record<string, unknown>[]): MockTableConfig[] => [{ match: "FROM depeg_events e LEFT JOIN depeg_event_provenance", rows }];
+const nativeQuoteFixtures = createLatestSchemaFixtureTracker();
 
 beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date("2026-03-06T12:00:00Z"));
   vi.mocked(loadActiveSafetyScoreSource).mockReset().mockResolvedValue(canonicalSafetySource([]));
 });
-afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); });
+afterEach(() => { nativeQuoteFixtures.closeAll(); vi.useRealTimers(); vi.restoreAllMocks(); });
 
 describe("response and editorial contracts", () => {
   it.each([
@@ -130,6 +139,9 @@ describe("response and editorial contracts", () => {
 
   it.each([
     ["contradictory hook", "USDC trades at $0.90, 50 bps below peg.", "hard"],
+    ["self-consistent false pair", "USDC trades at $0.90, 1,000 bps below peg.", "hard"],
+    ["false deviation with current price", "USDC trades at $0.995, 1,000 bps below peg.", "hard"],
+    ["historical pair", "USDC was at $0.90, 1,000 bps below peg yesterday.", "soft"],
     ["consistent quote", "USDC trades at $0.995, 50 bps below peg.", null],
     ["rounded quote", "USDC trades at $1.00, 50 bps below peg.", null],
     ["supply before price", "USDC has $50B in supply, trades at $0.995, and sits 50 bps below peg.", null],
@@ -172,6 +184,14 @@ describe("response and editorial contracts", () => {
     expect(issues.some((issue) => issue.code === "price-bps-direction-mismatch" && issue.severity === "hard")).toBe(blocked);
     expect(hasBlockingDigestQualityIssues(issues)).toBe(blocked);
   });
+
+  it("never binds a dollar claim to native-unit event evidence", () => {
+    const issues = validateDigestModelOutput(fixture({ text: "EURC trades at $1.10, 200 bps below peg." }), {
+      kind: "daily",
+      depegFacts: [{ symbol: "EURC", quoteMode: "native-peg", currentPriceUsd: 0.98, currentBps: -200, pegReference: 1 }],
+    }).filter((issue) => issue.code.startsWith("price-bps-"));
+    expect(issues).toEqual([]);
+  });
 });
 
 describe("intelligence, prompt, and regime contracts", () => {
@@ -204,6 +224,64 @@ describe("intelligence, prompt, and regime contracts", () => {
     expect(trigger).toMatchObject({ thresholdValue: 300, thresholdLabel: "300 bps off peg", repeatedCount: 1 });
     expect(trigger?.detail).toBe("If USDT reaches 300 bps off peg, the next digest should treat it as a stronger peg-stress signal.");
   });
+  const liquidityInput = (scoreDelta: number, currentScore = 68): DigestInputData => ({
+    ...current, topDepegs: [], stabilityIndex: null,
+    editorialCandidates: [{ id: `liquidity:usdt:${scoreDelta}`, kind: "liquidity", title: "USDT liquidity shift", symbols: ["USDT"], impactScore: 10, novelty: "new", confidence: "high", artifactRisk: "low", headlineFacts: ["Liquidity shifted"], whyItMatters: "Depth changed." }],
+    liquidityShifts: [{ symbol: "USDT", currentScore, previousScore: currentScore - scoreDelta, scoreDelta, currentTvl: 20e6, previousTvl: 20e6, mcapUsd: 100e6, tvlChangePct: 0, expectedScoreDeltaFromTvl: 0, coverageClass: "primary", coverageConfidence: 1 }],
+  });
+  const liquidityEvidence = (currentScore: number, stablecoinId = "usdt-tether") => ({
+    liquidity: [{ stablecoinId, symbol: "USDT", currentScore }],
+  });
+  it.each([
+    ["decay to recovery", -8, 60, 8, "lte", 52, "falls to 52"],
+    ["recovery to decay", 8, 76, -8, "gte", 84, "climbs to 84"],
+    ["continued decay", -8, 60, -8, "lte", 52, "falls to 52"],
+    ["continued recovery", 8, 76, 8, "gte", 84, "climbs to 84"],
+  ] as const)("preserves the whole armed liquidity condition through %s", (_label, priorDelta, priorScore, nextDelta, comparator, thresholdValue, detail) => {
+    const prior = liquidityInput(priorDelta, priorScore);
+    const armed = { ...prior, nextTriggers: buildNextTriggers(prior, null, liquidityEvidence(priorScore)) };
+    const today = liquidityInput(nextDelta);
+    const nextTriggers = buildNextTriggers(today, armed, liquidityEvidence(68));
+    expect(nextTriggers[0]).toEqual({ ...armed.nextTriggers[0], repeatedCount: 1 });
+    expect(nextTriggers[0]).toMatchObject({ metric: "liquidity-score", comparator, thresholdValue, stablecoinId: "usdt-tether" });
+    expect(nextTriggers[0].detail).toContain(detail);
+    expect(buildForwardLookOutcomes(today, armed, liquidityEvidence(68))[0].status).toBe("pending");
+    expect(buildForwardLookOutcomes(today, { ...today, nextTriggers }, liquidityEvidence(68))[0].status).toBe("pending");
+  });
+  it.each([
+    [-8, 60, 52, 8, "gte", 60],
+    [8, 76, 84, -8, "lte", 76],
+  ] as const)("re-arms a hit liquidity condition at score %s/%s/%s", (priorDelta, priorScore, hitScore, nextDelta, comparator, thresholdValue) => {
+    const prior = liquidityInput(priorDelta, priorScore);
+    const armed = { ...prior, nextTriggers: buildNextTriggers(prior, null, liquidityEvidence(priorScore)) };
+    const today = liquidityInput(nextDelta, hitScore);
+    expect(buildForwardLookOutcomes(today, armed, liquidityEvidence(hitScore))[0].status).toBe("hit");
+    const fresh = buildNextTriggers(today, null, liquidityEvidence(hitScore))[0];
+    expect(buildNextTriggers(today, armed, liquidityEvidence(hitScore))[0]).toEqual(fresh);
+    expect(fresh).toMatchObject({ id: "trigger:liquidity:usdt", comparator, thresholdValue });
+    expect(fresh.repeatedCount).toBeUndefined();
+  });
+  it("expires a reversed liquidity condition at the existing pending-edition TTL", () => {
+    const prior = liquidityInput(-8, 60);
+    let armed = { ...prior, nextTriggers: buildNextTriggers(prior, null, liquidityEvidence(60)) };
+    const today = liquidityInput(8);
+    for (const repeatedCount of [1, 2]) {
+      armed = { ...today, nextTriggers: buildNextTriggers(today, armed, liquidityEvidence(68)) };
+      expect(armed.nextTriggers[0]).toMatchObject({ comparator: "lte", thresholdValue: 52, repeatedCount });
+    }
+    expect(buildForwardLookOutcomes(today, armed, liquidityEvidence(68))[0].status).toBe("expired");
+    expect(buildNextTriggers(today, armed, liquidityEvidence(68))).toEqual([]);
+  });
+  it("retains the armed target and condition when its evidence is unavailable", () => {
+    const prior = liquidityInput(-8, 60);
+    const armed = { ...prior, nextTriggers: buildNextTriggers(prior, null, liquidityEvidence(60)) };
+    const today = liquidityInput(8);
+    const replacement = liquidityEvidence(68, "different-usdt");
+    expect(buildForwardLookOutcomes(today, armed, replacement)[0].status).toBe("unavailable");
+    const nextTriggers = buildNextTriggers(today, armed, replacement);
+    expect(nextTriggers[0]).toEqual({ ...armed.nextTriggers[0], repeatedCount: 1 });
+    expect(buildForwardLookOutcomes(today, { ...today, nextTriggers }, replacement)[0].status).toBe("unavailable");
+  });
   const supplyTriggerCases: Array<[string, DigestInputData, string]> = [
     ["weekly fallback", { ...current, supplyVelocity: [], supplyChanges7d: [{ coin: "USDC", change7d: 40_000_000 }] }, "USDC"],
     ["coin-specific velocity", { ...current, biggestSupplyChange: { id: "usdt-tether", symbol: "USDT", name: "Tether", changeUsd: 90_000_000, currentMcap: 100_000_000 } }, "USDC"],
@@ -227,7 +305,37 @@ describe("intelligence, prompt, and regime contracts", () => {
     const unavailableSafetyData: DigestInputData = { ...data, safetyContext: { status: "unavailable", expectedModel: "v9", identity: null, publishedAt: null, reason: "held" } };
     expect(buildDigestSafetyMapCapture(unavailableSafetyData, resolution)).toBeNull();
   });
-  it.each([["CALM", { ...BASE_DIGEST_INPUT, activeDepegCount: 0, topDepegs: [] }], ["CRISIS", { ...BASE_DIGEST_INPUT, mintBurnFlows: { gaugeScore: -20, gaugeBand: "CAUTIOUS", flightToQuality: { active: true, safeNetUsd: 200e6, riskyNetUsd: -200e6 }, topPressure: [] } }], ["CRISIS", { ...BASE_DIGEST_INPUT, stabilityIndex: { score: 65, band: "TREMOR", components: { severity: 30, breadth: 5, trend: -3 } } }], ["TENSION", { ...BASE_DIGEST_INPUT, dewsStress: { bandCounts: { calm: 100, watch: 10, alert: 2, warning: 1, danger: 0 }, yesterdayBandCounts: { calm: 100, watch: 10, alert: 2, warning: 1, danger: 0 }, bandChanges: [], elevatedCoins: [{ symbol: "USDT", band: "ALERT", score: 50, mcapUsd: 2e9 }] } }], ["WATCHFUL", { ...BASE_DIGEST_INPUT, activeDepegCount: 1, topDepegs: [{ symbol: "USDT", bps: 5, mcapUsd: 100e9 }] }]] as const)("classifies %s regime", (expected, data) => expect(classifyRegime(data as DigestInputData)).toBe(expected));
+  it.each([["CALM", { ...BASE_DIGEST_INPUT, activeDepegCount: 0, topDepegs: [] }], ["CRISIS", { ...BASE_DIGEST_INPUT, mintBurnFlows: { gaugeScore: -20, gaugeBand: "CAUTIOUS", flightToQuality: { active: true, safeNetUsd: 200e6, riskyNetUsd: -200e6 }, topPressure: [] } }], ["CRISIS", { ...BASE_DIGEST_INPUT, stabilityIndex: { score: 65, band: "TREMOR", components: { severity: 30, breadth: 5, trend: -3 } } }], ["TENSION", { ...BASE_DIGEST_INPUT, dewsStress: { bandCounts: { calm: 100, watch: 10, alert: 2, warning: 1, danger: 0 }, yesterdayBandCounts: { calm: 100, watch: 10, alert: 2, warning: 1, danger: 0 }, bandChangeCount: 0, alertPlusMcapUsd: 2e9, alertPlusSupplyCoverage: { complete: true, observedCount: 3, unavailableCount: 0 }, bandChanges: [], elevatedCoins: [{ symbol: "USDT", band: "ALERT", score: 50, mcapUsd: 2e9 }] } }], ["WATCHFUL", { ...BASE_DIGEST_INPUT, activeDepegCount: 1, topDepegs: [{ symbol: "USDT", bps: 5, mcapUsd: 100e9 }] }]] as const)("classifies %s regime", (expected, data) => expect(classifyRegime(data as DigestInputData)).toBe(expected));
+  it.each(PSI_CONDITION_BAND_VALUES)("classifies PSI band %s and its reader-facing tape tone", (band) => {
+    const input: DigestInputData = {
+      ...BASE_DIGEST_INPUT, activeDepegCount: 0, topDepegs: [], mintBurnFlows: undefined, dewsStress: undefined,
+      stabilityIndex: { score: 50, band, components: { severity: 0, breadth: 0, trend: 0 } },
+    };
+    expect(classifyRegime(input)).toBe(band === "BEDROCK" || band === "STEADY" ? "CALM" : "CRISIS");
+    const psi = buildRiskTape(input).find((item) => item.id === "risk-tape:psi");
+    expect(psi?.value).toContain(band);
+    expect(psi?.tone).toBe(band === "BEDROCK" ? "positive" : band === "STEADY" ? "neutral" : band === "TREMOR" ? "warning" : "critical");
+    expect(buildUserPrompt(input)).toContain(`Market regime: ${classifyRegime(input)}`);
+  });
+  it.each([
+    [110e9, "10.00% above", "10% above"],
+    [100e9, "at", "at"],
+    [90e9, "10.00% below", "10% below"],
+  ] as const)("renders total and coin ATH distances at current cap %s", (currentMcap, totalComparison, coinComparison) => {
+    const prompt = buildUserPrompt({
+      ...BASE_DIGEST_INPUT,
+      totalMcapUsd: currentMcap, supplyCoverage: { complete: true, observedCount: 1, unavailableCount: 0 },
+      totalMcapAth: { value: 100e9, date: 1_770_000_000, daysAgo: 10 },
+      biggestSupplyChange: { id: "usdt-tether", symbol: "USDT", name: "Tether", changeUsd: 1e9, currentMcap },
+      historicalContext: {
+        psiPrecedent: null, psiBandStreak: 1, digestTrackingDays: 30,
+        supplyMoverContext: { allTimeHighMcap: 100e9, allTimeHighDate: 1_770_000_000, largestWeeklyChange: 2e9, largestWeeklyChangeDate: 1_770_000_000, largestWeeklyChangeDaysAgo: 10 },
+      },
+    });
+    expect(prompt).toContain(`total mcap is ${totalComparison} its Digest-window ATH`);
+    expect(prompt).toContain(`Current mcap is ${coinComparison} ATH`);
+    expect(prompt).not.toMatch(/-\d+\.\d+% (?:above|below).*ATH|-\d+% (?:above|below).*ATH/);
+  });
   it("keeps the prompt register and V9 pillars canonical", () => {
     expect(SYSTEM_PROMPT.startsWith(buildEditorialPrompt("daily"))).toBe(true);
     expect(SYSTEM_PROMPT).toContain(`Allowed tones: ${ALLOWED_TONES.join(", ")}.`);
@@ -240,23 +348,132 @@ describe("intelligence, prompt, and regime contracts", () => {
 });
 
 describe("market and risk collectors", () => {
-  it("loads canonical V9 scores and organic grade transitions", async () => {
-    const snapshot = canonicalSafetySource([{ id: "usdt-tether", overallGrade: "A", overallScore: 88 }]);
-    vi.mocked(loadActiveSafetyScoreSource).mockResolvedValueOnce(snapshot);
-    const scores = await collectSafetyScores(ctxFor([]), new Set(["USDT"]));
-    expect(scores.value.safetyContext).toMatchObject({ status: "available", expectedModel: "v9" });
-    expect(scores.value.safetyScores).toMatchObject({ model: "v9", mentionedCoins: [{ symbol: "USDT", grade: "A", score: 88 }] });
-    const now = Math.floor(Date.now() / 1000);
-    const identity = scores.value.safetyIdentity!;
-    const db = mockD1([{ match: "GROUP BY recorded_at HAVING COUNT(*) > 15", rows: [] }, { match: "ORDER BY ABS(COALESCE(score, 0) - COALESCE(prev_score, 0)) DESC", rows: [{ history_id: "h", stablecoin_id: "usdt-tether", recorded_at: now, model: identity.model, identity_schema_version: identity.schemaVersion, methodology_version: identity.methodologyVersion, policy_id: identity.policyId, policy_digest: identity.policyDigest, evaluation_build_digest: identity.evaluationBuildDigest, base_input_generation_id: identity.baseInputGenerationId, model_publication_generation_id: identity.publicationGenerationId, transition_kind: "organic-grade-change", grade: "A-", score: 80, prev_grade: "A", prev_score: 85 }] }]);
-    expect((await collectGradeTransitions(makeCollectorCtx(db), scores.value.safetyGrades, identity)).value?.[0]).toMatchObject({ symbol: "USDT", fromGrade: "A", toGrade: "A-" });
-  });
+  it.each(["complete", "page-failure", "count-mismatch"] as const)(
+    "drains indexed 500-row organic identity pages before stamping %s accounting",
+    async (mode) => {
+      const snapshot = canonicalSafetySource([
+        { id: "usdt-tether", overallGrade: "A", overallScore: 88 },
+        { id: "dai-makerdao", overallGrade: "B", overallScore: 70 },
+      ]);
+      vi.mocked(loadActiveSafetyScoreSource).mockResolvedValueOnce(snapshot);
+      const scores = await collectSafetyScores(ctxFor([]), new Set(["USDT"]));
+      expect(scores.value.safetyContext).toMatchObject({ status: "available", expectedModel: "v9" });
+      expect(scores.value.safetyScores).toMatchObject({
+        model: "v9", mentionedCoins: [{ symbol: "USDT", grade: "A", score: 88 }],
+      });
+      const identity = scores.value.safetyIdentity!;
+      const { sqlite } = nativeQuoteFixtures.open();
+      const now = Math.floor(Date.now() / 1000);
+      const insert = sqlite.prepare(`INSERT INTO safety_score_history_v2 (
+        history_id, stablecoin_id, recorded_at, model, identity_schema_version,
+        methodology_version, policy_id, policy_digest, evaluation_build_digest,
+        base_input_generation_id, model_publication_generation_id, transition_kind,
+        grade, score, prev_grade, prev_score, created_at
+      ) VALUES (?, ?, ?, 'v9', ?, ?, ?, ?, ?, ?, ?, ?, 'A-', ?, ?, ?, ?)`);
+      const add = (id: string, at: number, coin = "usdt-tether", score = 80, prior = 85,
+        build = identity.evaluationBuildDigest, kind = "organic-grade-change", policy = identity.policyDigest) =>
+        insert.run(id, coin, at, identity.schemaVersion, identity.methodologyVersion, identity.policyId,
+          policy, build, identity.baseInputGenerationId, identity.publicationGenerationId, kind, score,
+          kind === "organic-grade-change" ? "A" : null, kind === "organic-grade-change" ? prior : null, now);
+      // A same-time tie spans three pages, without activating the unchanged 80% bump rule.
+      for (let index = 0; index < 1003; index++) {
+        add(`eligible:${String(index).padStart(4, "0")}`, now - 60, "usdt-tether", index % 2 ? 80 : 90);
+      }
+      // The raw top ten are ineligible; they must not crowd out eligible detail or census rows.
+      for (let index = 0; index < 12; index++) add(`small:${index}`, now - 120 - index, "dai-makerdao", 0, 100);
+      for (let index = 0; index < 16; index++) add(`bump:${index}`, now - 300, "usdt-tether", 100, 0);
+      add("wrong-build", now - 400, "usdt-tether", 0, 100, "1".repeat(64));
+      add("wrong-policy", now - 401, "usdt-tether", 0, 100, undefined, undefined, "2".repeat(64));
+      add("baseline", now - 402, "usdt-tether", 0, 100, undefined, "methodology-boundary-baseline");
+      add("outside-start", now - 172801);
+      add("at-start", now - 172800);
+      add("at-end", now);
+      let pages = 0;
+      const plans: string[] = [];
+      const db = createSqliteD1(sqlite, { onAll(sql) {
+        if (!sql.includes("SELECT history_id, recorded_at")) return;
+        pages++;
+        if (pages === 1) {
+          const plan = sqlite.prepare(`EXPLAIN QUERY PLAN ${sql}`)
+            .all(...Array(sql.split("?").length - 1).fill(null));
+          plans.push(...plan.map((row) => String(row.detail)));
+          if (mode === "count-mismatch") add("concurrent-insert", now - 30);
+        }
+        if (mode === "page-failure" && pages === 2) throw new Error("second D1 page failed");
+      } });
+      const result = await collectGradeTransitions(makeCollectorCtx(db), scores.value.safetyGrades, identity);
+      if (mode === "complete") {
+        expect(result.degradedReasons).toEqual([]);
+        expect(result.value.gradeTransitions).toHaveLength(5);
+        expect(result.value.gradeTransitions?.every((row) => row.symbol === "USDT")).toBe(true);
+        expect(result.value.gradeTransitions?.[0]).toMatchObject({ symbol: "USDT", fromGrade: "A", toGrade: "A-" });
+        const accounting = result.value.gradeTransitionAccounting!;
+        expect(accounting).toMatchObject({ complete: true, count: 1004, window: { start: now - 172800, end: now } });
+        if (accounting.complete) {
+          expect(new Set(accounting.identities.map((row) => row.historyId)).size).toBe(1004);
+          expect(accounting.identities[0]).toEqual({ historyId: "at-start", recordedAt: now - 172800 });
+        }
+        expect(pages).toBe(3);
+      } else {
+        expect(result.degradedReasons).toEqual(["grade-transitions-query"]);
+        expect(result.value.gradeTransitionAccounting).toMatchObject({ complete: false, reason: "grade-transitions-query" });
+        expect(result.value.gradeTransitionAccounting).not.toHaveProperty("identities");
+        expect(result.value.gradeTransitions).toBeUndefined();
+        expect(pages).toBe(mode === "page-failure" ? 2 : 3);
+      }
+      expect(plans.some((detail) =>
+        /SEARCH safety_score_history_v2 USING INDEX idx_safety_score_history_v2_recorded_at.*recorded_at>.*recorded_at</.test(detail))).toBe(true);
+    },
+  );
   it.each([["missing", () => missingPublishedGaugeTable(), undefined, [], ["mint-burn-gauge-missing"]], ["malformed", () => publishedGaugeTable({ value: '{"gauge":{"score":"nope"}}' }), undefined, ["mint-burn-gauge-malformed"], []], ["expired", () => publishedGaugeTable({ ageSec: 25 * 3600 }), undefined, ["mint-burn-gauge-expired"], []], ["stale", () => publishedGaugeTable({ ageSec: 3 * 3600 }), PUBLISHED_GAUGE_SCORE, ["mint-burn-gauge-stale"], []]] as const)("handles %s published gauge", async (_label, table, score, reasons, qualityReasons) => { const result = await collectMintBurnFlows(ctxFor([table()])); expect(result.value?.gaugeScore).toBe(score); expect(result.degradedReasons).toEqual(reasons); expect(result.qualityReasons ?? []).toEqual(qualityReasons); });
   it("re-bins the published gauge, includes FTQ chains, and never reads hourly rows", async () => {
     const db = mockD1([publishedGaugeTable()]); const result = await collectMintBurnFlows(makeCollectorCtx(db));
     expect(result.value).toMatchObject({ gaugeScore: PUBLISHED_GAUGE_SCORE, gaugeBand: "HEALTHY", classificationSource: "safety-score-v9-publication", topChains: [{ chainId: "ethereum", netUsd: 150e6 }, { chainId: "arbitrum", netUsd: -3e6 }] });
     expect(result.value?.topPressure.map(({ symbol }) => symbol)).toEqual(["USDT", "USDC"]); expect(buildUserPrompt({ ...BASE_DIGEST_INPUT, mintBurnFlows: result.value! })).toContain("Top chains by net flow"); expect(db.getHistory().some(({ sql }) => sql.includes("mint_burn_hourly"))).toBe(false);
   });
+  it.each(["2026-03-06T11:59:59Z", "2026-03-06T12:00:01Z"])(
+    "persists the retained producer window rather than the collection hour at %s", async (collectedAt) => {
+      vi.setSystemTime(new Date(collectedAt));
+      const window = { start: 1_772_697_600, end: 1_772_784_000, semantics: "closed-utc-hours" };
+      const publishedAt = Math.floor(new Date("2026-03-06T08:05:00Z").getTime() / 1000);
+      const updatedAt = publishedAt - 600;
+      const ageSec = Math.floor(Date.now() / 1000) - publishedAt;
+      const scenario = makeDailyDigestScenario({ db: { prependTables: [publishedGaugeTable({
+        ageSec, value: JSON.stringify(publishedGaugePayload({ window, updatedAt })),
+      })] } });
+      vi.mocked(loadStablecoinsCache).mockResolvedValue(scenario.sourcePayload);
+      const { inputData } = await buildDailyDigestInput(scenario.db);
+      const { sqlite } = nativeQuoteFixtures.open();
+      const generatedAt = Math.floor(Date.now() / 1000);
+      await insertDigestRecord({ db: createSqliteD1(sqlite), generatedAt, inputData,
+        digestText: "Retained source capture.", digestTitle: "Source capture", digestExtended: null, digestMeta: null });
+      const stored = sqlite.prepare("SELECT input_data FROM daily_digest WHERE generated_at = ?").get(generatedAt) as
+        { input_data: string };
+      const captured = parseStoredDigestInput(stored.input_data)!;
+      expect(captured.mintBurnFlows?.provenance).toEqual({ window, publishedAt, updatedAt });
+      expect(JSON.stringify(captured.mintBurnFlows?.provenance?.window)).toBe(JSON.stringify(window));
+      expect(captured.dataQuality?.windows.mintBurnFlows).toEqual({
+        label: "24 closed UTC hours", start: window.start, end: window.end,
+      });
+      expect(captured.dataQuality?.degradedSources).toContain("mint-burn-gauge-stale");
+    },
+  );
+  it.each([undefined, { start: "unreadable", end: 123, semantics: "closed-utc-hours" }])(
+    "leaves legacy or unreadable producer windows unavailable: %j", async (window) => {
+      const scenario = makeDailyDigestScenario({ db: { prependTables: [publishedGaugeTable({
+        value: JSON.stringify(publishedGaugePayload({ window })),
+      })] } });
+      vi.mocked(loadStablecoinsCache).mockResolvedValue(scenario.sourcePayload);
+      const { inputData } = await buildDailyDigestInput(scenario.db);
+      expect(inputData.mintBurnFlows?.provenance).toMatchObject({ window: null, updatedAt: null });
+      expect(inputData.dataQuality?.windows.mintBurnFlows).toEqual({
+        label: "unavailable", start: null, end: null,
+      });
+      const prompt = buildUserPrompt(inputData);
+      expect(prompt).toContain("Mint/burn window: unavailable");
+      expect(prompt).not.toContain("1970-01-01");
+    },
+  );
   it("never restates flow claims that missing valuation could alter", async () => {
     const partialMint = {
       window24h: { completeness: "partial", mintCompleteness: "partial", burnCompleteness: "complete", unpricedMintEventCount: 1, unpricedBurnEventCount: 0 },
@@ -331,6 +548,61 @@ describe("market and risk collectors", () => {
     ctx.trackedStablecoinAssets.push(variant); (ctx.trackedStablecoinIds as Set<string>).add(variant.id); ctx.stablecoinAssetById.set(variant.id, variant); ctx.mcapById.set(variant.id, 1e9);
     const result = await collectActiveDepegs(ctx); expect(ctx.coreAggregateStablecoinIds.has(variant.id)).toBe(false); expect(result.value.topDepegs[0]).toMatchObject({ stablecoinId: "susds-sky", symbol: "sUSDS" });
   });
+
+  it.each([
+    ["persisted native", "live", "native-peg", "fresh", false, 1],
+    ["inferred live native", "live", null, "fresh", false, 1],
+    ["historical native provenance", "backfill", "native-peg", "fresh", false, 1],
+    ["native start observation", "live", "native-peg", "missing", true, 1],
+    ["missing native", "live", "native-peg", "missing", false, 1],
+    ["expired native", "live", "native-peg", "expired", false, 1],
+    ["future native", "live", "native-peg", "future", false, 1],
+    ["malformed native", "live", "native-peg", "malformed", false, 1],
+    ["legacy USD reference", "backfill", null, "fresh", false, 1.1],
+    ["explicit USD provenance", "live", "usd", "fresh", false, 1],
+  ] as const)("keeps %s event facts and clocks in their quote domain", async (_label, source, quoteMode, quoteState, recentStart, pegReference) => {
+    const { db, sqlite } = nativeQuoteFixtures.open();
+    const now = Math.floor(Date.now() / 1000);
+    const startedAt = now - (recentStart ? 60 : 86400);
+    sqlite.prepare(`INSERT INTO depeg_events
+      (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price, peak_price, peg_reference, source)
+      VALUES (101, 'eurc-circle', 'EURC', 'peggedEUR', 'below', -500, ?, 0.98, 0.95, ?, ?)`)
+      .run(startedAt, pegReference, source);
+    if (quoteMode != null) sqlite.prepare(`INSERT INTO depeg_event_provenance
+      (event_id, source_kind, quote_mode, created_at, updated_at) VALUES (101, ?, ?, ?, ?)`)
+      .run(source, quoteMode, now, now);
+    const quoteAt = quoteState === "expired" ? now - PSI_NATIVE_EVIDENCE_MAX_AGE_SEC
+      : quoteState === "future" ? now + 60 : now - 30;
+    if (quoteState !== "missing") sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+      .run(`${NATIVE_EVENT_QUOTE_CACHE_PREFIX}101`,
+        quoteState === "malformed" ? "{invalid" : JSON.stringify({ value: 0.98, observedAt: quoteAt, source: "coingecko" }), quoteAt);
+    const ctx = makeCollectorCtx(db);
+    const asset = makeAsset({ id: "eurc-circle", symbol: "EURC", pegType: "peggedEUR", price: 1.1, priceObservedAt: now });
+    (ctx.trackedStablecoinIds as Set<string>).add(asset.id);
+    ctx.stablecoinAssetById.set(asset.id, asset);
+    ctx.mcapById.set(asset.id, 100e6);
+    const result = await collectActiveDepegs(ctx);
+    expect(result.degradedReasons).toEqual([]);
+    expect(result.value.activeDepegCount).toBe(1);
+    const fact = result.value.topDepegs[0];
+    const native = quoteMode === "native-peg" || (quoteMode == null && source === "live");
+    if (!native) {
+      expect(fact).toMatchObject({ quoteMode: "usd", currentPriceUsd: 1.1, currentBps: pegReference === 1 ? 1000 : 0, priceObservedAt: now, severityBasis: "current" });
+      expect(fact.currentPriceNative).toBeUndefined();
+    } else {
+      expect(fact).toMatchObject({ quoteMode: "native-peg", peakPriceNative: 0.95 });
+      expect(fact.currentPriceUsd).toBeUndefined();
+      expect(fact.peakPriceUsd).toBeUndefined();
+      if (quoteState === "fresh" || recentStart) {
+        expect(fact).toMatchObject({ currentPriceNative: 0.98, currentBps: -200, priceObservedAt: recentStart ? startedAt : quoteAt, severityBasis: "current" });
+      } else {
+        expect(fact).toMatchObject({ bps: -500, severityBasis: "peak-fallback" });
+        expect(fact.currentBps).toBeUndefined();
+        expect(fact.currentPriceNative).toBeUndefined();
+        expect(fact.priceObservedAt).toBeUndefined();
+      }
+    }
+  });
   it("covers velocity and silent collector failures", async () => {
     const now = ctxFor([]).todayTs; const rows = [{ stablecoin_id: "usdt-tether", snapshot_date: now, circulating_usd: 101.4e9 }, { stablecoin_id: "usdt-tether", snapshot_date: now - 86_400, circulating_usd: 101.35e9 }, { stablecoin_id: "usdt-tether", snapshot_date: now - 7 * 86_400, circulating_usd: 100e9 }];
     expect((await collectSupplyVelocity(ctxFor([{ match: "FROM supply_history WHERE stablecoin_id IN", rows }]))).value).toEqual([expect.objectContaining({ coin: "USDT", signal: "decelerating" })]);
@@ -343,6 +615,27 @@ describe("market and risk collectors", () => {
     for (const firstValue of [null, { stored_at: Math.floor(Date.now() / 1000) - 600, input_snapshot: JSON.stringify({ contributors: [] }) }]) expect((await collectPsiContributors(ctxFor([{ match: query, first: firstValue, rows: [] }]))).value).toBeUndefined();
     expect((await collectPsiContributors(ctxFor([{ match: query, first: { stored_at: Math.floor(Date.now() / 1000) - 3 * 3600, input_snapshot: JSON.stringify({ contributors }) }, rows: [] }]))).degradedReasons).toContain("psi-contributors-stale");
     expect((await collectPsiContributors(ctxFor([{ match: query, rows: [], throwError: new Error("down") }]))).degradedReasons).toContain("psi-contributors-query");
+  });
+  it("ranks finite signed PSI contributors by absolute impact without a 10000-bps ceiling", async () => {
+    const contributors = [
+      { symbol: "NEG", bps: -200, mcapUsd: 100e9, factor: 1 },
+      { symbol: "ABOVE", bps: 15000, mcapUsd: 1e9, factor: 1 },
+      { symbol: "POS", bps: 100, mcapUsd: 20e9, factor: 1 },
+      { symbol: "SMALL", bps: -20, mcapUsd: 1e9, factor: 1 },
+      ...[{ bps: "nonfinite" }, { bps: null }, { bps: "200" }, { mcapUsd: "nonfinite" }, { factor: "nonfinite" }, { factor: -1 }, { mcapUsd: 0 }].map((invalid) => ({
+        symbol: "INVALID", bps: 50000, mcapUsd: 100e9, factor: 1, ...invalid,
+      })),
+    ];
+    const result = await collectPsiContributors(ctxFor([{
+      match: "SELECT input_snapshot, stored_at FROM stability_index_samples", rows: [],
+      first: { stored_at: Math.floor(Date.now() / 1000) - 600, input_snapshot: JSON.stringify({ contributors }).replaceAll('"nonfinite"', "1e999") },
+    }]));
+    expect(result.degradedReasons).toEqual([]);
+    expect(result.value).toEqual([
+      { symbol: "NEG", bps: -200, mcapUsd: 100e9, marketImpact: 20000 },
+      { symbol: "ABOVE", bps: 15000, mcapUsd: 1e9, marketImpact: 15000 },
+      { symbol: "POS", bps: 100, mcapUsd: 20e9, marketImpact: 2000 },
+    ]);
   });
   it("filters yield anomalies and caps the result", async () => {
     const rows = ["USDT", "USDC", "DAI"].map((symbol, i) => ({ stablecoin_id: symbol === "USDT" ? "usdt-tether" : symbol === "USDC" ? "usdc-circle" : "dai-makerdao", symbol, current_apy: 8 + i, apy_7d: 4, apy_30d: 3, warning_signals: JSON.stringify(i === 2 ? [] : ["spike"]) }));
@@ -436,5 +729,40 @@ describe("history and DEWS collectors", () => {
     const partial = await collectDewsStress(ctxFor(tables));
     expect(partial.value).toBeUndefined();
     expect(partial.degradedReasons).toContain("dews-published-generation");
+  });
+  it.each([false, true])("keeps the full DEWS census independent of five displayed coins (missing supply: %s)", async (missingSupply) => {
+    const at = Math.floor(Date.now() / 1000) - 600;
+    const assets = Array.from({ length: 9 }, (_, index) => makeAsset({
+      id: `coin-${index}`, symbol: `C${index}`,
+      circulating: index === 8 ? (missingSupply ? {} : { peggedUSD: 0 }) : { peggedUSD: index === 7 ? 5e6 : 20e6 },
+    }));
+    const rows = assets.map((asset) => ({ stablecoin_id: asset.id, score: 65, band: "ALERT", signals_json: "{}", computed_at: at }));
+    const ctx = ctxFor([
+      ...makePublishedDewsTables(rows),
+      { match: "FROM stress_signal_history WHERE snapshot_date = ?", rows: rows.map((row) => ({ ...row, band: "WATCH", score: 25 })) },
+    ]);
+    ctx.trackedStablecoinAssets = assets;
+    ctx.trackedStablecoinIds = new Set(assets.map((asset) => asset.id));
+    ctx.stablecoinAssetById = new Map(assets.map((asset) => [asset.id, asset]));
+    const dewsStress = (await collectDewsStress(ctx)).value!;
+    expect(dewsStress).toMatchObject({
+      bandCounts: { alert: 9 }, alertPlusMcapUsd: 145e6, bandChangeCount: 9,
+      alertPlusSupplyCoverage: { complete: !missingSupply, observedCount: missingSupply ? 8 : 9, unavailableCount: missingSupply ? 1 : 0 },
+    });
+    expect(dewsStress.elevatedCoins).toHaveLength(5);
+    expect(dewsStress.bandChanges).toHaveLength(5);
+    for (const limit of [0, 1, 5]) {
+      const input: DigestInputData = {
+        ...BASE_DIGEST_INPUT, activeDepegCount: 0, topDepegs: [],
+        dewsStress: { ...dewsStress, elevatedCoins: dewsStress.elevatedCoins.slice(0, limit), bandChanges: dewsStress.bandChanges.slice(0, limit) },
+      };
+      expect(classifyRegime(input)).toBe("TENSION");
+      expect(buildRiskTape(input).find((item) => item.id === "risk-tape:dews")?.detail).toContain("9 band changes");
+      expect(buildUserPrompt(input)).toContain("Full band-change count (last 24h): 9");
+      expect(buildUserPrompt(input)).toContain(missingSupply ? "ALERT+ known supply subtotal: $145.00M" : "ALERT+ supply: $145.00M");
+      const breadth = buildEditorialCandidates(input, null).find((candidate) => candidate.id === "dews:alert-plus-breadth");
+      expect(breadth?.impactScore).toBe(0.1);
+      expect(breadth?.headlineFacts).toContain(missingSupply ? "$145.00M ALERT+ known supply subtotal (incomplete coverage)" : "$145.00M ALERT+ market cap");
+    }
   });
 });

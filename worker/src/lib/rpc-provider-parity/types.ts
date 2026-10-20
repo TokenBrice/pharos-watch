@@ -60,7 +60,7 @@ export const RPC_PARITY_LATEST_FRESHNESS_VERDICTS = ["fresh", "stale", "indeterm
 export const RPC_PARITY_LATEST_FRESHNESS_REASONS = [
   "matched-numeric-block", "no-bracket-match", "bracket-too-wide", "head-regressed", "step-failed",
   "served-block-in-range", "served-block-behind", "served-block-ahead", "bracket-reorg", "moving-bracket-no-match",
-  "sentinel-unavailable", "reference-unavailable",
+  "sentinel-unavailable", "reference-unavailable", "bracket-ancestry-gap",
 ] as const;
 
 /** Append only: v3–v5 persist method indices (Multicall3=0, state bracket=1, ArbSys=2). */

@@ -3,6 +3,8 @@ import {
   CLIENT_TRACKED_STABLECOINS,
 } from "../stablecoins/client-registry";
 import { round1 } from "../math";
+import { stableJsonStringifyV1 } from "../stable-json";
+import { SelectorCanonicalSourceEvidenceSchema, type SelectorCanonicalSourceEvidence } from "./types";
 import { buildRelaxableConstraints } from "./output-helpers";
 import {
   COVERAGE_SPARSE_FRACTION,
@@ -37,6 +39,7 @@ import type {
 } from "./types";
 
 const SUPPORTED_ENGINE_VERSIONS = new Set<string>(SELECTOR_SNAPSHOT_SUPPORTED_ENGINE_VERSIONS);
+const CANONICAL_SOURCES_SCHEMA = SelectorCanonicalSourceEvidenceSchema.array().length(1);
 
 /**
  * Engine versions whose weight vectors, component projection, and critical
@@ -61,6 +64,7 @@ const CURRENT_GENERATION_ENGINE_VERSIONS = new Set<string>([
   "selector-v2.6",
   "selector-v2.7",
   "selector-v2.8",
+  "selector-v2.9",
   SELECTOR_VERSION,
 ]);
 
@@ -82,6 +86,7 @@ const KNOWN_MISSING_SIGNALS = new Set([
   "liquidityScore",
   "every-signal-null",
   "recommendedSource",
+  "insufficient-control-evidence",
 ]);
 /**
  * Critical-component sets belong to the engine version that produced a
@@ -479,6 +484,17 @@ function projectMethodologyVersions(
   };
 }
 
+/** Preserve the exact admitted source evidence, never silently strip its fields. */
+export function normalizeSelectorCanonicalSources(value: unknown): SelectorCanonicalSourceEvidence[] | null {
+  const parsed = CANONICAL_SOURCES_SCHEMA.safeParse(value);
+  if (!parsed.success) return null;
+  try {
+    return stableJsonStringifyV1(value) === stableJsonStringifyV1(parsed.data) ? parsed.data : null;
+  } catch {
+    return null;
+  }
+}
+
 export function normalizeSelectorSnapshot(snapshot: SelectorOutput): SelectorOutput | null {
   if (!SUPPORTED_ENGINE_VERSIONS.has(snapshot.engineVersion) || !/^[0-9a-f]{64}$/.test(snapshot.datasetHash)) {
     return null;
@@ -525,7 +541,8 @@ export function normalizeSelectorSnapshot(snapshot: SelectorOutput): SelectorOut
     });
   }
   if (hasDuplicates(skippedForCoverage.map((entry) => entry.id))) return null;
-  const coverageExclusionCount = exclusionSummary.find((entry) => entry.reason === "coverage-too-thin")?.count ?? 0;
+  const coverageExclusionCount = exclusionSummary.reduce((total, entry) =>
+    total + (entry.reason === "coverage-too-thin" || entry.reason === "insufficient-control-evidence" ? entry.count : 0), 0);
   if (coverageExclusionCount !== skippedForCoverage.length) return null;
 
   const closestSurvivors = [];

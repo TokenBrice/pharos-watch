@@ -27,7 +27,7 @@ const credentialLifecycle: ApiKeyAuditEntry = {
 };
 
 describe("operational history model", () => {
-  it("merges newest-first and deduplicates the same cross-source credential lifecycle event", () => {
+  it("orders both source records newest-first without inferring a shared credential event", () => {
     const laterAction: AdminActionAuditEntry = {
       ...adminLifecycle,
       id: 2,
@@ -38,21 +38,77 @@ describe("operational history model", () => {
     };
     const view = buildOperationalActivityView([adminLifecycle, laterAction], [credentialLifecycle]);
 
-    expect(view).toMatchObject({ rawEntryCount: 3, deduplicatedCount: 1 });
-    expect(view.entries).toHaveLength(2);
+    expect(view.rawEntryCount).toBe(3);
+    expect(view.entries).toHaveLength(3);
     expect(view.entries.map((entry) => entry.id)).toEqual([
       "admin-action:2",
-      "combined:admin-action:1:credential-audit:11",
+      "credential-audit:11",
+      "admin-action:1",
     ]);
     expect(view.entries[1]).toMatchObject({
-      sources: ["admin-action", "credential-audit"],
+      sources: ["credential-audit"],
       target: "Partner reader (API key 7)",
+      outcome: "recorded",
+      detail: { name: "Partner reader", secret: "[redacted]" },
+    });
+    expect(view.entries[2]).toMatchObject({
+      sources: ["admin-action"],
       outcome: "ok",
+      detail: { apiKeyId: 7, path: "/api/api-keys/7/rotate", token: "[redacted]" },
     });
-    expect(view.entries[1].detail).toEqual({
-      adminAction: { apiKeyId: 7, path: "/api/api-keys/7/rotate", token: "[redacted]" },
-      credentialAudit: { name: "Partner reader", secret: "[redacted]" },
+  });
+
+  it.each([false, true])("keeps a failed retry apart from the successful receipt (reversed=%s)", (reversed) => {
+    const failed: AdminActionAuditEntry = {
+      ...adminLifecycle, id: 2, at: 1_004, result: "error", httpStatus: 400,
+      details: { apiKeyId: 7, status: "failed" },
+    };
+    const attempts = [adminLifecycle, failed];
+    const view = buildOperationalActivityView(reversed ? attempts.reverse() : attempts, [
+      { ...credentialLifecycle, createdAt: 1_000 },
+    ]);
+    expect(view.entries.map(({ id, outcome, sources }) => ({ id, outcome, sources }))).toEqual([
+      { id: "admin-action:2", outcome: "error", sources: ["admin-action"] },
+      { id: "admin-action:1", outcome: "ok", sources: ["admin-action"] },
+      { id: "credential-audit:11", outcome: "recorded", sources: ["credential-audit"] },
+    ]);
+  });
+
+  it.each([false, true])("retains ambiguous nearby successes regardless of enumeration (reversed=%s)", (reversed) => {
+    const attempts = [adminLifecycle, { ...adminLifecycle, id: 2, at: 1_001 }];
+    const receipts = [credentialLifecycle, { ...credentialLifecycle, id: 12, createdAt: 1_004 }];
+    const view = buildOperationalActivityView(
+      reversed ? attempts.reverse() : attempts,
+      reversed ? receipts.reverse() : receipts,
+    );
+    expect(view.entries.map((entry) => entry.id)).toEqual([
+      "credential-audit:12", "credential-audit:11", "admin-action:2", "admin-action:1",
+    ]);
+    expect(view.entries.map((entry) => entry.outcome)).toEqual(["recorded", "recorded", "ok", "ok"]);
+  });
+
+  it.each([
+    { status: "unknown", executionCertainty: "unknown" },
+    { status: "failed", reason: "post_write_readback_failed" },
+  ])("does not correlate unknown or post-write errors with durable mutation evidence: %j", (details) => {
+    const view = buildOperationalActivityView(
+      [{ ...adminLifecycle, result: "error", httpStatus: 503, details }],
+      [{ ...credentialLifecycle, createdAt: adminLifecycle.at }],
+    );
+    expect(view.entries).toHaveLength(2);
+    expect(view.entries[0]).toMatchObject({
+      id: "admin-action:1", outcome: details.status === "unknown" ? "unknown" : "error", httpStatus: 503,
     });
+    expect(view.entries[1]).toMatchObject({
+      id: "credential-audit:11", outcome: "recorded", httpStatus: null,
+    });
+  });
+
+  it("keeps even an exact-time single pair separate without shared durable identity", () => {
+    const view = buildOperationalActivityView([adminLifecycle], [
+      { ...credentialLifecycle, actor: adminLifecycle.actor, createdAt: adminLifecycle.at },
+    ]);
+    expect(view.entries.map((entry) => entry.sources)).toEqual([["admin-action"], ["credential-audit"]]);
   });
 
   it("redacts normalized keys and array strings through both public adapters", () => {
@@ -62,7 +118,7 @@ describe("operational history model", () => {
       [{ ...credentialLifecycle, detail }],
     );
     const safe = { "Access_Token": "[redacted]", "api_key_id": 7, values: ["[redacted]", "/api/status"] };
-    expect(view.entries[0].detail).toEqual({ adminAction: safe, credentialAudit: safe });
+    expect(view.entries.map((entry) => entry.detail)).toEqual([safe, safe]);
   });
 
   it("preserves canonical unknown outcomes instead of flattening them to errors", () => {

@@ -36,6 +36,8 @@ function buildV9ExpectedDependencyMeta(
     return {
       updatedAt: null,
       ageSeconds: null,
+      freshBudgetSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC,
+      generationId: null,
       status: "unavailable",
       reason: activeSource.reason,
     };
@@ -46,6 +48,8 @@ function buildV9ExpectedDependencyMeta(
     return {
       updatedAt,
       ageSeconds,
+      freshBudgetSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC,
+      generationId: activeSource.snapshot.safetyScoreIdentity.publicationGenerationId,
       status: "degraded",
       reason: "publication-held",
     };
@@ -57,6 +61,8 @@ function buildV9ExpectedDependencyMeta(
     return {
       updatedAt,
       ageSeconds,
+      freshBudgetSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC,
+      generationId: activeSource.snapshot.safetyScoreIdentity.publicationGenerationId,
       status: "stale",
       reason: "stale-cache",
     };
@@ -64,6 +70,8 @@ function buildV9ExpectedDependencyMeta(
   return {
     updatedAt,
     ageSeconds,
+    freshBudgetSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC,
+    generationId: activeSource.snapshot.safetyScoreIdentity.publicationGenerationId,
     status: "fresh",
   };
 }

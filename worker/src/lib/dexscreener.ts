@@ -6,6 +6,7 @@
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { fetchWithRetry } from "./fetch-retry";
 import { DS_CHAIN_MAP } from "@shared/lib/chains";
+import { canonicalExitRouteScopedId } from "@shared/types/exit-route-identity";
 import { RATE_LIMITS } from "./rate-limit";
 import { sleepWithSignal } from "./abort";
 import { USER_AGENT } from "./constants";
@@ -52,6 +53,7 @@ export interface DsTrackedTokenPrice {
 export interface DsFetchPoolsResult {
   ok: boolean;
   pairs: DsPair[];
+  degraded?: boolean;
   status?: number;
   contentType?: string;
   error?: string;
@@ -163,6 +165,24 @@ export function getDsPriceForSide(pair: DsPair, side: DsTrackedTokenPrice["side"
   };
 }
 
+export function getDsTrackedTokenSide(
+  pair: DsPair,
+  trackedAddress: string,
+  chain: string,
+): DsTrackedTokenPrice["side"] {
+  if (!DS_CHAIN_MAP[chain] || pair.chainId !== DS_CHAIN_MAP[chain]) return null;
+  const tracked = canonicalExitRouteScopedId(chain, trackedAddress);
+  if (!tracked) return null;
+  if (tracked === canonicalExitRouteScopedId(chain, pair.baseToken.address)) return "base";
+  if (tracked === canonicalExitRouteScopedId(chain, pair.quoteToken.address)) return "quote";
+  return null;
+}
+
+export function getDsTrackedTokenSymbol(pair: DsPair, trackedAddress: string, chain: string): string | null {
+  const side = getDsTrackedTokenSide(pair, trackedAddress, chain);
+  return side === null ? null : pair[side === "base" ? "baseToken" : "quoteToken"].symbol;
+}
+
 /**
  * Resolve the tracked token side and, when possible, its USD price.
  *
@@ -173,11 +193,9 @@ export function getDsPriceForSide(pair: DsPair, side: DsTrackedTokenPrice["side"
 export function getDsTrackedTokenPriceUsd(
   pair: DsPair,
   trackedAddress: string,
+  chain: string,
 ): DsTrackedTokenPrice {
-  const tracked = trackedAddress.toLowerCase();
-  const baseAddress = pair.baseToken.address.toLowerCase();
-  const quoteAddress = pair.quoteToken.address.toLowerCase();
-  return getDsPriceForSide(pair, tracked === baseAddress ? "base" : tracked === quoteAddress ? "quote" : null);
+  return getDsPriceForSide(pair, getDsTrackedTokenSide(pair, trackedAddress, chain));
 }
 
 async function fetchDsPoolsWithStatus(
@@ -230,6 +248,17 @@ async function fetchDsPoolsWithStatus(
         status,
         contentType,
         error: "DexScreener payload contained no valid pair rows",
+      };
+    }
+    const pairs = parsedPairs.filter((pair) => pair.chainId === dsChain);
+    if (pairs.length !== parsedPairs.length) {
+      return {
+        ok: pairs.length > 0,
+        degraded: true,
+        pairs,
+        status,
+        contentType,
+        error: `DexScreener payload contained pair rows outside requested chain ${dsChain}`,
       };
     }
     return { ok: true, pairs: parsedPairs };

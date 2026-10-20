@@ -150,7 +150,7 @@ describe("mergeStagedPools", () => {
       source: "cg_onchain",
       tvl_usd: 100_000,
       price_usd: 0.998,
-      refreshed_at: now,
+      refreshed_at: now - 6 * 3600,
     });
     const metrics = new Map();
 
@@ -172,10 +172,12 @@ describe("mergeStagedPools", () => {
       tvlUsd: 200_000,
       price: 0.998,
       priceSource: "cg_onchain",
+      priceObservedAt: now - 6 * 3600,
       priceEvidenceTvlUsd: 100_000,
     });
     expect(result.priceObservations.get("usdt-tether")?.[0]).toMatchObject({
       sourceFamily: "cg_onchain",
+      observedAt: now - 6 * 3600,
     });
   });
 
@@ -860,10 +862,10 @@ describe("mergeStagedPools", () => {
     expect(metrics.size).toBe(0);
   });
 
-  it.each([null, "{}", JSON.stringify({ identityReviewVersion: SLIPSTREAM_POOL_IDENTITY_REVIEW_VERSION })])("only replays factory-reviewed Slipstream writeback: %s", async (raw_json) => {
+  it.each([null, "{}", "{", JSON.stringify({ nested: { identityReviewVersion: SLIPSTREAM_POOL_IDENTITY_REVIEW_VERSION } }), JSON.stringify({ identityReviewVersion: SLIPSTREAM_POOL_IDENTITY_REVIEW_VERSION })])("only replays factory-reviewed Slipstream writeback: %s", async (raw_json) => {
     const metrics = new Map();
     const result = await mergeStagedPools(createMockDb([makeStagedPoolRow({ source: "direct_api", protocol: "aerodrome", pool_type: "aerodrome-slipstream-1bp", raw_json })]), metrics as never, makeKnownPoolIndex(), 1710000000, new Map());
-    expect(result.mergedCount).toBe(raw_json?.includes(SLIPSTREAM_POOL_IDENTITY_REVIEW_VERSION) ? 1 : 0);
+    expect(result.mergedCount).toBe(raw_json === JSON.stringify({ identityReviewVersion: SLIPSTREAM_POOL_IDENTITY_REVIEW_VERSION }) ? 1 : 0);
   });
 
   it("retains exact pool attribution for the ten reviewed cross-asset fixtures", async () => {

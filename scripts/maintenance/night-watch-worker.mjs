@@ -3,6 +3,7 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { isDeepStrictEqual } from "node:util";
 import { register as registerCommonJs } from "tsx/cjs/api";
 import { register as registerEsm } from "tsx/esm/api";
 import { collectWorkerHttpProbes } from "../lib/worker-http-probes.mts";
@@ -76,8 +77,9 @@ function usage() {
     "  --output <path>              Markdown report path (default: agents/night-watch-report.md)",
     "  --evidence-json <path>       JSON evidence path (default: agents/night-watch-evidence.json)",
     "  --checkpoint-jsonl <path>    Atomic resumable sample log (default: agents/night-watch-evidence.jsonl)",
-    "  --no-resume                  Ignore matching samples in an existing checkpoint",
-    "  --fixture <path>             Render/analyze an existing evidence JSON instead of collecting",
+    "  --no-resume                  Recollect matching samples; existing checkpoint is still identity-checked",
+    "                               Move/rename legacy or mismatched checkpoints, or choose a new path",
+    "  --fixture <path>             Render saved scope/window; collection flags are not accepted",
     "  --dry-run                   Print preview (or fixture report) without writes or network/D1 reads",
     "  --local                     Use local D1 for --include-d1",
     "  --cf-access-client-id <v>    Cloudflare Access service token client id (or CF_ACCESS_CLIENT_ID)",
@@ -138,12 +140,19 @@ export function parseArgs(argv, now = new Date()) {
       : kind === "iso" ? parseIso(value, `--${flag}`) : value;
   }
 
+  if (args.fixturePath) {
+    const renderingFlags = new Set(["fixture", "output", "evidence-json", "checkpoint-jsonl", "dry-run", "json", "cf-access-client-id", "cf-access-client-secret"]);
+    const collectionFlag = Object.keys(values).find((flag) => !renderingFlags.has(flag));
+    if (collectionFlag) throw new CliUsageError(`--fixture preserves collection scope and window; --${collectionFlag} is not supported`);
+  }
   if (args.cycles !== 1 && args.cycles !== 2) throw new CliUsageError("--cycles must be 1 or 2");
   if (args.includeStatusHistory && !args.includeStatus) args.includeStatus = true;
   const startMs = new Date(args.start).getTime();
   const end = args.end ?? new Date(startMs + args.cycles * CYCLE_MS).toISOString();
   if (new Date(end).getTime() <= startMs) throw new CliUsageError("--end must be after --start");
-  return { ...args, end };
+  return Object.defineProperty({ ...args, end }, "explicitOptions", {
+    value: NIGHT_WATCH_OPTION_SCHEMA.filter(([flag]) => values[flag] !== undefined).map(([, key]) => key),
+  });
 }
 
 function ensureParent(path) {
@@ -338,7 +347,7 @@ export function buildNightWatchCoverage(scheduleMatrix, snapshots, window) {
     return plan.jobChains.flat().map((jobId) => {
       const definition = jobDefinitionById.get(jobId) ?? {};
       const pathKey = `${plan.scheduleKey}:${jobId}`;
-      const pathRuns = runs.filter((run) => run.job === jobId && dueSet.has(Number(run.slot_started_at)));
+      const pathRuns = runs.filter((run) => run.job === jobId && run.schedule_key === plan.scheduleKey && dueSet.has(Number(run.slot_started_at)));
       const latestRun = [...pathRuns].sort((left, right) => Number(right.started_at ?? 0) - Number(left.started_at ?? 0))[0];
       const statusRun = statusCrons[jobId]?.runs?.[0];
       const statusInWindow = epochInWindow(statusRun?.startedAt, startSec, endSec);
@@ -454,7 +463,10 @@ export function buildNightWatchCoverage(scheduleMatrix, snapshots, window) {
     });
 
   const sharedPaths = jobPaths.filter((path) => (scheduleMatrix.sharedJobPaths?.[path.job]?.length ?? 0) > 1);
-  return { jobs, jobPaths, sharedPaths, slots: slotsByKey, budgetOnly };
+  const unattributedRuns = runs.filter((run) => !jobPaths.some((path) =>
+    path.job === run.job && path.scheduleKey === run.schedule_key
+      && dueByScheduleKey.get(path.scheduleKey)?.includes(Number(run.slot_started_at))));
+  return { jobs, jobPaths, sharedPaths, slots: slotsByKey, budgetOnly, unattributedRuns };
 }
 
 function summarizeFindings(snapshots, statusPayload, coverage, args) {
@@ -642,9 +654,29 @@ function writeTextAtomic(path, contents) {
   renameSync(temporaryPath, absolutePath);
 }
 
-export function loadNightWatchCheckpoint(path, window) {
+export function createNightWatchCollectionIdentity(options) {
+  return {
+    database: options.database,
+    remote: options.remote,
+    apiOrigin: new URL(options.apiUrl).origin,
+    adminApiOrigin: new URL(options.adminApiUrl).origin,
+    includeD1: options.includeD1,
+    includeStatus: options.includeStatus,
+    includeStatusHistory: options.includeStatusHistory,
+    includeWorkerTail: options.includeWorkerTail,
+    start: options.start,
+    end: options.end,
+    cycles: options.cycles,
+    intervalMinutes: options.intervalMinutes,
+    sampleLimit: options.sampleLimit,
+    metadataBytes: options.metadataBytes,
+  };
+}
+
+export function loadNightWatchCheckpoint(path, options) {
   const absolutePath = resolve(ROOT_DIR, path);
   if (!existsSync(absolutePath)) return [];
+  const collectionIdentity = createNightWatchCollectionIdentity(options);
   const records = [];
   for (const [index, line] of readFileSync(absolutePath, "utf8").split(/\r?\n/).entries()) {
     if (!line.trim()) continue;
@@ -654,9 +686,10 @@ export function loadNightWatchCheckpoint(path, window) {
     } catch {
       throw new Error(`Invalid Night Watch checkpoint JSON at line ${index + 1}`);
     }
-    if (record.version === 1 && record.windowStart === window.start && record.windowEnd === window.end && record.snapshot) {
-      records.push(record);
+    if (record.version !== 2 || !isDeepStrictEqual(record.collectionIdentity, collectionIdentity) || !record.snapshot) {
+      throw new Error(`Night Watch checkpoint identity mismatch at line ${index + 1}; retain this evidence and choose a new --checkpoint-jsonl path (render saved evidence JSON with --fixture)`);
     }
+    records.push(record);
   }
   return records;
 }
@@ -703,6 +736,7 @@ export function renderNightWatchMarkdown(evidence) {
     "## Literal Terminal Status And Output Evidence",
     "",
     renderWorkerEvidenceTable(analysis.runEvidence ?? summarizeWorkerEvidence([])),
+    `Unattributed in-window cron rows: ${(analysis.coverage.unattributedRuns ?? []).length} (retained in literal counts).`,
     "",
     "## Coverage Matrix",
     "",
@@ -806,24 +840,28 @@ async function collectEvidence(args) {
     const fixture = JSON.parse(readFileSync(resolve(ROOT_DIR, args.fixturePath), "utf8"));
     return {
       ...fixture,
-      options: { ...(fixture.options ?? {}), ...args },
+      options: {
+        ...(fixture.options ?? {}),
+        ...Object.fromEntries(args.explicitOptions.map((key) => [key, args[key]])),
+      },
       scheduleMatrix: fixture.scheduleMatrix ?? scheduleMatrix,
       snapshots: fixture.snapshots ?? [],
       generatedAt: fixture.generatedAt ?? new Date().toISOString(),
     };
   }
+  const collectionIdentity = createNightWatchCollectionIdentity(args);
   if (args.dryRun) {
     return {
       generatedAt: new Date().toISOString(),
       options: args,
+      collectionIdentity,
       scheduleMatrix,
       snapshots: [],
     };
   }
 
-  const checkpointRecords = args.resume
-    ? loadNightWatchCheckpoint(args.checkpointJsonlPath, { start: args.start, end: args.end })
-    : [];
+  const savedRecords = loadNightWatchCheckpoint(args.checkpointJsonlPath, args);
+  const checkpointRecords = args.resume ? savedRecords : [];
   const snapshots = checkpointRecords.map((record) => record.snapshot);
   const completedTargets = new Set(checkpointRecords.map((record) => record.targetAt));
   const startMs = new Date(args.start).getTime();
@@ -841,9 +879,8 @@ async function collectEvidence(args) {
     const checkpointedSnapshot = { ...snapshot, watchTargetAt: targetAt };
     snapshots.push(checkpointedSnapshot);
     checkpointRecords.push({
-      version: 1,
-      windowStart: args.start,
-      windowEnd: args.end,
+      version: 2,
+      collectionIdentity,
       targetAt,
       snapshot: checkpointedSnapshot,
     });
@@ -853,6 +890,7 @@ async function collectEvidence(args) {
   return {
     generatedAt: new Date().toISOString(),
     options: args,
+    collectionIdentity,
     scheduleMatrix,
     snapshots,
   };

@@ -37,6 +37,12 @@ export function makeDb(params: {
     : null;
   return mockD1([
     {
+      match: sqlMarker("public-status-boundary"),
+      rows: [],
+      first: null,
+      allowUnused: true,
+    },
+    {
       match: sqlMarker("public-status-transitions"),
       rows: params.publicRows ?? [],
       allowUnused: true,

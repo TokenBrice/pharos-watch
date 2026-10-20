@@ -170,6 +170,7 @@ export function useSelector(
       stressData: stressSignals.data ?? null,
       dexData: dexLiquidity.data ?? null,
       yieldData: yieldRankings.data ?? null,
+      yieldAgeAssessedAt: yieldRankings.dataUpdatedAt,
       bluechipData: bluechipRatings.data ?? null,
       now: selectorTimestamp,
     });
@@ -185,6 +186,7 @@ export function useSelector(
     stablecoins.data,
     stressSignals.data,
     yieldRankings.data,
+    yieldRankings.dataUpdatedAt,
   ]);
 
   const engineResult = useMemo<SelectorEngineResult>(() => {

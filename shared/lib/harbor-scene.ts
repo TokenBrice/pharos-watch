@@ -130,16 +130,16 @@ export interface HarborScene {
   unattributed: HarborBargeVessel | null;
   /** Berth id for every chain id in the response (tail-pooled chains map to the tail barge). */
   berthOf: Record<string, string>;
-  globalTotalUsd: number;
-  chainAttributedTotalUsd: number;
-  unattributedTotalUsd: number;
+  globalTotalUsd: number | null;
+  chainAttributedTotalUsd: number | null;
+  unattributedTotalUsd: number | null;
   /** Over-attribution share of global supply, when chain rows exceed global supply. */
   overAttributionRatio: number | null;
   /** True when any container stacks above the deck tier. */
   tiered: boolean;
   retained: boolean;
   updatedAt: number;
-  conservation: { ok: boolean; drawnUsd: number; expectedUsd: number };
+  conservation: { ok: boolean | null; drawnUsd: number; expectedUsd: number | null };
 }
 
 export type HarborSceneInput = Pick<
@@ -287,7 +287,10 @@ function harborWake(chain: Pick<HarborChainInput, "change7d" | "change7dPct">): 
 }
 
 function chainAccessibleName(chain: HarborChainInput, flag: HarborFlag, wake: HarborWake): string {
-  const parts = [chain.name, formatCompactUsd(chain.totalUsd), `${(chain.dominanceShare * 100).toFixed(1)}% of tracked supply`];
+  const shareLabel = chain.dominanceShare == null
+    ? "global share unavailable"
+    : `${(chain.dominanceShare * 100).toFixed(1)}% of tracked supply`;
+  const parts = [chain.name, formatCompactUsd(chain.totalUsd), shareLabel];
   parts.push(flag.kind === "band" ? `Chain Health ${flag.band}${flag.score == null ? "" : ` ${flag.score}`}` : "Chain Health not rated");
   if (wake.kind === "wake") parts.push(`7d ${formatSignedPercent(wake.pct, 2)}`);
   else if (wake.kind === "new") parts.push("7d new supply");
@@ -370,8 +373,8 @@ export function buildHarborScene(input: HarborSceneInput): HarborScene {
   }
   const pooledUsd = pooled.reduce((sum, chain) => sum + finitePositive(chain.totalUsd), 0);
   const tail = pooled.length > 0 ? bargeVessel("tail", pooledUsd, rank++, pooled) : null;
-  const unattributedUsd = finitePositive(input.unattributedTotalUsd);
-  const unattributed = unattributedUsd > 0 ? bargeVessel("unattributed", unattributedUsd, rank++, []) : null;
+  const unattributedUsd = input.unattributedTotalUsd == null ? null : finitePositive(input.unattributedTotalUsd);
+  const unattributed = unattributedUsd != null && unattributedUsd > 0 ? bargeVessel("unattributed", unattributedUsd, rank++, []) : null;
 
   const vessels: HarborVessel[] = [...ships, ...craft, ...(tail ? [tail] : []), ...(unattributed ? [unattributed] : [])];
   const berthOf: Record<string, string> = {};
@@ -382,8 +385,12 @@ export function buildHarborScene(input: HarborSceneInput): HarborScene {
     (sum, vessel) => sum + vessel.containers.reduce((acc, c) => acc + c.length, 0) * HARBOR_UNIT_USD,
     0,
   );
-  const expectedUsd = finitePositive(input.chainAttributedTotalUsd) + unattributedUsd;
-  const discrepancy = input.attributionDiscrepancyUsd ?? input.chainAttributedTotalUsd - input.globalTotalUsd;
+  const expectedUsd = input.chainAttributedTotalUsd != null && unattributedUsd != null
+    ? input.chainAttributedTotalUsd + unattributedUsd : null;
+  const discrepancy = input.attributionDiscrepancyUsd === undefined
+    ? input.chainAttributedTotalUsd != null && input.globalTotalUsd != null
+      ? input.chainAttributedTotalUsd - input.globalTotalUsd : null
+    : input.attributionDiscrepancyUsd;
 
   return {
     vessels,
@@ -395,11 +402,17 @@ export function buildHarborScene(input: HarborSceneInput): HarborScene {
     globalTotalUsd: input.globalTotalUsd,
     chainAttributedTotalUsd: input.chainAttributedTotalUsd,
     unattributedTotalUsd: unattributedUsd,
-    overAttributionRatio: discrepancy > 0 && input.globalTotalUsd > 0 ? discrepancy / input.globalTotalUsd : null,
+    overAttributionRatio: discrepancy != null && discrepancy > 0 && input.globalTotalUsd != null && input.globalTotalUsd > 0
+      ? discrepancy / input.globalTotalUsd : null,
     tiered: vessels.some((vessel) => vessel.containers.some((c) => c.tier > 0)),
     retained: isSupplyRetained(input._meta),
     updatedAt: input.updatedAt,
-    conservation: { ok: Math.abs(drawnUsd - expectedUsd) <= CONSERVATION_TOLERANCE_USD, drawnUsd, expectedUsd },
+    conservation: {
+      ok: expectedUsd != null && Number.isFinite(expectedUsd)
+        ? Math.abs(drawnUsd - expectedUsd) <= CONSERVATION_TOLERANCE_USD : null,
+      drawnUsd,
+      expectedUsd,
+    },
   };
 }
 

@@ -832,25 +832,26 @@ function textHasGuardedKeyword(text: string): boolean {
   );
 }
 
-function commandHasOpaqueGuardedConstruct(analysis: ShellCommandAnalysis): boolean {
-  const hasOpaqueHereDocBody = analysis.hereDocBodies.some(
-    (body) => (body.includes("$(") || body.includes("`")) && textHasGuardedKeyword(body),
+function commandHasOpaqueGuardedConstruct(analysis: ShellCommandAnalysis, depth = 0): boolean {
+  const hasOpaqueHereDocBody = analysis.hereDocs.some(
+    ({ expansionText }) => expansionText !== null &&
+      (expansionText.includes("$(") || expansionText.includes("`")) && textHasGuardedKeyword(expansionText),
   );
   // An unterminated heredoc means the scanner and the shell disagree about
   // which lines execute; never let that ambiguity hide a guarded command.
   const hasUnresolvedHereDocBody =
     analysis.unresolvedHereDocBody !== "" && textHasGuardedKeyword(analysis.unresolvedHereDocBody);
-  const hasGuardedPipedInput = analysis.pipedShellInputs.some((input) => {
-    if (input.script === null) return textHasGuardedKeyword(input.text);
+  const hasGuardedStdinInput = analysis.shellStdinInputs.some((input) => {
+    if (input.script === null || depth >= 3) return textHasGuardedKeyword(input.text);
     const scriptAnalysis = analyzeShellCommand(input.script, analysis.cwd);
     return scriptAnalysis.invocations.some(isGuardedShellInvocation) ||
       commandHasUnresolvedShellIndirection(scriptAnalysis) ||
-      commandHasOpaqueGuardedConstruct(scriptAnalysis);
+      commandHasOpaqueGuardedConstruct(scriptAnalysis, depth + 1);
   });
-  return hasOpaqueHereDocBody || hasUnresolvedHereDocBody || hasGuardedPipedInput || (
+  return hasOpaqueHereDocBody || hasUnresolvedHereDocBody || hasGuardedStdinInput || (
     (
       analysis.hasOpaqueSyntax ||
-      analysis.hasPipedShell ||
+      analysis.hasShellStdin ||
       analysis.hasXargsShell ||
       analysis.hasBackgroundSeparator
     ) &&

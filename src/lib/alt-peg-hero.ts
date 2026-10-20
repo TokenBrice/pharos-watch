@@ -1,6 +1,8 @@
 import { PEG_CHART_COLORS, PEG_LABELS_SHORT } from "@shared/lib/classification";
-import { getCoreNonUsdPeg } from "@shared/lib/alt-peg-snapshot";
+import { buildNonUsdMarketSnapshot, getCoreNonUsdPeg, type NonUsdPegEntry } from "@shared/lib/alt-peg-snapshot";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
+import { CLIENT_ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
+import { CLIENT_CORE_AGGREGATE_ACTIVE_IDS } from "@shared/lib/stablecoins/aggregate-client-registry";
 import type { PegCurrency, StablecoinData } from "@shared/types";
 import { PEG_ANCHORS } from "@/lib/alt-peg-emblems";
 import { arrangeClusterCoins, resolvePackedCoinOverlaps, type PackingInput } from "@/lib/alt-peg-packing";
@@ -28,6 +30,7 @@ export interface PlacedCoin extends HeroCoin {
 export interface PegCluster {
   peg: PegCurrency;
   rank?: number;
+  cohort: NonUsdPegEntry;
   anchor: { x: number; y: number };
   colorHex: string;
   coins: readonly PlacedCoin[];
@@ -42,6 +45,7 @@ export interface ShelfGroup {
   peg: PegCurrency;
   label: string;
   rank?: number;
+  cohort: NonUsdPegEntry;
   colorHex: string;
   coins: readonly PlacedCoin[];
 }
@@ -51,12 +55,10 @@ export interface PegDiversityHero {
   shelfGroups: readonly ShelfGroup[];
 }
 
-function resolveLogo(coin: StablecoinData): string | undefined {
-  return getLogoSrc(logosById, coin.id);
-}
-
-function toHeroCoin(coin: StablecoinData, peg: PegCurrency): HeroCoin | null {
-  const logoSrc = resolveLogo(coin);
+function toHeroCoin(id: string, peg: PegCurrency, observed?: StablecoinData): HeroCoin | null {
+  const coin = CLIENT_ACTIVE_META_BY_ID.get(id);
+  const logoSrc = getLogoSrc(logosById, id);
+  if (!coin) return null;
   if (!logoSrc) return null;
   return {
     id: coin.id,
@@ -65,11 +67,12 @@ function toHeroCoin(coin: StablecoinData, peg: PegCurrency): HeroCoin | null {
     href: buildStablecoinUrl(coin.id),
     logoSrc,
     pegCurrency: peg,
-    marketCap: getCirculatingRawOrNull(coin),
+    marketCap: observed ? getCirculatingRawOrNull(observed) : null,
   };
 }
 
-function placeFiatCluster(peg: PegCurrency, coins: HeroCoin[], rank?: number): PegCluster | null {
+function placeFiatCluster(cohort: NonUsdPegEntry, coins: HeroCoin[], rank?: number): PegCluster | null {
+  const { peg } = cohort;
   const anchor = PEG_ANCHORS[peg];
   if (!anchor) return null;
   if (coins.length === 0) return null;
@@ -89,18 +92,21 @@ function placeFiatCluster(peg: PegCurrency, coins: HeroCoin[], rank?: number): P
   return {
     peg,
     rank,
+    cohort,
     anchor,
     colorHex: PEG_CHART_COLORS[peg]?.hex ?? "#64748b",
     coins: placed,
   };
 }
 
-function placeShelfGroup(peg: PegCurrency, coins: HeroCoin[], rank?: number): ShelfGroup {
+function placeShelfGroup(cohort: NonUsdPegEntry, coins: HeroCoin[], rank?: number): ShelfGroup {
+  const { peg } = cohort;
   const byCap = compareFiniteDesc<HeroCoin>((coin) => coin.marketCap ?? Number.NaN);
   return {
     peg,
     label: PEG_LABELS_SHORT[peg] ?? peg,
     rank,
+    cohort,
     colorHex: PEG_CHART_COLORS[peg]?.hex ?? "#64748b",
     // Shelf emblems sit centred in their own slot, so the slot owns position.
     coins: [...coins].sort(byCap).map((coin) => ({
@@ -110,11 +116,6 @@ function placeShelfGroup(peg: PegCurrency, coins: HeroCoin[], rank?: number): Sh
       sizePx: coinEmblemSize(coin.marketCap, { ceil: SHELF_SIZE_CEIL }),
     })),
   };
-}
-
-function knownCap(coins: readonly HeroCoin[]): number | null {
-  const observed = coins.filter((coin) => coin.marketCap !== null);
-  return observed.length > 0 ? observed.reduce((sum, coin) => sum + coin.marketCap!, 0) : null;
 }
 
 /**
@@ -158,35 +159,39 @@ export function buildPegDiversityHero(peggedAssets: readonly StablecoinData[] | 
     return { pegClusters: [], shelfGroups: [] };
   }
 
-  const byPeg = new Map<PegCurrency, HeroCoin[]>();
+  const snapshot = buildNonUsdMarketSnapshot(peggedAssets);
+  const cohortByPeg = new Map(snapshot.pegs.map((cohort) => [cohort.peg, cohort]));
+  const observedById = new Map<string, StablecoinData>();
   for (const raw of peggedAssets) {
-    const peg = getCoreNonUsdPeg(raw.id);
+    if (!observedById.has(raw.id)) observedById.set(raw.id, raw);
+  }
+  const byPeg = new Map<PegCurrency, HeroCoin[]>();
+  // Census the registry first: an omitted API member is still an unavailable mark.
+  for (const id of CLIENT_CORE_AGGREGATE_ACTIVE_IDS) {
+    const peg = getCoreNonUsdPeg(id);
     if (peg === null) continue;
-    const hero = toHeroCoin(raw, peg);
+    const hero = toHeroCoin(id, peg, observedById.get(id));
     if (!hero) continue;
     const list = byPeg.get(peg) ?? [];
-    if (list.some((coin) => coin.id === hero.id)) continue;
     list.push(hero);
     byPeg.set(peg, list);
   }
 
   const cohortRankByPeg = new Map<PegCurrency, number>();
-  // No complete-cohort rank can be supported while any plotted supply is unknown.
-  if ([...byPeg.values()].every((coins) => coins.every((coin) => coin.marketCap !== null))) {
-    [...byPeg.entries()]
-      .map(([peg, coins]) => [peg, coins.reduce((sum, coin) => sum + coin.marketCap!, 0)] as const)
-      .sort((left, right) => right[1] - left[1])
-      .forEach(([peg], index) => cohortRankByPeg.set(peg, index + 1));
+  // Logo admission must not change the population supporting a complete-cohort rank.
+  if (snapshot.altSupplyUnavailableCount === 0) {
+    snapshot.pegs.forEach((cohort, index) => cohortRankByPeg.set(cohort.peg, index + 1));
   }
 
   const pegClusters: PegCluster[] = [];
   const shelfGroups: ShelfGroup[] = [];
 
   for (const [peg, coins] of byPeg) {
+    const cohort = cohortByPeg.get(peg)!;
     // A peg with no home territory (commodities, indexes, unmapped currencies) goes on the shelf, never off the atlas.
-    const cluster = placeFiatCluster(peg, coins, cohortRankByPeg.get(peg));
+    const cluster = placeFiatCluster(cohort, coins, cohortRankByPeg.get(peg));
     if (cluster) pegClusters.push(cluster);
-    else shelfGroups.push(placeShelfGroup(peg, coins, cohortRankByPeg.get(peg)));
+    else shelfGroups.push(placeShelfGroup(cohort, coins, cohortRankByPeg.get(peg)));
   }
 
   pegClusters.sort((a, b) => {
@@ -196,7 +201,7 @@ export function buildPegDiversityHero(peggedAssets: readonly StablecoinData[] | 
     if (bMax === null) return 1;
     return aMax - bMax;
   });
-  shelfGroups.sort(compareFiniteDesc<ShelfGroup>((group) => knownCap(group.coins) ?? Number.NaN));
+  shelfGroups.sort(compareFiniteDesc<ShelfGroup>((group) => group.cohort.marketCap ?? Number.NaN));
 
   return { pegClusters: separateFiatClusterLogos(pegClusters), shelfGroups };
 }

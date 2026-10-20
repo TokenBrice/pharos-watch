@@ -278,20 +278,18 @@ function DigestSnapshotContent({ date }: { date: string }) {
     return <SnapshotUnavailable />;
   }
 
-  const { inputData, prevInputData, depegEvents, blacklistEvents, blacklistSummary } = data;
+  const { inputData, prevInputData, comparison, depegEvents, blacklistEvents, blacklistSummary } = data;
   const prev = prevInputData ?? undefined;
-  const totalMcapUsd = inputData.totalMcapUsd ?? null;
-  const mcap7dDelta = inputData.mcap7dDelta ?? null;
+  const coverage = inputData.supplyCoverage;
+  const totalMcapUsd = coverage?.observedCount === 0 ? null : inputData.totalMcapUsd ?? null;
+  const mcap7dCoverage = inputData.mcap7dDeltaCoverage;
+  const mcap7dDelta = mcap7dCoverage && mcap7dCoverage.coveredCoins > 0 ? inputData.mcap7dDelta ?? null : null;
   const prevTotalMcapUsd = prev?.totalMcapUsd ?? null;
-
-  // Archive-compatible editions may omit either operand; a delta is published only when both
-  // are real readings.
-  const mcapDelta =
-    totalMcapUsd != null && prevTotalMcapUsd != null ? totalMcapUsd - prevTotalMcapUsd : null;
-  const mcap7dPercent =
-    totalMcapUsd != null && mcap7dDelta != null && totalMcapUsd - mcap7dDelta !== 0
-      ? formatPercentChange(totalMcapUsd, totalMcapUsd - mcap7dDelta)
-      : null;
+  const mcapDelta = comparison?.supplyComparable && totalMcapUsd != null && prevTotalMcapUsd != null
+    ? totalMcapUsd - prevTotalMcapUsd : null;
+  const coveredMcapUsd = mcap7dCoverage?.coveredMcapUsd;
+  const mcap7dPercent = coveredMcapUsd != null && mcap7dDelta != null && coveredMcapUsd - mcap7dDelta > 0
+    ? formatPercentChange(coveredMcapUsd, coveredMcapUsd - mcap7dDelta) : null;
 
   return (
     <section className="mt-8 space-y-4 animate-in fade-in duration-300">
@@ -316,23 +314,28 @@ function DigestSnapshotContent({ date }: { date: string }) {
           icon={<BarChart3 className="h-4 w-4" aria-hidden="true" />}
         >
           <p className="text-sm text-foreground/90">
-            Total mcap:{" "}
+            {coverage?.complete && coverage.observedCount > 0 ? "Total mcap" : "Known mcap subtotal"}:{" "}
             {totalMcapUsd == null ? (
               <span className="text-muted-foreground">Not captured for this edition</span>
             ) : (
-              <span className="font-medium">
-                {formatCurrency(totalMcapUsd)}
-              </span>
+              <>
+                <span className="font-medium">
+                  {formatCurrency(totalMcapUsd)}
+                </span>
+                {" "}{coverage
+                  ? `(${coverage.observedCount}/${coverage.observedCount + coverage.unavailableCount} coins observed)`
+                  : "(coverage unproven)"}
+              </>
             )}
             {mcapDelta != null && (
               <span className={getNetColor(mcapDelta)}>
                 {" "}({mcapDelta >= 0 ? "+" : ""}
-                {formatCurrency(mcapDelta)} from yesterday)
+                {formatCurrency(mcapDelta)} from {comparison?.fromDate} to {comparison?.toDate})
               </span>
             )}
           </p>
           <p className="text-sm text-muted-foreground">
-            7d change:{" "}
+            7d matched-cohort change:{" "}
             {mcap7dDelta == null ? (
               <span>Not captured for this edition</span>
             ) : (

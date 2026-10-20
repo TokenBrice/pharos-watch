@@ -153,6 +153,25 @@ export async function runTelegramTargetPlanCoordinator(args: {
       generation: claim.generation,
     });
     if (claim.state === "degraded") {
+      const recovery = await args.db.prepare(
+        `SELECT last_error_class FROM telegram_alert_source_events
+          WHERE source_event_id = ? AND target_plan_generation = ? AND target_plan_owner = ?
+            AND target_delivery_opened_at IS NULL`,
+      ).bind(claim.sourceEventId, claim.generation, claim.owner)
+        .first<{ last_error_class: string | null }>();
+      if (recovery?.last_error_class === "target_page_count_mismatch" ||
+        recovery?.last_error_class === "target_page_resume_mismatch") {
+        const page = await reconcileIncompleteTelegramTargetPlanPage(args.db, claim, args.nowSec);
+        if (!page.complete) break;
+        const refreshed = await claimTelegramTargetPlanning(
+          args.db, claim.sourceEventId, args.nowSec, claim.owner,
+        );
+        if (!refreshed || refreshed.state !== "planning") {
+          throw new Error("Telegram target-plan retained manifest recovery was not confirmed");
+        }
+        claim = refreshed;
+        continue;
+      }
       if (!await reopenTelegramTargetPlanDeliveryAfterIdentityCollision(args.db, claim, args.nowSec)) break;
       const refreshed = await claimTelegramTargetPlanning(
         args.db,

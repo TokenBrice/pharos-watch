@@ -5,6 +5,9 @@ import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helper
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { D1_BATCH_SIZE } from "../../lib/constants";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+
+const sqliteFixtures = createLatestSchemaFixtureTracker();
 
 stubCryptoForAuth();
 
@@ -41,9 +44,69 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks();
+  sqliteFixtures.closeAll();
 });
 
 describe("handleRemediateBlacklistAmountGaps", () => {
+  it.each([
+    [10, "resolved"], [null, "resolved"], [10, "suppressed"], [null, "suppressed"],
+  ] as const)("rejects stale admin recovery %s after operator %s evidence", async (amount, mutation) => {
+    const { db, sqlite } = sqliteFixtures.open();
+    sqlite.prepare(`INSERT INTO blacklist_events
+      (id, stablecoin, chain_id, chain_name, event_type, address, tx_hash, block_number,
+       timestamp, amount_status, amount_source, explorer_tx_url, explorer_address_url)
+      VALUES ('admin-race', 'USDC', 'avalanche', 'Avalanche', 'blacklist', '0xabc',
+        '0xtx', 100, 1700000000, 'recoverable_pending', 'unavailable', '', '')`).run();
+    let resume!: (value: number | null) => void;
+    let selected!: () => void;
+    const providerStarted = new Promise<void>((resolve) => { selected = resolve; });
+    vi.mocked(fetchEvmTokenBalance).mockImplementationOnce(() => {
+      selected();
+      return new Promise<number | null>((resolve) => { resume = resolve; });
+    });
+    const pending = handleRemediateBlacklistAmountGapsTrusted({
+      db, url: makeApiUrl("/api/remediate-blacklist-amount-gaps?dryRun=false"),
+      request: makeApiRequest("/api/remediate-blacklist-amount-gaps", { method: "POST" }),
+      chainRpcs: testChainRpcs,
+    });
+    await providerStarted;
+    if (mutation === "suppressed") {
+      sqlite.prepare("UPDATE blacklist_events SET suppression_reason = 'operator-suppressed' WHERE id = 'admin-race'").run();
+    } else {
+      sqlite.prepare(`UPDATE blacklist_events SET amount_native = 777, amount_usd_at_event = 777,
+        amount_status = 'resolved', provenance_source = 'operator-verified',
+        provenance_observed_at = 123, amount_attempt_count = 8 WHERE id = 'admin-race'`).run();
+    }
+    const before = sqlite.prepare("SELECT * FROM blacklist_events WHERE id = 'admin-race'").get();
+    resume(amount);
+    const body = await readJsonResponse(await pending, 200) as {
+      applied: { resolved: number; resolvedZero: number; providerFailed: number };
+      cacheInvalidation: { attempted: number };
+    };
+    expect(body.applied).toMatchObject({ resolved: 0, resolvedZero: 0, providerFailed: 0 });
+    expect(body.cacheInvalidation.attempted).toBe(0);
+    expect(sqlite.prepare("SELECT * FROM blacklist_events WHERE id = 'admin-race'").get()).toEqual(before);
+  });
+
+  it("repairs unchanged provenance-only rows without requiring a null amount", async () => {
+    const { db, sqlite } = sqliteFixtures.open();
+    sqlite.prepare(`INSERT INTO blacklist_events
+      (id, stablecoin, chain_id, chain_name, event_type, address, tx_hash, block_number,
+       timestamp, amount_native, amount_status, explorer_tx_url, explorer_address_url)
+      VALUES ('provenance-only', 'USDC', 'avalanche', 'Avalanche', 'blacklist', '0xabc',
+        '0xtx', 100, 1700000000, 12, 'provider_failed', '', '')`).run();
+    vi.mocked(fetchEvmTokenBalance).mockResolvedValue(25);
+    const response = await handleRemediateBlacklistAmountGapsTrusted({
+      db, url: makeApiUrl("/api/remediate-blacklist-amount-gaps?dryRun=false&onlyMissingProvenance=true"),
+      request: makeApiRequest("/api/remediate-blacklist-amount-gaps", { method: "POST" }),
+      chainRpcs: testChainRpcs,
+    });
+    expect((await readJsonResponse(response, 200) as { applied: { resolved: number } }).applied.resolved).toBe(1);
+    expect(sqlite.prepare(`SELECT amount_native, amount_status, config_key IS NOT NULL AS has_config,
+      contract_address IS NOT NULL AS has_contract FROM blacklist_events WHERE id = 'provenance-only'`).get())
+      .toEqual({ amount_native: 25, amount_status: "resolved", has_config: 1, has_contract: 1 });
+  });
+
   it("recovers historical EURC native amounts without attributing the repair-time quote to the event", async () => {
     vi.mocked(fetchEvmTokenBalance).mockResolvedValue(100);
     const db = mockD1([

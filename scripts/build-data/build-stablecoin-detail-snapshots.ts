@@ -197,7 +197,7 @@ function authenticatedGeneratorHeaders(url: string): Record<string, string> {
   return headers;
 }
 
-async function fetchDetailSnapshotJson(url: string): Promise<{ data: unknown; updatedAt: number }> {
+async function fetchDetailSnapshotJson(url: string): Promise<{ data: unknown; updatedAt: number | null }> {
   const response = await fetchWithRetry(url, { headers: authenticatedGeneratorHeaders(url) }, {
     logLabel: "stablecoin-detail-snapshots",
   });
@@ -213,10 +213,10 @@ export async function fetchOptionalDetailSnapshotLane<T>(
   label: string,
   url: string,
   schema: { parse(value: unknown): T },
-): Promise<{ data: T; updatedAt: number } | null> {
+): Promise<{ data: T; updatedAt?: number } | null> {
   try {
     const payload = await fetchDetailSnapshotJson(url);
-    return { data: schema.parse(payload.data), updatedAt: payload.updatedAt };
+    return { data: schema.parse(payload.data), ...(payload.updatedAt !== null ? { updatedAt: payload.updatedAt } : {}) };
   } catch (error) {
     if (error instanceof DetailSnapshotHttpError && (error.status === 404 || error.status === 410)) {
       console.warn(`[stablecoin-detail-snapshots] Omitting ${label} lane: ${error.message}`);
@@ -302,8 +302,8 @@ export async function generateSnapshots(
       liveSummary: detail ? projectStablecoinLiveSummary(detail.data) : null,
       supplyHistory: history?.data ?? null,
       updatedAt: {
-        ...(detail ? { liveSummary: detail.updatedAt } : {}),
-        ...(history ? { supplyHistory: history.updatedAt } : {}),
+        ...(detail?.updatedAt != null ? { liveSummary: detail.updatedAt } : {}),
+        ...(history?.updatedAt != null ? { supplyHistory: history.updatedAt } : {}),
       },
     };
   };

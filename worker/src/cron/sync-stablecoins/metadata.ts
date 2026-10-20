@@ -1,4 +1,5 @@
 import type { PriceObservationEffectiveness } from "./price-corroboration-observations";
+import type { DepegHoldReason } from "../depeg-detection/types";
 import { HiveMarketDiagnosticSchema } from "@shared/types/hive-market-price";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
@@ -372,6 +373,7 @@ function sizeGuardMetadataForRung(
     nativePegFills: guard.metadata.nativePegFills,
     priceObservationEffectiveness: guard.metadata.priceObservationEffectiveness,
     depegErrorCount: guard.metadata.depegErrorCount,
+    depegHeldReason: guard.metadata.depegHeldReason,
     stalenessCheckFailed: guard.metadata.stalenessCheckFailed,
     reason: guard.metadata.reason,
     supplyChainGuard: guard.metadata.supplyChainGuard,
@@ -409,6 +411,7 @@ function sizeGuardTerminalMetadata(guard: StablecoinsMetadataSizeGuardInput): Re
     missingPrices: guard.metadata.missingPrices,
     rejectedPrices: guard.metadata.rejectedPrices,
     depegErrorCount: guard.metadata.depegErrorCount,
+    depegHeldReason: guard.metadata.depegHeldReason,
     stalenessCheckFailed: guard.metadata.stalenessCheckFailed,
     supplyChainGuard: guard.metadata.supplyChainGuard,
     quality: guard.metadata.quality,
@@ -480,6 +483,7 @@ export function buildStablecoinsSyncResult(input: {
   syncStartSec?: number;
   responseReadyCacheError?: string | null;
   depegPipelineSucceeded?: boolean;
+  depegHeldReason?: DepegHoldReason;
   previousActivePriceCoverage?: PreviousStablecoinActivePriceCoverage | null;
   previousAcceptedAssetsById?: ReadonlyMap<string, StablecoinPriceCoverageAsset>;
   activePriceCoverage?: StablecoinActivePriceCoverage;
@@ -535,6 +539,7 @@ export function buildStablecoinsSyncResult(input: {
     || (input.supplyChainGuard?.unavailableAssetIds.length ?? 0) > 0;
   const status: CronResult["status"] =
     input.depegErrorCount > 0
+      || input.depegHeldReason != null
       || input.stalenessCheckFailed
       || publicationGapDegradesRun(publicationGap)
       ? "degraded"
@@ -578,6 +583,7 @@ export function buildStablecoinsSyncResult(input: {
     },
     activePublicationCoverage: publicationCoverage,
     ...(publicationGapDegradesRun(publicationGap) ? { reason: `stablecoin-publication-gap-${publicationGap}` } : {}),
+    ...(input.depegHeldReason ? { reason: input.depegHeldReason, depegHeldReason: input.depegHeldReason } : {}),
     activePriceCoverage,
     priceSourceAttemptLedger,
     upstreamFetchOk: input.upstreamFetchOk ?? true,
@@ -585,7 +591,7 @@ export function buildStablecoinsSyncResult(input: {
     cacheWriteSucceeded: input.cacheWriteSucceeded ?? true,
     cacheKey: input.cacheKey ?? "stablecoins",
     syncStartSec: input.syncStartSec,
-    depegPipelineSucceeded: input.depegPipelineSucceeded ?? input.depegErrorCount === 0,
+    depegPipelineSucceeded: !input.depegHeldReason && (input.depegPipelineSucceeded ?? input.depegErrorCount === 0),
     stalenessCheckFailed: input.stalenessCheckFailed,
   };
   if (input.supplyChainGuard) {
@@ -646,7 +652,7 @@ export function buildStablecoinsSyncResult(input: {
   // withholds the cache from them.
   const capabilities = {
     stablecoinsCache: publicationGap !== "systemic",
-    depegPipeline: input.depegPipelineSucceeded ?? input.depegErrorCount === 0,
+    depegPipeline: !input.depegHeldReason && (input.depegPipelineSucceeded ?? input.depegErrorCount === 0),
   };
   let serializedMetadata = buildSyncMetadata(metadata, {
     cacheWriteMode: "published",
@@ -686,6 +692,7 @@ export function buildFallbackStablecoinsSyncResult(input: {
   stalenessCheckFailed: boolean;
   stalenessCheckFailureReason?: string;
   depegErrorCount: number;
+  depegHeldReason?: DepegHoldReason;
   cacheKey: string;
   syncStartSec: number;
   activePriceCoverage: StablecoinActivePriceCoverage;
@@ -707,6 +714,7 @@ export function buildFallbackStablecoinsSyncResult(input: {
   return {
     status:
       input.depegErrorCount > 0
+        || input.depegHeldReason != null
         || input.stalenessCheckFailed
         || publicationGapDegradesRun(publicationGap)
         ? "degraded"
@@ -733,12 +741,13 @@ export function buildFallbackStablecoinsSyncResult(input: {
       priceStaleness: input.stalenessSummary,
       stalenessCheckFailed: input.stalenessCheckFailed,
       stalenessCheckFailureReason: input.stalenessCheckFailureReason,
+      ...(input.depegHeldReason ? { reason: input.depegHeldReason, depegHeldReason: input.depegHeldReason } : {}),
       upstreamFetchOk: false,
       payloadAccepted: true,
       cacheWriteSucceeded: true,
       cacheKey: input.cacheKey,
       syncStartSec: input.syncStartSec,
-      depegPipelineSucceeded: input.depegErrorCount === 0,
+      depegPipelineSucceeded: !input.depegHeldReason && input.depegErrorCount === 0,
       activePublicationCoverage: publicationCoverage,
       activePriceCoverage: persistedActivePriceCoverage,
       priceSourceAttemptLedger,
@@ -746,7 +755,7 @@ export function buildFallbackStablecoinsSyncResult(input: {
       cacheWriteMode: "published",
       capabilities: {
         stablecoinsCache: publicationGap !== "systemic",
-        depegPipeline: input.depegErrorCount === 0,
+        depegPipeline: !input.depegHeldReason && input.depegErrorCount === 0,
       },
     }),
   };

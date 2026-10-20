@@ -25,9 +25,9 @@ const TRIGGER_MAX_EDITIONS = 3;
 
 /**
  * Apply lifecycle rules against the previous edition's triggers:
- * - Sticky threshold: an already-armed trigger keeps its original threshold
- *   (re-deriving daily chased the metric — the PSI goalpost moved 89→93 as
- *   PSI rose, so it could never fire).
+ * - Sticky condition: an already-armed trigger keeps its complete original
+ *   condition, so daily metric drift or a direction reversal cannot move the
+ *   goalpost or turn a pending condition into an unrelated hit.
  * - Re-arm on fire: a trigger that hit yesterday re-derives fresh today.
  * - TTL: a trigger pending for TRIGGER_MAX_EDITIONS editions expires (dropped
  *   here; buildForwardLookOutcomes records the "expired" outcome).
@@ -46,13 +46,9 @@ function applyTriggerLifecycle(
   }
   const repeatedCount = (previous.repeatedCount ?? 0) + 1;
   if (repeatedCount >= TRIGGER_MAX_EDITIONS) return null;
-  // The detail sentence restates the threshold, so it is re-rendered from the
-  // kept one; carrying today's re-derived detail told the writer "-25 or lower"
-  // and "falls to -10" in the same trigger line.
-  const sticky = previous.thresholdValue != null
-    ? { ...trigger, thresholdValue: previous.thresholdValue, thresholdLabel: previous.thresholdLabel }
-    : trigger;
-  return { ...sticky, detail: triggerDetail(sticky), repeatedCount };
+  // Render from the retained condition as a whole: a fresh comparator paired
+  // with the old threshold can turn a reversal into an immediate false hit.
+  return { ...previous, detail: triggerDetail(previous), repeatedCount };
 }
 
 type TriggerWithoutDetail = Omit<DigestNextTrigger, "detail">;

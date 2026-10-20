@@ -9,6 +9,7 @@ import { formatCurrency } from "@shared/lib/format";
 import { formatEventTimestamp } from "@/lib/depeg-event-display";
 import { trackEvent } from "@/lib/analytics";
 import type { DependencyHubsModel } from "@shared/lib/dependency-hubs-model";
+import { formatClaimSubtotal } from "@/lib/dependency-watershed/known";
 
 export function DependencyHubsBoard({ model, logos, onExposure }: { model: DependencyHubsModel; logos?: Record<string, string>; onExposure?: (id: string) => void }) {
   const hubs = model.hubs.slice(0, 6);
@@ -34,17 +35,19 @@ export function DependencyHubsBoard({ model, logos, onExposure }: { model: Depen
             <TableHead scope="col">Top dependent share</TableHead>
             <TableHead scope="col">Action</TableHead>
           </TableRow></TableHeader>
-          <TableBody>{hubs.map(hub => (
+          <TableBody>{hubs.map(hub => {
+            const directKnown = hub.directKnown;
+            return (
             <TableRow key={hub.id}>
               <TableCell><div className="flex items-center gap-3"><StablecoinLogo src={logos?.[hub.id]} name={hub.label} size={30} /><div><p className="font-semibold">{hub.label}</p><p className="text-xs text-muted-foreground">{hub.edgeTypeBreakdown.map(entry => `${entry.type} ${entry.edgeCount}`).join(" · ")}</p><p className="text-xs text-muted-foreground">{hub.hubMcapUsd === null ? "mcap n/a" : `Own market cap ${formatCurrency(hub.hubMcapUsd, 2)}`}</p></div></div></TableCell>
-              <TableCell><p className="pharos-numeric font-semibold">{hub.direct.excludedSupplyUnknownIds.length === hub.dependentCount ? "n/a" : formatCurrency(hub.direct.knownUsd, 2)}</p><div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted/45" aria-hidden="true"><div className="h-full rounded-full bg-frost-blue" style={{ width: `${maxExposure > 0 ? hub.direct.knownUsd / maxExposure * 100 : 0}%` }} /></div>{!hub.direct.complete && <p className="text-xs text-muted-foreground">{hub.direct.excludedSupplyUnknownIds.length} supplies unavailable; {hub.direct.unknownShareEdgeCount} shares unknown{hub.direct.integrityFlag ? "; basket shares require review" : ""}.</p>}</TableCell>
-              <TableCell className="pharos-numeric max-w-72 whitespace-normal">{hub.unknownFormCount > 0 && hub.passThroughCount + hub.vaultClaimCount === 0 ? "Split unavailable" : <>{formatCurrency(hub.ownFamilyUsd, 2)}{hub.unknownFormCount > 0 && <p className="text-xs text-muted-foreground">Classified claims only</p>}</>}{hub.unknownFormCount > 0 && <p className="text-xs text-muted-foreground">Wrapper/vault split unavailable{hub.unknownFormUsd === null ? "; supply unavailable" : ` for ${formatCurrency(hub.unknownFormUsd, 2)} of known serial exposure`}.</p>}</TableCell>
-              <TableCell className="pharos-numeric max-w-56 whitespace-normal">{hub.unknownFormCount > 0 && hub.vaultClaimCount === 0 ? "Split unavailable" : <>{formatCurrency(hub.vaultClaimUsd, 2)}{hub.unknownFormCount > 0 && <p className="text-xs text-muted-foreground">Classified claims only</p>}</>}</TableCell>
+              <TableCell><p className="pharos-numeric font-semibold">{directKnown ? `${formatCurrency(hub.direct.knownUsd, 2)}${hub.direct.complete ? "" : " (known only)"}` : "Unavailable"}</p><div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted/45" aria-hidden="true">{directKnown && <div className="h-full rounded-full bg-frost-blue" style={{ width: `${maxExposure > 0 ? hub.direct.knownUsd / maxExposure * 100 : 0}%` }} />}</div>{!hub.direct.complete && <p className="text-xs text-muted-foreground">{hub.direct.excludedSupplyUnknownIds.length} supplies unavailable; {hub.direct.unknownShareEdgeCount} shares unknown{hub.direct.integrityFlag ? "; basket shares require review" : ""}.</p>}</TableCell>
+              <TableCell className="pharos-numeric max-w-72 whitespace-normal">{hub.unknownFormCount > 0 && hub.passThroughCount + hub.vaultClaimCount === 0 ? "Split unavailable" : <>{formatClaimSubtotal(hub.ownFamilyUsd, hub.claimAvailability.classified)}{hub.unknownFormCount > 0 && <p className="text-xs text-muted-foreground">Classified claims only</p>}</>}{hub.unknownFormCount > 0 && <p className="text-xs text-muted-foreground">Wrapper/vault split unavailable{hub.unknownFormUsd === null ? "; supply unavailable" : ` for ${formatCurrency(hub.unknownFormUsd, 2)} of known serial exposure`}.</p>}</TableCell>
+              <TableCell className="pharos-numeric max-w-56 whitespace-normal">{hub.unknownFormCount > 0 && hub.vaultClaimCount === 0 ? "Split unavailable" : <>{formatClaimSubtotal(hub.vaultClaimUsd, hub.claimAvailability["vault-claim"])}{hub.unknownFormCount > 0 && <p className="text-xs text-muted-foreground">Classified claims only</p>}</>}</TableCell>
               <TableCell className="pharos-numeric">{hub.dependentCount}</TableCell>
               <TableCell>{hub.topDependent ? `${Math.round(hub.topDependent.shareOfHubExposure * 100)}% from ${hub.topDependentSymbol}` : "n/a"}</TableCell>
               <TableCell><div className="flex gap-2"><Link href={buildStablecoinUrl(hub.id)} className="pharos-focus-ring inline-flex min-h-11 items-center rounded-sm text-xs text-frost-blue hover:text-foreground" aria-label={`Open coin ${hub.label}`} onClick={() => trackEvent("dependency_map_action", { action: "hub_open_coin", value: hub.id })}>Open coin</Link>{onExposure && <button type="button" aria-label={`Trace exposure from ${hub.label}`} className="pharos-focus-ring min-h-11 rounded px-2 text-xs underline" onClick={() => onExposure(hub.id)}>Exposure</button>}</div></TableCell>
             </TableRow>
-          ))}</TableBody>
+          ); })}</TableBody>
         </TableFrame>
       </CardContent>
     </Card>

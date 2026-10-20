@@ -8,6 +8,8 @@ import {
   resolveNetDirection,
 } from "@shared/lib/mint-burn-coin-helpers";
 import type { MintBurnCoinFlow, MintBurnValuation } from "@shared/types";
+import { MintBurnFlowsResponseSchema } from "@shared/types/mint-burn";
+import { makeMintBurnFlowCoin } from "@/test-utils/mint-burn-fixtures";
 
 function valuation24h(overrides: Partial<MintBurnValuation> = {}): NonNullable<MintBurnCoinFlow["valuation"]> {
   return {
@@ -49,6 +51,11 @@ describe("inferHas24hActivity", () => {
   it("returns explicit has24hActivity when present", () => {
     expect(inferHas24hActivity(stubCoin({ has24hActivity: true }))).toBe(true);
     expect(inferHas24hActivity(stubCoin({ has24hActivity: false }))).toBe(false);
+  });
+
+  it("preserves an explicit unknown flag even with observed subtotals", () => {
+    expect(inferHas24hActivity(stubCoin({ has24hActivity: null }))).toBeNull();
+    expect(inferHas24hActivity(stubCoin({ has24hActivity: null, mintCount24h: 1, mintVolume24hUsd: 100 }))).toBeNull();
   });
 
   it("derives from volume fields when has24hActivity missing", () => {
@@ -259,5 +266,62 @@ describe("aggregateCoinFlows24h", () => {
     })]);
     expect(aggregate.direction).toBe("minting");
     expect(aggregate.net.valueUsd).toBeNull();
+  });
+
+  it.each([false, true])("does not infer quiet, direction or a net when a required window is unknown (observed=%s)", (observed) => {
+    const unknown = stubCoin({ has24hActivity: null, netFlow24hUsd: null, netFlowDirection24h: null, valuation: valuation24h() });
+    const other = stubCoin({ has24hActivity: observed, netFlow24hUsd: observed ? 100 : 0, valuation: valuation24h() });
+    for (const coins of [[unknown, other], [other, unknown]]) {
+      const aggregate = aggregateCoinFlows24h(coins);
+      expect(aggregate.has24hActivity).toBe(observed ? true : null);
+      expect(aggregate.direction).toBeNull();
+      expect(aggregate.net.valueUsd).toBeNull();
+      expect(aggregate.net.bound).toBeUndefined();
+    }
+  });
+
+  it("keeps a proven quiet control distinct from unknown scan activity", () => {
+    const aggregate = aggregateCoinFlows24h([stubCoin({ has24hActivity: false, valuation: valuation24h() })]);
+    expect(aggregate.has24hActivity).toBe(false);
+    expect(aggregate.direction).toBe("inactive");
+    expect(aggregate.net.valueUsd).toBe(0);
+  });
+});
+
+describe("nullable scan-window reader contract", () => {
+  it("parses unknown activity and all four unavailable window nets without coercing them", () => {
+    const coin = makeMintBurnFlowCoin({
+      has24hActivity: null,
+      netFlowDirection24h: null,
+      pressureShiftScore: null,
+      pressureShiftState: "nr",
+      netFlow24hUsd: null,
+      netFlow7dUsd: null,
+      netFlow30dUsd: null,
+      netFlow90dUsd: null,
+    });
+    expect(MintBurnFlowsResponseSchema.shape.coins.element.parse(coin)).toEqual(coin);
+    for (const window of ["24h", "7d", "30d", "90d"] as const) {
+      expect(resolveCoinNetFlow(coin, window).valueUsd).toBeNull();
+    }
+    expect(resolveNetDirection(coin)).toBeNull();
+    expect(resolvePressureScore(coin)).toBeNull();
+    expect(resolvePressureState(coin)).toBe("nr");
+  });
+
+  it("does not turn unknown scan coverage into a valuation-only bound or pressure reading", () => {
+    const coin = stubCoin({
+      has24hActivity: null,
+      netFlow24hUsd: null,
+      mintVolume24hUsd: 100,
+      pressureShiftScore: 42,
+      valuation: valuation24h(PARTIAL_MINT_SIDE),
+    });
+    const net = resolveCoinNetFlow(coin, "24h");
+    expect(net.valueUsd).toBeNull();
+    expect(net.bound).toBeUndefined();
+    expect(resolvePressureScore(coin)).toBeNull();
+    expect(resolvePressureState(coin)).toBe("nr");
+    expect(aggregateCoinFlows24h([coin]).net.bound).toBeUndefined();
   });
 });

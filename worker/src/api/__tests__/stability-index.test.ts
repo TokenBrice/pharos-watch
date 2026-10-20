@@ -121,6 +121,30 @@ describe("handleStabilityIndex contract tests", () => {
     ).toHaveLength(1);
   });
 
+  it.each([
+    ["absent", "", undefined],
+    ["null", ',"totalMcapUsd":null', undefined],
+    ["nonfinite", ',"totalMcapUsd":1e999', undefined],
+    ["observed zero", ',"totalMcapUsd":0', 0],
+  ] as const)("preserves %s market cap in a daily-average fallback without borrowing current data", async (_label, marketCapJson, expected) => {
+    const { sqlite, db } = fixtures.open();
+    sqlite.prepare(`INSERT INTO stability_index
+      (computed_at, score, band, components, input_snapshot, methodology_version)
+      VALUES (?, ?, ?, ?, ?, ?)`).run(
+      yesterdayMidnight, 71, "TREMOR", historyRow.components,
+      `{"source":"daily-avg","sampleCount":48${marketCapJson}}`, "3.0",
+    );
+    const response = await handleStabilityIndex(db, new URL("https://x/api/stability-index"));
+    const body = StabilityIndexResponseSchema.parse(await readJsonResponse(response, 200));
+    expect(body.current?.computedAt).toBe(yesterdayMidnight);
+    expect(body.current?.score).toBe(71);
+    if (expected === undefined) {
+      expect(body.current).not.toHaveProperty("totalMcapUsd");
+    } else {
+      expect(body.current?.totalMcapUsd).toBe(expected);
+    }
+  });
+
   it("reconstructs methodology version from timestamps when DB version is null", async () => {
     const legacySample = {
       stored_at: 1772068000, // PSI v1.3 window

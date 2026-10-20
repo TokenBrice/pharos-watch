@@ -1,4 +1,5 @@
 import type { TelegramAlertType } from "@shared/types/status";
+import { TELEGRAM_ALERT_PERSISTENCE } from "@shared/lib/telegram-alert-families";
 import { buildInClause } from "../../../lib/db";
 import {
   listTelegramPresets,
@@ -12,11 +13,9 @@ export type PresetAlertType = Extract<TelegramAlertType, "dews" | "depeg" | "saf
 
 export const PRESET_ALERT_TYPES: readonly PresetAlertType[] = ["dews", "depeg", "safety"];
 
-export const PRESET_ALERT_COLUMN: Record<PresetAlertType, string> = {
-  dews: "alert_dews",
-  depeg: "alert_depeg",
-  safety: "alert_safety",
-};
+export const PRESET_ALERT_COLUMN = Object.fromEntries(
+  PRESET_ALERT_TYPES.map((family) => [family, TELEGRAM_ALERT_PERSISTENCE[family].subscriptionColumn]),
+) as Record<PresetAlertType, string>;
 
 export interface PresetMembership {
   preset_id: TelegramPresetId;

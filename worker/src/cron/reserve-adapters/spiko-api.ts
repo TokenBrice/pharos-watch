@@ -8,6 +8,7 @@ import {
   parseFiniteNumber,
   parseTimestampLikeToUnixSeconds,
   requireJsonInput,
+  reserveDegradedWarning,
   verifiedFreshnessMetadata,
 } from "./helpers";
 
@@ -29,9 +30,9 @@ interface SpikoSliceConfig {
   depType?: ReserveSlice["depType"];
 }
 
-function parsePositiveNumber(value: unknown, label: string, shareClassSymbol: string): number {
+function parseNumber(value: unknown, label: string, shareClassSymbol: string, min: number): number {
   try {
-    return parseFiniteNumber(value, { label, min: Number.MIN_VALUE });
+    return parseFiniteNumber(value, { label, min });
   } catch {
     throw new Error(`Spiko ${shareClassSymbol} totals payload has invalid ${label}`);
   }
@@ -52,12 +53,13 @@ export function adaptSpikoShareClassTotals(
   shareClassSymbol: string,
   slice: SpikoSliceConfig,
 ): AdapterResult {
-  const totalShares = parsePositiveNumber(payload.totalShares, "totalShares", shareClassSymbol);
-  const totalAssetsValue = parsePositiveNumber(payload.totalAssets?.value, "totalAssets.value", shareClassSymbol);
-  const navAmount = parsePositiveNumber(
+  const totalShares = parseNumber(payload.totalShares, "totalShares", shareClassSymbol, 0);
+  const totalAssetsValue = parseNumber(payload.totalAssets?.value, "totalAssets.value", shareClassSymbol, 0);
+  const navAmount = parseNumber(
     payload.netAssetValue?.amount?.value,
     "netAssetValue.amount.value",
     shareClassSymbol,
+    Number.MIN_VALUE,
   );
 
   const sourceTimestamp = parseTimestampLikeToUnixSeconds(payload.netAssetValue?.updatedAt);
@@ -81,8 +83,8 @@ export function adaptSpikoShareClassTotals(
   if (!Number.isFinite(supplyProduct)) {
     throw new Error(`Spiko ${shareClassSymbol} totals payload has a non-finite shares × NAV product`);
   }
-  const collateralizationRatio = totalAssetsValue / supplyProduct;
-  if (!Number.isFinite(collateralizationRatio)) {
+  const collateralizationRatio = supplyProduct > 0 ? totalAssetsValue / supplyProduct : undefined;
+  if (collateralizationRatio != null && !Number.isFinite(collateralizationRatio)) {
     throw new Error(`Spiko ${shareClassSymbol} totals payload has a non-finite collateralization ratio`);
   }
 
@@ -92,6 +94,12 @@ export function adaptSpikoShareClassTotals(
     message: (pct) => `Spiko ${shareClassSymbol} fund assets cover ${pct}% of issued share value`,
     coverageRatio: collateralizationRatio,
   });
+  if (supplyProduct === 0) {
+    warnings.push(reserveDegradedWarning(
+      "spiko-zero-share-value",
+      `Spiko ${shareClassSymbol} reports zero issued share value; reserve coverage is undefined`,
+    ));
+  }
 
   return {
     slices: [{
@@ -104,7 +112,7 @@ export function adaptSpikoShareClassTotals(
     }],
     metadata: {
       ...verifiedFreshnessMetadata(sourceTimestamp),
-      collateralizationRatio,
+      ...(collateralizationRatio != null ? { collateralizationRatio } : {}),
       ...(isUsdFund
         ? { totalReserveUsd: totalAssetsValue, supplyUsd: supplyProduct }
         : {}),

@@ -3,7 +3,8 @@
 import type { ReactNode } from "react";
 import { IntentLink } from "@/components/intent-link";
 import { BadgeCheck, Rocket } from "lucide-react";
-import type { Infrastructure, StablecoinData, StablecoinMeta } from "@shared/types";
+import type { Infrastructure, StablecoinMeta } from "@shared/types";
+import type { DetailQuote } from "@/lib/stablecoin-detail-view-model-types";
 import type { V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
 import {
   CLIENT_TRACKED_META_BY_ID,
@@ -98,7 +99,7 @@ export function HeroChipRail({ coin, verdict }: { coin: StablecoinMeta; verdict:
 
 export interface HeroSectionBaseProps {
   coin: StablecoinMeta;
-  coinData: StablecoinData;
+  coinData: DetailQuote;
   logoSrc?: string;
   reportCard: V9ConsumerCard | null;
   verdict: StablecoinVerdict;

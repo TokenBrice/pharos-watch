@@ -1,10 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 
-afterEach(() => vi.useRealTimers());
-const { buildCacheStatusesMock, detailUpdatedAtStore, deletedCacheKeys, sendToChatMock } = vi.hoisted(() => ({
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(() => {
+  fixtures.closeAll();
+  vi.restoreAllMocks();
+  vi.useRealTimers();
+});
+const { buildCacheStatusesMock, sendToChatMock } = vi.hoisted(() => ({
   buildCacheStatusesMock: vi.fn(),
-  detailUpdatedAtStore: new Map<string, number>(),
-  deletedCacheKeys: [] as string[],
   sendToChatMock: vi.fn(async (..._args: unknown[]) => ({ ok: true })),
 }));
 
@@ -48,8 +53,6 @@ function fakeDb(failureRows: FakeFailureRow[] = [], producerPublishedAt?: number
         run: async () => {
           if (sql.startsWith("INSERT INTO cache")) {
             cacheRows.set(args[0] as string, { value: args[1] as string, updated_at: args[2] as number });
-          } else if (sql.startsWith("DELETE FROM cache WHERE key IN")) {
-            deletedCacheKeys.push(...(args as string[]));
           } else if (sql.startsWith("DELETE")) {
             const cutoff = args[1] as number;
             for (let i = failureRows.length - 1; i >= 0; i -= 1) {
@@ -69,8 +72,7 @@ function fakeDb(failureRows: FakeFailureRow[] = [], producerPublishedAt?: number
             })) };
           }
           if (sql.startsWith("SELECT key, updated_at FROM cache WHERE key IN")) {
-            const keys = args as string[];
-            return { results: keys.filter((key) => detailUpdatedAtStore.has(key)).map((key) => ({ key, updated_at: detailUpdatedAtStore.get(key) })) };
+            return { results: [] };
           }
           return { results: failureRows.filter((row) => row.updated_at >= (args[1] as number)) };
         },
@@ -100,8 +102,6 @@ function mockCacheStatus(ages: Record<string, number | null>) {
 describe("cron staleness watchdog", () => {
   beforeEach(() => {
     buildCacheStatusesMock.mockReset();
-    detailUpdatedAtStore.clear();
-    deletedCacheKeys.length = 0;
     sendToChatMock.mockClear();
     sendToChatMock.mockResolvedValue({ ok: true });
   });
@@ -309,29 +309,86 @@ describe("cron staleness watchdog", () => {
   });
 
   it("treats a marker as recovered when the detail row was rewritten after it", async () => {
-    mockCacheStatus({ stablecoins: 0 });
-    const nowSec = Math.floor(Date.now() / 1000);
-    detailUpdatedAtStore.set("detail:usdt-tether", nowSec - 60);
-    const result = await runCronStalenessWatchdog(fakeDb([{ key: "detail-write-failure:usdt-tether", value: JSON.stringify({ reason: "write-error", bytes: 500 }), updated_at: nowSec - 600 }]));
-    expect(result.status).toBe("ok");
-    expect(deletedCacheKeys).toContain("detail-write-failure:usdt-tether");
+    const nowSec = 1_790_000_000;
+    const { sqlite, db } = fixtures.open();
+    const insert = sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, '{}', ?)");
+    for (let index = 0; index < 101; index += 1) {
+      insert.run(`detail-write-failure:coin-${index}`, nowSec - 600);
+      insert.run(`detail:coin-${index}`, nowSec - 60);
+    }
+    expect(await loadDetailWriteFailures(db, nowSec)).toEqual([]);
+    expect(sqlite.prepare("SELECT key FROM cache WHERE key LIKE 'detail-write-failure:%'").all()).toEqual([]);
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM cache WHERE key LIKE 'detail:%'").get()).toEqual({ count: 101 });
   });
 
   it("keeps markers whose detail row predates the failure", async () => {
-    mockCacheStatus({ stablecoins: 0 });
-    const nowSec = Math.floor(Date.now() / 1000);
-    detailUpdatedAtStore.set("detail:usdt-tether", nowSec - 600);
-    const result = await runCronStalenessWatchdog(fakeDb([{ key: "detail-write-failure:usdt-tether", value: JSON.stringify({ reason: "write-error", bytes: 500 }), updated_at: nowSec - 60 }]));
-    const metadata = JSON.parse(result.metadata ?? "{}") as { detailWriteFailures: Array<{ stablecoinId: string }> };
-    expect(result.status).toBe("ok");
-    expect(metadata.detailWriteFailures.map((failure) => failure.stablecoinId)).toEqual(["usdt-tether"]);
-    expect(deletedCacheKeys).not.toContain("detail-write-failure:usdt-tether");
+    const nowSec = 1_790_000_000;
+    const { sqlite, db } = fixtures.open();
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+      .run("detail-write-failure:usdt-tether", '{"reason":"write-error","bytes":500}', nowSec - 60);
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, '{}', ?)")
+      .run("detail:usdt-tether", nowSec - 600);
+    expect(await loadDetailWriteFailures(db, nowSec)).toEqual([
+      { stablecoinId: "usdt-tether", reason: "write-error", bytes: 500, ageSeconds: 60 },
+    ]);
+    expect(sqlite.prepare("SELECT key FROM cache WHERE key LIKE 'detail-write-failure:%'").all())
+      .toEqual([{ key: "detail-write-failure:usdt-tether" }]);
+  });
+
+  it.each([
+    { name: "newer failure", replacementAt: 1_790_000_000 },
+    { name: "same-second different-value failure", replacementAt: 1_789_999_400 },
+  ])("retains a $name written after the recovery scan", async ({ replacementAt }) => {
+    const nowSec = 1_790_000_000;
+    const key = "detail-write-failure:usdt-tether";
+    const replacement = '{"reason":"value-too-large","bytes":21000000}';
+    const { sqlite } = fixtures.open();
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, '{}', ?)")
+      .run(key, nowSec - 600);
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, '{}', ?)")
+      .run("detail:usdt-tether", nowSec - 60);
+    let replaced = false;
+    const db = createSqliteD1(sqlite, { onAll: (sql) => {
+      if (!replaced && sql.startsWith("SELECT key, updated_at FROM cache")) {
+        replaced = true;
+        sqlite.prepare("UPDATE cache SET value = ?, updated_at = ? WHERE key = ?").run(replacement, replacementAt, key);
+      }
+    } });
+
+    expect(await loadDetailWriteFailures(db, nowSec)).toEqual([]);
+    expect(sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = ?").get(key))
+      .toEqual({ value: replacement, updated_at: replacementAt });
+    if (replacementAt === nowSec) {
+      expect(await loadDetailWriteFailures(db, nowSec)).toEqual([
+        { stablecoinId: "usdt-tether", reason: "value-too-large", bytes: 21_000_000, ageSeconds: 0 },
+      ]);
+    }
+  });
+
+  it("retains a scanned marker when its recovery evidence disappears before cleanup", async () => {
+    const nowSec = 1_790_000_000;
+    const { sqlite } = fixtures.open();
+    const insert = sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, '{}', ?)");
+    insert.run("detail-write-failure:usdt-tether", nowSec - 600);
+    insert.run("detail:usdt-tether", nowSec - 60);
+    const db = createSqliteD1(sqlite, { onAll: (sql) => {
+      if (sql.startsWith("SELECT key, updated_at FROM cache")) {
+        sqlite.prepare("DELETE FROM cache WHERE key = ?").run("detail:usdt-tether");
+      }
+    } });
+    expect(await loadDetailWriteFailures(db, nowSec)).toEqual([]);
+    expect(await loadDetailWriteFailures(db, nowSec)).toEqual([
+      { stablecoinId: "usdt-tether", reason: "unknown", bytes: null, ageSeconds: 600 },
+    ]);
   });
 
   it("prunes expired detail write-failure markers", async () => {
     const nowSec = 1_750_000_000;
-    const rows = [{ key: "detail-write-failure:old-coin", value: "{}", updated_at: nowSec - 8 * 24 * 3600 }];
-    await loadDetailWriteFailures(fakeDb(rows), nowSec);
-    expect(rows).toEqual([]);
+    const { sqlite, db } = fixtures.open();
+    const insert = sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, '{}', ?)");
+    insert.run("detail-write-failure:old-coin", nowSec - 8 * 24 * 3600);
+    insert.run("detail-write-failure:boundary-coin", nowSec - 7 * 24 * 3600);
+    expect(await loadDetailWriteFailures(db, nowSec)).toEqual([]);
+    expect(sqlite.prepare("SELECT key FROM cache").all()).toEqual([{ key: "detail-write-failure:boundary-coin" }]);
   });
 });

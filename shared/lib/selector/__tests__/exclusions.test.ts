@@ -318,6 +318,26 @@ describe("input-driven exclusions", () => {
     ).toEqual(expect.objectContaining({ reason: "decentralization-required-violation" }));
   });
 
+  it.each([
+    ["centralized", ["violation", "violation", "violation", "violation", "violation"]],
+    ["centralized-dependent", ["unknown", "unknown", "violation", "violation", null]],
+    ["decentralized", ["unknown", "unknown", "violation", "violation", null]],
+    [null, ["unknown", "unknown", "violation", "violation", null]],
+  ] as const)("requires evidenced freeze-control absence under %s governance", (governance, expected) => {
+    const controls = [null, "possible", true, "inherited", false] as const;
+    controls.forEach((canBeBlacklisted, index) => {
+      const row = makeRow({ governance, canBeBlacklisted });
+      const result = applyInputDrivenExclusions(row, makeInput({ decentralization: "required" }));
+      const reason = expected[index];
+      expect(result, `${governance}/${canBeBlacklisted}`).toEqual(reason === null ? null
+        : expect.objectContaining({
+          reason: reason === "unknown" ? "insufficient-control-evidence" : "decentralization-required-violation",
+          severity: reason === "unknown" ? "info" : "hard",
+        }));
+      expect(applyInputDrivenExclusions(row, makeInput({ decentralization: "any" }))).toBeNull();
+    });
+  });
+
   it("custody=onchain-only + institutional-top excluded", () => {
     expect(
       applyInputDrivenExclusions(

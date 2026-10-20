@@ -45,8 +45,8 @@ export function BlacklistFilters({
     const visibleOptions: Array<BlacklistStablecoin | "all"> = ["all"];
     const withoutE: BlacklistStablecoin[] = [];
     for (const coin of BLACKLIST_STABLECOINS) {
-      const count = perCoinTotalEvents?.[coin] ?? 0;
-      (count > 0 ? visibleOptions : withoutE).push(coin);
+      const count = perCoinTotalEvents?.[coin];
+      (count === 0 ? withoutE : visibleOptions).push(coin);
     }
     return {
       stablecoinOptions: perCoinTotalEvents == null ? ALL_STABLECOIN_FILTER_OPTIONS : visibleOptions,
@@ -63,6 +63,7 @@ export function BlacklistFilters({
   const selectionHiddenByDefault =
     stablecoinFilter !== "all" && withoutEvents.includes(stablecoinFilter as BlacklistStablecoin);
   const [showWithoutEvents, setShowWithoutEvents] = useState(selectionHiddenByDefault);
+  const withoutEventsExpanded = showWithoutEvents || selectionHiddenByDefault;
 
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:flex lg:flex-wrap lg:gap-6">
@@ -82,17 +83,17 @@ export function BlacklistFilters({
             <button
               type="button"
               onClick={() => setShowWithoutEvents((v) => !v)}
-              aria-expanded={showWithoutEvents}
+              aria-expanded={withoutEventsExpanded}
               aria-controls="blacklist-no-events-filter-group"
               className="mt-1 inline-flex min-h-11 items-center gap-1 rounded-sm py-2 text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:min-h-0 sm:py-0"
             >
               <ChevronDown
-                className={`h-3 w-3 transition-transform ${showWithoutEvents ? "rotate-0" : "-rotate-90"}`}
+                className={`h-3 w-3 transition-transform ${withoutEventsExpanded ? "rotate-0" : "-rotate-90"}`}
                 aria-hidden="true"
               />
-              {showWithoutEvents ? "Hide" : "Show"} tracked without events yet ({withoutEvents.length})
+              {withoutEventsExpanded ? "Hide" : "Show"} tracked without events yet ({withoutEvents.length})
             </button>
-            {showWithoutEvents ? (
+            {withoutEventsExpanded ? (
               <div id="blacklist-no-events-filter-group" className="opacity-80">
                 <ControlPillToggle
                   className="flex w-full flex-wrap justify-start gap-1.5"

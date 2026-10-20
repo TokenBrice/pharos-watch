@@ -65,10 +65,6 @@ export function makeDispatchMetadata(overrides: Record<string, unknown> = {}): R
   return {
     subscribersNotified: 0,
     messagesSent: 0,
-    freshAttempted: 0,
-    freshSent: 0,
-    freshRetryQueued: 0,
-    freshPermanentFailures: 0,
     pendingAttempted: 0,
     pendingDrained: 0,
     pendingRetryQueued: 0,
@@ -78,6 +74,37 @@ export function makeDispatchMetadata(overrides: Record<string, unknown> = {}): R
     safetyAlertsSuppressed: false,
     reserveAlertsSuppressed: false,
     ...overrides,
+  };
+}
+
+export function makeAvailableTelegramDeliverySli(): Extract<
+  NonNullable<StatusResponse["telegramBot"]>["deliverySli"], { availability: "available" }
+> {
+  return {
+    availability: "available",
+    quality: "partial",
+    freshness: "stale",
+    acceptanceDefinition: "telegram_bot_api_accepted_not_user_receipt",
+    rollup: {
+      window: { generatedAt: STATUS_FIXTURE_NOW_SECONDS, startsAt: STATUS_FIXTURE_NOW_SECONDS - 86_400,
+        endsAt: STATUS_FIXTURE_NOW_SECONDS, lookbackSec: 86_400, bounded: true },
+      evidence: { latestAt: STATUS_FIXTURE_NOW_SECONDS - 3_600, ageSec: 3_600,
+        freshness: "stale", freshnessThresholdSec: 600 },
+      detectionToPlan: { eligibleCount: 28, observedCount: 28, averageSec: 10, maximumSec: 30, quality: "complete" },
+      planToTelegramAcceptance: { eligibleCount: 7, observedCount: 7, averageSec: 20, maximumSec: 40, quality: "complete" },
+      telegramAcceptanceBeforeTtl: { telegramAcceptedCount: 7, knownTtlCount: 7,
+        acceptedBeforeTtlCount: 7, acceptedAfterTtlCount: 0, rate: 1, quality: "complete" },
+      authoritativeTargetOutcomes: { total: 28, telegramAccepted: 7, failed: 5, cancelled: 4,
+        expired: 3, executionUnknown: 2, unresolved: 7, telegramAcceptanceRate: 0.25 },
+      familyAttribution: { dews: 6, depeg: 5, safety: 4, launch: 3, reserve: 2, freeze: 1, mixed: 5, unknown: 2 },
+      preferenceChangeCancellations: { count: 4, reasons: [], reasonsTruncated: false },
+      backlog: { windowStartsAt: STATUS_FIXTURE_NOW_SECONDS - 86_400, windowBounded: true,
+        count: 7, oldestAgeSec: 300, buckets: [] },
+      observedTargetErrorReasons: { reasons: [], truncated: false },
+      executionUnknown: { count: 2, oldestAgeSec: 120, olderThan15mCount: 0 },
+      deadLetters: { count: 0, totalAttempts: 0, reasons: [], reasonsTruncated: false,
+        lastErrorReasons: [], lastErrorReasonsTruncated: false },
+    },
   };
 }
 

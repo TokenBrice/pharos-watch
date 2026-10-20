@@ -20,7 +20,8 @@ const DEFAULT_YIELD_PUBLICATION_D1_TABLES: MockTableConfig[] = [
   { match: "pharos:yield-sync:abandoned-staged-generation-finalize", rows: [] },
   { match: "pharos:yield-sync:publication-generation-retention-delete", rows: [] },
   { match: "pharos:yield-sync:ownership-handoff-delete", rows: [] },
-  { match: "ranked_linked_generations", rows: [] },
+  // Cleanup ranks all published decisions before checking linked-source eligibility.
+  { match: "ranked_generations", rows: [] },
   { match: "INSERT INTO cache", rows: [], runMeta: { changes: 1 } },
   { match: "INSERT INTO yield_data", rows: [] },
   { match: "INSERT INTO yield_history", rows: [] },

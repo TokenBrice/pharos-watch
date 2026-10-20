@@ -14,6 +14,7 @@ import { createBudget } from "../../../lib/evm-logs";
 
 const ACCOUNT = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t";
 const CONTRACT = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t";
+const ACCOUNT_PATH = `/v1/accounts/${ACCOUNT}/transactions/trc20`;
 const ADDRESS_HEX = "0x6f566c6d608550fb50c9365bdb6665e1c8e53caa";
 const USDT_CONTRACT_HEX = "0x41a614f803b6fd780986a42c78ec9c7f77e6ded13c";
 const WINDOW_START = 1_790_000_000_000;
@@ -204,22 +205,23 @@ describe("fetchTronBlockTransactionPositions", () => {
 
 describe("validateTronTransferPaginationUrl", () => {
   it("accepts the canonical window URL and a fingerprint hop", () => {
-    expect(validateTronTransferPaginationUrl(windowUrl(), CONTRACT, WINDOW_START, WINDOW_END)).toBe(windowUrl());
-    expect(validateTronTransferPaginationUrl(windowUrl("abc"), CONTRACT, WINDOW_START, WINDOW_END)).toBe(windowUrl("abc"));
+    expect(validateTronTransferPaginationUrl(windowUrl(), ACCOUNT_PATH, CONTRACT, WINDOW_START, WINDOW_END)).toBe(windowUrl());
+    expect(validateTronTransferPaginationUrl(windowUrl("abc"), ACCOUNT_PATH, CONTRACT, WINDOW_START, WINDOW_END)).toBe(windowUrl("abc"));
   });
 
   it("rejects changed bounds, foreign hosts, and extra filters", () => {
     const changedBounds = new URL(windowUrl());
     changedBounds.searchParams.set("max_timestamp", String(WINDOW_END + 1));
-    expect(validateTronTransferPaginationUrl(changedBounds.toString(), CONTRACT, WINDOW_START, WINDOW_END)).toBeNull();
+    expect(validateTronTransferPaginationUrl(changedBounds.toString(), ACCOUNT_PATH, CONTRACT, WINDOW_START, WINDOW_END)).toBeNull();
 
     const otherContract = new URL(windowUrl());
     otherContract.searchParams.set("contract_address", "TElsewhere");
-    expect(validateTronTransferPaginationUrl(otherContract.toString(), CONTRACT, WINDOW_START, WINDOW_END)).toBeNull();
+    expect(validateTronTransferPaginationUrl(otherContract.toString(), ACCOUNT_PATH, CONTRACT, WINDOW_START, WINDOW_END)).toBeNull();
 
     expect(
       validateTronTransferPaginationUrl(
         windowUrl().replace("api.trongrid.io", "evil.example.com"),
+        ACCOUNT_PATH,
         CONTRACT,
         WINDOW_START,
         WINDOW_END,
@@ -228,11 +230,57 @@ describe("validateTronTransferPaginationUrl", () => {
 
     const extraFilter = new URL(windowUrl());
     extraFilter.searchParams.set("min_block_timestamp", "0");
-    expect(validateTronTransferPaginationUrl(extraFilter.toString(), CONTRACT, WINDOW_START, WINDOW_END)).toBeNull();
+    expect(validateTronTransferPaginationUrl(extraFilter.toString(), ACCOUNT_PATH, CONTRACT, WINDOW_START, WINDOW_END)).toBeNull();
+  });
+
+  it.each([
+    "/v1/accounts/TOther/transactions/trc20",
+    `${ACCOUNT_PATH}/extra/transactions/trc20`,
+  ])("rejects a changed account pathname: %s", (pathname) => {
+    const next = new URL(windowUrl("page2"));
+    next.pathname = pathname;
+    expect(validateTronTransferPaginationUrl(next.toString(), ACCOUNT_PATH, CONTRACT, WINDOW_START, WINDOW_END)).toBeNull();
   });
 });
 
 describe("fetchTronTransferWindow", () => {
+  it.each([200, 201])("rejects %s raw terminal records without continuation even when none are transfers", async (length) => {
+    const records = Array.from({ length }, (_, index) => ({
+      transaction_id: `approval-${index}`, block_timestamp: WINDOW_START + index,
+      from: ACCOUNT, to: "TOther", type: "Approval", value: "0",
+    }));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(transferPage(records)));
+    const ctx = providerContext();
+    await expect(fetchTronTransferWindow(ctx, ACCOUNT, CONTRACT, WINDOW_START, WINDOW_END, 10))
+      .rejects.toMatchObject({ errorClass: "provider_null" });
+    expect(ctx.pagesFetched.count).toBe(1);
+  });
+
+  it("preserves explicit page-cap truncation when continuation exists", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(transferPage([], windowUrl("page2"))));
+    const ctx = providerContext();
+    expect(await fetchTronTransferWindow(ctx, ACCOUNT, CONTRACT, WINDOW_START, WINDOW_END, 1))
+      .toMatchObject({ complete: false, stopped: false });
+    expect(ctx.pagesFetched.count).toBe(1);
+  });
+
+  it.each([
+    "/v1/accounts/TOther/transactions/trc20",
+    `${ACCOUNT_PATH}/extra/transactions/trc20`,
+  ])("rejects changed path %s before fetching an empty terminal page", async (pathname) => {
+    const next = new URL(windowUrl("page2"));
+    next.pathname = pathname;
+    const fetch = vi.fn()
+      .mockResolvedValueOnce(transferPage([], next.toString()))
+      .mockResolvedValueOnce(transferPage([]));
+    vi.stubGlobal("fetch", fetch);
+    const ctx = providerContext();
+    await expect(fetchTronTransferWindow(ctx, ACCOUNT, CONTRACT, WINDOW_START, WINDOW_END, 10))
+      .rejects.toMatchObject({ errorClass: "provider_null" });
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(ctx.pagesFetched.count).toBe(1);
+  });
+
   it.each([
     [WINDOW_END - 1, WINDOW_END + 60_000],
     [WINDOW_END + 60_000, WINDOW_END - 1],

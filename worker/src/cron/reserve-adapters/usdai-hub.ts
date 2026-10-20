@@ -16,6 +16,7 @@ import {
 } from "./onchain-identity";
 import type { AdapterContext, AdapterResult } from "./types";
 import { reserveDegradedWarning } from "./warnings";
+import { pinnedBlockPlan } from "./evm-observation-plan";
 
 const ADAPTER_KEY = "usdai-hub";
 const PYUSD_DECIMALS = 6;
@@ -52,6 +53,8 @@ export async function fetchUsdaiHubReserves(
 ): Promise<AdapterResult> {
   const input = requireOnchainInput(config.inputs.primary, ADAPTER_KEY);
   const params = parseLiveReserveAdapterParams(ADAPTER_KEY, config.params);
+  const plan = await pinnedBlockPlan({ chain: input.chain, signal, ctx, ...params });
+  ctx = plan.ctx;
   const onchain = makeOnchainCallers(input, {
     signal,
     ctx,
@@ -128,6 +131,7 @@ export async function fetchUsdaiHubReserves(
     ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
       ...notApplicableFreshnessMetadata(),
+      observedBlock: plan.observedBlock,
       totalSupplyRaw: totalSupplyRaw.toString(),
       totalReserveUsd,
       supplyUsd,

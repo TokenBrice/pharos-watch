@@ -294,6 +294,11 @@ export function applyInputDrivenExclusions(
     ) {
       return fail(row.id, "decentralization-required-violation");
     }
+    // Centralized-dependent governance retains its existing policy: reviewed
+    // absence of freeze control can qualify, but unavailable/possible cannot.
+    if (row.canBeBlacklisted !== false) {
+      return fail(row.id, "insufficient-control-evidence", "info");
+    }
   }
   if (input.custodyOk === "regulated-only") {
     if (

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { FlowTable } from "@/components/flow-table";
+import { makeMintBurnCoinValuation } from "@/test-utils/mint-burn-fixtures";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
@@ -96,6 +97,32 @@ describe("FlowTable", () => {
 
     expect(html).not.toContain("$0.00");
     expect(html).toContain("Signed net unavailable");
+  });
+
+  it("retains unknown scan activity in the default table instead of hiding it as idle", () => {
+    const unknown = {
+      ...coin,
+      has24hActivity: null,
+      netFlowDirection24h: null,
+      pressureShiftScore: null,
+      pressureShiftState: "nr" as const,
+      mintVolume24hUsd: 0,
+      burnVolume24hUsd: 0,
+      mintCount24h: 0,
+      burnCount24h: 0,
+      netFlow24hUsd: null,
+      netFlow7dUsd: null,
+      netFlow30dUsd: null,
+      netFlow90dUsd: null,
+      valuation: makeMintBurnCoinValuation(),
+    };
+    const html = renderToStaticMarkup(
+      <FlowTable coins={[unknown, { ...unknown, stablecoinId: "usdc-circle", symbol: "USDC", has24hActivity: false, netFlow24hUsd: 0 }]} isLoading={false} />,
+    );
+    expect(html).toContain('aria-label="Open USDT flow detail"');
+    expect(html).not.toContain('aria-label="Open USDC flow detail"');
+    expect(html).toContain('data-reason-codes="activity-unknown"');
+    expect(html).toContain("signed net unavailable");
   });
 
   it("ranks worst pressure against the 30-day norm first, with NR last", () => {

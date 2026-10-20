@@ -14,7 +14,7 @@ function buildCacheFallbackToken(
   // them for the canonical accessor preserves that contract without applying
   // any price conversion.
   const supplyUsd = getCirculatingRawOrNull({ circulating: circulatingUsd });
-  if (supplyUsd == null || supplyUsd <= 0) return null;
+  if (supplyUsd == null || supplyUsd < 0) return null;
   return {
     date,
     totalCirculatingUSD: circulatingUsd,

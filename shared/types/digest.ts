@@ -8,6 +8,7 @@ import {
   type DigestSafetyMapCapture,
 } from "./digest-safety-map-contract";
 import type { DepegDirection } from "./market";
+import type { MintBurnFlowsResponse } from "./mint-burn";
 import {
   SafetyScorePublicationIdentitySchema,
   SafetyScoreV8PublicationIdentitySchema,
@@ -158,6 +159,39 @@ export type DigestGradeTransition =
       bindingCap: DigestV9SafetyCap | null;
     });
 
+export const DigestEventPeriodSchema = z.object({
+  start: z.number().int().nonnegative(),
+  end: z.number().int().nonnegative(),
+}).refine((period) => period.start < period.end, "Event periods must be nonempty and half-open");
+export type DigestEventPeriod = z.output<typeof DigestEventPeriodSchema>;
+
+export const DigestGradeTransitionAccountingSchema = z.discriminatedUnion("complete", [
+  z.object({
+    complete: z.literal(true),
+    window: DigestEventPeriodSchema,
+    safetyScoreIdentity: SafetyScorePublicationIdentitySchema,
+    count: z.number().int().nonnegative(),
+    identities: z.array(z.object({
+      historyId: z.string().min(1),
+      recordedAt: z.number().int().nonnegative(),
+    })),
+  }),
+  z.object({
+    complete: z.literal(false),
+    window: DigestEventPeriodSchema,
+    reason: z.string().min(1),
+  }),
+]).superRefine((accounting, ctx) => {
+  if (!accounting.complete) return;
+  const ids = new Set(accounting.identities.map((entry) => entry.historyId));
+  if (ids.size !== accounting.count || ids.size !== accounting.identities.length ||
+      accounting.identities.some((entry) =>
+        entry.recordedAt < accounting.window.start || entry.recordedAt >= accounting.window.end)) {
+    ctx.addIssue({ code: "custom", message: "Transition census must reconcile distinct identities inside its window" });
+  }
+});
+export type DigestGradeTransitionAccounting = z.output<typeof DigestGradeTransitionAccountingSchema>;
+
 export type DigestEditorialCandidateKind =
   | "depeg"
   | "resolved-depeg"
@@ -207,7 +241,7 @@ export interface DigestDataQuality {
   degradedSources?: string[];
   windows: {
     blacklistActivity: { label: string; start: number; end: number };
-    mintBurnFlows: { label: string; start: number; end: number };
+    mintBurnFlows: { label: string; start: number | null; end: number | null };
     supplyVelocity: { label: string; dates: number[] };
     psi: { label: string; sampleAt: number | null; dailySnapshotAt: number | null };
   };
@@ -315,12 +349,30 @@ export const DigestSafetyMapCaptureSchema = z
     for (const issue of getDigestSafetyMapCaptureIssues(capture)) ctx.addIssue({ code: "custom", ...issue });
   });
 
+export const DigestSupplyCoverageSchema = z.object({
+  complete: z.boolean(),
+  observedCount: z.number().int().nonnegative(),
+  unavailableCount: z.number().int().nonnegative(),
+  /** SHA-256 of JSON [aggregateUniverse, sorted full-universe member IDs]. */
+  memberFingerprint: z.string().regex(/^[0-9a-f]{64}$/).optional(),
+}).refine((coverage) => !coverage.complete || coverage.unavailableCount === 0, {
+  message: "Complete supply cannot have unavailable members",
+});
+
+export const DigestMcap7dDeltaCoverageSchema = z.object({
+  coveredCoins: z.number().int().nonnegative(),
+  totalCoins: z.number().int().nonnegative(),
+  coveredMcapUsd: z.number().nonnegative(),
+}).refine((coverage) => coverage.coveredCoins <= coverage.totalCoins, {
+  message: "Covered supply members cannot exceed the universe",
+});
+
 export interface DigestInputData {
   digestVersion?: number;
   aggregateUniverse?: "core-stablecoins-v1";
   totalMcapUsd: number;
   /** totalMcapUsd is a known subtotal, not a complete market total unless coverage is complete. */
-  supplyCoverage?: { complete: boolean; observedCount: number; unavailableCount: number };
+  supplyCoverage?: z.infer<typeof DigestSupplyCoverageSchema>;
   mcap7dDelta: number;
   /**
    * Basis of `mcap7dDelta`: core coins carrying a prior-week supply bucket and
@@ -328,7 +380,7 @@ export interface DigestInputData {
    * sides of the delta, so `coveredMcapUsd` — not `totalMcapUsd` — is the
    * denominator of any published 7-day percentage.
    */
-  mcap7dDeltaCoverage?: { coveredCoins: number; totalCoins: number; coveredMcapUsd: number };
+  mcap7dDeltaCoverage?: z.infer<typeof DigestMcap7dDeltaCoverageSchema>;
   totalMcapAth?: {
     value: number;
     date: number;
@@ -383,6 +435,10 @@ export interface DigestInputData {
     peakBps?: number;
     peakPriceUsd?: number;
     currentPriceUsd?: number;
+    /** Prices and deviations share the event's quote domain, never an inferred USD peg. */
+    quoteMode?: "native-peg" | "usd";
+    peakPriceNative?: number;
+    currentPriceNative?: number;
     /** Signed deviation computed from the live price vs the event's peg reference. */
     currentBps?: number;
     /** Event reference and producing quote time; absent on legacy archived rows. */
@@ -445,6 +501,14 @@ export interface DigestInputData {
   mintBurnFlows?: {
     gaugeScore: number;
     gaugeBand: string;
+    /** Exact source capture; absent on archived editions that predate provenance. */
+    provenance?: {
+      window: NonNullable<MintBurnFlowsResponse["window"]> | null;
+      /** Producer cache publication timestamp; not a unique generation ID. */
+      publishedAt: number;
+      /** Producer body clock; unavailable on legacy or unreadable payloads. */
+      updatedAt: number | null;
+    };
     // `report-card-cache` is retained only for archived digest snapshots.
     classificationSource?: "safety-score-v9-publication" | "report-card-cache" | "unavailable";
     classificationReason?: string | null;
@@ -468,6 +532,11 @@ export interface DigestInputData {
     bandCounts: { calm: number; watch: number; alert: number; warning: number; danger: number };
     /** Prior generation's distribution, or null when no prior rows were observed. */
     yesterdayBandCounts: { calm: number; watch: number; alert: number; warning: number; danger: number } | null;
+    /** Full admitted ALERT+ known-supply subtotal; null when no supply was observed. */
+    alertPlusMcapUsd?: number | null;
+    alertPlusSupplyCoverage?: z.infer<typeof DigestSupplyCoverageSchema>;
+    /** Full rank-changing census before presentation slicing; null without a prior generation. */
+    bandChangeCount?: number | null;
     bandChanges: {
       symbol: string;
       from: string;
@@ -510,6 +579,8 @@ export interface DigestInputData {
     marketImpact: number;
   }[];
   gradeTransitions?: DigestGradeTransition[];
+  /** Complete slim organic census; gradeTransitions is a presentation-only top five. */
+  gradeTransitionAccounting?: DigestGradeTransitionAccounting;
   yieldAnomalies?: {
     symbol: string;
     currentApy: number;
@@ -676,6 +747,7 @@ export const DigestArchiveEntrySchema = z.object({
   psiScore: z.number().nullable(),
   psiBand: z.string().nullable(),
   totalMcapUsd: z.number().nullable(),
+  supplyCoverage: DigestSupplyCoverageSchema.optional(),
   riskSignal: DigestRiskSignalSchema.nullable().optional(),
   nextTriggers: z.array(DigestNextTriggerSchema).nullable().optional(),
   forwardLookOutcomes: z.array(DigestForwardLookOutcomeSchema).nullable().optional(),
@@ -693,8 +765,25 @@ export const DigestArchiveEntrySchema = z.object({
 });
 export type DigestArchiveEntry = z.infer<typeof DigestArchiveEntrySchema>;
 
+// Cursor: insertion horizon, full row count, rows scanned, last generation/id.
+// Internal sentinels count toward traversal and edition numbering, not output.
+export const DigestArchiveCursorSchema = z.tuple([
+  z.number().int().nonnegative().safe(),
+  z.number().int().nonnegative().safe(),
+  z.number().int().nonnegative().safe(),
+  z.number().int().nonnegative().safe(),
+  z.number().int().positive().safe(),
+]);
+export const DigestArchivePaginationSchema = z.object({
+  horizon: z.number().int().nonnegative().safe(),
+  total: z.number().int().nonnegative().safe(),
+  scanned: z.number().int().nonnegative().safe(),
+  nextCursor: z.string().nullable(),
+});
+
 export const DigestArchiveResponseSchema = z.object({
   digests: z.array(DigestArchiveEntrySchema),
+  pagination: DigestArchivePaginationSchema.optional(),
 });
 export type DigestArchiveResponse = z.infer<typeof DigestArchiveResponseSchema>;
 
@@ -785,7 +874,9 @@ const DigestSnapshotInputDataSchema = z
   .object({
     aggregateUniverse: z.literal("core-stablecoins-v1").optional(),
     totalMcapUsd: z.number().optional(),
+    supplyCoverage: DigestSupplyCoverageSchema.optional(),
     mcap7dDelta: z.number().optional(),
+    mcap7dDeltaCoverage: DigestMcap7dDeltaCoverageSchema.optional(),
     activeDepegCount: z.number().nullable().optional(),
     resolvedDepegCount: z.number().nullable().optional(),
     depegSignalKeys: z.object({
@@ -814,6 +905,9 @@ const DigestSnapshotInputDataSchema = z
             currentBps: z.number().optional(),
             pegReference: z.number().positive().optional(),
             priceObservedAt: z.number().optional(),
+            quoteMode: z.enum(["native-peg", "usd"]).optional(),
+            peakPriceNative: z.number().positive().optional(),
+            currentPriceNative: z.number().positive().optional(),
             severityBasis: z.enum(["current", "peak-fallback"]).optional(),
           })
           .passthrough(),
@@ -934,6 +1028,13 @@ export const DigestSnapshotResponseSchema = z.object({
   date: z.string(),
   inputData: DigestSnapshotInputDataSchema.nullable(),
   prevInputData: DigestSnapshotInputDataSchema.nullable(),
+  comparison: z.object({
+    fromDate: DigestSafetyMapUtcDateSchema,
+    toDate: DigestSafetyMapUtcDateSchema,
+    supplyComparable: z.boolean(),
+  }).refine((comparison) => comparison.fromDate < comparison.toDate, {
+    message: "Comparison endpoints must be chronological",
+  }).nullable().optional().describe("Actual captured daily endpoints; absent or null means the comparison interval is unproven. Supply deltas additionally require supplyComparable."),
   depegEvents: z.array(DigestSnapshotDepegEventSchema),
   blacklistEvents: z.array(DigestSnapshotBlacklistEventSchema),
   blacklistSummary: z.object({

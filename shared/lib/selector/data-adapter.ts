@@ -34,6 +34,8 @@ export interface BuildSelectorRowsArgs {
   stressData: StressSignalsAllResponse | null;
   dexData: DexLiquidityMap | null;
   yieldData: YieldRankingsResponse | null;
+  /** Yield response receipt/age-assessment clock only; never a sibling feed or publication clock. */
+  yieldAgeAssessedAt?: number | null;
   bluechipData: BluechipRatingsMap | null;
   /** `Date.now()`-style milliseconds or Unix seconds. */
   now: number;
@@ -160,9 +162,9 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
       yieldProtocolSlug: yieldRisk?.venueProtocol ?? yieldEntry?.yieldSource ?? null,
       yieldVenueChain: yieldRisk?.venueChain ?? null,
       yieldObservationDays30d: yieldRisk?.observationCount30d ?? null,
-      yieldFreshness: yieldFreshnessFrom(yieldEntry, args.now),
+      yieldFreshness: yieldFreshnessFrom(yieldEntry, args.now, args.yieldAgeAssessedAt),
       yieldSourceTvlUsd: yieldEntry?.sourceTvlUsd ?? null,
-      yieldSources: buildYieldSourceCandidates(yieldEntry, args.now),
+      yieldSources: buildYieldSourceCandidates(yieldEntry, args.now, args.yieldAgeAssessedAt),
 
       trackingSpanDays: peg?.trackingSpanDays ?? 0,
       isRecentListing: (peg?.trackingSpanDays ?? 0) > 0 && (peg?.trackingSpanDays ?? 0) < 90,
@@ -296,6 +298,7 @@ function normalizeDeploymentPlace(place: YieldDeploymentPlace | null | undefined
 function buildYieldSourceCandidates(
   ranking: YieldRanking | undefined,
   now: number,
+  yieldAgeAssessedAt: number | null | undefined,
 ): NonNullable<MergedRow["yieldSources"]> {
   if (!ranking) return [];
   const selectedRisk = ranking.sourceRisk ?? null;
@@ -314,12 +317,12 @@ function buildYieldSourceCandidates(
     sourceDepthRatio: selectedRisk?.sourceDepthRatio ?? null,
     sourceSwitchCount30d: selectedRisk?.sourceSwitchCount30d ?? null,
     observationCount30d: selectedRisk?.observationCount30d ?? null,
-    freshness: yieldFreshnessFrom(ranking, now),
+    freshness: yieldFreshnessFrom(ranking, now, yieldAgeAssessedAt),
     isPrimary: true,
   };
 
   const alternates = (ranking.altSources ?? []).map((source) =>
-    altYieldSourceCandidate(source, now),
+    altYieldSourceCandidate(source, now, yieldAgeAssessedAt),
   );
 
   return [selected, ...alternates];
@@ -328,6 +331,7 @@ function buildYieldSourceCandidates(
 function altYieldSourceCandidate(
   source: AltYieldSource,
   now: number,
+  yieldAgeAssessedAt: number | null | undefined,
 ): NonNullable<MergedRow["yieldSources"]>[number] {
   const risk = source.sourceRisk ?? null;
   return {
@@ -346,7 +350,7 @@ function altYieldSourceCandidate(
     sourceDepthRatio: risk?.sourceDepthRatio ?? null,
     sourceSwitchCount30d: risk?.sourceSwitchCount30d ?? null,
     observationCount30d: risk?.observationCount30d ?? null,
-    freshness: freshnessFromRisk(risk, now),
+    freshness: freshnessFromRisk(risk, now, yieldAgeAssessedAt),
     isPrimary: false,
   };
 }
@@ -355,29 +359,33 @@ function sourceKeyFor(protocol: string, yieldType: YieldType, risk: YieldSourceR
   return [risk?.venueProtocol ?? protocol, risk?.venueChain ?? "unknown-chain", yieldType].join(":");
 }
 
-function yieldFreshnessFrom(ranking: YieldRanking | undefined, now: number): MergedRow["yieldFreshness"] {
+function yieldFreshnessFrom(
+  ranking: YieldRanking | undefined,
+  now: number,
+  yieldAgeAssessedAt: number | null | undefined,
+): MergedRow["yieldFreshness"] {
   if (ranking?.provenance) {
-    if (ranking.provenance.sourceObservedAt == null || ranking.provenance.sourceAgeSeconds == null) return null;
-    return {
-      capturedAt: ranking.provenance.sourceObservedAt,
-      ageSeconds: ranking.provenance.sourceAgeSeconds,
-    };
+    const observedAt = ranking.provenance.sourceObservedAt;
+    if (observedAt == null || !Number.isFinite(observedAt) || observedAt < 0) return null;
+    const ageSeconds = toUnixSeconds(now) - observedAt;
+    if (!Number.isFinite(ageSeconds) || ageSeconds < 0) return null;
+    return { capturedAt: observedAt, ageSeconds: Math.round(ageSeconds) };
   }
-  const sourceAgeSeconds = ranking?.sourceRisk?.sourceAgeSeconds;
-  if (sourceAgeSeconds == null) return null;
-  return {
-    capturedAt: Math.max(0, Math.round(toUnixSeconds(now) - sourceAgeSeconds)),
-    ageSeconds: sourceAgeSeconds,
-  };
+  return freshnessFromRisk(ranking?.sourceRisk ?? null, now, yieldAgeAssessedAt);
 }
 
-function freshnessFromRisk(risk: YieldSourceRisk | null, now: number): MergedRow["yieldFreshness"] {
+function freshnessFromRisk(
+  risk: YieldSourceRisk | null,
+  now: number,
+  yieldAgeAssessedAt: number | null | undefined,
+): MergedRow["yieldFreshness"] {
   const sourceAgeSeconds = risk?.sourceAgeSeconds;
-  if (sourceAgeSeconds == null) return null;
-  return {
-    capturedAt: Math.max(0, Math.round(toUnixSeconds(now) - sourceAgeSeconds)),
-    ageSeconds: sourceAgeSeconds,
-  };
+  if (sourceAgeSeconds == null || yieldAgeAssessedAt == null ||
+      !Number.isFinite(yieldAgeAssessedAt) || yieldAgeAssessedAt <= 0) return null;
+  const capturedAt = toUnixSeconds(yieldAgeAssessedAt) - sourceAgeSeconds;
+  const ageSeconds = toUnixSeconds(now) - capturedAt;
+  if (!Number.isFinite(capturedAt) || capturedAt < 0 || !Number.isFinite(ageSeconds) || ageSeconds < 0) return null;
+  return { capturedAt, ageSeconds: Math.round(ageSeconds) };
 }
 
 function ageSecondsFromTimestamp(timestamp: number | null | undefined, now: number): number | null {

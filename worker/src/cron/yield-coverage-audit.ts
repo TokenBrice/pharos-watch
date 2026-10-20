@@ -40,7 +40,6 @@ import {
   identifyDeadCuratedPins,
   identifyStaleAutoLendingOverrides,
   isHighConfidenceProtocolCategory,
-  protocolRowsFromCachePayload,
   type CoverageAuditOperatorQueue,
   type PublishedYieldVenueRow,
 } from "./yield-coverage-audit/detectors";
@@ -64,13 +63,16 @@ async function loadProtocolCategoryLookup(db: D1Database): Promise<{
 }> {
   const cached = await getCache(db, CIRCUIT_SOURCE.DL_PROTOCOLS);
   const parsed = readCachedJson<unknown>("yield-coverage-audit", CIRCUIT_SOURCE.DL_PROTOCOLS, cached);
+  const admitted = parsed.status === "ok"
+    ? buildProtocolCategoryLookupFromCachePayload(parsed.data)
+    : null;
 
-  if (parsed.status !== "ok") {
+  if (parsed.status !== "ok" || admitted == null) {
     return {
       categoriesByProject: new Map(),
       meta: {
         cacheKey: CIRCUIT_SOURCE.DL_PROTOCOLS,
-        status: parsed.status,
+        status: parsed.status === "ok" ? "malformed" : parsed.status,
         protocolCount: 0,
         categorizedProtocolCount: 0,
         highConfidenceCategoryCount: 0,
@@ -78,14 +80,13 @@ async function loadProtocolCategoryLookup(db: D1Database): Promise<{
     };
   }
 
-  const protocolRows = protocolRowsFromCachePayload(parsed.data);
-  const categoriesByProject = buildProtocolCategoryLookupFromCachePayload(parsed.data);
+  const { categoriesByProject, protocolCount } = admitted;
   return {
     categoriesByProject,
     meta: {
       cacheKey: CIRCUIT_SOURCE.DL_PROTOCOLS,
       status: "ok",
-      protocolCount: protocolRows.length,
+      protocolCount,
       categorizedProtocolCount: categoriesByProject.size,
       highConfidenceCategoryCount: [...categoriesByProject.values()]
         .filter(isHighConfidenceProtocolCategory).length,
@@ -118,6 +119,8 @@ export interface LifecycleAuditBuckets {
    * the only place a past-due lifecycle review becomes visible.
    */
   reviewDueAdapters: LifecycleAdapterBucketItem[];
+  reviewDueAdapterCount: number;
+  reviewDueAdaptersTruncated: boolean;
 }
 
 function lifecycleBucketKey(lifecycle: YieldAdapterLifecycle): keyof LifecycleSummary {
@@ -197,6 +200,8 @@ export function summarizeAdapterLifecycle(
     quarantinedAdapters: quarantinedAdapters.slice(0, LIFECYCLE_BUCKET_LIMIT),
     intentionalGaps: intentionalGaps.slice(0, LIFECYCLE_BUCKET_LIMIT),
     reviewDueAdapters: reviewDueAdapters.slice(0, LIFECYCLE_BUCKET_LIMIT),
+    reviewDueAdapterCount: reviewDueAdapters.length,
+    reviewDueAdaptersTruncated: reviewDueAdapters.length > LIFECYCLE_BUCKET_LIMIT,
   };
 }
 
@@ -485,7 +490,7 @@ export async function runYieldCoverageAudit(
     venueRiskConfigMissingCount: gaps.venueRiskConfigMissing.length,
     staleAutoLendingOverrideCount: staleAutoLendingOverrides.length,
     deadCuratedPinCount: deadCuratedPins.length,
-    lifecycleReviewDueCount: lifecycleBuckets.reviewDueAdapters.length,
+    lifecycleReviewDueCount: lifecycleBuckets.reviewDueAdapterCount,
     exactPoolOverrideCount: explicitPoolOverrides.length,
     exactPoolOverrideNonYieldBearingOpportunityCount: exactPoolOverrideNonYieldBearingOpportunityIds.length,
     staleVenueRiskScoreCount: staleVenueRiskScores.length,
@@ -514,6 +519,7 @@ export async function runYieldCoverageAudit(
     queueTotals,
     deadCuratedPins: deadCuratedPins.slice(0, OPERATOR_QUEUE_ITEM_LIMIT),
     reviewDueAdapters: lifecycleBuckets.reviewDueAdapters,
+    reviewDueAdaptersTruncated: lifecycleBuckets.reviewDueAdaptersTruncated,
     lifecycleSummary: lifecycleBuckets.lifecycleSummary,
     quarantinedAdapters: lifecycleBuckets.quarantinedAdapters,
     intentionalGaps: lifecycleBuckets.intentionalGaps,
@@ -558,14 +564,15 @@ export async function runYieldCoverageAudit(
       },
     });
   }
-  if (lifecycleBuckets.reviewDueAdapters.length > 0) {
+  if (lifecycleBuckets.reviewDueAdapterCount > 0) {
     await logCronEvent(db, {
       job: "yield-coverage-audit",
       eventType: "lifecycle-review-due",
       severity: "warning",
-      message: `${lifecycleBuckets.reviewDueAdapters.length} adapter lifecycle review(s) are past due.`,
+      message: `${lifecycleBuckets.reviewDueAdapterCount} adapter lifecycle review(s) are past due.`,
       metadata: {
-        lifecycleReviewDueCount: lifecycleBuckets.reviewDueAdapters.length,
+        lifecycleReviewDueCount: lifecycleBuckets.reviewDueAdapterCount,
+        reviewDueAdaptersTruncated: lifecycleBuckets.reviewDueAdaptersTruncated,
         reviewDue: lifecycleBuckets.reviewDueAdapters.map((adapter) => ({
           stablecoinId: adapter.stablecoinId,
           code: adapter.code,

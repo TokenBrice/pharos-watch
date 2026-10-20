@@ -109,6 +109,7 @@ function gbpCanaryCacheRows(options: {
       key: "risk_free_rates",
       value: JSON.stringify({
         version: 1,
+        generationId: "benchmark-generation",
         benchmarks: {
           USD: {
             ...benchmark("USD", "fred-dgs3mo"),
@@ -126,13 +127,13 @@ function gbpCanaryCacheRows(options: {
     },
     {
       key: "fetch-tbill-rate:gbp-retained-fallback-streak",
-      value: options.streakValue ?? JSON.stringify({ consecutiveFreshRuns: options.freshRuns ?? 2 }),
+      value: options.streakValue ?? JSON.stringify({ generationId: "benchmark-generation", consecutiveFreshRuns: options.freshRuns ?? 2 }),
       updatedAt: NOW - 60,
       updated_at: NOW - 60,
     },
     {
       key: "fetch-tbill-rate:usd-fresh-streak",
-      value: options.streakValue ?? JSON.stringify({ consecutiveFreshRuns: options.freshRuns ?? 2 }),
+      value: options.streakValue ?? JSON.stringify({ generationId: "benchmark-generation", consecutiveFreshRuns: options.freshRuns ?? 2 }),
       updatedAt: NOW - 60,
       updated_at: NOW - 60,
     },
@@ -500,6 +501,46 @@ describe("worker data invariant canaries", () => {
         expect(summary.results.find((result) => result.checkId === `yield-${currency}-benchmark-current`)).toMatchObject({
           executionStatus: "failed", executionFailureReason: "benchmark-fresh-streak-unavailable",
           metadata: { consecutiveFreshRuns: null },
+        });
+      }
+    },
+  );
+
+  it.each(["registry-generationless", "all-generationless", "legacy-missing-marker", "marker-generationless", "generation-mismatch"] as const)(
+    "does not certify unrelated benchmark recovery evidence (%s)", async (kind) => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date(NOW * 1000));
+      const { db, sqlite } = fixtures.open();
+      for (const row of gbpCanaryCacheRows()) {
+        const payload = JSON.parse(row.value);
+        if (["registry-generationless", "all-generationless", "legacy-missing-marker"].includes(kind) && row.key === "risk_free_rates") {
+          delete payload.generationId;
+        }
+        if (row.key !== "risk_free_rates") {
+          if (kind === "legacy-missing-marker") continue;
+          if (kind === "marker-generationless" || kind === "all-generationless") delete payload.generationId;
+          if (kind === "generation-mismatch") payload.generationId = "another-publication";
+        }
+        sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(
+          row.key, JSON.stringify(payload), row.updatedAt,
+        );
+      }
+      const summary = await runCanaryChecks(db, { mode: "status", observedAt: NOW });
+      for (const currency of ["gbp", "usd"]) {
+        const legacyRegistry = ["registry-generationless", "all-generationless", "legacy-missing-marker"].includes(kind);
+        const reason = legacyRegistry
+          ? "benchmark-registry-generation-legacy"
+          : kind === "marker-generationless"
+            ? "benchmark-fresh-streak-generation-unavailable"
+            : "benchmark-fresh-streak-generation-mismatch";
+        expect(summary.results.find((result) => result.checkId === `yield-${currency}-benchmark-current`)).toMatchObject({
+          status: legacyRegistry ? "skipped" : "error",
+          executionStatus: legacyRegistry ? "completed" : "failed",
+          executionFailureReason: legacyRegistry ? null : reason,
+          error: reason,
+          metadata: legacyRegistry
+            ? { generationId: null, consecutiveFreshRuns: null, reason }
+            : { consecutiveFreshRuns: 2 },
         });
       }
     },

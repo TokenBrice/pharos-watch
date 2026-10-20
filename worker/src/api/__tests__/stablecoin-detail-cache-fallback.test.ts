@@ -50,6 +50,35 @@ describe("cache-backed native supply", () => {
     },
   );
 
+  it.each([false, true])("retains a measured current zero with an earlier positive=%s", async (earlierPositive) => {
+    const day = 1_728_000_000;
+    loadStablecoinsCacheMock.mockResolvedValue({
+      kind: "ok", updatedAt: day,
+      payload: { peggedAssets: [{
+        id: "probe", price: 2,
+        circulating: { peggedUSD: 0 },
+        circulatingPrevDay: earlierPositive ? { peggedUSD: 100 } : undefined,
+        circulatingPrevWeek: { peggedUSD: NaN },
+      }] },
+    });
+    const { db, sqlite } = fixtures.open();
+    const waitUntil = vi.fn();
+    const helpers = createDetailResponseHelpers({
+      db, stablecoinId: "probe", pegType: "peggedUSD", cached: null,
+      execCtx: { waitUntil } as unknown as ExecutionContext,
+    });
+    const response = await handleCacheBackedDetail({ db, stablecoinId: "probe", pegType: "peggedUSD" }, helpers);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("X-Data-Updated-At")).toBe(String(day));
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(await response.json()).toMatchObject({ tokens: [
+      ...(earlierPositive ? [{ date: day - 86400, totalCirculatingUSD: { peggedUSD: 100 }, totalCirculating: { peggedUSD: 50 } }] : []),
+      { date: day, totalCirculatingUSD: { peggedUSD: 0 }, totalCirculating: { peggedUSD: 0 } },
+    ], _meta: { updatedAt: day, status: "stale", reason: "detail-history-fallback" } });
+    expect(waitUntil).not.toHaveBeenCalled();
+    expect(sqlite.prepare("SELECT value FROM cache WHERE key = 'detail:probe'").get()).toBeUndefined();
+  });
+
   it.each([1, 40])("preserves the %s-day-old fallback source clock without renewing detail cache", async (days) => {
     const now = 1_800_000_000;
     vi.useFakeTimers();

@@ -62,6 +62,12 @@ const MINT_BURN_TAPE_ELIGIBLE_EVENT_SQL = `event.timestamp < ?
  */
 function mintBurnFinalHourSql(frontiersSql: string): string {
   return `NOT EXISTS (
+    SELECT 1 FROM mint_burn_dirty_hours dirty
+     WHERE dirty.stablecoin_id = event.stablecoin_id
+       AND dirty.chain_id = event.chain_id
+       AND dirty.hour_ts = (event.timestamp / 3600) * 3600
+  )
+  AND NOT EXISTS (
     SELECT 1
       FROM mint_burn_events sibling
      WHERE sibling.stablecoin_id = event.stablecoin_id

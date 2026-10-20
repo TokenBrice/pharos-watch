@@ -1,4 +1,5 @@
 import { runOperatorCli } from "./operator-cli.test-support";
+import type * as ChildProcessModule from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -15,6 +16,7 @@ import {
   restoreCleanupRowsToSqlite,
   runYieldHistoryCleanupCli,
 } from "../yield-history-cleanup";
+import { createD1Client } from "../../../scripts/lib/remote-d1";
 import { createWorkerD1Client } from "../lib/remote-d1";
 import type * as RemoteD1Module from "../lib/remote-d1";
 import type { RemoteD1Client } from "../lib/remote-d1";
@@ -22,6 +24,12 @@ import type { RemoteD1Client } from "../lib/remote-d1";
 vi.mock("../lib/remote-d1", async (importOriginal) => ({
   ...(await importOriginal<typeof RemoteD1Module>()),
   createWorkerD1Client: vi.fn(),
+}));
+
+const execFileSyncMock = vi.hoisted(() => vi.fn<(file: string, args: readonly string[]) => string>());
+vi.mock("node:child_process", async (importOriginal) => ({
+  ...(await importOriginal<typeof ChildProcessModule>()),
+  execFileSync: execFileSyncMock,
 }));
 
 function createTempDbPath(): string {
@@ -123,7 +131,7 @@ describe("yield-history-cleanup", () => {
       vi.mocked(createWorkerD1Client).mockReturnValue({
         query: (sql: string) => sqlite.prepare(sql).all(),
         executeStatements: (statements: string[]) => { for (const sql of statements) sqlite.exec(sql); },
-        queryRaw: () => "[]",
+        queryRaw: () => '[{"success":true,"results":[]}]',
       } as RemoteD1Client);
       const args = ["--execute", "--confirm", "yield-history-cleanup"];
       const dependencies = { printJson: vi.fn() };
@@ -149,6 +157,40 @@ describe("yield-history-cleanup", () => {
           restored: { hourly: 3, daily: 2 },
         }));
       }
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("aborts cleanup and restore without mutation when the lease query returns a failed D1 envelope", async () => {
+    const path = createTempDbPath();
+    tempPaths.push(path);
+    seedDb(path);
+    const before = readAllRows(path);
+    const beforeDaily = readAllRows(path, "yield_history_daily");
+    const restorePath = path.replace("test.sqlite", "restore.json");
+    writeFileSync(restorePath, JSON.stringify(createYieldHistoryCleanupArtifact(loadCleanupRowsFromSqlite(path), "ops")));
+    const sqlite = new DatabaseSync(path);
+    const executeStatements = vi.fn();
+    try {
+      const now = Math.floor(Date.now() / 1000);
+      sqlite.prepare("INSERT INTO cache VALUES (?, ?, ?)").run(
+        "yield-history-cleanup:writer-pause", JSON.stringify({ reason: "cleanup", pausedAt: now, operator: "ops" }), now,
+      );
+      execFileSyncMock.mockImplementation((_file, args) => {
+        const sql = args[args.indexOf("--command") + 1]!;
+        return JSON.stringify([sql.includes("FROM cron_leases")
+          ? { success: false, results: [], error: "lease read unavailable" }
+          : { success: true, results: sqlite.prepare(sql).all() }]);
+      });
+      vi.mocked(createWorkerD1Client).mockReturnValue({ ...createD1Client("stablecoin-db"), executeStatements });
+      const args = ["--execute", "--confirm", "yield-history-cleanup"];
+      for (const operation of [args, [...args, "--restore", restorePath]]) {
+        await expect(runYieldHistoryCleanupCli(operation, { printJson: vi.fn() })).rejects.toThrow("lease read unavailable");
+      }
+      expect(executeStatements).not.toHaveBeenCalled();
+      expect(readAllRows(path)).toEqual(before);
+      expect(readAllRows(path, "yield_history_daily")).toEqual(beforeDaily);
     } finally {
       sqlite.close();
     }

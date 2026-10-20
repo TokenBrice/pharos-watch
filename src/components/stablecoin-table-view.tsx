@@ -182,7 +182,7 @@ function DefaultFooter({ count }: { count: number }) {
         </Link>
       </span>
       <span className="pharos-meta sm:text-right">
-        Rows open the detail dossier. Green and red deltas reflect supply expansion and contraction, not price return.
+        Rows open the detail dossier. Green and red deltas reflect USD market-cap growth and decline, not token-supply change or price return.
       </span>
     </div>
   );

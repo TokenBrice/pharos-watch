@@ -3,9 +3,24 @@ import {
   createTelegramFetchSpy,
   telegramApiCallBody,
 } from "../../../test-helpers/__shared/telegram";
+import {
+  mockTelegramD1 as baseMockTelegramD1,
+  type MockTelegramD1Options,
+} from "../../../test-helpers/__shared/telegram";
+import type { MockTableConfig } from "@shared/test-utils/mock-d1";
 import type { TelegramCallbackQuery } from "../../callbacks";
 
-export { mockTelegramD1 } from "../../../test-helpers/__shared/telegram";
+export function mockTelegramD1(tables: MockTableConfig[] = [], options: MockTelegramD1Options = {}) {
+  return baseMockTelegramD1(tables, {
+    ...options,
+    fallbackTables: [
+      ...(options.fallbackTables ?? []),
+      // Store enable batches include the idempotent first-follow claim.
+      { match: "INSERT OR IGNORE INTO telegram_subscribers", rows: [] },
+      { match: "INSERT INTO telegram_adoption_daily", rows: [] },
+    ],
+  });
+}
 
 // Keep the callback suites focused on action-specific fixtures and assertions.
 vi.mock("../telegram-webhook-insights", async (importOriginal) => {

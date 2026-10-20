@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { ApiKeyAuditEntry } from "@pharos/contracts/api-keys";
 import type { AdminActionAuditEntry } from "@/lib/actions-workbench-model";
@@ -38,7 +38,7 @@ function state<T>(entries: readonly T[]): OperationalActivitySourceState<T> {
 }
 
 describe("OperationalActivity", () => {
-  it("merges duplicate lifecycle events, redacts detail, and links to focused workspaces", () => {
+  it("keeps lifecycle source records separate, redacts detail, and links to focused workspaces", () => {
     render(
       <OperationalActivity
         adminActions={state([adminEntry])}
@@ -47,14 +47,19 @@ describe("OperationalActivity", () => {
       />,
     );
 
-    expect(screen.getByText(/1 cross-source lifecycle duplicate reconciled/i)).toBeTruthy();
-    expect(screen.getByText("Admin action + Credential audit")).toBeTruthy();
+    const rows = screen.getAllByRole("listitem");
+    expect(rows).toHaveLength(2);
+    expect(within(rows[0]!).getByText("Credential audit")).toBeTruthy();
+    expect(within(rows[0]!).getByText("recorded")).toBeTruthy();
+    expect(within(rows[1]!).getByText("Admin action")).toBeTruthy();
+    expect(within(rows[1]!).getByText("ok")).toBeTruthy();
+    expect(screen.queryByText(/cross-source lifecycle duplicate reconciled/i)).toBeNull();
     expect(screen.getByText(/Partner reader \(API key 7\)/i)).toBeTruthy();
-    expect(screen.getByText(/1m ago/i)).toBeTruthy();
+    expect(screen.getAllByText(/1m ago/i)).toHaveLength(2);
     expect(screen.getByRole("link", { name: /Actions workspace/i }).getAttribute("href")).toBe("/admin/actions");
     expect(screen.getByRole("link", { name: /API Management/i }).getAttribute("href")).toBe("/admin-api");
 
-    fireEvent.click(screen.getByText("Safe structured detail"));
+    screen.getAllByText("Safe structured detail").forEach((summary) => fireEvent.click(summary));
     expect(screen.getAllByText(/\[redacted\]/i).length).toBeGreaterThan(0);
     expect(screen.queryByText(/ph_live_embedded_secret/i)).toBeNull();
     expect(screen.queryByText(/"hidden"/i)).toBeNull();

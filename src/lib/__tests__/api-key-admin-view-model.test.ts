@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
-import type { ApiKeySummary } from "@pharos/contracts/api-keys";
+import { API_KEY_TIER_VALUES, type ApiKeySummary } from "@pharos/contracts/api-keys";
 import {
   buildApiKeyInventoryView,
+  buildEditableKeyState,
+  buildUpdateApiKeyPayload,
   type ApiKeyInventoryQuery,
 } from "../api-key-admin-view-model";
 import { makeLargeApiKeyInventory } from "@/test-utils/api-key-fixtures";
@@ -77,6 +79,33 @@ function makeReviewInventory(): ApiKeySummary[] {
 function inventoryIds(keys: readonly ApiKeySummary[], query: ApiKeyInventoryQuery = {}): number[] {
   return buildApiKeyInventoryView(keys, NOW_SECONDS, { pageSize: UNPAGED, ...query }).keys.map((key) => key.id);
 }
+
+describe("API key editor tier projection", () => {
+  it.each(API_KEY_TIER_VALUES)("preserves %s through an unrelated rename and save", (tier) => {
+    const key = { ...makeReviewInventory()[0]!, tier, expiresAt: null };
+    const draft = buildEditableKeyState(key);
+    expect(draft.tier).toBe(tier);
+    expect(buildUpdateApiKeyPayload({ ...draft, name: "Renamed key" })).toEqual({
+      name: "Renamed key",
+      ownerEmail: key.ownerEmail,
+      tier,
+      rateLimitPerMinute: key.rateLimitPerMinute,
+      expiresAt: null,
+    });
+  });
+
+  it("falls back only for an unknown historical tier and allows intentional tier changes", () => {
+    const key = { ...makeReviewInventory()[0]!, tier: "legacy-partner", expiresAt: null };
+    const draft = buildEditableKeyState(key);
+    expect(draft.tier).toBe("standard");
+    expect(buildUpdateApiKeyPayload(draft).tier).toBe("standard");
+    expect(buildUpdateApiKeyPayload({ ...draft, tier: "donor" }).tier).toBe("donor");
+    expect(buildUpdateApiKeyPayload({
+      ...buildEditableKeyState({ ...key, tier: "donor" }),
+      tier: "standard",
+    }).tier).toBe("standard");
+  });
+});
 
 describe("API key inventory workbench model", () => {
   it("applies inclusive expiry windows and includes non-expiring exceptions only when requested", () => {

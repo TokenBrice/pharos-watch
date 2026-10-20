@@ -3,6 +3,7 @@ import {
   STATUS_COINGECKO_PRICE_DIFF_THRESHOLD_PCT,
 } from "@shared/lib/status-thresholds";
 import { PriceSourceHealthSchema } from "@shared/types/pricing-source-health";
+import { LiquidityHealthSchema } from "@shared/types/status/yield-liquidity";
 import { ACTIVE_IDS, ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type {
   CanaryStatus,
@@ -125,31 +126,6 @@ async function loadTelegramHealthSummary(
 }
 
 
-type CoverageClassCounts = Record<"primary" | "mixed" | "fallback" | "legacy" | "unobserved", number>;
-
-function finiteOr0(raw: unknown): number {
-  try {
-    const value = Number(raw ?? 0);
-    return Number.isFinite(value) ? value : 0;
-  } catch {
-    return 0;
-  }
-}
-
-function objectValue(raw: unknown, key: string): unknown {
-  if (raw == null || typeof raw !== "object") return undefined;
-  return Reflect.get(raw, key);
-}
-
-function coverageClasses(raw: unknown): CoverageClassCounts {
-  return {
-    primary: finiteOr0(objectValue(raw, "primary")),
-    mixed: finiteOr0(objectValue(raw, "mixed")),
-    fallback: finiteOr0(objectValue(raw, "fallback")),
-    legacy: finiteOr0(objectValue(raw, "legacy")),
-    unobserved: finiteOr0(objectValue(raw, "unobserved")),
-  };
-}
 
 // 250 IDs × a 1 KiB source envelope; overflow fails the supplement, never partial prices.
 const STATUS_COINGECKO_MAX_RESPONSE_BYTES = 256 * 1024;
@@ -299,7 +275,7 @@ function selectDexLiquidityCoverageRun(
   for (const run of runs) {
     if (now - run.startedAt > intervalSec * 2) return null;
     const sourceCoverage = run.metadata?.sourceCoverage;
-    if (sourceCoverage != null && typeof sourceCoverage === "object") {
+    if (sourceCoverage != null) {
       return run;
     }
   }
@@ -338,26 +314,19 @@ export async function loadStatusSupplements(
   try {
     const coverageRun = selectDexLiquidityCoverageRun(crons["sync-dex-liquidity"], now);
     const metadata = coverageRun?.metadata;
-    const sourceCoverage = metadata?.sourceCoverage as Record<string, unknown> | undefined;
-    if (coverageRun && sourceCoverage) {
-      liquidityHealth = {
+    if (coverageRun) {
+      const sourceCoverage = metadata?.sourceCoverage;
+      if (sourceCoverage == null || typeof sourceCoverage !== "object" || Array.isArray(sourceCoverage)) {
+        throw new Error("Liquidity coverage telemetry is malformed");
+      }
+      liquidityHealth = LiquidityHealthSchema.parse({
+        ...sourceCoverage,
         lastRunStatus: coverageRun.status,
         sourceRunStartedAt: coverageRun.startedAt,
-        currentCoverage: Number(sourceCoverage.currentCoverage ?? 0),
-        previousCoverage: sourceCoverage.previousCoverage != null ? Number(sourceCoverage.previousCoverage) : null,
-        currentGlobalTvl: sourceCoverage.currentGlobalTvl != null ? Number(sourceCoverage.currentGlobalTvl) : null,
-        previousGlobalTvl: sourceCoverage.previousGlobalTvl != null ? Number(sourceCoverage.previousGlobalTvl) : null,
-        currentTop10CoveredTvl: sourceCoverage.currentTop10CoveredTvl != null ? Number(sourceCoverage.currentTop10CoveredTvl) : null,
-        previousTop10CoveredTvl: sourceCoverage.previousTop10CoveredTvl != null ? Number(sourceCoverage.previousTop10CoveredTvl) : null,
-        currentTop10GuardTvl: sourceCoverage.currentTop10GuardTvl != null ? Number(sourceCoverage.currentTop10GuardTvl) : null,
-        previousTop10GuardTvl: sourceCoverage.previousTop10GuardTvl != null ? Number(sourceCoverage.previousTop10GuardTvl) : null,
-        failedSources: Array.isArray(metadata?.failedSources) ? metadata.failedSources.filter((v): v is string => typeof v === "string") : [],
-        nearCoverageGuard: Boolean(sourceCoverage.nearCoverageGuard),
-        nearValueGuard: Boolean(sourceCoverage.nearValueGuard),
-        nearMajorCoverageGuard: Boolean(sourceCoverage.nearMajorCoverageGuard),
-        currentCoverageClasses: coverageClasses(sourceCoverage.currentCoverageClasses),
-        previousCoverageClasses: coverageClasses(sourceCoverage.previousCoverageClasses),
-      };
+        failedSources: metadata?.failedSources,
+      });
+    } else if (crons["sync-dex-liquidity"]) {
+      throw new Error("Liquidity coverage telemetry is unavailable");
     }
   } catch (err) {
     logStatusSupplementWarning(

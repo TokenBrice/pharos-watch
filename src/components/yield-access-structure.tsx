@@ -10,6 +10,7 @@ function formatEnum(value: string | null | undefined): string {
 
 function formatDuration(seconds: number | null | undefined): string {
   if (seconds == null) return "Unknown";
+  if (seconds > 0 && seconds < 60) return "<1 min";
   if (seconds < 3_600) return `${Math.round(seconds / 60)} min`;
   if (seconds < 86_400) return `${(seconds / 3_600).toFixed(seconds % 3_600 === 0 ? 0 : 1)} hr`;
   return `${(seconds / 86_400).toFixed(seconds % 86_400 === 0 ? 0 : 1)} days`;

@@ -42,6 +42,24 @@ function makeFlow(overrides: Partial<Record<string, unknown>> = {}): Record<stri
 
 describe("mint_burn projector", () => {
 
+  it.each([
+    { timestamp: 1777636800, version: "6.0" },
+    { timestamp: 1792497600, version: "6.27" },
+  ])("persists the flow methodology at source time $timestamp under later replay clocks", async ({ timestamp, version }) => {
+    const { db, sqlite } = fixtures.open();
+    sqlite.prepare(`INSERT INTO mint_burn_events
+      (id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd, timestamp,
+       flow_type, tx_hash, block_number, explorer_tx_url)
+      VALUES ('historical', 'usdt-tether', 'USDT', 'ethereum', 'mint', 15000000, 15000000, ?,
+              'standard', '0xtest', 1, 'https://example.com')`).run(timestamp);
+    for (const clock of [1792497600, 1824033600]) {
+      vi.spyOn(Date, "now").mockReturnValue(clock * 1000);
+      await projectMintBurnLargeFlows(db, { since: timestamp - 1, until: timestamp });
+      expect(sqlite.prepare("SELECT methodology_version FROM tape_events").get())
+        .toEqual({ methodology_version: version });
+    }
+  });
+
   it("persists only economic flows at exact severity boundaries and keeps reruns durable", async () => {
     const { db, sqlite } = fixtures.open();
     const rows = [

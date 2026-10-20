@@ -32,6 +32,7 @@ import {
   type PlainAlertType,
 } from "../store/telegram-webhook-store";
 import type { TelegramOperationBatchOptions } from "../delivery/operation-batch";
+import { prepareTelegramFirstFollowStatements, type TelegramFollowOptions } from "../store/subscribers";
 import {
   TELEGRAM_ALERT_FAMILY_SHORT_LABELS,
   TELEGRAM_ALERT_PERSISTENCE,
@@ -67,7 +68,7 @@ export async function setQuietHours(
     username,
     nowSec: unixNow(),
     quietHours: enabled
-      ? { enabled: true, startHourUtc: DEFAULT_QUIET_START_HOUR, endHourUtc: DEFAULT_QUIET_END_HOUR }
+      ? { enabled: true, startHourUtc: DEFAULT_QUIET_START_HOUR, endHourUtc: DEFAULT_QUIET_END_HOUR, preserveSavedWindow: true }
       : { enabled: false },
   }, options);
 }
@@ -120,6 +121,22 @@ const PLAIN_SETTING_LABELS: Record<PlainAlertType, string> = {
   freeze: `${TELEGRAM_ALERT_FAMILY_SHORT_LABELS.freeze} alerts`,
 };
 
+/** Validate callback semantics before any required mutation intent is planned. */
+export function normalizeCoinSetting(setting: string, value: string): { setting: string; value: string } | null {
+  if (setting === TELEGRAM_ALERT_PERSISTENCE.dews.settingCode) {
+    return value === "0" || isDewsBandCode(value) ? { setting, value } : null;
+  }
+  if (setting === TELEGRAM_ALERT_PERSISTENCE.safety.settingCode) {
+    return value === "0" || isSafetyModeCode(value) ? { setting, value } : null;
+  }
+  if (setting === TELEGRAM_ALERT_PERSISTENCE.depeg.settingCode) {
+    return value === "0" || isDepegStep(Number(value)) ? { setting, value } : null;
+  }
+  return Object.prototype.hasOwnProperty.call(PLAIN_ALERT_TYPE_BY_SETTING_CODE, setting) && (value === "0" || value === "1")
+    ? { setting, value }
+    : null;
+}
+
 export function prepareCoinSettingStatements(
   db: D1Database,
   chatId: string,
@@ -127,15 +144,23 @@ export function prepareCoinSettingStatements(
   coinId: string,
   setting: string,
   value: string,
+  options: TelegramFollowOptions = {},
 ): { description: string | null; statements: D1PreparedStatement[] } {
   assertSubscribableCoin(coinId);
+  if (!normalizeCoinSetting(setting, value)) return { description: null, statements: [] };
   const tuned = TUNED_SETTING_PREPARERS[setting];
-  if (tuned) return tuned(db, chatId, username, coinId, value);
   const plainAlertType = PLAIN_ALERT_TYPE_BY_SETTING_CODE[setting];
-  if (plainAlertType) {
-    return preparePlainAlertSetting(db, chatId, username, coinId, plainAlertType, value);
+  const prepared = tuned
+    ? tuned(db, chatId, username, coinId, value)
+    : plainAlertType
+      ? preparePlainAlertSetting(db, chatId, username, coinId, plainAlertType, value)
+      : { description: null, statements: [] };
+  if (prepared.description != null && value !== "0" && options.recordFirstFollow !== false) {
+    prepared.statements.unshift(...prepareTelegramFirstFollowStatements(db, {
+      chatId, username, nowSec: unixNow(), feature: "direct", adoption: options.adoption,
+    }));
   }
-  return { description: null, statements: [] };
+  return prepared;
 }
 
 function prepareDewsSetting(

@@ -4,6 +4,7 @@ import {
   type PublicComponentState,
   type PublicStatusComponent,
   type PublicStatusComponentId,
+  type PublicStatusHistoryBoundary,
   type PublicStatusTransition,
 } from "@shared/types/status";
 
@@ -56,37 +57,22 @@ interface Segment {
   snapshot: Snapshot;
 }
 
-/**
- * Known-state segments covering the loaded window, oldest first. The state
- * before the oldest loaded public row is known only when that row says it
- * left an all-operational (`healthy`) state and is not the first public row
- * ever written; otherwise that stretch is left out (no data).
- */
+/** Persisted segments only; missing boundary or truncated intervening rows leave a gap. */
 function buildSegments(
   transitions: readonly PublicStatusTransition[],
-  live: Snapshot,
-  publicHistoryStartedAt: number | null,
+  boundary: PublicStatusHistoryBoundary | null,
   windowStart: number,
   nowSec: number,
   truncated: boolean,
 ): Segment[] {
   const rows = transitions.filter(isPublicRow).sort((a, b) => a.at - b.at || a.id - b.id);
-  if (rows.length === 0) {
-    // No public change inside the window: the projection held one state the
-    // whole time, provided public history existed before the window opened.
-    // ponytail: that state is taken from the live projection; a persisted
-    // seed row would make this exact if the two ever diverge.
-    if (publicHistoryStartedAt == null || publicHistoryStartedAt > nowSec) return [];
-    return [{ start: Math.max(windowStart, publicHistoryStartedAt), end: nowSec, snapshot: live }];
-  }
-
   const segments: Segment[] = [];
-  const first = rows[0];
-  const firstEverRow = publicHistoryStartedAt != null && first.at <= publicHistoryStartedAt;
-  // A truncated page (hasMore) hides older changes, so the stretch before the
-  // oldest loaded row stays unknown rather than painted operational (R2/R7).
-  if (!truncated && !firstEverRow && first.transitionType !== "init" && first.from === "healthy") {
-    segments.push({ start: windowStart, end: first.at, snapshot: new Map() });
+  if (!truncated && boundary != null && boundary.at <= windowStart) {
+    segments.push({
+      start: windowStart,
+      end: rows[0]?.at ?? nowSec,
+      snapshot: new Map(boundary.components.map((component) => [component.id, component.state])),
+    });
   }
   rows.forEach((row, index) => {
     segments.push({ start: row.at, end: rows[index + 1]?.at ?? nowSec, snapshot: rowSnapshot(row) });
@@ -102,6 +88,8 @@ function buildSegments(
 export function buildComponentDayCells({
   transitions,
   liveComponents,
+  liveObservedAt,
+  boundary,
   publicHistoryStartedAt,
   componentHistoryStartedAt,
   nowSec,
@@ -110,6 +98,8 @@ export function buildComponentDayCells({
 }: {
   transitions: readonly PublicStatusTransition[];
   liveComponents: readonly Pick<PublicStatusComponent, "id" | "state">[];
+  liveObservedAt?: number | null;
+  boundary?: PublicStatusHistoryBoundary | null;
   publicHistoryStartedAt: number | null | undefined;
   componentHistoryStartedAt?: Readonly<Record<string, number>>;
   nowSec: number;
@@ -120,7 +110,7 @@ export function buildComponentDayCells({
   const todayStart = Math.floor(nowSec / DAY_SEC) * DAY_SEC;
   const windowStart = todayStart - (days - 1) * DAY_SEC;
   const live = liveSnapshot(liveComponents);
-  const segments = buildSegments(transitions, live, publicHistoryStartedAt ?? null, windowStart, nowSec, truncated);
+  const segments = buildSegments(transitions, boundary ?? null, windowStart, nowSec, truncated);
 
   const result = {} as Record<PublicStatusComponentId, ComponentDayCell[]>;
   for (const id of PUBLIC_STATUS_COMPONENT_IDS) result[id] = [];
@@ -134,12 +124,14 @@ export function buildComponentDayCells({
       const active: ReadonlyMap<PublicStatusComponentId, PublicComponentState>[] = [];
       if (monitoredSince != null && monitoredSince < dayEnd) {
         for (const segment of segments) {
-          if (segment.snapshot && segment.start < dayEnd && segment.end > Math.max(dayStart, monitoredSince)) {
+          if (segment.snapshot && segment.start < dayEnd
+            && segment.end > Math.max(dayStart, monitoredSince, publicHistoryStartedAt ?? Infinity)) {
             active.push(segment.snapshot);
           }
         }
       }
-      if (dayStart === todayStart && live) active.push(live);
+      if (dayStart === todayStart && live && liveObservedAt != null
+        && Number.isFinite(liveObservedAt) && liveObservedAt >= todayStart && liveObservedAt <= nowSec) active.push(live);
       const state: ComponentDayState = active.length === 0
         ? "no-data"
         : active.reduce<PublicComponentState>((lead, snapshot) => worse(lead, snapshot.get(id) ?? "operational"), "operational");

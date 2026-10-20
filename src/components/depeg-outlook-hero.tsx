@@ -155,8 +155,8 @@ export function DepegOutlookHero({
             />
             <StatCell
               label="Median deviation"
-              value={stats ? `${stats.medianDeviationBps} bps` : "—"}
-              detail={stats ? "live peg status" : "peg summary unavailable"}
+              value={stats?.medianDeviationBps == null ? "—" : `${stats.medianDeviationBps} bps`}
+              detail={!stats ? "peg summary unavailable" : stats.medianDeviationBps === null ? "live peg status unavailable" : "live peg status"}
             />
           </div>
 

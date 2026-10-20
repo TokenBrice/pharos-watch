@@ -652,6 +652,7 @@ function decideRecovery(
     existing,
     nativeSignal: ctx.nativeSignal,
     nativePegPrice: ctx.nativePegPrice,
+    primarySignal: ctx.primarySignal,
     primaryPrice: price,
     recoveryThreshold,
     primarySupportsRecovery,

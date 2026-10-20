@@ -3,9 +3,9 @@ import { invalidateMintBurnFlowCaches } from "../../lib/mint-burn-flows-service"
 import { createBudget } from "../../lib/evm-logs";
 import { MINT_BURN_CONFIGS, type MintBurnContractConfig } from "../../lib/mint-burn-contracts";
 import { loadMintBurnPriceContextBatch } from "../../lib/mint-burn-pipeline/context";
-import { EVM_SAFETY_MARGIN_BLOCKS } from "../../lib/mint-burn-pipeline/scan-policy";
 import type { MintBurnAffectedHour, MintBurnLane, SyncMintBurnStatus } from "../../lib/mint-burn-pipeline/types";
 import { ensureMintBurnSyncStateRows, mintBurnConfigKey, readMintBurnSyncStateBatch, upsertMintBurnSyncState } from "../../lib/mint-burn-pipeline/sync-state";
+import type { MintBurnScanCoverage } from "../../lib/mint-burn-pipeline/scan-coverage";
 import { D1_SAFE_IN_CLAUSE_BIND_LIMIT } from "../../lib/d1-primitives";
 import type { CronProgressReporter } from "../../lib/cron-logger";
 import { reportCronProgress } from "../../lib/cron-progress";
@@ -63,6 +63,7 @@ export class MintBurnRun {
   private lastBlocksAfterRun!: Map<string, number>;
   private affectedHours!: Map<string, MintBurnAffectedHour>;
   private pendingCursorUpdates!: Map<string, number>;
+  private pendingScanCoverage!: Map<string, MintBurnScanCoverage>;
 
   constructor(
     private readonly db: D1Database,
@@ -193,7 +194,8 @@ export class MintBurnRun {
       chainRpcs: options.chainRpcs,
     });
     const chainHeads = new Map(
-      [...chainContexts.entries()].map(([chainId, context]) => [chainId, context.chainHead]),
+      [...chainContexts.entries()].flatMap(([chainId, context]) =>
+        context.chainHead == null ? [] : [[chainId, context.chainHead] as const]),
     );
 
     const stablecoinIds = [...new Set(configs.map((config) => config.stablecoinId))];
@@ -219,6 +221,7 @@ export class MintBurnRun {
     const criticalContractsEnabled = enabledConfigs.filter((config) => configTier(config) === "critical").length;
     const affectedHours = this.affectedHours = new Map<string, MintBurnAffectedHour>();
     const pendingCursorUpdates = this.pendingCursorUpdates = new Map<string, number>();
+    const pendingScanCoverage = this.pendingScanCoverage = new Map<string, MintBurnScanCoverage>();
 
     const { phaseResult, recalcFailed, recalcError } = await this.scanAndMaterialize({
       db,
@@ -233,11 +236,11 @@ export class MintBurnRun {
       priceContext,
       lastBlocksAfterRun,
       pendingCursorUpdates,
+      pendingScanCoverage,
       maxScanRange: MAX_SCAN_RANGE,
       criticalConfigBudgetLimit: CRITICAL_CONFIG_BUDGET_LIMIT,
       criticalBridgeConfigBudgetLimit: CRITICAL_BRIDGE_CONFIG_BUDGET_LIMIT,
       extendedConfigBudgetLimit: EXTENDED_CONFIG_BUDGET_LIMIT,
-      evmSafetyMarginBlocks: EVM_SAFETY_MARGIN_BLOCKS,
       affectedHours,
     });
 
@@ -366,7 +369,7 @@ export class MintBurnRun {
       if (!recalcFailed) {
         for (const [key, nextLastBlock] of this.pendingCursorUpdates) {
           throwIfAborted(input.signal);
-          await upsertMintBurnSyncState(this.db, key, nextLastBlock, "monotonic-max");
+          await upsertMintBurnSyncState(this.db, key, nextLastBlock, "monotonic-max", this.pendingScanCoverage.get(key));
           this.lastBlocksAfterRun.set(key, nextLastBlock);
         }
       }

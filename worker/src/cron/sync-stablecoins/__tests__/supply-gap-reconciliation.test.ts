@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import type { PeggedAsset } from "../enrich-prices";
 import type * as StablecoinRegistry from "@shared/lib/stablecoins/registry";
 import type * as OnchainSupply from "../supplemental-assets/onchain-supply";
@@ -46,6 +47,10 @@ import {
   reconcileTrackedSupplyGaps,
 } from "../supply-gap-reconciliation";
 import { fetchCuratedAggregateOnChainMcap } from "../supplemental-assets/onchain-supply";
+import { fillMissingSupplyHistory } from "../phase-helpers";
+
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(() => { fixtures.closeAll(); });
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -557,6 +562,47 @@ describe("CoinGecko missing-chain remainder reconciliation", () => {
     expect(asset.supplyGapFill?.withheldHistoricalBucketReasons).toEqual({ day: "history-unobserved" });
   });
 
+  it("hydrates ordinary supplemental history but preserves every source-owned packet and provenance", async () => {
+    const { db, sqlite } = fixtures.open();
+    const original = makeAsset();
+    original.circulatingPrevDay = null;
+    mockCoinGeckoAt(130);
+    await reconcileTrackedSupplyGaps([original]);
+    const owned = [
+      "coingecko-gap-fill", "defillama-history-gap-fill", "onchain-total-supply", "onchain-circulating-supply",
+    ].map((supplySource) => ({
+      ...makeAsset(), id: supplySource, supplySource,
+      circulatingPrevDay: null, circulatingPrevWeek: null, circulatingPrevMonth: null,
+    }));
+    const provenanceOnly = {
+      ...makeAsset(), id: "provenance-only", supplySource: undefined, supplyGapFill: original.supplyGapFill,
+      circulatingPrevDay: null, circulatingPrevWeek: null, circulatingPrevMonth: null,
+    };
+    const ordinary = {
+      ...makeAsset(), id: "ordinary", supplySource: "coingecko",
+      circulatingPrevDay: null, circulatingPrevWeek: null, circulatingPrevMonth: { peggedEUR: 0 },
+    };
+    const assets = [...owned, provenanceOnly, ordinary];
+    const now = new Date();
+    for (const asset of assets) {
+      for (const days of [1, 7, 30]) {
+        const date = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - days) / 1000;
+        sqlite.prepare("INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd) VALUES (?, ?, ?)")
+          .run(asset.id, date, 95);
+      }
+    }
+
+    expect(await fillMissingSupplyHistory(db, assets)).toBe(2);
+    for (const asset of [...owned, provenanceOnly]) {
+      expect([asset.circulatingPrevDay, asset.circulatingPrevWeek, asset.circulatingPrevMonth]).toEqual([null, null, null]);
+    }
+    expect(ordinary).toMatchObject({
+      circulatingPrevDay: { peggedEUR: 95 }, circulatingPrevWeek: { peggedEUR: 95 }, circulatingPrevMonth: { peggedEUR: 0 },
+    });
+    expect(provenanceOnly.supplyGapFill).toEqual(original.supplyGapFill);
+    expect(provenanceOnly.supplyGapFill?.withheldHistoricalBuckets).toEqual(["day"]);
+  });
+
   it("rejects conflicting chain attribution: an unavailable attributed chain or several missing chains", async () => {
     const unavailable = makeAsset();
     unavailable.chainCirculating.Stellar = { current: null, circulatingPrevDay: 9 };
@@ -576,6 +622,58 @@ describe("CoinGecko missing-chain remainder reconciliation", () => {
     expect(twoMissingResult.totalReconciled).toBe(0);
     expect(twoMissing).toEqual(beforeTwoMissing);
     expect(twoMissingResult.gapFillRejections).toEqual([{ id: twoMissing.id, reason: "multiple-missing-chains", ratio: 1.3 }]);
+  });
+
+  it.each([0, null, -1, "invalid"])("does not resurrect older positive supply past the latest dated value %s", async (latest) => {
+    const nowMs = Date.now();
+    const asset: PeggedAsset = {
+      id: "tryb-bilira", name: "BiLira", symbol: "TRYB", supplySource: "defillama",
+      circulating: { peggedTRY: 0 }, chainCirculating: {}, chains: [],
+    };
+    const before = structuredClone(asset);
+    fetchTextWithRetryMock.mockResolvedValue({
+      response: { ok: true },
+      body: JSON.stringify([
+        { date: nowMs - 30 * DAY_MS, totalCirculatingUSD: { peggedTRY: 14_800_000 } },
+        { date: nowMs, totalCirculatingUSD: latest == null ? {} : { peggedTRY: latest } },
+        { date: nowMs - 3600_000, totalCirculatingUSD: { peggedTRY: 15_260_000 } },
+        { date: nowMs - 7 * DAY_MS, totalCirculatingUSD: { peggedTRY: 15_100_000 } },
+        { date: nowMs - DAY_MS, totalCirculatingUSD: { peggedTRY: 15_220_000 } },
+      ]),
+    });
+
+    const result = await reconcileTrackedSupplyGaps([asset]);
+
+    expect(result.totalReconciled).toBe(0);
+    expect(result.byReason["defillama-history-gap-fill"]).toBe(0);
+    expect(asset).toEqual(before);
+  });
+
+  it("keeps curated on-chain fallback reachable when the latest chart point is explicit zero", async () => {
+    const nowMs = Date.now();
+    const asset: PeggedAsset = {
+      id: "cadd-cad-digital", name: "CAD Digital", symbol: "CADD", supplySource: "defillama",
+      circulating: { peggedCAD: 0 }, chainCirculating: {}, chains: [],
+    };
+    fetchTextWithRetryMock.mockResolvedValue({
+      response: { ok: true },
+      body: JSON.stringify([
+        { date: nowMs, totalCirculatingUSD: { peggedCAD: 0 } },
+        { date: nowMs - 3600_000, totalCirculatingUSD: { peggedCAD: 2_000_000 } },
+        ...[1, 7, 30].map((days) => ({ date: nowMs - days * DAY_MS, totalCirculatingUSD: { peggedCAD: 2_000_000 } })),
+      ]),
+    });
+    vi.mocked(fetchCuratedAggregateOnChainMcap).mockResolvedValue({
+      mcap: 387_447.5, supplySource: "onchain-total-supply", observedAt: Math.floor(nowMs / 1000),
+    });
+
+    const result = await reconcileTrackedSupplyGaps([asset], undefined, null, undefined, { peggedCAD: 0.72 });
+
+    expect(result.byReason).toMatchObject({ "defillama-history-gap-fill": 0, "onchain-total-supply": 1 });
+    expect(asset).toMatchObject({
+      circulating: { peggedCAD: 387_447.5 }, supplySource: "onchain-total-supply",
+      circulatingPrevDay: null, circulatingPrevWeek: null, circulatingPrevMonth: null,
+    });
   });
 
   it("restores zero-supply DefiLlama rows from complete chart history", async () => {

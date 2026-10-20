@@ -8,9 +8,9 @@ type PoolBalanceDetails = NonNullable<NonNullable<DexLiquidityPool["extra"]>["ba
 // Pure helpers
 // ---------------------------------------------------------------------------
 
-export function getConcentrationLabel(hhi: number): { label: string; color: string } {
+export function getConcentrationLabel(hhi: number | null | undefined): { label: string; color: string } | null {
   const band = getHhiBand(hhi);
-  return { label: band.concentrationLabel, color: band.color };
+  return band ? { label: band.concentrationLabel, color: band.color } : null;
 }
 
 export function getOrganicFractionTier(
@@ -118,6 +118,7 @@ export function getLiquidityEvidenceLabel(liq: DexLiquidityData): string | null 
     case "measured":
       return "Measured liquidity evidence";
     case "partial_measured":
+      if (liq.balanceMeasuredTvlUsd == null) return "Measured balance coverage unavailable";
       return `Measured balances cover ${Math.round((liq.balanceMeasuredTvlUsd / Math.max(liq.totalTvlUsd, 1)) * 100)}% of observed TVL`;
     case "observed_unmeasured":
       return "Observed liquidity without measured pool balances";

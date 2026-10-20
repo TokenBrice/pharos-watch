@@ -17,7 +17,7 @@ const BLOCK_TIMESTAMP = 1_757_000_000;
 
 const config: LiveReservesConfig = {
   adapter: "parallelizer-balances",
-  version: 1,
+  version: 2,
   semantics: "collateral-mix",
   inputs: {
     primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" },
@@ -167,6 +167,52 @@ describe("fetchParallelizerBalancesReserves", () => {
     // getOracleValues. Ethereum (1 collateral) = 6, HyperEVM (2) = 9.
     expect(network.rpcCalls.filter((call) => call.viaMulticall)).toHaveLength(15);
     expect(network.rpcCalls.every((call) => call.viaMulticall)).toBe(true);
+  });
+
+  it("pins each chain's identity, pause and asset waves to its own advancing head", async () => {
+    const heads: Record<string, number> = { ethereum: 100, hyperevm: 200 };
+    const spec = parallelizerNetwork();
+    spec.rpc!["eth_getBlockByNumber:latest"] = ({ chain }) => ({
+      number: heads[chain!]++, timestamp: BLOCK_TIMESTAMP,
+    });
+    spec.rpc!["0x0d126627"] = ({ chain, block }) =>
+      block === (chain === "ethereum" ? "0x64" : "0xc8") ? 0n : 1n;
+    const { result, network } = await runParallel(spec);
+    expect(result.metadata).toMatchObject({
+      totalReserveUsd: 450,
+      redemption: { capacityUsd: 450, routeStatus: "open" },
+      observedBlocks: [
+        { chain: "ethereum", number: 100, timestamp: BLOCK_TIMESTAMP },
+        { chain: "hyperevm", number: 200, timestamp: BLOCK_TIMESTAMP },
+      ],
+    });
+    expect(heads).toEqual({ ethereum: 101, hyperevm: 201 });
+    expect(network.rpcCalls.every((call) =>
+      call.block === (call.chain === "ethereum" ? "0x64" : "0xc8"))).toBe(true);
+  });
+
+  it("retains an injected Ethereum pin but establishes a separate HyperEVM pin", async () => {
+    const spec = parallelizerNetwork();
+    spec.rpc!["eth_getBlockByNumber:latest"] = ({ chain }) => {
+      if (chain === "ethereum") throw new Error("must retain the original Ethereum pin");
+      return { number: 200, timestamp: BLOCK_TIMESTAMP };
+    };
+    const { result, network } = await runAdapter("parallelizer-balances", "usdp-parallel", {
+      network: spec, params: { deployments: TEST_DEPLOYMENTS }, nowSec: BLOCK_TIMESTAMP,
+      ctx: { observedBlock: { chain: "ethereum", number: 77, timestamp: BLOCK_TIMESTAMP - 60 } },
+    });
+    expect(result.metadata?.observedBlocks).toEqual([
+      { chain: "ethereum", number: 77, timestamp: BLOCK_TIMESTAMP - 60 },
+      { chain: "hyperevm", number: 200, timestamp: BLOCK_TIMESTAMP },
+    ]);
+    expect(network.rpcCalls.every((call) =>
+      call.block === (call.chain === "ethereum" ? "0x4d" : "0xc8"))).toBe(true);
+  });
+
+  it("rejects the complete book when one deployment cannot establish a pin", async () => {
+    const spec = parallelizerNetwork();
+    spec.rpc!["hyperevm:eth_getBlockByNumber:latest"] = null;
+    await expect(runParallel(spec)).rejects.toThrow("hyperevm observation block header");
   });
 
   it("degrades the route and excludes a paused deployment's basket from capacity", async () => {

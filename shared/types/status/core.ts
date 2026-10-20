@@ -323,7 +323,7 @@ export const ActivePriceCoverageHealthSchema = z.object({
 });
 export type ActivePriceCoverageHealth = z.output<typeof ActivePriceCoverageHealthSchema>;
 
-export const DatasetFreshnessSchema = z.object({
+const DatasetFreshnessTimestampsSchema = z.object({
   stablecoins: z.number().nullable(),
   blacklist: z.number().nullable(),
   mintBurn: z.number().nullable(),
@@ -333,4 +333,13 @@ export const DatasetFreshnessSchema = z.object({
   depegs: z.number().nullable(),
   dews: z.number().nullable(),
   digest: z.number().nullable(),
+});
+
+export type DatasetFreshnessKey = keyof z.output<typeof DatasetFreshnessTimestampsSchema>;
+
+export const DatasetFreshnessSchema = DatasetFreshnessTimestampsSchema.extend({
+  unavailableReasons: z.partialRecord(
+    DatasetFreshnessTimestampsSchema.keyof(),
+    CacheStatusSchema.shape.timestampReason.unwrap(),
+  ).optional(),
 });

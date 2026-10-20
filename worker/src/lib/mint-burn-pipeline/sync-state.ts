@@ -1,6 +1,7 @@
 import { batchExecute, buildInClause } from "../db";
 import type { MintBurnContractConfig } from "../mint-burn-contracts";
 import type { MintBurnSyncStateMode } from "./types";
+import { mintBurnScanCoverageStatements, type MintBurnScanCoverage } from "./scan-coverage";
 
 // D1 allows at most 100 bound parameters per statement, so keep config-key
 // reads below that ceiling with a small safety margin.
@@ -71,9 +72,13 @@ export async function upsertMintBurnSyncState(
   configKey: string,
   lastBlock: number,
   mode: MintBurnSyncStateMode,
+  proof?: MintBurnScanCoverage,
 ): Promise<void> {
+  if (proof && (mode !== "monotonic-max" || proof.configKey !== configKey || proof.toBlock !== lastBlock)) {
+    throw new Error("Mint/burn scan proof does not match cursor commit");
+  }
   if (mode === "monotonic-max") {
-    await db
+    const cursor = db
       .prepare(
         `INSERT INTO mint_burn_sync_state (config_key, last_block) VALUES (?, ?)
          ON CONFLICT(config_key) DO UPDATE SET
@@ -82,8 +87,12 @@ export async function upsertMintBurnSyncState(
              ELSE excluded.last_block
            END`,
       )
-      .bind(configKey, lastBlock)
-      .run();
+      .bind(configKey, lastBlock);
+    if (proof) {
+      await db.batch([cursor, ...mintBurnScanCoverageStatements(db, proof)]);
+    } else {
+      await cursor.run();
+    }
     return;
   }
 

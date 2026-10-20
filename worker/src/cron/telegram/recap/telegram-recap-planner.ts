@@ -18,6 +18,8 @@ import {
 } from "@shared/lib/telegram-recap-policy";
 import {
   TELEGRAM_RECAP_PUBLIC_ROLLOUT_POLICY,
+  TELEGRAM_RECAP_RETIREMENT_FINGERPRINT,
+  TELEGRAM_RECAP_RETIREMENT_NOTICE,
   type TelegramRecapRolloutPolicy,
 } from "@shared/lib/telegram-recap-rollout";
 import { localDateInIanaTimezone, nextIanaLocalHourDueAt } from "@shared/lib/iana-local-time";
@@ -433,7 +435,7 @@ export async function planTelegramPersonalizedRecaps(
   }) as TelegramRecapPlannerResult;
   const deadlineReached = () => Date.now() - startedAtMs >= softDeadlineMs;
 
-  if (rolloutPolicy.mode === "off") return finish("ok", "fresh");
+  if (rolloutPolicy.mode !== "public") return finish("ok", "fresh");
 
   throwIfAborted(signal);
   const freshAt = await loadFreshProjectTapeAt(db);
@@ -590,4 +592,70 @@ export async function planTelegramPersonalizedRecaps(
     // advances its own next_due_at; re-reading the page remains the durable cursor.
   }
   return finish(counts.deferred > 0 ? "degraded" : "ok", "fresh");
+}
+
+/** Temporary notice-only final edition; shares the recap queue and effect fences. */
+export async function planTelegramRecapRetirementNotices(
+  db: D1Database,
+  signal?: AbortSignal,
+  options: TelegramRecapPlannerOptions = {},
+): Promise<TelegramRecapPlannerResult> {
+  const startedAtMs = Date.now();
+  const nowSec = safeNowSec(options);
+  const softDeadlineMs = options.softDeadlineMs ?? TELEGRAM_RECAP_PLANNER_SOFT_DEADLINE_MS;
+  let queued = 0;
+  let deferred = 0;
+  if (options.rolloutPolicy?.mode === "retirement-notice") {
+    const preferences = await listDueTelegramRecapPreferences(db, nowSec, TELEGRAM_RECAP_DUE_PAGE_SIZE, true);
+    const subscribers = await loadSubscriberRows(db, preferences.map((preference) => preference.chatId));
+    const payloadHash = await sha256Hex(TELEGRAM_RECAP_RETIREMENT_NOTICE);
+    const nextDueMemo: NextDueAtMemo = new Map();
+    for (const [index, preference] of preferences.entries()) {
+      throwIfAborted(signal);
+      if (Date.now() - startedAtMs >= softDeadlineMs) {
+        deferred += preferences.length - index;
+        break;
+      }
+      const timezone = subscribers.get(preference.chatId)?.timezone;
+      const localDate = timezone ? localDateInIanaTimezone(nowSec * 1000, timezone) : null;
+      const nextDueAt = timezone && localDate
+        ? nextDueAtAfterLocalDateSec(nowSec, timezone, preference.deliveryHourLocal, localDate, nextDueMemo)
+        : null;
+      if (!localDate || nextDueAt == null) {
+        deferred += 1;
+        continue;
+      }
+      const recapKey = buildTelegramRecapDedupeKey(preference.chatId, localDate);
+      const outcome = await queueTelegramRecapTarget(db, {
+        recapKey,
+        chatId: preference.chatId,
+        localDate,
+        // Point-in-time notice audit, not a watched-fact delivery window.
+        windowStartAt: nowSec,
+        windowEndAt: nowSec,
+        preferenceGeneration: preference.preferenceGeneration,
+        watchlistFingerprint: TELEGRAM_RECAP_RETIREMENT_FINGERPRINT,
+        pendingDedupeKey: recapKey,
+        payloadHash,
+        messageHtml: TELEGRAM_RECAP_RETIREMENT_NOTICE,
+        markupPolicyJson: serializePendingMarkupPolicy({}),
+        expectedNextDueAt: preference.expectedNextDueAt,
+        nextDueAtAfter: nextDueAt,
+        nowSec,
+      });
+      if (outcome === "queued") queued += 1;
+    }
+  }
+  return createCronResult({
+    status: deferred > 0 ? "degraded" : "ok",
+    itemCount: queued,
+    metadata: {
+      reason: deferred > 0 ? "recap-retirement-notice-deferred" : "recap-retirement-notice",
+      rollout: { mode: options.rolloutPolicy?.mode ?? "off", pendingEffects: options.rolloutPolicy?.mode === "retirement-notice" },
+      queued,
+      deferred,
+      aiCalls: 0,
+      externalPlanningFetches: 0,
+    },
+  }) as TelegramRecapPlannerResult;
 }

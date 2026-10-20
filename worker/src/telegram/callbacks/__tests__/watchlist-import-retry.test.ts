@@ -28,6 +28,7 @@ describe("watchlist import confirmation retry", () => {
     });
     const payload: Extract<ConfirmBulkPayload, { kind: "watchlist-import-v2" }> = {
       kind: "watchlist-import-v2",
+      flowId: "0123456789abcdef",
       registryVersion: "catalog-test",
       directEntries: [desiredEntry],
       presetEntries: [],
@@ -48,34 +49,12 @@ describe("watchlist import confirmation retry", () => {
       version: 1,
       kind: "callback:confirm",
       mutation: "required",
-      payload: { action: "confirm", kind: "bulk", expiresAt: 1_783_680_300, payload },
+      payload: { action: "confirm", kind: "bulk", flowId: "0123456789abcdef", expiresAt: 1_783_680_300, payload },
     };
-    const db = mockD1([
-      { match: "FROM telegram_subscriptions", rows: [] },
-      { match: "FROM telegram_preset_subscriptions", rows: [] },
-      {
-        match: "FROM telegram_subscribers",
-        rows: [{
-          alert_dews: 0,
-          alert_depeg: 0,
-          alert_safety: 0,
-          alert_launch: 0,
-          alert_reserve: 0,
-          global_alert_dews: 0,
-          global_alert_depeg: 0,
-          global_alert_safety: 0,
-          global_alert_launch: 0,
-          global_alert_reserve: 0,
-          global_depeg_worsening_bps_step: null,
-          quiet_hours_enabled: 0,
-          quiet_hours_start_utc: null,
-          quiet_hours_end_utc: null,
-          timezone: null,
-          alert_snooze_until_ts: null,
-          preference_generation: 6,
-        }],
-      },
-    ]);
+    const db = mockD1([{
+      match: "WITH subscriber AS",
+      rows: [{ row_kind: null, preference_generation: 6 }],
+    }]);
     const requests: Array<Record<string, unknown>> = [];
     mockFetch([{
       match: "https://api.telegram.org/bottoken/sendMessage",
@@ -92,11 +71,11 @@ describe("watchlist import confirmation retry", () => {
       chatId: "123",
       cb: {
         id: "callback-id",
-        data: "confirm:bulk",
+        data: "confirm:bulk:0123456789abcdef",
         from: { id: 42, username: "alice" },
         message: { chat: { id: 123, type: "private" }, message_id: 10 },
       },
-      parsed: { action: "confirm", arg: "bulk", parts: ["confirm", "bulk"] },
+      parsed: { action: "confirm", arg: "bulk", parts: ["confirm", "bulk", "0123456789abcdef"] },
       beforeIrreversibleEffect: async () => undefined,
       answerCallback,
       markMutationApplied: async () => undefined,

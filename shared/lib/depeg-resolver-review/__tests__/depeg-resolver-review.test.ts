@@ -480,6 +480,48 @@ describe("DDRR coverage metrics", () => {
     expect(summary.headline.invalidatedPct).toBeNull();
   });
 
+  it("counts pending published forecasts separately from unpublished lock coverage", () => {
+    const pending = reviewDepegResolverAssessment(
+      assessment(),
+      actualEvent({ endedAt: null, recoveryPrice: null }),
+      REVIEWED_AT,
+    );
+    const pendingLock = buildDdrrCoverageRow(coverage({
+      incidentKey: "pending-lock", predictionState: "pending_lock", coverageCause: "active_pending_lock",
+      sourceEventState: "active", actualOutcome: "still_open", actualEndedAt: null,
+    }));
+    expect(pending.verdictReview).toBe("pending");
+    const summary = summarizeDdrrRows([pending, pendingLock]);
+    expect(summary.headline).toMatchObject({
+      pendingRecoveryLikelihoodCount: 1, pendingLockCount: 1, recoveryLikelihoodScoredCount: 0,
+    });
+    expect(summarizeDdrrRows([pendingLock]).headline.pendingRecoveryLikelihoodCount).toBe(0);
+    expect(summarizeDdrrRows([]).headline.pendingRecoveryLikelihoodCount).toBe(0);
+    expect(summary.byPredictionPolicy.find((segment) => segment.segmentKind === "coverage")?.metrics
+      .pendingRecoveryLikelihoodCount).toBe(0);
+  });
+
+  it.each([19, 20])("scopes pending forecasts with headline accuracy at %i current-policy outcomes", (count) => {
+    const current = Array.from({ length: count }, (_, index) => reviewDepegResolverAssessment(
+      assessment({ incidentKey: `current-${index}` }), actualEvent(), REVIEWED_AT,
+    ));
+    const old = reviewDepegResolverAssessment(
+      assessment({ incidentKey: "old-scored", predictionPolicyVersion: "legacy-policy" }),
+      actualEvent(), REVIEWED_AT,
+    );
+    const pending = ["sticky-24h-v1", "legacy-policy"].map((predictionPolicyVersion) =>
+      reviewDepegResolverAssessment(
+        assessment({ incidentKey: `pending-${predictionPolicyVersion}`, predictionPolicyVersion }),
+        actualEvent({ endedAt: null, recoveryPrice: null }), REVIEWED_AT,
+      ));
+    const summary = summarizeDdrrRows([...current, old, ...pending]);
+    expect(summary.headlineScope).toBe(count === 20 ? "current_policy" : "all_ddrv2");
+    expect(summary.headline.recoveryLikelihoodScoredCount).toBe(20);
+    expect(summary.headline.pendingRecoveryLikelihoodCount).toBe(count === 20 ? 1 : 2);
+    expect(summary.byPredictionPolicy.find((segment) => segment.segmentKind === "all")?.metrics
+      .pendingRecoveryLikelihoodCount).toBe(2);
+  });
+
   it("calibrates horizon probabilities against scored duration outcomes", () => {
     const calibrationRows = [
       reviewDepegResolverAssessment(

@@ -6,13 +6,17 @@
 
 import { formatIsoDate } from "@shared/lib/format";
 import {
+  DigestArchiveCursorSchema,
+  DigestArchiveEntrySchema,
+  DigestArchiveResponseSchema,
   DigestStoredSnapshotSchema,
+  type DigestArchiveEntry,
   type DigestContentEntry,
 } from "@shared/types/digest";
-import { existsSync, readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-import { parseStrictCliArgs, runCliEntrypoint, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
-import { isDirectRun } from "../lib/smoke-runtime.mjs";
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import { fileURLToPath, URL } from "node:url";
+import { parseStrictCliArgs, runDirectCli, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
 import {
   apiFetchHeaders,
   fetchWithRetry,
@@ -36,17 +40,21 @@ Options:
   --check           Verify script wiring without network or file writes
   -h, --help        Show this help`;
 
-interface ApiDigest {
-  llm?: DigestContentEntry["llm"];
-  digestText: string;
-  digestTitle?: string;
-  digestExtended?: string;
-  generatedAt: number;
-  digestType?: "daily" | "weekly";
-  editionNumber?: number;
-  editorialStyleVersion?: string;
-  editorialStyleHash?: string;
-}
+// Older archive responses omit nullable display metrics and edition copy fields.
+const DigestSyncResponseSchema = DigestArchiveResponseSchema.extend({
+  digests: DigestArchiveEntrySchema.extend({
+    digestTitle: DigestArchiveEntrySchema.shape.digestTitle.default(null),
+    digestExtended: DigestArchiveEntrySchema.shape.digestExtended.default(null),
+    psiScore: DigestArchiveEntrySchema.shape.psiScore.default(null),
+    psiBand: DigestArchiveEntrySchema.shape.psiBand.default(null),
+    totalMcapUsd: DigestArchiveEntrySchema.shape.totalMcapUsd.default(null),
+    generatedAt: DigestArchiveEntrySchema.shape.generatedAt.refine(
+      (timestamp) => Number.isFinite(new Date(timestamp * 1000).getTime()),
+      "Digest generation timestamp must be a representable date",
+    ),
+  }).array(),
+});
+
 
 export interface DigestSyncCliOptions {
   allowArchiveShrink: boolean;
@@ -142,6 +150,8 @@ function resolveOutputPath(explicitOutput: string | null): URL {
 function cacheBustedUrl(rawUrl: string): string {
   const url = new URL(rawUrl);
   url.searchParams.set("staticSync", String(Date.now()));
+  url.searchParams.set("history", "all");
+  url.searchParams.delete("cursor");
   return url.toString();
 }
 
@@ -172,21 +182,67 @@ export async function runDigestSync(argv = process.argv.slice(2)) {
   headers.set("Pragma", "no-cache");
 
   try {
-    const { entries, outputFile, written } = await syncJson<DigestContentEntry>({
+    const { entries, outputFile } = await syncJson<DigestContentEntry>({
       writeTo: outputPath,
       parse: async () => {
-        const res = await fetchWithRetry(
-          fetchUrl,
-          { headers },
-          {
-            logLabel: "sync-digests",
-            retryStatuses: [403],
-            backoffMs: [12_000, 12_000],
-          },
-        );
-        if (!res.ok) throw new Error(`API returned ${res.status}`);
-        const { digests } = (await res.json()) as { digests: ApiDigest[] };
-        console.log(`Fetched ${digests.length} digests`);
+        const digests: DigestArchiveEntry[] = [];
+        let cursor: string | null = null;
+        let horizon: number | null = null;
+        let total: number | null = null;
+        let scanned = 0;
+        do {
+          const pageUrl = new URL(fetchUrl);
+          if (cursor) pageUrl.searchParams.set("cursor", cursor);
+          const res = await fetchWithRetry(
+            pageUrl.toString(),
+            { headers },
+            { logLabel: "sync-digests", retryStatuses: [403], backoffMs: [12_000, 12_000] },
+          );
+          if (!res.ok) {
+            await res.body?.cancel();
+            throw new Error(`API returned ${res.status}`);
+          }
+          let payload: unknown;
+          try {
+            payload = await res.json();
+          } catch (error) {
+            if (error instanceof SyntaxError) {
+              throw new SnapshotIntegrityError("Invalid digest archive response: malformed JSON");
+            }
+            throw error;
+          }
+          const parsed = DigestSyncResponseSchema.safeParse(payload);
+          if (!parsed.success) {
+            throw new SnapshotIntegrityError(`Invalid digest archive response: ${parsed.error.message}`);
+          }
+          const page = parsed.data;
+          if (!page.pagination) {
+            throw new SnapshotIntegrityError("Incomplete digest archive traversal: missing or invalid pagination");
+          }
+          const progress = page.pagination;
+          horizon ??= progress.horizon;
+          total ??= progress.total;
+          const delta = progress.scanned - scanned;
+          if (progress.horizon !== horizon || progress.total !== total
+            || progress.scanned > total || delta > 365 || delta < page.digests.length
+            || (total > 0 ? delta <= 0 : progress.scanned !== 0)
+            || (progress.nextCursor === null) !== (progress.scanned === total)) {
+            throw new SnapshotIntegrityError("Incomplete digest archive traversal: inconsistent page progress");
+          }
+          if (progress.nextCursor !== null) {
+            const next = DigestArchiveCursorSchema.safeParse(
+              /^\d+\.\d+\.\d+\.\d+\.\d+$/.test(progress.nextCursor) ? progress.nextCursor.split(".").map(Number) : null,
+            );
+            if (!next.success || next.data[0] !== horizon || next.data[1] !== total
+              || next.data[2] !== progress.scanned || next.data[4] > horizon) {
+              throw new SnapshotIntegrityError("Incomplete digest archive traversal: invalid continuation");
+            }
+          }
+          digests.push(...page.digests);
+          scanned = progress.scanned;
+          cursor = progress.nextCursor;
+        } while (cursor !== null);
+        console.log(`Fetched ${digests.length} digests across complete history`);
         const mappedEntries = digests.map((d) => ({
           date: formatIsoDate(d.generatedAt) + (d.digestType === "weekly" ? "-weekly" : ""),
           title: d.digestTitle || "Signal & Noise",
@@ -209,7 +265,11 @@ export async function runDigestSync(argv = process.argv.slice(2)) {
             ? { editorialStyleHash: d.editorialStyleHash }
             : {}),
         }));
-        const entries = deduplicateDigestEntries(mappedEntries);
+        const stored = DigestStoredSnapshotSchema.safeParse(deduplicateDigestEntries(mappedEntries));
+        if (!stored.success) {
+          throw new SnapshotIntegrityError(`Invalid stored digest snapshot: ${stored.error.message}`);
+        }
+        const entries = stored.data;
         const duplicateCount = mappedEntries.length - entries.length;
         if (duplicateCount > 0) {
           console.warn(
@@ -219,8 +279,19 @@ export async function runDigestSync(argv = process.argv.slice(2)) {
         assertDigestArchivePreserved(previousEntries, entries, options.allowArchiveShrink);
         return entries;
       },
-      write: !options.dryRun,
+      write: false,
     });
+    const written = !options.dryRun;
+    if (written) {
+      mkdirSync(new URL(".", outputPath), { recursive: true });
+      const temporaryFile = `${outputFile}.${randomUUID()}.tmp`;
+      try {
+        writeFileSync(temporaryFile, JSON.stringify(entries, null, 2) + "\n", { flag: "wx" });
+        renameSync(temporaryFile, outputFile);
+      } finally {
+        rmSync(temporaryFile, { force: true });
+      }
+    }
     console.log(
       written
         ? `Wrote ${entries.length} digests to ${outputFile}`
@@ -244,6 +315,4 @@ export async function runDigestSync(argv = process.argv.slice(2)) {
   }
 }
 
-if (isDirectRun(import.meta.url, process.argv[1])) {
-  void runCliEntrypoint(() => runDigestSync(), { label: "sync-digests", usage: USAGE });
-}
+runDirectCli(import.meta.url, () => runDigestSync(), { label: "sync-digests", usage: USAGE });

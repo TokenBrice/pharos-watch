@@ -202,6 +202,23 @@ describe("check-worker-wrangler-config", () => {
   it("accepts root-owned custom domains and fallthrough asset rules", () => {
     expect(evaluateWorkerWranglerConfig(VALID_CONFIG)).toEqual({ failed: false, issues: [] });
   });
+
+  it.each(["public", "heavy"] as const)("requires the asset glob-to-type mapping on %s", (workerRole) => {
+    const toml = workerRole === "public" ? VALID_CONFIG : readFileSync("worker/wrangler.heavy.toml", "utf8");
+    for (const mutation of [
+      toml.replaceAll("**/*.ttf", "**/*.swap").replaceAll("**/*.wasm", "**/*.ttf").replaceAll("**/*.swap", "**/*.wasm"),
+      toml.replace('globs = ["**/*.ttf"]', ""),
+      toml.replace('globs = ["**/*.wasm"]', ""),
+      toml.replace('globs = ["**/*.ttf"]', "globs = []"),
+      toml.replace('globs = ["**/*.wasm"]', 'globs = ["**/*.wasm", "**/*.ttf"]'),
+    ]) {
+      const report = evaluateWorkerWranglerConfig(mutation, { workerRole });
+      expect(report.failed).toBe(true);
+      expect(report.issues.some((issue) => issue.includes("must set globs"))).toBe(true);
+    }
+    expect(evaluateWorkerWranglerConfig(toml.replace('globs = ["**/*.ttf"]', "globs = [\n'**/*.ttf',\n]"), { workerRole }))
+      .toEqual({ failed: false, issues: [] });
+  });
   it("accepts the project-tape rollback flag without removing the binding", () => {
     expect(evaluateWorkerWranglerConfig(VALID_CONFIG.replace(
       'PROJECT_TAPE_PLACED_EXECUTOR = "on"', 'PROJECT_TAPE_PLACED_EXECUTOR = "off"',

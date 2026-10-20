@@ -351,10 +351,15 @@ describe("YieldInstrumentBoard — zone chip benchmark resolution", () => {
     const chart = screen.getByTestId("yield-history-chart");
     expect(chart.getAttribute("data-benchmark-rate")).toBe("1.94");
     expect(chart.getAttribute("data-benchmark-label")).toBe("EUR 3M compounded €STR");
+    expect(screen.getByRole("group", { name: "Why this PYS" }).textContent).toContain("Benchmark unavailable");
   });
 
-  it("still falls back to the risk-free frame when no registry is provided", () => {
-    renderBoard(eurRowWithoutRate());
+  it("uses an explicitly USD display frame without attributing it to the published PYS", () => {
+    renderBoard(eurRowWithoutRate(), true);
     expect(screen.getByText("Play It Safe")).toBeTruthy();
+    const chart = screen.getByTestId("yield-history-chart");
+    expect(chart.getAttribute("data-benchmark-rate")).toBe("3.5");
+    expect(chart.getAttribute("data-benchmark-label")).toBe("USD benchmark (display fallback)");
+    expect(screen.getByRole("group", { name: "Why this PYS" }).textContent).toContain("Benchmark unavailable");
   });
 });

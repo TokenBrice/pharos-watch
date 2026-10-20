@@ -288,17 +288,26 @@ function parseFiniteUsd(value: unknown): number | null {
   return value;
 }
 
+function isActiveCdpTrove(trove: MentoCdpTroveApiEntry, cdpStablecoin: MentoCdpStablecoin): boolean {
+  if (trove?.stablecoin !== cdpStablecoin) return false;
+  if (typeof trove.status !== "string" || !trove.status.trim()) {
+    throw new Error(`mento: invalid ${cdpStablecoin} CDP status`);
+  }
+  return trove.status === "active";
+}
+
 export function parseMentoCdpComposition(payload: unknown, cdpStablecoin: MentoCdpStablecoin): MentoCdpTroveEntry[] {
   const troves = getCdpTroves(payload);
   const entries = troves.flatMap((trove) => {
-    if (trove.stablecoin !== cdpStablecoin || trove.status !== "active" || typeof trove.collateral_token !== "string") {
-      return [];
+    if (!isActiveCdpTrove(trove, cdpStablecoin)) return [];
+    if (typeof trove.collateral_token !== "string" || !trove.collateral_token.trim()) {
+      throw new Error(`mento: invalid active ${cdpStablecoin} CDP collateral token`);
     }
 
     const collateralUsd = parseFiniteUsd(trove.collateral_usd);
     const debtUsd = parseFiniteUsd(trove.debt_usd);
     if (collateralUsd == null || collateralUsd <= 0 || debtUsd == null) {
-      return [];
+      throw new Error(`mento: invalid active ${cdpStablecoin} CDP amounts`);
     }
 
     return [{
@@ -343,7 +352,7 @@ export interface MentoCdpBackingTotals {
  * payload into per-stablecoin collateral/debt totals. Returns null when the
  * dashboard payload does not carry the array or it cannot be decoded.
  */
-function parseMentoDashboardCdpBackings(html: string): Map<string, MentoCdpBackingTotals> | null {
+function parseMentoDashboardCdpBackings(html: string, cdpStablecoin?: MentoCdpStablecoin): Map<string, MentoCdpBackingTotals> | null {
   let decoded: unknown;
   try {
     decoded = JSON.parse(
@@ -359,9 +368,12 @@ function parseMentoDashboardCdpBackings(html: string): Map<string, MentoCdpBacki
     if (!entry || typeof entry !== "object") continue;
     const record = entry as Record<string, unknown>;
     if (typeof record.stablecoin !== "string") continue;
+    if (record.stablecoin !== cdpStablecoin) continue;
     const collateralUsd = parseFiniteUsd(record.collateral_usd);
     const debtUsd = parseFiniteUsd(record.debt_usd);
-    if (collateralUsd == null || debtUsd == null) continue;
+    if (collateralUsd == null || debtUsd == null) {
+      throw new Error(`mento: invalid ${cdpStablecoin} dashboard CDP backing amounts`);
+    }
     const existing = totals.get(record.stablecoin);
     if (existing) {
       existing.collateralUsd += collateralUsd;
@@ -595,7 +607,7 @@ async function fetchMentoCdpSystem(
   }
   // These amounts are used only to recover the source's GBP/USD conversion,
   // never as the whole-system collateral or liability denominator.
-  const troves = getCdpTroves(payload).filter((trove) => trove.stablecoin === "GBPm" && trove.status === "active");
+  const troves = getCdpTroves(payload).filter((trove) => isActiveCdpTrove(trove, "GBPm"));
   const fxRates = troves.map((trove) => {
     const debtNative = typeof trove.debt_amount === "string" && trove.debt_amount.trim() !== ""
       ? Number(trove.debt_amount) : trove.debt_amount;
@@ -680,20 +692,18 @@ async function fetchMentoDashboardSnapshot(
   signal: AbortSignal,
   warnings: LiveReserveWarning[],
   ctx?: AdapterContext,
+  cdpStablecoin?: MentoCdpStablecoin,
 ): Promise<MentoDashboardSnapshot | null> {
   const url = config.display?.url;
   if (!url) return null;
+  let html: string;
   try {
-    const html = await fetchWithBrowserFallback(
+    html = await fetchWithBrowserFallback(
       "https://reserve.mento.org",
       "https://reserve.mento.org/",
       (headers) => fetchTextWithRetry(url, signal, 12_000, ctx, { headers }),
       signal,
     );
-    return {
-      sourceTimestamp: extractMentoDashboardTimestamp(html),
-      cdpBackings: parseMentoDashboardCdpBackings(html),
-    };
   } catch (error) {
     warnings.push(reserveInfoWarning(
       "mento-dashboard-timestamp-failed",
@@ -701,6 +711,10 @@ async function fetchMentoDashboardSnapshot(
     ));
     return null;
   }
+  return {
+    sourceTimestamp: extractMentoDashboardTimestamp(html),
+    cdpBackings: parseMentoDashboardCdpBackings(html, cdpStablecoin),
+  };
 }
 
 const MENTO_REDEMPTION_TIMEOUT_MS = 8_000;
@@ -713,6 +727,7 @@ export async function fetchMentoReserves(
 ): Promise<AdapterResult> {
   const input = requireJsonInput(config.inputs.primary, "mento");
   const dashboardWarnings: LiveReserveWarning[] = [];
+  const params = parseLiveReserveAdapterParams("mento", config.params);
   const [payload, dashboard] = await Promise.all([
     fetchWithBrowserFallback(
       "https://reserve.mento.org",
@@ -720,9 +735,8 @@ export async function fetchMentoReserves(
       (headers) => fetchJsonWithRetry<MentoReserveApiResponse>(input.url, signal, 12_000, ctx, { headers }),
       signal,
     ),
-    fetchMentoDashboardSnapshot(config, signal, dashboardWarnings, ctx),
+    fetchMentoDashboardSnapshot(config, signal, dashboardWarnings, ctx, params.cdpStablecoin),
   ]);
-  const params = parseLiveReserveAdapterParams("mento", config.params);
   if (params.cdpSystem && params.cdpStablecoin !== "GBPm") {
     throw new Error("mento: whole-system CDP configuration is only supported for GBPm");
   }

@@ -1,11 +1,12 @@
-import { getMintBurnBlockNumber, mintBurnRpcEndpoints } from "../../lib/mint-burn-pipeline/rpc";
+import { getMintBurnFinalizedHead, mintBurnRpcEndpoints } from "../../lib/mint-burn-pipeline/rpc";
 import type { ChainRpcConfig, RpcEndpoint } from "../../lib/chain-registry";
 import { throwIfAborted } from "../../lib/abort";
 import type { MintBurnTxContext } from "../../lib/mint-burn-bridge-classifier";
 import type { MintBurnContractConfig } from "../../lib/mint-burn-contracts";
 
 export interface MintBurnChainContext {
-  chainHead: number;
+  /** Admitted finalized ceiling, never the provisional tip. */
+  chainHead: number | null;
   rpcEndpoints: readonly RpcEndpoint[];
   endpointHeads: Map<string, number>;
   chainTimestampCache: Map<string, number>;
@@ -24,10 +25,8 @@ export async function loadMintBurnChainContexts(input: {
     throwIfAborted(input.signal);
     const rpcEndpoints = mintBurnRpcEndpoints(chainId, input.apiKey, input.chainRpcs);
     const endpointHeads = new Map<string, number>();
-    const chainHead = await getMintBurnBlockNumber(rpcEndpoints, input.budget, input.signal, endpointHeads);
-    if (chainHead === null) {
-      throw new Error(`Failed to get ${chainId} chain head`);
-    }
+    const finalized = await getMintBurnFinalizedHead(chainId, rpcEndpoints, input.budget, input.signal);
+    const chainHead = finalized?.number ?? null;
     chainContexts.set(chainId, {
       chainHead,
       rpcEndpoints,

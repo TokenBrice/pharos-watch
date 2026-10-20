@@ -23,10 +23,88 @@ import {
 export type TelegramGroupAdminGating = "soft" | "hard";
 export const TELEGRAM_GROUP_ADMIN_GATING: { mode: TelegramGroupAdminGating } = { mode: "hard" };
 
-const GROUP_ADMIN_GATED_COMMANDS = new Set([
-  "/subscribe", "/unsubscribe", "/set", "/mute", "/pause", "/forget",
-  "/unmutehours", "/unsnooze", "/import",
-]);
+export interface TelegramCommandPolicy {
+  requiresGroupAdmin: boolean;
+  mutation: "none" | "required";
+  pending: "passthrough" | "clear-and-run" | "remind" | "cancel";
+  setupNonOwnerPassthrough: boolean;
+  setupTickerEscape: boolean;
+  recoveryEligible: boolean;
+}
+
+const UNKNOWN_COMMAND_POLICY: Readonly<TelegramCommandPolicy> = {
+  requiresGroupAdmin: false,
+  mutation: "none",
+  pending: "remind",
+  setupNonOwnerPassthrough: false,
+  setupTickerEscape: false,
+  recoveryEligible: false,
+};
+const READ_COMMAND_POLICY: Readonly<TelegramCommandPolicy> = {
+  ...UNKNOWN_COMMAND_POLICY, pending: "passthrough", setupNonOwnerPassthrough: true,
+};
+const MUTATING_COMMAND_POLICY: Readonly<TelegramCommandPolicy> = {
+  ...UNKNOWN_COMMAND_POLICY,
+  requiresGroupAdmin: true,
+  mutation: "required",
+  pending: "clear-and-run",
+  recoveryEligible: true,
+};
+const START_READ_POLICY: Readonly<TelegramCommandPolicy> = {
+  ...READ_COMMAND_POLICY, setupTickerEscape: true, recoveryEligible: true,
+};
+const START_MUTATION_POLICY: Readonly<TelegramCommandPolicy> = {
+  ...START_READ_POLICY, mutation: "required", pending: "clear-and-run",
+};
+const TIMEZONE_READ_POLICY: Readonly<TelegramCommandPolicy> = {
+  ...UNKNOWN_COMMAND_POLICY, pending: "clear-and-run", recoveryEligible: true,
+};
+const RECAP_READ_POLICY: Readonly<TelegramCommandPolicy> = {
+  ...TIMEZONE_READ_POLICY, pending: "passthrough",
+};
+const RECAP_MUTATION_POLICY: Readonly<TelegramCommandPolicy> = {
+  ...TIMEZONE_READ_POLICY, mutation: "required",
+};
+
+// Explicit coverage is checked against COMMAND_HANDLERS, including aliases.
+export const TELEGRAM_COMMAND_POLICIES: Readonly<Record<string, Readonly<TelegramCommandPolicy>>> = {
+  "/start": START_READ_POLICY,
+  "/presets": READ_COMMAND_POLICY,
+  "/help": READ_COMMAND_POLICY,
+  "/sample": READ_COMMAND_POLICY,
+  "/list": READ_COMMAND_POLICY,
+  "/status": READ_COMMAND_POLICY,
+  "/brief": READ_COMMAND_POLICY,
+  "/market": READ_COMMAND_POLICY,
+  "/top": READ_COMMAND_POLICY,
+  "/why": READ_COMMAND_POLICY,
+  "/coverage": READ_COMMAND_POLICY,
+  "/health": READ_COMMAND_POLICY,
+  "/subscribe": MUTATING_COMMAND_POLICY,
+  "/unsubscribe": MUTATING_COMMAND_POLICY,
+  "/set": MUTATING_COMMAND_POLICY,
+  "/settings": { ...UNKNOWN_COMMAND_POLICY, pending: "clear-and-run" },
+  "/mute": MUTATING_COMMAND_POLICY,
+  "/pause": { ...MUTATING_COMMAND_POLICY, pending: "remind" },
+  "/timezone": TIMEZONE_READ_POLICY,
+  "/unmutehours": MUTATING_COMMAND_POLICY,
+  "/unsnooze": MUTATING_COMMAND_POLICY,
+  "/cancel": { ...UNKNOWN_COMMAND_POLICY, mutation: "required", pending: "cancel", setupTickerEscape: true },
+  "/forget": { ...MUTATING_COMMAND_POLICY, recoveryEligible: false },
+  "/export": UNKNOWN_COMMAND_POLICY,
+  "/import": { ...MUTATING_COMMAND_POLICY, pending: "remind", recoveryEligible: false },
+  "/recap": RECAP_READ_POLICY,
+};
+
+export function classifyTelegramCommand(command: string, args: string): Readonly<TelegramCommandPolicy> {
+  if (command === "/start") return isMutatingTelegramStartPayload(args) ? START_MUTATION_POLICY : START_READ_POLICY;
+  if (command === "/timezone") return args.trim() ? MUTATING_COMMAND_POLICY : TIMEZONE_READ_POLICY;
+  if (command === "/recap") {
+    if (!args.trim()) return RECAP_READ_POLICY;
+    return isRecapMutationArgs(args) ? RECAP_MUTATION_POLICY : TIMEZONE_READ_POLICY;
+  }
+  return TELEGRAM_COMMAND_POLICIES[command] ?? UNKNOWN_COMMAND_POLICY;
+}
 const PHAROS_BOT_USERNAMES = new Set([TELEGRAM_BOT_USERNAME.toLowerCase()]);
 const COMMAND_COOLDOWNS_SEC: Record<string, number> = {
   "/brief": 30,
@@ -37,11 +115,11 @@ const COMMAND_COOLDOWNS_SEC: Record<string, number> = {
 };
 const CANONICAL_COMMAND_KEYS: Record<string, string> = { "/market": "/brief" };
 
-export function isRecapMutationArgs(args: string): boolean {
+function isRecapMutationArgs(args: string): boolean {
   return /^(?:on|off|time\s+(?:[0-9]|1[0-9]|2[0-3]))$/i.test(args.trim());
 }
 
-export function isMutatingTelegramStartPayload(args: string): boolean {
+function isMutatingTelegramStartPayload(args: string): boolean {
   const kind = parseStartPayload(args).kind;
   return kind === "setup" || kind === "none" || kind === "subscribe" || kind === "adoption";
 }
@@ -277,10 +355,6 @@ export async function maybeGateNonAdminGroupActor(
   return TELEGRAM_GROUP_ADMIN_GATING.mode !== "hard";
 }
 
-export function commandRequiresGroupAdmin(command: string, args: string): boolean {
-  if (GROUP_ADMIN_GATED_COMMANDS.has(command)) return true;
-  return command === "/timezone" && args.trim().length > 0;
-}
 
 function formatAdminHint(admins: Awaited<ReturnType<typeof getCachedChatAdministrators>>): string {
   if (!admins || admins.length === 0) return "";

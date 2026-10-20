@@ -18,6 +18,41 @@ afterEach(() => {
 });
 
 describe("command runner", () => {
+  it.each([true, false])("preserves parent cancellation with initiallyAborted=%s", async (initiallyAborted) => {
+    const controller = new AbortController();
+    const runCommandImpl = vi.fn(() => { controller.abort(); return 0; });
+    if (initiallyAborted) controller.abort();
+    const result = await runParallelExecutionUnits([
+      createExecutionUnit(["first"]), createExecutionUnit(["queued"]),
+    ], { reporter: {}, maxParallel: 1, signal: controller.signal, runCommandImpl });
+
+    expect(result).toMatchObject({ status: 130, aborted: true, failedCmd: null, failures: [] });
+    expect(runCommandImpl.mock.calls).toHaveLength(initiallyAborted ? 0 : 1);
+    expect(result.results.map((entry) => entry.unit.commands)).toEqual(initiallyAborted ? [] : [["first"]]);
+    expect(result.results.map((entry) => entry.status)).toEqual(initiallyAborted ? [] : [0]);
+  });
+
+  it("keeps an aborted empty selection neutral", async () => {
+    const runCommandImpl = vi.fn(() => 0);
+    const result = await runParallelExecutionUnits([], {
+      reporter: {}, signal: AbortSignal.abort(), runCommandImpl,
+    });
+    expect(result).toEqual({ status: 0, aborted: false, failedCmd: null, failures: [], results: [] });
+    expect(runCommandImpl).not.toHaveBeenCalled();
+  });
+
+  it("retains a non-aborted failure over parent cancellation and omitted units", async () => {
+    const controller = new AbortController();
+    const runCommandImpl = vi.fn(() => { controller.abort(); return { status: 7, aborted: false }; });
+    const result = await runParallelExecutionUnits([
+      createExecutionUnit(["fail"]), createExecutionUnit(["queued"]),
+    ], { reporter: {}, maxParallel: 1, signal: controller.signal, runCommandImpl });
+    expect(result).toMatchObject({ status: 7, aborted: false, failedCmd: "fail" });
+    expect(result.failures.map((entry) => entry.failedCmd)).toEqual(["fail"]);
+    expect(result.results.map((entry) => entry.unit.commands)).toEqual([["fail"]]);
+    expect(runCommandImpl).toHaveBeenCalledTimes(1);
+  });
+
   it("settles aborted siblings after a rejecting parallel runner", async () => {
     const error = new Error("runner rejected");
     let settled = false;

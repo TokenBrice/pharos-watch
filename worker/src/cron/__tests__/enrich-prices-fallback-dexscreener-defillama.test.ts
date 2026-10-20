@@ -16,6 +16,33 @@ import { DEXSCREENER_ROTATION_INTERVAL_MS } from "../sync-stablecoins/enrich-pri
 
 describe("enrichMissingPrices", () => {
   afterEach(cleanupEnrichMissingPricesTest);
+  it.each([
+    { chainId: "ethereum", tokenAddress: "MintCase", resolves: false },
+    { chainId: "solana", tokenAddress: "mintCase", resolves: false },
+    { chainId: "solana", tokenAddress: "MintCase", resolves: true },
+  ])("requires chain and native-case identity for DexScreener fallback: %j", async ({ chainId, tokenAddress, resolves }) => {
+    const assets = [makePeggedAsset({ id: "test-usd", symbol: "TEST", price: null, address: "solana:MintCase" })];
+    mockFetch([{
+      match: "api.dexscreener.com/tokens/v1/solana/MintCase",
+      body: [{
+        chainId, dexId: "raydium", pairAddress: "PoolCase",
+        baseToken: { address: "BaseCase", name: "Base", symbol: "BASE" },
+        quoteToken: { address: tokenAddress, name: "Test", symbol: "TEST" },
+        priceUsd: "4", priceNative: "4", liquidity: { usd: 100_000, base: 0, quote: 0 },
+        volume: null, pairCreatedAt: null,
+      }],
+    }]);
+    const result = await runDexScreenerPass(assets, undefined, undefined);
+    expect(result.resolved).toBe(resolves ? 1 : 0);
+    expect(assets[0].price).toBe(resolves ? 1 : null);
+    if (!resolves && chainId === "ethereum") {
+      // Provider failures live in attempt diagnostics, not the pass's legacy failure list.
+      expect(result.diagnostics).toContainEqual(expect.objectContaining({
+        source: "dexscreener-exact", stage: "fallback", status: 200, ok: false, success: false,
+        errorMessage: expect.stringContaining("outside requested chain solana"),
+      }));
+    }
+  });
   it.each([true, false])("prefers the freshest usable DL deployment (newer symbol valid: %s)", async (validSymbol) => {
     const now = Math.floor(Date.now() / 1000);
     const assets = [makePeggedAsset({

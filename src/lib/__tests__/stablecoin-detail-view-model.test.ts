@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import type { MintBurnFlowsResponse, PegSummaryCoin, PegSummaryResponse, StablecoinData } from "@shared/types";
+import type { MintBurnFlowsResponse, PegSummaryCoin, PegSummaryResponse } from "@shared/types";
+import type { StablecoinLiveSummary } from "@shared/types/stablecoin-live-summary";
 import { makePegSummaryCoin as makePegSummaryCoinBase } from "@/test-utils/peg-summary-fixtures";
 import { makeYieldRanking } from "@shared/test-utils/yield-ranking-fixtures";
 import { makeV9Card } from "@/test/fixtures/safety-score-v9";
@@ -27,6 +28,38 @@ function makePegSummaryCoin(overrides: Partial<PegSummaryCoin> = {}): PegSummary
 }
 
 describe("stablecoin detail view-model builder", () => {
+  it("keeps a cold summary read loading rather than classifying the tracked ID as absent", () => {
+    const params = makeBuildStablecoinDetailViewModelParams({ queries: { liveSummary: { isLoading: true } } });
+    expect(buildStablecoinDetailViewModel(params).status).toBe("loading");
+  });
+
+  it.each([
+    ["usdc-circle", "peggedUSD", 1],
+    ["eurc-circle", "peggedEUR", 1.2],
+    ["usnd-nerite", "peggedUSD", 0.42],
+  ] as const)("keeps direct-summary quote and supply provenance for %s", (id, pegType, price) => {
+    const coin = TRACKED_META_BY_ID.get(id)!;
+    const nominalPriceReference = { price: 1, source: "protocol-par", mode: "nominal_reference" as const };
+    const params = makeReadyDetailParams({
+      id, coin,
+      asset: {
+        price, priceObservedAt: 1_700_000_001, priceUpdatedAt: 1_700_000_002,
+        priceSyncedAt: 1_700_000_003, priceObservedAtMode: "upstream",
+        supplyObservedAt: 1_700_000_000, supplyRestored: true, nominalPriceReference,
+      },
+      nativeSupply: { current: 90, prevWeek: 80, prevMonth: 70 },
+    });
+    const model = buildStablecoinDetailViewModel(params);
+    expect(model.status).toBe("ready");
+    if (model.status !== "ready") return;
+    expect(model.coinData).toMatchObject({
+      price, pegType, nominalPriceReference, supplyRestored: true, supplyObservedAt: 1_700_000_000,
+      priceObservedAt: 1_700_000_001, priceUpdatedAt: 1_700_000_002, priceSyncedAt: 1_700_000_003,
+    });
+    expect(model.hero.coinData).toBe(model.coinData);
+    expect(model.nativeSupply).toEqual({ current: 90, prevWeek: 80, prevMonth: 70 });
+    expect(model.supply).toBeCloseTo(100 / price);
+  });
   it("keeps explicit zero supply through the hero instead of reviving older positive checkpoints", () => {
     const coin = TRACKED_META_BY_ID.get("usdc-circle")!;
     const params = makeReadyDetailParams({
@@ -42,7 +75,7 @@ describe("stablecoin detail view-model builder", () => {
     expect(trend).toMatchObject({ current: 0, safePrevWeek: 200, safePrevMonth: 300 });
     expect((trend.current! / trend.safePrevWeek! - 1) * 100).toBe(-100);
     expect((trend.current! / trend.safePrevMonth! - 1) * 100).toBe(-100);
-    const unavailableAssets: Partial<StablecoinData>[] = [
+    const unavailableAssets: Partial<StablecoinLiveSummary>[] = [
       { circulating: {}, price: 1 },
       { circulating: { peggedUSD: 0 }, price: null },
       { circulating: { peggedUSD: 0 }, price: 0 },
@@ -60,20 +93,17 @@ describe("stablecoin detail view-model builder", () => {
     const coin = TRACKED_META_BY_ID.get("usdc-circle")!;
     const params = makeReadyDetailParams({ id: coin.id, coin });
     const failure = new Error("HTTP 502");
-    params.queries.stablecoinList.isError = true;
-    params.queries.stablecoinList.error = failure;
+    params.queries.liveSummary.error = failure;
     const retained = buildStablecoinDetailViewModel(params);
     expect(retained.status).toBe("ready");
     if (retained.status !== "ready") return;
     const query = retained.staleQueries.find((entry) => entry.preset === "stablecoins")!;
     expect(query.label).toBe("Detail snapshot");
     expect(deriveDataHealth({ ...DATA_HEALTH_PRESETS.stablecoins, ...query }).degradationReason).toBe("refresh");
-    params.queries.stablecoinList.error = null;
-    params.queries.stablecoinList.isError = false;
+    params.queries.liveSummary.error = null;
     expect(buildStablecoinDetailViewModel(params).status).toBe("ready");
-    params.queries.stablecoinList.data = undefined;
-    params.queries.stablecoinList.isError = true;
-    params.queries.stablecoinList.error = failure;
+    params.queries.liveSummary.data = undefined;
+    params.queries.liveSummary.error = failure;
     expect(buildStablecoinDetailViewModel(params)).toMatchObject({ status: "list-error", listError: failure });
   });
   it("keeps current listing supply independent of unavailable previous-day and native history", () => {
@@ -677,13 +707,6 @@ describe("stablecoin detail view-model builder", () => {
 
     expect(viewModel.status).toBe("ready");
     if (viewModel.status !== "ready") return;
-    expect(viewModel.featureStates).toMatchObject({
-      liquidity: { status: "unavailable", error },
-      yield: { status: "unavailable", error },
-      stress: { status: "unavailable", error },
-      flows: { status: "unavailable", error },
-      blacklist: { status: "unavailable", error },
-    });
     expect(viewModel.hasFlows).toBe(true);
     expect(viewModel.hasBlacklist).toBe(true);
     expect(viewModel.staleQueries.map((query) => query.preset)).toEqual(
@@ -778,14 +801,12 @@ describe("stablecoin detail view-model builder", () => {
         id: "xaut-tether",
         coin: coin!,
         asset: {
-          pegType: "peggedGOLD",
           price: 3_000,
           circulating: { peggedGOLD: 100 },
           circulatingPrevDay: { peggedGOLD: 98 },
           circulatingPrevWeek: { peggedGOLD: 96 },
           circulatingPrevMonth: { peggedGOLD: 92 },
         },
-        fxFallbackRates: { peggedGOLD: 3_000 },
         queries: {
           supplyHistory: { data: [{ date: 1_700_000_000, circulatingUsd: 100, price: 3_000 }] },
         },
@@ -859,14 +880,12 @@ describe("stablecoin detail view-model builder", () => {
         id,
         coin: coin!,
         asset: {
-          pegType,
           price,
           circulating: { [pegType]: 100 },
           circulatingPrevDay: { [pegType]: 99 },
           circulatingPrevWeek: { [pegType]: 97 },
           circulatingPrevMonth: { [pegType]: 95 },
         },
-        fxFallbackRates: { [pegType]: price },
         queries: {
           supplyHistory: {
             data: [
@@ -891,7 +910,7 @@ describe("stablecoin detail view-model builder", () => {
     expect(viewModel.performanceVsUsd1y).toBeCloseTo(expected, 6);
   });
 
-  it("returns not-found when the stablecoin is absent from the list payload", () => {
+  it("returns the existing read error when the detail summary is unavailable", () => {
     const coin = TRACKED_META_BY_ID.get("usdt-tether");
     expect(coin).toBeDefined();
 
@@ -902,15 +921,15 @@ describe("stablecoin detail view-model builder", () => {
           coin: coin!,
         },
         queries: {
-          stablecoinList: {
-            data: { peggedAssets: [] } as never,
+          liveSummary: {
+            data: undefined,
             dataUpdatedAt: 1,
           },
         },
       }),
     );
 
-    expect(viewModel.status).toBe("not-found");
+    expect(viewModel).toMatchObject({ status: "list-error", listError: new Error("Stablecoin list data unavailable") });
   });
 
   it("preserves reserve fetch errors while still falling back to static reserve metadata", () => {
@@ -918,32 +937,18 @@ describe("stablecoin detail view-model builder", () => {
     expect(coin).toBeDefined();
 
     const viewModel = buildStablecoinDetailViewModel(
-      makeBuildStablecoinDetailViewModelParams({
-        core: {
-          id: "iusd-infinifi",
-          coin: coin!,
+      makeReadyDetailParams({
+        id: "iusd-infinifi",
+        coin: coin!,
+        asset: {
+          price: 1,
+          circulating: { peggedUSD: 100 },
+          circulatingPrevDay: { peggedUSD: 90 },
+          circulatingPrevWeek: { peggedUSD: 80 },
+          circulatingPrevMonth: { peggedUSD: 70 },
         },
         queries: {
           supplyHistory: { data: [{ date: 1_700_000_000, circulatingUsd: 100, price: null }] },
-          stablecoinList: {
-            data: {
-              peggedAssets: [
-                {
-                  id: "iusd-infinifi",
-                  name: "iUSD",
-                  symbol: "iUSD",
-                  pegType: "peggedUSD",
-                  price: 1,
-                  circulating: { peggedUSD: 100 },
-                  circulatingPrevDay: { peggedUSD: 90 },
-                  circulatingPrevWeek: { peggedUSD: 80 },
-                  circulatingPrevMonth: { peggedUSD: 70 },
-                },
-              ],
-              fxFallbackRates: {},
-            } as never,
-            dataUpdatedAt: 1,
-          },
         },
         supplemental: {
           reserves: { error: new Error("reserve api failed") },

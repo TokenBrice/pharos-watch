@@ -7,6 +7,8 @@ import {
   DepegEventSchema,
   DepegEventStoredSnapshotSchema,
   DepegPendingIncidentSchema,
+  DexLiquidityHistoryPointSchema,
+  PegSummaryStatsSchema,
   StablecoinDataSchema,
 } from "../market";
 
@@ -100,6 +102,29 @@ describe("depeg chronology contract", () => {
   });
 });
 
+describe("peg summary median reader contract", () => {
+  const summary = {
+    activeDepegCount: 0,
+    medianDeviationBps: null,
+    worstCurrent: null,
+    coinsAtPeg: 0,
+    totalTracked: 0,
+    depegEventsToday: 2,
+    depegEventsYesterday: 1,
+  };
+
+  it.each([null, 0, 75])("preserves median %s without changing independent counts", (medianDeviationBps) => {
+    expect(PegSummaryStatsSchema.parse({ ...summary, medianDeviationBps })).toEqual({ ...summary, medianDeviationBps });
+  });
+
+  it.each(["activeDepegCount", "coinsAtPeg", "totalTracked", "depegEventsToday", "depegEventsYesterday"])(
+    "does not widen the %s cohort count to nullable",
+    (field) => {
+      expect(PegSummaryStatsSchema.safeParse({ ...summary, [field]: null }).success).toBe(false);
+    },
+  );
+});
+
 describe("blacklist summary cache contract", () => {
   it("parses a cache payload whose quarterly record still carries only pre-addition symbols", () => {
     const body = {
@@ -165,5 +190,24 @@ describe("nominal price reference reader contract", () => {
     });
     expect(isObservedPrice(row)).toBe(false);
     expect(isObservedPrice({ priceSource: "protocol-par" })).toBe(false);
+  });
+});
+
+describe("DEX volume availability wire contract", () => {
+  it.each([
+    [1, null, false],
+    [1, 0, true],
+    [0, null, true],
+    [null, null, true],
+  ] as const)("admits measured count %s and sum %s only with consistent evidence", (measuredPoolCount, partialGrossUsd, accepted) => {
+    const schema = DexLiquidityHistoryPointSchema.pick({ volume24hAvailability: true });
+    const result = schema.safeParse({ volume24hAvailability: {
+      completeness: "complete", reason: null, measuredPoolCount, partialGrossUsd,
+      missingPoolCount: 0, stalePoolCount: 0, windowSec: 86_400,
+      asOfSec: 1_790_000_000, maxObservationAgeSec: 259_200,
+      oldestObservedAtSec: null, newestObservedAtSec: null,
+    } });
+    expect(result.success).toBe(accepted);
+    if (result.success) expect(result.data.volume24hAvailability).not.toHaveProperty("admittedTvlUsd");
   });
 });

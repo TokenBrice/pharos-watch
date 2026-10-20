@@ -19,6 +19,10 @@ export function normalizeStablecoinLiveSummary(summary: StablecoinLiveSummary): 
   };
 }
 
+function admittedDetailBuckets(buckets: Record<string, number> | undefined): Record<string, number> {
+  return admitSupplyBuckets(buckets).status === "observed" ? buckets! : {};
+}
+
 /** Newest sample at/before the target; gaps wider than a daily bucket are unavailable. */
 function detailBucketsAt(
   detail: StablecoinDetailResponse,
@@ -36,7 +40,7 @@ function detailBucketsAt(
       chosen = token[field];
     }
   }
-  return chosen ?? {};
+  return admittedDetailBuckets(chosen);
 }
 
 /** Shared by the compact live endpoint, per-coin acquisition and cache-only bulk acquisition. */
@@ -86,7 +90,7 @@ export function projectStablecoinLiveSummary(detail: StablecoinDetailResponse): 
     supplyObservedAt,
     ...(supplyUnavailable || (hasCurrentSupply && detail.currentSupplyRestored === true) ? { supplyRestored: true } : {}),
     circulating,
-    circulatingPrevDay: hasCurrentSupply ? detail.currentCirculatingPrevDayUSD ?? {}
+    circulatingPrevDay: hasCurrentSupply ? admittedDetailBuckets(detail.currentCirculatingPrevDayUSD)
       : latestDate == null ? {} : detailBucketsAt(detail, latestDate - 86_400, "totalCirculatingUSD"),
     circulatingPrevWeek: supplyObservedAt == null ? {} : detailBucketsAt(detail, supplyObservedAt - 7 * 86_400, "totalCirculatingUSD"),
     circulatingPrevMonth: supplyObservedAt == null ? {} : detailBucketsAt(detail, supplyObservedAt - 30 * 86_400, "totalCirculatingUSD"),

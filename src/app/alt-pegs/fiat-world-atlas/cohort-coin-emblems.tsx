@@ -2,6 +2,7 @@
 
 import { CoinEmblem, type EmblemVariant } from "@/app/alt-pegs/fiat-world-atlas/coin-emblem";
 import type { PlacedCoin } from "@/lib/alt-peg-hero";
+import type { NonUsdPegEntry } from "@shared/lib/alt-peg-snapshot";
 
 export interface CohortSummary {
   coinCount: number;
@@ -10,12 +11,11 @@ export interface CohortSummary {
   symbolPreview: string;
 }
 
-export function summarizeCohort(coins: readonly PlacedCoin[]): CohortSummary {
-  const observedCoins = coins.filter((coin) => coin.marketCap !== null);
+export function summarizeCohort(coins: readonly PlacedCoin[], cohort: NonUsdPegEntry): CohortSummary {
   return {
-    coinCount: coins.length,
-    marketCap: observedCoins.length > 0 ? observedCoins.reduce((sum, coin) => sum + coin.marketCap!, 0) : null,
-    supplyUnavailableCount: coins.length - observedCoins.length,
+    coinCount: cohort.coinCount,
+    marketCap: cohort.marketCap,
+    supplyUnavailableCount: cohort.supplyUnavailableCount,
     symbolPreview: coins
       .slice(0, 3)
       .map((coin) => coin.symbol)
@@ -26,7 +26,7 @@ export function summarizeCohort(coins: readonly PlacedCoin[]): CohortSummary {
 interface CohortCoinEmblemsProps {
   coins: readonly PlacedCoin[];
   cohortRank?: number;
-  summary?: CohortSummary;
+  summary: CohortSummary;
   variant: EmblemVariant | ((coin: PlacedCoin, index: number) => EmblemVariant);
   loading: "eager" | "lazy" | ((coin: PlacedCoin, index: number) => "eager" | "lazy");
   hoverCardYPlacement?: "auto" | "above" | "below";
@@ -35,7 +35,7 @@ interface CohortCoinEmblemsProps {
 export function CohortCoinEmblems({
   coins,
   cohortRank,
-  summary = summarizeCohort(coins),
+  summary,
   variant,
   loading,
   hoverCardYPlacement,

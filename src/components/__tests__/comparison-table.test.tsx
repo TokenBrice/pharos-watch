@@ -33,6 +33,7 @@ function makeCoin(id: string, symbol: string): ComparisonCoinEntry {
     id,
     symbol,
     name: symbol,
+    bluechipPublicationAvailable: false,
     data: makeData(100_000_000_000),
     meta: {
       id,
@@ -120,8 +121,21 @@ describe("ComparisonTable", () => {
     expect(html).not.toMatch(/\bbest\b/i);
   });
 
+  it.each([false, true])("distinguishes whole-feed availability (%s) from an unrated coin", (available) => {
+    const coin = makeCoin("usdt", "USDT");
+    coin.bluechipPublicationAvailable = available;
+    const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} pegRates={PEG_RATES} logos={{}} />);
+    const row = html.match(/<tr\b[^>]*>(?:(?!<\/tr>)[\s\S])*External Bluechip(?:(?!<\/tr>)[\s\S])*<\/tr>/)?.[0];
+    expect(row).toContain(available ? "Not rated" : "No comparable data available");
+    if (!available) {
+      expect(row).toContain("—");
+      expect(row).not.toContain("Not rated");
+    }
+  });
+
   it("marks missing Bluechip audit data as not reported", () => {
     const coin = makeCoin("usdt", "USDT");
+    coin.bluechipPublicationAvailable = true;
     coin.bluechipRating = makeUnreportedBluechipRating();
     const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} pegRates={PEG_RATES} logos={{}} />);
 
@@ -140,6 +154,7 @@ describe("ComparisonTable", () => {
     const now = 1_790_000_000;
     vi.spyOn(Date, "now").mockReturnValue(now * 1000);
     const coin = makeCoin("usdt", "USDT");
+    coin.bluechipPublicationAvailable = true;
     coin.bluechipRating = {
       ...makeUnreportedBluechipRating(),
       lastObservedAt: age == null ? null : now - age,
@@ -194,5 +209,36 @@ describe("ComparisonTable", () => {
 
     expect(zeroHtml).toContain("$0.00");
     expect(zeroHtml).toMatch(/-100\.0+%|-100%/);
+  });
+
+  it.each([
+    { currency: "EUR", pegType: "peggedEUR", price: 1.1 },
+    { currency: "GOLD", pegType: "peggedGOLD", price: 3300 },
+  ] as const)("names valuation-only $currency movement as USD market-cap change", ({ currency, pegType, price }) => {
+    const coin = makeCoin("test", "TST");
+    coin.meta.flags.pegCurrency = currency;
+    // A fixed native balance revalues by 10% in USD; no token issuance.
+    coin.data = { ...coin.data, pegType, price, circulating: { [pegType]: 1100 },
+      circulatingPrevDay: { [pegType]: 1000 }, circulatingPrevWeek: { [pegType]: 1000 },
+      circulatingPrevMonth: { [pegType]: 1000 } };
+    const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} pegRates={{ [currency]: price }} />);
+    for (const window of ["24h", "7d", "30d"]) {
+      const row = html.match(/<tr\b[^>]*>[\s\S]*?<\/tr>/g)?.find((row) => row.includes(`Market-cap change · ${window}`));
+      expect(row).toContain("+10.00%");
+    }
+    expect(html).toContain("USD-valued circulation, not token counts or price returns");
+    expect(html).not.toContain("Supply change ·");
+  });
+
+  it("withholds market-cap deltas when historical buckets are missing", () => {
+    const coin = makeCoin("test", "TST");
+    coin.data = { ...coin.data, circulatingPrevDay: {}, circulatingPrevWeek: {}, circulatingPrevMonth: {} };
+    const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} pegRates={PEG_RATES} />);
+    const rows = html.match(/<tr\b[^>]*>[\s\S]*?<\/tr>/g)?.filter((row) => row.includes("Market-cap change ·"));
+    expect(rows).toHaveLength(3);
+    for (const row of rows ?? []) {
+      expect(row).toContain("No comparable data available");
+      expect(row).not.toContain("%");
+    }
   });
 });

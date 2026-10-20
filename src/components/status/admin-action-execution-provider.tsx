@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from "react";
+import { sha256Hex } from "@shared/lib/sha256";
 import { AdminActionExecutionDialog } from "@/components/status/admin-action-execution-dialog";
 import type {
   AdminActionDialogRequest,
@@ -47,6 +48,7 @@ function decorateAdminActionExecution(
 ): AdminActionExecution {
   return {
     ...execution,
+    idempotencyKeyHash: sha256Hex(execution.idempotencyKey),
     action: request.action,
     executionKey: execution.laneKey,
     requestPath: request.requestPath,

@@ -5,6 +5,32 @@ import { TELEGRAM_COMMAND_REFERENCE } from "@shared/lib/telegram-bot-registratio
 import type { ResolvedCoin } from "../common/alerts-parser";
 import { DISAMBIGUATION_TTL_SEC } from "../common/constants";
 import { escapeHtml } from "../common/html";
+import type { InlineKeyboardButton, InlineKeyboardMarkup } from "../delivery/telegram";
+
+export function isPendingFlowId(value: unknown): value is string {
+  return typeof value === "string" && /^[a-f0-9]{16}$/.test(value);
+}
+
+export function pendingFlowId(value?: unknown): string {
+  return isPendingFlowId(value) ? value : crypto.randomUUID().replaceAll("-", "").slice(0, 16);
+}
+
+/** Every pending keyboard carries a bounded opaque identity, never a coin id. */
+export function bindPendingKeyboard(
+  markup: { inline_keyboard: readonly (readonly InlineKeyboardButton[])[] },
+  flowId: string,
+): InlineKeyboardMarkup {
+  if (!isPendingFlowId(flowId)) throw new Error("Invalid pending Telegram flow identity");
+  const encoder = new TextEncoder();
+  return {
+    inline_keyboard: markup.inline_keyboard.map((row) => row.map((button) => {
+      if (!("callback_data" in button) || !button.callback_data) return button;
+      const data = `${button.callback_data}:${flowId}`;
+      if (encoder.encode(data).length > 64) throw new Error("Pending Telegram callback exceeds 64 bytes");
+      return { ...button, callback_data: data };
+    })),
+  };
+}
 
 // Re-export so existing callers importing this constant from this module keep working.
 export { DISAMBIGUATION_TTL_SEC };
@@ -130,7 +156,7 @@ export type PendingActionType = "subscribe" | "unsubscribe" | "set" | "confirm-b
  * needed to execute the deferred subscribe/unsubscribe once the user taps
  * Confirm on the inline keyboard.
  */
-export type ConfirmBulkPayload =
+export type ConfirmBulkPayload = { flowId?: string } & (
   | {
       kind: "subscribe";
       alertTypes: string[];
@@ -162,7 +188,7 @@ export type ConfirmBulkPayload =
         presetChanges: string[];
         presetChangeBefore: string[];
       };
-    };
+    });
 
 /**
  * Setup wizard state machine. Persisted in `telegram_pending_disambiguation`
@@ -188,6 +214,7 @@ export interface SetupWizardState {
   target: SetupWizardTarget | null;
   initiatorUserId: string | null;
   adoptionToken?: string | null;
+  flowId?: string;
 }
 
 export const SETUP_PENDING_ACTION_TYPE = "setup-step";
@@ -324,7 +351,7 @@ export type CoinResolution =
       suggestion?: ResolvedCoin;
     };
 
-export type PendingAction =
+export type PendingAction = { flowId?: string } & (
   | {
       actionType: "subscribe";
       alertTypes: Set<string>;
@@ -362,7 +389,7 @@ export type PendingAction =
   | {
       actionType: "forget-confirm";
       initiatorUserId: string | null;
-    };
+    });
 
 /**
  * Typed sentinel returned by `parsePendingDisambiguation` when the loaded row is

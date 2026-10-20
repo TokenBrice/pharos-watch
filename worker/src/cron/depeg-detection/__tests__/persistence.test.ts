@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { persistDepegCommands } from "../persistence";
 import type { DepegPersistenceCommand } from "../types";
+import { sealPredictionFixture, withSqliteD1 } from "../../../lib/__tests__/depeg-resolver-ddrv2-store.test-support";
 
 function insertOpenEvent(sqlite: DatabaseSync, stablecoinId: string, startedAt: number): number {
   sqlite.prepare(
@@ -43,6 +44,17 @@ function closeCommand(id: number, endedAt: number): DepegPersistenceCommand {
 }
 
 describe("persistDepegCommands", () => {
+  it("retains sealed source events without granting deletion authority", async () => withSqliteD1(async (db) => {
+    const { prediction } = await sealPredictionFixture(db);
+    await persistDepegCommands(db, [{ type: "delete-event", id: prediction.eventId }]);
+    expect(db.sqlite.prepare("SELECT id FROM depeg_events WHERE id = ?").get(prediction.eventId))
+      .toEqual({ id: prediction.eventId });
+    expect(() => db.sqlite.prepare("DELETE FROM depeg_events WHERE id = ?").run(prediction.eventId))
+      .toThrow("sealed depeg event deletes require incident repair authorization");
+    expect(db.sqlite.prepare("SELECT COUNT(*) AS count FROM depeg_resolver_event_repair_authorizations").get())
+      .toEqual({ count: 0 });
+  }));
+
   it("commits every asset transition when the total statement count crosses 100", async () => {
     const { sqlite, db } = createLatestSchemaSqlite();
     const commands: DepegPersistenceCommand[] = [];

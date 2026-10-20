@@ -4,6 +4,7 @@ import {
   appendFileSync,
   copyFileSync,
   cpSync,
+  existsSync,
   mkdirSync,
   readFileSync,
   renameSync,
@@ -11,7 +12,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { parseStrictCliArgs, runCliEntrypoint, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
 import {
   createNpmScriptCommand,
@@ -29,6 +30,12 @@ Options:
   --refresh-dir <path>  Directory for snapshots, logs, and the default result JSON
   --result <path>       Machine-readable result path (default: <refresh-dir>/result.json)
   -h, --help            Show this help`;
+
+const PUBLIC_DATASET_BUNDLE_PATHS = [
+  "public/datasets",
+  "public/_redirects",
+  "src/lib/datasets/public-dataset-current.ts",
+] as const;
 
 export interface ReleaseRefreshResult {
   depegEvents: { ok: boolean };
@@ -69,7 +76,7 @@ function captured(command: SpawnCommand): Promise<CommandResult> {
   return runSpawnCommand({ ...command, captureOutput: true });
 }
 
-function defaultDependencies(): ReleaseRefreshDependencies {
+function defaultDependencies(repoRoot: string, datasetBackupDir: string): ReleaseRefreshDependencies {
   return {
     digests: ({ outputPath }) => captured(createSpawnCommand(localBin("tsx"), [
       "scripts/maintenance/sync-digests.ts",
@@ -83,10 +90,16 @@ function defaultDependencies(): ReleaseRefreshDependencies {
     ])),
     publicDatasets: () => captured(createNpmScriptCommand("generate:public-datasets")),
     rollbackPublicDatasets: async () => {
-      const checkout = await captured(createSpawnCommand("git", ["checkout", "--", "public/datasets"]));
-      if (checkout.status !== 0) return checkout;
-      const clean = await captured(createSpawnCommand("git", ["clean", "-fd", "--", "public/datasets"]));
-      return { ...clean, output: `${checkout.output ?? ""}${clean.output ?? ""}` };
+      for (const path of PUBLIC_DATASET_BUNDLE_PATHS) {
+        const target = join(repoRoot, path);
+        const backup = join(datasetBackupDir, path);
+        rmSync(target, { recursive: true, force: true });
+        if (existsSync(backup)) {
+          mkdirSync(dirname(target), { recursive: true });
+          cpSync(backup, target, { recursive: true });
+        }
+      }
+      return { status: 0, aborted: false, output: "Restored pre-refresh public dataset bundle\n" };
     },
   };
 }
@@ -128,7 +141,6 @@ export async function refreshPagesReleaseData({
   repoRoot = process.cwd(),
   resultPath,
 }: RefreshPagesReleaseDataOptions = {}): Promise<ReleaseRefreshResult> {
-  const dependencies = { ...defaultDependencies(), ...overrides };
   const resolvedRefreshDir = resolve(
     refreshDir
       ?? join(
@@ -137,6 +149,8 @@ export async function refreshPagesReleaseData({
       ),
   );
   mkdirSync(resolvedRefreshDir, { recursive: true });
+  const datasetBackupDir = join(resolvedRefreshDir, "public-dataset-bundle");
+  const dependencies = { ...defaultDependencies(repoRoot, datasetBackupDir), ...overrides };
 
   const committedDigestPath = join(repoRoot, "data/digests.json");
   const committedDepegPath = join(repoRoot, "data/depeg-events");
@@ -180,6 +194,18 @@ export async function refreshPagesReleaseData({
     depegLog = appendLog(depegLog, "::warning::depeg-event refresh failed; using committed depeg snapshot");
   }
 
+  // Snapshot every generator output, including authored redirects, before any dataset writes.
+  rmSync(datasetBackupDir, { recursive: true, force: true });
+  mkdirSync(datasetBackupDir, { recursive: true });
+  for (const path of PUBLIC_DATASET_BUNDLE_PATHS) {
+    const source = join(repoRoot, path);
+    if (existsSync(source)) {
+      const backup = join(datasetBackupDir, path);
+      mkdirSync(dirname(backup), { recursive: true });
+      cpSync(source, backup, { recursive: true });
+    }
+  }
+
   const datasetsRun = await settledProducer(dependencies.publicDatasets, {});
 
   const datasetsOk = datasetsRun.status === 0;
@@ -188,7 +214,7 @@ export async function refreshPagesReleaseData({
   if (!datasetsOk) {
     datasetsLog = appendLog(
       datasetsLog,
-      "::warning::public-dataset refresh failed; using committed public datasets",
+      "::warning::public-dataset refresh failed; using pre-refresh public dataset bundle",
     );
     const rollback = await settledProducer(() => dependencies.rollbackPublicDatasets(), {});
     rolledBack = rollback.status === 0;

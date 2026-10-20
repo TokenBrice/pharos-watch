@@ -1,4 +1,8 @@
 import { describe, expect, it } from "vitest";
+import usx from "@shared/data/stablecoins/coins/usx-solstice.json";
+import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import { computeLiveReserveConfigFingerprint, getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
+import { evaluateLiveReserveAdmission } from "../../../lib/live-reserves/store-snapshot-state";
 import { adaptSolsticeAttestation } from "../solstice-attestation";
 import { getReserveAdapter } from "../index";
 import { validateAdapterOutput } from "../validate";
@@ -31,6 +35,39 @@ describe("adaptSolsticeAttestation", () => {
         { ts: 1_778_000_000, supply: 100 },
       ] } },
     })).toThrow(/missing reserve\/supply/);
+  });
+
+  it("publishes zero backing with ratio zero and reconciles an observed zero headline", () => {
+    const result = adaptSolsticeAttestation({
+      res: "ok",
+      data: { reserves: {
+        total_reserves: { value: 0 }, total_supply: { value: 100 },
+        timeline: [{ ts: 1_778_000_000, reserves: 0, supply: 100 }],
+      } },
+    });
+    expect(result.metadata).toMatchObject({ totalReserveUsd: 0, supplyUsd: 100, collateralizationRatio: 0 });
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "reserve-undercollateralized", effect: "degraded" }));
+    expect(result.warnings).not.toContainEqual(expect.objectContaining({ code: "solstice-timeline-total-mismatch" }));
+  });
+
+  it.each([undefined, null, -1, NaN, Infinity])("rejects unavailable or invalid reserves (%s)", (reserves) => {
+    expect(() => adaptSolsticeAttestation({
+      res: "ok", data: { reserves: { timeline: [{ reserves: reserves as number, supply: 100 }] } },
+    })).toThrow(/missing reserve\/supply/);
+  });
+
+  it("preserves zero liabilities without a ratio and still detects a mismatched headline", () => {
+    const result = adaptSolsticeAttestation({
+      res: "ok",
+      data: { reserves: {
+        total_reserves: { value: 1 }, total_supply: { value: 0 },
+        timeline: [{ ts: 1_778_000_000, reserves: 0, supply: 0 }],
+      } },
+    });
+    expect(result.metadata).toMatchObject({ totalReserveUsd: 0, supplyUsd: 0 });
+    expect(result.metadata).not.toHaveProperty("collateralizationRatio");
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "solstice-zero-supply", effect: "degraded" }));
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "solstice-timeline-total-mismatch", effect: "degraded" }));
   });
 
   it("uses the selected point date when neither envelope nor point has a timestamp", () => {
@@ -128,6 +165,36 @@ describe("adaptSolsticeAttestation", () => {
     expect(result.metadata?.freshnessMode).toBe("unverified");
   });
 
+  it("does not date an undated selected point with a fresh envelope", () => {
+    const result = adaptSolsticeAttestation({
+      res: "ok",
+      data: { ts: 1_778_000_000, reserves: { timeline: [{ reserves: 120, supply: 100 }] } },
+    });
+    expect(result.metadata?.freshnessMode).toBe("unverified");
+    expect(result.metadata?.sourceTimestamp).toBeUndefined();
+    expect(result.metadata?.details).toMatchObject({ envelopeTimestamp: 1_778_000_000 });
+  });
+
+  it("rejects retained envelope-dated v1 packets after the point-clock cutover", () => {
+    const config = usx.liveReservesConfig as LiveReservesConfig;
+    expect(config.version).toBe(2);
+    expect(getLiveReserveAdapterDefinition("solstice-attestation")?.configValidation.allowedVersions).toEqual([2]);
+    const snapshot = {
+      stablecoinId: usx.id, source: config.adapter, fetchedAt: 1_778_000_000,
+      slices: [{ name: "Aggregate Solstice attested reserves", pct: 100, risk: "high" as const }],
+      metadata: { freshnessMode: "verified" as const, sourceTimestamp: 1_778_000_000 },
+      warnings: [], warningCount: 0,
+      adapterSourceModel: "single-bucket" as const, adapterEvidenceClass: "weak-live-probe" as const,
+      configFingerprint: computeLiveReserveConfigFingerprint({ ...config, version: 1 }),
+    };
+    const sync = { lastSuccessAt: snapshot.fetchedAt, lastSuccessAttemptId: null };
+    expect(evaluateLiveReserveAdmission(snapshot, sync, { liveReservesConfig: config }, snapshot.fetchedAt).reasons)
+      .toContain("config-mismatch");
+    expect(evaluateLiveReserveAdmission({
+      ...snapshot, configFingerprint: computeLiveReserveConfigFingerprint(config),
+    }, sync, { liveReservesConfig: config }, snapshot.fetchedAt).reasons).not.toContain("config-mismatch");
+  });
+
   it("is rejected by validateAdapterOutput when the source timestamp is in the future", () => {
     const futureMs = (Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60) * 1000;
     const result = adaptSolsticeAttestation({
@@ -152,7 +219,7 @@ describe("adaptSolsticeAttestation", () => {
       res: "ok",
       data: {
         ts: String(sourceTimestamp * 1000),
-        reserves: { timeline: [{ reserves: 1000, supply: 900 }] },
+        reserves: { timeline: [{ ts: sourceTimestamp, reserves: 1000, supply: 900 }] },
       },
     });
     const adapter = getReserveAdapter("solstice-attestation")!;
@@ -187,6 +254,7 @@ describe("adaptSolsticeAttestation", () => {
       },
     });
     expect(result.metadata?.details).toEqual({
+      envelopeTimestamp: 1_788_944_462,
       evidenceBasis: {
         merkleRoot: "GoShEX4gMDc9Y63zmyo6V51wx6uXWq7dXxfoALWSgWz2",
         zkpLiabilitiesHash: "7CwrfdDDyytZfKucpRmXBGLb41LQwhTEjumFDyBVkhy3",
@@ -263,6 +331,7 @@ describe("adaptSolsticeAttestation", () => {
       },
     });
     expect(result.metadata?.details).toEqual({
+      envelopeTimestamp: 1_776_264_425,
       evidenceBasis: {
         merkleRoot: "GoShEX4gMDc9Y63zmyo6V51wx6uXWq7dXxfoALWSgWz2",
         zkpLiabilitiesHash: null,

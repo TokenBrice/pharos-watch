@@ -2,6 +2,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { CliUsageError, parseStrictCliArgs, runDirectCli } from "../../scripts/lib/cli-args.mjs";
+import { decodeD1Envelopes } from "../../scripts/lib/remote-d1";
 import { createRemoteD1Client, sqlString } from "./lib/remote-d1";
 import { buildSafetyScoreMovementLedger, renderSafetyScoreMovementMarkdown, type SafetyScoreMovementRow, type SafetyScoreMovementAttempt } from "./lib/safety-score-movement-ledger";
 
@@ -25,11 +26,11 @@ export function runSafetyScoreMovementLedgerCli(argv: readonly string[]): void {
   const client = createRemoteD1Client(typeof values.database === "string" ? values.database : "stablecoin-db");
   // queryRaw lets us reject failed/malformed envelopes instead of mistaking them for empty evidence.
   const select = <T>(sql: string): T[] => {
-    const result: unknown = JSON.parse(client.queryRaw(sql));
-    if (!Array.isArray(result) || result.length !== 1) throw new Error("ledger-query-envelope-invalid");
-    const envelope = result[0] as { success?: boolean; results?: T[] };
-    if (envelope.success !== true || !Array.isArray(envelope.results)) throw new Error("ledger-query-failed");
-    return envelope.results;
+    const envelopes = decodeD1Envelopes(JSON.parse(client.queryRaw(sql)));
+    if (envelopes.length !== 1) throw new Error("ledger-query-envelope-invalid");
+    const envelope = envelopes[0]!;
+    if (envelope.success !== true) throw new Error("ledger-query-failed");
+    return envelope.results as T[];
   };
   const rows: SafetyScoreMovementRow[] = [];
   let cursor = "";

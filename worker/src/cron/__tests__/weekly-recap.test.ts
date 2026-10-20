@@ -534,6 +534,11 @@ describe("generateWeeklyRecap", () => {
       digestDate: "2026-03-30",
       scheduledAtSec: mondaySlotSec,
     });
+    const insert = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO daily_digest"));
+    expect(JSON.parse(String(insert?.binds[3])).gradeTransitionPeriods).toEqual({
+      current: { start: Date.parse("2026-03-23T00:00:00Z") / 1000, end: Date.parse("2026-03-30T00:00:00Z") / 1000 },
+      prior: { start: Date.parse("2026-03-16T00:00:00Z") / 1000, end: Date.parse("2026-03-23T00:00:00Z") / 1000 },
+    });
   });
 
   it("returns a neutral skipped result when this week's recap already exists", async () => {
@@ -684,7 +689,16 @@ describe("generateWeeklyRecap", () => {
     const dailyRows = Array.from({ length: 7 }, (_, index) => ({
       ...template,
       generated_at: Math.floor(Date.UTC(2026, 2, 24 + index) / 1000),
-      input_data: JSON.stringify({ ...JSON.parse(template.input_data), gradeTransitions: [] }),
+      input_data: JSON.stringify({
+        ...JSON.parse(template.input_data), gradeTransitions: [],
+        gradeTransitionAccounting: {
+          complete: true, count: 0, identities: [], safetyScoreIdentity: safetyContext.identity,
+          window: {
+            start: Math.floor(Date.UTC(2026, 2, 22 + index) / 1000),
+            end: Math.floor(Date.UTC(2026, 2, 24 + index) / 1000),
+          },
+        },
+      }),
     }));
     const db = mockD1(makeTables({ dailyRows }));
     vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse({
@@ -957,13 +971,42 @@ describe("generateWeeklyRecap", () => {
     expect(body.messages[0].content).toContain("Worst depeg by bps");
   });
 
+  it("returns an intentional neutral skip when Anthropic credentials are missing", async () => {
+    const db = mockD1([]);
+    const result = await generateWeeklyRecap(db, null);
+    expect(result).toMatchObject({ status: "skipped_neutral", itemCount: 0 });
+    expect(JSON.parse(result.metadata!)).toEqual({ reason: "missing-api-key" });
+    expect(db.getHistory()).toEqual([]);
+    expect(fetchWithRetry).not.toHaveBeenCalled();
+    expect(enqueueTelegramDigestEdition).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { reason: "insufficient-current-week-digests", count: 4 },
+    { reason: "weekly-input-unavailable", count: 5 },
+  ])("returns a neutral $reason skip without generating or publishing", async ({ reason, count }) => {
+    const dailyRows = buildDailyRows().slice(0, count).map((row) => ({ ...row, input_data: "{}" }));
+    const db = mockD1(makeTables({ dailyRows }));
+    const result = await generateWeeklyRecap(db, "anthropic-key");
+    expect(result).toMatchObject({ status: "skipped_neutral", itemCount: 0 });
+    const metadata = JSON.parse(result.metadata!);
+    expect(metadata.reason).toBe(reason);
+    expect(metadata).not.toHaveProperty("outputPublishedAt");
+    expect(fetchWithRetry).not.toHaveBeenCalled();
+    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO daily_digest"))).toBe(false);
+    expect(enqueueTelegramDigestEdition).not.toHaveBeenCalled();
+  });
+
   it("skips generation cleanly when the Anthropic circuit is open", async () => {
     const db = mockD1(makeTables());
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
 
     const result = await generateWeeklyRecap(db, "anthropic-key", null, null);
 
-    expect(result).toEqual({ metadata: "skipped: anthropic circuit open" });
+    expect(result).toMatchObject({ status: "degraded", itemCount: 0 });
+    expect(JSON.parse(result.metadata!)).toEqual({ reason: "anthropic-circuit-open" });
+    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO daily_digest"))).toBe(false);
+    expect(enqueueTelegramDigestEdition).not.toHaveBeenCalled();
     expect(fetchWithRetry).not.toHaveBeenCalled();
     expect(deliverTelegramDigestEdition).not.toHaveBeenCalled();
   });

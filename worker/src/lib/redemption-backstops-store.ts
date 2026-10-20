@@ -17,7 +17,6 @@ import type {  RedemptionBackstopEntry,
 import {
   RedemptionBackstopEntrySchema,
   RedemptionBackstopDetailsSchema,
-  RedemptionRouteFamilySchema,
   RedemptionConfidenceDetailsSchema,
   RedemptionCostScenarioScoresSchema,
   RedemptionDocsSchema,
@@ -371,10 +370,8 @@ function decodeBackstopRows(
     const map: RedemptionBackstopMap = {};
     for (const row of rows) {
       const entry = toEntry(row, runId, rejectionReasons);
-      // Skip individual rows that fail schema validation rather than letting a
-      // single malformed row abort the entire snapshot decode. Skipped rows
-      // make the run row count fall short of written_count, so the caller's
-      // count guard rejects the run and falls through to an older valid run.
+      // Admission already selected the immutable generation. The caller rejects
+      // the projection if any selected row fails decoding.
       if (entry) {
         map[row.stablecoin_id] = entry;
       }
@@ -431,33 +428,42 @@ async function getRecentCompletedRedemptionBackstopRuns(
     }));
 }
 
+const REDEMPTION_ADMISSION_PAGE_SIZE = 50;
+
 async function queryRedemptionBackstopMapFromRunRows(
   db: D1Database,
   runId: string,
-): Promise<{ map: RedemptionBackstopMap; rawRowCount: number; rowRejectionReasons: string[] }> {
-  let rows: D1Result<RedemptionBackstopRow>;
+  retainMap: boolean,
+): Promise<{ map: RedemptionBackstopMap; rawRowCount: number; validRowCount: number; rowRejectionReasons: string[] }> {
+  const map: RedemptionBackstopMap = {};
+  const validIds: Record<string, true> = {};
+  const rowRejectionReasons: string[] = [];
+  let rawRowCount = 0;
   try {
-    rows = await db
-      .prepare(
+    for (;;) {
+      const rows = await db.prepare(
         `SELECT ${REDEMPTION_BACKSTOP_ROW_COLUMNS}
            FROM redemption_backstop_run_rows
-          WHERE snapshot_run_id = ?`,
-      )
-      .bind(runId)
-      .all<RedemptionBackstopRow>();
+          WHERE snapshot_run_id = ?
+          ORDER BY stablecoin_id LIMIT ? OFFSET ?`,
+      ).bind(runId, REDEMPTION_ADMISSION_PAGE_SIZE, rawRowCount).all<RedemptionBackstopRow>();
+      const page = rows.results ?? [];
+      rawRowCount += page.length;
+      for (const row of page) {
+        const entry = toEntry(row, runId, rowRejectionReasons);
+        if (entry) {
+          validIds[row.stablecoin_id] = true;
+          if (retainMap) map[row.stablecoin_id] = entry;
+        }
+      }
+      if (page.length < REDEMPTION_ADMISSION_PAGE_SIZE) break;
+    }
   } catch (error) {
     throw new RedemptionBackstopSnapshotUnavailableError("Failed to load immutable redemption backstop run rows", {
       cause: error,
     });
   }
-
-  const resultRows = rows.results ?? [];
-  const rowRejectionReasons: string[] = [];
-  return {
-    map: decodeBackstopRows(resultRows, "Failed to decode immutable redemption backstop run rows", runId, rowRejectionReasons),
-    rawRowCount: resultRows.length,
-    rowRejectionReasons,
-  };
+  return { map, rawRowCount, validRowCount: Object.keys(validIds).length, rowRejectionReasons };
 }
 
 export interface RedemptionBackstopLiveSignalRow {
@@ -468,74 +474,34 @@ export interface RedemptionBackstopLiveSignalRow {
 }
 
 /**
- * Narrow completed-run reader for live depeg-resolver context. Serves the same
- * immutable run rows as loadRedemptionBackstopSnapshot() but only the live
- * signal fields for the requested coins, so callers avoid decoding the full
- * snapshot map. Throws RedemptionBackstopSnapshotUnavailableError when no
- * valid completed run exists.
+ * Validate the entire immutable generation before projecting live signals.
+ * Unrelated decoded entries are discarded page by page, not retained as a feed.
  */
 export async function loadRedemptionBackstopLiveSignalRows(
   db: D1Database,
   stablecoinIds: readonly string[],
 ): Promise<RedemptionBackstopLiveSignalRow[]> {
   if (stablecoinIds.length === 0) return [];
-
-  const recentRuns = await getRecentCompletedRedemptionBackstopRuns(db);
-  const requestedIds = new Set(stablecoinIds);
-  let rowReadError: unknown;
-
-  for (const run of recentRuns) {
-    if (run.written_count !== run.expected_count) continue;
-    if (run.expected_count > 0 && run.max_updated_at == null) continue;
-
-    let rows: D1Result<RedemptionBackstopLiveSignalRow>;
-    try {
-      rows = await db
-        .prepare(
-          `SELECT stablecoin_id, immediate_capacity_ratio, route_family, updated_at
-             FROM redemption_backstop_run_rows
-            WHERE snapshot_run_id = ?`,
-        )
-        .bind(run.run_id)
-        .all<RedemptionBackstopLiveSignalRow>();
-    } catch (error) {
-      rowReadError ??= error;
-      continue;
-    }
-
-    const resultRows = rows.results ?? [];
-    const decodedRows = resultRows.filter(
-      (row) =>
-        typeof row.stablecoin_id === "string" &&
-        row.stablecoin_id.length > 0 &&
-        (row.immediate_capacity_ratio == null ||
-          (typeof row.immediate_capacity_ratio === "number" &&
-            Number.isFinite(row.immediate_capacity_ratio) &&
-            row.immediate_capacity_ratio >= 0 &&
-            row.immediate_capacity_ratio <= 1)) &&
-        (row.route_family == null || RedemptionRouteFamilySchema.safeParse(row.route_family).success) &&
-        typeof row.updated_at === "number" &&
-        Number.isFinite(row.updated_at) &&
-        row.updated_at >= 0,
-    );
-    const decodedIds = new Set(decodedRows.map((row) => row.stablecoin_id));
-    if (
-      resultRows.length !== run.written_count ||
-      decodedRows.length !== run.written_count ||
-      decodedIds.size !== run.written_count
-    ) {
-      continue;
-    }
-
-    return decodedRows.filter((row) => requestedIds.has(row.stablecoin_id));
+  const { run } = await selectAdmittedRedemptionBackstopRun(db, false);
+  try {
+    const rows = await db.prepare(
+      `SELECT stablecoin_id, immediate_capacity_ratio, route_family, updated_at
+         FROM redemption_backstop_run_rows
+        WHERE snapshot_run_id = ?`,
+    ).bind(run.run_id).all<RedemptionBackstopLiveSignalRow>();
+    const requestedIds = new Set(stablecoinIds);
+    return (rows.results ?? []).filter((row) => requestedIds.has(row.stablecoin_id));
+  } catch (error) {
+    throw new RedemptionBackstopSnapshotUnavailableError("Failed to load immutable redemption backstop live signals", {
+      cause: error,
+    });
   }
-
-  throw new RedemptionBackstopSnapshotUnavailableError("No valid completed redemption backstop run found for live signals", {
-    cause: rowReadError,
-  });
 }
 
-export async function loadRedemptionBackstopSnapshot(db: D1Database): Promise<RedemptionBackstopLoadResult> {
+async function selectAdmittedRedemptionBackstopRun(
+  db: D1Database,
+  retainMap: boolean,
+): Promise<{ run: RedemptionBackstopRunRow; map: RedemptionBackstopMap }> {
   try {
     const recentRuns = await getRecentCompletedRedemptionBackstopRuns(db);
     if (recentRuns.length === 0) {
@@ -548,6 +514,7 @@ export async function loadRedemptionBackstopSnapshot(db: D1Database): Promise<Re
     }
 
     const rejectionReasons: string[] = [];
+    let rowReadError: unknown;
 
     for (const run of recentRuns) {
       if (run.written_count !== run.expected_count) {
@@ -561,34 +528,29 @@ export async function loadRedemptionBackstopSnapshot(db: D1Database): Promise<Re
 
       let map: RedemptionBackstopMap;
       let rawRowCount: number;
+      let validRowCount: number;
       let rowRejectionReasons: string[];
       try {
-        ({ map, rawRowCount, rowRejectionReasons } = await queryRedemptionBackstopMapFromRunRows(db, run.run_id));
+        ({ map, rawRowCount, validRowCount, rowRejectionReasons } = await queryRedemptionBackstopMapFromRunRows(db, run.run_id, retainMap));
       } catch (error) {
+        rowReadError ??= error;
         const message = toErrorMessage(error);
         rejectionReasons.push(`${run.run_id}: query failed (${message})`);
         continue;
       }
 
-      const rowCount = Object.keys(map).length;
+      const rowCount = validRowCount;
       if (rawRowCount !== run.written_count || rowCount !== run.written_count) {
         rejectionReasons.push(`${run.run_id}: run-row count mismatch (${rowCount}/${run.written_count}); row-rejections=${rowRejectionReasons.join(",")}`);
         continue;
       }
 
-      return {
-        map,
-        latestUpdatedAt: run.max_updated_at,
-        runId: run.run_id,
-        methodologyVersion: run.methodology_version,
-        snapshotSource: "run-rows",
-        runMetadata: run.metadata,
-        reserveInputAssessment: assessConsumedRedemptionReserves(Object.values(map), run.metadata, run.max_updated_at ?? 0, Math.floor(Date.now() / 1000)),
-      };
+      return { run, map };
     }
 
     throw new RedemptionBackstopSnapshotUnavailableError(
       `No valid completed redemption backstop run found (${rejectionReasons.join("; ")})`,
+      { cause: rowReadError },
     );
   } catch (error) {
     if (error instanceof RedemptionBackstopSnapshotUnavailableError) {
@@ -600,37 +562,42 @@ export async function loadRedemptionBackstopSnapshot(db: D1Database): Promise<Re
   }
 }
 
+export async function loadRedemptionBackstopSnapshot(db: D1Database): Promise<RedemptionBackstopLoadResult> {
+  const { run, map } = await selectAdmittedRedemptionBackstopRun(db, true);
+  return {
+    map,
+    latestUpdatedAt: run.max_updated_at,
+    runId: run.run_id,
+    methodologyVersion: run.methodology_version,
+    snapshotSource: "run-rows",
+    runMetadata: run.metadata,
+    reserveInputAssessment: assessConsumedRedemptionReserves(Object.values(map), run.metadata, run.max_updated_at ?? 0, Math.floor(Date.now() / 1000)),
+  };
+}
+
 /** Select only the requested immutable row; the completed manifest retains cohort scope. */
 async function loadRedemptionBackstopCoinSnapshot(
   db: D1Database,
   stablecoinId: string,
 ): Promise<RedemptionBackstopLoadResult> {
-  const recentRuns = await getRecentCompletedRedemptionBackstopRuns(db);
-  for (const run of recentRuns) {
-    if (run.written_count !== run.expected_count || (run.expected_count > 0 && run.max_updated_at == null)) continue;
-    const [count, rows] = await Promise.all([
-      db.prepare(`SELECT COUNT(*) AS totalCount, COUNT(DISTINCT stablecoin_id) AS uniqueCount
-        FROM redemption_backstop_run_rows WHERE snapshot_run_id = ?`).bind(run.run_id)
-        .first<{ totalCount: number; uniqueCount: number }>(),
-      db.prepare(`SELECT ${REDEMPTION_BACKSTOP_ROW_COLUMNS}
-        FROM redemption_backstop_run_rows WHERE snapshot_run_id = ? AND stablecoin_id = ?`).bind(run.run_id, stablecoinId)
-        .all<RedemptionBackstopRow>(),
-    ]);
-    if (count?.totalCount !== run.written_count || count.uniqueCount !== run.written_count) continue;
-    const selectedRows = rows.results;
-    const rejections: string[] = [];
-    const map = decodeBackstopRows(selectedRows, "Failed to decode immutable redemption backstop coin row", run.run_id, rejections);
-    if (Object.keys(map).length !== selectedRows.length) continue;
-    return {
-      map,
-      latestUpdatedAt: map[stablecoinId]?.updatedAt ?? run.max_updated_at,
-      runId: run.run_id,
-      methodologyVersion: run.methodology_version,
-      snapshotSource: "run-rows",
-      totalCount: run.written_count,
-    };
+  const { run } = await selectAdmittedRedemptionBackstopRun(db, false);
+  const rows = await db.prepare(`SELECT ${REDEMPTION_BACKSTOP_ROW_COLUMNS}
+    FROM redemption_backstop_run_rows WHERE snapshot_run_id = ? AND stablecoin_id = ?`)
+    .bind(run.run_id, stablecoinId).all<RedemptionBackstopRow>();
+  const selectedRows = rows.results ?? [];
+  const rejections: string[] = [];
+  const map = decodeBackstopRows(selectedRows, "Failed to decode immutable redemption backstop coin row", run.run_id, rejections);
+  if (Object.keys(map).length !== selectedRows.length) {
+    throw new RedemptionBackstopSnapshotUnavailableError("Failed to decode admitted redemption backstop coin row");
   }
-  throw new RedemptionBackstopSnapshotUnavailableError("No valid completed redemption backstop run found for coin");
+  return {
+    map,
+    latestUpdatedAt: run.max_updated_at,
+    runId: run.run_id,
+    methodologyVersion: run.methodology_version,
+    snapshotSource: "run-rows",
+    totalCount: run.written_count,
+  };
 }
 
 export async function buildRedemptionBackstopsSnapshot(db: D1Database, stablecoinId?: string): Promise<RedemptionBackstopsResponse & {

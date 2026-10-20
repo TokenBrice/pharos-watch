@@ -12,6 +12,7 @@ import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import type { DepegEvent, StablecoinData } from "@shared/types/market";
 import type { PegSummaryCoin } from "@shared/types/peg";
+import { isValidIsoDateOnly, parseIsoDateOrUtcInstantSec } from "@shared/types/date-primitives";
 
 import { type DepegRow } from "./depeg-helpers";
 import {
@@ -38,9 +39,9 @@ export interface PegAnalyticsSnapshot {
 }
 
 function parseLaunchDateSec(dateText: string | undefined): number | null {
-  if (!dateText) return null;
-  const parsedMs = Date.parse(`${dateText}T00:00:00Z`);
-  return Number.isFinite(parsedMs) ? Math.floor(parsedMs / 1000) : null;
+  if (!isValidIsoDateOnly(dateText)) return null;
+  const parsedSec = parseIsoDateOrUtcInstantSec(dateText);
+  return Number.isFinite(parsedSec) ? parsedSec : null;
 }
 
 type PegHistoryCoverage = NonNullable<PegSummaryCoin["historyCoverage"]>;

@@ -2,6 +2,17 @@ import type { BlacklistAmountStatus } from "@shared/types/market";
 import type { ContractEventConfig } from "../blacklist-contracts";
 import { shouldSuppressAsMirrorZero } from "./shared";
 
+const SELECTED_AMOUNT_STATE_COLUMNS = [
+  "amount_native", "amount_usd_at_event", "amount_source", "amount_status",
+  "amount_attempt_count", "amount_last_attempted_at",
+  "provenance_source", "provenance_observed_at", "contract_address", "config_key",
+] as const;
+
+/** Selected evidence generation, including legacy-derived-zero and provenance-only repairs. */
+export type BlacklistAmountSelectedState = {
+  [K in typeof SELECTED_AMOUNT_STATE_COLUMNS[number]]: string | number | null;
+};
+
 export interface RecoveredBlacklistAmountPersistenceInput {
   eventId: string;
   eventType: string;
@@ -40,27 +51,40 @@ export function buildBlacklistAmountAttemptUpdate(
                amount_last_attempted_at = ?,
                amount_last_error_class = ?,
                amount_last_provider = ?${statusClause}
-           WHERE id = ?${unresolvedAmountGuard(options)}`,
+           WHERE id = ?${unresolvedAmountGuard(options)}${selectedAmountGuard(options)}`,
   );
   const binds: Array<string | number | null> = [input.attemptedAt, input.errorClass, input.lastProvider];
   if (input.amountStatus !== undefined) binds.push(input.amountStatus);
   binds.push(input.eventId);
+  binds.push(...selectedAmountGuardBinds(options));
   return statement.bind(...binds);
 }
 
 /**
- * Lanes whose whole candidate set is unresolved pass this so a row resolved by
- * another writer (typically the operator repair CLI) between candidate selection
- * and the deferred batch write is never overwritten.
+ * Null-only lanes retain their existing guard. Mixed eligibility lanes compare
+ * the exact selected evidence generation so legacy-zero/provenance repair works
+ * without overwriting a newer resolution, suppression, or operator annotation.
  */
 export interface BlacklistAmountWriteGuardOptions {
   requireUnresolvedAmount?: boolean;
+  selectedState?: BlacklistAmountSelectedState;
 }
 
 function unresolvedAmountGuard(options: BlacklistAmountWriteGuardOptions): string {
   return options.requireUnresolvedAmount
     ? "\n             AND amount_native IS NULL\n             AND suppression_reason IS NULL"
     : "";
+}
+
+function selectedAmountGuard(options: BlacklistAmountWriteGuardOptions): string {
+  if (!options.selectedState) return "";
+  return "\n             AND suppression_reason IS NULL"
+    + SELECTED_AMOUNT_STATE_COLUMNS.map((column) => `\n             AND ${column} IS ?`).join("");
+}
+
+function selectedAmountGuardBinds(options: BlacklistAmountWriteGuardOptions): Array<string | number | null> {
+  const state = options.selectedState;
+  return state ? SELECTED_AMOUNT_STATE_COLUMNS.map((column) => state[column] ?? null) : [];
 }
 
 export interface RecoveredBlacklistAmountPersistence {
@@ -101,7 +125,7 @@ export function buildRecoveredBlacklistAmountPersistence(
            amount_last_provider = ?,
            provenance_source = COALESCE(?, provenance_source),
            provenance_observed_at = COALESCE(?, provenance_observed_at)
-       WHERE id = ?${unresolvedAmountGuard(options)}`,
+       WHERE id = ?${unresolvedAmountGuard(options)}${selectedAmountGuard(options)}`,
     )
     .bind(
       input.amount,
@@ -117,6 +141,7 @@ export function buildRecoveredBlacklistAmountPersistence(
       input.provenanceSource ?? null,
       input.provenanceObservedAt ?? null,
       input.eventId,
+      ...selectedAmountGuardBinds(options),
     );
   return { statement, suppressed, targetStatus };
 }

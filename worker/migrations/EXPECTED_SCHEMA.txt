@@ -37,6 +37,7 @@ index	idx_blacklist_current_balances_status_observed
 index	idx_blacklist_events_amount_status
 index	idx_blacklist_events_api_filter
 index	idx_blacklist_events_backfill
+index	idx_blacklist_events_chain_block
 index	idx_blacklist_events_chain_ts
 index	idx_blacklist_events_config_key
 index	idx_blacklist_events_latest_identity
@@ -122,6 +123,7 @@ index	idx_dex_deployment_outcomes_outcome
 index	idx_dex_deployment_outcomes_stablecoin
 index	idx_dex_hist_coin_date
 index	idx_dex_hist_coin_date_unique
+index	idx_dex_hist_snapshot_date
 index	idx_dex_liq_score
 index	idx_dex_liquidity_generations_state_started
 index	idx_dex_liquidity_publication_state
@@ -418,9 +420,11 @@ table	dex_source_pagination_state
 table	feedback_rate_limit
 table	kv_config
 table	mint_burn_config_deferral
+table	mint_burn_dirty_hours
 table	mint_burn_events
 table	mint_burn_hourly
 table	mint_burn_run_state
+table	mint_burn_scan_coverage
 table	mint_burn_sync_state
 table	onchain_supply
 table	price_cache

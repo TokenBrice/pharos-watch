@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { refreshPagesReleaseData, type ReleaseRefreshDependencies } from "../maintenance/refresh-pages-release-data.ts";
+import { refreshPagesReleaseData, shouldFailReleaseRefresh, type ReleaseRefreshDependencies } from "../maintenance/refresh-pages-release-data.ts";
 import { SnapshotIntegrityError } from "../lib/sync-from-api";
 
 const tempDirs: string[] = [];
@@ -21,6 +21,17 @@ function fixture() {
   writeFileSync(join(repoRoot, "data/digests.json"), JSON.stringify([{ id: 1 }, { id: 2 }]));
   writeFileSync(join(repoRoot, "data/depeg-events/index.json"), JSON.stringify([{ id: "old" }]));
   writeFileSync(join(repoRoot, "public/datasets/latest.json"), "committed\n");
+  mkdirSync(join(repoRoot, "src/lib/datasets"), { recursive: true });
+  writeFileSync(join(repoRoot, "public/_redirects"), [
+    "/candidate-authored /keep-me 301",
+    "# BEGIN GENERATED PUBLIC DATASET ALIASES",
+    "/datasets/top-stablecoins/latest.json /datasets/top-stablecoins/2026-10-18.json 200",
+    "# END GENERATED PUBLIC DATASET ALIASES",
+    "/another-authored /also-keep 302",
+    "",
+  ].join("\n"));
+  writeFileSync(join(repoRoot, "src/lib/datasets/public-dataset-current.ts"),
+    'import current from "../../../public/datasets/top-stablecoins/2026-10-18.json";\nexport { current };\n');
   const refreshDir = join(repoRoot, "refresh");
   const summaryPath = join(repoRoot, "summary.md");
   return { repoRoot, refreshDir, summaryPath };
@@ -165,6 +176,87 @@ describe("Pages release data refresh", () => {
     expect(JSON.parse(readFileSync(join(paths.repoRoot, "data/digests.json"), "utf8"))).toHaveLength(3);
     expect(JSON.parse(readFileSync(join(paths.repoRoot, "data/depeg-events/index.json"), "utf8"))).toEqual([{ id: "new" }]);
   });
+
+  it.each(["dated files", "aliases", "current module"] as const)(
+    "restores the complete pre-refresh bundle after failure following %s",
+    async (boundary) => {
+      vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+      const paths = fixture();
+      const topicDir = join(paths.repoRoot, "public/datasets/top-stablecoins");
+      mkdirSync(topicDir);
+      const oldFiles = ["2026-07-01.json", "2026-10-18.csv", "2026-10-18.json", "2026-10-18.ndjson"];
+      for (const name of oldFiles) writeFileSync(join(topicDir, name), `original ${name}\n`);
+      const redirectsPath = join(paths.repoRoot, "public/_redirects");
+      const currentPath = join(paths.repoRoot, "src/lib/datasets/public-dataset-current.ts");
+      const previousRedirects = readFileSync(redirectsPath);
+      const previousCurrent = readFileSync(currentPath);
+      const result = await refreshPagesReleaseData({
+        dependencies: {
+          digests: ({ outputPath }) => {
+            writeFileSync(outputPath!, JSON.stringify([{ id: 1 }, { id: 2 }, { id: 3 }]));
+            return ok();
+          },
+          depegEvents: ({ outputPath }) => {
+            writeFileSync(outputPath!, JSON.stringify([{ id: "new" }]));
+            return ok();
+          },
+          publicDatasets: async () => {
+            // Model dated writes, same-day replacement and retention pruning before alias/import commits.
+            for (const extension of ["csv", "json", "ndjson"]) {
+              writeFileSync(join(topicDir, `2026-10-19.${extension}`), `new ${extension}\n`);
+              writeFileSync(join(topicDir, `2026-10-18.${extension}`), "overwritten\n");
+            }
+            rmSync(join(topicDir, "2026-07-01.json"));
+            writeFileSync(join(paths.repoRoot, "public/datasets/latest.json"), "partial\n");
+            if (boundary === "dated files") throw new Error("dated write fault");
+            writeFileSync(redirectsPath, previousRedirects.toString().replaceAll("2026-10-18", "2026-10-19"));
+            if (boundary === "aliases") throw new Error("alias write fault");
+            writeFileSync(currentPath, previousCurrent.toString().replaceAll("2026-10-18", "2026-10-19"));
+            throw new Error("current module write fault");
+          },
+        },
+        env: { NODE_ENV: "test" },
+        refreshDir: paths.refreshDir,
+        repoRoot: paths.repoRoot,
+      });
+
+      expect(result.publicDatasets).toEqual({ ok: false, rolledBack: true });
+      expect(shouldFailReleaseRefresh(result)).toBe(false);
+      expect(readdirSync(join(paths.repoRoot, "public/datasets")).sort()).toEqual(["latest.json", "top-stablecoins"]);
+      expect(readdirSync(topicDir).sort()).toEqual(oldFiles);
+      for (const name of oldFiles) expect(readFileSync(join(topicDir, name), "utf8")).toBe(`original ${name}\n`);
+      expect(readFileSync(join(paths.repoRoot, "public/datasets/latest.json"), "utf8")).toBe("committed\n");
+      expect(readFileSync(redirectsPath)).toEqual(previousRedirects);
+      expect(readFileSync(currentPath)).toEqual(previousCurrent);
+      expect(JSON.parse(readFileSync(join(paths.repoRoot, "data/digests.json"), "utf8"))).toHaveLength(3);
+      expect(JSON.parse(readFileSync(join(paths.repoRoot, "data/depeg-events/index.json"), "utf8"))).toEqual([{ id: "new" }]);
+    },
+  );
+
+  it("removes newly created bundle targets when the pre-refresh workspace had none", async () => {
+    vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    const paths = fixture();
+    const targets = ["public/datasets", "public/_redirects", "src/lib/datasets/public-dataset-current.ts"];
+    for (const target of targets) rmSync(join(paths.repoRoot, target), { recursive: true, force: true });
+    const result = await refreshPagesReleaseData({
+      dependencies: {
+        digests: () => ok(),
+        depegEvents: () => ok(),
+        publicDatasets: async () => {
+          mkdirSync(join(paths.repoRoot, "public/datasets"));
+          writeFileSync(join(paths.repoRoot, "public/datasets/new.json"), "partial\n");
+          writeFileSync(join(paths.repoRoot, "public/_redirects"), "/new /missing 200\n");
+          writeFileSync(join(paths.repoRoot, "src/lib/datasets/public-dataset-current.ts"), "partial\n");
+          return { status: 1, aborted: false };
+        },
+      },
+      env: { NODE_ENV: "test" },
+      refreshDir: paths.refreshDir,
+      repoRoot: paths.repoRoot,
+    });
+    expect(result.publicDatasets).toEqual({ ok: false, rolledBack: true });
+    for (const target of targets) expect(existsSync(join(paths.repoRoot, target))).toBe(false);
+  });
   it.each(["digests", "depegEvents"] as const)("isolates a rejected %s promise and persists the result", async (failed) => {
     vi.spyOn(process.stdout, "write").mockImplementation(() => true);
     const paths = fixture();
@@ -228,9 +320,26 @@ describe("Pages release data refresh", () => {
       repoRoot: paths.repoRoot,
     });
     expect(result.publicDatasets).toEqual({ ok: false, rolledBack: false });
+    expect(shouldFailReleaseRefresh(result)).toBe(true);
     expect(readFileSync(datasetPath, "utf8")).toBe("partial\n");
     expect(JSON.parse(readFileSync(result.resultPath, "utf8"))).toEqual(result);
     expect(readFileSync(join(paths.refreshDir, "datasets.log"), "utf8")).toContain("rollback sentinel");
+  });
+
+  it("still blocks release when all producers fail even after a complete dataset rollback", async () => {
+    vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    const paths = fixture();
+    const failed = async () => ({ status: 1, aborted: false });
+    const result = await refreshPagesReleaseData({
+      dependencies: { digests: failed, depegEvents: failed, publicDatasets: failed },
+      env: { NODE_ENV: "test" },
+      refreshDir: paths.refreshDir,
+      repoRoot: paths.repoRoot,
+    });
+    expect(result.digests.ok).toBe(false);
+    expect(result.depegEvents.ok).toBe(false);
+    expect(result.publicDatasets).toEqual({ ok: false, rolledBack: true });
+    expect(shouldFailReleaseRefresh(result)).toBe(true);
   });
 
   it("refreshes both snapshots concurrently and defers public datasets until they land", async () => {

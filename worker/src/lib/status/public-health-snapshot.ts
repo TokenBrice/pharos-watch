@@ -1,5 +1,8 @@
 import { HealthResponseSchema, type HealthResponse } from "@shared/types/status";
 import { z } from "zod";
+import { getCacheHealthyMaxRatio } from "@shared/lib/status-thresholds";
+import { getOverallCacheImpactStatus, maxPublicStatus } from "@shared/lib/public-health";
+import { assessFreshnessTimestamp } from "../api-freshness-age";
 import { STATUS_SYSTEM_FRESHNESS_SEC } from "../status-reliability-shared";
 import { loadStatusSnapshotPayload, writeStatusSnapshotPayload, type StatusSnapshotLoadResult } from "./status-snapshot-cache";
 
@@ -27,6 +30,41 @@ export function loadStatusPublicHealthSnapshot(
   );
 }
 
+/** Age admitted evidence without rereading the assessment or renewing its clock. */
+export function advancePublicHealthSnapshot(publicHealth: HealthResponse, now: number): HealthResponse {
+  const assessedAt = publicHealth.assessedAt ?? publicHealth.timestamp;
+  const elapsed = assessFreshnessTimestamp(now, assessedAt);
+  const caches: HealthResponse["caches"] = {};
+  for (const [key, cache] of Object.entries(publicHealth.caches)) {
+    // Rejected or unreadable evidence must not become fresh as wall time advances.
+    const age = cache.timestampReason != null || cache.ageSeconds == null
+      ? { ageSeconds: null, reason: cache.timestampReason ?? null }
+      : cache.publishedAt != null
+        ? assessFreshnessTimestamp(now, cache.publishedAt)
+        : elapsed.reason != null
+          ? elapsed
+          : { ageSeconds: cache.ageSeconds + elapsed.ageSeconds, reason: null };
+    const aged = {
+      ...cache,
+      ageSeconds: age.ageSeconds,
+      ...(age.reason != null ? { timestampReason: age.reason } : {}),
+    };
+    caches[key] = {
+      ...aged,
+      healthy: cache.healthy && age.ageSeconds != null
+        && age.ageSeconds <= (cache.healthyMaxAge ?? cache.maxAge * getCacheHealthyMaxRatio(key)),
+    };
+  }
+  return {
+    ...publicHealth,
+    timestamp: now,
+    assessedAt,
+    caches,
+    // The prior assessment also contains independent quality and availability floors.
+    status: maxPublicStatus(publicHealth.status, getOverallCacheImpactStatus(caches)),
+  };
+}
+
 export function writeStatusPublicHealthSnapshot(
   db: D1Database,
   now: number,
@@ -35,6 +73,6 @@ export function writeStatusPublicHealthSnapshot(
   return writeStatusSnapshotPayload(db, STATUS_PUBLIC_HEALTH_SNAPSHOT_CACHE_KEY, now, {
     version: 1,
     producedAt: now,
-    publicHealth,
+    publicHealth: { ...publicHealth, assessedAt: publicHealth.assessedAt ?? publicHealth.timestamp },
   });
 }

@@ -1,6 +1,6 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   CURATED_ANNOTATIONS,
   getCuratedAnnotations,
@@ -60,4 +60,38 @@ describe("curated-annotations", () => {
     expect(getCuratedAnnotations("toString")).toEqual([]);
   });
 
+});
+
+describe("curated annotation calendar admission", () => {
+  afterEach(() => {
+    vi.doUnmock("../coins/usdc-circle.json");
+    vi.resetModules();
+  });
+
+  async function loadWithDate(date: unknown) {
+    vi.resetModules();
+    vi.doMock("../coins/usdc-circle.json", () => ({
+      default: [{ date, kind: "depeg", label: "Calendar admission witness" }],
+    }));
+    return import("../curated-annotations");
+  }
+
+  it.each([
+    "2023-02-29", "2024-02-30T00:00:00Z", "2023-02-29T12:00:00Z",
+    "2024-04-31T23:59:59.123Z", "2024-02-29T24:00:00Z",
+    "2024-02-29T12:60:00Z", "2024-02-29T12:00:60Z",
+    "2024-02-29T12:00:00+00:00", 1_709_164_800_000,
+  ])("rejects invalid timestamp %s with coin and entry context", async (date) => {
+    await expect(loadWithDate(date)).rejects.toThrow(/Invalid curated annotation usdc-circle\[0\]: date/);
+  });
+
+  it.each([
+    ["2024-02-29", 1_709_164_800_000],
+    ["2024-02-29T12:34:56Z", 1_709_210_096_000],
+    ["2024-02-29T12:34:56.1Z", 1_709_210_096_100],
+    ["2024-02-29T12:34:56.123Z", 1_709_210_096_123],
+  ])("preserves admitted milliseconds for %s", async (date, expectedTs) => {
+    const loaded = await loadWithDate(date);
+    expect(loaded.getCuratedAnnotations("usdc-circle")[0]?.ts).toBe(expectedTs);
+  });
 });

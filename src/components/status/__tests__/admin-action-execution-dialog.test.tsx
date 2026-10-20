@@ -49,6 +49,7 @@ function makeExecution(request: AdminActionExecutionRequest, status: "failed" | 
     laneKey: "execution-1",
     intentId: "intent-1",
     idempotencyKey: "key-1",
+    idempotencyKeyHash: "be2974546978e3739e6d6da85c4be9f334ce32df2b9fd4b6ff1b55c0d57e9d44",
     request,
     status,
     requestInFlight: false,

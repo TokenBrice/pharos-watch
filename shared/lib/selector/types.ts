@@ -8,6 +8,8 @@
  *
  * Binding: see `docs/screener-page.md#input-and-engine-contract` for the maintained type contract.
  */
+import { z } from "zod";
+import { ApiMetaEnvelopeSchema } from "@pharos/contracts/api-meta";
 import type {
   BluechipGrade,
   CustodyModel,
@@ -386,6 +388,7 @@ export const EXCLUSION_REASONS = [
   "peg-currency-mismatch",
   "yield-native-only-violation",
   "decentralization-required-violation",
+  "insufficient-control-evidence",
   "custody-regulated-only-violation",
   "custody-onchain-only-violation",
   "howey-uncertain",
@@ -522,10 +525,21 @@ export interface SelectorRelaxableConstraint {
 
 export const SELECTOR_SNAPSHOT_VERIFICATION_KIND = "pharos-server-recomputed-v1" as const;
 
+export const SelectorCanonicalSourceEvidenceSchema = z.object({
+  source: z.literal("stablecoins"),
+  /** Producer-owned source clock, verdict and named budgets; null means unknown. */
+  freshness: ApiMetaEnvelopeSchema.nullable(),
+}).strict();
+export type SelectorCanonicalSourceEvidence = z.output<typeof SelectorCanonicalSourceEvidenceSchema>;
+
 export interface SelectorSnapshotVerification {
   kind: typeof SELECTOR_SNAPSHOT_VERIFICATION_KIND;
   datasetHash: string;
   engineVersion: string;
+  /** Server-fetched input provenance, not a guarantee that the inputs were fresh.
+   * Absent on historical snapshots: source freshness is unknown.
+   */
+  canonicalSources?: SelectorCanonicalSourceEvidence[];
 }
 
 // ---------------------------------------------------------------------------

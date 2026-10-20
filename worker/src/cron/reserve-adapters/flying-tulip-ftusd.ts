@@ -8,7 +8,7 @@ import {
   requireJsonInput,
   sameRunRenderClockFreshnessMetadata,
 } from "./helpers";
-import { reserveDegradedWarning, reserveInfoWarning } from "./warnings";
+import { reserveInfoWarning } from "./warnings";
 
 interface FlyingTulipCollateral {
   address?: string;
@@ -253,19 +253,12 @@ export function adaptFlyingTulipFtUsd(payload: FlyingTulipPayload): AdapterResul
     });
   }
 
-  // An active chain outside the reviewed set means Flying Tulip deployed somewhere we
-  // have not reviewed. Surface it as a degraded warning (snapshot stored, scoring
-  // blocked) rather than throwing, so a new deployment never flips the coin to error.
+  // Unreviewed active scope cannot become reviewed-only whole-book totals.
   for (const chain of payloadChains) {
     if (chain.chainId !== undefined && EXPECTED_CHAINS.has(chain.chainId)) continue;
     if (!chainIsActive(chain)) continue;
     const label = chain.chainName ? `${chain.chainName} (chain ${chain.chainId})` : `chain ${chain.chainId}`;
-    warnings.push(
-      reserveDegradedWarning(
-        "unexpected-chain",
-        `flying-tulip-ftusd payload carries an active chain outside the reviewed set: ${label}`,
-      ),
-    );
+    throw new Error(`flying-tulip-ftusd unexpected-chain: incomplete whole-book scope for ${label}`);
   }
 
   const unknownCollateralUsd = [...unreviewedCollateralUsd.values()].reduce((sum, row) => sum + row.value, 0);

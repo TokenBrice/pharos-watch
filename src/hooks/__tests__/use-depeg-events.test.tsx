@@ -22,6 +22,7 @@ import { DEFAULT_MAX_AUTO_PAGES } from "../use-auto-load-infinite-pages";
 import { useActiveDepegEvents, useInfiniteDepegEvents } from "../use-depeg-events";
 import { latestInfiniteQueryOptions, makeInfiniteQueryResult } from "./infinite-event-hooks.test-support";
 import type { CursorPageFixture } from "./infinite-event-hooks.test-support";
+import { DepegEventsResponseSchema } from "@shared/types/market";
 
 /**
  * Cursor pages as the depeg-events endpoint serves them: the terminal page
@@ -62,6 +63,7 @@ describe("useInfiniteDepegEvents", () => {
     const { result, rerender } = renderHook(() => useInfiniteDepegEvents({ includePending: true }));
     expect(result.current.data).toBeUndefined();
     expect(result.current.error).toBeInstanceOf(Error);
+    expect(result.current.isFullyLoaded).toBe(false);
     useInfiniteQueryMock.mockReturnValue(makeInfiniteQueryResult([{
       data: { events: [], pending: [], total: 0, totalExact: true, nextCursor: null },
     }]));
@@ -178,10 +180,7 @@ describe("useInfiniteDepegEvents", () => {
       makeInfiniteQueryResult(cappedPages, { fetchNextPage, hasNextPage: true }),
     );
 
-    const { result, rerender } = renderHook(() => useInfiniteDepegEvents({
-      stablecoinId: "usdc-circle",
-      autoLoadAll: true,
-    }));
+    const { result, rerender } = renderHook(() => useActiveDepegEvents({ autoLoadAll: true }));
 
     rerender();
     await waitFor(() => expect(result.current.isAutoLoadCapped).toBe(true));
@@ -209,6 +208,41 @@ describe("useInfiniteDepegEvents", () => {
       expect.anything(),
       { signal: undefined },
     );
+  });
+
+  it("admits complete canonical active IDs across pages without requiring constituent identities", () => {
+    const event = {
+      stablecoinId: "usdt-tether", symbol: "USDT", pegType: "peggedUSD", direction: "below",
+      peakDeviationBps: -300, startedAt: 1_700_000_000, endedAt: null,
+      startPrice: 0.97, peakPrice: 0.96, recoveryPrice: null, pegReference: 1, source: "live",
+    };
+    const first = {
+      data: DepegEventsResponseSchema.parse({
+        events: [{ ...event, id: 102, constituentEventCount: 2 }],
+        total: 2, totalExact: false, nextCursor: "next",
+      }),
+      meta: { updatedAt: 1_700_000_300, status: "fresh" },
+    };
+    const last = {
+      data: DepegEventsResponseSchema.parse({
+        events: [{ ...event, id: 103, startedAt: 1_699_000_000 }],
+        total: 1, totalExact: false, nextCursor: null,
+      }),
+      meta: null,
+    };
+    useInfiniteQueryMock.mockReturnValue(makeInfiniteQueryResult([first], { hasNextPage: true }));
+    const { result, rerender } = renderHook(() => useActiveDepegEvents());
+    expect(result.current.isFullyLoaded).toBe(false);
+    useInfiniteQueryMock.mockReturnValue(makeInfiniteQueryResult([first, last]));
+    rerender();
+    expect(result.current.isFullyLoaded).toBe(true);
+    expect(result.current.data?.events.map(({ id }) => id)).toEqual([102, 103]);
+    expect(result.current.data?.events[0]?.constituentEventCount).toBe(2);
+    expect(result.current.meta).toEqual(first.meta);
+    useInfiniteQueryMock.mockReturnValue(makeInfiniteQueryResult([first, last], { error: new Error("refresh failed") }));
+    rerender();
+    expect(result.current.data?.events).toHaveLength(2);
+    expect(result.current.isFullyLoaded).toBe(false);
   });
 
   it("requests pending incidents when enabled", async () => {

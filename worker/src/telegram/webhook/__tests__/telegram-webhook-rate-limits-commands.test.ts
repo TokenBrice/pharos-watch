@@ -15,6 +15,8 @@ import {
   mockTelegramMembership,
 } from "./telegram-webhook.test-support.ts";
 import type * as TelegramWebhookReplies from "../telegram-webhook-replies";
+import { COMMAND_HANDLERS } from "../../commands";
+import { classifyTelegramCommand, TELEGRAM_COMMAND_POLICIES } from "../telegram-webhook-ingress-policy";
 
 // The audited reply helper keeps its production behaviour by default; the flood
 // cases below make one notice reply throw, which the helper swallows internally.
@@ -50,8 +52,71 @@ vi.mock("../../../lib/safety-score-active-source", async () => {
 });
 
 
+describe("command ingress policy", () => {
+  it("classifies every registered command and alias explicitly, without stale policy entries", () => {
+    expect(Object.keys(TELEGRAM_COMMAND_POLICIES).sort()).toEqual(Object.keys(COMMAND_HANDLERS).sort());
+    for (const command of Object.keys(COMMAND_HANDLERS)) {
+      expect(classifyTelegramCommand(command, "")).toMatchObject({
+        requiresGroupAdmin: expect.any(Boolean),
+        mutation: expect.stringMatching(/^(none|required)$/),
+        pending: expect.stringMatching(/^(passthrough|clear-and-run|remind|cancel)$/),
+        recoveryEligible: expect.any(Boolean),
+      });
+      expect(classifyTelegramCommand(command, "").setupTickerEscape)
+        .toBe(command === "/start" || command === "/cancel");
+    }
+  });
+
+  it.each([
+    ["/start", "", "required", "clear-and-run", false],
+    ["/start", "setup", "required", "clear-and-run", false],
+    ["/start", "pw1_landing_hero", "required", "clear-and-run", false],
+    ["/start", "sub_dews_usdc-circle", "required", "clear-and-run", false],
+    ["/start", "status_usdc-circle", "none", "passthrough", false],
+    ["/start", "why_usdc-circle", "none", "passthrough", false],
+    ["/start", "coverage_usdc-circle", "none", "passthrough", false],
+    ["/start", "sample", "none", "passthrough", false],
+    ["/start", "app", "none", "passthrough", false],
+    ["/start", "garbage_xyz", "required", "clear-and-run", false],
+    ["/timezone", "", "none", "clear-and-run", false],
+    ["/timezone", " UTC ", "required", "clear-and-run", true],
+    ["/recap", "", "none", "passthrough", false],
+    ["/recap", " on ", "required", "clear-and-run", false],
+    ["/recap", "OFF", "required", "clear-and-run", false],
+    ["/recap", "time 23", "required", "clear-and-run", false],
+    ["/recap", "time 24", "none", "clear-and-run", false],
+  ] as const)("classifies %s %j without changing argument-sensitive policy", (command, args, mutation, pending, requiresGroupAdmin) => {
+    expect(classifyTelegramCommand(command, args)).toMatchObject({
+      mutation, pending, requiresGroupAdmin, recoveryEligible: true,
+    });
+  });
+});
+
 describe("handleTelegramWebhook", () => {
   beforeEach(resetTelegramWebhookTest);
+  it.each(["PharosWatchBot", "OtherBot", "Pharos_Watch", "Pharos"])(
+    "routes newline-delimited group commands only for the exact bot mention %s",
+    async (mention) => {
+      const handler = vi.fn().mockResolvedValue(undefined);
+      const previous = COMMAND_HANDLERS["/subscribe"];
+      COMMAND_HANDLERS["/subscribe"] = handler;
+      try {
+        mockTelegramMembership(fetchSpy, "administrator");
+        await handleTelegramWebhook(
+          makeTelegramWebhookDb(),
+          makeWebhookRequest(-123, `/subscribe@${mention}\ndews USDC`, "test-secret", {
+            chatType: "supergroup", fromId: 7,
+          }),
+          "test-secret",
+          "bot-token",
+        );
+        expect(handler).toHaveBeenCalledTimes(mention === "PharosWatchBot" ? 1 : 0);
+        if (mention === "PharosWatchBot") expect(handler.mock.calls[0][1]).toBe("dews USDC");
+      } finally {
+        COMMAND_HANDLERS["/subscribe"] = previous;
+      }
+    },
+  );
   it("rate-limits expensive commands per chat with a graceful reply", async () => {
     const nowSpy = vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000);
     const db = makeTelegramWebhookDb([
@@ -379,9 +444,9 @@ describe("handleTelegramWebhook", () => {
       reply_markup?: { inline_keyboard?: Array<Array<{ callback_data?: string }>> };
     };
     const callbacks = (sent.reply_markup?.inline_keyboard ?? []).flat().map((btn) => btn.callback_data);
-    expect(callbacks).toContain("setup:branch:recommended");
-    expect(callbacks).toContain("setup:branch:custom");
-    expect(callbacks).toContain("setup:branch:skip");
+    expect(callbacks).toContainEqual(expect.stringMatching(/^setup:branch:recommended:[a-f0-9]{16}$/));
+    expect(callbacks).toContainEqual(expect.stringMatching(/^setup:branch:custom:[a-f0-9]{16}$/));
+    expect(callbacks).toContainEqual(expect.stringMatching(/^setup:branch:skip:[a-f0-9]{16}$/));
     expect(
       db
         .getHistory()
@@ -402,7 +467,7 @@ describe("handleTelegramWebhook", () => {
       reply_markup?: { inline_keyboard?: Array<Array<{ callback_data?: string }>> };
     };
     const callbacks = (sent.reply_markup?.inline_keyboard ?? []).flat().map((btn) => btn.callback_data);
-    expect(callbacks).toContain("setup:branch:recommended");
+    expect(callbacks).toContainEqual(expect.stringMatching(/^setup:branch:recommended:[a-f0-9]{16}$/));
   });
 
   it("/start in a group gives non-admins the read-only start message", async () => {
@@ -533,6 +598,14 @@ describe("handleTelegramWebhook", () => {
   it("/start status_<coinId> dispatches into /status", async () => {
     const db = makeTelegramWebhookDb([
       { match: "telegram_pending_disambiguation", rows: [] },
+      // Current DEWS rows require explicit accepted publication scope (WS05-B4).
+      {
+        match: "FROM cache WHERE key = ?", matchBinds: ["dews:published-generation"],
+        rows: [{
+          value: JSON.stringify({ updatedAt: 1_700_000_000, source: "compute-dews", publishStatus: "published" }),
+          updated_at: 1_700_000_000,
+        }],
+      },
       { match: "FROM stress_signals", rows: [{ band: "CALM", score: 15, computed_at: 1_700_000_000 }] },
       { match: "FROM depeg_events WHERE stablecoin_id = ? AND ended_at IS NULL", rows: [] },
       {
@@ -607,6 +680,14 @@ describe("handleTelegramWebhook", () => {
   it("/start coverage_<coinId> dispatches into /coverage", async () => {
     const db = makeTelegramWebhookDb([
       { match: "telegram_pending_disambiguation", rows: [] },
+      // Current DEWS rows require explicit accepted publication scope (WS05-B4).
+      {
+        match: "FROM cache WHERE key = ?", matchBinds: ["dews:published-generation"],
+        rows: [{
+          value: JSON.stringify({ updatedAt: 1_700_000_000, source: "compute-dews", publishStatus: "published" }),
+          updated_at: 1_700_000_000,
+        }],
+      },
       { match: "FROM stress_signals", rows: [{ band: "CALM", score: 15, computed_at: 1_700_000_000 }] },
       { match: "FROM depeg_events WHERE stablecoin_id = ? AND ended_at IS NULL", rows: [] },
       {
@@ -672,15 +753,17 @@ describe("handleTelegramWebhook", () => {
   it("handles direct /why and /coverage commands", async () => {
     const db = makeTelegramWebhookDb([
       { match: "FROM price_cache WHERE asset_id = ?", rows: [] },
-      { match: "FROM stress_signals", rows: [] },
       { match: "FROM depeg_events", rows: [] },
       { match: "FROM dex_liquidity", rows: [] },
-      { match: "FROM yield_data", rows: [] },
       { match: "FROM cache WHERE key = ?", rows: [] },
     ]);
 
     await handleTelegramWebhook(db, makeWebhookRequest(123, "/why NOTACOIN"), "test-secret", "bot-token");
     await handleTelegramWebhook(db, makeWebhookRequest(123, "/coverage USDC"), "test-secret", "bot-token");
+    // Coverage now reads the served yield snapshot, never the raw yield table.
+    expect(db.getHistory().some((entry) => entry.sql.includes("FROM yield_data"))).toBe(false);
+    // No accepted DEWS pointer: coverage stays unavailable without diagnostic reads.
+    expect(db.getHistory().some((entry) => entry.sql.includes("FROM stress_signals"))).toBe(false);
 
     expect(sentMessageBody(0).text).toContain("not found");
     expect(sentMessageBody(1).text).toContain("USDC coverage");
@@ -707,7 +790,7 @@ describe("handleTelegramWebhook", () => {
     expect(sent.text).toContain("Welcome to PharosWatchBot");
     expect(sent.text).toContain("Pick a path below");
     const callbacks = (sent.reply_markup?.inline_keyboard ?? []).flat().map((btn) => btn.callback_data);
-    expect(callbacks).toContain("setup:branch:recommended");
+    expect(callbacks).toContainEqual(expect.stringMatching(/^setup:branch:recommended:[a-f0-9]{16}$/));
   });
 
   it("/start rejects payloads over 64 characters and falls back to the wizard intro", async () => {

@@ -134,6 +134,25 @@ describe("current-balance kyc.rip reconciliation", () => {
     expect(after.stats.trackedAddressCount).toBe(7);
   });
 
+  it.each([" ", "\t\n", "not-a-number"])("retains last-good balances for malformed %j while admitting explicit zero", async (frozen_balance) => {
+    const { sqlite } = fixtures.open();
+    const seeded = seedLedger(sqlite);
+    const retained = sqlite.prepare("SELECT * FROM blacklist_current_balances WHERE id = ?").get(balanceId(seeded[0]!));
+    const { d1 } = sqliteRemoteD1(sqlite);
+    const summary = await runCurrentBalanceReconciliation(
+      { apply: true, remote: true, database: "stablecoin-db", timeoutMs: 1000, minRows: 1 },
+      { fetchImpl: vi.fn().mockResolvedValue(okPayload([
+        { ...currentRows[0], frozen_balance }, { ...currentRows[1], frozen_balance: "0" },
+      ])), d1, now: () => 1_700_000_000_000 },
+    );
+    expect(summary).toMatchObject({ acceptedRows: 1, malformedRows: 1, rowsToUpsert: 1 });
+    expect(sqlite.prepare("SELECT * FROM blacklist_current_balances WHERE id = ?").get(balanceId(seeded[0]!))).toEqual(retained);
+    expect(sqlite.prepare("SELECT amount_native, amount_usd, status, last_successful_observed_at FROM blacklist_current_balances WHERE address = ?")
+      .get(currentRows[1]!.address)).toEqual({
+        amount_native: 0, amount_usd: 0, status: "resolved", last_successful_observed_at: 1_700_000_000,
+      });
+  });
+
   it("keeps every retained scope intact when the second admission import fails beyond 200 statements", async () => {
     const { sqlite } = fixtures.open();
     seedLedger(sqlite);

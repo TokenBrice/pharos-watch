@@ -30,7 +30,7 @@ const DetailSnapshotInputEntrySchema = z.discriminatedUnion("status", [
   z.object({
     id: z.string().min(1),
     status: z.literal("unavailable"),
-    reason: z.enum(["unknown-id", "detail-cache-missing", "detail-cache-invalid-clock", "detail-cache-too-old", "publication-unavailable", "supply-marker-missing", "invalid-cache-input", "entry-too-large", "cache-read-failed"]),
+    reason: z.enum(["unknown-id", "detail-cache-missing", "detail-cache-invalid-clock", "detail-cache-too-old", "publication-unavailable", "supply-marker-missing", "source-clock-unavailable", "invalid-cache-input", "entry-too-large", "cache-read-failed"]),
     sources: SourcesSchema,
   }),
 ]);

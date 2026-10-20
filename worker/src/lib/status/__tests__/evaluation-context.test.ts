@@ -3,6 +3,7 @@ import type { DataQuality, StatusResponse } from "@shared/types/status";
 import type { PublicHealthAssessment } from "../../public-health-assessment";
 import type { CronHealthSnapshot } from "../cron-health";
 import { makeCronHealth } from "./cron-health.test-support";
+import { buildStatusSummary } from "../summary";
 import { mockReserveD1 } from "../../__tests__/live-reserves-store.test-support";
 import {
   applyCronHealthSectionErrors,
@@ -46,6 +47,20 @@ function expectScheduledSlotSectionError(
 }
 
 describe("status evaluation scheduled-slot query failures", () => {
+  it("names failed history in section errors and summary while retaining successful companion evidence", () => {
+    const cronHealth = makeCronHealth({ cronHistoryQueryFailed: true, scheduledSlots: { runningSlots: 2 } });
+    expect(countIssues(cronHealth)).toBe(1);
+    expect(getSectionErrors(cronHealth)).toEqual({
+      crons: { code: "cron-history-read-failed", message: expect.any(String) },
+    });
+    expect(buildStatusSummary({
+      cronHealth, budgetOnlySurfaces: [], diagnosticIssueCount: 1,
+      worstCacheRatio: 0, transitionsLast24h: 0,
+    })).toMatchObject({
+      cronHistoryUnavailableReason: "cron-history-read-failed",
+      unhealthyCrons: null, cronErrors: null, expiredCronLeases: 0, scheduledSlotRunning: 2,
+    });
+  });
   it("counts and surfaces running-slot query failure alone", () => {
     const cronHealth = makeCronHealth({ scheduledSlots: { queryFailed: true } });
 

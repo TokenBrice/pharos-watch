@@ -41,6 +41,33 @@ function createTapeDatabase(): { db: D1Database } {
   return fixtures.open();
 }
 
+describe("Tape event source-key conflicts", () => {
+  it("keeps an identical peak's original identity and clocks without suppressing other source corrections", async () => {
+    const { db, sqlite } = fixtures.open();
+    vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000);
+    const peak: TapeEventInsert = {
+      ...event("7:200"), type: "depeg.peak_worsened", sourceTable: "depeg_events", transition: "updated",
+    };
+    const ordinary = event("correctable");
+    await insertTapeEvents(db, [peak, ordinary]);
+    const first = sqlite.prepare("SELECT * FROM tape_events WHERE source_row_id = '7:200'").get()!;
+
+    vi.mocked(Date.now).mockReturnValue(1_700_000_060_000);
+    await insertTapeEvents(db, [
+      { ...peak, eventId: "retried-peak", ts: 61_000 },
+      { ...ordinary, eventId: "corrected-event", title: "corrected", ts: 61_000 },
+      { ...peak, sourceRowId: "7:300", eventId: "larger-peak", ts: 61_000 },
+    ]);
+    expect(sqlite.prepare("SELECT * FROM tape_events WHERE event_id = ?").get(peak.eventId)).toEqual(first);
+    expect(sqlite.prepare("SELECT * FROM tape_events WHERE event_id = 'retried-peak'").get()).toBeUndefined();
+    expect(sqlite.prepare("SELECT event_id, title, ts FROM tape_events WHERE source_row_id = 'correctable'").get())
+      .toEqual({ event_id: "corrected-event", title: "corrected", ts: 61_000 });
+    expect(sqlite.prepare("SELECT event_id FROM tape_events WHERE source_row_id = '7:300'").get())
+      .toEqual({ event_id: "larger-peak" });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM tape_events").get()?.count).toBe(3);
+  });
+});
+
 describe("Tape event store static-catalog probes", () => {
   it("retries two overload failures and returns each unprojected event once", async () => {
     vi.useFakeTimers();

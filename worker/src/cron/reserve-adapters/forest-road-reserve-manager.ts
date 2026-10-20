@@ -1,4 +1,4 @@
-import type { ReserveAdapterCoin } from "@shared/types/core";
+import type { ReserveAdapterCoin, ReserveSlice } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { fetchEvmStorageAtBlock } from "../../lib/evm-rpc";
 import { encodeBalanceOfCallData } from "../../lib/evm-selectors";
@@ -173,7 +173,7 @@ export async function fetchForestRoadReserveManagerReserves(
   if (surplus > 0n) warnings.push(reserveInfoWarning(
     "forest-road-unrecognized-usdc-surplus", "USDC custody exceeds the recorded idle reserve; the unrecognized surplus is excluded from backing."));
   return {
-    slices: [
+    slices: ([
       {
         sourceKey: "forest-road:idle-usdc", name: "USDC idle accounting reserve", pct: idlePct,
         risk: "low", coinId: "usdc-circle", depType: "collateral", assetClass: "stablecoin",
@@ -185,7 +185,7 @@ export async function fetchForestRoadReserveManagerReserves(
         issuerOrObligor: "Forest Road originated facilities; borrower legal identities undisclosed",
         riskFactors: ["credit", "duration", "liquidity", "legal", "counterparty", "concentration"], liquidityHorizon: "unknown",
       },
-    ],
+    ] satisfies ReserveSlice[]).filter((slice) => slice.pct > 0),
     warnings,
     metadata: {
       ...verifiedFreshnessMetadata(block.timestamp), totalReserveUsd, supplyTokens, supplyUsd: supplyTokens,

@@ -4,6 +4,7 @@ import { reportCronProgress } from "../../lib/cron-progress";
 import { budgetExhausted } from "../../lib/evm-logs";
 import { mintBurnConfigKey } from "../../lib/mint-burn-pipeline/sync-state";
 import type { MintBurnAffectedHour, MintBurnPriceContext } from "../../lib/mint-burn-pipeline/types";
+import type { MintBurnScanCoverage } from "../../lib/mint-burn-pipeline/scan-coverage";
 import type { MintBurnContractConfig, MintBurnTier } from "../../lib/mint-burn-contracts";
 import { deferConfig, loadActiveConfigDeferrals, shouldDeferConfig } from "./run-state";
 import { createMintBurnConfigSummary, syncMintBurnConfig, type MintBurnConfigSummary } from "./sync-config";
@@ -71,11 +72,11 @@ export async function runMintBurnConfigPhase(input: {
   priceContext: MintBurnPriceContext;
   lastBlocksAfterRun: Map<string, number>;
   pendingCursorUpdates: Map<string, number>;
+  pendingScanCoverage?: Map<string, MintBurnScanCoverage>;
   maxScanRange: number;
   criticalConfigBudgetLimit: number;
   criticalBridgeConfigBudgetLimit?: number;
   extendedConfigBudgetLimit: number;
-  evmSafetyMarginBlocks: number;
   affectedHours: Map<string, MintBurnAffectedHour>;
   deadlineMs?: number;
   minimumConfigWindowMs?: number;
@@ -111,7 +112,7 @@ export async function runMintBurnConfigPhase(input: {
   for (const config of input.configs) {
     const key = configKey(config);
     const chainContext = input.chainContexts.get(config.chain.chainId);
-    if (deferredKeys.has(key) || !chainContext || !getMintBurnConservationEligibility(config).supported) continue;
+    if (deferredKeys.has(key) || chainContext?.chainHead == null || !getMintBurnConservationEligibility(config).supported) continue;
     const { fromBlock, scanTo } = configScanRange(config, input.lastBlocksAfterRun.get(key), chainContext.chainHead, input.maxScanRange);
     if (fromBlock <= chainContext.chainHead) boundaryRequests.set(key, { key, config, fromBlock, toBlock: scanTo });
   }
@@ -136,7 +137,7 @@ export async function runMintBurnConfigPhase(input: {
       const config = input.configs[i]!;
       const key = configKey(config);
       const context = input.chainContexts.get(config.chain.chainId);
-      const needsScan = !deferredKeys.has(key) && context
+      const needsScan = !deferredKeys.has(key) && context?.chainHead != null
         && configScanRange(config, input.lastBlocksAfterRun.get(key), context.chainHead, input.maxScanRange).fromBlock <= context.chainHead;
       reservedScanRequests[i] = reservedScanRequests[i + 1]!
         + (needsScan ? config.events.length + conservationOnlyEventDefsFor(config).length : 0);
@@ -197,6 +198,21 @@ export async function runMintBurnConfigPhase(input: {
       configBreakdown.push(summary);
     };
 
+    const chainContext = input.chainContexts.get(config.chain.chainId);
+    if (chainContext?.chainHead == null) {
+      summary.skippedReason = "finality-head-unavailable";
+      summary.eventCoverage = config.events.map((eventDef) => ({
+        eventDef: `${eventDef.signature}:${eventDef.direction}`,
+        status: "finality-head-unavailable",
+        complete: false,
+        scannedToBlock: (input.lastBlocksAfterRun.get(key) ?? config.startBlock - 1),
+        rowsRead: 0,
+      }));
+      contractsSkipped++;
+      finalizeSummary("unsatisfied");
+      continue;
+    }
+
     if (deferredKeys.has(key)) {
       summary.skippedReason = "deferred";
       contractsSkipped++;
@@ -221,14 +237,6 @@ export async function runMintBurnConfigPhase(input: {
       contractsDeferredExtended++;
       contractsSkipped++;
       finalizeSummary();
-      continue;
-    }
-
-    const chainContext = input.chainContexts.get(config.chain.chainId);
-    if (!chainContext) {
-      summary.skippedReason = "missing-chain-context";
-      contractsSkipped++;
-      finalizeSummary("unsatisfied");
       continue;
     }
 
@@ -276,7 +284,6 @@ export async function runMintBurnConfigPhase(input: {
       chainTimestampCache: chainContext.chainTimestampCache,
       txContextCache: chainContext.txContextCache,
       affectedHours,
-      safetyMarginBlocks: input.evmSafetyMarginBlocks,
       deadlineMs,
       conservationBoundary: boundaryRequest && (boundaryRequest.fromBlock !== fromBlock || boundaryRequest.toBlock !== scanTo)
         ? { status: "unavailable", reason: "incomplete-log-range" }
@@ -301,6 +308,9 @@ export async function runMintBurnConfigPhase(input: {
       const previousLastBlock = input.lastBlocksAfterRun.get(key) ?? (config.startBlock - 1);
       const nextLastBlock = Math.max(previousLastBlock, result.newLastBlock);
       input.pendingCursorUpdates.set(key, nextLastBlock);
+      if (result.scanCoverage && result.scanCoverage.toBlock === nextLastBlock) {
+        input.pendingScanCoverage?.set(key, result.scanCoverage);
+      }
     }
     input.budget.count += summary.requestBudgetUsed;
 

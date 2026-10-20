@@ -134,7 +134,9 @@ describe("Dwellir raw log transport", () => {
     const meter = vi.spyOn(credits, "recordDwellirCredits");
     const fetcher = vi.fn().mockResolvedValueOnce(new Response(JSON.stringify([
       { id: 0, error: { code: -32000, message: "batch not executed: member 1 (eth_getLogs) violated the log range policy" } },
-    ]))).mockResolvedValueOnce(new Response(JSON.stringify([{ id: 0, result: { timestamp: "0x64" } }])));
+    ]))).mockResolvedValueOnce(new Response(JSON.stringify([{
+      id: 0, result: { number: "0xa", timestamp: "0x64", hash: `0x${"a".repeat(64)}` },
+    }])));
     vi.stubGlobal("fetch", fetcher);
     const result = await resolveBlockTimestamps(endpoint.url, [10], createBudget(20));
     expect(result.get(10)).toBe(100);

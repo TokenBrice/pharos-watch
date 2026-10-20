@@ -126,8 +126,8 @@ describe("daily digest Safety Score transitions", () => {
 
     const transitions = await collectGradeTransitions(ctx, grades, identity);
 
-    expect(transitions.value).toHaveLength(1);
-    expect(transitions.value?.[0]).toMatchObject({
+    expect(transitions.value.gradeTransitions).toHaveLength(1);
+    expect(transitions.value.gradeTransitions?.[0]).toMatchObject({
       historyId: "organic-current",
       model: "v9",
       symbol: "USDT",

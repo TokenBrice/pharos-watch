@@ -112,6 +112,37 @@ describe("liquidity page model", () => {
     });
   });
 
+  it.each([null, 0, 100])("weights only members with both an observed ratio and weight (%s)", (weight) => {
+    const [first, second, third, fourth] = ACTIVE_STABLECOINS;
+    const map: DexLiquidityMap = {
+      [first.id]: makeLiquidity({
+        weightedBalanceRatio: 0.75, organicFraction: 0.5,
+        balanceMeasuredTvlUsd: weight, organicMeasuredTvlUsd: weight,
+      }),
+      [second.id]: makeLiquidity({
+        weightedBalanceRatio: null, organicFraction: null,
+        balanceMeasuredTvlUsd: 1_000, organicMeasuredTvlUsd: 1_000,
+      }),
+      [third.id]: makeLiquidity({
+        weightedBalanceRatio: 0, organicFraction: 0,
+        balanceMeasuredTvlUsd: null, organicMeasuredTvlUsd: null,
+      }),
+      [fourth.id]: makeLiquidity({
+        weightedBalanceRatio: null, organicFraction: null,
+        balanceMeasuredTvlUsd: null, organicMeasuredTvlUsd: null,
+      }),
+    };
+    expect(buildLiquidityViewModel(map, "all", "").summaryStats).toMatchObject({
+      avgBalance: weight === 100 ? 75 : null, avgOrganic: weight === 100 ? 50 : null,
+    });
+    map[second.id] = makeLiquidity({
+      weightedBalanceRatio: 0, organicFraction: 0, balanceMeasuredTvlUsd: 100, organicMeasuredTvlUsd: 100,
+    });
+    expect(buildLiquidityViewModel(map, "all", "").summaryStats).toMatchObject({
+      avgBalance: weight === 100 ? 38 : 0, avgOrganic: weight === 100 ? 25 : 0,
+    });
+  });
+
   it("keeps observed NR rows in the leaderboard and folds unobserved coins", () => {
     const [first, second, third] = ACTIVE_STABLECOINS.filter((coin) => coin.flags.pegCurrency === "USD");
     if (!first || !second || !third) {
@@ -135,6 +166,40 @@ describe("liquidity page model", () => {
     expect(model.leaderboardRows.map((row) => row.meta.id)).toEqual([first.id, second.id]);
     expect(model.unobservedRows.map((row) => row.meta.id)).toEqual([third.id]);
     expect(model.summaryStats).toMatchObject({ ratedCount: 1, nrObservedCount: 1, withLiquidity: 2 });
+  });
+
+  it.each([null, 99])("isolates positive-depth quarantines without admitting their score (%s)", (liquidityScore) => {
+    const [rated, observedNr, unobserved, quarantined] = ACTIVE_STABLECOINS;
+    const map: DexLiquidityMap = {
+      [rated.id]: makeLiquidity({
+        tvlChange7d: 0, weightedBalanceRatio: 0.5, balanceMeasuredTvlUsd: 100,
+        organicFraction: 0.4, organicMeasuredTvlUsd: 100,
+      }),
+      [observedNr.id]: makeLiquidity({ liquidityScore: null, liquidityScoreUnavailableReason: "activity-missing" }),
+      [unobserved.id]: makeLiquidity({
+        liquidityScore: null, totalTvlUsd: 0, poolCount: 0, coverageClass: "unobserved",
+        liquidityEvidenceClass: "unobserved", liquidityScoreUnavailableReason: "no-retained-pools",
+      }),
+      [quarantined.id]: makeLiquidity({
+        liquidityScore, totalTvlUsd: 1_000_000, poolCount: 8,
+        coverageClass: null, liquidityEvidenceClass: null,
+        unavailableReason: "invalid-coverage-evidence", liquidityScoreUnavailableReason: "invalid-coverage-evidence",
+        tvlChange7d: 100, weightedBalanceRatio: 1, balanceMeasuredTvlUsd: 1_000_000,
+        organicFraction: 1, organicMeasuredTvlUsd: 1_000_000,
+      }),
+    };
+    const model = buildLiquidityViewModel(map, "all", "");
+    expect(model.leaderboardRows.map(({ meta }) => meta.id)).toEqual([rated.id, observedNr.id]);
+    expect(model.unobservedRows.map(({ meta }) => meta.id)).toEqual([unobserved.id]);
+    expect(model.unavailableRows.map(({ meta }) => meta.id)).toEqual([quarantined.id]);
+    expect(model.unavailableRows[0].liq.unavailableReason).toBe("invalid-coverage-evidence");
+    expect(model.summaryStats).toMatchObject({
+      ratedCount: 1, nrObservedCount: 1, withLiquidity: 2,
+      highConfidenceCoverage: 2, fallbackCoverage: 0, agg7dChange: 0, avgBalance: 50, avgOrganic: 40,
+    });
+    const filtered = buildLiquidityViewModel(map, quarantined.flags.pegCurrency, quarantined.name);
+    expect(filtered.unavailableRows.map(({ meta }) => meta.id)).toEqual([quarantined.id]);
+    expect(filtered.summaryStats).toEqual(model.summaryStats);
   });
 
   it("counts observed primary mixed and fallback NR markets independently of rated scores", () => {
@@ -161,6 +226,8 @@ describe("liquidity page model", () => {
     expect(model.summaryStats).toMatchObject({
       withLiquidity: 4, highConfidenceCoverage: 3, fallbackCoverage: 1, ratedCount: 1, nrObservedCount: 3,
     });
+    expect(model.unavailableRows.map(({ meta }) => meta.id)).toEqual([unknown.id]);
+    expect(model.unobservedRows.map(({ meta }) => meta.id)).toEqual([placeholder.id]);
   });
 
   it("preserves missing global TVL and an all-NR cohort as unavailable aggregates", () => {

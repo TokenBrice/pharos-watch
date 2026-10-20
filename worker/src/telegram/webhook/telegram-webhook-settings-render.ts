@@ -20,6 +20,7 @@ import {
 } from "./telegram-webhook-messages";
 import { unixNow } from "../store/telegram-webhook-store";
 import type { SubscriberRow, SubscriptionRow } from "./telegram-webhook-shared";
+import type { TelegramAlertType } from "@shared/types/status";
 import {
   DEPEG_STEPS,
   DEWS_BAND_CODES,
@@ -112,14 +113,15 @@ export function buildCoinMessage(coinId: string, row: SubscriptionRow | null): s
   return [
     `<b>${escapeHtml(symbol)} settings</b>`,
     "",
+    "<b>Local overrides</b>",
     `DEWS min band: ${escapeHtml(describeDews(row))}`,
     `Safety mode: ${escapeHtml(describeSafety(row))}`,
     `Depeg step: ${escapeHtml(describeDepeg(row))}`,
-    `Launch: ${row?.alert_launch ? "on" : "off"}`,
-    `Reserve: ${row?.alert_reserve ? "on" : "off"}`,
-    `Freeze alerts: ${row?.alert_freeze ? "on" : "off"}`,
+    `Launch: ${describeLocalState(row, "launch")}`,
+    `Reserve: ${describeLocalState(row, "reserve")}`,
+    `Freeze alerts: ${describeLocalState(row, "freeze")}`,
     "",
-    "Tap a row to change.",
+    "Tap a row to set a local override. Inherited coverage follows chat/preset policy; membership is not evaluated here.",
   ].join("\n");
 }
 
@@ -128,23 +130,23 @@ export function buildCoinKeyboard(
   row: SubscriptionRow | null,
   options: { includeMiniAppButton?: boolean } = {},
 ): { inline_keyboard: SettingsButton[][] } {
-  const dewsBand = row?.alert_dews ? row?.dews_min_band ?? "ALERT" : null;
-  const safetyMode = row?.alert_safety ? row?.safety_mode ?? "all" : null;
-  const depegStep: number | "off" | "default" = row?.alert_depeg
-    ? row?.depeg_worsening_bps_step ?? "default"
-    : "off";
-  const launchOn = Boolean(row?.alert_launch);
-  const reserveOn = Boolean(row?.alert_reserve);
-  const freezeOn = Boolean(row?.alert_freeze);
+  const dewsBand = row?.alert_dews ? row.dews_min_band ?? "ALERT" : null;
+  const safetyMode = row?.alert_safety ? row.safety_mode ?? "all" : null;
+  const depegStep: number | "off" | "default" | null = row?.alert_depeg
+    ? row.depeg_worsening_bps_step ?? "default"
+    : isExplicitOff(row, "depeg") ? "off" : null;
+  const plainState = (type: "launch" | "reserve" | "freeze"): boolean | null =>
+    row?.[TELEGRAM_ALERT_PERSISTENCE[type].subscriptionColumn] === 1
+      ? true
+      : isExplicitOff(row, type) ? false : null;
 
   const rows: SettingsButton[][] = [
-    buildDewsRow(coinId, dewsBand),
-    buildSafetyRow(coinId, safetyMode),
+    buildDewsRow(coinId, dewsBand, isExplicitOff(row, "dews")),
+    buildSafetyRow(coinId, safetyMode, isExplicitOff(row, "safety")),
     buildDepegRow(coinId, depegStep),
-    // The launch row predates the family prefix and stays unprefixed.
-    buildPlainAlertRow(coinId, "launch", launchOn, ""),
-    buildPlainAlertRow(coinId, "reserve", reserveOn),
-    buildPlainAlertRow(coinId, "freeze", freezeOn),
+    buildPlainAlertRow(coinId, "launch", plainState("launch"), ""),
+    buildPlainAlertRow(coinId, "reserve", plainState("reserve")),
+    buildPlainAlertRow(coinId, "freeze", plainState("freeze")),
     [{ text: "← Back to chat settings", callback_data: "settings:home" }],
   ];
   if (options.includeMiniAppButton) rows.push([{ text: "Open in app", web_app: { url: buildTelegramMiniAppUrl(`coin_${coinId}`) } }]);
@@ -174,25 +176,25 @@ function coinLabel(coinId: string): string {
   return TRACKED_META_BY_ID.get(coinId)?.symbol ?? coinId;
 }
 
-function buildDewsRow(coinId: string, dewsBand: string | null): Array<{ text: string; callback_data: string }> {
+function buildDewsRow(coinId: string, dewsBand: string | null, explicitOff: boolean): Array<{ text: string; callback_data: string }> {
   const row = (["A", "W", "D"] as const).map((code) => ({
     text: `${markIf(dewsBand === DEWS_BAND_CODES[code])}${DEWS_BAND_CODES[code]}`,
     callback_data: `settings:c:${coinId}:db:${code}`,
   }));
   row.push({
-    text: `${markIf(dewsBand == null)}off`,
+    text: `${markIf(explicitOff)}off`,
     callback_data: `settings:c:${coinId}:db:0`,
   });
   return row;
 }
 
-function buildSafetyRow(coinId: string, safetyMode: string | null): Array<{ text: string; callback_data: string }> {
+function buildSafetyRow(coinId: string, safetyMode: string | null, explicitOff: boolean): Array<{ text: string; callback_data: string }> {
   const row = (["a", "d", "u"] as const).map((code) => ({
     text: `${markIf(safetyMode === SAFETY_MODE_CODES[code])}${labelForSafety(code)}`,
     callback_data: `settings:c:${coinId}:sm:${code}`,
   }));
   row.push({
-    text: `${markIf(safetyMode == null)}off`,
+    text: `${markIf(explicitOff)}off`,
     callback_data: `settings:c:${coinId}:sm:0`,
   });
   return row;
@@ -201,19 +203,19 @@ function buildSafetyRow(coinId: string, safetyMode: string | null): Array<{ text
 function buildPlainAlertRow(
   coinId: string,
   alertType: "launch" | "reserve" | "freeze",
-  enabled: boolean,
+  enabled: boolean | null,
   prefix = `${TELEGRAM_ALERT_FAMILY_SHORT_LABELS[alertType]} `,
 ): Array<{ text: string; callback_data: string }> {
   const code = TELEGRAM_ALERT_PERSISTENCE[alertType].settingCode;
   return [
-    { text: `${prefix}${markIf(enabled)}on`, callback_data: `settings:c:${coinId}:${code}:1` },
-    { text: `${markIf(!enabled)}off`, callback_data: `settings:c:${coinId}:${code}:0` },
+    { text: `${prefix}${markIf(enabled === true)}on`, callback_data: `settings:c:${coinId}:${code}:1` },
+    { text: `${markIf(enabled === false)}off`, callback_data: `settings:c:${coinId}:${code}:0` },
   ];
 }
 
 function buildDepegRow(
   coinId: string,
-  depegStep: number | "off" | "default",
+  depegStep: number | "off" | "default" | null,
 ): Array<{ text: string; callback_data: string }> {
   const row = DEPEG_STEPS.map((step) => ({
     text: `${markIf(depegStep === step)}${step}`,
@@ -246,18 +248,31 @@ function markIf(active: boolean): string {
   return active ? "• " : "";
 }
 
+function isExplicitOff(row: SubscriptionRow | null, type: TelegramAlertType): boolean {
+  const { subscriptionColumn, overrideColumn } = TELEGRAM_ALERT_PERSISTENCE[type];
+  return row?.[subscriptionColumn] === 0 && row[overrideColumn] === 1;
+}
+
+function describeLocalState(row: SubscriptionRow | null, type: TelegramAlertType): string {
+  if (row?.[TELEGRAM_ALERT_PERSISTENCE[type].subscriptionColumn] === 1) return "on";
+  if (isExplicitOff(row, type)) return "off (local override)";
+  return type === "dews" || type === "depeg" || type === "safety"
+    ? "inherits chat/preset policy"
+    : "inherits chat policy";
+}
+
 function describeDews(row: SubscriptionRow | null): string {
-  if (!row?.alert_dews) return "off";
+  if (!row?.alert_dews) return describeLocalState(row, "dews");
   return row.dews_min_band ?? "ALERT";
 }
 
 function describeSafety(row: SubscriptionRow | null): string {
-  if (!row?.alert_safety) return "off";
+  if (!row?.alert_safety) return describeLocalState(row, "safety");
   return row.safety_mode ?? "all";
 }
 
 function describeDepeg(row: SubscriptionRow | null): string {
-  if (!row?.alert_depeg) return "off";
+  if (!row?.alert_depeg) return describeLocalState(row, "depeg");
   return row.depeg_worsening_bps_step != null ? `+${row.depeg_worsening_bps_step}bps` : "on (no step)";
 }
 

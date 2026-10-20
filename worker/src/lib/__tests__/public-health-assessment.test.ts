@@ -86,6 +86,8 @@ function makeMintBurnAssessmentDb(
     publicationQueryError?: unknown;
     yieldSafetyError?: unknown;
     yieldSafetyIdentity?: SafetyScoreV9PublicationIdentity;
+    yieldSafetyPublishedAt?: number | null;
+    yieldPublishedAt?: number;
     yieldSafetyLiveReadError?: unknown;
     yieldSafetyHealthReadError?: unknown;
     safetyScorePublication?: V9PublicationHealth | null;
@@ -217,9 +219,9 @@ function makeMintBurnAssessmentDb(
         ? { throwError: options.yieldSafetyError }
         : {
             first: options.yieldSafetyIdentity ? {
-              updated_at: nowSec - 60,
+              updated_at: options.yieldPublishedAt ?? nowSec - 60,
               stamped_identity: JSON.stringify(options.yieldSafetyIdentity),
-              safety_published_at: nowSec - 60,
+              safety_published_at: options.yieldSafetyPublishedAt === undefined ? nowSec - 60 : options.yieldSafetyPublishedAt,
             } : null,
           }),
     },
@@ -1006,5 +1008,32 @@ describe("assessPublicHealth independent yield-safety reads", () => {
     expect(result).toEqual(baseline);
     expect(result.yieldSafetyQueryFailed).toBe(false);
     expect(result.warnings.some((warning) => warning.startsWith("yield-safety-"))).toBe(false);
+  });
+
+  it.each([false, true])("uses the original live safety deadline for current-compatible health and held fallback (held=%s)", async (held) => {
+    const now = 1_800_000_000;
+    for (const age of [86400, 86401, -1]) {
+      const publishedAt = now - age;
+      const result = await assessPublicHealth(makeMintBurnAssessmentDb(now, {
+        yieldSafetyIdentity: identity, yieldSafetyPublishedAt: publishedAt,
+        safetyScorePublication: { schemaVersion: 2, status: held ? "held" : "current",
+          acceptedPublicationGenerationId: identity.publicationGenerationId, acceptedAtSec: publishedAt,
+          attemptedAtSec: Math.max(now, publishedAt), heldSinceSec: held ? now : null, reasons: held ? [{ code: "dex-stale" }] : [] },
+      }), now);
+      const reason = held ? "safety-snapshot-held" : "safety-publication-clock-out-of-budget";
+      expect(result.warnings.filter((warning) => warning.startsWith("yield-safety-"))).toEqual(
+        age === 86400 ? held ? [`yield-safety-publish-time-fallback:${reason}`] : []
+          : [`yield-safety-unrated-serving:${reason}`],
+      );
+      if (age !== 86400) expect(result.overallStatus).not.toBe("healthy");
+    }
+  });
+
+  it("does not apply the cached yield fallback clock to valid current live safety", async () => {
+    const now = 1_800_000_000;
+    const result = await assessPublicHealth(makeMintBurnAssessmentDb(now, {
+      yieldSafetyIdentity: identity, yieldPublishedAt: now - 100000, yieldSafetyPublishedAt: null,
+    }), now);
+    expect(result.warnings.filter((warning) => warning.startsWith("yield-safety-"))).toEqual([]);
   });
 });

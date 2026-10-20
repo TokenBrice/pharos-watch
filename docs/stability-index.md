@@ -157,6 +157,8 @@ Cutover observation: wait for the next daily snapshot after activation, then ref
 
 `GET /api/stability-index` — latest score + recent history (default: latest ~91 daily rows with today's running average prepended). `?detail=true` returns full history and per-day components; adding `&days=365` bounds rich history to the recent year (30–365 days accepted). Detail `headlineAggregates` contains the band streak and per-event worst observed scores, computed from full admitted history, with source `computedAt` and response `generatedAt`. Bounded reads use a thin full-history projection rather than decoding older component blobs. `current.inputDegradation` retains dependency and unpriced-event diagnostics, including stored supply/trend omission IDs; old snapshots do not invent these arrays. Cache: standard (5-min edge, 1-min browser).
 
+`current.totalMcapUsd` is included only when the selected source snapshot records a finite number, including an observed zero. When no live sample remains, the current daily fallback keeps its original snapshot and timestamp; a daily-average snapshot without market cap omits that field rather than reporting zero or borrowing a present-day market cap.
+
 See the [API Reference](https://pharos.watch/api/) for the full response shape.
 
 ## Frontend

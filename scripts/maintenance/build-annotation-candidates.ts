@@ -56,10 +56,6 @@ const CandidateSchema = z.object({
 });
 export type Candidate = z.infer<typeof CandidateSchema>;
 
-function epochAt(daysAgo: number): number {
-  return Date.now() - daysAgo * 24 * 60 * 60 * 1000;
-}
-
 export async function fetchTapeJson(url: string, headers: Record<string, string>, timeoutMs = FETCH_TIMEOUT_MS): Promise<unknown> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -217,8 +213,8 @@ function mapBlacklistCandidate(
   };
 }
 
-function findRecentLaunches(coins: readonly StablecoinMeta[]): Candidate[] {
-  const cutoffMs = epochAt(LAUNCH_LOOKBACK_DAYS);
+function findRecentLaunches(coins: readonly StablecoinMeta[], untilMs: number): Candidate[] {
+  const cutoffMs = untilMs - LAUNCH_LOOKBACK_DAYS * 86_400_000;
   const candidates: Candidate[] = [];
   for (const coin of coins) {
     const status = coin.status ?? "active";
@@ -226,7 +222,7 @@ function findRecentLaunches(coins: readonly StablecoinMeta[]): Candidate[] {
     const launchDate = coin.launchDate;
     if (typeof launchDate !== "string" || launchDate.length < 10) continue;
     const ts = Date.parse(`${launchDate.slice(0, 10)}T00:00:00Z`);
-    if (Number.isNaN(ts) || ts < cutoffMs) continue;
+    if (Number.isNaN(ts) || ts < cutoffMs || ts > untilMs) continue;
     candidates.push({
       id: `launch:${coin.id}:${launchDate.slice(0, 10)}`,
       coinId: coin.id,
@@ -240,8 +236,8 @@ function findRecentLaunches(coins: readonly StablecoinMeta[]): Candidate[] {
   return candidates;
 }
 
-function findRecentMilestones(coins: readonly StablecoinMeta[]): Candidate[] {
-  const cutoffMs = epochAt(LAUNCH_LOOKBACK_DAYS);
+function findRecentMilestones(coins: readonly StablecoinMeta[], untilMs: number): Candidate[] {
+  const cutoffMs = untilMs - LAUNCH_LOOKBACK_DAYS * 86_400_000;
   const launchKeywords = /\b(mainnet|launch|live|public|production|go[- ]?live)\b/i;
   const candidates: Candidate[] = [];
   for (const coin of coins) {
@@ -250,7 +246,7 @@ function findRecentMilestones(coins: readonly StablecoinMeta[]): Candidate[] {
     for (const m of milestones) {
       if (typeof m.date !== "string" || m.date.length < 10) continue;
       const ts = Date.parse(`${m.date.slice(0, 10)}T00:00:00Z`);
-      if (Number.isNaN(ts) || ts < cutoffMs) continue;
+      if (Number.isNaN(ts) || ts < cutoffMs || ts > untilMs) continue;
       if (!launchKeywords.test(m.title) && m.type !== "milestone") continue;
       candidates.push({
         coinId: coin.id,
@@ -479,8 +475,8 @@ export async function runAnnotationCandidates(argv: string[], root = ROOT): Prom
     const candidates = [
       ...depeg.events.map(mapDepegCandidate),
       ...freeze.events.map((event) => mapBlacklistCandidate(event, resolveCoinId)),
-      ...findRecentLaunches(coins),
-      ...findRecentMilestones(coins),
+      ...findRecentLaunches(coins, untilMs),
+      ...findRecentMilestones(coins, untilMs),
     ].filter((candidate): candidate is Candidate => candidate !== null);
     snapshots.push({
       version: 1,

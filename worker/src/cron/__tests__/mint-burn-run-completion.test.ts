@@ -1,9 +1,18 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { completeMintBurnRun, type CompleteMintBurnRunInput } from "../mint-burn/run-completion";
 import type { MintBurnConfigSummary } from "../mint-burn/sync-config";
 import { setMintBurnRunState } from "../mint-burn/run-state";
 import { getNullPriceBacklog, healNullPrices } from "../../lib/mint-burn-pipeline/price-heal";
 import { sweepRecentRoundtrips } from "../../lib/mint-burn-pipeline/roundtrip-sweep";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
+import {
+  drainMintBurnMaterializationDebt,
+  executeMintBurnMaintenanceMutations,
+} from "../../lib/mint-burn-pipeline/materialization-debt";
+
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(() => fixtures.closeAll());
 
 vi.mock("../mint-burn/run-state", () => ({
   setMintBurnRunState: vi.fn(),
@@ -122,6 +131,122 @@ describe("completeMintBurnRun", () => {
     expect(result.metadata.conservationFailures).toBe(0);
     expect(result.metadata.reason).toBeUndefined();
     expect(result.metadata.apiErrors).toBe(0);
+  });
+
+  it.each([false, true])("retains healed source and %s rebuild failure debt without aborting completion", async (failRebuild) => {
+    const { sqlite } = fixtures.open();
+    const hourTs = Math.floor(Date.now() / 3_600_000) * 3600 - 7200;
+    sqlite.prepare(`INSERT INTO mint_burn_events
+      (id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd,
+       tx_hash, block_number, timestamp, explorer_tx_url, price_repair_status)
+      VALUES ('healed', 'usdc-circle', 'USDC', 'ethereum', 'mint', 100, 101,
+        'healed', 1, ?, '', 'pending_aggregate')`).run(hourTs + 1);
+    sqlite.prepare("INSERT INTO mint_burn_dirty_hours VALUES ('usdc-circle', 'ethereum', ?)").run(hourTs);
+    sqlite.prepare(`INSERT INTO mint_burn_hourly
+      (stablecoin_id, chain_id, hour_ts, mint_volume_usd, mint_unpriced_event_count, burn_unpriced_event_count)
+      VALUES ('usdc-circle', 'ethereum', ?, 7, 0, 0)`).run(hourTs);
+    const input = buildRunInput();
+    input.db = createSqliteD1(sqlite, { onRun(sql) {
+      if (failRebuild && sql.includes("DELETE FROM mint_burn_dirty_hours")) throw new Error("rebuild failed");
+    } });
+    vi.mocked(healNullPrices).mockResolvedValue({ healed: 1, affectedHours: new Map([
+      ["healed", { stablecoinId: "usdc-circle", chainId: "ethereum", hourTs }],
+    ]) });
+    const result = await completeMintBurnRun(input);
+    expect(result.metadata.nullPricesHealed).toBe(1);
+    expect(sqlite.prepare("SELECT amount_usd, price_repair_status FROM mint_burn_events").get())
+      .toEqual({ amount_usd: 101, price_repair_status: failRebuild ? "pending_aggregate" : "recovered" });
+    expect(sqlite.prepare("SELECT mint_volume_usd FROM mint_burn_hourly").get())
+      .toEqual({ mint_volume_usd: failRebuild ? 7 : 101 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM mint_burn_dirty_hours").get())
+      .toEqual({ count: failRebuild ? 1 : 0 });
+    expect(sweepRecentRoundtrips).toHaveBeenCalled();
+  });
+
+  it("drains old non-standard debt even when both candidate maintenance stages fail", async () => {
+    const { sqlite, db } = fixtures.open();
+    sqlite.prepare(`INSERT INTO mint_burn_events
+      (id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd,
+       tx_hash, block_number, timestamp, explorer_tx_url, flow_type)
+      VALUES ('old', 'usdc-circle', 'USDC', 'ethereum', 'mint', 100, 100,
+        'old', 1, 3601, '', 'atomic_roundtrip')`).run();
+    sqlite.prepare("INSERT INTO mint_burn_dirty_hours VALUES ('usdc-circle', 'ethereum', 3600)").run();
+    sqlite.prepare(`INSERT INTO mint_burn_hourly
+      (stablecoin_id, chain_id, hour_ts, mint_count, mint_volume_usd)
+      VALUES ('usdc-circle', 'ethereum', 3600, 1, 100)`).run();
+    vi.mocked(healNullPrices).mockRejectedValueOnce(new Error("heal unavailable"));
+    vi.mocked(sweepRecentRoundtrips).mockRejectedValueOnce(new Error("sweep unavailable"));
+    await completeMintBurnRun({ ...buildRunInput(), db });
+    expect(sqlite.prepare("SELECT mint_count, mint_volume_usd FROM mint_burn_hourly").get())
+      .toEqual({ mint_count: 0, mint_volume_usd: 0 });
+    expect(sqlite.prepare("SELECT * FROM mint_burn_dirty_hours").all()).toEqual([]);
+  });
+
+  it.each([
+    ["before", "amount"], ["after", "amount"],
+    ["before", "classification"], ["after", "classification"],
+  ] as const)("preserves a %s-rebuild %s mutation through an independent drain", async (boundary, kind) => {
+    const { sqlite } = fixtures.open();
+    sqlite.prepare(`INSERT INTO mint_burn_events
+      (id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd,
+       tx_hash, block_number, timestamp, explorer_tx_url)
+      VALUES ('race', 'usdc-circle', 'USDC', 'ethereum', 'mint', 100, 100, 'race', 1, 3601, '')`).run();
+    sqlite.prepare("INSERT INTO mint_burn_dirty_hours VALUES ('usdc-circle', 'ethereum', 3600)").run();
+    sqlite.prepare(`INSERT INTO mint_burn_sync_state VALUES ('race-cursor', 77)`).run();
+    const mutationDb = createSqliteD1(sqlite);
+    const mutate = () => executeMintBurnMaintenanceMutations(mutationDb, [{
+      enqueue: mutationDb.prepare(`INSERT INTO mint_burn_dirty_hours VALUES ('usdc-circle', 'ethereum', 3600)
+        ON CONFLICT (stablecoin_id, chain_id, hour_ts) DO UPDATE SET hour_ts = excluded.hour_ts
+        RETURNING stablecoin_id, chain_id, hour_ts`),
+      update: mutationDb.prepare(kind === "amount"
+        ? "UPDATE mint_burn_events SET amount_usd = 150 WHERE id = 'race'"
+        : "UPDATE mint_burn_events SET flow_type = 'atomic_roundtrip' WHERE id = 'race'"),
+    }]);
+    const db = createSqliteD1(sqlite);
+    const batch = db.batch.bind(db);
+    let interleaved = false;
+    db.batch = async <T = unknown>(statements: D1PreparedStatement[]) => {
+      const inject = !interleaved;
+      interleaved = true;
+      if (inject && boundary === "before") await mutate();
+      const result = await batch<T>(statements);
+      if (inject && boundary === "after") await mutate();
+      return result;
+    };
+    const expectedVolume = kind === "amount" ? 150 : 0;
+    expect(await drainMintBurnMaterializationDebt(db)).toBe(1);
+    expect(sqlite.prepare("SELECT mint_volume_usd FROM mint_burn_hourly").get())
+      .toEqual({ mint_volume_usd: boundary === "before" ? expectedVolume : 100 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM mint_burn_dirty_hours").get())
+      .toEqual({ count: boundary === "before" ? 0 : 1 });
+    await drainMintBurnMaterializationDebt(db);
+    expect(sqlite.prepare("SELECT mint_volume_usd FROM mint_burn_hourly").get())
+      .toEqual({ mint_volume_usd: expectedVolume });
+    expect(sqlite.prepare("SELECT * FROM mint_burn_dirty_hours").all()).toEqual([]);
+    expect(sqlite.prepare("SELECT last_block FROM mint_burn_sync_state WHERE config_key = 'race-cursor'").get())
+      .toEqual({ last_block: 77 });
+  });
+
+  it("retains seeded debt across an interrupted drain and resumes without candidate work", async () => {
+    const { sqlite } = fixtures.open();
+    sqlite.prepare(`INSERT INTO mint_burn_events
+      (id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd,
+       tx_hash, block_number, timestamp, explorer_tx_url, price_repair_status)
+      VALUES ('restart', 'usdc-circle', 'USDC', 'ethereum', 'mint', 10, 10,
+        'restart', 1, 3601, '', 'pending_aggregate')`).run();
+    const controller = new AbortController();
+    const interruptedDb = createSqliteD1(sqlite, { onAll(sql) {
+      if (sql.includes("FROM mint_burn_dirty_hours")) controller.abort(new Error("drain interrupted"));
+    } });
+    await expect(drainMintBurnMaterializationDebt(interruptedDb, { signal: controller.signal }))
+      .rejects.toThrow("drain interrupted");
+    expect(sqlite.prepare("SELECT hour_ts FROM mint_burn_dirty_hours").all()).toEqual([{ hour_ts: 3600 }]);
+    expect(sqlite.prepare("SELECT * FROM mint_burn_hourly").all()).toEqual([]);
+    expect(await drainMintBurnMaterializationDebt(createSqliteD1(sqlite))).toBe(1);
+    expect(sqlite.prepare("SELECT price_repair_status FROM mint_burn_events").get())
+      .toEqual({ price_repair_status: "recovered" });
+    expect(sqlite.prepare("SELECT mint_volume_usd FROM mint_burn_hourly").get()).toEqual({ mint_volume_usd: 10 });
+    expect(sqlite.prepare("SELECT * FROM mint_burn_dirty_hours").all()).toEqual([]);
   });
 
   it("does not persist run state when the run has already been aborted", async () => {

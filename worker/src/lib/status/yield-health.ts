@@ -844,20 +844,27 @@ async function buildLiveSafetyHydration(
   }
   const active = await loadActiveSafetyScoreIndex(db);
   const stamped = SafetyScorePublicationIdentitySchema.safeParse(safetySnapshot.safetyScoreIdentity);
-  if (active.kind === "v9" && stamped.success
+  const liveWithinBudget = active.kind === "v9"
+    && isYieldSafetyFallbackWithinWindow(now, active.snapshot.updatedAt, now);
+  if (active.kind === "v9" && liveWithinBudget && stamped.success
     && safetyScorePublicationIdentitiesAreComparable(stamped.data, active.snapshot.safetyScoreIdentity)) {
-    return { ...base, status: "healthy", reason: null, fallback: null };
+    return { ...base, safetyPublishedAt: active.snapshot.updatedAt, safetyAgeSec: ageSeconds(now, active.snapshot.updatedAt),
+      status: "healthy", reason: null, fallback: null };
   }
   if (active.kind === "error" && active.reason === "safety-score-index-read-failed") {
     return { ...base, status: "unknown", reason: active.reason, fallback: null };
   }
   const reason = active.kind !== "v9" ? active.reason
+    : !liveWithinBudget ? "safety-publication-clock-out-of-budget"
     : stamped.success ? "safety-identity-mismatch" : "safety-identity-missing";
   const fallbackAllowed = !(active.kind === "error" && active.reason.startsWith("safety-score-index-"))
     && stamped.success && rankingUpdatedAt != null
     && isYieldSafetyFallbackWithinWindow(rankingUpdatedAt, safetyPublishedAt, now);
   return {
     ...base,
+    ...(!fallbackAllowed && active.kind === "v9" ? {
+      safetyPublishedAt: active.snapshot.updatedAt, safetyAgeSec: ageSeconds(now, active.snapshot.updatedAt),
+    } : {}),
     status: fallbackAllowed ? "degraded" : "stale",
     reason,
     fallback: fallbackAllowed ? "publish-time-snapshot" : null,

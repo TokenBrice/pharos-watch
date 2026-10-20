@@ -78,7 +78,7 @@ describe("enrichMissingPrices", () => {
       vi.setSystemTime(nowSec * 1000);
       const { db, sqlite } = sqliteFixtures.open();
       const put = sqlite.prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)");
-      put.run("cmc_verified_targeted_quotes:v1", JSON.stringify([{
+      put.run("cmc_verified_targeted_quotes:v2", JSON.stringify([{
         assetId: "test-dollar", slug: "test-dollar", symbol: "TUSD", price: 1.0002,
         volume24h: 50_000, observedAt, providerAddress: null, chain: null, active: true,
       }]), observedAt + 60);
@@ -110,7 +110,7 @@ describe("enrichMissingPrices", () => {
       expect(fetchSpy.mock.calls.length).toBe(
         ["cooldown", "rate-limited", "circuit-open"].includes(scenario) ? 0 : scenario === "failed" ? 1 : 2,
       );
-      const cacheRow = sqlite.prepare("SELECT value FROM cache WHERE key = ?").get("cmc_verified_targeted_quotes:v1");
+      const cacheRow = sqlite.prepare("SELECT value FROM cache WHERE key = ?").get("cmc_verified_targeted_quotes:v2");
       expect(JSON.parse(String(cacheRow?.value))[0].observedAt).toBe(observedAt);
     },
   );
@@ -202,6 +202,56 @@ describe("enrichMissingPrices", () => {
     expect(assets[1].price).toBe(0.998);
     expect(assets[1].priceSource).toBe("coinmarketcap");
     expect(stats.passCmc).toBe(2);
+  });
+
+  it.each([false, true])("never substitutes a foreign category slug; targeted recovery=%s", async (targetedRecovery) => {
+    const assets = [makePeggedAsset({ id: "usdc-circle", symbol: "USDC", price: 0, cmcSlug: "usd-coin" })];
+    const fetchSpy = mockFetch([
+      { match: "/v1/cryptocurrency/category", body: cmcCategory([
+        { slug: "foreign-dollar", symbol: "USDC", quote: { USD: cmcUsdQuote(1.003) } },
+      ]) },
+      { match: "/v3/cryptocurrency/quotes/latest", body: { data: targetedRecovery ? [{
+        id: 3408, slug: "usd-coin", symbol: "USDC", is_active: 1,
+        quote: { USD: { ...cmcUsdQuote(0.9998), volume_24h: 50_000 } },
+      }] : [] } },
+    ]);
+    const result = await runCmcPass(assets, "test-key", undefined, undefined);
+    expect(result.resolved).toBe(targetedRecovery ? 1 : 0);
+    expect(assets[0].price).toBe(targetedRecovery ? 0.9998 : 0);
+    expect(result.diagnostics?.[0].resolvedCount).toBe(0);
+    expect(fetchSpy.getHistory()[1].url).toContain("slug=usd-coin");
+  });
+
+  it("accepts an exact category slug after a provider symbol rebrand", async () => {
+    const assets = [makePeggedAsset({ id: "usdc-circle", symbol: "USDC", price: 0, cmcSlug: "usd-coin" })];
+    const fetchSpy = mockFetch([{ match: "/v1/cryptocurrency/category", body: cmcCategory([
+      { slug: "usd-coin", symbol: "REBRANDED", quote: { USD: cmcUsdQuote(1.0001) } },
+    ]) }]);
+    expect((await runCmcPass(assets, "test-key", undefined, undefined)).resolved).toBe(1);
+    expect(assets[0].price).toBe(1.0001);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    [false, false], [true, false], [false, true], [true, true],
+  ])("refuses duplicate provider symbols regardless of order=%s or stale sibling=%s", async (reverse, staleSibling) => {
+    const rows = [
+      { slug: "usd-coin", symbol: "USDC", quote: { USD: cmcUsdQuote(1.0001) } },
+      { slug: "foreign-dollar", symbol: "usdc", quote: { USD: cmcUsdQuote(0.999, staleSibling ? staleIsoTimestamp() : undefined) } },
+    ];
+    const assets = [makePeggedAsset({ id: "usdc-circle", symbol: "USDC", price: 0 })];
+    mockFetch([{ match: "/v1/cryptocurrency/category", body: cmcCategory(reverse ? rows.reverse() : rows) }]);
+    expect((await runCmcPass(assets, "test-key", undefined, undefined)).resolved).toBe(0);
+    expect(assets[0].price).toBe(0);
+  });
+
+  it("retains unique slugless category fallback", async () => {
+    const assets = [makePeggedAsset({ id: "usdc-circle", symbol: "USDC", price: 0 })];
+    mockFetch([{ match: "/v1/cryptocurrency/category", body: cmcCategory([
+      { slug: "usd-coin", symbol: "USDC", quote: { USD: cmcUsdQuote(1.0001) } },
+    ]) }]);
+    expect((await runCmcPass(assets, "test-key", undefined, undefined)).resolved).toBe(1);
+    expect(assets[0].price).toBe(1.0001);
   });
 
   it("closes a stale CMC circuit when no fallback candidates remain", async () => {
@@ -615,7 +665,7 @@ describe("enrichMissingPrices", () => {
       .resolves.toMatchObject({ resolved: 1 });
     const verifiedCacheWrite = initialDb.getHistory().find(
       (entry) => entry.sql.includes("INSERT INTO cache") &&
-        entry.binds[0] === "cmc_verified_targeted_quotes:v1",
+        entry.binds[0] === "cmc_verified_targeted_quotes:v2",
     );
     expect(verifiedCacheWrite).toBeDefined();
 
@@ -624,7 +674,7 @@ describe("enrichMissingPrices", () => {
       match: "SELECT value, updated_at FROM cache WHERE key = ?",
       rows: [
         {
-          key: "cmc_verified_targeted_quotes:v1",
+          key: "cmc_verified_targeted_quotes:v2",
           value: String(verifiedCacheWrite?.binds[1]),
           updated_at: nowSec,
         },
@@ -749,7 +799,7 @@ describe("enrichMissingPrices", () => {
       match: "SELECT value, updated_at FROM cache WHERE key = ?",
       rows: [
         {
-          key: "cmc_verified_targeted_quotes:v1",
+          key: "cmc_verified_targeted_quotes:v2",
           value: JSON.stringify([{
             assetId: "test-dollar",
             slug: "test-dollar",
@@ -802,7 +852,7 @@ describe("enrichMissingPrices", () => {
       match: "SELECT value, updated_at FROM cache WHERE key = ?",
       rows: [
         {
-          key: "cmc_verified_targeted_quotes:v1",
+          key: "cmc_verified_targeted_quotes:v2",
           value: JSON.stringify([{
             assetId: "test-dollar",
             slug: "test-dollar",
@@ -860,6 +910,87 @@ describe("enrichMissingPrices", () => {
     expect(missingFirst).toHaveLength(25);
     expect([...missingFirst, ...missingNext].every(({ asset }) => manyMissing.has(asset.id))).toBe(true);
     expect(new Set([...missingFirst, ...missingNext].map(({ asset }) => asset.id)).size).toBe(30);
+  });
+
+  it.each([
+    ["wrong chain", "ethereum", "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd", "bnb", "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd", false],
+    ["native case mismatch", "solana", "Abcdefghijkmnopqrstuvwxyz123456789ABCDEFGHJK", "solana", "abcdefghijkmnopqrstuvwxyz123456789ABCDEFGHJK", false],
+    ["exact native identity", "solana", "Abcdefghijkmnopqrstuvwxyz123456789ABCDEFGHJK", "solana", "Abcdefghijkmnopqrstuvwxyz123456789ABCDEFGHJK", true],
+    ["EVM case-insensitive identity", "ethereum", "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd", "ethereum", "0xABCDEFABCDEFABCDEFABCDEFABCDEFABCDEFABCD", true],
+    ["supported platform alias", "bsc", "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd", "bnb", "0xABCDEFABCDEFABCDEFABCDEFABCDEFABCDEFABCD", true],
+    ["Polygon platform alias", "polygon", "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd", "polygon-ecosystem-token", "0xABCDEFABCDEFABCDEFABCDEFABCDEFABCDEFABCD", true],
+    ["unknown platform", "ethereum", "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd", "unknown-platform", "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd", false],
+    ["inherited object key", "ethereum", "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd", "__proto__", "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd", false],
+    ["missing platform", "ethereum", "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd", null, "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd", false],
+  ] as const)("validates and replays the provider tuple: %s", async (_label, chain, address, platform, providerAddress, accepted) => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-08T00:09:00Z"));
+    const observedAt = Date.parse("2026-10-08T00:08:00Z") / 1000;
+    const { db, sqlite } = sqliteFixtures.open();
+    const makeAsset = () => makePeggedAsset({
+      id: "test-dollar", symbol: "TUSD", price: 0, cmcSlug: "test-dollar",
+      contracts: [{ chain, address, decimals: 6 }],
+    });
+    const fetchSpy = mockFetch([
+      { match: "/v1/cryptocurrency/category", body: cmcCategory([]) },
+      { match: "/v3/cryptocurrency/quotes/latest", body: { data: [{
+        id: 123, slug: "test-dollar", symbol: "TUSD", is_active: 1,
+        platform: { slug: platform, token_address: providerAddress },
+        quote: { USD: { ...cmcUsdQuote(0.9998), volume_24h: 50_000 } },
+      }] } },
+    ]);
+    const assets = [makeAsset()];
+    const result = await runCmcPass(assets, "test-key", undefined, db);
+    expect(result.resolved).toBe(accepted ? 1 : 0);
+    expect(assets[0].price).toBe(accepted ? 0.9998 : 0);
+    const attempt = result.diagnostics?.flatMap((d) => d.assetAttempts ?? [])[0];
+    const cacheRow = sqlite.prepare("SELECT value FROM cache WHERE key = ?").get("cmc_verified_targeted_quotes:v2");
+    if (!accepted) {
+      expect(attempt).toMatchObject({ result: "rejected", rejectionClass: "unsupported-quote" });
+      expect(cacheRow).toBeUndefined();
+      return;
+    }
+    expect(attempt).toMatchObject({ result: "resolved", chain, target: address });
+    expect(JSON.parse(String(cacheRow?.value))).toEqual([expect.objectContaining({
+      chain, providerAddress: address, observedAt,
+    })]);
+    vi.setSystemTime(new Date("2026-10-08T00:24:00Z"));
+    const replayAssets = [makeAsset()];
+    const replay = await runCmcPass(replayAssets, "test-key", undefined, db);
+    expect(replay.resolved).toBe(1);
+    expect(replayAssets[0].priceObservedAt).toBe(observedAt);
+    expect(replay.diagnostics?.flatMap((d) => d.assetAttempts ?? [])).toEqual(expect.arrayContaining([
+      expect.objectContaining({ adapter: "coinmarketcap-verified-cache", result: "resolved", chain, target: address, observedAt }),
+    ]));
+    const changedAsset = makeAsset();
+    changedAsset.contracts = [{ chain: chain === "solana" ? "ethereum" : "solana", address, decimals: 6 }];
+    expect((await runCmcPass([changedAsset], "test-key", undefined, db)).resolved).toBe(0);
+    expect(changedAsset.price).toBe(0);
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it.each([
+    ["legacy EVM packet", "v1", "ethereum", "ethereum", "0x1111111111111111111111111111111111111111", "0x1111111111111111111111111111111111111111"],
+    ["legacy native packet", "v1", "solana", "solana", "Abcdefghijkmnopqrstuvwxyz123456789ABCDEFGHJK", "abcdefghijkmnopqrstuvwxyz123456789ABCDEFGHJK"],
+    ["wrong-chain v2 packet", "v2", "ethereum", "bsc", "0x1111111111111111111111111111111111111111", "0x1111111111111111111111111111111111111111"],
+    ["wrong-case v2 packet", "v2", "solana", "solana", "Abcdefghijkmnopqrstuvwxyz123456789ABCDEFGHJK", "abcdefghijkmnopqrstuvwxyz123456789ABCDEFGHJK"],
+  ])("refuses replay of %s", async (_label, version, chain, cachedChain, address, providerAddress) => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const { db, sqlite } = sqliteFixtures.open();
+    const put = sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)");
+    put.run(`cmc_verified_targeted_quotes:${version}`, JSON.stringify([{
+      assetId: "test-dollar", slug: "test-dollar", symbol: "TUSD", price: 1.0002,
+      volume24h: 50_000, observedAt: nowSec - 60, providerAddress, chain: cachedChain, active: true,
+    }]), nowSec);
+    put.run("cmc_last_fetch", JSON.stringify({ version: 1, kind: "success" }), nowSec);
+    const assets = [makePeggedAsset({
+      id: "test-dollar", symbol: "TUSD", price: 0, cmcSlug: "test-dollar",
+      contracts: [{ chain, address, decimals: 6 }],
+    })];
+    const fetchSpy = mockFetch();
+    expect((await runCmcPass(assets, "test-key", undefined, db)).resolved).toBe(0);
+    expect(assets[0].price).toBe(0);
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 
   it.each([

@@ -5,8 +5,12 @@ import { formatCompactUsd } from "@shared/lib/format";
 import { SEVERITY_RANK, type TapeEventSeverity } from "@shared/types/tape-event";
 import type { TapeEvent } from "@shared/types/tape-event";
 import { tapeClassLabel } from "@/lib/tape-class-style";
+import { PSI_CONDITION_BANDS } from "@shared/lib/psi-policy";
 
 const DIGEST_THRESHOLD = 3;
+const PSI_BAND_RANK: Readonly<Record<string, number>> = Object.fromEntries(
+  PSI_CONDITION_BANDS.map(({ band }, rank) => [band, rank]),
+);
 
 export interface DigestedClass {
   classSlug: string;
@@ -65,14 +69,31 @@ function depegSummary(events: readonly TapeEvent[]): string {
 }
 
 function freezeSummary(events: readonly TapeEvent[]): string {
-  let totalUsd = 0;
-  for (const e of events) {
-    const amount = e.payload?.amountUsdAtEvent;
-    if (typeof amount === "number" && amount > 0) totalUsd += amount;
+  const amounts = new Map<string, { totalUsd: number; valued: number; missing: number }>();
+  for (const event of events) {
+    const action = event.type === "freeze.blocked" ? "frozen"
+      : event.type === "freeze.unblocked" ? "released"
+      : event.type === "freeze.destroyed" ? "destroyed" : null;
+    if (!action) continue;
+    const group = amounts.get(action) ?? { totalUsd: 0, valued: 0, missing: 0 };
+    const amount = event.payload?.amountUsdAtEvent;
+    if (typeof amount === "number" && Number.isFinite(amount) && amount >= 0) {
+      group.totalUsd += amount;
+      group.valued += 1;
+    } else {
+      group.missing += 1;
+    }
+    amounts.set(action, group);
   }
-  const tickers = formatTopTickers(events);
-  const usd = totalUsd > 0 ? `${formatCompactUsd(totalUsd)} frozen` : "";
-  return [tickers, usd].filter(Boolean).join(" · ");
+  const parts = [formatTopTickers(events)];
+  for (const action of ["frozen", "released", "destroyed"]) {
+    const group = amounts.get(action);
+    if (!group) continue;
+    const amount = group.valued > 0 ? formatCompactUsd(group.totalUsd) : "USD unavailable";
+    const incomplete = group.missing > 0 ? ` (valuation incomplete: ${group.missing} unpriced)` : "";
+    parts.push(`${amount} ${action}${incomplete}`);
+  }
+  return parts.filter(Boolean).join(" · ");
 }
 
 function scoreSummary(events: readonly TapeEvent[]): string {
@@ -104,21 +125,19 @@ function psiSummary(events: readonly TapeEvent[]): string {
   // PSI is a single global series — recap reads the worst band touched and
   // the latest transition direction.
   let worstBand = "";
+  let worstRank = -1;
   for (const e of events) {
     const newBand = e.payload?.newBand;
     if (typeof newBand === "string" && newBand.length > 0) {
-      if (!worstBand || severityForBand(newBand) > severityForBand(worstBand)) {
+      const rank = Object.hasOwn(PSI_BAND_RANK, newBand) ? PSI_BAND_RANK[newBand] : -1;
+      if (!worstBand || rank > worstRank) {
         worstBand = newBand;
+        worstRank = rank;
       }
     }
   }
   if (!worstBand) return "";
   return `worst band ${worstBand}`;
-}
-
-function severityForBand(band: string): number {
-  const order = ["BEDROCK", "STEADY", "TREMOR", "FRACTURE", "CRISIS", "MELTDOWN"];
-  return order.indexOf(band);
 }
 
 function yieldSummary(events: readonly TapeEvent[]): string {

@@ -1,5 +1,5 @@
 import { DatabaseSync } from "node:sqlite";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { StablecoinsCacheLoadResult } from "../../../../lib/stablecoins-cache";
 import {
   serializePendingAlertScope,
@@ -16,6 +16,10 @@ import type { PendingAlertRow } from "../types";
 import { emptyAlerts, expandSubscriberChunks } from "../../dispatch/dispatch-telegram-routing";
 import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
 import { insertTelegramSubscriber } from "../../dispatch/__tests__/telegram-subscriber.test-support";
+import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import { buildActiveAlertSafetyV9SourceEnvelope } from "../../../../lib/alert-safety-source-cache";
+import { makeWorkerReportCardsV9Response } from "../../../../test-helpers/report-cards-v9";
+import { TELEGRAM_ALERT_TYPES } from "@shared/types/status";
 
 const NOW = 1_800_000_000;
 const CHAT_ID = "42";
@@ -191,6 +195,89 @@ describe("pending Telegram preference revalidation", () => {
     db = createSqliteD1(sqlite);
   });
   afterEach(() => sqlite.close());
+
+  it.each(TELEGRAM_ALERT_TYPES)("revalidates %s global/direct enablement and explicit off", async (family) => {
+    insertTelegramSubscriber(sqlite, {
+      chatId: CHAT_ID, createdAt: 0, lastActiveAt: 0, global: { [family]: true },
+    });
+    const response = makeWorkerReportCardsV9Response({ updatedAt: NOW });
+    const insert = sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)");
+    insert.run("alert-safety-v9-source", JSON.stringify(buildActiveAlertSafetyV9SourceEnvelope(response)), NOW);
+    insert.run("report-cards:v9:publication-health", stableJsonStringifyV1(response.publicationHealth), NOW);
+    const row = pendingRow({
+      scope: [{ stablecoinId: COIN_ID, family }], safetyScoreIdentity: response.safetyScoreIdentity,
+    });
+    expect(await evaluate(row)).toMatchObject({ kind: "eligible" });
+    sqlite.prepare(`INSERT INTO telegram_subscriptions
+      (chat_id, stablecoin_id, alert_${family}, alert_${family}_override) VALUES (?, ?, 1, 1)`).run(CHAT_ID, COIN_ID);
+    sqlite.prepare(`UPDATE telegram_subscribers SET global_alert_${family} = 0 WHERE chat_id = ?`).run(CHAT_ID);
+    expect(await evaluate(row)).toMatchObject({ kind: "eligible" });
+    sqlite.prepare(`UPDATE telegram_subscriptions SET alert_${family} = 0 WHERE chat_id = ?`).run(CHAT_ID);
+    expect(await evaluate(row)).toMatchObject({ kind: "cancel", reason: "scope_disabled" });
+  });
+
+  it.each(["missing", "held", "stale", "health-read"] as const)(
+    "defers %s safety evidence and admits unchanged-identity recovery",
+    async (failure) => {
+      insertTelegramSubscriber(sqlite, {
+        chatId: CHAT_ID, createdAt: 0, lastActiveAt: 0, global: { safety: true },
+      });
+      const response = makeWorkerReportCardsV9Response({ updatedAt: NOW });
+      const envelope = buildActiveAlertSafetyV9SourceEnvelope(response)!;
+      const insert = sqlite.prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)");
+      const seedHealthy = () => {
+        insert.run("alert-safety-v9-source", JSON.stringify(envelope), NOW);
+        insert.run("report-cards:v9:publication-health", stableJsonStringifyV1(response.publicationHealth), NOW);
+      };
+      seedHealthy();
+      if (failure === "missing") sqlite.prepare("DELETE FROM cache WHERE key = 'alert-safety-v9-source'").run();
+      if (failure === "held") insert.run("report-cards:v9:publication-health", stableJsonStringifyV1({
+        ...response.publicationHealth, status: "held", heldSinceSec: NOW, reasons: [{ code: "dex-stale" }],
+      }), NOW);
+      if (failure === "stale") insert.run("alert-safety-v9-source", JSON.stringify({
+        ...envelope, publishedAt: NOW - 6 * 3600 - 1,
+      }), NOW);
+      const prepare = db.prepare.bind(db);
+      const spy = vi.spyOn(db, "prepare").mockImplementation((sql) => {
+        const statement = prepare(sql);
+        const bind = statement.bind.bind(statement);
+        statement.bind = (...args: unknown[]) => {
+          const bound = bind(...args);
+          if (failure === "health-read" && args[0] === "report-cards:v9:publication-health") {
+            bound.first = async () => { throw new Error("transient health read"); };
+          }
+          return bound;
+        };
+        return statement;
+      });
+      const row = pendingRow({
+        scope: [{ stablecoinId: COIN_ID, family: "safety" }],
+        safetyScoreIdentity: response.safetyScoreIdentity,
+      });
+      try {
+        expect(await evaluate(row)).toMatchObject({
+          kind: "defer", notBeforeAt: NOW + 300,
+          reason: failure === "missing" ? "v9-snapshot-unavailable"
+            : failure === "held" ? "v9-publication-held"
+            : failure === "stale" ? "v9-snapshot-stale" : "v9-snapshot-read-failed",
+        });
+      } finally { spy.mockRestore(); }
+      seedHealthy();
+      expect(await evaluate(row)).toMatchObject({ kind: "eligible" });
+      expect(row.expires_at).toBe(NOW + 3_000);
+    },
+  );
+
+  it("cancels proven incompatible safety build identity", async () => {
+    const response = makeWorkerReportCardsV9Response({ updatedAt: NOW });
+    const insert = sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)");
+    insert.run("alert-safety-v9-source", JSON.stringify(buildActiveAlertSafetyV9SourceEnvelope(response)), NOW);
+    insert.run("report-cards:v9:publication-health", stableJsonStringifyV1(response.publicationHealth), NOW);
+    expect(await evaluate(pendingRow({
+      scope: [{ stablecoinId: COIN_ID, family: "safety" }],
+      safetyScoreIdentity: { ...response.safetyScoreIdentity, evaluationBuildDigest: "f".repeat(64) },
+    }))).toMatchObject({ kind: "cancel", reason: "safety_identity_changed" });
+  });
 
   it("allows an unchanged direct subscription", async () => {
     insertSubscriber({ generation: 4 });

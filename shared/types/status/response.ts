@@ -39,6 +39,7 @@ export type StatusSectionKey =
   | "reserveComposition"
   | "dataQuality"
   | "summary"
+  | "crons"
   | "statusTransitions"
   | "schedulerLiveness"
   | "workerVersions"
@@ -98,6 +99,7 @@ const StatusSummarySchema = z.object({
    */
   transitionsLast24h: z.number().nullable(),
   transitionsUnavailableReason: z.enum(["db-unavailable", "status-transitions-read-failed"]).nullable().optional(),
+  cronHistoryUnavailableReason: z.literal("cron-history-read-failed").nullable().optional(),
   unavailableReason: z.literal("db-unavailable").nullable().optional(),
 });
 

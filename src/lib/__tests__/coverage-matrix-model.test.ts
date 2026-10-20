@@ -8,6 +8,7 @@ import {
   type CoverageMatrixQueryKey,
 } from "@/lib/coverage-matrix-model";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
+import { makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
 
 /**
  * Field-checked partial: a renamed or reshaped production field fails to
@@ -63,6 +64,36 @@ function trackedMeta(id: string): StablecoinClientMeta {
 }
 
 describe("buildCoverageMatrixModel", () => {
+  it("preserves published safety membership and excludes technical gaps from known reach", () => {
+    const ids = ["usdc-circle", "usdt-tether", "dai-makerdao", "lusd-liquity"];
+    const input = makeMatrixInput({
+      activeStablecoins: ids.map(trackedMeta),
+      stablecoins: { peggedAssets: ids.map((id) => ({ id, circulating: { peggedUSD: 100 } })) },
+      reportCards: makeReportCardsV9Response({ cards: [
+        makeV9Card({ id: ids[0], score: 0, ratingStatus: "rated" }),
+        makeV9Card({ id: ids[1], score: null, ratingStatus: "not-rated" }),
+        makeReportCardsV9PipelineGapCard("control", "A", { id: ids[2] }),
+      ] }),
+    });
+    const model = buildCoverageMatrixModel(input);
+    expect(model.rows.map((row) => row.statuses.safety.kind)).toEqual(["rated", "nr", "data-unavailable", "data-unavailable"]);
+    expect(model.rows[2].statuses.safety.detail).toContain("single-pillar-pipeline-gap");
+    expect(model.featureSummaries.find((summary) => summary.feature.key === "safety")).toMatchObject({
+      availableCount: 1, totalCount: 2, coveragePct: 50, mcapSharePct: 50,
+      breakdown: [
+        { key: "rated", label: "rated", count: 1 },
+        { key: "nr", label: "NR", count: 1 },
+        { key: "data-unavailable", label: "data n/a", count: 2 },
+      ],
+    });
+    input.reportCards = { data: undefined, dataUpdatedAt: 0, error: new Error("unavailable"), meta: null };
+    const unavailable = buildCoverageMatrixModel(input);
+    expect(unavailable.rows.every((row) => row.statuses.safety.kind === "data-unavailable")).toBe(true);
+    expect(unavailable.featureSummaries.find((summary) => summary.feature.key === "safety")).toMatchObject({
+      availableCount: 0, totalCount: 0, coveragePct: null, mcapSharePct: null,
+    });
+  });
+
   it("joins compliance profiles onto compact registry rows and aggregates assessed coverage", () => {
     const model = buildCoverageMatrixModel(
       makeMatrixInput({

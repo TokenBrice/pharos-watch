@@ -52,6 +52,29 @@ function makeActiveRecord(overrides: Partial<BlacklistActiveRecord> = {}): Black
 }
 
 describe("buildBlacklistActiveRecords", () => {
+  it.each(["ethereum", "tron"])("retains successful %s ledger amounts after refresh failure", (chainId) => {
+    const event = makeEvent({ chainId, address: "0xabc", amountUsdAtEvent: 999 });
+    for (const amount of [250, 0]) {
+      const snapshot = makeSnapshot({
+        chainId, address: event.address, amountNative: amount, amountUsd: amount,
+        status: "provider_failed", observedAt: 20, lastSuccessfulObservedAt: 20,
+        lastAttemptedAt: 30, lastErrorClass: "provider_timeout",
+      });
+      const records = buildBlacklistActiveRecords([event], new Map([[buildBlacklistRecordIdentityKey(event), snapshot]]));
+      expect(records[0]?.frozenAmountUsd).toBe(amount);
+      expect(computeBlacklistActiveSummaryStats(records)).toMatchObject({ activeFrozenTotal: amount, activeAmountGapCount: 0 });
+      expect(snapshot).toMatchObject({ status: "provider_failed", observedAt: 20, lastAttemptedAt: 30 });
+      const legacySnapshot = { ...snapshot, lastSuccessfulObservedAt: null };
+      expect(buildBlacklistActiveRecords([event], new Map([[buildBlacklistRecordIdentityKey(event), legacySnapshot]]))[0]?.frozenAmountUsd)
+        .toBe(amount);
+    }
+    const failedFirstRead = makeSnapshot({
+      chainId, amountNative: null, amountUsd: null, status: "provider_failed", lastSuccessfulObservedAt: null,
+    });
+    expect(buildBlacklistActiveRecords([event], new Map([[buildBlacklistRecordIdentityKey(event), failedFirstRead]]))[0]?.frozenAmountUsd)
+      .toBe(chainId === "tron" ? null : 999);
+  });
+
   it.each([["0xf", "0x10"], ["9", "10"]])("uses numeric block-global positions %s then %s across transactions", (first, second) => {
     const freeze = makeEvent({ id: `ethereum-0xff-${first}`, txHash: "0xff" });
     const release = makeEvent({ id: `ethereum-0xaa-${second}`, txHash: "0xaa", eventType: "unblacklist" });

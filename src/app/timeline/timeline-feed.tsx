@@ -10,10 +10,12 @@ import {
   type TapeEvent,
 } from "@shared/types/tape-event";
 import type { ApiMeta } from "@/lib/api";
+import type { DepegEvent } from "@shared/types";
+import type { DataHealthInfo } from "@/lib/data-health";
 import type { DigestedDay } from "@/lib/tape-digest";
 import type { TapeFilterState } from "@/components/tape/tape-filters";
 import type { ActiveFilterChip, TimelineFeedController } from "./timeline-controller";
-import { bucketByDay, eventDomId } from "./timeline-feed-helpers";
+import { eventDomId } from "./timeline-feed-helpers";
 import { DayDigestSection, EmptyState, EventSkeleton, OpenIncidentsSection } from "./timeline-feed-sections";
 import { getLogoSrc } from "@/lib/logos";
 
@@ -24,7 +26,10 @@ interface TimelineFeedProps {
   nowMs: number;
   rawEvents: readonly TapeEvent[];
   visibleEvents: readonly TapeEvent[];
-  openIncidents: readonly TapeEvent[];
+  openIncidents: readonly DepegEvent[] | null;
+  activeStatus: "available" | "loading" | "incomplete" | "unavailable";
+  activeHealth: DataHealthInfo;
+  refetchActive: () => void;
   digestedDays: readonly DigestedDay[];
   isLoading: boolean;
   error: Error | null;
@@ -54,6 +59,9 @@ export function TimelineFeed({
   rawEvents,
   visibleEvents,
   openIncidents,
+  activeStatus,
+  activeHealth,
+  refetchActive,
   digestedDays,
   isLoading,
   error,
@@ -74,7 +82,6 @@ export function TimelineFeed({
   onLoadMore,
   sentinelRef,
 }: TimelineFeedProps) {
-  const openCountByDay = bucketByDay(openIncidents);
   const lastEventTs = rawEvents.length > 0 ? rawEvents[0].ts : null;
 
   return (
@@ -103,9 +110,14 @@ export function TimelineFeed({
         </div>
       ) : null}
 
-      {openIncidents.length > 0 ? (
-        <OpenIncidentsSection incidents={openIncidents} logos={logos} nowMs={nowMs} />
-      ) : null}
+      <OpenIncidentsSection
+        incidents={openIncidents}
+        status={activeStatus}
+        health={activeHealth}
+        onRetry={refetchActive}
+        logos={logos}
+        nowMs={nowMs}
+      />
 
       {/* Discrete sr-only announcer for paginated loads (T1.4). The feed
           wrapper below intentionally omits `aria-live` so each Load More
@@ -126,6 +138,7 @@ export function TimelineFeed({
               </p>
               <EventCard
                 event={bufferEvent}
+                nowMs={nowMs}
                 logoSrc={bufferEvent.coinId ? getLogoSrc(logos, bufferEvent.coinId) : undefined}
                 highlighted={highlightedId === bufferEvent.id}
                 domId={eventDomId(bufferEvent.id)}
@@ -157,7 +170,6 @@ export function TimelineFeed({
                   nowMs={nowMs}
                   logos={logos}
                   highlightedId={highlightedId}
-                  openCount={openCountByDay.get(day.dayKey) ?? 0}
                 />
               ))}
               {hasNextPage ? (

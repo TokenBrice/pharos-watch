@@ -7,6 +7,8 @@ import { handleDetailSnapshotInputs } from "../snapshot-inputs";
 import { evaluateAccessGate } from "../../../handlers/http/gates";
 import { createWorkerEnv } from "../../../test-helpers/__shared/worker-env";
 import { PUBLIC_STATIC_ROUTES } from "../../../routes/public-routes";
+import * as supplyHistoryApi from "../../supply-history";
+import * as detailPrice from "../price";
 
 const NOW = 1_800_000_000;
 const DAY = 86_400;
@@ -20,7 +22,7 @@ const detail = {
   research: "never transferred",
 };
 
-function makeDb(options: { detailBody?: string; age?: number; marker?: boolean; publication?: boolean } = {}) {
+function makeDb(options: { detailBody?: string; age?: number; marker?: boolean; publication?: boolean; healthyUsdc?: boolean } = {}) {
   const canonical = {
     id: "usdt-tether", name: "Tether", symbol: "USDT", pegType: "peggedUSD", pegMechanism: "fiat-backed",
     price: 0.997, priceSource: "coingecko", priceConfidence: "high", priceUpdatedAt: NOW - 70,
@@ -38,6 +40,9 @@ function makeDb(options: { detailBody?: string; age?: number; marker?: boolean; 
     { match: "cache", matchBinds: ["detail:usdt-tether"], rows: [], first: {
       value: options.detailBody ?? JSON.stringify(detail), updated_at: NOW - (options.age ?? 30),
     } },
+    { match: "cache", matchBinds: ["detail:usdc-circle"], rows: [], first: options.healthyUsdc ? {
+      value: JSON.stringify({ price: 1 }), updated_at: NOW - 30,
+    } : null },
     { match: "supply_history", rows: [{ snapshot_date: NOW - DAY, circulating_usd: 90, price: 1 }] },
     { match: "cache", rows: [], first: null },
   ]);
@@ -76,6 +81,27 @@ describe("cache-only detail snapshot inputs", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
+  it("keeps malformed selected cached checkpoints unavailable and observed zero intact", async () => {
+    const tokens = [
+      { date: NOW - 60 - 7 * DAY - 1, totalCirculatingUSD: { peggedUSD: 80 }, totalCirculating: { peggedUSD: 81 } },
+      { date: NOW - 60 - 7 * DAY, totalCirculatingUSD: { peggedUSD: -1 }, totalCirculating: { peggedUSD: -1 } },
+      { date: NOW - 60 - 30 * DAY, totalCirculatingUSD: { peggedUSD: 0 }, totalCirculating: { peggedUSD: 0 } },
+    ];
+    const response = await handleDetailSnapshotInputs(makeDb({ detailBody: JSON.stringify({ ...detail, tokens }) }),
+      new URL(API_PATHS.stablecoinDetailSnapshotInputs(["usdt-tether"]), "https://site-api.pharos.watch"));
+    const body = DetailSnapshotInputsResponseSchema.parse(await response.json());
+    expect(body).toMatchObject({ entries: [{
+      id: "usdt-tether", status: "available",
+      liveSummary: { circulating: { peggedUSD: 100 }, circulatingPrevDay: { peggedUSD: 99 },
+        circulatingPrevWeek: {}, circulatingPrevMonth: { peggedUSD: 0 },
+        nativeSupply: { current: 100 / 0.997, prevWeek: null, prevMonth: 0 } },
+    }] });
+    const entry = body.entries[0];
+    if (entry.status !== "available") throw new Error("Expected available projected inputs");
+    expect(entry.liveSummary.circulatingPrevWeek).toEqual({});
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it("retains absolute source clocks when cache reads cross HTTP second boundaries", async () => {
     let tick = 0;
     vi.mocked(Date.now).mockImplementation(() => (NOW + tick++) * 1000);
@@ -85,6 +111,29 @@ describe("cache-only detail snapshot inputs", () => {
       status: "available",
       updatedAt: { liveSummary: (NOW - 60) * 1000, supplyHistory: (NOW - 120) * 1000 },
     }] });
+  });
+
+  it.each(["liveSummary", "supplyHistory"] as const)("isolates an unproven %s clock without weakening available entries", async (lane) => {
+    if (lane === "liveSummary") {
+      vi.spyOn(detailPrice, "enrichMissingDetailPrice").mockResolvedValueOnce(Response.json({ price: 1 }));
+    } else {
+      vi.spyOn(supplyHistoryApi, "handleSupplyHistory").mockResolvedValueOnce(Response.json([], {
+        headers: { Date: new Date(NOW * 1000).toUTCString() },
+      }));
+    }
+    const response = await handleDetailSnapshotInputs(makeDb({ healthyUsdc: true }),
+      new URL(API_PATHS.stablecoinDetailSnapshotInputs(["usdt-tether", "usdc-circle"]), "https://site-api.pharos.watch"));
+    const body = DetailSnapshotInputsResponseSchema.parse(await response.json());
+    expect(body.entries[0]).toMatchObject({ id: "usdt-tether", status: "unavailable", reason: "source-clock-unavailable" });
+    expect(body.entries[0]).not.toHaveProperty("freshness");
+    expect(body.entries[0]).not.toHaveProperty("updatedAt");
+    expect(body.entries[1]).toMatchObject({ id: "usdc-circle", status: "available",
+      updatedAt: { liveSummary: (NOW - 30) * 1000, supplyHistory: (NOW - 120) * 1000 } });
+    const healthy = body.entries[1];
+    expect(DetailSnapshotInputsResponseSchema.safeParse({ version: 1, entries: [{
+      ...healthy, updatedAt: { liveSummary: null, supplyHistory: null },
+    }] }).success).toBe(false);
+    expect(fetch).not.toHaveBeenCalled();
   });
 
   it.each([

@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import type { StatusCause } from "@shared/types/status";
+import { PublicStatusHistoryResponseSchema } from "@shared/types/status";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { makePublicHealth } from "../../lib/__tests__/public-health.test-support";
 import { makeDb, readHistory, transition } from "./public-status-history.test-support";
 
@@ -14,6 +16,7 @@ vi.mock("../../lib/public-health-assessment", async (importOriginal) => ({
 }));
 
 const { handlePublicStatusHistory } = await import("../public-status-history");
+const fixtures = createLatestSchemaFixtureTracker();
 
 
 describe("handlePublicStatusHistory", () => {
@@ -27,6 +30,7 @@ describe("handlePublicStatusHistory", () => {
   });
 
   afterEach(() => {
+    fixtures.closeAll();
     vi.useRealTimers();
     vi.restoreAllMocks();
   });
@@ -64,6 +68,7 @@ describe("handlePublicStatusHistory", () => {
         },
       },
       { match: "pharos:public-status-transitions", rows: [] },
+      { match: "pharos:public-status-boundary", rows: [], first: null },
     ]);
     const res = await handlePublicStatusHistory(db, new Request("https://pharos.watch/api/public-status-history"));
     expect(res.status).toBe(200);
@@ -84,6 +89,79 @@ describe("handlePublicStatusHistory", () => {
       transitions: [],
       lastChangedAt: null,
     });
+  });
+
+  it.each(["valid", "malformed"] as const)("admits only a complete latest persisted boundary (%s)", async (scenario) => {
+    const now = Math.floor(Date.now() / 1000);
+    const from = now - 86_400;
+    const { sqlite, db } = fixtures.open();
+    const insert = sqlite.prepare(`INSERT INTO status_transitions
+      (scope, previous_status, next_status, raw_status, transition_type, reason, confidence, causes_json, created_at)
+      VALUES (?, 'healthy', 'degraded', 'degraded', 'degrade', 'public-projection-changed', 1, ?, ?)`);
+    const snapshot = (components: unknown[]) => JSON.stringify({
+      version: 1, headline: { state: "degraded", title: "Degraded", affected: ["yield"] }, components,
+    });
+    const components = [{ id: "yield", state: "outage", reasons: ["cache:yield-data:outage"] }];
+    insert.run("public", snapshot([]), from - 3600);
+    insert.run("public", snapshot([]), from);
+    // Equal-clock order, scope and strict payload admission all affect the selected seed.
+    insert.run("public", scenario === "malformed" ? "{}" : snapshot(components), from);
+    insert.run("global", snapshot([]), from);
+    const response = await handlePublicStatusHistory(
+      db, new Request("https://pharos.watch/api/public-status-history?window=24h&limit=1"),
+    );
+    expect(response.status).toBe(200);
+    const body = PublicStatusHistoryResponseSchema.parse(await response.json());
+    // The exact-boundary rows are also in-window rows, so use a larger page below for seed admission.
+    expect(body.hasMore).toBe(true);
+    expect(body.boundary).toBeNull();
+    const completeResponse = await handlePublicStatusHistory(
+      db, new Request("https://pharos.watch/api/public-status-history?window=24h&limit=20"),
+    );
+    const complete = PublicStatusHistoryResponseSchema.parse(await completeResponse.json());
+    expect(complete.hasMore).toBe(false);
+    expect(complete.boundary).toEqual(scenario === "malformed" ? null : { at: from, components });
+    expect(complete.transitions.every(({ source }) => source === "public")).toBe(true);
+  });
+
+  it("serves the persisted seed for a quiet window independently of a new live incident", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const at = now - 2 * 86_400;
+    const { sqlite, db } = fixtures.open();
+    sqlite.prepare(`INSERT INTO status_transitions
+      (scope, previous_status, next_status, raw_status, transition_type, reason, confidence, causes_json, created_at)
+      VALUES ('public', NULL, 'healthy', 'healthy', 'init', 'public-projection-initialized', 1, ?, ?)`).run(JSON.stringify({
+      version: 1, headline: { state: "operational", title: "Operational", affected: [] }, components: [],
+    }), at);
+    assessPublicHealthMock.mockResolvedValue(makePublicHealth("stale"));
+    const response = await handlePublicStatusHistory(
+      db, new Request("https://pharos.watch/api/public-status-history?window=24h"),
+    );
+    expect(response.status).toBe(200);
+    const body = PublicStatusHistoryResponseSchema.parse(await response.json());
+    expect(body).toMatchObject({
+      currentStatus: "stale", boundary: { at, components: [] }, transitions: [], hasMore: false,
+    });
+  });
+
+  it("does not use current persisted state or legacy rows as a missing public boundary", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const { sqlite, db } = fixtures.open();
+    sqlite.prepare(`INSERT INTO status_state
+      (scope, current_status, raw_status, last_evaluated_at, last_changed_at, causes_json, updated_at)
+      VALUES ('public', 'healthy', 'healthy', ?, ?, ?, ?)`).run(now, now, JSON.stringify({
+      version: 1, headline: { state: "operational", title: "Operational", affected: [] },
+      components: [{ id: "yield", state: "operational", since: null, reasons: [] }],
+    }), now);
+    sqlite.prepare(`INSERT INTO status_transitions
+      (scope, previous_status, next_status, raw_status, transition_type, reason, confidence, causes_json, created_at)
+      VALUES ('global', NULL, 'healthy', 'healthy', 'init', 'operator-initialized', 1, '[]', ?)`).run(now - 2 * 86_400);
+    const response = await handlePublicStatusHistory(
+      db, new Request("https://pharos.watch/api/public-status-history?window=24h"),
+    );
+    expect(response.status).toBe(200);
+    const body = PublicStatusHistoryResponseSchema.parse(await response.json());
+    expect(body).toMatchObject({ boundary: null, transitions: [], hasMore: false });
   });
 
   it("filters transitions to the requested time window", async () => {

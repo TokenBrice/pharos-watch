@@ -15,13 +15,11 @@ export interface OperationalActivityEntry {
   outcome: "ok" | "error" | "unknown" | "recorded";
   httpStatus: number | null;
   detail: unknown;
-  lifecycleIdentity: { verb: string; apiKeyId: number } | null;
 }
 
 export interface OperationalActivityView {
   entries: OperationalActivityEntry[];
   rawEntryCount: number;
-  deduplicatedCount: number;
 }
 
 const SENSITIVE_DETAIL_KEYS = new Set([
@@ -43,7 +41,6 @@ const MAX_DETAIL_DEPTH = 5;
 const MAX_DETAIL_ARRAY_ITEMS = 20;
 const MAX_DETAIL_OBJECT_KEYS = 30;
 const MAX_DETAIL_STRING_LENGTH = 500;
-const LIFECYCLE_DEDUPE_WINDOW_SECONDS = 5;
 
 function normalizeKey(key: string): string {
   return key.toLowerCase().replace(/[^a-z0-9]/gu, "");
@@ -94,50 +91,6 @@ export function sanitizeOperationalDetail(value: unknown, depth = 0, parentKey =
   return Object.fromEntries(entries);
 }
 
-function readPositiveInteger(value: unknown): number | null {
-  if (typeof value === "number" && Number.isInteger(value) && value > 0) return value;
-  if (typeof value === "string" && /^\d+$/u.test(value.trim())) {
-    const parsed = Number.parseInt(value, 10);
-    return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null;
-  }
-  return null;
-}
-
-function readApiKeyId(details: unknown, target: string | null): number | null {
-  const record = readRecord(details);
-  const keyRecord = readRecord(record?.key);
-  for (const candidate of [record?.apiKeyId, record?.keyId, record?.api_key_id, keyRecord?.id]) {
-    const parsed = readPositiveInteger(candidate);
-    if (parsed != null) return parsed;
-  }
-  if (!target) return null;
-  const match = target.match(/(?:api\s*key|key|id)[^0-9]*(\d+)/iu) ?? target.match(/^\s*(\d+)\s*$/u);
-  return readPositiveInteger(match?.[1]);
-}
-
-function canonicalLifecycleVerb(actionText: string): string | null {
-  const normalized = actionText.toLowerCase();
-  if (/rotat/iu.test(normalized)) return "rotated";
-  if (/deactivat|revok/iu.test(normalized)) return "deactivated";
-  if (/updat|edit/iu.test(normalized)) return "updated";
-  if (/creat|issu/iu.test(normalized)) return "created";
-  return null;
-}
-
-function adminLifecycleIdentity(entry: AdminActionAuditEntry): OperationalActivityEntry["lifecycleIdentity"] {
-  const details = readRecord(entry.details);
-  const actionText = [
-    entry.action,
-    typeof details?.action === "string" ? details.action : "",
-    typeof details?.actionPath === "string" ? details.actionPath : "",
-    typeof details?.path === "string" ? details.path : "",
-  ].join(" ");
-  if (!/api[-_ /]?keys?/iu.test(actionText)) return null;
-  const verb = canonicalLifecycleVerb(actionText);
-  const apiKeyId = readApiKeyId(entry.details, entry.target);
-  return verb && apiKeyId != null ? { verb, apiKeyId } : null;
-}
-
 function humanizeAction(action: string): string {
   const words = action
     .trim()
@@ -180,7 +133,6 @@ function buildAdminActivity(entry: AdminActionAuditEntry): OperationalActivityEn
     outcome: adminActionOutcome(entry),
     httpStatus: entry.httpStatus,
     detail: sanitizeOperationalDetail(entry.details),
-    lifecycleIdentity: adminLifecycleIdentity(entry),
   };
 }
 
@@ -197,45 +149,6 @@ function buildCredentialActivity(entry: ApiKeyAuditEntry): OperationalActivityEn
     outcome: "recorded",
     httpStatus: null,
     detail: sanitizeOperationalDetail(entry.detail),
-    lifecycleIdentity: {
-      verb: canonicalLifecycleVerb(entry.action) ?? entry.action.trim().toLowerCase(),
-      apiKeyId: entry.apiKeyId,
-    },
-  };
-}
-
-function isCrossSourceLifecycleDuplicate(left: OperationalActivityEntry, right: OperationalActivityEntry): boolean {
-  if (!left.lifecycleIdentity || !right.lifecycleIdentity) return false;
-  if (left.sources.some((source) => right.sources.includes(source))) return false;
-  return (
-    left.lifecycleIdentity.verb === right.lifecycleIdentity.verb &&
-    left.lifecycleIdentity.apiKeyId === right.lifecycleIdentity.apiKeyId &&
-    Math.abs(left.at - right.at) <= LIFECYCLE_DEDUPE_WINDOW_SECONDS
-  );
-}
-
-function mergeDuplicateActivity(
-  left: OperationalActivityEntry,
-  right: OperationalActivityEntry,
-): OperationalActivityEntry {
-  const admin = left.sources.includes("admin-action") ? left : right;
-  const credential = left.sources.includes("credential-audit") ? left : right;
-  const detailEntries: Array<readonly [string, unknown]> = [];
-  if (admin.detail != null) detailEntries.push(["adminAction", admin.detail]);
-  if (credential.detail != null) detailEntries.push(["credentialAudit", credential.detail]);
-  const details = Object.fromEntries(detailEntries);
-  return {
-    id: `combined:${admin.id}:${credential.id}`,
-    sources: ["admin-action", "credential-audit"],
-    at: Math.max(left.at, right.at),
-    actors: [...new Set([...left.actors, ...right.actors])],
-    actionCode: credential.actionCode,
-    actionLabel: credential.actionLabel,
-    target: credential.target !== "Unknown target" ? credential.target : admin.target,
-    outcome: admin.outcome,
-    httpStatus: admin.httpStatus,
-    detail: Object.keys(details).length > 0 ? details : null,
-    lifecycleIdentity: credential.lifecycleIdentity,
   };
 }
 
@@ -243,28 +156,14 @@ export function buildOperationalActivityView(
   adminEntries: readonly AdminActionAuditEntry[],
   credentialEntries: readonly ApiKeyAuditEntry[],
 ): OperationalActivityView {
-  const merged: OperationalActivityEntry[] = [];
-  const candidates = [...adminEntries.map(buildAdminActivity), ...credentialEntries.map(buildCredentialActivity)].sort(
+  // The stores expose no shared durable mutation identity. A matching key,
+  // action, actor or timestamp cannot prove that two rows describe one request.
+  const entries = [...adminEntries.map(buildAdminActivity), ...credentialEntries.map(buildCredentialActivity)].sort(
     (left, right) => right.at - left.at || left.id.localeCompare(right.id),
   );
-
-  let deduplicatedCount = 0;
-  for (const candidate of candidates) {
-    const duplicateIndex = merged.findIndex((existing) => isCrossSourceLifecycleDuplicate(existing, candidate));
-    if (duplicateIndex < 0) {
-      merged.push(candidate);
-      continue;
-    }
-    const existing = merged[duplicateIndex];
-    if (existing) merged[duplicateIndex] = mergeDuplicateActivity(existing, candidate);
-    deduplicatedCount += 1;
-  }
-
-  merged.sort((left, right) => right.at - left.at || left.id.localeCompare(right.id));
   return {
-    entries: merged,
-    rawEntryCount: candidates.length,
-    deduplicatedCount,
+    entries,
+    rawEntryCount: entries.length,
   };
 }
 

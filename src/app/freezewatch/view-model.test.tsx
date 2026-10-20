@@ -169,6 +169,70 @@ describe("useFreezeWatchPageController", () => {
     expect(result.current.canPreviousPage).toBe(false);
   });
 
+  it.each(["", "?stablecoin=USDT&chain=tron&event=destroy&sortBy=event&sortDirection=asc&q=abc&status=yes"])(
+    "selects both lattice filters in one replacement and resets the cursor from %s",
+    (search) => {
+      currentSearch = search;
+      const { result, rerender } = renderHook(() => useFreezeWatchPageController());
+      act(() => result.current.handleNextPage());
+      expect(result.current.page).toBe(2);
+      useBlacklistEventsPageMock.mockClear();
+      act(() => result.current.handleLatticeSelection({ stablecoin: "USDC", chainId: "ethereum" }));
+      expect(replaceParamsMock).toHaveBeenCalledOnce();
+      rerender();
+      const params = new URLSearchParams(currentSearch);
+      expect(params.get("stablecoin")).toBe("USDC");
+      expect(params.get("chain")).toBe("ethereum");
+      expect(params.get("event")).toBe(search ? "destroy" : null);
+      expect(params.get("q")).toBe(search ? "abc" : null);
+      expect(params.get("status")).toBe(search ? "yes" : null);
+      expect(result.current.page).toBe(1);
+      expect(result.current.canPreviousPage).toBe(false);
+      expect(useBlacklistEventsPageMock.mock.calls.every(([query]) =>
+        query.stablecoin === "USDC" && query.chainName === "Ethereum" && query.cursor === undefined,
+      )).toBe(true);
+      expect(trackEventMock).toHaveBeenCalledWith("filter_applied", {
+        page: "freezewatch", filter_type: "stablecoin", filter_value: "USDC",
+      });
+      expect(trackEventMock).toHaveBeenCalledWith("filter_applied", {
+        page: "freezewatch", filter_type: "chain", filter_value: "ethereum",
+      });
+    },
+  );
+
+  it("keeps all four freshness clocks, budgets and errors bound to their own source", () => {
+    const supplyMeta = { updatedAt: 1_700_000_000, status: "fresh", freshBudgetSec: 900, degradedBudgetSec: 1800 };
+    const scoreMeta = { updatedAt: 1_699_900_000, status: "stale", freshBudgetSec: 86400 };
+    const supplyError = new Error("supply refresh failed");
+    const scoreError = new Error("scores refresh failed");
+    useStablecoinsMock.mockReturnValue({
+      data: { peggedAssets: [] }, dataUpdatedAt: 901, isLoading: false,
+      error: supplyError, meta: supplyMeta, refetch: vi.fn(),
+    });
+    useReportCardsV9Mock.mockReturnValue({
+      data: { cards: [] }, dataUpdatedAt: 902, isLoading: false,
+      error: scoreError, meta: scoreMeta, refetch: vi.fn(),
+    });
+    const { result, rerender } = renderHook(() => useFreezeWatchPageController());
+    const lanes = result.current.freshnessQueries;
+    expect(lanes).toMatchObject([
+      { preset: "blacklist", dataUpdatedAt: 123, error: null, hasData: true },
+      { preset: "blacklist", dataUpdatedAt: 456, error: null, hasData: true },
+      { preset: "stablecoins", dataUpdatedAt: 901, error: supplyError, hasData: true, isLoading: false },
+      { preset: "reportCards", dataUpdatedAt: 902, error: scoreError, hasData: true, isLoading: false },
+    ]);
+    expect(lanes[2].meta).toBe(supplyMeta);
+    expect(lanes[3].meta).toBe(scoreMeta);
+    expect(lanes[2].catchUp).toBeUndefined();
+    expect(lanes[3].catchUp).toBeUndefined();
+    useStablecoinsMock.mockReturnValue({
+      ...useStablecoinsMock.mock.results.at(-1)?.value, dataUpdatedAt: 999,
+    });
+    rerender();
+    expect(result.current.freshnessQueries[2]).toMatchObject({ dataUpdatedAt: 999, meta: supplyMeta });
+    expect(result.current.freshnessQueries[3]).toMatchObject({ dataUpdatedAt: 902, meta: scoreMeta });
+  });
+
   it("debounces search updates and scrolls the drilldown when the status bucket changes", () => {
     vi.useFakeTimers();
     const { result, rerender } = renderHook(() => useFreezeWatchPageController());

@@ -5,6 +5,7 @@ import { WORKER_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/sta
 import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { buildFreshnessMeta } from "../lib/api-freshness";
+import { assessFreshnessTimestamp } from "../lib/api-freshness-age";
 import {
   CACHE_TTL_SECONDS,
   DETAIL_STALE_CACHE_MAX_AGE_SECONDS,
@@ -124,12 +125,13 @@ const resolveStablecoinDetail = async (db: D1Database, id: string, ctx: Executio
     // new collection for a known non-active catalog record.
     const providerRefreshAllowed = meta == null || isActiveStablecoinMeta(meta);
     const pegType = `pegged${meta?.flags.pegCurrency ?? "USD"}`;
-    const normalizedCached = cached
+    const cacheTimestamp = assessFreshnessTimestamp(Math.floor(Date.now() / 1000), cached?.updatedAt);
+    const normalizedCached = cached && cacheTimestamp.reason == null
       ? { ...cached, value: applyCuratedDetailAddress(cached.value, meta) }
       : null;
 
-    if (normalizedCached) {
-      const age = Math.floor(Date.now() / 1000) - normalizedCached.updatedAt;
+    if (normalizedCached && cacheTimestamp.ageSeconds != null) {
+      const age = cacheTimestamp.ageSeconds;
       if (age < CACHE_TTL_SECONDS) {
         return createFreshCacheHitResponse(normalizedCached.value, age, normalizedCached.updatedAt);
       }

@@ -53,30 +53,37 @@ function normalizeProtocolCategory(category: string | null | undefined): string 
   return normalized ? normalized : null;
 }
 
-export function protocolRowsFromCachePayload(payload: unknown): unknown[] {
-  if (Array.isArray(payload)) return payload;
-  if (payload == null || typeof payload !== "object") return [];
-  const envelope = payload as { data?: unknown; protocols?: unknown };
-  if (Array.isArray(envelope.protocols)) return envelope.protocols;
-  return Array.isArray(envelope.data) ? envelope.data : [];
-}
-
 export function isHighConfidenceProtocolCategory(category: string | null | undefined): boolean {
   const normalized = normalizeProtocolCategory(category)?.toLowerCase();
   return normalized != null && HIGH_CONFIDENCE_PROTOCOL_CATEGORIES.has(normalized);
 }
 
-export function buildProtocolCategoryLookupFromCachePayload(payload: unknown): Map<string, string> {
-  const categories = new Map<string, string>();
-  for (const row of protocolRowsFromCachePayload(payload)) {
-    if (row == null || typeof row !== "object") continue;
-    const protocol = row as { category?: unknown; slug?: unknown };
-    if (typeof protocol.slug !== "string" || typeof protocol.category !== "string") continue;
-    const category = normalizeProtocolCategory(protocol.category);
-    if (!category) continue;
-    categories.set(normalizeProtocolProjectKey(protocol.slug), category);
+export function buildProtocolCategoryLookupFromCachePayload(payload: unknown): {
+  protocolCount: number;
+  categoriesByProject: Map<string, string>;
+} | null {
+  let rows: unknown;
+  if (Array.isArray(payload)) {
+    rows = payload;
+  } else if (payload != null && typeof payload === "object") {
+    const envelope = payload as { protocols?: unknown; data?: unknown };
+    if (("protocols" in envelope && !Array.isArray(envelope.protocols))
+      || ("data" in envelope && !Array.isArray(envelope.data))) return null;
+    rows = envelope.protocols ?? envelope.data;
   }
-  return categories;
+  if (!Array.isArray(rows)) return null;
+
+  const categoriesByProject = new Map<string, string>();
+  for (const row of rows) {
+    if (row == null || typeof row !== "object" || Array.isArray(row)) return null;
+    const protocol = row as { category?: unknown; slug?: unknown };
+    if (typeof protocol.slug !== "string" || !protocol.slug.trim()) return null;
+    if (protocol.category != null && typeof protocol.category !== "string") return null;
+    // A missing category is valid provider evidence, but cannot pass the category gate.
+    const category = normalizeProtocolCategory(typeof protocol.category === "string" ? protocol.category : null);
+    if (category) categoriesByProject.set(normalizeProtocolProjectKey(protocol.slug), category);
+  }
+  return { protocolCount: rows.length, categoriesByProject };
 }
 
 export interface CoverageAuditOperatorQueue {

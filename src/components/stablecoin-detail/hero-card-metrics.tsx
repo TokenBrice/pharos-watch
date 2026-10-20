@@ -9,7 +9,8 @@ import {
   formatSupply,
   pegCurrencySymbol,
 } from "@shared/lib/format";
-import type { StablecoinData, StablecoinMeta } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types";
+import type { DetailQuote } from "@/lib/stablecoin-detail-view-model-types";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import type { HeroCardViewModel } from "@/lib/stablecoin-detail-view-model";
 import { confidenceClass } from "@/lib/confidence";
@@ -66,7 +67,7 @@ function formatTrendPercent(current: number | null, previous: number | null): st
   return current == null || previous == null ? "—" : formatPercentChange(current, previous);
 }
 
-function formatSupplyRestoredAsOf(coinData?: StablecoinData): string | null {
+function formatSupplyRestoredAsOf(coinData?: Pick<DetailQuote, "supplyRestored" | "supplyObservedAt">): string | null {
   return coinData?.supplyRestored === true && coinData.supplyObservedAt != null
     ? new Date(coinData.supplyObservedAt * 1000).toLocaleDateString("en-US", {
         month: "short",
@@ -76,7 +77,7 @@ function formatSupplyRestoredAsOf(coinData?: StablecoinData): string | null {
     : null;
 }
 
-function SupplyRestoredNotice({ coinData, className }: { coinData?: StablecoinData; className: string }) {
+function SupplyRestoredNotice({ coinData, className }: { coinData?: Pick<DetailQuote, "supplyRestored" | "supplyObservedAt">; className: string }) {
   if (coinData?.supplyRestored !== true) return null;
   const supplyRestoredAsOf = formatSupplyRestoredAsOf(coinData);
   return <p className={className}>Stale supply{supplyRestoredAsOf ? ` · as of ${supplyRestoredAsOf}` : ""}</p>;
@@ -177,7 +178,7 @@ export function HeroPriceMetric({
 interface HeroMarketCapMetricProps {
   variant: HeroMetricVariant;
   coin: StablecoinMeta;
-  coinData?: StablecoinData;
+  coinData?: Pick<DetailQuote, "supplyRestored" | "supplyObservedAt">;
   mcap: number | null;
   safePrevDay: number | null;
   prevDayTrendClass: string;
@@ -300,6 +301,7 @@ interface HeroMarketMetricGridProps extends HeroPriceMetricProps {
   variant: HeroMetricVariant;
   market: HeroCardViewModel["market"];
   tertiaryMetric?: HeroTertiaryMetricConfig;
+  coinData: HeroPriceMetricProps["coinData"] & Pick<DetailQuote, "supplyRestored" | "supplyObservedAt">;
 }
 
 export function HeroMarketMetricGrid({
@@ -438,7 +440,7 @@ export function HeroTertiaryMetrics({
 
 interface HeroPriceMetricProps {
   coin: StablecoinMeta;
-  coinData: StablecoinData;
+  coinData: Pick<DetailQuote, "price" | "priceSource" | "priceObservedAtMode" | "priceConfidence">;
   price: HeroCardViewModel["price"];
 }
 

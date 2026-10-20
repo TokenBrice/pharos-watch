@@ -33,6 +33,7 @@ describe("buildComponentDayCells", () => {
         row(2, TODAY - DAY + 3600, []),
       ],
       liveComponents: live(),
+      liveObservedAt: NOW,
       publicHistoryStartedAt: TODAY - 3 * DAY,
       componentHistoryStartedAt: Object.fromEntries(PUBLIC_STATUS_COMPONENT_IDS.map((id) => [
         id, id === "safety-scores" ? TODAY - DAY + 3600 : TODAY - 3 * DAY,
@@ -47,6 +48,7 @@ describe("buildComponentDayCells", () => {
   it("shows no past history when a component has no admitted monitoring start", () => {
     const cells = buildComponentDayCells({
       transitions: [row(1, TODAY - DAY, [])], liveComponents: live(),
+      liveObservedAt: NOW,
       publicHistoryStartedAt: TODAY - 3 * DAY, componentHistoryStartedAt: {},
       nowSec: NOW, days: 2,
     });
@@ -57,6 +59,7 @@ describe("buildComponentDayCells", () => {
     const cells = buildComponentDayCells({
       transitions: [row(1, TODAY - DAY + 3600, [], { transitionType: "init", from: null })],
       liveComponents: live(),
+      liveObservedAt: NOW,
       publicHistoryStartedAt: TODAY - DAY + 3600,
       componentHistoryStartedAt: Object.fromEntries(PUBLIC_STATUS_COMPONENT_IDS.map((id) => [id, TODAY - DAY + 3600])),
       nowSec: NOW,
@@ -73,12 +76,14 @@ describe("buildComponentDayCells", () => {
         row(2, TODAY - DAY + 3600, [{ id: "yield", state: "degraded", reasons: ["cache-stale:yield-data"] }]),
       ],
       liveComponents: live(),
+      liveObservedAt: NOW,
+      boundary: { at: TODAY - 10 * DAY, components: [] },
       publicHistoryStartedAt: TODAY - 10 * DAY,
       componentHistoryStartedAt: Object.fromEntries(PUBLIC_STATUS_COMPONENT_IDS.map((id) => [id, TODAY - 10 * DAY])),
       nowSec: NOW,
       days: 3,
     });
-    // First row left "healthy", so the earlier stretch is known operational.
+    // Only the admitted persisted boundary proves the earlier operational stretch.
     expect(cells.yield.map((cell) => cell.state)).toEqual(["operational", "degraded", "operational"]);
     expect(cells["mint-burn"].map((cell) => cell.state)).toEqual(["operational", "operational", "operational"]);
   });
@@ -87,6 +92,7 @@ describe("buildComponentDayCells", () => {
     const cells = buildComponentDayCells({
       transitions: [row(5, TODAY - DAY, [], { from: "degraded" })],
       liveComponents: live(),
+      liveObservedAt: NOW,
       publicHistoryStartedAt: TODAY - 40 * DAY,
       componentHistoryStartedAt: Object.fromEntries(PUBLIC_STATUS_COMPONENT_IDS.map((id) => [id, TODAY - 40 * DAY])),
       nowSec: NOW,
@@ -102,6 +108,8 @@ describe("buildComponentDayCells", () => {
         row(2, TODAY - DAY + 3600, [{ id: "yield", state: "degraded", reasons: ["cache:yield-data:stale"] }]),
       ],
       liveComponents: live(),
+      liveObservedAt: NOW,
+      boundary: { at: TODAY - 10 * DAY, components: [] },
       publicHistoryStartedAt: TODAY - 10 * DAY,
       componentHistoryStartedAt: Object.fromEntries(PUBLIC_STATUS_COMPONENT_IDS.map((id) => [id, TODAY - 10 * DAY])),
       nowSec: NOW,
@@ -115,12 +123,75 @@ describe("buildComponentDayCells", () => {
     const cells = buildComponentDayCells({
       transitions: [],
       liveComponents: live({ "mint-burn": "delayed" }),
+      liveObservedAt: NOW,
       publicHistoryStartedAt: null,
       nowSec: NOW,
       days: 2,
     });
     expect(cells["mint-burn"].map((cell) => cell.state)).toEqual(["no-data", "delayed"]);
     expect(cells.yield.map((cell) => cell.state)).toEqual(["no-data", "operational"]);
+  });
+
+  it("HISTORY_SMEAR: keeps an empty window operational until today's unpersisted outage", () => {
+    const cells = buildComponentDayCells({
+      transitions: [], boundary: { at: TODAY - 40 * DAY, components: [] },
+      liveComponents: live({ yield: "outage" }), liveObservedAt: NOW,
+      publicHistoryStartedAt: TODAY - 40 * DAY,
+      componentHistoryStartedAt: { yield: TODAY - 40 * DAY },
+      nowSec: NOW, days: 3,
+    });
+    expect(cells.yield.map(({ state }) => state)).toEqual(["operational", "operational", "outage"]);
+  });
+
+  it("retains a pre-window incident when live health recovers without a persisted transition", () => {
+    const cells = buildComponentDayCells({
+      transitions: [],
+      boundary: { at: TODAY - 40 * DAY, components: [{ id: "charts", state: "outage", reasons: [] }] },
+      liveComponents: live(), liveObservedAt: NOW,
+      publicHistoryStartedAt: TODAY - 50 * DAY,
+      componentHistoryStartedAt: { charts: TODAY - 50 * DAY },
+      nowSec: NOW, days: 3,
+    });
+    // Today's recovery cannot erase an outage observed earlier in the same day.
+    expect(cells.charts.map(({ state }) => state)).toEqual(["outage", "outage", "outage"]);
+  });
+
+  it("leaves an empty window unknown without a persisted boundary, even after monitoring began", () => {
+    const cells = buildComponentDayCells({
+      transitions: [], liveComponents: live({ yield: "outage" }), liveObservedAt: NOW,
+      publicHistoryStartedAt: TODAY - 40 * DAY, componentHistoryStartedAt: { yield: TODAY - 40 * DAY },
+      nowSec: NOW, days: 3,
+    });
+    expect(cells.yield.map(({ state }) => state)).toEqual(["no-data", "no-data", "outage"]);
+  });
+
+  it("does not infer operational component history from the oldest row's healthy headline level", () => {
+    const cells = buildComponentDayCells({
+      transitions: [row(1, TODAY - DAY, [{ id: "yield", state: "delayed", reasons: [] }])],
+      liveComponents: live(), liveObservedAt: NOW,
+      publicHistoryStartedAt: TODAY - 40 * DAY, componentHistoryStartedAt: { yield: TODAY - 40 * DAY },
+      nowSec: NOW, days: 3,
+    });
+    expect(cells.yield.map(({ state }) => state)).toEqual(["no-data", "delayed", "delayed"]);
+  });
+
+  it("uses a pre-window incident seed only until its in-window recovery", () => {
+    const cells = buildComponentDayCells({
+      transitions: [row(2, TODAY - DAY + 3600, [], { from: "stale" })],
+      boundary: { at: TODAY - 40 * DAY, components: [{ id: "yield", state: "outage", reasons: [] }] },
+      liveComponents: live(), liveObservedAt: NOW,
+      publicHistoryStartedAt: TODAY - 50 * DAY, componentHistoryStartedAt: { yield: TODAY - 50 * DAY },
+      nowSec: NOW, days: 3,
+    });
+    expect(cells.yield.map(({ state }) => state)).toEqual(["outage", "outage", "operational"]);
+  });
+
+  it.each([undefined, NOW + 1, TODAY - 1, NaN])("does not renew live evidence from a missing, future or old clock (%s)", (liveObservedAt) => {
+    const cells = buildComponentDayCells({
+      transitions: [], liveComponents: live({ yield: "outage" }), liveObservedAt,
+      publicHistoryStartedAt: null, nowSec: NOW, days: 2,
+    });
+    expect(cells.yield.map(({ state }) => state)).toEqual(["no-data", "no-data"]);
   });
 });
 

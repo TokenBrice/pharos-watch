@@ -3,6 +3,7 @@ import { getAlertSafetyV9SourceGeneration } from "../../../../lib/alert-safety-s
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../../../../lib/safety-score-v9/consumer-freshness";
+import type * as DbCache from "../../../../lib/db-cache";
 
 const fixtures = createLatestSchemaFixtureTracker();
 
@@ -475,14 +476,100 @@ describe("runTelegramDegradationWatchdog · safety source", () => {
 });
 
 describe("runTelegramDegradationWatchdog · zero-send streak", () => {
-  it("does not increment the same dispatch cron run twice", async () => {
+  it.each([
+    { reason: "read-failed", streak: 0, metadata: null },
+    { reason: "read-failed", streak: 3, metadata: null },
+    { reason: "missing-metadata", streak: 3, metadata: null },
+    { reason: "invalid-json", streak: 3, metadata: "{" },
+    { reason: "invalid-shape", streak: 3, metadata: "[]" },
+    { reason: "malformed-count", streak: 3, metadata: '{"eventsDetected":{"dews":"bad"}}' },
+    { reason: "missing-count", streak: 3, metadata: '{"eventsDetected":{"dews":0}}' },
+    {
+      reason: "missing-planned-target-count", streak: 3,
+      metadata: '{"eventsDetected":{"dews":1,"depeg":0,"safety":0,"launch":0},"messagesSent":0}',
+    },
+    {
+      reason: "missing-freeze-target-count", streak: 3,
+      metadata: '{"eventsDetected":{"dews":0,"depeg":0,"safety":0,"launch":0,"freeze":1},"messagesSent":0}',
+    },
+    {
+      reason: "missing-planned-target-count", streak: 3,
+      metadata: '{"eventsDetected":{"dews":1,"depeg":0,"safety":0,"launch":0},"messagesSent":0,"freshCandidateChats":0}',
+    },
+    {
+      reason: "source-workload-not-applicable", streak: 3,
+      metadata: '{"eventsDetected":{"dews":1,"depeg":0,"safety":0,"launch":0},"messagesSent":0,"authoritativePlanning":{"sourceEventId":"another-family","sourceEventFamilies":["reserve"],"plannedTargetCount":0}}',
+    },
+    {
+      reason: "source-workload-not-applicable", streak: 3,
+      metadata: '{"eventsDetected":{"dews":1,"depeg":0,"safety":0,"launch":0},"messagesSent":0,"authoritativePlanning":{"sourceEventId":null,"sourceEventFamilies":["dews"],"plannedTargetCount":0}}',
+    },
+    {
+      reason: "missing-planned-target-count", streak: 3,
+      metadata: '{"eventsDetected":{"dews":1,"depeg":0,"safety":0,"launch":0},"messagesSent":0,"authoritativePlanning":{"sourceEventId":"source-18","sourceEventFamilies":["dews"],"plannedTargetCount":-1}}',
+    },
+  ])("preserves durable episode state for $reason at streak $streak", async ({ reason, streak, metadata }) => {
+    const realCache = await vi.importActual<typeof DbCache>("../../../../lib/db-cache");
+    mockGetCache.mockImplementation(realCache.getCache);
+    mockSetCache.mockImplementation(realCache.setCache);
+    mockDeleteCache.mockImplementation(realCache.deleteCache);
+    const { sqlite, db: baseDb } = fixtures.open();
+    const nowSec = Math.floor(Date.now() / 1000);
+    const state = JSON.stringify({ streak, lastRunIdentity: "17" });
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+      .run(WATCHDOG_KEYS.zeroSendStreak, state, nowSec - 60);
+    sqlite.prepare("INSERT INTO cron_runs (id, job, started_at, duration_ms, status, metadata) VALUES (18, 'dispatch-telegram-alerts', ?, 0, 'ok', ?)")
+      .run(nowSec, metadata);
+    const db = {
+      ...baseDb,
+      prepare(sql: string) {
+        if (reason === "read-failed" && sql.includes("FROM cron_runs WHERE job = 'dispatch-telegram-alerts'")) {
+          throw new Error("dispatch ledger unavailable");
+        }
+        return baseDb.prepare(sql);
+      },
+    };
+
+    const result = await runTelegramDegradationWatchdog(db);
+    const meta = JSON.parse(result.metadata ?? "{}");
+
+    expect(result.status).toBe("degraded");
+    expect(meta.reason).toBe("dispatch-evidence-unavailable");
+    expect(meta.pendingBacklog.availability).toBe("available");
+    expect(meta.zeroSend).toMatchObject({
+      availability: "unknown", reason, streak, triggered: streak === 3,
+      recovered: false, evaluated: false, runIdentity: reason === "read-failed" ? null : "18",
+    });
+    expect(sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = ?")
+      .get(WATCHDOG_KEYS.zeroSendStreak)).toEqual({ value: state, updated_at: nowSec - 60 });
+  });
+
+  it.each([0, 3])("distinguishes an empty dispatch ledger from failed evidence at streak %s", async (streak) => {
     const store = installCacheStore();
+    const state = { value: JSON.stringify({ streak, lastRunIdentity: "17" }), updatedAt: 1 };
+    store.values.set(WATCHDOG_KEYS.zeroSendStreak, state);
+    const result = await runTelegramDegradationWatchdog(makeDb());
+    const meta = JSON.parse(result.metadata ?? "{}");
+
+    expect(result.status).toBe(streak === 3 ? "degraded" : "ok");
+    expect(meta.zeroSend).toMatchObject({
+      availability: "available", reason: "no-completed-run", streak,
+      triggered: streak === 3, recovered: false, evaluated: false, runIdentity: null,
+    });
+    expect(store.values.get(WATCHDOG_KEYS.zeroSendStreak)).toEqual(state);
+  });
+
+  it.each([0, 2])("does not increment the same dispatch cron run twice (prior streak %s)", async (priorStreak) => {
+    const store = installCacheStore();
+    store.values.set(WATCHDOG_KEYS.zeroSendStreak, {
+      value: JSON.stringify({ streak: priorStreak, lastRunIdentity: "76" }), updatedAt: 1,
+    });
     const db = makeDb({
       dispatchRunId: 77,
       dispatchMetadata: {
         eventsDetected: { dews: 1, depeg: 0, safety: 0, launch: 0, reserve: 0 },
         messagesSent: 0,
-        freshCandidateChats: 1,
+        authoritativePlanning: { sourceEventId: "source-77", sourceEventFamilies: ["dews"], plannedTargetCount: 1 },
       },
     });
 
@@ -491,8 +578,12 @@ describe("runTelegramDegradationWatchdog · zero-send streak", () => {
     const meta = JSON.parse(second.metadata ?? "{}");
     const state = JSON.parse(store.values.get(WATCHDOG_KEYS.zeroSendStreak)?.value ?? "{}");
 
-    expect(state).toEqual({ streak: 1, lastRunIdentity: "77" });
-    expect(meta.zeroSend.streak).toBe(1);
+    expect(state).toEqual({ streak: priorStreak + 1, lastRunIdentity: "77" });
+    expect(meta.zeroSend.streak).toBe(priorStreak + 1);
+    expect(meta.zeroSend).toMatchObject({
+      availability: "available", reason: "already-evaluated", triggered: priorStreak === 2, recovered: false,
+    });
+    expect(second.status).toBe(priorStreak === 2 ? "degraded" : "ok");
     expect(meta.zeroSend.evaluated).toBe(false);
     expect(meta.zeroSend.runIdentity).toBe("77");
   });
@@ -504,7 +595,7 @@ describe("runTelegramDegradationWatchdog · zero-send streak", () => {
       dispatchMetadata: {
         eventsDetected: { dews: 1, depeg: 0, safety: 0, launch: 0 },
         messagesSent: 0,
-        freshCandidateChats: 1,
+        authoritativePlanning: { sourceEventId: "source-1", sourceEventFamilies: ["dews"], plannedTargetCount: 1 },
       },
     });
 
@@ -522,7 +613,7 @@ describe("runTelegramDegradationWatchdog · zero-send streak", () => {
       dispatchMetadata: {
         eventsDetected: { dews: 0, depeg: 0, safety: 0, launch: 0, reserve: 2 },
         messagesSent: 0,
-        freshCandidateChats: 2,
+        authoritativePlanning: { sourceEventId: "source-reserve", sourceEventFamilies: ["reserve"], plannedTargetCount: 2 },
       },
     });
 
@@ -545,7 +636,7 @@ describe("runTelegramDegradationWatchdog · zero-send streak", () => {
       dispatchMetadata: {
         eventsDetected: { dews: 2, depeg: 1, safety: 0, launch: 0 },
         messagesSent: 0,
-        freshCandidateChats: 3,
+        authoritativePlanning: { sourceEventId: "source-1", sourceEventFamilies: ["dews", "depeg"], plannedTargetCount: 3 },
       },
     });
 
@@ -569,7 +660,7 @@ describe("runTelegramDegradationWatchdog · zero-send streak", () => {
       dispatchMetadata: {
         eventsDetected: { dews: 1, depeg: 0, safety: 0, launch: 0 },
         messagesSent: 7,
-        freshCandidateChats: 3,
+        authoritativePlanning: { sourceEventId: "source-1", sourceEventFamilies: ["dews"], plannedTargetCount: 3 },
       },
     });
 
@@ -578,7 +669,12 @@ describe("runTelegramDegradationWatchdog · zero-send streak", () => {
 
     expect(meta.zeroSend.recovered).toBe(true);
     expect(meta.zeroSend.streak).toBe(0);
-    expect(store.values.has(WATCHDOG_KEYS.zeroSendStreak)).toBe(false);
+    expect(JSON.parse(store.values.get(WATCHDOG_KEYS.zeroSendStreak)?.value ?? "{}"))
+      .toEqual({ streak: 0, lastRunIdentity: "1" });
+    const repeated = await runTelegramDegradationWatchdog(db);
+    expect(JSON.parse(repeated.metadata ?? "{}").zeroSend).toMatchObject({
+      availability: "available", reason: "already-evaluated", evaluated: false, recovered: false, triggered: false,
+    });
   });
 
   it("stays triggered while the zero-send streak continues", async () => {
@@ -593,7 +689,7 @@ describe("runTelegramDegradationWatchdog · zero-send streak", () => {
       dispatchMetadata: {
         eventsDetected: { dews: 2, depeg: 1, safety: 0, launch: 0 },
         messagesSent: 0,
-        freshCandidateChats: 3,
+        authoritativePlanning: { sourceEventId: "source-1", sourceEventFamilies: ["dews", "depeg"], plannedTargetCount: 3 },
       },
     });
 
@@ -604,14 +700,14 @@ describe("runTelegramDegradationWatchdog · zero-send streak", () => {
     expect(meta.zeroSend.streak).toBe(ZERO_SEND_STREAK_THRESHOLD + 1);
   });
 
-  it("ignores runs with no events even if messagesSent is zero", async () => {
+  it.each([false, true])("ignores runs with no events even if messagesSent is zero (bootstrap %s)", async (snapshotSeeded) => {
     installCacheStore();
     const db = makeDb({
       pendingCount: 0,
       dispatchMetadata: {
+        snapshotSeeded,
         eventsDetected: { dews: 0, depeg: 0, safety: 0, launch: 0 },
         messagesSent: 0,
-        freshCandidateChats: 0,
       },
     });
 
@@ -620,16 +716,22 @@ describe("runTelegramDegradationWatchdog · zero-send streak", () => {
 
     expect(meta.zeroSend.triggered).toBe(false);
     expect(meta.zeroSend.streak).toBe(0);
+    expect(meta.zeroSend).toMatchObject({ availability: "available", reason: null, evaluated: true });
+    expect(result.status).toBe("ok");
   });
 
-  it("ignores runs with events but no candidate chats", async () => {
-    installCacheStore();
+  it("recovers when the evaluated source has an observed zero-target workload", async () => {
+    const store = installCacheStore();
+    store.values.set(WATCHDOG_KEYS.zeroSendStreak, {
+      value: JSON.stringify({ streak: ZERO_SEND_STREAK_THRESHOLD, lastRunIdentity: "17" }), updatedAt: 1,
+    });
     const db = makeDb({
+      dispatchRunId: 18,
       pendingCount: 0,
       dispatchMetadata: {
         eventsDetected: { dews: 2, depeg: 0, safety: 0, launch: 0 },
         messagesSent: 0,
-        freshCandidateChats: 0,
+        authoritativePlanning: { sourceEventId: "source-18", sourceEventFamilies: ["dews"], plannedTargetCount: 0 },
       },
     });
 
@@ -638,6 +740,9 @@ describe("runTelegramDegradationWatchdog · zero-send streak", () => {
 
     expect(meta.zeroSend.triggered).toBe(false);
     expect(meta.zeroSend.streak).toBe(0);
+    expect(meta.zeroSend).toMatchObject({ availability: "available", recovered: true, evaluated: true });
+    expect(JSON.parse(store.values.get(WATCHDOG_KEYS.zeroSendStreak)?.value ?? "{}"))
+      .toEqual({ streak: 0, lastRunIdentity: "18" });
   });
 });
 

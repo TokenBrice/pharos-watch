@@ -199,7 +199,6 @@ function makePhaseInput(opts: {
     maxScanRange: 50_000,
     criticalConfigBudgetLimit: 100,
     extendedConfigBudgetLimit: 50,
-    evmSafetyMarginBlocks: 12,
     affectedHours: new Map(),
   };
 }

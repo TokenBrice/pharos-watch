@@ -66,7 +66,7 @@ interface CapVaultAssetState {
   totalSupplied: number;
   totalBorrowed: number;
   available: number;
-  paused: boolean;
+  paused: boolean | null;
   /**
    * When omitted, only recognized USD-like reserves use the 1.0 peg
    * assumption. Non-USD-like assets must provide priceUsd.
@@ -77,7 +77,6 @@ interface CapVaultAssetState {
   priceObservedAt?: number;
   /**
    * True when the asset's paused() call returned a value that could not be decoded.
-   * When true, `paused` is conservatively set to true.
    */
   pausedStatusUnavailable: boolean;
 }
@@ -261,18 +260,18 @@ export function adaptCapVaultState(args: {
     (sum, asset) => sum + (asset.paused ? 0 : Math.max(0, asset.available) * priceForCapAsset(asset)),
     0,
   );
-  const pausedAssets = activeAssets.filter((asset) => asset.paused);
+  const pausedAssets = activeAssets.filter((asset) => asset.paused === true);
   for (const asset of pausedAssets) {
     warnings.push(reserveDegradedWarning(
       "cap-asset-paused",
       `Cap vault asset "${asset.name}" is paused and excluded from immediate redeemable capacity`,
     ));
   }
-  const statusUnavailableAssets = activeAssets.filter((asset) => asset.pausedStatusUnavailable);
+  const statusUnavailableAssets = activeAssets.filter((asset) => asset.paused == null || asset.pausedStatusUnavailable);
   for (const asset of statusUnavailableAssets) {
     warnings.push(reserveInfoWarning(
       "cap-vault-asset-status-unavailable",
-      `Cap vault asset "${asset.name}" paused status could not be read; conservatively treated as paused`,
+      `Cap vault asset "${asset.name}" paused status could not be read; direct capacity and route claims are withheld`,
     ));
   }
 
@@ -306,7 +305,7 @@ export function adaptCapVaultState(args: {
         ...(asset.priceUsd != null ? { priceUsd: asset.priceUsd } : {}),
         ...(asset.configured === false ? { configured: false } : {}),
       })),
-      ...buildRedemptionSnapshotMetadata({
+      ...(statusUnavailableAssets.length === 0 ? buildRedemptionSnapshotMetadata({
         capacityUsd: immediateRedeemableUsd,
         ...(args.supplyUsd != null && args.supplyUsd > 0
           ? { capacityRatioOfSupply: immediateRedeemableUsd / args.supplyUsd }
@@ -317,7 +316,7 @@ export function adaptCapVaultState(args: {
           ? "open"
           : immediateRedeemableUsd > 0
             ? "degraded"
-            : "paused",
+            : pausedAssets.length > 0 ? "paused" : "degraded",
         routeStatusSource: "onchain",
         routeObserved: true,
         holderEligibility: "any-holder",
@@ -325,7 +324,7 @@ export function adaptCapVaultState(args: {
         sourceUrls: ["https://docs.cap.app/concepts/vault"],
         feeBps: args.redemptionFeeBps,
         ...(outputValuation ? { outputValuation } : {}),
-      }),
+      }) : {}),
     },
   };
 }
@@ -397,10 +396,8 @@ export async function fetchCapVaultReserves(
     }
 
     const decimals = validateDecimals(decimalsRaw, `${ADAPTER_KEY}: decimals() for asset ${address}`);
-    // Conservative: treat a missing/undecodable paused() response as paused.
-    const pausedDecoded = decodeStrictBoolWord(pausedRaw);
-    const pausedStatusUnavailable = pausedDecoded == null;
-    const paused = pausedDecoded ?? true;
+    const paused = decodeStrictBoolWord(pausedRaw);
+    const pausedStatusUnavailable = paused == null;
 
     const assetConfig = resolveAssetConfig(address, assetConfigs);
     return {

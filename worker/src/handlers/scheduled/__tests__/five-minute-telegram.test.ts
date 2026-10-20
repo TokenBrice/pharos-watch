@@ -6,7 +6,10 @@ import { observeMockD1Cost } from "../../../lib/__tests__/d1-cost.test-support";
 import type { CronResult } from "../../../lib/cron-logger";
 
 vi.mock("../../../cron/telegram/dispatch/dispatch-telegram-alerts", () => ({ dispatchTelegramAlerts: vi.fn() }));
-vi.mock("../../../cron/telegram/recap/telegram-recap-planner", () => ({ planTelegramPersonalizedRecaps: vi.fn() }));
+vi.mock("../../../cron/telegram/recap/telegram-recap-planner", () => ({
+  planTelegramPersonalizedRecaps: vi.fn(),
+  planTelegramRecapRetirementNotices: vi.fn(),
+}));
 vi.mock("../../../telegram/recap/recap-store", () => ({ cancelQueuedTelegramRecapsForRollout: vi.fn() }));
 vi.mock("../../../telegram/webhook/telegram-pulse", () => ({ publishTelegramPulseSnapshotWithOutcome: vi.fn() }));
 vi.mock("../../../cron/telegram/maintenance/telegram-degradation-watchdog", () => ({ runTelegramDegradationWatchdog: vi.fn() }));
@@ -24,7 +27,7 @@ import { runFiveMinuteTelegramSlot } from "../five-minute-telegram";
 import { logSkippedCronRun } from "../preflight-skip";
 import { recordBudgetSurfaceTelemetry } from "../../../lib/budget-surface-telemetry";
 import { dispatchTelegramAlerts } from "../../../cron/telegram/dispatch/dispatch-telegram-alerts";
-import { planTelegramPersonalizedRecaps } from "../../../cron/telegram/recap/telegram-recap-planner";
+import { planTelegramPersonalizedRecaps, planTelegramRecapRetirementNotices } from "../../../cron/telegram/recap/telegram-recap-planner";
 import { cancelQueuedTelegramRecapsForRollout } from "../../../telegram/recap/recap-store";
 import { publishTelegramPulseSnapshotWithOutcome } from "../../../telegram/webhook/telegram-pulse";
 import { runTelegramDegradationWatchdog } from "../../../cron/telegram/maintenance/telegram-degradation-watchdog";
@@ -54,6 +57,7 @@ beforeEach(() => {
   vi.spyOn(Date, "now").mockReturnValue(0);
   vi.mocked(dispatchTelegramAlerts).mockResolvedValue({ itemCount: 1, metadata: "{}" } as never);
   vi.mocked(planTelegramPersonalizedRecaps).mockResolvedValue({ itemCount: 0, metadata: "{}", status: "ok" } as never);
+  vi.mocked(planTelegramRecapRetirementNotices).mockResolvedValue({ itemCount: 0, metadata: "{}", status: "ok" });
   vi.mocked(cancelQueuedTelegramRecapsForRollout).mockResolvedValue({ targetRowsCancelled: 0, pendingRowsDeleted: 0 });
   vi.mocked(runTelegramDegradationWatchdog).mockResolvedValue({ itemCount: 0, metadata: "{}" } as never);
   vi.mocked(cleanExpiredDisambiguations).mockResolvedValue({ status: "ok", itemCount: 0 } as never);
@@ -74,6 +78,19 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe("runFiveMinuteTelegramSlot", () => {
+  it("uses only the final notice planner while controls remain unavailable in retirement-notice mode", async () => {
+    const runtime = buildRuntime("token", "retirement-notice");
+    await runFiveMinuteTelegramSlot(runtime);
+    expect(planTelegramPersonalizedRecaps).not.toHaveBeenCalled();
+    expect(planTelegramRecapRetirementNotices).toHaveBeenCalledWith(
+      runtime.db, expect.anything(), expect.objectContaining({ rolloutPolicy: { mode: "retirement-notice" } }),
+    );
+    expect(cancelQueuedTelegramRecapsForRollout).toHaveBeenCalledWith(
+      runtime.db, { mode: "retirement-notice" }, 0,
+    );
+    expect(dispatchTelegramAlerts).toHaveBeenCalledOnce();
+  });
+
   it("emits pulse D1 costs while retaining publication results and SQL errors", async () => {
     const rows = [{ id: "pulse-evidence" }];
     const failure = new Error("original pulse SQL failure");

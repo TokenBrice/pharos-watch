@@ -1,5 +1,7 @@
 import { getCronJobMeta } from "@shared/lib/cron-jobs";
 import { STATUS_CACHE_RATIO_THRESHOLDS } from "@shared/lib/status-thresholds";
+import { getDatasetCadenceSec, STATUS_DATASET_FRESHNESS } from "@shared/lib/status-dataset-freshness";
+import type { DatasetFreshnessKey } from "@shared/types/status/core";
 import type { StatusResponse } from "@shared/types";
 import { DataTableShell } from "@/components/data-table-shell";
 import { TableCell, TableRow } from "@/components/table";
@@ -9,43 +11,10 @@ import { OPERATIONAL_PILL_CLASS } from "@/lib/status/dashboard-presentation";
 import { StatusPill } from "./severity-pill";
 import { defineStatusColumns, Timestamp } from "./page-primitives";
 
-type DatasetKey = keyof StatusResponse["datasetFreshness"];
-
 const DATASET_FRESHNESS_COLUMNS = defineStatusColumns([
   ["domain", "Domain"], ["updated", "Updated"], ["age", "Age"], ["cadence", "Cadence"],
   ["grace-basis", "Grace Basis"], ["writers", "Writers"], ["band", "Band"],
 ]);
-
-const DATASET_META: Record<
-  DatasetKey,
-  {
-    label: string;
-    owners: readonly string[];
-    expectedOwners?: readonly string[];
-  }
-> = {
-  stablecoins: { label: "Stablecoins cache", owners: ["sync-stablecoins"] },
-  blacklist: { label: "Blacklist sync", owners: ["sync-blacklist"] },
-  mintBurn: {
-    label: "Mint/burn sync",
-    owners: ["sync-mint-burn", "sync-mint-burn-extended"],
-    expectedOwners: ["sync-mint-burn"],
-  },
-  supply: { label: "Supply history", owners: ["snapshot-supply"] },
-  safetyGrades: { label: "Safety grade history", owners: ["snapshot-safety-grade-history"] },
-  yield: { label: "Yield data", owners: ["sync-yield-data"] },
-  depegs: { label: "Depeg pipeline", owners: ["sync-stablecoins"] },
-  dews: { label: "DEWS signals", owners: ["compute-dews"] },
-  digest: { label: "Daily digest", owners: ["daily-digest"] },
-};
-
-function getCadenceSec(owners: readonly string[]): number | null {
-  const intervals = owners
-    .map((owner) => getCronJobMeta(owner)?.intervalSec)
-    .filter((interval): interval is number => interval != null);
-  if (intervals.length === 0) return null;
-  return Math.min(...intervals);
-}
 
 // Band heuristics reuse the canonical default availability ratios over the
 // writer cadence: 8× cadence (= 4× the displayed grace basis) and 12× cadence
@@ -60,7 +29,7 @@ function getBand(
 } {
   if (ageSeconds == null) {
     return {
-      label: "missing",
+      label: "unavailable",
       className: OPERATIONAL_PILL_CLASS.unknown,
     };
   }
@@ -95,11 +64,14 @@ export function DatasetFreshnessTable({
   datasetFreshness: StatusResponse["datasetFreshness"];
   nowSeconds: number;
 }) {
-  const rows = (Object.keys(DATASET_META) as DatasetKey[]).map((key) => {
-    const meta = DATASET_META[key];
-    const updatedAt = datasetFreshness[key];
-    const ageSeconds = updatedAt != null ? Math.max(0, nowSeconds - updatedAt) : null;
-    const cadenceSec = getCadenceSec(meta.expectedOwners ?? meta.owners);
+  const rows = (Object.keys(STATUS_DATASET_FRESHNESS) as DatasetFreshnessKey[]).map((key) => {
+    const meta = STATUS_DATASET_FRESHNESS[key];
+    const clock = datasetFreshness[key];
+    const reason = datasetFreshness.unavailableReasons?.[key];
+    const updatedAt = reason == null && clock != null && Number.isFinite(clock)
+      && Number.isFinite(nowSeconds) && clock <= nowSeconds ? clock : null;
+    const ageSeconds = updatedAt != null ? nowSeconds - updatedAt : null;
+    const cadenceSec = getDatasetCadenceSec(key);
     const expectedFreshnessSec = cadenceSec != null ? cadenceSec * 2 : null;
     const owners = meta.owners.map((owner) => getCronJobMeta(owner)?.label ?? owner).join(", ");
 
@@ -107,6 +79,9 @@ export function DatasetFreshnessTable({
       key,
       label: meta.label,
       updatedAt,
+      unavailableReason: reason ?? (clock == null ? "missing-timestamp"
+        : !Number.isFinite(clock) || !Number.isFinite(nowSeconds) ? "invalid-timestamp"
+        : clock > nowSeconds ? "future-timestamp" : null),
       ageSeconds,
       owners,
       cadenceSec,
@@ -154,7 +129,7 @@ export function DatasetFreshnessTable({
                   {row.expectedFreshnessSec != null ? formatElapsedSeconds(row.expectedFreshnessSec) : "—"}
                 </TableCell>
                 <TableCell className="py-2 text-xs text-muted-foreground">{row.owners}</TableCell>
-                <TableCell className="py-2">
+                <TableCell className="py-2" title={row.unavailableReason ?? undefined}>
                   <StatusPill className={row.band.className}>
                     {row.band.label}
                   </StatusPill>

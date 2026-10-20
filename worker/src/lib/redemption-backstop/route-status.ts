@@ -2,10 +2,11 @@ import type { RedemptionRouteStatus, RedemptionRouteStatusSource } from "@shared
 import type { RedemptionRouteAvailability } from "./availability";
 
 export const REDEMPTION_ROUTE_STATUS_PRODUCER = {
-  model: "live-reserve-adapters-plus-static-policy",
-  fetchesDuringRedemptionSync: false,
+  model: "live-reserve-adapters-plus-executable-observers-plus-static-policy",
   freshness: "sync-redemption-backstops-snapshot",
 } as const;
+
+export type DirectObserverExecutionEvent = "attempted" | "consumed";
 
 export interface RedemptionRouteStatusEvidence {
   routeStatus: RedemptionRouteStatus;

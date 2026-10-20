@@ -1,3 +1,4 @@
+import { canonicalExitRouteChain, canonicalExitRouteScopedId } from "@shared/types/exit-route-identity";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import {
   CIRCUIT_SOURCE,
@@ -55,9 +56,23 @@ const CMC_CATEGORY_ENDPOINT = "pro-api.coinmarketcap.com/v1/cryptocurrency/categ
 const CMC_QUOTES_ENDPOINT = "pro-api.coinmarketcap.com/v3/cryptocurrency/quotes/latest";
 const CMC_STABLECOIN_CATEGORY_ID = "604f2753ebccdd50cd175fc1";
 const CMC_LAST_FETCH_CACHE_KEY = "cmc_last_fetch";
-const CMC_VERIFIED_QUOTES_CACHE_KEY = "cmc_verified_targeted_quotes:v1";
+// v1 inferred the provider chain from a local address match and folded native case.
+const CMC_VERIFIED_QUOTES_CACHE_KEY = "cmc_verified_targeted_quotes:v2";
 const CMC_TARGETED_MAX_SLUGS = 25;
 const CMC_VERIFIED_QUOTES_MAX_ENTRIES = 100;
+// Provider platform slugs are an explicit allowlist, never generic chain aliases.
+const CMC_PLATFORM_CHAINS: Readonly<Record<string, string | undefined>> = {
+  ethereum: "ethereum",
+  solana: "solana",
+  bnb: "bsc",
+  "polygon-ecosystem-token": "polygon",
+  avalanche: "avalanche",
+  arbitrum: "arbitrum",
+  base: "base",
+  tron: "tron",
+  aptos: "aptos",
+  sui: "sui",
+};
 
 interface CmcFallbackQuote extends FallbackPriceQuote {
   observedAt: number;
@@ -124,16 +139,18 @@ function buildSkippedCmcAttempts(
   }));
 }
 
-function normalizedContractAddress(value: string | null | undefined): string | null {
-  const normalized = value?.trim().toLowerCase();
-  return normalized ? normalized : null;
-}
-
-function matchesConfiguredContract(asset: PeggedAsset, providerAddress: string): boolean {
-  const normalized = normalizedContractAddress(providerAddress);
-  return normalized != null && (asset.contracts ?? []).some(
-    (deployment) => normalizedContractAddress(deployment.address) === normalized,
-  );
+function resolveVerifiedCmcDeployment(
+  asset: PeggedAsset,
+  chain: string | null | undefined,
+  providerAddress: string | null | undefined,
+): { chain: string; target: string } | null {
+  if (!chain || !providerAddress?.trim()) return null;
+  const canonicalChain = canonicalExitRouteChain(chain);
+  const target = canonicalExitRouteScopedId(canonicalChain, providerAddress);
+  return (asset.contracts ?? []).some((deployment) => (
+    canonicalExitRouteChain(deployment.chain) === canonicalChain &&
+    canonicalExitRouteScopedId(canonicalChain, deployment.address) === target
+  )) ? { chain: canonicalChain, target } : null;
 }
 
 function parseVerifiedCmcQuote(value: unknown): CmcVerifiedTargetedQuote | null {
@@ -157,7 +174,7 @@ function parseVerifiedCmcQuote(value: unknown): CmcVerifiedTargetedQuote | null 
     price: entry.price,
     volume24h: entry.volume24h,
     observedAt: Math.floor(entry.observedAt),
-    providerAddress: normalizedContractAddress(entry.providerAddress as string | null),
+    providerAddress: typeof entry.providerAddress === "string" ? entry.providerAddress.trim() : null,
     chain: typeof entry.chain === "string" ? entry.chain.slice(0, 80) : null,
     active: true,
   };
@@ -204,22 +221,20 @@ function replayVerifiedCmcQuotes(params: {
     const cached = cachedByAssetId.get(candidate.asset.id);
     if (!cached) continue;
     const hasConfiguredContracts = (candidate.asset.contracts?.length ?? 0) > 0;
-    const providerAddressMatches = !hasConfiguredContracts || (
-      cached.providerAddress != null && matchesConfiguredContract(candidate.asset, cached.providerAddress)
-    );
+    const providerIdentity = resolveVerifiedCmcDeployment(candidate.asset, cached.chain, cached.providerAddress);
     const accepted =
       cached.slug === candidate.asset.cmcSlug?.toLowerCase() &&
       cached.symbol === candidate.asset.symbol.toUpperCase() &&
       cached.active &&
-      providerAddressMatches &&
+      (!hasConfiguredContracts || providerIdentity != null) &&
       isFreshFallbackObservedAt(cached.observedAt, CMC_VERIFIED_QUOTE_BRIDGE_SEC) &&
       isUsableFallbackPrice(candidate.asset, cached.price, params.fxRates);
     attempts.push(createPricingAssetAttempt({
       assetId: candidate.asset.id,
       adapter: "coinmarketcap-verified-cache",
       source: "coinmarketcap",
-      ...(accepted && cached.chain && cached.providerAddress
-        ? { chain: cached.chain, target: cached.providerAddress }
+      ...(accepted && providerIdentity
+        ? providerIdentity
         : { target: `slug:${candidate.asset.cmcSlug}` }),
       state: "attempted",
       result: accepted ? "resolved" : "rejected",
@@ -372,7 +387,7 @@ async function fetchTargetedCmcQuotes(params: {
     result: "resolved" | "rejected",
     rejectionClass?: string,
     observedAt?: number | null,
-    identity?: { chain: string; target: string },
+    identity?: { chain: string; target: string } | null,
   ): void => {
     diagnostic.assetAttempts = diagnostic.assetAttempts?.map((attempt) => (
       attempt.assetId === assetId
@@ -456,29 +471,23 @@ async function fetchTargetedCmcQuotes(params: {
       updateAttempt(candidate.asset.id, "rejected", "missing-quote");
       continue;
     }
-    const providerAddress = normalizedContractAddress(quote.platform?.token_address);
+    const platformSlug = quote.platform?.slug?.toLowerCase() ?? "";
+    const providerChain = Object.prototype.hasOwnProperty.call(CMC_PLATFORM_CHAINS, platformSlug)
+      ? CMC_PLATFORM_CHAINS[platformSlug]
+      : undefined;
+    const providerIdentity = resolveVerifiedCmcDeployment(candidate.asset, providerChain, quote.platform?.token_address);
     const requiresContractIdentity = (candidate.asset.contracts?.length ?? 0) > 0;
     if (
       quote.slug.toLowerCase() !== expectedSlug ||
       quote.symbol.toUpperCase() !== candidate.asset.symbol.toUpperCase() ||
       quote.is_active !== 1 ||
-      (requiresContractIdentity && (
-        providerAddress == null || !matchesConfiguredContract(candidate.asset, providerAddress)
-      ))
+      (requiresContractIdentity && providerIdentity == null)
     ) {
       reject("unsupported-quote");
       updateAttempt(candidate.asset.id, "rejected", "unsupported-quote");
       continue;
     }
     matched += 1;
-    const matchedDeployment = providerAddress == null
-      ? null
-      : candidate.asset.contracts?.find(
-          (deployment) => normalizedContractAddress(deployment.address) === providerAddress,
-        ) ?? null;
-    const providerIdentity = matchedDeployment && providerAddress
-      ? { chain: matchedDeployment.chain, target: providerAddress }
-      : undefined;
     const usdQuote = Array.isArray(quote.quote)
       ? quote.quote.find((entry) => entry.symbol.toUpperCase() === "USD")
       : quote.quote.USD;
@@ -514,8 +523,8 @@ async function fetchTargetedCmcQuotes(params: {
       price,
       volume24h,
       observedAt: observedAt!,
-      providerAddress,
-      chain: matchedDeployment?.chain ?? null,
+      providerAddress: providerIdentity?.target ?? null,
+      chain: providerIdentity?.chain ?? null,
       active: true,
     });
     updateAttempt(candidate.asset.id, "resolved", undefined, observedAt, providerIdentity);
@@ -687,9 +696,16 @@ export async function runCmcPass(
           cmcData.data.num_tokens > CMC_CATEGORY_LIMIT ||
           cmcData.data.coins.length < cmcData.data.num_tokens;
         diagnostic.responseRowCount = cmcData.data.coins.length;
-        const cmcBySymbol = new Map<string, CmcFallbackQuote>();
+        const cmcBySymbol = new Map<string, CmcFallbackQuote | null>();
         const cmcBySlug = new Map<string, CmcFallbackQuote>();
         for (const entry of categoryTruncated ? [] : cmcData.data.coins) {
+          const symbol = entry.symbol.toUpperCase();
+          const repeatedSymbol = cmcBySymbol.has(symbol);
+          if (repeatedSymbol) {
+            logWorkerEventArgs("handler", "warn", `[enrich] CMC symbol collision: ${symbol}`);
+          }
+          // Even a stale/unpriced sibling makes symbol-only identity ambiguous.
+          cmcBySymbol.set(symbol, null);
           const price = entry.quote?.USD?.price;
           const observedAt = parseUnixOrIsoTimestampSec(entry.quote?.USD?.last_updated);
           if (
@@ -697,10 +713,6 @@ export async function runCmcPass(
             price > 0 &&
             isFreshFallbackObservedAt(observedAt, CMC_QUOTE_MAX_AGE_SEC)
           ) {
-            const symbol = entry.symbol.toUpperCase();
-            if (cmcBySymbol.has(symbol)) {
-              logWorkerEventArgs("handler", "warn", `[enrich] CMC symbol collision: ${symbol} (existing=$${cmcBySymbol.get(symbol)?.price}, new=$${price})`);
-            }
             const quote: CmcFallbackQuote = {
               price,
               observedAt: observedAt!,
@@ -708,7 +720,7 @@ export async function runCmcPass(
               symbol,
             };
             if (entry.slug) quote.slug = entry.slug;
-            cmcBySymbol.set(symbol, quote);
+            if (!repeatedSymbol) cmcBySymbol.set(symbol, quote);
             if (entry.slug) {
               cmcBySlug.set(entry.slug.toLowerCase(), quote);
             }
@@ -721,7 +733,7 @@ export async function runCmcPass(
           const allowSymbolFallback = UNIQUE_ACTIVE_SYMBOLS.has(symbolKey);
           const slug = entry.asset.cmcSlug;
           const cmcQuote = slug
-            ? cmcBySlug.get(slug.toLowerCase()) ?? (allowSymbolFallback ? cmcBySymbol.get(symbolKey) : undefined)
+            ? cmcBySlug.get(slug.toLowerCase())
             : allowSymbolFallback
               ? cmcBySymbol.get(symbolKey)
               : undefined;

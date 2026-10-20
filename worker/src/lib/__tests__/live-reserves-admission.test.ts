@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
+import { computeLiveReserveConfigFingerprint, getLiveReserveAdapterDefinition, LiveReservesConfigSchema } from "@shared/lib/live-reserve-adapters";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { computeReserveCompositionOverview, loadFreshIndependentLiveReserveMap, loadReserveSnapshotMetadataMap } from "../live-reserves/store";
@@ -139,6 +139,97 @@ describe("live reserve admission", () => {
     expect((await resolveReserveResult(db, "hbd-hive", 1_200))?.mode).not.toBe("live");
     expect((await loadFreshIndependentLiveReserveMap(db, 1_200)).has("hbd-hive")).toBe(false);
     expect((await loadReserveSnapshotMetadataMap(db, ["hbd-hive"], 1_200)).has("hbd-hive")).toBe(false);
+  });
+
+  it.each([2, 3, 4])("rejects retained crvUSD v%s books without renewing their original evidence", async (version) => {
+    const coin = TRACKED_META_BY_ID.get("crvusd-curve")!;
+    const config = coin.liveReservesConfig!;
+    expect(config.version).toBe(5);
+    expect(WORKER_TRACKED_META_BY_ID.get(coin.id)?.liveReservesConfig?.version).toBe(5);
+    expect(getLiveReserveAdapterDefinition(config.adapter)?.configValidation.allowedVersions).toEqual([5]);
+    expect(LiveReservesConfigSchema.safeParse(config).success).toBe(true);
+    expect(LiveReservesConfigSchema.safeParse({ ...config, version }).success).toBe(false);
+    const metadata = { freshnessMode: "not-applicable" as const };
+    const fingerprint = computeLiveReserveConfigFingerprint({ ...config, version });
+    const record = {
+      stablecoinId: coin.id, source: config.adapter, fetchedAt: 1_000,
+      slices: [{ name: "Retained collateral", pct: 100, risk: "medium" as const }],
+      metadata, warnings: [], warningCount: 0, adapterSourceModel: "dynamic-mix" as const,
+      adapterEvidenceClass: "independent" as const, configFingerprint: fingerprint,
+    };
+    expect(evaluateLiveReserveAdmission(record, { lastSuccessAt: 1_000, lastSuccessAttemptId: null }, coin, 1_200).reasons)
+      .toContain("config-mismatch");
+    const db = fixture(coin.id, metadata, fingerprint);
+    expect((await resolveReserveResult(db, coin.id, 1_200))?.mode).not.toBe("live");
+    expect((await loadFreshIndependentLiveReserveMap(db, 1_200)).has(coin.id)).toBe(false);
+    expect((await loadReserveSnapshotMetadataMap(db, [coin.id], 1_200)).has(coin.id)).toBe(false);
+    const currentDb = fixture(coin.id, metadata, computeLiveReserveConfigFingerprint(config));
+    expect((await resolveReserveResult(currentDb, coin.id, 1_200))?.provenance?.scoringEligible).toBe(true);
+  });
+
+  it.each([
+    { id: "usdai-usd-ai", version: 2, legacyVersions: [1] },
+    { id: "usdat-saturn", version: 2, legacyVersions: [1] },
+    { id: "dai-makerdao", version: 3, legacyVersions: [1, 2] },
+    { id: "usds-sky", version: 3, legacyVersions: [1, 2] },
+    { id: "usdp-parallel", version: 2, legacyVersions: [1] },
+    { id: "satusd-river", version: 2, legacyVersions: [1] },
+  ])("rejects retained mixed-head $id packets without renewing their clocks", async ({ id, version, legacyVersions }) => {
+    const coin = TRACKED_META_BY_ID.get(id)!;
+    const config = coin.liveReservesConfig!;
+    const adapter = getLiveReserveAdapterDefinition(config.adapter)!;
+    expect(config.version).toBe(version);
+    expect(adapter.configValidation.allowedVersions).toEqual([version]);
+    expect(LiveReservesConfigSchema.safeParse(config).success).toBe(true);
+    const record = {
+      stablecoinId: id, source: config.adapter, fetchedAt: 1_100,
+      slices: [{ name: "Retained reserve observation", pct: 100, risk: "low" as const }],
+      metadata: { freshnessMode: "verified" as const, sourceTimestamp: 1_000 },
+      warnings: [], warningCount: 0, adapterSourceModel: adapter.sourceModel,
+      adapterEvidenceClass: adapter.evidenceClass,
+      configFingerprint: computeLiveReserveConfigFingerprint(config),
+    };
+    const sync = { lastSuccessAt: 1_100, lastSuccessAttemptId: null };
+    expect(evaluateLiveReserveAdmission(record, sync, coin, 1_200).reasons).not.toContain("config-mismatch");
+    for (const legacyVersion of legacyVersions) {
+      const legacyConfig = { ...config, version: legacyVersion };
+      expect(LiveReservesConfigSchema.safeParse(legacyConfig).success).toBe(false);
+      const fingerprint = computeLiveReserveConfigFingerprint(legacyConfig);
+      expect(evaluateLiveReserveAdmission({ ...record, configFingerprint: fingerprint }, sync, coin, 1_200).reasons)
+        .toContain("config-mismatch");
+      const db = fixture(id, record.metadata, fingerprint);
+      expect((await resolveReserveResult(db, id, 1_200))?.mode).not.toBe("live");
+      expect((await loadReserveSnapshotMetadataMap(db, [id], 1_200)).has(id)).toBe(false);
+    }
+    expect(record.fetchedAt).toBe(1_100);
+    expect(record.metadata.sourceTimestamp).toBe(1_000);
+  });
+
+  it.each([
+    { id: "fpi-frax", version: 3, legacyVersions: [1, 2] },
+    { id: "ftusd-flying-tulip", version: 2, legacyVersions: [1] },
+    { id: "jupusd-jupiter", version: 2, legacyVersions: [1] },
+    { id: "usdx-kava", version: 2, legacyVersions: [1] },
+  ])("rejects retained incomplete-scope $id bindings before detail or metadata use", async ({ id, version, legacyVersions }) => {
+    const coin = TRACKED_META_BY_ID.get(id)!;
+    const config = coin.liveReservesConfig!;
+    const adapter = getLiveReserveAdapterDefinition(config.adapter)!;
+    expect(config.version).toBe(version);
+    expect(WORKER_TRACKED_META_BY_ID.get(id)?.liveReservesConfig?.version).toBe(version);
+    expect(adapter.configValidation.allowedVersions).toEqual([version]);
+    expect(LiveReservesConfigSchema.safeParse(config).success).toBe(true);
+    const metadata = { freshnessMode: "not-applicable" as const };
+    const current = await resolveReserveResult(fixture(id, metadata), id, 1_200);
+    expect(current?.mode).toBe("live");
+    for (const legacyVersion of legacyVersions) {
+      const oldConfig = { ...config, version: legacyVersion };
+      expect(LiveReservesConfigSchema.safeParse(oldConfig).success).toBe(false);
+      const fingerprint = computeLiveReserveConfigFingerprint(oldConfig);
+      const db = fixture(id, metadata, fingerprint);
+      expect((await resolveReserveResult(db, id, 1_200))?.mode).not.toBe("live");
+      expect((await loadFreshIndependentLiveReserveMap(db, 1_200)).has(id)).toBe(false);
+      expect((await loadReserveSnapshotMetadataMap(db, [id], 1_200)).has(id)).toBe(false);
+    }
   });
 
   it("accepts matching fingerprints but excludes internal diagnostics from detail", async () => {

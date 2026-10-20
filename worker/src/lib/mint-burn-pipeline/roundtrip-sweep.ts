@@ -1,7 +1,6 @@
 import { logWorkerEventArgs } from "../structured-log";
-import { batchExecute } from "../db";
 import { throwIfAborted } from "../abort";
-import { collectAffectedHours, recalcAffectedHours } from "./persistence";
+import { executeMintBurnMaintenanceMutations, rebuildMintBurnMaterializationHours } from "./materialization-debt";
 import { ROUNDTRIP_TOLERANCE_HAVING_SQL } from "./roundtrip-detection";
 import type { MintBurnAffectedHour } from "./types";
 
@@ -30,7 +29,7 @@ export async function sweepRecentRoundtrips(
   const cutoff = nowSec - lookbackSec;
 
   const { results: candidates } = await db.prepare(
-    `SELECT tx_hash, stablecoin_id, chain_id, MIN(timestamp) as timestamp
+    `SELECT tx_hash, stablecoin_id, chain_id
      FROM mint_burn_events
      WHERE flow_type = 'standard' AND timestamp >= ?
      GROUP BY tx_hash, stablecoin_id, chain_id
@@ -42,7 +41,6 @@ export async function sweepRecentRoundtrips(
     tx_hash: string;
     stablecoin_id: string;
     chain_id: string;
-    timestamp: number;
   }>();
   throwIfAborted(signal);
 
@@ -55,19 +53,24 @@ export async function sweepRecentRoundtrips(
     logWorkerEventArgs("lib", "warn", `[roundtrip-sweep] Hit limit (${SWEEP_LIMIT}), backlog may remain`);
   }
 
-  const affectedHours = collectAffectedHours(candidates);
-
-  const updateStmts = candidates.map((row) =>
-    db.prepare(
-     `UPDATE mint_burn_events
+  const mutations = candidates.map((row) => ({
+    enqueue: db.prepare(
+      `INSERT OR REPLACE INTO mint_burn_dirty_hours (stablecoin_id, chain_id, hour_ts)
+       SELECT DISTINCT stablecoin_id, chain_id, (timestamp / 3600) * 3600
+       FROM mint_burn_events
+       WHERE tx_hash = ? AND stablecoin_id = ? AND chain_id = ? AND flow_type = 'standard'
+       RETURNING stablecoin_id, chain_id, hour_ts`,
+    ).bind(row.tx_hash, row.stablecoin_id, row.chain_id),
+    update: db.prepare(
+      `UPDATE mint_burn_events
        SET flow_type = 'atomic_roundtrip'
        WHERE tx_hash = ? AND stablecoin_id = ? AND chain_id = ? AND flow_type = 'standard'`,
     ).bind(row.tx_hash, row.stablecoin_id, row.chain_id),
-  );
-  const reclassified = await batchExecute(db, updateStmts, { signal });
+  }));
+  const { changed: reclassified, affectedHours } = await executeMintBurnMaintenanceMutations(db, mutations, { signal });
 
   if (affectedHours.size > 0) {
-    await recalcAffectedHours(db, affectedHours, { signal });
+    await rebuildMintBurnMaterializationHours(db, affectedHours, { signal });
   }
 
   return { reclassified, affectedHours, saturated };

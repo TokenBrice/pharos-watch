@@ -290,26 +290,26 @@ async function writeDewsGenerationRows(
   await batchExecute(db, stmts, { signal });
 }
 
-async function countStressSignalRowsForGeneration(
+async function readStressSignalIdsForGeneration(
   db: D1Database,
   table: "stress_signal_publication_rows" | "stress_signals_latest",
   nowSec: number,
   signal?: AbortSignal,
-): Promise<number | null> {
-  const row = await runWithOverloadRetry(() =>
+): Promise<Set<string>> {
+  const rows = await runWithOverloadRetry(() =>
     db
       .prepare(
         table === "stress_signal_publication_rows"
-          ? "SELECT /* pharos:dews:publication-generation-count */ COUNT(*) as cnt FROM stress_signal_publication_rows WHERE computed_at = ?"
-          : "SELECT /* pharos:dews:stress-latest-generation-count */ COUNT(*) as cnt FROM stress_signals_latest WHERE computed_at = ?",
+          ? "SELECT /* pharos:dews:publication-generation-ids */ stablecoin_id FROM stress_signal_publication_rows WHERE computed_at = ?"
+          : "SELECT /* pharos:dews:stress-latest-generation-ids */ stablecoin_id FROM stress_signals_latest WHERE computed_at = ?",
       )
       .bind(nowSec)
-      .first<{ cnt: number }>(),
+      .all<{ stablecoin_id: string }>(),
     3,
     signal,
   );
   throwIfAborted(signal);
-  return row?.cnt ?? 0;
+  return new Set(rows.results.map((row) => row.stablecoin_id));
 }
 
 /**
@@ -414,22 +414,6 @@ export async function persistDewsResults(params: {
   ));
   await deleteLatestStressSignalRowsForIds(params.db, quarantinedStablecoinIds, params.signal);
 
-  const todayMidnight = startOfUtcDaySec(new Date());
-  if (params.results.length > 0) {
-    const dailySnapshot = await reconcileDailyDewsHistorySnapshot(
-      params.db,
-      params.results,
-      todayMidnight,
-      params.signal,
-      quarantinedStablecoinIds,
-    );
-    if (dailySnapshot.rewritten) {
-      logWorkerEventArgs("lib", "info",
-        `[dews] Reconciled daily snapshot (${dailySnapshot.previousOwnedRowCount} -> ${dailySnapshot.sealedRowCount}) for ${formatUtcDateOnly(new Date(todayMidnight * 1000))}`,
-      );
-    }
-  }
-
   let rowsDropped = rowsRetiredCurrent;
   if (params.eligibleIds.size > 0) {
     rowsDropped += await deleteOrphansForTable(params.db, "stress_signals", params.eligibleIds, {
@@ -480,28 +464,35 @@ export async function persistDewsResults(params: {
       params.signal,
     );
   } else if (params.results.length > 0) {
-    currentGenerationRows = await countStressSignalRowsForGeneration(
+    const currentGenerationIds = await readStressSignalIdsForGeneration(
       params.db,
       "stress_signal_publication_rows",
       params.nowSec,
       params.signal,
-    ) ?? 0;
-    latestGenerationRows = await countStressSignalRowsForGeneration(
+    );
+    currentGenerationRows = currentGenerationIds.size;
+    const latestGenerationIds = await readStressSignalIdsForGeneration(
       params.db,
       "stress_signals_latest",
       params.nowSec,
       params.signal,
     );
+    latestGenerationRows = latestGenerationIds.size;
     const expectedRows = params.results.length;
     if (currentGenerationRows !== expectedRows) {
       throw new Error(
         `DEWS publication incomplete: stress_signal_publication_rows has ${currentGenerationRows}/${expectedRows} rows for ${params.nowSec}`,
       );
     }
-    if (latestGenerationRows != null && latestGenerationRows !== expectedRows) {
+    if (latestGenerationRows !== expectedRows) {
       throw new Error(
         `DEWS publication incomplete: stress_signals_latest has ${latestGenerationRows}/${expectedRows} rows for ${params.nowSec}`,
       );
+    }
+    if (computedIds.size !== expectedRows
+      || !hasExactStablecoinIds(currentGenerationIds, computedIds)
+      || !hasExactStablecoinIds(latestGenerationIds, computedIds)) {
+      throw new Error(`DEWS publication identity mismatch for ${params.nowSec}`);
     }
     const pointerWrite = await writeDewsPublishedGeneration(
       params.db,
@@ -537,6 +528,21 @@ export async function persistDewsResults(params: {
   if (publicationPointerWritten) {
     throwIfAborted(params.signal);
     await writeFreshnessSentinel(params.db, "dews", params.nowSec, `dews:${params.nowSec}`, params.signal);
+    // History failure is visible to the caller, but cannot undo or invalidate
+    // the already accepted current generation, ledger proof or freshness.
+    const todayMidnight = startOfUtcDaySec(new Date());
+    const dailySnapshot = await reconcileDailyDewsHistorySnapshot(
+      params.db,
+      params.results,
+      todayMidnight,
+      params.signal,
+      quarantinedStablecoinIds,
+    );
+    if (dailySnapshot.rewritten) {
+      logWorkerEventArgs("lib", "info",
+        `[dews] Reconciled daily snapshot (${dailySnapshot.previousOwnedRowCount} -> ${dailySnapshot.sealedRowCount}) for ${formatUtcDateOnly(new Date(todayMidnight * 1000))}`,
+      );
+    }
   }
 
   return {

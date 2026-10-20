@@ -52,13 +52,25 @@ function verdict(
     : { verdict: "changed" as const, observed, recorded, reason };
 }
 
+class ScenarioReadUnavailableError extends Error {
+  name = "ScenarioReadUnavailableError";
+}
+
+function storageWord(raw: Hex | undefined, address: Address, slot: Hex): Hex {
+  if (!raw || !/^0x[0-9a-fA-F]{64}$/.test(raw)) {
+    throw new ScenarioReadUnavailableError(`Storage word unavailable at ${address} slot ${slot}: expected 32-byte hex`);
+  }
+  return raw;
+}
+
 async function storageAddress(
   context: ScenarioCheckContext, address: Address, slot: Hex,
 ): Promise<Address> {
   const chain = requireScenarioChain(context, 1);
   return memoizeRead(context, `eth:${address}:${slot}`, async () => {
-    const raw = await chain.client.getStorageAt({ address, slot, blockNumber: chain.blockNumber });
-    if (!raw || raw === "0x") return "0x0000000000000000000000000000000000000000";
+    const raw = storageWord(
+      await chain.client.getStorageAt({ address, slot, blockNumber: chain.blockNumber }), address, slot,
+    );
     return `0x${raw.slice(-40)}` as Address;
   });
 }
@@ -80,7 +92,7 @@ async function safeState(context: ScenarioCheckContext) {
       const raw = await chain.client.getStorageAt({
         address: devSafe, slot: headSlot, blockNumber: chain.blockNumber,
       });
-      return raw ? BigInt(raw) : 0n;
+      return BigInt(storageWord(raw, devSafe, headSlot));
     }),
     storageAddress(context, devSafe, safeGuardSlot),
   ]);
@@ -101,13 +113,16 @@ async function aclRole(
     }));
 }
 
-async function yearnCloneTarget(context: ScenarioCheckContext): Promise<Address> {
+async function yearnCloneTarget(context: ScenarioCheckContext): Promise<Address | null> {
   const chain = requireScenarioChain(context, 1);
   return memoizeRead(context, `eth:${yearnFrUsdc}:bytecode`, async () => {
     const code = await chain.client.getBytecode({ address: yearnFrUsdc, blockNumber: chain.blockNumber });
-    // EIP-1167 minimal proxy: 0x363d3d373d3d3d363d73<target>5af43d82803e903d91602b57fd5bf3.
-    if (!code || code.length !== 92) return "0x0000000000000000000000000000000000000000";
-    return `0x${code.slice(22, 62)}` as Address;
+    if (!code || code.length % 2 !== 0 || !/^0x[0-9a-fA-F]+$/.test(code)) {
+      throw new ScenarioReadUnavailableError(`Bytecode unavailable at ${yearnFrUsdc}: expected nonempty hex bytes`);
+    }
+    // Authenticate the complete EIP-1167 runtime, not just its embedded target.
+    const target = code.match(/^0x363d3d373d3d3d363d73([0-9a-fA-F]{40})5af43d82803e903d91602b57fd5bf3$/i)?.[1];
+    return target ? `0x${target.toLowerCase()}` as Address : null;
   });
 }
 
@@ -274,7 +289,7 @@ const checks: readonly ScenarioCheck[] = [
       const observed = { borrowSharePct: Number((borrows * 10n ** 12n * 10000n) / supply) / 100 };
       const recorded = { borrowSharePct: 76.08 };
       return verdict(
-        observed.borrowSharePct >= 25,
+        borrows * 10n ** 12n * 4n > supply,
         observed,
         recorded,
         "Operator borrows at or below a quarter of supply would mean backing is mostly liquid again; the premise that holders hold operator claims instead of cash would no longer hold.",

@@ -13,6 +13,8 @@ import { adaptCrvUsd, adaptCrvUsdOnchain } from "../crvusd";
 
 type TestHexAddress = `0x${string}`;
 
+const OBSERVED_EMPTY_YIELD_BASIS = { complete: true as const, markets: [], warnings: [] };
+
 const BTC_ASSET = "0x00000000000000000000000000000000000000b0";
 const BTC_LT = "0x00000000000000000000000000000000000000b1";
 const ETH_ASSET = "0x00000000000000000000000000000000000000e0";
@@ -57,7 +59,7 @@ describe("adaptCrvUsd", () => {
           ],
         },
       },
-    });
+    }, OBSERVED_EMPTY_YIELD_BASIS);
 
     expect(result.slices).toEqual([
       { sourceKey: "crvusd:btc",
@@ -93,10 +95,10 @@ describe("adaptCrvUsd", () => {
           },
         },
       },
-      [
+      { complete: true, warnings: [], markets: [
         { marketId: 3, symbol: "WBTC", usd: 200 },
         { marketId: 6, symbol: "WETH", usd: 100 },
-      ],
+      ] },
     );
 
     expect(result.slices).toEqual([
@@ -118,7 +120,7 @@ describe("adaptCrvUsd", () => {
     const result = adaptCrvUsd({ chains: { ethereum: { data: [
       { collateral_amount_usd: 75, collateral_token: { symbol: "WBTC" } },
       { collateral_amount_usd: 25, collateral_token: { symbol: "UNREVIEWED" } },
-    ] } } });
+    ] } } }, OBSERVED_EMPTY_YIELD_BASIS);
     expect(result.slices).toEqual([
       { sourceKey: "crvusd:btc",
       name: "Custodied BTC (ex: wBTC/cbBTC)", pct: 75, risk: "medium" },
@@ -132,24 +134,21 @@ describe("adaptCrvUsd", () => {
   it("publishes all-unknown positive exposure rather than an empty recognized basket", () => {
     const result = adaptCrvUsd({ chains: { ethereum: { data: [
       { collateral_amount_usd: 100, collateral_token: { symbol: "UNREVIEWED" } },
-    ] } } });
+    ] } } }, OBSERVED_EMPTY_YIELD_BASIS);
     expect(result.slices).toEqual([{ sourceKey: "crvusd:unknown",
       name: "Other / unmapped collateral markets", pct: 100, risk: "high" }]);
     expect(result.metadata).toMatchObject({ unknownExposurePct: 100, activeMarketCount: 1 });
     expect(result.warnings).toEqual([expect.objectContaining({ code: "unknown-market" })]);
   });
 
-  it("excludes nonpositive and nonfinite values from exposure and active counts", () => {
+  it("preserves observed zero markets without adding exposure or active counts", () => {
     const result = adaptCrvUsd({ chains: { ethereum: { data: [
       { collateral_amount_usd: 100, collateral_token: { symbol: "WBTC" } },
-      ...[0, -10, NaN, Infinity].map((collateral_amount_usd) => ({
-        collateral_amount_usd, collateral_token: { symbol: "UNREVIEWED" },
-      })),
-    ] } } }, [
+      { collateral_amount_usd: 0, collateral_token: { symbol: "UNREVIEWED" } },
+    ] } } }, { complete: true, warnings: [], markets: [
       { marketId: 1, symbol: "WETH", usd: 100 },
-      { marketId: 2, symbol: "UNREVIEWED", usd: -50 },
-      { marketId: 3, symbol: "UNREVIEWED", usd: Infinity },
-    ]);
+      { marketId: 2, symbol: "UNREVIEWED", usd: 0 },
+    ] });
     expect(result.slices).toEqual([
       { sourceKey: "crvusd:btc",
       name: "Custodied BTC (ex: wBTC/cbBTC)", pct: 50, risk: "medium" },
@@ -161,6 +160,36 @@ describe("adaptCrvUsd", () => {
       yieldBasisActiveMarketCount: 1, directCollateralUsd: 100, yieldBasisCollateralUsd: 100,
     });
     expect(result.warnings).toEqual([]);
+  });
+
+  it.each([
+    { collateral_token: { symbol: "ETH" } },
+    { collateral_amount_usd: NaN, collateral_token: { symbol: "ETH" } },
+    { collateral_amount_usd: Infinity, collateral_token: { symbol: "ETH" } },
+    { collateral_amount_usd: -1, collateral_token: { symbol: "ETH" } },
+    { collateral_amount_usd: 100 },
+    { collateral_amount_usd: 100, collateral_token: { symbol: " " } },
+  ])("withholds the whole HTTP book for an unreadable market %j", (market) => {
+    const result = adaptCrvUsd({ chains: { ethereum: { data: [
+      { collateral_amount_usd: 100, collateral_token: { symbol: "WBTC" } }, market,
+    ] } } }, OBSERVED_EMPTY_YIELD_BASIS);
+    expect(result.slices).toEqual([]);
+    expectWarningEffect(result, "curve-markets-incomplete", "fatal");
+    expect(result.metadata).not.toHaveProperty("yieldBasisCollateralUsd");
+    expect(result.metadata).not.toHaveProperty("yieldBasisCollateralPct");
+  });
+
+  it.each([{}, { chains: { ethereum: {} } }])("rejects a missing HTTP census even with measured Yield Basis collateral", (payload) => {
+    const result = adaptCrvUsd(payload, { complete: true, warnings: [], markets: [{ marketId: 0, symbol: "WBTC", usd: 100 }] });
+    expect(result.slices).toEqual([]);
+    expectWarningEffect(result, "curve-markets-incomplete", "fatal");
+  });
+
+  it.each([-50, NaN, Infinity])("refuses an invalid measured Yield Basis value %s", (usd) => {
+    expect(() => adaptCrvUsd({ chains: { ethereum: { data: [
+      { collateral_amount_usd: 100, collateral_token: { symbol: "WBTC" } },
+    ] } } }, { complete: true, warnings: [], markets: [{ marketId: 0, symbol: "WETH", usd }] }))
+      .toThrow("crvusd-collateral-incomplete");
   });
 
 
@@ -179,7 +208,7 @@ describe("adaptCrvUsd", () => {
           bandCount: 2,
         },
       ],
-      [{ marketId: 1, symbol: "WETH", usd: 50 }],
+      { complete: true, warnings: [], markets: [{ marketId: 1, symbol: "WETH", usd: 50 }] },
     );
 
     expect(result.slices).toEqual([
@@ -215,7 +244,7 @@ describe("adaptCrvUsd", () => {
           bandCount: 2,
         },
       ],
-      [],
+      { complete: true, warnings: [], markets: [] },
     );
 
     expect(result.metadata).toMatchObject({
@@ -288,6 +317,7 @@ interface YieldBasisScenario {
   /** Answer market_count() with a failed call. */
   failMarketCount?: boolean;
   tokenDecimals?: (assetAddress: string) => number;
+  totalSupply?: bigint;
 }
 
 interface CrvUsdScenario {
@@ -350,7 +380,7 @@ function crvUsdNetwork(scenario: CrvUsdScenario): AdapterNetworkSpec {
       rpc[`${address}:symbol()`] = symbolResult(address === ETH_ASSET.toLowerCase() ? "WETH" : "WBTC");
     }
   }
-  // The optional Yield Basis leg runs in both input modes, so market_count()
+  // The required Yield Basis scope runs in both input modes, so market_count()
   // must always be answerable (default: no registered markets).
   rpc[`${YIELD_BASIS_FACTORY}:market_count()`] = yb?.failMarketCount ? null : ybMarketCount;
   if (yb) {
@@ -370,7 +400,7 @@ function crvUsdNetwork(scenario: CrvUsdScenario): AdapterNetworkSpec {
     }
     for (let marketId = 0; marketId < ybMarketCount; marketId += 1) {
       const { assetAddress, ltAddress } = yieldBasisMarketFor(marketId);
-      rpc[`${ltAddress}:totalSupply()`] = 1n;
+      rpc[`${ltAddress}:totalSupply()`] = yb.totalSupply ?? 1n;
       rpc[`${ltAddress}:preview_emergency_withdraw(uint256)`] = () => {
         const [assetAmount, feeAmount] = assetAddress.toLowerCase() === ETH_ASSET.toLowerCase()
           ? [10n * 10n ** 18n, 0n]
@@ -440,7 +470,7 @@ describe("fetchCrvUsdReserves", () => {
     expect(bandMembers).toHaveLength(3 * 1502);
   });
 
-  it("drops Yield Basis when its untrusted market count exceeds the adapter cap before scheduling market reads", async () => {
+  it("withholds the whole book when Yield Basis exceeds the adapter cap before scheduling market reads", async () => {
     const { result, network } = await runCrvUsd({
       curvePayload: {
         chains: {
@@ -450,11 +480,12 @@ describe("fetchCrvUsdReserves", () => {
         },
       },
       yieldBasis: { marketCount: 257 },
-    });
+    }, { validate: false });
 
-    expect(result.slices).toEqual([{ sourceKey: "crvusd:btc",
-      name: "Custodied BTC (ex: wBTC/cbBTC)", pct: 100, risk: "medium" }]);
-    expectWarningEffect(result, "yield-basis-read-failed", "degraded");
+    expect(result.slices).toEqual([]);
+    expectWarningEffect(result, "yield-basis-incomplete", "fatal");
+    expect(result.metadata).not.toHaveProperty("yieldBasisCollateralUsd");
+    expect(result.metadata).not.toHaveProperty("yieldBasisCollateralPct");
     expect(network.rpcCalls.filter((call) => call.method === "eth_call").map((call) => call.selector))
       .toEqual([toFunctionSelector("market_count()")]);
   });
@@ -526,34 +557,32 @@ describe("fetchCrvUsdReserves", () => {
     });
   });
 
-  it("continues with direct Curve market data when the optional Yield Basis leg fails", async () => {
+  it.each(["http", "onchain"] as const)("withholds %s replacement rather than claiming zero Yield Basis on a failed read", async (mode) => {
     const { result, network } = await runCrvUsd({
-      curvePayload: {
+      ...(mode === "onchain" ? { llamma: { marketCount: 1 } } : { curvePayload: {
         chains: {
           ethereum: {
             data: [{ collateral_amount_usd: 100, collateral_token: { symbol: "WBTC" } }],
           },
         },
-      },
+      } }),
       yieldBasis: { failMarketCount: true },
-    });
+    }, { validate: false });
 
-    expect(result.slices).toEqual([{ sourceKey: "crvusd:btc",
-      name: "Custodied BTC (ex: wBTC/cbBTC)", pct: 100, risk: "medium" }]);
-    expectWarningEffect(result, "yield-basis-read-failed", "degraded");
-    expect(result.metadata).toMatchObject({
-      directActiveMarketCount: 1,
-      yieldBasisActiveMarketCount: 0,
-      yieldBasisCollateralUsd: 0,
-    });
+    expect(result.slices).toEqual([]);
+    expectWarningEffect(result, "yield-basis-incomplete", "fatal");
+    expect(result.metadata).not.toHaveProperty("yieldBasisActiveMarketCount");
+    expect(result.metadata).not.toHaveProperty("yieldBasisCollateralUsd");
+    expect(result.metadata).not.toHaveProperty("yieldBasisCollateralPct");
+    expect(result.metadata?.details).toMatchObject({ measuredDirectCollateralUsd: 100 });
     const ethCallSelectors = network.rpcCalls
       .filter((call) => call.method === "eth_call")
       .map((call) => call.selector);
     expect(ethCallSelectors.length).toBeGreaterThan(0);
-    expect(ethCallSelectors.every((selector) => selector === toFunctionSelector("market_count()"))).toBe(true);
+    if (mode === "http") expect(ethCallSelectors.every((selector) => selector === toFunctionSelector("market_count()"))).toBe(true);
   });
 
-  it("drops the optional Yield Basis leg when token decimals are out of bounds", async () => {
+  it("withholds the whole book when Yield Basis token decimals are out of bounds", async () => {
     const { result, network } = await runCrvUsd({
       curvePayload: {
         chains: {
@@ -563,14 +592,23 @@ describe("fetchCrvUsdReserves", () => {
         },
       },
       yieldBasis: { marketCount: 1, tokenDecimals: () => 37 },
-    });
+    }, { validate: false });
 
-    expect(result.slices).toEqual([{ sourceKey: "crvusd:btc",
-      name: "Custodied BTC (ex: wBTC/cbBTC)", pct: 100, risk: "medium" }]);
-    expectWarningEffect(result, "yield-basis-read-failed", "degraded");
-    expect(result.metadata).toMatchObject({ yieldBasisActiveMarketCount: 0 });
+    expect(result.slices).toEqual([]);
+    expectWarningEffect(result, "yield-basis-incomplete", "fatal");
+    expect(result.metadata).not.toHaveProperty("yieldBasisActiveMarketCount");
     expect(network.rpcCalls.some((call) => call.selector === toFunctionSelector("decimals()"))).toBe(true);
     expect(network.requests.some((request) => request.url.includes("prices/current"))).toBe(false);
+  });
+
+  it.each([0, 1])("publishes observed empty Yield Basis as measured zero (%s registered markets)", async (marketCount) => {
+    const { result } = await runCrvUsd({
+      llamma: { marketCount: 1 }, yieldBasis: { marketCount, totalSupply: 0n },
+    });
+    expect(result.slices).toEqual([{ sourceKey: "crvusd:btc",
+      name: "Custodied BTC (ex: wBTC/cbBTC)", pct: 100, risk: "medium" }]);
+    expect(result.warnings).toEqual([]);
+    expect(result.metadata).toMatchObject({ yieldBasisCollateralUsd: 0, yieldBasisCollateralPct: 0 });
   });
 
   it("reads LLAMMA collateral at or above the active band and crvUSD at or below it", async () => {
@@ -606,7 +644,7 @@ describe("fetchCrvUsdReserves", () => {
     expect(bandMembers.filter((call) => call.selector === BANDS_X_SELECTOR).map(bandOf)).toEqual([0, 1, 2, 3, 4]);
   });
 
-  it("fails closed with a degraded warning when the Curve payload's collateral amounts are unreadable", async () => {
+  it("fails closed with a fatal completeness warning when the Curve payload's collateral amounts are unreadable", async () => {
     // Upstream drift: collateral_amount_usd renamed/dropped must not publish a
     // silently empty collateral mix.
     const { result } = await runCrvUsd({
@@ -623,6 +661,6 @@ describe("fetchCrvUsdReserves", () => {
     }, { validate: false });
 
     expect(result.slices).toEqual([]);
-    expectWarningEffect(result, "curve-markets-unreadable", "degraded");
+    expectWarningEffect(result, "curve-markets-incomplete", "fatal");
   });
 });

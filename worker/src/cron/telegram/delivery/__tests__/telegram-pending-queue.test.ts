@@ -7,6 +7,7 @@ import {
   serializePendingMarkupPolicy,
 } from "../../../../telegram/outbox/pending-provenance";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import {
   DEFAULT_TELEGRAM_PENDING_D1_TABLES,
   insertAlertJobTargetFixture,
@@ -180,6 +181,26 @@ describe("registerSubscriberBlockAndShouldDisable", () => {
 });
 
 describe("enqueuePendingAlerts", () => {
+  it("inherits the largest live chat deadline on enqueue without extending TTL or inheriting terminal evidence", async () => {
+    const { sqlite, db } = setupTelegramPendingSqlite();
+    const now = Math.floor(Date.now() / 1000);
+    try {
+      insertPendingSqlite(sqlite, { id: 1, chatId: "limited", html: "live", createdAt: now, expiresAt: now + 1800, notBeforeAt: now + 900 }, now);
+      insertPendingSqlite(sqlite, { id: 2, chatId: "limited", html: "unknown", createdAt: now, expiresAt: now + 1800, notBeforeAt: now + 2000, deliveryState: "execution_unknown" }, now);
+      insertPendingSqlite(sqlite, { id: 3, chatId: "limited", html: "expired", createdAt: now - 100, expiresAt: now, notBeforeAt: now + 3000 }, now);
+      const message = { chatId: "limited", html: "new body", disableNotification: false };
+      await enqueuePendingAlerts(db, [message, { ...message, chatId: "peer" }], now);
+      expect(sqlite.prepare("SELECT not_before_at, expires_at FROM telegram_pending_alerts WHERE dedupe_key = ?").get(buildDedupeKey(message))).toEqual({
+        not_before_at: now + 900, expires_at: now + PENDING_TTL_SEC,
+      });
+      expect(sqlite.prepare("SELECT not_before_at FROM telegram_pending_alerts WHERE chat_id = 'peer'").get()).toEqual({ not_before_at: null });
+      await enqueuePendingAlerts(db, [message], now + 10, { notBeforeAt: now + 1200 });
+      expect(sqlite.prepare("SELECT not_before_at, expires_at FROM telegram_pending_alerts WHERE dedupe_key = ?").get(buildDedupeKey(message))).toEqual({
+        not_before_at: now + 1200, expires_at: now + PENDING_TTL_SEC,
+      });
+    } finally { sqlite.close(); }
+  });
+
   it("uses the shared recap priority, six-hour TTL, and immutable markup provenance", async () => {
     const { sqlite, db } = setupTelegramPendingSqlite();
     const markup = { inline_keyboard: [[{ text: "View watchlist", web_app: { url: "https://pharos.watch/pharoswatchbot" } }]] };
@@ -548,7 +569,7 @@ describe("buildDedupeKey", () => {
 
 describe("cleanupExpiredPendingAlerts", () => {
   it("retries deletion after a committed dead-letter insert without duplicating audit rows", async () => {
-    const { sqlite, db } = setupTelegramPendingSqlite();
+    const { sqlite } = setupTelegramPendingSqlite();
     const now = Math.floor(Date.now() / 1000);
     insertPendingSqlite(sqlite, {
       id: 901,
@@ -559,29 +580,14 @@ describe("cleanupExpiredPendingAlerts", () => {
       dedupeKey: "dead-letter-crash-key",
     });
     let failDelete = true;
-    const crashDb = {
-      ...db,
-      prepare: (sql: string) => {
-        if (sql.includes("DELETE FROM telegram_pending_alerts WHERE id IN")) {
-          const statement = db.prepare(sql);
-          return {
-            bind: (...binds: unknown[]) => {
-              const bound = statement.bind(...binds);
-              return {
-                run: async () => {
-                  if (failDelete) {
-                    failDelete = false;
-                    throw new Error("crash after dead-letter insert");
-                  }
-                  return bound.run();
-                },
-              };
-            },
-          } as unknown as D1PreparedStatement;
+    const crashDb = createSqliteD1(sqlite, {
+      onRun: (sql) => {
+        if (failDelete && sql.includes("DELETE FROM telegram_pending_alerts WHERE id = ?")) {
+          failDelete = false;
+          throw new Error("crash after dead-letter insert");
         }
-        return db.prepare(sql);
       },
-    } as D1Database;
+    });
 
     await expect(cleanupExpiredPendingAlerts(crashDb, now)).rejects.toThrow("crash after dead-letter insert");
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_alert_dead_letters").get()).toEqual({ count: 1 });
@@ -665,11 +671,10 @@ describe("cleanupExpiredPendingAlerts", () => {
     const db = mockD1([
       { match: "SELECT id, chat_id, message_html", rows: expiredRows },
       { match: "INSERT INTO telegram_alert_dead_letters", rows: [] },
-      { match: "UPDATE telegram_alert_job_targets", rows: [] },
       {
-        match: "DELETE FROM telegram_pending_alerts WHERE id IN",
+        match: "DELETE FROM telegram_pending_alerts WHERE id = ?",
         rows: [],
-        runMeta: { changes: EXPIRED_PENDING_CLEANUP_BATCH_LIMIT },
+        runMeta: { changes: 1 },
       },
     ]);
 
@@ -758,8 +763,7 @@ describe("cleanupExpiredPendingAlerts", () => {
         }],
       },
       { match: "INSERT INTO telegram_alert_dead_letters", rows: [] },
-      { match: "UPDATE telegram_alert_job_targets", rows: [] },
-      { match: "DELETE FROM telegram_pending_alerts WHERE id IN", rows: [], runMeta: { changes: 1 } },
+      { match: "DELETE FROM telegram_pending_alerts WHERE id = ?", rows: [], runMeta: { changes: 1 } },
     ]);
 
     expect(await cleanupExpiredPendingAlerts(db, nowSec)).toBe(1);
@@ -801,8 +805,7 @@ describe("cleanupExpiredPendingAlerts", () => {
         }],
       },
       { match: "INSERT INTO telegram_alert_dead_letters", rows: [], throwError: new Error("D1 write failed") },
-      { match: "UPDATE telegram_alert_job_targets", rows: [] },
-      { match: "DELETE FROM telegram_pending_alerts WHERE id IN", rows: [], runMeta: { changes: 1 } },
+      { match: "DELETE FROM telegram_pending_alerts WHERE id = ?", rows: [], runMeta: { changes: 1 } },
     ]);
 
     expect(await cleanupExpiredPendingAlerts(db, nowSec)).toBe(1);

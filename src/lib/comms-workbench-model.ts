@@ -11,12 +11,12 @@ import {
   readMetadataString,
 } from "@shared/lib/status-metadata";
 import { TELEGRAM_LIFECYCLE_SNAPSHOT_REFRESH_SECONDS } from "@shared/lib/status-thresholds";
-import { TELEGRAM_ALERT_TYPES } from "@shared/types/status/telegram";
 import type {
   CronRunStatus,
   CronStatus,
   StatusResponse,
   TelegramAlertType,
+  TelegramDeliverySliStatus,
 } from "@shared/types";
 
 export type CommsDeliveryHealth = "healthy" | "degraded" | "failed" | "unknown";
@@ -31,16 +31,6 @@ export interface CommsPriorityMetric {
     | "rate-limiting"
     | "latest-dispatch";
   label: string;
-}
-
-export interface CommsPerAlertDeliveryRow {
-  type: TelegramAlertType;
-  label: string;
-  sent: number | null;
-  enqueued: number | null;
-  failed: number | null;
-  blocked: number | null;
-  firstSendLatencyMs: number | null;
 }
 
 export interface CommsRecoveryLink {
@@ -81,13 +71,11 @@ export interface CommsWorkbenchModel {
     };
     permanentFailures: {
       total: number | null;
-      fresh: number | null;
       pendingNonRetryable: number | null;
       maxAttempts: number | null;
     };
     retries: {
       totalQueued: number | null;
-      freshQueued: number | null;
       pendingQueued: number | null;
       rateLimited: boolean | null;
       retryAfterSec: number | null;
@@ -103,8 +91,6 @@ export interface CommsWorkbenchModel {
       skipped: string | null;
       subscribersNotified: number | null;
       messagesSent: number | null;
-      freshAttempted: number | null;
-      freshSent: number | null;
       pendingAttempted: number | null;
       pendingDrained: number | null;
       pendingDeferred: number | null;
@@ -117,7 +103,7 @@ export interface CommsWorkbenchModel {
       reserveAlertsSuppressed: boolean | null;
       reserveSourceState: string | null;
     };
-    perAlertType: CommsPerAlertDeliveryRow[];
+    sli: TelegramDeliverySliStatus | null;
     recoveryLinks: CommsRecoveryLink[];
   };
   audience: {
@@ -177,15 +163,6 @@ const PRIORITY_METRICS: CommsPriorityMetric[] = [
   { id: "latest-dispatch", label: "Latest dispatch" },
 ];
 
-const ALERT_TYPE_LABELS: Record<TelegramAlertType, string> = {
-  dews: "DEWS",
-  depeg: "Depeg",
-  safety: "Safety",
-  launch: "Launch",
-  reserve: "Reserve",
-  freeze: "Freeze",
-};
-
 const REPOSITORY_BLOB_URL = "https://github.com/TokenBrice/pharos-watch/blob/main";
 
 function readOptionalNumber(value: unknown): number | null {
@@ -212,24 +189,6 @@ function optionalBotNumber(
   if (!telegramBot || hasUnavailableField(unavailableFields, String(field))) return null;
   const value = telegramBot[field];
   return typeof value === "number" && Number.isFinite(value) ? value : null;
-}
-
-function buildPerAlertRows(metadata: Record<string, unknown> | null): CommsPerAlertDeliveryRow[] {
-  const perAlertRecord = readMetadataRecord(metadata?.perAlertType);
-  if (!perAlertRecord) return [];
-
-  return TELEGRAM_ALERT_TYPES.map((type) => {
-    const stats = readMetadataRecord(perAlertRecord[type]);
-    return {
-      type,
-      label: ALERT_TYPE_LABELS[type],
-      sent: readOptionalNumber(stats?.sent),
-      enqueued: readOptionalNumber(stats?.enqueued),
-      failed: readOptionalNumber(stats?.failed),
-      blocked: readOptionalNumber(stats?.blocked),
-      firstSendLatencyMs: readOptionalNumber(stats?.firstSendLatencyMs),
-    };
-  });
 }
 
 function buildRecoveryLinks(input: {
@@ -319,24 +278,11 @@ export function buildCommsWorkbenchModel(input: {
   const backlogAssessment: CommsBacklogAssessment =
     backlogReasons.length > 0 ? "attention" : backlogTelemetryComplete ? "within-policy" : "unknown";
 
-  const freshPermanentFailures = readOptionalNumber(metadata?.freshPermanentFailures);
   const pendingPermanentFailures = readOptionalNumber(metadata?.pendingDroppedPermanentFailure);
   const maxAttemptsFailures = readOptionalNumber(metadata?.pendingDroppedMaxAttemptsFallback);
-  const permanentFailures = sumKnown([freshPermanentFailures, pendingPermanentFailures, maxAttemptsFailures]);
-  const rawFreshRetryQueued = readOptionalNumber(metadata?.freshRetryQueued);
+  const permanentFailures = sumKnown([pendingPermanentFailures, maxAttemptsFailures]);
   const pendingRetryQueued = readOptionalNumber(metadata?.pendingRetryQueued);
-  // The dispatcher emits both retry counters on every run
-  // (dispatch-telegram-result.ts spreads the full result into cron metadata),
-  // but rows written before that breakdown — or recovery re-writes of them —
-  // carry only the pending-side counter. Treat the absent fresh counter as 0
-  // only when the dispatch itself completed ok and the sibling counter is
-  // present; any other shape stays unknown rather than manufacturing a zero.
-  const freshRetryQueued = rawFreshRetryQueued == null
-    && lastDispatch?.status === "ok"
-    && pendingRetryQueued != null
-      ? 0
-      : rawFreshRetryQueued;
-  const retryTotal = sumKnown([freshRetryQueued, pendingRetryQueued]);
+  const retryTotal = pendingRetryQueued;
   const rateLimited = readOptionalBoolean(metadata?.pendingRateLimited);
   const safetyAlertsSuppressed = readOptionalBoolean(metadata?.safetyAlertsSuppressed);
   const safetySourceState = readMetadataString(metadata?.safetyAlertSourceState);
@@ -407,7 +353,6 @@ export function buildCommsWorkbenchModel(input: {
 
   const lifecycle = telegramBot?.lifecycleSnapshot ?? null;
   const lifecycleAgeSec = lifecycle ? Math.max(0, nowSeconds - lifecycle.snapshotAt) : null;
-  const perAlertType = buildPerAlertRows(metadata);
   const recoveryLinks = buildRecoveryLinks({
     health,
     backlogAssessment,
@@ -447,13 +392,11 @@ export function buildCommsWorkbenchModel(input: {
       },
       permanentFailures: {
         total: permanentFailures,
-        fresh: freshPermanentFailures,
         pendingNonRetryable: pendingPermanentFailures,
         maxAttempts: maxAttemptsFailures,
       },
       retries: {
         totalQueued: retryTotal,
-        freshQueued: freshRetryQueued,
         pendingQueued: pendingRetryQueued,
         rateLimited,
         retryAfterSec: readOptionalNumber(metadata?.pendingRetryAfterSec),
@@ -469,8 +412,6 @@ export function buildCommsWorkbenchModel(input: {
         skipped: readMetadataString(metadata?.skipped) ?? lastDispatch?.skippedReason ?? null,
         subscribersNotified: readOptionalNumber(metadata?.subscribersNotified),
         messagesSent: readOptionalNumber(metadata?.messagesSent),
-        freshAttempted: readOptionalNumber(metadata?.freshAttempted),
-        freshSent: readOptionalNumber(metadata?.freshSent),
         pendingAttempted: readOptionalNumber(metadata?.pendingAttempted),
         pendingDrained: readOptionalNumber(metadata?.pendingDrained),
         pendingDeferred: readOptionalNumber(metadata?.pendingDeferred),
@@ -483,7 +424,7 @@ export function buildCommsWorkbenchModel(input: {
         reserveAlertsSuppressed,
         reserveSourceState,
       },
-      perAlertType,
+      sli: telegramBot?.deliverySli ?? null,
       recoveryLinks,
     },
     audience: {
@@ -558,19 +499,10 @@ export function buildCommsWorkbenchModel(input: {
   };
 }
 
-/**
- * "Not applicable" is not "Unknown" (A4, R1): an empty queue has no oldest
- * item, and an alert type that sent nothing has no first-send latency.
- * `Unknown` stays reserved for genuinely missing telemetry.
- */
+/** An empty queue has no oldest item; Unknown means genuinely missing telemetry. */
 export function formatOldestBacklogAge(ageSec: number | null, pendingDeliveries: number | null): string {
   if (ageSec != null) return formatElapsedSeconds(ageSec);
   return pendingDeliveries === 0 ? "No backlog" : "Unknown";
-}
-
-export function formatFirstSendLatency(latencyMs: number | null, sent: number | null): string {
-  if (latencyMs != null) return `${latencyMs.toLocaleString()}ms`;
-  return sent === 0 ? "None sent" : "Unknown";
 }
 
 /** True only when every value is a measured zero; any missing value keeps the full table visible. */

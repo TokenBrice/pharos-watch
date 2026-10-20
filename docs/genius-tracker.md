@@ -61,6 +61,8 @@ The headline `authorizationStatus`. **When uncertain between two statuses, pick 
 | `not-applicable` | The reviewed asset is outside the tracked GENIUS payment-stablecoin authorization posture (pairs with an excluded/`non-payment-token` applicability). | — |
 | `unknown` | Public posture not resolved from available sources. | — |
 
+Detail summaries describe `unknown` as an unresolved public GENIUS posture, including when a dated review exists. An absent profile remains unassessed; unresolved evidence does not imply the issuer has never been reviewed or support an authorization conclusion.
+
 **HARD RULE:** never assert `ppsi-approved`, `state-qualified`, or `official-application-pending` without a regulator-grade reference that names the issuer of *this* token (not a same-name affiliate). No fabricated approvals. While the regime is in rulemaking (see [Regime state](#regime-state--effective-date)), genuine `ppsi-approved`/`state-qualified` rows should be exceedingly rare — most honest answers are `issuer-announced-intent` or `no-public-authorization-found`.
 
 ---

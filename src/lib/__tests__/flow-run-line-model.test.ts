@@ -60,6 +60,15 @@ describe("buildRunLineModel", () => {
     expect(selectRunLineDrivers(model)).toMatchObject({ down: [{ symbol: "USDC" }], up: [{ symbol: "USDG" }] });
   });
 
+  it("keeps unknown scan activity as an unavailable stub, not a quiet coin", () => {
+    const model = buildRunLineModel(gauge({ score: null, band: null }), [
+      makeMintBurnFlowCoin({ has24hActivity: null, netFlow24hUsd: null, pressureShiftScore: null }),
+    ]);
+    expect(model.ticks).toEqual([]);
+    expect(model.stubs).toMatchObject([{ symbol: "USDC", reason: "activity-unknown" }]);
+    expect(model.band).toBeNull();
+  });
+
   it("does not encode height or pull when the payload predates per-coin weights", () => {
     const legacy = makeMintBurnFlowCoin({ pressureShiftScore: -20 });
     delete (legacy as { gaugeWeightUsd?: number | null }).gaugeWeightUsd;

@@ -7,12 +7,23 @@ import {
   recordTelegramUsageEvent,
   refreshTelegramLifecycleSnapshotIfStale,
 } from "../usage-analytics";
+import { recordTelegramDeliveryOutcomes, recordTelegramReplyOutcome } from "../usage-analytics-writes";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { publishTelegramPulseSnapshot } from "../../webhook/telegram-pulse";
 import { cachedPulse, pulseCacheTables } from "../../webhook/__tests__/telegram-pulse.test-support.ts";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(fixtures.closeAll);
+
+function recordDiagnostic(
+  mode: "reply" | "delivery",
+  db: D1Database,
+  input: Parameters<typeof recordTelegramReplyOutcome>[1],
+) {
+  return mode === "reply"
+    ? recordTelegramReplyOutcome(db, input)
+    : recordTelegramDeliveryOutcomes(db, [input]);
+}
 
 describe("telegram usage analytics", () => {
   it("includes freeze opt-ins in lifecycle counts and all-family watcher gating", async () => {
@@ -272,5 +283,122 @@ describe("telegram usage analytics", () => {
         subscribers: 5,
       },
     ]);
+  });
+});
+
+describe("telegram delivery diagnostics", () => {
+  it.each(["reply", "delivery"] as const)("keeps %s clocks monotonic across descending writes", async (mode) => {
+    const { sqlite, db } = fixtures.open();
+    await recordDiagnostic(mode, db, { chatId: "chat", ok: true, nowSec: 200 });
+    await recordDiagnostic(mode, db, { chatId: "chat", ok: false, errorClass: "blocked", nowSec: 300 });
+    await recordDiagnostic(mode, db, { chatId: "chat", ok: true, nowSec: 100 });
+    await recordDiagnostic(mode, db, { chatId: "chat", ok: false, errorClass: "timeout", nowSec: 250 });
+
+    expect(sqlite.prepare("SELECT * FROM telegram_chat_delivery_diagnostics").get()).toEqual({
+      chat_id: "chat",
+      last_successful_delivery_at: mode === "delivery" ? 200 : null,
+      last_successful_reply_at: mode === "reply" ? 200 : null,
+      last_delivery_attempt_at: 300,
+      recent_failure_class: "blocked",
+      updated_at: 300,
+    });
+
+    await recordDiagnostic(mode, db, { chatId: "chat", ok: true, nowSec: 400 });
+    expect(sqlite.prepare("SELECT * FROM telegram_chat_delivery_diagnostics").get()).toMatchObject({
+      last_successful_delivery_at: mode === "delivery" ? 400 : null,
+      last_successful_reply_at: mode === "reply" ? 400 : null,
+      last_delivery_attempt_at: 400,
+      recent_failure_class: null,
+      updated_at: 400,
+    });
+  });
+
+  it.each([false, true])("preserves separate success clocks and latest failure across interleavings (reverse=%s)", async (reverse) => {
+    const { sqlite, db } = fixtures.open();
+    const outcomes = [
+      { mode: "delivery", ok: false, errorClass: "blocked", nowSec: 300 },
+      { mode: "reply", ok: true, nowSec: 100 },
+      { mode: "delivery", ok: true, nowSec: 200 },
+      { mode: "reply", ok: false, errorClass: "timeout", nowSec: 250 },
+      { mode: "reply", ok: true, nowSec: 50 },
+    ] as const;
+    for (const { mode, ...outcome } of reverse ? [...outcomes].reverse() : outcomes) {
+      await recordDiagnostic(mode, db, { chatId: "chat", ...outcome });
+    }
+
+    expect(sqlite.prepare("SELECT * FROM telegram_chat_delivery_diagnostics").get()).toEqual({
+      chat_id: "chat",
+      last_successful_delivery_at: 200,
+      last_successful_reply_at: 100,
+      last_delivery_attempt_at: 300,
+      recent_failure_class: "blocked",
+      updated_at: 300,
+    });
+  });
+
+  it.each([
+    ["reply", "reply"], ["delivery", "delivery"], ["reply", "delivery"], ["delivery", "reply"],
+  ] as const)("retains equal-second %s failures with %s successes in either order", async (failureMode, successMode) => {
+    const { sqlite, db } = fixtures.open();
+    for (const failureFirst of [false, true]) {
+      const failure = { chatId: String(failureFirst), ok: false, errorClass: "blocked", nowSec: 100 };
+      const success = { chatId: String(failureFirst), ok: true, nowSec: 100 };
+      if (failureFirst) {
+        await recordDiagnostic(failureMode, db, failure);
+        await recordDiagnostic(successMode, db, success);
+      } else {
+        await recordDiagnostic(successMode, db, success);
+        await recordDiagnostic(failureMode, db, failure);
+      }
+      expect(sqlite.prepare("SELECT * FROM telegram_chat_delivery_diagnostics WHERE chat_id = ?")
+        .get(String(failureFirst))).toEqual({
+        chat_id: String(failureFirst),
+        last_successful_delivery_at: successMode === "delivery" ? 100 : null,
+        last_successful_reply_at: successMode === "reply" ? 100 : null,
+        last_delivery_attempt_at: 100,
+        recent_failure_class: "blocked",
+        updated_at: 100,
+      });
+    }
+  });
+
+  it("uses the last observed failure among equal-second failures across and within batches", async () => {
+    const { sqlite, db } = fixtures.open();
+    await recordTelegramDeliveryOutcomes(db, [
+      { chatId: "chat", ok: false, errorClass: "blocked", nowSec: 100 },
+      { chatId: "chat", ok: false, errorClass: "timeout", nowSec: 100 },
+    ]);
+    expect(sqlite.prepare("SELECT recent_failure_class FROM telegram_chat_delivery_diagnostics").get())
+      .toEqual({ recent_failure_class: "timeout" });
+    await recordTelegramReplyOutcome(db, { chatId: "chat", ok: false, errorClass: "forbidden", nowSec: 100 });
+    expect(sqlite.prepare("SELECT recent_failure_class FROM telegram_chat_delivery_diagnostics").get())
+      .toEqual({ recent_failure_class: "forbidden" });
+    await recordTelegramDeliveryOutcomes(db, [{ chatId: "chat", ok: false, errorClass: "unknown", nowSec: 100 }]);
+    expect(sqlite.prepare("SELECT recent_failure_class FROM telegram_chat_delivery_diagnostics").get())
+      .toEqual({ recent_failure_class: "unknown" });
+  });
+
+  it("fills nullable historical clocks without decreasing an existing update clock", async () => {
+    const { sqlite, db } = fixtures.open();
+    sqlite.exec("INSERT INTO telegram_chat_delivery_diagnostics (chat_id, updated_at) VALUES ('chat', 500)");
+    await recordTelegramDeliveryOutcomes(db, [{ chatId: "chat", ok: true, nowSec: 100 }]);
+    await recordTelegramReplyOutcome(db, { chatId: "chat", ok: true, nowSec: 90 });
+    expect(sqlite.prepare("SELECT * FROM telegram_chat_delivery_diagnostics").get()).toEqual({
+      chat_id: "chat",
+      last_successful_delivery_at: 100,
+      last_successful_reply_at: 90,
+      last_delivery_attempt_at: 100,
+      recent_failure_class: null,
+      updated_at: 500,
+    });
+  });
+
+  it.each(["reply", "delivery"] as const)("keeps %s diagnostics best-effort on persistence failure", async (mode) => {
+    const db = mockD1([{
+      match: "INSERT INTO telegram_chat_delivery_diagnostics",
+      rows: [],
+      throwError: new Error("diagnostics unavailable"),
+    }]);
+    await expect(recordDiagnostic(mode, db, { chatId: "chat", ok: true, nowSec: 100 })).resolves.toBeUndefined();
   });
 });

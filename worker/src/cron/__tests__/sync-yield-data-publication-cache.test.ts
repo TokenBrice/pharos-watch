@@ -38,6 +38,53 @@ function makePublicationCacheDb(existingIds: Record<string, unknown>[] = []) {
 describe("syncYieldData", () => {
   beforeEach(resetSyncYieldDataTest);
   afterEach(cleanupSyncYieldDataTest);
+  it.each([false, true])("publishes current/held safety at the inclusive original-clock boundary without restamping (held=%s)", async (held) => {
+    const db = makePublicationCacheDb();
+    const now = Math.floor(Date.now() / 1000);
+    const publishedAt = now - 86400;
+    const snapshot = testSafetyScoresSnapshot({
+      kind: held ? "degraded" : "ok", ...(held ? { reason: "v9-publication-held" } : {}),
+      publishedAt, trackedCount: 1, scores: new Map([["100", { score: 80, grade: "B+" }]]),
+    });
+    vi.mocked(safetyScoresModule.computeSafetyScoresSnapshot).mockResolvedValue(snapshot);
+    mockHealthyRiskFreeRateCache();
+    mockFetch([{ match: "yields.llama.fi", body: { data: [
+      makeDlYieldPool({ pool: "pool-sdai-1", project: "maker", symbol: "sDAI", tvlUsd: 1_000_000_000, apy: 5.2, apyBase: 5.2, apyMean30d: 5.1 }),
+    ] } }]);
+
+    const result = await syncYieldData(db);
+    expect(result.status).toBe("ok");
+    expect(getPublishedYieldRows(db).length).toBeGreaterThan(0);
+    const payload = getYieldRankingsCachePayload(db) as YieldRankingsResponse;
+    expect(payload.updatedAt).toBe(now);
+    expect(payload.provenance?.safetySnapshot).toMatchObject({
+      publishedAt, safetyScoreIdentity: snapshot.safetyScoreIdentity, kind: held ? "degraded" : "ok",
+    });
+  });
+
+  it.each([86401, null, Number.NaN, Number.POSITIVE_INFINITY, -1])("defers current safety with an expired or invalid original clock (%s)", async (age) => {
+    const db = makePublicationCacheDb();
+    const now = Math.floor(Date.now() / 1000);
+    const publishedAt = age === null ? null : now - age;
+    const snapshot = testSafetyScoresSnapshot({ publishedAt, trackedCount: 1,
+      scores: new Map([["100", { score: 80, grade: "B+" }]]) });
+    vi.mocked(safetyScoresModule.computeSafetyScoresSnapshot).mockResolvedValue(snapshot);
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    mockFetch([]);
+
+    const result = await syncYieldData(db);
+    expect(result.status).toBe("degraded");
+    expect(result.productivity).toMatchObject({ productive: false, reason: "safety-snapshot-unavailable" });
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      reason: "safety-snapshot-unavailable:safety-publication-clock-out-of-budget",
+      safetyScoreIdentity: snapshot.safetyScoreIdentity, safetySnapshotHeld: false,
+      safetyPublishedAt: publishedAt != null && Number.isFinite(publishedAt) ? publishedAt : null,
+      acceptedPublicationAgeSeconds: age === 86401 ? 86401 : null,
+    });
+    expect(getPublishedYieldRows(db)).toHaveLength(0);
+    expect(getYieldRankingsCachePayload(db)).toBeUndefined();
+  });
+
   it("syncs yield data from DeFiLlama pools on normal path", async () => {
     const db = makePublicationCacheDb();
 
@@ -59,6 +106,8 @@ describe("syncYieldData", () => {
     expect(result.itemCount).toBe(1);
     expect(getPublishedYieldRows(db)).toHaveLength(1);
     expect(getYieldRankingsCachePayload(db)).toBeDefined();
+    expect((getYieldRankingsCachePayload(db) as YieldRankingsResponse).provenance?.safetySnapshot)
+      .toMatchObject({ coveredCount: 4, trackedCount: 4, coverageRatio: 1 });
     const sentinel = db.getHistory().find((entry) => entry.binds[0] === "freshness:yield-data");
     expect(JSON.parse(String(sentinel?.binds[1]))).toMatchObject({
       generationId: (getYieldRankingsCachePayload(db) as YieldRankingsResponse).publication?.generationId,

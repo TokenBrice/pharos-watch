@@ -280,6 +280,7 @@ export function prepareTelegramAlertJobCounterReconciliation(
   projectionGuard?: {
     targetKey: string;
     finalDeliveryState: TelegramTargetFinalDeliveryState;
+    pendingGuard?: TelegramTargetProjectionGuard;
   },
 ): D1PreparedStatement {
   const projectionGuardSql = projectionGuard
@@ -290,6 +291,9 @@ export function prepareTelegramAlertJobCounterReconciliation(
              AND projected_target.target_key = ?
              AND projected_target.final_delivery_state = ?
         )`
+    : "";
+  const pendingGuardSql = projectionGuard?.pendingGuard
+    ? ` AND (${projectionGuard.pendingGuard.sql})`
     : "";
   const projectionGuardBinds = projectionGuard
     ? [projectionGuard.targetKey, projectionGuard.finalDeliveryState]
@@ -343,9 +347,9 @@ export function prepareTelegramAlertJobCounterReconciliation(
                 )
               END
         WHERE job_id = ?
-          ${projectionGuardSql}`,
+          ${projectionGuardSql}${pendingGuardSql}`,
     )
-    .bind(jobId, nowSec, nowSec, jobId, ...projectionGuardBinds);
+    .bind(jobId, nowSec, nowSec, jobId, ...projectionGuardBinds, ...(projectionGuard?.pendingGuard?.binds ?? []));
 }
 
 export async function reconcileTelegramAlertJobCounters(

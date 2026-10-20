@@ -59,7 +59,8 @@ describe("generation-bound Safety Score index", () => {
       publicationGenerationId: publication.publicationGenerationId,
     } });
     expect(await computeSafetyScoresSnapshot(db)).toMatchObject({ kind: "degraded", reason: "v9-publication-held",
-      publicationGenerationId: publication.publicationGenerationId, coveredCount: 1 });
+      publicationGenerationId: publication.publicationGenerationId, coveredCount: 1,
+      trackedCount: 1, coverageRatio: 1 });
   });
 
   it.each([
@@ -81,7 +82,8 @@ describe("generation-bound Safety Score index", () => {
     expect(await loadActiveSafetyScoreIndex(db)).toMatchObject({ kind: "error", reason, snapshot: null });
     expect(await loadActiveSafetyScoreIdentity(db)).toEqual({ kind: "error", safetyScoreIdentity: null });
     expect(await computeSafetyScoresSnapshot(db)).toMatchObject({ kind: "degraded", reason,
-      scores: new Map(), safetyScoreIdentity: null, publishedAt: null });
+      scores: new Map(), safetyScoreIdentity: null, publishedAt: null,
+      coveredCount: 0, trackedCount: null, coverageRatio: null });
   });
 
   it("rolls back the publication when the score-index write loses its fence", async () => {

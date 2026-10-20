@@ -15,7 +15,7 @@ export interface ChainCardData {
   /** 0-100 percentage, already converted from the 0-1 ratio the chain aggregate carries. */
   change7dPercent: number | null;
   stablecoinCount: number;
-  dominanceShare: number;
+  dominanceShare: number | null;
   healthScore: number | null;
   healthBand: string | null;
   topStablecoins: ChainCardTopStablecoin[];
@@ -69,7 +69,7 @@ export function ChainCard({ data }: { data: ChainCardData }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           <MetricLabel fontSize={13}>SHARE OF GLOBAL</MetricLabel>
           <span style={{ fontSize: 30, fontWeight: 700, color: FROST_BLUE }}>
-            {(data.dominanceShare * 100).toFixed(1)}%
+            {data.dominanceShare == null ? "Unavailable" : `${(data.dominanceShare * 100).toFixed(1)}%`}
           </span>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>

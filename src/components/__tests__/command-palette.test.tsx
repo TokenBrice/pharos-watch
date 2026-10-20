@@ -102,7 +102,7 @@ describe("CommandPalette", () => {
     queryClient = new QueryClient();
     queryClient.setQueryData(STABLECOINS_QUERY_KEY, {
       data: stablecoinsPayload(),
-      meta: null,
+      meta: { updatedAt: Date.now() / 1000, ageSeconds: 0, status: "fresh" },
     });
   });
 
@@ -115,6 +115,8 @@ describe("CommandPalette", () => {
   }
 
   afterEach(() => {
+    queryClient.clear();
+    vi.useRealTimers();
     vi.unstubAllGlobals();
     vi.clearAllMocks();
   });
@@ -143,13 +145,61 @@ describe("CommandPalette", () => {
     act(() => {
       queryClient.setQueryData(STABLECOINS_QUERY_KEY, {
         data: stablecoinsPayload(),
-        meta: null,
+        meta: { updatedAt: Date.now() / 1000, ageSeconds: 0, status: "fresh" },
       });
     });
 
     await waitFor(() => {
       expect(screen.getByRole("option", { name: /USD CoinUSDC/i }).textContent).toContain("$76.00B");
     });
+  });
+
+  it("ages an open palette at the producer boundary, dating caps without fetching or disabling navigation", () => {
+    vi.useFakeTimers();
+    const savedAt = Date.parse("2026-09-06T12:00:00Z");
+    vi.setSystemTime(savedAt);
+    const fetch = vi.fn(() => new Promise<Response>(() => {}));
+    vi.stubGlobal("fetch", fetch);
+    queryClient.setQueryData(STABLECOINS_QUERY_KEY, {
+      data: stablecoinsPayload(),
+      meta: { updatedAt: savedAt / 1000, ageSeconds: 0, status: "fresh", freshBudgetSec: 1, degradedBudgetSec: 2 },
+    });
+    renderPalette();
+    fireEvent.change(screen.getByRole("combobox", { name: "Search" }), { target: { value: "USDC" } });
+    expect(screen.getByRole("option", { name: /USD CoinUSDC.*At peg/i })).toBeDefined();
+    const reads = fetch.mock.calls.length;
+    act(() => vi.advanceTimersByTime(1001));
+    const retained = screen.getByRole("option", { name: /USD CoinUSDC/i });
+    expect(retained.textContent).toContain("$76.00B");
+    expect(retained.textContent).toContain("As of");
+    expect(retained.textContent).not.toContain("At peg");
+    expect(fetch.mock.calls.length).toBe(reads);
+    fireEvent.click(retained);
+    expect(pushMock).toHaveBeenCalledWith("/stablecoin/usdc-circle/");
+  });
+
+  it("does not label a failed cached read at peg, but retains dated caps and static search", () => {
+    queryClient.getQueryCache().find({ queryKey: STABLECOINS_QUERY_KEY })!.setState({
+      error: new Error("offline"), status: "error",
+    });
+    renderPalette();
+    fireEvent.change(screen.getByRole("combobox", { name: "Search" }), { target: { value: "USDC" } });
+    const row = screen.getByRole("option", { name: /USD CoinUSDC/i });
+    expect(row.textContent).toContain("As of");
+    expect(row.textContent).not.toContain("At peg");
+    fireEvent.click(row);
+    expect(pushMock).toHaveBeenCalledWith("/stablecoin/usdc-circle/");
+  });
+
+  it("keeps static navigation available when the producer clock is missing", () => {
+    queryClient.setQueryData(STABLECOINS_QUERY_KEY, { data: stablecoinsPayload(), meta: null });
+    renderPalette();
+    fireEvent.change(screen.getByRole("combobox", { name: "Search" }), { target: { value: "USDC" } });
+    const row = screen.getByRole("option", { name: /USD CoinUSDC/i });
+    expect(row.textContent).not.toContain("$76.00B");
+    expect(row.textContent).not.toContain("At peg");
+    fireEvent.click(row);
+    expect(pushMock).toHaveBeenCalledWith("/stablecoin/usdc-circle/");
   });
 
   it("emits bounded palette_selected analytics on Enter and never the raw query", () => {

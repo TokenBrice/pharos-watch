@@ -8,9 +8,9 @@ export const HARBOR_LIVE = live as unknown as HarborSceneInput;
 export function scaleHarborInput(input: HarborSceneInput, factor: number): HarborSceneInput {
   return {
     ...input,
-    globalTotalUsd: input.globalTotalUsd * factor,
-    chainAttributedTotalUsd: input.chainAttributedTotalUsd * factor,
-    unattributedTotalUsd: input.unattributedTotalUsd * factor,
+    globalTotalUsd: input.globalTotalUsd == null ? null : input.globalTotalUsd * factor,
+    chainAttributedTotalUsd: input.chainAttributedTotalUsd == null ? null : input.chainAttributedTotalUsd * factor,
+    unattributedTotalUsd: input.unattributedTotalUsd == null ? null : input.unattributedTotalUsd * factor,
     chains: input.chains.map((c) => ({
       ...c,
       totalUsd: c.totalUsd * factor,

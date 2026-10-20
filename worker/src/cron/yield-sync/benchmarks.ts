@@ -132,6 +132,12 @@ export function withYieldBenchmarkStaticMeta(
     key,
     ...BENCHMARK_META_BY_KEY[key],
     ...meta,
+    ...(key === "AUD" && meta.source === "rba-interbank-overnight" ? {
+      label: "AUD interbank overnight (cash-rate proxy)",
+      isProxy: true,
+      isFallback: true,
+      fallbackMode: meta.fallbackMode ?? "aud-interbank-overnight-proxy",
+    } : {}),
   };
 }
 

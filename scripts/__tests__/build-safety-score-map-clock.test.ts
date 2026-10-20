@@ -1,10 +1,11 @@
 import { spawn } from "node:child_process";
 import type { Server } from "node:http";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { runSafetyScoreMapCli } from "../maintenance/build-safety-score-map";
 import {
   makeSafetyMapPsiPayload,
   makeSafetyMapRatedCard,
@@ -23,6 +24,49 @@ const HOUR = 3600;
 
 const utcDate = (sec: number) => new Date(sec * 1000).toISOString().slice(0, 10);
 
+describe("clock discipline — supply admission before rendering", () => {
+  let server: Server;
+  let baseUrl = "";
+  let supplySourceSec = 0;
+  beforeAll(async () => {
+    ({ server, baseUrl } = await startSafetyMapFixtureServer({
+      reportCardsPayload: () => {
+        const current = Math.floor(Date.now() / 1000);
+        return makeSafetyMapReportCardsResponse({
+          cards: [makeSafetyMapRatedCard({ id: "coin", grade: "A+", score: 90 })],
+          fixtureId: "supply-clock", methodologyVersion: "9.19", defaultUpdatedAt: current, asOfSec: current,
+        });
+      },
+      stablecoinsPayload: () => makeSafetyMapStablecoinsPayload([{ id: "coin", symbol: "COIN", circulating: { peggedUSD: 100 } }]),
+      stablecoinsHeaders: () => ({ "X-Data-Updated-At": String(supplySourceSec) }),
+      psiPayload: () => makeSafetyMapPsiPayload({ score: 94, band: "BEDROCK", computedAt: Math.floor(Date.now() / 1000) }),
+      publicationStatus: () => "current",
+    }));
+  });
+  afterAll(async () => {
+    await new Promise<void>((done) => server.close(() => done()));
+  });
+  it.each([
+    { offsetSec: -600, reason: "stale: source-too-old" },
+    { offsetSec: 3600, reason: "future: future-source-clock" },
+  ])("rejects a $reason supply clock even with current report cards", async ({ offsetSec, reason }) => {
+    supplySourceSec = Math.floor(Date.now() / 1000) + offsetSec;
+    const outDir = mkdtempSync(join(tmpdir(), "pharos-safety-map-clock-"));
+    try {
+      const errors: string[] = [];
+      const status = await runSafetyScoreMapCli({
+        argv: ["--out", join(outDir, "map.png")], apiKey: "fixture-key", baseUrl,
+        io: { log: () => {}, warn: () => {}, error: (message) => errors.push(message) },
+      });
+      expect(status).toBe(1);
+      expect(errors.join("")).toContain(`Stablecoin supply freshness ${reason}`);
+      expect(readdirSync(outDir)).toEqual([]);
+    } finally {
+      rmSync(outDir, { recursive: true, force: true });
+    }
+  });
+});
+
 // A real render needs headless Firefox. Skipped rather than failed where the
 // browser is not installed (the PR gate does not install it by default).
 let firefoxInstalled = false;
@@ -40,6 +84,7 @@ describe.skipIf(!firefoxInstalled)("clock discipline — emitted artifacts (full
   // the run date while the poster stamp keeps the capture date.
   const capturedAtSec = Math.floor(Date.now() / 1000) - 30 * HOUR;
   const updatedAt = capturedAtSec + HOUR;
+  const supplyUpdatedAtSec = Math.floor(Date.now() / 1000) - 300;
   const fixtureIds = [
     "usdt-tether",
     "usdc-circle",
@@ -110,6 +155,7 @@ describe.skipIf(!firefoxInstalled)("clock discipline — emitted artifacts (full
       stablecoinsPayload,
       psiPayload,
       publicationStatus: () => "held",
+      stablecoinsHeaders: () => ({ "X-Data-Updated-At": String(supplyUpdatedAtSec), "X-Data-Age": "300", Age: "60" }),
     }));
   });
 
@@ -165,6 +211,20 @@ describe.skipIf(!firefoxInstalled)("clock discipline — emitted artifacts (full
       expect(alt.altText).toContain(`data as of ${utcDate(capturedAtSec)}`);
       expect(alt.psi).toEqual({ score: 93.8, band: "BEDROCK", basis: "24H AVG", computedAt: expect.any(Number) });
       expect(alt.altText).toContain("PSI 93.8 · BEDROCK · 24H AVG at render time");
+      expect(alt.supplyFreshness).toEqual(manifest.supplyFreshness);
+      expect(manifest.supplyFreshness).toMatchObject({
+        status: "fresh",
+        reason: null,
+        sourceClock: "x-data-updated-at",
+        sourceUpdatedAtSec: supplyUpdatedAtSec,
+        maxAgeSec: 600,
+        sourceHeaders: { "X-Data-Updated-At": String(supplyUpdatedAtSec), "X-Data-Age": "300", Age: "60", Warning: null },
+      });
+      expect(manifest.supplyFreshness.ageSec).toBe(manifest.supplyFreshness.assessedAtSec - supplyUpdatedAtSec);
+      expect(manifest.supplyFreshness.assessedAtSec).toBeLessThanOrEqual(manifest.renderedAtSec);
+      // Every sibling must coexist with a real PNG, never alias its path.
+      expect(readFileSync(pngPath).subarray(0, 8).toString("hex")).toBe("89504e470d0a1a0a");
+      expect(readFileSync(join(outDir, "map.html"), "utf8")).toContain("<svg");
 
       expect(manifest.counts.graded).toBe(cards.length);
       expect(manifest.publicationStatus).toBe("held");

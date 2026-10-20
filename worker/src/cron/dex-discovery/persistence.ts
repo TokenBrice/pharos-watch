@@ -10,6 +10,8 @@ import type { ContractDeployment } from "@shared/types/core";
 import { tryParseJson } from "../../lib/json-parse";
 import {
   STAGED_POOL_CONFIDENCE_HORIZON_HOURS,
+  TEZOS_POOL_IDENTITY_REVIEW_VERSION,
+  SLIPSTREAM_POOL_IDENTITY_REVIEW_VERSION,
   STAGED_POOL_MAX_TVL_USD,
   type DiscoveryMeta,
   type DiscoveryRunCheckpoint,
@@ -59,6 +61,17 @@ const STAGING_BATCH_SIZE = 50;
 const STAGING_DELETE_TTL_SEC = (STAGED_POOL_CONFIDENCE_HORIZON_HOURS + 24) * 60 * 60;
 const STAGING_RAW_JSON_TTL_SEC = 4 * 60 * 60;
 const STAGING_CLEANUP_MAX_ROWS_PER_RUN = 1_000;
+// Retain only an already valid producer-owned admission marker, never provider payloads.
+const STAGING_IDENTITY_ENVELOPE_SQL = `CASE WHEN json_valid(raw_json) THEN
+  CASE
+    WHEN (SELECT COUNT(*) FROM json_each(raw_json) WHERE key = 'identityReviewVersion') <> 1 THEN NULL
+    WHEN source = 'tezos' AND json_extract(raw_json, '$.identityReviewVersion') = '${TEZOS_POOL_IDENTITY_REVIEW_VERSION}'
+      THEN json_object('identityReviewVersion', '${TEZOS_POOL_IDENTITY_REVIEW_VERSION}')
+    WHEN source = 'direct_api' AND instr(pool_type, 'slipstream') > 0
+      AND json_extract(raw_json, '$.identityReviewVersion') = '${SLIPSTREAM_POOL_IDENTITY_REVIEW_VERSION}'
+      THEN json_object('identityReviewVersion', '${SLIPSTREAM_POOL_IDENTITY_REVIEW_VERSION}')
+    ELSE NULL END
+  ELSE NULL END`;
 const RUN_SEQ_KEY = "discovery_run_seq";
 const TARGET_CURSOR_KEY = "discovery_target_cursors";
 const RUN_CHECKPOINT_KEY = "discovery_run_checkpoint";
@@ -339,7 +352,7 @@ export async function recordDiscoveryAttemptFence(
 /**
  * Cleanup stale staging data.
  * - Delete rows past the delete TTL (merge horizon plus a day), after confidence has fully decayed.
- * - Raw provider payloads, including legacy ticker payloads, are cleared after four hours.
+ * - Raw provider payloads expire after four hours; valid identity review envelopes survive with the row.
  *   Ticker price evidence uses normalized price/observed-flow columns and does not depend on raw depth.
  * - Bound both oldest-first passes so a retention shortening drains gradually.
  */
@@ -379,12 +392,14 @@ export async function cleanupStaging(
         runLimit: STAGING_CLEANUP_MAX_ROWS_PER_RUN,
       },
       rawJson: {
+        // SAFETY: STAGING_IDENTITY_ENVELOPE_SQL is a module-level constant SQL expression.
         sql: `UPDATE dex_pool_registry
-              SET raw_json = NULL
+              SET raw_json = ${STAGING_IDENTITY_ENVELOPE_SQL}
             WHERE rowid IN (
               SELECT rowid
                 FROM dex_pool_registry
                WHERE raw_json IS NOT NULL
+                 AND raw_json IS NOT (${STAGING_IDENTITY_ENVELOPE_SQL})
                  AND refreshed_at < ?
                ORDER BY refreshed_at ASC, rowid ASC
                LIMIT ?
@@ -397,7 +412,7 @@ export async function cleanupStaging(
     probes: {
       oldest: {
         sql: `SELECT MIN(refreshed_at) AS oldest_remaining_at,
-                  MIN(CASE WHEN raw_json IS NOT NULL THEN refreshed_at END) AS oldest_raw_json_remaining_at
+                  MIN(CASE WHEN raw_json IS NOT (${STAGING_IDENTITY_ENVELOPE_SQL}) THEN refreshed_at END) AS oldest_raw_json_remaining_at
              FROM dex_pool_registry`,
       },
     },

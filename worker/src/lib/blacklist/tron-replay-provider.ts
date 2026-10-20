@@ -255,6 +255,7 @@ function toPrefixedLowerHex(value: string): string {
 
 export function validateTronTransferPaginationUrl(
   candidate: string,
+  expectedPathname: string,
   contractAddress: string,
   windowStartMs: number,
   windowEndMs: number,
@@ -265,7 +266,7 @@ export function validateTronTransferPaginationUrl(
     if (url.protocol !== "https:" || url.origin !== TRONGRID_ORIGIN || url.username !== "" || url.password !== "" || url.hash !== "") {
       return null;
     }
-    if (!url.pathname.startsWith("/v1/accounts/") || !url.pathname.endsWith("/transactions/trc20")) return null;
+    if (url.pathname !== expectedPathname) return null;
     if (url.searchParams.get("only_confirmed") !== "true") return null;
     if (url.searchParams.get("contract_address") !== contractAddress) return null;
     if (url.searchParams.get("min_timestamp") !== String(windowStartMs)) return null;
@@ -283,9 +284,9 @@ export function validateTronTransferPaginationUrl(
 /**
  * Reads every confirmed TRC20 transfer for one account in `[windowStartMs, windowEndMs]`.
  *
- * The window is an evidence bound, not a convenience filter: callers receive
- * `complete: false` unless pagination ends without a fingerprint, so an
- * unresolved amount can never be derived from a partially paginated history.
+ * The window is an evidence bound, not a convenience filter: completeness
+ * requires a short terminal provider page, not merely a missing fingerprint.
+ * An unresolved amount can never be derived from a partially paginated history.
  * Every requested page is counted on `ctx.pagesFetched`, including pages that
  * fail, so the caller's per-run page budget covers unproductive requests too.
  */
@@ -313,7 +314,7 @@ export async function fetchTronTransferWindow(
     if (ctx.shouldStop?.()) {
       return { transfers, watermarkMs, complete: false, stopped: true };
     }
-    const validated = validateTronTransferPaginationUrl(next, contractBase58, windowStartMs, windowEndMs);
+    const validated = validateTronTransferPaginationUrl(next, initial.pathname, contractBase58, windowStartMs, windowEndMs);
     if (!validated) throw new TronReplayProviderError("provider_null", "pagination URL rejected");
     ctx.pagesFetched.count++;
     pages++;
@@ -341,6 +342,10 @@ export async function fetchTronTransferWindow(
       });
     }
     next = meta.links?.next ?? null;
+    // Count raw records: filtering out non-transfers cannot prove exhaustion.
+    if (!next && parsed.data.data.length >= TRC20_PAGE_LIMIT) {
+      throw new TronReplayProviderError("provider_null", "full transfer page missing continuation");
+    }
   }
   return { transfers, watermarkMs, complete: next == null, stopped: false };
 }

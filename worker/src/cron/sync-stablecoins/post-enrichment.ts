@@ -26,6 +26,7 @@ import {
 import { getPriceCache, type PriceCacheEntry, type PriceCacheWriteEntry } from "../../lib/db-cache";
 import { detectDepegEvents } from "../detect-depegs";
 import { confirmPendingDepegs } from "../confirm-pending-depegs";
+import type { DepegHoldReason } from "../depeg-detection/types";
 import {
   enrichMissingPrices,
   hasMissingPrice,
@@ -138,6 +139,7 @@ export interface MissingPriceEnrichmentResult {
 export interface DepegPipelineResult {
   depegErrorCount: number;
   depegErrors: string[];
+  depegHeldReason?: DepegHoldReason;
   providerDiagnostics: PricingProviderAttemptDiagnostic[];
 }
 
@@ -575,12 +577,14 @@ export async function runDepegPipeline(
 ): Promise<DepegPipelineResult | CronResult> {
   let depegErrorCount = 0;
   const depegErrors: string[] = [];
+  let depegHeldReason: DepegHoldReason | undefined;
   const providerDiagnostics: PricingProviderAttemptDiagnostic[] = [];
 
   try {
     const depegAbort = returnIfAborted(signal, `${abortStagePrefix}depeg-detection`);
     if (depegAbort) return depegAbort;
-    await detectDepegEvents(db, assets, fxFallbackRates, signal, coingeckoApiKey, nativePegSession);
+    const detection = await detectDepegEvents(db, assets, fxFallbackRates, signal, coingeckoApiKey, nativePegSession);
+    if (detection.status === "held") depegHeldReason = detection.reason;
   } catch (err) {
     if (signal?.aborted) return abortResult(signal, `${abortStagePrefix}depeg-detection`);
     logWorkerEventArgs("handler", "error", `[sync-stablecoins] Depeg detection failed${logContext}:`, err);
@@ -600,6 +604,7 @@ export async function runDepegPipeline(
       binanceSession,
       nativePegSession,
     );
+    if (confirmation.status === "held") depegHeldReason = confirmation.reason;
     if (confirmation?.providerDiagnostics?.length) {
       providerDiagnostics.push(...confirmation.providerDiagnostics);
     }
@@ -610,7 +615,7 @@ export async function runDepegPipeline(
     depegErrors.push(`confirmation: ${String(err).slice(0, 200)}`);
   }
 
-  return { depegErrorCount, depegErrors, providerDiagnostics };
+  return { depegErrorCount, depegErrors, providerDiagnostics, ...(depegHeldReason ? { depegHeldReason } : {}) };
 }
 
 /** Type guard: true when the pipeline returned the abort sentinel CronResult. */

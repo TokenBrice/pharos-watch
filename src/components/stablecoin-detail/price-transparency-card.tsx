@@ -17,7 +17,8 @@ import { MethodologyLabel } from "@/components/methodology-hint";
 import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
 import { RailCard, RailStamp } from "@/components/stablecoin-detail/rail-card";
 import { PROTOCOL_LOGOS } from "@/lib/dex-display-constants";
-import type { PegSummaryCoin, StablecoinData } from "@shared/types";
+import type { PegSummaryCoin } from "@shared/types";
+import type { DetailQuote } from "@/lib/stablecoin-detail-view-model-types";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { cn } from "@/lib/utils";
 import { useHydrated } from "@/hooks/use-hydrated";
@@ -30,7 +31,7 @@ import { normalizePegType } from "@shared/lib/peg-rates";
 import { resolvePriceTransparencySourceStatus, type SourceStatus } from "./price-transparency-status";
 
 interface PriceTransparencyCardProps {
-  coinData: StablecoinData;
+  coinData: Pick<DetailQuote, "price" | "priceSource" | "priceConfidence" | "priceUpdatedAt" | "priceObservedAtMode" | "nominalPriceReference" | "pegType">;
   consensusSources: string[];
   agreeSources: string[];
   dexPriceCheck: PegSummaryCoin["dexPriceCheck"];

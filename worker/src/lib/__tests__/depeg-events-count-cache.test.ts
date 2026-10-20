@@ -125,6 +125,15 @@ describe("depeg event count publication cache", () => {
     expect(await readCount(fixture)).toBe(2);
     await expectInvalidation(fixture, () => fixture.sqlite.prepare(`UPDATE depeg_resolver_incidents
       SET current_event_id = 2, current_started_at = 1700000002 WHERE incident_key = ?`).run(firstIncident));
+    fixture.sqlite.exec("UPDATE depeg_events SET started_at = 1700001000 WHERE id = 2");
+    const response = await handleDepegEvents(fixture.db, new URL("https://x/api/depeg-events?limit=1"));
+    const body = await response.json() as { events: Array<{ id: number }>; total: number; nextCursor: string };
+    expect(body.total).toBe(2);
+    expect(body.events.map((event) => event.id)).toEqual([3]);
+    const continuation = await handleDepegEvents(fixture.db, new URL(`https://x/api/depeg-events?limit=1&cursor=${body.nextCursor}`));
+    expect(await continuation.json()).toMatchObject({
+      total: 2, events: [{ id: 2, startedAt: 1_700_000_001, constituentEventCount: 2 }], nextCursor: null,
+    });
     insertIncident(fixture, aliasIncident, 3);
     await expectInvalidation(fixture, () => fixture.sqlite.prepare(`UPDATE depeg_resolver_incidents
       SET incident_state = 'superseded', superseded_by_incident_key = ? WHERE incident_key = ?`)

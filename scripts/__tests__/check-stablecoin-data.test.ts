@@ -8,6 +8,7 @@ import {
 } from "@shared/lib/live-reserve-adapters";
 import {
   getCommodityProtocolSlugIssue,
+  getContractDeploymentIssues,
   getCommodityAllocatedPegMatchIssues,
   getDependencyReserveOverlapIssues,
   getReservePublicLabelIssues,
@@ -17,6 +18,20 @@ import {
   getTerminalLiveReserveConfigIssue,
   getExpiredReserveSupplyAdmissionBootstrapIssue,
 } from "../ci/check-stablecoin-data";
+
+describe("per-coin deployment identity gate", () => {
+  it("retains duplicate rejection across primary/traded arrays without folding native identity case", () => {
+    const deployment = { chain: "ethereum", address: "0xabcdef0000000000000000000000000000000000", decimals: 6 };
+    expect(getContractDeploymentIssues({
+      contracts: [deployment],
+      tradedContracts: [{ ...deployment, address: "0xABCDEF0000000000000000000000000000000000" }],
+    } as StablecoinMeta)).toEqual([expect.stringContaining("tradedContracts[0] duplicates contracts[0]")]);
+    expect(getContractDeploymentIssues({
+      contracts: [{ chain: "solana", address: "A".repeat(32), decimals: 6 }],
+      tradedContracts: [{ chain: "solana", address: "a".repeat(32), decimals: 6 }],
+    } as StablecoinMeta)).toEqual([]);
+  });
+});
 
 describe("terminal live-reserve binding gate", () => {
   const config: NonNullable<StablecoinMeta["liveReservesConfig"]> = {

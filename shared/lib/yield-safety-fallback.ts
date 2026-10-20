@@ -1,10 +1,10 @@
 /**
- * How long the yield-rankings API may keep serving the cached payload's own
- * publish-time safety values when live safety hydration is unusable (missing,
- * held, or identity-incompatible publication). Both the yield publication and
- * the safety evidence's own publication time must fall within this window;
- * missing safety time is unavailable, never renewed by the yield cache clock.
- * Beyond it the response degrades to explicit NR fields.
+ * Original-clock budget shared by yield production, live safety hydration and
+ * publish-time fallback. Current and held safety both retain their accepted
+ * publication time. Pass now as yieldPublishedAt when assessing live safety
+ * alone; fallback additionally requires the original yield publication clock.
+ * Missing, non-finite or future safety time is unavailable, never renewed by a
+ * yield refresh. Beyond the inclusive window the response clears safety to NR.
  */
 export const YIELD_SAFETY_STALE_COHERENT_MAX_AGE_SEC = 24 * 3600;
 

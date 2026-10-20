@@ -131,6 +131,12 @@ describe("StablecoinTable", () => {
     downloadCsvWithPreambleMock.mockClear();
   });
 
+  it("explains that the shared table deltas measure USD market cap, not token issuance", () => {
+    render(<StablecoinTable data={[coin]} isLoading={false} activeFilters={[]} />);
+    expect(screen.getByText(/deltas reflect USD market-cap growth and decline, not token-supply change or price return/)).toBeTruthy();
+    expect(screen.queryByText(/deltas reflect supply expansion and contraction/)).toBeNull();
+  });
+
   it("threads supplied source generations through the table model into the CSV preamble", () => {
     render(<StablecoinTable
       data={[coin]} isLoading={false} activeFilters={[]}

@@ -665,6 +665,7 @@ export function convertToGtNewPools(
         qualityMultiplier,
         maturityDays: 30,
         price: tokenPrice ?? 0,
+        priceObservedAt: pool.priceObservedAt ?? null,
         symbol: symbolStr,
         poolType: pool.poolType,
         sourceFamily: "direct_api",
@@ -758,6 +759,7 @@ export function extractPriceObservations(
 
       const obs: DexPriceObs = {
         price,
+        observedAt: pool.priceObservedAt ?? null,
         tvl: pool.tvlUsd,
         chain: pool.chain,
         protocol: pool.source,

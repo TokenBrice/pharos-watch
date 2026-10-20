@@ -1,8 +1,14 @@
+import { z } from "zod";
 import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
+import { CHAIN_META } from "@shared/types/chain-identity";
+import usdcSource from "@shared/data/stablecoins/coins/usdc-circle.json";
+import usdcRiskReview from "@shared/data/stablecoins/domains/risk-review/usdc-circle.json";
 import type { AdapterContext, AdapterResult } from "./types";
 import { rethrowIfAborted } from "../../lib/abort";
+import { finiteDecimalNumberFromBigInt } from "../../lib/bigint";
+import { parseDecimalNumber, parseDigitString } from "./strict-amount";
 import { encodeBalanceOfCallData, encodeUint256 } from "../../lib/evm-selectors";
 import {
   fetchEvmBlockNumber,
@@ -28,73 +34,119 @@ import { fetchOnchainMulticall3, fetchOnchainUint256 } from "./onchain";
 import { EIP1967_BEACON_SLOT, multicallResultByLabel, runtimeCodeHash } from "./onchain-identity";
 import { ERC4626_CONVERT_TO_ASSETS_SELECTOR as CONVERT_TO_ASSETS_SELECTOR } from "./erc4626";
 
-interface MakinaStrategyEnvelope {
-  data?: MakinaStrategyData;
-  meta?: {
-    generated_at?: unknown;
+const optionalTextSchema = z.string().trim().min(1).nullish().catch(null).transform((value) => value ?? null);
+const chainIdSchema = z.union([
+  z.string().trim().min(1),
+  z.number().finite().transform(String),
+]).nullish().catch(null).transform((value) => value ?? null);
+const tokenSchema = z.object({
+  address: optionalTextSchema,
+  chainId: chainIdSchema,
+  symbol: optionalTextSchema,
+}).nullish().catch(null).transform((value) => value ?? null);
+type MakinaToken = z.output<typeof tokenSchema>;
+// Reuse authored deployments and reviewed issuance identities, not a symbol
+// alias or another hand-maintained USDC address roster. Representations stay out.
+const canonicalUsdcDeployments: Record<string, true> = Object.fromEntries(
+  usdcRiskReview.bridgeRouteRisk.routes.flatMap((route) => {
+    const chain = CHAIN_META[route.destinationChain];
+    if (route.reviewDisposition !== "reviewed" || route.issuanceModel !== "native-issuance"
+      || route.routeClass !== "native" || route.semantics !== "native-mint" || chain?.evmChainId == null
+      || !usdcSource.contracts.some((deployment) =>
+        deployment.chain === route.destinationChain && deployment.address.toLowerCase() === route.contractAddress.toLowerCase()
+      )) return [];
+    return [[`${chain.evmChainId}:${route.contractAddress.toLowerCase()}`, true]];
+  }),
+);
+
+const rawAmountSchema = z.string().trim().regex(/^\d+$/).transform((value) =>
+  parseDigitString(value, "makina-strategy invalid raw amount")
+);
+const timestampSchema = z.unknown().transform((value) => parseTimestampLikeToUnixSeconds(value))
+  .pipe(z.number().finite().positive());
+const generatedAtSchema = z.object({ generated_at: timestampSchema });
+const protocolSchema = optionalTextSchema.transform((value) => value?.toLowerCase() ?? null);
+const strategySchema = z.object({
+  data: z.object({
+    address: z.string().trim().min(1),
+    aum: rawAmountSchema,
+    lastReportedAum: rawAmountSchema.nullish(),
+    shareSupply: rawAmountSchema,
+    shareLimit: rawAmountSchema,
+    sharePrice: z.unknown().transform((value) => parseDecimalNumber(value)).pipe(z.number().finite().positive()),
+    accountingToken: z.object({
+      address: optionalTextSchema,
+      chainId: chainIdSchema,
+      symbol: optionalTextSchema,
+      decimals: z.number().int().min(0).max(36).optional(),
+    }),
+    apy7d: z.number().finite().optional().catch(undefined),
+    apy30d: z.number().finite().optional().catch(undefined),
+  }),
+  meta: generatedAtSchema,
+});
+const baseTokenSchema = z.object({
+  accounting_token_value: rawAmountSchema,
+  protocol: protocolSchema,
+  token: tokenSchema,
+});
+const positionSchema = z.object({
+  value: rawAmountSchema,
+  is_debt: z.unknown().optional(),
+  id: optionalTextSchema,
+  chain_id: chainIdSchema,
+  protocol: protocolSchema,
+  strategy: optionalTextSchema,
+  type: optionalTextSchema,
+  updated_at: z.number().finite().nullish().catch(null).transform((value) => value ?? null),
+  updated_at_block: optionalTextSchema,
+  token: tokenSchema,
+}).transform((row, ctx) => {
+  if (row.value === 0n) return null;
+  if (typeof row.is_debt !== "boolean") {
+    ctx.addIssue({ code: "custom", path: ["is_debt"], message: "makina-strategy positive position requires boolean is_debt" });
+    return z.NEVER;
+  }
+  return { ...row, is_debt: row.is_debt };
+});
+const allocationsSchema = z.object({
+  data: z.object({
+    base_tokens: z.array(baseTokenSchema),
+    positions: z.array(positionSchema).transform((rows) => rows.filter((row) => row != null)),
+  }),
+  meta: generatedAtSchema,
+});
+
+function normalizeMakinaInput(strategy: unknown, allocations: unknown, params: MakinaStrategyParams) {
+  const strategyWire = strategySchema.parse(strategy);
+  const allocationWire = allocationsSchema.parse(allocations);
+  const decimals = params.accountingTokenDecimals
+    ?? strategyWire.data.accountingToken.decimals
+    ?? DEFAULT_ACCOUNTING_DECIMALS;
+  if (!Number.isSafeInteger(decimals) || decimals < 0 || decimals > 36) {
+    throw new Error("makina-strategy invalid accounting token decimals");
+  }
+  const amount = (value: bigint, scale = decimals): number => {
+    const result = finiteDecimalNumberFromBigInt(value, scale);
+    if (result == null) throw new Error("makina-strategy invalid accounting value");
+    return result;
   };
-}
-
-interface MakinaStrategyData {
-  address?: unknown;
-  aum?: unknown;
-  lastReportedAum?: unknown;
-  sharePrice?: unknown;
-  shareSupply?: unknown;
-  shareLimit?: unknown;
-  apy7d?: unknown;
-  apy30d?: unknown;
-  accountingToken?: MakinaToken;
-  shareToken?: MakinaToken;
-  ntt?: unknown;
-}
-
-interface MakinaAllocationsEnvelope {
-  data?: {
-    base_tokens?: unknown;
-    positions?: unknown;
-    groups?: unknown;
-    stats?: unknown;
+  return {
+    strategyData: {
+      ...strategyWire.data,
+      aum: amount(strategyWire.data.aum),
+      lastReportedAum: strategyWire.data.lastReportedAum == null ? null : amount(strategyWire.data.lastReportedAum),
+      shareSupply: amount(strategyWire.data.shareSupply, 18),
+      shareLimit: amount(strategyWire.data.shareLimit, 18),
+    },
+    allocationData: {
+      base_tokens: allocationWire.data.base_tokens.map((row) => ({
+        ...row, accounting_token_value: amount(row.accounting_token_value),
+      })),
+      positions: allocationWire.data.positions.map((row) => ({ ...row, value: amount(row.value) })),
+    },
+    sourceTimestamp: Math.min(strategyWire.meta.generated_at, allocationWire.meta.generated_at),
   };
-  meta?: {
-    generated_at?: unknown;
-  };
-}
-
-interface MakinaToken {
-  address?: unknown;
-  chainId?: unknown;
-  name?: unknown;
-  symbol?: unknown;
-  decimals?: unknown;
-}
-
-interface MakinaBaseToken {
-  balance?: unknown;
-  type?: unknown;
-  protocol?: unknown;
-  token?: MakinaToken;
-  accounting_token_value?: unknown;
-  accounting_token?: MakinaToken;
-  percentage?: unknown;
-}
-
-interface MakinaPosition {
-  id?: unknown;
-  value?: unknown;
-  created_at_block?: unknown;
-  created_at?: unknown;
-  updated_at_block?: unknown;
-  updated_at?: unknown;
-  chain_id?: unknown;
-  protocol?: unknown;
-  market_id?: unknown;
-  strategy?: unknown;
-  type?: unknown;
-  is_debt?: unknown;
-  token?: MakinaToken;
-  group?: unknown;
-  percentage?: unknown;
 }
 
 type MakinaBucketKind = "protocol" | "base-token" | "unknown" | "other";
@@ -178,15 +230,6 @@ function readParams(config: LiveReservesConfig): MakinaStrategyParams {
 function readSafeOnchainNumber(value: bigint | null): number | null {
   if (value == null || value < 0n || value > BigInt(Number.MAX_SAFE_INTEGER)) return null;
   return Number(value);
-}
-
-function decimalNumberFromRaw(value: bigint, decimals: number): number | null {
-  if (!Number.isSafeInteger(decimals) || decimals < 0 || decimals > 36 || value < 0n) return null;
-  const raw = value.toString();
-  const integerDigits = decimals === 0 ? raw : raw.slice(0, -decimals) || "0";
-  const fractionalDigits = decimals === 0 ? "" : raw.slice(-decimals).padStart(decimals, "0").replace(/0+$/, "");
-  const parsed = Number(fractionalDigits ? `${integerDigits}.${fractionalDigits}` : integerDigits);
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 }
 
 function redemptionTelemetryUnavailable(message: string): MakinaRedemptionRead {
@@ -403,11 +446,11 @@ async function fetchMakinaRedemptionState(
     }
 
     const accountingDecimals = params.accountingTokenDecimals ?? DEFAULT_ACCOUNTING_DECIMALS;
-    const grossIdleCapacityUsd = decimalNumberFromRaw(machineIdleRaw, accountingDecimals);
-    const queueDepthUsd = decimalNumberFromRaw(queueDepthRaw, accountingDecimals);
-    const reservedUnclaimedUsdc = decimalNumberFromRaw(reservedUnclaimedRaw, accountingDecimals);
-    const lockedShares = decimalNumberFromRaw(lockedSharesRaw, 18);
-    const minimumRedeemShares = decimalNumberFromRaw(minimumRedeemRaw, 18);
+    const grossIdleCapacityUsd = finiteDecimalNumberFromBigInt(machineIdleRaw, accountingDecimals);
+    const queueDepthUsd = finiteDecimalNumberFromBigInt(queueDepthRaw, accountingDecimals);
+    const reservedUnclaimedUsdc = finiteDecimalNumberFromBigInt(reservedUnclaimedRaw, accountingDecimals);
+    const lockedShares = finiteDecimalNumberFromBigInt(lockedSharesRaw, 18);
+    const minimumRedeemShares = finiteDecimalNumberFromBigInt(minimumRedeemRaw, 18);
     if (
       grossIdleCapacityUsd == null ||
       queueDepthUsd == null ||
@@ -422,7 +465,7 @@ async function fetchMakinaRedemptionState(
     const machineAccountedAt = readSafeOnchainNumber(decodeUint256Word(
       multicallResultByLabel(reads, "machine-last-global-accounting-time"),
     ));
-    const machineAumUsd = machineAumRaw == null ? null : decimalNumberFromRaw(machineAumRaw, 6);
+    const machineAumUsd = machineAumRaw == null ? null : finiteDecimalNumberFromBigInt(machineAumRaw, 6);
     const readClockSec = ctx?.nowSec ?? Math.floor(Date.now() / 1000);
     // The identity checks above prove canonical Ethereum USDC and the tracked
     // share token. Incomplete accounting evidence cannot create another anchor.
@@ -462,70 +505,6 @@ async function fetchMakinaRedemptionState(
       `Makina AsyncRedeemer telemetry unavailable: ${error instanceof Error ? error.message : "unknown error"}`,
     );
   }
-}
-
-function asArray(value: unknown): unknown[] {
-  return Array.isArray(value) ? value : [];
-}
-
-function readString(value: unknown): string | null {
-  return typeof value === "string" && value.trim() ? value.trim() : null;
-}
-
-function readStringLike(value: unknown): string | null {
-  if (typeof value === "string" && value.trim()) return value.trim();
-  if (typeof value === "number" && Number.isFinite(value)) return String(value);
-  return null;
-}
-
-function readBoolean(value: unknown): boolean {
-  return value === true;
-}
-
-function readNumber(value: unknown, label: string): number {
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value === "string" && value.trim()) {
-    const parsed = Number(value);
-    if (Number.isFinite(parsed)) return parsed;
-  }
-  throw new Error(`makina-strategy invalid ${label}`);
-}
-
-function readPositiveNumber(value: unknown, label: string): number {
-  const parsed = readNumber(value, label);
-  if (parsed <= 0) throw new Error(`makina-strategy ${label} must be positive`);
-  return parsed;
-}
-
-function readNonNegativeAccountingValue(value: unknown, decimals: number, label: string): number {
-  const raw = readString(value);
-  if (!raw || !/^\d+$/.test(raw)) {
-    throw new Error(`makina-strategy invalid ${label}`);
-  }
-  const integerDigits = decimals === 0 ? raw : raw.slice(0, -decimals) || "0";
-  const fractionalDigits = decimals === 0 ? "" : raw.slice(-decimals).padStart(decimals, "0");
-  const parsed = Number(`${integerDigits}.${fractionalDigits}`);
-  if (!Number.isFinite(parsed) || parsed < 0) {
-    throw new Error(`makina-strategy invalid ${label}`);
-  }
-  return parsed;
-}
-
-function readTimestamp(value: unknown, label: string): number {
-  const parsed = parseTimestampLikeToUnixSeconds(value);
-  if (parsed == null || parsed <= 0) {
-    throw new Error(`makina-strategy invalid ${label}`);
-  }
-  return parsed;
-}
-
-function tokenSymbol(token: MakinaToken | undefined): string | null {
-  return readString(token?.symbol);
-}
-
-function protocolKey(protocol: unknown): string | null {
-  const raw = readString(protocol);
-  return raw ? raw.toLowerCase() : null;
 }
 
 function displayProtocol(protocol: string): string {
@@ -584,9 +563,9 @@ function pushBucket(
   buckets.set(value.key, { ...value, value: amount });
 }
 
-function isKnownAccountingToken(token: MakinaToken | undefined, params: MakinaStrategyParams): boolean {
-  const expected = params.accountingTokenSymbol?.toUpperCase() ?? "USDC";
-  return tokenSymbol(token)?.toUpperCase() === expected;
+function isKnownAccountingToken(token: MakinaToken | undefined): boolean {
+  return token?.chainId != null && token.address != null
+    && canonicalUsdcDeployments[`${token.chainId}:${token.address.toLowerCase()}`] === true;
 }
 
 function reserveSliceFromBucket(bucket: MakinaBucketValue): ReserveSlice {
@@ -601,8 +580,8 @@ function reserveSliceFromBucket(bucket: MakinaBucketValue): ReserveSlice {
 }
 
 function reviewedBaseTokenProtocol(token: MakinaToken | undefined): string | null {
-  const chainId = readStringLike(token?.chainId);
-  const address = readString(token?.address)?.toLowerCase();
+  const chainId = token?.chainId;
+  const address = token?.address?.toLowerCase();
   if (!chainId || !address) return null;
   return `${chainId}:${address}` === REVIEWED_PENDLE_PT_AUSD_MONAD ? "pendle" : null;
 }
@@ -625,47 +604,32 @@ function makeOtherBucket(buckets: MakinaBucketValue[]): MakinaBucketValue {
 }
 
 export function adaptMakinaStrategyReserves(
-  strategy: MakinaStrategyEnvelope,
-  allocations: MakinaAllocationsEnvelope,
+  strategy: unknown,
+  allocations: unknown,
   params: MakinaStrategyParams,
   redemptionState?: MakinaRedemptionState | null,
   redemptionWarning?: LiveReserveWarning,
 ): AdapterResult {
-  const strategyData = strategy.data;
-  const allocationData = allocations.data;
-  if (!strategyData || !allocationData) {
-    throw new Error("makina-strategy missing data envelope");
-  }
-
-  const strategyAddress = readString(strategyData.address);
+  const { strategyData, allocationData, sourceTimestamp: inputTimestamp } = normalizeMakinaInput(strategy, allocations, params);
+  const strategyAddress = strategyData.address;
   if (strategyAddress?.toLowerCase() !== params.machineAddress.toLowerCase()) {
     throw new Error("makina-strategy machine address mismatch");
   }
 
-  const accountingDecimals = params.accountingTokenDecimals ?? (
-    typeof strategyData.accountingToken?.decimals === "number"
-      ? strategyData.accountingToken.decimals
-      : DEFAULT_ACCOUNTING_DECIMALS
-  );
-  if (!Number.isSafeInteger(accountingDecimals) || accountingDecimals < 0 || accountingDecimals > 36) {
-    throw new Error("makina-strategy invalid accounting token decimals");
-  }
-  if (!isKnownAccountingToken(strategyData.accountingToken, params)) {
+  if (!isKnownAccountingToken(strategyData.accountingToken)
+    || strategyData.accountingToken.chainId !== "1"
+    || (params.accountingTokenSymbol?.toUpperCase() ?? "USDC") !== "USDC") {
     throw new Error("makina-strategy accounting token mismatch");
   }
 
-  const strategyTimestamp = readTimestamp(strategy.meta?.generated_at, "strategy generated_at");
-  const allocationsTimestamp = readTimestamp(allocations.meta?.generated_at, "allocations generated_at");
   // The result combines accounting state with allocation-driven reserve slices, so
   // its freshness cannot be newer than either source.
-  let sourceTimestamp = Math.min(strategyTimestamp, allocationsTimestamp);
-  const currentAumUsd = readNonNegativeAccountingValue(strategyData.aum, accountingDecimals, "current AUM");
-  const lastReportedAumUsd = strategyData.lastReportedAum == null
-    ? null
-    : readNonNegativeAccountingValue(strategyData.lastReportedAum, accountingDecimals, "last reported AUM");
-  const shareSupply = readNonNegativeAccountingValue(strategyData.shareSupply, 18, "share supply");
-  const shareLimit = readNonNegativeAccountingValue(strategyData.shareLimit, 18, "share limit");
-  const sharePrice = readPositiveNumber(strategyData.sharePrice, "share price");
+  let sourceTimestamp = inputTimestamp;
+  const currentAumUsd = strategyData.aum;
+  const lastReportedAumUsd = strategyData.lastReportedAum;
+  const shareSupply = strategyData.shareSupply;
+  const shareLimit = strategyData.shareLimit;
+  const sharePrice = strategyData.sharePrice;
   if (currentAumUsd <= 0 || shareSupply <= 0 || sharePrice <= 0) {
     throw new Error("makina-strategy non-positive accounting state");
   }
@@ -682,17 +646,13 @@ export function adaptMakinaStrategyReserves(
   const positionDetails: Array<Record<string, unknown>> = [];
   const chainTotals = new Map<string, number>();
 
-  for (const entry of asArray(allocationData.base_tokens) as MakinaBaseToken[]) {
-    const value = readNonNegativeAccountingValue(
-      entry.accounting_token_value,
-      accountingDecimals,
-      "base token accounting value",
-    );
+  for (const entry of allocationData.base_tokens) {
+    const value = entry.accounting_token_value;
     if (value <= 0) continue;
     grossAssetsUsd += value;
-    const chainId = readStringLike(entry.token?.chainId) ?? "unknown";
+    const chainId = entry.token?.chainId ?? "unknown";
     chainTotals.set(chainId, (chainTotals.get(chainId) ?? 0) + value);
-    if (isKnownAccountingToken(entry.token, params)) {
+    if (isKnownAccountingToken(entry.token)) {
       pushBucket(buckets, {
         key: "base-token",
         sourceKey: "makina:base-token:usdc",
@@ -704,7 +664,7 @@ export function adaptMakinaStrategyReserves(
       }, value);
       continue;
     }
-    const protocol = protocolKey(entry.protocol) ?? reviewedBaseTokenProtocol(entry.token);
+    const protocol = entry.protocol ?? reviewedBaseTokenProtocol(entry.token);
     if (protocol) {
       pushBucket(buckets, {
         key: `protocol:${protocol}`,
@@ -729,26 +689,26 @@ export function adaptMakinaStrategyReserves(
   const assetBuckets = new Map([...buckets].map(([key, bucket]) => [key, { ...bucket }]));
   const financingBuckets = new Map<string, MakinaBucketValue>();
 
-  for (const entry of asArray(allocationData.positions) as MakinaPosition[]) {
-    const unsignedValue = readNonNegativeAccountingValue(entry.value, accountingDecimals, "position value");
+  for (const entry of allocationData.positions) {
+    const unsignedValue = entry.value;
     if (unsignedValue <= 0) continue;
     positionCount += 1;
-    const signedValue = readBoolean(entry.is_debt) ? -unsignedValue : unsignedValue;
+    const signedValue = entry.is_debt ? -unsignedValue : unsignedValue;
     if (signedValue < 0) {
       totalDebtUsd += unsignedValue;
       debtPositionCount += 1;
     } else {
       grossAssetsUsd += unsignedValue;
     }
-    const chainId = readStringLike(entry.chain_id) ?? "unknown";
+    const chainId = entry.chain_id ?? "unknown";
     chainTotals.set(chainId, (chainTotals.get(chainId) ?? 0) + signedValue);
 
-    const updatedAt = typeof entry.updated_at === "number" ? entry.updated_at : null;
+    const updatedAt = entry.updated_at;
     if (updatedAt == null) missingTimestampPositionCount += 1;
     else if (oldestPositionUpdatedAt == null || updatedAt < oldestPositionUpdatedAt) {
       oldestPositionUpdatedAt = updatedAt;
     }
-    const protocol = protocolKey(entry.protocol);
+    const protocol = entry.protocol;
     const name = protocol ? displayProtocol(protocol) : "Unknown Makina exposure";
     const key = protocol ? `protocol:${protocol}` : "unknown";
     const risk = protocol ? protocolRisk(protocol) : "high";
@@ -768,16 +728,16 @@ export function adaptMakinaStrategyReserves(
     }, unsignedValue);
 
     positionDetails.push({
-      id: readString(entry.id) ?? null,
-      protocol: protocol ?? null,
-      strategy: readString(entry.strategy) ?? null,
-      type: readString(entry.type) ?? null,
+      id: entry.id,
+      protocol,
+      strategy: entry.strategy,
+      type: entry.type,
       chainId,
       valueUsd: signedValue,
       isDebt: signedValue < 0,
       updatedAt,
-      updatedAtBlock: readString(entry.updated_at_block) ?? null,
-      tokenSymbol: tokenSymbol(entry.token),
+      updatedAtBlock: entry.updated_at_block,
+      tokenSymbol: entry.token?.symbol ?? null,
       materialPct: null,
     });
   }
@@ -919,8 +879,8 @@ export function adaptMakinaStrategyReserves(
       currentAumUsd,
       reportedAumUsd: lastReportedAumUsd ?? currentAumUsd,
       ...(lastReportedAumUsd != null ? { lastReportedAumUsd } : {}),
-      apy7d: typeof strategyData.apy7d === "number" ? strategyData.apy7d : undefined,
-      apy30d: typeof strategyData.apy30d === "number" ? strategyData.apy30d : undefined,
+      apy7d: strategyData.apy7d,
+      apy30d: strategyData.apy30d,
       unknownExposurePct,
       ...(redemptionState ? buildMakinaRedemptionMetadata(redemptionState) : {}),
       details: {
@@ -976,8 +936,8 @@ export async function fetchMakinaStrategyReserves(
   const primary = requireJsonInputFromConfig(config, "makina-strategy");
   const params = readParams(config);
   const [strategy, allocations, redemptionRead] = await Promise.all([
-    fetchJsonWithRetry<MakinaStrategyEnvelope>(primary.url, signal, 12_000, ctx),
-    fetchJsonWithRetry<MakinaAllocationsEnvelope>(params.allocationsUrl, signal, 12_000, ctx),
+    fetchJsonWithRetry<unknown>(primary.url, signal, 12_000, ctx),
+    fetchJsonWithRetry<unknown>(params.allocationsUrl, signal, 12_000, ctx),
     fetchMakinaRedemptionState(coin, params, signal, ctx),
   ]);
   return adaptMakinaStrategyReserves(strategy, allocations, params, redemptionRead.state, redemptionRead.warning);

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { RedemptionBackstopEntry, RedemptionBackstopMap } from "@shared/types/redemption";
 import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/registry";
 import { toMethodologyVersionLabel } from "@shared/lib/methodology-versions/base";
@@ -6,13 +6,14 @@ import { assertAllD1MatchesUsed, mockD1Strict } from "@shared/test-utils/mock-d1
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import {
   loadRedemptionBackstopLiveSignalRows,
+  buildRedemptionBackstopsSnapshot,
   loadRedemptionBackstopSnapshot,
   normalizeRedemptionBackstopRunMetadata,
   RedemptionBackstopSnapshotUnavailableError,
   resolveSnapshotMethodologyVersion,
   upsertRedemptionBackstopSnapshots,
 } from "../redemption-backstops-store";
-import { pruneRedemptionBackstopRunRetention } from "../redemption-backstops-store-write";
+import { pruneRedemptionBackstopRunRetention, validateRedemptionBackstopSnapshot } from "../redemption-backstops-store-write";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import {
   completedRunRow,
@@ -96,6 +97,108 @@ describe("loadRedemptionBackstopSnapshot", () => {
       sqlite.exec("UPDATE redemption_backstop_runs SET metadata_json = '{}'");
       expect((await loadRedemptionBackstopSnapshot(db)).reserveInputAssessment?.state).toBe("unavailable");
     } finally { sqlite.close(); }
+  });
+
+  it("round-trips downstream failure disclosure through stored details and bulk/coin readers", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const disclosure = { stablecoinId: "usdc-circle", resolutionState: "failed" as const };
+      const record = makeRedemptionWriteRecord({ outputDependencyResolution: disclosure });
+      await upsertRedemptionBackstopSnapshots(db, [record], { runId: "redemption:disclosure" });
+      for (const table of ["redemption_backstop_run_rows", "redemption_backstop_history"]) {
+        const row = sqlite.prepare(`SELECT details_json FROM ${table} WHERE stablecoin_id = ?`)
+          .get(record.stablecoinId) as { details_json: string };
+        const details = JSON.parse(row.details_json);
+        expect(details.outputDependencyResolution).toEqual(disclosure);
+        expect(details).not.toHaveProperty("accessScore");
+        expect(details).not.toHaveProperty("updatedAt");
+      }
+      const bulk = await loadRedemptionBackstopSnapshot(db);
+      const coin = await buildRedemptionBackstopsSnapshot(db, record.stablecoinId);
+      for (const entry of [bulk.map[record.stablecoinId], coin.coins[record.stablecoinId]]) {
+        expect(entry.outputDependencyResolution).toEqual(disclosure);
+        expect(entry.resolutionState).toBe("resolved");
+        expect(entry.score).toBe(65);
+      }
+    } finally { sqlite.close(); }
+  });
+
+  it.each([
+    ["corrupt JSON", "not-json", false],
+    ["missing details", null, false],
+    ["invalid reserve input", '{"resolutionState":"resolved","reserveInput":{}}', false],
+    ["invalid entry", "valid-details", false],
+    ["absent requested row", "not-json", true],
+  ] as const)("selects one prior generation across all readers for an unrequested sibling with %s", async (_reason, details, absent) => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    // Writer manifest clocks use Date.now(); nowSec controls retention only.
+    vi.useFakeTimers();
+    try {
+      const older = 1_800_000_000;
+      const newer = older + 60;
+      const requested = "eurc-circle";
+      for (const [runId, clock, id, ratio] of [
+        ["prior", older, requested, 0.25],
+        ["rejected", newer, absent ? "usdt-tether" : requested, 0.75],
+      ] as const) {
+        vi.setSystemTime(clock * 1000);
+        await upsertRedemptionBackstopSnapshots(db, [
+          makeRedemptionWriteRecord({ stablecoinId: id, updatedAt: clock, immediateCapacityRatio: ratio }),
+          makeRedemptionWriteRecord({ stablecoinId: "usdc-circle", updatedAt: clock }),
+        ], { runId, nowSec: clock });
+      }
+      if (details === "valid-details") {
+        sqlite.prepare("UPDATE redemption_backstop_run_rows SET score = 101 WHERE snapshot_run_id = 'rejected' AND stablecoin_id = 'usdc-circle'").run();
+      } else {
+        const corruptDetails = details?.includes("reserveInput")
+          ? JSON.stringify({ ...JSON.parse(makeRealisticRedemptionRow().details_json), reserveInput: {} })
+          : details;
+        sqlite.prepare("UPDATE redemption_backstop_run_rows SET details_json = ? WHERE snapshot_run_id = 'rejected' AND stablecoin_id = 'usdc-circle'")
+          .run(corruptDetails);
+      }
+      const bulk = await loadRedemptionBackstopSnapshot(db);
+      const coin = await buildRedemptionBackstopsSnapshot(db, requested);
+      const signals = await loadRedemptionBackstopLiveSignalRows(db, [requested]);
+      expect(bulk.runId).toBe("prior");
+      expect(bulk.latestUpdatedAt).toBe(older);
+      expect(Object.keys(bulk.map).sort()).toEqual([requested, "usdc-circle"]);
+      expect(coin.projection).toEqual({ stablecoinId: requested, generationId: "prior", updatedAt: older, totalCount: 2, unavailableReason: null });
+      expect(coin.updatedAt).toBe(older);
+      expect(coin.coins).toEqual({ [requested]: bulk.map[requested] });
+      expect(signals).toEqual([{ stablecoin_id: requested, immediate_capacity_ratio: 0.25, route_family: "offchain-issuer", updated_at: older }]);
+      const missing = await buildRedemptionBackstopsSnapshot(db, "never-published");
+      expect(missing.projection).toEqual({ stablecoinId: "never-published", generationId: "prior", updatedAt: null, totalCount: 2, unavailableReason: "row-not-published" });
+      expect(missing.updatedAt).toBe(older);
+      sqlite.prepare("DELETE FROM redemption_backstop_run_rows WHERE snapshot_run_id = 'prior'").run();
+      for (const read of [
+        () => loadRedemptionBackstopSnapshot(db),
+        () => buildRedemptionBackstopsSnapshot(db, requested),
+        () => loadRedemptionBackstopLiveSignalRows(db, [requested]),
+      ]) await expect(read()).rejects.toBeInstanceOf(RedemptionBackstopSnapshotUnavailableError);
+    } finally { sqlite.close(); vi.useRealTimers(); }
+  });
+
+  it("admits every page before projecting a row, retaining the manifest clock separately from its row clock", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    vi.useFakeTimers();
+    try {
+      const older = 1_800_000_000;
+      const records = Array.from({ length: 51 }, (_, i) => makeRedemptionWriteRecord({
+        stablecoinId: `coin-${String(i).padStart(2, "0")}`, updatedAt: older + i,
+      }));
+      vi.setSystemTime((older + 51) * 1000);
+      await upsertRedemptionBackstopSnapshots(db, records, { runId: "prior", nowSec: older + 51 });
+      vi.setSystemTime((older + 111) * 1000);
+      await upsertRedemptionBackstopSnapshots(db, records.map((record) => ({ ...record, updatedAt: record.updatedAt + 60 })), { runId: "rejected", nowSec: older + 111 });
+      sqlite.prepare("UPDATE redemption_backstop_run_rows SET details_json = 'not-json' WHERE snapshot_run_id = 'rejected' AND stablecoin_id = 'coin-50'").run();
+      const coin = await buildRedemptionBackstopsSnapshot(db, "coin-00");
+      expect(coin.projection).toMatchObject({ generationId: "prior", updatedAt: older, totalCount: 51 });
+      expect(coin.updatedAt).toBe(older + 50);
+      expect((await loadRedemptionBackstopSnapshot(db)).runId).toBe("prior");
+      expect(await loadRedemptionBackstopLiveSignalRows(db, ["coin-00"])).toEqual([
+        { stablecoin_id: "coin-00", immediate_capacity_ratio: null, route_family: "offchain-issuer", updated_at: older },
+      ]);
+    } finally { sqlite.close(); vi.useRealTimers(); }
   });
 
   it("prefers the latest completed run when loading a snapshot", async () => {
@@ -368,8 +471,11 @@ describe("loadRedemptionBackstopSnapshot", () => {
           validatorVersion: 4,
           configMethodologyVersion: "4.0",
           v4ScoringParametersHash: "def456",
-          routeStatusProducer: "live-reserve-adapters-plus-static-policy",
-          routeStatusProducerFetches: false,
+          routeStatusProducer: "live-reserve-adapters-plus-executable-observers-plus-static-policy",
+          routeStatusProducerFetches: true,
+          directObserverAttemptedCount: 2,
+          directObserverConsumedCount: 1,
+          directObserverUnavailableCount: 1,
           failure: { message: "boom" },
         }),
       ),
@@ -381,8 +487,11 @@ describe("loadRedemptionBackstopSnapshot", () => {
       validatorVersion: 4,
       configMethodologyVersion: "4.0",
       v4ScoringParametersHash: "def456",
-      routeStatusProducer: "live-reserve-adapters-plus-static-policy",
-      routeStatusProducerFetches: false,
+      routeStatusProducer: "live-reserve-adapters-plus-executable-observers-plus-static-policy",
+      routeStatusProducerFetches: true,
+      directObserverAttemptedCount: 2,
+      directObserverConsumedCount: 1,
+      directObserverUnavailableCount: 1,
     });
     expect(normalizeRedemptionBackstopRunMetadata("not-json")).toEqual({});
     expect(normalizeRedemptionBackstopRunMetadata(null)).toEqual({});
@@ -404,6 +513,26 @@ describe("loadRedemptionBackstopSnapshot", () => {
         metadata: { stablecoinsInput: { updatedAt: 0, assessedAt: 1_800_000_000, maxAgeSec: 600 } },
       })).rejects.toThrow();
       expect(sqlite.prepare("SELECT COUNT(*) AS count FROM redemption_backstop_runs").get()).toEqual({ count: 0 });
+    } finally { sqlite.close(); }
+  });
+
+  it("separates caller schema admission from a failed manifest after storage starts", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const record = makeRedemptionWriteRecord({ sourceUrls: ["not-a-url"] });
+      expect(() => validateRedemptionBackstopSnapshot(record)).toThrow();
+      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM redemption_backstop_runs").get()).toEqual({ count: 0 });
+      record.sourceUrls = ["https://example.com/redemption"];
+      validateRedemptionBackstopSnapshot(record);
+      await upsertRedemptionBackstopSnapshots(db, [record], { runId: "prior-valid" });
+      // Simulate corruption after caller admission: storage retains its own guard.
+      record.sourceUrls = ["not-a-url"];
+      await expect(upsertRedemptionBackstopSnapshots(db, [record], { runId: "corrupt" })).rejects.toThrow();
+      expect(sqlite.prepare("SELECT status, written_count FROM redemption_backstop_runs WHERE run_id = 'corrupt'").get())
+        .toEqual({ status: "failed", written_count: 0 });
+      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM redemption_backstop_run_rows WHERE snapshot_run_id = 'corrupt'").get())
+        .toEqual({ count: 0 });
+      expect((await loadRedemptionBackstopSnapshot(db)).runId).toBe("prior-valid");
     } finally { sqlite.close(); }
   });
 
@@ -704,6 +833,7 @@ describe("loadRedemptionBackstopLiveSignalRows", () => {
   it("serves narrow live-signal rows from the latest valid completed run", async () => {
     const db = mockD1Strict([
       completedRunsQuery([completedRunRow()]),
+      runRowsQuery("run-live", [makeRealisticRedemptionRow({ immediate_capacity_ratio: 0.42 })]),
       {
         match: LIVE_SIGNAL_ROWS_SQL,
         matchBinds: ["run-live"],
@@ -738,6 +868,7 @@ describe("loadRedemptionBackstopLiveSignalRows", () => {
         completedRunRow({ run_id: "run-missing-max", completed_at: 1_700_000_020, max_updated_at: null }),
         completedRunRow({ run_id: "run-valid", completed_at: 1_700_000_010 }),
       ]),
+      runRowsQuery("run-valid", [makeRealisticRedemptionRow()]),
       {
         match: LIVE_SIGNAL_ROWS_SQL,
         matchBinds: ["run-valid"],
@@ -765,18 +896,8 @@ describe("loadRedemptionBackstopLiveSignalRows", () => {
         completedRunRow({ run_id: "run-partial", completed_at: 1_700_000_020, expected_count: 2, written_count: 2 }),
         completedRunRow({ run_id: "run-valid", completed_at: 1_700_000_010 }),
       ]),
-      {
-        match: LIVE_SIGNAL_ROWS_SQL,
-        matchBinds: ["run-partial"],
-        rows: [
-          {
-            stablecoin_id: "eurc-circle",
-            immediate_capacity_ratio: 0.1,
-            route_family: "offchain-issuer",
-            updated_at: 1_700_000_000,
-          },
-        ],
-      },
+      runRowsQuery("run-partial", [makeRealisticRedemptionRow({ immediate_capacity_ratio: 0.1 })]),
+      runRowsQuery("run-valid", [makeRealisticRedemptionRow({ immediate_capacity_ratio: 0.42, updated_at: 1_699_999_990 })]),
       {
         match: LIVE_SIGNAL_ROWS_SQL,
         matchBinds: ["run-valid"],

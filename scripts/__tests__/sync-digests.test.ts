@@ -3,7 +3,8 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockFetchStrict } from "@shared/test-utils/mock-fetch";
 import { createTempRepoTracker } from "./helpers/test-state";
-import type { DigestContentEntry } from "@shared/types/digest";
+import { DigestStoredSnapshotSchema, type DigestContentEntry } from "@shared/types/digest";
+import { SnapshotIntegrityError } from "../lib/sync-from-api";
 
 import {
   assertDigestArchivePreserved,
@@ -67,8 +68,12 @@ describe("sync-digests archive guard", () => {
 describe("digest mirror publication", () => {
   function serve(digests: Record<string, unknown>[]) {
     return mockFetchStrict([{
-      match: (request) => /^https:\/\/api\.example\.com\/api\/digest-archive\?staticSync=\d+$/.test(request.url),
-      body: { digests },
+      match: (request) => {
+        const url = new URL(request.url);
+        return url.origin === "https://api.example.com" && url.pathname === "/api/digest-archive"
+          && url.searchParams.get("history") === "all" && /^\d+$/.test(url.searchParams.get("staticSync") ?? "");
+      },
+      body: { digests, pagination: { horizon: digests.length, total: digests.length, scanned: digests.length, nextCursor: null } },
     }]);
   }
 
@@ -82,12 +87,68 @@ describe("digest mirror publication", () => {
         editorialStyleVersion: "pre-policy", editorialStyleHash: "pre-policy" },
     ]);
     await runDigestSync(["--api-url", "https://api.example.com", "--output", output]);
-    expect(JSON.parse(readFileSync(output, "utf8"))).toEqual([
+    const stored = JSON.parse(readFileSync(output, "utf8"));
+    expect(DigestStoredSnapshotSchema.safeParse(stored).success).toBe(true);
+    expect(stored).toEqual([
       { date: "2026-07-18", title: "Daily title", text: "Daily", extended: "Details", generatedAt,
         digestType: "daily", editionNumber: 8, llm: { servedModel: "claude-sonnet-5" }, editorialStyleVersion: "v2", editorialStyleHash: "abc123" },
       { date: "2026-07-18-weekly", title: "Signal & Noise", text: "Weekly", extended: "", generatedAt,
         digestType: "weekly", editionNumber: 0 },
     ]);
+  });
+
+  it.each([
+    { digestText: 42 },
+    { digestTitle: false },
+    { digestExtended: {} },
+    { generatedAt: "yesterday" },
+    { generatedAt: 1e100 },
+    { generatedAt: Date.UTC(10000, 0, 1) / 1000 },
+    { digestType: "monthly" },
+    { editionNumber: "8" },
+    { llm: { servedModel: 42 } },
+  ])("rejects malformed API fields %j without using the fetch fallback", async (invalidFields) => {
+    const output = join(makeRoot(), "digests.json");
+    // Legacy stored editions may lack optional edition metadata.
+    const bytes = JSON.stringify([{ date: "2026-07-17", title: "Legacy", text: "Summary",
+      extended: "", generatedAt: digest("2026-07-17").generatedAt }]);
+    writeFileSync(output, bytes);
+    serve([{ digestText: "New", generatedAt: digest("2026-07-17").generatedAt, ...invalidFields }]);
+    await expect(runDigestSync([
+      "--api-url", "https://api.example.com", "--output", output, "--allow-existing-on-fetch-failure",
+    ])).rejects.toThrow(SnapshotIntegrityError);
+    expect(readFileSync(output, "utf8")).toBe(bytes);
+  });
+
+  it.each([
+    { total: -1 },
+    { total: "1" },
+    { scanned: 0.5 },
+    { nextCursor: 123 },
+    { nextCursor: "bad-cursor" },
+  ])("rejects invalid pagination %j before writing with fallback enabled", async (invalidPagination) => {
+    const output = join(makeRoot(), "digests.json");
+    const bytes = JSON.stringify([digest("2026-07-17")]);
+    writeFileSync(output, bytes);
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({
+      digests: [{ digestText: "New", generatedAt: digest("2026-07-17").generatedAt }],
+      pagination: { horizon: 1, total: 1, scanned: 1, nextCursor: null, ...invalidPagination },
+    })));
+    await expect(runDigestSync([
+      "--api-url", "https://api.example.com", "--output", output, "--allow-existing-on-fetch-failure",
+    ])).rejects.toThrow(SnapshotIntegrityError);
+    expect(readFileSync(output, "utf8")).toBe(bytes);
+  });
+
+  it("rejects malformed JSON as integrity failure rather than a fetch outage", async () => {
+    const output = join(makeRoot(), "digests.json");
+    const bytes = JSON.stringify([digest("2026-07-17")]);
+    writeFileSync(output, bytes);
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("{invalid")));
+    await expect(runDigestSync([
+      "--api-url", "https://api.example.com", "--output", output, "--allow-existing-on-fetch-failure",
+    ])).rejects.toThrow(SnapshotIntegrityError);
+    expect(readFileSync(output, "utf8")).toBe(bytes);
   });
 
 
@@ -102,4 +163,35 @@ describe("digest mirror publication", () => {
       .rejects.toThrow(/2026-07-17/);
     expect(readFileSync(output, "utf8")).toBe(bytes);
   });
+
+
+  it.each(["missing-pagination", "premature-end", "changed-horizon", "repeated-cursor", "http-failure"])(
+    "refuses %s traversal without replacing the existing artifact, even with shrink override",
+    async (failure) => {
+      vi.stubEnv("PAGES_RELEASE_ALLOW_EXISTING_DATA_ON_FETCH_FAILURE", "");
+      vi.stubEnv("DIGEST_SYNC_ALLOW_EXISTING_ON_FETCH_FAILURE", "");
+      const output = join(makeRoot(), "digests.json");
+      const bytes = JSON.stringify([digest("2026-07-17")]);
+      writeFileSync(output, bytes);
+      let page = 0;
+      vi.stubGlobal("fetch", vi.fn(async () => {
+        page++;
+        if (failure === "http-failure" && page === 2) return new Response("Forbidden", { status: 401 });
+        return Response.json({
+          digests: [],
+          ...(failure === "missing-pagination" ? {} : { pagination: {
+            horizon: failure === "changed-horizon" && page === 2 ? 3 : 2,
+            total: 2,
+            scanned: page,
+            nextCursor: failure === "premature-end" || page === 2
+              ? (failure === "repeated-cursor" ? "2.2.1.100.1" : null) : "2.2.1.100.1",
+          } }),
+        });
+      }));
+      await expect(runDigestSync([
+        "--api-url", "https://api.example.com", "--output", output, "--allow-archive-shrink",
+      ])).rejects.toThrow(/traversal|API returned/);
+      expect(readFileSync(output, "utf8")).toBe(bytes);
+    },
+  );
 });

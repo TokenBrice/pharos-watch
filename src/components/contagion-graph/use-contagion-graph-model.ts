@@ -29,8 +29,7 @@ import type { ReportCardsV9DependencyEdge } from "@shared/types/report-cards-v9"
 import { trackEvent } from "@/lib/analytics";
 import { NODE_LIMIT_OPTIONS } from "@/lib/contagion-layout";
 import { DEFAULT_NODE_LIMIT } from "@/lib/contagion-graph-constants";
-import { buildDependencyHubsModel } from "@shared/lib/dependency-hubs-model";
-import type { HubExposure } from "@shared/lib/dependency-exposure";
+import { buildDependencyHubsModel, type DependencyHubExposure } from "@shared/lib/dependency-hubs-model";
 import { highlightedExposureEdges, type ExposureOverlay } from "./contagion-graph-exposure";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 
@@ -44,7 +43,7 @@ interface UseContagionGraphModelOptions {
   trackActions?: boolean;
   exposureOverlay?: ExposureOverlay | null;
   onUseAsExposureRoot?: (coinId: string) => void;
-  hubExposures?: readonly HubExposure[];
+  hubExposures?: readonly DependencyHubExposure[];
 }
 
 const FOCUS_NEIGHBOR_RADIUS_X = 240;
@@ -175,6 +174,10 @@ export function useContagionGraphModel({
   }).hubs, [hubExposures, cards, dependencyEdges, mcapMap]);
   const directExposureById = useMemo(
     () => new Map(fullExposure.map(hub => [hub.hubId, hub])),
+    [fullExposure],
+  );
+  const directExposureKnownIds = useMemo(
+    () => new Set(fullExposure.filter(hub => hub.directKnown).map(hub => hub.hubId)),
     [fullExposure],
   );
   const fullSupernodeState = useMemo(
@@ -468,6 +471,7 @@ export function useContagionGraphModel({
     showSmallLinks,
     setShowSmallLinks,
     directExposureById,
+    directExposureKnownIds,
     fullResolvedLinks,
     exposureOverlay,
     exposureNodeIds,

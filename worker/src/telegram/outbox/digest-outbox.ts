@@ -682,13 +682,30 @@ async function finalizeSentEdition(
   nowSec: number,
   signal?: AbortSignal,
 ): Promise<void> {
+  const eligibilityPredicate = `edition_key = ?
+            AND state = 'sending'
+            AND delivery_owner = ?
+            AND delivery_generation = ?
+            AND media_state IN ('none', 'sent')
+            AND next_chunk_index = ?`;
+  const eligibilityBindings = [
+    claim.row.edition_key,
+    claim.owner,
+    claim.generation,
+    claim.chunks.length,
+  ] as const;
+  // Side effects leave this predicate unchanged until the last, terminal CAS.
+  const eligibleEdition = `EXISTS (
+    SELECT 1 FROM telegram_digest_outbox WHERE ${eligibilityPredicate}
+  )`;
   const statements = claim.successActions.map((action) =>
     db
       .prepare(
-        `INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)
+        `INSERT INTO cache (key, value, updated_at)
+         SELECT ?, ?, ? WHERE ${eligibleEdition}
          ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
       )
-      .bind(action.key, action.value, nowSec)
+      .bind(action.key, action.value, nowSec, ...eligibilityBindings)
   );
   const weeklyMetaStatementIndex = claim.row.digest_kind === "weekly"
     ? statements.length
@@ -706,9 +723,10 @@ async function finalizeSentEdition(
                     '$.telegramDeliveredAt', ?
                   )
             WHERE generated_at = ?
-              AND json_extract(digest_meta, '$.type') = 'weekly'`,
+              AND json_extract(digest_meta, '$.type') = 'weekly'
+              AND ${eligibleEdition}`,
         )
-        .bind(nowSec, nowSec, claim.row.digest_generated_at),
+        .bind(nowSec, nowSec, claim.row.digest_generated_at, ...eligibilityBindings),
     );
   }
   statements.push(
@@ -722,32 +740,17 @@ async function finalizeSentEdition(
                 last_error_class = NULL,
                 last_status_code = 200,
                 updated_at = ?
-          WHERE edition_key = ?
-            AND state = 'sending'
-            AND delivery_owner = ?
-            AND delivery_generation = ?
-            AND media_state IN ('none', 'sent')
-            AND next_chunk_index = ?`,
+          WHERE ${eligibilityPredicate}`,
       )
       .bind(
         nowSec,
         nowSec,
-        claim.row.edition_key,
-        claim.owner,
-        claim.generation,
-        claim.chunks.length,
+        ...eligibilityBindings,
       ),
   );
+  let results: D1Result[];
   try {
-    const results = await executeAtomicBatch(db, statements, { signal, returnResults: true });
-    const failedStrictStatementIndex = results.findIndex((result, index) =>
-      index !== weeklyMetaStatementIndex && Number(result.meta?.changes ?? 0) !== 1
-    );
-    if (results.length !== statements.length || failedStrictStatementIndex !== -1) {
-      throw new Error(
-        `terminal batch strict statement failed (${results.length}/${statements.length} results, index ${failedStrictStatementIndex})`,
-      );
-    }
+    results = await executeAtomicBatch(db, statements, { signal, returnResults: true });
   } catch (error) {
     await bestEffortMarkExecutionUnknown(
       db,
@@ -756,6 +759,16 @@ async function finalizeSentEdition(
       `accepted_edition_persistence_failed:${toErrorMessage(error).slice(0, 120)}`,
     );
     throw error;
+  }
+  const failedStrictStatementIndex = results.findIndex((result, index) =>
+    index !== weeklyMetaStatementIndex && Number(result.meta?.changes ?? 0) !== 1
+  );
+  // This confirms the result; safety comes from the identical SQL guards, not
+  // from an exception after the batch has already committed.
+  if (results.length !== statements.length || failedStrictStatementIndex !== -1) {
+    throw new Error(
+      `terminal batch strict statement failed (${results.length}/${statements.length} results, index ${failedStrictStatementIndex})`,
+    );
   }
 }
 

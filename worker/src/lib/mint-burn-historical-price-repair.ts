@@ -7,7 +7,12 @@ import { cgHeaders, cgUrl } from "./coingecko";
 import { DEFILLAMA_COINS, USER_AGENT } from "./constants";
 import { fetchJsonWithRetry } from "./fetch-retry";
 import { buildPriceValidationContext, validatePriceCandidate } from "./price-validation";
-import { mintBurnHourlyBucketAggregatesSql, recalcAffectedHours } from "./mint-burn-pipeline/persistence";
+import { mintBurnHourlyBucketAggregatesSql } from "./mint-burn-pipeline/persistence";
+import {
+  executeMintBurnMaintenanceMutations,
+  rebuildMintBurnMaterializationHours,
+  seedMintBurnLegacyMaterializationDebt,
+} from "./mint-burn-pipeline/materialization-debt";
 import type { MintBurnAffectedHour, MintBurnPriceHistoryPoint } from "./mint-burn-pipeline/types";
 import { projectMintBurnPriceHistory, resolveMintBurnEventPrice } from "./mint-burn-pipeline/context";
 
@@ -565,25 +570,25 @@ async function loadBacklog(db: D1Database): Promise<HistoricalMintPriceRepairBac
 
 async function loadPendingAggregateHours(
   db: D1Database,
-  stablecoinIds?: string[],
+  durableOnly: boolean,
 ): Promise<MintBurnAffectedHour[]> {
-  const ids = [...new Set(stablecoinIds ?? [])].sort();
-  if (stablecoinIds && ids.length === 0) return [];
-  const filter = ids.length > 0 ? buildInClause(ids) : null;
   const rows = await db
     .prepare(
       `SELECT
          stablecoin_id,
          chain_id,
          (timestamp / 3600) * 3600 AS hour_ts
-       FROM mint_burn_events
-       WHERE price_repair_status = 'pending_aggregate'
-         ${filter ? `AND stablecoin_id IN (${filter.sql})` : ""}
+       FROM mint_burn_events e
+       WHERE price_repair_status = 'pending_aggregate' AND amount_usd IS NOT NULL
+         AND (? = 0 OR EXISTS (
+           SELECT 1 FROM mint_burn_dirty_hours d
+           WHERE d.stablecoin_id = e.stablecoin_id AND d.chain_id = e.chain_id
+             AND d.hour_ts = (e.timestamp / 3600) * 3600))
        GROUP BY stablecoin_id, chain_id, hour_ts
        ORDER BY stablecoin_id ASC, chain_id ASC, hour_ts ASC
        LIMIT 500`,
     )
-    .bind(...(filter?.binds ?? []))
+    .bind(durableOnly ? 1 : 0)
     .all<{ stablecoin_id: string; chain_id: string; hour_ts: number }>();
   return (rows.results ?? []).map((row) => ({
     stablecoinId: row.stablecoin_id,
@@ -649,28 +654,11 @@ async function rebuildAndFinalizeAggregates(
   for (const hour of hours) {
     affectedHours.set(`${hour.stablecoinId}-${hour.chainId}-${hour.hourTs}`, hour);
   }
-  await recalcAffectedHours(db, affectedHours);
-  for (const hour of affectedHours.values()) {
+  const rebuiltHours = await rebuildMintBurnMaterializationHours(db, affectedHours);
+  for (const hour of rebuiltHours) {
     await verifyHourlyAggregateForHour(db, hour);
   }
-  await batchExecute(
-    db,
-    [...affectedHours.values()].map((hour) =>
-      db
-        .prepare(
-          `UPDATE mint_burn_events
-           SET price_repair_status = 'recovered', price_repair_reason = NULL
-           WHERE stablecoin_id = ?
-             AND chain_id = ?
-             AND timestamp >= ?
-             AND timestamp < ?
-             AND price_repair_status = 'pending_aggregate'
-             AND amount_usd IS NOT NULL`,
-        )
-        .bind(hour.stablecoinId, hour.chainId, hour.hourTs, hour.hourTs + 3600),
-    ),
-  );
-  return [...new Set([...affectedHours.values()].map((hour) => hour.stablecoinId))].sort();
+  return [...new Set(rebuiltHours.map((hour) => hour.stablecoinId))].sort();
 }
 
 export async function repairHistoricalMintBurnPrices(
@@ -685,7 +673,10 @@ export async function repairHistoricalMintBurnPrices(
     throw new Error(`unknown stablecoinId: ${options.stablecoinId}`);
   }
   const nowSec = options.nowSec ?? Math.floor(Date.now() / 1000);
-  const existingPendingAggregateHours = await loadPendingAggregateHours(db);
+  // Seed first, then select only durable pending keys. The bounded seeder orders
+  // by hour, not coin, so a separately selected pending page may not be seeded.
+  if (!options.dryRun) await seedMintBurnLegacyMaterializationDebt(db, { limit: 500 });
+  const existingPendingAggregateHours = await loadPendingAggregateHours(db, !options.dryRun);
   const existingPendingAggregateCoins = [
     ...new Set(existingPendingAggregateHours.map((hour) => hour.stablecoinId)),
   ].sort();
@@ -734,12 +725,18 @@ export async function repairHistoricalMintBurnPrices(
 
   if (!options.dryRun && dispositions.length > 0) {
     const statements: D1PreparedStatement[] = [];
+    const recoveries: Parameters<typeof executeMintBurnMaintenanceMutations>[1] = [];
     for (const disposition of dispositions) {
       const row = rows.find((candidate) => candidate.id === disposition.eventId);
       if (!row) continue;
       if (disposition.disposition === "recover") {
-        statements.push(
-          db
+        recoveries.push({
+          enqueue: db.prepare(`INSERT INTO mint_burn_dirty_hours (stablecoin_id, chain_id, hour_ts)
+            SELECT stablecoin_id, chain_id, (timestamp / 3600) * 3600
+            FROM mint_burn_events WHERE id = ? AND amount_usd IS NULL
+            ON CONFLICT (stablecoin_id, chain_id, hour_ts) DO UPDATE SET hour_ts = excluded.hour_ts
+            RETURNING stablecoin_id, chain_id, hour_ts`).bind(disposition.eventId),
+          update: db
             .prepare(
               `UPDATE mint_burn_events
                SET amount_usd = ?,
@@ -763,7 +760,7 @@ export async function repairHistoricalMintBurnPrices(
               options.timeTravelBookmark ?? null,
               disposition.eventId,
             ),
-        );
+        });
       } else if (disposition.disposition === "irreducible") {
         statements.push(
           db
@@ -806,12 +803,9 @@ export async function repairHistoricalMintBurnPrices(
       }
     }
     await batchExecute(db, statements);
+    const { affectedHours } = await executeMintBurnMaintenanceMutations(db, recoveries);
 
-    const newlyRecoveredCoins = dispositions
-      .filter((disposition) => disposition.disposition === "recover")
-      .map((disposition) => disposition.stablecoinId);
-    const newlyRecoveredHours = await loadPendingAggregateHours(db, newlyRecoveredCoins);
-    const rebuilt = await rebuildAndFinalizeAggregates(db, newlyRecoveredHours);
+    const rebuilt = await rebuildAndFinalizeAggregates(db, [...affectedHours.values()]);
     aggregateCoinsRebuilt = [...new Set([...aggregateCoinsRebuilt, ...rebuilt])].sort();
   }
 

@@ -7,7 +7,9 @@ import { TELEGRAM_RECAP_DEFAULT_DELIVERY_HOUR_LOCAL } from "./telegram-recap-pol
 
 export type { TelegramAlertType };
 
-export const TELEGRAM_MINI_APP_CONTRACT_VERSION = "5";
+export const TELEGRAM_MINI_APP_CONTRACT_VERSION = "6";
+// Accepted only for the v6 rolling deployment; remove at the next contract bump.
+export const TELEGRAM_MINI_APP_LEGACY_CONTRACT_VERSION = "5";
 export const TELEGRAM_MINI_APP_CONTRACT_VERSION_PARAM = "mini_app_contract";
 export const TELEGRAM_MINI_APP_CATALOG_VERSION_PARAM = "mini_app_catalog";
 export { TELEGRAM_MINI_APP_CATALOG_VERSION };
@@ -540,14 +542,15 @@ export function createTelegramMiniAppSnapshot(state: TelegramMiniAppMutableState
 }
 
 export type TelegramMiniAppVersionCompatibility =
-  "legacy" | "compatible" | "contract-version-mismatch" | "catalog-version-mismatch";
+  "legacy" | "legacy-v5" | "compatible" | "contract-version-mismatch" | "catalog-version-mismatch";
 
 export function telegramMiniAppVersionCompatibility(input: {
   contractVersion?: string;
   catalogVersion?: string;
 }): TelegramMiniAppVersionCompatibility {
   if (input.contractVersion == null && input.catalogVersion == null) return "legacy";
-  if (input.contractVersion !== TELEGRAM_MINI_APP_CONTRACT_VERSION) return "contract-version-mismatch";
+  if (input.contractVersion !== TELEGRAM_MINI_APP_CONTRACT_VERSION
+    && input.contractVersion !== TELEGRAM_MINI_APP_LEGACY_CONTRACT_VERSION) return "contract-version-mismatch";
   if (input.catalogVersion !== TELEGRAM_MINI_APP_CATALOG_VERSION) return "catalog-version-mismatch";
-  return "compatible";
+  return input.contractVersion === TELEGRAM_MINI_APP_LEGACY_CONTRACT_VERSION ? "legacy-v5" : "compatible";
 }

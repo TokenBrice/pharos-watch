@@ -15,6 +15,10 @@ import { buildWeeklyPrompt } from "../weekly-recap/prompt";
 
 const START_SEC = 1_786_665_600;
 const SAFETY_START_SEC = 1_784_916_000;
+const SAFETY_PERIODS = {
+  current: { start: SAFETY_START_SEC - 86_400, end: SAFETY_START_SEC + 6 * 86_400 },
+  prior: { start: SAFETY_START_SEC - 8 * 86_400, end: SAFETY_START_SEC - 86_400 },
+};
 
 const v8Identity: SafetyScoreV8PublicationIdentity = {
   model: "v8",
@@ -80,6 +84,41 @@ function row(index: number, overrides: Partial<DigestInputData> = {}): DailyDige
 }
 
 describe("weekly recap canonical candidate aggregation", () => {
+  it("uses full DEWS totals for weekly maxima and counts regardless of presentation limits", () => {
+    for (const limit of [0, 1, 5]) {
+      const weekly = buildWeeklyInputData(Array.from({ length: 7 }, (_, index) => row(index, {
+        dewsStress: {
+          bandCounts: { calm: 0, watch: 0, alert: 8, warning: 0, danger: 0 },
+          yesterdayBandCounts: { calm: 0, watch: 8, alert: 0, warning: 0, danger: 0 },
+          alertPlusMcapUsd: (index + 1) * 100e6,
+          alertPlusSupplyCoverage: { complete: true, observedCount: 8, unavailableCount: 0 },
+          bandChangeCount: 8,
+          elevatedCoins: Array.from({ length: limit }, () => ({ symbol: "COIN", band: "ALERT", score: 65, mcapUsd: 20e6 })),
+          bandChanges: Array.from({ length: limit }, () => ({ symbol: "COIN", from: "WATCH", to: "ALERT", score: 65, topDriver: "pool" })),
+        },
+      })))!;
+      expect(weekly.weeklySignals).toMatchObject({ maxAlertPlusMcapUsd: 700e6, totalDewsBandChanges: 56 });
+      expect(buildWeeklyPrompt(weekly)).toContain("max ALERT+ mcap $700.00M; band-change observations 56");
+    }
+  });
+
+  it.each(["legacy", "partial"] as const)("withholds the weekly full ALERT+ maximum for %s daily census evidence", (kind) => {
+    const weekly = buildWeeklyInputData(Array.from({ length: 7 }, (_, index) => row(index, {
+      dewsStress: {
+        bandCounts: { calm: 0, watch: 0, alert: 6, warning: 0, danger: 0 },
+        yesterdayBandCounts: null, bandChanges: [],
+        elevatedCoins: [{ symbol: "COIN", band: "ALERT", score: 65, mcapUsd: 20e6 }],
+        ...(kind === "partial" ? {
+          alertPlusMcapUsd: 100e6,
+          alertPlusSupplyCoverage: { complete: false, observedCount: 5, unavailableCount: 1 },
+          bandChangeCount: null,
+        } : {}),
+      },
+    })))!;
+    expect(weekly.weeklySignals).toMatchObject({ maxAlertPlusMcapUsd: null, totalDewsBandChanges: null });
+    expect(buildWeeklyPrompt(weekly)).toContain("max ALERT+ mcap unavailable");
+    expect(buildWeeklyPrompt(weekly)).not.toContain("max ALERT+ mcap $");
+  });
   it("keeps unavailable outcomes separate from resolved weekly accountability", () => {
     const statuses = ["hit", "missed", "expired", "pending", "unavailable"] as const;
     const weekly = buildWeeklyInputData(statuses.map((status, index) => row(index, {
@@ -182,9 +221,12 @@ describe("weekly recap canonical candidate aggregation", () => {
     rows[2] = { ...rows[2]!, input_data: JSON.stringify(input) };
     const weekly = buildWeeklyInputData(rows, [], {
       status: "available", expectedModel: "v8", identity, publishedAt: START_SEC, reason: null,
+    }, {
+      current: { start: START_SEC, end: START_SEC + 7 * 86_400 },
+      prior: { start: START_SEC - 7 * 86_400, end: START_SEC },
     });
     expect(weekly?.weeklySignals.topGradeTransitions.map((entry) => entry.historyId)).toEqual(["history:usdt:1"]);
-    expect(weekly?.gradeTransitionCount).toBe(1);
+    expect(weekly?.gradeTransitionCount).toBeNull(); // Legacy display rows cannot establish a full census.
   });
 
   it("ranks fresh criticals first but makes carried criticals compete on severity ahead of suppressed signals", () => {
@@ -439,6 +481,11 @@ function safetyRow(
   transitions: DigestGradeTransition[] = [],
   authoredIdentity?: SafetyScoreV8PublicationIdentity | SafetyScoreV9PublicationIdentity,
 ): DailyDigestSourceRow {
+  const censusIdentity = authoredIdentity ?? v9Identity;
+  const identities = transitions.filter((entry) =>
+    entry.model === censusIdentity.model &&
+    entry.safetyScoreIdentity.evaluationBuildDigest === censusIdentity.evaluationBuildDigest)
+    .map(({ historyId, recordedAt }) => ({ historyId, recordedAt }));
   return {
     generated_at: SAFETY_START_SEC + index * 86_400,
     digest_title: `Day ${index}`,
@@ -446,6 +493,10 @@ function safetyRow(
     input_data: JSON.stringify(digestInput({
       totalMcapUsd: 180_000_000 + index,
       gradeTransitions: transitions,
+      gradeTransitionAccounting: {
+        complete: true, count: identities.length, identities, safetyScoreIdentity: censusIdentity,
+        window: { start: SAFETY_START_SEC + index * 86_400 - 172_800, end: SAFETY_START_SEC + index * 86_400 + 1 },
+      },
       ...(authoredIdentity ? { safetyContext: available(authoredIdentity) } : {}),
     })),
   };
@@ -464,7 +515,7 @@ describe("weekly recap safety identity", () => {
       safetyRow(6),
     ];
 
-    const weekly = buildWeeklyInputData(rows, [], available(v9Identity));
+    const weekly = buildWeeklyInputData(rows, [], available(v9Identity), SAFETY_PERIODS);
 
     expect(weekly?.safetyContext).toMatchObject({
       status: "available",
@@ -483,16 +534,11 @@ describe("weekly recap safety identity", () => {
 
   it("omits only safety movers when V9 is unavailable and restores V8 movers after rollback", () => {
     const rows = [
-      safetyRow(0, [v8Transition(1_784_916_000)]),
-      safetyRow(1),
-      safetyRow(2),
-      safetyRow(3),
-      safetyRow(4),
-      safetyRow(5),
-      safetyRow(6),
+      safetyRow(0, [v8Transition(1_784_916_000)], v8Identity),
+      ...Array.from({ length: 6 }, (_, index) => safetyRow(index + 1, [], v8Identity)),
     ];
-    const degraded = buildWeeklyInputData(rows, [], unavailable("v9-identity-mismatch"));
-    const restored = buildWeeklyInputData(rows, [], available(v8Identity));
+    const degraded = buildWeeklyInputData(rows, [], unavailable("v9-identity-mismatch"), SAFETY_PERIODS);
+    const restored = buildWeeklyInputData(rows, [], available(v8Identity), SAFETY_PERIODS);
 
     expect(degraded).toMatchObject({
       totalBlacklistEventsThisWeek: 0,
@@ -513,7 +559,7 @@ describe("weekly recap safety identity", () => {
     const current = Array.from({ length: 7 }, (_, index) => safetyRow(index, [], v9Identity));
     const prior = Array.from({ length: 7 }, (_, index) => safetyRow(index - 7, [], v9Identity));
     const reason = "safety-canonical-snapshot:v9-publication-held";
-    const weekly = buildWeeklyInputData(current, prior, unavailable())!;
+    const weekly = buildWeeklyInputData(current, prior, unavailable(), SAFETY_PERIODS)!;
 
     expect(weekly).toMatchObject({
       gradeTransitionCount: null,
@@ -528,10 +574,66 @@ describe("weekly recap safety identity", () => {
     expect(prompt).not.toContain("Risk transitions: 0");
   });
 
+  it.each(["complete", "legacy", "partial", "missing", "delayed"] as const)(
+    "counts full organic identities once inside adjacent scheduled periods with %s editions",
+    (mode) => {
+      const { current, prior } = SAFETY_PERIODS;
+      const event = (historyId: string, recordedAt: number) => ({ ...v9Transition(recordedAt), historyId });
+      const events = [
+        event("prior-start", prior.start),
+        event("prior-last", current.start - 1),
+        event("current-start", current.start),
+        ...Array.from({ length: 8 }, (_, index) => event(`inner:${index}`, current.start + index + 1)),
+        event("current-last", current.end - 1),
+        event("next-start", current.end),
+      ];
+      const captures = (offset: number) => Array.from({ length: 7 }, (_, index) => {
+        const captureAt = SAFETY_START_SEC + (index + offset) * 86_400;
+        const captured = events.filter((entry) => entry.recordedAt >= captureAt - 172800 && entry.recordedAt < captureAt + 1);
+        const source = safetyRow(index + offset, captured, v9Identity);
+        const input = JSON.parse(source.input_data) as DigestInputData;
+        input.gradeTransitions = captured.slice(0, 5); // Census remains complete beyond the editorial cap.
+        return { ...source, input_data: JSON.stringify(input) };
+      });
+      const rows = captures(0);
+      if (mode === "missing") rows.splice(2, 1);
+      if (mode === "legacy" || mode === "partial" || mode === "delayed") {
+        const input = JSON.parse(rows[6]!.input_data) as DigestInputData;
+        if (mode === "legacy") delete input.gradeTransitionAccounting;
+        if (mode === "partial") input.gradeTransitionAccounting = {
+          complete: false, window: { start: current.end - 172800, end: current.end + 1 }, reason: "grade-transitions-query",
+        };
+        if (mode === "delayed" && input.gradeTransitionAccounting?.complete) {
+          input.gradeTransitionAccounting.window.end = current.end - 10;
+          input.gradeTransitionAccounting.identities = input.gradeTransitionAccounting.identities.filter(
+            (entry) => entry.recordedAt < current.end - 10);
+          input.gradeTransitionAccounting.count = input.gradeTransitionAccounting.identities.length;
+        }
+        rows[6] = { ...rows[6]!, input_data: JSON.stringify(input) };
+      }
+      const weekly = buildWeeklyInputData(rows, captures(-7), available(v9Identity), SAFETY_PERIODS)!;
+      expect(weekly.gradeTransitionCount).toBe(mode === "complete" ? 10 : null);
+      expect(weekly.weekOverWeekDeltas?.gradeTransitions).toEqual({
+        current: mode === "complete" ? 10 : null, prior: 2,
+      });
+      if (mode === "complete") {
+        const ids = weekly.weeklySignals.topGradeTransitions.map((entry) => entry.historyId);
+        expect(new Set(ids).size).toBe(ids.length);
+        expect(ids).not.toContain("prior-last");
+        expect(ids).not.toContain("next-start");
+        expect(ids).toContain("current-start");
+        expect(ids).toContain("current-last");
+        expect(buildWeeklyPrompt(weekly)).toContain("Organic transition event periods: current [");
+      } else {
+        expect(weekly.metricUnavailableReasons?.gradeTransitions?.length).toBeGreaterThan(0);
+      }
+    },
+  );
+
   it("retains observed zero weekly transition counts when canonical safety is available", () => {
     const current = Array.from({ length: 7 }, (_, index) => safetyRow(index, [], v9Identity));
     const prior = Array.from({ length: 7 }, (_, index) => safetyRow(index - 7, [], v9Identity));
-    const weekly = buildWeeklyInputData(current, prior, available(v9Identity))!;
+    const weekly = buildWeeklyInputData(current, prior, available(v9Identity), SAFETY_PERIODS)!;
 
     expect(weekly.gradeTransitionCount).toBe(0);
     expect(weekly.metricUnavailableReasons?.gradeTransitions).toBeUndefined();
@@ -566,7 +668,7 @@ describe("weekly recap safety identity", () => {
       safetyRow(4, [], priorV9Identity),
     ];
 
-    const weekly = buildWeeklyInputData(rows, [], available(v9Identity));
+    const weekly = buildWeeklyInputData(rows, [], available(v9Identity), SAFETY_PERIODS);
     expect(weekly?.dailyDigests[0]).toMatchObject({ title: "", text: "" });
     expect(weekly?.dailyDigests[1]).toMatchObject({
       title: "USDC Moved On V9 Evidence",
@@ -590,7 +692,7 @@ describe("weekly recap safety identity", () => {
       safetyRow(6, [], v9Identity),
     ];
 
-    const weekly = buildWeeklyInputData(rows, [], unavailable());
+    const weekly = buildWeeklyInputData(rows, [], unavailable(), SAFETY_PERIODS);
     const prompt = buildWeeklyPrompt(weekly!);
 
     expect(prompt).toContain("Risk transitions: N/A (safety-canonical-snapshot:v9-publication-held)");
@@ -631,7 +733,7 @@ describe("weekly recap safety identity", () => {
     };
     rows[4] = { ...rows[4]!, input_data: JSON.stringify(latestInput) };
 
-    const weekly = buildWeeklyInputData(rows, [], available(v9Identity));
+    const weekly = buildWeeklyInputData(rows, [], available(v9Identity), SAFETY_PERIODS);
     const prompt = buildWeeklyPrompt(weekly!);
 
     expect(prompt).toContain("Safety desk:");

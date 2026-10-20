@@ -708,14 +708,29 @@ export async function hydrateYieldRankingsCache(ctx: HydrationContext): Promise<
       },
     });
     if (decoded.ok) {
-      // Stale evidence still scores — blanking it would silently zero every
-      // structured-yield contribution — but the run reports the degradation
-      // instead of treating an unrefreshed publication as current.
-      const rankingsAgeSec = getRowAgeSec(rankingsCache?.updated_at, ctx.nowSec);
-      if (rankingsAgeSec == null || rankingsAgeSec > DEWS_STALE_YIELD_RANKINGS_SEC) {
+      // Retain readable evidence for diagnostics, but hold publication whenever
+      // its generation clock is inadmissible or beyond the producer budget.
+      const rankingsFreshness = classifyFreshness(
+        {
+          job: "sync-yield-data",
+          lastSuccessAt: rankingsCache?.updated_at ?? null,
+          lastRunAt: rankingsCache?.updated_at ?? null,
+          expectedIntervalSec: DEWS_STALE_YIELD_RANKINGS_SEC,
+          lastStatus: "ok",
+        },
+        {
+          watchAt: { absoluteSec: DEWS_STALE_YIELD_RANKINGS_SEC },
+          staleAt: { absoluteSec: DEWS_STALE_YIELD_RANKINGS_SEC },
+        },
+        ctx.nowSec,
+        { readAtSec: Math.floor(Date.now() / 1000) },
+      );
+      if (rankingsFreshness.state !== "fresh") {
         ctx.registerSourceFailure(
           "yield-rankings-freshness",
-          `yield-rankings age ${rankingsAgeSec ?? "unknown"}s exceeds ${DEWS_STALE_YIELD_RANKINGS_SEC}s`,
+          rankingsFreshness.timestampReason != null
+            ? `yield-rankings ${rankingsFreshness.timestampReason}`
+            : `yield-rankings age ${rankingsFreshness.ageSec}s exceeds ${DEWS_STALE_YIELD_RANKINGS_SEC}s`,
         );
       }
       for (const ranking of decoded.payload) {

@@ -174,9 +174,7 @@ export async function projectMethodologyBumps(
   let total = 0;
   for (const spec of METHODOLOGY_DOMAINS) {
     const result = await projectStaticCatalogEntries(db, {
-      eventType: `methodology.bumped:${spec.domain}`,
       entries: spec.changelog,
-      sourceRowId: (entry) => entry.version,
       buildEvent: (entry) => buildMethodologyEvent(spec, entry),
     }, options);
     total += result.projected;

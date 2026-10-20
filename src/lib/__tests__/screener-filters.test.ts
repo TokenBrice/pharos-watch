@@ -3,13 +3,14 @@ import {
   SCREENER_FILTER_DEFAULTS,
   SCREENER_URL_SCHEMA,
   applyFilters,
-  hasLoadingScoreFilterData,
+  resolveScreenerFilterDataState,
   hasActiveFilters,
   normalizeScreenerDeepLinkAliases,
   projectBlacklistable,
   sortScreenerRows,
   type ScreenerFilters,
   type ScreenerRow,
+  type ScreenerFilterSources,
 } from "@/lib/screener-filters";
 import { decodeState, encodeState } from "@/lib/url-state";
 import { parsePaletteInput } from "@/lib/command-palette-verbs";
@@ -382,47 +383,59 @@ describe("sortScreenerRows", () => {
   });
 });
 
-describe("hasLoadingScoreFilterData", () => {
-  const loaded = {
-    dewsLoading: false,
-    dewsHasData: true,
-    reportLoading: false,
-    reportHasData: true,
+describe("resolveScreenerFilterDataState", () => {
+  const loaded: ScreenerFilterSources = {
+    dews: { loading: false, hasData: true },
+    report: { loading: false, hasData: true },
+    peg: { loading: false, hasData: true },
+    liquidity: { loading: false, hasData: true },
   };
-  const dewsPending = { dewsLoading: true, dewsHasData: false };
-  const reportPending = { reportLoading: true, reportHasData: false };
 
-  // Since safety 9.1 the mint score and band are read from the published V9
-  // mint component, so both mint filters depend on the report-cards query.
-  // The curated route bucket is not re-sourced, so it must not gate on a query.
-  it.each<{
-    name: string;
-    filters: Partial<ScreenerFilters>;
-    state: Partial<typeof loaded>;
-    expected: boolean;
-  }>([
-    { name: "deep-linked DEWS filters wait for the DEWS query", filters: { dewsMin: 80 }, state: dewsPending, expected: true },
-    { name: "safety filters do not wait for the DEWS query", filters: { safetyExitMin: 75 }, state: dewsPending, expected: false },
-    { name: "safety filters wait for report cards", filters: { safetyExitMin: 75 }, state: reportPending, expected: true },
-    { name: "the mint score threshold waits for report cards", filters: { mintAuthorityScoreMin: 65 }, state: reportPending, expected: true },
-    { name: "the mint band filter waits for report cards", filters: { mintAuthorityScores: ["hardened"] }, state: reportPending, expected: true },
-    { name: "the mint band filter does not wait for the DEWS query", filters: { mintAuthorityScores: ["hardened"] }, state: dewsPending, expected: false },
-    {
-      name: "the mint filters release once report cards have data",
-      filters: { mintAuthorityScoreMin: 65, mintAuthorityScores: ["hardened"] },
-      state: { reportLoading: true, reportHasData: true },
-      expected: false,
-    },
-    {
-      name: "the curated mint route filter never waits on a query",
-      filters: { mintAuthority: ["no-privileged-mint"] },
-      state: reportPending,
-      expected: false,
-    },
-  ])("$name", ({ filters, state, expected }) => {
-    expect(
-      hasLoadingScoreFilterData({ ...SCREENER_FILTER_DEFAULTS, ...filters }, { ...loaded, ...state }),
-    ).toBe(expected);
+  it.each<{ filters: Partial<ScreenerFilters>; source: keyof ScreenerFilterSources }>([
+    { filters: { dewsMin: 80 }, source: "dews" },
+    { filters: { dewsMax: 20 }, source: "dews" },
+    { filters: { safetyGrades: ["A"] }, source: "report" },
+    { filters: { safetyScoreMin: 80 }, source: "report" },
+    { filters: { safetyBackingMin: 75 }, source: "report" },
+    { filters: { safetyExitMin: 75 }, source: "report" },
+    { filters: { safetyControlMin: 75 }, source: "report" },
+    { filters: { safetyEvidence: ["nr"] }, source: "report" },
+    { filters: { mintAuthorityScoreMin: 65 }, source: "report" },
+    { filters: { mintAuthorityScores: ["hardened"] }, source: "report" },
+    { filters: { mintAuthorityScores: ["nr"] }, source: "report" },
+    { filters: { pegScoreMin: 80 }, source: "peg" },
+    { filters: { liquidityScoreMin: 65 }, source: "liquidity" },
+  ])("qualifies active $source predicates by publication availability ($filters)", ({ filters, source }) => {
+    const active = { ...SCREENER_FILTER_DEFAULTS, ...filters };
+    const resolve = (state: ScreenerFilterSources[typeof source]) =>
+      resolveScreenerFilterDataState(active, { ...loaded, [source]: state });
+    expect(resolve({ loading: true, hasData: false })).toBe("loading");
+    expect(resolve({ loading: false, hasData: false, error: new Error("offline") })).toBe("unavailable");
+    expect(resolve({ loading: true, hasData: false, error: new Error("retrying") })).toBe("unavailable");
+    expect(resolve({ loading: false, hasData: false })).toBe("unavailable");
+    expect(resolve({ loading: true, hasData: true })).toBe("ready");
+    expect(resolve({ loading: false, hasData: true, error: new Error("refresh failed") })).toBe("ready");
+    // A valid empty publication is data, not pending or failed transport.
+    expect(resolve({ loading: false, hasData: true })).toBe("ready");
+    for (const other of Object.keys(loaded) as Array<keyof ScreenerFilterSources>) {
+      if (other === source) continue;
+      expect(resolveScreenerFilterDataState(active, {
+        ...loaded, [other]: { loading: false, hasData: false, error: new Error("irrelevant") },
+      })).toBe("ready");
+    }
+  });
+
+  it("keeps curated mint routes and exact Picker inspection independent of score feeds", () => {
+    const unavailable = Object.fromEntries(Object.keys(loaded).map((source) => [
+      source, { loading: false, hasData: false, error: new Error("offline") },
+    ])) as ScreenerFilterSources;
+    expect(resolveScreenerFilterDataState({
+      ...SCREENER_FILTER_DEFAULTS, mintAuthority: ["no-privileged-mint"],
+    }, unavailable)).toBe("ready");
+    expect(resolveScreenerFilterDataState({
+      ...SCREENER_FILTER_DEFAULTS, coins: ["usdc-circle"], dewsMin: 80,
+      safetyScoreMin: 90, pegScoreMin: 80, liquidityScoreMin: 80,
+    }, unavailable)).toBe("ready");
   });
 });
 

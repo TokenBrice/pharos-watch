@@ -3,7 +3,10 @@ import * as conservationModule from "../../mint-burn-conservation";
 import { MINT_BURN_CONFIGS } from "../../mint-burn-contracts";
 import { MintBurnConservationRecordSchema, MintBurnReconciliationSummarySchema } from "@shared/types/status";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
-import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
+import { getDatasetCadenceSec } from "@shared/lib/status-dataset-freshness";
+import * as safetySourceModule from "../../safety-score-active-source";
+import { makeWorkerReportCardsV9Response } from "../../../test-helpers/report-cards-v9";
+import { DatasetFreshnessSchema } from "@shared/types/status/core";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { getDatasetFreshness, getMintBurnReconciliation } from "../derived-data";
 
@@ -207,97 +210,76 @@ function publishedPointer(updatedAt: number) {
 }
 
 describe("getDatasetFreshness", () => {
-  it("fails closed for safety freshness when the compact cache has no identity instead of reading legacy history", async () => {
+  it("fails closed for safety freshness without an accepted canonical publication instead of reading legacy history", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(NOW * 1000));
-    const db = mockD1([
-      {
-        match: "FROM cache WHERE key = ?",
-        matchBinds: ["report_card_cache"],
-        rows: [
-          {
-            key: "report_card_cache",
-            value: JSON.stringify({
-              methodologyVersion: "v8-test",
-              updatedAt: NOW - 60,
-              scores: { "usdc-circle": { score: 99, grade: "A+" } },
-            }),
-            updated_at: NOW - 60,
-          },
-        ],
-      },
-    ]);
-
+    const db = mockD1([]);
     const freshness = await getDatasetFreshness(db);
-
     expect(freshness.safetyGrades).toBeNull();
+    expect(freshness.unavailableReasons?.safetyGrades).toBe("missing-timestamp");
     expect(db.getHistory().some((entry) => entry.sql.includes("safety_grade_history"))).toBe(false);
   });
 
-  it("keeps dataset freshness available when the report-card cache read fails", async () => {
+  it("keeps other dataset freshness available when the canonical publication read fails", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(NOW * 1000));
-    const db = mockD1([
-      {
-        match: "FROM cache WHERE key = ?",
-        matchBinds: ["report_card_cache"],
-        rows: [],
-        throwError: "report-card cache unavailable",
-      },
-    ]);
-
-    await expect(getDatasetFreshness(db)).resolves.toMatchObject({
-      safetyGrades: null,
-    });
+    vi.spyOn(safetySourceModule, "loadActiveSafetyScoreSource").mockRejectedValue(new Error("publication unavailable"));
+    const freshness = await getDatasetFreshness(mockD1([
+      { match: "SELECT MAX(updated_at) as latest FROM cache", rows: [], first: { latest: NOW - 60 } },
+    ]));
+    expect(freshness).toMatchObject({ safetyGrades: null, stablecoins: NOW - 60 });
+    expect(freshness.unavailableReasons?.safetyGrades).toBe("missing-timestamp");
   });
 
-  it("fails closed for safety freshness when the V8 release sees a complete V9 compact publication", async () => {
+  it.each(["v9", "held"] as const)("uses the canonical %s publication clock with the publication producer budget", async (kind) => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(NOW * 1000));
-    const updatedAt = NOW - 60;
-    const publicationGenerationId = `safety-score-v9:9.0:${updatedAt}`;
-    const scoreIds = [...ACTIVE_IDS].sort();
-    const db = mockD1([
-      {
-        match: "FROM cache WHERE key = ?",
-        matchBinds: ["report_card_cache"],
-        rows: [
-          {
-            key: "report_card_cache",
-            value: JSON.stringify({
-              methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-              updatedAt,
-              scores: Object.fromEntries(scoreIds.map((id) => [id, { score: 99, grade: "A+" }])),
-              safetyScoreIdentity: {
-                model: "v9",
-                schemaVersion: 1,
-                methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-                policyId: "v9-policy-2026-05",
-                policyDigest: "b".repeat(64),
-                evaluationBuildDigest: "c".repeat(64),
-                baseInputGenerationId: `report-cards-input:v1:${"d".repeat(64)}`,
-                publicationGenerationId,
-              },
-              publicationGenerationId,
-              completeness: {
-                generationId: publicationGenerationId,
-                methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-                expectedCount: scoreIds.length,
-                scoredCount: scoreIds.length,
-                notRatedCount: 0,
-                notRatedIds: [],
-              },
-            }),
-            updated_at: updatedAt,
-          },
-        ],
-      },
-    ]);
+    const updatedAt = NOW - 2 * 86400;
+    const snapshot = makeWorkerReportCardsV9Response({ updatedAt });
+    vi.spyOn(safetySourceModule, "loadActiveSafetyScoreSource").mockResolvedValue(
+      kind === "v9" ? { kind, snapshot }
+        : { kind, snapshot, reason: "v9-publication-held", detail: "Held publication" },
+    );
+    const freshness = await getDatasetFreshness(mockD1([]));
+    expect(freshness.safetyGrades).toBe(updatedAt);
+    expect(freshness.unavailableReasons?.safetyGrades).toBeUndefined();
+    expect(getDatasetCadenceSec("safetyGrades")).toBe(1800);
+  });
 
-    const freshness = await getDatasetFreshness(db);
-
+  it.each([
+    [NOW + 1, "future-timestamp"],
+    [NOW + 61, "future-timestamp"],
+    [Number.NaN, "invalid-timestamp"],
+    [Number.POSITIVE_INFINITY, "invalid-timestamp"],
+    [null, "missing-timestamp"],
+  ] as const)("rejects dataset clock %s with a per-dataset machine reason", async (clock, reason) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(NOW * 1000));
+    if (clock != null) {
+      vi.spyOn(safetySourceModule, "loadActiveSafetyScoreSource").mockResolvedValue({
+        kind: "v9", snapshot: { ...makeWorkerReportCardsV9Response(), updatedAt: clock },
+      });
+    }
+    const freshness = await getDatasetFreshness(mockD1([
+      { match: "SELECT MAX(updated_at) as latest FROM cache", rows: [], first: { latest: clock } },
+      { match: "SELECT MAX(snapshot_date)", rows: [], first: { latest: NOW - 100 } },
+    ]));
+    expect(freshness.stablecoins).toBeNull();
+    expect(freshness.unavailableReasons?.stablecoins).toBe(reason);
+    expect(freshness.supply).toBe(NOW - 100);
     expect(freshness.safetyGrades).toBeNull();
-    expect(db.getHistory().some((entry) => entry.sql.includes("safety_grade_history"))).toBe(false);
+    expect(freshness.unavailableReasons?.safetyGrades).toBe(reason);
+    expect(DatasetFreshnessSchema.parse(freshness).unavailableReasons).toEqual(freshness.unavailableReasons);
+  });
+
+  it("preserves an admitted observed zero timestamp", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(NOW * 1000));
+    const freshness = await getDatasetFreshness(mockD1([
+      { match: "SELECT MAX(updated_at) as latest FROM cache", rows: [], first: { latest: 0 } },
+    ]));
+    expect(freshness.stablecoins).toBe(0);
+    expect(freshness.unavailableReasons?.stablecoins).toBeUndefined();
   });
 
   it("uses the DEWS publication pointer and never a newer partial table timestamp", async () => {

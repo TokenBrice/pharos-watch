@@ -4,6 +4,7 @@ const STATUS_SECTION_MESSAGES: Record<string, string> = {
   dependencyHealth: "Dependency health unavailable.",
   reserveComposition: "Reserve composition overview unavailable.",
   scheduledSlots: "Scheduled slot diagnostics unavailable.",
+  crons: "Cron history unavailable.",
   telegramBot: "Telegram bot diagnostics unavailable.",
   liquidity_health_extraction_failed: "Liquidity health data unavailable.",
   yield_health_summary_failed: "Yield health summary unavailable.",

@@ -33,6 +33,10 @@ export const PHAROSVILLE_API_CONTRACT = {
     metaMaxAgeSec: DATA_SURFACE_DESCRIPTORS.stablecoins.endpointMaxAgeSec,
     producerIntervalSec: DATA_SURFACE_DESCRIPTORS.stablecoins.producerIntervalSec,
   },
+  // Reader compatibility: global/attribution totals, residual/discrepancy, geometry
+  // denominator and dominanceShare may be null. Null is unavailable, never zero;
+  // published chain rows and chainDetail still require finite observed totals.
+  // External consumers must deploy these guards before the nullable producer.
   chains: {
     key: "chains",
     path: API_PATHS.chains(),

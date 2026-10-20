@@ -612,6 +612,13 @@ const DexVolumeAvailabilitySchema = z
         message: "complete volume windows carry no reason; every other completeness carries one",
       });
     }
+    if (availability.measuredPoolCount != null && availability.measuredPoolCount > 0 && availability.partialGrossUsd === null) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["partialGrossUsd"],
+        message: "measured nonempty volume windows require an admitted sum",
+      });
+    }
   });
 export type DexVolumeAvailability = z.infer<typeof DexVolumeAvailabilitySchema>;
 
@@ -776,8 +783,8 @@ const DexLiquidityDataSchema = z
     hasMeasuredLiquidityEvidence: z.boolean(),
     trendworthy: z.boolean(),
     sourceMix: LiquiditySourceMixSchema,
-    balanceMeasuredTvlUsd: z.number(),
-    organicMeasuredTvlUsd: z.number(),
+    balanceMeasuredTvlUsd: z.number().nullable(),
+    organicMeasuredTvlUsd: z.number().nullable(),
     scoreComponents: z
       .object({
         tvlDepth: z.number(),
@@ -984,7 +991,7 @@ export type DepegEventsResponse = z.infer<typeof DepegEventsResponseSchema>;
 
 export const PegSummaryStatsSchema = z.object({
   activeDepegCount: z.number(),
-  medianDeviationBps: z.number(),
+  medianDeviationBps: z.number().nullable(),
   worstCurrent: z.object({ id: z.string(), symbol: z.string(), bps: z.number() }).nullable(),
   coinsAtPeg: z.number(),
   totalTracked: z.number(),

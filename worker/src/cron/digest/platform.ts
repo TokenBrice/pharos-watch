@@ -14,6 +14,7 @@ import {
   type CronResult,
 } from "../../lib/cron-logger";
 import { reportCronProgress } from "../../lib/cron-progress";
+import { createCronResult, createNeutralSkippedCronResult } from "../../lib/cron-result";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { findUnboundDigestSafetyClaimMarkers } from "../../lib/digest-safety-context";
@@ -254,13 +255,13 @@ export async function reportDigestMissingApiKey(
       skipped: "missing-api-key",
     },
   });
-  return { metadata: "skipped: no API key" };
+  return createNeutralSkippedCronResult("missing-api-key");
 }
 
 export async function reportDigestCircuitOpen(
   reportProgress: CronProgressReporter | undefined,
   edition: DigestEditionLabel,
-): Promise<void> {
+): Promise<CronResult> {
   await reportCronProgress(reportProgress, {
     stage: "skipped",
     message: `Skipping ${edition} because Anthropic circuit is open`,
@@ -270,6 +271,11 @@ export async function reportDigestCircuitOpen(
     metadata: {
       skipped: "anthropic-circuit-open",
     },
+  });
+  return createCronResult({
+    status: "degraded",
+    itemCount: 0,
+    metadata: { reason: "anthropic-circuit-open" },
   });
 }
 

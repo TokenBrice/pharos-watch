@@ -238,8 +238,12 @@ function validateRow(
 
   if (mode === "current-balances") {
     const amount = raw.frozen_balance;
-    const amountString = typeof amount === "number" ? String(amount) : amount;
-    if (typeof amountString !== "string" || amountString.length === 0 || !Number.isFinite(Number(amountString))) {
+    const amountString = typeof amount === "number" ? String(amount) : typeof amount === "string" ? amount.trim() : amount;
+    const parts = typeof amountString === "string" ? amountString.split(/[eE]/) : [];
+    const decimal = parts[0]?.split(".") ?? [];
+    if (typeof amountString !== "string" || parts.length < 1 || parts.length > 2 || decimal.length > 2 ||
+        decimal.some((part) => !/^\d+$/.test(part)) ||
+        (parts.length === 2 && !/^[+-]?\d+$/.test(parts[1])) || !Number.isFinite(Number(amountString))) {
       return { type: "malformed", reason: "missing or invalid frozen_balance" };
     }
     return {

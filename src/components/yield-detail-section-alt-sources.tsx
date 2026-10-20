@@ -8,6 +8,7 @@ import { TableSourceLink } from "@/components/table/client";
 import { DIRECTION_TONE_CLASSES, YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
 import { formatCurrency, formatPercent } from "@shared/lib/format";
 import { cn } from "@/lib/utils";
+import { createTableComparator } from "@/lib/table-comparator";
 import { formatYieldApyDelta } from "@/lib/yield-presentation";
 import { ALT_SOURCE_INITIAL_COUNT } from "@/components/yield-detail-section-model";
 import {
@@ -16,6 +17,11 @@ import {
   formatYieldSourceRiskCompact,
 } from "@/lib/yield-source-risk";
 import type { YieldSourceExplorerAlternate } from "@/lib/yield-source-explorer-model";
+
+const compareAltSources = createTableComparator<"apy" | "tvl", YieldSourceExplorerAlternate>({
+  apy: (source) => source.apy30d,
+  tvl: (source) => source.sourceTvlUsd,
+});
 
 export interface YieldDetailSectionAltSourcesProps {
   altSources: YieldSourceExplorerAlternate[];
@@ -58,11 +64,8 @@ export function YieldDetailSectionAltSources({
     return sortDir === "desc" ? "↓" : "↑";
   };
 
-  const sorted = [...altSources].sort((a, b) => {
-    const mul = sortDir === "asc" ? 1 : -1;
-    if (sortField === "apy") return mul * (a.apy30d - b.apy30d);
-    return mul * ((a.sourceTvlUsd ?? 0) - (b.sourceTvlUsd ?? 0));
-  });
+  const sort = { key: sortField, direction: sortDir };
+  const sorted = [...altSources].sort((a, b) => compareAltSources(a, b, sort));
 
   const visible = showAll ? sorted : sorted.slice(0, ALT_SOURCE_INITIAL_COUNT);
   const hiddenCount = sorted.length - ALT_SOURCE_INITIAL_COUNT;

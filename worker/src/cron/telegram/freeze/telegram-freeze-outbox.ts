@@ -1,3 +1,4 @@
+import { TELEGRAM_ALERT_TTL_SEC } from "@shared/lib/telegram-delivery-policy";
 import { executeAtomicBatch } from "../../../lib/db";
 import { getCache, setCache } from "../../../lib/db-cache";
 import { parseJsonObject } from "../../../lib/json-parse";
@@ -144,7 +145,7 @@ export async function dispatchFreezeAlertOutbox(db: D1Database, nowSec: number):
 
 async function persistAndQueueFreezeEvent(db: D1Database, event: FreezeAlert, nowSec: number): Promise<{ queued: number; targetCount: number }> {
   const sourceEventId = `freeze:${event.tapeEventId}`;
-  const expiresAt = nowSec + 2 * 60 * 60;
+  const expiresAt = nowSec + TELEGRAM_ALERT_TTL_SEC.freeze;
   await db.prepare(
     `INSERT INTO telegram_freeze_alert_events (
        source_event_id, tape_event_id, blacklist_event_id, event_type,

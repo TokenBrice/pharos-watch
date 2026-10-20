@@ -4,6 +4,13 @@ import { makeDexLiquidityData } from "@/test/fixtures/dex-liquidity";
 import { DEX_GLOBAL_KEY } from "@shared/types/market";
 
 describe("buildLiquidityExitRouteModel", () => {
+  it.each([NaN, Infinity, -Infinity, -0.01, 1.01])("leaves invalid HHI %s unscored in the model interpretation", (concentrationHhi) => {
+    const model = buildLiquidityExitRouteModel({
+      [DEX_GLOBAL_KEY]: makeDexLiquidityData({ totalTvlUsd: 10_000, concentrationHhi }),
+    });
+    expect(model?.interpretation).toBe("Route concentration is not scored for this snapshot.");
+  });
+
   it("derives exit routes from the global DEX liquidity row", () => {
     const model = buildLiquidityExitRouteModel({
       [DEX_GLOBAL_KEY]: makeDexLiquidityData({

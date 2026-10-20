@@ -3,6 +3,9 @@ import { fireEvent, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { CoinEmblem } from "@/app/alt-pegs/fiat-world-atlas/coin-emblem";
 import { summarizeCohort } from "@/app/alt-pegs/fiat-world-atlas/cohort-coin-emblems";
+import { FiatEmblems } from "@/app/alt-pegs/fiat-world-atlas/fiat-emblems";
+import { buildPegDiversityHero } from "@/lib/alt-peg-hero";
+import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import { makePlacedCoin, renderAtlas } from "./atlas.test-support";
 
 const sample = makePlacedCoin({
@@ -109,13 +112,20 @@ describe("CoinEmblem", () => {
   });
 
   it("discloses known cohort subtotals and withholds partial-denominator shares", () => {
-    const summary = summarizeCohort([sample, { ...sample, id: "missing", marketCap: null }]);
-    expect(summary).toMatchObject({ marketCap: sample.marketCap, supplyUnavailableCount: 1 });
-    expect(summarizeCohort([{ ...sample, marketCap: null }]).marketCap).toBeNull();
-    renderAtlas(<CoinEmblem coin={sample} variant="fiat" cohortMarketCap={summary.marketCap} cohortSupplyUnavailableCount={summary.supplyUnavailableCount} />);
+    const eur = buildPegDiversityHero([makeStablecoin({ id: sample.id, circulating: { usd: sample.marketCap! } })])
+      .pegClusters.find((group) => group.peg === "EUR")!;
+    const summary = summarizeCohort([sample], eur.cohort);
+    const unavailableCount = eur.cohort.coinCount - 1;
+    expect(summary).toMatchObject({ marketCap: sample.marketCap, coinCount: eur.cohort.coinCount, supplyUnavailableCount: unavailableCount });
+    const unknown = buildPegDiversityHero([makeStablecoin({ id: sample.id, circulating: {} })])
+      .pegClusters.find((group) => group.peg === "EUR")!;
+    expect(summarizeCohort([{ ...sample, marketCap: null }], unknown.cohort).marketCap).toBeNull();
+    renderAtlas(<FiatEmblems clusters={[{ ...eur, coins: [sample] }]} />);
     fireEvent.focus(screen.getByRole("link"));
     expect(screen.getByText("Cohort share").nextElementSibling?.textContent).toBe("n/a");
-    expect(screen.getByText("Known cohort subtotal").nextElementSibling?.textContent).toContain("1 unavailable");
+    expect(screen.getByText("Known cohort subtotal").nextElementSibling?.textContent).toContain(`${unavailableCount} unavailable`);
+    expect(screen.getByText("Cohort size").nextElementSibling?.textContent).toBe(`${eur.cohort.coinCount} coins`);
+    expect(screen.getByRole("link").getAttribute("aria-label")).not.toMatch(/%|#\d/);
   });
 
 });

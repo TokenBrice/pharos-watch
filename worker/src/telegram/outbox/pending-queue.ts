@@ -8,6 +8,7 @@ import {
   TELEGRAM_ALERT_TTL_SEC,
   TELEGRAM_PENDING_PRIORITY,
   TELEGRAM_SPLIT_VERSION,
+  TELEGRAM_CHAT_BACKOFF_CACHE_PREFIX,
 } from "../common/constants";
 import {
   isValidPendingSourceEventId,
@@ -341,13 +342,26 @@ export function buildPendingAlertEnqueueStatement(
     provenance.preferenceGeneration,
     provenance.markupPolicyJson,
   ];
-  const valuePlaceholders = values.map(() => "?").join(", ");
-  const valuesSource = guard
-    ? `SELECT ${valuePlaceholders} WHERE ${guard.sql}`
-    : `VALUES (${valuePlaceholders})`;
+  const valuePlaceholders = values.map((_, index) => index === 4
+    ? `NULLIF(MAX(COALESCE(?, 0), COALESCE((
+        SELECT MAX(existing.not_before_at)
+          FROM telegram_pending_alerts existing INDEXED BY idx_telegram_pending_alerts_chat_id
+         WHERE existing.chat_id = ?
+           AND existing.delivery_state = 'pending'
+           AND COALESCE(existing.expires_at, existing.created_at + ?) > ?
+           AND existing.not_before_at > ?
+      ), 0), COALESCE((
+        SELECT CAST(value AS INTEGER) FROM cache WHERE key = ? AND CAST(value AS INTEGER) > ?
+      ), 0)), 0)`
+    : "?").join(", ");
+  const valuesSource = `SELECT ${valuePlaceholders} WHERE ${guard?.sql ?? "1"}`;
   return db
     .prepare(buildPendingAlertUpsertSql(valuesSource))
-    .bind(...values, ...(guard?.binds ?? []));
+    .bind(
+      ...values.slice(0, 5), msg.chatId, PENDING_TTL_SEC, nowSec, nowSec,
+      `${TELEGRAM_CHAT_BACKOFF_CACHE_PREFIX}${msg.chatId}`, nowSec,
+      ...values.slice(5), ...(guard?.binds ?? []),
+    );
 }
 
 export async function enqueuePendingAlerts(

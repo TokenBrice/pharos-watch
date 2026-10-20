@@ -8,7 +8,8 @@ import {
   TELEGRAM_RECAP_PENDING_PRIORITY,
   TELEGRAM_RECAP_TTL_SEC,
 } from "@shared/lib/telegram-recap-policy";
-import type { TelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
+import { TELEGRAM_RECAP_RETIREMENT_FINGERPRINT, type TelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
+import { TELEGRAM_CHAT_BACKOFF_CACHE_PREFIX } from "../common/constants";
 
 export function buildTelegramRecapDedupeKey(chatId: string, localDate: string): string {
   if (!chatId || !localDate) throw new Error("Telegram recap dedupe identity is required");
@@ -113,6 +114,7 @@ interface TargetRow {
   chat_id: string;
   local_date: string;
   window_end_at: number;
+  watchlist_fingerprint: string;
   status: TelegramRecapTargetStatus;
 }
 
@@ -303,6 +305,7 @@ export async function listDueTelegramRecapPreferences(
   db: D1Database,
   nowSec: number,
   limit: number = TELEGRAM_RECAP_DUE_PAGE_SIZE,
+  retirementNoticeOnly = false,
 ): Promise<DueTelegramRecapPreference[]> {
   const boundedLimit = Math.max(1, Math.min(TELEGRAM_RECAP_DUE_PAGE_SIZE, Math.floor(limit)));
   const rows = await db.prepare(`
@@ -314,10 +317,16 @@ export async function listDueTelegramRecapPreferences(
        WHERE p.enabled = 1 AND p.chat_kind = 'private'
        AND p.next_due_at IS NOT NULL
        AND p.next_due_at <= ?
+       AND (? = 0 OR NOT EXISTS (
+         SELECT 1 FROM telegram_recap_targets notice
+          WHERE notice.chat_id = p.chat_id AND notice.watchlist_fingerprint = ?
+       ))
      ORDER BY p.next_due_at ASC, p.chat_id ASC
      LIMIT ?
   `).bind(
     nowSec,
+    retirementNoticeOnly ? 1 : 0,
+    TELEGRAM_RECAP_RETIREMENT_FINGERPRINT,
     boundedLimit,
   ).all<PreferenceRow>();
   return (rows.results ?? []).map((row) => ({
@@ -339,6 +348,7 @@ export function prepareCancelUnstartedTelegramRecaps(
     reason: "recap_disabled" | "timezone_cleared" | "recap_rollout_disabled";
     nowSec: number;
     requireDisabledPreference?: boolean;
+    preserveRetirementNotice?: boolean;
   },
 ): D1PreparedStatement[] {
   const chatClause = input.chatId == null ? "" : "AND chat_id = ?";
@@ -353,6 +363,7 @@ export function prepareCancelUnstartedTelegramRecaps(
       UPDATE telegram_recap_targets
          SET status = 'cancelled', terminal_reason = ?, completed_at = ?, updated_at = ?
        WHERE status IN ('planned', 'queued') ${chatClause} ${preferenceClause}
+         AND (? = 0 OR watchlist_fingerprint <> ?)
          AND NOT EXISTS (
            SELECT 1 FROM telegram_pending_alerts pending
             WHERE pending.source_type = 'personalized_recap'
@@ -372,7 +383,10 @@ export function prepareCancelUnstartedTelegramRecaps(
                 AND pending.delivery_state = 'pending'
            )
          )
-    `).bind(input.reason, input.nowSec, input.nowSec, ...chatBinds),
+    `).bind(
+      input.reason, input.nowSec, input.nowSec, ...chatBinds,
+      input.preserveRetirementNotice ? 1 : 0, TELEGRAM_RECAP_RETIREMENT_FINGERPRINT,
+    ),
     db.prepare(`
       DELETE FROM telegram_pending_alerts
        WHERE source_type = 'personalized_recap' AND delivery_state = 'pending'
@@ -398,6 +412,7 @@ export async function cancelQueuedTelegramRecapsForRollout(
   const results = await executeAtomicBatch(db, prepareCancelUnstartedTelegramRecaps(db, {
     reason: "recap_rollout_disabled",
     nowSec,
+    preserveRetirementNotice: policy.mode === "retirement-notice",
   }), { returnResults: true });
   return {
     targetRowsCancelled: Number(results[0]?.meta?.changes ?? 0),
@@ -523,7 +538,11 @@ export async function queueTelegramRecapTarget(
   }
   const values = targetValues(input, "planned");
   const guard = `p.chat_id = ? AND p.chat_kind = 'private' AND p.enabled = 1 AND p.next_due_at = ?
-                 AND s.preference_generation = ?`;
+                 AND s.preference_generation = ?
+                 AND (? = 0 OR NOT EXISTS (
+                   SELECT 1 FROM telegram_recap_targets notice
+                    WHERE notice.chat_id = p.chat_id AND notice.watchlist_fingerprint = ?
+                 ))`;
   const target = db.prepare(`
     INSERT INTO telegram_recap_targets (
       recap_key, chat_id, local_date, window_start_at, window_end_at,
@@ -539,14 +558,20 @@ export async function queueTelegramRecapTarget(
          SELECT 1 FROM telegram_recap_targets existing
           WHERE existing.chat_id = ? AND existing.local_date = ?
        )
-  `).bind(...values, input.chatId, input.expectedNextDueAt, input.preferenceGeneration, input.chatId, input.localDate);
+  `).bind(
+    ...values, input.chatId, input.expectedNextDueAt, input.preferenceGeneration,
+    input.watchlistFingerprint === TELEGRAM_RECAP_RETIREMENT_FINGERPRINT ? 1 : 0,
+    TELEGRAM_RECAP_RETIREMENT_FINGERPRINT, input.chatId, input.localDate,
+  );
   const pending = db.prepare(`
     INSERT INTO telegram_pending_alerts (
       chat_id, message_html, disable_notification, created_at, not_before_at,
       updated_at, dedupe_key, chunk_index, priority, source_type, alert_type,
       expires_at, source_event_id, preference_generation, markup_policy_json
     )
-    SELECT ?, ?, ?, ?, NULL, ?, ?, 0, ?, 'personalized_recap', NULL, ?, ?, ?, ?
+    SELECT ?, ?, ?, ?, (
+      SELECT CAST(value AS INTEGER) FROM cache WHERE key = ? AND CAST(value AS INTEGER) > ?
+    ), ?, ?, 0, ?, 'personalized_recap', NULL, ?, ?, ?, ?
       WHERE EXISTS (
         SELECT 1 FROM telegram_recap_targets
          WHERE recap_key = ? AND status = 'planned'
@@ -556,6 +581,8 @@ export async function queueTelegramRecapTarget(
     input.chatId,
     input.messageHtml,
     input.disableNotification ? 1 : 0,
+    input.nowSec,
+    `${TELEGRAM_CHAT_BACKOFF_CACHE_PREFIX}${input.chatId}`,
     input.nowSec,
     input.nowSec,
     input.pendingDedupeKey,
@@ -650,7 +677,7 @@ export async function projectTelegramRecapTerminalOutcome(
   reason?: string | null,
 ): Promise<boolean> {
   const target = await db.prepare(`
-    SELECT recap_key, chat_id, local_date, window_end_at, status
+    SELECT recap_key, chat_id, local_date, window_end_at, watchlist_fingerprint, status
       FROM telegram_recap_targets WHERE recap_key = ?
   `).bind(recapKey).first<TargetRow>();
   if (!target || (target.status !== "planned" && target.status !== "queued")) return false;
@@ -685,7 +712,11 @@ export async function projectTelegramRecapTerminalOutcome(
     recapKey,
     status,
   );
-  await executeAtomicBatch(db, [targetUpdate, preferenceUpdate]);
+  // Retirement notices are not watched-fact delivery and must not consume its
+  // window or overwrite the last delivered recap date.
+  await executeAtomicBatch(db, target.watchlist_fingerprint === TELEGRAM_RECAP_RETIREMENT_FINGERPRINT
+    ? [targetUpdate]
+    : [targetUpdate, preferenceUpdate]);
   const updated = await db.prepare(
     "SELECT status FROM telegram_recap_targets WHERE recap_key = ?",
   ).bind(recapKey).first<{ status: TelegramRecapTargetStatus }>();
@@ -714,13 +745,14 @@ export async function pruneTelegramRecapTargets(
      WHERE rowid IN (
        SELECT rowid
          FROM telegram_recap_targets
-        WHERE (status IN ('sent', 'skipped_no_changes', 'skipped_paused', 'skipped_stale')
-               AND updated_at < ?)
-           OR (status IN ('cancelled', 'expired', 'execution_unknown', 'failed_permanent') AND updated_at < ?)
+        WHERE watchlist_fingerprint <> ?
+          AND ((status IN ('sent', 'skipped_no_changes', 'skipped_paused', 'skipped_stale')
+                AND updated_at < ?)
+            OR (status IN ('cancelled', 'expired', 'execution_unknown', 'failed_permanent') AND updated_at < ?))
         ORDER BY updated_at ASC, recap_key ASC
         LIMIT ?
      )
-  `).bind(aggregateCutoff, terminalCutoff, limit ?? 10_000).run();
+  `).bind(TELEGRAM_RECAP_RETIREMENT_FINGERPRINT, aggregateCutoff, terminalCutoff, limit ?? 10_000).run();
   const deletedTargets = Number(result.meta?.changes ?? 0);
   return { deletedTargets, cappedAtLimit: deletedTargets >= (limit ?? 10_000) };
 }

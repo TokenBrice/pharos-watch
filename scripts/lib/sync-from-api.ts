@@ -7,7 +7,7 @@
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, URL } from "node:url";
 import { setTimeout as sleep } from "node:timers/promises";
 
 import { SITE_DATA_PATH_PREFIX, SITE_DATA_PROXY_SECRET_HEADER, toSiteDataPath } from "@shared/lib/site-data-lane";

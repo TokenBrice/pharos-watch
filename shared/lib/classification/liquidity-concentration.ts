@@ -37,8 +37,7 @@ const HHI_BANDS = [
 
 export type HhiBand = (typeof HHI_BANDS)[number];
 
-export function getHhiBand(hhi: number): HhiBand {
-  // Total: NaN fails every `>=` comparison, so a non-finite HHI degrades to the
-  // broadest band instead of throwing at the card that renders it.
-  return HHI_BANDS.find((band) => hhi >= band.min) ?? HHI_BANDS[HHI_BANDS.length - 1];
+export function getHhiBand(hhi: number | null | undefined): HhiBand | null {
+  if (hhi == null || !Number.isFinite(hhi) || hhi < 0 || hhi > 1) return null;
+  return HHI_BANDS.find((band) => hhi >= band.min) ?? null;
 }

@@ -7,7 +7,7 @@ import {
 } from "@shared/lib/telegram-alert-families";
 import { TELEGRAM_ALERT_TYPES, type TelegramAlertType } from "@shared/types/status";
 import { escapeHtml, type InlineKeyboardButton } from "../delivery/telegram";
-import { formatTelegramAge } from "../common/format-age";
+import { formatTelegramAge, formatTelegramIsoTimestamp } from "../common/format-age";
 import { MANAGE_PAGE_SIZE } from "../common/constants";
 import { buildTelegramMiniAppUrl } from "../common/mini-app-url";
 import type { ResolvedCoin } from "../common/alerts-parser";
@@ -516,6 +516,22 @@ export function formatTelegramSafety(safety: NonNullable<StatusForCoin["safety"]
   return `${rating}${safety.score != null ? ` (${safety.score})` : ""}${safety.ratingStatus !== "pipeline-gap" && safety.partialEvidence ? " — Partial evidence: pipeline gap" : ""} [${safety.model.toUpperCase()} ${safety.methodologyVersion}]`;
 }
 
+/** Status, coverage and inline cards disclose the same accepted source evidence. */
+export function formatTelegramYield(status: StatusForCoin): string {
+  const value = status.yield;
+  if (!value) return `Yield: unavailable (${escapeHtml(status.yieldUnavailableReason ?? "yield-ranking-not-found")})`;
+  const provenance = value.provenance;
+  const freshness = provenance?.sourceFreshness ?? "unknown";
+  const reason = freshness === "stale" ? "source-stale"
+    : freshness === "unknown" ? "source-freshness-unknown" : null;
+  const observedAt = formatTelegramIsoTimestamp(provenance?.sourceObservedAt, "unknown");
+  const age = provenance?.sourceAgeSeconds != null ? `${provenance.sourceAgeSeconds}s` : "unknown";
+  const budget = provenance?.sourceMaxAgeSeconds != null ? `${provenance.sourceMaxAgeSeconds}s` : "unknown";
+  const pys = value.pharosYieldScore != null ? String(Math.round(value.pharosYieldScore))
+    : `unavailable (${escapeHtml(value.pysUnavailableReason ?? "pys-unavailable")})`;
+  return `Yield: ${value.apy30d.toFixed(2)}% 30d at ${escapeHtml(value.source)}, PYS ${pys}; source observed ${observedAt} (age ${age}, ${freshness}${reason ? `: ${reason}` : ""}, budget ${budget}; generation ${escapeHtml(value.generationId ?? "unknown")})`;
+}
+
 export function buildStatusMessage(symbol: string, s: StatusForCoin): string {
   const nowSec = Math.floor(Date.now() / 1000);
   const priceLine =
@@ -548,15 +564,7 @@ export function buildStatusMessage(symbol: string, s: StatusForCoin): string {
     : s.liquidityUnavailableReason
       ? `Liquidity: unavailable (${escapeHtml(s.liquidityUnavailableReason)})`
       : null;
-  const yieldLine = s.yield
-    ? `Yield: ${s.yield.apy30d.toFixed(2)}% 30d at ${escapeHtml(s.yield.source)}${
-        s.yield.pharosYieldScore != null
-          ? `, PYS ${Math.round(s.yield.pharosYieldScore)}`
-          : s.yield.pysUnavailableReason
-            ? ", PYS unavailable"
-            : ""
-      }`
-    : null;
+  const yieldLine = formatTelegramYield(s);
   const flowSigned = s.flow ? formatTelegramSignedCompactUsd(s.flow.netFlowUsd) : null;
   const flowLine = s.flow && flowSigned ? `Flow 24h: ${flowSigned} (${formatAge(s.flow.updatedAt, nowSec)}${s.flow.stale ? ", stale" : ""})` : null;
   const lines = [

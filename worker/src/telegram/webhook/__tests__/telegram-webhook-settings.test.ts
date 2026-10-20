@@ -4,10 +4,24 @@ import { createTelegramWebhookIntent } from "../telegram-webhook-effect-fence";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   createTelegramFetchSpy,
-  mockTelegramD1 as mockD1,
+  mockTelegramD1 as baseMockD1,
   telegramApiCalls,
   telegramCallBody,
 } from "../../../test-helpers/__shared/telegram";
+import type { MockTableConfig } from "@shared/test-utils/mock-d1";
+import type { MockTelegramD1Options } from "../../../test-helpers/__shared/telegram";
+
+function mockD1(tables: MockTableConfig[] = [], options: MockTelegramD1Options = {}) {
+  return baseMockD1(tables, {
+    ...options,
+    fallbackTables: [
+      ...(options.fallbackTables ?? []),
+      // Store enable batches include the idempotent first-follow claim.
+      { match: "INSERT OR IGNORE INTO telegram_subscribers", rows: [] },
+      { match: "INSERT INTO telegram_adoption_daily", rows: [] },
+    ],
+  });
+}
 
 import type { SubscriptionRow } from "../telegram-webhook-shared";
 
@@ -126,6 +140,63 @@ describe("handleSettingsCommand", () => {
   });
 });
 
+describe("per-coin local override descriptions", () => {
+  it.each([
+    ["dews", "DEWS min band", "db"],
+    ["depeg", "Depeg step", "ds"],
+    ["safety", "Safety mode", "sm"],
+    ["launch", "Launch", "lc"],
+    ["reserve", "Reserve", "rs"],
+    ["freeze", "Freeze alerts", "fz"],
+  ])("distinguishes inherited zero from explicit %s off through the Store loader", async (family, label, code) => {
+    const { db, sqlite } = fixtures.open();
+    sqlite.exec(`INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at) VALUES ('42', 1, 1);
+      INSERT INTO telegram_subscriptions (chat_id, stablecoin_id) VALUES ('42', 'usdc-circle')`);
+    for (const marker of [0, 1]) {
+      sqlite.exec(`UPDATE telegram_subscriptions SET alert_${family}_override = ${marker}`);
+      await handleSettingsCommand(db, "fake-token", "42", null, "USDC");
+      const body = jsonBody(sendCalls()[marker]) as {
+        text: string; reply_markup: { inline_keyboard: Array<Array<{ text: string; callback_data: string }>> };
+      };
+      expect(body.text).toContain(`${label}: ${marker ? "off (local override)" : "inherits chat"}`);
+      expect(body.text).toContain("Local overrides");
+      const off = body.reply_markup.inline_keyboard.flat().find((button) => button.callback_data.endsWith(`:${code}:0`));
+      expect(off?.text.includes("\u2022")).toBe(marker === 1);
+    }
+  });
+
+  it.each(["global-on", "preset-on", "unavailable-membership"])("does not claim inherited coverage is off with %s", async (source) => {
+    const { db, sqlite } = fixtures.open();
+    sqlite.exec(`INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at, global_alert_dews)
+      VALUES ('42', 1, 1, ${source === "global-on" ? 1 : 0})`);
+    if (source !== "global-on") {
+      sqlite.exec(`INSERT INTO telegram_preset_subscriptions (chat_id, preset_id, alert_dews, alert_depeg, alert_safety, created_at, updated_at)
+        VALUES ('42', 'usd-top25', 1, 0, 0, 1, 1);
+        INSERT INTO telegram_subscriptions (chat_id, stablecoin_id) VALUES ('42', 'usdc-circle')`);
+      if (source === "preset-on") {
+        sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES ('stablecoins', ?, 1)")
+          .run(JSON.stringify({ peggedAssets: [{ id: "usdc-circle", circulating: { peggedUSD: 1_000_000 } }] }));
+      }
+    }
+    await handleSettingsCommand(db, "fake-token", "42", null, "USDC");
+    expect(jsonBody(sendCalls()[0]).text).toContain("DEWS min band: inherits chat/preset policy");
+    expect(jsonBody(sendCalls()[0]).text).not.toContain("DEWS min band: off");
+  });
+
+  it("shows enabled direct tuning instead of an inherited or off claim", async () => {
+    const { db, sqlite } = fixtures.open();
+    sqlite.exec(`INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at) VALUES ('42', 1, 1);
+      INSERT INTO telegram_subscriptions
+        (chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, dews_min_band, safety_mode, depeg_worsening_bps_step)
+      VALUES ('42', 'usdc-circle', 1, 1, 1, 'WARNING', 'downgrade-only', 250)`);
+    await handleSettingsCommand(db, "fake-token", "42", null, "USDC");
+    const text = jsonBody(sendCalls()[0]).text;
+    expect(text).toContain("DEWS min band: WARNING");
+    expect(text).toContain("Safety mode: downgrade-only");
+    expect(text).toContain("Depeg step: +250bps");
+  });
+});
+
 describe("handleSettingsCallback — chat-level", () => {
   it("settings:gt:dews flips the global flag and re-renders", async () => {
     const db = mockD1([{ match: "INSERT INTO telegram_subscribers", rows: [] }]);
@@ -211,7 +282,7 @@ describe("handleSettingsCallback — chat-level", () => {
   });
 
   it("settings:q:1 enables quiet hours with the default 22-07 window", async () => {
-    const db = mockD1([{ match: "INSERT INTO telegram_subscribers", rows: [] }]);
+    const { db, sqlite } = fixtures.open();
     await handleSettingsCallback(
       db,
       "fake-token",
@@ -225,18 +296,9 @@ describe("handleSettingsCallback — chat-level", () => {
       "1",
     );
 
-    const history = db.getHistory();
-    const upsert = history.find(
-      (h) =>
-        /INSERT INTO telegram_subscribers/.test(h.sql) &&
-        /quiet_hours_enabled = excluded\.quiet_hours_enabled/.test(h.sql),
-    );
-    expect(upsert).toBeDefined();
-    // bind positions: chat_id, username, six per-coin flags, six global flags,
-    //                 quiet_enabled(14), quiet_start(15), quiet_end(16)
-    expect(upsert!.binds[14]).toBe(1);
-    expect(upsert!.binds[15]).toBe(22);
-    expect(upsert!.binds[16]).toBe(7);
+    expect(sqlite.prepare(`SELECT quiet_hours_enabled, quiet_hours_start_utc, quiet_hours_end_utc
+      FROM telegram_subscribers WHERE chat_id = '42'`).get())
+      .toEqual({ quiet_hours_enabled: 1, quiet_hours_start_utc: 22, quiet_hours_end_utc: 7 });
     expect(ackCalls().length).toBe(1);
     expect(jsonBody(ackCalls()[0]).text).toContain("enabled");
   });
@@ -261,8 +323,33 @@ describe("handleSettingsCallback — chat-level", () => {
 
     expect(sqlite.prepare(`SELECT quiet_hours_enabled, quiet_hours_start_utc, quiet_hours_end_utc,
       global_alert_reserve FROM telegram_subscribers WHERE chat_id = '42'`).get()).toEqual({
-      quiet_hours_enabled: 0, quiet_hours_start_utc: null, quiet_hours_end_utc: null, global_alert_reserve: 1,
+      quiet_hours_enabled: 0, quiet_hours_start_utc: 22, quiet_hours_end_utc: 7, global_alert_reserve: 1,
     });
+  });
+
+  it.each([
+    [1, 9, 1, 9],
+    [null, null, 22, 7],
+    [3, 3, 22, 7],
+    [-1, 9, 22, 7],
+    [1, 24, 22, 7],
+    [1.5, 9, 22, 7],
+  ])("preserves valid saved quiet window %s-%s through OFF/ON", async (start, end, expectedStart, expectedEnd) => {
+    const { db, sqlite } = fixtures.open();
+    sqlite.prepare(`INSERT INTO telegram_subscribers
+      (chat_id, created_at, last_active_at, quiet_hours_enabled, quiet_hours_start_utc, quiet_hours_end_utc)
+      VALUES ('42', 1, 1, 1, ?, ?)`).run(start, end);
+    for (const value of ["0", "1"]) {
+      await handleSettingsCallback(db, "fake-token", {
+        id: "cb", from: { id: 1 }, message: { chat: { id: 42 }, message_id: 999 },
+      }, "q", value);
+    }
+    expect(sqlite.prepare(`SELECT quiet_hours_enabled, quiet_hours_start_utc, quiet_hours_end_utc
+      FROM telegram_subscribers WHERE chat_id = '42'`).get()).toEqual({
+      quiet_hours_enabled: 1, quiet_hours_start_utc: expectedStart, quiet_hours_end_utc: expectedEnd,
+    });
+    expect(jsonBody(editCalls()[1]).text).toContain(`${String(expectedStart).padStart(2, "0")}:00`);
+    expect(jsonBody(editCalls()[1]).text).toContain(`${String(expectedEnd).padStart(2, "0")}:00`);
   });
 
   it("settings:sc clears the snooze timestamp", async () => {
@@ -592,7 +679,7 @@ describe("message builders", () => {
       .filter((button) => button.callback_data?.includes(":ds:") ?? false);
     expect(depegButtons.some((button) => button.text.includes("•"))).toBe(false);
 
-    const offRow = { alert_depeg: 0, depeg_worsening_bps_step: 250 } as unknown as SubscriptionRow;
+    const offRow = { alert_depeg: 0, alert_depeg_override: 1, depeg_worsening_bps_step: 250 } as unknown as SubscriptionRow;
     const offButtons = buildCoinKeyboard("usdc-circle", offRow)
       .inline_keyboard.flat()
       .filter((button) => button.callback_data?.includes(":ds:") ?? false);

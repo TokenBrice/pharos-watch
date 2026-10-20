@@ -74,6 +74,8 @@ export function buildBlacklistAmountRepairQueueUpdate(
     attemptedAt: number;
     priorAttempts: number;
     errorClass: string | null;
+    /** Must follow the event CAS in the same atomic batch. */
+    requireChangedEvent?: boolean;
   },
 ): D1PreparedStatement {
   const retryDelay = Math.min(
@@ -95,7 +97,7 @@ export function buildBlacklistAmountRepairQueueUpdate(
            last_error_class = ?,
            updated_at = ?,
            completed_at = CASE WHEN ? = 1 THEN ? ELSE NULL END
-       WHERE event_id = ?`,
+       WHERE event_id = ?${args.requireChangedEvent ? " AND changes() > 0" : ""}`,
     )
     .bind(
       status,

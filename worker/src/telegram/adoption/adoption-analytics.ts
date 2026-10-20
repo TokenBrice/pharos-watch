@@ -53,6 +53,15 @@ interface RetentionMetricRow {
   retained_global: number | string | null;
 }
 
+interface CohortEvidenceMismatch {
+  outcome: "cohort-evidence-mismatch";
+  cohortDay: string;
+  measurementDay: string;
+  windowDays: number;
+  cohortSize: number;
+  retained: Record<(typeof RETENTION_FEATURES)[number], number>;
+}
+
 const FIRST_MUTATION_BUCKET_SECONDS: Readonly<Record<string, number>> = {
   lt_30s: 15,
   "30s_2m": 75,
@@ -110,32 +119,6 @@ export function telegramAdoptionDimensionsForStart(raw: string | null | undefine
   return telegramAdoptionSource(raw);
 }
 
-export async function recordTelegramFirstFollow(
-  db: D1Database,
-  input: AdoptionDimensions & { chatId: string; feature: "direct" | "preset" | "global"; nowSec: number },
-): Promise<void> {
-  try {
-    await db.batch([
-      db.prepare(
-        `INSERT INTO telegram_adoption_daily (
-           day, campaign, placement, stage, feature, latency_bucket, outcome,
-           count, first_seen_at, last_seen_at
-         )
-         SELECT ?, ?, ?, 'first_follow', ?, '', 'success', 1, ?, ?
-          WHERE EXISTS (
-            SELECT 1 FROM telegram_subscribers WHERE chat_id = ? AND first_follow_at IS NULL
-          )
-         ON CONFLICT(day, campaign, placement, stage, feature, latency_bucket, outcome)
-         DO UPDATE SET count = telegram_adoption_daily.count + 1, last_seen_at = excluded.last_seen_at`,
-      ).bind(formatIsoDate(input.nowSec), input.campaign, input.placement, input.feature, input.nowSec, input.nowSec, input.chatId),
-      db.prepare(
-        "UPDATE telegram_subscribers SET first_follow_at = ? WHERE chat_id = ? AND first_follow_at IS NULL",
-      ).bind(input.nowSec, input.chatId),
-    ]);
-  } catch {
-    // Best-effort aggregate; a later follow can claim an unpersisted milestone.
-  }
-}
 
 export async function recordTelegramFirstSetupComplete(
   db: D1Database,
@@ -319,7 +302,7 @@ SELECT COALESCE((
 export async function refreshTelegramAdoptionRetention(
   db: D1Database,
   nowSec = Math.floor(Date.now() / 1_000),
-): Promise<{ written: number; caughtUp: number }> {
+): Promise<{ written: number; caughtUp: number; mismatches: CohortEvidenceMismatch[] }> {
   const earliestDay = dayAtOffset(nowSec, -TELEGRAM_ADOPTION_RETENTION_CATCHUP_DAYS);
   const existing = await db.prepare(
     `SELECT measurement_day, window_days, COUNT(*) AS feature_count
@@ -335,6 +318,7 @@ export async function refreshTelegramAdoptionRetention(
 
   let written = 0;
   let caughtUp = 0;
+  const mismatches: CohortEvidenceMismatch[] = [];
   // Snapshot only completed UTC days. Persisting today's first pulse would
   // freeze a nearly day-short D7/D30 result behind the immutable insert.
   for (let offset = -TELEGRAM_ADOPTION_RETENTION_CATCHUP_DAYS; offset <= -1; offset += 1) {
@@ -353,6 +337,19 @@ export async function refreshTelegramAdoptionRetention(
         preset: count(row?.retained_preset),
         global: count(row?.retained_global),
       };
+      if (Object.values(values).some((retained) => retained > cohortSize)) {
+        // One entry per window/day: bounded by the seven-day catch-up horizon.
+        // Keep independent raw counts; an invalid cohort must not look like 100% retention.
+        mismatches.push({
+          outcome: "cohort-evidence-mismatch",
+          cohortDay,
+          measurementDay,
+          windowDays,
+          cohortSize,
+          retained: values,
+        });
+        continue;
+      }
       const quality = cohortDay < ADOPTION_COHORT_START_DAY
         ? "pre_rollout_unavailable"
         : offset === -1
@@ -364,12 +361,12 @@ export async function refreshTelegramAdoptionRetention(
            retained_count, measured_at, quality
          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(measurement_day, window_days, feature) DO NOTHING`,
-      ).bind(cohortDay, measurementDay, windowDays, feature, cohortSize, Math.min(cohortSize, values[feature]), nowSec, quality)));
+      ).bind(cohortDay, measurementDay, windowDays, feature, cohortSize, values[feature], nowSec, quality)));
       written += RETENTION_FEATURES.length;
       if (offset < -1) caughtUp += RETENTION_FEATURES.length;
     }
   }
-  return { written, caughtUp };
+  return { written, caughtUp, mismatches };
 }
 
 export const TELEGRAM_ADOPTION_SESSION_CACHE_PREFIX = MINI_APP_SESSION_CACHE_PREFIX;

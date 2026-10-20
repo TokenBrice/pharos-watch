@@ -66,6 +66,10 @@ function liveReadingFor(reason: ExclusionReason, row: MergedRow): string {
       return row.custodyModel != null
         ? `custody model ${row.custodyModel}`
         : "custody model unavailable";
+    case "insufficient-control-evidence":
+      return row.canBeBlacklisted === "possible"
+        ? "freeze control remains possible"
+        : "reviewed freeze-control evidence unavailable";
     case "coverage-too-thin":
       return "required signals missing";
     default:

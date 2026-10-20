@@ -1,8 +1,6 @@
 import { TelegramSendOriginatedError } from "../../../telegram/delivery/transport-errors";
 import type { TelegramDispatchCronResult } from "@shared/types";
 import type { PendingCapacitySnapshot, PendingDrainResult } from "../delivery/types";
-import { emptyPerAlertTypeDelivery } from "./dispatch-telegram-routing";
-import type { TelegramAlertType } from "@shared/types/status";
 import {
   emptyPendingCapacitySnapshot,
   pendingCapacityProgressFields,
@@ -11,14 +9,8 @@ import {
 import type { AlertSafetySourceAssessment } from "../../../lib/alert-safety-source-cache";
 import type { AlertReserveSourceAssessment } from "../../../lib/alert-reserve-source-cache";
 
-export type PerAlertTypeTargets = Record<Exclude<TelegramAlertType, "freeze">, { chats: number; chunks: number }> &
-  Partial<Record<"freeze", { chats: number; chunks: number }>>;
-
 export interface DispatchCapacityMetadata {
-  freshCandidateChats: number;
   freezeTargetCount: number;
-  freshCandidateCount: number;
-  freshOverflow: number;
   pendingSent: number;
   pendingTotal: number;
   pendingDue: number;
@@ -31,7 +23,6 @@ export interface DispatchCapacityMetadata {
   pendingDrainBudgetPerRun: number;
   pendingCapacityBefore: PendingCapacitySnapshot;
   pendingCapacityAfter: PendingCapacitySnapshot;
-  perAlertTypeTargets: PerAlertTypeTargets;
   fanoutQueryMs: number;
   fanoutBuildMs: number;
   fanoutTotalMs: number;
@@ -190,16 +181,6 @@ export function shouldRecordTelegramDispatchFailure(
   return error instanceof TelegramSendOriginatedError;
 }
 
-function emptyPerAlertTypeTargets(): PerAlertTypeTargets {
-  return {
-    dews: { chats: 0, chunks: 0 },
-    depeg: { chats: 0, chunks: 0 },
-    safety: { chats: 0, chunks: 0 },
-    launch: { chats: 0, chunks: 0 },
-    reserve: { chats: 0, chunks: 0 },
-  };
-}
-
 function emptyResult(snapshotSeeded: boolean, chatsWithActiveSnooze = 0): DispatchResult {
   const emptyCapacity = emptyPendingCapacitySnapshot();
   return {
@@ -237,15 +218,7 @@ function emptyResult(snapshotSeeded: boolean, chatsWithActiveSnooze = 0): Dispat
     ...pendingCapacityProgressFields(emptyCapacity),
     pendingCapacityBefore: emptyCapacity,
     pendingCapacityAfter: emptyCapacity,
-    freshAttempted: 0,
-    freshSent: 0,
-    freshRetryQueued: 0,
-    freshPermanentFailures: 0,
-    freshDeferredPerChat: 0,
-    freshCandidateChats: 0,
     freezeTargetCount: 0,
-    freshCandidateCount: 0,
-    freshOverflow: 0,
     chatsWithActiveSnooze,
     safetyAlertSourceState: "missing",
     safetyAlertSourceAgeSeconds: null,
@@ -258,8 +231,6 @@ function emptyResult(snapshotSeeded: boolean, chatsWithActiveSnooze = 0): Dispat
     presetQueryFailures: 0,
     presetResolutionFailures: 0,
     presetFailure: false,
-    perAlertType: emptyPerAlertTypeDelivery(),
-    perAlertTypeTargets: emptyPerAlertTypeTargets(),
     fanoutQueryMs: 0,
     fanoutBuildMs: 0,
     fanoutTotalMs: 0,

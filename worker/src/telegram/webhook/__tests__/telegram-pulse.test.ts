@@ -331,6 +331,21 @@ describe("handleTelegramPulse", () => {
 });
 
 describe("publishTelegramPulseSnapshot", () => {
+  it("publishes healthy pulse metrics while quarantining inconsistent retention evidence", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { db, sqlite } = persistedPulseDb();
+    const now = Math.floor(Date.parse("2026-08-20T12:00:00Z") / 1000);
+    const cohortAt = Math.floor(Date.parse("2026-08-12T12:00:00Z") / 1000);
+    sqlite.prepare(`INSERT INTO telegram_subscribers
+      (chat_id, created_at, last_active_at, first_follow_at, global_alert_depeg)
+      VALUES ('cohort', ?, ?, ?, 1)`).run(cohortAt, cohortAt, cohortAt);
+    const outcome = await publishTelegramPulseSnapshotWithOutcome(db, now);
+    expect(outcome.snapshotPublished).toBe(true);
+    expect(outcome.pulse.activeWatchers).toBe(1);
+    expect(sqlite.prepare("SELECT count(*) AS count FROM telegram_adoption_retention_daily WHERE measurement_day = '2026-08-19' AND window_days = 7").get())
+      .toEqual({ count: 0 });
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("cohort-evidence-mismatch"));
+  });
   function observePulseReads(sqlite: Parameters<typeof createSqliteD1>[0]) {
     const observed = { sql: [] as string[], pendingUnavailable: false };
     const prepare = sqlite.prepare.bind(sqlite);

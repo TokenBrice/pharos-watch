@@ -334,9 +334,9 @@ export function SelectorShortlistCard(props: SelectorShortlistCardProps) {
 }
 
 /**
- * Cohort-tinted sparklines (D13). Renders a 7d peg-deviation strip (signed,
- * baselined at the rec's most-recent price) and a 30d supply strip beneath
- * the identity row. Mobile gates to peg-deviation only to avoid crowding.
+ * Cohort-tinted sparklines (D13). Renders a 7d price strip (signed,
+ * baselined at the latest observed price) and a 30d supply strip beneath
+ * the identity row. Mobile gates to price only to avoid crowding.
  */
 function CardTrendStrips({
   coinId,
@@ -389,14 +389,14 @@ function CardTrendStrips({
     <div className="mt-3 grid gap-2 sm:grid-cols-2">
       {pegAvailable ? (
         <div className="flex flex-col gap-0.5">
-          <p className="pharos-label">7d peg</p>
+          <p className="pharos-label">7d price</p>
           <RowSparkline
             data={pegSeries}
             signed
             referenceValue={pegBaseline ?? 1}
             positiveColor={tint}
             negativeColor={tint}
-            ariaLabel={`${symbol} 7-day price trajectory relative to its current peg level`}
+            ariaLabel={`${symbol} 7-day price trajectory relative to latest observed price`}
             srSummary="Cohort-tinted strip; colour reflects this asset's safety grade."
             className="w-full"
             height={16}

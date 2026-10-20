@@ -235,7 +235,7 @@ function MountedTimelineClient({ queryAnchorMs, nowMs }: { queryAnchorMs: number
         loadedCount={feed.visibleEvents.length}
         totalCount={total}
         droppedRows={droppedRows}
-        openCount={feed.openIncidents.length}
+        openCount={feed.openIncidents?.length ?? null}
         windowLabel={feedController.windowLabel}
         severityLabel={feedController.severityLabel}
         dataUpdatedAt={dataUpdatedAt}
@@ -263,6 +263,9 @@ function MountedTimelineClient({ queryAnchorMs, nowMs }: { queryAnchorMs: number
         rawEvents={rawEvents}
         visibleEvents={feed.visibleEvents}
         openIncidents={feed.openIncidents}
+        activeStatus={feed.activeStatus}
+        activeHealth={feed.activeHealth}
+        refetchActive={() => void feed.activeIncidents.refetch()}
         digestedDays={feed.digestedDays}
         isLoading={isLoading}
         error={error}

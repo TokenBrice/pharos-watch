@@ -5,6 +5,7 @@ import { ContagionGraph } from "@/components/contagion-graph-root";
 import { useContagionGraphModel } from "@/components/contagion-graph/use-contagion-graph-model";
 import { footprintViewBox, upstreamArrowPoint, type ExposureOverlay } from "@/components/contagion-graph/contagion-graph-exposure";
 import { buildDependencyHubsModel } from "@shared/lib/dependency-hubs-model";
+import { buildDirectHubExposures } from "@shared/lib/dependency-exposure";
 import type { ContagionGraphCard } from "@/lib/contagion-layout";
 import type { ReportCardsV9DependencyEdge } from "@shared/types/report-cards-v9";
 import type * as ContagionLayout from "@/lib/contagion-layout";
@@ -47,7 +48,7 @@ describe("controlled exposure graph", () => {
       <>
         {(["overlay", "panel"] as const).map((variant) => (
           <ContagionGraphInsights key={variant} variant={variant} inspectedNode={node}
-            visibleLinks={[]} fullLinks={[]} directExposureById={new Map()} nodeMap={new Map([[node.id, node]])}
+            visibleLinks={[]} fullLinks={[]} directExposureById={new Map()} directExposureKnownIds={new Set()} nodeMap={new Map([[node.id, node]])}
             onTraceNode={vi.fn()} />
         ))}
       </>,
@@ -59,6 +60,71 @@ describe("controlled exposure graph", () => {
       expect(panel.textContent).toContain("Partial evidence: pipeline gap (A)");
       if (grade === null) expect(panel.textContent).not.toContain("Grade");
     }
+  });
+  it.each([
+    { name: "missing supply", supply: null, weight: 0.5, expected: "Unavailable" },
+    { name: "unknown share", supply: 100, weight: null, expected: "Unavailable" },
+    { name: "observed zero supply", supply: 0, weight: 0.5, expected: "$0.0" },
+    { name: "observed zero share", supply: 100, weight: 0, expected: "$0.0" },
+    { name: "known share", supply: 100, weight: 0.5, expected: "$50.0" },
+  ])("keeps $name distinct in both node inspection panels", ({ supply, weight, expected }) => {
+    const edges: ReportCardsV9DependencyEdge[] = [{ ...dependencyEdges[0], kind: "basket", materiality: "basket-weighted", weight }];
+    const graph = renderHook(() => useContagionGraphModel({ cards, dependencyEdges: edges, mcapMap: new Map([["coin-1", supply]]), trackActions: false }));
+    const node = graph.result.current.nodes.find(node => node.id === "coin-0")!;
+    render(<>{(["overlay", "panel"] as const).map(variant => (
+      <ContagionGraphInsights key={variant} variant={variant} inspectedNode={node}
+        visibleLinks={[]} fullLinks={graph.result.current.fullResolvedLinks}
+        directExposureById={graph.result.current.directExposureById} directExposureKnownIds={graph.result.current.directExposureKnownIds}
+        nodeMap={graph.result.current.nodeMap} onTraceNode={vi.fn()} />
+    ))}</>);
+    for (const label of screen.getAllByText("Direct dependent exposure")) {
+      expect(label.parentElement!.textContent).toBe(`Direct dependent exposure${expected}`);
+    }
+  });
+  it("uses a full-graph known subtotal even when the measured link is hidden", () => {
+    const edges: ReportCardsV9DependencyEdge[] = [
+      { ...dependencyEdges[0], kind: "basket", materiality: "basket-weighted", weight: 0.5 },
+      { ...dependencyEdges[0], to: "coin-2", kind: "basket", materiality: "basket-weighted", weight: null },
+      { ...dependencyEdges[0], to: "coin-3" },
+    ];
+    const graph = renderHook(() => useContagionGraphModel({ cards, dependencyEdges: edges, mcapMap: new Map([["coin-1", 100], ["coin-2", 100]]), maxNodes: 1, trackActions: false }));
+    const node = { ...cards[0], mcap: null, r: 10 };
+    render(<ContagionGraphInsights inspectedNode={node} visibleLinks={[]} fullLinks={graph.result.current.fullResolvedLinks}
+      directExposureById={graph.result.current.directExposureById} directExposureKnownIds={graph.result.current.directExposureKnownIds}
+      nodeMap={graph.result.current.nodeMap} onTraceNode={vi.fn()} />);
+    expect(screen.getByText("$50.0 (known only)")).toBeTruthy();
+  });
+  it("ignores a defunct target when deriving inspection knownness", () => {
+    const edges: ReportCardsV9DependencyEdge[] = [
+      { ...dependencyEdges[0], kind: "basket", materiality: "basket-weighted", weight: null },
+      { ...dependencyEdges[0], to: "coin-2" },
+    ];
+    const inputCards = cards.map(card => ({ ...card, isDefunct: card.id === "coin-2" }));
+    const graph = renderHook(() => useContagionGraphModel({ cards: inputCards, dependencyEdges: edges, mcapMap, trackActions: false }));
+    expect(graph.result.current.directExposureKnownIds.has("coin-0")).toBe(false);
+    render(<ContagionGraphInsights inspectedNode={graph.result.current.nodeMap.get("coin-0")!} visibleLinks={[]}
+      fullLinks={graph.result.current.fullResolvedLinks} directExposureById={graph.result.current.directExposureById}
+      directExposureKnownIds={graph.result.current.directExposureKnownIds} nodeMap={graph.result.current.nodeMap} onTraceNode={vi.fn()} />);
+    expect(screen.getByText("Direct dependent exposure").parentElement!.textContent).toBe("Direct dependent exposureUnavailable");
+  });
+  it("reports a measured zero for a leaf with no dependents", () => {
+    const graph = renderHook(() => useContagionGraphModel({ cards, dependencyEdges, mcapMap, trackActions: false }));
+    render(<ContagionGraphInsights inspectedNode={graph.result.current.nodeMap.get("coin-7")!} visibleLinks={[]}
+      fullLinks={graph.result.current.fullResolvedLinks} directExposureById={graph.result.current.directExposureById}
+      directExposureKnownIds={graph.result.current.directExposureKnownIds} nodeMap={graph.result.current.nodeMap} onTraceNode={vi.fn()} />);
+    expect(screen.getByText("$0.0")).toBeTruthy();
+  });
+  it("keeps an admitted shared-book holding replacement measurable", () => {
+    const edges: ReportCardsV9DependencyEdge[] = [{ ...dependencyEdges[0], kind: "basket", materiality: "basket-weighted", weight: null }];
+    const hubs = buildDirectHubExposures(edges, () => ({ usd: 100, asOf: null, basis: "market-cap-proxy" }), {
+      sharedBooks: { bookIdOf: () => "book", measuredHoldingUsd: () => 25 },
+      familyOf: () => null, wrapperFormOf: () => "unknown",
+    }).map(hub => ({ ...hub, directKnown: true }));
+    const graph = renderHook(() => useContagionGraphModel({ cards, dependencyEdges: edges, mcapMap, hubExposures: hubs, trackActions: false }));
+    render(<ContagionGraphInsights inspectedNode={graph.result.current.nodeMap.get("coin-0")!} visibleLinks={[]}
+      fullLinks={graph.result.current.fullResolvedLinks} directExposureById={graph.result.current.directExposureById}
+      directExposureKnownIds={graph.result.current.directExposureKnownIds} nodeMap={graph.result.current.nodeMap} onTraceNode={vi.fn()} />);
+    expect(screen.getByText("$25.0 (known only)")).toBeTruthy();
   });
   it("renders roots, an unknown-supply hatch and long-hop rows without changing hover traversal", () => {
     const { container } = render(<ContagionGraph cards={cards} dependencyEdges={dependencyEdges} mcapMap={mcapMap} exposureOverlay={exposureOverlay} />);
@@ -99,7 +165,7 @@ describe("controlled exposure graph", () => {
   });
   it("uses supplied full-graph hub exposures identically to the fallback through limit changes", () => {
     const options = { cards, dependencyEdges, mcapMap, trackActions: false };
-    const hubs = buildDependencyHubsModel({ cards: cards.map(card => ({ ...card, name: card.symbol })), edges: dependencyEdges, mcapMap }).hubs.map(({ hubId, direct, passThroughUsd, vaultClaimUsd, ownFamilyUsd, dependentCount, topDependent }) => ({ hubId, direct, passThroughUsd, vaultClaimUsd, ownFamilyUsd, dependentCount, topDependent }));
+    const hubs = buildDependencyHubsModel({ cards: cards.map(card => ({ ...card, name: card.symbol })), edges: dependencyEdges, mcapMap }).hubs;
     const supplied = renderHook(() => useContagionGraphModel({ ...options, hubExposures: hubs }));
     const fallback = renderHook(() => useContagionGraphModel(options));
     act(() => { supplied.result.current.setNodeLimit(50); fallback.result.current.setNodeLimit(50); });

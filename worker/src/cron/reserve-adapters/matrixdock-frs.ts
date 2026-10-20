@@ -1,12 +1,15 @@
 import { z } from "zod";
 import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
+import type { LiveReserveAdapterValidationPolicy } from "@shared/types/live-reserve-core";
 import {
   MATRIXDOCK_BULLION_RESERVE_FEED_MAX_AGE_SEC,
   parseLiveReserveAdapterParams,
   type LiveReserveAdapterParamsByKey,
 } from "@shared/lib/live-reserve-adapters";
-import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "@shared/lib/live-reserve-freshness";
+import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC, resolveLiveReserveSourceAgeBudget } from "@shared/lib/live-reserve-freshness";
+import { LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS } from "@shared/types/live-reserve-adapter-declarations";
+import { LIVE_RESERVE_FRESHNESS_SEC } from "../../lib/live-reserves/store-shared";
 import { DECIMALS_SELECTOR, LATEST_ROUND_DATA_SELECTOR, TOTAL_SUPPLY_SELECTOR } from "../../lib/evm-selectors";
 import { requireChainlinkLatestRoundData } from "../../lib/chainlink-round-data";
 import type { AdapterContext, AdapterResult } from "./types";
@@ -40,6 +43,7 @@ const EXPECTED_DECIMALS = 9;
 // `ozPerToken()` x supply.
 const MAX_RESERVE_FEED_AGE_SEC = MATRIXDOCK_BULLION_RESERVE_FEED_MAX_AGE_SEC;
 
+const MAX_CROSS_CHAIN_SKEW_SEC = 6 * 60 * 60;
 const OZ_PER_TOKEN_SELECTOR = "0x73b16bc7"; // ozPerToken()
 const SUI_GRAPHQL_ENDPOINT = "https://graphql.mainnet.sui.io/graphql";
 
@@ -121,8 +125,28 @@ async function fetchSuiCoinSupply(
   };
 }
 
-export function adaptMatrixdockFrsState(state: MatrixdockFrsState, params: MatrixdockFrsParams): AdapterResult {
+export function adaptMatrixdockFrsState(
+  state: MatrixdockFrsState,
+  params: MatrixdockFrsParams,
+  maxSourceAgeSec?: number,
+): AdapterResult {
   const warnings: LiveReserveWarning[] = [];
+  const validation: LiveReserveAdapterValidationPolicy = LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS[ADAPTER_KEY].validation;
+  const { sourceAgeBudgetSec } = resolveLiveReserveSourceAgeBudget(
+    maxSourceAgeSec,
+    validation.maxSourceAgeSec,
+    LIVE_RESERVE_FRESHNESS_SEC,
+  );
+  if (
+    !Number.isFinite(state.suiCheckpointTimestamp) || state.suiCheckpointTimestamp <= 0
+    || state.nowSec - state.suiCheckpointTimestamp > sourceAgeBudgetSec
+    || state.suiCheckpointTimestamp > state.nowSec + MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC
+  ) {
+    throw new Error(`${ADAPTER_KEY}: Sui checkpoint timestamp is outside the latest-state freshness budget`);
+  }
+  if (Math.abs(state.observedBlock.timestamp - state.suiCheckpointTimestamp) > MAX_CROSS_CHAIN_SKEW_SEC) {
+    throw new Error(`${ADAPTER_KEY}: Ethereum/Sui observation skew exceeds ${MAX_CROSS_CHAIN_SKEW_SEC}s`);
+  }
 
   // ── Feed freshness sanity. The feed is deviation-triggered, so it remains
   //    not-applicable freshness, but an unboundedly old round is degraded. ──
@@ -290,5 +314,5 @@ export async function fetchMatrixdockFrsReserves(
     suiCheckpointTimestamp: sui.checkpointTimestamp,
     observedBlock: plan.observedBlock,
     nowSec,
-  }, params);
+  }, params, config.scoring?.maxSourceAgeSec);
 }

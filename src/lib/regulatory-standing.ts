@@ -127,7 +127,7 @@ const GENIUS_SUMMARY_CLAUSES: Record<GeniusAuthorizationStatus, string> = {
   "issuer-announced-intent": "has public materials signalling a GENIUS-era issuance path",
   "no-public-authorization-found": "has no public GENIUS authorization on record",
   "not-applicable": "sits outside the GENIUS Act's scope",
-  unknown: "has an unreviewed GENIUS status",
+  unknown: "has an unresolved public GENIUS posture",
 };
 
 const MICA_SUMMARY_CLAUSES: Record<MicaStatus, string> = {

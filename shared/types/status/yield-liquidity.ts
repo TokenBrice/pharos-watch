@@ -5,6 +5,17 @@ import { StatusHealthValueSchema } from "./core";
 import type { StatusHealthOrUnknown } from "./core";
 import { StatusHealthOrUnknownSchema } from "./schema-primitives";
 
+export const DexLiquidityBaselineReadFailureSchema = z.enum([
+  "coverage-count-read-failed",
+  "global-tvl-read-failed",
+  "coverage-classes-read-failed",
+  "top-ten-read-failed",
+  "cron-history-read-failed",
+  "watchlist-read-failed",
+  "coin-tvl-read-failed",
+]);
+export type DexLiquidityBaselineReadFailure = z.output<typeof DexLiquidityBaselineReadFailureSchema>;
+
 export const LiquidityHealthSchema = z.object({
   lastRunStatus: z.string().nullable(),
   /**
@@ -28,7 +39,8 @@ export const LiquidityHealthSchema = z.object({
   nearValueGuard: z.boolean(),
   nearMajorCoverageGuard: z.boolean(),
   currentCoverageClasses: z.record(LiquidityCoverageClassSchema, z.number()),
-  previousCoverageClasses: z.record(LiquidityCoverageClassSchema, z.number()),
+  previousCoverageClasses: z.record(LiquidityCoverageClassSchema, z.number()).nullable(),
+  baselineReadFailures: z.array(DexLiquidityBaselineReadFailureSchema).optional(),
 });
 export type LiquidityHealth = z.output<typeof LiquidityHealthSchema>;
 

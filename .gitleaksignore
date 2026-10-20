@@ -366,3 +366,9 @@ a9e221850546690c59755a13d75de4a09925f218:shared/data/safety-score-v9/evidence-ga
 # Reviewed 2026-10-17: historical public USDC mint in the retired Raydium
 # measured-execution fixture; its dedicated value/path allowlist was removed.
 d2961f89365ac611e8a36dcb87313e76fb70a4aa:worker/src/cron/measured-execution/__tests__/fixtures/raydium-wm-usdc-single-segment-2026-07-27.json:generic-api-key:13
+
+# Reviewed 2026-10-20: public Arbitrum USDai token address in a mint/burn
+# sync-cursor fixture (config_key) and a synthetic SHA-256 idempotency digest
+# in an admin dialog fixture; neither is a credential.
+e22e82c1a3edb5484d84fc3d32de3fef55d80f02:worker/src/cron/__tests__/sync-mint-burn-multichain.test.ts:generic-api-key:91
+abbd074ed1de1ff8c35fccc6fa3effe6b5718e78:src/components/status/__tests__/admin-action-execution-dialog.test.tsx:generic-api-key:52

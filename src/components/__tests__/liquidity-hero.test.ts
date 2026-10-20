@@ -54,6 +54,20 @@ const TAIL_GLOBAL = makeDexLiquidityData({
 });
 
 describe("LiquidityHero", () => {
+  it.each([NaN, Infinity, -Infinity, -0.01, 1.01])("keeps invalid HHI %s unscored in map and fallback readouts", (concentrationHhi) => {
+    render(createElement(LiquidityHero, {
+      stats: makeStats(),
+      liquidityMap: { [DEX_GLOBAL_KEY]: { ...TAIL_GLOBAL, concentrationHhi } },
+    }));
+    const throat = screen.getByTestId("exit-throat");
+    const fallback = screen.getByTestId("exit-route-fallback-crowding");
+    expect(throat.getAttribute("data-crowding-band")).toBe("unknown");
+    expect(throat.getAttribute("aria-label")).toContain("crowding index not scored");
+    expect(throat.textContent).toContain("NR");
+    expect(fallback.textContent).toContain("NR");
+    expect(fallback.textContent).not.toMatch(/(Low|Medium|High) crowding|NaN|Infinity/);
+  });
+
   it("renders the beam, the unframed exit route map and the ledger in one hero", () => {
     const { container } = render(createElement(LiquidityHero, {
       stats: makeStats(),

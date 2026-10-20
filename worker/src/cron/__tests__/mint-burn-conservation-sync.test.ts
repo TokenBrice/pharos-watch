@@ -40,7 +40,7 @@ function run() {
   return syncMintBurnConfig({ db: {} as D1Database, config, key: "key", tier: "extended", fromBlock: 101,
     scanTo: 102, chainHead: 200, rpcEndpoints: [mintBurnAlchemyEndpoint("https://rpc.example")], configBudgetLimit: 25, runTimestamp: 1200,
     priceContext: { priceObservations: new Map(), priceHistory: new Map() }, chainTimestampCache: new Map(),
-    txContextCache: new Map(), affectedHours: new Map(), safetyMarginBlocks: 10 });
+    txContextCache: new Map(), affectedHours: new Map() });
 }
 beforeEach(() => {
   vi.resetAllMocks();

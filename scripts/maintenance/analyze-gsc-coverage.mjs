@@ -13,7 +13,6 @@ import {
   hasHeader,
   KNOWN_GSC_FILES,
   parseCsv,
-  parseCsvNumber,
   recordFromCsvRow,
   runAsyncDirect,
   runGscCli,
@@ -80,8 +79,12 @@ function getField(record, candidates) {
 }
 
 function parseCount(value) {
-  const parsed = parseCsvNumber(value);
-  return parsed === null ? null : Math.trunc(parsed);
+  const raw = String(value ?? "").trim();
+  const groups = raw.split(",");
+  if (groups.length === 1 ? !/^\d+$/.test(raw)
+    : !/^\d{1,3}$/.test(groups[0]) || groups.slice(1).some((group) => !/^\d{3}$/.test(group))) return null;
+  const parsed = Number(raw.replaceAll(",", ""));
+  return Number.isSafeInteger(parsed) ? parsed : null;
 }
 
 function isPlainCountText(value) {
@@ -199,6 +202,7 @@ function parseIssueRows(entry, parsed) {
         trend: getField(record, ["Trend"]),
         sourceLabel: entry.sourceLabel,
         rowIndex: rowIndex + 2,
+        raw: record,
       };
     })
     .filter(Boolean);
@@ -324,11 +328,16 @@ function aggregateIssues(issueRows) {
   return [...byKey.values()]
     .map((aggregate) => {
       const pageRows = aggregate.rows.map((row) => row.pages).filter((value) => value !== null);
-      const pages = pageRows.length > 0 ? pageRows.reduce((sum, value) => sum + value, 0) : null;
+      const pagesComplete = pageRows.length === aggregate.rows.length;
+      const knownPagesSubtotal = pageRows.reduce((sum, value) => sum + value, 0);
+      const pages = pagesComplete ? knownPagesSubtotal : null;
       return {
         ...aggregate,
         pages,
-        hasAffectedPages: pageRows.length === 0 || pageRows.some((value) => value > 0),
+        pagesComplete,
+        pagesUnavailableReason: pagesComplete ? null : "missing-or-malformed-page-count",
+        knownPagesSubtotal,
+        hasAffectedPages: !pagesComplete || pageRows.some((value) => value > 0),
         sourceValues: [...aggregate.sourceValues].sort(compareText),
         validationValues: [...aggregate.validationValues].sort(compareText),
         trendValues: [...aggregate.trendValues].sort(compareText),
@@ -447,6 +456,7 @@ export function renderGscCoverageReport(report) {
 
   appendGscReportSection(lines, "Issue counts:", report.issueCounts, (issue) =>
     `[${issue.severity}] ${issue.issueName} | pages=${formatPages(issue.pages)} | exportRows=${issue.rows.length}` +
+    (issue.pagesComplete ? "" : ` | knownPagesSubtotal=${issue.knownPagesSubtotal} (partial) | reason=${issue.pagesUnavailableReason}`) +
     formatValues("source", issue.sourceValues) +
     formatValues("validation", issue.validationValues) +
     formatValues("trend", issue.trendValues),

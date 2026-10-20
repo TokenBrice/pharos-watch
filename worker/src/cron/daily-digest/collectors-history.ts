@@ -67,11 +67,9 @@ export async function collectPsiContributors(
     return collectorResult(snapshot.contributors
       .filter(
         (contributor) =>
-          typeof contributor.bps === "number" &&
-          typeof contributor.mcapUsd === "number" &&
-          typeof contributor.factor === "number" &&
-          contributor.bps >= 0 &&
-          contributor.bps <= 10000 &&
+          Number.isFinite(contributor.bps) &&
+          Number.isFinite(contributor.mcapUsd) &&
+          Number.isFinite(contributor.factor) &&
           contributor.factor >= 0 &&
           contributor.mcapUsd > 0,
       )

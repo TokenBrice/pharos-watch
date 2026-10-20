@@ -500,6 +500,124 @@ describe("persistDewsResults", () => {
     }
   });
 
+  it("seeds daily values from the first accepted same-cohort recovery, not the rejected first run", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const nowSec = Math.floor(Date.now() / 1000);
+    const persist = (clock: number, score: number, degradedSources: string[] = []) => persistDewsResults({
+      db, results: [buildDewsRow("usdt-tether", score)],
+      eligibleIds: new Set(["usdt-tether"]), degradedSources, nowSec: clock,
+    });
+    const daily = () => sqlite.prepare("SELECT stablecoin_id, score FROM stress_signal_history").all();
+    try {
+      await expect(persist(nowSec - 180, 70, ["yield-rankings-freshness"]))
+        .resolves.toMatchObject({ publicationPointerWritten: false });
+      expect(daily()).toEqual([]);
+      await expect(persist(nowSec - 120, 25)).resolves.toMatchObject({ publicationPointerWritten: true });
+      expect(daily()).toEqual([{ stablecoin_id: "usdt-tether", score: 25 }]);
+      await persist(nowSec - 60, 80, ["dex-liquidity-freshness"]);
+      await persist(nowSec, 40);
+      expect(daily()).toEqual([{ stablecoin_id: "usdt-tether", score: 25 }]);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("reseals changed membership only after acceptance, not a dependency hold or older-pointer refusal", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const nowSec = Math.floor(Date.now() / 1000);
+    const eligibleIds = new Set(["usdt-tether", "usdc-circle", "dai-makerdao"]);
+    const persist = (clock: number, ids: string[], score: number, degradedSources: string[] = []) =>
+      persistDewsResults({
+        db, results: ids.map((id) => buildDewsRow(id, score)), eligibleIds, degradedSources, nowSec: clock,
+      });
+    const daily = () => sqlite.prepare(
+      "SELECT stablecoin_id, score FROM stress_signal_history ORDER BY stablecoin_id",
+    ).all();
+    try {
+      await persist(nowSec - 120, ["usdt-tether", "usdc-circle"], 12);
+      const before = daily();
+      await expect(persist(nowSec - 60, ["usdt-tether", "dai-makerdao"], 80, ["yield-rankings-freshness"]))
+        .resolves.toMatchObject({ publicationPointerWritten: false });
+      expect(daily()).toEqual(before);
+      await expect(persist(nowSec - 180, ["usdt-tether", "dai-makerdao"], 60))
+        .resolves.toMatchObject({ publicationPointerWritten: false });
+      expect(daily()).toEqual(before);
+      await persist(nowSec, ["usdt-tether", "dai-makerdao"], 35);
+      expect(daily()).toEqual([
+        { stablecoin_id: "dai-makerdao", score: 35 }, { stablecoin_id: "usdt-tether", score: 35 },
+      ]);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it.each([
+    ["buffer count", "stress_signal_publication_rows", "DELETE", "DEWS publication incomplete"],
+    ["latest count", "stress_signals_latest", "DELETE", "DEWS publication incomplete"],
+    ["buffer identity", "stress_signal_publication_rows", "UPDATE", "DEWS publication identity mismatch"],
+    ["latest identity", "stress_signals_latest", "UPDATE", "DEWS publication identity mismatch"],
+  ])("does not seed daily history when %s validation fails", async (_label, table, mutation, error) => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const nowSec = Math.floor(Date.now() / 1000);
+    const persist = (clock: number, score: number) => persistDewsResults({
+      db, results: [buildDewsRow("usdt-tether", score)],
+      eligibleIds: new Set(["usdt-tether", "usdc-circle"]), degradedSources: [], nowSec: clock,
+    });
+    try {
+      sqlite.exec(`CREATE TRIGGER reject_candidate AFTER INSERT ON ${table} BEGIN
+        ${mutation === "DELETE"
+          ? `DELETE FROM ${table} WHERE stablecoin_id = NEW.stablecoin_id AND computed_at = NEW.computed_at`
+          : `UPDATE ${table} SET stablecoin_id = 'usdc-circle' WHERE stablecoin_id = NEW.stablecoin_id AND computed_at = NEW.computed_at`};
+        END;`);
+      await expect(persist(nowSec - 60, 80)).rejects.toThrow(error);
+      expect(sqlite.prepare("SELECT * FROM stress_signal_history").all()).toEqual([]);
+      expect(await readDewsPublishedGenerationResult(db, nowSec)).toEqual({ status: "no-pointer" });
+      sqlite.exec("DROP TRIGGER reject_candidate");
+      await persist(nowSec, 42);
+      expect(sqlite.prepare("SELECT stablecoin_id, score FROM stress_signal_history").all())
+        .toEqual([{ stablecoin_id: "usdt-tether", score: 42 }]);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("leaves daily history untouched when pointer acceptance fails", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      sqlite.exec(`CREATE TRIGGER reject_pointer BEFORE INSERT ON cache
+        WHEN NEW.key = 'dews:published-generation' BEGIN SELECT RAISE(ABORT, 'pointer acceptance failed'); END;`);
+      await expect(persistDewsResults({
+        db, results: [buildDewsRow("usdt-tether")], eligibleIds: new Set(["usdt-tether"]),
+        degradedSources: [], nowSec: Math.floor(Date.now() / 1000),
+      })).rejects.toThrow("pointer acceptance failed");
+      expect(sqlite.prepare("SELECT * FROM stress_signal_history").all()).toEqual([]);
+      expect(sqlite.prepare("SELECT * FROM surface_publication_generations WHERE surface = 'dews'").all()).toEqual([]);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("surfaces a post-acceptance daily seal failure without invalidating the accepted publication", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const nowSec = Math.floor(Date.now() / 1000);
+    try {
+      sqlite.exec(`CREATE TRIGGER reject_daily BEFORE INSERT ON stress_signal_history
+        BEGIN SELECT RAISE(ABORT, 'daily history seal failed'); END;`);
+      await expect(persistDewsResults({
+        db, results: [buildDewsRow("usdt-tether", 42)], eligibleIds: new Set(["usdt-tether"]),
+        degradedSources: [], nowSec,
+      })).rejects.toThrow("daily history seal failed");
+      const observed = await observeDewsPublication(sqlite, db, nowSec);
+      expect(observed.pointer).toMatchObject({ status: "ok", computedAt: nowSec });
+      expect(observed.servedScores).toEqual({ "usdt-tether": 42 });
+      expect(observed.ledger).toMatchObject([{ generationId: `dews:${nowSec}`, state: "published" }]);
+      expect(observed.freshnessAt).toBe(nowSec);
+      expect(sqlite.prepare("SELECT * FROM stress_signal_history").all()).toEqual([]);
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it("skips the publication pointer and freshness sentinel when no DEWS rows were written", async () => {
     const { sqlite, db } = createLatestSchemaSqlite();
     try {
