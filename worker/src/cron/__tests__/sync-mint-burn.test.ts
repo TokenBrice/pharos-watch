@@ -645,8 +645,8 @@ describe("syncMintBurn", () => {
     const meta = JSON.parse(result.metadata);
     const usdt = (meta.configSamples as Array<Record<string, unknown>>).find((row) => row.symbol === "USDT");
 
-    expect(usdt?.advancedTo).toBe(21_975_000);
-    expect(usdt?.coverageFrontier).toBe(21_975_000);
+    expect(usdt?.advancedTo).toBe(21_960_000);
+    expect(usdt?.coverageFrontier).toBe(21_960_000);
     expect(usdt?.advanceReason).toBe("partial-frontier");
   });
 
@@ -675,8 +675,8 @@ describe("syncMintBurn", () => {
 
     expect(usdt?.missingTimestampCount).toBe(1);
     expect(usdt?.earliestMissingTimestampBlock).toBe(21_950_002);
-    expect(usdt?.advancedTo).toBe(21_975_000);
-    expect(usdt?.coverageFrontier).toBe(21_975_000);
+    expect(usdt?.advancedTo).toBe(21_950_001);
+    expect(usdt?.coverageFrontier).toBe(21_950_001);
     expect(usdt?.advanceReason).toBe("partial-frontier");
   });
 
@@ -854,7 +854,7 @@ describe("syncMintBurn", () => {
     expect(usdt?.txContextShortfalls).toBe(1);
     expect(usdt?.bridgeClassificationDeferredRows).toBe(1);
     expect(usdt?.failedEventDefs).toContain("tx-context:1");
-    expect(usdt?.advancedTo).toBe(21_975_000);
+    expect(usdt?.advancedTo).toBe(21_999_999);
     expect(usdt?.advanceReason).toBe("partial-frontier");
   });
 

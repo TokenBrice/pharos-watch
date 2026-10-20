@@ -464,4 +464,34 @@ describe("syncMintBurn — multi-chain invariant", () => {
       expect(sqlite.prepare("SELECT COUNT(*) AS count FROM mint_burn_scan_coverage").get()).toEqual({ count: 0 });
     }
   });
+
+  it("commits the exact proven prefix before a persistent interior timestamp failure near the start", async () => {
+    const { sqlite, db } = sqliteFixtures.open();
+    vi.mocked(batchExecute).mockImplementation((await vi.importActual<typeof DbModule>("../../lib/db")).batchExecute);
+    const key = `ethereum-${USDT_CONTRACT}`;
+    const timestamp = Math.floor(Date.now() / 1000) - 60;
+    const failedBlock = 21_950_003;
+    sqlite.prepare("INSERT INTO mint_burn_sync_state (config_key, last_block) VALUES (?, ?)").run(key, 21_950_000);
+    vi.mocked(getMintBurnFinalizedHead).mockResolvedValue({ number: 22_000_000, timestamp, hash: `0x${"a".repeat(64)}` });
+    vi.mocked(fetchAlchemyLogs).mockImplementation(async (_url, _address, _topics, from, to) => ({
+      logs: from <= failedBlock && to >= failedBlock ? [makeMintLog({ blockNumber: failedBlock })] : [],
+      complete: true, scannedToBlock: to, calls: 1, maxDepth: 0,
+    }));
+    vi.mocked(resolveBlockTimestamps).mockImplementation(async (_url, blocks) =>
+      new Map(blocks.filter((block) => block !== failedBlock).map((block) => [block, timestamp])));
+    const result = await syncMintBurn(db, "alchemy-key", { disabledConfigIds: ["usdai-usd-ai"] });
+    expect(JSON.parse(result.metadata).configSamples[0]).toMatchObject({
+      scanAttempts: 2, advancedTo: failedBlock - 1, earliestMissingTimestampBlock: failedBlock, advanceReason: "partial-frontier",
+    });
+    expect(sqlite.prepare("SELECT last_block FROM mint_burn_sync_state WHERE config_key = ?").get(key))
+      .toEqual({ last_block: failedBlock - 1 });
+    expect(sqlite.prepare("SELECT from_block, to_block FROM mint_burn_scan_coverage").all())
+      .toEqual([{ from_block: 21_950_001, to_block: failedBlock - 1 }]);
+    const retry = await syncMintBurn(db, "alchemy-key", { disabledConfigIds: ["usdai-usd-ai"] });
+    expect(JSON.parse(retry.metadata).configSamples[0]).toMatchObject({
+      scanFrom: failedBlock, scanAttempts: 1, advancedTo: null, advanceReason: "scan-coverage-unproven",
+    });
+    expect(sqlite.prepare("SELECT last_block FROM mint_burn_sync_state WHERE config_key = ?").get(key))
+      .toEqual({ last_block: failedBlock - 1 });
+  });
 });

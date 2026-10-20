@@ -4,7 +4,7 @@ import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-sche
 import type { DatabaseSync } from "node:sqlite";
 import type { MintBurnContractConfig } from "../../lib/mint-burn-contracts";
 import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
-import { fetchConservationBoundaries } from "../../lib/mint-burn-conservation";
+import { conservationOnlyEventDefsFor, fetchConservationBoundaries } from "../../lib/mint-burn-conservation";
 import { upsertMintBurnSyncState } from "../../lib/mint-burn-pipeline/sync-state";
 import {
   createMintBurnConfigSummary,
@@ -18,8 +18,10 @@ import {
   resolveMintBurnResumeConfigKey,
   resolveRotatedConfigs,
 } from "../mint-burn/run-state";
+import type * as ScanRetryModule from "../mint-burn/scan-with-retry";
 
-vi.mock("../mint-burn/scan-with-retry", () => ({
+vi.mock("../mint-burn/scan-with-retry", async (importOriginal) => ({
+  ...await importOriginal<typeof ScanRetryModule>(),
   syncMintBurnConfigWithRetries: vi.fn(),
 }));
 
@@ -39,7 +41,7 @@ vi.mock("../../lib/evm-logs", () => ({
 }));
 
 import { runMintBurnConfigPhase } from "../mint-burn/run-configs";
-import { syncMintBurnConfigWithRetries as syncMintBurnConfig } from "../mint-burn/scan-with-retry";
+import { mintBurnScanRequestFloor, syncMintBurnConfigWithRetries as syncMintBurnConfig } from "../mint-burn/scan-with-retry";
 
 const NOW_SEC = 1_750_000_000;
 const fixtures = createLatestSchemaFixtureTracker();
@@ -212,7 +214,7 @@ describe("runMintBurnConfigPhase deferral integration", () => {
     vi.useRealTimers();
   });
 
-  it("covers 129 extended configs in two rotated runs even when early configs consume their entire cap", async () => {
+  it("covers a healthy extended roster in two rotated runs despite one hot config", async () => {
     const { db } = fixtures.open();
     const template = MINT_BURN_CONFIGS.find((config) => config.tier === "extended"
       && config.chain.chainId === "ethereum" && config.events.length === 2)!;
@@ -225,7 +227,7 @@ describe("runMintBurnConfigPhase deferral integration", () => {
     vi.mocked(syncMintBurnConfig).mockImplementation(async (input) => ({
       summary: {
         ...createMintBurnConfigSummary(input.config, input.key, input.tier, { attempted: true }),
-        requestBudgetUsed: input.configBudgetLimit,
+        requestBudgetUsed: input.config === configs[0] ? input.configBudgetLimit : 2,
         requestBudgetLimit: input.configBudgetLimit,
       },
       apiErrors: 0, effectiveBurns: 0, bridgeBurns: 0, reviewBurns: 0,
@@ -250,6 +252,93 @@ describe("runMintBurnConfigPhase deferral integration", () => {
         (config) => `${config.chain.chainId}-${config.contractAddress}`);
     }
     expect(attempted.size).toBe(129);
+  });
+
+  it("funds complete proofs instead of reproducing the 128-config log-only budget deadlock", async () => {
+    const { db } = fixtures.open();
+    const template = MINT_BURN_CONFIGS.find((config) => config.tier === "extended"
+      && config.chain.chainId === "ethereum" && config.events.length === 2)!;
+    const configs = Array.from({ length: 128 }, (_, i) => makeConfig({
+      ...template, contractAddress: `0x${(i + 1).toString(16).padStart(40, "0")}`,
+      startBlock: 22_000_001, tier: "extended",
+    }));
+    const args = { ...makePhaseInput({ db, configs }), lane: "extended" as const,
+      budget: { limit: 160, count: 21 }, extendedConfigBudgetLimit: 25 };
+    let coldHeaders = true;
+    vi.mocked(syncMintBurnConfig).mockImplementation(async (scan) => {
+      // Eventful cold scan costs two log requests, an event-header batch and
+      // boundary headers. Later quiet configs reuse those boundary headers.
+      expect(scan.configBudgetLimit).toBeGreaterThanOrEqual(4);
+      const requestBudgetUsed = coldHeaders ? 4 : 2;
+      coldHeaders = false;
+      return {
+        summary: makeSummary({ key: scan.key, attempted: true, scanFrom: scan.fromBlock,
+          scanTo: scan.scanTo, advancedTo: scan.scanTo, advanceReason: "full-success-empty", requestBudgetUsed }),
+        apiErrors: 0, effectiveBurns: 0, bridgeBurns: 0, reviewBurns: 0, atomicRoundtripsDetected: 0,
+        newLastBlock: scan.scanTo,
+        scanCoverage: { configKey: scan.key, configFingerprint: "test", chainId: "ethereum",
+          fromBlock: scan.fromBlock, toBlock: scan.scanTo, fromTimestamp: NOW_SEC - 60,
+          toTimestamp: NOW_SEC, finalizedBlock: scan.chainHead, acceptedAt: NOW_SEC },
+      };
+    });
+    const result = await runMintBurnConfigPhase(args);
+    expect(args.pendingCursorUpdates.size).toBeGreaterThan(50);
+    expect(args.pendingCursorUpdates.size).toBe(result.contractsProcessed);
+    expect(result.configBreakdown.some((summary) => summary.advanceReason === "scan-coverage-unproven")).toBe(false);
+    expect(result.contractsDeferredExtended).toBeGreaterThan(0);
+    expect(args.budget.count).toBeLessThanOrEqual(150);
+  });
+
+  it("defers without spending requests when a full scan and proof cannot fit", async () => {
+    const { db } = fixtures.open();
+    const template = MINT_BURN_CONFIGS.find((config) => config.events.length === 2)!;
+    const config = makeConfig({ ...template, tier: "extended" });
+    const args = { ...makePhaseInput({ db, configs: [config] }), lane: "extended" as const,
+      budget: { limit: 160, count: 147 } };
+    const result = await runMintBurnConfigPhase(args);
+    expect(syncMintBurnConfig).not.toHaveBeenCalled();
+    expect(args.budget.count).toBe(147);
+    expect(result.configBreakdown[0]?.skippedReason).toBe("extended-deferred-under-pressure");
+  });
+
+  it("shrinks OUSD's seven-topic Dwellir range before preparing exact conservation boundaries", async () => {
+    const { db } = fixtures.open();
+    const config = { ...MINT_BURN_CONFIGS.find((candidate) => candidate.symbol === "OUSD")!, startBlock: 1 };
+    expect(config.events).toHaveLength(2);
+    expect(conservationOnlyEventDefsFor(config)).toHaveLength(5);
+    const key = `${config.chain.chainId}-${config.contractAddress}`;
+    const preferred = { ...mintBurnAlchemyEndpoint("https://dwellir.example"), operator: "dwellir" as const, maxLogBlockSpan: 10_000 };
+    const context = { chainHead: 50_000, rpcEndpoints: [preferred, mintBurnAlchemyEndpoint("https://alchemy.example")],
+      endpointHeads: new Map([[preferred.url, 50_000]]), chainTimestampCache: new Map<string, number>(), txContextCache: new Map() };
+    const args = { ...makePhaseInput({ db, configs: [config] }), lane: "extended" as const,
+      extendedConfigBudgetLimit: 25, chainContexts: new Map([[config.chain.chainId, context]]),
+      lastBlocksAfterRun: new Map([[key, 0]]) };
+    expect(mintBurnScanRequestFloor({ config, fromBlock: 1, scanTo: 50_000, ...context })).toBe(37);
+    const boundary = { status: "unavailable" as const, reason: "audit-rpc-unavailable" as const };
+    vi.mocked(fetchConservationBoundaries).mockResolvedValue(new Map([[key, boundary]]));
+    vi.mocked(syncMintBurnConfig).mockImplementation(async (scan) => {
+      const floor = mintBurnScanRequestFloor(scan);
+      expect(floor).toBe(23);
+      expect(scan.configBudgetLimit).toBeGreaterThanOrEqual(floor);
+      expect(scan.configBudgetLimit).toBeLessThanOrEqual(25);
+      expect(scan.conservationBoundary).toBe(boundary);
+      return { summary: makeSummary({ key, attempted: true, scanFrom: scan.fromBlock, scanTo: scan.scanTo,
+        advancedTo: scan.scanTo, advanceReason: "full-success-empty", requestBudgetUsed: floor }),
+        apiErrors: 0, effectiveBurns: 0, bridgeBurns: 0, reviewBurns: 0, atomicRoundtripsDetected: 0,
+        newLastBlock: scan.scanTo, scanCoverage: { configKey: key, configFingerprint: "test", chainId: config.chain.chainId,
+          fromBlock: scan.fromBlock, toBlock: scan.scanTo, fromTimestamp: NOW_SEC - 60,
+          toTimestamp: NOW_SEC, finalizedBlock: scan.chainHead, acceptedAt: NOW_SEC } };
+    });
+    await runMintBurnConfigPhase(args);
+    expect(args.pendingCursorUpdates.get(key)).toBe(25_000);
+    args.lastBlocksAfterRun.set(key, args.pendingCursorUpdates.get(key)!);
+    await runMintBurnConfigPhase(args);
+    expect(args.pendingCursorUpdates.get(key)).toBe(50_000);
+    expect(vi.mocked(syncMintBurnConfig).mock.calls.map(([scan]) => [scan.fromBlock, scan.scanTo]))
+      .toEqual([[1, 25_000], [25_001, 50_000]]);
+    expect(vi.mocked(fetchConservationBoundaries).mock.calls.map(([prepass]) =>
+      prepass.requests.map((request) => [request.fromBlock, request.toBlock])))
+      .toEqual([[[1, 25_000]], [[25_001, 50_000]]]);
   });
 
   it("records a deferral for a config with apiErrors=6 and coverage=0.5", async () => {
