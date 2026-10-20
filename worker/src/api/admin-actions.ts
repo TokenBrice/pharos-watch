@@ -1,4 +1,3 @@
-import type { TelegramCreds } from "../telegram/delivery/telegram";
 import { DigestKindSchema, type DigestKind, type DigestLlmProfile } from "@shared/types/digest";
 import { makeAdminRoute, makeIdempotentAdminRoute, type AdminRouteContext } from "../lib/route-wrappers";
 import { setCache } from "../lib/db-cache";
@@ -18,12 +17,6 @@ import {
 import { CONTRACT_CONFIGS } from "../lib/blacklist-contracts";
 import { normalizeBlacklistSyncStateKey } from "../lib/db";
 
-interface TriggerDigestRouteContext extends AdminRouteContext {
-  execCtx: ExecutionContext;
-  anthropicApiKey?: string | null;
-  telegramCreds?: TelegramCreds | null;
-}
-
 /**
  * Cache key used by `digest-trigger-poll` to decide whether to run the digest
  * out-of-band on its next scheduled tick. The JSON value is a bounded retry
@@ -34,7 +27,7 @@ export const DIGEST_FORCE_RUN_CACHE_KEY = "digest:force-run-request";
 export const handleTriggerDigest = makeIdempotentAdminRoute(
   "route-trigger-digest",
   "trigger-digest",
-  async ({ db, request }: TriggerDigestRouteContext) => {
+  async ({ db, request }: AdminRouteContext) => {
     const requestText = await readRequestTextBounded(request, 1_024);
     if (requestText instanceof Response) return requestText;
     let kind: DigestKind = "daily";

@@ -5,7 +5,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   collectSourceEnvKeys,
-  parseWorkerEnvInterfaceBindings,
+  findWranglerBindingContractErrors,
+  getWorkerEnvBindings,
   parseWranglerWorkerConfigBindings,
 } from "../ci/check-env-contract";
 
@@ -20,31 +21,48 @@ function withTempEnvSource<T>(source: string, run: (filePath: string) => T, file
   }
 }
 
-describe("check-env-contract worker Env parser", () => {
-  it("parses top-level Env binding types", () => {
-    withTempEnvSource(`
-      export interface Env {
-        DB: D1Database;
-        CORS_ORIGIN: string;
-        OPTIONAL_KEY?: string;
-        NESTED?: {
-          INNER_KEY: string;
-        };
-      }
-    `, (filePath) => {
-      expect([...parseWorkerEnvInterfaceBindings(filePath)]).toEqual([
-        ["DB", { optional: false, type: "D1Database" }],
-        ["CORS_ORIGIN", { optional: false, type: "string" }],
-        ["OPTIONAL_KEY", { optional: true, type: "string" }],
-        ["NESTED", { optional: true, type: "{" }],
-      ]);
-    });
+describe("check-env-contract manifest bindings", () => {
+  it("projects platform types and ingress requiredness independently of operator requirements", () => {
+    const bindings = getWorkerEnvBindings();
+    expect(bindings.get("DB")).toEqual({ optional: false, type: "D1Database" });
+    expect(bindings.get("CORS_ORIGIN")).toEqual({ optional: false, type: "string" });
+    expect(bindings.get("SAFETY_CAPTURE_ARCHIVE")).toEqual({ optional: true, type: "R2Bucket" });
+    for (const key of ["GITHUB_PAT", "FEEDBACK_IP_SALT", "BANXICO_TOKEN"]) {
+      expect(bindings.get(key)).toEqual({ optional: true, type: "string" });
+    }
+    expect(bindings.has("SITE_API_ORIGIN")).toBe(false);
   });
 
-  it("fails closed when worker env.ts does not export Env", () => {
-    withTempEnvSource("export interface NotEnv { API_KEY: string; }\n", (filePath) => {
-      expect(() => parseWorkerEnvInterfaceBindings(filePath)).toThrow(/missing export interface Env/);
-    });
+  it("accepts matching config and rejects missing keys and platform type drift", () => {
+    expect(findWranglerBindingContractErrors(`
+      [vars]
+      CORS_ORIGIN = "https://pharos.watch"
+      [[d1_databases]]
+      binding = "DB"
+    `)).toEqual([]);
+    expect(findWranglerBindingContractErrors(`
+      [vars]
+      DB = "not-a-database"
+      UNKNOWN_WORKER_BINDING = "unknown"
+    `)).toEqual([
+      expect.stringContaining("UNKNOWN_WORKER_BINDING ([vars])"),
+      expect.stringContaining("DB ([vars]) is string, manifest declares D1Database"),
+    ]);
+  });
+
+  it("retains duplicate and unsupported deployed binding failures", () => {
+    expect(findWranglerBindingContractErrors(`
+      [vars]
+      CORS_ORIGIN = "https://pharos.watch"
+      [[d1_databases]]
+      binding = "CORS_ORIGIN"
+      [[services]]
+      binding = "invalid-binding"
+    `)).toEqual([
+      expect.stringContaining("duplicate Worker binding keys: CORS_ORIGIN"),
+      expect.stringContaining("unsupported Worker binding keys: invalid-binding"),
+      expect.stringContaining("CORS_ORIGIN ([[d1_databases]]) is D1Database"),
+    ]);
   });
 });
 

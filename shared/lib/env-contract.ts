@@ -3,6 +3,7 @@ export {
   getRuntimeActiveEnvKeys,
   getRuntimeEnvKeys,
 } from "./env-contract/registry.ts";
+export type { RuntimeEnv } from "./env-contract/registry.ts";
 export { renderEnvExample } from "./env-contract/render-env-example.ts";
 export {
   renderOperatorOriginAccessEnvBlock,

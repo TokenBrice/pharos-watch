@@ -33,8 +33,6 @@ function buildDaily0800SlotGroups(runtime: ScheduledRuntimeContext) {
   };
 
   return bindScheduledSlotPlan("daily0800Utc", {
-    mode: "parallel-serial",
-    label: "daily-0800-chains",
     chainLabels: ["snapshot-supply", "safety-psi-public", "tbill-usds"],
     implementations: {
       "snapshot-supply": (signal) => snapshotSupply(runtime.db, signal, stablecoinsCacheFreshnessGate),

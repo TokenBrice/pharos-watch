@@ -19,29 +19,9 @@ const D1_TABLE_GROWTH_CACHE_MAX_AGE_SEC = 50 * 60 * 60;
 const D1_TABLE_GROWTH_SNAPSHOT_VERSION = 1;
 const D1_TABLE_GROWTH_TOP_N = 10;
 
-export interface D1TableGrowthRow {
-  tableName: string;
-  rowCount: number;
-  previousRowCount: number | null;
-  rowCountDelta: number | null;
-  oldestTimestamp: number | null;
-  newestTimestamp: number | null;
-}
-
-export interface D1TableGrowthTopGrower {
-  tableName: string;
-  rowCount: number;
-  rowCountDelta: number;
-}
-
-export interface D1TableGrowthSnapshot {
-  checkedAt: number;
-  utcDay: number;
-  previousCheckedAt: number | null;
-  tables: D1TableGrowthRow[];
-  topGrowers: D1TableGrowthTopGrower[];
-  failedTables: string[];
-}
+export type D1TableGrowthRow = z.output<typeof D1TableGrowthRowSchema>;
+export type D1TableGrowthTopGrower = z.output<typeof D1TableGrowthTopGrowerSchema>;
+export type D1TableGrowthSnapshot = z.output<typeof D1TableGrowthSnapshotSchema>;
 
 export type D1UsageSummaryWithTableGrowth = D1UsageSummary & {
   tableGrowth: D1TableGrowthSnapshot | null;
@@ -137,10 +117,7 @@ interface D1TableNameRow {
   name?: string | null;
 }
 
-interface D1TableGrowthCacheEnvelope {
-  version: 1;
-  snapshot: D1TableGrowthSnapshot;
-}
+type D1TableGrowthCacheEnvelope = z.output<typeof D1TableGrowthCacheEnvelopeSchema>;
 
 const FiniteNumberSchema = z.number().finite();
 const D1TableGrowthRowSchema = z.object({

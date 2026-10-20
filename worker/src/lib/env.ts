@@ -1,4 +1,5 @@
 import type { ReserveContinuationMessage } from "@shared/types/reserve-continuation";
+import type { RuntimeEnv } from "@shared/lib/env-contract";
 import { DWELLIR_CHAINS } from "@shared/lib/dwellir-chains";
 import { DWELLIR_NATIVE_ENDPOINTS } from "@shared/lib/dwellir-native-endpoints";
 import { logWorkerEvent } from "./structured-log";
@@ -9,82 +10,17 @@ export interface WorkerVersionMetadata {
   timestamp: string;
 }
 
-export interface Env {
-  DB: D1Database;
-  TELEGRAM_WEBHOOK_PREAUTH_RATE_LIMIT: RateLimit;
-  TELEGRAM_MINI_APP_SESSION_PREAUTH_RATE_LIMIT: RateLimit;
-  TELEGRAM_MINI_APP_MUTATION_PREAUTH_RATE_LIMIT: RateLimit;
-  TELEGRAM_WEBHOOK_SOURCE_RATE_LIMIT: RateLimit;
-  TELEGRAM_MINI_APP_SESSION_SOURCE_RATE_LIMIT: RateLimit;
-  TELEGRAM_MINI_APP_MUTATION_SOURCE_RATE_LIMIT: RateLimit;
-  DONOR_KEY_CLAIM_RATE_LIMIT: RateLimit;
-  SAFETY_GRADES_RATE_LIMIT: RateLimit;
-  CF_VERSION_METADATA: WorkerVersionMetadata;
-  /** Heavy-only binding; public scheduled paths do not require archive access. */
-  SAFETY_CAPTURE_ARCHIVE?: R2Bucket;
-  /** Public driver only; invokes heavy's private default fetch handler. */
-  HEAVY_EXECUTOR?: Fetcher;
-  HEAVY_EXECUTOR_SHARED_SECRET?: string;
-  PROJECT_TAPE_PLACED_EXECUTOR?: string;
-  /** Public-only; D1 remains reserve execution authority. */
-  RESERVE_CONTINUATION_QUEUE?: Queue<ReserveContinuationMessage>;
-  WORKER_RESERVE_QUEUE_MODE?: string;
-  CORS_ORIGIN: string;
-  SELF_URL?: string;
-  OPS_UI_ORIGIN?: string;
-  OPS_API_ORIGIN?: string;
-  SITE_API_SHARED_SECRET?: string;
-  SITE_API_SHARED_SECRET_PREVIOUS?: string;
-  API_KEY_HASH_PEPPER?: string;
-  API_KEY_HASH_PEPPER_PREVIOUS?: string;
-  CF_ACCESS_TEAM_DOMAIN?: string;
-  CF_ACCESS_OPS_UI_AUD?: string;
-  CF_ACCESS_OPS_API_AUD?: string;
-  ETHERSCAN_API_KEY?: string;
-  TRONGRID_API_KEY?: string;
-  DRPC_API_KEY?: string;
-  ALCHEMY_API_KEY?: string;
-  DWELLIR_API_KEY?: string;
-  DWELLIR_MAX_CREDITS_PER_MONTH?: string;
-  DWELLIR_ROUTING_DISABLED_CHAINS?: string;
-  ADDRESS_PRICE_PROVIDERS_ENABLED?: string;
-  GRAPH_API_KEY?: string;
-  ANTHROPIC_API_KEY?: string;
-  CMC_API_KEY?: string;
-  JUPITER_API_KEY?: string;
-  M0_API_KEY?: string;
-  COINGECKO_API_KEY?: string;
-  GITHUB_PAT?: string;
-  FEEDBACK_IP_SALT?: string;
-  TWITTER_API_KEY?: string;
-  TWITTER_API_SECRET?: string;
-  TWITTER_ACCESS_TOKEN?: string;
-  TWITTER_ACCESS_TOKEN_SECRET?: string;
-  TELEGRAM_BOT_TOKEN?: string;
-  TELEGRAM_BOT_TOKEN_PREVIOUS?: string;
-  TELEGRAM_CHAT_ID?: string;
-  TELEGRAM_OPERATOR_CHAT_ID?: string;
-  TELEGRAM_WEBHOOK_SECRET?: string;
-  TELEGRAM_WEBHOOK_SECRET_PREVIOUS?: string;
-  TELEGRAM_RECAP_ROLLOUT_MODE?: string;
-  MINT_BURN_DISABLED_IDS?: string;
-  MINT_BURN_DISABLED_SYMBOLS?: string;
-  MINT_BURN_MAJOR_SYMBOLS?: string;
-  MINT_BURN_STALE_WARN_SEC?: string;
-  MINT_BURN_STALE_CRIT_SEC?: string;
-  MINT_BURN_ALERT_COOLDOWN_SEC?: string;
-  OPENEXCHANGERATES_API_KEY?: string;
-  BANXICO_TOKEN?: string;
-  CLOUDFLARE_ACCOUNT_ID?: string;
-  CLOUDFLARE_D1_STATUS_API_TOKEN?: string;
-  CLOUDFLARE_D1_DATABASE_ID?: string;
-  MAINTENANCE_MODE?: string;
-  REQUEST_SOURCE_ATTRIBUTION_DISABLED?: string;
-  API_KEY_REQUEST_ATTRIBUTION_DISABLED?: string;
-  DDR_REPAIR_TASK_RUNNER_ENABLED?: string;
-  WORKER_RESERVE_RECOVERY_MODE?: string;
-  WORKER_CANARY_MODE?: string;
+interface WorkerBindingValues {
+  string: string;
+  D1Database: D1Database;
+  RateLimit: RateLimit;
+  WorkerVersionMetadata: WorkerVersionMetadata;
+  R2Bucket: R2Bucket;
+  Fetcher: Fetcher;
+  "Queue<ReserveContinuationMessage>": Queue<ReserveContinuationMessage>;
 }
+
+export type Env = RuntimeEnv<"worker", WorkerBindingValues>;
 
 /** Scheduled execution has no HTTP CORS or rate-limit bindings. */
 export type ScheduledEnv = Pick<Env, "DB" | "CF_VERSION_METADATA"> &

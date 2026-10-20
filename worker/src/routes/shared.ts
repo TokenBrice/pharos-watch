@@ -8,8 +8,6 @@ import {
   type EndpointMethod,
 } from "@shared/lib/api-endpoints";
 import type { CloudflareD1StatusBindings } from "../lib/env";
-import type { MintBurnFreshnessConfig } from "../lib/mint-burn-health-config";
-import type { TelegramCreds } from "../telegram/delivery/telegram";
 import type { ChainRpcConfig } from "../lib/chain-registry";
 import type { RpcProviderTrialEnv } from "../lib/rpc-provider-parity/report";
 import type { FeedbackEnv } from "../api/feedback";
@@ -35,15 +33,10 @@ export interface TelegramRouteFields {
   telegramWebhookSecretPrevious: string | undefined;
   telegramBotToken: string | undefined;
   telegramBotTokenPrevious: string | undefined;
-  telegramCreds: TelegramCreds | null;
 }
 
 export interface TelegramRecapRolloutRouteFields {
   telegramRecapRollout: TelegramRecapRolloutPolicy;
-}
-
-export interface DigestRouteFields {
-  anthropicApiKey: string | null;
 }
 
 export interface DonorKeyClaimRouteFields {
@@ -54,10 +47,6 @@ export interface FeedbackRouteFields {
   feedbackEnv: FeedbackEnv;
 }
 
-export interface MintBurnFreshnessRouteFields {
-  mintBurnFreshnessConfig: MintBurnFreshnessConfig;
-}
-
 /**
  * Read-only env subset for the Dwellir supplemental-RPC trial report. Hydrating
  * it never enables Dwellir on the request path: it only carries the secret
@@ -65,10 +54,6 @@ export interface MintBurnFreshnessRouteFields {
  */
 export interface DwellirBudgetRouteFields {
   dwellirBudgetEnv: RpcProviderTrialEnv;
-}
-
-export interface AlchemyRouteFields {
-  alchemyApiKey: string | null;
 }
 
 export interface ApiKeysRouteFields {
@@ -99,15 +84,12 @@ export interface WorkerStatusConfigRouteFields {
 
 export interface RouteDependencyFieldMap {
   apiKeyHashPepper: ApiKeysRouteFields;
-  alchemyApiKey: AlchemyRouteFields;
-  anthropicApiKey: Pick<DigestRouteFields, "anthropicApiKey">;
   cloudflareD1StatusConfig: CloudflareD1StatusRouteFields;
   chainRpcs: ChainRpcRouteFields;
   coingeckoApiKey: CoingeckoRouteFields;
   dwellirBudgetEnv: DwellirBudgetRouteFields;
   donorKeyClaimRateLimit: DonorKeyClaimRouteFields;
   feedbackEnv: FeedbackRouteFields;
-  mintBurnFreshnessConfig: MintBurnFreshnessRouteFields;
   workerStatusConfig: WorkerStatusConfigRouteFields;
   workerVersion: WorkerVersionRouteFields;
   telegram: TelegramRouteFields;

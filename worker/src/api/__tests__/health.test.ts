@@ -264,7 +264,7 @@ describe("handleHealth", () => {
       }));
       const written = buildStablecoinsSyncResult({
         assets, rawAssetCount: assets.length, droppedMalformedAssets: 0,
-        canonicalDeduplication: { dedupedAssets: assets, duplicateRows: 0, affectedIds: [] },
+        canonicalDeduplication: { duplicateRows: 0, affectedIds: [] },
         enrichStats: {}, priceValidationStats: {}, providerDiagnostics: [], rejectedCount: 0,
         stalenessWarning: false, stalenessCheckFailed: false, gtProbe: { stats: {} as never },
         depegErrorCount: 0, depegErrors: [], syncStartSec: now,

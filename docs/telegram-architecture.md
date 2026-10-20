@@ -39,6 +39,8 @@ Nine seams: **Ingress**, **Command parsing**, **Callback routing**, **Action han
 
 "Outbound transport" has its own seam because both Ingress (replies to commands) and Dispatch (alert fan-out) send through it; collapsing it into either side would force the other to reach across. **Command parsing** is kept distinct from **Action handlers** because the parser is reused by callbacks (disambiguation reply path) and `/start` deep-link payloads.
 
+Settings adapters validate transport codes and describe the result; State / persistence owns their subscription statement assembly. `/set` executes that shared plan, while callbacks and Mini App patches compose its statements into their existing atomic mutation boundary.
+
 ---
 
 ## 1. Ingress
@@ -131,6 +133,7 @@ Structural boundaries:
 
 - Capture/planning reuse one invocation-local input page only while captured preference generations match. Payload bounds apply before materialization; durable ordinals/digests make partial pages resumable without widening the cohort or reformatting stored targets. Handoff is separately cursor-bounded and set-based.
 - The whole five-minute import graph uses `shared/lib/stablecoins/worker-runtime-registry.ts`, never the full stablecoin registry. Safety grade/score/publication identity comes only from the thin alert envelope via `loadActiveAlertSafetySourceAssessment`, never `loadActiveSafetyScoreSource`. `npm run check:runtime-reachability` protects this boundary; [ADR-24](./architecture.md#adr-24) owns the architectural decision.
+- `shared/types/status/telegram.ts` owns thin safety row, explanation and envelope schemas and inferred types. Persisted sources and dispatch baselines require explanations and publication identity; only the live source requires the V9 model. Admission strips unknown projection fields while retaining rating refinements, finite numbers and nullable/optional semantics. The publication writer projects already-decoded cards through `buildAlertSafetyV9SourceEnvelopeFromParts`; alert consumers assess only the persisted compact envelope plus publication health, not a decoded-response adapter.
 - `five-minute-telegram.ts` owns serial orchestration and token-independent DB sidecars. [Operational notes](./telegram-alerts.md#operational-notes) owns ordering, token absence, registration outcomes, and recap deadline behavior.
 - Reserve dispatch consumes the producer's versioned D1 envelope; it performs no reserve-adapter I/O. The producer owns admission/continuity; dispatch owns its observed/dispatched baselines.
 - Freeze consumes immutable fresh Tape through its own cursor/cohort outbox, not the five-family target-plan constraint. It still creates canonical source/job/target/item lineage and uses the same pending queue.
@@ -186,13 +189,21 @@ The chat deadline is also stored independently in D1 `cache` under `telegram:cha
 
 Direct/local coin intent and persistent preset intent remain separate; neither setup, import, nor Mini App may flatten resolved presets into direct rows. Existing indistinguishable legacy rows remain conservatively direct/local. [Preset watchlists](./telegram-alerts.md#preset-watchlists) owns inheritance/override behavior; [Mini App portability](./telegram-mini-app.md#configuration-portability) owns signed preview/confirmation.
 
+`shared/types/status/telegram.ts` owns tuning value tuples, schema primitives and derived types; `shared/lib/telegram-alert-families.ts` owns reversible settings callback codes. DEWS classification remains owned by `shared/lib/classification/risk.ts`. The Store's `prepareSettingToSubscriptions` assembles subscriber activity, preference generation, direct override and tuning writes without executing them, preserving composition with webhook operation proof. First-follow attribution can be claimed once by an outer Mini App batch rather than by each nested setting.
+
+Watchlist import and bounded direct patches keep separate confirmation validators but share one generation-fenced atomic batch: ensure the parent when requested, claim the generation lease, apply guarded preference/adoption writes, restore the next generation, and prove the result from the lease claim. Import alone cleans empty rows and consumes the exact pending preview even on stale rejection, with its webhook effect proof in the same transaction; direct patches never consume pending commands and alone restore explicit undo snoozes. Both retain D1 bind/statement bounds and overload retry.
+
 Unavailable pulse quality is `unknown`, never `complete`; do not write a lifecycle snapshot when pending-delivery evidence is unavailable.
+
+Lifecycle family opt-in totals and the all-types conjunction share manifest-derived direct/preset/global predicates, counting each chat once per family; presets contribute only their supported families. Delivery SLI attribution derives from persisted item-key patterns, not the target's routing type: depeg intentionally matches `depeg-%`, while the other families use colon prefixes. Multiple recognized families count as mixed; targets without a recognized family count as unknown.
 
 Digest appendix preparation exposes immutable-edition `successActions`, not a separate commit callback. Only `worker/src/telegram/outbox/digest-outbox.ts` applies these post-delivery cache writes, atomically with the exact edition's fenced `sent` transition; preparation retains immediate writes solely for safe first-run/reseed baselines. The [digest outbox contract](./runbooks/telegram-digest-outbox.md#contract) owns finalization and replay safety.
 
 Delivery diagnostics reconcile atomically across command replies and alert batches: each independent success clock retains its greatest observed timestamp (null until observed), and attempt/update clocks never decrease. Older attempts may contribute genuine historical successes but cannot change the latest attempt's failure class. At equal-second attempts, failures take precedence over successes; among failures the last persisted observation wins, matching within-batch coalescing. A strictly newer successful attempt clears the failure class. Diagnostics remain best-effort and never block replies or delivery.
 
 `/forget` erases subscriber-owned rows and raw chat cache keys while retaining processed-update replay proof. Mini App abuse admission is independent, not subscriber-owned: only anonymous time-scoped HMAC keys, counters and the original admission clock survive, for at most the remainder of the anchored 30-second window. They never extend on forget/denial or identify a later window. Expired anonymous rows are inert and physically removed by the existing daily bounded cache prune; no raw chat-key retention or precise 30-second physical deletion is implied. [Mini App auth](./telegram-mini-app.md#auth-model) owns admission and identity details.
+
+Chat migration derives insert/select columns and conflict assignments from one ordered local descriptor per merged table, including copy-only identities. Paired quiet-hour windows, null-safe minima, snooze normalization and generation increments retain explicit merge rules; repeated service events preserve complete destination rows. Child-table order, collision cleanup, private recap purge and processed-update evidence remain unchanged.
 
 **Owned files.**
 - `worker/src/telegram/store/telegram-webhook-store.ts`, `worker/src/telegram/store/*` — stable import barrel and topic-specific SQL builders.
@@ -217,13 +228,15 @@ Delivery diagnostics reconcile atomically across command replies and alert batch
 **Responsibility.** The single place that hits `https://api.telegram.org/bot<token>/…`. Owns HTTP timeouts, the `link_preview_options` shape, bounded response-body cleanup, Bot API error classification, and the auditing wrapper that updates per-chat reply diagnostics.
 
 **Owned files.**
-- `worker/src/telegram/delivery/telegram.ts` (`postTelegramBotApi`, `sendToChat`, `sendBatch`, `answerCallbackQuery`, `editMessage`, `escapeHtml`, link-preview helpers, send-error classification)
+- `worker/src/telegram/delivery/telegram.ts` (`postTelegramBotApi`, `sendToChat`, `schedulePerChatBatches`, `answerCallbackQuery`, `editMessage`, `escapeHtml`, link-preview helpers, send-error classification)
 - `worker/src/telegram/webhook/telegram-webhook-replies.ts` (`sendAuditedTelegramReply` — chunks + diagnostics + replyMarkup)
 - `worker/src/telegram/common/log.ts` (structured Telegram event logger)
 
 **Allowed inbound dependencies.** Action handlers, Callback routing, Ingress (for replies), Dispatch (alert sends), Queue (drains), admin routes, daily digest, registration reconciliation, chat-admin membership probes.
 
 **Allowed outbound dependencies.** Native `fetch`, Common.
+
+Distinct-chat scheduling stays in `schedulePerChatBatches`; the durable queue drain supplies the send callback and persisted markup/preview policy. Recovery resumes authoritative target manifests and normalized item lineage, rather than reconstructing a send-only batch or subtracting handled items from fresh fan-out.
 
 **Must NOT.**
 - Know about subscribers, snapshots, or commands. Send what you are given.

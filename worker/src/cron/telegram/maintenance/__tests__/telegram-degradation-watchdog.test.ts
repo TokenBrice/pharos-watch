@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { getAlertSafetyV9SourceGeneration } from "../../../../lib/alert-safety-source-cache";
+import { ALERT_SAFETY_V9_SOURCE_GENERATION } from "../../../../lib/alert-safety-source-cache";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../../../../lib/safety-score-v9/consumer-freshness";
@@ -150,7 +150,7 @@ beforeEach(() => {
     ...safetyDiagnostics(),
     state: "ok",
     ageSeconds: 60,
-    generation: getAlertSafetyV9SourceGeneration(),
+    generation: ALERT_SAFETY_V9_SOURCE_GENERATION,
     envelope: null,
   });
 });
@@ -446,7 +446,7 @@ describe("runTelegramDegradationWatchdog · safety source", () => {
       ...safetyDiagnostics(nowSec - 300),
       state: phase === "recovered" ? "ok" as const : "corrupt" as const,
       ageSeconds: 1_200,
-      generation: getAlertSafetyV9SourceGeneration(),
+      generation: ALERT_SAFETY_V9_SOURCE_GENERATION,
       sourcePublicationGenerationId: "source-generation",
       acceptedPublicationGenerationId: "accepted-generation",
       envelope: null,

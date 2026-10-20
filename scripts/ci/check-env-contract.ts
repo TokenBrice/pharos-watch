@@ -13,10 +13,10 @@ import {
   renderOperatorOriginAccessEnvBlock,
   renderWorkerInfrastructureEnvBlock,
 } from "@shared/lib/env-contract";
+import { ENV_BINDINGS } from "@shared/lib/env-contract/registry";
 
 const repoRoot = process.cwd();
 const envExamplePath = resolve(repoRoot, ".env.example");
-const workerEnvPath = resolve(repoRoot, "worker/src/lib/env.ts");
 const wranglerConfigPath = resolve(repoRoot, "worker/wrangler.toml");
 
 const DOC_SCAN_FILES = [
@@ -61,13 +61,6 @@ const SOURCE_SCAN_EXTENSIONS = new Set([
 const DOC_NON_ENV_TOKENS = new Set([
   "WORKER_RESERVED_ENV_KEYS",
   "WORKER_ACTIVE_ENV_KEYS",
-  "PAGES_FUNCTIONS_REQUIRED_ENV_KEYS",
-  "PAGES_FUNCTIONS_OPTIONAL_ENV_KEYS",
-  "PAGES_FUNCTIONS_RESERVED_ENV_KEYS",
-  "PAGES_FUNCTIONS_ACTIVE_ENV_KEYS",
-  "SITE_DATA_FUNCTIONS_REQUIRED_ENV_KEYS",
-  "SITE_DATA_FUNCTIONS_OPTIONAL_ENV_KEYS",
-  "SITE_DATA_FUNCTIONS_ACTIVE_ENV_KEYS",
   "DATA_SOURCE_GROUPS",
   "ENV_BINDINGS",
 ]);
@@ -79,11 +72,6 @@ const WRANGLER_BINDING_SECTIONS = new Map([
   ["services", { property: "binding", type: "Fetcher" }],
   ["queues.producers", { property: "binding", type: "Queue<ReserveContinuationMessage>" }],
 ]);
-
-interface EnvInterfaceBinding {
-  optional: boolean;
-  type: string;
-}
 
 interface WranglerBinding {
   source: string;
@@ -124,60 +112,14 @@ function parseEnvExampleKeys(filePath: string) {
   return { duplicates, keys };
 }
 
-export function extractExportedEnvInterfaceBody(source: string): string | null {
-  const match = /\bexport\s+interface\s+Env\s*\{/u.exec(source);
-  if (!match) {
-    return null;
-  }
-
-  let depth = 1;
-  let cursor = match.index + match[0].length;
-  const bodyStart = cursor;
-
-  while (cursor < source.length) {
-    const char = source[cursor];
-    if (char === "{") {
-      depth += 1;
-    } else if (char === "}") {
-      depth -= 1;
-      if (depth === 0) {
-        return source.slice(bodyStart, cursor);
-      }
-    }
-    cursor += 1;
-  }
-
-  return null;
-}
-
-export function parseWorkerEnvInterfaceBindings(filePath: string): Map<string, EnvInterfaceBinding> {
-  const source = readFileSync(filePath, "utf8");
-  const body = extractExportedEnvInterfaceBody(source);
-  if (!body) {
-    throw new Error(`${relative(repoRoot, filePath)} is missing export interface Env`);
-  }
-
-  const bindings = new Map<string, EnvInterfaceBinding>();
-  let typeLiteralDepth = 0;
-  for (const rawLine of splitLines(body)) {
-    const line = rawLine.replace(/\/\/.*$/u, "").trim();
-    const match = typeLiteralDepth === 0 ? /^([A-Z][A-Z0-9_]*|DB)(\?)?\s*:\s*([^;]+);?/u.exec(line) : null;
-    if (match) {
-      bindings.set(match[1], {
-        optional: match[2] === "?",
-        type: match[3].trim().replace(/\s+/gu, " "),
-      });
-    }
-    for (const char of line) {
-      if (char === "{") {
-        typeLiteralDepth += 1;
-      } else if (char === "}") {
-        typeLiteralDepth = Math.max(0, typeLiteralDepth - 1);
-      }
-    }
-  }
-
-  return bindings;
+export function getWorkerEnvBindings() {
+  return new Map(ENV_BINDINGS.flatMap((binding) => {
+    const usage = binding.runtimes.worker;
+    return usage ? [[binding.key, {
+      optional: usage.status !== "required" || usage.optionalAtIngress === true,
+      type: binding.valueType,
+    }] as const] : [];
+  }));
 }
 
 function addWranglerBinding(
@@ -226,6 +168,37 @@ export function parseWranglerWorkerConfigBindings(source: string) {
   }
 
   return { bindings, duplicates, unsupported };
+}
+
+export function findWranglerBindingContractErrors(source: string): string[] {
+  const config = parseWranglerWorkerConfigBindings(source);
+  const workerBindings = getWorkerEnvBindings();
+  const errors: string[] = [];
+  if (config.duplicates.size > 0) {
+    errors.push(`worker/wrangler.toml declares duplicate Worker binding keys: ${[...config.duplicates].sort().join(", ")}`);
+  }
+  if (config.unsupported.length > 0) {
+    errors.push(`worker/wrangler.toml declares unsupported Worker binding keys: ${
+      config.unsupported.map((binding) => `${binding.key} (${binding.source})`).sort().join(", ")
+    }`);
+  }
+  const missing = [...config.bindings]
+    .filter(([key]) => !workerBindings.has(key))
+    .map(([key, binding]) => `${key} (${binding.source})`)
+    .sort();
+  if (missing.length > 0) {
+    errors.push(`worker/wrangler.toml declares bindings missing from the shared Worker env manifest: ${missing.join(", ")}`);
+  }
+  const mismatches = [...config.bindings].flatMap(([key, binding]) => {
+    const expected = workerBindings.get(key);
+    return expected && expected.type !== binding.type
+      ? [`${key} (${binding.source}) is ${binding.type}, manifest declares ${expected.type}`]
+      : [];
+  }).sort();
+  if (mismatches.length > 0) {
+    errors.push(`worker/wrangler.toml binding types drift from the shared Worker env manifest: ${mismatches.join("; ")}`);
+  }
+  return errors;
 }
 
 function addRegexMatches(
@@ -451,9 +424,6 @@ export function runEnvContractCheck({
 } = {}): boolean {
   const envExample = parseEnvExampleKeys(envExamplePath);
   const manifestEnvKeys = new Set(getAllEnvBindingKeys());
-  const workerEnvInterfaceBindings = parseWorkerEnvInterfaceBindings(workerEnvPath);
-  const workerEnvInterfaceKeys = new Set(workerEnvInterfaceBindings.keys());
-  const wranglerConfigBindings = parseWranglerWorkerConfigBindings(readFileSync(wranglerConfigPath, "utf8"));
   const sourceEnvKeys = collectSourceEnvKeys(SOURCE_SCAN_ROOTS.flatMap(collectFiles));
   const documentedEnvKeys = collectDocumentedEnvKeys(DOC_SCAN_FILES);
   const knownEnvKeys = new Set([
@@ -473,57 +443,7 @@ export function runEnvContractCheck({
     assertGeneratedBlockMatches(block.filePath, block.marker, block.render(), errors);
   }
 
-  const workerEnvKeysMissingFromManifest = [...workerEnvInterfaceKeys]
-    .filter((key) => !manifestEnvKeys.has(key))
-    .sort();
-  if (workerEnvKeysMissingFromManifest.length > 0) {
-    errors.push(
-      `worker/src/lib/env.ts Env declares keys missing from the shared env manifest: ${workerEnvKeysMissingFromManifest.join(", ")}`,
-    );
-  }
-
-  if (wranglerConfigBindings.duplicates.size > 0) {
-    errors.push(
-      `worker/wrangler.toml declares duplicate Worker binding keys: ${[...wranglerConfigBindings.duplicates].sort().join(", ")}`,
-    );
-  }
-
-  if (wranglerConfigBindings.unsupported.length > 0) {
-    errors.push(
-      `worker/wrangler.toml declares unsupported Worker binding keys: ${
-        wranglerConfigBindings.unsupported
-          .map((binding) => `${binding.key} (${binding.source})`)
-          .sort()
-          .join(", ")
-      }`,
-    );
-  }
-
-  const wranglerBindingsMissingFromEnv = [...wranglerConfigBindings.bindings]
-    .filter(([key]) => !workerEnvInterfaceKeys.has(key))
-    .map(([key, binding]) => `${key} (${binding.source})`)
-    .sort();
-  if (wranglerBindingsMissingFromEnv.length > 0) {
-    errors.push(
-      `worker/wrangler.toml declares bindings missing from worker/src/lib/env.ts Env: ${wranglerBindingsMissingFromEnv.join(", ")}`,
-    );
-  }
-
-  const wranglerBindingTypeMismatches = [...wranglerConfigBindings.bindings]
-    .filter(([key, binding]) => {
-      const envBinding = workerEnvInterfaceBindings.get(key)!;
-      return envBinding && envBinding.type !== binding.type;
-    })
-    .map(([key, binding]) => {
-      const envBinding = workerEnvInterfaceBindings.get(key)!;
-      return `${key} (${binding.source}) is ${binding.type}, Env declares ${envBinding.type}`;
-    })
-    .sort();
-  if (wranglerBindingTypeMismatches.length > 0) {
-    errors.push(
-      `worker/wrangler.toml binding types drift from worker/src/lib/env.ts Env: ${wranglerBindingTypeMismatches.join("; ")}`,
-    );
-  }
+  errors.push(...findWranglerBindingContractErrors(readFileSync(wranglerConfigPath, "utf8")));
 
   for (const [key, filePaths] of documentedEnvKeys) {
     if (knownEnvKeys.has(key)) continue;

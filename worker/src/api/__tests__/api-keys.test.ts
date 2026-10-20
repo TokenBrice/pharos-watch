@@ -21,7 +21,7 @@ import {
   makeAuthenticatedApiKeyRow,
   makeRequestAttributionTables,
 } from "../../test-helpers/api-key-test-support";
-import { resetApiKeyStateForTests } from "../../lib/api-keys";
+import { resetApiKeyStateForTests } from "../../lib/api-key-core";
 import { resetRequestAttributionStateForTests } from "../../lib/request-source-attribution";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 

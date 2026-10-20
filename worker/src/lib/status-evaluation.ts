@@ -11,14 +11,12 @@ import {
 } from "./status/evaluation-context";
 import type { StatusLevel } from "./status-reliability";
 import { maxStatus } from "./status-reliability-shared";
-import {
-  deriveReserveCompositionStatus,
-  scoreStatusConfidence,
-} from "./status/evaluation-state";
+import { scoreStatusConfidence } from "./status/evaluation-state";
 import { synthesizeOverallCauses } from "./status/evaluation-causes";
 import {
   evaluateAvailabilityStatus,
   evaluateDataQualityStatus,
+  evaluateReserveCompositionStatus,
   withRunbook,
 } from "./status/evaluation-rules";
 import { loadCronHealth } from "./status/cron-health";
@@ -166,7 +164,7 @@ export async function computeRawStatus(
   } = deriveStatusAssessmentInputs(dataQuality);
   const reserveCompositionStatus = reserveComposition.status === "unavailable"
     ? "unavailable"
-    : deriveReserveCompositionStatus(reserveComposition).status;
+    : evaluateReserveCompositionStatus(reserveComposition).status;
   const diagnosticIssueCount = countStatusDiagnosticIssues({
     publicHealth,
     dataQuality,

@@ -1,5 +1,4 @@
 import type { D1Database } from "@shared/types/cloudflare-runtime";
-import { getRuntimeActiveEnvKeys, getRuntimeEnvKeys } from "@shared/lib/env-contract";
 import { getConfiguredValue, hasConfiguredValue } from "@shared/lib/env-utils";
 import { SITE_API_ORIGIN as CANONICAL_SITE_API_ORIGIN } from "@shared/lib/runtime-origins";
 import { resolveTrustedHttpsOrigin } from "./trusted-upstream-origin";
@@ -19,18 +18,10 @@ export interface SiteDataProxyEnvIssue {
   message: string;
 }
 
-export const SITE_DATA_FUNCTIONS_REQUIRED_ENV_KEYS = getRuntimeEnvKeys("pagesSiteData", "required");
-export const SITE_DATA_FUNCTIONS_OPTIONAL_ENV_KEYS = getRuntimeEnvKeys("pagesSiteData", "optional");
-export const SITE_DATA_FUNCTIONS_ACTIVE_ENV_KEYS = getRuntimeActiveEnvKeys("pagesSiteData");
-
 export function resolveSiteApiOrigin(
   env: Pick<SiteDataProxyEnv, "SITE_API_ORIGIN">,
 ): string | null {
-  const configuredOrigin = getConfiguredValue(env.SITE_API_ORIGIN);
-  if (!configuredOrigin) {
-    return null;
-  }
-  return resolveTrustedHttpsOrigin(configuredOrigin, [CANONICAL_SITE_API_ORIGIN]);
+  return resolveTrustedHttpsOrigin(env.SITE_API_ORIGIN, [CANONICAL_SITE_API_ORIGIN]);
 }
 
 export function validatePagesSiteDataProxyEnv(

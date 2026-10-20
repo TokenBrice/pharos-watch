@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
 import type { ScheduledRuntimeContext } from "../context";
 import { makeScheduledRuntime } from "../../../test-helpers/scheduled-runtime.test-support";
 
@@ -30,7 +31,7 @@ interface SnapshotPresence {
 
 const DAY_START = 1_790_035_200; // 2026-09-22T00:00:00Z
 const SLOT_0700 = DAY_START + 7 * 3600;
-const SLOT_0800 = DAY_START + 8 * 3600;
+const SLOT_0800 = DAY_START + CRON_SCHEDULE_CADENCES.daily0800Utc.offsetSec;
 const SLOT_0900 = DAY_START + 9 * 3600;
 
 function runtime(

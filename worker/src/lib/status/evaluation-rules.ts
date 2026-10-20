@@ -711,7 +711,7 @@ function evaluateReserveOperationalDiagnostics(input: DataQualityEvaluationInput
   return ruleResult("healthy", causes);
 }
 
-const DATA_QUALITY_STATUS_RULES_CORE: readonly StatusRule<DataQualityEvaluationInput>[] = [
+const DATA_QUALITY_STATUS_RULES: readonly StatusRule<DataQualityEvaluationInput>[] = [
   (input) => {
       const status = input.dataQuality.stablecoinsCacheStatus === "error" ? "stale" : input.dataQuality.stablecoinsCacheStatus === "degraded" ? "degraded" : "healthy";
       if (status === "healthy") return null;
@@ -820,6 +820,9 @@ const DATA_QUALITY_STATUS_RULES_CORE: readonly StatusRule<DataQualityEvaluationI
       ));
       return ruleResult(input.activePriceCoverageImpactStatus, causes);
   },
+  evaluateDataSourceFailures,
+  evaluateReserveQueryFailure,
+  evaluateRepairDiagnostics,
   (input) => {
       if (input.missingPriceRatio > STATUS_MISSING_PRICE_THRESHOLDS.ratioStale) {
         return ruleResult("stale", [makeCause(
@@ -888,41 +891,6 @@ const DATA_QUALITY_STATUS_RULES_CORE: readonly StatusRule<DataQualityEvaluationI
       const causes = input.onchainAssessmentCauses.map(withRunbook);
       return status === "healthy" && causes.length === 0 ? null : { status, causes };
   },
-  (input) => {
-      const reserve = input.reserveComposition;
-      if (reserve.status === "unavailable") return null; // The failed-read rule supplies the degrading cause.
-      const status = reserve.status;
-      if (status === "healthy") return null;
-      const unacknowledged = reserve.unacknowledgedPersistentlyStaleIndependentCoins
-        ?? reserve.persistentlyStaleIndependentCoins;
-      const persistent = unacknowledged.length > 0
-        ? ` Unacknowledged: ${formatPersistentStaleIndependentFeeds(unacknowledged)}.`
-        : "";
-      const runTail = reserve.runBudgetTruncated
-        ? ` Last run was truncated by budget with ${reserve.deferredCoins} deferred coin(s)${reserve.nextCursorStablecoinId ? `; next cursor ${reserve.nextCursorStablecoinId}` : ""}.`
-        : "";
-      const uncertain = reserve.writeTimeoutUncertain > 0
-        ? ` ${reserve.writeTimeoutUncertain} coin(s) have uncertain D1 write outcomes.`
-        : "";
-      const message = status === "stale"
-        ? "All configured live reserve feeds are missing, stale, or degraded." + persistent + runTail + uncertain
-        : `Live reserve coverage is degraded (${formatPercentFromRatio(reserve.freshCoverageRatio)} fresh, ${formatPercentFromRatio(reserve.authoritativeFreshCoverageRatio)} authoritative). ` +
-          `${reserve.errorCoins} error, ${reserve.missingCoins} missing, ${reserve.staleCoins} stale, ${reserve.degradedCoins} degraded, ${reserve.corruptCoins} corrupt live reserve feed(s).` +
-          persistent + runTail + uncertain;
-      return ruleResult(status, [makeCause("data-quality", status === "stale" ? "reserve_sync_stale" : "reserve_sync_degraded", status === "stale" ? "critical" : "warning", message)]);
-  },
-];
-
-const DATA_QUALITY_STATUS_RULES: readonly StatusRule<DataQualityEvaluationInput>[] = [
-  DATA_QUALITY_STATUS_RULES_CORE[0],
-  DATA_QUALITY_STATUS_RULES_CORE[1],
-  DATA_QUALITY_STATUS_RULES_CORE[2],
-  evaluateDataSourceFailures,
-  evaluateReserveQueryFailure,
-  evaluateRepairDiagnostics,
-  DATA_QUALITY_STATUS_RULES_CORE[3],
-  DATA_QUALITY_STATUS_RULES_CORE[4],
-  DATA_QUALITY_STATUS_RULES_CORE[5],
   evaluateReserveOperationalDiagnostics,
   (input) => {
     const reserve = input.reserveComposition;
@@ -952,7 +920,29 @@ const DATA_QUALITY_STATUS_RULES: readonly StatusRule<DataQualityEvaluationInput>
     ));
     return ruleResult("healthy", causes);
   },
-  DATA_QUALITY_STATUS_RULES_CORE[6],
+  (input) => {
+      const reserve = input.reserveComposition;
+      if (reserve.status === "unavailable") return null; // The failed-read rule supplies the degrading cause.
+      const status = reserve.status;
+      if (status === "healthy") return null;
+      const unacknowledged = reserve.unacknowledgedPersistentlyStaleIndependentCoins
+        ?? reserve.persistentlyStaleIndependentCoins;
+      const persistent = unacknowledged.length > 0
+        ? ` Unacknowledged: ${formatPersistentStaleIndependentFeeds(unacknowledged)}.`
+        : "";
+      const runTail = reserve.runBudgetTruncated
+        ? ` Last run was truncated by budget with ${reserve.deferredCoins} deferred coin(s)${reserve.nextCursorStablecoinId ? `; next cursor ${reserve.nextCursorStablecoinId}` : ""}.`
+        : "";
+      const uncertain = reserve.writeTimeoutUncertain > 0
+        ? ` ${reserve.writeTimeoutUncertain} coin(s) have uncertain D1 write outcomes.`
+        : "";
+      const message = status === "stale"
+        ? "All configured live reserve feeds are missing, stale, or degraded." + persistent + runTail + uncertain
+        : `Live reserve coverage is degraded (${formatPercentFromRatio(reserve.freshCoverageRatio)} fresh, ${formatPercentFromRatio(reserve.authoritativeFreshCoverageRatio)} authoritative). ` +
+          `${reserve.errorCoins} error, ${reserve.missingCoins} missing, ${reserve.staleCoins} stale, ${reserve.degradedCoins} degraded, ${reserve.corruptCoins} corrupt live reserve feed(s).` +
+          persistent + runTail + uncertain;
+      return ruleResult(status, [makeCause("data-quality", status === "stale" ? "reserve_sync_stale" : "reserve_sync_degraded", status === "stale" ? "critical" : "warning", message)]);
+  },
 ];
 
 function formatPersistentStaleIndependentFeeds(

@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
 import { buildFaqJsonLd, type FaqItem } from "@/lib/faq";
 import { safeJsonLd } from "@/lib/json-ld";
@@ -7,6 +8,7 @@ interface FaqSectionProps {
   items: readonly FaqItem[];
   title?: string;
   includeJsonLd?: boolean;
+  renderAnswer?: (answer: string) => ReactNode;
   /**
    * Folds the whole block behind one native disclosure whose summary carries
    * the title and question count. The answers stay in the server HTML, so the
@@ -20,6 +22,7 @@ export function FaqSection({
   title = "Frequently asked questions",
   includeJsonLd = false,
   collapsed = false,
+  renderAnswer,
 }: FaqSectionProps) {
   const questions = items.map((item) => (
     <details key={item.question} className="group border border-border/50 rounded-lg">
@@ -31,7 +34,7 @@ export function FaqSection({
         />
       </summary>
       <p className="px-4 pb-4 text-sm text-muted-foreground">
-        {item.answer}
+        {renderAnswer ? renderAnswer(item.answer) : item.answer}
       </p>
     </details>
   ));

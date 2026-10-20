@@ -27,7 +27,7 @@ import {
 } from "./telegram-pending-queue.test-support";
 import { insertTelegramSubscriber } from "../../dispatch/__tests__/telegram-subscriber.test-support";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
-import { buildActiveAlertSafetyV9SourceEnvelope } from "../../../../lib/alert-safety-source-cache";
+import { buildAlertSafetyV9SourceEnvelopeFromParts } from "../../../../lib/alert-safety-source-cache";
 import { makeWorkerReportCardsV9Response } from "../../../../test-helpers/report-cards-v9";
 
 function mockD1(tables: MockTableConfig[] = []) {
@@ -103,7 +103,9 @@ describe("exact pending lifecycle admission", () => {
     try {
       const response = makeWorkerReportCardsV9Response({ updatedAt: now });
       const insert = sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)");
-      insert.run("alert-safety-v9-source", JSON.stringify(buildActiveAlertSafetyV9SourceEnvelope(response)), now);
+      insert.run("alert-safety-v9-source", JSON.stringify(buildAlertSafetyV9SourceEnvelopeFromParts({
+        cards: response.cards, safetyScoreIdentity: response.safetyScoreIdentity, publishedAt: response.updatedAt,
+      })), now);
       insert.run("report-cards:v9:publication-health", stableJsonStringifyV1(response.publicationHealth), now);
       insertTelegramSubscriber(sqlite, {
         chatId: "safety", createdAt: now, lastActiveAt: now, global: { safety: true },
@@ -139,7 +141,9 @@ describe("exact pending lifecycle admission", () => {
       expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_alert_dead_letters").get()).toEqual({ count: 0 });
       expect(mockSendToChat).not.toHaveBeenCalled();
       if (identityChanged) {
-        const envelope = buildActiveAlertSafetyV9SourceEnvelope(response)!;
+        const envelope = buildAlertSafetyV9SourceEnvelopeFromParts({
+          cards: response.cards, safetyScoreIdentity: response.safetyScoreIdentity, publishedAt: response.updatedAt,
+        });
         sqlite.prepare("UPDATE cache SET value = ? WHERE key = 'alert-safety-v9-source'").run(JSON.stringify({
           ...envelope, safetyScoreIdentity: { ...envelope.safetyScoreIdentity, evaluationBuildDigest: "f".repeat(64) },
         }));

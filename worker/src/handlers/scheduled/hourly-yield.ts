@@ -1,3 +1,4 @@
+import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
 import { fetchTbillRate } from "../../cron/fetch-tbill-rate";
 import type { CronResult } from "../../lib/cron-logger";
 import { syncRpcProviderParity } from "../../cron/rpc-provider-parity";
@@ -5,13 +6,6 @@ import { syncYieldData } from "../../cron/sync-yield-data";
 import { syncYieldSupplemental } from "../../cron/sync-yield-supplemental";
 import type { ScheduledRuntimeContext } from "./context";
 import { bindScheduledSlotPlan, runScheduledSlotGroups } from "./slot-groups";
-
-/**
- * C16: the 4-hourly supplemental slot stays the primary producer; the hourly
- * yield slot only catches up after a missed slot, so the catch-up skips while
- * the newest family marker is younger than one producer cadence.
- */
-export const SUPPLEMENTAL_CATCH_UP_MIN_MARKER_AGE_SEC = 4 * 3600;
 
 /** A4: refresh the benchmark registry mid-day only once the daily slot is overdue. */
 export const HOURLY_TBILL_MIN_REGISTRY_AGE_SEC = 24 * 3600;
@@ -48,13 +42,12 @@ function buildHourlyYieldSlotGroups(runtime: ScheduledRuntimeContext) {
   // The independent one-connection parity chain is included in the registry's
   // parallel-chain sum: catch-up 3 + parity 1 = 4 connections at peak.
   return bindScheduledSlotPlan("hourlyYieldSync", {
-    mode: "parallel-serial",
-    label: "post-V9 yield slot",
     chainLabels: ["post-V9 yield publication", "dwellir parity observation"],
     implementations: {
       "sync-yield-supplemental": async (signal, reportProgress) => {
         const result = await syncYieldSupplemental(runtime.db, signal, runtime.chainRpcs, reportProgress, {
-          catchUpMinMarkerAgeSec: SUPPLEMENTAL_CATCH_UP_MIN_MARKER_AGE_SEC,
+          // C16: catch up only after the primary producer has missed one cadence.
+          catchUpMinMarkerAgeSec: CRON_SCHEDULE_CADENCES.fourHourlyYieldSupplemental.intervalSec,
         });
         supplementalCatchUpRan = result.status !== "skipped_neutral";
         return result;

@@ -52,7 +52,6 @@ export function makeScheduledRuntime(
     deadline: createSlotDeadline(overrides.slotBudgetStartedAtMs ?? Date.now()),
     mintBurnDisabledIds: [],
     mintBurnDisabledSymbols: [],
-    mintBurnFreshnessConfig: {} as ScheduledRuntimeContext["mintBurnFreshnessConfig"],
     coingeckoApiKey: null,
     chainRpcs: new Map(),
     runLeasedCron: runLeasedCron as ScheduledRuntimeContext["runLeasedCron"],

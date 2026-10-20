@@ -25,6 +25,7 @@ import { createNeutralSkippedCronResult } from "../../lib/cron-result";
 import type { CronResult } from "../../lib/cron-logger";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
+import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
 import { parseStablecoinsCapabilities, type ScheduledRuntimeContext } from "./context";
 import { runBestEffortScheduledJobWithOutcome } from "./run-best-effort-job";
 import {
@@ -37,7 +38,6 @@ import { logSkippedCronRun } from "./preflight-skip";
 
 const SAME_DAY_CATCH_UP_REASON = "same_day_catch_up";
 const BEFORE_DAILY_SLOT_REASON = "before_daily_slot";
-const DAILY_SLOT_OFFSET_SECONDS = 8 * 3600; // daily0800Utc
 
 function currentUtcDay(slotStartedAt: number) {
   const todayMidnight = bucketUnixSecondsToUtcDay(slotStartedAt);
@@ -47,7 +47,7 @@ function currentUtcDay(slotStartedAt: number) {
     // The preferred 08:00 attempt owns the day until it has had its turn; a
     // catch-up before that would claim the write-once public snapshot with a
     // midnight cache and bypass the daily0800Utc freshness gate.
-    dailySlotStartedAt: todayMidnight + DAILY_SLOT_OFFSET_SECONDS,
+    dailySlotStartedAt: todayMidnight + CRON_SCHEDULE_CADENCES.daily0800Utc.offsetSec,
   };
 }
 

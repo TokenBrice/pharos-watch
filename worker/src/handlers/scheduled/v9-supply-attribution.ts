@@ -5,8 +5,6 @@ import { bindScheduledSlotPlan, runScheduledSlotGroups } from "./slot-groups";
 
 export function buildV9SupplyAttributionSlotGroups(runtime: ScheduledRuntimeContext) {
   return bindScheduledSlotPlan("v9SupplyAttributionOffset", {
-    mode: "serial",
-    label: "v9-supply-attribution",
     implementations: {
       "sync-v9-supply-attribution": (signal) =>
         runV9AfterCoreWithinWindow(

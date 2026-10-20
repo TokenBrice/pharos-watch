@@ -6,11 +6,14 @@ import {
   buildAlertReserveSourceEnvelope,
 } from "../../../../lib/alert-reserve-source-cache";
 import {
-  assessActiveAlertSafetySource,
-  buildActiveAlertSafetyV9SourceEnvelope,
-  getAlertSafetyV9SourceGeneration,
+  loadActiveAlertSafetySourceAssessment,
+  buildAlertSafetyV9SourceEnvelopeFromParts,
+  ALERT_SAFETY_V9_SOURCE_GENERATION,
 } from "../../../../lib/alert-safety-source-cache";
 import { mockD1 } from "@shared/test-utils/mock-d1";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import type { ReportCardsV9CurrentResponse } from "@shared/types/report-cards-v9";
 import {
   makeWorkerReportCardsV9Response,
   makeWorkerV9Card,
@@ -70,16 +73,15 @@ function sourceData(
 }
 
 function safetyBaseline(
-  response: ReturnType<typeof makeWorkerReportCardsV9Response>,
+  response: ReportCardsV9CurrentResponse,
   grade: string,
   score: number,
 ) {
-  const source = buildActiveAlertSafetyV9SourceEnvelope(response);
-  if (!source) throw new Error("Expected current V9 alert source");
+  const source = buildAlertSafetyV9SourceEnvelopeFromParts({
+    cards: response.cards, safetyScoreIdentity: response.safetyScoreIdentity, publishedAt: response.updatedAt,
+  });
   return cache({
-    generation: getAlertSafetyV9SourceGeneration(
-      response.safetyScoreIdentity.methodologyVersion,
-    ),
+    generation: ALERT_SAFETY_V9_SOURCE_GENERATION,
     safetyScoreIdentity: response.safetyScoreIdentity,
     snapshot: {
       ...source.snapshot,
@@ -90,6 +92,22 @@ function safetyBaseline(
       },
     },
   });
+}
+
+async function safetyAssessment(response: ReportCardsV9CurrentResponse | null) {
+  const { sqlite, db } = createLatestSchemaSqlite();
+  try {
+    if (response) {
+      const insert = sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)");
+      insert.run("alert-safety-v9-source", JSON.stringify(buildAlertSafetyV9SourceEnvelopeFromParts({
+        cards: response.cards, safetyScoreIdentity: response.safetyScoreIdentity, publishedAt: response.updatedAt,
+      })), response.updatedAt);
+      insert.run("report-cards:v9:publication-health", stableJsonStringifyV1(response.publicationHealth), response.updatedAt);
+    }
+    return await loadActiveAlertSafetySourceAssessment(db, nowSec);
+  } finally {
+    sqlite.close();
+  }
 }
 
 describe("loadDewsRows", () => {
@@ -195,15 +213,10 @@ describe("buildDispatchSnapshotState", () => {
     expect(clear.currentReserveDriftIds).toEqual([]);
   });
 
-  it("fails closed when canonical V9 is unavailable without blocking DEWS", () => {
+  it("fails closed when canonical V9 is unavailable without blocking DEWS", async () => {
     const state = buildDispatchSnapshotState(
       sourceData({
-        safetySourceAssessment: assessActiveAlertSafetySource({
-          kind: "error",
-          reason: "v9-snapshot-unavailable",
-          snapshot: null,
-          detail: "publication unavailable",
-        }, { nowSec }),
+        safetySourceAssessment: await safetyAssessment(null),
         dewsRows: [{
           stablecoin_id: "usdc-circle",
           score: 72,
@@ -234,7 +247,7 @@ describe("buildDispatchSnapshotState", () => {
     )).toHaveLength(1);
   });
 
-  it.each(["entering", "recovering"] as const)("suppresses %s pipeline-gap grade alerts", (transition) => {
+  it.each(["entering", "recovering"] as const)("suppresses %s pipeline-gap grade alerts", async (transition) => {
     const rated = makeWorkerReportCardsV9Response({
       updatedAt: nowSec - 60, asOfSec: nowSec - 120,
       cards: [makeWorkerV9Card({ id: "usdc-circle", grade: "D", score: 44 })],
@@ -243,18 +256,21 @@ describe("buildDispatchSnapshotState", () => {
       updatedAt: nowSec - 60, asOfSec: nowSec - 120,
       cards: [makeReportCardsV9PipelineGapCard("control", "A", { id: "usdc-circle" })],
     });
-    const previous = buildActiveAlertSafetyV9SourceEnvelope(transition === "entering" ? rated : gap)!;
+    const priorResponse = transition === "entering" ? rated : gap;
+    const previous = buildAlertSafetyV9SourceEnvelopeFromParts({
+      cards: priorResponse.cards, safetyScoreIdentity: priorResponse.safetyScoreIdentity, publishedAt: priorResponse.updatedAt,
+    });
     const current = transition === "entering" ? gap : rated;
     const state = buildDispatchSnapshotState(sourceData({
       safetyCache: cache(previous),
-      safetySourceAssessment: assessActiveAlertSafetySource({ kind: "v9", snapshot: current }, { nowSec }),
+      safetySourceAssessment: await safetyAssessment(current),
     }), nowSec);
     expect(state.safetySnapshotNeedsSeed).toBe(false);
     expect(state.currentSafetySnapshot?.["usdc-circle"]?.ratingStatus).toBe(transition === "entering" ? "pipeline-gap" : "rated");
     expect(buildSafetyChanges(state.currentSafetySnapshot, state.safeSafetySnapshot, () => "USDC").changes).toEqual([]);
   });
 
-  it("compares consecutive canonical V9 publications", () => {
+  it("compares consecutive canonical V9 publications", async () => {
     const response = makeWorkerReportCardsV9Response({
       updatedAt: nowSec - 60,
       asOfSec: nowSec - 120,
@@ -262,10 +278,7 @@ describe("buildDispatchSnapshotState", () => {
     });
     const state = buildDispatchSnapshotState(
       sourceData({
-        safetySourceAssessment: assessActiveAlertSafetySource({
-          kind: "v9",
-          snapshot: response,
-        }, { nowSec }),
+        safetySourceAssessment: await safetyAssessment(response),
         safetyCache: safetyBaseline(response, "D", 44),
       }),
       nowSec,
@@ -285,7 +298,7 @@ describe("buildDispatchSnapshotState", () => {
     ).toHaveLength(1);
   });
 
-  it("marks affected rows from matching partial-publication metadata", () => {
+  it("marks affected rows from matching partial-publication metadata", async () => {
     const response = makeWorkerReportCardsV9Response({
       updatedAt: nowSec - 60,
       asOfSec: nowSec - 120,
@@ -293,10 +306,7 @@ describe("buildDispatchSnapshotState", () => {
     });
     const state = buildDispatchSnapshotState(
       sourceData({
-        safetySourceAssessment: assessActiveAlertSafetySource({
-          kind: "v9",
-          snapshot: response,
-        }, { nowSec }),
+        safetySourceAssessment: await safetyAssessment(response),
         publicationAttempt: {
           schemaVersion: 1,
           attemptedAtSec: response.updatedAt,

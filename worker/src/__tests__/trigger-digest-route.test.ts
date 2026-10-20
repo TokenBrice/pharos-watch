@@ -18,7 +18,6 @@ vi.mock("../lib/db-cache", async (importOriginal) => {
 
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
-import { makeExecutionContext } from "../test-helpers/__shared/auth";
 import { handleTriggerDigest } from "../api/admin-actions";
 import { DIGEST_STYLE_GATE_MODE_CACHE_KEYS } from "../lib/digest-style-gate";
 import { DIGEST_LLM_PROFILE_CACHE_KEYS } from "../lib/digest-llm-profile";
@@ -43,20 +42,16 @@ describe("trigger-digest route", () => {
 
   afterEach(() => vi.useRealTimers());
 
-  it("writes the force-run cache key and returns 202 without long-running waitUntil", async () => {
+  it("writes the force-run cache key and returns 202 without execution credentials or context", async () => {
     const request = makeRequest();
     // Idempotency-Key is optional; absent header makes the handler run
     // directly via runIdempotentAction's no-key shortcut.
 
-    const { ctx } = makeExecutionContext();
     const response = await handleTriggerDigest(
       {
         request,
         db: mockD1(),
-        execCtx: ctx,
         trustedAdmin: true,
-        anthropicApiKey: "anthropic-key",
-        telegramCreds: { botToken: "bot-token", chatId: "@pharoswatch" },
       },
     );
 
@@ -86,9 +81,6 @@ describe("trigger-digest route", () => {
     expect(persistedValue.nextAttemptAt).toBe(persistedValue.requestedAt);
     expect(persistedValue.state).toBe("pending");
     expect(persistedValue.lastError).toBeNull();
-
-    // waitUntil is not used for digest execution anymore.
-    expect(ctx.waitUntil).not.toHaveBeenCalled();
   });
 
   it.each(["daily", "weekly"] as const)("queues an explicit %s kind on Monday", async (kind) => {
@@ -97,7 +89,6 @@ describe("trigger-digest route", () => {
     const response = await handleTriggerDigest({
       request: makeRequest(JSON.stringify({ kind })),
       db: mockD1(),
-      execCtx: makeExecutionContext().ctx,
       trustedAdmin: true,
     });
 
@@ -118,7 +109,6 @@ describe("trigger-digest route", () => {
     const response = await handleTriggerDigest({
       request: makeRequest('{"kind":"weekly"}'),
       db: mockD1(),
-      execCtx: makeExecutionContext().ctx,
       trustedAdmin: true,
     });
 
@@ -133,7 +123,6 @@ describe("trigger-digest route", () => {
     const response = await handleTriggerDigest({
       request: makeRequest(JSON.stringify({ styleGateMode: { daily: "enforce" } })),
       db: mockD1(),
-      execCtx: makeExecutionContext().ctx,
       trustedAdmin: true,
     });
 
@@ -150,7 +139,7 @@ describe("trigger-digest route", () => {
       const invoke = async () => {
         const request = makeRequest('{"styleGateMode":{"daily":"enforce"}}');
         request.headers.set("Idempotency-Key", "digest-mode-replay-123");
-        return handleTriggerDigest({ request, db, execCtx: makeExecutionContext().ctx, trustedAdmin: true });
+        return handleTriggerDigest({ request, db, trustedAdmin: true });
       };
       const first = await invoke();
       const replay = await invoke();
@@ -172,7 +161,7 @@ describe("trigger-digest route", () => {
       const invoke = async () => {
         const request = makeRequest('{"styleGateMode":{"weekly":"enforce"}}');
         request.headers.set("Idempotency-Key", "digest-mode-unknown-123");
-        return handleTriggerDigest({ request, db, execCtx: makeExecutionContext().ctx, trustedAdmin: true });
+        return handleTriggerDigest({ request, db, trustedAdmin: true });
       };
       const first = await invoke();
       const replay = await invoke();
@@ -193,7 +182,6 @@ describe("trigger-digest route", () => {
     const response = await handleTriggerDigest({
       request: makeRequest(JSON.stringify({ llmProfile: { daily: "standard" } })),
       db: mockD1(),
-      execCtx: makeExecutionContext().ctx,
       trustedAdmin: true,
     });
     expect(response.status).toBe(500);
@@ -212,7 +200,6 @@ describe("trigger-digest route", () => {
     const response = await handleTriggerDigest({
       request: makeRequest(JSON.stringify(body)),
       db: mockD1(),
-      execCtx: makeExecutionContext().ctx,
       trustedAdmin: true,
     });
 
@@ -230,7 +217,6 @@ describe("trigger-digest route", () => {
     const response = await handleTriggerDigest({
       request: makeRequest(JSON.stringify(body)),
       db: mockD1(),
-      execCtx: makeExecutionContext().ctx,
       trustedAdmin: true,
     });
 
@@ -251,7 +237,6 @@ describe("trigger-digest route", () => {
     const response = await handleTriggerDigest({
       request: makeRequest(body),
       db: mockD1(),
-      execCtx: makeExecutionContext().ctx,
       trustedAdmin: true,
     });
     expect(response.status).toBe(status);

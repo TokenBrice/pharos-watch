@@ -8,8 +8,8 @@ import {
 import { unwrapStressSignalsEnvelope } from "@shared/lib/stress-signals-envelope";
 import type {
   AlertSafetySnapshotEnvelope,
-  AlertSafetySourceSnapshot,
-} from "../../../lib/alert-safety-source-cache";
+  AlertSafetySourceRow,
+} from "@shared/types/status/telegram";
 
 // ---------- Constants ----------
 
@@ -39,7 +39,9 @@ export const SNAPSHOT_MAX_AGE_SEC = DAY_SECONDS; // 24h
 
 export type DewsSnapshot = Record<string, string>;
 export type DepegSnapshot = Record<string, DepegAlertPayload & { eventId?: number }>;
-export type SafetySnapshot = AlertSafetySourceSnapshot;
+export type SafetySnapshot = Record<string,
+  Omit<AlertSafetySourceRow, "v9Explain"> & Partial<Pick<AlertSafetySourceRow, "v9Explain">>
+>;
 
 export interface DewsRow {
   stablecoin_id: string;

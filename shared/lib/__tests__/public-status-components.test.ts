@@ -34,6 +34,38 @@ describe("public status components", () => {
     expect(projection.headline).toEqual({ state: "operational", title: "All systems operational", affected: [] });
     expect(projection.components.every((item) => item.state === "operational" && item.reasons.length === 0)).toBe(true);
   });
+  it("keeps missing freshness unavailable and every affected cache named regardless of input order", () => {
+    for (const caches of [
+      { stablecoins: cache(null), "stablecoin-charts": cache(13 * 600) },
+      { "stablecoin-charts": cache(13 * 600), stablecoins: cache(null) },
+    ]) {
+      const health = { ...makeHealthyHealthResponse(), caches };
+      expect(component(health, "stablecoin-data")).toMatchObject({
+        state: "degraded", ageSeconds: null, reasons: ["cache:stablecoins:age-unavailable"],
+      });
+      expect(component(health, "charts")).toMatchObject({ state: "degraded", reasons: ["cache:stablecoin-charts:stale"] });
+    }
+  });
+
+  it("keeps source degradation informational while the FX cache remains fresh", () => {
+    const health = makeHealthyHealthResponse();
+    health.caches = { "fx-rates": { ...cache(120, 3600), sourceStatus: "degraded" } };
+    expect(component(health, "stablecoin-data").state).toBe("operational");
+  });
+
+  it.each([
+    [30, false, "degraded", "mint-burn-run-failed"],
+    [5401, true, "degraded", "mint-burn-sync:stale"],
+    [10801, true, "outage", "mint-burn-sync:outage"],
+  ] as const)("keeps mint/burn critical outcomes and age grace independent (%ss, healthy=%s)", (age, criticalLaneHealthy, state, reason) => {
+    const health = makeHealthyHealthResponse();
+    health.mintBurn.sync = { ...health.mintBurn.sync, lastSuccessfulSyncAt: NOW - age,
+      freshnessStatus: age > 5400 ? "stale" : "fresh", criticalLaneHealthy };
+    health.blacklist = { ...health.blacklist, missingAmounts: 200, missingRatio: 0.2 };
+    expect(component(health, "mint-burn")).toMatchObject({ state, reasons: expect.arrayContaining([reason]) });
+    expect(component(health, "blacklist")).toMatchObject({ state: "degraded", reasons: ["blacklist-amounts-missing"] });
+  });
+
 
   it("degrades held Safety Scores with their machine reason without changing Risk signals", () => {
     const health = makeHealthyHealthResponse();

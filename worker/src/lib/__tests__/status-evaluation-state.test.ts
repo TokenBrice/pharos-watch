@@ -11,11 +11,11 @@ import {
   makeReserveComposition as makeBaseReserveComposition,
 } from "@shared/types/__tests__/status.test-support";
 import { synthesizeOverallCauses } from "../status/evaluation-causes";
-import { deriveReserveCompositionStatus } from "../status/evaluation-state";
 import { maxStatus, SEVERITY } from "../status-reliability-shared";
 import {
   evaluateAvailabilityStatus,
   evaluateDataQualityStatus,
+  evaluateReserveCompositionStatus,
   type AvailabilityEvaluationInput,
   type DataQualityEvaluationInput,
 } from "../status/evaluation-rules";
@@ -220,7 +220,7 @@ describe("status evaluation policy", () => {
 
   it("preserves a successfully observed empty reserve cohort", () => {
     const empty = makeBaseReserveComposition();
-    expect(deriveReserveCompositionStatus(empty)).toMatchObject({
+    expect(evaluateReserveCompositionStatus(empty)).toMatchObject({
       status: "healthy",
       freshCoverageRatio: 0,
       authoritativeFreshCoverageRatio: 0,
@@ -230,7 +230,7 @@ describe("status evaluation policy", () => {
     })).status).toBe("healthy");
   });
   it("keeps reserve status healthy for low-count issues when fresh coverage remains high", () => {
-    const assessment = deriveReserveCompositionStatus(
+    const assessment = evaluateReserveCompositionStatus(
       makeReserveComposition({
         freshCoins: 8,
         staleCoins: 1,
@@ -248,7 +248,7 @@ describe("status evaluation policy", () => {
   });
 
   it("degrades reserve status when fresh or authoritative coverage drops below policy thresholds", () => {
-    const assessment = deriveReserveCompositionStatus(
+    const assessment = evaluateReserveCompositionStatus(
       makeReserveComposition({
         freshCoins: 7,
         staleCoins: 2,
@@ -266,7 +266,7 @@ describe("status evaluation policy", () => {
   });
 
   it("degrades reserve status when independent feeds are persistently stale despite high coverage", () => {
-    const assessment = deriveReserveCompositionStatus(
+    const assessment = evaluateReserveCompositionStatus(
       makeReserveComposition({
         persistentlyStaleIndependentCoins: [{ stablecoinId: "coin-a", ageSec: 1_300_000 }],
       }),
@@ -278,7 +278,7 @@ describe("status evaluation policy", () => {
   });
 
   it("keeps a bounded continuation healthy without using deferred share as a capacity verdict", () => {
-    const assessment = deriveReserveCompositionStatus(
+    const assessment = evaluateReserveCompositionStatus(
       makeReserveComposition({
         runBudgetTruncated: true,
         deferredCoins: 1,
@@ -294,14 +294,14 @@ describe("status evaluation policy", () => {
     [3, true, 0, "healthy"],
     [0, false, 1, "degraded"],
   ] as const)("keeps live remainder separate from real capacity pressure (%s/%s/%s)", (deferredCoins, runBudgetTruncated, writeTimeoutUncertain, status) => {
-    const assessment = deriveReserveCompositionStatus(makeReserveComposition({
+    const assessment = evaluateReserveCompositionStatus(makeReserveComposition({
       inProgressCoins: 8, deferredCoins, runBudgetTruncated, writeTimeoutUncertain,
     }));
     expect(assessment.status).toBe(status);
   });
 
   it("does not degrade reserve coverage for high-share continuation alone", () => {
-    const highShare = deriveReserveCompositionStatus(
+    const highShare = evaluateReserveCompositionStatus(
       makeReserveComposition({
         runBudgetTruncated: true,
         deferredCoins: 3,
@@ -312,7 +312,7 @@ describe("status evaluation policy", () => {
   });
 
   it("degrades reserve status for uncertain writes", () => {
-    const uncertainWrite = deriveReserveCompositionStatus(
+    const uncertainWrite = evaluateReserveCompositionStatus(
       makeReserveComposition({
         writeTimeoutUncertain: 1,
       }),
@@ -322,7 +322,7 @@ describe("status evaluation policy", () => {
   });
 
   it("marks reserve status stale only when no fresh coverage remains", () => {
-    const assessment = deriveReserveCompositionStatus(
+    const assessment = evaluateReserveCompositionStatus(
       makeReserveComposition({
         freshCoins: 0,
         staleCoins: 4,
@@ -1112,6 +1112,34 @@ describe("availability cron-error semantics", () => {
 });
 
 describe("status rule-set behavior at policy boundaries", () => {
+  it("emits every data-quality rule's causes once in persisted evaluation order", () => {
+    const result = evaluateDataQualityStatus(makeDataQualityEvaluationInput({
+      dataQuality: makeDataQuality({
+        stablecoinsCacheStatus: "error",
+        stablecoinPublication: { status: "unknown", expectedActiveCount: 1, presentActiveCount: 0,
+          waivedActiveCount: 0, missingActiveIds: [], waivedActiveIds: [], expiredWaiverIds: [], observedAt: null },
+        sourceFailures: [{ source: "blacklist-gaps", message: "unavailable" }],
+      }),
+      activePriceCoverage: { ...makePublicHealth().activePriceCoverage, status: "unknown" },
+      reserveCompositionQueryFailed: true,
+      repairRunnerAutoRepairCount: 1,
+      missingPriceRatio: 0.5,
+      blacklistMissingRatio: 0.02,
+      onchainAssessment: { status: "degraded", causes: [], representative: true },
+      onchainAssessmentCauses: [{ code: "onchain_supply_stale", layer: "data-quality", severity: "warning", message: "Stale feed" }],
+      reserveComposition: makeReserveComposition({
+        status: "degraded", writeTimeoutUncertain: 1, expiredFeedReviewIds: ["reviewed-coin"],
+      }),
+    }));
+    expect(result.status).toBe("stale");
+    expect(result.causes.map((cause) => cause.code)).toEqual([
+      "stablecoins_cache_unavailable", "stablecoin_publication_unknown", "active_price_coverage_unknown",
+      "blacklist_gap_query_failed", "reserve_sync_query_failed", "ddr_auto_repair_count",
+      "missing_prices_stale", "blacklist_gaps_stale", "onchain_supply_stale",
+      "reserve_sync_write_uncertain", "reserve_feed_reviews_expired", "reserve_sync_degraded",
+    ]);
+  });
+
   it("names the jobs behind counted cron causes", () => {
     const combined = evaluateAvailabilityStatus({
       ...makeAvailabilityCauseInput(makePublicHealth()),

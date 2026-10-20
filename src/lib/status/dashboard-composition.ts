@@ -6,7 +6,7 @@ import { buildCommsWorkbenchModel, type CommsWorkbenchModel } from "@/lib/comms-
 import { deriveStatusActionRecommendations } from "@/lib/status/action-recommendations";
 import { STATUS_PRIORITY, getStatusTone } from "@/lib/status/dashboard-presentation";
 import { getBlacklistGapStatus } from "@shared/lib/status-thresholds";
-import { getImpactedPublicSurfaces, getPublicHealthWarningPresentation, getPublicMintBurnStatus } from "@/lib/status/public-status";
+import { getPublicHealthWarningPresentation, getPublicMintBurnStatus, resolvePublicProjection } from "@/lib/status/public-status";
 import {
   STATUS_DASHBOARD_FRESHNESS_POLICY,
   buildDashboardDecision,
@@ -114,7 +114,11 @@ function buildDashboardNotices({
       reasons.push(healthData.blacklist.missingAmounts == null ? "Blacklist gap evidence unavailable."
         : `Blacklist gaps tracked by /api/health: ${healthData.blacklist.missingAmounts}.`);
     }
-    if (reasons.length === 0) reasons.push(...getImpactedPublicSurfaces(healthData).map((surface) => surface.detail));
+    if (reasons.length === 0) {
+      reasons.push(...resolvePublicProjection(healthData).components
+        .filter((component) => component.state !== "operational")
+        .map((component) => component.summary));
+    }
     notices.push({
       id: "public-health",
       title: `Public /api/health reports ${healthData.status}`,
