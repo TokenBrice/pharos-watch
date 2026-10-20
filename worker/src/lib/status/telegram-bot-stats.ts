@@ -64,15 +64,6 @@ interface TelegramBotRetryErrorClassRow {
   pending_count: number | string | null;
 }
 
-interface TelegramRecapTelemetryRow {
-  enabled_private_chats: number | string | null;
-  due_count: number | string | null;
-  queued_count: number | string | null;
-  execution_unknown_count: number | string | null;
-  oldest_due_at: number | string | null;
-  oldest_queued_at: number | string | null;
-  oldest_execution_unknown_at: number | string | null;
-}
 
 interface TelegramBotTopStablecoinRow {
   stablecoin_id: string;
@@ -256,23 +247,6 @@ const TELEGRAM_RETRY_ERROR_CLASSES_SQL = `SELECT last_error_class AS error_class
  GROUP BY last_error_class
  ORDER BY pending_count DESC, last_error_class ASC
  LIMIT 10`;
-const TELEGRAM_RECAP_TELEMETRY_SQL = `SELECT
-  (SELECT COUNT(*) FROM telegram_recap_preferences
-    WHERE enabled = 1 AND chat_kind = 'private') AS enabled_private_chats,
-  (SELECT COUNT(*) FROM telegram_recap_preferences
-    WHERE enabled = 1 AND chat_kind = 'private'
-      AND next_due_at IS NOT NULL AND next_due_at <= ?) AS due_count,
-  (SELECT COUNT(*) FROM telegram_recap_targets
-    WHERE status = 'queued') AS queued_count,
-  (SELECT COUNT(*) FROM telegram_recap_targets
-    WHERE status = 'execution_unknown') AS execution_unknown_count,
-  (SELECT MIN(next_due_at) FROM telegram_recap_preferences
-    WHERE enabled = 1 AND chat_kind = 'private'
-      AND next_due_at IS NOT NULL AND next_due_at <= ?) AS oldest_due_at,
-  (SELECT MIN(COALESCE(queued_at, created_at)) FROM telegram_recap_targets
-    WHERE status = 'queued') AS oldest_queued_at,
-  (SELECT MIN(COALESCE(completed_at, updated_at)) FROM telegram_recap_targets
-    WHERE status = 'execution_unknown') AS oldest_execution_unknown_at`;
 // Mini App events recorded by `telegram-mini-app.ts`:
 // - successful mutations are tagged with the per-operation `mini_app_*` event
 //   type returned by `mutationEventType`, plus the generic `mini_app_mutation`
@@ -289,7 +263,6 @@ const TELEGRAM_MINI_APP_SUCCESS_EVENT_TYPES = [
   "mini_app_snooze",
   "mini_app_coin_snooze",
   "mini_app_forget",
-  "mini_app_recap",
 ] as const;
 // These generic event types are also emitted by non-Mini-App bot flows, so
 // only count rows whose Mini App recorder populated a Mini App source category.
@@ -355,9 +328,6 @@ async function loadTelegramRetryErrorClasses(db: D1Database): Promise<TelegramBo
   return result.results ?? [];
 }
 
-async function loadTelegramRecapTelemetry(db: D1Database, now: number): Promise<TelegramRecapTelemetryRow | null> {
-  return db.prepare(TELEGRAM_RECAP_TELEMETRY_SQL).bind(now, now).first<TelegramRecapTelemetryRow>();
-}
 
 export function utcDayFromUnixSeconds(nowSec: number): string {
   return formatIsoDate(nowSec);
@@ -422,7 +392,6 @@ export function mapTelegramBotStats(input: {
   pendingCapacity?: TelegramPendingCapacitySnapshot | null;
   webhookEffectUnknown?: TelegramBotPendingRow | null;
   retryErrorClasses?: TelegramBotRetryErrorClassRow[] | null;
-  recapTelemetry?: TelegramRecapTelemetryRow | null;
   topStablecoins: TelegramBotTopStablecoinRow[];
   presetQueryFailures?: number;
   inactiveSubscribersCleanedThisWeek?: number | null;
@@ -438,7 +407,6 @@ export function mapTelegramBotStats(input: {
     pendingCapacity,
     webhookEffectUnknown,
     retryErrorClasses,
-    recapTelemetry,
     topStablecoins,
     presetQueryFailures,
     inactiveSubscribersCleanedThisWeek,
@@ -550,22 +518,6 @@ export function mapTelegramBotStats(input: {
     stats.retryErrorClassCounts = retryErrorClassCounts;
   }
 
-  if (recapTelemetry) {
-    const oldestDueAt = coerceNullableTimestamp(recapTelemetry.oldest_due_at);
-    const oldestQueuedAt = coerceNullableTimestamp(recapTelemetry.oldest_queued_at);
-    const oldestExecutionUnknownAt = coerceNullableTimestamp(recapTelemetry.oldest_execution_unknown_at);
-    stats.personalizedRecap = {
-      enabledPrivateChats: coerceCount(recapTelemetry.enabled_private_chats),
-      due: coerceCount(recapTelemetry.due_count),
-      queued: coerceCount(recapTelemetry.queued_count),
-      executionUnknown: coerceCount(recapTelemetry.execution_unknown_count),
-      oldestDueAgeSec: oldestDueAt == null ? null : Math.max(0, now - oldestDueAt),
-      oldestQueuedAgeSec: oldestQueuedAt == null ? null : Math.max(0, now - oldestQueuedAt),
-      oldestExecutionUnknownAgeSec: oldestExecutionUnknownAt == null
-        ? null
-        : Math.max(0, now - oldestExecutionUnknownAt),
-    };
-  }
 
   if (presetQueryFailures != null && presetQueryFailures > 0) {
     stats.presetQueryFailures = coerceCount(presetQueryFailures);
@@ -632,7 +584,6 @@ export async function getTelegramBotStats(db: D1Database, now: number): Promise<
     pendingCapacityResult,
     webhookEffectUnknownResult,
     retryErrorClassesResult,
-    recapTelemetryResult,
     topStablecoins,
     presetQueryFailuresResult,
     inactiveCleanupResult,
@@ -645,7 +596,6 @@ export async function getTelegramBotStats(db: D1Database, now: number): Promise<
     loadOptionalTelegramTelemetry(loadTelegramPendingCapacity(db, now)),
     loadOptionalTelegramTelemetry(loadTelegramPendingCount(db, TELEGRAM_WEBHOOK_EFFECT_UNKNOWN_SQL)),
     loadOptionalTelegramTelemetry(loadTelegramRetryErrorClasses(db)),
-    loadOptionalTelegramTelemetry(loadTelegramRecapTelemetry(db, now)),
     loadTelegramTopStablecoins(db),
     loadOptionalTelegramTelemetry(loadPresetQueryFailureCount(db)),
     loadOptionalTelegramTelemetry(loadInactiveSubscribersCleanedThisWeek(db, now)),
@@ -656,7 +606,6 @@ export async function getTelegramBotStats(db: D1Database, now: number): Promise<
     pendingDeliveryBacklog: pendingCapacityResult,
     webhookEffectUnknown: webhookEffectUnknownResult,
     retryErrorClassCounts: retryErrorClassesResult,
-    personalizedRecap: recapTelemetryResult,
     presetQueryFailures: presetQueryFailuresResult,
     inactiveSubscribersCleanedThisWeek: inactiveCleanupResult,
     lifecycleSnapshot: lifecycleSnapshotResult,
@@ -678,7 +627,6 @@ export async function getTelegramBotStats(db: D1Database, now: number): Promise<
     pendingCapacity: pendingCapacityResult.value,
     webhookEffectUnknown: webhookEffectUnknownResult.value,
     retryErrorClasses: retryErrorClassesResult.value,
-    recapTelemetry: recapTelemetryResult.value,
     topStablecoins,
     presetQueryFailures: presetQueryFailuresResult.value ?? undefined,
     inactiveSubscribersCleanedThisWeek: inactiveCleanupResult.value,

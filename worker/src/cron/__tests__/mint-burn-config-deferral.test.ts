@@ -19,13 +19,9 @@ import {
   resolveRotatedConfigs,
 } from "../mint-burn/run-state";
 
-vi.mock("../mint-burn/sync-config", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../mint-burn/sync-config")>();
-  return {
-    ...actual,
-    syncMintBurnConfig: vi.fn(),
-  };
-});
+vi.mock("../mint-burn/scan-with-retry", () => ({
+  syncMintBurnConfigWithRetries: vi.fn(),
+}));
 
 vi.mock("../../lib/mint-burn-conservation", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../lib/mint-burn-conservation")>();
@@ -43,7 +39,7 @@ vi.mock("../../lib/evm-logs", () => ({
 }));
 
 import { runMintBurnConfigPhase } from "../mint-burn/run-configs";
-import { syncMintBurnConfig } from "../mint-burn/sync-config";
+import { syncMintBurnConfigWithRetries as syncMintBurnConfig } from "../mint-burn/scan-with-retry";
 
 const NOW_SEC = 1_750_000_000;
 const fixtures = createLatestSchemaFixtureTracker();
@@ -375,7 +371,10 @@ describe("runMintBurnConfigPhase deferral integration", () => {
         throw controller.signal.reason;
       }
       return { summary: makeSummary({ advanceReason: "full-success-empty", advancedTo: input.scanTo, requestBudgetUsed: 2 }),
-        apiErrors: 0, effectiveBurns: 0, bridgeBurns: 0, reviewBurns: 0, atomicRoundtripsDetected: 0, newLastBlock: input.scanTo };
+        apiErrors: 0, effectiveBurns: 0, bridgeBurns: 0, reviewBurns: 0, atomicRoundtripsDetected: 0, newLastBlock: input.scanTo,
+        scanCoverage: { configKey: input.key, configFingerprint: "test", chainId: input.config.chain.chainId,
+          fromBlock: input.fromBlock, toBlock: input.scanTo, fromTimestamp: NOW_SEC - 60,
+          toTimestamp: NOW_SEC, finalizedBlock: input.chainHead, acceptedAt: NOW_SEC } };
     });
     await expect(runMintBurnConfigPhase(args)).rejects.toThrow("stop during third scan");
     const expected = [

@@ -9,7 +9,6 @@ import {
 import type { ScheduledRuntimeContext } from "./context";
 import { WEEKLY_RECAP_LLM_CONFIG } from "../../lib/constants";
 import { resolveDigestLlmConfig } from "../../cron/digest/llm-request";
-import { resolveTelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
 
 /**
  * Single binding of the weekly recap to a scheduled runtime.
@@ -52,6 +51,5 @@ export function runWeeklyRecapForRuntime(
       telegramMissing: missingTelegramCredentialNames(runtime.env),
     },
     llmConfig,
-    resolveTelegramRecapRolloutPolicy(runtime.env),
   );
 }

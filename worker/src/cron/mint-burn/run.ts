@@ -26,6 +26,10 @@ import {
 import { includeActiveTrackedIds } from "../shared/exclude-frozen";
 import { throwIfAborted } from "../../lib/abort";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
+import {
+  COVERAGE_REPAIR_REQUEST_LIMIT, COVERAGE_REPAIR_WINDOW_MS,
+  loadMintBurnCoverageGaps, repairMintBurnCoverage,
+} from "./repair-coverage";
 
 const MAX_SCAN_RANGE = 50_000;
 
@@ -305,6 +309,7 @@ export class MintBurnRun {
       completion.metadata.reason = "mint-burn-hourly-recalc-failed";
     }
     completion.metadata.recalcFailed = recalcFailed;
+    completion.metadata.coverageRepairs = phaseResult.coverageRepairs ?? [];
     if (recalcError) completion.metadata.recalcError = recalcError;
     if (lane === "critical") {
       const retention = await pruneMintBurnRetention(db, runTimestamp, signal, { enabledConfigs: retentionConfigs });
@@ -360,8 +365,32 @@ export class MintBurnRun {
     let phaseResult!: MintBurnRunConfigPhaseResult;
     let recalcFailed = false;
     let recalcError: string | null = null;
+    const repairProofs: MintBurnScanCoverage[] = [];
+    const deadlineMs = input.deadlineMs ?? Date.now() + 9 * 60_000;
     try {
-      phaseResult = await runMintBurnConfigPhase(input);
+      const gaps = await loadMintBurnCoverageGaps(this.db, input.configs, input.lastBlocksAfterRun, input.runTimestamp);
+      const liveBudget = {
+        count: input.budget.count,
+        limit: gaps.length ? Math.max(input.budget.count, input.budget.limit - COVERAGE_REPAIR_REQUEST_LIMIT) : input.budget.limit,
+      };
+      try {
+        phaseResult = await runMintBurnConfigPhase({
+          ...input, budget: liveBudget,
+          deadlineMs: gaps.length ? deadlineMs - COVERAGE_REPAIR_WINDOW_MS : deadlineMs,
+        });
+      } finally {
+        input.budget.count = liveBudget.count;
+      }
+      phaseResult.coverageRepairs = await repairMintBurnCoverage(
+        { ...input, deadlineMs }, gaps, repairProofs, phaseResult.activeProviderDeferrals,
+      );
+      for (const repair of phaseResult.coverageRepairs) {
+        phaseResult.rowsRead += repair.rowsRead;
+        phaseResult.rowsParsed += repair.rowsParsed;
+        phaseResult.rowsInserted += repair.rowsInserted;
+        phaseResult.rowsIgnored += repair.rowsIgnored;
+        phaseResult.rowsDropped += repair.rowsDropped;
+      }
     } finally {
       const recalcResult = await recalcMintBurnAffectedHours(this.db, this.affectedHours, input.signal);
       recalcFailed = recalcResult.failed;
@@ -369,8 +398,24 @@ export class MintBurnRun {
       if (!recalcFailed) {
         for (const [key, nextLastBlock] of this.pendingCursorUpdates) {
           throwIfAborted(input.signal);
-          await upsertMintBurnSyncState(this.db, key, nextLastBlock, "monotonic-max", this.pendingScanCoverage.get(key));
+          const proof = this.pendingScanCoverage.get(key);
+          if (proof?.toBlock !== nextLastBlock) continue;
+          await upsertMintBurnSyncState(this.db, key, nextLastBlock, "monotonic-max", proof);
           this.lastBlocksAfterRun.set(key, nextLastBlock);
+        }
+        for (const proof of repairProofs) {
+          throwIfAborted(input.signal);
+          await upsertMintBurnSyncState(this.db, proof.configKey, proof.toBlock, "monotonic-max", proof);
+          this.lastBlocksAfterRun.set(proof.configKey,
+            Math.max(this.lastBlocksAfterRun.get(proof.configKey) ?? 0, proof.toBlock));
+          const repair = phaseResult?.coverageRepairs?.find((summary) =>
+            summary.key === proof.configKey && summary.scanFrom === proof.fromBlock);
+          if (repair) repair.repairReason = "proof-committed";
+        }
+      }
+      if (recalcFailed) {
+        for (const repair of phaseResult?.coverageRepairs ?? []) {
+          if (repair.repairReason === "proof-staged") repair.repairReason = "materialization-failed";
         }
       }
     }

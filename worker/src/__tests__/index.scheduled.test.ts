@@ -78,10 +78,6 @@ const cronMocks = vi.hoisted(() => ({
       },
     }),
   })),
-  cancelQueuedTelegramRecapsForRollout: vi.fn(async () => ({
-    targetRowsCancelled: 0,
-    pendingRowsDeleted: 0,
-  })),
   publishTelegramPulseSnapshotWithOutcome: vi.fn(async () => ({
     pulse: { quality: { status: "complete", unavailableFields: [] } },
     status: "ok",
@@ -193,13 +189,6 @@ vi.mock("../cron/sync-fx-rates", () => ({ syncFxRates: cronMocks.syncFxRates }))
 vi.mock("../cron/stability-index", () => ({ computeAndStoreStabilityIndex: cronMocks.computeAndStoreStabilityIndex }));
 vi.mock("../lib/dews/service", () => ({ computeAndStoreDEWS: cronMocks.computeAndStoreDEWS }));
 vi.mock("../cron/project-tape", () => ({ projectTape: cronMocks.projectTape }));
-vi.mock("../telegram/recap/recap-store", async (importOriginal) => {
-  const original = await importOriginal<typeof import("../telegram/recap/recap-store")>();
-  return {
-    ...original,
-    cancelQueuedTelegramRecapsForRollout: cronMocks.cancelQueuedTelegramRecapsForRollout,
-  };
-});
 vi.mock("../cron/telegram/dispatch/dispatch-telegram-alerts", () => ({ dispatchTelegramAlerts: cronMocks.dispatchTelegramAlerts }));
 vi.mock("../cron/telegram/maintenance/telegram-degradation-watchdog", () => ({
   runTelegramDegradationWatchdog: cronMocks.runTelegramDegradationWatchdog,

@@ -50,7 +50,7 @@ beforeEach(() => {
   vi.mocked(fetchAlchemyLogs).mockResolvedValueOnce({ logs: [{ data: `0x${(1_000_000n).toString(16).padStart(64, "0")}`,
     blockNumber: "0x66", logIndex: "0x0" }], complete: true, scannedToBlock: 102 } as never)
     .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 102 } as never);
-  vi.mocked(resolveBlockTimestamps).mockResolvedValue(new Map([[102, 1100]]));
+  vi.mocked(resolveBlockTimestamps).mockResolvedValue(new Map([[101, 1099], [102, 1100]]));
   vi.mocked(parseMintBurnLogs).mockReturnValue({
     rows: [{ ...row }],
     dropped: 0,

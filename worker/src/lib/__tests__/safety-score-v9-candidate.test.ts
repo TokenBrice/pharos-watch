@@ -17,6 +17,7 @@ import {
 } from "@shared/lib/safety-score-v9/policy";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { SafetyScoreV9ResponseSchema } from "@shared/types/safety-score-v9-public";
+import { explainSafetyScoreV9PillarFreshness } from "@shared/types/safety-score-v9-public-facts";
 import { describe, expect, it, vi } from "vitest";
 import {
   buildSafetyScoreV9Candidate,
@@ -973,10 +974,39 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
       });
     };
 
+    const boundary = withDexRowAge(14_400).candidate;
+    expect(boundary.pillarFreshness).toEqual({
+      dexMaxAgeSec: 14_400, dexObservedAtSec: [AS_OF_SEC - 14_400],
+    });
+    expect(explainSafetyScoreV9PillarFreshness(boundary, 0, "exit")).toMatchObject({
+      verdict: "current", assessedAtSec: AS_OF_SEC, observedAtSec: AS_OF_SEC - 14_400,
+      sourceGenerationId: `dex-liquidity-${AS_OF_SEC - 14_400}`, maxAgeSec: 14_400,
+    });
+    expect(explainSafetyScoreV9PillarFreshness(withDexRowAge(14_401).candidate, 0, "exit").verdict).toBe("stale");
     // One hour old: inside the 4h DEX lane bound, so the exit input is current.
     expect(withDexRowAge(3_600).candidate.cards[0]?.pillars.exit.freshness).toBe("current");
     // Five hours old: past the bound, the stale DEX generation must surface on
     // the card instead of an anonymous "unknown".
     expect(withDexRowAge(5 * 3_600).candidate.cards[0]?.pillars.exit.freshness).toBe("stale");
+  });
+
+  it("adds only compact operands to the canonical projection, retaining all score/cap/route bytes", () => {
+    const original = publicModule.buildSafetyScoreV9Response;
+    const spy = vi.spyOn(publicModule, "buildSafetyScoreV9Response").mockImplementation(args => {
+      const response = original(args);
+      const { pillarFreshness, ...withoutOperands } = response;
+      expect(pillarFreshness).toBeDefined();
+      const legacy = original({ ...args, dexMaxAgeSec: undefined });
+      expect(stableJsonStringifyV1(withoutOperands)).toBe(stableJsonStringifyV1(legacy));
+      return response;
+    });
+    try {
+      const fixedInput = exactFixedInput("alpha");
+      const extension = reviewedExtension(fixedInput);
+      extension.routeFreshness.dexMaxAgeSec = 5_000;
+      const result = buildSafetyScoreV9Candidate({ fixedInput, extension, publishedAtSec: PUBLISHED_AT_SEC });
+      expect(result.candidate.pillarFreshness?.dexMaxAgeSec).toBe(5_000);
+      expect(spy).toHaveBeenCalledOnce();
+    } finally { spy.mockRestore(); }
   });
 });

@@ -193,5 +193,3 @@ PROJECT_TAPE_PLACED_EXECUTOR = "on"
 WORKER_RESERVE_RECOVERY_MODE = "recover"
 # Roll back latency acceleration with off; retain cron, ledger and Queue resources.
 WORKER_RESERVE_QUEUE_MODE = "on"
-# Recap retirement: stop enrolment/planning; retain off-mode cancellation and terminal reconciliation.
-TELEGRAM_RECAP_ROLLOUT_MODE = "off"

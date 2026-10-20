@@ -145,47 +145,42 @@ The audit row is written only if the inspected generation wins. Extending/re-pau
 
 ## Recap Retirement Stop and Drain
 
-This is the personalized watchlist recap's operated withdrawal, not a bot-wide pause or retirement of public editorial digests. Keep the existing public five-minute trigger, role, leases, shared drain and terminal maintenance. No fleet broadcast, raw SQL mutation, forced recap run, resend, table drop or consumer deletion belongs to this stage.
+Personalized watchlist recaps are retired immediately; **do not enter `retirement-notice` mode or send a notice edition**. Public editorial daily/weekly digests, risk alerts and shared delivery remain active.
 
-**User notice.** The final notice body is owned by `TELEGRAM_RECAP_RETIREMENT_NOTICE` in `shared/lib/telegram-recap-rollout.ts`:
+Before deploying consumer-removal code, operate the **previous stop-capable release** (WS06-B30, not the cutover checkout) with the existing binding set to `off`. Use the approved release process for activation; its exact public-Worker configuration command, from that release's repository root, is:
 
-> We're retiring personalized daily watchlist recaps. Your watchlist and alert settings won't change, and your regular alerts and public market digests will continue. Thank you for using PharosWatchBot!
+```sh
+npx --no-install wrangler deploy --config worker/wrangler.toml --strict --var TELEGRAM_RECAP_ROLLOUT_MODE:off
+```
 
-Use three explicit configuration stages on the same existing `TELEGRAM_RECAP_ROLLOUT_MODE` binding. The checked-in configuration is off; a release is not evidence that any user received a notice.
+This is an operator-only production mutation, not a command to run while implementing retirement. Confirm the selected source is the currently approved stop-capable release so other configuration/code is not rolled back. Record source SHA, activated public version/time, final planner admission and compatible rollback floor. Observe a natural five-minute `off` execution, allow older invocations/claims to settle, then observe a later slot. Do not clear leases, force recap execution, reset/replay unknown effects, hand-enqueue, or delete transport rows.
 
-1. **Stop (`off`).** Record the source/merge SHA, public Worker version/verified activation time, last public recap-planner admission, final preference/target clocks and rollback-compatible version. Observe the first natural five-minute execution with recap `rollout.mode=off` and `skipped=recap-rollout-off`. It must cancel only unstarted recap work before shared drain, preserve accepted/in-flight/unknown effects, and admit no new ordinary plans. Wait for pre-stop public invocations to settle under their original fences; never clear a lease to accelerate the stop.
-2. **Notice (`retirement-notice`).** Only after the initial stop is observed, deploy this temporary value on the existing binding. Controls and enrolment remain off. The final scheduled edition is notice-only, even without material facts or a fresh Tape; no ordinary recap planning runs. It is queued once per still-opted-in private chat at its existing due schedule, through the original target/queue/effect-fence path. Notice mode cancels ordinary queued recap work but preserves notice targets. Existing local-date identity collisions advance to the next safe scheduled date without rewriting an earlier edition. Normal pause, snooze, block, quiet-hour, generation, expiry and transport guards are not bypassed. The durable `recap-retirement-notice:v1` fingerprint prevents a second notice on later dates, including after cancellation, failure or an unknown send.
-3. **Final stop (`off`).** Compare the captured opted-in cohort with final notice targets; every still-eligible chat must have a terminal notice outcome, with unavailable/missing-timezone evidence or unnotified chats investigated rather than called complete. Record cancellations/failures explicitly; an unknown effect is terminal uncertainty, never proof of receipt or permission to resend. Only after this accounting and zero pending/sending recap work, deploy off again. Observe its first natural execution and a later five-minute slot with no new targets. Keep code, client contract, schema, notice markers and shared unknown/effect-fence evidence until this proof is accepted. Feature removal remains separately gated.
+Run SELECT-only readbacks using `--command`, never `--file` ([remote D1 inspection](../worker-infrastructure.md#remote-d1-inspection)):
 
-Use approved SELECT-only inspection via `--command`, never `--file`, following [remote D1 inspection](../worker-infrastructure.md#remote-d1-inspection). Capture the initial enabled/private cohort in restricted operator evidence, not public logs or this runbook; recheck erasure/opt-out changes before claiming notice completeness. These readbacks give separate target, transport and clock evidence:
+```sh
+npx --no-install wrangler d1 execute stablecoin-db --config worker/wrangler.toml --remote --json --command "SELECT (SELECT COUNT(*) FROM telegram_recap_targets WHERE status IN ('planned','queued')) AS nonterminal_targets, (SELECT COUNT(*) FROM telegram_pending_alerts WHERE source_type = 'personalized_recap' AND delivery_state IN ('pending','sending')) AS nonterminal_transports;"
+```
+
+Both counts must be explicitly observed zero after stop and again immediately before cutover. Capture the following aggregate clocks/outcomes at both natural-slot observations; no new target admissions or queues may appear:
 
 ```sql
-SELECT status, COUNT(*) FROM telegram_recap_targets GROUP BY status;
-SELECT delivery_state, COUNT(*) FROM telegram_pending_alerts
+SELECT status, COUNT(*) AS count FROM telegram_recap_targets GROUP BY status;
+SELECT delivery_state, COUNT(*) AS count FROM telegram_pending_alerts
 WHERE source_type = 'personalized_recap' GROUP BY delivery_state;
-SELECT COUNT(*) AS nonterminal_targets FROM telegram_recap_targets
-WHERE status IN ('planned', 'queued');
-SELECT status, COUNT(*) FROM telegram_recap_targets
-WHERE watchlist_fingerprint = 'recap-retirement-notice:v1' GROUP BY status;
-SELECT COUNT(*) AS opted_in_without_notice
-FROM telegram_recap_preferences p JOIN telegram_subscribers s USING (chat_id)
-WHERE p.enabled = 1 AND p.chat_kind = 'private'
-  AND NOT EXISTS (SELECT 1 FROM telegram_recap_targets t
-    WHERE t.chat_id = p.chat_id
-      AND t.watchlist_fingerprint = 'recap-retirement-notice:v1');
-SELECT MAX(created_at) AS last_target_created_at,
+SELECT COUNT(*) AS target_count, MAX(created_at) AS last_target_created_at,
        MAX(queued_at) AS last_target_queued_at,
        MAX(completed_at) AS last_target_completed_at,
        MAX(updated_at) AS last_target_evidence_at FROM telegram_recap_targets;
-SELECT MAX(created_at) AS last_preference_created_at,
-       MAX(updated_at) AS last_preference_write_at FROM telegram_recap_preferences;
-SELECT MAX(updated_at) AS last_pending_evidence_at FROM telegram_pending_alerts
+SELECT MAX(updated_at) AS last_preference_write_at FROM telegram_recap_preferences;
+SELECT MAX(updated_at) AS last_transport_evidence_at FROM telegram_pending_alerts
 WHERE source_type = 'personalized_recap';
 ```
 
-For final acceptance, `nonterminal_targets` is zero and there are no `pending` or `sending` recap rows. Retained `sent`/`execution_unknown` records are terminal audit, not backlog to empty. Compare identities and new-target clocks over both off observations; cleanup counters and `pendingEffects=false` alone are not drain proof. Preserve the final admission cutoff (verified off activation plus the settled last pre-stop public attempt), target clocks, final terminal-evidence clock, outcome counts, observation times and rollback floor. Failed reads are pending evidence, never zero work.
+Failed/null query envelopes are unavailable evidence, never zero backlog. `sent`/`execution_unknown` are terminal audit, not permission to resend or proof of user receipt. If work remains, retain the stop-capable consumer and investigate its original claim/target fences; **do not deploy removal code**.
 
-Compatible rollback is deliberate and only possible before consumer deletion; it must preserve original claims, generations and terminal outcomes. Do not remove notice markers through ordinary retention or reset accepted/unknown rows. Later destructive cleanup requires closure of the rollback floor and at least 90 days from final recap evidence, a fresh zero-use proof and verified Time Travel in a separately authorized window; `/forget` erasure remains available throughout.
+Only after accepted zero-work/no-new-admission proof may the cutover remove planner/consumers/controls and the binding. Deploy the v7 Worker before Pages; old explicit contracts reject without mutation, and unversioned retired operations fail schema validation. Confirm the next production five-minute lane still runs risk dispatch and sidecars with no recap task. The cutover has no permanent disabled flag.
+
+No table drop, baseline rewrite or retention-row removal belongs here. Keep recap audit, privacy erasure and existing expiry. Separate destructive cleanup requires at least 90 days after final recap evidence, closed compatible rollback floor, fresh zero-use proof and verified Time Travel. No production stop/drain acceptance is asserted by these instructions.
 
 ## Cross-References
 

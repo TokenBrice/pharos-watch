@@ -2,7 +2,7 @@ import { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { FROZEN_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
-import { setSubscriptionSnooze } from "../snooze";
+import { clearAlertSnooze, setSubscriberSnooze, setSubscriberTimezone, setSubscriptionSnooze } from "../snooze";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 
 const NOW_SEC = 1_800_000_000;
@@ -191,6 +191,32 @@ describe("setSubscriptionSnooze clear invariants", () => {
         setSubscriptionSnooze(db, "42", frozen.id, NOW_SEC + 3_600),
       ).rejects.toThrow(/not subscribable/i);
       expect(subscriptionCount(sqlite)).toBe(0);
+    } finally {
+      sqlite.close();
+    }
+  });
+});
+
+describe("single-column subscriber preferences", () => {
+  it.each([false, true].flatMap((existing) =>
+    (["timezone", "clear-timezone", "snooze", "clear-snooze"] as const).map((operation) => ({ existing, operation }))))
+  ("rolls back $operation and its operation proof existing=$existing", async ({ existing, operation }) => {
+    const { sqlite, db } = createSubscriptionDb();
+    try {
+      if (existing) sqlite.exec(`INSERT INTO telegram_subscribers
+        (chat_id, username, created_at, last_active_at, preference_generation,
+         timezone, alert_snooze_until_ts, alert_freeze, global_alert_reserve,
+         quiet_hours_enabled, quiet_hours_start_utc, quiet_hours_end_utc)
+        VALUES ('42', 'prior', 1, 2, 9, 'UTC', 123, 1, 1, 1, 2, 6)`);
+      const before = sqlite.prepare("SELECT * FROM telegram_subscribers").all();
+      const options = { operationStatements: [db.prepare("INSERT INTO missing_operation_proof VALUES (1)")] };
+      const mutation = operation === "timezone" || operation === "clear-timezone"
+        ? setSubscriberTimezone(db, "42", null, operation === "timezone" ? "Europe/Paris" : null, options)
+        : operation === "snooze"
+          ? setSubscriberSnooze(db, "42", null, NOW_SEC + 3600, options)
+          : clearAlertSnooze(db, "42", null, options);
+      await expect(mutation).rejects.toThrow();
+      expect(sqlite.prepare("SELECT * FROM telegram_subscribers").all()).toEqual(before);
     } finally {
       sqlite.close();
     }

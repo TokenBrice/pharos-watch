@@ -17,8 +17,6 @@ export const DEFAULT_TELEGRAM_PENDING_D1_TABLES: MockTableConfig[] = [
   { match: "AND delivery_state = 'sending'", rows: [], allowUnused: true },
   { match: "DELETE FROM telegram_preset_subscriptions", rows: [], allowUnused: true },
   { match: "WHERE chat_id = ?", rows: [], allowUnused: true },
-  { match: "UPDATE telegram_recap_preferences", rows: [], allowUnused: true },
-  { match: "UPDATE telegram_recap_targets", rows: [], allowUnused: true },
 ];
 
 export type PendingAlertSeed = {
@@ -324,47 +322,6 @@ export function insertAlertJobTargetFixture(sqlite: DatabaseSync, row: TelegramA
   insertAlertJobTargetSqlite(sqlite, row, now);
 }
 
-export function insertRecapDeliveryFixture(
-  sqlite: DatabaseSync,
-  now: number,
-  options: { chatId?: string; generation?: number; paused?: boolean } = {},
-): { chatId: string; recapKey: string } {
-  const chatId = options.chatId ?? "recap-delivery";
-  const generation = options.generation ?? 4;
-  const recapKey = `recap:${chatId}:2026-07-11:v1`;
-  insertTelegramSubscriber(sqlite, {
-    chatId,
-    createdAt: 0,
-    lastActiveAt: 0,
-    preferenceGeneration: generation,
-    snoozeUntil: options.paused ? 4_102_444_800 : null,
-  });
-  sqlite.prepare(
-    `INSERT INTO telegram_recap_preferences
-     (chat_id, chat_kind, enabled, last_window_end_at, last_delivered_local_date, created_at, updated_at)
-     VALUES (?, 'private', 1, NULL, NULL, ?, ?)`,
-  ).run(chatId, now, now);
-  sqlite.prepare(
-    `INSERT INTO telegram_recap_targets
-     (recap_key, chat_id, local_date, window_start_at, window_end_at, preference_generation,
-      watchlist_fingerprint, pending_dedupe_key, status, created_at, updated_at)
-     VALUES (?, ?, '2026-07-11', ?, ?, ?, 'fingerprint-v1', ?, 'queued', ?, ?)`,
-  ).run(recapKey, chatId, now - 3660, now - 60, generation, recapKey, now, now);
-  insertPendingSqlite(sqlite, {
-    id: options.paused ? 8_502 : 8_501,
-    chatId,
-    html: "<b>Your Watchbot recap</b>",
-    createdAt: now - 30,
-    expiresAt: now + 3600,
-    priority: 100,
-    sourceType: "personalized_recap",
-    dedupeKey: recapKey,
-    sourceEventId: recapKey,
-    preferenceGeneration: generation,
-    markupPolicyJson: serializePendingMarkupPolicy({ replyMarkup: { inline_keyboard: [[{ text: "View watchlist", web_app: { url: "https://pharos.watch/pharoswatchbot" } }]] } }),
-  });
-  return { chatId, recapKey };
-}
 
 export type PendingQueueScenarioOverrides = {
   now?: number;

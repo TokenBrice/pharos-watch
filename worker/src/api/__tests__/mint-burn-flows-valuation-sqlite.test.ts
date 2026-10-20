@@ -190,8 +190,8 @@ describe("mint/burn valuation completeness on real SQLite", () => {
     expect(response.status).toBe(200);
     const perCoin = MintBurnPerCoinResponseSchema.parse(await response.json());
     const window = { start, end, semantics: "closed-utc-hours" };
-    expect(aggregate.window).toEqual(window);
-    expect(perCoin.window).toEqual(window);
+    expect(aggregate.window).toMatchObject(window);
+    expect(perCoin.window).toMatchObject(window);
     expect(perCoin).toMatchObject({ windowHours: 24, mintCount: 2, burnCount: 1, mintVolumeUsd: 10,
       burnVolumeUsd: 2, netFlowUsd: null, valuation: { completeness: "partial", unpricedMintEventCount: 1 } });
     const coin = aggregate.coins.find((entry) => entry.stablecoinId === "usdt-tether")!;
@@ -403,7 +403,9 @@ describe("mint/burn valuation completeness on real SQLite", () => {
   });
 
   it("distinguishes never-scanned, legacy cursors, one missing contract and fully scanned quiet zero", async () => {
-    const { db, sqlite } = fixtures.open();
+    const { db, sqlite } = await provenFixture();
+    sqlite.prepare("DELETE FROM mint_burn_scan_coverage WHERE config_key IN (?, ?)")
+      .run(...MINT_BURN_CONFIGS.filter((config) => config.stablecoinId === "buidl-blackrock").map(mintBurnConfigKey));
     const configs = MINT_BURN_CONFIGS.filter((config) => config.stablecoinId === "buidl-blackrock");
     expect(configs).toHaveLength(2);
     const end = Math.floor(NOW / HOUR) * HOUR;
@@ -427,13 +429,15 @@ describe("mint/burn valuation completeness on real SQLite", () => {
     const quiet = await read();
     expect(quiet).toMatchObject({ netFlow24hUsd: 0, netFlow7dUsd: 0, netFlow30dUsd: 0, netFlow90dUsd: 0,
       has24hActivity: false, netFlowDirection24h: "inactive", pressureShiftScore: null });
-    expect(quiet.coverage.windows?.window24h).toEqual({ complete: true, unavailableReason: null });
+    expect(quiet.coverage.windows?.window24h).toMatchObject({ complete: true, unavailableReason: null, provenance: "durable-v2" });
     sqlite.prepare("UPDATE mint_burn_scan_coverage SET to_timestamp = ? WHERE config_key = ?").run(end - 1, mintBurnConfigKey(configs[1]!));
-    expect(await read()).toMatchObject(unknown);
+    expect((await read()).coverage.has24hWindow).toBe(true); // Common watermark retreats one hour.
   });
 
   it.each([7, 30, 90])("does not bridge missing blocks in the %i-day window while 24h is proven", async (days) => {
-    const { db } = fixtures.open();
+    const { db, sqlite } = await provenFixture();
+    sqlite.prepare("DELETE FROM mint_burn_scan_coverage WHERE config_key = ?")
+      .run(mintBurnConfigKey(MINT_BURN_CONFIGS.find((entry) => entry.stablecoinId === "usdt-tether")!));
     const config = MINT_BURN_CONFIGS.find((entry) => entry.stablecoinId === "usdt-tether")!;
     const end = Math.floor(NOW / HOUR) * HOUR;
     for (const [fromBlock, toBlock, fromTimestamp, toTimestamp] of [

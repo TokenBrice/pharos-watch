@@ -2,7 +2,6 @@ import {
   createTelegramWebhookIntent,
   type TelegramCommandMutationContext,
 } from "../webhook/telegram-webhook-effect-fence";
-import type { TelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
 
 /**
  * Shared context passed to every command handler in the Telegram webhook
@@ -17,7 +16,6 @@ export interface WebhookCommandContext extends TelegramCommandMutationContext {
   username: string | null;
   actorUserId: string | null;
   botToken: string;
-  recapRollout?: TelegramRecapRolloutPolicy;
   /** Stable timestamp captured when the operation was normalized. */
   operationNowSec?: number;
   /** Fold replacement of an active pending flow into this command's mutation batch. */

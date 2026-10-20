@@ -47,7 +47,6 @@ const operations: TelegramMiniAppOperation[] = [
   { kind: "pause" },
   { kind: "set-coin-snooze", stablecoinId: "usdc-circle", durationToken: "clear" },
   { kind: "set-timezone", timezone: "Europe/Paris" },
-  { kind: "set-recap", enabled: true, deliveryHourLocal: 9 },
   { kind: "unsubscribe-all" },
   { kind: "forget-me" },
   { kind: "set-coin", stablecoinId: "usdc-circle", patch: { alertTypes: { dews: true } } },
@@ -114,6 +113,20 @@ describe("Telegram Mini App shared contract", () => {
         patch: {},
       }).success,
     ).toBe(false);
+  });
+
+  it("rejects retired recap operations at standalone and signed request boundaries", () => {
+    for (const enabled of [true, false]) {
+      const operation = { kind: "set-recap", enabled, deliveryHourLocal: 9 };
+      expect(TelegramMiniAppOperationSchema.safeParse(operation).success).toBe(false);
+      expect(TelegramMiniAppMutationRequestSchema.safeParse({
+        initData: "signed",
+        contractVersion: TELEGRAM_MINI_APP_CONTRACT_VERSION,
+        catalogVersion: TELEGRAM_MINI_APP_CATALOG_VERSION,
+        operation,
+      }).success).toBe(false);
+    }
+    expect(createTelegramMiniAppSnapshot(mutableState).state.subscriber).not.toHaveProperty("recap");
   });
 
   it("parses both the compact contract and the rolling-deploy legacy response", () => {
@@ -273,14 +286,16 @@ describe("Telegram Mini App shared contract", () => {
         catalogVersion: TELEGRAM_MINI_APP_CATALOG_VERSION,
       }),
     ).toBe("compatible");
-    expect(telegramMiniAppVersionCompatibility({
-      contractVersion: "5",
-      catalogVersion: TELEGRAM_MINI_APP_CATALOG_VERSION,
-    })).toBe("legacy-v5");
-    expect(telegramMiniAppVersionCompatibility({ contractVersion: "5" })).toBe("catalog-version-mismatch");
-    expect(telegramMiniAppVersionCompatibility({
-      contractVersion: "5", catalogVersion: "not-the-current-catalog",
-    })).toBe("catalog-version-mismatch");
+    for (const contractVersion of ["5", "6"]) {
+      expect(telegramMiniAppVersionCompatibility({
+        contractVersion,
+        catalogVersion: TELEGRAM_MINI_APP_CATALOG_VERSION,
+      })).toBe("contract-version-mismatch");
+      expect(telegramMiniAppVersionCompatibility({ contractVersion })).toBe("contract-version-mismatch");
+      expect(telegramMiniAppVersionCompatibility({
+        contractVersion, catalogVersion: "not-the-current-catalog",
+      })).toBe("contract-version-mismatch");
+    }
     expect(
       telegramMiniAppVersionCompatibility({
         contractVersion: TELEGRAM_MINI_APP_CONTRACT_VERSION,

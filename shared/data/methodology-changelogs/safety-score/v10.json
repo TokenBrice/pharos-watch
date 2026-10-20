@@ -1,5 +1,21 @@
 [
   {
+    "version": "10.25",
+    "title": "Wrapper withdrawal terms without duplicate execution-certainty charges",
+    "date": "2026-10-20",
+    "effectiveAt": 1792540800,
+    "summary": "Wrapper-local withdrawal terms price actual holder restrictions, not measurement/model execution certainty already assessed by Exit. This disclosed score-changing correction applies to the wrapper cohort, including CUSDO, rather than a one-asset exception.",
+    "impact": [
+      "The withdrawalTerms assessment no longer treats conditional or discretionary executionCertainty as a holder restriction. Issuer-only or restricted access, discretionary or queued execution models, settlement bounds and fee evidence retain their existing treatment. Exit confidence, certificate freshness, same-notional admission and measured-unwind gates are unchanged and fail closed.",
+      "A conditional certificate cannot add a second withdrawal restriction, and losing that certificate's price freshness cannot improve the wrapper parent cap merely by removing the duplicate charge. Independent current published terms remain distinct from measured executable capacity; no capacity, access or settlement promise is inferred.",
+      "Historical pre-release replay of the deferred correction at two accepted capture clocks found 14 distinct numeric movers (+1 to +3), including CUSDO 40 to 41, and no grade changes; one capture had 14 movers and the other 13. These are prior checkpoint results, not a current-release or production receipt. Other wrappers can move by the same mechanism, and the integrated release requires fresh fixed-clock comparison and attributed cohort review.",
+      "Publish compact, reproducible pillar-freshness metadata bound to the original DEX observation clock, source generation and effective budget; Backing/Control remain explicitly unwired, with no score, grade, cap or route change.",
+      "Pillar weights, grade bands, wrapper form fallbacks, real withdrawal restrictions and evidence freshness budgets are unchanged. Planned activation is provisionally 2026-10-21 00:00 UTC (1792540800), following the next-UTC-midnight convention; re-date effectiveAt at release. First accepted production publication and exact deployed-code replay remain separate acceptance obligations; no deployment or production acceptance is claimed."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "10.24",
     "title": "Source-bound evidence and conservative risk composition",
     "date": "2026-10-20",

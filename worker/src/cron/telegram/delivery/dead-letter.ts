@@ -252,16 +252,6 @@ export async function settleUnstartedPendingRows(
         }));
       }
     }
-    // These outcomes never consume the recap window or alter its schedule.
-    if (row.source_type === "personalized_recap" && row.source_event_id) {
-      statements.push(db.prepare(
-        `UPDATE telegram_recap_targets
-            SET status = ?, terminal_reason = COALESCE(?, terminal_reason),
-                completed_at = ?, updated_at = ?
-          WHERE recap_key = ? AND status IN ('planned', 'queued')
-            AND (${guard.sql})`,
-      ).bind(state === "failed" ? "failed_permanent" : state, error, nowSec, nowSec, row.source_event_id, ...guard.binds));
-    }
     statements.push(db.prepare(
       `DELETE FROM telegram_pending_alerts WHERE id = ? AND (${guard.sql})`,
     ).bind(row.id, ...guard.binds));

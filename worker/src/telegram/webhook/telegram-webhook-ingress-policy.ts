@@ -59,12 +59,6 @@ const START_MUTATION_POLICY: Readonly<TelegramCommandPolicy> = {
 const TIMEZONE_READ_POLICY: Readonly<TelegramCommandPolicy> = {
   ...UNKNOWN_COMMAND_POLICY, pending: "clear-and-run", recoveryEligible: true,
 };
-const RECAP_READ_POLICY: Readonly<TelegramCommandPolicy> = {
-  ...TIMEZONE_READ_POLICY, pending: "passthrough",
-};
-const RECAP_MUTATION_POLICY: Readonly<TelegramCommandPolicy> = {
-  ...TIMEZONE_READ_POLICY, mutation: "required",
-};
 
 // Explicit coverage is checked against COMMAND_HANDLERS, including aliases.
 export const TELEGRAM_COMMAND_POLICIES: Readonly<Record<string, Readonly<TelegramCommandPolicy>>> = {
@@ -91,16 +85,11 @@ export const TELEGRAM_COMMAND_POLICIES: Readonly<Record<string, Readonly<Telegra
   "/unsnooze": MUTATING_COMMAND_POLICY,
   "/cancel": { ...UNKNOWN_COMMAND_POLICY, mutation: "required", pending: "cancel", setupTickerEscape: true },
   "/forget": { ...MUTATING_COMMAND_POLICY, recoveryEligible: false },
-  "/recap": RECAP_READ_POLICY,
 };
 
 export function classifyTelegramCommand(command: string, args: string): Readonly<TelegramCommandPolicy> {
   if (command === "/start") return isMutatingTelegramStartPayload(args) ? START_MUTATION_POLICY : START_READ_POLICY;
   if (command === "/timezone") return args.trim() ? MUTATING_COMMAND_POLICY : TIMEZONE_READ_POLICY;
-  if (command === "/recap") {
-    if (!args.trim()) return RECAP_READ_POLICY;
-    return isRecapMutationArgs(args) ? RECAP_MUTATION_POLICY : TIMEZONE_READ_POLICY;
-  }
   return TELEGRAM_COMMAND_POLICIES[command] ?? UNKNOWN_COMMAND_POLICY;
 }
 const PHAROS_BOT_USERNAMES = new Set([TELEGRAM_BOT_USERNAME.toLowerCase()]);
@@ -113,9 +102,6 @@ const COMMAND_COOLDOWNS_SEC: Record<string, number> = {
 };
 const CANONICAL_COMMAND_KEYS: Record<string, string> = { "/market": "/brief" };
 
-function isRecapMutationArgs(args: string): boolean {
-  return /^(?:on|off|time\s+(?:[0-9]|1[0-9]|2[0-3]))$/i.test(args.trim());
-}
 
 function isMutatingTelegramStartPayload(args: string): boolean {
   const kind = parseStartPayload(args).kind;

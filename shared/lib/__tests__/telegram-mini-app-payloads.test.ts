@@ -22,6 +22,13 @@ describe("telegram mini app payloads", () => {
     expect(parseMiniAppPayload("pw1_landing_hero")).toBeNull();
   });
 
+  it("rejects retired recap launch tokens while retaining timezone and watchlist routes", () => {
+    expect(parseMiniAppPayload("recap_settings")).toBeNull();
+    expect(parseMiniAppPayload("recap_watchlist")).toBeNull();
+    expect(miniAppPayloadIntent(parseMiniAppPayload("quiet-hours")!)).toBe("quiet-hours");
+    expect(miniAppPayloadIntent(parseMiniAppPayload("watchlist")!)).toBe("watchlist");
+  });
+
   it("rejects empty insight ids and malformed payloads", () => {
     expect(parseMiniAppPayload("why_")).toBeNull();
     expect(parseMiniAppPayload("coverage_")).toBeNull();

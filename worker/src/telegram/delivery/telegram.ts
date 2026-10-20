@@ -1,7 +1,5 @@
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { parseRetryAfterSeconds } from "@shared/lib/retry-after";
-import { TELEGRAM_BOT_URL } from "@shared/lib/telegram-bot-registration";
-import type { TelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
 import { cancelResponseBodyQuietly, readResponseTextBoundedWithSignal } from "../../lib/response-body";
 import { escapeHtml } from "../common/html";
 import { logTelegramEvent } from "../common/log";
@@ -76,17 +74,6 @@ export async function postTelegramBotApi(
 
 export { escapeHtml } from "../common/html";
 
-/**
- * The digest is published in a channel, while personalized recaps are
- * private-chat-only. Keep the CTA explicit about that boundary and fail closed
- * until the caller supplies the runtime rollout policy.
- */
-export function buildTelegramRecapCta(
-  rollout: TelegramRecapRolloutPolicy | null | undefined,
-): string | null {
-  if (rollout?.mode !== "public") return null;
-  return `<a href="${TELEGRAM_BOT_URL}">Open @PharosWatchBot for a private /recap →</a>`;
-}
 
 /** Build the full Telegram message for a digest. */
 export function buildTelegramMessage(
@@ -96,7 +83,6 @@ export function buildTelegramMessage(
   editionNumber?: number | null,
   appendixHtml?: string | null,
   mapAppendixHtml?: string | null,
-  recapRollout?: TelegramRecapRolloutPolicy | null,
 ): string {
   // Escape HTML first, then convert markdown bold **text** to <b>text</b>
   const extendedSections = extended.split("\n\n");
@@ -115,7 +101,6 @@ export function buildTelegramMessage(
     ? ""
     : `<blockquote expandable>${escapeHtml(standingLine)}</blockquote>`;
   const kicker = editionNumber ? `Pharos Daily Digest #${editionNumber}\n` : "";
-  const recapCta = buildTelegramRecapCta(recapRollout);
   const sections = [
     mapAppendixHtml ?? "",
     `${kicker}<b>${escapeHtml(title)}</b>`,
@@ -123,7 +108,6 @@ export function buildTelegramMessage(
     standing,
     appendixHtml ?? "",
     `<a href="${SITE_ORIGIN}/digest/${date}/">Read on Pharos →</a>`,
-    recapCta ?? "",
   ].filter((section) => section.trim().length > 0);
   return sections.join("\n\n");
 }

@@ -7,6 +7,7 @@ import type { MintBurnFlowsResponse } from "@shared/types";
 import { makeMintBurnFlowCoin } from "@/test-utils/mint-burn-fixtures";
 
 const useMintBurnFlowsMock = vi.hoisted(() => vi.fn());
+const flowGaugeHeroMock = vi.hoisted(() => vi.fn(() => null));
 
 vi.mock("@/hooks/use-mint-burn-flows", () => ({
   useMintBurnFlows: useMintBurnFlowsMock,
@@ -24,7 +25,7 @@ vi.mock("@/components/feature-page-shell", () => ({
 }));
 vi.mock("@/components/flow-chart", () => ({ FlowChart: () => null }));
 vi.mock("@/components/flow-table", () => ({ FlowTable: () => null }));
-vi.mock("@/components/flow-gauge-hero", () => ({ FlowGaugeHero: () => null }));
+vi.mock("@/components/flow-gauge-hero", () => ({ FlowGaugeHero: flowGaugeHeroMock }));
 vi.mock("@/components/faq-section", () => ({ FaqSection: () => null }));
 vi.mock("@/components/control-pill-toggle", () => ({
   ControlPillToggle: ({ onChange }: { onChange: (hours: number) => void }) => (
@@ -77,6 +78,21 @@ afterEach(() => {
 });
 
 describe("FlowsClient", () => {
+  it("passes the summary evidence window to the hero and labels the footer as a sync clock", () => {
+    const summary = makeFlowData();
+    summary.window = {
+      start: Date.UTC(2026, 0, 17, 16) / 1000,
+      end: Date.UTC(2026, 0, 18, 16) / 1000,
+      semantics: "closed-utc-hours",
+      watermark: { timestamp: Date.UTC(2026, 0, 18, 16) / 1000, ageSec: 7200, maxAgeSec: 28800, unavailableReason: null },
+    };
+    useMintBurnFlowsMock.mockReturnValue(makeQueryResult({ data: summary }));
+    render(<FlowsClient faqItems={[]} />);
+    expect(flowGaugeHeroMock).toHaveBeenCalledWith(expect.objectContaining({ window: summary.window }), undefined);
+    expect(screen.getByText(/Critical-lane sync every .* min; evidence may lag/)).toBeTruthy();
+    expect(screen.queryByText(/Refreshed every/)).toBeNull();
+  });
+
   it("defers the 30-day variant until selected and reuses the weekly chart for the 7-day receipt", () => {
     render(<FlowsClient faqItems={[]} />);
     expect(useMintBurnFlowsMock).toHaveBeenCalledWith(24);

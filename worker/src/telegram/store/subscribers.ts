@@ -78,19 +78,26 @@ export function prepareTelegramFirstFollowStatements(
   ];
 }
 
-export interface UpsertSubscriberInput {
+interface SubscriberCommonInput {
   chatId: string;
   username: string | null;
   nowSec: number;
-  perCoinAlertBumps?: Partial<Record<(typeof TELEGRAM_ALERT_TYPES)[number], 0 | 1>>;
-  globalAlertBumps?: Partial<Record<(typeof TELEGRAM_ALERT_TYPES)[number], 0 | 1>>;
-  globalAlertOverrides?: Partial<Record<(typeof TELEGRAM_ALERT_TYPES)[number], 0 | 1>>;
+}
+
+type AlertFlags = Partial<Record<(typeof TELEGRAM_ALERT_TYPES)[number], 0 | 1>>;
+
+export type UpsertSubscriberInput = SubscriberCommonInput & {
+  kind?: never;
+  perCoinAlertBumps?: AlertFlags;
   quietHours?:
     | { enabled: true; startHourUtc: number; endHourUtc: number; preserveSavedWindow?: boolean }
     | { enabled: false };
   /** Increment in the same UPSERT as an intent mutation not inferable from the fields above. */
   bumpPreferenceGeneration?: boolean;
-}
+} & (
+  | { globalAlertBumps?: AlertFlags; globalAlertOverrides?: never }
+  | { globalAlertBumps?: never; globalAlertOverrides: AlertFlags }
+);
 
 // Canonical order — indexes here are positionally bound to the alert_*/
 // global_alert_* columns in the upsert SQL below.
@@ -100,81 +107,52 @@ const SUBSCRIBER_ALERT_COLUMNS = [
   ...ALERT_KEYS.map((key) => `global_alert_${key}`),
 ].join(",\n         ");
 
-/**
- * Discriminated normalization of every `telegram_subscribers` upsert. Each
- * variant maps to one mutually-exclusive mutation intent, so adding a future
- * flag in the wrong combination becomes a compile-time error inside this
- * module instead of a left-to-right SQL-evaluation footgun at runtime.
- */
-type UpsertSubscriberKind =
-  | {
-      kind: "bump";
-      chatId: string;
-      username: string | null;
-      nowSec: number;
-      perCoinAlertBumps?: Partial<Record<(typeof TELEGRAM_ALERT_TYPES)[number], 0 | 1>>;
-      globalAlertBumps?: Partial<Record<(typeof TELEGRAM_ALERT_TYPES)[number], 0 | 1>>;
-      quietHours?: UpsertSubscriberInput["quietHours"];
-      bumpPreferenceGeneration?: boolean;
-    }
-  | {
-      kind: "override";
-      chatId: string;
-      username: string | null;
-      nowSec: number;
-      globalAlertOverrides: Partial<Record<(typeof TELEGRAM_ALERT_TYPES)[number], 0 | 1>>;
-      quietHours?: UpsertSubscriberInput["quietHours"];
-      bumpPreferenceGeneration?: boolean;
-    }
-  | {
-      kind: "preference";
-      chatId: string;
-      username: string | null;
-      nowSec: number;
-      /** `undefined` = leave existing; explicit `null` = write SQL NULL. */
-      timezone?: string | null;
-      /** `undefined` = leave existing; explicit `null` = clear snooze. */
-      alertSnoozeUntilTs?: number | null;
-      bumpPreferenceGeneration?: boolean;
-    };
+type SubscriberMutationInput = UpsertSubscriberInput | (SubscriberCommonInput & {
+  kind: "preference";
+  /** `undefined` preserves the column; explicit `null` clears it. */
+  timezone?: string | null;
+  alertSnoozeUntilTs?: number | null;
+});
 
-/**
- * Build the SQL + binds for a single `telegram_subscribers` upsert. All five
- * subscriber-row UPSERT sites in this file route through this builder so that
- * the alert/default INSERT shape, the `created_at`/`last_active_at` defaults,
- * and the COALESCE(excluded.username, ...) preservation rule live in exactly
- * one place. Bind order is stable so the existing `binds[6] === 1` assertion
- * in `telegram-webhook-settings.test.ts` continues to hold for the bump/override
- * shapes.
- */
+/** One SQL boundary for alert intent and single-column subscriber preferences. */
 export function buildSubscriberUpsert(
-  kind: UpsertSubscriberKind,
+  kind: SubscriberMutationInput,
 ): { sql: string; binds: unknown[] } {
+  const updates = [
+    "username = COALESCE(excluded.username, telegram_subscribers.username)",
+    "last_active_at = excluded.last_active_at",
+  ];
   if (kind.kind === "preference") {
-    return buildSubscriberPreferenceUpsert(kind);
+    const setsTimezone = kind.timezone !== undefined;
+    if (setsTimezone === (kind.alertSnoozeUntilTs !== undefined)) {
+      throw new Error("buildSubscriberUpsert: exactly one of timezone or alertSnoozeUntilTs must be set");
+    }
+    const column = setsTimezone ? "timezone" : "alert_snooze_until_ts";
+    updates.push(`${column} = excluded.${column}`);
+    updates.push("preference_generation = telegram_subscribers.preference_generation + 1");
+    return {
+      sql: `INSERT INTO telegram_subscribers
+        (chat_id, username, ${column}, created_at, last_active_at, preference_generation)
+        VALUES (?, ?, ?, ?, ?, 1)
+        ON CONFLICT(chat_id) DO UPDATE SET ${updates.join(", ")}`,
+      binds: [kind.chatId, kind.username, setsTimezone ? kind.timezone : kind.alertSnoozeUntilTs, kind.nowSec, kind.nowSec],
+    };
   }
-
+  if (kind.globalAlertBumps && kind.globalAlertOverrides) {
+    throw new Error("upsertSubscriberRow: globalAlertBumps and globalAlertOverrides cannot be combined");
+  }
   const quietHours = kind.quietHours;
   const quietStart = quietHours?.enabled ? quietHours.startHourUtc : null;
   const quietEnd = quietHours?.enabled ? quietHours.endHourUtc : null;
   const quietEnabled = quietHours?.enabled ? 1 : 0;
-
-  const updates: string[] = [
-    "username = COALESCE(excluded.username, telegram_subscribers.username)",
-    "last_active_at = excluded.last_active_at",
-  ];
   const bumpsPreferenceGeneration = kind.bumpPreferenceGeneration === true ||
-    kind.quietHours != null ||
-    (kind.kind === "bump" && (
-      kind.perCoinAlertBumps != null || kind.globalAlertBumps != null
-    )) ||
-    kind.kind === "override";
+    quietHours != null || kind.globalAlertOverrides != null ||
+    kind.perCoinAlertBumps != null || kind.globalAlertBumps != null;
   if (bumpsPreferenceGeneration) {
     updates.push("preference_generation = telegram_subscribers.preference_generation + 1");
   }
-
   const perCoinRow: Array<0 | 1> = TELEGRAM_ALERT_TYPES.map(() => 0);
-  if (kind.kind === "bump" && kind.perCoinAlertBumps) {
+  if (!kind.globalAlertOverrides && kind.perCoinAlertBumps) {
     for (let i = 0; i < ALERT_KEYS.length; i += 1) {
       const key = ALERT_KEYS[i];
       const value = kind.perCoinAlertBumps[key];
@@ -188,7 +166,7 @@ export function buildSubscriberUpsert(
   }
 
   const globalRow: Array<0 | 1> = TELEGRAM_ALERT_TYPES.map(() => 0);
-  if (kind.kind === "bump" && kind.globalAlertBumps) {
+  if (kind.globalAlertBumps) {
     for (let i = 0; i < ALERT_KEYS.length; i += 1) {
       const key = ALERT_KEYS[i];
       const value = kind.globalAlertBumps[key];
@@ -200,7 +178,7 @@ export function buildSubscriberUpsert(
       }
     }
   }
-  if (kind.kind === "override") {
+  if (kind.globalAlertOverrides) {
     for (let i = 0; i < ALERT_KEYS.length; i += 1) {
       const key = ALERT_KEYS[i];
       const value = kind.globalAlertOverrides[key];
@@ -254,84 +232,6 @@ export function buildSubscriberUpsert(
   return { sql, binds };
 }
 
-/**
- * `preference` upserts touch a single optional column (`timezone` or
- * `alert_snooze_until_ts`) plus the always-written `username`/`last_active_at`
- * pair. All alert flag and quiet-hours columns get their schema defaults on
- * initial insert and are preserved (not mentioned in the SET clause) on
- * conflict.
- */
-function buildSubscriberPreferenceUpsert(kind: Extract<
-  UpsertSubscriberKind,
-  { kind: "preference" }
->): { sql: string; binds: unknown[] } {
-  const setsTimezone = kind.timezone !== undefined;
-  const setsSnooze = kind.alertSnoozeUntilTs !== undefined;
-  // Callers always set exactly one preference column today; if they need to
-  // set both in the future, extend this builder rather than reintroducing a
-  // hand-rolled INSERT.
-  if (setsTimezone === setsSnooze) {
-    throw new Error(
-      "buildSubscriberPreferenceUpsert: exactly one of timezone or alertSnoozeUntilTs must be set",
-    );
-  }
-
-  const updates: string[] = [
-    "username = COALESCE(excluded.username, telegram_subscribers.username)",
-  ];
-  if (setsTimezone) updates.push("timezone = excluded.timezone");
-  if (setsSnooze) {
-    // Distinguish between "set to NULL" and "set to a timestamp" so the
-    // `historyHas("alert_snooze_until_ts = NULL", ...)` assertion in
-    // `telegram-mini-app.test.ts:933` keeps matching the clearAlertSnooze path.
-    updates.push(
-      kind.alertSnoozeUntilTs === null
-        ? "alert_snooze_until_ts = NULL"
-        : "alert_snooze_until_ts = excluded.alert_snooze_until_ts",
-    );
-  }
-  updates.push("last_active_at = excluded.last_active_at");
-  updates.push("preference_generation = telegram_subscribers.preference_generation + 1");
-
-  const insertColumns = [
-    "chat_id",
-    "username",
-    "alert_dews",
-    "alert_depeg",
-    "alert_safety",
-    "alert_launch",
-    "global_alert_dews",
-    "global_alert_depeg",
-    "global_alert_safety",
-    "global_alert_launch",
-    "quiet_hours_enabled",
-    "quiet_hours_start_utc",
-    "quiet_hours_end_utc",
-  ];
-  const insertValues = ["?", "?", "0", "0", "0", "0", "0", "0", "0", "0", "0", "NULL", "NULL"];
-  const binds: unknown[] = [kind.chatId, kind.username];
-  if (setsTimezone) {
-    insertColumns.push("timezone");
-    insertValues.push("?");
-    binds.push(kind.timezone);
-  }
-  if (setsSnooze) {
-    insertColumns.push("alert_snooze_until_ts");
-    insertValues.push("?");
-    binds.push(kind.alertSnoozeUntilTs);
-  }
-  insertColumns.push("created_at", "last_active_at", "preference_generation");
-  insertValues.push("?", "?", "1");
-  binds.push(kind.nowSec, kind.nowSec);
-
-  const sql = `INSERT INTO telegram_subscribers (
-         ${insertColumns.join(", ")}
-       )
-       VALUES (${insertValues.join(", ")})
-       ON CONFLICT(chat_id) DO UPDATE SET
-         ${updates.join(",\n         ")}`;
-  return { sql, binds };
-}
 
 /**
  * Upserts a telegram_subscribers row. Any field left undefined preserves
@@ -347,38 +247,7 @@ export function prepareUpsertSubscriberRow(
   db: D1Database,
   input: UpsertSubscriberInput,
 ): D1PreparedStatement {
-  if (input.globalAlertBumps && input.globalAlertOverrides) {
-    // Defense-in-depth: the discriminated `UpsertSubscriberKind` makes this
-    // unreachable for internal callers, but the wide external `UpsertSubscriberInput`
-    // surface still admits it. SQLite applies UPDATE SET clauses left-to-right,
-    // so combining both would silently let the override win for any shared
-    // column. Forbid it so future external callers cannot rely on order.
-    throw new Error(
-      "upsertSubscriberRow: globalAlertBumps and globalAlertOverrides cannot be combined",
-    );
-  }
-
-  const kind: UpsertSubscriberKind = input.globalAlertOverrides
-    ? {
-        kind: "override",
-        chatId: input.chatId,
-        username: input.username,
-        nowSec: input.nowSec,
-        globalAlertOverrides: input.globalAlertOverrides,
-        quietHours: input.quietHours,
-        bumpPreferenceGeneration: input.bumpPreferenceGeneration,
-      }
-    : {
-        kind: "bump",
-        chatId: input.chatId,
-        username: input.username,
-        nowSec: input.nowSec,
-        perCoinAlertBumps: input.perCoinAlertBumps,
-        globalAlertBumps: input.globalAlertBumps,
-        quietHours: input.quietHours,
-        bumpPreferenceGeneration: input.bumpPreferenceGeneration,
-      };
-  const { sql, binds } = buildSubscriberUpsert(kind);
+  const { sql, binds } = buildSubscriberUpsert(input);
   return db.prepare(sql).bind(...binds);
 }
 

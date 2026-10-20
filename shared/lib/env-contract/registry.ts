@@ -457,15 +457,6 @@ const ENV_BINDING_DEFINITIONS = [
     },
   },
   {
-    key: "TELEGRAM_RECAP_ROLLOUT_MODE",
-    valueType: "string",
-    description: "Personalized recap availability: `off` (default when unset, malformed, or a retired mode), `public`, or temporary `retirement-notice` for the final opted-in cohort notice with enrolment disabled.",
-    example: { section: "workerOptional", value: "off" },
-    runtimes: {
-      worker: { status: "optional" },
-    },
-  },
-  {
     key: "MINT_BURN_DISABLED_IDS",
     valueType: "string",
     description: "Mint/burn runtime disable list by stablecoin ID (CSV).",

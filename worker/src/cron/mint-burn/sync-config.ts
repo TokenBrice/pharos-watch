@@ -69,6 +69,7 @@ export interface MintBurnConfigSummary {
     | "full-success-empty"
     | "partial-frontier"
     | "no-safe-frontier"
+    | "scan-coverage-unproven"
     | null;
   missingTimestampCount: number;
   earliestMissingTimestampBlock: number | null;
@@ -76,6 +77,12 @@ export interface MintBurnConfigSummary {
   bridgeClassificationDeferredRows: number;
   requestBudgetLimit: number;
   requestBudgetUsed: number;
+  scanAttempts?: number;
+  scanAttemptRanges?: Array<{
+    scanTo: number;
+    requestBudgetUsed: number;
+    reason: MintBurnConfigSummary["advanceReason"];
+  }>;
 }
 
 export interface SyncMintBurnConfigInput {
@@ -599,6 +606,13 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
         fromBlock, toBlock: scanTo, fromTimestamp, toTimestamp, finalizedBlock: chainHead, acceptedAt: runTimestamp,
       };
     }
+  }
+  // Event/topic success alone is not durable scan proof. Hold the frontier on
+  // missing headers, decode quarantine or partial results so the next run retries.
+  if (newLastBlock != null && scanCoverage?.toBlock !== newLastBlock) {
+    newLastBlock = null;
+    summary.advancedTo = null;
+    summary.advanceReason = "scan-coverage-unproven";
   }
   await reconcileReviewedSupplyBurns(db, config, rpcEndpoints, configBudget, txContextCache,
     Math.ceil((runTimestamp - MINT_BURN_EVENT_RETENTION_SEC) / 3600) * 3600, signal, { deadlineMs });

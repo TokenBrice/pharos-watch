@@ -48,6 +48,22 @@ const coin = {
 };
 
 describe("FlowTable", () => {
+  it("exposes legacy pre-cutover scan provenance on the coin pressure tooltip", () => {
+    const html = renderToStaticMarkup(<FlowTable coins={[{
+      ...coin, coverage: { ...coin.coverage, provenance: "legacy-pre-cutover" },
+    }]} isLoading={false} />);
+    expect(html).toContain('title="24h scan evidence uses legacy pre-cutover coverage, not durable-v2 scan proof."');
+  });
+
+  it("uses the window-specific provenance before the coin-wide fallback", () => {
+    const durable = { complete: true, unavailableReason: null, provenance: "durable-v2" } as const;
+    const html = renderToStaticMarkup(<FlowTable coins={[{
+      ...coin, coverage: { ...coin.coverage, provenance: "legacy-pre-cutover",
+        windows: { window24h: durable, window7d: durable, window30d: durable, window90d: durable } },
+    }]} isLoading={false} />);
+    expect(html).not.toContain("not durable-v2 scan proof");
+  });
+
   it("labels colliding tickers by registry identity even when only one collision member is shown", () => {
     const html = renderToStaticMarkup(<FlowTable coins={[{ ...coin, stablecoinId: "ousd-open-standard", symbol: "OUSD" }]} isLoading={false} />);
     expect(html).toContain("OUSD (Open USD)");

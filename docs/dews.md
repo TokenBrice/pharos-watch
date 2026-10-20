@@ -8,7 +8,7 @@ Per-coin, forward-looking stress score (0-100) for depeg stress. It is not a cal
 
 DEWS shares its methodology versioning with the Depeg Tracker pipeline. Both resolve their published version and changelog through `shared/lib/methodology-versions/registry.ts`.
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-dews -->`v6.36`<!-- GENERATED-END: methodology-version-depeg-dews -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-dews -->`v6.37`<!-- GENERATED-END: methodology-version-depeg-dews -->
 - **Public changelog page:** `/methodology/depeg-changelog/`
 - **Canonical constants:** `shared/lib/methodology-versions/constants.ts`
 
@@ -150,7 +150,7 @@ Only public events (`suppression_reason IS NULL`) enter either window. Suppresse
 
 ### S_flow — Mint/Burn Flow
 
-Requires at least 7 observed baseline days, a latest hourly row no older than 24h, complete 24h USD valuation, and no partial burn-baseline valuation. Missing values or failed gates make the signal unavailable; unknown legacy baseline valuation is tolerated. Fresh fully valued zero-volume rows produce zero stress. Measures:
+Requires complete 24h/30d coverage at one published common closed-hour watermark for windows/debt. Legacy assurance is not v2 proof. Age uses that end; reader/24h-DEWS limits stay. Requires >=7 baseline days, complete 24h USD and no partial burn-baseline valuation (unknown legacy allowed). Failed gates are unavailable; valued admitted zero is calm. Measures:
 
 - **Burn surge:** 24h burn volume / 30d daily average
 - **Burn-to-mint ratio:** 24h burns / 24h mints

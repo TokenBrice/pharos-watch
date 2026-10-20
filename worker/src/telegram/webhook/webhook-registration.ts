@@ -4,10 +4,10 @@ import {
   TELEGRAM_ALLOWED_UPDATES,
   TELEGRAM_BOT_DESCRIPTION,
   TELEGRAM_BOT_GROUP_COMMANDS,
+  TELEGRAM_BOT_COMMANDS,
   TELEGRAM_BOT_NAME,
   TELEGRAM_BOT_SHORT_DESCRIPTION,
 } from "@shared/lib/telegram-bot-registration";
-import { getTelegramPrivateBotCommands } from "@shared/lib/telegram-bot-registration";
 import { getCache, setCache } from "../../lib/db-cache";
 import { sha256Hex } from "../../lib/hash";
 import { postTelegramBotApi } from "../delivery/telegram";
@@ -107,11 +107,11 @@ async function buildExpectedWebhookCacheValue(expectedUrl: string, webhookSecret
   });
 }
 
-function buildExpectedCommandsCacheValue(includeRecap: boolean): string {
+function buildExpectedCommandsCacheValue(): string {
   return JSON.stringify({
-    version: TELEGRAM_COMMANDS_CACHE_VERSION + (includeRecap ? 0 : 1),
+    version: TELEGRAM_COMMANDS_CACHE_VERSION,
     scopes: {
-      all_private_chats: getTelegramPrivateBotCommands(includeRecap),
+      all_private_chats: TELEGRAM_BOT_COMMANDS,
       all_group_chats: TELEGRAM_BOT_GROUP_COMMANDS,
     },
   });
@@ -354,17 +354,14 @@ export async function reconcileTelegramCommandRegistration(
   options: {
     botToken?: string | null;
     signal?: AbortSignal;
-    /** Explicit rollout injection; compatibility callers retain the public command list. */
-    includeRecap?: boolean;
   },
 ): Promise<ReconcileTelegramCommandResult> {
   const botToken = options.botToken?.trim();
-  const includeRecap = options.includeRecap ?? true;
   if (!botToken) {
     return { attempted: false, skipped: true, reason: "missing-bot-token" };
   }
 
-  const expectedCacheValue = buildExpectedCommandsCacheValue(includeRecap);
+  const expectedCacheValue = buildExpectedCommandsCacheValue();
   if (await shouldSkipFreshMatchingCache(db, TELEGRAM_COMMANDS_RECONCILED_CACHE_KEY, TELEGRAM_COMMANDS_RECONCILE_TTL_SEC, expectedCacheValue)) {
     return { attempted: false, skipped: true, reason: "fresh-cache" };
   }
@@ -372,7 +369,7 @@ export async function reconcileTelegramCommandRegistration(
   const privateResult = await setMyCommandsForScope(
     db,
     botToken,
-    getTelegramPrivateBotCommands(includeRecap),
+    TELEGRAM_BOT_COMMANDS,
     TELEGRAM_PRIVATE_COMMAND_SCOPE,
     options.signal,
   );

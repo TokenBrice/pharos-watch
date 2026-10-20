@@ -28,10 +28,6 @@ import {
   handleTelegramChosenInlineResultUpdate,
   handleTelegramInlineQueryUpdate,
 } from "./telegram-inline-queries";
-import {
-  TELEGRAM_RECAP_PUBLIC_ROLLOUT_POLICY,
-  type TelegramRecapRolloutPolicy,
-} from "@shared/lib/telegram-recap-rollout";
 
 const MISSING_BOT_TOKEN_WARN_INTERVAL_MS = 60_000;
 let lastMissingBotTokenWarnAtMs: number | null = null;
@@ -70,7 +66,6 @@ export const handleTelegramWebhook = withErrorHandler(
     webhookSecret?: string,
     botToken?: string,
     previousWebhookSecret?: string,
-    recapRollout: TelegramRecapRolloutPolicy = TELEGRAM_RECAP_PUBLIC_ROLLOUT_POLICY,
   ): Promise<Response> => {
     const ok = () => new Response("ok", { status: 200 });
 
@@ -144,7 +139,6 @@ export const handleTelegramWebhook = withErrorHandler(
           effectFence,
           beforeIrreversibleEffect,
           answerWebhookCallback,
-          recapRollout,
         });
       }
 
@@ -212,7 +206,6 @@ export const handleTelegramWebhook = withErrorHandler(
         effectFence,
         beforeIrreversibleEffect,
         operationNowSec: nowSec,
-        recapRollout,
       });
     } catch (err) {
       await effectFence?.fail(classifyWebhookError(err));

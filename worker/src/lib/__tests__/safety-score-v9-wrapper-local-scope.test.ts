@@ -645,6 +645,49 @@ describe("wrapper-local loss absorption and custody scope", () => {
     },
   );
 
+  it.each(["guaranteed", "bounded", "conditional", "discretionary"] as const)(
+    "does not price measurement certainty %s as a holder withdrawal restriction",
+    (executionCertainty) => {
+      const fixture = wrapperFixture("strategy-vault");
+      const terms = (route: V9ExitRouteFactV2): V9ExitRouteFactV2 => ({
+        ...route, lane: "redemption", routeFamily: "protocol-redemption",
+        holderAccess: "permissionless", executionModel: "deterministic",
+        settlementModel: "atomic", settlementSlaSec: 0,
+        executionCertainty,
+      });
+      const current = compile(fixture, terms);
+      const bounded = compile(fixture, (route) => ({ ...terms(route), executionCertainty: "bounded" }));
+      expect(current.facts.facts.withdrawalTerms).toMatchObject({ disposition: "reviewed", assessment: "low" });
+      expect(current.facts.facts.withdrawalTerms).toEqual(bounded.facts.facts.withdrawalTerms);
+      expect(current.card.trace.wrapperParentLimit).toEqual(bounded.card.trace.wrapperParentLimit);
+    },
+  );
+
+  it("does not improve a CUSDO-shaped parent cap when a conditional execution measurement expires", () => {
+    const fixture = wrapperFixture("strategy-vault");
+    const legacyTerms = (route: V9ExitRouteFactV2): V9ExitRouteFactV2 => ({
+      ...route, routeKey: "redemption:cusdo:published-terms", lane: "redemption",
+      routeFamily: "protocol-redemption", evidenceKind: "documented-terms",
+      holderAccess: "permissionless", executionModel: "deterministic", executionCertainty: "bounded",
+      settlementModel: "atomic", settlementSlaSec: 0,
+    });
+    const fresh = compile(fixture, (route) => [
+      legacyTerms(route),
+      { ...legacyTerms(route), routeKey: "redemption:cusdo:execution",
+        evidenceKind: "onchain-contract-state", executionCertainty: "conditional" },
+    ]);
+    // Price-stale admission removes the exact measurement, not the independent
+    // permissionless, deterministic withdrawal terms that remain current.
+    const expired = compile(fixture, legacyTerms);
+    expect(fresh.facts.facts.withdrawalTerms).toEqual(expired.facts.facts.withdrawalTerms);
+    expect(expired.facts.facts.withdrawalTerms).toMatchObject({ disposition: "reviewed", assessment: "low" });
+    const before = fresh.card.trace.wrapperParentLimit!;
+    const after = expired.card.trace.wrapperParentLimit!;
+    expect(after.parentScore).toBe(before.parentScore);
+    expect(after.appliedDiscount).toBe(before.appliedDiscount);
+    expect(after.limit).toBe(before.limit);
+  });
+
   it("keeps a published but unquantified formula fee bounded, not issuer-undisclosed or cost-admitted", () => {
     const fixture = wrapperFixture("strategy-vault");
     const entry = structuredClone(makeV9QueuedRedemptionFixedInput().redemptionBackstopMap.alpha!);

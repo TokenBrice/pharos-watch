@@ -35,15 +35,15 @@ export const MESSAGING_STATIC_ROUTES = [
   defineLazyStaticRoute("telegram-mini-app-session", () =>
     import("../telegram/mini-app/telegram-mini-app").then(
       ({ handleTelegramMiniAppSession }) =>
-        ({ db, request, telegramBotToken, telegramBotTokenPrevious, telegramRecapRollout }) =>
-          handleTelegramMiniAppSession(db, request, telegramBotToken, telegramBotTokenPrevious, telegramRecapRollout),
+        ({ db, request, telegramBotToken, telegramBotTokenPrevious }) =>
+          handleTelegramMiniAppSession(db, request, telegramBotToken, telegramBotTokenPrevious),
     ),
   ),
   defineLazyStaticRoute("telegram-mini-app-mutation", () =>
     import("../telegram/mini-app/telegram-mini-app").then(
       ({ handleTelegramMiniAppMutation }) =>
-        ({ db, request, telegramBotToken, telegramBotTokenPrevious, telegramRecapRollout }) =>
-          handleTelegramMiniAppMutation(db, request, telegramBotToken, telegramBotTokenPrevious, telegramRecapRollout),
+        ({ db, request, telegramBotToken, telegramBotTokenPrevious }) =>
+          handleTelegramMiniAppMutation(db, request, telegramBotToken, telegramBotTokenPrevious),
     ),
   ),
   defineLazyStaticRoute("telegram-webhook", () =>
@@ -55,7 +55,6 @@ export const MESSAGING_STATIC_ROUTES = [
           telegramWebhookSecret,
           telegramBotToken,
           telegramWebhookSecretPrevious,
-          telegramRecapRollout,
         }) =>
           handleTelegramWebhook(
             db,
@@ -63,7 +62,6 @@ export const MESSAGING_STATIC_ROUTES = [
             telegramWebhookSecret,
             telegramBotToken,
             telegramWebhookSecretPrevious,
-            telegramRecapRollout,
           ),
     ),
   ),

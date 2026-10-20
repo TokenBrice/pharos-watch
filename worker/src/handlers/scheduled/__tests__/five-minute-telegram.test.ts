@@ -6,11 +6,6 @@ import { observeMockD1Cost } from "../../../lib/__tests__/d1-cost.test-support";
 import type { CronResult } from "../../../lib/cron-logger";
 
 vi.mock("../../../cron/telegram/dispatch/dispatch-telegram-alerts", () => ({ dispatchTelegramAlerts: vi.fn() }));
-vi.mock("../../../cron/telegram/recap/telegram-recap-planner", () => ({
-  planTelegramPersonalizedRecaps: vi.fn(),
-  planTelegramRecapRetirementNotices: vi.fn(),
-}));
-vi.mock("../../../telegram/recap/recap-store", () => ({ cancelQueuedTelegramRecapsForRollout: vi.fn() }));
 vi.mock("../../../telegram/webhook/telegram-pulse", () => ({ publishTelegramPulseSnapshotWithOutcome: vi.fn() }));
 vi.mock("../../../cron/telegram/maintenance/telegram-degradation-watchdog", () => ({ runTelegramDegradationWatchdog: vi.fn() }));
 vi.mock("../../../telegram/store/disambiguation", () => ({ cleanExpiredDisambiguations: vi.fn() }));
@@ -27,8 +22,6 @@ import { runFiveMinuteTelegramSlot } from "../five-minute-telegram";
 import { logSkippedCronRun } from "../preflight-skip";
 import { recordBudgetSurfaceTelemetry } from "../../../lib/budget-surface-telemetry";
 import { dispatchTelegramAlerts } from "../../../cron/telegram/dispatch/dispatch-telegram-alerts";
-import { planTelegramPersonalizedRecaps, planTelegramRecapRetirementNotices } from "../../../cron/telegram/recap/telegram-recap-planner";
-import { cancelQueuedTelegramRecapsForRollout } from "../../../telegram/recap/recap-store";
 import { publishTelegramPulseSnapshotWithOutcome } from "../../../telegram/webhook/telegram-pulse";
 import { runTelegramDegradationWatchdog } from "../../../cron/telegram/maintenance/telegram-degradation-watchdog";
 import { cleanExpiredDisambiguations } from "../../../telegram/store/disambiguation";
@@ -39,12 +32,10 @@ import {
   reconcileTelegramWebhookRegistration,
 } from "../../../telegram/webhook/webhook-registration";
 
-function buildRuntime(token?: string, recapRolloutMode: string = "public"): ScheduledRuntimeContext {
+function buildRuntime(token?: string): ScheduledRuntimeContext {
   return makeScheduledRuntime({
     db: {} as D1Database,
-    env: (token
-      ? { TELEGRAM_BOT_TOKEN: token, TELEGRAM_RECAP_ROLLOUT_MODE: recapRolloutMode }
-      : { TELEGRAM_RECAP_ROLLOUT_MODE: recapRolloutMode }) as ScheduledRuntimeContext["env"],
+    env: (token ? { TELEGRAM_BOT_TOKEN: token } : {}) as ScheduledRuntimeContext["env"],
     cron: "2,7,12,17,22,27,32,37,42,47,52,57 * * * *",
     scheduleKey: "fiveMinuteTelegramAlerts",
     scheduledTimeMs: null,
@@ -56,9 +47,6 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.spyOn(Date, "now").mockReturnValue(0);
   vi.mocked(dispatchTelegramAlerts).mockResolvedValue({ itemCount: 1, metadata: "{}" } as never);
-  vi.mocked(planTelegramPersonalizedRecaps).mockResolvedValue({ itemCount: 0, metadata: "{}", status: "ok" } as never);
-  vi.mocked(planTelegramRecapRetirementNotices).mockResolvedValue({ itemCount: 0, metadata: "{}", status: "ok" });
-  vi.mocked(cancelQueuedTelegramRecapsForRollout).mockResolvedValue({ targetRowsCancelled: 0, pendingRowsDeleted: 0 });
   vi.mocked(runTelegramDegradationWatchdog).mockResolvedValue({ itemCount: 0, metadata: "{}" } as never);
   vi.mocked(cleanExpiredDisambiguations).mockResolvedValue({ status: "ok", itemCount: 0 } as never);
   vi.mocked(publishTelegramPulseSnapshotWithOutcome).mockResolvedValue({
@@ -78,18 +66,6 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe("runFiveMinuteTelegramSlot", () => {
-  it("uses only the final notice planner while controls remain unavailable in retirement-notice mode", async () => {
-    const runtime = buildRuntime("token", "retirement-notice");
-    await runFiveMinuteTelegramSlot(runtime);
-    expect(planTelegramPersonalizedRecaps).not.toHaveBeenCalled();
-    expect(planTelegramRecapRetirementNotices).toHaveBeenCalledWith(
-      runtime.db, expect.anything(), expect.objectContaining({ rolloutPolicy: { mode: "retirement-notice" } }),
-    );
-    expect(cancelQueuedTelegramRecapsForRollout).toHaveBeenCalledWith(
-      runtime.db, { mode: "retirement-notice" }, 0,
-    );
-    expect(dispatchTelegramAlerts).toHaveBeenCalledOnce();
-  });
 
   it("emits pulse D1 costs while retaining publication results and SQL errors", async () => {
     const rows = [{ id: "pulse-evidence" }];
@@ -178,7 +154,6 @@ describe("runFiveMinuteTelegramSlot", () => {
     let now = 0;
     vi.mocked(Date.now).mockImplementation(() => now);
     vi.mocked(logSkippedCronRun)
-      .mockImplementationOnce(async () => { now += 25; })
       .mockImplementationOnce(async () => { now += 25; });
     vi.mocked(runTelegramDegradationWatchdog).mockImplementation(async () => {
       now += 10_000;
@@ -188,7 +163,7 @@ describe("runFiveMinuteTelegramSlot", () => {
     await runFiveMinuteTelegramSlot(buildRuntime());
 
     expect(recordBudgetSurfaceTelemetry).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
-      durationMs: 50, outcome: "error", metadata: expect.objectContaining({ failedCount: 4 }),
+      durationMs: 25, outcome: "error", metadata: expect.objectContaining({ failedCount: 4 }),
     }));
     expect(reconcileTelegramCommandRegistration).not.toHaveBeenCalled();
     expect(reconcileTelegramProfileRegistration).not.toHaveBeenCalled();
@@ -203,7 +178,6 @@ describe("runFiveMinuteTelegramSlot", () => {
     const summary = await runFiveMinuteTelegramSlot(runtime);
 
     expect(dispatchTelegramAlerts).not.toHaveBeenCalled();
-    expect(planTelegramPersonalizedRecaps).not.toHaveBeenCalled();
     expect(runTelegramDegradationWatchdog).toHaveBeenCalledOnce();
     expect(cleanExpiredDisambiguations).toHaveBeenCalledOnce();
     expect(publishTelegramPulseSnapshotWithOutcome).toHaveBeenCalledOnce();
@@ -214,7 +188,6 @@ describe("runFiveMinuteTelegramSlot", () => {
     ]);
     expect(vi.mocked(logSkippedCronRun).mock.calls.map(([, options]) => options.job)).toEqual([
       "dispatch-telegram-alerts",
-      "telegram-personalized-recap-planner",
     ]);
     expect(summary.jobs.map((job) => job.job)).toContain("dispatch-telegram-alerts");
     expect(summary.budgetOnlyJobs).toBe(1);
@@ -227,75 +200,9 @@ describe("runFiveMinuteTelegramSlot", () => {
     }));
   });
 
-  it("runs the off-mode recap cleanup without a bot token and does not double-report it as skipped", async () => {
-    const runtime = buildRuntime(undefined, "off");
-
-    const summary = await runFiveMinuteTelegramSlot(runtime);
-
-    expect(cancelQueuedTelegramRecapsForRollout).toHaveBeenCalledWith(
-      runtime.db,
-      expect.objectContaining({ mode: "off" }),
-      0,
-    );
-    expect(planTelegramPersonalizedRecaps).not.toHaveBeenCalled();
-    expect(vi.mocked(logSkippedCronRun).mock.calls.map(([, options]) => options.job)).toEqual([
-      "dispatch-telegram-alerts",
-    ]);
-    expect(summary.jobs.filter((job) => job.job === "telegram-personalized-recap-planner")).toHaveLength(1);
-  });
-
-  it.each(["dark", "canary", "malformed"])("fails retired/invalid mode %s to off even without a bot token", async (mode) => {
-    const runtime = buildRuntime(undefined, mode);
-    await runFiveMinuteTelegramSlot(runtime);
-    expect(cancelQueuedTelegramRecapsForRollout).toHaveBeenCalledWith(
-      runtime.db, expect.objectContaining({ mode: "off" }), 0,
-    );
-    expect(planTelegramPersonalizedRecaps).not.toHaveBeenCalled();
-    expect(vi.mocked(logSkippedCronRun).mock.calls.map(([, options]) => options.job)).toEqual(["dispatch-telegram-alerts"]);
-  });
-
-  it.each(["off", "dark", "canary"])(
-    "cleans queued recaps before pending dispatch in %s mode",
-    async (mode) => {
-      const order: string[] = [];
-      vi.mocked(cancelQueuedTelegramRecapsForRollout).mockImplementation(async () => {
-        order.push("recap-cleanup");
-        return { targetRowsCancelled: 1, pendingRowsDeleted: 1 };
-      });
-      vi.mocked(dispatchTelegramAlerts).mockImplementation(async () => {
-        order.push("dispatch");
-        return { itemCount: 1, metadata: "{}" } as never;
-      });
-      vi.mocked(planTelegramPersonalizedRecaps).mockImplementation(async () => {
-        order.push("recap-plan");
-        return { itemCount: 0, metadata: "{}", status: "ok" } as never;
-      });
-
-      await runFiveMinuteTelegramSlot(buildRuntime("token", mode));
-
-      expect(order[0]).toBe("recap-cleanup");
-      expect(order.indexOf("recap-cleanup")).toBeLessThan(order.indexOf("dispatch"));
-      expect(cancelQueuedTelegramRecapsForRollout).toHaveBeenCalledOnce();
-      expect(dispatchTelegramAlerts).toHaveBeenCalledOnce();
-    },
-  );
-
-  it("fails pending dispatch closed when non-public recap cleanup fails", async () => {
-    vi.mocked(cancelQueuedTelegramRecapsForRollout).mockRejectedValue(new Error("cleanup failed"));
-
-    const summary = await runFiveMinuteTelegramSlot(buildRuntime("token", "off"));
-
-    expect(dispatchTelegramAlerts).not.toHaveBeenCalled();
-    expect(summary.jobs.find((job) => job.job === "dispatch-telegram-alerts")?.outcome).toBe("error");
-    expect(runTelegramDegradationWatchdog).toHaveBeenCalledOnce();
-    expect(cleanExpiredDisambiguations).toHaveBeenCalledOnce();
-    expect(publishTelegramPulseSnapshotWithOutcome).toHaveBeenCalledOnce();
-  });
-
   it("runs critical dispatch and sidecars before all registration units", async () => {
     const order: string[] = [];
     vi.mocked(dispatchTelegramAlerts).mockImplementation(async () => { order.push("dispatch"); return { itemCount: 1, metadata: "{}" } as never; });
-    vi.mocked(planTelegramPersonalizedRecaps).mockImplementation(async () => { order.push("recap"); return { itemCount: 0, metadata: "{}", status: "ok" } as never; });
     vi.mocked(runTelegramDegradationWatchdog).mockImplementation(async () => { order.push("watchdog"); return { itemCount: 0, metadata: "{}" } as never; });
     vi.mocked(cleanExpiredDisambiguations).mockImplementation(async () => { order.push("cleanup"); return { status: "ok", itemCount: 0 } as never; });
     vi.mocked(publishTelegramPulseSnapshotWithOutcome).mockImplementation(async () => {
@@ -321,8 +228,7 @@ describe("runFiveMinuteTelegramSlot", () => {
     const summary = await runFiveMinuteTelegramSlot(buildRuntime("token"));
 
     expect(summary.budgetOnlyJobs).toBe(1);
-    expect(order).toEqual(["dispatch", "recap", "watchdog", "cleanup", "pulse", "commands", "profile", "menu", "webhook"]);
-    expect(cancelQueuedTelegramRecapsForRollout).not.toHaveBeenCalled();
+    expect(order).toEqual(["dispatch", "watchdog", "cleanup", "pulse", "commands", "profile", "menu", "webhook"]);
     expect(reconcileTelegramCommandRegistration).toHaveBeenCalledOnce();
     expect(reconcileTelegramProfileRegistration).toHaveBeenCalledOnce();
     expect(reconcileTelegramMenuButton).toHaveBeenCalledOnce();
@@ -342,56 +248,6 @@ describe("runFiveMinuteTelegramSlot", () => {
     }));
   });
 
-  it("defers recap planning when the risk-dispatch lease is locked", async () => {
-    const runtime = buildRuntime("token");
-    vi.mocked(runtime.runLeasedCron).mockImplementation(async (job, fn) => {
-      if (job === "dispatch-telegram-alerts") return { status: "skipped_locked" } as never;
-      return fn(new AbortController().signal, vi.fn());
-    });
-
-    const summary = await runFiveMinuteTelegramSlot(runtime);
-
-    expect(dispatchTelegramAlerts).not.toHaveBeenCalled();
-    expect(planTelegramPersonalizedRecaps).not.toHaveBeenCalled();
-    expect(summary.jobs.find((job) => job.job === "telegram-personalized-recap-planner")).toMatchObject({
-      outcome: "skipped",
-      reason: "risk-dispatch-locked-or-incomplete",
-      neutral: true,
-    });
-  });
-
-  it("defers recap planning when risk dispatch consumes the shared slot budget", async () => {
-    let now = 0;
-    vi.mocked(Date.now).mockImplementation(() => now);
-    vi.mocked(dispatchTelegramAlerts).mockImplementationOnce(async () => {
-      now = 280_000;
-      return { itemCount: 1, metadata: "{}" };
-    });
-
-    const summary = await runFiveMinuteTelegramSlot(buildRuntime("token"));
-
-    expect(dispatchTelegramAlerts).toHaveBeenCalledOnce();
-    expect(planTelegramPersonalizedRecaps).not.toHaveBeenCalled();
-    expect(summary.jobs.find((job) => job.job === "telegram-personalized-recap-planner")).toMatchObject({
-      outcome: "skipped",
-      reason: "risk-dispatch-consumed-slot-budget",
-      neutral: true,
-    });
-  });
-
-  it("defers recap planning after a risk-dispatch failure", async () => {
-    vi.mocked(dispatchTelegramAlerts).mockRejectedValue(new Error("dispatch failed"));
-
-    const summary = await runFiveMinuteTelegramSlot(buildRuntime("token"));
-
-    expect(planTelegramPersonalizedRecaps).not.toHaveBeenCalled();
-    expect(summary.jobs.find((job) => job.job === "dispatch-telegram-alerts")?.outcome).toBe("error");
-    expect(summary.jobs.find((job) => job.job === "telegram-personalized-recap-planner")).toMatchObject({
-      outcome: "skipped",
-      reason: "risk-dispatch-failed",
-      neutral: true,
-    });
-  });
 
   it("does not refresh registration success when every unit is skipped", async () => {
     const skipped = {

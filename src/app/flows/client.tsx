@@ -189,6 +189,7 @@ export default function FlowsClient({ faqItems }: { faqItems: readonly FaqItem[]
         gauge={gauge ?? null}
         coins={coins}
         sync={sync}
+        window={summaryData?.window}
         dataHealth={dataHealth}
         isLoading={isSummaryLoading}
       />
@@ -246,13 +247,13 @@ export default function FlowsClient({ faqItems }: { faqItems: readonly FaqItem[]
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <span>Source: on-chain mint and burn events, {scopeLabel.toLowerCase()}</span>
           <span aria-hidden="true">·</span>
-          <span>Refreshed every {SYNC_CADENCE_MIN} min</span>
+          <span>Critical-lane sync every {SYNC_CADENCE_MIN} min; evidence may lag</span>
           {sync?.lastSuccessfulSyncAt != null ? (
             <FreshnessIndicator
               compact
               updatedAtMs={sync.lastSuccessfulSyncAt * 1000}
               staleAfterMs={API_FRESHNESS_MAX_AGE_SEC.mintBurnFlows * 1000}
-              labelPrefix="Synced"
+              labelPrefix="Critical-lane sync"
             />
           ) : null}
         </div>

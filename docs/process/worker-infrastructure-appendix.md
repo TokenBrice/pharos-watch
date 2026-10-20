@@ -63,7 +63,6 @@ Canonical binding ownership now lives in `shared/lib/env-contract.ts`; the worke
 | `TELEGRAM_OPERATOR_CHAT_ID` | `string` | optional | - | - | Private Telegram chat for operator-only alerts (cron freshness watchdog); operator alerts are suppressed when unset and never fall back to `TELEGRAM_CHAT_ID`. |
 | `TELEGRAM_WEBHOOK_SECRET` | `string` | optional | - | - | Telegram webhook secret used to authenticate the webhook lane. |
 | `TELEGRAM_WEBHOOK_SECRET_PREVIOUS` | `string` | optional | - | - | Optional overlap Telegram webhook secret accepted during secret rotation. |
-| `TELEGRAM_RECAP_ROLLOUT_MODE` | `string` | optional | - | - | Personalized recap availability: `off` (default when unset, malformed, or a retired mode), `public`, or temporary `retirement-notice` for the final opted-in cohort notice with enrolment disabled. |
 | `MINT_BURN_DISABLED_IDS` | `string` | optional | - | - | Mint/burn runtime disable list by stablecoin ID (CSV). |
 | `MINT_BURN_DISABLED_SYMBOLS` | `string` | optional | - | - | Mint/burn runtime disable list by symbol (CSV). |
 | `MINT_BURN_MAJOR_SYMBOLS` | `string` | optional | - | - | Mint/burn health-check major-symbols override (CSV). |
@@ -609,10 +608,9 @@ Chain/task positions below are one-based. Separate chains run independently; tas
 | `hourlyYieldSync` | `observe-rpc-provider-parity` | chain 2, task 1 | scheduled-job | 1 | 300 | TTL-derived defaults | every occurrence |
 | `fourHourlyYieldSupplemental` | `sync-yield-supplemental` | chain 1, task 1 | scheduled-job | 3 | 720 | 30 / 3 | every occurrence |
 | `fiveMinuteTelegramAlerts` | `dispatch-telegram-alerts` | chain 1, task 1 | scheduled-job | 4 | 270 | 30 / 3 | every occurrence |
-| `fiveMinuteTelegramAlerts` | `telegram-personalized-recap-planner` | chain 1, task 2 | scheduled-job | 0 | 300 | TTL-derived defaults | every occurrence |
-| `fiveMinuteTelegramAlerts` | `telegram-degradation-watchdog` | chain 1, task 3 | scheduled-job | 1 | 300 | TTL-derived defaults | every occurrence |
-| `fiveMinuteTelegramAlerts` | `telegram-disambiguation-cleanup` | chain 1, task 4 | scheduled-job | 0 | 300 | TTL-derived defaults | every occurrence |
-| `fiveMinuteTelegramAlerts` | `telegram-pulse-snapshot` | chain 1, task 5 | scheduled-job | 0 | 300 | TTL-derived defaults | every occurrence |
+| `fiveMinuteTelegramAlerts` | `telegram-degradation-watchdog` | chain 1, task 2 | scheduled-job | 1 | 300 | TTL-derived defaults | every occurrence |
+| `fiveMinuteTelegramAlerts` | `telegram-disambiguation-cleanup` | chain 1, task 3 | scheduled-job | 0 | 300 | TTL-derived defaults | every occurrence |
+| `fiveMinuteTelegramAlerts` | `telegram-pulse-snapshot` | chain 1, task 4 | scheduled-job | 0 | 300 | TTL-derived defaults | every occurrence |
 | `fiveMinuteTelegramAlerts` | `telegram-registration-reconciliation` | side stage, task 1 | budget-only | 1 | 300 | not leased by the scheduled wrapper | every occurrence |
 | `fiveMinuteReserveRecovery` | `reserve-recovery` | chain 1, task 1 | scheduled-job | 3 | 780 | 30 / 3 | every occurrence |
 | `digestTriggerPoll` | `daily-digest` | chain 1, task 1 | scheduled-job | 1 | 840 | 30 / 3 | admission evidence required |

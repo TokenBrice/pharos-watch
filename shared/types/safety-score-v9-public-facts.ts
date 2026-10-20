@@ -103,6 +103,81 @@ export type SafetyScoreV9NrReason = z.infer<typeof SafetyScoreV9NrReasonSchema>;
 export const SafetyScoreV9EvidenceFreshnessSchema = z.enum(["current", "stale", "unknown"]);
 export type SafetyScoreV9EvidenceFreshness = z.infer<typeof SafetyScoreV9EvidenceFreshnessSchema>;
 
+/** Clocks follow the response's card order; assessment time/generation reuse its envelope. */
+export const SafetyScoreV9PillarFreshnessSchema = z.object({
+  dexMaxAgeSec: z.number().int().nonnegative(),
+  dexObservedAtSec: z.array(z.number().int().nonnegative().nullable()),
+}).strict();
+export type SafetyScoreV9PillarFreshness = z.infer<typeof SafetyScoreV9PillarFreshnessSchema>;
+
+export const SafetyScoreV9FreshnessReasonSchema = z.enum([
+  "within-budget", "source-too-old", "source-unavailable", "future-source-time",
+  "pillar-clock-unavailable", "historical-operands-unavailable",
+]);
+export type SafetyScoreV9FreshnessAssessment = {
+  verdict: SafetyScoreV9EvidenceFreshness;
+  assessedAtSec: number;
+  observedAtSec: number | null;
+  sourceGenerationId: string | null;
+  maxAgeSec: number | null;
+  reason: z.infer<typeof SafetyScoreV9FreshnessReasonSchema>;
+};
+
+/** No publication clock or sibling source may stand in for an unwired pillar. */
+export function explainSafetyScoreV9PillarFreshness(
+  context: { asOfSec: number; sourceGenerations: Readonly<Record<string, string>>;
+    pillarFreshness?: SafetyScoreV9PillarFreshness },
+  cardIndex: number,
+  pillar: "backing" | "exit" | "control",
+): SafetyScoreV9FreshnessAssessment {
+  const base = { assessedAtSec: context.asOfSec, observedAtSec: null,
+    sourceGenerationId: null, maxAgeSec: null };
+  if (context.pillarFreshness === undefined) {
+    return { ...base, verdict: "unknown", reason: "historical-operands-unavailable" };
+  }
+  if (pillar !== "exit") return { ...base, verdict: "unknown", reason: "pillar-clock-unavailable" };
+  const observedAtSec = context.pillarFreshness.dexObservedAtSec[cardIndex];
+  if (observedAtSec === undefined) throw new Error("Missing pillar freshness card index");
+  const operands = { assessedAtSec: context.asOfSec, observedAtSec,
+    sourceGenerationId: observedAtSec === null ? null : context.sourceGenerations.dex ?? null,
+    maxAgeSec: context.pillarFreshness.dexMaxAgeSec };
+  if (observedAtSec === null) return { ...operands, verdict: "unknown", reason: "source-unavailable" };
+  if (observedAtSec > context.asOfSec) return { ...operands, verdict: "unknown", reason: "future-source-time" };
+  return context.asOfSec - observedAtSec <= operands.maxAgeSec
+    ? { ...operands, verdict: "current", reason: "within-budget" }
+    : { ...operands, verdict: "stale", reason: "source-too-old" };
+}
+
+export function refineSafetyScoreV9PillarFreshness(
+  response: { asOfSec: number; sourceGenerations: Readonly<Record<string, string>>;
+    pillarFreshness?: SafetyScoreV9PillarFreshness;
+    cards: readonly { pillars: Record<"backing" | "exit" | "control", { freshness: SafetyScoreV9EvidenceFreshness }>;
+      evidence: { freshness: SafetyScoreV9EvidenceFreshness } }[] },
+  ctx: { addIssue: (issue: { code: "custom"; path?: PropertyKey[]; message: string }) => void },
+): void {
+  if (response.pillarFreshness === undefined) return;
+  if (response.pillarFreshness.dexObservedAtSec.length !== response.cards.length) {
+    issue(ctx, ["pillarFreshness", "dexObservedAtSec"], "Freshness clocks must exactly follow card membership");
+    return;
+  }
+  if (response.pillarFreshness.dexObservedAtSec.some(clock => clock !== null) && !response.sourceGenerations.dex) {
+    issue(ctx, ["pillarFreshness"], "Observed DEX clocks require their source generation");
+  }
+  response.cards.forEach((card, index) => {
+    const verdicts = (["backing", "exit", "control"] as const).map(pillar => {
+      const verdict = explainSafetyScoreV9PillarFreshness(response, index, pillar).verdict;
+      if (card.pillars[pillar].freshness !== verdict) {
+        issue(ctx, ["cards", index, "pillars", pillar, "freshness"], "Pillar freshness must reproduce its source operands");
+      }
+      return verdict;
+    });
+    const overall = verdicts.includes("stale") ? "stale" : "unknown";
+    if (card.evidence.freshness !== overall) {
+      issue(ctx, ["cards", index, "evidence", "freshness"], "Aggregate freshness must reconcile to its pillars");
+    }
+  });
+}
+
 export const SafetyScoreV9PillarSchema = z
   .object({
     ...V9PillarCauseShape,

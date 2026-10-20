@@ -14,7 +14,6 @@ import {
   findTtlMarginBreaches,
   runStatusPathBudgetChecks,
   simulateProductionCalibratedDispatch,
-  simulateTelegramRecapLoadScenarios,
   STATUS_PATH_MAX_DURATION_MS,
   type QueryPlanCheckDefinition,
 } from "../ci/check-telegram-load";
@@ -31,17 +30,6 @@ describe("Telegram load simulation", () => {
     report = buildTelegramLoadCheckReport({ targets: [5_000], skipQueryPlans: true });
   });
 
-  it("derives each target's recap contention from its retained risk-burst scenario", () => {
-    const combined = buildTelegramLoadCheckReport({ targets: [1_000, 5_000], skipQueryPlans: true });
-    for (const target of [1_000, 5_000]) {
-      const scenarios = combined.scenarios.filter((scenario) => scenario.targetActiveWatchers === target);
-      expect(scenarios).toHaveLength(6);
-      const riskBurst = scenarios.find((scenario) => scenario.scenarioId === "market-wide-burst")!;
-      expect(combined.recapScenarios.filter((scenario) => scenario.targetRecipients === target)).toEqual(
-        simulateTelegramRecapLoadScenarios(target, { riskBurstChunks: riskBurst.messageChunks }),
-      );
-    }
-  });
 
   it("classifies the required 5000-watcher SLO across planning and delivery", () => {
     const requiredScenarios = report.scenarios.filter((scenario) =>
@@ -151,27 +139,6 @@ describe("Telegram load simulation", () => {
     expect(findCpuBudgetBreaches(exploratoryOver)).toEqual([]);
   });
 
-  it("enforces all seven personalized recap capacity and zero-call scenarios", () => {
-    const scenarios = simulateTelegramRecapLoadScenarios(5_000, { riskBurstChunks: 8_000 });
-
-    expect(scenarios.map((scenario) => scenario.scenarioId)).toEqual([
-      "recap-all-due",
-      "recap-plus-risk-burst",
-      "recap-plus-429-storm",
-      "recap-preset-heavy",
-      "recap-global-scope",
-      "recap-no-change",
-      "recap-stale-tape",
-    ]);
-    expect(scenarios.every((scenario) => scenario.ttlMarginFraction >= 0.2)).toBe(true);
-    expect(scenarios.every((scenario) => scenario.priorityPreserved)).toBe(true);
-    expect(scenarios.every((scenario) => scenario.aiCalls === 0)).toBe(true);
-    expect(scenarios.every((scenario) => scenario.externalPlanningFetches === 0)).toBe(true);
-    expect(scenarios.find((scenario) => scenario.scenarioId === "recap-no-change"))
-      .toMatchObject({ pendingEnqueued: 0, scheduleAdvancements: 5_000 });
-    expect(scenarios.find((scenario) => scenario.scenarioId === "recap-stale-tape"))
-      .toMatchObject({ pendingEnqueued: 0, scheduleAdvancements: 0 });
-  });
 
 });
 

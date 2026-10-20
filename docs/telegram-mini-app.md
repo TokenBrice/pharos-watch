@@ -13,17 +13,10 @@ Launch is private-chat scoped for the current phase: bot commands and alert deli
 Unsigned browser **preview** is a permanent launch-guidance state. With no supported Telegram launch hint, it explains how to open the Mini App and makes zero session API calls; it exposes no subscription controls or mutation authority. It is not awaiting promotion to a browser control panel. A Telegram-indicated launch with missing or failed signed data remains the distinct missing/error state, and signed `initData` validation is always the backend authorization boundary. `noindex` and robots exclusion govern discoverability, not access control.
 
 
-## Daily Recap Control
+## Personalized Recap Retirement
 
-Personalized daily watchlist recaps are being retired. The checked-in Worker configuration selects the existing `off` mode, so server-confirmed sessions omit this control and reject recap mutations, including cached clients. Watchlists, regular alerts, timezone, quiet hours, and public editorial digests are unchanged. The implementation and wire contract remain in place until the [operator notice, stop and terminal-drain proof](./runbooks/telegram-no-delivery.md#recap-retirement-stop-and-drain) is complete; client/code removal is a separate cutover.
+Personalized watchlist recaps are retired. The command menu, public manual, Mini App controls, signed operations and session state no longer expose recap preferences or delivery history. Stale `set-recap` requests fail operation-schema validation before writes; retired recap launch payloads follow the ordinary unknown-payload Home route. Watchlists, risk alerts, IANA timezone, quiet hours, snooze, delivery health and the public editorial daily/weekly digests are unchanged.
 
-While public mode remains available for a deliberate compatible rollback, Settings includes one compact **Daily Recap** section for private subscribers. Individual opt-in is off by default. The control exposes an enable toggle, an hour selector (`0`–`23`) in the subscriber's confirmed IANA timezone, the next local delivery time, and the latest aggregate outcome. Copy states that a recap is sent only when watched assets materially changed. If no timezone is confirmed, enabling is rejected with `recap-timezone-required`; UTC is valid when explicitly selected. Quiet-hours and recap scheduling use the same subscriber timezone, and changing the timezone recomputes an enabled recap's next due instant atomically.
-
-The Mini App sends `{ kind: "set-recap", enabled, deliveryHourLocal }` through the signed mutation endpoint. The server persists the preference in `telegram_recap_preferences`, advances the shared subscriber preference generation, and returns the refreshed state. Private-chat and stale-auth gates remain authoritative; the client never optimistically flips the toggle. Recap messages link back to the Mini App with `View watchlist` and `Recap settings` buttons. Recap planning itself is DB-only and never invokes an AI or external data provider.
-
-Global recap availability is independent of private opt-in: the Worker supports `off|public` plus temporary `retirement-notice`, with unset/malformed/retired modes failing closed to off. Both off and notice mode omit the Settings control and reject forged `set-recap` mutations as `recap-unavailable` before preference writes; public preserves the confirmed-timezone and private-chat requirements. Notice mode admits only the final scheduled notice for existing opted-in private chats through the original recap queue, never new enrolment or ordinary recap plans. No per-chat rollout allowlist or new permanent feature flag is introduced.
-
-Implementation ownership lives in [architecture §9](./telegram-architecture.md#9-mini-app-surface), not a second file inventory here.
 
 ## Launch Surfaces
 
@@ -33,7 +26,7 @@ The static control panel is `https://pharos.watch/pharoswatchbot/app/`. Web App 
 | --- | --- |
 | Persistent `Manage Alerts` menu | Five-minute Worker lane, 15-minute fresh-cache marker; Bot API failure/backoff can delay drift repair |
 | Profile `Launch app`, preview/loading assets, Inline Mode | BotFather; use [configured state and smoke tests](./runbooks/telegram-mini-app-botfather.md#configured-state), not a duplicated feature checklist |
-| Private command replies / quick-subscribe | `/start`, `/help`, `/presets`, `/settings`, `/list`, `/status`, `/why`, `/coverage`, `/set`, `/mute`, `/unmutehours`, `/timezone`, `/unsnooze`, `/pause`, `/health`, `/forget` attach context-aware buttons; quicksub uses `coin_<id>`. `/recap` itself uses callbacks, not a launch button |
+| Private command replies / quick-subscribe | `/start`, `/help`, `/presets`, `/settings`, `/list`, `/status`, `/why`, `/coverage`, `/set`, `/mute`, `/unmutehours`, `/timezone`, `/unsnooze`, `/pause`, `/health`, `/forget` attach context-aware buttons; quicksub uses `coin_<id>` |
 | Direct `https://t.me/PharosWatchBot?startapp=<payload>` | Shared payload parser chooses view; signed `initData` still authorizes every API operation. Stale-auth relaunch preserves current panel/context |
 
 Groups keep command/callback keyboards; no group Mini App mutation until fresh admin verification and group-scoped launch ownership exist.
@@ -45,8 +38,8 @@ The shared parser in `shared/lib/telegram-mini-app-payloads.ts` owns `?startapp=
 | Payload | Initial view |
 | --- | --- |
 | absent / unknown / `home`, `snooze`, `health` | Home |
-| `settings`, `quiet-hours`, `forget`, `recap_settings` | Settings (matching control context) |
-| `watchlist`, `setup_recommended`, `recap_watchlist` | Watchlist (`setup_recommended` is a legacy launch alias) |
+| `settings`, `quiet-hours`, `forget` | Settings (matching control context) |
+| `watchlist`, `setup_recommended` | Watchlist (`setup_recommended` is a legacy launch alias) |
 | `presets` | Presets |
 | `coin_<id>` | Watchlist coin/followable launch target |
 | `why_<id>`, `coverage_<id>` | Watchlist in-app insight with bot-DM full explainer fallback |
@@ -90,11 +83,11 @@ Preset edits keep at least one DEWS/depeg/safety family enabled; disable the fin
 
 Tuning schemas consume the shared preference vocabulary in `shared/types/status/telegram.ts`; settings callback maps and inverses live in `shared/lib/telegram-alert-families.ts`. These are representation authorities, not a contract-version change: callback codes/order, portable-token ordinals and historical fixture bytes remain stable. Nullable Mini App tuning still means enabled default/any, never the settings keyboard's Off action.
 
-Contract **v6** changes the meaning of existing tuning and preset-edit payloads (see [control semantics](#client-state-and-control-semantics)). Deploy the v6 Worker before Pages. The Worker accepts explicit **v5** clients with the matching catalog for the entire v6 rolling-deploy window, until the next contract-version bump removes v5 admission; it returns v5 envelopes for session, mutation, portability and bulk-preview responses so cached v5 bundles can still parse them. Both versions use the corrected domain semantics; the window does not retain the former accidental Off/additive behavior. Unsupported versions and mismatched catalogs still fail before writes. No existing disabled row is automatically restored, because intent cannot be recovered from that row.
+Contract **v7** removes personalized recap operations, response projections, errors and launch tokens. Deploy the v7 Worker before Pages. Explicit earlier contract versions, including v5 and v6, are rejected before writes; there is no versioned compatibility adapter. The corrected tuning and preset-edit semantics described below remain unchanged. Existing disabled rows are not automatically restored because intent cannot be recovered from those rows.
 
 The searchable coin catalog is projected by `scripts/build-data/build-client-registry.mjs` into `shared/data/stablecoins/coins.telegram-mini-app.generated.json`. `shared/lib/telegram-mini-app-catalog.ts` combines that slim asset with the shared preset definitions and derives a content version. The slim catalog is bundled into the fingerprinted static Mini App JavaScript, so it is cached with the Pages asset instead of being returned by every signed API call. The repository does not currently define a fixed byte budget for this registry-sized artifact.
 
-Clients advertise `mini_app_contract` and `mini_app_catalog` query parameters. A matching Worker returns `{ contractVersion, catalogVersion, stateRevision, state }`; `state` contains only viewer/subscriber/preset/subscription/health data and never the immutable catalog. A request with neither parameter remains a legacy client and receives the former full-catalog state shape. Query negotiation avoids adding custom request headers. The v6 client must not ship before the v6 Worker: a version-aware v5 Worker rejects v6 rather than implementing its corrected semantics.
+Clients advertise `mini_app_contract` and `mini_app_catalog` query parameters. A matching Worker returns `{ contractVersion, catalogVersion, stateRevision, state }`; `state` contains only viewer/subscriber/preset/subscription/health data and never the immutable catalog. A request with neither parameter remains an unversioned legacy client and receives the full-catalog state shape, without retired recap fields or operations. Query negotiation avoids adding custom request headers. The v7 client must not ship before the v7 Worker: an earlier version-aware Worker rejects v7.
 
 Version skew returns `409 contract-version-mismatch` or `409 catalog-version-mismatch` before auth cooldown, mutation burst, analytics, or persistence writes. The client does not replay a rejected mutation. It stores only the non-identifying target-version pair in `sessionStorage` and reloads the fingerprinted static bundle at most once for that target; a repeated mismatch asks the user to close and reopen the Mini App.
 

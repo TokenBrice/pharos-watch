@@ -67,6 +67,7 @@ function buildPublicProjection(
     },
     cards,
     foreignCauseGaps: publication.foreignCauseGaps,
+    ...(publication.pillarFreshness === undefined ? {} : { pillarFreshness: publication.pillarFreshness }),
     ...(publication.commonModeGroups === undefined ? {} : { commonModeGroups: publication.commonModeGroups }),
     dependencyGraph: buildReportCardsV9DependencyGraph(
       cards,

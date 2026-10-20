@@ -19,7 +19,6 @@ import {
   type TelegramCallbackMutationContext,
   type TelegramMutationContext,
 } from "../webhook/telegram-webhook-effect-fence";
-import type { TelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
 
 export { SNOOZE_SECONDS };
 
@@ -44,7 +43,6 @@ const CALLBACK_ACTIONS = [
   "help",
   "settings",
   "tz",
-  "recap",
 ] as const;
 
 export type CallbackAction = (typeof CALLBACK_ACTIONS)[number];
@@ -280,7 +278,6 @@ export interface CallbackContext extends TelegramCallbackMutationContext {
   botToken: string;
   cb: TelegramCallbackQuery;
   chatId: string;
-  recapRollout?: TelegramRecapRolloutPolicy;
   parsed: ParsedCallbackData<CallbackAction>;
   answerCallback: (options?: { text?: string }) => Promise<void>;
 }

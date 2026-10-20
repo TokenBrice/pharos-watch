@@ -195,6 +195,8 @@ Regenerate the schedule inventory and the appendix's [executable-task topology/n
 
 Due Aave-only refreshes follow safe stablecoins publication before snapshots. The full child has a 45-second wall-clock cap and requires 60 seconds of snapshot headroom, within the original slot deadline. Independent-family budgets, triggers and the serial `4/6` peak stay unchanged; [Yield operations](./yield-intelligence-operations.md#slot-context) owns deferral and settlement.
 
+Charts-offset preparation derives the due stablecoins slot from logical time. Its [bounded D1 readiness fence](process/report-cards-appendix.md#canonical-publication) changes no trigger or fetch peak. First-run acceptance: expected-slot publication clock equals captured source, compiler accepts, and mint/burn FTQ stays fresh; a missing/failed source defers without replacing input.
+
 ### Event-entry lifecycle and admission
 
 `runScheduledSlotWithFence()` arms the inherited absolute deadline before the first D1 await, not after claim or child-protocol stamping. Same-key presweeps no longer precede admission; same-slot stale takeover remains CAS-fenced. Mandatory await boundaries recheck expiry before admitting the next stage. Replay keeps the executing event's deadline and its separate producer/source identity.

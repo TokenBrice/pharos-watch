@@ -75,6 +75,10 @@ export function projectV9Detail(
   return ReportCardsV9DetailResponseSchema.parse({
     ...envelope(snapshot), projection: "detail", coinId,
     cards: [resolveV9PublicWitnessTexts(selected)], neighborhood,
+    ...(snapshot.pillarFreshness === undefined ? {} : { pillarFreshness: {
+      dexMaxAgeSec: snapshot.pillarFreshness.dexMaxAgeSec,
+      dexObservedAtSec: [snapshot.pillarFreshness.dexObservedAtSec[snapshot.cards.indexOf(selected)]!],
+    } }),
     dependencyGraph: { edges }, commonModeGroups: groups,
     foreignCauseGaps: Object.fromEntries(selected.foreignCauseGapRefs.map(ref => [String(ref), snapshot.foreignCauseGaps[ref]])),
     scope: { kind: "incident-and-dependent-input-closure", returnedCount: neighborhood.length,

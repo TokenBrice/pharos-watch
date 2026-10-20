@@ -16,6 +16,8 @@ import {
   SafetyScoreV9AccessPostureSchema,
   SafetyScoreV9CapSchema,
   SafetyScoreV9EvidenceFreshnessSchema,
+  SafetyScoreV9PillarFreshnessSchema,
+  refineSafetyScoreV9PillarFreshness,
   SafetyScoreV9NrReasonSchema,
   SafetyScoreV9PillarSchema,
   SafetyScoreV9PublicReasonListSchema,
@@ -451,6 +453,7 @@ const SafetyScoreV9ResponseShape = {
   completeness: SafetyScoreV9CompletenessSchema,
   foreignCauseGaps: canonicalTextArray(),
   commonModeGroups: SafetyScoreV9CommonModeGroupsSchema.optional(),
+  pillarFreshness: SafetyScoreV9PillarFreshnessSchema.optional(),
 } as const;
 function refineResponse(
   response: {
@@ -459,10 +462,13 @@ function refineResponse(
     completeness: z.infer<typeof SafetyScoreV9CompletenessSchema>;
     cards: readonly SafetyScoreV9CurrentCard[];
     foreignCauseGaps: readonly string[];
+    sourceGenerations: Readonly<Record<string, string>>;
+    pillarFreshness?: z.infer<typeof SafetyScoreV9PillarFreshnessSchema>;
   },
   ctx: { addIssue: (issue: { code: "custom"; path?: PropertyKey[]; message: string }) => void },
 ): void {
   refineV9PublicGapContext(response, ctx);
+  refineSafetyScoreV9PillarFreshness(response, ctx);
   if (response.publishedAtSec < response.asOfSec) {
     ctx.addIssue({ code: "custom", path: ["publishedAtSec"], message: "Publication cannot predate evidence" });
   }

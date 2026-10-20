@@ -2,6 +2,106 @@ import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import type { MintBurnContractConfig } from "../mint-burn-contracts";
 import { mintBurnConfigKey } from "./sync-state";
+import legacyFingerprints from "./legacy-cutover-fingerprints.json";
+
+/** Last closed hour before T1 deployed at 12:03Z; remove after 2027-01-18T12:00Z
+ * plus the public freshness budget (the longest public window is 90 days).
+ * This is weaker, explicitly labelled legacy assurance, NOT a v2 ledger proof.
+ */
+export const MINT_BURN_LEGACY_CUTOVER = Date.parse("2026-10-20T12:00:00Z") / 1000;
+const legacyIdentities: Readonly<Record<string, true>> = Object.fromEntries(
+  legacyFingerprints.map((fingerprint) => [fingerprint, true as const]),
+);
+
+export interface MintBurnLegacySpan {
+  start: number;
+  end: number;
+}
+
+export interface MintBurnLegacyRow {
+  config_key: string;
+  last_block: number;
+  timestamp: number | null;
+  first_hour_ts: number | null;
+}
+
+export function prepareMintBurnLegacyEvidence(
+  db: D1Database, configs: readonly MintBurnContractConfig[],
+): D1PreparedStatement {
+  return db.prepare(`
+    SELECT /* pharos:mint-burn-legacy-evidence */
+      s.config_key, s.last_block, t.timestamp,
+      (SELECT MIN(h.hour_ts) FROM mint_burn_hourly h
+       WHERE h.chain_id = json_extract(i.value, '$[1]')
+         AND h.stablecoin_id = json_extract(i.value, '$[2]') AND h.hour_ts < ?) AS first_hour_ts
+    FROM json_each(?) i
+    JOIN mint_burn_sync_state s ON s.config_key = json_extract(i.value, '$[0]')
+    LEFT JOIN block_timestamp_cache t ON t.chain_id = json_extract(i.value, '$[1]')
+      AND t.block_number = s.last_block
+  `).bind(MINT_BURN_LEGACY_CUTOVER, JSON.stringify(configs.map((config) =>
+    [mintBurnConfigKey(config), config.chain.chainId, config.stablecoinId])));
+}
+
+/** Anchor the old cursor/event span to actual scan time, never to the request clock.
+ * A new source/fingerprint or a first scan after cutover cannot acquire legacy history.
+ */
+export function buildMintBurnLegacySpans(
+  configs: readonly MintBurnContractConfig[], rows: readonly MintBurnLegacyRow[],
+  segments: ReadonlyMap<string, readonly MintBurnScanSegment[]>,
+  blockTime: (chainId: string) => number | null,
+): Map<string, MintBurnLegacySpan> {
+  const byKey = new Map(rows.map((row) => [row.config_key, row]));
+  const spans = new Map<string, MintBurnLegacySpan>();
+  const pairCounts = new Map<string, number>();
+  for (const config of configs) {
+    const pair = `${config.stablecoinId}|${config.chain.chainId}`;
+    pairCounts.set(pair, (pairCounts.get(pair) ?? 0) + 1);
+  }
+  for (const config of configs) {
+    if (!legacyIdentities[mintBurnScanFingerprint(config)]) continue;
+    const key = mintBurnConfigKey(config);
+    const row = byKey.get(key);
+    if (!row || row.last_block < config.startBlock) continue;
+    const boundary = (segments.get(key) ?? []).find((segment) =>
+      segment.dirty_hour_ts == null && segment.from_timestamp < MINT_BURN_LEGACY_CUTOVER
+      && segment.to_block <= row.last_block);
+    const timestamp = boundary?.from_timestamp ?? row.timestamp;
+    const block = boundary?.from_block ?? row.last_block;
+    if (timestamp == null || timestamp > MINT_BURN_LEGACY_CUTOVER) continue;
+    const secondsPerBlock = blockTime(config.chain.chainId);
+    const cursorStart = secondsPerBlock == null ? timestamp
+      : timestamp - Math.max(0, block - config.startBlock) * secondsPerBlock;
+    // Hourly buckets have no contract attribution. A sibling contract's old event
+    // must not extend this config's cursor span (notably BUIDL's two share classes).
+    const firstHour = pairCounts.get(`${config.stablecoinId}|${config.chain.chainId}`) === 1
+      ? row.first_hour_ts : null;
+    const start = Math.min(cursorStart, firstHour ?? timestamp);
+    const end = Math.min(MINT_BURN_LEGACY_CUTOVER, boundary?.to_timestamp ?? timestamp);
+    if (start < end) spans.set(key, { start, end });
+  }
+  return spans;
+}
+
+/** Split only at the immutable cutover; debt vetoes both assurance regimes. */
+export function mintBurnWindowAdmits(
+  configs: readonly MintBurnContractConfig[], segments: ReadonlyMap<string, readonly MintBurnScanSegment[]>,
+  legacy: ReadonlyMap<string, MintBurnLegacySpan>, from: number, to: number,
+): boolean {
+  if (from >= MINT_BURN_LEGACY_CUTOVER) return mintBurnScanCoverageAdmits(configs, segments, from, to);
+  if (configs.length === 0 || from <= 0 || from >= to || from % 3600 !== 0 || to % 3600 !== 0) return false;
+  const legacyEnd = Math.min(to, MINT_BURN_LEGACY_CUTOVER);
+  for (const config of configs) {
+    const key = mintBurnConfigKey(config);
+    if ((segments.get(key) ?? []).some((row) => row.dirty_hour_ts != null
+      && row.dirty_hour_ts < to && row.dirty_hour_ts + 3600 > from)) return false;
+    // Prefer full v2 evidence whenever it exists.
+    if (mintBurnScanCoverageAdmits([config], segments, from, legacyEnd)) continue;
+    const span = legacy.get(key);
+    if (!span || span.start > from || span.end < legacyEnd) return false;
+  }
+  return to <= MINT_BURN_LEGACY_CUTOVER
+    || mintBurnScanCoverageAdmits(configs, segments, MINT_BURN_LEGACY_CUTOVER, to);
+}
 
 export interface MintBurnScanCoverage {
   configKey: string;

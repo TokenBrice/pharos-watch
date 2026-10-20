@@ -166,15 +166,6 @@ const TelegramWebhookEffectLifecycleSchema = z.object({
   lowerBound: z.boolean(),
 });
 
-const TelegramPersonalizedRecapTelemetrySchema = z.object({
-  enabledPrivateChats: z.number(),
-  due: z.number(),
-  queued: z.number(),
-  executionUnknown: z.number(),
-  oldestDueAgeSec: z.number().nullable(),
-  oldestQueuedAgeSec: z.number().nullable(),
-  oldestExecutionUnknownAgeSec: z.number().nullable(),
-});
 
 export const TELEGRAM_DELIVERY_SLI_EVIDENCE_QUALITY_VALUES = ["complete", "partial", "empty"] as const;
 export type TelegramDeliverySliEvidenceQuality =
@@ -330,7 +321,6 @@ export const TelegramBotStatsSchema = z.object({
   pendingDeliveryBacklog: TelegramPendingDeliveryBacklogSchema.optional(),
   webhookEffectUnknown: z.number().optional(),
   webhookEffectLifecycle: TelegramWebhookEffectLifecycleSchema.optional(),
-  personalizedRecap: TelegramPersonalizedRecapTelemetrySchema.optional(),
   deliverySli: TelegramDeliverySliStatusSchema,
   presetQueryFailures: z.number().optional(),
   /**

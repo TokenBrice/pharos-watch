@@ -9,20 +9,12 @@ import { TELEGRAM_ALERT_TYPES, type TelegramAlertType } from "@shared/types/stat
 import { isDepegStepValue, isTelegramSafetyMode } from "@shared/types/status/telegram";
 import { isDewsAlertBand } from "@shared/lib/classification/risk";
 import type { TelegramMiniAppMutableState } from "@shared/lib/telegram-mini-app-contract";
-import { TELEGRAM_RECAP_DEFAULT_DELIVERY_HOUR_LOCAL } from "@shared/lib/telegram-recap-policy";
-import {
-  TELEGRAM_RECAP_PUBLIC_ROLLOUT_POLICY,
-  isTelegramRecapAvailable,
-  type TelegramRecapRolloutPolicy,
-} from "@shared/lib/telegram-recap-rollout";
 import { listTelegramPresets, type TelegramPresetDefinition } from "../common/presets";
 import { loadTelegramChatHealthDiagnostics } from "../store/usage-analytics";
 import type { TelegramMiniAppAuthContext } from "./mini-app-auth";
 import {
   prepareTelegramPendingAlertCount,
-  prepareTelegramRecapState,
   type TelegramPendingAlertCountRow,
-  type TelegramRecapStateRow,
 } from "../store/chat-state";
 import type {
   PresetSubscriptionRow,
@@ -33,7 +25,6 @@ import type {
 interface LoadTelegramMiniAppStateOptions {
   nowSec: number;
   mutationMaxAgeSec: number;
-  recapRollout?: TelegramRecapRolloutPolicy;
 }
 
 type MiniAppSubscriptionRow = SubscriptionRow & {
@@ -102,9 +93,8 @@ export async function loadTelegramMiniAppState(
   const mutationBlockReason = auth.canMutatePrivateChat
     ? mutationAuthExpired ? "stale-auth" : null
     : "not-private";
-  const recapAvailable = chatId != null && isTelegramRecapAvailable(options.recapRollout ?? TELEGRAM_RECAP_PUBLIC_ROLLOUT_POLICY);
 
-  const [subscriber, subscriptions, presets, health, pending, recap] = chatId
+  const [subscriber, subscriptions, presets, health, pending] = chatId
     ? await (async () => {
       const [stateResults, diagnostics] = await Promise.all([
         db.batch([
@@ -131,13 +121,11 @@ export async function loadTelegramMiniAppState(
               ORDER BY preset_id`,
           ).bind(chatId),
           prepareTelegramPendingAlertCount(db, chatId, "queued_alerts"),
-          prepareTelegramRecapState(db, chatId),
         ]) as Promise<[
           D1Result<SubscriberRow>,
           D1Result<MiniAppSubscriptionRow>,
           D1Result<PresetSubscriptionRow>,
           D1Result<TelegramPendingAlertCountRow>,
-          D1Result<TelegramRecapStateRow>,
         ]>,
         loadTelegramChatHealthDiagnostics(db, chatId),
       ]);
@@ -147,14 +135,12 @@ export async function loadTelegramMiniAppState(
         { results: stateResults[2].results ?? [] },
         diagnostics,
         stateResults[3].results?.[0] ?? null,
-        stateResults[4].results?.[0] ?? null,
       ] as const;
     })()
     : [
       null,
       { results: [] as MiniAppSubscriptionRow[] },
       { results: [] as PresetSubscriptionRow[] },
-      null,
       null,
       null,
     ] as const;
@@ -184,16 +170,6 @@ export async function loadTelegramMiniAppState(
         startHourUtc: subscriber?.quiet_hours_start_utc ?? null,
         endHourUtc: subscriber?.quiet_hours_end_utc ?? null,
         timezone: subscriber?.timezone ?? null,
-      },
-      recap: {
-        available: recapAvailable,
-        enabled: boolFlag(recap?.enabled),
-        deliveryHourLocal: recap?.delivery_hour_local ?? TELEGRAM_RECAP_DEFAULT_DELIVERY_HOUR_LOCAL,
-        timezoneConfirmed: subscriber?.timezone != null,
-        nextDueAt: recap?.next_due_at ?? null,
-        lastWindowEndAt: recap?.last_window_end_at ?? null,
-        lastDeliveredLocalDate: recap?.last_delivered_local_date ?? null,
-        lastOutcome: recap?.last_outcome ?? null,
       },
       snoozeUntilTs: subscriber?.alert_snooze_until_ts ?? null,
     },

@@ -288,6 +288,13 @@ describe("frontend API query descriptors", () => {
     );
   });
 
+  it("opts full and detail readers into compact freshness without changing table requests", () => {
+    expect(FRONTEND_API_QUERY_DESCRIPTORS.reportCardsV9.path).toBe("/api/report-cards/v9?freshness=operands");
+    expect(FRONTEND_API_QUERY_DESCRIPTORS.reportCardsV9Detail("usdc-circle").path)
+      .toBe("/api/report-cards/v9-detail?stablecoin=usdc-circle&freshness=operands");
+    expect(FRONTEND_API_QUERY_DESCRIPTORS.reportCardsV9Table.path).toBe("/api/report-cards/v9-table");
+  });
+
   it("accepts only report-v5 at the live V9 reader boundary", async () => {
     const schema = await resolveSchemaLike(FRONTEND_API_QUERY_DESCRIPTORS.reportCardsV9.schema);
     if (schema === undefined) throw new Error("Expected a V9 report-card response schema");

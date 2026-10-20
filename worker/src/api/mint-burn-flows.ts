@@ -21,7 +21,7 @@ import {
   summarizeMintBurnValuation,
 } from "@shared/lib/mint-burn-valuation";
 import { MINT_BURN_HOURLY_BUCKET_COLUMNS_SQL } from "../lib/mint-burn-hourly-valuation";
-import { decodeMintBurnScanCoverage, mintBurnScanCoverageAdmits, prepareMintBurnScanCoverage, type MintBurnScanSegment } from "../lib/mint-burn-pipeline/scan-coverage";
+import { decodeMintBurnScanCoverage, prepareMintBurnScanCoverage, type MintBurnScanSegment } from "../lib/mint-burn-pipeline/scan-coverage";
 import { sumMcapForTrackedChains } from "../lib/mint-burn-mcap-weighting";
 import {
   buildFlightToQualityClassificationFromV9Snapshot,
@@ -45,6 +45,8 @@ import {
   MINT_BURN_CRON_JOB,
   mintBurnHourlyWindow,
   mintBurnScanWindow,
+  mintBurnWindowCoverage,
+  readMintBurnWindowContext,
   perCoinFlowCacheKey,
   readMintBurnCronSnapshot,
   resolveFlowUpdatedAt,
@@ -133,11 +135,21 @@ export async function refreshAggregateMintBurnFlowCache(db: D1Database, hours: n
     gradeClassification,
   );
 
-  const gaugeScanCoverage = mintBurnScanWindow(coins.every((coin) => coin.coverage.has24hWindow));
-  const gaugeScore = gaugeScanCoverage.complete ? computeGaugeScore(gaugeInputs) : null;
+  const gaugeScanCoverage = {
+    ...mintBurnScanWindow(coins.every((coin) => coin.coverage.has24hWindow)),
+    ...(coins.some((coin) => coin.coverage.windows?.window24h.provenance === "legacy-pre-cutover")
+      ? { provenance: "legacy-pre-cutover" as const } : {}),
+    admittedCoins: coins.filter((coin) => coin.coverage.has24hWindow).length,
+    excludedCoins: coins.filter((coin) => !coin.coverage.has24hWindow).length,
+    excludedMcapUsd: coins.some((coin) => !coin.coverage.has24hWindow && coin.gaugeWeightUsd == null)
+      ? null : coins.reduce((sum, coin) => sum + (!coin.coverage.has24hWindow ? coin.gaugeWeightUsd ?? 0 : 0), 0),
+  };
+  // Pre-T1 semantics: only admitted, scored, observed-weight members contribute.
+  // There was no roster-weight quorum; incomplete membership remains explicit above.
+  const gaugeScore = computeGaugeScore(gaugeInputs);
   const gaugeBand = gaugeScore !== null ? getGaugeBand(gaugeScore) : null;
   const hourly = buildHourlyFlowSeries(data.hourlyRows, (ts) =>
-    mintBurnScanCoverageAdmits(ACTIVE_MINT_BURN_CONFIGS, data.scanSegments, ts, ts + 3600));
+    mintBurnWindowCoverage(ACTIVE_MINT_BURN_CONFIGS, data.scanSegments, data.legacy, ts, ts + 3600, data.watermark).complete);
   const updatedAt = resolveFlowUpdatedAt(data.hourlyRows, nowSec);
   // Per-chain 24h net flow over the same tracked-pair universe as `coins`, so
   // consumers of the published payload (daily digest) never re-derive a chain
@@ -146,10 +158,10 @@ export async function refreshAggregateMintBurnFlowCache(db: D1Database, hours: n
   const chains = [...aggregateHourlyRowsByChain(data.hourly24hRows).entries()]
     .map(([chainId, aggregate]) => {
       const valuation = summarizeMintBurnValuation(aggregate.valuation).completeness;
-      const scanCoverage = mintBurnScanWindow(mintBurnScanCoverageAdmits(
+      const scanCoverage = mintBurnWindowCoverage(
         ACTIVE_MINT_BURN_CONFIGS.filter((config) => config.chain.chainId === chainId),
-        data.scanSegments, params.window24h, params.windowEnd,
-      ));
+        data.scanSegments, data.legacy, data.windowEnd - 24 * 3600, data.windowEnd, data.watermark,
+      );
       return { chainId, netFlow24hUsd: !scanCoverage.complete || valuation === "partial" ? null : aggregate.netFlow, valuation, scanCoverage };
     })
     .sort((a, b) => {
@@ -164,6 +176,7 @@ export async function refreshAggregateMintBurnFlowCache(db: D1Database, hours: n
       score: gaugeScore,
       band: gaugeBand,
       intensitySemantics: "signed-v2",
+      scoreScope: "admitted-coins",
       flightToQuality: flightToQuality?.active ?? null,
       flightIntensity: flightToQuality?.intensity ?? null,
       scanCoverage: gaugeScanCoverage,
@@ -181,7 +194,7 @@ export async function refreshAggregateMintBurnFlowCache(db: D1Database, hours: n
     hourly,
     updatedAt,
     windowHours: hours,
-    window: mintBurnHourlyWindow(nowSec, hours),
+    window: { ...mintBurnHourlyWindow(data.windowEnd, hours), watermark: data.watermark },
     scope: buildAggregateScope(),
     sync: {
       ...data.sync,
@@ -358,7 +371,11 @@ async function handlePerCoin(db: D1Database, stablecoinId: string, hours: number
   return withMintBurnFlowFallback(db, "per-coin", cacheKey, async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const syncStartSec = nowSec;
-    const window = mintBurnHourlyWindow(nowSec, hours);
+    const context = await readMintBurnWindowContext(db, nowSec, ACTIVE_MINT_BURN_CONFIGS);
+    const window = {
+      ...mintBurnHourlyWindow(context.watermark.timestamp ?? nowSec, hours),
+      watermark: context.watermark,
+    };
 
     const [snapshot, latestCronSnapshot, latestSuccessfulSyncLookup] = await Promise.all([
       db.batch([
@@ -385,16 +402,16 @@ async function handlePerCoin(db: D1Database, stablecoinId: string, hours: number
         : null;
     const sync = buildMintBurnSyncHealth(nowSec, latestSuccessfulSyncAt, latestCronSnapshot.status);
 
-    const scanCoverage = mintBurnScanWindow(mintBurnScanCoverageAdmits(configs, scanSegments, window.start, window.end));
+    const scanCoverage = mintBurnWindowCoverage(configs, scanSegments, context.legacy, window.start, window.end, context.watermark);
     // Per-chain breakdown
     const chainMap = aggregateHourlyRowsByChain(rows);
 
     // Signed nets of a partial window are unavailable; volumes stay known subtotals.
     const chains = [...chainMap.entries()].map(([chainId, v]) => {
       const valuation = summarizeMintBurnValuation(v.valuation);
-      const chainScanCoverage = mintBurnScanWindow(mintBurnScanCoverageAdmits(
-        configs.filter((config) => config.chain.chainId === chainId), scanSegments, window.start, window.end,
-      ));
+      const chainScanCoverage = mintBurnWindowCoverage(
+        configs.filter((config) => config.chain.chainId === chainId), scanSegments, context.legacy, window.start, window.end, context.watermark,
+      );
       return {
         chainId,
         mintVolumeUsd: v.mintVolume,
@@ -407,7 +424,8 @@ async function handlePerCoin(db: D1Database, stablecoinId: string, hours: number
       };
     });
 
-    const hourly = buildHourlyFlowSeries(rows, (ts) => mintBurnScanCoverageAdmits(configs, scanSegments, ts, ts + 3600));
+    const hourly = buildHourlyFlowSeries(rows, (ts) =>
+      mintBurnWindowCoverage(configs, scanSegments, context.legacy, ts, ts + 3600, context.watermark).complete);
 
     // Totals
     let totalMint = 0;

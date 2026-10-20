@@ -11,7 +11,6 @@ import {
   insertAlertJobFixture,
   insertAlertJobTargetFixture,
   insertPendingSqlite,
-  insertRecapDeliveryFixture,
   insertRiskPendingSqlite,
   insertSourceEventSqlite,
   makePendingQueryRow,
@@ -622,21 +621,6 @@ describe("drainPendingQueue contract cases", () => {
     expect(mockMigrateTelegramChatId).toHaveBeenCalledWith(migrated, "-1234567890", "-1001234567890");
   });
 
-  it("projects personalized recap acceptance and pause cancellation with persisted markup", async () => {
-    for (const paused of [false, true]) {
-      await withPendingQueueScenario({}, async ({ sqlite, db, now }) => {
-        const { recapKey } = insertRecapDeliveryFixture(sqlite, now, { paused });
-        if (!paused) sqlite.prepare("UPDATE telegram_pending_alerts SET markup_policy_json = ? WHERE id = 8501").run(serializePendingMarkupPolicy({ replyMarkup: { inline_keyboard: [[{ text: "Open", callback_data: "open" }]] }, linkPreviewOptions: { url: "https://pharos.watch", prefer_small_media: true } }));
-        if (!paused) mockSendToChat.mockResolvedValue(makeTelegramSentResult());
-        const result = await drainPendingQueue(db, "bot-token", 1);
-        expect(result).toMatchObject(paused ? { attempted: 0, dropped: 1 } : { attempted: 1, sent: 1 });
-        expect(mockSendToChat).toHaveBeenCalledTimes(paused ? 0 : 1);
-        expect(sqlite.prepare("SELECT status FROM telegram_recap_targets WHERE recap_key = ?").get(recapKey)).toEqual({ status: paused ? "cancelled" : "sent" });
-        if (!paused) expect(mockSendToChat.mock.calls[0]?.[3]).toEqual(expect.objectContaining({ replyMarkup: expect.any(Object), linkPreviewOptions: { url: "https://pharos.watch", prefer_small_media: true } }));
-      });
-      mockSendToChat.mockClear();
-    }
-  });
 
   it("defers incomplete preference data and cancels a changed generation before the Bot API", async () => {
     const now = Math.floor(Date.now() / 1000);
@@ -717,9 +701,9 @@ describe("drainPendingQueue contract cases", () => {
       for (let id = 1; id <= PENDING_DELETE_CHUNK_SIZE + 2; id++) {
         insertPendingSqlite(sqlite, { id, chatId: `orphan-${id}`, html: "orphan", deliveryState: "sending", deliveryOwner: "lost", deliveryGeneration: 3, deliveryClaimExpiresAt: id === PENDING_DELETE_CHUNK_SIZE + 2 ? 2_001 : 2_000 }, 1_000);
       }
-      expect(await reconcilePendingQueueMaintenance(db, 2_000)).toEqual({ staleSendingReconciled: PENDING_DELETE_CHUNK_SIZE, targetOutcomesProjected: 0, terminalPendingReconciled: 0, recapOutcomesProjected: 0 });
+      expect(await reconcilePendingQueueMaintenance(db, 2_000)).toEqual({ staleSendingReconciled: PENDING_DELETE_CHUNK_SIZE, targetOutcomesProjected: 0, terminalPendingReconciled: 0 });
       expect(await reconcilePendingQueueMaintenance(db, 2_000)).toMatchObject({ staleSendingReconciled: 1 });
-      expect(await reconcilePendingQueueMaintenance(db, 2_000)).toEqual({ staleSendingReconciled: 0, targetOutcomesProjected: 0, terminalPendingReconciled: 0, recapOutcomesProjected: 0 });
+      expect(await reconcilePendingQueueMaintenance(db, 2_000)).toEqual({ staleSendingReconciled: 0, targetOutcomesProjected: 0, terminalPendingReconciled: 0 });
       expect(sqlite.prepare("SELECT delivery_state, delivery_generation FROM telegram_pending_alerts WHERE id = ?").get(PENDING_DELETE_CHUNK_SIZE + 2)).toEqual({ delivery_state: "sending", delivery_generation: 3 });
       expect(mockSendToChat).not.toHaveBeenCalled();
     } finally {
@@ -746,7 +730,7 @@ describe("drainPendingQueue contract cases", () => {
     }
   });
 
-  it("bounds terminal target and recap projection backlogs across passes", async () => {
+  it("bounds terminal target projection backlogs across passes", async () => {
     const { sqlite, db } = createLatestSchemaSqlite();
     try {
       insertSourceEventSqlite(sqlite, { sourceEventId: "terminal-source" });
@@ -754,13 +738,10 @@ describe("drainPendingQueue contract cases", () => {
       for (let id = 1; id <= PENDING_DELETE_CHUNK_SIZE + 1; id++) {
         insertPendingSqlite(sqlite, { id, chatId: `terminal-${id}`, html: "terminal", dedupeKey: `terminal-${id}`, sourceEventId: "terminal-source" }, 1_000);
         insertAlertJobTargetFixture(sqlite, { jobId: "terminal-job", targetKey: `terminal-${id}`, chatId: `terminal-${id}`, alertType: "dews", sourceEventId: "terminal-source", pendingDedupeKey: `terminal-${id}`, status: "sent" }, 1_000);
-        insertRecapDeliveryFixture(sqlite, 1_000, { chatId: `recap-${id}` });
-        sqlite.prepare("UPDATE telegram_pending_alerts SET id = ?, delivery_state = 'execution_unknown' WHERE id = 8501").run(1_000 + id);
       }
-      expect(await reconcilePendingQueueMaintenance(db, 2_000)).toMatchObject({ terminalPendingReconciled: PENDING_DELETE_CHUNK_SIZE, recapOutcomesProjected: PENDING_DELETE_CHUNK_SIZE });
-      expect(await reconcilePendingQueueMaintenance(db, 2_000)).toMatchObject({ terminalPendingReconciled: 1, recapOutcomesProjected: 1 });
-      expect(await reconcilePendingQueueMaintenance(db, 2_000)).toEqual({ staleSendingReconciled: 0, targetOutcomesProjected: 0, terminalPendingReconciled: 0, recapOutcomesProjected: 0 });
-      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_recap_targets WHERE status = 'execution_unknown'").get()).toEqual({ count: PENDING_DELETE_CHUNK_SIZE + 1 });
+      expect(await reconcilePendingQueueMaintenance(db, 2_000)).toMatchObject({ terminalPendingReconciled: PENDING_DELETE_CHUNK_SIZE });
+      expect(await reconcilePendingQueueMaintenance(db, 2_000)).toMatchObject({ terminalPendingReconciled: 1 });
+      expect(await reconcilePendingQueueMaintenance(db, 2_000)).toEqual({ staleSendingReconciled: 0, targetOutcomesProjected: 0, terminalPendingReconciled: 0 });
       expect(mockSendToChat).not.toHaveBeenCalled();
     } finally {
       sqlite.close();

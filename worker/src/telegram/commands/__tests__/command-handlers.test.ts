@@ -37,8 +37,6 @@ function mockD1(
     { match: "FROM telegram_subscribers", rows: [], first: null },
     { match: "FROM telegram_subscriptions", rows: [] },
     { match: "FROM telegram_pending_disambiguation", rows: [], first: null },
-    { match: "FROM telegram_recap_preferences", rows: [], first: null },
-    { match: "FROM telegram_recap_targets", rows: [], first: null },
     // First-follow evidence now commits atomically with every enable mutation.
     { match: "INSERT OR IGNORE INTO telegram_subscribers", rows: [] },
     { match: "INSERT INTO telegram_adoption_daily", rows: [] },

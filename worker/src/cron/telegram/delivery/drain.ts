@@ -51,7 +51,6 @@ import {
   revalidatePendingAlertPreferences,
   type PendingPreferenceRevalidation,
 } from "./preference-revalidation";
-import { reconcileRecapPendingTerminalOutcomes } from "./recap-terminal";
 import { reconcileTelegramJobTargetFinalDeliveryFromPending } from "./telegram-alert-job-target-outcomes";
 import {
   claimTelegramTransportPermit,
@@ -76,8 +75,7 @@ interface PendingDrainOptions {
 }
 
 function isPendingRowSnoozed(row: PendingAlertRow, nowSec: number): boolean {
-  return row.source_type !== "personalized_recap" &&
-    row.alert_snooze_until_ts != null && row.alert_snooze_until_ts > nowSec;
+  return row.alert_snooze_until_ts != null && row.alert_snooze_until_ts > nowSec;
 }
 
 function shouldSilencePendingRow(row: PendingAlertRow, nowSec: number): boolean {
@@ -450,7 +448,6 @@ export interface PendingQueueMaintenanceResult {
   staleSendingReconciled: number;
   targetOutcomesProjected: number;
   terminalPendingReconciled: number;
-  recapOutcomesProjected: number;
 }
 
 /** Bounded, idempotent queue repair independent of transport eligibility. */
@@ -461,8 +458,7 @@ export async function reconcilePendingQueueMaintenance(
   const staleSendingReconciled = await reconcileStalePendingSending(db, nowSec);
   const targetOutcomesProjected = await reconcileTelegramJobTargetFinalDeliveryFromPending(db, nowSec);
   const terminalPendingReconciled = await reconcileTerminalTargetRows(db, nowSec);
-  const recapOutcomesProjected = await reconcileRecapPendingTerminalOutcomes(db, nowSec);
-  return { staleSendingReconciled, targetOutcomesProjected, terminalPendingReconciled, recapOutcomesProjected };
+  return { staleSendingReconciled, targetOutcomesProjected, terminalPendingReconciled };
 }
 
 

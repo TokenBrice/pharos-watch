@@ -1,13 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
-import { resolveTelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
 
 let fetchSpy = mockFetch([], { requireMatch: true });
 
 const {
   answerCallbackQuery,
   answerInlineQuery,
-  buildTelegramRecapCta,
   buildTelegramMessage,
   editMessage,
   schedulePerChatBatches,
@@ -41,23 +39,6 @@ describe("sendToChat", () => {
     expect(body).toContain(`<a href="https://pharos.watch/digest/2026-03-21/">Read on Pharos →</a>`);
   });
 
-  it("only advertises the private recap CTA in public rollout", () => {
-    const publicPolicy = { mode: "public" as const };
-
-    expect(buildTelegramRecapCta(publicPolicy)).toBe(
-      '<a href="https://t.me/PharosWatchBot">Open @PharosWatchBot for a private /recap →</a>',
-    );
-    for (const mode of ["dark", "canary", "unknown"]) {
-      expect(buildTelegramRecapCta(resolveTelegramRecapRolloutPolicy({ TELEGRAM_RECAP_ROLLOUT_MODE: mode }))).toBeNull();
-    }
-    expect(buildTelegramRecapCta({ mode: "off" })).toBeNull();
-    expect(buildTelegramRecapCta(undefined)).toBeNull();
-
-    const publicBody = buildTelegramMessage("Daily Digest", "PSI held steady.", "2026-03-21", null, null, null, publicPolicy);
-    const offBody = buildTelegramMessage("Daily Digest", "PSI held steady.", "2026-03-21", null, null, null, { mode: "off" });
-    expect(publicBody).toContain("private /recap");
-    expect(offBody).not.toContain("private /recap");
-  });
 
   it("returns blocked: true on 403", async () => {
     fetchSpy.mockResolvedValueOnce(new Response("Forbidden", { status: 403 }));

@@ -25,7 +25,6 @@ export const baseState: TelegramMiniAppState = {
     exists: true,
     globalAlerts: { dews: true, depeg: true, safety: false, launch: false, reserve: false, freeze: false, depegStepBps: 250 },
     quietHours: { enabled: false, startHourUtc: null, endHourUtc: null, timezone: "UTC" },
-    recap: { available: true, enabled: false, deliveryHourLocal: 9, timezoneConfirmed: true, nextDueAt: null, lastWindowEndAt: null, lastDeliveredLocalDate: null, lastOutcome: null },
     snoozeUntilTs: null,
   },
   presets: [],
@@ -41,10 +40,9 @@ export const baseState: TelegramMiniAppState = {
 
 interface StateOverrides {
   viewer?: Partial<TelegramMiniAppState["viewer"]>;
-  subscriber?: Partial<Omit<TelegramMiniAppState["subscriber"], "globalAlerts" | "quietHours" | "recap">> & {
+  subscriber?: Partial<Omit<TelegramMiniAppState["subscriber"], "globalAlerts" | "quietHours">> & {
     globalAlerts?: Partial<TelegramMiniAppState["subscriber"]["globalAlerts"]>;
     quietHours?: Partial<TelegramMiniAppState["subscriber"]["quietHours"]>;
-    recap?: Partial<TelegramMiniAppState["subscriber"]["recap"]>;
   };
   presets?: TelegramMiniAppState["presets"];
   subscriptions?: TelegramMiniAppState["subscriptions"];
@@ -59,7 +57,7 @@ interface StateOverrides {
  */
 export function makeMiniAppState(overrides: StateOverrides = {}): TelegramMiniAppState {
   const { viewer, subscriber, presets, subscriptions, catalog, health } = overrides;
-  const { globalAlerts, quietHours, recap, ...subscriberRest } = subscriber ?? {};
+  const { globalAlerts, quietHours, ...subscriberRest } = subscriber ?? {};
   return {
     ...baseState,
     viewer: { ...baseState.viewer, ...viewer },
@@ -68,7 +66,6 @@ export function makeMiniAppState(overrides: StateOverrides = {}): TelegramMiniAp
       ...subscriberRest,
       globalAlerts: { ...baseState.subscriber.globalAlerts, ...globalAlerts },
       quietHours: { ...baseState.subscriber.quietHours, ...quietHours },
-      recap: { ...baseState.subscriber.recap, ...recap },
     },
     presets: presets ?? baseState.presets,
     subscriptions: subscriptions ?? baseState.subscriptions,

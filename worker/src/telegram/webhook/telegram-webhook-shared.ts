@@ -110,7 +110,6 @@ const HELP_COMMAND_SEQUENCE = [
   "set",
   "status",
   "brief",
-  "recap",
   "top",
   "why",
   "coverage",

@@ -12,7 +12,6 @@ import { handleUnsubCallback } from "./unsub";
 import { handleSelectCallback } from "./select";
 import { handleHelpCallback } from "./help";
 import { handleTimezoneCallback } from "./tz";
-import { handleRecapCallback } from "./recap";
 import type { CallbackAction, CallbackHandler } from "./_shared";
 
 export type { CallbackAction, CallbackHandler, ParsedCallbackData, TelegramCallbackQuery } from "./_shared";
@@ -45,5 +44,4 @@ export const CALLBACK_HANDLERS: Record<Exclude<CallbackAction, "settings">, Call
   select: handleSelectCallback,
   help: handleHelpCallback,
   tz: handleTimezoneCallback,
-  recap: handleRecapCallback,
 };

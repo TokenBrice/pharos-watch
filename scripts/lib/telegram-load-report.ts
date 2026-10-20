@@ -3,12 +3,10 @@ import type {
   ProductionCalibratedDispatchScenario,
   SyntheticFixtureSummary,
 } from "./telegram-load-scenarios";
-import type { TelegramRecapLoadScenarioResult } from "./telegram-recap-load-scenarios";
-import { TELEGRAM_LOAD_GUARD_ASSUMPTIONS } from "@shared/lib/telegram-delivery-policy";
 
 export interface TelegramQueryPlanCheckResult {
   id: string;
-  category: "fan-out" | "pulse-status" | "pending-drain" | "lifecycle" | "recap-planner";
+  category: "fan-out" | "pulse-status" | "pending-drain" | "lifecycle";
   status: "ok" | "review" | "fail";
   details: string[];
   missingRequiredDetails: string[];
@@ -54,7 +52,6 @@ export interface TelegramLoadCheckReport {
   };
   fixtureSummaries: SyntheticFixtureSummary[];
   scenarios: LoadScenarioResult[];
-  recapScenarios: TelegramRecapLoadScenarioResult[];
   productionDispatchScenario: ProductionCalibratedDispatchScenario;
   queryPlans: TelegramQueryPlanCheckResult[];
   statusPathBudgets: TelegramStatusPathBudgetResult[];
@@ -115,18 +112,6 @@ export function printTelegramLoadReport(report: TelegramLoadCheckReport): void {
     `Production-calibrated dispatch: ${calibrated.subscriberCount} subscribers, ${calibrated.candidateSubscriberCount} candidates, ${calibrated.targetCount} targets, ${calibrated.capturePageCount} capture pages, ${calibrated.fanoutInputLoadCallCount} fanout input loads, ${calibrated.handoffOperationCount} handoff operations, estimated ${calibrated.estimatedInvocationWallMs.toLocaleString()}ms/${calibrated.maxInvocationWallMs.toLocaleString()}ms wall budget.`,
   );
 
-  console.log("");
-  console.log("Personalized recap estimates:");
-  for (const result of report.recapScenarios) {
-    const mode = result.exploratory
-      ? "ADVISORY"
-      : result.targetRecipients === TELEGRAM_LOAD_GUARD_ASSUMPTIONS.requiredTarget
-        ? "ENFORCED"
-        : "CALIBRATION";
-    console.log(
-      `- ${result.targetRecipients.toLocaleString()} / ${result.scenarioLabel}: ${result.pendingEnqueued.toLocaleString()} queued, ${result.plannerRuns} planner runs, ${result.pendingDrainRuns} drain runs, completion ${formatDuration(result.estimatedCompletionSeconds)}, TTL margin ${(result.ttlMarginFraction * 100).toFixed(1)}%, planner CPU ~${result.peakPlannerCpuMs.toLocaleString()}ms, dispatch CPU ~${result.peakDispatchCpuMs.toLocaleString()}ms, aiCalls=${result.aiCalls}, externalPlanningFetches=${result.externalPlanningFetches} [${mode}]`,
-    );
-  }
 
   if (report.queryPlans.length > 0) {
     console.log("");

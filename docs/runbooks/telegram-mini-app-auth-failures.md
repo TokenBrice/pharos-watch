@@ -67,7 +67,6 @@ WITH mini_app_writes AS (
           'mini_app_coin_add',
           'mini_app_coin_remove',
           'mini_app_quiet_hours',
-          'mini_app_recap',
           'mini_app_snooze',
           'mini_app_coin_snooze',
           'mini_app_forget'

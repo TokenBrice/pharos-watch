@@ -176,6 +176,9 @@ try {
       })) witnessViewBytes[view] = (witnessViewBytes[view] ?? 0) + Buffer.byteLength(JSON.stringify(value));
     }
     const acceptedBaselineBytes = Buffer.byteLength(JSON.stringify(buildSafetyScoreV9AcceptedPublicationBaseline(publication)));
+    assert(publication.pillarFreshness, "pillar-freshness-operands-required");
+    const pillarFreshnessBytes = Buffer.byteLength(`,"pillarFreshness":${JSON.stringify(publication.pillarFreshness)}`);
+    assert(pillarFreshnessBytes <= 15_000, "pillar-freshness-byte-budget");
     assert(envelope.uncompressedBytes <= 7_100_000, "synthetic-publication-byte-budget");
     assert(envelope.compressedBytes < 1_350_000, "publication-compressed-byte-budget");
     assert(Buffer.byteLength(transport) > 0, "publication-stored-bytes");
@@ -190,7 +193,7 @@ try {
       compressedBytes: envelope.compressedBytes, storedBytes: Buffer.byteLength(transport),
       replayCaptureUncompressedBytes: enrichment.uncompressedBytes, acceptedBaselineBytes,
       extensionAssets: extension.assets.length, researchEvidenceCount, componentEvidenceCount,
-      witnessTextSavingsBytes, factVocabularySavingsBytes, witnessViewBytes,
+      witnessTextSavingsBytes, factVocabularySavingsBytes, witnessViewBytes, pillarFreshnessBytes,
       expandedWitnessCandidateBytes: envelope.uncompressedBytes + witnessTextSavingsBytes + factVocabularySavingsBytes }));
   } else {
     for (const name of readdirSync(resolve(process.cwd(), "worker/migrations")).filter((name) => /^\d+.*\.sql$/.test(name)).sort()) sqlite.exec(readFileSync(resolve(process.cwd(), "worker/migrations", name), "utf8"));

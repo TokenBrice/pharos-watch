@@ -12,7 +12,6 @@ import {
   DEFAULT_TELEGRAM_PENDING_D1_TABLES,
   insertAlertJobTargetFixture,
   insertPendingSqlite,
-  insertRecapDeliveryFixture,
   insertSourceEventSqlite,
   resetTelegramPendingMocks,
 } from "./telegram-pending-queue.test-support";
@@ -88,10 +87,11 @@ afterEach(() => {
 });
 
 describe("disableBlockedSubscriber", () => {
-  it("clears every alert flag, preset subscription, and recap commitment for the blocked chat", async () => {
+  it("clears every alert flag and preset subscription for the blocked chat", async () => {
     const { sqlite, db } = setupTelegramPendingSqlite();
     const now = Math.floor(Date.now() / 1000);
-    const { chatId, recapKey } = insertRecapDeliveryFixture(sqlite, now, { chatId: "blocked-chat" });
+    const chatId = "blocked-chat";
+    sqlite.prepare("INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at, preference_generation) VALUES (?, ?, ?, 4)").run(chatId, now, now);
     sqlite
       .prepare(
         `UPDATE telegram_subscribers
@@ -143,14 +143,6 @@ describe("disableBlockedSubscriber", () => {
     expect(
       sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_preset_subscriptions WHERE chat_id = ?").get(chatId),
     ).toEqual({ count: 0 });
-    expect(
-      sqlite.prepare("SELECT enabled, next_due_at FROM telegram_recap_preferences WHERE chat_id = ?").get(chatId),
-    ).toEqual({ enabled: 0, next_due_at: null });
-    expect(
-      sqlite
-        .prepare("SELECT status, terminal_reason FROM telegram_recap_targets WHERE recap_key = ?")
-        .get(recapKey),
-    ).toEqual({ status: "cancelled", terminal_reason: "blocked_disabled" });
     sqlite.close();
   });
 
@@ -201,45 +193,6 @@ describe("enqueuePendingAlerts", () => {
     } finally { sqlite.close(); }
   });
 
-  it("uses the shared recap priority, six-hour TTL, and immutable markup provenance", async () => {
-    const { sqlite, db } = setupTelegramPendingSqlite();
-    const markup = { inline_keyboard: [[{ text: "View watchlist", web_app: { url: "https://pharos.watch/pharoswatchbot" } }]] };
-    await enqueuePendingAlerts(db, [{
-      chatId: "recap-enqueue",
-      html: "<b>Watchbot recap</b>",
-      disableNotification: false,
-      sourceEventId: "recap:recap-enqueue:2026-07-11:v1",
-      preferenceGeneration: 3,
-      replyMarkup: markup,
-    }], 10_000, { sourceType: "personalized_recap" });
-
-    expect(sqlite.prepare(
-      `SELECT source_type, priority, expires_at, source_event_id, alert_scope_json,
-              preference_generation, markup_policy_json
-         FROM telegram_pending_alerts`,
-    ).get()).toEqual({
-      source_type: "personalized_recap",
-      priority: 100,
-      expires_at: 10_000 + 6 * 60 * 60,
-      source_event_id: "recap:recap-enqueue:2026-07-11:v1",
-      alert_scope_json: null,
-      preference_generation: 3,
-      markup_policy_json: serializePendingMarkupPolicy({ replyMarkup: markup }),
-    });
-    sqlite.close();
-  });
-
-  it("rejects a recap that lacks immutable delivery provenance", async () => {
-    const db = mockD1([]);
-
-    await expect(enqueuePendingAlerts(db, [{
-      chatId: "invalid-recap",
-      html: "<b>Watchbot recap</b>",
-      disableNotification: false,
-      sourceEventId: "recap:invalid-recap:2026-07-11:v1",
-    }], 10_000, { sourceType: "personalized_recap" })).rejects.toThrow("incomplete provenance");
-    expect(db.getHistory()).toHaveLength(0);
-  });
 
   it("persists replay markup while using the admin delivery policy by default", async () => {
     const { sqlite, db } = setupTelegramPendingSqlite();

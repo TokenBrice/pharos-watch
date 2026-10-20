@@ -46,10 +46,6 @@ const PRESET_QUERY_FAILURE_CACHE_KEY = "telegram:preset-query-failure-count";
 export interface TelegramDispatchSharedState {
   pendingCapacitySnapshot?: PendingCapacitySnapshot;
   safetySourceAssessment?: AlertSafetySourceAssessment;
-  dispatchStartedAtMs?: number;
-  dispatchCompleted?: boolean;
-  dispatchFailed?: boolean;
-  dispatchDurationMs?: number;
 }
 
 export function assignSharedDispatchState(

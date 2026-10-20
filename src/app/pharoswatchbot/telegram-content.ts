@@ -11,7 +11,7 @@ import {
 import { TELEGRAM_PUBLIC_ALERT_SAMPLES } from "@shared/lib/telegram-alert-samples";
 
 export const TELEGRAM_PAGE_DESCRIPTION =
-  "PharosWatchBot delivers customizable stablecoin risk alerts, watchlists, daily recaps, quiet hours, and threshold controls in Telegram.";
+  "PharosWatchBot delivers customizable stablecoin risk alerts, watchlists, quiet hours, and threshold controls in Telegram.";
 
 export const TELEGRAM_ACTIONS = [
   {
@@ -20,7 +20,7 @@ export const TELEGRAM_ACTIONS = [
     handle: "@PharosWatchBot",
     href: "https://t.me/PharosWatchBot",
     description:
-      "Per-coin or all-stablecoin alerts for DEWS changes, depegs, safety-grade moves with reason lines, launches, live reserve-mix drift, and issuer freeze events, plus an optional private daily watchlist recap. Tune thresholds, set quiet hours, snooze on the fly.",
+      "Per-coin or all-stablecoin alerts for DEWS changes, depegs, safety-grade moves with reason lines, launches, live reserve-mix drift, and issuer freeze events. Tune thresholds, set quiet hours, snooze on the fly.",
     cardButtonLabel: "Open Bot",
     showArchiveLink: false,
     isPrimary: true,
@@ -51,7 +51,6 @@ export const TELEGRAM_ACTIONS = [
 
 export const MINI_APP_FEATURES = [
   { title: "Watchlist", detail: "Followed coins, alert toggles, live risk context." },
-  { title: "Daily recap", detail: "One private summary when watched assets materially change." },
   { title: "Global alerts", detail: "DEWS, depeg, safety, launch, reserve, and freeze in one panel." },
   { title: "Per-coin tuning", detail: "DEWS bands, depeg steps, safety modes, reserve, and freeze switches." },
   { title: "Presets", detail: "One-tap cohorts like USD Top 25." },
@@ -140,7 +139,6 @@ const singleCommandVariant = (command: keyof typeof TELEGRAM_COMMAND_REFERENCE):
 const [subscribeTypes, subscribeAll, subscribeStep] = TELEGRAM_COMMAND_REFERENCE.subscribe.variants;
 const [unsubscribeTargets, unsubscribeAll] = TELEGRAM_COMMAND_REFERENCE.unsubscribe.variants;
 const [setCoin, setAll] = TELEGRAM_COMMAND_REFERENCE.set.variants;
-const [recapToggle, recapTime] = TELEGRAM_COMMAND_REFERENCE.recap.variants;
 
 function commandRow(variant: TelegramCommandVariant, description: string) {
   return { command: variant.syntax, description, example: variant.example };
@@ -199,14 +197,6 @@ export const TELEGRAM_COMMAND_GROUPS = [
       commandRow(
         singleCommandVariant("timezone"),
         "Set the chat's IANA timezone used to resolve /mute quiet hours locally (e.g. Europe/Paris, America/New_York). Sending /timezone with no argument shows the current zone and an inline keyboard of common zones.",
-      ),
-      commandRow(
-        recapToggle,
-        "Show, enable, or disable the private daily watchlist recap. Enabling requires a confirmed /timezone. A recap sends at most once per local day and only when watched assets materially changed.",
-      ),
-      commandRow(
-        recapTime,
-        "Set the recap delivery hour from 0 to 23 in your confirmed IANA timezone. Personalized recaps are private-chat only.",
       ),
       commandRow(
         singleCommandVariant("settings"),
@@ -322,12 +312,7 @@ export const TELEGRAM_FAQ: FaqItem[] = [
   {
     question: "Is there a Mini App or do I have to type commands?",
     answer:
-      "Both work. Every alert family, preset, threshold, and daily recap setting is reachable through commands. There's also a Mini App you can open from the bot's menu button or via https://t.me/PharosWatchBot?startapp=home. It gives you a visual surface for the watchlist, settings, recap, snooze, and presets without typing slash commands. The Mini App and the bot share the same subscription state, so you can switch between them freely.",
-  },
-  {
-    question: "How does the daily watchlist recap work?",
-    answer:
-      "The personalized recap is an optional private-chat summary of material changes in your own watchlist, separate from the market-wide Daily Digest channel. Set an IANA timezone with /timezone, then use /recap on and optionally /recap time <hour>. Pharos sends at most one recap per local day and sends nothing when your watched assets had no material changes. The same controls are available in the Mini App settings.",
+      "Both work. Every alert family, preset, and threshold is reachable through commands. There's also a Mini App you can open from the bot's menu button or via https://t.me/PharosWatchBot?startapp=home. It gives you a visual surface for the watchlist, settings, snooze, and presets without typing slash commands. The Mini App and the bot share the same subscription state, so you can switch between them freely.",
   },
   {
     question: "What are preset watchlists?",

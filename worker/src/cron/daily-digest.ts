@@ -4,7 +4,6 @@ import { createCronResult, createNeutralSkippedCronResult } from "../lib/cron-re
 import { throwIfAborted } from "../lib/abort";
 import type { TwitterCreds } from "../lib/twitter";
 import type { TelegramCreds } from "../telegram/delivery/telegram";
-import type { TelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
 import { HOUR_SECONDS } from "@shared/lib/time-constants";
 import { formatIsoDate } from "@shared/lib/format";
 import { setCache } from "../lib/db-cache";
@@ -69,7 +68,6 @@ async function buildDailyTelegramPublication(
   creds: TelegramCreds | null,
   missingCredentialNames: readonly string[] | undefined,
   degradedReasons: string[],
-  recapRollout: TelegramRecapRolloutPolicy | null,
 ) {
   let appendices: PreparedTelegramDigestAppendices | null = null;
   if (creds) {
@@ -89,7 +87,6 @@ async function buildDailyTelegramPublication(
     : "";
   return buildDigestTelegramPublication(creds, missingCredentialNames, {
     editionKey: `daily:${digestDate}`,
-    recapRollout,
     appendixHtml: appendices?.appendixHtml ?? null,
     extraSections: [
       ...(standingLine ? [{ kind: "text" as const, content: standingLine }] : []),
@@ -111,7 +108,6 @@ export async function generateDailyDigest(
   reportProgress?: CronProgressReporter,
   credentialDiagnostics: DigestCredentialDiagnostics = {},
   llmConfig: DigestLlmConfig = DAILY_DIGEST_LLM_CONFIG,
-  recapRollout: TelegramRecapRolloutPolicy | null = null,
 ): Promise<CronResult> {
   const resolvedLlmConfig = resolveDigestLlmConfig(DAILY_DIGEST_LLM_CONFIG, llmConfig);
   await reportCronProgress(reportProgress, {
@@ -314,7 +310,7 @@ export async function generateDailyDigest(
   });
   const qualityGateStatus = hasBlockingQualityIssues ? "skipped: quality-gate" : null;
   const telegram = qualityGateStatus ? null : await buildDailyTelegramPublication(
-    db, digestDate, inputData, safetyMap, telegramCreds, credentialDiagnostics.telegramMissing, degradedReasons, recapRollout,
+    db, digestDate, inputData, safetyMap, telegramCreds, credentialDiagnostics.telegramMissing, degradedReasons,
   );
   const delivery = await publishDigestEdition({
     db,
@@ -414,7 +410,6 @@ export async function resumeDailyDigestDelivery(
   signal?: AbortSignal,
   reportProgress?: CronProgressReporter,
   credentialDiagnostics: DigestCredentialDiagnostics = {},
-  recapRollout: TelegramRecapRolloutPolicy | null = null,
 ): Promise<ResumeDailyDigestDeliveryOutcome> {
   const nowSec = Math.floor(Date.now() / 1000);
   const digestDate = formatIsoDate(nowSec);
@@ -459,7 +454,7 @@ export async function resumeDailyDigestDelivery(
   throwIfAborted(signal);
   const degradedReasons: string[] = [];
   const telegram = alreadyEnqueued ? null : await buildDailyTelegramPublication(
-    db, digestDate, storedInput, safetyMap, telegramCreds, credentialDiagnostics.telegramMissing, degradedReasons, recapRollout,
+    db, digestDate, storedInput, safetyMap, telegramCreds, credentialDiagnostics.telegramMissing, degradedReasons,
   );
   const outcome = await deliverDigestEdition({
     db,

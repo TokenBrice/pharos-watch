@@ -1110,26 +1110,3 @@ describe("corroboration event visibility and chronology", () => {
     expect(result.crons["sync-stablecoins"].latestEvent).toBeUndefined();
   });
 });
-
-describe("recap availability metadata projection", () => {
-  it.each(["off", "public"] as const)("retains %s mode and pendingEffects in history and progress", async (mode) => {
-    const now = 1_775_890_000;
-    const job = "telegram-personalized-recap-planner";
-    const rollout = { mode, pendingEffects: mode === "public" };
-    const rows = seedWithOverrides(now, []);
-    rows.find((row) => row.job === job)!.metadata = JSON.stringify({ rollout });
-    const db = mockD1([
-      { match: "UNION ALL", rows },
-      { match: "SELECT MAX(output_at)", rows: [] },
-      { match: "FROM cron_leases", rows: [{ job, lease_owner: "recap-owner", lease_until: now + 60 }] },
-      { match: "FROM cron_run_progress", rows: [{
-        job, started_at: now - 10, updated_at: now - 1, stage: "planning",
-        items_done: 0, items_total: 1, message: "Planning",
-        lease_owner: "recap-owner", metadata: JSON.stringify({ rollout }), slot_started_at: now - 10,
-      }] },
-    ]);
-    const snapshot = await loadCronHealth(db, now);
-    expect(snapshot.crons[job].runs[0]?.metadata).toMatchObject({ rollout });
-    expect(snapshot.crons[job].inFlight?.metadata).toMatchObject({ rollout });
-  });
-});
