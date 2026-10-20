@@ -4,6 +4,7 @@ import {
   type CacheFreshnessLaneConfig,
 } from "@shared/lib/api-freshness";
 import { CRON_JOB_DEFINITIONS, type CronJobMeta } from "@shared/lib/cron-jobs";
+import { CRON_RUNS_RETENTION_SEC } from "@shared/lib/retention-policy";
 import type { CacheStatus } from "@shared/types/status";
 import { runWithOverloadRetry } from "../lib/d1-overload-retry";
 import { DETAIL_WRITE_FAILURE_KEY_PREFIX } from "../lib/constants";
@@ -24,7 +25,6 @@ import { deliverOperatorAlert } from "./cron-sentinel-rules";
 // whose 3x-interval staleness threshold exceeds that retention (e.g. the
 // monthly yield-coverage-audit) can never be observed fresh here and would
 // alert forever; such cadences need their own audit trail, not this watchdog.
-const CRON_RUNS_OBSERVABILITY_RETENTION_SEC = 7 * 24 * 3600;
 
 const WATCHDOG_STATE_KEY = "cron-staleness-watchdog:producer-state:v1";
 const WATCHDOG_ALERT_KEY = "cron-staleness-watchdog:alert:direct:v1";
@@ -59,7 +59,7 @@ export function deriveCronFreshnessProducers(
         thresholdSec: cacheLane.lane.producerIntervalSec * 2,
       }];
     }
-    if (definition.intervalSec * 3 > CRON_RUNS_OBSERVABILITY_RETENTION_SEC) return [];
+    if (definition.intervalSec * 3 > CRON_RUNS_RETENTION_SEC) return [];
     return [{
       producerJob: definition.job,
       laneKey: null,

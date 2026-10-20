@@ -7,7 +7,7 @@ import { createCronResult, createNeutralSkippedCronResult } from "../lib/cron-re
 import type { TelegramCreds } from "../telegram/delivery/telegram";
 import type { TelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
 import type { TwitterCreds } from "../lib/twitter";
-import { SECONDS } from "../lib/time-constants";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { logMalformedJsonPath } from "../lib/json-decode-observability";
 import { parseJson, parseJsonObject } from "../lib/json-parse";
 import {
@@ -112,7 +112,7 @@ export async function generateWeeklyRecap(
   // state remains eligible for duplicate-safe delivery recovery.
   const digestDate = formatIsoDate(scheduledAtSec);
   const editionDayStart = bucketUnixSecondsToUtcDay(scheduledAtSec);
-  const editionDayEnd = editionDayStart + SECONDS.ONE_DAY;
+  const editionDayEnd = editionDayStart + DAY_SECONDS;
   const existing = await db
     .prepare(
       `SELECT generated_at, digest_title, digest_text, digest_extended, digest_meta, input_data
@@ -281,8 +281,8 @@ export async function generateWeeklyRecap(
   });
   // Two seven-day UTC edition windows, bounded by the scheduled slot.
   const todayTs = bucketUnixSecondsToUtcDay(scheduledAtSec);
-  const weekBoundary = todayTs - 6 * SECONDS.ONE_DAY;
-  const cutoff = weekBoundary - 7 * SECONDS.ONE_DAY;
+  const weekBoundary = todayTs - 6 * DAY_SECONDS;
+  const cutoff = weekBoundary - 7 * DAY_SECONDS;
   const dailyRows = await db
     .prepare(
       `WITH latest_daily AS (
@@ -364,8 +364,8 @@ export async function generateWeeklyRecap(
     };
   }
   const weeklyData = buildWeeklyInputData(currentRows, priorRows, safetyContext, {
-    current: { start: todayTs - 7 * SECONDS.ONE_DAY, end: todayTs },
-    prior: { start: todayTs - 14 * SECONDS.ONE_DAY, end: todayTs - 7 * SECONDS.ONE_DAY },
+    current: { start: todayTs - 7 * DAY_SECONDS, end: todayTs },
+    prior: { start: todayTs - 14 * DAY_SECONDS, end: todayTs - 7 * DAY_SECONDS },
   });
   if (!weeklyData) {
     await reportCronProgress(reportProgress, {

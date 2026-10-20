@@ -25,12 +25,27 @@ import {
 } from "@shared/lib/public-dataset-snapshot-budget";
 import { PUBLIC_SLOT_RUNNER_LOADERS } from "../public-runners";
 import { HEAVY_SLOT_RUNNER_LOADERS } from "../heavy-runners";
+import { bindScheduledSlotPlan } from "../slot-groups";
 
 function sorted(values: Iterable<string>): string[] {
   return [...values].sort((a, b) => a.localeCompare(b));
 }
 
 describe("scheduled runner contract", () => {
+  it("binds every canonical chain directly without changing task order or implementations", () => {
+    for (const plan of Object.values(SCHEDULED_SLOT_PLANS)) {
+      const implementations = Object.fromEntries(
+        flattenScheduledSlotPlanJobs(plan).map((job) => [job, async () => ({ status: "ok" as const })]),
+      );
+      const stages = bindScheduledSlotPlan(plan.scheduleKey, { implementations });
+      expect(stages).toHaveLength(1);
+      expect(stages[0].map((chain) => chain.tasks.map(({ job }) => job))).toEqual(plan.jobChains);
+      for (const chain of stages[0]) {
+        for (const task of chain.tasks) expect(task.run).toBe(implementations[task.job]);
+      }
+    }
+  });
+
   it("projects timeout and lease policies from every executable descriptor without changing job caps", () => {
     const timeoutOverrides: Record<string, number> = {
       "sync-stablecoins": 8 * 60_000,

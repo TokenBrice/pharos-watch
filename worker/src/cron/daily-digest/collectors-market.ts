@@ -24,7 +24,7 @@ import {
   type PublishedGaugeChain,
   type PublishedGaugeCoin,
 } from "../../lib/mint-burn-published-gauge";
-import { SECONDS } from "../../lib/time-constants";
+import { DAY_SECONDS, HOUR_SECONDS } from "@shared/lib/time-constants";
 import { classifyGaugeRegime } from "./prompt/regime";
 import { getGaugeRiskTapeTone } from "./digest-risk-tape";
 import { computeDigestMintBurnFtqFlows } from "./mint-burn-ftq";
@@ -108,7 +108,7 @@ export async function collectActiveDepegs(
         supplyUnavailable = true;
         return [];
       }
-      const ageHours = Math.max(0, Math.round((ctx.nowSec - row.started_at) / SECONDS.ONE_HOUR));
+      const ageHours = Math.max(0, Math.round((ctx.nowSec - row.started_at) / HOUR_SECONDS));
       const asset = ctx.stablecoinAssetById.get(row.stablecoin_id);
       const quoteEvent = { ...row, peg_reference: row.peg_reference ?? NaN, peg_type: row.peg_type ?? undefined };
       const nativeEvent = isNativePegEvent(quoteEvent);
@@ -244,7 +244,7 @@ export async function collectBlacklistActivity(
       .prepare(
         `SELECT stablecoin AS symbol, chain_name, event_type, amount_usd_at_event FROM blacklist_events WHERE timestamp >= ? AND timestamp < ? AND ${BLACKLIST_PUBLIC_EVENT_SQL} ORDER BY amount_usd_at_event DESC`,
       )
-      .bind(ctx.nowSec - SECONDS.ONE_DAY, ctx.nowSec)
+      .bind(ctx.nowSec - DAY_SECONDS, ctx.nowSec)
       .all<{ symbol: string; chain_name: string; event_type: string; amount_usd_at_event: number | null }>();
     const blEvents = blRows.results ?? [];
     const activityEvents = blEvents.filter((event) => event.event_type === "blacklist" || event.event_type === "destroy");
@@ -297,8 +297,8 @@ export async function collectSupplyVelocity(
       .slice(0, 10);
 
     if (top10.length > 0) {
-      const yesterday = ctx.todayTs - SECONDS.ONE_DAY;
-      const weekAgo = ctx.todayTs - 7 * SECONDS.ONE_DAY;
+      const yesterday = ctx.todayTs - DAY_SECONDS;
+      const weekAgo = ctx.todayTs - 7 * DAY_SECONDS;
       const top10IdInClause = buildInClause(top10.map((coin) => coin.id));
       const supplyRows = await ctx.db
         .prepare(
@@ -368,7 +368,7 @@ export async function collectResolvedDepegs(
   try {
     // Recovery evidence is uncapped. Only the prompt presentation below applies
     // market-cap, peak-size and top-N filters.
-    const cutoff24h = ctx.nowSec - SECONDS.ONE_DAY;
+    const cutoff24h = ctx.nowSec - DAY_SECONDS;
     const eligibleIds = [...ctx.trackedStablecoinIds];
     const resolvedRows = await ctx.db
       .prepare(
@@ -407,7 +407,7 @@ export async function collectResolvedDepegs(
           symbol: row.symbol,
           peakBps: Math.abs(row.peak_deviation_bps),
           direction: row.direction,
-          durationHours: Math.round((row.ended_at - row.started_at) / SECONDS.ONE_HOUR),
+          durationHours: Math.round((row.ended_at - row.started_at) / HOUR_SECONDS),
           mcapUsd,
           startedAt: row.started_at,
           endedAt: row.ended_at,
@@ -547,7 +547,7 @@ export async function collectLiquidityShifts(
 ): Promise<CollectorResult<DigestInputData["liquidityShifts"]>> {
   const degradedReasons: string[] = [];
   try {
-    const lookbackStart = ctx.yesterdayTs - 2 * SECONDS.ONE_DAY;
+    const lookbackStart = ctx.yesterdayTs - 2 * DAY_SECONDS;
     const rows = await ctx.db
       .prepare(
         `SELECT h.stablecoin_id, h.liquidity_score, h.total_tvl_usd, h.snapshot_date,

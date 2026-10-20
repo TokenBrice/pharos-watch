@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
+import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
 import type { ScheduledRuntimeContext } from "../context";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 import { makeScheduledRuntime } from "../../../test-helpers/scheduled-runtime.test-support";
@@ -48,7 +49,6 @@ import { buildTelegramCreds, buildTwitterCreds } from "../../../lib/runtime-cred
 import { drainTelegramDigestOutbox } from "../../../telegram/outbox/digest-outbox";
 import {
   DIGEST_LAST_TRIGGER_RESULT_CACHE_KEY,
-  DIGEST_TRIGGER_POLL_INTERVAL_SECONDS,
   MAX_ATTEMPTS,
   runDigestTriggerPollSlot,
 } from "../digest-trigger-poll";
@@ -456,7 +456,7 @@ describe("runDigestTriggerPollSlot", () => {
       lastError: "network timeout",
     });
     expect(retryOne?.nextAttemptAt).toBe(
-      1_800_000_000 + 2 * DIGEST_TRIGGER_POLL_INTERVAL_SECONDS,
+      1_800_000_000 + 2 * CRON_SCHEDULE_CADENCES.digestTriggerPoll.intervalSec,
     );
     expect(deleteCache).not.toHaveBeenCalled();
 
@@ -473,7 +473,7 @@ describe("runDigestTriggerPollSlot", () => {
       lastError: "D1 unavailable",
     });
     expect(retryTwo?.nextAttemptAt).toBe(
-      1_800_000_000 + 2 * DIGEST_TRIGGER_POLL_INTERVAL_SECONDS * 3,
+      1_800_000_000 + 2 * CRON_SCHEDULE_CADENCES.digestTriggerPoll.intervalSec * 3,
     );
 
     vi.setSystemTime(new Date((retryTwo?.nextAttemptAt ?? 0) * 1000));

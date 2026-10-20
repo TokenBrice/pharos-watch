@@ -2,7 +2,7 @@ import { WORKER_ACTIVE_IDS, WORKER_READABLE_IDS } from "@shared/lib/stablecoins/
 import { CACHE_RETENTION_POLICIES } from "@shared/lib/retention-policy";
 import type { CronResult } from "../lib/cron-logger";
 import { throwIfAborted } from "../lib/abort";
-import { SECONDS } from "../lib/time-constants";
+import { WEEK_SECONDS } from "@shared/lib/time-constants";
 import { runWithOverloadRetry } from "../lib/d1-overload-retry";
 import { createCronResult } from "../lib/cron-result";
 import { batchExecute } from "../lib/db";
@@ -19,7 +19,7 @@ const DETAIL_KEY_PREFIX = "detail:";
 // Non-active readable coins (frozen, quarantined, delisted) are exempt from the age
 // rule: the detail API never refreshes them, so their last row is the only copy and
 // deleting it turns every later read into a permanent 404.
-const DETAIL_ROW_MAX_AGE_SEC = SECONDS.ONE_WEEK;
+const DETAIL_ROW_MAX_AGE_SEC = WEEK_SECONDS;
 const DETAIL_CACHE_PAGE_SIZE = 500;
 
 export async function runPruneDetailCache(db: D1Database, signal?: AbortSignal): Promise<CronResult> {

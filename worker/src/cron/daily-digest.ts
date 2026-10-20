@@ -5,7 +5,7 @@ import { throwIfAborted } from "../lib/abort";
 import type { TwitterCreds } from "../lib/twitter";
 import type { TelegramCreds } from "../telegram/delivery/telegram";
 import type { TelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
-import { SECONDS } from "../lib/time-constants";
+import { HOUR_SECONDS } from "@shared/lib/time-constants";
 import { formatIsoDate } from "@shared/lib/format";
 import { setCache } from "../lib/db-cache";
 import { DEPEG_LIFECYCLE_FLAGS_CACHE_KEY } from "../lib/depeg-lifecycle";
@@ -147,7 +147,7 @@ export async function generateDailyDigest(
   if (latest) {
     const ageSec = Math.floor(Date.now() / 1000) - latest.generated_at;
     const isBroken = latest.digest_text.trimStart().startsWith("```");
-    if (ageSec < SECONDS.ONE_HOUR && !isBroken && !force) {
+    if (ageSec < HOUR_SECONDS && !isBroken && !force) {
       logWorkerEventArgs("handler", "info",
         `[daily-digest] Latest digest is ${Math.round(ageSec / 60)}min old, skipping`,
       );

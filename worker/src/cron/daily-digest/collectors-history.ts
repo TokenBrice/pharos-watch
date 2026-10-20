@@ -3,7 +3,7 @@ import type { DigestInputData } from "@shared/types/digest";
 import { round1 } from "@shared/lib/math";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { getPsiBandStreak, type PsiHistoryPointLike } from "@shared/lib/psi-view-model";
-import { SECONDS } from "../../lib/time-constants";
+import { DAY_SECONDS, HOUR_SECONDS } from "@shared/lib/time-constants";
 import { NON_WEEKLY_DIGEST_SQL_FILTER } from "../../lib/digest-sql-filters";
 import {
   collectorDegraded,
@@ -35,7 +35,7 @@ export async function collectTotalMcapAth(
     return collectorOk({
       value: row.ath_value,
       date: dayTs,
-      daysAgo: Math.max(0, Math.round((ctx.todayTs - dayTs) / SECONDS.ONE_DAY)),
+      daysAgo: Math.max(0, Math.round((ctx.todayTs - dayTs) / DAY_SECONDS)),
     });
   } catch (error) {
     logWorkerEventArgs("handler", "error", "[daily-digest] Failed to collect total mcap ATH:", error);
@@ -54,7 +54,7 @@ export async function collectPsiContributors(
     if (!latestSample || typeof latestSample.input_snapshot !== "string") return collectorOk(undefined);
     // A stale sample's per-coin attribution presented as current is worse
     // than no attribution at all; drop it and record the degradation.
-    if (ctx.nowSec - latestSample.stored_at > 2 * SECONDS.ONE_HOUR) {
+    if (ctx.nowSec - latestSample.stored_at > 2 * HOUR_SECONDS) {
       degradedReasons.push("psi-contributors-stale");
       return collectorResult(undefined, degradedReasons);
     }
@@ -106,7 +106,7 @@ export async function collectHistoricalContext(
       )
       .first<{ oldest: number | null }>();
     const digestTrackingDays = oldestDigest?.oldest
-      ? Math.round((ctx.todayTs - oldestDigest.oldest) / SECONDS.ONE_DAY)
+      ? Math.round((ctx.todayTs - oldestDigest.oldest) / DAY_SECONDS)
       : 0;
 
     if (displayScore != null && displayBand && currentComputedAt != null && (histDepth?.cnt ?? 0) > 30) {
@@ -136,7 +136,7 @@ export async function collectHistoricalContext(
         const dayTs = bucketUnixSecondsToUtcDay(digestPrecedent.generated_at);
         psiPrecedent = {
           lastSeenDate: dayTs,
-          lastSeenDaysAgo: Math.round((ctx.todayTs - dayTs) / SECONDS.ONE_DAY),
+          lastSeenDaysAgo: Math.round((ctx.todayTs - dayTs) / DAY_SECONDS),
           lastSeenScore: digestPrecedent.psi_score,
           lastSeenBand: digestPrecedent.psi_band,
         };
@@ -171,7 +171,7 @@ export async function collectHistoricalContext(
              WHERE s1.stablecoin_id = ?
              ORDER BY abs_change DESC LIMIT 1`,
           )
-          .bind(7 * SECONDS.ONE_DAY, biggestSupplyChange.id)
+          .bind(7 * DAY_SECONDS, biggestSupplyChange.id)
           .first<{ snapshot_date: number; abs_change: number }>();
 
         if (athRow?.ath_mcap && largestChangeRow) {
@@ -180,7 +180,7 @@ export async function collectHistoricalContext(
             allTimeHighDate: athDate,
             largestWeeklyChange: largestChangeRow.abs_change,
             largestWeeklyChangeDate: largestChangeRow.snapshot_date,
-            largestWeeklyChangeDaysAgo: Math.round((ctx.todayTs - largestChangeRow.snapshot_date) / SECONDS.ONE_DAY),
+            largestWeeklyChangeDaysAgo: Math.round((ctx.todayTs - largestChangeRow.snapshot_date) / DAY_SECONDS),
           };
         }
       }
@@ -208,7 +208,7 @@ export async function collectCrossDayTrends(
          ORDER BY generated_at DESC
          LIMIT 7`,
       )
-      .bind(ctx.nowSec - 7 * SECONDS.ONE_DAY)
+      .bind(ctx.nowSec - 7 * DAY_SECONDS)
       .all<{ generated_at: number; input_data: string }>();
 
     const entries = rows.results ?? [];
