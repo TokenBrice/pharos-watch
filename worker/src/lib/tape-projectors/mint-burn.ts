@@ -12,11 +12,9 @@
  * table today, so gauge-band-changed events are left for a follow-up.
  */
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
+import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/registry";
 import { formatCompactUsd } from "@shared/lib/format";
 import type { TapeEventSeverity } from "@shared/types/tape-event";
-
-const MINT_BURN_VERSION = MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL.replace(/^v/, "");
 
 import { buildTapeEventId, deriveIssuerId } from "../tape-event-helpers";
 import type { TapeEventInsert } from "../tape-event-types";
@@ -140,7 +138,7 @@ function buildFlowEvent(row: MintBurnSourceRow): TapeEventInsert | null {
     sourceRowId,
     transition,
     sourceUrl: "/flows/",
-    methodologyVersion: MINT_BURN_VERSION,
+    methodologyVersion: getMethodologyVersionAt("mint-burn-flow", row.timestamp),
   };
 }
 

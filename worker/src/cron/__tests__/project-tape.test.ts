@@ -7,6 +7,7 @@ import { TAPE_PROJECTOR_JOBS } from "../../lib/tape-projectors/registry";
 import { mockTapeD1, tapeInsertBinds, tapeInsertBindsForType } from "../../lib/tape-projectors/__tests__/test-support";
 import { projectCemeteryEntries } from "../../lib/tape-projectors/cemetery";
 import { projectLifecycleFrozen } from "../../lib/tape-projectors/lifecycle";
+import { projectMethodologyBumps } from "../../lib/tape-projectors/methodology";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { SOURCE_RECONCILIATION_LOOKBACK_SEC } from "../../lib/tape-projectors/types";
 import { mockD1 } from "@shared/test-utils/mock-d1";
@@ -404,6 +405,28 @@ describe("projectTape", () => {
     expect(tapeInsertBindsForType(db, "freeze.destroyed")).toHaveLength(0);
     expect(tapeInsertBindsForType(db, "score.upgraded")).toHaveLength(0);
     expect(tapeInsertBindsForType(db, "score.downgraded")).toHaveLength(0);
+  });
+
+  it.each([
+    { name: "cemetery", project: projectCemeteryEntries },
+    { name: "lifecycle", project: projectLifecycleFrozen },
+    { name: "methodology", project: projectMethodologyBumps },
+  ])("preserves $name source keys and archived identities on repeated catalog scans", async ({ project }) => {
+    const { db, sqlite } = fixtures.open();
+    await project(db);
+    const select = sqlite.prepare("SELECT * FROM tape_events ORDER BY event_id");
+    const original = select.all();
+    expect(original.length).toBeGreaterThan(0);
+    vi.spyOn(Date, "now").mockReturnValue((SEC + 86400) * 1000);
+    expect(await project(db)).toEqual({ projected: 0, advanced: null });
+    expect(select.all()).toEqual(original);
+    const replay = fixtures.open();
+    await project(replay.db);
+    expect(replay.sqlite.prepare(
+      "SELECT event_id, source_table, source_row_id, transition FROM tape_events ORDER BY event_id",
+    ).all()).toEqual(sqlite.prepare(
+      "SELECT event_id, source_table, source_row_id, transition FROM tape_events ORDER BY event_id",
+    ).all());
   });
 
   it("emits cemetery.entry.added on first observation", async () => {

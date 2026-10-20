@@ -77,9 +77,7 @@ export async function projectLifecycleFrozen(
   }
 
   return projectStaticCatalogEntries(db, {
-    eventType: "lifecycle.tracked.frozen",
     entries,
-    sourceRowId: ({ coin }) => coin.id,
     buildEvent,
   }, options);
 }

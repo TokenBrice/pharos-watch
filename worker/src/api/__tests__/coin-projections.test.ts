@@ -134,7 +134,7 @@ describe("site-only coin projections", () => {
     } finally { sqlite.close(); }
   });
 
-  it("retains the completed redemption generation but uses the selected row's own clock", async () => {
+  it("retains the admitted redemption generation clock and the selected row's own evidence clock", async () => {
     vi.spyOn(Date, "now").mockReturnValue(now * 1000);
     const { sqlite, db } = createLatestSchemaSqlite();
     try {
@@ -152,8 +152,14 @@ describe("site-only coin projections", () => {
       const response = await handleRedemptionBackstopCoin(db, coinUrl("redemption-backstop-coin", "cusd-cap"));
       const body = RedemptionBackstopCoinResponseSchema.parse(await response.json());
       expect(body.projection).toMatchObject({ generationId: run.run_id, totalCount: 2, updatedAt: now - staleAge });
-      expect(response.headers.get("X-Data-Updated-At")).toBe(String(now - staleAge));
-      expect(response.headers.get("Cache-Control")).toBe("no-store");
+      // Whole-run admission makes HTTP freshness follow the immutable manifest,
+      // while projection/row evidence keeps its original per-coin timestamp.
+      expect(body.updatedAt).toBe(now);
+      expect(body.coins["cusd-cap"].updatedAt).toBe(now - staleAge);
+      expect(response.headers.get("X-Data-Updated-At")).toBe(String(now));
+      expect(response.headers.get("X-Data-Age")).toBe("0");
+      expect(response.headers.get("Warning")).toBeNull();
+      expect(response.headers.get("Cache-Control")).toBe(full.headers.get("Cache-Control"));
     } finally { sqlite.close(); }
   });
 

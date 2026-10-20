@@ -452,12 +452,68 @@ describe("resolveBlockTimestamps", () => {
     fetchMock = mockFetch([], { requireMatch: true });
   });
 
+  const hash = `0x${"a".repeat(64)}`;
+  const header = (number: number, timestamp: string) => ({
+    number: `0x${number.toString(16)}`, timestamp, hash,
+  });
+
+  it.each([
+    ["duplicate", [{ id: 0, result: { number: "0x64", timestamp: "0xc8", hash } }]],
+    ["duplicate without hash", [{ id: 0, result: { number: "0x64", timestamp: "0xc8" } }]],
+    ["out-of-range", [{ id: 1, result: { number: "0x64", timestamp: "0xc8", hash } }]],
+  ])("never caches ambiguous %s timestamp evidence", async (_label, extra) => {
+    const db = makeDbForTimestampCache();
+    const localCache = new Map<string, number>();
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify([
+      { id: 0, result: header(100, "0x64") }, ...extra,
+    ])));
+    const options = { localCache, blockHashes: new Map([[100, hash]]),
+      persistentCache: { db, chainId: "ethereum" } };
+    const result = await resolveBlockTimestamps("https://rpc.invalid", [100], createBudget(1), options);
+    // Out-of-range peers are ignored; duplicate IDs invalidate both candidates.
+    const expected = _label === "out-of-range" ? [[100, 100]] : [];
+    expect([...result]).toEqual(expected);
+    expect([...await resolveBlockTimestamps("https://rpc.invalid", [100], createBudget(0), {
+      ...options, localCache: new Map(),
+    })]).toEqual(expected);
+    expect([...localCache.values()]).toEqual(_label === "out-of-range" ? [100] : []);
+  });
+
+  it.each([
+    { number: "0x65", timestamp: "0x64", hash },
+    { number: "0x64", timestamp: "0x64" },
+    { number: "0x64", timestamp: "0x0", hash },
+    { number: "0x64", timestamp: "0x20000000000000", hash },
+    { number: "0x64", timestamp: "0x64", hash: "0x1234" },
+  ])("retries malformed complete headers without caching their timestamp: %j", async result => {
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify([{ id: 0, result }])))
+      .mockResolvedValueOnce(new Response(JSON.stringify([{ id: 0, result: header(100, "0xc8") }])));
+    const db = makeDbForTimestampCache();
+    const options = { blockHashes: new Map([[100, hash]]), persistentCache: { db, chainId: "ethereum" } };
+    expect([...await resolveBlockTimestamps("https://rpc.invalid", [100], createBudget(2), options)])
+      .toEqual([[100, 200]]);
+    expect([...await resolveBlockTimestamps("https://rpc.invalid", [100], createBudget(0), options)])
+      .toEqual([[100, 200]]);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("retries duplicate members while retaining unique complete peers", async () => {
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify([
+      { id: 0, result: header(100, "0x64") },
+      { id: 0, result: { number: "0x64", timestamp: "0xc8" } },
+      { id: 1, result: header(101, "0x65") },
+    ]))).mockResolvedValueOnce(new Response(JSON.stringify([{ id: 0, result: header(100, "0x12c") }])));
+    expect([...await resolveBlockTimestamps("https://rpc.invalid", [100, 101], createBudget(2))])
+      .toEqual([[101, 101], [100, 300]]);
+    expect(JSON.parse(String(fetchMock.mock.calls[1][1]?.body))[0].params).toEqual(["0x64", false]);
+  });
+
   it("batch-fetches timestamps for multiple blocks", async () => {
     fetchMock.mockResolvedValueOnce(
       new Response(
         JSON.stringify([
-          { jsonrpc: "2.0", id: 0, result: { timestamp: "0x6651a2c0" } },
-          { jsonrpc: "2.0", id: 1, result: { timestamp: "0x6651a2cc" } },
+          { jsonrpc: "2.0", id: 0, result: header(0x176f050, "0x6651a2c0") },
+          { jsonrpc: "2.0", id: 1, result: header(0x176f051, "0x6651a2cc") },
         ]),
         { status: 200 },
       ),
@@ -480,14 +536,14 @@ describe("resolveBlockTimestamps", () => {
       .mockResolvedValueOnce(
         new Response(
           JSON.stringify([
-            { jsonrpc: "2.0", id: 0, result: { timestamp: "0x6651a2c0" } },
-            { jsonrpc: "2.0", id: 2, result: { timestamp: "0x6651a2e4" } },
+            { jsonrpc: "2.0", id: 0, result: header(0x176f050, "0x6651a2c0") },
+            { jsonrpc: "2.0", id: 2, result: header(0x176f052, "0x6651a2e4") },
           ]),
           { status: 200 },
         ),
       )
       .mockResolvedValueOnce(
-        new Response(JSON.stringify([{ jsonrpc: "2.0", id: 0, result: { timestamp: "0x6651a2cc" } }]), { status: 200 }),
+        new Response(JSON.stringify([{ jsonrpc: "2.0", id: 0, result: header(0x176f051, "0x6651a2cc") }]), { status: 200 }),
       );
 
     const budget = createBudget(100);
@@ -550,7 +606,7 @@ describe("resolveBlockTimestamps", () => {
 
   it("writes fetched timestamps into persistent cache", async () => {
     fetchMock.mockResolvedValueOnce(
-      new Response(JSON.stringify([{ jsonrpc: "2.0", id: 0, result: { timestamp: "0x6651a2c0" } }]), { status: 200 }),
+      new Response(JSON.stringify([{ jsonrpc: "2.0", id: 0, result: header(0x176f050, "0x6651a2c0") }]), { status: 200 }),
     );
 
     const db = makeDbForTimestampCache();
@@ -577,8 +633,8 @@ describe("resolveBlockTimestamps", () => {
     const local = new Map<string, number>([[`100:${orphan}`, 1]]);
     const hashes = new Map([[100, replacement], [101, replacement]]);
     fetchMock.mockResolvedValueOnce(new Response(JSON.stringify([
-      { jsonrpc: "2.0", id: 0, result: { timestamp: "0x64", hash: replacement } },
-      { jsonrpc: "2.0", id: 1, result: { timestamp: "0x65", hash: replacement } },
+      { jsonrpc: "2.0", id: 0, result: { ...header(100, "0x64"), hash: replacement } },
+      { jsonrpc: "2.0", id: 1, result: { ...header(101, "0x65"), hash: replacement } },
     ])));
     const options = { localCache: local, blockHashes: hashes, persistentCache: { db, chainId: "ethereum" } };
     expect([...await resolveBlockTimestamps("https://rpc.invalid", [100, 101], createBudget(1), options)])
@@ -593,7 +649,7 @@ describe("resolveBlockTimestamps", () => {
     const hash = "0x" + "a".repeat(64);
     const replacement = "0x" + "b".repeat(64);
     fetchMock.mockImplementation(async () => new Response(JSON.stringify([
-      { jsonrpc: "2.0", id: 0, result: { timestamp: "0x64", hash: replacement } },
+      { jsonrpc: "2.0", id: 0, result: { ...header(100, "0x64"), hash: replacement } },
     ])));
     expect(await resolveBlockTimestamps("https://rpc.invalid", [100], createBudget(1), {
       blockHashes: new Map([[100, hash]]),
@@ -612,7 +668,7 @@ describe("resolveBlockTimestamps", () => {
           Array.from({ length: 50 }, (_, idx) => ({
             jsonrpc: "2.0",
             id: idx,
-            result: { timestamp: "0x" + (1700000000 + idx).toString(16) },
+            result: header(1000 + idx, "0x" + (1700000000 + idx).toString(16)),
           })),
         ),
         { status: 200 },

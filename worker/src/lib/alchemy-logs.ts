@@ -813,15 +813,20 @@ async function fetchBlockTimestampBatch(
       return missingAll();
     }
 
-    const timestamps = new Map<number, number>();
-    const blockHashes = new Map<number, string>();
+    const headers = new Map<number, { number: number; hash: string; timestamp: number }>();
+    const idCounts = new Map<number, number>();
+    for (const response of parsed) {
+      if (response && typeof response === "object" && Number.isInteger(response.id)) {
+        idCounts.set(response.id, (idCounts.get(response.id) ?? 0) + 1);
+      }
+    }
     let issueCount = 0;
     for (const response of parsed) {
       if (!response || typeof response !== "object") {
         issueCount++;
         continue;
       }
-      const rpc = response as Partial<JsonRpcResponse<{ timestamp: string; hash?: string }>>;
+      const rpc = response as Partial<JsonRpcResponse<{ number: string; timestamp: string; hash: string }>>;
       const requestIndex = rpc.id;
       if (typeof requestIndex !== "number" || !Number.isInteger(requestIndex)) {
         issueCount++;
@@ -831,29 +836,27 @@ async function fetchBlockTimestampBatch(
         issueCount++;
         continue;
       }
-      if (rpc.error) {
+      if (idCounts.get(requestIndex) !== 1 || rpc.error) {
         issueCount++;
         continue;
       }
 
-      const tsHex = rpc.result?.timestamp;
-      if (typeof tsHex !== "string") {
-        issueCount++;
-        continue;
-      }
-
-      const parsedQuantity = parseQuantityHex(tsHex);
-      const ts = parsedQuantity == null ? null : Number(parsedQuantity);
-      if (ts !== null && Number.isFinite(ts)) {
-        // Duplicate IDs are deterministic: the last valid mapping wins.
-        timestamps.set(batch[requestIndex]!, ts);
-        if (typeof rpc.result?.hash === "string" && /^0x[0-9a-f]{64}$/i.test(rpc.result.hash)) {
-          blockHashes.set(batch[requestIndex]!, rpc.result.hash.toLowerCase());
-        }
+      const block = rpc.result;
+      const numberQuantity = parseQuantityHex(block?.number);
+      const timestampQuantity = parseQuantityHex(block?.timestamp);
+      const number = numberQuantity == null ? null : Number(numberQuantity);
+      const timestamp = timestampQuantity == null ? null : Number(timestampQuantity);
+      if (number === batch[requestIndex] && Number.isSafeInteger(number) &&
+          timestamp !== null && Number.isSafeInteger(timestamp) && timestamp > 0 &&
+          typeof block?.hash === "string" && /^0x[0-9a-f]{64}$/i.test(block.hash)) {
+        headers.set(number, { number, timestamp, hash: block.hash.toLowerCase() });
       } else {
         issueCount++;
       }
     }
+
+    const timestamps = new Map([...headers].map(([number, header]) => [number, header.timestamp]));
+    const blockHashes = new Map([...headers].map(([number, header]) => [number, header.hash]));
 
     const missingBlocks = batch.filter((block) => !timestamps.has(block));
     if (missingBlocks.length > 0) issueCount++;

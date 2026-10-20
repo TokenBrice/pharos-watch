@@ -86,9 +86,7 @@ export async function projectCemeteryEntries(
   }
 
   return projectStaticCatalogEntries(db, {
-    eventType: "cemetery.entry.added",
     entries,
-    sourceRowId: ({ entry }) => entry.id,
     buildEvent,
   }, options);
 }

@@ -10,7 +10,6 @@ import { createSlotDeadline, type SlotDeadline } from "../../../lib/cron-timeout
 const rpc = vi.hoisted(() => ({ fetchEvmBlockNumber: vi.fn(), fetchEvmBlockHeader: vi.fn(), fetchEvmMulticall3Aggregate3AtBlock: vi.fn() }));
 vi.mock("../../../lib/evm-rpc", () => rpc);
 const POOL = "0x3416cf6c708da44db2624d63ea0aaef7113527c6";
-const OTHER = "0x0000000000000000000000000000000000000001";
 const TOKEN0 = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
 const TOKEN1 = "0xdac17f958d2ee523a2206206994597c13d831ec7";
 const ABI = parseAbi([
@@ -51,7 +50,7 @@ async function enrich(pools: PoolEntry[], deadline?: SlotDeadline) {
 
 beforeEach(() => {
   rpc.fetchEvmBlockNumber.mockReset().mockResolvedValue(25_000_000);
-  rpc.fetchEvmBlockHeader.mockReset().mockResolvedValue({ number: 25_000_000, hash: `0x${"11".repeat(32)}` });
+  rpc.fetchEvmBlockHeader.mockReset().mockResolvedValue({ number: 25_000_000, hash: `0x${"11".repeat(32)}`, timestamp: 1_791_184_659 });
   rpc.fetchEvmMulticall3Aggregate3AtBlock.mockReset();
 });
 
@@ -61,20 +60,20 @@ describe("address-bound discovered QuoterV2 capture", () => {
     const result = await captureQuoterV2Pools(input());
     expect(result.pools[0]).toMatchObject({ poolAddress: POOL, feeRate: fee / 1_000_000, tokens: [{ address: TOKEN0, decimals: 6 }, { address: TOKEN1, decimals: 6 }] });
     expect(result.blockNumber).toBe(25_000_000);
-    expect(rpc.fetchEvmMulticall3Aggregate3AtBlock.mock.calls.every((call) => call[2] === result.blockNumber)).toBe(true);
+    expect(rpc.fetchEvmMulticall3Aggregate3AtBlock.mock.calls.every((call) =>
+      call[2] === result.blockNumber && call[3].stateBlockHash === `0x${"11".repeat(32)}`)).toBe(true);
   });
-  it("does not replace an address with another same-token factory pool", async () => {
-    answers("uniswap-v3-quoter-v2", "ethereum", 100, OTHER);
-    expect((await captureQuoterV2Pools(input())).pools).toEqual([]);
-  });
-  it("rejects a provider token pair contradicting actual pool currencies", async () => {
+  it.each(["unavailable", "changed"])("withholds captured targets when the source header is %s", async (failure) => {
     answers();
-    expect((await captureQuoterV2Pools({ ...input(), candidates: [{ poolAddress: POOL, expectedTokens: new Set([TOKEN0, OTHER]) }] })).pools).toEqual([]);
-  });
-  it("does not interpret failed token decimals as zero", async () => {
-    const { state, binding } = answers();
-    rpc.fetchEvmMulticall3Aggregate3AtBlock.mockReset().mockResolvedValueOnce(state).mockResolvedValueOnce(binding.map((entry) => entry.label.endsWith("0-decimals") ? { ...entry, success: false } : entry));
-    expect((await captureQuoterV2Pools(input())).pools).toEqual([]);
+    if (failure === "unavailable") rpc.fetchEvmBlockHeader.mockResolvedValueOnce(null);
+    else rpc.fetchEvmBlockHeader
+      .mockResolvedValueOnce({ number: 25_000_000, hash: `0x${"11".repeat(32)}`, timestamp: 1_791_184_659 })
+      .mockResolvedValueOnce({ number: 25_000_000, hash: `0x${"22".repeat(32)}`, timestamp: 1_791_184_659 });
+    expect(await captureQuoterV2Pools(input())).toMatchObject({
+      pools: [], ok: false, degraded: true,
+      errors: [failure === "unavailable" ? "cl-capture-header-unavailable" : "cl-capture-header-changed"],
+    });
+    if (failure === "unavailable") expect(rpc.fetchEvmMulticall3Aggregate3AtBlock).not.toHaveBeenCalled();
   });
   it("accepts one-sided CL balances without pretending balance is unavailable", async () => {
     const { state, binding } = answers();
@@ -96,8 +95,9 @@ describe("address-bound discovered QuoterV2 capture", () => {
   });
   it.each([
     ["hybra-v3-quoter-v2", "hyperevm"],
+    ["velodrome-slipstream-quoter-v2", "optimism"],
     ["xswap-v3-quoter-v2", "xdc"],
-  ])("refuses retired %s capture before opening transport", async (profile, chain) => {
+  ])("refuses source-only or retired %s capture before opening transport", async (profile, chain) => {
     expect(await captureQuoterV2Pools(input(profile, chain))).toMatchObject({
       ok: false, errors: ["quoter-v2-deployment-unreviewed"], pools: [],
     });

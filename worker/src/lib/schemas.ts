@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { DexLiquidityBaselineReadFailureSchema, LiquidityHealthSchema } from "@shared/types/status/yield-liquidity";
 
 /** DefiLlama /coins/{tokens} price response */
 export const DLPriceResponseSchema = z.object({
@@ -180,9 +181,9 @@ export const DexLiquidityCronMetadataSchema = z.object({
   sourceCoverage: z
     .object({
       currentCoverage: z.number().optional(),
-      previousCoverage: z.number().optional(),
+      previousCoverage: z.number().nullable().optional(),
       previousCoverageBaselineAvailable: z.boolean().optional(),
-      minExpectedCoverage: z.number().optional(),
+      minExpectedCoverage: z.number().nullable().optional(),
       dlYieldsAvailable: z.boolean().optional(),
       dlProtocolsAvailable: z.boolean().optional(),
       currentGlobalTvl: z.number().optional(),
@@ -211,10 +212,13 @@ export const DexLiquidityCronMetadataSchema = z.object({
         protocol: z.string().nullable(),
         protocolDeltaUsd: z.number().nullable(),
       })).optional(),
-      currentTop10CoveredTvl: z.number().optional(),
-      previousTop10CoveredTvl: z.number().optional(),
-      currentTop10GuardTvl: z.number().optional(),
-      previousTop10GuardTvl: z.number().optional(),
+      currentTop10CoveredTvl: z.number().nullable().optional(),
+      previousTop10CoveredTvl: z.number().nullable().optional(),
+      currentTop10GuardTvl: z.number().nullable().optional(),
+      previousTop10GuardTvl: z.number().nullable().optional(),
+      baselineReadFailures: z.array(DexLiquidityBaselineReadFailureSchema).optional(),
+      currentCoverageClasses: LiquidityHealthSchema.shape.currentCoverageClasses.optional(),
+      previousCoverageClasses: LiquidityHealthSchema.shape.previousCoverageClasses.optional(),
       priceObservationCoins: z.number().optional(),
       weakCoverageCoins: z.number().optional(),
       coverageRecoveredCoins: z.number().optional(),

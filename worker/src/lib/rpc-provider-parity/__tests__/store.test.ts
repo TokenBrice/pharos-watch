@@ -60,6 +60,21 @@ describe("rpc parity store merging", () => {
     expect(stale.row.runs.map((run) => run.atSec)).toEqual([NOW_SEC + WEEK_SEC + 1]);
   });
 
+  it("retains a late run without rewinding latest and still replaces the newest same slot", () => {
+    let row: RpcParityStoreRow | null = null;
+    for (const atSec of [100, 200, 150]) {
+      row = mergeRpcParityRun(row, fullParityRun(atSec, () => ({ dwellirHead: atSec })), { nowSec: atSec }).row;
+    }
+    expect(row!.runs.map((run) => run.atSec)).toEqual([100, 150, 200]);
+    expect(row!.latest.base).toMatchObject({ atSec: 200, dwellirHead: 200 });
+    expect(row!.runs[1].samples[0].dwellirHead).toBe(150);
+    const replaced = mergeRpcParityRun(row, fullParityRun(200, () => ({ dwellirHead: 201 })), { nowSec: 200 }).row;
+    expect(replaced.runs.map((run) => run.atSec)).toEqual([100, 150, 200]);
+    expect(replaced.latest.base).toMatchObject({ atSec: 200, dwellirHead: 201 });
+    const decoded = decodeRpcParityStoreRow(encodeRpcParityStoreRow(replaced));
+    expect(decoded?.latest.base).toMatchObject({ atSec: 200, dwellirHead: 201 });
+  });
+
   it("caps the window at the retained-run count", () => {
     let row: RpcParityStoreRow | null = null;
     for (let index = 0; index < RPC_PARITY_RETENTION_RUNS + 5; index += 1) {
@@ -125,6 +140,21 @@ describe("rpc parity store merging", () => {
 });
 
 describe("rpc parity store wire form", () => {
+  it("round-trips an indeterminate token ancestry gap beside a fresh sentinel", () => {
+    // Keep the sentinel in the token bracket's block domain; the codec rejects contradictory references.
+    const sample = paritySample("base", { dwellirHead: 102, comparatorHead: 102, commonBlock: 100, tokenFreshness: {
+      verdict: "indeterminate", reason: "bracket-ancestry-gap", method: "state-bracket",
+      discriminating: false, headBefore: 100, headAfter: 102, referenceEndBlock: 102,
+      matchedBlock: null, latestValue: "0x7", numericValues: [], toleranceBlocks: 3,
+      call: { to: RPC_PARITY_TARGETS.find((target) => target.chainId === "base")!.contract, data: "0x18160ddd" },
+    } });
+    const row = mergeRpcParityRun(null, { atSec: NOW_SEC, samples: [sample] }, { nowSec: NOW_SEC }).row;
+    const retained = decodeRpcParityStoreRow(encodeRpcParityStoreRow(row))?.runs[0].samples[0];
+    expect(retained?.sentinelFreshness?.verdict).toBe("fresh");
+    expect(retained?.tokenFreshness).toMatchObject({ verdict: "indeterminate", reason: "bracket-ancestry-gap" });
+    expect(retained?.latestFreshness?.verdict).toBe("indeterminate");
+  });
+
   it("retains only five newest safe failure details across the window", () => {
     const row = buildParityRow(Array.from({ length: 8 }, (_, index) => NOW_SEC - (7 - index) * 3600));
     for (const run of row.runs) {

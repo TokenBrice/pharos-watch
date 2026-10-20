@@ -1,11 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   crawlTokenPools,
-  getChainAwareDsTrackedTokenPriceUsd,
   shouldSkipFallbackCurvePool,
 } from "../crawl-helpers";
 import type { GtNewPool } from "../types";
-import type { DsPair } from "../../../lib/dexscreener";
 
 interface RawPool {
   id: string;
@@ -78,6 +76,8 @@ describe("crawlTokenPools", () => {
   it("accepts fallback Curve pools on chains without native Curve API coverage", async () => {
     const newPools = new Map<string, GtNewPool[]>();
     const priceObs = new Map();
+    // Live crawler observations now preserve the local provider-read clock.
+    const beforeRead = Math.floor(Date.now() / 1000);
     const result = await crawlTokenPools<RawPool, GtNewPool>({
       sourceLabel: "test",
       tokens: [{ sourceChain: "plasma", ourChain: "plasma", address: "0xstable", stablecoinId: "yzusd-yuzu" }],
@@ -124,8 +124,12 @@ describe("crawlTokenPools", () => {
       price: 0.9973,
     });
     expect(priceObs.get("yzusd-yuzu")).toEqual([
-      { price: 0.9973, tvl: 900_000, chain: "plasma", protocol: "curve-plasma" },
+      { price: 0.9973, observedAt: expect.any(Number), tvl: 900_000, chain: "plasma", protocol: "curve-plasma" },
     ]);
+    const observedAt = priceObs.get("yzusd-yuzu")[0].observedAt;
+    expect(observedAt).toBeGreaterThanOrEqual(beforeRead);
+    expect(observedAt).toBeLessThanOrEqual(Math.floor(Date.now() / 1000));
+    expect(newPools.get("yzusd-yuzu")?.[0].priceObservedAt).toBe(observedAt);
   });
 
   it("adds new pools and price observations for matching stablecoin side", async () => {
@@ -247,6 +251,7 @@ describe("crawlTokenPools", () => {
   it("admits a coherent quiet pool with zero volume and takes its price observation", async () => {
     const newPools = new Map<string, GtNewPool[]>();
     const priceObs = new Map();
+    const beforeRead = Math.floor(Date.now() / 1000);
     await crawlTokenPools<RawPool, GtNewPool>({
       sourceLabel: "test",
       tokens: [{ sourceChain: "zksync", ourChain: "zksync", address: "0xusn", stablecoinId: "test" }],
@@ -291,32 +296,15 @@ describe("crawlTokenPools", () => {
 
     expect(newPools.get("test")).toHaveLength(1);
     expect(priceObs.get("test")).toEqual([
-      { price: 1.0018122159, tvl: 52_313, chain: "zksync", protocol: "syncswap-v3-zksync" },
+      { price: 1.0018122159, observedAt: expect.any(Number), tvl: 52_313, chain: "zksync", protocol: "syncswap-v3-zksync" },
     ]);
+    const observedAt = priceObs.get("test")[0].observedAt;
+    expect(observedAt).toBeGreaterThanOrEqual(beforeRead);
+    expect(observedAt).toBeLessThanOrEqual(Math.floor(Date.now() / 1000));
+    expect(newPools.get("test")?.[0].priceObservedAt).toBe(observedAt);
   });
 
   it("does not collapse case-distinct non-EVM token identities", async () => {
-    const pair = {
-      baseToken: { address: "MintCase" },
-      quoteToken: { address: "QuoteCase" },
-      priceUsd: "1",
-      priceNative: "1",
-    } as DsPair;
-    expect(getChainAwareDsTrackedTokenPriceUsd(pair, "mintCase", "solana")).toEqual({
-      side: null,
-      priceUsd: null,
-    });
-    expect(getChainAwareDsTrackedTokenPriceUsd(pair, "mintCase", "ethereum")).toEqual({
-      side: "base",
-      priceUsd: 1,
-    });
-    expect(getChainAwareDsTrackedTokenPriceUsd({ ...pair, priceUsd: "4", priceNative: "2" }, "QuoteCase", "solana"))
-      .toEqual({ side: "quote", priceUsd: 2 });
-    expect(getChainAwareDsTrackedTokenPriceUsd(pair, "quoteCase", "solana")).toEqual({ side: null, priceUsd: null });
-    for (const priceNative of [undefined, "0", "invalid"]) {
-      expect(getChainAwareDsTrackedTokenPriceUsd({ ...pair, priceNative }, "QuoteCase", "solana"))
-        .toEqual({ side: "quote", priceUsd: null });
-    }
 
     const newPools = new Map<string, GtNewPool[]>();
     await crawlTokenPools<RawPool, GtNewPool>({

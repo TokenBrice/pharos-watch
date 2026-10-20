@@ -20,7 +20,7 @@
  * absorbs duplicates. Watermark advancement keeps the scan cheap on re-runs.
  */
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { DEPEG_DEWS_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
+import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/registry";
 import { THREAT_BAND_ORDER, isThreatBand, type ThreatBand } from "@shared/lib/classification";
 
 import { buildTapeEventId, deriveIssuerId } from "../tape-event-helpers";
@@ -210,7 +210,7 @@ function buildEvent(t: BandTransition): TapeEventInsert {
     // The depeg page hosts both the DEWS alert feed and per-coin DEWS table.
     // No stable per-coin anchor exists, so link to the section root.
     sourceUrl: "/depeg/",
-    methodologyVersion: DEPEG_DEWS_METHODOLOGY_VERSION,
+    methodologyVersion: getMethodologyVersionAt("depeg-dews", t.computedAt),
   };
 }
 

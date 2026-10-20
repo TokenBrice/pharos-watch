@@ -102,13 +102,14 @@ export function createDexGenerationStore<ChildRowsKey extends string = "deletedC
       }
       return [input.protectedGenerationId];
     };
+    // SAFETY: every identifier interpolated into these candidate subqueries comes from
+    // DexGenerationStoreSpec's closed literal unions; candidateWhere is internal.
     const childCandidates = `
     SELECT ${spec.columns.generationId}
      FROM ${spec.manifestTable}
      WHERE ${candidateWhere("", spec.prune.childExtraWhere)}
      ORDER BY ${spec.prune.childOrderBy} LIMIT ?`;
-    // SAFETY: every identifier interpolated into these candidate subqueries comes from
-    // DexGenerationStoreSpec's closed literal unions; candidateWhere is internal.
+    // SAFETY: same closed spec identifiers as childCandidates.
     const manifestCandidates = `
     SELECT candidate.rowid
       FROM ${spec.manifestTable} candidate

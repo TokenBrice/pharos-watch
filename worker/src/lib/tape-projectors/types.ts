@@ -159,9 +159,7 @@ export async function finalizeProjectorBatch(
 export async function projectStaticCatalogEntries<T>(
   db: D1Database,
   input: {
-    eventType: string;
     entries: readonly T[];
-    sourceRowId: (entry: T) => string;
     buildEvent: (entry: T) => TapeEventInsert;
   },
   options?: ProjectorOptions,

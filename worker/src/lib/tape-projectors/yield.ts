@@ -21,7 +21,7 @@
  * tape_events (source_table, source_row_id, transition) unique index.
  */
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
+import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/registry";
 import type { TapeEventSeverity } from "@shared/types/tape-event";
 
 import { buildTapeEventId, deriveIssuerId } from "../tape-event-helpers";
@@ -61,15 +61,67 @@ function symbolFor(coinId: string): string {
   return TRACKED_META_BY_ID.get(coinId)?.symbol ?? coinId;
 }
 
-function parseSignals(raw: string | null | undefined): string[] {
-  if (!raw) return [];
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.filter((value): value is string => typeof value === "string" && value.length > 0);
-  } catch {
-    return [];
+function yieldMethodologyVersionAt(rawInputs: string | null | undefined, timestamp: number): string {
+  if (rawInputs) {
+    try {
+      const inputs: unknown = JSON.parse(rawInputs);
+      if (inputs && typeof inputs === "object" && "methodologyVersion" in inputs
+        && typeof inputs.methodologyVersion === "string" && inputs.methodologyVersion.length > 0) {
+        return inputs.methodologyVersion;
+      }
+    } catch {
+      // Older history may not retain readable publication inputs.
+    }
   }
+  return getMethodologyVersionAt("yield", timestamp);
+}
+
+type WarningEvidence =
+  | { status: "valid-empty" | "valid-signals"; signals: string[] }
+  | { status: "unavailable"; reason: "malformed-json" | "non-array" | "invalid-member" };
+
+type WarningBaseline =
+  | { status: "no-history" }
+  | { status: "usable"; signals: string[] }
+  | { status: "unavailable" };
+
+function decodeWarningEvidence(raw: string | null | undefined): WarningEvidence {
+  // The producer persists SQL NULL when its observed signal list is empty.
+  if (raw === null) return { status: "valid-empty", signals: [] };
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw ?? "");
+  } catch {
+    return { status: "unavailable", reason: "malformed-json" };
+  }
+  if (!Array.isArray(parsed)) return { status: "unavailable", reason: "non-array" };
+  if (parsed.some((value) => typeof value !== "string" || value.length === 0)) {
+    return { status: "unavailable", reason: "invalid-member" };
+  }
+  return { status: parsed.length === 0 ? "valid-empty" : "valid-signals", signals: parsed };
+}
+
+interface WarningDegradation {
+  record(row: YieldHistoryRow, reason: Extract<WarningEvidence, { status: "unavailable" }>["reason"]): void;
+  report(): void;
+}
+
+function warningDegradation(): WarningDegradation {
+  const counts: Partial<Record<Extract<WarningEvidence, { status: "unavailable" }>["reason"], number>> = {};
+  const samples: Array<{ coinId: string; recordedAt: number; reason: string }> = [];
+  return {
+    record(row: YieldHistoryRow, reason: Extract<WarningEvidence, { status: "unavailable" }>["reason"]) {
+      counts[reason] = (counts[reason] ?? 0) + 1;
+      if (samples.length < 10) samples.push({ coinId: row.stablecoin_id, recordedAt: row.recorded_at, reason });
+    },
+    report() {
+      if (samples.length > 0) {
+        console.warn("[tape:yield.warning_emitted]", {
+          reason: "warning-evidence-unavailable", counts, samples,
+        });
+      }
+    },
+  };
 }
 
 function severityForWarningSignals(signals: string[]): TapeEventSeverity {
@@ -90,6 +142,7 @@ interface YieldHistoryRow {
   source_key: string;
   recorded_at: number;
   warning_signals: string | null;
+  pys_inputs_at_publish?: string | null;
 }
 
 async function fetchYieldHistorySince(
@@ -99,11 +152,11 @@ async function fetchYieldHistorySince(
   limit: number,
 ): Promise<YieldHistoryRow[]> {
   return fetchRowsWithTieExpansion<YieldHistoryRow>(db, {
-    selectSql: "SELECT stablecoin_id, source_key, recorded_at, warning_signals",
+    selectSql: "SELECT stablecoin_id, source_key, recorded_at, warning_signals, pys_inputs_at_publish",
     fromSql: "yield_history",
     timePredicatePrefix: "is_best = 1 AND ",
     timeColumn: "recorded_at",
-    orderBySql: "recorded_at ASC, stablecoin_id ASC",
+    orderBySql: "recorded_at ASC, stablecoin_id ASC, source_key ASC",
     since,
     until,
     limit,
@@ -112,7 +165,7 @@ async function fetchYieldHistorySince(
 }
 
 /**
- * Fetch the most recent best-source warning_signals at-or-before `since` for
+ * Fetch the most recent usable best-source warning_signals at-or-before `since` for
  * each coin appearing in the batch, used to seed the per-coin diff for the
  * first sample of each coin in this run. Two rows can share a `recorded_at`
  * (one publication per source key), so the pick is tie-broken on `source_key`
@@ -122,27 +175,44 @@ async function fetchPriorWarningSignals(
   db: D1Database,
   coinIds: string[],
   since: number,
-): Promise<Map<string, string[]>> {
-  const map = new Map<string, string[]>();
+  degradation: WarningDegradation,
+): Promise<Map<string, WarningBaseline>> {
+  const map = new Map<string, WarningBaseline>();
   if (coinIds.length === 0 || since <= 0) return map;
   for (const chunk of chunkArray([...new Set(coinIds)])) {
     const inClause = buildInClause(chunk);
     const rows = await db
       .prepare(
-        `SELECT c.stablecoin_id,
-                (SELECT h.warning_signals
-                   FROM yield_history h
-                  WHERE h.stablecoin_id = c.stablecoin_id
-                    AND h.is_best = 1
-                    AND h.recorded_at <= ?
-                  ORDER BY h.recorded_at DESC, h.source_key DESC
-                  LIMIT 1) AS warning_signals
-           FROM (SELECT DISTINCT stablecoin_id FROM yield_history WHERE stablecoin_id IN (${inClause.sql})) c`,
+        `SELECT h.stablecoin_id, h.source_key, h.recorded_at, h.warning_signals
+           FROM (SELECT DISTINCT stablecoin_id FROM yield_history WHERE stablecoin_id IN (${inClause.sql})) c
+           JOIN yield_history h ON h.rowid = (
+             SELECT h.rowid FROM yield_history h
+              WHERE h.stablecoin_id = c.stablecoin_id
+                AND h.is_best = 1 AND h.recorded_at <= ?
+              ORDER BY h.recorded_at DESC, h.source_key DESC LIMIT 1)`,
       )
-      .bind(since, ...inClause.binds)
-      .all<{ stablecoin_id: string; warning_signals: string | null }>();
+      .bind(...inClause.binds, since)
+      .all<YieldHistoryRow>();
     for (const row of rows.results ?? []) {
-      map.set(row.stablecoin_id, parseSignals(row.warning_signals));
+      map.set(row.stablecoin_id, { status: "unavailable" });
+      let candidate: YieldHistoryRow | null = row;
+      while (candidate) {
+        const evidence = decodeWarningEvidence(candidate.warning_signals);
+        if (evidence.status !== "unavailable") {
+          map.set(row.stablecoin_id, { status: "usable", signals: evidence.signals });
+          break;
+        }
+        degradation.record(candidate, evidence.reason);
+        // Seek backwards only for corrupt observations, including same-time ties.
+        // The same decoder owns seeding and walking; no SQL JSON approximation.
+        candidate = await db.prepare(
+          `SELECT stablecoin_id, source_key, recorded_at, warning_signals
+             FROM yield_history
+            WHERE stablecoin_id = ? AND is_best = 1
+              AND (recorded_at, source_key) < (?, ?)
+            ORDER BY recorded_at DESC, source_key DESC LIMIT 1`,
+        ).bind(row.stablecoin_id, candidate.recorded_at, candidate.source_key).first<YieldHistoryRow>();
+      }
     }
   }
   return map;
@@ -160,35 +230,48 @@ export async function projectYieldWarningEmitted(
 
   rows.sort((a, b) => (
     a.stablecoin_id === b.stablecoin_id
-      ? a.recorded_at - b.recorded_at
+      ? a.recorded_at - b.recorded_at || (a.source_key < b.source_key ? -1 : a.source_key > b.source_key ? 1 : 0)
       : a.stablecoin_id.localeCompare(b.stablecoin_id)
   ));
   const distinctCoinIds = Array.from(new Set(rows.map((r) => r.stablecoin_id)));
-  const priorByCoin = await fetchPriorWarningSignals(db, distinctCoinIds, since);
+  const degradation = warningDegradation();
+  const priorByCoin = await fetchPriorWarningSignals(db, distinctCoinIds, since, degradation);
 
   const events: TapeEventInsert[] = [];
   let maxCursor = since;
 
   // Walk per-coin and emit when net-new signals appear vs. the running snapshot.
   let currentCoin: string | null = null;
-  let prevSignals: string[] = [];
+  let predecessor: WarningBaseline = { status: "no-history" };
   for (const row of rows) {
     if (row.stablecoin_id !== currentCoin) {
       currentCoin = row.stablecoin_id;
-      prevSignals = priorByCoin.get(currentCoin) ?? [];
+      predecessor = priorByCoin.get(currentCoin) ?? { status: "no-history" };
     }
     if (row.recorded_at > maxCursor) maxCursor = row.recorded_at;
 
-    const currentSignals = parseSignals(row.warning_signals);
+    const evidence = decodeWarningEvidence(row.warning_signals);
+    if (evidence.status === "unavailable") {
+      degradation.record(row, evidence.reason);
+      if (predecessor.status === "no-history") predecessor = { status: "unavailable" };
+      continue;
+    }
+    const currentSignals = evidence.signals;
+    if (predecessor.status === "unavailable") {
+      // An observed warning after an unknown prefix establishes state, not motion.
+      predecessor = { status: "usable", signals: currentSignals };
+      continue;
+    }
+    const prevSignals = predecessor.status === "usable" ? predecessor.signals : [];
     if (currentSignals.length === 0) {
-      prevSignals = currentSignals;
+      predecessor = { status: "usable", signals: currentSignals };
       continue;
     }
 
     const prevSet = new Set(prevSignals);
     const newSignals = currentSignals.filter((signal) => !prevSet.has(signal));
     if (newSignals.length === 0) {
-      prevSignals = currentSignals;
+      predecessor = { status: "usable", signals: currentSignals };
       continue;
     }
 
@@ -230,12 +313,13 @@ export async function projectYieldWarningEmitted(
       sourceRowId,
       transition,
       sourceUrl: coinSourceUrl(row.stablecoin_id),
-      methodologyVersion: YIELD_METHODOLOGY_VERSION,
+      methodologyVersion: yieldMethodologyVersionAt(row.pys_inputs_at_publish, row.recorded_at),
     });
 
-    prevSignals = currentSignals;
+    predecessor = { status: "usable", signals: currentSignals };
   }
 
+  degradation.report();
   return finalizeProjectorBatch(db, { events, maxCursor, cursorKey, options });
 }
 
@@ -246,6 +330,7 @@ interface YieldDecisionRow {
   selected_source_key: string;
   selected_score: number | null;
   created_at: number;
+  pys_inputs_at_publish?: string | null;
 }
 
 async function fetchYieldDecisionsSince(
@@ -255,8 +340,12 @@ async function fetchYieldDecisionsSince(
   limit: number,
 ): Promise<YieldDecisionRow[]> {
   return fetchRowsWithTieExpansion<YieldDecisionRow>(db, {
-    selectSql: "SELECT stablecoin_id, selected_source_key, selected_score, created_at",
-    fromSql: "yield_source_decisions",
+    selectSql: `SELECT d.stablecoin_id, d.selected_source_key, d.selected_score, d.created_at,
+      (SELECT h.pys_inputs_at_publish FROM yield_history h
+        WHERE h.publication_generation_id = d.generation_id
+          AND h.stablecoin_id = d.stablecoin_id AND h.source_key = d.selected_source_key
+        ORDER BY h.recorded_at DESC LIMIT 1) AS pys_inputs_at_publish`,
+    fromSql: "yield_source_decisions d",
     timeColumn: "created_at",
     orderBySql: "created_at ASC, stablecoin_id ASC",
     since,
@@ -378,7 +467,7 @@ export async function projectYieldPysDropped(
           sourceRowId,
           transition,
           sourceUrl: coinSourceUrl(row.stablecoin_id),
-          methodologyVersion: YIELD_METHODOLOGY_VERSION,
+          methodologyVersion: yieldMethodologyVersionAt(row.pys_inputs_at_publish, row.created_at),
         });
       }
     }

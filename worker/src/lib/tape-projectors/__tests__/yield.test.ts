@@ -1,4 +1,4 @@
-import { afterEach, describe, it, expect } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { projectYieldWarningEmitted, projectYieldPysDropped } from "../yield";
@@ -483,10 +483,13 @@ describe("yield PYS null-baseline continuity", () => {
 });
 
 const fixtures = createLatestSchemaFixtureTracker();
-afterEach(fixtures.closeAll);
+afterEach(() => {
+  fixtures.closeAll();
+  vi.restoreAllMocks();
+});
 
 describe("yield projector prior-row SQL", () => {
-  it("binds the watermark before all coin ids for warning and PYS comparisons", async () => {
+  it("seeds warning and PYS comparisons for all requested coin ids", async () => {
     const { db, sqlite } = await fixtures.open();
     for (const id of ["usdt-tether", "usdc-circle"]) {
       for (const [time, score] of [[SEC - 1, 80], [SEC + 1, 60]]) {
@@ -503,5 +506,164 @@ describe("yield projector prior-row SQL", () => {
     }
     expect(await projectYieldWarningEmitted(db, { since: SEC, until: SEC + 2 })).toMatchObject({ projected: 0 });
     expect(await projectYieldPysDropped(db, { since: SEC, until: SEC + 2 })).toMatchObject({ projected: 2 });
+  });
+});
+
+describe("yield warning unavailable evidence", () => {
+  it.each([
+    { raw: "{", reason: "malformed-json" },
+    { raw: "", reason: "malformed-json" },
+    { raw: "null", reason: "non-array" },
+    { raw: "{}", reason: "non-array" },
+    { raw: '["reward-heavy", 1]', reason: "invalid-member" },
+    { raw: '[""]', reason: "invalid-member" },
+  ])("carries the last usable warning baseline across every split: $raw", async ({ raw, reason }) => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    function openHistory() {
+      const fixture = fixtures.open();
+      const signals = ['["reward-heavy"]', raw, '["reward-heavy"]', "[]", '["reward-heavy"]'];
+      const insert = fixture.sqlite.prepare(`INSERT INTO yield_history
+        (stablecoin_id, source_key, recorded_at, is_best, apy, data_source, warning_signals)
+        VALUES ('usdt-tether', 'aave-v3:test', ?, 1, 5, 'defillama', ?)`);
+      const seed = (start: number, end: number) => {
+        for (let i = start; i < end; i++) insert.run(SEC + i * 900, signals[i]!);
+      };
+      const events = fixture.sqlite.prepare(
+        "SELECT event_id, source_row_id, payload_json FROM tape_events ORDER BY ts",
+      );
+      return { ...fixture, seed, events, length: signals.length };
+    }
+    const reference = openHistory();
+    reference.seed(0, reference.length);
+    await projectYieldWarningEmitted(reference.db);
+    const expected = reference.events.all();
+    expect(expected).toEqual([0, 4].map((index) => ({
+      event_id: expect.any(String),
+      source_row_id: `usdt-tether:${SEC + index * 900}:warning`,
+      payload_json: JSON.stringify({
+        signals: ["reward-heavy"], prevSignals: [], newSignals: ["reward-heavy"], sourceKey: "aave-v3:test",
+      }),
+    })));
+    expect(warn).toHaveBeenCalledWith("[tape:yield.warning_emitted]", {
+      reason: "warning-evidence-unavailable",
+      counts: { [reason]: 1 },
+      samples: [{ coinId: "usdt-tether", recordedAt: SEC + 900, reason }],
+    });
+    for (let split = 0; split <= reference.length; split++) {
+      for (const maxRows of [1, 2, 500]) {
+        const replay = openHistory();
+        replay.seed(0, split);
+        for (let i = 0; i < split; i++) await projectYieldWarningEmitted(replay.db, { maxRows });
+        replay.seed(split, replay.length);
+        for (let i = split; i < replay.length; i++) await projectYieldWarningEmitted(replay.db, { maxRows });
+        expect(replay.events.all()).toEqual(expected);
+      }
+    }
+  });
+
+  it.each([
+    { prefix: ["{"], name: "malformed JSON" },
+    { prefix: ["{}", '[""]', "{"], name: "multiple unavailable observations" },
+  ])("holds the first valid same-coin warning after $name across every split and batch", async ({ prefix }) => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const signals = [...prefix, '["reward-heavy"]', '["reward-heavy","tvl-outflow"]', "[]", '["reward-heavy"]'];
+    for (let split = 0; split <= signals.length; split++) {
+      for (const maxRows of [1, 2, 500]) {
+        const { db, sqlite } = fixtures.open();
+        const insert = sqlite.prepare(`INSERT INTO yield_history
+          (stablecoin_id, source_key, recorded_at, is_best, apy, data_source, warning_signals)
+          VALUES ('usdt-tether', 'source', ?, 1, 5, 'defillama', ?)`);
+        const seed = (start: number, end: number) => {
+          for (let i = start; i < end; i++) insert.run(SEC + i * 900, signals[i]!);
+        };
+        seed(0, split);
+        for (let i = 0; i < split; i++) await projectYieldWarningEmitted(db, { maxRows });
+        seed(split, signals.length);
+        for (let i = split; i < signals.length; i++) await projectYieldWarningEmitted(db, { maxRows });
+        const events = sqlite.prepare("SELECT source_row_id, payload_json FROM tape_events ORDER BY ts").all();
+        expect(events).toEqual([
+          {
+            source_row_id: `usdt-tether:${SEC + (prefix.length + 1) * 900}:warning`,
+            payload_json: JSON.stringify({
+              signals: ["reward-heavy", "tvl-outflow"], prevSignals: ["reward-heavy"],
+              newSignals: ["tvl-outflow"], sourceKey: "source",
+            }),
+          },
+          {
+            source_row_id: `usdt-tether:${SEC + (prefix.length + 3) * 900}:warning`,
+            payload_json: JSON.stringify({
+              signals: ["reward-heavy"], prevSignals: [], newSignals: ["reward-heavy"], sourceKey: "source",
+            }),
+          },
+        ]);
+      }
+    }
+  });
+
+  it("quarantines leading corrupt evidence, keeps peers and bounds diagnostic samples", async () => {
+    const { db, sqlite } = fixtures.open();
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const insert = sqlite.prepare(`INSERT INTO yield_history
+      (stablecoin_id, source_key, recorded_at, is_best, apy, data_source, warning_signals)
+      VALUES (?, 'source', ?, 1, 5, 'defillama', ?)`);
+    for (let i = 0; i < 12; i++) insert.run("bad", SEC + i, "{");
+    insert.run("healthy", SEC, '["reward-heavy"]');
+    await projectYieldWarningEmitted(db);
+    expect(sqlite.prepare("SELECT coin_id FROM tape_events").all()).toEqual([{ coin_id: "healthy" }]);
+    expect(warn).toHaveBeenCalledWith("[tape:yield.warning_emitted]", {
+      reason: "warning-evidence-unavailable",
+      counts: { "malformed-json": 12 },
+      samples: expect.any(Array),
+    });
+    expect(warn.mock.calls[0]![1].samples).toHaveLength(10);
+  });
+
+  it("uses source-key ordering while seeking past corrupt priors and preserves genuine null clears", async () => {
+    const { db, sqlite } = fixtures.open();
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const insert = sqlite.prepare(`INSERT INTO yield_history
+      (stablecoin_id, source_key, recorded_at, is_best, apy, data_source, warning_signals)
+      VALUES ('usdt-tether', ?, ?, 1, 5, 'defillama', ?)`);
+    insert.run("a", SEC, '["reward-heavy"]');
+    insert.run("z", SEC, "{");
+    insert.run("a", SEC + 900, '["reward-heavy"]');
+    insert.run("a", SEC + 1800, null);
+    insert.run("a", SEC + 2700, '["reward-heavy"]');
+    await projectYieldWarningEmitted(db, { since: SEC });
+    expect(sqlite.prepare("SELECT source_row_id FROM tape_events").all()).toEqual([
+      { source_row_id: `usdt-tether:${SEC + 2700}:warning` },
+    ]);
+  });
+});
+
+describe("yield historical methodology", () => {
+  it.each([
+    { timestamp: 1777636800, version: "7.43", rawInputs: null },
+    { timestamp: 1792497600, version: "8.49", rawInputs: null },
+    { timestamp: 1777636800, version: "6.09", rawInputs: '{"methodologyVersion":"6.09"}' },
+    { timestamp: 1777636800, version: "7.43", rawInputs: "{" },
+    { timestamp: 1777636800, version: "7.43", rawInputs: '{"methodologyVersion":42}' },
+  ])("persists both yield event versions at source time $timestamp with $rawInputs under later clocks", async ({ timestamp, version, rawInputs }) => {
+    const { db, sqlite } = fixtures.open();
+    sqlite.prepare(`INSERT INTO yield_history
+      (stablecoin_id, source_key, recorded_at, is_best, apy, data_source, warning_signals,
+       publication_generation_id, pys_inputs_at_publish)
+      VALUES ('usdt-tether', 'source', ?, 1, 5, 'defillama', '["reward-heavy"]', 'current', ?)`)
+      .run(timestamp, rawInputs);
+    const decision = sqlite.prepare(`INSERT INTO yield_source_decisions
+      (generation_id, stablecoin_id, selected_source_key, selected_confidence_tier,
+       selected_data_source, selected_apy_30d, selected_score, selected_reason, alternatives_json, created_at)
+      VALUES (?, 'usdt-tether', 'source', 'high', 'defillama', 5, ?, 'best', '[]', ?)`);
+    decision.run("prior", 80, timestamp - 900);
+    decision.run("current", 50, timestamp);
+    for (const clock of [1792497600, 1824033600]) {
+      vi.spyOn(Date, "now").mockReturnValue(clock * 1000);
+      await projectYieldWarningEmitted(db, { since: timestamp - 900, until: timestamp });
+      await projectYieldPysDropped(db, { since: timestamp - 900, until: timestamp });
+      expect(sqlite.prepare("SELECT type, methodology_version FROM tape_events ORDER BY type").all()).toEqual([
+        { type: "yield.pys_dropped", methodology_version: version },
+        { type: "yield.warning_emitted", methodology_version: version },
+      ]);
+    }
   });
 });

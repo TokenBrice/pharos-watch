@@ -1,4 +1,4 @@
-import { batchExecute } from "./db";
+import { batchExecute, executeAtomicBatch } from "./db";
 import { D1_BATCH_SIZE } from "./constants";
 import { getCache, setCache } from "./db-cache";
 import { runWithOverloadRetry } from "./d1-overload-retry";
@@ -29,13 +29,17 @@ export async function setProjectorWatermark(
 }
 
 /**
- * Idempotent batch insert. Each row writes via `INSERT OR REPLACE` keyed on
- * `(source_table, source_row_id, transition)`, which is the documented
- * idempotency contract (e.g. so a pending→confirmed reclassification
- * overwrites the row in place).
+ * Source-key reclassification replaces ordinary events. Peak observations are
+ * insert-if-absent: replay must preserve the first permalink, ingestion ID and
+ * observation/creation clocks. An optional checkpoint commits with the final
+ * bounded event batch; earlier batches remain replay-safe if that commit fails.
  */
-export async function insertTapeEvents(db: D1Database, events: TapeEventInsert[]): Promise<number> {
-  if (events.length === 0) return 0;
+export async function insertTapeEvents(
+  db: D1Database,
+  events: TapeEventInsert[],
+  checkpoint?: D1PreparedStatement,
+): Promise<number> {
+  if (events.length === 0 && !checkpoint) return 0;
   const nowSec = Math.floor(Date.now() / 1000);
   const stmts = events.map((event) =>
     db
@@ -44,7 +48,10 @@ export async function insertTapeEvents(db: D1Database, events: TapeEventInsert[]
            (event_id, type, severity, ts, ends_at, coin_id, issuer_id, peg_currency,
             chain, title, summary, payload_json, source_table, source_row_id,
             transition, source_url, methodology_version, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ${event.type === "depeg.peak_worsened"
+           ? "ON CONFLICT(source_table, source_row_id, transition) DO NOTHING"
+           : ""}`,
       )
       .bind(
         event.eventId,
@@ -67,7 +74,15 @@ export async function insertTapeEvents(db: D1Database, events: TapeEventInsert[]
         nowSec,
       ),
   );
-  await batchExecute(db, stmts);
+  if (checkpoint) {
+    // Reserve one slot so even an exact multiple of the batch limit ends with
+    // event writes and the checkpoint in the same transaction.
+    const tailStart = Math.max(0, stmts.length - (D1_BATCH_SIZE - 1));
+    await batchExecute(db, stmts.slice(0, tailStart));
+    await executeAtomicBatch(db, [...stmts.slice(tailStart), checkpoint]);
+  } else {
+    await batchExecute(db, stmts);
+  }
   return events.length;
 }
 

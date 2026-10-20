@@ -10,7 +10,7 @@ import {
   recoverProviderOnNoCandidates,
   recordProviderOutcomeSafe,
 } from "../../lib/pricing-provider-lifecycle";
-import { fetchDsTokenPoolsWithStatus, getDsTrackedTokenPriceUsd } from "../../lib/dexscreener";
+import { fetchDsTokenPoolsWithStatus, getDsTrackedTokenPriceUsd, getDsTrackedTokenSymbol } from "../../lib/dexscreener";
 import { applyResolvedPrice, type PeggedAsset } from "./enrich-prices-shared";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import {
@@ -184,15 +184,6 @@ function selectDexScreenerBatch(
   return selected;
 }
 
-function getDexPairTrackedTokenSymbol(
-  pair: Awaited<ReturnType<typeof fetchDsTokenPoolsWithStatus>>["pairs"][number],
-  trackedAddress: string,
-): string | null {
-  const tracked = trackedAddress.toLowerCase();
-  if (pair.baseToken.address.toLowerCase() === tracked) return pair.baseToken.symbol;
-  if (pair.quoteToken.address.toLowerCase() === tracked) return pair.quoteToken.symbol;
-  return null;
-}
 
 function resolveDexScreenerAddressPrice(
   asset: PeggedAsset,
@@ -206,11 +197,11 @@ function resolveDexScreenerAddressPrice(
       if (tvl < DEXSCREENER_MIN_LIQUIDITY_USD) return null;
       if (
         target.expectedSymbol &&
-        getDexPairTrackedTokenSymbol(pair, target.address)?.toUpperCase() !== target.expectedSymbol.toUpperCase()
+        getDsTrackedTokenSymbol(pair, target.address, target.chain)?.toUpperCase() !== target.expectedSymbol.toUpperCase()
       ) {
         return null;
       }
-      return getDsTrackedTokenPriceUsd(pair, target.address).priceUsd;
+      return getDsTrackedTokenPriceUsd(pair, target.address, target.chain).priceUsd;
     })
     .filter((price): price is number => typeof price === "number" && Number.isFinite(price) && price > 0);
 

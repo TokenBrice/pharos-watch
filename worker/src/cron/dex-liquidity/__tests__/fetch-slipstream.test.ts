@@ -1,13 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { encodeFunctionResult, parseAbi } from "viem/utils";
+import { decodeFunctionData, encodeFunctionResult, parseAbi } from "viem/utils";
 
 vi.mock("../../../lib/evm-rpc", () => ({
   fetchEvmCallHexAtBlock: vi.fn(),
+  fetchEvmBlockNumber: vi.fn(),
+  fetchEvmBlockHeader: vi.fn(),
   fetchEvmMulticall3Aggregate3AtBlock: vi.fn(),
 }));
 
 import {
   fetchEvmCallHexAtBlock,
+  fetchEvmBlockNumber,
+  fetchEvmBlockHeader,
   fetchEvmMulticall3Aggregate3AtBlock,
 } from "../../../lib/evm-rpc";
 import {
@@ -16,9 +20,9 @@ import {
   getSugarClStartOffset,
   projectSugarPoolPage,
   projectSugarTokens,
-  sqrtRatioToSpotPrice,
 } from "../fetch-slipstream";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
+import { makeChainRpcs } from "../../../test-helpers/chain-rpc-fixtures.test-support";
 
 const ABI = parseAbi([
   "function allPoolsLength() view returns (uint256)",
@@ -36,39 +40,6 @@ const RECOVERY_ABI = parseAbi([
   "function balanceOf(address account) view returns (uint256)",
 ]);
 
-describe("sqrtRatioToSpotPrice", () => {
-  it("returns 1.0 for a balanced sqrt price (Q96 == 2^96)", () => {
-    // sqrt(1) * 2^96 = 2^96 → price = 1.0 (same decimals)
-    const price = sqrtRatioToSpotPrice(1n << 96n, 6, 6);
-    expect(price).toBeCloseTo(1, 3);
-  });
-
-  it("handles decimal adjustment across token decimals", () => {
-    // Q96 balanced ratio with token0 6dec, token1 18dec:
-    // priceRaw = 1.0, decimals adjust = 10^(6 - 18) = 10^-12
-    const price = sqrtRatioToSpotPrice(1n << 96n, 6, 18);
-    expect(price).toBeCloseTo(1e-12, 15);
-  });
-
-  it("retains precision when a tiny raw ratio becomes a normal human price after decimal adjustment", () => {
-    const liveCadcUsdcSqrtRatio = 66_808_070_069_819_834_061_550n;
-    const price = sqrtRatioToSpotPrice(liveCadcUsdcSqrtRatio, 18, 6);
-
-    expect(price).toBeCloseTo(0.7110476163373841, 12);
-  });
-
-  it("handles large sqrt ratios without overflow", () => {
-    // Uniswap V3 sqrtPriceX96 can reach ~2^160. Pick 2^140 as a well-above-safe-int test.
-    const price = sqrtRatioToSpotPrice(1n << 140n, 18, 18);
-    expect(Number.isFinite(price)).toBe(true);
-    expect(price).toBeGreaterThan(0);
-  });
-
-  it("returns 0 for zero or negative sqrt ratio", () => {
-    expect(sqrtRatioToSpotPrice(0n, 6, 6)).toBe(0);
-    expect(sqrtRatioToSpotPrice(-1n, 6, 6)).toBe(0);
-  });
-});
 
 describe("getSlipstreamPoolFeeBps", () => {
   it("returns the numeric bps for valid values", () => {
@@ -165,6 +136,8 @@ describe("Sugar ABI projection", () => {
 describe("fetchSlipstreamPools", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(fetchEvmBlockNumber).mockResolvedValue(25_000_000);
+    vi.mocked(fetchEvmBlockHeader).mockResolvedValue({ number: 25_000_000, hash: `0x${"11".repeat(32)}`, timestamp: 1_791_184_659 });
   });
 
   afterEach(() => {
@@ -317,21 +290,20 @@ describe("fetchSlipstreamPools", () => {
       result: result as never,
     });
     vi.mocked(fetchEvmMulticall3Aggregate3AtBlock).mockResolvedValueOnce([
-      { label: "slipstream-recovery-0-factory", success: true, returnData: encoded("factory", "0x5e7BB104d84c7CB9B682AaC2F3d509f5F406809A") },
-      { label: "slipstream-recovery-0-token0", success: true, returnData: encoded("token0", usdc) },
-      { label: "slipstream-recovery-0-token1", success: true, returnData: encoded("token1", btcusd) },
-      { label: "slipstream-recovery-0-tickSpacing", success: true, returnData: encoded("tickSpacing", 1) },
-      { label: "slipstream-recovery-0-slot0", success: true, returnData: encoded("slot0", [(1n << 96n) * 1_000_000n, 0, 0, 0, 0, true]) },
-      { label: "slipstream-recovery-0-token-0-decimals", success: true, returnData: encoded("decimals", 18) },
-      { label: "slipstream-recovery-0-token-0-balance", success: true, returnData: encoded("balanceOf", 1_000_000n * 10n ** 18n) },
-      { label: "slipstream-recovery-0-token-1-decimals", success: true, returnData: encoded("decimals", 6) },
-      { label: "slipstream-recovery-0-token-1-balance", success: true, returnData: encoded("balanceOf", 1_000_000n * 10n ** 6n) },
+      { label: "cl-0-factory", success: true, returnData: encoded("factory", "0x5e7BB104d84c7CB9B682AaC2F3d509f5F406809A") },
+      { label: "cl-0-token0", success: true, returnData: encoded("token0", usdc) },
+      { label: "cl-0-token1", success: true, returnData: encoded("token1", btcusd) },
+      { label: "cl-0-tickSpacing", success: true, returnData: encoded("tickSpacing", 1) },
+      { label: "cl-0-slot0", success: true, returnData: encoded("slot0", [(1n << 96n) * 1_000_000n, 0, 0, 0, 0, true]) },
+      { label: "cl-0-token-0-decimals", success: true, returnData: encoded("decimals", 18) },
+      { label: "cl-0-token-0-balance", success: true, returnData: encoded("balanceOf", 1_000_000n * 10n ** 18n) },
+      { label: "cl-0-token-1-decimals", success: true, returnData: encoded("decimals", 6) },
+      { label: "cl-0-token-1-balance", success: true, returnData: encoded("balanceOf", 1_000_000n * 10n ** 6n) },
     ]);
-    vi.mocked(fetchEvmMulticall3Aggregate3AtBlock).mockResolvedValueOnce(membership === "unavailable" ? null : [{
-      label: "slipstream-recovery-0-membership",
-      success: true,
-      returnData: membership === "malformed" ? "0x" : encoded("getPool", membership === "registered" ? pool : "0x0000000000000000000000000000000000000000"),
-    }]);
+    vi.mocked(fetchEvmMulticall3Aggregate3AtBlock).mockResolvedValueOnce(membership === "unavailable" ? null : [
+      { label: "cl-0-membership", success: true,
+        returnData: membership === "malformed" ? "0x" : encoded("getPool", membership === "registered" ? pool : "0x0000000000000000000000000000000000000000") },
+    ]);
     const db = makeNoopD1({
       prepare: () => ({
         bind: () => ({
@@ -378,4 +350,78 @@ describe("fetchSlipstreamPools", () => {
       price: 1,
     });
   });
+  it.each(["coherent", "unavailable-header", "changed-header", "zero-balance", "untracked-token", "velodrome"])(
+    "keeps seven staged candidates coherent across the slot0/balance chunk boundary: %s",
+    async (scenario) => {
+      const actualRpc = await vi.importActual<{ fetchEvmMulticall3Aggregate3AtBlock: typeof fetchEvmMulticall3Aggregate3AtBlock }>("../../../lib/evm-rpc");
+      vi.mocked(fetchEvmMulticall3Aggregate3AtBlock).mockImplementation(actualRpc.fetchEvmMulticall3Aggregate3AtBlock);
+      vi.mocked(fetchEvmCallHexAtBlock).mockResolvedValue(null);
+      const protocol = scenario === "velodrome" ? "velodrome-slipstream" : "aerodrome-slipstream";
+      const chain = scenario === "velodrome" ? "optimism" : "base";
+      const factory = scenario === "velodrome" ? "0xcc0bddb707055e04e497ab22a59c2af4391cd12f" : "0x5e7bb104d84c7cb9b682aac2f3d509f5f406809a";
+      const token0 = "0x00000000000000000000000000000000000000bb";
+      const token1 = "0x00000000000000000000000000000000000000cc";
+      const pools = Array.from({ length: 7 }, (_, index) => `0x${(index + 1).toString(16).padStart(40, "0")}`);
+      const hash: `0x${string}` = `0x${"11".repeat(32)}`;
+      if (scenario === "unavailable-header") vi.mocked(fetchEvmBlockHeader).mockResolvedValueOnce(null);
+      if (scenario === "changed-header") vi.mocked(fetchEvmBlockHeader)
+        .mockResolvedValueOnce({ number: 25_000_000, hash, timestamp: 1_791_184_659 })
+        .mockResolvedValueOnce({ number: 25_000_000, hash: `0x${"22".repeat(32)}`, timestamp: 1_791_184_659 });
+      const aggregateAbi = parseAbi([
+        "function aggregate3((address target,bool allowFailure,bytes callData)[] calls) payable returns ((bool success,bytes returnData)[] returnData)",
+      ]);
+      const selectors: unknown[] = [];
+      const chunkSizes: number[] = [];
+      let latestHead = 0;
+      let resultsIndex = 0;
+      const transport = vi.fn(async (_url: unknown, init?: RequestInit) => {
+        const request = JSON.parse(String(init?.body));
+        selectors.push(request.params[1]);
+        const calls = decodeFunctionData({ abi: aggregateAbi, data: request.params[0].data }).args![0];
+        chunkSizes.push(calls.length);
+        // Every aggregate advances latest and simulates a swap. Only the pin
+        // keeps slot0 at call58 and token balances at call60/62 in one state.
+        const pinned = request.params[1]?.blockHash === hash;
+        const snapshot = pinned ? 1 : latestHead + 2;
+        latestHead++;
+        const results = calls.map((call) => {
+          const decoded = decodeFunctionData({ abi: RECOVERY_ABI, data: call.callData });
+          const value = decoded.functionName === "factory" ? factory
+            : decoded.functionName === "token0" ? token0
+            : decoded.functionName === "token1" ? token1
+            : decoded.functionName === "tickSpacing" ? 1
+            : decoded.functionName === "slot0" ? [(1n << 96n) * BigInt(snapshot), 0, 0, 0, 0, true]
+            : decoded.functionName === "decimals" ? 6
+            : decoded.functionName === "balanceOf" ? (scenario === "zero-balance" ? 0n : BigInt(snapshot) * 1_000_000n * 10n ** 6n)
+            : pools[resultsIndex++];
+          return { success: true, returnData: encodeFunctionResult({ abi: RECOVERY_ABI, functionName: decoded.functionName, result: value as never }) };
+        });
+        return Response.json({ jsonrpc: "2.0", id: request.id, result: encodeFunctionResult({ abi: aggregateAbi, functionName: "aggregate3", result: results }) });
+      });
+      vi.stubGlobal("fetch", transport);
+      const db = makeNoopD1({ prepare: () => ({ bind: () => ({ all: async () => ({ results: pools.map((pool) => ({
+        pool_id: `${chain}:${pool}`, base_token: token0, quote_token: token1, fee_tier: 5,
+      })) }) }) }) });
+      try {
+        const tracked = new Map([[`${chain}:${token0}`, "usdc-circle"]]);
+        if (scenario !== "untracked-token") tracked.set(`${chain}:${token1}`, "usdt-tether");
+        const result = await fetchSlipstreamPools(protocol, tracked,
+          new Map(), new Map([["usdc-circle", 1], ["usdt-tether", 1]]), undefined, makeChainRpcs([chain]), db);
+        if (["unavailable-header", "changed-header", "zero-balance", "untracked-token"].includes(scenario)) expect(result.pools).toEqual([]);
+        else {
+          expect(result.pools).toHaveLength(7);
+          for (const pool of result.pools) expect(pool).toMatchObject({ source: protocol, price: 1, tvlUsd: 2_000_000, feeRate: 0.0005, balances: [1_000_000, 1_000_000] });
+        }
+        if (["unavailable-header", "untracked-token"].includes(scenario)) expect(transport).not.toHaveBeenCalled();
+        else {
+          expect(chunkSizes).toEqual([60, 3, 7]);
+          expect(selectors).toEqual(Array(3).fill({ blockHash: hash, requireCanonical: true }));
+          expect(vi.mocked(fetchEvmMulticall3Aggregate3AtBlock).mock.calls.every((call) => call[2] === 25_000_000 && call[3]?.stateBlockHash === hash)).toBe(true);
+        }
+      } finally {
+        vi.unstubAllGlobals();
+        vi.mocked(fetchEvmMulticall3Aggregate3AtBlock).mockReset();
+      }
+    },
+  );
 });

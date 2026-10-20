@@ -15,17 +15,19 @@ function CoverageMix({
   classes,
 }: {
   title: string;
-  classes: Pick<LiquidityHealth["currentCoverageClasses"], "primary" | "mixed" | "fallback" | "unobserved">;
+  classes: Pick<LiquidityHealth["currentCoverageClasses"], "primary" | "mixed" | "fallback" | "unobserved"> | null;
 }) {
   return (
     <div className="rounded-lg border border-border/50 p-3">
       <div className="mb-2 pharos-label">{title}</div>
-      <div className="grid grid-cols-2 gap-2 text-sm">
-        <div>Primary: <span className="pharos-numeric">{classes.primary}</span></div>
-        <div>Mixed: <span className="pharos-numeric">{classes.mixed}</span></div>
-        <div>Fallback: <span className="pharos-numeric">{classes.fallback}</span></div>
-        <div>Unobserved: <span className="pharos-numeric">{classes.unobserved}</span></div>
-      </div>
+      {classes == null ? <p className="text-sm text-muted-foreground">Unavailable</p> : (
+        <div className="grid grid-cols-2 gap-2 text-sm">
+          <div>Primary: <span className="pharos-numeric">{classes.primary}</span></div>
+          <div>Mixed: <span className="pharos-numeric">{classes.mixed}</span></div>
+          <div>Fallback: <span className="pharos-numeric">{classes.fallback}</span></div>
+          <div>Unobserved: <span className="pharos-numeric">{classes.unobserved}</span></div>
+        </div>
+      )}
     </div>
   );
 }
@@ -59,6 +61,11 @@ export function LiquidityHealthCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {(health.baselineReadFailures?.length ?? 0) > 0 && (
+          <p className="text-sm text-state-warn">
+            Baseline evidence unavailable: {health.baselineReadFailures?.join(", ")}.
+          </p>
+        )}
         <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
           <StatTile
             label="Covered coins"
@@ -66,7 +73,7 @@ export function LiquidityHealthCard({
             subtext={
               health.previousCoverage != null
                 ? `prev ${health.previousCoverage}`
-                : undefined
+                : "prev unavailable"
             }
           />
           <StatTile
@@ -75,7 +82,7 @@ export function LiquidityHealthCard({
             subtext={
               health.previousGlobalTvl != null
                 ? `prev ${formatCurrency(health.previousGlobalTvl)}`
-                : undefined
+                : "prev unavailable"
             }
           />
           <StatTile
@@ -92,7 +99,7 @@ export function LiquidityHealthCard({
                 ? `prev ${formatCurrency(health.previousTop10GuardTvl)}`
                 : health.previousTop10CoveredTvl != null
                   ? `prev ${formatCurrency(health.previousTop10CoveredTvl)}`
-                : undefined
+                : "prev unavailable"
             }
           />
           <StatTile

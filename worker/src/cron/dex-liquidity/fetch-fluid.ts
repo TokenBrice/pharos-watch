@@ -159,8 +159,18 @@ async function enrichFluidPool(
     ? decodeUint256Words(feeResult.value, 1)
     : null;
 
-  const token0Balance = (collateralReserves?.[0] ?? 0n) + (debtReserves?.[2] ?? 0n);
-  const token1Balance = (collateralReserves?.[1] ?? 0n) + (debtReserves?.[3] ?? 0n);
+  const fee = feeWords?.[0] ?? 0n;
+  if (fee > 0n) {
+    // Fluid fee encoding uses 1% = 10_000, so divide by 1_000_000 for decimal form.
+    pool.feeRate = Number(fee) / 1_000_000;
+  }
+
+  // Strict RPC decoding returns null where malformed bytes previously threw.
+  if (!collateralReserves || !debtReserves) {
+    throw new Error("collateral or debt reserves unavailable");
+  }
+  const token0Balance = collateralReserves[0] + debtReserves[2];
+  const token1Balance = collateralReserves[1] + debtReserves[3];
   const token0Decimals = pool.tokens[0]?.decimals ?? 0;
   const token1Decimals = pool.tokens[1]?.decimals ?? 0;
   if (token0Balance > 0n || token1Balance > 0n) {
@@ -174,12 +184,6 @@ async function enrichFluidPool(
       pool.balances = [Number(token0Balance), Number(token1Balance)];
       pool.balancesNormalized = false;
     }
-  }
-
-  const fee = feeWords?.[0] ?? 0n;
-  if (fee > 0n) {
-    // Fluid fee encoding uses 1% = 10_000, so divide by 1_000_000 for decimal form.
-    pool.feeRate = Number(fee) / 1_000_000;
   }
 }
 

@@ -686,6 +686,10 @@ async function probeTokenFreshness(
   const firstBlock = Math.max(0, headBefore - freshness.toleranceBlocks!);
   const endBlock = Math.max(headAfter, sentinelBlock ?? headAfter);
   freshness.referenceEndBlock = endBlock;
+  if (headAfter > headBefore + 1) {
+    freshness.reason = "bracket-ancestry-gap";
+    return "none";
+  }
   if (endBlock - firstBlock + 1 > RPC_PARITY_LATEST_MAX_NUMERIC_CALLS) {
     freshness.reason = "bracket-too-wide";
     return "none";

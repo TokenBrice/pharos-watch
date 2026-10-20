@@ -15,7 +15,7 @@ import {
   deriveIssuerId,
   severityForDepegOpened,
 } from "../tape-event-helpers";
-import { getCache, setCache } from "../db-cache";
+import { getCache, prepareCacheUpsert } from "../db-cache";
 import {
   insertTapeEvents,
 } from "../tape-event-store";
@@ -206,10 +206,6 @@ async function loadPeakSeenMap(db: D1Database): Promise<PeakWorsenedSeenMap> {
   }
 }
 
-async function savePeakSeenMap(db: D1Database, map: PeakWorsenedSeenMap): Promise<void> {
-  await setCache(db, PEAK_WORSENED_CACHE_KEY, JSON.stringify(map));
-}
-
 async function fetchOpenDepegRows(
   db: D1Database,
   since: number | null,
@@ -334,8 +330,11 @@ export async function projectDepegPeakWorsened(
   }
 
   if (!dryRun) {
-    if (events.length > 0) await insertTapeEvents(db, events);
-    await savePeakSeenMap(db, nextMap);
+    await insertTapeEvents(db, events, prepareCacheUpsert(db, {
+      key: PEAK_WORSENED_CACHE_KEY,
+      value: JSON.stringify(nextMap),
+      updatedAt: Math.floor(nowMs / 1000),
+    }));
   }
   return { projected: events.length, advanced: null };
 }

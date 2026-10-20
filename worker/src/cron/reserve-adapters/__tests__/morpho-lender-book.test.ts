@@ -209,6 +209,38 @@ describe("Morpho NAV-accounted lender-book producer", () => {
       status: "unavailable", reason: code === "0x" ? "identity-mismatch" : "rpc-unavailable",
     });
   });
+  it.each(["http", "missing-state", "revert"] as const)(
+    "does not infer interface absence from an optional direct %s probe", async outcome => {
+      const f = fixture();
+      f.spec.code![MULTICALL3_ADDRESS.toLowerCase()] = "0x";
+      const network = installAdapterNetwork(f.spec);
+      const fetch = globalThis.fetch;
+      let probes = 0;
+      vi.stubGlobal("fetch", async (...args: Parameters<typeof fetch>) => {
+        const request = new Request(...args);
+        const body = await request.clone().json() as { method: string; params: { to?: string; data?: string }[] };
+        if (body.method === "eth_call" && body.params[0]?.to?.toLowerCase() === ADAPTER &&
+            body.params[0]?.data === toFunctionSelector("morphoVaultV1()")) {
+          probes++;
+          return new Response(JSON.stringify(outcome === "http" ? { error: "unavailable" } : {
+            error: outcome === "revert" ? { code: 3, message: "execution reverted" } :
+              { code: -32000, message: "missing trie node" },
+          }), { status: outcome === "http" ? 503 : 200 });
+        }
+        return fetch(request);
+      });
+      const requestCache = new Map<string, Promise<unknown>>();
+      const result = await observeMorphoLenderBook(f.coin, f.config, new AbortController().signal, {
+        chainRpcs: network.chainRpcs, requestCache, ioLimiter: createAdapterIoLimiter(), nowSec: PIN.timestamp + 60,
+      });
+      expect(probes).toBeGreaterThan(0);
+      if (outcome === "revert") expect(result.status).toBe("ok");
+      else {
+        expect(result).toMatchObject({ status: "unavailable", reason: "rpc-unavailable", deployments: null });
+        expect(requestCache.has(`morpho-book:ethereum:${PIN.hash}:${ADAPTER}:${toFunctionSelector("morphoVaultV1()")}`)).toBe(false);
+      }
+    },
+  );
   it.each(["decimals()", "DECIMALS_OFFSET()"])("labels out-of-range %s as malformed", async signature => {
     const f = fixture([market(100n)], "kpkusdcprime-kpk", signature === "decimals()" ? "direct" : "nested");
     f.rpc[signature] = 37n;
@@ -276,13 +308,13 @@ describe("Morpho NAV-accounted lender-book producer", () => {
     const f = fixture();
     const network = installAdapterNetwork(f.spec);
     const fetch = globalThis.fetch;
-    let changed = false;
     vi.stubGlobal("fetch", async (...args: Parameters<typeof fetch>) => {
       const request = new Request(...args);
       const body = await request.clone().json() as { method: string; params: { data?: string }[] };
       const response = await fetch(request);
-      if (!changed && body.method === "eth_call" && body.params[0]?.data?.startsWith("0x82ad56cb")) {
-        changed = true;
+      // Malformed aggregate responses now try the next eligible endpoint.
+      // Corrupt every attempt so this remains an exhausted-provider regression.
+      if (body.method === "eth_call" && body.params[0]?.data?.startsWith("0x82ad56cb")) {
         const payload = await response.json() as { result: `0x${string}` };
         const abi = [{ type: "tuple[]", components: [{ type: "bool" }, { type: "bytes" }] }] as const;
         const [slots] = decodeAbiParameters(abi, payload.result);

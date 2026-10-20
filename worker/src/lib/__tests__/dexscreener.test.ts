@@ -9,7 +9,7 @@ vi.mock("../abort", () => ({
 }));
 
 import { fetchWithRetry } from "../fetch-retry";
-import { fetchDsTokenPairsWithStatus, fetchDsTokenPoolsWithStatus, getDsTrackedTokenPriceUsd } from "../dexscreener";
+import { fetchDsTokenPairsWithStatus, fetchDsTokenPoolsWithStatus, getDsTrackedTokenPriceUsd, getDsTrackedTokenSymbol } from "../dexscreener";
 
 function validPair(chainId = "base", dexId = "aerodrome") {
   return {
@@ -32,15 +32,57 @@ describe("dexscreener", () => {
     "derives quote USD only with a valid native ratio %s",
     (priceNative) => {
       const pair = { ...validPair(), priceUsd: "4", priceNative };
-      expect(getDsTrackedTokenPriceUsd(pair, "0xDEF")).toEqual({
+      expect(getDsTrackedTokenPriceUsd(pair, "0xDEF", "base")).toEqual({
         side: "quote", priceUsd: priceNative === "2" ? 2 : null,
       });
-      expect(getDsTrackedTokenPriceUsd(pair, "0xABC")).toEqual({ side: "base", priceUsd: 4 });
-      expect(getDsTrackedTokenPriceUsd(pair, "other")).toEqual({ side: null, priceUsd: null });
-      expect(getDsTrackedTokenPriceUsd({ ...pair, priceUsd: "invalid" }, "0xdef"))
+      expect(getDsTrackedTokenPriceUsd(pair, "0xABC", "base")).toEqual({ side: "base", priceUsd: 4 });
+      expect(getDsTrackedTokenPriceUsd(pair, "other", "base")).toEqual({ side: null, priceUsd: null });
+      expect(getDsTrackedTokenPriceUsd({ ...pair, priceUsd: "invalid" }, "0xdef", "base"))
         .toEqual({ side: "quote", priceUsd: null });
     },
   );
+
+  it("preserves native identity case for both tracked-side price and symbol resolution", () => {
+    const pair = {
+      ...validPair("solana"), priceUsd: "4", priceNative: "2",
+      baseToken: { address: "MintCase", name: "Native", symbol: "NATIVE" },
+      quoteToken: { address: "QuoteCase", name: "Quote", symbol: "QUOTE" },
+    };
+    expect(getDsTrackedTokenPriceUsd(pair, "mintCase", "solana")).toEqual({ side: null, priceUsd: null });
+    expect(getDsTrackedTokenSymbol(pair, "mintCase", "solana")).toBeNull();
+    expect(getDsTrackedTokenPriceUsd(pair, "QuoteCase", "solana")).toEqual({ side: "quote", priceUsd: 2 });
+    expect(getDsTrackedTokenSymbol(pair, "QuoteCase", "solana")).toBe("QUOTE");
+    expect(getDsTrackedTokenPriceUsd(pair, "quoteCase", "solana")).toEqual({ side: null, priceUsd: null });
+    for (const priceNative of [undefined, "0", "invalid"]) {
+      expect(getDsTrackedTokenPriceUsd({ ...pair, priceNative }, "QuoteCase", "solana"))
+        .toEqual({ side: "quote", priceUsd: null });
+    }
+    expect(getDsTrackedTokenPriceUsd(validPair(), "0xAbC", "base")).toEqual({ side: "base", priceUsd: 1.0001 });
+    expect(getDsTrackedTokenSymbol(validPair(), "0xDEF", "base")).toBe("USDC");
+    expect(getDsTrackedTokenPriceUsd(validPair(), "0xabc", "ethereum")).toEqual({ side: null, priceUsd: null });
+    expect(getDsTrackedTokenSymbol(validPair(), "0xabc", "ethereum")).toBeNull();
+  });
+
+  it.each([fetchDsTokenPoolsWithStatus, fetchDsTokenPairsWithStatus])(
+    "rejects wrong-chain responses and preserves mixed-chain incompleteness", async (fetchPools) => {
+      vi.mocked(fetchWithRetry).mockResolvedValueOnce(new Response(JSON.stringify([validPair("ethereum")])));
+      await expect(fetchPools("base", "0xabc")).resolves.toMatchObject({
+        ok: false, degraded: true, pairs: [], error: expect.stringContaining("outside requested chain base"),
+      });
+      const pair = validPair();
+      vi.mocked(fetchWithRetry).mockResolvedValueOnce(new Response(JSON.stringify([pair, validPair("ethereum")])));
+      await expect(fetchPools("base", "0xabc")).resolves.toMatchObject({ ok: true, degraded: true, pairs: [pair] });
+      vi.mocked(fetchWithRetry).mockResolvedValueOnce(new Response("[]"));
+      await expect(fetchPools("base", "0xabc")).resolves.toEqual({ ok: true, pairs: [] });
+    },
+  );
+
+  it("compares against mapped provider chain slugs rather than Pharos chain ids", async () => {
+    const pair = validPair("flowevm");
+    vi.mocked(fetchWithRetry).mockResolvedValueOnce(new Response(JSON.stringify([pair])));
+    await expect(fetchDsTokenPairsWithStatus("flow", "0xabc")).resolves.toEqual({ ok: true, pairs: [pair] });
+    expect(getDsTrackedTokenPriceUsd(pair, "0xAbC", "flow")).toEqual({ side: "base", priceUsd: 1.0001 });
+  });
 
   it("treats malformed token-pool payloads as failed fetches for breaker accounting", async () => {
     vi.mocked(fetchWithRetry).mockResolvedValueOnce(

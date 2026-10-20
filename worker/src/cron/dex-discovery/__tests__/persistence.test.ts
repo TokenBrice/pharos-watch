@@ -13,13 +13,15 @@ import {
   upsertStagedPools,
   writeDiscoveryRunCheckpoint,
 } from "../persistence";
-import { STAGED_POOL_CONFIDENCE_HORIZON_HOURS, STAGED_POOL_MAX_TVL_USD, type DiscoveryRunCheckpoint } from "../types";
+import { STAGED_POOL_CONFIDENCE_HORIZON_HOURS, STAGED_POOL_MAX_TVL_USD, TEZOS_POOL_IDENTITY_REVIEW_VERSION, SLIPSTREAM_POOL_IDENTITY_REVIEW_VERSION, type DiscoveryRunCheckpoint } from "../types";
 import { makeNoopD1, makeRunCountingNoopD1 } from "../../../test-helpers/noop-d1";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { stagedPool } from "./discovery.test-support";
+import { mergeStagedPools } from "../../dex-liquidity/staging-merge";
+import { createKnownPoolIdentityIndex } from "../../dex-liquidity/pool-identity";
 
 const fixtures = createLatestSchemaFixtureTracker();
-afterEach(() => { fixtures.closeAll(); vi.useRealTimers(); });
+afterEach(() => { fixtures.closeAll(); vi.restoreAllMocks(); vi.useRealTimers(); });
 
 // Rows survive one day past the confidence horizon so the stale_confidence_zero grace window still finds them.
 const STAGING_DELETE_TTL_SEC = (STAGED_POOL_CONFIDENCE_HORIZON_HOURS + 24) * 60 * 60;
@@ -286,7 +288,6 @@ describe("discovery persistence D1 retry coverage", () => {
     expect(attempts).toBe(3);
     expect(prepared[0]?.sql).toContain("ORDER BY refreshed_at ASC, rowid ASC");
     expect(prepared[0]?.binds).toEqual([1_710_000_000 - STAGING_DELETE_TTL_SEC, 1_000]);
-    expect(prepared[2]?.sql).toContain("SET raw_json = NULL");
     expect(prepared[2]?.binds).toEqual([
       1_710_000_000 - 4 * 60 * 60,
       1_000,
@@ -341,6 +342,40 @@ describe("discovery persistence D1 retry coverage", () => {
         { pool_id: "orderbook:kinesis:kag-older", raw_json: null },
       ]);
   });
+
+  it.each([
+    { source: "tezos", chain: "tezos", protocol: "quipuswap", poolType: "amm", version: TEZOS_POOL_IDENTITY_REVIEW_VERSION },
+    { source: "direct_api", chain: "base", protocol: "aerodrome", poolType: "aerodrome-slipstream-1bp", version: SLIPSTREAM_POOL_IDENTITY_REVIEW_VERSION },
+  ] as const)("keeps reviewed $source pools mergeable after raw payload expiry", async ({ source, chain, protocol, poolType, version }) => {
+    const { sqlite, db } = fixtures.open();
+    const now = 1_710_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    const refreshedAt = now - 5 * 3600;
+    await upsertStagedPools(db, [stagedPool({
+      stablecoinId: "usdt-tether", source, chain, protocol, poolType,
+      poolId: `${chain}:0x1111111111111111111111111111111111111111`,
+      priceUsd: null, discoveredAt: refreshedAt - 3600, refreshedAt,
+      rawJson: JSON.stringify({ identityReviewVersion: version, reserves: ["bulky".repeat(1000)] }),
+    })]);
+    expect((await mergeStagedPools(db, new Map(), createKnownPoolIdentityIndex(), now, new Map())).mergedCount).toBe(1);
+    const cleanup = await cleanupStaging(db, now);
+    expect(cleanup).toMatchObject({ rawJsonClearedRows: 1, oldestRawJsonRemainingAt: null, error: null });
+    expect(sqlite.prepare("SELECT raw_json, discovered_at, refreshed_at FROM dex_pool_registry").get()).toEqual({
+      raw_json: JSON.stringify({ identityReviewVersion: version }), discovered_at: refreshedAt - 3600, refreshed_at: refreshedAt,
+    });
+    expect((await mergeStagedPools(db, new Map(), createKnownPoolIdentityIndex(), now, new Map())).mergedCount).toBe(1);
+    expect((await cleanupStaging(db, now)).rawJsonClearedRows).toBe(0);
+  });
+
+  it.each(["{", "{}", '{"identityReviewVersion":"wrong"}', '{"nested":{"identityReviewVersion":"tezos-reviewed-v1"}}', '{"identityReviewVersion":"tezos-reviewed-v1","identityReviewVersion":"wrong"}'])(
+    "does not manufacture review identity while pruning %s", async (rawJson) => {
+      const { sqlite, db } = fixtures.open();
+      const now = 1_710_000_000;
+      await upsertStagedPools(db, [stagedPool({ source: "tezos", rawJson, refreshedAt: now - 5 * 3600 })]);
+      expect((await cleanupStaging(db, now)).error).toBeNull();
+      expect(sqlite.prepare("SELECT raw_json FROM dex_pool_registry").get()).toEqual({ raw_json: null });
+    },
+  );
 
   it("reports staging cleanup errors without throwing", async () => {
     const db = makeNoopD1({

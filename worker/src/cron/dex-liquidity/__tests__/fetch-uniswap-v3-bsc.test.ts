@@ -3,11 +3,13 @@ import { encodeFunctionResult, parseAbi } from "viem/utils";
 
 const rpcMocks = vi.hoisted(() => ({
   fetchEvmBlockNumber: vi.fn(),
+  fetchEvmBlockHeader: vi.fn(),
   fetchEvmMulticall3Aggregate3AtBlock: vi.fn(),
 }));
 
 vi.mock("../../../lib/evm-rpc", () => ({
   fetchEvmBlockNumber: rpcMocks.fetchEvmBlockNumber,
+  fetchEvmBlockHeader: rpcMocks.fetchEvmBlockHeader,
   fetchEvmMulticall3Aggregate3AtBlock: rpcMocks.fetchEvmMulticall3Aggregate3AtBlock,
 }));
 
@@ -86,6 +88,9 @@ function stateResultsWithBalances(rawBalance: bigint) {
 describe("Uniswap V3 BSC shadow staging recovery", () => {
   beforeEach(() => {
     rpcMocks.fetchEvmBlockNumber.mockReset().mockResolvedValue(115_749_297);
+    rpcMocks.fetchEvmBlockHeader.mockReset().mockResolvedValue({
+      number: 115_749_297, hash: `0x${"11".repeat(32)}`, timestamp: 1_791_184_659,
+    });
     rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mockReset();
   });
 
