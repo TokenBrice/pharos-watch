@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
 import type { CronResult } from "../../../lib/cron-logger";
 import type { ScheduledRuntimeContext } from "../context";
 import { makeScheduledRuntime } from "../../../test-helpers/scheduled-runtime.test-support";
@@ -16,7 +15,7 @@ vi.mock("../../../cron/sync-yield-supplemental", () => ({
   syncYieldSupplemental: mocks.syncYieldSupplemental,
 }));
 
-import { HOURLY_TBILL_MIN_REGISTRY_AGE_SEC } from "../hourly-yield";
+import { HOURLY_TBILL_MIN_REGISTRY_AGE_SEC, SUPPLEMENTAL_CATCH_UP_MIN_MARKER_AGE_SEC } from "../hourly-yield";
 import { runHourlyYieldSlot } from "../hourly-yield";
 import { runYieldSupplementalSlot } from "../yield-supplemental";
 
@@ -93,7 +92,7 @@ describe("runHourlyYieldSlot", () => {
       signal,
       runtime.chainRpcs,
       reportProgress,
-      { catchUpMinMarkerAgeSec: CRON_SCHEDULE_CADENCES.fourHourlyYieldSupplemental.intervalSec },
+      { catchUpMinMarkerAgeSec: SUPPLEMENTAL_CATCH_UP_MIN_MARKER_AGE_SEC },
     );
     expect(mocks.fetchTbillRate).toHaveBeenCalledWith(runtime.db, signal, runtime.env, {
       minRegistryAgeSec: HOURLY_TBILL_MIN_REGISTRY_AGE_SEC,

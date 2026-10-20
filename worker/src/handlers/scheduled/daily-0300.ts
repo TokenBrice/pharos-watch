@@ -27,6 +27,8 @@ function buildDaily0300SlotGroups(runtime: ScheduledRuntimeContext) {
   }
 
   return bindScheduledSlotPlan("daily0300Utc", {
+    mode: "serial",
+    label: "retention-and-telegram-housekeeping",
     implementations: {
       "cron-sentinel": (signal) => runDailyCronSentinel(runtime.db, {
         nowSec: Math.floor(Date.now() / 1_000),

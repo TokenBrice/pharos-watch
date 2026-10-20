@@ -55,21 +55,27 @@ describe("scheduled slot groups", () => {
       return result;
     }) as ScheduledRuntimeContext["runLeasedCron"];
 
-    const summary = await runScheduledSlotGroups(buildRuntime(runLeasedCron), "test slot", [[
+    const summary = await runScheduledSlotGroups(buildRuntime(runLeasedCron), "test slot", [
       {
-        label: "left",
-        tasks: [
-          { job: "a", run: async () => ({ status: "ok" }) },
-          { job: "b", run: async () => ({ status: "ok" }) },
+        mode: "parallel-serial",
+        label: "chains",
+        chains: [
+          {
+            label: "left",
+            tasks: [
+              { job: "a", run: async () => ({ status: "ok" }) },
+              { job: "b", run: async () => ({ status: "ok" }) },
+            ],
+          },
+          {
+            label: "right",
+            tasks: [
+              { job: "c", run: async () => ({ status: "ok" }) },
+            ],
+          },
         ],
       },
-      {
-        label: "right",
-        tasks: [
-          { job: "c", run: async () => ({ status: "ok" }) },
-        ],
-      },
-    ]]);
+    ]);
 
     expect(order.indexOf("end:a")).toBeLessThan(order.indexOf("start:b"));
     expect(order.indexOf("start:c")).toBeLessThan(order.indexOf("start:b"));
@@ -93,8 +99,9 @@ describe("scheduled slot groups", () => {
       return fn(new AbortController().signal, async () => {});
     }) as ScheduledRuntimeContext["runLeasedCron"];
 
-    const summary = await runScheduledSlotGroups(buildRuntime(runLeasedCron), "test slot", [[
+    const summary = await runScheduledSlotGroups(buildRuntime(runLeasedCron), "test slot", [
       {
+        mode: "serial",
         label: "serial",
         tasks: [
           { job: "ok", run: async () => ({ status: "ok" }) },
@@ -102,7 +109,7 @@ describe("scheduled slot groups", () => {
           { job: "failed", run: async () => ({ status: "ok" }) },
         ],
       },
-    ]]);
+    ]);
 
     expect(summary).toMatchObject({
       jobsAttempted: 3,
@@ -127,8 +134,9 @@ describe("scheduled slot groups", () => {
       return fn(new AbortController().signal, async () => {});
     }) as ScheduledRuntimeContext["runLeasedCron"];
 
-    const summary = await runScheduledSlotGroups(buildRuntime(runLeasedCron), "test slot", [[
+    const summary = await runScheduledSlotGroups(buildRuntime(runLeasedCron), "test slot", [
       {
+        mode: "serial",
         label: "dependent-serial",
         stopOnFailure: true,
         tasks: [
@@ -137,7 +145,7 @@ describe("scheduled slot groups", () => {
           { job: "snapshot-psi", run: async () => ({ status: "ok" }) },
         ],
       },
-    ]]);
+    ]);
 
     expect(runLeasedCron).toHaveBeenCalledTimes(2);
     expect(summary).toMatchObject({
@@ -163,8 +171,9 @@ describe("scheduled slot groups", () => {
       return fn(new AbortController().signal, async () => {});
     }) as ScheduledRuntimeContext["runLeasedCron"];
 
-    const summary = await runScheduledSlotGroups(buildRuntime(runLeasedCron), "test slot", [[
+    const summary = await runScheduledSlotGroups(buildRuntime(runLeasedCron), "test slot", [
       {
+        mode: "serial",
         label: "dependent-serial",
         stopOnNonNeutralSkip: true,
         tasks: [
@@ -173,7 +182,7 @@ describe("scheduled slot groups", () => {
           { job: "snapshot-psi", run: async () => ({ status: "ok" }) },
         ],
       },
-    ]]);
+    ]);
 
     expect(runLeasedCron).toHaveBeenCalledTimes(1);
     expect(summary).toMatchObject({
@@ -192,61 +201,37 @@ describe("scheduled slot groups", () => {
   it.each(["skipped_neutral", "degraded"] as const)("continues after %s despite configured stop predicates", async (status) => {
     const successor = vi.fn(async () => ({ status: "ok" as const }));
     const runtime = makeScheduledRuntime();
-    const summary = await runScheduledSlotGroups(runtime, "continuation", [[{
-      label: "chain", stopOnFailure: true, stopOnNonNeutralSkip: true,
+    const summary = await runScheduledSlotGroups(runtime, "continuation", [{
+      mode: "serial", label: "chain", stopOnFailure: true, stopOnNonNeutralSkip: true,
       tasks: [
         { job: "first", run: async () => ({ status }) },
         { job: "successor", run: successor },
       ],
-    }]]);
+    }]);
     expect(successor).toHaveBeenCalledOnce();
     expect(summary.jobs.map(({ job, outcome }) => [job, outcome])).toEqual([
       ["first", status === "skipped_neutral" ? "skipped" : "degraded"], ["successor", "ok"],
     ]);
   });
 
-  it("stops only the failing concurrent chain", async () => {
+  it("stops only the failing parallel-serial chain", async () => {
     const blocked = vi.fn();
     const independent = vi.fn(async () => ({ status: "ok" as const }));
     const runtime = buildRuntime(vi.fn(async (_job, fn) => fn(new AbortController().signal, vi.fn())));
-    const summary = await runScheduledSlotGroups(runtime, "independent chains", [[
-      { label: "failed", stopOnFailure: true, tasks: [
-        { job: "snapshot-supply", run: async () => { throw new Error("failed"); } },
-        { job: "snapshot-psi", run: blocked },
-      ] },
-      { label: "independent", tasks: [{ job: "snapshot-safety-grade-history", run: independent }] },
-    ]]);
+    const summary = await runScheduledSlotGroups(runtime, "independent chains", [{
+      mode: "parallel-serial", label: "chains", chains: [
+        { label: "failed", stopOnFailure: true, tasks: [
+          { job: "snapshot-supply", run: async () => { throw new Error("failed"); } },
+          { job: "snapshot-psi", run: blocked },
+        ] },
+        { label: "independent", tasks: [{ job: "snapshot-safety-grade-history", run: independent }] },
+      ],
+    }]);
     expect(blocked).not.toHaveBeenCalled();
     expect(independent).toHaveBeenCalledOnce();
     expect(summary.jobs.map(({ job, outcome }) => [job, outcome])).toEqual([
       ["snapshot-supply", "error"], ["snapshot-psi", "skipped"], ["snapshot-safety-grade-history", "ok"],
     ]);
-  });
-
-  it("waits for every chain in a stage before starting the next stage", async () => {
-    const order: string[] = [];
-    let releaseSlow!: () => void;
-    const slowCanFinish = new Promise<void>((resolve) => { releaseSlow = resolve; });
-    const task = (job: string, beforeEnd?: () => Promise<void> | void) => ({
-      job,
-      run: async () => {
-        order.push(`start:${job}`);
-        await beforeEnd?.();
-        order.push(`end:${job}`);
-        return { status: "ok" as const };
-      },
-    });
-    const summary = await runScheduledSlotGroups(makeScheduledRuntime(), "stages", [
-      [
-        { label: "slow", tasks: [task("slow", () => slowCanFinish)] },
-        { label: "fast", tasks: [task("fast", () => { releaseSlow(); })] },
-      ],
-      [{ label: "next", tasks: [task("next")] }],
-    ]);
-    for (const job of ["slow", "fast"]) {
-      expect(order.indexOf(`end:${job}`)).toBeLessThan(order.indexOf("start:next"));
-    }
-    expect(summary.jobs.map(({ job }) => job)).toEqual(["slow", "fast", "next"]);
   });
 });
 

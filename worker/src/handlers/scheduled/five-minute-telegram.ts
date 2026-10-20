@@ -32,7 +32,7 @@ import {
 import { logSkippedCronRun } from "./preflight-skip";
 import {
   runScheduledSlotGroups,
-  type ScheduledSlotTaskChain,
+  type ScheduledSlotGroup,
   type ScheduledSlotTask,
 } from "./slot-groups";
 import {
@@ -167,7 +167,7 @@ async function runTelegramReconciliation<T extends { attempted: boolean }>(
 function buildTelegramSlotGroups(
   runtime: ScheduledRuntimeContext,
   botToken: string | null,
-): ScheduledSlotTaskChain[][] {
+): ScheduledSlotGroup[] {
   const sharedTelegramState: TelegramDispatchSharedState = {};
   const tasks: ScheduledSlotTask[] = [];
   const recapRollout = resolveTelegramRecapRolloutPolicy(runtime.env);
@@ -356,12 +356,13 @@ function buildTelegramSlotGroups(
       },
     },
   );
-  return [[
+  return [
     {
+      mode: "serial",
       label: "telegram-alerts-and-sidecars",
       tasks,
     },
-  ]];
+  ];
 }
 
 export async function runFiveMinuteTelegramSlot(runtime: ScheduledRuntimeContext) {

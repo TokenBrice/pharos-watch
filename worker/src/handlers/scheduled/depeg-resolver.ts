@@ -36,6 +36,8 @@ async function loadLatestStablecoinsCapabilities(
 
 export function buildDepegResolverSlotGroups(runtime: ScheduledRuntimeContext) {
   return bindScheduledSlotPlan("depegResolverOffset", {
+    mode: "serial",
+    label: "depeg-resolver",
     implementations: {
       "compute-depeg-resolver": (signal) =>
         runV9AfterCoreWithinWindow(

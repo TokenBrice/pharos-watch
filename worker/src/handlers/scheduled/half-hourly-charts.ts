@@ -143,6 +143,8 @@ async function recoverLastAcceptedDexPublication(
 export function buildHalfHourlyChartsSlotGroups(runtime: ScheduledRuntimeContext) {
   let dexPublication: DexPublication | null = null;
   return bindScheduledSlotPlan("halfHourlyChartsOffset", {
+    mode: "serial",
+    label: "dex-scoring-v9-input-and-charts",
     implementations: {
       "sync-dex-liquidity": async (signal, reportProgress) => {
         let result: CronResult;

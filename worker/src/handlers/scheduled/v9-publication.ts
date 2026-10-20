@@ -8,6 +8,8 @@ export function buildV9PublicationSlotGroups(
   runtime: ScheduledRuntimeContext,
 ) {
   return bindScheduledSlotPlan("v9PublicationOffset", {
+    mode: "serial",
+    label: "v9-publication",
     implementations: {
       "compute-safety-score-v9": (signal, reportProgress) =>
         runV9AfterCoreWithinWindow(

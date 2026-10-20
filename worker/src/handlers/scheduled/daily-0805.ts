@@ -23,6 +23,8 @@ const SLOT_LABEL = "daily 08:05 slot";
 
 function buildDaily0805SlotGroups(runtime: ScheduledRuntimeContext) {
   return bindScheduledSlotPlan("daily0805Utc", {
+    mode: "parallel-serial",
+    label: "daily-0805-chains",
     chainLabels: ["sync-bluechip", "daily-digest"],
     implementations: {
       "sync-bluechip": (signal) => syncBluechip(runtime.db, signal),

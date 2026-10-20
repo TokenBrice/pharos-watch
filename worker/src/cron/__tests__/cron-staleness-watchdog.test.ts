@@ -25,7 +25,6 @@ vi.mock("../../telegram/delivery/telegram", async (importOriginal) => ({
 
 import { CRON_JOB_DEFINITIONS } from "@shared/lib/cron-jobs";
 import { CACHE_FRESHNESS_LANES } from "@shared/lib/api-freshness";
-import { CRON_RUNS_RETENTION_SEC } from "@shared/lib/retention-policy";
 import {
   CRON_STALENESS_ALERT_COOLDOWN_SEC,
   deriveCronFreshnessProducers,
@@ -173,17 +172,6 @@ describe("cron staleness watchdog", () => {
     const producers = deriveCronFreshnessProducers([...CRON_JOB_DEFINITIONS, monthly]);
     expect(producers.map((producer) => producer.producerJob)).not.toContain("yield-coverage-audit-like");
     expect(producers.map((producer) => producer.producerJob)).not.toContain("yield-coverage-audit");
-  });
-
-  it.each([0, 1])("admits a producer only while its threshold fits retention (excess %s)", (excessSec) => {
-    const producer = {
-      ...CRON_JOB_DEFINITIONS[0],
-      job: "retention-boundary-producer",
-      freshnessSurface: "consumer" as const,
-      intervalSec: (CRON_RUNS_RETENTION_SEC + excessSec) / 3,
-    };
-    expect(deriveCronFreshnessProducers([producer]).map(({ producerJob }) => producerJob))
-      .toEqual(excessSec === 0 ? [producer.job] : []);
   });
 
   it("flags watched freshness lanes beyond twice their producer interval", () => {

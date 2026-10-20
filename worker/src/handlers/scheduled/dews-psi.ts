@@ -16,6 +16,8 @@ import { bindScheduledSlotPlan, runScheduledSlotGroups } from "./slot-groups";
 
 export function buildDewsPsiSlotGroups(runtime: ScheduledRuntimeContext) {
   return bindScheduledSlotPlan("dewsPsiOffset", {
+    mode: "serial",
+    label: "dews-psi-tape",
     implementations: {
       "compute-dews": (signal, reportProgress) => computeAndStoreDEWS(runtime.db, signal, reportProgress),
       "stability-index": (signal) => computeAndStoreStabilityIndex(runtime.db, signal),
