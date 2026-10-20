@@ -23,6 +23,58 @@ function makeDirectPool(overrides: Partial<DexApiPool>): DexApiPool {
   };
 }
 
+describe("Orca balance evidence", () => {
+  it.each([false, true])("never labels withheld balances measured (normalization marker %s)", (balancesNormalized) => {
+    const pool = makeDirectPool({
+      source: "orca", chain: "solana", poolAddress: "PoolCase", poolType: "orca-whirlpool",
+      tokens: [
+        { address: "MintA", symbol: "USDC", decimals: 6.5, priceUsd: 1 },
+        { address: "MintB", symbol: "USDT", decimals: 6, priceUsd: 1 },
+      ],
+      balances: null, balancesNormalized,
+    });
+    const shape = (input: DexApiPool) => convertToGtNewPools(
+      [input], new Map([["solana:MintA", "usdc-circle"]]), new Map(),
+    ).get("usdc-circle")![0]!;
+    expect(shape(pool)).toMatchObject({ tvlUsd: 1_000_000, measurement: { balanceMeasured: false } });
+    expect(shape(pool).balanceRatio).toBeUndefined();
+    expect(shape(pool).balanceDetails).toBeUndefined();
+    expect(shape(pool).ammExecutionModel).toBeUndefined();
+    const measured = shape({
+      ...pool, tokens: pool.tokens.map((token) => ({ ...token, decimals: 6 })),
+      balances: [0, 1], balancesNormalized: true,
+    });
+    expect(measured.measurement?.balanceMeasured).toBe(true);
+    expect(measured.balanceRatio).toBe(0);
+  });
+});
+
+describe("Fluid reserve evidence", () => {
+  it("keeps a partial capture unmeasured while preserving ticker evidence and measured zero controls", () => {
+    const pool = makeDirectPool({
+      source: "fluid", poolType: "fluid-dex", tokenVolumes24h: [10, 20], volume24hUsd: null,
+      tokens: [
+        { address: "0xusdc", symbol: "USDC", decimals: 6, priceUsd: 1 },
+        { address: "0xusdt", symbol: "USDT", decimals: 6, priceUsd: 1 },
+      ],
+      balances: null,
+    });
+    const shape = (input: DexApiPool) => convertToGtNewPools(
+      [input], new Map([["ethereum:0xusdc", "usdc-circle"]]), new Map(),
+    ).get("usdc-circle")![0]!;
+    const partial = shape(pool);
+    expect(partial).toMatchObject({ tvlUsd: 1_000_000, measurement: { balanceMeasured: false } });
+    expect(partial.balanceRatio).toBeUndefined();
+    expect(partial.balanceDetails).toBeUndefined();
+    const metric = initMetrics("usdc-circle", "USDC");
+    addSecondaryPoolContribution(new Map([["usdc-circle", metric]]), "usdc-circle", "USDC", partial);
+    expect(metric.topPools[0]?.extra?.measurement?.balanceMeasured).toBe(false);
+    expect(shape({ ...pool, balances: [0, 100], balancesNormalized: true })).toMatchObject({
+      balanceRatio: 0, measurement: { balanceMeasured: true },
+    });
+  });
+});
+
 describe("isPreferredDirectApiPool", () => {
   it("accepts Slipstream pools with unmeasured zero volume when TVL is eligible", () => {
     expect(isPreferredDirectApiPool(makeDirectPool({

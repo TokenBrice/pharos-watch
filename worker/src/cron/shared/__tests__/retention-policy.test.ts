@@ -67,6 +67,17 @@ describe("retention policy registry", () => {
     expect(RETENTION_NON_APPEND_TABLES.mint_burn_dirty_hours).toContain("atomic rebuild");
   });
 
+  it("assigns challenger lifecycle retention to its publisher without age-pruning current heads or child rows independently", () => {
+    expect(registry.find((policy) => policy.table === "dex_price_challenger_publications_v2")).toMatchObject({
+      execution: "owner", permanent: false, timestampColumn: "published_at",
+      owner: "worker/src/cron/dex-liquidity/challenger-publish.ts",
+    });
+    for (const table of ["dex_price_challenger_heads_v2", "dex_price_challenger_payloads_v2"]) {
+      expect(registry.some((policy) => policy.table === table)).toBe(false);
+      expect(RETENTION_NON_APPEND_TABLES[table]).toBeTruthy();
+    }
+  });
+
   it("keeps both sampled stores on the small daily budget and legacy/key stores draining at 35 days", () => {
     for (const table of ["api_request_source_samples", "site_data_request_samples"]) {
       expect(registry.find((policy) => policy.table === table)).toMatchObject({

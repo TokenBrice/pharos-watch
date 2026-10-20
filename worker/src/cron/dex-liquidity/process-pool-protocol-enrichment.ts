@@ -58,9 +58,10 @@ export function enrichPoolProtocol(
     const contributionScope = curveAddressMatch
       ? curveData.contributionTvlScope ?? (curveData.metapoolAdjustedTvl !== curveData.tvl ? "base-pool-excluded" : "full-pool")
       : "full-pool";
-    hasMeasuredBalance = (curveData.balanceTvlScope ?? "full-pool") === contributionScope;
-    // Do not apply a full-pool measurement to a base-pool-excluded notional.
-    balanceRatio = hasMeasuredBalance ? curveData.balanceRatio : 1;
+    hasMeasuredBalance = curveData.balanceRatio != null &&
+      (curveData.balanceTvlScope ?? "full-pool") === contributionScope;
+    // Incomplete or differently scoped balances cannot weight this notional.
+    balanceRatio = hasMeasuredBalance ? curveData.balanceRatio! : 1;
     balanceDetails = hasMeasuredBalance ? curveData.balanceDetails : undefined;
     if (isCryptoSwap(curveData.registryId)) {
       resolvedPoolType = "curve-cryptoswap";

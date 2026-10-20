@@ -2,10 +2,79 @@ import { afterEach, describe, expect, it } from "vitest";
 import { loadPublishedDexPoolChallengers } from "../challenger-load";
 import { mockD1, type MockD1Database } from "@shared/test-utils/mock-d1";
 import { loaderFixtures, loaderScenario } from "./challenger-load.test-support";
+import { loadDexPoolChallengers } from "../../../lib/depeg-helpers";
 
 afterEach(() => loaderFixtures.closeAll());
 
 describe("challenger load", () => {
+  it("reads v2 head and exact payload coherently despite same-clock replacement and old-writer skew", async () => {
+    const { db, sqlite, payload } = loaderScenario();
+    payload(100, "old-worker");
+    sqlite.exec(`INSERT INTO dex_price_challenger_publications_v2
+      (publication_id, generation_id, snapshot_at, published_at, sealed)
+      VALUES (1, 'liquidity', 100, 110, 1), (2, 'liquidity', 100, 120, 1);
+      INSERT INTO dex_price_challenger_payloads_v2
+      (publication_id, stablecoin_id, pool_id, chain, protocol, source_family, price_usd, tvl_usd, price_observed_at)
+      VALUES (1, 'coin-a', 'accepted', 'Ethereum', 'curve', 'cg_onchain', 1, 20000, 90),
+             (2, 'coin-a', 'staged', 'Base', 'balancer', 'dl', 0.9, 30000, 95);
+      INSERT INTO dex_price_challenger_heads_v2 (stablecoin_id, publication_id, has_rows)
+      VALUES ('coin-a', 1, 1);`);
+    let switched = false;
+    const reader = {
+      ...db,
+      prepare(sql: string) {
+        const statement = db.prepare(sql);
+        if (!sql.includes("SELECT heads.stablecoin_id")) return statement;
+        const all = statement.all.bind(statement);
+        statement.all = async <T>() => {
+          const result = await all<T>();
+          if (!switched) {
+            sqlite.exec(`UPDATE dex_price_challenger_heads_v2 SET publication_id = 2;
+              DELETE FROM dex_price_challenger_payloads_v2 WHERE publication_id = 1;
+              UPDATE dex_price_challenger_snapshots SET snapshot_at = 200;`);
+            payload(200, "new-old-worker");
+            switched = true;
+          }
+          return result;
+        };
+        return statement;
+      },
+    } as D1Database;
+    const first = await loadPublishedDexPoolChallengers(reader, 20_000, 1_000, 220);
+    expect(first.challengersByStablecoin.get("coin-a")).toEqual([
+      expect.objectContaining({ poolId: "accepted", sourceFamily: "cg_onchain", priceObservedAt: 90, snapshotAt: 100 }),
+    ]);
+    const next = await loadPublishedDexPoolChallengers(db, 20_000, 1_000, 220);
+    expect(next.challengersByStablecoin.get("coin-a")?.map((row) => row.poolId)).toEqual(["staged"]);
+    expect((await loadDexPoolChallengers(db, 20_000, 1_000, 220)).get("coin-a")?.[0]?.observedAt).toBe(95);
+    sqlite.exec("UPDATE dex_price_challenger_payloads_v2 SET price_observed_at = NULL WHERE publication_id = 2");
+    expect((await loadDexPoolChallengers(db, 20_000, 1_000, 220)).get("coin-a")?.[0]?.observedAt).toBeUndefined();
+    expect(next.diagnostics.legacyFallbackCoins).toEqual([]);
+  });
+
+  it("keeps v2 empty authoritative over old-writer rows, while missing, stale and incomplete v2 use explicit legacy fallback", async () => {
+    const { db, sqlite, payload } = loaderScenario();
+    payload(100, "old-worker");
+    sqlite.exec(`INSERT INTO dex_price_challenger_publications_v2
+      (publication_id, generation_id, snapshot_at, published_at, sealed)
+      VALUES (1, 'liquidity', 100, 110, 1);
+      INSERT INTO dex_price_challenger_heads_v2 (stablecoin_id, publication_id, has_rows)
+      VALUES ('coin-a', 1, 0);`);
+    const empty = await loadPublishedDexPoolChallengers(db, 20_000, 1_000, 1_100);
+    expect(empty.challengersByStablecoin.get("coin-a")).toEqual([]);
+    expect(empty.diagnostics.emptyPublishedCoins).toEqual(["coin-a"]);
+    sqlite.exec("UPDATE dex_price_challenger_heads_v2 SET has_rows = 1");
+    const missing = await loadPublishedDexPoolChallengers(db, 20_000, 1_000, 1_100);
+    expect(missing.challengersByStablecoin.get("coin-a")?.map((row) => row.poolId)).toEqual(["coin-a:legacy:Base"]);
+    sqlite.exec("UPDATE dex_price_challenger_heads_v2 SET has_rows = 0, source_coverage_complete = 0");
+    const incomplete = await loadPublishedDexPoolChallengers(db, 20_000, 1_000, 1_100);
+    expect(incomplete.diagnostics.incompletePublishedCoins).toEqual(["coin-a"]);
+    expect(incomplete.challengersByStablecoin.get("coin-a")?.map((row) => row.poolId)).toEqual(["coin-a:legacy:Base"]);
+    const stale = await loadPublishedDexPoolChallengers(db, 20_000, 1_000, 1_101);
+    expect(stale.diagnostics.staleSnapshotCoins).toEqual(["coin-a"]);
+    expect(stale.challengersByStablecoin.get("coin-a")?.map((row) => row.poolId)).toEqual(["coin-a:legacy:Base"]);
+  });
+
   it("keeps a coherent generation when publication switches pointers and cleans old payloads", async () => {
     const { db, sqlite, payload } = loaderScenario();
     payload(100, "old");

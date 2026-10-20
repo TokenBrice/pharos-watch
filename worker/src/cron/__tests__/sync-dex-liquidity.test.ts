@@ -3,6 +3,7 @@ import { getCronQualityReasons } from "@shared/lib/cron-quality-reasons";
 import type { DatabaseSync } from "node:sqlite";
 import type { D1Database } from "@shared/types/cloudflare-runtime";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 import type { StablecoinData } from "@shared/types/market";
 import type { DexApiPool } from "../../lib/dex-api-common";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
@@ -78,7 +79,7 @@ const phaseFixtures = vi.hoisted(() => {
         retainedPoolsByStablecoin: new Map(),
         tvlStabilityMap: new Map(),
         diagnostics: {
-          protocolCapReductions: { cappedPoolCount: 0, cappedProtocols: 0, reducedTvlUsd: 0 },
+          protocolTvlQuarantine: { reason: "fallback-protocol-tvl-exceeds-headroom", poolCount: 0, protocolCount: 0, tvlUsd: 0 },
           globalProtocolOverCapUsd: 0,
           fallbackCounters: { tvlDepthMcapFallback: 2, retainedExclusionBlockedDex: 1 },
           measuredTargetFunnel: { stageOrigin: "scheduled", groups: [], groupsOmitted: 0, sourceFailures: [], sourceFailuresOmitted: 0 },
@@ -303,6 +304,7 @@ import {
   loadCurrentDexScoringGenerationId,
 } from "../dex-liquidity/scoring";
 import { persistScores, writeHistoricalSnapshots } from "../dex-liquidity/persistence";
+import { publishDexPriceChallengerSnapshots } from "../dex-liquidity/challenger-publish";
 import { buildSymbolLookups } from "../dex-liquidity/pool-helpers";
 import { processPoolMetrics } from "../dex-liquidity/process-pools";
 import { mergeStagedPools } from "../dex-liquidity/staging-merge";
@@ -417,6 +419,9 @@ describe("dex liquidity scoring stage cycle", () => {
       // relative to consumption; the old stage-start clock rejected it.
       expect(sourceClock + 240).toBeLessThanOrEqual(Number(call[4]));
       expect(scoringStage.syncStartSec).toBe(sourceClock);
+      expect(vi.mocked(publishDexPriceChallengerSnapshots).mock.lastCall?.[1]).toMatchObject({
+        snapshotAt: sourceClock, generationId: expect.any(String),
+      });
     } finally {
       clock.mockRestore();
     }
@@ -538,6 +543,7 @@ describe("dex liquidity scoring stage cycle", () => {
     expect(persistScores).not.toHaveBeenCalled();
     expect(publishStablecoinScoreTargets).not.toHaveBeenCalled();
     expect(computeDexPrices).not.toHaveBeenCalled();
+    expect(publishDexPriceChallengerSnapshots).not.toHaveBeenCalled();
     expect(writeHistoricalSnapshots).not.toHaveBeenCalled();
     expect(computeDepthStability).not.toHaveBeenCalled();
   });
@@ -564,6 +570,68 @@ describe("dex liquidity scoring stage cycle", () => {
     expect(metadata.failedSources).toContain("defillama-yields");
     expect(persistScores).not.toHaveBeenCalled();
     expect(publishStablecoinScoreTargets).not.toHaveBeenCalled();
+    expect(publishDexPriceChallengerSnapshots).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["COUNT(*) as cnt FROM dex_liquidity", "coverage-count-read-failed"],
+    ["SELECT total_tvl_usd, updated_at", "global-tvl-read-failed"],
+    ["ORDER BY total_tvl_usd DESC", "top-ten-read-failed"],
+    ["FROM cron_runs", "cron-history-read-failed"],
+  ])("retains accepted rows and generation when %s is unreadable", async (match, reason) => {
+    const fixture = createLatestSchemaSqlite();
+    try {
+      fixture.sqlite.prepare(`INSERT INTO dex_liquidity_publication_generations
+        (generation_id, started_at, state, expected_row_count, created_at)
+        VALUES ('accepted', 1700000000, 'published', 2, 1700000000)`).run();
+      const insert = fixture.sqlite.prepare(`INSERT INTO dex_liquidity
+        (stablecoin_id, symbol, total_tvl_usd, liquidity_score, coverage_class, updated_at,
+         publication_generation_id, publication_state)
+        VALUES (?, 'USD', 100, 80, 'primary', 1700000000, 'accepted', 'published')`);
+      insert.run("usdt-tether");
+      insert.run("__global__");
+      const failedReadDb = mockD1([{ match, rows: [], throwError: new Error("baseline read failed") }]);
+      const database = {
+        ...fixture.db,
+        prepare: (sql: string) => sql.includes(match) ? failedReadDb.prepare(sql) : fixture.db.prepare(sql),
+      };
+      const result = await runDexLiquidityScoringCycle(database, "graph-key");
+      expect(result.status).toBe("degraded");
+      const metadata = JSON.parse(result.metadata ?? "{}");
+      expect(metadata).toMatchObject({
+        reason: "required-baseline-read-failed",
+        rowsWritten: 0,
+        sourceCoverage: { baselineReadFailures: [reason] },
+        persistence: { skipped: true, skippedReason: "required-baseline-read-failed" },
+      });
+      expect(DexLiquidityCronMetadataSchema.safeParse(metadata).success).toBe(true);
+      expect(fixture.sqlite.prepare(`SELECT stablecoin_id, total_tvl_usd, updated_at,
+        publication_generation_id FROM dex_liquidity ORDER BY stablecoin_id`).all()).toEqual([
+        { stablecoin_id: "__global__", total_tvl_usd: 100, updated_at: 1700000000, publication_generation_id: "accepted" },
+        { stablecoin_id: "usdt-tether", total_tvl_usd: 100, updated_at: 1700000000, publication_generation_id: "accepted" },
+      ]);
+      expect(persistScores).not.toHaveBeenCalled();
+      expect(publishStablecoinScoreTargets).not.toHaveBeenCalled();
+      expect(computeDexPrices).not.toHaveBeenCalled();
+      expect(writeHistoricalSnapshots).not.toHaveBeenCalled();
+      expect(markDexLiquidityScoringStageConsumed).not.toHaveBeenCalled();
+    } finally {
+      fixture.sqlite.close();
+    }
+  });
+
+  it.each([
+    ["GROUP BY coverage_class", "coverage-classes-read-failed"],
+    ["SELECT stablecoin_id, pool_count", "watchlist-read-failed"],
+    ["FROM dex_liquidity_run_rows r", "coin-tvl-read-failed"],
+  ])("does not turn optional %s telemetry into a publication hold", async (match, reason) => {
+    const failedReadDb = mockD1([{ match, rows: [], throwError: new Error("optional baseline unavailable") }]);
+    const database = { ...db, prepare: (sql: string) => sql.includes(match) ? failedReadDb.prepare(sql) : db.prepare(sql) };
+    const result = await runDexLiquidityScoringCycle(database, "graph-key");
+    expect(result.status).toBe("ok");
+    expect(JSON.parse(result.metadata ?? "{}").sourceCoverage.baselineReadFailures).toEqual([reason]);
+    expect(persistScores).toHaveBeenCalledOnce();
+    expect(publishStablecoinScoreTargets).toHaveBeenCalledOnce();
   });
 
   it("degrades and skips persistence instead of tripping hard value guard when DL yields is unavailable", async () => {
@@ -585,7 +653,7 @@ describe("dex liquidity scoring stage cycle", () => {
       retainedPoolsByStablecoin: new Map(),
       tvlStabilityMap: new Map(),
       diagnostics: {
-        protocolCapReductions: { cappedPoolCount: 0, cappedProtocols: 0, reducedTvlUsd: 0 },
+        protocolTvlQuarantine: { reason: "fallback-protocol-tvl-exceeds-headroom", poolCount: 0, protocolCount: 0, tvlUsd: 0 },
         globalProtocolOverCapUsd: 0,
         measuredTargetFunnel: { stageOrigin: "scheduled", groups: [], groupsOmitted: 0, sourceFailures: [], sourceFailuresOmitted: 0 },
         routeRemovalEvidence: new Map(),
@@ -654,6 +722,7 @@ describe("dex liquidity scoring stage cycle", () => {
     expect(persistScores).not.toHaveBeenCalled();
     expect(publishStablecoinScoreTargets).not.toHaveBeenCalled();
     expect(computeDexPrices).not.toHaveBeenCalled();
+    expect(publishDexPriceChallengerSnapshots).not.toHaveBeenCalled();
   });
 
   it.each(["critical-source", "coverage", "value", "persistence"] as const)(
@@ -709,7 +778,7 @@ describe("dex liquidity scoring stage cycle", () => {
         qualityDriftSeverity?: string;
         qualityDriftFlags?: string[];
         coinsWithoutMeasuredBalances?: number;
-        protocolCapReductions?: { reducedTvlUsd?: number };
+        protocolTvlQuarantine?: { tvlUsd?: number };
       };
     };
     expect(metadata.failedSources).toEqual([]);
@@ -731,7 +800,7 @@ describe("dex liquidity scoring stage cycle", () => {
     expect(metadata.sourceCoverage?.qualityDriftSeverity).toBe("none");
     expect(metadata.sourceCoverage?.qualityDriftFlags).toEqual([]);
     expect(metadata.sourceCoverage?.coinsWithoutMeasuredBalances).toBe(0);
-    expect(metadata.sourceCoverage?.protocolCapReductions?.reducedTvlUsd).toBe(0);
+    expect(metadata.sourceCoverage?.protocolTvlQuarantine?.tvlUsd).toBe(0);
   });
 
   it("carries partial-source telemetry through the stage into consumer metadata", async () => {
@@ -1305,7 +1374,7 @@ describe("dex liquidity scoring stage cycle", () => {
       ]),
       tvlStabilityMap: new Map(),
       diagnostics: {
-        protocolCapReductions: { cappedPoolCount: 1, cappedProtocols: 1, reducedTvlUsd: 50 },
+        protocolTvlQuarantine: { reason: "fallback-protocol-tvl-exceeds-headroom", poolCount: 1, protocolCount: 1, tvlUsd: 50 },
         globalProtocolOverCapUsd: 60,
         measuredTargetFunnel: { stageOrigin: "scheduled", groups: [], groupsOmitted: 0, sourceFailures: [], sourceFailuresOmitted: 0 },
         routeRemovalEvidence: new Map(),
@@ -1400,7 +1469,7 @@ describe("dex liquidity scoring stage cycle", () => {
         coinsCrawlerOnly?: number;
         coinsPriceOnlyNoMeasuredLiquidity?: number;
         globalProtocolOverCapUsd?: number;
-        protocolCapReductions?: { cappedPoolCount?: number; cappedProtocols?: number; reducedTvlUsd?: number };
+        protocolTvlQuarantine?: { reason: string; poolCount: number; protocolCount: number; tvlUsd: number };
         topAssetCoverageDeltas?: Array<{ stablecoinId: string; poolCountPctDelta: number | null }>;
       };
     };
@@ -1414,8 +1483,8 @@ describe("dex liquidity scoring stage cycle", () => {
     expect(metadata.sourceCoverage?.coinsCrawlerOnly).toBe(1);
     expect(metadata.sourceCoverage?.coinsPriceOnlyNoMeasuredLiquidity).toBe(1);
     expect(DexLiquidityCronMetadataSchema.parse(metadata).sourceCoverage?.globalProtocolOverCapUsd).toBe(60);
-    expect(metadata.sourceCoverage?.protocolCapReductions).toEqual({
-      cappedPoolCount: 1, cappedProtocols: 1, reducedTvlUsd: 50,
+    expect(DexLiquidityCronMetadataSchema.parse(metadata).sourceCoverage?.protocolTvlQuarantine).toEqual({
+      reason: "fallback-protocol-tvl-exceeds-headroom", poolCount: 1, protocolCount: 1, tvlUsd: 50,
     });
     expect(metadata.sourceCoverage?.topAssetCoverageDeltas).toEqual([
       expect.objectContaining({ stablecoinId: "usdc-circle", poolCountPctDelta: -0.8 }),

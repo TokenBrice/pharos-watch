@@ -74,7 +74,7 @@ export function makePegSummaryResult(options: {
       coins: options.coins,
       summary: {
         activeDepegCount: options.coins.filter((coin) => coin.activeDepeg).length,
-        medianDeviationBps: 0,
+        medianDeviationBps: options.coins.length === 0 ? null : 0,
         worstCurrent: null,
         coinsAtPeg: options.coins.length,
         totalTracked: options.coins.length,

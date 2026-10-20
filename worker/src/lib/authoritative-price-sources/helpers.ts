@@ -150,7 +150,6 @@ export async function fetchVaultAssetsPerShareViaSelector(
   );
 }
 
-const INHERITED_PARENT_SYNC_MAX_AGE_SEC = 30 * 60;
 
 const CAP_HISTORICAL_MIN_COVERAGE = 0.8;
 
@@ -350,12 +349,6 @@ function isExplicitAuthoritativeParent(asset: PeggedAsset): boolean {
   );
 }
 
-function normalizeFreshSyncedAt(value: number | null | undefined, nowSec: number): number | null {
-  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) return null;
-  const syncedAt = Math.floor(value);
-  if (syncedAt > nowSec + 60) return null;
-  return nowSec - syncedAt <= INHERITED_PARENT_SYNC_MAX_AGE_SEC ? syncedAt : null;
-}
 
 interface LiveParentTrustOptions {
   allowFreshNonReplaySafeParent?: boolean;
@@ -445,26 +438,6 @@ function resolveTrustedInheritedParent(
     requireObservedAt: true,
   });
   if (!freshness.accepted || freshness.observedAt == null) {
-    const syncedAt = normalizeFreshSyncedAt(asset.priceSyncedAt, nowSec);
-    if (
-      freshness.accepted === false &&
-      freshness.reason === "stale_observed_at" &&
-      replaySafe &&
-      syncedAt != null &&
-      splitCompositePriceSource(parentSource).length > 1
-    ) {
-      return {
-        parent: {
-          price,
-          observedAt: syncedAt,
-          observedAtMode: "local_fetch",
-          replaySafe,
-          source: parentSource,
-          confidence: trustedConfidence,
-        },
-        untrustedReason: null,
-      };
-    }
     return {
       parent: null,
       untrustedReason: `freshness-${freshness.accepted === false ? freshness.reason : "missing-observed-at"}`,

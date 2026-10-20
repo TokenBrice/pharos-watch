@@ -1,5 +1,4 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { canonicalExitRouteAssetKey } from "@shared/types/exit-route-identity";
 import {
   buildPoolFingerprint,
   computePoolPairQuality,
@@ -7,7 +6,7 @@ import {
   computePoolStress,
   initMetrics,
 } from "./pool-helpers";
-import { isTrustworthyExactPoolId } from "./pool-identity";
+import { buildPrimaryPoolKey } from "./pool-identity";
 import type { LiquidityFallbackCounters, LiquidityMetrics } from "./types";
 import type {
   PoolExecutionCapability,
@@ -73,15 +72,8 @@ export function accumulatePoolMetrics(
   // A two-token discovery row cannot dedupe a three-token Curve fingerprint.
   const exactCurveAddress = enrichment.curveAddressMatch ? curveData?.poolAddress : undefined;
   metric.topPools.push({
-    poolId: exactCurveAddress
-      ? canonicalExitRouteAssetKey(chainNorm, exactCurveAddress)
-      : isTrustworthyExactPoolId(pool.pool, pool.project)
-      ? canonicalExitRouteAssetKey(chainNorm, pool.pool)
-      : (buildPoolFingerprint(
-          chainNorm,
-          pool.project,
-          pool.underlyingTokens ?? [],
-        ) ?? canonicalExitRouteAssetKey(chainNorm, pool.pool)),
+    poolId: buildPrimaryPoolKey(chainNorm, pool.pool, pool.project, exactCurveAddress),
+    candidateFingerprint: buildPoolFingerprint(chainNorm, pool.project, pool.underlyingTokens ?? []) ?? undefined,
     project: protocol,
     chain: chainNorm,
     tvlUsd: rawContribTvl,

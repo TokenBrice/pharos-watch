@@ -19,7 +19,8 @@ export const POOL_REJECTION_POOL_ID_LIMIT = 20;
 export type PoolRejectionReason =
   | "invalid-pool-identity"
   | "invalid-pool-tvl"
-  | "invalid-pool-volume";
+  | "invalid-pool-volume"
+  | "conflicting-pool-observations";
 
 export interface PoolProcessingRejection {
   reason: PoolRejectionReason;

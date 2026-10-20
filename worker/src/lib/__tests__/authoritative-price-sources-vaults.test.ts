@@ -126,7 +126,7 @@ describe("authoritative-price-sources", () => {
     expect(override?.price).toBeCloseTo(1.01 * 0.9999, 4);
   });
 
-  it("prices an ERC-4626 NAV vault when a fresh same-run composite parent has an older component timestamp", async () => {
+  it.each([301, 900, 86400])("withholds a NAV vault when a composite parent is %ss old despite a recent sync", async (ageSec) => {
     const oneShareUsdcRaw = 1_115_989n.toString(16).padStart(64, "0");
     fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${oneShareUsdcRaw}`);
     const nowSec = Math.floor(Date.now() / 1000);
@@ -135,24 +135,32 @@ describe("authoritative-price-sources", () => {
       asset("gtusdc-gauntlet", { circulating: { peggedUSD: 128_000_000 } }),
       freshParent("usdc-circle", 0.9999, "coingecko+pyth", {
         nowSec,
-        observedAt: nowSec - 900,
+        observedAt: nowSec - ageSec,
         priceSyncedAt: nowSec - 60,
       }),
     ]);
 
-    const override = overrides.get("gtusdc-gauntlet");
-    expect(override).toMatchObject({
-      source: "protocol-redeem",
-      confidence: "high",
-      observedAt: nowSec - 60,
-      observedAtMode: "local_fetch",
-      metadata: {
-        inheritedFrom: "usdc-circle",
-        parentSource: "coingecko+pyth",
-        parentConfidence: "high",
-      },
-    });
-    expect(override?.price).toBeCloseTo(1.115989 * 0.9999, 4);
+    expect(overrides.has("gtusdc-gauntlet")).toBe(false);
+    expect(fetchEvmCallHexAtBlockMock).not.toHaveBeenCalled();
+  });
+
+  it("preserves the original source clock at the composite parent's age boundary", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const clock = vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+    try {
+      fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${1_010_000n.toString(16).padStart(64, "0")}`);
+      const overrides = await fetchLiveOverrides([
+        asset("gtusdc-gauntlet", { circulating: { peggedUSD: 128_000_000 } }),
+        freshParent("usdc-circle", 0.9999, "coingecko+pyth", {
+          nowSec, observedAt: nowSec - 300, priceSyncedAt: nowSec - 60,
+        }),
+      ]);
+      expect(overrides.get("gtusdc-gauntlet")).toMatchObject({
+        price: 1.01 * 0.9999, observedAt: nowSec - 300, observedAtMode: "upstream",
+      });
+    } finally {
+      clock.mockRestore();
+    }
   });
 
   it("prices audited ERC-4626 NAV vaults from their configured parent assets", async () => {

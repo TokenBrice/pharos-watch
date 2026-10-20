@@ -31,6 +31,7 @@ export function isDexLiquidityDegraded(params: {
     params.criticalSourceFailures.length > 0 ||
     hasMaterialPoolRejections(params.poolRejections) ||
     !params.analysis.previousCoverageBaselineAvailable ||
+    params.analysis.requiredBaselineUnavailable ||
     params.analysis.nearCoverageGuard ||
     params.analysis.nearValueGuard ||
     params.analysis.nearMajorCoverageGuard ||
@@ -82,6 +83,8 @@ export function buildDexLiquidityCronMetadata(params: {
     ...getDexLiquiditySourceQualityReasons(sourceState),
   ])];
   return {
+    ...(persistence.skippedReason === "required-baseline-read-failed"
+      ? { reason: "required-baseline-read-failed" } : {}),
     ...(qualityReasons.length > 0 ? { quality: { reasons: qualityReasons } } : {}),
     rowsRead: sourceState.primaryRawPoolCount,
     rowsWritten: persistence.skipped || persistence.skippedReason === "liquidity-cadence-reuse"

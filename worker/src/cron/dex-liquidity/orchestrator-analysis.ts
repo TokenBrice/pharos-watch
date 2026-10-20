@@ -1,6 +1,6 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { ACTIVE_IDS, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { DexLiquidityCronMetadataSchema, type DexLiquidityCronMetadata } from "../../lib/schemas";
+import { DexLiquidityCronMetadataSchema, type DexLiquidityCronMetadata, type DexLiquidityProtocolTvlQuarantine } from "../../lib/schemas";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity";
 import type { DexPriceObs, FullScoreResult, GlobalAgg, LiquidityMetrics } from "./types";
 import { round4 } from "@shared/lib/math";
@@ -15,6 +15,7 @@ import {
   type PreviousDexLiquiditySummary,
 } from "./orchestrator-drift";
 import { toErrorMessage } from "@shared/lib/error-utils";
+import type { DexLiquidityBaselineReadFailure } from "@shared/types/status/yield-liquidity";
 
 
 type ParsedPreviousCronRow = {
@@ -235,19 +236,20 @@ function selectValueBaseline(params: {
 
 export interface DexLiquidityPostScoreAnalysis {
   currentCoverage: number;
-  previousCoverage: number;
+  previousCoverage: number | null;
   previousCoverageBaselineAvailable: boolean;
-  minExpectedCoverage: number;
+  minExpectedCoverage: number | null;
   currentGlobalTvl: number;
   previousGlobalTvl: number | null;
   minExpectedGlobalTvl: number | null;
   valueBaselineSource: ValueBaselineSource;
   valueBaselineGlobalTvl: number | null;
   ignoredPersistedGlobalTvl: number | null;
-  currentTop10CoveredTvl: number;
-  previousTop10CoveredTvl: number;
-  currentTop10GuardTvl: number;
-  previousTop10GuardTvl: number;
+  currentTop10CoveredTvl: number | null;
+  previousTop10CoveredTvl: number | null;
+  currentTop10GuardTvl: number | null;
+  previousTop10GuardTvl: number | null;
+  requiredBaselineUnavailable: boolean;
   nearCoverageGuard: boolean;
   nearValueGuard: boolean;
   hardValueGuard: boolean;
@@ -258,9 +260,9 @@ export interface DexLiquidityPostScoreAnalysis {
     dlYieldsAvailable: boolean;
     dlProtocolsAvailable: boolean;
     currentCoverage: number;
-    previousCoverage: number;
+    previousCoverage: number | null;
     previousCoverageBaselineAvailable: boolean;
-    minExpectedCoverage: number;
+    minExpectedCoverage: number | null;
     nearCoverageGuard: boolean;
     hardCoverageGuard: boolean;
     currentGlobalTvl: number;
@@ -288,13 +290,14 @@ export interface DexLiquidityPostScoreAnalysis {
       protocol: string | null;
       protocolDeltaUsd: number | null;
     }>;
-    currentTop10CoveredTvl: number;
-    previousTop10CoveredTvl: number;
-    currentTop10GuardTvl: number;
-    previousTop10GuardTvl: number;
+    currentTop10CoveredTvl: number | null;
+    previousTop10CoveredTvl: number | null;
+    currentTop10GuardTvl: number | null;
+    previousTop10GuardTvl: number | null;
     nearMajorCoverageGuard: boolean;
     currentCoverageClasses: CoverageClasses;
-    previousCoverageClasses: CoverageClasses;
+    previousCoverageClasses: CoverageClasses | null;
+    baselineReadFailures: DexLiquidityBaselineReadFailure[];
     priceObservationCoins: number;
     weakCoverageCoins: number;
     measuredBalanceCoveragePct: number;
@@ -308,11 +311,7 @@ export interface DexLiquidityPostScoreAnalysis {
     priceObservationCoinsBySourceFamily: Record<string, number>;
     sourceDegradedFamilies: string[];
     globalProtocolOverCapUsd: number;
-    protocolCapReductions: {
-      cappedPoolCount?: number;
-      cappedProtocols?: number;
-      reducedTvlUsd?: number;
-    };
+    protocolTvlQuarantine: DexLiquidityProtocolTvlQuarantine;
   } & DexLiquidityDriftSummary;
 }
 
@@ -325,11 +324,7 @@ export async function analyzeDexLiquidityPostScoring(params: {
   priceObservations: Map<string, DexPriceObs[]>;
   diagnostics: {
     globalProtocolOverCapUsd: number;
-    protocolCapReductions: {
-      cappedPoolCount?: number;
-      cappedProtocols?: number;
-      reducedTvlUsd?: number;
-    };
+    protocolTvlQuarantine: DexLiquidityProtocolTvlQuarantine;
   };
   stagedMergedCount: number;
   stagedSkippedCount: number;
@@ -340,16 +335,15 @@ export async function analyzeDexLiquidityPostScoring(params: {
 }): Promise<DexLiquidityPostScoreAnalysis> {
   const currentCoverage = params.scoreResults.size;
   const activeIdsJson = JSON.stringify([...ACTIVE_IDS]);
-  let coinTvlStepBaselineUnavailable = false;
   const [
-    previousCoverageRow,
-    previousGlobalRow,
-    previousCoverageClassRows,
-    previousTopCoverageRows,
-    previousCronRows,
-    previousWatchlistRows,
-    previousCoinTvlRows,
-  ] = await Promise.all([
+    coverageRead,
+    globalRead,
+    classesRead,
+    topTenRead,
+    historyRead,
+    watchlistRead,
+    coinTvlRead,
+  ] = await Promise.allSettled([
     params.db
       .prepare(
         `SELECT COUNT(*) as cnt FROM dex_liquidity
@@ -364,20 +358,12 @@ export async function analyzeDexLiquidityPostScoring(params: {
            )`,
       )
       .bind(activeIdsJson)
-      .first<{ cnt: number }>()
-      .catch((e) => {
-        logWorkerEventArgs("handler", "warn", "[dex-liquidity] Failed to read previous coverage count:", e instanceof Error ? e.message : e);
-        return null;
-      }),
+      .first<{ cnt: number }>(),
     params.db
       .prepare(
         `SELECT total_tvl_usd, updated_at FROM dex_liquidity WHERE stablecoin_id = '__global__' AND ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}`,
       )
-      .first<{ total_tvl_usd: number | null; updated_at: number | null }>()
-      .catch((e) => {
-        logWorkerEventArgs("handler", "warn", "[dex-liquidity] Failed to read previous global TVL:", e);
-        return null;
-      }),
+      .first<{ total_tvl_usd: number | null; updated_at: number | null }>(),
     params.db
       .prepare(
         `SELECT coverage_class, COUNT(*) as cnt
@@ -388,11 +374,7 @@ export async function analyzeDexLiquidityPostScoring(params: {
          GROUP BY coverage_class`,
       )
       .bind(activeIdsJson)
-      .all<{ coverage_class: string | null; cnt: number }>()
-      .catch((e) => {
-        logWorkerEventArgs("handler", "warn", "[dex-liquidity] Failed to read previous coverage classes:", e);
-        return { results: [] as Array<{ coverage_class: string | null; cnt: number }> };
-      }),
+      .all<{ coverage_class: string | null; cnt: number }>(),
     params.db
       .prepare(
         `SELECT stablecoin_id, total_tvl_usd, effective_tvl_usd
@@ -405,11 +387,7 @@ export async function analyzeDexLiquidityPostScoring(params: {
          LIMIT 10`,
       )
       .bind(activeIdsJson)
-      .all<TopCoverageRow>()
-      .catch((e) => {
-        logWorkerEventArgs("handler", "warn", "[dex-liquidity] Failed to read previous top coverage:", e);
-        return { results: [] as TopCoverageRow[] };
-      }),
+      .all<TopCoverageRow>(),
     params.db
       .prepare(
         `SELECT started_at, status, metadata
@@ -420,13 +398,7 @@ export async function analyzeDexLiquidityPostScoring(params: {
          ORDER BY started_at DESC
          LIMIT 12`,
       )
-      .all<{ started_at: number | null; status: string | null; metadata: string | null }>()
-      .catch((e) => {
-        logWorkerEventArgs("handler", "warn", "[dex-liquidity] Failed to read previous cron metadata:", e);
-        return {
-          results: [] as Array<{ started_at: number | null; status: string | null; metadata: string | null }>,
-        };
-      }),
+      .all<{ started_at: number | null; status: string | null; metadata: string | null }>(),
     params.db
       .prepare(
         `SELECT stablecoin_id, pool_count, coverage_confidence, total_tvl_usd, balance_measured_tvl_usd
@@ -441,19 +413,7 @@ export async function analyzeDexLiquidityPostScoring(params: {
         coverage_confidence: number | null;
         total_tvl_usd: number;
         balance_measured_tvl_usd: number;
-      }>()
-      .catch((e) => {
-        logWorkerEventArgs("handler", "warn", "[dex-liquidity] Failed to read previous watchlist rows:", e);
-        return {
-          results: [] as Array<{
-            stablecoin_id: string;
-            pool_count: number;
-            coverage_confidence: number | null;
-            total_tvl_usd: number;
-            balance_measured_tvl_usd: number;
-          }>,
-        };
-      }),
+      }>(),
     params.db
       .prepare(
         `SELECT r.stablecoin_id, r.total_tvl_usd, r.protocol_tvl_json
@@ -469,15 +429,38 @@ export async function analyzeDexLiquidityPostScoring(params: {
            )`,
       )
       .bind(activeIdsJson, params.currentGenerationId ?? null, params.currentGenerationId ?? null)
-      .all<PreviousCoinTvlRow>()
-      .catch((e) => {
-        logWorkerEventArgs("handler", "warn", "[dex-liquidity] Failed to read previous per-coin TVL:", e);
-        coinTvlStepBaselineUnavailable = true;
-        return { results: [] as PreviousCoinTvlRow[] };
-      }),
+      .all<PreviousCoinTvlRow>(),
   ]);
+  // Fulfilled empty reads are bootstrap evidence; rejected reads are unavailable,
+  // never an empty population. Optional drift/class reads cannot block publication.
+  const baselineReadFailures: DexLiquidityBaselineReadFailure[] = [];
+  const reads = [
+    ["coverage-count-read-failed", coverageRead],
+    ["global-tvl-read-failed", globalRead],
+    ["coverage-classes-read-failed", classesRead],
+    ["top-ten-read-failed", topTenRead],
+    ["cron-history-read-failed", historyRead],
+    ["watchlist-read-failed", watchlistRead],
+    ["coin-tvl-read-failed", coinTvlRead],
+  ] as const;
+  for (const [reason, read] of reads) {
+    if (read.status === "rejected") {
+      baselineReadFailures.push(reason);
+      logWorkerEventArgs("handler", "warn", `[dex-liquidity] ${reason}:`, toErrorMessage(read.reason));
+    }
+  }
+  const requiredBaselineUnavailable = [coverageRead, globalRead, topTenRead, historyRead]
+    .some((read) => read.status === "rejected");
+  const previousCoverageRow = coverageRead.status === "fulfilled" ? coverageRead.value : null;
+  const previousGlobalRow = globalRead.status === "fulfilled" ? globalRead.value : null;
+  const previousCoverageClassRows = classesRead.status === "fulfilled" ? classesRead.value.results : null;
+  const previousTopCoverageRows = topTenRead.status === "fulfilled" ? topTenRead.value.results : null;
+  const previousCronRows = historyRead.status === "fulfilled" ? historyRead.value.results : [];
+  const previousWatchlistRows = watchlistRead.status === "fulfilled" ? watchlistRead.value.results : [];
+  const previousCoinTvlRows = coinTvlRead.status === "fulfilled" ? coinTvlRead.value.results : [];
+  const coinTvlStepBaselineUnavailable = coinTvlRead.status === "rejected";
 
-  const parsedPreviousCronRows = parsePreviousCronRows(previousCronRows.results ?? []);
+  const parsedPreviousCronRows = parsePreviousCronRows(previousCronRows ?? []);
 
   // Compare observed coverage on the price-only ticker policy. The current
   // published rows can be normalized exactly from their scored source mix;
@@ -492,14 +475,15 @@ export async function analyzeDexLiquidityPostScoring(params: {
         (row.metadata.sourceCoverage.retainedPoolCountBySourceFamily.cg_tickers ?? 0) === 0)
       .map((row) => row.metadata.sourceCoverage.currentCoverage!),
   ];
-  const coverageBaseline = medianOfRecentRuns(coverageBaselineWindow);
+  const coverageBaseline = coverageRead.status === "fulfilled" && historyRead.status === "fulfilled"
+    ? medianOfRecentRuns(coverageBaselineWindow) ?? 0 : null;
   const previousCoverageBaselineAvailable = coverageBaseline != null;
-  const previousCoverage = coverageBaseline ?? 0;
-  const minExpectedCoverage = previousCoverageBaselineAvailable ? Math.max(1, Math.floor(previousCoverage * 0.6)) : 0;
+  const previousCoverage = coverageBaseline;
+  const minExpectedCoverage = previousCoverage != null ? Math.max(1, Math.floor(previousCoverage * 0.6)) : null;
   const hardCoverageGuard =
-    previousCoverageBaselineAvailable && previousCoverage >= 10 && currentCoverage < minExpectedCoverage;
+    previousCoverage != null && previousCoverage >= 10 && currentCoverage < minExpectedCoverage!;
   const nearCoverageGuard =
-    previousCoverageBaselineAvailable && previousCoverage >= 10 && currentCoverage < Math.floor(previousCoverage * 0.8);
+    previousCoverage != null && previousCoverage >= 10 && currentCoverage < Math.floor(previousCoverage * 0.8);
 
   const currentGlobalTvl = params.globalAgg.totalTvl;
   const persistedGlobalTvl = previousGlobalRow?.total_tvl_usd ?? null;
@@ -516,9 +500,10 @@ export async function analyzeDexLiquidityPostScoring(params: {
       .map((row) => row.metadata.sourceCoverage.currentGlobalTvl!),
   );
   const valueBaseline = selectValueBaseline({
-    persistedGlobalTvl,
+    persistedGlobalTvl: globalRead.status === "fulfilled" && historyRead.status === "fulfilled" ? persistedGlobalTvl : null,
     persistedSourceIncomplete,
-    trailingSourceCompleteGlobalTvl,
+    trailingSourceCompleteGlobalTvl: globalRead.status === "fulfilled" && historyRead.status === "fulfilled"
+      ? trailingSourceCompleteGlobalTvl : null,
   });
   const previousGlobalTvl = valueBaseline.previousGlobalTvl;
   const minExpectedGlobalTvl = valueBaseline.minExpectedGlobalTvl;
@@ -527,26 +512,28 @@ export async function analyzeDexLiquidityPostScoring(params: {
   const hardValueGuard =
     previousGlobalTvl != null && previousGlobalTvl >= 10_000_000 && currentGlobalTvl < previousGlobalTvl * 0.6;
 
-  const previousTop10CoveredTvl = (previousTopCoverageRows.results ?? []).reduce(
+  const previousTop10CoveredTvl = previousTopCoverageRows?.reduce(
     (sum, row) => sum + row.total_tvl_usd,
     0,
-  );
-  const currentTop10CoveredTvl = (previousTopCoverageRows.results ?? []).reduce(
+  ) ?? null;
+  const currentTop10CoveredTvl = previousTopCoverageRows?.reduce(
     (sum, row) => sum + (params.scoreResults.get(row.stablecoin_id)?.tvl ?? 0),
     0,
-  );
-  const previousTop10GuardTvl = (previousTopCoverageRows.results ?? []).reduce(
+  ) ?? null;
+  const previousTop10GuardTvl = previousTopCoverageRows?.reduce(
     (sum, row) => sum + computeMajorCoverageGuardTvl(row.total_tvl_usd, row.effective_tvl_usd),
     0,
-  );
-  const currentTop10GuardTvl = (previousTopCoverageRows.results ?? []).reduce((sum, row) => {
+  ) ?? null;
+  const currentTop10GuardTvl = previousTopCoverageRows?.reduce((sum, row) => {
     const current = params.scoreResults.get(row.stablecoin_id);
     return sum + (current ? computeMajorCoverageGuardTvl(current.tvl, current.effectiveTvl) : 0);
-  }, 0);
+  }, 0) ?? null;
   const nearMajorCoverageGuard =
+    previousTop10GuardTvl != null && currentTop10GuardTvl != null &&
     previousTop10GuardTvl >= 5_000_000 && currentTop10GuardTvl < previousTop10GuardTvl * 0.85;
   const hardMajorCoverageGuard =
     valueBaseline.ignoredPersistedGlobalTvl == null &&
+    previousTop10GuardTvl != null && currentTop10GuardTvl != null &&
     previousTop10GuardTvl >= 5_000_000 &&
     currentTop10GuardTvl < previousTop10GuardTvl * 0.6;
 
@@ -576,16 +563,16 @@ export async function analyzeDexLiquidityPostScoring(params: {
     return totalTvl > 0 && primaryTvl <= 0 && row.coverageClass === "fallback";
   }).length;
 
-  const previousCoverageClasses = emptyCoverageClasses();
-  for (const row of previousCoverageClassRows.results ?? []) {
+  const previousCoverageClasses = previousCoverageClassRows == null ? null : emptyCoverageClasses();
+  for (const row of previousCoverageClassRows ?? []) {
     const key = row.coverage_class;
-    if (key && key in previousCoverageClasses) {
+    if (previousCoverageClasses && key && key in previousCoverageClasses) {
       previousCoverageClasses[key as keyof CoverageClasses] = row.cnt;
     }
   }
 
   const previousDriftBaseline = readLatestProductiveDexLiquidityBaseline(parsedPreviousCronRows);
-  const watchlistPreviousById = new Map((previousWatchlistRows.results ?? []).map((row) => [row.stablecoin_id, row]));
+  const watchlistPreviousById = new Map((previousWatchlistRows ?? []).map((row) => [row.stablecoin_id, row]));
 
   const retainedPoolCountBySourceFamily: Record<string, number> = {};
   const measuredBalanceTvlBySourceFamily: Record<string, number> = {};
@@ -645,7 +632,7 @@ export async function analyzeDexLiquidityPostScoring(params: {
   let coinTvlStepMissingCurrent = 0;
   const positiveBaselineIds = new Set<string>();
   const coinTvlSteps: DexLiquidityPostScoreAnalysis["sourceCoverage"]["coinTvlStepTop"] = [];
-  for (const previous of previousCoinTvlRows.results ?? []) {
+  for (const previous of previousCoinTvlRows ?? []) {
     const current = params.scoreResults.get(previous.stablecoin_id);
     if (!isFinitePositive(previous.total_tvl_usd)) continue;
     positiveBaselineIds.add(previous.stablecoin_id);
@@ -738,13 +725,14 @@ export async function analyzeDexLiquidityPostScoring(params: {
     previousMajorTvlById: new Map(
       // Material coins remain monitored after leaving the top ten or accepting
       // a lasting cliff. The prior published generation owns the new baseline.
-      [...(previousTopCoverageRows.results ?? []), ...(previousCoinTvlRows.results ?? [])]
+      [...(previousTopCoverageRows ?? []), ...(previousCoinTvlRows ?? [])]
         .map((row) => [row.stablecoin_id, row.total_tvl_usd]),
     ),
   });
 
   return {
     currentCoverage,
+    requiredBaselineUnavailable,
     previousCoverage,
     previousCoverageBaselineAvailable,
     minExpectedCoverage,
@@ -798,6 +786,7 @@ export async function analyzeDexLiquidityPostScoring(params: {
       nearMajorCoverageGuard,
       currentCoverageClasses,
       previousCoverageClasses,
+      baselineReadFailures,
       priceObservationCoins: params.priceObservations.size,
       weakCoverageCoins: params.weakCoverageCoinsBeforeFallback,
       measuredBalanceCoveragePct,
@@ -811,7 +800,7 @@ export async function analyzeDexLiquidityPostScoring(params: {
       priceObservationCoinsBySourceFamily,
       sourceDegradedFamilies: [...new Set(params.criticalSourceFailures)],
       globalProtocolOverCapUsd: params.diagnostics.globalProtocolOverCapUsd,
-      protocolCapReductions: { ...params.diagnostics.protocolCapReductions },
+      protocolTvlQuarantine: { ...params.diagnostics.protocolTvlQuarantine },
       qualityDriftFlags: driftSummary.qualityDriftFlags,
       qualityDriftCandidates: driftSummary.qualityDriftCandidates,
       qualityDriftRebaselined: driftSummary.qualityDriftRebaselined,

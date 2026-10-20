@@ -1,9 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   crawlTokenPools,
   shouldSkipFallbackCurvePool,
 } from "../crawl-helpers";
-import type { GtNewPool } from "../types";
+import type { GtNewPool, GtPool } from "../types";
+import { parseGtPool } from "../geckoterminal-shared";
+import * as structuredLog from "../../../lib/structured-log";
 
 interface RawPool {
   id: string;
@@ -17,6 +19,53 @@ describe("crawlTokenPools", () => {
     expect(shouldSkipFallbackCurvePool("base", "curve-stable-swap")).toBe(true);
     expect(shouldSkipFallbackCurvePool("plasma", "curve-plasma")).toBe(false);
     expect(shouldSkipFallbackCurvePool("plasma", "balancer-v3-plasma")).toBe(false);
+  });
+
+  it("does not turn provider numeric prefixes into crawler TVL, prices or volume", async () => {
+    const fixture = (address: string, fields: Partial<GtPool["attributes"]>): GtPool => ({
+      id: address, type: "pool",
+      attributes: {
+        address, name: "USDC / USD", pool_created_at: "2026-01-01T00:00:00Z",
+        reserve_in_usd: "100000.25", base_token_price_usd: "1.001",
+        quote_token_price_usd: "1", volume_usd: { h24: "0" }, ...fields,
+      },
+      relationships: {
+        base_token: { data: { id: "ethereum_0xstable", type: "token" } },
+        quote_token: { data: { id: "ethereum_0xref", type: "token" } },
+        dex: { data: { id: "testdex", type: "dex" } },
+      },
+    });
+    const newPools = new Map<string, GtNewPool[]>();
+    const priceObs = new Map();
+    await crawlTokenPools<GtPool, GtNewPool>({
+      sourceLabel: "GT", tokens: [
+        { sourceChain: "eth", ourChain: "ethereum", address: "0xstable", stablecoinId: "usdc-circle" },
+      ],
+      chainAddressToId: new Map([["ethereum:0xstable", "usdc-circle"]]),
+      knownPoolAddrs: new Set(), protocolTvlCaps: new Map(), newPools, priceObs,
+      fetchPools: async () => ({
+        rows: [
+          fixture("0xbadtvl", { reserve_in_usd: "100000usd" }),
+          fixture("0xbadprice", { base_token_price_usd: "1.001usd" }),
+          fixture("0xbadvolume", { volume_usd: { h24: "100usd" } }),
+          fixture("0xvalid", {}),
+        ], complete: true, cappedAtMaxPages: false, failedAfterRows: null,
+      }),
+      parsePool: parseGtPool,
+      buildNewPool: ({ parsed, price }) => ({
+        address: parsed.poolAddress, project: parsed.dexId, chain: "ethereum", dexId: parsed.dexId,
+        name: parsed.poolName, symbol: parsed.poolName, tvlUsd: parsed.tvlUsd,
+        volume24hUsd: parsed.volume24hUsd, qualityMultiplier: 1, maturityDays: 1,
+        price, poolType: "generic", sourceFamily: "gecko_terminal",
+      }),
+    });
+    const admitted = newPools.get("usdc-circle")!;
+    expect(admitted.map((pool) => pool.address)).toEqual(["0xbadprice", "0xbadvolume", "0xvalid"]);
+    expect(admitted[0]!.price).toBeNaN();
+    expect(admitted[1]!.volume24hUsd).toBeNull();
+    expect(admitted[2]).toMatchObject({ tvlUsd: 100000.25, price: 1.001, volume24hUsd: 0 });
+    expect(priceObs.get("usdc-circle")).toHaveLength(2);
+    expect(priceObs.get("usdc-circle").every((obs: { price: number }) => obs.price === 1.001)).toBe(true);
   });
 
   it("stops before a request when beforeRequest returns false", async () => {
@@ -83,7 +132,7 @@ describe("crawlTokenPools", () => {
       tokens: [{ sourceChain: "plasma", ourChain: "plasma", address: "0xstable", stablecoinId: "yzusd-yuzu" }],
       chainAddressToId: new Map([["plasma:0xstable", "yzusd-yuzu"]]),
       knownPoolAddrs: new Set(),
-      protocolTvlCaps: new Map([["curve", 800_000]]),
+      protocolTvlCaps: new Map([["curve", 900_000]]),
       newPools,
       priceObs,
       fetchPools: async () => ({ rows: [{ id: "0xpool", tvlUsd: 900_000, price: 0.9973 }], complete: true, cappedAtMaxPages: false, failedAfterRows: null }),
@@ -99,14 +148,14 @@ describe("crawlTokenPools", () => {
         createdAt: "2026-01-01T00:00:00Z",
         poolName: "yzUSD / USDT0",
       }),
-      buildNewPool: ({ cappedTvlUsd, price }) => ({
+      buildNewPool: ({ parsed, price }) => ({
         address: "0xpool",
         project: "curve-plasma",
         chain: "plasma",
         dexId: "curve-plasma",
         name: "yzUSD / USDT0",
         symbol: "yzUSD / USDT0",
-        tvlUsd: cappedTvlUsd,
+        tvlUsd: parsed.tvlUsd,
         volume24hUsd: 20_000,
         qualityMultiplier: 1,
         maturityDays: 1,
@@ -120,7 +169,7 @@ describe("crawlTokenPools", () => {
     expect(newPools.get("yzusd-yuzu")?.[0]).toMatchObject({
       chain: "plasma",
       dexId: "curve-plasma",
-      tvlUsd: 800_000,
+      tvlUsd: 900_000,
       price: 0.9973,
     });
     expect(priceObs.get("yzusd-yuzu")).toEqual([
@@ -132,15 +181,16 @@ describe("crawlTokenPools", () => {
     expect(newPools.get("yzusd-yuzu")?.[0].priceObservedAt).toBe(observedAt);
   });
 
-  it("adds new pools and price observations for matching stablecoin side", async () => {
+  it.each([50_000, 100_000, 200_000, null, 0])("quarantines oversized fallback without scaling admitted raw TVL (protocol total %s)", async (cap) => {
     const newPools = new Map<string, GtNewPool[]>();
     const priceObs = new Map();
+    const log = vi.spyOn(structuredLog, "logWorkerEvent").mockImplementation(() => {});
     const result = await crawlTokenPools<RawPool, GtNewPool>({
       sourceLabel: "test",
       tokens: [{ sourceChain: "eth", ourChain: "ethereum", address: "0xstable", stablecoinId: "usdc-circle" }],
       chainAddressToId: new Map([["ethereum:0xstable", "usdc-circle"]]),
       knownPoolAddrs: new Set(),
-      protocolTvlCaps: new Map([["testdex", 50_000]]),
+      protocolTvlCaps: cap == null ? new Map() : new Map([["testdex", cap]]),
       newPools,
       priceObs,
       fetchPools: async () => ({ rows: [{ id: "pool-a", tvlUsd: 100_000, price: 1 }], complete: true, cappedAtMaxPages: false, failedAfterRows: null }),
@@ -156,14 +206,14 @@ describe("crawlTokenPools", () => {
         createdAt: "2026-01-01T00:00:00Z",
         poolName: "USDC / USD",
       }),
-      buildNewPool: ({ cappedTvlUsd, price }) => ({
+      buildNewPool: ({ parsed, price }) => ({
         address: "pool-a",
         project: "testdex",
         chain: "ethereum",
         dexId: "testdex",
         name: "USDC / USD",
         symbol: "USDC / USD",
-        tvlUsd: cappedTvlUsd,
+        tvlUsd: parsed.tvlUsd,
         volume24hUsd: 10_000,
         qualityMultiplier: 1,
         maturityDays: 1,
@@ -174,8 +224,19 @@ describe("crawlTokenPools", () => {
     });
 
     expect(result.stoppedEarly).toBe(false);
-    expect(newPools.get("usdc-circle")?.[0]?.tvlUsd).toBe(50_000);
-    expect(priceObs.get("usdc-circle")).toHaveLength(1);
+    if (cap === 50_000) {
+      expect(newPools.size).toBe(0);
+      expect(priceObs.size).toBe(0);
+      expect(log).toHaveBeenCalledWith(expect.objectContaining({
+        event: "dex-liquidity-source-quarantine",
+        metadata: { reason: "fallback-pool-tvl-exceeds-protocol", poolCount: 1, tvlUsd: 100_000 },
+      }));
+    } else {
+      expect(newPools.get("usdc-circle")?.[0]?.tvlUsd).toBe(100_000);
+      expect(priceObs.get("usdc-circle")).toHaveLength(1);
+      expect(log).not.toHaveBeenCalled();
+    }
+    log.mockRestore();
   });
 
   it("skips secondary-source pools with implausible tracked token prices", async () => {

@@ -32,6 +32,9 @@ async function hasLegacyCandidatesWithoutSnapshots(
          SELECT 1
          FROM dex_price_challenger_snapshots snapshots
          WHERE snapshots.stablecoin_id = dex_liquidity.stablecoin_id
+         UNION ALL
+         SELECT 1 FROM dex_price_challenger_heads_v2 heads
+          WHERE heads.stablecoin_id = dex_liquidity.stablecoin_id
        )
      LIMIT 1`,
     `SELECT stablecoin_id
@@ -42,6 +45,9 @@ async function hasLegacyCandidatesWithoutSnapshots(
          SELECT 1
          FROM dex_price_challenger_snapshots snapshots
          WHERE snapshots.stablecoin_id = dex_prices.stablecoin_id
+         UNION ALL
+         SELECT 1 FROM dex_price_challenger_heads_v2 heads
+          WHERE heads.stablecoin_id = dex_prices.stablecoin_id
        )
      LIMIT 1`,
   ];
@@ -76,15 +82,29 @@ export async function loadPublishedDexPoolChallengers(
   // Read the visibility pointer and its exact generation in one SQLite snapshot.
   // LEFT JOIN preserves authoritative empty pointers during publication cleanup.
   const joined = await db.prepare(
-    `SELECT snapshots.stablecoin_id, snapshots.snapshot_at, snapshots.published_at,
+    `SELECT heads.stablecoin_id, publication.snapshot_at, publication.published_at,
+            heads.has_rows, heads.source_coverage_complete,
+            payload.pool_id, payload.chain, payload.protocol, payload.source_family,
+            payload.price_usd, payload.tvl_usd, payload.price_observed_at, 2 AS storage_version
+       FROM dex_price_challenger_heads_v2 heads
+       JOIN dex_price_challenger_publications_v2 publication
+         ON publication.publication_id = heads.publication_id AND publication.sealed = 1
+       LEFT JOIN dex_price_challenger_payloads_v2 payload
+         ON payload.stablecoin_id = heads.stablecoin_id
+        AND payload.publication_id = heads.publication_id
+      WHERE heads.stablecoin_id != '__global__'
+      UNION ALL
+     SELECT snapshots.stablecoin_id, snapshots.snapshot_at, snapshots.published_at,
             snapshots.has_rows, snapshots.source_coverage_complete,
             payload.pool_id, payload.chain, payload.protocol, payload.source_family,
-            payload.price_usd, payload.tvl_usd
+            payload.price_usd, payload.tvl_usd, NULL AS price_observed_at, 1 AS storage_version
        FROM dex_price_challenger_snapshots snapshots
        LEFT JOIN dex_price_challengers payload
          ON payload.stablecoin_id = snapshots.stablecoin_id
         AND payload.snapshot_at = snapshots.snapshot_at
-       WHERE snapshots.stablecoin_id != '__global__'`,
+      WHERE snapshots.stablecoin_id != '__global__'
+        AND NOT EXISTS (SELECT 1 FROM dex_price_challenger_heads_v2 heads
+                         WHERE heads.stablecoin_id = snapshots.stablecoin_id)`,
   ).all<{
     stablecoin_id: string;
     snapshot_at: number;
@@ -97,6 +117,8 @@ export async function loadPublishedDexPoolChallengers(
     source_family: string;
     price_usd: number;
     tvl_usd: number;
+    price_observed_at: number | null;
+    storage_version: number;
   }>();
   const snapshotByCoin = new Map<string, (NonNullable<typeof joined.results>)[number]>();
   const rowsByCoinAndSnapshot = new Map<string, DexPriceChallengerLoadRow[]>();
@@ -115,6 +137,7 @@ export async function loadPublishedDexPoolChallengers(
       tvlUsd: row.tvl_usd,
       snapshotAt: row.snapshot_at,
       publishedAt: row.published_at,
+      ...(row.storage_version === 2 ? { priceObservedAt: row.price_observed_at } : {}),
     });
     rowsByCoinAndSnapshot.set(key, existing);
   }

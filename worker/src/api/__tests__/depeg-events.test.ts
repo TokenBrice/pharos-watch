@@ -554,6 +554,48 @@ describe("handleDepegEvents", () => {
     }
   });
 
+  it("reports pending pool availability from accepted v2 membership, retaining v1 only before a head exists", async () => {
+    const nowSec = 1_800_000_000;
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(nowSec * 1000);
+    const { sqlite, db } = fixtures.open();
+    sqlite.prepare(`INSERT INTO depeg_pending
+      (stablecoin_id, symbol, peg_type, direction, first_seen_bps, first_seen_at, first_price, peg_reference)
+      VALUES ('usdt-tether', 'USDT', 'peggedUSD', 'below', -200, ?, .98, 1)`).run(nowSec - 60);
+    sqlite.prepare(`INSERT INTO dex_price_challenger_snapshots
+      (stablecoin_id, snapshot_at, published_at, has_rows, source_coverage_complete)
+      VALUES ('usdt-tether', ?, ?, 1, 1)`).run(nowSec - 60, nowSec - 60);
+    const assertAvailability = async (available: boolean) => {
+      for (const filter of ["", "&stablecoin=usdt-tether"]) {
+        const res = await handleDepegEvents(db,
+          new URL(`https://x/api/depeg-events?includeTotal=false&includePending=true${filter}`));
+        const pending = DepegEventsResponseSchema.parse(await readJsonResponse(res, 200)).pending?.[0];
+        expect(pending?.availableConfirmationCategories.includes("pool")).toBe(available);
+        expect(pending?.missingConfirmationCategories.includes("pool")).toBe(!available);
+      }
+    };
+    await assertAvailability(true);
+    sqlite.prepare(`INSERT INTO dex_price_challenger_publications_v2
+      (publication_id, generation_id, snapshot_at, published_at) VALUES (1, 'generation', ?, ?)`)
+      .run(nowSec - 60, nowSec);
+    await assertAvailability(true); // Staging is not a visibility authority.
+    sqlite.exec(`UPDATE dex_price_challenger_publications_v2 SET sealed = 1;
+      INSERT INTO dex_price_challenger_heads_v2 (stablecoin_id, publication_id, has_rows)
+      VALUES ('usdt-tether', 1, 0);`);
+    await assertAvailability(false); // Accepted empty overrides fresh legacy rows.
+    sqlite.exec(`INSERT INTO dex_price_challenger_payloads_v2
+      (publication_id, stablecoin_id, pool_id, chain, protocol, source_family, price_usd, tvl_usd)
+      VALUES (1, 'usdt-tether', 'pool', 'Ethereum', 'curve', 'dl', .98, 100000);
+      UPDATE dex_price_challenger_heads_v2 SET has_rows = 1;
+      UPDATE dex_price_challenger_snapshots SET snapshot_at = 1;`);
+    await assertAvailability(true); // Fresh v2 no longer depends on frozen v1.
+    sqlite.exec("UPDATE dex_price_challenger_heads_v2 SET source_coverage_complete = 0");
+    await assertAvailability(false);
+    sqlite.exec(`UPDATE dex_price_challenger_heads_v2 SET source_coverage_complete = 1;
+      UPDATE dex_price_challenger_publications_v2 SET snapshot_at = 1;`);
+    await assertAvailability(false); // Source clock, not allocation clock, ages availability.
+  });
+
   it("filters pending incidents by readable stablecoin ID", async () => {
     const db = mockD1([{ match: "pharos:depeg-event-projection:active-incidents", rows: [] }, { match: "pharos:depeg-events:count", rows: [{ total: 0 }] }, { match: "depeg_events", rows: [] },
     {

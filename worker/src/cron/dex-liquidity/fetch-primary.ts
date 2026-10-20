@@ -29,6 +29,8 @@ import type { PriceValidationReferences } from "../../lib/price-validation";
 import {
   buildDexPriceObservationIdentity,
   buildPoolIdentity,
+  buildPrimaryPoolKey,
+  samePrimaryPoolObservation,
   createKnownPoolIdentityIndex,
   registerKnownPoolIdentity,
   type KnownPoolIdentityIndex,
@@ -42,6 +44,7 @@ import { attachDefiLlamaV4PoolIdentities, DEFILLAMA_V4_IDENTITIES_URL } from "./
 import { requirePoolIdentity } from "./process-pool-admission-identity";
 import { ExpectedPoolInputError, POOL_REJECTION_POOL_ID_LIMIT, type PoolProcessingRejection } from "./process-pool-types";
 
+import { parseStrictFiniteDecimal } from "./direct-api-json";
 const PRIMARY_SOURCE_JSON_TIMEOUT_MS = 30_000;
 const CURVE_API_FETCH_CONCURRENCY = 4;
 
@@ -512,32 +515,33 @@ export async function buildCurveLookups(
         if (isNaN(A)) continue;
 
         const coinBalances = pool.coins.map((coin) => {
-          const raw = parseFloat(coin.poolBalance);
-          const decimals = parseInt(coin.decimals, 10);
+          const raw = parseStrictFiniteDecimal(coin.poolBalance);
+          const decimals = parseStrictFiniteDecimal(coin.decimals);
           const usdBalance =
-            isNaN(raw) || isNaN(decimals) || !(coin.usdPrice > 0)
-              ? 0
-              : (raw / 10 ** decimals) * coin.usdPrice;
-          return { coin, usdBalance };
+            raw != null && raw >= 0 &&
+            decimals != null && Number.isInteger(decimals) && decimals >= 0 && decimals <= 255 &&
+            Number.isFinite(coin.usdPrice) && coin.usdPrice > 0
+              ? (raw / 10 ** decimals) * coin.usdPrice
+              : null;
+          return { coin, raw, decimals, usdBalance };
         });
 
-        // Compute balance ratio (min/max) — 1.0 = perfectly balanced
-        const totalUsd = coinBalances.reduce((sum, { usdBalance }) => sum + usdBalance, 0);
-        const balances = coinBalances.map(({ usdBalance }) => usdBalance);
-
-        let balanceRatio = 1;
-        if (balances.length >= 2) {
-          const minBal = balances.reduce((m, b) => Math.min(m, b), Infinity);
-          const maxBal = balances.reduce((m, b) => Math.max(m, b), -Infinity);
+        // A failed leg is unavailable, not an observed empty reserve.
+        const totalUsd = coinBalances.reduce((sum, { usdBalance }) => sum + (usdBalance ?? Number.NaN), 0);
+        const balanceComplete = Number.isFinite(totalUsd);
+        let balanceRatio: number | null = null;
+        if (balanceComplete) {
+          const minBal = coinBalances.reduce((m, { usdBalance }) => Math.min(m, usdBalance!), Infinity);
+          const maxBal = coinBalances.reduce((m, { usdBalance }) => Math.max(m, usdBalance!), -Infinity);
           balanceRatio = maxBal > 0 ? minBal / maxBal : 0;
         }
-
-        // v2: Per-token balance details
-        const balanceDetails = coinBalances.map(({ coin, usdBalance }) => ({
-          symbol: coin.symbol,
-          balancePct: totalUsd > 0 ? Math.round((usdBalance / totalUsd) * 1000) / 10 : 0,
-          isTracked: symbolToIds.has(normalizeDexSymbol(coin.symbol)),
-        }));
+        const balanceDetails = balanceComplete
+          ? coinBalances.map(({ coin, usdBalance }) => ({
+              symbol: coin.symbol,
+              balancePct: totalUsd > 0 ? Math.round((usdBalance! / totalUsd) * 1000) / 10 : 0,
+              isTracked: symbolToIds.has(normalizeDexSymbol(coin.symbol)),
+            }))
+          : undefined;
 
         // v2: Use metapool-adjusted TVL when available
         const metapoolAdjustedTvl =
@@ -550,21 +554,21 @@ export async function buildCurveLookups(
           .join("-");
         const tokenPrices: Record<string, number> = {};
         for (const c of pool.coins) {
-          if (c.usdPrice && c.usdPrice > 0) {
+          if (Number.isFinite(c.usdPrice) && c.usdPrice > 0) {
             tokenPrices[normalizeDexSymbol(c.symbol)] = c.usdPrice;
           }
         }
         // Exact physical coin identity is retained for reviewed direct-quote
         // adapters, including the base LP leg of a metapool. Reserve
         // simulation remains limited to complete non-meta, non-LP rows.
-        const poolCoins = coinBalances.map(({ coin }) => {
-          const decimals = parseInt(coin.decimals, 10);
+        const poolCoins = coinBalances.map(({ coin, decimals }) => {
           if (
             !coin.address?.trim() ||
+            decimals == null ||
             !Number.isInteger(decimals) ||
             decimals < 0 ||
             decimals > 255 ||
-            !(coin.usdPrice > 0)
+            !Number.isFinite(coin.usdPrice) || !(coin.usdPrice > 0)
           ) {
             return null;
           }
@@ -576,20 +580,21 @@ export async function buildCurveLookups(
             isBasePoolLpToken: coin.isBasePoolLpToken === true,
           };
         });
-        const executionCoins = coinBalances.map(({ coin }, index) => {
+        const executionCoins = coinBalances.map(({ raw, usdBalance }, index) => {
           const identity = poolCoins[index];
-          const balance = parseFloat(coin.poolBalance);
+          const balance = identity != null && raw != null ? raw / 10 ** identity.decimals : null;
           if (
             identity == null ||
             identity.isBasePoolLpToken ||
-            !Number.isFinite(balance) ||
+            balance == null || !Number.isFinite(balance) ||
+            usdBalance == null || !Number.isFinite(usdBalance) ||
             balance <= 0
           ) return null;
           return {
             address: identity.address,
             symbol: identity.symbol,
             decimals: identity.decimals,
-            balance: balance / 10 ** identity.decimals,
+            balance,
             usdPrice: identity.usdPrice,
           };
         });
@@ -599,14 +604,15 @@ export async function buildCurveLookups(
           pool.address,
         );
         const underlyingCoins = pool.underlyingCoins?.map((coin) => {
-          const decimals = parseInt(coin.decimals, 10);
+          const decimals = parseStrictFiniteDecimal(coin.decimals);
           if (
             !coin.address?.trim() ||
             !coin.symbol?.trim() ||
+            decimals == null ||
             !Number.isInteger(decimals) ||
             decimals < 0 ||
             decimals > 255 ||
-            !(coin.usdPrice > 0)
+            !Number.isFinite(coin.usdPrice) || !(coin.usdPrice > 0)
           ) return null;
           return {
             address: coin.address,
@@ -706,7 +712,7 @@ export async function buildCurveLookups(
 
         // Extract per-token price observations for DEX cross-validation
         // Filter: pool TVL >= $50K, balance ratio >= 0.3, coin has valid usdPrice
-        if (metapoolAdjustedTvl >= DEX_PRICE_OBSERVATION_MIN_TVL_USD && balanceRatio >= 0.3) {
+        if (metapoolAdjustedTvl >= DEX_PRICE_OBSERVATION_MIN_TVL_USD && balanceRatio != null && balanceRatio >= 0.3) {
           const identity = buildPoolIdentity({
             chain,
             protocol: "curve",
@@ -772,8 +778,19 @@ export function buildKnownPoolAddresses(
   let derivedCount = 0;
   const enforceDexProjectFilter = dexProjects.size > 0;
 
-  // UUID-only DeFiLlama pools use derived keys; verified V4 PoolIds also register exact keys.
+  // Repeated provider observations must not make a unique candidate ambiguous.
+  // Conflicts are reported by processPoolMetrics and contribute no known identity.
+  const primaryByKey = new Map<string, LlamaPool>();
+  const conflictingKeys = new Set<string>();
   for (const pool of pools) {
+    const key = buildPrimaryPoolKey(pool.chain, pool.pool, pool.project);
+    const previous = primaryByKey.get(key);
+    if (previous && !samePrimaryPoolObservation(previous, pool)) conflictingKeys.add(key);
+    else if (!previous) primaryByKey.set(key, pool);
+  }
+  // UUID-only DeFiLlama pools use derived candidates, never physical exact keys.
+  for (const [key, pool] of primaryByKey) {
+    if (conflictingKeys.has(key)) continue;
     if (!pool.tvlUsd || pool.tvlUsd < DEX_LIQUIDITY_POOL_MIN_TVL_USD) continue;
     if (enforceDexProjectFilter && !dexProjects.has(pool.project)) continue;
     if (pool.exposure === "single") continue;

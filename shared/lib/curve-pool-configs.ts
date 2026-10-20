@@ -33,7 +33,7 @@ export interface CurvePoolConfig {
  * worker/src/lib/curve-onchain.ts (it needs RPC access, so it stays worker-side).
  */
 export const CURVE_POOL_CONFIGS: CurvePoolConfig[] = [
-  // ── Direct pools (get_dy, paired against USDC) ──
+  // ── USDC anchors and USDT-reference pools ──
 
   // 3pool: query USDT relative to USDC
   {
@@ -196,7 +196,8 @@ export const CURVE_POOL_CONFIGS: CurvePoolConfig[] = [
     inputDecimals: 6,
     outputDecimals: 6,
     chain: "ethereum",
-    routeType: "direct",
+    hop: { viaStablecoinId: "usdt-tether" },
+    routeType: "one-hop",
   },
   // USDG/USDC (factory-stable-ng, ~$8.5M TVL)
   {
@@ -262,7 +263,8 @@ export const CURVE_POOL_CONFIGS: CurvePoolConfig[] = [
     inputDecimals: 6,
     outputDecimals: 6,
     chain: "ethereum",
-    routeType: "direct",
+    hop: { viaStablecoinId: "usdt-tether" },
+    routeType: "one-hop",
   },
   // sUSDS/USDT (factory-stable-ng, ~$50.0M TVL)
   {
@@ -273,7 +275,8 @@ export const CURVE_POOL_CONFIGS: CurvePoolConfig[] = [
     inputDecimals: 6,
     outputDecimals: 18,
     chain: "ethereum",
-    routeType: "direct",
+    hop: { viaStablecoinId: "usdt-tether" },
+    routeType: "one-hop",
   },
   // ── Hop pools (paired against crvUSD or PYUSD, resolved via two-phase pricing) ──
 
@@ -338,7 +341,7 @@ export const CURVE_POOL_CONFIGS: CurvePoolConfig[] = [
     routeType: "one-hop",
   },
 
-  // ── Trusted-wrapper pools ──
+  // ── Explicit chained-hop pools ──
 
   // DOLA/sUSDS (factory-stable-ng, ~$5.6M TVL)
   {
@@ -350,10 +353,10 @@ export const CURVE_POOL_CONFIGS: CurvePoolConfig[] = [
     outputDecimals: 18,
     chain: "ethereum",
     hop: { viaStablecoinId: "susds-sky" },
-    routeType: "trusted-wrapper",
+    routeType: "chained-hop",
+    maxHopDepth: 2,
   },
 
-  // ── Explicit chained-hop pools ──
 
   // frxUSD/msUSD (factory-stable-ng, ~$14.3M TVL)
   {

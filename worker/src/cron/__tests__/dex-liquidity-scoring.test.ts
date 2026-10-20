@@ -807,7 +807,7 @@ describe("dex-liquidity scoring", () => {
     const result = await computeStablecoinScores(
       db,
       new Map([["usdc-circle", metrics]]),
-      new Map([["balancer", 100_000]]),
+      new Map([["balancer", 150_000]]),
     );
     const coverage = (result.scores.get("usdc-circle") as {
       exitRouteObservationCoverage?: {
@@ -827,22 +827,22 @@ describe("dex-liquidity scoring", () => {
         "executionCapabilityGate:balancer-amm:rate-bearing-inputs": 1,
       },
     });
-    expect(metrics.totalTvlUsd).toBe(100_000);
+    expect(metrics.totalTvlUsd).toBe(150_000);
     expect(metrics.poolCount).toBe(1);
     expect(metrics.topPools).toHaveLength(1);
     expect(metrics.topPools[0]).toMatchObject({
       poolId: "ethereum:0xrate-bearing-balancer",
-      tvlUsd: 100_000,
+      tvlUsd: 150_000,
     });
     expect(result.retainedPoolsByStablecoin.get("usdc-circle")).toHaveLength(1);
     expect(result.globalAgg).toMatchObject({
-      totalTvl: 100_000,
+      totalTvl: 150_000,
       poolCount: 1,
-      protocolTvl: { balancer: 100_000 },
+      protocolTvl: { balancer: 150_000 },
     });
-    expect(result.diagnostics.protocolCapReductions).toMatchObject({
-      cappedPoolCount: 1,
-      reducedTvlUsd: 50_000,
+    expect(result.diagnostics.protocolTvlQuarantine).toMatchObject({
+      poolCount: 0,
+      tvlUsd: 0,
     });
   });
 
@@ -1408,7 +1408,7 @@ describe("dex-liquidity scoring", () => {
     ).rejects.toThrow("no such table: dex_liquidity_history");
   });
 
-  it("does not clip direct_api pools with the strict secondary-source protocol cap", async () => {
+  it("keeps trusted raw TVL and quarantines the fallback group instead of scaling quality/effective values", async () => {
     const db = makeQueryDb([
       { match: "FROM dex_liquidity_history", all: [] },
     ]);
@@ -1439,6 +1439,7 @@ describe("dex-liquidity scoring", () => {
         extra: { effectiveTvl: 80_000 },
       },
     ];
+    const fallback = metrics.topPools[1]!;
 
     const result = await computeStablecoinScores(
       db,
@@ -1446,13 +1447,16 @@ describe("dex-liquidity scoring", () => {
       new Map([["orca", 180_000]]),
     );
 
-    expect(metrics.totalTvlUsd).toBe(180_000);
+    expect(metrics.totalTvlUsd).toBe(150_000);
+    expect(metrics.topPools).toHaveLength(1);
     expect(metrics.topPools[0]?.tvlUsd).toBe(150_000);
-    expect(metrics.topPools[1]?.tvlUsd).toBe(30_000);
-    expect(result.diagnostics.protocolCapReductions).toMatchObject({
-      cappedPoolCount: 1,
-      cappedProtocols: 1,
-      reducedTvlUsd: 50_000,
+    expect(fallback.tvlUsd).toBe(80_000);
+    expect(fallback.extra?.effectiveTvl).toBe(80_000);
+    expect(result.diagnostics.protocolTvlQuarantine).toEqual({
+      reason: "fallback-protocol-tvl-exceeds-headroom",
+      poolCount: 1,
+      protocolCount: 1,
+      tvlUsd: 80_000,
     });
   });
 
@@ -1494,7 +1498,7 @@ describe("dex-liquidity scoring", () => {
     });
     expect(result.retainedPoolsByStablecoin.get("usdc-circle")?.map((pool) => pool.tvlUsd)).toEqual([80_000_000, 80_000_000]);
     expect(result.diagnostics.globalProtocolOverCapUsd).toBe(60_000_000);
-    expect(result.diagnostics.protocolCapReductions.reducedTvlUsd).toBe(0);
+    expect(result.diagnostics.protocolTvlQuarantine.tvlUsd).toBe(0);
     expect(result.diagnostics.fallbackCounters).toMatchObject({
       retainedExclusionBlockedDex: 1,
       retainedExclusionLargePoolLowVolume: 1,
@@ -1784,7 +1788,7 @@ describe("dex-liquidity scoring", () => {
     expect(result.diagnostics.measuredExecution.inventoryTargetCount).toBe(0);
   });
 
-  it("applies DefiLlama protocol caps to Carbon DeFi chain-suffixed secondary rows", async () => {
+  it("quarantines oversized Carbon DeFi chain-suffixed fallback observations without rewriting them", async () => {
     const db = makeQueryDb([
       { match: "FROM dex_liquidity_history", all: [] },
     ]);
@@ -1805,6 +1809,7 @@ describe("dex-liquidity scoring", () => {
         extra: { effectiveTvl: 480_000_000 },
       },
     ];
+    const rawPool = metrics.topPools[0]!;
 
     withReadings(metrics.topPools);
     const result = await computeStablecoinScores(
@@ -1815,13 +1820,16 @@ describe("dex-liquidity scoring", () => {
       SCORING_CLOCK_SEC,
     );
 
-    expect(metrics.totalTvlUsd).toBe(3_500_000);
-    expect(metrics.topPools[0]?.tvlUsd).toBe(3_500_000);
-    expect(result.globalAgg.protocolTvl["carbon-defi"]).toBe(3_500_000);
-    expect(result.diagnostics.protocolCapReductions).toMatchObject({
-      cappedPoolCount: 1,
-      cappedProtocols: 1,
-      reducedTvlUsd: 1_996_500_000,
+    expect(metrics.totalTvlUsd).toBe(0);
+    expect(metrics.topPools).toEqual([]);
+    expect(result.globalAgg.protocolTvl["carbon-defi"]).toBeUndefined();
+    expect(rawPool.tvlUsd).toBe(2_000_000_000);
+    expect(rawPool.extra?.effectiveTvl).toBe(480_000_000);
+    expect(result.diagnostics.protocolTvlQuarantine).toEqual({
+      reason: "fallback-protocol-tvl-exceeds-headroom",
+      poolCount: 1,
+      protocolCount: 1,
+      tvlUsd: 2_000_000_000,
     });
   });
 

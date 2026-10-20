@@ -1,4 +1,4 @@
-import { logWorkerEventArgs } from "../../lib/structured-log";
+import { logWorkerEvent, logWorkerEventArgs } from "../../lib/structured-log";
 import { isBlockedDexId } from "../../lib/dex-cron-constants";
 import { canonicalExitRouteScopedId, canonicalExitRouteScopedKey } from "@shared/types/exit-route-identity";
 import { CURVE_NATIVE_DISCOVERY_CHAINS } from "@shared/lib/dex-deployment-coverage";
@@ -49,7 +49,6 @@ export type BuildNewPoolArgs<TRawPool> = {
   stablecoinId: string;
   chain: string;
   price: number;
-  cappedTvlUsd: number;
   maturityDays: number;
 };
 
@@ -131,6 +130,8 @@ export async function crawlTokenPools<TRawPool, TNewPool extends GtNewPool>(
   const minTvlUsd = config.minTvlUsd ?? 10_000;
   let requestCount = 0;
   const coherenceRejections = createPoolPriceCoherenceAdmissionGate("dex-liquidity", config.sourceLabel);
+  let quarantinedPoolCount = 0;
+  let quarantinedTvlUsd = 0;
   let stoppedEarly = false;
   for (const token of config.tokens) {
     throwIfAborted(config.signal);
@@ -188,6 +189,13 @@ export async function crawlTokenPools<TRawPool, TNewPool extends GtNewPool>(
           continue;
         }
 
+        const protoCap = config.protocolTvlCaps.get(normalizeProtocol(parsed.dexId));
+        if (protoCap != null && Number.isFinite(protoCap) && protoCap > 0 && parsed.tvlUsd > protoCap) {
+          quarantinedPoolCount++;
+          quarantinedTvlUsd += parsed.tvlUsd;
+          continue;
+        }
+
         if (hasUsablePrice && parsed.tvlUsd >= DEX_PRICE_OBSERVATION_MIN_TVL_USD) {
           const obs = config.priceObs.get(token.stablecoinId) ?? [];
           obs.push({ price, observedAt, tvl: parsed.tvlUsd, chain: token.ourChain, protocol: parsed.dexId });
@@ -207,9 +215,6 @@ export async function crawlTokenPools<TRawPool, TNewPool extends GtNewPool>(
           continue;
         }
 
-        const protoNorm = normalizeProtocol(parsed.dexId);
-        const protoCap = config.protocolTvlCaps.get(protoNorm);
-        const cappedTvlUsd = protoCap != null && parsed.tvlUsd > protoCap ? protoCap : parsed.tvlUsd;
         const maturityDays = toMaturityDays(parsed.createdAt, nowSec);
 
         const poolList = config.newPools.get(token.stablecoinId) ?? [];
@@ -219,7 +224,6 @@ export async function crawlTokenPools<TRawPool, TNewPool extends GtNewPool>(
           stablecoinId: token.stablecoinId,
           chain: token.ourChain,
           price,
-          cappedTvlUsd,
           maturityDays,
         });
         newPool.priceObservedAt = observedAt;
@@ -237,6 +241,18 @@ export async function crawlTokenPools<TRawPool, TNewPool extends GtNewPool>(
   }
 
   coherenceRejections.flush();
+  if (quarantinedPoolCount > 0) {
+    logWorkerEvent({
+      scope: "handler", level: "warn", event: "dex-liquidity-source-quarantine",
+      message: "Oversized fallback pool TVL quarantined without scaling",
+      job: "sync-dex-liquidity", source: config.sourceLabel,
+      metadata: {
+        reason: "fallback-pool-tvl-exceeds-protocol",
+        poolCount: quarantinedPoolCount,
+        tvlUsd: quarantinedTvlUsd,
+      },
+    });
+  }
 
   return { stoppedEarly };
 }

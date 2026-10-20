@@ -8,6 +8,16 @@ export type DexApiJsonResult<T> =
 
 export { isRecord as isDexApiRecord } from "@shared/lib/type-guards";
 
+/** Reject numeric prefixes, empty values and non-decimal encodings from provider scalars. */
+export function parseStrictFiniteDecimal(value: unknown): number | null {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim();
+  const unsigned = normalized[0] === "+" || normalized[0] === "-" ? normalized.slice(1) : normalized;
+  if (!unsigned || ["0x", "0o", "0b"].includes(unsigned.slice(0, 2).toLowerCase())) return null;
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 /**
  * Reads one direct-API page body under an explicit byte cap.
  *

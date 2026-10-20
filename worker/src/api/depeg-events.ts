@@ -93,11 +93,22 @@ async function loadPoolAvailability(
 ): Promise<Map<string, boolean>> {
   try {
     const where = stablecoinId ? " WHERE stablecoin_id = ?" : " WHERE stablecoin_id != '__global__'";
-    const stmt = db
-      .prepare(
-        `SELECT /* pharos:depeg-events:pool-availability */
-           stablecoin_id, snapshot_at, has_rows FROM dex_price_challenger_snapshots${where}`,
-      );
+    const stmt = db.prepare(
+      `SELECT /* pharos:depeg-events:pool-availability */ stablecoin_id, snapshot_at, has_rows
+         FROM (
+           SELECT heads.stablecoin_id, publication.snapshot_at,
+                  CASE WHEN heads.source_coverage_complete = 1 THEN heads.has_rows ELSE 0 END AS has_rows
+             FROM dex_price_challenger_heads_v2 heads
+             JOIN dex_price_challenger_publications_v2 publication
+               ON publication.publication_id = heads.publication_id AND publication.sealed = 1
+           UNION ALL
+           SELECT snapshots.stablecoin_id, snapshots.snapshot_at,
+                  CASE WHEN snapshots.source_coverage_complete = 1 THEN snapshots.has_rows ELSE 0 END AS has_rows
+             FROM dex_price_challenger_snapshots snapshots
+            WHERE NOT EXISTS (SELECT 1 FROM dex_price_challenger_heads_v2 heads
+                               WHERE heads.stablecoin_id = snapshots.stablecoin_id)
+         )${where}`,
+    );
     const result = stablecoinId
       ? await stmt.bind(stablecoinId).all<PoolAvailabilityRow>()
       : await stmt.all<PoolAvailabilityRow>();

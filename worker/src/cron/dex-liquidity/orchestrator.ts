@@ -1085,7 +1085,8 @@ async function scoreDexLiquidityPoolState(
   // failure already forces `degraded` and skipped persistence, so it keeps
   // suppressing the hard abort that would otherwise replace that metadata with
   // a thrown error.
-  const hasCriticalSourceFailure = sourceState.criticalSourceFailures.length > 0;
+  const hasCriticalSourceFailure = sourceState.criticalSourceFailures.length > 0 ||
+    analysis.requiredBaselineUnavailable;
   if (!hasCriticalSourceFailure && analysis.hardCoverageGuard) {
     throw new Error(
       `[dex-liquidity] coverage guard tripped: current=${analysis.currentCoverage}, baseline=${analysis.previousCoverage}, minExpected=${analysis.minExpectedCoverage}`,
@@ -1099,10 +1100,10 @@ async function scoreDexLiquidityPoolState(
   }
   if (!hasCriticalSourceFailure && analysis.hardMajorCoverageGuard) {
     throw new Error(
-      `[dex-liquidity] major coverage guard tripped: currentTop10GuardTvl=${Math.round(analysis.currentTop10GuardTvl)}, ` +
-        `previousTop10GuardTvl=${Math.round(analysis.previousTop10GuardTvl)}, ` +
-        `currentTop10CoveredTvl=${Math.round(analysis.currentTop10CoveredTvl)}, ` +
-        `previousTop10CoveredTvl=${Math.round(analysis.previousTop10CoveredTvl)}`,
+      `[dex-liquidity] major coverage guard tripped: currentTop10GuardTvl=${Math.round(analysis.currentTop10GuardTvl!)}, ` +
+        `previousTop10GuardTvl=${Math.round(analysis.previousTop10GuardTvl!)}, ` +
+        `currentTop10CoveredTvl=${Math.round(analysis.currentTop10CoveredTvl!)}, ` +
+        `previousTop10CoveredTvl=${Math.round(analysis.previousTop10CoveredTvl!)}`,
     );
   }
   throwIfAborted(ctx.signal);
@@ -1136,7 +1137,9 @@ async function persistDexLiquidityScoreState(
   poolState: DexLiquidityPoolState,
   scoreState: DexLiquidityScoreState,
 ): Promise<DexLiquidityPersistenceState> {
-  const skippedReason = getPersistenceSkipReason(sourceState.criticalSourceFailures);
+  const skippedReason = scoreState.analysis.requiredBaselineUnavailable
+    ? "required-baseline-read-failed"
+    : getPersistenceSkipReason(sourceState.criticalSourceFailures);
   if (skippedReason) {
     scoreState.measuredTargetInventory.active.length = 0;
     scoreState.measuredTargetInventory.shadow.length = 0;
@@ -1233,32 +1236,17 @@ async function persistDexLiquidityScoreState(
     done: scoreState.scoreResults.size, total: scoreState.scoreResults.size,
   });
 
-  const hasCriticalSourceFailure = sourceState.criticalSourceFailures.length > 0;
-  const sourceCoverageCompleteByStablecoin = new Map<string, boolean>(
-    ACTIVE_STABLECOINS.map((meta) => {
-      const retainedPools = scoreState.retainedPoolsByStablecoin.get(meta.id) ?? [];
-      const hasPublishedRows = retainedPools.some(
-        (pool) =>
-          Number.isFinite(pool.price) &&
-          (pool.price ?? 0) > 0 &&
-          Number.isFinite(pool.tvlUsd) &&
-          pool.tvlUsd >= POOL_CHALLENGE_MIN_TVL,
-      );
-      return [meta.id, !hasCriticalSourceFailure || hasPublishedRows];
-    }),
-  );
   const challengerPublication = await publishDexPriceChallengerSnapshots(
     ctx.db,
     {
       snapshotAt: ctx.syncStartSec,
+      generationId: publicationGenerationId,
       retainedPoolsByStablecoin: scoreState.retainedPoolsByStablecoin,
-      sourceCoverageCompleteByStablecoin,
       minPoolTvlUsd: POOL_CHALLENGE_MIN_TVL,
       consumeRetainedPools: true,
     },
     ctx.signal,
   );
-  sourceCoverageCompleteByStablecoin.clear();
   scoreState.retainedPoolsByStablecoin.clear();
   await ctx.reportDexProgress("persistence-challengers-complete", {
     message: "Published bounded DEX challenger batches", providerFamily: "d1", done: challengerPublication.publishedStablecoins,

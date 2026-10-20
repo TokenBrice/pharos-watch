@@ -235,11 +235,12 @@ export const DexLiquidityCronMetadataSchema = z.object({
       priceObservationCoinsBySourceFamily: z.record(z.string(), z.number()).optional(),
       sourceDegradedFamilies: z.array(z.string()).optional(),
       globalProtocolOverCapUsd: z.number().optional(),
-      protocolCapReductions: z
+      protocolTvlQuarantine: z
         .object({
-          cappedPoolCount: z.number().optional(),
-          cappedProtocols: z.number().optional(),
-          reducedTvlUsd: z.number().optional(),
+          reason: z.literal("fallback-protocol-tvl-exceeds-headroom"),
+          poolCount: z.number().int().nonnegative(),
+          protocolCount: z.number().int().nonnegative(),
+          tvlUsd: z.number().nonnegative(),
         })
         .optional(),
       qualityDriftFlags: z.array(z.string()).optional(),
@@ -385,3 +386,6 @@ export const DexLiquidityCronMetadataSchema = z.object({
 });
 
 export type DexLiquidityCronMetadata = z.infer<typeof DexLiquidityCronMetadataSchema>;
+export type DexLiquidityProtocolTvlQuarantine = NonNullable<
+  NonNullable<DexLiquidityCronMetadata["sourceCoverage"]>["protocolTvlQuarantine"]
+>;

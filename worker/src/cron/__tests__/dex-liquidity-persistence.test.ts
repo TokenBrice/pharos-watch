@@ -1088,6 +1088,60 @@ describe("dex-liquidity persistence", () => {
     }
   });
 
+  it("persists only admitted raw pools after a physical fallback quarantine across coins", async () => {
+    const fixtures = createLatestSchemaFixtureTracker();
+    try {
+      const { sqlite, db } = fixtures.open();
+      const actual = await vi.importActual<typeof DbModule>("../../lib/db");
+      vi.mocked(batchExecute).mockImplementation(actual.batchExecute);
+      vi.mocked(executeAtomicBatch).mockImplementation(actual.executeAtomicBatch);
+      const now = 1_800_000_000;
+      const usdc = initMetrics("usdc-circle", "USDC");
+      const usdt = initMetrics("usdt-tether", "USDT");
+      const trusted = makePool({
+        poolId: "ethereum:trusted", project: "orca", chain: "ethereum", source: "direct_api", tvlUsd: 150_000,
+        extra: { qualityAdjustedTvl: 120_000, effectiveTvl: 90_000 },
+        volumeReading: { volume24hUsd: 20_000, volume7dUsd: 140_000, observedAtSec: now - 60 },
+      });
+      const fallback = makePool({
+        poolId: "ethereum:fallback", project: "orca", chain: "ethereum", source: "gecko_terminal", tvlUsd: 80_000,
+        extra: { qualityAdjustedTvl: 40_000, effectiveTvl: 30_000 },
+        volumeReading: { volume24hUsd: 15_000, volume7dUsd: 105_000, observedAtSec: now - 60 },
+      });
+      usdc.topPools = [trusted, fallback];
+      usdt.topPools = [{ ...fallback }];
+      const metrics = new Map([["usdc-circle", usdc], ["usdt-tether", usdt]]);
+      const result = await computeStablecoinScores(db, metrics, new Map([["orca", 180_000]]), undefined, now);
+      await persistScores(db, metrics, result.scores, result.globalAgg, now);
+      for (const id of ["usdc-circle", "__global__"]) {
+        const row = sqlite.prepare(`SELECT total_tvl_usd, total_volume_24h_usd, protocol_tvl_json,
+          chain_tvl_json, volume_availability_json FROM dex_liquidity WHERE stablecoin_id = ?`).get(id) as {
+          total_tvl_usd: number; total_volume_24h_usd: number; protocol_tvl_json: string;
+          chain_tvl_json: string; volume_availability_json: string;
+        };
+        expect(row.total_tvl_usd).toBe(150_000);
+        expect(row.total_volume_24h_usd).toBe(20_000);
+        expect(JSON.parse(row.protocol_tvl_json)).toEqual({ orca: 150_000 });
+        expect(JSON.parse(row.chain_tvl_json)).toEqual({ ethereum: 150_000 });
+        expect(JSON.parse(row.volume_availability_json)["24h"]).toMatchObject({
+          retainedTvlUsd: 150_000, admittedTvlUsd: 150_000, partialGrossUsd: 20_000,
+        });
+      }
+      const row = sqlite.prepare(`SELECT total_tvl_usd, effective_tvl_usd, top_pools_json
+        FROM dex_liquidity WHERE stablecoin_id = 'usdc-circle'`).get() as {
+        total_tvl_usd: number; effective_tvl_usd: number; top_pools_json: string;
+      };
+      expect(row.effective_tvl_usd).toBe(90_000);
+      expect(JSON.parse(row.top_pools_json)).toEqual([expect.objectContaining({ poolId: "ethereum:trusted", tvlUsd: 150_000 })]);
+      expect(sqlite.prepare("SELECT total_tvl_usd FROM dex_liquidity WHERE stablecoin_id = 'usdt-tether'").get())
+        .toEqual({ total_tvl_usd: 0 });
+      expect(fallback.tvlUsd).toBe(80_000);
+      expect(fallback.extra?.effectiveTvl).toBe(30_000);
+    } finally {
+      fixtures.closeAll();
+    }
+  });
+
 
 
   it("logs and swallows snapshot query failures", async () => {

@@ -1,4 +1,4 @@
-import { canonicalExitRouteAssetKey } from "@shared/types/exit-route-identity";
+import { buildPrimaryPoolKey, samePrimaryPoolObservation } from "./pool-identity";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { DEX_LIQUIDITY_POOL_MIN_TVL_USD } from "./constants";
 import type { LiquidityMetrics } from "./types";
@@ -13,6 +13,8 @@ import {
   type PoolProcessingRejection,
   type ProcessPoolMetricsInput,
   type ProcessPoolMetricsResult,
+  type ResolvedPoolIdentity,
+  type PoolProtocolEnrichment,
 } from "./process-pool-types";
 
 export * from "./process-pool-execution-capability";
@@ -90,7 +92,9 @@ export function processPoolMetrics(
   const context = buildProcessingContext(input);
   const metrics = new Map<string, LiquidityMetrics>();
   const rejectionMap = new Map<string, PoolProcessingRejection>();
-  const seenCurvePoolAssets = new Set<string>();
+  const observations: { identity: ResolvedPoolIdentity; enrichment: PoolProtocolEnrichment; key: string; providerKey: string }[] = [];
+  const firstByKey = new Map<string, ResolvedPoolIdentity["pool"]>();
+  const conflictingKeys = new Set<string>();
   const enforceDexProjectFilter = context.dexProjects.size > 0;
   if (!enforceDexProjectFilter) {
     logWorkerEventArgs("handler", "warn",
@@ -114,12 +118,28 @@ export function processPoolMetrics(
     if (!identity) continue;
 
     const enrichment = enrichPoolProtocol(context, identity);
+    const key = buildPrimaryPoolKey(identity.chainNorm, pool.pool, pool.project,
+      enrichment.curveAddressMatch ? enrichment.curveData?.poolAddress : undefined);
+    const providerKey = `${identity.chainNorm}:defillama:${pool.pool.trim()}`;
+    for (const observationKey of [key, providerKey]) {
+      const previous = firstByKey.get(observationKey);
+      if (previous && !samePrimaryPoolObservation(previous, pool)) conflictingKeys.add(observationKey);
+      else if (!previous) firstByKey.set(observationKey, pool);
+    }
+    observations.push({ identity, enrichment, key, providerKey });
+  }
+
+  // Resolve the whole batch before accumulation: a later conflict retracts every
+  // observation of that identity, rather than selecting the first arriving row.
+  const seenPools = new Set<string>();
+  for (const { identity, enrichment, key, providerKey } of observations) {
+    if (conflictingKeys.has(key) || conflictingKeys.has(providerKey)) {
+      recordRejection(rejectionMap, identity.pool, new ExpectedPoolInputError("conflicting-pool-observations"));
+      continue;
+    }
+    if (seenPools.has(key)) continue;
+    seenPools.add(key);
     for (const stablecoinId of identity.matchedIds) {
-      if (enrichment.curveAddressMatch && enrichment.curveData?.poolAddress) {
-        const key = `${canonicalExitRouteAssetKey(identity.chainNorm, enrichment.curveData.poolAddress)}:${stablecoinId}`;
-        if (seenCurvePoolAssets.has(key)) continue;
-        seenCurvePoolAssets.add(key);
-      }
       const capability = buildPoolExecutionCapability(
         context,
         identity,

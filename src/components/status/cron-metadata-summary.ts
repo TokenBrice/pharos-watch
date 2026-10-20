@@ -140,9 +140,10 @@ function summarizeDexLiquidity(metadata: Record<string, unknown>): string[] {
   const priceObservationPctDelta = readNumber(qualityDriftMetrics?.priceObservationPctDelta);
   const measuredBalanceCoverageDelta = readNumber(qualityDriftMetrics?.measuredBalanceCoverageDelta);
   const topAssetCoverageDeltas = readArray(sourceCoverage?.topAssetCoverageDeltas);
-  const protocolCapReductions = readRecord(sourceCoverage?.protocolCapReductions);
-  const cappedPoolCount = readNumber(protocolCapReductions?.cappedPoolCount);
-  const reducedTvlUsd = readNumber(protocolCapReductions?.reducedTvlUsd);
+  const protocolTvlQuarantine = readRecord(sourceCoverage?.protocolTvlQuarantine);
+  const quarantinedPoolCount = readNumber(protocolTvlQuarantine?.poolCount);
+  const quarantinedTvlUsd = readNumber(protocolTvlQuarantine?.tvlUsd);
+  const quarantineReason = readString(protocolTvlQuarantine?.reason);
   const globalProtocolOverCapUsd = readNumber(sourceCoverage?.globalProtocolOverCapUsd);
   const nearCoverageGuard = readBoolean(sourceCoverage?.nearCoverageGuard);
   const skipBreakdown =
@@ -176,8 +177,8 @@ function summarizeDexLiquidity(metadata: Record<string, unknown>): string[] {
       ? `price-only/no-measured-liquidity rows ${coinsPriceOnlyNoMeasuredLiquidity}`
       : null,
     syntheticOnlyCoins != null && syntheticOnlyCoins > 0 ? `synthetic-only rows ${syntheticOnlyCoins}` : null,
-    cappedPoolCount != null && reducedTvlUsd != null && cappedPoolCount > 0
-      ? `protocol caps ${cappedPoolCount} pools, ${Math.round(reducedTvlUsd).toLocaleString()} TVL reduced`
+    quarantinedPoolCount != null && quarantinedTvlUsd != null && quarantinedPoolCount > 0
+      ? `protocol TVL quarantine ${quarantinedPoolCount} pools, ${Math.round(quarantinedTvlUsd).toLocaleString()} TVL excluded${quarantineReason ? ` (${quarantineReason})` : ""}`
       : null,
     globalProtocolOverCapUsd != null && globalProtocolOverCapUsd > 0
       ? `global protocol TVL excess ${Math.round(globalProtocolOverCapUsd).toLocaleString()} observed (not reduced)`

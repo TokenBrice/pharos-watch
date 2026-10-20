@@ -26,13 +26,16 @@ export function hasSameLiquidityMethodologyBasis(
  * volume-derived CoinGecko ticker TVL, including legacy registry rows. Version
  * 6.96 removes the second global protocol clamp so all global TVL and volume
  * denominators describe the retained deduped population.
+ * Version 6.97 retains distinct provider deployments instead of aggregating
+ * token-pair fingerprints, quarantines conflicting exact observations and
+ * replaces fallback TVL scaling with named source admission.
  * Versions that only reweight pools, change volume admission, or tighten discovery
  * admission (whose TVL effect ages in over the 14-day registry horizon) are not breaks. Ascending and
  * append-only: any future liquidity version that changes how retained TVL is
  * measured must be appended here in the same change that bumps
  * LIQUIDITY_METHODOLOGY_VERSION, or the 30-day stability series will mix bases.
  */
-const LIQUIDITY_TVL_BASIS_BREAK_VERSIONS: readonly string[] = ["6.91", "6.92", "6.93", "6.96"];
+const LIQUIDITY_TVL_BASIS_BREAK_VERSIONS: readonly string[] = ["6.91", "6.92", "6.93", "6.96", "6.97"];
 
 /**
  * TVL-measurement epoch of a persisted liquidity methodology version: the number

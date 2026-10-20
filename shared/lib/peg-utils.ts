@@ -93,7 +93,7 @@ export function worstDeviation(events: DepegEvent[]): number | null {
   return worst;
 }
 
-export function medianOfRounded(values: readonly number[]): number {
+export function medianOfRounded(values: readonly number[]): number | null {
   const result = median(values);
-  return result == null ? 0 : Math.round(result);
+  return result == null ? null : Math.round(result);
 }

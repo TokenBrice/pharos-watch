@@ -35,7 +35,7 @@ const SnapshotCandidateSchema = z.object({
   tvlUsd: z.number().finite().positive(),
   token0Price: z.number().finite().positive(),
   token1Price: z.number().finite().positive(),
-  tokens: z.tuple([SnapshotTokenSchema, SnapshotTokenSchema]),
+  tokens: z.tuple([SnapshotTokenSchema, SnapshotTokenSchema]).readonly(),
 });
 
 const SnapshotPayloadSchema = z.object({
@@ -110,7 +110,7 @@ export function mergeUniV3CandidateSnapshot(
     );
     if (key == null) continue;
     const bucket = into.get(key) ?? [];
-    bucket.push(candidate);
+    bucket.push({ ...candidate, carriedFromSnapshot: true });
     into.set(key, bucket);
     present.add(poolKey);
     added++;

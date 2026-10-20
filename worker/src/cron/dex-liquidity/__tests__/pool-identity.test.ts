@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildDexPriceObservationIdentity,
   buildPoolIdentity,
+  buildPrimaryPoolKey,
   clearKnownPoolIdentityIndex,
   countPoolIdentityKeys,
   createKnownPoolIdentityIndex,
@@ -11,6 +12,20 @@ import {
 } from "../pool-identity";
 
 describe("pool identity dedup", () => {
+  it("keeps opaque provider deployments distinct without claiming exact physical identity", () => {
+    const first = "10000000-0000-4000-8000-000000000000";
+    const second = "20000000-0000-4000-8000-000000000000";
+    expect(buildPrimaryPoolKey("Ethereum", first, "uniswap-v3")).toBe(`ethereum:defillama:${first}`);
+    expect(buildPrimaryPoolKey("ethereum", first, "uniswap-v3")).not.toBe(buildPrimaryPoolKey("ethereum", second, "uniswap-v3"));
+    expect(buildPrimaryPoolKey("ethereum", first, "uniswap-v3")).not.toBe(buildPrimaryPoolKey("base", first, "uniswap-v3"));
+    expect(buildPrimaryPoolKey("ethereum", "OpaqueCase", "curve")).not.toBe(buildPrimaryPoolKey("ethereum", "opaquecase", "curve"));
+    const physical = "0xabc0000000000000000000000000000000000000";
+    expect(buildPrimaryPoolKey("ethereum", first, "curve", physical)).toBe(`ethereum:${physical}`);
+    expect(buildPoolIdentity({ chain: "ethereum", protocol: "curve",
+      poolAddressOrId: buildPrimaryPoolKey("ethereum", first, "curve"), tokenAddresses: [],
+    }).exactPoolKey).toBeNull();
+  });
+
   it("releases every identity collection after the dedup phase", () => {
     const known = createKnownPoolIdentityIndex();
     known.exactKeys.add("ethereum:0xpool");

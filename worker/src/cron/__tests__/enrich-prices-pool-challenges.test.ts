@@ -106,6 +106,30 @@ describe("pool challenge — soft-only high confidence downgrade", () => {
 });
 
 describe("applyPoolChallenge", () => {
+  it("uses bounded price evidence rather than unrelated retained TVL for conflicting protocol medians", () => {
+    const pool = (poolId: string, project: string, price: number, tvlUsd: number, priceEvidenceTvlUsd?: number): PoolEntry => ({
+      poolId, project, price, tvlUsd, priceEvidenceTvlUsd,
+      priceSource: priceEvidenceTvlUsd == null ? undefined : "cg_onchain",
+      chain: "Ethereum", symbol: "TEST-USDC", source: "dl", poolType: "generic",
+      volumeUsd1d: 10_000, volumeUsd7d: 70_000,
+    });
+    const rows = selectDexPriceChallengerRowsFromPools("dusd-test", [
+      pool("curve-low", "curve", 0.8, 1_000_000),
+      pool("curve-high", "curve", 1, 100_000_000, 300_000),
+      pool("balancer", "balancer", 0.8, 1_000_000),
+    ], 100_000);
+    const { results, pools, pegTypes, stats } = makePoolChallengeInputs({
+      assetId: "dusd-test",
+      result: makePriceConsensusResult(),
+      pools: rows.map((row) => ({
+        price: row.priceUsd, tvlUsd: row.tvlUsd, protocol: row.protocol, chain: row.chain,
+      })),
+    });
+    applyPoolChallenge(results, pools, pegTypes, stats);
+    expect(results.get("dusd-test")).toMatchObject({ source: "pool-tvl-weighted", price: 0.8, confidence: "low" });
+    expect(rows.find((row) => row.poolId === "curve-high")).toMatchObject({ sourceFamily: "cg_onchain", tvlUsd: 300_000 });
+  });
+
   it("replaces a bad soft price when a dominant and minority DEX protocol agree", () => {
     const makePool = (poolId: string, project: string, tvlUsd: number, price: number): PoolEntry => ({
       poolId,

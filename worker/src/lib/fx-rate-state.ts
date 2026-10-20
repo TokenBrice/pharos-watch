@@ -21,7 +21,7 @@ const FX_INTRADAY_SOURCE_STALE_AGE_SEC = 24 * 3600;
 const FX_CALENDAR_DAILY_ROLLOVER_HOUR_UTC = 6;
 const FX_BUSINESS_DAILY_PUBLISH_HOUR_UTC = 16;
 /** A persisted per-peg source time further ahead of the reader clock than this is not admissible provenance. */
-const FX_SOURCE_MAX_FUTURE_SKEW_SEC = 5 * 60;
+export const FX_SOURCE_MAX_FUTURE_SKEW_SEC = 5 * 60;
 const SHA256_HEX_PATTERN = /^[0-9a-f]{64}$/;
 
 export type FxRateSyncMode = "live" | "cached-fallback";
@@ -56,7 +56,9 @@ export type FxPegAdmissionIssue =
   | `metadata-${FxUnverifiableMetadataIdentity}`
   | "source-provenance-missing"
   | "source-time-missing"
-  | "source-time-future";
+  | "source-time-future"
+  | "source-date-invalid"
+  | "source-date-future";
 
 export interface FxRatesMeta {
   usableSyncAt: number;
@@ -66,6 +68,7 @@ export interface FxRatesMeta {
   sourceCadenceByPeg?: Record<string, FxSourceCadence>;
   sourceDateByPeg?: Record<string, string | null>;
   sources?: Record<string, string>;
+  sourceLastSuccessAtBySource?: Record<string, number>;
   ecbDate?: string | null;
   previousCacheUpdatedAt?: number | null;
   consecutiveFallbackRuns: number;
@@ -81,6 +84,7 @@ export interface FxRateState {
   sourceCadenceByPeg: Record<string, FxSourceCadence>;
   sourceDateByPeg: Record<string, string | null>;
   sources?: Record<string, string>;
+  sourceLastSuccessAtBySource: Record<string, number>;
   ecbDate?: string | null;
   previousCacheUpdatedAt?: number | null;
   consecutiveFallbackRuns: number;
@@ -129,6 +133,27 @@ function sanitizeSources(input: unknown): Record<string, string> | undefined {
     typeof value === "string" && value.length > 0 ? value : undefined
   ));
   return Object.keys(out).length > 0 ? out : undefined;
+}
+
+const FX_SOURCE_SUCCESS_ALIASES = {
+  "secondary:jsdelivr": ["secondary:jsdelivr", "jsdelivr", "fawazahmed0"],
+  "secondary:pages.dev": ["secondary:pages.dev", "pages.dev"],
+  "secondary:jsdelivr-versioned": ["secondary:jsdelivr-versioned", "jsdelivr-versioned"],
+  openExchangeRates: ["openExchangeRates", "openexchange-rates"],
+  metals: ["metals", "gold-api.com"],
+  chainlink: ["chainlink", "chainlink-feeds"],
+} as const;
+
+function sanitizeSourceLastSuccess(input: unknown): Record<string, number> {
+  if (!input || typeof input !== "object" || Array.isArray(input)) return {};
+  const record = input as Record<string, unknown>;
+  const result: Record<string, number> = {};
+  for (const [source, aliases] of Object.entries(FX_SOURCE_SUCCESS_ALIASES)) {
+    const timestamp = aliases.map((alias) => record[alias])
+      .find((value) => typeof value === "number" && Number.isFinite(value) && value > 0);
+    if (typeof timestamp === "number") result[source] = Math.floor(timestamp);
+  }
+  return result;
 }
 
 /**
@@ -180,6 +205,7 @@ function parseFxMeta(
             sourceCadenceByPeg: sanitizeSourceCadenceByPeg(record.sourceCadenceByPeg),
             sourceDateByPeg: sanitizeSourceDateByPeg(record.sourceDateByPeg),
             sources: sanitizeSources(record.sources),
+            sourceLastSuccessAtBySource: sanitizeSourceLastSuccess(record.sourceLastSuccessAtBySource ?? record.sourceLastSuccessAt),
             ecbDate: typeof record.ecbDate === "string" && record.ecbDate.length > 0 ? record.ecbDate : null,
             previousCacheUpdatedAt:
               typeof record.previousCacheUpdatedAt === "number" && Number.isFinite(record.previousCacheUpdatedAt)
@@ -230,8 +256,14 @@ function formatUtcDate(dayStartSec: number): string {
 function parseIsoDayStartSec(dateText: string | null | undefined): number | null {
   if (!dateText || !/^\d{4}-\d{2}-\d{2}$/.test(dateText)) return null;
   const parsed = Date.parse(`${dateText}T00:00:00Z`);
-  if (!Number.isFinite(parsed)) return null;
+  if (!Number.isFinite(parsed) || new Date(parsed).toISOString().slice(0, 10) !== dateText) return null;
   return Math.floor(parsed / 1000);
+}
+
+/** Date-only providers may publish today's date before their nominal publication hour. */
+export function isAdmissibleFxSourceDate(dateText: string | null | undefined, nowSec: number): boolean {
+  const dayStartSec = parseIsoDayStartSec(dateText);
+  return dayStartSec != null && dayStartSec <= startOfUtcDaySec(new Date(nowSec * 1000));
 }
 
 function isWeekendDay(dayStartSec: number): boolean {
@@ -352,6 +384,12 @@ function evaluateFxSourceFreshness(
       ? Math.max(0, nowSec - updatedAt)
       : null;
   const sourceDaySec = parseIsoDayStartSec(sourceDate);
+  if (
+    (updatedAt != null && updatedAt - nowSec > FX_SOURCE_MAX_FUTURE_SKEW_SEC)
+    || (sourceDate != null && !isAdmissibleFxSourceDate(sourceDate, nowSec))
+  ) {
+    return { status: "none", ageSec: null, cadence: normalizedCadence, warning: null };
+  }
 
   if (normalizedCadence === "business-daily" && sourceDaySec != null) {
     const expectedDaySec = resolveBusinessDailyExpectedDaySec(nowSec);
@@ -458,6 +496,14 @@ function assessFxPegAdmission(state: FxRateState, pegKey: string, nowSec: number
   if (updatedAt != null && updatedAt - nowSec > FX_SOURCE_MAX_FUTURE_SKEW_SEC) {
     return { status: "none", issue: "source-time-future", ageSec: null, cadence: null, updatedAt, warning: null };
   }
+  const sourceDate = state.sourceDateByPeg[pegKey];
+  if (sourceDate != null && !isAdmissibleFxSourceDate(sourceDate, nowSec)) {
+    return {
+      status: "none",
+      issue: parseIsoDayStartSec(sourceDate) == null ? "source-date-invalid" : "source-date-future",
+      ageSec: null, cadence: null, updatedAt, warning: null,
+    };
+  }
   const mode = state.sourceModeByPeg[pegKey];
   const freshness = evaluateFxSourceFreshness(
     pegKey,
@@ -558,6 +604,7 @@ export function hydrateFxRateState(
       }),
     ),
     sources: meta.sources,
+    sourceLastSuccessAtBySource: meta.sourceLastSuccessAtBySource ?? {},
     ecbDate: meta.ecbDate ?? null,
     previousCacheUpdatedAt: meta.previousCacheUpdatedAt ?? ratesCache.updatedAt,
     consecutiveFallbackRuns: meta.consecutiveFallbackRuns,

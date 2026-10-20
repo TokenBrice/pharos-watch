@@ -60,7 +60,7 @@ function makeAnalysisInput(overrides: Partial<Parameters<typeof analyzeDexLiquid
     retainedPoolsByStablecoin: new Map(),
     priceObservations: new Map(),
     diagnostics: {
-      protocolCapReductions: {},
+      protocolTvlQuarantine: { reason: "fallback-protocol-tvl-exceeds-headroom" as const, poolCount: 0, protocolCount: 0, tvlUsd: 0 },
       globalProtocolOverCapUsd: 0,
     },
     stagedMergedCount: 0,
@@ -210,7 +210,7 @@ describe("analyzeDexLiquidityPostScoring", () => {
       const scores = new Map(activeIds.map((id) => [id, { ...BASE_SCORE_RESULT, tvl: 10_000_000, effectiveTvl: 10_000_000 }]));
       const healthy = await analyzeDexLiquidityPostScoring(makeAnalysisInput({ db, scoreResults: scores }));
       expect(healthy.previousCoverage).toBe(10);
-      expect(healthy.sourceCoverage.previousCoverageClasses.primary).toBe(10);
+      expect(healthy.sourceCoverage.previousCoverageClasses?.primary).toBe(10);
       expect(healthy.previousTop10CoveredTvl).toBe(100_000_000);
       expect(healthy.currentTop10CoveredTvl).toBe(100_000_000);
       expect(healthy.sourceCoverage.majorTvlCliffs).toEqual([]);
@@ -393,9 +393,9 @@ describe("analyzeDexLiquidityPostScoring", () => {
       db,
     }));
 
-    expect(analysis.previousCoverage).toBe(0);
+    expect(analysis.previousCoverage).toBeNull();
     expect(analysis.previousCoverageBaselineAvailable).toBe(false);
-    expect(analysis.minExpectedCoverage).toBe(0);
+    expect(analysis.minExpectedCoverage).toBeNull();
     expect(analysis.nearCoverageGuard).toBe(false);
     expect(analysis.sourceCoverage.previousCoverageBaselineAvailable).toBe(false);
     expect(
@@ -418,6 +418,45 @@ describe("analyzeDexLiquidityPostScoring", () => {
         },
       }),
     ).toBe(true);
+  });
+
+  it.each([
+    ["ORDER BY total_tvl_usd DESC", "top-ten-read-failed", true],
+    ["GROUP BY coverage_class", "coverage-classes-read-failed", false],
+    ["SELECT total_tvl_usd, updated_at", "global-tvl-read-failed", true],
+    ["FROM cron_runs", "cron-history-read-failed", true],
+    ["SELECT stablecoin_id, pool_count", "watchlist-read-failed", false],
+    ["FROM dex_liquidity_run_rows r", "coin-tvl-read-failed", false],
+  ] as const)("keeps %s failure distinct from an empty bootstrap", async (match, reason, required) => {
+    const empty = await analyzeDexLiquidityPostScoring(makeAnalysisInput());
+    const failed = await analyzeDexLiquidityPostScoring(makeAnalysisInput({
+      db: mockD1([{ match, rows: [], throwError: new Error("baseline unavailable") }], { assertMatchesUsed: true }),
+    }));
+    expect(empty.requiredBaselineUnavailable).toBe(false);
+    expect(empty.previousCoverage).toBe(0);
+    expect(empty.previousCoverageBaselineAvailable).toBe(true);
+    expect(empty.previousTop10GuardTvl).toBe(0);
+    expect(empty.hardMajorCoverageGuard).toBe(false);
+    expect(empty.sourceCoverage.previousCoverageClasses).toEqual({
+      primary: 0, mixed: 0, fallback: 0, legacy: 0, unobserved: 0,
+    });
+    expect(empty.sourceCoverage.baselineReadFailures).toEqual([]);
+    expect(failed.currentCoverage).toBe(empty.currentCoverage);
+    expect(failed.currentGlobalTvl).toBe(empty.currentGlobalTvl);
+    expect(failed.requiredBaselineUnavailable).toBe(required);
+    expect(failed.sourceCoverage.baselineReadFailures).toEqual([reason]);
+    if (reason === "top-ten-read-failed") {
+      expect(failed.currentTop10CoveredTvl).toBeNull();
+      expect(failed.previousTop10CoveredTvl).toBeNull();
+      expect(failed.currentTop10GuardTvl).toBeNull();
+      expect(failed.previousTop10GuardTvl).toBeNull();
+    }
+    if (reason === "coverage-classes-read-failed") expect(failed.sourceCoverage.previousCoverageClasses).toBeNull();
+    if (reason === "global-tvl-read-failed" || reason === "cron-history-read-failed") {
+      expect(failed.previousGlobalTvl).toBeNull();
+      expect(failed.minExpectedGlobalTvl).toBeNull();
+    }
+    if (reason === "cron-history-read-failed") expect(failed.previousCoverage).toBeNull();
   });
 
   it("ignores a source-incomplete persisted value baseline and uses the last source-complete cron baseline", async () => {

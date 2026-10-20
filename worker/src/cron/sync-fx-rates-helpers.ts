@@ -7,7 +7,7 @@ import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
 import { getCache, setCache } from "../lib/db-cache";
 import type { MetalPegKey, MetalsResolution } from "../lib/fx-metals";
 import type { FxRateSourceMode, FxRateState, FxRateSyncMode, FxRatesMeta, FxSourceCadence } from "../lib/fx-rate-state";
-import { getFxSourceStatus, persistFxRateState } from "../lib/fx-rate-state";
+import { FX_SOURCE_MAX_FUTURE_SKEW_SEC, getFxSourceStatus, isAdmissibleFxSourceDate, persistFxRateState } from "../lib/fx-rate-state";
 import { logCronEvent, type CronEventInput, type CronResult } from "../lib/cron-logger";
 import {
   applyRealtimeOverlaySourceMetadata,
@@ -191,7 +191,7 @@ function resolveDatedSourceUpdatedAt(
   syncStartSec: number,
   publishedHourUtc?: number,
 ): number | null {
-  if (!dateText || !/^\d{4}-\d{2}-\d{2}$/.test(dateText)) return null;
+  if (!isAdmissibleFxSourceDate(dateText, syncStartSec)) return null;
   const timeSuffix = publishedHourUtc == null
     ? "T23:59:59Z"
     : `T${String(publishedHourUtc).padStart(2, "0")}:00:00Z`;
@@ -351,6 +351,7 @@ export class FxSyncRunState {
     mappings: SecondaryFxMappings,
     options: { includeMissingPrevious?: boolean } = {},
   ): void {
+    if (candidate.payload.date != null && !isAdmissibleFxSourceDate(candidate.payload.date, this.syncStartSec)) return;
     this.applyPerUsdPayload({
       payload: candidate,
       mappings,
@@ -374,18 +375,18 @@ export class FxSyncRunState {
     mappings: SecondaryFxMappings,
     options: { includeMissingPrevious?: boolean } = {},
   ): void {
+    const timestamp = payload.time_last_update_unix;
+    if (timestamp != null && (
+      !Number.isFinite(timestamp) || timestamp <= 0
+      || timestamp - this.syncStartSec > FX_SOURCE_MAX_FUTURE_SKEW_SEC
+    )) return;
     this.applyPerUsdPayload({
       payload,
       mappings,
       includeMissingPrevious: options.includeMissingPrevious,
       cadence: "calendar-daily",
-      resolveSourceMeta: (sourcePayload) => {
-        const sourceUpdatedAt =
-          typeof sourcePayload.time_last_update_unix === "number" &&
-          Number.isFinite(sourcePayload.time_last_update_unix) &&
-          sourcePayload.time_last_update_unix > 0
-            ? Math.min(this.syncStartSec, Math.floor(sourcePayload.time_last_update_unix))
-            : null;
+      resolveSourceMeta: () => {
+        const sourceUpdatedAt = timestamp == null ? null : Math.floor(timestamp);
         return {
           sourceUpdatedAt,
           sourceDate: sourceUpdatedAt == null
@@ -467,10 +468,11 @@ export class FxSyncRunState {
     currencyToPeg: Record<string, string>,
   ): void {
     this.usableRates = {};
+    const ecbUpdatedAt = resolveDatedSourceUpdatedAt(sourceDate, this.syncStartSec, 16);
+    if (ecbUpdatedAt == null) return;
     this.ecbDate = sourceDate;
 
     const ecbDateObj = new Date(`${sourceDate}T16:00:00Z`);
-    const ecbUpdatedAt = resolveDatedSourceUpdatedAt(sourceDate, this.syncStartSec, 16);
     const ecbAgeSec = (Date.now() - ecbDateObj.getTime()) / 1000;
     if (ecbAgeSec > DAY_SECONDS) {
       this.recordCronEvent({

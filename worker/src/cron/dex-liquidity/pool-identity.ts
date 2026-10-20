@@ -6,6 +6,27 @@ import {
 } from "@shared/types/exit-route-identity";
 import { normalizeProtocol } from "./pool-helpers";
 import { suiClmmFamily, suiCoinType, suiObjectId } from "./sui/identity";
+import type { LlamaPool } from "./types";
+
+/** Provider identity is not physical identity; pair fingerprints never own TVL. */
+export function buildPrimaryPoolKey(chain: string, poolId: string, protocol: string, physicalPoolId?: string): string {
+  const exact = buildPoolIdentity({
+    chain, protocol, poolAddressOrId: physicalPoolId ?? poolId, tokenAddresses: [],
+  }).exactPoolKey;
+  return exact ?? `${canonicalExitRouteChain(chain)}:defillama:${poolId.trim()}`;
+}
+
+/** Compare observations, not provider aliases or JSON property insertion order. */
+export function samePrimaryPoolObservation(left: LlamaPool, right: LlamaPool): boolean {
+  const observation = (pool: LlamaPool) => [
+    normalizeProtocol(pool.project), pool.symbol, pool.poolMeta ?? null,
+    pool.tvlUsd, pool.volumeUsd1d, pool.volumeUsd7d, pool.stablecoin,
+    pool.underlyingTokens?.map((token) => canonicalExitRouteScopedId(pool.chain, token)).sort() ?? null,
+    pool.apyBase, pool.apyReward, pool.apy, pool.apyMean30d ?? null,
+    pool.sigma, pool.exposure, pool.count,
+  ];
+  return JSON.stringify(observation(left)) === JSON.stringify(observation(right));
+}
 
 export type PoolIdentitySource = "address" | "native-id" | "token-shape-heuristic" | "none";
 export type PoolDedupReason = "exact" | "derived_unique" | "derived_optional_wildcard";

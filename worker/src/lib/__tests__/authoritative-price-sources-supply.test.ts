@@ -44,6 +44,15 @@ describe("resolveVaultNavSupplyPrice", () => {
     expect(await resolveVaultNavSupplyPrice("aa-falconx-mev-capital", previousPayload(nowSec))).toBeNull();
   });
 
+  it.each([301, 900, 86400])("withholds supply NAV for a %ss-old composite despite a recent sync", async (ageSec) => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const parent = freshParent("usdc-circle", 0.9999, "coingecko+pyth", {
+      nowSec, observedAt: nowSec - ageSec, priceSyncedAt: nowSec - 60,
+    });
+    expect(await resolveVaultNavSupplyPrice("eearn-ember", new Map([["usdc-circle", parent]]))).toBeNull();
+    expect(fetchEvmCallHexAtBlockMock).not.toHaveBeenCalled();
+  });
+
   it("resolves a live NAV supply price from the previous payload parent and persists the rate", async () => {
     const oneShareUsdcRaw = 1_040_000n.toString(16).padStart(64, "0");
     fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${oneShareUsdcRaw}`);
@@ -59,6 +68,8 @@ describe("resolveVaultNavSupplyPrice", () => {
     expect(override).toMatchObject({
       source: "protocol-redeem",
       confidence: "high",
+      observedAt: nowSec - 60,
+      observedAtMode: "upstream",
       metadata: { inheritedFrom: "usdc-circle" },
     });
     expect(override?.price).toBeCloseTo(1.04 * 0.9999, 6);

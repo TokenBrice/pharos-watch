@@ -214,9 +214,18 @@ describe("loadDexLiquiditySnapshot", () => {
       hasMeasuredLiquidityEvidence: false,
       trendworthy: false,
       effectiveTvlUsd: 0,
-      balanceMeasuredTvlUsd: 0,
-      organicMeasuredTvlUsd: 0,
+      balanceMeasuredTvlUsd: null,
+      organicMeasuredTvlUsd: null,
       methodologyVersion: "5.10",
+    });
+  });
+
+  it.each([null, 0, 12_000])("preserves independently observed measured weights (%s)", async (weight) => {
+    const result = await loadDexLiquiditySnapshot(mockDb([liquidityRow({
+      balance_measured_tvl_usd: weight, organic_measured_tvl_usd: weight,
+    })]));
+    expect(result.map["usdc-circle"]).toMatchObject({
+      balanceMeasuredTvlUsd: weight, organicMeasuredTvlUsd: weight, liquidityScore: 91,
     });
   });
 
