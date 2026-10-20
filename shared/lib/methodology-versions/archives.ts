@@ -1,4 +1,5 @@
-import { methodologyChangelogEntryId, type MethodologyChangelogDetailBlock } from "./base";
+import { methodologyChangelogEntryId } from "./base";
+import type { MethodologyChangelogDetailBlock } from "../../types/editorial-content";
 import { METHODOLOGY_CHANGELOG_REGISTRY, type MethodologyChangelogRegistryEntry } from "./registry";
 
 /** Bound the overview independently of the amount of retained history. */

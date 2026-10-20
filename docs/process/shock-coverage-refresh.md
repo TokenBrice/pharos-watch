@@ -60,6 +60,12 @@ npx tsx scripts/maintenance/generate-safety-score-v9-evaluation-build-manifest.t
 
 Measuring the same head block twice is idempotent: the measure script keeps the existing journal and verifies the new measurement matches it, rather than overwriting.
 
+Target getter descriptors and family calls author canonical signatures, not
+duplicate selectors. Live and replay journals share memoized selector derivation;
+replay still rejects any signature, selector, calldata or request-order mismatch
+against the original capture. Do not regenerate captures to accommodate a changed
+signature.
+
 To byte-replay a journal, supply its original path even when only the companion summary is committed. Replay resolves hash-verified local cache, pinned R2, then lifecycle R2; missing/expired or corrupt bodies fail rather than replaying the summary. Simulation equality and code-pin checks remain mandatory:
 
 ```bash

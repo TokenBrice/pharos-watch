@@ -6,6 +6,7 @@ import {
 } from "../../lib/db";
 import { TELEGRAM_ALERT_PERSISTENCE } from "@shared/lib/telegram-alert-families";
 import { TELEGRAM_ALERT_TYPES, type TelegramAlertType } from "@shared/types/status";
+import type { TelegramDewsBand, TelegramSafetyMode, TelegramDepegStepBps } from "@shared/types/status/telegram";
 import type { ResolvedCoin } from "../common/alerts-parser";
 import type {
   ParsedSetCommand,
@@ -25,9 +26,6 @@ import {
 } from "../delivery/operation-batch";
 import { pendingDisambiguationClearStatement } from "./disambiguation";
 
-export type DewsMinBandValue = "ALERT" | "WARNING" | "DANGER" | null;
-export type SafetyModeValue = "all" | "downgrade-only" | "upgrade-only" | null;
-export type DepegWorseningStepValue = 100 | 250 | 500 | null;
 
 export interface BuiltSubscriptionUpsert {
   sql: string;
@@ -146,7 +144,7 @@ export function buildDewsUpsert(
   chatId: string,
   stablecoinId: string,
   enabled: boolean,
-  minBand: DewsMinBandValue,
+  minBand: TelegramDewsBand | null,
 ): BuiltSubscriptionUpsert {
   return buildSubscriptionAlertUpsert({
     alertType: "dews",
@@ -162,7 +160,7 @@ export function buildSafetyUpsert(
   chatId: string,
   stablecoinId: string,
   enabled: boolean,
-  mode: SafetyModeValue,
+  mode: TelegramSafetyMode | null,
 ): BuiltSubscriptionUpsert {
   return buildSubscriptionAlertUpsert({
     alertType: "safety",
@@ -192,7 +190,7 @@ export function buildDepegUpsert(
 export function buildDepegStepUpsert(
   chatId: string,
   stablecoinId: string,
-  step: DepegWorseningStepValue,
+  step: TelegramDepegStepBps | null,
 ): BuiltSubscriptionUpsert {
   return buildSubscriptionAlertUpsert({
     alertType: "depeg",
@@ -360,14 +358,14 @@ export async function upsertSubscriberAndSubscriptions(
   if (atomicStatements.length > 0) await executeAtomicBatch(db, atomicStatements);
 }
 
-export async function applySettingToSubscriptions(
+export function prepareSettingToSubscriptions(
   db: D1Database,
   chatId: string,
   username: string | null,
-  coins: ResolvedCoin[],
+  coins: readonly Pick<ResolvedCoin, "id">[],
   command: ParsedSetCommand,
-  options: TelegramOperationBatchOptions & TelegramFollowOptions & { clearPending?: boolean } = {},
-): Promise<void> {
+  options: TelegramFollowOptions & { clearPending?: boolean } = {},
+): D1PreparedStatement[] {
   const now = unixNow();
   // `depeg-step` always implies the depeg family; every other setting bumps its
   // own family only when it is being turned on.
@@ -379,7 +377,7 @@ export async function applySettingToSubscriptions(
         : {};
 
   const statements: D1PreparedStatement[] = [
-    ...(coins.length > 0 && Object.values(perCoinAlertBumps ?? {}).some((flag) => flag === 1)
+    ...(options.recordFirstFollow !== false && coins.length > 0 && Object.values(perCoinAlertBumps ?? {}).some((flag) => flag === 1)
       ? prepareTelegramFirstFollowStatements(db, { chatId, username, nowSec: now, feature: "direct", adoption: options.adoption })
       : []),
     prepareUpsertSubscriberRow(db, {
@@ -400,6 +398,18 @@ export async function applySettingToSubscriptions(
     ));
   }
 
+  return statements;
+}
+
+export async function applySettingToSubscriptions(
+  db: D1Database,
+  chatId: string,
+  username: string | null,
+  coins: ResolvedCoin[],
+  command: ParsedSetCommand,
+  options: TelegramOperationBatchOptions & TelegramFollowOptions & { clearPending?: boolean } = {},
+): Promise<void> {
+  const statements = prepareSettingToSubscriptions(db, chatId, username, coins, command, options);
   await executeAtomicBatch(db, appendTelegramOperationStatements(statements, options));
 }
 

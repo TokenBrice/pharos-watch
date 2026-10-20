@@ -94,19 +94,8 @@ export const DDR_DURATION_LABELS: Readonly<Record<DdrrDurationReview, string>> =
   data_issue: "data issue",
 };
 
-const CORRECT_VERDICTS: ReadonlySet<DdrrVerdictReview> = new Set(["correct_recoverable", "correct_terminal"]);
-const MISS_VERDICTS: ReadonlySet<DdrrVerdictReview> = new Set(["false_terminal", "false_recoverable"]);
-
 export function isDdrScoredVerdict(verdict: DdrrVerdictReview): boolean {
   return DDRR_SCORED_VERDICTS.has(verdict);
-}
-
-export function isDdrCorrectVerdict(verdict: DdrrVerdictReview): boolean {
-  return CORRECT_VERDICTS.has(verdict);
-}
-
-export function isDdrMissVerdict(verdict: DdrrVerdictReview): boolean {
-  return MISS_VERDICTS.has(verdict);
 }
 
 export function formatDdrSignedDuration(seconds: number | null): string {
@@ -186,40 +175,6 @@ export function getRowTime(row: DdrrResponseRow): number {
 
 export function getSignedDurationError(row: DdrrResponseRow): number | null {
   return row.kind === "prediction_review" ? row.signedDurationErrorSec : null;
-}
-
-export interface PredictionRowsBreakdown {
-  correctRecoverable: number;
-  correctTerminal: number;
-  falseTerminal: number;
-  falseRecoverable: number;
-  withinIqrCount: number;
-  iqrScoredCount: number;
-}
-
-export function summarizePredictionRows(rows: readonly DdrrResponseRow[]): PredictionRowsBreakdown {
-  return rows.reduce<PredictionRowsBreakdown>(
-    (breakdown, row) => {
-      if (row.kind !== "prediction_review") return breakdown;
-      if (row.verdictReview === "correct_recoverable") breakdown.correctRecoverable += 1;
-      if (row.verdictReview === "correct_terminal") breakdown.correctTerminal += 1;
-      if (row.verdictReview === "false_terminal") breakdown.falseTerminal += 1;
-      if (row.verdictReview === "false_recoverable") breakdown.falseRecoverable += 1;
-      if (row.withinIqr != null) {
-        breakdown.iqrScoredCount += 1;
-        if (row.withinIqr) breakdown.withinIqrCount += 1;
-      }
-      return breakdown;
-    },
-    {
-      correctRecoverable: 0,
-      correctTerminal: 0,
-      falseTerminal: 0,
-      falseRecoverable: 0,
-      withinIqrCount: 0,
-      iqrScoredCount: 0,
-    },
-  );
 }
 
 export type NodeKind = "correct" | "miss" | "risk" | "pending" | "muted";

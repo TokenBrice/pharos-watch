@@ -9,14 +9,12 @@ import type { TelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-roll
 import type { TwitterCreds } from "../lib/twitter";
 import { SECONDS } from "../lib/time-constants";
 import { logMalformedJsonPath } from "../lib/json-decode-observability";
-import { parseJson } from "../lib/json-parse";
+import { parseJson, parseJsonObject } from "../lib/json-parse";
 import {
   buildDigestQualityAssessment,
   classifyDigestChannelStatus,
-  didDigestChannelDeliver,
   finalizeDigestCronResult,
   hasNonDeliveringDisposition,
-  markDigestMetaBlocked,
   reportDigestCircuitOpen,
   reportDigestGenerationComplete,
   reportDigestLlmAttempt,
@@ -27,7 +25,6 @@ import { requestDigestCopy, resolveDigestLlmConfig } from "./digest/llm-request"
 import { reportCronProgress } from "../lib/cron-progress";
 import { NON_BLOCKED_DIGEST_SQL_FILTER, NON_WEEKLY_DIGEST_SQL_FILTER } from "../lib/digest-sql-filters";
 import { buildRecentDigestMeta } from "./daily-digest/runtime-helpers";
-import { getMetaString } from "./daily-digest/digest-intelligence-utils";
 import { buildWeeklyInputData } from "./weekly-recap/input-data";
 import { WEEKLY_SYSTEM_PROMPT, buildWeeklyLeadRequirements, buildWeeklyPrompt } from "./weekly-recap/prompt";
 import type { DailyDigestSourceRow } from "./weekly-recap/types";
@@ -42,11 +39,13 @@ import {
   buildDigestTwitterPublication,
   deliverDigestEdition,
   publishDigestEdition,
+  readDigestTelegramOutboxState,
   type DigestCredentialDiagnostics,
 } from "./digest/publish";
 import { WEEKLY_RECAP_LLM_CONFIG, type DigestLlmConfig } from "../lib/constants";
 import { resolveDigestStyleGateMode } from "../lib/digest-style-gate";
 import { resolveDigestLlmProfile } from "../lib/digest-llm-profile";
+import { readTwitterDigestDeliveryStatus } from "../lib/twitter-digest-ledger";
 
 const TWITTER_SENT_MARKER_PREFIX = "weekly-recap:twitter-sent:";
 
@@ -59,116 +58,6 @@ interface ExistingWeeklyDigestRow {
   input_data: string | null;
 }
 
-interface WeeklyDigestMeta {
-  twitterDelivered?: boolean;
-  twitterDeliveryStatus?: string;
-  twitterDeliveryUpdatedAt?: number;
-  twitterDeliveredAt?: number;
-  telegramDelivered?: boolean;
-  telegramDeliveryStatus?: string;
-  telegramDeliveryUpdatedAt?: number;
-  telegramDeliveredAt?: number;
-  [key: string]: unknown;
-}
-
-function parseWeeklyDigestMeta(rawMeta: string | null, updatedAt: number | null): WeeklyDigestMeta {
-  if (!rawMeta) return {};
-  const parsed = parseJson(rawMeta, {
-    context: "daily_digest.digest_meta",
-    onFailure: ({ message }) =>
-      logMalformedJsonPath(
-        {
-          scope: "cron",
-          owner: "weekly-recap",
-          context: "daily_digest.digest_meta",
-          reason: "json-parse-failed",
-          source: "daily_digest",
-          ...(updatedAt != null ? { updatedAt } : {}),
-        },
-        new Error(message),
-      ),
-  });
-  if (
-    parsed.ok &&
-    parsed.value &&
-    typeof parsed.value === "object" &&
-    !Array.isArray(parsed.value)
-  ) {
-    return { ...(parsed.value as WeeklyDigestMeta) };
-  }
-  return {};
-}
-
-function encodeWeeklyDigestMeta(
-  rawMeta: string | null,
-  params: {
-    generatedAt: number;
-    nowSec: number;
-    twitterDelivered: boolean;
-    twitterDeliveryStatus: string;
-    telegramDelivered: boolean;
-    telegramDeliveryStatus: string;
-    weeklyDefaults?: WeeklyDigestMeta;
-  },
-): string {
-  const meta = parseWeeklyDigestMeta(rawMeta, params.generatedAt);
-  if (!params.twitterDelivered) {
-    delete meta.twitterDeliveredAt;
-  }
-  if (!params.telegramDelivered) {
-    delete meta.telegramDeliveredAt;
-  }
-  return JSON.stringify({
-    ...(params.weeklyDefaults ?? {}),
-    ...meta,
-    twitterDelivered: params.twitterDelivered,
-    twitterDeliveryStatus: params.twitterDeliveryStatus,
-    twitterDeliveryUpdatedAt: params.nowSec,
-    ...(params.twitterDelivered ? { twitterDeliveredAt: params.nowSec } : {}),
-    telegramDelivered: params.telegramDelivered,
-    telegramDeliveryStatus: params.telegramDeliveryStatus,
-    telegramDeliveryUpdatedAt: params.nowSec,
-    ...(params.telegramDelivered ? { telegramDeliveredAt: params.nowSec } : {}),
-  });
-}
-
-function shouldRetryChannel(delivered: boolean | undefined, status: string | undefined): boolean {
-  if (delivered === true) return false;
-  if (!status) return true;
-  return classifyDigestChannelStatus(status) === "retryable";
-}
-
-function shouldRetryExistingWeeklyDelivery(
-  meta: WeeklyDigestMeta,
-  channels: { twitter: boolean; telegram: boolean },
-): boolean {
-  return (channels.twitter && shouldRetryChannel(meta.twitterDelivered, meta.twitterDeliveryStatus))
-    || (channels.telegram && shouldRetryChannel(meta.telegramDelivered, meta.telegramDeliveryStatus));
-}
-
-async function updateWeeklyDeliveryMeta(
-  db: D1Database,
-  row: { generated_at: number; digest_meta: string | null },
-  params: { nowSec: number; twitterStatus: string; telegramStatus: string },
-): Promise<void> {
-  const digestMeta = encodeWeeklyDigestMeta(row.digest_meta, {
-    generatedAt: row.generated_at,
-    nowSec: params.nowSec,
-    twitterDelivered: didDigestChannelDeliver(params.twitterStatus),
-    twitterDeliveryStatus: params.twitterStatus,
-    telegramDelivered: didDigestChannelDeliver(params.telegramStatus),
-    telegramDeliveryStatus: params.telegramStatus,
-  });
-  await db
-    .prepare(
-      `UPDATE daily_digest
-          SET digest_meta = ?
-        WHERE generated_at = ?
-          AND json_extract(digest_meta, '$.type') = 'weekly'`,
-    )
-    .bind(digestMeta, row.generated_at)
-    .run();
-}
 
 export async function generateWeeklyRecap(
   db: D1Database,
@@ -238,11 +127,17 @@ export async function generateWeeklyRecap(
     .bind(editionDayStart, editionDayEnd)
     .first<ExistingWeeklyDigestRow>();
   if (existing) {
-    const existingMeta = parseWeeklyDigestMeta(existing.digest_meta, existing.generated_at);
-    if (!shouldRetryExistingWeeklyDelivery(existingMeta, {
-      twitter: Boolean(twitterCreds) || credentialDiagnostics.twitterMissing != null,
-      telegram: Boolean(telegramCreds) || credentialDiagnostics.telegramMissing != null,
-    })) {
+    const markerKey = `${TWITTER_SENT_MARKER_PREFIX}${digestDate}`;
+    const editionKey = `weekly:${digestDate}`;
+    const twitterStatus = twitterCreds ? await readTwitterDigestDeliveryStatus(db, markerKey) : null;
+    const telegramState = telegramCreds ? await readDigestTelegramOutboxState(db, editionKey) : null;
+    const telegramStatus = telegramCreds ? `outbox-${telegramState ?? "execution_unknown"}` : null;
+    const dispositions = {
+      twitter: classifyDigestChannelStatus(twitterStatus ?? (twitterCreds ? "pending" : "skipped: no-creds")),
+      telegram: classifyDigestChannelStatus(telegramStatus ?? "no-creds"),
+    };
+    if (!hasNonDeliveringDisposition(dispositions)
+      && credentialDiagnostics.twitterMissing == null && credentialDiagnostics.telegramMissing == null) {
       await reportCronProgress(reportProgress, {
         stage: "skipped",
         message: "Skipping weekly recap because this week already exists",
@@ -289,10 +184,9 @@ export async function generateWeeklyRecap(
       : null;
     const safetyContext = digestSafetyContextFromPersistedInput(existingInput);
     const retryNowSec = Math.floor(Date.now() / 1000);
-    const safetyMap = twitterCreds || telegramCreds
+    const safetyMap = twitterCreds && twitterStatus == null
       ? await resolveDigestSafetyMap(digestDate, retryNowSec, signal)
       : null;
-    const weekStartLabel = getMetaString(existingMeta, "weekStart") ?? digestDate;
     const retryDegradedReasons: string[] = [];
     const retry = await deliverDigestEdition({
       db,
@@ -310,30 +204,26 @@ export async function generateWeeklyRecap(
       qualityGateStatus: null,
       degradedReasons: retryDegradedReasons,
       safetyMap,
-      twitter: buildDigestTwitterPublication(
-        twitterCreds,
-        `${TWITTER_SENT_MARKER_PREFIX}${digestDate}`,
-        credentialDiagnostics.twitterMissing,
-      ),
-      telegram: buildDigestTelegramPublication(
-        telegramCreds,
-        credentialDiagnostics.telegramMissing,
-        {
-          editionKey: `weekly:${digestDate}`,
-          recapRollout,
-          title: `Weekly Recap: ${existing.digest_title || `Week of ${weekStartLabel}`}`,
-          routeDate: `${digestDate}-weekly`,
-          alreadySentStatus: "ok+already-sent",
-        },
-      ),
+      twitter: twitterStatus == null
+        ? buildDigestTwitterPublication(twitterCreds, markerKey, credentialDiagnostics.twitterMissing)
+        : null,
+      // Existing weekly payloads are immutable; absent legacy evidence refuses
+      // delivery rather than treating a missing outbox row as proof of unsent.
+      telegram: null,
       signal,
       reportProgress,
     });
-    await updateWeeklyDeliveryMeta(db, existing, {
-      nowSec: retryNowSec,
-      twitterStatus: retry.tweetStatus,
-      telegramStatus: retry.telegramStatus,
-    });
+    const tweetStatus = twitterStatus ?? retry.tweetStatus;
+    const finalTelegramState = telegramState == null ? null : await readDigestTelegramOutboxState(db, editionKey);
+    const finalTelegramStatus = telegramStatus == null
+      ? (credentialDiagnostics.telegramMissing != null ? "no-creds" : retry.telegramStatus)
+      : `outbox-${finalTelegramState ?? "execution_unknown"}`;
+    const finalDispositions = {
+      twitter: twitterCreds || credentialDiagnostics.twitterMissing == null
+        ? classifyDigestChannelStatus(tweetStatus) : "terminal-unsent" as const,
+      telegram: telegramCreds || credentialDiagnostics.telegramMissing == null
+        ? classifyDigestChannelStatus(finalTelegramStatus) : "terminal-unsent" as const,
+    };
     await reportCronProgress(reportProgress, {
       stage: "complete",
       message: "Completed weekly recap channel retry",
@@ -341,21 +231,21 @@ export async function generateWeeklyRecap(
       itemsDone: 1,
       itemsTotal: 1,
       metadata: {
-        twitterStatus: retry.tweetStatus,
-        telegramStatus: retry.telegramStatus,
+        twitterStatus: tweetStatus,
+        telegramStatus: finalTelegramStatus,
       },
     });
     return createCronResult({
       itemCount: 0,
-      ...(retryDegradedReasons.length > 0 || hasNonDeliveringDisposition(retry.dispositions)
+      ...(retryDegradedReasons.length > 0 || hasNonDeliveringDisposition(finalDispositions)
         ? { status: "degraded" as const }
         : {}),
       metadata: {
-        reason: retryDegradedReasons.join(",") || (hasNonDeliveringDisposition(retry.dispositions) ? "delivery-not-completed" : "delivery-completed"),
-        summary: `weekly: existing recap delivery retry, tweet: ${retry.tweetStatus}, telegram: ${retry.telegramStatus}`,
+        reason: retryDegradedReasons.join(",") || (hasNonDeliveringDisposition(finalDispositions) ? "delivery-not-completed" : "delivery-completed"),
+        summary: `weekly: existing recap delivery retry, tweet: ${tweetStatus}, telegram: ${finalTelegramStatus}`,
         channels: {
-          twitter: { status: retry.tweetStatus, disposition: retry.dispositions.twitter },
-          telegram: { status: retry.telegramStatus, disposition: retry.dispositions.telegram },
+          twitter: { status: tweetStatus, disposition: finalDispositions.twitter },
+          telegram: { status: finalTelegramStatus, disposition: finalDispositions.telegram },
         },
         degradedReasons: retryDegradedReasons,
       },
@@ -566,20 +456,13 @@ export async function generateWeeklyRecap(
 
   const publicationNowSec = Math.floor(Date.now() / 1000);
   const generatedAt = scheduledAtSec;
-  const initialDigestMeta = encodeWeeklyDigestMeta(digestCopy.digestMeta, {
-    generatedAt,
-    nowSec: publicationNowSec,
-    twitterDelivered: false,
-    twitterDeliveryStatus: "pending",
-    telegramDelivered: false,
-    telegramDeliveryStatus: "pending",
-    weeklyDefaults: {
-      type: "weekly",
-      periodType: weeklyData.periodType,
-      weekStart: weeklyData.weekStartDate,
-      weekEnd: weeklyData.weekEndDate,
-      safetyContext: weeklyData.safetyContext,
-    },
+  const initialDigestMeta = JSON.stringify({
+    type: "weekly",
+    periodType: weeklyData.periodType,
+    weekStart: weeklyData.weekStartDate,
+    weekEnd: weeklyData.weekEndDate,
+    safetyContext: weeklyData.safetyContext,
+    ...parseJsonObject(digestCopy.digestMeta, "weekly-recap:digest_meta"),
   });
 
   const qualityGateStatus = hasBlockingQualityIssues ? "skipped: quality-gate" : null;
@@ -623,21 +506,6 @@ export async function generateWeeklyRecap(
     signal,
     reportProgress,
   });
-  const storedDigestMeta = qualityGateStatus
-    ? markDigestMetaBlocked(initialDigestMeta)
-    : initialDigestMeta;
-  await updateWeeklyDeliveryMeta(
-    db,
-    {
-      generated_at: generatedAt,
-      digest_meta: storedDigestMeta,
-    },
-    {
-      nowSec: publicationNowSec,
-      twitterStatus: publication.tweetStatus,
-      telegramStatus: publication.telegramStatus,
-    },
-  );
 
   return finalizeDigestCronResult({
     reportProgress,

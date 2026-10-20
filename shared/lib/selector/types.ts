@@ -11,6 +11,28 @@
 import { z } from "zod";
 import { ApiMetaEnvelopeSchema } from "@pharos/contracts/api-meta";
 import type {
+  SelectorInputSchema,
+  SelectorComponentSchema,
+  LowestSubDimensionSchema,
+  RecommendedSourceSchema,
+  SelectorChainHintsSchema,
+  SelectorRankRobustnessSchema,
+  SelectorConfidenceReasonSchema,
+  TreasuryRecommendationSchema,
+  YieldRecommendationSchema,
+  TradingRecommendationSchema,
+  SelectorRecommendationSchema,
+  SelectorLowerRankedSchema,
+  SkippedCoinSchema,
+  SelectorCoverageWarningsSchema,
+  MethodologyVersionsSchema,
+  SelectorExclusionSummaryItemSchema,
+  SelectorClosestSurvivorSchema,
+  SelectorRelaxableConstraintSchema,
+  SelectorSnapshotVerificationSchema,
+  SelectorOutputSchema,
+} from "./snapshot";
+import type {
   BluechipGrade,
   CustodyModel,
   GovernanceType,
@@ -81,28 +103,7 @@ export type SelectorVenuePreference =
   | SelectorYieldVenue
   | SelectorTradingVenue;
 
-export interface SelectorInput {
-  profile: SelectorProfile;
-  pegCurrency: SelectorEligiblePegCurrency;
-  horizon: SelectorHorizon;
-  depegTolerance: SelectorDepegTolerance;
-  composability: SelectorComposability;
-  exitSpeed: SelectorExitSpeed;
-  /**
-   * Raw venue answers from the wizard. `composability` remains the broad
-   * scoring bucket; this preserves the user's specific rail preference for
-   * yield-source selection and audit output. Optional for legacy snapshots.
-   */
-  venuePreferences?: readonly SelectorVenuePreference[];
-  /** MVP-internal: not collected from the wizard in Phase 1. */
-  minApy: number | null;
-  /** MVP-internal default `false`. */
-  yieldNativeOnly: boolean;
-  /** MVP-internal default `"any"`. */
-  decentralization: SelectorDecentralization;
-  /** MVP-internal default `"any"`. */
-  custodyOk: SelectorCustodyOk;
-}
+export type SelectorInput = z.output<typeof SelectorInputSchema>;
 
 // ---------------------------------------------------------------------------
 // Scoring vocabulary
@@ -152,18 +153,7 @@ export type WeightVector<P extends SelectorProfile = SelectorProfile> = Readonly
   readonly __profile?: P;
 };
 
-export interface SelectorComponent {
-  key: WeightKey;
-  /** Weight applied to this slot after redistribution. */
-  weight: number;
-  rawValue: number | null;
-  /** Normalized to [0, 100]; higher is better. */
-  normalizedValue: number | null;
-  /** `weight × normalizedValue / 100`. */
-  contribution: number;
-  /** True when the raw value was null and the slot was Penalty + redistribute. */
-  redistributed: boolean;
-}
+export type SelectorComponent = z.output<typeof SelectorComponentSchema>;
 
 // ---------------------------------------------------------------------------
 // Lowest sub-dimension
@@ -202,12 +192,7 @@ export const CONTEXT_KEYS = [
 ] as const;
 export type ContextKey = (typeof CONTEXT_KEYS)[number];
 
-export interface LowestSubDimension {
-  key: LowestSubDimensionKey;
-  /** Normalized [0, 100], higher = better. */
-  score: number;
-  contextKeys: ContextKey[];
-}
+export type LowestSubDimension = z.output<typeof LowestSubDimensionSchema>;
 
 // ---------------------------------------------------------------------------
 // Why-keys (canonical reason vocabulary)
@@ -248,46 +233,10 @@ export type WhyKey = (typeof WHY_KEYS)[number];
 // Recommendation
 // ---------------------------------------------------------------------------
 
-export interface RecommendedSource {
-  sourceKey?: string | null;
-  protocol: string;
-  chain: string;
-  yieldType?: YieldType | null;
-  apy30d: number;
-  pharosYieldScore: number | null;
-  sourceTvlUsd?: number | null;
-  /**
-   * `null` when the venue-risk registry has not sourced a tier for this rail.
-   * The comparator scores an unknown tier as the neutral 55; publishing it as
-   * `"mid"` would render an unmade measurement as a measured one.
-   */
-  sourceRiskTier: "low" | "mid" | "high" | null;
-  /**
-   * `null` when the winning rail published no freshness reading. The engine
-   * scores unknown freshness as neutral (50), so callers must render it as
-   * unknown — a fabricated `{ capturedAt: 0, ageSeconds: 0 }` would claim the
-   * stalest safe-looking reading on the one signal the card shows.
-   */
-  freshness: { capturedAt: number; ageSeconds: number } | null;
-  selectionReason?: string | null;
-}
-
-export interface SelectorChainHints {
-  topByLiquidity: string[];
-  topByYield: string[];
-  primary: string | null;
-}
-
-export type SelectorRankRobustnessLabel =
-  | "clear-margin"
-  | "crowded-field"
-  | "narrow-margin"
-  | "concentration-adjusted";
-
-export interface SelectorRankRobustness {
-  label: SelectorRankRobustnessLabel;
-  scoreMargin: number | null;
-}
+export type RecommendedSource = z.output<typeof RecommendedSourceSchema>;
+export type SelectorChainHints = z.output<typeof SelectorChainHintsSchema>;
+export type SelectorRankRobustness = z.output<typeof SelectorRankRobustnessSchema>;
+export type SelectorRankRobustnessLabel = SelectorRankRobustness["label"];
 
 export const BASE_CONFIDENCE_REASON_KEYS = [
   "recent-listing",
@@ -303,64 +252,11 @@ export const BASE_CONFIDENCE_REASON_KEYS = [
 ] as const;
 export type BaseConfidenceReasonKey = (typeof BASE_CONFIDENCE_REASON_KEYS)[number];
 export type MissingCriticalConfidenceReason = `missing-critical-${WeightKey}`;
-export type SelectorConfidenceReason =
-  | BaseConfidenceReasonKey
-  | MissingCriticalConfidenceReason;
-
-interface SelectorRecommendationBase {
-  id: string;
-  symbol: string;
-  name: string;
-  rank: 1 | 2 | 3;
-  score: number;
-  confidence: number;
-  confidenceReasons?: SelectorConfidenceReason[];
-  components: SelectorComponent[];
-  whyKeys: WhyKey[];
-  /** Authored, data-anchored prose for visible result cards. */
-  whyText?: string;
-  /** Authored "what to watch" prose derived from the lowest sub-dimension. */
-  watchText?: string;
-  lowestSubDimension: LowestSubDimension;
-  chainHints: SelectorChainHints;
-  rankRobustness?: SelectorRankRobustness;
-  relaxedReason?: ExclusionReason | null;
-  isRecentListing: boolean;
-  bluechipGrade: BluechipGrade | null;
-  safetyGrade: ReportCardGrade;
-  supplyUsd: number;
-  isBeta: true;
-}
-
-export interface TreasuryRecommendation extends SelectorRecommendationBase {
-  profile: "treasury";
-  recommendedSource: null;
-  perInputStaleness: null;
-}
-
-export interface YieldRecommendation extends SelectorRecommendationBase {
-  profile: "yield";
-  /** Non-null for Yield profile entries (the rail the user is being pointed at). */
-  recommendedSource: RecommendedSource;
-  perInputStaleness: null;
-}
-
-export interface TradingRecommendation extends SelectorRecommendationBase {
-  profile: "trading";
-  recommendedSource: null;
-  /** Trading-only: per-input data freshness in seconds. */
-  perInputStaleness: Record<string, number>;
-}
-
-/**
- * Discriminated union by `profile`. Frontend rendering code switches on the
- * variant; engine emits the exact variant whose `recommendedSource` /
- * `perInputStaleness` slot is populated.
- */
-export type SelectorRecommendation =
-  | TreasuryRecommendation
-  | YieldRecommendation
-  | TradingRecommendation;
+export type SelectorConfidenceReason = z.output<typeof SelectorConfidenceReasonSchema>;
+export type TreasuryRecommendation = z.output<typeof TreasuryRecommendationSchema>;
+export type YieldRecommendation = z.output<typeof YieldRecommendationSchema>;
+export type TradingRecommendation = z.output<typeof TradingRecommendationSchema>;
+export type SelectorRecommendation = z.output<typeof SelectorRecommendationSchema>;
 
 // ---------------------------------------------------------------------------
 // Exclusions
@@ -408,54 +304,20 @@ export interface ExclusionRecord {
 // Lower-ranked
 // ---------------------------------------------------------------------------
 
-export interface SelectorLowerRanked {
-  id: string;
-  symbol: string;
-  name: string;
-  slot: "A" | "B";
-  /** Canonical key the editorial layer maps to prose. */
-  reasonKey: string;
-  /** Authored visible headline that avoids exposing `reasonKey`. */
-  verdictText?: string;
-  /** Authored teaching line keyed by `reasonKey` / `failedComponent`. */
-  teachingText?: string;
-  failedComponent: string | null;
-  hypotheticalScore: number | null;
-}
+export type SelectorLowerRanked = z.output<typeof SelectorLowerRankedSchema>;
 
 // ---------------------------------------------------------------------------
 // Coverage warnings
 // ---------------------------------------------------------------------------
 
-export interface SkippedCoin {
-  id: string;
-  symbol: string;
-  missingSignals: string[];
-}
-
-export interface SelectorCoverageWarnings {
-  skippedForCoverageCount: number;
-  skippedForCoverage: SkippedCoin[];
-  /** True when >25% of the universe was skipped for coverage. */
-  sparse: boolean;
-  /** True when 15–25% of the universe was skipped (and not sparse). */
-  uneven: boolean;
-  newListingCount: number;
-  redistributionCount: number;
-}
+export type SkippedCoin = z.output<typeof SkippedCoinSchema>;
+export type SelectorCoverageWarnings = z.output<typeof SelectorCoverageWarningsSchema>;
 
 // ---------------------------------------------------------------------------
 // Methodology versions
 // ---------------------------------------------------------------------------
 
-export interface MethodologyVersions {
-  safetyScore: string;
-  pegScoreAndDews: string;
-  yieldIntelligence: string;
-  bluechipAlignment: string;
-  /** Equals `ENGINE_VERSION`. */
-  exclusionFilters: string;
-}
+export type MethodologyVersions = z.output<typeof MethodologyVersionsSchema>;
 
 // ---------------------------------------------------------------------------
 // Screener handoff
@@ -500,29 +362,9 @@ export interface SelectorScreenerFilterProjection {
 // Engine-owned empty-state diagnostics
 // ---------------------------------------------------------------------------
 
-export interface SelectorExclusionSummaryItem {
-  reason: ExclusionReason;
-  count: number;
-  severity: ExclusionRecord["severity"];
-  sampleIds: string[];
-}
-
-export interface SelectorClosestSurvivor {
-  id: string;
-  symbol: string;
-  failingDimension: string;
-  liveReading: string;
-  reason: ExclusionReason;
-  hypotheticalScore: number | null;
-}
-
-export interface SelectorRelaxableConstraint {
-  key: "depegTolerance" | "venue" | "exitSpeed";
-  label: string;
-  description: string;
-  reason: ExclusionReason | "input-strictness";
-}
-
+export type SelectorExclusionSummaryItem = z.output<typeof SelectorExclusionSummaryItemSchema>;
+export type SelectorClosestSurvivor = z.output<typeof SelectorClosestSurvivorSchema>;
+export type SelectorRelaxableConstraint = z.output<typeof SelectorRelaxableConstraintSchema>;
 export const SELECTOR_SNAPSHOT_VERIFICATION_KIND = "pharos-server-recomputed-v1" as const;
 
 export const SelectorCanonicalSourceEvidenceSchema = z.object({
@@ -532,48 +374,13 @@ export const SelectorCanonicalSourceEvidenceSchema = z.object({
 }).strict();
 export type SelectorCanonicalSourceEvidence = z.output<typeof SelectorCanonicalSourceEvidenceSchema>;
 
-export interface SelectorSnapshotVerification {
-  kind: typeof SELECTOR_SNAPSHOT_VERIFICATION_KIND;
-  datasetHash: string;
-  engineVersion: string;
-  /** Server-fetched input provenance, not a guarantee that the inputs were fresh.
-   * Absent on historical snapshots: source freshness is unknown.
-   */
-  canonicalSources?: SelectorCanonicalSourceEvidence[];
-}
+export type SelectorSnapshotVerification = z.output<typeof SelectorSnapshotVerificationSchema>;
 
 // ---------------------------------------------------------------------------
 // Output
 // ---------------------------------------------------------------------------
 
-export interface SelectorOutput {
-  profile: SelectorProfile;
-  input: SelectorInput;
-  universe: { active: number; surviving: number };
-  /** 0–3 entries, ranked highest fit first. */
-  recommended: SelectorRecommendation[];
-  /** 0–2 entries. */
-  lowerRanked: SelectorLowerRanked[];
-  coverageWarnings: SelectorCoverageWarnings;
-  lowConfidence: boolean;
-  usedRelaxedFallback: boolean;
-  relaxedReasons: ExclusionReason[];
-  exclusionSummary: SelectorExclusionSummaryItem[];
-  closestSurvivors: SelectorClosestSurvivor[];
-  relaxableConstraints: SelectorRelaxableConstraint[];
-  /** Caller-provided `Date.now()` snapshot; threaded so the engine stays pure. */
-  timestamp: number;
-  engineVersion: string;
-  methodologyVersions: MethodologyVersions;
-  /** Stable content hash over content-only fields of the merged universe. */
-  datasetHash: string;
-  /** Added by the snapshot boundary; live engine output has no provenance marker. */
-  provenance?: "client-unverified" | "pharos-verified";
-  /** Exact persisted projection version added by the snapshot boundary. */
-  snapshotSchemaVersion?: 2 | 3;
-  /** Present only when the Pages Function recomputed the output from canonical sources. */
-  verification?: SelectorSnapshotVerification;
-}
+export type SelectorOutput = z.output<typeof SelectorOutputSchema>;
 
 // ---------------------------------------------------------------------------
 // Engine-internal: merged row + data + dataset metadata

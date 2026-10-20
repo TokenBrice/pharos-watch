@@ -14,6 +14,8 @@ export type EnvExampleSection =
 
 interface EnvRuntimeUsage {
   status: EnvRuntimeStatus;
+  /** Operator-required credentials may still be absent at the runtime ingress. */
+  optionalAtIngress?: true;
 }
 
 interface EnvExampleEntry {

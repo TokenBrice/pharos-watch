@@ -1,13 +1,14 @@
 import { cgUrl, cgHeaders } from "../coingecko";
 import { RATE_LIMITS } from "../rate-limit";
 import { sleepWithSignal, throwIfAborted } from "../abort";
-import { applyInvalidShapeDiagnostic } from "../pricing-provider-lifecycle";
+import { applyInvalidShapeDiagnostic, buildCapSkipDiagnostic } from "../pricing-provider-lifecycle";
+import { createPricingAssetAttempt, type PricingProviderAttemptDiagnostic, type PricingProviderRejectionReason } from "../pricing-provider-diagnostics";
 import { isReviewedAddressPriceTargetOverride } from "./reviewed-target-overrides";
-import type { AddressPriceProviderRunResult, AddressPriceTarget } from "./types";
+import type { AddressPriceQuote, AddressPriceTarget } from "./types";
 import {
   ADDRESS_PROVIDER_MIN_LIQUIDITY_USD,
   chunk,
-  createAddressProviderRunner,
+  finalizeAddressPriceDiagnosticAttempts,
   fetchProviderJson,
   groupTargetsByProviderChain,
   incrementReason,
@@ -26,7 +27,6 @@ function buildRoundRobinNetworkBatches(
   const remainingTargets: AddressPriceTarget[] = [];
   for (const target of targets) {
     (isReviewedAddressPriceTargetOverride({
-      provider: "coingecko-onchain-address",
       stablecoinId: target.stablecoinId,
       chain: target.chain,
       address: target.address,
@@ -58,29 +58,26 @@ export async function runCoingeckoOnchainAddressProvider(
   signal: AbortSignal | undefined,
   nowSec: number,
   deadlineMs: number,
-): Promise<AddressPriceProviderRunResult> {
-  const runner = createAddressProviderRunner({
-    provider: "coingecko-onchain-address",
-    label: "CoinGecko onchain",
-    targets,
-    deadlineMs,
-    maxRequests: CG_ONCHAIN_ADDRESS_MAX_REQUESTS,
-  });
-  const { quotes, rejectedTargets } = runner;
+) {
+  const quotes: AddressPriceQuote[] = [];
+  const diagnostics: PricingProviderAttemptDiagnostic[] = [];
+  const rejectedTargets: Partial<Record<PricingProviderRejectionReason, number>> = {};
+  const processedTargets = new Set<AddressPriceTarget>();
+  let successfulRequests = 0;
+  let attemptedRequests = 0;
 
   for (const { providerChainId, targets: batch } of buildRoundRobinNetworkBatches(targets)) {
     throwIfAborted(signal);
-    if (!runner.canStartRequest()) break;
-    if (runner.attemptedRequests > 0) {
+    if (!(attemptedRequests < CG_ONCHAIN_ADDRESS_MAX_REQUESTS && Date.now() < deadlineMs)) break;
+    if (attemptedRequests > 0) {
       await sleepWithSignal(RATE_LIMITS.COINGECKO_ONCHAIN_MS, signal);
     }
-    runner.beginRequest();
+    attemptedRequests += 1;
     const url = cgUrl(
       `/onchain/networks/${providerChainId}/tokens/multi/${batch.map((target) => target.address).join(",")}`,
       apiKey,
     );
     const { json, diagnostic: rawDiagnostic } = await fetchProviderJson({
-      provider: "coingecko-onchain-address",
       url,
       candidateCount: batch.length,
       targets: batch,
@@ -111,7 +108,6 @@ export async function runCoingeckoOnchainAddressProvider(
         }
         const liquidityUsd = parseNonNegativeNumber(attrs.total_reserve_in_usd);
         const reviewedOverride = isReviewedAddressPriceTargetOverride({
-          provider: "coingecko-onchain-address",
           stablecoinId: target.stablecoinId,
           chain: target.chain,
           address: target.address,
@@ -141,12 +137,31 @@ export async function runCoingeckoOnchainAddressProvider(
       diagnostic.responseRowCount = data.length;
       diagnostic.matchedCount = quotes.length - matchedCountBefore;
       diagnostic.success = true;
-      runner.recordSuccess();
+      successfulRequests += 1;
     } else if (json != null) {
       diagnostic = applyInvalidShapeDiagnostic(diagnostic, "Expected CoinGecko onchain tokens/multi payload");
     }
-    runner.markProcessed(batch);
-    runner.recordDiagnostic(diagnostic);
+    for (const target of batch) processedTargets.add(target);
+    diagnostics.push(finalizeAddressPriceDiagnosticAttempts(diagnostic, quotes));
   }
-  return runner.finish();
+  const skippedTargets = targets.filter((target) => !processedTargets.has(target));
+  if (skippedTargets.length > 0) {
+    const diagnostic = buildCapSkipDiagnostic(
+      { source: "coingecko-onchain-address", label: "CoinGecko onchain" },
+      skippedTargets.length,
+    );
+    const deadlineReached = Date.now() >= deadlineMs;
+    diagnostic.assetAttempts = skippedTargets.slice(0, 100).map((target) => createPricingAssetAttempt({
+      assetId: target.stablecoinId,
+      adapter: "coingecko-onchain-address",
+      chain: target.chain,
+      target: target.address,
+      state: "skipped",
+      skipReason: deadlineReached ? "deadline" : "request-cap",
+      rejectionClass: deadlineReached ? "timeout" : "cap",
+      candidateAt: Math.floor(Date.now() / 1000),
+    }));
+    diagnostics.push(diagnostic);
+  }
+  return { quotes, diagnostics, rejectedTargets, successfulRequests, attemptedRequests };
 }

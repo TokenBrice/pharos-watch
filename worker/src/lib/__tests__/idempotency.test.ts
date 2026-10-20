@@ -19,6 +19,7 @@ interface TestDbOptions {
   ambiguousTerminalCommitOnce?: boolean;
   beforeTerminalUpdate?: (record: TestIdempotencyRecord) => void;
   beforePreExecutionRelease?: (record: TestIdempotencyRecord) => void;
+  beforeStartedUnknownUpdate?: (record: TestIdempotencyRecord) => void;
 }
 
 function makeIdempotencyDb(options: TestDbOptions = {}): D1Database & {
@@ -61,41 +62,6 @@ function makeIdempotencyDb(options: TestDbOptions = {}): D1Database & {
             reservation_owner: owner,
             reservation_generation: 1,
             execution_started_at: null,
-          });
-          return { success: true, meta: { changes: 1 } };
-        }
-
-        if (sql.includes("SET response_status = ?") && sql.includes("execution_started_at = NULL")) {
-          const [
-            status,
-            owner,
-            createdAt,
-            action,
-            idempotencyKey,
-            requestHash,
-            expectedStatus,
-            expectedStartedAt,
-            expectedGeneration,
-            expectedCreatedAt,
-          ] = args as [number, string, number, string, string, string, number, number, number, number];
-          const record = store.get(`${action}:${idempotencyKey}`);
-          if (
-            !record ||
-            record.request_hash !== requestHash ||
-            record.response_status !== expectedStatus ||
-            record.execution_started_at !== expectedStartedAt ||
-            record.reservation_generation !== expectedGeneration ||
-            record.created_at !== expectedCreatedAt
-          ) {
-            return { success: true, meta: { changes: 0 } };
-          }
-          Object.assign(record, {
-            response_status: status,
-            response_body: "",
-            reservation_owner: owner,
-            reservation_generation: expectedGeneration + 1,
-            execution_started_at: null,
-            created_at: createdAt,
           });
           return { success: true, meta: { changes: 1 } };
         }
@@ -167,6 +133,7 @@ function makeIdempotencyDb(options: TestDbOptions = {}): D1Database & {
             cutoff,
           ] = args as [number, string, number, string, string, string, number, number, number, number];
           const record = store.get(`${action}:${idempotencyKey}`);
+          if (record) options.beforeStartedUnknownUpdate?.(record);
           if (
             !record ||
             record.request_hash !== requestHash ||
@@ -595,10 +562,20 @@ describe("runIdempotentAction", () => {
     expect(calls).toBe(0);
   });
 
-  it("never re-executes a started attempt whose outcome is unknown, however stale", async () => {
+  it.each(["success", "no-op", "throw", "competing-owner"])(
+    "never re-executes a started attempt whose outcome is unknown, however stale (CAS %s)", async (outcome) => {
     const now = 1_800_000_000;
     vi.spyOn(Date, "now").mockReturnValue(now * 1000);
-    const db = makeIdempotencyDb();
+    const db = makeIdempotencyDb({
+      beforeStartedUnknownUpdate: (record) => {
+        if (outcome === "throw") throw new Error("unknown persistence unavailable");
+        if (outcome === "no-op") record.execution_started_at = now;
+        if (outcome === "competing-owner") {
+          record.reservation_owner = "new-owner";
+          record.reservation_generation += 1;
+        }
+      },
+    });
     let started!: () => void;
     const startedPromise = new Promise<void>((resolve) => {
       started = resolve;
@@ -616,50 +593,23 @@ describe("runIdempotentAction", () => {
     const secondReplay = await runIdempotentAction(db, "backfill-depegs", request("stale-started"), execute);
 
     expect(replay.status).toBe(503);
-    expect(await replay.json()).toMatchObject({ error: "execution_unknown" });
+    const body = await replay.json();
+    expect(body).toMatchObject({ error: "execution_unknown" });
     expect(secondReplay.status).toBe(503);
     expect(secondReplay.headers.get("X-Idempotent-Replay")).toBe("true");
+    expect(replay.headers.get("Idempotency-Key")).toBe("stale-started");
+    expect(replay.headers.get("X-Idempotent-Replay")).toBe("true");
+    expect(replay.headers.get("X-Execution-Certainty")).toBe("unknown");
+    expect(secondReplay.headers.get("X-Execution-Certainty")).toBe("unknown");
+    expect(await secondReplay.json()).toEqual(body);
     expect(retryCalls).toBe(0);
-    expect(db.getRecord("backfill-depegs", "stale-started")?.response_status).toBe(-2);
+    expect(db.getRecord("backfill-depegs", "stale-started")?.response_status).toBe(outcome === "success" ? -2 : -1);
+    if (outcome === "competing-owner") {
+      expect(db.getRecord("backfill-depegs", "stale-started")?.reservation_owner).toBe("new-owner");
+      expect(db.getRecord("backfill-depegs", "stale-started")?.reservation_generation).toBe(3);
+    }
     vi.restoreAllMocks();
   });
-
-  it("re-executes a stale started attempt once reconciliation proves the effect never landed", async () => {
-    const now = 1_800_000_000;
-    vi.spyOn(Date, "now").mockReturnValue(now * 1000);
-    const db = makeIdempotencyDb();
-    let started!: () => void;
-    const startedPromise = new Promise<void>((resolve) => {
-      started = resolve;
-    });
-    void runIdempotentAction(db, "backfill-depegs", request("reconcilable"), async () => {
-      started();
-      return new Promise<Response>(() => {});
-    });
-    await startedPromise;
-    db.getRecord("backfill-depegs", "reconcilable")!.execution_started_at = now - 25 * 60 * 60;
-
-    let retryCalls = 0;
-    const reconciled: Array<{ action: string; key: string }> = [];
-    const recovered = await runIdempotentAction(
-      db,
-      "backfill-depegs",
-      request("reconcilable"),
-      async () => Response.json({ calls: ++retryCalls }, { status: 202 }),
-      {
-        reconcileAbandonedExecution: async ({ action, key }) => {
-          reconciled.push({ action, key });
-          return true;
-        },
-      },
-    );
-
-    expect(recovered.status).toBe(202);
-    expect(retryCalls).toBe(1);
-    expect(reconciled).toEqual([{ action: "backfill-depegs", key: "reconcilable" }]);
-    vi.restoreAllMocks();
-  });
-
 
   it("keeps execution_unknown rows out of the terminal TTL so their key can never re-run", async () => {
     const now = 1_800_000_000;

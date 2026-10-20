@@ -41,13 +41,10 @@ describe("validateAndWriteStablecoinsCache", () => {
         db,
         syncStartSec,
         validationContext,
-        returnIfAborted: () => null,
-        abortResult: () => ({ aborted: true, metadata: "aborted" }),
       }, () => ({ metadata: "blocked" }));
       await commitReplayPriceCache({
         db,
         entries: priceCacheEntries,
-        returnIfAborted: () => null,
         stagePrefix,
       });
     }
@@ -70,11 +67,12 @@ describe("validateAndWriteStablecoinsCache", () => {
     const companionKey = getResponseReadyCacheKey("stablecoins");
     sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run("stablecoins", "prior", 200);
     sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(companionKey, "companion", 50);
+    const controller = new AbortController();
+    if (gate === "aborted") controller.abort("cancelled before cache publication");
     const result = await validateAndWriteStablecoinsCache({
       db, assets: gate === "invalid" ? [makePeggedAsset({ name: 42 as never })] : [],
       syncStartSec: gate === "newer" ? 100 : 300, validationContext: "main",
-      returnIfAborted: () => gate === "aborted" ? { aborted: true, metadata: "aborted" } : null,
-      abortResult: () => ({ aborted: true, metadata: "aborted" }),
+      signal: controller.signal,
     }, () => ({ metadata: "blocked" }));
     expect(await getCache(db, "stablecoins")).toEqual({ value: "prior", updatedAt: 200 });
     expect(await getCache(db, companionKey)).toEqual({ value: "companion", updatedAt: 50 });
@@ -96,9 +94,10 @@ describe("validateAndWriteStablecoinsCache", () => {
     const before = await getPriceCache(db);
     const result = await commitReplayPriceCache({
       db, entries: [{ id: "fixture-usd", price: 1, syncedAt: 200 }],
-      returnIfAborted: () => ({ aborted: true, metadata: "aborted" }),
+      signal: AbortSignal.abort("cancelled before replay persistence"),
     });
     expect(result).toMatchObject({ aborted: true });
+    expect(JSON.parse(result!.metadata!)).toMatchObject({ stage: "save-price-cache", reason: "aborted" });
     expect(await getPriceCache(db)).toEqual(before);
   });
 
@@ -170,12 +169,6 @@ describe("validateAndWriteStablecoinsCache", () => {
         db,
         syncStartSec,
         validationContext: "main",
-        returnIfAborted: () => null,
-        abortResult: () => ({
-          status: "degraded",
-          itemCount: 0,
-          metadata: "aborted",
-        }),
       },
       () => ({
         status: "degraded",
@@ -211,8 +204,6 @@ describe("validateAndWriteStablecoinsCache", () => {
 
     const result = await validateAndWriteStablecoinsCache({
       assets, db, syncStartSec, validationContext: "main",
-      returnIfAborted: () => null,
-      abortResult: () => ({ aborted: true, metadata: "aborted" }),
     }, () => ({ metadata: "blocked" }));
 
     expect(result).toMatchObject({ written: true, quarantinedAssets: [expect.objectContaining({ id: "negative-history" })] });
@@ -271,12 +262,6 @@ describe("validateAndWriteStablecoinsCache", () => {
         db,
         syncStartSec,
         validationContext: "main",
-        returnIfAborted: () => null,
-        abortResult: () => ({
-          status: "degraded",
-          itemCount: 0,
-          metadata: "aborted",
-        }),
       },
       () => ({
         status: "degraded",

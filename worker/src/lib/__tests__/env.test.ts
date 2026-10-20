@@ -1,5 +1,6 @@
-import { describe, expect, it, vi } from "vitest";
-import type { Env, WorkerEnvIssue } from "../env";
+import { describe, expect, expectTypeOf, it, vi } from "vitest";
+import type { Env, HeavyEnv, ScheduledEnv, WorkerEnvIssue, WorkerVersionMetadata } from "../env";
+import type { ReserveContinuationMessage } from "@shared/types/reserve-continuation";
 import {
   parseDwellirRoutingDisabledChains,
   resolveDdrRepairTaskRunnerConfig,
@@ -7,6 +8,33 @@ import {
   WORKER_ACTIVE_ENV_KEYS,
   WORKER_RESERVED_ENV_KEYS,
 } from "../env";
+
+type RequiredKeys<Value> = {
+  [Key in keyof Value]-?: Record<never, never> extends Pick<Value, Key> ? never : Key;
+}[keyof Value];
+
+it("preserves manifest-derived HTTP, scheduled and heavy ingress types", () => {
+  expectTypeOf<RequiredKeys<Env>>().toEqualTypeOf<
+    | "DB" | "CF_VERSION_METADATA" | "CORS_ORIGIN"
+    | "TELEGRAM_WEBHOOK_PREAUTH_RATE_LIMIT" | "TELEGRAM_MINI_APP_SESSION_PREAUTH_RATE_LIMIT"
+    | "TELEGRAM_MINI_APP_MUTATION_PREAUTH_RATE_LIMIT" | "TELEGRAM_WEBHOOK_SOURCE_RATE_LIMIT"
+    | "TELEGRAM_MINI_APP_SESSION_SOURCE_RATE_LIMIT" | "TELEGRAM_MINI_APP_MUTATION_SOURCE_RATE_LIMIT"
+    | "DONOR_KEY_CLAIM_RATE_LIMIT" | "SAFETY_GRADES_RATE_LIMIT"
+  >();
+  expectTypeOf<Pick<Env, "GITHUB_PAT" | "FEEDBACK_IP_SALT" | "BANXICO_TOKEN">>()
+    .toEqualTypeOf<{ GITHUB_PAT?: string; FEEDBACK_IP_SALT?: string; BANXICO_TOKEN?: string }>();
+  expectTypeOf<Env["DB"]>().toEqualTypeOf<D1Database>();
+  expectTypeOf<Env["CF_VERSION_METADATA"]>().toEqualTypeOf<WorkerVersionMetadata>();
+  expectTypeOf<Env["TELEGRAM_WEBHOOK_PREAUTH_RATE_LIMIT"]>().toEqualTypeOf<RateLimit>();
+  expectTypeOf<Env["SAFETY_CAPTURE_ARCHIVE"]>().toEqualTypeOf<R2Bucket | undefined>();
+  expectTypeOf<Env["HEAVY_EXECUTOR"]>().toEqualTypeOf<Fetcher | undefined>();
+  expectTypeOf<Env["RESERVE_CONTINUATION_QUEUE"]>().toEqualTypeOf<Queue<ReserveContinuationMessage> | undefined>();
+  expectTypeOf<RequiredKeys<ScheduledEnv>>().toEqualTypeOf<"DB" | "CF_VERSION_METADATA">();
+  expectTypeOf<Extract<keyof ScheduledEnv, "CORS_ORIGIN" | "SAFETY_GRADES_RATE_LIMIT">>().toEqualTypeOf<never>();
+  expectTypeOf<RequiredKeys<HeavyEnv>>().toEqualTypeOf<"DB" | "CF_VERSION_METADATA" | "SAFETY_CAPTURE_ARCHIVE">();
+  expectTypeOf<HeavyEnv["SAFETY_CAPTURE_ARCHIVE"]>().toEqualTypeOf<R2Bucket>();
+  expectTypeOf<Extract<keyof HeavyEnv, "M0_API_KEY">>().toEqualTypeOf<never>();
+});
 
 describe("parseDwellirRoutingDisabledChains", () => {
   it("trims, lowercases and deduplicates known IDs", () => {

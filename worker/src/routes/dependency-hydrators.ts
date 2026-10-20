@@ -2,8 +2,6 @@ import type { EndpointDependency } from "@shared/lib/api-endpoints";
 import { buildChainRpcs } from "../lib/chain-registry";
 import { normalizeCgApiKey } from "../lib/coingecko";
 import type { Env } from "../lib/env";
-import { resolveMintBurnFreshnessConfig } from "../lib/mint-burn-health-config";
-import { buildTelegramCreds } from "../lib/runtime-credentials";
 import { resolveTelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
 import type { FullRouteContext } from "./shared";
 import { normalizeWorkerCanaryMode } from "../lib/worker-canary-mode";
@@ -13,12 +11,6 @@ type RouteDependencyHydrator = (routeCtx: FullRouteContext, env: Env) => void;
 export const ROUTE_DEPENDENCY_HYDRATORS = {
   apiKeyHashPepper(routeCtx, env) {
     routeCtx.apiKeyHashPepper = env.API_KEY_HASH_PEPPER;
-  },
-  alchemyApiKey(routeCtx, env) {
-    routeCtx.alchemyApiKey = env.ALCHEMY_API_KEY ?? null;
-  },
-  anthropicApiKey(routeCtx, env) {
-    routeCtx.anthropicApiKey = env.ANTHROPIC_API_KEY ?? null;
   },
   cloudflareD1StatusConfig(routeCtx, env) {
     routeCtx.cloudflareD1StatusBindings = {
@@ -51,9 +43,6 @@ export const ROUTE_DEPENDENCY_HYDRATORS = {
       FEEDBACK_IP_SALT: env.FEEDBACK_IP_SALT,
     };
   },
-  mintBurnFreshnessConfig(routeCtx, env) {
-    routeCtx.mintBurnFreshnessConfig = resolveMintBurnFreshnessConfig(env);
-  },
   workerStatusConfig(routeCtx, env) {
     routeCtx.workerCanaryMode = normalizeWorkerCanaryMode(env.WORKER_CANARY_MODE);
   },
@@ -62,7 +51,6 @@ export const ROUTE_DEPENDENCY_HYDRATORS = {
     routeCtx.workerVersionId = env.CF_VERSION_METADATA?.id || null;
   },
   telegram(routeCtx, env) {
-    routeCtx.telegramCreds = buildTelegramCreds(env);
     routeCtx.telegramWebhookSecret = env.TELEGRAM_WEBHOOK_SECRET;
     routeCtx.telegramWebhookSecretPrevious = env.TELEGRAM_WEBHOOK_SECRET_PREVIOUS;
     routeCtx.telegramBotToken = env.TELEGRAM_BOT_TOKEN;

@@ -1,4 +1,4 @@
-import type { CaseStudy } from "./types";
+import type { CaseStudy } from "@shared/types/editorial-content";
 import {
   resolveCaseStudySlugForEvent,
   type CaseStudyEventWindowResolverItem,
@@ -101,5 +101,3 @@ const CASE_STUDY_EVENT_WINDOWS: readonly CaseStudyEventWindowResolverItem[] =
 export function caseStudySlugForEvent(coinId: string, tsMs: number): string | undefined {
   return resolveCaseStudySlugForEvent(CASE_STUDY_EVENT_WINDOWS, coinId, tsMs);
 }
-
-export type { CaseStudy } from "./types";

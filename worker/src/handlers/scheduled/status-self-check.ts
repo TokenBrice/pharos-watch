@@ -27,7 +27,6 @@ export function buildStatusSelfCheckSlotGroups(runtime: ScheduledRuntimeContext)
           signal,
           reportProgress,
           ctx: runtime.ctx,
-          mintBurnFreshnessConfig: runtime.mintBurnFreshnessConfig,
           siteApiSharedSecret: runtime.env.SITE_API_SHARED_SECRET,
           d1StatusConfig: resolveCloudflareD1StatusConfig(runtime.env) ?? undefined,
           coingeckoApiKey: runtime.coingeckoApiKey,

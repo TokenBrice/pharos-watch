@@ -360,18 +360,16 @@ export function YieldSourceDetails({
 
 export function YieldSignalsIndicator({
   row,
-  sourceRiskMaterial,
-  rawSourceRiskPenalty,
+  sourceRiskSummary,
   variant = "board",
 }: {
   row: YieldViewModelRow;
-  sourceRiskMaterial: boolean;
-  rawSourceRiskPenalty: number | null;
+  sourceRiskSummary: string | null;
   variant?: "board" | "mobile";
 }) {
   const warningSignalCount = row.warningSignals.length;
 
-  if (warningSignalCount === 0 && !sourceRiskMaterial) {
+  if (warningSignalCount === 0 && !sourceRiskSummary) {
     return variant === "mobile" ? <span>No warnings</span> : null;
   }
 
@@ -398,16 +396,16 @@ export function YieldSignalsIndicator({
         </TooltipTrigger>
         <TooltipContent className="max-w-[260px] text-2xs">
           {warningSignalCount > 0
-            ? sourceRiskMaterial
-              ? `${warningSignalCount} warning signal${warningSignalCount === 1 ? "" : "s"} + source-risk ${(rawSourceRiskPenalty ?? 0).toFixed(2)}×`
+            ? sourceRiskSummary
+              ? `${warningSignalCount} warning signal${warningSignalCount === 1 ? "" : "s"} + ${sourceRiskSummary}`
               : `${warningSignalCount} warning signal${warningSignalCount === 1 ? "" : "s"}`
-            : `Source-risk penalty ${(rawSourceRiskPenalty ?? 0).toFixed(2)}× (no warning signals)`}
+            : `${sourceRiskSummary} (no warning signals)`}
         </TooltipContent>
       </Tooltip>
     );
   }
 
-  if (warningSignalCount === 0 && sourceRiskMaterial) {
+  if (warningSignalCount === 0 && sourceRiskSummary) {
     return (
       <Tooltip>
         <TooltipTrigger asChild>
@@ -418,13 +416,13 @@ export function YieldSignalsIndicator({
               if (event.key === "Enter" || event.key === " ") event.stopPropagation();
             }}
             className="inline-flex pharos-focus-ring"
-            aria-label={`Source-risk penalty ${(rawSourceRiskPenalty ?? 0).toFixed(2)} times`}
+            aria-label={sourceRiskSummary}
           >
             <AlertTriangle className="h-4 w-4 text-state-warn-solid/70" />
           </button>
         </TooltipTrigger>
         <TooltipContent className="max-w-[260px] text-xs">
-          Source-risk penalty {(rawSourceRiskPenalty ?? 0).toFixed(2)}× (no warning signals)
+          {sourceRiskSummary} (no warning signals)
         </TooltipContent>
       </Tooltip>
     );
@@ -455,9 +453,9 @@ export function YieldSignalsIndicator({
               <li key={signal}>
                 <span className="font-medium text-foreground">{formatYieldWarningSignal(signal)}</span>
                 <span className="block text-muted-foreground">{formatYieldWarningSignalDescription(signal)}</span>
-                {isLast && sourceRiskMaterial ? (
+                {isLast && sourceRiskSummary ? (
                   <span className="mt-1 block text-state-warn-solid">
-                    + source-risk {(rawSourceRiskPenalty ?? 0).toFixed(2)}×
+                    + {sourceRiskSummary}
                   </span>
                 ) : null}
               </li>

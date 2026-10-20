@@ -2,8 +2,6 @@ import { decodeAbiParameters } from "viem/utils";
 import {
   decodeMentoPoolExchange,
   mentoSpreadToFeeBps,
-  MENTO_GET_EXCHANGE_IDS_SELECTOR,
-  MENTO_GET_POOL_EXCHANGE_SELECTOR,
   type MentoPoolExchange,
 } from "@shared/lib/mento-contracts";
 import {
@@ -34,7 +32,7 @@ export async function measureMentoConversion(
   const checks: MeasurementCheck[] = [];
   const selfToken = normalizeAddress(target.contracts.token);
   const counterToken = normalizeAddress(target.contracts.counterToken);
-  const totalSupplyRaw = await readJournalUint(caller, { name: "token.totalSupply", to: selfToken, signature: "totalSupply()", selector: "0x18160ddd" }, 0, "totalSupply");
+  const totalSupplyRaw = await readJournalUint(caller, { name: "token.totalSupply", to: selfToken, signature: "totalSupply()" }, 0, "totalSupply");
   requireCheck(checks, "supply.positive", totalSupplyRaw > 0n, `token supply ${totalSupplyRaw} is positive`);
 
   let derived: MentoConversionMeasurementEvidence["derived"];
@@ -46,7 +44,6 @@ export async function measureMentoConversion(
       name: "biPoolManager.getExchangeIds",
       to: manager,
       signature: "getExchangeIds()",
-      selector: MENTO_GET_EXCHANGE_IDS_SELECTOR,
     });
     const [exchangeIds] = decodeAbiParameters([{ type: "bytes32[]" }], rawIds as `0x${string}`);
     caller.recordDecoded(`count=${exchangeIds.length}`);
@@ -71,7 +68,6 @@ export async function measureMentoConversion(
         name: `biPoolManager.getPoolExchange(${index})`,
         to: manager,
         signature: "getPoolExchange(bytes32)",
-        selector: MENTO_GET_POOL_EXCHANGE_SELECTOR,
         args: [BigInt(exchangeId)],
       });
       const exchange = decodeMentoPoolExchange(rawExchange as `0x${string}`);
@@ -118,7 +114,6 @@ export async function measureMentoConversion(
         name: "counterToken.balanceOf(pool)",
         to: counterToken,
         signature: "balanceOf(address)",
-        selector: "0x70a08231",
         args: [BigInt(pool)],
       }),
       0,

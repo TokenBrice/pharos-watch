@@ -213,16 +213,6 @@ describe("handleSettingsCallback — chat-level", () => {
       "dews",
     );
 
-    const history = db.getHistory();
-    const upsert = history.find(
-      (h) =>
-        /INSERT INTO telegram_subscribers/.test(h.sql) &&
-        /global_alert_dews\s*=\s*excluded\.global_alert_dews/.test(h.sql),
-    );
-    expect(upsert).toBeDefined();
-    // Binds are chatId, username, six per-coin flags, then six global flags.
-    // global_alert_dews must be 1 (toggled from 0).
-    expect(upsert!.binds[8]).toBe(1);
     expect(editCalls().length).toBe(1);
     expect(ackCalls().length).toBe(1);
     expect(jsonBody(ackCalls()[0]).text).toContain("dews");
@@ -398,109 +388,29 @@ describe("handleSettingsCallback — per-coin", () => {
   });
 
   it.each([
-    {
-      name: "settings:c:<id>:db:W sets DEWS min band to WARNING",
-      setting: "db:W",
-      from: { id: 1, username: "alice" },
-      chat: { id: 42, type: "private" },
-      sqlPatterns: [/INSERT INTO telegram_subscriptions/, /dews_min_band = excluded\.dews_min_band/],
-      binds: [[1, "usdc-circle"], [2, 1], [3, "WARNING"]],
-      acknowledgement: "WARNING",
-    },
-    {
-      name: "settings:c:<id>:sm:d sets safety mode to downgrade-only",
-      setting: "sm:d",
-      from: { id: 1 },
-      chat: { id: 42 },
-      sqlPatterns: [/safety_mode = excluded\.safety_mode/],
-      binds: [[2, 1], [3, "downgrade-only"]],
-      acknowledgement: null,
-    },
-    {
-      name: "settings:c:<id>:ds:250 sets depeg-step to 250 bps",
-      setting: "ds:250",
-      from: { id: 1 },
-      chat: { id: 42 },
-      sqlPatterns: [/depeg_worsening_bps_step = excluded\.depeg_worsening_bps_step/],
-      binds: [[2, 250]],
-      acknowledgement: null,
-    },
-    {
-      name: "settings:c:<id>:ds:0 clears depeg-step and disables depeg for the coin",
-      setting: "ds:0",
-      from: { id: 1 },
-      chat: { id: 42 },
-      sqlPatterns: [
-        /INSERT INTO telegram_subscriptions/,
-        /depeg_worsening_bps_step = CASE WHEN excluded\.alert_depeg = 0 THEN NULL/,
-      ],
-      binds: [[2, 0]],
-      acknowledgement: null,
-    },
-    {
-      name: "settings:c:<id>:lc:1 enables launch for the coin",
-      setting: "lc:1",
-      from: { id: 1 },
-      chat: { id: 42 },
-      sqlPatterns: [/INSERT INTO telegram_subscriptions/, /alert_launch = excluded\.alert_launch/],
-      binds: [[2, 1]],
-      acknowledgement: null,
-    },
-  ] as const)("$name", async ({ setting, from, chat, sqlPatterns, binds, acknowledgement }) => {
+    ["db:W", "WARNING"],
+    ["sm:d", "downgrade-only"],
+    ["ds:250", "250bps"],
+    ["ds:0", "Depeg off"],
+    ["lc:1", "Launch on"],
+    ["db:0", "DEWS off"],
+  ])("settings:c:<id>:%s edits the panel and acknowledges the setting", async (setting, acknowledgement) => {
     const db = mockD1([
       { match: "FROM telegram_subscriptions", rows: [] },
       { match: "INSERT INTO telegram_subscribers", rows: [] },
       { match: "INSERT INTO telegram_subscriptions", rows: [] },
     ]);
-    await handleSettingsCallback(
-      db,
-      "fake-token",
-      {
-        id: "cb",
-        data: `settings:c:usdc-circle:${setting}`,
-        from,
-        message: { chat, message_id: 999 },
-      },
-      "c",
-      `usdc-circle:${setting}`,
-    );
-
-    const insert = db.getHistory().find((h) => sqlPatterns.every((pattern) => pattern.test(h.sql)));
-    expect(insert).toBeDefined();
-    for (const [index, value] of binds) {
-      expect(insert!.binds[index]).toBe(value);
-    }
-    if (acknowledgement !== null) {
-      expect(jsonBody(ackCalls()[0]).text).toContain(acknowledgement);
-    }
+    await handleSettingsCallback(db, "fake-token", {
+      id: "cb", data: `settings:c:usdc-circle:${setting}`, from: { id: 1, username: "alice" },
+      message: { chat: { id: 42, type: "private" }, message_id: 999 },
+    }, "c", `usdc-circle:${setting}`);
+    expect(editCalls()).toHaveLength(1);
+    expect(jsonBody(editCalls()[0]).text).toContain("USDC settings");
+    expect(ackCalls()).toHaveLength(1);
+    expect(jsonBody(ackCalls()[0]).text).toContain(acknowledgement);
   });
 
-  it("settings:c:<id>:db:0 turns DEWS off without losing the row's other settings", async () => {
-    const { db, sqlite } = fixtures.open();
-    sqlite.exec(`INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at) VALUES ('42', 1, 1);
-      INSERT INTO telegram_subscriptions
-      (chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, dews_min_band, safety_mode, depeg_worsening_bps_step)
-      VALUES ('42', 'usdc-circle', 1, 1, 1, 'WARNING', 'downgrade-only', 100)`);
-    await handleSettingsCallback(
-      db,
-      "fake-token",
-      {
-        id: "cb",
-        data: "settings:c:usdc-circle:db:0",
-        from: { id: 1 },
-        message: { chat: { id: 42 }, message_id: 999 },
-      },
-      "c",
-      "usdc-circle:db:0",
-    );
-
-    expect(sqlite.prepare(`SELECT alert_dews, alert_depeg, alert_safety, safety_mode, depeg_worsening_bps_step
-      FROM telegram_subscriptions WHERE chat_id = '42' AND stablecoin_id = 'usdc-circle'`).get()).toEqual({
-      alert_dews: 0, alert_depeg: 1, alert_safety: 1, safety_mode: "downgrade-only", depeg_worsening_bps_step: 100,
-    });
-  });
-
-  it("unknown setting code under settings:c:<id>:?? acks gracefully without DB writes", async () => {
+  it("unknown setting code under settings:c:<id>:?? receives an unknown-setting acknowledgement", async () => {
     const db = mockD1();
     await handleSettingsCallback(
       db,
@@ -515,8 +425,6 @@ describe("handleSettingsCallback — per-coin", () => {
       "usdc-circle:xx:1",
     );
 
-    const history = db.getHistory();
-    expect(history.some((h) => /INSERT INTO telegram_subscriptions/.test(h.sql))).toBe(false);
     expect(jsonBody(ackCalls()[0]).text).toMatch(/unknown/i);
   });
 

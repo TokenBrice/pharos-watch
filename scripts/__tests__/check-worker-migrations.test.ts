@@ -1,8 +1,8 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import type * as NodeFs from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { DatabaseSync } from "node:sqlite";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   REQUIRED_DATA_MIGRATION_MODE,
@@ -11,7 +11,6 @@ import {
   UNSAFE_ROLLOUT_ADD_COLUMN_LABEL,
   DROP_INDEX_GRANDFATHER_THROUGH_SEQUENCE,
   parseDataMigrationManifestRows,
-  createTableFixtureQuery,
   validateManifestMigrationParity,
   validateDataMigrationManifestRows,
   validateNoSqliteDotCommands,
@@ -24,6 +23,11 @@ import {
   findDestructiveDataStatements,
   stripSqlComments,
 } from "../ci/check-worker-migrations.ts";
+
+vi.mock("node:fs", async (importOriginal) => {
+  const fs = await importOriginal<typeof NodeFs>();
+  return { ...fs, mkdtempSync: vi.fn(fs.mkdtempSync) };
+});
 
 const manifestText = `
 ## Individual Migrations (current active files)
@@ -47,23 +51,6 @@ const manifestText = `
 
 ## Known Anomalies
 `;
-
-describe("createTableFixtureQuery", () => {
-  it("finds only the requested table and rejects names that could change the SQL", () => {
-    const db = new DatabaseSync(":memory:");
-    try {
-      db.exec("CREATE TABLE fixture_1 (id INTEGER);");
-      expect(db.prepare(createTableFixtureQuery("fixture_1")).get()).toBeDefined();
-      expect(db.prepare(createTableFixtureQuery("missing_table")).get()).toBeUndefined();
-      for (const name of ["", "fixture_1' OR 1=1 --", "fixture_1'; DROP TABLE fixture_1; --", "main.fixture_1", "fixture_1\n"]) {
-        expect(() => createTableFixtureQuery(name)).toThrow("Invalid table name");
-      }
-      expect(db.prepare(createTableFixtureQuery("fixture_1")).get()).toBeDefined();
-    } finally {
-      db.close();
-    }
-  });
-});
 
 describe("validateManifestMigrationParity", () => {
   it("rejects squashed manifest rows whose files are still checked in", () => {
@@ -639,5 +626,24 @@ describe("seeded data-migration replay", () => {
   it("replays every seeded data migration, including grandfathered 0236, against the repository fixtures", async () => {
     const result = await validateWorkerMigrations();
     expect(result.dataMigrationFixtureCheckedCount).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe("native database-open failure", () => {
+  it("preserves the native SQLite error and removes the temporary directory", async () => {
+    const tempDir = mkdtempSync(join(tmpdir(), "pharos-migration-open-test-"));
+    mkdirSync(join(tempDir, "migrations.db"));
+    vi.mocked(mkdtempSync).mockReturnValueOnce(tempDir);
+    try {
+      await expect(validateWorkerMigrations()).rejects.toMatchObject({
+        code: "ERR_SQLITE_ERROR",
+        errcode: 14,
+        message: "unable to open database file",
+      });
+      expect(existsSync(tempDir)).toBe(false);
+    } finally {
+      vi.mocked(mkdtempSync).mockReset();
+      rmSync(tempDir, { recursive: true, force: true });
+    }
   });
 });

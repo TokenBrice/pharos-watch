@@ -1,3 +1,7 @@
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { relative, resolve } from "node:path";
+import { unstable_dev, unstable_readConfig } from "wrangler";
+import type { Unstable_DevWorker } from "wrangler";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   cancelResponseBodyQuietly,
@@ -85,10 +89,7 @@ describe("cancelResponseBodyQuietly", () => {
 
   it("cancels the body when present", async () => {
     const cancel = vi.fn(async () => undefined);
-    const response = {
-      bodyUsed: false,
-      body: { cancel },
-    } as unknown as Response;
+    const response = new Response(new ReadableStream<Uint8Array>({ cancel }));
 
     await expect(cancelResponseBodyQuietly(response)).resolves.toBeUndefined();
     expect(cancel).toHaveBeenCalledTimes(1);
@@ -96,24 +97,19 @@ describe("cancelResponseBodyQuietly", () => {
 
   it("does not cancel responses whose body has already been consumed", async () => {
     const cancel = vi.fn(async () => undefined);
-    const response = {
-      bodyUsed: true,
-      body: { cancel },
-    } as unknown as Response;
+    const response = new Response(new ReadableStream<Uint8Array>({
+      start(controller) { controller.close(); }, cancel,
+    }));
+    await response.text();
 
     await expect(cancelResponseBodyQuietly(response)).resolves.toBeUndefined();
     expect(cancel).not.toHaveBeenCalled();
   });
 
   it("swallows cancellation errors", async () => {
-    const response = {
-      bodyUsed: false,
-      body: {
-        cancel: vi.fn(async () => {
-          throw new Error("cannot cancel");
-        }),
-      },
-    } as unknown as Response;
+    const response = new Response(new ReadableStream<Uint8Array>({
+      cancel: vi.fn(async () => { throw new Error("cannot cancel"); }),
+    }));
 
     await expect(cancelResponseBodyQuietly(response)).resolves.toBeUndefined();
   });
@@ -122,10 +118,7 @@ describe("cancelResponseBodyQuietly", () => {
 describe("cancelUnsuccessfulResponseBodyQuietly", () => {
   it("does not cancel successful responses", async () => {
     const cancel = vi.fn(async () => undefined);
-    const response = {
-      ok: true,
-      body: { cancel },
-    } as unknown as Response;
+    const response = new Response(new ReadableStream<Uint8Array>({ cancel }));
 
     await expect(cancelUnsuccessfulResponseBodyQuietly(response)).resolves.toBeUndefined();
     expect(cancel).not.toHaveBeenCalled();
@@ -133,10 +126,7 @@ describe("cancelUnsuccessfulResponseBodyQuietly", () => {
 
   it("cancels non-OK responses", async () => {
     const cancel = vi.fn(async () => undefined);
-    const response = {
-      ok: false,
-      body: { cancel },
-    } as unknown as Response;
+    const response = new Response(new ReadableStream<Uint8Array>({ cancel }), { status: 500 });
 
     await expect(cancelUnsuccessfulResponseBodyQuietly(response)).resolves.toBeUndefined();
     expect(cancel).toHaveBeenCalledTimes(1);
@@ -160,9 +150,53 @@ describe("readResponseTextWithinLimitWithSignal", () => {
     const observe = vi.fn();
     await expect(readResponseJsonWithinLimitWithSignal(new Response("{bad"), 4, undefined, observe)).rejects.toBeInstanceOf(SyntaxError);
     expect(observe).toHaveBeenLastCalledWith({ intakeBytes: 4, declaredBytes: null, outcome: "accepted" });
-    const fake = { json: async () => ({ ok: true }) } as unknown as Response;
-    await readResponseJsonWithinLimitWithSignal(fake, 20, undefined, observe);
-    expect(observe).toHaveBeenLastCalledWith({ intakeBytes: null, declaredBytes: null, outcome: "accepted" });
+    await expect(readResponseJsonWithinLimitWithSignal(new Response(null), 20, undefined, observe)).rejects.toBeInstanceOf(SyntaxError);
+    expect(observe).toHaveBeenLastCalledWith({ intakeBytes: null, declaredBytes: null, outcome: "rejected" });
+  });
+
+  it("keeps native null bodies empty with unknown intake across transport modes", async () => {
+    const observe = vi.fn();
+    await expect(readResponseBytesWithinLimitWithSignal(new Response(null), 0, undefined, observe)).resolves.toEqual(new Uint8Array(0));
+    await expect(readResponseTextWithinLimitWithSignal(new Response(null), 0, undefined, observe)).resolves.toBe("");
+    expect(observe.mock.calls.map(([evidence]) => evidence)).toEqual([
+      { intakeBytes: null, declaredBytes: null, outcome: "accepted" },
+      { intakeBytes: null, declaredBytes: null, outcome: "accepted" },
+    ]);
+    await expect(readResponseTextBoundedWithSignal(new Response(null), 0)).resolves.toBe("");
+  });
+
+  it("preserves null-body validation, preflight and pre-abort ordering", async () => {
+    const observe = vi.fn();
+    const reason = new Error("already aborted");
+    const signal = AbortSignal.abort(reason);
+    await expect(readResponseTextWithinLimitWithSignal(new Response(null), -1, signal, observe)).rejects.toBeInstanceOf(RangeError);
+    expect(observe).not.toHaveBeenCalled();
+    await expect(readResponseTextWithinLimitWithSignal(new Response(null, {
+      headers: { "Content-Length": "2" },
+    }), 1, signal, observe)).rejects.toMatchObject({ name: "ResponseBodyTooLargeError" });
+    expect(observe).toHaveBeenLastCalledWith({ intakeBytes: 0, declaredBytes: 2, outcome: "rejected" });
+    await expect(readResponseTextWithinLimitWithSignal(new Response(null), 0, signal, observe)).rejects.toBe(reason);
+    expect(observe).toHaveBeenLastCalledWith({ intakeBytes: null, declaredBytes: null, outcome: "rejected" });
+    await expect(readResponseTextBoundedWithSignal(new Response(null), 0, signal)).rejects.toBe(reason);
+  });
+
+  it("rejects consumed and locked native bodies without reporting acceptance", async () => {
+    const observe = vi.fn();
+    const consumed = new Response("used");
+    await consumed.text();
+    const locked = new Response("locked");
+    const reader = locked.body!.getReader();
+    try {
+      for (const response of [consumed, locked]) {
+        await expect(readResponseBytesWithinLimitWithSignal(response, 10, undefined, observe)).rejects.toBeInstanceOf(TypeError);
+      }
+      expect(observe.mock.calls.map(([evidence]) => evidence)).toEqual([
+        { intakeBytes: 0, declaredBytes: null, outcome: "rejected" },
+        { intakeBytes: 0, declaredBytes: null, outcome: "rejected" },
+      ]);
+    } finally {
+      reader.releaseLock();
+    }
   });
 
   it("preserves partial streamed intake when a body stalls and is cancelled", async () => {
@@ -190,6 +224,7 @@ describe("readResponseTextWithinLimitWithSignal", () => {
     await vi.advanceTimersByTimeAsync(100);
     await rejection;
     expect(cancel).toHaveBeenCalledOnce();
+    expect(vi.getTimerCount()).toBe(0);
   });
 
 });
@@ -202,3 +237,78 @@ describe("readResponseTextBoundedWithSignal", () => {
   });
 
 });
+
+it("preserves null-body, byte-stream and cancellation evidence in workerd", async () => {
+  const root = resolve(import.meta.dirname, "../../../..");
+  mkdirSync(resolve(root, "agents"), { recursive: true });
+  const scratch = mkdtempSync(resolve(root, "agents/response-body-runtime-"));
+  let worker: Unstable_DevWorker | undefined;
+  try {
+    const config = resolve(scratch, "wrangler.json");
+    const entry = resolve(scratch, "worker.ts");
+    const production = unstable_readConfig({ config: resolve(root, "worker/wrangler.toml") });
+    writeFileSync(config, JSON.stringify({
+      name: "response-body-runtime-test",
+      compatibility_date: production.compatibility_date,
+      compatibility_flags: production.compatibility_flags,
+      tsconfig: relative(scratch, resolve(root, "worker/tsconfig.json")),
+    }));
+    writeFileSync(entry, `
+      import {
+        readResponseBytesWithinLimitWithSignal as bytes,
+        readResponseTextWithinLimitWithSignal as text,
+        readResponseJsonWithinLimitWithSignal as json,
+      } from ${JSON.stringify(resolve(root, "worker/src/lib/response-body.ts"))};
+      export default {
+        async fetch() {
+          const observations = [];
+          const observe = evidence => observations.push(evidence);
+          const emptyBytes = await bytes(new Response(null), 0, undefined, observe);
+          const emptyText = await text(new Response(null), 0, undefined, observe);
+          let jsonError;
+          try { await json(new Response(null), 0, undefined, observe); }
+          catch (error) { jsonError = error.name; }
+          const body = await bytes(new Response(new ReadableStream({
+            start(controller) {
+              controller.enqueue(new Uint8Array([0, 128, 255]));
+              controller.close();
+            },
+          })), 3, undefined, observe);
+          let cancelReason;
+          const parent = new AbortController();
+          const reason = new Error("parent stopped");
+          const stalled = new Response(new ReadableStream({
+            cancel(value) { cancelReason = value; },
+          }));
+          const pending = bytes(stalled, 3, parent.signal, observe);
+          const rejected = pending.catch(error => error === reason);
+          parent.abort(reason);
+          return Response.json({
+            emptyBytes: [...emptyBytes], emptyText, jsonError, body: [...body],
+            originalReason: await rejected, cancelled: cancelReason === reason, observations,
+          });
+        },
+      };
+    `);
+    worker = await unstable_dev(entry, {
+      config, local: true, persist: false, logLevel: "error", port: 0,
+      experimental: { disableExperimentalWarning: true, disableDevRegistry: true },
+    });
+    const response = await worker.fetch("/");
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      emptyBytes: [], emptyText: "", jsonError: "SyntaxError", body: [0, 128, 255],
+      originalReason: true, cancelled: true,
+      observations: [
+        { intakeBytes: null, declaredBytes: null, outcome: "accepted" },
+        { intakeBytes: null, declaredBytes: null, outcome: "accepted" },
+        { intakeBytes: null, declaredBytes: null, outcome: "rejected" },
+        { intakeBytes: 3, declaredBytes: null, outcome: "accepted" },
+        { intakeBytes: 0, declaredBytes: null, outcome: "rejected" },
+      ],
+    });
+  } finally {
+    try { await worker?.stop(); }
+    finally { rmSync(scratch, { recursive: true, force: true }); }
+  }
+}, 60_000);

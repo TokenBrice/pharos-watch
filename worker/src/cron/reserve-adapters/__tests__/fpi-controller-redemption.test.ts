@@ -15,6 +15,7 @@ import {
   observeFpiControllerRedemptionRoute,
   type FpiControllerRouteReadClient,
 } from "../fpi-controller-redemption";
+import { createAdapterIoLimiter } from "../concurrency";
 
 type Hex = `0x${string}`;
 
@@ -526,6 +527,77 @@ describe("observeFpiControllerRedemptionRoute", () => {
       rejectionCode: "controller-state-unavailable",
       blockNumber: BLOCK,
     });
+  });
+
+  it.each([
+    ["controller-redeem-fee", "controller-state-invalid"],
+    ["controller-fpi-token", "interface-identity-mismatch"],
+    ["controller-frax-price-feed", "oracle-identity-mismatch"],
+    ["frax-price-feed-decimals", "oracle-state-invalid"],
+    ["frax-price-feed-round", "oracle-round-invalid"],
+  ] as const)("preserves the rejection class when %s is missing", async (label, rejectionCode) => {
+    const readClient = client();
+    vi.mocked(readClient.multicall).mockImplementation(async (calls) =>
+      encodedResults(calls).filter((row) => row.label !== label));
+    const attempt = await observeFpiControllerRedemptionRoute(params, new AbortController().signal, undefined,
+      { attemptedAtSec: NOW, client: readClient });
+    expect(attempt).toEqual({ status: "rejected", attemptedAtSec: NOW, rejectionCode, blockNumber: BLOCK });
+  });
+
+  it("rejects a duplicate state label without observing redemption capacity", async () => {
+    const readClient = client();
+    vi.mocked(readClient.multicall).mockImplementation(async (calls) => {
+      const rows = encodedResults(calls);
+      return [rows[0], ...rows.slice(0, -1)];
+    });
+    const attempt = await observeFpiControllerRedemptionRoute(params, new AbortController().signal, undefined,
+      { attemptedAtSec: NOW, client: readClient });
+    expect(attempt).toEqual({
+      status: "rejected", attemptedAtSec: NOW, rejectionCode: "controller-state-invalid", blockNumber: BLOCK,
+    });
+    expect(readClient.call).not.toHaveBeenCalled();
+  });
+
+  it("keeps every observation at the original pin, deadline and two-I/O limit", async () => {
+    const clock = vi.spyOn(Date, "now").mockReturnValue(NOW * 1_000);
+    try {
+      const readClient = client();
+      const signal = new AbortController().signal;
+      let active = 0;
+      let peak = 0;
+      const tracked = <Args extends unknown[], Value>(read: (...args: Args) => Promise<Value>) =>
+        async (...args: Args): Promise<Value> => {
+          active += 1;
+          peak = Math.max(peak, active);
+          try { await Promise.resolve(); return await read(...args); }
+          finally { active -= 1; }
+        };
+      const observed: FpiControllerRouteReadClient = {
+        blockNumber: tracked(readClient.blockNumber),
+        blockTimestamp: tracked(readClient.blockTimestamp),
+        code: tracked(readClient.code),
+        multicall: tracked(readClient.multicall),
+        call: tracked(readClient.call),
+      };
+      const attempt = await observeFpiControllerRedemptionRoute(params, signal,
+        { ioLimiter: createAdapterIoLimiter(), abortSignal: signal },
+        { attemptedAtSec: NOW, client: observed });
+      expect(attempt.status).toBe("accepted");
+      expect(peak).toBe(2);
+      const rpcOptions = { signal, timeoutMs: 3_000, deadlineMs: NOW * 1_000 + 8_000, maxRetries: 0 };
+      expect(readClient.blockNumber).toHaveBeenCalledWith(expect.objectContaining(rpcOptions));
+      expect(readClient.blockTimestamp).toHaveBeenCalledWith(BLOCK, expect.objectContaining(rpcOptions));
+      for (const [, block, options] of vi.mocked(readClient.code).mock.calls) {
+        expect(block).toBe(BLOCK);
+        expect(options).toMatchObject(rpcOptions);
+      }
+      expect(readClient.multicall).toHaveBeenCalledWith(expect.arrayContaining([
+        expect.objectContaining({ label: "controller-fpi-token", allowFailure: false }),
+      ]), BLOCK, expect.objectContaining(rpcOptions));
+      expect(readClient.call).toHaveBeenCalledWith(CONTROLLER, expect.any(String), BLOCK, expect.objectContaining(rpcOptions));
+    } finally {
+      clock.mockRestore();
+    }
   });
 });
 

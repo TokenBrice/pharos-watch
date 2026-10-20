@@ -7,6 +7,7 @@ import {
   ACTIVE_PRESET_FLAGS_SQL,
   ACTIVE_SUBSCRIPTION_FLAGS_SQL,
   ACTIVE_WATCHER_SQL_CONDITION,
+  TELEGRAM_LIFECYCLE_OPT_IN_PROJECTIONS_SQL,
   buildActivePresetAggregateSql,
   buildActiveSubscriptionAggregateSql,
 } from "@shared/lib/telegram-alert-families";
@@ -257,87 +258,12 @@ export async function computeTelegramCurrentLifecycleSnapshot(
   const [aggregate, presetRows, pendingDeliveries, lifecycleEvents] = await Promise.all([
     db
       .prepare(
+        // SAFETY: Interpolated lifecycle projections and rollups use only canonical family identifiers.
         `SELECT
            SUM(CASE WHEN ${ACTIVE_WATCHER_SQL_CONDITION} THEN 1 ELSE 0 END) AS active_watchers,
            SUM(COALESCE(sub.active_sub_count, 0)) AS explicit_coin_follows,
            SUM(CASE WHEN COALESCE(preset.active_preset_count, 0) > 0 THEN 1 ELSE 0 END) AS active_preset_followers,
-           SUM(
-             CASE
-               WHEN COALESCE(sub.dews_enabled, 0) = 1
-                 OR COALESCE(preset.dews_enabled, 0) = 1
-                 OR s.global_alert_dews = 1
-               THEN 1 ELSE 0
-             END
-           ) AS active_dews_opt_ins,
-           SUM(
-             CASE
-               WHEN COALESCE(sub.depeg_enabled, 0) = 1
-                 OR COALESCE(preset.depeg_enabled, 0) = 1
-                 OR s.global_alert_depeg = 1
-               THEN 1 ELSE 0
-             END
-           ) AS active_depeg_opt_ins,
-           SUM(
-             CASE
-               WHEN COALESCE(sub.safety_enabled, 0) = 1
-                 OR COALESCE(preset.safety_enabled, 0) = 1
-                 OR s.global_alert_safety = 1
-               THEN 1 ELSE 0
-             END
-           ) AS active_safety_opt_ins,
-           SUM(
-             CASE
-               WHEN COALESCE(sub.launch_enabled, 0) = 1
-                 OR s.global_alert_launch = 1
-               THEN 1 ELSE 0
-             END
-           ) AS active_launch_opt_ins,
-           SUM(
-             CASE
-               WHEN COALESCE(sub.reserve_enabled, 0) = 1
-                 OR s.global_alert_reserve = 1
-               THEN 1 ELSE 0
-             END
-           ) AS active_reserve_opt_ins,
-           SUM(
-             CASE
-               WHEN COALESCE(sub.freeze_enabled, 0) = 1
-                 OR s.global_alert_freeze = 1
-               THEN 1 ELSE 0
-             END
-           ) AS active_freeze_opt_ins,
-           SUM(
-             CASE
-               WHEN (
-                   COALESCE(sub.dews_enabled, 0) = 1
-                   OR COALESCE(preset.dews_enabled, 0) = 1
-                   OR s.global_alert_dews = 1
-                 )
-                 AND (
-                   COALESCE(sub.depeg_enabled, 0) = 1
-                   OR COALESCE(preset.depeg_enabled, 0) = 1
-                   OR s.global_alert_depeg = 1
-                 )
-                 AND (
-                   COALESCE(sub.safety_enabled, 0) = 1
-                   OR COALESCE(preset.safety_enabled, 0) = 1
-                   OR s.global_alert_safety = 1
-                 )
-                 AND (
-                   COALESCE(sub.launch_enabled, 0) = 1
-                   OR s.global_alert_launch = 1
-                 )
-                 AND (
-                   COALESCE(sub.reserve_enabled, 0) = 1
-                   OR s.global_alert_reserve = 1
-                 )
-                 AND (
-                   COALESCE(sub.freeze_enabled, 0) = 1
-                   OR s.global_alert_freeze = 1
-                 )
-               THEN 1 ELSE 0
-             END
-           ) AS active_all_types_opt_ins,
+           ${TELEGRAM_LIFECYCLE_OPT_IN_PROJECTIONS_SQL},
            SUM(CASE WHEN COALESCE(s.quiet_hours_enabled, 0) = 1 THEN 1 ELSE 0 END) AS quiet_hours_enabled_chats
          FROM telegram_subscribers s
          LEFT JOIN (${ACTIVE_EXPLICIT_SUBS_BY_CHAT_SQL}) sub ON sub.chat_id = s.chat_id
@@ -417,60 +343,33 @@ async function upsertTelegramLifecycleSnapshot(
   // The telegram_watcher_lifecycle_daily table has no active_reserve_opt_ins or
   // active_freeze_opt_ins columns (migration 0123). Persisting either family would require a
   // coordinated D1 migration; live counts still surface via the live aggregate query.
+  const columns = [
+    ["day", snapshot.day],
+    ["snapshot_at", snapshot.snapshotAt],
+    ["active_watchers", snapshot.activeWatchers],
+    ["new_watchers", snapshot.newWatchers],
+    ["churned_watchers", snapshot.churnedWatchers],
+    ["reactivated_watchers", snapshot.reactivatedWatchers],
+    ["explicit_coin_follows", snapshot.explicitCoinFollows],
+    ["preset_implied_coin_follows", snapshot.presetImpliedCoinFollows],
+    ["active_preset_followers", snapshot.activePresetFollowers],
+    ["active_dews_opt_ins", snapshot.alertTypeOptIns.dews],
+    ["active_depeg_opt_ins", snapshot.alertTypeOptIns.depeg],
+    ["active_safety_opt_ins", snapshot.alertTypeOptIns.safety],
+    ["active_launch_opt_ins", snapshot.alertTypeOptIns.launch],
+    ["quiet_hours_enabled_chats", snapshot.quietHoursEnabledChats],
+    ["pending_deliveries", snapshot.pendingDeliveries],
+  ] as const;
   try {
     await db
       .prepare(
-        `INSERT INTO telegram_watcher_lifecycle_daily (
-           day,
-           snapshot_at,
-           active_watchers,
-           new_watchers,
-           churned_watchers,
-           reactivated_watchers,
-           explicit_coin_follows,
-           preset_implied_coin_follows,
-           active_preset_followers,
-           active_dews_opt_ins,
-           active_depeg_opt_ins,
-           active_safety_opt_ins,
-           active_launch_opt_ins,
-           quiet_hours_enabled_chats,
-           pending_deliveries
-         )
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-         ON CONFLICT(day) DO UPDATE SET
-           snapshot_at = excluded.snapshot_at,
-           active_watchers = excluded.active_watchers,
-           new_watchers = excluded.new_watchers,
-           churned_watchers = excluded.churned_watchers,
-           reactivated_watchers = excluded.reactivated_watchers,
-           explicit_coin_follows = excluded.explicit_coin_follows,
-           preset_implied_coin_follows = excluded.preset_implied_coin_follows,
-           active_preset_followers = excluded.active_preset_followers,
-           active_dews_opt_ins = excluded.active_dews_opt_ins,
-           active_depeg_opt_ins = excluded.active_depeg_opt_ins,
-           active_safety_opt_ins = excluded.active_safety_opt_ins,
-           active_launch_opt_ins = excluded.active_launch_opt_ins,
-           quiet_hours_enabled_chats = excluded.quiet_hours_enabled_chats,
-           pending_deliveries = excluded.pending_deliveries`,
+        // SAFETY: Identifiers come from the fixed local supported-column list; snapshot values are bound.
+        `INSERT INTO telegram_watcher_lifecycle_daily (${columns.map(([column]) => column).join(", ")})
+         VALUES (${columns.map(() => "?").join(", ")})
+         ON CONFLICT(day) DO UPDATE SET ${columns.slice(1)
+           .map(([column]) => `${column} = excluded.${column}`).join(",\n           ")}`,
       )
-      .bind(
-        snapshot.day,
-        snapshot.snapshotAt,
-        snapshot.activeWatchers,
-        snapshot.newWatchers,
-        snapshot.churnedWatchers,
-        snapshot.reactivatedWatchers,
-        snapshot.explicitCoinFollows,
-        snapshot.presetImpliedCoinFollows,
-        snapshot.activePresetFollowers,
-        snapshot.alertTypeOptIns.dews,
-        snapshot.alertTypeOptIns.depeg,
-        snapshot.alertTypeOptIns.safety,
-        snapshot.alertTypeOptIns.launch,
-        snapshot.quietHoursEnabledChats,
-        snapshot.pendingDeliveries,
-      )
+      .bind(...columns.map(([, value]) => value))
       .run();
   } catch {
     // Snapshot writes are best-effort; callers can still return live aggregates.

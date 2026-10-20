@@ -100,6 +100,16 @@ function marker(db: D1Database, updateId = 7001): D1PreparedStatement {
   });
 }
 
+function applyMutation(
+  kind: "import" | "direct",
+  db: D1Database,
+  input: Parameters<typeof applyWatchlistImportV2>[1],
+): Promise<"applied" | "stale"> {
+  return kind === "import"
+    ? applyWatchlistImportV2(db, input)
+    : applyWatchlistDirectPatch(db, { ...input, directEntriesToUpsert: input.directEntries });
+}
+
 function readState(sqlite: DatabaseSync): unknown {
   return {
     subscriber: sqlite.prepare(`
@@ -293,11 +303,11 @@ describe("watchlist v2 atomic replacement", () => {
     }
   });
 
-  it("creates a first-time Mini App subscriber inside the guarded replacement batch", async () => {
+  it.each(["import", "direct"] as const)("creates a first-time Mini App subscriber inside the guarded batch (%s)", async (kind) => {
     const { sqlite, db } = openLatestSchema();
     const desired = [direct("usdc-circle", true)];
     try {
-      const outcome = await applyWatchlistImportV2(db, {
+      const outcome = await applyMutation(kind, db, {
         chatId: "mini-app-chat",
         ensureSubscriber: { username: "alice" },
         expectedPreferenceGeneration: 0,
@@ -317,14 +327,14 @@ describe("watchlist v2 atomic replacement", () => {
     }
   });
 
-  it("consumes a stale preview and commits only the webhook marker, never portable preferences", async () => {
+  it.each(["import", "direct"] as const)("rejects stale preferences while keeping terminal effects domain-specific (%s)", async (kind) => {
     const { sqlite, db } = openLatestSchema();
     const desired = [direct("usdc-circle", false)];
     const payload = { kind: "watchlist-import-v2", directEntries: desired.map(packWatchlistDirectState) };
     try {
       seed(sqlite, payload);
       const before = readState(sqlite);
-      const outcome = await applyWatchlistImportV2(db, {
+      const outcome = await applyMutation(kind, db, {
         chatId: "chat",
         expectedPreferenceGeneration: 4,
         generationLease: 4_100_000_000_000_002,
@@ -338,25 +348,32 @@ describe("watchlist v2 atomic replacement", () => {
       });
       expect(outcome).toBe("stale");
       expect(readState(sqlite)).toEqual(before);
-      expect(sqlite.prepare("SELECT 1 FROM telegram_pending_disambiguation WHERE chat_id = 'chat'").get()).toBeUndefined();
-      expect(sqlite.prepare("SELECT applied_at FROM telegram_webhook_operation_mutations WHERE update_id = 7001").get()).toEqual({ applied_at: NOW });
+      expect(sqlite.prepare("SELECT 1 FROM telegram_pending_disambiguation WHERE chat_id = 'chat'").get())
+        .toEqual(kind === "import" ? undefined : { 1: 1 });
+      expect(sqlite.prepare("SELECT applied_at FROM telegram_webhook_operation_mutations WHERE update_id = 7001").get())
+        .toEqual(kind === "import" ? { applied_at: NOW } : undefined);
     } finally {
       sqlite.close();
     }
   });
 
-  it("rolls every guarded write and pending deletion back when the final operation statement fails", async () => {
+  it.each(["import", "direct"] as const)("rolls every guarded write and pending deletion back when the batch tail fails (%s)", async (kind) => {
     const { sqlite, db } = openLatestSchema();
     const desired = [direct("usdc-circle", false)];
     const payload = { kind: "watchlist-import-v2", directEntries: desired.map(packWatchlistDirectState) };
     try {
       seed(sqlite, payload);
       const before = readState(sqlite);
+      if (kind === "direct") sqlite.exec(`
+        CREATE TRIGGER fail_generation_restore BEFORE UPDATE OF preference_generation ON telegram_subscribers
+        WHEN NEW.preference_generation = 6
+        BEGIN SELECT RAISE(ABORT, 'generation restore failed'); END;
+      `);
       const failure = db.prepare(`
         INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at)
         VALUES ('chat', ?, ?)
       `).bind(NOW, NOW);
-      await expect(applyWatchlistImportV2(db, {
+      await expect(applyMutation(kind, db, {
         chatId: "chat",
         expectedPreferenceGeneration: 5,
         generationLease: 4_100_000_000_000_003,

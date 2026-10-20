@@ -1,8 +1,5 @@
-import {
-  toMethodologyVersionLabel,
-  type MethodologyChangelogDetailBlock,
-  type MethodologyChangelogRichText,
-} from "@shared/lib/methodology-versions/base";
+import { toMethodologyVersionLabel } from "@shared/lib/methodology-versions/base";
+import type { MethodologyChangelogDetailBlock, MethodologyChangelogRichText } from "@shared/types/editorial-content";
 import {
   METHODOLOGY_CHANGELOG_MARKDOWN_KEYS,
   getMethodologyChangelogEntryByMarkdownKey,

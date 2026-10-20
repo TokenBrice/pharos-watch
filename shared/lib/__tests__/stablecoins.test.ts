@@ -15,27 +15,12 @@ import {
   TRACKED_META_BY_ID,
   TRACKED_STABLECOINS,
 } from "@shared/lib/stablecoins/registry";
-import { createVariantRelationshipHelpers } from "../stablecoins/variant-relationships";
-import { isActiveStablecoinMeta } from "../stablecoins/status";
-import type { StablecoinMeta, VariantKind } from "../../types";
 import {
   findStablecoinCatalogInvariantIssues,
   parseCanonicalOrderAsset,
   parseDeadStablecoinAssets,
   parseStablecoinMetaAssets,
 } from "../stablecoins/schema";
-
-function hasTrackedVariantMeta(
-  meta: StablecoinMeta | undefined,
-): meta is StablecoinMeta & { variantOf: string; variantKind: VariantKind } {
-  return meta?.variantOf != null && meta.variantKind != null && isActiveStablecoinMeta(meta);
-}
-
-const { getVariants, isTrackedVariant } = createVariantRelationshipHelpers({
-  activeMetaById: ACTIVE_META_BY_ID,
-  activeStablecoins: ACTIVE_STABLECOINS,
-  hasTrackedVariantMeta,
-});
 
 const EURR_PRE_LAUNCH_ID = "eurr-revolut";
 const EXPECTED_TRACKED_STABLECOIN_COUNT = 488;
@@ -367,7 +352,9 @@ describe("tracked stablecoin metadata", () => {
   });
 
   it("tracks the current implementation-scope variants", () => {
-    const variantIds = ACTIVE_STABLECOINS.filter((coin) => isTrackedVariant(coin.id)).map((coin) => coin.id);
+    const variantIds = ACTIVE_STABLECOINS.filter(
+      (coin) => coin.variantOf != null && coin.variantKind != null,
+    ).map((coin) => coin.id);
 
     expect(variantIds).toEqual([
       "susdt-spark", "steakusdt-steakhouse", "skymoneyusdtsavings-sky", "sparkusdtbc-spark",
@@ -406,10 +393,11 @@ describe("tracked stablecoin metadata", () => {
   });
 
   it("keeps multi-variant parents explicit", () => {
-    expect(getVariants("usds-sky").map((coin) => coin.id)).toEqual([
+    expect(ACTIVE_STABLECOINS.filter((coin) => coin.variantOf === "usds-sky").map((coin) => coin.id)).toEqual([
       "susds-sky", "stusds-sky", "skymoneyusdsflagship-sky",
     ]);
-    expect(getVariants("bold-liquity").map((coin) => coin.id)).toEqual(["sbold-k3-capital", "ybold-yearn"]);
+    expect(ACTIVE_STABLECOINS.filter((coin) => coin.variantOf === "bold-liquity").map((coin) => coin.id))
+      .toEqual(["sbold-k3-capital", "ybold-yearn"]);
   });
 
   it("rejects malformed stablecoin assets with readable schema errors", () => {

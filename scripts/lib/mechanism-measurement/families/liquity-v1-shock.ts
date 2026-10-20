@@ -43,7 +43,6 @@ export async function measureLiquityV1ShockCoverage(
     role: "graph",
     to: token,
     signature: "troveManagerAddress()",
-    selector: "0x5a4d28bb",
   });
   requirePass(
     checks,
@@ -56,7 +55,6 @@ export async function measureLiquityV1ShockCoverage(
     role: "graph",
     to: token,
     signature: "stabilityPoolAddress()",
-    selector: "0x0b622ab2",
   });
   requirePass(
     checks,
@@ -69,7 +67,6 @@ export async function measureLiquityV1ShockCoverage(
     role: "graph",
     to: troveManager,
     signature: "priceFeed()",
-    selector: "0x741bef1a",
   });
   requirePass(
     checks,
@@ -83,28 +80,24 @@ export async function measureLiquityV1ShockCoverage(
     role: "graph",
     to: troveManager,
     signature: "sortedTroves()",
-    selector: "0xae918754",
   });
   const activePool = await readAddress(caller, {
     name: "troveManager.activePool",
     role: "graph",
     to: troveManager,
     signature: "activePool()",
-    selector: "0x7f7dde4a",
   });
   const defaultPool = await readAddress(caller, {
     name: "troveManager.defaultPool",
     role: "graph",
     to: troveManager,
     signature: "defaultPool()",
-    selector: "0x3cc74225",
   });
   const derivedBorrowerOperations = await readAddress(caller, {
     name: "troveManager.borrowerOperationsAddress",
     role: "graph",
     to: troveManager,
     signature: "borrowerOperationsAddress()",
-    selector: "0xb7f8cf9b",
   });
   requirePass(
     checks,
@@ -117,7 +110,6 @@ export async function measureLiquityV1ShockCoverage(
     role: "graph",
     to: troveManager,
     signature: "lusdToken()",
-    selector: "0xb83f91a2",
   });
   requirePass(
     checks,
@@ -130,14 +122,12 @@ export async function measureLiquityV1ShockCoverage(
     role: "graph",
     to: collSurplusPool,
     signature: "troveManagerAddress()",
-    selector: "0x5a4d28bb",
   });
   const surplusPoolActivePool = await readAddress(caller, {
     name: "collSurplusPool.activePoolAddress",
     role: "graph",
     to: collSurplusPool,
     signature: "activePoolAddress()",
-    selector: "0xb08bc722",
   });
   requirePass(
     checks,
@@ -150,28 +140,24 @@ export async function measureLiquityV1ShockCoverage(
     role: "oracle-graph",
     to: priceFeed,
     signature: "priceAggregator()",
-    selector: "0x3078fff5",
   });
   const tellorCaller = await readAddress(caller, {
     name: "priceFeed.tellorCaller",
     role: "oracle-graph",
     to: priceFeed,
     signature: "tellorCaller()",
-    selector: "0x7c61e3bf",
   });
   const priceAggregatorImplementation = await readAddress(caller, {
     name: "priceAggregator.aggregator",
     role: "oracle-graph",
     to: priceAggregator,
     signature: "aggregator()",
-    selector: "0x245a7bfc",
   });
   const tellorOracle = await readAddress(caller, {
     name: "tellorCaller.tellor",
     role: "oracle-graph",
     to: tellorCaller,
     signature: "tellor()",
-    selector: "0x1959ad5b",
   });
 
   const price = await readUint(caller, {
@@ -179,49 +165,42 @@ export async function measureLiquityV1ShockCoverage(
     role: "state",
     to: priceFeed,
     signature: "fetchPrice()",
-    selector: "0x0fdb11cf",
   });
   const protocolCollateral = await readUint(caller, {
     name: "troveManager.getEntireSystemColl",
     role: "state",
     to: troveManager,
     signature: "getEntireSystemColl()",
-    selector: "0x887105d3",
   });
   const protocolDebt = await readUint(caller, {
     name: "troveManager.getEntireSystemDebt",
     role: "state",
     to: troveManager,
     signature: "getEntireSystemDebt()",
-    selector: "0x795d26c3",
   });
   const stabilityPoolDeposits = await readUint(caller, {
     name: "stabilityPool.getTotalLUSDDeposits",
     role: "state",
     to: stabilityPool,
     signature: "getTotalLUSDDeposits()",
-    selector: "0x9bf2f1ac",
   });
   const mcr = await readUint(caller, {
     name: "troveManager.MCR",
     role: "parameter",
     to: troveManager,
     signature: "MCR()",
-    selector: "0x794e5724",
   });
   const ccr = await readUint(caller, {
     name: "troveManager.CCR",
     role: "parameter",
     to: troveManager,
     signature: "CCR()",
-    selector: "0x5733d58f",
   });
   const currentRecoveryModeRaw = await readUint(caller, {
     name: "troveManager.checkRecoveryMode",
     role: "state",
     to: troveManager,
     signature: "checkRecoveryMode(uint256)",
-    selector: "0x4e443d9e",
     args: [price],
   });
   requirePass(
@@ -243,7 +222,6 @@ export async function measureLiquityV1ShockCoverage(
       role: "enumeration",
       to: troveManager,
       signature: "getTroveOwnersCount()",
-      selector: "0x49eefeee",
     }),
   );
   requirePass(
@@ -258,7 +236,6 @@ export async function measureLiquityV1ShockCoverage(
       role: "liquidation-order",
       to: sortedTroves,
       signature: "getSize()",
-      selector: "0xde8fa431",
     }),
   );
   requirePass(
@@ -272,14 +249,12 @@ export async function measureLiquityV1ShockCoverage(
     role: "liquidation-order",
     to: sortedTroves,
     signature: "getFirst()",
-    selector: "0x1e223143",
   });
   const last = await readAddress(caller, {
     name: "sortedTroves.getLast",
     role: "liquidation-order",
     to: sortedTroves,
     signature: "getLast()",
-    selector: "0x4d622831",
   });
 
   const ownerSpecs: ShockEthCallSpec[] = Array.from({ length: positionCount }, (_, index) => ({
@@ -287,7 +262,6 @@ export async function measureLiquityV1ShockCoverage(
     role: "enumeration",
     to: troveManager,
     signature: "getTroveFromTroveOwnersArray(uint256)",
-    selector: "0xd9a72444",
     args: [BigInt(index)],
   }));
   const ownerReturns = await caller.batch(ownerSpecs);
@@ -307,7 +281,6 @@ export async function measureLiquityV1ShockCoverage(
     role: "position-input",
     to: troveManager,
     signature: "getEntireDebtAndColl(address)",
-    selector: "0xb91af97c",
     args: [BigInt(owner)],
   }));
   const positionReturns = await caller.batch(positionSpecs);
@@ -330,7 +303,6 @@ export async function measureLiquityV1ShockCoverage(
     role: "liquidation-order",
     to: sortedTroves,
     signature: "getPrev(address)",
-    selector: "0xb72703ac",
     args: [BigInt(owner)],
   }));
   const prevReturns = await caller.batch(prevSpecs);

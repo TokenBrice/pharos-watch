@@ -14,6 +14,7 @@ import type { FaqItem } from "@/lib/faq";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { METHODOLOGY_READING_STEPS, METHODOLOGY_SECTIONS, READER_GUIDE_COPY } from "./methodology-shared";
+import { DEFINITIONS } from "@/lib/definitions";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Methodology: How Pharos Grades Stablecoins",
@@ -57,7 +58,7 @@ const METHODOLOGY_FAQ_ITEMS = [
   {
     question: "What is the Bank Run Gauge?",
     answer:
-      "The Bank Run Gauge is a market-cap-weighted composite of each tracked stablecoin's issuance-chain net flow versus its own trailing 30-day baseline. It is a signed -100 to +100 pressure signal. Scores below -10 indicate worsening redemption pressure; scores above +10 indicate improving issuance pressure. It returns null when insufficient data is available.",
+      DEFINITIONS.bankRunGauge.long,
   },
 ] as const satisfies readonly FaqItem[];
 
@@ -228,7 +229,6 @@ export default function MethodologyPage() {
 
       <LongformScrollspyNav
         sections={METHODOLOGY_SECTIONS}
-        railLabel="Jump to section"
         navAriaLabel="Methodology section controls"
         edgeFade
         rightSlot={

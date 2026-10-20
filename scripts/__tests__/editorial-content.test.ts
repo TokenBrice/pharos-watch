@@ -1,12 +1,32 @@
 import { readFileSync } from "node:fs";
-import { describe, expect, it } from "vitest";
-import { CaseStudyContentSchema, WeeklyContentSchema } from "../lib/editorial-content";
+import { describe, expect, expectTypeOf, it } from "vitest";
+import { CaseStudyContentSchema, MethodologyContentSchema, WeeklyContentSchema } from "@shared/types/editorial-content";
+import type { CaseStudy, MethodologyChangelogDetailBlock, SummaryHref } from "@shared/types/editorial-content";
 import { buildPrStaticCheckPlan, STRUCTURAL_CHECKS } from "../maintenance/run-pr-static-checks";
 import { checkEditorialContent } from "../ci/check-editorial-content";
 import { withTempRepo } from "./helpers/test-state";
 
 const load = (path: string): unknown => JSON.parse(readFileSync(path, "utf8"));
 describe("authored editorial JSON", () => {
+  it("keeps inferred recursive readonly views, six weights and internal-path hrefs", () => {
+    const weights = { kind: "weights", values: ["1", "2", "3", "4", "5", "6"] } as const;
+    const nested = { kind: "section", heading: "Nested", blocks: [weights] } as const satisfies MethodologyChangelogDetailBlock;
+    expectTypeOf(nested).toMatchTypeOf<MethodologyChangelogDetailBlock>();
+    expectTypeOf<Extract<MethodologyChangelogDetailBlock, { kind: "section" }>["blocks"]>().toEqualTypeOf<readonly MethodologyChangelogDetailBlock[]>();
+    expectTypeOf<Extract<MethodologyChangelogDetailBlock, { kind: "weights" }>["values"]>().toEqualTypeOf<readonly [string, string, string, string, string, string]>();
+    expectTypeOf<CaseStudy["lead"]>().toEqualTypeOf<readonly string[]>();
+    expectTypeOf<SummaryHref>().toEqualTypeOf<`/${string}`>();
+    expectTypeOf<"https://example.com">().not.toMatchTypeOf<SummaryHref>();
+    const entry = { version: "1.0", title: "Title", date: "2026-10-19", effectiveAt: 0, summary: "Summary", impact: [], commits: [], reconstructed: false };
+    expect(MethodologyContentSchema.parse([{ ...entry, detail: [nested] }])[0].detail).toEqual([nested]);
+    expect(MethodologyContentSchema.safeParse([{ ...entry, detail: [{ ...nested, unexpected: true }] }]).success).toBe(false);
+    for (const values of [weights.values.slice(1), [...weights.values, "7"]]) {
+      expect(MethodologyContentSchema.safeParse([{ ...entry, detail: [{ ...nested, blocks: [{ ...weights, values }] }] }]).success).toBe(false);
+    }
+    const weekly = WeeklyContentSchema.parse(load("src/data/changelogs/2026-08-02.json"));
+    expect(WeeklyContentSchema.safeParse({ ...weekly, summary: [{ ...weekly.summary[0], href: "//example.com" }] }).success).toBe(false);
+  });
+
   it("discovers nested authored JSON and TypeScript with the existing editorial exclusions", () => {
     withTempRepo("pharos-editorial-content", {
       "shared/data/stablecoins/coins/demo.json": "{}",

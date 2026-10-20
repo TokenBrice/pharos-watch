@@ -11,22 +11,9 @@ import {
   ReserveDriftEntrySchema,
   YieldHealthSummarySchema,
   StatusResponseSchema,
-  type CanaryStatus,
-  type CoinGeckoPriceDiff,
-  type LiquidityHealth,
-  type MintBurnReconciliationSummary,
-  type PublicationHealth,
-  type PriceSourceHealth,
-  type ProviderCircuitHealth,
-  type ReserveDriftEntry,
   type StatusSectionErrors,
-  type TelegramHealthSummary,
-  type YieldHealthSummary,
 } from "@shared/types/status";
-import {
-  D1TableGrowthSnapshotSchema,
-  type D1UsageSummaryWithTableGrowth,
-} from "./d1-usage";
+import { D1TableGrowthSnapshotSchema } from "./d1-usage";
 import type { RawStatusComputation } from "../status-evaluation";
 import { STATUS_SYSTEM_FRESHNESS_SEC } from "../status-reliability-shared";
 import { PriceSourceHealthSchema } from "@shared/types/pricing-source-health";
@@ -46,22 +33,9 @@ export const STATUS_RAW_SNAPSHOT_MAX_AGE_SEC = STATUS_SYSTEM_FRESHNESS_SEC;
 const STATUS_RAW_SNAPSHOT_PAYLOAD_VERSION = 2;
 const EXPECTED_CRON_JOBS = Object.keys(CRON_INTERVALS);
 
-interface StatusSupplements {
-  liquidityHealth: LiquidityHealth | null;
-  yieldHealth: YieldHealthSummary | null;
-  publicationHealth: PublicationHealth | null;
-  providerCircuitHealth: ProviderCircuitHealth | null;
-  canaries: CanaryStatus | null;
-  priceSourceHealth: PriceSourceHealth | null;
-  coingeckoPriceDiff: CoinGeckoPriceDiff | null;
-  d1Usage: D1UsageSummaryWithTableGrowth | null;
-  mintBurnReconciliation: MintBurnReconciliationSummary | null;
-  reserveDrift?: ReserveDriftEntry[];
-  telegramSummary: TelegramHealthSummary | null;
+export type StatusSupplements = Omit<z.output<typeof StatusSupplementsSchema>, "sectionErrors"> & {
   sectionErrors: StatusSectionErrors;
-}
-
-export type { StatusSupplements };
+};
 
 /** The persisted assessment: everything but the live-reloaded cron records. */
 export type SnapshotRawStatus = Omit<RawStatusComputation, "crons">;

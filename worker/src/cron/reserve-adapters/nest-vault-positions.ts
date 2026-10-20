@@ -154,49 +154,98 @@ function readPendingTransactions(
   });
 }
 
+const USDC_METADATA: Omit<SliceValue, "value"> = {
+  sourceKey: "nest-vault-positions:usdc",
+  name: "Liquid USDC balances",
+  risk: "low",
+  coinId: "usdc-circle",
+  depType: "collateral",
+};
+const USDT_METADATA: Omit<SliceValue, "value"> = {
+  sourceKey: "nest-vault-positions:usdt",
+  name: "Liquid USDT balances",
+  risk: "low",
+  coinId: "usdt-tether",
+  depType: "collateral",
+};
+const LIQUID_TOKEN_METADATA: Readonly<Record<string, Omit<SliceValue, "value">>> = {
+  USDC: USDC_METADATA,
+  "USDC.e": USDC_METADATA,
+  USDT: USDT_METADATA,
+  USDT0: USDT_METADATA,
+  pUSD: {
+    sourceKey: "nest-vault-positions:pusd",
+    name: "pUSD liquid balance",
+    risk: "high",
+    coinId: "pusd-plume",
+    depType: "collateral",
+  },
+  USDG: {
+    sourceKey: "nest-vault-positions:usdg",
+    name: "USDG liquid balance",
+    risk: "low",
+    coinId: "usdg-paxos",
+    depType: "collateral",
+  },
+};
+
+// First matching slug OR symbol wins, including conflicting known aliases.
+const YIELD_TOKEN_METADATA: ReadonlyArray<{
+  slug: string;
+  symbol: string;
+  metadata: Omit<SliceValue, "value">;
+}> = [
+  {
+    slug: "nest-treasury-vault",
+    symbol: "nTBILL",
+    metadata: {
+      sourceKey: "nest-vault-positions:ntbill",
+      name: "Nest Treasury vault (nTBILL)",
+      risk: "low",
+      coinId: "ntbill-nest",
+      depType: "collateral",
+    },
+  },
+  {
+    slug: "janus-henderson-fund",
+    symbol: "JTRSY",
+    metadata: {
+      sourceKey: "nest-vault-positions:jtrsy",
+      name: "Janus Henderson Anemoy Treasury Fund (JTRSY)",
+      risk: "low",
+      coinId: "jtrsy-anemoy",
+      depType: "collateral",
+    },
+  },
+  {
+    slug: "superstate-ustb",
+    symbol: "USTB",
+    metadata: {
+      sourceKey: "nest-vault-positions:ustb",
+      name: "Superstate USTB Treasury Fund",
+      risk: "low",
+      coinId: "ustb-superstate",
+      depType: "collateral",
+    },
+  },
+  {
+    slug: "superstate-uscc",
+    symbol: "USCC",
+    metadata: {
+      sourceKey: "nest-vault-positions:uscc",
+      name: "Superstate USCC cash-and-carry fund",
+      risk: "low",
+    },
+  },
+];
+
 function bucketLiquidToken(token: NestPositionToken): SliceValue {
   const symbol = typeof token.symbol === "string" ? token.symbol : "Unknown";
   const value = readValue(token);
-  if (symbol === "USDC" || symbol === "USDC.e") {
-    return {
-      sourceKey: "nest-vault-positions:usdc",
-      value,
-      name: "Liquid USDC balances",
-      risk: "low",
-      coinId: "usdc-circle",
-      depType: "collateral",
-    };
-  }
-  if (symbol === "USDT" || symbol === "USDT0") {
-    return {
-      sourceKey: "nest-vault-positions:usdt",
-      value,
-      name: "Liquid USDT balances",
-      risk: "low",
-      coinId: "usdt-tether",
-      depType: "collateral",
-    };
-  }
-  if (symbol === "pUSD") {
-    return {
-      sourceKey: "nest-vault-positions:pusd",
-      value,
-      name: "pUSD liquid balance",
-      risk: "high",
-      coinId: "pusd-plume",
-      depType: "collateral",
-    };
-  }
-  if (symbol === "USDG") {
-    return {
-      sourceKey: "nest-vault-positions:usdg",
-      value,
-      name: "USDG liquid balance",
-      risk: "low",
-      coinId: "usdg-paxos",
-      depType: "collateral",
-    };
-  }
+  const metadata = Object.prototype.hasOwnProperty.call(LIQUID_TOKEN_METADATA, symbol)
+    ? LIQUID_TOKEN_METADATA[symbol]
+    : undefined;
+  if (metadata) return { ...metadata, value };
   return {
     sourceKey: "nest-vault-positions:unknown",
     value,
@@ -210,44 +259,8 @@ function bucketYieldToken(asset: NestYieldAsset, token: NestPositionToken): Slic
   const slug = typeof asset.slug === "string" ? asset.slug : "";
   const symbol = typeof token.symbol === "string" ? token.symbol : "Unknown";
   const value = readValue(token);
-  if (slug === "nest-treasury-vault" || symbol === "nTBILL") {
-    return {
-      sourceKey: "nest-vault-positions:ntbill",
-      value,
-      name: "Nest Treasury vault (nTBILL)",
-      risk: "low",
-      coinId: "ntbill-nest",
-      depType: "collateral",
-    };
-  }
-  if (slug === "janus-henderson-fund" || symbol === "JTRSY") {
-    return {
-      sourceKey: "nest-vault-positions:jtrsy",
-      value,
-      name: "Janus Henderson Anemoy Treasury Fund (JTRSY)",
-      risk: "low",
-      coinId: "jtrsy-anemoy",
-      depType: "collateral",
-    };
-  }
-  if (slug === "superstate-ustb" || symbol === "USTB") {
-    return {
-      sourceKey: "nest-vault-positions:ustb",
-      value,
-      name: "Superstate USTB Treasury Fund",
-      risk: "low",
-      coinId: "ustb-superstate",
-      depType: "collateral",
-    };
-  }
-  if (slug === "superstate-uscc" || symbol === "USCC") {
-    return {
-      sourceKey: "nest-vault-positions:uscc",
-      value,
-      name: "Superstate USCC cash-and-carry fund",
-      risk: "low",
-    };
-  }
+  const metadata = YIELD_TOKEN_METADATA.find((entry) => entry.slug === slug || entry.symbol === symbol)?.metadata;
+  if (metadata) return { ...metadata, value };
   return {
     sourceKey: "nest-vault-positions:credit-vaults",
     value,

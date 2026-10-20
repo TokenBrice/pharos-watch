@@ -46,26 +46,10 @@ export interface V9AnchorRule {
   timeBox?: V9AnchorTimeBox;
 }
 
-export interface V9RelativePairRule {
-  kind: "pair";
-  id: string;
-  overId: string;
-  label: string;
-}
-
 export interface V9RelativeArchetypeRule {
   kind: "archetype-set";
   id: string;
   archetypes: readonly string[];
-  label: string;
-}
-
-export type V9RelativeRule = V9RelativePairRule | V9RelativeArchetypeRule;
-
-export interface V9AdverseScorePin {
-  kind: "max-score";
-  id: string;
-  maxScore: number;
   label: string;
 }
 
@@ -76,13 +60,11 @@ export interface V9AdverseGradePin {
   label: string;
 }
 
-export type V9AdverseRule = V9AdverseScorePin | V9AdverseGradePin;
-
 export interface V9AnchorContract {
   schemaVersion: 1;
   anchors: readonly V9AnchorRule[];
-  relative: readonly V9RelativeRule[];
-  adverse: readonly V9AdverseRule[];
+  relative: readonly V9RelativeArchetypeRule[];
+  adverse: readonly V9AdverseGradePin[];
 }
 
 /**
@@ -206,8 +188,7 @@ export const SAFETY_SCORE_V9_ANCHOR_CONTRACT_V1 = {
      * The inversion is therefore honest measurement, and the rule was asserting
      * an ordering the methodology does not produce. It was removed rather than
      * tuned around: scores and constraints are not adjusted to force an
-     * ordering. The `kind: "pair"` machinery is deliberately retained for future
-     * pair rules.
+     * ordering.
      */
     {
       kind: "archetype-set",
@@ -381,33 +362,6 @@ export function evaluateSafetyScoreV9AnchorGate(input: {
   }
 
   for (const relative of contract.relative) {
-    if (relative.kind === "pair") {
-      const rule = `relative:${relative.id}>=${relative.overId}`;
-      const required = `${relative.id} score ≥ ${relative.overId} score`;
-      const left = byId.get(relative.id);
-      const right = byId.get(relative.overId);
-      const unavailable =
-        missingOrUnrated(rule, "relative", left, required, relative.id) ??
-        missingOrUnrated(rule, "relative", right, required, relative.overId);
-      if (unavailable) {
-        verdicts.push(unavailable);
-        continue;
-      }
-      const passes = left!.score! >= right!.score!;
-      verdicts.push({
-        rule,
-        kind: "relative",
-        status: passes ? "pass" : "fail",
-        code: passes ? "pass" : "relative-inversion",
-        observed: `${left!.score} vs ${right!.score}`,
-        required,
-        detail: passes
-          ? `${relative.id} ${left!.score} ≥ ${relative.overId} ${right!.score}`
-          : `${relative.id} ${left!.score} is below ${relative.overId} ${right!.score}`,
-      });
-      continue;
-    }
-
     const rule = `relative:${relative.id}>=archetype(${[...relative.archetypes].sort(compareText).join("|")})`;
     const required = `${relative.id} score ≥ every other ${relative.archetypes.join("/")} asset score`;
     const leader = byId.get(relative.id);
@@ -444,10 +398,8 @@ export function evaluateSafetyScoreV9AnchorGate(input: {
 
   for (const pin of contract.adverse) {
     const rule = `adverse:${pin.id}`;
-    const bound =
-      pin.kind === "max-score" ? pin.maxScore + 1 : upperBoundForMaxGrade(thresholds, pin.maxGrade);
-    const required =
-      pin.kind === "max-score" ? `score ≤ ${pin.maxScore}` : `grade ≤ ${pin.maxGrade} (score < ${bound})`;
+    const bound = upperBoundForMaxGrade(thresholds, pin.maxGrade);
+    const required = `grade ≤ ${pin.maxGrade} (score < ${bound})`;
     const card = byId.get(pin.id);
     const unavailable = missingOrUnrated(rule, "adverse", card, required, pin.id);
     if (unavailable) {

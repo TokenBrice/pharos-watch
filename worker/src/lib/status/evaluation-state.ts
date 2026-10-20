@@ -1,19 +1,4 @@
-import type { StatusResponse } from "@shared/types/status";
 import { clampConfidence, type StatusLevel } from "../status-reliability-shared";
-import {
-  evaluateReserveCompositionStatus,
-  type ReserveCompositionAssessment,
-} from "./evaluation-rules";
-
-export type { ReserveCompositionAssessment } from "./evaluation-rules";
-
-
-export function deriveReserveCompositionStatus(
-  reserveComposition: Exclude<StatusResponse["reserveComposition"], { status: "unavailable" }>,
-): ReserveCompositionAssessment {
-  return evaluateReserveCompositionStatus(reserveComposition);
-}
-
 
 export function scoreStatusConfidence(input: {
   availabilityStatus: StatusLevel;

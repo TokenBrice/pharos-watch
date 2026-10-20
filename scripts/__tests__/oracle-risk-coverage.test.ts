@@ -65,7 +65,6 @@ function runCoverageCli(coins: readonly StablecoinMeta[], argv: readonly string[
   const status = runOracleRiskCoverageCheck(coins, argv, {
     stdout: { write: (value) => (stdout += value) },
     stderr: { write: (value) => (stderr += value) },
-    reviewedBranchDispositions: [],
   });
   return { status, stdout, stderr };
 }
@@ -180,119 +179,37 @@ describe("analyzeOracleRiskCoverage", () => {
     ]);
   });
 
-  describe("reviewed inoperable branch dispositions", () => {
-    function deadOracleBranch(overrides: Partial<OracleBranch> = {}): OracleBranch {
-      return completeBranch({
-        id: "dead", label: "Dead oracle market", summary: "The market's price feed reverts.",
-        fallbackBehavior: "No fallback: the price read reverts.",
-        collateralParameters: [{ asset: "ETH", minimumCollateralRatioPct: 150 }],
-        liquidationMechanism: "Permissionless liquidation that cannot execute while the oracle reverts.",
-        liquidationDelaySec: undefined,
-        backstop: "None.",
-        shutdownOrBadDebtBehavior: "Debt is stranded with holders.",
-        ...overrides,
-      });
-    }
-
-    function coinWithDeadBranch(branchOverrides: Partial<OracleBranch> = {}) {
-      return makeCoin({
-        oracleRisk: reviewedMultiBranch({
-          summary: "One market's oracle is dead.",
-          branches: [deadOracleBranch(branchOverrides)],
-        }),
-      });
-    }
-
-    const disposition = {
-      id: "test-cdp",
-      branchId: "dead",
-      field: "liquidationDelaySec" as const,
-      disposition: "reviewed-inoperable" as const,
-      reasonCode: "liquidation-uncallable-dead-oracle" as const,
-      schemaLimitation: "The field cannot express an unbounded wait.",
-      finding: "liquidateVault reverts empty on a live position at the pinned block.",
-      observedBlocks: ["ethereum:1"],
-      evidenceUrls: ["https://example.com/proof"],
-      reviewer: "test",
-      reviewedDate: "2026-08-09",
-    };
-
-    const asOf = { asOf: new Date("2026-07-13T00:00:00Z"), staleDays: 180 };
-
-    it("reports an unreviewed dead-oracle gap as outstanding evidence work", () => {
-      const result = analyzeOracleRiskCoverage([coinWithDeadBranch()], asOf);
-
-      expect(result.completeBranches).toBe(0);
-      expect(result.reviewedInoperableBranches).toBe(0);
-      expect(result.findings).toEqual([
-        expect.objectContaining({
-          kind: "missing-branch-evidence",
-          detail: "dead branch missing liquidationDelaySec",
-        }),
-      ]);
+  it("blocks a missing liquidation delay without schema-backed uncallability", () => {
+    const coin = makeCoin({
+      oracleRisk: reviewedMultiBranch({ branches: [completeBranch({ liquidationDelaySec: undefined })] }),
     });
+    const result = analyzeOracleRiskCoverage([coin], { asOf: new Date("2026-08-01T00:00:00Z") });
 
-    it("converts the gap into a reviewed-inoperable finding that carries its evidence", () => {
-      const result = analyzeOracleRiskCoverage([coinWithDeadBranch()], {
-        ...asOf,
-        reviewedBranchDispositions: [disposition],
-      });
+    expect(result.completeProfiles).toBe(0);
+    expect(result.completeBranches).toBe(0);
+    expect(result.findings).toEqual([
+      expect.objectContaining({
+        kind: "missing-branch-evidence",
+        detail: "eth branch missing liquidationDelaySec",
+      }),
+    ]);
+    expect(runCoverageCli([coin]).status).toBe(1);
+  });
 
-      expect(result.reviewedInoperableBranches).toBe(1);
-      // Reviewed is not complete: the audit knows why the field is blank, which
-      // is a different claim from having the evidence the field asks for.
-      expect(result.completeBranches).toBe(0);
-      expect(result.findings).toEqual([
-        expect.objectContaining({
-          kind: "reviewed-inoperable-branch-evidence",
-          detail: expect.stringContaining("https://example.com/proof"),
-        }),
-      ]);
-      expect(result.findings[0]?.detail).toContain("liquidation-uncallable-dead-oracle");
-      expect(result.findings[0]?.detail).toContain("ethereum:1");
+  it("counts schema-backed uncallable branches as complete without inventing a liquidation delay", () => {
+    const coin = makeCoin({
+      oracleRisk: reviewedMultiBranch({
+        branches: [completeBranch({ liquidationState: "uncallable", liquidationDelaySec: undefined })],
+      }),
     });
+    const result = analyzeOracleRiskCoverage([coin], { asOf: new Date("2026-08-01T00:00:00Z") });
 
-    it("blocks when a disposition outlives the gap it excused", () => {
-      const populated = analyzeOracleRiskCoverage([coinWithDeadBranch({ liquidationDelaySec: 0 })], {
-        ...asOf,
-        reviewedBranchDispositions: [disposition],
-      });
-      expect(populated.reviewedInoperableBranches).toBe(0);
-      expect(populated.completeBranches).toBe(1);
-      expect(populated.findings).toEqual([
-        expect.objectContaining({
-          kind: "stale-branch-disposition",
-          detail: "dead branch liquidationDelaySec disposition no longer applies: branch now records liquidationDelaySec",
-        }),
-      ]);
-
-      const renamedBranch = analyzeOracleRiskCoverage([coinWithDeadBranch({ id: "renamed" })], {
-        ...asOf,
-        reviewedBranchDispositions: [disposition],
-      });
-      expect(renamedBranch.findings).toContainEqual(
-        expect.objectContaining({
-          kind: "stale-branch-disposition",
-          detail: expect.stringContaining("profile has no branch with that id"),
-        }),
-      );
-
-      const removedCoin = analyzeOracleRiskCoverage([], {
-        ...asOf,
-        reviewedBranchDispositions: [disposition],
-      });
-      expect(removedCoin.findings).toEqual([
-        expect.objectContaining({
-          kind: "stale-branch-disposition",
-          detail: expect.stringContaining("no active crypto-backed CDP with that id"),
-        }),
-      ]);
-      expect(removedCoin.completeProfiles).toBe(0);
-      const healthyPeer = analyzeOracleRiskCoverage([makeCoin({ id: "healthy-peer", oracleRisk: reviewedMultiBranch() })], {
-        ...asOf, reviewedBranchDispositions: [disposition],
-      });
-      expect(healthyPeer.completeProfiles).toBe(1);
-    });
+    expect(result.completeProfiles).toBe(1);
+    expect(result.completeBranches).toBe(1);
+    expect(result.findings).toEqual([]);
+    const cli = runCoverageCli([coin]);
+    expect(cli.status).toBe(0);
+    expect(cli.stdout).toContain("1/1 branches complete");
   });
 });
 

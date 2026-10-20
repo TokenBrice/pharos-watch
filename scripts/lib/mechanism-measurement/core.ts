@@ -1,3 +1,4 @@
+import { toFunctionSelector } from "viem";
 import { canonicalEvmAddress } from "@shared/lib/evm-address";
 import { isTronRpcUrl, requiresHistoricalEvmState } from "@shared/lib/tron-rpc";
 import type { MeasurementCall, MeasurementLog, MeasurementLogQuery } from "./schema";
@@ -95,8 +96,19 @@ export interface EthCallSpec {
   name: string;
   to: string;
   signature: string;
-  selector: string;
   args?: readonly bigint[];
+}
+
+const selectorsBySignature = new Map<string, string>();
+
+/** Offline call authoring uses canonical signatures; captured selectors stay on the wire. */
+export function selectorForSignature(signature: string): string {
+  let selector = selectorsBySignature.get(signature);
+  if (selector === undefined) {
+    selector = toFunctionSelector(signature);
+    selectorsBySignature.set(signature, selector);
+  }
+  return selector;
 }
 
 export interface LogQuerySpec {
@@ -167,7 +179,8 @@ export class JournaledEthCaller implements EthCallJournal {
     if (isTronRpcUrl(this.rpcUrl)) {
       throw new Error("historical-state-unsupported: TRON constant calls execute latest state");
     }
-    const callData = `${spec.selector}${(spec.args ?? []).map(encodeWord).join("")}`;
+    const selector = selectorForSignature(spec.signature);
+    const callData = `${selector}${(spec.args ?? []).map(encodeWord).join("")}`;
     const returnData = (await rpcRequest(this.rpcUrl, "eth_call", [
       { to: spec.to, data: callData },
       this.blockTag,
@@ -179,7 +192,7 @@ export class JournaledEthCaller implements EthCallJournal {
       name: spec.name,
       to: spec.to.toLowerCase(),
       signature: spec.signature,
-      selector: spec.selector,
+      selector,
       callData,
       returnData: returnData.toLowerCase(),
       decoded: "", // set by recordDecoded after the caller interprets the bytes
@@ -273,14 +286,15 @@ export class ReplayEthCaller implements EthCallJournal {
   ) {}
 
   async call(spec: EthCallSpec): Promise<string> {
-    const callData = `${spec.selector}${(spec.args ?? []).map(encodeWord).join("")}`.toLowerCase();
+    const selector = selectorForSignature(spec.signature);
+    const callData = `${selector}${(spec.args ?? []).map(encodeWord).join("")}`.toLowerCase();
     const expected = this.recorded[this.index];
     if (!expected) throw new Error(`Replay journal ended before ${spec.name}`);
     if (
       expected.name !== spec.name ||
       expected.to !== spec.to.toLowerCase() ||
       expected.signature !== spec.signature ||
-      expected.selector !== spec.selector ||
+      expected.selector !== selector ||
       expected.callData !== callData
     ) {
       throw new Error(

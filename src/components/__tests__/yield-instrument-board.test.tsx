@@ -161,6 +161,15 @@ describe("YieldInstrumentBoard", () => {
     expect(screen.getByText("Source risk 42/100 | 1.32x")).toBeTruthy();
   });
 
+  it.each([null, undefined])("discloses score-only risk with penalty %s in the board indicator", async (sourceRiskPenalty) => {
+    renderBoard({ ...baseRow, sourceRisk: { sourceRiskScore: 42, sourceRiskPenalty } });
+    const indicator = screen.getByRole("button", { name: "Source risk 42/100 | n/a" });
+    fireEvent.focus(indicator);
+    const tooltip = await screen.findByRole("tooltip");
+    expect(tooltip.textContent).toContain("Source risk 42/100 | n/a");
+    expect(tooltip.textContent).not.toMatch(/0\.00[x×]|1\.00[x×]/);
+  });
+
   it("reads a native row with no venue TVL as Native depth-not-applicable, board and card alike", () => {
     // `rebase` keeps the yield-type badge off the word "Native", so the only
     // "Native" in the DOM is the TVL cell under test.

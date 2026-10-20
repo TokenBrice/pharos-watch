@@ -1,6 +1,5 @@
-import { CASE_STUDY_OUTCOME_CLASSES, type CaseStudyOutcomeKey } from "@shared/lib/classification";
-
-export type CaseStudyOutcome = CaseStudyOutcomeKey;
+import { CASE_STUDY_OUTCOME_CLASSES } from "@shared/lib/classification";
+import type { CaseStudyOutcome } from "@shared/types/editorial-content";
 
 export const CASE_STUDY_OUTCOME_LABELS: Record<CaseStudyOutcome, string> = {
   survived: "Survived",

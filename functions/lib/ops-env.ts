@@ -1,5 +1,4 @@
 import { normalizeTeamDomain } from "@shared/lib/cloudflare-access-jwt";
-import { getRuntimeActiveEnvKeys, getRuntimeEnvKeys } from "@shared/lib/env-contract";
 import { getConfiguredValue, hasConfiguredValue } from "@shared/lib/env-utils";
 import { OPS_API_ORIGIN } from "@shared/lib/runtime-origins";
 import { resolveTrustedHttpsOrigin } from "./trusted-upstream-origin";
@@ -24,14 +23,6 @@ export interface ResolvedPagesOpsUiAccessConfig {
   teamDomain: string;
   aud: string;
 }
-
-export const PAGES_FUNCTIONS_REQUIRED_ENV_KEYS = getRuntimeEnvKeys("pagesOps", "required");
-
-export const PAGES_FUNCTIONS_OPTIONAL_ENV_KEYS = getRuntimeEnvKeys("pagesOps", "optional");
-
-export const PAGES_FUNCTIONS_RESERVED_ENV_KEYS = getRuntimeEnvKeys("pagesOps", "reserved");
-
-export const PAGES_FUNCTIONS_ACTIVE_ENV_KEYS = getRuntimeActiveEnvKeys("pagesOps");
 
 export function resolveOpsApiOrigin(env: Pick<OpsAdminProxyEnv, "OPS_API_ORIGIN">): string | null {
   return resolveTrustedHttpsOrigin(env.OPS_API_ORIGIN ?? DEFAULT_OPS_API_ORIGIN, [DEFAULT_OPS_API_ORIGIN]);

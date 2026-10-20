@@ -376,10 +376,106 @@ describe("delivery boundaries and resume", () => {
     const pending = await invoke(); expect(pending.metadata).toContain("telegram: failed:"); expect(enqueueTelegramDigestEdition).toHaveBeenCalledWith(scenario.db, expect.objectContaining({ successActions }), undefined);
   });
 
-  it("resumes an existing publishable edition and reports an unresolved resume", async () => {
-    const db = mockD1([{ match: "SELECT generated_at, digest_text, digest_title, digest_extended, digest_meta, input_data FROM daily_digest", rows: [], first: { generated_at: 1_772_798_400, digest_text: "Stored digest body.", digest_title: "Stored Title", digest_extended: "Stored extended body.", digest_meta: JSON.stringify({ leadSignalId: "depeg:usdt-tether:active", lead: "depeg", coins: ["USDT"] }), input_data: JSON.stringify({ totalMcapUsd: 100e9 }) } }, { match: "SELECT COUNT(*) as cnt FROM daily_digest", rows: [{ cnt: 187 }], first: { cnt: 187 } }, { match: "SELECT state FROM telegram_digest_outbox", rows: [], first: { state: "sent" } }, { match: "INSERT OR IGNORE INTO cache", rows: [] }, { match: "UPDATE cache SET value = ?", rows: [] }]);
-    const resumed = await resumeDailyDigestDelivery(db, CREDS, TG, validMap()); expect(resumed).toEqual({ kind: "resumed", tweetStatus: "ok", telegramStatus: "outbox-sent", deliveryComplete: true }); expect(postDigestTweet).toHaveBeenCalledWith("Stored Title", "Stored digest body.", expect.any(Object), 187, expect.any(String), null, expect.any(Object));
-    const missing = mockD1([{ match: "SELECT generated_at, digest_text, digest_title, digest_extended, digest_meta, input_data FROM daily_digest", rows: [], first: null }]); expect(await resumeDailyDigestDelivery(missing, CREDS, null, validMap())).toEqual({ kind: "no-publishable-digest" });
+  it("resumes a retryable X ledger and leaves the sent Telegram edition alone", async () => {
+    const db = mockD1([
+      { match: "SELECT generated_at, digest_text, digest_title, digest_extended, digest_meta, input_data FROM daily_digest", rows: [], first: {
+        generated_at: 1_772_798_400, digest_text: "Stored digest body.", digest_title: "Stored Title",
+        digest_extended: "Stored extended body.", digest_meta: JSON.stringify({ leadSignalId: "depeg:usdt-tether:active", lead: "depeg", coins: ["USDT"] }),
+        input_data: JSON.stringify({ totalMcapUsd: 100e9 }),
+      } },
+      { match: "SELECT COUNT(*) as cnt FROM daily_digest", rows: [{ cnt: 187 }] },
+      { match: "SELECT state FROM telegram_digest_outbox", rows: [], first: { state: "sent" } },
+      { match: "SELECT value FROM cache WHERE key = ?", rows: [], first: { value: JSON.stringify({
+        schemaVersion: 1, state: "failed", attempts: 1, createdAt: 1, updatedAt: 1,
+      }) } },
+      { match: "INSERT OR IGNORE INTO cache", rows: [] },
+      { match: "UPDATE cache SET value = ?", rows: [] },
+    ]);
+    const resumed = await resumeDailyDigestDelivery(db, CREDS, TG, validMap());
+    expect(resumed).toEqual({ kind: "resumed", tweetStatus: "ok", telegramStatus: "outbox-sent", deliveryComplete: true });
+    expect(postDigestTweet).toHaveBeenCalledWith("Stored Title", "Stored digest body.", expect.any(Object), 187, expect.any(String), null, expect.any(Object));
+    expect(prepareTelegramDigestAppendices).not.toHaveBeenCalled();
+    expect(enqueueTelegramDigestEdition).not.toHaveBeenCalled();
+    const missing = mockD1([{ match: "SELECT generated_at, digest_text, digest_title, digest_extended, digest_meta, input_data FROM daily_digest", rows: [], first: null }]);
+    expect(await resumeDailyDigestDelivery(missing, CREDS, null, validMap())).toEqual({ kind: "no-publishable-digest" });
+  });
+
+  it.each(["pending", "sending", "sent", "execution_unknown", "failed_permanent"])(
+    "never regenerates an existing daily %s payload when the map changes", async (state) => {
+      const db = mockD1([
+        { match: "SELECT generated_at, digest_text, digest_title, digest_extended, digest_meta, input_data FROM daily_digest", rows: [], first: {
+          generated_at: 1_772_798_400, digest_text: "Stored copy.", digest_title: "Stored", digest_extended: "Stored extended.",
+          input_data: JSON.stringify({ safetyContext: { status: "available" }, safetyMap: { manifest: { date: "2026-03-05" } } }),
+        } },
+        { match: "SELECT COUNT(*) as cnt FROM daily_digest", rows: [{ cnt: 187 }] },
+        { match: "SELECT state FROM telegram_digest_outbox", rows: [], first: { state } },
+      ]);
+      const result = await resumeDailyDigestDelivery(db, null, TG, validMap());
+      expect(result).toMatchObject({ telegramStatus: `outbox-${state}`, deliveryComplete: state === "sent" });
+      expect(prepareTelegramDigestAppendices).not.toHaveBeenCalled();
+      expect(enqueueTelegramDigestEdition).not.toHaveBeenCalled();
+      expect(deliverTelegramDigestEdition).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([null, JSON.stringify({ schemaVersion: 1, state: "execution_unknown", attempts: 1, createdAt: 1, updatedAt: 1 })])(
+    "refuses daily X resume without known retryable ledger evidence (%s)", async (value) => {
+      const db = mockD1([
+        { match: "SELECT generated_at, digest_text, digest_title, digest_extended, digest_meta, input_data FROM daily_digest", rows: [], first: {
+          generated_at: 1_772_798_400, digest_text: "Stored copy.", digest_title: "Stored", digest_extended: "Stored extended.",
+        } },
+        { match: "SELECT COUNT(*) as cnt FROM daily_digest", rows: [{ cnt: 187 }] },
+        { match: "SELECT value FROM cache WHERE key = ?", rows: [], first: value == null ? null : { value } },
+      ]);
+      expect(await resumeDailyDigestDelivery(db, CREDS, null, null)).toMatchObject({
+        tweetStatus: "skipped: execution-unknown", deliveryComplete: false,
+      });
+      expect(postDigestTweet).not.toHaveBeenCalled();
+    },
+  );
+
+  it("builds byte-identical new Telegram envelopes in generation and missing-outbox resume", async () => {
+    const map = validMap();
+    vi.mocked(resolveDigestSafetyMap).mockResolvedValueOnce(map);
+    vi.mocked(prepareTelegramDigestAppendices).mockResolvedValue({
+      ...scenario.deliveryMocks.appendices,
+      appendixHtml: "<b>Tracking Changes</b>\nNewly tracked: USDC",
+      successActions: [{ key: "telegram:tracked-stablecoins-snapshot", value: '["usdc-circle"]' }],
+      metadata: { ...scenario.deliveryMocks.appendices.metadata, hasAppendix: true, trackedDetected: 1 },
+    });
+    await invoke();
+    const binds = getInsertDigestBinds(scenario.db as MockD1Database)!;
+    const original = vi.mocked(enqueueTelegramDigestEdition).mock.calls[0]![1];
+    vi.clearAllMocks();
+    const db = mockD1([
+      { match: "SELECT generated_at, digest_text, digest_title, digest_extended, digest_meta, input_data FROM daily_digest", rows: [], first: {
+        generated_at: binds[0], digest_text: binds[1], digest_title: binds[2], input_data: binds[3], digest_extended: binds[4], digest_meta: binds[5],
+      } },
+      { match: "SELECT COUNT(*) as cnt FROM daily_digest", rows: [{ cnt: 1 }] },
+      { match: "SELECT state FROM telegram_digest_outbox", rows: [], first: null },
+    ]);
+    await resumeDailyDigestDelivery(db, null, TG, map);
+    expect(prepareTelegramDigestAppendices).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(enqueueTelegramDigestEdition).mock.calls[0]![1]).toEqual(original);
+  });
+
+  it("preserves resume appendix failures and missing-credential diagnostics", async () => {
+    const db = mockD1([
+      { match: "SELECT generated_at, digest_text, digest_title, digest_extended, digest_meta, input_data FROM daily_digest", rows: [], first: {
+        generated_at: 1_772_798_400, digest_text: "Stored copy.", digest_title: "Stored", digest_extended: "Stored extended.",
+      } },
+      { match: "SELECT COUNT(*) as cnt FROM daily_digest", rows: [{ cnt: 187 }] },
+      { match: "SELECT state FROM telegram_digest_outbox", rows: [], first: null },
+    ]);
+    vi.mocked(prepareTelegramDigestAppendices).mockRejectedValueOnce(new Error("appendix store down"));
+    expect(await resumeDailyDigestDelivery(db, null, TG, null)).toMatchObject({ telegramStatus: "ok" });
+    expect(enqueueTelegramDigestEdition).toHaveBeenCalledWith(db, expect.objectContaining({
+      appendixHtml: null, successActions: [],
+    }), undefined);
+    const missing = await resumeDailyDigestDelivery(db, null, null, null, undefined, undefined, {
+      twitterMissing: ["TWITTER_API_KEY"], telegramMissing: ["TELEGRAM_BOT_TOKEN"],
+    });
+    expect(missing).toMatchObject({ tweetStatus: "skipped: no-creds", telegramStatus: "no-creds", deliveryComplete: false });
   });
 });
 

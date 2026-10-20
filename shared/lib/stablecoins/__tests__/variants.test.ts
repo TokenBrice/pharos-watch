@@ -4,53 +4,9 @@ import initiaIusdReserves from "../../../data/stablecoins/domains/reserves/iusd-
 import { StablecoinMetaSourceAssetSchema } from "../schema";
 import { deriveEffectiveDependencies } from "../../dependency-derivation";
 import { resolveBlacklistStatuses } from "../../report-card-blacklist-matchers";
-import type { StablecoinMeta, VariantKind } from "../../../types";
-import { isActiveStablecoinMeta } from "../status";
-import { createVariantRelationshipHelpers } from "../variant-relationships";
 import { makeStablecoinMeta } from "../../../test-utils/stablecoin";
 
-function hasTrackedVariantMeta(
-  meta: StablecoinMeta | undefined,
-): meta is StablecoinMeta & { variantOf: string; variantKind: VariantKind } {
-  return meta?.variantOf != null && meta.variantKind != null && isActiveStablecoinMeta(meta);
-}
-
-const graph = [
-  makeStablecoinMeta({ id: "parent" }),
-  makeStablecoinMeta({ id: "child", variantOf: "parent", variantKind: "risk-absorption" }),
-  makeStablecoinMeta({ id: "sibling", variantOf: "parent", variantKind: "pure-wrapper" }),
-  makeStablecoinMeta({ id: "unrelated", variantOf: "other", variantKind: "pure-wrapper" }),
-  makeStablecoinMeta({ id: "orphan", variantOf: "absent", variantKind: "pure-wrapper" }),
-];
-const { getVariantParent, getVariantRelationship, getVariants, isTrackedVariant } = createVariantRelationshipHelpers({
-  activeMetaById: new Map(graph.map((coin) => [coin.id, coin])),
-  activeStablecoins: graph,
-  hasTrackedVariantMeta,
-});
-
 describe("stablecoin variants", () => {
-  it("resolves a parent and exactly its other children, excluding unrelated variants", () => {
-    expect(getVariantParent("child")?.id).toBe("parent");
-    expect(getVariantParent("parent")).toBeNull();
-    const relationship = getVariantRelationship("child");
-    expect(relationship?.parent.id).toBe("parent");
-    expect(relationship?.kind).toBe("risk-absorption");
-    expect(relationship?.siblings.map((coin) => coin.id)).toEqual(["sibling"]);
-    expect(getVariants("parent").map((coin) => coin.id)).toEqual(["child", "sibling"]);
-  });
-
-  it("returns no relationships or tracked status for an unknown id", () => {
-    expect(getVariantParent("unknown")).toBeNull();
-    expect(getVariantRelationship("unknown")).toBeNull();
-    expect(isTrackedVariant("unknown")).toBe(false);
-  });
-
-  it("does not invent a parent relationship for an authored orphan", () => {
-    expect(isTrackedVariant("orphan")).toBe(true);
-    expect(getVariantParent("orphan")).toBeNull();
-    expect(getVariantRelationship("orphan")).toBeNull();
-  });
-
   it("preserves a direct reviewed blacklist status independently of upstream status", () => {
     const review = {
       sourceFreeRationale: "Synthetic reviewed fixture", evidence: "Explicit local authority review",

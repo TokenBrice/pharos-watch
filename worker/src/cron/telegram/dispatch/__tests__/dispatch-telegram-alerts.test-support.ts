@@ -2,10 +2,10 @@ import { DatabaseSync } from "node:sqlite";
 import { vi } from "vitest";
 import { mockCircuitBreaker } from "../../../../test-helpers/cron";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
-import { makeWorkerReportCardsV9Response, makeWorkerSafetyScoreV9Publication, makeWorkerV9Card } from "../../../../test-helpers/report-cards-v9";
+import { makeWorkerSafetyScoreV9Publication, makeWorkerV9Card } from "../../../../test-helpers/report-cards-v9";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { scoreToGrade } from "@shared/lib/report-card-core";
-import { buildActiveAlertSafetyV9SourceEnvelope, getAlertSafetyV9SourceGeneration } from "../../../../lib/alert-safety-source-cache";
+import { buildAlertSafetyV9SourceEnvelopeFromParts, ALERT_SAFETY_V9_SOURCE_GENERATION } from "../../../../lib/alert-safety-source-cache";
 import type { CronProgressUpdate } from "../../../../lib/cron-logger";
 import {
   insertPendingSqlite,
@@ -54,7 +54,6 @@ vi.mock("../../../../lib/circuit-breaker", () =>
 );
 
 const mockSendToChat = vi.fn();
-const mockSendBatch = vi.fn();
 
 export interface TelegramDeliveryResult {
   ok: boolean;
@@ -106,7 +105,6 @@ vi.mock("../../../../telegram/delivery/telegram", async (importOriginal) => {
   return {
     ...actual,
     sendToChat: mockSendToChat,
-    sendBatch: mockSendBatch,
   };
 });
 
@@ -174,14 +172,11 @@ function makeCanonicalSafetySourceCaches(
     heldSinceSec: null,
     reasons: [],
   };
-  const sourceEnvelope = buildActiveAlertSafetyV9SourceEnvelope(makeWorkerReportCardsV9Response({
+  const sourceEnvelope = buildAlertSafetyV9SourceEnvelopeFromParts({
     cards: publication.cards,
-    updatedAt: publishedAt,
-    asOfSec: publishedAt,
+    publishedAt,
     safetyScoreIdentity: safetyScoreIdentity(publicationGenerationId),
-    publicationHealth,
-  }));
-  if (sourceEnvelope === null) throw new Error("Current dispatch fixture did not produce a thin alert source");
+  });
   return {
     alertSafetySource: {
       value: stableJsonStringifyV1(sourceEnvelope),
@@ -219,7 +214,7 @@ function seedActiveSafetySource(
 
 function makeSafetySnapshotCache(
   snapshot: Record<string, { grade: string; score: number | null; methodologyVersion: string | null }>,
-  generation = getAlertSafetyV9SourceGeneration(),
+  generation = ALERT_SAFETY_V9_SOURCE_GENERATION,
 ) {
   return {
     value: JSON.stringify({
@@ -277,7 +272,6 @@ function resetDispatchTelegramAlertsTest() {
   mockShouldAttemptFetch.mockReset();
   mockRecordOutcome.mockReset();
   mockSendToChat.mockReset();
-  mockSendBatch.mockReset();
   telegramDeliveryTranscript.length = 0;
   scriptedDeliveryResults = [];
   scriptedDeliveryResultsByChat.clear();
@@ -286,33 +280,6 @@ function resetDispatchTelegramAlertsTest() {
   mockRecordOutcome.mockResolvedValue(undefined);
   mockSendToChat.mockImplementation(async (chatId, html, botToken, options) =>
     recordDisabledTelegramDelivery(chatId, html, botToken, options ?? {}),
-  );
-
-  // Default sendBatch: delegate each message to mockSendToChat
-  mockSendBatch.mockImplementation(
-    async (
-      messages: Array<{
-        chatId: string;
-        html: string;
-        disableNotification: boolean;
-        linkPreviewOptions?: unknown;
-        replyMarkup?: unknown;
-      }>,
-      _botToken: string,
-    ) => {
-      const results = [];
-      for (const msg of messages) {
-        const result = await mockSendToChat(msg.chatId, msg.html, _botToken, {
-          ...(msg.linkPreviewOptions
-            ? { linkPreviewOptions: msg.linkPreviewOptions }
-            : { disableWebPagePreview: true }),
-          disableNotification: msg.disableNotification,
-          replyMarkup: msg.replyMarkup,
-        });
-        results.push({ chatId: msg.chatId, ...result });
-      }
-      return results;
-    },
   );
 }
 
@@ -757,7 +724,7 @@ function defaultDispatchCaches(overrides: Record<string, unknown> = {}): Record<
   return {
     "alert:dews-snapshot": {},
     "alert:depeg-snapshot": {},
-    "alert:safety-snapshot": makeSafetySnapshotCache({}, getAlertSafetyV9SourceGeneration()).value,
+    "alert:safety-snapshot": makeSafetySnapshotCache({}, ALERT_SAFETY_V9_SOURCE_GENERATION).value,
     "report-cards:v9": safety.publication.value,
     "report-cards:v9:publication-health": safety.publicationHealth.value,
     "alert-safety-v9-source": safety.alertSafetySource.value,

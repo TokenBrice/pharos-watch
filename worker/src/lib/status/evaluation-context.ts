@@ -12,7 +12,7 @@ import {
   getDatasetFreshness,
 } from "./derived-data";
 import { getTelegramBotStats } from "./telegram-bot-stats";
-import { deriveReserveCompositionStatus } from "./evaluation-state";
+import { evaluateReserveCompositionStatus } from "./evaluation-rules";
 import {
   assessOnchainDataQuality,
   type OnchainDataQualityAssessment,
@@ -57,7 +57,7 @@ export async function loadSupplementalStatusSections(
   let reserveCompositionQueryFailed = false;
   try {
     const reserveOverviewData = await computeReserveCompositionOverview(db, now, resolveScheduledSlotPolicy("fourHourlyReserveSync"));
-    const reserveAssessment = deriveReserveCompositionStatus({
+    const reserveAssessment = evaluateReserveCompositionStatus({
       ...emptyReserveComposition(),
       ...reserveOverviewData,
     });

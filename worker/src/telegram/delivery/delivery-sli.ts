@@ -1,4 +1,5 @@
 import { pendingPrioritySql } from "../outbox/pending-queue";
+import { TELEGRAM_ALERT_TYPES, type TelegramAlertType } from "@shared/types/status/telegram";
 import type {
   TelegramDeliverySliBacklogBucket,
   TelegramDeliverySliEvidenceQuality,
@@ -13,6 +14,22 @@ const DEFAULT_LOOKBACK_SEC = 24 * 60 * 60;
 const DEFAULT_FRESHNESS_SEC = 15 * 60;
 const DEFAULT_REASON_LIMIT = 12;
 const MAX_REASON_LIMIT = 25;
+
+// Persisted item keys use a colon except for depeg's triggered/worsening/resolved variants.
+const FAMILY_ITEM_KEY_PATTERNS = {
+  dews: "dews:%",
+  depeg: "depeg-%",
+  safety: "safety:%",
+  launch: "launch:%",
+  reserve: "reserve:%",
+  freeze: "freeze:%",
+} as const satisfies Record<TelegramAlertType, string>;
+const FAMILY_FLAGS_SQL = TELEGRAM_ALERT_TYPES.map((family) =>
+  `COALESCE(MAX(item.item_key LIKE '${FAMILY_ITEM_KEY_PATTERNS[family]}'), 0) AS ${family}`,
+).join(",\n              ");
+const EXCLUSIVE_FAMILY_PROJECTIONS_SQL = TELEGRAM_ALERT_TYPES.map((family) =>
+  `SUM(CASE WHEN family_count = 1 AND ${family} = 1 THEN 1 ELSE 0 END) AS ${family}`,
+).join(",\n       ");
 
 export interface TelegramDeliverySliOptions {
   nowSec: number;
@@ -57,16 +74,7 @@ interface UnknownRow {
   older_than_15m_count: number | string | null;
 }
 
-interface FamilyAttributionRow {
-  dews: number | string | null;
-  depeg: number | string | null;
-  safety: number | string | null;
-  launch: number | string | null;
-  reserve: number | string | null;
-  freeze: number | string | null;
-  mixed: number | string | null;
-  unknown: number | string | null;
-}
+type FamilyAttributionRow = Record<TelegramAlertType | "mixed" | "unknown", number | string | null>;
 
 interface DeadLetterSummaryRow {
   count: number | string | null;
@@ -209,18 +217,14 @@ export async function loadTelegramDeliverySliRollup(
 
   const familyAttribution = await db
     .prepare(
+      // SAFETY: Family identifiers and LIKE patterns come only from the canonical roster and fixed descriptor.
       `WITH recent_sources AS MATERIALIZED (
        SELECT source_event_id
          FROM telegram_alert_source_events
         WHERE detected_at >= ? AND detected_at <= ?
      ), family_flags AS (
        SELECT target.job_id, target.target_key,
-              COALESCE(MAX(item.item_key LIKE 'dews:%'), 0) AS dews,
-              COALESCE(MAX(item.item_key LIKE 'depeg-%'), 0) AS depeg,
-              COALESCE(MAX(item.item_key LIKE 'safety:%'), 0) AS safety,
-              COALESCE(MAX(item.item_key LIKE 'launch:%'), 0) AS launch,
-              COALESCE(MAX(item.item_key LIKE 'reserve:%'), 0) AS reserve,
-              COALESCE(MAX(item.item_key LIKE 'freeze:%'), 0) AS freeze
+              ${FAMILY_FLAGS_SQL}
          FROM recent_sources source
          CROSS JOIN telegram_alert_job_targets target INDEXED BY idx_tajt_authoritative_ready
          LEFT JOIN telegram_alert_job_target_items item
@@ -229,15 +233,10 @@ export async function loadTelegramDeliverySliRollup(
         WHERE target.source_event_id = source.source_event_id
         GROUP BY target.job_id, target.target_key
      ), attributed AS (
-       SELECT *, dews + depeg + safety + launch + reserve + freeze AS family_count FROM family_flags
+       SELECT *, ${TELEGRAM_ALERT_TYPES.join(" + ")} AS family_count FROM family_flags
      )
      SELECT
-       SUM(CASE WHEN family_count = 1 AND dews = 1 THEN 1 ELSE 0 END) AS dews,
-       SUM(CASE WHEN family_count = 1 AND depeg = 1 THEN 1 ELSE 0 END) AS depeg,
-       SUM(CASE WHEN family_count = 1 AND safety = 1 THEN 1 ELSE 0 END) AS safety,
-       SUM(CASE WHEN family_count = 1 AND launch = 1 THEN 1 ELSE 0 END) AS launch,
-       SUM(CASE WHEN family_count = 1 AND reserve = 1 THEN 1 ELSE 0 END) AS reserve,
-       SUM(CASE WHEN family_count = 1 AND freeze = 1 THEN 1 ELSE 0 END) AS freeze,
+       ${EXCLUSIVE_FAMILY_PROJECTIONS_SQL},
        SUM(CASE WHEN family_count > 1 THEN 1 ELSE 0 END) AS mixed,
        SUM(CASE WHEN family_count = 0 THEN 1 ELSE 0 END) AS unknown
       FROM attributed`,
@@ -401,12 +400,9 @@ export async function loadTelegramDeliverySliRollup(
       telegramAcceptanceRate: ratio(acceptedCount, targetCount),
     },
     familyAttribution: {
-      dews: integer(familyAttribution?.dews),
-      depeg: integer(familyAttribution?.depeg),
-      safety: integer(familyAttribution?.safety),
-      launch: integer(familyAttribution?.launch),
-      reserve: integer(familyAttribution?.reserve),
-      freeze: integer(familyAttribution?.freeze),
+      ...Object.fromEntries(TELEGRAM_ALERT_TYPES.map((family) => [
+        family, integer(familyAttribution?.[family]),
+      ])) as Record<TelegramAlertType, number>,
       mixed: integer(familyAttribution?.mixed),
       unknown: integer(familyAttribution?.unknown),
     },

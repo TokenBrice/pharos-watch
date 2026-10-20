@@ -8,6 +8,7 @@ import {
 import {
   YIELD_SOURCE_CONFIDENCE_DEFINITIONS,
   getYieldSourceRiskDrivers,
+  isYieldSourceRiskMaterial,
 } from "@/lib/yield-source-risk";
 import {
   YIELD_SOURCE_CONFIDENCE_STYLES,
@@ -70,9 +71,6 @@ export function getYieldBenchmarkSelectionMode(row: YieldWorkbenchRanking): Yiel
   return row.benchmarkSelectionMode;
 }
 
-/** A source-risk penalty above this multiplier reads as materially risky on every yield surface. */
-const MATERIAL_SOURCE_RISK_PENALTY = 1.05;
-
 /**
  * Row-level presentation values shared by the desktop instrument row and the
  * mobile card. Both surfaces derived these identically; the PYS breakdown stays
@@ -80,7 +78,6 @@ const MATERIAL_SOURCE_RISK_PENALTY = 1.05;
  */
 export function deriveYieldRowPresentation(row: YieldWorkbenchRanking) {
   const confidenceTier = row.provenance?.confidenceTier ?? null;
-  const rawSourceRiskPenalty = row.sourceRisk?.sourceRiskPenalty ?? null;
 
   return {
     confidenceStyle: confidenceTier ? YIELD_SOURCE_CONFIDENCE_STYLES[confidenceTier] : null,
@@ -91,8 +88,7 @@ export function deriveYieldRowPresentation(row: YieldWorkbenchRanking) {
       warningSignals: row.warningSignals,
     }),
     sourceRiskScore: row.sourceRisk?.sourceRiskScore ?? null,
-    rawSourceRiskPenalty,
-    sourceRiskMaterial: rawSourceRiskPenalty !== null && rawSourceRiskPenalty > MATERIAL_SOURCE_RISK_PENALTY,
+    sourceRiskMaterial: isYieldSourceRiskMaterial(row.sourceRisk),
     sourceRiskDrivers: getYieldSourceRiskDrivers({
       sourceRisk: row.sourceRisk,
       sourceChanged: row.provenance?.sourceSwitch ?? false,

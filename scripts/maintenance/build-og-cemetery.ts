@@ -44,19 +44,18 @@ import { parseStrictCliArgs, runDirectCli, writeCliHelpIfRequested } from "../li
 import {
   buildSignedPng,
   checkSignedPng,
-  cssModuleClassMap,
   dataUri,
   registerCssModuleHook,
   renderScenePng,
   resolveRootTokens,
   rootCustomProperties,
-  serializeJson,
   unwrapCssModule,
   woff2FontFace,
+  type SignedPngImageRecord,
+  type SignedPngPaths,
+  type SignedPngProblem,
   type SignedPngSpec,
 } from "../lib/scene-og";
-
-export { cssModuleClassMap, resolveRootTokens, rootCustomProperties, serializeJson, unwrapCssModule };
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, "../..");
@@ -237,16 +236,6 @@ export async function buildOgCemeteryDocument(repoRoot = REPO_ROOT): Promise<OgC
 // Signature, check, render and build (the kit pipeline, cemetery parameters)
 // ---------------------------------------------------------------------------
 
-export interface OgCemeteryImageRecord {
-  sha256: string;
-  bytes: number;
-}
-
-export interface OgCemeteryPaths {
-  imagePath: string;
-  signaturePath: string;
-}
-
 export interface OgCemeterySignature {
   generatedBy: string;
   generatorVersion: number;
@@ -254,15 +243,10 @@ export interface OgCemeterySignature {
   png: typeof OG_CEMETERY_PNG_OPTIONS;
   documentSha256: string;
   summary: OgCemeteryDocument["summary"];
-  image: OgCemeteryImageRecord & { width: number; height: number };
+  image: SignedPngImageRecord & { width: number; height: number };
 }
 
-export interface OgCemeteryProblem {
-  kind: "missing-signature" | "stale-inputs" | "stale-signature" | "missing-image" | "image-modified" | "image-dimensions";
-  message: string;
-}
-
-export function buildOgCemeterySignature(document: OgCemeteryDocument, image: OgCemeteryImageRecord): OgCemeterySignature {
+export function buildOgCemeterySignature(document: OgCemeteryDocument, image: SignedPngImageRecord): OgCemeterySignature {
   return {
     generatedBy: GENERATED_BY,
     generatorVersion: OG_CEMETERY_GENERATOR_VERSION,
@@ -286,7 +270,7 @@ function signedPngSpec(document: OgCemeteryDocument): SignedPngSpec {
 }
 
 /** Platform-stable freshness check (the kit's `checkSignedPng`): the document hash and the committed PNG hash. */
-export async function checkOgCemetery(document: OgCemeteryDocument, paths: OgCemeteryPaths): Promise<OgCemeteryProblem[]> {
+export async function checkOgCemetery(document: OgCemeteryDocument, paths: SignedPngPaths): Promise<SignedPngProblem[]> {
   return checkSignedPng(signedPngSpec(document), paths);
 }
 
@@ -317,7 +301,7 @@ export async function buildOgCemetery({
   render = renderOgCemeteryPng,
   document,
 }: {
-  paths: OgCemeteryPaths;
+  paths: SignedPngPaths;
   force?: boolean;
   render?: (html: string) => Promise<Buffer>;
   document?: OgCemeteryDocument;
@@ -327,7 +311,7 @@ export async function buildOgCemetery({
   return { status, document: doc, imageBytes };
 }
 
-export function defaultOgCemeteryPaths(): OgCemeteryPaths {
+export function defaultOgCemeteryPaths(): SignedPngPaths {
   return {
     imagePath: resolve(REPO_ROOT, "public/og-cemetery.png"),
     signaturePath: resolve(REPO_ROOT, "scripts/maintenance/state/og-cemetery-signature.json"),

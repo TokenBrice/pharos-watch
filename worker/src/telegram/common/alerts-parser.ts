@@ -5,8 +5,8 @@ import {
 } from "./presets";
 import {
   isDepegStepValue,
-  type DepegStepValue,
-} from "./constants";
+  type TelegramDepegStepBps,
+} from "@shared/types/status/telegram";
 import { TELEGRAM_SUBSCRIBABLE_STABLECOINS } from "../store/subscription-eligibility";
 import { isTelegramReservedTargetToken } from "@shared/lib/telegram-command-vocabulary";
 import { TELEGRAM_ALERT_TYPES } from "@shared/types/status/telegram";
@@ -245,7 +245,7 @@ export function parseSubscribeArgs(argsText: string): ParsedSubscribeArgs {
   };
 }
 
-function parseDepegWorseningStep(value: string): { valid: true; value: DepegStepValue | null } | { valid: false } {
+function parseDepegWorseningStep(value: string): { valid: true; value: TelegramDepegStepBps | null } | { valid: false } {
   const normalized = value.toLowerCase();
   if (normalized === "off") {
     return { valid: true, value: null };

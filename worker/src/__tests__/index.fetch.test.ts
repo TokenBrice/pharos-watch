@@ -9,7 +9,7 @@ import {
   makeAuthenticatedApiKeyRow,
   makeRequestAttributionTables,
 } from "../test-helpers/api-key-test-support";
-import { API_KEY_AUTH_CACHE_TTL_MS, resetApiKeyStateForTests } from "../lib/api-keys";
+import { API_KEY_AUTH_CACHE_TTL_MS, resetApiKeyStateForTests } from "../lib/api-key-core";
 import { resetRequestAttributionStateForTests } from "../lib/request-source-attribution";
 import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
 import { DONOR_KEY_CLAIMS_OPEN } from "@shared/lib/public-api-contract";

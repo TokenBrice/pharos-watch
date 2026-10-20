@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import aiSummaries from "../../data/ai-summaries.json";
 import digestsData from "../../data/digests.json";
 import { CHANGELOG_MONTH_ARCHIVES, RECENT_CHANGELOGS } from "../../src/lib/changelog-history";
-import type { ChangelogEntry } from "../../src/data/changelogs/types";
+import type { ChangelogEntry } from "@shared/types/editorial-content";
 import {
   BACKING_LABELS,
   GOVERNANCE_LABELS,

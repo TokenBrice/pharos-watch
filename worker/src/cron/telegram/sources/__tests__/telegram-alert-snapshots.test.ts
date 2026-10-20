@@ -15,6 +15,7 @@ import {
   type DewsRow,
   type ActiveDepegRow,
 } from "../telegram-alert-snapshots";
+import { makeAlertSafetySourceRow } from "./dispatch-telegram-events.test-support";
 
 const DEFAULT_TELEGRAM_SNAPSHOT_D1_TABLES: MockTableConfig[] = [
   { match: "INSERT INTO cache", rows: [] },
@@ -265,7 +266,16 @@ describe("writeSnapshots", () => {
       dews: {},
       dewsAlertable: {},
       depeg: {},
-      safety: { generation: "test", snapshot: { "usdc-circle": { grade: "A", score: 90, ratingStatus: "rated", partialEvidence: null, methodologyVersion: "v1" } } },
+      safety: {
+        generation: "test",
+        safetyScoreIdentity: {
+          model: "v8", schemaVersion: 1, methodologyVersion: "v1",
+          evaluationBuildDigest: "a".repeat(64),
+          baseInputGenerationId: `report-cards-input:v1:${"b".repeat(64)}`,
+          publicationGenerationId: "report-cards:v8:1",
+        },
+        snapshot: { "usdc-circle": makeAlertSafetySourceRow() },
+      },
       launch: [],
       reserveDispatched: [],
     });

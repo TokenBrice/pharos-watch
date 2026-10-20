@@ -7,7 +7,6 @@ import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
 import { throwIfAborted } from "../abort";
 import { hasPublishableCurrentPrice } from "../price-publication-state";
-import type { PricingProviderDiagnosticSource } from "../pricing-provider-diagnostics";
 import { createPricingAssetAttempt } from "../pricing-provider-diagnostics";
 import {
   buildBlockedProviderDiagnostic,
@@ -23,7 +22,6 @@ import { applyReviewedAddressPriceTargetOverride } from "./reviewed-target-overr
 import type {
   AddressPriceAssetLike,
   AddressPriceProviderCollectionResult,
-  AddressPriceProviderKey,
   AddressPriceProviderRuntimeConfig,
   AddressPriceQuote,
   AddressPriceTarget,
@@ -33,7 +31,6 @@ import { ACTIVE_PRICE_COVERAGE_ALERT_GENERATIONS } from "../stablecoin-publicati
 export type {
   AddressPriceAssetLike,
   AddressPriceProviderCollectionResult,
-  AddressPriceProviderKey,
   AddressPriceProviderRuntimeConfig,
   AddressPriceQuote,
   AddressPriceTarget,
@@ -56,20 +53,13 @@ const NEXT_PRICE_GENERATION_SEC = 15 * 60;
  */
 export type AddressPriceTargetCohort = "corroboration" | "coverage-refresh";
 
-export function resolveEnabledAddressPriceProviders(
+export function isCoingeckoOnchainAddressEnabled(
   config?: AddressPriceProviderRuntimeConfig,
-): AddressPriceProviderKey[] {
-  if (!config) return [];
-
-  const configured = config.enabledProviders?.trim();
-  if (configured && ["none", "off", "false", "0"].includes(configured.toLowerCase())) {
-    return [];
-  }
-
-  if (!configured || !hasValue(config.cgApiKey)) return [];
-  return configured.split(",").some((part) => part.trim() === COINGECKO_ONCHAIN_PROVIDER)
-    ? [COINGECKO_ONCHAIN_PROVIDER]
-    : [];
+): boolean {
+  const configured = config?.enabledProviders?.trim();
+  if (!configured || !hasValue(config?.cgApiKey)) return false;
+  if (["none", "off", "false", "0"].includes(configured.toLowerCase())) return false;
+  return configured.split(",").some((part) => part.trim() === COINGECKO_ONCHAIN_PROVIDER);
 }
 
 function readStringHint(asset: AddressPriceAssetLike | undefined, key: "priceConfidence" | "priceSource"): string | null {
@@ -262,11 +252,10 @@ function compareAddressPriceTargets(
   return `${left.stablecoinId}:${left.chain}:${left.address}`.localeCompare(`${right.stablecoinId}:${right.chain}:${right.address}`);
 }
 
-export function buildAddressPriceTargetsByProvider(params: {
+export function buildAddressPriceTargets(params: {
   assets: AddressPriceAssetLike[];
   previousAssetsById?: Map<string, AddressPriceAssetLike>;
   previousMissingGenerationsById?: ReadonlyMap<string, number>;
-  providers: readonly AddressPriceProviderKey[];
   nowSec?: number;
   cohort?: AddressPriceTargetCohort;
   /**
@@ -276,11 +265,7 @@ export function buildAddressPriceTargetsByProvider(params: {
    * so routing state can never invent a target.
    */
   deploymentHints?: ReadonlyMap<string, { chain: string; address: string }>;
-}): Map<AddressPriceProviderKey, AddressPriceTarget[]> {
-  const result = new Map<AddressPriceProviderKey, AddressPriceTarget[]>();
-  if (!params.providers.includes(COINGECKO_ONCHAIN_PROVIDER)) return result;
-
-  const provider = COINGECKO_ONCHAIN_PROVIDER;
+}): AddressPriceTarget[] {
   const chainMap = CG_CHAIN_MAP;
   const targets: AddressPriceTarget[] = [];
   const seen = new Set<string>();
@@ -302,7 +287,6 @@ export function buildAddressPriceTargetsByProvider(params: {
       ...(meta?.tradedContracts ?? []),
     ];
     const deployments = applyReviewedAddressPriceTargetOverride({
-      provider,
       stablecoinId: asset.id,
       deployments: buildAssetDeployments(asset),
       metadataDeployments,
@@ -347,15 +331,13 @@ export function buildAddressPriceTargetsByProvider(params: {
   }
 
   targets.sort((left, right) => compareAddressPriceTargets(left, right, laneOwnedIds));
-  result.set(provider, targets);
-  return result;
+  return targets;
 }
 
 
 export async function collectAddressPriceProviderQuotes(params: {
-  targetsByProvider: Map<AddressPriceProviderKey, AddressPriceTarget[]>;
-  providers: readonly AddressPriceProviderKey[];
-  sourceAllowed: Record<AddressPriceProviderKey, boolean>;
+  targets: AddressPriceTarget[];
+  sourceAllowed: boolean;
   config: AddressPriceProviderRuntimeConfig;
   signal?: AbortSignal;
   nowSec: number;
@@ -365,74 +347,63 @@ export async function collectAddressPriceProviderQuotes(params: {
 }): Promise<AddressPriceProviderCollectionResult> {
   const quotesByStablecoinId = new Map<string, AddressPriceQuote[]>();
   const diagnostics: AddressPriceProviderCollectionResult["diagnostics"] = [];
-  const providerOutcomes: AddressPriceProviderCollectionResult["providerOutcomes"] = new Map();
   const deadlineMs = Date.now() + (params.budgetMs ?? ADDRESS_PROVIDER_RUN_BUDGET_MS);
   const provider = COINGECKO_ONCHAIN_PROVIDER;
-
-  if (params.providers.includes(provider)) {
-    throwIfAborted(params.signal);
-    const targets = params.targetsByProvider.get(provider) ?? [];
-    if (targets.length === 0) {
-      providerOutcomes.set(provider, "success");
-      diagnostics.push(buildNoCandidatesDiagnostic({
-        source: provider as PricingProviderDiagnosticSource,
-        stage: "no-candidates",
-        endpoint: provider,
-      }));
-      return { quotesByStablecoinId, diagnostics, providerOutcomes, attemptedRequests: 0, successfulRequests: 0 };
-    }
-
-    if (!params.sourceAllowed[provider]) {
-      providerOutcomes.set(provider, "neutral");
-      const diagnostic = buildBlockedProviderDiagnostic({
-        source: provider as PricingProviderDiagnosticSource,
-        stage: "primary",
-        endpoint: provider,
-        candidateCount: targets.length,
-      }, `${provider} circuit open`);
-      diagnostic.assetAttempts = targets.slice(0, 100).map((target) => createPricingAssetAttempt({
-        assetId: target.stablecoinId,
-        adapter: provider,
-        chain: target.chain,
-        target: target.address,
-        state: "skipped",
-        skipReason: "circuit-open",
-        rejectionClass: "blocked",
-        candidateAt: params.nowSec,
-      }));
-      diagnostics.push(diagnostic);
-      return { quotesByStablecoinId, diagnostics, providerOutcomes, attemptedRequests: 0, successfulRequests: 0 };
-    }
-
-    const result = await runCoingeckoOnchainAddressProvider(
-      targets,
-      params.config.cgApiKey ?? null,
-      params.signal,
-      params.nowSec,
-      deadlineMs,
-    );
-    diagnostics.push(...result.diagnostics);
-    // A 404 is the provider's definitive "this deployment is not indexed"
-    // answer, not an outage. Counting it as a failure would let a cohort made
-    // mostly of unindexed deployments open the circuit on healthy traffic.
-    const failedRequests = result.diagnostics
-      .filter((diagnostic) => !diagnostic.success && diagnostic.status !== 404);
-    providerOutcomes.set(
-      provider,
-      result.attemptedRequests === 0
-        ? "neutral"
-        : result.successfulRequests > 0 || failedRequests.length === 0
-          ? "success"
-          : "failure",
-    );
-    for (const quote of result.quotes) {
-      const list = quotesByStablecoinId.get(quote.stablecoinId) ?? [];
-      list.push(quote);
-      quotesByStablecoinId.set(quote.stablecoinId, list);
-    }
-    return { quotesByStablecoinId, diagnostics, providerOutcomes,
-      attemptedRequests: result.attemptedRequests, successfulRequests: result.successfulRequests };
+  const { targets } = params;
+  throwIfAborted(params.signal);
+  if (targets.length === 0) {
+    diagnostics.push(buildNoCandidatesDiagnostic({
+      source: provider,
+      stage: "no-candidates",
+      endpoint: provider,
+    }));
+    return { quotesByStablecoinId, diagnostics, providerOutcome: "success", attemptedRequests: 0, successfulRequests: 0 };
   }
 
-  return { quotesByStablecoinId, diagnostics, providerOutcomes, attemptedRequests: 0, successfulRequests: 0 };
+  if (!params.sourceAllowed) {
+    const diagnostic = buildBlockedProviderDiagnostic({
+      source: provider,
+      stage: "primary",
+      endpoint: provider,
+      candidateCount: targets.length,
+    }, `${provider} circuit open`);
+    diagnostic.assetAttempts = targets.slice(0, 100).map((target) => createPricingAssetAttempt({
+      assetId: target.stablecoinId,
+      adapter: provider,
+      chain: target.chain,
+      target: target.address,
+      state: "skipped",
+      skipReason: "circuit-open",
+      rejectionClass: "blocked",
+      candidateAt: params.nowSec,
+    }));
+    diagnostics.push(diagnostic);
+    return { quotesByStablecoinId, diagnostics, providerOutcome: "neutral", attemptedRequests: 0, successfulRequests: 0 };
+  }
+
+  const result = await runCoingeckoOnchainAddressProvider(
+    targets,
+    params.config.cgApiKey ?? null,
+    params.signal,
+    params.nowSec,
+    deadlineMs,
+  );
+  diagnostics.push(...result.diagnostics);
+  // A 404 is the provider's definitive "this deployment is not indexed"
+  // answer, not an outage. Counting it as a failure would let a cohort made
+  // mostly of unindexed deployments open the circuit on healthy traffic.
+  const failedRequests = result.diagnostics
+    .filter((diagnostic) => !diagnostic.success && diagnostic.status !== 404);
+  const providerOutcome = result.attemptedRequests === 0
+    ? "neutral"
+    : result.successfulRequests > 0 || failedRequests.length === 0
+      ? "success"
+      : "failure";
+  for (const quote of result.quotes) {
+    const list = quotesByStablecoinId.get(quote.stablecoinId) ?? [];
+    list.push(quote);
+    quotesByStablecoinId.set(quote.stablecoinId, list);
+  }
+  return { quotesByStablecoinId, diagnostics, providerOutcome,
+    attemptedRequests: result.attemptedRequests, successfulRequests: result.successfulRequests };
 }

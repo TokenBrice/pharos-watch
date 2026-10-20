@@ -18,6 +18,8 @@ Web Vitals retain document-lifetime meaning and current allowed path attribution
 
 There is no website account. Optional supporter-claim wallet interaction is the only wallet connection. Browser state includes shortcuts, portfolio, shared watchlist, Picker dismissal/session recovery, table/show-work/motion/history/Timeline preferences. Feature owners define exact keys: [Homepage](./homepage.md), [Portfolio](./portfolio-page.md#persistence-and-sharing), [Picker](./screener-page.md#browser-storage). Portfolio/shortcut state is not sent to API; shared snapshots are separate server-side storage.
 
+Picker tab-session recovery retains completed answers and their save time, not the generated shortlist. Restoring answers evaluates current data; server-side share snapshots retain frozen output separately.
+
 The homepage retains a bounded IndexedDB envelope of public market/PSI/incident evidence, with whole-envelope schema/methodology version admission and per-lane producer-age admission ([Homepage](./homepage.md#browser-state)). Detail pages separately retain compact public live summaries for at most 20 coin IDs in least-recently-used order, without URLs, visit timestamps or user identifiers. Both restore only after hydration as dated, labelled retained display evidence, never a persisted query cache, and expire under the existing 72-hour fallback ceiling. Neither envelope is sent to the API; browser site-data clearing removes them, and expired evidence is ignored even if its row remains on disk. Detail schema/projection changes rotate its envelope version; market projection changes rotate the homepage envelope version.
 
 ### Feedback and API access

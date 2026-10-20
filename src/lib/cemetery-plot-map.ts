@@ -18,6 +18,7 @@
 import { CAUSE_HEX, CAUSE_HEX_DARK, CAUSE_META, CAUSE_ORDER, type CauseOfDeath } from "@shared/lib/cause-of-death";
 import { parseCemeteryDeathDate, sortCemeteryCoins } from "@shared/lib/cemetery";
 import { formatDeathDate, formatUtcDayLabel } from "@shared/lib/format";
+import { fnv1a32 } from "@shared/lib/fnv1a";
 import { faceFloorPx, footprintOverlaps, type CapacityIssue, type CapacityReport } from "@shared/lib/scene/capacity";
 import { boxToFrameRect, placeInspectorCard as placeSceneInspectorCard, placeTag, type SceneRect } from "@shared/lib/scene/placement";
 import {
@@ -27,7 +28,6 @@ import {
   PLOT_UNIT,
   bbox,
   cypressGeometry,
-  fnv1a,
   gateGeometry,
   graveGeometry,
   graveHitHull,
@@ -562,7 +562,7 @@ export function buildCemeteryPlotMap(entries: readonly CemeteryPlotMapInput[], o
   const graves: Working[] = input.map((e) => {
     const { t, year } = deathTime(e.id, e.deathDate);
     const peakClass = plotPeakClassOf(e.peakMcap);
-    const seed = fnv1a(e.id);
+    const seed = fnv1a32(e.id);
     const lot: PlotLot = peakClass === 4 ? 3 : peakClass === 3 ? 2 : 1;
     const weather = plotWeatherOf(Math.max(0, (asOfT - t) / YEAR_MS));
     const rnd = seededStream(seed);

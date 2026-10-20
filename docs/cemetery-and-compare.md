@@ -84,6 +84,8 @@ The `og-cemetery` artifact renders the real resting plot map, depends on the atl
 
 `buildCemeteryPlotMap` is a deterministic serializable model: no clock, DOM or randomness; identical input in any order yields identical output. Geometry/capacity live in `src/lib/cemetery-plot-map.ts` and `cemetery-plot-geometry.ts`; [scene kit](./data-visualization.md#scene-kit) owns shared drawing primitives.
 
+Scene, flower and legend seeds use the frozen UTF-16 `fnv1a32` authority in `shared/lib/fnv1a.ts`; `shared/lib/scene/seed.ts` owns only the seeded stream. Import cutovers preserve serialized geometry and SVG bytes, including surrogate-pair ids.
+
 Cause, date and recorded peak determine the drawing. Peak is size at the top, never holder losses; orderly regulatory/abandoned exits must not look like destruction. Unknown peaks have a distinct neutral/hatched encoding, not zero/floor. Age uses latest recorded death (`asOf`), not wall time. Legend examples use the same geometry and distinguish archive availability, peg and unknown data. The sole frost figure counts all records, not visible stones.
 
 Both layouts provide one roving tab stop, full accessible grave names, button/pressed semantics and described keyboard rules; decorative geometry is hidden from assistive technology. Desktop ←/→ moves within a cause, ↑/↓ across causes at nearest date, Home/End to ends; portrait swaps axes. Skip the cemetery map reaches the equivalent register. Hover/focus previews; click/Enter/Space pins and announces once politely; Escape/background closes (the next Escape exits zoom). Keyboard access reaches graves outside a partial zoom window, whose label discloses years and `n of total`. Session flowers are not dataset statistics.
@@ -135,7 +137,7 @@ The server-rendered autopsy rows (first 25) carry the kicker, epitaph, obituary 
 Both charts are hand-rolled SVG driven by compact series props from `CemeteryStats`, with no Recharts on the route. Each has a `ChartDataTable` disclosure, which is also the screen-reader surface.
 
 - Deaths by year keeps a continuous axis, marks partial years and separates tracked/curated coverage. Empty years are catalog gaps, not evidence of no failures; absent peaks stay unrecorded. Count/share views and headlines use guarded stats.
-- Peak-by-cause plots recorded peaks only, names omissions/denominators and uses deterministic jitter and roving tabindex. Selecting a dot reveals the register row; the data table is an equivalent screen-reader surface.
+- Peak-by-cause plots recorded peaks only, names omissions/denominators and uses deterministic jitter and roving tabindex. Jitter maps the same frozen `fnv1a32(id)` hash through `(hash / 0xffffffff) * 2 - 1`; labelled dots retain their below-lane placement. Selecting a dot reveals the register row; the data table is an equivalent screen-reader surface.
 
 Peak market cap is never presented as a loss: the section copy states that it measures size at the top, and the only peak sums shown are over recorded peaks with their `knownCount`.
 

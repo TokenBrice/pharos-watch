@@ -73,8 +73,7 @@ const ABOUT_API_FAQ: FaqItem[] = [
   },
   {
     question: "Do I need an API key for every endpoint?",
-    answer:
-      `Almost every public data endpoint on ${PUBLIC_API_HOST} requires ${PUBLIC_API_KEY_HEADER}. The no-key exceptions are the safety-grades feed, health checks, OG images, feedback submission, the Telegram webhook, Telegram Mini App session/mutation, and the supporter key claim; Telegram still authenticates with its own secret or signed Mini App initData. Admin routes use Cloudflare Access instead of public API keys.`,
+    answer: "See [Public API Auth](/api/reference/#public-api-auth) for key requirements, no-key exceptions, and separate authentication.",
   },
   {
     question: "What is the difference between the public API lane and the website lane?",
@@ -404,9 +403,6 @@ export async function ApiReferencePanel() {
               <span className="font-semibold text-foreground">Public auth:</span> <InlineCode>{PUBLIC_API_KEY_HEADER}</InlineCode>
             </li>
             <li>
-              <span className="font-semibold text-foreground">No-key public routes:</span> safety grades, health, OG images, feedback, supporter key claim, Telegram webhook (Telegram secret)
-            </li>
-            <li>
               <span className="font-semibold text-foreground">Admin auth:</span> Cloudflare Access on the ops hosts
             </li>
           </ul>
@@ -458,7 +454,7 @@ export async function ApiReferencePanel() {
         </div>
       </section>
 
-      <FaqSection items={ABOUT_API_FAQ} title="API Access FAQ" includeJsonLd />
+      <FaqSection items={ABOUT_API_FAQ} title="API Access FAQ" includeJsonLd renderAnswer={(answer) => <InlineMarkdown text={answer} />} />
 
       {document.introBlocks.length > 0 ? (
         <section className="pharos-card-shell px-4 py-5 sm:px-5 sm:py-6">

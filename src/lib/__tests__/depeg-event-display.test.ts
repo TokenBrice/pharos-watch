@@ -112,3 +112,13 @@ describe("depeg closure presentation", () => {
     expect(html).toContain(buildDepegEventSynopsis(event));
   });
 });
+
+describe("depeg event editorial rendering", () => {
+  it.each([
+    ["usdc-2023-03-11", true],
+    ["tryb-2026-06-23", false],
+  ] as const)("renders a briefing only for authored event %s", async (slug, authored) => {
+    const html = renderToStaticMarkup(await DepegEventPage({ params: Promise.resolve({ event: slug }) }));
+    expect(/<article aria-label="[^"]+ depeg briefing"/.test(html)).toBe(authored);
+  });
+});

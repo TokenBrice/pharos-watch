@@ -109,10 +109,6 @@ export function parseDestructiveOperationArgs({
   };
 }
 
-export function parseDestructiveOperationMode(options: DestructiveOperationOptions): DestructiveOperationMode {
-  return parseDestructiveOperationArgs(options).mode;
-}
-
 export function describeDestructiveOperationMode(mode: DestructiveOperationMode): string {
   const mutationMode = mode.dryRun ? "DRY RUN" : "LIVE";
   const d1Target = mode.remote ? "remote D1" : "local D1";

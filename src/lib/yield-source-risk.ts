@@ -385,7 +385,7 @@ export function formatYieldSourcePosture(posture: YieldSourcePosture): string {
   return YIELD_SOURCE_POSTURE_DEFINITIONS[posture].label;
 }
 
-function isYieldSourceRiskMaterial(sourceRisk: YieldSourceRisk | null | undefined): boolean {
+export function isYieldSourceRiskMaterial(sourceRisk: YieldSourceRisk | null | undefined): boolean {
   const sourceRiskPenalty = finiteNumber(sourceRisk?.sourceRiskPenalty);
   const sourceRiskScore = finiteNumber(sourceRisk?.sourceRiskScore);
   if (sourceRiskPenalty !== null) return sourceRiskPenalty > 1.05;
@@ -399,10 +399,10 @@ export function formatYieldSourceRiskSummary(sourceRisk: YieldSourceRisk | null 
 }
 
 export function formatYieldSourceRiskCompact(sourceRisk: YieldSourceRisk | null | undefined): string {
-  const sourceRiskPenalty = finiteNumber(sourceRisk?.sourceRiskPenalty) ?? 1;
+  const sourceRiskPenalty = finiteNumber(sourceRisk?.sourceRiskPenalty);
   const sourceRiskScore = finiteNumber(sourceRisk?.sourceRiskScore);
   const scoreLabel = sourceRiskScore !== null ? `${Math.round(sourceRiskScore)}/100` : "n/a";
-  const penaltyLabel = `${sourceRiskPenalty.toFixed(2)}x`;
+  const penaltyLabel = sourceRiskPenalty !== null ? `${sourceRiskPenalty.toFixed(2)}x` : "n/a";
   return `${scoreLabel} | ${penaltyLabel}`;
 }
 

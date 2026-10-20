@@ -1,5 +1,5 @@
 import { ChangelogEntryCard } from "@/components/changelog-entry-card";
-import type { ChangelogEntry } from "@/data/changelogs/types";
+import type { ChangelogEntry } from "@shared/types/editorial-content";
 
 /** Only the caller's document partition is rendered; closed folds are not a payload boundary. */
 export function ChangelogTimeline({ entries, highlightLatest = true }: {

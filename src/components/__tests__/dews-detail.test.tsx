@@ -3,7 +3,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 
-import { DEWSDetail, DEWSFiringList } from "@/components/dews-detail";
+import { DEWSDetail } from "@/components/dews-detail";
 import type { ReactNode } from "react";
 
 const { useDetailMock, chartMock, areaMock, tooltipMock } = vi.hoisted(() => ({
@@ -63,30 +63,19 @@ describe("DEWSDetail", () => {
     render(<DEWSDetail stablecoinId="fixture" />);
     expect(screen.getByText(/not applicable/).textContent).toContain("not applicable (not-applicable)");
   });
-});
 
-
-describe("DEWSFiringList", () => {
-  it("lists firing signals with their numeric value", () => {
-    render(
-      <DEWSFiringList
-        signals={{
-          supply: { value: 55, available: true },
-          pool: { value: 0, available: true },
-          liq: { value: 0, available: false },
-          price: { value: 25, available: true },
-          diverg: { value: 80, available: true },
-          black: { value: 0, available: false },
-          flow: { value: 0, available: false },
-          yield: { value: 0, available: false },
-        }}
-      />,
-    );
-    // The firing list sorts by value descending and excludes zero/unavailable.
-    const items = screen.getAllByTestId("dews-firing-signal");
-    expect(items.length).toBe(3);
-    expect(items[0].textContent).toMatch(/Cross-Source Divergence/i);
-    expect(items[0].textContent).toMatch(/80/);
+  it("sorts available signal rows by score and retains measured zero", () => {
+    useDetailMock.mockReturnValue({ isLoading: false, error: null, data: {
+      current: { score: 20, band: "CALM", signals: {
+        supply: { value: 55, available: true },
+        pool: { value: 0, available: true },
+        price: { value: 99, available: false },
+        diverg: { value: 80, available: true },
+      } }, history: [],
+    } });
+    render(<DEWSDetail stablecoinId="fixture" />);
+    const scores = screen.getAllByText(/^· \d+ \/ 100$/)
+      .map((element) => Number(element.textContent?.match(/\d+/)?.[0]));
+    expect(scores).toEqual([80, 55, 0, 80, 55, 0]);
   });
-
 });

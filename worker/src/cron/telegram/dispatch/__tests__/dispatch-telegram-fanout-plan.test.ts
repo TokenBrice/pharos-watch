@@ -3,7 +3,6 @@ import type { DewsChange } from "../../../../telegram/common/alerts-formatting";
 import {
   buildTelegramAlertsByChat,
   renderTelegramSubscriberPage,
-  summarizePresetFanoutFailures,
 } from "../dispatch-telegram-fanout-plan";
 import type { TelegramFanoutPlanEvents } from "../../sources/dispatch-telegram-events";
 import {
@@ -117,8 +116,8 @@ describe("dispatch telegram fanout planning", () => {
     expect([...routing.alertsByChat.keys()].sort()).toEqual(["direct-dews", "global-dews", "preset-dews"]);
   });
 
-  it("counts preset query and resolution failures without treating failed presets as subscribers", () => {
-    const summary = summarizePresetFanoutFailures(fanoutInputs({
+  it("does not treat failed preset queries as subscribers", () => {
+    const inputs = fanoutInputs({
       preset: {
         dews: { kind: "query-failed", error: new Error("d1 unavailable") },
         depeg: {
@@ -129,13 +128,12 @@ describe("dispatch telegram fanout planning", () => {
         },
         safety: { kind: "ok", rows: new Map() },
       },
-    }));
-
-    expect(summary).toEqual({
-      presetQueryFailures: 1,
-      presetResolutionFailures: 1,
-      presetFailure: true,
     });
+    const routing = buildTelegramAlertsByChat({
+      events: fanoutEvents({ dewsChanges: [DEWS_WARNING] }),
+      inputs,
+    });
+    expect(routing).toEqual({ alertsByChat: new Map() });
   });
 
   it("rejects a whole page over budget and preserves direct, preset, global routing and vetoes", () => {
@@ -187,7 +185,6 @@ describe("dispatch telegram fanout planning", () => {
     expect(queue.map((entry) => entry.chatId)).toEqual(["global", "preset", "direct"]);
     expect(queue.every((entry) => entry.chunks.length === 1)).toBe(true);
     expect(queue.every((entry) => entry.canonicalHtml.includes("<b>DEWS</b>"))).toBe(true);
-    expect(buildTelegramAlertsByChat(args).presetFailure).toBe(false);
   });
 
   it("admits the first candidate above budget and preserves quiet-hour, escalation and lineage policy", () => {

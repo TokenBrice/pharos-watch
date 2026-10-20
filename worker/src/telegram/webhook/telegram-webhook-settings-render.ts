@@ -12,6 +12,9 @@ import { buildTelegramMiniAppUrl } from "../common/mini-app-url";
 import {
   TELEGRAM_ALERT_FAMILY_SHORT_LABELS,
   TELEGRAM_ALERT_PERSISTENCE,
+  DEWS_BAND_CODE_BY_VALUE,
+  SAFETY_MODE_CODE_BY_VALUE,
+  type SafetyModeCode,
 } from "@shared/lib/telegram-alert-families";
 import {
   formatQuietHours,
@@ -20,15 +23,16 @@ import {
 } from "./telegram-webhook-messages";
 import { unixNow } from "../store/telegram-webhook-store";
 import type { SubscriberRow, SubscriptionRow } from "./telegram-webhook-shared";
-import type { TelegramAlertType } from "@shared/types/status";
 import {
-  DEPEG_STEPS,
-  DEWS_BAND_CODES,
+  TELEGRAM_DEWS_BANDS,
+  TELEGRAM_SAFETY_MODES,
+  TELEGRAM_DEPEG_STEPS,
+  type TelegramAlertType,
+} from "@shared/types/status/telegram";
+import {
   GLOBAL_ALERT_TYPES,
-  SAFETY_MODE_CODES,
   subscriberHasGlobal,
   type GlobalAlertType,
-  type SafetyModeCode,
 } from "./telegram-webhook-settings-shared";
 
 export function buildHomeMessage(
@@ -177,9 +181,9 @@ function coinLabel(coinId: string): string {
 }
 
 function buildDewsRow(coinId: string, dewsBand: string | null, explicitOff: boolean): Array<{ text: string; callback_data: string }> {
-  const row = (["A", "W", "D"] as const).map((code) => ({
-    text: `${markIf(dewsBand === DEWS_BAND_CODES[code])}${DEWS_BAND_CODES[code]}`,
-    callback_data: `settings:c:${coinId}:db:${code}`,
+  const row = TELEGRAM_DEWS_BANDS.map((band) => ({
+    text: `${markIf(dewsBand === band)}${band}`,
+    callback_data: `settings:c:${coinId}:db:${DEWS_BAND_CODE_BY_VALUE[band]}`,
   }));
   row.push({
     text: `${markIf(explicitOff)}off`,
@@ -189,9 +193,9 @@ function buildDewsRow(coinId: string, dewsBand: string | null, explicitOff: bool
 }
 
 function buildSafetyRow(coinId: string, safetyMode: string | null, explicitOff: boolean): Array<{ text: string; callback_data: string }> {
-  const row = (["a", "d", "u"] as const).map((code) => ({
-    text: `${markIf(safetyMode === SAFETY_MODE_CODES[code])}${labelForSafety(code)}`,
-    callback_data: `settings:c:${coinId}:sm:${code}`,
+  const row = TELEGRAM_SAFETY_MODES.map((mode) => ({
+    text: `${markIf(safetyMode === mode)}${labelForSafety(SAFETY_MODE_CODE_BY_VALUE[mode])}`,
+    callback_data: `settings:c:${coinId}:sm:${SAFETY_MODE_CODE_BY_VALUE[mode]}`,
   }));
   row.push({
     text: `${markIf(explicitOff)}off`,
@@ -217,7 +221,7 @@ function buildDepegRow(
   coinId: string,
   depegStep: number | "off" | "default" | null,
 ): Array<{ text: string; callback_data: string }> {
-  const row = DEPEG_STEPS.map((step) => ({
+  const row = TELEGRAM_DEPEG_STEPS.map((step) => ({
     text: `${markIf(depegStep === step)}${step}`,
     callback_data: `settings:c:${coinId}:ds:${step}`,
   }));

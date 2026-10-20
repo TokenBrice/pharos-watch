@@ -9,14 +9,19 @@ import {
   notApplicableFreshnessMetadata,
   requireOnchainInput,
 } from "./helpers";
-import { strictAddressDecoder, strictBoolDecoder, strictUint256Decoder } from "./abi-decode";
 import {
   readImplementationSlotAddress,
   requireExpectedAddress,
 } from "./onchain-identity";
 import type { AdapterContext, AdapterResult } from "./types";
 import { reserveDegradedWarning } from "./warnings";
-import { pinnedBlockPlan } from "./evm-observation-plan";
+import {
+  addressObservation,
+  boolObservation,
+  executeEvmObservationPlan,
+  pinnedBlockPlan,
+  uint256Observation,
+} from "./evm-observation-plan";
 
 const ADAPTER_KEY = "usdai-hub";
 const PYUSD_DECIMALS = 6;
@@ -28,10 +33,6 @@ const SELECTORS = {
   bridgedSupply: "0x11c301e0",
   paused: "0x5c975abb",
 } as const;
-
-const requireUint = strictUint256Decoder(ADAPTER_KEY);
-const requireAddress = strictAddressDecoder(ADAPTER_KEY);
-const requireBool = strictBoolDecoder(ADAPTER_KEY);
 
 /**
  * Independently measures USDai's complete PYUSD liability on Arbitrum. The
@@ -62,14 +63,28 @@ export async function fetchUsdaiHubReserves(
     fallbackRpcUrl: params.fallbackRpcUrl,
   });
 
-  const [[rawBaseToken, rawBalance, rawTotalSupply, rawBridgedSupply, rawPaused], implementation] = await Promise.all([
-    Promise.all([
-      onchain.raw(params.hubAddress, SELECTORS.baseToken),
-      onchain.raw(params.baseTokenAddress, encodeBalanceOfCallData(params.hubAddress)),
-      onchain.raw(params.hubAddress, TOTAL_SUPPLY_SELECTOR),
-      onchain.raw(params.hubAddress, SELECTORS.bridgedSupply),
-      onchain.raw(params.hubAddress, SELECTORS.paused),
-    ]),
+  const [observation, implementation] = await Promise.all([
+    executeEvmObservationPlan({
+      adapterKey: ADAPTER_KEY,
+      fields: [
+        addressObservation({ label: "baseToken()", contract: params.hubAddress, data: SELECTORS.baseToken }),
+        uint256Observation({ label: "PYUSD balanceOf(hub)", contract: params.baseTokenAddress, data: encodeBalanceOfCallData(params.hubAddress) }),
+        uint256Observation({ label: "totalSupply()", contract: params.hubAddress, data: TOTAL_SUPPLY_SELECTOR }),
+        uint256Observation({ label: "bridgedSupply()", contract: params.hubAddress, data: SELECTORS.bridgedSupply }),
+        boolObservation({ label: "paused()", contract: params.hubAddress, data: SELECTORS.paused }),
+      ],
+      read: (calls) => Promise.all(calls.map(async ({ label, contract, data }) => {
+        const raw = await onchain.raw(contract, data);
+        return { label, success: raw != null, returnData: (raw ?? "0x") as `0x${string}` };
+      })),
+      onFailure: (label) => {
+        const kind = label === "baseToken()" ? "address" : label === "paused()" ? "bool" : "uint256";
+        throw new Error(`${ADAPTER_KEY}: ${label} returned malformed ${kind} payload`);
+      },
+      onDecodeError: (error) => {
+        throw new Error(`${ADAPTER_KEY}: ${error instanceof Error ? error.message : String(error)}`);
+      },
+    }),
     readImplementationSlotAddress({
       adapterKey: ADAPTER_KEY,
       input,
@@ -80,14 +95,15 @@ export async function fetchUsdaiHubReserves(
     }),
   ]);
 
-  const baseToken = requireAddress(rawBaseToken, "baseToken()");
+  const {
+    "baseToken()": baseToken,
+    "PYUSD balanceOf(hub)": baseTokenBalanceRaw,
+    "totalSupply()": totalSupplyRaw,
+    "bridgedSupply()": bridgedSupplyRaw,
+    "paused()": paused,
+  } = observation.values;
   requireExpectedAddress(ADAPTER_KEY, baseToken, params.baseTokenAddress, "baseToken()");
   requireExpectedAddress(ADAPTER_KEY, implementation, params.implementationAddress, "EIP-1967 implementation");
-
-  const baseTokenBalanceRaw = requireUint(rawBalance, "PYUSD balanceOf(hub)");
-  const totalSupplyRaw = requireUint(rawTotalSupply, "totalSupply()");
-  const bridgedSupplyRaw = requireUint(rawBridgedSupply, "bridgedSupply()");
-  const paused = requireBool(rawPaused, "paused()");
 
   const bridgeSafeLiabilityRaw = totalSupplyRaw + bridgedSupplyRaw;
   const warnings = [];

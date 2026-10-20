@@ -24,6 +24,8 @@ The output is the cached `price`, `priceSource`, `priceConfidence`, `priceObserv
 
 When an asset still has no usable current price after validation and fallback recovery, Pharos keeps `price = null`, `priceConfidence = null`, and serializes `priceSource = "missing"` so the cache payload stays structurally valid while still making the missing-price state explicit.
 
+The public methodology's compact overview and current source-admission exceptions share typed content with its Markdown export in `src/lib/methodology-content.ts`. HBD, SOFID, ticker-only evidence, quarantine and original-clock caveats remain in the technical disclosure; source tables, formulas and bounded supply gap-fill rules retain their existing sections. Dated release and acceptance evidence belongs to canonical Pricing history, not a second overview diary.
+
 USDFC is included in the reviewed CoinGecko low-volume fallback cohort. Its exact Filecoin token identity is verified against issuer deployments and CoinGecko metadata; sparse trading can leave an observed quote older than primary consensus permits. Recovery retains the original upstream clock and fallback confidence under the existing seven-day budget, without changing DefiLlama supply or treating the FIL collateral oracle as a USDFC market price.
 
 
@@ -63,6 +65,8 @@ The effective observation clock is the earlier of book retrieval and parent upst
 
 CoinMarketCap fallback is outside primary consensus. Its complete category response requires the configured exact slug, without a symbol-equality gate on that slug; only slugless assets may use a symbol unique both locally and in the provider response. An absent configured slug stays eligible for bounded targeted validation, never a different same-symbol category token. [Fallback enrichment](process/pricing-pipeline-appendix.md#fallback-enrichment) owns targeted chain/address identity and verified-cache admission.
 
+Fallback providers return explicit confidence and observation provenance with every recovered quote; publication does not synthesize missing confidence afterward. Both intake paths reuse their initial authoritative overrides and replay snapshot for shared completion, retaining the later local-only dependency repair and nominal-reference settlement. Their discriminated publication context selects the existing path-specific labels and main-only DefiLlama circuit bookkeeping.
+
 The DefiLlama-list consensus input accepts only intake prices with an absent source or an explicit `defillama` / `defillama-list` origin, and still excludes `coingecko-fallback` supply rows. Supplemental contract quotes and other named price sources retain their own provenance and cannot be relabeled `defillama-list`, including when their supply comes from an on-chain read.
 
 Tracked NAV classification is authoritative in both intake normalization and price-validation context: an omitted curated NAV flag means false, and a provider's `navToken: true` cannot bypass fixed-peg validation. Untracked rows retain their source classification.
@@ -95,6 +99,8 @@ Promoted DEX corroboration is candidate-scoped. A hard-source match admits only 
 The primary CEX, ticker, oracle, promoted-DEX, reserve-telemetry and pool-challenge lanes protect depeg detection within publication. Exact-address transport remains detached; CoinGecko Onchain is the sole retained adapter and requires explicit allowlisting. Retired source registry keys, including `pyth`, remain renderable for historical provenance but cannot contribute live observations.
 
 The current exact-address lane also requires a configured CoinGecko key and canonical deployment identity. It targets missing prices or below-target source depth under its existing freshness, liquidity and request-budget gates; hourly corroboration and slot-level refresh do not bypass admission or renew an old observation. Public source tables name only this current adapter. DexScreener exact-pool enrichment/refresh is a separate live fallback, not the retired DexScreener address-provider adapter; retired adapters belong in the canonical pricing release history rather than the active inventory.
+
+Both exact-address callers share one enabled predicate, a flat target list and a scalar circuit outcome. The comma-separated allowlist remains explicit opt-in; no candidates recover successfully, blocked or unattempted work stays neutral, and an answered 404 is an unindexed deployment rather than a provider outage.
 
 Kraken's curated `SOFIDUSD` market supplies SoFiUSD's hard-market quote through the existing batched ticker request, corroborating the contract-verified CoinGecko `sofiusd` identity. SoFiUSD no longer has a nominal-par override: admitted observed market consensus publishes through the ordinary validation path. Kraken's bid/ask midpoint retains its local-fetch clock, and CoinGecko agreement does not upgrade that quote to single-source depeg authority. Failed or absent quotes stay unavailable rather than publishing par. Provider registration alone does not establish a published observation.
 

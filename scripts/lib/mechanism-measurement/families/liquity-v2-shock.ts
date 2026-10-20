@@ -66,14 +66,12 @@ async function readConfiguredBranchGraph(
     role: "graph",
     to,
     signature: "troveManager()",
-    selector: "0x3d83908a",
   });
   const collateralToken = await readAddress(caller, {
     name: `addressesRegistry[${configuredIndex}].collToken`,
     role: "graph",
     to,
     signature: "collToken()",
-    selector: "0x31b8c946",
   });
   const stabilityPool = await readAddress(caller, {
     name: `addressesRegistry[${configuredIndex}].stabilityPool`,
@@ -86,7 +84,6 @@ async function readConfiguredBranchGraph(
     role: "graph",
     to,
     signature: "priceFeed()",
-    selector: "0x741bef1a",
   });
   const activePool = await readAddress(caller, {
     name: `addressesRegistry[${configuredIndex}].activePool`,
@@ -99,105 +96,90 @@ async function readConfiguredBranchGraph(
     role: "graph",
     to,
     signature: "defaultPool()",
-    selector: "0x3cc74225",
   });
   const sortedTroves = await readAddress(caller, {
     name: `addressesRegistry[${configuredIndex}].sortedTroves`,
     role: "graph",
     to,
     signature: "sortedTroves()",
-    selector: "0xae918754",
   });
   const borrowerOperations = await readAddress(caller, {
     name: `addressesRegistry[${configuredIndex}].borrowerOperations`,
     role: "graph",
     to,
     signature: "borrowerOperations()",
-    selector: "0x77553ad4",
   });
   const troveNft = await readAddress(caller, {
     name: `addressesRegistry[${configuredIndex}].troveNFT`,
     role: "graph",
     to,
     signature: "troveNFT()",
-    selector: "0x059e0113",
   });
   const gasPool = await readAddress(caller, {
     name: `addressesRegistry[${configuredIndex}].gasPoolAddress`,
     role: "graph",
     to,
     signature: "gasPoolAddress()",
-    selector: "0xfe9d0323",
   });
   const collSurplusPool = await readAddress(caller, {
     name: `addressesRegistry[${configuredIndex}].collSurplusPool`,
     role: "graph",
     to,
     signature: "collSurplusPool()",
-    selector: "0xcda775f9",
   });
   const boldToken = await readAddress(caller, {
     name: `addressesRegistry[${configuredIndex}].boldToken`,
     role: "graph",
     to,
     signature: "boldToken()",
-    selector: "0x630afce5",
   });
   const weth = await readAddress(caller, {
     name: `addressesRegistry[${configuredIndex}].WETH`,
     role: "graph",
     to,
     signature: "WETH()",
-    selector: "0xad5c4648",
   });
   const collateralRegistry = await readAddress(caller, {
     name: `addressesRegistry[${configuredIndex}].collateralRegistry`,
     role: "graph",
     to,
     signature: "collateralRegistry()",
-    selector: "0xd330fadd",
   });
   const interestRouter = await readAddress(caller, {
     name: `addressesRegistry[${configuredIndex}].interestRouter`,
     role: "graph",
     to,
     signature: "interestRouter()",
-    selector: "0xd0ee2ace",
   });
   const mcr = await readUint(caller, {
     name: `addressesRegistry[${configuredIndex}].MCR`,
     role: "parameter",
     to,
     signature: "MCR()",
-    selector: "0x794e5724",
   });
   const ccr = await readUint(caller, {
     name: `addressesRegistry[${configuredIndex}].CCR`,
     role: "parameter",
     to,
     signature: "CCR()",
-    selector: "0x5733d58f",
   });
   const scr = await readUint(caller, {
     name: `addressesRegistry[${configuredIndex}].SCR`,
     role: "parameter",
     to,
     signature: "SCR()",
-    selector: "0x58d5a961",
   });
   const liquidationPenaltySp = await readUint(caller, {
     name: `addressesRegistry[${configuredIndex}].LIQUIDATION_PENALTY_SP`,
     role: "parameter",
     to,
     signature: "LIQUIDATION_PENALTY_SP()",
-    selector: "0x370619be",
   });
   const liquidationPenaltyRedistribution = await readUint(caller, {
     name: `addressesRegistry[${configuredIndex}].LIQUIDATION_PENALTY_REDISTRIBUTION`,
     role: "parameter",
     to,
     signature: "LIQUIDATION_PENALTY_REDISTRIBUTION()",
-    selector: "0x1170f2d4",
   });
   return {
     configuredIndex,
@@ -347,14 +329,12 @@ export async function measureLiquityV2ShockCoverage(
         role: "graph",
         to: graph.troveManager,
         signature: "sortedTroves()",
-        selector: "0xae918754",
       },
       {
         name: `troveManager[${branchIndex}].borrowerOperations`,
         role: "graph",
         to: graph.troveManager,
         signature: "borrowerOperations()",
-        selector: "0x77553ad4",
       },
       {
         name: `troveManager[${branchIndex}].activePool`,
@@ -383,7 +363,6 @@ export async function measureLiquityV2ShockCoverage(
       role: "oracle-graph",
       to: graph.priceFeed,
       signature: "ethUsdOracle()",
-      selector: "0x8a97f9c9",
     });
     const configuredOracleGraph = target.branches[graph.configuredIndex]!.oracleGraph;
     const ethUsdAggregatorImplementation = configuredOracleGraph?.primaryImplementationAddress
@@ -393,7 +372,6 @@ export async function measureLiquityV2ShockCoverage(
           role: "oracle-graph",
           to: ethUsdAggregator,
           signature: "aggregator()",
-          selector: "0x245a7bfc",
         });
     codeSpecs.push(
       {
@@ -416,14 +394,11 @@ export async function measureLiquityV2ShockCoverage(
       const secondaryOracleSignature =
         secondaryOracleConfig?.signature ??
         (graph.collateralSymbol === "wstETH" ? "stEthUsdOracle()" : "rEthEthOracle()");
-      const secondaryOracleSelector =
-        secondaryOracleConfig?.selector ?? (graph.collateralSymbol === "wstETH" ? "0xd69e820d" : "0x03f04756");
       secondaryAggregator = await readAddress(caller, {
         name: `priceFeed[${branchIndex}].secondaryOracle`,
         role: "oracle-graph",
         to: graph.priceFeed,
         signature: secondaryOracleSignature,
-        selector: secondaryOracleSelector,
       });
       secondaryAggregatorImplementation = secondaryOracleConfig?.implementationAddress
         ? normalizeAddress(secondaryOracleConfig.implementationAddress)
@@ -432,7 +407,6 @@ export async function measureLiquityV2ShockCoverage(
             role: "oracle-graph",
             to: secondaryAggregator,
             signature: "aggregator()",
-            selector: "0x245a7bfc",
           });
       codeSpecs.push(
         {
@@ -457,7 +431,6 @@ export async function measureLiquityV2ShockCoverage(
         role: "oracle-graph",
         to: graph.priceFeed,
         signature: rateProviderConfig?.signature ?? "rateProviderAddress()",
-        selector: rateProviderConfig?.selector ?? "0xe5aa1c40",
       });
       const expectedRateProvider = normalizeAddress(rateProviderConfig?.expectedAddress ?? graph.collateralToken);
       requirePass(
@@ -490,7 +463,6 @@ export async function measureLiquityV2ShockCoverage(
       role: "state",
       to: graph.stabilityPool,
       signature: target.spDeposits.signature,
-      selector: target.spDeposits.selector,
     });
     const shutdownTime = await readUint(caller, {
       name: `troveManager[${branchIndex}].shutdownTime`,
@@ -528,7 +500,6 @@ export async function measureLiquityV2ShockCoverage(
         role: "enumeration",
         to: graph.troveManager,
         signature: "getTroveIdsCount()",
-        selector: "0x4aff96e1",
       }),
     );
     requirePass(
@@ -542,7 +513,6 @@ export async function measureLiquityV2ShockCoverage(
       role: "enumeration",
       to: graph.troveManager,
       signature: "getTroveFromTroveIdsArray(uint256)",
-      selector: "0x1ef11b62",
       args: [BigInt(arrayIndex)],
     }));
     const idReturns = await caller.batch(idSpecs);
@@ -562,7 +532,6 @@ export async function measureLiquityV2ShockCoverage(
       role: "position-input",
       to: graph.troveManager,
       signature: "getLatestTroveData(uint256)",
-      selector: "0xaad3f404",
       args: [id],
     }));
     const statusSpecs: ShockEthCallSpec[] = ids.map((id, arrayIndex) => ({
@@ -570,7 +539,6 @@ export async function measureLiquityV2ShockCoverage(
       role: "position-input",
       to: graph.troveManager,
       signature: "getTroveStatus(uint256)",
-      selector: "0xe47bfaf1",
       args: [id],
     }));
     const latestReturns = await caller.batch(latestSpecs);

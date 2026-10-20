@@ -9,7 +9,6 @@ import {
   type YieldSourceRiskDriver,
 } from "@/lib/yield-source-risk";
 import { YIELD_TYPE_LABELS } from "@shared/lib/classification";
-import { median } from "@shared/lib/stats";
 import {
   getYieldAlternateSourceCount,
   getYieldWorkbenchDataSource,
@@ -21,12 +20,6 @@ import type { YieldType } from "@shared/types";
 export type YieldSourceConfidenceCounts = Record<YieldSourceConfidenceTier, number>;
 export type YieldSourceDepthCounts = Record<YieldSourceDepthLens, number>;
 export type YieldSourcePostureCounts = Record<YieldSourcePosture, number>;
-
-export interface YieldSourceBoardApySummary {
-  min: number;
-  median: number;
-  max: number;
-}
 
 export interface YieldSourceBoardLabelCount {
   label: string;
@@ -48,7 +41,6 @@ export interface YieldSourceBoardGroup {
   selectedCount: number;
   alternateCount: number;
   representedSourceCount: number;
-  apy: YieldSourceBoardApySummary | null;
   sourceLabels: YieldSourceBoardLabelCount[];
 }
 
@@ -110,7 +102,6 @@ interface SourceRow {
   yieldType: YieldType;
   dataSource: string;
   yieldSource: string;
-  apy30d: number;
 }
 
 interface MutableGroup {
@@ -121,7 +112,6 @@ interface MutableGroup {
   dataSourceLabel: string;
   selectedCount: number;
   alternateCount: number;
-  apyValues: number[];
   sourceLabelCounts: Map<string, number>;
 }
 
@@ -155,18 +145,6 @@ function addCount(map: Map<string, number>, key: string) {
   map.set(key, (map.get(key) ?? 0) + 1);
 }
 
-function summarizeApy(values: readonly number[]): YieldSourceBoardApySummary | null {
-  const finite = values.filter(Number.isFinite).sort((a, b) => a - b);
-  const medianApy = median(finite);
-  if (medianApy == null) return null;
-
-  return {
-    min: finite[0],
-    median: medianApy,
-    max: finite[finite.length - 1],
-  };
-}
-
 function sortedLabelCounts(labelCounts: Map<string, number>): YieldSourceBoardLabelCount[] {
   return Array.from(labelCounts.entries())
     .map(([label, count]) => ({ label, count }))
@@ -189,7 +167,6 @@ function getSourceRows(ranking: YieldWorkbenchRanking): SourceRow[] {
       yieldType: ranking.yieldType,
       dataSource,
       yieldSource: ranking.yieldSource,
-      apy30d: ranking.apy30d,
     },
     ...(ranking.altSources ?? []).flatMap((source) =>
       source.yieldType != null && source.yieldSource != null && source.apy30d != null
@@ -198,7 +175,6 @@ function getSourceRows(ranking: YieldWorkbenchRanking): SourceRow[] {
           yieldType: source.yieldType,
           dataSource: source.dataSource,
           yieldSource: source.yieldSource,
-          apy30d: source.apy30d,
         }]
         : [],
     ),
@@ -314,7 +290,6 @@ export function buildYieldSourceBoardModel(
           dataSourceLabel: getYieldDataSourceLabel(sourceRow.dataSource),
           selectedCount: 0,
           alternateCount: 0,
-          apyValues: [],
           sourceLabelCounts: new Map<string, number>(),
         };
         groupMap.set(groupKey, group);
@@ -322,7 +297,6 @@ export function buildYieldSourceBoardModel(
 
       if (sourceRow.kind === "selected") group.selectedCount += 1;
       else group.alternateCount += 1;
-      group.apyValues.push(sourceRow.apy30d);
       addCount(group.sourceLabelCounts, sourceRow.yieldSource);
     }
   }
@@ -338,7 +312,6 @@ export function buildYieldSourceBoardModel(
       selectedCount: group.selectedCount,
       alternateCount: group.alternateCount,
       representedSourceCount: group.selectedCount + group.alternateCount,
-      apy: summarizeApy(group.apyValues),
       sourceLabels: sortedLabelCounts(group.sourceLabelCounts),
     }))
     .sort(

@@ -11,8 +11,15 @@ import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { buildFallbackAssetsFromCoinGecko } from "../fallback-intake";
 import type { PeggedAsset } from "../enrich-prices";
 import type { PreviousStablecoinsLoadResult } from "../shared";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import type * as enrichment from "../enrich-prices";
+import type * as completion from "../post-enrichment";
+import type * as authoritative from "../../../lib/authoritative-price-sources";
+import type * as pricing from "../pricing";
 
 const NOW_SEC = 1_700_000_000;
+const fixtures = createLatestSchemaFixtureTracker();
 
 // ---------------------------------------------------------------------------
 // Mocks for the heavy sub-phase modules referenced by fallback.ts
@@ -28,8 +35,9 @@ const subPhaseMocks = vi.hoisted(() => ({
     validationReferences: undefined,
   })),
   loadReplayPriceCacheForTrustedContinuity: vi.fn(async () => new Map()),
-  createValidationContextResolver: vi.fn(() => () => ({})),
+  fetchAuthoritativeLivePriceOverrides: vi.fn<typeof authoritative.fetchAuthoritativeLivePriceOverrides>(async () => new Map()),
   buildPreviousTrustedPriceLookup: vi.fn(() => new Map()),
+  prevalidatePrices: vi.fn<typeof pricing.prevalidatePrices>(() => {}),
   checkStablecoinsPriceStaleness: vi.fn(async () => ({
     state: "missing-previous-cache" as string,
     stalenessWarning: false,
@@ -37,8 +45,16 @@ const subPhaseMocks = vi.hoisted(() => ({
     stalenessCheckFailed: false,
     stalenessCheckFailureReason: undefined as string | undefined,
   })),
-  runFallbackPriceEnrichmentPhase: vi.fn(async () => ({
-    enrichStats: {},
+  enrichMissingPrices: vi.fn<typeof enrichment.enrichMissingPrices>(async () => ({
+    totalMissing: 0, pass1: 0, pass1b: 0, passCmc: 0, passJupiter: 0, passDex: 0,
+    passCgLowVolume: 0, finalMissing: 0, failedPasses: [],
+  })),
+  runSharedPriceCompletion: vi.fn<typeof completion.runSharedPriceCompletion>(async () => ({
+    authoritativeOverrideStats: {
+      budgetMs: 10000, candidateCount: 0, attemptedCount: 0, successCount: 0, failedCount: 0,
+      emptyCount: 0, skippedCircuitOpen: 0, skippedBudget: 0, cachedRateFallbacks: 0, timedOut: false,
+      assetAttempts: [],
+    },
     authoritativeOverrideCount: 0,
     rejectedCount: 0,
     cachedFallbackCount: 0,
@@ -74,12 +90,17 @@ vi.mock("../shared", async (importOriginal) => ({
 
 vi.mock("../pricing", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../pricing")>()),
-  createValidationContextResolver: subPhaseMocks.createValidationContextResolver,
   buildPreviousTrustedPriceLookup: subPhaseMocks.buildPreviousTrustedPriceLookup,
+  prevalidatePrices: subPhaseMocks.prevalidatePrices,
 }));
 
-vi.mock("../fallback-enrichment", () => ({
-  runFallbackPriceEnrichmentPhase: subPhaseMocks.runFallbackPriceEnrichmentPhase,
+vi.mock("../../../lib/authoritative-price-sources", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../../lib/authoritative-price-sources")>()),
+  fetchAuthoritativeLivePriceOverrides: subPhaseMocks.fetchAuthoritativeLivePriceOverrides,
+}));
+vi.mock("../enrich-prices", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../enrich-prices")>()),
+  enrichMissingPrices: subPhaseMocks.enrichMissingPrices,
 }));
 vi.mock("../supplemental-assets/onchain-supply", () => ({ fetchCuratedAggregateOnChainMcap: vi.fn(async () => null) }));
 vi.mock("../phase-helpers", async (importOriginal) => ({
@@ -93,16 +114,15 @@ vi.mock("../cache-publication", () => ({
 vi.mock("../post-enrichment", () => ({
   isAbortResult: (result: { aborted?: boolean }) => result?.aborted === true,
   runDepegPipeline: subPhaseMocks.runDepegPipeline,
+  runSharedPriceCompletion: subPhaseMocks.runSharedPriceCompletion,
 }));
 vi.mock("../telegram-tracked-additions", () => ({
   queueTrackedAdditionsNotice: subPhaseMocks.queueTrackedAdditionsNotice,
 }));
 
 // runtime reporter is optional; stub to a no-op
-vi.mock("../runtime", () => ({
-  returnIfAborted: () => null,
-  abortResult: () => ({ metadata: "{}" }),
-  reportStablecoinsStage: vi.fn(),
+vi.mock("../runtime", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../runtime")>()),
   checkStablecoinsPriceStaleness: subPhaseMocks.checkStablecoinsPriceStaleness,
 }));
 
@@ -137,7 +157,7 @@ describe("syncViaCoingeckoFallback orchestrator", () => {
       mock.mockClear();
     }
   });
-  afterEach(() => { vi.restoreAllMocks(); });
+  afterEach(() => { fixtures.closeAll(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
   // -----------------------------------------------------------------------
   // (a) A successful fallback write still fails closed when CoinGecko cannot
@@ -189,9 +209,64 @@ describe("syncViaCoingeckoFallback orchestrator", () => {
       records: [],
     });
     expect(subPhaseMocks.loadReplayPriceCacheForTrustedContinuity).toHaveBeenCalledTimes(1);
-    expect(subPhaseMocks.runFallbackPriceEnrichmentPhase).toHaveBeenCalledWith(
-      expect.objectContaining({ priceCache: expect.any(Map), chainRpcs }),
+    expect(subPhaseMocks.loadFreshFxRates).toHaveBeenCalledTimes(1);
+    expect(subPhaseMocks.runSharedPriceCompletion).toHaveBeenCalledWith(
+      expect.objectContaining({ priceCache: expect.any(Map), chainRpcs }), "fallback-",
     );
+  });
+
+  it("uses authenticated fallback enrichment but withholds an unreasonable candidate", async () => {
+    const providers = await vi.importActual<typeof enrichment>("../enrich-prices");
+    const post = await vi.importActual<typeof completion>("../post-enrichment");
+    const pricePolicy = await vi.importActual<typeof pricing>("../pricing");
+    subPhaseMocks.prevalidatePrices.mockImplementationOnce(pricePolicy.prevalidatePrices);
+    subPhaseMocks.enrichMissingPrices.mockImplementationOnce(providers.enrichMissingPrices);
+    subPhaseMocks.runSharedPriceCompletion.mockImplementationOnce(post.runSharedPriceCompletion);
+    const cgData = buildRealCgData(Infinity);
+    const ids = ["dllr-sovryn", "btcusd-btcfi"];
+    for (const id of ids) cgData[ACTIVE_META_BY_ID.get(id)!.geckoId!] = {
+      usd: 0, usd_market_cap: 5_000_000, last_updated_at: NOW_SEC,
+    };
+    const fetch = vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
+      if (String(url).includes("/simple/price")) {
+        const authenticated = new Headers(init?.headers).get("x-cg-pro-api-key") === "cg-key";
+        return Response.json(authenticated ? {
+          [ACTIVE_META_BY_ID.get(ids[0])!.geckoId!]: { usd: 1, last_updated_at: NOW_SEC },
+          [ACTIVE_META_BY_ID.get(ids[1])!.geckoId!]: { usd: 10, last_updated_at: NOW_SEC },
+        } : {});
+      }
+      return Response.json({ coins: {}, pairs: [] });
+    });
+    vi.stubGlobal("fetch", fetch);
+    const { db } = fixtures.open();
+    const chainRpcs = new Map();
+    await syncViaCoingeckoFallback(db, cgData, undefined, NOW_SEC, undefined, "cg-key", undefined, undefined, chainRpcs);
+    const published = subPhaseMocks.validateAndWriteStablecoinsCache.mock.calls[0][0];
+    expect(published).toMatchObject({ assets: expect.arrayContaining([
+      expect.objectContaining({ id: ids[0], price: 1, priceConfidence: "fallback" }),
+      expect.objectContaining({ id: ids[1], price: null }),
+    ]) });
+    expect(fetch.mock.calls.some(([url, init]) => String(url).includes("/simple/price") &&
+      new Headers(init?.headers).get("x-cg-pro-api-key") === "cg-key")).toBe(true);
+    expect(subPhaseMocks.fetchAuthoritativeLivePriceOverrides).toHaveBeenCalledTimes(2);
+    for (const call of subPhaseMocks.fetchAuthoritativeLivePriceOverrides.mock.calls) {
+      expect(call[3]?.chainRpcs).toBe(chainRpcs);
+    }
+  });
+
+  it("aborts at fallback-enrich-prices after the enrichment progress boundary without writing", async () => {
+    const controller = new AbortController();
+    const result = await syncViaCoingeckoFallback(
+      mockD1([]), buildRealCgData(Infinity), undefined, NOW_SEC, controller.signal, undefined,
+      async (update) => { if (update.stage === "fallback-price-enrichment") controller.abort("cancel enrichment"); },
+    );
+    expect(result).toMatchObject({ aborted: true, status: "degraded", itemCount: 0 });
+    expect(JSON.parse(result.metadata!)).toMatchObject({
+      reason: "aborted", stage: "fallback-enrich-prices", detail: "cancel enrichment",
+      capabilities: { stablecoinsCache: false, depegPipeline: false },
+    });
+    expect(subPhaseMocks.enrichMissingPrices).not.toHaveBeenCalled();
+    expect(subPhaseMocks.validateAndWriteStablecoinsCache).not.toHaveBeenCalled();
   });
 
   // -----------------------------------------------------------------------

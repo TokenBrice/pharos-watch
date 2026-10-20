@@ -5,6 +5,7 @@ import {
   createPresetStatus,
   DATA_UNAVAILABLE_KIND,
   definePresetCoverageFeature,
+  legendItemsFromPresets,
   type CoverageLegendItem,
   type CoverageStatusPreset,
 } from "./shared";
@@ -53,11 +54,7 @@ function resolveSafety(
 
 // "NR" is shared with DEX; the dedicated "general" legend entry covers it.
 const SAFETY_LEGEND: readonly CoverageLegendItem[] = [
-  {
-    term: "Rated",
-    description: "This asset currently receives an overall Safety Score.",
-    kinds: ["rated"],
-  },
+  ...legendItemsFromPresets(SAFETY_STATUS_PRESETS, ["rated"]),
   {
     term: "Data n/a (pipeline gap)",
     description: "Technical evidence is unavailable, not an issuer NR. Pipeline gaps and absent cards are excluded from known coverage reach.",

@@ -9,48 +9,38 @@
  */
 
 import {
+  DEPEG_TOLERANCE_VALUES,
+  EXIT_SPEED_VALUES,
+  HORIZON_VALUES,
   SELECTOR_ELIGIBLE_PEG_CURRENCIES,
+  SELECTOR_PROFILES,
+  TRADING_VENUE_VALUES,
+  TREASURY_VENUE_VALUES,
+  YIELD_VENUE_VALUES,
+  type SelectorDepegTolerance,
   type SelectorEligiblePegCurrency,
+  type SelectorExitSpeed,
+  type SelectorHorizon,
   type SelectorInput,
-} from "@shared/lib/selector";
+  type SelectorProfile,
+  type SelectorVenuePreference,
+} from "@shared/lib/selector/types";
 
 // ---------------------------------------------------------------------------
 // Vocabularies
 // ---------------------------------------------------------------------------
 
-const SELECTOR_PROFILE_VALUES = ["treasury", "yield", "trading"] as const;
-export type SelectorProfile = (typeof SELECTOR_PROFILE_VALUES)[number];
-
-export type SelectorPeg = SelectorEligiblePegCurrency;
-
-const SELECTOR_HORIZON_VALUES = [
-  "lt24h", "1to7d", "1to4w", "1to6m", "6mplus",
-] as const;
-export type SelectorHorizon = (typeof SELECTOR_HORIZON_VALUES)[number];
-
-const SELECTOR_DEPEG_VALUES = ["zero", "tight", "moderate"] as const;
-export type SelectorDepeg = (typeof SELECTOR_DEPEG_VALUES)[number];
-
-const SELECTOR_EXIT_VALUES = ["1h", "24h", "any"] as const;
-export type SelectorExit = (typeof SELECTOR_EXIT_VALUES)[number];
-
-// Venue values vary by profile but share a single set so the URL codec is flat.
+// Venue admission is profile-specific; option labels/order remain UI-owned.
 const SELECTOR_VENUE_VALUES = [
-  // Yield
-  "lend", "dex", "wrap",
-  // Trading
-  "cex", "perps", "spot",
-  // Treasury (single-select uses these values)
-  "custody", "some", "active",
-  // Shared "All of the above" sentinel
-  "all",
+  ...YIELD_VENUE_VALUES,
+  ...TRADING_VENUE_VALUES,
+  ...TREASURY_VENUE_VALUES,
 ] as const;
-export type SelectorVenue = (typeof SELECTOR_VENUE_VALUES)[number];
 
-const SELECTOR_VENUES_BY_PROFILE: Record<SelectorProfile, readonly SelectorVenue[]> = {
-  treasury: ["custody", "some", "active"],
-  yield: ["lend", "dex", "wrap", "all"],
-  trading: ["cex", "perps", "spot", "all"],
+const SELECTOR_VENUES_BY_PROFILE: Record<SelectorProfile, readonly SelectorVenuePreference[]> = {
+  treasury: TREASURY_VENUE_VALUES,
+  yield: YIELD_VENUE_VALUES,
+  trading: TRADING_VENUE_VALUES,
 };
 
 export type SelectorStep = 1 | 2 | 3 | 4 | 5 | 6 | "result";
@@ -61,11 +51,11 @@ export type SelectorStep = 1 | 2 | 3 | 4 | 5 | 6 | "result";
 
 export interface SelectorWizardState {
   profile: SelectorProfile | null;
-  pegCurrency: SelectorPeg;
+  pegCurrency: SelectorEligiblePegCurrency;
   horizon: SelectorHorizon | null;
-  depegTolerance: SelectorDepeg | null;
-  venue: readonly SelectorVenue[];
-  exitSpeed: SelectorExit | null;
+  depegTolerance: SelectorDepegTolerance | null;
+  venue: readonly SelectorVenuePreference[];
+  exitSpeed: SelectorExitSpeed | null;
   step: SelectorStep;
   sid: string | null;
   ev: string | null;
@@ -137,7 +127,7 @@ function decodeSnapshotId(raw: string | null): string | null {
 
 export function decodeSelectorState(search: string | URLSearchParams): SelectorWizardState {
   const params = typeof search === "string" ? new URLSearchParams(search) : search;
-  const profile = decodeEnum(params.get("p"), SELECTOR_PROFILE_VALUES);
+  const profile = decodeEnum(params.get("p"), SELECTOR_PROFILES);
   const requestedPeg =
     decodeEnum(params.get("peg"), SELECTOR_ELIGIBLE_PEG_CURRENCIES) ?? "USD";
   const pegCurrency = requestedPeg;
@@ -146,10 +136,10 @@ export function decodeSelectorState(search: string | URLSearchParams): SelectorW
   return {
     profile,
     pegCurrency,
-    horizon: decodeEnum(params.get("h"), SELECTOR_HORIZON_VALUES),
-    depegTolerance: decodeEnum(params.get("d"), SELECTOR_DEPEG_VALUES),
+    horizon: decodeEnum(params.get("h"), HORIZON_VALUES),
+    depegTolerance: decodeEnum(params.get("d"), DEPEG_TOLERANCE_VALUES),
     venue,
-    exitSpeed: decodeEnum(params.get("u"), SELECTOR_EXIT_VALUES),
+    exitSpeed: decodeEnum(params.get("u"), EXIT_SPEED_VALUES),
     step: decodeStep(params.get("step")),
     sid: decodeSnapshotId(params.get("sid")),
     ev: decodeString(params.get("ev")),
@@ -183,15 +173,15 @@ export const SELECTOR_URL_KEYS = ["p", "peg", "h", "d", "v", "u", "step", "sid",
 export function shouldSkipExitStep(
   profile: SelectorProfile | null,
   horizon: SelectorHorizon | null,
-  depeg: SelectorDepeg | null,
+  depeg: SelectorDepegTolerance | null,
 ): boolean {
   return profile === "treasury" && horizon === "6mplus" && depeg === "zero";
 }
 
 function pruneVenueForProfile(
   profile: SelectorProfile,
-  venue: readonly SelectorVenue[],
-): readonly SelectorVenue[] {
+  venue: readonly SelectorVenuePreference[],
+): readonly SelectorVenuePreference[] {
   const allowed = SELECTOR_VENUES_BY_PROFILE[profile];
   const filtered = venue.filter((value) => allowed.includes(value));
   if (filtered.includes("all")) return ["all"];
@@ -232,19 +222,19 @@ export function highestValidStep(state: SelectorWizardState): SelectorStep {
 export type SelectorAction =
   | { type: "set-profile"; value: SelectorProfile }
   | { type: "answer-profile"; value: SelectorProfile }
-  | { type: "set-peg"; value: SelectorPeg }
-  | { type: "answer-peg"; value: SelectorPeg }
+  | { type: "set-peg"; value: SelectorEligiblePegCurrency }
+  | { type: "answer-peg"; value: SelectorEligiblePegCurrency }
   | { type: "set-horizon"; value: SelectorHorizon }
   | { type: "answer-horizon"; value: SelectorHorizon }
-  | { type: "set-depeg"; value: SelectorDepeg }
-  | { type: "answer-depeg"; value: SelectorDepeg }
+  | { type: "set-depeg"; value: SelectorDepegTolerance }
+  | { type: "answer-depeg"; value: SelectorDepegTolerance }
   // `set-venue` updates the venue selection without advancing the step;
   // used by multi-select venue (Yield, Active Trading) so each checkbox toggle
   // does not jump to exit. `answer-venue` is the explicit "Next" commit.
-  | { type: "set-venue"; value: readonly SelectorVenue[] }
-  | { type: "answer-venue"; value: readonly SelectorVenue[] }
-  | { type: "set-exit"; value: SelectorExit }
-  | { type: "answer-exit"; value: SelectorExit }
+  | { type: "set-venue"; value: readonly SelectorVenuePreference[] }
+  | { type: "answer-venue"; value: readonly SelectorVenuePreference[] }
+  | { type: "set-exit"; value: SelectorExitSpeed }
+  | { type: "answer-exit"; value: SelectorExitSpeed }
   | { type: "advance-to-result" } // mobile single-form submit
   | { type: "restore-session"; state: SelectorWizardState }
   | { type: "start-over" }
@@ -382,7 +372,7 @@ export function toSelectorInput(state: SelectorWizardState): SelectorInput | nul
 
 function composabilityFromVenue(
   profile: SelectorProfile,
-  venue: readonly SelectorVenue[],
+  venue: readonly SelectorVenuePreference[],
 ): "none" | "moderate" | "high" {
   // Mapping per design §3.7
   if (venue.includes("all")) return "high";
@@ -398,7 +388,7 @@ function composabilityFromVenue(
 
 function decentralizationFromVenue(
   profile: SelectorProfile,
-  venue: readonly SelectorVenue[],
+  venue: readonly SelectorVenuePreference[],
 ): SelectorInput["decentralization"] {
   if (profile === "treasury" && venue.includes("active")) return "required";
   return "any";
@@ -406,7 +396,7 @@ function decentralizationFromVenue(
 
 function custodyOkFromVenue(
   profile: SelectorProfile,
-  venue: readonly SelectorVenue[],
+  venue: readonly SelectorVenuePreference[],
 ): SelectorInput["custodyOk"] {
   if (profile === "treasury" && venue.includes("custody")) return "regulated-only";
   if (profile === "treasury" && venue.includes("active")) return "onchain-only";
@@ -420,7 +410,7 @@ function custodyOkFromVenue(
 export function preHighlightForDepeg(
   profile: SelectorProfile | null,
   horizon: SelectorHorizon | null,
-): SelectorDepeg | undefined {
+): SelectorDepegTolerance | undefined {
   if (profile === "treasury" && horizon === "6mplus") return "zero";
   if (profile === "yield") return "tight";
   return undefined;

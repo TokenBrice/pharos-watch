@@ -25,20 +25,19 @@ export async function measureResupply(
   const token = normalizeAddress(target.contracts.token);
   const registry = normalizeAddress(target.contracts.registry);
 
-  const tokenCore = await readJournalAddress(caller, { name: "token.core", to: token, signature: "core()", selector: "0xf2f4eb26" }, "token core");
-  const registryCore = await readJournalAddress(caller, { name: "registry.core", to: registry, signature: "core()", selector: "0xf2f4eb26" }, "registry core");
+  const tokenCore = await readJournalAddress(caller, { name: "token.core", to: token, signature: "core()" }, "token core");
+  const registryCore = await readJournalAddress(caller, { name: "registry.core", to: registry, signature: "core()" }, "registry core");
   requireCheck(checks, "graph.core", registryCore === tokenCore, `registry and token share core ${tokenCore}`);
-  const registryToken = await readJournalAddress(caller, { name: "registry.token", to: registry, signature: "token()", selector: "0xfc0c546a" }, "registry token");
+  const registryToken = await readJournalAddress(caller, { name: "registry.token", to: registry, signature: "token()" }, "registry token");
   requireCheck(checks, "graph.token", registryToken === token, `registry token ${registryToken} matches reUSD`);
 
-  const totalSupplyRaw = await readJournalUint(caller, { name: "token.totalSupply", to: token, signature: "totalSupply()", selector: "0x18160ddd" }, 0, "totalSupply");
+  const totalSupplyRaw = await readJournalUint(caller, { name: "token.totalSupply", to: token, signature: "totalSupply()" }, 0, "totalSupply");
   requireCheck(checks, "supply.positive", totalSupplyRaw > 0n, `reUSD supply ${totalSupplyRaw} is positive`);
 
   const rawPairs = await caller.call({
     name: "registry.getAllPairAddresses",
     to: registry,
     signature: "getAllPairAddresses()",
-    selector: "0x607b6d16",
   });
   const [decodedPairs] = decodeAbiParameters([{ type: "address[]" }], rawPairs as `0x${string}`);
   const pairAddresses = decodedPairs.map((address) => normalizeAddress(address));
@@ -49,7 +48,6 @@ export async function measureResupply(
         name: "registry.registeredPairsLength",
         to: registry,
         signature: "registeredPairsLength()",
-        selector: "0x23103b7d",
       }),
       0,
       "registeredPairsLength",
@@ -73,7 +71,6 @@ export async function measureResupply(
     name: "registry.insurancePool",
     to: registry,
     signature: "insurancePool()",
-    selector: "0xab2adc00",
   }, "insurancePool");
   requireCheck(
     checks,
@@ -85,7 +82,6 @@ export async function measureResupply(
     name: "registry.liquidationHandler",
     to: registry,
     signature: "liquidationHandler()",
-    selector: "0xd25adeb3",
   }, "liquidationHandler");
   requireCheck(
     checks,
@@ -97,7 +93,6 @@ export async function measureResupply(
     name: "liquidationHandler.insurancePool",
     to: liquidationHandler,
     signature: "insurancePool()",
-    selector: "0xab2adc00",
   }, "handler insurancePool");
   requireCheck(
     checks,
@@ -109,7 +104,6 @@ export async function measureResupply(
     name: "liquidationHandler.registry",
     to: liquidationHandler,
     signature: "registry()",
-    selector: "0x7b103999",
   }, "handler registry");
   requireCheck(
     checks,
@@ -131,7 +125,6 @@ export async function measureResupply(
       name: `pair[${index}].underlying`,
       to: address,
       signature: "underlying()",
-      selector: "0x6f307dc3",
     }, `pair ${index} underlying`);
     requireCheck(
       checks,
@@ -143,7 +136,6 @@ export async function measureResupply(
       name: `pair[${index}].getPairAccounting`,
       to: address,
       signature: "getPairAccounting()",
-      selector: "0xcdd72d52",
     });
     const [, totalBorrowRaw, , totalCollateralSharesRaw] = decodeAbiParameters(
       [{ type: "uint256" }, { type: "uint128" }, { type: "uint128" }, { type: "uint256" }],
@@ -160,13 +152,11 @@ export async function measureResupply(
       name: `pair[${index}].collateral`,
       to: address,
       signature: "collateral()",
-      selector: "0xd8dfeb45",
     }, `pair ${index} collateral`);
     const convertedRaw = await readJournalUint(caller, {
       name: `collateral[${index}].convertToAssets`,
       to: collateral,
       signature: "convertToAssets(uint256)",
-      selector: "0x07a2d13a",
       args: [totalCollateralSharesRaw],
     }, 0, `pair ${index} converted collateral`);
     if (totalBorrowRaw > 0n) {
@@ -205,13 +195,11 @@ export async function measureResupply(
     name: "insurancePool.totalAssets",
     to: insurancePool,
     signature: "totalAssets()",
-    selector: "0x01e1d114",
   }, 0, "insurancePool totalAssets");
   const insuranceBalanceRaw = await readJournalUint(caller, {
     name: "token.balanceOf(insurancePool)",
     to: token,
     signature: "balanceOf(address)",
-    selector: "0x70a08231",
     args: [BigInt(insurancePool)],
   }, 0, "insurance pool token balance");
   requireCheck(
@@ -224,13 +212,11 @@ export async function measureResupply(
     name: "insurancePool.withdrawTime",
     to: insurancePool,
     signature: "withdrawTime()",
-    selector: "0x45cb3dde",
   }, 0, "withdrawTime");
   const withdrawTimeLimit = await readJournalUint(caller, {
     name: "insurancePool.withdrawTimeLimit",
     to: insurancePool,
     signature: "withdrawTimeLimit()",
-    selector: "0x4f04a86b",
   }, 0, "withdrawTimeLimit");
   requireCheck(
     checks,

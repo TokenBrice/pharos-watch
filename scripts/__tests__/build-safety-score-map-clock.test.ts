@@ -196,6 +196,10 @@ describe.skipIf(!firefoxInstalled)("clock discipline — emitted artifacts (full
       const manifest = read(".manifest.json");
       const alt = read(".alt.json");
       const svg = readFileSync(join(outDir, "map.svg"), "utf8");
+      expect(manifest.counts).toMatchObject({ chipsDrawn: 3, chipsDropped: 0 });
+      expect([...svg.matchAll(/data-annotation-id="([^"]+)"/g)].map((match) => match[1])).toEqual([
+        "grade-key", "supply-mass-rail", "footer-encoding",
+      ]);
 
       // Rule 7: `date` is the UTC date of `renderedAtSec`, in every artifact.
       expect(manifest.date).toBe(utcDate(manifest.renderedAtSec));

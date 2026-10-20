@@ -21,7 +21,6 @@ export interface YieldSourceExplorerSource {
   displayLabel: string;
   url: string | null;
   yieldType: YieldType;
-  currentApy: number;
   apy30d: number;
   sourceTvlUsd: number | null;
   dataSource: string;
@@ -41,28 +40,13 @@ export interface YieldSourceExplorerModel {
   retainedAlternates: YieldSourceExplorerAlternate[];
   allSources: YieldSourceExplorerSource[];
   historySources: Array<{ sourceKey: string; yieldSource: string }>;
-  sourceIdentity: {
-    sourceKey: string;
-    label: string;
-    displayLabel: string;
-    url: string | null;
-  };
   sourceSwitch: {
     changed: boolean;
     previousSourceKey: string | null;
-    previousSourceLabel: string | null;
     previousSourceDisplayLabel: string | null;
   };
   sourceRiskDrivers: YieldSourceRiskDriver[];
   sourceDepthLens: YieldSourceDepthLens;
-  benchmarkContext: {
-    key: YieldRanking["benchmarkKey"] | null;
-    label: string | null;
-    rate: number | null;
-    isFallback: boolean;
-    fallbackMode: string | null;
-    selectionMode: YieldRanking["benchmarkSelectionMode"] | null;
-  };
 }
 
 function selectedSourceKey(ranking: YieldRanking): string {
@@ -105,7 +89,6 @@ export function buildYieldSourceExplorerModel(ranking: YieldRanking): YieldSourc
       label: ranking.yieldSource,
       url: ranking.yieldSourceUrl ?? null,
       yieldType: ranking.yieldType,
-      currentApy: ranking.currentApy,
       apy30d: ranking.apy30d,
       sourceTvlUsd: ranking.sourceTvlUsd,
       dataSource: ranking.dataSource,
@@ -119,7 +102,6 @@ export function buildYieldSourceExplorerModel(ranking: YieldRanking): YieldSourc
       label: source.yieldSource,
       url: sourceUrl(source),
       yieldType: source.yieldType,
-      currentApy: source.currentApy,
       apy30d: source.apy30d,
       sourceTvlUsd: source.sourceTvlUsd,
       dataSource: source.dataSource,
@@ -174,27 +156,12 @@ export function buildYieldSourceExplorerModel(ranking: YieldRanking): YieldSourc
       sourceKey: source.sourceKey,
       yieldSource: source.displayLabel,
     })),
-    sourceIdentity: {
-      sourceKey: selectedSource.sourceKey,
-      label: selectedSource.label,
-      displayLabel: selectedSource.displayLabel,
-      url: selectedSource.url,
-    },
     sourceSwitch: {
       changed: ranking.provenance?.sourceSwitch ?? false,
       previousSourceKey,
-      previousSourceLabel: previousSource?.label ?? (previousSourceKey ? "previous source (not retained)" : null),
       previousSourceDisplayLabel: previousSource?.displayLabel ?? (previousSourceKey ? "previous source (not retained)" : null),
     },
     sourceRiskDrivers: selectedSource.sourceRiskDrivers,
     sourceDepthLens: selectedSource.depthLens,
-    benchmarkContext: {
-      key: ranking.benchmarkKey ?? null,
-      label: ranking.benchmarkLabel ?? null,
-      rate: ranking.benchmarkRate ?? null,
-      isFallback: ranking.benchmarkSelectionMode === "fallback-usd" || !!ranking.benchmarkIsFallback,
-      fallbackMode: ranking.benchmarkFallbackMode ?? null,
-      selectionMode: ranking.benchmarkSelectionMode ?? null,
-    },
   };
 }

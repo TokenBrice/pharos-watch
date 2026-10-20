@@ -231,7 +231,6 @@ function YieldInstrumentRowBase({
     confidenceLabel,
     freshness,
     sourceRiskScore,
-    rawSourceRiskPenalty,
     sourceRiskMaterial,
     sourceRiskDrivers,
     rankChip,
@@ -315,8 +314,7 @@ function YieldInstrumentRowBase({
             <YieldZoneChip safetyScore={safetyScore} apy30d={row.apy30d} benchmarkRate={resolvedBenchmark.rate} />
             <YieldSignalsIndicator
               row={row}
-              sourceRiskMaterial={sourceRiskMaterial}
-              rawSourceRiskPenalty={rawSourceRiskPenalty}
+              sourceRiskSummary={labels.sourceRiskSummary}
             />
           </div>
         </div>

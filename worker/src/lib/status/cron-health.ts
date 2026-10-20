@@ -459,96 +459,76 @@ async function fetchCronHistoryRows(
   }
 }
 
+async function readOptionalCronRows<Row>(
+  query: () => Promise<{ results?: Row[] }>,
+  failure: { event: string; source: string; message: string },
+): Promise<{ rows: Row[]; failed: boolean }> {
+  try {
+    const result = await query();
+    return { rows: result.results ?? [], failed: false };
+  } catch (error) {
+    logWorkerEvent({ scope: "status", level: "warn", route: "status", ...failure, error });
+    return { rows: [], failed: true };
+  }
+}
+
 async function fetchCronLeaseRows(
   db: D1Database,
   cronJobInClause: { sql: string; binds: unknown[] },
 ): Promise<{ rows: CronLeaseRow[]; failed: boolean }> {
-  try {
-    const leaseRows = await db
+  return readOptionalCronRows(
+    () => db
       .prepare(
         `SELECT job, lease_owner, lease_until
            FROM cron_leases
            WHERE job IN (${cronJobInClause.sql})`,
       )
       .bind(...cronJobInClause.binds)
-      .all<CronLeaseRow>();
-    return { rows: leaseRows.results ?? [], failed: false };
-  } catch (err) {
-    logWorkerEvent({
-      scope: "status",
-      level: "warn",
-      event: "cron_leases_unavailable",
-      route: "status",
-      source: "cron_leases",
-      message: "Cron leases unavailable",
-      error: err,
-    });
-    return { rows: [], failed: true };
-  }
+      .all<CronLeaseRow>(),
+    { event: "cron_leases_unavailable", source: "cron_leases", message: "Cron leases unavailable" },
+  );
 }
 
 async function fetchCronProgressRows(
   db: D1Database,
   cronJobInClause: { sql: string; binds: unknown[] },
 ): Promise<{ rows: CronProgressRow[]; failed: boolean }> {
-  try {
-    const progressRows = await db
+  return readOptionalCronRows(
+    () => db
       .prepare(
         `SELECT job, started_at, updated_at, stage, items_done, items_total, message, lease_owner, metadata, slot_started_at
            FROM cron_run_progress
            WHERE job IN (${cronJobInClause.sql})`,
       )
       .bind(...cronJobInClause.binds)
-      .all<CronProgressRow>();
-    return { rows: progressRows.results ?? [], failed: false };
-  } catch (err) {
-    logWorkerEvent({
-      scope: "status",
-      level: "warn",
-      event: "cron_run_progress_unavailable",
-      route: "status",
-      source: "cron_run_progress",
-      message: "Cron run progress unavailable",
-      error: err,
-    });
-    return { rows: [], failed: true };
-  }
+      .all<CronProgressRow>(),
+    { event: "cron_run_progress_unavailable", source: "cron_run_progress", message: "Cron run progress unavailable" },
+  );
 }
 
 async function fetchCronSlotEventRows(
   db: D1Database,
   eventKeyInClause: { sql: string; binds: unknown[] },
 ): Promise<{ rows: CronSlotEventRow[]; failed: boolean }> {
-  try {
-    const eventRows = await db
+  return readOptionalCronRows(
+    () => db
       .prepare(
         `SELECT key, value, updated_at
            FROM cache
            WHERE key IN (${eventKeyInClause.sql})`,
       )
       .bind(...eventKeyInClause.binds)
-      .all<CronSlotEventRow>();
-    return { rows: eventRows.results ?? [], failed: false };
-  } catch (err) {
-    logWorkerEvent({
-      scope: "status",
-      level: "warn",
-      event: "cron_slot_events_unavailable",
-      route: "status",
-      source: "cache",
-      message: "Cron slot event markers unavailable",
-      error: err,
-    });
-    return { rows: [], failed: true };
-  }
+      .all<CronSlotEventRow>(),
+    { event: "cron_slot_events_unavailable", source: "cache", message: "Cron slot event markers unavailable" },
+  );
 }
 
 async function fetchRunningCronSlotRows(
   db: D1Database,
   now: number,
 ): Promise<{ rows: RunningCronSlotRow[]; failed: boolean }> {
-  try {
-    const runningRows = await db
+  return readOptionalCronRows(
+    () => db
       .prepare(
         `SELECT slot_key, slot_started_at, execution_owner, started_at, updated_at,
                 COUNT(*) OVER () AS running_count,
@@ -559,20 +539,9 @@ async function fetchRunningCronSlotRows(
            LIMIT 25`,
       )
       .bind(now - STATUS_RUNNING_SLOT_STALE_CANDIDATE_SEC)
-      .all<RunningCronSlotRow>();
-    return { rows: runningRows.results ?? [], failed: false };
-  } catch (err) {
-    logWorkerEvent({
-      scope: "status",
-      level: "warn",
-      event: "cron_slot_running_unavailable",
-      route: "status",
-      source: "cron_slot_executions",
-      message: "Running scheduled slot rows unavailable",
-      error: err,
-    });
-    return { rows: [], failed: true };
-  }
+      .all<RunningCronSlotRow>(),
+    { event: "cron_slot_running_unavailable", source: "cron_slot_executions", message: "Running scheduled slot rows unavailable" },
+  );
 }
 
 function summarizeRunningCronSlots(

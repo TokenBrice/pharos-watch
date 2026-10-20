@@ -360,40 +360,6 @@ export async function loadReplayPriceCacheForTrustedContinuity(db: D1Database): 
   }
 }
 
-/**
- * Fill a primary coverage gap from a supplemental row. Only an absent or
- * wholly invalid primary bucket is a gap: an explicit finite zero is an
- * observed redemption and is published as read, never swapped for a positive
- * supplemental amount. The supplemental row is a fresh observation and is
- * published as itself: its own `supplySource` and `supplyObservedAt` carry
- * the provenance, and it must not carry `supplyRestored`, which snapshot
- * generation and the detail page treat as stale cache carry-forward.
- */
-export function replaceZeroSupplyPrimaryAssets(
-  primaryAssets: readonly PeggedAsset[],
-  supplementalAssets: readonly PeggedAsset[],
-): { assets: PeggedAsset[]; replacedIds: string[] } {
-  const positiveSupplementalById = new Map(
-    supplementalAssets
-      .filter((asset) => {
-        const supply = getCirculatingRawOrNull(asset);
-        return supply !== null && supply > 0;
-      })
-      .map((asset) => [String(asset.id), asset] as const),
-  );
-  const replacedIds: string[] = [];
-  const assets = primaryAssets.map((asset) => {
-    const primarySupply = getCirculatingRawOrNull(asset);
-    if (primarySupply != null && primarySupply >= 0) return asset;
-    const replacement = positiveSupplementalById.get(String(asset.id));
-    if (!replacement) return asset;
-    replacedIds.push(String(asset.id));
-    return replacement;
-  });
-
-  return { assets, replacedIds: [...new Set(replacedIds)].sort() };
-}
-
 export function isSupplyObservationWithinRestoreCeiling(observedAt: number, nowSec: number): boolean {
   return (
     Number.isSafeInteger(observedAt) &&

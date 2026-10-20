@@ -66,6 +66,8 @@ Before announcing, acceptance identifies both deployed versions and the accepted
 
 Render canonical reference minus admin sections, preserving section/subsection/endpoint-directory anchors and quickstart. Lane guidance separates external `https://api.pharos.watch` plus `X-API-Key`, website `/_site-data/*`, and Access-protected ops hosts. No-key classifications derive from canonical endpoint registry, including anonymous publication reads and separately authenticated Telegram exceptions; examples run from servers/scripts, not browser-key exposure.
 
+Keep the exemption roster only in canonical [Public API Auth](./api-reference.md#public-api-auth); the FAQ links there and Quick facts does not repeat it. The free-grades example remains onboarding guidance, not an exhaustive no-key list. FAQ answer links render through the reference panel's existing inline Markdown renderer; JSON-LD answers retain link text without Markdown syntax or destinations.
+
 OpenAPI/Postman and static-download links derive from shared artifact/descriptors. Artifact/DataCatalog/Dataset schema uses public URLs and complete nested catalog identity, never private site-data paths. Visible dataset descriptions distinguish snapshots from live API; sameAs/url point to their visible `/api/reference/#dataset-<topic>` descriptions without changing stable IDs/downloads. FAQ must not advertise closed issuance, paid tier or public-feedback key requests.
 
 ## Parsing And Rendering Contract

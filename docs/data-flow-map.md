@@ -24,6 +24,8 @@ Choose a bounded domain table below; each retains the source → producer → st
 
 Detail market charts keep the 90-day build/hover seed separate from expanded reads: `1Y` requests `days=365`, and `All` requests `range=all` for every retained daily row under the existing completed-snapshot fence. Each window owns its query/cache identity and producer clock. Loading, failed or healthy-empty expansion retains useful bounded seed observations with an explicit coverage caption; a failed retained expansion keeps its source generation and local retry. The additive Worker range admission ships before the Pages reader in the same release PR.
 
+Hourly `price-corroboration.ts` and quarter-hourly `price-dex-refresh.ts` share the opt-in CoinGecko Onchain exact-address adapter: one ordered target list feeds quotes, per-asset diagnostics, transport counts and one circuit outcome. Each caller retains its existing cohort and deadline; the [pricing contract](./pricing-pipeline.md#primary-consensus) owns admission.
+
 ### Risk and reserve flows
 
 | Domain | External Sources | Worker Ingest / Compute | Storage Layer | API Surface | Frontend Hook(s) | Primary UI |

@@ -32,6 +32,9 @@ softening rules for discovery surfaces do not apply here.
   `classifyDepegClosure` result: only recovered and legacy-recovered records claim
   recovery. Coverage loss, superseded direction, removed tracking and unknown
   closure remain tracking closures; an end timestamp alone is not recovery.
+  Authored editorial entries add the briefing lede, timeline and watchpoints;
+  unauthored pages retain the structural event record. Editorial presence does
+  not change the 500 bps route-admission threshold.
 
 ---
 
@@ -148,6 +151,8 @@ behind an explicit toggle that mounts them only when opened.
   forecast and incident-row counts, the visible slice, past-peak count, and
   calibration lineage/coin count. A four-card slice is not the whole book.
   The retired standalone "Outlook Posture" surface must not return.
+- **Review totals:** forecast grading uses the published reviewer summary, not a
+  verdict or IQR breakdown recalculated from bounded browsing rows.
 
 ---
 

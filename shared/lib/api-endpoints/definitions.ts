@@ -6,12 +6,9 @@ export type EndpointPublicApiAccess = "protected" | "exempt" | "site-only";
 export type EndpointSiteDataAccess = "allowed" | "denied";
 export type EndpointDependency =
   | "apiKeyHashPepper"
-  | "alchemyApiKey"
-  | "anthropicApiKey"
   | "cloudflareD1StatusConfig"
   | "chainRpcs"
   | "feedbackEnv"
-  | "mintBurnFreshnessConfig"
   | "coingeckoApiKey"
   | "dwellirBudgetEnv"
   | "donorKeyClaimRateLimit"
@@ -773,7 +770,6 @@ const BASE_ENDPOINT_DEFINITIONS = [
     key: "trigger-digest",
     path: API_PATHS.triggerDigest(),
     cacheBypass: false,
-    routeDependencies: ["anthropicApiKey", "telegram"],
   }, {
       label: "Trigger Digest",
       confirm: "Trigger daily digest? Bypasses 1h dedup window.",

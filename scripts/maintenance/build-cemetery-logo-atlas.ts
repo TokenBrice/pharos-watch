@@ -34,25 +34,14 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { CEMETERY_ENTRIES, resolveCemeteryLogoUrl } from "@shared/lib/cemetery-merged";
 import {
-  CSS_GRAYSCALE_WEIGHTS,
   buildSceneAtlas,
-  buildSceneAtlasManifest,
-  buildSceneAtlasSignature,
   checkSceneAtlas,
   planSceneAtlas,
   readSceneAtlasInputs,
-  renderSceneAtlas,
-  serializeJson,
-  toCssGrayscale,
-  type AtlasImageRecord,
   type AtlasInputRow,
-  type AtlasKernel,
-  type AtlasManifest,
   type AtlasPaths,
   type AtlasPlan,
   type AtlasProblem,
-  type AtlasSignature,
-  type AtlasSource,
   type BuildSceneAtlasResult,
   type SceneAtlasParams,
 } from "../lib/scene-atlas";
@@ -103,9 +92,6 @@ export const ATLAS_IMAGE_PUBLIC_PATH = "/logos/atlas/cemetery-atlas.webp";
  */
 export const PIXEL_ART_LOGO_URLS: readonly string[] = ["/logos/10-mim.png"];
 
-export { CSS_GRAYSCALE_WEIGHTS, serializeJson, toCssGrayscale };
-export type { AtlasImageRecord, AtlasInputRow, AtlasKernel, AtlasManifest, AtlasPaths, AtlasPlan, AtlasProblem, AtlasSignature, AtlasSource };
-
 /** The cemetery atlas's kit parameters, with the manifest's public image path. */
 function atlasParams(image = ATLAS_IMAGE_PUBLIC_PATH, cellSize = ATLAS_CELL_SIZE, gutter = ATLAS_CELL_GUTTER): SceneAtlasParams {
   return { generatedBy: GENERATED_BY, generatorVersion: ATLAS_GENERATOR_VERSION, cellSize, gutter, webp: ATLAS_WEBP_OPTIONS, byteBudget: ATLAS_BYTE_BUDGET, image };
@@ -123,14 +109,6 @@ export function planCemeteryLogoAtlas(
   return planSceneAtlas(rows, atlasParams(ATLAS_IMAGE_PUBLIC_PATH, cellSize, gutter), pixelArtLogoUrls);
 }
 
-export function buildAtlasManifest(plan: AtlasPlan, image = ATLAS_IMAGE_PUBLIC_PATH): AtlasManifest {
-  return buildSceneAtlasManifest(plan, atlasParams(image));
-}
-
-export function buildAtlasSignature(plan: AtlasPlan, image: AtlasImageRecord): AtlasSignature {
-  return buildSceneAtlasSignature(plan, image, atlasParams());
-}
-
 /** Read and hash each row's logo, resolved exactly as the cemetery UI does (`resolveCemeteryLogoUrl`). */
 export function readAtlasInputs(
   rows: readonly { id: string; logo?: string }[],
@@ -139,16 +117,10 @@ export function readAtlasInputs(
   return readSceneAtlasInputs(rows.map((row) => ({ id: row.id, logoUrl: resolveCemeteryLogoUrl(row.logo) })), publicDir);
 }
 
-export async function renderCemeteryLogoAtlas(plan: AtlasPlan, bytesByUrl: ReadonlyMap<string, Buffer>): Promise<Buffer> {
-  return renderSceneAtlas(plan, bytesByUrl, atlasParams());
-}
-
 /** Platform-stable freshness check (`checkSceneAtlas`): input signatures and the committed image hash. */
 export async function checkCemeteryLogoAtlas(plan: AtlasPlan, paths: AtlasPaths, image = ATLAS_IMAGE_PUBLIC_PATH): Promise<AtlasProblem[]> {
   return checkSceneAtlas(plan, paths, atlasParams(image));
 }
-
-export type BuildAtlasResult = BuildSceneAtlasResult;
 
 export async function buildCemeteryLogoAtlas({
   rows,
@@ -162,7 +134,7 @@ export async function buildCemeteryLogoAtlas({
   force?: boolean;
   pixelArtLogoUrls?: readonly string[];
   image?: string;
-}): Promise<BuildAtlasResult> {
+}): Promise<BuildSceneAtlasResult> {
   const { inputs, bytesByUrl } = readAtlasInputs(rows, paths.publicDir);
   const plan = planCemeteryLogoAtlas(inputs, { pixelArtLogoUrls });
   return buildSceneAtlas({ plan, bytesByUrl, paths, params: atlasParams(image), force });

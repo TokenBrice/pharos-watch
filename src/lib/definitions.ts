@@ -18,6 +18,7 @@ import { DEWS_SIGNAL_LABELS, DEWS_THREAT_BANDS } from "@shared/lib/dews-config";
 import { DEPEG_THRESHOLD_BPS, DEPEG_THRESHOLD_BPS_NON_USD } from "@shared/lib/depeg-config";
 import { LIQUIDITY_SCORE_WEIGHTS } from "@shared/lib/liquidity-score-weights";
 import { PSI_CONDITION_BANDS } from "@shared/lib/psi-policy";
+import { GAUGE_BAND_RANGES } from "@shared/lib/mint-burn-gauge-bands";
 import { V9_GRADE_THRESHOLDS, V9_PILLAR_WEIGHTS } from "@shared/types/safety-score-v9-grade";
 import {
   CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH,
@@ -41,6 +42,8 @@ import {
   YIELD_METHODOLOGY_CHANGELOG_PATH,
   YIELD_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/methodology-versions/constants";
+
+const NEUTRAL_GAUGE_RANGE = GAUGE_BAND_RANGES.find(({ band }) => band === "NEUTRAL")!;
 
 export interface Definition {
   /** Display label used in tooltips and popovers. */
@@ -442,7 +445,7 @@ export const DEFINITIONS = {
     short:
       "Market-cap-weighted aggregate of per-coin pressure shift. It measures unusual redemption pressure, not literal net direction.",
     long:
-      "A market-cap-weighted composite of each tracked stablecoin's Pressure Shift: a signed -100 to +100 signal. Scores below -10 indicate worsening redemption pressure; scores above +10 indicate improving issuance pressure. It measures unusual redemption pressure, not literal net direction, and is unavailable when data is insufficient.",
+      `A market-cap-weighted composite of each tracked stablecoin's Pressure Shift: a signed ${GAUGE_BAND_RANGES[0].min} to +${GAUGE_BAND_RANGES[GAUGE_BAND_RANGES.length - 1].max} signal. Scores below ${NEUTRAL_GAUGE_RANGE.min} indicate worsening redemption pressure; scores ≥ +${NEUTRAL_GAUGE_RANGE.max} indicate improving issuance pressure. It measures unusual redemption pressure, not literal net direction, and is unavailable when data is insufficient.`,
     listed: true,
     seeAlso: ["pressureShift", "mintBurnFlows"],
     ...MINT_BURN,

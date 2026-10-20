@@ -24,10 +24,6 @@ import { createDwellirNativeCapability, type DwellirNativeCapability } from "../
 import { logWorkerEvent } from "../../lib/structured-log";
 import { normalizeCronMetadataWithLease } from "../../lib/cron-metadata";
 import { parseCsvEnv, parseDwellirRoutingDisabledChains, type ScheduledEnv } from "../../lib/env";
-import {
-  resolveMintBurnFreshnessConfig,
-  type MintBurnFreshnessConfig,
-} from "../../lib/mint-burn-health-config";
 import type { ScheduledRecoveryCheckpoint } from "../../lib/scheduled-recovery-checkpoint";
 import { utcCalendarMonth, type ProducerIdentity } from "../../lib/producer-history";
 import { ScheduledFetchBudget } from "../../lib/scheduled-fetch-budget";
@@ -109,7 +105,6 @@ export interface ScheduledRuntimeContext {
   reserveQueueMetadata?: Record<string, string | number>;
   mintBurnDisabledIds: string[];
   mintBurnDisabledSymbols: string[];
-  mintBurnFreshnessConfig: MintBurnFreshnessConfig;
   coingeckoApiKey: string | null;
   chainRpcs: Map<string, ChainRpcConfig>;
   dwellirNative?: DwellirNativeCapability;
@@ -206,7 +201,6 @@ export function createScheduledRuntimeContext(
   const db = env.DB;
   const mintBurnDisabledIds = parseCsvEnv(env.MINT_BURN_DISABLED_IDS);
   const mintBurnDisabledSymbols = parseCsvEnv(env.MINT_BURN_DISABLED_SYMBOLS);
-  const mintBurnFreshnessConfig = resolveMintBurnFreshnessConfig(env);
   const coingeckoApiKey = normalizeCgApiKey(env.COINGECKO_API_KEY);
   const chainRpcs = buildChainRpcs(env.ALCHEMY_API_KEY, env.DRPC_API_KEY);
   const slotBudgetStartedAtMs = scheduled.deadline?.eventEntryMs ?? scheduled.slotBudgetStartedAtMs ?? Date.now();
@@ -237,7 +231,6 @@ export function createScheduledRuntimeContext(
     ...(scheduled.recoveryCheckpoint ? { recoveryCheckpoint: scheduled.recoveryCheckpoint } : {}),
     mintBurnDisabledIds,
     mintBurnDisabledSymbols,
-    mintBurnFreshnessConfig,
     coingeckoApiKey,
     chainRpcs,
     runLeasedCron: async (job, fn) => {

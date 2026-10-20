@@ -5,8 +5,8 @@ import {
   formatMethodologyDisplayDate,
   methodologyChangelogEntryId,
   toMethodologyVersionLabel,
-  type MethodologyChangelogEntry,
 } from "../methodology-versions/base";
+import type { MethodologyChangelogEntry } from "../../types/editorial-content";
 import { DDR_METHODOLOGY_CHANGELOG, DDR_V2_EFFECTIVE_AT } from "../methodology-versions/depeg-resolver";
 import { LIQUIDITY_METHODOLOGY_VERSION, SAFETY_SCORE_METHODOLOGY_VERSION } from "../methodology-versions/constants";
 import LIQUIDITY_SCORE_V6 from "../../data/methodology-changelogs/liquidity-score/v6.json";

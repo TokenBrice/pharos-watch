@@ -29,16 +29,6 @@ export interface IdempotentActionOptions {
   isExecutionOutcomeUnknown?: (response: Response) => boolean;
   /** Identify a retryable response returned before the protected action began. */
   isPreExecutionRetryable?: (response: Response) => boolean;
-  /**
-   * Prove that an abandoned started attempt never committed its effect. Only a
-   * `true` verdict re-opens the reservation; without one the row stays
-   * terminally `execution_unknown` and every replay answers 503.
-   */
-  reconcileAbandonedExecution?: (context: {
-    action: string;
-    key: string;
-    executionStartedAt: number;
-  }) => Promise<boolean>;
 }
 
 const PENDING_RESPONSE_STATUS = -1;
@@ -168,21 +158,18 @@ async function takeOverAbandonedUnstartedReservation(
 /**
  * Terminally records an abandoned started attempt as `execution_unknown`. Once
  * `execution_started_at` is set, the absence of a terminal response cannot prove
- * the side effect did not commit, so replays answer 503 forever. A fresh
- * reservation is handed back only when the action's own reconciliation proves
- * the original effect never landed.
+ * the side effect did not commit, so replays answer 503 forever. This procedure
+ * never reopens the reservation, even if terminal marking fails.
  */
-async function recoverAbandonedStartedReservation(
+async function markAbandonedStartedReservationUnknown(
   db: D1Database,
   action: string,
   key: string,
   fingerprint: string,
-  owner: string,
   existingGeneration: number,
   executionStartedAt: number,
   now: number,
-  reconcile: IdempotentActionOptions["reconcileAbandonedExecution"],
-): Promise<ReservationToken | null> {
+): Promise<void> {
   const cutoff = now - STARTED_TAKEOVER_AFTER_SECONDS;
   const executionUnknownBody = buildExecutionUnknownBody();
   try {
@@ -213,7 +200,7 @@ async function recoverAbandonedStartedReservation(
         cutoff,
       )
       .run();
-    if ((unknownResult.meta?.changes ?? 0) !== 1) return null;
+    if ((unknownResult.meta?.changes ?? 0) !== 1) return;
 
     logWorkerEvent({
       scope: "admin",
@@ -223,56 +210,6 @@ async function recoverAbandonedStartedReservation(
       source: "admin_idempotency_keys",
       message: "Recorded a stale started idempotency attempt as execution_unknown",
     });
-
-    if (!reconcile) return null;
-    let effectProvenAbsent = false;
-    try {
-      effectProvenAbsent = await reconcile({ action, key, executionStartedAt });
-    } catch (error) {
-      logWorkerEvent({
-        scope: "admin",
-        level: "warn",
-        event: "idempotency_abandoned_execution_reconciliation_failed",
-        route: action,
-        source: "admin_idempotency_keys",
-        message: "Abandoned idempotent execution could not be reconciled",
-        error,
-      });
-      return null;
-    }
-    if (!effectProvenAbsent) return null;
-
-    const takeoverResult = await db
-      .prepare(
-        `UPDATE admin_idempotency_keys
-            SET response_status = ?,
-                response_body = '',
-                reservation_owner = ?,
-                reservation_generation = reservation_generation + 1,
-                execution_started_at = NULL,
-                created_at = ?
-          WHERE action = ?
-            AND idempotency_key = ?
-            AND request_hash = ?
-            AND response_status = ?
-            AND execution_started_at = ?
-            AND reservation_generation = ?
-            AND created_at = ?`,
-      )
-      .bind(
-        PENDING_RESPONSE_STATUS,
-        owner,
-        now,
-        action,
-        key,
-        fingerprint,
-        EXECUTION_UNKNOWN_RESPONSE_STATUS,
-        executionStartedAt,
-        existingGeneration,
-        now,
-      )
-      .run();
-    return (takeoverResult.meta?.changes ?? 0) === 1 ? { owner, generation: existingGeneration + 1 } : null;
   } catch (error) {
     logWorkerEvent({
       scope: "admin",
@@ -283,7 +220,6 @@ async function recoverAbandonedStartedReservation(
       message: "Abandoned started idempotency reservation recovery failed",
       error,
     });
-    return null;
   }
 }
 
@@ -478,20 +414,16 @@ export async function runIdempotentAction(
   }
   let token: ReservationToken | null = insertedReservation ? { owner, generation: 1 } : null;
   if (existing.execution_started_at != null) {
-    token = await recoverAbandonedStartedReservation(
+    await markAbandonedStartedReservationUnknown(
       db,
       action,
       key,
       fingerprint,
-      owner,
       existing.reservation_generation,
       existing.execution_started_at,
       now,
-      options.reconcileAbandonedExecution,
     );
-    if (!token) {
-      return withIdempotencyHeaders(buildExecutionUnknownResponse(), key, true);
-    }
+    return withIdempotencyHeaders(buildExecutionUnknownResponse(), key, true);
   } else if (!token) {
     token = await takeOverAbandonedUnstartedReservation(
       db,

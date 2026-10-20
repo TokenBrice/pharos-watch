@@ -126,9 +126,9 @@ The controller prunes observations older than five minutes during qualifying clo
 
 There is **no supported operator pause/resume mutation**. Modes are `fresh`, `pending`, and `admin`; an admin pause does not silence webhook replies. Read-only D1 inspection is not write authority.
 
-If an emergency pause is required, restore/add a separately reviewed Access-protected control or script using `setTelegramDeliveryPause()` semantics, with all of:
+If an emergency pause is required, add a separately reviewed Access-protected control or script with all of:
 
-- exact mode and caller-validated self-expiry between 60 seconds and 24 hours (the helper itself does not enforce this range);
+- exact mode and validated self-expiry between 60 seconds and 24 hours;
 - captured current generation (`0` only for an absent row);
 - conditional state mutation and conditional keep-forever `admin_action_audit` action `telegram-delivery-pause` in the **same D1 batch**;
 - zero-change conflict handling and post-write readback.
@@ -140,7 +140,7 @@ The audit row is written only if the inspected generation wins. Extending/re-pau
 1. Correct credentials or wait for Telegram recovery without clearing queued rows. [Secret rotation](./telegram-secret-rotation.md) owns credential overlap.
 2. Let the durable circuit reach `next_probe_at`. Exactly one owner may claim a **one-to-four-distinct-chat half-open probe**; other invocations defer.
 3. A confirmed reachable response closes the circuit. A single chat-local 429 is inconclusive, not proof of bot-wide failure. Do not reset the circuit to force a large live batch: the bound protects the untouched tail from bad credentials or a continuing outage.
-4. Resume an operator pause only through the same reviewed control/script using captured current generation and `resumeTelegramDelivery()` semantics. Pair the conditional mutation and `telegram-delivery-resume` audit; a zero-row result is conflict, not success. Read back before retrying.
+4. Resume an operator pause only through the same reviewed control/script using captured current generation. On a match, increment the generation, set expiry to the current time, and update actor/reason/write time while preserving `created_at`. Pair the conditional mutation and `telegram-delivery-resume` audit in the same D1 batch; a zero-row result is conflict, not success, and writes no audit. Read back before retrying.
 5. Verify untouched work kept original priority, expiry, and lifecycle. Reconcile `execution_unknown` separately; no operator resend path exists. Confirm queue trend over subsequent five-minute slots and inspect terminal target/recap outcomes as well as send counters.
 
 ## Recap Retirement Stop and Drain

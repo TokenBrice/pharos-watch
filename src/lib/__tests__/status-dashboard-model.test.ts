@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { EndpointProbeResult, StatusCause, StatusResponse } from "@shared/types";
 import { StatusResponseSchema } from "@shared/types/status";
-import { buildReliabilityWorkspaceModel } from "@/lib/reliability-workspace-model";
+import { projectPublicStatus } from "@shared/lib/public-status-components";
+import { buildReliabilityWorkspaceModel } from "@/lib/reliability-workspace-issue-builder";
 import {
   makeActivePriceCoverage,
   makeCompleteTelegramBotStatus,
@@ -82,6 +83,60 @@ describe("triage and detailed cache parity", () => {
 });
 
 describe("status dashboard model", () => {
+  it.each(["unattributed", "cache age", "cache quality", "unknown coverage", "served projection"])(
+    "uses canonical component summaries for warningless unhealthy health (%s)",
+    (scenario) => {
+      const healthData = makeHealthyHealthResponse();
+      healthData.status = "degraded";
+      if (scenario === "cache age" || scenario === "served projection") {
+        healthData.caches = { stablecoins: { ageSeconds: 13 * 600, maxAge: 600, healthy: false } };
+      } else if (scenario === "cache quality") {
+        healthData.caches = { "yield-data": { ageSeconds: 30, maxAge: 3600, healthy: false, mode: "cached-fallback" } };
+      } else if (scenario === "unknown coverage") {
+        healthData.activePriceCoverage = makeActivePriceCoverage([], { status: "unknown", observedAt: null });
+      }
+      const projection = projectPublicStatus(healthData);
+      const summaries = projection.components.filter((component) => component.state !== "operational")
+        .map((component) => component.summary);
+      if (scenario === "served projection") {
+        Object.assign(healthData, projection);
+        healthData.caches = {};
+      }
+      const notice = buildModel(undefined, { healthData }).notices.find((entry) => entry.id === "public-health");
+      expect(summaries.length).toBeGreaterThan(0);
+      expect(notice?.detail.endsWith(summaries.join(" "))).toBe(true);
+    },
+  );
+
+  it.each([96_534_823.01, 500_000_000])("keeps canonical publication materiality for a last-known cap of %s", (cap) => {
+    const healthData = makeHealthyHealthResponse();
+    healthData.stablecoinPublication = {
+      status: "incomplete", missingActiveIds: ["hbd-hive"], expectedActiveCount: 1,
+      presentActiveCount: 0, waivedActiveCount: 0, waivedActiveIds: [], expiredWaiverIds: [], observedAt: healthData.timestamp,
+    };
+    healthData.activePriceCoverage = makeActivePriceCoverage([makeMissingActiveAsset({
+      stablecoinId: "hbd-hive", marketCapUsd: null, lastKnownMarketCapUsd: cap,
+      lastKnownMarketCapObservedAt: healthData.timestamp, lastKnownMarketCapSource: "supply_history",
+    })]);
+    const component = projectPublicStatus(healthData).components.find((entry) => entry.id === "stablecoin-data");
+    expect(component?.state).toBe(cap === 500_000_000 ? "degraded" : "operational");
+  });
+
+  it("retains named warnings, mint/burn details and blacklist gaps before fallback summaries", () => {
+    const healthData = makeHealthyHealthResponse();
+    healthData.status = "degraded";
+    healthData.warnings = ["named-provider-warning"];
+    healthData.mintBurn = { ...healthData.mintBurn, majorStaleCount: 1, staleMajorSymbols: ["USDT"],
+      sync: { ...healthData.mintBurn.sync, criticalLaneHealthy: false,
+        lastSuccessfulSyncAt: healthData.timestamp - 30, warning: "named-mint-burn-warning" } };
+    healthData.blacklist = { ...healthData.blacklist, missingAmounts: 20, missingRatio: 0.02 };
+    const detail = buildModel(undefined, { healthData }).notices.find((entry) => entry.id === "public-health")?.detail;
+    expect(detail).toContain("named-provider-warning");
+    expect(detail).toContain("named-mint-burn-warning");
+    expect(detail).toContain("USDT");
+    expect(detail).toMatch(/\b20\b/);
+  });
+
   it("admits failed cron history as unavailable Crons attention with its named reason", () => {
     const data = makeHealthyStatusResponse();
     Object.assign(data.summary, {

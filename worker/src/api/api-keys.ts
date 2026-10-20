@@ -6,7 +6,7 @@ import {
   listApiKeys,
   rotateApiKey,
   updateApiKey,
-} from "../lib/api-keys";
+} from "../lib/api-key-admin";
 import { jsonResponse } from "../lib/api-response";
 import { parseOptionalRequestJsonObject } from "../lib/api-json-body";
 import { runIdempotentAction } from "../lib/idempotency";

@@ -5,7 +5,7 @@ import { LazyDetails } from "@/components/status/lazy-details";
 import { ReliabilityCopyDiagnostics } from "@/components/status/reliability-copy-diagnostics";
 import { StatusPill } from "@/components/status/severity-pill";
 import type { ReliabilityEndpointModel } from "@/lib/reliability-workspace-model";
-import { sanitizeReliabilityProbePath } from "@/lib/reliability-workspace-model";
+import { sanitizeReliabilityProbePath } from "@/lib/reliability-workspace-endpoint-builder";
 import { getProbeStatusDetail, getProbeStatusLabel, isProbePassing } from "@/lib/status-dashboard-model";
 import { formatStatusTimestamp } from "@/lib/status/dashboard-presentation";
 import { cn } from "@/lib/utils";

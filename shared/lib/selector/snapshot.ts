@@ -1,5 +1,6 @@
+import { z } from "zod";
 import { BluechipGradeSchema, YIELD_TYPE_VALUES } from "../../types/core";
-import { isFiniteNumber, isRecord } from "../type-guards";
+import { isRecord } from "../type-guards";
 import { canonicalizeForSid } from "./canonicalize";
 import { normalizeSelectorCanonicalSources, normalizeSelectorInput, normalizeSelectorSnapshot } from "./snapshot-normalize";
 import { sha256Hex } from "../sha256";
@@ -22,6 +23,7 @@ import {
   WEIGHT_KEYS,
   WHY_KEYS,
   YIELD_VENUE_VALUES,
+  SelectorCanonicalSourceEvidenceSchema,
   type SelectorInput,
   type SelectorOutput,
   type SelectorCanonicalSourceEvidence,
@@ -37,49 +39,207 @@ export const SELECTOR_SNAPSHOT_UNREAD_TTL_SECONDS = 60 * 60 * 24 * 90;
 
 const MAX_JSON_DEPTH = 12;
 
-const SELECTOR_PROFILE_SET = new Set<string>(SELECTOR_PROFILES);
-const SELECTOR_PEG_SET = new Set<string>(SELECTOR_ELIGIBLE_PEG_CURRENCIES);
-const HORIZON_SET = new Set<string>(HORIZON_VALUES);
-const DEPEG_TOLERANCE_SET = new Set<string>(DEPEG_TOLERANCE_VALUES);
-const COMPOSABILITY_SET = new Set<string>(COMPOSABILITY_VALUES);
-const EXIT_SPEED_SET = new Set<string>(EXIT_SPEED_VALUES);
-const DECENTRALIZATION_SET = new Set<string>(DECENTRALIZATION_VALUES);
-const CUSTODY_OK_SET = new Set<string>(CUSTODY_OK_VALUES);
-const WEIGHT_KEY_SET = new Set<string>(WEIGHT_KEYS);
-const WHY_KEY_SET = new Set<string>(WHY_KEYS);
-const LOWEST_SUB_DIMENSION_SET = new Set<string>(LOWEST_SUB_DIMENSION_KEYS);
-const CONTEXT_KEY_SET = new Set<string>(CONTEXT_KEYS);
-const LOWER_RANKED_REASON_SET = new Set<string>([
-  ...EXCLUSION_REASONS,
-  ...WEIGHT_KEYS.map((key) => `weak-${key}`),
-]);
-const EXCLUSION_REASON_SET = new Set<string>(EXCLUSION_REASONS);
-const SOURCE_RISK_TIERS = new Set(["low", "mid", "high"]);
-const YIELD_TYPE_SET = new Set<string>(YIELD_TYPE_VALUES);
-const PER_INPUT_STALENESS_KEYS = new Set(["pegSummary", "dexTvl", "dews"]);
-const EXCLUSION_SEVERITIES = new Set(["info", "soft", "hard"]);
-const RELAXABLE_CONSTRAINT_KEYS = new Set(["depegTolerance", "venue", "exitSpeed"]);
-const VENUE_SETS_BY_PROFILE: Record<string, ReadonlySet<string>> = {
-  treasury: new Set<string>(TREASURY_VENUE_VALUES),
-  yield: new Set<string>(YIELD_VENUE_VALUES),
-  trading: new Set<string>(TRADING_VENUE_VALUES),
+const NonEmptyStringSchema = z.string().max(256).refine((value) => value.trim().length > 0);
+const PercentSchema = z.number().min(0).max(100);
+const NonNegativeSchema = z.number().min(0);
+// z.int() also imposes safe-integer bounds, unlike the retained wire contract.
+const CountSchema = NonNegativeSchema.refine(Number.isInteger);
+const StringArraySchema = z.array(z.string().max(128)).max(64);
+const WeightKeySchema = z.enum(WEIGHT_KEYS);
+const ExclusionReasonSchema = z.enum(EXCLUSION_REASONS);
+const SeveritySchema = z.enum(["info", "soft", "hard"]);
+const VenueSchema = z.enum([...TREASURY_VENUE_VALUES, ...YIELD_VENUE_VALUES, ...TRADING_VENUE_VALUES]);
+const VENUES_BY_PROFILE = {
+  treasury: TREASURY_VENUE_VALUES,
+  yield: YIELD_VENUE_VALUES,
+  trading: TRADING_VENUE_VALUES,
 };
-const BASE_CONFIDENCE_REASON_SET = new Set<string>(BASE_CONFIDENCE_REASON_KEYS);
-const RANK_ROBUSTNESS_LABELS = new Set([
-  "clear-margin",
-  "crowded-field",
-  "narrow-margin",
-  "concentration-adjusted",
+
+export const SelectorInputSchema = z.object({
+  profile: z.enum(SELECTOR_PROFILES),
+  pegCurrency: z.enum(SELECTOR_ELIGIBLE_PEG_CURRENCIES),
+  horizon: z.enum(HORIZON_VALUES),
+  depegTolerance: z.enum(DEPEG_TOLERANCE_VALUES),
+  composability: z.enum(COMPOSABILITY_VALUES),
+  exitSpeed: z.enum(EXIT_SPEED_VALUES),
+  /** Optional on historical snapshots; preserve the wizard's specific rail. */
+  venuePreferences: z.array(VenueSchema).readonly().optional(),
+  minApy: NonNegativeSchema.nullable(),
+  yieldNativeOnly: z.boolean(),
+  decentralization: z.enum(DECENTRALIZATION_VALUES),
+  custodyOk: z.enum(CUSTODY_OK_VALUES),
+}).refine(({ profile, venuePreferences }) => {
+  const allowed: readonly string[] = VENUES_BY_PROFILE[profile];
+  return venuePreferences === undefined
+    || (venuePreferences.length <= allowed.length && venuePreferences.every((venue) => allowed.includes(venue)));
+});
+
+export const SelectorComponentSchema = z.object({
+  key: WeightKeySchema,
+  weight: PercentSchema,
+  rawValue: z.number().nullable(),
+  normalizedValue: PercentSchema.nullable(),
+  contribution: PercentSchema,
+  redistributed: z.boolean(),
+});
+export const LowestSubDimensionSchema = z.object({
+  key: z.enum(LOWEST_SUB_DIMENSION_KEYS),
+  score: PercentSchema,
+  contextKeys: z.array(z.enum(CONTEXT_KEYS)).max(CONTEXT_KEYS.length),
+});
+export const RecommendedSourceSchema = z.object({
+  sourceKey: NonEmptyStringSchema.nullish(),
+  protocol: NonEmptyStringSchema,
+  chain: NonEmptyStringSchema,
+  yieldType: z.enum(YIELD_TYPE_VALUES).nullish(),
+  apy30d: z.number(),
+  pharosYieldScore: PercentSchema.nullable(),
+  sourceTvlUsd: NonNegativeSchema.nullish(),
+  /** Unknown is not a measured neutral tier. */
+  sourceRiskTier: z.enum(["low", "mid", "high"]).nullable(),
+  // Older artifacts omit this field; the semantic projector also emits null.
+  freshness: z.object({
+    capturedAt: NonNegativeSchema,
+    ageSeconds: NonNegativeSchema,
+  }).nullable().default(null),
+  selectionReason: NonEmptyStringSchema.nullish(),
+});
+export const SelectorChainHintsSchema = z.object({
+  topByLiquidity: StringArraySchema.max(3),
+  topByYield: StringArraySchema.max(1),
+  primary: z.string().nullable(),
+});
+export const SelectorRankRobustnessSchema = z.object({
+  label: z.enum(["clear-margin", "crowded-field", "narrow-margin", "concentration-adjusted"]),
+  scoreMargin: PercentSchema.nullable(),
+});
+export const SelectorConfidenceReasonSchema = z.union([
+  z.enum(BASE_CONFIDENCE_REASON_KEYS),
+  z.templateLiteral(["missing-critical-", WeightKeySchema]),
 ]);
-const BLUECHIP_GRADES = new Set<string>(BluechipGradeSchema.options);
-const SAFETY_GRADES = new Set([...BLUECHIP_GRADES, "NR"]);
-const REQUIRED_METHODOLOGY_KEYS = [
-  "safetyScore",
-  "pegScoreAndDews",
-  "yieldIntelligence",
-  "bluechipAlignment",
-  "exclusionFilters",
-] as const;
+const RecommendationBaseSchema = z.object({
+  id: NonEmptyStringSchema,
+  symbol: NonEmptyStringSchema,
+  name: NonEmptyStringSchema,
+  rank: z.union([z.literal(1), z.literal(2), z.literal(3)]),
+  score: PercentSchema,
+  confidence: PercentSchema,
+  confidenceReasons: z.array(SelectorConfidenceReasonSchema).optional(),
+  components: z.array(SelectorComponentSchema).max(16),
+  whyKeys: z.array(z.enum(WHY_KEYS)).max(4),
+  whyText: NonEmptyStringSchema.optional(),
+  watchText: NonEmptyStringSchema.optional(),
+  lowestSubDimension: LowestSubDimensionSchema,
+  chainHints: SelectorChainHintsSchema,
+  rankRobustness: SelectorRankRobustnessSchema.optional(),
+  relaxedReason: ExclusionReasonSchema.nullish(),
+  isRecentListing: z.boolean(),
+  bluechipGrade: BluechipGradeSchema.nullable(),
+  safetyGrade: z.union([BluechipGradeSchema, z.literal("NR")]),
+  supplyUsd: NonNegativeSchema,
+  isBeta: z.literal(true),
+});
+export const TreasuryRecommendationSchema = RecommendationBaseSchema.extend({
+  profile: z.literal("treasury"),
+  recommendedSource: z.null(),
+  perInputStaleness: z.null(),
+});
+export const YieldRecommendationSchema = RecommendationBaseSchema.extend({
+  profile: z.literal("yield"),
+  recommendedSource: RecommendedSourceSchema,
+  perInputStaleness: z.null(),
+});
+export const TradingRecommendationSchema = RecommendationBaseSchema.extend({
+  profile: z.literal("trading"),
+  recommendedSource: z.null(),
+  perInputStaleness: z.record(z.string(), NonNegativeSchema)
+    .refine((value) => Object.keys(value).every((key) => ["pegSummary", "dexTvl", "dews"].includes(key))),
+});
+export const SelectorRecommendationSchema = z.discriminatedUnion("profile", [
+  TreasuryRecommendationSchema, YieldRecommendationSchema, TradingRecommendationSchema,
+]);
+const LOWER_RANKED_REASONS: readonly string[] = [
+  ...EXCLUSION_REASONS, ...WEIGHT_KEYS.map((key) => `weak-${key}`),
+];
+export const SelectorLowerRankedSchema = z.object({
+  id: NonEmptyStringSchema,
+  symbol: NonEmptyStringSchema,
+  name: NonEmptyStringSchema,
+  slot: z.enum(["A", "B"]),
+  reasonKey: z.string().refine((key) => LOWER_RANKED_REASONS.includes(key)),
+  verdictText: NonEmptyStringSchema.optional(),
+  teachingText: NonEmptyStringSchema.optional(),
+  failedComponent: z.string().refine((key) => (WEIGHT_KEYS as readonly string[]).includes(key)).nullable(),
+  hypotheticalScore: PercentSchema.nullable(),
+});
+export const SkippedCoinSchema = z.object({
+  id: NonEmptyStringSchema, symbol: NonEmptyStringSchema, missingSignals: StringArraySchema,
+});
+export const SelectorCoverageWarningsSchema = z.object({
+  skippedForCoverageCount: CountSchema,
+  skippedForCoverage: z.array(SkippedCoinSchema).max(410),
+  sparse: z.boolean(),
+  uneven: z.boolean(),
+  newListingCount: CountSchema,
+  redistributionCount: CountSchema,
+});
+export const MethodologyVersionsSchema = z.object({
+  safetyScore: NonEmptyStringSchema,
+  pegScoreAndDews: NonEmptyStringSchema,
+  yieldIntelligence: NonEmptyStringSchema,
+  bluechipAlignment: NonEmptyStringSchema,
+  exclusionFilters: NonEmptyStringSchema,
+});
+export const SelectorExclusionSummaryItemSchema = z.object({
+  reason: ExclusionReasonSchema, count: CountSchema, severity: SeveritySchema, sampleIds: StringArraySchema,
+});
+export const SelectorClosestSurvivorSchema = z.object({
+  id: NonEmptyStringSchema,
+  symbol: NonEmptyStringSchema,
+  failingDimension: NonEmptyStringSchema,
+  liveReading: NonEmptyStringSchema,
+  reason: ExclusionReasonSchema,
+  hypotheticalScore: PercentSchema.nullable(),
+});
+export const SelectorRelaxableConstraintSchema = z.object({
+  key: z.enum(["depegTolerance", "venue", "exitSpeed"]),
+  label: NonEmptyStringSchema,
+  description: NonEmptyStringSchema,
+  reason: z.union([ExclusionReasonSchema, z.literal("input-strictness")]),
+});
+export const SelectorSnapshotVerificationSchema = z.object({
+  kind: z.literal(SELECTOR_SNAPSHOT_VERIFICATION_KIND),
+  datasetHash: z.string(),
+  engineVersion: z.string(),
+  canonicalSources: z.array(SelectorCanonicalSourceEvidenceSchema).optional(),
+});
+const OutputShapeSchema = z.object({
+  profile: z.enum(SELECTOR_PROFILES),
+  input: SelectorInputSchema,
+  universe: z.object({ active: CountSchema, surviving: CountSchema })
+    .refine(({ active, surviving }) => surviving <= active),
+  recommended: z.array(SelectorRecommendationSchema).max(3),
+  lowerRanked: z.array(SelectorLowerRankedSchema).max(2),
+  coverageWarnings: SelectorCoverageWarningsSchema,
+  lowConfidence: z.boolean(),
+  usedRelaxedFallback: z.boolean(),
+  relaxedReasons: z.array(ExclusionReasonSchema).max(EXCLUSION_REASONS.length),
+  exclusionSummary: z.array(SelectorExclusionSummaryItemSchema).max(410),
+  closestSurvivors: z.array(SelectorClosestSurvivorSchema).max(3),
+  relaxableConstraints: z.array(SelectorRelaxableConstraintSchema).max(3),
+  timestamp: z.number(),
+  engineVersion: NonEmptyStringSchema,
+  methodologyVersions: MethodologyVersionsSchema,
+  datasetHash: NonEmptyStringSchema,
+}).refine((value) => value.input.profile === value.profile
+  && value.recommended.every((recommendation) => recommendation.profile === value.profile));
+// Metadata is not structural admission: legacy callers may supply any values,
+// which the semantic projector discards. Verified replay checks exact bindings.
+export const SelectorOutputSchema = OutputShapeSchema.safeExtend({
+  provenance: z.enum(["client-unverified", "pharos-verified"]).optional(),
+  snapshotSchemaVersion: z.union([z.literal(2), z.literal(3)]).optional(),
+  verification: SelectorSnapshotVerificationSchema.optional(),
+});
 
 export type SelectorSnapshotValidationError = "unsafe" | "shape";
 
@@ -125,8 +285,8 @@ export function validateSelectorSnapshotInput(value: unknown): SelectorSnapshotI
     return { ok: false, error: "shape" };
   }
   const candidate = isRecord(value.input) ? value.input : value;
-  const profile = candidate.profile;
-  if (typeof profile !== "string" || !SELECTOR_PROFILE_SET.has(profile) || !isSelectorInputShape(candidate, profile)) {
+  const parsed = SelectorInputSchema.safeParse(candidate);
+  if (!parsed.success) {
     return { ok: false, error: "shape" };
   }
   return { ok: true, input: normalizeSelectorInput(candidate as unknown as SelectorInput) };
@@ -231,333 +391,9 @@ export function computeSelectorSnapshotSid(snapshot: unknown): string {
   return sha256Hex(canonicalizeForSid(snapshot)).slice(0, 32);
 }
 
-function isNonEmptyString(value: unknown): value is string {
-  return typeof value === "string" && value.trim().length > 0 && value.length <= 256;
-}
-
-function isNumberInRange(value: unknown, min: number, max: number): value is number {
-  return isFiniteNumber(value) && value >= min && value <= max;
-}
-
-function isNonNegativeInteger(value: unknown): value is number {
-  return Number.isInteger(value) && (value as number) >= 0;
-}
-
-function isNonNegativeNumber(value: unknown): value is number {
-  return isFiniteNumber(value) && value >= 0;
-}
-
-function isStringArray(value: unknown): value is string[] {
-  return Array.isArray(value)
-    && value.length <= 64
-    && value.every((item) => typeof item === "string" && item.length <= 128);
-}
-
-function isKnownStringArray(value: unknown, allowed: ReadonlySet<string>): value is string[] {
-  return Array.isArray(value)
-    && value.length <= allowed.size
-    && value.every((item) => typeof item === "string" && allowed.has(item));
-}
-
-function isRequiredArrayOf(
-  value: unknown,
-  itemGuard: (item: unknown) => boolean,
-): boolean {
-  return Array.isArray(value) && value.every(itemGuard);
-}
-
-function isNullableNonEmptyString(value: unknown): boolean {
-  return value === null || isNonEmptyString(value);
-}
-
-function isConfidenceReason(value: unknown): boolean {
-  if (typeof value !== "string") return false;
-  if (BASE_CONFIDENCE_REASON_SET.has(value)) return true;
-  if (!value.startsWith("missing-critical-")) return false;
-  return WEIGHT_KEY_SET.has(value.slice("missing-critical-".length));
-}
-
-function isOptionalConfidenceReasons(value: unknown): boolean {
-  return value === undefined || (Array.isArray(value) && value.every(isConfidenceReason));
-}
-
-function isOptionalRankRobustness(value: unknown): boolean {
-  if (value === undefined) return true;
-  if (!isRecord(value)) return false;
-  return (
-    typeof value.label === "string"
-    && RANK_ROBUSTNESS_LABELS.has(value.label)
-    && (value.scoreMargin === null || isNumberInRange(value.scoreMargin, 0, 100))
-  );
-}
-
-function isSelectorInputShape(value: unknown, profile: string): boolean {
-  if (!isRecord(value)) return false;
-  const venueSet = VENUE_SETS_BY_PROFILE[profile];
-  return (
-    value.profile === profile
-    && typeof value.pegCurrency === "string"
-    && SELECTOR_PEG_SET.has(value.pegCurrency)
-    && typeof value.horizon === "string"
-    && HORIZON_SET.has(value.horizon)
-    && typeof value.depegTolerance === "string"
-    && DEPEG_TOLERANCE_SET.has(value.depegTolerance)
-    && typeof value.composability === "string"
-    && COMPOSABILITY_SET.has(value.composability)
-    && typeof value.exitSpeed === "string"
-    && EXIT_SPEED_SET.has(value.exitSpeed)
-    && (value.minApy === null || isNonNegativeNumber(value.minApy))
-    && typeof value.yieldNativeOnly === "boolean"
-    && typeof value.decentralization === "string"
-    && DECENTRALIZATION_SET.has(value.decentralization)
-    && typeof value.custodyOk === "string"
-    && CUSTODY_OK_SET.has(value.custodyOk)
-    && (
-      value.venuePreferences === undefined
-      || (venueSet != null && isKnownStringArray(value.venuePreferences, venueSet))
-    )
-  );
-}
-
-function isUniverseShape(value: unknown): boolean {
-  if (!isRecord(value)) return false;
-  return (
-    isNonNegativeInteger(value.active)
-    && isNonNegativeInteger(value.surviving)
-    && value.surviving <= value.active
-  );
-}
-
-function isSkippedCoinShape(value: unknown): boolean {
-  if (!isRecord(value)) return false;
-  return (
-    isNonEmptyString(value.id)
-    && isNonEmptyString(value.symbol)
-    && isStringArray(value.missingSignals)
-  );
-}
-
-function isCoverageWarningsShape(value: unknown): boolean {
-  if (!isRecord(value)) return false;
-  return (
-    isNonNegativeInteger(value.skippedForCoverageCount)
-    && Array.isArray(value.skippedForCoverage)
-    && value.skippedForCoverage.length <= 410
-    && value.skippedForCoverage.every(isSkippedCoinShape)
-    && typeof value.sparse === "boolean"
-    && typeof value.uneven === "boolean"
-    && isNonNegativeInteger(value.newListingCount)
-    && isNonNegativeInteger(value.redistributionCount)
-  );
-}
-
-function isComponentShape(value: unknown): boolean {
-  if (!isRecord(value)) return false;
-  return (
-    typeof value.key === "string"
-    && WEIGHT_KEY_SET.has(value.key)
-    && isNumberInRange(value.weight, 0, 100)
-    && (value.rawValue === null || isFiniteNumber(value.rawValue))
-    && (value.normalizedValue === null || isNumberInRange(value.normalizedValue, 0, 100))
-    && isNumberInRange(value.contribution, 0, 100)
-    && typeof value.redistributed === "boolean"
-  );
-}
-
-function isLowestSubDimensionShape(value: unknown): boolean {
-  if (!isRecord(value)) return false;
-  return (
-    typeof value.key === "string"
-    && LOWEST_SUB_DIMENSION_SET.has(value.key)
-    && isNumberInRange(value.score, 0, 100)
-    && isKnownStringArray(value.contextKeys, CONTEXT_KEY_SET)
-  );
-}
-
-function isChainHintsShape(value: unknown): boolean {
-  if (!isRecord(value)) return false;
-  return (
-    isStringArray(value.topByLiquidity)
-    && value.topByLiquidity.length <= 3
-    && isStringArray(value.topByYield)
-    && value.topByYield.length <= 1
-    && (value.primary === null || typeof value.primary === "string")
-  );
-}
-
-function isRecommendedSourceShape(value: unknown): boolean {
-  if (!isRecord(value)) return false;
-  // A rail whose freshness the yield domain never published carries no reading
-  // at all (E30). A present reading must still be well-formed, so unknown cannot
-  // launder a corrupt timestamp.
-  if (
-    value.freshness !== undefined
-    && value.freshness !== null
-    && (
-      !isRecord(value.freshness)
-      || !isNonNegativeNumber(value.freshness.capturedAt)
-      || !isNonNegativeNumber(value.freshness.ageSeconds)
-    )
-  ) return false;
-  return (
-    isNonEmptyString(value.protocol)
-    && isNonEmptyString(value.chain)
-    && (value.sourceKey === undefined || isNullableNonEmptyString(value.sourceKey))
-    && (
-      value.yieldType === undefined
-      || value.yieldType === null
-      || (typeof value.yieldType === "string" && YIELD_TYPE_SET.has(value.yieldType))
-    )
-    && isFiniteNumber(value.apy30d)
-    && (value.pharosYieldScore === null || isNumberInRange(value.pharosYieldScore, 0, 100))
-    && (value.sourceTvlUsd === undefined || value.sourceTvlUsd === null || isNonNegativeNumber(value.sourceTvlUsd))
-    && (
-      value.sourceRiskTier === null
-      || (typeof value.sourceRiskTier === "string" && SOURCE_RISK_TIERS.has(value.sourceRiskTier))
-    )
-    && (value.selectionReason === undefined || isNullableNonEmptyString(value.selectionReason))
-  );
-}
-
-function isPerInputStalenessShape(value: unknown): boolean {
-  if (!isRecord(value)) return false;
-  const entries = Object.entries(value);
-  return entries.every(([key, age]) => PER_INPUT_STALENESS_KEYS.has(key) && isNonNegativeNumber(age));
-}
-
-function isRecommendationSourceSlotsShape(value: Record<string, unknown>): boolean {
-  if (value.profile === "treasury") {
-    return value.recommendedSource === null && value.perInputStaleness === null;
-  }
-  if (value.profile === "yield") {
-    return isRecommendedSourceShape(value.recommendedSource) && value.perInputStaleness === null;
-  }
-  if (value.profile === "trading") {
-    return value.recommendedSource === null && isPerInputStalenessShape(value.perInputStaleness);
-  }
-  return false;
-}
-
-function isRecommendationShape(value: unknown, outputProfile: string): boolean {
-  if (!isRecord(value)) return false;
-  return (
-    value.profile === outputProfile
-    && isNonEmptyString(value.id)
-    && isNonEmptyString(value.symbol)
-    && isNonEmptyString(value.name)
-    && Number.isInteger(value.rank)
-    && (value.rank as number) >= 1
-    && (value.rank as number) <= 3
-    && isNumberInRange(value.score, 0, 100)
-    && isNumberInRange(value.confidence, 0, 100)
-    && Array.isArray(value.components)
-    && value.components.length <= 16
-    && value.components.every(isComponentShape)
-    && isKnownStringArray(value.whyKeys, WHY_KEY_SET)
-    && value.whyKeys.length <= 4
-    && isOptionalConfidenceReasons(value.confidenceReasons)
-    && isLowestSubDimensionShape(value.lowestSubDimension)
-    && isChainHintsShape(value.chainHints)
-    && isOptionalRankRobustness(value.rankRobustness)
-    && typeof value.isRecentListing === "boolean"
-    && (value.bluechipGrade === null || (typeof value.bluechipGrade === "string" && BLUECHIP_GRADES.has(value.bluechipGrade)))
-    && typeof value.safetyGrade === "string"
-    && SAFETY_GRADES.has(value.safetyGrade)
-    && isNonNegativeNumber(value.supplyUsd)
-    && value.isBeta === true
-    && isRecommendationSourceSlotsShape(value)
-    && (value.relaxedReason === undefined || value.relaxedReason === null || (typeof value.relaxedReason === "string" && EXCLUSION_REASON_SET.has(value.relaxedReason)))
-    && (value.whyText === undefined || isNonEmptyString(value.whyText))
-    && (value.watchText === undefined || isNonEmptyString(value.watchText))
-  );
-}
-
-function isLowerRankedShape(value: unknown): boolean {
-  if (!isRecord(value)) return false;
-  return (
-    isNonEmptyString(value.id)
-    && isNonEmptyString(value.symbol)
-    && isNonEmptyString(value.name)
-    && (value.slot === "A" || value.slot === "B")
-    && typeof value.reasonKey === "string"
-    && LOWER_RANKED_REASON_SET.has(value.reasonKey)
-    && (value.failedComponent === null || (typeof value.failedComponent === "string" && WEIGHT_KEY_SET.has(value.failedComponent)))
-    && (value.hypotheticalScore === null || isNumberInRange(value.hypotheticalScore, 0, 100))
-    && (value.verdictText === undefined || isNonEmptyString(value.verdictText))
-    && (value.teachingText === undefined || isNonEmptyString(value.teachingText))
-  );
-}
-
-function isMethodologyVersionsShape(value: unknown): boolean {
-  if (!isRecord(value)) return false;
-  return REQUIRED_METHODOLOGY_KEYS.every((key) => isNonEmptyString(value[key]));
-}
-
-function isExclusionSummaryItemShape(value: unknown): boolean {
-  if (!isRecord(value)) return false;
-  return (
-    typeof value.reason === "string"
-    && EXCLUSION_REASON_SET.has(value.reason)
-    && isNonNegativeInteger(value.count)
-    && typeof value.severity === "string"
-    && EXCLUSION_SEVERITIES.has(value.severity)
-    && isStringArray(value.sampleIds)
-  );
-}
-
-function isClosestSurvivorShape(value: unknown): boolean {
-  if (!isRecord(value)) return false;
-  return (
-    isNonEmptyString(value.id)
-    && isNonEmptyString(value.symbol)
-    && isNonEmptyString(value.failingDimension)
-    && isNonEmptyString(value.liveReading)
-    && typeof value.reason === "string"
-    && EXCLUSION_REASON_SET.has(value.reason)
-    && (value.hypotheticalScore === null || isNumberInRange(value.hypotheticalScore, 0, 100))
-  );
-}
-
-function isRelaxableConstraintShape(value: unknown): boolean {
-  if (!isRecord(value)) return false;
-  return (
-    typeof value.key === "string"
-    && RELAXABLE_CONSTRAINT_KEYS.has(value.key)
-    && isNonEmptyString(value.label)
-    && isNonEmptyString(value.description)
-    && typeof value.reason === "string"
-    && (EXCLUSION_REASON_SET.has(value.reason) || value.reason === "input-strictness")
-  );
-}
-
 function isSelectorOutputShape(value: unknown): value is SelectorOutput {
-  if (!isRecord(value)) return false;
-  const candidate = value as Record<string, unknown>;
-  if (!isNonEmptyString(candidate.profile) || !SELECTOR_PROFILE_SET.has(candidate.profile)) {
-    return false;
-  }
-  return (
-    isNonEmptyString(candidate.engineVersion)
-    && isNonEmptyString(candidate.datasetHash)
-    && isFiniteNumber(candidate.timestamp)
-    && isSelectorInputShape(candidate.input, candidate.profile)
-    && isUniverseShape(candidate.universe)
-    && Array.isArray(candidate.recommended)
-    && candidate.recommended.length <= 3
-    && candidate.recommended.every((item) => isRecommendationShape(item, candidate.profile as string))
-    && Array.isArray(candidate.lowerRanked)
-    && candidate.lowerRanked.length <= 2
-    && candidate.lowerRanked.every(isLowerRankedShape)
-    && isCoverageWarningsShape(candidate.coverageWarnings)
-    && typeof candidate.lowConfidence === "boolean"
-    && isMethodologyVersionsShape(candidate.methodologyVersions)
-    && typeof candidate.usedRelaxedFallback === "boolean"
-    && isKnownStringArray(candidate.relaxedReasons, EXCLUSION_REASON_SET)
-    && isRequiredArrayOf(candidate.exclusionSummary, isExclusionSummaryItemShape)
-    && (candidate.exclusionSummary as unknown[]).length <= 410
-    && isRequiredArrayOf(candidate.closestSurvivors, isClosestSurvivorShape)
-    && (candidate.closestSurvivors as unknown[]).length <= 3
-    && isRequiredArrayOf(candidate.relaxableConstraints, isRelaxableConstraintShape)
-    && (candidate.relaxableConstraints as unknown[]).length <= 3
-  );
+  // Never feed a schema-stripped/defaulted clone into semantic normalization:
+  // historical unknown fields and verified canonical equality have their own
+  // projection rules, independent of structural admission.
+  return OutputShapeSchema.safeParse(value).success;
 }

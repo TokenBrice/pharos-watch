@@ -8,6 +8,7 @@ import { getCompletedSupplySnapshot, SNAPSHOT_SUPPLY_LAST_WRITE_KEY } from "./su
 import { throwIfAborted } from "./abort";
 import { parseJson } from "./json-parse";
 import { isRecord } from "@shared/lib/type-guards";
+import { sampleHistoricalDatePoints } from "./stablecoin-charts-payload";
 
 export const NON_USD_SHARE_HISTORY_KEY = "non-usd-share:daily:v1";
 export const NON_USD_SHARE_MAX_DAYS = 5000;
@@ -260,19 +261,7 @@ export function sampleNonUsdShareHistory(
   cutoff: number,
   nowSec: number,
 ): NonUsdSharePoint[] {
-  const sampled: NonUsdSharePoint[] = [];
-  let lastKeptDate = 0;
-  for (const point of points) {
-    if (point.date < cutoff) continue;
-    const interval = point.date >= nowSec - 90 * DAY_SECONDS
-      ? DAY_SECONDS
-      : point.date >= nowSec - 2 * 365 * DAY_SECONDS ? 7 * DAY_SECONDS : 30 * DAY_SECONDS;
-    if (point.date - lastKeptDate >= interval) {
-      sampled.push(point);
-      lastKeptDate = point.date;
-    }
-  }
-  return sampled;
+  return sampleHistoricalDatePoints(points.filter((point) => !(point.date < cutoff)), nowSec);
 }
 
 export async function publishNonUsdShareHistory(db: D1Database, nowSec: number, signal?: AbortSignal): Promise<void> {

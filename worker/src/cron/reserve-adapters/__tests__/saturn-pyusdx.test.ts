@@ -170,6 +170,10 @@ describe("saturn-pyusdx adapter", () => {
     await expect(fetchFixture({ alternativeAssets })).rejects.toThrow(/alternative-backing scope unavailable|requires a reviewed multi-asset reserve scope/);
   });
 
+  it("rejects a uint256 observation outside the declared uint8 decimal domain", async () => {
+    await expect(fetchFixture({ decimals: 256n })).rejects.toThrow("decimals returned malformed payload");
+  });
+
   it("degrades zero supply and reports a paused MultiMint route as paused", async () => {
     const output = await fetchFixture({ supply: 0n, paused: 1n }, { validate: false });
     expect(output.metadata?.collateralizationRatio).toBeUndefined();
@@ -186,8 +190,8 @@ describe("saturn-pyusdx adapter", () => {
     );
   });
 
-  it("degrades the route to unknown when paused() is unreadable", async () => {
-    const output = await fetchFixture({ pausedResult: null }, { validate: false });
+  it.each([null, word(2n), `${word(0n)}${"00".repeat(32)}`])("degrades the route to unknown when paused() is unreadable: %s", async (pausedResult) => {
+    const output = await fetchFixture({ pausedResult }, { validate: false });
 
     expect(output.metadata?.redemption).toMatchObject({
       routeStatus: "unknown",

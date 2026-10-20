@@ -15,6 +15,10 @@ import {
 } from "../../methodology-shared";
 import { STABILITY_INDEX_SECTION_CONTENT } from "@/lib/methodology-content";
 import { PSI_BAND_CLASSES, METHODOLOGY_SECTION_ACCENT_CLASSES, METHODOLOGY_TABLE_ACCENT_CLASSES } from "@shared/lib/classification";
+import { PSI_COMPONENT_LIMITS, PSI_CONDITION_BANDS } from "@shared/lib/psi-policy";
+import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
+
+const PSI_REFRESH_MINUTES = CRON_SCHEDULE_CADENCES.dewsPsiOffset.intervalSec / 60;
 
 const STABILITY_COMPONENT_COLUMNS = [
   { id: "component", header: "Component", cellClassName: "text-foreground" },
@@ -28,8 +32,8 @@ const STABILITY_COMPONENT_ROWS = [
     id: "severity",
     cells: {
       component: "Severity",
-      range: "0–68",
-      formula: <>min(68, &Sigma;(abs(bps)/100 &times; share &times; log2(1+mcap/1B) &times; 60 &times; factor))</>,
+      range: `0–${PSI_COMPONENT_LIMITS.severity}`,
+      formula: <>min({PSI_COMPONENT_LIMITS.severity}, &Sigma;(abs(bps)/100 &times; share &times; log2(1+mcap/1B) &times; 60 &times; factor))</>,
       purpose: "Magnitude-weighted depeg damage with extra emphasis on mega-cap instability",
     },
   },
@@ -37,8 +41,8 @@ const STABILITY_COMPONENT_ROWS = [
     id: "breadth",
     cells: {
       component: "Breadth",
-      range: "0–17",
-      formula: <>min(17, &Sigma;(sqrt(mcap/1B) &times; 3 &times; factor))</>,
+      range: `0–${PSI_COMPONENT_LIMITS.breadth}`,
+      formula: <>min({PSI_COMPONENT_LIMITS.breadth}, &Sigma;(sqrt(mcap/1B) &times; 3 &times; factor))</>,
       purpose: "How widely depegs are spreading across unique coins",
     },
   },
@@ -46,8 +50,8 @@ const STABILITY_COMPONENT_ROWS = [
     id: "stress-breadth",
     cells: {
       component: "Stress Breadth",
-      range: "0–5",
-      formula: "min(5, dewsStressBreadth)",
+      range: `0–${PSI_COMPONENT_LIMITS.stressBreadth}`,
+      formula: `min(${PSI_COMPONENT_LIMITS.stressBreadth}, dewsStressBreadth)`,
       purpose: "Early-warning pressure from DEWS stress signals before full depegs",
     },
   },
@@ -55,8 +59,8 @@ const STABILITY_COMPONENT_ROWS = [
     id: "trend",
     cells: {
       component: "Trend",
-      range: "−5 to +5",
-      formula: "clamp(-5, 5, mcap7dChangePct)",
+      range: `−${PSI_COMPONENT_LIMITS.trend} to +${PSI_COMPONENT_LIMITS.trend}`,
+      formula: `clamp(-${PSI_COMPONENT_LIMITS.trend}, ${PSI_COMPONENT_LIMITS.trend}, mcap7dChangePct)`,
       purpose: "7-day stablecoin market-cap momentum (supports or offsets penalties)",
     },
   },
@@ -68,38 +72,23 @@ const STABILITY_BAND_COLUMNS = [
   { id: "meaning", header: "Meaning", cellClassName: "whitespace-normal" },
 ];
 
-const STABILITY_BAND_ROWS = [
-  {
-    id: "bedrock",
-    cells: { range: "90–100", band: "BEDROCK", meaning: "Near-ideal market stability" },
-    cellClassNames: { band: PSI_BAND_CLASSES.BEDROCK },
+const STABILITY_BAND_MEANINGS = {
+  BEDROCK: "Near-ideal market stability",
+  STEADY: "Normal conditions with minor stress",
+  TREMOR: "Meaningful instability emerging",
+  FRACTURE: "Broad, significant market stress",
+  CRISIS: "Contagion-level instability",
+  MELTDOWN: "Systemic peg failure conditions",
+};
+const STABILITY_BAND_ROWS = PSI_CONDITION_BANDS.map(({ min, band }, index) => ({
+  id: band.toLowerCase(),
+  cells: {
+    range: `[${min}, ${index === 0 ? "100]" : `${PSI_CONDITION_BANDS[index - 1].min})`}`,
+    band,
+    meaning: STABILITY_BAND_MEANINGS[band],
   },
-  {
-    id: "steady",
-    cells: { range: "75–89", band: "STEADY", meaning: "Normal conditions with minor stress" },
-    cellClassNames: { band: PSI_BAND_CLASSES.STEADY },
-  },
-  {
-    id: "tremor",
-    cells: { range: "60–74", band: "TREMOR", meaning: "Meaningful instability emerging" },
-    cellClassNames: { band: PSI_BAND_CLASSES.TREMOR },
-  },
-  {
-    id: "fracture",
-    cells: { range: "40–59", band: "FRACTURE", meaning: "Broad, significant market stress" },
-    cellClassNames: { band: PSI_BAND_CLASSES.FRACTURE },
-  },
-  {
-    id: "crisis",
-    cells: { range: "20–39", band: "CRISIS", meaning: "Contagion-level instability" },
-    cellClassNames: { band: PSI_BAND_CLASSES.CRISIS },
-  },
-  {
-    id: "meltdown",
-    cells: { range: "0–19", band: "MELTDOWN", meaning: "Systemic peg failure conditions" },
-    cellClassNames: { band: PSI_BAND_CLASSES.MELTDOWN },
-  },
-];
+  cellClassNames: { band: PSI_BAND_CLASSES[band] },
+}));
 
 export function StabilityIndexMethodologySection() {
   return (
@@ -113,7 +102,7 @@ export function StabilityIndexMethodologySection() {
     >
       <p>
         The Pharos Stability Index (PSI) is a market-level 0&ndash;100 health score for the stablecoin ecosystem. It is
-        recomputed every 30 minutes from live depeg conditions and stress signals, then aggregated into daily history
+        recomputed every {PSI_REFRESH_MINUTES} minutes from live depeg conditions and stress signals, then aggregated into daily history
         snapshots. Its monetary aggregate contains active core stablecoins and cash equivalents; tracked variants and
         stable-value investment products remain browsable but do not count as independent supply.
       </p>
@@ -138,7 +127,7 @@ export function StabilityIndexMethodologySection() {
       </p>
       <MethodologyFacts
         facts={[
-          { label: "Update cadence", value: "30m refresh" },
+          { label: "Update cadence", value: `${PSI_REFRESH_MINUTES}m refresh` },
           { label: "Score range", value: "0-100 market health" },
           { label: "Main use", value: "Bands: BEDROCK to MELTDOWN" },
         ]}
@@ -195,10 +184,10 @@ export function StabilityIndexMethodologySection() {
         <MethodologyDiagramFlow
           inputCols={4}
           inputs={[
-            { title: "Severity", subtitle: "0–68" },
-            { title: "Breadth", subtitle: "0–17" },
-            { title: "Stress Breadth", subtitle: "0–5" },
-            { title: "Trend", subtitle: "−5 to +5" },
+            { title: "Severity", subtitle: STABILITY_COMPONENT_ROWS[0].cells.range },
+            { title: "Breadth", subtitle: STABILITY_COMPONENT_ROWS[1].cells.range },
+            { title: "Stress Breadth", subtitle: STABILITY_COMPONENT_ROWS[2].cells.range },
+            { title: "Trend", subtitle: STABILITY_COMPONENT_ROWS[3].cells.range },
           ]}
           steps={[
             { title: "Compute PSI", subtitle: "100 − penalties + trend", className: "md:w-80" },

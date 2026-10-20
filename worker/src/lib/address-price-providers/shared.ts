@@ -9,20 +9,13 @@ import {
   createPricingAssetAttempt,
   endpointLabel,
   type PricingProviderAttemptDiagnostic,
-  type PricingProviderDiagnosticSource,
   type PricingProviderRejectionReason,
 } from "../pricing-provider-diagnostics";
 import {
   applyJsonParseFailureDiagnostic,
-  buildCapSkipDiagnostic,
   buildPricingProviderDiagnostic,
 } from "../pricing-provider-lifecycle";
-import type {
-  AddressPriceProviderKey,
-  AddressPriceProviderRunResult,
-  AddressPriceQuote,
-  AddressPriceTarget,
-} from "./types";
+import type { AddressPriceQuote, AddressPriceTarget } from "./types";
 import { readResponseSnippetWithTimeout, readResponseTextWithinLimitWithTimeout } from "../response-body";
 
 export const ADDRESS_PROVIDER_MIN_LIQUIDITY_USD = 50_000;
@@ -94,7 +87,6 @@ export function groupTargetsByProviderChain(targets: AddressPriceTarget[]): Map<
 }
 
 export async function fetchProviderJson(params: {
-  provider: AddressPriceProviderKey;
   url: string;
   endpoint?: string;
   fetchLogUrl?: string;
@@ -105,14 +97,14 @@ export async function fetchProviderJson(params: {
   signal?: AbortSignal;
 }): Promise<{ json: unknown | null; diagnostic: PricingProviderAttemptDiagnostic }> {
   const baseDiagnostic = {
-    source: params.provider as PricingProviderDiagnosticSource,
+    source: "coingecko-onchain-address" as const,
     stage: "primary" as const,
     endpoint: params.endpoint ?? endpointLabel(params.url),
     candidateCount: params.candidateCount,
   };
   const assetAttempts = params.targets?.slice(0, 100).map((target) => createPricingAssetAttempt({
     assetId: target.stablecoinId,
-    adapter: params.provider,
+    adapter: "coingecko-onchain-address",
     chain: target.chain,
     target: target.address,
     state: "attempted",
@@ -182,7 +174,7 @@ export async function fetchProviderJson(params: {
   }
 }
 
-function finalizeAddressPriceDiagnosticAttempts(
+export function finalizeAddressPriceDiagnosticAttempts(
   diagnostic: PricingProviderAttemptDiagnostic,
   quotes: readonly AddressPriceQuote[],
 ): PricingProviderAttemptDiagnostic {
@@ -222,97 +214,5 @@ function finalizeAddressPriceDiagnosticAttempts(
       }
       return attempt;
     }),
-  };
-}
-
-function buildSkippedAddressPriceAttempts(
-  provider: AddressPriceProviderKey,
-  targets: readonly AddressPriceTarget[],
-  skipReason: "budget" | "deadline" | "request-cap",
-  rejectionClass: string,
-): PricingProviderAttemptDiagnostic["assetAttempts"] {
-  return targets.slice(0, 100).map((target) => createPricingAssetAttempt({
-    assetId: target.stablecoinId,
-    adapter: provider,
-    chain: target.chain,
-    target: target.address,
-    state: "skipped",
-    skipReason,
-    rejectionClass,
-    candidateAt: Math.floor(Date.now() / 1000),
-  }));
-}
-
-export function createAddressProviderRunner(input: {
-  provider: AddressPriceProviderKey;
-  label: string;
-  targets: readonly AddressPriceTarget[];
-  deadlineMs: number;
-  maxRequests: number;
-}) {
-  const diagnostics: AddressPriceProviderRunResult["diagnostics"] = [];
-  const quotes: AddressPriceQuote[] = [];
-  const rejectedTargets: AddressPriceProviderRunResult["rejectedTargets"] = {};
-  const processedTargets = new Set<AddressPriceTarget>();
-  let successfulRequests = 0;
-  let attemptedRequests = 0;
-
-  return {
-    diagnostics,
-    quotes,
-    rejectedTargets,
-    get attemptedRequests() {
-      return attemptedRequests;
-    },
-    canStartRequest(): boolean {
-      return attemptedRequests < input.maxRequests && Date.now() < input.deadlineMs;
-    },
-    beginRequest(): void {
-      attemptedRequests += 1;
-    },
-    recordSuccess(count = 1): void {
-      successfulRequests += count;
-    },
-    markProcessed(targets: readonly AddressPriceTarget[]): void {
-      for (const target of targets) processedTargets.add(target);
-    },
-    recordDiagnostic(diagnostic: PricingProviderAttemptDiagnostic): void {
-      diagnostics.push(finalizeAddressPriceDiagnosticAttempts(diagnostic, quotes));
-    },
-    finish(options?: {
-      eligibleTargets?: readonly AddressPriceTarget[];
-      skipPolicy?: (deadlineReached: boolean) => {
-        skipReason: "budget" | "deadline" | "request-cap";
-        rejectionClass: string;
-      };
-    }): AddressPriceProviderRunResult {
-      const eligibleTargets = options?.eligibleTargets ?? input.targets;
-      const skippedTargets = eligibleTargets.filter((target) => !processedTargets.has(target));
-      if (skippedTargets.length > 0) {
-        const diagnostic = buildCapSkipDiagnostic(
-          { source: input.provider, label: input.label },
-          skippedTargets.length,
-        );
-        const deadlineReached = Date.now() >= input.deadlineMs;
-        const policy = options?.skipPolicy?.(deadlineReached) ?? {
-          skipReason: deadlineReached ? "deadline" : "request-cap",
-          rejectionClass: deadlineReached ? "timeout" : "cap",
-        };
-        diagnostic.assetAttempts = buildSkippedAddressPriceAttempts(
-          input.provider,
-          skippedTargets,
-          policy.skipReason,
-          policy.rejectionClass,
-        );
-        diagnostics.push(diagnostic);
-      }
-      return {
-        quotes,
-        diagnostics,
-        rejectedTargets,
-        successfulRequests,
-        attemptedRequests,
-      };
-    },
   };
 }

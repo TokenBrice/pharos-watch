@@ -4,7 +4,7 @@ import type {
   EnvRuntimeStatus,
 } from "./types.ts";
 
-export const ENV_BINDINGS = [
+const ENV_BINDING_DEFINITIONS = [
   {
     key: "NEXT_PUBLIC_API_BASE",
     valueType: "string",
@@ -354,7 +354,7 @@ export const ENV_BINDINGS = [
     description: "GitHub personal access token used by the feedback -> issue bridge (required to keep `POST /api/feedback` available) and by the pre-digest Safety Score map producer kick, which dispatches `safety-map-refresh.yml`; it needs classic `repo` scope or fine-grained Issues and Actions write access on the repository.",
     example: { section: "workerRequired", value: "" },
     runtimes: {
-      worker: { status: "required" },
+      worker: { status: "required", optionalAtIngress: true },
     },
   },
   {
@@ -363,7 +363,7 @@ export const ENV_BINDINGS = [
     description: "Dedicated salt for hashed-IP feedback submission throttling; required to keep `POST /api/feedback` available.",
     example: { section: "workerRequired", value: "" },
     runtimes: {
-      worker: { status: "required" },
+      worker: { status: "required", optionalAtIngress: true },
     },
   },
   {
@@ -534,7 +534,7 @@ export const ENV_BINDINGS = [
     description: "Banxico SIE API token required for official MXN CETES 28-day benchmark rates; when the feed fails, MXN retains the last market benchmark when available or remains unavailable for USD fallback.",
     example: { section: "workerRequired", value: "" },
     runtimes: {
-      worker: { status: "required" },
+      worker: { status: "required", optionalAtIngress: true },
     },
   },
   {
@@ -745,7 +745,30 @@ export const ENV_BINDINGS = [
     example: { section: "workerOptional", value: "" },
     runtimes: {},
   },
-] satisfies readonly EnvBindingDefinition[];
+] as const satisfies readonly EnvBindingDefinition[];
+
+// Widen optional metadata for runtime queries without losing the literal type authority.
+export const ENV_BINDINGS: readonly EnvBindingDefinition[] = ENV_BINDING_DEFINITIONS;
+
+type RuntimeBinding<Runtime extends EnvRuntimeName> = Extract<
+  (typeof ENV_BINDING_DEFINITIONS)[number],
+  { runtimes: Record<Runtime, { status: EnvRuntimeStatus }> }
+>;
+
+type RequiredRuntimeBinding<Runtime extends EnvRuntimeName> = Exclude<
+  Extract<RuntimeBinding<Runtime>, { runtimes: Record<Runtime, { status: "required" }> }>,
+  { runtimes: Record<Runtime, { optionalAtIngress: true }> }
+>;
+
+/** Platform types are supplied by each runtime; shared code never imports its globals. */
+export type RuntimeEnv<
+  Runtime extends EnvRuntimeName,
+  Values extends Record<RuntimeBinding<Runtime>["valueType"], unknown>,
+> = {
+  [Binding in RequiredRuntimeBinding<Runtime> as Binding["key"]]: Values[Binding["valueType"] & keyof Values];
+} & {
+  [Binding in Exclude<RuntimeBinding<Runtime>, RequiredRuntimeBinding<Runtime>> as Binding["key"]]?: Values[Binding["valueType"] & keyof Values];
+};
 
 function getBindingsForRuntime(
   runtime: EnvRuntimeName,

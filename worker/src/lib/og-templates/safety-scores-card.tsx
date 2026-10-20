@@ -3,24 +3,14 @@ import { CardFrame, MetricLabel, TEXT_SECONDARY, FROST_BLUE, GRADE_COLORS, SEMAN
 
 export interface SafetyScoresCardData {
   gradeDistribution: Record<string, number>;
-  pulseGrade: string | null;
   pulseScore: number | null;
   coverageRatio: number | null; // 0-1; null when the safety source is unavailable
   totalCoins: number;
   // New fields
   topPerformers: Array<{ symbol: string; grade: string; score: number }>;
   bottomPerformers: Array<{ symbol: string; grade: string; score: number }>;
-  trend: number | null; // week-over-week change
   safetyModel?: "v8" | "v9" | null;
   lastUpdated?: string;
-}
-
-/** Get trend arrow and color */
-function getTrendIndicator(trend: number | null): { arrow: string; color: string } {
-  if (trend === null) return { arrow: "—", color: TEXT_SECONDARY };
-  if (trend > 0) return { arrow: "↑", color: SEMANTIC_COLORS.positive };
-  if (trend < 0) return { arrow: "↓", color: SEMANTIC_COLORS.negative };
-  return { arrow: "→", color: TEXT_SECONDARY };
 }
 
 function PerformerList({
@@ -79,8 +69,6 @@ function PerformerList({
 }
 
 export function SafetyScoresCard({ data }: { data: SafetyScoresCardData }) {
-  const trend = getTrendIndicator(data.trend);
-  
   // Filter out zero counts for cleaner display
   const filteredDistribution = Object.entries(data.gradeDistribution)
     .filter(([, count]) => count > 0)
@@ -130,32 +118,16 @@ export function SafetyScoresCard({ data }: { data: SafetyScoresCardData }) {
         </div>
       </div>
 
-      {/* Middle section: Pulse + Coverage + Trend */}
+      {/* Middle section: Average score + Coverage */}
       <div style={{ display: "flex", gap: 60, fontFamily: "Geist Mono" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <MetricLabel>AVERAGE SCORE</MetricLabel>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <span style={{ fontSize: 56, fontWeight: 700, color: FROST_BLUE }}>
-              {data.pulseScore !== null ? data.pulseScore.toFixed(1) : "NR"}
-            </span>
-            <span 
-              style={{ 
-                fontSize: 24, 
-                color: trend.color,
-                fontWeight: 700,
-              }}
-            >
-              {trend.arrow}
-            </span>
-          </div>
+          <span style={{ fontSize: 56, fontWeight: 700, color: FROST_BLUE }}>
+            {data.pulseScore !== null ? data.pulseScore.toFixed(1) : "NR"}
+          </span>
           <span style={{ fontSize: 16, color: TEXT_SECONDARY }}>
             {data.pulseScore !== null ? "/ 100 · no aggregate grade" : "Safety score unavailable"}
           </span>
-          {data.trend !== null && (
-            <span style={{ fontSize: 14, color: trend.color }}>
-              {data.trend >= 0 ? "+" : ""}{data.trend.toFixed(1)}% vs last week
-            </span>
-          )}
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <MetricLabel>COVERAGE</MetricLabel>

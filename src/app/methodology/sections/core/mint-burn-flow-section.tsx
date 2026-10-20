@@ -14,6 +14,10 @@ import {
 } from "../../methodology-shared";
 import { MINT_BURN_FLOW_SECTION_CONTENT } from "@/lib/methodology-content";
 import { METHODOLOGY_SECTION_ACCENT_CLASSES } from "@shared/lib/classification";
+import { GAUGE_BAND_RANGES, type GaugeBand } from "@shared/lib/mint-burn-gauge-bands";
+import { getPressureShiftState } from "@shared/lib/mint-burn-signals";
+
+const NEUTRAL_GAUGE_RANGE = GAUGE_BAND_RANGES.find(({ band }) => band === "NEUTRAL")!;
 
 const BANK_RUN_GAUGE_COLUMNS = [
   { id: "band", header: "Band", cellClassName: "text-foreground" },
@@ -21,15 +25,23 @@ const BANK_RUN_GAUGE_COLUMNS = [
   { id: "meaning", header: "Meaning", cellClassName: "whitespace-normal" },
 ];
 
-const BANK_RUN_GAUGE_ROWS = [
-  { id: "crisis", cells: { band: "CRISIS", scoreRange: "−100 to −70", meaning: "Severe below-baseline redemption pressure across major coins" } },
-  { id: "stress", cells: { band: "STRESS", scoreRange: "−70 to −40", meaning: "Worsening coordinated pressure versus normal conditions" } },
-  { id: "cautious", cells: { band: "CAUTIOUS", scoreRange: "−40 to −10", meaning: "Mild but broad pressure deterioration" } },
-  { id: "neutral", cells: { band: "NEUTRAL", scoreRange: "−10 to 10", meaning: "Close to 30D norms across the market" } },
-  { id: "healthy", cells: { band: "HEALTHY", scoreRange: "10 to 40", meaning: "Improving aggregate pressure versus baseline" } },
-  { id: "confident", cells: { band: "CONFIDENT", scoreRange: "40 to 70", meaning: "Strong positive pressure shift across major coins" } },
-  { id: "surge", cells: { band: "SURGE", scoreRange: "70 to 100", meaning: "Exceptional improvement versus recent norms" } },
-];
+const BANK_RUN_GAUGE_MEANINGS: Record<GaugeBand, string> = {
+  CRISIS: "Severe below-baseline redemption pressure across major coins",
+  STRESS: "Worsening coordinated pressure versus normal conditions",
+  CAUTIOUS: "Mild but broad pressure deterioration",
+  NEUTRAL: "Close to 30D norms across the market",
+  HEALTHY: "Improving aggregate pressure versus baseline",
+  CONFIDENT: "Strong positive pressure shift across major coins",
+  SURGE: "Exceptional improvement versus recent norms",
+};
+const BANK_RUN_GAUGE_ROWS = GAUGE_BAND_RANGES.map(({ band, min, max }, index) => ({
+  id: band.toLowerCase(),
+  cells: {
+    band,
+    scoreRange: `[${min}, ${max}${index === GAUGE_BAND_RANGES.length - 1 ? "]" : ")"}`,
+    meaning: BANK_RUN_GAUGE_MEANINGS[band],
+  },
+}));
 
 const MINT_BURN_CARD_CLASSES = {
   desktop: ["rounded-lg border p-3 text-center flex-1", "text-foreground font-medium", "text-xs text-muted-foreground mt-0.5"],
@@ -236,8 +248,9 @@ export function MintBurnFlowMethodologySection() {
                       in low-volume coins
                     </li>
                     <li>
-                      <span className="text-foreground">Interpretation</span> &mdash; above +10 = improving vs baseline,
-                      between -10 and +10 = stable vs baseline, below -10 = worsening
+                      <span className="text-foreground">Aggregate gauge interpretation</span> &mdash; &ge; +{NEUTRAL_GAUGE_RANGE.max} = improving vs baseline,
+                      [{NEUTRAL_GAUGE_RANGE.min}, +{NEUTRAL_GAUGE_RANGE.max}) = stable vs baseline, below {NEUTRAL_GAUGE_RANGE.min} = worsening.
+                      Per-coin pressure-state labels are separate: exactly +{NEUTRAL_GAUGE_RANGE.max} is {getPressureShiftState(NEUTRAL_GAUGE_RANGE.max)}.
                     </li>
                   </ul>
                 </div>

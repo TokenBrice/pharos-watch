@@ -1,6 +1,6 @@
 # D1 Migration Authoring
 
-Use this policy for every file added to `worker/migrations/`. The active and historical migration inventory remains authoritative in `worker/migrations/MANIFEST.md`.
+Policy for every new `worker/migrations/` file; `worker/migrations/MANIFEST.md` owns the active/historical inventory.
 
 ## Additive migrations
 
@@ -11,9 +11,9 @@ Use this policy for every file added to `worker/migrations/`. The active and his
 
 Additive migrations do not need data-migration metadata.
 
-Migration `0280_mint_burn_dirty_hours.sql` is an additive debt-table example: apply it before the maintenance writer, without baseline changes, migration-time legacy seeding, or a business-row rewrite. Worker rollback retains the schema and queued debt; keep the verified pre-window Time Travel bookmark, migration ledger and Worker versions, and observe source enqueue plus the first atomic rebuild separately from migration application. Restore D1 only for unexpected schema/data mutation.
+Additive debt-table example `0280_mint_burn_dirty_hours.sql` precedes the maintenance writer: no baseline change, legacy seeding or business-row rewrite. Worker rollback retains schema/debt. Keep the verified pre-window Time Travel bookmark, ledger and Worker versions; observe source enqueue and first atomic rebuild separately from schema application. Restore D1 only for unexpected schema/data mutation.
 
-Migration `0281_mint_burn_scan_coverage.sql` follows the same additive ordering for prospective evidence: install the empty table before the writer and observe durable proof roundtrips before activating public coverage readers. Existing cursors, event ages and cron metadata must not seed historical coverage. Keep all fingerprinted proof on Worker rollback; an old writer's intervening cursor advances do not establish scanned intervals. Retain the pre-window bookmark, ledger and Worker identities; schema application alone is not writer-soak acceptance.
+`0281_mint_burn_scan_coverage.sql` likewise installs an empty prospective-evidence table before its writer; observe durable proof roundtrips before activating public readers. Never seed history from cursors, event ages or cron metadata. Worker rollback retains fingerprinted proof; old-writer cursor advances prove no scanned interval. Keep the pre-window bookmark, ledger and Worker identities; schema application is not writer-soak acceptance.
 
 ## Reviewed data migrations
 
@@ -51,3 +51,5 @@ npx vitest run scripts/__tests__/check-worker-migrations*.test.ts
 ```
 
 `check:migrations` verifies manifest parity, rollout annotations, reviewed-DML evidence, seeded pre-migration replay, complete fresh replay, and `EXPECTED_SCHEMA.txt` object parity.
+
+Fresh/seeded temporary replays use supported Node's built-in `node:sqlite` `DatabaseSync`, never external `sqlite3` or fallback. Native database-open errors fail the gate.

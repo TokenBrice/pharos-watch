@@ -61,7 +61,6 @@ describe("stablecoin OG card data", () => {
       pegScore: 95,
       backing: "rwa-backed",
       governance: "centralized",
-      redemptionScore: 85,
       change24h: 0.5,
     });
 
@@ -71,6 +70,10 @@ describe("stablecoin OG card data", () => {
     expect(data.pegScore).toBe(95);
     expect(data.backing).toBe("rwa-backed");
     expect(data.governance).toBe("centralized");
+    const markup = renderToStaticMarkup(<StablecoinCard data={data} />);
+    expect(markup).toContain("PEG SCORE");
+    expect(markup).toContain("95.0");
+    expect(markup).not.toContain("REDEMPTION");
   });
   it("preserves unavailable facts instead of inventing healthy readings or full-cap inflow", () => {
     const input = {
@@ -84,7 +87,6 @@ describe("stablecoin OG card data", () => {
       pegScore: null,
       backing: null,
       governance: null,
-      redemptionScore: null,
       change24h: null,
     };
     const data = deriveStablecoinOgCardData(input);
@@ -110,7 +112,7 @@ describe("stablecoin OG card data", () => {
       },
       dexLiquidityScore: 0, dewsBand: null, grade: null, sparklineRows: [{ price: 1 }],
       hasActiveDepeg: false, mintBurn7d: { knownNetUsd: 0, knownGrossUsd: 0, completeness: "complete" }, pegScore: null, backing: null,
-      governance: null, redemptionScore: null, change24h: null,
+      governance: null, change24h: null,
     });
     expect(data.flow7d).toBe(0);
     expect(data.flow7dSource).toBe("mint-burn");
@@ -130,7 +132,7 @@ describe("stablecoin OG card data", () => {
       },
       dexLiquidityScore: null, dewsBand: null, grade: null, sparklineRows: [],
       hasActiveDepeg: false, pegScore: null, backing: null,
-      governance: null, redemptionScore: null, change24h: null,
+      governance: null, change24h: null,
     };
     // Unknown-value mint plus a priced $1M burn: the known net is -$1M, but that is not a bound.
     const partial = deriveStablecoinOgCardData({
@@ -161,7 +163,7 @@ describe("stablecoin OG card data", () => {
       dexLiquidityScore: null, dewsBand: null, grade: null,
       sparklineRows: [{ price: 1 }, { price: 1 }, { price: 1 }],
       hasActiveDepeg: false, mintBurn7d: null, pegScore: null, backing: null,
-      governance: null, redemptionScore: null, change24h: null,
+      governance: null, change24h: null,
     };
     const nominal = deriveStablecoinOgCardData(input);
     expect(nominal).toMatchObject({ pegPrice: 1, pegPriceIsNominal: true, sparklineData: null });
@@ -397,6 +399,19 @@ describe("stablecoin OG card data", () => {
       expect(response?.headers.get("X-Safety-Score-Generation")).toBe(source.snapshot.safetyScoreIdentity.publicationGenerationId);
       expect(response?.headers.get("X-Safety-Score-Assessed-At")).toBe(String(nowSec));
       expect(response?.headers.get("X-Safety-Score-Freshness-Budget")).toBe(String(SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC));
+    });
+
+    it("keeps the supplied average score ungraded without inventing a weekly trend", async () => {
+      vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreIndex").mockResolvedValue(activeV9());
+      await handleOg(makeOgDb([makeAsset({ id: "usdt-tether", symbol: "USDT" })]), "/api/og/safety-scores");
+      const calls = vi.mocked(satoriStandalone).mock.calls;
+      const element = calls[calls.length - 1][0] as React.ReactElement<{ data: SafetyScoresCardData }>;
+      expect(element.props.data.pulseScore).toBe(88);
+      const markup = renderToStaticMarkup(element);
+      expect(markup).toContain(">88.0<");
+      expect(markup).toContain("no aggregate grade");
+      expect(markup).toContain("USDT");
+      expect(markup).not.toMatch(/vs last week|[\u2190-\u2193]/);
     });
 
     it("renders a degraded safety aggregate as unavailable rather than 0.0", async () => {
@@ -798,6 +813,7 @@ describe("stability-index OG handler aggregation", () => {
       expect(markup).toContain("High:");
       expect(markup).toContain("Low:");
       expect(markup).not.toMatch(/\b(?:ATH|ATL)\b|all.time/i);
+      expect(markup).not.toContain("FLIGHT TO QUALITY");
     } finally {
       sqlite.close();
     }
@@ -914,7 +930,6 @@ describe("og cards render through satori", () => {
     pegScore: 97.2,
     backing: "rwa-backed",
     governance: "centralized",
-    redemptionScore: null,
     change24h: 0.01,
     variantLabel: null,
     variantParentSymbol: null,
@@ -957,7 +972,6 @@ describe("og cards render through satori", () => {
           D: 3,
           F: 1,
         },
-        pulseGrade: "B+",
         pulseScore: 78.4,
         coverageRatio: 0.93,
         totalCoins: 401,
@@ -971,7 +985,6 @@ describe("og cards render through satori", () => {
           { symbol: "YUSD", grade: "D", score: 28 },
           { symbol: "ZUSD", grade: "C-", score: 41 },
         ],
-        trend: -0.4,
         lastUpdated: "2026-06-10 07:30 UTC",
       }} />,
     },
@@ -992,13 +1005,11 @@ describe("og cards render through satori", () => {
           F: 0,
           NR: 0,
         },
-        pulseGrade: null,
         pulseScore: null,
         coverageRatio: 0,
         totalCoins: 401,
         topPerformers: [],
         bottomPerformers: [],
-        trend: null,
         safetyModel: null,
         lastUpdated: "DEGRADED: V9 safety score unavailable",
       }} />,
@@ -1083,8 +1094,6 @@ describe("og cards render through satori", () => {
         avg7d: 91.2,
         retainedSampleHigh: 97.5,
         retainedSampleLow: 11.4,
-        flightToQuality: true,
-        flightIntensity: 62,
         lastUpdated: "2026-06-10 07:30 UTC",
       }} />,
     },

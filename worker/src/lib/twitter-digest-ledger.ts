@@ -59,6 +59,24 @@ function parseRecord(value: string): TwitterDigestDeliveryRecord | null {
   }
 }
 
+/** Existing editions need durable evidence before another attempt is allowed. */
+export async function readTwitterDigestDeliveryStatus(
+  db: D1Database,
+  key: string,
+): Promise<string | null> {
+  const row = await db.prepare("SELECT value FROM cache WHERE key = ?").bind(key).first<{ value: string }>();
+  if (!row) return "skipped: execution-unknown";
+  const record = parseRecord(row.value);
+  // A legacy marker is still proof of delivery, not permission to resend.
+  if (!record || record.state === "sent") return "skipped: already-sent";
+  if (record.state === "execution_unknown") return "skipped: execution-unknown";
+  if (record.state === "failed" && record.attempts >= TWITTER_DIGEST_MAX_ATTEMPTS) {
+    return "skipped: attempt-limit";
+  }
+  // The claim owner resolves live/expired sending and fences every attempt.
+  return null;
+}
+
 async function replaceRecord(
   db: D1Database,
   key: string,

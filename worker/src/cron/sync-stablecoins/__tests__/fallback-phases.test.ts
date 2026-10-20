@@ -11,7 +11,6 @@ import { restoreFallbackCacheState } from "../fallback";
 import { loadPreviousStablecoinsById } from "../shared";
 import { checkStablecoinsPriceStaleness } from "../runtime";
 import {
-  buildFallbackStablecoinsPublicationPolicy,
   runStablecoinsPostIntakePublication,
 } from "../publication";
 import type { PeggedAsset } from "../enrich-prices";
@@ -93,17 +92,28 @@ async function evaluateFallbackStalenessFixture(input: {
   signal?: AbortSignal;
 }) {
   const { syncStartSec: _syncStartSec, ...stalenessInput } = input;
-  const policy = buildFallbackStablecoinsPublicationPolicy(input.assets);
-  const labels = policy.labels;
   const result = await checkStablecoinsPriceStaleness({
     ...stalenessInput,
-    progressStage: labels.stalenessProgressStage,
-    progressMessage: labels.stalenessProgressMessage,
-    abortStage: labels.stalenessAbortStage,
-    warningLabel: labels.stalenessWarningLabel,
-    failureLabel: labels.stalenessFailureLabel,
-    blockedResultFactory: policy.blockedResultBuilder.staleness,
+    progressStage: "fallback-staleness-check",
+    progressMessage: "Checking fallback price staleness",
+    abortStage: "fallback-detect-price-staleness",
+    warningLabel: "(fallback)",
+    failureLabel: "Fallback staleness check",
+    blockedResultFactory: () => ({ metadata: "{}" }),
   });
+  if (result.blockedReason === "severe-staleness") {
+    return runStablecoinsPostIntakePublication({
+      ...stalenessInput,
+      previousAssetsById: new Map(input.previousAssetsById),
+      previousActivePriceCoverage: null,
+      syncStartSec: input.syncStartSec ?? NOW_SEC,
+      priceCacheEntries: [], providerDiagnostics: [],
+      metadata: { path: "fallback", input: {
+        enrichStats: {}, authoritativeOverrideCount: 0, rejectedCount: 0,
+        cachedFallbackCount: 0, nativePegCorrectionCount: 0, nativePegFillCount: 0,
+      } },
+    });
+  }
   if (result.blockedResult) return result.blockedResult;
   return result;
 }
@@ -520,8 +530,6 @@ describe("CoinGecko fallback phases", () => {
       syncStartSec: NOW_SEC,
       priceCacheEntries: [],
       providerDiagnostics: [],
-      returnIfAborted: () => null,
-      abortResult: () => ({ metadata: "{}" }),
       metadata: {
         path: "fallback",
         input: {
@@ -533,7 +541,6 @@ describe("CoinGecko fallback phases", () => {
           nativePegFillCount: 0,
         },
       },
-      policy: buildFallbackStablecoinsPublicationPolicy(assets),
     });
 
     const metadata = JSON.parse(result.metadata ?? "{}");
@@ -579,8 +586,6 @@ describe("CoinGecko fallback phases", () => {
       undefined,
       undefined,
       undefined,
-      expect.any(Function),
-      expect.any(Function),
       "fallback-",
       " (CG fallback)",
       undefined,

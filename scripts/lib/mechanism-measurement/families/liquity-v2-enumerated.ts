@@ -80,7 +80,6 @@ export async function measureEnumeratedLiquityV2(
       name: `registry.controller(${index})`,
       to: registry,
       signature: target.controllerEnumerator.signature,
-      selector: target.controllerEnumerator.selector,
       args: [BigInt(index)],
     });
     const controller = decodeAddressWord(controllerReturn, `controller ${index}`);

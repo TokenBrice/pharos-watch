@@ -1,6 +1,5 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 import type { FeedbackEnv } from "../../api/feedback";
-import type { TelegramCreds } from "../../telegram/delivery/telegram";
 import { makeScheduledEnv } from "../../test-helpers/scheduled-runtime.test-support";
 import { buildRouteContext } from "../../handlers/http/context";
 import { DYNAMIC_ADMIN_ROUTE_HANDLER_KEYS, getDynamicRouteMatch } from "../dynamic-routes";
@@ -33,7 +32,6 @@ describe("route context typing", () => {
 
     defineStaticRoute("feedback", async (routeCtx) => {
       expectTypeOf(routeCtx.feedbackEnv).toEqualTypeOf<FeedbackEnv>();
-      expectTypeOf(routeCtx.telegramCreds).toEqualTypeOf<TelegramCreds | null | undefined>();
       return new Response("ok");
     });
   });

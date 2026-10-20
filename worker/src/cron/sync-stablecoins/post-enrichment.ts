@@ -19,20 +19,17 @@ import {
 import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
-  createAuthoritativeLivePriceOverrideStats,
-  fetchAuthoritativeLivePriceOverrides,
   type AuthoritativeLivePriceOverrideStats,
+  fetchAuthoritativeLivePriceOverrides,
 } from "../../lib/authoritative-price-sources";
-import { getPriceCache, type PriceCacheEntry, type PriceCacheWriteEntry } from "../../lib/db-cache";
+import type { PriceCacheEntry, PriceCacheWriteEntry } from "../../lib/db-cache";
 import { detectDepegEvents } from "../detect-depegs";
 import { confirmPendingDepegs } from "../confirm-pending-depegs";
 import type { DepegHoldReason } from "../depeg-detection/types";
 import {
-  enrichMissingPrices,
   hasMissingPrice,
   type PrimaryPriceResult,
 } from "./enrich-prices";
-import type { EnrichmentProgressReporter } from "./enrich-prices-progress";
 import type { PeggedAsset } from "./enrich-prices";
 import {
   type PriceValidationContext,
@@ -52,7 +49,6 @@ import {
 import type { NativePegQuoteSession } from "../../lib/native-peg-quotes";
 import {
   clearPriceMetadata,
-  stampPriceMetadata,
   type CronResult,
 } from "./shared";
 import {
@@ -65,6 +61,7 @@ import {
 } from "./pricing";
 import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
 import type { BinanceFetchSession } from "../../lib/cex-tickers";
+import { abortResult, returnIfAborted } from "./runtime";
 
 const PRICE_CACHE_TTL = 6 * 60 * 60;
 
@@ -83,17 +80,11 @@ export interface PostEnrichmentInput {
   validationContexts: { get: (asset: PeggedAsset) => PriceValidationContext };
   primaryPriceResults?: Map<string, PrimaryPriceResult>;
   previousTrustedPrices?: Map<string, TrustedPriceReference>;
-  authoritativeOverrides?: Map<string, ProtocolPriceOverride>;
-  authoritativeOverrideStats?: AuthoritativeLivePriceOverrideStats;
-  /**
-   * The replay price_cache snapshot already loaded for trusted-price
-   * continuity. When provided, the cached-fallback stage reuses it instead of
-   * loading the full price_cache table from D1 a second time in the same run.
-   */
-  priceCache?: ReadonlyMap<string, PriceCacheEntry>;
+  authoritativeOverrides: Map<string, ProtocolPriceOverride>;
+  authoritativeOverrideStats: AuthoritativeLivePriceOverrideStats;
+  /** The same replay snapshot used to establish trusted-price continuity. */
+  priceCache: ReadonlyMap<string, PriceCacheEntry>;
   nativePegSession?: NativePegQuoteSession;
-  returnIfAborted: (signal: AbortSignal | undefined, stage: string) => CronResult | null;
-  abortResult: (signal: AbortSignal | undefined, stage: string) => CronResult;
 }
 
 export interface PriceValidationResult {
@@ -108,8 +99,6 @@ export interface PriceValidationResult {
 
 export interface SharedPriceCompletionInput extends PostEnrichmentInput {
   chainRpcs?: Map<string, ChainRpcConfig>;
-  authoritativeOverrides?: Map<string, ProtocolPriceOverride>;
-  authoritativeOverrideStats?: AuthoritativeLivePriceOverrideStats;
   previousMissingGenerationsById?: ReadonlyMap<string, number>;
 }
 
@@ -118,23 +107,6 @@ export interface SharedPriceCompletionResult extends PriceValidationResult {
   authoritativeOverrideStats: AuthoritativeLivePriceOverrideStats;
 }
 
-export interface MissingPriceEnrichmentInput {
-  chainRpcs?: Map<string, ChainRpcConfig>;
-  assets: PeggedAsset[];
-  db: D1Database;
-  syncStartSec: number;
-  signal?: AbortSignal;
-  cmcApiKey?: string;
-  coingeckoApiKey?: string | null;
-  jupiterApiKey?: string | null;
-  previousMissingGenerationsById?: ReadonlyMap<string, number>;
-  returnIfAborted: (signal: AbortSignal | undefined, stage: string) => CronResult | null;
-  onProgress?: EnrichmentProgressReporter;
-}
-
-export interface MissingPriceEnrichmentResult {
-  enrichStats: Awaited<ReturnType<typeof enrichMissingPrices>>;
-}
 
 export interface DepegPipelineResult {
   depegErrorCount: number;
@@ -166,7 +138,6 @@ export async function runPostEnrichmentPricePipeline(
     validationContexts,
     previousTrustedPrices,
     nativePegSession,
-    returnIfAborted,
   } = input;
 
   const getCurrentSourceParts = (asset: PeggedAsset): string[] => (
@@ -306,7 +277,7 @@ export async function runPostEnrichmentPricePipeline(
       previousTrustedPrice: previousTrustedPrices?.get(asset.id) ?? null,
     });
     if (!decision.accepted) {
-      const authoritativeOverride = input.authoritativeOverrides?.get(asset.id);
+      const authoritativeOverride = input.authoritativeOverrides.get(asset.id);
       const currentPrice = asset.price;
       if (
         authoritativeOverride &&
@@ -372,7 +343,7 @@ export async function runPostEnrichmentPricePipeline(
     else if (!hasMissingPrice(asset)) priceObservationEffectiveness.publication.alreadyPriced += observations.length;
   }
   if (stillMissing.length > 0) {
-    const priceCache = input.priceCache ?? await getPriceCache(db);
+    const priceCache = input.priceCache;
     for (const asset of stillMissing) {
       const candidates = staged.get(asset.id) ?? [];
       const candidatePrices = Object.fromEntries(candidates.map((candidate) => [candidate.source, candidate.price]));
@@ -464,37 +435,22 @@ export async function runSharedPriceCompletion(
   input: SharedPriceCompletionInput,
   abortStagePrefix: string,
 ): Promise<SharedPriceCompletionResult | CronResult> {
-  const authoritativeOverrideStats =
-    input.authoritativeOverrideStats ?? createAuthoritativeLivePriceOverrideStats();
-  const authoritativeOverrides = new Map(
-    input.authoritativeOverrides ?? await fetchAuthoritativeLivePriceOverrides(
-      input.assets,
-      input.signal,
-      input.validationReferences,
-      {
-        db: input.db,
-        stats: authoritativeOverrideStats,
-        chainRpcs: input.chainRpcs,
-        previousMissingGenerationsById: input.previousMissingGenerationsById,
-      },
-    ),
+  const authoritativeOverrideStats = input.authoritativeOverrideStats;
+  const authoritativeOverrides = new Map(input.authoritativeOverrides);
+  const postFallbackLocalOverrides = await fetchAuthoritativeLivePriceOverrides(
+    input.assets,
+    input.signal,
+    input.validationReferences,
+    {
+      db: input.db,
+      stats: authoritativeOverrideStats,
+      chainRpcs: input.chainRpcs,
+      maxProviderLivePriority: 0,
+      previousMissingGenerationsById: input.previousMissingGenerationsById,
+    },
   );
-  if (input.authoritativeOverrides) {
-    const postFallbackLocalOverrides = await fetchAuthoritativeLivePriceOverrides(
-      input.assets,
-      input.signal,
-      input.validationReferences,
-      {
-        db: input.db,
-        stats: authoritativeOverrideStats,
-        chainRpcs: input.chainRpcs,
-        maxProviderLivePriority: 0,
-        previousMissingGenerationsById: input.previousMissingGenerationsById,
-      },
-    );
-    for (const [assetId, override] of postFallbackLocalOverrides) {
-      authoritativeOverrides.set(assetId, override);
-    }
+  for (const [assetId, override] of postFallbackLocalOverrides) {
+    authoritativeOverrides.set(assetId, override);
   }
   const authoritativeOverrideCount = applyProtocolPriceOverrides({
     assets: input.assets,
@@ -521,37 +477,6 @@ export async function runSharedPriceCompletion(
   };
 }
 
-export async function runMissingPriceEnrichmentPhase(
-  input: MissingPriceEnrichmentInput,
-  abortStagePrefix: string,
-): Promise<MissingPriceEnrichmentResult | CronResult> {
-  const missingBefore = new Set(input.assets.filter(hasMissingPrice).map((asset) => asset.id));
-
-  const enrichAbort = input.returnIfAborted(input.signal, `${abortStagePrefix}enrich-prices`);
-  if (enrichAbort) return enrichAbort;
-  const enrichStats = await enrichMissingPrices(
-    input.assets,
-    input.cmcApiKey,
-    input.db,
-    input.signal,
-    input.jupiterApiKey,
-    input.coingeckoApiKey,
-    input.onProgress,
-    input.previousMissingGenerationsById,
-    undefined,
-    input.chainRpcs,
-  );
-
-  for (const asset of input.assets) {
-    if (missingBefore.has(asset.id) && !hasMissingPrice(asset) && !asset.priceConfidence) {
-      stampPriceMetadata(asset, asset.priceSource || "unknown", "fallback", input.syncStartSec);
-    }
-  }
-
-  return {
-    enrichStats,
-  };
-}
 
 // ---------------------------------------------------------------------------
 // Stage 2: Depeg detection + confirmation
@@ -568,8 +493,6 @@ export async function runDepegPipeline(
   fxFallbackRates: Record<string, number> | undefined,
   signal: AbortSignal | undefined,
   coingeckoApiKey: string | null | undefined,
-  returnIfAborted: (signal: AbortSignal | undefined, stage: string) => CronResult | null,
-  abortResult: (signal: AbortSignal | undefined, stage: string) => CronResult,
   abortStagePrefix: string,
   logContext: string,
   binanceSession?: BinanceFetchSession,

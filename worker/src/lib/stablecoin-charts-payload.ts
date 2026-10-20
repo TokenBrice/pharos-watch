@@ -1,8 +1,25 @@
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import {
   StablecoinChartAggregateUniverseSchema,
   type StablecoinChartPoint,
 } from "@shared/types/market";
 import { sanitizeRecordValues } from "./normalizers";
+
+/** Sample admitted chronological points without sorting or changing their payloads. */
+export function sampleHistoricalDatePoints<T extends { date: number }>(points: readonly T[], nowSec: number): T[] {
+  const sampled: T[] = [];
+  let lastKeptDate = 0;
+  for (const point of points) {
+    const interval = point.date >= nowSec - 90 * DAY_SECONDS
+      ? DAY_SECONDS
+      : point.date >= nowSec - 2 * 365 * DAY_SECONDS ? 7 * DAY_SECONDS : 30 * DAY_SECONDS;
+    if (point.date - lastKeptDate >= interval) {
+      sampled.push(point);
+      lastKeptDate = point.date;
+    }
+  }
+  return sampled;
+}
 
 function coerceFiniteNumber(value: unknown): number | undefined {
   const numeric = typeof value === "string" ? Number(value) : value;

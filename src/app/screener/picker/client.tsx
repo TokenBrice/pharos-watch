@@ -7,7 +7,6 @@ import {
   isValidSelectorSnapshotId,
   softConfirmationForHorizon,
   toSelectorInput,
-  type SelectorProfile,
   type SelectorStep,
 } from "@/lib/selector-state";
 import { useSelectorState } from "@/hooks/use-selector-state";
@@ -16,7 +15,7 @@ import { useHydrated } from "@/hooks/use-hydrated";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { SelectorQuestionCard } from "@/components/selector/selector-question-card";
 import { SelectorMobileForm } from "@/components/selector/selector-mobile-form";
-import type { SelectorOutput } from "@shared/lib/selector";
+import type { SelectorOutput, SelectorProfile } from "@shared/lib/selector/types";
 import { ResultPane } from "@/components/selector/result-pane";
 import {
   PROFILE_LABEL,
@@ -105,7 +104,7 @@ export function SelectorClient() {
 
   useEffect(() => {
     if (!hydrated || selector.status !== "ready" || state.step !== "result" || !output) return;
-    writeStoredSelectorRun(state, output);
+    writeStoredSelectorRun(state);
   }, [hydrated, selector.status, state, output]);
 
   const handleAdjust = useCallback(() => {

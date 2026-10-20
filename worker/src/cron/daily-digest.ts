@@ -9,7 +9,7 @@ import { SECONDS } from "../lib/time-constants";
 import { formatIsoDate } from "@shared/lib/format";
 import { setCache } from "../lib/db-cache";
 import { DEPEG_LIFECYCLE_FLAGS_CACHE_KEY } from "../lib/depeg-lifecycle";
-import { prepareTelegramDigestAppendices } from "../telegram/digest/digest-appendices";
+import { prepareTelegramDigestAppendices, type PreparedTelegramDigestAppendices } from "../telegram/digest/digest-appendices";
 import { buildDailyDigestInput, buildDigestSafetyMapCapture } from "./daily-digest/input";
 import { formatStandingConditionsLine } from "./daily-digest/cause-context";
 import { buildUserPrompt, SYSTEM_PROMPT } from "./daily-digest/prompt";
@@ -33,6 +33,7 @@ import {
   deliverDigestEdition,
   publishDigestEdition,
   resolveDailyDigestEditionNumber,
+  readDigestTelegramOutboxState,
   type DigestCredentialDiagnostics,
 } from "./digest/publish";
 import {
@@ -50,6 +51,7 @@ import { requestDigestCopy, resolveDigestLlmConfig } from "./digest/llm-request"
 import { DAILY_DIGEST_LLM_CONFIG, type DigestLlmConfig } from "../lib/constants";
 import { resolveDigestStyleGateMode } from "../lib/digest-style-gate";
 import { resolveDigestLlmProfile } from "../lib/digest-llm-profile";
+import { readTwitterDigestDeliveryStatus } from "../lib/twitter-digest-ledger";
 
 export { classifyRegime } from "./daily-digest/prompt";
 
@@ -57,6 +59,46 @@ const TWITTER_SENT_MARKER_PREFIX = "daily-digest:twitter-sent:";
 
 function getTwitterSentMarkerKey(date: string): string {
   return `${TWITTER_SENT_MARKER_PREFIX}${date}`;
+}
+
+async function buildDailyTelegramPublication(
+  db: D1Database,
+  digestDate: string,
+  input: Partial<DigestInputData> | null,
+  safetyMap: DigestSafetyMapResolution | null,
+  creds: TelegramCreds | null,
+  missingCredentialNames: readonly string[] | undefined,
+  degradedReasons: string[],
+  recapRollout: TelegramRecapRolloutPolicy | null,
+) {
+  let appendices: PreparedTelegramDigestAppendices | null = null;
+  if (creds) {
+    try {
+      appendices = await prepareTelegramDigestAppendices(db);
+    } catch (error) {
+      degradedReasons.push("telegram-appendix-state");
+      logWorkerEventArgs("handler", "error", "[daily-digest] Failed to prepare Telegram digest appendices:", error);
+    }
+  }
+  const mapCaptions = safetyMap?.kind === "available" && input?.safetyContext?.status === "available"
+    ? buildDigestSafetyMapCaptions(safetyMap.manifest.mapSummary, safetyMap.freshness, safetyMap.ageDays)
+    : null;
+  const standingLine = formatStandingConditionsLine(input?.standingConditions);
+  const appendixSuffix = appendices?.metadata.hasAppendix
+    ? `+appendix(cemetery=${appendices.metadata.cemeteryDetected},tracked=${appendices.metadata.trackedDetected},prelaunch=${appendices.metadata.preLaunchDetected})`
+    : "";
+  return buildDigestTelegramPublication(creds, missingCredentialNames, {
+    editionKey: `daily:${digestDate}`,
+    recapRollout,
+    appendixHtml: appendices?.appendixHtml ?? null,
+    extraSections: [
+      ...(standingLine ? [{ kind: "text" as const, content: standingLine }] : []),
+      ...(mapCaptions?.telegramAppendixHtml ? [{ kind: "html" as const, content: mapCaptions.telegramAppendixHtml }] : []),
+    ],
+    successActions: appendices?.successActions ?? [],
+    successStatus: `ok${appendixSuffix}`,
+    alreadySentStatus: "skipped: already-sent",
+  });
 }
 
 export async function generateDailyDigest(
@@ -270,27 +312,10 @@ export async function generateDailyDigest(
     qualityIssues,
     leadRequirements,
   });
-  const safetyMapCaptions = safetyMap?.kind === "available" && inputData.safetyContext?.status === "available"
-    ? buildDigestSafetyMapCaptions(
-        safetyMap.manifest.mapSummary,
-        safetyMap.freshness,
-        safetyMap.ageDays,
-      )
-    : null;
   const qualityGateStatus = hasBlockingQualityIssues ? "skipped: quality-gate" : null;
-  let telegramAppendices: Awaited<ReturnType<typeof prepareTelegramDigestAppendices>> | null = null;
-  if (!qualityGateStatus && telegramCreds) {
-    try {
-      telegramAppendices = await prepareTelegramDigestAppendices(db);
-    } catch (error) {
-      degradedReasons.push("telegram-appendix-state");
-      logWorkerEventArgs("handler", "error", "[daily-digest] Failed to prepare Telegram digest appendices:", error);
-    }
-  }
-  const standingLine = formatStandingConditionsLine(inputData.standingConditions);
-  const appendixSuffix = telegramAppendices?.metadata.hasAppendix
-    ? `+appendix(cemetery=${telegramAppendices.metadata.cemeteryDetected},tracked=${telegramAppendices.metadata.trackedDetected},prelaunch=${telegramAppendices.metadata.preLaunchDetected})`
-    : "";
+  const telegram = qualityGateStatus ? null : await buildDailyTelegramPublication(
+    db, digestDate, inputData, safetyMap, telegramCreds, credentialDiagnostics.telegramMissing, degradedReasons, recapRollout,
+  );
   const delivery = await publishDigestEdition({
     db,
     kind: "daily",
@@ -313,24 +338,7 @@ export async function generateDailyDigest(
       getTwitterSentMarkerKey(digestDate),
       credentialDiagnostics.twitterMissing,
     ),
-    telegram: buildDigestTelegramPublication(
-      telegramCreds,
-      credentialDiagnostics.telegramMissing,
-      {
-        editionKey: `daily:${digestDate}`,
-        recapRollout,
-        appendixHtml: telegramAppendices?.appendixHtml ?? null,
-        extraSections: [
-          ...(standingLine ? [{ kind: "text" as const, content: standingLine }] : []),
-          ...(safetyMapCaptions?.telegramAppendixHtml
-            ? [{ kind: "html" as const, content: safetyMapCaptions.telegramAppendixHtml }]
-            : []),
-        ],
-        successActions: telegramAppendices?.successActions ?? [],
-        successStatus: `ok${appendixSuffix}`,
-        alreadySentStatus: "skipped: already-sent",
-      },
-    ),
+    telegram,
     signal,
     reportProgress,
   });
@@ -429,14 +437,12 @@ export async function resumeDailyDigestDelivery(
   const storedInput = row.input_data
     ? safeJsonParse<Partial<DigestInputData> | null>(row.input_data, null, "daily-digest:resume:input_data")
     : null;
-  const outboxRow = telegramCreds
-    ? await db
-        .prepare("SELECT state FROM telegram_digest_outbox WHERE edition_key = ?")
-        .bind(`daily:${digestDate}`)
-        .first<{ state: string }>()
-    : null;
-  const alreadyEnqueued = outboxRow != null;
-  if (outboxRow && (outboxRow.state === "execution_unknown" || outboxRow.state === "failed_permanent")) {
+  const markerKey = getTwitterSentMarkerKey(digestDate);
+  const twitterStatus = twitterCreds ? await readTwitterDigestDeliveryStatus(db, markerKey) : null;
+  const editionKey = `daily:${digestDate}`;
+  const outboxState = telegramCreds ? await readDigestTelegramOutboxState(db, editionKey) : null;
+  const alreadyEnqueued = outboxState != null;
+  if (outboxState === "execution_unknown" || outboxState === "failed_permanent") {
     // The drain deliberately never retries these states (a blind resend could
     // double-post), so the retry loop cannot make progress either. Escalate
     // loudly for manual outbox reconciliation instead of retrying a send that
@@ -447,31 +453,14 @@ export async function resumeDailyDigestDelivery(
       event: "daily_digest_telegram_edition_unrecoverable",
       job: "daily-digest",
       message: "Today's Telegram digest edition is in a terminal non-sent outbox state; manual reconciliation required",
-      metadata: { date: digestDate, outboxState: outboxRow.state },
+      metadata: { date: digestDate, outboxState },
     });
   }
   throwIfAborted(signal);
   const degradedReasons: string[] = [];
-  let telegramAppendices: Awaited<ReturnType<typeof prepareTelegramDigestAppendices>> | null = null;
-  if (!alreadyEnqueued && telegramCreds) {
-    try {
-      telegramAppendices = await prepareTelegramDigestAppendices(db);
-    } catch (error) {
-      degradedReasons.push("telegram-appendix-state");
-      logWorkerEventArgs("handler", "error", "[daily-digest] Failed to prepare Telegram digest appendices:", error);
-    }
-  }
-  const mapCaptions = safetyMap?.kind === "available" && storedInput?.safetyContext?.status === "available"
-    ? buildDigestSafetyMapCaptions(
-        safetyMap.manifest.mapSummary,
-        safetyMap.freshness,
-        safetyMap.ageDays,
-      )
-    : null;
-  const standingLine = formatStandingConditionsLine(storedInput?.standingConditions);
-  const appendixSuffix = telegramAppendices?.metadata.hasAppendix
-    ? `+appendix(cemetery=${telegramAppendices.metadata.cemeteryDetected},tracked=${telegramAppendices.metadata.trackedDetected},prelaunch=${telegramAppendices.metadata.preLaunchDetected})`
-    : "";
+  const telegram = alreadyEnqueued ? null : await buildDailyTelegramPublication(
+    db, digestDate, storedInput, safetyMap, telegramCreds, credentialDiagnostics.telegramMissing, degradedReasons, recapRollout,
+  );
   const outcome = await deliverDigestEdition({
     db,
     kind: "daily",
@@ -491,46 +480,20 @@ export async function resumeDailyDigestDelivery(
     qualityGateStatus: null,
     degradedReasons,
     safetyMap,
-    twitter: twitterCreds || credentialDiagnostics.twitterMissing != null
-      ? {
-          creds: twitterCreds,
-          markerKey: getTwitterSentMarkerKey(digestDate),
-          required: credentialDiagnostics.twitterMissing != null,
-          missingCredentialNames: credentialDiagnostics.twitterMissing,
-        }
+    twitter: twitterStatus == null
+      ? buildDigestTwitterPublication(twitterCreds, markerKey, credentialDiagnostics.twitterMissing)
       : null,
-    // An already-enqueued Telegram edition is immutable and owned by the
-    // outbox drain; re-enqueueing would diff a rebuilt payload against the
-    // stored one, so the resume path leaves that channel alone.
-    telegram: alreadyEnqueued
-      ? null
-      : telegramCreds || credentialDiagnostics.telegramMissing != null
-        ? {
-            creds: telegramCreds,
-            editionKey: `daily:${digestDate}`,
-            recapRollout,
-            appendixHtml: telegramAppendices?.appendixHtml ?? null,
-            extraSections: [
-              ...(standingLine ? [{ kind: "text" as const, content: standingLine }] : []),
-              ...(mapCaptions?.telegramAppendixHtml
-                ? [{ kind: "html" as const, content: mapCaptions.telegramAppendixHtml }]
-                : []),
-            ],
-            successActions: telegramAppendices?.successActions ?? [],
-            required: credentialDiagnostics.telegramMissing != null,
-            missingCredentialNames: credentialDiagnostics.telegramMissing,
-            successStatus: `ok${appendixSuffix}`,
-          }
-        : null,
+    telegram,
     signal,
     reportProgress,
   });
-  const telegramStatus = outboxRow ? `outbox-${outboxRow.state}` : outcome.telegramStatus;
+  const tweetStatus = twitterStatus ?? outcome.tweetStatus;
+  const finalOutboxState = alreadyEnqueued ? await readDigestTelegramOutboxState(db, editionKey) : null;
+  const telegramStatus = alreadyEnqueued ? `outbox-${finalOutboxState ?? "execution_unknown"}` : outcome.telegramStatus;
   const dispositions = {
     ...outcome.dispositions,
-    telegram: outboxRow
-      ? classifyDigestChannelStatus(telegramStatus)
-      : outcome.dispositions.telegram,
+    twitter: twitterStatus == null ? outcome.dispositions.twitter : classifyDigestChannelStatus(tweetStatus),
+    telegram: alreadyEnqueued ? classifyDigestChannelStatus(telegramStatus) : outcome.dispositions.telegram,
   };
   const deliveryComplete = !hasNonDeliveringDisposition(dispositions);
   logWorkerEvent({
@@ -541,7 +504,7 @@ export async function resumeDailyDigestDelivery(
     message: "Resumed daily digest delivery from the stored edition",
     metadata: {
       date: digestDate,
-      tweetStatus: outcome.tweetStatus,
+      tweetStatus,
       telegramStatus,
       deliveryComplete,
       degradedReasons,
@@ -549,7 +512,7 @@ export async function resumeDailyDigestDelivery(
   });
   return {
     kind: "resumed",
-    tweetStatus: outcome.tweetStatus,
+    tweetStatus,
     telegramStatus,
     deliveryComplete,
   };

@@ -40,7 +40,7 @@ import {
   formatEventUtcTime,
   getDepegEventClosurePresentation,
 } from "@/lib/depeg-event-display";
-import { getDepegEditorial, qualifiesForEditorialBriefing } from "./editorials";
+import { getDepegEditorial } from "./editorials";
 import { CASE_STUDY_BY_DEPEG_SLUG } from "@/lib/case-studies";
 
 export function generateStaticParams() {
@@ -226,20 +226,7 @@ export default async function DepegEventPage(
   const eventRecordContext = buildDepegRecordContext({ event, versionLabel });
   const canonicalUrl = `${SITE_URL}/depeg/${event.slug}/`;
 
-  const authoredEditorial = getDepegEditorial(event.slug);
-  const qualifiesForBriefing = qualifiesForEditorialBriefing({
-    peakDeviationBps: event.peakDeviationBps,
-    startedAt: event.startedAt,
-    endedAt: event.endedAt,
-    hasCuratedAnnotation: curated != null,
-    hasAuthoredEditorial: authoredEditorial != null,
-  });
-  // Only promote to the authored briefing layout when (a) an editorial entry
-  // exists and (b) the event clears the threshold. The qualification gate
-  // prevents an accidentally-authored low-severity event from receiving
-  // briefing treatment; the entry gate prevents qualifying-but-unauthored
-  // events from rendering a half-authored shell.
-  const editorial = qualifiesForBriefing ? authoredEditorial : null;
+  const editorial = getDepegEditorial(event.slug);
   const incidentNumber = formatIncidentNumber(event.slug);
   const coinDisplayName = coin?.name ?? event.symbol;
   const incidentKicker = incidentNumber

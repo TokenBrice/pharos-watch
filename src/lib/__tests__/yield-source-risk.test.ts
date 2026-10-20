@@ -3,10 +3,12 @@ import {
   classifyYieldSourcePosture,
   classifyYieldSourceDepth,
   formatYieldSourceRiskSummary,
+  formatYieldSourceRiskCompact,
   formatYieldSourceRiskDriverSummary,
   getYieldSourceDepthDisplay,
   getYieldSourceRiskDrivers,
   isNativeYieldSource,
+  isYieldSourceRiskMaterial,
 } from "@/lib/yield-source-risk";
 import {
   classifyYieldSourceAgeContext,
@@ -84,6 +86,27 @@ describe("yield source risk UI helpers", () => {
       "Source risk 42/100 | 1.32x",
     );
     expect(formatYieldSourceRiskSummary({ sourceRiskScore: 2, sourceRiskPenalty: 1.01 })).toBeNull();
+  });
+
+  it.each([
+    { sourceRisk: null, material: false },
+    { sourceRisk: { sourceRiskScore: 9, sourceRiskPenalty: null }, material: false },
+    { sourceRisk: { sourceRiskScore: 10, sourceRiskPenalty: null }, material: true },
+    { sourceRisk: { sourceRiskScore: 42 }, material: true },
+    { sourceRisk: { sourceRiskScore: 99, sourceRiskPenalty: 1.05 }, material: false },
+    { sourceRisk: { sourceRiskScore: 2, sourceRiskPenalty: 1.06 }, material: true },
+    { sourceRisk: { sourceRiskScore: 42, sourceRiskPenalty: Number.NaN }, material: true },
+    { sourceRisk: { sourceRiskScore: Number.NaN }, material: false },
+  ])("shares penalty-first materiality with summary visibility: $sourceRisk", ({ sourceRisk, material }) => {
+    expect(isYieldSourceRiskMaterial(sourceRisk)).toBe(material);
+    expect(formatYieldSourceRiskSummary(sourceRisk) !== null).toBe(material);
+  });
+
+  it("does not substitute a neutral scoring multiplier for unobserved display evidence", () => {
+    expect(formatYieldSourceRiskSummary({ sourceRiskScore: 42, sourceRiskPenalty: null }))
+      .toBe("Source risk 42/100 | n/a");
+    expect(formatYieldSourceRiskCompact(null)).toBe("n/a | n/a");
+    expect(formatYieldSourceRiskCompact({ sourceRiskPenalty: 1 })).toBe("n/a | 1.00x");
   });
 
   it("keeps missing source-risk evidence neutral", () => {

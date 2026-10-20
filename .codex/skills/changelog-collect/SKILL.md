@@ -22,7 +22,7 @@ git log --no-merges --abbrev=8 --since="<from> 00:00:00 +0000" --until="<to> 23:
 
 2. Remove generated-refresh, ratchet/baseline, dependency-bump, `[skip ci]`, documentation-cleanup, and revert-of-revert noise from both analysis and the manifest. Scan subject frequencies first so new dominant automation wording is not mistaken for product work. If more than half is filtered, warn the reviewer.
 3. Cluster surviving work by story and user impact, normally 5–8 groups. Check stablecoin-count crossings, methodology versions, reserve/source additions, and security/auth milestones against their source files. A new external source also needs about-page coverage.
-4. Write a ≤120-character factual headline; 45–80 words of interpretive `fieldNotes`; and a summary item per cluster with a 2–4 word noun label, allowed tag from `src/data/changelogs/types.ts`, ≤220-character description, and methodology `href` when applicable.
+4. Write a ≤120-character factual headline; 45–80 words of interpretive `fieldNotes`; and a summary item per cluster with a 2–4 word noun label, allowed tag from `shared/types/editorial-content.ts`, ≤220-character description, and methodology `href` when applicable.
 5. Set `stats.totalCommits` to the full filtered count. Store only the newest `min(totalCommits, 20)` filtered commits, unchanged and newest-first; git history remains the archive.
 
 ## Write And Verify

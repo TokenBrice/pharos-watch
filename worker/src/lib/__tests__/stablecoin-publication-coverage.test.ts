@@ -6,6 +6,7 @@ import {
   resolveStablecoinPriceGapReviews,
   classifyStablecoinPublicationGap,
   compactStablecoinActivePriceCoverage,
+  parseMissingActivePriceDetail,
   parsePersistedMissingActivePriceState,
   evaluateStablecoinActivePriceCoverage,
   evaluateStablecoinPublicationCoverage,
@@ -669,6 +670,72 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
       lastAcceptedSource: "pyth",
       lastAcceptedObservedAt: null,
     });
+  });
+
+  it("decodes complete object/tuple details equally across legacy slots, malformed provenance and review expiry", () => {
+    const review = STABLECOIN_PRICE_GAP_REVIEWS.find((entry) => entry.stablecoinId === "wusd-worldwide")!;
+    const coin = ACTIVE_STABLECOINS.find((entry) => entry.id === review.stablecoinId)!;
+    const tuples: unknown[][] = [
+      [coin.id, 2, 0.99, "unknown-source", review.reviewedAt, "no-accepted-price"],
+      [coin.id, null, -1, {}, 9e15, 0, "previous-coverage-read-failed", 100, review.reviewedAt, "unknown-source", 0],
+      [coin.id, 0, "1", " ", null, " ", "unknown-reason", null, null, {}, null],
+      [coin.id, 1.5, NaN, null, Infinity, {}, null, NaN, Infinity, "publication", Infinity],
+      [coin.id, 3, 1, "coingecko", review.reviewedAt, "active-row-missing", null, 100, review.reviewedAt, "supply_history", null],
+    ];
+    for (const tuple of tuples) {
+      const verbose = {
+        stablecoinId: tuple[0], symbol: coin.symbol, currentPrice: null,
+        consecutiveMissingGenerations: tuple[1], lastAcceptedPrice: tuple[2], lastAcceptedSource: tuple[3],
+        lastAcceptedObservedAt: tuple[4], rejectionReason: tuple[5], streakUnavailableReason: tuple[6],
+        lastKnownMarketCapUsd: tuple[7], lastKnownMarketCapObservedAt: tuple[8],
+        lastKnownMarketCapSource: tuple[9], marketCapUsd: tuple[10],
+        acknowledgedGap: { owner: "persisted-not-trusted" }, alertEligible: false,
+      };
+      for (const nowSec of [review.expiresAt - 1, review.expiresAt]) {
+        const detail = parsePersistedMissingActivePriceState(tuple, { nowSec });
+        expect(detail).toEqual(parseMissingActivePriceDetail(verbose, { nowSec }));
+        expect(detail?.acknowledgedGap != null).toBe(nowSec < review.expiresAt);
+        expect(detail?.currentPrice).toBeNull();
+      }
+    }
+    expect(parsePersistedMissingActivePriceState(tuples[0], { nowSec: review.expiresAt })?.lastAcceptedSource)
+      .toBe("unknown-source");
+    expect(parsePersistedMissingActivePriceState(tuples[1], { nowSec: review.expiresAt })).toMatchObject({
+      consecutiveMissingGenerations: null, streakUnavailableReason: "previous-coverage-read-failed",
+      lastAcceptedSource: null, lastKnownMarketCapSource: null, alertEligible: true,
+    });
+    expect(parsePersistedMissingActivePriceState(tuples[2], { nowSec: review.expiresAt })).toMatchObject({
+      consecutiveMissingGenerations: null, streakUnavailableReason: "previous-coverage-malformed",
+      lastAcceptedPrice: null, rejectionReason: "no-accepted-price", lastKnownMarketCapSource: null,
+    });
+    expect(parseMissingActivePriceDetail({ stablecoinId: coin.id, currentPrice: 1 }, { nowSec: review.expiresAt - 1 }))
+      .toMatchObject({ acknowledgedGap: null });
+  });
+
+  it("retains the compact entry shape guard", () => {
+    for (const value of [null, {}, [], ["id", 1], [7, 1, null, null, null, null]]) {
+      expect(parsePersistedMissingActivePriceState(value)).toBeNull();
+    }
+  });
+
+  it.each([false, true])("requires every exact missing ID while resolving duplicate details (verbose=%s)", async (verbose) => {
+    const nowSec = 1_790_000_000;
+    const coverage = evaluateStablecoinActivePriceCoverage([], ["missing"], { nowSec });
+    const detail = { ...coverage.missingActiveAssets[0], consecutiveMissingGenerations: 5 };
+    const state = {
+      ...coverage, missingActiveAssets: verbose ? [detail, { ...detail, consecutiveMissingGenerations: 6 }] : [],
+      missingActiveState: [["missing", 2, null, null, null, "no-accepted-price"],
+        ["missing", 3, null, null, null, "no-accepted-price"]],
+    };
+    const read = (missingActiveIds: string[]) => loadPreviousStablecoinActivePriceCoverage(mockD1([{
+      match: "activePriceCoverage", rows: [],
+      first: { metadata: JSON.stringify({ activePriceCoverage: { ...state, missingActiveIds } }) },
+    }]), nowSec);
+    const result = await read(["missing"]);
+    expect(result).toMatchObject({ status: "ok", coverage: {
+      missingActiveIds: ["missing"], missingActiveAssets: [{ consecutiveMissingGenerations: verbose ? 6 : 3 }],
+    } });
+    expect(await read(["missing", "no-detail"])).toEqual({ status: "read-error", reason: "previous-coverage-malformed" });
   });
 
   it("loads verbose retained cap evidence and normalizes unknown source provenance to null", async () => {

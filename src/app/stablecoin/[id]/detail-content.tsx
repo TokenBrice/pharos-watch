@@ -183,7 +183,6 @@ function DetailNavigation({
         if (section.id === "how-it-breaks") return hasFailureScenario;
         return true;
       })}
-      railLabel="Jump to"
       navAriaLabel="Stablecoin detail section navigation"
       emphasis="pill-tabs"
       onActiveChange={onActiveChange}

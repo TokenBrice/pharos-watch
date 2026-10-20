@@ -1,4 +1,4 @@
-import type { CaseStudy } from "@/lib/case-studies/types";
+import type { CaseStudy } from "@shared/types/editorial-content";
 
 const CASE_STUDY_WORDS_PER_MINUTE = 200;
 

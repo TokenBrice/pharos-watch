@@ -6,9 +6,10 @@ import {
   type SelectorOutput,
   type SelectorScreenerFilterProjection,
 } from "@shared/lib/selector";
+import type { SelectorVenuePreference } from "@shared/lib/selector/types";
 import type { SelectorOption } from "@/components/selector/selector-question-card";
 import type { SelectorResultSummaryProps } from "@/components/selector/selector-result-summary";
-import { shouldSkipExitStep, type SelectorStep, type SelectorVenue, type SelectorWizardState } from "@/lib/selector-state";
+import { shouldSkipExitStep, type SelectorStep, type SelectorWizardState } from "@/lib/selector-state";
 import {
   DEPEG_OPTIONS,
   EXIT_OPTIONS,
@@ -109,7 +110,7 @@ function compareVenueParam(input: SelectorInput, state: SelectorWizardState): st
   return venueFromInput(input).join(",");
 }
 
-export function venueFromInput(input: SelectorInput): readonly SelectorVenue[] {
+export function venueFromInput(input: SelectorInput): readonly SelectorVenuePreference[] {
   const venue = venuePreferencesFromInput(input);
   if (venue.length > 0) return venue;
 
@@ -122,9 +123,9 @@ export function venueFromInput(input: SelectorInput): readonly SelectorVenue[] {
   return input.profile === "yield" ? ["lend"] : ["cex"];
 }
 
-function venuePreferencesFromInput(input: SelectorInput): readonly SelectorVenue[] {
+function venuePreferencesFromInput(input: SelectorInput): readonly SelectorVenuePreference[] {
   const allowed = new Set(VENUE_OPTIONS_BY_PROFILE[input.profile].map((option) => option.value));
-  return (input.venuePreferences ?? []).filter((value): value is SelectorVenue => allowed.has(value as SelectorVenue));
+  return (input.venuePreferences ?? []).filter((value): value is SelectorVenuePreference => allowed.has(value));
 }
 
 export function buildResultSummaryCoordinationProps({

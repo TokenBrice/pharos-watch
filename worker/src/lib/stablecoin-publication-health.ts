@@ -8,8 +8,7 @@ import type {
 } from "@shared/types/status";
 import { tryParseJson } from "./json-parse";
 import {
-  parseMissingActivePriceDetail,
-  parsePersistedMissingActivePriceState,
+  parseMissingActivePriceDetailsById,
   resolveStablecoinPriceGapReviews,
 } from "./stablecoin-publication-coverage";
 
@@ -127,23 +126,7 @@ function parseActivePriceCoverageHealth(
   const accountedIds = [...pricedActiveIds, ...nominalReferenceIds];
   const reviews = resolveStablecoinPriceGapReviews([...ACTIVE_IDS], nowSec);
   const parseOptions = { nowSec, reviewsById: reviews.activeById };
-  const missingDetailsById = new Map(
-    (Array.isArray(coverage.missingActiveState)
-      ? coverage.missingActiveState
-          .slice(0, ACTIVE_IDS.size)
-          .map((value) => parsePersistedMissingActivePriceState(value, parseOptions))
-          .filter((entry): entry is ActivePriceCoverageGap => entry != null)
-      : [])
-      .map((entry) => [entry.stablecoinId, entry] as const),
-  );
-  const verboseMissingDetails = Array.isArray(coverage.missingActiveAssets)
-    ? coverage.missingActiveAssets
-        .map((value) => parseMissingActivePriceDetail(value, parseOptions))
-        .filter((entry): entry is ActivePriceCoverageGap => entry != null)
-    : [];
-  for (const entry of verboseMissingDetails) {
-    missingDetailsById.set(entry.stablecoinId, entry);
-  }
+  const missingDetailsById = parseMissingActivePriceDetailsById(coverage, parseOptions);
   const missingActiveAssets = (missingActiveIds.length > 0
     ? missingActiveIds
     : [...missingDetailsById.keys()])

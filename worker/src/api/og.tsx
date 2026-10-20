@@ -286,7 +286,6 @@ interface StablecoinOgSignalsInput {
   pegScore: number | null;
   backing: BackingType | null;
   governance: string | null;
-  redemptionScore: number | null;
   change24h: number | null;
   variantLabel?: string | null;
   variantParentSymbol?: string | null;
@@ -304,7 +303,6 @@ export function deriveStablecoinOgCardData({
   pegScore,
   backing,
   governance,
-  redemptionScore,
   change24h,
   variantLabel,
   variantParentSymbol,
@@ -347,7 +345,6 @@ export function deriveStablecoinOgCardData({
     pegScore,
     backing,
     governance,
-    redemptionScore,
     change24h,
     variantLabel: variantLabel ?? null,
     variantParentSymbol: variantParentSymbol ?? null,
@@ -505,7 +502,6 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
       pegScore,
       backing: meta?.flags.backing ?? null,
       governance: meta?.flags.governance ?? null,
-      redemptionScore: null, // Not available in current cache schema
       change24h,
       variantLabel,
       variantParentSymbol,
@@ -593,13 +589,11 @@ async function handleSafetyScoresOg(db: D1Database): Promise<Response> {
   const data: SafetyScoresCardData = {
     gradeDistribution,
     // An average score is not an asset-level grade under either methodology.
-    pulseGrade: null,
     pulseScore: avgScore,
     coverageRatio: safetySource.kind === "ok" && totalCoins > 0 ? ratedCount / totalCoins : null,
     totalCoins,
     topPerformers,
     bottomPerformers,
-    trend: null,
     safetyModel: safetySource.kind === "ok" ? safetySource.model : null,
     lastUpdated: safetyPresentation.lastUpdated,
   };
@@ -848,8 +842,6 @@ async function handleStabilityIndexOg(db: D1Database): Promise<Response> {
     avg7d,
     retainedSampleHigh: retainedHighRow?.max ?? null,
     retainedSampleLow: retainedLowRow?.min ?? null,
-    flightToQuality: false,
-    flightIntensity: null,
     lastUpdated: sourceAsOf,
   };
 

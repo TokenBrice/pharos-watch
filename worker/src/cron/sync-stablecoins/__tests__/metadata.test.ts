@@ -59,7 +59,7 @@ function syncInput(
     assets,
     rawAssetCount: assets.length,
     droppedMalformedAssets: 0,
-    canonicalDeduplication: { dedupedAssets: assets, duplicateRows: 0, affectedIds: [] },
+    canonicalDeduplication: { duplicateRows: 0, affectedIds: [] },
     enrichStats: {},
     priceValidationStats: {},
     providerDiagnostics: [],
@@ -390,7 +390,6 @@ describe("stablecoins pricing metadata", () => {
       rawAssetCount: assets.length,
       droppedMalformedAssets: 0,
       canonicalDeduplication: {
-        dedupedAssets: assets,
         duplicateRows: 1,
         affectedIds: assets.map((asset) => asset.id),
       },

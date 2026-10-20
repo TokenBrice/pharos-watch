@@ -15,7 +15,8 @@ import {
   buildYieldSnapshotRecommendation,
 } from "./snapshot-fixture";
 import { BluechipGradeSchema } from "../../../types/core";
-import { SELECTOR_VERSION } from "../version";
+import { SELECTOR_SNAPSHOT_SUPPORTED_ENGINE_VERSIONS, SELECTOR_VERSION } from "../version";
+import { sha256Hex } from "../../sha256";
 import { runSelector } from "../engine";
 import { FIXTURE_DATASET, makeInput, makeMergedRowWithIdentity } from "./fixture";
 import { makeYieldRailRow } from "./engine.test-support";
@@ -121,6 +122,86 @@ function buildCurrentTradingSnapshot(): Record<string, unknown> {
 }
 
 describe("selector snapshot contract", () => {
+  it("preserves old-guard SID fingerprints and unknown-field projection for every retained profile/version", () => {
+    const sids: string[] = [];
+    const row = makeMergedRowWithIdentity(
+      { id: "usdc-circle", symbol: "USDC", name: "USD Coin" },
+      { yieldVenueChain: "ethereum", yieldProtocolSlug: "aave" },
+    );
+    for (const profile of ["treasury", "yield", "trading"] as const) {
+      const fixture = buildSelectorSnapshotOutput();
+      const legacy = buildSelectorSnapshotOutput({
+        profile, input: { ...(fixture.input as Record<string, unknown>), profile },
+        recommended: [({
+          treasury: buildSnapshotRecommendation, yield: buildYieldSnapshotRecommendation,
+          trading: buildTradingSnapshotRecommendation,
+        })[profile]()],
+      });
+      const current = runSelector(makeInput({ profile }), { rows: new Map([[row.id, row]]) }, {
+        ...FIXTURE_DATASET, datasetHash: "a".repeat(64),
+      });
+      for (const engineVersion of SELECTOR_SNAPSHOT_SUPPORTED_ENGINE_VERSIONS) {
+        const raw = engineVersion.startsWith("selector-v1.") ? legacy : current;
+        const baseline = expectValid({
+          ...raw, engineVersion,
+          methodologyVersions: { ...raw.methodologyVersions as Record<string, unknown>, exclusionFilters: engineVersion },
+        });
+        const projected = expectValid({
+          ...baseline, unknownRoot: { nested: [true] }, provenance: "ignored", snapshotSchemaVersion: -1,
+          input: { ...baseline.input, unknownInput: "ignored" },
+          recommended: baseline.recommended.map((rec) => ({
+            ...rec, unknownRecommendation: true,
+            components: rec.components.map((component) => ({ ...component, unknownComponent: true })),
+          })),
+        });
+        expect(JSON.stringify(projected)).toBe(JSON.stringify(baseline));
+        const verified = createVerifiedSelectorSnapshot(baseline);
+        expect(validateSelectorSnapshotResponse(verified)).toEqual({ ok: true, snapshot: verified });
+        expect(validateSelectorSnapshotResponse({ ...verified, unknownRoot: true }).ok).toBe(false);
+        sids.push(computeSelectorSnapshotSid(projected), computeSelectorSnapshotSid(verified));
+      }
+    }
+    // Captured from the pre-schema hand guards, not calculated by the new parser.
+    expect(sha256Hex(JSON.stringify(sids))).toBe("6a40642f03672f308cc270fd402f183fa6df9738bd9d222620b4daadb5ccb680");
+  });
+
+  it.each([12, 13])("runs the safety gate before projection at JSON depth %i", (depth) => {
+    let nested: unknown = 0;
+    for (let index = 1; index < depth; index++) nested = [nested];
+    const verified = createVerifiedSelectorSnapshot(expectValid(buildSelectorSnapshotOutput()));
+    const value = { ...verified, ageSeconds: nested };
+    for (const validate of [validateSelectorSnapshotInput, validateSelectorSnapshot, validateVerifiedSelectorSnapshot, validateSelectorSnapshotResponse]) {
+      if (depth === 12) expect(validate(value).ok).toBe(true);
+      else expect(validate(value)).toEqual({ ok: false, error: "unsafe" });
+    }
+  });
+
+  it.each(["__proto__", "constructor", "prototype"])("rejects %s inside unknown arrays before stripping", (key) => {
+    const reserved = JSON.parse(`{"${key}":{"polluted":true}}`) as Record<string, unknown>;
+    const value = { ...buildSelectorSnapshotOutput(), ageSeconds: [{ nested: [reserved] }] };
+    for (const validate of [validateSelectorSnapshotInput, validateSelectorSnapshot, validateVerifiedSelectorSnapshot, validateSelectorSnapshotResponse]) {
+      expect(validate(value)).toEqual({ ok: false, error: "unsafe" });
+    }
+  });
+
+  it.each([undefined, null])("preserves omitted/null yield source fields without widening required fields: %s", (absent) => {
+    const rec = buildYieldSnapshotRecommendation();
+    const source = rec.recommendedSource as Record<string, unknown>;
+    const fixture = buildSelectorSnapshotOutput();
+    const raw = buildSelectorSnapshotOutput({
+      profile: "yield", input: { ...fixture.input as Record<string, unknown>, profile: "yield" },
+      recommended: [{
+        ...rec, recommendedSource: { ...source, freshness: absent, sourceKey: absent, sourceTvlUsd: absent, yieldType: absent },
+      }],
+    });
+    const snapshot = expectValid(raw);
+    expect(snapshot.recommended[0]?.recommendedSource?.freshness).toBeNull();
+    expect(snapshot.recommended[0]?.recommendedSource?.sourceKey).toBe(absent);
+    expectInvalid({ ...raw, recommended: [{ ...rec, recommendedSource: { ...source, sourceRiskTier: undefined } }] });
+    expectInvalid({ ...raw, recommended: [{ ...rec, recommendedSource: { ...source, sourceTvlUsd: -1 } }] });
+    expectInvalid({ ...raw, recommended: [{ ...rec, recommendedSource: { ...source, pharosYieldScore: 101 } }] });
+  });
+
   it("round-trips insufficient-control coverage and does not re-evaluate v2.9 frozen eligibility", () => {
     const row = makeMergedRowWithIdentity(
       { id: "usdc-circle", symbol: "USDC", name: "USD Coin" },

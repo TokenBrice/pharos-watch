@@ -173,6 +173,8 @@ The closing line is legal because it is arithmetic against the issuer's own clai
 
 Generated consumers read this block only. Editing it requires a monotonic `version` bump; prose-only edits above leave `version` and the policy hash unchanged.
 
+The generator and runtime share the readonly `EditorialPolicy` contract from `shared/lib/editorial-style.ts`. The generator imports that contract as a type only and still validates raw JSON, enum references and regular expressions before hashing or rendering; type annotations do not admit untrusted policy input.
+
 ```json editorial-policy
 {
   "version": "1.2",

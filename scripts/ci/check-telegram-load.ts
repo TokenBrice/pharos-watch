@@ -53,6 +53,7 @@ import {
   ACTIVE_SUBSCRIPTION_FLAGS_SQL,
   ACTIVE_WATCHER_SQL_CONDITION,
   TELEGRAM_ALERT_PERSISTENCE,
+  TELEGRAM_LIFECYCLE_OPT_IN_PROJECTIONS_SQL,
   buildActivePresetAggregateSql,
   buildActiveSubscriptionAggregateSql,
 } from "@shared/lib/telegram-alert-families";
@@ -501,6 +502,7 @@ export function extractProductionStatusSql(sourceText: string): Map<string, stri
     ["ACTIVE_PRESET_FLAGS_SQL", ACTIVE_PRESET_FLAGS_SQL],
     ["ACTIVE_SUBSCRIPTION_FLAGS_SQL", ACTIVE_SUBSCRIPTION_FLAGS_SQL],
     ["ACTIVE_WATCHER_SQL_CONDITION", ACTIVE_WATCHER_SQL_CONDITION],
+    ["TELEGRAM_LIFECYCLE_OPT_IN_PROJECTIONS_SQL", TELEGRAM_LIFECYCLE_OPT_IN_PROJECTIONS_SQL],
     ["PENDING_DELIVERY_STATE_PLACEHOLDERS", loadProductionPendingStates().map(() => "?").join(", ")],
   ]);
   function visitConstants(node: ts.Node): void {

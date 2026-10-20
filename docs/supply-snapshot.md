@@ -147,6 +147,8 @@ CREATE TABLE IF NOT EXISTS chain_supply_history (
 
 **Primary source:** DefiLlama list API (`stablecoins.llama.fi/stablecoins`), cached every 15 minutes by `syncStablecoins()`.
 
+The intake loader owns the initial FX read and intake progress/abort boundaries, returning main, fallback or withheld outcomes without a transport-only stage wrapper. The outer sync retains the insufficient-fallback error decision.
+
 **Tracked gap-fill exceptions:** `syncStablecoins()` now has four supply-reconciliation lanes for tracked DefiLlama-backed assets:
 
 - For exactly one missing metadata chain identity (contract entries are deduplicated by chain), the explicit CoinGecko aggregate gap-fill lane can raise the aggregate and attribute only the admitted increase to that chain. This is not a chain-only attribution that leaves the aggregate unchanged. The current-cap candidate and published chart point have distinct admission clocks, described below; stale or ambiguous attribution fails closed. The bounded contract requires coherent buckets and no duplicate native/bridge/custody amount.
@@ -197,6 +199,8 @@ Supplemental on-chain supply failures identify asset, chain, contract and machin
 **File:** `shared/lib/supply.ts`
 
 `admitSupplyBuckets()` is the current/history bucket authority: an explicit finite nonnegative record is observed (including zero), `{}`/null/undefined is absent, and a negative, nonfinite or overflowing record is invalid. No invalid bucket is discarded into a partial numeric total. `sumPegBucketsOrNull()` returns only an admitted total; otherwise it returns null. Publication's `fillMissingSupplyHistory()` uses the shared historical nullable helpers for ordinary rows, so empty records also qualify for existing exact-day D1 history fallback. It preserves observed values (including zero), requires one current peg bucket and an observed 1d/7d/30d row within 30% of positive current supply, and never synthesizes missing dates.
+
+Intake admits primary current supply before merging supplemental coverage. An admitted positive or explicit-zero primary row keeps precedence over a duplicate supplemental row. Absent or invalid primary supply is quarantined first, so supplemental admission uses the ordinary missing-ID merge with its own source and observation clock, not a primary replacement pass. Existing reviewed gap repair and carry-forward rules are unchanged.
 
 The shared live-summary projection applies this admission to selected historical USD checkpoints and legacy/direct previous-day inputs before output. Day/week/month selection first chooses the newest sample at or before the target within one day, then admits that sample; an invalid selected record remains `{}`, never an older valid measurement or an invented zero. Current USD buckets use the same admission, native checkpoints use nullable admitted totals, and measured zero survives both contracts.
 
@@ -273,6 +277,8 @@ On-chain `totalSupply()` and configured inventory-exclusion backfills persist a 
 
 The operator backfill also supports `detailProvider === "coingecko"` and `"commodity"`. CoinGecko history selects the first valid exact-timestamp price/cap pair per UTC day; unmatched prices do not borrow another intraday cap. Non-USD regular coins fetch historical prices for native-to-USD conversion by default. Explicit `allow-constant-price-fallback=true` permits a current-price emergency fallback only for missing historical prices on entries within the preceding seven days. Historical `totalSupply()` replay requires exactly one deployment in the **complete** metadata roster and canonical EVM probe eligibility; mixed-family or other unsupported rosters return `unsupported-complete-roster`, never one-chain global supply. Batch processing uses `stablecoin`, `batch`, and `batchSize`; `startDay` / `endDay` bound daily writes, with future `endDay` clamped to the last completed UTC day.
 
+The prices-only CoinGecko backfill transport shares request/validation handling, not history policy: daily requests keep `days=max` or explicit ranges; hourly requests retain the 2018-01-30 epoch, serial 89-day chunks, per-request pacing and later-point overlap precedence. Only an entirely empty hourly result triggers daily fallback; native-peg currencies and the recycled Solomon identity exclusion remain unchanged. This path does not fetch coin details.
+
 ---
 
 ## Frontend
@@ -338,6 +344,8 @@ DefiLlama supplies the primary list; CoinGecko market cap, DefiLlama history and
 - **DefiLlama** — primary for stablecoins tracked by its stablecoin API
 - **CoinGecko market cap** — supplemental commodity and CoinGecko-detail assets. During DefiLlama outages, `syncViaCoingeckoFallback()` uses the already-fetched commodity/CoinGecko-detail cap feed, not a new whole-cohort request. Missing fresh caps are omitted from intake; fewer than `MIN_VALID_ASSET_COUNT` admitted rows blocks publication before continuity restoration.
 
+Main and outage fallback enter one post-intake publication pipeline. Its main/fallback context alone determines operational labels and DefiLlama circuit bookkeeping; supply admission, aggregate/chain/history packets and observation clocks remain source-owned. Completion metadata excludes intake payloads and guard persistence state.
+
 Supply policy and prohibited overrides are governed by [ADR-8](./architecture.md#adr-8); [Supply Data Source](#supply-data-source) owns runtime admission.
 
 savUSD's curated aggregate reads Avalanche CCIP LockRelease escrow `0x8fcc42c414e29e8e3dbfa1628cf45e8ed80c999d`, separating canonical free float, measured remote deployments and `savUSD unattributed CCIP escrow`. The residual conserves unprobed Base/Arbitrum/Movement custody without assigning it to Avalanche. Unreadable escrow, escrow > canonical supply or < measured representations rejects. Supplemental fiat/commodity/outage fallback dates supply from the winning observation: market-cap `last_updated_at` or on-chain reader `observedAt`, never price/NAV time. Silver units-times-price retains circulating `coins/markets.last_updated`; winning CoinGecko market cap retains its own timestamp. Undated DefiLlama protocol market caps stay undated.
@@ -392,6 +400,8 @@ Coverage decisions: `rusd-royal-dollar` uses DefiLlama Royal Dollar (`llamaId = 
 Four records are quarantined with `changedAt: 2026-09-24`, `reviewBy: 2026-10-24`: `hlusd-hela` has no supported tracked contract and CoinGecko is stale since Biconomy's 2026-08-14 trading suspension; `vusd-virtue` has unprobeable IOTA Move issuance, making partial IOTA EVM raw supply inadmissible; `luausd-lumi-finance` has no CoinGecko/DefiLlama price and only an imbalanced, zero-volume Arbitrum Curve pool (~$3.4K effective TVL); `bib01-backed` is in issuer wind-down, with CoinGecko frozen since 2026-09-17 and DefiLlama re-stamping 121.86, so its seven-chain aggregate cannot be valued. `vcred-vcred` stays active: Hemi's registered independent RPCs are `rpc.hemi.network/rpc` and `hemi.drpc.org`; `CURATED_ONCHAIN_SUPPLY_EXCLUSIONS` subtracts 987,400,000 protocol SafeProxy units from 1,000,000,000 total (RPC-verified 2026-09-24), yielding CoinGecko's 12,600,000 circulating basis. `usda-avalon` stays active with dated price-gap acknowledgement: supply is sound, but its sole DefiLlama per-deployment quote (e.g. `nibiru` 0xf4e0…2003) is intermittently re-stamped, not absent.
 
 `syncStablecoinCharts()` reads `stablecoincharts/all`, repairs FX, then overlays D1 `supply_history` for tracked non-DefiLlama assets without `llamaId` before downsampling/publication. BRZ alone is excepted: its legacy DefiLlama ID has no chart rows. CoinGecko-admitted rows with DefiLlama chart identities are not double-counted. `GET /api/stablecoin-charts` serves that cache without a trailing live `stablecoins` aggregate point.
+
+Aggregate supply charts and non-USD share history share chronological spacing: daily from the inclusive 90-day boundary, weekly from the inclusive two-year boundary, and 30-day spacing earlier. Selection measures elapsed seconds from the last retained point, without calendar alignment or a forced latest point. Chart sorting/projection and minimum-point admission remain producer-owned; non-USD window cutoff and coverage admission happen before sampling, preserving admitted null/zero payloads.
 
 Producer intake quarantines empty/all-invalid base buckets with `invalid-chart-base-buckets-dropped` before repair, overlays or sampling; genuine observed zero remains admitted. Overlay rows never fabricate points for rejected base dates. The final payload must satisfy `normalizeStablecoinChartPoints()` before persistence.
 

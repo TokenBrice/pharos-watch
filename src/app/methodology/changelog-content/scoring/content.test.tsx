@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { SAFETY_SCORE_METHODOLOGY_CHANGELOG } from "@shared/lib/methodology-versions/registry";
-import type { MethodologyChangelogDetailBlock } from "@shared/lib/methodology-versions/base";
+import type { MethodologyChangelogDetailBlock } from "@shared/types/editorial-content";
 import { ScoringChangelogContent, scoringAnchorId } from "./content";
 
 describe("ScoringChangelogContent", () => {

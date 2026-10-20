@@ -10,9 +10,9 @@ import { isProviderCircuitAllowed, recoverProviderOnNoCandidates, recordProvider
 import { hasPublishableCurrentPrice } from "../../lib/price-publication-state";
 import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
 import {
-  buildAddressPriceTargetsByProvider,
+  buildAddressPriceTargets,
   collectAddressPriceProviderQuotes,
-  resolveEnabledAddressPriceProviders,
+  isCoingeckoOnchainAddressEnabled,
   type AddressPriceProviderRuntimeConfig,
 } from "../../lib/address-price-providers";
 import { clearPriceMetadata, loadPreviousStablecoinsById } from "./shared";
@@ -201,30 +201,27 @@ async function runAddressRefresh(params: {
   const resolvedTargets = new Map<string, ExactTarget>();
   const definitiveIds = new Set<string>();
   const none = { summary, observations, targets: [] as ExactTarget[], unresolvedIds: [] as string[] };
-  const providers = resolveEnabledAddressPriceProviders(params.addressProvider);
-  if (providers.length === 0 || !params.addressProvider) return none;
+  if (!isCoingeckoOnchainAddressEnabled(params.addressProvider) || !params.addressProvider) return none;
   summary.enabled = true;
   const deploymentHints = new Map(params.hints.map((hint) => [hint.id, { chain: hint.chain, address: hint.target }] as const));
-  const targetsByProvider = buildAddressPriceTargetsByProvider({
+  const targets = buildAddressPriceTargets({
     assets: [...params.previousAssetsById.values()]
       .filter((asset) => ACTIVE_META_BY_ID.has(asset.id) &&
         (!params.reviewedGapIds.has(asset.id) ||
           (hasPublishableCurrentPrice(asset) &&
             splitCompositePriceSource(asset.priceSource ?? "").includes("coingecko-onchain-address")))),
     previousAssetsById: params.previousAssetsById,
-    providers,
     nowSec: params.syncStartSec,
     cohort: "coverage-refresh",
     deploymentHints,
   });
-  const targets = targetsByProvider.get("coingecko-onchain-address") ?? [];
   summary.targetCount = targets.length;
   summary.cohortSize = new Set(targets.map((target) => target.stablecoinId)).size;
   // No targets means nothing this lane can price; requesting anyway would spend
   // the request cap and record a meaningless provider outcome.
   if (targets.length === 0) return none;
-  const sourceAllowed = { "coingecko-onchain-address": await shouldAttemptFetch(params.db, CIRCUIT_SOURCE.CG_ONCHAIN) };
-  if (!sourceAllowed["coingecko-onchain-address"]) {
+  const sourceAllowed = await shouldAttemptFetch(params.db, CIRCUIT_SOURCE.CG_ONCHAIN);
+  if (!sourceAllowed) {
     summary.circuitOpen = true;
     return none;
   }
@@ -232,7 +229,7 @@ async function runAddressRefresh(params: {
     timeoutReason: new DOMException("Address refresh deadline", "TimeoutError"), parentSignal: params.signal });
   try {
     const result = await collectAddressPriceProviderQuotes({
-      targetsByProvider, providers, sourceAllowed, config: params.addressProvider,
+      targets, sourceAllowed, config: params.addressProvider,
       signal: timeout.signal, nowSec: Math.floor(Date.now() / 1_000), budgetMs: ADDRESS_REFRESH_BUDGET_MS,
     });
     summary.attemptedRequests = result.attemptedRequests;
@@ -244,11 +241,7 @@ async function runAddressRefresh(params: {
     summary.failureClasses = [...new Set(result.diagnostics
       .filter((diagnostic) => !diagnostic.success && diagnostic.status !== 404)
       .map((diagnostic) => diagnostic.errorClass ?? "upstream-error"))];
-    for (const [provider, outcome] of result.providerOutcomes) {
-      if (provider === "coingecko-onchain-address") {
-        await recordOutcomeDecision(params.db, CIRCUIT_SOURCE.CG_ONCHAIN, outcome);
-      }
-    }
+    await recordOutcomeDecision(params.db, CIRCUIT_SOURCE.CG_ONCHAIN, result.providerOutcome);
     for (const [stablecoinId, quotes] of result.quotesByStablecoinId) {
       for (const quote of quotes) {
         observations.push({ id: stablecoinId, source: quote.source, chain: quote.chain, target: quote.address,

@@ -1,6 +1,5 @@
 import type {
   AggregatedShockScenario,
-  ShockPositionInput,
   ShockPositionOutcome,
   ShockScenarioResult,
   ShockSimulationRun,
@@ -75,18 +74,6 @@ export function deltaPpm(measured: bigint, reference: bigint): number {
 export function isWithinDeltaPpm(measured: bigint, reference: bigint, tolerancePpm: number): boolean {
   if (reference <= 0n || !Number.isInteger(tolerancePpm) || tolerancePpm < 0) return false;
   return absoluteDelta(measured, reference) * 1_000_000n <= reference * BigInt(tolerancePpm);
-}
-
-export function serialisePosition(position: ShockPositionInput) {
-  return {
-    id: position.id,
-    debtRaw: position.debt.toString(),
-    collateralRaw: position.collateral.toString(),
-    pendingDebtRaw: position.pendingDebt.toString(),
-    pendingCollateralRaw: position.pendingCollateral.toString(),
-    status: position.status,
-    liquidationOrder: position.liquidationOrder,
-  };
 }
 
 export function serialiseOutcome(outcome: ShockPositionOutcome) {

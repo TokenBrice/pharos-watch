@@ -3,7 +3,7 @@ import { isAbsolute, relative, resolve } from "node:path";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { formatCompactUsdWithOptions } from "@shared/lib/format";
 import { isRecord, numberValue, stringValue } from "@shared/lib/type-guards";
-import { markdownValue, renderMarkdownRows } from "./markdown-report";
+import { markdownValue } from "./markdown-report";
 import { writeFileResolved } from "./cli-args.mjs";
 
 export { isRecord, markdownValue, numberValue, stringValue };
@@ -271,28 +271,6 @@ export async function runCoverageAuditCli<TOptions extends CoverageAuditShellOpt
     }
   }
   return failures.length > 0 ? 1 : 0;
-}
-
-export function renderMarkdownSummary(rows: readonly [string, unknown][]): string[] {
-  return rows.map(([label, value]) => `- ${label}: ${value}`);
-}
-
-export function renderMarkdownTable(
-  headings: readonly string[],
-  rows: readonly (readonly unknown[])[],
-  { limit }: { limit?: number } = {},
-): string[] {
-  return renderMarkdownRows({ headings, rows, cells: (row) => row, limit });
-}
-
-export function renderMarkdownAuditDocument(title: string, sections: readonly {
-  heading: string;
-  lines: readonly string[];
-}[], preamble: readonly string[] = []): string {
-  const lines = [`# ${title}`, "", ...preamble];
-  if (preamble.length > 0) lines.push("");
-  for (const section of sections) lines.push(`## ${section.heading}`, "", ...section.lines, "");
-  return `${lines.join("\n").trimEnd()}\n`;
 }
 
 export interface CandidateReportCliOptions {

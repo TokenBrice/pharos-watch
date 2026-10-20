@@ -71,7 +71,6 @@ interface BuildCoverageRowInput {
   hasYieldCoverage: boolean;
   flowCoverageStatus: MintBurnCoverageStatus | null | undefined;
   dependencyCoverage?: DependencyCoverageFact | null;
-  hasDependencyCoverage?: boolean;
   blacklistStatus?: BlacklistStatus | null;
   /** Published V9 mint component; absent publications render a not-rated mint band. */
   publishedMint?: PublishedMintComponent | null;
@@ -187,7 +186,6 @@ export function buildCoverageRow({
   hasYieldCoverage,
   flowCoverageStatus,
   dependencyCoverage,
-  hasDependencyCoverage,
   blacklistStatus = null,
   publishedMint = null,
   liveReserveFresh = null,
@@ -205,7 +203,7 @@ export function buildCoverageRow({
     blacklist: modules.blacklist.resolve(coin, blacklistStatus),
     mica: modules.mica.resolve(coin.mica),
     genius: modules.genius.resolve(coin.genius),
-    dependency: modules.dependency.resolve(dependencyCoverage ?? hasDependencyCoverage, hasData("dependency")),
+    dependency: modules.dependency.resolve(dependencyCoverage, hasData("dependency")),
     mintAuthority: modules.mintAuthority.resolve(coin.mintAuthoritySummary, publishedMint, hasData("mintAuthority")),
   } satisfies Record<CoverageFeatureKey, CoverageStatus>;
 

@@ -4,9 +4,12 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+const launchBrowser = vi.hoisted(() => vi.fn());
+vi.mock("playwright", () => ({ chromium: { launch: launchBrowser } }));
+
 import { parseFreezeStablecoinArgs } from "../maintenance/freeze-stablecoin";
 import { parseD1InsightsArgs } from "../maintenance/capture-d1-insights.mjs";
-import { parseSeoRenderBudgetArgs } from "../maintenance/audit-seo-render-budget.mjs";
+import { parseSeoRenderBudgetArgs, runSeoRenderBudget } from "../maintenance/audit-seo-render-budget.mjs";
 
 import {
   run as waitForReleaseMarker,
@@ -16,6 +19,7 @@ const tempDirs: string[] = [];
 
 afterEach(() => {
   for (const path of tempDirs.splice(0)) rmSync(path, { force: true, recursive: true });
+  vi.unstubAllEnvs();
 });
 
 describe("priority operator CLI parsers", () => {
@@ -31,6 +35,23 @@ describe("priority operator CLI parsers", () => {
     ["--url=one", "--url=two"], ["extra"], ["--routes=,"],
   ])("rejects invalid SEO audit usage %j", (...argv) => {
     expect(() => parseSeoRenderBudgetArgs(argv)).toThrow(expect.objectContaining({ exitCode: 2 }));
+  });
+
+  it.each([
+    [undefined, undefined, { headless: true }],
+    [" /browser/chromium ", undefined, { executablePath: "/browser/chromium", headless: true }],
+    [undefined, " chrome-beta ", { channel: "chrome-beta", headless: true }],
+    [" /browser/chromium ", " chrome-beta ", { executablePath: "/browser/chromium", headless: true }],
+  ])("preserves SEO launch options for executable=%s channel=%s", async (executablePath, channel, expected) => {
+    vi.stubEnv("SEO_AUDIT_BROWSER_EXECUTABLE_PATH", executablePath);
+    vi.stubEnv("SEO_AUDIT_BROWSER_CHANNEL", channel);
+    vi.stubEnv("GITHUB_ACTIONS", "true");
+    vi.stubEnv("SMOKE_UI_BROWSER_CHANNEL", "chrome");
+    vi.stubEnv("SMOKE_UI_BROWSER_EXECUTABLE_PATH", "/unrelated/smoke-browser");
+    const failure = new Error("Executable doesn't exist");
+    launchBrowser.mockReset().mockRejectedValue(failure);
+    await expect(runSeoRenderBudget(["--routes=/", "--wait-ms=0"])).rejects.toBe(failure);
+    expect(launchBrowser).toHaveBeenCalledExactlyOnceWith(expected);
   });
 
   it("preserves D1 capture defaults and repeatable period/sort selection", () => {

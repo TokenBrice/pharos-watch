@@ -53,6 +53,7 @@ import { PSI_HEX_COLORS, type ConditionBand } from "@shared/lib/classification";
 import { V9_GRADE_THRESHOLDS } from "@shared/lib/report-card-core";
 import { admitSupplyBuckets, getCirculatingRawOrNull } from "@shared/lib/supply";
 import { StablecoinListResponseSchema, type StablecoinListResponse } from "@shared/types/market";
+import type { DigestSafetyMapSummary } from "@shared/types/digest-safety-map-contract";
 import {
   ReportCardsV9CurrentResponseSchema,
   type ReportCardsV9CurrentResponse,
@@ -60,9 +61,7 @@ import {
 import { StabilityIndexResponseSchema, type StabilityIndexCurrent } from "@shared/types/stability";
 import { buildSvgBrowserDocument, escapeXml } from "../lib/og-svg.mts";
 import {
-  planAnnotations,
   validateAnnotationScene,
-  type Annotation,
   type AnnotationScene,
   type PlacedAnnotation,
   type Rect,
@@ -1838,7 +1837,7 @@ export function validateComposition(input: {
   return violations;
 }
 
-function annotationSceneForBands(bands: readonly BandLayout[], annotations: readonly PlacedAnnotation[] = []): AnnotationScene {
+export function annotationSceneForBands(bands: readonly BandLayout[], annotations: readonly PlacedAnnotation[] = []): AnnotationScene {
   const circles = bands.flatMap((band) => band.bubbles.map((bubble) => ({
     id: bubble.coin.id,
     cx: bubble.cx,
@@ -1864,7 +1863,6 @@ function annotationSceneForBands(bands: readonly BandLayout[], annotations: read
       ...chromeKeepOuts().filter((rect) => rect.id.startsWith("masthead-")).map((rect) => ({ ...rect, role: "obstacle" as const })),
       ...slotRects,
     ],
-    lines: [],
     orbits: bands.map((band, index) => ({
       id: `band-${band.tier}-${index}`,
       cx: GALAXY_CX,
@@ -1963,25 +1961,17 @@ export function supplyMassBarWidth(tierMcap: number, totalMcap: number, trackWid
   return totalMcap > 0 ? (tierMcap / totalMcap) * trackWidth : 0;
 }
 
-function publicationAnnotationRequests(): Annotation[] {
-  const fixed = (id: string, classId: string, priority: number, rect: Rect): Annotation => ({
-    id,
-    classId,
-    priority,
-    required: true,
-    bounds: { w: rect.w, h: rect.h },
-    candidates: [{ id: `${id}:fixed`, anchor: { x: rect.x, y: rect.y }, horizontal: "start" as const, vertical: "top" as const }],
-  });
+export function publicationAnnotationRequests(): PlacedAnnotation[] {
   return [
-    fixed("grade-key", "chart-key", 300, CHART_KEY_PANEL),
-    fixed("supply-mass-rail", "chart-key", 290, SUPPLY_KEY_PANEL),
-    fixed("footer-encoding", "footer", 270, FOOTER_PANEL),
+    { id: "grade-key", classId: "chart-key", bounds: { ...CHART_KEY_PANEL } },
+    { id: "supply-mass-rail", classId: "chart-key", bounds: { ...SUPPLY_KEY_PANEL } },
+    { id: "footer-encoding", classId: "footer", bounds: { ...FOOTER_PANEL } },
   ];
 }
 
 function annotationById(annotations: readonly PlacedAnnotation[], id: string): PlacedAnnotation {
   const annotation = annotations.find((item) => item.id === id);
-  if (!annotation) throw new Error(`Required annotation ${id} was not returned by the planner`);
+  if (!annotation) throw new Error(`Required annotation ${id} is missing from the fixed placements`);
   return annotation;
 }
 
@@ -2307,7 +2297,6 @@ async function validateRenderedAnnotations(
   const violations = validateAnnotationScene({ ...scene, annotations: measured }, {
     bubbleGap: BUBBLE_GAP,
     labelGap: 1,
-    leaderGap: 1,
   });
   if (violations.length > 0) {
     throw new Error(`Rendered annotation validation failed:\n  ${violations.slice(0, 20).map((item) => item.message).join("\n  ")}`);
@@ -2387,24 +2376,9 @@ function summarizeSubgradeLanes(coins: readonly MapCoin[]): SubgradeLaneSummary 
   return { counts, splitTiers, baseOnlyTiers };
 }
 
-interface MapSummary {
-  date: string;
-  asOfSec: number;
-  methodologyVersion: string;
-  gradedCount: number;
-  notRatedCount: number;
-  totalMcapUsd: number;
-  supplyCoverage: { complete: boolean; observedCount: number; unavailableCount: number; unavailableById: Record<string, string>; shareBasis: "known-mapped-supply" };
-  floorMcapByTier: FloorMcapByTier;
-  tiers: Array<{
-    tier: Tier;
-    range: string;
-    count: number;
-    mcapUsd: number;
-    sharePct: number;
-    leaders: Array<{ symbol: string; score: number; mcapUsd: number }>;
-  }>;
-}
+type MapSummary = DigestSafetyMapSummary & {
+  supplyCoverage: NonNullable<DigestSafetyMapSummary["supplyCoverage"]>;
+};
 
 export function buildMapSummary({
   date,
@@ -2637,7 +2611,6 @@ export function fitLayout(graded: readonly MapCoin[]): { bands: BandLayout[]; k:
         const annotationViolations = validateAnnotationScene(annotationSceneForBands(layout.bands), {
           bubbleGap: BUBBLE_GAP,
           labelGap: 1,
-          leaderGap: 1,
         });
         const compositionViolations = validateComposition({
           orbits: compositionOrbitsFor(layout.bands),
@@ -2696,23 +2669,16 @@ async function buildMap(options: {
     lanes,
   };
   const annotationScene = annotationSceneForBands(bands);
-  const annotationPlan = planAnnotations({
-    ...annotationScene,
-    annotationRequests: publicationAnnotationRequests(),
-  }, {
-    // The chart key is a fixed-size composite annotation. Its complete SVG
-    // group is measured with getBBox() in Firefox before the screenshot.
-    measureText: (annotationId) => {
-      throw new Error(`Annotation ${annotationId} unexpectedly requested unmeasured text bounds`);
-    },
+  // Mandatory fixed panels; Firefox checks their complete SVG getBBox() before
+  // the screenshot, in addition to this full-scene geometry validation.
+  const annotations = publicationAnnotationRequests();
+  const annotationViolations = validateAnnotationScene({ ...annotationScene, annotations }, {
     bubbleGap: BUBBLE_GAP,
     labelGap: 1,
-    leaderGap: 1,
   });
-  if (!annotationPlan.ok) {
-    throw new Error(`Required chart annotation placement failed: ${annotationPlan.failure.detail}\n  ${annotationPlan.violations.slice(0, 20).map((item) => item.message).join("\n  ")}`);
+  if (annotationViolations.length > 0) {
+    throw new Error(`Required chart annotation placement failed:\n  ${annotationViolations.slice(0, 20).map((item) => item.message).join("\n  ")}`);
   }
-  const annotations = annotationPlan.placed;
 
   const asOf = new Date(reportCards.asOfSec * 1000);
   const dateLabel = asOf.toISOString().slice(0, 10);
@@ -2839,7 +2805,7 @@ async function buildMap(options: {
     unjoined: unjoined.length,
     missingLogos: missingLogos.length,
     chipsDrawn: annotations.length,
-    chipsDropped: annotationPlan.dropped.length,
+    chipsDropped: 0,
     byTier: Object.fromEntries(tiers.map((tier) => [tier.tier, tier.count])),
   };
 

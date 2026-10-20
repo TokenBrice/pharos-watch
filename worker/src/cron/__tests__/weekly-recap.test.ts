@@ -228,11 +228,6 @@ function makeTables(overrides: Partial<{
       rows: [],
       runMeta: { changes: 1 },
     },
-    {
-      match: "SET digest_meta = ?",
-      rows: [],
-      runMeta: { changes: 1 },
-    },
   ];
 }
 
@@ -308,8 +303,6 @@ describe("generateWeeklyRecap", () => {
       weekEnd: "2026-03-28",
       editorialStyleVersion: EDITORIAL_STYLE_VERSION,
       editorialStyleHash: EDITORIAL_STYLE_HASH,
-      telegramDelivered: false,
-      telegramDeliveryStatus: "pending",
       llm: {
         model: DIGEST_MODEL,
         effort: "high",
@@ -331,14 +324,13 @@ describe("generateWeeklyRecap", () => {
         }],
       },
     });
-    const update = db.getHistory().find((entry) => entry.sql.includes("SET digest_meta = ?"));
-    const finalMeta = JSON.parse(String(update?.binds[0])) as Record<string, unknown>;
-    expect(finalMeta).toMatchObject({
-      type: "weekly",
-      telegramDelivered: true,
-      telegramDeliveryStatus: "ok",
-    });
-    expect(update?.binds[1]).toBe(insert?.binds[0]);
+    expect(JSON.parse(String(insert?.binds[5]))).not.toHaveProperty("telegramDelivered");
+    expect(JSON.parse(String(insert?.binds[5]))).not.toHaveProperty("twitterDelivered");
+    expect(db.getHistory().some((entry) => entry.sql.includes("SET digest_meta = ?"))).toBe(false);
+    expect(enqueueTelegramDigestEdition).toHaveBeenCalledWith(db, expect.objectContaining({
+      editionKey: "weekly:2026-03-30",
+      digestKind: "weekly",
+    }), undefined);
 
     expect(fetchWithRetry).toHaveBeenCalledWith(
       "https://api.anthropic.com/v1/messages",
@@ -575,10 +567,8 @@ describe("generateWeeklyRecap", () => {
     expect(deliverTelegramDigestEdition).not.toHaveBeenCalled();
   });
 
-  it.each([
-    "failed: Error: Telegram digest failed_permanent: stale_safety_identity:identity-mismatch",
-    "queued: execution_unknown",
-  ])("does not auto-retry an operator-terminal weekly outbox row (%s)", async (telegramDeliveryStatus) => {
+  it.each(["failed_permanent", "execution_unknown"])(
+    "refuses an operator-terminal weekly outbox row despite stale delivered metadata (%s)", async (state) => {
     const existingGeneratedAt = Math.floor(Date.UTC(2026, 2, 30, 12, 0, 0) / 1000);
     const existing = {
       generated_at: existingGeneratedAt,
@@ -587,8 +577,8 @@ describe("generateWeeklyRecap", () => {
       digest_extended: VALID_WEEKLY_EXTENDED,
       digest_meta: JSON.stringify({
         type: "weekly",
-        telegramDelivered: false,
-        telegramDeliveryStatus,
+        telegramDelivered: true,
+        telegramDeliveryStatus: "ok",
       }),
     };
     const db = mockD1([
@@ -597,6 +587,7 @@ describe("generateWeeklyRecap", () => {
         rows: [existing],
         first: existing,
       },
+      { match: "SELECT state FROM telegram_digest_outbox", rows: [], first: { state } },
     ]);
 
     const result = await generateWeeklyRecap(
@@ -606,7 +597,10 @@ describe("generateWeeklyRecap", () => {
       { botToken: "bot", chatId: "chat" },
     );
 
-    expect(result.status).toBe("skipped_neutral");
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(String(result.metadata)).channels.telegram).toEqual({
+      status: `outbox-${state}`, disposition: "terminal-unsent",
+    });
     expect(enqueueTelegramDigestEdition).not.toHaveBeenCalled();
     expect(deliverTelegramDigestEdition).not.toHaveBeenCalled();
     expect(db.getHistory().some((entry) => entry.sql.includes("SET digest_meta = ?"))).toBe(false);
@@ -634,13 +628,8 @@ describe("generateWeeklyRecap", () => {
     const insertedMeta = JSON.parse(String(insert?.binds[5])) as Record<string, unknown>;
     expect(insertedMeta.qualityGate).toBe("blocked");
 
-    const update = db.getHistory().find((entry) => entry.sql.includes("SET digest_meta = ?"));
-    const finalMeta = JSON.parse(String(update?.binds[0])) as Record<string, unknown>;
-    expect(finalMeta).toMatchObject({
-      qualityGate: "blocked",
-      telegramDelivered: false,
-      telegramDeliveryStatus: "skipped: quality-gate",
-    });
+    expect(insertedMeta).not.toHaveProperty("telegramDelivered");
+    expect(db.getHistory().some((entry) => entry.sql.includes("SET digest_meta = ?"))).toBe(false);
   });
 
   it("blocks weekly copy that makes grade claims while safety context is unavailable", async () => {
@@ -754,7 +743,7 @@ describe("generateWeeklyRecap", () => {
     expect(firstRequest.messages[0]?.content).not.toContain("Safety source unavailable");
   });
 
-  it("stores failed Telegram delivery state so the weekly row can be retried", async () => {
+  it("reports retryable Telegram outbox delivery without writing weekly shadows", async () => {
     const db = mockD1(makeTables());
     vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse());
     vi.mocked(deliverTelegramDigestEdition).mockResolvedValueOnce({
@@ -784,13 +773,12 @@ describe("generateWeeklyRecap", () => {
     expect(enqueueTelegramDigestEdition).toHaveBeenCalledTimes(1);
     expect(deliverTelegramDigestEdition).toHaveBeenCalledTimes(1);
 
-    const update = db.getHistory().find((entry) => entry.sql.includes("SET digest_meta = ?"));
-    const finalMeta = JSON.parse(String(update?.binds[0])) as Record<string, unknown>;
-    expect(finalMeta.telegramDelivered).toBe(false);
-    expect(finalMeta.telegramDeliveryStatus).toMatch(/^failed:/);
+    const insert = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO daily_digest"));
+    expect(JSON.parse(String(insert?.binds[5]))).not.toHaveProperty("telegramDelivered");
+    expect(db.getHistory().some((entry) => entry.sql.includes("SET digest_meta = ?"))).toBe(false);
   });
 
-  it("retries an existing generated weekly recap when Telegram was not delivered", async () => {
+  it.each(["pending", "sent"])("uses weekly outbox truth without rebuilding a %s payload", async (state) => {
     const existingGeneratedAt = Math.floor(Date.UTC(2026, 2, 30, 12, 0, 0) / 1000);
     const existing = {
       generated_at: existingGeneratedAt,
@@ -803,7 +791,7 @@ describe("generateWeeklyRecap", () => {
         weekStart: "2026-03-24",
         weekEnd: "2026-03-28",
         telegramDelivered: false,
-        telegramDeliveryStatus: "failed: telegram down",
+        telegramDeliveryStatus: "failed: stale shadow",
       }),
     };
     const db = mockD1([
@@ -812,10 +800,7 @@ describe("generateWeeklyRecap", () => {
         rows: [existing],
         first: existing,
       },
-      {
-        match: "SET digest_meta = ?",
-        rows: [],
-      },
+      { match: "SELECT state FROM telegram_digest_outbox", rows: [], first: { state } },
     ]);
 
     const result = await generateWeeklyRecap(
@@ -826,21 +811,81 @@ describe("generateWeeklyRecap", () => {
     );
 
     expect(result.itemCount).toBe(0);
-    expect(result.metadata).toContain("existing recap delivery retry");
-    expect(result.metadata).toContain("telegram: ok");
+    expect(result.status).toBe(state === "sent" ? "skipped_neutral" : "degraded");
+    if (state === "pending") {
+      expect(JSON.parse(String(result.metadata)).channels.telegram).toEqual({
+        status: "outbox-pending", disposition: "retryable",
+      });
+    }
     expect(fetchWithRetry).not.toHaveBeenCalled();
+    expect(resolveDigestSafetyMap).not.toHaveBeenCalled();
     expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO daily_digest"))).toBe(false);
-    expect(vi.mocked(enqueueTelegramDigestEdition).mock.calls[0]?.[1]).toMatchObject({
-      title: "Weekly Recap: Weekly Calm",
-      extended: VALID_WEEKLY_EXTENDED,
+    expect(enqueueTelegramDigestEdition).not.toHaveBeenCalled();
+    expect(deliverTelegramDigestEdition).not.toHaveBeenCalled();
+    expect(db.getHistory().some((entry) => entry.sql.includes("SET digest_meta = ?"))).toBe(false);
+  });
+
+  it.each([
+    [null, "skipped: execution-unknown"],
+    ['{"sentAt":1}', "skipped: already-sent"],
+    [JSON.stringify({ schemaVersion: 1, state: "execution_unknown", attempts: 1, createdAt: 1, updatedAt: 1 }), "skipped: execution-unknown"],
+    [JSON.stringify({ schemaVersion: 1, state: "failed", attempts: 3, createdAt: 1, updatedAt: 1 }), "skipped: attempt-limit"],
+  ])("refuses weekly X resend without retryable durable evidence (%s)", async (value, expectedStatus) => {
+    const db = mockD1([
+      { match: "SELECT generated_at, digest_title, digest_text, digest_extended, digest_meta", rows: [], first: {
+        generated_at: Math.floor(Date.now() / 1000), digest_title: "Stored", digest_text: "Stored weekly copy.",
+        digest_extended: VALID_WEEKLY_EXTENDED, digest_meta: '{"type":"weekly","twitterDelivered":false}',
+      } },
+      { match: "SELECT value FROM cache WHERE key = ?", rows: [], first: value == null ? null : { value } },
+    ]);
+    const result = await generateWeeklyRecap(db, "anthropic-key", {
+      apiKey: "key", apiSecret: "secret", accessToken: "token", accessTokenSecret: "token-secret",
     });
-    const update = db.getHistory().find((entry) => entry.sql.includes("SET digest_meta = ?"));
-    const finalMeta = JSON.parse(String(update?.binds[0])) as Record<string, unknown>;
-    expect(finalMeta).toMatchObject({
-      telegramDelivered: true,
-      telegramDeliveryStatus: "ok",
-      weekStart: "2026-03-24",
+    expect(result.status).toBe(expectedStatus === "skipped: already-sent" ? "skipped_neutral" : "degraded");
+    if (expectedStatus !== "skipped: already-sent") {
+      expect(JSON.parse(String(result.metadata)).channels.twitter.status).toBe(expectedStatus);
+    }
+    expect(deliverTwitterDigestWithLedger).not.toHaveBeenCalled();
+    expect(fetchWithRetry).not.toHaveBeenCalled();
+  });
+
+  it("observes pending becoming sent under a concurrent drain without rebuilding weekly copy", async () => {
+    const outbox = { state: "pending" };
+    const db = mockD1([
+      { match: "SELECT generated_at, digest_title, digest_text, digest_extended, digest_meta", rows: [], first: {
+        generated_at: Math.floor(Date.now() / 1000), digest_title: "Stored", digest_text: "Stored weekly copy.",
+        digest_extended: VALID_WEEKLY_EXTENDED, digest_meta: '{"type":"weekly"}',
+      } },
+      { match: "SELECT state FROM telegram_digest_outbox", rows: [], first: outbox },
+    ]);
+    const result = await generateWeeklyRecap(db, "anthropic-key", null, { botToken: "bot", chatId: "chat" },
+      undefined, async (update) => {
+        if (update.stage === "twitter-delivery") outbox.state = "sent";
+      });
+    expect(JSON.parse(String(result.metadata)).channels.telegram).toEqual({
+      status: "outbox-sent", disposition: "delivered",
     });
+    expect(result.status).toBeUndefined();
+    expect(enqueueTelegramDigestEdition).not.toHaveBeenCalled();
+    expect(deliverTelegramDigestEdition).not.toHaveBeenCalled();
+    expect(resolveDigestSafetyMap).not.toHaveBeenCalled();
+  });
+
+  it("refuses a legacy weekly Telegram resend when the outbox evidence is missing", async () => {
+    const db = mockD1([
+      { match: "SELECT generated_at, digest_title, digest_text, digest_extended, digest_meta", rows: [], first: {
+        generated_at: Math.floor(Date.now() / 1000), digest_title: "Stored", digest_text: "Stored weekly copy.",
+        digest_extended: VALID_WEEKLY_EXTENDED, digest_meta: '{"type":"weekly","telegramDelivered":false}',
+      } },
+      { match: "SELECT state FROM telegram_digest_outbox", rows: [], first: null },
+    ]);
+    const result = await generateWeeklyRecap(db, "anthropic-key", null, { botToken: "bot", chatId: "chat" });
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(String(result.metadata)).channels.telegram).toEqual({
+      status: "outbox-execution_unknown", disposition: "terminal-unsent",
+    });
+    expect(enqueueTelegramDigestEdition).not.toHaveBeenCalled();
+    expect(deliverTelegramDigestEdition).not.toHaveBeenCalled();
   });
 
   it("repairs non-JSON weekly output with a corrective retry", async () => {

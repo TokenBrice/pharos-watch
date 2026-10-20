@@ -198,6 +198,8 @@ A chain absent from the current aggregate renders a figure-free "No current supp
 
 Summary cards keep missing DEWS counts, safety coverage and window averages unavailable. Fewer than two PSI history observations yield no sparkline, and PSI 24h change uses a sample within one hour before source-minus-24h, else it is unavailable. PSI and safety freshness headers name the assessment clock, budget and generation where available.
 
+OG cards display only metrics supplied by their constructors: the stablecoin card has no redemption cell, and summary cards have no safety trend or PSI flight-to-quality widget. The safety summary retains its average score explicitly without an aggregate grade; real flow flight-to-quality and redemption products are unchanged.
+
 PSI card high/low values are extrema of the retained instantaneous samples, explicitly labelled **Retained samples (up to 90 days)**. The actual retained history can be shorter; these are neither lifetime ATH/ATL nor extrema of daily averages. Pruned extremes leave this window without changing archived editions.
 
 These are the OG images that automatically reflect current data. If their template needs to change, edit `worker/src/lib/og-templates/*` and run worker tests.

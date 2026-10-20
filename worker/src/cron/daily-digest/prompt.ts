@@ -1,9 +1,5 @@
-import {
-  DigestSafetyMapCaptureSchema,
-  type DigestInputData,
-  type DigestSafetyContext,
-  type DigestSafetyMapCapture,
-} from "@shared/types/digest";
+import type { DigestInputData, DigestSafetyContext } from "@shared/types/digest";
+import { DigestSafetyMapCaptureSchema, type DigestSafetyMapCapture } from "@shared/types/digest-safety-map-contract";
 import { formatCurrency } from "@shared/lib/format";
 import { computeLeadStreak } from "@shared/lib/digest-lead-policy";
 import { UNCORROBORATED_TVL_DROP_RATIO } from "@shared/lib/digest-liquidity-admission";

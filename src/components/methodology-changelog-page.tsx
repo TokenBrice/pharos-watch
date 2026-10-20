@@ -2,7 +2,8 @@ import Link from "next/link";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { JsonLdScript } from "@/components/json-ld-script";
 import { LongformScrollspyNav } from "@/components/longform-scrollspy-nav";
-import { MethodologyVersionCard, type MethodologyChangelogEntry } from "@/components/methodology-version-card";
+import { MethodologyVersionCard } from "@/components/methodology-version-card";
+import type { MethodologyChangelogEntry } from "@shared/types/editorial-content";
 import { buildArticleJsonLd, safeJsonLd } from "@/lib/json-ld";
 import type { PharosUrnJsonLdIdentifier } from "@/lib/pharos-urn-json-ld";
 import {
@@ -20,7 +21,6 @@ interface MethodologyChangelogPageProps {
   lead: React.ReactNode;
   entries?: readonly MethodologyChangelogEntry[];
   sections?: readonly { id: string; label: string }[];
-  railLabel?: string;
   navAriaLabel?: string;
   children?: React.ReactNode;
   footerContent?: React.ReactNode;
@@ -38,7 +38,6 @@ export function MethodologyChangelogPage({
   lead,
   entries = [],
   sections,
-  railLabel = "Jump to Version",
   navAriaLabel,
   children,
   footerContent,
@@ -128,7 +127,6 @@ export function MethodologyChangelogPage({
 
       <LongformScrollspyNav
         sections={navSections}
-        railLabel={railLabel}
         navAriaLabel={navAriaLabel ?? `${title} version navigation`}
       />
       {children ?? (

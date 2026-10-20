@@ -43,7 +43,20 @@ describe("buildYieldSourceBoardModel", () => {
       anomalyUnavailableCount: 1,
     });
   });
-  it("summarizes selected rows, alternate rows, confidence, switches, anomalies, and lane APY", () => {
+
+  it.each([undefined, 0])("preserves alternate APY metadata eligibility without aggregating APY: %s", (apy30d) => {
+    const summary = projectRows([makeYieldRanking({ altSources: [makeAltYieldSource()] })]);
+    const row = summary.rankings[0];
+    const model = buildYieldSourceBoardModel([{
+      ...row, altSources: row.altSources?.map((source) => ({ ...source, apy30d })),
+    }]);
+    expect(model.alternateCount).toBe(1);
+    expect(model.representedSourceCount).toBe(2);
+    expect(model.compositionMissingSourceCount).toBe(apy30d === undefined ? 1 : 0);
+    expect(model.groups.reduce((sum, lane) => sum + lane.representedSourceCount, 0))
+      .toBe(apy30d === undefined ? 1 : 2);
+  });
+  it("summarizes selected rows, alternate rows, confidence, switches, anomalies, and lanes", () => {
     const rankings = [
       makeYieldRanking({
         id: "usdc-circle",
@@ -147,7 +160,6 @@ describe("buildYieldSourceBoardModel", () => {
       selectedCount: 2,
       alternateCount: 0,
       representedSourceCount: 2,
-      apy: { min: 5, median: 6.5, max: 8 },
     }));
     expect(model.groups.find((group) => group.key === "lending-opportunity:defillama-auto")).toEqual(
       expect.objectContaining({
@@ -155,7 +167,6 @@ describe("buildYieldSourceBoardModel", () => {
         selectedCount: 0,
         alternateCount: 1,
         representedSourceCount: 1,
-        apy: { min: 4, median: 4, max: 4 },
       }),
     );
     expect(model.groups.find((group) => group.key === "lending-vault:defillama")).toEqual(
@@ -164,7 +175,6 @@ describe("buildYieldSourceBoardModel", () => {
         selectedCount: 0,
         alternateCount: 1,
         representedSourceCount: 1,
-        apy: { min: 6, median: 6, max: 6 },
       }),
     );
   });

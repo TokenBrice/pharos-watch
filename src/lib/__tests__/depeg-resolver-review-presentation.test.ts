@@ -31,14 +31,11 @@ import {
   getRowTime,
   getSignedDurationError,
   getVerdictReview,
-  isDdrCorrectVerdict,
-  isDdrMissVerdict,
   isDdrScoredVerdict,
   isScored,
   isTrackRecordRow,
   nodeKind,
   summarizeAccuracyByMajor,
-  summarizePredictionRows,
 } from "../depeg-resolver-review-presentation";
 
 const publicationRow = {
@@ -104,8 +101,6 @@ describe("DDR review presentation vocabulary", () => {
     expect(DDR_COVERAGE_LABELS.no_call).toBe("no-call");
     expect(DDR_OUTCOME_LABELS.still_open).toBe("still open");
     expect(isDdrScoredVerdict("risk_noted_terminal")).toBe(true);
-    expect(isDdrCorrectVerdict("correct_terminal")).toBe(true);
-    expect(isDdrMissVerdict("false_recoverable")).toBe(true);
     expect(isDdrScoredVerdict("pending")).toBe(false);
   });
 
@@ -170,26 +165,6 @@ describe("DDR review derivations", () => {
     expect(getSignedDurationError(noCallRow)).toBeNull();
     expect(formatReviewerPercent(0.5)).toBe("50%");
     expect(formatMetricPercent(null)).toBe("—");
-  });
-
-  it("counts prediction verdict and IQR breakdowns without counting context rows", () => {
-    const breakdown = summarizePredictionRows([
-      predictionRow,
-      { ...predictionRow, eventId: 44, verdictReview: "correct_terminal", withinIqr: false } as DdrrRow,
-      { ...predictionRow, eventId: 45, verdictReview: "false_terminal", withinIqr: null } as DdrrRow,
-      { ...predictionRow, eventId: 46, verdictReview: "false_recoverable" } as DdrrRow,
-      noCallRow,
-      coverageRow,
-    ]);
-
-    expect(breakdown).toEqual({
-      correctRecoverable: 1,
-      correctTerminal: 1,
-      falseTerminal: 1,
-      falseRecoverable: 1,
-      withinIqrCount: 2,
-      iqrScoredCount: 3,
-    });
   });
 
   it("classifies and caps the track-record timeline", () => {

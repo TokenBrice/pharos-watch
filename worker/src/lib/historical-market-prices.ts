@@ -199,6 +199,27 @@ export function collapsePricesToDailyTimestamps(prices: PricePoint[]): number[] 
   return Array.from(byDay.values()).sort((a, b) => a - b);
 }
 
+async function fetchCgChartPrices(
+  path: string,
+  coingeckoApiKey: string | null,
+  signal?: AbortSignal,
+): Promise<{ prices: PricePoint[]; parseError?: string }> {
+  const result = await fetchJsonWithRetry(
+    cgUrl(path, coingeckoApiKey),
+    { headers: cgHeaders({ "User-Agent": USER_AGENT }, coingeckoApiKey), signal },
+    2,
+    { timeoutMs: 30_000 },
+  );
+  if (!result) return { prices: [] };
+  const parsed = CoinGeckoMarketChartSchema.safeParse(result.body);
+  if (!parsed.success) return { prices: [], parseError: parsed.error.message };
+  return {
+    prices: parsed.data.prices
+      .filter(([, price]) => price > 0)
+      .map(([timestampMs, price]) => ({ timestamp: Math.floor(timestampMs / 1000), price })),
+  };
+}
+
 async function fetchCgPriceHistoryDaily(
   geckoId: string,
   range?: HistoricalMarketBackfillRange,
@@ -213,21 +234,11 @@ async function fetchCgPriceHistoryDaily(
       startSec != null
         ? `/coins/${geckoId}/market_chart/range?vs_currency=${vsCurrency}&from=${startSec}&to=${endSec}&precision=full`
         : `/coins/${geckoId}/market_chart?vs_currency=${vsCurrency}&days=max`;
-    const result = await fetchJsonWithRetry(
-      cgUrl(path, coingeckoApiKey),
-      { headers: cgHeaders({ "User-Agent": USER_AGENT }, coingeckoApiKey), signal },
-      2,
-      { timeoutMs: 30_000 },
-    );
-    if (!result) return [];
-    const parsed = CoinGeckoMarketChartSchema.safeParse(result.body);
-    if (!parsed.success) {
-      logWorkerEventArgs("api", "warn", "[backfill-pricing] CG market chart validation failed:", parsed.error.message);
-      return [];
+    const result = await fetchCgChartPrices(path, coingeckoApiKey, signal);
+    if (result.parseError !== undefined) {
+      logWorkerEventArgs("api", "warn", "[backfill-pricing] CG market chart validation failed:", result.parseError);
     }
-    return parsed.data.prices
-      .filter(([, price]) => price > 0)
-      .map(([timestampMs, price]) => ({ timestamp: Math.floor(timestampMs / 1000), price }));
+    return result.prices;
   } catch (err) {
     rethrowIfAborted(err, signal);
     logWorkerEventArgs("api", "error", `[backfill-pricing] Failed to fetch CG daily price history for ${geckoId}/${vsCurrency}:`, err);
@@ -257,24 +268,13 @@ export async function fetchCgPriceHistoryHourly(
   try {
     if (startSec < HOURLY_EPOCH) {
       await sleepWithSignal(RATE_LIMITS.COINGECKO_BACKFILL_MS, signal);
-      const phaseOne = await fetchJsonWithRetry(
-        cgUrl(
-          `/coins/${geckoId}/market_chart/range?vs_currency=${vsCurrency}&from=${startSec}&to=${Math.min(endSec, HOURLY_EPOCH)}&precision=full`,
-          coingeckoApiKey,
-        ),
-        { headers: cgHeaders({ "User-Agent": USER_AGENT }, coingeckoApiKey), signal },
-        2,
-        { timeoutMs: 30_000 },
+      const phaseOne = await fetchCgChartPrices(
+        `/coins/${geckoId}/market_chart/range?vs_currency=${vsCurrency}&from=${startSec}&to=${Math.min(endSec, HOURLY_EPOCH)}&precision=full`,
+        coingeckoApiKey,
+        signal,
       );
-      if (phaseOne) {
-        const parsed = CoinGeckoMarketChartSchema.safeParse(phaseOne.body);
-        if (parsed.success) {
-          for (const [timestampMs, price] of parsed.data.prices) {
-            if (price > 0) {
-              seen.set(Math.floor(timestampMs / 1000), price);
-            }
-          }
-        }
+      for (const { timestamp, price } of phaseOne.prices) {
+        seen.set(timestamp, price);
       }
     }
   } catch (err) {
@@ -286,22 +286,13 @@ export async function fetchCgPriceHistoryHourly(
     const chunkTo = Math.min(chunkFrom + CHUNK_SEC, endSec);
     try {
       await sleepWithSignal(RATE_LIMITS.COINGECKO_BACKFILL_MS, signal);
-      const result = await fetchJsonWithRetry(
-        cgUrl(
-          `/coins/${geckoId}/market_chart/range?vs_currency=${vsCurrency}&from=${chunkFrom}&to=${chunkTo}&precision=full`,
-          coingeckoApiKey,
-        ),
-        { headers: cgHeaders({ "User-Agent": USER_AGENT }, coingeckoApiKey), signal },
-        2,
-        { timeoutMs: 30_000 },
+      const result = await fetchCgChartPrices(
+        `/coins/${geckoId}/market_chart/range?vs_currency=${vsCurrency}&from=${chunkFrom}&to=${chunkTo}&precision=full`,
+        coingeckoApiKey,
+        signal,
       );
-      if (!result) continue;
-      const parsed = CoinGeckoMarketChartSchema.safeParse(result.body);
-      if (!parsed.success) continue;
-      for (const [timestampMs, price] of parsed.data.prices) {
-        if (price > 0) {
-          seen.set(Math.floor(timestampMs / 1000), price);
-        }
+      for (const { timestamp, price } of result.prices) {
+        seen.set(timestamp, price);
       }
     } catch (err) {
       rethrowIfAborted(err, signal);

@@ -1,15 +1,12 @@
 import type { CronResult } from "./sync-stablecoins/shared";
 import {
-  buildMainStablecoinsPublicationPolicy,
   loadStablecoinsPublicationContinuity,
   runStablecoinsPostIntakePublication,
 } from "./sync-stablecoins/publication";
 import {
-  abortResult,
   returnIfAborted,
 } from "./sync-stablecoins/runtime";
 import {
-  runStablecoinsIntakeStage,
   runStablecoinsPricingStage,
 } from "./sync-stablecoins/stages";
 import type { ChainRpcConfig } from "../lib/chain-registry";
@@ -18,6 +15,8 @@ import type { CronProgressReporter } from "../lib/cron-logger";
 import { createBinanceFetchSession } from "../lib/cex-tickers";
 import { createNativePegQuoteSession } from "../lib/native-peg-quotes";
 import { createD1CostTracker } from "../lib/d1-cost";
+import { loadStablecoinsIntake } from "./sync-stablecoins/intake";
+import { syncViaCoingeckoFallback } from "./sync-stablecoins/fallback";
 
 export interface SyncStablecoinsOptions {
   cmcApiKey?: string;
@@ -61,18 +60,20 @@ export async function syncStablecoins(
   // partial-overlap deduplication. Failed/non-2xx/malformed batches are evicted
   // so they never suppress a later caller's own attempt.
   const nativePegSession = createNativePegQuoteSession();
-  const intake = await runStablecoinsIntakeStage({
+  const intake = await loadStablecoinsIntake({
     db,
     syncStartSec,
-    cmcApiKey,
-    jupiterApiKey,
     signal,
     coingeckoApiKey,
     chainRpcs,
     dwellirNative,
     reportProgress,
+    fallbackToCoingecko: (cgData) => syncViaCoingeckoFallback(
+      db, cgData, cmcApiKey, syncStartSec, signal, coingeckoApiKey,
+      reportProgress, jupiterApiKey, chainRpcs, dwellirNative,
+    ),
   });
-  if (!("kind" in intake)) return withD1Cost(intake);
+  if (intake.kind === "withheld") return withD1Cost(intake.result);
   if (intake.kind === "fallback") {
     if (intake.result.itemCount && intake.result.itemCount > 0) {
       return withD1Cost(intake.result);
@@ -80,14 +81,14 @@ export async function syncStablecoins(
     throw new Error(intake.errorMessage);
   }
   // Destructure every consumed field so nothing references `intake` past this
-  // point: the stage result also carries cgData, canonicalDeduplication's
+  // point: the intake result also carries cgData, canonicalDeduplication's
   // deduped rows, and other intake-only payloads that would otherwise stay
   // pinned on the isolate heap for the rest of the run.
   const {
     assets,
     rawAssetCount,
     droppedMalformedAssets,
-    canonicalDeduplication,
+    canonicalDeduplication: { duplicateRows, affectedIds },
     supplyGapReconciliation,
     supplyChainGuard,
     trackedCoverage,
@@ -96,6 +97,7 @@ export async function syncStablecoins(
     fxFallbackRates,
     validationReferences,
   } = intake;
+  const { state: _guardState, ...supplyChainGuardMetadata } = supplyChainGuard;
   const { previousActivePriceCoverage, previousMissingGenerationsById } =
     await loadStablecoinsPublicationContinuity(db, syncStartSec);
   const pricingStage = await runStablecoinsPricingStage({
@@ -113,20 +115,8 @@ export async function syncStablecoins(
     reportProgress,
     nativePegSession,
   });
-  if ("enrichStats" in pricingStage === false) return withD1Cost(pricingStage);
-  const {
-    enrichStats,
-    priceValidationStats,
-    gtProbe,
-    authoritativeOverrideCount,
-    authoritativeOverrideStats,
-    rejectedCount,
-    nativePegCorrectionCount,
-    nativePegFillCount,
-    priceObservationEffectiveness,
-    priceCacheEntries,
-    providerDiagnostics,
-  } = pricingStage;
+  if (!("priceCacheEntries" in pricingStage)) return withD1Cost(pricingStage);
+  const { metadata: pricingMetadata, priceCacheEntries, providerDiagnostics } = pricingStage;
   return runStablecoinsPostIntakePublication({
     assets,
     previousAssetsById,
@@ -140,38 +130,23 @@ export async function syncStablecoins(
     priceCacheEntries,
     supplyChainGuard,
     providerDiagnostics,
-    returnIfAborted,
-    abortResult,
     reportProgress,
+    binanceSession,
+    nativePegSession,
     metadata: {
       path: "main",
       input: {
         rawAssetCount,
         droppedMalformedAssets,
-        canonicalDeduplication,
-        enrichStats,
-        priceValidationStats,
-        authoritativeOverrideCount,
-        authoritativeOverrideStats,
-        rejectedCount,
-        nativePegCorrectionCount,
-        nativePegFillCount,
-        priceObservationEffectiveness,
+        canonicalDeduplication: { duplicateRows, affectedIds },
+        ...pricingMetadata,
         supplyGapReconciliation,
-        supplyChainGuard,
+        supplyChainGuard: supplyChainGuardMetadata,
         trackedCoverage,
-        gtProbe,
         upstreamFetchOk: true,
         payloadAccepted: true,
         cacheWriteSucceeded: true,
       },
     },
-    policy: buildMainStablecoinsPublicationPolicy({
-      assets,
-      rawAssetCount,
-      droppedMalformedAssets,
-      binanceSession,
-      nativePegSession,
-    }),
   }).then(withD1Cost);
 }

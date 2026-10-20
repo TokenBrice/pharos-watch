@@ -16,7 +16,6 @@ import { reconcilePublicStatusState } from "../lib/status/public-status-state";
 import { writeStatusRawSnapshot } from "../lib/status/raw-snapshot";
 import { STATUS_PUBLIC_HEALTH_SNAPSHOT_CACHE_KEY, writeStatusPublicHealthSnapshot } from "../lib/status/public-health-snapshot";
 import { loadStatusSupplements } from "../lib/status/supplements";
-import type { MintBurnFreshnessConfig } from "../lib/mint-burn-health-config";
 import { route } from "../router";
 import {
   buildDiscrepancy,
@@ -90,7 +89,6 @@ export interface StatusSelfCheckOptions {
   signal?: AbortSignal;
   reportProgress?: CronProgressReporter;
   ctx?: ExecutionContext;
-  mintBurnFreshnessConfig?: MintBurnFreshnessConfig;
   siteApiSharedSecret?: string | null;
   d1StatusConfig?: CloudflareD1StatusConfig;
   coingeckoApiKey?: string | null;
@@ -479,7 +477,6 @@ async function probePathInternally(
   path: string,
   probeBaseUrl: URL,
   ctx: ExecutionContext,
-  mintBurnFreshnessConfig?: MintBurnFreshnessConfig,
 ): Promise<ProbeResult> {
   const startedAt = Date.now();
   try {
@@ -501,7 +498,6 @@ async function probePathInternally(
       request,
       trustedAdmin: isAdminPath,
       internalProbe: "status-self-check",
-      mintBurnFreshnessConfig,
     });
     if (!response) {
       return buildProbeResult({
@@ -632,10 +628,10 @@ async function collectStatusSelfCheckProbes(
   now: number,
   options: Pick<
     StatusSelfCheckOptions,
-    "selfUrl" | "signal" | "ctx" | "mintBurnFreshnessConfig" | "siteApiSharedSecret" | "reportProgress"
+    "selfUrl" | "signal" | "ctx" | "siteApiSharedSecret" | "reportProgress"
   >,
 ): Promise<CollectedStatusSelfCheckProbes> {
-  const { selfUrl, signal, ctx, mintBurnFreshnessConfig, siteApiSharedSecret } = options;
+  const { selfUrl, signal, ctx, siteApiSharedSecret } = options;
   const probeBaseUrl = resolveProbeBaseUrl(selfUrl);
   const probeMode = ctx ? "internal-router" : "external-http";
   const probeSelection = selectStatusProbePathsForRun(now);
@@ -653,7 +649,7 @@ async function collectStatusSelfCheckProbes(
     });
     internalProbes.push(
       ctx
-        ? await probePathInternally(db, path, probeBaseUrl, ctx, mintBurnFreshnessConfig)
+        ? await probePathInternally(db, path, probeBaseUrl, ctx)
         : await probePathExternally(
             path,
             probeBaseUrl,

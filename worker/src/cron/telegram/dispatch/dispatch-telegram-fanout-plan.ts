@@ -13,65 +13,21 @@ import {
   type AlertsByChatEntry,
 } from "./dispatch-telegram-routing";
 import { mergeSubscriberMaps } from "./dispatch-telegram-subscribers";
-import { removeHandledTelegramAlertItems } from "../sources/telegram-alert-event-lineage";
-
-export interface PresetFanoutFailureSummary {
-  presetQueryFailures: number;
-  presetResolutionFailures: number;
-  presetFailure: boolean;
-}
-
-
-export function summarizePresetFanoutFailures(
-  inputs: Pick<FanoutSubscriptionInputs, "preset">,
-): PresetFanoutFailureSummary {
-  const presetResults = TELEGRAM_FANOUT_FAMILIES.flatMap((spec) =>
-    spec.presetFamily == null ? [] : [inputs.preset[spec.presetFamily]]);
-  const presetQueryFailures = presetResults.reduce(
-    (count, result) => count + (
-      result.kind === "query-failed"
-        ? 1
-        : result.kind === "partial"
-          ? result.queryFailures
-          : 0
-    ),
-    0,
-  );
-  const presetResolutionFailures = presetResults.reduce(
-    (count, result) => count + (
-      result.kind === "partial" ? result.resolutionFailures : 0
-    ),
-    0,
-  );
-  return {
-    presetQueryFailures,
-    presetResolutionFailures,
-    presetFailure: presetQueryFailures > 0 || presetResolutionFailures > 0,
-  };
-}
 
 interface TelegramFanoutRoutingArgs {
   events: TelegramFanoutPlanEvents;
   inputs: FanoutSubscriptionInputs;
-  presetFailureSummary?: PresetFanoutFailureSummary;
-  handledItemsByChat?: ReadonlyMap<string, ReadonlySet<string>>;
 }
 
-export interface TelegramFanoutRoutingResult extends PresetFanoutFailureSummary {
+export interface TelegramFanoutRoutingResult {
   alertsByChat: Map<string, AlertsByChatEntry>;
-  handledItemsPruned: number;
 }
 
 /** Route and filter one subscriber page without formatting any message HTML. */
 export function buildTelegramAlertsByChat(
   args: TelegramFanoutRoutingArgs,
 ): TelegramFanoutRoutingResult {
-  const {
-    events,
-    inputs,
-    presetFailureSummary = summarizePresetFanoutFailures(inputs),
-    handledItemsByChat = new Map(),
-  } = args;
+  const { events, inputs } = args;
 
   const alertsByChat = new Map<string, AlertsByChatEntry>();
   for (const family of TELEGRAM_FANOUT_FAMILIES) {
@@ -93,12 +49,7 @@ export function buildTelegramAlertsByChat(
     }
   }
 
-  const handledItemsPruned = removeHandledTelegramAlertItems(alertsByChat, handledItemsByChat);
-  return {
-    alertsByChat,
-    handledItemsPruned,
-    ...presetFailureSummary,
-  };
+  return { alertsByChat };
 }
 
 /** Render the entire authoritative page, or reject it before persisting any target. */

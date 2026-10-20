@@ -1,7 +1,7 @@
-import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import { getWorkerMigrationFiles } from "../lib/worker-migration-files.mts";
 
@@ -40,14 +40,6 @@ interface SchemaRow {
   sql: string;
 }
 
-interface MigrationExecutor {
-  backend: "node:sqlite" | "sqlite3";
-  close(): void;
-  execute(sql: string): void;
-  hasTable(name: string): boolean;
-  getSchemaRows(): SchemaRow[];
-}
-
 interface ValidateWorkerMigrationsOptions {
   migrationsDir?: string;
   manifestPath?: string;
@@ -56,7 +48,7 @@ interface ValidateWorkerMigrationsOptions {
 }
 
 interface WorkerMigrationResult {
-  backend: MigrationExecutor["backend"];
+  backend: "node:sqlite";
   migrationCount: number;
   manifestParity: ManifestParity;
   rolloutSafetyCheckedCount: number;
@@ -592,137 +584,13 @@ export function validateSchemaObjectManifest(actual: string, expected: string): 
   throw new Error(`Fresh-replay schema object manifest drifted:\n- ${details.join("\n- ")}`);
 }
 
-export function createTableFixtureQuery(name: string): string {
-  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
-    throw new Error("Invalid table name for sqlite3 fixture query");
-  }
-  // SAFETY: name is rejected above unless it is an unquoted SQL identifier; no quotes, delimiters or input SQL can reach this literal.
-  return `SELECT 1 FROM sqlite_schema WHERE type = 'table' AND name = '${name}';`;
-}
-
-async function createExecutor(dbPath: string): Promise<MigrationExecutor> {
-  try {
-    const { DatabaseSync } = await import("node:sqlite");
-    const db = new DatabaseSync(dbPath);
-
-    return {
-      backend: "node:sqlite",
-      close() {
-        db.close();
-      },
-      execute(sql: string) {
-        db.exec(sql);
-      },
-      hasTable(name: string) {
-        return Boolean(
-          db.prepare("SELECT 1 FROM sqlite_schema WHERE type = 'table' AND name = ?").get(name),
-        );
-      },
-      getSchemaRows() {
-        return db
-          .prepare(SCHEMA_OBJECT_QUERY)
-          .all()
-          .map((row) => ({
-            type: String(row.type),
-            name: String(row.name),
-            tblName: String(row.tbl_name),
-            sql: String(row.sql),
-          }));
-      },
-    };
-  } catch (error) {
-    const nodeSqliteDetail = error instanceof Error ? error.message : String(error);
-    const sqlite3Probe = spawnSync("sqlite3", ["-version"], {
-      encoding: "utf8",
-    });
-
-    if (!sqlite3Probe.error && sqlite3Probe.status === 0) {
-      return {
-        backend: "sqlite3",
-        close() {},
-        execute(sql: string) {
-          const result = spawnSync("sqlite3", ["-bail", dbPath], {
-            encoding: "utf8",
-            input: sql,
-          });
-
-          if (result.error) {
-            throw new Error(`sqlite3 CLI execution failed: ${result.error.message}`);
-          }
-
-          if (result.status !== 0) {
-            const detail = (result.stderr || result.stdout || "").trim();
-            throw new Error(detail || `sqlite3 exited with status ${result.status}`);
-          }
-        },
-        hasTable(name: string) {
-          const result = spawnSync(
-            "sqlite3",
-            ["-bail", dbPath, createTableFixtureQuery(name)],
-            { encoding: "utf8" },
-          );
-          if (result.error || result.status !== 0) {
-            const detail = result.error?.message ?? (result.stderr || result.stdout || "").trim();
-            throw new Error(`sqlite3 table fixture query failed: ${detail}`);
-          }
-          return result.stdout.trim() === "1";
-        },
-        getSchemaRows() {
-          const result = spawnSync("sqlite3", ["-bail", "-json", dbPath, SCHEMA_OBJECT_QUERY], {
-            encoding: "utf8",
-          });
-
-          if (result.error) {
-            throw new Error(`sqlite3 CLI schema object query failed: ${result.error.message}`);
-          }
-
-          if (result.status !== 0) {
-            const detail = (result.stderr || result.stdout || "").trim();
-            throw new Error(detail || `sqlite3 schema object query exited with status ${result.status}`);
-          }
-
-          const rows: unknown = JSON.parse(result.stdout || "[]");
-          if (!Array.isArray(rows)) {
-            throw new Error("sqlite3 schema object query returned a non-array payload");
-          }
-
-          return rows.map((row): SchemaRow => {
-            if (!row || typeof row !== "object") {
-              throw new Error("sqlite3 schema object query returned an invalid row");
-            }
-            const record = row as Record<string, unknown>;
-            return {
-              type: String(record.type),
-              name: String(record.name),
-              tblName: String(record.tbl_name),
-              sql: String(record.sql),
-            };
-          });
-        },
-      };
-    }
-
-    const sqlite3ErrorCode =
-      sqlite3Probe.error && "code" in sqlite3Probe.error ? String(sqlite3Probe.error.code) : undefined;
-    const sqlite3Detail = sqlite3Probe.error
-      ? sqlite3ErrorCode === "ENOENT"
-        ? "sqlite3 CLI is not installed"
-        : sqlite3Probe.error.message
-      : (sqlite3Probe.stderr || sqlite3Probe.stdout || "").trim() ||
-        `sqlite3 -version exited with status ${sqlite3Probe.status}`;
-    throw new Error(
-      `Worker migration validation requires node:sqlite or sqlite3. node:sqlite load failed: ${nodeSqliteDetail}. sqlite3 probe: ${sqlite3Detail}`,
-    );
-  }
-}
-
-function seedPreMigrationFixture(executor: MigrationExecutor, targets: readonly string[]): void {
+function seedPreMigrationFixture(db: DatabaseSync, targets: readonly string[]): void {
   for (const target of targets) {
-    if (!executor.hasTable(target)) {
+    if (!db.prepare("SELECT 1 FROM sqlite_schema WHERE type = 'table' AND name = ?").get(target)) {
       throw new Error(`seeded pre-migration fixture target does not exist: ${target}`);
     }
     if (target === "cache") {
-      executor.execute(`
+      db.exec(`
         INSERT INTO cache (key, value, updated_at)
         VALUES ('depeg-events:counts:v1', '[{"stablecoinId":"usdt-tether","active":1,"total":1}]', 1);
         INSERT INTO cache (key, value, updated_at)
@@ -731,13 +599,13 @@ function seedPreMigrationFixture(executor: MigrationExecutor, targets: readonly 
       continue;
     }
     if (target === "cron_runs") {
-      executor.execute(
+      db.exec(
         "INSERT INTO cron_runs (job, started_at, duration_ms, status) VALUES ('migration-gate-fixture', 1, 0, 'ok');",
       );
       continue;
     }
     if (target === "dex_deployment_outcomes") {
-      executor.execute(`
+      db.exec(`
         INSERT INTO dex_discovery_meta (stablecoin_id, last_crawl_at)
         VALUES ('migration-gate-fixture', 100);
         INSERT INTO dex_deployment_outcomes (
@@ -750,7 +618,7 @@ function seedPreMigrationFixture(executor: MigrationExecutor, targets: readonly 
       continue;
     }
     if (target === "telegram_subscribers") {
-      executor.execute(`
+      db.exec(`
         INSERT INTO telegram_subscribers (
           chat_id, username, created_at, last_active_at, global_alert_dews
         ) VALUES (
@@ -760,7 +628,7 @@ function seedPreMigrationFixture(executor: MigrationExecutor, targets: readonly 
       continue;
     }
     if (target === "tape_events") {
-      executor.execute(`
+      db.exec(`
         INSERT INTO tape_events (
           event_id, type, severity, ts, chain, title, summary, payload_json,
           source_table, source_row_id, transition, created_at
@@ -813,22 +681,27 @@ export async function validateWorkerMigrations({
   }
 
   const tempDir = mkdtempSync(join(tmpdir(), "pharos-worker-migrations-"));
-  const dbPath = join(tempDir, "migrations.db");
-  const executor = await createExecutor(dbPath);
+  let db: DatabaseSync | undefined;
   let dataMigrationFixtureCheckedCount = 0;
   let schemaObjectCount = 0;
 
   try {
+    db = new DatabaseSync(join(tempDir, "migrations.db"));
     for (const file of migrationFiles) {
       try {
-        executor.execute(migrationSql.get(file)!);
+        db.exec(migrationSql.get(file)!);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         throw new Error(`Migration replay failed for ${join(migrationsDir, file)}\n${message}`);
       }
     }
 
-    const schemaRows = executor.getSchemaRows();
+    const schemaRows = db.prepare(SCHEMA_OBJECT_QUERY).all().map((row) => ({
+      type: String(row.type),
+      name: String(row.name),
+      tblName: String(row.tbl_name),
+      sql: String(row.sql),
+    }));
     const schemaObjectManifest = createSchemaObjectManifest(schemaRows);
     schemaObjectCount = schemaRows.length;
     if (writeSchemaManifest) {
@@ -840,10 +713,10 @@ export async function validateWorkerMigrations({
 
     for (const row of dataMigrationRows) {
       const migrationIndex = migrationFiles.indexOf(row.filename);
-      const fixtureExecutor = await createExecutor(join(tempDir, `fixture-${row.sequence}.db`));
+      const fixtureDb = new DatabaseSync(join(tempDir, `fixture-${row.sequence}.db`));
       try {
         for (const priorFile of migrationFiles.slice(0, migrationIndex)) {
-          fixtureExecutor.execute(migrationSql.get(priorFile)!);
+          fixtureDb.exec(migrationSql.get(priorFile)!);
         }
         const sql = migrationSql.get(row.filename)!;
         // A table created by this same migration cannot hold pre-existing
@@ -851,25 +724,25 @@ export async function validateWorkerMigrations({
         // table still needs a representative seeded fixture.
         const createdInMigration = new Set(findCreatedTables(sql));
         seedPreMigrationFixture(
-          fixtureExecutor,
+          fixtureDb,
           findDataMigrationTargets(sql).filter((target) => !createdInMigration.has(target)),
         );
-        fixtureExecutor.execute(sql);
+        fixtureDb.exec(sql);
         dataMigrationFixtureCheckedCount += 1;
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         throw new Error(`Seeded pre-migration fixture failed for ${row.filename}\n${message}`);
       } finally {
-        fixtureExecutor.close();
+        fixtureDb.close();
       }
     }
   } finally {
-    executor.close();
+    db?.close();
     rmSync(tempDir, { force: true, recursive: true });
   }
 
   return {
-    backend: executor.backend,
+    backend: "node:sqlite",
     migrationCount: migrationFiles.length,
     manifestParity,
     rolloutSafetyCheckedCount,

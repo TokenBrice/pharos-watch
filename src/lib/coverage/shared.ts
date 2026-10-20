@@ -22,6 +22,16 @@ export interface CoverageLegendItem {
   kinds: readonly string[];
 }
 
+export function legendItemsFromPresets<TPresets extends Readonly<Record<string, CoverageStatusPreset>>>(
+  presets: TPresets,
+  keys: readonly (keyof TPresets)[],
+): readonly CoverageLegendItem[] {
+  return keys.map((key) => {
+    const preset = presets[key];
+    return { term: preset.label, description: preset.detail, kinds: [preset.kind] };
+  });
+}
+
 function createStatus(
   kind: string,
   label: string,

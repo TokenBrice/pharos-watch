@@ -17,7 +17,7 @@ import {
   type SearchInput,
 } from "@/lib/url-storage-codecs";
 
-export type UrlStateField<V> =
+type UrlStateFieldVariants<V> =
   | {
       kind: "enum";
       defaultValue: V;
@@ -44,56 +44,56 @@ export type UrlStateField<V> =
   | {
       kind: "enumList";
       defaultValue: V;
-      allowedValues?: readonly unknown[];
+      allowedValues?: readonly (V extends readonly unknown[] ? V[number] : never)[];
       delimiter?: string;
       maxItems?: number;
-      normalizeItem?: (value: string) => unknown | null;
+      normalizeItem?: (value: string) => (V extends readonly unknown[] ? V[number] : never) | null;
     };
+
+export type UrlStateField<V> = { defaultValue: V } & (
+  [V] extends [string] ? Extract<UrlStateFieldVariants<V>, { kind: "string" | "enum" }>
+    : [V] extends [number] ? Extract<UrlStateFieldVariants<V>, { kind: "boundedNumber" }>
+    : [V] extends [boolean] ? Extract<UrlStateFieldVariants<V>, { kind: "boolean" }>
+    : [V] extends [readonly unknown[]] ? Extract<UrlStateFieldVariants<V>, { kind: "enumList" }>
+    : never
+);
+
+type DecodedField = UrlStateField<string> | UrlStateField<number>
+  | UrlStateField<boolean> | UrlStateField<readonly unknown[]>;
 
 export type UrlStateSchema<T> = { [K in keyof T]: UrlStateField<T[K]> };
 
-function decodeField<V>(
+function decodeField(
   params: URLSearchParams,
   key: string,
-  field: UrlStateField<V>,
-): V {
+  field: DecodedField,
+): string | number | boolean | readonly unknown[] {
   switch (field.kind) {
     case "enum": {
       const result = parseEnumSearchParam(
         params,
         key,
-        field.allowedValues as readonly string[],
-        {
-          fallback: field.defaultValue as unknown as string,
-          normalize: field.normalize,
-        },
+        field.allowedValues,
+        { normalize: field.normalize },
       );
-      return (result ?? field.defaultValue) as V;
+      return result ?? field.defaultValue;
     }
     case "boundedNumber": {
       const result = parseBoundedNumberSearchParam(params, key, {
-        fallback: field.defaultValue as unknown as number,
         min: field.min,
         max: field.max,
         integer: field.integer,
       });
-      return (result ?? field.defaultValue) as V;
+      return result ?? field.defaultValue;
     }
     case "string": {
       const result = parseStringSearchParam(params, key, {
-        fallback: field.defaultValue as unknown as string,
         trim: field.trim,
       });
-      return (result ?? field.defaultValue) as V;
+      return result ?? field.defaultValue;
     }
-    case "boolean": {
-      const result = parseBooleanSearchParam(
-        params,
-        key,
-        field.defaultValue as unknown as boolean,
-      );
-      return (result ?? field.defaultValue) as V;
-    }
+    case "boolean":
+      return parseBooleanSearchParam(params, key) ?? field.defaultValue;
     case "enumList": {
       const raw = params.get(key);
       if (raw == null || raw === "") return field.defaultValue;
@@ -109,12 +109,12 @@ function decodeField<V>(
         }
       }
       const limited = field.maxItems == null ? items : items.slice(0, field.maxItems);
-      return limited as V;
+      return limited;
     }
   }
 }
 
-function isEqualValue<V>(a: V, b: V, field: UrlStateField<V>): boolean {
+function isEqualValue<V>(a: V, b: V, field: UrlStateFieldVariants<V>): boolean {
   if (field.kind === "enumList") {
     if (!Array.isArray(a) || !Array.isArray(b)) return false;
     if (a.length !== b.length) return false;
@@ -126,7 +126,7 @@ function isEqualValue<V>(a: V, b: V, field: UrlStateField<V>): boolean {
   return Object.is(a, b);
 }
 
-function encodeField<V>(value: V, field: UrlStateField<V>): string | null {
+function encodeField<V>(value: V, field: UrlStateFieldVariants<V>): string | null {
   switch (field.kind) {
     case "enum":
       return field.encode ? field.encode(value) : String(value);
@@ -149,13 +149,13 @@ export function decodeState<T>(
   schema: UrlStateSchema<T>,
 ): T {
   const params = toSearchParams(query);
-  const result = {} as T;
-  for (const key in schema) {
-    if (!Object.prototype.hasOwnProperty.call(schema, key)) continue;
-    const field = schema[key] as UrlStateField<T[typeof key]>;
-    result[key] = decodeField(params, key, field);
+  const result: Record<string, unknown> = {};
+  const fields = schema as Record<string, DecodedField>;
+  for (const key in fields) {
+    if (!Object.prototype.hasOwnProperty.call(fields, key)) continue;
+    result[key] = decodeField(params, key, fields[key]);
   }
-  return result;
+  return result as T;
 }
 
 export function encodeState<T>(

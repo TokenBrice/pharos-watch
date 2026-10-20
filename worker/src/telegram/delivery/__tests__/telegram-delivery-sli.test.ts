@@ -268,6 +268,9 @@ describe("Telegram delivery SLI rollup", () => {
     expect(empty.window).toMatchObject({ lookbackSec: 7 * 86_400, bounded: true });
     expect(empty.evidence).toEqual({ latestAt: null, ageSec: null, freshness: "empty", freshnessThresholdSec: 900 });
     expect(empty.detectionToPlan.quality).toBe("empty");
+    expect(empty.familyAttribution).toEqual({
+      dews: 0, depeg: 0, safety: 0, launch: 0, reserve: 0, freeze: 0, mixed: 0, unknown: 0,
+    });
 
     insertSource(sqlite, "stale", NOW - 4_000, NOW + 1_000, NOW - 3_900);
     insertJob(sqlite, "job-stale", "stale", "reserve", NOW - 3_900, NOW + 1_000);
@@ -298,6 +301,59 @@ describe("Telegram delivery SLI rollup", () => {
       ],
       truncated: true,
     });
+  });
+
+  it("matches previous SQL for all item-key families, mixed targets and unknown items", async () => {
+    const { sqlite, db } = fixtures.open();
+    insertSource(sqlite, "families", NOW - 1_000, NOW + 1_000, NOW - 900);
+    insertJob(sqlite, "family-job", "families", "depeg", NOW - 900, NOW + 1_000);
+    const cases = [
+      ["dews:one", "dews:two", "future:extra"],
+      ["depeg-triggered:one"], ["depeg-worsening:one"], ["depeg-resolved:one"],
+      ["safety:one"], ["launch:one"], ["reserve:one"], ["freeze:one"],
+      ["dews:one", "freeze:one"], [], ["depeg:wrong-separator"], ["future:one"],
+      ["dews:one", "depeg-triggered:one", "safety:one", "launch:one", "reserve:one", "freeze:one"],
+    ];
+    for (const [index, items] of cases.entries()) {
+      const key = `family-${index}`;
+      insertTarget(sqlite, {
+        jobId: "family-job", sourceId: "families", key, alertType: "depeg", createdAt: NOW - 800,
+      });
+      insertTargetItems(sqlite, "family-job", "families", key, items);
+    }
+    // Retained pre-refactor family query: the oracle never imports generated projections.
+    const previous = sqlite.prepare(`WITH recent_sources AS MATERIALIZED (
+      SELECT source_event_id FROM telegram_alert_source_events WHERE detected_at >= ? AND detected_at <= ?
+    ), family_flags AS (
+      SELECT target.job_id, target.target_key,
+        COALESCE(MAX(item.item_key LIKE 'dews:%'), 0) AS dews,
+        COALESCE(MAX(item.item_key LIKE 'depeg-%'), 0) AS depeg,
+        COALESCE(MAX(item.item_key LIKE 'safety:%'), 0) AS safety,
+        COALESCE(MAX(item.item_key LIKE 'launch:%'), 0) AS launch,
+        COALESCE(MAX(item.item_key LIKE 'reserve:%'), 0) AS reserve,
+        COALESCE(MAX(item.item_key LIKE 'freeze:%'), 0) AS freeze
+      FROM recent_sources source
+      CROSS JOIN telegram_alert_job_targets target INDEXED BY idx_tajt_authoritative_ready
+      LEFT JOIN telegram_alert_job_target_items item ON item.job_id = target.job_id AND item.target_key = target.target_key
+      WHERE target.source_event_id = source.source_event_id GROUP BY target.job_id, target.target_key
+    ), attributed AS (
+      SELECT *, dews + depeg + safety + launch + reserve + freeze AS family_count FROM family_flags
+    ) SELECT
+      SUM(CASE WHEN family_count = 1 AND dews = 1 THEN 1 ELSE 0 END) AS dews,
+      SUM(CASE WHEN family_count = 1 AND depeg = 1 THEN 1 ELSE 0 END) AS depeg,
+      SUM(CASE WHEN family_count = 1 AND safety = 1 THEN 1 ELSE 0 END) AS safety,
+      SUM(CASE WHEN family_count = 1 AND launch = 1 THEN 1 ELSE 0 END) AS launch,
+      SUM(CASE WHEN family_count = 1 AND reserve = 1 THEN 1 ELSE 0 END) AS reserve,
+      SUM(CASE WHEN family_count = 1 AND freeze = 1 THEN 1 ELSE 0 END) AS freeze,
+      SUM(CASE WHEN family_count > 1 THEN 1 ELSE 0 END) AS mixed,
+      SUM(CASE WHEN family_count = 0 THEN 1 ELSE 0 END) AS unknown FROM attributed`)
+      .get(NOW - 86_400, NOW);
+    const report = await loadTelegramDeliverySliRollup(db, { nowSec: NOW });
+    expect(report.familyAttribution).toEqual(previous);
+    expect(report.familyAttribution).toEqual({
+      dews: 1, depeg: 3, safety: 1, launch: 1, reserve: 1, freeze: 1, mixed: 2, unknown: 3,
+    });
+    expect(report.authoritativeTargetOutcomes.total).toBe(cases.length);
   });
 
   it("materializes the bounded source window and forces the source-first target index", async () => {

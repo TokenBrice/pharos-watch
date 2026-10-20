@@ -4,9 +4,9 @@ import {
 } from "@shared/lib/report-card-core";
 import type { SafetyChange } from "../../../telegram/common/alerts-formatting";
 import type {
-  AlertSafetyV9SourceRow,
+  AlertSafetySourceRow,
   AlertSafetyV9ExplainSnapshot,
-} from "../../../lib/alert-safety-source-cache";
+} from "@shared/types/status/telegram";
 import type { SafetySnapshot } from "./telegram-alert-snapshots";
 
 export type SafetyChangeWithExplain = SafetyChange;
@@ -95,9 +95,9 @@ function largestPillarMovement(
 }
 
 export function buildV9SafetyReason(
-  current: Pick<AlertSafetyV9SourceRow, "grade" | "score" | "v9Explain">,
+  current: Pick<AlertSafetySourceRow, "grade" | "score" | "v9Explain">,
   previous?: Pick<
-    AlertSafetyV9SourceRow,
+    AlertSafetySourceRow,
     "grade" | "score" | "v9Explain"
   >,
 ): string {
@@ -171,10 +171,8 @@ export function addSafetyReasonLines(
     return {
       ...change,
       contextLine: buildV9SafetyReason(
-        current as AlertSafetyV9SourceRow,
-        previous?.v9Explain
-          ? (previous as AlertSafetyV9SourceRow)
-          : undefined,
+        current as AlertSafetySourceRow,
+        previous?.v9Explain ? previous as AlertSafetySourceRow : undefined,
       ),
     };
   });

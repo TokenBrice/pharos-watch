@@ -101,12 +101,6 @@ export function ensureHttpUrl(input, missingMessage = "Missing URL.") {
   return new URL(trimmed).toString();
 }
 
-export function joinRouteUrl(baseUrl, route) {
-  const parsed = new URL(baseUrl);
-  const normalized = normalizeRoute(route);
-  return normalized === "/" ? parsed.toString() : new URL(normalized, parsed).toString();
-}
-
 export function isSameRouteUrl(finalUrl, requestedUrl) {
   try {
     const final = new URL(finalUrl);
@@ -152,19 +146,6 @@ export function chunkContiguous(items, workerCount) {
   return chunks;
 }
 
-export async function runBoundedWorkerPool(items, workerCount, worker) {
-  const results = new Array(items.length);
-  let nextIndex = 0;
-  const runWorker = async (workerIndex) => {
-    while (nextIndex < items.length) {
-      const itemIndex = nextIndex++;
-      results[itemIndex] = await worker(items[itemIndex], itemIndex, workerIndex);
-    }
-  };
-  await Promise.all(Array.from({ length: Math.min(workerCount, items.length) }, (_, index) => runWorker(index)));
-  return results;
-}
-
 export async function retrySmokeOperation(operation, {
   retries = 0,
   delayMs = 0,
@@ -199,15 +180,6 @@ export async function retrySmokeResult(operation, {
     result = await operation(retryIndex + 1, result);
   }
   return result;
-}
-
-export function aggregateRouteResults(results) {
-  return results.reduce((aggregate, result) => {
-    aggregate.results.push(result);
-    if (result?.failures?.length) aggregate.failures.push(...result.failures);
-    if (result?.screenshotPath) aggregate.screenshots.push(result.screenshotPath);
-    return aggregate;
-  }, { failures: [], results: [], screenshots: [] });
 }
 
 export async function captureFailureScreenshot(page, path, options = {}) {
@@ -246,20 +218,6 @@ export async function launchChromiumBrowser(chromium, { env = process.env, log =
     if (launchOptions.channel || launchOptions.executablePath || !isMissingPlaywrightBrowserError(error)) throw error;
     log("[smoke-ui] WARN Playwright-managed Chromium missing; retrying with system Chrome");
     return chromium.launch({ channel: "chrome", headless: true });
-  }
-}
-
-export async function withBrowserContext({ chromium, contextOptions, launch = launchChromiumBrowser }, callback) {
-  const browser = await launch(chromium);
-  try {
-    const context = await browser.newContext(contextOptions);
-    try {
-      return await callback(context, browser);
-    } finally {
-      await context.close();
-    }
-  } finally {
-    await browser.close();
   }
 }
 
@@ -401,14 +359,4 @@ export function formatError(error) {
  */
 export function parseCheckMode(argv) {
   return argv.includes("--check");
-}
-
-/**
- * Look up a single `--name <value>` style argument in the provided argv.
- * Returns the next token, or null if the flag isn't present.
- */
-export function getArgValue(argv, name) {
-  const index = argv.indexOf(name);
-  if (index === -1) return null;
-  return argv[index + 1] ?? null;
 }

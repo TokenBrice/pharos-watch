@@ -17,7 +17,6 @@ import type { DeadStablecoin, StablecoinMeta } from "@shared/types";
 import { NativeBankDenomSchema } from "@shared/types/stablecoin-meta-schemas";
 import { isValidIsoDateOnly } from "@shared/types/date-primitives";
 import { MANIFEST_SOURCES } from "@shared/data/live-reserves/independent-assurance";
-import { REVIEWED_ORACLE_RISK_BRANCH_DISPOSITIONS } from "@shared/data/coverage-dispositions/oracle-risk-branch-dispositions";
 import listingDecisionsAsset from "@shared/data/stablecoins/listing-decisions.json";
 import { RESERVE_COMPOSITION_TOTAL_TOLERANCE_PCT, validateReserveCompositionTotal } from "@shared/types/reserves";
 import { MechanismArchetypeReviewSchema } from "@shared/types/stablecoin-meta-schemas";
@@ -856,14 +855,9 @@ function runStablecoinDataCheck(): void {
       reportError(`${STABLECOIN_DATA_DIR}: ${issue.id}: ${issue.message}`);
     }
 
-    // Reviewed coverage dispositions promise they "cannot silently become
-    // stale". Their audits are maintenance CLIs that no pull request runs, so
-    // the registers are validated here as well: a row that no longer describes
-    // the corpus (duplicate, unknown, no-longer-active, now-configured, or a
-    // stale oracle branch) blocks. The genuine coverage *backlog* — an active
-    // unconfigured asset that has no reviewed row yet, or an incomplete CDP
-    // oracle profile — is reported through the advisory lane and stays owned by
-    // `npm run audit:coverage`, whose `--check` mode is where it blocks.
+    // Reviewed redemption dispositions must still describe the active corpus;
+    // missing rows remain advisory backlog for `npm run audit:coverage`.
+    // Oracle structural gaps block below; research freshness stays advisory.
     const coverageCoins = allEntries.map((entry) => entry.coin);
     const redemptionDispositions = validateReviewedRedemptionDispositionRows({
       trackedCoins: coverageCoins,
@@ -880,9 +874,7 @@ function runStablecoinDataCheck(): void {
       );
     }
 
-    for (const finding of analyzeOracleRiskCoverage(coverageCoins, {
-      reviewedBranchDispositions: REVIEWED_ORACLE_RISK_BRANCH_DISPOSITIONS,
-    }).findings) {
+    for (const finding of analyzeOracleRiskCoverage(coverageCoins).findings) {
       const message = `${STABLECOIN_DATA_DIR}: ${finding.id} (${finding.symbol}): oracleRisk ${finding.kind} — ${finding.detail}`;
       if (isBlockingOracleRiskCoverageFinding(finding)) {
         reportError(message);

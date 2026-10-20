@@ -26,15 +26,14 @@ export async function measureYamato(
   const token = normalizeAddress(target.contracts.token);
   const yamato = normalizeAddress(target.contracts.yamato);
 
-  const currencyOs = await readJournalAddress(caller, { name: "yamato.currencyOS", to: yamato, signature: "currencyOS()", selector: "0x19eb292c" }, "currencyOS");
-  const currency = await readJournalAddress(caller, { name: "currencyOS.currency", to: currencyOs, signature: "currency()", selector: "0xe5a6b10f" }, "currencyOS.currency");
+  const currencyOs = await readJournalAddress(caller, { name: "yamato.currencyOS", to: yamato, signature: "currencyOS()" }, "currencyOS");
+  const currency = await readJournalAddress(caller, { name: "currencyOS.currency", to: currencyOs, signature: "currency()" }, "currencyOS.currency");
   requireCheck(checks, "graph.currency", currency === token, `CurrencyOS token ${currency} equals configured CJPY`);
 
   const statesRaw = await caller.call({
     name: "yamato.getStates",
     to: yamato,
     signature: "getStates()",
-    selector: "0xd8ab8274",
   });
   const totalCollateralRaw = decodeUintWord(statesRaw, 0, "getStates.totalColl");
   const totalDebtRaw = decodeUintWord(statesRaw, 1, "getStates.totalDebt");
@@ -52,11 +51,11 @@ export async function measureYamato(
     `collateral ${totalCollateralRaw} and debt ${totalDebtRaw} are positive`,
   );
 
-  const priceFeed = await readJournalAddress(caller, { name: "yamato.priceFeed", to: yamato, signature: "priceFeed()", selector: "0x741bef1a" }, "priceFeed");
-  const priceRaw = await readJournalUint(caller, { name: "priceFeed.getPrice", to: priceFeed, signature: "getPrice()", selector: "0x98d5fdca" }, 0, "getPrice");
+  const priceFeed = await readJournalAddress(caller, { name: "yamato.priceFeed", to: yamato, signature: "priceFeed()" }, "priceFeed");
+  const priceRaw = await readJournalUint(caller, { name: "priceFeed.getPrice", to: priceFeed, signature: "getPrice()" }, 0, "getPrice");
   requireCheck(checks, "price.positive", priceRaw > 0n, `protocol ETH/JPY price ${priceRaw} is positive`);
 
-  const pool = await readJournalAddress(caller, { name: "yamato.pool", to: yamato, signature: "pool()", selector: "0x16f0115b" }, "pool");
+  const pool = await readJournalAddress(caller, { name: "yamato.pool", to: yamato, signature: "pool()" }, "pool");
   requireCheck(
     checks,
     "graph.pool",
@@ -64,7 +63,7 @@ export async function measureYamato(
     `protocol pool ${pool} matches configured graph`,
   );
 
-  const totalSupplyRaw = await readJournalUint(caller, { name: "token.totalSupply", to: token, signature: "totalSupply()", selector: "0x18160ddd" }, 0, "totalSupply");
+  const totalSupplyRaw = await readJournalUint(caller, { name: "token.totalSupply", to: token, signature: "totalSupply()" }, 0, "totalSupply");
   requireCheck(
     checks,
     "derivation.supply-vs-debt",
@@ -76,7 +75,6 @@ export async function measureYamato(
     name: "token.balanceOf(pool)",
     to: token,
     signature: "balanceOf(address)",
-    selector: "0x70a08231",
     args: [BigInt(pool)],
   }, 0, "pool balance");
   requireCheck(

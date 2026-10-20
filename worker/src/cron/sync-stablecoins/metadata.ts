@@ -456,7 +456,7 @@ export function buildStablecoinsSyncResult(input: {
   assets: PeggedAsset[];
   rawAssetCount: number;
   droppedMalformedAssets: number;
-  canonicalDeduplication: CanonicalDeduplicationResult;
+  canonicalDeduplication: Pick<CanonicalDeduplicationResult, "duplicateRows" | "affectedIds">;
   enrichStats: unknown;
   priceValidationStats: unknown;
   providerDiagnostics?: PricingProviderAttemptDiagnostic[];

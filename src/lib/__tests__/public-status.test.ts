@@ -8,11 +8,9 @@ import {
   getAcknowledgedPriceGapNotice,
   describePublicHeadline,
   getAgeBandState,
-  getImpactedPublicSurfaces,
   getPublicDivergenceNotice,
   getPublicHealthWarningPresentation,
   getPublicMintBurnStatus,
-  getPublicWorstCacheSummary,
 } from "@/lib/status/public-status";
 
 const BASE_HEALTH: HealthResponse = makeHealthyHealthResponse();
@@ -43,8 +41,6 @@ describe("public status helpers", () => {
         lastKnownMarketCapObservedAt: BASE_HEALTH.timestamp, lastKnownMarketCapSource: "supply_history",
       })]),
     };
-    expect(getImpactedPublicSurfaces(health).some((surface) => surface.id === "stablecoin-publication"))
-      .toBe(cap === 500_000_000);
     const presentation = getPublicHealthWarningPresentation(health.warnings[0]!, health);
     expect(presentation.detail).toContain("hbd-hive");
     expect(presentation.detail).not.toBe(health.warnings[0]);
@@ -89,7 +85,6 @@ describe("public status helpers", () => {
     const presentation = getPublicHealthWarningPresentation(health.warnings[0]!, health);
     expect(presentation.detail).toContain("NXUSD");
     expect(presentation.detail).not.toContain("TUSD");
-    expect(getImpactedPublicSurfaces(health).some((surface) => surface.id === "active-price-coverage")).toBe(false);
   });
 
   it("renders long-running price gaps as catalog reviews, never as the raw slug", () => {
@@ -141,7 +136,6 @@ describe("public status helpers", () => {
     expect(buildPublicHealthStatusCauses(health)).toEqual([
       expect.objectContaining({ severity: "info", value: 1 }),
     ]);
-    expect(getImpactedPublicSurfaces(health)).toEqual([]);
   });
 
 
@@ -163,90 +157,6 @@ describe("public status helpers", () => {
     };
 
     expect(getPublicMintBurnStatus(sync)).toBe("degraded");
-
-    const impacted = getImpactedPublicSurfaces({
-      ...BASE_HEALTH,
-      mintBurn: {
-        ...BASE_HEALTH.mintBurn,
-        sync,
-      },
-    });
-
-    expect(impacted).toContainEqual(expect.objectContaining({ id: "mint-burn", tone: "degraded" }));
-  });
-
-  it("treats missing cache rows as stale in the worst cache summary", () => {
-    const summary = getPublicWorstCacheSummary({
-      stablecoins: {
-        ageSeconds: null,
-        maxAge: 900,
-        healthy: false,
-      },
-    });
-
-    expect(summary).toEqual({
-      ratio: null,
-      status: "stale",
-      impactedCount: 1,
-    });
-  });
-
-  it("selects the worst severity across caches and counts every impacted cache", () => {
-    const summary = getPublicWorstCacheSummary({
-      stablecoins: { ageSeconds: 11_700, maxAge: 900, healthy: false }, // ratio 13 → stale
-      "stablecoin-charts": { ageSeconds: 8_100, maxAge: 900, healthy: false }, // ratio 9 → degraded
-      "fx-rates": { ageSeconds: 90, maxAge: 900, healthy: true }, // ratio 0.1 → healthy
-    });
-
-    expect(summary).toEqual({ ratio: 13, status: "stale", impactedCount: 2 });
-  });
-
-  it("prefers a missing freshness row over a numeric ratio within a severity tie, in any order", () => {
-    const missingRow = { ageSeconds: null, maxAge: 900, healthy: false }; // stale, no freshness ratio
-    const numericStale = { ageSeconds: 1_300, maxAge: 100, healthy: false }; // ratio 13 → stale
-
-    expect(getPublicWorstCacheSummary({ stablecoins: missingRow, "stablecoin-charts": numericStale })).toEqual({
-      ratio: null,
-      status: "stale",
-      impactedCount: 2,
-    });
-    expect(getPublicWorstCacheSummary({ "stablecoin-charts": numericStale, stablecoins: missingRow })).toEqual({
-      ratio: null,
-      status: "stale",
-      impactedCount: 2,
-    });
-  });
-
-  it("treats source-degraded as informational — fresh cache stays healthy impact", () => {
-    const ratio = 120 / 3_600;
-    const summary = getPublicWorstCacheSummary({
-      "fx-rates": {
-        ageSeconds: 120,
-        maxAge: 3_600,
-        healthy: true,
-        sourceStatus: "degraded",
-      },
-    });
-
-    expect(summary).toEqual({
-      ratio,
-      status: "healthy",
-      impactedCount: 0,
-    });
-
-    const impacted = getImpactedPublicSurfaces({
-      ...BASE_HEALTH,
-      caches: {
-        "fx-rates": {
-          ageSeconds: 120,
-          maxAge: 3_600,
-          healthy: true,
-          sourceStatus: "degraded",
-        },
-      },
-    });
-
-    expect(impacted).not.toContainEqual(expect.objectContaining({ id: "cache-fx-rates", tone: "degraded" }));
   });
 
   it("keeps dedicated outages scoped while shared source families degrade availability", () => {
@@ -316,69 +226,6 @@ describe("getPublicDivergenceNotice", () => {
   });
   it("both-degraded-different-severity when both degraded but different", () => {
     expect(getPublicDivergenceNotice("degraded", "stale").kind).toBe("both-degraded-different-severity");
-  });
-});
-
-describe("getImpactedPublicSurfaces", () => {
-  it("returns an empty list when everything is healthy", () => {
-    const surfaces = getImpactedPublicSurfaces(BASE_HEALTH);
-    expect(surfaces).toEqual([]);
-  });
-
-  it("fails closed with a degraded surface when exact price coverage is unknown", () => {
-    const health: HealthResponse = {
-      ...BASE_HEALTH,
-      activePriceCoverage: makeActivePriceCoverage([], {
-        status: "unknown",
-        expectedActiveCount: 0,
-        presentActiveCount: 0,
-        pricedActiveCount: 0,
-        observedAt: null,
-      }),
-    };
-
-    expect(getImpactedPublicSurfaces(health)).toContainEqual(
-      expect.objectContaining({ id: "active-price-coverage", tone: "degraded" }),
-    );
-  });
-
-  it("surfaces both mint-burn and blacklist when both are degraded", () => {
-    const health: HealthResponse = {
-      ...BASE_HEALTH,
-      mintBurn: {
-        ...BASE_HEALTH.mintBurn,
-        majorStaleCount: 2,
-        staleMajorSymbols: ["USDT", "USDC"],
-      },
-      blacklist: {
-        ...BASE_HEALTH.blacklist,
-        totalEvents: 1000,
-        missingAmounts: 200,
-        recentMissingAmounts: 25,
-        missingRatio: 0.2,
-      },
-    };
-    const surfaces = getImpactedPublicSurfaces(health);
-    const ids = surfaces.map((s) => s.id);
-    expect(ids).toContain("mint-burn");
-    expect(ids).toContain("blacklist");
-  });
-
-  it("maps a stale mint/burn lane to the stale public surface tone", () => {
-    const staleHealth: HealthResponse = {
-      ...BASE_HEALTH,
-      mintBurn: {
-        ...BASE_HEALTH.mintBurn,
-        sync: {
-          ...BASE_HEALTH.mintBurn.sync,
-          freshnessStatus: "stale",
-        },
-      },
-    };
-
-    expect(getImpactedPublicSurfaces(staleHealth)).toContainEqual(
-      expect.objectContaining({ id: "mint-burn", tone: "stale" }),
-    );
   });
 });
 

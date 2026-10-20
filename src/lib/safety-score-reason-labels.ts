@@ -1,5 +1,5 @@
 import { normalizeChain, prettifyProtocol } from "@/lib/dex-display-constants";
-import { describeFailureDomain } from "@/lib/failure-domains";
+import { describeFailureDomain } from "@/lib/failure-domain-labels";
 
 /**
  * Reader label for a scored exit route. DEX routes arrive labelled with

@@ -6,11 +6,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   buildOgCemetery,
   checkOgCemetery,
-  resolveRootTokens,
-  rootCustomProperties,
   type OgCemeteryDocument,
-  type OgCemeteryPaths,
 } from "../maintenance/build-og-cemetery";
+import { resolveRootTokens, rootCustomProperties, type SignedPngPaths } from "../lib/scene-og";
 
 describe("resolveRootTokens", () => {
   const moduleCss = `
@@ -31,7 +29,7 @@ describe("buildOgCemetery + checkOgCemetery", () => {
     for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
   });
 
-  function makePaths(): OgCemeteryPaths {
+  function makePaths(): SignedPngPaths {
     const root = mkdtempSync(join(tmpdir(), "og-cemetery-"));
     roots.push(root);
     return { imagePath: join(root, "public/og-cemetery.png"), signaturePath: join(root, "state/og-cemetery-signature.json") };
@@ -45,7 +43,7 @@ describe("buildOgCemetery + checkOgCemetery", () => {
   const png = (width = 1200, height = 630, background = "#f8f8fa") =>
     sharp({ create: { width, height, channels: 3, background } }).png().toBuffer();
 
-  async function problemKinds(document: OgCemeteryDocument, paths: OgCemeteryPaths): Promise<string[]> {
+  async function problemKinds(document: OgCemeteryDocument, paths: SignedPngPaths): Promise<string[]> {
     return (await checkOgCemetery(document, paths)).map((problem) => problem.kind);
   }
 

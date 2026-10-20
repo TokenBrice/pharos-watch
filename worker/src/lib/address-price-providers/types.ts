@@ -1,11 +1,6 @@
 import type { PriceObservedAtMode } from "@shared/types/core";
-import type {
-  PricingProviderAttemptDiagnostic,
-  PricingProviderRejectionReason,
-} from "../pricing-provider-diagnostics";
+import type { PricingProviderAttemptDiagnostic } from "../pricing-provider-diagnostics";
 import type { PricingSourceKey } from "@shared/lib/pricing-source-registry";
-
-export type AddressPriceProviderKey = "coingecko-onchain-address";
 
 export interface AddressPriceProviderRuntimeConfig {
   enabledProviders?: string | null;
@@ -58,18 +53,10 @@ export interface AddressPriceQuote {
   metadata?: Record<string, unknown>;
 }
 
-export interface AddressPriceProviderRunResult {
-  quotes: AddressPriceQuote[];
-  diagnostics: PricingProviderAttemptDiagnostic[];
-  rejectedTargets: Partial<Record<PricingProviderRejectionReason, number>>;
-  successfulRequests: number;
-  attemptedRequests: number;
-}
-
 export interface AddressPriceProviderCollectionResult {
   quotesByStablecoinId: Map<string, AddressPriceQuote[]>;
   diagnostics: PricingProviderAttemptDiagnostic[];
-  providerOutcomes: Map<AddressPriceProviderKey, "success" | "failure" | "neutral">;
+  providerOutcome: "success" | "failure" | "neutral";
   /** Provider transport calls made, excluding accounting-only diagnostics. */
   attemptedRequests: number;
   successfulRequests: number;

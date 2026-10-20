@@ -8,11 +8,11 @@
  */
 import type { ReactElement } from "react";
 import { CAUSE_META, CAUSE_ORDER, type CauseOfDeath } from "@shared/lib/cause-of-death";
+import { fnv1a32 } from "@shared/lib/fnv1a";
 import {
   PLOT_ARCHETYPE_BY_CAUSE,
   PLOT_PROJECTIONS,
   bbox,
-  fnv1a,
   graveGeometry,
   plotShapeOf,
   type PlotGraveShapeInput,
@@ -23,7 +23,7 @@ import { PLOT_FRESH_DAYS, PLOT_PEG_GLYPHS } from "@/lib/cemetery-plot-map";
 import { PlotGraveBody, PlotMarks, plotGraveClass } from "./plot-map-shapes";
 import styles from "./plot-map.module.css";
 
-const LEGEND_SEED = fnv1a("legend");
+const LEGEND_SEED = fnv1a32("legend");
 
 /** A plain 1×1 $10M–$100M stone; each example overrides one field. */
 function sample(over: Partial<PlotGraveShapeInput>): PlotGraveShapeInput {
@@ -135,7 +135,7 @@ export function PlotMapLegend({ firstYear, lastYear }: { firstYear: number; last
           <li>
             <span className={styles.icons}>
               {WEATHER_SAMPLES.map((w) => (
-                <StoneIcon key={w} g={sample({ weather: w, seed: fnv1a(`w${w}`) })} ground={false} />
+                <StoneIcon key={w} g={sample({ weather: w, seed: fnv1a32(`w${w}`) })} ground={false} />
               ))}
             </span>
             <span>

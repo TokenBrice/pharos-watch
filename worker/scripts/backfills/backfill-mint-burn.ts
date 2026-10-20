@@ -32,10 +32,6 @@ const ETHEREUM_CHUNK_SIZE = 50_000;
 const BACKFILL_BUDGET_LIMIT = 900;
 const DEFAULT_MAX_CHUNKS = 24;
 
-function configKey(config: MintBurnContractConfig): string {
-  return mintBurnConfigKey(config);
-}
-
 type BackfillConfigResult =
   | { ok: true; config: MintBurnContractConfig; selectionMode: "explicit" | "auto"; autoSelectedReason: string | null }
   | { ok: false; response: Response };
@@ -46,7 +42,7 @@ async function resolveBackfillConfig(
   requestedConfigKey: string | null,
 ): Promise<BackfillConfigResult> {
   if (requestedConfigKey) {
-    const config = MINT_BURN_CONFIGS.find((entry) => configKey(entry).toLowerCase() === requestedConfigKey);
+    const config = MINT_BURN_CONFIGS.find((entry) => mintBurnConfigKey(entry).toLowerCase() === requestedConfigKey);
     if (!config) {
       return { ok: false, response: errorResponse(404, "Unknown mint/burn configKey") };
     }
@@ -82,8 +78,8 @@ async function resolveBackfillConfig(
 
     const aHead = chainHeads.get(a.chain.chainId) ?? (a.startBlock - 1);
     const bHead = chainHeads.get(b.chain.chainId) ?? (b.startBlock - 1);
-    const aLag = Math.max(0, aHead - (syncStateByKey.get(configKey(a)) ?? a.startBlock - 1));
-    const bLag = Math.max(0, bHead - (syncStateByKey.get(configKey(b)) ?? b.startBlock - 1));
+    const aLag = Math.max(0, aHead - (syncStateByKey.get(mintBurnConfigKey(a)) ?? a.startBlock - 1));
+    const bLag = Math.max(0, bHead - (syncStateByKey.get(mintBurnConfigKey(b)) ?? b.startBlock - 1));
     return bLag - aLag;
   })[0];
   if (!config) {
@@ -182,7 +178,7 @@ export async function handleBackfillMintBurn({
     const toBlock = toBlockParam >= 0 ? Math.min(toBlockParam, chainHead) : chainHead;
     if (toBlock < fromBlock) {
       return jsonResponse({
-        configKey: configKey(config),
+        configKey: mintBurnConfigKey(config),
         selectedSymbol: config.symbol,
         selectionMode,
         autoSelectedReason,
@@ -263,7 +259,7 @@ export async function handleBackfillMintBurn({
       if (failedEventDefs.length > 0) {
         return errorResponse(
           502,
-          `Backfill failed for ${configKey(config)} at ${cursor}-${scanTo}: ${failedEventDefs.join(", ")}`,
+          `Backfill failed for ${mintBurnConfigKey(config)} at ${cursor}-${scanTo}: ${failedEventDefs.join(", ")}`,
         );
       }
 
@@ -280,7 +276,7 @@ export async function handleBackfillMintBurn({
       if (uniqueBlocks.length > 0 && blockTimestamps.size < uniqueBlocks.length) {
         return errorResponse(
           502,
-          `Backfill failed for ${configKey(config)} at ${cursor}-${scanTo}: missing block timestamps`,
+          `Backfill failed for ${mintBurnConfigKey(config)} at ${cursor}-${scanTo}: missing block timestamps`,
         );
       }
 
@@ -293,7 +289,7 @@ export async function handleBackfillMintBurn({
         for (const log of logs) {
           const slot = eventDef.amountEncoding === "nth-data-uint256" ? (eventDef.dataSlot ?? 0) : 0;
           if (decodeUint256AtSlotOrNull(log.data, slot, config.decimals) == null) {
-            const retry = await shouldQuarantineDecodeFailure(db, configKey(config), log, Math.floor(Date.now() / 1000));
+            const retry = await shouldQuarantineDecodeFailure(db, mintBurnConfigKey(config), log, Math.floor(Date.now() / 1000));
             if (retry.quarantined) {
               rowsDropped++;
               rowsDroppedDecode++;
@@ -324,7 +320,7 @@ export async function handleBackfillMintBurn({
         txContextShortfalls += burnCounts.txContextShortfalls;
         return errorResponse(
           502,
-          `Backfill failed for ${configKey(config)} at ${cursor}-${scanTo}: ` +
+          `Backfill failed for ${mintBurnConfigKey(config)} at ${cursor}-${scanTo}: ` +
             `${burnCounts.txContextShortfalls} transaction context lookup(s) unavailable`,
         );
       }
@@ -344,7 +340,7 @@ export async function handleBackfillMintBurn({
         ? chunkDecodeFailureBlock - 1
         : mintBurnSuccessfulScanFrontier(cursor, scanTo, chainHead);
       if (advancedTo >= cursor) {
-        await upsertMintBurnSyncState(db, configKey(config), advancedTo, "monotonic-max");
+        await upsertMintBurnSyncState(db, mintBurnConfigKey(config), advancedTo, "monotonic-max");
       }
       cursor = Math.max(cursor, advancedTo + 1);
       chunksProcessed++;
@@ -353,7 +349,7 @@ export async function handleBackfillMintBurn({
     }
 
     return jsonResponse({
-      configKey: configKey(config),
+      configKey: mintBurnConfigKey(config),
       selectedSymbol: config.symbol,
       selectionMode,
       autoSelectedReason,

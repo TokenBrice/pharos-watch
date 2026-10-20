@@ -15,9 +15,18 @@ import {
 import { YIELD_SECTION_CONTENT } from "@/lib/methodology-content";
 import { YieldMethodologyRelatedLinks, YieldNavTokenMechanismLinks } from "./yield-mechanism-links";
 import { METHODOLOGY_SECTION_ACCENT_CLASSES } from "@shared/lib/classification";
+import {
+  PYS_APY_SANITY_MAX, PYS_BENCHMARK_SPREAD_WEIGHT, PYS_MAX_SOURCE_RISK_PENALTY,
+  PYS_RISK_PENALTY_EXPONENT, PYS_RISK_PENALTY_FLOOR, PYS_SUSTAINABILITY_FLOOR,
+} from "@shared/lib/yield-scoring";
+import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
+
+const YIELD_PUBLISH_HOURS = CRON_SCHEDULE_CADENCES.hourlyYieldSync.intervalSec / 3600;
+const YIELD_SUPPLEMENTAL_HOURS = CRON_SCHEDULE_CADENCES.fourHourlyYieldSupplemental.intervalSec / 3600;
+const EFFECTIVE_YIELD_LABEL = `APY + ${PYS_BENCHMARK_SPREAD_WEIGHT * 100}% spread, USD-rebased hurdle`;
 
 const YIELD_OVERVIEW_PARAGRAPH =
-  "Pharos tracks native stablecoin yield plus reviewed lending and structured opportunities, then computes a risk-adjusted ranking through the Pharos Yield Score (PYS). Core rankings publish hourly; slower supplemental families refresh every four hours. Source resolution is identity-first and confidence-weighted, preserves valid alternatives, and keeps quarantined or pre-launch coverage visible without admitting it to the live leaderboard. Published external opportunities must pass source-quality, size, measured venue-TVL, benchmark-freshness, and exposure-identity gates. Opportunity-level risk can affect PYS for that market, but it never rewrites the underlying stablecoin's Safety Score. The typed adapter, allowlist, exact-pool, source-risk, and lifecycle registries own the changing venue and asset inventories.";
+  `Pharos tracks native stablecoin yield plus reviewed lending and structured opportunities, then computes a risk-adjusted ranking through the Pharos Yield Score (PYS). Core rankings publish every ${YIELD_PUBLISH_HOURS} hour; slower supplemental families refresh every ${YIELD_SUPPLEMENTAL_HOURS} hours. Source resolution is identity-first and confidence-weighted, preserves valid alternatives, and keeps quarantined or pre-launch coverage visible without admitting it to the live leaderboard. Published external opportunities must pass source-quality, size, measured venue-TVL, benchmark-freshness, and exposure-identity gates. Opportunity-level risk can affect PYS for that market, but it never rewrites the underlying stablecoin's Safety Score. The typed adapter, allowlist, exact-pool, source-risk, and lifecycle registries own the changing venue and asset inventories.`;
 
 const YIELD_PIPELINE = {
   desktop: {
@@ -29,7 +38,7 @@ const YIELD_PIPELINE = {
           { className: "flex-1", title: "Tier 2", subtitle: "Curated pools + protocol APIs" },
           { className: "flex-1", title: "Tier 3 / 4", subtitle: "Price- or rate-derived fallback" },
         ] },
-      { cards: [{ className: "w-32 flex flex-shrink-0 flex-col justify-center", title: "Effective Yield", subtitle: "APY + 25% spread, USD-rebased hurdle" }] },
+      { cards: [{ className: "w-32 flex flex-shrink-0 flex-col justify-center", title: "Effective Yield", subtitle: EFFECTIVE_YIELD_LABEL }] },
       { wrapperClassName: "flex flex-col gap-2 flex-1", cards: [
           { className: "flex-1", title: "Row utility", subtitle: "Effective yield ÷ source risk" },
           { className: "flex-1", title: "Yield efficiency", subtitle: "Row utility ÷ curved safety penalty" },
@@ -47,7 +56,7 @@ const YIELD_PIPELINE = {
           { title: "Tier 2", titleClassName: "text-xs text-foreground font-medium", subtitle: "Curated venues", subtitleClassName: "text-xs text-muted-foreground" },
           { title: "Tier 3 / 4", titleClassName: "text-xs text-foreground font-medium", subtitle: "Fallbacks", subtitleClassName: "text-xs text-muted-foreground" },
         ] },
-      { cards: [{ className: "w-full", title: "Effective Yield", subtitle: "APY + 25% spread, USD-rebased hurdle" }] },
+      { cards: [{ className: "w-full", title: "Effective Yield", subtitle: EFFECTIVE_YIELD_LABEL }] },
       { wrapperClassName: "grid grid-cols-3 gap-2 w-full", cards: [
           { title: "Row utility", titleClassName: "text-xs text-foreground font-medium", subtitle: "yield ÷ source risk", subtitleClassName: "text-xs text-muted-foreground" },
           { title: "Efficiency", titleClassName: "text-xs text-foreground font-medium", subtitle: "utility ÷ safety", subtitleClassName: "text-xs text-muted-foreground" },
@@ -92,7 +101,7 @@ export function YieldIntelligenceMethodologySection() {
               <YieldMethodologyRelatedLinks />
               <MethodologyFacts
                 facts={[
-                  { label: "Update cadence", value: "1h publish / 4h supplemental" },
+                  { label: "Update cadence", value: `${YIELD_PUBLISH_HOURS}h publish / ${YIELD_SUPPLEMENTAL_HOURS}h supplemental` },
                   { label: "APY priority", value: "Confidence-weighted across deterministic, curated, and fallback sources" },
                   { label: "Output", value: "PYS (0-100)" },
                 ]}
@@ -252,8 +261,8 @@ export function YieldIntelligenceMethodologySection() {
                   </p>
                   <p>
                     Read-time <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">data-stale</code> warnings are also
-                    cadence-aware: hourly families attach only after three missed <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">sync-yield-data</code>{" "}
-                    intervals (about 3 hours at the current publisher), while <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">price-derived</code>{" "}
+                    cadence-aware: core families attach only after three missed <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">sync-yield-data</code>{" "}
+                    intervals (about {3 * YIELD_PUBLISH_HOURS} hours at the current publisher), while <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">price-derived</code>{" "}
                     rows wait 30 hours because they are backed by daily <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">supply_history</code>{" "}
                     snapshots and <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">rate-derived</code> rows wait 36 hours
                     for the daily benchmark producer. Each source class also emits a midpoint <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">aging</code>{" "}
@@ -283,27 +292,27 @@ export function YieldIntelligenceMethodologySection() {
                     <br />
                     hurdleRebase = usdBenchmarkRate &minus; benchmarkRate (0 for USD-currency rows or missing rates)
                     <br />
-                    effectiveYield = max(0, apy30d + benchmarkSpread &times; 0.25 + hurdleRebase)
+                    effectiveYield = max(0, apy30d + benchmarkSpread &times; {PYS_BENCHMARK_SPREAD_WEIGHT} + hurdleRebase)
                     <br />
-                    sourceRiskPenalty = deriveOrResolve(sourceRisk, neutral=1, max=2.5)
+                    sourceRiskPenalty = deriveOrResolve(sourceRisk, neutral=1, max={PYS_MAX_SOURCE_RISK_PENALTY})
                     <br />
                     rowUtility = effectiveYield / sourceRiskPenalty
                     <br />
-                    riskPenalty = max(0.5, (101 &minus; safetyScore) / 20)
+                    riskPenalty = max({PYS_RISK_PENALTY_FLOOR}, (101 &minus; safetyScore) / 20)
                     <br />
-                    yieldEfficiency = rowUtility / (riskPenalty ^ 1.75)
+                    yieldEfficiency = rowUtility / (riskPenalty ^ {PYS_RISK_PENALTY_EXPONENT})
                     <br />
-                    sustainability = max(0.3, 1.0 &minus; apyVarianceScore)
+                    sustainability = max({PYS_SUSTAINABILITY_FLOOR}, 1.0 &minus; apyVarianceScore)
                     <br />
                     PYS = clamp(round(yieldEfficiency &times; sustainability &times; scalingFactor), 0, 100)
                   </p>
                   <p>
-                    APY above the 300% scoring envelope or non-finite effective yield is unavailable, not a zero score.
+                    APY above the {PYS_APY_SANITY_MAX}% scoring envelope or non-finite effective yield is unavailable, not a zero score.
                     Every withheld score carries an NR reason; a valid score that rounds to zero remains a measured 0.
                   </p>
                   <ul className="list-disc list-inside space-y-1">
                     <li>
-                      <span className="text-foreground">Effective yield</span> keeps raw APY as the anchor and adds 25%
+                      <span className="text-foreground">Effective yield</span> keeps raw APY as the anchor and adds {PYS_BENCHMARK_SPREAD_WEIGHT * 100}%
                       of the row&apos;s benchmark spread, then swaps the local hurdle for the USD risk-free rate (v8.43). A
                       peg that only pays its own central-bank rate scores like a USD row holding the T-bill rate, and equal
                       benchmark-relative excess scores equally in every currency. This is the covered-interest-parity
@@ -314,7 +323,7 @@ export function YieldIntelligenceMethodologySection() {
                       <span className="text-foreground">Source-risk penalty</span> uses nested source-risk evidence from
                       measured reward share, source depth, freshness, source switching, bootstrap history, and sourced
                       venue tier where available. History maturity counts distinct UTC observation days rather than raw
-                      hourly samples, then clamps the combined penalty to 1&ndash;2.5 while treating missing evidence as neutral
+                      hourly samples, then clamps the combined penalty to 1&ndash;{PYS_MAX_SOURCE_RISK_PENALTY} while treating missing evidence as neutral
                     </li>
                     <li>
                       <span className="text-foreground">Yield efficiency</span> rewards higher APY relative to the

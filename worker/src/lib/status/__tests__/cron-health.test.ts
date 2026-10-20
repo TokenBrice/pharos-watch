@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { createMockD1Preset } from "@shared/test-utils/mock-d1";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
@@ -59,6 +59,39 @@ function makeDb(_now: number, rows: Record<string, unknown>[]) {
     { match: "FROM cron_run_progress", rows: [] },
   ]);
 }
+
+describe("loadCronHealth optional reads", () => {
+  it.each([
+    ["FROM cron_leases", "cron_leases_unavailable", "cron_leases"],
+    ["FROM cron_run_progress", "cron_run_progress_unavailable", "cron_run_progress"],
+    ["FROM cache", "cron_slot_events_unavailable", "cache"],
+    ["WHERE state = 'running'", "cron_slot_running_unavailable", "cron_slot_executions"],
+    [null, null, null],
+  ])("isolates failed optional evidence and preserves log identity (%s)", async (match, event, source) => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const now = 1_775_890_000;
+      const db = mockD1([
+        ...(match ? [{ match, rows: [], throwError: new Error("optional-read-failed") }] : []),
+        { match: "UNION ALL", rows: seedWithOverrides(now, []) },
+      ]);
+      const snapshot = await loadCronHealth(db, now);
+      expect([
+        snapshot.cronLeaseQueryFailed, snapshot.cronProgressQueryFailed,
+        snapshot.scheduledSlotEventMarkerQueryFailed, snapshot.scheduledSlots.queryFailed,
+      ]).toEqual([
+        source === "cron_leases", source === "cron_run_progress", source === "cache", source === "cron_slot_executions",
+      ]);
+      expect(snapshot.cronHistoryQueryFailed).toBe(false);
+      expect(snapshot.scheduledSlots.runningSlots).toBe(0);
+      expect(snapshot.crons["sync-stablecoins"].inFlight).toBeNull();
+      const logs = warn.mock.calls.map(([line]) => JSON.parse(String(line)) as { event: string; source: string });
+      expect(logs.map((log) => ({ event: log.event, source: log.source }))).toEqual(event ? [{ event, source }] : []);
+    } finally {
+      warn.mockRestore();
+    }
+  });
+});
 
 describe("loadCronHealth — availabilityImpactingConsecutiveCronErrors", () => {
   // Fixed epoch-seconds value so test assertions are deterministic and do not

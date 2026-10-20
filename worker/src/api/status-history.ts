@@ -13,7 +13,7 @@ import type { StatusHistoryResponse } from "@shared/types/status";
 import { makeAdminRoute, type AdminRouteContext } from "../lib/route-wrappers";
 import { computeReserveCompositionOverview } from "../lib/live-reserves/store";
 import { emptyReserveComposition } from "../lib/status/derived-data";
-import { deriveReserveCompositionStatus } from "../lib/status/evaluation-state";
+import { evaluateReserveCompositionStatus } from "../lib/status/evaluation-rules";
 import { logWorkerEvent } from "../lib/structured-log";
 import { resolveScheduledSlotPolicy } from "../lib/scheduled-slot-policy";
 
@@ -63,7 +63,7 @@ export const handleStatusHistoryRoute = makeAdminRoute<AdminRouteContext>(
     const transitions = transitionRows.slice(0, limit);
     const reserveComposition = reserveOverviewResult.ok
       ? (() => {
-          const reserveAssessment = deriveReserveCompositionStatus({
+          const reserveAssessment = evaluateReserveCompositionStatus({
             ...emptyReserveComposition(),
             ...reserveOverviewResult.overview,
           });

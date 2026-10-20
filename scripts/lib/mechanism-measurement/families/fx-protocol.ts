@@ -58,22 +58,21 @@ export async function measureFxProtocol(
     `add-only RegisterPool history contains exactly the ${configuredPools.size} configured pools`,
   );
 
-  const poolManager = await readJournalAddress(caller, { name: "token.poolManager", to: token, signature: "poolManager()", selector: "0xdc4c90d3" }, "poolManager");
+  const poolManager = await readJournalAddress(caller, { name: "token.poolManager", to: token, signature: "poolManager()" }, "poolManager");
   requireCheck(
     checks,
     "graph.pool-manager",
     poolManager === configuredManager,
     `token manager ${poolManager} matches config`,
   );
-  const fxBase = await readJournalAddress(caller, { name: "poolManager.fxBASE", to: poolManager, signature: "fxBASE()", selector: "0x9d8c2910" }, "fxBASE");
+  const fxBase = await readJournalAddress(caller, { name: "poolManager.fxBASE", to: poolManager, signature: "fxBASE()" }, "fxBASE");
   requireCheck(checks, "graph.fx-base", fxBase === configuredFxBase, `manager fxBASE ${fxBase} matches config`);
 
-  const totalSupplyRaw = await readJournalUint(caller, { name: "token.totalSupply", to: token, signature: "totalSupply()", selector: "0x18160ddd" }, 0, "totalSupply");
+  const totalSupplyRaw = await readJournalUint(caller, { name: "token.totalSupply", to: token, signature: "totalSupply()" }, 0, "totalSupply");
   const legacySupplyRaw = await readJournalUint(caller, {
     name: "token.legacyTotalSupply",
     to: token,
     signature: "legacyTotalSupply()",
-    selector: "0x80b17407",
   }, 0, "legacyTotalSupply");
   requireCheck(checks, "supply.positive", totalSupplyRaw > 0n, `fxUSD supply ${totalSupplyRaw} is positive`);
 
@@ -91,7 +90,6 @@ export async function measureFxProtocol(
       name: `poolManager.getPoolInfo(${index})`,
       to: poolManager,
       signature: "getPoolInfo(address)",
-      selector: "0x06bfa938",
       args: [BigInt(address)],
     });
     const managedRawCollateral = decodeUintWord(managerInfo, 2, `pool ${index} managed raw collateral`);
@@ -102,7 +100,6 @@ export async function measureFxProtocol(
       name: `pool[${index}].collateralToken`,
       to: address,
       signature: "collateralToken()",
-      selector: "0xb2016bd4",
     }, `pool ${index} collateral token`);
     requireCheck(
       checks,
@@ -114,7 +111,6 @@ export async function measureFxProtocol(
       name: `pool[${index}].priceOracle`,
       to: address,
       signature: "priceOracle()",
-      selector: "0x2630c12f",
     }, `pool ${index} price oracle`);
     requireCheck(
       checks,
@@ -127,13 +123,11 @@ export async function measureFxProtocol(
       name: `pool[${index}].getTotalRawCollaterals`,
       to: address,
       signature: "getTotalRawCollaterals()",
-      selector: "0xee65a03c",
     }, 0, `pool ${index} collateral`);
     const debtRaw = await readJournalUint(caller, {
       name: `pool[${index}].getTotalRawDebts`,
       to: address,
       signature: "getTotalRawDebts()",
-      selector: "0xf9d45fd2",
     }, 0, `pool ${index} debt`);
     requireCheck(
       checks,
@@ -153,7 +147,6 @@ export async function measureFxProtocol(
       name: `oracle[${index}].getPrice`,
       to: priceOracle,
       signature: "getPrice()",
-      selector: "0x98d5fdca",
     });
     const anchorPriceRaw = decodeUintWord(priceReturn, 0, `pool ${index} anchor price`);
     caller.recordDecoded(
@@ -171,7 +164,6 @@ export async function measureFxProtocol(
         name: `pool[${index}].isBorrowPaused`,
         to: address,
         signature: "isBorrowPaused()",
-        selector: "0x70f3c4b1",
       }),
       0,
       `pool ${index} borrow paused`,
@@ -182,7 +174,6 @@ export async function measureFxProtocol(
         name: `pool[${index}].isRedeemPaused`,
         to: address,
         signature: "isRedeemPaused()",
-        selector: "0x3cd9b53c",
       }),
       0,
       `pool ${index} redeem paused`,
@@ -217,16 +208,14 @@ export async function measureFxProtocol(
     name: "fxBase.totalStableToken",
     to: fxBase,
     signature: "totalStableToken()",
-    selector: "0x9ff39038",
   }, 0, "fxBASE stable token");
   const fxBaseYieldRaw = await readJournalUint(caller, {
     name: "fxBase.totalYieldToken",
     to: fxBase,
     signature: "totalYieldToken()",
-    selector: "0x65d2cb08",
   }, 0, "fxBASE yield token");
-  const fxBaseShareSupplyRaw = await readJournalUint(caller, { name: "fxBase.totalSupply", to: fxBase, signature: "totalSupply()", selector: "0x18160ddd" }, 0, "fxBASE share supply");
-  const fxBaseNavRaw = await readJournalUint(caller, { name: "fxBase.nav", to: fxBase, signature: "nav()", selector: "0xc1590cd7" }, 0, "fxBASE nav");
+  const fxBaseShareSupplyRaw = await readJournalUint(caller, { name: "fxBase.totalSupply", to: fxBase, signature: "totalSupply()" }, 0, "fxBASE share supply");
+  const fxBaseNavRaw = await readJournalUint(caller, { name: "fxBase.nav", to: fxBase, signature: "nav()" }, 0, "fxBASE nav");
 
   const committedCapacityRaw = fxBaseYieldRaw + fxBaseStableRaw * 10n ** 12n;
   const navCapacityRaw = (fxBaseShareSupplyRaw * fxBaseNavRaw) / 10n ** 18n;

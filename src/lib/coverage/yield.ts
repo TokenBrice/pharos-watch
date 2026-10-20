@@ -10,7 +10,7 @@ import {
   defineCoverageFeature,
   resolveBooleanCoverageStatus,
   statusKindsFromPresets,
-  type CoverageLegendItem,
+  legendItemsFromPresets,
   type CoverageStatusPreset,
 } from "./shared";
 
@@ -56,13 +56,7 @@ function formatYield(
   ];
 }
 
-const YIELD_LEGEND: readonly CoverageLegendItem[] = [
-  {
-    term: "Ranked",
-    description: "This asset currently appears in the Yield Intelligence rankings.",
-    kinds: ["ranked"],
-  },
-] as const;
+const YIELD_LEGEND = legendItemsFromPresets(YIELD_STATUS_PRESETS, ["ranked"]);
 
 export const coverageFeature = defineCoverageFeature({
   statusKinds: [...statusKindsFromPresets(YIELD_STATUS_PRESETS), DATA_UNAVAILABLE_KIND],

@@ -1,16 +1,18 @@
 import { PEG_METADATA } from "@shared/lib/classification";
-import { SELECTOR_ELIGIBLE_PEG_CURRENCIES } from "@shared/lib/selector";
+import {
+  SELECTOR_ELIGIBLE_PEG_CURRENCIES,
+  type SelectorDepegTolerance,
+  type SelectorEligiblePegCurrency,
+  type SelectorExitSpeed,
+  type SelectorHorizon,
+  type SelectorProfile,
+  type SelectorVenuePreference,
+} from "@shared/lib/selector/types";
 import type { SelectorOption } from "@/components/selector/selector-question-card";
 import {
   preHighlightForDepeg,
   shouldSkipExitStep,
   type SelectorAction,
-  type SelectorDepeg,
-  type SelectorExit,
-  type SelectorHorizon,
-  type SelectorPeg,
-  type SelectorProfile,
-  type SelectorVenue,
   type SelectorWizardState,
 } from "@/lib/selector-state";
 
@@ -32,14 +34,14 @@ export const PROFILE_OPTIONS: readonly SelectorOption<SelectorProfile>[] = [
   },
 ];
 
-const PEG_SUBLABEL: Record<SelectorPeg, string> = {
+const PEG_SUBLABEL: Record<SelectorEligiblePegCurrency, string> = {
   USD: "Default dollar-denominated universe.",
   EUR: "Euro-denominated stablecoin universe.",
   CHF: "Swiss franc universe with yield and trading coverage.",
   GOLD: "Tokenized gold universe with live signal coverage.",
 };
 
-const PEG_OPTIONS: readonly SelectorOption<SelectorPeg>[] =
+const PEG_OPTIONS: readonly SelectorOption<SelectorEligiblePegCurrency>[] =
   SELECTOR_ELIGIBLE_PEG_CURRENCIES.map((value) => ({
     value,
     label: PEG_METADATA[value]?.filterLabel ?? value,
@@ -55,13 +57,13 @@ export const HORIZON_OPTIONS: readonly SelectorOption<SelectorHorizon>[] = [
   { value: "6mplus", label: "6 months or more" },
 ];
 
-export const DEPEG_OPTIONS: readonly SelectorOption<SelectorDepeg>[] = [
+export const DEPEG_OPTIONS: readonly SelectorOption<SelectorDepegTolerance>[] = [
   { value: "zero", label: "Zero tolerance", sublabel: "Peg must hold without exception." },
   { value: "tight", label: "Within 0.5%", sublabel: "Brief slippage acceptable if liquidity holds." },
   { value: "moderate", label: "Moderate", sublabel: "Short depegs OK if recovery is clean." },
 ];
 
-export const VENUE_OPTIONS_BY_PROFILE: Record<SelectorProfile, readonly SelectorOption<SelectorVenue>[]> = {
+export const VENUE_OPTIONS_BY_PROFILE: Record<SelectorProfile, readonly SelectorOption<SelectorVenuePreference>[]> = {
   yield: [
     { value: "lend", label: "Lending and structured opportunities" },
     { value: "dex", label: "DEX liquidity pools" },
@@ -93,7 +95,7 @@ export const VENUE_OPTIONS_BY_PROFILE: Record<SelectorProfile, readonly Selector
   ],
 };
 
-export const EXIT_OPTIONS: readonly SelectorOption<SelectorExit>[] = [
+export const EXIT_OPTIONS: readonly SelectorOption<SelectorExitSpeed>[] = [
   { value: "1h", label: "Under 1 hour" },
   { value: "24h", label: "Same day" },
   { value: "any", label: "Not in a hurry" },
@@ -144,8 +146,8 @@ export interface SelectorQuestionDescriptor {
   answerAction: (state: SelectorWizardState) => SelectorAction | null;
 }
 
-function toVenueList(value: string | readonly string[]): readonly SelectorVenue[] {
-  return (Array.isArray(value) ? value : [value]) as readonly SelectorVenue[];
+function toVenueList(value: string | readonly string[]): readonly SelectorVenuePreference[] {
+  return (Array.isArray(value) ? value : [value]) as readonly SelectorVenuePreference[];
 }
 
 export const SELECTOR_QUESTIONS: readonly SelectorQuestionDescriptor[] = [
@@ -159,7 +161,7 @@ export const SELECTOR_QUESTIONS: readonly SelectorQuestionDescriptor[] = [
     helper: "Narrows the universe to this reference asset.",
     options: () => PEG_OPTIONS,
     value: (state) => state.pegCurrency,
-    setAction: (value) => ({ type: "set-peg", value: value as SelectorPeg }),
+    setAction: (value) => ({ type: "set-peg", value: value as SelectorEligiblePegCurrency }),
     answerAction: (state) => ({ type: "answer-peg", value: state.pegCurrency }),
   },
   {
@@ -182,7 +184,7 @@ export const SELECTOR_QUESTIONS: readonly SelectorQuestionDescriptor[] = [
     options: () => DEPEG_OPTIONS,
     value: (state) => state.depegTolerance,
     preHighlight: (state, profile) => preHighlightForDepeg(profile, state.horizon),
-    setAction: (value) => ({ type: "set-depeg", value: value as SelectorDepeg }),
+    setAction: (value) => ({ type: "set-depeg", value: value as SelectorDepegTolerance }),
     answerAction: (state) =>
       state.depegTolerance ? { type: "answer-depeg", value: state.depegTolerance } : null,
   },
@@ -206,7 +208,7 @@ export const SELECTOR_QUESTIONS: readonly SelectorQuestionDescriptor[] = [
     helper: "Faster exits weight liquidity, DEWS, and redemption pathways.",
     options: () => EXIT_OPTIONS,
     value: (state) => state.exitSpeed,
-    setAction: (value) => ({ type: "set-exit", value: value as SelectorExit }),
+    setAction: (value) => ({ type: "set-exit", value: value as SelectorExitSpeed }),
     answerAction: (state) => (state.exitSpeed ? { type: "answer-exit", value: state.exitSpeed } : null),
   },
 ];
@@ -214,7 +216,7 @@ export const SELECTOR_QUESTIONS: readonly SelectorQuestionDescriptor[] = [
 export function computeTotalSteps(
   profile: SelectorProfile | null,
   horizon: SelectorHorizon | null,
-  depeg: SelectorDepeg | null,
+  depeg: SelectorDepegTolerance | null,
 ): number {
   if (shouldSkipExitStep(profile, horizon, depeg)) return 5;
   return 6;

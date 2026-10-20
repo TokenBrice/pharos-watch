@@ -69,46 +69,9 @@ interface YieldHistoryCleanupTarget {
   sourceKeys: string[];
 }
 
-export interface YieldHistoryCleanupRow {
-  stablecoin_id: string;
-  source_key: string | null;
-  recorded_at: number;
-  source_observed_at: number | null;
-  is_best: number;
-  apy: number;
-  apy_base: number | null;
-  apy_reward: number | null;
-  exchange_rate: number | null;
-  source_tvl_usd: number | null;
-  data_source: string;
-  warning_signals: string | null;
-  yield_source: string | null;
-  yield_type: string | null;
-  publication_generation_id: string | null;
-  publication_state: string | null;
-  pys_at_publish: number | null;
-  safety_at_publish: number | null;
-  variance_at_publish: number | null;
-  pys_inputs_at_publish: string | null;
-}
-
-export interface YieldHistoryCleanupDailyRow extends YieldHistoryCleanupRow {
-  source_key: string;
-  snapshot_date: number;
-}
-
 export interface YieldHistoryCleanupRows {
   hourlyRows: YieldHistoryCleanupRow[];
   dailyRows: YieldHistoryCleanupDailyRow[];
-}
-
-export interface YieldHistoryCleanupArtifact extends YieldHistoryCleanupRows {
-  version: 3;
-  generatedAt: number;
-  operator: string | null;
-  targets: YieldHistoryCleanupTarget[];
-  hourlyRowCount: number;
-  dailyRowCount: number;
 }
 
 const nullableFiniteNumber = z.number().finite().nullable();
@@ -134,10 +97,14 @@ const yieldHistoryCleanupRowSchema = z.object({
   variance_at_publish: nullableFiniteNumber,
   pys_inputs_at_publish: z.string().nullable(),
 }).strict();
+export type YieldHistoryCleanupRow = z.infer<typeof yieldHistoryCleanupRowSchema>;
+
 const yieldHistoryCleanupDailyRowSchema = yieldHistoryCleanupRowSchema.extend({
   source_key: z.string(),
   snapshot_date: z.number().int().nonnegative(),
 });
+export type YieldHistoryCleanupDailyRow = z.infer<typeof yieldHistoryCleanupDailyRowSchema>;
+
 const yieldHistoryCleanupArtifactSchema = z.object({
   version: z.literal(3),
   generatedAt: z.number().finite(),
@@ -151,6 +118,7 @@ const yieldHistoryCleanupArtifactSchema = z.object({
   hourlyRows: z.array(yieldHistoryCleanupRowSchema),
   dailyRows: z.array(yieldHistoryCleanupDailyRowSchema),
 }).strict();
+export type YieldHistoryCleanupArtifact = z.infer<typeof yieldHistoryCleanupArtifactSchema>;
 
 export interface YieldHistoryCleanupSummary {
   totalRows: number;

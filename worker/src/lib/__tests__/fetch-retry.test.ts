@@ -640,13 +640,9 @@ describe("fetchWithRetry", () => {
     expect(attempt.cancel).not.toHaveBeenCalled();
   });
 
-  it("reads JSON from a bodyless Response-like test double", async () => {
-    const responseLike = {
-      ok: true,
-      status: 200,
-      json: vi.fn().mockResolvedValue({ price: 1 }),
-    } as unknown as Response;
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(responseLike));
+  it("reads JSON from a genuine Response byte stream", async () => {
+    const response = new Response('{"price":1}');
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(response));
 
     const result = await fetchJsonWithRetry<{ price: number }>(
       "https://example.com/mock.json",
@@ -654,18 +650,14 @@ describe("fetchWithRetry", () => {
       0,
     );
 
-    expect(result).toEqual({ response: responseLike, body: { price: 1 } });
-    expect(responseLike.json).toHaveBeenCalledTimes(1);
+    expect(result).toEqual({ response, body: { price: 1 } });
+    expect(response.bodyUsed).toBe(true);
   });
 
-  it("enforces the limit after reading a bodyless Response-like test double", async () => {
-    const responseLike = {
-      ok: true,
-      status: 200,
-      text: vi.fn().mockResolvedValue("oversized"),
-    } as unknown as Response;
+  it("enforces the limit after reading a genuine Response byte stream", async () => {
+    const response = new Response("oversized");
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(responseLike));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(response));
 
     try {
       const result = await fetchTextWithRetry(
@@ -681,6 +673,27 @@ describe("fetchWithRetry", () => {
         errorName: "ResponseBodyTooLargeError",
         metadata: expect.objectContaining({ maxBytes: 5, observedBytes: 9 }),
       }));
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
+  it("preserves null-body observation through JSON retry attempts", async () => {
+    const observe = vi.fn();
+    const fetchMock = mockFetch([{
+      match: () => true,
+      outcomes: [{ response: new Response(null, { status: 204 }) }, { body: { ok: true } }],
+    }]);
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      const result = await fetchJsonWithRetry("https://example.com/empty", undefined, 1, { onBodyRead: observe });
+      expect(result?.body).toEqual({ ok: true });
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(observe.mock.calls.map(([evidence]) => evidence)).toEqual([
+        { intakeBytes: null, declaredBytes: null, outcome: "rejected" },
+        { intakeBytes: 11, declaredBytes: null, outcome: "accepted" },
+      ]);
+      expect(warnRecords(warnSpy)).toContainEqual(expect.objectContaining({ errorName: "SyntaxError" }));
     } finally {
       warnSpy.mockRestore();
     }

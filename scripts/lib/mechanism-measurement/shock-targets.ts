@@ -36,7 +36,7 @@ export interface LiquityV2ShockCoverageTarget extends ShockCoverageTargetBase {
     token: string;
     collateralRegistry: string;
   };
-  spDeposits: { signature: string; selector: string };
+  spDeposits: { signature: string };
   branches: readonly {
     collateralSymbol: string;
     addressesRegistry: string;
@@ -45,12 +45,10 @@ export interface LiquityV2ShockCoverageTarget extends ShockCoverageTargetBase {
       primaryImplementationAddress?: string;
       secondary?: {
         signature: string;
-        selector: string;
         implementationAddress?: string;
       };
       rateProvider?: {
         signature: string;
-        selector: string;
         expectedAddress: string;
       };
     };

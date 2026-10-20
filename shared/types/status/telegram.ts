@@ -1,4 +1,80 @@
 import { z } from "zod";
+import { ReportCardGradeSchema } from "../report-card-grade";
+import {
+  V9RatingStatusSchema,
+  V9CompactPartialEvidenceSchema,
+  refineV9RatingStatusFields,
+} from "../safety-score-v9-causes";
+import {
+  SafetyScorePublicationIdentitySchema,
+  SafetyScoreV9PublicationIdentitySchema,
+} from "../safety-score-publication";
+
+const AlertSafetyPillarSchema = z.object({
+  score: z.number().finite().nullable(),
+  evidenceLevel: z.string(),
+  freshness: z.string(),
+});
+export const AlertSafetyV9ExplainSnapshotSchema = z.object({
+  reasons: z.array(z.object({ code: z.string(), message: z.string() })),
+  bindingCap: z.object({ kind: z.string(), limit: z.number().finite(), reason: z.string() }).nullable(),
+  weakestPillar: z.object({ pillar: z.string(), score: z.number().finite() }).nullable(),
+  pillars: z.object({
+    backing: AlertSafetyPillarSchema,
+    exit: AlertSafetyPillarSchema,
+    control: AlertSafetyPillarSchema,
+  }),
+});
+export type AlertSafetyV9ExplainSnapshot = z.output<typeof AlertSafetyV9ExplainSnapshotSchema>;
+
+/** Persisted rows require explanations, even though reason rendering can fall back. */
+export const AlertSafetySourceRowSchema = z.object({
+  grade: ReportCardGradeSchema.nullable(),
+  score: z.number().min(0).max(100).nullable(),
+  ratingStatus: V9RatingStatusSchema,
+  partialEvidence: V9CompactPartialEvidenceSchema.nullable(),
+  methodologyVersion: z.string().nullable(),
+  operationallyAffected: z.boolean().optional(),
+  v9Explain: AlertSafetyV9ExplainSnapshotSchema,
+}).superRefine(refineV9RatingStatusFields);
+export type AlertSafetySourceRow = z.output<typeof AlertSafetySourceRowSchema>;
+export const AlertSafetySourceSnapshotSchema = z.record(z.string().min(1), AlertSafetySourceRowSchema);
+export type AlertSafetySourceSnapshot = z.output<typeof AlertSafetySourceSnapshotSchema>;
+
+export const AlertSafetySnapshotEnvelopeSchema = z.object({
+  generation: z.string(),
+  safetyScoreIdentity: SafetyScorePublicationIdentitySchema,
+  snapshot: AlertSafetySourceSnapshotSchema,
+});
+export type AlertSafetySnapshotEnvelope = z.output<typeof AlertSafetySnapshotEnvelopeSchema>;
+export const AlertSafetySourceEnvelopeSchema = z.object({
+  generation: AlertSafetySnapshotEnvelopeSchema.shape.generation,
+  safetyScoreIdentity: SafetyScoreV9PublicationIdentitySchema,
+  publicationGenerationId: z.string(),
+  methodologyVersion: z.string(),
+  publishedAt: z.number().finite(),
+  snapshot: AlertSafetySourceSnapshotSchema,
+});
+export type AlertSafetySourceEnvelope = z.output<typeof AlertSafetySourceEnvelopeSchema>;
+
+/** Preference values only; DEWS band classification remains owned by classification/risk. */
+export const TELEGRAM_DEWS_BANDS = ["ALERT", "WARNING", "DANGER"] as const;
+export const TELEGRAM_SAFETY_MODES = ["all", "downgrade-only", "upgrade-only"] as const;
+export const TELEGRAM_DEPEG_STEPS = [100, 250, 500] as const;
+export const TelegramDewsBandSchema = z.enum(TELEGRAM_DEWS_BANDS);
+export const TelegramSafetyModeSchema = z.enum(TELEGRAM_SAFETY_MODES);
+export const TelegramDepegStepBpsSchema = z.union(TELEGRAM_DEPEG_STEPS.map((step) => z.literal(step)));
+export type TelegramDewsBand = z.output<typeof TelegramDewsBandSchema>;
+export type TelegramSafetyMode = z.output<typeof TelegramSafetyModeSchema>;
+export type TelegramDepegStepBps = z.output<typeof TelegramDepegStepBpsSchema>;
+
+export function isDepegStepValue(value: unknown): value is TelegramDepegStepBps {
+  return typeof value === "number" && (TELEGRAM_DEPEG_STEPS as readonly number[]).includes(value);
+}
+
+export function isTelegramSafetyMode(value: unknown): value is TelegramSafetyMode {
+  return typeof value === "string" && (TELEGRAM_SAFETY_MODES as readonly string[]).includes(value);
+}
 
 export const ReserveAlertObservationsSchema = z.record(z.string().min(1), z.number().int().positive());
 export const AlertReserveSourceEnvelopeSchema = z.object({

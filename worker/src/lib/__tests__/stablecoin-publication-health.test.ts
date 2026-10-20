@@ -8,7 +8,9 @@ import {
   unknownStablecoinPublicationHealth,
 } from "../stablecoin-publication-health";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-import { STABLECOIN_PRICE_GAP_REVIEWS } from "../stablecoin-publication-coverage";
+import {
+  STABLECOIN_PRICE_GAP_REVIEWS, parseMissingActivePriceDetail, parsePersistedMissingActivePriceState,
+} from "../stablecoin-publication-coverage";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(fixtures.closeAll);
@@ -318,6 +320,44 @@ describe("stablecoin publication health", () => {
     });
     expect(after.expiredGapReviewIds).toContain(review.stablecoinId);
     expect(after.missingActiveAssets[0]?.acknowledgedGap).toBeNull();
+  });
+
+  it.each([[false, false], [false, true], [true, false], [true, true]])(
+    "keeps duplicate precedence and tolerant ID fallback (verbose=%s, explicit IDs=%s)",
+    async (verbose, explicitIds) => {
+      const { sqlite, db } = fixtures.open();
+      const review = STABLECOIN_PRICE_GAP_REVIEWS.find((entry) => entry.stablecoinId === "wusd-worldwide")!;
+      const id = review.stablecoinId;
+      const nowSec = review.expiresAt - 1;
+      const tuple = [id, 3, 0.99, "unknown-source", review.reviewedAt, "no-accepted-price",
+        null, 100, review.reviewedAt, "publication", null];
+      const compact = parsePersistedMissingActivePriceState(tuple, { nowSec })!;
+      const override = { ...compact, symbol: "verbose", currentPrice: 1, consecutiveMissingGenerations: 6 };
+      insertRun(sqlite, "sync-stablecoins", nowSec - 1, {
+        activePublicationCoverage: publicationCoverage(),
+        activePriceCoverage: priceCoverage({
+          complete: false, missingActiveIds: explicitIds ? [id, "no-detail"] : [],
+          missingActiveState: [[id, 2, null, null, null, "no-accepted-price"], tuple],
+          missingActiveAssets: verbose ? [compact, override] : [],
+        }),
+      });
+      const price = (await loadStablecoinCoverageHealth(db, nowSec)).activePriceCoverage;
+      expect(price.status).toBe("incomplete");
+      expect(price.missingActiveIds).toEqual(explicitIds ? [id, "no-detail"] : []);
+      expect(price.missingActiveAssets).toEqual([verbose ? parseMissingActivePriceDetail(override, { nowSec }) : compact]);
+      expect(price.missingActiveAssets[0]?.acknowledgedGap != null).toBe(!verbose);
+    },
+  );
+
+  it.each(["unknown-source", { malformed: true }])("retains the health schema gate for verbose cap source %j", async (source) => {
+    const { sqlite, db } = fixtures.open();
+    const detail = parsePersistedMissingActivePriceState([activeIds[0], 3, null, null, null, "no-accepted-price"])!;
+    insertRun(sqlite, "sync-stablecoins", 100, {
+      activePublicationCoverage: publicationCoverage(),
+      activePriceCoverage: priceCoverage({ missingActiveAssets: [{ ...detail, lastKnownMarketCapSource: source }] }),
+    });
+    expect((await loadStablecoinCoverageHealth(db, 1_000)).activePriceCoverage)
+      .toMatchObject({ status: "unknown", unavailableReason: "coverage-malformed" });
   });
 
   it("exposes the publication slice through loadStablecoinPublicationHealth", async () => {

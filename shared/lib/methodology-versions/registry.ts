@@ -54,10 +54,10 @@ import YIELD_METHODOLOGY_V7 from "../../data/methodology-changelogs/yield-method
 import YIELD_METHODOLOGY_V8 from "../../data/methodology-changelogs/yield-methodology/v8.json";
 import {
   createMethodologyVersion,
-  type MethodologyChangelogEntry,
   type MethodologyVersion,
   type MethodologyVersionConfig,
 } from "./base";
+import type { MethodologyChangelogEntry } from "../../types/editorial-content";
 import {
   BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
   BLACKLIST_TRACKER_METHODOLOGY_VERSION,
