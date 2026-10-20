@@ -196,6 +196,7 @@
         {"path": "docs/data-flow-map.md", "anchor": "market-and-supply-flows"},
         {"path": "docs/process/pricing-pipeline-appendix.md", "anchor": "active-price-coverage-health"},
         {"path": "docs/process/pricing-pipeline-appendix.md", "anchor": "native-hive-order-book"},
+        {"path": "docs/process/pricing-pipeline-appendix.md", "anchor": "primary-collection-bookkeeping"},
         { "path": "docs/runbooks/stablecoins-cache.md", "runbook": { "label": "Stablecoin cache or publication failure", "kind": "symptom" } }
       ],
       "checks": ["npm run audit:pricing-providers", "npx vitest run worker/src/lib"],
@@ -284,6 +285,7 @@
       ],
       "background": [
         {"path": "docs/process/live-reserves-appendix.md", "anchor": "adapter-specific-evidence-boundaries"},
+        {"path": "docs/process/live-reserves-appendix.md", "anchor": "packet-admission-details"},
         {"path": "docs/architecture.md", "anchor": "adr-36"},
         {"path": "docs/dependency-map.md", "anchor": "offline-modeled-scenarios"},
         {"path": "docs/dependency-map.md", "anchor": "shared-failure-domains-board"},
@@ -340,6 +342,7 @@
         { "path": "docs/runbooks/yield-rankings-stale-or-missing.md", "runbook": { "label": "Yield rankings stale or missing", "kind": "symptom" } },
         { "path": "docs/runbooks/yield-supplemental-snapshot.md", "runbook": { "label": "Yield supplemental snapshot failure", "kind": "symptom" } },
         {"path": "docs/yield-intelligence-operations.md", "anchor": "runtime-guardrails"},
+        {"path": "docs/yield-intelligence-operations.md", "anchor": "publication-storage-appendix"},
         {"path": "docs/yield-intelligence-operations.md", "anchor": "failure-semantics"}
       ],
       "rules": ["Keep source observation, publication, and read-time freshness distinct; missing yield evidence is not a measured zero."]
@@ -855,6 +858,10 @@
         }
       ],
       "background": [
+        { "path": "docs/telegram-alerts.md", "anchor": "command-implementation-appendix" },
+        { "path": "docs/telegram-alerts.md", "anchor": "delivery-implementation-appendix" },
+        { "path": "docs/telegram-architecture.md", "anchor": "ingress-implementation-appendix" },
+        { "path": "docs/telegram-architecture.md", "anchor": "dispatch-implementation-appendix" },
         { "path": "docs/runbooks/telegram-no-delivery.md", "runbook": { "label": "Telegram delivery, backlog and bot-wide outages", "kind": "symptom" } },
         { "path": "docs/runbooks/telegram-admin-broadcast-safety.md", "runbook": { "label": "Telegram broadcast preflight", "kind": "procedure" } },
         { "path": "docs/runbooks/telegram-adoption-report.md", "runbook": { "label": "Telegram adoption report queries", "kind": "reference" } },
@@ -1183,6 +1190,7 @@
         }
       ],
       "background": [
+        {"path": "docs/digest-pipeline.md", "anchor": "generation-implementation-appendix"},
         { "path": "docs/architecture.md", "anchor": "adr-19" },
         { "path": "docs/architecture.md", "anchor": "adr-35" },
         { "path": "docs/architecture.md", "anchor": "adr-37" },
@@ -1291,6 +1299,7 @@
         { "path": "docs/runbooks/dated-source-age-caps.md", "anchor": "scheduled-boundaries", "runbook": { "label": "Dated-source scheduled renewal boundaries", "kind": "procedure" } }
       ],
       "background": [
+        { "path": "docs/status-dashboard.md", "anchor": "cron-metadata-persistence-budget" },
         { "path": "docs/architecture.md", "anchor": "adr-9" },
         { "path": "docs/architecture.md", "anchor": "adr-28" },
         { "path": "docs/architecture.md", "anchor": "adr-29" },
@@ -1432,6 +1441,7 @@
         }
       ],
       "background": [
+        { "path": "docs/scripts.md", "anchor": "tool-implementation-appendix" },
         { "path": "docs/scripts.md", "anchor": "build-and-generated-artifacts" },
         { "path": "docs/scripts.md", "anchor": "operational-notes" }
       ],
@@ -1671,6 +1681,9 @@
         { "path": "docs/worker-infrastructure.md", "anchor": "runtime-feature-contracts" },
         {"path": "docs/worker-and-api-limits.md", "anchor": "connection-budget-operating-assumption"},
         {"path": "docs/process/worker-infrastructure-appendix.md", "anchor": "binding-inventory"},
+        {"path": "docs/process/worker-infrastructure-appendix.md", "anchor": "rpc-read-admission-details"},
+        {"path": "docs/process/worker-infrastructure-appendix.md", "anchor": "event-entry-recovery-details"},
+        {"path": "docs/process/worker-infrastructure-appendix.md", "anchor": "database-maintenance-details"},
         {"path": "docs/blacklist-tracker.md", "anchor": "public-exposure-contract"},
         {"path": "docs/blacklist-tracker.md", "anchor": "storage-semantics"}
       ],
