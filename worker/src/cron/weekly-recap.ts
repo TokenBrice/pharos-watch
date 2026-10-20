@@ -450,7 +450,10 @@ export async function generateWeeklyRecap(
         },
       },
     });
-    return { metadata: `skipped: only ${currentRows.length} daily digests available in current week (need 5+)` };
+    return createNeutralSkippedCronResult("insufficient-current-week-digests", {
+      currentWeekRows: currentRows.length,
+      requiredCurrentWeekRows: 5,
+    });
   }
 
   let safetyContext: DigestSafetyContext;
@@ -470,7 +473,10 @@ export async function generateWeeklyRecap(
       reason: "source-load-failed",
     };
   }
-  const weeklyData = buildWeeklyInputData(currentRows, priorRows, safetyContext);
+  const weeklyData = buildWeeklyInputData(currentRows, priorRows, safetyContext, {
+    current: { start: todayTs - 7 * SECONDS.ONE_DAY, end: todayTs },
+    prior: { start: todayTs - 14 * SECONDS.ONE_DAY, end: todayTs - 7 * SECONDS.ONE_DAY },
+  });
   if (!weeklyData) {
     await reportCronProgress(reportProgress, {
       stage: "input-unavailable",
@@ -479,7 +485,7 @@ export async function generateWeeklyRecap(
       itemsDone: currentRows.length,
       itemsTotal: currentRows.length,
     });
-    return { metadata: "skipped: failed to build weekly input data" };
+    return createNeutralSkippedCronResult("weekly-input-unavailable");
   }
 
   const userPrompt = buildWeeklyPrompt(weeklyData, recentWeeklyMeta);
@@ -531,8 +537,7 @@ export async function generateWeeklyRecap(
     },
   });
   if (digestCopy.kind === "circuit-open") {
-    await reportDigestCircuitOpen(reportProgress, "weekly recap");
-    return { metadata: "skipped: anthropic circuit open" };
+    return reportDigestCircuitOpen(reportProgress, "weekly recap");
   }
   if (digestCopy.kind === "refusal") {
     return reportDigestRefusal(

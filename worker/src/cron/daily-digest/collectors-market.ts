@@ -2,6 +2,9 @@ import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { DigestInputData } from "@shared/types/digest";
 import { classifyDepegClosure } from "@shared/lib/depeg-closure";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import { getNativeEventPriceObservation, isNativePegEvent } from "@shared/lib/depeg-quote-domain";
+import { deriveDepegSignal } from "@shared/lib/depeg-signals";
+import { decodeNativeEventQuote, NATIVE_EVENT_QUOTE_CACHE_PREFIX } from "../../lib/native-peg-quote-cache";
 import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import { classifyDepegLifecycle, type DepegLifecycleFlag } from "../../lib/depeg-lifecycle";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
@@ -68,12 +71,21 @@ export async function collectActiveDepegs(
   try {
     const activeDepegs = await ctx.db
       .prepare(
-        "SELECT stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, peak_price, peg_reference FROM depeg_events WHERE ended_at IS NULL",
+        `SELECT e.stablecoin_id, e.symbol, e.peg_type, e.source, e.direction, e.peak_deviation_bps,
+                e.started_at, e.start_price, e.peak_price, e.peg_reference, p.quote_mode,
+                nq.value AS current_native_quote
+         FROM depeg_events e LEFT JOIN depeg_event_provenance p ON p.event_id = e.id
+         LEFT JOIN cache nq ON nq.key = '${NATIVE_EVENT_QUOTE_CACHE_PREFIX}' || e.id
+         WHERE e.ended_at IS NULL`,
       )
       .all<{
         stablecoin_id: string;
         symbol: string;
         peg_type: string | null;
+        source: string;
+        quote_mode: string | null;
+        start_price: number | null;
+        current_native_quote: string | null;
         direction: "above" | "below";
         peak_deviation_bps: number;
         started_at: number;
@@ -98,16 +110,22 @@ export async function collectActiveDepegs(
       }
       const ageHours = Math.max(0, Math.round((ctx.nowSec - row.started_at) / SECONDS.ONE_HOUR));
       const asset = ctx.stablecoinAssetById.get(row.stablecoin_id);
-      const priceObservedAt = asset?.priceObservedAt ?? asset?.priceUpdatedAt;
-      const livePrice =
+      const quoteEvent = { ...row, peg_reference: row.peg_reference ?? NaN, peg_type: row.peg_type ?? undefined };
+      const nativeEvent = isNativePegEvent(quoteEvent);
+      const nativeObservation = nativeEvent
+        ? getNativeEventPriceObservation(quoteEvent, ctx.nowSec, decodeNativeEventQuote(row.current_native_quote))
+        : null;
+      const usdObservedAt = asset?.priceObservedAt ?? asset?.priceUpdatedAt;
+      const livePrice = nativeEvent ? nativeObservation?.value ?? null :
         ctx.stablecoinsCacheIsFresh &&
-        priceObservedAt != null && priceObservedAt <= ctx.nowSec &&
-        ctx.nowSec - priceObservedAt <= API_FRESHNESS_MAX_AGE_SEC.stablecoins &&
+        usdObservedAt != null && usdObservedAt <= ctx.nowSec &&
+        ctx.nowSec - usdObservedAt <= API_FRESHNESS_MAX_AGE_SEC.stablecoins &&
         typeof asset?.price === "number" &&
         Number.isFinite(asset.price) &&
         asset.price > 0
           ? asset.price
           : null;
+      const priceObservedAt = nativeEvent ? nativeObservation?.observedAt : usdObservedAt;
       const direction = row.direction;
       const bps = direction === "below" ? -Math.abs(row.peak_deviation_bps) : Math.abs(row.peak_deviation_bps);
       // Severity decisions run on the live deviation vs the event's peg
@@ -118,10 +136,9 @@ export async function collectActiveDepegs(
         typeof row.peg_reference === "number" && Number.isFinite(row.peg_reference) && row.peg_reference > 0
           ? row.peg_reference
           : null;
-      const currentBps =
-        livePrice != null && pegReference != null
-          ? Math.round(((livePrice - pegReference) / pegReference) * 10_000)
-          : null;
+      const currentBps = livePrice != null && pegReference != null
+        ? deriveDepegSignal(livePrice, pegReference)?.bps ?? null
+        : null;
       const severityBps = currentBps ?? bps;
       const severityBasis: "current" | "peak-fallback" = currentBps != null ? "current" : "peak-fallback";
       const impactScore = getDepegMarketImpactScore(severityBps, mcapUsd);
@@ -137,11 +154,14 @@ export async function collectActiveDepegs(
         peakBps: row.peak_deviation_bps,
         severityBps,
         severityBasis,
+        quoteMode: nativeEvent ? "native-peg" as const : "usd" as const,
+        ...(nativeEvent && row.peak_price != null ? { peakPriceNative: row.peak_price } : {}),
+        ...(nativeEvent && livePrice != null ? { currentPriceNative: livePrice } : {}),
         ...(pegReference != null ? { pegReference } : {}),
         ...(livePrice != null && priceObservedAt != null ? { priceObservedAt } : {}),
         ...(currentBps != null ? { currentBps } : {}),
-        ...(row.peak_price != null ? { peakPriceUsd: row.peak_price } : {}),
-        ...(livePrice != null ? { currentPriceUsd: livePrice } : {}),
+        ...(!nativeEvent && row.peak_price != null ? { peakPriceUsd: row.peak_price } : {}),
+        ...(!nativeEvent && livePrice != null ? { currentPriceUsd: livePrice } : {}),
         suppressReason: getActiveDepegSuppressReason({ mcapUsd, ageHours, bps: severityBps }),
       };
     });
@@ -164,6 +184,9 @@ export async function collectActiveDepegs(
           peakBps,
           severityBasis,
           currentBps,
+          quoteMode,
+          peakPriceNative,
+          currentPriceNative,
           pegReference,
           priceObservedAt,
           peakPriceUsd,
@@ -180,6 +203,9 @@ export async function collectActiveDepegs(
           impactScore,
           peakBps,
           severityBasis,
+          quoteMode,
+          ...(peakPriceNative != null ? { peakPriceNative } : {}),
+          ...(currentPriceNative != null ? { currentPriceNative } : {}),
           ...(currentBps != null ? { currentBps } : {}),
           ...(pegReference != null ? { pegReference } : {}),
           ...(priceObservedAt != null ? { priceObservedAt } : {}),
@@ -498,6 +524,7 @@ export async function collectMintBurnFlows(
     return collectorResult({
       gaugeScore,
       gaugeBand: getGaugeBand(gaugeScore),
+      provenance: { window: gauge.window, publishedAt: gauge.publishedAt, updatedAt: gauge.updatedAt },
       classificationSource:
         ftqFlows.kind === "ok"
           ? "safety-score-v9-publication"

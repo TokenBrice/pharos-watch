@@ -286,8 +286,8 @@ function addDewsCandidates(candidates: DigestEditorialCandidate[], data: DigestI
     });
   }
 
-  const elevatedMcap = dews.elevatedCoins.reduce((sum, coin) => sum + coin.mcapUsd, 0);
-  if (elevatedMcap > 0) {
+  const elevatedMcap = dews.alertPlusMcapUsd;
+  if (elevatedMcap != null && elevatedMcap > 0 && dews.alertPlusSupplyCoverage) {
     addCandidate(candidates, {
       id: candidateId("dews", ["alert-plus-breadth"]),
       kind: "dews",
@@ -297,11 +297,11 @@ function addDewsCandidates(candidates: DigestEditorialCandidate[], data: DigestI
       // peg break. Same per-$1B basis as every other mcap-scaled candidate.
       impactScore: elevatedMcap / 1_000_000_000,
       novelty: "structural",
-      confidence: confidenceForData(data.degradedSources, "dews"),
+      confidence: dews.alertPlusSupplyCoverage.complete ? confidenceForData(data.degradedSources, "dews") : "low",
       artifactRisk: elevatedMcap < 50_000_000 ? "medium" : "low",
       headlineFacts: [
         `${dews.bandCounts.alert} ALERT, ${dews.bandCounts.warning} WARNING, ${dews.bandCounts.danger} DANGER`,
-        `${formatCurrency(elevatedMcap)} ALERT+ market cap`,
+        `${formatCurrency(elevatedMcap)} ALERT+ ${dews.alertPlusSupplyCoverage.complete ? "market cap" : "known supply subtotal (incomplete coverage)"}`,
       ],
       whyItMatters: "Stress breadth matters when elevated coins carry enough size to be more than background noise.",
       ...(elevatedMcap < 50_000_000 ? { suppressReason: "ALERT+ market cap is too small for a lead" } : {}),
@@ -454,13 +454,13 @@ function addPsiCandidate(candidates: DigestEditorialCandidate[], data: DigestInp
   const psi = data.stabilityIndex;
   if (!psi || psi.components.severity == null || psi.components.breadth == null) return;
 
-  const alertPlusMcap = (data.dewsStress?.elevatedCoins ?? []).reduce((sum, coin) => sum + coin.mcapUsd, 0);
+  const alertPlusMcap = data.dewsStress?.alertPlusMcapUsd;
   addCandidate(candidates, {
     id: candidateId("psi", [psi.band]),
     kind: "psi",
     title: `PSI reads ${psi.score} [${psi.band}]`,
     symbols: [],
-    impactScore: Math.max(1, psi.components.severity * 25 + psi.components.breadth * 10 + alertPlusMcap / 1_000_000_000),
+    impactScore: Math.max(1, psi.components.severity * 25 + psi.components.breadth * 10 + (alertPlusMcap != null ? alertPlusMcap / 1_000_000_000 : 0)),
     novelty: "structural",
     confidence: "high",
     artifactRisk: "none",

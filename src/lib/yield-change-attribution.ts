@@ -139,6 +139,7 @@ function findLargestDailyDelta(
   for (let i = 1; i < closes.length; i++) {
     const current = closes[i]!;
     const prior = closes[i - 1]!;
+    if (Math.floor(current.ts / DAY_MS) - Math.floor(prior.ts / DAY_MS) !== 1) continue;
     const delta = current.apy - prior.apy;
     if (!best || Math.abs(delta) > Math.abs(best.value)) {
       best = { value: delta, ts: current.ts, prior, current };

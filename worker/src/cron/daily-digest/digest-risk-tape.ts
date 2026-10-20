@@ -1,8 +1,18 @@
 import type { DigestInputData, DigestRiskTapeItem } from "@shared/types/digest";
+import type { PsiConditionBand } from "@shared/types/stability-constants";
 import { formatCurrency } from "@shared/lib/format";
 import { isCriticalDepegRisk } from "@shared/lib/digest-risk";
 import { formatScore, signedCurrency } from "./digest-intelligence-utils";
 import { ACTIVE_DEPEGS_DEGRADED_SOURCE } from "./degraded-sources";
+
+const PSI_TONE = {
+  BEDROCK: "positive",
+  STEADY: "neutral",
+  TREMOR: "warning",
+  FRACTURE: "critical",
+  CRISIS: "critical",
+  MELTDOWN: "critical",
+} as const satisfies Record<PsiConditionBand, DigestRiskTapeItem["tone"]>;
 
 export function getGaugeRiskTapeTone(score: number): "warning" | "positive" | "neutral" {
   return score < -20 ? "warning" : score > 20 ? "positive" : "neutral";
@@ -17,16 +27,18 @@ export function buildRiskTape(data: DigestInputData): DigestRiskTapeItem[] {
       id: "risk-tape:psi",
       label: "PSI",
       value: `${formatScore(data.stabilityIndex.score)} ${band}`,
-      tone: psiTone(band),
+      tone: PSI_TONE[band as PsiConditionBand] ?? "neutral",
       detail: `Severity ${formatScore(data.stabilityIndex.components.severity)}, breadth ${formatScore(data.stabilityIndex.components.breadth)}.`,
     });
   }
 
-  const topDepeg = data.topDepegs.find((depeg) => !depeg.suppressReason) ?? data.topDepegs[0];
+  const depegsUnavailable = data.activeDepegCount == null
+    || (data.degradedSources?.includes(ACTIVE_DEPEGS_DEGRADED_SOURCE) ?? false);
+  const hasActiveDepegs = !depegsUnavailable && data.activeDepegCount != null && data.activeDepegCount > 0;
+  const topDepeg = hasActiveDepegs
+    ? data.topDepegs.find((depeg) => !depeg.suppressReason) ?? data.topDepegs[0]
+    : undefined;
   const topDepegBps = topDepeg ? topDepeg.currentBps ?? topDepeg.bps : null;
-  // A failed active-depeg query observed nothing because it could not read.
-  // "None active" is a positive claim and must not rest on that failure.
-  const depegsUnavailable = data.degradedSources?.includes(ACTIVE_DEPEGS_DEGRADED_SOURCE) ?? false;
   items.push({
     id: "risk-tape:depegs",
     label: "Depegs",
@@ -35,17 +47,19 @@ export function buildRiskTape(data: DigestInputData): DigestRiskTapeItem[] {
         ? `${topDepeg.symbol} ${Math.abs(topDepegBps)}bps${topDepeg.currentBps == null ? " historical peak" : ""}`
         : depegsUnavailable
           ? "Unavailable"
-          : "None active",
+          : hasActiveDepegs ? `${data.activeDepegCount} active` : "None active",
     tone: topDepeg && topDepegBps != null
       ? (isCriticalDepegRisk({ bps: topDepegBps, mcapUsd: topDepeg.mcapUsd }) ? "critical" : "warning")
       : depegsUnavailable
         ? "neutral"
-        : "positive",
+        : hasActiveDepegs ? "warning" : "positive",
     detail: topDepeg
       ? `${data.activeDepegCount} active; ${formatCurrency(topDepeg.mcapUsd, 0)} mcap on top signal.`
       : depegsUnavailable
         ? "Active depegs could not be read for this edition."
-        : "No active peg breaks in the digest input.",
+        : hasActiveDepegs
+          ? `${data.activeDepegCount} active; severity and supply unavailable.`
+          : "No active peg breaks in the digest input.",
   });
 
   if (data.mintBurnFlows) {
@@ -67,12 +81,21 @@ export function buildRiskTape(data: DigestInputData): DigestRiskTapeItem[] {
   if (data.dewsStress) {
     const alertPlus =
       data.dewsStress.bandCounts.alert + data.dewsStress.bandCounts.warning + data.dewsStress.bandCounts.danger;
+    const { bandChangeCount, alertPlusMcapUsd, alertPlusSupplyCoverage } = data.dewsStress;
+    const changes = bandChangeCount == null
+      ? "Band-change count unavailable."
+      : `${bandChangeCount} band change${bandChangeCount === 1 ? "" : "s"} in the last 24h.`;
+    const supply = alertPlusMcapUsd == null || !alertPlusSupplyCoverage
+      ? "ALERT+ supply unavailable."
+      : alertPlusSupplyCoverage.complete
+        ? `${formatCurrency(alertPlusMcapUsd, 0)} ALERT+ supply.`
+        : `${formatCurrency(alertPlusMcapUsd, 0)} ALERT+ known supply subtotal (${alertPlusSupplyCoverage.observedCount} observed, ${alertPlusSupplyCoverage.unavailableCount} unavailable).`;
     items.push({
       id: "risk-tape:dews",
       label: "DEWS",
       value: `${alertPlus} ALERT+`,
       tone: data.dewsStress.bandCounts.danger > 0 ? "critical" : alertPlus > 0 ? "warning" : "positive",
-      detail: `${data.dewsStress.bandChanges.length} band change${data.dewsStress.bandChanges.length === 1 ? "" : "s"} in the last 24h.`,
+      detail: `${changes} ${supply}`,
     });
   }
 
@@ -89,9 +112,3 @@ export function buildRiskTape(data: DigestInputData): DigestRiskTapeItem[] {
   return items.slice(0, 5);
 }
 
-function psiTone(band: string): DigestRiskTapeItem["tone"] {
-  if (band === "CRISIS" || band === "FRACTURE") return "critical";
-  if (band === "TREMOR" || band === "STRAIN") return "warning";
-  if (band === "BEDROCK") return "positive";
-  return "neutral";
-}

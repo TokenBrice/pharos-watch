@@ -3,6 +3,10 @@ import {
   mockD1 as createMockD1,
   type MockTableConfig,
 } from "@shared/test-utils/mock-d1";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import { persistDewsResults } from "../dews/persistence";
+import { computeDEWS } from "../dews";
+import { makeDewsInput } from "./dews.test-support";
 import {
   loadPreviousStressSignalCurrentRows,
   loadStressSignalCurrentRowForCoin,
@@ -39,6 +43,46 @@ function mockD1(
 
 
 describe("stress-signal current-row helpers", () => {
+  it("withholds rejected first-run diagnostic rows from every current reader until acceptance", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const computedAt = nowSec - 60;
+    const rejectedAt = computedAt - 60;
+    const scored = computeDEWS(makeDewsInput())!;
+    const persist = (clock: number, degradedSources: string[]) => persistDewsResults({
+      db,
+      results: [{ ...scored, stablecoinId: "usdt-tether", score: 70 }],
+      eligibleIds: new Set(["usdt-tether"]),
+      degradedSources,
+      nowSec: clock,
+    });
+    const options = { staleAfterSec: 300 };
+    try {
+      await persist(rejectedAt, ["yield-rankings-freshness"]);
+      expect(sqlite.prepare("SELECT score FROM stress_signals_latest WHERE stablecoin_id = ?")
+        .get("usdt-tether")).toEqual({ score: 70 });
+      expect(sqlite.prepare("SELECT score FROM stress_signals WHERE stablecoin_id = ?")
+        .get("usdt-tether")).toEqual({ score: 70 });
+      expect(sqlite.prepare("SELECT value FROM cache WHERE key = ?")
+        .get("dews:published-generation")).toBeUndefined();
+      expect((await loadStressSignalCurrentRows(db, nowSec, options)).results).toEqual([]);
+      expect(await loadStressSignalCurrentRowForCoin(db, "usdt-tether", nowSec, options)).toBeNull();
+      expect(await loadTelegramDewsCurrentRows(db, nowSec, options)).toEqual([]);
+      expect(await loadPreviousStressSignalCurrentRows(db, nowSec, options)).toEqual([]);
+
+      await persist(computedAt, []);
+      expect((await loadStressSignalCurrentRows(db, nowSec, options)).results)
+        .toEqual([expect.objectContaining({ stablecoin_id: "usdt-tether", score: 70, computed_at: computedAt })]);
+      expect(await loadStressSignalCurrentRowForCoin(db, "usdt-tether", nowSec, options))
+        .toMatchObject({ score: 70, computed_at: computedAt });
+      expect(await loadTelegramDewsCurrentRows(db, nowSec, options))
+        .toEqual([expect.objectContaining({ stablecoin_id: "usdt-tether", score: 70, computed_at: computedAt })]);
+      expect(await loadPreviousStressSignalCurrentRows(db, nowSec, options))
+        .toEqual([expect.objectContaining({ stablecoin_id: "usdt-tether", computed_at: computedAt })]);
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it("merges latest rows over legacy rows while preserving legacy-only rows", () => {
     const merged = mergeNewestStressSignalRows(
       [row("usdt-tether", nowSec - 120, 12), row("usdc-circle", nowSec - 60, 30)],
@@ -107,8 +151,8 @@ describe("stress-signal current-row helpers", () => {
       {
         match: "FROM cache WHERE key = ?",
         matchBinds: ["dews:published-generation"],
-        rows: [],
-        first: null,
+        rows: [publishedPointer(nowSec - 60)],
+        first: publishedPointer(nowSec - 60),
       },
       {
         match: "pharos:stress-signals:latest-all",
@@ -129,7 +173,7 @@ describe("stress-signal current-row helpers", () => {
     const staleLatest = row("usdt-tether", nowSec - 1_000, 20);
     const onReadError = vi.fn();
     const db = mockD1([
-      { match: "FROM cache WHERE key = ?", matchBinds: ["dews:published-generation"], rows: [], first: null },
+      { match: "FROM cache WHERE key = ?", matchBinds: ["dews:published-generation"], rows: [publishedPointer(nowSec - 60)] },
       { match: "pharos:stress-signals:latest-all", rows: [staleLatest] },
       { match: "pharos:stress-signals:legacy-latest-all", rows: [], throwError: new Error("D1 unavailable") },
     ]);
@@ -161,8 +205,8 @@ describe("stress-signal current-row helpers", () => {
     const staleLatest = { score: 25, band: "WATCH", signals_json: signalsJson, computed_at: nowSec - 1_000 };
     const onReadError = vi.fn();
     const db = mockD1([
-      { match: "FROM cache WHERE key = ?", matchBinds: ["dews:published-generation"], rows: [], first: null },
-      { match: "pharos:stress-signals:latest-one", matchBinds: ["usdt-tether"], rows: [staleLatest], first: staleLatest },
+      { match: "FROM cache WHERE key = ?", matchBinds: ["dews:published-generation"], rows: [publishedPointer(nowSec - 60)] },
+      { match: "pharos:stress-signals:latest-one", matchBinds: ["usdt-tether", nowSec - 60], rows: [staleLatest], first: staleLatest },
       { match: "pharos:stress-signals:legacy-latest-one", rows: [], throwError: new Error("D1 unavailable") },
     ]);
 
@@ -360,18 +404,18 @@ describe("stress-signal current-row helpers", () => {
       {
         match: "FROM cache WHERE key = ?",
         matchBinds: ["dews:published-generation"],
-        rows: [],
-        first: null,
+        rows: [publishedPointer(nowSec - 60)],
+        first: publishedPointer(nowSec - 60),
       },
       {
         match: "pharos:stress-signals:latest-one",
-        matchBinds: ["usdt-tether"],
+        matchBinds: ["usdt-tether", nowSec - 60],
         rows: [staleLatest],
         first: staleLatest,
       },
       {
         match: "pharos:stress-signals:legacy-latest-one",
-        matchBinds: ["usdt-tether"],
+        matchBinds: ["usdt-tether", nowSec - 60],
         rows: [],
         first: null,
       },
@@ -427,7 +471,7 @@ describe("stress-signal current-row helpers", () => {
     expect(loaded).toBeNull();
   });
 
-  it("serves a fresh single-coin latest row directly when no publication pointer exists", async () => {
+  it("serves a fresh single-coin latest row under an accepted legacy pointer", async () => {
     const fresh = {
       score: 25,
       band: "WATCH",
@@ -438,12 +482,12 @@ describe("stress-signal current-row helpers", () => {
       {
         match: "FROM cache WHERE key = ?",
         matchBinds: ["dews:published-generation"],
-        rows: [],
-        first: null,
+        rows: [publishedPointer(nowSec - 60)],
+        first: publishedPointer(nowSec - 60),
       },
       {
         match: "pharos:stress-signals:latest-one",
-        matchBinds: ["usdt-tether"],
+        matchBinds: ["usdt-tether", nowSec - 60],
         rows: [fresh],
         first: fresh,
       },
@@ -471,18 +515,18 @@ describe("stress-signal current-row helpers", () => {
       {
         match: "FROM cache WHERE key = ?",
         matchBinds: ["dews:published-generation"],
-        rows: [],
-        first: null,
+        rows: [publishedPointer(nowSec - 60)],
+        first: publishedPointer(nowSec - 60),
       },
       {
         match: "pharos:stress-signals:latest-one",
-        matchBinds: ["usdt-tether"],
+        matchBinds: ["usdt-tether", nowSec - 60],
         rows: [],
         throwError: new Error("D1 unavailable"),
       },
       {
         match: "pharos:stress-signals:legacy-latest-one",
-        matchBinds: ["usdt-tether"],
+        matchBinds: ["usdt-tether", nowSec - 60],
         rows: [canonical],
         first: canonical,
       },

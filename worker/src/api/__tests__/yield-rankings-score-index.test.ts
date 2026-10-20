@@ -21,12 +21,12 @@ const NOW = Date.parse("2026-04-23T12:00:00Z") / 1000;
 const databases: DatabaseSync[] = [];
 afterEach(() => { vi.restoreAllMocks(); vi.useRealTimers(); for (const db of databases.splice(0)) db.close(); });
 
-async function fixture(held = false, pipelineGap = false) {
+async function fixture(held = false, pipelineGap = false, safetyPublishedAt = NOW) {
   vi.useFakeTimers(); vi.setSystemTime(NOW * 1000);
   const sqlite = createLatestSchemaSqlite().sqlite;
   databases.push(sqlite);
   const db = createSqliteD1(sqlite);
-  const publication = makeWorkerSafetyScoreV9Publication({ asOfSec: NOW - 30, publishedAtSec: NOW,
+  const publication = makeWorkerSafetyScoreV9Publication({ asOfSec: safetyPublishedAt - 30, publishedAtSec: safetyPublishedAt,
     cards: [pipelineGap
       ? makeReportCardsV9PipelineGapCard("control", "A", { id: "usdc-circle" })
       : makeWorkerV9Card({ id: "usdc-circle", score: 80, grade: "A-" }),
@@ -49,19 +49,116 @@ async function fixture(held = false, pipelineGap = false) {
     provenance: { selectionMethod: "confidence-weighted", benchmark, benchmarks: { USD: benchmark },
       dlPools: { mode: "dex-cache", updatedAt: NOW, ageSeconds: 0, poolCount: 1, fallbackMode: null },
       safetySnapshot: { kind: "ok", coverageRatio: 0.5, coveredCount: 1, trackedCount: 2, reason: null,
-        publishedAt: NOW, safetyScoreIdentity: active.snapshot.safetyScoreIdentity } },
+        publishedAt: safetyPublishedAt, safetyScoreIdentity: active.snapshot.safetyScoreIdentity } },
   };
   sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run("yield-rankings", JSON.stringify(payload), NOW);
-  if (held) await persistSafetyScoreV9Publication(db, {
-    publicationClockSec: NOW + 1,
-    publicationHealth: { ...input.publicationHealth, status: "held", attemptedAtSec: NOW + 1,
-      heldSinceSec: NOW + 1, reasons: [{ code: "dex-stale" }] },
-    publicationAttempt: { ...input.publicationAttempt, outcome: "held", publicationGenerationId: null, attemptedAtSec: NOW + 1 },
-  });
+  if (held) {
+    // A hold is a later attempt even when the accepted safety clock is in the future.
+    const heldAt = Math.max(NOW, safetyPublishedAt) + 1;
+    await persistSafetyScoreV9Publication(db, {
+      publicationClockSec: heldAt,
+      publicationHealth: { ...input.publicationHealth, status: "held", attemptedAtSec: heldAt,
+        heldSinceSec: heldAt, reasons: [{ code: "dex-stale" }] },
+      publicationAttempt: { ...input.publicationAttempt, outcome: "held", publicationGenerationId: null, attemptedAtSec: heldAt },
+    });
+  }
   return { sqlite, db };
 }
 
 describe("rankings score-index hydration", () => {
+  it.each([false, true])("expires original current/held safety at 86401 while retaining fresh APY (held=%s)", async (held) => {
+    const { db } = await fixture(held, false, NOW - 86400);
+    const coinUrl = new URL("https://site-api.pharos.watch/api/yield-rankings-coin?stablecoin=usdc-circle");
+    for (const elapsed of [0, 1]) {
+      vi.setSystemTime((NOW + elapsed) * 1000);
+      for (const response of [
+        await handleYieldRankings(db),
+        await handleYieldRankings(db, new URL("https://api.pharos.watch/api/yield-rankings?projection=summary")),
+        await handleYieldRankingsCoin(db, coinUrl),
+      ]) {
+        expect(response.status).toBe(200);
+        const body = await response.json() as YieldRankingsResponse | YieldRankingsSummaryResponse;
+        const row = body.rankings.find((entry) => entry.id === "usdc-circle")!;
+        expect(row.currentApy).toBe(5);
+        expect(row.provenance?.sourceFreshness).toBe("fresh");
+        expect(row.safetyScore).toBe(elapsed === 0 ? 80 : null);
+        expect(body.provenance?.liveSafetyHydration?.publishedAt).toBe(NOW - 86400);
+        expect(body.provenance?.safetySnapshot.publishedAt).toBe(NOW - 86400);
+        if (elapsed === 1) {
+          expect(row.pharosYieldScore).toBeNull();
+          expect(row.provenance?.safetyReason).toBe("safety-snapshot-unavailable");
+          expect(row.pysNullReason).toBe("opportunity-evidence-missing");
+          expect(response.headers.get("Warning")).toContain("199");
+        }
+      }
+    }
+    // Yield's budget is not a global compact-index freshness policy.
+    expect((await handleSafetyGrades(db)).status).toBe(200);
+  });
+
+  it("expires a warm comparator on live safety time even when the cached safety deadline is already past", async () => {
+    const { db, sqlite } = await fixture(false, false, NOW - 86400);
+    sqlite.prepare("UPDATE cache SET value = json_set(value, '$.provenance.safetySnapshot.publishedAt', ?) WHERE key = 'yield-rankings'")
+      .run(NOW - 100000);
+    const url = new URL("https://site-api.pharos.watch/api/yield-rankings-coin?stablecoin=usdc-circle");
+    const before = YieldRankingsCoinResponseSchema.parse(await (await handleYieldRankingsCoin(db, url)).json());
+    expect(before.rankings[0].safetyScore).toBe(80);
+    expect(before.provenance?.liveSafetyHydration?.coveredCount).toBe(1);
+    vi.setSystemTime((NOW + 1) * 1000);
+    const after = YieldRankingsCoinResponseSchema.parse(await (await handleYieldRankingsCoin(db, url)).json());
+    const full = YieldRankingsResponseSchema.parse(await (await handleYieldRankings(db)).json());
+    expect(after.rankings).toEqual(full.rankings.filter((row) => row.id === "usdc-circle"));
+    expect(after.provenance).toEqual(full.provenance);
+    expect(after.provenance?.liveSafetyHydration).toMatchObject({
+      coveredCount: 0, publishedAt: NOW - 86400, reason: expect.stringContaining("safety-publication-clock-out-of-budget"),
+    });
+  });
+
+  it.each([false, true])("rejects future current/held clocks until the original time arrives (held=%s)", async (held) => {
+    const { db } = await fixture(held, false, NOW + 1);
+    const before = YieldRankingsResponseSchema.parse(await (await handleYieldRankings(db)).json());
+    expect(before.rankings.find((row) => row.id === "usdc-circle")?.safetyScore).toBeNull();
+    expect(before.provenance?.liveSafetyHydration?.publishedAt).toBe(NOW + 1);
+    vi.setSystemTime((NOW + 1) * 1000);
+    const after = YieldRankingsResponseSchema.parse(await (await handleYieldRankings(db)).json());
+    expect(after.rankings.find((row) => row.id === "usdc-circle")?.safetyScore).toBe(80);
+  });
+
+  it.each([false, true])("reassesses independent deadlines before explicit NR and pipeline-gap returns (gap=%s)", async (gap) => {
+    for (const evidence of ["aging", "source", "anchor", "benchmark"] as const) {
+      const { db, sqlite } = await fixture(false, gap);
+      const payload = JSON.parse(String(sqlite.prepare("SELECT value FROM cache WHERE key = 'yield-rankings'").get()!.value)) as YieldRankingsResponse;
+      for (const row of payload.rankings) {
+        row.provenance = makeYieldProvenance({
+          sourceObservedAt: NOW - (evidence === "aging" ? 18000 : evidence === "source" ? 21600 : 0),
+          comparisonAnchorObservedAt: evidence === "anchor" ? NOW - 14 * 86400 : null,
+        });
+      }
+      if (evidence === "benchmark") {
+        payload.benchmarks!.USD.fetchedAt = NOW - 48 * 3600;
+        payload.provenance!.benchmark.fetchedAt = NOW - 48 * 3600;
+      }
+      sqlite.prepare("UPDATE cache SET value = ? WHERE key = 'yield-rankings'").run(JSON.stringify(payload));
+      for (const elapsed of [0, 1]) {
+        vi.setSystemTime((NOW + elapsed) * 1000);
+        const body = YieldRankingsResponseSchema.parse(await (await handleYieldRankings(db)).json());
+        for (const row of body.rankings) {
+          expect(row.provenance?.sourceFreshness).toBe(elapsed && (evidence === "source" || evidence === "anchor") ? "stale" : "fresh");
+          expect(row.provenance?.benchmarkFreshness).toBe(elapsed && evidence === "benchmark" ? "stale" : "healthy");
+          const warning = evidence === "aging" ? "aging" : evidence === "benchmark" ? "benchmark-stale" : "data-stale";
+          expect(row.warningSignals.includes(warning)).toBe(elapsed === 1);
+          if (elapsed && evidence !== "aging") {
+            expect(row.pysNullReason).toBe(evidence === "benchmark" ? "benchmark-stale" : "source-stale");
+          }
+          if (gap || row.id === "usdt-tether") {
+            expect(row.pharosYieldScore).toBeNull();
+            expect(row.warningSignals).toContain("safety-unrated");
+          }
+        }
+      }
+    }
+  });
+
   it.each([NOW - 3687, null])("ages full, summary and warm coin pool evidence from its original clock (%s)", async updatedAt => {
     const { db, sqlite } = await fixture();
     sqlite.prepare("UPDATE cache SET value = json_set(value, '$.provenance.dlPools.updatedAt', ?, '$.provenance.dlPools.ageSeconds', 2677) WHERE key = 'yield-rankings'")

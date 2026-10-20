@@ -173,6 +173,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
   // schema-optional and needs a spoken default (E20).
   const excessWithinDisplayPrecision = excessYield != null && Math.abs(excessYield) < 0.005;
   const benchmarkHurdleLabel = view.ranking.benchmarkLabel ?? "benchmark";
+  const publishedBenchmarkRate = view.ranking.benchmarkRate ?? null;
   const historyChart = (
     <YieldHistoryChart
       stablecoinId={stablecoinId}
@@ -230,7 +231,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
             neutral caption when the hurdle comparison is unavailable. */}
         <p className="text-sm text-muted-foreground">
           {excessYield != null && view.ranking.apy30d != null
-            ? `APY ${formatPercent(view.ranking.apy30d)} is ${formatYieldBenchmarkSpread(excessYield, benchmarkHurdleLabel, view.benchmarkRate)}; PYS ${view.ranking.pharosYieldScore ?? "NR"} after risk adjustments.`
+            ? `APY ${formatPercent(view.ranking.apy30d)} is ${formatYieldBenchmarkSpread(excessYield, benchmarkHurdleLabel, publishedBenchmarkRate)}; PYS ${view.ranking.pharosYieldScore ?? "NR"} after risk adjustments.`
             : "APY trend against the current benchmark hurdle rate and peer median."}
         </p>
 
@@ -268,7 +269,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
             </span>
             {excessYield !== null ? (
               <span
-                aria-label={formatYieldBenchmarkSpread(excessYield, benchmarkHurdleLabel, view.benchmarkRate)}
+                aria-label={formatYieldBenchmarkSpread(excessYield, benchmarkHurdleLabel, publishedBenchmarkRate)}
                 className={cn(
                   "rounded-full px-1.5 py-0.5 font-mono text-3xs tabular-nums",
                   excessWithinDisplayPrecision

@@ -1,5 +1,4 @@
 import { makeReportCardsV9PartialCard } from "@shared/test-utils/report-cards-v9";
-import { mockD1 } from "@shared/test-utils/mock-d1";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import type { CollectorContext } from "../daily-digest/collectors-shared";
 import { makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
@@ -465,18 +464,18 @@ describe("digest grade availability", () => {
     const assets = [makeAsset({ id: "gap", symbol: "GAP", circulating: { peggedUSD: 20_000_000 } }),
       makeAsset({ id: "partial", symbol: "PARTIAL", circulating: { peggedUSD: 20_000_000 } })];
     const identity = snapshot.safetyScoreIdentity;
+    const { db, sqlite } = fixtures.open();
+    sqlite.prepare(`INSERT INTO safety_score_history_v2 (
+      history_id, stablecoin_id, recorded_at, model, identity_schema_version,
+      methodology_version, policy_id, policy_digest, evaluation_build_digest,
+      base_input_generation_id, model_publication_generation_id, transition_kind,
+      grade, score, prev_grade, prev_score, created_at
+    ) VALUES ('prior-gap-change', 'gap', ?, ?, ?, ?, ?, ?, ?, ?, ?, 'organic-grade-change', 'F', 20, 'A', 90, ?)`)
+      .run(nowSec - 3600, identity.model, identity.schemaVersion, identity.methodologyVersion,
+        identity.policyId, identity.policyDigest, identity.evaluationBuildDigest,
+        identity.baseInputGenerationId, identity.publicationGenerationId, nowSec - 3600);
     const ctx: CollectorContext = {
-      db: mockD1([
-        { match: "GROUP BY recorded_at", rows: [] },
-        { match: "ORDER BY ABS", rows: [{
-          history_id: "prior-gap-change", stablecoin_id: "gap", recorded_at: nowSec - 3600,
-          model: identity.model, identity_schema_version: identity.schemaVersion,
-          methodology_version: identity.methodologyVersion, policy_id: identity.policyId,
-          policy_digest: identity.policyDigest, evaluation_build_digest: identity.evaluationBuildDigest,
-          base_input_generation_id: identity.baseInputGenerationId, model_publication_generation_id: identity.publicationGenerationId,
-          transition_kind: "organic-grade-change", grade: "F", score: 20, prev_grade: "A", prev_score: 90,
-        }] },
-      ]),
+      db,
       trackedStablecoinAssets: assets, trackedStablecoinIds: new Set(assets.map((asset) => asset.id)),
       coreAggregateStablecoinAssets: assets, coreAggregateStablecoinIds: new Set(assets.map((asset) => asset.id)),
       stablecoinAssetById: new Map(assets.map((asset) => [asset.id, asset])),
@@ -493,7 +492,10 @@ describe("digest grade availability", () => {
     ]);
     expect(collected.value.safetyScores?.model === "v9" ? collected.value.safetyScores.gradeDistribution : null).not.toHaveProperty("NR");
     const transitions = await collectGradeTransitions(ctx, collected.value.safetyGrades, collected.value.safetyIdentity);
-    expect(transitions).toEqual({ value: undefined, degradedReasons: [] });
+    expect(transitions).toMatchObject({
+      value: { gradeTransitionAccounting: { complete: true, count: 0, identities: [] } },
+      degradedReasons: [],
+    });
   });
 });
 

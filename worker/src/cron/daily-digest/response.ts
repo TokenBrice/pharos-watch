@@ -12,6 +12,7 @@ import { toErrorMessage } from "@shared/lib/error-utils";
 import { getMetaString, normalizeStringArray } from "./digest-intelligence-utils";
 import { findDigestSafetyClaimMarkers } from "../../lib/digest-safety-context";
 import { findQuarantinedDigestSignalClaims } from "@shared/lib/digest-signal-quarantine";
+import type { DigestInputData } from "@shared/types/digest";
 import {
   EDITORIAL_STYLE_HASH,
   EDITORIAL_STYLE_VERSION,
@@ -92,6 +93,8 @@ export interface DigestDepegFact {
   currentBps?: number;
   bps?: number;
   peakBps?: number;
+  quoteMode?: DigestInputData["topDepegs"][number]["quoteMode"];
+  pegReference?: number;
 }
 
 export interface DigestModelResponseParseOptions {
@@ -656,7 +659,8 @@ function lintPriceBpsConsistency(
     const bpsMatch = bpsMatches[0];
     const afterBps = sentence.slice(bpsMatch.end).trimStart().replace(/\s+/g, " ");
     const boundDeviation = /^(below|above|under|over|off) (?:its |the )?peg\b/i.exec(afterBps);
-    if (!fact || otherTicker || priceMatches.length !== 1 || bpsMatches.length !== 1 || !boundDeviation) {
+    const historicalClaim = /\b(?:was|were|previously|yesterday|peak|peaked|historical)\b/i.test(sentence);
+    if (!fact || otherTicker || priceMatches.length !== 1 || bpsMatches.length !== 1 || !boundDeviation || historicalClaim) {
       issues.push({
         code: "price-bps-ambiguous",
         severity: "soft",
@@ -664,13 +668,14 @@ function lintPriceBpsConsistency(
       });
       continue;
     }
-    if (fact.currentPriceUsd == null || fact.currentBps == null
+    // A dollar quote cannot be bound to an observation in the native peg unit.
+    if (fact.quoteMode === "native-peg" || fact.currentPriceUsd == null || fact.currentBps == null
       || !Number.isFinite(fact.currentPriceUsd) || !Number.isFinite(fact.currentBps)) continue;
     const quotedPrice = Number(priceMatches[0].value.replaceAll(",", ""));
     const quotedBps = Number(bpsMatch.value.replaceAll(",", ""));
     if (!Number.isFinite(quotedPrice) || !Number.isFinite(quotedBps) || quotedPrice <= 0) continue;
-    // Recover the peg reference from the fact so non-USD pegs stay lintable.
-    const pegReference = fact.currentPriceUsd / (1 + fact.currentBps / 10_000);
+    // Legacy facts can recover their USD reference without assuming a $1 peg.
+    const pegReference = fact.pegReference ?? fact.currentPriceUsd / (1 + fact.currentBps / 10_000);
     if (!Number.isFinite(pegReference) || pegReference <= 0) continue;
     const signedImpliedBps = ((quotedPrice - pegReference) / pegReference) * 10_000;
     const impliedBps = Math.abs(signedImpliedBps);
@@ -686,9 +691,19 @@ function lintPriceBpsConsistency(
         message: `${fact.symbol}: ${direction} peg contradicts the signed current deviation (${fact.currentBps} bps) or quoted price.`,
       });
     }
-    // Prices quoted to fewer decimals than the deviation warrants are fine;
-    // only a genuine cross-field contradiction should fire.
-    if (Math.abs(impliedBps - quotedBps) > LINT_PRICE_BPS_TOLERANCE) {
+    // Compare both claims with the observation, not just with each other: a
+    // self-consistent but invented price/deviation pair is still false.
+    const quotedPriceDeltaBps = Math.abs(quotedPrice - fact.currentPriceUsd) / pegReference * 10_000;
+    if (Math.abs(quotedBps - Math.abs(fact.currentBps)) > LINT_PRICE_BPS_TOLERANCE ||
+      quotedPriceDeltaBps > Math.max(LINT_PRICE_BPS_TOLERANCE, priceRoundingBps)) {
+      issues.push({
+        code: "price-bps-observation-mismatch",
+        severity: "hard",
+        message: `${fact.symbol}: current observation is $${fact.currentPriceUsd} (${fact.currentBps} bps), not $${quotedPrice} (${quotedBps} bps ${direction} peg).`,
+      });
+    }
+    // Honest quoted-price rounding cannot establish a cross-field contradiction.
+    if (Math.abs(impliedBps - quotedBps) > Math.max(LINT_PRICE_BPS_TOLERANCE, priceRoundingBps)) {
       issues.push({
         code: "price-bps-mismatch",
         severity: "hard",

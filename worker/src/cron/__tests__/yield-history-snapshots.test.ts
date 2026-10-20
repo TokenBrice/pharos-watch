@@ -278,7 +278,8 @@ describe("cleanupFalseLinkedVariantSourceSwitches", () => {
   });
 
   it("uses only the seven-day clean-generation window for reclassification", async () => {
-    const fixture = createDb();
+    let cleanupSql = "";
+    const fixture = createLatestSchemaSqlite({ onRun: (sql) => { cleanupSql = sql; } });
     sqlite = fixture.sqlite;
     const startSec = 1_800_000_000;
     const floorSec = startSec - 7 * DAY_SECONDS;
@@ -322,6 +323,8 @@ describe("cleanupFalseLinkedVariantSourceSwitches", () => {
     addDecision("out-clean-1", "coin-out", linkedKey, 0, floorSec + 400, "audit");
 
     expect(await cleanupFalseLinkedVariantSourceSwitches(fixture.db, startSec)).toBe(1);
+    const plan = sqlite.prepare(`EXPLAIN QUERY PLAN ${cleanupSql}`).all(floorSec);
+    expect(plan.some((row) => /SEARCH d USING INDEX idx_yield_source_decisions_created_coin \(created_at>/.test(String(row.detail)))).toBe(true);
     expect(
       sqlite
         .prepare(
@@ -335,6 +338,58 @@ describe("cleanupFalseLinkedVariantSourceSwitches", () => {
       { generation_id: "in-false", source_switch: 0, retention_reason: "audit" },
       { generation_id: "out-false", source_switch: 1, retention_reason: "trend" },
     ]);
+  });
+
+  it.each([
+    { name: "one clean generation", sources: ["linked-variant:child:onchain:child"], repaired: 0 },
+    { name: "an intervening other source", sources: ["linked-variant:child:onchain:child", "defillama:pool", "linked-variant:child:onchain:child"], repaired: 0 },
+    { name: "a different child identity", sources: ["linked-variant:other:onchain:other", "linked-variant:child:onchain:child"], repaired: 0 },
+    { name: "a different underlying source key", sources: ["linked-variant:child:defillama:pool", "linked-variant:child:onchain:child"], repaired: 0 },
+    { name: "a latest nonlinked source", sources: ["linked-variant:child:onchain:child", "linked-variant:child:onchain:child", "defillama:pool"], repaired: 0 },
+    { name: "a latest source switch", sources: ["linked-variant:child:onchain:child", "linked-variant:child:onchain:child"], latestSwitch: 1, repaired: 0 },
+    { name: "two consecutive identical clean identities", sources: ["linked-variant:child:onchain:child", "linked-variant:child:onchain:child"], repaired: 1 },
+    { name: "an unpublished intervening decision", sources: ["linked-variant:child:onchain:child", "linked-variant:child:onchain:child"], unpublished: true, repaired: 1 },
+  ])("repairs only the verified alias with $name", async ({ sources, latestSwitch, unpublished, repaired }) => {
+    const fixture = createDb();
+    sqlite = fixture.sqlite;
+    const startSec = 1_800_000_000;
+    const floorSec = startSec - 7 * DAY_SECONDS;
+    const linkedKey = "linked-variant:child:onchain:child";
+    const addDecision = (
+      id: string, key: string, previousKey: string, sourceSwitch: number, createdAt: number, state = "published",
+    ) => {
+      sqlite!.prepare(
+        `INSERT INTO yield_publication_generations (generation_id, started_at, state, created_at)
+         VALUES (?, ?, ?, ?)`,
+      ).run(id, createdAt, state, createdAt);
+      sqlite!.prepare(
+        `INSERT INTO yield_source_decisions (
+           generation_id, stablecoin_id, selected_source_key, selected_confidence_tier,
+           selected_data_source, selected_apy_30d, selected_reason,
+           previous_best_source_key, source_switch, alternatives_json, created_at, retention_reason
+         ) VALUES (?, 'coin', ?, 'curated', 'test', 4.2, 'test', ?, ?, '[]', ?, ?)`,
+      ).run(id, key, previousKey, sourceSwitch, createdAt, sourceSwitch ? "trend" : "audit");
+    };
+    addDecision("alias", linkedKey, "onchain:coin", 1, floorSec - 100);
+    addDecision("other-child", "linked-variant:other:onchain:other", "onchain:coin", 1, floorSec - 100);
+    addDecision("other-source", "linked-variant:child:defillama:pool", "onchain:coin", 1, floorSec - 100);
+    addDecision("real-switch", linkedKey, "defillama:pool", 1, floorSec - 100);
+    sources.forEach((key, index) => {
+      addDecision(`clean-${index}`, key, key, index === sources.length - 1 ? latestSwitch ?? 0 : 0, floorSec + 100 + index);
+    });
+    if (unpublished) addDecision("staged", "defillama:pool", linkedKey, 1, floorSec + 200, "staged");
+    const persistedRows = sqlite.prepare(
+      "SELECT generation_id, selected_source_key, previous_best_source_key, source_switch, retention_reason FROM yield_source_decisions ORDER BY generation_id",
+    );
+    const before = persistedRows.all();
+
+    expect(await cleanupFalseLinkedVariantSourceSwitches(fixture.db, startSec)).toBe(repaired);
+    expect(persistedRows.all()).toEqual(before.map((row) =>
+      row.generation_id === "alias" && repaired
+        ? { ...row, source_switch: 0, retention_reason: "audit" }
+        : row,
+    ));
+    expect(await cleanupFalseLinkedVariantSourceSwitches(fixture.db, startSec)).toBe(0);
   });
 });
 

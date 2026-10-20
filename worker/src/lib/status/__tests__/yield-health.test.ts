@@ -1,9 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { loadYieldHealthSummary } from "../yield-health";
 import type { CronRunStatus, CronStatusDetail } from "@shared/types/status";
 import { YIELD_SAFETY_STALE_COHERENT_MAX_AGE_SEC } from "@shared/lib/yield-safety-fallback";
+import { SafetyScoreV9PublicationIdentitySchema } from "@shared/types/safety-score-publication";
+import * as scoreIndex from "../../safety-score-index";
 import {
   emptyYieldAudit,
   healthyYieldProvenance,
@@ -1127,5 +1129,44 @@ describe("loadYieldHealthSummary", () => {
       })] },
     ]), NOW, {});
     expect(summary.liveSafetyHydration).toMatchObject({ status: "stale", fallback: null, cachedAgeSec: 10, safetyAgeSec: 86401 });
+  });
+
+  it.each([false, true])("shares the original current/held safety deadline with serving (held=%s)", async (held) => {
+    const identity = SafetyScoreV9PublicationIdentitySchema.parse(stampedSafetyIdentity());
+    const active = vi.spyOn(scoreIndex, "loadActiveSafetyScoreIndex");
+    try {
+      for (const age of [-1, 86401, 86400]) {
+        const publishedAt = NOW - age;
+        const snapshot: scoreIndex.SafetyScoreGradeSnapshot = {
+          lifecycle: "active", safetyScoreIdentity: identity, methodology: { version: identity.methodologyVersion },
+          asOfSec: publishedAt - 30, updatedAt: publishedAt, completeness: { expectedCount: 0 }, cards: [],
+          publicationHealth: { schemaVersion: 2, status: held ? "held" : "current",
+            acceptedPublicationGenerationId: identity.publicationGenerationId, acceptedAtSec: publishedAt,
+            attemptedAtSec: NOW, heldSinceSec: held ? NOW : null, reasons: held ? [{ code: "dex-stale" }] : [] },
+        };
+        active.mockResolvedValue(held ? { kind: "held", reason: "v9-publication-held", detail: "held", snapshot }
+          : { kind: "v9", snapshot });
+        const summary = await loadYieldHealthSummary(makeDb([
+          yieldCacheRow("yield-rankings", NOW - 10, { rankings: [], provenance: {
+            safetySnapshot: { safetyScoreIdentity: identity, publishedAt },
+          } }),
+        ]), NOW, {});
+        expect(summary.liveSafetyHydration).toMatchObject({
+          status: age === 86400 ? held ? "degraded" : "healthy" : "stale",
+          fallback: held && age === 86400 ? "publish-time-snapshot" : null,
+          safetyPublishedAt: publishedAt,
+        });
+        if (!held && age !== 86400) expect(summary.liveSafetyHydration?.reason).toBe("safety-publication-clock-out-of-budget");
+      }
+      // A current live generation does not inherit the cached fallback's yield-clock restriction.
+      const summary = await loadYieldHealthSummary(makeDb([
+        yieldCacheRow("yield-rankings", NOW - 100000, { rankings: [], provenance: {
+          safetySnapshot: { safetyScoreIdentity: identity, publishedAt: NOW - 100000 },
+        } }),
+      ]), NOW, {});
+      expect(summary.liveSafetyHydration?.status).toBe(held ? "stale" : "healthy");
+    } finally {
+      active.mockRestore();
+    }
   });
 });

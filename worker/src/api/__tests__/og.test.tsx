@@ -778,6 +778,31 @@ describe("stability-index OG handler aggregation", () => {
     }
   });
 
+  it("labels pruned extrema as retained instantaneous samples, including shorter history", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const insert = sqlite.prepare("INSERT INTO stability_index_samples (stored_at, score, band, components, input_snapshot) VALUES (?, ?, 'STEADY', '{}', '{}')");
+      insert.run(nowSec - 92 * 86400, 100);
+      insert.run(nowSec - 91 * 86400, 0);
+      insert.run(nowSec - 2 * 86400, 80);
+      insert.run(nowSec, 70);
+      sqlite.prepare("INSERT INTO stability_index (computed_at, score, band, components, input_snapshot) VALUES (?, 99, 'BEDROCK', '{}', '{}')").run(nowSec - 86400);
+      const beforePrune = await captureStabilityData(db);
+      expect([beforePrune.retainedSampleHigh, beforePrune.retainedSampleLow]).toEqual([100, 0]);
+      sqlite.prepare("DELETE FROM stability_index_samples WHERE stored_at < ?").run(nowSec - 90 * 86400);
+      const data = await captureStabilityData(db);
+      expect([data.retainedSampleHigh, data.retainedSampleLow]).toEqual([80, 70]);
+      const markup = renderToStaticMarkup(<StabilityIndexCard data={data} />);
+      expect(markup).toContain("Retained samples (up to 90 days)");
+      expect(markup).toContain("High:");
+      expect(markup).toContain("Low:");
+      expect(markup).not.toMatch(/\b(?:ATH|ATL)\b|all.time/i);
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it("preserves unavailable window aggregates and insufficient history without synthetic observations", async () => {
     const db = mockD1([
       { match: "WHERE stored_at <= ?", rows: [], first: null },
@@ -798,8 +823,8 @@ describe("stability-index OG handler aggregation", () => {
     expect(data.psiBand).toBe("STEADY");
     expect(data.delta24h).toBeNull();
     expect(data.avg7d).toBeNull();
-    expect(data.allTimeHigh).toBeNull();
-    expect(data.allTimeLow).toBeNull();
+    expect(data.retainedSampleHigh).toBeNull();
+    expect(data.retainedSampleLow).toBeNull();
     expect(data.sparklineData).toBeNull();
     const markup = renderToStaticMarkup(<StabilityIndexCard data={data} />);
     expect(markup).toContain("7D AVG: —");
@@ -1056,8 +1081,8 @@ describe("og cards render through satori", () => {
           { name: "MELTDOWN", active: false },
         ],
         avg7d: 91.2,
-        allTimeHigh: 97.5,
-        allTimeLow: 11.4,
+        retainedSampleHigh: 97.5,
+        retainedSampleLow: 11.4,
         flightToQuality: true,
         flightIntensity: 62,
         lastUpdated: "2026-06-10 07:30 UTC",
@@ -1096,6 +1121,16 @@ describe("og cards render through satori", () => {
     }} />);
     expect(markup).toContain("— 7d");
     expect(markup).not.toContain("0.0% 7d");
+  });
+
+  it("renders an unavailable global chain share distinctly from observed zero", () => {
+    const data: ChainCardData = {
+      name: "Ethereum", totalUsd: 100, change7dPercent: null, stablecoinCount: 1,
+      dominanceShare: null, healthScore: null, healthBand: null, topStablecoins: [],
+    };
+    expect(renderToStaticMarkup(<ChainCard data={data} />)).toContain("Unavailable");
+    expect(renderToStaticMarkup(<ChainCard data={data} />)).not.toContain("0.0%");
+    expect(renderToStaticMarkup(<ChainCard data={{ ...data, dominanceShare: 0 }} />)).toContain("0.0%");
   });
 
 });

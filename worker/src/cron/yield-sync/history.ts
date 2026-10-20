@@ -891,8 +891,8 @@ export async function cleanupFalseLinkedVariantSourceSwitches(
 ): Promise<number> {
   const result = await db
     .prepare(
-        `WITH ranked_linked_generations AS (
-           SELECT d.stablecoin_id, d.generation_id, d.source_switch,
+        `WITH ranked_generations AS (
+           SELECT d.stablecoin_id, d.generation_id, d.selected_source_key, d.source_switch,
                   ROW_NUMBER() OVER (
                     PARTITION BY d.stablecoin_id
                     ORDER BY d.created_at DESC, d.generation_id DESC
@@ -901,23 +901,24 @@ export async function cleanupFalseLinkedVariantSourceSwitches(
              JOIN yield_publication_generations g
                ON g.generation_id = d.generation_id
               AND g.state = 'published'
-            WHERE d.selected_source_key LIKE 'linked-variant:%'
-              AND d.created_at >= ?
+            WHERE d.created_at >= ?
          ), verified_clean_identities AS (
-           SELECT stablecoin_id
-             FROM ranked_linked_generations
+           SELECT stablecoin_id, MIN(selected_source_key) AS selected_source_key
+             FROM ranked_generations
             WHERE generation_rank <= 2
             GROUP BY stablecoin_id
            HAVING COUNT(*) = 2
-              AND SUM(CASE WHEN source_switch = 0 THEN 1 ELSE 0 END) = 2
+              AND SUM(CASE WHEN source_switch = 0 AND selected_source_key LIKE 'linked-variant:%' THEN 1 ELSE 0 END) = 2
+              AND MIN(selected_source_key) = MAX(selected_source_key)
          )
          UPDATE yield_source_decisions
             SET source_switch = 0,
                 retention_reason = 'audit'
           WHERE source_switch = 1
-            AND selected_source_key LIKE 'linked-variant:%'
             AND previous_best_source_key = 'onchain:' || stablecoin_id
-            AND stablecoin_id IN (SELECT stablecoin_id FROM verified_clean_identities)`,
+            AND (stablecoin_id, selected_source_key) IN (
+              SELECT stablecoin_id, selected_source_key FROM verified_clean_identities
+            )`,
     )
     .bind(startSec - 7 * DAY_SECONDS)
     .run();

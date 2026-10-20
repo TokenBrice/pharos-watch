@@ -6,6 +6,7 @@ import { getYieldBenchmarkDisplayLabel, resolveYieldBenchmarkAge, type YieldBenc
 import { cn } from "@/lib/utils";
 import { formatPercent } from "@shared/lib/format";
 import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
+import { PEG_CURRENCY_SYMBOLS } from "@shared/lib/peg-taxonomy";
 import { CurrencyFlag } from "@/components/yield/currency-flag";
 import type {
   YieldBenchmarkMeta,
@@ -36,26 +37,10 @@ interface BenchmarkRow {
 // Pool input is considered stale once it exceeds 2x the hourly source producer interval.
 const POOL_STALE_THRESHOLD_SECONDS = 2 * CRON_SCHEDULE_CADENCES.halfHourlyOffset.intervalSec;
 
-// Currency glyph rendered alongside the ISO code. Where a currency shares the
-// "$" mark with USD (AUD, CAD, SGD, BRL, MXN), the prefixed form disambiguates
-// at a glance without relying on the ISO column alone.
-const CURRENCY_SYMBOLS: Record<string, string> = {
-  USD: "$",
-  EUR: "€",
-  GBP: "£",
-  JPY: "¥",
+// Preserve strip-specific forms while sharing the canonical currency glyphs.
+const CURRENCY_SYMBOL_OVERRIDES: Record<string, string> = {
   CHF: "Fr",
-  AUD: "A$",
-  CAD: "C$",
-  BRL: "R$",
   MXN: "Mex$",
-  ZAR: "R",
-  CNY: "¥",
-  CNH: "¥",
-  TRY: "₺",
-  IDR: "Rp",
-  SGD: "S$",
-  PHP: "₱",
 };
 
 function getBenchmarkRows(
@@ -75,7 +60,7 @@ function getBenchmarkRows(
       return {
         key: b.key ?? fullLabel ?? currency,
         currency,
-        currencySymbol: CURRENCY_SYMBOLS[currency] ?? null,
+        currencySymbol: CURRENCY_SYMBOL_OVERRIDES[currency] ?? PEG_CURRENCY_SYMBOLS[currency as keyof typeof PEG_CURRENCY_SYMBOLS] ?? null,
         benchmarkLabel,
         rate: b.rate,
         recordDate: b.recordDate,

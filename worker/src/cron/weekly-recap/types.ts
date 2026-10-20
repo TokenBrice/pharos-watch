@@ -1,4 +1,4 @@
-import type { DigestForwardLookOutcome, DigestInputData, DigestSafetyContext } from "@shared/types/digest";
+import type { DigestEventPeriod, DigestForwardLookOutcome, DigestInputData, DigestSafetyContext } from "@shared/types/digest";
 import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
 
 export type WeeklyRiskKind = "depeg" | "dews" | "mint-burn" | "blacklist" | "grade" | "yield" | "liquidity" | "supply";
@@ -51,6 +51,8 @@ export interface WeeklyInputData {
   weekStartDate: string;
   weekEndDate: string;
   periodType: "trailing-daily-editions";
+  /** Scheduled half-open event periods, independent of available edition dates. */
+  gradeTransitionPeriods?: { current: DigestEventPeriod; prior: DigestEventPeriod };
   safetyContext?: DigestSafetyContext;
   degradedSources?: string[];
   dailyDigests: { date: string; title: string; text: string; inputData: DigestInputData }[];
@@ -72,7 +74,10 @@ export interface WeeklyInputData {
     topDepegSignals: WeeklyDepegSignal[];
     topSupplySignals: { symbol: string; label: string; amountUsd: number }[];
     topDewsChanges: { symbol: string; from: string; to: string; score: number; mcapUsd: number; driver: string }[];
-    maxAlertPlusMcapUsd: number;
+    /** Null unless every daily edition proves a complete full ALERT+ supply census. */
+    maxAlertPlusMcapUsd: number | null;
+    /** Sum of daily full band-change counts, not unique assets or displayed changes. */
+    totalDewsBandChanges: number | null;
     topPressureSignals: { symbol: string; intensity: number; net24hUsd: number; date: string }[];
     topBlacklistEvents: { symbol: string; chain: string; type: string; amountUsd: number | null; date: string }[];
     topGradeTransitions: {

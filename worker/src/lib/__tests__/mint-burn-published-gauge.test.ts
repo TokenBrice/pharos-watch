@@ -64,6 +64,8 @@ describe("parsePublishedMintBurnGauge", () => {
         },
       ],
       chains: [{ chainId: "ethereum", net24hUsd: -4_000_000, valuation: "unknown" }],
+      window: null,
+      updatedAt: null,
       publishedAt: NOW_SEC,
       stale: false,
     });
@@ -89,6 +91,14 @@ describe("parsePublishedMintBurnGauge", () => {
       chains: [{ chainId: "ethereum", net24hUsd: null, valuation: "partial" }],
     });
   });
+
+  it.each([undefined, null, {}, { start: 0, end: 86400, semantics: "rolling" },
+    { start: 3601, end: 90001, semantics: "closed-utc-hours" }])(
+    "keeps absent or unreadable window provenance unavailable: %j", (window) => {
+      expect(parsePublishedMintBurnGauge(payload({ window, updatedAt: "bad" }), NOW_SEC, false))
+        .toMatchObject({ window: null, updatedAt: null, publishedAt: NOW_SEC, score: -12.5 });
+    },
+  );
 
   it("keeps a null gauge score (all coins NR) as a usable publication", () => {
     expect(parsePublishedMintBurnGauge(payload({ gauge: { score: null } }), NOW_SEC, false)?.score).toBeNull();
@@ -150,5 +160,17 @@ describe("readPublishedMintBurnGauge", () => {
     expect(result.kind).toBe("ok");
     expect(result.kind === "ok" && result.gauge.stale).toBe(true);
     expect(result.kind === "ok" && result.gauge.score).toBe(-12.5);
+  });
+
+  it("retains producer boundaries and both clocks across a delayed hour boundary", async () => {
+    const window = { start: 1_799_899_200, end: 1_799_985_600, semantics: "closed-utc-hours" };
+    const updatedAt = 1_799_982_000;
+    const result = await readPublishedMintBurnGauge(mockD1([
+      cacheTable(JSON.stringify(payload({ window, updatedAt })), 3 * 3600),
+    ]), NOW_SEC);
+    expect(result).toMatchObject({ kind: "ok", gauge: {
+      window, updatedAt, publishedAt: NOW_SEC - 3 * 3600, stale: true,
+    } });
+    if (result.kind === "ok") expect(JSON.stringify(result.gauge.window)).toBe(JSON.stringify(window));
   });
 });

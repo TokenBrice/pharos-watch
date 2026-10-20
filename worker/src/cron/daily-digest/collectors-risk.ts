@@ -2,7 +2,6 @@ import { projectV9CompactPartialEvidence } from "@shared/types/safety-score-v9-c
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { DigestInputData } from "@shared/types/digest";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
-import { safetyScorePublicationIdentitiesAreComparable } from "@shared/lib/safety-score-publication";
 import { DEWS_SIGNAL_LABELS, type DewsSignalKey } from "@shared/lib/dews-config";
 import { THREAT_BAND_ORDER, isDewsAlertBand, isThreatBand } from "@shared/lib/classification";
 import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
@@ -216,7 +215,23 @@ export async function collectDewsStress(
         if (yesterdayBandCounts && key in yesterdayBandCounts) yesterdayBandCounts[key]++;
       }
 
+      let alertPlusMcapUsd = 0;
+      let observedCount = 0;
+      let unavailableCount = 0;
+      for (const row of todayRows) {
+        if (!isDewsAlertBand(row.band)) continue;
+        const coin = ctx.stablecoinAssetById.get(row.stablecoin_id);
+        const supply = coin ? getCirculatingRawOrNull(coin) : null;
+        if (supply === null) {
+          unavailableCount++;
+        } else {
+          observedCount++;
+          alertPlusMcapUsd += supply;
+        }
+      }
+
       const bandChanges: NonNullable<DigestInputData["dewsStress"]>["bandChanges"] = [];
+      let bandChangeCount = 0;
       const malformedSignalsReason = "dews-stress-signals-json";
 
       for (const today of todayRows) {
@@ -225,6 +240,7 @@ export async function collectDewsStress(
         const yesterdayRank = isThreatBand(yesterday.band) ? THREAT_BAND_ORDER[yesterday.band] : 0;
         const todayRank = isThreatBand(today.band) ? THREAT_BAND_ORDER[today.band] : 0;
         if (yesterdayRank === todayRank) continue;
+        bandChangeCount++;
 
         let topDriver = "unknown";
         try {
@@ -306,6 +322,9 @@ export async function collectDewsStress(
       return collectorResult({
         bandCounts,
         yesterdayBandCounts,
+        alertPlusMcapUsd: observedCount > 0 || unavailableCount === 0 ? alertPlusMcapUsd : null,
+        alertPlusSupplyCoverage: { complete: unavailableCount === 0, observedCount, unavailableCount },
+        bandChangeCount: yesterdayBandCounts === null ? null : bandChangeCount,
         bandChanges: bandChanges.slice(0, 5),
         elevatedCoins,
       }, degradedReasons);
@@ -322,125 +341,119 @@ export async function collectGradeTransitions(
   ctx: CollectorContext,
   safetyGrades: CanonicalSafetyGradeRow[] | undefined,
   safetyIdentity: SafetyScoreV9PublicationIdentity | undefined,
-): Promise<CollectorResult<DigestInputData["gradeTransitions"]>> {
-  if (!safetyGrades || !safetyIdentity) return collectorOk(undefined);
+): Promise<CollectorResult<Pick<DigestInputData, "gradeTransitions" | "gradeTransitionAccounting">>> {
+  const window = { start: ctx.nowSec - 2 * SECONDS.ONE_DAY, end: ctx.nowSec };
+  if (!safetyGrades || !safetyIdentity) {
+    return collectorOk({
+      gradeTransitionAccounting: { complete: false, window, reason: "safety-canonical-snapshot" },
+    });
+  }
   try {
-    const cutoff48h = ctx.nowSec - 2 * 24 * 60 * 60;
-    const policyClause = "AND policy_id = ? AND policy_digest = ?";
-    const identityBinds = [
-      safetyIdentity.model,
-      safetyIdentity.schemaVersion,
-      safetyIdentity.methodologyVersion,
-      safetyIdentity.evaluationBuildDigest,
-      safetyIdentity.policyId,
-      safetyIdentity.policyDigest,
-    ];
-    const bumpRows = await ctx.db
-      .prepare(
-        `SELECT recorded_at,
-                COUNT(*) as cnt,
-                SUM(CASE WHEN score > prev_score THEN 1 ELSE 0 END) as upgrades,
-                SUM(CASE WHEN score < prev_score THEN 1 ELSE 0 END) as downgrades
-         FROM safety_score_history_v2
-         WHERE recorded_at >= ?
-           AND model = ?
-           AND identity_schema_version = ?
-           AND methodology_version = ?
-           AND evaluation_build_digest = ?
-           ${policyClause}
-           AND transition_kind = 'organic-grade-change'
-         GROUP BY recorded_at HAVING COUNT(*) > 15`,
-      )
-      .bind(
-        cutoff48h,
-        ...identityBinds,
-      )
-      .all<{ recorded_at: number; cnt: number; upgrades: number; downgrades: number }>();
-    const bumpTimestamps = new Set(
-      (bumpRows.results ?? [])
-        .filter((row) => row.upgrades / row.cnt > 0.8 || row.downgrades / row.cnt > 0.8)
-        .map((row) => row.recorded_at),
-    );
-
-    const transitionRows = await ctx.db
-      .prepare(
-        `SELECT history_id, stablecoin_id, recorded_at, model, identity_schema_version,
-                methodology_version, policy_id, policy_digest, evaluation_build_digest,
-                base_input_generation_id, model_publication_generation_id, transition_kind,
-                grade, score, prev_grade, prev_score
-         FROM safety_score_history_v2
-         WHERE recorded_at >= ?
-           AND model = ?
-           AND identity_schema_version = ?
-           AND methodology_version = ?
-           AND evaluation_build_digest = ?
-           ${policyClause}
-           AND transition_kind = 'organic-grade-change'
-         ORDER BY ABS(COALESCE(score, 0) - COALESCE(prev_score, 0)) DESC
-         LIMIT 10`,
-      )
-      .bind(
-        cutoff48h,
-        ...identityBinds,
-      )
-      .all<SafetyScoreHistoryV2Row>();
-
-    const candidates = (transitionRows.results ?? [])
-      .filter((row) => safetyGrades.some((grade) => grade.id === row.stablecoin_id))
-      .filter((row) => !bumpTimestamps.has(row.recorded_at))
-      .filter((row) => row.prev_grade !== null)
-      .filter((row) =>
-        safetyScorePublicationIdentitiesAreComparable(
-          safetyScoreHistoryIdentityFromV2Row(row),
-          safetyIdentity,
-        ),
-      )
-      .filter((row) => {
-        const coin = ctx.trackedStablecoinAssets.find((candidate) => candidate.id === row.stablecoin_id);
+    const gradeMap = new Map(safetyGrades.map((grade) => [grade.id, grade]));
+    const eligibleIds = ctx.trackedStablecoinAssets
+      .filter((coin) => {
         const supply = getCirculatingRawOrNull(coin);
-        return supply !== null && supply > 10_000_000;
+        return gradeMap.has(coin.id) && supply !== null && supply > 10_000_000;
       })
-      .slice(0, 5);
-
-    if (candidates.length > 0) {
-      const gradeMap = new Map(safetyGrades.map((grade) => [grade.id, grade]));
-      return collectorOk(candidates.map((row) => {
-        const coin = ctx.trackedStablecoinAssets.find((candidate) => candidate.id === row.stablecoin_id)!;
-        const currentGrade = gradeMap.get(row.stablecoin_id);
-        const rowIdentity = safetyScoreHistoryIdentityFromV2Row(row);
-        if (rowIdentity.model !== "v9") {
-          throw new Error("Canonical V9 transition query returned a non-V9 history row");
-        }
-        const base = {
-          historyId: row.history_id,
-          recordedAt: row.recorded_at,
-          symbol: coin.symbol,
-          fromGrade: row.prev_grade!,
-          toGrade: row.grade,
-          fromScore: row.prev_score,
-          toScore: row.score,
-          mcapUsd: getCirculatingRawOrNull(coin)!, // admitted by the candidate supply filter above
-        };
-        return {
-          ...base,
-          model: "v9" as const,
-          safetyScoreIdentity: rowIdentity,
-          currentPillars: currentGrade?.pillars ?? {
-            backing: { score: null, evidenceLevel: "unknown", freshness: "unknown", reasons: [] },
-            exit: { score: null, evidenceLevel: "unknown", freshness: "unknown", reasons: [] },
-            control: { score: null, evidenceLevel: "unknown", freshness: "unknown", reasons: [] },
-          },
-          reasonCodes: currentGrade?.reasonCodes ?? [],
-          caps: currentGrade?.caps ?? [],
-          bindingCap: currentGrade?.bindingCap ?? null,
-        };
-      }));
+      .map((coin) => coin.id);
+    const identityClause = `model = ? AND identity_schema_version = ?
+      AND methodology_version = ? AND evaluation_build_digest = ?
+      AND policy_id = ? AND policy_digest = ?`;
+    const identityBinds = [
+      safetyIdentity.model, safetyIdentity.schemaVersion, safetyIdentity.methodologyVersion,
+      safetyIdentity.evaluationBuildDigest, safetyIdentity.policyId, safetyIdentity.policyDigest,
+    ];
+    // Keep bump detection unchanged, but apply its exclusions, exact identity and
+    // materiality before every census/detail limit. One JSON bind avoids D1's
+    // parameter ceiling as the tracked universe grows.
+    const eligibleSql = `WITH bumps AS (
+      SELECT recorded_at FROM safety_score_history_v2 INDEXED BY idx_safety_score_history_v2_recorded_at
+      WHERE recorded_at >= ? AND recorded_at < ? AND ${identityClause}
+        AND transition_kind = 'organic-grade-change'
+      GROUP BY recorded_at
+      HAVING COUNT(*) > 15 AND (
+        1.0 * SUM(CASE WHEN score > prev_score THEN 1 ELSE 0 END) / COUNT(*) > 0.8
+        OR 1.0 * SUM(CASE WHEN score < prev_score THEN 1 ELSE 0 END) / COUNT(*) > 0.8)
+    )`;
+    const eligibleWhere = `WHERE recorded_at >= ? AND recorded_at < ? AND ${identityClause}
+      AND transition_kind = 'organic-grade-change' AND prev_grade IS NOT NULL
+      AND stablecoin_id IN (SELECT value FROM json_each(?))
+      AND recorded_at NOT IN (SELECT recorded_at FROM bumps)`;
+    const binds = [
+      window.start, window.end, ...identityBinds,
+      window.start, window.end, ...identityBinds, JSON.stringify(eligibleIds),
+    ];
+    const aggregate = await ctx.db.prepare(
+      `${eligibleSql} SELECT COUNT(DISTINCT history_id) AS count
+       FROM safety_score_history_v2 INDEXED BY idx_safety_score_history_v2_recorded_at ${eligibleWhere}`,
+    ).bind(...binds).first<{ count: number }>();
+    if (!aggregate || !Number.isSafeInteger(aggregate.count) || aggregate.count < 0) {
+      throw new Error("Organic transition COUNT unavailable");
     }
+    const identities: { historyId: string; recordedAt: number }[] = [];
+    const seen = new Set<string>();
+    let cursor = { recordedAt: window.start, historyId: "" };
+    while (true) {
+      const page = await ctx.db.prepare(
+        `${eligibleSql} SELECT history_id, recorded_at
+         FROM safety_score_history_v2 INDEXED BY idx_safety_score_history_v2_recorded_at ${eligibleWhere}
+           AND (recorded_at, history_id) > (?, ?)
+         ORDER BY recorded_at, history_id LIMIT 500`,
+      ).bind(...binds, cursor.recordedAt, cursor.historyId)
+        .all<{ history_id: string; recorded_at: number }>();
+      if (!page.success || !page.results) throw new Error("Organic transition page unavailable");
+      for (const row of page.results) {
+        if (row.recorded_at < window.start || row.recorded_at >= window.end ||
+            row.recorded_at < cursor.recordedAt ||
+            (row.recorded_at === cursor.recordedAt && row.history_id <= cursor.historyId) ||
+            seen.has(row.history_id)) {
+          throw new Error("Organic transition page did not advance distinct identities");
+        }
+        identities.push({ historyId: row.history_id, recordedAt: row.recorded_at });
+        seen.add(row.history_id);
+        cursor = { recordedAt: row.recorded_at, historyId: row.history_id };
+      }
+      if (page.results.length < 500) break;
+    }
+    if (seen.size !== aggregate.count) throw new Error("Organic transition census count mismatch");
+    const details = await ctx.db.prepare(
+      `${eligibleSql}
+       SELECT history_id, stablecoin_id, recorded_at, model, identity_schema_version,
+              methodology_version, policy_id, policy_digest, evaluation_build_digest,
+              base_input_generation_id, model_publication_generation_id, transition_kind,
+              grade, score, prev_grade, prev_score
+       FROM safety_score_history_v2 INDEXED BY idx_safety_score_history_v2_recorded_at ${eligibleWhere}
+       ORDER BY ABS(COALESCE(score, 0) - COALESCE(prev_score, 0)) DESC, history_id
+       LIMIT 5`,
+    ).bind(...binds).all<SafetyScoreHistoryV2Row>();
+    if (!details.success || !details.results) throw new Error("Organic transition details unavailable");
+    const gradeTransitions = details.results.map((row) => {
+      if (!seen.has(row.history_id)) throw new Error("Organic transition detail absent from census");
+      const coin = ctx.stablecoinAssetById.get(row.stablecoin_id)!;
+      const currentGrade = gradeMap.get(row.stablecoin_id)!;
+      const rowIdentity = safetyScoreHistoryIdentityFromV2Row(row);
+      if (rowIdentity.model !== "v9") throw new Error("Canonical V9 transition query returned a non-V9 history row");
+      return {
+        historyId: row.history_id, recordedAt: row.recorded_at, symbol: coin.symbol,
+        fromGrade: row.prev_grade!, toGrade: row.grade, fromScore: row.prev_score, toScore: row.score,
+        mcapUsd: getCirculatingRawOrNull(coin)!,
+        model: "v9" as const, safetyScoreIdentity: rowIdentity,
+        currentPillars: currentGrade.pillars, reasonCodes: currentGrade.reasonCodes,
+        caps: currentGrade.caps, bindingCap: currentGrade.bindingCap,
+      };
+    });
+    return collectorOk({
+      ...(gradeTransitions.length > 0 ? { gradeTransitions } : {}),
+      gradeTransitionAccounting: {
+        complete: true, window, safetyScoreIdentity: safetyIdentity, count: aggregate.count, identities,
+      },
+    });
   } catch (error) {
     logWorkerEventArgs("handler", "error", "[daily-digest] Failed to collect grade transitions:", error);
-    return collectorDegraded(undefined, "grade-transitions-query");
+    return collectorDegraded({
+      gradeTransitionAccounting: { complete: false, window, reason: "grade-transitions-query" },
+    }, "grade-transitions-query");
   }
-  return collectorOk(undefined);
 }
 
 export async function collectYieldAnomalies(

@@ -30,18 +30,26 @@ export function getNativeEventPrice(
   asOf: number,
   currentQuote?: PersistedNativePegQuote | null,
 ): number | null {
-  let price: number | null = null;
-  let observedAt = -Infinity;
+  return getNativeEventPriceObservation(event, asOf, currentQuote)?.value ?? null;
+}
+
+/** Preserve the selected quote's clock without reproducing the native admission policy. */
+export function getNativeEventPriceObservation(
+  event: NativeEventPriceEvidence,
+  asOf: number,
+  currentQuote?: PersistedNativePegQuote | null,
+): { value: number; observedAt: number } | null {
+  let observation: { value: number; observedAt: number } | null = null;
   for (const [at, value] of [
     [event.started_at, event.start_price],
     [event.ended_at, event.recovery_price],
     [currentQuote?.observedAt, currentQuote?.value],
   ]) {
     if (at == null || value == null || !Number.isFinite(at) || !Number.isFinite(value) || value <= 0) continue;
-    if (at <= asOf && asOf - at < PSI_NATIVE_EVIDENCE_MAX_AGE_SEC && at > observedAt) {
-      price = value;
-      observedAt = at;
+    if (at <= asOf && asOf - at < PSI_NATIVE_EVIDENCE_MAX_AGE_SEC &&
+      (observation == null || at > observation.observedAt)) {
+      observation = { value, observedAt: at };
     }
   }
-  return price;
+  return observation;
 }

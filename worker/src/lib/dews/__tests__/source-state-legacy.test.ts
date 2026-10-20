@@ -1,9 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { StablecoinData } from "@shared/types/market";
 import { buildDewsScoringResult } from "../scoring";
 import { loadDewsSourceState } from "../source-state";
 import { CONTRACT_CONFIGS } from "../../blacklist-contracts";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
+
+afterEach(() => vi.restoreAllMocks());
 
 /**
  * Minimal D1 mock that returns a single row from the previous-stress-signals
@@ -32,7 +34,7 @@ function mockDbWithPrevRows(
     band: string;
     computed_at: number;
   }> = [],
-  publishedGeneration: number | null = null,
+  publishedGeneration: number | null = 1_700_000_000,
 ): D1Database {
   const pointerRow = publishedGeneration == null
     ? null
@@ -274,7 +276,14 @@ describe("loadDewsSourceState legacy signals_json hydration", () => {
     expect(sourceState.prevSignals.get("usdt-tether")?.signals.supply).toEqual({ value: 3, available: true });
   });
 
-  it("hydrates structured yield source-risk and rank attribution from rankings cache", async () => {
+  it.each([
+    ["fresh", nowSec, null],
+    ["stale", nowSec - 86400, "exceeds"],
+    ["future", nowSec + 86400, "future-timestamp"],
+    ["invalid", Number.POSITIVE_INFINITY, "invalid-timestamp"],
+  ] as const)("propagates %s yield clock diagnostics while retaining structured source-risk and rank attribution", async (_label, updatedAt, reason) => {
+    vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+    const registerSourceFailure = vi.fn();
     const db = mockDbWithPrevRows([], {
       value: JSON.stringify({
         rankings: [
@@ -300,13 +309,13 @@ describe("loadDewsSourceState legacy signals_json hydration", () => {
           },
         ],
       }),
-      updated_at: nowSec,
+      updated_at: updatedAt,
     });
 
     const sourceState = await loadDewsSourceState({
       db,
       nowSec,
-      registerSourceFailure: () => {},
+      registerSourceFailure,
       registerMalformedPersistedInput: () => {},
     });
 
@@ -328,6 +337,12 @@ describe("loadDewsSourceState legacy signals_json hydration", () => {
       primaryDriver: "source-risk",
     });
     expect(sourceState.sourceCoverage.yieldStructuredRows).toBe(1);
+    if (reason == null) {
+      expect(registerSourceFailure).not.toHaveBeenCalled();
+    } else {
+      expect(registerSourceFailure).toHaveBeenCalledTimes(1);
+      expect(registerSourceFailure).toHaveBeenCalledWith("yield-rankings-freshness", expect.stringContaining(reason));
+    }
   });
 
   it("hydrates blacklist counts by tracker stablecoin id instead of bare symbol", async () => {
@@ -436,6 +451,11 @@ describe("loadDewsSourceState legacy signals_json hydration", () => {
             stablecoin_id: "usdc-circle", band: "CALM", computed_at: nowSec - 600,
             signals_json: JSON.stringify({ supply: { value: 7, available: true } }),
           }] });
+        } else if (call.label === "cache:dews:published-generation") {
+          call.resolve({
+            value: JSON.stringify({ updatedAt: nowSec - 600, source: "compute-dews", publishStatus: "published" }),
+            updated_at: nowSec - 600,
+          });
         } else {
           call.resolve(call.kind === "first" ? null : { results: [] });
         }

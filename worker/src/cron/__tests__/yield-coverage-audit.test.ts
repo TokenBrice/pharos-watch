@@ -1,6 +1,33 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 
+const lifecycleFixture = vi.hoisted(() => ({
+  coins: undefined as Array<{ id: string; symbol: string }> | undefined,
+  registry: undefined as Record<string, YieldAdapterLifecycleEntry> | undefined,
+}));
+vi.mock("@shared/lib/tracked-stablecoin-utils", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@shared/lib/tracked-stablecoin-utils")>();
+  return {
+    ...actual,
+    get ACTIVE_YIELD_BEARING_STABLECOINS() {
+      return lifecycleFixture.coins ?? actual.ACTIVE_YIELD_BEARING_STABLECOINS;
+    },
+  };
+});
+vi.mock("../../lib/yield-config/yield-config-rate-sources", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../lib/yield-config/yield-config-rate-sources")>();
+  return {
+    ...actual,
+    get YIELD_ADAPTER_LIFECYCLE() {
+      return lifecycleFixture.registry ?? actual.YIELD_ADAPTER_LIFECYCLE;
+    },
+  };
+});
+vi.mock("../../lib/cron-logger", async (importOriginal) => ({
+  ...await importOriginal<typeof import("../../lib/cron-logger")>(),
+  logCronEvent: vi.fn(),
+}));
+
 vi.mock("../yield-sync/sources-dl", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../yield-sync/sources-dl")>();
 
@@ -19,6 +46,7 @@ vi.mock("../../lib/safety-scores", () => ({
 
 import { getCache, setCache } from "../../lib/db-cache";
 import { computeSafetyScoresSnapshot } from "../../lib/safety-scores";
+import { logCronEvent } from "../../lib/cron-logger";
 import type { CronProgressUpdate } from "../../lib/cron-logger";
 import {
   buildCoverageAuditOperatorQueue,
@@ -87,6 +115,9 @@ afterEach(() => {
   mockGetCache.mockReset();
   mockSetCache.mockReset();
   mockComputeSafetyScoresSnapshot.mockReset();
+  vi.mocked(logCronEvent).mockClear();
+  lifecycleFixture.coins = undefined;
+  lifecycleFixture.registry = undefined;
   vi.useRealTimers();
 });
 
@@ -205,8 +236,8 @@ describe("runYieldCoverageAudit", () => {
       kind: "degraded",
       mode: "map",
       coveredCount: 0,
-      trackedCount: 1,
-      coverageRatio: 0,
+      trackedCount: null,
+      coverageRatio: null,
       reason: "safety-score-v9-publication:completeness-mismatch",
       scores: new Map(),
       source: "safety-score-v9-publication",
@@ -302,8 +333,8 @@ describe("runYieldCoverageAudit", () => {
       kind: "degraded",
       mode: "map",
       coveredCount: 0,
-      trackedCount: 1,
-      coverageRatio: 0,
+      trackedCount: null,
+      coverageRatio: null,
       reason,
       scores: new Map(),
       source: "safety-score-v9-publication",
@@ -521,6 +552,85 @@ describe("runYieldCoverageAudit", () => {
       protocolCategoryStatus: "missing",
     });
     expect(mockSetCache).toHaveBeenCalled();
+  });
+
+  it.each([
+    ["missing", undefined, 0, 0],
+    ["malformed", "{", 0, 0],
+    ...[{}, null, { data: {} }, { protocols: null }, { data: [{}] },
+      { protocols: [{ slug: "new-lender", category: 4 }] },
+      [{ slug: "new-lender", category: "Lending" }, { slug: "" }],
+    ].map((payload): [string, string | undefined, number, number] => ["malformed", JSON.stringify(payload), 0, 0]),
+    ["ok", "[]", 0, 0],
+    ["ok", JSON.stringify({ data: [] }), 0, 0],
+    ["ok", JSON.stringify({ protocols: [] }), 0, 0],
+    ["ok", JSON.stringify([{ slug: "uncategorized" }, { slug: "unknown", category: null }]), 2, 0],
+    ["ok", JSON.stringify({ data: [{ slug: "new-lender", category: "Lending" }] }), 1, 1],
+  ])("publishes admitted protocol evidence and matching terminal status: %s %s", async (status, value, count, categorized) => {
+    mockLoadDlStablecoinPools.mockResolvedValue({
+      pools: [lendingPool({ pool: "new-usdc", project: "new-lender", symbol: "USDC", tvlUsd: 12_000_000 })],
+      meta: { mode: "dex-cache", updatedAt: 1_774_526_300, ageSeconds: 100, poolCount: 1, fallbackMode: null },
+    });
+    mockGetCache.mockImplementation(async (_db, key) => {
+      if (key === "defillama-protocols" && typeof value === "string") return { value, updatedAt: 1_774_526_300 };
+      if (key === "stablecoins") return { value: "[]", updatedAt: 1_774_526_300 };
+      if (key === "yield-rankings") return { value: '{"rankings":[]}', updatedAt: 1_774_526_300 };
+      return null;
+    });
+    mockComputeSafetyScoresSnapshot.mockResolvedValue(successfulSafetySnapshot());
+    const result = await runYieldCoverageAudit(mockD1([{ match: "yield_coverage_review_dispositions", rows: [] }]));
+    const report = JSON.parse(String(mockSetCache.mock.calls[0]?.[2]));
+    expect(report.protocolCategoryMeta).toMatchObject({
+      status, protocolCount: count, categorizedProtocolCount: categorized, highConfidenceCategoryCount: categorized,
+    });
+    expect(result.status).toBe(status === "ok" ? "ok" : "degraded");
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      protocolCategoryStatus: status, protocolCategoryCount: categorized,
+      reason: status === "ok" ? "coverage-audit-completed" : `protocol-category-cache-${status}`,
+    });
+    if (categorized === 0) expect(report.protocolRecommendations.every(
+      (item: { protocolCategory: string | null; recommendedTier: string }) =>
+        item.protocolCategory === null && item.recommendedTier === "review-needed",
+    )).toBe(true);
+  });
+
+  it.each([0, 100, 101])("reports the full %i lifecycle review cohort beside capped event and report details", async (count) => {
+    lifecycleFixture.coins = Array.from({ length: count }, (_, i) => ({ id: `due-${i}`, symbol: `DUE${i}` }));
+    lifecycleFixture.registry = Object.fromEntries(lifecycleFixture.coins.map(({ id }, i): [string, YieldAdapterLifecycleEntry] => [id, {
+      lifecycle: i % 2 === 0 ? "quarantined" : "intentional-gap",
+      reason: { code: "needs-review", since: "2020-01-01", nextReviewAt: "2020-02-01" },
+    }]));
+    const buckets = summarizeAdapterLifecycle(lifecycleFixture.coins.map(({ id }) => id), lifecycleFixture.registry);
+    expect(buckets.reviewDueAdapterCount).toBe(count);
+    expect(buckets.reviewDueAdapters).toHaveLength(Math.min(count, 100));
+    expect(buckets.reviewDueAdaptersTruncated).toBe(count > 100);
+    mockLoadDlStablecoinPools.mockResolvedValue({
+      pools: [lendingPool({ pool: "new-usdc", project: "new-lender", symbol: "USDC", tvlUsd: 12_000_000 })],
+      meta: { mode: "dex-cache", updatedAt: 1_774_526_300, ageSeconds: 100, poolCount: 1, fallbackMode: null },
+    });
+    mockGetCache.mockImplementation(async (_db, key) => {
+      if (key === "stablecoins" || key === "defillama-protocols") return { value: "[]", updatedAt: 1_774_526_300 };
+      if (key === "yield-rankings") return { value: '{"rankings":[]}', updatedAt: 1_774_526_300 };
+      return null;
+    });
+    mockComputeSafetyScoresSnapshot.mockResolvedValue(successfulSafetySnapshot());
+    const result = await runYieldCoverageAudit(mockD1([{ match: "yield_coverage_review_dispositions", rows: [] }]));
+    const report = JSON.parse(String(mockSetCache.mock.calls[0]?.[2]));
+    expect(report.lifecycleReviewDueCount).toBe(count);
+    expect(report.reviewDueAdapters).toHaveLength(Math.min(count, 100));
+    expect(report.reviewDueAdaptersTruncated).toBe(count > 100);
+    expect(JSON.parse(result.metadata ?? "{}").lifecycleReviewDueCount).toBe(count);
+    const event = vi.mocked(logCronEvent).mock.calls.find(([, entry]) => entry.eventType === "lifecycle-review-due")?.[1];
+    if (count === 0) {
+      expect(event).toBeUndefined();
+    } else {
+      expect(event?.message?.startsWith(`${count} `)).toBe(true);
+      expect(event?.metadata).toMatchObject({
+        lifecycleReviewDueCount: count, reviewDueAdaptersTruncated: count > 100,
+        reviewDue: expect.any(Array),
+      });
+      expect((event?.metadata?.reviewDue as unknown[]).length).toBe(Math.min(count, 100));
+    }
   });
 
   it("publishes queue totals that account for every candidate item", async () => {

@@ -540,10 +540,13 @@ async function assessYieldSafetyAvailability(
       return { impactStatus: "degraded", warning: "yield-safety-availability-unknown" };
     }
     const held = health.status === "held";
-    if (!held && live && safetyScorePublicationIdentitiesAreComparable(stamped, live)) {
+    const liveWithinBudget = isYieldSafetyFallbackWithinWindow(now, health.acceptedAtSec, now);
+    if (!held && live && liveWithinBudget && safetyScorePublicationIdentitiesAreComparable(stamped, live)) {
       return { impactStatus: "healthy", warning: null };
     }
-    const reason = held ? "safety-snapshot-held" : live ? "safety-identity-mismatch" : "safety-snapshot-unavailable";
+    const reason = held ? "safety-snapshot-held"
+      : live && !liveWithinBudget ? "safety-publication-clock-out-of-budget"
+      : live ? "safety-identity-mismatch" : "safety-snapshot-unavailable";
     const withinWindow = isYieldSafetyFallbackWithinWindow(row.updated_at, row.safety_published_at, now);
     return withinWindow
       ? { impactStatus: "healthy", warning: `yield-safety-publish-time-fallback:${reason}` }

@@ -322,7 +322,9 @@ export const handleStabilityIndex = async (db: D1Database, url: URL): Promise<Re
       ...(snapshot.value.aggregateUniverse === CORE_STABLECOIN_AGGREGATE_UNIVERSE
         ? { aggregateUniverse: CORE_STABLECOIN_AGGREGATE_UNIVERSE }
         : {}),
-      totalMcapUsd: typeof snapshot.value.totalMcapUsd === "number" ? snapshot.value.totalMcapUsd : 0,
+      ...(typeof snapshot.value.totalMcapUsd === "number" && Number.isFinite(snapshot.value.totalMcapUsd)
+        ? { totalMcapUsd: snapshot.value.totalMcapUsd }
+        : {}),
       computedAt,
       methodologyVersion,
       ...(dailyProvenance ? { dailyProvenance } : {}),

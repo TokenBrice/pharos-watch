@@ -46,7 +46,12 @@ import { addFreshnessHeaders } from "../lib/api-freshness";
 import { classifyDepegClosure } from "@shared/lib/depeg-closure";
 import { deriveCurrentPegObservationMap, type CurrentPegObservation } from "../lib/current-peg-observations";
 import { getDepegThresholdBps } from "../lib/constants";
-import { signalCrossesThreshold } from "@shared/lib/depeg-signals";
+import { deriveDepegSignal, signalCrossesThreshold } from "@shared/lib/depeg-signals";
+import {
+  getNativeEventPriceObservation, isNativePegEvent, PSI_NATIVE_EVIDENCE_MAX_AGE_SEC,
+  type NativeEventPriceEvidence,
+} from "@shared/lib/depeg-quote-domain";
+import { decodeNativeEventQuote, NATIVE_EVENT_QUOTE_CACHE_PREFIX } from "../lib/native-peg-quote-cache";
 
 // ---------------------------------------------------------------------------
 // WASM singleton initialization (yoga for satori + resvg for SVG→PNG)
@@ -615,9 +620,16 @@ async function handleDepegOg(db: D1Database): Promise<Response> {
     db.prepare("SELECT score, band, stored_at FROM stability_index_samples ORDER BY stored_at DESC LIMIT 1")
       .first<{ score: number; band: string; stored_at: number }>(),
     loadStressSignalCurrentRows(db, now, { staleAfterSec: STRESS_SIGNALS_DEGRADED_MAX_AGE_SEC }),
-    db.prepare(`SELECT stablecoin_id, symbol, direction, peak_deviation_bps, peg_reference
-                FROM depeg_events WHERE ended_at IS NULL`)
-      .all<{ stablecoin_id: string; symbol: string; direction: "above" | "below"; peak_deviation_bps: number; peg_reference: number | null }>(),
+    db.prepare(`SELECT e.stablecoin_id, e.symbol, e.direction, e.peak_deviation_bps, e.peg_reference,
+                       e.peg_type, e.source, e.started_at, e.start_price, p.quote_mode,
+                       nq.value AS current_native_quote
+                FROM depeg_events e LEFT JOIN depeg_event_provenance p ON p.event_id = e.id
+                LEFT JOIN cache nq ON nq.key = '${NATIVE_EVENT_QUOTE_CACHE_PREFIX}' || e.id
+                WHERE e.ended_at IS NULL`)
+      .all<NativeEventPriceEvidence & {
+        stablecoin_id: string; symbol: string; direction: "above" | "below";
+        peak_deviation_bps: number; current_native_quote: string | null;
+      }>(),
     db.prepare(`SELECT ended_at, close_reason, recovery_price FROM depeg_events
                 WHERE ended_at IS NOT NULL AND ended_at > ?`)
       .bind(oneDayAgo).all<{ ended_at: number; close_reason: string | null; recovery_price: number | null }>(),
@@ -663,17 +675,25 @@ async function handleDepegOg(db: D1Database): Promise<Response> {
       openEventById.set(row.stablecoin_id, row);
     }
   }
+  const nativeQuoteTimes: number[] = [];
+  let hasNativeEvent = false;
   const activeDepegs = [...openEventById.values()].map((row) => {
     const asset = assetById.get(row.stablecoin_id);
     const quoteAge = assessFreshnessTimestamp(now, asset?.priceObservedAt ?? asset?.priceUpdatedAt);
-    const currentAvailable = marketFresh && asset && isObservedPrice(asset) &&
+    const nativeEvent = isNativePegEvent(row);
+    hasNativeEvent ||= nativeEvent;
+    const nativeObservation = nativeEvent
+      ? getNativeEventPriceObservation(row, now, decodeNativeEventQuote(row.current_native_quote))
+      : null;
+    if (nativeObservation) nativeQuoteTimes.push(nativeObservation.observedAt);
+    const usdAvailable = marketFresh && asset && isObservedPrice(asset) &&
       typeof asset.price === "number" && Number.isFinite(asset.price) && asset.price > 0 &&
-      quoteAge.reason == null && quoteAge.ageSeconds <= API_FRESHNESS_MAX_AGE_SEC.stablecoins &&
-      row.peg_reference != null && Number.isFinite(row.peg_reference) && row.peg_reference > 0;
+      quoteAge.reason == null && quoteAge.ageSeconds <= API_FRESHNESS_MAX_AGE_SEC.stablecoins;
+    const currentPrice = nativeEvent ? nativeObservation?.value ?? null : usdAvailable ? asset.price! : null;
     return {
       symbol: row.symbol,
       name: TRACKED_META_BY_ID.get(row.stablecoin_id)?.name ?? row.symbol,
-      deviationBps: currentAvailable ? Math.round(((asset.price! - row.peg_reference!) / row.peg_reference!) * 10_000) : null,
+      deviationBps: currentPrice != null ? deriveDepegSignal(currentPrice, row.peg_reference)?.bps ?? null : null,
       peakBps: row.direction === "below" ? -Math.abs(row.peak_deviation_bps) : Math.abs(row.peak_deviation_bps),
     };
   }).sort((a, b) => {
@@ -699,6 +719,7 @@ async function handleDepegOg(db: D1Database): Promise<Response> {
     newToday: newTodayResult?.count ?? null,
     lastUpdated: [
       ogSourceAsOf("Live peg", stablecoins.updatedAt, API_FRESHNESS_MAX_AGE_SEC.stablecoins, now),
+      ...(hasNativeEvent ? [ogSourceAsOf("Native peg", nativeQuoteTimes.length ? Math.min(...nativeQuoteTimes) : null, PSI_NATIVE_EVIDENCE_MAX_AGE_SEC, now)] : []),
       ogSourceAsOf("PSI", psiRow?.stored_at, API_FRESHNESS_MAX_AGE_SEC.stabilityIndex, now),
       ogSourceAsOf("DEWS", stressRows.results?.length ? Math.min(...stressRows.results.map((row) => row.computed_at)) : null, API_FRESHNESS_MAX_AGE_SEC.stressSignals, now),
     ].join(" · "),
@@ -749,8 +770,8 @@ async function handleStabilityIndexOg(db: D1Database): Promise<Response> {
     latestSample, 
     avg7dRow,
     historyRows,
-    athRow,
-    atlRow,
+    retainedHighRow,
+    retainedLowRow,
   ] = await Promise.all([
     db
       .prepare("SELECT score, band, stored_at FROM stability_index_samples ORDER BY stored_at DESC LIMIT 1")
@@ -763,11 +784,10 @@ async function handleStabilityIndexOg(db: D1Database): Promise<Response> {
     db
       .prepare("SELECT score FROM stability_index ORDER BY computed_at DESC LIMIT 14")
       .all<{ score: number }>(),
-    // New: All-time high
+    // Extrema of retained instantaneous samples, not lifetime or daily scores.
     db
       .prepare("SELECT MAX(score) as max FROM stability_index_samples")
       .first<{ max: number | null }>(),
-    // New: All-time low
     db
       .prepare("SELECT MIN(score) as min FROM stability_index_samples")
       .first<{ min: number | null }>(),
@@ -826,8 +846,8 @@ async function handleStabilityIndexOg(db: D1Database): Promise<Response> {
     sparklineData,
     bands: allBands,
     avg7d,
-    allTimeHigh: athRow?.max ?? null,
-    allTimeLow: atlRow?.min ?? null,
+    retainedSampleHigh: retainedHighRow?.max ?? null,
+    retainedSampleLow: retainedLowRow?.min ?? null,
     flightToQuality: false,
     flightIntensity: null,
     lastUpdated: sourceAsOf,
@@ -976,16 +996,19 @@ async function handleOgPage(db: D1Database, slug: string): Promise<Response> {
         }}
       />,
     );
+    const assessedAtSec = Date.now() / 1000;
+    const freshSecondsLeft = (load.freshUntilSec ?? load.asOfSec + load.budgetSec) - assessedAtSec;
+    if (freshSecondsLeft <= 0) return renderOgPageTimeless(slug, "stale-cache", Math.floor(assessedAtSec));
     return new Response(png, {
       headers: {
         "Content-Type": "image/png",
         // Never cached past the figure's admission budget.
-        "Cache-Control": buildOgImageCacheControl((load.freshUntilSec ?? load.asOfSec + load.budgetSec) - nowSec),
+        "Cache-Control": buildOgImageCacheControl(freshSecondsLeft),
         "X-Og-Status": "live",
         "X-Og-Generation": load.generation,
         "X-Og-As-Of": String(load.asOfSec),
         "X-Og-Freshness-Budget": String(load.budgetSec),
-        "X-Og-Assessed-At": String(nowSec),
+        "X-Og-Assessed-At": String(Math.floor(assessedAtSec)),
       },
     });
   } catch (err) {

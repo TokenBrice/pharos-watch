@@ -26,7 +26,10 @@ export function pushDataQualityLines(lines: string[], data: DigestInputData): vo
     lines.push("  No degraded collectors reported.");
   }
   lines.push(`  Blacklist window: ${quality.windows.blacklistActivity.label}, ${formatDateTime(quality.windows.blacklistActivity.start)} to ${formatDateTime(quality.windows.blacklistActivity.end)}`);
-  lines.push(`  Mint/burn window: ${quality.windows.mintBurnFlows.label}, ${formatDateTime(quality.windows.mintBurnFlows.start)} to ${formatDateTime(quality.windows.mintBurnFlows.end)}`);
+  const mintBurnWindow = quality.windows.mintBurnFlows;
+  lines.push(mintBurnWindow.start != null && mintBurnWindow.end != null
+    ? `  Mint/burn window: ${mintBurnWindow.label}, ${formatDateTime(mintBurnWindow.start)} to ${formatDateTime(mintBurnWindow.end)}`
+    : "  Mint/burn window: unavailable (producer window provenance missing or unreadable)");
   lines.push(`  PSI source: ${quality.windows.psi.label}; sample=${quality.windows.psi.sampleAt ? formatDateTime(quality.windows.psi.sampleAt) : "n/a"}, daily=${quality.windows.psi.dailySnapshotAt ? formatDateTime(quality.windows.psi.dailySnapshotAt) : "n/a"}`);
 }
 

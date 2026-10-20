@@ -91,6 +91,12 @@ export function buildWeeklyPrompt(
     `Total blacklist events: ${data.totalBlacklistEventsThisWeek ?? unavailable("blacklistEvents")}, ${blacklistValue} affected`,
     `${safetyContextAvailable ? "Grade transitions" : "Risk transitions"}: ${data.gradeTransitionCount ?? unavailable("gradeTransitions")}`,
   ];
+  if (data.gradeTransitionPeriods) {
+    const { current, prior } = data.gradeTransitionPeriods;
+    const bounds = (period: typeof current) =>
+      `[${new Date(period.start * 1000).toISOString()}, ${new Date(period.end * 1000).toISOString()})`;
+    lines.push(`Organic transition event periods: current ${bounds(current)}; prior ${bounds(prior)}. Count each history identity once in its event period, not once per daily capture.`);
+  }
 
   if (safetyContextAvailable) {
     const identity = safetyIdentity;
@@ -239,13 +245,12 @@ export function buildWeeklyPrompt(
       );
     }
   }
-  if (data.weeklySignals.topDewsChanges.length > 0 || data.weeklySignals.maxAlertPlusMcapUsd > 0) {
-    lines.push(`  DEWS: max ALERT+ mcap ${formatCurrency(data.weeklySignals.maxAlertPlusMcapUsd)}`);
-    for (const change of data.weeklySignals.topDewsChanges) {
-      lines.push(
-        `    ${change.symbol}: ${change.from} -> ${change.to}, score ${change.score}, ${formatCurrency(change.mcapUsd)} mcap, driver ${change.driver}`,
-      );
-    }
+  const { maxAlertPlusMcapUsd, totalDewsBandChanges } = data.weeklySignals;
+  lines.push(`  DEWS: max ALERT+ mcap ${maxAlertPlusMcapUsd == null ? "unavailable (full census or supply coverage missing)" : formatCurrency(maxAlertPlusMcapUsd)}; band-change observations ${totalDewsBandChanges == null ? "unavailable (full census missing)" : totalDewsBandChanges}`);
+  for (const change of data.weeklySignals.topDewsChanges) {
+    lines.push(
+      `    ${change.symbol}: ${change.from} -> ${change.to}, score ${change.score}, ${formatCurrency(change.mcapUsd)} mcap, driver ${change.driver}`,
+    );
   }
   if (data.weeklySignals.topPressureSignals.length > 0) {
     lines.push("  Mint/burn pressure extremes:");

@@ -703,8 +703,8 @@ export function YieldMobileCard({
           {row.pharosYieldScore !== null ? (
             <YieldWhyPysStrip
               benchmarkSpread={benchmarkSpread}
-              benchmarkLabel={resolvedBenchmark.label}
-              benchmarkRate={resolvedBenchmark.rate}
+              benchmarkLabel={row.benchmarkLabel}
+              benchmarkRate={resolvedBenchmark.publishedRate}
               stabilityPct={stabilityPct}
               sustainabilityMult={sustainabilityMult}
               grade={grade}

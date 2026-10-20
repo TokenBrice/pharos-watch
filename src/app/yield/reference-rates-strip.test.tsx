@@ -152,6 +152,16 @@ describe("ReferenceRatesStrip", () => {
     expect(within(eurRow!).getByText("€")).toBeTruthy();
   });
 
+  it.each([
+    ["RUB", "₽"],
+    ["CHF", "Fr"],
+    ["MXN", "Mex$"],
+  ] as const)("renders the shared glyph or deliberate override for %s", (currency, glyph) => {
+    render(<ReferenceRatesStrip fallbackBenchmark={makeBenchmark(currency, currency, `${currency} reference`, 3, "2026-05-19")} />);
+    const row = screen.getByText(currency).closest("tr")!;
+    expect(within(row).getByText(glyph)).toBeTruthy();
+  });
+
   it("renders the fallback provenance benchmark when the optional registry is absent", () => {
     render(
       <ReferenceRatesStrip

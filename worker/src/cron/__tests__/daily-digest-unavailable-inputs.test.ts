@@ -1,13 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { DigestSnapshotResponseSchema, type DigestInputData } from "@shared/types/digest";
-import { BASE_DIGEST_INPUT, makeCollectorCtx, publishedGaugePayload, publishedGaugeTable } from "./daily-digest.test-support";
+import { BASE_DIGEST_INPUT, BASE_SAFETY_CONTEXT, makeCollectorCtx, makePublishedDewsTables, publishedGaugePayload, publishedGaugeTable } from "./daily-digest.test-support";
 import { classifyRegime } from "../daily-digest/prompt/regime";
 import { buildRiskTape } from "../daily-digest/digest-risk-tape";
 import { rollupDigestInputs } from "../daily-digest/collectors-shared";
 import { buildUserPrompt } from "../daily-digest/prompt";
 import { buildEditorialCandidates } from "../daily-digest/editorial-candidates";
 import { collectActiveDepegs, collectBlacklistActivity, collectMintBurnFlows, collectResolvedDepegs } from "../daily-digest/collectors-market";
+import { collectDewsStress } from "../daily-digest/collectors-risk";
 import { resolveDailyDigestEditionNumber } from "../digest/publish";
 import { buildWeeklyInputData } from "../weekly-recap/input-data";
 import { buildWeeklyPrompt } from "../weekly-recap/prompt";
@@ -153,6 +154,37 @@ describe("digest publishes unavailable inputs as unavailable", () => {
     expect(degraded?.detail).not.toContain("No active peg breaks");
   });
 
+  it.each([
+    [2, "2 active", "warning", "WATCHFUL"],
+    [null, "Unavailable", "neutral", "WATCHFUL"],
+    [0, "None active", "positive", "CALM"],
+  ] as const)("uses the full observed active count %s when sized detail is absent", (activeDepegCount, value, tone, regime) => {
+    const input = dayInput({ activeDepegCount, topDepegs: [] });
+    const tape = buildRiskTape(input).find((item) => item.id === "risk-tape:depegs");
+    expect(tape).toMatchObject({ value, tone });
+    expect(classifyRegime(input)).toBe(regime);
+    if (activeDepegCount !== 0) {
+      expect(tape?.detail).not.toContain("No active peg breaks");
+      expect(tape?.tone).not.toBe("positive");
+    }
+    if (activeDepegCount === 2) expect(tape?.detail).toMatch(/2 active;.*severity and supply unavailable/);
+  });
+  it("retains missing-supply incidents in tape and regime after detail admission withholds them", async () => {
+    const ctx = makeCollectorCtx(mockD1([{
+      match: "FROM depeg_events", rows: [
+        { stablecoin_id: "usdt-tether", symbol: "USDT", direction: "below", peak_deviation_bps: -200, started_at: 1000 },
+      ],
+    }]));
+    ctx.mcapById = new Map();
+    const active = await collectActiveDepegs(ctx);
+    expect(active.value).toMatchObject({ activeDepegCount: 1, topDepegs: [] });
+    const input = dayInput({ ...active.value, degradedSources: active.degradedReasons });
+    expect(buildRiskTape(input).find((item) => item.id === "risk-tape:depegs")).toMatchObject({
+      value: "1 active", tone: "warning", detail: expect.stringMatching(/severity and supply unavailable/),
+    });
+    expect(classifyRegime(input)).toBe("WATCHFUL");
+  });
+
   it("publishes null weekly totals below full daily coverage", () => {
     const day = dayInput({ activeDepegCount: 2, blacklistActivity: { eventCount: 1, totalAmountUsd: 5, topEvents: [] } });
     const partial = rollupDigestInputs(Array.from({ length: 5 }, () => day));
@@ -170,10 +202,14 @@ describe("digest publishes unavailable inputs as unavailable", () => {
     const days = Array.from({ length: 7 }, (_, index) => dayInput({
       blacklistActivity: { eventCount: 0, totalAmountUsd: 0, unpricedEventCount: 0, topEvents: [] },
       gradeTransitions: [],
+      gradeTransitionAccounting: {
+        complete: true, window: { start: 1000, end: 2000 }, count: 0, identities: [],
+        safetyScoreIdentity: BASE_SAFETY_CONTEXT.identity,
+      },
       ...(index === 1 ? { degradedSources: ["active-depegs-query"] } : {}),
       ...(index === 2 ? { blacklistActivity: undefined, degradedSources: ["blacklist-activity-query"] } : {}),
     }));
-    const rollup = rollupDigestInputs(days);
+    const rollup = rollupDigestInputs(days, undefined, { start: 1000, end: 2000 });
     expect(rollup).toMatchObject({
       activeDepegObs: null, uniqueDepegSignals: null, blacklistEvents: null, blacklistUsd: null,
       gradeTransitions: 0,
@@ -237,6 +273,40 @@ describe("digest publishes unavailable inputs as unavailable", () => {
     expect(weekly.weekOverWeekDeltas?.mcap).toEqual({ current: null, prior: null, deltaPct: null });
     expect(buildWeeklyPrompt(weekly)).toContain("Market cap: N/A (supply-coverage-incomplete)");
     expect(weekly.psiRange.end).toBe(BASE_DIGEST_INPUT.stabilityIndex!.score);
+  });
+
+  it("does not reconstruct legacy DEWS totals or change counts from display rows", () => {
+    const input = dayInput({ dewsStress: {
+      bandCounts: { calm: 0, watch: 0, alert: 6, warning: 0, danger: 0 },
+      yesterdayBandCounts: null, bandChanges: [],
+      elevatedCoins: [{ symbol: "COIN", band: "ALERT", score: 65, mcapUsd: 2e9 }],
+    } });
+    expect(classifyRegime(input)).toBe("WATCHFUL");
+    const tape = buildRiskTape(input).find((item) => item.id === "risk-tape:dews")!;
+    expect(tape.detail).toContain("Band-change count unavailable");
+    expect(tape.detail).toContain("ALERT+ supply unavailable");
+    expect(tape.detail).not.toContain("0 band changes");
+  });
+
+  it.each([{}, { peggedUSD: 0 }] as Record<string, number>[])("preserves unavailable versus observed-zero ALERT+ supply %j", async (circulating) => {
+    const at = Math.floor(Date.now() / 1000) - 600;
+    const ctx = makeCollectorCtx(mockD1([
+      ...makePublishedDewsTables([{ stablecoin_id: "usdt-tether", score: 65, band: "ALERT", signals_json: "{}", computed_at: at }]),
+      { match: "FROM stress_signal_history WHERE snapshot_date = ?", rows: [] },
+    ]));
+    const asset = { ...ctx.stablecoinAssetById.get("usdt-tether")!, circulating };
+    ctx.stablecoinAssetById.set(asset.id, asset);
+    ctx.trackedStablecoinAssets = [asset];
+    const dewsStress = (await collectDewsStress(ctx)).value!;
+    const observed = "peggedUSD" in circulating;
+    expect(dewsStress).toMatchObject({
+      alertPlusMcapUsd: observed ? 0 : null, bandChangeCount: null,
+      alertPlusSupplyCoverage: { complete: observed, observedCount: observed ? 1 : 0, unavailableCount: observed ? 0 : 1 },
+    });
+    expect(dewsStress.elevatedCoins).toEqual([]);
+    expect(classifyRegime(dayInput({ dewsStress }))).toBe("WATCHFUL");
+    expect(buildRiskTape(dayInput({ dewsStress })).find((item) => item.id === "risk-tape:dews")?.detail)
+      .toContain(observed ? "$0" : "ALERT+ supply unavailable");
   });
 
   it("renders an absent prior DEWS generation as unavailable rather than an all-calm day", () => {

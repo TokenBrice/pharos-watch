@@ -4,9 +4,10 @@ import {
   isValidBenchmarkRate,
   parseEnglishDate,
   parseRate,
+  type BenchmarkFetchResult,
 } from "./shared";
 
-export function parseRbaF1MoneyMarketCsv(csv: string): { recordDate: string; rate: number } | null {
+export function parseRbaF1MoneyMarketCsv(csv: string): BenchmarkFetchResult | null {
   const lines = csv.replace(/^\uFEFF/, "").split(/\r?\n/);
   for (let i = lines.length - 1; i >= 0; i--) {
     const line = lines[i]?.trim();
@@ -15,14 +16,19 @@ export function parseRbaF1MoneyMarketCsv(csv: string): { recordDate: string; rat
     const recordDate = parseEnglishDate((columns[0] ?? "").replace(/-/g, " "));
     const cashRateTarget = parseRate(columns[1]);
     const interbankOvernightRate = parseRate(columns[3]);
-    const rate = isValidBenchmarkRate(cashRateTarget) ? cashRateTarget : interbankOvernightRate;
+    const usesTarget = isValidBenchmarkRate(cashRateTarget);
+    const rate = usesTarget ? cashRateTarget : interbankOvernightRate;
     if (!recordDate || !isValidBenchmarkRate(rate)) continue;
-    return { recordDate, rate };
+    return {
+      recordDate,
+      rate,
+      source: usesTarget ? "rba-cash-rate-target" : "rba-interbank-overnight",
+    };
   }
   return null;
 }
 
-export async function tryRbaCashRateTarget(signal?: AbortSignal): Promise<{ rate: number; recordDate: string } | null> {
+export async function tryRbaCashRateTarget(signal?: AbortSignal): Promise<BenchmarkFetchResult | null> {
   return fetchAndParseBenchmark({
     url: RBA_F1_MONEY_MARKET_CSV_URL,
     headers: { "User-Agent": USER_AGENT },

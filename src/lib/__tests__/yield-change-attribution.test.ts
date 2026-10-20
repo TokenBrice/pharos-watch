@@ -81,6 +81,39 @@ describe("classifyApyChange", () => {
     expect(result.largestDelta?.value).toBeCloseTo(1.5); // 4.0 -> 5.5
   });
 
+  it("does not turn a six-day observation gap into a high-confidence organic daily move", () => {
+    const result = classifyApyChange({
+      history: [point(7, 4), point(1, 7)],
+      yieldStability: 0.9,
+      nowMs: NOW_MS,
+    });
+    expect(result.attribution).toBe("insufficient-data");
+    expect(result.confidence).toBe("low");
+    expect(result.largestDelta).toBeNull();
+  });
+
+  it.each([
+    ["exact next day", [hourlyPoint(17, 22, 4), hourlyPoint(18, 22, 7)], 3],
+    ["adjacent UTC buckets with timestamp jitter", [hourlyPoint(17, 23, 4), hourlyPoint(18, 1, 7)], 3],
+    ["same-day timestamp jitter", [hourlyPoint(18, 21, 4), hourlyPoint(18, 23, 7)], null],
+  ] as const)("requires adjacent UTC closes: %s", (_name, history, delta) => {
+    const result = classifyApyChange({ history: [...history], yieldStability: 0.9, nowMs: NOW_MS });
+    expect(result.largestDelta?.value ?? null).toBe(delta);
+    expect(result.attribution).toBe(delta === null ? "insufficient-data" : "organic");
+  });
+
+  it("retains independently dated ledger switch evidence when no adjacent daily pair exists", () => {
+    const result = classifyApyChange({
+      history: [point(7, 4), point(1, 7)],
+      decisionLedger: { sourceSwitch: true, apy30dDeltaFromPrevious: 2, previousBestSourceKey: "old", switchedAtMs: NOW_MS - DAY_MS },
+      nowMs: NOW_MS,
+    });
+    expect(result.attribution).toBe("source-switch");
+    expect(result.confidence).toBe("high");
+    expect(result.largestDelta).toBeNull();
+    expect(result.sourceSwitchDetail?.apy30dDelta).toBe(2);
+  });
+
   it("attributes a real switch observed in history with high confidence (no ledger timestamp)", () => {
     const history = [
       point(6, 4.0, { sourceKey: "aave-v3", yieldSource: "Aave" }),
@@ -106,7 +139,7 @@ describe("classifyApyChange", () => {
   });
 
   it("does not treat a ledger switch without any observable switch point as recent", () => {
-    const history = [point(10, 5.0), point(2, 7.0), point(1, 7.05)];
+    const history = [point(3, 5.0), point(2, 7.0), point(1, 7.05)];
     const result = classifyApyChange({
       history,
       decisionLedger: { sourceSwitch: true, apy30dDeltaFromPrevious: 1.8 },
@@ -162,7 +195,7 @@ describe("classifyApyChange", () => {
   });
 
   it("attributes organic drift when the largest move exceeds the organic threshold without source switch", () => {
-    const history = [point(10, 5.0), point(5, 5.1), point(2, 6.5), point(1, 6.55)];
+    const history = [point(10, 5.0), point(3, 5.1), point(2, 6.5), point(1, 6.55)];
     const result = classifyApyChange({ history, yieldStability: 0.8, nowMs: NOW_MS });
     expect(result.attribution).toBe("organic");
     expect(result.confidence).toBe("high");
@@ -171,7 +204,7 @@ describe("classifyApyChange", () => {
   });
 
   it("uses lower organic confidence when stability is weak", () => {
-    const history = [point(10, 5.0), point(2, 7.0), point(1, 7.05)];
+    const history = [point(3, 5.0), point(2, 7.0), point(1, 7.05)];
     const result = classifyApyChange({ history, yieldStability: 0.3, nowMs: NOW_MS });
     expect(result.attribution).toBe("organic");
     expect(result.confidence).toBe("low");
@@ -184,6 +217,7 @@ describe("classifyApyChange", () => {
       point(15, 4.05),
       point(14, 5.0), // switch impact
       point(13, 5.05),
+      point(3, 5.05),
       point(2, 6.5), // unrelated organic spike
       point(1, 6.55),
     ];

@@ -38,10 +38,8 @@ interface CurrentRowsOptions {
 
 interface StressSignalCurrentRowsQueries {
   latest: string;
-  latestBounded: string;
   exact: string;
   legacy: string;
-  legacyBounded: string;
 }
 
 type CompletedDewsScope =
@@ -51,7 +49,6 @@ type CompletedDewsScope =
       expectedRowCount: number | null;
       stablecoinIdsDigest: string | null;
     }
-  | { status: "no-pointer" }
   | { status: "unavailable"; reason: string };
 
 interface StressSignalQueryTags {
@@ -68,7 +65,6 @@ function buildStressSignalCurrentRowsQueries(input: {
   const columns = input.columns.join(", ");
   const legacyColumns = input.columns.map((column) => `s.${column}`).join(", ");
   const one = input.scope === "one";
-  const latestWhere = one ? "\nWHERE stablecoin_id = ?" : "";
   const latestBoundedWhere = one
     ? "\nWHERE stablecoin_id = ? AND computed_at <= ?\nORDER BY computed_at DESC LIMIT 1"
     : "\nWHERE computed_at <= ?";
@@ -76,17 +72,6 @@ function buildStressSignalCurrentRowsQueries(input: {
     ? "\nWHERE stablecoin_id = ? AND computed_at = ?\nLIMIT 1"
     : "\nWHERE computed_at = ?\nORDER BY stablecoin_id ASC";
   const legacy = one
-    ? `SELECT /* ${input.tags.legacy} */ ${columns}
-FROM stress_signals
-WHERE stablecoin_id = ?
-ORDER BY computed_at DESC LIMIT 1`
-    : `SELECT /* ${input.tags.legacy} */ ${legacyColumns}
-FROM stress_signals s
-INNER JOIN (
-  SELECT stablecoin_id, MAX(computed_at) AS max_at
-  FROM stress_signals GROUP BY stablecoin_id
-) latest ON s.stablecoin_id = latest.stablecoin_id AND s.computed_at = latest.max_at`;
-  const legacyBounded = one
     ? `SELECT /* ${input.tags.legacy} */ ${columns}
 FROM stress_signals
 WHERE stablecoin_id = ? AND computed_at <= ?
@@ -102,13 +87,10 @@ INNER JOIN (
 
   return {
     latest: `SELECT /* ${input.tags.latest} */ ${columns}
-FROM stress_signals_latest${latestWhere}`,
-    latestBounded: `SELECT /* ${input.tags.latest} */ ${columns}
 FROM stress_signals_latest${latestBoundedWhere}`,
     exact: `SELECT /* ${input.tags.exact} */ ${columns}
 FROM stress_signal_publication_rows${exactWhere}`,
     legacy,
-    legacyBounded,
   };
 }
 
@@ -281,7 +263,7 @@ async function loadCompletedDewsScope(db: D1Database, nowSec: number): Promise<C
         stablecoinIdsDigest: result.stablecoinIdsDigest,
       };
     case "no-pointer":
-      return { status: "no-pointer" };
+      return { status: "unavailable", reason: "publication pointer is missing" };
     case "invalid-pointer":
       return { status: "unavailable", reason: result.reason };
     case "read-failed":
@@ -289,19 +271,6 @@ async function loadCompletedDewsScope(db: D1Database, nowSec: number): Promise<C
   }
 }
 
-function prepareCompletedAtScoped(
-  db: D1Database,
-  unboundedSql: string,
-  boundedSql: string,
-  completedAt: number | null,
-  ...leadingBinds: Array<string | number>
-): D1PreparedStatement {
-  const statement = db.prepare(completedAt == null ? unboundedSql : boundedSql);
-  if (completedAt == null) {
-    return leadingBinds.length > 0 ? statement.bind(...leadingBinds) : statement;
-  }
-  return statement.bind(...leadingBinds, completedAt);
-}
 
 async function loadCurrentRows<Row extends { stablecoin_id: string; computed_at: number }>(
   db: D1Database,
@@ -313,17 +282,10 @@ async function loadCurrentRows<Row extends { stablecoin_id: string; computed_at:
   if (completedScope.status === "unavailable") {
     return [];
   }
-  const completedAt = completedScope.status === "scoped" ? completedScope.completedAt : null;
-  const expectedRowCount = completedScope.status === "scoped" ? completedScope.expectedRowCount : null;
-  const stablecoinIdsDigest = completedScope.status === "scoped" ? completedScope.stablecoinIdsDigest : null;
+  const { completedAt, expectedRowCount, stablecoinIdsDigest } = completedScope;
   let latestRows: Row[] = [];
   try {
-    const latestStmt = prepareCompletedAtScoped(
-      db,
-      queries.latest,
-      queries.latestBounded,
-      completedAt,
-    );
+    const latestStmt = db.prepare(queries.latest).bind(completedAt);
     const rows = await runWithOverloadRetry(() => latestStmt.all<Row>());
     latestRows = rows.results ?? [];
   } catch (error) {
@@ -360,12 +322,7 @@ async function loadCurrentRows<Row extends { stablecoin_id: string; computed_at:
 
   let legacyResults: Row[];
   try {
-    const legacyStmt = prepareCompletedAtScoped(
-      db,
-      queries.legacy,
-      queries.legacyBounded,
-      completedAt,
-    );
+    const legacyStmt = db.prepare(queries.legacy).bind(completedAt);
     const legacyRows = await runWithOverloadRetry(() => legacyStmt.all<Row>());
     legacyResults = legacyRows.results ?? [];
   } catch (error) {
@@ -388,19 +345,12 @@ async function loadCurrentRowForCoin<Row extends { computed_at: number }>(
   if (completedScope.status === "unavailable") {
     return null;
   }
-  const completedAt = completedScope.status === "scoped" ? completedScope.completedAt : null;
-  const hasExactCoverage = completedScope.status === "scoped"
-    && completedScope.expectedRowCount != null
+  const { completedAt } = completedScope;
+  const hasExactCoverage = completedScope.expectedRowCount != null
     && completedScope.stablecoinIdsDigest != null;
   let latest: Row | null = null;
   try {
-    const latestStmt = prepareCompletedAtScoped(
-      db,
-      queries.latest,
-      queries.latestBounded,
-      completedAt,
-      stablecoinId,
-    );
+    const latestStmt = db.prepare(queries.latest).bind(stablecoinId, completedAt);
     latest = await runWithOverloadRetry(() => latestStmt.first<Row>());
     if (
       latest
@@ -424,13 +374,7 @@ async function loadCurrentRowForCoin<Row extends { computed_at: number }>(
   }
 
   try {
-    const legacyStmt = prepareCompletedAtScoped(
-      db,
-      queries.legacy,
-      queries.legacyBounded,
-      completedAt,
-      stablecoinId,
-    );
+    const legacyStmt = db.prepare(queries.legacy).bind(stablecoinId, completedAt);
     return await runWithOverloadRetry(() => legacyStmt.first<Row>()) ?? latest;
   } catch (error) {
     options.onReadError?.(error);

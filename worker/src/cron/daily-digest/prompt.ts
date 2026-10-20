@@ -85,10 +85,12 @@ export function buildUserPrompt(
   );
 
   if (data.supplyCoverage?.complete === true && data.totalMcapAth && data.totalMcapAth.value > 0) {
-    const pctFromAth = (((data.totalMcapAth.value - data.totalMcapUsd) / data.totalMcapAth.value) * 100).toFixed(2);
-    const relation = data.totalMcapUsd < data.totalMcapAth.value ? "below" : "above";
+    const pctFromAth = ((Math.abs(data.totalMcapUsd - data.totalMcapAth.value) / data.totalMcapAth.value) * 100).toFixed(2);
+    const comparison = data.totalMcapUsd === data.totalMcapAth.value
+      ? "at"
+      : `${pctFromAth}% ${data.totalMcapUsd < data.totalMcapAth.value ? "below" : "above"}`;
     lines.push(
-      `Context: total mcap is ${pctFromAth}% ${relation} its Digest-window ATH (${formatCurrency(data.totalMcapAth.value)} set ${data.totalMcapAth.daysAgo} days ago).`,
+      `Context: total mcap is ${comparison} its Digest-window ATH (${formatCurrency(data.totalMcapAth.value)} set ${data.totalMcapAth.daysAgo} days ago).`,
     );
   }
 
@@ -182,11 +184,13 @@ export function buildUserPrompt(
     );
     if (data.historicalContext?.supplyMoverContext) {
       const context = data.historicalContext.supplyMoverContext;
-      const athPct = (((context.allTimeHighMcap - currentMcap) / context.allTimeHighMcap) * 100).toFixed(0);
-      const relation = currentMcap < context.allTimeHighMcap ? "below" : "above";
+      const athPct = ((Math.abs(currentMcap - context.allTimeHighMcap) / context.allTimeHighMcap) * 100).toFixed(0);
+      const comparison = currentMcap === context.allTimeHighMcap
+        ? "at"
+        : `${athPct}% ${currentMcap < context.allTimeHighMcap ? "below" : "above"}`;
       const athDate = new Date(context.allTimeHighDate * 1000).toISOString().slice(0, 10);
       lines.push(
-        `Context: ${symbol}'s largest single-week change was ${formatCurrency(context.largestWeeklyChange)} (${context.largestWeeklyChangeDaysAgo} days ago). Current mcap is ${athPct}% ${relation} ATH (${formatCurrency(context.allTimeHighMcap)} on ${athDate}).`,
+        `Context: ${symbol}'s largest single-week change was ${formatCurrency(context.largestWeeklyChange)} (${context.largestWeeklyChangeDaysAgo} days ago). Current mcap is ${comparison} ATH (${formatCurrency(context.allTimeHighMcap)} on ${athDate}).`,
       );
     }
   }
@@ -245,7 +249,7 @@ export function buildUserPrompt(
   }
 
   if (data.dewsStress) {
-    const { bandCounts, yesterdayBandCounts, bandChanges, elevatedCoins } = data.dewsStress;
+    const { bandCounts, yesterdayBandCounts, bandChanges, elevatedCoins, alertPlusMcapUsd, alertPlusSupplyCoverage, bandChangeCount } = data.dewsStress;
     lines.push("", "DEWS Stress Signals:");
     const versusYesterday =
       yesterdayBandCounts == null
@@ -254,8 +258,12 @@ export function buildUserPrompt(
     lines.push(
       `  Band distribution: ${bandCounts.calm} CALM, ${bandCounts.watch} WATCH, ${bandCounts.alert} ALERT, ${bandCounts.warning} WARNING, ${bandCounts.danger} DANGER (vs yesterday: ${versusYesterday})`,
     );
+    lines.push(`  Full band-change count (last 24h): ${bandChangeCount == null ? "unavailable" : bandChangeCount}`);
+    lines.push(alertPlusMcapUsd == null || !alertPlusSupplyCoverage
+      ? "  Full ALERT+ supply: unavailable (full census missing)"
+      : `  ALERT+ ${alertPlusSupplyCoverage.complete ? "supply" : "known supply subtotal"}: ${formatCurrency(alertPlusMcapUsd)} (${alertPlusSupplyCoverage.observedCount} observed, ${alertPlusSupplyCoverage.unavailableCount} unavailable)`);
     if (bandChanges.length > 0) {
-      lines.push("  Band changes (last 24h):");
+      lines.push("  Top band changes (presentation only, last 24h):");
       for (const change of bandChanges) {
         lines.push(
           `    ${change.symbol}: ${change.from} -> ${change.to} (score ${change.score}, driven by ${change.topDriver})`,
@@ -263,7 +271,7 @@ export function buildUserPrompt(
       }
     }
     if (elevatedCoins.length > 0) {
-      lines.push("  Elevated coins (ALERT+):");
+      lines.push("  Top elevated coins (presentation only, ALERT+):");
       for (const coin of elevatedCoins) {
         const driverStr = coin.topSignals?.length
           ? `driven by ${coin.topSignals.map((signal) => `${signal.name}=${signal.value}`).join(", ")}`

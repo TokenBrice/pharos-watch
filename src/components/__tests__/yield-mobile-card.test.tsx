@@ -84,17 +84,22 @@ describe("YieldMobileCard — zone chip benchmark resolution", () => {
     expect(screen.getByText("Sweet Spot")).toBeTruthy();
   });
 
-  it("uses the same resolved EUR benchmark for the expanded history chart", () => {
+  it("uses resolved EUR for history without inventing the missing published scoring hurdle", () => {
     renderYieldMobileCard(eurRowWithoutRate, { benchmarks: REGISTRY_WITH_EUR, expanded: true });
     const chart = screen.getByTestId("yield-history-chart");
     expect(chart.getAttribute("data-benchmark-rate")).toBe("1.94");
     expect(chart.getAttribute("data-benchmark-label")).toBe("EUR 3M compounded €STR");
     expect(screen.getByRole("group", { name: "Why this PYS" }).textContent)
-      .toContain("vs EUR 3M compounded €STR (1.94%)");
+      .toContain("Benchmark unavailable");
   });
 
-  it("still falls back to the risk-free frame when no registry is provided", () => {
-    renderYieldMobileCard(eurRowWithoutRate);
+  it("identifies the USD display frame without claiming it was the published PYS hurdle", () => {
+    renderYieldMobileCard(eurRowWithoutRate, { expanded: true });
     expect(screen.getByText("Play It Safe")).toBeTruthy();
+    const chart = screen.getByTestId("yield-history-chart");
+    expect(chart.getAttribute("data-benchmark-rate")).toBe("3.5");
+    expect(chart.getAttribute("data-benchmark-label")).toBe("USD benchmark (display fallback)");
+    expect(screen.getByRole("group", { name: "Why this PYS" }).textContent)
+      .toContain("Benchmark unavailable");
   });
 });

@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { logCronRun } from "../cron-logger";
 import { DEFAULT_CRON_METADATA_BUDGET_BYTES } from "../cron-metadata-persistence";
+import { reportDigestCircuitOpen, reportDigestMissingApiKey } from "../../cron/digest/platform";
 
 describe("cron progress cleanup", () => {
   const fixtures = createLatestSchemaFixtureTracker();
@@ -130,6 +131,18 @@ describe("degraded reason projection", () => {
     expect(console.warn).toHaveBeenCalledWith("[cron:silent-degrade] degraded result carries no metadata.reason");
   });
 
+  it.each(["daily digest", "weekly recap"] as const)("persists reasoned %s generation terminals without publication", async (edition) => {
+    const { sqlite, db } = fixtures.open();
+    await logCronRun(db, "circuit", () => reportDigestCircuitOpen(undefined, edition));
+    await logCronRun(db, "missing-key", () => reportDigestMissingApiKey(undefined, edition));
+    expect(sqlite.prepare(`SELECT job, status, item_count, degraded_reason,
+      json_extract(metadata, '$.outputPublishedAt') AS outputPublishedAt
+      FROM cron_runs ORDER BY job`).all()).toEqual([
+      { job: "circuit", status: "degraded", item_count: 0, degraded_reason: "anthropic-circuit-open", outputPublishedAt: null },
+      { job: "missing-key", status: "skipped_neutral", item_count: 0, degraded_reason: "missing-api-key", outputPublishedAt: null },
+    ]);
+  });
+
   it("leaves an ok run with quality metadata unreasoned", async () => {
     const { sqlite, db } = fixtures.open();
 
@@ -138,8 +151,8 @@ describe("degraded reason projection", () => {
       metadata: JSON.stringify({ quality: { degraded: true, reasons: ["yield-supplemental:family-degraded:pendle"] } }),
     }));
 
-    expect(sqlite.prepare("SELECT status, degraded_reason FROM cron_runs").all()).toEqual([
-      { status: "ok", degraded_reason: null },
+    expect(sqlite.prepare("SELECT status, degraded_reason, json_extract(metadata, '$.outputPublishedAt') AS outputPublishedAt FROM cron_runs").all()).toEqual([
+      { status: "ok", degraded_reason: null, outputPublishedAt: expect.any(Number) },
     ]);
     expect(sqlite.prepare(NON_OK_REASONS).all()).toEqual([]);
   });
