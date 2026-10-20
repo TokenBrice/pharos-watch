@@ -7,7 +7,7 @@ import type {
   LiveReserveSnapshotMetadata,
   ReserveFreshnessView,
 } from "@shared/types/live-reserves";
-import { LIVE_RESERVE_FRESHNESS_SEC, selectScoringDegradedWarnings, type ReserveCompositionRecord, type ReserveSyncStateRecord } from "./store-shared";
+import { LIVE_RESERVE_FRESHNESS_SEC, hasFatalReserveWarnings, selectScoringDegradedWarnings, type ReserveCompositionRecord, type ReserveSyncStateRecord } from "./store-shared";
 import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC, resolveLiveReserveSourceAgeBudget } from "@shared/lib/live-reserve-freshness";
 
 export function hasConsistentSnapshotState(
@@ -182,7 +182,8 @@ export function evaluateLiveReserveAdmission(
   if (freshness?.stale) reasons.push("stale");
   if (freshness?.staleReasons.includes("invalid-fetch-clock")
     || !hasScoringEligibleLiveReserveFreshness(record.metadata, now)) reasons.push("invalid-freshness");
-  if (selectScoringDegradedWarnings(record.warnings, config).length > 0) reasons.push("degraded-snapshot");
+  if (hasFatalReserveWarnings(record.warnings)
+    || selectScoringDegradedWarnings(record.warnings, config).length > 0) reasons.push("degraded-snapshot");
   if (("sliceCount" in record ? record.sliceCount : record.slices.length) < minSlices) reasons.push("insufficient-slices");
   return { eligible: reasons.length === 0, reasons, freshness };
 }

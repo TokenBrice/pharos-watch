@@ -8,6 +8,7 @@ import { EXPECTED_FX_PEG_KEYS } from "../fx-config";
 import {
   buildFxCacheStatus,
   getFxReferenceTypeFromState,
+  getFxSourceStatus,
   hydrateFxRateState,
   loadFxRateState,
   persistFxRateState,
@@ -32,6 +33,64 @@ describe("fx-rate-state cadence-aware freshness", () => {
     vi.useRealTimers();
   });
 
+
+  it.each(["business-daily", "calendar-daily"] as const)(
+    "rejects persisted future and impossible source days for %s", (cadence) => {
+      vi.setSystemTime(new Date("2026-03-11T08:00:00Z"));
+      const now = Math.floor(Date.now() / 1000);
+      for (const sourceDate of ["2099-01-01", "2026-03-12", "2026-02-30"]) {
+        const state = buildState({
+          usableSyncAt: now - 60, mode: "live", consecutiveFallbackRuns: 0,
+          sourceUpdatedAtByPeg: { peggedEUR: now - 60 },
+          sourceModeByPeg: { peggedEUR: "live" },
+          sourceCadenceByPeg: { peggedEUR: cadence },
+          sourceDateByPeg: { peggedEUR: sourceDate },
+        }, { peggedEUR: 1.08 });
+        expect(getFxReferenceTypeFromState(state, "peggedEUR", 21600, now)).toBe("none");
+        expect(getFxSourceStatus(now - 60, "live", now, { pegKey: "peggedEUR", cadence, sourceDate })).toBe("none");
+        expect(buildFxCacheStatus(state, 1800, now).cacheStatus.sourceStatus).not.toBe("fresh");
+      }
+    },
+  );
+
+  it("admits today's date-only source before its nominal publication hour", () => {
+    vi.setSystemTime(new Date("2026-03-11T08:00:00Z"));
+    const now = Math.floor(Date.now() / 1000);
+    expect(getFxSourceStatus(now, "live", now, {
+      pegKey: "peggedEUR", cadence: "business-daily", sourceDate: "2026-03-11",
+    })).toBe("fresh");
+  });
+
+  it.each(["sourceLastSuccessAtBySource", "sourceLastSuccessAt"])(
+    "hydrates source-success aliases once from %s", (field) => {
+      const state = buildState({
+        [field]: {
+          "secondary:jsdelivr": 123.9, jsdelivr: 456, fawazahmed0: 789,
+          "pages.dev": 234, "jsdelivr-versioned": 345, "openexchange-rates": 456,
+          "gold-api.com": 567, "chainlink-feeds": 678, unknown: 999,
+        },
+      }, { peggedEUR: 1.08 });
+      expect(state?.sourceLastSuccessAtBySource).toEqual({
+        "secondary:jsdelivr": 123, "secondary:pages.dev": 234, "secondary:jsdelivr-versioned": 345,
+        openExchangeRates: 456, metals: 567, chainlink: 678,
+      });
+    },
+  );
+
+  it.each([null, [], "bad", { chainlink: {}, metals: -1, openExchangeRates: "123" }].map((value) => ({ value })))(
+    "drops malformed source-success metadata $value", ({ value }) => {
+      expect(buildState({ sourceLastSuccessAtBySource: value }, { peggedEUR: 1.08 })?.sourceLastSuccessAtBySource).toEqual({});
+    },
+  );
+
+  it("does not attach source-success metadata from a rejected generation", () => {
+    const state = hydrateFxRateState(
+      { value: JSON.stringify({ peggedEUR: 1.08 }), updatedAt: 100 },
+      { value: JSON.stringify({ sourceLastSuccessAtBySource: { chainlink: 999 } }), updatedAt: 99 },
+    );
+    expect(state?.metadataIdentity).toBe("generation-mismatch");
+    expect(state?.sourceLastSuccessAtBySource).toEqual({});
+  });
   it("keeps business-daily references fresh before the next publish window", () => {
     vi.setSystemTime(new Date("2026-03-11T08:00:00Z"));
     const nowSec = Math.floor(Date.now() / 1000);

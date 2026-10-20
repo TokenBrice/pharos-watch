@@ -5,7 +5,8 @@ import {
   type PegClass,
 } from "@shared/lib/peg-price-bounds";
 import { PEG_HARDCODED_PRICE_BOUNDS, pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
-import { getFxReferenceTypeFromState, loadFxRateState } from "./fx-rate-state";
+import { getFxReferenceTypeFromState, getFxSourceStatus, loadFxRateState, type FxRateState } from "./fx-rate-state";
+import { inferFxSourceCadence } from "./fx-cadence";
 import { sanitizeRecordValues } from "./normalizers";
 import type { PriceReferenceType } from "@shared/types/core";
 
@@ -36,6 +37,11 @@ export interface PriceValidationReferences {
   updatedAt: number | null;
   updatedAtByPeg?: Record<string, number | null>;
   typeByPeg?: Record<string, PriceReferenceType>;
+  /** Original source policy, retained across source-stage serialization for measured admission. */
+  sourceModeByPeg?: FxRateState["sourceModeByPeg"];
+  sourceCadenceByPeg?: FxRateState["sourceCadenceByPeg"];
+  sourceDateByPeg?: FxRateState["sourceDateByPeg"];
+  maxAgeSec?: number;
 }
 
 export interface PriceValidationDecision {
@@ -186,6 +192,10 @@ export async function loadPriceValidationReferences(
       updatedAt: globalUpdatedAt,
       updatedAtByPeg,
       typeByPeg,
+      sourceModeByPeg: state.sourceModeByPeg,
+      sourceCadenceByPeg: state.sourceCadenceByPeg,
+      sourceDateByPeg: state.sourceDateByPeg,
+      maxAgeSec,
     };
   } catch (error) {
     logWorkerEventArgs("lib", "warn", "[price-validation] Failed to load FX validation references; falling back to static references", error);
@@ -209,6 +219,37 @@ export function getReferencePriceForContext(
   const rate = references.rates[context.pegType];
   if (typeof rate !== "number" || !Number.isFinite(rate) || rate <= 0) return null;
   return rate * getCommodityScale(context.pegType, context.commodityOunces);
+}
+
+/** Score-bearing fallback only; diagnostic reference lookup deliberately keeps stale values. */
+export function getFreshReferencePriceForContext(
+  context: PriceValidationContext,
+  references: PriceValidationReferences | undefined,
+  assessmentAtSec: number,
+): number | null {
+  if (context.pegType?.includes("USD")) return getReferencePriceForContext(context, references);
+  const pegType = context.pegType;
+  if (!pegType || references?.typeByPeg?.[pegType] !== "fresh") return null;
+  const observedAt = references.updatedAtByPeg?.[pegType];
+  if (
+    !Number.isFinite(assessmentAtSec) ||
+    observedAt == null || !Number.isFinite(observedAt) ||
+    observedAt <= 0 || observedAt > assessmentAtSec
+  ) return null;
+  const cadence = inferFxSourceCadence(pegType, references.sourceCadenceByPeg?.[pegType]);
+  const status = getFxSourceStatus(observedAt, references.sourceModeByPeg?.[pegType], assessmentAtSec, {
+    pegKey: pegType,
+    cadence,
+    sourceDate: references.sourceDateByPeg?.[pegType],
+  });
+  if (status === "none" || status === "stale") return null;
+  if (
+    status === "degraded" && cadence === "intraday" &&
+    assessmentAtSec - observedAt > (references.maxAgeSec ?? DEFAULT_REFERENCE_STALE_SEC)
+  ) {
+    return null;
+  }
+  return getReferencePriceForContext(context, references);
 }
 
 function getReferenceTypeForContext(

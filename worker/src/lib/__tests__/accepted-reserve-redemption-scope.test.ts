@@ -59,6 +59,16 @@ describe("independent redemption evidence in consumed reserve bindings", () => {
     expect(assessConsumedRedemptionReserves([row], metadata, clock, clock + 60)).toEqual({ state: "fresh", quarantined: {} });
   });
 
+  it("cannot rescue fatal retained evidence with independently fresh nested capacity", () => {
+    const draft = fixture("iusd-infinifi");
+    const snapshot = draft.envelope.members[0]!.snapshot!;
+    snapshot.warnings = [{ code: "source-total-gap", message: "Unusable retained evidence", severity: "info", effect: "fatal" }];
+    snapshot.warningCount = 1;
+    const records = acceptedReserveMetadataMap(draft.envelope, clock);
+    expect(records.has(draft.assetId)).toBe(false);
+    expect(readRedemptionBackstopLiveMetadata(draft.assetId, records.get(draft.assetId), clock).canUseCapacity).toBe(false);
+  });
+
   it("preserves observed zero rather than replacing it with absent capacity", () => {
     const { record, input, row, metadata } = consume(fixture("rusd-reservoir", 0));
     expect(readRedemptionBackstopLiveMetadata(row.stablecoinId, record, clock).immediateRedeemableUsd).toBe(0);

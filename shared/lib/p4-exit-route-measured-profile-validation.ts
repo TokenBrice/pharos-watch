@@ -133,6 +133,7 @@ export function validateMeasuredExecutionProfile(
       provenance == null ||
       evmProfile.poolId !== canonicalExitRouteAssetKey(evmProfile.chain, provenance.poolId) ||
       provenance.blockNumber !== evmProfile.blockNumber ||
+      provenance.blockHash !== evmProfile.blockHash ||
       provenance.poolManagerAddress !== deployment.poolManagerAddress ||
       provenance.poolManagerCodeHash !== deployment.poolManagerCodeHash ||
       provenance.stateViewAddress !== deployment.stateViewAddress ||
@@ -182,7 +183,7 @@ export function validateMeasuredExecutionProfile(
       !policy ||
       provenance == null ||
       provenance.blockNumber !== evmProfile.blockNumber ||
-      !/^0x[0-9a-f]{64}$/.test(provenance.blockHash) ||
+      provenance.blockHash !== evmProfile.blockHash ||
       provenance.blockCommitment !== "finalized" ||
       provenance.factoryAddress !== policy.factoryAddress ||
       provenance.factoryCodeHash !== policy.factoryCodeHash ||
@@ -217,6 +218,7 @@ export function validateMeasuredExecutionProfile(
     if (
       !policy || !provenance ||
       provenance.blockNumber !== evmProfile.blockNumber || provenance.blockCommitment !== "finalized" ||
+      provenance.blockHash !== evmProfile.blockHash ||
       provenance.poolIndex !== policy.factoryPoolIndex ||
       provenance.factoryAddress !== policy.factoryAddress ||
       provenance.factoryCodeHash !== policy.expectedFactoryCodeHash ||

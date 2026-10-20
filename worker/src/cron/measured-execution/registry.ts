@@ -197,6 +197,7 @@ export function isTickSpacingQuoterV2Profile(adapterProfileId: string): boolean 
 export async function verifyDexMeasuredExecutionDeployment(input: {
   deployment: DexMeasuredExecutionDeployment;
   blockNumber: number;
+  blockHash: `0x${string}`;
   chainRpcs: Map<string, ChainRpcConfig>;
   signal?: AbortSignal;
   rpcBudget?: DexMeasuredExecutionRpcBudget;
@@ -212,6 +213,7 @@ export async function verifyDexMeasuredExecutionDeployment(input: {
   }
   const code = await fetchEvmCodeAtBlock(input.deployment.chain, input.deployment.endpointAddress, input.blockNumber, {
     chainRpcs: input.chainRpcs,
+    stateBlockHash: input.blockHash,
     signal: input.signal,
     timeoutMs: DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
     ...(input.rpcBudget ? { deadlineMs: input.rpcBudget.deadlineMs } : {}),
@@ -231,6 +233,7 @@ export async function verifyDexMeasuredExecutionDeployment(input: {
     input.blockNumber,
     {
       chainRpcs: input.chainRpcs,
+      stateBlockHash: input.blockHash,
       signal: input.signal,
       timeoutMs: DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
       ...(input.rpcBudget ? { deadlineMs: input.rpcBudget.deadlineMs } : {}),

@@ -1,4 +1,6 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { decodeFunctionData, encodeAbiParameters, encodeFunctionResult, keccak256, parseAbi, parseAbiParameters } from "viem/utils";
+import { buildChainRpcs } from "../../../lib/chain-registry";
 
 import type {
   DexMeasuredExecutionProfile,
@@ -20,6 +22,7 @@ import {
   getCurveCryptoSwapReviewedPolicy,
   resolveCurveCryptoSwapTokenIndices,
   validateCurveCryptoSwapProfileProof,
+  verifyCurveCryptoSwapDeployment,
   type CurveCryptoSwapPoolPolicy,
 } from "../curve-cryptoswap";
 import { isOperationalDexMeasuredFailure } from "../persistence";
@@ -346,6 +349,102 @@ describe("Curve CryptoSwap policy", () => {
   });
 });
 
+describe("Curve CryptoSwap hash-bound kill-proof acquisition", () => {
+  afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
+
+  const dependencyAbi = parseAbi([
+    "function factory() view returns (address)",
+    "function MATH() view returns (address)",
+    "function views_implementation() view returns (address)",
+    "function coins(uint256) view returns (address)",
+  ]);
+  const aggregateAbi = parseAbi([
+    "function aggregate3((address target,bool allowFailure,bytes callData)[] calls) payable returns ((bool success,bytes returnData)[] returnData)",
+  ]);
+  const codeHash = keccak256("0x6000");
+  const policy: CurveCryptoSwapPoolPolicy = {
+    ...completePinnedPolicy(), transferSemanticsReviewed: true,
+    expectedPoolCodeHash: codeHash, expectedFactoryCodeHash: codeHash,
+    expectedViewsCodeHash: codeHash, expectedMathCodeHash: codeHash,
+  };
+  const response = (result: string) => new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result }));
+  const aggregateResult = (success: boolean, returnData: `0x${string}` = "0x") =>
+    encodeAbiParameters(parseAbiParameters("(bool success,bytes returnData)[]"), [[{ success, returnData }]]);
+
+  it.each([
+    ["executed refusal", false, "0x", true, null],
+    ["successful empty getter", true, "0x", false, "ng-kill-method-not-proven-absent"],
+    ["successful false getter", true, uint256Return(0n), false, "ng-kill-method-not-proven-absent"],
+    ["successful true getter", true, uint256Return(1n), false, "ng-kill-method-not-proven-absent"],
+    ["HTTP503", null, null, false, "ng-kill-probe-unavailable"],
+    ["timeout", null, null, false, "ng-kill-probe-unavailable"],
+    ["admission denial", null, null, false, "ng-kill-probe-unavailable"],
+    ["malformed aggregate", null, "0x1234", false, "ng-kill-probe-unavailable"],
+    ["missing member", null, "0x", false, "ng-kill-probe-unavailable"],
+  ] as const)("%s never confuses outer failure with executed method absence", async (mode, success, data, ok, reason) => {
+    const chainRpcs = buildChainRpcs("alchemy-test-key");
+    const config = chainRpcs.get("ethereum")!;
+    config.endpoints = config.endpoints.filter((endpoint) => endpoint.operator === "alchemy").slice(0, 1);
+    const rpcBudget = createDexMeasuredExecutionRpcBudget({
+      maxRequests: mode === "admission denial" ? 9 : 20, deadlineMs: Date.now() + 60_000,
+    });
+    let killCalls = 0;
+    const fetchMock = vi.fn<typeof fetch>(async (_url, init) => {
+      const request = JSON.parse(String(init?.body));
+      expect(request.params[1]).toEqual({ blockHash: HASH_A, requireCanonical: true });
+      if (request.method === "eth_getCode") return response("0x6000");
+      expect(request.method).toBe("eth_call");
+      const callData = request.params[0].data as `0x${string}`;
+      if (callData.startsWith("0x82ad56cb")) {
+        killCalls++;
+        const decoded = decodeFunctionData({ abi: aggregateAbi, data: callData });
+        expect(decoded.args[0]).toEqual([{
+          target: policy.poolAddress, allowFailure: true, callData: "0x9c868ac0",
+        }]);
+        if (mode === "HTTP503") return new Response("unavailable", { status: 503 });
+        if (mode === "timeout") throw new DOMException("RPC timeout", "TimeoutError");
+        if (mode === "malformed aggregate") return response(data!);
+        if (mode === "missing member") return response(encodeAbiParameters(parseAbiParameters("(bool success,bytes returnData)[]"), [[]]));
+        return response(aggregateResult(success!, data as `0x${string}`));
+      }
+      const decoded = decodeFunctionData({ abi: dependencyAbi, data: callData });
+      const address = decoded.functionName === "factory" ? DEP_A
+        : decoded.functionName === "MATH" ? DEP_C
+        : decoded.functionName === "views_implementation" ? DEP_B
+        : decoded.args[0] === 0n ? CADD : USDC;
+      return response(encodeFunctionResult({ abi: dependencyAbi, functionName: decoded.functionName, result: address }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const result = await verifyCurveCryptoSwapDeployment({
+      policy, blockNumber: ETHEREUM_BLOCK, blockHash: HASH_A, chainRpcs, rpcBudget,
+    });
+    expect(result.ok).toBe(ok);
+    if (result.ok) expect(result.runtimeEvidence.ngKillMethodUnavailable).toBe(true);
+    else expect(result.reason).toBe(reason);
+    expect(killCalls).toBe(mode === "admission denial" ? 0 : 1);
+    expect(fetchMock).toHaveBeenCalledTimes(mode === "admission denial" ? 9 : 10);
+    expect(rpcBudget.requestsUsed).toBe(fetchMock.mock.calls.length);
+    expect(isOperationalDexMeasuredFailure(reason)).toBe(reason === "ng-kill-probe-unavailable");
+  });
+
+  it("refuses unsupported hash state without trying a numeric selector", async () => {
+    const chainRpcs = buildChainRpcs("alchemy-test-key");
+    const config = chainRpcs.get("ethereum")!;
+    config.endpoints = config.endpoints.filter((endpoint) => endpoint.operator === "alchemy").slice(0, 1);
+    const fetchMock = vi.fn<typeof fetch>(async (_url, init) => {
+      expect(JSON.parse(String(init?.body)).params[1]).toEqual({ blockHash: HASH_A, requireCanonical: true });
+      return new Response(JSON.stringify({ error: { code: -32000, message: "hash not canonical" } }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    await expect(verifyCurveCryptoSwapDeployment({
+      policy, blockNumber: ETHEREUM_BLOCK, blockHash: HASH_A, chainRpcs,
+    })).resolves.toEqual({ ok: false, reason: "runtime-code-unavailable" });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe("Curve CryptoSwap token indices and ABI", () => {
   it("uses ordered 2-8 token inventory while keeping route poolId separate from execution address", () => {
     const target = makeTarget({
@@ -408,6 +507,7 @@ describe("Curve CryptoSwap quote transport", () => {
           target,
           inputUsd: 1_000,
           blockNumber: ETHEREUM_BLOCK,
+          blockHash: HASH_A,
           endpointAddress: TWOCRYPTO_POOL,
           runtimeEvidence: { apiIsBroken: false, ngKillMethodUnavailable: true },
         },
@@ -419,6 +519,7 @@ describe("Curve CryptoSwap quote transport", () => {
       expect.objectContaining({
         chain: "ethereum",
         blockNumber: ETHEREUM_BLOCK,
+        blockHash: HASH_A,
         calls: [expect.objectContaining({ target: TWOCRYPTO_POOL, allowFailure: true })],
       }),
     );
@@ -540,6 +641,7 @@ describe("Curve CryptoSwap quote transport", () => {
           target,
           inputUsd: 1_000,
           blockNumber: ETHEREUM_BLOCK,
+          blockHash: HASH_A,
           endpointAddress: ACTIVE_TWOCRYPTO_POOL,
           runtimeEvidence: {
             apiIsBroken: false,
@@ -592,6 +694,7 @@ describe("Curve CryptoSwap stored proof validation", () => {
     );
     if (decoded.point == null) throw new Error("missing quote point fixture");
     return buildDexMeasuredExecutionProfile({
+      blockHash: HASH_A,
       target,
       targetGenerationId: "target-generation",
       quoteGenerationId: "quote-generation",

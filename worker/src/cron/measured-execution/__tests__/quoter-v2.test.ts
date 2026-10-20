@@ -200,6 +200,7 @@ describe("QuoterV2 pinned-block replay proofs", () => {
     rpcMocks.fetchEvmCodeAtBlock.mockResolvedValue("0x00");
 
     await expect(verifyDexMeasuredExecutionDeployment({
+      blockHash: `0x${"ab".repeat(32)}`,
       deployment,
       blockNumber: REPLAYS[0]!.blockNumber,
       chainRpcs: new Map(),
@@ -216,6 +217,7 @@ describe("QuoterV2 pinned-block replay proofs", () => {
           calls.map((call) => ({ label: call.label, success: true, returnData: fixture.quoteReturnData })),
       );
       const outcomes = await quoteQuoterV2Requests({
+        blockHash: `0x${"ab".repeat(32)}`,
         requests: [{ target, inputUsd: 1_000_000, endpointAddress: deployment.endpointAddress }],
         blockNumber: fixture.blockNumber, chainRpcs: new Map(),
       });
@@ -257,6 +259,7 @@ describe("QuoterV2 pinned-block replay proofs", () => {
       );
 
       const binding = await resolveQuoterV2PoolBindings({
+        blockHash: `0x${"ab".repeat(32)}`,
         requests: [
           {
             target,
@@ -268,6 +271,7 @@ describe("QuoterV2 pinned-block replay proofs", () => {
         chainRpcs: new Map(),
       });
       const quotes = await quoteQuoterV2Requests({
+        blockHash: `0x${"ab".repeat(32)}`,
         requests: DEMANDED_GRID_USD.map((inputUsd) => ({
           target,
           inputUsd,
@@ -293,6 +297,7 @@ describe("QuoterV2 pinned-block replay proofs", () => {
       });
 
       const profile = buildDexMeasuredExecutionProfile({
+        blockHash: `0x${"ab".repeat(32)}`,
         target,
         targetGenerationId: "target-generation",
         quoteGenerationId: "quote-generation",
@@ -350,6 +355,7 @@ describe("QuoterV2 pinned-block replay proofs", () => {
     );
 
     const result = await resolveQuoterV2PoolBindings({
+      blockHash: `0x${"ab".repeat(32)}`,
       requests: [
         {
           target,
@@ -371,6 +377,7 @@ describe("QuoterV2 pinned-block replay proofs", () => {
     const deployment = getDexMeasuredExecutionDeployment(fixture.adapterProfileId, fixture.chain)!;
 
     const result = await quoteQuoterV2Requests({
+      blockHash: `0x${"ab".repeat(32)}`,
       requests: [{ target, inputUsd: 1_000_000, endpointAddress: deployment.endpointAddress }],
       blockNumber: fixture.blockNumber,
       chainRpcs: new Map(),
@@ -402,6 +409,7 @@ describe("QuoterV2 pinned-block replay proofs", () => {
     });
 
     const outcomes = await quoteQuoterV2Requests({
+      blockHash: `0x${"ab".repeat(32)}`,
       requests: Array.from({ length: 8 }, () => ({
         target,
         inputUsd: 1_000_000,
@@ -436,6 +444,7 @@ describe("QuoterV2 pinned-block replay proofs", () => {
     });
 
     const outcomes = await quoteQuoterV2Requests({
+      blockHash: `0x${"ab".repeat(32)}`,
       requests: Array.from({ length: 4 }, () => ({
         target,
         inputUsd: 1_000,
@@ -472,6 +481,7 @@ describe("QuoterV2 pinned-block replay proofs", () => {
     );
 
     const outcomes = await quoteQuoterV2Requests({
+      blockHash: `0x${"ab".repeat(32)}`,
       requests: Array.from({ length: 3 }, () => ({
         target,
         inputUsd: 1_000_000,
@@ -498,6 +508,7 @@ describe("QuoterV2 pinned-block replay proofs", () => {
     );
 
     const [outcome] = await quoteQuoterV2Requests({
+      blockHash: `0x${"ab".repeat(32)}`,
       requests: [{ target, inputUsd: 100_000, endpointAddress: deployment.endpointAddress }],
       blockNumber: fixture.blockNumber,
       chainRpcs: new Map(),
@@ -523,6 +534,7 @@ describe("QuoterV2 pinned-block replay proofs", () => {
     rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mockResolvedValue(null);
 
     const [outcome] = await quoteQuoterV2Requests({
+      blockHash: `0x${"ab".repeat(32)}`,
       requests: [{ target, inputUsd: 100_000, endpointAddress: deployment.endpointAddress }],
       blockNumber: fixture.blockNumber,
       chainRpcs: new Map(),
@@ -545,6 +557,7 @@ describe("QuoterV2 pinned-block replay proofs", () => {
     );
 
     const [outcome] = await quoteQuoterV2Requests({
+      blockHash: `0x${"ab".repeat(32)}`,
       requests: [{ target, inputUsd: 100_000, endpointAddress: deployment.endpointAddress }],
       blockNumber: fixture.blockNumber,
       chainRpcs: new Map(),
@@ -578,6 +591,7 @@ describe("QuoterV2 pinned-block replay proofs", () => {
       retainedPoolPriceUsdAtQuote: target.retainedPoolPriceUsd,
       quotedAt: target.capturedAt,
       blockNumber: fixture.blockNumber,
+      blockHash: `0x${"ab".repeat(32)}`,
       executionEndpoint: {
         address: deployment.endpointAddress,
         codeHash: deployment.expectedCodeHash,

@@ -41,8 +41,8 @@ function network(options: { shutdown?: boolean; missingDebt?: boolean } = {}): A
 }
 
 describe("USDaf on-chain rebinding", () => {
-  it.each([true, false])("uses accounted collateral despite unsolicited token balances (multicall=%s)", async (multicall) => {
-    const { result } = await runAdapter("liquity-v2-branches", "usdaf-asymmetry", { network: { ...network(), multicall }, nowSec: NOW });
+  it("uses accounted collateral despite unsolicited token balances", async () => {
+    const { result } = await runAdapter("liquity-v2-branches", "usdaf-asymmetry", { network: network(), nowSec: NOW });
     expect(result.slices.map((slice) => slice.name).sort()).toEqual(["sUSDS", "scrvUSD", "sfrxUSD", "tBTC", "wBTC", "ysyBOLD"].sort());
     for (const slice of result.slices) expect(slice.pct).toBeCloseTo(100 / 6, 0);
     expect(result.slices.find((slice) => slice.name === "wBTC")?.sourceKey).toBe("liquity-v2-branches:ethereum:0xe065bc161b90c9c4bba2de7f1e194b70a3267c47");
@@ -50,14 +50,24 @@ describe("USDaf on-chain rebinding", () => {
     expectWarnings(result, []);
   });
 
-  it.each([false, true])("preserves complete observations across batch and fallback transports (shutdown=%s)", async (shutdown) => {
+  it.each([false, true])("preserves receipt conversion but withholds unclassified fallback members (shutdown=%s)", async (shutdown) => {
     const batched = await runAdapter("liquity-v2-branches", "usdaf-asymmetry", {
       network: { ...network({ shutdown }), multicall: true }, nowSec: NOW,
     });
     const fallback = await runAdapter("liquity-v2-branches", "usdaf-asymmetry", {
       network: { ...network({ shutdown }), multicall: false }, nowSec: NOW,
     });
-    expect(fallback.result).toEqual(batched.result);
+    expect(fallback.result.metadata).toMatchObject({ valuationComplete: false, unknownExposurePct: 100 });
+    expect(fallback.result.metadata?.details).toMatchObject({
+      knownReserveValueUsd: 400,
+      unavailableBranches: expect.arrayContaining([
+        { name: "tBTC", reason: "balance-unavailable" },
+        { name: "wBTC", reason: "balance-unavailable" },
+      ]),
+    });
+    expect(fallback.result.slices).toEqual([{ name: "Unclassified or unavailable reserve residual", pct: 100, risk: "high" }]);
+    expect(fallback.result.metadata?.redemption).toEqual(batched.result.metadata?.redemption);
+    expect(batched.result.metadata?.valuationComplete).toBe(true);
   });
 
   it("retains measured collateral while a branch shutdown degrades the route", async () => {

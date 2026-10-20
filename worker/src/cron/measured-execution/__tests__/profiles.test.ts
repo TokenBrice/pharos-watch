@@ -82,6 +82,7 @@ describe("measured execution RPC budget", () => {
 describe("measured execution profile construction", () => {
   it("preserves a deterministic marginal revert as measured zero capacity", () => {
     const profile = buildDexMeasuredExecutionProfile({
+      blockHash: `0x${"ab".repeat(32)}`,
       target: TARGET,
       targetGenerationId: "targets-1",
       quoteGenerationId: "quotes-1",

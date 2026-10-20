@@ -437,6 +437,7 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
   "usdk-kast": {
     ...issuerBase,
     ...documentedBoundSupplyFull("2026-04-16"),
+    outputAssets: ["m-m0"],
     costModel: documentedVariableFee(
       "KAST documents 1:1 mint by wrapping M (M0), and redemption by unwrapping; the fiat on/off-ramp is mediated by licensed partners (Tazapay, BitGo, Fireblocks) whose fees apply separately",
     ),

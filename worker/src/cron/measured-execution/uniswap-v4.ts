@@ -207,6 +207,7 @@ export interface UniswapV4RuntimeEvidence {
 export async function verifyUniswapV4Deployment(input: {
   deployment: UniswapV4Deployment;
   blockNumber: number;
+  blockHash: `0x${string}`;
   chainRpcs: Map<string, ChainRpcConfig>;
   signal?: AbortSignal;
   rpcBudget?: DexMeasuredExecutionRpcBudget;
@@ -235,6 +236,7 @@ export async function verifyUniswapV4Deployment(input: {
       input.blockNumber,
       {
         chainRpcs: input.chainRpcs,
+        stateBlockHash: input.blockHash,
         signal: input.signal,
         timeoutMs: DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
         ...(input.rpcBudget ? { deadlineMs: input.rpcBudget.deadlineMs } : {}),
@@ -295,6 +297,7 @@ export async function verifyUniswapV4Deployment(input: {
     input.blockNumber,
     {
       chainRpcs: input.chainRpcs,
+      stateBlockHash: input.blockHash,
       signal: input.signal,
       timeoutMs: DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
       ...(input.rpcBudget ? { deadlineMs: input.rpcBudget.deadlineMs } : {}),
@@ -426,6 +429,7 @@ export async function resolveUniswapV4PoolBindings(input: {
     runtimeEvidence: UniswapV4RuntimeEvidence;
   }>;
   blockNumber: number;
+  blockHash: `0x${string}`;
   chainRpcs: Map<string, ChainRpcConfig>;
   signal?: AbortSignal;
   rpcBudget?: DexMeasuredExecutionRpcBudget;
@@ -452,6 +456,7 @@ export async function resolveUniswapV4PoolBindings(input: {
       label: `${request.index}:slot0`,
       chain: request.target.chain,
       blockNumber: input.blockNumber,
+      blockHash: input.blockHash,
       call: {
         label: `${request.index}:slot0`,
         target: request.deployment.stateViewAddress,
@@ -466,6 +471,7 @@ export async function resolveUniswapV4PoolBindings(input: {
       label: `${request.index}:liquidity`,
       chain: request.target.chain,
       blockNumber: input.blockNumber,
+      blockHash: input.blockHash,
       call: {
         label: `${request.index}:liquidity`,
         target: request.deployment.stateViewAddress,
@@ -545,6 +551,7 @@ export async function resolveUniswapV4PoolBindings(input: {
         targetId: request.target.targetId,
         proof: {
           blockNumber: input.blockNumber,
+          blockHash: input.blockHash,
           poolId: request.poolId,
           poolManagerAddress: request.deployment.poolManagerAddress,
           poolManagerCodeHash: request.runtimeEvidence.poolManagerCodeHash,
@@ -669,6 +676,7 @@ function decodeQuotePoint(
 export async function quoteUniswapV4Requests(input: {
   requests: readonly UniswapV4QuoteRequest[];
   blockNumber: number;
+  blockHash: `0x${string}`;
   chainRpcs: Map<string, ChainRpcConfig>;
   signal?: AbortSignal;
   rpcBudget?: DexMeasuredExecutionRpcBudget;
@@ -683,7 +691,7 @@ export async function quoteUniswapV4Requests(input: {
         }
       : { targetId: request.target.targetId, inputUsd: request.inputUsd },
   );
-  const plans = buildEvmSingleCallQuotePlans(encoded, input.blockNumber);
+  const plans = buildEvmSingleCallQuotePlans(encoded, input.blockNumber, input.blockHash);
   return executeEvmQuotePlan({
     plans,
     outcomes,
@@ -773,6 +781,7 @@ export function validateUniswapV4ProfileProof(
   }
   if (
     proof.blockNumber !== profile.blockNumber ||
+    proof.blockHash !== profile.blockHash ||
     proof.poolId !== poolKey?.poolId ||
     proof.poolManagerAddress !== deployment.poolManagerAddress ||
     proof.poolManagerCodeHash !== deployment.expectedPoolManagerCodeHash ||

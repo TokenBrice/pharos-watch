@@ -39,7 +39,7 @@ function aggregateSize(init: RequestInit): number {
   const request = JSON.parse(String(init.body));
   expect(request.method).toBe("eth_call");
   expect(request.params[0].gas).toBe("0x1c9c380");
-  expect(request.params[1]).toBe(`0x${BLOCK.toString(16)}`);
+  expect(request.params[1]).toEqual({ blockHash: `0x${"ab".repeat(32)}`, requireCanonical: true });
   const decoded = decodeFunctionData({ abi: AGGREGATE_ABI, data: request.params[0].data });
   return decoded.args[0].length;
 }
@@ -60,6 +60,7 @@ function setup() {
     quote: (count: number) => quoteQuoterV2Requests({
       requests: Array.from({ length: count }, () => ({ target, inputUsd: 1_000, endpointAddress: ENDPOINT })),
       blockNumber: BLOCK,
+      blockHash: `0x${"ab".repeat(32)}`,
       chainRpcs,
       rpcBudget: budget,
     }),
@@ -149,6 +150,19 @@ describe("Quoter V2 execution-budget failover", () => {
     expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([run.primary, run.primary, run.fallback]);
     expect(run.budget.requestsUsed).toBe(3);
     expect(recordDwellirCredits.mock.calls).toEqual([[1], [1]]);
+  });
+
+  it.each(["unsupported hash selector", "noncanonical hash"])("refuses %s without numeric fallback", async (message) => {
+    const run = setup();
+    fetchMock.mockImplementation(async (_url, init) => {
+      aggregateSize(init!);
+      return rpcResponse({ error: { code: -32000, message } });
+    });
+    const outcomes = await run.quote(2);
+    expect(outcomes.every((outcome) => outcome.point == null &&
+      outcome.failureReason === "quoter-rpc-unavailable")).toBe(true);
+    expect(fetchMock.mock.calls.length).toBeGreaterThan(0);
+    expect(run.budget.requestsUsed).toBe(fetchMock.mock.calls.length);
   });
 
   it("keeps OOG failover for non-quote aggregates and ordinary eth_call callers", async () => {

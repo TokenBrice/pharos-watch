@@ -14,9 +14,10 @@ import {
 import { CURVE_STABLESWAP_DEPLOYMENT } from "@shared/lib/measured-execution-deployment-policies";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import {
-  fetchEvmBlockTimestamp,
+  fetchEvmBlockHeader,
   fetchEvmCallHexAtBlock,
   fetchEvmCodeStatusAtBlock,
+  type EvmBlockHeader,
 } from "../../lib/evm-rpc";
 import type { DexMeasuredExecutionRpcBudget } from "./profiles";
 import type { CurveGetDyQuoteFailure } from "./curve-get-dy-quote-engine";
@@ -159,11 +160,11 @@ export function evaluateCurveStableSwapEligibility(input: {
 }
 
 interface CurveStableSwapVerificationDependencies extends CurveFamilyVerificationDependencies {
-  fetchBlockTimestamp(
+  fetchBlockHeader(
     chain: string,
     blockNumber: number,
-    options: Parameters<typeof fetchEvmBlockTimestamp>[2],
-  ): Promise<number | null>;
+    options: Parameters<typeof fetchEvmBlockHeader>[2],
+  ): Promise<EvmBlockHeader | null>;
 }
 
 export type CurveStableSwapDeploymentVerification =
@@ -171,6 +172,7 @@ export type CurveStableSwapDeploymentVerification =
       ok: true;
       codeHash: `0x${string}`;
       blockTimestamp: number;
+      blockHash: `0x${string}`;
       runtimeEvidence: CurveStableSwapRuntimeEvidence;
       registryBindingProof: DexMeasuredExecutionRegistryBindingProof;
     }
@@ -198,18 +200,16 @@ export function createCurveStableSwapDeploymentVerifier(
       if (!Number.isSafeInteger(input.blockNumber) || input.blockNumber < 0) {
         return { ok: false, reason: "invalid-pinned-block" };
       }
-      const blockTimestamp = await dependencies.fetchBlockTimestamp(
-        policy.chain,
-        input.blockNumber,
-        requestOptions,
-      );
-      input.rpcBudget?.recordChainResult(policy.chain, blockTimestamp != null);
-      if (blockTimestamp == null) return { ok: false, reason: "block-timestamp-unavailable" };
-      if (blockTimestamp > input.nowSec + 60) return { ok: false, reason: "future-pinned-block" };
-      if (input.nowSec - blockTimestamp > DEX_MEASURED_FRESHNESS_MAX_SEC) {
+      const header = await dependencies.fetchBlockHeader(policy.chain, input.blockNumber, requestOptions);
+      input.rpcBudget?.recordChainResult(policy.chain, header != null);
+      if (header == null || header.number !== input.blockNumber || canonicalEvmHash(header.hash) == null) {
+        return { ok: false, reason: "block-timestamp-unavailable" };
+      }
+      if (header.timestamp > input.nowSec + 60) return { ok: false, reason: "future-pinned-block" };
+      if (input.nowSec - header.timestamp > DEX_MEASURED_FRESHNESS_MAX_SEC) {
         return { ok: false, reason: "stale-pinned-block" };
       }
-      return { number: input.blockNumber, timestamp: blockTimestamp };
+      return { number: header.number, timestamp: header.timestamp, hash: header.hash };
     },
     codeBindings: [
       {
@@ -275,6 +275,7 @@ export function createCurveStableSwapDeploymentVerifier(
             ok: true,
             codeHash: poolCodeHash,
             blockTimestamp: block.timestamp,
+            blockHash: block.hash!,
             runtimeEvidence,
             registryBindingProof,
           }
@@ -286,7 +287,7 @@ export function createCurveStableSwapDeploymentVerifier(
 export const verifyCurveStableSwapDeployment = createCurveStableSwapDeploymentVerifier({
   fetchCodeStatus: fetchEvmCodeStatusAtBlock,
   fetchCall: fetchEvmCallHexAtBlock,
-  fetchBlockTimestamp: fetchEvmBlockTimestamp,
+  fetchBlockHeader: fetchEvmBlockHeader,
 });
 
 export type CurveStableSwapQuoteFailure =

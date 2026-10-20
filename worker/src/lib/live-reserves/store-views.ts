@@ -18,6 +18,7 @@ import { matchReserveFeedReview } from "../reserve-feed-reviews";
 import { parseReserveCompositionRow } from "./store-row-decoding";
 import {
   LIVE_RESERVE_FRESHNESS_SEC,
+  hasFatalReserveWarnings,
   type ReserveCompositionRecord,
   type ReserveSyncStateRecord,
   type ReserveSyncStatus,
@@ -156,7 +157,8 @@ export async function resolveReserveResult(
     ? parseReserveCompositionRow(consistentRow, syncState)
     : { record: null, issue: null };
   const admission = evaluateLiveReserveAdmission(consistentSnapshot.record, syncState, meta, now, freshnessSec);
-  const liveSnapshot = admission.reasons.includes("config-mismatch") ? null : consistentSnapshot.record;
+  const fatalSnapshot = consistentSnapshot.record != null && hasFatalReserveWarnings(consistentSnapshot.record.warnings);
+  const liveSnapshot = admission.reasons.includes("config-mismatch") || fatalSnapshot ? null : consistentSnapshot.record;
   // The served live snapshot is judged by admission's own assessment (same
   // record, clock, and budgets); every other path judges the newest known
   // generation by fetch age alone.
@@ -170,9 +172,9 @@ export async function resolveReserveResult(
 
   // Prior live detail deliberately stays visible when the *current* sync attempt
   // failed: the earlier snapshot was validly observed, and scoring judges it on
-  // its own warnings, not on the later attempt's status. Only genuine
-  // staleness (Worker fetch age or effective upstream observation age, computed
-  // above) may demote it, and that surfaces as `live-stale` rather than hiding it.
+  // its own warnings, not on the later attempt's status. Fatal or config-invalid
+  // evidence is withheld above; genuinely stale valid evidence stays visible
+  // as `live-stale`.
   if (liveSnapshot) {
     const provenance = buildReserveProvenanceView(liveSnapshot, admission);
     const adapterBadge = buildReserveDisplayBadgeView(liveSnapshot);
@@ -209,7 +211,9 @@ export async function resolveReserveResult(
     : (await import("@shared/lib/stablecoins/registry")).TRACKED_META_BY_ID.get(stablecoinId);
   const staticFallback = fallbackMeta ? getReserves(fallbackMeta) : null;
 
-  const snapshotIntegrityWarning = consistentSnapshot.issue ? describeSnapshotIssue(consistentSnapshot.issue) : null;
+  const snapshotIntegrityWarning = consistentSnapshot.issue
+    ? describeSnapshotIssue(consistentSnapshot.issue)
+    : fatalSnapshot ? "Stored live reserve snapshot contains fatal warnings" : null;
   const statusOverride = snapshotIntegrityWarning
     ? (syncState?.lastStatus === "error" ? "error" : "degraded")
     : undefined;

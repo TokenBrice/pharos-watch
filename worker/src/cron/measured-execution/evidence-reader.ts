@@ -86,6 +86,7 @@ const OPERATIONAL_DEX_MEASURED_FAILURE_REASONS = new Set([
   "block-header-unavailable",
   "block-timestamp-unavailable",
   "factory-code-unavailable",
+  "ng-kill-probe-unavailable",
   "pool-manager-code-unavailable",
   "pool-state-rpc-unavailable",
   "quote-call-budget-exhausted",
@@ -483,14 +484,13 @@ async function loadCurrentMeasuredQuoteEvidence<
 /**
  * Newest measured quote evidence a consumer may read.
  *
- * `publishedAtCeilingSec` is the consumer's observation clock. A clock-pinned
- * consumer (the hourly DEX scoring run pins `routeObservedAt` to its source
- * slot, while the measured lane publishes minutes later) passes it so it reads
- * the newest cohort that already existed at its clock instead of loading a
- * newer one whose history the `future-history` guard must reject.
+ * `assessmentAtSec` ages original source clocks and producer-cycle history.
+ * `publishedAtCeilingSec` independently limits which published cohort is read;
+ * neither the selected cohort's publication nor a later read renews source age.
  */
 export async function loadLatestPublishedDexMeasuredQuoteEvidence(
   db: D1Database,
+  assessmentAtSec: number,
   signal?: AbortSignal,
   options: {
     deferProfiles?: boolean;
@@ -569,7 +569,7 @@ export async function loadLatestPublishedDexMeasuredQuoteEvidence(
     const historyGenerationIds = await loadSupersededQuoteGenerationIds({
       db,
       quoteSurface: DEX_MEASURED_QUOTE_SURFACE,
-      publishedAtFloor: latestPublishedAt - DEX_MEASURED_HISTORY_LOOKBACK_MAX_SEC,
+      publishedAtFloor: assessmentAtSec - DEX_MEASURED_HISTORY_LOOKBACK_MAX_SEC,
       ...(options.publishedAtCeilingSec === undefined
         ? {}
         : { publishedAtCeiling: options.publishedAtCeilingSec }),
@@ -628,7 +628,7 @@ export async function loadLatestPublishedDexMeasuredQuoteEvidence(
           const currentTarget = byTargetId.get(row.target_id)?.quotedTarget;
           if (
             currentTarget &&
-            latestPublishedAt - row.quote_published_at >
+            assessmentAtSec - row.quote_published_at >
               getDexMeasuredHistoryFreshnessSec(currentTarget.adapterProfileId)
           ) {
             continue;
@@ -709,7 +709,7 @@ export async function loadLatestPublishedDexMeasuredQuoteEvidence(
           if (entry?.status === "measured" && profile !== null) {
             const observationHistory = summarizeDexMeasuredExecutionHistory({
               cycles: historyCyclesByTargetId.get(targetId) ?? [],
-              nowSec: latestPublishedAt,
+              nowSec: assessmentAtSec,
               freshnessMaxSec: getDexMeasuredHistoryFreshnessSec(profile.adapterProfileId),
             });
             if (observationHistory) {
@@ -743,7 +743,7 @@ export async function loadLatestPublishedDexMeasuredQuoteEvidence(
     }
     const observationHistory = summarizeDexMeasuredExecutionHistory({
       cycles: historyCyclesByTargetId.get(targetId) ?? [],
-      nowSec: latestPublishedAt,
+      nowSec: assessmentAtSec,
       freshnessMaxSec: getDexMeasuredHistoryFreshnessSec(profile.adapterProfileId),
     });
     if (observationHistory) {

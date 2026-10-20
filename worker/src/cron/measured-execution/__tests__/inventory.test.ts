@@ -7,6 +7,9 @@ vi.mock("../../../lib/structured-log", () => ({
 }));
 
 import type { DexApiPool } from "../../../lib/dex-api-types";
+import type { PriceValidationReferences } from "../../../lib/price-validation";
+import { getTokenReferenceUsdPrice } from "../../../lib/dex-api-token-pricing";
+import { computeUniswapV4PoolId, UNISWAP_V4_HOOK_FREE_ADDRESS } from "../uniswap-v4";
 import {
   buildNativeDexExecutionTarget,
   buildMeasuredPoolDirectionKey,
@@ -14,6 +17,7 @@ import {
   buildSlipstreamMeasuredExecutionTarget,
   buildSlipstreamMeasuredExecutionTargets,
   buildUniV3MeasuredExecutionTarget,
+  buildUniswapV4MeasuredExecutionTarget,
   parseUniV3FeePips,
   type SlipstreamExecutionCandidate,
   type UniV3ExecutionCandidate,
@@ -81,6 +85,72 @@ describe("measured execution target inventory", () => {
     expect(parseUniV3FeePips("Uniswap V3 .01%")).toBeNull();
     expect(parseUniV3FeePips("Uniswap V3")).toBeNull();
   });
+
+  it.each(["pancake", "univ3", "slipstream", "v4"] as const)(
+    "admits fresh per-peg FX and withholds stale/future/unproven input fallback for %s",
+    (family) => {
+      const capturedAt = 1_792_000_000;
+      const eurc = "0x1abaea1f7c830bd89acc67ec4af516284b1bc33c";
+      const chain = family === "slipstream" ? "base" : "ethereum";
+      const tokens: UniV3ExecutionCandidate["tokens"] = [
+        { address: eurc, symbol: "EURC", decimals: 6 },
+        { address: USDC, symbol: "USDC", decimals: 6 },
+      ];
+      const common = {
+        stablecoinId: "eurc-circle", capturedAt, retainedTvlUsd: 4_000_000,
+        stablecoinPriceById: new Map([["usdc-circle", 1]]),
+        chainAddressToId: addressMap([[eurc, "eurc-circle"], [USDC, "usdc-circle"]], chain),
+        symbolToChainScopedIds: new Map<string, Map<string, string[]>>(),
+      };
+      const candidate = {
+        chain, poolAddress: POOL, feePips: 100, tickSpacing: 50, tvlUsd: 4_000_000,
+        token0Price: 1 / 1.08, token1Price: 1.08, tokens,
+        ...(family === "univ3" ? { carriedFromSnapshot: true as const } : {}),
+      };
+      const fresh: PriceValidationReferences = {
+        rates: { peggedEUR: 1.08 }, type: "stale", updatedAt: capturedAt - 86_400,
+        typeByPeg: { peggedEUR: "fresh" }, updatedAtByPeg: { peggedEUR: capturedAt - 60 },
+        sourceModeByPeg: { peggedEUR: "live" }, sourceCadenceByPeg: { peggedEUR: "intraday" },
+      };
+      function build(validationReferences: PriceValidationReferences, stablecoinId = common.stablecoinId) {
+        const input = { ...common, stablecoinId, candidate, validationReferences };
+        if (family === "univ3") return buildUniV3MeasuredExecutionTarget(input);
+        if (family === "slipstream") return buildSlipstreamMeasuredExecutionTarget(input);
+        if (family === "v4") {
+          const poolId = computeUniswapV4PoolId({
+            currency0: eurc, currency1: USDC, feePips: 100, tickSpacing: 50,
+            hookAddress: UNISWAP_V4_HOOK_FREE_ADDRESS,
+          });
+          return buildUniswapV4MeasuredExecutionTarget({
+            ...input, identityMatch: "exact-pool-id",
+            candidate: { ...candidate, poolId, hookAddress: UNISWAP_V4_HOOK_FREE_ADDRESS, activeLiquidity: "1000000" },
+          });
+        }
+        const pool = { ...directPool("pancakeswap", [...tokens]), price: 1.08 };
+        return buildPancakeMeasuredExecutionTargets({ ...input, pools: [pool] })
+          .get(`${stablecoinId}|ethereum:${POOL}`) ?? null;
+      }
+      expect(build(fresh)).toMatchObject({
+        tokenIn: { referencePriceUsd: 1.08 }, tokenOut: { referencePriceUsd: 1 },
+        retainedPoolPriceUsd: 1.08, capturedAt,
+      });
+      const invalidReferences: Partial<PriceValidationReferences>[] = [
+        { typeByPeg: { peggedEUR: "stale" } },
+        { updatedAtByPeg: { peggedEUR: capturedAt + 1 } },
+        { updatedAtByPeg: { peggedEUR: capturedAt - 8 * 3600 } },
+        { updatedAtByPeg: {} },
+      ];
+      for (const override of invalidReferences) {
+        expect(build({ ...fresh, ...override })).toBeNull();
+      }
+      const stale = { ...fresh, typeByPeg: { peggedEUR: "stale" as const } };
+      if (family === "pancake" || family === "univ3") {
+        expect(build(fresh, "usdc-circle")?.tokenOut.referencePriceUsd).toBe(1.08);
+        expect(build(stale, "usdc-circle")).toBeNull();
+      }
+      expect(getTokenReferenceUsdPrice(tokens[0], chain, common.chainAddressToId, common.symbolToChainScopedIds, stale)).toBe(1.08);
+    },
+  );
 
   it("builds a Base Slipstream shadow target with tick-spacing identity", () => {
     const candidate: SlipstreamExecutionCandidate = {
@@ -182,7 +252,7 @@ describe("measured execution target inventory", () => {
     });
   });
 
-  it("uses independent tracked references for a uniquely joined Uniswap v3 target", () => {
+  it.each([false, true])("uses independent tracked references for a uniquely joined Uniswap v3 target (carried: %s)", (carried) => {
     const candidate: UniV3ExecutionCandidate = {
       chain: "ethereum",
       poolAddress: POOL,
@@ -190,6 +260,7 @@ describe("measured execution target inventory", () => {
       tvlUsd: 4_000_000,
       token0Price: 999,
       token1Price: 0.001,
+      ...(carried ? { carriedFromSnapshot: true as const } : {}),
       tokens: [
         { address: USDC, symbol: "USDC", decimals: 6 },
         { address: USDT, symbol: "USDT", decimals: 6 },
@@ -220,6 +291,7 @@ describe("measured execution target inventory", () => {
     });
     expect(target?.tokenIn.referencePriceUsd).not.toBe(candidate.token0Price);
     expect(target?.tokenOut.referencePriceUsd).not.toBe(candidate.token1Price);
+    expect(target?.carriedFromSnapshot).toBe(carried ? true : undefined);
   });
 
   it("rejects CL targets whose independent output reference is too favorable for the source spot", () => {
@@ -282,6 +354,14 @@ describe("measured execution target inventory", () => {
     // inputIndex = 0: implied output reference = inputRef × token0Price.
     expect(forward?.tokenOut.referencePriceUsd).toBeCloseTo(1_862.48, 6);
     expect(forward?.tokenOut.trackedAssetId).toBeUndefined();
+    expect(buildUniV3MeasuredExecutionTarget({
+      stablecoinId: "usdc-circle",
+      candidate: { ...candidate, carriedFromSnapshot: true },
+      stablecoinPriceById: new Map([["usdc-circle", 1]]),
+      chainAddressToId,
+      retainedTvlUsd: 3_000_000,
+      capturedAt: 1_752_560_000,
+    })).toBeNull();
 
     // Reverse direction (stablecoin is token1, prices swap with the legs):
     // implied = inputRef × token1Price.

@@ -135,7 +135,7 @@ describe("mergeRedemptionRouteStatus", () => {
     expect(result.capsApplied).toEqual([]);
   });
 
-  it("does not exempt strong live-direct routes from output dependency impairment", () => {
+  it.each([1, undefined])("does not exempt strong live-direct routes from output dependency impairment (share %s)", (share) => {
     const result = mergeRedemptionRouteStatus({
       staticEvidence: staticOpen,
       liveEvidence: {
@@ -145,7 +145,7 @@ describe("mergeRedemptionRouteStatus", () => {
       severeMarketImplied: severeMarketEvidence({
         routeStatusReason: "Output asset impairment",
         outputImpairedDependencyId: "usdc-circle",
-        outputImpairedShare: 1,
+        ...(share === undefined ? {} : { outputImpairedShare: share }),
       }),
       allowSevereMarketOpenException: true,
     });

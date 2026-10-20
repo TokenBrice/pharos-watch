@@ -31,6 +31,7 @@ function fixtureProfile(
   identity: { targetGenerationId?: string; quoteGenerationId?: string; quotedAt?: number } = {},
 ) {
   return buildDexMeasuredExecutionProfile({
+    blockHash: `0x${"ab".repeat(32)}`,
     target,
     targetGenerationId: identity.targetGenerationId ?? "target-generation",
     quoteGenerationId: identity.quoteGenerationId ?? "quote-generation",
@@ -63,6 +64,8 @@ describe("measured execution publication", () => {
     expect(isOperationalDexMeasuredFailure("registry-code-unavailable")).toBe(true);
     expect(isOperationalDexMeasuredFailure("block-header-unavailable")).toBe(true);
     expect(isOperationalDexMeasuredFailure("factory-code-unavailable")).toBe(true);
+    expect(isOperationalDexMeasuredFailure("ng-kill-probe-unavailable")).toBe(true);
+    expect(isOperationalDexMeasuredFailure("ng-kill-method-not-proven-absent")).toBe(false);
     expect(isOperationalDexMeasuredFailure("runtime-code-absent")).toBe(false);
     expect(isOperationalDexMeasuredFailure("registry-code-absent")).toBe(false);
     expect(isOperationalDexMeasuredFailure("block-header-mismatch")).toBe(false);
@@ -172,7 +175,7 @@ describe("measured execution durable publication", () => {
       { target_id: failedTarget.targetId, quote_profile_json: null, raw_quote_payload_json: JSON.stringify({ reason: "execution reverted" }) },
       { target_id: measuredTarget.targetId, quote_profile_json: JSON.stringify(profile), raw_quote_payload_json: null },
     ]);
-    const evidence = await loadLatestPublishedDexMeasuredQuoteEvidence(db);
+    const evidence = await loadLatestPublishedDexMeasuredQuoteEvidence(db, 2_010);
     expect(evidence?.byTargetId.get(measuredTarget.targetId)?.profile).toEqual(profile);
     expect(evidence?.byTargetId.get(failedTarget.targetId)).not.toHaveProperty("rawPayload");
   });
@@ -218,14 +221,14 @@ describe("measured execution durable publication", () => {
           : { target, status: "failed" as const, failureReason: "budget-deferred" }) });
       expect(sqlite.prepare("SELECT target_id FROM dex_measured_execution_quotes WHERE generation_id = ?").all(generationId))
         .toEqual(allDeferred ? [] : [{ target_id: targets[0]!.targetId }]);
-      const evidence = await loadLatestPublishedDexMeasuredQuoteEvidence(db);
+      const evidence = await loadLatestPublishedDexMeasuredQuoteEvidence(db, 2_010);
       expect(evidence?.quoteGenerationId).toBe(generationId);
       expect(evidence?.byTargetId.get(targets[1]!.targetId)).toMatchObject({ status: "failed", failureReason: "budget-deferred", profile: null });
       expect([...evidence!.byTargetId.keys()].sort()).toEqual(targets.map((target) => target.targetId).sort());
     }
     sqlite.prepare("UPDATE surface_publication_generations SET dependency_snapshot_json = json_set(dependency_snapshot_json, '$.targetIdsSha256', ?) WHERE generation_id = 'all-deferred'")
       .run("0".repeat(64));
-    await expect(loadLatestPublishedDexMeasuredQuoteEvidence(db)).rejects.toThrow("incomplete");
+    await expect(loadLatestPublishedDexMeasuredQuoteEvidence(db, 2_010)).rejects.toThrow("incomplete");
   });
 
   it("rejects the same torn terminal row in full and selected evidence scans", async () => {
@@ -244,7 +247,7 @@ describe("measured execution durable publication", () => {
     ).run("torn-quotes");
 
     for (const options of [undefined, { targetIds: [target.targetId] }]) {
-      await expect(loadLatestPublishedDexMeasuredQuoteEvidence(db, undefined, options))
+      await expect(loadLatestPublishedDexMeasuredQuoteEvidence(db, 2_010, undefined, options))
         .rejects.toThrow("torn terminal identity");
     }
   });
@@ -257,7 +260,7 @@ describe("measured execution durable publication", () => {
     await publishDexMeasuredQuoteGeneration({ db, generationId: "quote-generation", quotedAt: 1_060,
       targetGeneration: { generationId: published.generationId, targets, publishedAt: 1_000 },
       outcomes: targets.map((target, index) => ({ target, status: "measured", profile: profiles[index]! })) });
-    const evidence = await loadLatestPublishedDexMeasuredQuoteEvidence(db, undefined, { deferProfiles: true });
+    const evidence = await loadLatestPublishedDexMeasuredQuoteEvidence(db, 2_010, undefined, { deferProfiles: true });
     expect([...evidence!.byTargetId.keys()]).toEqual(targets.map((target) => target.targetId).sort());
     for (const [index, target] of targets.entries()) {
       const entry = evidence!.byTargetId.get(target.targetId)!;
@@ -281,7 +284,7 @@ describe("measured execution durable publication", () => {
     for (const outcomes of [[failed(targets[0]!), failed(targets[0]!)], [failed(targets[0]!)], [failed(targets[0]!), failed(fixtureTarget("polygon"))]]) {
       await expect(publishDexMeasuredQuoteGeneration({ db, targetGeneration: { generationId: "candidate-targets", targets, publishedAt: 2_100 }, outcomes, quotedAt: 2_200 }))
         .rejects.toThrow("exactly cover");
-      expect((await loadLatestPublishedDexMeasuredQuoteEvidence(db))?.quoteGenerationId).toBe("quote-generation-latest");
+      expect((await loadLatestPublishedDexMeasuredQuoteEvidence(db, 2_010))?.quoteGenerationId).toBe("quote-generation-latest");
     }
   });
 
@@ -297,7 +300,7 @@ describe("measured execution durable publication", () => {
     ]) {
       await expect(publishDexMeasuredQuoteGeneration({ db, generationId: "quote-generation", targetGeneration: { generationId: "target-generation", targets: [target], publishedAt: 2_100 }, outcomes: [outcome], quotedAt: 2_200 }))
         .rejects.toThrow("invalid terminal state");
-      expect((await loadLatestPublishedDexMeasuredQuoteEvidence(db))?.quoteGenerationId).toBe("quote-generation-latest");
+      expect((await loadLatestPublishedDexMeasuredQuoteEvidence(db, 2_010))?.quoteGenerationId).toBe("quote-generation-latest");
     }
   });
 
@@ -311,7 +314,7 @@ describe("measured execution durable publication", () => {
     ]) {
       await expect(publishDexMeasuredQuoteGeneration({ db, generationId: "quote-generation", targetGeneration: { generationId: "target-generation", targets: [target], publishedAt: 2_100 }, outcomes: [{ target, status: "measured", profile }], quotedAt: 2_200 }))
         .rejects.toThrow("mismatched generation identity");
-      expect((await loadLatestPublishedDexMeasuredQuoteEvidence(db))?.quoteGenerationId).toBe("quote-generation-latest");
+      expect((await loadLatestPublishedDexMeasuredQuoteEvidence(db, 2_010))?.quoteGenerationId).toBe("quote-generation-latest");
     }
   });
 
@@ -330,7 +333,7 @@ describe("measured execution durable publication", () => {
     await expect(publishDexMeasuredQuoteGeneration({ db, generationId: "broken-quotes", targetGeneration,
       outcomes: [{ target, status: "failed", failureReason: "pool-revert" }], quotedAt: 2_060 })).rejects.toThrow("row mismatch");
     expect(await loadLatestPublishedDexMeasuredTargets(db)).toEqual(targetGeneration);
-    const evidence = await loadLatestPublishedDexMeasuredQuoteEvidence(db);
+    const evidence = await loadLatestPublishedDexMeasuredQuoteEvidence(db, 2_010);
     expect(evidence?.quoteGenerationId).toBe("prior-quotes");
     expect([...evidence!.byTargetId.keys()]).toEqual([target.targetId]);
     expect(sqlite.prepare("SELECT state FROM surface_publication_generations WHERE generation_id = 'broken-quotes'").get()).toEqual({ state: "failed" });
@@ -340,6 +343,22 @@ describe("measured execution durable publication", () => {
 });
 
 describe("measured execution last-known-good selection", () => {
+  it.each([false, true])("refuses retained number-only JSON without renewing it (deferred=%s)", async (deferProfiles) => {
+    const target = fixtureTarget("ethereum");
+    const profile = fixtureProfile(target, {
+      targetGenerationId: "target-generation-latest", quoteGenerationId: "quote-generation-latest", quotedAt: 2_000,
+    });
+    const { db, sqlite } = evidenceDb({ target, latest: { status: "measured", failureReason: null, profile } });
+    const { blockHash: _blockHash, ...legacy } = profile;
+    const retainedJson = JSON.stringify(legacy);
+    sqlite.prepare("UPDATE dex_measured_execution_quotes SET quote_profile_json = ? WHERE generation_id = ?")
+      .run(retainedJson, "quote-generation-latest");
+    await expect(loadLatestPublishedDexMeasuredQuoteEvidence(db, 2_010, undefined, { deferProfiles }))
+      .rejects.toThrow(/blockHash/);
+    expect(sqlite.prepare("SELECT quote_profile_json, quoted_at FROM dex_measured_execution_quotes WHERE generation_id = ?")
+      .get("quote-generation-latest")).toEqual({ quote_profile_json: retainedJson, quoted_at: 2_000 });
+  });
+
   it("selects only complete superseded history inside the inclusive lookback", async () => {
     const { db, sqlite } = databases.open();
     const target = fixtureTarget("ethereum");
@@ -357,7 +376,7 @@ describe("measured execution last-known-good selection", () => {
     }
     sqlite.exec("DELETE FROM dex_measured_execution_quotes WHERE generation_id = 'missing-row'");
     sqlite.exec("UPDATE surface_publication_generations SET published_rows = 2 WHERE generation_id = 'wrong-count'");
-    const evidence = await loadLatestPublishedDexMeasuredQuoteEvidence(db);
+    const evidence = await loadLatestPublishedDexMeasuredQuoteEvidence(db, 20_000);
     expect([...evidence!.byTargetId.keys()].sort()).toEqual([
       target.targetId, fixtureTarget("complete").targetId, fixtureTarget("cutoff").targetId,
     ].sort());
@@ -365,7 +384,7 @@ describe("measured execution last-known-good selection", () => {
       quoteGenerationId: "cutoff", resolution: "last-known-good",
     });
   });
-  it.each(["request-budget-exhausted", "block-header-unavailable"])(
+  it.each(["request-budget-exhausted", "block-header-unavailable", "ng-kill-probe-unavailable"])(
     "retains original source time across a latest %s operational failure", async (failureReason) => {
     const measuredTarget = fixtureTarget("ethereum");
     const historicalProfile = fixtureProfile(measuredTarget, {
@@ -383,7 +402,7 @@ describe("measured execution last-known-good selection", () => {
       historical: [{ target: measuredTarget, profile: historicalProfile }],
     });
 
-    const evidence = await loadLatestPublishedDexMeasuredQuoteEvidence(db, undefined, {
+    const evidence = await loadLatestPublishedDexMeasuredQuoteEvidence(db, 2_010, undefined, {
       deferProfiles: true,
     });
     const entry = evidence?.byTargetId.get(measuredTarget.targetId);
@@ -444,7 +463,7 @@ describe("measured execution last-known-good selection", () => {
     });
     const consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
-    const evidence = await loadLatestPublishedDexMeasuredQuoteEvidence(db);
+    const evidence = await loadLatestPublishedDexMeasuredQuoteEvidence(db, 2_010);
 
     expect(evidence?.byTargetId.get(measuredTarget.targetId)).toMatchObject({
       status: "failed",
@@ -457,7 +476,7 @@ describe("measured execution last-known-good selection", () => {
     consoleWarn.mockRestore();
   });
 
-  it("preserves mature conservative history across a latest operational failure", async () => {
+  it.each(["quoter-rpc-unavailable", "ng-kill-probe-unavailable"])("preserves mature conservative history across a latest %s operational failure", async (failureReason) => {
     const measuredTarget = fixtureTarget("ethereum");
     const newerProfile = fixtureProfile(measuredTarget, {
       targetGenerationId: "target-generation-g2",
@@ -473,7 +492,7 @@ describe("measured execution last-known-good selection", () => {
       target: measuredTarget,
       latest: {
         status: "failed",
-        failureReason: "quoter-rpc-unavailable",
+        failureReason,
         profile: null,
       },
       historical: [
@@ -482,7 +501,7 @@ describe("measured execution last-known-good selection", () => {
       ],
     });
 
-    const entry = (await loadLatestPublishedDexMeasuredQuoteEvidence(db))?.byTargetId.get(measuredTarget.targetId);
+    const entry = (await loadLatestPublishedDexMeasuredQuoteEvidence(db, 2_010))?.byTargetId.get(measuredTarget.targetId);
 
     expect(entry).toMatchObject({
       resolution: "last-known-good",
@@ -497,7 +516,7 @@ describe("measured execution last-known-good selection", () => {
     });
   });
 
-  it("does not mask a deterministic or semantic failure with older evidence", async () => {
+  it.each(["pool-revert", "ng-kill-method-not-proven-absent"])("does not mask deterministic %s with older evidence", async (failureReason) => {
     const measuredTarget = fixtureTarget("ethereum");
     const historicalProfile = fixtureProfile(measuredTarget, {
       targetGenerationId: "target-generation-lkg",
@@ -508,18 +527,18 @@ describe("measured execution last-known-good selection", () => {
       target: measuredTarget,
       latest: {
         status: "failed",
-        failureReason: "pool-revert",
+        failureReason,
         profile: null,
       },
       historical: [{ target: measuredTarget, profile: historicalProfile }],
     });
 
-    const evidence = await loadLatestPublishedDexMeasuredQuoteEvidence(db);
+    const evidence = await loadLatestPublishedDexMeasuredQuoteEvidence(db, 2_010);
     const entry = evidence?.byTargetId.get(measuredTarget.targetId);
 
     expect(entry).toMatchObject({
       status: "failed",
-      failureReason: "pool-revert",
+      failureReason,
       quoteGenerationId: "quote-generation-latest",
       targetGenerationId: "target-generation-latest",
       resolution: "latest",
@@ -554,7 +573,7 @@ describe("measured execution last-known-good selection", () => {
       ],
     });
 
-    const entry = (await loadLatestPublishedDexMeasuredQuoteEvidence(db))?.byTargetId.get(measuredTarget.targetId);
+    const entry = (await loadLatestPublishedDexMeasuredQuoteEvidence(db, 2_010))?.byTargetId.get(measuredTarget.targetId);
 
     expect(entry).toMatchObject({
       status: "failed",
@@ -588,7 +607,7 @@ describe("measured execution last-known-good selection", () => {
       historical: [{ target: measuredTarget, profile: historicalProfile }],
     });
 
-    const evidence = await loadLatestPublishedDexMeasuredQuoteEvidence(db);
+    const evidence = await loadLatestPublishedDexMeasuredQuoteEvidence(db, 2_010);
     const entry = evidence?.byTargetId.get(measuredTarget.targetId);
 
     expect(entry).toMatchObject({
@@ -622,7 +641,7 @@ describe("measured execution last-known-good selection", () => {
       historical: [{ target: historicalTarget, profile: historicalProfile }],
     });
 
-    const evidence = await loadLatestPublishedDexMeasuredQuoteEvidence(db);
+    const evidence = await loadLatestPublishedDexMeasuredQuoteEvidence(db, 2_010);
     const latestEntry = evidence?.byTargetId.get(latestTarget.targetId);
     const historicalEntry = evidence?.byTargetId.get(historicalTarget.targetId);
 
@@ -660,7 +679,7 @@ describe("measured execution last-known-good selection", () => {
       historical,
     });
 
-    const evidence = await loadLatestPublishedDexMeasuredQuoteEvidence(db);
+    const evidence = await loadLatestPublishedDexMeasuredQuoteEvidence(db, 2_010);
 
     expect(evidence?.byTargetId).toHaveLength(66);
     expect(evidence?.byTargetId.get(historical[64]!.target.targetId)).toMatchObject({
@@ -672,6 +691,40 @@ describe("measured execution last-known-good selection", () => {
 });
 
 describe("measured execution clock-bounded cohort reads", () => {
+  it.each([false, true])("ages source clocks independently of publication with history=%s", async (withHistory) => {
+    const { db, sqlite } = databases.open();
+    const target = fixtureTarget("ethereum");
+    for (const generationId of withHistory ? ["current", "prior"] : ["current"]) {
+      seedGeneration(sqlite, {
+        generationId, targetGenerationId: `${generationId}-targets`,
+        publishedAt: generationId === "current" ? 20_000 : 19_000,
+        state: generationId === "current" ? "published" : "superseded",
+        rows: [{ target, profile: fixtureProfile(target, {
+          targetGenerationId: `${generationId}-targets`, quoteGenerationId: generationId,
+          quotedAt: generationId === "current" ? 9_200 : 9_199,
+        }) }],
+      });
+    }
+    for (const deferProfiles of [false, true]) {
+      const options = { deferProfiles, publishedAtCeilingSec: 20_000 };
+      const nearExpiry = await loadLatestPublishedDexMeasuredQuoteEvidence(db, 20_000, undefined, options);
+      expect(nearExpiry?.byTargetId.get(target.targetId)?.observationHistory).toMatchObject({
+        completeProducerCycleCount: withHistory ? 2 : 1,
+        successfulObservationCount: 1, consecutiveSuccessCount: 1,
+        latestOperationalFailureAt: null,
+      });
+      const expired = await loadLatestPublishedDexMeasuredQuoteEvidence(db, 20_001, undefined, options);
+      const entry = expired?.byTargetId.get(target.targetId);
+      expect(expired?.publishedAt).toBe(20_000);
+      expect(entry).toMatchObject({ status: "measured", latestFailureReason: null });
+      expect(entry?.observationHistory).toBeUndefined();
+      expect(materializeDexMeasuredQuoteProfile(entry!)?.quotedAt).toBe(9_200);
+    }
+    expect(sqlite.prepare(
+      "SELECT status, quoted_at FROM dex_measured_execution_quotes WHERE generation_id = 'current'",
+    ).get()).toEqual({ status: "measured", quoted_at: 9_200 });
+  });
+
   it("retains twelve quarter-hour observations without leaking later supplemental history", async () => {
     const { db, sqlite } = databases.open();
     const target = fixtureTarget("ethereum");
@@ -685,13 +738,13 @@ describe("measured execution clock-bounded cohort reads", () => {
         rows: [{ target, profile: fixtureProfile(target, { targetGenerationId, quoteGenerationId: generationId, quotedAt }) }],
       });
     }
-    const latest = await loadLatestPublishedDexMeasuredQuoteEvidence(db);
+    const latest = await loadLatestPublishedDexMeasuredQuoteEvidence(db, 10_960);
     expect(latest?.quoteGenerationId).toBe("quarter-hour-quotes-11");
     expect(latest?.byTargetId.get(target.targetId)?.observationHistory).toMatchObject({
       completeProducerCycleCount: 12, successfulObservationCount: 12,
       observationWindowStartedAt: 1_060, observationWindowEndedAt: 10_960,
     });
-    const clocked = await loadLatestPublishedDexMeasuredQuoteEvidence(db, undefined, { publishedAtCeilingSec: 5_560 });
+    const clocked = await loadLatestPublishedDexMeasuredQuoteEvidence(db, 5_560, undefined, { publishedAtCeilingSec: 5_560 });
     expect(clocked?.quoteGenerationId).toBe("quarter-hour-quotes-5");
     expect(clocked?.byTargetId.get(target.targetId)?.observationHistory).toMatchObject({
       completeProducerCycleCount: 6, successfulObservationCount: 6,
@@ -722,12 +775,12 @@ describe("measured execution clock-bounded cohort reads", () => {
     // routeObservedAt to its source slot, which measured cohort publication can
     // land after.
     const clockSec = 1_400;
-    const unbounded = await loadLatestPublishedDexMeasuredQuoteEvidence(db);
+    const unbounded = await loadLatestPublishedDexMeasuredQuoteEvidence(db, 2_010);
     expect(unbounded?.quoteGenerationId).toBe("quote-generation-latest");
     expect(unbounded?.byTargetId.get(target.targetId)?.observationHistory?.observationWindowEndedAt)
       .toBeGreaterThan(clockSec);
 
-    const clocked = await loadLatestPublishedDexMeasuredQuoteEvidence(db, undefined, {
+    const clocked = await loadLatestPublishedDexMeasuredQuoteEvidence(db, clockSec, undefined, {
       publishedAtCeilingSec: clockSec,
     });
     expect(clocked?.quoteGenerationId).toBe("quote-generation-admitted");
@@ -738,7 +791,7 @@ describe("measured execution clock-bounded cohort reads", () => {
     // what the no-lookahead `future-history` guard rejects.
     expect(entry?.observationHistory?.observationWindowEndedAt).toBeLessThanOrEqual(clockSec);
 
-    const deferred = await loadLatestPublishedDexMeasuredQuoteEvidence(db, undefined, {
+    const deferred = await loadLatestPublishedDexMeasuredQuoteEvidence(db, clockSec, undefined, {
       deferProfiles: true,
       publishedAtCeilingSec: clockSec,
     });
@@ -775,10 +828,10 @@ describe("measured execution clock-bounded cohort reads", () => {
     }
 
     const clockSec = 1_400;
-    expect((await loadLatestPublishedDexMeasuredQuoteEvidence(db))?.byTargetId.get(deferred.targetId))
+    expect((await loadLatestPublishedDexMeasuredQuoteEvidence(db, 2_010))?.byTargetId.get(deferred.targetId))
       .toMatchObject({ status: "measured", resolution: "last-known-good", quoteGenerationId: "quote-generation-displaced" });
 
-    expect((await loadLatestPublishedDexMeasuredQuoteEvidence(db, undefined, {
+    expect((await loadLatestPublishedDexMeasuredQuoteEvidence(db, clockSec, undefined, {
       publishedAtCeilingSec: clockSec,
     }))?.byTargetId.get(deferred.targetId))
       .toMatchObject({ status: "failed", resolution: "latest" });

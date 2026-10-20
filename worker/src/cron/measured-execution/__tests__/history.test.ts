@@ -50,6 +50,7 @@ function profile(
     retainedPoolPriceUsdAtQuote: 1,
     quotedAt,
     blockNumber: 1,
+    blockHash: `0x${"ab".repeat(32)}`,
     executionEndpoint: {
       address: "0x4444444444444444444444444444444444444444",
       codeHash: `0x${"1".repeat(64)}`,
@@ -170,6 +171,53 @@ describe("summarizeDexMeasuredExecutionHistory", () => {
 
     expect(result?.successfulObservationCount).toBe(1);
     expect(result?.observationWindowStartedAt).toBe(1_900);
+  });
+
+  it("expires source constituents without rewriting producer cycles or failure barriers", () => {
+    const fresh = measured("fresh", 20_000, [100_000, 100_000, 100_000, 100_000]);
+    const expired = measured("expired", 19_000, [1_000, 1_000, 1_000, 1_000]);
+    expired.profile!.quotedAt = 9_200;
+    const interruption: DexMeasuredExecutionHistoryCycle = {
+      generationId: "outage", publishedAt: 19_500, status: "failed",
+      operationalFailure: true, profile: null,
+    };
+    const summarize = (nowSec: number) => summarizeDexMeasuredExecutionHistory({
+      nowSec, freshnessMaxSec: 10_800, cycles: [fresh, interruption, expired],
+    });
+    expect(summarize(20_000)).toMatchObject({
+      completeProducerCycleCount: 3, successfulObservationCount: 2,
+      consecutiveSuccessCount: 1, latestOperationalFailureAt: 19_500,
+    });
+    const result = summarize(20_001);
+    expect(result).toMatchObject({
+      completeProducerCycleCount: 3, successfulObservationCount: 1,
+      consecutiveSuccessCount: 1, latestOperationalFailureAt: 19_500,
+    });
+    expect(result?.conservativeCapacityCurve.map((point) => point.executableUsd))
+      .toEqual([100_000, 100_000, 100_000, 100_000]);
+    // An expired measured row breaks the streak but is not an execution failure.
+    expired.publishedAt = 20_001;
+    expect(summarize(20_001)).toMatchObject({
+      completeProducerCycleCount: 3, successfulObservationCount: 1,
+      consecutiveSuccessCount: 0, latestOperationalFailureAt: 19_500,
+    });
+    interruption.operationalFailure = false;
+    expect(summarize(20_001)?.successfulObservationCount).toBe(1);
+    fresh.profile!.quotedAt = 9_200;
+    expect(summarize(20_001)).toBeNull();
+  });
+
+  it.each([
+    [9_200, true], [9_199, false], [20_060, true], [20_061, false],
+    [Number.NaN, false], [Number.POSITIVE_INFINITY, false],
+  ] as const)("checks the original source clock %s independently of publication", (quotedAt, eligible) => {
+    const cycle = measured("published-now", 20_000, [100_000, 100_000, 100_000, 100_000]);
+    cycle.profile!.quotedAt = quotedAt;
+    const result = summarizeDexMeasuredExecutionHistory({
+      nowSec: 20_000, freshnessMaxSec: 10_800, cycles: [cycle],
+    });
+    if (eligible) expect(result?.successfulObservationCount).toBe(1);
+    else expect(result).toBeNull();
   });
 
   it("returns null when no fresh success exists", () => {

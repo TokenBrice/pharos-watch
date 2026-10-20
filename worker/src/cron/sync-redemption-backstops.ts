@@ -200,6 +200,7 @@ export async function syncRedemptionBackstops(
     db,
     formatUtcDate(now),
     currentDepegObservationsById,
+    { metadataById: reserveSnapshotMetadataById, now },
   );
   const registryMetadata = buildRegistryMetadata(configuredIds, configById);
 

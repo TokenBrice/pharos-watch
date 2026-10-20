@@ -153,6 +153,7 @@
         "worker/src/cron/snapshot-chain-supply.ts",
         "worker/src/cron/sync-v9-supply-attribution.ts",
         "worker/src/lib/price*.ts",
+        "worker/src/lib/dex-api-token-pricing.ts",
         "worker/src/lib/hive-market-price.ts",
         "worker/src/lib/address-price-providers/**",
         "worker/src/lib/authoritative-price-sources/**",
@@ -227,6 +228,7 @@
         "shared/types/reserve-continuation.ts",
         "shared/lib/live-reserve*.ts",
         "worker/src/lib/live-reserves/**",
+        "worker/src/lib/accepted-reserve-generation.ts",
         "worker/src/lib/reserve-continuation*.ts",
         "worker/src/handlers/reserve-continuation.ts",
         "worker/src/lib/safety-score-v9/extension-reserves.ts",
@@ -331,11 +333,16 @@
         "src/lib/yield*.ts",
         "docs/yield-intelligence-operations.md",
         "docs/yield-intelligence.md",
+        "docs/process/yield-intelligence-appendix.md",
         "docs/runbooks/yield-*.md"
       ],
       "docs": [{ "path": "docs/yield-intelligence.md", "anchor": "engineering-contract" }],
       "background": [
         {"path": "docs/yield-intelligence.md", "anchor": "methodology-versioning"},
+        {"path": "docs/process/yield-intelligence-appendix.md", "anchor": "publication-storage-and-diagnostics"},
+        {"path": "docs/process/yield-intelligence-appendix.md", "anchor": "external-opportunity-valuation"},
+        {"path": "docs/process/yield-intelligence-appendix.md", "anchor": "coverage-audit-input-admission"},
+        {"path": "docs/process/yield-intelligence-appendix.md", "anchor": "safety-hydration-mechanics"},
         { "path": "docs/runbooks/yield-benchmark-fallback-stale.md", "runbook": { "label": "Yield benchmark fallback or stale state", "kind": "symptom" } },
         { "path": "docs/runbooks/yield-health.md", "runbook": { "label": "Yield health and deterministic all-fail cooldown diagnostics", "kind": "reference" } },
         { "path": "docs/runbooks/yield-history-cleanup-writer-pause.md", "runbook": { "label": "Yield history cleanup and writer pause", "kind": "procedure" } },
@@ -953,6 +960,8 @@
         "worker/src/lib/dews/**",
         "worker/src/cron/compute-depeg-resolver.ts",
         "worker/src/cron/dex-liquidity/**",
+        "worker/src/cron/measured-execution/**",
+        "worker/src/lib/dex-api-token-pricing.ts",
         "worker/src/cron/mint-burn/**",
         "worker/src/cron/sync-mint-burn.ts",
         "worker/src/api/depeg-resolver.ts",
@@ -977,7 +986,7 @@
       "docs": [{ "path": "docs/methodology-page.md", "anchor": "methodology-editing-entry" }, { "path": "docs/report-cards.md", "anchor": "methodology-identity" }],
       "reading": [
         {
-          "sources": ["worker/src/cron/dex-liquidity/**", "docs/dex-liquidity.md", "docs/process/dex-liquidity-appendix.md"],
+          "sources": ["worker/src/cron/dex-liquidity/**", "worker/src/cron/measured-execution/**", "worker/src/lib/dex-api-token-pricing.ts", "docs/dex-liquidity.md", "docs/process/dex-liquidity-appendix.md"],
           "local": [
             { "path": "docs/dex-liquidity.md", "anchor": "discovery-cron" },
             { "path": "docs/process/dex-liquidity-appendix.md", "anchor": "methodology-versioning" }
@@ -1717,6 +1726,7 @@
         { "path": "docs/architecture.md", "anchor": "adr-2" },
         { "path": "docs/architecture.md", "anchor": "adr-32" },
         { "path": "docs/architecture.md", "anchor": "adr-40" },
+        "docs/process/architecture-appendix.md",
         { "path": "docs/data-flow-map.md", "anchor": "publication-and-consumer-flows" }
       ],
       "alsoRead": ["shared/AGENTS.md"],

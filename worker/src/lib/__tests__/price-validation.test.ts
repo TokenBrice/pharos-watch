@@ -17,6 +17,8 @@ vi.mock("@shared/lib/stablecoins/worker-runtime-registry", () => {
 import {
   buildPriceReasonablenessOptions,
   buildPriceValidationContext,
+  getFreshReferencePriceForContext,
+  getReferencePriceForContext,
   isReasonablePrice,
   isSevereFixedPegDownside,
   loadPriceValidationReferences,
@@ -224,6 +226,57 @@ describe("loadPriceValidationReferences", () => {
 
     expect(result.type).toBe("fresh");
     expect(result.typeByPeg).toEqual({ peggedEUR: "fresh" });
+    expect(getFreshReferencePriceForContext(buildPriceValidationContext({ pegCurrency: "EUR" }), result, nowSec)).toBe(1.08);
+    expect(result.updatedAtByPeg?.peggedEUR).toBe(nowSec - (16 * 3600));
+    const laterClock = Date.parse("2026-03-12T17:00:00Z") / 1000;
+    expect(getFreshReferencePriceForContext(buildPriceValidationContext({ pegCurrency: "EUR" }), result, laterClock)).toBeNull();
+  });
+});
+
+describe("score-bearing reference fallback admission", () => {
+  const clock = Date.parse("2026-03-11T08:00:00Z") / 1000;
+  const context = buildPriceValidationContext({ pegCurrency: "EUR" });
+  const references: PriceValidationReferences = {
+    rates: { peggedEUR: 1.08 }, type: "stale", updatedAt: clock - 86_400,
+    typeByPeg: { peggedEUR: "fresh" }, updatedAtByPeg: { peggedEUR: clock - 60 },
+    sourceModeByPeg: { peggedEUR: "live" }, sourceCadenceByPeg: { peggedEUR: "intraday" },
+  };
+
+  it("uses per-peg freshness and the original clock across serialized reference generations", () => {
+    const restored = JSON.parse(JSON.stringify(references)) as PriceValidationReferences;
+    expect(getFreshReferencePriceForContext(context, restored, clock)).toBe(1.08);
+    expect(getFreshReferencePriceForContext(context, restored, clock - 60 + 6 * 3600)).toBe(1.08);
+    expect(getFreshReferencePriceForContext(context, restored, clock - 59 + 6 * 3600)).toBeNull();
+    expect(getReferencePriceForContext(context, restored)).toBe(1.08);
+    expect(restored.updatedAtByPeg?.peggedEUR).toBe(clock - 60);
+    const longerBudget = { ...restored, maxAgeSec: 8 * 3600 };
+    expect(getFreshReferencePriceForContext(context, longerBudget, clock - 60 + 8 * 3600)).toBe(1.08);
+    expect(getFreshReferencePriceForContext(context, longerBudget, clock - 59 + 8 * 3600)).toBeNull();
+  });
+
+  it.each<Partial<PriceValidationReferences>>([
+    { typeByPeg: { peggedEUR: "stale" } },
+    { typeByPeg: { peggedEUR: "static" } },
+    { type: "fresh", typeByPeg: {} },
+    { updatedAtByPeg: { peggedEUR: null } },
+    { updatedAtByPeg: { peggedEUR: Number.NaN } },
+    { updatedAtByPeg: { peggedEUR: clock + 1 } },
+    { updatedAtByPeg: { peggedEUR: clock - 8 * 3600 } },
+    { sourceModeByPeg: {} },
+  ])("withholds unproven measured FX without discarding diagnostic values: %j", (override) => {
+    const rejected = { ...references, ...override };
+    expect(getFreshReferencePriceForContext(context, rejected, clock)).toBeNull();
+    expect(getReferencePriceForContext(context, rejected)).toBe(1.08);
+  });
+
+  it("retains nominal USD and correctly scaled fresh commodity references", () => {
+    expect(getFreshReferencePriceForContext(buildPriceValidationContext({ pegCurrency: "USD" }), undefined, clock)).toBe(1);
+    const gold = {
+      ...references, rates: { peggedGOLD: 2_915 }, typeByPeg: { peggedGOLD: "fresh" as const },
+      updatedAtByPeg: { peggedGOLD: clock - 60 }, sourceModeByPeg: { peggedGOLD: "live" as const },
+      sourceCadenceByPeg: { peggedGOLD: "intraday" as const },
+    };
+    expect(getFreshReferencePriceForContext(buildPriceValidationContext({ stablecoinId: "ggbr-goldfish-gold" }), gold, clock)).toBe(2.915);
   });
 });
 

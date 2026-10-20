@@ -318,6 +318,7 @@ export const BASE_OFFCHAIN_ISSUER_ENTRIES: RedemptionBackstopRegistryEntry[] = [
           ? {
               ...entry.config,
               ...documentedBoundSupplyFull("2026-08-18"),
+              outputAssets: ["usdc-circle"],
               // Keep this wording clear of the `feeDescriptionLooksUndisclosed`
               // trigger list in ../shared.ts. The fee-free quota makes the
               // charge variable, so the model stays `documented-variable` with

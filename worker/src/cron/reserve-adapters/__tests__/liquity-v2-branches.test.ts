@@ -514,13 +514,14 @@ describe("fetchLiquityV2BranchReserves BOLD mechanism metrics", () => {
     expect(mechanismCalls.every((call) => call.viaMulticall)).toBe(true);
   });
 
-  it("keeps reserves but leaves redemption unrated when branch redeemability is unreadable", async () => {
+  it("withholds reserves and leaves redemption unrated when fallback receipt identity and redeemability are unreadable", async () => {
     const { result } = await runAdapter("liquity-v2-branches", "bold-liquity", {
       network: boldFallbackNetwork(new Map(boldParams.branches.map((branch) => [branch.name, 1_000_000n * WAD as bigint]))),
       nowSec: NOW,
     });
 
-    expect(result.slices).toHaveLength(3);
+    expect(result.slices).toEqual([{ name: "Unclassified or unavailable reserve residual", pct: 100, risk: "high" }]);
+    expect(result.metadata).toMatchObject({ valuationComplete: false, unknownExposurePct: 100 });
     expect(result.metadata?.collateralizationRatio).toBeUndefined();
     expect(result.metadata?.liquidationCapacityRatio).toBeUndefined();
     expect(result.metadata?.redemption).toBeUndefined();
@@ -528,6 +529,7 @@ describe("fetchLiquityV2BranchReserves BOLD mechanism metrics", () => {
       unreadableRedeemabilityBranches: ["wstETH (Lido)", "WETH", "rETH (Rocket Pool)"],
     });
     expectWarnings(result, [
+      "branch-reserve-book-partial",
       "liquity-v2-mechanism-metrics-unavailable",
       "liquity-v2-redeemability-unavailable",
     ]);
@@ -703,6 +705,8 @@ describe("fetchLiquityV2BranchReserves Beraborrow branches", () => {
         routeStatus: "degraded",
         feeBps: 50,
       },
+      valuationComplete: true,
+      details: { knownReserveValueUsd: 840 },
     });
     expect(metadata.details).toMatchObject({
       branchDebt: expect.arrayContaining([
@@ -728,6 +732,56 @@ describe("fetchLiquityV2BranchReserves Beraborrow branches", () => {
     expect(network.rpcCalls.some((call) =>
       call.contract === pumpBtcBranch.holder.toLowerCase() && call.selector === nectParams.shutdownSelector
     )).toBe(true);
+  });
+
+  it.each([
+    [false, "asset()"],
+    [false, "totalAssets()"],
+    [true, "totalAssets()"],
+    [false, "totalSupply()"],
+    [true, "totalSupply()"],
+    [false, "decimals()"],
+    [true, "decimals()"],
+  ] as const)("withholds the whole book when multicall=%s leaves receipt %s unavailable", async (multicall, selector) => {
+    const network = beraborrowNetwork({ multicall });
+    const contract = selector === "decimals()" ? PUMP_BTC_VAULT_ASSET : pumpBtcBranch.token.address;
+    network.rpc![`${contract}:${selector}`] = null;
+    const { result } = await runAdapter("liquity-v2-branches", "nect-beraborrow", { network, nowSec: NOW });
+
+    expect(result.metadata).toMatchObject({ valuationComplete: false, unknownExposurePct: 100 });
+    expect(result.metadata?.details).toMatchObject({
+      unavailableBranches: [{ name: "pumpBTC", reason: "balance-unavailable" }],
+      knownReserveValueUsd: 40,
+      contextualObservationsOnly: true,
+    });
+    expect(result.slices).toEqual([{ name: "Unclassified or unavailable reserve residual", pct: 100, risk: "high" }]);
+    expectWarningEffect(result, "branch-reserve-book-partial", "degraded");
+  });
+
+  it.each([
+    ["asset()", "0x"],
+    ["asset()", `0x${"01".repeat(12)}${PUMP_BTC_VAULT_ASSET.slice(2)}`],
+    ["totalSupply()", 0n],
+    ["decimals()", 256n],
+  ] as const)("withholds malformed receipt %s rather than using share units", async (selector, value) => {
+    const network = beraborrowNetwork({ multicall: true });
+    const contract = selector === "decimals()" ? PUMP_BTC_VAULT_ASSET : pumpBtcBranch.token.address;
+    network.rpc![`${contract}:${selector}`] = value;
+    const { result } = await runAdapter("liquity-v2-branches", "nect-beraborrow", { network, nowSec: NOW });
+
+    expect(result.metadata).toMatchObject({ valuationComplete: false, unknownExposurePct: 100 });
+    expect(result.slices.some((slice) => slice.name === "pumpBTC")).toBe(false);
+    expectWarningEffect(result, "branch-reserve-book-partial", "degraded");
+  });
+
+  it("keeps an observed zero receipt asset balance distinct from unavailable conversion", async () => {
+    const network = beraborrowNetwork({ multicall: true });
+    network.rpc![`${pumpBtcBranch.token.address}:totalAssets()`] = 0n;
+    const { result } = await runAdapter("liquity-v2-branches", "nect-beraborrow", { network, nowSec: NOW });
+
+    expect(result.metadata?.valuationComplete).toBe(true);
+    expect(result.metadata?.details).toMatchObject({ knownReserveValueUsd: 40, unavailableBranches: [] });
+    expect(result.slices).toEqual([expect.objectContaining({ name: "WBERA", pct: 100 })]);
   });
 
   it("keeps the degraded DefiLlama miss only when no reviewed price path resolves it", async () => {

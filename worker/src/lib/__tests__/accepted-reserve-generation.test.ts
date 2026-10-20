@@ -51,6 +51,23 @@ describe("producer-owned accepted reserve generations", () => {
     expect(accepted?.members).toHaveLength(2);
   });
 
+  it.each(["snapshot", "legacy-state"])("withholds fatal %s evidence from the accepted seal and serialized reload", async (source) => {
+    const h = await harness();
+    const warnings = JSON.stringify([{ code: "fatal-retained", message: "Unusable reserve evidence", severity: "info", effect: "fatal" }]);
+    if (source === "snapshot") {
+      h.sqlite.prepare("UPDATE reserve_composition SET warnings = ?, warning_count = 1").run(warnings);
+    } else {
+      h.sqlite.exec("UPDATE reserve_composition SET attempt_id = NULL, metadata = '{}', warnings = NULL, warning_count = NULL");
+      h.sqlite.prepare(`UPDATE reserve_sync_state SET last_success_attempt_id = NULL, last_attempted_at = last_success_at,
+        last_status = 'ok', warnings = ?, warning_count = 1, metadata = '{"freshnessMode":"not-applicable"}'`).run(warnings);
+    }
+    await sealAcceptedReserveGeneration(h.db, h.identity, "test", h.ids, { status: "ok" }, CLOCK);
+    const accepted = await loadAcceptedReserveGeneration(h.db);
+    expect(accepted.members).toHaveLength(2);
+    expect(accepted.members[0].snapshot).toBeNull();
+    expect(acceptedReserveMetadataMap(accepted, CLOCK).has(ASSET)).toBe(false);
+  });
+
   it.each([
     null, [], "invalid",
     { capacityUsd: 1_000_000, dailyLimitUsd: -1 },

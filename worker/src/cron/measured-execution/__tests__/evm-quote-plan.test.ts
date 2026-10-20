@@ -20,6 +20,7 @@ function plan(index: number, chain: string, blockNumber: number): TestPlan {
     label,
     chain,
     blockNumber,
+    blockHash: `0x${"ab".repeat(32)}`,
     value: index,
     call: {
       label,
@@ -71,6 +72,38 @@ describe("EVM quote-plan executor", () => {
 
     expect(outcomes).toEqual(["ok:0", "ok:1", "ok:2", "ok:3", "ok:4"]);
     expect(peak).toBeLessThanOrEqual(3);
+  });
+
+  it("separates equal block numbers by hash through adaptive fragments and singleton recovery", async () => {
+    const hashA = `0x${"aa".repeat(32)}` as const;
+    const hashB = `0x${"bb".repeat(32)}` as const;
+    const plans = [
+      { ...plan(0, "ethereum", 10), blockHash: hashA },
+      { ...plan(1, "ethereum", 10), blockHash: hashB },
+      { ...plan(2, "ethereum", 10), blockHash: hashA },
+    ];
+    const seen: Array<[string | undefined, string[]]> = [];
+    const outcomes = await executeEvmQuotePlan({
+      plans, outcomes: plans.map(() => "pending"), chainRpcs: new Map(),
+      spec: {
+        batchSize: 8,
+        adaptive: { failedAttemptAccounting: "all", unattemptedResult: "omit", retryFailedCallsIndividually: true },
+        executeMulticall: async ({ calls, blockHash }) => {
+          seen.push([blockHash, calls.map((call) => call.label)]);
+          if (calls.length > 1) return null;
+          return calls.map((call) => ({
+            label: call.label, success: blockHash === hashA, returnData: "0x01" as const,
+          }));
+        },
+        resolveResult: (_item, result) => result.success ? "a" : "b-refused",
+        materializeTransportFailure: () => "unavailable",
+      },
+    });
+    expect(outcomes).toEqual(["a", "b-refused", "a"]);
+    expect(seen).toEqual([
+      [hashA, ["0:target", "2:target"]], [hashA, ["0:target"]], [hashA, ["2:target"]],
+      [hashB, ["1:target"]], [hashB, ["1:target"]],
+    ]);
   });
 
   it("maps labeled results instead of relying on RPC response order", async () => {

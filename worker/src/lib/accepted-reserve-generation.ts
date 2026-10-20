@@ -6,7 +6,7 @@ import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC, resolveLiveReserveSourceAgeBudget
 import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import { sha256Hex } from "./hash";
 import { executeAtomicBatch } from "./db";
-import { LIVE_RESERVE_FRESHNESS_SEC } from "./live-reserves/store-shared";
+import { LIVE_RESERVE_FRESHNESS_SEC, hasFatalReserveWarnings } from "./live-reserves/store-shared";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import type { ReserveSnapshotMetadataRecord } from "./live-reserves/store-shared";
 import { assessReserveSnapshotFreshness, evaluateLiveReserveAdmission, hasScoringEligibleLiveReserveFreshness } from "./live-reserves/store-snapshot-state";
@@ -80,7 +80,7 @@ export async function sealAcceptedReserveGeneration(db: D1Database, identity: Sc
       const adapterKey = WORKER_TRACKED_META_BY_ID.get(row.stablecoin_id)?.liveReservesConfig?.adapter;
       const adapter = adapterKey ? getLiveReserveAdapterDefinition(adapterKey) : undefined;
       let malformed = parsedWarnings.issue != null || selectedWarnings.issue != null ||
-        decodeLiveReserveRedemptionTelemetry(finalMetadata).status === "invalid";
+        hasFatalReserveWarnings(finalWarnings) || decodeLiveReserveRedemptionTelemetry(finalMetadata).status === "invalid";
       const diag = finalMetadata.diag;
       if (diag && Object.prototype.hasOwnProperty.call(diag, "rawSumDeviation") &&
         !LiveReserveDiagnosticsSchema.shape.rawSumDeviation.unwrap().safeParse(diag.rawSumDeviation).success) malformed = true;
@@ -131,7 +131,7 @@ export function acceptedReserveMetadataMap(envelope: AcceptedReserveGeneration, 
   const map = new Map<string, ReserveSnapshotMetadataRecord>();
   for (const member of envelope.members) {
     const snapshot = member.snapshot;
-    if (!snapshot) continue;
+    if (!snapshot || hasFatalReserveWarnings(snapshot.warnings)) continue;
     const admission = evaluateLiveReserveAdmission(snapshot, snapshot, WORKER_TRACKED_META_BY_ID.get(member.stablecoinId), now);
     if (admission.reasons.includes("config-mismatch")) continue;
     map.set(member.stablecoinId, { stablecoinId: member.stablecoinId, fetchedAt: snapshot.fetchedAt, source: snapshot.source, metadata: snapshot.metadata,

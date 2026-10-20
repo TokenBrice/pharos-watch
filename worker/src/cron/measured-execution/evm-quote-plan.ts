@@ -28,6 +28,7 @@ export interface EvmQuotePlanItem {
   label: string;
   chain: string;
   blockNumber: number;
+  blockHash: `0x${string}`;
   call: EvmMulticall3Call;
 }
 
@@ -35,6 +36,7 @@ export interface EvmQuotePlanBatchInput {
   chain: string;
   calls: readonly EvmMulticall3Call[];
   blockNumber: number;
+  blockHash: `0x${string}`;
   chainRpcs: Map<string, ChainRpcConfig>;
   signal?: AbortSignal;
   rpcBudget?: DexMeasuredExecutionRpcBudget;
@@ -47,6 +49,7 @@ export interface EvmQuotePlanSpec<TPlan extends EvmQuotePlanItem, TOutcome> {
     plans: readonly TPlan[];
     chain: string;
     blockNumber: number;
+    blockHash: `0x${string}`;
     chainRpcs: Map<string, ChainRpcConfig>;
     signal?: AbortSignal;
     rpcBudget?: DexMeasuredExecutionRpcBudget;
@@ -78,27 +81,34 @@ export async function executeEvmQuotePlan<TPlan extends EvmQuotePlanItem, TOutco
 
   const plansByChain = new Map<string, TPlan[]>();
   for (const plan of input.plans) {
+    if (!/^0x[0-9a-f]{64}$/.test(plan.blockHash)) {
+      input.outcomes[plan.index] = input.spec.materializeTransportFailure(plan, null);
+      continue;
+    }
     const chainPlans = plansByChain.get(plan.chain) ?? [];
     chainPlans.push(plan);
     plansByChain.set(plan.chain, chainPlans);
   }
 
   await mapWithConcurrency([...plansByChain.entries()], MAX_CONCURRENT_EVM_CHAIN_LANES, async ([chain, chainPlans]) => {
-    const plansByBlock = new Map<number, TPlan[]>();
+    const plansByBlock = new Map<string, TPlan[]>();
     for (const plan of chainPlans) {
-      const blockPlans = plansByBlock.get(plan.blockNumber) ?? [];
+      const blockKey = `${plan.blockNumber}:${plan.blockHash}`;
+      const blockPlans = plansByBlock.get(blockKey) ?? [];
       blockPlans.push(plan);
-      plansByBlock.set(plan.blockNumber, blockPlans);
+      plansByBlock.set(blockKey, blockPlans);
     }
 
     // A chain lane owns one request at a time. Pinned-block groups, batches,
     // adaptive fragments, and singleton retries are therefore all serialized.
-    for (const [blockNumber, blockPlans] of plansByBlock) {
+    for (const blockPlans of plansByBlock.values()) {
+      const { blockNumber, blockHash } = blockPlans[0]!;
       throwIfAborted(input.signal);
       const blockReadiness = await input.spec.beforeBlock?.({
         plans: blockPlans,
         chain,
         blockNumber,
+        blockHash,
         chainRpcs: input.chainRpcs,
         signal: input.signal,
         rpcBudget: input.rpcBudget,
@@ -127,6 +137,7 @@ export async function executeEvmQuotePlan<TPlan extends EvmQuotePlanItem, TOutco
                   chain: requestChain,
                   calls: requestCalls,
                   blockNumber: requestBlock,
+                  blockHash,
                   chainRpcs: input.chainRpcs,
                   signal,
                   rpcBudget: input.rpcBudget,
@@ -170,6 +181,7 @@ export async function executeEvmQuotePlan<TPlan extends EvmQuotePlanItem, TOutco
             chain,
             calls,
             blockNumber,
+            blockHash,
             chainRpcs: input.chainRpcs,
             signal: input.signal,
             rpcBudget: input.rpcBudget,
@@ -243,9 +255,10 @@ export function createEvmQuotePlanMulticallExecutor(options: {
   /** Split reviewed multi-call quote aggregates on deterministic OOG; singleton failover is unchanged. */
   splitOnExecutionBudgetError?: boolean;
 }): (input: EvmQuotePlanBatchInput) => Promise<EvmMulticall3Result[] | null> {
-  return ({ chain, calls, blockNumber, chainRpcs, signal, rpcBudget, onBudgetStop }) =>
+  return ({ chain, calls, blockNumber, blockHash, chainRpcs, signal, rpcBudget, onBudgetStop }) =>
     fetchEvmMulticall3Aggregate3AtBlock(chain, calls, blockNumber, {
       chainRpcs,
+      stateBlockHash: blockHash,
       signal,
       timeoutMs: DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
       ...(rpcBudget ? { deadlineMs: rpcBudget.deadlineMs } : {}),
@@ -273,11 +286,12 @@ export function buildEvmSingleCallQuotePlans<
     callData: `0x${string}`;
     target: { chain: string };
   },
->(encoded: readonly (TEncoded | null)[], blockNumber: number): Array<TEncoded & EvmQuotePlanItem> {
+>(encoded: readonly (TEncoded | null)[], blockNumber: number, blockHash: `0x${string}`): Array<TEncoded & EvmQuotePlanItem> {
   return encoded.flatMap((request) => request ? [{
     ...request,
     chain: request.target.chain,
     blockNumber,
+    blockHash,
     call: {
       label: request.label,
       target: request.endpointAddress,

@@ -103,6 +103,7 @@ export function profile(nowSec = 10_000, quotedTarget = target(nowSec), override
     retainedPoolPriceUsdAtQuote: quotedTarget.retainedPoolPriceUsd,
     quotedAt: nowSec - 60,
     blockNumber: 123,
+    blockHash: `0x${"ab".repeat(32)}`,
     executionEndpoint: {
       address: "0x4444444444444444444444444444444444444444",
       codeHash: `0x${"ab".repeat(32)}`,

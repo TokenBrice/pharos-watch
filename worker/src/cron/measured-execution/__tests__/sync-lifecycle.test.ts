@@ -5,13 +5,15 @@ import type * as Admission from "../admission";
 import type * as EvmRpc from "../../../lib/evm-rpc";
 import type * as Quoter from "../quoter-v2";
 import type * as Registry from "../registry";
+import type * as CryptoSwap from "../curve-cryptoswap";
+import { makeMeasuredTarget } from "@shared/test-utils/measured-execution.test-support";
 import type { DexMeasuredQuoteOutcome } from "../persistence";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 import { makeV3Target } from "./measured-execution.test-support";
 import { syncDexMeasuredExecution, syncDexShadowMeasuredExecution } from "../sync";
 
 const mocks = vi.hoisted(() => ({
-  load: vi.fn(), publish: vi.fn(), block: vi.fn(), header: vi.fn(), verify: vi.fn(), bindings: vi.fn(), quotes: vi.fn(),
+  load: vi.fn(), publish: vi.fn(), block: vi.fn(), header: vi.fn(), verify: vi.fn(), bindings: vi.fn(), quotes: vi.fn(), cryptoVerify: vi.fn(),
 }));
 vi.mock("../persistence", async (importOriginal) => ({
   ...await importOriginal<typeof Persistence>(),
@@ -45,12 +47,17 @@ vi.mock("../quoter-v2", async (importOriginal) => ({
   quoteQuoterV2Requests: mocks.quotes,
   validateQuoterV2ProfileProof: vi.fn(() => []),
 }));
+vi.mock("../curve-cryptoswap", async (importOriginal) => ({
+  ...await importOriginal<typeof CryptoSwap>(),
+  verifyCurveCryptoSwapDeployment: mocks.cryptoVerify,
+}));
 
 beforeEach(() => {
   mocks.load.mockReset();
   mocks.block.mockReset().mockResolvedValue(null);
   mocks.header.mockReset().mockResolvedValue(null);
   mocks.verify.mockReset().mockResolvedValue({ ok: true, codeHash: `0x${"ab".repeat(32)}` });
+  mocks.cryptoVerify.mockReset().mockResolvedValue({ ok: false, reason: "ng-kill-probe-unavailable" });
   mocks.bindings.mockReset().mockImplementation(async ({ requests }: Parameters<typeof Quoter.resolveQuoterV2PoolBindings>[0]) =>
     requests.map(({ target, factoryAddress, factoryCodeHash }) => ({ proof: {
       factoryAddress, factoryCodeHash, resolvedPoolAddress: target.poolId.split(":")[1],
@@ -116,6 +123,13 @@ describe("measured EVM source-header admission", () => {
     const outcome = publication.outcomes[0] as DexMeasuredQuoteOutcome;
     expect(outcome.status).toBe("measured");
     expect(outcome.profile?.quotedAt).toBe(now - age);
+    expect(outcome.profile?.blockHash).toBe(`0x${"ab".repeat(32)}`);
+    for (const read of [mocks.verify, mocks.bindings, mocks.quotes]) {
+      expect(read.mock.calls.length).toBeGreaterThan(0);
+      for (const [request] of read.mock.calls) {
+        expect(request).toMatchObject({ blockNumber, blockHash: `0x${"ab".repeat(32)}` });
+      }
+    }
     expect(publication.quotedAt).toBe(now);
     expect(mocks.header).toHaveBeenCalledWith("ethereum", blockNumber, expect.any(Object));
     expect(validateDexMeasuredExecutionProfile({
@@ -124,6 +138,48 @@ describe("measured EVM source-header admission", () => {
       expectedQuoteGenerationId: publication.generationId,
       nowSec: now - age + DEX_MEASURED_FRESHNESS_MAX_SEC + 1,
     })).toContain("stale-observation");
+  });
+
+  it("does not accept a replacement canonical hash at the same number after verification", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    const target = makeV3Target({ capturedAt: now - 60 });
+    const hashA = `0x${"ab".repeat(32)}`;
+    const hashB = `0x${"cd".repeat(32)}`;
+    mocks.load.mockResolvedValue(catalog([target]));
+    mocks.block.mockResolvedValue(blockNumber);
+    mocks.header.mockResolvedValue({ number: blockNumber, timestamp: now - 30, hash: hashA });
+    mocks.verify.mockImplementation(async () => {
+      mocks.header.mockResolvedValue({ number: blockNumber, timestamp: now - 30, hash: hashB });
+      return { ok: true, codeHash: hashA };
+    });
+    mocks.bindings.mockResolvedValue([{ failureReason: "factory-pool-rpc-unavailable" }]);
+    await syncDexMeasuredExecution(makeNoopD1(), new Map());
+    expect(mocks.bindings).toHaveBeenCalledWith(expect.objectContaining({ blockNumber, blockHash: hashA }));
+    expect(mocks.header).toHaveBeenCalledTimes(1);
+    expect(mocks.quotes).not.toHaveBeenCalled();
+    expect(mocks.publish.mock.calls[0]![0].outcomes[0]).toMatchObject({
+      status: "failed", failureReason: "factory-pool-rpc-unavailable",
+    });
+  });
+
+  it("publishes an unavailable CryptoSwap kill proof as an observed failed attempt, never a measured quote", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    const target = makeMeasuredTarget({
+      stablecoinId: "crvusd-curve", adapterProfileId: "curve-cryptoswap-get-dy-v1", protocol: "curve",
+      poolId: "ethereum:0x313698667d7fdd6789a9bc70821309ff891e729a", capturedAt: now - 60,
+    });
+    mocks.load.mockResolvedValue(catalog([target]));
+    mocks.block.mockResolvedValue(blockNumber);
+    mocks.header.mockResolvedValue({ number: blockNumber, timestamp: now - 30, hash: `0x${"ab".repeat(32)}` });
+    const result = await syncDexMeasuredExecution(makeNoopD1(), new Map());
+    expect(mocks.cryptoVerify).toHaveBeenCalledWith(expect.objectContaining({
+      blockNumber, blockHash: `0x${"ab".repeat(32)}`,
+    }));
+    expect(mocks.publish.mock.calls[0]![0].outcomes).toEqual([expect.objectContaining({
+      status: "failed", failureReason: "ng-kill-probe-unavailable", observedThisRun: true,
+    })]);
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({ failedCount: 1, attemptedFailureCount: 1 });
   });
 });
 

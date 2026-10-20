@@ -15,7 +15,7 @@ import { computeDurabilityScore, computeLiquidityScore, initLiquidityFallbackCou
 import {
   accumulateGlobalAggregate,
   applyPoolVolumeEligibility,
-  applyProtocolCaps,
+  quarantineProtocolTvlOutliers,
   applyRebuiltMetrics,
   classifyCoverage,
   filterRetainedPools,
@@ -31,6 +31,7 @@ import { DEX_LIQUIDITY_SCORING_BATCH_SIZE, DEX_PRICE_STAGE_RETENTION_GENERATIONS
 import { computeDexPrices, type DexPricePersistenceDiagnostics } from "./dex-price-publisher";
 import { canonicalExitRouteScopedKey } from "@shared/types/exit-route-identity";
 import { getMeasuredTargetFunnelGroup, incrementReason, measuredPoolProfileIds, summarizeMeasuredTargetFunnel, type DexRouteRemovalEvidence, type MeasuredTargetFunnel, type MeasuredTargetFunnelGroup } from "./route-telemetry";
+import type { DexLiquidityProtocolTvlQuarantine } from "../../lib/schemas";
 
 export {
   DEX_LIQUIDITY_SCORING_BATCH_SIZE, DEX_PRICE_STAGE_RETENTION_GENERATIONS_PER_RUN,
@@ -48,15 +49,8 @@ function isP4OnlyPausedBalancerPool(pool: LiquidityMetrics["topPools"][number]):
   return gate?.family === "balancer-amm" && gate.reason === "paused-or-swap-disabled";
 }
 
-interface ProtocolCapDiagnostics {
-  cappedPoolCount: number;
-  cappedProtocols: number;
-  reducedTvlUsd: number;
-}
-
-
 interface ScoreDiagnostics {
-  protocolCapReductions: ProtocolCapDiagnostics;
+  protocolTvlQuarantine: DexLiquidityProtocolTvlQuarantine;
   /** Report-only excess above external protocol TVL; never subtracted from retained aggregates. */
   globalProtocolOverCapUsd: number;
   /** Report-only optimistic-default/silent-exclusion counters from the scoring pass. */
@@ -84,7 +78,7 @@ const DEAD_POOL_EXCLUSION_TOP_STABLECOINS = 10;
 
 /**
  * Run-metadata summary of the liquidity v6.92 dead-pool floor. Counts are per
- * (stablecoin, pool) attribution, before protocol caps.
+ * (stablecoin, pool) attribution, before source quarantine.
  */
 export interface DeadPoolExclusionSummary {
   reason: typeof DEAD_POOL_EXCLUSION_REASON;
@@ -205,9 +199,9 @@ export async function computeStablecoinScores(
   let globalTotalTvl = 0;
   let globalPoolCount = 0;
   const globalChains = new Set<string>();
-  const protocolCapDiagnostics: ProtocolCapDiagnostics = { cappedPoolCount: 0, cappedProtocols: 0, reducedTvlUsd: 0 };
   const fallbackCounters = initLiquidityFallbackCounters();
   const preparedRetainedPools = new Map<string, LiquidityMetrics["topPools"]>();
+  const candidatePoolsByStablecoin = new Map<string, LiquidityMetrics["topPools"]>();
   const p4OnlyRetainedPools = new Map<string, LiquidityMetrics["topPools"]>();
   const deadPoolExclusionsByStablecoin: Array<{ stablecoinId: string } & DeadPoolExclusionTally> = [];
 
@@ -220,6 +214,7 @@ export async function computeStablecoinScores(
     // in-window volume (aged/absent readings are null, never decayed or zero).
     applyPoolVolumeEligibility(m.topPools, volumeClock);
     const candidatePools = m.topPools;
+    candidatePoolsByStablecoin.set(id, candidatePools);
     for (const pool of candidatePools) {
       for (const profile of measuredPoolProfileIds(pool)) {
         const group = getMeasuredTargetFunnelGroup(targetFunnelGroups, profile, pool.chain);
@@ -239,12 +234,16 @@ export async function computeStablecoinScores(
       deadPoolTally,
     );
     if (deadPoolTally.poolCount > 0) deadPoolExclusionsByStablecoin.push({ stablecoinId: id, ...deadPoolTally });
-    const capResult = applyProtocolCaps(m.topPools, protocolTvlCaps);
-    protocolCapDiagnostics.cappedPoolCount += capResult.cappedPoolCount;
-    protocolCapDiagnostics.cappedProtocols += capResult.cappedProtocols;
-    protocolCapDiagnostics.reducedTvlUsd += capResult.reducedTvlUsd;
+    preparedRetainedPools.set(id, m.topPools);
+  }
 
-    const retainedPools = m.topPools;
+  const protocolTvlQuarantine = quarantineProtocolTvlOutliers(preparedRetainedPools, protocolTvlCaps);
+  for (const [id, retainedPools] of preparedRetainedPools) {
+    throwIfAborted(signal);
+    const m = metrics.get(id)!;
+    m.topPools = retainedPools;
+    const candidatePools = candidatePoolsByStablecoin.get(id)!;
+    candidatePoolsByStablecoin.delete(id);
     const retainedPoolSet = new Set(retainedPools);
     for (const pool of candidatePools) {
       for (const profile of measuredPoolProfileIds(pool)) {
@@ -293,6 +292,7 @@ export async function computeStablecoinScores(
             ? resolveDexMeasuredTargetForRetainedPool({
                 stablecoinId: id,
                 retainedPoolId: pool.poolId,
+                retainedPoolFingerprint: pool.candidateFingerprint,
                 retainedTvlUsd: pool.tvlUsd,
                 adapterProfileId: "aerodrome-slipstream-quoter-v2",
                 exactTargets: slipstreamMeasuredTargets,
@@ -418,7 +418,7 @@ export async function computeStablecoinScores(
   // made during that stage and cohorts published before consumption are not
   // lookahead. The read ceiling and validators still reject later cohorts and
   // genuinely future source evidence without refreshing any evidence clock.
-  const joinEvidence = await loadDexMeasuredExecutionJoinEvidence(db, signal, {
+  const joinEvidence = await loadDexMeasuredExecutionJoinEvidence(db, routeObservedAt, signal, {
     publishedAtCeilingSec: routeObservedAt,
   });
   const measuredExecutionJoin = joinDexMeasuredExecutionEvidence({
@@ -475,7 +475,7 @@ export async function computeStablecoinScores(
 
     applyRebuiltMetrics(m, rebuilt);
     // Measured windows over the COMPLETE retained set, never the visible top 10;
-    // coverage weighs each pool by its retained (post-cap) scoring TVL.
+    // coverage weighs each pool by its admitted raw TVL.
     const volume = summarizeRetainedPoolVolume(
       retainedPools.map((pool) => ({ reading: pool.volumeReading, tvlUsd: pool.tvlUsd })),
       volumeClock,
@@ -547,7 +547,7 @@ export async function computeStablecoinScores(
 
   // External protocol TVL remains a fraud-observation diagnostic, not a second
   // rewrite of the retained graph. Headline, breakdowns and volume coverage must
-  // all describe the same deduped pools after the existing per-coin controls.
+  // all describe the same deduped pools after named source admission.
   let globalProtocolOverCapUsd = 0;
   for (const [proto, tvl] of Object.entries(globalProtocolTvl)) {
     const cap = protocolTvlCaps.get(proto);
@@ -581,11 +581,7 @@ export async function computeStablecoinScores(
     tvlStabilityMap,
     measuredTargetInventory,
     diagnostics: {
-      protocolCapReductions: {
-        cappedPoolCount: protocolCapDiagnostics.cappedPoolCount,
-        cappedProtocols: protocolCapDiagnostics.cappedProtocols,
-        reducedTvlUsd: protocolCapDiagnostics.reducedTvlUsd,
-      },
+      protocolTvlQuarantine,
       globalProtocolOverCapUsd: Math.round(globalProtocolOverCapUsd),
       fallbackCounters,
       deadPoolExclusions: summarizeDeadPoolExclusions(deadPoolExclusionsByStablecoin),

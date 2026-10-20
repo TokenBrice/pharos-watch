@@ -228,6 +228,34 @@ describe("P4 DEX exit route observations", () => {
     expect(result.coverage.unsupportedReasons["invalidMeasuredExecution:invalid-profile-schema"]).toBe(1);
   });
 
+  it("withholds retained number-only measured profiles independently of the producer", () => {
+    const observedAt = 1_752_560_000;
+    const valid = makeMeasuredProfile(observedAt);
+    const { blockHash: _blockHash, ...legacy } = valid;
+    const pool = retainedMeasuredPool(valid);
+    pool.extra = { ...pool.extra, measuredExecution: legacy as never };
+    const context = { pool, stablecoinId: "usdc-circle", observedAt };
+    expect(validateMeasuredExecutionProfile(legacy as never, context)).toEqual(["invalid-profile-schema"]);
+    const result = buildP4DexExitRouteObservations({ ...context, retainedPools: [pool] });
+    expect(result.observations).toEqual([]);
+    expect(result.coverage.unsupportedReasons["invalidMeasuredExecution:invalid-profile-schema"]).toBe(1);
+  });
+
+  it.each(["v4", "ng"] as const)("rejects incoherent %s source chain/number/hash provenance", (kind) => {
+    const observedAt = 1_752_560_000;
+    const valid = kind === "v4" ? uniswapV4MeasuredProfile(observedAt) : curveStableSwapNgMeasuredProfile(observedAt);
+    const pool = retainedMeasuredPool(valid);
+    const context = { pool, stablecoinId: valid.tokenIn.trackedAssetId!, observedAt };
+    expect(validateMeasuredExecutionProfile(valid, context)).toEqual([]);
+    for (const profile of [
+      { ...valid, chain: "base" },
+      { ...valid, blockNumber: valid.blockNumber + 1 },
+      { ...valid, blockHash: `0x${"ef".repeat(32)}` },
+    ]) {
+      expect(validateMeasuredExecutionProfile(profile, context).length).toBeGreaterThan(0);
+    }
+  });
+
   it.each([
     ["history-before-selected-quote", (profile: DexMeasuredExecutionPublicProfile) => {
       profile.observationHistory!.observationWindowEndedAt = profile.quotedAt - 1;
