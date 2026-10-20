@@ -1,6 +1,6 @@
 import { WORKER_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { TELEGRAM_ALERT_FAMILIES } from "@shared/lib/telegram-alert-families";
-import type { TelegramAlertType } from "@shared/types/status/telegram";
+import type { TelegramAlertType, TelegramDewsBand, TelegramSafetyMode } from "@shared/types/status/telegram";
 import { TELEGRAM_COMMAND_REFERENCE } from "@shared/lib/telegram-bot-registration";
 import type { ResolvedCoin } from "../common/alerts-parser";
 import { DISAMBIGUATION_TTL_SEC } from "../common/constants";
@@ -220,8 +220,8 @@ export interface SetupWizardState {
 export const SETUP_PENDING_ACTION_TYPE = "setup-step";
 
 export type ParsedSetCommand =
-  | { ticker: string; setting: "dews"; enabled: boolean; minBand: "WARNING" | "DANGER" | null }
-  | { ticker: string; setting: "safety"; enabled: boolean; mode: "downgrade-only" | "upgrade-only" | null }
+  | { ticker: string; setting: "dews"; enabled: boolean; minBand: TelegramDewsBand | null }
+  | { ticker: string; setting: "safety"; enabled: boolean; mode: TelegramSafetyMode | null }
   | { ticker: string; setting: "launch"; enabled: boolean }
   | { ticker: string; setting: "reserve"; enabled: boolean }
   | { ticker: string; setting: "freeze"; enabled: boolean }

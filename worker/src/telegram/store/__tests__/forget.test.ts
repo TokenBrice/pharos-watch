@@ -346,6 +346,7 @@ describe("migrateTelegramChatId", () => {
     );
 
     await migrateTelegramChatId(db, oldChatId, newChatId);
+    await migrateTelegramChatId(db, oldChatId, newChatId);
 
     for (const table of CHAT_ROW_MERGE_TABLES) {
       const actual = sqlite
@@ -355,6 +356,35 @@ describe("migrateTelegramChatId", () => {
         expectedRows.get(table),
       );
     }
+  });
+
+  it.each([
+    [0, 0, 0, 8, 20, 8],
+    [1, 0, 6, 22, 6, 8],
+    [0, 1, 7, 8, 20, 9],
+    [1, 1, 20, 8, 20, 22],
+  ])("preserves paired quiet hours and generation arithmetic (%s, %s, %s)", async (
+    oldEnabled, newEnabled, oldGeneration, start, end, generation,
+  ) => {
+    const { sqlite, db } = setupChatMigrationSqlite();
+    for (const [chatId, enabled, hour, until, first, gen] of [
+      ["-123", oldEnabled, 22, 6, 100, oldGeneration],
+      ["-100123", newEnabled, 8, 20, null, 7],
+    ] as const) insertRow(sqlite, "telegram_subscribers", {
+      chat_id: chatId, created_at: 100, last_active_at: 200,
+      quiet_hours_enabled: enabled, quiet_hours_start_utc: hour, quiet_hours_end_utc: until,
+      preference_generation: gen, consecutive_block_first_at: first,
+      first_follow_at: first, first_setup_completed_at: first, alert_snooze_until_ts: 0,
+    });
+    const destination = sqlite.prepare("SELECT * FROM telegram_subscribers WHERE chat_id = ?").get("-100123");
+    await migrateTelegramChatId(db, "-123", "-100123");
+    await migrateTelegramChatId(db, "-123", "-100123");
+    expect(sqlite.prepare("SELECT * FROM telegram_subscribers").all()).toEqual([{
+      ...destination, quiet_hours_enabled: Math.max(oldEnabled, newEnabled),
+      quiet_hours_start_utc: start, quiet_hours_end_utc: end, preference_generation: generation,
+      consecutive_block_first_at: 100, first_follow_at: 100, first_setup_completed_at: 100,
+      alert_snooze_until_ts: null,
+    }]);
   });
 
   it("merges conflicting group rows in SQLite and is idempotent", async () => {
@@ -505,7 +535,13 @@ describe("migrateTelegramChatId", () => {
     );
 
     await migrateTelegramChatId(db, oldChatId, newChatId);
+    const firstMigrationRows = CHAT_ROW_MERGE_TABLES.map((table) =>
+      sqlite.prepare(`SELECT * FROM ${quoteSqlIdentifier(table)} ORDER BY chat_id`).all(),
+    );
     await migrateTelegramChatId(db, oldChatId, newChatId);
+    expect(CHAT_ROW_MERGE_TABLES.map((table) =>
+      sqlite.prepare(`SELECT * FROM ${quoteSqlIdentifier(table)} ORDER BY chat_id`).all(),
+    )).toEqual(firstMigrationRows);
 
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_subscribers WHERE chat_id = ?").get(oldChatId))
       .toEqual({ count: 0 });
@@ -515,16 +551,13 @@ describe("migrateTelegramChatId", () => {
       .toEqual({ count: 0 });
 
     expect(sqlite.prepare(`
-      SELECT username, alert_dews, alert_depeg, alert_safety, alert_launch,
-             alert_reserve,
-             global_alert_dews, global_alert_depeg, global_alert_safety, global_alert_launch,
-             global_alert_reserve,
-             quiet_hours_enabled, quiet_hours_start_utc, quiet_hours_end_utc,
-             global_depeg_worsening_bps_step, timezone, alert_snooze_until_ts,
-             consecutive_block_count, consecutive_block_first_at, created_at, last_active_at
-        FROM telegram_subscribers
+      SELECT * FROM telegram_subscribers
        WHERE chat_id = ?
     `).get(newChatId)).toEqual({
+      chat_id: newChatId,
+      alert_freeze: 0, global_alert_freeze: 0,
+      watcher_active: 1, watcher_ever_active: 1,
+      preference_generation: 2, first_follow_at: null, first_setup_completed_at: null,
       username: "legacy-group",
       alert_dews: 1,
       alert_depeg: 1,
@@ -549,13 +582,10 @@ describe("migrateTelegramChatId", () => {
     });
 
     expect(sqlite.prepare(`
-      SELECT alert_dews, alert_depeg, alert_safety, alert_launch, alert_reserve,
-             alert_dews_override, alert_depeg_override, alert_safety_override,
-             alert_launch_override, alert_reserve_override,
-             dews_min_band, safety_mode, depeg_worsening_bps_step, alert_snooze_until_ts
-        FROM telegram_subscriptions
+      SELECT * FROM telegram_subscriptions
        WHERE chat_id = ? AND stablecoin_id = 'usdc'
     `).get(newChatId)).toEqual({
+      chat_id: newChatId, stablecoin_id: "usdc", alert_freeze: 0, alert_freeze_override: 0,
       alert_dews: 1,
       alert_depeg: 1,
       alert_safety: 1,
@@ -572,12 +602,11 @@ describe("migrateTelegramChatId", () => {
       alert_snooze_until_ts: 900,
     });
     expect(sqlite.prepare(`
-      SELECT alert_dews, alert_depeg, alert_safety, alert_launch, alert_reserve,
-             alert_dews_override, alert_depeg_override, alert_safety_override,
-             alert_launch_override, alert_reserve_override
-        FROM telegram_subscriptions
+      SELECT * FROM telegram_subscriptions
        WHERE chat_id = ? AND stablecoin_id = 'dai'
     `).get(newChatId)).toEqual({
+      chat_id: newChatId, stablecoin_id: "dai", alert_freeze: 0, alert_freeze_override: 0,
+      dews_min_band: null, safety_mode: null, depeg_worsening_bps_step: null, alert_snooze_until_ts: null,
       alert_dews: 0,
       alert_depeg: 0,
       alert_safety: 0,
@@ -590,10 +619,10 @@ describe("migrateTelegramChatId", () => {
       alert_reserve_override: 1,
     });
     expect(sqlite.prepare(`
-      SELECT alert_dews, alert_depeg, alert_safety, depeg_worsening_bps_step, created_at, updated_at
-        FROM telegram_preset_subscriptions
+      SELECT * FROM telegram_preset_subscriptions
        WHERE chat_id = ? AND preset_id = 'usd-top25'
     `).get(newChatId)).toEqual({
+      chat_id: newChatId, preset_id: "usd-top25",
       alert_dews: 1,
       alert_depeg: 1,
       alert_safety: 1,
@@ -602,20 +631,20 @@ describe("migrateTelegramChatId", () => {
       updated_at: 300,
     });
     expect(sqlite.prepare(`
-      SELECT action_type, action_payload, initiator_user_id
-        FROM telegram_pending_disambiguation
+      SELECT * FROM telegram_pending_disambiguation
        WHERE chat_id = ?
     `).get(newChatId)).toEqual({
+      chat_id: newChatId, alert_types: "safety", resolved_ids: "[]", ambiguous_ticker: "EUR",
+      candidates: "[]", remaining_tickers: "[]", expires_at: 1_700_001_500,
       action_type: "subscribe",
       action_payload: "{\"new\":true}",
       initiator_user_id: "43",
     });
     expect(sqlite.prepare(`
-      SELECT last_successful_delivery_at, last_successful_reply_at,
-             last_delivery_attempt_at, recent_failure_class, updated_at
-        FROM telegram_chat_delivery_diagnostics
+      SELECT * FROM telegram_chat_delivery_diagnostics
        WHERE chat_id = ?
     `).get(newChatId)).toEqual({
+      chat_id: newChatId,
       last_successful_delivery_at: 500,
       last_successful_reply_at: 700,
       last_delivery_attempt_at: 800,

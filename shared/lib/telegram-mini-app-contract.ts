@@ -1,5 +1,11 @@
 import { z } from "zod";
-import { TELEGRAM_ALERT_TYPES, type TelegramAlertType } from "../types/status/telegram";
+import {
+  TELEGRAM_ALERT_TYPES,
+  TelegramDewsBandSchema,
+  TelegramDepegStepBpsSchema,
+  TelegramSafetyModeSchema,
+  type TelegramAlertType,
+} from "../types/status/telegram";
 import { fnv1a32Hex } from "./fnv1a";
 import { TELEGRAM_MINI_APP_CATALOG_VERSION } from "./telegram-mini-app-catalog";
 import { TELEGRAM_PRESET_IDS } from "./telegram-presets";
@@ -49,9 +55,6 @@ export function isTelegramMiniAppErrorCode(value: unknown): value is TelegramMin
 }
 
 const TelegramAlertTypeSchema = z.enum(TELEGRAM_ALERT_TYPES);
-const TelegramDewsBandSchema = z.enum(["ALERT", "WARNING", "DANGER"]);
-const TelegramDepegStepBpsSchema = z.union([z.literal(100), z.literal(250), z.literal(500)]);
-const TelegramSafetyModeSchema = z.enum(["all", "downgrade-only", "upgrade-only"]);
 const TelegramPresetIdSchema = z.enum(TELEGRAM_PRESET_IDS);
 
 const NullableDepegStepSchema = TelegramDepegStepBpsSchema.nullable();

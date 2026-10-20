@@ -26,6 +26,100 @@ function recordDiagnostic(
 }
 
 describe("telegram usage analytics", () => {
+  it.each(["empty", "direct", "global", "preset", "mixed"])(
+    "matches the previous lifecycle SQL for every family mask from %s sources",
+    async (source) => {
+      const { sqlite, db } = fixtures.open();
+      const subscriber = sqlite.prepare(`INSERT INTO telegram_subscribers
+        (chat_id, created_at, last_active_at, global_alert_dews, global_alert_depeg,
+         global_alert_safety, global_alert_launch, global_alert_reserve, global_alert_freeze)
+        VALUES (?, 1, 1, ?, ?, ?, ?, ?, ?)`);
+      const direct = sqlite.prepare(`INSERT INTO telegram_subscriptions
+        (chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch, alert_reserve, alert_freeze)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`);
+      const preset = sqlite.prepare(`INSERT INTO telegram_preset_subscriptions
+        (chat_id, preset_id, created_at, updated_at, alert_dews, alert_depeg, alert_safety)
+        VALUES (?, 'mcap-ge-1b', 1, 1, ?, ?, ?)`);
+      for (let mask = 0; source !== "empty" && mask < 64; mask++) {
+        const flags = Array.from({ length: 6 }, (_, index) => (mask >> index) & 1);
+        const chat = `${source}-${mask}`;
+        subscriber.run(chat, ...flags.map((flag, index) =>
+          source === "global" || (source === "mixed" && index % 2 === 1) ? flag : 0));
+        if (source === "direct" || source === "mixed") {
+          const directFlags = flags.map((flag, index) => source === "direct" || index % 2 === 0 ? flag : 0);
+          direct.run(chat, "coin-a", ...directFlags);
+          if (source === "mixed") direct.run(chat, "coin-b", ...directFlags);
+        }
+        if (source === "preset" || source === "mixed") preset.run(chat, ...flags.slice(0, 3));
+      }
+      // Independent pre-refactor predicates and rollups; no production SQL builders in the oracle.
+      const previous = sqlite.prepare(`WITH sub AS (
+        SELECT chat_id, MAX(alert_dews = 1) AS dews_enabled, MAX(alert_depeg = 1) AS depeg_enabled,
+          MAX(alert_safety = 1) AS safety_enabled, MAX(alert_launch = 1) AS launch_enabled,
+          MAX(alert_reserve = 1) AS reserve_enabled, MAX(alert_freeze = 1) AS freeze_enabled
+        FROM telegram_subscriptions GROUP BY chat_id
+      ), preset AS (
+        SELECT chat_id, MAX(alert_dews = 1) AS dews_enabled, MAX(alert_depeg = 1) AS depeg_enabled,
+          MAX(alert_safety = 1) AS safety_enabled FROM telegram_preset_subscriptions
+        WHERE alert_dews = 1 OR alert_depeg = 1 OR alert_safety = 1 GROUP BY chat_id
+      ), enabled AS (
+        SELECT
+          COALESCE(sub.dews_enabled, 0) = 1 OR COALESCE(preset.dews_enabled, 0) = 1 OR s.global_alert_dews = 1 AS dews,
+          COALESCE(sub.depeg_enabled, 0) = 1 OR COALESCE(preset.depeg_enabled, 0) = 1 OR s.global_alert_depeg = 1 AS depeg,
+          COALESCE(sub.safety_enabled, 0) = 1 OR COALESCE(preset.safety_enabled, 0) = 1 OR s.global_alert_safety = 1 AS safety,
+          COALESCE(sub.launch_enabled, 0) = 1 OR s.global_alert_launch = 1 AS launch,
+          COALESCE(sub.reserve_enabled, 0) = 1 OR s.global_alert_reserve = 1 AS reserve,
+          COALESCE(sub.freeze_enabled, 0) = 1 OR s.global_alert_freeze = 1 AS freeze
+        FROM telegram_subscribers s LEFT JOIN sub ON sub.chat_id = s.chat_id
+        LEFT JOIN preset ON preset.chat_id = s.chat_id
+      ) SELECT SUM(dews) AS dews, SUM(depeg) AS depeg, SUM(safety) AS safety,
+        SUM(launch) AS launch, SUM(reserve) AS reserve, SUM(freeze) AS freeze,
+        SUM(CASE WHEN dews AND depeg AND safety AND launch AND reserve AND freeze THEN 1 ELSE 0 END) AS allTypes
+        FROM enabled`).get()!;
+      const snapshot = await computeTelegramCurrentLifecycleSnapshot(db, 1_771_833_600, { pendingDeliveryCount: 0 });
+      expect(snapshot.alertTypeOptIns).toEqual(Object.fromEntries(
+        Object.entries(previous).map(([family, count]) => [family, Number(count ?? 0)]),
+      ));
+      expect(snapshot.activeWatchers).toBe(source === "empty" ? 0 : source === "preset" ? 56 : 63);
+      expect(snapshot.explicitCoinFollows).toBe(source === "direct" ? 63 : source === "mixed" ? 112 : 0);
+      expect(snapshot.activePresetFollowers).toBe(source === "preset" || source === "mixed" ? 56 : 0);
+      if (source === "preset" || source === "mixed") {
+        expect(snapshot.unavailableFields).toContain("presetImpliedCoinSubscriptions");
+      }
+    },
+  );
+
+  it("upserts every supported historical column without adding live-only families or overwriting unavailable evidence", async () => {
+    const { sqlite, db } = fixtures.open();
+    const current = await computeTelegramCurrentLifecycleSnapshot(db, 1_771_833_600, { pendingDeliveryCount: 0 });
+    for (const offset of [0, 900]) {
+      const value = offset === 0 ? 10 : 30;
+      await refreshTelegramLifecycleSnapshotIfStale(db, current.snapshotAt + offset, {
+        ...current, snapshotAt: current.snapshotAt + offset, activeWatchers: value,
+        newWatchers: value + 1, churnedWatchers: value + 2, reactivatedWatchers: value + 3,
+        explicitCoinFollows: value + 4, presetImpliedCoinFollows: value + 5, activePresetFollowers: value + 6,
+        alertTypeOptIns: { dews: value + 7, depeg: value + 8, safety: value + 9, launch: value + 10,
+          reserve: 101, freeze: 102, allTypes: 103 },
+        quietHoursEnabledChats: value + 11, pendingDeliveries: value + 12,
+      });
+      expect(sqlite.prepare("SELECT * FROM telegram_watcher_lifecycle_daily").all()).toEqual([{
+        day: current.day, snapshot_at: current.snapshotAt + offset, active_watchers: value,
+        new_watchers: value + 1, churned_watchers: value + 2, reactivated_watchers: value + 3,
+        explicit_coin_follows: value + 4, preset_implied_coin_follows: value + 5, active_preset_followers: value + 6,
+        active_dews_opt_ins: value + 7, active_depeg_opt_ins: value + 8,
+        active_safety_opt_ins: value + 9, active_launch_opt_ins: value + 10,
+        quiet_hours_enabled_chats: value + 11, pending_deliveries: value + 12,
+      }]);
+    }
+    for (const missing of ["newWatchers", "churnedWatchers", "reactivatedWatchers", "presetImpliedCoinFollows", "pendingDeliveries"]) {
+      await refreshTelegramLifecycleSnapshotIfStale(db, current.snapshotAt + 1_800, {
+        ...current, ...(missing === "pendingDeliveries" ? { unavailableFields: [missing] } : { [missing]: null }),
+      });
+      expect(sqlite.prepare("SELECT snapshot_at, active_watchers FROM telegram_watcher_lifecycle_daily").get())
+        .toEqual({ snapshot_at: current.snapshotAt + 900, active_watchers: 30 });
+    }
+  });
+
   it("includes freeze opt-ins in lifecycle counts and all-family watcher gating", async () => {
     const { sqlite, db } = fixtures.open();
     sqlite.exec(`

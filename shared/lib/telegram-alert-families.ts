@@ -1,4 +1,31 @@
-import { TELEGRAM_ALERT_TYPES, type TelegramAlertType } from "../types/status/telegram";
+import {
+  TELEGRAM_ALERT_TYPES,
+  TELEGRAM_DEWS_BANDS,
+  TELEGRAM_SAFETY_MODES,
+  type TelegramAlertType,
+  type TelegramDewsBand,
+  type TelegramSafetyMode,
+} from "../types/status/telegram";
+
+/** Durable settings callback codes; null/default is deliberately not callback Off ("0"). */
+export const DEWS_BAND_CODES = { A: TELEGRAM_DEWS_BANDS[0], W: TELEGRAM_DEWS_BANDS[1], D: TELEGRAM_DEWS_BANDS[2] } as const;
+export type DewsBandCode = keyof typeof DEWS_BAND_CODES;
+export const SAFETY_MODE_CODES = { a: TELEGRAM_SAFETY_MODES[0], d: TELEGRAM_SAFETY_MODES[1], u: TELEGRAM_SAFETY_MODES[2] } as const;
+export type SafetyModeCode = keyof typeof SAFETY_MODE_CODES;
+export const DEWS_BAND_CODE_BY_VALUE = Object.fromEntries(
+  Object.entries(DEWS_BAND_CODES).map(([code, value]) => [value, code]),
+) as Record<TelegramDewsBand, DewsBandCode>;
+export const SAFETY_MODE_CODE_BY_VALUE = Object.fromEntries(
+  Object.entries(SAFETY_MODE_CODES).map(([code, value]) => [value, code]),
+) as Record<TelegramSafetyMode, SafetyModeCode>;
+
+export function isDewsBandCode(value: string): value is DewsBandCode {
+  return Object.prototype.hasOwnProperty.call(DEWS_BAND_CODES, value);
+}
+
+export function isSafetyModeCode(value: string): value is SafetyModeCode {
+  return Object.prototype.hasOwnProperty.call(SAFETY_MODE_CODES, value);
+}
 
 /**
  * Canonical public manifest for the Telegram alert families (TGB-028).
@@ -109,6 +136,26 @@ export const ACTIVE_SUBSCRIPTION_FLAGS_SQL = activeFlagConditions(
 export const ACTIVE_PRESET_FLAGS_SQL = activeFlagConditions(
   PRESET_ALERT_TYPES.map((alertType) => TELEGRAM_ALERT_PERSISTENCE[alertType].subscriptionColumn),
 );
+
+/** Per-chat lifecycle opt-ins; requires subscriber s and family rollups sub/preset. */
+const LIFECYCLE_OPT_IN_PREDICATES_SQL = TELEGRAM_ALERT_TYPES.map((alertType) => ({
+  alertType,
+  predicate: [
+    `COALESCE(sub.${alertType}_enabled, 0) = 1`,
+    ...((PRESET_ALERT_TYPES as readonly TelegramAlertType[]).includes(alertType)
+      ? [`COALESCE(preset.${alertType}_enabled, 0) = 1`]
+      : []),
+    `s.${TELEGRAM_ALERT_PERSISTENCE[alertType].globalColumn} = 1`,
+  ].join(" OR "),
+}));
+
+export const TELEGRAM_LIFECYCLE_OPT_IN_PROJECTIONS_SQL = [
+  ...LIFECYCLE_OPT_IN_PREDICATES_SQL.map(({ alertType, predicate }) =>
+    `SUM(CASE WHEN ${predicate} THEN 1 ELSE 0 END) AS active_${alertType}_opt_ins`,
+  ),
+  `SUM(CASE WHEN ${LIFECYCLE_OPT_IN_PREDICATES_SQL
+    .map(({ predicate }) => `(${predicate})`).join(" AND ")} THEN 1 ELSE 0 END) AS active_all_types_opt_ins`,
+].join(",\n           ");
 
 export interface ActiveFamilyAggregateQueryOptions {
   /** Extra status-only projections such as total row counts or preference totals. */

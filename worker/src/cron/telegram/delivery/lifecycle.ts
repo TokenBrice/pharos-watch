@@ -84,28 +84,6 @@ export async function handleBlockedChat(
   return registerSubscriberBlockAndMaybeDisable(db, chatId, nowSec);
 }
 
-/** Reset the consecutive-block counter on any successful send. */
-export async function resetSubscriberBlockCount(db: D1Database, chatId: string): Promise<void> {
-  try {
-    await db
-      .prepare(
-        `UPDATE telegram_subscribers
-            SET consecutive_block_count = 0,
-                consecutive_block_first_at = NULL
-          WHERE chat_id = ?
-            AND (consecutive_block_count <> 0 OR consecutive_block_first_at IS NOT NULL)`,
-      )
-      .bind(chatId)
-      .run();
-  } catch {
-    logTelegramEvent({
-      message: "Failed to reset block count",
-      action: "reset-block-count",
-      module: "telegram-pending-lifecycle",
-    });
-  }
-}
-
 export async function flushChatSuccessResets(
   db: D1Database,
   chatIds: Iterable<string>,

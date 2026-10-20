@@ -13,7 +13,6 @@ const {
   schedulePerChatBatches,
   sendPhotoToChat,
   sendToChat,
-  sendBatch,
 } = await import("../telegram");
 
 beforeEach(() => {
@@ -437,7 +436,10 @@ describe("answerInlineQuery", () => {
   });
 });
 
-describe("sendBatch", () => {
+describe("schedulePerChatBatches", () => {
+  const sendMessage = (message: { chatId: string; html: string }) =>
+    sendToChat(message.chatId, message.html, "bot-token");
+
   beforeEach(() => {
     fetchSpy = mockFetch([], { requireMatch: true });
   });
@@ -485,7 +487,7 @@ describe("sendBatch", () => {
       })),
     ];
 
-    const sendPromise = sendBatch(messages, "bot-token", 4);
+    const sendPromise = schedulePerChatBatches(messages, 4, sendMessage);
     await vi.waitFor(() => expect(started).toHaveLength(4));
     expect(started).toEqual(["same-chat:chunk-0", "other-a:only-chunk", "other-b:only-chunk", "other-c:only-chunk"]);
 
@@ -536,7 +538,7 @@ describe("sendBatch", () => {
       { chatId: "c", html: "hi", disableNotification: false },
     ];
 
-    const results = await sendBatch(messages, "bot-token", 3);
+    const results = await schedulePerChatBatches(messages, 3, sendMessage);
     expect(results).toHaveLength(3);
     expect(results[0]).toMatchObject({ chatId: "a", ok: true, blocked: false, delivery: "sent" });
     expect(results[1]).toMatchObject({ chatId: "b", ok: false, blocked: true, delivery: "blocked" });
@@ -561,7 +563,7 @@ describe("sendBatch", () => {
       { chatId: "other-chat", html: "<b>Other alert</b>", disableNotification: false },
     ];
 
-    const results = await sendBatch(messages, "bot-token", 4);
+    const results = await schedulePerChatBatches(messages, 4, sendMessage);
 
     expect(fetchSpy).toHaveBeenCalledTimes(2);
     expect(results).toHaveLength(5);
@@ -599,15 +601,15 @@ describe("sendBatch", () => {
         .mockResolvedValueOnce(new Response("failed", { status }))
         .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
 
-      const results = await sendBatch(
+      const results = await schedulePerChatBatches(
         [
           { chatId: "same-chat", html: "chunk-0", disableNotification: false },
           { chatId: "same-chat", html: "chunk-1", disableNotification: false },
           { chatId: "same-chat", html: "chunk-2", disableNotification: false },
           { chatId: "other-chat", html: "other", disableNotification: false },
         ],
-        "bot-token",
         4,
+        sendMessage,
       );
 
       expect(fetchSpy).toHaveBeenCalledTimes(2);
@@ -656,7 +658,7 @@ describe("sendBatch", () => {
       disableNotification: false,
     }));
 
-    const results = await sendBatch(messages, "bot-token", 3);
+    const results = await schedulePerChatBatches(messages, 3, sendMessage);
 
     expect(fetchSpy).toHaveBeenCalledTimes(5);
     expect(results).toHaveLength(5);
@@ -687,7 +689,7 @@ describe("sendBatch", () => {
       disableNotification: false,
     }));
 
-    const results = await sendBatch(messages, "bot-token", 2);
+    const results = await schedulePerChatBatches(messages, 2, sendMessage);
 
     expect(fetchSpy).toHaveBeenCalledTimes(5);
     expect(results).toHaveLength(5);
@@ -702,26 +704,20 @@ describe("sendBatch", () => {
     expect(results.slice(2).every((result) => result.ok && result.attempted === true)).toBe(true);
   });
 
-  it("forwards per-message linkPreviewOptions instead of the default disable flag", async () => {
+  it("sends explicit link-preview options with precedence over the legacy disable flag", async () => {
     fetchSpy
       .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
 
-    const messages = [
-      {
-        chatId: "single-coin",
-        html: "<b>USDC</b> alert",
-        disableNotification: false,
-        linkPreviewOptions: { is_disabled: false, prefer_small_media: true, show_above_text: false },
-      },
-      {
-        chatId: "multi-coin",
-        html: "<b>USDC</b> + <b>USDT</b>",
-        disableNotification: false,
-      },
-    ];
-
-    await sendBatch(messages, "bot-token", 2);
+    await sendToChat("single-coin", "<b>USDC</b> alert", "bot-token", {
+      linkPreviewOptions: { is_disabled: false, prefer_small_media: true, show_above_text: false },
+      disableWebPagePreview: true,
+      disableNotification: true,
+      replyMarkup: { inline_keyboard: [[{ text: "View", callback_data: "view" }]] },
+    });
+    await sendToChat("multi-coin", "<b>USDC</b> + <b>USDT</b>", "bot-token", {
+      disableWebPagePreview: true,
+    });
 
     const firstBody = JSON.parse(fetchSpy.mock.calls[0][1]!.body as string);
     expect(firstBody.link_preview_options).toEqual({
@@ -730,6 +726,8 @@ describe("sendBatch", () => {
       show_above_text: false,
     });
     expect(firstBody.disable_web_page_preview).toBeUndefined();
+    expect(firstBody.disable_notification).toBe(true);
+    expect(firstBody.reply_markup).toEqual({ inline_keyboard: [[{ text: "View", callback_data: "view" }]] });
 
     const secondBody = JSON.parse(fetchSpy.mock.calls[1][1]!.body as string);
     expect(secondBody.disable_web_page_preview).toBe(true);
@@ -740,14 +738,14 @@ describe("sendBatch", () => {
     const controller = new AbortController();
     controller.abort();
 
-    const results = await sendBatch(
+    const results = await schedulePerChatBatches(
       [
         { chatId: "a", html: "hi", disableNotification: false },
         { chatId: "b", html: "hi", disableNotification: false },
       ],
-      "bot-token",
       2,
-      controller.signal,
+      sendMessage,
+      { signal: controller.signal },
     );
 
     expect(fetchSpy).not.toHaveBeenCalled();
@@ -758,14 +756,13 @@ describe("sendBatch", () => {
   it("marks the untouched tail retryable when the soft deadline has elapsed", async () => {
     fetchSpy.mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
 
-    const results = await sendBatch(
+    const results = await schedulePerChatBatches(
       [
         { chatId: "a", html: "hi", disableNotification: false },
         { chatId: "b", html: "hi", disableNotification: false },
       ],
-      "bot-token",
       2,
-      undefined,
+      sendMessage,
       { softDeadlineAtMs: Date.now() - 1 },
     );
 

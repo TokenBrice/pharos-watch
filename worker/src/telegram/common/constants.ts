@@ -16,21 +16,6 @@ import {
   TELEGRAM_PENDING_PRIORITY as SHARED_TELEGRAM_PENDING_PRIORITY,
 } from "@shared/lib/telegram-delivery-policy";
 
-// ---------- Depeg-step subscription values ----------
-
-/** Allowed bps values for the depeg-step subscription setting. */
-export const DEPEG_STEP_VALUES = [100, 250, 500] as const;
-
-export type DepegStepValue = (typeof DEPEG_STEP_VALUES)[number];
-
-/** Type guard for depeg-step values (`100 | 250 | 500`). */
-export function isDepegStepValue(value: unknown): value is DepegStepValue {
-  return (
-    typeof value === "number" &&
-    (DEPEG_STEP_VALUES as readonly number[]).includes(value)
-  );
-}
-
 // ---------- Snooze durations ----------
 
 /** Snooze callback arg → duration in seconds. */

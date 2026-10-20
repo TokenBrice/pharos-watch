@@ -226,17 +226,6 @@ async function sendTelegramPayload(
   }
 }
 
-export interface SendBatchOptions {
-  softDeadlineAtMs?: number;
-  beforeSendBatch?: (
-    entries: readonly ScheduledBatchEntry<BatchMessage>[],
-  ) => Promise<ReadonlyMap<number, PreSendBatchResult> | void>;
-  afterSendBatch?: (
-    entries: readonly ScheduledBatchEntry<BatchMessage>[],
-    results: readonly BatchResult[],
-  ) => Promise<void>;
-}
-
 function classifyCallbackAcknowledgementFailure(statusCode: number): TelegramSendErrorClass {
   if (statusCode === 429) return "rate_limit";
   if (statusCode >= 500) return "server_error";
@@ -305,9 +294,8 @@ export interface BatchMessage {
   chunkIndex?: number;
   /**
    * Pre-split canonical message body used to derive a stable dedupe key for the
-   * pending queue. Optional because send-only paths (e.g. raw `sendBatch` tests)
-   * do not need it, but production routing populates it for every chunk so the
-   * key survives unrelated changes to `splitMessage`.
+   * pending queue. Production routing populates it for every chunk so the key
+   * survives unrelated changes to `splitMessage`; legacy queued rows may omit it.
    */
   canonicalHtml?: string;
   /**
@@ -318,11 +306,9 @@ export interface BatchMessage {
    */
   alertType?: import("@shared/types/status").TelegramAlertType;
   /**
-   * Per-chunk Bot API 7.0+ link-preview override. When set, `sendBatch` forwards
-   * it to `sendToChat`, which takes precedence over the batch-wide
-   * `disable_web_page_preview: true` default. Used by the dispatch router to
-   * enable a small preview card for the "View on Pharos" link on the first
-   * chunk of single-coin alerts.
+   * Per-chunk Bot API 7.0+ link-preview override forwarded by the durable drain
+   * to `sendToChat`. Used by the dispatch router to enable a small preview
+   * card for the "View on Pharos" link on the first chunk of single-coin alerts.
    */
   linkPreviewOptions?: LinkPreviewOptions;
   /** Immutable source identity for queued risk-alert provenance. */
@@ -539,43 +525,6 @@ export async function schedulePerChatBatches<T extends { chatId: string }>(
     if (result) return result;
     return buildUnsentRetryResult(items[index].chatId, "unknown", null);
   });
-}
-
-/**
- * Send messages serially within each chat and concurrently across distinct
- * chats. Concurrency stays <= 6 to match the repo's conservative outbound-request budget.
- * Individual send failures are caught by `sendToChat`; one failed chat does
- * not abort other chat queues. Results retain the original input order.
- */
-export async function sendBatch(
-  messages: BatchMessage[],
-  botToken: string,
-  batchSize: number,
-  signal?: AbortSignal,
-  options: SendBatchOptions = {},
-): Promise<BatchResult[]> {
-  const softDeadlineAtMs = Number.isFinite(options.softDeadlineAtMs)
-    ? options.softDeadlineAtMs
-    : null;
-  return schedulePerChatBatches(
-    messages,
-    batchSize,
-    (msg) =>
-      sendToChat(msg.chatId, msg.html, botToken, {
-        // Caller-supplied preview options win; otherwise default to no preview
-        // for batch alert sends to keep the message dense on mobile.
-        ...(msg.linkPreviewOptions ? { linkPreviewOptions: msg.linkPreviewOptions } : { disableWebPagePreview: true }),
-        disableNotification: msg.disableNotification,
-        replyMarkup: msg.replyMarkup,
-        signal,
-      }),
-    {
-      signal,
-      softDeadlineAtMs,
-      beforeSendBatch: options.beforeSendBatch,
-      afterSendBatch: options.afterSendBatch,
-    },
-  );
 }
 
 export interface EditMessageOpts {

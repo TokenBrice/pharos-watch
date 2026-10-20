@@ -2,6 +2,22 @@ import type { DispatchSourceData, DispatchSnapshotState } from "../../dispatch/d
 import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../../../../lib/safety-score-v9/consumer-freshness";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import type { DepegSnapshot } from "../telegram-alert-snapshots";
+import type { AlertSafetySourceRow } from "@shared/types/status/telegram";
+
+export function makeAlertSafetySourceRow(overrides: Partial<AlertSafetySourceRow> = {}): AlertSafetySourceRow {
+  return {
+    grade: "A", score: 90, ratingStatus: "rated", partialEvidence: null, methodologyVersion: "v1",
+    v9Explain: {
+      reasons: [], bindingCap: null, weakestPillar: null,
+      pillars: {
+        backing: { score: 90, evidenceLevel: "adequate", freshness: "current" },
+        exit: { score: 90, evidenceLevel: "adequate", freshness: "current" },
+        control: { score: 90, evidenceLevel: "adequate", freshness: "current" },
+      },
+    },
+    ...overrides,
+  };
+}
 
 export function eventSources(overrides: Partial<DispatchSourceData> = {}): DispatchSourceData {
   return {

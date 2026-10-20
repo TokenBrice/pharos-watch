@@ -343,6 +343,85 @@ function preparePresetInsertStatements(
   return statements;
 }
 
+function prepareGuardedDeletes(
+  db: D1Database,
+  chatId: string,
+  generationLease: number,
+  table: "telegram_subscriptions" | "telegram_preset_subscriptions",
+  column: "stablecoin_id" | "preset_id",
+  ids: readonly string[],
+): D1PreparedStatement[] {
+  const statements: D1PreparedStatement[] = [];
+  const chunkSize = D1_MAX_BOUND_PARAMETERS - 3;
+  for (let index = 0; index < ids.length; index += chunkSize) {
+    const chunk = ids.slice(index, index + chunkSize);
+    const placeholders = chunk.map(() => "?").join(", ");
+    // SAFETY: table and column are closed internal literal unions; values use D1 binds.
+    statements.push(db.prepare(`
+      DELETE FROM ${table}
+       WHERE chat_id = ? AND ${column} IN (${placeholders})
+         AND EXISTS (
+           SELECT 1 FROM telegram_subscribers
+            WHERE chat_id = ? AND preference_generation = ?
+         )
+    `).bind(chatId, ...chunk, chatId, generationLease));
+  }
+  return statements;
+}
+
+async function executeGenerationFencedWatchlistMutation(
+  db: D1Database,
+  input: {
+    chatId: string;
+    adoption?: TelegramFollowOptions["adoption"];
+    ensureSubscriber?: { username: string | null };
+    expectedPreferenceGeneration: number;
+    generationLease: number;
+    firstFollowFeature?: "direct" | "preset";
+    prepareGuardedStatements: (nowSec: number) => D1PreparedStatement[];
+    unguardedTerminalStatements?: D1PreparedStatement[];
+    unguardedEffectStatements?: D1PreparedStatement[];
+    statementLimitLabel: string;
+  },
+): Promise<"applied" | "stale"> {
+  const nowSec = unixNow();
+  const statements: D1PreparedStatement[] = [
+    ...(input.ensureSubscriber
+      ? [db.prepare(`
+          INSERT OR IGNORE INTO telegram_subscribers (
+            chat_id, username, created_at, last_active_at
+          ) VALUES (?, ?, ?, ?)
+        `).bind(input.chatId, input.ensureSubscriber.username, nowSec, nowSec)]
+      : []),
+    db.prepare(`
+      UPDATE telegram_subscribers
+         SET preference_generation = ?, last_active_at = ?
+       WHERE chat_id = ? AND preference_generation = ?
+    `).bind(input.generationLease, nowSec, input.chatId, input.expectedPreferenceGeneration),
+    ...(input.firstFollowFeature
+      ? prepareTelegramFirstFollowStatements(db, {
+          chatId: input.chatId, username: null, nowSec, adoption: input.adoption,
+          ensureSubscriber: false, feature: input.firstFollowFeature,
+          guard: { sql: "preference_generation = ?", binds: [input.generationLease] },
+        })
+      : []),
+    ...input.prepareGuardedStatements(nowSec),
+    ...(input.unguardedTerminalStatements ?? []),
+    db.prepare(`
+      UPDATE telegram_subscribers
+         SET preference_generation = ?
+       WHERE chat_id = ? AND preference_generation = ?
+    `).bind(input.expectedPreferenceGeneration + 1, input.chatId, input.generationLease),
+    ...(input.unguardedEffectStatements ?? []),
+  ];
+  if (statements.length > D1_BATCH_SIZE) {
+    throw new RangeError(`${input.statementLimitLabel} requires too many atomic statements (${statements.length})`);
+  }
+  const results = await runWithOverloadRetry(() => db.batch(statements), 3);
+  const guardResultIndex = input.ensureSubscriber ? 1 : 0;
+  return Number(results[guardResultIndex]?.meta?.changes ?? 0) > 0 ? "applied" : "stale";
+}
+
 export async function applyWatchlistImportV2(
   db: D1Database,
   input: {
@@ -387,90 +466,46 @@ export async function applyWatchlistImportV2(
   ) {
     throw new Error("Stored watchlist import payload failed confirmation validation");
   }
-  const nowSec = unixNow();
-  const prepareGuardedDeletes = (table: "telegram_subscriptions" | "telegram_preset_subscriptions", column: string, ids: readonly string[]) => {
-    const statements: D1PreparedStatement[] = [];
-    const chunkSize = D1_MAX_BOUND_PARAMETERS - 3;
-    for (let index = 0; index < ids.length; index += chunkSize) {
-      const chunk = ids.slice(index, index + chunkSize);
-      const placeholders = chunk.map(() => "?").join(", ");
-      // SAFETY: table is a closed literal union, column is selected internally, and values use D1 binds.
-      statements.push(db.prepare(`
-        DELETE FROM ${table}
-         WHERE chat_id = ? AND ${column} IN (${placeholders})
+  return executeGenerationFencedWatchlistMutation(db, {
+    ...input,
+    statementLimitLabel: "Watchlist import",
+    firstFollowFeature: presetRows.some((row) => row.alertDews || row.alertDepeg || row.alertSafety)
+      ? "preset"
+      : directRows.some((row) => row.alertDews || row.alertDepeg || row.alertSafety || row.alertLaunch || row.alertReserve || row.alertFreeze)
+        ? "direct" : undefined,
+    prepareGuardedStatements: (nowSec) => [
+      ...prepareGuardedDeletes(db, input.chatId, input.generationLease, "telegram_subscriptions", "stablecoin_id", input.directRemoveIds),
+      ...prepareGuardedDeletes(db, input.chatId, input.generationLease, "telegram_preset_subscriptions", "preset_id", input.presetRemoveIds),
+      db.prepare(`
+        DELETE FROM telegram_subscriptions
+         WHERE chat_id = ?
+           AND alert_dews = 0 AND alert_depeg = 0 AND alert_safety = 0
+           AND alert_launch = 0 AND alert_reserve = 0
+           AND alert_freeze = 0
+           AND alert_dews_override = 0 AND alert_depeg_override = 0
+           AND alert_safety_override = 0 AND alert_launch_override = 0
+           AND alert_reserve_override = 0 AND alert_freeze_override = 0
+           AND dews_min_band IS NULL AND safety_mode IS NULL
+           AND depeg_worsening_bps_step IS NULL
+           AND (alert_snooze_until_ts IS NULL OR alert_snooze_until_ts <= ?)
            AND EXISTS (
              SELECT 1 FROM telegram_subscribers
               WHERE chat_id = ? AND preference_generation = ?
            )
-      `).bind(input.chatId, ...chunk, input.chatId, input.generationLease));
-    }
-    return statements;
-  };
-  const guard = db.prepare(`
-    UPDATE telegram_subscribers
-       SET preference_generation = ?, last_active_at = ?
-     WHERE chat_id = ? AND preference_generation = ?
-  `).bind(input.generationLease, nowSec, input.chatId, input.expectedPreferenceGeneration);
-  const statements: D1PreparedStatement[] = [
-    ...(input.ensureSubscriber
-      ? [db.prepare(`
-          INSERT OR IGNORE INTO telegram_subscribers (
-            chat_id, username, created_at, last_active_at
-          ) VALUES (?, ?, ?, ?)
-        `).bind(input.chatId, input.ensureSubscriber.username, nowSec, nowSec)]
-      : []),
-    guard,
-    ...(directRows.some((row) => row.alertDews || row.alertDepeg || row.alertSafety || row.alertLaunch || row.alertReserve || row.alertFreeze)
-      || presetRows.some((row) => row.alertDews || row.alertDepeg || row.alertSafety)
-      ? prepareTelegramFirstFollowStatements(db, {
-          chatId: input.chatId, username: null, nowSec, adoption: input.adoption,
-          ensureSubscriber: false,
-          feature: presetRows.some((row) => row.alertDews || row.alertDepeg || row.alertSafety) ? "preset" : "direct",
-          guard: { sql: "preference_generation = ?", binds: [input.generationLease] },
-        })
-      : []),
-    ...prepareGuardedDeletes("telegram_subscriptions", "stablecoin_id", input.directRemoveIds),
-    ...prepareGuardedDeletes("telegram_preset_subscriptions", "preset_id", input.presetRemoveIds),
-    db.prepare(`
-      DELETE FROM telegram_subscriptions
-       WHERE chat_id = ?
-         AND alert_dews = 0 AND alert_depeg = 0 AND alert_safety = 0
-         AND alert_launch = 0 AND alert_reserve = 0
-         AND alert_freeze = 0
-         AND alert_dews_override = 0 AND alert_depeg_override = 0
-         AND alert_safety_override = 0 AND alert_launch_override = 0
-         AND alert_reserve_override = 0 AND alert_freeze_override = 0
-         AND dews_min_band IS NULL AND safety_mode IS NULL
-         AND depeg_worsening_bps_step IS NULL
-         AND (alert_snooze_until_ts IS NULL OR alert_snooze_until_ts <= ?)
-         AND EXISTS (
-           SELECT 1 FROM telegram_subscribers
-            WHERE chat_id = ? AND preference_generation = ?
-         )
-    `).bind(input.chatId, nowSec, input.chatId, input.generationLease),
-    ...prepareWatchlistDirectInsertStatements(db, input.chatId, input.generationLease, directRows),
-    ...preparePresetInsertStatements(db, input.chatId, input.generationLease, presetRows, nowSec),
+      `).bind(input.chatId, nowSec, input.chatId, input.generationLease),
+      ...prepareWatchlistDirectInsertStatements(db, input.chatId, input.generationLease, directRows),
+      ...preparePresetInsertStatements(db, input.chatId, input.generationLease, presetRows, nowSec),
+    ],
     // Consume this exact preview even when the generation guard is stale. The
     // operation marker commits in the same batch, making stale rejection a
     // terminal, retry-safe outcome while every preference statement remains a no-op.
-    pendingDisambiguationClearStatement(db, input.chatId, {
+    unguardedTerminalStatements: [pendingDisambiguationClearStatement(db, input.chatId, {
       actionType: "confirm-bulk",
       actionPayload: input.pendingActionPayload,
       expiresAt: input.pendingExpiresAt,
-    }),
-    db.prepare(`
-      UPDATE telegram_subscribers
-         SET preference_generation = ?
-       WHERE chat_id = ? AND preference_generation = ?
-    `).bind(input.expectedPreferenceGeneration + 1, input.chatId, input.generationLease),
-    ...(input.operationStatements ?? []),
-  ];
-  if (statements.length > D1_BATCH_SIZE) {
-    throw new RangeError(`Watchlist import requires too many atomic statements (${statements.length})`);
-  }
-  const results = await runWithOverloadRetry(() => db.batch(statements), 3);
-  const guardResultIndex = input.ensureSubscriber ? 1 : 0;
-  return Number(results[guardResultIndex]?.meta?.changes ?? 0) > 0 ? "applied" : "stale";
+    })],
+    unguardedEffectStatements: input.operationStatements,
+  });
 }
 
 /**
@@ -515,74 +550,38 @@ export async function applyWatchlistDirectPatch(
   ) {
     throw new Error("Bulk direct watchlist snooze restoration failed validation");
   }
-  const nowSec = unixNow();
-  const guard = db.prepare(`
-    UPDATE telegram_subscribers
-       SET preference_generation = ?, last_active_at = ?
-     WHERE chat_id = ? AND preference_generation = ?
-  `).bind(input.generationLease, nowSec, input.chatId, input.expectedPreferenceGeneration);
-  const deletes = input.directRemoveIds.length === 0
-    ? []
-    : [db.prepare(`
-        DELETE FROM telegram_subscriptions
-         WHERE chat_id = ? AND stablecoin_id IN (${input.directRemoveIds.map(() => "?").join(", ")})
-           AND EXISTS (
-             SELECT 1 FROM telegram_subscribers
-              WHERE chat_id = ? AND preference_generation = ?
+  return executeGenerationFencedWatchlistMutation(db, {
+    ...input,
+    statementLimitLabel: "Bulk watchlist patch",
+    firstFollowFeature: directRows.some((row) => row.alertDews || row.alertDepeg || row.alertSafety || row.alertLaunch || row.alertReserve || row.alertFreeze)
+      ? "direct" : undefined,
+    prepareGuardedStatements: () => [
+      ...prepareGuardedDeletes(db, input.chatId, input.generationLease, "telegram_subscriptions", "stablecoin_id", input.directRemoveIds),
+      ...prepareWatchlistDirectInsertStatements(db, input.chatId, input.generationLease, directRows),
+      ...(snoozeValues.length === 0 ? [] : [db.prepare(`
+        WITH import_guard AS (
+          SELECT 1 FROM telegram_subscribers WHERE chat_id = ? AND preference_generation = ?
+        ), incoming (stablecoin_id, alert_snooze_until_ts) AS (
+          VALUES ${snoozeValues.map(() => "(?, ?)").join(", ")}
+        )
+        UPDATE telegram_subscriptions
+           SET alert_snooze_until_ts = (
+             SELECT incoming.alert_snooze_until_ts
+               FROM incoming
+              WHERE incoming.stablecoin_id = telegram_subscriptions.stablecoin_id
            )
-      `).bind(input.chatId, ...input.directRemoveIds, input.chatId, input.generationLease)];
-  const statements: D1PreparedStatement[] = [
-    ...(input.ensureSubscriber
-      ? [db.prepare(`
-          INSERT OR IGNORE INTO telegram_subscribers (
-            chat_id, username, created_at, last_active_at
-          ) VALUES (?, ?, ?, ?)
-        `).bind(input.chatId, input.ensureSubscriber.username, nowSec, nowSec)]
-      : []),
-    guard,
-    ...(directRows.some((row) => row.alertDews || row.alertDepeg || row.alertSafety || row.alertLaunch || row.alertReserve || row.alertFreeze)
-      ? prepareTelegramFirstFollowStatements(db, {
-          chatId: input.chatId, username: null, nowSec, feature: "direct", adoption: input.adoption,
-          ensureSubscriber: false,
-          guard: { sql: "preference_generation = ?", binds: [input.generationLease] },
-        })
-      : []),
-    ...deletes,
-    ...prepareWatchlistDirectInsertStatements(db, input.chatId, input.generationLease, directRows),
-    ...(snoozeValues.length === 0 ? [] : [db.prepare(`
-      WITH import_guard AS (
-        SELECT 1 FROM telegram_subscribers WHERE chat_id = ? AND preference_generation = ?
-      ), incoming (stablecoin_id, alert_snooze_until_ts) AS (
-        VALUES ${snoozeValues.map(() => "(?, ?)").join(", ")}
-      )
-      UPDATE telegram_subscriptions
-         SET alert_snooze_until_ts = (
-           SELECT incoming.alert_snooze_until_ts
-             FROM incoming
-            WHERE incoming.stablecoin_id = telegram_subscriptions.stablecoin_id
-         )
-       WHERE chat_id = ?
-         AND stablecoin_id IN (${snoozeValues.map(() => "?").join(", ")})
-         AND EXISTS (SELECT 1 FROM import_guard)
-    `).bind(
-      input.chatId,
-      input.generationLease,
-      ...snoozeValues.flatMap((row) => [row.stablecoinId, row.snoozeUntilTs]),
-      input.chatId,
-      ...snoozeValues.map((row) => row.stablecoinId),
-    )]),
-    db.prepare(`
-      UPDATE telegram_subscribers
-         SET preference_generation = ?
-       WHERE chat_id = ? AND preference_generation = ?
-    `).bind(input.expectedPreferenceGeneration + 1, input.chatId, input.generationLease),
-  ];
-  if (statements.length > D1_BATCH_SIZE) {
-    throw new RangeError(`Bulk watchlist patch requires too many atomic statements (${statements.length})`);
-  }
-  const results = await runWithOverloadRetry(() => db.batch(statements), 3);
-  const guardResultIndex = input.ensureSubscriber ? 1 : 0;
-  return Number(results[guardResultIndex]?.meta?.changes ?? 0) > 0 ? "applied" : "stale";
+         WHERE chat_id = ?
+           AND stablecoin_id IN (${snoozeValues.map(() => "?").join(", ")})
+           AND EXISTS (SELECT 1 FROM import_guard)
+      `).bind(
+        input.chatId,
+        input.generationLease,
+        ...snoozeValues.flatMap((row) => [row.stablecoinId, row.snoozeUntilTs]),
+        input.chatId,
+        ...snoozeValues.map((row) => row.stablecoinId),
+      )]),
+    ],
+  });
 }
 
 export async function watchlistPortableStateMatches(

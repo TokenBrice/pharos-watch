@@ -445,9 +445,10 @@ function decodeV1(cleaned: string): WatchlistTokenDecodeResult {
   return { ok: true, version: 1, state: { coinIds, alertTypes, presetIds } };
 }
 
-async function decodeV2(cleaned: string): Promise<WatchlistTokenDecodeResult> {
+async function decodeCompressed(cleaned: string, version: 2 | 3): Promise<WatchlistTokenDecodeResult> {
   const parts = cleaned.split(".");
-  if (parts.length !== 3 || parts[0] !== V2_PREFIX) return { ok: false, error: "malformed" };
+  const prefix = version === V3_TOKEN_VERSION ? V3_PREFIX : V2_PREFIX;
+  if (parts.length !== 3 || parts[0] !== prefix) return { ok: false, error: "malformed" };
   let compressed: Uint8Array;
   let suppliedDigest: Uint8Array;
   try {
@@ -469,49 +470,21 @@ async function decodeV2(cleaned: string): Promise<WatchlistTokenDecodeResult> {
   if (!parsedResult.ok) return { ok: false, error: "malformed" };
   const parsed = parsedResult.value;
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return { ok: false, error: "malformed" };
-  const body = parsed as Partial<WatchlistTokenV2Body>;
-  if (body.v !== V2_TOKEN_VERSION) return { ok: false, error: "unsupported-version" };
+  const body = parsed as Partial<WatchlistTokenV2Body | WatchlistTokenV3Body>;
+  if (body.v !== version) return { ok: false, error: "unsupported-version" };
   if (typeof body.r !== "string" || body.r.length < 1 || body.r.length > 64) return { ok: false, error: "malformed" };
-  const direct = decodeBinaryRows(body.d, DIRECT_BINARY_ROW_BYTES, DIRECT_ID_BY_HASH, unpackWatchlistDirectState);
+  const direct = version === V3_TOKEN_VERSION
+    ? decodeV3DirectRows(body.d)
+    : decodeBinaryRows(body.d, DIRECT_BINARY_ROW_BYTES, DIRECT_ID_BY_HASH, unpackWatchlistDirectState);
   const presets = decodeBinaryRows(body.p, PRESET_BINARY_ROW_BYTES, PRESET_ID_BY_HASH, unpackWatchlistPresetState);
   if (!direct || !presets) return { ok: false, error: "malformed" };
-  const directIds = new Set(direct.map((row) => row.stablecoinId));
-  const presetIds = new Set(presets.map((row) => row.presetId));
-  if (directIds.size !== direct.length || presetIds.size !== presets.length) return { ok: false, error: "malformed" };
+  if (version === V2_TOKEN_VERSION) {
+    const directIds = new Set(direct.map((row) => row.stablecoinId));
+    const presetIds = new Set(presets.map((row) => row.presetId));
+    if (directIds.size !== direct.length || presetIds.size !== presets.length) return { ok: false, error: "malformed" };
+  }
   if (direct.length === 0 && presets.length === 0) return { ok: false, error: "empty" };
-  return { ok: true, version: 2, state: { registryVersion: body.r, direct, presets } };
-}
-
-async function decodeV3(cleaned: string): Promise<WatchlistTokenDecodeResult> {
-  const parts = cleaned.split(".");
-  if (parts.length !== 3 || parts[0] !== V3_PREFIX) return { ok: false, error: "malformed" };
-  let compressed: Uint8Array;
-  let suppliedDigest: Uint8Array;
-  try {
-    compressed = base64UrlToBytes(parts[1]);
-    suppliedDigest = base64UrlToBytes(parts[2]);
-  } catch {
-    return { ok: false, error: "malformed" };
-  }
-  if (suppliedDigest.byteLength !== V2_DIGEST_BYTES) return { ok: false, error: "malformed" };
-  if (!equalBytes(suppliedDigest, await digest96(compressed))) return { ok: false, error: "integrity" };
-  let decoded: string;
-  try {
-    decoded = new TextDecoder().decode(await gunzipBounded(compressed));
-  } catch {
-    return { ok: false, error: "malformed" };
-  }
-  const parsedResult = parseJson(decoded);
-  if (!parsedResult.ok) return { ok: false, error: "malformed" };
-  const parsed = parsedResult.value;
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return { ok: false, error: "malformed" };
-  const body = parsed as Partial<WatchlistTokenV3Body>;
-  if (body.v !== V3_TOKEN_VERSION) return { ok: false, error: "unsupported-version" };
-  if (typeof body.r !== "string" || body.r.length < 1 || body.r.length > 64) return { ok: false, error: "malformed" };
-  const direct = decodeV3DirectRows(body.d);
-  const presets = decodeBinaryRows(body.p, PRESET_BINARY_ROW_BYTES, PRESET_ID_BY_HASH, unpackWatchlistPresetState);
-  if (!direct || !presets || (direct.length === 0 && presets.length === 0)) return { ok: false, error: direct && presets ? "empty" : "malformed" };
-  return { ok: true, version: 3, state: { registryVersion: body.r, direct, presets } };
+  return { ok: true, version, state: { registryVersion: body.r, direct, presets } };
 }
 
 export async function decodeWatchlistToken(raw: string): Promise<WatchlistTokenDecodeResult> {
@@ -519,7 +492,9 @@ export async function decodeWatchlistToken(raw: string): Promise<WatchlistTokenD
   if (cleaned.length === 0) return { ok: false, error: "empty" };
   if (cleaned.startsWith(`${V2_PREFIX}.`) || cleaned.startsWith(`${V3_PREFIX}.`)) {
     if (cleaned.length > MAX_WATCHLIST_TOKEN_CHARS) return { ok: false, error: "too-large" };
-    return cleaned.startsWith(`${V3_PREFIX}.`) ? decodeV3(cleaned) : decodeV2(cleaned);
+    return cleaned.startsWith(`${V3_PREFIX}.`)
+      ? decodeCompressed(cleaned, V3_TOKEN_VERSION)
+      : decodeCompressed(cleaned, V2_TOKEN_VERSION);
   }
   if (cleaned.length > LEGACY_V1_MAX_WATCHLIST_TOKEN_CHARS) return { ok: false, error: "too-large" };
   return decodeV1(cleaned);

@@ -390,6 +390,10 @@ describe("authoritative Telegram target plans on latest SQLite schema", () => {
 
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_alert_target_plans").get()).toEqual({ count: 20 });
     const retainedV3 = change === "v3 retained" ? await seedRetainedV3Plans(sqlite) : null;
+    const retainedPlans = sqlite.prepare(`SELECT * FROM telegram_alert_target_plans
+      WHERE plan_ordinal < 20 ORDER BY plan_ordinal`).all();
+    const retainedItems = sqlite.prepare(`SELECT * FROM telegram_alert_target_plan_items
+      ORDER BY plan_key, item_key`).all();
     const incomplete = await reconcileIncompleteTelegramTargetPlanPage(baseDb, claim, NOW + 1);
     expect(incomplete).toMatchObject({ found: true, complete: false, pageIndex: 0 });
     const remainder = await loadTelegramPlanningSubscriberPage(baseDb, claim, 90, {
@@ -397,6 +401,7 @@ describe("authoritative Telegram target plans on latest SQLite schema", () => {
       lastChatId: incomplete.lastChatId!,
     });
     expect(remainder).toHaveLength(10);
+    expect(remainder.map((subscriber) => subscriber.chatId)).toEqual(chatIds.slice(20));
     const withdrawn = change === "unsubscribe" || change === "snooze";
     if (withdrawn) {
       sqlite.prepare(`UPDATE telegram_subscribers SET preference_generation = 2, alert_snooze_until_ts = ?
@@ -416,6 +421,11 @@ describe("authoritative Telegram target plans on latest SQLite schema", () => {
       })),
       NOW + 1,
     );
+    expect(sqlite.prepare(`SELECT * FROM telegram_alert_target_plans
+      WHERE plan_ordinal < 20 ORDER BY plan_ordinal`).all()).toEqual(retainedPlans);
+    expect(sqlite.prepare(`SELECT * FROM telegram_alert_target_plan_items
+      WHERE plan_key IN (SELECT plan_key FROM telegram_alert_target_plans WHERE plan_ordinal < 20)
+      ORDER BY plan_key, item_key`).all()).toEqual(retainedItems);
 
     expect(
       sqlite
@@ -466,6 +476,41 @@ describe("authoritative Telegram target plans on latest SQLite schema", () => {
       expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_alerts WHERE chat_id = '030'").get())
         .toEqual({ count: 0 });
     }
+  });
+
+  it("resumes an authoritative manifest without reconstructing handled direct/global items", async () => {
+    const { sqlite, db } = setupLatestSchema();
+    const sourceEventId = "telegram-source:test:v1:handled-manifest-resume";
+    insertSource(sqlite, sourceEventId);
+    for (const chatId of ["direct", "global", "preset"]) insertSubscriber(sqlite, chatId);
+    await openDeliveryForRoutes(db, sourceEventId, new Map(
+      ["direct", "global", "preset"].map((chatId) => [chatId, [routed(chatId, sourceEventId, 1)]]),
+    ));
+    sqlite.exec(`UPDATE telegram_alert_job_targets
+      SET status = 'sent', effect_state = 'complete', final_delivery_state = 'accepted'
+      WHERE chat_id = 'direct';
+      UPDATE telegram_alert_job_targets
+      SET status = 'queued', effect_state = 'execution_unknown', final_delivery_state = 'execution_unknown'
+      WHERE chat_id = 'global'`);
+    const retainedTargets = sqlite.prepare(`SELECT * FROM telegram_alert_job_targets
+      WHERE chat_id IN ('direct', 'global') ORDER BY chat_id`).all();
+    const retainedItems = sqlite.prepare(`SELECT * FROM telegram_alert_target_plan_items
+      ORDER BY plan_key, item_key`).all();
+    const resumed = await runTelegramTargetPlanCoordinator({
+      db, sourceEventId, nowSec: NOW + 121,
+      callbacks: {
+        resolveInitialEligibility: async () => { throw new Error("must not recapture handled recipients"); },
+        planSubscribers: async () => { throw new Error("must not reconstruct handled source items"); },
+      },
+    });
+    expect(resumed).toMatchObject({ state: "delivery_open", enqueued: 1 });
+    expect(sqlite.prepare("SELECT chat_id FROM telegram_pending_alerts").all()).toEqual([{ chat_id: "preset" }]);
+    expect(sqlite.prepare(`SELECT * FROM telegram_alert_job_targets
+      WHERE chat_id IN ('direct', 'global') ORDER BY chat_id`).all()).toEqual(retainedTargets);
+    expect(sqlite.prepare(`SELECT * FROM telegram_alert_target_plan_items
+      ORDER BY plan_key, item_key`).all()).toEqual(retainedItems);
+    expect(await enqueueTelegramAuthoritativeTargets(db, sourceEventId, 1, NOW + 122))
+      .toMatchObject({ enqueued: 0, remaining: 0 });
   });
 
   it.each([

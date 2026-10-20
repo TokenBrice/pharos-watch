@@ -224,143 +224,146 @@ function prepareChatMigrationCacheStatements(
   ];
 }
 
-/**
- * Per-column merge strategies used when copying a row from the old chat onto
- * an existing new-chat row. Adding a column to a tracked table means picking
- * a strategy here and listing it in `MIGRATION_TABLE_DESCRIPTORS` — no SQL
- * editing required for the common cases.
- */
+/** One ordered column list owns insert values and conflict assignments. */
 type MergeStrategy =
-  | "max"                // MAX(old, new)
-  | "min"                // MIN(old, new)
-  | "coalesce-old-first" // COALESCE(old, new) — preserve old non-NULL
-  | "nullif-max-zero";   // NULLIF(MAX(COALESCE(old, 0), COALESCE(new, 0)), 0)
+  | "copy-only"
+  | "max"
+  | "min"
+  | "coalesce-old-first"
+  | "nullif-max-zero"
+  | "null-safe-min"
+  | { sql: string };
 
 interface MigrationDescriptor {
   table: string;
-  /** Copy columns in SELECT/INSERT order. `chat_id` is supplied by the bind. */
-  copyColumns: readonly string[];
-  /** Conflict resolution mode. `insert-or-ignore` skips the DO UPDATE block entirely. */
-  mode:
-    | { kind: "insert-or-ignore" }
-    | {
-        kind: "upsert";
-        conflictColumns: readonly string[];
-        merges: ReadonlyArray<{ column: string; strategy: MergeStrategy }>;
-      };
+  columns: ReadonlyArray<{ column: string; select?: string; strategy: MergeStrategy }>;
+  /** Omitted for INSERT OR IGNORE; identity columns still declare copy-only. */
+  conflictColumns?: readonly string[];
 }
 
 const MIGRATION_TABLE_DESCRIPTORS: readonly MigrationDescriptor[] = [
   {
-    table: "telegram_subscriptions",
-    copyColumns: [
-      "stablecoin_id",
-      "alert_dews",
-      "alert_depeg",
-      "alert_safety",
-      "alert_launch",
-      "alert_reserve",
-      "alert_freeze",
-      "alert_dews_override",
-      "alert_depeg_override",
-      "alert_safety_override",
-      "alert_launch_override",
-      "alert_reserve_override",
-      "alert_freeze_override",
-      "dews_min_band",
-      "safety_mode",
-      "depeg_worsening_bps_step",
-      "alert_snooze_until_ts",
+    table: "telegram_subscribers",
+    conflictColumns: ["chat_id"],
+    columns: [
+      { column: "chat_id", select: "?", strategy: "copy-only" },
+      { column: "username", strategy: "coalesce-old-first" },
+      { column: "alert_dews", strategy: "max" },
+      { column: "alert_depeg", strategy: "max" },
+      { column: "alert_safety", strategy: "max" },
+      { column: "alert_launch", strategy: "max" },
+      { column: "alert_reserve", strategy: "max" },
+      { column: "alert_freeze", strategy: "max" },
+      { column: "watcher_active", strategy: "max" },
+      { column: "watcher_ever_active", strategy: "max" },
+      { column: "global_alert_dews", strategy: "max" },
+      { column: "global_alert_depeg", strategy: "max" },
+      { column: "global_alert_safety", strategy: "max" },
+      { column: "global_alert_launch", strategy: "max" },
+      { column: "global_alert_reserve", strategy: "max" },
+      { column: "global_alert_freeze", strategy: "max" },
+      { column: "quiet_hours_enabled", strategy: "max" },
+      // Keep the enabled row's paired window; the destination wins if both enable it.
+      { column: "quiet_hours_start_utc", strategy: { sql: `CASE
+          WHEN telegram_subscribers.quiet_hours_enabled = 1 THEN telegram_subscribers.quiet_hours_start_utc
+          WHEN excluded.quiet_hours_enabled = 1 THEN excluded.quiet_hours_start_utc
+          ELSE COALESCE(telegram_subscribers.quiet_hours_start_utc, excluded.quiet_hours_start_utc)
+        END` } },
+      { column: "quiet_hours_end_utc", strategy: { sql: `CASE
+          WHEN telegram_subscribers.quiet_hours_enabled = 1 THEN telegram_subscribers.quiet_hours_end_utc
+          WHEN excluded.quiet_hours_enabled = 1 THEN excluded.quiet_hours_end_utc
+          ELSE COALESCE(telegram_subscribers.quiet_hours_end_utc, excluded.quiet_hours_end_utc)
+        END` } },
+      { column: "global_depeg_worsening_bps_step", strategy: "coalesce-old-first" },
+      { column: "timezone", strategy: "coalesce-old-first" },
+      { column: "alert_snooze_until_ts", strategy: "nullif-max-zero" },
+      { column: "consecutive_block_count", strategy: {
+        sql: "MAX(COALESCE(telegram_subscribers.consecutive_block_count, 0), COALESCE(excluded.consecutive_block_count, 0))",
+      } },
+      { column: "consecutive_block_first_at", strategy: "null-safe-min" },
+      { column: "created_at", strategy: "min" },
+      { column: "last_active_at", strategy: "max" },
+      // excluded already includes the SELECT increment; retain the second conflict increment.
+      { column: "preference_generation", select: "preference_generation + 1", strategy: {
+        sql: "MAX(telegram_subscribers.preference_generation, excluded.preference_generation) + 1",
+      } },
+      { column: "first_follow_at", strategy: "null-safe-min" },
+      { column: "first_setup_completed_at", strategy: "null-safe-min" },
     ],
-    mode: {
-      kind: "upsert",
-      conflictColumns: ["chat_id", "stablecoin_id"],
-      merges: [
-        { column: "alert_dews", strategy: "max" },
-        { column: "alert_depeg", strategy: "max" },
-        { column: "alert_safety", strategy: "max" },
-        { column: "alert_launch", strategy: "max" },
-        { column: "alert_reserve", strategy: "max" },
-        { column: "alert_freeze", strategy: "max" },
-        // Override markers preserve explicit user intent from either row. Alert
-        // values already merge with MAX, so the matching boolean markers do too.
-        { column: "alert_dews_override", strategy: "max" },
-        { column: "alert_depeg_override", strategy: "max" },
-        { column: "alert_safety_override", strategy: "max" },
-        { column: "alert_launch_override", strategy: "max" },
-        { column: "alert_reserve_override", strategy: "max" },
-        { column: "alert_freeze_override", strategy: "max" },
-        { column: "dews_min_band", strategy: "coalesce-old-first" },
-        { column: "safety_mode", strategy: "coalesce-old-first" },
-        { column: "depeg_worsening_bps_step", strategy: "coalesce-old-first" },
-        { column: "alert_snooze_until_ts", strategy: "nullif-max-zero" },
-      ],
-    },
+  },
+  {
+    table: "telegram_subscriptions",
+    conflictColumns: ["chat_id", "stablecoin_id"],
+    columns: [
+      { column: "chat_id", select: "?", strategy: "copy-only" },
+      { column: "stablecoin_id", strategy: "copy-only" },
+      { column: "alert_dews", strategy: "max" },
+      { column: "alert_depeg", strategy: "max" },
+      { column: "alert_safety", strategy: "max" },
+      { column: "alert_launch", strategy: "max" },
+      { column: "alert_reserve", strategy: "max" },
+      { column: "alert_freeze", strategy: "max" },
+      // Preserve explicit intent from either row alongside the matching alert flags.
+      { column: "alert_dews_override", strategy: "max" },
+      { column: "alert_depeg_override", strategy: "max" },
+      { column: "alert_safety_override", strategy: "max" },
+      { column: "alert_launch_override", strategy: "max" },
+      { column: "alert_reserve_override", strategy: "max" },
+      { column: "alert_freeze_override", strategy: "max" },
+      { column: "dews_min_band", strategy: "coalesce-old-first" },
+      { column: "safety_mode", strategy: "coalesce-old-first" },
+      { column: "depeg_worsening_bps_step", strategy: "coalesce-old-first" },
+      { column: "alert_snooze_until_ts", strategy: "nullif-max-zero" },
+    ],
   },
   {
     table: "telegram_preset_subscriptions",
-    copyColumns: [
-      "preset_id",
-      "alert_dews",
-      "alert_depeg",
-      "alert_safety",
-      "depeg_worsening_bps_step",
-      "created_at",
-      "updated_at",
+    conflictColumns: ["chat_id", "preset_id"],
+    columns: [
+      { column: "chat_id", select: "?", strategy: "copy-only" },
+      { column: "preset_id", strategy: "copy-only" },
+      { column: "alert_dews", strategy: "max" },
+      { column: "alert_depeg", strategy: "max" },
+      { column: "alert_safety", strategy: "max" },
+      { column: "depeg_worsening_bps_step", strategy: "coalesce-old-first" },
+      { column: "created_at", strategy: "min" },
+      { column: "updated_at", strategy: "max" },
     ],
-    mode: {
-      kind: "upsert",
-      conflictColumns: ["chat_id", "preset_id"],
-      merges: [
-        { column: "alert_dews", strategy: "max" },
-        { column: "alert_depeg", strategy: "max" },
-        { column: "alert_safety", strategy: "max" },
-        { column: "depeg_worsening_bps_step", strategy: "coalesce-old-first" },
-        { column: "created_at", strategy: "min" },
-        { column: "updated_at", strategy: "max" },
-      ],
-    },
   },
   {
     table: "telegram_pending_disambiguation",
-    copyColumns: [
-      "alert_types",
-      "resolved_ids",
-      "ambiguous_ticker",
-      "candidates",
-      "remaining_tickers",
-      "expires_at",
-      "action_type",
-      "action_payload",
-      "initiator_user_id",
+    columns: [
+      { column: "chat_id", select: "?", strategy: "copy-only" },
+      { column: "alert_types", strategy: "copy-only" },
+      { column: "resolved_ids", strategy: "copy-only" },
+      { column: "ambiguous_ticker", strategy: "copy-only" },
+      { column: "candidates", strategy: "copy-only" },
+      { column: "remaining_tickers", strategy: "copy-only" },
+      { column: "expires_at", strategy: "copy-only" },
+      { column: "action_type", strategy: "copy-only" },
+      { column: "action_payload", strategy: "copy-only" },
+      { column: "initiator_user_id", strategy: "copy-only" },
     ],
-    mode: { kind: "insert-or-ignore" },
   },
   {
     table: "telegram_chat_delivery_diagnostics",
-    copyColumns: [
-      "last_successful_delivery_at",
-      "last_successful_reply_at",
-      "last_delivery_attempt_at",
-      "recent_failure_class",
-      "updated_at",
+    conflictColumns: ["chat_id"],
+    columns: [
+      { column: "chat_id", select: "?", strategy: "copy-only" },
+      { column: "last_successful_delivery_at", strategy: "nullif-max-zero" },
+      { column: "last_successful_reply_at", strategy: "nullif-max-zero" },
+      { column: "last_delivery_attempt_at", strategy: "nullif-max-zero" },
+      { column: "recent_failure_class", strategy: "coalesce-old-first" },
+      { column: "updated_at", strategy: "max" },
     ],
-    mode: {
-      kind: "upsert",
-      conflictColumns: ["chat_id"],
-      merges: [
-        { column: "last_successful_delivery_at", strategy: "nullif-max-zero" },
-        { column: "last_successful_reply_at", strategy: "nullif-max-zero" },
-        { column: "last_delivery_attempt_at", strategy: "nullif-max-zero" },
-        { column: "recent_failure_class", strategy: "coalesce-old-first" },
-        { column: "updated_at", strategy: "max" },
-      ],
-    },
   },
 ];
 
 function renderMergeExpr(table: string, column: string, strategy: MergeStrategy): string {
+  if (typeof strategy === "object") return strategy.sql;
   switch (strategy) {
+    case "copy-only":
+      throw new Error("Copy-only migration columns have no conflict assignment");
     case "max":
       return `MAX(${table}.${column}, excluded.${column})`;
     case "min":
@@ -369,6 +372,12 @@ function renderMergeExpr(table: string, column: string, strategy: MergeStrategy)
       return `COALESCE(${table}.${column}, excluded.${column})`;
     case "nullif-max-zero":
       return `NULLIF(MAX(COALESCE(${table}.${column}, 0), COALESCE(excluded.${column}, 0)), 0)`;
+    case "null-safe-min":
+      return `CASE
+          WHEN ${table}.${column} IS NULL THEN excluded.${column}
+          WHEN excluded.${column} IS NULL THEN ${table}.${column}
+          ELSE MIN(${table}.${column}, excluded.${column})
+        END`;
   }
 }
 
@@ -376,18 +385,17 @@ function buildMigrationStatement(
   db: D1Database,
   descriptor: MigrationDescriptor,
 ): D1PreparedStatement {
-  const insertColumns = ["chat_id", ...descriptor.copyColumns].join(",\n        ");
-  const selectColumns = ["?", ...descriptor.copyColumns].join(",\n        ");
-  // SAFETY: `descriptor.table` and every column in `descriptor.copyColumns` /
-  // `descriptor.mode.merges` / `descriptor.mode.conflictColumns` come from the
-  // closed-set `MIGRATION_TABLE_DESCRIPTORS` constant defined just above. No
-  // runtime data flows into the SQL string.
-  const verb = descriptor.mode.kind === "insert-or-ignore" ? "INSERT OR IGNORE INTO" : "INSERT INTO";
+  const insertColumns = descriptor.columns.map(({ column }) => column).join(",\n        ");
+  const selectColumns = descriptor.columns.map(({ column, select }) => select ?? column).join(",\n        ");
+  // SAFETY: All identifiers and expressions come from the closed-set local
+  // MIGRATION_TABLE_DESCRIPTORS above. No runtime data flows into the SQL string.
+  const verb = descriptor.conflictColumns ? "INSERT INTO" : "INSERT OR IGNORE INTO";
   let sql = `${verb} ${descriptor.table} (\n        ${insertColumns}\n      )\n      SELECT\n        ${selectColumns}\n      FROM ${descriptor.table}\n      WHERE chat_id = ?`;
-  if (descriptor.mode.kind === "upsert") {
-    const conflict = descriptor.mode.conflictColumns.join(", ");
-    const setClause = descriptor.mode.merges
-      .map((m) => `${m.column} = ${renderMergeExpr(descriptor.table, m.column, m.strategy)}`)
+  if (descriptor.conflictColumns) {
+    const conflict = descriptor.conflictColumns.join(", ");
+    const setClause = descriptor.columns
+      .filter(({ strategy }) => strategy !== "copy-only")
+      .map(({ column, strategy }) => `${column} = ${renderMergeExpr(descriptor.table, column, strategy)}`)
       .join(",\n        ");
     sql += `\n      ON CONFLICT(${conflict}) DO UPDATE SET\n        ${setClause}`;
   }
@@ -487,13 +495,6 @@ function preparePendingDedupeMigrationStatements(
  * Merge Telegram group state after Telegram upgrades a group to a supergroup.
  * Telegram emits both `migrate_to_chat_id` and `migrate_from_chat_id` service
  * messages; this helper is idempotent so either event can safely run first.
- *
- * The `telegram_subscribers` block is intentionally kept inline: it has three
- * outlier merge expressions (`quiet_hours_start_utc`/`quiet_hours_end_utc`
- * jointly track `quiet_hours_enabled`, and `consecutive_block_first_at` uses
- * a MIN-with-NULL CASE) that don't fit the per-column strategy framework. The
- * other four tables flow through `MIGRATION_TABLE_DESCRIPTORS` so adding a
- * column there is a one-line descriptor change.
  */
 export async function migrateTelegramChatId(
   db: D1Database,
@@ -505,135 +506,6 @@ export async function migrateTelegramChatId(
   const now = unixNow();
 
   const statements: D1PreparedStatement[] = [
-    db.prepare(`
-      INSERT INTO telegram_subscribers (
-        chat_id,
-        username,
-        alert_dews,
-        alert_depeg,
-        alert_safety,
-        alert_launch,
-        alert_reserve,
-        alert_freeze,
-        watcher_active,
-        watcher_ever_active,
-        global_alert_dews,
-        global_alert_depeg,
-        global_alert_safety,
-        global_alert_launch,
-        global_alert_reserve,
-        global_alert_freeze,
-        quiet_hours_enabled,
-        quiet_hours_start_utc,
-        quiet_hours_end_utc,
-        global_depeg_worsening_bps_step,
-        timezone,
-        alert_snooze_until_ts,
-        consecutive_block_count,
-        consecutive_block_first_at,
-        created_at,
-        last_active_at,
-        preference_generation,
-        first_follow_at,
-        first_setup_completed_at
-      )
-      SELECT
-        ?,
-        username,
-        alert_dews,
-        alert_depeg,
-        alert_safety,
-        alert_launch,
-        alert_reserve,
-        alert_freeze,
-        watcher_active,
-        watcher_ever_active,
-        global_alert_dews,
-        global_alert_depeg,
-        global_alert_safety,
-        global_alert_launch,
-        global_alert_reserve,
-        global_alert_freeze,
-        quiet_hours_enabled,
-        quiet_hours_start_utc,
-        quiet_hours_end_utc,
-        global_depeg_worsening_bps_step,
-        timezone,
-        alert_snooze_until_ts,
-        consecutive_block_count,
-        consecutive_block_first_at,
-        created_at,
-        last_active_at,
-        preference_generation + 1,
-        first_follow_at,
-        first_setup_completed_at
-      FROM telegram_subscribers
-      WHERE chat_id = ?
-      ON CONFLICT(chat_id) DO UPDATE SET
-        username = COALESCE(telegram_subscribers.username, excluded.username),
-        alert_dews = MAX(telegram_subscribers.alert_dews, excluded.alert_dews),
-        alert_depeg = MAX(telegram_subscribers.alert_depeg, excluded.alert_depeg),
-        alert_safety = MAX(telegram_subscribers.alert_safety, excluded.alert_safety),
-        alert_launch = MAX(telegram_subscribers.alert_launch, excluded.alert_launch),
-        alert_reserve = MAX(telegram_subscribers.alert_reserve, excluded.alert_reserve),
-        alert_freeze = MAX(telegram_subscribers.alert_freeze, excluded.alert_freeze),
-        watcher_active = MAX(telegram_subscribers.watcher_active, excluded.watcher_active),
-        watcher_ever_active = MAX(telegram_subscribers.watcher_ever_active, excluded.watcher_ever_active),
-        global_alert_dews = MAX(telegram_subscribers.global_alert_dews, excluded.global_alert_dews),
-        global_alert_depeg = MAX(telegram_subscribers.global_alert_depeg, excluded.global_alert_depeg),
-        global_alert_safety = MAX(telegram_subscribers.global_alert_safety, excluded.global_alert_safety),
-        global_alert_launch = MAX(telegram_subscribers.global_alert_launch, excluded.global_alert_launch),
-        global_alert_reserve = MAX(telegram_subscribers.global_alert_reserve, excluded.global_alert_reserve),
-        global_alert_freeze = MAX(telegram_subscribers.global_alert_freeze, excluded.global_alert_freeze),
-        quiet_hours_enabled = MAX(telegram_subscribers.quiet_hours_enabled, excluded.quiet_hours_enabled),
-        quiet_hours_start_utc = CASE
-          WHEN telegram_subscribers.quiet_hours_enabled = 1 THEN telegram_subscribers.quiet_hours_start_utc
-          WHEN excluded.quiet_hours_enabled = 1 THEN excluded.quiet_hours_start_utc
-          ELSE COALESCE(telegram_subscribers.quiet_hours_start_utc, excluded.quiet_hours_start_utc)
-        END,
-        quiet_hours_end_utc = CASE
-          WHEN telegram_subscribers.quiet_hours_enabled = 1 THEN telegram_subscribers.quiet_hours_end_utc
-          WHEN excluded.quiet_hours_enabled = 1 THEN excluded.quiet_hours_end_utc
-          ELSE COALESCE(telegram_subscribers.quiet_hours_end_utc, excluded.quiet_hours_end_utc)
-        END,
-        global_depeg_worsening_bps_step = COALESCE(
-          telegram_subscribers.global_depeg_worsening_bps_step,
-          excluded.global_depeg_worsening_bps_step
-        ),
-        timezone = COALESCE(telegram_subscribers.timezone, excluded.timezone),
-        alert_snooze_until_ts = NULLIF(
-          MAX(
-            COALESCE(telegram_subscribers.alert_snooze_until_ts, 0),
-            COALESCE(excluded.alert_snooze_until_ts, 0)
-          ),
-          0
-        ),
-        consecutive_block_count = MAX(
-          COALESCE(telegram_subscribers.consecutive_block_count, 0),
-          COALESCE(excluded.consecutive_block_count, 0)
-        ),
-        consecutive_block_first_at = CASE
-          WHEN telegram_subscribers.consecutive_block_first_at IS NULL THEN excluded.consecutive_block_first_at
-          WHEN excluded.consecutive_block_first_at IS NULL THEN telegram_subscribers.consecutive_block_first_at
-          ELSE MIN(telegram_subscribers.consecutive_block_first_at, excluded.consecutive_block_first_at)
-        END,
-        created_at = MIN(telegram_subscribers.created_at, excluded.created_at),
-        last_active_at = MAX(telegram_subscribers.last_active_at, excluded.last_active_at),
-        preference_generation = MAX(
-          telegram_subscribers.preference_generation,
-          excluded.preference_generation
-        ) + 1,
-        first_follow_at = CASE
-          WHEN telegram_subscribers.first_follow_at IS NULL THEN excluded.first_follow_at
-          WHEN excluded.first_follow_at IS NULL THEN telegram_subscribers.first_follow_at
-          ELSE MIN(telegram_subscribers.first_follow_at, excluded.first_follow_at)
-        END,
-        first_setup_completed_at = CASE
-          WHEN telegram_subscribers.first_setup_completed_at IS NULL THEN excluded.first_setup_completed_at
-          WHEN excluded.first_setup_completed_at IS NULL THEN telegram_subscribers.first_setup_completed_at
-          ELSE MIN(telegram_subscribers.first_setup_completed_at, excluded.first_setup_completed_at)
-        END
-    `).bind(newChatId, oldChatId),
     ...MIGRATION_TABLE_DESCRIPTORS.map((descriptor) =>
       buildMigrationStatement(db, descriptor).bind(newChatId, oldChatId),
     ),

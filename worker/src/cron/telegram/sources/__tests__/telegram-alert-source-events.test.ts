@@ -21,12 +21,8 @@ import {
   resolveTelegramAlertSourcePresetPages,
 } from "../telegram-alert-source-memberships";
 import type { TelegramAlertSnapshots } from "../telegram-alert-snapshots";
-import { materializeTelegramTargetPlanPage } from "../../target-plans/materialization";
 import { runTelegramTargetPlanCoordinator } from "../../target-plans/coordinator";
-import {
-  loadHandledTelegramAlertItemsByChat,
-  removeHandledTelegramAlertItems,
-} from "../telegram-alert-event-lineage";
+import { makeAlertSafetySourceRow } from "./dispatch-telegram-events.test-support";
 
 const NOW = 1_800_000_000;
 
@@ -158,7 +154,7 @@ describe("Telegram alert source-event resolution", () => {
           generation: "safety-8.0-test-alert-source-v1",
           safetyScoreIdentity: V8_IDENTITY,
           snapshot: {
-            "usdc-circle": { grade: "A", score: 91, ratingStatus: "rated", partialEvidence: null, methodologyVersion: "8.0-test" },
+            "usdc-circle": makeAlertSafetySourceRow({ score: 91, methodologyVersion: "8.0-test" }),
           },
         },
       },
@@ -169,7 +165,7 @@ describe("Telegram alert source-event resolution", () => {
       generation: "safety-v9-alert-source-v2",
       safetyScoreIdentity: V9_IDENTITY,
       snapshot: {
-        "usdc-circle": { grade: "B-", score: 80, ratingStatus: "rated", partialEvidence: null, methodologyVersion: "candidate-v9.0" },
+        "usdc-circle": makeAlertSafetySourceRow({ grade: "B-", score: 80, methodologyVersion: "candidate-v9.0" }),
       },
     });
 
@@ -615,123 +611,6 @@ describe("Telegram alert source-event resolution", () => {
     if (revalidated.presetResults.dews.kind !== "ok") throw new Error("expected completed DEWS pages");
     expect(revalidated.presetResults.dews.rows.get("usdc-circle")?.map((row) => row.chat_id))
       .toEqual(["active"]);
-  });
-
-  it("subtracts handled direct/global source items while preserving missing preset items", async () => {
-    const harness = createHarness();
-    const source = await persistedSource(harness, ["usdc-circle", "dai-makerdao"]);
-    const routed = (chatId: string): RoutedSubscriberAlert => ({
-      chatId,
-      lastActiveAt: NOW,
-      alerts: {
-        dews: [events(["usdc-circle"]).dewsChanges[0]],
-        depegTriggered: [],
-        depegResolved: [],
-        depegWorsening: [],
-        safety: [],
-        launch: [],
-        reserve: [],
-      },
-      canonicalHtml: `<b>${chatId}: USDC</b>`,
-      chunks: [`<b>${chatId}: USDC</b>`],
-      disableNotification: false,
-      alertType: "dews",
-    });
-    const owner = "lineage-test";
-    harness.sqlite.prepare(
-      `UPDATE telegram_alert_source_events
-          SET status = 'planned', target_plan_state = 'capturing',
-              target_plan_owner = ?, target_plan_claim_expires_at = ?
-        WHERE source_event_id = ?`,
-    ).run(owner, NOW + 120, source.sourceEventId);
-    const claim = {
-      sourceEventId: source.sourceEventId,
-      owner,
-      generation: 0,
-      state: "planning" as const,
-      detectedAt: source.detectedAt,
-      expiresAt: source.expiresAt,
-      horizonAt: NOW,
-      highWaterChatId: null,
-      subscriberCursorChatId: null,
-      planningCursorChatId: null,
-    };
-    // Materialization admits only captured members with a live subscriber at
-    // the observed generation; lineage fixtures must preserve that evidence.
-    for (const chatId of ["direct-chat", "global-chat"]) {
-      harness.sqlite.prepare(
-        `INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at)
-         VALUES (?, ?, ?)`,
-      ).run(chatId, NOW, NOW);
-      harness.sqlite.prepare(
-        `INSERT INTO telegram_alert_planning_subscribers (
-           source_event_id, plan_generation, chat_id, preference_generation,
-           last_active_at, captured_at, initially_eligible
-         ) VALUES (?, 0, ?, 0, ?, ?, 1)`,
-      ).run(source.sourceEventId, chatId, NOW, NOW);
-    }
-    harness.sqlite.prepare(
-      "UPDATE telegram_alert_source_events SET target_plan_state = 'planning' WHERE source_event_id = ?",
-    ).run(source.sourceEventId);
-    const authoritativeRoutes = [routed("direct-chat"), routed("global-chat")].map((entry) => ({
-      ...entry,
-      sourceEventId: source.sourceEventId,
-      preferenceGeneration: 0,
-      alertScope: [{ stablecoinId: "usdc-circle", family: "dews" as const }],
-    }));
-    await materializeTelegramTargetPlanPage(
-      harness.db,
-      claim,
-      0,
-      authoritativeRoutes.map((entry) => ({
-        subscriber: {
-          chatId: entry.chatId,
-          preferenceGeneration: 0,
-          lastActiveAt: entry.lastActiveAt,
-          initiallyEligible: true,
-        },
-        currentPreferenceGeneration: 0,
-        currentEligible: true,
-        routed: [entry],
-      })),
-      NOW,
-    );
-    harness.sqlite.prepare(
-      `UPDATE telegram_alert_job_targets
-          SET status = 'sent', effect_state = 'complete', sent_at = ?,
-              final_delivery_state = 'accepted', final_delivery_at = ?
-        WHERE source_event_id = ?`,
-    ).run(NOW, NOW, source.sourceEventId);
-
-    const handled = await loadHandledTelegramAlertItemsByChat(harness.db, source.sourceEventId);
-    expect(handled.get("direct-chat")).toEqual(new Set(["dews:usdc-circle"]));
-    expect(handled.get("global-chat")).toEqual(new Set(["dews:usdc-circle"]));
-    expect(handled.get("direct-chat")?.has("dews:dai-makerdao")).toBe(false);
-
-    const pending = new Map([
-      [
-        "direct-chat",
-        {
-          lastActiveAt: NOW,
-          alerts: {
-            dews: events(["usdc-circle", "dai-makerdao"]).dewsChanges,
-            depegTriggered: [],
-            depegResolved: [],
-            depegWorsening: [],
-            safety: [],
-            launch: [],
-            reserve: [],
-          },
-          quietHoursEnabled: false,
-          quietHoursStartUtc: null,
-          quietHoursEndUtc: null,
-          timezone: null,
-        },
-      ],
-    ]);
-    expect(removeHandledTelegramAlertItems(pending, handled)).toBe(1);
-    expect(pending.get("direct-chat")?.alerts.dews.map((event) => event.stablecoinId))
-      .toEqual(["dai-makerdao"]);
   });
 
   it("commits snapshots and the baseline marker atomically at every statement boundary", async () => {

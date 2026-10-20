@@ -1,5 +1,7 @@
 import searchableCoinsAsset from "@shared/data/stablecoins/coins.telegram-mini-app.generated.json";
+import { fnv1a32 } from "@shared/lib/fnv1a";
 import { TELEGRAM_PRESET_IDS } from "@shared/lib/telegram-presets";
+import { TELEGRAM_DEWS_BANDS, TELEGRAM_SAFETY_MODES, TELEGRAM_DEPEG_STEPS } from "@shared/types/status/telegram";
 import { describe, expect, it } from "vitest";
 
 import { TELEGRAM_MESSAGE_CHUNK_LIMIT } from "../../common/constants";
@@ -42,6 +44,21 @@ async function signedEnvelope(prefix: "pw2" | "pw3", compressed: Uint8Array): Pr
   return `${prefix}.${bytesToBase64Url(compressed)}.${bytesToBase64Url(digest.slice(0, 12))}`;
 }
 
+async function signedJsonEnvelope(prefix: "pw2" | "pw3", json: string): Promise<string> {
+  const stream = new Response(json).body!.pipeThrough(new CompressionStream("gzip"));
+  return signedEnvelope(prefix, new Uint8Array(await new Response(stream).arrayBuffer()));
+}
+
+function duplicateRows(id: string, packedBits: number): string {
+  const row = fnv1a32(id).toString(2).padStart(32, "0") + "0".repeat(packedBits);
+  const bits = (row + row).padEnd(Math.ceil((row.length * 2) / 8) * 8, "0");
+  const bytes = new Uint8Array(bits.length / 8);
+  for (let index = 0; index < bytes.length; index += 1) {
+    bytes[index] = Number.parseInt(bits.slice(index * 8, (index + 1) * 8), 2);
+  }
+  return bytesToBase64Url(bytes);
+}
+
 function direct(stablecoinId: string, overrides = false): WatchlistTokenDirectState {
   return {
     stablecoinId,
@@ -64,6 +81,20 @@ function direct(stablecoinId: string, overrides = false): WatchlistTokenDirectSt
 }
 
 describe("watchlist token codec", () => {
+  it("round-trips every canonical tuning value without changing null", async () => {
+    for (let index = -1; index < TELEGRAM_DEWS_BANDS.length; index += 1) {
+      const row = {
+        ...direct("usdc-circle", true),
+        dewsMinBand: TELEGRAM_DEWS_BANDS[index] ?? null,
+        safetyMode: TELEGRAM_SAFETY_MODES[index] ?? null,
+        depegWorseningBpsStep: TELEGRAM_DEPEG_STEPS[index] ?? null,
+      };
+      const state = { registryVersion: WATCHLIST_TOKEN_REGISTRY_VERSION, direct: [row], presets: [] };
+      const encoded = await encodeWatchlistTokenV3(state);
+      await expect(decodeWatchlistToken(encoded)).resolves.toMatchObject({ ok: true, state });
+    }
+  });
+
   it("keeps v1 byte compatibility and reads copy/paste artifacts", async () => {
     const state = {
       coinIds: ["usdc-circle", "dai-makerdao"],
@@ -190,27 +221,46 @@ describe("watchlist token codec", () => {
     await expect(decodeWatchlistToken(altered)).resolves.toEqual({ ok: false, error: "integrity" });
   });
 
-  it("rejects corrupt pw3 envelopes without treating them as legacy payloads", async () => {
-    await expect(decodeWatchlistToken("pw3.not-base64.aaaaaaaaaaaaaaaa")).resolves.toEqual({
-      ok: false,
-      error: "integrity",
-    });
-    await expect(decodeWatchlistToken("pw3.aaaa.aaaaaaaaaaaaaaaa")).resolves.toEqual({
-      ok: false,
-      error: "integrity",
-    });
-  });
+  describe.each([2, 3] as const)("pw%i envelope framing", (version) => {
+    const prefix = `pw${version}` as const;
 
-  it("rejects signed envelopes whose compressed payload cannot be decoded", async () => {
-    const malformedCompressedPayload = new Uint8Array([0x01, 0x02, 0x03]);
-
-    await expect(decodeWatchlistToken(await signedEnvelope("pw2", malformedCompressedPayload))).resolves.toEqual({
-      ok: false,
-      error: "malformed",
+    it.each([
+      ["aaaa", "malformed"],
+      ["aaaa.aaaaaaaaaaaaaaaa.extra", "malformed"],
+      ["!.aaaaaaaaaaaaaaaa", "malformed"],
+      ["aaaa.aaaa", "malformed"],
+      ["not-base64.aaaaaaaaaaaaaaaa", "integrity"],
+      ["aaaa.aaaaaaaaaaaaaaaa", "integrity"],
+      [`${"A".repeat(MAX_WATCHLIST_TOKEN_CHARS)}.AAAAAAAAAAAAAAAA`, "too-large"],
+    ])("rejects frame %s as %s", async (frame, error) => {
+      await expect(decodeWatchlistToken(`${prefix}.${frame}`)).resolves.toEqual({ ok: false, error });
     });
-    await expect(decodeWatchlistToken(await signedEnvelope("pw3", malformedCompressedPayload))).resolves.toEqual({
-      ok: false,
-      error: "malformed",
+
+    it("rejects signed envelopes whose compressed payload cannot be decoded", async () => {
+      const token = await signedEnvelope(prefix, new Uint8Array([0x01, 0x02, 0x03]));
+      await expect(decodeWatchlistToken(token)).resolves.toEqual({ ok: false, error: "malformed" });
+    });
+
+    it.each([
+      ["invalid JSON", "not json", "malformed"],
+      ["null", "null", "malformed"],
+      ["array", "[]", "malformed"],
+      ["version before registry", JSON.stringify({ v: 99, r: null }), "unsupported-version"],
+      ["empty registry", JSON.stringify({ v: version, r: "", d: "", p: "" }), "malformed"],
+      ["long registry", JSON.stringify({ v: version, r: "r".repeat(65), d: "", p: "" }), "malformed"],
+      ["non-string registry", JSON.stringify({ v: version, r: null, d: "", p: "" }), "malformed"],
+      ["missing rows", JSON.stringify({ v: version, r: "historical" }), "malformed"],
+      ["invalid direct before empty", JSON.stringify({ v: version, r: "historical", d: "!", p: "" }), "malformed"],
+      ["invalid preset before empty", JSON.stringify({ v: version, r: "historical", d: "", p: "!" }), "malformed"],
+      ["empty rows", JSON.stringify({ v: version, r: "historical", d: "", p: "" }), "empty"],
+      ["duplicate direct", JSON.stringify({
+        v: version, r: "historical", d: duplicateRows("usdc-circle", version === 2 ? 16 : 18), p: "",
+      }), "malformed"],
+      ["duplicate preset", JSON.stringify({
+        v: version, r: "historical", d: "", p: duplicateRows("usd-top25", 8),
+      }), "malformed"],
+    ])("rejects %s with the original verdict", async (_label, json, error) => {
+      await expect(decodeWatchlistToken(await signedJsonEnvelope(prefix, json))).resolves.toEqual({ ok: false, error });
     });
   });
 
@@ -226,12 +276,6 @@ describe("watchlist token codec", () => {
     ).resolves.toEqual({
       ok: false,
       error: "unsupported-version",
-    });
-    await expect(
-      decodeWatchlistToken(`pw2.${"A".repeat(MAX_WATCHLIST_TOKEN_CHARS)}.AAAAAAAAAAAAAAAA`),
-    ).resolves.toEqual({
-      ok: false,
-      error: "too-large",
     });
   });
 

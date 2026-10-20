@@ -15,6 +15,16 @@ import {
   type TelegramMiniAppOperation,
 } from "../telegram-mini-app-contract";
 import { makeMiniAppState } from "../../test-utils/telegram-mini-app-state";
+import {
+  TELEGRAM_DEWS_BANDS, TELEGRAM_SAFETY_MODES, TELEGRAM_DEPEG_STEPS,
+  TelegramDewsBandSchema, TelegramSafetyModeSchema, TelegramDepegStepBpsSchema,
+  isDepegStepValue, isTelegramSafetyMode,
+} from "../../types/status/telegram";
+import {
+  DEWS_BAND_CODES, DEWS_BAND_CODE_BY_VALUE, isDewsBandCode,
+  SAFETY_MODE_CODES, SAFETY_MODE_CODE_BY_VALUE, isSafetyModeCode,
+} from "../telegram-alert-families";
+import { isDewsAlertBand } from "../classification/risk";
 
 const { catalog: _catalog, ...mutableState } = makeMiniAppState({
   subscriptions: [],
@@ -47,6 +57,44 @@ const operations: TelegramMiniAppOperation[] = [
 ];
 
 describe("Telegram Mini App shared contract", () => {
+  it("validates every canonical tuning value and round-trips bijective callback maps", () => {
+    for (const [values, schema, codes, inverse, guard] of [
+      [TELEGRAM_DEWS_BANDS, TelegramDewsBandSchema, DEWS_BAND_CODES, DEWS_BAND_CODE_BY_VALUE, isDewsBandCode],
+      [TELEGRAM_SAFETY_MODES, TelegramSafetyModeSchema, SAFETY_MODE_CODES, SAFETY_MODE_CODE_BY_VALUE, isSafetyModeCode],
+    ] as const) {
+      expect(new Set(Object.values(codes)).size).toBe(values.length);
+      expect(Object.values(codes)).toEqual([...values]);
+      for (const value of values) {
+        expect(schema.parse(value)).toBe(value);
+        const code = (inverse as Record<string, string>)[value];
+        expect(guard(code)).toBe(true);
+        expect((codes as Record<string, string>)[code]).toBe(value);
+      }
+      for (const invalid of ["0", "", "constructor", "toString"]) expect(guard(invalid)).toBe(false);
+    }
+    for (const dewsMinBand of TELEGRAM_DEWS_BANDS) {
+      expect(isDewsAlertBand(dewsMinBand)).toBe(true);
+      expect(TelegramMiniAppOperationSchema.parse({
+        kind: "set-coin", stablecoinId: "usdc-circle", patch: { dewsMinBand },
+      })).toMatchObject({ patch: { dewsMinBand } });
+    }
+    for (const safetyMode of TELEGRAM_SAFETY_MODES) {
+      expect(isTelegramSafetyMode(safetyMode)).toBe(true);
+      expect(TelegramMiniAppOperationSchema.parse({
+        kind: "set-coin", stablecoinId: "usdc-circle", patch: { safetyMode },
+      })).toMatchObject({ patch: { safetyMode } });
+    }
+    for (const depegStepBps of TELEGRAM_DEPEG_STEPS) {
+      expect(isDepegStepValue(depegStepBps)).toBe(true);
+      expect(TelegramDepegStepBpsSchema.parse(depegStepBps)).toBe(depegStepBps);
+      expect(TelegramMiniAppOperationSchema.parse({
+        kind: "set-coin", stablecoinId: "usdc-circle", patch: { depegStepBps },
+      })).toMatchObject({ patch: { depegStepBps } });
+    }
+    for (const invalid of [0, 99, null, undefined, "100"]) expect(isDepegStepValue(invalid)).toBe(false);
+    for (const invalid of ["off", "", null, undefined]) expect(isTelegramSafetyMode(invalid)).toBe(false);
+  });
+
   it("uses the same operation parser for standalone and mutation-request parsing", () => {
     for (const operation of operations) {
       const direct = TelegramMiniAppOperationSchema.parse(operation);

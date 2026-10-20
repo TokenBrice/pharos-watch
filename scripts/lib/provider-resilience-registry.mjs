@@ -261,7 +261,7 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
       circuitSources: ["CIRCUIT_SOURCE.TELEGRAM_API"],
     },
     requiredMarkers: [
-      "sendBatch",
+      "schedulePerChatBatches",
       "Retry-After",
       "shouldAttemptFetch",
       "recordOutcome",

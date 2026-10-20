@@ -64,6 +64,8 @@ The Settings panel exposes the same lossless portable-watchlist contract as `/ex
 
 The preview lists every direct and preset add, remove, and change, then separately names broadened and removed alert-family coverage. Global-all settings, quiet hours, timezone, chat snooze, pending actions, and delivery history remain outside the token; retained per-coin rows keep their snooze, while removed rows lose it. Tokens and previews remain request-local and React-session-local: the Mini App does not persist them to browser storage, analytics, logs, or D1.
 
+Portable-token framing is shared by `pw2` and `pw3`: prefix/base64 framing and digest integrity precede bounded gzip/JSON decoding, embedded-version admission, registry provenance and row validation; only valid empty rows return `empty`. Their direct-row codecs remain distinct (`pw3` adds freeze intent), and historical V1/V2 reads remain compatible. The digest detects copy/paste corruption, not authentication.
+
 Export and preview are read-only operations. They accept the 24-hour signed-session freshness window, use the existing session throttle, and do not consume the Mini App mutation burst. Confirmation is a write: it retains the 5-minute mutation-auth window and burst limiter, fails with `stale-import-preview` when state changed after preview, and never automatically retries. A stale-auth user may still export or preview readable state, but must relaunch before confirming.
 
 ## Bulk Watchlist Management
@@ -85,6 +87,8 @@ Preset edits keep at least one DEWS/depeg/safety family enabled; disable the fin
 ## Contract And Catalog Versioning
 
 `shared/lib/telegram-mini-app-contract.ts` owns operation/DTO schemas, error codes, contract version and opaque revision. Both Worker and client import it; never mirror a literal version or schema. The optional server-derived removal `undo` snapshot reuses the bounded bulk undo contract.
+
+Tuning schemas consume the shared preference vocabulary in `shared/types/status/telegram.ts`; settings callback maps and inverses live in `shared/lib/telegram-alert-families.ts`. These are representation authorities, not a contract-version change: callback codes/order, portable-token ordinals and historical fixture bytes remain stable. Nullable Mini App tuning still means enabled default/any, never the settings keyboard's Off action.
 
 Contract **v6** changes the meaning of existing tuning and preset-edit payloads (see [control semantics](#client-state-and-control-semantics)). Deploy the v6 Worker before Pages. The Worker accepts explicit **v5** clients with the matching catalog for the entire v6 rolling-deploy window, until the next contract-version bump removes v5 admission; it returns v5 envelopes for session, mutation, portability and bulk-preview responses so cached v5 bundles can still parse them. Both versions use the corrected domain semantics; the window does not retain the former accidental Off/additive behavior. Unsupported versions and mismatched catalogs still fail before writes. No existing disabled row is automatically restored, because intent cannot be recovered from that row.
 
@@ -215,5 +219,7 @@ Freshness is split deliberately:
 - Heavy public pulse sections (`topCoins`, lifecycle history, and Mini App daily usage counters) are reused for up to 15 minutes when the cached pulse is valid. The current aggregate counts still refresh on the 5-minute pulse cadence, and pending-delivery count can reuse the dispatch lane's pending-capacity snapshot.
 
 The public chart contains at most 90 completed UTC days of persisted lifecycle snapshots. Daily subscribe, unsubscribe, and reactivation counts come from transition events captured when subscription state changes; the current partial UTC day is never presented as finalized history.
+
+Live opt-ins include every alert family, but historical snapshot writes retain only the daily table's supported columns: reserve/freeze family counts and the all-types conjunction are not persisted. One fixed ordered column/value list drives insert, update and bindings; adding a live family does not silently expand historical storage.
 
 Pulse snapshot publication is generation-fenced: an older build cannot replace a newer generation. `miniAppOpenToFirstMutationP50Sec` uses the selected daily latency-bucket midpoint, stays null/privacy-suppressed below five known-latency sessions, and excludes unknown session correlations. Lifecycle-event/preset read failure publishes affected fields as null in `quality.unavailableFields`, never synthetic zero.

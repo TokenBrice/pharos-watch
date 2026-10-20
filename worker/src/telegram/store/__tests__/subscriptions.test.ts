@@ -3,6 +3,56 @@ import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-sche
 import { applySettingToSubscriptions, loadSubscriptionsByIds, prepareSubscriberAndSubscriptionStatements } from "../subscriptions";
 import { prepareCoinSettingStatements } from "../../webhook/telegram-webhook-settings-mutations";
 import type { ParsedSetCommand } from "../../webhook/telegram-webhook-shared";
+import type { TelegramMiniAppOperation } from "@shared/lib/telegram-mini-app-contract";
+import { applyTelegramMiniAppMutation } from "../../mini-app/telegram-mini-app-mutations";
+
+type SettingCase = {
+  name: string;
+  callback?: [string, string];
+  command: ParsedSetCommand;
+  patch: Extract<TelegramMiniAppOperation, { kind: "set-coin" }>["patch"];
+  expected: Record<string, unknown>;
+};
+const settingCases: SettingCase[] = [
+  ...(["dews", "depeg", "safety", "launch", "reserve", "freeze"] as const).flatMap((family): SettingCase[] => {
+    const code = { dews: "db", depeg: "ds", safety: "sm", launch: "lc", reserve: "rs", freeze: "fz" }[family];
+    const off = {
+      name: `${family} off`, callback: [code, "0"] as [string, string],
+      command: { ticker: "USDC", setting: family, enabled: false, minBand: null, mode: null } as ParsedSetCommand,
+      patch: { alertTypes: { [family]: false } },
+      expected: {
+        [`alert_${family}`]: 0, [`alert_${family}_override`]: 1,
+        ...(family === "dews" ? { dews_min_band: null } : family === "safety" ? { safety_mode: null }
+          : family === "depeg" ? { depeg_worsening_bps_step: null } : {}),
+      },
+    };
+    return family === "launch" || family === "reserve" || family === "freeze"
+      ? [off, {
+        name: `${family} on`, callback: [code, "1"],
+        command: { ticker: "USDC", setting: family, enabled: true }, patch: { [family]: true },
+        expected: { [`alert_${family}`]: 1, [`alert_${family}_override`]: 1 },
+      }] : [off];
+  }),
+  ...([["A", "ALERT"], ["W", "WARNING"], ["D", "DANGER"], [null, null]] as const).map(([code, band]): SettingCase => ({
+    name: `DEWS ${band}`, callback: code == null ? undefined : ["db", code],
+    command: { ticker: "USDC", setting: "dews", enabled: true, minBand: band }, patch: { dewsMinBand: band },
+    expected: { alert_dews: 1, alert_dews_override: 1, dews_min_band: band },
+  })),
+  ...([["a", "all"], ["d", "downgrade-only"], ["u", "upgrade-only"], [null, null]] as const).map(([code, mode]): SettingCase => ({
+    name: `safety ${mode}`, callback: code == null ? undefined : ["sm", code],
+    command: { ticker: "USDC", setting: "safety", enabled: true, mode }, patch: { safetyMode: mode },
+    expected: { alert_safety: 1, alert_safety_override: 1, safety_mode: mode },
+  })),
+  ...([100, 250, 500, null] as const).map((step): SettingCase => ({
+    name: `depeg step ${step}`, callback: step == null ? undefined : ["ds", String(step)],
+    command: { ticker: "USDC", setting: "depeg-step", enabled: true, step }, patch: { depegStepBps: step },
+    expected: { alert_depeg: 1, alert_depeg_override: 1, depeg_worsening_bps_step: step },
+  })),
+  {
+    name: "depeg on preserves tuning", command: { ticker: "USDC", setting: "depeg", enabled: true },
+    patch: { alertTypes: { depeg: true } }, expected: { alert_depeg: 1, alert_depeg_override: 1 },
+  },
+];
 
 const COIN = { id: "usdc-circle", symbol: "USDC", name: "USD Coin" };
 const fixtures = createLatestSchemaFixtureTracker();
@@ -20,6 +70,31 @@ function seeded() {
 }
 
 describe("per-coin subscription persistence", () => {
+  it.each(settingCases)("persists $name identically through /set, settings and Mini App", async ({ callback, command, patch, expected }) => {
+    for (const path of ["set", "settings", "mini-app"]) {
+      if (path === "settings" && !callback) continue; // The keyboard has no Default/Any/on-without-step action.
+      const { db, sqlite } = seeded();
+      sqlite.exec(`UPDATE telegram_subscriptions SET alert_dews = 1, alert_safety = 1, alert_launch = 1,
+        alert_reserve = 1, alert_freeze = 1, dews_min_band = 'WARNING', safety_mode = 'upgrade-only';
+        INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, alert_dews) VALUES ('42', 'dai-makerdao', 1)`);
+      const before = sqlite.prepare("SELECT * FROM telegram_subscriptions ORDER BY chat_id, stablecoin_id").all();
+      if (path === "settings") {
+        await db.batch(prepareCoinSettingStatements(db, "42", "alice", COIN.id, ...callback!).statements);
+      } else if (path === "set") {
+        await applySettingToSubscriptions(db, "42", "alice", [COIN], command);
+      } else {
+        await applyTelegramMiniAppMutation(db, {
+          userId: "42", username: "alice", firstName: "Alice", chatType: "private", startParam: null,
+          authDate: 1_800_000_000, initDataHash: "test", canMutatePrivateChat: true,
+        }, { kind: "set-coin", stablecoinId: COIN.id, patch });
+      }
+      expect(sqlite.prepare("SELECT * FROM telegram_subscriptions ORDER BY chat_id, stablecoin_id").all())
+        .toEqual(before.map((row) => row.chat_id === "42" && row.stablecoin_id === COIN.id ? { ...row, ...expected } : row));
+      expect(sqlite.prepare("SELECT chat_id, preference_generation FROM telegram_subscribers ORDER BY chat_id").all())
+        .toEqual([{ chat_id: "42", preference_generation: 8 }, { chat_id: "neighbor", preference_generation: 12 }]);
+    }
+  });
+
   it.each(["dews", "depeg", "safety", "launch", "reserve", "freeze"] as const)(
     "loads the %s override marker independently from the zero alert flag",
     async (family) => {

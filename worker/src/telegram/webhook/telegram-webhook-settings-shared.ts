@@ -5,7 +5,6 @@
  */
 
 import type { SubscriberRow } from "./telegram-webhook-shared";
-import { isDepegStepValue } from "../common/constants";
 import { TELEGRAM_ALERT_PERSISTENCE } from "@shared/lib/telegram-alert-families";
 import {
   TELEGRAM_ALERT_TYPES,
@@ -24,29 +23,11 @@ export const DEFAULT_QUIET_END_HOUR = 7;
 export const GLOBAL_ALERT_TYPES = TELEGRAM_ALERT_TYPES;
 export type GlobalAlertType = TelegramAlertType;
 
-export const DEWS_BAND_CODES = { A: "ALERT", W: "WARNING", D: "DANGER" } as const;
-export type DewsBandCode = keyof typeof DEWS_BAND_CODES;
-export type DewsBandValue = (typeof DEWS_BAND_CODES)[DewsBandCode];
-
-export const SAFETY_MODE_CODES = { a: "all", d: "downgrade-only", u: "upgrade-only" } as const;
-export type SafetyModeCode = keyof typeof SAFETY_MODE_CODES;
-export type SafetyModeValue = (typeof SAFETY_MODE_CODES)[SafetyModeCode];
-
-export const DEPEG_STEPS = [100, 250, 500] as const;
 
 export function isGlobalAlertType(value: string): value is GlobalAlertType {
   return isTelegramAlertType(value);
 }
 
-export function isDewsBandCode(value: string): value is DewsBandCode {
-  return value === "A" || value === "W" || value === "D";
-}
-
-export function isSafetyModeCode(value: string): value is SafetyModeCode {
-  return value === "a" || value === "d" || value === "u";
-}
-
-export const isDepegStep = isDepegStepValue;
 
 export function subscriberHasGlobal(subscriber: SubscriberRow | null, type: GlobalAlertType): boolean {
   if (!subscriber) return false;

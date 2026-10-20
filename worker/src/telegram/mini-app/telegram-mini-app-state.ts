@@ -6,6 +6,8 @@ import {
   type TelegramSubscriptionOverrideColumn,
 } from "@shared/lib/telegram-alert-families";
 import { TELEGRAM_ALERT_TYPES, type TelegramAlertType } from "@shared/types/status";
+import { isDepegStepValue, isTelegramSafetyMode } from "@shared/types/status/telegram";
+import { isDewsAlertBand } from "@shared/lib/classification/risk";
 import type { TelegramMiniAppMutableState } from "@shared/lib/telegram-mini-app-contract";
 import { TELEGRAM_RECAP_DEFAULT_DELIVERY_HOUR_LOCAL } from "@shared/lib/telegram-recap-policy";
 import {
@@ -50,17 +52,6 @@ function coinMeta(stablecoinId: string): { symbol: string; name: string } {
   };
 }
 
-function normalizeDewsBand(value: string | null | undefined): "ALERT" | "WARNING" | "DANGER" | null {
-  return value === "ALERT" || value === "WARNING" || value === "DANGER" ? value : null;
-}
-
-function normalizeDepegStep(value: number | null | undefined): 100 | 250 | 500 | null {
-  return value === 100 || value === 250 || value === 500 ? value : null;
-}
-
-function normalizeSafetyMode(value: string | null | undefined): "all" | "downgrade-only" | "upgrade-only" | null {
-  return value === "all" || value === "downgrade-only" || value === "upgrade-only" ? value : null;
-}
 
 type AlertTypeFlags = Record<TelegramAlertType, boolean>;
 
@@ -186,7 +177,7 @@ export async function loadTelegramMiniAppState(
           subscriber ?? {},
           (alertType) => TELEGRAM_ALERT_PERSISTENCE[alertType].globalColumn,
         ),
-        depegStepBps: normalizeDepegStep(subscriber?.global_depeg_worsening_bps_step),
+        depegStepBps: isDepegStepValue(subscriber?.global_depeg_worsening_bps_step) ? subscriber.global_depeg_worsening_bps_step : null,
       },
       quietHours: {
         enabled: boolFlag(subscriber?.quiet_hours_enabled),
@@ -214,9 +205,9 @@ export async function loadTelegramMiniAppState(
         name: meta.name,
         alertTypes: alertTypes(row),
         alertOverrides: alertOverrideTypes(row),
-        dewsMinBand: normalizeDewsBand(row.dews_min_band),
-        safetyMode: normalizeSafetyMode(row.safety_mode),
-        depegStepBps: normalizeDepegStep(row.depeg_worsening_bps_step),
+        dewsMinBand: row.dews_min_band != null && isDewsAlertBand(row.dews_min_band) ? row.dews_min_band : null,
+        safetyMode: isTelegramSafetyMode(row.safety_mode) ? row.safety_mode : null,
+        depegStepBps: isDepegStepValue(row.depeg_worsening_bps_step) ? row.depeg_worsening_bps_step : null,
         snoozeUntilTs: row.alert_snooze_until_ts,
       };
     }),
@@ -231,7 +222,7 @@ export async function loadTelegramMiniAppState(
           depeg: boolFlag(row.alert_depeg),
           safety: boolFlag(row.alert_safety),
         },
-        depegStepBps: normalizeDepegStep(row.depeg_worsening_bps_step),
+        depegStepBps: isDepegStepValue(row.depeg_worsening_bps_step) ? row.depeg_worsening_bps_step : null,
       };
     }),
     health: {

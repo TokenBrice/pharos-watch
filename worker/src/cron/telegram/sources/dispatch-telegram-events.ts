@@ -8,7 +8,7 @@ import { crossesTelegramDepegWorseningStep } from "@shared/lib/telegram-delivery
 import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
 import { throwIfAborted } from "../../../lib/abort";
 import { buildInClause, chunkArray } from "../../../lib/db";
-import { DEPEG_STEP_VALUES } from "../../../telegram/common/constants";
+import { TELEGRAM_DEPEG_STEPS } from "@shared/types/status/telegram";
 import {
   isDewsAlertable,
   type DepegAlertPayload,
@@ -207,7 +207,7 @@ export async function buildTelegramDispatchEvents(
       ) {
         return [];
       }
-      const crossesSupportedStep = DEPEG_STEP_VALUES.some((step) =>
+      const crossesSupportedStep = TELEGRAM_DEPEG_STEPS.some((step) =>
         crossesTelegramDepegWorseningStep(previous.deviationBps, currentDeviationBps, step)
       );
       if (!crossesSupportedStep) return [];
