@@ -1,3 +1,4 @@
+import { TELEGRAM_ALERT_PERSISTENCE } from "@shared/lib/telegram-alert-families";
 import { buildInClause } from "../../../lib/db";
 import {
   loadFanoutSubscriptionInputs,
@@ -171,8 +172,8 @@ async function loadCandidateSubscriberPage(
   if (claim.highWaterChatId == null) return [];
   const familySpecs = TELEGRAM_FANOUT_FAMILIES.map((spec) => ({
     ids: context.stablecoinIds[spec.idsKey],
-    direct: spec.directColumn,
-    global: spec.globalColumn,
+    direct: TELEGRAM_ALERT_PERSISTENCE[spec.family].subscriptionColumn,
+    global: TELEGRAM_ALERT_PERSISTENCE[spec.family].globalColumn,
     preset: spec.presetFamily,
   })).filter((spec) => spec.ids.length > 0);
   if (familySpecs.length === 0) return [];

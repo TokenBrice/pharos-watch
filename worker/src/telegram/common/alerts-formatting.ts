@@ -464,134 +464,113 @@ export function resolveAlertLinkPreviewOptions(
   };
 }
 
-/**
- * Repair a chunk that may have broken HTML tags from a hard character split.
- * Assumes input has been through escapeHtml() so literal > is encoded as &gt;.
- * Only safe for pre-escaped Telegram HTML (the only context splitMessage is used).
- */
-function repairBrokenHtml(chunk: string): string {
-  // Remove a trailing partial tag (e.g., "<b" or "<a href=\"...")
-  let repaired = chunk.replace(/<[^>]*$/, "");
-  // Remove a leading fragment from a tag that was split (e.g., 'ref="...">text</a>').
-  // Safe because escapeHtml converts literal > to &gt;, so bare > only appears in tags.
-  repaired = repaired.replace(/^[^<]*>/, "");
-
-  // Balance simple tags: <b>, <i>, <code>, <pre>
-  const countTagOpenings = (value: string, tagName: string): number => {
-    let count = 0;
-    let cursor = 0;
-    const needle = `<${tagName}`;
-    while (true) {
-      const hit = value.indexOf(needle, cursor);
-      if (hit === -1) break;
-      const charAfterTag = value[hit + needle.length];
-      if (charAfterTag === " " || charAfterTag === ">" || charAfterTag === "/") {
-        count++;
-      }
-      cursor = hit + needle.length;
-    }
-    return count;
-  };
-
-  const TAG_PATTERNS: Array<{ close: RegExp; tag: string }> = [
-    { close: /<\/b>/g, tag: "b" },
-    { close: /<\/i>/g, tag: "i" },
-    { close: /<\/code>/g, tag: "code" },
-    { close: /<\/pre>/g, tag: "pre" },
-    { close: /<\/blockquote>/g, tag: "blockquote" },
-  ];
-  for (const { close, tag } of TAG_PATTERNS) {
-    const openCount = countTagOpenings(repaired, tag);
-    const closeCount = (repaired.match(close) ?? []).length;
-    if (openCount > closeCount) {
-      repaired += `</${tag}>`.repeat(openCount - closeCount);
-    } else if (closeCount > openCount) {
-      repaired = `<${tag}>`.repeat(closeCount - openCount) + repaired;
-    }
-  }
-  // Handle <a> separately (has attributes)
-  const aOpens = (repaired.match(/<a[\s>]/g) ?? []).length;
-  const aCloses = (repaired.match(/<\/a>/g) ?? []).length;
-  if (aOpens > aCloses) {
-    repaired += "</a>".repeat(aOpens - aCloses);
-  } else if (aCloses > aOpens) {
-    // Strip orphaned </a> rather than prepending a fake <a>
-    let surplus = aCloses - aOpens;
-    repaired = repaired.replace(/<\/a>/g, (match) => {
-      if (surplus > 0) { surplus--; return ""; }
-      return match;
-    });
-  }
-  return repaired;
+function hasNonWhitespaceRenderedText(html: string): boolean {
+  return /\S/.test(html.replace(/<[^>]*>/g, "").replace(
+    /&#(x[0-9a-fA-F]+|[0-9]+);/g,
+    (_, entity: string) => String.fromCodePoint(entity.startsWith("x")
+      ? parseInt(entity.slice(1), 16) : Number(entity)),
+  ));
 }
 
 /**
- * `TELEGRAM_SPLIT_VERSION` lives in `./constants` and is re-exported
- * from the top of this module. The pending-queue dedupe key incorporates it
- * so a logic change here predictably invalidates in-flight pending rows
- * instead of orphaning them silently.
+ * Split admitted Telegram HTML without changing its text or tag attributes.
+ * Every boundary reserves space for the ordered closing stack; the next chunk
+ * reopens the exact same tags. Persisted chunks retain their original policy.
  */
-
-/** Split a message into chunks under the given character limit. */
 export function splitMessage(html: string, limit = TELEGRAM_MESSAGE_CHUNK_LIMIT): string[] {
   if (!Number.isSafeInteger(limit) || limit < 1) throw new RangeError("Message chunk limit must be a positive integer");
-  if (html.length <= limit) return [html];
+  if (html.length <= limit) {
+    if (!hasNonWhitespaceRenderedText(html)) throw new RangeError("Message must contain non-whitespace rendered text");
+    return [html];
+  }
 
-  const splitOversizedSection = (section: string): string[] => {
-    if (section.length <= limit) return [section];
-
-    const parts: string[] = [];
-    let current = "";
-    for (const line of section.split("\n")) {
-      const candidate = current ? `${current}\n${line}` : line;
-      if (candidate.length <= limit) {
-        current = candidate;
-        continue;
-      }
-
-      if (current) {
-        parts.push(current);
-        current = "";
-      }
-
-      if (line.length <= limit) {
-        current = line;
-        continue;
-      }
-
-      for (let index = 0; index < line.length;) {
-        let end = Math.min(index + limit, line.length);
-        let repaired = repairBrokenHtml(line.slice(index, end));
-        // Balancing tags consumes part of the same limit as the original text.
-        while (repaired.length > limit) {
-          // Always consume a positive prefix, even when balancing deeply nested
-          // tags adds more bytes than the entire original prefix.
-          end = Math.max(index + 1, end - Math.max(1, repaired.length - limit));
-          repaired = repairBrokenHtml(line.slice(index, end));
-        }
-        if (repaired) parts.push(repaired);
-        index = end;
-      }
+  const chunks: string[] = [];
+  const stack: Array<{ open: string; close: string }> = [];
+  let openingLength = 0;
+  let closingLength = 0;
+  let current = "";
+  let hasSource = false;
+  const flush = () => {
+    if (!hasSource) throw new RangeError("Message chunk limit cannot fit the HTML context and next token");
+    if (!hasNonWhitespaceRenderedText(current)) {
+      throw new RangeError("Message chunk limit cannot retain whitespace with rendered text");
     }
-
-    if (current) parts.push(current);
-    return parts;
+    chunks.push(current + stack.map((tag) => tag.close).reverse().join(""));
+    current = stack.map((tag) => tag.open).join("");
+    hasSource = false;
+  };
+  const appendAtomic = (token: string, nextClosingLength = closingLength) => {
+    if (current.length + token.length + nextClosingLength > limit) flush();
+    if (current.length + token.length + nextClosingLength > limit) {
+      throw new RangeError("Message chunk limit cannot fit the HTML context and next token");
+    }
+    current += token;
+    hasSource = true;
   };
 
-  // Split on double-newline boundaries to preserve structure where possible.
-  const sections = html.split("\n\n").flatMap(splitOversizedSection);
-  const chunks: string[] = [];
-  let current = "";
-  for (const section of sections) {
-    const candidate = current ? `${current}\n\n${section}` : section;
-    if (candidate.length > limit && current) {
-      chunks.push(current);
-      current = section;
+  // Tags/entities are indivisible. Plain runs are sliced only between Unicode
+  // code points, so even a two-code-unit character at the limit stays intact.
+  const tokens = /<[^>]*>|&(?:[a-zA-Z]+|#[0-9]+|#x[0-9a-fA-F]+);|[^<&]+|[<&]/g;
+  for (const match of html.matchAll(tokens)) {
+    const token = match[0];
+    const tag = token.match(/^<(\/?)\s*([a-zA-Z][a-zA-Z0-9-]*)[^>]*>$/);
+    if (tag) {
+      if (tag[1]) {
+        const last = stack[stack.length - 1];
+        appendAtomic(token, closingLength - last.close.length);
+        stack.pop();
+        openingLength -= last.open.length;
+        closingLength -= last.close.length;
+      } else {
+        const close = `</${tag[2].toLowerCase()}>`;
+        appendAtomic(token, closingLength + close.length);
+        stack.push({ open: token, close });
+        openingLength += token.length;
+        closingLength += close.length;
+      }
+    } else if (token.startsWith("&") && token.endsWith(";")) {
+      appendAtomic(token);
     } else {
-      current = candidate;
+      for (let offset = 0; offset < token.length;) {
+        let end = Math.min(token.length, offset + limit - current.length - closingLength);
+        if (end > offset && end < token.length) {
+          const prefix = token.slice(offset, end);
+          const section = prefix.lastIndexOf("\n\n");
+          const line = prefix.lastIndexOf("\n");
+          // A leading separator alone is not a Telegram message. Keep it with
+          // neighboring text via the bounded hard cut instead of flushing it.
+          if (section !== -1 && hasNonWhitespaceRenderedText(current + prefix.slice(0, section + 2))) {
+            end = offset + section + 2;
+          } else if (line !== -1 && hasNonWhitespaceRenderedText(current + prefix.slice(0, line + 1))) {
+            end = offset + line + 1;
+          }
+        }
+        if (end > offset && end < token.length
+          && token.charCodeAt(end - 1) >= 0xd800 && token.charCodeAt(end - 1) <= 0xdbff
+          && token.charCodeAt(end) >= 0xdc00 && token.charCodeAt(end) <= 0xdfff) {
+          end--;
+        }
+        if (end <= offset) {
+          // A full reopen/close envelope cannot be discarded to make room.
+          if (current.length === openingLength) {
+            throw new RangeError("Message chunk limit cannot fit the HTML context and next token");
+          }
+          flush();
+          continue;
+        }
+        current += token.slice(offset, end);
+        hasSource = true;
+        offset = end;
+        if (offset < token.length) flush();
+      }
     }
   }
-  if (current) chunks.push(current);
+  if (hasSource) {
+    if (!hasNonWhitespaceRenderedText(current)) {
+      throw new RangeError("Message chunk limit cannot retain whitespace with rendered text");
+    }
+    chunks.push(current);
+  }
   return chunks;
 }
 

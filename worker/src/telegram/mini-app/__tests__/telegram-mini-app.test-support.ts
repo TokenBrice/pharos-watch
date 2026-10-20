@@ -152,7 +152,17 @@ export function stateReadTables(overrides: {
     timezone: null,
     alert_snooze_until_ts: null,
   };
+  // Portable reads capture generation and both sources in one statement.
+  const portableRows = [
+    ...(overrides.subscriptions ?? []).map((row) => ({ ...row, row_kind: "direct" })),
+    ...(overrides.presets ?? []).map((row) => ({ ...row, row_kind: "preset" })),
+  ];
   return [
+    {
+      match: "WITH subscriber AS",
+      rows: (portableRows.length > 0 ? portableRows : [{ row_kind: null }])
+        .map((row) => ({ ...row, preference_generation: subscriber.preference_generation ?? 0 })),
+    },
     { match: "FROM telegram_subscribers", first: subscriber, rows: subscriber == null ? [] : [subscriber] },
     { match: "FROM telegram_subscriptions", rows: overrides.subscriptions ?? [] },
     { match: "FROM telegram_preset_subscriptions", rows: overrides.presets ?? [] },

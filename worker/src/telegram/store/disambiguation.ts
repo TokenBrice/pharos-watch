@@ -216,13 +216,14 @@ export async function persistPendingForgetConfirm(
     chatId: string;
     initiatorUserId: string | null;
     expiresAt?: number;
+    flowId?: string;
     operationStatements?: D1PreparedStatement[];
   },
 ): Promise<boolean> {
   return persistPendingDisambiguationRow(db, {
     chatId: input.chatId,
     actionType: "forget-confirm",
-    actionPayload: {},
+    actionPayload: { flowId: input.flowId },
     alertTypes: [],
     resolvedIds: [],
     ambiguousTicker: "",
@@ -268,7 +269,7 @@ export async function clearPendingDisambiguation(
   db: D1Database,
   chatId: string,
   options: TelegramOperationBatchOptions & {
-    expected?: { actionType: string; expiresAt: number };
+    expected?: { actionType: string; actionPayload?: string; expiresAt: number };
   } = {},
 ): Promise<void> {
   const statement = pendingDisambiguationClearStatement(db, chatId, options.expected);

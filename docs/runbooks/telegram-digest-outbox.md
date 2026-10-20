@@ -32,6 +32,18 @@ or resent.
 
 An expired `sending` claim becomes `execution_unknown`. It is never returned to `pending` automatically.
 
+Finalization commits the stored appendix cache writes, retained weekly
+delivered metadata and terminal `sent` transition in one atomic D1 batch.
+Every write requires the same edition key, `sending` state, delivery owner and
+generation, media state `none` or `sent`, and text cursor at the exact stored
+chunk count. Success actions cannot alter this eligibility predicate; the
+terminal transition is last. A stale or incomplete claim changes no appendix,
+weekly metadata or edition state. SQL failure rolls back every batch write;
+post-send persistence failure retains the existing `execution_unknown` policy.
+A later diagnostic changes-count exception is not a rollback mechanism.
+Replaying a sent edition neither reapplies its actions nor refreshes their
+timestamps, even when a newer edition is pending.
+
 ## Inspect
 
 Check `/api/status` and locate `budgetOnlySurfaces[]` where `job == "telegram-digest-outbox-drain"`. `retainedExecutionUnknown` and `retainedFailedPermanent` count terminal rows whose `updated_at` falls within the 7-day operator-review window; they represent operator backlog, degrade that surface, and do not repeatedly trip the shared Telegram provider circuit when no send was attempted. The `retainedExecutionUnknownTotal` and `retainedFailedPermanentTotal` metadata fields report the all-time retained counts, so forensic rows older than the review window stay visible without degrading the surface.

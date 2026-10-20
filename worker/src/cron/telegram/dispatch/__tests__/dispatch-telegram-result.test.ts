@@ -69,4 +69,17 @@ describe("capacity projections", () => {
     expect(result.pendingCapacityAfter).toEqual(emptyPendingCapacitySnapshot());
     expect(result.pendingTotal).toBe(0);
   });
+
+  it("publishes real pending work without synthetic fresh-send or family metrics", () => {
+    const result = buildDispatchResult({
+      snapshotSeeded: false,
+      capacity: { before: observed, after: observed },
+      overrides: { messagesSent: 3, pendingAttempted: 4, pendingDrained: 3 },
+    });
+    expect(result).toMatchObject({ messagesSent: 3, pendingAttempted: 4, pendingDrained: 3, pendingTotal: 5 });
+    for (const key of [
+      "perAlertType", "perAlertTypeTargets", "freshAttempted", "freshSent", "freshRetryQueued",
+      "freshPermanentFailures", "freshDeferredPerChat", "freshCandidateChats", "freshCandidateCount", "freshOverflow",
+    ]) expect(result).not.toHaveProperty(key);
+  });
 });

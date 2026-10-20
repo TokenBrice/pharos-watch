@@ -306,13 +306,19 @@ export function validateSubscribeArgs(parsed: ParsedSubscribeArgs): string | nul
   return null;
 }
 
+function parseDisambiguationNumber(token: string, candidateCount: number): number | null {
+  if (!/^\d+$/.test(token)) return null;
+  const n = Number(token);
+  return Number.isSafeInteger(n) && n >= 1 && n <= candidateCount ? n : null;
+}
+
 /** Parse a disambiguation reply (e.g. "1", "1,2", "1, 3"). Returns selected indices (0-based). */
 export function parseDisambiguationReply(text: string, candidateCount: number): number[] | null {
   const parts = text.split(/[,\s]+/).filter(Boolean);
   const indices: number[] = [];
   for (const part of parts) {
-    const n = parseInt(part, 10);
-    if (isNaN(n) || n < 1 || n > candidateCount) return null;
+    const n = parseDisambiguationNumber(part, candidateCount);
+    if (n == null) return null;
     indices.push(n - 1);
   }
   return indices.length > 0 ? indices : null;
@@ -322,9 +328,7 @@ export function findInvalidDisambiguationToken(text: string, candidateCount: num
   const parts = text.split(/[,\s]+/).filter(Boolean);
   if (parts.length === 0) return "";
   for (const part of parts) {
-    if (!/^\d+$/.test(part)) return part;
-    const n = Number(part);
-    if (!Number.isInteger(n) || n < 1 || n > candidateCount) return part;
+    if (parseDisambiguationNumber(part, candidateCount) == null) return part;
   }
   return null;
 }

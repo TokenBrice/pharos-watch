@@ -51,6 +51,25 @@ describe("parseCommand", () => {
     });
   });
 
+  it.each(["\n", "\t", "   ", "\r\n"])("splits the command at whitespace %j", (separator) => {
+    for (const mention of ["", "@PharosWatchBot", "@OtherBot", "@Pharos_Watch"]) {
+      expect(parseCommand(`/subscribe${mention}${separator}dews USDC`)).toEqual({
+        command: "/subscribe",
+        args: "dews USDC",
+        botMention: mention ? mention.slice(1).toLowerCase() : null,
+      });
+    }
+  });
+
+  it("does not join command or bot-name fragments across whitespace", () => {
+    expect(parseCommand("/sub\tscribe dews USDC")).toEqual({
+      command: "/sub", args: "scribe dews USDC", botMention: null,
+    });
+    expect(parseCommand("/subscribe@Pharos\tWatchBot dews USDC")).toEqual({
+      command: "/subscribe", args: "WatchBot dews USDC", botMention: "pharos",
+    });
+  });
+
   it("keeps unaddressed commands distinguishable from addressed commands", () => {
     expect(parseCommand("/help")).toEqual({
       command: "/help",

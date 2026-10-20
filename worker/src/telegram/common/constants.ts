@@ -55,12 +55,14 @@ export const TELEGRAM_MESSAGE_CHUNK_LIMIT = 4000;
 
 /**
  * Stable version tag for the message chunking algorithm. Bump whenever the
- * splitting logic (boundaries, repair, ordering) changes in a way that would
+ * splitting logic (boundaries, tag envelopes, ordering) changes in a way that would
  * alter the chunks produced from the same canonical body.
  */
-export const TELEGRAM_SPLIT_VERSION = 3;
+export const TELEGRAM_SPLIT_VERSION = 4;
 
 // ---------- Delivery policy ----------
+
+export const TELEGRAM_CHAT_BACKOFF_CACHE_PREFIX = "telegram:chat-send-backoff:";
 
 export type PendingDeliveryState = "pending" | "sending" | "sent" | "execution_unknown";
 export const PENDING_DELIVERY_STATES = ["pending"] as const satisfies readonly PendingDeliveryState[];

@@ -8,6 +8,7 @@ import { serializePendingAlertScope, serializePendingMarkupPolicy } from "../../
 import { insertTelegramSubscriber, type TelegramSubscriberSeed } from "../../dispatch/__tests__/telegram-subscriber.test-support";
 
 export const DEFAULT_TELEGRAM_PENDING_D1_TABLES: MockTableConfig[] = [
+  { match: "DELETE FROM cache WHERE key IN", rows: [], runMeta: { changes: 0 }, allowUnused: true },
   { match: "WHERE delivery_state = 'sending'", rows: [], allowUnused: true },
   { match: "WHERE delivery_state = 'sent'", rows: [], runMeta: { changes: 0 }, allowUnused: true },
   { match: "delivery_state = 'sent'", rows: [], allowUnused: true },

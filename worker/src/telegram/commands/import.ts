@@ -20,10 +20,10 @@ import {
 } from "../store/telegram-webhook-store";
 import { createTelegramWebhookIntent } from "../webhook/telegram-webhook-effect-fence";
 import type { ConfirmBulkPayload } from "../webhook/telegram-webhook-shared";
-import { DISAMBIGUATION_TTL_SEC } from "../webhook/telegram-webhook-shared";
+import { pendingFlowId, DISAMBIGUATION_TTL_SEC } from "../webhook/telegram-webhook-shared";
 import { parseStoredConfirmBulkPayload } from "../webhook/telegram-webhook-parsing";
 import {
-  BULK_CONFIRM_REPLY_MARKUP,
+  buildBulkConfirmReplyMarkup,
   buildBulkConfirmMessage,
   dedupePresetIds,
   subscribableCoinCount,
@@ -114,6 +114,7 @@ async function persistImportPreview(
   expiresAt: number,
   ensureSubscriber: boolean,
 ): Promise<boolean> {
+  payload.flowId = pendingFlowId(payload.flowId);
   await ctx.planIntent?.(createTelegramWebhookIntent("command:import", {
     stage: "bulk-confirm-prompt",
     payload,
@@ -205,7 +206,7 @@ async function handleV1Import(
       "This only adds/enables the listed coverage. It does not remove existing rows. Per-coin tuning was not stored by v1.",
       buildV1ConfirmMessage(payload.coinIds.length, payload.alertTypes, symbols, presetLabels),
     ].join("\n") + droppedNote,
-    { replyMarkup: BULK_CONFIRM_REPLY_MARKUP },
+    { replyMarkup: buildBulkConfirmReplyMarkup(payload.flowId!) },
   );
   await recordTelegramUsageEvent(ctx.db, { eventType: "subscribe", actionDetail: "import-v1", outcome: "preview" });
 }
@@ -276,6 +277,6 @@ export const handleImport: WebhookCommandHandler = async (ctx, args) => {
     await ctx.replyToChat(PENDING_OWNERSHIP_CONFLICT_MESSAGE);
     return;
   }
-  await ctx.replyToChatWithMarkup(buildV2PreviewMessage(payload), { replyMarkup: BULK_CONFIRM_REPLY_MARKUP });
+  await ctx.replyToChatWithMarkup(buildV2PreviewMessage(payload), { replyMarkup: buildBulkConfirmReplyMarkup(payload.flowId!) });
   await recordTelegramUsageEvent(ctx.db, { eventType: "subscribe", actionDetail: "import-v2", outcome: "preview" });
 };

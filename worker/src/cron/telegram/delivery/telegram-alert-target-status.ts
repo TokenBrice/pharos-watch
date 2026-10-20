@@ -2,9 +2,11 @@ import { batchExecute } from "../../../lib/db";
 import { runWithOverloadRetry } from "../../../lib/d1-overload-retry";
 import { TELEGRAM_ALERT_TTL_SEC } from "../../../telegram/common/constants";
 import { logTelegramEvent } from "../../../telegram/common/log";
+import type { TelegramTargetProjectionGuard } from "./telegram-alert-job-target-outcomes";
 
 export interface TelegramAlertTargetStatusUpdate {
   targetKey: string;
+  sourceEventId: string;
   status: "queued" | "sent" | "failed" | "expired";
   at: number;
   errorClass?: string | null;
@@ -12,8 +14,10 @@ export interface TelegramAlertTargetStatusUpdate {
 
 export interface TelegramAlertTargetCancellation {
   targetKey: string;
+  sourceEventId: string;
   at: number;
   reason: string;
+  pendingGuard?: TelegramTargetProjectionGuard;
 }
 
 export async function recordTelegramAlertTargetStatuses(
@@ -35,6 +39,7 @@ export async function recordTelegramAlertTargetStatuses(
                   failed_at = COALESCE(failed_at, ?),
                   error_class = COALESCE(?, error_class)
             WHERE pending_dedupe_key = ?
+              AND source_event_id = ?
               AND status <> 'sent'
               AND effect_state NOT IN ('sending', 'execution_unknown')`,
         )
@@ -45,6 +50,7 @@ export async function recordTelegramAlertTargetStatuses(
           failedAt,
           update.errorClass ?? null,
           update.targetKey,
+          update.sourceEventId,
         );
     }));
   } catch {
@@ -74,10 +80,15 @@ export async function recordTelegramAlertTargetCancellations(
                   cancelled_at = COALESCE(cancelled_at, ?),
                   cancellation_reason = COALESCE(cancellation_reason, ?)
             WHERE pending_dedupe_key = ?
+              AND source_event_id = ?
               AND status <> 'sent'
-              AND effect_state NOT IN ('sending', 'execution_unknown')`,
+              AND effect_state NOT IN ('sending', 'execution_unknown')
+              ${cancellation.pendingGuard ? `AND (${cancellation.pendingGuard.sql})` : ""}`,
         )
-        .bind(cancellation.at, cancellation.at, cancellation.reason, cancellation.targetKey),
+        .bind(
+          cancellation.at, cancellation.at, cancellation.reason, cancellation.targetKey, cancellation.sourceEventId,
+          ...(cancellation.pendingGuard?.binds ?? []),
+        ),
     ));
   } catch {
     logTelegramEvent({

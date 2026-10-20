@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-import { applySettingToSubscriptions, prepareSubscriberAndSubscriptionStatements } from "../subscriptions";
+import { applySettingToSubscriptions, loadSubscriptionsByIds, prepareSubscriberAndSubscriptionStatements } from "../subscriptions";
 import { prepareCoinSettingStatements } from "../../webhook/telegram-webhook-settings-mutations";
 import type { ParsedSetCommand } from "../../webhook/telegram-webhook-shared";
 
@@ -20,6 +20,19 @@ function seeded() {
 }
 
 describe("per-coin subscription persistence", () => {
+  it.each(["dews", "depeg", "safety", "launch", "reserve", "freeze"] as const)(
+    "loads the %s override marker independently from the zero alert flag",
+    async (family) => {
+      const { db, sqlite } = seeded();
+      for (const marker of [0, 1]) {
+        sqlite.exec(`UPDATE telegram_subscriptions SET alert_${family} = 0, alert_${family}_override = ${marker} WHERE chat_id = '42'`);
+        const rows = await loadSubscriptionsByIds(db, "42", [COIN.id]);
+        expect(rows).toHaveLength(1);
+        expect(rows[0]).toMatchObject({ [`alert_${family}`]: 0, [`alert_${family}_override`]: marker });
+      }
+    },
+  );
+
   it.each([
     ["off", "0", { ticker: "USDC", setting: "depeg", enabled: false }, 0, null],
     ["step", "250", { ticker: "USDC", setting: "depeg-step", enabled: true, step: 250 }, 1, 250],

@@ -10,7 +10,7 @@ import {
   TELEGRAM_ALERTS_PER_MESSAGE_CHUNK_ESTIMATE,
 } from "../../../telegram/common/constants";
 import { TELEGRAM_ALERT_TTL_SEC } from "@shared/lib/telegram-delivery-policy";
-import type { PerAlertTypeDelivery, PerAlertTypeDeliveryStats, TelegramAlertType } from "@shared/types/status";
+import type { TelegramAlertType } from "@shared/types/status";
 import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
 import { buildPendingAlertScope, type PendingAlertScopeItem } from "../../../telegram/outbox/pending-provenance";
 
@@ -23,21 +23,6 @@ type AlertAppender<T> = (alerts: ConsolidatedAlerts) => T[];
  * Used purely for delivery-metric attribution.
  */
 const ALERT_TYPE_PRIORITY: readonly TelegramAlertType[] = ["depeg", "dews", "safety", "launch", "reserve"];
-
-function emptyPerAlertTypeStats(): PerAlertTypeDeliveryStats {
-  return { sent: 0, enqueued: 0, failed: 0, blocked: 0, firstSendLatencyMs: null };
-}
-
-export function emptyPerAlertTypeDelivery(): PerAlertTypeDelivery {
-  return {
-    dews: emptyPerAlertTypeStats(),
-    depeg: emptyPerAlertTypeStats(),
-    safety: emptyPerAlertTypeStats(),
-    launch: emptyPerAlertTypeStats(),
-    reserve: emptyPerAlertTypeStats(),
-    freeze: emptyPerAlertTypeStats(),
-  };
-}
 
 function dominantAlertType(alerts: ConsolidatedAlerts): TelegramAlertType {
   if (alerts.depegTriggered.length + alerts.depegResolved.length + alerts.depegWorsening.length > 0) {

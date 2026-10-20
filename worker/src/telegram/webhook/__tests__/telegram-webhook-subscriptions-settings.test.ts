@@ -1,10 +1,11 @@
-import { makeBulkPendingRow, makeSubscriptionRow, pendingDisambiguationTable } from "./telegram-rows.test-support.ts";
+import { makeBulkPendingRow, pendingDisambiguationTable } from "./telegram-rows.test-support.ts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { TelegramWebhookEffectFence, createTelegramWebhookIntent } from "../telegram-webhook-effect-fence";
 import { claimTelegramProcessedUpdate } from "../../store/telegram-webhook-store";
 import { TELEGRAM_SUBSCRIBABLE_STABLECOINS } from "../../store/subscription-eligibility";
 import { TELEGRAM_ALERT_TYPES } from "@shared/types/status";
+import { classifyTelegramCommand } from "../telegram-webhook-ingress-policy";
 
 import { COMMAND_HANDLERS, type WebhookCommandHandler } from "../../commands";
 import { makePendingSelectionRow, makeSelectionSubscription } from "../../store/__tests__/telegram-selection.test-support.ts";
@@ -47,6 +48,7 @@ function pendingActionPayload(
   return JSON.stringify({
     ...actionPayload,
     schemaVersion: 1,
+    flowId: "0123456789abcdef",
     resolvedIds: [],
     ambiguousTicker: "USDF",
     candidates,
@@ -59,6 +61,117 @@ describe("handleTelegramWebhook", () => {
   beforeEach(resetTelegramWebhookTest);
   const sqliteFixtures = createLatestSchemaFixtureTracker();
   afterEach(sqliteFixtures.closeAll);
+
+  const commandPolicyCases = [
+    ["/start", false, "required", "clear-and-run", true, true],
+    ["/presets", false, "none", "passthrough", false, true],
+    ["/help", false, "none", "passthrough", false, true],
+    ["/sample", false, "none", "passthrough", false, true],
+    ["/list", false, "none", "passthrough", false, true],
+    ["/status", false, "none", "passthrough", false, true],
+    ["/brief", false, "none", "passthrough", false, true],
+    ["/market", false, "none", "passthrough", false, true],
+    ["/top", false, "none", "passthrough", false, true],
+    ["/why", false, "none", "passthrough", false, true],
+    ["/coverage", false, "none", "passthrough", false, true],
+    ["/health", false, "none", "passthrough", false, true],
+    ["/subscribe", true, "required", "clear-and-run", true, false],
+    ["/unsubscribe", true, "required", "clear-and-run", true, false],
+    ["/set", true, "required", "clear-and-run", true, false],
+    ["/settings", false, "none", "clear-and-run", false, false],
+    ["/mute", true, "required", "clear-and-run", true, false],
+    ["/pause", true, "required", "remind", true, false],
+    ["/timezone", false, "none", "clear-and-run", true, false],
+    ["/unmutehours", true, "required", "clear-and-run", true, false],
+    ["/unsnooze", true, "required", "clear-and-run", true, false],
+    ["/cancel", false, "required", "cancel", false, false],
+    ["/forget", true, "required", "clear-and-run", false, false],
+    ["/export", false, "none", "remind", false, false],
+    ["/import", true, "required", "remind", false, false],
+    ["/recap", false, "none", "passthrough", true, false],
+  ] as const;
+  it("pins every registered command in the pending-state matrix", () => {
+    expect(commandPolicyCases.map(([command]) => command).sort()).toEqual(Object.keys(COMMAND_HANDLERS).sort());
+  });
+  it.each(commandPolicyCases)(
+    "preserves the full authorization and pending matrix for %s",
+    async (command, requiresGroupAdmin, mutation, pending, recoveryEligible, setupNonOwnerPassthrough) => {
+      expect(classifyTelegramCommand(command, "")).toMatchObject({
+        requiresGroupAdmin, mutation, pending, recoveryEligible, setupNonOwnerPassthrough,
+      });
+      const { sqlite, db } = sqliteFixtures.open();
+      const handler = vi.fn<WebhookCommandHandler>().mockResolvedValue(undefined);
+      const previousHandler = COMMAND_HANDLERS[command];
+      COMMAND_HANDLERS[command] = handler;
+      try {
+        for (const flow of ["none", "setup", "numeric", "bulk"] as const) {
+          for (const chatType of ["private", "group", "supergroup", "channel"] as const) {
+            for (const owner of [true, false]) {
+              for (const admin of [true, false]) {
+                handler.mockClear();
+                fetchSpy.mockClear();
+                mockTelegramMembership(fetchSpy, admin ? "administrator" : "member");
+                sqlite.exec("DELETE FROM telegram_pending_disambiguation; DELETE FROM telegram_processed_updates; DELETE FROM cache;");
+                if (flow !== "none") {
+                  const actionType = flow === "setup" ? "setup-step" : flow === "bulk" ? "confirm-bulk" : "subscribe";
+                  const payload = flow === "setup"
+                    ? { step: "branch", initiatorUserId: "111" }
+                    : flow === "bulk"
+                      ? { kind: "subscribe", alertTypes: ["dews"], coinIds: ["usdc-circle"], presetIds: [] }
+                      : {
+                        alertTypes: ["dews"], resolvedIds: [], ambiguousTicker: "USDF",
+                        candidates: [{ id: "usdf-falcon", symbol: "USDF", name: "Falcon USD" }],
+                        remainingTickers: [],
+                      };
+                  sqlite.prepare(`
+                    INSERT INTO telegram_pending_disambiguation (
+                      chat_id, action_type, action_payload, expires_at, initiator_user_id,
+                      alert_types, resolved_ids, ambiguous_ticker, candidates, remaining_tickers
+                    ) VALUES ('123', ?, ?, ?, '111', '[]', '[]', '', '[]', '[]')
+                  `).run(actionType, JSON.stringify({ schemaVersion: 1, flowId: "0123456789abcdef", ...payload }), Math.floor(Date.now() / 1000) + 60);
+                }
+                const allowedByPending = flow === "none"
+                  || (flow === "setup"
+                    ? (owner ? pending !== "cancel" : setupNonOwnerPassthrough)
+                    : pending === "passthrough" || (pending === "clear-and-run" && owner));
+                const authorized = !requiresGroupAdmin
+                  || chatType === "private"
+                  || (chatType !== "channel" && admin);
+                const dispatches = allowedByPending && authorized;
+                const response = await handleTelegramWebhook(
+                  db,
+                  makeWebhookRequest(123, `${command}${chatType === "private" ? "" : "@PharosWatchBot"}`, "test-secret", {
+                    chatType, fromId: owner ? 111 : 222,
+                  }),
+                  "test-secret",
+                  "bot-token",
+                );
+                const scenario = `${command}/${flow}/${chatType}/owner=${owner}/admin=${admin}`;
+                expect(response.status, scenario).toBe(200);
+                expect(handler.mock.calls.length, scenario).toBe(dispatches ? 1 : 0);
+                expect(fetchSpy.mock.calls.filter(([url]) => String(url).endsWith("/getChatMember")).length, scenario).toBe(
+                  allowedByPending && requiresGroupAdmin && (chatType === "group" || chatType === "supergroup") ? 1 : 0,
+                );
+                if (dispatches) {
+                  expect(Boolean(handler.mock.calls[0][0].clearPendingOnMutation), scenario).toBe(
+                    flow !== "none" && owner && mutation === "required"
+                    && (flow === "setup" || pending === "clear-and-run"),
+                  );
+                }
+                const clearedImmediately = flow !== "none" && owner
+                  && (pending === "cancel"
+                    || (mutation === "none" && (flow === "setup" || pending === "clear-and-run")));
+                expect(Boolean(sqlite.prepare("SELECT 1 FROM telegram_pending_disambiguation WHERE chat_id = '123'").get()), scenario)
+                  .toBe(flow !== "none" && !clearedImmediately);
+              }
+            }
+          }
+        }
+      } finally {
+        COMMAND_HANDLERS[command] = previousHandler;
+      }
+    },
+  );
 
   describe.each(["numeric", "callback"] as const)("deferred %s selection authorization", (completion) => {
     it.each([
@@ -116,7 +229,7 @@ describe("handleTelegramWebhook", () => {
         mockTelegramMembership(fetchSpy, membership);
       }
       const request = completion === "callback"
-        ? makeCallbackRequest("select:1", { chatId: -123, chatType, fromId: 111, updateId: 801 })
+        ? makeCallbackRequest(`select:1:${JSON.parse(String(pending!.action_payload)).flowId}`, { chatId: -123, chatType, fromId: 111, updateId: 801 })
         : makeWebhookRequest(-123, "1", "test-secret", { chatType, fromId: 111, updateId: 801 });
       const response = await handleTelegramWebhook(db, request, "test-secret", "bot-token");
       expect(response.status).toBe(200);
@@ -168,12 +281,13 @@ describe("handleTelegramWebhook", () => {
         alertTypes: ["dews"],
         depegWorseningBpsStep: null,
         clearPending: true,
+        flowId: "0123456789abcdef",
         initiatorUserId: "111",
       }, "required"));
       // Recover without a pending row: authorization must not depend on it.
       mockTelegramMembership(fetchSpy, membership);
       const request = completion === "callback"
-        ? makeCallbackRequest("select:1", { chatId: -123, chatType, fromId: actor, updateId })
+        ? makeCallbackRequest("select:1:0123456789abcdef", { chatId: -123, chatType, fromId: actor, updateId })
         : makeWebhookRequest(
           -123,
           completion === "command" ? "/start@PharosWatchBot sub_dews_usdc-circle" : "1",
@@ -262,7 +376,7 @@ describe("handleTelegramWebhook", () => {
 
     await handleTelegramWebhook(
       db,
-      makeCallbackRequest("confirm:bulk", { chatId: 123, fromId: 999, fromUsername: "requester" }),
+      makeCallbackRequest("confirm:bulk:0123456789abcdef", { chatId: 123, fromId: 999, fromUsername: "requester" }),
       "test-secret",
       "bot-token",
     );
@@ -399,14 +513,12 @@ describe("handleTelegramWebhook", () => {
   });
 
   it("refuses to export an unavailable row instead of silently dropping it", async () => {
-    const stablecoinId = "retired-stablecoin";
-    const db = makeTelegramWebhookDb([
-      {
-        match: "FROM telegram_subscriptions",
-        rows: [{ ...makeSubscriptionRow(stablecoinId, { alert_snooze_until_ts: null }) }],
-      },
-      { match: "FROM telegram_preset_subscriptions", rows: [] },
-    ]);
+    const { sqlite, db } = sqliteFixtures.open();
+    sqlite.exec(`
+      INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at) VALUES ('123', 1, 1);
+      INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, alert_dews, alert_dews_override)
+      VALUES ('123', 'retired-stablecoin', 1, 1);
+    `);
 
     await handleTelegramWebhook(db, makeWebhookRequest(123, "/export"), "test-secret", "bot-token");
 
@@ -510,7 +622,7 @@ describe("handleTelegramWebhook", () => {
     };
     expect(body.text).toContain("matches");
     const buttons = (body.reply_markup?.inline_keyboard ?? []).flat();
-    expect(buttons.some((button) => button.text.startsWith("1.") && button.callback_data === "select:1")).toBe(true);
+    expect(buttons.some((button) => button.text.startsWith("1.") && /^select:1:[a-f0-9]{16}$/.test(button.callback_data ?? ""))).toBe(true);
   });
 
   it("preserves the pending initiator on chained ambiguous ticker selections", async () => {
@@ -529,7 +641,7 @@ describe("handleTelegramWebhook", () => {
 
     await handleTelegramWebhook(
       db,
-      makeCallbackRequest("select:1", { chatId: -123, chatType: "supergroup", fromId: 999 }),
+      makeCallbackRequest("select:1:0123456789abcdef", { chatId: -123, chatType: "supergroup", fromId: 999 }),
       "test-secret",
       "bot-token",
     );
@@ -732,27 +844,54 @@ describe("handleTelegramWebhook", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  it("reminds the initiating user when a pending selection reply is invalid", async () => {
-    const ambiguous = resolveTicker("USDF");
-    if (ambiguous.status !== "ambiguous") {
-      throw new Error("Expected USDF to be ambiguous for invalid selection reminder test");
-    }
+  it.each(["not a number", "1.5", "1abc", "1,2e0", "+1", "9007199254740992"])(
+    "reminds the initiating user without changing preferences or consuming pending for %s",
+    async (text) => {
+      const { sqlite, db } = sqliteFixtures.open();
+      await handleTelegramWebhook(
+        db,
+        makeWebhookRequest(123, "/subscribe dews USDF", "test-secret", { fromId: 999, updateId: 900 }),
+        "test-secret",
+        "bot-token",
+      );
+      const pendingBefore = sqlite.prepare(
+        "SELECT * FROM telegram_pending_disambiguation WHERE chat_id = '123'",
+      ).get();
+      expect(pendingBefore).toMatchObject({ action_type: "subscribe", initiator_user_id: "999" });
+      const preferencesBefore = sqlite.prepare("SELECT * FROM telegram_subscriptions WHERE chat_id = '123'").all();
+      const generationBefore = sqlite.prepare("SELECT preference_generation FROM telegram_subscribers WHERE chat_id = '123'").get();
+      fetchSpy.mockClear();
+      const sendMarkers: unknown[] = [];
+      fetchSpy.mockImplementation(async (url) => {
+        if (String(url).endsWith("/sendMessage")) {
+          sendMarkers.push(sqlite.prepare(
+            "SELECT effect_state, effect_started_at FROM telegram_processed_updates WHERE update_id = 901",
+          ).get());
+        }
+        return new Response(JSON.stringify({ ok: true, result: { message_id: 1 } }));
+      });
 
-    const db = makeTelegramWebhookDb([
-      pendingDisambiguationTable(makePendingSelectionRow("subscribe", pendingActionPayload(ambiguous.matches, { alertTypes: ["dews"] }), "999")),
-    ]);
+      const response = await handleTelegramWebhook(
+        db,
+        makeWebhookRequest(123, text, "test-secret", { fromId: 999, updateId: 901 }),
+        "test-secret",
+        "bot-token",
+      );
 
-    await handleTelegramWebhook(db, makeWebhookRequest(123, "not a number"), "test-secret", "bot-token");
-
-    const history = db.getHistory();
-    expect(history.some((entry) => entry.sql.includes("INSERT INTO telegram_subscriptions"))).toBe(false);
-    expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_pending_disambiguation"))).toBe(false);
-    const text = sentMessageBody().text;
-    expect(text).toContain("I could not parse");
-    expect(text).toContain("&quot;not&quot;");
-    expect(text).toContain("numbers only");
-    expect(text).toContain("USDF");
-  });
+      expect(response.status).toBe(200);
+      expect(sqlite.prepare("SELECT * FROM telegram_subscriptions WHERE chat_id = '123'").all())
+        .toEqual(preferencesBefore);
+      // Reply diagnostics may advance, but the subscription preference generation must not.
+      expect(sqlite.prepare("SELECT preference_generation FROM telegram_subscribers WHERE chat_id = '123'").get())
+        .toEqual(generationBefore);
+      expect(sqlite.prepare("SELECT * FROM telegram_pending_disambiguation WHERE chat_id = '123'").get())
+        .toEqual(pendingBefore);
+      expect(fetchSpy.mock.calls.filter(([url]) => String(url).endsWith("/sendMessage"))).toHaveLength(1);
+      expect(sendMarkers).toEqual([{ effect_state: "started", effect_started_at: expect.any(Number) }]);
+      expect(sentMessageBody().text).toContain("numbers only");
+      expect(sentMessageBody().text).toContain("USDF");
+    },
+  );
 
   it("allows the initiating group admin to complete a pending selection", async () => {
     const ambiguous = resolveTicker("USDF");
@@ -927,7 +1066,7 @@ describe("handleTelegramWebhook", () => {
     };
     expect(body.text).toContain("matches");
     expect(
-      (body.reply_markup?.inline_keyboard ?? []).flat().some((button) => button.callback_data === "select:1"),
+      (body.reply_markup?.inline_keyboard ?? []).flat().some((button) => /^select:1:[a-f0-9]{16}$/.test(button.callback_data ?? "")),
     ).toBe(true);
   });
 
@@ -961,7 +1100,7 @@ describe("handleTelegramWebhook", () => {
       })),
     ]);
 
-    const request = makeCallbackRequest("confirm:bulk");
+    const request = makeCallbackRequest("confirm:bulk:0123456789abcdef");
     await handleTelegramWebhook(db, request, "test-secret", "bot-token");
 
     const history = db.getHistory();

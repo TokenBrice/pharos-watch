@@ -185,6 +185,8 @@ export function createTelegramFetchSpy(): { fetchSpy: TelegramFetchSpy; reset: (
   const fetchSpy: TelegramFetchSpy = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>();
   vi.stubGlobal("fetch", fetchSpy);
   const reset = (): void => {
+    // Multiple harnesses may coexist in one suite; resetting selects this owner.
+    vi.stubGlobal("fetch", fetchSpy);
     fetchSpy.mockReset();
     fetchSpy.mockImplementation(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }));
   };

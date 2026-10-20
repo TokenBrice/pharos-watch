@@ -161,7 +161,7 @@ describe("handleTelegramWebhook", () => {
       { match: "INSERT INTO telegram_pending_disambiguation", rows: [] },
     ]);
 
-    await handleTelegramWebhook(db, makeCallbackRequest("setup:type-toggle:launch"), "test-secret", "bot-token");
+    await handleTelegramWebhook(db, makeCallbackRequest("setup:type-toggle:launch:0123456789abcdef"), "test-secret", "bot-token");
 
     const pendingWrites = db
       .getHistory()
@@ -178,8 +178,8 @@ describe("handleTelegramWebhook", () => {
     const body = sentMessageBody();
     expect(body.text).toContain("Selected: DEWS, Depeg, Launch");
     const buttons = inlineButtons(body);
-    expect(buttons).toContainEqual({ text: "✓ Launch", callback_data: "setup:type-toggle:launch" });
-    expect(buttons).toContainEqual({ text: "Next →", callback_data: "setup:next" });
+    expect(buttons).toContainEqual({ text: "✓ Launch", callback_data: expect.stringMatching(/^setup:type-toggle:launch:[a-f0-9]{16}$/) });
+    expect(buttons).toContainEqual({ text: "Next →", callback_data: expect.stringMatching(/^setup:next:[a-f0-9]{16}$/) });
   });
 
   it("setup:target:type opens one ticker prompt with an inline cancel affordance", async () => {
@@ -195,7 +195,7 @@ describe("handleTelegramWebhook", () => {
       { match: "INSERT INTO telegram_pending_disambiguation", rows: [] },
     ]);
 
-    await handleTelegramWebhook(db, makeCallbackRequest("setup:target:type"), "test-secret", "bot-token");
+    await handleTelegramWebhook(db, makeCallbackRequest("setup:target:type:0123456789abcdef"), "test-secret", "bot-token");
 
     const pendingWrites = db
       .getHistory()
@@ -214,7 +214,7 @@ describe("handleTelegramWebhook", () => {
     const promptBody = sentMessageBody();
     expect(promptBody.text).toContain("Reply with a ticker");
     expect((promptBody.reply_markup as { force_reply?: boolean } | undefined)?.force_reply).toBeUndefined();
-    expect(inlineButtons(promptBody)).toContainEqual({ text: "Cancel", callback_data: "setup:cancel" });
+    expect(inlineButtons(promptBody)).toContainEqual({ text: "Cancel", callback_data: expect.stringMatching(/^setup:cancel:[a-f0-9]{16}$/) });
   });
 
   it("atomically replaces a stale setup-step row when reopening the setup wizard", async () => {
@@ -314,10 +314,8 @@ describe("handleTelegramWebhook", () => {
   it("keeps discovery keyboards for addressed /coverage commands in group chats", async () => {
     const db = makeTelegramWebhookDb([
       { match: "FROM price_cache WHERE asset_id = ?", rows: [] },
-      { match: "FROM stress_signals", rows: [] },
       { match: "FROM depeg_events", rows: [] },
       { match: "FROM dex_liquidity", rows: [] },
-      { match: "FROM yield_data", rows: [] },
       { match: "FROM cache WHERE key = ?", rows: [] },
     ]);
 
@@ -329,6 +327,10 @@ describe("handleTelegramWebhook", () => {
     );
 
     expect(coverageRes.status).toBe(200);
+    // Coverage now reads the served yield snapshot, never the raw yield table.
+    expect(db.getHistory().some((entry) => entry.sql.includes("FROM yield_data"))).toBe(false);
+    // Missing accepted DEWS scope must not fall through to diagnostic row reads.
+    expect(db.getHistory().some((entry) => entry.sql.includes("FROM stress_signals"))).toBe(false);
     const sentBodies = fetchSpy.mock.calls
       .filter((call) => String(call[0]).includes("/sendMessage"))
       .map(([, init]) => JSON.parse((init?.body as string) ?? "{}") as { text: string; reply_markup?: unknown });

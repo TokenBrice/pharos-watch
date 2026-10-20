@@ -120,6 +120,26 @@ function readState(sqlite: DatabaseSync): unknown {
 }
 
 describe("watchlist v2 atomic replacement", () => {
+  it("distinguishes an absent subscriber from a retained empty generation-zero subscriber", async () => {
+    const { sqlite, db } = openLatestSchema();
+    try {
+      const absent = await loadWatchlistPortableState(db, "chat", "catalog-test", true);
+      expect(absent).toEqual({
+        state: { registryVersion: "catalog-test", direct: [], presets: [] },
+        preferenceGeneration: null,
+        directSnoozes: new Map(),
+      });
+      sqlite.prepare(`
+        INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at, preference_generation)
+        VALUES ('chat', ?, ?, 0)
+      `).run(NOW, NOW);
+      expect(await loadWatchlistPortableState(db, "chat", "catalog-test", true))
+        .toEqual({ ...absent, preferenceGeneration: 0 });
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it("completes a 20-coin direct bulk patch atomically without changing preset intent", async () => {
     const { sqlite, db } = openLatestSchema();
     const ids = [...TRACKED_META_BY_ID.keys()].filter(isSubscribableCoin).slice(0, 20);
@@ -392,7 +412,7 @@ describe("watchlist v2 atomic replacement", () => {
         INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, safety_mode)
         VALUES ('chat', 'lusd-liquity', 'upgrade-only');
       `);
-      const { state, preferenceGeneration } = await loadWatchlistPortableState(db, "chat", "catalog-test");
+      const { state, preferenceGeneration, directSnoozes } = await loadWatchlistPortableState(db, "chat", "catalog-test");
       expect(preferenceGeneration).toBe(5);
       const empty = {
         alertDews: false, alertDepeg: false, alertSafety: false, alertLaunch: false,
@@ -405,6 +425,15 @@ describe("watchlist v2 atomic replacement", () => {
         { ...empty, stablecoinId: "lusd-liquity", safetyMode: "upgrade-only" },
         { ...empty, stablecoinId: "pyusd-paypal", overrideFreeze: true },
         { ...empty, stablecoinId: "usdc-circle", alertDews: true, alertDepeg: true, overrideDews: true, overrideDepeg: true, dewsMinBand: "ALERT", depegWorseningBpsStep: 100 },
+      ]);
+      expect(state.presets).toEqual([
+        { presetId: "eur-top10", alertDews: true, alertDepeg: true, alertSafety: false, depegWorseningBpsStep: 250 },
+        { presetId: "usd-top25", alertDews: true, alertDepeg: false, alertSafety: false, depegWorseningBpsStep: null },
+      ]);
+      expect([...directSnoozes]).toEqual([
+        ["dai-makerdao", NOW + 100_000], ["frax-frax", NOW + 100_000],
+        ["lusd-liquity", null], ["pyusd-paypal", null],
+        ["usdc-circle", NOW + 100_000], ["usdt-tether", NOW - 1],
       ]);
     } finally {
       sqlite.close();

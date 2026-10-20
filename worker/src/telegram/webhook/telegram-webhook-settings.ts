@@ -40,6 +40,7 @@ import {
 } from "./telegram-webhook-settings-render";
 import {
   applyCoinSetting,
+  normalizeCoinSetting,
   setQuietHours,
   toggleGlobalAlert,
 } from "./telegram-webhook-settings-mutations";
@@ -241,11 +242,13 @@ export async function handleSettingsCallback(
       await answer({ text: "Unknown setting." });
       return;
     }
-    const [coinId, setting, value] = settingParts;
-    if (!isSubscribableStablecoinId(coinId) || !setting || value == null) {
+    const [coinId, settingCode, settingValue] = settingParts;
+    const normalized = normalizeCoinSetting(settingCode, settingValue);
+    if (!isSubscribableStablecoinId(coinId) || !normalized) {
       await answer({ text: "Unknown setting." });
       return;
     }
+    const { setting, value } = normalized;
     const operation = await prepareMutation("callback:settings-c", { coinId, setting, value });
     const applied = effect.wasMutationApplied
       ? "Setting updated."

@@ -7,6 +7,7 @@ import type { CronResult } from "../../../lib/cron-logger";
 import { createCronResult } from "../../../lib/cron-result";
 import { logTelegramEvent } from "../../../telegram/common/log";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
+import type { TelegramDispatchCronMetadata } from "@shared/types/status";
 import {
   parseTelegramDispatchCronMetadata,
   readMetadataNumber,
@@ -77,6 +78,8 @@ type WatchdogResult = {
     holdReasonCodes?: string[];
   };
   zeroSend: WatchdogOutcome & {
+    availability: "available" | "unknown";
+    reason: string | null;
     streak: number;
     evaluated: boolean;
     runIdentity: string | null;
@@ -124,7 +127,7 @@ function hasMalformedDispatchCounts(value: unknown): boolean {
       readMetadataNumber(events[key]) === null
     ) return true;
   }
-  for (const key of ["messagesSent", "freshCandidateChats", "freezeTargetCount"] as const) {
+  for (const key of ["messagesSent", "freezeTargetCount"] as const) {
     if (
       Object.prototype.hasOwnProperty.call(record, key) &&
       readMetadataNumber(record[key]) === null
@@ -145,7 +148,22 @@ async function clearEpisode(
   return { recovered: true };
 }
 
-async function readLatestDispatchMetadata(db: D1Database) {
+type DispatchMetadataReadResult =
+  | {
+    availability: "available";
+    value: {
+      runIdentity: string;
+      metadata: TelegramDispatchCronMetadata;
+    } | null;
+  }
+  | { availability: "unknown"; reason: string; runIdentity: string | null };
+
+function unknownDispatchEvidence(reason: string, runIdentity: string | null): DispatchMetadataReadResult {
+  logDispatchMetadataWarning(reason);
+  return { availability: "unknown", reason, runIdentity };
+}
+
+async function readLatestDispatchMetadata(db: D1Database): Promise<DispatchMetadataReadResult> {
   try {
     // Exclude aborted/locked runs (error, skipped_locked) so a canceled dispatch
     // does not falsely reset the zero-send streak (post-release-review E.6).
@@ -154,25 +172,19 @@ async function readLatestDispatchMetadata(db: D1Database) {
         "SELECT id, metadata FROM cron_runs WHERE job = 'dispatch-telegram-alerts' AND status IN ('ok', 'degraded') ORDER BY started_at DESC, id DESC LIMIT 1",
       )
       .first<{ id: number | string; metadata: string | null }>();
-    if (!row?.metadata) return null;
+    if (!row) return { availability: "available", value: null };
+    const runIdentity = String(row.id);
+    if (!row.metadata) return unknownDispatchEvidence("missing-metadata", runIdentity);
     const parsed = parseJson(row.metadata);
-    if (!parsed.ok) {
-      logDispatchMetadataWarning("invalid-json");
-      return null;
-    }
+    if (!parsed.ok) return unknownDispatchEvidence("invalid-json", runIdentity);
     const metadata = parseTelegramDispatchCronMetadata(parsed.value);
-    if (!metadata) {
-      logDispatchMetadataWarning("invalid-shape");
-      return null;
+    if (!metadata) return unknownDispatchEvidence("invalid-shape", runIdentity);
+    if (hasMalformedDispatchCounts(parsed.value)) {
+      return unknownDispatchEvidence("malformed-count", runIdentity);
     }
-    return {
-      runIdentity: String(row.id),
-      metadata,
-      malformedCounts: hasMalformedDispatchCounts(parsed.value),
-    };
+    return { availability: "available", value: { runIdentity, metadata } };
   } catch {
-    logDispatchMetadataWarning("read-failed");
-    return null;
+    return unknownDispatchEvidence("read-failed", null);
   }
 }
 
@@ -358,7 +370,7 @@ async function evaluateSafetySource(
   return outcome;
 }
 
-function sumEvents(metadata: ReturnType<typeof parseTelegramDispatchCronMetadata>): number | null {
+function sumEvents(metadata: TelegramDispatchCronMetadata): number | null {
   const events = metadata?.eventsDetected;
   if (!events) return null;
   const { dews, depeg, safety, launch } = events;
@@ -369,74 +381,79 @@ function sumEvents(metadata: ReturnType<typeof parseTelegramDispatchCronMetadata
 async function evaluateZeroSendStreak(
   db: D1Database,
 ): Promise<WatchdogResult["zeroSend"]> {
-  const latestRun = await readLatestDispatchMetadata(db);
+  const dispatchRead = await readLatestDispatchMetadata(db);
+  const latestRun = dispatchRead.availability === "available" ? dispatchRead.value : null;
   const priorState = await readZeroSendState(db);
   const priorStreak = priorState.streak;
   const outcome: WatchdogResult["zeroSend"] = {
     ...emptyOutcome(),
+    triggered: priorStreak >= ZERO_SEND_STREAK_THRESHOLD,
+    availability: dispatchRead.availability,
+    reason: dispatchRead.availability === "unknown" ? dispatchRead.reason : null,
     streak: priorStreak,
     evaluated: false,
-    runIdentity: latestRun?.runIdentity ?? null,
+    runIdentity: dispatchRead.availability === "unknown" ? dispatchRead.runIdentity : latestRun?.runIdentity ?? null,
   };
 
   if (!latestRun) {
-    outcome.detail = "dispatch metadata unavailable; streak preserved";
-    return outcome;
-  }
-  if (priorState.lastRunIdentity === latestRun.runIdentity) {
-    outcome.detail = `run=${latestRun.runIdentity} already evaluated`;
+    if (dispatchRead.availability === "available") outcome.reason = "no-completed-run";
+    outcome.detail = "no admitted dispatch metadata; streak preserved";
     return outcome;
   }
 
   const metadata = latestRun.metadata;
-  if (latestRun.malformedCounts) {
-    logDispatchMetadataWarning("malformed-count");
-    outcome.detail = "dispatch metadata unavailable; streak preserved";
-    return outcome;
-  }
-
   const events = sumEvents(metadata);
   const messagesSent = metadata.messagesSent;
-  if (events == null || messagesSent == null) {
-    logDispatchMetadataWarning("missing-count");
-    outcome.detail = "dispatch metadata unavailable; streak preserved";
-    return outcome;
-  }
-  const freshCandidateChats = metadata.freshCandidateChats;
-  if (events > 0 && messagesSent === 0 && freshCandidateChats == null) {
-    logDispatchMetadataWarning("missing-candidate-count");
-    outcome.detail = "dispatch metadata unavailable; streak preserved";
-    return outcome;
-  }
+  const planning = metadata.authoritativePlanning;
+  const sourceFamilies = (["dews", "depeg", "safety", "launch", "reserve"] as const)
+    .filter((family) => (metadata.eventsDetected?.[family] ?? 0) > 0);
+  const planningApplies = planning?.sourceEventId != null &&
+    planning.sourceEventFamilies != null &&
+    sourceFamilies.every((family) => planning.sourceEventFamilies!.includes(family));
   const freezeEvents = metadata.eventsDetected?.freeze ?? 0;
   const freezeTargetCount = metadata.freezeTargetCount;
-  if (events > 0 && messagesSent === 0 && freezeEvents > 0 && freezeTargetCount == null) {
-    logDispatchMetadataWarning("missing-freeze-target-count");
+  const needsWorkload = events != null && events > 0 && messagesSent === 0;
+  const missingReason = events == null || messagesSent == null ? "missing-count"
+    : needsWorkload && sourceFamilies.length > 0 && planning?.plannedTargetCount == null ? "missing-planned-target-count"
+      : needsWorkload && sourceFamilies.length > 0 && !planningApplies ? "source-workload-not-applicable"
+        : needsWorkload && freezeEvents > 0 &&
+          (freezeTargetCount == null || !Number.isInteger(freezeTargetCount) || freezeTargetCount < 0)
+          ? "missing-freeze-target-count"
+          : null;
+  if (missingReason || events == null || messagesSent == null) {
+    logDispatchMetadataWarning(missingReason ?? "missing-count");
+    outcome.availability = "unknown";
+    outcome.reason = missingReason ?? "missing-count";
     outcome.detail = "dispatch metadata unavailable; streak preserved";
+    return outcome;
+  }
+  if (priorState.lastRunIdentity === latestRun.runIdentity) {
+    outcome.reason = "already-evaluated";
+    outcome.detail = `run=${latestRun.runIdentity} already evaluated`;
     return outcome;
   }
   outcome.evaluated = true;
-  const zeroSendRun = events > 0 && messagesSent === 0 && ((freshCandidateChats ?? 0) > 0 || (freezeTargetCount ?? 0) > 0);
+  const zeroSendRun = needsWorkload &&
+    ((sourceFamilies.length > 0 && planningApplies && planning!.plannedTargetCount! > 0) ||
+      (freezeEvents > 0 && freezeTargetCount! > 0));
 
   if (zeroSendRun) {
     const nextStreak = priorStreak + 1;
     await writeZeroSendState(db, { streak: nextStreak, lastRunIdentity: latestRun.runIdentity });
     outcome.streak = nextStreak;
     outcome.triggered = nextStreak >= ZERO_SEND_STREAK_THRESHOLD;
-    outcome.detail = `eventsDetected=${events}, freshCandidateChats=${freshCandidateChats}, freezeTargetCount=${freezeTargetCount}, streak=${nextStreak}`;
+    outcome.detail = `eventsDetected=${events}, sourceEventId=${planning?.sourceEventId}, plannedTargetCount=${planning?.plannedTargetCount}, freezeTargetCount=${freezeTargetCount}, streak=${nextStreak}`;
     return outcome;
   }
 
   outcome.streak = 0;
+  outcome.triggered = false;
+  await writeZeroSendState(db, { streak: 0, lastRunIdentity: latestRun.runIdentity });
   if (priorStreak >= ZERO_SEND_STREAK_THRESHOLD) {
-    const cleared = await clearEpisode(db, WATCHDOG_KEYS.zeroSendStreak);
-    outcome.recovered = cleared.recovered;
+    outcome.recovered = true;
     outcome.detail = `recovered after streak=${priorStreak}`;
-  } else {
-    await writeZeroSendState(db, { streak: 0, lastRunIdentity: latestRun.runIdentity });
-    if (priorStreak > 0) {
-      outcome.detail = `streak reset (priorStreak=${priorStreak})`;
-    }
+  } else if (priorStreak > 0) {
+    outcome.detail = `streak reset (priorStreak=${priorStreak})`;
   }
   return outcome;
 }
@@ -457,6 +474,7 @@ export async function runTelegramDegradationWatchdog(
   const result: WatchdogResult = { pendingBacklog, safetySource, zeroSend };
   const degraded =
     pendingBacklog.availability === "unknown" ||
+    zeroSend.availability === "unknown" ||
     pendingBacklog.triggered ||
     safetySource.triggered ||
     zeroSend.triggered;
@@ -468,7 +486,8 @@ export async function runTelegramDegradationWatchdog(
       reason: pendingBacklog.availability === "unknown" ? "pending-backlog-unavailable"
         : pendingBacklog.triggered ? "pending-backlog-threshold"
           : safetySource.triggered ? "safety-source-unavailable"
-            : zeroSend.triggered ? "zero-send-streak" : "watchdog-completed",
+            : zeroSend.availability === "unknown" ? "dispatch-evidence-unavailable"
+              : zeroSend.triggered ? "zero-send-streak" : "watchdog-completed",
     },
   });
 }

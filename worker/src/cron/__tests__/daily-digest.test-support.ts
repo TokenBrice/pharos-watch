@@ -296,9 +296,12 @@ function makeDailyDigestTables(): MockTableConfig[] {
       "SELECT h.stablecoin_id, h.liquidity_score, h.total_tvl_usd, h.snapshot_date",
     ].map(empty),
     first("SELECT circulating_usd AS ath_mcap, snapshot_date FROM supply_history", null),
+    // Transition accounting now certifies a complete census independently of
+    // the bounded detail rows; an observed empty history needs both reads.
+    first("SELECT COUNT(DISTINCT history_id) AS count", { count: 0 }),
     ...[
       "SELECT stablecoin_id, score, band FROM stress_signal_history",
-      "GROUP BY recorded_at HAVING COUNT(*) > 15",
+      "SELECT history_id, recorded_at",
       "SELECT history_id, stablecoin_id, recorded_at, model, identity_schema_version",
       "INSERT INTO daily_digest",
       "INSERT OR IGNORE INTO cache",
@@ -309,7 +312,7 @@ function makeDailyDigestTables(): MockTableConfig[] {
     first("SELECT value, updated_at FROM cache WHERE key = ?", null),
     { ...empty("SELECT COUNT(*) as cnt FROM daily_digest WHERE"), rows: [{ cnt: 1 }], first: { cnt: 1 } },
     {
-      match: "FROM depeg_events WHERE ended_at IS NULL",
+      match: "FROM depeg_events e LEFT JOIN depeg_event_provenance",
       rows: [
         {
           stablecoin_id: "usdt-tether",
@@ -362,7 +365,6 @@ interface DailyDigestScenarioOptions {
     prependTables?: MockTableConfig[];
     transformTables?: (tables: MockTableConfig[]) => MockTableConfig[];
   };
-  appendicesCommitSuccess?: () => Promise<void>;
 }
 
 export function makeDailyDigestScenario(
@@ -375,7 +377,6 @@ export function makeDailyDigestScenario(
     ...makeDailyDigestTables(),
   ];
   const tables = dbOptions.transformTables?.(baseTables) ?? baseTables;
-  const commitSuccess = options.appendicesCommitSuccess ?? (async () => undefined);
   const deliveryMocks: DailyDigestDeliveryMocks = {
     twitter: { tweetId: "1", mediaAttached: true },
     telegramEnqueue: { created: true, payloadMatched: true, editionKey: "daily:2026-03-06", state: "pending", chunks: ["stored daily payload"] },
@@ -383,7 +384,6 @@ export function makeDailyDigestScenario(
     appendices: {
       appendixHtml: null,
       metadata: { hasAppendix: false, cemeteryDetected: 0, trackedDetected: 0, preLaunchDetected: 0, cemeterySymbols: [], trackedSymbols: [], preLaunchSymbols: [], frozenDetected: 0, frozenSymbols: [], seededSnapshots: [] },
-      commitSuccess,
     },
   };
   return {

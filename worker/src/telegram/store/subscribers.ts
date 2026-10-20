@@ -1,5 +1,7 @@
 import { unixNowSec as unixNow } from "@shared/lib/time-constants";
 import { TELEGRAM_ALERT_TYPES } from "@shared/types/status";
+import { formatIsoDate } from "@shared/lib/format";
+import type { TelegramAdoptionCampaign, TelegramAdoptionPlacement } from "@shared/lib/telegram-adoption-analytics";
 import { executeAtomicBatch } from "../../lib/db";
 import type { SubscriberRow } from "../webhook/telegram-webhook-shared";
 import {
@@ -27,6 +29,55 @@ export function prepareEnsureSubscriberExists(
   `).bind(chatId, username, nowSec, nowSec);
 }
 
+export interface TelegramFollowAttribution {
+  campaign: TelegramAdoptionCampaign;
+  placement: TelegramAdoptionPlacement;
+}
+
+export interface TelegramFollowOptions {
+  adoption?: TelegramFollowAttribution;
+  /** False only when a composed mutation claims once before all its domain writes. */
+  recordFirstFollow?: boolean;
+}
+
+/** Prepend only to a validated enable transition, in its atomic domain batch.
+ * Existing effective follows are not proof of a missing historical milestone.
+ */
+export function prepareTelegramFirstFollowStatements(
+  db: D1Database,
+  input: {
+    chatId: string;
+    username: string | null;
+    feature: "direct" | "preset" | "global";
+    nowSec: number;
+    adoption?: TelegramFollowAttribution;
+    guard?: { sql: string; binds: unknown[] };
+    ensureSubscriber?: boolean;
+  },
+): D1PreparedStatement[] {
+  const eligible = `chat_id = ? AND first_follow_at IS NULL
+    AND NOT (${TELEGRAM_ALERT_TYPES.map((type) => `global_alert_${type} = 1`).join(" OR ")})
+    AND NOT EXISTS (SELECT 1 FROM telegram_subscriptions t WHERE t.chat_id = telegram_subscribers.chat_id
+      AND (${TELEGRAM_ALERT_TYPES.map((type) => `t.alert_${type} = 1`).join(" OR ")}))
+    AND NOT EXISTS (SELECT 1 FROM telegram_preset_subscriptions p WHERE p.chat_id = telegram_subscribers.chat_id
+      AND (p.alert_dews = 1 OR p.alert_depeg = 1 OR p.alert_safety = 1))
+    ${input.guard ? `AND (${input.guard.sql})` : ""}`;
+  const binds = [input.chatId, ...(input.guard?.binds ?? [])];
+  return [
+    ...(input.ensureSubscriber === false ? [] : [prepareEnsureSubscriberExists(db, input.chatId, input.username, input.nowSec)]),
+    db.prepare(`INSERT INTO telegram_adoption_daily (
+        day, campaign, placement, stage, feature, latency_bucket, outcome, count, first_seen_at, last_seen_at
+      ) SELECT ?, ?, ?, 'first_follow', ?, '', 'success', 1, ?, ?
+        WHERE EXISTS (SELECT 1 FROM telegram_subscribers WHERE ${eligible})
+      ON CONFLICT(day, campaign, placement, stage, feature, latency_bucket, outcome)
+      DO UPDATE SET count = telegram_adoption_daily.count + 1, last_seen_at = excluded.last_seen_at`)
+      .bind(formatIsoDate(input.nowSec), input.adoption?.campaign ?? "organic", input.adoption?.placement ?? "unknown",
+        input.feature, input.nowSec, input.nowSec, ...binds),
+    db.prepare(`UPDATE telegram_subscribers SET first_follow_at = ? WHERE ${eligible}`)
+      .bind(input.nowSec, ...binds),
+  ];
+}
+
 export interface UpsertSubscriberInput {
   chatId: string;
   username: string | null;
@@ -35,7 +86,7 @@ export interface UpsertSubscriberInput {
   globalAlertBumps?: Partial<Record<(typeof TELEGRAM_ALERT_TYPES)[number], 0 | 1>>;
   globalAlertOverrides?: Partial<Record<(typeof TELEGRAM_ALERT_TYPES)[number], 0 | 1>>;
   quietHours?:
-    | { enabled: true; startHourUtc: number; endHourUtc: number }
+    | { enabled: true; startHourUtc: number; endHourUtc: number; preserveSavedWindow?: boolean }
     | { enabled: false };
   /** Increment in the same UPSERT as an intent mutation not inferable from the fields above. */
   bumpPreferenceGeneration?: boolean;
@@ -63,9 +114,7 @@ type UpsertSubscriberKind =
       nowSec: number;
       perCoinAlertBumps?: Partial<Record<(typeof TELEGRAM_ALERT_TYPES)[number], 0 | 1>>;
       globalAlertBumps?: Partial<Record<(typeof TELEGRAM_ALERT_TYPES)[number], 0 | 1>>;
-      quietHours?:
-        | { enabled: true; startHourUtc: number; endHourUtc: number }
-        | { enabled: false };
+      quietHours?: UpsertSubscriberInput["quietHours"];
       bumpPreferenceGeneration?: boolean;
     }
   | {
@@ -74,9 +123,7 @@ type UpsertSubscriberKind =
       username: string | null;
       nowSec: number;
       globalAlertOverrides: Partial<Record<(typeof TELEGRAM_ALERT_TYPES)[number], 0 | 1>>;
-      quietHours?:
-        | { enabled: true; startHourUtc: number; endHourUtc: number }
-        | { enabled: false };
+      quietHours?: UpsertSubscriberInput["quietHours"];
       bumpPreferenceGeneration?: boolean;
     }
   | {
@@ -165,11 +212,20 @@ export function buildSubscriberUpsert(
   }
 
   if (quietHours != null) {
-    updates.push(
-      "quiet_hours_enabled = excluded.quiet_hours_enabled",
-      "quiet_hours_start_utc = excluded.quiet_hours_start_utc",
-      "quiet_hours_end_utc = excluded.quiet_hours_end_utc",
-    );
+    updates.push("quiet_hours_enabled = excluded.quiet_hours_enabled");
+    if (quietHours.enabled) {
+      // Evaluate the saved window inside the UPSERT, not in a stale pre-toggle read.
+      const validSavedWindow = `telegram_subscribers.quiet_hours_start_utc BETWEEN 0 AND 23
+        AND telegram_subscribers.quiet_hours_end_utc BETWEEN 0 AND 23
+        AND telegram_subscribers.quiet_hours_start_utc = CAST(telegram_subscribers.quiet_hours_start_utc AS INTEGER)
+        AND telegram_subscribers.quiet_hours_end_utc = CAST(telegram_subscribers.quiet_hours_end_utc AS INTEGER)
+        AND telegram_subscribers.quiet_hours_start_utc <> telegram_subscribers.quiet_hours_end_utc`;
+      for (const column of ["quiet_hours_start_utc", "quiet_hours_end_utc"]) {
+        updates.push(quietHours.preserveSavedWindow
+          ? `${column} = CASE WHEN ${validSavedWindow} THEN telegram_subscribers.${column} ELSE excluded.${column} END`
+          : `${column} = excluded.${column}`);
+      }
+    }
   }
 
   const sql = `
@@ -284,7 +340,8 @@ function buildSubscriberPreferenceUpsert(kind: Extract<
  * - `perCoinAlertBumps` / `globalAlertBumps` use MAX(...) so per-coin actions
  *   never downgrade a flag.
  * - `globalAlertOverrides` replaces the value (used by `/set all ... off`).
- * - `quietHours` replaces unconditionally.
+ * - `quietHours` changes enabled state; disabling retains the saved window.
+ *   Enabling replaces hours unless `preserveSavedWindow` requests atomic valid-window fallback.
  */
 export function prepareUpsertSubscriberRow(
   db: D1Database,
@@ -328,11 +385,17 @@ export function prepareUpsertSubscriberRow(
 export async function upsertSubscriberRow(
   db: D1Database,
   input: UpsertSubscriberInput,
-  options: TelegramOperationBatchOptions = {},
+  options: TelegramOperationBatchOptions & TelegramFollowOptions = {},
 ): Promise<void> {
+  const enablesGlobal = Object.values(input.globalAlertOverrides ?? input.globalAlertBumps ?? {}).some((value) => value === 1);
   await executeAtomicBatch(
     db,
-    appendTelegramOperationStatements([prepareUpsertSubscriberRow(db, input)], options),
+    appendTelegramOperationStatements([
+      ...(enablesGlobal ? prepareTelegramFirstFollowStatements(db, {
+        ...input, feature: "global", adoption: options.adoption,
+      }) : []),
+      prepareUpsertSubscriberRow(db, input),
+    ], options),
   );
 }
 
@@ -380,13 +443,17 @@ export async function upsertGlobalAlertTypes(
   chatId: string,
   username: string | null,
   alertTypes: Set<string>,
-  options: { clearPending?: boolean; operationStatements?: D1PreparedStatement[] } = {},
+  options: { clearPending?: boolean; operationStatements?: D1PreparedStatement[] } & TelegramFollowOptions = {},
 ): Promise<void> {
+  const nowSec = unixNow();
   const statements = [
+    ...(TELEGRAM_ALERT_TYPES.some((type) => alertTypes.has(type))
+      ? prepareTelegramFirstFollowStatements(db, { chatId, username, nowSec, feature: "global", adoption: options.adoption })
+      : []),
     prepareUpsertSubscriberRow(db, {
       chatId,
       username,
-      nowSec: unixNow(),
+      nowSec,
       globalAlertBumps: {
         dews: alertTypes.has("dews") ? 1 : 0,
         depeg: alertTypes.has("depeg") ? 1 : 0,

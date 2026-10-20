@@ -18,13 +18,10 @@ import {
   type PendingSelectionOperationContext,
 } from "../store/telegram-webhook-disambiguation-selection";
 import { isGroupChatType } from "./telegram-webhook-auth";
-import { sendAuditedTelegramReply } from "./telegram-webhook-replies";
 import { createTelegramWebhookIntent } from "./telegram-webhook-effect-fence";
 import type { TelegramWebhookOperationIntent } from "../store/telegram-webhook-store";
 import {
-  commandRequiresGroupAdmin,
-  isRecapMutationArgs,
-  isMutatingTelegramStartPayload,
+  classifyTelegramCommand,
   maybeGateNonAdminGroupActor,
 } from "./telegram-webhook-ingress-policy";
 
@@ -35,11 +32,6 @@ type PendingDisambiguationRow = Awaited<ReturnType<typeof loadPendingDisambiguat
 type PendingFlowResult = "continue" | "continue-clear-pending" | "finished";
 
 
-function mutatesAfterPendingClear(command: ParsedTelegramCommand): boolean {
-  return commandRequiresGroupAdmin(command.command, command.args)
-    || (command.command === "/recap" && isRecapMutationArgs(command.args))
-    || (command.command === "/start" && isMutatingTelegramStartPayload(command.args));
-}
 
 function normalizedPendingActionType(value: string | null | undefined): string {
   return value && /^[a-z0-9][a-z0-9-]{0,63}$/.test(value) ? value : "unknown";
@@ -118,46 +110,8 @@ export async function resumeStoredPendingClearIntent(args: {
   return { handled: true, reply, continueCommand: reason === "clear-and-run" };
 }
 
-/**
- * Commands that, when issued while a pending disambiguation is active, clear
- * the pending state (after the permission check) and then run through the
- * normal dispatch. All other commands either run as-is or get the pending
- * reminder — see the dispatch loop in `telegram-webhook.ts`.
- */
-const PENDING_CLEAR_AND_RUN_COMMANDS = new Set([
-  "/subscribe",
-  "/unsubscribe",
-  "/set",
-  "/settings",
-  "/forget",
-  "/mute",
-  "/unmutehours",
-  "/unsnooze",
-  "/timezone",
-  "/recap",
-]);
-
-/**
- * Commands that may run even while a pending disambiguation is active, without
- * clearing it. These are read-only / informational commands.
- */
-const PENDING_PASSTHROUGH_COMMANDS = new Set([
-  "/presets",
-  "/help",
-  "/sample",
-  "/list",
-  "/status",
-  "/brief",
-  "/market",
-  "/top",
-  "/why",
-  "/coverage",
-  "/start",
-  "/health",
-]);
 
 const SETUP_SLASH_TICKER_REPLY_PATTERN = /^\/[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
-const SETUP_TICKER_COMMAND_ESCAPES = new Set(["/cancel", "/start"]);
 
 export async function handleSetupPendingBeforeDispatch(args: {
   db: D1Database;
@@ -207,10 +161,10 @@ export async function handleSetupPendingBeforeDispatch(args: {
         await reply("Setup cancelled. Send /start to begin again or /list to view subscriptions.");
         return "finished";
       }
-      if (mutatesAfterPendingClear(parsedCommand)) return "continue-clear-pending";
+      if (classifyTelegramCommand(parsedCommand.command, parsedCommand.args).mutation === "required") return "continue-clear-pending";
       await clearPendingWithIntent(db, chatId, pendingRow, "clear-and-run", operation);
       return "continue";
-    } else if (!PENDING_PASSTHROUGH_COMMANDS.has(parsedCommand.command)) {
+    } else if (!classifyTelegramCommand(parsedCommand.command, parsedCommand.args).setupNonOwnerPassthrough) {
       await reply(PENDING_OWNERSHIP_CONFLICT_MESSAGE);
       return "finished";
     }
@@ -223,7 +177,7 @@ function normalizeSetupTickerInput(
   parsedCommand: ParsedTelegramCommand | null,
 ): string | null {
   if (!parsedCommand) return text;
-  if (SETUP_TICKER_COMMAND_ESCAPES.has(parsedCommand.command)) return null;
+  if (classifyTelegramCommand(parsedCommand.command, parsedCommand.args).setupTickerEscape) return null;
   const trimmed = text.trim();
   if (!SETUP_SLASH_TICKER_REPLY_PATTERN.test(trimmed)) return null;
   return trimmed.slice(1);
@@ -303,8 +257,8 @@ export async function handlePendingActionBeforeDispatch(args: {
     return "finished";
   }
 
-  const command = parsedCommand.command;
-  if (command === "/cancel") {
+  const policy = classifyTelegramCommand(parsedCommand.command, parsedCommand.args);
+  if (policy.pending === "cancel") {
     if (!canActOnPending(pendingAction, actorUserId)) {
       await reply("Only the user who started this pending selection can cancel it.");
       return "finished";
@@ -314,22 +268,15 @@ export async function handlePendingActionBeforeDispatch(args: {
     return "finished";
   }
 
-  if (command === "/start" && isMutatingTelegramStartPayload(parsedCommand.args)) {
-    if (!canActOnPending(pendingAction, actorUserId)) {
-      await reply(PENDING_OWNERSHIP_CONFLICT_MESSAGE);
-      return "finished";
-    }
-    return "continue-clear-pending";
-  }
-  if (PENDING_PASSTHROUGH_COMMANDS.has(command) || (command === "/recap" && parsedCommand.args.trim().length === 0)) {
+  if (policy.pending === "passthrough") {
     return "continue";
   }
-  if (PENDING_CLEAR_AND_RUN_COMMANDS.has(command)) {
+  if (policy.pending === "clear-and-run") {
     if (!canActOnPending(pendingAction, actorUserId)) {
       await reply(PENDING_OWNERSHIP_CONFLICT_MESSAGE);
       return "finished";
     }
-    if (mutatesAfterPendingClear(parsedCommand)) return "continue-clear-pending";
+    if (policy.mutation === "required") return "continue-clear-pending";
     await clearPendingWithIntent(db, chatId, pendingRow!, "clear-and-run", operation);
     return "continue";
   }
@@ -396,7 +343,7 @@ async function handleDisambiguationReply(
       "Use /cancel to abandon this selection.",
       formatDisambiguation(pending.ambiguousTicker, pending.candidates),
     ].join("\n\n");
-    await sendAuditedTelegramReply(db, chatId, escapeHtml(reminder), botToken);
+    await reply(escapeHtml(reminder));
     return;
   }
   if (

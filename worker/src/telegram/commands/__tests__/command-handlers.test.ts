@@ -39,6 +39,9 @@ function mockD1(
     { match: "FROM telegram_pending_disambiguation", rows: [], first: null },
     { match: "FROM telegram_recap_preferences", rows: [], first: null },
     { match: "FROM telegram_recap_targets", rows: [], first: null },
+    // First-follow evidence now commits atomically with every enable mutation.
+    { match: "INSERT OR IGNORE INTO telegram_subscribers", rows: [] },
+    { match: "INSERT INTO telegram_adoption_daily", rows: [] },
     { match: "INSERT INTO telegram_subscribers", rows: [] },
     { match: "UPDATE telegram_subscribers", rows: [] },
     { match: "INSERT INTO telegram_subscriptions", rows: [] },
@@ -207,7 +210,7 @@ describe("webhook command handlers", () => {
       "SELECT action_type, action_payload FROM telegram_pending_disambiguation WHERE chat_id = '42'",
     ).get() as { action_type: string; action_payload: string };
     expect(pendingRow.action_type).toBe("confirm-bulk");
-    const pending = JSON.parse(pendingRow.action_payload) as { coinIds: string[]; presetIds: string[] };
+    const pending = JSON.parse(pendingRow.action_payload) as { coinIds: string[]; presetIds: string[]; flowId: string };
     expect(pending.coinIds).toEqual([]);
     expect(pending.presetIds).toEqual([]);
     expect(replyToChatWithMarkup).toHaveBeenCalledTimes(1);
@@ -216,9 +219,41 @@ describe("webhook command handlers", () => {
     expect(message).toMatch(/subscribe \d+ coins/);
     const buttons = buttonsFromMarkup(options.replyMarkup);
     expect(buttons).toEqual([
-      { text: "Confirm", callback_data: "confirm:bulk" },
-      { text: "Cancel", callback_data: "cancel:bulk" },
+      { text: "Confirm", callback_data: `confirm:bulk:${pending.flowId}` },
+      { text: "Cancel", callback_data: `cancel:bulk:${pending.flowId}` },
     ]);
+  });
+
+  it.each(["subscribe", "start"] as const)("re-emits the original bounded %s keyboard when its stored prompt resumes", async (command) => {
+    const { sqlite, db } = fixtures.open();
+    const planIntent = vi.fn().mockResolvedValue(undefined);
+    const replyToChatWithMarkup = vi.fn().mockResolvedValue(undefined);
+    const first = makeContext({ db, planIntent, replyToChatWithMarkup });
+    if (command === "subscribe") await handleSubscribe(first, "dews all");
+    else await handleStart(first, "");
+    const storedIntent = planIntent.mock.calls[0]?.[0];
+    expect(storedIntent).toBeDefined();
+    const pending = sqlite.prepare("SELECT * FROM telegram_pending_disambiguation").all();
+    const original = command === "subscribe"
+      ? buttonsFromMarkup(replyToChatWithMarkup.mock.calls[0]?.[1].replyMarkup)
+      : buttonsFromBody(latestSendMessageBody());
+    const replayPlan = vi.fn().mockResolvedValue(undefined);
+    const replayReply = vi.fn().mockResolvedValue(undefined);
+    const replay = makeContext({ db, planIntent: replayPlan, replyToChatWithMarkup: replayReply, storedIntent, wasMutationApplied: true });
+    if (command === "subscribe") await handleSubscribe(replay, "dews all");
+    else await handleStart(replay, "");
+    const recovered = command === "subscribe"
+      ? buttonsFromMarkup(replayReply.mock.calls[0]?.[1].replyMarkup)
+      : buttonsFromBody(latestSendMessageBody());
+    expect(recovered).toEqual(original);
+    expect(replayPlan.mock.calls[0]?.[0]).toEqual(storedIntent);
+    expect(sqlite.prepare("SELECT * FROM telegram_pending_disambiguation").all()).toEqual(pending);
+    for (const button of recovered) {
+      if (!button.callback_data) continue;
+      const bytes = new TextEncoder().encode(button.callback_data).length;
+      expect(bytes).toBeGreaterThanOrEqual(1);
+      expect(bytes).toBeLessThanOrEqual(64);
+    }
   });
 
   it("/unsubscribe removes a direct coin follow", async () => {
@@ -397,7 +432,7 @@ describe("webhook command handlers", () => {
       .find((entry) => entry.sql.includes("INSERT INTO telegram_pending_disambiguation"));
     expect(pendingInsert?.binds).toContain("setup-step");
     const body = latestSendMessageBody();
-    const callbacks = buttonsFromBody(body).map((button) => button.callback_data);
+    const callbacks = buttonsFromBody(body).map((button) => button.callback_data?.replace(/:[a-f0-9]{16}$/, ""));
     expect(callbacks).toEqual(
       expect.arrayContaining(["setup:branch:recommended", "setup:branch:custom", "setup:branch:skip"]),
     );

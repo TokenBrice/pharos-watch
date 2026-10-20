@@ -3,7 +3,7 @@ import { seedDispatchSnapshots } from "./dispatch-telegram-snapshots.test-suppor
 import { ALERT_RESERVE_SOURCE_GENERATION } from "../../../../lib/alert-reserve-source-cache";
 import {
   cleanupDispatchTelegramAlertsTest,
-  createDispatchHarness,
+  createDispatchHarness as createBaseDispatchHarness,
   dispatchTelegramAlerts,
   mockRecordOutcome,
   parseLogRecords,
@@ -14,6 +14,25 @@ import {
   STABLECOINS_CACHE_WITH_USDC,
   telegramDeliveryTranscript,
 } from "./dispatch-telegram-alerts.test-support";
+
+// Snooze/preset scenarios require published DEWS, not pointerless diagnostic rows.
+// Keep admission local so the base harness can still exercise unavailable publications.
+function createDispatchHarness(...args: Parameters<typeof createBaseDispatchHarness>) {
+  const harness = createBaseDispatchHarness(...args);
+  const seed = harness.seed;
+  harness.seed = (input) => {
+    seed(input);
+    if (input.dews?.length) {
+      const computedAt = Math.max(...input.dews.map((row) => row.computedAt ?? Math.floor(Date.now() / 1000)));
+      harness.cache("dews:published-generation", {
+        updatedAt: computedAt,
+        source: "compute-dews",
+        publishStatus: "published",
+      }, computedAt);
+    }
+  };
+  return harness;
+}
 
 function sources(
   harness: ReturnType<typeof createDispatchHarness>,

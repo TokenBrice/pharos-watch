@@ -34,9 +34,10 @@ afterEach(fixtures.closeAll);
 describe("stored setup transition recovery", () => {
   it.each(cases)("resumes $data ($step) after mutation but before effect start", async ({ data, step, alerts, target, ack, reply }) => {
     const { sqlite, db } = fixtures.open();
+    const boundData = `${data}:0123456789abcdef`;
     await handleTelegramWebhook(db, makeWebhookRequest(123, "/start", "test-secret", { updateId: 1 }), "test-secret", "bot-token");
     sqlite.prepare("UPDATE telegram_pending_disambiguation SET action_payload = ? WHERE chat_id = '123'")
-      .run(JSON.stringify({ step, alertTypes: alerts, target }));
+      .run(JSON.stringify({ step, alertTypes: alerts, target, flowId: "0123456789abcdef" }));
     sqlite.prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES ('stablecoins', ?, ?)")
       .run(makeStablecoinsCacheValue({}), now());
     sqlite.exec(`
@@ -53,7 +54,7 @@ describe("stored setup transition recovery", () => {
     if (claim.status !== "claimed") throw new Error("Expected first update claim");
     if (claim.claimOwner == null || claim.claimGeneration == null) throw new Error("Expected claimed update fence identity");
     const fence = new TelegramWebhookEffectFence(db, 2, { owner: claim.claimOwner, generation: claim.claimGeneration }, undefined, null);
-    const cb = { id: "cb1", data, from: { id: 999, username: "requester" }, message: { chat: { id: 123, type: "private" }, message_id: 1 } };
+    const cb = { id: "cb1", data: boundData, from: { id: 999, username: "requester" }, message: { chat: { id: 123, type: "private" }, message_id: 1 } };
     resetTelegramWebhookTest();
     await expect(handleCallbackQuery(db, "bot-token", cb, buildMutationOperations(fence, { beforeIrreversibleEffect: interrupted })))
       .rejects.toThrow("interrupted before effect-start persistence");
@@ -67,9 +68,15 @@ describe("stored setup transition recovery", () => {
     sqlite.prepare("UPDATE telegram_pending_disambiguation SET expires_at = 0 WHERE chat_id = '123'").run();
     const baseline = sqlite.prepare("SELECT COUNT(*) AS count FROM setup_mutation_audit").get();
 
-    const response = await handleTelegramWebhook(db, makeCallbackRequest(data, { updateId: 2 }), "test-secret", "bot-token");
+    const response = await handleTelegramWebhook(db, makeCallbackRequest(boundData, { updateId: 2 }), "test-secret", "bot-token");
     expect(response.status).toBe(200);
     expect(latestSendMessageBody().text).toContain(reply);
+    const markup = latestSendMessageBody().reply_markup as { inline_keyboard?: Array<Array<{ callback_data?: string }>> } | undefined;
+    for (const button of markup?.inline_keyboard?.flat() ?? []) {
+      if (!button.callback_data) continue;
+      expect(new TextEncoder().encode(button.callback_data).length).toBeGreaterThanOrEqual(1);
+      expect(new TextEncoder().encode(button.callback_data).length).toBeLessThanOrEqual(64);
+    }
     const ackCall = fetchSpy.mock.calls.find((call) => String(call[0]).includes("answerCallbackQuery"));
     expect(JSON.parse(String(ackCall?.[1]?.body)).text).toBe(ack);
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM setup_mutation_audit").get()).toEqual(baseline);

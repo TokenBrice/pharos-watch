@@ -284,8 +284,12 @@ function buildTelegramSlotGroups(
             }),
           };
         }
-        const { planTelegramPersonalizedRecaps } = await import("../../cron/telegram/recap/telegram-recap-planner");
-        const planned = await planTelegramPersonalizedRecaps(runtime.db, signal, {
+        // Keep the public-only job graph lazy; Heavy cannot initialize this lane.
+        const { planTelegramPersonalizedRecaps, planTelegramRecapRetirementNotices } = await import("../../cron/telegram/recap/telegram-recap-planner");
+        const planner = recapRollout.mode === "retirement-notice"
+          ? planTelegramRecapRetirementNotices
+          : planTelegramPersonalizedRecaps;
+        const planned = await planner(runtime.db, signal, {
           rolloutPolicy: recapRollout,
           softDeadlineMs: recapBudgetMs,
         });
@@ -365,7 +369,7 @@ export async function runFiveMinuteTelegramSlot(runtime: ScheduledRuntimeContext
   if (!runtime.env.TELEGRAM_BOT_TOKEN) {
     const reconciliationStartedMs = Date.now();
     const recapRollout = resolveTelegramRecapRolloutPolicy(runtime.env);
-    const recapRequiresBotToken = recapRollout.mode === "public";
+    const recapRequiresBotToken = recapRollout.mode !== "off";
     const message = "TELEGRAM_BOT_TOKEN missing; skipping Telegram transport work";
     const skippedJobs = [
       {

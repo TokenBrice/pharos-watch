@@ -1,10 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { CronStatus } from "@shared/types";
-import { makeCompleteTelegramBotStatus, makeDispatchMetadata } from "@/test-utils/status-fixtures";
+import { makeAvailableTelegramDeliverySli, makeCompleteTelegramBotStatus, makeDispatchMetadata } from "@/test-utils/status-fixtures";
 import {
   allMeasuredZero,
   buildCommsWorkbenchModel,
-  formatFirstSendLatency,
   formatOldestBacklogAge,
 } from "../comms-workbench-model";
 
@@ -128,9 +127,7 @@ describe("buildCommsWorkbenchModel", () => {
       },
       dispatchCron: dispatchCron(
         makeDispatchMetadata({
-          freshRetryQueued: 2,
           pendingRetryQueued: 3,
-          freshPermanentFailures: 1,
           pendingDroppedPermanentFailure: 2,
           pendingDroppedMaxAttemptsFallback: 3,
           pendingRateLimited: true,
@@ -142,10 +139,9 @@ describe("buildCommsWorkbenchModel", () => {
     });
 
     expect(model.delivery.health).toBe("failed");
-    expect(model.delivery.permanentFailures.total).toBe(6);
+    expect(model.delivery.permanentFailures.total).toBe(5);
     expect(model.delivery.retries).toMatchObject({
-      totalQueued: 5,
-      freshQueued: 2,
+      totalQueued: 3,
       pendingQueued: 3,
       rateLimited: true,
       retryAfterSec: 45,
@@ -189,8 +185,8 @@ describe("buildCommsWorkbenchModel", () => {
 
   it.each([
     ["error", {}, "failed", "The latest dispatch failed."],
-    ["ok", { freshPermanentFailures: 1 }, "failed", "1 permanent failure was recorded in the latest dispatch."],
-    ["ok", { freshRetryQueued: 1 }, "degraded", "The latest dispatch queued delivery retries."],
+    ["ok", { pendingDroppedPermanentFailure: 1 }, "failed", "1 permanent failure was recorded in the latest dispatch."],
+    ["ok", { pendingRetryQueued: 1 }, "degraded", "The latest dispatch queued delivery retries."],
     ["ok", { pendingRateLimited: true }, "degraded", "Telegram rate limiting affected the latest dispatch."],
   ] as const)("preserves delivery failure and retry precedence over suppression (%s, %j)", (status, metadata, health, reason) => {
     const model = buildCommsWorkbenchModel({
@@ -214,63 +210,44 @@ describe("buildCommsWorkbenchModel", () => {
     expect(model.delivery.healthReason).toBe("The latest dispatch reported a degraded outcome.");
   });
 
-  it("treats an absent fresh retry counter as zero only on an ok dispatch with its sibling present", () => {
-    // Live 2026-09-22 shape: dispatch ok, 0 permanent failures, empty backlog,
-    // but the last run's metadata predates the fresh-side retry breakdown and
-    // only carries pendingRetryQueued. Health must classify as healthy rather
-    // than forcing the whole panel Unknown off one absent counter.
-    const legacyShape = buildCommsWorkbenchModel({
+  it("uses pending retry evidence without a synthetic fresh-side denominator", () => {
+    const current = buildCommsWorkbenchModel({
       telegramBot: makeCompleteTelegramBotStatus(),
-      dispatchCron: dispatchCron(makeDispatchMetadata({ freshRetryQueued: undefined })),
+      dispatchCron: dispatchCron(makeDispatchMetadata()),
       nowSeconds: NOW_SECONDS,
     });
-    expect(legacyShape.delivery.health).toBe("healthy");
-    expect(legacyShape.delivery.retries.totalQueued).toBe(0);
-    expect(legacyShape.delivery.retries.freshQueued).toBe(0);
-    expect(legacyShape.delivery.retries.pendingQueued).toBe(0);
+    expect(current.delivery.health).toBe("healthy");
+    expect(current.delivery.retries).toMatchObject({ totalQueued: 0, pendingQueued: 0 });
 
-    // Sibling counter missing too, or a non-ok dispatch: evidence stays
-    // unknown instead of manufacturing a zero.
-    const noSibling = buildCommsWorkbenchModel({
+    const missing = buildCommsWorkbenchModel({
       telegramBot: makeCompleteTelegramBotStatus(),
-      dispatchCron: dispatchCron(
-        makeDispatchMetadata({ freshRetryQueued: undefined, pendingRetryQueued: undefined }),
-      ),
+      dispatchCron: dispatchCron(makeDispatchMetadata({ pendingRetryQueued: undefined })),
       nowSeconds: NOW_SECONDS,
     });
-    expect(noSibling.delivery.health).toBe("unknown");
-    expect(noSibling.delivery.retries.totalQueued).toBeNull();
-
-    const degradedDispatch = buildCommsWorkbenchModel({
-      telegramBot: makeCompleteTelegramBotStatus(),
-      dispatchCron: dispatchCron(makeDispatchMetadata({ freshRetryQueued: undefined }), "degraded"),
-      nowSeconds: NOW_SECONDS,
-    });
-    expect(degradedDispatch.delivery.health).toBe("degraded");
-    expect(degradedDispatch.delivery.retries.totalQueued).toBeNull();
+    expect(missing.delivery.health).toBe("unknown");
+    expect(missing.delivery.retries.totalQueued).toBeNull();
   });
 
-  it("keeps absent per-alert values unknown instead of manufacturing zeroes", () => {
+  it("uses row SLI outcomes and preserves their window, freshness and mixed-family lineage", () => {
+    const sli = makeAvailableTelegramDeliverySli();
     const model = buildCommsWorkbenchModel({
-      telegramBot: makeCompleteTelegramBotStatus(),
-      dispatchCron: dispatchCron(
-        makeDispatchMetadata({
-          perAlertType: {
-            dews: { sent: 3, enqueued: 0, failed: 0, blocked: 0, firstSendLatencyMs: 240 },
-          },
-        }),
-      ),
+      telegramBot: makeCompleteTelegramBotStatus({ deliverySli: sli }),
+      dispatchCron: dispatchCron(makeDispatchMetadata({
+        perAlertType: { dews: { sent: 0 } }, freshPermanentFailures: 99, freshRetryQueued: 99,
+      })),
       nowSeconds: NOW_SECONDS,
     });
+    expect(model.delivery.sli).toEqual(sli);
+    expect(model.delivery.sli?.rollup?.authoritativeTargetOutcomes.telegramAccepted).toBe(7);
+    expect(model.delivery.sli?.rollup?.familyAttribution.mixed).toBe(5);
+    expect(model.delivery.health).toBe("healthy");
+    expect(model.delivery).not.toHaveProperty("perAlertType");
 
-    expect(model.delivery.perAlertType).toHaveLength(6);
-    expect(model.delivery.perAlertType[0]).toMatchObject({ type: "dews", sent: 3, enqueued: 0 });
-    expect(model.delivery.perAlertType[1]).toMatchObject({
-      type: "depeg",
-      sent: null,
-      enqueued: null,
-      failed: null,
+    const missing = buildCommsWorkbenchModel({
+      telegramBot: makeCompleteTelegramBotStatus(),
+      nowSeconds: NOW_SECONDS,
     });
+    expect(missing.delivery.sli).toMatchObject({ availability: "unavailable", rollup: null });
   });
 });
 
@@ -280,9 +257,6 @@ describe("comms not-applicable formatting (A4)", () => {
     expect(formatOldestBacklogAge(null, null)).toBe("Unknown");
     expect(formatOldestBacklogAge(null, 3)).toBe("Unknown");
     expect(formatOldestBacklogAge(120, 3)).toBe("2m");
-    expect(formatFirstSendLatency(null, 0)).toBe("None sent");
-    expect(formatFirstSendLatency(null, null)).toBe("Unknown");
-    expect(formatFirstSendLatency(1500, 2)).toBe("1,500ms");
   });
 
   it("collapses only when every value is a measured zero", () => {

@@ -159,7 +159,7 @@ function makeSetupPendingRow(
 ): Record<string, unknown> {
   return {
     action_type: "setup-step",
-    action_payload: JSON.stringify(actionPayload),
+    action_payload: JSON.stringify({ ...actionPayload, flowId: "0123456789abcdef" }),
     alert_types: JSON.stringify([]),
     resolved_ids: JSON.stringify([]),
     ambiguous_ticker: "",
@@ -215,6 +215,9 @@ const TELEGRAM_WEBHOOK_HARNESS_FALLBACKS: MockTableConfig[] = [
   { match: "UPDATE telegram_processed_updates", rows: [], runMeta: { changes: 1 } },
   { match: "DELETE FROM telegram_processed_updates", rows: [], runMeta: { changes: 1 } },
   { match: "INSERT INTO telegram_chat_delivery_diagnostics", rows: [] },
+  // Store enable batches include the idempotent first-follow claim.
+  { match: "INSERT OR IGNORE INTO telegram_subscribers", rows: [] },
+  { match: "INSERT INTO telegram_adoption_daily", rows: [] },
   { match: "preference_generation = preference_generation + 1", rows: [] },
 ];
 

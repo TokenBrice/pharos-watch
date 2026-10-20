@@ -1,6 +1,7 @@
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import { TELEGRAM_RECAP_RETIREMENT_FINGERPRINT } from "@shared/lib/telegram-recap-rollout";
 import {
   cancelQueuedTelegramRecapsForRollout,
   getTelegramRecapPreference,
@@ -99,6 +100,17 @@ describe("telegram recap store on latest SQLite schema", () => {
     await expect(queueTelegramRecapTarget(db, target("42"))).resolves.toBe("stale");
   });
 
+  it("inherits a durable chat deadline with no pending carrier", async () => {
+    const { sqlite, db } = setup();
+    subscriber(sqlite, "42");
+    await setTelegramRecapPreference(db, preferenceInput("42"));
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES ('telegram:chat-send-backoff:42', ?, ?)")
+      .run(String(NOW + 60), NOW - 30);
+    await expect(queueTelegramRecapTarget(db, target("42"))).resolves.toBe("queued");
+    expect(sqlite.prepare("SELECT not_before_at, expires_at FROM telegram_pending_alerts").get())
+      .toEqual({ not_before_at: NOW + 60, expires_at: NOW + 6 * 3600 });
+  });
+
   it("uses a sent current-generation target as idempotent schedule proof", async () => {
     const { sqlite, db } = setup();
     subscriber(sqlite, "42");
@@ -169,7 +181,37 @@ describe("telegram recap store on latest SQLite schema", () => {
     ]);
   });
 
-  it("preserves risk, in-flight, sent and execution-unknown evidence during off cleanup", async () => {
+  it.each(["accepted", "execution_unknown", "cancelled", "expired", "failed_permanent"] as const)("drains only final notices and never re-enqueues %s notice evidence on another date", async (outcome) => {
+    const { sqlite, db } = setup();
+    for (const chatId of ["ordinary", "notice"]) {
+      subscriber(sqlite, chatId);
+      await setTelegramRecapPreference(db, preferenceInput(chatId));
+      await queueTelegramRecapTarget(db, {
+        ...target(chatId),
+        watchlistFingerprint: chatId === "notice" ? TELEGRAM_RECAP_RETIREMENT_FINGERPRINT : "watch:v1",
+      });
+    }
+    await expect(cancelQueuedTelegramRecapsForRollout(db, { mode: "retirement-notice" }, NOW + 1))
+      .resolves.toEqual({ targetRowsCancelled: 1, pendingRowsDeleted: 1 });
+    expect(sqlite.prepare("SELECT chat_id FROM telegram_pending_alerts").all()).toEqual([{ chat_id: "notice" }]);
+    await projectTelegramRecapTerminalOutcome(db, target("notice").recapKey, outcome, NOW + 2);
+    const expectedStatus = outcome === "accepted" ? "sent" : outcome;
+    await expect(queueTelegramRecapTarget(db, {
+      ...target("notice", 1, "2026-07-12"),
+      expectedNextDueAt: NOW + 86400,
+      nextDueAtAfter: NOW + 2 * 86400,
+      watchlistFingerprint: TELEGRAM_RECAP_RETIREMENT_FINGERPRINT,
+    })).resolves.toBe("stale");
+    expect(sqlite.prepare("SELECT status FROM telegram_recap_targets WHERE chat_id = 'notice'").all())
+      .toEqual([{ status: expectedStatus }]);
+    await pruneTelegramRecapTargets(db, NOW + 180 * 86400);
+    expect(sqlite.prepare("SELECT status FROM telegram_recap_targets WHERE chat_id = 'notice'").all())
+      .toEqual([{ status: expectedStatus }]);
+    await expect(cancelQueuedTelegramRecapsForRollout(db, { mode: "off" }, NOW + 3))
+      .resolves.toEqual({ targetRowsCancelled: 0, pendingRowsDeleted: 0 });
+  });
+
+  it("preserves other sources and terminal evidence across repeated off cleanup and late recap reconciliation", async () => {
     const { sqlite, db } = setup();
     for (const chatId of ["queued", "in-flight", "sent", "unknown"]) {
       subscriber(sqlite, chatId);
@@ -179,9 +221,15 @@ describe("telegram recap store on latest SQLite schema", () => {
     sqlite.prepare("UPDATE telegram_pending_alerts SET delivery_state = 'sending' WHERE chat_id = 'in-flight'").run();
     sqlite.prepare("UPDATE telegram_recap_targets SET status = 'sent' WHERE chat_id = 'sent'").run();
     sqlite.prepare("UPDATE telegram_recap_targets SET status = 'execution_unknown' WHERE chat_id = 'unknown'").run();
-    sqlite.prepare(`INSERT INTO telegram_pending_alerts
-      (chat_id, message_html, created_at, updated_at, dedupe_key, source_type)
-      VALUES ('risk', 'risk', ?, ?, 'risk:protected', 'risk_alert')`).run(NOW, NOW);
+    sqlite.prepare("UPDATE telegram_pending_alerts SET delivery_state = 'sent' WHERE chat_id = 'sent'").run();
+    sqlite.prepare("UPDATE telegram_pending_alerts SET delivery_state = 'execution_unknown' WHERE chat_id = 'unknown'").run();
+    for (const source of ["risk_alert", "admin_broadcast", "legacy"]) {
+      sqlite.prepare(`INSERT INTO telegram_pending_alerts
+        (chat_id, message_html, created_at, updated_at, dedupe_key, source_type)
+        VALUES (?, ?, ?, ?, ?, ?)`).run(source, source, NOW, NOW, `${source}:protected`, source);
+    }
+    const protectedPending = sqlite.prepare("SELECT * FROM telegram_pending_alerts WHERE chat_id <> 'queued' ORDER BY chat_id").all();
+    const terminalTargets = sqlite.prepare("SELECT * FROM telegram_recap_targets WHERE status IN ('sent', 'execution_unknown') ORDER BY chat_id").all();
 
     await expect(cancelQueuedTelegramRecapsForRollout(db, { mode: "public" }, NOW + 1))
       .resolves.toEqual({ targetRowsCancelled: 0, pendingRowsDeleted: 0 });
@@ -193,12 +241,24 @@ describe("telegram recap store on latest SQLite schema", () => {
       { chat_id: "sent", status: "sent" },
       { chat_id: "unknown", status: "execution_unknown" },
     ]);
-    expect(sqlite.prepare("SELECT chat_id, delivery_state FROM telegram_pending_alerts ORDER BY chat_id").all()).toEqual([
-      { chat_id: "in-flight", delivery_state: "sending" },
-      { chat_id: "risk", delivery_state: "pending" },
-      { chat_id: "sent", delivery_state: "pending" },
-      { chat_id: "unknown", delivery_state: "pending" },
-    ]);
+    expect(sqlite.prepare("SELECT * FROM telegram_pending_alerts ORDER BY chat_id").all()).toEqual(protectedPending);
+    expect(sqlite.prepare("SELECT * FROM telegram_recap_targets WHERE status IN ('sent', 'execution_unknown') ORDER BY chat_id").all()).toEqual(terminalTargets);
+    const cancelledTarget = sqlite.prepare("SELECT * FROM telegram_recap_targets WHERE chat_id = 'queued'").get();
+    await expect(cancelQueuedTelegramRecapsForRollout(db, { mode: "off" }, NOW + 3))
+      .resolves.toEqual({ targetRowsCancelled: 0, pendingRowsDeleted: 0 });
+    expect(sqlite.prepare("SELECT * FROM telegram_recap_targets WHERE chat_id = 'queued'").get()).toEqual(cancelledTarget);
+
+    // A send already in flight at the stop may still settle. Preserve its
+    // unknown terminal outcome; another off tick must not cancel or replay it.
+    await expect(projectTelegramRecapTerminalOutcome(db, target("in-flight").recapKey, "execution_unknown", NOW + 4))
+      .resolves.toBe(true);
+    const lateTerminal = sqlite.prepare("SELECT * FROM telegram_recap_targets WHERE chat_id = 'in-flight'").get();
+    await expect(cancelQueuedTelegramRecapsForRollout(db, { mode: "off" }, NOW + 5))
+      .resolves.toEqual({ targetRowsCancelled: 0, pendingRowsDeleted: 0 });
+    expect(sqlite.prepare("SELECT * FROM telegram_recap_targets WHERE chat_id = 'in-flight'").get()).toEqual(lateTerminal);
+    expect(sqlite.prepare("SELECT status FROM telegram_recap_targets WHERE chat_id = 'in-flight'").get())
+      .toEqual({ status: "execution_unknown" });
+    expect(sqlite.prepare("SELECT * FROM telegram_pending_alerts ORDER BY chat_id").all()).toEqual(protectedPending);
   });
   it.each(["recap-off", "timezone-clear"] as const)(
     "%s cancels only unstarted recap work and preserves terminal projection",

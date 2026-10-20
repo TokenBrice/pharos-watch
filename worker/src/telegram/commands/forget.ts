@@ -7,12 +7,11 @@ import {
 } from "../store/telegram-webhook-store";
 import type { WebhookCommandHandler } from "./context";
 import { createTelegramWebhookIntent } from "../webhook/telegram-webhook-effect-fence";
-import { DISAMBIGUATION_TTL_SEC } from "../webhook/telegram-webhook-shared";
+import { bindPendingKeyboard, pendingFlowId, DISAMBIGUATION_TTL_SEC } from "../webhook/telegram-webhook-shared";
 
 /**
- * Inline keyboard markup for the `/forget` two-step confirmation. Mirrors the
- * `BULK_CONFIRM_REPLY_MARKUP` shape used by `/subscribe all` so the callback
- * shares the existing `confirm:`/`cancel:` action namespace.
+ * Inline keyboard template for the `/forget` two-step confirmation. The pending
+ * flow identity is appended before sending, as for bulk confirmations.
  */
 const FORGET_CONFIRM_REPLY_MARKUP = {
   inline_keyboard: [
@@ -54,12 +53,14 @@ export const handleForget: WebhookCommandHandler = async (ctx) => {
   const expiresAt = Number.isFinite(storedExpiresAt)
     ? storedExpiresAt
     : (ctx.operationNowSec ?? Math.floor(Date.now() / 1000)) + DISAMBIGUATION_TTL_SEC;
+  const flowId = pendingFlowId(ctx.storedIntent?.payload.flowId);
   await ctx.planIntent?.(createTelegramWebhookIntent("command:forget", {
     stage: "forget-confirm-prompt",
     expiresAt,
+    flowId,
     clearPending: Boolean(ctx.clearPendingOnMutation),
   }, "required"));
-  const actionPayload = "{}";
+  const actionPayload = JSON.stringify({ flowId });
   const operationStatements = ctx.preparePendingMutationAppliedStatement
     ? [ctx.preparePendingMutationAppliedStatement({
         chatId: ctx.chatId,
@@ -74,6 +75,7 @@ export const handleForget: WebhookCommandHandler = async (ctx) => {
         chatId: ctx.chatId,
         initiatorUserId: ctx.actorUserId,
         expiresAt,
+        flowId,
         operationStatements,
       });
   if (!persisted) {
@@ -83,7 +85,7 @@ export const handleForget: WebhookCommandHandler = async (ctx) => {
   if (!ctx.wasMutationApplied && operationStatements) ctx.confirmAtomicMutationApplied?.();
 
   await ctx.replyToChatWithMarkup(FORGET_CONFIRM_MESSAGE, {
-    replyMarkup: FORGET_CONFIRM_REPLY_MARKUP,
+    replyMarkup: bindPendingKeyboard(FORGET_CONFIRM_REPLY_MARKUP, flowId),
   });
   await recordTelegramUsageEvent(ctx.db, {
     eventType: "command_forget",

@@ -225,6 +225,14 @@ describe("Telegram Mini App shared contract", () => {
         catalogVersion: TELEGRAM_MINI_APP_CATALOG_VERSION,
       }),
     ).toBe("compatible");
+    expect(telegramMiniAppVersionCompatibility({
+      contractVersion: "5",
+      catalogVersion: TELEGRAM_MINI_APP_CATALOG_VERSION,
+    })).toBe("legacy-v5");
+    expect(telegramMiniAppVersionCompatibility({ contractVersion: "5" })).toBe("catalog-version-mismatch");
+    expect(telegramMiniAppVersionCompatibility({
+      contractVersion: "5", catalogVersion: "not-the-current-catalog",
+    })).toBe("catalog-version-mismatch");
     expect(
       telegramMiniAppVersionCompatibility({
         contractVersion: TELEGRAM_MINI_APP_CONTRACT_VERSION,

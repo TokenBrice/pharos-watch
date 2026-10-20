@@ -10,7 +10,7 @@ import {
   parseSetupState,
   resumeStoredSetupCallback,
 } from "../webhook/telegram-webhook-setup";
-import { SETUP_PENDING_ACTION_TYPE } from "../webhook/telegram-webhook-shared";
+import { isPendingFlowId, SETUP_PENDING_ACTION_TYPE } from "../webhook/telegram-webhook-shared";
 import type { TelegramWebhookOperationIntent } from "../store/telegram-webhook-store";
 import {
   callbackActorUserId,
@@ -51,7 +51,13 @@ export async function handleSetupCallback(
     await beforeIrreversibleEffect("callback-ack");
     await answerCallbackQuery(cb.id, botToken, { text });
   };
-  const { arg: subAction = "", parts } = parsed;
+  const flowId = parsed.parts[parsed.parts.length - 1];
+  if (!isPendingFlowId(flowId)) {
+    await answer("This keyboard is no longer current. Send /start to begin again.");
+    return;
+  }
+  const parts = parsed.parts.slice(0, -1);
+  const subAction = parsed.arg ?? "";
   const subArg = parts[2] ?? "";
   const validSetupCallback =
     (subAction === "branch" && hasExactParts(parts, 3) && (subArg === "recommended" || subArg === "custom" || subArg === "skip")) ||
@@ -80,6 +86,7 @@ export async function handleSetupCallback(
     chatId,
     actorUserId: callbackActorUserId(cb),
     username: callbackUsername(cb),
+    flowId,
     beforeIrreversibleEffect,
     planIntent: effect.planIntent,
     prepareMutationAppliedStatement: effect.prepareMutationAppliedStatement,
@@ -87,6 +94,10 @@ export async function handleSetupCallback(
     storedIntent: effect.storedIntent,
     wasMutationApplied: effect.wasMutationApplied,
   };
+  if (effect.storedIntent && effect.storedIntent.payload.sourceFlowId !== flowId) {
+    await answer("This keyboard is no longer current. Send /start to begin again.");
+    return;
+  }
   const resumed = await resumeStoredSetupCallback(context, subArg);
   if (resumed) {
     await answer(resumed.text);
@@ -98,6 +109,10 @@ export async function handleSetupCallback(
   const state = isActiveSetup
     ? parseSetupState(stateRow?.action_payload ?? null, stateRow?.initiator_user_id ?? null)
     : null;
+  if (!state || state.flowId !== flowId) {
+    await answer("This keyboard is no longer current. Send /start to begin again.");
+    return;
+  }
 
   let result: { text: string };
   if (subAction === "branch") {

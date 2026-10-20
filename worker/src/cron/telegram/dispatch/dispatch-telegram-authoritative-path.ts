@@ -230,9 +230,6 @@ export async function executeAuthoritativeFanoutPath(
     overrides: {
       subscribersNotified: drainResult.acceptedChats,
       cappedAtLimit: hasDeferredTelegramAuthoritativeWork(sourceResolution.allComplete, planner),
-      freshCandidateChats: Number(progress.planningOutcomes.target_planned ?? 0),
-      freshCandidateCount: progress.targets,
-      freshOverflow: planner?.remainingTargets ?? 0,
       presetQueryFailures: sourceResolution.queryFailures,
       presetResolutionFailures: sourceResolution.resolutionFailures,
       presetFailure: !sourceResolution.allComplete,

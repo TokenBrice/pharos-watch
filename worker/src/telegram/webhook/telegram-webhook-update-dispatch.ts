@@ -41,12 +41,10 @@ import {
 import {
   callbackActionDetail,
   callbackMutatesChatState,
-  commandRequiresGroupAdmin,
+  classifyTelegramCommand,
   enforceCommandCooldown,
   enforceIngressFlood,
   isAddressedToPharosBot,
-  isRecapMutationArgs,
-  isMutatingTelegramStartPayload,
   logTelegramWebhookWarning,
   maybeGateNonAdminGroupActor,
   recordCommandUsage,
@@ -72,18 +70,6 @@ function logWarn(message: string, action: string, err: unknown): void {
 export type FinishOk = (errorClass?: string | null) => Promise<Response>;
 export type ReplyWithMarkupFn = (message: string, options: { replyMarkup?: unknown }) => Promise<void>;
 
-const RESUMABLE_NORMALIZED_COMMANDS = new Set([
-  "/start",
-  "/mute",
-  "/pause",
-  "/set",
-  "/subscribe",
-  "/timezone",
-  "/recap",
-  "/unmutehours",
-  "/unsnooze",
-  "/unsubscribe",
-]);
 
 /**
  * Pending-gate operation context. `operationNowSec` is supplied only by the
@@ -324,7 +310,7 @@ export async function handleTelegramMessageUpdate(args: {
         || effectFence.storedIntent.payload.stage === "bulk-confirm-prompt"
         || effectFence.storedIntent.payload.scope === "all"
         || (
-          RESUMABLE_NORMALIZED_COMMANDS.has(parsedCommand.command)
+          classifyTelegramCommand(parsedCommand.command, parsedCommand.args).recoveryEligible
           && effectFence.storedIntent.kind === `command:${parsedCommand.command.slice(1)}`
           && effectFence.storedIntent.mutation === "required"
         )
@@ -420,7 +406,7 @@ export async function handleTelegramMessageUpdate(args: {
     }
 
     if (!parsedCommand) return finishOk();
-    if (!effectFence?.storedIntent && !commandMutatesLocalState(parsedCommand.command, parsedCommand.args)) {
+    if (!effectFence?.storedIntent && classifyTelegramCommand(parsedCommand.command, parsedCommand.args).mutation === "none") {
       await effectFence?.plan(createTelegramWebhookIntent(`command:${parsedCommand.command}`, {
         command: parsedCommand.command,
         argsDigest: await digestWebhookIntentInput(parsedCommand.args),
@@ -488,6 +474,7 @@ async function dispatchParsedTelegramCommand(args: {
     storedSelection,
   } = args;
   const commandStartedAtMs = Date.now();
+  const policy = classifyTelegramCommand(parsedCommand.command, parsedCommand.args);
 
   if (!skipFlood) {
     const floodAllowed = await enforceIngressFlood(db, {
@@ -504,7 +491,7 @@ async function dispatchParsedTelegramCommand(args: {
 
   if (
     isChannelChatType(chatType) &&
-    (storedSelection || commandRequiresGroupAdmin(parsedCommand.command, parsedCommand.args))
+    (storedSelection || policy.requiresGroupAdmin)
   ) {
     await reply("Channel-originated mutations are not supported. Manage alerts from a private chat or group.");
     await recordCommandUsage(db, parsedCommand.command, commandStartedAtMs, "denied", "channel_mutation");
@@ -513,7 +500,7 @@ async function dispatchParsedTelegramCommand(args: {
 
   if (
     isGroupChatType(chatType) &&
-    (storedSelection || commandRequiresGroupAdmin(parsedCommand.command, parsedCommand.args))
+    (storedSelection || policy.requiresGroupAdmin)
   ) {
     const proceed = await maybeGateNonAdminGroupActor(
       db,
@@ -603,11 +590,3 @@ async function digestWebhookIntentInput(value: string): Promise<string> {
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
-
-function commandMutatesLocalState(command: string, args: string): boolean {
-  return commandRequiresGroupAdmin(command, args)
-    || command === "/forget"
-    || command === "/cancel"
-    || (command === "/recap" && isRecapMutationArgs(args))
-    || (command === "/start" && isMutatingTelegramStartPayload(args));
-}

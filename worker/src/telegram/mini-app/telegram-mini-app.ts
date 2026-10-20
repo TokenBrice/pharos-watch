@@ -4,6 +4,7 @@ import {
   TELEGRAM_MINI_APP_CATALOG_VERSION_PARAM,
   TELEGRAM_MINI_APP_CONTRACT_VERSION,
   TELEGRAM_MINI_APP_CONTRACT_VERSION_PARAM,
+  TELEGRAM_MINI_APP_LEGACY_CONTRACT_VERSION,
   TelegramMiniAppMutationRequestSchema,
   TelegramMiniAppSessionRequestSchema,
   createTelegramMiniAppSnapshot,
@@ -44,10 +45,8 @@ import { acquireTelegramMiniAppMutationBurst } from "./telegram-mini-app-rate-li
 import { loadTelegramMiniAppState } from "./telegram-mini-app-state";
 import { logWorkerEvent } from "../../lib/structured-log";
 import {
-  recordTelegramFirstFollow,
   recordTelegramMiniAppAdoptionSession,
   recordTelegramMiniAppFirstMutation,
-  telegramAdoptionDimensionsForMiniApp,
 } from "../adoption/adoption-analytics";
 import type { TelegramAdoptionFeature } from "@shared/lib/telegram-adoption-analytics";
 import { MINI_APP_PAYLOAD_NAMES } from "@shared/lib/telegram-mini-app-payloads";
@@ -83,7 +82,7 @@ function miniAppError(
 }
 
 function versionMismatchResponse(
-  compatibility: Exclude<TelegramMiniAppVersionCompatibility, "legacy" | "compatible">,
+  compatibility: Exclude<TelegramMiniAppVersionCompatibility, "legacy" | "legacy-v5" | "compatible">,
 ): Response {
   const message = compatibility === "contract-version-mismatch"
     ? "Telegram Mini App contract version changed"
@@ -96,13 +95,15 @@ function versionMismatchResponse(
 
 function stateResponse(
   state: TelegramMiniAppMutableState,
-  compatibility: Extract<TelegramMiniAppVersionCompatibility, "legacy" | "compatible">,
+  compatibility: Extract<TelegramMiniAppVersionCompatibility, "legacy" | "legacy-v5" | "compatible">,
   undo?: TelegramMiniAppSnapshot["undo"],
 ): Response {
   if (compatibility === "legacy") {
     return jsonResponse({ ...state, catalog: TELEGRAM_MINI_APP_CATALOG }, NO_STORE);
   }
-  return jsonResponse({ ...createTelegramMiniAppSnapshot(state), ...(undo ? { undo } : {}) }, NO_STORE);
+  const snapshot = createTelegramMiniAppSnapshot(state);
+  if (compatibility === "legacy-v5") snapshot.contractVersion = TELEGRAM_MINI_APP_LEGACY_CONTRACT_VERSION;
+  return jsonResponse({ ...snapshot, ...(undo ? { undo } : {}) }, NO_STORE);
 }
 
 function requestVersionCompatibility(
@@ -179,7 +180,7 @@ async function prepareMiniAppRequest<T extends { contractVersion?: string; catal
   invalidPayloadMessage: string,
 ): Promise<Response | {
   parsed: T;
-  compatibility: Extract<TelegramMiniAppVersionCompatibility, "legacy" | "compatible">;
+  compatibility: Extract<TelegramMiniAppVersionCompatibility, "legacy" | "legacy-v5" | "compatible">;
   start: number;
   botToken: string;
 }> {
@@ -350,12 +351,6 @@ function adoptionMutationFeature(operation: TelegramMiniAppOperation): TelegramA
   return "settings";
 }
 
-function firstFollowFeature(operation: TelegramMiniAppOperation): "direct" | "preset" | "global" | null {
-  if (operation.kind === "recommended-setup" || operation.kind === "follow-preset") return "preset";
-  if (operation.kind === "set-coin") return "direct";
-  if (operation.kind === "set-global" && operation.enabled) return "global";
-  return null;
-}
 
 function mutationErrorMessage(err: TelegramMiniAppMutationError): string {
   if (err.code === "not-private") return "Mini App mutations are private-chat only";
@@ -530,6 +525,7 @@ export const handleTelegramMiniAppMutation = miniAppErrorHandler(
     if (!readOnlyPortability) {
       const burst = await acquireTelegramMiniAppMutationBurst(db, {
         userId: auth.userId,
+        botToken: configuredBotToken,
         nowSec: unixNow(),
       });
       if (!burst.allowed) {
@@ -551,6 +547,7 @@ export const handleTelegramMiniAppMutation = miniAppErrorHandler(
     try {
       if (bulkPreviewOperation) {
         const preview = await executeTelegramMiniAppBulkWatchlistPreview(db, auth, bulkPreviewOperation);
+        if (compatibility === "legacy-v5") preview.contractVersion = TELEGRAM_MINI_APP_LEGACY_CONTRACT_VERSION;
         await recordMiniAppEvent(db, {
           eventType: "mini_app_portability",
           auth,
@@ -562,6 +559,7 @@ export const handleTelegramMiniAppMutation = miniAppErrorHandler(
       }
       if (portabilityOperation) {
         const portability = await executeTelegramMiniAppPortabilityOperation(db, auth, portabilityOperation);
+        if (portability && compatibility === "legacy-v5") portability.contractVersion = TELEGRAM_MINI_APP_LEGACY_CONTRACT_VERSION;
         await recordMiniAppEvent(db, {
           eventType: readOnlyPortability ? "mini_app_portability" : "mini_app_mutation",
           auth,
@@ -606,15 +604,6 @@ export const handleTelegramMiniAppMutation = miniAppErrorHandler(
       feature: adoptionMutationFeature(parsed.operation),
       nowSec: adoptionNowSec,
     });
-    const followFeature = firstFollowFeature(parsed.operation);
-    if (followFeature) {
-      await recordTelegramFirstFollow(db, {
-        ...telegramAdoptionDimensionsForMiniApp(auth.startParam),
-        chatId: auth.userId,
-        feature: followFeature,
-        nowSec: adoptionNowSec,
-      });
-    }
     const state = await loadTelegramMiniAppState(db, auth, {
       nowSec: unixNow(),
       mutationMaxAgeSec: TELEGRAM_MINI_APP_MUTATION_AUTH_MAX_AGE_SEC,

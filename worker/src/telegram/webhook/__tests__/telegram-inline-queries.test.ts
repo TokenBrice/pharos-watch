@@ -71,6 +71,14 @@ describe("Telegram inline status cards", () => {
     const db = mockD1([
       ...inlineReadLimitRows(),
       { match: "FROM price_cache WHERE asset_id = ?", rows: [{ price: 0.9997, updated_at: 1_700_000_000 }] },
+      // DEWS rows are readable only behind an admitted published-generation pointer.
+      {
+        match: "FROM cache WHERE key = ?", matchBinds: ["dews:published-generation"],
+        rows: [{
+          value: JSON.stringify({ updatedAt: 1_700_000_000, source: "compute-dews", publishStatus: "published" }),
+          updated_at: 1_700_000_000,
+        }],
+      },
       { match: "FROM stress_signals", rows: [{ band: "CALM", score: 5, computed_at: 1_700_000_000 }] },
       { match: "FROM depeg_events WHERE stablecoin_id = ? AND ended_at IS NULL", rows: [] },
     ]);
@@ -136,6 +144,14 @@ describe("Telegram inline status cards", () => {
         result_digest: snapshot.source.resultDigest, publication_updated_at: snapshot.updatedAt,
       } },
       { match: "FROM price_cache WHERE asset_id = ?", rows: [] },
+      // An admitted pointer lets the empty row result exercise unavailable DEWS alongside the safety gap.
+      {
+        match: "FROM cache WHERE key = ?", matchBinds: ["dews:published-generation"],
+        rows: [{
+          value: JSON.stringify({ updatedAt: 1_700_000_000, source: "compute-dews", publishStatus: "published" }),
+          updated_at: 1_700_000_000,
+        }],
+      },
       { match: "FROM stress_signals", rows: [] },
       { match: "FROM depeg_events WHERE stablecoin_id = ? AND ended_at IS NULL", rows: [] },
     ]);

@@ -3,6 +3,8 @@ import type { PresetSubscriptionRow } from "../webhook/telegram-webhook-shared";
 import {
   preparePreferenceGenerationBump,
   unixNow,
+  prepareTelegramFirstFollowStatements,
+  type TelegramFollowOptions,
 } from "./subscribers";
 import {
   prepareRemoveSubscriptionStatements,
@@ -23,6 +25,7 @@ export interface SubscribeIntentInput {
   clearPending?: boolean;
   depegWorseningBpsStep?: 100 | 250 | 500 | null;
   operationStatements?: D1PreparedStatement[];
+  adoption?: TelegramFollowOptions["adoption"];
 }
 
 export interface UnsubscribeIntentInput {
@@ -86,11 +89,78 @@ export function prepareSubscriberAndPresetStatements(
   presetIds: readonly string[],
   directStablecoinIds: string[],
   alertTypes: Set<string>,
-  options?: { clearPending?: boolean; depegWorseningBpsStep?: 100 | 250 | 500 | null },
+  options?: { clearPending?: boolean; depegWorseningBpsStep?: 100 | 250 | 500 | null } & TelegramFollowOptions,
 ): D1PreparedStatement[] {
   return [
+    ...(presetIds.length > 0 && (options?.depegWorseningBpsStep !== undefined || ["dews", "depeg", "safety"].some((type) => alertTypes.has(type)))
+      ? prepareTelegramFirstFollowStatements(db, { chatId, username, nowSec: unixNow(), feature: "preset", adoption: options?.adoption })
+      : []),
     ...prepareSubscriberAndSubscriptionStatements(db, chatId, username, alertTypes, directStablecoinIds, options),
     ...preparePresetSubscriptionStatements(db, chatId, presetIds, alertTypes, options),
+  ];
+}
+
+/** Merge Mini App presence flags against the transaction's row, never a prior read. */
+export function prepareSubscriberAndPresetPatchStatements(
+  db: D1Database,
+  chatId: string,
+  username: string | null,
+  presetId: string,
+  alertTypes: Partial<Record<"dews" | "depeg" | "safety", boolean>>,
+  depegWorseningBpsStep: 100 | 250 | 500 | null | undefined,
+  options: TelegramFollowOptions = {},
+): D1PreparedStatement[] {
+  const now = unixNow();
+  const merged = `WITH patch AS (
+    SELECT
+      CASE WHEN ? THEN ? ELSE COALESCE(p.alert_dews, 0) END AS dews,
+      CASE WHEN ? THEN ? WHEN ? IS NOT NULL THEN 1 ELSE COALESCE(p.alert_depeg, 0) END AS depeg,
+      CASE WHEN ? THEN ? ELSE COALESCE(p.alert_safety, 0) END AS safety,
+      CASE WHEN ? THEN ? ELSE p.depeg_worsening_bps_step END AS step
+    FROM (SELECT 1) LEFT JOIN telegram_preset_subscriptions p
+      ON p.chat_id = ? AND p.preset_id = ?
+  ), admitted AS (
+    SELECT dews, depeg, safety, CASE WHEN depeg = 1 THEN step ELSE NULL END AS step
+    FROM patch WHERE dews = 1 OR depeg = 1 OR safety = 1
+  )`;
+  const binds = [
+    alertTypes.dews !== undefined ? 1 : 0, alertTypes.dews ? 1 : 0,
+    alertTypes.depeg !== undefined ? 1 : 0, alertTypes.depeg ? 1 : 0, depegWorseningBpsStep ?? null,
+    alertTypes.safety !== undefined ? 1 : 0, alertTypes.safety ? 1 : 0,
+    depegWorseningBpsStep !== undefined ? 1 : 0, depegWorseningBpsStep ?? null,
+    chatId, presetId,
+  ];
+  // Every statement sees the same preset until the final write. Invalid
+  // last-family removals therefore change neither domain nor adoption state.
+  return [
+    db.prepare(`${merged}
+      INSERT OR IGNORE INTO telegram_subscribers (chat_id, username, created_at, last_active_at)
+      SELECT ?, ?, ?, ? FROM admitted
+    `).bind(...binds, chatId, username, now, now),
+    ...prepareTelegramFirstFollowStatements(db, {
+      chatId, username, nowSec: now, feature: "preset", adoption: options.adoption,
+      ensureSubscriber: false,
+      guard: { sql: `EXISTS (${merged} SELECT 1 FROM admitted)`, binds },
+    }),
+    db.prepare(`${merged}
+      UPDATE telegram_subscribers SET
+        username = COALESCE(?, username), last_active_at = ?,
+        preference_generation = preference_generation + 1,
+        alert_dews = MAX(alert_dews, (SELECT dews FROM admitted)),
+        alert_depeg = MAX(alert_depeg, (SELECT depeg FROM admitted)),
+        alert_safety = MAX(alert_safety, (SELECT safety FROM admitted))
+      WHERE chat_id = ? AND EXISTS (SELECT 1 FROM admitted)
+    `).bind(...binds, username, now, chatId),
+    db.prepare(`${merged}
+      INSERT INTO telegram_preset_subscriptions (
+        chat_id, preset_id, alert_dews, alert_depeg, alert_safety,
+        depeg_worsening_bps_step, created_at, updated_at
+      ) SELECT ?, ?, dews, depeg, safety, step, ?, ? FROM admitted WHERE true
+      ON CONFLICT(chat_id, preset_id) DO UPDATE SET
+        alert_dews = excluded.alert_dews, alert_depeg = excluded.alert_depeg,
+        alert_safety = excluded.alert_safety, depeg_worsening_bps_step = excluded.depeg_worsening_bps_step,
+        updated_at = excluded.updated_at
+    `).bind(...binds, chatId, presetId, now, now),
   ];
 }
 
@@ -108,6 +178,7 @@ function prepareSubscribeIntentStatements(
     {
       clearPending: input.clearPending,
       depegWorseningBpsStep: input.depegWorseningBpsStep,
+      adoption: input.adoption,
     },
   );
 }

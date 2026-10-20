@@ -13,6 +13,22 @@ const state = makeMiniAppState({
 
 
 describe("PresetsPanel", () => {
+  it("sends explicit preset Off and clears its step without optimistically changing confirmed state", () => {
+    const onMutate = vi.fn();
+    const followed = makeMiniAppState({
+      ...state,
+      presets: [{ ...state.presets[0], alertTypes: { dews: true, depeg: true, safety: true } }],
+    });
+    render(<PresetsPanel state={followed} canMutate isMutating={false} pendingOperation={null} onMutate={onMutate} onUnfollowPreset={vi.fn()} />);
+    const depeg = screen.getByRole("button", { name: "USD Top 25 Depeg" });
+    fireEvent.click(depeg);
+    expect(onMutate).toHaveBeenCalledWith({
+      kind: "follow-preset", presetId: "usd-top25",
+      alertTypes: { dews: true, depeg: false, safety: true }, depegStepBps: null,
+    });
+    expect(depeg.getAttribute("aria-pressed")).toBe("true");
+  });
+
   it("keeps the final enabled alert family on and directs the user to Unfollow", () => {
     const onMutate = vi.fn();
     const onUnfollowPreset = vi.fn();

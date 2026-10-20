@@ -184,25 +184,31 @@ describe("Telegram query-plan evaluation", () => {
     requiredDetails: ["idx_needed"],
   };
 
-  it("excludes terminal job targets from otherwise eligible pending claims", () => {
+  it("excludes only exact-source terminal job targets from otherwise eligible pending claims", () => {
     const { sqlite } = databases.open();
     const claimCheck = buildQueryPlanChecks().find((candidate) => candidate.id === "pending-claim-ready")!;
     const pending = sqlite.prepare(`INSERT INTO telegram_pending_alerts
-      (id, chat_id, message_html, created_at, dedupe_key, priority, delivery_state)
-      VALUES (?, 'chat', 'message', 1799999990, ?, 10, ?)`);
+      (id, chat_id, message_html, created_at, dedupe_key, priority, delivery_state, source_event_id)
+      VALUES (?, 'chat', 'message', 1799999990, ?, 10, ?, 'current-source')`);
     const target = sqlite.prepare(`INSERT INTO telegram_alert_job_targets
-      (job_id, target_key, chat_id, alert_type, status, pending_dedupe_key, created_at)
-      VALUES ('job', ?, 'chat', 'depeg', ?, ?, 1799999990)`);
+      (job_id, target_key, chat_id, alert_type, status, pending_dedupe_key, created_at, source_event_id)
+      VALUES ('job', ?, 'chat', 'depeg', ?, ?, 1799999990, ?)`);
     for (const [index, status] of ["sent", "expired", "queued", "planned", "failed"].entries()) {
       const key = `target-${index}`;
       pending.run(index + 1, key, "pending");
-      target.run(key, status, key);
+      target.run(key, status, key, "current-source");
     }
     pending.run(6, null, "pending");
     pending.run(7, "already-delivered", "sent");
+    // WS06-B01/A01: recurring content and source-less legacy rows cannot inherit another source's final.
+    pending.run(8, "recurring-body", "pending");
+    target.run("prior-terminal", "sent", "recurring-body", "prior-source");
+    pending.run(9, "legacy-body", "pending");
+    sqlite.prepare("UPDATE telegram_pending_alerts SET source_event_id = NULL WHERE id = 9").run();
+    target.run("legacy-terminal", "expired", "legacy-body", "prior-source");
 
     expect(sqlite.prepare(claimCheck.sql).all(...claimCheck.binds)).toEqual([
-      { id: 3 }, { id: 4 }, { id: 5 }, { id: 6 },
+      { id: 3 }, { id: 4 }, { id: 5 }, { id: 6 }, { id: 8 }, { id: 9 },
     ]);
     expect(evaluateQueryPlan(claimCheck, sqlite.prepare(`EXPLAIN QUERY PLAN ${claimCheck.sql}`)
       .all(...claimCheck.binds).map((row) => String(row.detail))).status).toBe("ok");

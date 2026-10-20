@@ -6,6 +6,7 @@ import {
   parseSubscribeArgs,
   validateSubscribeArgs,
   parseDisambiguationReply,
+  findInvalidDisambiguationToken,
   type ParsedSubscribeArgs,
 } from "../alerts-parser";
 
@@ -228,5 +229,41 @@ describe("parseDisambiguationReply", () => {
 
   it("returns null for non-numeric input", () => {
     expect(parseDisambiguationReply("abc", 3)).toBeNull();
+  });
+
+  it.each([
+    ["1.5", "1.5"],
+    ["1abc", "1abc"],
+    ["1e0", "1e0"],
+    ["+1", "+1"],
+    ["-1", "-1"],
+    ["0x1", "0x1"],
+    ["0", "0"],
+    ["1,2.5", "2.5"],
+    ["1 2suffix", "2suffix"],
+    ["9007199254740992", "9007199254740992"],
+    ["9".repeat(400), "9".repeat(400)],
+  ])("rejects the entire malformed selection %s", (text, invalidToken) => {
+    expect(parseDisambiguationReply(text, 3)).toBeNull();
+    expect(findInvalidDisambiguationToken(text, 3)).toBe(invalidToken);
+  });
+
+  it("rejects unsafe integers even if the supplied range is larger", () => {
+    expect(parseDisambiguationReply("9007199254740992", Number.MAX_VALUE)).toBeNull();
+    expect(findInvalidDisambiguationToken("9007199254740992", Number.MAX_VALUE)).toBe("9007199254740992");
+  });
+
+  it.each([
+    [" 01,\t02 ", [0, 1]],
+    ["1 2,3", [0, 1, 2]],
+    ["2,1,2", [1, 0, 1]],
+  ] as const)("preserves valid decimal multi-selections %s", (text, indices) => {
+    expect(parseDisambiguationReply(text, 3)).toEqual(indices);
+    expect(findInvalidDisambiguationToken(text, 3)).toBeNull();
+  });
+
+  it.each(["", " , \t"])("keeps empty selections invalid: %j", (text) => {
+    expect(parseDisambiguationReply(text, 3)).toBeNull();
+    expect(findInvalidDisambiguationToken(text, 3)).toBe("");
   });
 });

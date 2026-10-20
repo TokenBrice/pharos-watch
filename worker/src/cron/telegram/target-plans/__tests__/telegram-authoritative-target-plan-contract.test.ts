@@ -71,6 +71,39 @@ describe("authoritative Telegram target plan contract", () => {
       .resolves.toEqual({ kind: "invalid", reason: "target_plan_digest_mismatch" });
   });
 
+  it.each([3, 4])("admits exact retained v%i keys without changing stored chunks", async (version) => {
+    const serialized = await serializeTelegramTargetPlan({
+      ...routed(), chunks: ["<b>USDC</b>", " entered WARNING"],
+    }, 1_800_003_600);
+    expect(serialized.payload.messages.every((message) => message.targetKey.includes(":v4:"))).toBe(true);
+    const payload = {
+      ...serialized.payload,
+      messages: serialized.payload.messages.map((message) => ({
+        ...message, targetKey: message.targetKey.replace(":v4:", `:v${version}:`),
+      })),
+    };
+    await expect(parseTelegramTargetPlan(JSON.stringify(payload))).resolves.toEqual({ kind: "ok", value: payload });
+  });
+
+  it.each(["v2", "v5", "v03", "v3.0", "mixed", "corrupt"])(
+    "rejects unsupported, mixed or inexact persisted split identities: %s",
+    async (variant) => {
+      const serialized = await serializeTelegramTargetPlan({
+        ...routed(), chunks: ["<b>USDC</b>", " entered WARNING"],
+      }, 1_800_003_600);
+      const payload = {
+        ...serialized.payload,
+        messages: serialized.payload.messages.map((message, index) => ({
+          ...message,
+          targetKey: variant === "corrupt" ? message.targetKey + "x"
+            : message.targetKey.replace(":v4:", `:${variant === "mixed" ? index === 0 ? "v3" : "v4" : variant}:`),
+        })),
+      };
+      await expect(parseTelegramTargetPlan(JSON.stringify(payload)))
+        .resolves.toEqual({ kind: "invalid", reason: "target_plan_target_key_invalid" });
+    },
+  );
+
   it("persists model identity with safety outbox plans and rejects unbound safety plans", async () => {
     const alerts = emptyAlerts();
     alerts.safety.push({

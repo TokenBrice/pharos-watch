@@ -39,7 +39,7 @@ function callbackContext(policy: TelegramRecapRolloutPolicy): CallbackContext {
   };
 }
 
-const deniedPolicies = [undefined, "off", "dark", "canary", "invalid"].map((mode) =>
+const deniedPolicies = [undefined, "off", "retirement-notice", "dark", "canary", "invalid"].map((mode) =>
   resolveTelegramRecapRolloutPolicy({ TELEGRAM_RECAP_ROLLOUT_MODE: mode }),
 );
 

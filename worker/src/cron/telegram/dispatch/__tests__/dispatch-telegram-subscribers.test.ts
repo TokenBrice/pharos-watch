@@ -1,12 +1,27 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { loadPerCoinExplicitlyOffMap } from "../dispatch-telegram-subscribers";
+import { loadGlobalSubscriberRows, loadPerCoinExplicitlyOffMap, loadSubscriberRowsBatch } from "../dispatch-telegram-subscribers";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { insertTelegramSubscriber } from "./telegram-subscriber.test-support";
+import { TELEGRAM_ALERT_TYPES } from "@shared/types/status";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => fixtures.closeAll());
 
 describe("dispatch telegram subscriber loaders", () => {
+  it.each(TELEGRAM_ALERT_TYPES)("selects only %s direct, global, and explicit-off recipients", async (family) => {
+    const { sqlite, db } = fixtures.open();
+    for (const chatId of ["direct", "global", "off", "inactive"]) {
+      insertTelegramSubscriber(sqlite, { chatId, global: { [family]: chatId === "global" } });
+    }
+    sqlite.prepare(`INSERT INTO telegram_subscriptions
+      (chat_id, stablecoin_id, alert_${family}, alert_${family}_override)
+      VALUES ('direct', 'coin', 1, 1), ('off', 'coin', 0, 1), ('inactive', 'coin', 0, 0)`).run();
+    const direct = await loadSubscriberRowsBatch(db, ["coin"], family, 1_800_000_000);
+    expect(direct.get("coin")?.map((row) => row.chat_id)).toEqual(["direct"]);
+    expect((await loadGlobalSubscriberRows(db, family, 1_800_000_000)).map((row) => row.chat_id)).toEqual(["global"]);
+    expect(await loadPerCoinExplicitlyOffMap(db, ["coin"], family)).toEqual(new Map([["coin", new Set(["off"])]]));
+  });
+
   it.each(["depeg", "reserve", "freeze"] as const)("executes %s explicit-off eligibility across coin and chat chunks", async (type) => {
     const { sqlite, db } = fixtures.open();
     const insert = sqlite.prepare(`INSERT INTO telegram_subscriptions

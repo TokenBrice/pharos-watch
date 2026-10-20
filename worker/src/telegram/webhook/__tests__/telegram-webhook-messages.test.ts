@@ -1,4 +1,5 @@
 import { makeSubscriptionRow } from "./telegram-rows.test-support.ts";
+import { makeYieldProvenance } from "@shared/test-utils/yield-ranking-fixtures";
 import { describe, it, expect } from "vitest";
 import { MANAGE_PAGE_SIZE } from "../../common/constants";
 import { formatTelegramCompactUsd, formatTelegramSignedCompactUsd } from "../../common/telegram-format";
@@ -380,7 +381,8 @@ describe("buildStatusMessage Telegram HTML escaping", () => {
           apy30d: 4.2,
           source: 'Morpho: Safe Vault <a href="https://attacker.example/phish">CLAIM</a> & <b>verified</b>',
           pharosYieldScore: 42,
-          updatedAt: Math.floor(Date.now() / 1000),
+          provenance: makeYieldProvenance({ sourceFreshness: "fresh" }),
+          generationId: "yield-test",
         },
       }),
     );
@@ -402,11 +404,45 @@ describe("buildStatusMessage Telegram HTML escaping", () => {
           source: "Aave V3",
           pharosYieldScore: null,
           pysUnavailableReason: "yield-ranking-not-found",
-          updatedAt: Math.floor(Date.now() / 1000),
+          provenance: makeYieldProvenance({ sourceFreshness: "fresh" }),
+          generationId: "yield-test",
         },
       }),
     );
     expect(msg).toContain("PYS unavailable");
+  });
+
+  it.each([
+    ["stale", "source-stale", 1_792_000_000, 604800],
+    ["unknown", "source-freshness-unknown", null, null],
+  ] as const)("qualifies %s yield with canonical source evidence in status and coverage", (freshness, reason, observedAt, age) => {
+    const status = baseStatus({
+      yield: {
+        currentApy: 4.8, apy30d: 4.2, source: "Accepted venue", pharosYieldScore: null,
+        pysUnavailableReason: reason, generationId: "yield-retained",
+        provenance: makeYieldProvenance({
+          sourceObservedAt: observedAt, sourceAgeSeconds: age,
+          sourceMaxAgeSeconds: 7200, sourceFreshness: freshness,
+        }),
+      },
+    });
+    const message = buildStatusMessage("USDC", status);
+    const coverage = buildCoverageMessage("USDC", status);
+    const yieldLine = message.split("\n").find((line) => line.startsWith("Yield:"))!;
+    expect(coverage).toContain(yieldLine);
+    expect(yieldLine).toContain(`PYS unavailable (${reason})`);
+    expect(yieldLine).toContain(`${freshness}: ${reason}`);
+    expect(yieldLine).toContain(`source observed ${observedAt == null ? "unknown" : new Date(observedAt * 1000).toISOString()}`);
+    expect(yieldLine).toContain(`age ${age == null ? "unknown" : `${age}s`}`);
+    expect(yieldLine).toContain("budget 7200s; generation yield-retained");
+  });
+
+  it("discloses unavailable accepted yield rather than hiding the field", () => {
+    const status = baseStatus({ yieldUnavailableReason: "yield-rankings-unavailable" });
+    for (const message of [buildStatusMessage("USDC", status), buildCoverageMessage("USDC", status)]) {
+      expect(message).toContain("Yield: unavailable (yield-rankings-unavailable)");
+      expect(message).not.toContain("% 30d at");
+    }
   });
 });
 

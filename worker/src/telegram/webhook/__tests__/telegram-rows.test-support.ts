@@ -27,7 +27,7 @@ export function pendingRowFromForget(options: {
 } = {}) {
   return {
     action_type: options.action_type ?? "forget-confirm",
-    action_payload: "{}",
+    action_payload: JSON.stringify({ flowId: "0123456789abcdef" }),
     alert_types: "[]",
     resolved_ids: "[]",
     ambiguous_ticker: "",
@@ -39,12 +39,12 @@ export function pendingRowFromForget(options: {
 }
 
 export function makeBulkPendingRow(
-  payload: { kind: "subscribe" | "unsubscribe"; presetIds: string[]; coinIds: string[]; alertTypes?: string[]; subscribeAll?: boolean; unsubscribeAll?: boolean },
+  payload: { flowId?: string; kind: "subscribe" | "unsubscribe"; presetIds: string[]; coinIds: string[]; alertTypes?: string[]; subscribeAll?: boolean; unsubscribeAll?: boolean },
   options: { expires_at: number; initiator_user_id: string | null },
 ) {
   return {
     action_type: "confirm-bulk",
-    action_payload: JSON.stringify(payload),
+    action_payload: JSON.stringify({ ...payload, flowId: payload.flowId ?? "0123456789abcdef" }),
     alert_types: "[]",
     resolved_ids: "[]",
     ambiguous_ticker: "",

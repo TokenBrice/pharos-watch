@@ -54,7 +54,6 @@ export interface PreparedTelegramDigestAppendices {
   appendixHtml: string | null;
   metadata: TelegramDigestAppendixMetadata;
   successActions?: readonly TelegramDigestSuccessAction[];
-  commitSuccess: () => Promise<void>;
 }
 
 export interface QueueTrackedStablecoinAdditionsResult {
@@ -432,10 +431,5 @@ export async function prepareTelegramDigestAppendices(
     appendixHtml,
     metadata,
     successActions: postSuccessWrites,
-    // Appendix snapshot advancement is a post-delivery best-effort commit.
-    // The daily digest sender owns retry idempotency through the send marker.
-    commitSuccess: async () => {
-      await applyCacheWrites(db, postSuccessWrites);
-    },
   };
 }

@@ -5,6 +5,7 @@ import {
 } from "@shared/lib/telegram-alert-families";
 import { TELEGRAM_ALERT_TYPES } from "@shared/types/status";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import { PRESET_ALERT_COLUMN } from "../../../cron/telegram/dispatch/telegram-preset-subscriber-store";
 
 /**
  * The alert-type registry's column names are load-bearing D1 identifiers: the
@@ -24,6 +25,14 @@ function tableColumns(table: string): Set<string> {
 }
 
 describe("telegram alert-type persistence registry", () => {
+  it("keeps preset persistence projections valid against the migrated schema", () => {
+    const columns = tableColumns("telegram_preset_subscriptions");
+    for (const [family, column] of Object.entries(PRESET_ALERT_COLUMN)) {
+      expect(column).toBe(TELEGRAM_ALERT_PERSISTENCE[family as keyof typeof PRESET_ALERT_COLUMN].subscriptionColumn);
+      expect(columns).toContain(column);
+    }
+  });
+
   it("names only real telegram_subscriptions columns", () => {
     const columns = tableColumns("telegram_subscriptions");
     expect(columns.size).toBeGreaterThan(0);

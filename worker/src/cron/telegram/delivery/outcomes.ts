@@ -1,6 +1,6 @@
 import { batchExecute } from "../../../lib/db";
 import type { BatchResult } from "../../../telegram/delivery/telegram";
-import { PENDING_MAX_ATTEMPTS } from "../../../telegram/common/constants";
+import { PENDING_MAX_ATTEMPTS, PENDING_TTL_SEC, TELEGRAM_CHAT_BACKOFF_CACHE_PREFIX } from "../../../telegram/common/constants";
 import { recordTelegramDeliveryOutcomes } from "../../../telegram/store/usage-analytics";
 import {
   recordTelegramAlertTargetStatuses,
@@ -9,7 +9,7 @@ import {
 import { pendingBackoffSec, setTelegramGlobalBackoff } from "./backoff";
 import {
   claimedDeleteByDeliveryClaims,
-  claimedDeleteByIds,
+  settleUnstartedPendingRows,
   deadLetterTerminalPendingRows,
 } from "./dead-letter";
 import type {
@@ -84,10 +84,16 @@ export async function deadLetterAndDeleteTerminalPendingGroups(
 ): Promise<void> {
   for (const group of groups) {
     if (group.rows.length === 0) continue;
-    const deadLettered = await deadLetterTerminalPendingRows(db, group.rows, nowSec, group.reason);
+    const unfencedRows = group.rows.filter((row) => row.delivery_state !== "sending");
+    if (unfencedRows.length > 0) {
+      await settleUnstartedPendingRows(db, unfencedRows, nowSec, group.reason, processingOwner);
+    }
+    const attemptedRows = group.rows.filter((row) => row.delivery_state === "sending");
+    if (attemptedRows.length === 0) continue;
+    const deadLettered = await deadLetterTerminalPendingRows(db, attemptedRows, nowSec, group.reason);
     if (!deadLettered) continue;
     const finalState = group.reason === "preference_changed" ? "cancelled" : "failed";
-    for (const row of group.rows) {
+    for (const row of attemptedRows) {
       if (!row.dedupe_key || !row.source_event_id) continue;
       await recordTelegramJobTargetFinalDelivery(
         db,
@@ -98,7 +104,7 @@ export async function deadLetterAndDeleteTerminalPendingGroups(
     const recapOutcome = group.reason === "preference_changed"
       ? "cancelled"
       : "failed_permanent";
-    for (const row of group.rows) {
+    for (const row of attemptedRows) {
       await projectRecapPendingTerminalOutcome(
         db,
         row,
@@ -107,10 +113,9 @@ export async function deadLetterAndDeleteTerminalPendingGroups(
         row.last_error_class ?? group.reason,
       );
     }
-    const fencedRows = group.rows.filter((row) =>
-      row.delivery_state === "sending" && row.delivery_owner != null && row.delivery_generation != null
+    const fencedRows = attemptedRows.filter((row) =>
+      row.delivery_owner != null && row.delivery_generation != null
     );
-    const unfencedRows = group.rows.filter((row) => !fencedRows.includes(row));
     if (fencedRows.length > 0) {
       const deleted = await batchExecute(db, fencedRows.map((row) => db
         .prepare(
@@ -124,18 +129,6 @@ export async function deadLetterAndDeleteTerminalPendingGroups(
       if (deleted !== fencedRows.length) {
         throw new Error(`Telegram terminal pending ownership changed (${deleted}/${fencedRows.length})`);
       }
-    }
-    const unfencedDeleted = await claimedDeleteByIds(
-      db,
-      unfencedRows.map((row) => row.id),
-      "pending",
-      processingOwner,
-      nowSec,
-    );
-    if (unfencedDeleted !== unfencedRows.length) {
-      throw new Error(
-        `Telegram terminal pending ownership changed (${unfencedDeleted}/${unfencedRows.length})`,
-      );
     }
   }
 }
@@ -157,7 +150,7 @@ export async function persistPendingDeferrals(
     }
     return db.prepare(
       `UPDATE telegram_pending_alerts
-          SET not_before_at = ?,
+          SET not_before_at = MAX(COALESCE(not_before_at, 0), ?),
               last_error_class = COALESCE(?, last_error_class),
               updated_at = ?,
               processing_owner = NULL,
@@ -251,11 +244,20 @@ export function reducePendingOutcome(
     };
   }
   const maxAttempts = result.retryable;
-  return terminal(
-    maxAttempts ? "droppedMaxAttemptsFallback" : "droppedPermanentFailure",
-    result.errorClass ?? (maxAttempts ? "max_attempts" : "permanent_failure"),
-    maxAttempts ? "max_attempts" : "permanent_failure",
-  );
+  return {
+    ...terminal(
+      maxAttempts ? "droppedMaxAttemptsFallback" : "droppedPermanentFailure",
+      result.errorClass ?? (maxAttempts ? "max_attempts" : "permanent_failure"),
+      maxAttempts ? "max_attempts" : "permanent_failure",
+    ),
+    ...(result.errorClass === "rate_limit" && result.rateLimitScope !== "global" ? {
+      rateLimit: {
+        retryAfterSec: result.retryAfterSec,
+        notBeforeAt: at + pendingBackoffSec(result.attempts, result.retryAfterSec),
+        scope: "chat" as const,
+      },
+    } : {}),
+  };
 }
 
 export async function checkpointAttemptedPendingWave(
@@ -305,8 +307,38 @@ export async function checkpointAttemptedPendingWave(
   if (globalBackoffAt != null) {
     globalBackoffDurable = await setTelegramGlobalBackoff(db, globalBackoffAt);
   }
-  if (retryUpdates.length > 0) {
-    const changed = await batchExecute(db, retryUpdates.map((update) =>
+  const chatBackoffs = outcomes.filter((outcome) => outcome.rateLimit?.scope === "chat" && outcome.claim);
+  if (retryUpdates.length > 0 || chatBackoffs.length > 0) {
+    const backoffStatements = chatBackoffs.flatMap((outcome) => [db.prepare(
+      `UPDATE telegram_pending_alerts INDEXED BY idx_telegram_pending_alerts_chat_id
+          SET not_before_at = MAX(COALESCE(not_before_at, 0), ?)
+        WHERE chat_id = ?
+          AND delivery_state = 'pending'
+          AND COALESCE(expires_at, created_at + ?) > ?
+          AND EXISTS (
+            SELECT 1 FROM telegram_pending_alerts attempted
+             WHERE attempted.id = ? AND attempted.delivery_state = 'sending'
+               AND attempted.delivery_owner = ? AND attempted.delivery_generation = ?
+          )`,
+    ).bind(
+      outcome.rateLimit!.notBeforeAt, outcome.row.chat_id, PENDING_TTL_SEC, completedAt,
+      outcome.claim!.id, outcome.claim!.owner, outcome.claim!.generation,
+    ), db.prepare(
+      `INSERT INTO cache (key, value, updated_at)
+       SELECT ?, ?, ? WHERE EXISTS (
+         SELECT 1 FROM telegram_pending_alerts attempted
+          WHERE attempted.id = ? AND attempted.delivery_state = 'sending'
+            AND attempted.delivery_owner = ? AND attempted.delivery_generation = ?
+       )
+       ON CONFLICT(key) DO UPDATE SET
+         value = CAST(MAX(CAST(cache.value AS INTEGER), CAST(excluded.value AS INTEGER)) AS TEXT),
+         updated_at = MAX(cache.updated_at, excluded.updated_at)`,
+    ).bind(
+      `${TELEGRAM_CHAT_BACKOFF_CACHE_PREFIX}${outcome.row.chat_id}`,
+      String(outcome.rateLimit!.notBeforeAt), completedAt,
+      outcome.claim!.id, outcome.claim!.owner, outcome.claim!.generation,
+    )]);
+    const retryStatements = retryUpdates.map((update) =>
       preparePendingSendingTransition(db, update, {
         to: "pending",
         // A bot-wide rate limit normally defers through the durable global
@@ -318,7 +350,10 @@ export async function checkpointAttemptedPendingWave(
         errorClass: update.errorClass,
         retryAfterSec: update.retryAfterSec,
       }, { updatedAtSec: completedAt }),
-    ));
+    );
+    const results = await db.batch([...backoffStatements, ...retryStatements]);
+    const changed = results.slice(backoffStatements.length)
+      .reduce((count, result) => count + Number(result.meta?.changes ?? 0), 0);
     if (changed !== retryUpdates.length) {
       throw new Error(`Telegram pending retry ownership changed (${changed}/${retryUpdates.length})`);
     }

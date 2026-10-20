@@ -1,4 +1,11 @@
-import { describe, expect, it, beforeEach } from "vitest";
+import { afterEach, describe, expect, it, beforeEach } from "vitest";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import {
+  fetchSpy as webhookFetchSpy,
+  handleTelegramWebhook,
+  makeCallbackRequest,
+  resetTelegramWebhookTest,
+} from "./telegram-webhook.test-support.ts";
 import { mockTelegramMembership } from "../../../test-helpers/__shared/telegram";
 import {
   fetchSpy,
@@ -30,9 +37,54 @@ import {
 
 
 beforeEach(resetCallbackTest);
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(() => fixtures.closeAll());
 
 describe("handleCallbackQuery", () => {
   describe("settings dispatch", () => {
+    it.each(["xx:1", "db:bad", "sm:bad", "ds:123", "lc:2", "rs:yes", "fz:"])(
+      "terminalizes invalid per-coin setting %s once without a mutation requirement",
+      async (setting) => {
+        resetTelegramWebhookTest();
+        const { db, sqlite } = fixtures.open();
+        sqlite.exec("INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at, preference_generation) VALUES ('42', 1, 1, 7)");
+        for (let delivery = 0; delivery < 2; delivery++) {
+          const request = makeCallbackRequest(`settings:c:usdc-circle:${setting}`, { chatId: 42, updateId: 800 });
+          expect((await handleTelegramWebhook(db, request, "test-secret", "bot-token")).status).toBe(200);
+        }
+        const acks = webhookFetchSpy.mock.calls.filter((call) => String(call[0]).includes("answerCallbackQuery"));
+        expect(acks).toHaveLength(1);
+        expect(JSON.parse((acks[0][1] as RequestInit).body as string).text).toMatch(/unknown setting/i);
+        expect(sqlite.prepare("SELECT preference_generation FROM telegram_subscribers WHERE chat_id = '42'").get())
+          .toEqual({ preference_generation: 7 });
+        expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_subscriptions").get()).toEqual({ count: 0 });
+        expect(sqlite.prepare(`SELECT status, effect_state, intent_mutates, mutation_applied_at
+          FROM telegram_processed_updates WHERE update_id = 800`).get())
+          .toEqual({ status: "processed", effect_state: "complete", intent_mutates: 0, mutation_applied_at: null });
+      },
+    );
+
+    it("commits a valid per-coin setting and its mutation marker before the first Bot API effect", async () => {
+      resetTelegramWebhookTest();
+      const { db, sqlite } = fixtures.open();
+      const observedBeforeEffects: unknown[] = [];
+      webhookFetchSpy.mockImplementation(async () => {
+        observedBeforeEffects.push({
+          setting: sqlite.prepare("SELECT alert_dews FROM telegram_subscriptions WHERE chat_id = '42'").get(),
+          proof: sqlite.prepare("SELECT mutation_applied_at FROM telegram_processed_updates WHERE update_id = 801").get(),
+        });
+        return new Response(JSON.stringify({ ok: true, result: true }), { status: 200 });
+      });
+      const response = await handleTelegramWebhook(db,
+        makeCallbackRequest("settings:c:usdc-circle:db:A", { chatId: 42, updateId: 801 }), "test-secret", "bot-token");
+      expect(response.status).toBe(200);
+      expect(webhookFetchSpy).toHaveBeenCalled();
+      expect(observedBeforeEffects.length).toBeGreaterThan(0);
+      for (const observed of observedBeforeEffects) {
+        expect(observed).toEqual({ setting: { alert_dews: 1 }, proof: { mutation_applied_at: expect.any(Number) } });
+      }
+    });
+
     it("settings:home routes to the settings handler and edits the message", async () => {
       const db = mockTelegramD1([], {
         fallbackTables: [{ match: "FROM telegram_subscribers WHERE chat_id = ?", rows: [], first: null }],

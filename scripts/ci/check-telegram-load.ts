@@ -52,6 +52,7 @@ import {
   ACTIVE_PRESET_FLAGS_SQL,
   ACTIVE_SUBSCRIPTION_FLAGS_SQL,
   ACTIVE_WATCHER_SQL_CONDITION,
+  TELEGRAM_ALERT_PERSISTENCE,
   buildActivePresetAggregateSql,
   buildActiveSubscriptionAggregateSql,
 } from "@shared/lib/telegram-alert-families";
@@ -236,10 +237,6 @@ const TELEGRAM_FANOUT_FAMILIES_SOURCE_PATH = resolve(
   process.cwd(),
   "worker/src/cron/telegram/dispatch/dispatch-telegram-alerts-fanout.ts",
 );
-const TELEGRAM_GLOBAL_COLUMNS_SOURCE_PATH = resolve(
-  process.cwd(),
-  "worker/src/telegram/delivery/broadcast-targets.ts",
-);
 
 export interface ProductionSubscriberFanoutSql {
   direct: string;
@@ -397,39 +394,8 @@ function objectProperty(object: ts.ObjectLiteralExpression, name: string): ts.Ex
   throw new Error(`Could not find production metadata property ${name}.`);
 }
 
-function extractStringMap(
-  sourceText: string,
-  sourcePath: string,
-  variableName: string,
-): Map<string, string> {
-  const sourceFile = ts.createSourceFile(
-    sourcePath,
-    sourceText,
-    ts.ScriptTarget.Latest,
-    true,
-    ts.ScriptKind.TS,
-  );
-  const initializer = findVariableInitializer(sourceFile, variableName);
-  if (!ts.isObjectLiteralExpression(initializer)) {
-    throw new Error(`Expected ${variableName} to be an object literal.`);
-  }
-  const values = new Map<string, string>();
-  for (const property of initializer.properties) {
-    if (!ts.isPropertyAssignment(property) || !ts.isStringLiteral(property.initializer)) continue;
-    const key = ts.isIdentifier(property.name) || ts.isStringLiteral(property.name)
-      ? property.name.text
-      : null;
-    if (key != null) values.set(key, property.initializer.text);
-  }
-  return values;
-}
 
 function loadFanoutColumns(): Map<string, ProductionFanoutColumns> {
-  const globalColumns = extractStringMap(
-    readFileSync(TELEGRAM_GLOBAL_COLUMNS_SOURCE_PATH, "utf8"),
-    TELEGRAM_GLOBAL_COLUMNS_SOURCE_PATH,
-    "GLOBAL_ALERT_COLUMN_BY_TYPE",
-  );
   const sourceText = readFileSync(TELEGRAM_FANOUT_FAMILIES_SOURCE_PATH, "utf8");
   const sourceFile = ts.createSourceFile(
     TELEGRAM_FANOUT_FAMILIES_SOURCE_PATH,
@@ -448,22 +414,13 @@ function loadFanoutColumns(): Map<string, ProductionFanoutColumns> {
     const spec = unwrapExpression(element);
     if (!ts.isObjectLiteralExpression(spec)) continue;
     const family = objectProperty(spec, "family");
-    const directColumn = objectProperty(spec, "directColumn");
-    const globalColumn = objectProperty(spec, "globalColumn");
-    if (
-      !ts.isStringLiteral(family)
-      || !ts.isStringLiteral(directColumn)
-      || !ts.isPropertyAccessExpression(globalColumn)
-    ) {
-      throw new Error("Expected static Telegram fan-out family column metadata.");
+    if (!ts.isStringLiteral(family) || !(family.text in TELEGRAM_ALERT_PERSISTENCE)) {
+      throw new Error("Expected a canonical Telegram fan-out family.");
     }
-    const resolvedGlobalColumn = globalColumns.get(globalColumn.name.text);
-    if (resolvedGlobalColumn == null) {
-      throw new Error(`Missing global alert column metadata for ${family.text}.`);
-    }
+    const persistence = TELEGRAM_ALERT_PERSISTENCE[family.text as keyof typeof TELEGRAM_ALERT_PERSISTENCE];
     columns.set(family.text, {
-      directColumn: directColumn.text,
-      globalColumn: resolvedGlobalColumn,
+      directColumn: persistence.subscriptionColumn,
+      globalColumn: persistence.globalColumn,
     });
   }
   return columns;
@@ -704,8 +661,8 @@ export function buildQueryPlanChecks(): QueryPlanCheckDefinition[] {
         LEGACY_PENDING_PRIORITY,
         PENDING_DRAIN_ATTEMPTS_PER_RUN,
       ],
-      requiredDetails: ["idx_tpa_delivery_reconcile", "idx_tajt_pending_status"],
-      note: "Executes the SQL from selectPendingClaimCandidateIds() in telegram/delivery/drain.ts. SQLite uses the delivery-state reconciliation index for pending candidates and the target status index for the terminal-target dedupe exclusion; this guards the production claim drain against a regression to a full table scan.",
+      requiredDetails: ["idx_tpa_delivery_reconcile", "idx_tajt_pending_source_outcome"],
+      note: "Executes production selectPendingClaimCandidateIds(). WS06-B01/A01 fences terminal evidence by source plus dedupe, so the reviewed target lookup uses idx_tajt_pending_source_outcome's exact identity prefix instead of the dedupe/status index. Pending candidates still use the delivery-state index and the unchanged priority/due-time top-N sort is limited by the drain-attempt budget; neither table may regress to a full scan.",
     },
     {
       id: "pending-backoff-aggregate",

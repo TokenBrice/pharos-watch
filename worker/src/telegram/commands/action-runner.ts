@@ -5,7 +5,6 @@
  */
 import { escapeHtml } from "../delivery/telegram";
 import { recordTelegramUsageEvent } from "../store/usage-analytics";
-import { recordTelegramFirstFollow } from "../adoption/adoption-analytics";
 import {
   type ResolvedCoin,
   type TickerResolutionScope,
@@ -50,7 +49,7 @@ import {
   createTelegramWebhookIntent,
   type TelegramCommandMutationContext,
 } from "../webhook/telegram-webhook-effect-fence";
-import { DISAMBIGUATION_TTL_SEC } from "../webhook/telegram-webhook-shared";
+import { bindPendingKeyboard, pendingFlowId, STABLECOIN_BY_ID, DISAMBIGUATION_TTL_SEC } from "../webhook/telegram-webhook-shared";
 import type { WebhookCommandContext } from "./context";
 
 export interface TelegramActionContext extends TelegramCommandMutationContext {
@@ -59,6 +58,7 @@ export interface TelegramActionContext extends TelegramCommandMutationContext {
   username: string | null;
   initiatorUserId: string | null;
   operationNowSec?: number;
+  flowId?: string;
 }
 
 /**
@@ -94,7 +94,10 @@ async function prepareActionMutation(
   kind: string,
   payload: Record<string, unknown>,
 ): Promise<{ operationStatements?: D1PreparedStatement[] }> {
-  await context.planIntent?.(createTelegramWebhookIntent(kind, payload, "required"));
+  await context.planIntent?.(createTelegramWebhookIntent(kind, {
+    ...payload,
+    ...(context.flowId ? { flowId: context.flowId } : {}),
+  }, "required"));
   return context.prepareMutationOperationStatements
     ? { operationStatements: context.prepareMutationOperationStatements() }
     : context.prepareMutationAppliedStatement
@@ -118,12 +121,14 @@ export function subscribableCoinCount(): number {
   return SUBSCRIBABLE_COIN_COUNT;
 }
 
-export const BULK_CONFIRM_REPLY_MARKUP = {
-  inline_keyboard: [[
-    { text: "Confirm", callback_data: "confirm:bulk" },
-    { text: "Cancel", callback_data: "cancel:bulk" },
-  ]],
-} as const;
+export function buildBulkConfirmReplyMarkup(flowId: string) {
+  return bindPendingKeyboard({
+    inline_keyboard: [[
+      { text: "Confirm", callback_data: "confirm:bulk" },
+      { text: "Cancel", callback_data: "cancel:bulk" },
+    ]],
+  }, flowId);
+}
 
 function formatBulkAlertTypeList(alertTypes: readonly string[]): string {
   if (alertTypes.length === 0) return "all";
@@ -217,13 +222,6 @@ const completionHandlers: CompletionHandlerMap = {
       });
       confirmActionMutation(context, operation);
     }
-    await recordTelegramFirstFollow(context.db, {
-      campaign: "organic",
-      placement: "unknown",
-      chatId: context.chatId,
-      feature: presetIds.length > 0 ? "preset" : "direct",
-      nowSec: context.operationNowSec ?? Math.floor(Date.now() / 1_000),
-    });
     if (presetIds.length > 0) {
       await recordTelegramUsageEvent(context.db, {
         eventType: "preset_follow",
@@ -398,7 +396,7 @@ async function persistAndPromptBulkConfirm(
       symbols,
     ),
     botToken,
-    { replyMarkup: BULK_CONFIRM_REPLY_MARKUP },
+    { replyMarkup: buildBulkConfirmReplyMarkup(persisted) },
   );
   // We have already replied with the inline keyboard, so signal the flow to skip
   // its own outer reply.
@@ -412,8 +410,10 @@ export async function persistBulkConfirmPrompt(
     clearPending?: boolean;
     requireMatchingStoredIntent?: boolean;
   } = {},
-): Promise<boolean> {
+): Promise<string | null> {
   const intentKind = `command:${payload.kind}`;
+  const storedPayload = context.storedIntent?.payload.payload as { flowId?: unknown } | undefined;
+  payload.flowId = pendingFlowId(storedPayload?.flowId ?? payload.flowId);
   const canReuseStoredExpiry = !options.requireMatchingStoredIntent
     || context.storedIntent?.kind === intentKind;
   const storedExpiresAt = canReuseStoredExpiry
@@ -426,6 +426,8 @@ export async function persistBulkConfirmPrompt(
     stage: "bulk-confirm-prompt",
     payload,
     expiresAt,
+    sourceFlowId: context.flowId ?? null,
+    initiatorUserId: context.initiatorUserId,
   };
   if (options.clearPending != null) {
     intentPayload.clearPending = options.clearPending;
@@ -453,7 +455,7 @@ export async function persistBulkConfirmPrompt(
   if (persisted && !context.wasMutationApplied && operationStatements) {
     context.confirmAtomicMutationApplied?.();
   }
-  return persisted;
+  return persisted ? payload.flowId : null;
 }
 
 export function makeActionRunner(
@@ -484,7 +486,23 @@ export function makeActionRunner(
       alertTypes,
       clearPendingOnTerminal,
       resolutionScope,
-      persistAmbiguous: async (resolution) => {
+      flowId: context.storedIntent?.payload.flowId as string | undefined,
+      recoveredResolution: context.storedIntent?.payload.stage === "disambiguation-prompt" ? {
+        kind: "ambiguous",
+        ticker: String(context.storedIntent.payload.ambiguousTicker),
+        coins: (context.storedIntent.payload.resolvedCoinIds as string[]).map((id) => {
+          const coin = STABLECOIN_BY_ID.get(id);
+          if (!coin) throw new Error(`Stored Telegram prompt references unknown coin ${id}`);
+          return coin;
+        }),
+        candidates: (context.storedIntent.payload.candidateIds as string[]).map((id) => {
+          const coin = STABLECOIN_BY_ID.get(id);
+          if (!coin) throw new Error(`Stored Telegram prompt references unknown coin ${id}`);
+          return coin;
+        }),
+        remainingTickers: context.storedIntent.payload.remainingTickers as string[],
+      } : undefined,
+      persistAmbiguous: async (resolution, flowId) => {
         const storedExpiresAt = Number(context.storedIntent?.payload.expiresAt);
         const expiresAt = Number.isFinite(storedExpiresAt)
           ? storedExpiresAt
@@ -493,6 +511,8 @@ export function makeActionRunner(
           stage: "disambiguation-prompt",
           actionType,
           actionPayload,
+          flowId,
+          sourceFlowId: context.flowId ?? null,
           resolvedCoinIds: resolution.coins.map((coin) => coin.id),
           ambiguousTicker: resolution.ticker,
           candidateIds: resolution.candidates.map((coin) => coin.id),
@@ -503,7 +523,7 @@ export function makeActionRunner(
         };
         await context.planIntent?.(createTelegramWebhookIntent(`command:${actionType}`, normalizedPayload, "required"));
         const serializedActionPayload = JSON.stringify(buildPendingDisambiguationActionPayload({
-          actionPayload,
+          actionPayload: { ...actionPayload, flowId },
           alertTypes,
           resolvedCoins: resolution.coins,
           ambiguousTicker: resolution.ticker,
@@ -522,7 +542,7 @@ export function makeActionRunner(
         const persisted = await persistPendingDisambiguation(context.db, {
           chatId: context.chatId,
           actionType,
-          actionPayload,
+          actionPayload: { ...actionPayload, flowId },
           alertTypes,
           resolvedCoins: resolution.coins,
           ambiguousTicker: resolution.ticker,

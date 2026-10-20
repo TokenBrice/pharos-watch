@@ -57,7 +57,7 @@ async function recoverSelection(intent: TelegramWebhookOperationIntent): Promise
     SET status = 'failed', mutation_applied_at = ?, received_at = ? WHERE update_id = 1`).run(NOW - 599, NOW - 600);
   expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_disambiguation").get()).toEqual({ count: 0 });
   const response = await handleTelegramWebhook(db,
-    makeCallbackRequest("select:1", { chatId: 42, fromId: 42, updateId: 1 }), "test-secret", "bot-token");
+    makeCallbackRequest("select:1:0123456789abcdef", { chatId: 42, fromId: 42, updateId: 1 }), "test-secret", "bot-token");
   expect(response.status).toBe(200);
   const calls = fetchSpy.mock.calls.map((call) => JSON.parse(String(call[1]?.body)) as { text?: string });
   expect(calls.some((body) => body.text?.includes("Selection expired"))).toBe(false);
@@ -70,6 +70,7 @@ describe("stored selection family recovery", () => {
     const intent = createTelegramWebhookIntent("command:subscribe", {
       coinIds: ["usdc-circle"], alertTypes: [family], presetIds: [], depegWorseningBpsStep: null,
       initiatorUserId: "42", clearPending: true,
+      flowId: "0123456789abcdef",
     }, "required");
     expect(parseStoredCommandSelectionIntent(intent)).toMatchObject({ alertTypes: [family], initialCoinIds: ["usdc-circle"] });
     await recoverSelection(intent);
@@ -82,6 +83,7 @@ describe("stored selection family recovery", () => {
       const { ticker: _ticker, ...setting } = parsed;
       const intent = createTelegramWebhookIntent("command:set", {
         coinIds: ["usdc-circle"], setting, initiatorUserId: "42", clearPending: true,
+        flowId: "0123456789abcdef",
       }, "required");
       expect(parseStoredCommandSelectionIntent(intent)).toMatchObject({ command: { ticker: "USDC", ...setting } });
       await recoverSelection(intent);

@@ -6,6 +6,7 @@ import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlit
 import { makeNoopD1 } from "../../../../test-helpers/noop-d1";
 import { createFreezeIdentityFixture } from "./telegram-alert-freeze.test-support";
 import { recordTelegramJobTargetFinalDelivery } from "../../delivery/telegram-alert-job-target-outcomes";
+import { TELEGRAM_ALERT_TTL_SEC } from "@shared/lib/telegram-delivery-policy";
 
 function db(rows: unknown[], latestRun: number | null): D1Database {
   return makeNoopD1({
@@ -176,6 +177,12 @@ describe("freeze dedicated outbox", () => {
       try {
         insertFreeze("event-1", now + 1);
         expect((await dispatchFreezeAlertOutbox(db, now + 2)).queued).toBe(1);
+        expect(sqlite.prepare(
+          "SELECT expires_at FROM telegram_freeze_alert_events WHERE source_event_id = 'freeze:event-1'",
+        ).get()).toEqual({ expires_at: now + 2 + TELEGRAM_ALERT_TTL_SEC.freeze });
+        expect(sqlite.prepare(
+          "SELECT expires_at FROM telegram_pending_alerts WHERE source_event_id = 'freeze:event-1'",
+        ).get()).toEqual({ expires_at: now + 2 + TELEGRAM_ALERT_TTL_SEC.freeze });
         sqlite.prepare(
           "UPDATE telegram_pending_alerts SET delivery_state = ? WHERE source_event_id = 'freeze:event-1'",
         ).run(firstState);

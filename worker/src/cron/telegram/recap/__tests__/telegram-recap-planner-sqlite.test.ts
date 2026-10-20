@@ -3,7 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockFetch, type MockFetchSpy } from "@shared/test-utils/mock-fetch";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { PAUSE_SENTINEL_TS } from "@shared/lib/telegram-delivery-policy";
-import { planTelegramPersonalizedRecaps } from "../telegram-recap-planner";
+import { planTelegramPersonalizedRecaps, planTelegramRecapRetirementNotices } from "../telegram-recap-planner";
+import { TELEGRAM_RECAP_RETIREMENT_FINGERPRINT } from "@shared/lib/telegram-recap-rollout";
 import {
   applyRecapPreference,
   buildTelegramRecapDedupeKey,
@@ -66,6 +67,39 @@ afterEach(() => {
 });
 
 describe("telegram personalized recap planner", () => {
+  it("queues one notice-only final edition per opted-in private chat without Tape or watchlist changes", async () => {
+    const { sqlite, db } = setup();
+    for (const chatId of ["due", "later", "disabled"]) insertSubscriber(sqlite, chatId);
+    sqlite.prepare("UPDATE telegram_recap_preferences SET next_due_at = ? WHERE chat_id = 'later'").run(NOW + 3600);
+    sqlite.prepare("UPDATE telegram_recap_preferences SET enabled = 0 WHERE chat_id = 'disabled'").run();
+    const options = { nowSec: NOW, rolloutPolicy: { mode: "retirement-notice" as const } };
+
+    await expect(planTelegramPersonalizedRecaps(db, undefined, options)).resolves.toMatchObject({ itemCount: 0 });
+    await expect(planTelegramRecapRetirementNotices(db, undefined, options)).resolves.toMatchObject({ status: "ok", itemCount: 1 });
+    const notice = sqlite.prepare("SELECT * FROM telegram_pending_alerts").get();
+    expect(notice).toMatchObject({ chat_id: "due", source_type: "personalized_recap", priority: 100, delivery_state: "pending" });
+    expect(sqlite.prepare("SELECT watchlist_fingerprint, material_fact_count FROM telegram_recap_targets").get())
+      .toEqual({ watchlist_fingerprint: TELEGRAM_RECAP_RETIREMENT_FINGERPRINT, material_fact_count: 0 });
+    await expect(planTelegramRecapRetirementNotices(db, undefined, options)).resolves.toMatchObject({ itemCount: 0 });
+    expect(sqlite.prepare("SELECT * FROM telegram_pending_alerts").get()).toEqual(notice);
+
+    const dueTarget = sqlite.prepare("SELECT recap_key FROM telegram_recap_targets WHERE chat_id = 'due'").get() as { recap_key: string };
+    await projectTelegramRecapTerminalOutcome(db, dueTarget.recap_key, "execution_unknown", NOW + 1);
+    expect(sqlite.prepare("SELECT last_window_end_at, last_delivered_local_date FROM telegram_recap_preferences WHERE chat_id = 'due'").get())
+      .toEqual({ last_window_end_at: null, last_delivered_local_date: null });
+    await planTelegramRecapRetirementNotices(db, undefined, { ...options, nowSec: NOW + 86400 });
+    expect(sqlite.prepare("SELECT chat_id, COUNT(*) AS count FROM telegram_recap_targets GROUP BY chat_id ORDER BY chat_id").all())
+      .toEqual([{ chat_id: "due", count: 1 }, { chat_id: "later", count: 1 }]);
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_subscriptions").get()).toEqual({ count: 0 });
+  });
+
+  it.each(["off", "public"] as const)("does not admit retirement notices in %s mode", async (mode) => {
+    const { sqlite, db } = setup();
+    insertSubscriber(sqlite, "due");
+    await planTelegramRecapRetirementNotices(db, undefined, { nowSec: NOW, rolloutPolicy: { mode } });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_recap_targets").get()).toEqual({ count: 0 });
+  });
+
   it("plans deterministic direct and explicit global recaps without network access", async () => {
     const { sqlite, db } = setup();
     insertSubscriber(sqlite, "direct");

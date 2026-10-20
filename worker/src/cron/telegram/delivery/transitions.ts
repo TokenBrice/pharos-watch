@@ -1,4 +1,5 @@
 import { executeAtomicBatch } from "../../../lib/db";
+import { TELEGRAM_CHAT_BACKOFF_CACHE_PREFIX } from "../../../telegram/common/constants";
 import {
   prepareTelegramAlertJobCounterReconciliation,
   prepareTelegramJobTargetFinalDeliveryProjection,
@@ -20,8 +21,12 @@ interface PendingSendingTransitionOptions { updatedAtSec?: number; targetGuard?:
 
 const SENT_SQL = `UPDATE telegram_pending_alerts SET delivery_state = 'sent', delivery_completed_at = ?, delivery_claim_expires_at = NULL, updated_at = ? WHERE id = ? AND processing_owner = ? AND delivery_state = 'sending' AND delivery_owner = ? AND delivery_generation = ?`;
 const EXECUTION_UNKNOWN_SQL = `UPDATE telegram_pending_alerts SET delivery_state = 'execution_unknown', delivery_completed_at = ?, delivery_claim_expires_at = NULL, last_error_class = COALESCE(?, 'execution_unknown'), processing_owner = NULL, processing_started_at = NULL, processing_expires_at = NULL, updated_at = ? WHERE id = ? AND delivery_state = 'sending' AND delivery_owner = ? AND delivery_generation = ?`;
-const RETRY_SQL = `UPDATE telegram_pending_alerts SET attempts = attempts + 1, delivery_state = 'pending', delivery_owner = NULL, delivery_started_at = NULL, delivery_completed_at = NULL, delivery_claim_expires_at = NULL, not_before_at = ?, last_error_class = ?, retry_after_sec = ?, updated_at = ?, processing_owner = NULL, processing_started_at = NULL, processing_expires_at = NULL WHERE id = ? AND delivery_state = 'sending' AND delivery_owner = ? AND delivery_generation = ?`;
-const DEFER_SQL = `UPDATE telegram_pending_alerts SET not_before_at = ?, last_error_class = COALESCE(?, last_error_class), updated_at = ?, delivery_state = 'pending', delivery_owner = NULL, delivery_started_at = NULL, delivery_completed_at = NULL, delivery_claim_expires_at = NULL, processing_owner = NULL, processing_started_at = NULL, processing_expires_at = NULL WHERE id = ? AND delivery_state = 'sending' AND delivery_owner = ? AND delivery_generation = ?`;
+const RETRY_DEADLINE_SQL = `NULLIF(MAX(COALESCE(?, 0), COALESCE(not_before_at, 0), COALESCE((
+  SELECT CAST(value AS INTEGER) FROM cache WHERE key = '${TELEGRAM_CHAT_BACKOFF_CACHE_PREFIX}' || telegram_pending_alerts.chat_id
+), 0)), 0)`;
+const RETRY_SQL = `UPDATE telegram_pending_alerts SET attempts = attempts + 1, delivery_state = 'pending', delivery_owner = NULL, delivery_started_at = NULL, delivery_completed_at = NULL, delivery_claim_expires_at = NULL, not_before_at = ${RETRY_DEADLINE_SQL}, last_error_class = ?, retry_after_sec = ?, updated_at = ?, processing_owner = NULL, processing_started_at = NULL, processing_expires_at = NULL WHERE id = ? AND delivery_state = 'sending' AND delivery_owner = ? AND delivery_generation = ?`;
+// SAFETY: RETRY_DEADLINE_SQL is static SQL built only from the fixed chat-backoff cache prefix; runtime values remain bound parameters.
+const DEFER_SQL = `UPDATE telegram_pending_alerts SET not_before_at = ${RETRY_DEADLINE_SQL}, last_error_class = COALESCE(?, last_error_class), updated_at = ?, delivery_state = 'pending', delivery_owner = NULL, delivery_started_at = NULL, delivery_completed_at = NULL, delivery_claim_expires_at = NULL, processing_owner = NULL, processing_started_at = NULL, processing_expires_at = NULL WHERE id = ? AND delivery_state = 'sending' AND delivery_owner = ? AND delivery_generation = ?`;
 const TERMINAL_GUARDS = {
   sent: {
     target: ` AND EXISTS (SELECT 1 FROM telegram_alert_job_targets target WHERE target.job_id = ? AND target.target_key = ? AND target.pending_dedupe_key = ? AND target.source_event_id = ? AND (target.final_delivery_state IS NULL OR target.final_delivery_state = 'accepted'))`,

@@ -3,7 +3,7 @@
  *
  * Unset, malformed, and retired rollout modes deliberately resolve to `off`.
  */
-const TELEGRAM_RECAP_ROLLOUT_MODES = ["off", "public"] as const;
+const TELEGRAM_RECAP_ROLLOUT_MODES = ["off", "public", "retirement-notice"] as const;
 
 export type TelegramRecapRolloutMode = (typeof TELEGRAM_RECAP_ROLLOUT_MODES)[number];
 
@@ -14,6 +14,12 @@ export interface TelegramRecapRolloutPolicy {
 export const TELEGRAM_RECAP_PUBLIC_ROLLOUT_POLICY: TelegramRecapRolloutPolicy = {
   mode: "public",
 };
+
+/** Temporary retirement campaign; remove with the recap consumer cutover. */
+export const TELEGRAM_RECAP_RETIREMENT_FINGERPRINT = "recap-retirement-notice:v1";
+export const TELEGRAM_RECAP_RETIREMENT_NOTICE =
+  "We're retiring personalized daily watchlist recaps. Your watchlist and alert settings won't change, " +
+  "and your regular alerts and public market digests will continue. Thank you for using PharosWatchBot!";
 
 export interface TelegramRecapRolloutEnv {
   TELEGRAM_RECAP_ROLLOUT_MODE?: string;

@@ -27,6 +27,9 @@ import { resolveTelegramTargetExpiresAt } from "../materialization";
 import { insertTelegramSubscriber } from "../../dispatch/__tests__/telegram-subscriber.test-support";
 import { loadTelegramPendingCapacity } from "../../../../telegram/outbox/pending-capacity";
 import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../../../../lib/safety-score-v9/consumer-freshness";
+import { recordTelegramAlertTargetStatuses, recordTelegramAlertTargetCancellations } from "../../delivery/telegram-alert-target-status";
+import { sha256Hex } from "../../../../lib/hash";
+import type { PersistedTelegramTargetPlanV1 } from "../telegram-alert-target-plan-contract";
 
 const NOW = 1_800_000_000;
 const { open: setupLatestSchema, closeAll } = createLatestSchemaFixtureTracker();
@@ -173,6 +176,34 @@ async function openDeliveryForRoutes(
   await openTelegramTargetPlanDelivery(db, claim, NOW);
 }
 
+// Seed exact retained v3 evidence, including its digest-derived plan identity.
+// This is fixture construction only; runtime recovery must never rewrite it.
+async function seedRetainedV3Plans(sqlite: DatabaseSync): Promise<unknown[]> {
+  const plans = sqlite.prepare("SELECT plan_key, plan_payload_json FROM telegram_alert_target_plans")
+    .all() as Array<{ plan_key: string; plan_payload_json: string }>;
+  for (const row of plans) {
+    const payload = JSON.parse(row.plan_payload_json) as PersistedTelegramTargetPlanV1;
+    for (const message of payload.messages) {
+      const oldKey = message.targetKey;
+      message.targetKey = oldKey.replace(":v4:", ":v3:");
+      sqlite.prepare(`UPDATE telegram_alert_job_targets SET target_key = ?, pending_dedupe_key = ?
+        WHERE plan_key = ? AND target_key = ?`).run(message.targetKey, message.targetKey, row.plan_key, oldKey);
+      sqlite.prepare("UPDATE telegram_alert_job_target_items SET target_key = ? WHERE target_key = ?")
+        .run(message.targetKey, oldKey);
+    }
+    const json = JSON.stringify(payload);
+    const digest = await sha256Hex(json);
+    const key = `${payload.chatId}:${payload.alertType}:${digest.slice(0, 32)}`;
+    sqlite.prepare(`UPDATE telegram_alert_target_plans SET plan_key = ?, plan_payload_json = ?,
+      plan_payload_digest = ? WHERE plan_key = ?`).run(key, json, digest, row.plan_key);
+    for (const table of ["telegram_alert_job_targets", "telegram_alert_target_plan_items"]) {
+      sqlite.prepare(`UPDATE ${table} SET plan_key = ? WHERE plan_key = ?`).run(key, row.plan_key);
+    }
+  }
+  return sqlite.prepare(`SELECT plan_key, plan_payload_json, plan_payload_digest
+    FROM telegram_alert_target_plans ORDER BY plan_ordinal`).all();
+}
+
 describe("authoritative Telegram target plans on latest SQLite schema", () => {
   it("uses the strictest family TTL for a mixed consolidated target", () => {
     expect(
@@ -251,6 +282,30 @@ describe("authoritative Telegram target plans on latest SQLite schema", () => {
     });
   });
 
+  it("hands off retained v3 delivery_open plans with exact stored payloads and keys", async () => {
+    const { sqlite, db } = setupLatestSchema();
+    const sourceEventId = "telegram-source:test:v1:retained-v3-handoff";
+    insertSource(sqlite, sourceEventId);
+    insertSubscriber(sqlite, "42");
+    await openDeliveryForRoutes(db, sourceEventId, new Map([
+      ["42", [routed("42", sourceEventId, 1, "", 2)]],
+    ]));
+    const retained = await seedRetainedV3Plans(sqlite);
+    const expected = sqlite.prepare(`SELECT pending_dedupe_key AS dedupe_key, message_html
+      FROM telegram_alert_job_targets ORDER BY chunk_index`).all();
+    expect(expected).toHaveLength(2);
+    expect(sqlite.prepare("SELECT target_plan_state FROM telegram_alert_source_events").get())
+      .toEqual({ target_plan_state: "delivery_open" });
+    await expect(enqueueTelegramAuthoritativeTargets(db, sourceEventId, 1, NOW + 1))
+      .resolves.toMatchObject({ enqueued: 2, remaining: 0 });
+    expect(sqlite.prepare(`SELECT dedupe_key, message_html FROM telegram_pending_alerts ORDER BY chunk_index`).all())
+      .toEqual(expected);
+    expect(sqlite.prepare(`SELECT plan_key, plan_payload_json, plan_payload_digest
+      FROM telegram_alert_target_plans ORDER BY plan_ordinal`).all()).toEqual(retained);
+    await expect(enqueueTelegramAuthoritativeTargets(db, sourceEventId, 1, NOW + 2))
+      .resolves.toMatchObject({ enqueued: 0, remaining: 0 });
+  });
+
   it("packs a target page into bounded D1 transactions", async () => {
     const { sqlite, db: baseDb } = setupLatestSchema();
     const sourceEventId = "telegram-source:test:v1:batched-page";
@@ -291,7 +346,13 @@ describe("authoritative Telegram target plans on latest SQLite schema", () => {
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_alert_target_plan_items").get()).toEqual({ count: 40 });
   });
 
-  it("resumes the untouched page suffix after a packed D1 batch fails", async () => {
+  it.each([
+    { change: "unchanged", plans: 30, targets: 30 },
+    { change: "unsubscribe", plans: 29, targets: 29 },
+    { change: "snooze", plans: 29, targets: 29 },
+    { change: "fewer chunks", plans: 30, targets: 30 },
+    { change: "v3 retained", plans: 30, targets: 50 },
+  ])("resumes the untouched page suffix after a packed D1 batch fails: $change", async ({ change, plans, targets }) => {
     const { sqlite, db: baseDb } = setupLatestSchema();
     const sourceEventId = "telegram-source:test:v1:batched-page-retry";
     const chatIds = Array.from({ length: 30 }, (_, index) => String(index + 1).padStart(3, "0"));
@@ -317,7 +378,9 @@ describe("authoritative Telegram target plans on latest SQLite schema", () => {
       subscriber,
       currentPreferenceGeneration: 1,
       currentEligible: true,
-      routed: [routed(subscriber.chatId, sourceEventId, 1, `-${subscriber.chatId}`)],
+      routed: [routed(subscriber.chatId, sourceEventId, 1, `-${subscriber.chatId}`,
+        (change === "fewer chunks" && subscriber.chatId === "030")
+          || (change === "v3 retained" && subscriber.chatId <= "020") ? 2 : 1)],
     }));
 
     await expect(
@@ -326,6 +389,7 @@ describe("authoritative Telegram target plans on latest SQLite schema", () => {
     rejectSuffixBatch = false;
 
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_alert_target_plans").get()).toEqual({ count: 20 });
+    const retainedV3 = change === "v3 retained" ? await seedRetainedV3Plans(sqlite) : null;
     const incomplete = await reconcileIncompleteTelegramTargetPlanPage(baseDb, claim, NOW + 1);
     expect(incomplete).toMatchObject({ found: true, complete: false, pageIndex: 0 });
     const remainder = await loadTelegramPlanningSubscriberPage(baseDb, claim, 90, {
@@ -333,6 +397,11 @@ describe("authoritative Telegram target plans on latest SQLite schema", () => {
       lastChatId: incomplete.lastChatId!,
     });
     expect(remainder).toHaveLength(10);
+    const withdrawn = change === "unsubscribe" || change === "snooze";
+    if (withdrawn) {
+      sqlite.prepare(`UPDATE telegram_subscribers SET preference_generation = 2, alert_snooze_until_ts = ?
+        WHERE chat_id = '030'`).run(change === "snooze" ? NOW + 3_600 : null);
+    }
 
     await materializeTelegramTargetPlanPage(
       baseDb,
@@ -340,9 +409,10 @@ describe("authoritative Telegram target plans on latest SQLite schema", () => {
       0,
       remainder.map((subscriber) => ({
         subscriber,
-        currentPreferenceGeneration: 1,
-        currentEligible: true,
-        routed: [routed(subscriber.chatId, sourceEventId, 1, `-${subscriber.chatId}`)],
+        currentPreferenceGeneration: withdrawn && subscriber.chatId === "030" ? 2 : 1,
+        currentEligible: !(withdrawn && subscriber.chatId === "030"),
+        routed: withdrawn && subscriber.chatId === "030"
+          ? [] : [routed(subscriber.chatId, sourceEventId, 1, `-${subscriber.chatId}`)],
       })),
       NOW + 1,
     );
@@ -354,9 +424,9 @@ describe("authoritative Telegram target plans on latest SQLite schema", () => {
              FROM telegram_alert_target_plans`,
         )
         .get(),
-    ).toEqual({ plans: 30, ordinals: 30 });
-    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_alert_job_targets").get()).toEqual({ count: 30 });
-    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_alert_target_plan_items").get()).toEqual({ count: 30 });
+    ).toEqual({ plans, ordinals: plans });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_alert_job_targets").get()).toEqual({ count: targets });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_alert_target_plan_items").get()).toEqual({ count: plans });
     expect(
       sqlite
         .prepare(
@@ -366,6 +436,273 @@ describe("authoritative Telegram target plans on latest SQLite schema", () => {
         .get(),
     ).toEqual({ count: 0 });
     expect(sqlite.prepare("SELECT status FROM telegram_alert_target_plan_pages").get()).toEqual({ status: "complete" });
+    expect(sqlite.prepare(`SELECT expected_plan_count, materialized_plan_count,
+      expected_target_count, materialized_target_count FROM telegram_alert_target_plan_pages`).get())
+      .toEqual({ expected_plan_count: plans, materialized_plan_count: plans,
+        expected_target_count: targets, materialized_target_count: targets });
+    expect(sqlite.prepare(`SELECT COUNT(*) AS finalized,
+      SUM(planning_outcome = 'target_planned') AS planned
+      FROM telegram_alert_planning_subscribers WHERE planning_outcome <> 'pending'`).get())
+      .toEqual({ finalized: 30, planned: plans });
+    await finalizeTelegramTargetPlanning(baseDb, claim, NOW + 1);
+    expect(await openTelegramTargetPlanDelivery(baseDb, claim, NOW + 1)).toBe(true);
+    const firstHandoff = await enqueueTelegramAuthoritativeTargets(baseDb, sourceEventId, 1, NOW + 1);
+    if (retainedV3) {
+      expect(firstHandoff).toMatchObject({ enqueued: 45, remaining: 5 });
+      expect(await enqueueTelegramAuthoritativeTargets(baseDb, sourceEventId, 1, NOW + 2))
+        .toMatchObject({ enqueued: 5, remaining: 0 });
+    } else {
+      expect(firstHandoff).toMatchObject({ enqueued: targets, remaining: 0 });
+    }
+    if (retainedV3) {
+      expect(sqlite.prepare(`SELECT plan_key, plan_payload_json, plan_payload_digest
+        FROM telegram_alert_target_plans WHERE plan_ordinal < 20 ORDER BY plan_ordinal`).all()).toEqual(retainedV3);
+      expect(sqlite.prepare(`SELECT COUNT(*) AS count FROM telegram_pending_alerts
+        WHERE dedupe_key LIKE '%:v3:%'`).get()).toEqual({ count: 40 });
+      expect(sqlite.prepare(`SELECT COUNT(*) AS count FROM telegram_pending_alerts
+        WHERE dedupe_key LIKE '%:v4:%'`).get()).toEqual({ count: 10 });
+    }
+    if (withdrawn) {
+      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_alerts WHERE chat_id = '030'").get())
+        .toEqual({ count: 0 });
+    }
+  });
+
+  it.each([
+    ["missing plan", "DELETE FROM telegram_alert_target_plans WHERE chat_id = '2'"],
+    ["missing target", "DELETE FROM telegram_alert_job_targets WHERE chat_id = '2'"],
+    ["missing item", `DELETE FROM telegram_alert_target_plan_items
+      WHERE plan_key IN (SELECT plan_key FROM telegram_alert_target_plans WHERE chat_id = '2')`],
+    ["replaced item", `UPDATE telegram_alert_target_plan_items SET item_key = 'unrelated'
+      WHERE plan_key IN (SELECT plan_key FROM telegram_alert_target_plans WHERE chat_id = '2')`],
+    ["replaced target", "UPDATE telegram_alert_job_targets SET message_html = 'unrelated' WHERE chat_id = '2'"],
+    ["invalid digest", "UPDATE telegram_alert_target_plans SET plan_payload_digest = printf('%064d', 0) WHERE chat_id = '2'"],
+    ["erased interior", `DELETE FROM telegram_alert_target_plan_items
+       WHERE plan_key IN (SELECT plan_key FROM telegram_alert_target_plans WHERE chat_id = '2');
+       DELETE FROM telegram_alert_job_targets WHERE chat_id = '2';
+       DELETE FROM telegram_alert_target_plans WHERE chat_id = '2';
+       DELETE FROM telegram_alert_planning_subscribers WHERE chat_id = '2'`],
+    ["migrated interior", `UPDATE telegram_alert_planning_subscribers SET chat_id = '4' WHERE chat_id = '2';
+       UPDATE telegram_alert_target_plans SET chat_id = '4' WHERE chat_id = '2';
+       UPDATE telegram_alert_job_targets SET chat_id = '4' WHERE chat_id = '2'`],
+  ])("holds an incomplete retained manifest after %s", async (_reason, corrupt) => {
+    const { sqlite, db } = setupLatestSchema();
+    const sourceEventId = "telegram-source:test:v1:retained-proof";
+    insertSource(sqlite, sourceEventId);
+    for (const chatId of ["1", "2", "3"]) insertSubscriber(sqlite, chatId);
+    await openDeliveryForRoutes(db, sourceEventId, new Map(
+      ["1", "2", "3"].map((chatId) => [chatId, [routed(chatId, sourceEventId, 1)]]),
+    ));
+    sqlite.exec(`UPDATE telegram_alert_target_plan_pages SET status = 'materializing', completed_at = NULL;
+      UPDATE telegram_alert_source_events SET target_plan_state = 'materializing',
+        planning_cursor_chat_id = NULL, target_delivery_opened_at = NULL; ${corrupt}`);
+    const claim = await claimTelegramTargetPlanning(db, sourceEventId, NOW + 1, "test-owner");
+    expect(claim).not.toBeNull();
+    await expect(reconcileIncompleteTelegramTargetPlanPage(db, claim!, NOW + 1)).rejects.toThrow();
+    expect(sqlite.prepare("SELECT status FROM telegram_alert_target_plan_pages").get())
+      .toEqual({ status: "materializing" });
+    expect(sqlite.prepare(`SELECT target_plan_state, target_delivery_opened_at,
+      planning_cursor_chat_id FROM telegram_alert_source_events`).get())
+      .toEqual({ target_plan_state: "degraded", target_delivery_opened_at: null, planning_cursor_chat_id: null });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_alerts").get()).toEqual({ count: 0 });
+  });
+
+  it("recovers an intact count-mismatch-degraded manifest without replaying ineligible members", async () => {
+    const { sqlite, db } = setupLatestSchema();
+    const sourceEventId = "telegram-source:test:v1:legacy-count-mismatch";
+    insertSource(sqlite, sourceEventId);
+    for (const chatId of ["1", "2", "3"]) insertSubscriber(sqlite, chatId);
+    const claim = await captureClaim(db, sourceEventId, new Map([["1", true], ["2", true], ["3", true]]));
+    const subscribers = await loadTelegramPlanningSubscriberPage(db, claim);
+    await materializeTelegramTargetPlanPage(db, claim, 0, subscribers.map((subscriber) => ({
+      subscriber, currentPreferenceGeneration: 1, currentEligible: subscriber.chatId !== "3",
+      routed: subscriber.chatId === "3" ? [] : [routed(subscriber.chatId, sourceEventId, 1)],
+    })), NOW);
+    sqlite.exec(`UPDATE telegram_alert_target_plan_pages SET status = 'materializing',
+      expected_plan_count = 3, expected_target_count = 3, completed_at = NULL;
+      UPDATE telegram_alert_source_events SET target_plan_state = 'degraded',
+        last_error_class = 'target_page_count_mismatch', planning_cursor_chat_id = NULL;`);
+    const result = await runTelegramTargetPlanCoordinator({
+      db, sourceEventId, nowSec: NOW + 121,
+      callbacks: {
+        resolveInitialEligibility: async () => { throw new Error("must not recapture"); },
+        planSubscribers: async () => { throw new Error("must not rerender finalized decisions"); },
+      },
+    });
+    expect(result).toMatchObject({ state: "delivery_open", enqueued: 2 });
+    expect(sqlite.prepare("SELECT chat_id FROM telegram_pending_alerts ORDER BY chat_id").all())
+      .toEqual([{ chat_id: "1" }, { chat_id: "2" }]);
+    expect(sqlite.prepare(`SELECT expected_plan_count, materialized_plan_count,
+      expected_target_count, materialized_target_count FROM telegram_alert_target_plan_pages`).get())
+      .toEqual({ expected_plan_count: 2, materialized_plan_count: 2,
+        expected_target_count: 2, materialized_target_count: 2 });
+  });
+
+  it("seals an all-ineligible decision page with zero targets", async () => {
+    const { sqlite, db } = setupLatestSchema();
+    const sourceEventId = "telegram-source:test:v1:zero-targets";
+    insertSource(sqlite, sourceEventId);
+    insertSubscriber(sqlite, "42");
+    const claim = await captureClaim(db, sourceEventId, new Map([["42", true]]));
+    const subscribers = await loadTelegramPlanningSubscriberPage(db, claim);
+    await materializeTelegramTargetPlanPage(db, claim, 0, subscribers.map((subscriber) => ({
+      subscriber, currentPreferenceGeneration: 2, currentEligible: false, routed: [],
+    })), NOW);
+    await finalizeTelegramTargetPlanning(db, claim, NOW);
+    expect(await openTelegramTargetPlanDelivery(db, claim, NOW)).toBe(true);
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_alert_target_plans").get()).toEqual({ count: 0 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_alerts").get()).toEqual({ count: 0 });
+    expect(sqlite.prepare(`SELECT status, expected_plan_count, expected_target_count
+      FROM telegram_alert_target_plan_pages`).get())
+      .toEqual({ status: "complete", expected_plan_count: 0, expected_target_count: 0 });
+  });
+
+  it("rejects multiple consolidated routes for one captured chat", async () => {
+    const { sqlite, db } = setupLatestSchema();
+    const sourceEventId = "telegram-source:test:v1:multiple-routes";
+    insertSource(sqlite, sourceEventId);
+    insertSubscriber(sqlite, "42");
+    const claim = await captureClaim(db, sourceEventId, new Map([["42", true]]));
+    const [subscriber] = await loadTelegramPlanningSubscriberPage(db, claim);
+    await expect(materializeTelegramTargetPlanPage(db, claim, 0, [{
+      subscriber, currentPreferenceGeneration: 1, currentEligible: true,
+      routed: [routed("42", sourceEventId, 1), routed("42", sourceEventId, 1, "-second")],
+    }], NOW)).rejects.toThrow("one consolidated target plan");
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_alert_target_plans").get()).toEqual({ count: 0 });
+  });
+
+  it("does not seal or advance the cursor when finalized decisions change during admission", async () => {
+    const { sqlite, db: baseDb } = setupLatestSchema();
+    const sourceEventId = "telegram-source:test:v1:seal-ledger-race";
+    insertSource(sqlite, sourceEventId);
+    insertSubscriber(sqlite, "42");
+    const claim = await captureClaim(baseDb, sourceEventId, new Map([["42", true]]));
+    const [subscriber] = await loadTelegramPlanningSubscriberPage(baseDb, claim);
+    let batches = 0;
+    const racingDb = {
+      ...baseDb,
+      batch: async (statements: D1PreparedStatement[]) => {
+        batches += 1;
+        if (batches === 2) sqlite.exec(`UPDATE telegram_alert_planning_subscribers
+          SET planning_outcome = 'pending', planned_at = NULL`);
+        return baseDb.batch(statements);
+      },
+    } as D1Database;
+    await expect(materializeTelegramTargetPlanPage(racingDb, claim, 0, [{
+      subscriber, currentPreferenceGeneration: 1, currentEligible: true,
+      routed: [routed("42", sourceEventId, 1)],
+    }], NOW)).rejects.toThrow("resume CAS was not confirmed");
+    expect(sqlite.prepare("SELECT status FROM telegram_alert_target_plan_pages").get())
+      .toEqual({ status: "materializing" });
+    expect(sqlite.prepare(`SELECT planning_cursor_chat_id, target_delivery_opened_at
+      FROM telegram_alert_source_events`).get())
+      .toEqual({ planning_cursor_chat_id: null, target_delivery_opened_at: null });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_alerts").get()).toEqual({ count: 0 });
+  });
+
+  it("never restores a subscriber's erased plan evidence from a stale decision", async () => {
+    const { sqlite, db: baseDb } = setupLatestSchema();
+    const sourceEventId = "telegram-source:test:v1:erased-before-unit";
+    insertSource(sqlite, sourceEventId);
+    insertSubscriber(sqlite, "42");
+    const claim = await captureClaim(baseDb, sourceEventId, new Map([["42", true]]));
+    const [subscriber] = await loadTelegramPlanningSubscriberPage(baseDb, claim);
+    const erasingDb = {
+      ...baseDb,
+      batch: async (statements: D1PreparedStatement[]) => {
+        sqlite.exec(`DELETE FROM telegram_alert_planning_subscribers WHERE chat_id = '42';
+          DELETE FROM telegram_subscribers WHERE chat_id = '42'`);
+        return baseDb.batch(statements);
+      },
+    } as D1Database;
+    await expect(materializeTelegramTargetPlanPage(erasingDb, claim, 0, [{
+      subscriber, currentPreferenceGeneration: 1, currentEligible: true,
+      routed: [routed("42", sourceEventId, 1)],
+    }], NOW)).rejects.toThrow();
+    for (const table of ["telegram_alert_planning_subscribers", "telegram_alert_target_plans",
+      "telegram_alert_job_targets", "telegram_alert_target_plan_items", "telegram_pending_alerts"]) {
+      expect(sqlite.prepare(`SELECT COUNT(*) AS count FROM ${table}`).get()).toEqual({ count: 0 });
+    }
+    expect(sqlite.prepare("SELECT target_delivery_opened_at FROM telegram_alert_source_events").get())
+      .toEqual({ target_delivery_opened_at: null });
+  });
+
+  it("holds an old zero-target window whose original membership has no intact witness", async () => {
+    const { sqlite, db } = setupLatestSchema();
+    const sourceEventId = "telegram-source:test:v1:unproven-zero";
+    insertSource(sqlite, sourceEventId);
+    insertSubscriber(sqlite, "42");
+    const claim = await captureClaim(db, sourceEventId, new Map([["42", false]]));
+    const [subscriber] = await loadTelegramPlanningSubscriberPage(db, claim);
+    await materializeTelegramTargetPlanPage(db, claim, 0, [{
+      subscriber, currentPreferenceGeneration: 1, currentEligible: false, routed: [],
+    }], NOW);
+    sqlite.exec(`UPDATE telegram_alert_target_plan_pages SET status = 'materializing', completed_at = NULL;
+      UPDATE telegram_alert_source_events SET planning_cursor_chat_id = NULL;`);
+    await expect(reconcileIncompleteTelegramTargetPlanPage(db, claim, NOW + 1))
+      .rejects.toThrow("target_page_membership_unproven");
+    expect(sqlite.prepare("SELECT target_plan_state, last_error_class FROM telegram_alert_source_events").get())
+      .toEqual({ target_plan_state: "degraded", last_error_class: "target_page_membership_unproven" });
+  });
+
+  it.each(["before finalization", "before delivery-open"] as const)(
+    "does not redefine sealed totals after privacy erasure %s", async (boundary) => {
+      const { sqlite, db } = setupLatestSchema();
+      const sourceEventId = "telegram-source:test:v1:erase-after-seal";
+      insertSource(sqlite, sourceEventId);
+      for (const chatId of ["1", "2", "3"]) insertSubscriber(sqlite, chatId);
+      const claim = await captureClaim(db, sourceEventId, new Map([["1", true], ["2", true], ["3", true]]));
+      const subscribers = await loadTelegramPlanningSubscriberPage(db, claim);
+      await materializeTelegramTargetPlanPage(db, claim, 0, subscribers.map((subscriber) => ({
+        subscriber, currentPreferenceGeneration: 1, currentEligible: true,
+        routed: [routed(subscriber.chatId, sourceEventId, 1)],
+      })), NOW);
+      if (boundary === "before delivery-open") await finalizeTelegramTargetPlanning(db, claim, NOW);
+      sqlite.exec(`DELETE FROM telegram_alert_target_plan_items
+        WHERE plan_key IN (SELECT plan_key FROM telegram_alert_target_plans WHERE chat_id = '2');
+        DELETE FROM telegram_alert_job_targets WHERE chat_id = '2';
+        DELETE FROM telegram_alert_target_plans WHERE chat_id = '2';
+        DELETE FROM telegram_alert_planning_subscribers WHERE chat_id = '2';
+        DELETE FROM telegram_subscribers WHERE chat_id = '2'`);
+      if (boundary === "before finalization") {
+        await expect(finalizeTelegramTargetPlanning(db, claim, NOW + 1))
+          .rejects.toThrow("before exact reconciliation");
+      } else {
+        expect(await openTelegramTargetPlanDelivery(db, claim, NOW + 1)).toBe(false);
+      }
+      expect(sqlite.prepare(`SELECT expected_plan_count, expected_target_count
+        FROM telegram_alert_target_plan_pages`).get())
+        .toEqual({ expected_plan_count: 3, expected_target_count: 3 });
+      expect(sqlite.prepare("SELECT target_delivery_opened_at FROM telegram_alert_source_events").get())
+        .toEqual({ target_delivery_opened_at: null });
+      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_alerts").get()).toEqual({ count: 0 });
+    },
+  );
+
+  it.each(["sent", "expired"] as const)("does not project source B status or cancellation onto historical source A %s targets", async (priorStatus) => {
+    const { sqlite, db } = setupLatestSchema();
+    insertSubscriber(sqlite, "42");
+    for (const sourceEventId of ["telegram-source:test:v1:recurrence-a", "telegram-source:test:v1:recurrence-b"]) {
+      insertSource(sqlite, sourceEventId);
+      await openDeliveryForRoutes(db, sourceEventId, new Map([["42", [routed("42", sourceEventId, 1)]]]));
+    }
+    const sourceA = "telegram-source:test:v1:recurrence-a";
+    const sourceB = "telegram-source:test:v1:recurrence-b";
+    sqlite.prepare("UPDATE telegram_alert_job_targets SET status = ? WHERE source_event_id = ?").run(priorStatus, sourceA);
+    const prior = sqlite.prepare("SELECT * FROM telegram_alert_job_targets WHERE source_event_id = ?").get(sourceA);
+    const current = sqlite.prepare("SELECT pending_dedupe_key FROM telegram_alert_job_targets WHERE source_event_id = ?").get(sourceB) as { pending_dedupe_key: string };
+    await recordTelegramAlertTargetStatuses(db, [{
+      targetKey: current.pending_dedupe_key, sourceEventId: sourceB, status: "queued", at: NOW + 1, errorClass: "server_error",
+    }]);
+    expect(sqlite.prepare("SELECT * FROM telegram_alert_job_targets WHERE source_event_id = ?").get(sourceA)).toEqual(prior);
+    expect(sqlite.prepare("SELECT status, error_class FROM telegram_alert_job_targets WHERE source_event_id = ?").get(sourceB)).toEqual({ status: "queued", error_class: "server_error" });
+    await recordTelegramAlertTargetCancellations(db, [{
+      targetKey: current.pending_dedupe_key, sourceEventId: sourceB, at: NOW + 2, reason: "scope_disabled",
+    }]);
+    expect(sqlite.prepare("SELECT * FROM telegram_alert_job_targets WHERE source_event_id = ?").get(sourceA)).toEqual(prior);
+    expect(sqlite.prepare("SELECT status, cancelled_at, cancellation_reason FROM telegram_alert_job_targets WHERE source_event_id = ?").get(sourceB)).toEqual({
+      status: "failed", cancelled_at: NOW + 2, cancellation_reason: "scope_disabled",
+    });
   });
 
   it.each([
@@ -1313,7 +1650,7 @@ describe("authoritative Telegram target plans on latest SQLite schema", () => {
     ]);
   });
 
-  it("propagates existing per-chat backoff to authoritative target handoff", async () => {
+  it.each(["live carrier", "expired carrier"] as const)("propagates per-chat backoff to authoritative handoff with %s", async (carrier) => {
     const { sqlite, db } = setupLatestSchema();
     const sourceEventId = "telegram-source:test:v1:chat-backoff";
     insertSource(sqlite, sourceEventId);
@@ -1343,9 +1680,14 @@ describe("authoritative Telegram target plans on latest SQLite schema", () => {
          dedupe_key, updated_at, source_type
        ) VALUES ('42', 'older retry', ?, ?, ?, 'older-retry', ?, 'legacy')`,
       )
-      .run(NOW - 60, NOW + 300, NOW + 3_600, NOW - 60);
+      .run(NOW - 60, NOW + 60, carrier === "expired carrier" ? NOW + 30 : NOW + 3_600, NOW - 60);
+    if (carrier === "expired carrier") {
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES ('telegram:chat-send-backoff:42', ?, ?)")
+        .run(String(NOW + 60), NOW);
+      sqlite.prepare("DELETE FROM telegram_pending_alerts WHERE expires_at <= ?").run(NOW + 31);
+    }
 
-    await enqueueTelegramAuthoritativeTargets(db, sourceEventId, 1, NOW);
+    await enqueueTelegramAuthoritativeTargets(db, sourceEventId, 1, NOW + 31);
 
     expect(
       sqlite
@@ -1355,7 +1697,7 @@ describe("authoritative Telegram target plans on latest SQLite schema", () => {
         )
         .get(sourceEventId),
     ).toEqual({
-      not_before_at: NOW + 300,
+      not_before_at: NOW + 60,
       priority: 20,
       expires_at: NOW + PENDING_TTL_SEC,
     });
@@ -1530,4 +1872,125 @@ describe("authoritative Telegram target plans on latest SQLite schema", () => {
       enqueued_count: 0,
     });
   });
+
+  it.each(["unsubscribe", "snooze"])("resumes a live-generation admission miss after %s without holding peers", async (change) => {
+    const { sqlite, db: baseDb } = setupLatestSchema();
+    const sourceEventId = `telegram-source:test:v1:admission-${change}`;
+    insertSource(sqlite, sourceEventId);
+    for (const chatId of ["001", "002"]) insertSubscriber(sqlite, chatId);
+    sqlite.exec("UPDATE telegram_subscribers SET global_alert_dews = 1");
+    let injected = false;
+    const db = {
+      ...baseDb,
+      batch: async (statements: D1PreparedStatement[]) => {
+        if (!injected && statements.length === 10) {
+          injected = true;
+          sqlite.prepare(`UPDATE telegram_subscribers
+            SET preference_generation = preference_generation + 1,
+                global_alert_dews = ?, alert_snooze_until_ts = ?
+            WHERE chat_id = '002'`).run(change === "unsubscribe" ? 0 : 1, change === "snooze" ? NOW + 3_600 : null);
+        }
+        return baseDb.batch(statements);
+      },
+    } as D1Database;
+    const plannedChats: string[][] = [];
+    const callbacks = {
+      resolveInitialEligibility: async (subscribers: readonly { chatId: string; preferenceGeneration: number }[]) =>
+        new Map(subscribers.map((subscriber) => [subscriber.chatId, {
+          eligible: true, observedPreferenceGeneration: subscriber.preferenceGeneration,
+        }])),
+      planSubscribers: async (subscribers: readonly TelegramPlanningDecision["subscriber"][]) => {
+        plannedChats.push(subscribers.map((subscriber) => subscriber.chatId));
+        return subscribers.map((subscriber) => {
+          const live = sqlite.prepare(`SELECT preference_generation, global_alert_dews, alert_snooze_until_ts
+            FROM telegram_subscribers WHERE chat_id = ?`).get(subscriber.chatId) as {
+            preference_generation: number; global_alert_dews: number; alert_snooze_until_ts: number | null;
+          };
+          const eligible = live.global_alert_dews === 1 && (live.alert_snooze_until_ts ?? 0) <= NOW;
+          return {
+            subscriber, currentPreferenceGeneration: live.preference_generation, currentEligible: eligible,
+            routed: eligible ? [routed(subscriber.chatId, sourceEventId, live.preference_generation)] : [],
+          };
+        });
+      },
+    };
+    await expect(runTelegramTargetPlanCoordinator({
+      db, sourceEventId, nowSec: NOW, callbacks, maxSteps: 2,
+    })).resolves.toMatchObject({ state: "planning", enqueued: 0 });
+    expect(injected).toBe(true);
+    expect(sqlite.prepare(`SELECT chat_id, planning_outcome FROM telegram_alert_planning_subscribers
+      ORDER BY chat_id`).all()).toEqual([
+      { chat_id: "001", planning_outcome: "target_planned" },
+      { chat_id: "002", planning_outcome: "pending" },
+    ]);
+    expect(sqlite.prepare("SELECT status FROM telegram_alert_target_plan_pages").get()).toEqual({ status: "materializing" });
+    const retained = sqlite.prepare("SELECT * FROM telegram_alert_target_plans").all();
+    await expect(runTelegramTargetPlanCoordinator({
+      db, sourceEventId, nowSec: NOW + 1, callbacks,
+    })).resolves.toMatchObject({ state: "delivery_open", enqueued: 1, remainingTargets: 0 });
+    expect(plannedChats).toEqual([["001", "002"], ["002"]]);
+    expect(sqlite.prepare("SELECT * FROM telegram_alert_target_plans").all()).toEqual(retained);
+    expect(sqlite.prepare(`SELECT planning_outcome, planned_preference_generation
+      FROM telegram_alert_planning_subscribers WHERE chat_id = '002'`).get()).toEqual({
+      planning_outcome: "preference_changed_ineligible", planned_preference_generation: 2,
+    });
+    expect(sqlite.prepare(`SELECT expected_plan_count, materialized_plan_count,
+      expected_target_count, materialized_target_count FROM telegram_alert_target_plan_pages`).get()).toEqual({
+      expected_plan_count: 1, materialized_plan_count: 1, expected_target_count: 1, materialized_target_count: 1,
+    });
+    expect(sqlite.prepare("SELECT last_error_class, target_plan_generation FROM telegram_alert_source_events").get())
+      .toEqual({ last_error_class: null, target_plan_generation: 1 });
+    expect(sqlite.prepare("SELECT chat_id FROM telegram_pending_alerts").all()).toEqual([{ chat_id: "001" }]);
+    await expect(enqueueTelegramAuthoritativeTargets(baseDb, sourceEventId, 1, NOW + 2))
+      .resolves.toMatchObject({ enqueued: 0, remaining: 0 });
+  });
+
+  it.each(["erased member", "changed capture", "committed plan erased"])(
+    "does not excuse corrupt evidence as a generation admission miss: %s", async (corruption) => {
+      const { sqlite, db: baseDb } = setupLatestSchema();
+      const sourceEventId = `telegram-source:test:v1:corrupt-admission-${corruption}`;
+      insertSource(sqlite, sourceEventId);
+      insertSubscriber(sqlite, "001");
+      const claim = await captureClaim(baseDb, sourceEventId, new Map([["001", true]]));
+      const [subscriber] = await loadTelegramPlanningSubscriberPage(baseDb, claim);
+      let injected = false;
+      const corrupt = () => {
+        sqlite.exec("UPDATE telegram_subscribers SET preference_generation = 2");
+        if (corruption === "erased member") {
+          sqlite.exec("DELETE FROM telegram_alert_planning_subscribers");
+        } else if (corruption === "changed capture") {
+          sqlite.exec("UPDATE telegram_alert_planning_subscribers SET preference_generation = 99");
+        } else {
+          sqlite.exec(`DELETE FROM telegram_alert_target_plan_items;
+            DELETE FROM telegram_alert_job_targets;
+            DELETE FROM telegram_alert_target_plans;
+            UPDATE telegram_alert_planning_subscribers SET planning_outcome = 'pending',
+              planned_at = NULL, planned_preference_generation = NULL`);
+        }
+      };
+      const db = {
+        ...baseDb,
+        batch: async (statements: D1PreparedStatement[]) => {
+          if (!injected && statements.length === 5) {
+            injected = true;
+            if (corruption !== "committed plan erased") corrupt();
+            const results = await baseDb.batch(statements);
+            if (corruption === "committed plan erased") corrupt();
+            return results;
+          }
+          return baseDb.batch(statements);
+        },
+      } as D1Database;
+      await expect(materializeTelegramTargetPlanPage(db, claim, 0, [{
+        subscriber, currentPreferenceGeneration: 1, currentEligible: true,
+        routed: [routed("001", sourceEventId, 1)],
+      }], NOW)).rejects.toThrow("materialization did not reconcile");
+      expect(injected).toBe(true);
+      expect(sqlite.prepare(`SELECT target_plan_state, last_error_class, target_delivery_opened_at
+        FROM telegram_alert_source_events`).get()).toEqual({
+        target_plan_state: "degraded", last_error_class: "target_plan_count_mismatch", target_delivery_opened_at: null,
+      });
+      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_alerts").get()).toEqual({ count: 0 });
+    },
+  );
 });

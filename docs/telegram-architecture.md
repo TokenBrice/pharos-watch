@@ -44,18 +44,8 @@ Nine seams: **Ingress**, **Command parsing**, **Callback routing**, **Action han
 ## 1. Ingress
 
 **Responsibility.** Authenticate `POST /api/telegram-webhook`, claim each update by owner/generation, and route through flood, pending-flow, group-admin, and cooldown gates. [Update deduplication](./telegram-alerts.md#update-deduplication) owns normalized-intent recovery and effect fences; [ingress incidents](./runbooks/telegram-webhook-retry-dedupe.md) owns admission/retry diagnosis. Parsing/authorization precede replay-safe local mutation; only the irreversible Bot API boundary starts an external effect.
+`worker/src/telegram/webhook/` owns this seam; the [implementation appendix](#ingress-implementation-appendix) maps entrypoints, lifecycle/pending gates and canonical read-only projections.
 
-**Owned files.**
-- `worker/src/telegram/webhook/telegram-webhook.ts` — HTTP entry/claim bootstrap.
-- `worker/src/telegram/webhook/telegram-webhook-auth.ts` — secret/admin validation.
-- `worker/src/telegram/webhook/telegram-webhook-update-normalization.ts` — pure update/chat/migration shapes; no D1 or Bot API.
-- `worker/src/telegram/webhook/telegram-webhook-effect-fence.ts` — claim/normalized-intent effect boundary.
-- `worker/src/telegram/webhook/telegram-webhook-update-dispatch.ts` — policy/pending-gated intent routing.
-- `worker/src/telegram/webhook/telegram-webhook-ingress-policy.ts` — flood, cooldown, admin and channel gates.
-- `worker/src/telegram/webhook/telegram-webhook-pending-gate.ts` — pending-flow decisions.
-- `worker/src/telegram/webhook/telegram-webhook-group-welcome.ts` — group lifecycle/welcome.
-- `worker/src/telegram/webhook/telegram-inline-queries.ts` — read-only inline cards.
-- `worker/src/telegram/webhook/telegram-webhook-shared.ts` — cross-seam types/copy.
 
 **Allowed inbound dependencies.** `worker/src/index.ts` request router (this is an HTTP entrypoint).
 
@@ -67,9 +57,6 @@ Nine seams: **Ingress**, **Command parsing**, **Callback routing**, **Action han
 - Write subscription state directly — go through State / persistence helpers.
 - Reorganize `COMMAND_HANDLERS` without adding/removing a command; do not re-expand it into parallel switches.
 
-Group lifecycle and pending-flow policy remain explicit ingress sub-seams: `telegram-webhook-group-welcome.ts` owns bot-added/removed handling and atomic welcome claims; `telegram-webhook-pending-gate.ts` owns pass-through, clear-and-run, ownership refusal, and reply-and-stop decisions before `COMMAND_HANDLERS`.
-
-`telegram-webhook-shared.ts` is the cross-seam contract for update/pending/bulk types and framed bot copy. Command rows and alert-family lists derive from shared manifests; widening a type is routine, restructuring this contract is a seam change.
 
 ---
 
@@ -150,19 +137,8 @@ Structural boundaries:
 - Personalized recap is a separate DB-only planner, not another risk-alert fan-out. It shares bounded Tape windows, resolves direct/preset/global intent without materialization, and persists exact targets. No AI/provider client, per-recipient Tape query, or planner Bot API send is permitted. Queue owns terminal projection.
 - `admin-telegram-broadcast.ts` is the operator write surface, using Dispatch targeting and Queue lifecycle. [Broadcast safety](./runbooks/telegram-admin-broadcast-safety.md) owns canary/TTL authority; [operator queries](./runbooks/telegram-operator-queries.md) owns read-only incident access. There is no supported operator replay/clear/pause mutation.
 
-**Owned files.**
-- `worker/src/cron/telegram/dispatch/` — alerts entrypoint, authoritative planning/handoff orchestration, source and queue lifecycle, recipient pages/routing, predicates, state and result contract.
-- `worker/src/cron/telegram/sources/` — event detection, changes, snapshots, context, safety reasons, immutable source events/memberships and item lineage.
-- `worker/src/cron/telegram/target-plans/` — direct concrete modules for source state, cohort horizon, materialization, delivery handoff, read model and coordinator; `telegram-alert-target-plan-contract.ts` owns bounds and payload contracts.
-- `worker/src/cron/telegram/delivery/` — pending queue lifecycle plus exclusive job-target delivery outcomes and target-status projections; see Queue below.
-- `worker/src/cron/telegram/freeze/` — immutable freeze source/cohort outbox with its separate schema.
-- `worker/src/cron/telegram/recap/` — deterministic DB-only recap planner; persistence and pure facts/rank/format stay in `worker/src/telegram/recap/recap-store.ts`, `recap-facts.ts`, `recap-ranking.ts`, `recap-formatting.ts`.
-- `worker/src/cron/telegram/maintenance/` — degradation watchdog, inactive cleanup and retention cleanup; physical triggers stay owned by `shared/lib/cron-jobs.ts`.
-- Each cron seam keeps its suites/support in a matching `__tests__/` directory. Consumers import concrete modules directly, with no compatibility barrels. Source/planning hands exact targets to Delivery; Freeze retains its separate immutable outbox and Recap its separate planner. Shared queue/store/transport policy stays in its existing library owner.
-- `worker/src/cron/digest/telegram-transport.ts` — digest channel-edition publication, outside risk targeting.
-- `worker/src/telegram/common/quiet-hours.ts` — shared quiet-hours predicate and callback timezone validation.
-- `worker/src/handlers/scheduled/five-minute-telegram.ts` — serial orchestration with deferred imports of cron entrypoints.
-- `worker/src/telegram/admin/admin-telegram-broadcast.ts` — operator broadcast, not webhook Ingress.
+The [dispatch implementation appendix](#dispatch-implementation-appendix) maps concrete owners and their colocated suites; imports remain direct, never compatibility barrels.
+
 
 **Allowed inbound dependencies.** Worker scheduled-event router, Worker admin route entrypoints. Not Ingress, not Callback routing.
 
@@ -179,12 +155,17 @@ Structural boundaries:
 
 ## 6. Queue / rate-limit / retry
 
-**Responsibility.** Own queue enqueue/provenance, claims, current-preference revalidation, effect fence, retry/backoff, terminal projection, dead letters, expiry, and blocked-chat lifecycle. [Delivery persistence](./telegram-alerts.md#delivery-persistence) owns the behavioral contract. Only confirmed rejection may return the exact sending generation to pending; ambiguity never auto-replays. Confirmed migration archives the old effect before the shared chat-ID migration.
+**Responsibility.** Own queue enqueue/provenance, claims, current-preference revalidation, effect fence, retry/backoff, terminal projection, dead letters, expiry, and blocked-chat lifecycle. [Delivery persistence](./telegram-alerts.md#delivery-persistence) owns the behavioral contract. After a request starts, only confirmed rejection may return the exact sending generation to pending; ambiguity never auto-replays. A late pre-send CAS response may release its exact generation only with known-unattempted evidence. Confirmed migration archives the old effect before the shared chat-ID migration.
+
+Queue terminal evidence is source-scoped: the exact source-event and pending-dedupe pair, never a recurring body hash, owns status, cancellation and final delivery. Source-less legacy rows do not mutate alert targets. Cleanup repeats the selected lifecycle tuple through audit, terminal projection and deletion; a refreshed row is a different lifecycle even when its id is reused. TTL is a current-clock send-admission cutoff, not permission to rewrite an already-attempted outcome. Chat-scoped Retry-After is indexed, set-based pending-row propagation under the confirmed attempt's owner/generation proof, not a global transport pause or a TTL extension.
+
+The chat deadline is also stored independently in D1 `cache` under `telegram:chat-send-backoff:<chatId>`, monotonically checkpointed under the same sending proof. All pending enqueue paths and retry transitions inherit it even after the last carrier row disappears. Bounded pending maintenance removes only expired deadlines; chat erasure removes the exact key and migration takes the numeric maximum.
 
 **Owned files.**
 - `worker/src/cron/telegram/delivery/` (direct claim/drain, backoff, cleanup, dead-letter, preference revalidation, recap terminal projection, lifecycle, outcome and target-status modules; no barrel)
 - `worker/src/telegram/outbox/pending-queue.ts` (enqueue, dedupe-key construction, priority and upsert SQL) and `worker/src/telegram/outbox/pending-capacity.ts` (capacity/watchdog read model)
 - `shared/lib/telegram-delivery-policy.ts` owns runtime-neutral queue, batch, TTL, rate-limit, deadline, and load-model policy. `worker/src/telegram/common/constants.ts` re-exports the established Worker import surface.
+- `shared/lib/telegram-alert-families.ts` owns family persistence identifiers used by dispatch, broadcast targeting and delivery revalidation. Local projections derive from `TELEGRAM_ALERT_PERSISTENCE`; the fan-out table retains event-route semantics only. Freeze outbox expiry uses `TELEGRAM_ALERT_TTL_SEC.freeze`, the same authority as queue admission.
 
 **Allowed inbound dependencies.** Dispatch and the personalized recap planner (the only legitimate alert/recap enqueuers), Admin Telegram routes (`admin-telegram-broadcast.ts`), Callback routing only via the `SNOOZE_REPLY_MARKUP` keyboard in `worker/src/telegram/common/alerts-formatting.ts`.
 
@@ -206,6 +187,12 @@ Structural boundaries:
 Direct/local coin intent and persistent preset intent remain separate; neither setup, import, nor Mini App may flatten resolved presets into direct rows. Existing indistinguishable legacy rows remain conservatively direct/local. [Preset watchlists](./telegram-alerts.md#preset-watchlists) owns inheritance/override behavior; [Mini App portability](./telegram-mini-app.md#configuration-portability) owns signed preview/confirmation.
 
 Unavailable pulse quality is `unknown`, never `complete`; do not write a lifecycle snapshot when pending-delivery evidence is unavailable.
+
+Digest appendix preparation exposes immutable-edition `successActions`, not a separate commit callback. Only `worker/src/telegram/outbox/digest-outbox.ts` applies these post-delivery cache writes, atomically with the exact edition's fenced `sent` transition; preparation retains immediate writes solely for safe first-run/reseed baselines. The [digest outbox contract](./runbooks/telegram-digest-outbox.md#contract) owns finalization and replay safety.
+
+Delivery diagnostics reconcile atomically across command replies and alert batches: each independent success clock retains its greatest observed timestamp (null until observed), and attempt/update clocks never decrease. Older attempts may contribute genuine historical successes but cannot change the latest attempt's failure class. At equal-second attempts, failures take precedence over successes; among failures the last persisted observation wins, matching within-batch coalescing. A strictly newer successful attempt clears the failure class. Diagnostics remain best-effort and never block replies or delivery.
+
+`/forget` erases subscriber-owned rows and raw chat cache keys while retaining processed-update replay proof. Mini App abuse admission is independent, not subscriber-owned: only anonymous time-scoped HMAC keys, counters and the original admission clock survive, for at most the remainder of the anchored 30-second window. They never extend on forget/denial or identify a later window. Expired anonymous rows are inert and physically removed by the existing daily bounded cache prune; no raw chat-key retention or precise 30-second physical deletion is implied. [Mini App auth](./telegram-mini-app.md#auth-model) owns admission and identity details.
 
 **Owned files.**
 - `worker/src/telegram/store/telegram-webhook-store.ts`, `worker/src/telegram/store/*` — stable import barrel and topic-specific SQL builders.
@@ -403,3 +390,39 @@ The reconciled menu is `Manage Alerts`, a Web App link to `https://pharos.watch/
 ### Webhook Secret Rotation
 
 [Secret rotation](./runbooks/telegram-secret-rotation.md) is the operational authority. The receiver accepts current or previous webhook secret while both are configured; the up-to-24-hour overlap is operator policy, not a timestamp gate. Registration sends only the current secret. Previous bot tokens validate signed Mini App sessions only, never outbound sends.
+
+## Ingress Implementation Appendix
+
+**Owned files.**
+- `worker/src/telegram/webhook/telegram-webhook.ts` — HTTP entry/claim bootstrap.
+- `worker/src/telegram/webhook/telegram-webhook-auth.ts` — secret/admin validation.
+- `worker/src/telegram/webhook/telegram-webhook-update-normalization.ts` — pure update/chat/migration shapes; no D1 or Bot API.
+- `worker/src/telegram/webhook/telegram-webhook-effect-fence.ts` — claim/normalized-intent effect boundary.
+- `worker/src/telegram/webhook/telegram-webhook-update-dispatch.ts` — policy/pending-gated intent routing.
+- `worker/src/telegram/webhook/telegram-webhook-ingress-policy.ts` — flood, cooldown, admin and channel gates.
+- `worker/src/telegram/webhook/telegram-webhook-pending-gate.ts` — pending-flow decisions.
+- `worker/src/telegram/webhook/telegram-webhook-group-welcome.ts` — group lifecycle/welcome.
+- `worker/src/telegram/webhook/telegram-inline-queries.ts` — read-only inline cards.
+- `worker/src/telegram/webhook/telegram-webhook-shared.ts` — cross-seam types/copy.
+
+Group lifecycle and pending-flow policy remain explicit ingress sub-seams: `telegram-webhook-group-welcome.ts` owns bot-added/removed handling and atomic welcome claims; `telegram-webhook-pending-gate.ts` owns pass-through, clear-and-run, ownership refusal, and reply-and-stop decisions before `COMMAND_HANDLERS`.
+
+`telegram-webhook-shared.ts` is the cross-seam contract for update/pending/bulk types and framed bot copy. Command rows and alert-family lists derive from shared manifests; widening a type is routine, restructuring this contract is a seam change.
+
+Read-only status loads the accepted yield-rankings response once and projects APY, venue, PYS and source provenance from the same canonical coin row. Status replies, coverage and inline cards share that projection and its evidence formatter: stale/unknown observations retain their producer clock and reason, not the cache/publication clock. Missing rankings or a missing accepted row render unavailable; there is no raw-table fallback or independent score lookup.
+
+## Dispatch Implementation Appendix
+
+**Owned files.**
+- `worker/src/cron/telegram/dispatch/` — alerts entrypoint, authoritative planning/handoff orchestration, source and queue lifecycle, recipient pages/routing, predicates, state and result contract.
+- `worker/src/cron/telegram/sources/` — event detection, changes, snapshots, context, safety reasons, immutable source events/memberships and item lineage.
+- `worker/src/cron/telegram/target-plans/` — direct concrete modules for source state, cohort horizon, materialization, delivery handoff, read model and coordinator; `telegram-alert-target-plan-contract.ts` owns bounds and payload contracts.
+- `worker/src/cron/telegram/delivery/` — pending queue lifecycle plus exclusive job-target delivery outcomes and target-status projections; see Queue below.
+- `worker/src/cron/telegram/freeze/` — immutable freeze source/cohort outbox with its separate schema.
+- `worker/src/cron/telegram/recap/` — deterministic DB-only recap planner; persistence and pure facts/rank/format stay in `worker/src/telegram/recap/recap-store.ts`, `recap-facts.ts`, `recap-ranking.ts`, `recap-formatting.ts`.
+- `worker/src/cron/telegram/maintenance/` — degradation watchdog, inactive cleanup and retention cleanup; physical triggers stay owned by `shared/lib/cron-jobs.ts`.
+- Each cron seam keeps its suites/support in a matching `__tests__/` directory. Consumers import concrete modules directly, with no compatibility barrels. Source/planning hands exact targets to Delivery; Freeze retains its separate immutable outbox and Recap its separate planner. Shared queue/store/transport policy stays in its existing library owner.
+- `worker/src/cron/digest/telegram-transport.ts` — digest channel-edition publication, outside risk targeting.
+- `worker/src/telegram/common/quiet-hours.ts` — shared quiet-hours predicate and callback timezone validation.
+- `worker/src/handlers/scheduled/five-minute-telegram.ts` — serial orchestration with deferred imports of cron entrypoints.
+- `worker/src/telegram/admin/admin-telegram-broadcast.ts` — operator broadcast, not webhook Ingress.

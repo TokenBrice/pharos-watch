@@ -1,5 +1,4 @@
 import type { TelegramAlertType } from "@shared/types/status";
-import { GLOBAL_ALERT_COLUMN_BY_TYPE } from "../../../telegram/delivery/broadcast-targets";
 import type { ConsolidatedAlerts } from "../../../telegram/common/alerts-formatting";
 import type { TelegramFanoutPlanEvents } from "../sources/dispatch-telegram-events";
 import {
@@ -57,14 +56,10 @@ function route<K extends RoutedEventKey>(
 export const TELEGRAM_FANOUT_FAMILIES = [
   {
     family: "dews", idsKey: "dewsIds", presetFamily: "dews",
-    directColumn: "alert_dews", globalColumn: GLOBAL_ALERT_COLUMN_BY_TYPE.dews,
-    overrideColumn: "alert_dews_override",
     routes: [route("dewsChanges", "dews", (sub, change) => meetsDewsThreshold(change.newBand, sub.dews_min_band))],
   },
   {
     family: "depeg", idsKey: "depegIds", presetFamily: "depeg",
-    directColumn: "alert_depeg", globalColumn: GLOBAL_ALERT_COLUMN_BY_TYPE.depeg,
-    overrideColumn: "alert_depeg_override",
     routes: [
       route("depegTriggered", "depegTriggered", (sub, event) =>
         meetsDepegStepThreshold(event.deviationBps, sub.depeg_worsening_bps_step)),
@@ -75,20 +70,14 @@ export const TELEGRAM_FANOUT_FAMILIES = [
   },
   {
     family: "safety", idsKey: "safetyIds", presetFamily: "safety",
-    directColumn: "alert_safety", globalColumn: GLOBAL_ALERT_COLUMN_BY_TYPE.safety,
-    overrideColumn: "alert_safety_override",
     routes: [route("safetyChanges", "safety", shouldIncludeSafetyForSubscriber)],
   },
   {
     family: "launch", idsKey: "launchIds", presetFamily: null,
-    directColumn: "alert_launch", globalColumn: GLOBAL_ALERT_COLUMN_BY_TYPE.launch,
-    overrideColumn: "alert_launch_override",
     routes: [route("launchPromoted", "launch")],
   },
   {
     family: "reserve", idsKey: "reserveIds", presetFamily: null,
-    directColumn: "alert_reserve", globalColumn: GLOBAL_ALERT_COLUMN_BY_TYPE.reserve,
-    overrideColumn: "alert_reserve_override",
     routes: [route("reservePromoted", "reserve")],
   },
 ] as const;

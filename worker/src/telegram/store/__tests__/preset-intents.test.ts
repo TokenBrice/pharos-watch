@@ -4,6 +4,7 @@ import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import {
   applySubscribeIntent,
   applyUnsubscribeIntent,
+  prepareSubscriberAndPresetPatchStatements,
 } from "../presets";
 import { unsubscribeAll } from "../subscriber-lifecycle";
 import { upsertGlobalAlertTypes } from "../subscribers";
@@ -97,6 +98,37 @@ afterEach(() => {
 });
 
 describe("atomic Telegram subscribe intent", () => {
+  it("keeps repeated command subscriptions additive while Mini App edits replace exact families", async () => {
+    const sqlite = openSqlite();
+    const db = createSqliteD1(sqlite);
+    try {
+      await applySubscribeIntent(db, { ...subscribeInput, directStablecoinIds: [], alertTypes: new Set(["dews"]), depegWorseningBpsStep: undefined });
+      await applySubscribeIntent(db, { ...subscribeInput, directStablecoinIds: [], alertTypes: new Set(["safety"]), depegWorseningBpsStep: undefined });
+      expect(sqlite.prepare("SELECT alert_dews, alert_depeg, alert_safety FROM telegram_preset_subscriptions").get())
+        .toEqual({ alert_dews: 1, alert_depeg: 0, alert_safety: 1 });
+      await db.batch(prepareSubscriberAndPresetPatchStatements(db, CHAT_ID, "alice", "usd-top25", { dews: false, depeg: false, safety: true }, null));
+      expect(sqlite.prepare("SELECT alert_dews, alert_depeg, alert_safety, depeg_worsening_bps_step FROM telegram_preset_subscriptions").get())
+        .toEqual({ alert_dews: 0, alert_depeg: 0, alert_safety: 1, depeg_worsening_bps_step: null });
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("rolls preset replacement, subscriber activity and generation back together on failure", async () => {
+    const sqlite = openSqlite();
+    try {
+      await applySubscribeIntent(createSqliteD1(sqlite), subscribeInput);
+      const before = stateSnapshot(sqlite);
+      const db = createFaultInjectingD1(sqlite, { failAtBoundary: 1 });
+      await expect(db.batch(prepareSubscriberAndPresetPatchStatements(
+        db, CHAT_ID, "changed-name", "usd-top25", { dews: false, depeg: false, safety: true }, null,
+      ))).rejects.toThrow("injected failure at boundary 1");
+      expect(stateSnapshot(sqlite)).toEqual(before);
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it("commits subscriber, coin, preset, and pending-clear statements in one batch", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(NOW_MS);
@@ -106,7 +138,8 @@ describe("atomic Telegram subscribe intent", () => {
       insertPending(sqlite);
       await applySubscribeIntent(createFaultInjectingD1(sqlite, { batchSizes }), subscribeInput);
 
-      expect(batchSizes).toEqual([5]);
+      // Both direct and preset enable kernels enlist their idempotent first-follow claims.
+      expect(batchSizes).toEqual([11]);
       expect(sqlite.prepare(`
         SELECT username, alert_dews, alert_depeg, last_active_at, preference_generation
           FROM telegram_subscribers

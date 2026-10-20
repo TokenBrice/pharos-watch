@@ -2,13 +2,32 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { seedDispatchSnapshots } from "./dispatch-telegram-snapshots.test-support";
 import {
   cleanupDispatchTelegramAlertsTest,
-  createDispatchHarness,
+  createDispatchHarness as createBaseDispatchHarness,
   dispatchTelegramAlerts,
   makeSafetySnapshotCache,
   readCacheValue,
   resetDispatchTelegramAlertsTest,
   telegramDeliveryTranscript,
 } from "./dispatch-telegram-alerts.test-support";
+
+// Routing scenarios require published DEWS; pointerless diagnostic rows are not alert sources.
+// Keep admission local so the base harness can still exercise unavailable publications.
+function createDispatchHarness() {
+  const harness = createBaseDispatchHarness();
+  const seed = harness.seed;
+  harness.seed = (input) => {
+    seed(input);
+    if (input.dews?.length) {
+      const computedAt = Math.max(...input.dews.map((row) => row.computedAt ?? Math.floor(Date.now() / 1000)));
+      harness.cache("dews:published-generation", {
+        updatedAt: computedAt,
+        source: "compute-dews",
+        publishStatus: "published",
+      }, computedAt);
+    }
+  };
+  return harness;
+}
 
 
 

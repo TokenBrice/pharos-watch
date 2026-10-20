@@ -207,7 +207,7 @@ export function CoinCard({ coin, globalAlerts, presets, canMutate, isMutating, p
                   <SegmentedControl
                     ariaLabel={`${coin.symbol} DEWS minimum band`}
                     value={coin.dewsMinBand}
-                    options={[{ value: null, label: "Default", caption: "Any band" }, ...DEWS_BAND_OPTIONS]}
+                    options={[{ value: null, label: "Default", caption: "ALERT or higher" }, ...DEWS_BAND_OPTIONS]}
                     disabled={!canMutate || isMutating}
                     onChange={(next) => onMutate({ kind: "set-coin", stablecoinId: coin.stablecoinId, patch: { dewsMinBand: next } })}
                   />

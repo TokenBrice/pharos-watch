@@ -16,12 +16,12 @@ import {
  */
 export const CRON_STATUS_LATEST_FACT_KEYS: Readonly<Record<string, readonly string[]>> = {
   "dispatch-telegram-alerts": [
-    "freshPermanentFailures", "pendingDroppedPermanentFailure", "pendingDroppedMaxAttemptsFallback",
-    "freshRetryQueued", "pendingRetryQueued", "pendingRateLimited", "pendingRetryAfterSec",
+    "pendingDroppedPermanentFailure", "pendingDroppedMaxAttemptsFallback",
+    "pendingRetryQueued", "pendingRateLimited", "pendingRetryAfterSec",
     "safetyAlertsSuppressed", "safetyAlertSourceState", "reserveAlertsSuppressed", "reserveAlertSourceState",
-    "skipped", "subscribersNotified", "messagesSent", "freshAttempted", "freshSent",
+    "skipped", "subscribersNotified", "messagesSent",
     "pendingAttempted", "pendingDrained", "pendingDeferred", "pendingDropped", "pendingDroppedTtlExpired",
-    "cappedAtLimit", "snapshotSeeded", "perAlertType",
+    "cappedAtLimit", "snapshotSeeded",
   ],
   "sync-live-reserves": ["synced", "total", "nextCursorStablecoinId"],
   "status-self-check": ["slowestProbes"],

@@ -400,7 +400,21 @@ export async function publishTelegramPulseSnapshotWithOutcome(
     }
     try {
       throwIfAborted(options.signal);
-      await refreshTelegramAdoptionRetention(db, nowSec);
+      const retention = await refreshTelegramAdoptionRetention(db, nowSec);
+      if (retention.mismatches.length > 0) {
+        logWorkerEvent({
+          scope: "api",
+          level: "warn",
+          message: "Telegram adoption retention cohort-evidence-mismatch",
+          metadata: {
+            outcome: "cohort-evidence-mismatch",
+            measurements: retention.mismatches.map(({ retained, ...measurement }) => ({
+              ...measurement, retainedAny: retained.any, retainedDirect: retained.direct,
+              retainedPreset: retained.preset, retainedGlobal: retained.global,
+            })),
+          },
+        });
+      }
     } catch (error) {
       throwIfAborted(options.signal);
       logWorkerEvent({

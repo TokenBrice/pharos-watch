@@ -363,17 +363,6 @@ export function isTelegramAlertType(value: unknown): value is TelegramAlertType 
   return (TELEGRAM_ALERT_TYPES as readonly string[]).includes(value as string);
 }
 
-export interface PerAlertTypeDeliveryStats {
-  sent: number;
-  enqueued: number;
-  failed: number;
-  blocked: number;
-  firstSendLatencyMs: number | null;
-}
-
-export type PerAlertTypeDelivery = Record<Exclude<TelegramAlertType, "freeze">, PerAlertTypeDeliveryStats> &
-  Partial<Record<"freeze", PerAlertTypeDeliveryStats>>;
-
 export const SAFETY_ALERT_SOURCE_STATE_VALUES = ["ok", "missing", "corrupt", "stale", "wrong-generation"] as const;
 export type SafetyAlertSourceState = (typeof SAFETY_ALERT_SOURCE_STATE_VALUES)[number];
 
@@ -415,11 +404,6 @@ export interface TelegramDispatchCronResult {
   snapshotSeeded: boolean;
   eventlessFastPath?: boolean;
   skipped?: string | null;
-  freshAttempted: number;
-  freshSent: number;
-  freshRetryQueued: number;
-  freshPermanentFailures: number;
-  freshDeferredPerChat: number;
   pendingAttempted: number;
   pendingDrained: number;
   pendingRetryQueued: number;
@@ -456,7 +440,6 @@ export interface TelegramDispatchCronResult {
    */
   suppressedSafetyChangesAtSeed: number;
   eventsDetected: TelegramDispatchEventsDetected;
-  perAlertType: PerAlertTypeDelivery;
 }
 
 type ParsedTelegramDispatchEventsDetected = {
@@ -472,15 +455,8 @@ export interface TelegramDispatchCronMetadata extends SafetyAlertFieldsNullable,
   snapshotSeeded: boolean | null;
   eventlessFastPath: boolean | null;
   skipped: string | null;
-  freshAttempted: number | null;
-  freshSent: number | null;
-  freshRetryQueued: number | null;
-  freshPermanentFailures: number | null;
-  freshDeferredPerChat: number | null;
-  freshCandidateChats: number | null;
   /** Durable freeze recipient work considered this run; null for legacy metadata. */
   freezeTargetCount: number | null;
-  freshCandidateCount: number | null;
   pendingAttempted: number | null;
   pendingDrained: number | null;
   pendingRetryQueued: number | null;
@@ -499,5 +475,10 @@ export interface TelegramDispatchCronMetadata extends SafetyAlertFieldsNullable,
   presetFailure: boolean | null;
   suppressedSafetyChangesAtSeed: number | null;
   eventsDetected: ParsedTelegramDispatchEventsDetected | null;
-  perAlertType: PerAlertTypeDelivery | null;
+  /** Row-backed workload for the source evaluated by this dispatch run. */
+  authoritativePlanning: {
+    sourceEventId: string | null;
+    sourceEventFamilies: TelegramAlertType[] | null;
+    plannedTargetCount: number | null;
+  } | null;
 }

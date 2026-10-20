@@ -1,6 +1,8 @@
 import { makeBulkPendingRow, pendingDisambiguationTable, pendingRowFromForget } from "./telegram-rows.test-support.ts";
 import { describe, expect, it, beforeEach } from "vitest";
 import { mockTelegramMembership } from "../../../test-helpers/__shared/telegram";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { persistPendingDisambiguationRow } from "../../store/disambiguation";
 import {
   fetchSpy,
   firstAckBody,
@@ -30,6 +32,43 @@ import {
 beforeEach(resetCallbackTest);
 
 describe("handleCallbackQuery", () => {
+  it.each(["setup", "forget"] as const)("refuses old %s confirmation and cancellation buttons after same-owner replacement", async (kind) => {
+    const fixtures = createLatestSchemaFixtureTracker();
+    const { sqlite, db } = fixtures.open();
+    try {
+      sqlite.exec("INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at) VALUES ('123', 1, 1)");
+      const flowId = "2222222222222222";
+      await persistPendingDisambiguationRow(db, {
+        chatId: "123", actionType: kind === "setup" ? "setup-step" : "forget-confirm",
+        actionPayload: kind === "setup"
+          ? { step: "confirm-custom", alertTypes: ["dews"], target: { kind: "all" }, flowId }
+          : { flowId },
+        alertTypes: [], resolvedIds: [], ambiguousTicker: "", candidates: [], remainingTickers: [],
+        initiatorUserId: "999",
+      });
+      const before = sqlite.prepare("SELECT * FROM telegram_pending_disambiguation").all();
+      const subscriber = sqlite.prepare("SELECT * FROM telegram_subscribers").all();
+      for (const action of ["confirm", "cancel"]) {
+        const prefix = kind === "setup" ? `setup:${action}` : `${action}:forget`;
+        await handleCallbackQuery(db, "fake-token", makeCallbackQuery(`${prefix}:1111111111111111`, {
+          from: { id: 999 }, message: { chat: { id: 123, type: "private" }, message_id: 1 },
+        }));
+        expect(sqlite.prepare("SELECT * FROM telegram_pending_disambiguation").all()).toEqual(before);
+        expect(sqlite.prepare("SELECT * FROM telegram_subscribers").all()).toEqual(subscriber);
+        expect(lastAckBody().text).toMatch(/begin again|re-run/i);
+      }
+      const fresh = kind === "setup" ? `setup:confirm:${flowId}` : `confirm:forget:${flowId}`;
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery(fresh, {
+        from: { id: 999 }, message: { chat: { id: 123, type: "private" }, message_id: 2 },
+      }));
+      expect(sqlite.prepare("SELECT * FROM telegram_pending_disambiguation").all()).toEqual([]);
+      expect(sqlite.prepare("SELECT global_alert_dews FROM telegram_subscribers").all()).toEqual(
+        kind === "setup" ? [{ global_alert_dews: 1 }] : [],
+      );
+    } finally {
+      fixtures.closeAll();
+    }
+  });
   it("finalizes pending disambiguation from a select callback", async () => {
     const ambiguous = resolveTicker("USDF");
     const usdc = resolveTicker("USDC");
@@ -42,6 +81,7 @@ describe("handleCallbackQuery", () => {
         action_type: "subscribe",
         action_payload: JSON.stringify({
           schemaVersion: 1,
+          flowId: "0123456789abcdef",
           alertTypes: ["dews"],
           presetIds: [],
           resolvedIds: [],
@@ -85,7 +125,7 @@ describe("handleCallbackQuery", () => {
       },
     ]);
 
-    await handleCallbackQuery(db, "fake-token", makeCallbackQuery("select:1", { id: "cb-select", from: { id: 999, username: "requester" }, message: { chat: { id: 123, type: "private" }, message_id: 1 } }));
+    await handleCallbackQuery(db, "fake-token", makeCallbackQuery("select:1:0123456789abcdef", { id: "cb-select", from: { id: 999, username: "requester" }, message: { chat: { id: 123, type: "private" }, message_id: 1 } }));
 
     const history = db.getHistory();
     expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_pending_disambiguation"))).toBe(true);
@@ -172,7 +212,7 @@ describe("handleCallbackQuery", () => {
       coinIds: [],
       subscribeAll: true,
     }, { expires_at: Math.floor(Date.now() / 1000) + 60, initiator_user_id: "999" }))]);
-    await handleCallbackQuery(db, "fake-token", makeCallbackQuery("confirm:bulk", { id: "cb-bulk", from: { id: 7, username: "interloper" }, message: { chat: { id: 123, type: "private" }, message_id: 1 } }));
+    await handleCallbackQuery(db, "fake-token", makeCallbackQuery("confirm:bulk:0123456789abcdef", { id: "cb-bulk", from: { id: 7, username: "interloper" }, message: { chat: { id: 123, type: "private" }, message_id: 1 } }));
 
     const history = db.getHistory();
     expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_pending_disambiguation"))).toBe(false);
@@ -187,7 +227,7 @@ describe("handleCallbackQuery", () => {
       coinIds: [],
       unsubscribeAll: true,
     }, { expires_at: Math.floor(Date.now() / 1000) - 1, initiator_user_id: "999" }))]);
-    await handleCallbackQuery(db, "fake-token", makeCallbackQuery("confirm:bulk", { id: "cb-expired", from: { id: 999, username: "requester" }, message: { chat: { id: 123, type: "private" }, message_id: 1 } }));
+    await handleCallbackQuery(db, "fake-token", makeCallbackQuery("confirm:bulk:0123456789abcdef", { id: "cb-expired", from: { id: 999, username: "requester" }, message: { chat: { id: 123, type: "private" }, message_id: 1 } }));
 
     expect(firstAckBody().text).toMatch(/expired/i);
   });
@@ -204,7 +244,7 @@ describe("handleCallbackQuery", () => {
       { match: "INSERT INTO telegram_subscribers", rows: [] },
       { match: "INSERT INTO telegram_preset_subscriptions", rows: [] },
     ]);
-    await handleCallbackQuery(db, "fake-token", makeCallbackQuery("confirm:bulk", { id: "cb-preset-follow", from: { id: 999, username: "requester" }, message: { chat: { id: 123, type: "private" }, message_id: 1 } }));
+    await handleCallbackQuery(db, "fake-token", makeCallbackQuery("confirm:bulk:0123456789abcdef", { id: "cb-preset-follow", from: { id: 999, username: "requester" }, message: { chat: { id: 123, type: "private" }, message_id: 1 } }));
 
     const history = db.getHistory();
     expect(history.some((entry) => entry.sql.includes("INSERT INTO telegram_preset_subscriptions"))).toBe(true);
@@ -219,7 +259,7 @@ describe("handleCallbackQuery", () => {
       unsubscribeAll: false,
     }, { expires_at: Math.floor(Date.now() / 1000) + 60, initiator_user_id: "999" }))]);
 
-    await handleCallbackQuery(db, "fake-token", makeCallbackQuery("confirm:bulk", { id: "cb-preset-unfollow", from: { id: 999, username: "requester" }, message: { chat: { id: 123, type: "private" }, message_id: 1 } }));
+    await handleCallbackQuery(db, "fake-token", makeCallbackQuery("confirm:bulk:0123456789abcdef", { id: "cb-preset-unfollow", from: { id: 999, username: "requester" }, message: { chat: { id: 123, type: "private" }, message_id: 1 } }));
 
     const history = db.getHistory();
     expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_preset_subscriptions"))).toBe(true);
@@ -246,7 +286,7 @@ describe("handleCallbackQuery", () => {
     });
     mockTelegramMembership(fetchSpy, "member", { id: 7, is_bot: false, first_name: "member" });
 
-    await handleCallbackQuery(db, "fake-token", makeCallbackQuery("setup:confirm", { id: "cb-setup-confirm-group", from: { id: 7, username: "member" }, message: { chat: { id: -42, type: "supergroup" }, message_id: 1 } }));
+    await handleCallbackQuery(db, "fake-token", makeCallbackQuery("setup:confirm:0123456789abcdef", { id: "cb-setup-confirm-group", from: { id: 7, username: "member" }, message: { chat: { id: -42, type: "supergroup" }, message_id: 1 } }));
 
     const history = db.getHistory();
     expect(history.some((h) => /telegram_pending_disambiguation/.test(h.sql))).toBe(false);
@@ -269,7 +309,7 @@ describe("handleCallbackQuery forget confirmations", () => {
   beforeEach(resetCallbackTest);
 
   const privateForgetTap = (id: string, fromId = 999) =>
-    makeCallbackQuery("confirm:forget", { id, from: { id: fromId, username: "requester" }, message: { chat: { id: 123, type: "private" }, message_id: 1 } });
+    makeCallbackQuery("confirm:forget:0123456789abcdef", { id, from: { id: fromId, username: "requester" }, message: { chat: { id: 123, type: "private" }, message_id: 1 } });
 
   it("confirm:forget deletes subscriber-owned Telegram rows and replies", async () => {
     const db = mockTelegramD1([
@@ -309,7 +349,7 @@ describe("handleCallbackQuery forget confirmations", () => {
 
   it("cancel:forget clears only the pending confirmation and replies", async () => {
     const db = mockTelegramD1([pendingDisambiguationTable(pendingRowFromForget({ initiator_user_id: "999" }))]);
-    await handleCallbackQuery(db, "fake-token", makeCallbackQuery("cancel:forget", { id: "cb-forget-cancel", from: { id: 999, username: "requester" }, message: { chat: { id: 123, type: "private" }, message_id: 1 } }));
+    await handleCallbackQuery(db, "fake-token", makeCallbackQuery("cancel:forget:0123456789abcdef", { id: "cb-forget-cancel", from: { id: 999, username: "requester" }, message: { chat: { id: 123, type: "private" }, message_id: 1 } }));
 
     const history = db.getHistory();
     expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_pending_disambiguation"))).toBe(true);
@@ -320,7 +360,7 @@ describe("handleCallbackQuery forget confirmations", () => {
 
   it("confirm:forget refuses leaked group callbacks before reading D1", async () => {
     const db = mockTelegramD1([]);
-    await handleCallbackQuery(db, "fake-token", makeCallbackQuery("confirm:forget", { id: "cb-forget-group", from: { id: 999, username: "requester" }, message: { chat: { id: -123, type: "supergroup" }, message_id: 1 } }));
+    await handleCallbackQuery(db, "fake-token", makeCallbackQuery("confirm:forget:0123456789abcdef", { id: "cb-forget-group", from: { id: 999, username: "requester" }, message: { chat: { id: -123, type: "supergroup" }, message_id: 1 } }));
 
     expect(db.getHistory()).toHaveLength(0);
     expect(lastAckBody().text).toContain("Open a private chat");

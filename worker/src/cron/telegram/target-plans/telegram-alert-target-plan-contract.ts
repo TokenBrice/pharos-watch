@@ -1,7 +1,6 @@
 import { isRecord } from "@shared/lib/type-guards";
 import { isTelegramAlertType, type TelegramAlertType } from "@shared/types/status";
 import { D1_BATCH_SIZE } from "../../../lib/constants";
-import { D1_MAX_BOUND_PARAMETERS } from "../../../lib/db";
 import { sha256Hex } from "../../../lib/hash";
 import { parseJson } from "../../../lib/json-parse";
 import type { BatchMessage } from "../../../telegram/delivery/telegram";
@@ -216,6 +215,7 @@ export async function parseTelegramTargetPlan(
 
   const messages: PersistedTelegramTargetMessageV1[] = [];
   const targetKeys = new Set<string>();
+  let admittedSplitVersion: number | undefined;
   for (const [index, message] of value.messages.entries()) {
     if (
       !isRecord(message) ||
@@ -230,6 +230,14 @@ export async function parseTelegramTargetPlan(
     if (markup.kind !== "ok") {
       return { kind: "invalid", reason: "target_plan_markup_invalid" };
     }
+    // Decode the persisted policy, never regenerate chunks with today's policy.
+    // All messages in a plan must share one explicitly supported key version.
+    const keyParts = message.targetKey.slice(value.chatId.length).match(/^:v(3|4):/);
+    const splitVersion = keyParts ? Number(keyParts[1]) : undefined;
+    if (splitVersion == null || (admittedSplitVersion != null && admittedSplitVersion !== splitVersion)) {
+      return { kind: "invalid", reason: "target_plan_target_key_invalid" };
+    }
+    admittedSplitVersion = splitVersion;
     const reconstructed: BatchMessage = {
       chatId: value.chatId,
       html: message.html,
@@ -237,7 +245,7 @@ export async function parseTelegramTargetPlan(
       disableNotification: value.disableNotification,
       chunkIndex: index,
     };
-    if (buildDedupeKey(reconstructed) !== message.targetKey || targetKeys.has(message.targetKey)) {
+    if (buildDedupeKey(reconstructed, admittedSplitVersion) !== message.targetKey || targetKeys.has(message.targetKey)) {
       return { kind: "invalid", reason: "target_plan_target_key_invalid" };
     }
     targetKeys.add(message.targetKey);
@@ -277,12 +285,9 @@ export interface TelegramPlanMaterializationBatchInvariant {
 }
 
 export function telegramPlanMaterializationBatchInvariant(): TelegramPlanMaterializationBatchInvariant {
-  const targetColumns = 20;
-  const itemColumns = 5;
-  const targetRowsPerStatement = Math.floor(D1_MAX_BOUND_PARAMETERS / targetColumns);
-  const itemRowsPerStatement = Math.floor(D1_MAX_BOUND_PARAMETERS / itemColumns);
-  const targetInsertStatements = Math.ceil(TELEGRAM_TARGET_PLAN_MAX_CHUNKS / targetRowsPerStatement);
-  const itemInsertStatements = Math.ceil(TELEGRAM_TARGET_PLAN_MAX_ITEMS / itemRowsPerStatement);
+  // Guarded JSON SELECT inserts retain the whole bounded payload in one unit.
+  const targetInsertStatements = 1;
+  const itemInsertStatements = 1;
   const markerStatements = 3;
   return {
     targetInsertStatements,

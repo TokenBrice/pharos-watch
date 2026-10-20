@@ -1,11 +1,16 @@
 import { batchExecute, buildInClause, chunkArray, D1_SAFE_IN_CLAUSE_BIND_LIMIT } from "../../../lib/db";
-import { TELEGRAM_PENDING_PRIORITY, type PendingDeliveryState } from "../../../telegram/common/constants";
+import { PENDING_TTL_SEC, TELEGRAM_PENDING_PRIORITY } from "../../../telegram/common/constants";
 import { logTelegramEvent } from "../../../telegram/common/log";
 import type {
   DeadLetterPendingRow,
   PendingDeadLetterReason,
   PendingDeliveryClaim,
 } from "./types";
+import {
+  prepareTelegramAlertJobCounterReconciliation,
+  prepareTelegramJobTargetFinalDeliveryProjection,
+  resolveTelegramJobTargetIdentityForPending,
+} from "./telegram-alert-job-target-outcomes";
 
 export const PENDING_DELETE_CHUNK_SIZE = D1_SAFE_IN_CLAUSE_BIND_LIMIT;
 
@@ -21,37 +26,6 @@ function pendingDeadLetterKey(row: Pick<DeadLetterPendingRow, "id" | "delivery_g
   return key;
 }
 
-/**
- * Delete pending-queue rows that never entered a delivery claim, fenced on
- * the state observed when they were selected: each row must still be in that
- * `delivery_state` and still carry the processing lease observed then — no
- * live lease, or the same owner. A row that a competing drain re-claimed, or
- * that moved terminal, in the SELECT→DELETE gap therefore survives.
- */
-export async function claimedDeleteByIds(
-  db: D1Database,
-  ids: readonly number[],
-  deliveryState: PendingDeliveryState,
-  processingOwner: string | null,
-  nowSec: number,
-): Promise<number> {
-  if (ids.length === 0) return 0;
-  let deleted = 0;
-  for (const idChunk of chunkArray(ids, PENDING_DELETE_CHUNK_SIZE)) {
-    const inClause = buildInClause(idChunk);
-    const leaseFenceSql = processingOwner != null
-      ? "processing_owner IS ?"
-      : "(processing_owner IS NULL OR processing_expires_at IS NULL OR processing_expires_at <= ?)";
-    const result = await db
-      .prepare(
-        `DELETE FROM telegram_pending_alerts WHERE id IN (${inClause.sql}) AND delivery_state = ? AND ${leaseFenceSql}`,
-      )
-      .bind(...inClause.binds, deliveryState, ...(processingOwner != null ? [processingOwner] : [nowSec]))
-      .run();
-    deleted += Number(result.meta?.changes ?? 0);
-  }
-  return deleted;
-}
 
 /**
  * Delete rows whose delivery claims the caller observed, fenced on owner and
@@ -89,16 +63,14 @@ export async function claimedDeleteByDeliveryClaims(
   return deleted;
 }
 
-async function insertPendingDeadLetters(
+function preparePendingDeadLetter(
   db: D1Database,
-  rows: readonly DeadLetterPendingRow[],
+  row: DeadLetterPendingRow,
   nowSec: number,
   reason: PendingDeadLetterReason,
-): Promise<void> {
-  if (rows.length === 0) return;
-  const changed = await batchExecute(db, rows.map((row) =>
-    db
-      .prepare(
+  guard?: { sql: string; binds: readonly unknown[] },
+): D1PreparedStatement {
+  return db.prepare(
         `INSERT INTO telegram_alert_dead_letters (
            dead_letter_key, pending_id, chat_id, message_html, source_type, alert_type, priority,
            created_at, expired_at, attempts, last_error_class, reason, dedupe_key, chunk_index,
@@ -106,7 +78,8 @@ async function insertPendingDeadLetters(
            delivery_state, delivery_owner, delivery_generation, delivery_started_at,
            delivery_completed_at, delivery_claim_expires_at
          )
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+          WHERE ${guard?.sql ?? "1"}
          ON CONFLICT(dead_letter_key) WHERE dead_letter_key IS NOT NULL DO UPDATE SET
            dead_letter_key = excluded.dead_letter_key
          WHERE telegram_alert_dead_letters.pending_id IS excluded.pending_id
@@ -157,11 +130,145 @@ async function insertPendingDeadLetters(
         row.delivery_started_at ?? null,
         row.delivery_completed_at ?? null,
         row.delivery_claim_expires_at ?? null,
-      ),
-  ));
+        ...(guard?.binds ?? []),
+      );
+}
+
+async function insertPendingDeadLetters(
+  db: D1Database,
+  rows: readonly DeadLetterPendingRow[],
+  nowSec: number,
+  reason: PendingDeadLetterReason,
+): Promise<void> {
+  const changed = await batchExecute(db, rows.map((row) => preparePendingDeadLetter(db, row, nowSec, reason)));
   if (changed !== rows.length) {
     throw new Error(`Telegram pending dead-letter identity conflict (${changed}/${rows.length})`);
   }
+}
+
+/** Every cleanup write repeats the selected lifecycle, not merely its reusable row id. */
+export function pendingLifecycleGuard(
+  row: DeadLetterPendingRow,
+  nowSec: number,
+  reason: PendingDeadLetterReason,
+  processingOwner: string | null,
+): { sql: string; binds: unknown[] } {
+  return {
+    sql: `EXISTS (
+      SELECT 1 FROM telegram_pending_alerts current
+       WHERE current.id = ?
+         AND current.delivery_state = 'pending'
+         AND current.created_at = ?
+         AND current.source_event_id IS ?
+         AND current.dedupe_key IS ?
+         AND current.expires_at IS ?
+         AND current.delivery_generation = ?
+         AND current.processing_owner IS ?
+         AND current.processing_started_at IS ?
+         AND current.processing_expires_at IS ?
+         AND (? IS NOT NULL AND current.processing_owner = ?
+              OR current.processing_owner IS NULL
+              OR current.processing_expires_at IS NULL
+              OR current.processing_expires_at <= ?)
+         ${reason === "ttl_expired" ? "AND COALESCE(current.expires_at, current.created_at + ?) <= ?" : ""}
+    )`,
+    binds: [
+      row.id, row.created_at, row.source_event_id ?? null, row.dedupe_key ?? null,
+      row.expires_at ?? null, row.delivery_generation ?? 0,
+      row.processing_owner ?? null, row.processing_started_at ?? null, row.processing_expires_at ?? null,
+      processingOwner, processingOwner, nowSec,
+      ...(reason === "ttl_expired" ? [PENDING_TTL_SEC, nowSec] : []),
+    ],
+  };
+}
+
+/**
+ * Archive and settle only a still-current, unstarted lifecycle. The audit copy
+ * is guarded too; all terminal projections and deletion then share one atomic
+ * checkpoint with the identical guard. Expiry alone may bypass failed audit.
+ */
+export async function settleUnstartedPendingRows(
+  db: D1Database,
+  rows: readonly DeadLetterPendingRow[],
+  nowSec: number,
+  reason: PendingDeadLetterReason,
+  processingOwner: string | null = null,
+): Promise<number> {
+  let deleted = 0;
+  for (const row of rows) {
+    const guard = pendingLifecycleGuard(row, nowSec, reason, processingOwner);
+    try {
+      const audit = await preparePendingDeadLetter(db, row, nowSec, reason, guard).run();
+      if (Number(audit.meta?.changes ?? 0) !== 1) {
+        // A stale selection is a no-op. A real audit-key conflict on a later
+        // refreshed lifecycle is diagnostic failure, not permission to keep
+        // expired work alive indefinitely.
+        const current = reason === "ttl_expired"
+          ? await db.prepare(`SELECT 1 AS present WHERE ${guard.sql}`).bind(...guard.binds).first()
+          : null;
+        if (!current) continue;
+        throw new Error("Telegram pending dead-letter identity conflict");
+      }
+    } catch {
+      if (reason !== "ttl_expired") {
+        logTelegramEvent({
+          level: "warn",
+          message: "Failed to dead-letter terminal pending alerts",
+          action: "dead-letter-terminal-pending",
+          module: "telegram-pending-dead-letter",
+          reason,
+          rowCount: 1,
+        });
+        continue;
+      }
+      logTelegramEvent({
+        level: "error",
+        message: "expired pending Telegram alert removed without dead-letter copy after dead-letter write failure",
+        action: "cleanup-expired-pending-dead-letter-bypass",
+        module: "telegram-pending-cleanup",
+        reason,
+        rowCount: 1,
+        affectedChatCount: 1,
+        dedupeKeyCount: row.dedupe_key ? 1 : 0,
+      });
+    }
+    const state = reason === "ttl_expired" ? "expired"
+      : reason === "preference_changed" ? "cancelled" : "failed";
+    const error = reason === "preference_changed" ? row.last_error_class ?? reason : reason;
+    const statements: D1PreparedStatement[] = [];
+    if (row.dedupe_key && row.source_event_id) {
+      const identity = await resolveTelegramJobTargetIdentityForPending(db, {
+        pendingDedupeKey: row.dedupe_key,
+        sourceEventId: row.source_event_id,
+      });
+      if (identity) {
+        statements.push(prepareTelegramJobTargetFinalDeliveryProjection(
+          db, identity, { state, at: nowSec, error }, { pendingGuard: guard },
+        ));
+        statements.push(prepareTelegramAlertJobCounterReconciliation(db, identity.jobId, nowSec, {
+          targetKey: identity.targetKey,
+          finalDeliveryState: state,
+          pendingGuard: guard,
+        }));
+      }
+    }
+    // These outcomes never consume the recap window or alter its schedule.
+    if (row.source_type === "personalized_recap" && row.source_event_id) {
+      statements.push(db.prepare(
+        `UPDATE telegram_recap_targets
+            SET status = ?, terminal_reason = COALESCE(?, terminal_reason),
+                completed_at = ?, updated_at = ?
+          WHERE recap_key = ? AND status IN ('planned', 'queued')
+            AND (${guard.sql})`,
+      ).bind(state === "failed" ? "failed_permanent" : state, error, nowSec, nowSec, row.source_event_id, ...guard.binds));
+    }
+    statements.push(db.prepare(
+      `DELETE FROM telegram_pending_alerts WHERE id = ? AND (${guard.sql})`,
+    ).bind(row.id, ...guard.binds));
+    const results = await db.batch(statements);
+    deleted += Number(results[results.length - 1]?.meta?.changes ?? 0);
+  }
+  return deleted;
 }
 
 export async function deadLetterTerminalPendingRows(

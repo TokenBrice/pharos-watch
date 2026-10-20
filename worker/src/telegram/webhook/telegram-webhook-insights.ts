@@ -11,7 +11,7 @@ import { suggestClosestToken } from "../common/alerts-parser";
 import { TOP_VIEW_NAMES } from "../common/constants";
 import { formatTelegramCompactUsd } from "../common/telegram-format";
 import type { StatusForCoin } from "./telegram-webhook-status";
-import { formatTelegramSafety } from "./telegram-webhook-messages";
+import { formatTelegramSafety, formatTelegramYield } from "./telegram-webhook-messages";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER, normalizeDexLiquidityEvidence } from "../../lib/dex-liquidity";
 import { loadPublishedStressSignalGeneration } from "../../lib/stress-signals-current-rows";
 import { loadActiveSafetyScoreIndex } from "../../lib/safety-score-index";
@@ -364,7 +364,7 @@ export function buildCoverageMessage(symbol: string, status: StatusForCoin): str
     }`,
     `Active depeg: ${status.depeg.status === "active" ? "yes" : "no"}`,
     `DEX liquidity: ${status.liquidity ? `score ${status.liquidity.score ?? "NR"}, TVL ${formatTelegramCompactUsd(status.liquidity.totalTvlUsd) ?? "n/a"}${status.liquidity.current ? "" : " (stale)"}` : "missing"}`,
-    `Yield: ${status.yield ? `${status.yield.apy30d.toFixed(2)}% 30d at ${escapeHtml(status.yield.source)}` : "missing"}`,
+    formatTelegramYield(status),
     `<a href="https://pharos.watch/stablecoin/${status.stablecoinId}">Open coin page</a>`,
   ];
   return lines.join("\n");

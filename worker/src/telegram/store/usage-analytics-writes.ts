@@ -157,6 +157,8 @@ function buildChatDeliveryDiagnosticsUpsert(
     mode: "reply" | "delivery";
   },
 ): D1PreparedStatement {
+  // MAX propagates NULL: coalesce both operands so an unobserved success stays
+  // nullable, while a late observation can still add historical success evidence.
   return db
     .prepare(
       `INSERT INTO telegram_chat_delivery_diagnostics (
@@ -165,17 +167,27 @@ function buildChatDeliveryDiagnosticsUpsert(
        )
        VALUES (?, ?, ?, ?, ?, ?)
        ON CONFLICT(chat_id) DO UPDATE SET
-         last_successful_delivery_at = COALESCE(
-           excluded.last_successful_delivery_at,
-           telegram_chat_delivery_diagnostics.last_successful_delivery_at
+         last_successful_delivery_at = MAX(
+           COALESCE(excluded.last_successful_delivery_at, telegram_chat_delivery_diagnostics.last_successful_delivery_at),
+           COALESCE(telegram_chat_delivery_diagnostics.last_successful_delivery_at, excluded.last_successful_delivery_at)
          ),
-         last_successful_reply_at = COALESCE(
-           excluded.last_successful_reply_at,
-           telegram_chat_delivery_diagnostics.last_successful_reply_at
+         last_successful_reply_at = MAX(
+           COALESCE(excluded.last_successful_reply_at, telegram_chat_delivery_diagnostics.last_successful_reply_at),
+           COALESCE(telegram_chat_delivery_diagnostics.last_successful_reply_at, excluded.last_successful_reply_at)
          ),
-         last_delivery_attempt_at = excluded.last_delivery_attempt_at,
-         recent_failure_class = excluded.recent_failure_class,
-         updated_at = excluded.updated_at`,
+         last_delivery_attempt_at = MAX(
+           COALESCE(telegram_chat_delivery_diagnostics.last_delivery_attempt_at, excluded.last_delivery_attempt_at),
+           excluded.last_delivery_attempt_at
+         ),
+         recent_failure_class = CASE
+           WHEN telegram_chat_delivery_diagnostics.last_delivery_attempt_at IS NULL
+             OR excluded.last_delivery_attempt_at > telegram_chat_delivery_diagnostics.last_delivery_attempt_at
+             THEN excluded.recent_failure_class
+           WHEN excluded.last_delivery_attempt_at = telegram_chat_delivery_diagnostics.last_delivery_attempt_at
+             THEN COALESCE(excluded.recent_failure_class, telegram_chat_delivery_diagnostics.recent_failure_class)
+           ELSE telegram_chat_delivery_diagnostics.recent_failure_class
+         END,
+         updated_at = MAX(telegram_chat_delivery_diagnostics.updated_at, excluded.updated_at)`,
     )
     .bind(
       input.chatId,
@@ -234,7 +246,9 @@ export async function recordTelegramDeliveryOutcomes(
     }
     // The latest attempt owns the attempt facts: an earlier success must not
     // clear a later failure's error class, and a later failure must not erase
-    // the success that genuinely happened.
+    // the success that genuinely happened. Equal-second failures win over
+    // successes; the last observed failure wins among failures, matching the
+    // shared SQL across separate reply/delivery writes.
     if (at > existing.attemptAt) {
       existing.attemptAt = at;
       existing.failureClass = failureClass;

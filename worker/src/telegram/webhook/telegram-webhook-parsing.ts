@@ -85,6 +85,7 @@ export function parseStoredConfirmBulkPayload(payload: Record<string, unknown>):
       depegWorseningBpsStep,
       coinIds: parseStringArray(payload.coinIds),
       subscribeAll: payload.subscribeAll === true,
+      flowId: typeof payload.flowId === "string" ? payload.flowId : undefined,
     };
   }
   if (kind === "unsubscribe") {
@@ -93,6 +94,7 @@ export function parseStoredConfirmBulkPayload(payload: Record<string, unknown>):
       presetIds: parseStringArray(payload.presetIds),
       coinIds: parseStringArray(payload.coinIds),
       unsubscribeAll: payload.unsubscribeAll === true,
+      flowId: typeof payload.flowId === "string" ? payload.flowId : undefined,
     };
   }
   if (kind === "watchlist-import-v2") {
@@ -123,6 +125,7 @@ export function parseStoredConfirmBulkPayload(payload: Record<string, unknown>):
       expectedPreferenceGeneration: Number(payload.expectedPreferenceGeneration),
       generationLease: Number(payload.generationLease),
       preview,
+      flowId: typeof payload.flowId === "string" ? payload.flowId : undefined,
     };
   }
   return null;
@@ -146,14 +149,14 @@ function parsePendingActionPayload(pending: PendingDisambiguationRow): Record<st
 }
 
 export function parseCommand(text: string): { command: string; args: string; botMention: string | null } {
-  const spaceIdx = text.indexOf(" ");
-  const commandToken = spaceIdx === -1 ? text : text.slice(0, spaceIdx);
+  const separatorIdx = text.search(/\s/);
+  const commandToken = separatorIdx === -1 ? text : text.slice(0, separatorIdx);
   const mentionIdx = commandToken.indexOf("@");
   const rawCommand = mentionIdx === -1 ? commandToken : commandToken.slice(0, mentionIdx);
   const rawMention = mentionIdx === -1 ? "" : commandToken.slice(mentionIdx + 1);
   const command = rawCommand.toLowerCase();
   const botMention = rawMention ? rawMention.toLowerCase() : null;
-  const args = spaceIdx === -1 ? "" : text.slice(spaceIdx + 1).trim();
+  const args = separatorIdx === -1 ? "" : text.slice(separatorIdx + 1).trim();
   return { command, args, botMention };
 }
 
@@ -234,6 +237,7 @@ function parseResolvedCoins(value: unknown): ResolvedCoin[] {
 
 export function parsePendingDisambiguation(
   pending: PendingDisambiguationRow,
+  expectedFlowId?: string,
 ): PendingAction | PendingSetupSentinel | null {
   // Setup-wizard rows share this table but are not disambiguation actions.
   // Return a typed sentinel so callers must branch on it explicitly rather than
@@ -251,13 +255,14 @@ export function parsePendingDisambiguation(
   }
 
   const payload = parsePendingActionPayload(pending);
-  if (!payload) return null;
+  if (!payload || (expectedFlowId != null && payload.flowId !== expectedFlowId)) return null;
 
   if (actionType === "confirm-bulk") {
     const bulkPayload = parseStoredConfirmBulkPayload(payload);
     if (!bulkPayload) return null;
     return {
       actionType,
+      flowId: typeof payload.flowId === "string" ? payload.flowId : undefined,
       payload: bulkPayload,
       initiatorUserId: pending.initiator_user_id ?? null,
     };
@@ -267,6 +272,7 @@ export function parsePendingDisambiguation(
     // No payload required; presence of the row + non-expired TTL is the gate.
     return {
       actionType,
+      flowId: typeof payload.flowId === "string" ? payload.flowId : undefined,
       initiatorUserId: pending.initiator_user_id ?? null,
     };
   }
@@ -307,6 +313,7 @@ export function parsePendingDisambiguation(
         : undefined;
     return {
       actionType,
+      flowId: typeof payload.flowId === "string" ? payload.flowId : undefined,
       alertTypes: actionAlertTypes,
       presetIds: parseStringArray(payload.presetIds),
       depegWorseningBpsStep,
@@ -321,6 +328,7 @@ export function parsePendingDisambiguation(
   if (actionType === "unsubscribe") {
     return {
       actionType,
+      flowId: typeof payload.flowId === "string" ? payload.flowId : undefined,
       presetIds: parseStringArray(payload.presetIds),
       resolvedCoins,
       initiatorUserId: pending.initiator_user_id ?? null,
@@ -335,6 +343,7 @@ export function parsePendingDisambiguation(
   return {
     actionType: "set",
     command: setCommand,
+    flowId: typeof payload.flowId === "string" ? payload.flowId : undefined,
     resolvedCoins,
     initiatorUserId: pending.initiator_user_id ?? null,
     ambiguousTicker,
