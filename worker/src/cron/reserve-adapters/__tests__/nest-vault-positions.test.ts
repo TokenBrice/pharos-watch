@@ -45,6 +45,58 @@ function runNest(
 }
 
 describe("fetchNestVaultPositionsReserves", () => {
+  it.each([
+    ["USDC", "usdc", "Liquid USDC balances", "low", "usdc-circle"],
+    ["USDC.e", "usdc", "Liquid USDC balances", "low", "usdc-circle"],
+    ["USDT", "usdt", "Liquid USDT balances", "low", "usdt-tether"],
+    ["USDT0", "usdt", "Liquid USDT balances", "low", "usdt-tether"],
+    ["pUSD", "pusd", "pUSD liquid balance", "high", "pusd-plume"],
+    ["USDG", "usdg", "USDG liquid balance", "low", "usdg-paxos"],
+    ["constructor", "unknown", "constructor liquid balance", "high", undefined],
+    [undefined, "unknown", "Unknown liquid balance", "high", undefined],
+  ])("preserves liquid alias metadata for %s", async (symbol, key, name, risk, coinId) => {
+    const { result } = await runNest("inalpha-nest", { data: { positions: {
+      liquidAssets: [{ symbol, position: { value: 100 } }], yieldAssets: [],
+    } } }, { data: { nav: 100 } }, { data: { lastPriceUpdates: [{ updatedAt: FIXTURE_NOW }] } });
+    expect(result.slices).toEqual([{
+      sourceKey: `nest-vault-positions:${key}`, name, risk, pct: 100,
+      ...(coinId ? { coinId, depType: "collateral" } : {}),
+    }]);
+    expect(result.metadata?.unknownExposurePct).toBe(coinId ? 0 : 100);
+    expectWarnings(result, []);
+  });
+
+  it("preserves first-match slug OR symbol precedence for every yield alias pair", async () => {
+    const aliases = [
+      { slug: "nest-treasury-vault", symbol: "nTBILL", key: "ntbill",
+        name: "Nest Treasury vault (nTBILL)", coinId: "ntbill-nest" },
+      { slug: "janus-henderson-fund", symbol: "JTRSY", key: "jtrsy",
+        name: "Janus Henderson Anemoy Treasury Fund (JTRSY)", coinId: "jtrsy-anemoy" },
+      { slug: "superstate-ustb", symbol: "USTB", key: "ustb",
+        name: "Superstate USTB Treasury Fund", coinId: "ustb-superstate" },
+      { slug: "superstate-uscc", symbol: "USCC", key: "uscc",
+        name: "Superstate USCC cash-and-carry fund", coinId: undefined },
+      { slug: "unfamiliar", symbol: "unfamiliar", key: "credit-vaults",
+        name: "Nest private and structured credit vaults", coinId: undefined },
+    ];
+    for (const [slugIndex, { slug }] of aliases.entries()) {
+      for (const [symbolIndex, { symbol }] of aliases.entries()) {
+        const expected = aliases[Math.min(slugIndex, symbolIndex)];
+        const unknown = expected.key === "credit-vaults";
+        const { result } = await runNest("inalpha-nest", { data: { positions: {
+          liquidAssets: [], yieldAssets: [{ slug, tokens: [{ symbol, position: { value: 100 } }] }],
+        } } }, { data: { nav: 100 } }, { data: { lastPriceUpdates: [{ updatedAt: FIXTURE_NOW }] } });
+        expect(result.slices, `${slug} / ${symbol}`).toEqual([{
+          sourceKey: `nest-vault-positions:${expected.key}`, name: expected.name,
+          risk: unknown ? "high" : "low", pct: 100,
+          ...(expected.coinId ? { coinId: expected.coinId, depType: "collateral" } : {}),
+        }]);
+        expect(result.metadata?.unknownExposurePct).toBe(unknown ? 100 : 0);
+        expectWarnings(result, []);
+      }
+    }
+  });
+
   it.each(["nopal-nest", "nbasis-nest", "inalpha-nest"] as const)(
     "rejects publisher position errors without pending withdrawals for %s",
     async (coinId) => {

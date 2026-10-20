@@ -29,14 +29,13 @@ export async function measureGho(
 ): Promise<GhoMeasurementEvidence> {
   const checks: MeasurementCheck[] = [];
   const token = normalizeAddress(target.contracts.token);
-  const totalSupplyRaw = await readJournalUint(caller, { name: "token.totalSupply", to: token, signature: "totalSupply()", selector: "0x18160ddd" }, 0, "totalSupply");
+  const totalSupplyRaw = await readJournalUint(caller, { name: "token.totalSupply", to: token, signature: "totalSupply()" }, 0, "totalSupply");
   requireCheck(checks, "supply.positive", totalSupplyRaw > 0n, `GHO supply ${totalSupplyRaw} is positive`);
 
   const rawList = await caller.call({
     name: "token.getFacilitatorsList",
     to: token,
     signature: "getFacilitatorsList()",
-    selector: "0x1ec90f2e",
   });
   const [rawFacilitators] = decodeAbiParameters([{ type: "address[]" }], rawList as `0x${string}`);
   const facilitatorAddresses = rawFacilitators.map((address) => normalizeAddress(address));
@@ -63,7 +62,6 @@ export async function measureGho(
       name: `token.getFacilitator(${index})`,
       to: token,
       signature: "getFacilitator(address)",
-      selector: "0xd46ec0ed",
       args: [BigInt(address)],
     });
     const [facilitator] = decodeAbiParameters(
@@ -108,12 +106,11 @@ export async function measureGho(
   let directSwappableRaw = 0n;
   for (let index = 0; index < target.trackedGsms.length; index += 1) {
     const address = normalizeAddress(target.trackedGsms[index]!);
-    const usedRaw = await readJournalUint(caller, { name: `gsm[${index}].getUsed`, to: address, signature: "getUsed()", selector: "0x9abeb940" }, 0, `gsm ${index} used`);
+    const usedRaw = await readJournalUint(caller, { name: `gsm[${index}].getUsed`, to: address, signature: "getUsed()" }, 0, `gsm ${index} used`);
     const backingReturn = await caller.call({
       name: `gsm[${index}].getCurrentBacking`,
       to: address,
       signature: "getCurrentBacking()",
-      selector: "0x476cce03",
     });
     const excessRaw = decodeUintWord(backingReturn, 0, `gsm ${index} excess`);
     const deficitRaw = decodeUintWord(backingReturn, 1, `gsm ${index} deficit`);
@@ -123,7 +120,6 @@ export async function measureGho(
         name: `gsm[${index}].getIsFrozen`,
         to: address,
         signature: "getIsFrozen()",
-        selector: "0x236fc8ad",
       }),
       0,
       `gsm ${index} frozen`,
@@ -134,7 +130,6 @@ export async function measureGho(
         name: `gsm[${index}].getIsSeized`,
         to: address,
         signature: "getIsSeized()",
-        selector: "0x80bc659a",
       }),
       0,
       `gsm ${index} seized`,
@@ -144,7 +139,6 @@ export async function measureGho(
       name: `gsm[${index}].getFeeStrategy`,
       to: address,
       signature: "getFeeStrategy()",
-      selector: "0x4101d9f4",
     }, `gsm ${index} fee strategy`);
 
     let buyFeeBps: number | null = null;
@@ -153,7 +147,6 @@ export async function measureGho(
         name: `gsm[${index}].feeStrategy.getBuyFee`,
         to: feeStrategy,
         signature: "getBuyFee(uint256)",
-        selector: "0x45d6494d",
         args: [10n ** 18n],
       }, 0, `gsm ${index} buy fee`);
       buyFeeBps = Number((buyFeeRaw * 10_000n) / 10n ** 18n);

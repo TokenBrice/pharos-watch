@@ -37,7 +37,7 @@ export interface LiquityV2MeasurementTarget extends CdpMeasurementTargetBase {
     collateralRegistry: string;
   };
   /** Stability Pool deposits getter — forks rename it (BOLD getTotalBoldDeposits, Felix getTotalfeUSDDeposits). */
-  spDeposits: { signature: string; selector: string };
+  spDeposits: { signature: string };
   /**
    * Optional Chainlink cross-check for the branch-0 collateral price (mainnet
    * WETH branch). Chains without Chainlink record protocol-feed-only evidence.
@@ -63,8 +63,8 @@ export interface EnumeratedLiquityV2MeasurementTarget extends CdpMeasurementTarg
     collateralRegistry: string;
     deriveRegistryFromToken: boolean;
   };
-  controllerEnumerator: { signature: string; selector: string };
-  spDeposits: { signature: string; selector: string };
+  controllerEnumerator: { signature: string };
+  spDeposits: { signature: string };
   branches: readonly {
     collateralToken: string;
     controller: string;
@@ -207,8 +207,8 @@ const ADDITIONAL_MEASUREMENT_TARGETS: readonly CdpMeasurementTarget[] = [
       collateralRegistry: "0x9474206bc035d03d142264fd9913d1d51246d3ac",
       deriveRegistryFromToken: true,
     },
-    controllerEnumerator: { signature: "getTroveManager(uint256)", selector: "0x0bc17feb" },
-    spDeposits: { signature: "getTotalBoldDeposits()", selector: "0xf71c6940" },
+    controllerEnumerator: { signature: "getTroveManager(uint256)" },
+    spDeposits: { signature: "getTotalBoldDeposits()" },
     branches: [
       {
         collateralToken: "0xad552a648c74d49e10027ab8a618a3ad4901c5be",
@@ -258,8 +258,8 @@ const ADDITIONAL_MEASUREMENT_TARGETS: readonly CdpMeasurementTarget[] = [
       collateralRegistry: "0x358d90036e70542ae24b3813c0efecc1f8811442",
       deriveRegistryFromToken: true,
     },
-    controllerEnumerator: { signature: "getTroveManager(uint256)", selector: "0x0bc17feb" },
-    spDeposits: { signature: "getTotalBoldDeposits()", selector: "0xf71c6940" },
+    controllerEnumerator: { signature: "getTroveManager(uint256)" },
+    spDeposits: { signature: "getTotalBoldDeposits()" },
     branches: [
       {
         collateralToken: "0x5300000000000000000000000000000000000004",
@@ -309,8 +309,8 @@ const ADDITIONAL_MEASUREMENT_TARGETS: readonly CdpMeasurementTarget[] = [
       collateralRegistry: "0x1bedd4334335522b0a0e8e610d326b16b0a605fb",
       deriveRegistryFromToken: false,
     },
-    controllerEnumerator: { signature: "getTroveManager(uint256)", selector: "0x0bc17feb" },
-    spDeposits: { signature: "getTotalBoldDeposits()", selector: "0xf71c6940" },
+    controllerEnumerator: { signature: "getTroveManager(uint256)" },
+    spDeposits: { signature: "getTotalBoldDeposits()" },
     branches: [
       {
         collateralToken: MENTO_COUNTER_TOKEN,
@@ -489,7 +489,7 @@ export const CDP_MEASUREMENT_TARGETS: readonly CdpMeasurementTarget[] = [
       token: "0x252d36f435582ecb01686448d21e8c9ea0b2ca65",
       collateralRegistry: "0x7551ebfc8340b7f91874942be9c653733d4fb04f",
     },
-    spDeposits: { signature: "getTotalBoldDeposits()", selector: "0xf71c6940" },
+    spDeposits: { signature: "getTotalBoldDeposits()" },
     sanity: {
       minCollateralizationRatio: 1,
       maxCollateralizationRatio: 100,
@@ -517,7 +517,7 @@ export const CDP_MEASUREMENT_TARGETS: readonly CdpMeasurementTarget[] = [
       token: "0x6440f144b7e50d6a8439336510312d2f54beb01d",
       collateralRegistry: "0xf949982b91c8c61e952b3ba942cbbfaef5386684",
     },
-    spDeposits: { signature: "getTotalBoldDeposits()", selector: "0xf71c6940" },
+    spDeposits: { signature: "getTotalBoldDeposits()" },
     chainlinkBranch0: {
       feed: "0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419",
       heartbeatSeconds: 3600,
@@ -550,7 +550,7 @@ export const CDP_MEASUREMENT_TARGETS: readonly CdpMeasurementTarget[] = [
       token: "0x02c6a2fa58cc01a18b8d9e00ea48d65e4df26c70",
       collateralRegistry: "0x9de1e57049c475736289cb006212f3e1dce4711b",
     },
-    spDeposits: { signature: "getTotalfeUSDDeposits()", selector: "0x2d02cf6a" },
+    spDeposits: { signature: "getTotalfeUSDDeposits()" },
     sanity: {
       minCollateralizationRatio: 1,
       maxCollateralizationRatio: 100,

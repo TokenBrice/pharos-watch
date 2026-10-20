@@ -25,15 +25,15 @@ export async function measureWrapperMechanism(
 ): Promise<WrapperMechanismMeasurementEvidence> {
   const checks: MeasurementCheck[] = [];
   const wrapper = normalizeAddress(target.contracts.wrapper);
-  const asset = await readJournalAddress(caller, { name: "wrapper.asset", to: wrapper, signature: "asset()", selector: "0x38d52e0f" }, "wrapper asset");
+  const asset = await readJournalAddress(caller, { name: "wrapper.asset", to: wrapper, signature: "asset()" }, "wrapper asset");
   requireCheck(
     checks,
     "graph.asset",
     asset === normalizeAddress(target.contracts.expectedAsset),
     `wrapper asset ${asset} matches configured parent token`,
   );
-  const totalSupplyRaw = await readJournalUint(caller, { name: "wrapper.totalSupply", to: wrapper, signature: "totalSupply()", selector: "0x18160ddd" }, 0, "wrapper supply");
-  const totalAssetsRaw = await readJournalUint(caller, { name: "wrapper.totalAssets", to: wrapper, signature: "totalAssets()", selector: "0x01e1d114" }, 0, "wrapper total assets");
+  const totalSupplyRaw = await readJournalUint(caller, { name: "wrapper.totalSupply", to: wrapper, signature: "totalSupply()" }, 0, "wrapper supply");
+  const totalAssetsRaw = await readJournalUint(caller, { name: "wrapper.totalAssets", to: wrapper, signature: "totalAssets()" }, 0, "wrapper total assets");
   requireCheck(
     checks,
     "wrapper.positive-state",
@@ -44,7 +44,6 @@ export async function measureWrapperMechanism(
     name: "wrapper.convertToAssets(totalSupply)",
     to: wrapper,
     signature: "convertToAssets(uint256)",
-    selector: "0x07a2d13a",
     args: [totalSupplyRaw],
   }, 0, "wrapper converted assets");
   const accountingDeltaPct = Math.abs(relativeDeltaPct(convertedAssetsRaw, totalAssetsRaw));

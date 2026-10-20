@@ -67,16 +67,13 @@ export {
   verifiedFreshnessMetadata,
 } from "./freshness";
 export type {
-  SourceTimestampCoverageSummary,
   SourceTimestampSummary,
   SourceTimestampZonelessPolicy,
 } from "./freshness";
 export {
-  HTML_ENTITY_MAP,
   decodeHtmlEntities,
   escapeRegExp,
   extractAnchorWindow,
-  extractLabeledSpanText,
   extractTagById,
   htmlLayoutChangedError,
   htmlParseError,

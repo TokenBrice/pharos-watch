@@ -123,12 +123,10 @@ function replayTargetFromEvidence(recorded: ShockCoverageEvidenceV1): ShockCover
         primaryImplementationAddress,
         secondary: {
           signature: "stEthUsdOracle()",
-          selector: "0xd69e820d",
           implementationAddress: branch.contracts.secondaryOracleImplementation!,
         },
         rateProvider: {
           signature: "rateProviderAddress()",
-          selector: "0xe5aa1c40",
           expectedAddress: branch.contracts.rateProvider!,
         },
       };
@@ -138,12 +136,10 @@ function replayTargetFromEvidence(recorded: ShockCoverageEvidenceV1): ShockCover
         primaryImplementationAddress,
         secondary: {
           signature: "rEthEthOracle()",
-          selector: "0x03f04756",
           implementationAddress: branch.contracts.secondaryOracleImplementation!,
         },
         rateProvider: {
           signature: "rateProviderAddress()",
-          selector: "0xe5aa1c40",
           expectedAddress: branch.contracts.rateProvider!,
         },
       };
@@ -153,7 +149,6 @@ function replayTargetFromEvidence(recorded: ShockCoverageEvidenceV1): ShockCover
         primaryImplementationAddress,
         secondary: {
           signature: "btcUsdOracle()",
-          selector: "0xca1ca21c",
           implementationAddress: branch.contracts.secondaryOracleImplementation!,
         },
       };
@@ -163,7 +158,6 @@ function replayTargetFromEvidence(recorded: ShockCoverageEvidenceV1): ShockCover
         primaryImplementationAddress,
         secondary: {
           signature: "cbEthEthOracle()",
-          selector: "0x4403b69b",
           implementationAddress: branch.contracts.secondaryOracleImplementation!,
         },
       };
@@ -181,7 +175,7 @@ function replayTargetFromEvidence(recorded: ShockCoverageEvidenceV1): ShockCover
       token: codeAddress("bold-token"),
       collateralRegistry: codeAddress("collateral-registry"),
     },
-    spDeposits: { signature: "getTotalBoldDeposits()", selector: "0xf71c6940" },
+    spDeposits: { signature: "getTotalBoldDeposits()" },
     branches: recorded.branches.map((branch) => ({
       collateralSymbol: branch.label,
       addressesRegistry: branch.contracts.addressesRegistry,

@@ -16,7 +16,7 @@ export { escapeRegExp };
 
 /** Named HTML entities encountered in disclosure pages. Numeric (`&#123;` /
  *  `&#xAB;`) entities are decoded directly by {@link decodeHtmlEntities}. */
-export const HTML_ENTITY_MAP: Record<string, string> = {
+const HTML_ENTITY_MAP: Record<string, string> = {
   amp: "&",
   lt: "<",
   gt: ">",
@@ -86,20 +86,6 @@ export function extractAnchorWindow(html: string, anchor: RegExp, halfWidth: num
   const start = Math.max(0, match.index - halfWidth);
   const end = Math.min(html.length, match.index + halfWidth);
   return html.slice(start, end);
-}
-
-/** Match a `<span>{label}</span>\s*<span>{value}</span>` pair (case-insensitive)
- *  and return the trimmed inner text of the value span. The label is escaped
- *  before interpolation. Returns `null` when no such pair exists. */
-export function extractLabeledSpanText(html: string, label: string): string | null {
-  const escapedLabel = escapeRegExp(label);
-  // eslint-disable-next-line security/detect-non-literal-regexp -- label is escaped before interpolation.
-  const re = new RegExp(
-    `<span[^>]*>\\s*${escapedLabel}\\s*</span>\\s*<span[^>]*>\\s*([^<]+?)\\s*</span>`,
-    "i",
-  );
-  const match = html.match(re);
-  return match?.[1]?.trim() ?? null;
 }
 
 function decodeEscapedJsonFragment(fragment: string): string {

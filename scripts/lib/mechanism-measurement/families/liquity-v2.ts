@@ -15,20 +15,19 @@ import type { LiquityV2MeasurementEvidence } from "../schema";
 
 const WAD = 10n ** 18n;
 export const LIQUITY_V2_CALLS = {
-  collateralRegistryAddress: { signature: "collateralRegistryAddress()", selector: "0x45a74626" },
-  totalSupply: { signature: "totalSupply()", selector: "0x18160ddd" },
-  totalCollaterals: { signature: "totalCollaterals()", selector: "0x30504b6f" },
-  getTroveManager: { signature: "getTroveManager(uint256)", selector: "0x0bc17feb" },
-  getToken: { signature: "getToken(uint256)", selector: "0xe4b50cb8" },
-  getEntireBranchColl: { signature: "getEntireBranchColl()", selector: "0x3ecaaa3f" },
-  getEntireBranchDebt: { signature: "getEntireBranchDebt()", selector: "0x105b403b" },
-  stabilityPool: { signature: "stabilityPool()", selector: "0x048c661d" },
-  activePool: { signature: "activePool()", selector: "0x7f7dde4a" },
-  getBoldDebt: { signature: "getBoldDebt()", selector: "0x45507998" },
-  shutdownTime: { signature: "shutdownTime()", selector: "0x58569081" },
+  collateralRegistryAddress: { signature: "collateralRegistryAddress()" },
+  totalSupply: { signature: "totalSupply()" },
+  totalCollaterals: { signature: "totalCollaterals()" },
+  getTroveManager: { signature: "getTroveManager(uint256)" },
+  getToken: { signature: "getToken(uint256)" },
+  getEntireBranchColl: { signature: "getEntireBranchColl()" },
+  getEntireBranchDebt: { signature: "getEntireBranchDebt()" },
+  stabilityPool: { signature: "stabilityPool()" },
+  activePool: { signature: "activePool()" },
+  getBoldDebt: { signature: "getBoldDebt()" },
+  shutdownTime: { signature: "shutdownTime()" },
   priceAndRedeemability: {
     signature: "getUnbackedPortionPriceAndRedeemability()",
-    selector: "0x4ea15f37",
   },
 } as const;
 
@@ -45,7 +44,7 @@ interface ReadLiquityV2BranchOptions {
   afterDebt?: (debt: bigint) => Promise<void>;
   caller: EthCallJournal;
   controller: string;
-  depositsCall: { signature: string; selector: string };
+  depositsCall: { signature: string };
   labels: {
     collateral: string;
     debt: string;
@@ -121,7 +120,7 @@ interface BranchReading {
  * branch isolation. The branch price comes from the TroveManager's own
  * getUnbackedPortionPriceAndRedeemability — the same fresh fetchPrice-backed
  * value the CollateralRegistry uses for redemptions. Forks rename the SP
- * deposits getter; the target config carries its signature and selector.
+ * deposits getter; the target config carries its canonical signature.
  */
 export async function measureLiquityV2(
   caller: EthCallJournal,
@@ -266,7 +265,6 @@ export async function measureLiquityV2(
       name: "chainlink.latestRoundData",
       to: target.chainlinkBranch0.feed,
       signature: "latestRoundData()",
-      selector: "0xfeaf968c",
     });
     const answer = decodeUintWord(roundData, 1, "latestRoundData.answer");
     const updatedAt = decodeUintWord(roundData, 3, "latestRoundData.updatedAt");

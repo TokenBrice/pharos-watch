@@ -12,14 +12,8 @@ import {
   notApplicableFreshnessMetadata,
   requireOnchainInput,
 } from "./helpers";
+import { decodeStrictBoolWord } from "./abi-decode";
 import {
-  decodeStrictAddressWord,
-  decodeStrictBoolWord,
-  decodeUint256Word,
-  decodeUint8Word,
-} from "./abi-decode";
-import {
-  multicallResultByLabel,
   readImplementationSlotAddress,
   requireExpectedAddress,
 } from "./onchain-identity";
@@ -27,7 +21,13 @@ import { ERC4626_TOTAL_ASSETS_SELECTOR } from "./erc4626";
 import { reserveDegradedWarning } from "./warnings";
 import type { AdapterContext, AdapterResult } from "./types";
 import { readWrapperCoverage, wrapperCoverageResult } from "./wrapper-coverage";
-import { pinnedBlockPlan } from "./evm-observation-plan";
+import {
+  addressObservation,
+  boolObservation,
+  executeEvmObservationPlan,
+  pinnedBlockPlan,
+  uint256Observation,
+} from "./evm-observation-plan";
 
 const ADAPTER_KEY = "saturn-pyusdx";
 const PYUSDX_SELECTOR = "0xda6b76b8"; // pyusdx()
@@ -59,27 +59,42 @@ export async function fetchSaturnPyusdxReserves(
   const plan = await pinnedBlockPlan({ chain: input.chain, signal, ctx, ...params });
   ctx = plan.ctx;
 
-  const [results, implementation] = await Promise.all([
-    fetchOnchainMulticall3({
-      calls: [
-        { label: "pyusdx", contract: wrapperAddress, data: PYUSDX_SELECTOR },
-        { label: "wrapper-supply", contract: wrapperAddress, data: TOTAL_SUPPLY_SELECTOR },
-        { label: "wrapper-decimals", contract: wrapperAddress, data: DECIMALS_SELECTOR },
-        {
+  const [observation, implementation] = await Promise.all([
+    executeEvmObservationPlan({
+      adapterKey: ADAPTER_KEY,
+      fields: [
+        addressObservation({ label: "pyusdx", contract: wrapperAddress, data: PYUSDX_SELECTOR }),
+        uint256Observation({ label: "wrapper-supply", contract: wrapperAddress, data: TOTAL_SUPPLY_SELECTOR }),
+        uint256Observation({ label: "wrapper-decimals", contract: wrapperAddress, data: DECIMALS_SELECTOR }),
+        uint256Observation({
           label: "underlying-balance",
           contract: params.underlyingToken,
           data: encodeBalanceOfCallData(wrapperAddress),
+        }),
+        uint256Observation({ label: "underlying-decimals", contract: params.underlyingToken, data: DECIMALS_SELECTOR }),
+        {
+          ...boolObservation({ label: "wrapper-paused", contract: wrapperAddress, data: PAUSED_SELECTOR, optional: true }),
+          // Unlike required backing, an unreadable pause probe remains a local
+          // degraded route observation, including malformed ABI words.
+          decode: decodeStrictBoolWord,
         },
-        { label: "underlying-decimals", contract: params.underlyingToken, data: DECIMALS_SELECTOR },
-        { label: "wrapper-paused", contract: wrapperAddress, data: PAUSED_SELECTOR },
-        { label: "alternative-assets", contract: wrapperAddress, data: ERC4626_TOTAL_ASSETS_SELECTOR },
+        uint256Observation({ label: "alternative-assets", contract: wrapperAddress, data: ERC4626_TOTAL_ASSETS_SELECTOR }),
       ],
-      chain: input.chain,
-      signal,
-      ctx,
-      rpcUrl: params.rpcUrl,
-      fallbackRpcUrl: params.fallbackRpcUrl,
-      timeoutMs: 12_000,
+      read: async (calls) => {
+        const results = await fetchOnchainMulticall3({
+          calls,
+          chain: input.chain,
+          signal,
+          ctx,
+          rpcUrl: params.rpcUrl,
+          fallbackRpcUrl: params.fallbackRpcUrl,
+          timeoutMs: 12_000,
+        });
+        if (!results) throw new Error(`${ADAPTER_KEY}: Multicall3 state batch unavailable for ${coin.id}`);
+        return results;
+      },
+      onFailure: (label) => { throw new Error(malformedMessage(label)); },
+      onDecodeError: (_error, label) => { throw new Error(malformedMessage(label)); },
     }),
     readImplementationSlotAddress({
       adapterKey: ADAPTER_KEY,
@@ -90,39 +105,35 @@ export async function fetchSaturnPyusdxReserves(
       ctx,
     }),
   ]);
-  if (!results) {
-    throw new Error(`${ADAPTER_KEY}: Multicall3 state batch unavailable for ${coin.id}`);
+  function malformedMessage(label: string): string {
+    const reason = label === "alternative-assets" ? "totalAssets() alternative-backing scope unavailable"
+      : label === "pyusdx" ? "pyusdx() returned malformed payload"
+        : label === "wrapper-supply" ? "totalSupply() returned malformed payload"
+          : label === "underlying-balance" ? "PYUSDx balanceOf(wrapper) returned malformed payload"
+            : "decimals returned malformed payload";
+    return `${ADAPTER_KEY}: ${reason} for ${coin.id}`;
   }
   requireExpectedAddress(ADAPTER_KEY, implementation, params.expectedImplementation, "EIP-1967 implementation");
-
-  const pyusdxAddress = decodeStrictAddressWord(multicallResultByLabel(results, "pyusdx"));
-  if (!pyusdxAddress) {
-    throw new Error(`${ADAPTER_KEY}: pyusdx() returned malformed payload for ${coin.id}`);
-  }
+  const {
+    pyusdx: pyusdxAddress,
+    "alternative-assets": alternativeAssetsRaw,
+    "wrapper-supply": totalSupplyRaw,
+    "underlying-balance": underlyingBalanceRaw,
+    "wrapper-decimals": wrapperDecimalsRaw,
+    "underlying-decimals": underlyingDecimalsRaw,
+    "wrapper-paused": paused,
+  } = observation.values;
   requireExpectedAddress(ADAPTER_KEY, pyusdxAddress, params.underlyingToken, "pyusdx()");
 
-  const alternativeAssetsRaw = decodeUint256Word(multicallResultByLabel(results, "alternative-assets"));
-  if (alternativeAssetsRaw == null) {
-    throw new Error(`${ADAPTER_KEY}: totalAssets() alternative-backing scope unavailable for ${coin.id}`);
-  }
   if (alternativeAssetsRaw !== 0n) {
     throw new Error(`${ADAPTER_KEY}: non-PYUSDx backing ${alternativeAssetsRaw} requires a reviewed multi-asset reserve scope for ${coin.id}`);
   }
 
-  const totalSupplyRaw = decodeUint256Word(multicallResultByLabel(results, "wrapper-supply"));
-  if (totalSupplyRaw == null) {
-    throw new Error(`${ADAPTER_KEY}: totalSupply() returned malformed payload for ${coin.id}`);
-  }
-  const underlyingBalanceRaw = decodeUint256Word(multicallResultByLabel(results, "underlying-balance"));
-  if (underlyingBalanceRaw == null) {
-    throw new Error(`${ADAPTER_KEY}: PYUSDx balanceOf(wrapper) returned malformed payload for ${coin.id}`);
-  }
-  const wrapperDecimals = decodeUint8Word(multicallResultByLabel(results, "wrapper-decimals"));
-  const underlyingDecimals = decodeUint8Word(multicallResultByLabel(results, "underlying-decimals"));
-  if (wrapperDecimals == null || underlyingDecimals == null) {
+  if (wrapperDecimalsRaw > 255n || underlyingDecimalsRaw > 255n) {
     throw new Error(`${ADAPTER_KEY}: decimals returned malformed payload for ${coin.id}`);
   }
-  const paused = decodeStrictBoolWord(multicallResultByLabel(results, "wrapper-paused"));
+  const wrapperDecimals = Number(wrapperDecimalsRaw);
+  const underlyingDecimals = Number(underlyingDecimalsRaw);
 
   const coverage = readWrapperCoverage({
     underlyingBalanceRaw,

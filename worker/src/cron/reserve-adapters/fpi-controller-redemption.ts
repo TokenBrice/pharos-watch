@@ -1,4 +1,5 @@
 import type { LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
+import type { Abi, ExtractAbiFunctionNames } from "abitype";
 import { SAME_NOTIONAL_EXIT_REQUEST_POLICY } from "@shared/lib/redemption-backstop-scoring";
 import type { EvmMulticall3Call, EvmMulticall3Result, EvmRpcOptions } from "../../lib/evm-rpc";
 import {
@@ -18,11 +19,19 @@ import {
   decodeFunctionResult,
   encodeFunctionData,
   parseAbi,
+  type DecodeFunctionResultParameters,
+  type DecodeFunctionResultReturnType,
 } from "viem/utils";
 import type { AdapterContext } from "./types";
 import { runAdapterIo } from "./concurrency";
 import { normalizeEvmAddress } from "./evm";
-import { multicallResultByLabel, runtimeCodeHash } from "./onchain-identity";
+import { runtimeCodeHash } from "./onchain-identity";
+import {
+  abiObservation,
+  codeIdentityChecks,
+  customObservation,
+  executeEvmObservationPlan,
+} from "./evm-observation-plan";
 
 type FpiParams = LiveReserveAdapterParamsByKey["frax-fpi-collateral"];
 type Hex = `0x${string}`;
@@ -96,68 +105,24 @@ function rejected(
   });
 }
 
-type ControllerFunctionName =
-  | "FPI_TKN"
-  | "FRAX"
-  | "priceFeedFRAXUSD"
-  | "priceFeedFPIUSD"
-  | "cpiTracker"
-  | "chainlink_frax_usd_decimals"
-  | "chainlink_fpi_usd_decimals"
-  | "redeem_fee"
-  | "redeems_paused"
-  | "peg_band_mint_redeem"
-  | "pegStatusMntRdm"
-  | "calcRedeemFPI"
-  | "getFRAXPriceE18"
-  | "getFPIPriceE18";
-
-function decodeWithAbi(
-  abi: Parameters<typeof decodeFunctionResult>[0]["abi"],
-  results: readonly EvmMulticall3Result[],
-  label: string,
-  functionName: string,
-): unknown {
-  const data = multicallResultByLabel(results, label);
-  if (!data) return null;
-  try {
-    return decodeFunctionResult({
-      abi,
-      functionName,
-      data,
-    } as Parameters<typeof decodeFunctionResult>[0]);
-  } catch {
-    return null;
-  }
-}
-
-function decodeResult(
-  results: readonly EvmMulticall3Result[],
-  label: string,
-  functionName: ControllerFunctionName,
-): unknown {
-  return decodeWithAbi(CONTROLLER_ABI, results, label, functionName);
-}
-
-function decodePriceFeedResult(
-  results: readonly EvmMulticall3Result[],
-  label: string,
-  functionName: "decimals" | "latestRoundData",
-): unknown {
-  return decodeWithAbi(PRICE_FEED_ABI, results, label, functionName);
-}
-
-function decodeCpiTrackerResult(
-  results: readonly EvmMulticall3Result[],
-  label: string,
-  functionName: "currPegPrice" | "lastUpdateTime",
-): unknown {
-  return decodeWithAbi(CPI_TRACKER_ABI, results, label, functionName);
-}
-
-function decodeBalance(results: readonly EvmMulticall3Result[]): bigint | null {
-  const decoded = decodeWithAbi(ERC20_ABI, results, "controller-frax-balance", "balanceOf");
-  return typeof decoded === "bigint" ? decoded : null;
+function fpiObservation<
+  const Label extends string,
+  const ABI extends Abi,
+  const Function extends ExtractAbiFunctionNames<ABI, "view"> & NonNullable<DecodeFunctionResultParameters<ABI>["functionName"]>,
+>(label: Label, contract: string, abi: ABI, functionName: Function, args?: readonly unknown[]) {
+  const field = abiObservation({ label, contract, abi, functionName, args, optional: true });
+  return customObservation({
+    ...field,
+    // Keep ABI decoding and nullable failures: the controller, identity and
+    // oracle policies below own both rejection precedence and reason codes.
+    decode: (raw, observedLabel): DecodeFunctionResultReturnType<ABI, Function> | null => {
+      try {
+        return field.decode(raw, observedLabel) as DecodeFunctionResultReturnType<ABI, Function>;
+      } catch {
+        return null;
+      }
+    },
+  });
 }
 
 function expectedRedeemOutput(inputRaw: bigint, pegPriceRaw: bigint, feeRaw: bigint): bigint | null {
@@ -178,19 +143,9 @@ interface DecodedPriceFeedRound {
 }
 
 function decodePriceFeedRound(
-  results: readonly EvmMulticall3Result[],
-  label: string,
+  decoded: readonly [bigint, bigint, bigint, bigint, bigint] | null,
 ): DecodedPriceFeedRound | null {
-  const decoded = decodePriceFeedResult(results, label, "latestRoundData");
-  if (
-    !Array.isArray(decoded) ||
-    typeof decoded[0] !== "bigint" ||
-    typeof decoded[1] !== "bigint" ||
-    typeof decoded[3] !== "bigint" ||
-    typeof decoded[4] !== "bigint"
-  ) {
-    return null;
-  }
+  if (!decoded) return null;
   return {
     roundId: decoded[0],
     answer: decoded[1],
@@ -227,145 +182,6 @@ function expectedPegDifferenceE6(fpiPriceRaw: bigint, pegPriceRaw: bigint): bigi
   return fpiPriceRaw > pegPriceRaw
     ? ((fpiPriceRaw - pegPriceRaw) * FEE_SCALE) / fpiPriceRaw
     : ((pegPriceRaw - fpiPriceRaw) * FEE_SCALE) / fpiPriceRaw;
-}
-
-function buildCalls(params: FpiParams): EvmMulticall3Call[] {
-  return [
-    {
-      label: "controller-fpi-token",
-      target: params.controllerAddress,
-      callData: encodeFunctionData({ abi: CONTROLLER_ABI, functionName: "FPI_TKN" }),
-      allowFailure: false,
-    },
-    {
-      label: "controller-frax-price-feed",
-      target: params.controllerAddress,
-      callData: encodeFunctionData({ abi: CONTROLLER_ABI, functionName: "priceFeedFRAXUSD" }),
-      allowFailure: false,
-    },
-    {
-      label: "controller-fpi-price-feed",
-      target: params.controllerAddress,
-      callData: encodeFunctionData({ abi: CONTROLLER_ABI, functionName: "priceFeedFPIUSD" }),
-      allowFailure: false,
-    },
-    {
-      label: "controller-cpi-tracker",
-      target: params.controllerAddress,
-      callData: encodeFunctionData({ abi: CONTROLLER_ABI, functionName: "cpiTracker" }),
-      allowFailure: false,
-    },
-    {
-      label: "controller-frax-feed-decimals",
-      target: params.controllerAddress,
-      callData: encodeFunctionData({ abi: CONTROLLER_ABI, functionName: "chainlink_frax_usd_decimals" }),
-      allowFailure: false,
-    },
-    {
-      label: "controller-fpi-feed-decimals",
-      target: params.controllerAddress,
-      callData: encodeFunctionData({ abi: CONTROLLER_ABI, functionName: "chainlink_fpi_usd_decimals" }),
-      allowFailure: false,
-    },
-    {
-      label: "controller-frax-token",
-      target: params.controllerAddress,
-      callData: encodeFunctionData({ abi: CONTROLLER_ABI, functionName: "FRAX" }),
-      allowFailure: false,
-    },
-    {
-      label: "controller-fpi-price",
-      target: params.controllerAddress,
-      callData: encodeFunctionData({ abi: CONTROLLER_ABI, functionName: "getFPIPriceE18" }),
-      allowFailure: false,
-    },
-    {
-      label: "frax-price-feed-decimals",
-      target: params.expectedFraxPriceFeedAddress,
-      callData: encodeFunctionData({ abi: PRICE_FEED_ABI, functionName: "decimals" }),
-      allowFailure: false,
-    },
-    {
-      label: "frax-price-feed-round",
-      target: params.expectedFraxPriceFeedAddress,
-      callData: encodeFunctionData({ abi: PRICE_FEED_ABI, functionName: "latestRoundData" }),
-      allowFailure: false,
-    },
-    {
-      label: "fpi-price-feed-decimals",
-      target: params.expectedFpiPriceFeedAddress,
-      callData: encodeFunctionData({ abi: PRICE_FEED_ABI, functionName: "decimals" }),
-      allowFailure: false,
-    },
-    {
-      label: "fpi-price-feed-round",
-      target: params.expectedFpiPriceFeedAddress,
-      callData: encodeFunctionData({ abi: PRICE_FEED_ABI, functionName: "latestRoundData" }),
-      allowFailure: false,
-    },
-    {
-      label: "cpi-tracker-peg-price",
-      target: params.expectedCpiTrackerAddress,
-      callData: encodeFunctionData({ abi: CPI_TRACKER_ABI, functionName: "currPegPrice" }),
-      allowFailure: false,
-    },
-    {
-      label: "cpi-tracker-updated-at",
-      target: params.expectedCpiTrackerAddress,
-      callData: encodeFunctionData({ abi: CPI_TRACKER_ABI, functionName: "lastUpdateTime" }),
-      allowFailure: false,
-    },
-    {
-      label: "controller-redeem-fee",
-      target: params.controllerAddress,
-      callData: encodeFunctionData({ abi: CONTROLLER_ABI, functionName: "redeem_fee" }),
-      allowFailure: false,
-    },
-    {
-      label: "controller-redeems-paused",
-      target: params.controllerAddress,
-      callData: encodeFunctionData({ abi: CONTROLLER_ABI, functionName: "redeems_paused" }),
-      allowFailure: false,
-    },
-    {
-      label: "controller-peg-band",
-      target: params.controllerAddress,
-      callData: encodeFunctionData({ abi: CONTROLLER_ABI, functionName: "peg_band_mint_redeem" }),
-      allowFailure: false,
-    },
-    {
-      label: "controller-peg-status",
-      target: params.controllerAddress,
-      callData: encodeFunctionData({ abi: CONTROLLER_ABI, functionName: "pegStatusMntRdm" }),
-      allowFailure: false,
-    },
-    {
-      label: "controller-unit-redeem-quote",
-      target: params.controllerAddress,
-      callData: encodeFunctionData({
-        abi: CONTROLLER_ABI,
-        functionName: "calcRedeemFPI",
-        args: [QUOTE_INPUT_RAW, 0n],
-      }),
-      allowFailure: false,
-    },
-    {
-      label: "controller-frax-price",
-      target: params.controllerAddress,
-      callData: encodeFunctionData({ abi: CONTROLLER_ABI, functionName: "getFRAXPriceE18" }),
-      allowFailure: false,
-    },
-    {
-      label: "controller-frax-balance",
-      target: params.fraxTokenAddress,
-      callData: encodeFunctionData({
-        abi: ERC20_ABI,
-        functionName: "balanceOf",
-        args: [params.controllerAddress as Hex],
-      }),
-      allowFailure: false,
-    },
-  ];
 }
 
 async function observeWithClient(
@@ -418,19 +234,30 @@ async function observeWithClient(
   );
   if (blockNumber == null) return rejected(attemptedAtSec, "block-unavailable");
 
-  const [blockTimestamp, controllerCode] = await Promise.all([
+  const checkIdentities = (identities: readonly { address: string; codeHash: string; label: string }[]) =>
+    codeIdentityChecks(client, identities, {
+      blockNumber,
+      rpcOptions,
+      parallel: true,
+      readCode: async (readClient, address, block, options) =>
+        (await readClient.code(address, block, options)) || null,
+      readStorage: async () => { throw new Error("FPI identity checks require direct contracts, not proxy slots"); },
+      hashCode: (code) => runtimeCodeHash(code as Hex),
+      codeLabel: (identity) => identity.label,
+      run: (label, factory) => runAdapterIo(ctx, label, factory, { signal }),
+    });
+  const [blockTimestamp, controllerIdentity] = await Promise.all([
     runAdapterIo(
       ctx,
       "fpi-controller-block-timestamp",
       () => client.blockTimestamp(blockNumber, rpcOptions),
       { signal },
     ),
-    runAdapterIo(
-      ctx,
-      "fpi-controller-code",
-      () => client.code(controllerAddress, blockNumber, rpcOptions),
-      { signal },
-    ),
+    checkIdentities([{
+      address: controllerAddress,
+      codeHash: params.expectedControllerCodeHash,
+      label: "fpi-controller-code",
+    }]),
   ]);
   if (
     blockTimestamp == null ||
@@ -439,143 +266,133 @@ async function observeWithClient(
   ) {
     return rejected(attemptedAtSec, "block-time-out-of-range", blockNumber);
   }
-  if (!controllerCode) {
-    return rejected(attemptedAtSec, "controller-code-unavailable", blockNumber);
+  if (controllerIdentity.status === "rejected") {
+    return rejected(attemptedAtSec, controllerIdentity.rejectionCode === "code-unavailable"
+      ? "controller-code-unavailable" : "controller-code-drift", blockNumber);
   }
-  const controllerCodeHash = runtimeCodeHash(controllerCode);
-  if (controllerCodeHash !== params.expectedControllerCodeHash.toLowerCase()) {
-    return rejected(attemptedAtSec, "controller-code-drift", blockNumber);
-  }
-
-  const [fraxPriceFeedCode, fpiPriceFeedCode] = await Promise.all([
-    runAdapterIo(
-      ctx,
-      "fpi-controller-frax-price-feed-code",
-      () => client.code(expectedFraxPriceFeedAddress, blockNumber, rpcOptions),
-      { signal },
-    ),
-    runAdapterIo(
-      ctx,
-      "fpi-controller-fpi-price-feed-code",
-      () => client.code(expectedFpiPriceFeedAddress, blockNumber, rpcOptions),
-      { signal },
-    ),
+  const feedIdentities = await checkIdentities([
+    { address: expectedFraxPriceFeedAddress, codeHash: params.expectedFraxPriceFeedCodeHash, label: "fpi-controller-frax-price-feed-code" },
+    { address: expectedFpiPriceFeedAddress, codeHash: params.expectedFpiPriceFeedCodeHash, label: "fpi-controller-fpi-price-feed-code" },
   ]);
-  const cpiTrackerCode = await runAdapterIo(
-    ctx,
-    "fpi-controller-cpi-tracker-code",
-    () => client.code(expectedCpiTrackerAddress, blockNumber, rpcOptions),
-    { signal },
-  );
-  if (!fraxPriceFeedCode || !fpiPriceFeedCode || !cpiTrackerCode) {
-    return rejected(attemptedAtSec, "dependency-code-unavailable", blockNumber);
+  const cpiIdentity = await checkIdentities([
+    { address: expectedCpiTrackerAddress, codeHash: params.expectedCpiTrackerCodeHash, label: "fpi-controller-cpi-tracker-code" },
+  ]);
+  const dependencyFailures = [feedIdentities, cpiIdentity].filter((result) => result.status === "rejected");
+  if (dependencyFailures.length > 0) {
+    return rejected(attemptedAtSec, dependencyFailures.some((result) => result.rejectionCode === "code-unavailable")
+      ? "dependency-code-unavailable" : "dependency-code-drift", blockNumber);
   }
-  const fraxPriceFeedCodeHash = runtimeCodeHash(fraxPriceFeedCode);
-  const fpiPriceFeedCodeHash = runtimeCodeHash(fpiPriceFeedCode);
-  const cpiTrackerCodeHash = runtimeCodeHash(cpiTrackerCode);
-  if (
-    fraxPriceFeedCodeHash !== params.expectedFraxPriceFeedCodeHash.toLowerCase() ||
-    fpiPriceFeedCodeHash !== params.expectedFpiPriceFeedCodeHash.toLowerCase() ||
-    cpiTrackerCodeHash !== params.expectedCpiTrackerCodeHash.toLowerCase()
-  ) {
-    return rejected(attemptedAtSec, "dependency-code-drift", blockNumber);
-  }
+  const controllerCodeHash = params.expectedControllerCodeHash.toLowerCase();
+  const fraxPriceFeedCodeHash = params.expectedFraxPriceFeedCodeHash.toLowerCase();
+  const fpiPriceFeedCodeHash = params.expectedFpiPriceFeedCodeHash.toLowerCase();
+  const cpiTrackerCodeHash = params.expectedCpiTrackerCodeHash.toLowerCase();
 
-  const results = await runAdapterIo(
-    ctx,
-    "fpi-controller-state",
-    () => client.multicall(buildCalls(params), blockNumber, rpcOptions),
-    { signal },
-  );
-  if (!results) {
-    return rejected(attemptedAtSec, "controller-state-unavailable", blockNumber);
+  let readCompleted = false;
+  let stateAvailable = false;
+  const observation = await executeEvmObservationPlan({
+    adapterKey: "fpi-controller",
+    fields: [
+      fpiObservation("controller-fpi-token", params.controllerAddress, CONTROLLER_ABI, "FPI_TKN"),
+      fpiObservation("controller-frax-price-feed", params.controllerAddress, CONTROLLER_ABI, "priceFeedFRAXUSD"),
+      fpiObservation("controller-fpi-price-feed", params.controllerAddress, CONTROLLER_ABI, "priceFeedFPIUSD"),
+      fpiObservation("controller-cpi-tracker", params.controllerAddress, CONTROLLER_ABI, "cpiTracker"),
+      fpiObservation("controller-frax-feed-decimals", params.controllerAddress, CONTROLLER_ABI, "chainlink_frax_usd_decimals"),
+      fpiObservation("controller-fpi-feed-decimals", params.controllerAddress, CONTROLLER_ABI, "chainlink_fpi_usd_decimals"),
+      fpiObservation("controller-frax-token", params.controllerAddress, CONTROLLER_ABI, "FRAX"),
+      fpiObservation("controller-fpi-price", params.controllerAddress, CONTROLLER_ABI, "getFPIPriceE18"),
+      fpiObservation("frax-price-feed-decimals", params.expectedFraxPriceFeedAddress, PRICE_FEED_ABI, "decimals"),
+      fpiObservation("frax-price-feed-round", params.expectedFraxPriceFeedAddress, PRICE_FEED_ABI, "latestRoundData"),
+      fpiObservation("fpi-price-feed-decimals", params.expectedFpiPriceFeedAddress, PRICE_FEED_ABI, "decimals"),
+      fpiObservation("fpi-price-feed-round", params.expectedFpiPriceFeedAddress, PRICE_FEED_ABI, "latestRoundData"),
+      fpiObservation("cpi-tracker-peg-price", params.expectedCpiTrackerAddress, CPI_TRACKER_ABI, "currPegPrice"),
+      fpiObservation("cpi-tracker-updated-at", params.expectedCpiTrackerAddress, CPI_TRACKER_ABI, "lastUpdateTime"),
+      fpiObservation("controller-redeem-fee", params.controllerAddress, CONTROLLER_ABI, "redeem_fee"),
+      fpiObservation("controller-redeems-paused", params.controllerAddress, CONTROLLER_ABI, "redeems_paused"),
+      fpiObservation("controller-peg-band", params.controllerAddress, CONTROLLER_ABI, "peg_band_mint_redeem"),
+      fpiObservation("controller-peg-status", params.controllerAddress, CONTROLLER_ABI, "pegStatusMntRdm"),
+      fpiObservation("controller-unit-redeem-quote", params.controllerAddress, CONTROLLER_ABI, "calcRedeemFPI", [QUOTE_INPUT_RAW, 0n]),
+      fpiObservation("controller-frax-price", params.controllerAddress, CONTROLLER_ABI, "getFRAXPriceE18"),
+      fpiObservation("controller-frax-balance", params.fraxTokenAddress, ERC20_ABI, "balanceOf", [params.controllerAddress as Hex]),
+    ],
+    read: async (calls) => {
+      const results = await runAdapterIo(ctx, "fpi-controller-state", () =>
+        client.multicall(calls.map(({ label, contract, data, allowFailure }) => ({
+          label, target: contract, callData: data, allowFailure,
+        })), blockNumber, rpcOptions), { signal });
+      readCompleted = true;
+      stateAvailable = results != null;
+      if (!results || results.length >= calls.length) return results;
+      // A missing optional observation keeps its original local rejection
+      // class. Duplicate/unknown labels still fail the shared plan's census.
+      const seen = new Set(results.map(({ label }) => label));
+      return [...results, ...calls.filter(({ label }) => !seen.has(label)).map(({ label }) => ({
+        label, success: false, returnData: "0x" as const,
+      }))];
+    },
+  }).catch((error: unknown) => {
+    if (!readCompleted) throw error;
+    return null;
+  });
+  if (!observation) {
+    return rejected(attemptedAtSec, stateAvailable ? "controller-state-invalid" : "controller-state-unavailable", blockNumber);
   }
-
-  const fpiAddress = normalizeEvmAddress(
-    decodeResult(results, "controller-fpi-token", "FPI_TKN") as string | undefined,
-  );
-  const fraxAddress = normalizeEvmAddress(
-    decodeResult(results, "controller-frax-token", "FRAX") as string | undefined,
-  );
-  const fraxPriceFeedAddress = normalizeEvmAddress(
-    decodeResult(results, "controller-frax-price-feed", "priceFeedFRAXUSD") as string | undefined,
-  );
-  const fpiPriceFeedAddress = normalizeEvmAddress(
-    decodeResult(results, "controller-fpi-price-feed", "priceFeedFPIUSD") as string | undefined,
-  );
-  const cpiTrackerAddress = normalizeEvmAddress(
-    decodeResult(results, "controller-cpi-tracker", "cpiTracker") as string | undefined,
-  );
-  const controllerFraxFeedDecimals = decodeResult(
-    results,
-    "controller-frax-feed-decimals",
-    "chainlink_frax_usd_decimals",
-  );
-  const controllerFpiFeedDecimals = decodeResult(
-    results,
-    "controller-fpi-feed-decimals",
-    "chainlink_fpi_usd_decimals",
-  );
-  const feeRaw = decodeResult(results, "controller-redeem-fee", "redeem_fee");
-  const paused = decodeResult(results, "controller-redeems-paused", "redeems_paused");
-  const pegBandRaw = decodeResult(results, "controller-peg-band", "peg_band_mint_redeem");
-  const pegStatus = decodeResult(results, "controller-peg-status", "pegStatusMntRdm");
-  const unitQuoteRaw = decodeResult(results, "controller-unit-redeem-quote", "calcRedeemFPI");
-  const outputPriceRaw = decodeResult(results, "controller-frax-price", "getFRAXPriceE18");
-  const fpiPriceRaw = decodeResult(results, "controller-fpi-price", "getFPIPriceE18");
-  const fraxFeedDecimals = decodePriceFeedResult(results, "frax-price-feed-decimals", "decimals");
-  const fpiFeedDecimals = decodePriceFeedResult(results, "fpi-price-feed-decimals", "decimals");
-  const fraxPriceRound = decodePriceFeedRound(results, "frax-price-feed-round");
-  const fpiPriceRound = decodePriceFeedRound(results, "fpi-price-feed-round");
-  const cpiTrackerPegPriceRaw = decodeCpiTrackerResult(
-    results,
-    "cpi-tracker-peg-price",
-    "currPegPrice",
-  );
-  const cpiTrackerUpdatedAtRaw = decodeCpiTrackerResult(
-    results,
-    "cpi-tracker-updated-at",
-    "lastUpdateTime",
-  );
-  const controllerBalanceRaw = decodeBalance(results);
+  const {
+    "controller-fpi-token": fpiAddress,
+    "controller-frax-token": fraxAddress,
+    "controller-frax-price-feed": fraxPriceFeedAddress,
+    "controller-fpi-price-feed": fpiPriceFeedAddress,
+    "controller-cpi-tracker": cpiTrackerAddress,
+    "controller-frax-feed-decimals": controllerFraxFeedDecimals,
+    "controller-fpi-feed-decimals": controllerFpiFeedDecimals,
+    "controller-redeem-fee": feeRaw,
+    "controller-redeems-paused": paused,
+    "controller-peg-band": pegBandRaw,
+    "controller-peg-status": pegStatus,
+    "controller-unit-redeem-quote": unitQuoteRaw,
+    "controller-frax-price": outputPriceRaw,
+    "controller-fpi-price": fpiPriceRaw,
+    "frax-price-feed-decimals": fraxFeedDecimals,
+    "fpi-price-feed-decimals": fpiFeedDecimals,
+    "cpi-tracker-peg-price": cpiTrackerPegPriceRaw,
+    "cpi-tracker-updated-at": cpiTrackerUpdatedAtRaw,
+    "controller-frax-balance": controllerBalanceRaw,
+  } = observation.values;
+  const fraxPriceRound = decodePriceFeedRound(observation.values["frax-price-feed-round"]);
+  const fpiPriceRound = decodePriceFeedRound(observation.values["fpi-price-feed-round"]);
   if (
-    typeof controllerFraxFeedDecimals !== "bigint" ||
-    typeof controllerFpiFeedDecimals !== "bigint" ||
-    typeof feeRaw !== "bigint" ||
-    typeof paused !== "boolean" ||
-    typeof pegBandRaw !== "bigint" ||
-    !Array.isArray(pegStatus) ||
-    typeof pegStatus[0] !== "bigint" ||
-    typeof pegStatus[1] !== "bigint" ||
-    typeof pegStatus[2] !== "boolean" ||
-    typeof unitQuoteRaw !== "bigint" ||
-    typeof outputPriceRaw !== "bigint" ||
-    typeof fpiPriceRaw !== "bigint" ||
+    controllerFraxFeedDecimals == null ||
+    controllerFpiFeedDecimals == null ||
+    feeRaw == null ||
+    paused == null ||
+    pegBandRaw == null ||
+    pegStatus == null ||
+    unitQuoteRaw == null ||
+    outputPriceRaw == null ||
+    fpiPriceRaw == null ||
     controllerBalanceRaw == null
   ) {
     return rejected(attemptedAtSec, "controller-state-invalid", blockNumber);
   }
-  if (fpiAddress !== expectedFpiAddress || fraxAddress !== expectedFraxAddress) {
+  if (normalizeEvmAddress(fpiAddress ?? undefined) !== expectedFpiAddress ||
+      normalizeEvmAddress(fraxAddress ?? undefined) !== expectedFraxAddress) {
     return rejected(attemptedAtSec, "interface-identity-mismatch", blockNumber);
   }
   if (
-    fraxPriceFeedAddress !== expectedFraxPriceFeedAddress ||
-    fpiPriceFeedAddress !== expectedFpiPriceFeedAddress ||
-    cpiTrackerAddress !== expectedCpiTrackerAddress
+    normalizeEvmAddress(fraxPriceFeedAddress ?? undefined) !== expectedFraxPriceFeedAddress ||
+    normalizeEvmAddress(fpiPriceFeedAddress ?? undefined) !== expectedFpiPriceFeedAddress ||
+    normalizeEvmAddress(cpiTrackerAddress ?? undefined) !== expectedCpiTrackerAddress
   ) {
     return rejected(attemptedAtSec, "oracle-identity-mismatch", blockNumber);
   }
   if (
-    typeof fraxFeedDecimals !== "number" ||
-    typeof fpiFeedDecimals !== "number" ||
-    !Number.isInteger(fraxFeedDecimals) ||
-    !Number.isInteger(fpiFeedDecimals) ||
+    fraxFeedDecimals == null ||
+    fpiFeedDecimals == null ||
     controllerFraxFeedDecimals !== BigInt(params.expectedFraxPriceFeedDecimals) ||
     controllerFpiFeedDecimals !== BigInt(params.expectedFpiPriceFeedDecimals) ||
     fraxFeedDecimals !== params.expectedFraxPriceFeedDecimals ||
     fpiFeedDecimals !== params.expectedFpiPriceFeedDecimals ||
-    typeof cpiTrackerPegPriceRaw !== "bigint" ||
-    typeof cpiTrackerUpdatedAtRaw !== "bigint"
+    cpiTrackerPegPriceRaw == null ||
+    cpiTrackerUpdatedAtRaw == null
   ) {
     return rejected(attemptedAtSec, "oracle-state-invalid", blockNumber);
   }
@@ -638,7 +455,7 @@ async function observeWithClient(
   }
   if (paused) return rejected(attemptedAtSec, "redemption-paused", blockNumber);
 
-  const [pegPriceRaw, pegDifferenceRaw, withinPegBand] = pegStatus as [bigint, bigint, boolean];
+  const [pegPriceRaw, pegDifferenceRaw, withinPegBand] = pegStatus;
   const expectedPegDifferenceRaw = expectedPegDifferenceE6(fpiPriceRaw, cpiTrackerPegPriceRaw);
   if (
     expectedPegDifferenceRaw == null ||

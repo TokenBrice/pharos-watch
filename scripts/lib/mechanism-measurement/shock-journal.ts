@@ -1,7 +1,7 @@
 import { keccak256, type Hex } from "viem";
 import { isTronRpcUrl } from "@shared/lib/tron-rpc";
 
-import { encodeWord, normalizeAddress } from "./core";
+import { encodeWord, normalizeAddress, selectorForSignature } from "./core";
 import type { MeasurementCall } from "./schema";
 
 export type ShockAbiWord = bigint | { type: "uint256"; value: bigint } | { type: "address"; value: string };
@@ -11,7 +11,6 @@ export interface ShockEthCallSpec {
   to: string;
   role?: string;
   signature: string;
-  selector: string;
   args?: readonly ShockAbiWord[];
 }
 
@@ -94,20 +93,11 @@ export function encodeShockAbiWord(word: ShockAbiWord): string {
   return encodeWord(BigInt(normalizeAddress(word.value, "ABI address argument")));
 }
 
-export function shockUintWord(value: bigint): ShockAbiWord {
-  return { type: "uint256", value };
-}
-
-export function shockAddressWord(value: string): ShockAbiWord {
-  return { type: "address", value };
-}
-
 function normalizeCallSpec(spec: ShockEthCallSpec): NormalizedCallSpec {
   const name = requireNonEmpty(spec.name, "call name");
   const to = normalizeAddress(spec.to, `${name} target`);
   const signature = requireNonEmpty(spec.signature, `${name} signature`);
-  const selector = spec.selector.toLowerCase();
-  if (!/^0x[0-9a-f]{8}$/.test(selector)) throw new Error(`${name}: malformed selector ${spec.selector}`);
+  const selector = selectorForSignature(signature);
   const role = spec.role === undefined ? undefined : requireNonEmpty(spec.role, `${name} role`);
   return {
     name,

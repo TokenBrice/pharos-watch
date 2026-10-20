@@ -1,4 +1,5 @@
 import { keccak256 } from "viem";
+import { selectorForSignature } from "../lib/mechanism-measurement/core";
 import { encodeShockAbiWord, type ShockCallJournal, type ShockEthCallSpec } from "../lib/mechanism-measurement/shock-journal";
 import { getShockCoverageTarget } from "../lib/mechanism-measurement/shock-targets";
 import { measureConfiguredShockCoverageTarget } from "../lib/mechanism-measurement/shock-measure";
@@ -46,7 +47,8 @@ export async function makeShockReplayFixture() {
       else if (values[spec.name] !== undefined) words = [values[spec.name]!];
       else throw new Error(`Unconfigured fixture call ${spec.name}`);
       const returnData = `0x${words.map(encodeShockAbiWord).join("")}`;
-      caller.calls.push({ name: spec.name, to: spec.to.toLowerCase(), signature: spec.signature, selector: spec.selector, callData: spec.selector + (spec.args ?? []).map(encodeShockAbiWord).join(""), returnData, decoded: "" });
+      const selector = selectorForSignature(spec.signature);
+      caller.calls.push({ name: spec.name, to: spec.to.toLowerCase(), signature: spec.signature, selector, callData: selector + (spec.args ?? []).map(encodeShockAbiWord).join(""), returnData, decoded: "" });
       return returnData;
     },
     async batch(specs) { return Promise.all(specs.map((spec) => caller.call(spec))); },

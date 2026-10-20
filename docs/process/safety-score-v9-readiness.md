@@ -58,6 +58,12 @@ Their immutable recovery source is `ade03b84b^:shared/data/safety-score-v9/mecha
 count against committed summaries before family replay; edited or regenerated
 fixtures are not replacement evidence.
 
+Offline call descriptors author only canonical function signatures; the journals
+derive and memoize selectors at encoding time. Captured selector/calldata bytes,
+request order, decoded values and exhaustion checks remain independent replay
+assertions. Keep the frozen family replay code and original fixtures even when
+unused authoring conveniences are removed.
+
 The frozen `scripts/__tests__/fixtures/usde-ethena-frozen-legacy-protocol-api-v1.json`
 is accepted only at its designated capture path and pinned SHA-256 by the protocol-API
 replay tests. Identical bytes under another capture name do not qualify.
