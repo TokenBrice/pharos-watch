@@ -88,6 +88,7 @@ describe("depeg-resolver scheduling", () => {
     expect(scheduledRuntime.runLeasedCron).toHaveBeenCalledWith(
       "compute-depeg-resolver",
       expect.any(Function),
+      undefined, // DDR retains the ordinary slot deadline, not a bounded tail.
     );
     expect(mocks.computeDepegResolver).toHaveBeenCalledWith(expect.objectContaining({
       db: scheduledRuntime.db,

@@ -273,7 +273,9 @@ export function createScheduledRuntimeContext(
         // Contract C: opt this runtime into the Dwellir supplemental endpoints
         // (memoized, fail-closed) before the job body can read chainRpcs.
         await ensureDwellirEndpointsEnabled(runtime);
-        assertSlotDeadline(deadline, combinedSlotSignal);
+        // Only bounded tails need this pre-logger cancellation fence. Ordinary
+        // exhausted jobs must retain logCronRun's controlled timeout accounting.
+        if (bounded) assertSlotDeadline(deadline, combinedSlotSignal);
         const timeoutBudget = resolveCronTimeoutBudget(job, { deadline });
         const timeoutBudgetMetadata = getCronTimeoutBudgetMetadata(timeoutBudget);
         try {
