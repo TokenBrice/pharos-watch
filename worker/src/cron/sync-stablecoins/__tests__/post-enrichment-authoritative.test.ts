@@ -1,16 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { mockD1 as createMockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 import { createValidationContextResolver } from "../pricing";
 import { runSharedPriceCompletion } from "../post-enrichment";
 import type { PeggedAsset } from "../enrich-prices";
+import { createAuthoritativeLivePriceOverrideStats } from "../../../lib/authoritative-price-sources";
 
-const DEFAULT_POST_ENRICHMENT_D1_TABLES: MockTableConfig[] = [
-  { match: "SELECT asset_id, price, updated_at, source, confidence, observed_at, observed_at_mode, synced_at, agree_sources_json, consensus_sources_json FROM price_cache", rows: [] },
-];
-
-function mockD1(tables: MockTableConfig[] = []) {
-  return createMockD1([...tables, ...DEFAULT_POST_ENRICHMENT_D1_TABLES]);
-}
 
 const authoritativeMocks = vi.hoisted(() => ({
   fetch: vi.fn(),
@@ -61,16 +55,17 @@ describe("runSharedPriceCompletion authoritative repair", () => {
     };
 
     const chainRpcs = new Map();
+    const initialOverrides = new Map();
     const result = await runSharedPriceCompletion(
       {
         assets: [asset],
         db: mockD1([]),
         syncStartSec: 1_800_000_000,
         validationContexts: createValidationContextResolver(),
-        authoritativeOverrides: new Map(),
+        authoritativeOverrides: initialOverrides,
         chainRpcs,
-        returnIfAborted: () => null,
-        abortResult: () => ({ status: "degraded", itemCount: 0, metadata: "aborted" }),
+        authoritativeOverrideStats: createAuthoritativeLivePriceOverrideStats(),
+        priceCache: new Map(),
       },
       "",
     );
@@ -88,6 +83,24 @@ describe("runSharedPriceCompletion authoritative repair", () => {
       priceConfidence: "high",
     });
     expect(result).toMatchObject({ authoritativeOverrideCount: 1 });
+    expect(initialOverrides.size).toBe(0);
+  });
+
+  it("reuses the loaded replay snapshot without another D1 price-cache read", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const asset: PeggedAsset = { id: "fixture-usd", name: "Fixture", symbol: "FIX", pegType: "peggedUSD", price: null };
+    // Strict D1 has only the corroboration read; a replay-table reload would fail.
+    const db = mockD1([{ match: "FROM cache", rows: [] }]);
+    const result = await runSharedPriceCompletion({
+      assets: [asset], db, syncStartSec: now, validationContexts: createValidationContextResolver(),
+      authoritativeOverrides: new Map(), authoritativeOverrideStats: createAuthoritativeLivePriceOverrideStats(),
+      priceCache: new Map([[asset.id, {
+        price: 1, updatedAt: now - 30, source: "coingecko", confidence: "single-source",
+        observedAt: now - 30, observedAtMode: "upstream", syncedAt: now - 30,
+      }]]),
+    }, "");
+    expect(result).toMatchObject({ cachedFallbackCount: 1 });
+    expect(asset).toMatchObject({ price: 1, priceSource: "cached", priceConfidence: "fallback", priceObservedAt: now - 30 });
   });
 
   it("withholds an uncorroborated AZND Curve exact-pool override", async () => {
@@ -129,8 +142,8 @@ describe("runSharedPriceCompletion authoritative repair", () => {
             },
           ],
         ]),
-        returnIfAborted: () => null,
-        abortResult: () => ({ status: "degraded", itemCount: 0, metadata: "aborted" }),
+        authoritativeOverrideStats: createAuthoritativeLivePriceOverrideStats(),
+        priceCache: new Map(),
       },
       "",
     );

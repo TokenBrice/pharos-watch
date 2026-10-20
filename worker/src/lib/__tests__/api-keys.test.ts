@@ -10,26 +10,28 @@ import {
   makeAuthenticatedApiKeyRow,
   makePreviousPepperTables,
 } from "../../test-helpers/api-key-test-support";
+import { createApiKey, updateApiKey } from "../api-key-admin";
+import { authenticateApiKey, authenticateApiKeyFromFreshCache, parseApiKeyToken } from "../api-key-auth";
 import {
   API_KEY_AUTH_CACHE_MAX_ENTRIES,
   API_KEY_AUTH_CACHE_TTL_MS,
   API_KEY_LOCAL_RATE_LIMIT_MAX_ENTRIES,
   API_KEY_USAGE_UPDATE_CACHE_MAX_ENTRIES,
-  authenticateApiKey,
+  getApiKeyRuntimeState,
+  getCachedApiKeyByPrefix,
+  lookupApiKeyByPrefix,
+  normalizeCreateInput,
+  resetApiKeyStateForTests,
+} from "../api-key-core";
+import {
   checkApiKeyRateLimit,
   checkIsolateLocalApiKeyRateLimit,
-  createApiKey,
   isApiKeyRateLimitDependencyCircuitOpen,
-  parseApiKeyToken,
   recordApiKeyRateLimitDependencyFailure,
   recordApiKeyRateLimitDependencySuccess,
-  resetApiKeyStateForTests,
   recordApiKeyUsage,
   resolveIsolateFallbackApiKeyRateLimit,
-  updateApiKey,
-} from "../api-keys";
-import { authenticateApiKeyFromFreshCache } from "../api-key-auth";
-import { getApiKeyRuntimeState, getCachedApiKeyByPrefix, lookupApiKeyByPrefix, normalizeCreateInput } from "../api-key-core";
+} from "../api-key-rate-limit";
 
 describe("api key helpers", () => {
   beforeEach(() => {

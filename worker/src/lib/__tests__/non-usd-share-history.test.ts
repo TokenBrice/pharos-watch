@@ -45,6 +45,21 @@ async function computeHistory(db: D1Database, days = 5000) {
   return sampleNonUsdShareHistory(history.points, cutoff, nowSec);
 }
 
+describe("non-USD share chronological sampling parity", () => {
+  it("retains inclusive 90d/2y spacing, cutoff, duplicate precedence and no forced latest point", () => {
+    const now = 1_800_000_000;
+    const ages = [800, 799, 770, 740, 731, 730, 729, 723, 100, 96, 91, 90, 89, 88, 88, 87.5, 87, 0.5, 0];
+    const points = ages.map((age, index) => ({
+      date: now - age * 86400, total: 100 + index,
+      commodity: 0, fiatNonUsd: 0, commodityShare: 0, fiatNonUsdShare: 0,
+    }));
+    const kept = [0, 2, 3, 5, 7, 8, 10, 11, 12, 13, 16, 17].map((index) => points[index]);
+    expect(JSON.stringify(sampleNonUsdShareHistory(points, 0, now))).toBe(JSON.stringify(kept));
+    expect(JSON.stringify(sampleNonUsdShareHistory(points, now - 740 * 86400, now)))
+      .toBe(JSON.stringify(kept.slice(2)));
+  });
+});
+
 describe("non-USD share producer aggregation", () => {
   afterEach(() => {
     fixtures.closeAll();

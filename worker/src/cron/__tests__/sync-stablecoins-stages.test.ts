@@ -49,13 +49,6 @@ vi.mock("../sync-stablecoins/enrich-prices", () => ({
     asset.price == null || typeof asset.price !== "number" || asset.price === 0,
 }));
 
-vi.mock("../sync-stablecoins/fallback", () => ({
-  syncViaCoingeckoFallback: vi.fn(),
-}));
-
-vi.mock("../sync-stablecoins/intake", () => ({
-  loadStablecoinsIntake: vi.fn(),
-}));
 
 vi.mock("../../lib/authoritative-price-sources", () => ({
   createAuthoritativeLivePriceOverrideStats: vi.fn((budgetMs = 10_000) => ({
@@ -162,11 +155,13 @@ describe("sync-stablecoins stage helpers", () => {
       validationReferences: undefined,
     });
 
-    expect("authoritativeOverrideCount" in result ? result.authoritativeOverrideCount : null).toBe(1);
+    expect("priceCacheEntries" in result ? result.metadata.authoritativeOverrideCount : null).toBe(1);
     expect(pricingStageMocks.fetchAuthoritativeLivePriceOverrides).toHaveBeenCalledTimes(2);
     for (const call of pricingStageMocks.fetchAuthoritativeLivePriceOverrides.mock.calls) {
       expect(call[3].chainRpcs).toBe(chainRpcs);
     }
+    expect(pricingStageMocks.fetchAuthoritativeLivePriceOverrides.mock.calls[0][3].maxProviderLivePriority).toBeUndefined();
+    expect(pricingStageMocks.fetchAuthoritativeLivePriceOverrides.mock.calls[1][3].maxProviderLivePriority).toBe(0);
     expect(assets[0]).toMatchObject({
       price: 0.998,
       priceSource: "protocol-redeem",
@@ -199,7 +194,7 @@ describe("sync-stablecoins stage helpers", () => {
       });
 
       expect(assets[0].price).toBe(1);
-      expect("gtProbe" in result ? result.gtProbe.stats : null).toMatchObject({
+      expect("priceCacheEntries" in result ? result.metadata.gtProbe.stats : null).toMatchObject({
         inlineDisabled: true,
         isolationReason: "worker-memory-boundary",
       });

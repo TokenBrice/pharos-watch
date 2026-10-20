@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { evaluateAccessGate, evaluateCachedPublicApiReadFastGate } from "../../handlers/http/gates";
 import { rotateApiKey } from "../../lib/api-key-admin";
 import { authenticateApiKey } from "../../lib/api-key-auth";
-import { resetApiKeyStateForTests } from "../../lib/api-keys";
+import { resetApiKeyStateForTests } from "../../lib/api-key-core";
 import { loadActiveSafetyScoreIndex } from "../../lib/safety-score-index";
 import { makeJsonRequest } from "../../test-helpers/__shared/auth";
 import { createWorkerEnv } from "../../test-helpers/__shared/worker-env";

@@ -676,36 +676,42 @@ export function parsePersistedMissingActivePriceState(
   options: { nowSec?: number; reviewsById?: ReadonlyMap<string, StablecoinPriceGapReview> } = {},
 ): MissingActivePriceDetail | null {
   if (!Array.isArray(value) || value.length < 6 || typeof value[0] !== "string") return null;
-  const streak = finiteNumberOrNull(value[1]);
-  const consecutiveMissingGenerations = streak != null && Number.isInteger(streak) && streak >= 1 ? streak : null;
-  const review = options.reviewsById
-    ? options.reviewsById.get(value[0]) ?? null
-    : activePriceGapReviewForId(value[0], options.nowSec ?? Math.floor(Date.now() / 1000));
-  return {
+  return parseMissingActivePriceDetail({
     stablecoinId: value[0],
     symbol: ACTIVE_STABLECOIN_SYMBOL_BY_ID.get(value[0]) ?? value[0],
-    marketCapUsd: finiteNumberOrNull(value[10]),
-    lastKnownMarketCapUsd: finiteNumberOrNull(value[7]),
-    lastKnownMarketCapObservedAt: dateSecondsOrNull(value[8]),
-    lastKnownMarketCapSource: value[9] === "publication" ? "publication"
-      : value[9] === "supply_history" ? "supply_history" : null,
+    consecutiveMissingGenerations: value[1],
+    lastAcceptedPrice: value[2],
+    lastAcceptedSource: value[3],
+    lastAcceptedObservedAt: value[4],
+    rejectionReason: value[5],
+    streakUnavailableReason: value[6],
+    lastKnownMarketCapUsd: value[7],
+    lastKnownMarketCapObservedAt: value[8],
+    lastKnownMarketCapSource: value[9],
+    marketCapUsd: value[10],
     currentPrice: null,
-    currentSource: null,
-    currentObservedAt: null,
-    currentConfidence: null,
-    consecutiveMissingGenerations,
-    streakUnavailableReason: consecutiveMissingGenerations == null
-      ? value[6] === "previous-coverage-read-failed"
-        ? "previous-coverage-read-failed" : "previous-coverage-malformed"
-      : null,
-    lastAcceptedPrice: positiveFiniteNumberOrNull(value[2]),
-    lastAcceptedSource: stringOrNull(value[3]),
-    lastAcceptedObservedAt: dateSecondsOrNull(value[4]),
-    rejectionReason: stringOrNull(value[5]) ?? "no-accepted-price",
-    alertEligible: review == null
-      && (consecutiveMissingGenerations == null || consecutiveMissingGenerations >= ACTIVE_PRICE_COVERAGE_ALERT_GENERATIONS),
-    acknowledgedGap: review == null ? null : acknowledgementFromReview(review),
-  };
+  }, options);
+}
+
+/** Compact continuity fills absent details; the last verbose entry wins. */
+export function parseMissingActivePriceDetailsById(
+  coverage: Record<string, unknown>,
+  options: Parameters<typeof parseMissingActivePriceDetail>[1] = {},
+): Map<string, MissingActivePriceDetail> {
+  const detailsById = new Map<string, MissingActivePriceDetail>();
+  if (Array.isArray(coverage.missingActiveState)) {
+    for (const value of coverage.missingActiveState.slice(0, WORKER_ACTIVE_IDS.length)) {
+      const detail = parsePersistedMissingActivePriceState(value, options);
+      if (detail) detailsById.set(detail.stablecoinId, detail);
+    }
+  }
+  if (Array.isArray(coverage.missingActiveAssets)) {
+    for (const value of coverage.missingActiveAssets) {
+      const detail = parseMissingActivePriceDetail(value, options);
+      if (detail) detailsById.set(detail.stablecoinId, detail);
+    }
+  }
+  return detailsById;
 }
 
 function parsePreviousCoverageMetadata(metadataJson: string): PreviousStablecoinActivePriceCoverage | null {
@@ -738,19 +744,7 @@ function parsePreviousCoverageMetadata(metadataJson: string): PreviousStablecoin
           .filter((id): id is string => typeof id === "string")
           .slice(0, WORKER_ACTIVE_STABLECOINS.length)
       : [];
-    const verboseDetails = Array.isArray(coverage.missingActiveAssets)
-      ? coverage.missingActiveAssets
-          .map((value) => parseMissingActivePriceDetail(value, parseOptions))
-          .filter((detail): detail is MissingActivePriceDetail => detail != null)
-      : [];
-    const compactedDetails = Array.isArray(coverage.missingActiveState)
-      ? coverage.missingActiveState
-          .slice(0, WORKER_ACTIVE_STABLECOINS.length)
-          .map((value) => parsePersistedMissingActivePriceState(value, parseOptions))
-          .filter((detail): detail is MissingActivePriceDetail => detail != null)
-      : [];
-    const detailsById = new Map(compactedDetails.map((detail) => [detail.stablecoinId, detail] as const));
-    for (const detail of verboseDetails) detailsById.set(detail.stablecoinId, detail);
+    const detailsById = parseMissingActivePriceDetailsById(coverage, parseOptions);
     const missingActiveAssets = missingActiveIds
       .map((stablecoinId) => detailsById.get(stablecoinId))
       .filter((detail): detail is MissingActivePriceDetail => detail != null);

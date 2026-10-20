@@ -5,11 +5,10 @@ import { observeMockD1Cost } from "../../lib/__tests__/d1-cost.test-support";
 
 const stages = vi.hoisted(() => ({ intake: vi.fn(), pricing: vi.fn(), publish: vi.fn() }));
 vi.mock("../sync-stablecoins/stages", () => ({
-  runStablecoinsIntakeStage: stages.intake,
   runStablecoinsPricingStage: stages.pricing,
 }));
+vi.mock("../sync-stablecoins/intake", () => ({ loadStablecoinsIntake: stages.intake }));
 vi.mock("../sync-stablecoins/publication", () => ({
-  buildMainStablecoinsPublicationPolicy: vi.fn(),
   loadStablecoinsPublicationContinuity: vi.fn(async () => ({})),
   runStablecoinsPostIntakePublication: stages.publish,
 }));
@@ -18,8 +17,10 @@ import { syncStablecoins } from "../sync-stablecoins";
 
 beforeEach(() => {
   vi.clearAllMocks();
-  stages.intake.mockReset().mockResolvedValue({ kind: "main" });
-  stages.pricing.mockReset().mockResolvedValue({ enrichStats: {} });
+  stages.intake.mockReset().mockResolvedValue({
+    kind: "main", canonicalDeduplication: { duplicateRows: 0, affectedIds: [] }, supplyChainGuard: {},
+  });
+  stages.pricing.mockReset().mockResolvedValue({ metadata: {}, priceCacheEntries: [], providerDiagnostics: [] });
   stages.publish.mockReset();
 });
 afterEach(() => vi.restoreAllMocks());
@@ -48,7 +49,7 @@ describe("syncStablecoins D1 cost metadata", () => {
     const returned = { status: "degraded", itemCount: 2, metadata: JSON.stringify({ path }), error: "original diagnostic" };
     const execute = async ({ db: trackedDb }: { db: D1Database }) => {
       expect((await trackedDb.prepare("SELECT early_result").first<{ id: string }>())?.id).toBe(path);
-      return path === "fallback" ? { kind: "fallback", result: returned } : returned;
+      return path === "pricing" ? returned : { kind: path === "fallback" ? "fallback" : "withheld", result: returned };
     };
     if (path === "pricing") stages.pricing.mockImplementationOnce(execute);
     else stages.intake.mockImplementationOnce(execute);
@@ -56,6 +57,12 @@ describe("syncStablecoins D1 cost metadata", () => {
     expect(result).toMatchObject({ status: returned.status, itemCount: returned.itemCount, error: returned.error });
     expect(JSON.parse(result.metadata!)).toMatchObject({ path });
     expect(assertCost(result)).toMatchObject({ queries: 1, bindingCalls: 1, batchCalls: 0, sqlDurationMs: null, servedByRegion: null });
+    expect(stages.publish).not.toHaveBeenCalled();
+  });
+
+  it("retains the outer insufficient-fallback error decision", async () => {
+    stages.intake.mockResolvedValueOnce({ kind: "fallback", result: { metadata: "{}" }, errorMessage: "fallback insufficient" });
+    await expect(syncStablecoins(mockD1())).rejects.toThrow("fallback insufficient");
     expect(stages.publish).not.toHaveBeenCalled();
   });
 

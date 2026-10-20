@@ -16,14 +16,87 @@ import { getCache, getPriceCache } from "../../../lib/db-cache";
 import { evaluateStablecoinActivePriceCoverage } from "../../../lib/stablecoin-publication-coverage";
 import { createEmptyGtProbeStats } from "../../../lib/geckoterminal-price-probe-stats";
 import {
-  buildMainStablecoinsPublicationPolicy,
-  buildFallbackStablecoinsPublicationPolicy,
   runStablecoinsPostIntakePublication,
   type StablecoinsPostIntakePublicationContext,
 } from "../publication";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => { fixtures.closeAll(); vi.restoreAllMocks(); });
+
+function publicationInput(path: "main" | "fallback", db: D1Database, assets: PeggedAsset[]): StablecoinsPostIntakePublicationContext {
+  const base = {
+    db, assets, syncStartSec: 1_800_000_000, previousAssetsById: new Map<string, PeggedAsset>(),
+    previousCacheState: { state: "missing" as const }, previousActivePriceCoverage: null,
+    priceCacheEntries: [], providerDiagnostics: [],
+  };
+  return path === "main" ? { ...base, metadata: { path, input: {
+    rawAssetCount: assets.length, droppedMalformedAssets: 0,
+    canonicalDeduplication: { duplicateRows: 0, affectedIds: [] },
+    enrichStats: null, priceValidationStats: {}, rejectedCount: 0, gtProbe: { stats: createEmptyGtProbeStats() },
+  } } } : { ...base, metadata: { path, input: {
+    enrichStats: {}, authoritativeOverrideCount: 0, rejectedCount: 0,
+    cachedFallbackCount: 0, nativePegCorrectionCount: 0, nativePegFillCount: 0,
+  } } };
+}
+
+describe("publication path authority", () => {
+  it.each(["main", "fallback"] as const)("preserves %s operational labels, terminal metadata and circuit bookkeeping", async (path) => {
+    vi.spyOn(Date, "now").mockReturnValue(1_800_000_000_000);
+    const { db } = fixtures.open();
+    const assets = [makePeggedAsset({
+      id: "fixture-usd", price: 1, pegMechanism: "fiat-backed",
+      circulating: { peggedUSD: 100 }, chainCirculating: {}, chains: [],
+    }), ...WORKER_ACTIVE_STABLECOINS.map((meta) => makePeggedAsset({
+      id: meta.id, name: meta.name, symbol: meta.symbol, price: 1, priceSource: "coingecko",
+      pegMechanism: "fiat-backed", circulating: { peggedUSD: 100 }, chainCirculating: {}, chains: [],
+    }))];
+    vi.spyOn(phase, "fillMissingSupplyHistory").mockResolvedValue(0);
+    vi.spyOn(notices, "queueTrackedAdditionsNotice").mockResolvedValue(undefined);
+    const depeg = vi.spyOn(post, "runDepegPipeline").mockResolvedValue({
+      depegErrorCount: 0, depegErrors: [], providerDiagnostics: [],
+    });
+    const record = vi.spyOn(circuit, "recordOutcome");
+    const stages: string[] = [];
+    const result = await runStablecoinsPostIntakePublication({
+      ...publicationInput(path, db, assets),
+      reportProgress: async (update) => { stages.push(update.stage!); },
+    });
+    expect(stages).toEqual(path === "main"
+      ? ["staleness-check", "cache-validation", "cache-write", "depeg-pipeline", "complete"]
+      : ["fallback-staleness-check", "fallback-cache-validation", "fallback-cache-write", "fallback-depeg-pipeline", "complete"]);
+    expect(record.mock.calls).toEqual(path === "main" ? [[db, "defillama-stablecoins", true]] : []);
+    expect(depeg).toHaveBeenCalledWith(
+      db, assets, undefined, undefined, undefined,
+      path === "main" ? "" : "fallback-", path === "main" ? "" : " (CG fallback)", undefined, undefined,
+    );
+    expect(JSON.parse(result.metadata!)).toMatchObject({
+      rowsRead: assets.length, rowsWritten: assets.length, rowsDropped: 0, cacheWriteSucceeded: true, depegPipelineSucceeded: true,
+      upstreamFetchOk: path === "main", fallbackMode: path === "main" ? null : "coingecko-supply-fallback",
+    });
+    expect(JSON.parse((await getCache(db, "stablecoins"))!.value).peggedAssets[0]).toMatchObject({
+      id: "fixture-usd", circulating: assets[0].circulating,
+    });
+  });
+
+  it.each(["main", "fallback"] as const)("retains %s mid-stage cancellation metadata and writes no generation", async (path) => {
+    const { db } = fixtures.open();
+    const controller = new AbortController();
+    vi.spyOn(phase, "fillMissingSupplyHistory").mockImplementation(async () => {
+      controller.abort("cancel after history");
+      return 0;
+    });
+    const result = await runStablecoinsPostIntakePublication({
+      ...publicationInput(path, db, [makePeggedAsset()]), signal: controller.signal,
+    });
+    expect(JSON.parse(result.metadata!)).toMatchObject({
+      reason: "aborted", detail: "cancel after history",
+      stage: path === "main" ? "detect-price-staleness" : "fallback-detect-price-staleness",
+      cacheWriteMode: "no-write", capabilities: { stablecoinsCache: false, depegPipeline: false },
+    });
+    expect(await getCache(db, "stablecoins")).toBeNull();
+    expect(await getPriceCache(db)).toEqual(new Map());
+  });
+});
 
 async function publishSupplyPacket(asset: PeggedAsset, path: "main" | "fallback"): Promise<PeggedAsset> {
   const { db, sqlite } = fixtures.open();
@@ -58,17 +131,16 @@ async function publishSupplyPacket(asset: PeggedAsset, path: "main" | "fallback"
   const base = {
     db, assets, syncStartSec: now, previousAssetsById: new Map<string, PeggedAsset>(),
     previousCacheState: { state: "ok" }, previousActivePriceCoverage: null, priceCacheEntries: [], providerDiagnostics: [],
-    returnIfAborted: () => null, abortResult: () => ({ aborted: true, metadata: "aborted" }),
-  } satisfies Omit<StablecoinsPostIntakePublicationContext, "metadata" | "policy">;
+  } satisfies Omit<StablecoinsPostIntakePublicationContext, "metadata">;
   const input: StablecoinsPostIntakePublicationContext = path === "main" ? {
-    ...base, policy: buildMainStablecoinsPublicationPolicy({ assets, rawAssetCount: assets.length, droppedMalformedAssets: 0 }),
+    ...base,
     metadata: { path: "main", input: {
       rawAssetCount: assets.length, droppedMalformedAssets: 0,
-      canonicalDeduplication: { dedupedAssets: assets, duplicateRows: 0, affectedIds: [] },
+      canonicalDeduplication: { duplicateRows: 0, affectedIds: [] },
       enrichStats: {}, priceValidationStats: {}, rejectedCount: 0, gtProbe: { stats: createEmptyGtProbeStats() },
     } },
   } : {
-    ...base, policy: buildFallbackStablecoinsPublicationPolicy(assets),
+    ...base,
     metadata: { path: "fallback", input: { enrichStats: {}, authoritativeOverrideCount: 0, rejectedCount: 0,
       cachedFallbackCount: 0, nativePegCorrectionCount: 0, nativePegFillCount: 0 } },
   };
@@ -192,19 +264,16 @@ describe("stablecoins publication cohort", () => {
       priceCacheEntries: [healthy[0]!, invalid].map((asset) => ({ id: asset.id, price: 1, source: "coingecko", observedAt: now, syncedAt: now })),
       providerDiagnostics: [{ source: "coingecko", stage: "primary", endpoint: "test", status: 200, ok: true, success: true,
         assetAttempts: [{ assetId: rejectedId, adapter: "coingecko", source: "coingecko", state: "attempted", result: "resolved", replaySafe: true }] }],
-      returnIfAborted: () => null, abortResult: () => ({ aborted: true, metadata: "aborted" }),
-    } satisfies Omit<StablecoinsPostIntakePublicationContext, "metadata" | "policy">;
+    } satisfies Omit<StablecoinsPostIntakePublicationContext, "metadata">;
     const input = path === "main" ? {
       ...base,
-      policy: buildMainStablecoinsPublicationPolicy({ assets, rawAssetCount: assets.length, droppedMalformedAssets: 0 }),
       metadata: { path: "main", input: {
         rawAssetCount: assets.length, droppedMalformedAssets: 0,
-        canonicalDeduplication: { dedupedAssets: assets, duplicateRows: 0, affectedIds: [] },
+        canonicalDeduplication: { duplicateRows: 0, affectedIds: [] },
         enrichStats: {}, priceValidationStats: {}, rejectedCount: 0, gtProbe: { stats: createEmptyGtProbeStats() },
       } },
     } satisfies StablecoinsPostIntakePublicationContext : {
       ...base,
-      policy: buildFallbackStablecoinsPublicationPolicy(assets),
       metadata: { path: "fallback", input: { enrichStats: {}, authoritativeOverrideCount: 0, rejectedCount: 0,
         cachedFallbackCount: 0, nativePegCorrectionCount: 0, nativePegFillCount: 0 } },
     } satisfies StablecoinsPostIntakePublicationContext;

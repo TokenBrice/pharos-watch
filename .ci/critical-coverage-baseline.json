@@ -80,7 +80,6 @@
     "worker/src/cron/sync-stablecoins/enrich-prices-progress.ts": 92.9,
     "worker/src/cron/sync-stablecoins/enrich-prices-shared.ts": 100,
     "worker/src/cron/sync-stablecoins/enrich-prices.ts": 100,
-    "worker/src/cron/sync-stablecoins/fallback-enrichment.ts": 100,
     "worker/src/cron/sync-stablecoins/fallback-intake.ts": 100,
     "worker/src/cron/sync-stablecoins/fallback.ts": 97.4,
     "worker/src/cron/sync-stablecoins/intake.ts": 88,

@@ -29,6 +29,8 @@ import {
 } from "./metadata";
 import { isAbortResult, runDepegPipeline } from "./post-enrichment";
 import {
+  abortResult,
+  returnIfAborted,
   checkStablecoinsPriceStaleness,
   reportStablecoinsStage,
   type StablecoinsStalenessSummary,
@@ -72,9 +74,7 @@ type FallbackMetadataInput = Omit<
   | "activePriceCoverage"
 >;
 
-export interface StablecoinsPublicationLabels {
-  supplyHistoryAbortStage: string;
-  logSupplyHistoryFillCount: boolean;
+interface StablecoinsPublicationLabels {
   stalenessProgressStage: string;
   stalenessProgressMessage: string;
   stalenessAbortStage: string;
@@ -91,30 +91,10 @@ export interface StablecoinsPublicationLabels {
   depegAbortStagePrefix: string;
   depegLogContext: string;
   completeMessage: string;
-  completePath: "main" | "fallback";
   productivityReason: string;
   productivityValidationSummary?: Record<string, unknown>;
 }
 
-export interface StablecoinsPublicationPathPolicy {
-  validationContext: "main" | "fallback";
-  labels: StablecoinsPublicationLabels;
-  sourceCoverage: Record<string, unknown>;
-  fallbackMode: string | null;
-  blockedResultBuilder: {
-    staleness: (summary: StablecoinsStalenessSummary) => CronResult;
-    invalidPayload: (stablecoinsCacheAgeSec: number | null) => CronResult;
-  };
-  circuitOutcome?: {
-    source: string;
-    staleBlockSuccess: boolean;
-    cacheDecisionSuccess: boolean;
-  };
-  sharedFetchSessions?: {
-    binance?: BinanceFetchSession;
-    nativePeg?: NativePegQuoteSession;
-  };
-}
 
 export async function loadStablecoinsPublicationContinuity(
   db: D1Database,
@@ -141,18 +121,8 @@ export async function loadStablecoinsPublicationContinuity(
   };
 }
 
-export function buildMainStablecoinsPublicationPolicy(input: {
-  assets: PeggedAsset[];
-  rawAssetCount: number;
-  droppedMalformedAssets: number;
-  binanceSession?: BinanceFetchSession;
-  nativePegSession?: NativePegQuoteSession;
-}): StablecoinsPublicationPathPolicy {
-  return {
-    validationContext: "main",
-    labels: {
-      supplyHistoryAbortStage: "fill-supply-history",
-      logSupplyHistoryFillCount: true,
+function publicationLabels(path: "main" | "fallback"): StablecoinsPublicationLabels {
+  return path === "main" ? {
       stalenessProgressStage: "staleness-check",
       stalenessProgressMessage: "Checking stablecoin price staleness",
       stalenessAbortStage: "detect-price-staleness",
@@ -167,65 +137,8 @@ export function buildMainStablecoinsPublicationPolicy(input: {
       depegAbortStagePrefix: "",
       depegLogContext: "",
       completeMessage: "Completed stablecoins sync",
-      completePath: "main",
       productivityReason: "stablecoins-cache-published",
-    },
-    sourceCoverage: { defillama: true },
-    fallbackMode: null,
-    blockedResultBuilder: {
-      staleness: (summary) => ({
-        status: "degraded",
-        itemCount: input.assets.length,
-        metadata: buildSyncMetadata({
-          rowsRead: input.rawAssetCount,
-          rowsWritten: 0,
-          rowsDropped: input.droppedMalformedAssets,
-          sourceCoverage: { defillama: true },
-          fallbackMode: "stale-prices-blocked",
-          validationFailures: 1,
-          stalenessWarning: true,
-          priceStaleness: summary,
-          staleWriteBlocked: true,
-          upstreamFetchOk: true,
-          payloadAccepted: false,
-          cacheWriteSucceeded: false,
-          depegPipelineSucceeded: false,
-        }, {
-          cacheWriteMode: "no-write",
-          capabilities: { stablecoinsCache: false, depegPipeline: false },
-        }),
-      }),
-      invalidPayload: (stablecoinsCacheAgeSec) => buildBlockedInvalidPayloadResult({
-        rowsRead: input.rawAssetCount,
-        rowsDropped: input.droppedMalformedAssets,
-        sourceCoverage: { defillama: true },
-        fallbackMode: null,
-        validationContext: "main",
-        stablecoinsCacheAgeSec,
-        itemCount: input.assets.length,
-      }),
-    },
-    circuitOutcome: {
-      source: CIRCUIT_SOURCE.DL_STABLECOINS,
-      staleBlockSuccess: false,
-      cacheDecisionSuccess: true,
-    },
-    sharedFetchSessions: {
-      binance: input.binanceSession,
-      nativePeg: input.nativePegSession,
-    },
-  };
-}
-
-export function buildFallbackStablecoinsPublicationPolicy(
-  assets: PeggedAsset[],
-): StablecoinsPublicationPathPolicy {
-  const sourceCoverage = { defillama: false, coingeckoFallbackAssets: assets.length };
-  return {
-    validationContext: "fallback",
-    labels: {
-      supplyHistoryAbortStage: "fallback-fill-supply-history",
-      logSupplyHistoryFillCount: false,
+    } : {
       stalenessProgressStage: "fallback-staleness-check",
       stalenessProgressMessage: "Checking fallback price staleness",
       stalenessAbortStage: "fallback-detect-price-staleness",
@@ -241,46 +154,9 @@ export function buildFallbackStablecoinsPublicationPolicy(
       depegAbortStagePrefix: "fallback-",
       depegLogContext: " (CG fallback)",
       completeMessage: "Completed stablecoins fallback sync",
-      completePath: "fallback",
       productivityReason: "stablecoins-fallback-cache-published",
       productivityValidationSummary: { publicationPath: "coingecko-fallback" },
-    },
-    sourceCoverage,
-    fallbackMode: "coingecko-supply-fallback",
-    blockedResultBuilder: {
-      staleness: (summary) => ({
-        status: "degraded",
-        itemCount: assets.length,
-        metadata: buildSyncMetadata({
-          rowsRead: assets.length,
-          rowsWritten: 0,
-          rowsDropped: 0,
-          sourceCoverage,
-          fallbackMode: "coingecko-supply-fallback-stale-blocked",
-          validationFailures: 1,
-          upstreamFetchOk: false,
-          payloadAccepted: false,
-          cacheWriteSucceeded: false,
-          depegPipelineSucceeded: false,
-          stalenessWarning: true,
-          priceStaleness: summary,
-          staleWriteBlocked: true,
-        }, {
-          cacheWriteMode: "no-write",
-          capabilities: { stablecoinsCache: false, depegPipeline: false },
-        }),
-      }),
-      invalidPayload: (stablecoinsCacheAgeSec) => buildBlockedInvalidPayloadResult({
-        rowsRead: assets.length,
-        rowsDropped: 0,
-        sourceCoverage,
-        fallbackMode: "coingecko-supply-fallback",
-        validationContext: "fallback",
-        stablecoinsCacheAgeSec,
-        itemCount: assets.length,
-      }),
-    },
-  };
+    };
 }
 
 interface StablecoinsPostIntakePublicationBase {
@@ -297,9 +173,8 @@ interface StablecoinsPostIntakePublicationBase {
   priceCacheEntries: PriceCacheWriteEntry[];
   providerDiagnostics: PricingProviderAttemptDiagnostic[];
   supplyChainGuard?: SupplyChainGuardResult;
-  returnIfAborted: (signal: AbortSignal | undefined, stage: string) => CronResult | null;
-  abortResult: (signal: AbortSignal | undefined, stage: string) => CronResult;
-  policy: StablecoinsPublicationPathPolicy;
+  binanceSession?: BinanceFetchSession;
+  nativePegSession?: NativePegQuoteSession;
 }
 
 export type StablecoinsPostIntakePublicationContext = StablecoinsPostIntakePublicationBase & (
@@ -310,12 +185,13 @@ export type StablecoinsPostIntakePublicationContext = StablecoinsPostIntakePubli
 async function fillStablecoinsSupplyHistory(
   input: StablecoinsPostIntakePublicationContext,
 ): Promise<CronResult | null> {
-  const stage = input.policy.labels.supplyHistoryAbortStage;
+  const main = input.metadata.path === "main";
+  const stage = main ? "fill-supply-history" : "fallback-fill-supply-history";
   try {
-    const fillAbort = input.returnIfAborted(input.signal, stage);
+    const fillAbort = returnIfAborted(input.signal, stage);
     if (fillAbort) return fillAbort;
     const fillCount = await fillMissingSupplyHistory(input.db, input.assets, input.signal);
-    if (fillCount > 0 && input.policy.labels.logSupplyHistoryFillCount) {
+    if (fillCount > 0 && main) {
       logWorkerEventArgs(
         "handler",
         "info",
@@ -323,7 +199,7 @@ async function fillStablecoinsSupplyHistory(
       );
     }
   } catch (error) {
-    if (input.signal?.aborted) return input.abortResult(input.signal, stage);
+    if (input.signal?.aborted) return abortResult(input.signal, stage);
     logWorkerEventArgs("handler", "warn", "[sync-stablecoins] supply_history fallback failed:", error);
   }
   return null;
@@ -335,7 +211,26 @@ export async function runStablecoinsPostIntakePublication(
   const supplyHistoryResult = await fillStablecoinsSupplyHistory(input);
   if (supplyHistoryResult) return supplyHistoryResult;
 
-  const labels = input.policy.labels;
+  const main = input.metadata.path === "main";
+  const labels = publicationLabels(input.metadata.path);
+  const rowsRead = input.metadata.path === "main" ? input.metadata.input.rawAssetCount : input.assets.length;
+  const rowsDropped = input.metadata.path === "main" ? input.metadata.input.droppedMalformedAssets : 0;
+  const sourceCoverage = main ? { defillama: true } : { defillama: false, coingeckoFallbackAssets: input.assets.length };
+  const fallbackMode = main ? null : "coingecko-supply-fallback";
+  const blockedResult = (summary: StablecoinsStalenessSummary): CronResult => ({
+    status: "degraded",
+    itemCount: input.assets.length,
+    metadata: buildSyncMetadata({
+      rowsRead, rowsWritten: 0, rowsDropped, sourceCoverage,
+      fallbackMode: main ? "stale-prices-blocked" : "coingecko-supply-fallback-stale-blocked",
+      validationFailures: 1,
+      stalenessWarning: true, priceStaleness: summary, staleWriteBlocked: true,
+      upstreamFetchOk: main, payloadAccepted: false, cacheWriteSucceeded: false, depegPipelineSucceeded: false,
+    }, {
+      cacheWriteMode: "no-write",
+      capabilities: { stablecoinsCache: false, depegPipeline: false },
+    }),
+  });
   const staleness = await checkStablecoinsPriceStaleness({
     previousAssetsById: input.previousAssetsById,
     previousCacheState: input.previousCacheState,
@@ -347,15 +242,11 @@ export async function runStablecoinsPostIntakePublication(
     abortStage: labels.stalenessAbortStage,
     warningLabel: labels.stalenessWarningLabel,
     failureLabel: labels.stalenessFailureLabel,
-    blockedResultFactory: input.policy.blockedResultBuilder.staleness,
+    blockedResultFactory: blockedResult,
   });
   if (staleness.blockedResult) {
-    if (staleness.blockedReason === "severe-staleness" && input.policy.circuitOutcome) {
-      await recordOutcome(
-        input.db,
-        input.policy.circuitOutcome.source,
-        input.policy.circuitOutcome.staleBlockSuccess,
-      );
+    if (staleness.blockedReason === "severe-staleness" && main) {
+      await recordOutcome(input.db, CIRCUIT_SOURCE.DL_STABLECOINS, false);
     }
     return staleness.blockedResult;
   }
@@ -374,7 +265,7 @@ export async function runStablecoinsPostIntakePublication(
   input.previousAssetsById.clear();
 
   if (labels.cacheValidationAbortStage) {
-    const validationAbort = input.returnIfAborted(input.signal, labels.cacheValidationAbortStage);
+    const validationAbort = returnIfAborted(input.signal, labels.cacheValidationAbortStage);
     if (validationAbort) return validationAbort;
   }
   await reportStablecoinsStage(
@@ -389,29 +280,17 @@ export async function runStablecoinsPostIntakePublication(
     db: input.db,
     syncStartSec: input.syncStartSec,
     signal: input.signal,
-    validationContext: input.policy.validationContext,
-    returnIfAborted: input.returnIfAborted,
-    abortResult: input.abortResult,
-  }, input.policy.blockedResultBuilder.invalidPayload);
+    validationContext: input.metadata.path,
+  }, (stablecoinsCacheAgeSec) => buildBlockedInvalidPayloadResult({
+    rowsRead, rowsDropped, sourceCoverage, fallbackMode,
+    validationContext: input.metadata.path, stablecoinsCacheAgeSec, itemCount: input.assets.length,
+  }));
   if (isAbortResult(cacheResult)) return cacheResult;
   if (!cacheResult.written) {
-    if (input.policy.circuitOutcome) {
-      await recordOutcome(
-        input.db,
-        input.policy.circuitOutcome.source,
-        input.policy.circuitOutcome.cacheDecisionSuccess,
-      );
-    }
+    if (main) await recordOutcome(input.db, CIRCUIT_SOURCE.DL_STABLECOINS, true);
     if (!cacheResult.skippedBecauseNewer) return cacheResult.blockedResult!;
     return buildSkippedNewerCacheResult({
-      rowsRead: input.metadata.path === "main"
-        ? input.metadata.input.rawAssetCount
-        : input.assets.length,
-      rowsDropped: input.metadata.path === "main"
-        ? input.metadata.input.droppedMalformedAssets
-        : 0,
-      sourceCoverage: input.policy.sourceCoverage,
-      fallbackMode: input.policy.fallbackMode,
+      rowsRead, rowsDropped, sourceCoverage, fallbackMode,
       cacheKey: cacheResult.cacheKey,
       syncStartSec: cacheResult.syncStartSec,
       upstreamFetchOk: input.metadata.path === "main",
@@ -439,17 +318,10 @@ export async function runStablecoinsPostIntakePublication(
     db: input.db,
     entries: input.priceCacheEntries.filter((entry) => admittedAssetIds.has(entry.id)),
     signal: input.signal,
-    returnIfAborted: input.returnIfAborted,
     stagePrefix: labels.priceCacheStagePrefix,
   });
   if (priceCacheCommit) return priceCacheCommit;
-  if (input.policy.circuitOutcome) {
-    await recordOutcome(
-      input.db,
-      input.policy.circuitOutcome.source,
-      input.policy.circuitOutcome.cacheDecisionSuccess,
-    );
-  }
+  if (main) await recordOutcome(input.db, CIRCUIT_SOURCE.DL_STABLECOINS, true);
 
   await queueTrackedAdditionsNotice(input.db, previousAssetIds, input.assets);
   await reportStablecoinsStage(
@@ -464,55 +336,42 @@ export async function runStablecoinsPostIntakePublication(
     input.fxFallbackRates,
     input.signal,
     input.coingeckoApiKey,
-    input.returnIfAborted,
-    input.abortResult,
     labels.depegAbortStagePrefix,
     labels.depegLogContext,
-    input.policy.sharedFetchSessions?.binance,
-    input.policy.sharedFetchSessions?.nativePeg,
+    input.binanceSession,
+    input.nativePegSession,
   );
   if (isAbortResult(depegResult)) return depegResult;
 
   const providerDiagnostics = [...input.providerDiagnostics, ...depegResult.providerDiagnostics];
+  const completion = {
+    assets: input.assets,
+    providerDiagnostics,
+    stalenessWarning: staleness.stalenessWarning,
+    stalenessSummary: staleness.stalenessSummary,
+    stalenessCheckFailed: staleness.stalenessCheckFailed,
+    stalenessCheckFailureReason: staleness.stalenessCheckFailureReason,
+    depegErrorCount: depegResult.depegErrorCount,
+    depegHeldReason: depegResult.depegHeldReason,
+    cacheKey: cacheResult.cacheKey,
+    syncStartSec: cacheResult.syncStartSec,
+    activePriceCoverage,
+  };
   const result = input.metadata.path === "main"
     ? buildStablecoinsSyncResult({
-        ...input.metadata.input,
-        assets: input.assets,
-        providerDiagnostics,
-        stalenessWarning: staleness.stalenessWarning,
-        stalenessSummary: staleness.stalenessSummary,
-        stalenessCheckFailed: staleness.stalenessCheckFailed,
-        stalenessCheckFailureReason: staleness.stalenessCheckFailureReason,
-        depegErrorCount: depegResult.depegErrorCount,
+        ...input.metadata.input, ...completion,
         depegErrors: depegResult.depegErrors,
-        depegHeldReason: depegResult.depegHeldReason,
-        cacheKey: cacheResult.cacheKey,
-        syncStartSec: cacheResult.syncStartSec,
         responseReadyCacheError: cacheResult.responseReadyCacheError,
         depegPipelineSucceeded: !depegResult.depegHeldReason && depegResult.depegErrorCount === 0,
         previousActivePriceCoverage: input.previousActivePriceCoverage,
-        activePriceCoverage,
       })
-    : buildFallbackStablecoinsSyncResult({
-        ...input.metadata.input,
-        assets: input.assets,
-        providerDiagnostics,
-        stalenessWarning: staleness.stalenessWarning,
-        stalenessSummary: staleness.stalenessSummary,
-        stalenessCheckFailed: staleness.stalenessCheckFailed,
-        stalenessCheckFailureReason: staleness.stalenessCheckFailureReason,
-        depegErrorCount: depegResult.depegErrorCount,
-        depegHeldReason: depegResult.depegHeldReason,
-        cacheKey: cacheResult.cacheKey,
-        syncStartSec: cacheResult.syncStartSec,
-        activePriceCoverage,
-      });
+    : buildFallbackStablecoinsSyncResult({ ...input.metadata.input, ...completion });
 
   await reportStablecoinsStage(input.reportProgress, "complete", labels.completeMessage, {
     itemsDone: input.assets.length,
     itemsTotal: input.assets.length,
     metadata: {
-      path: labels.completePath,
+      path: input.metadata.path,
       status: result.status ?? "ok",
     },
   });

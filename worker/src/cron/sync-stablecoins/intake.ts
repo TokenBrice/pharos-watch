@@ -8,6 +8,9 @@ import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import type { DwellirNativeCapability } from "../../lib/dwellir-native";
 import { logWorkerEvent } from "../../lib/structured-log";
+import type { CronProgressReporter } from "../../lib/cron-logger";
+import type { PriceValidationReferences } from "../../lib/price-validation";
+import { reportStablecoinsStage, returnIfAborted } from "./runtime";
 import { createCronResult } from "../../lib/cron-result";
 import { isRecord } from "@shared/lib/type-guards";
 import type { PeggedAsset } from "./enrich-prices";
@@ -32,9 +35,9 @@ import {
 import { guardChainDropouts, loadChainDropoutState, type SupplyChainGuardResult } from "./chain-dropout-guard";
 import {
   hydrateGeckoIdAliases,
+  loadFreshFxRates,
   loadPreviousStablecoinsById,
   mergeSupplementalLastKnownGood,
-  replaceZeroSupplyPrimaryAssets,
   restoreMissingTrackedAssets,
   type CronResult,
   type PreviousStablecoinsCacheState,
@@ -48,6 +51,7 @@ interface StablecoinsIntakeMainResult {
   droppedMalformedAssets: number;
   canonicalDeduplication: CanonicalDeduplicationResult;
   fxFallbackRates?: Record<string, number>;
+  validationReferences: PriceValidationReferences | undefined;
   previousAssetsById: Map<string, PeggedAsset>;
   previousCacheState: PreviousStablecoinsCacheState;
   cgData: CoinGeckoMcapData;
@@ -213,13 +217,17 @@ export async function loadStablecoinsIntake(
     db: D1Database;
     signal?: AbortSignal;
     syncStartSec: number;
-    fxFallbackRates?: Record<string, number>;
+    reportProgress?: CronProgressReporter;
     coingeckoApiKey?: string | null;
     chainRpcs?: Map<string, ChainRpcConfig>;
     dwellirNative?: DwellirNativeCapability;
     fallbackToCoingecko: (cgData: CoinGeckoMcapData) => Promise<CronResult>;
   },
 ): Promise<StablecoinsIntakeResult> {
+  const { fxFallbackRates: freshFxFallbackRates, validationReferences } = await loadFreshFxRates(input.db);
+  const preFetchAbort = returnIfAborted(input.signal, "fetch-stablecoins-and-supplementals");
+  if (preFetchAbort) return { kind: "withheld", result: preFetchAbort };
+  await reportStablecoinsStage(input.reportProgress, "intake", "Loading DefiLlama stablecoin intake");
   const { previousAssetsById, cacheState: previousCacheState } = await loadPreviousStablecoinsById(input.db);
   const cgData = await fetchCoinGeckoMarketData(input.db, input.signal, input.coingeckoApiKey);
 
@@ -244,7 +252,7 @@ export async function loadStablecoinsIntake(
     input.signal,
     input.coingeckoApiKey,
     input.chainRpcs,
-    input.fxFallbackRates,
+    freshFxFallbackRates,
     input.db,
     previousAssetsById,
     input.dwellirNative,
@@ -430,19 +438,6 @@ export async function loadStablecoinsIntake(
   }
 
   const supplementalAssets = [...goldTokens, ...silverTokens, ...fiatCgTokens];
-  const primaryReplacement = replaceZeroSupplyPrimaryAssets(assets, supplementalAssets);
-  assets = primaryReplacement.assets;
-  if (primaryReplacement.replacedIds.length > 0) {
-    logWorkerEvent({
-      scope: "lib",
-      level: "warn",
-      event: "zero-supply-primary-replacement",
-      job: "sync-stablecoins",
-      message: "Replaced zero-supply primary rows with positive supplemental coverage",
-      metadata: { replacedIds: primaryReplacement.replacedIds },
-    });
-  }
-
   const supplementalResolution = mergeSupplementalLastKnownGood(
     supplementalAssets,
     previousAssetsById,
@@ -511,7 +506,7 @@ export async function loadStablecoinsIntake(
     input.signal,
     input.coingeckoApiKey,
     input.chainRpcs,
-    input.fxFallbackRates,
+    freshFxFallbackRates,
     previousAssetsById,
     input.dwellirNative,
   );
@@ -571,13 +566,24 @@ export async function loadStablecoinsIntake(
     signal: input.signal,
   });
 
+  await reportStablecoinsStage(input.reportProgress, "intake", "Loaded DefiLlama stablecoin intake", {
+    itemsDone: assets.length,
+    itemsTotal: rawAssetCount,
+    metadata: {
+      rawAssetCount,
+      droppedMalformedAssets,
+      canonicalDuplicateRows: canonicalDeduplication.duplicateRows,
+    },
+  });
+
   return {
     kind: "main",
     assets,
     rawAssetCount,
     droppedMalformedAssets,
     canonicalDeduplication,
-    fxFallbackRates: dlFxFallbackRates,
+    fxFallbackRates: freshFxFallbackRates ?? dlFxFallbackRates,
+    validationReferences,
     previousAssetsById,
     previousCacheState,
     cgData,

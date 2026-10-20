@@ -7,6 +7,7 @@ import { writeResponseReadyCache } from "../../lib/api-cache-read";
 import { RESPONSE_READY_CACHE_SCHEMA_IDS } from "../../lib/response-ready-cache-contracts";
 import { savePriceCache, setCacheIfNewer, type PriceCacheWriteEntry } from "../../lib/db-cache";
 import type { PeggedAsset } from "./enrich-prices";
+import { returnIfAborted } from "./runtime";
 import {
   getStablecoinsCacheAgeSec,
   normalizeStablecoinsPayload,
@@ -46,8 +47,6 @@ export interface ValidateAndCacheInput {
   signal?: AbortSignal;
   /** "main" or "fallback" - controls log messages */
   validationContext: "main" | "fallback";
-  returnIfAborted: (signal: AbortSignal | undefined, stage: string) => CronResult | null;
-  abortResult: (signal: AbortSignal | undefined, stage: string) => CronResult;
 }
 
 type PublicationAdmission =
@@ -113,7 +112,7 @@ export async function validateAndWriteStablecoinsCache(
   input: ValidateAndCacheInput,
   buildBlockedResult: (stablecoinsCacheAgeSec: number | null) => CronResult,
 ): Promise<CacheValidationResult | CronResult> {
-  const { assets, fxFallbackRates, db, syncStartSec, signal, validationContext, returnIfAborted } =
+  const { assets, fxFallbackRates, db, syncStartSec, signal, validationContext } =
     input;
 
   // Tag frozen coins so /api/stablecoins exposes `frozen` and `frozenAt` per-coin.
@@ -222,12 +221,11 @@ export async function commitReplayPriceCache(input: {
   db: D1Database;
   entries: PriceCacheWriteEntry[];
   signal?: AbortSignal;
-  returnIfAborted: (signal: AbortSignal | undefined, stage: string) => CronResult | null;
   stagePrefix?: string;
 }): Promise<CronResult | null> {
   if (input.entries.length === 0) return null;
   const stage = `${input.stagePrefix ?? ""}save-price-cache`;
-  const priceCacheWriteAbort = input.returnIfAborted(input.signal, stage);
+  const priceCacheWriteAbort = returnIfAborted(input.signal, stage);
   if (priceCacheWriteAbort) return priceCacheWriteAbort;
   await savePriceCache(input.db, input.entries);
   return null;

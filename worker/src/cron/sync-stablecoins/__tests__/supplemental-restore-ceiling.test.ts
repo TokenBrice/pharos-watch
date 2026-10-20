@@ -7,7 +7,6 @@ import {
   loadPreviousStablecoinsById,
   mergeSupplementalLastKnownGood,
   normalizeStablecoinsPayload,
-  replaceZeroSupplyPrimaryAssets,
   restoreMissingTrackedAssets,
 } from "../shared";
 
@@ -348,76 +347,5 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
     expect(result.restoredCount).toBe(1);
     expect(result.expiredRestoreIds).toEqual([]);
     expect(result.assets[0]).toMatchObject({ supplyRestored: true });
-  });
-});
-
-describe("replaceZeroSupplyPrimaryAssets", () => {
-  it("fills an unreadable primary bucket from fresh supplemental coverage without the stale marker", () => {
-    const primary = asset({
-      id: "eurq-quantoz",
-      symbol: "EURQ",
-      supplySource: "defillama",
-    });
-    const supplemental = asset({
-      id: "eurq-quantoz",
-      symbol: "EURQ",
-      circulating: { peggedEUR: 5_200_000 },
-      supplySource: "coingecko-fallback",
-      supplyObservedAt: NOW_SEC,
-    });
-
-    const result = replaceZeroSupplyPrimaryAssets([primary], [supplemental]);
-
-    expect(result.replacedIds).toEqual(["eurq-quantoz"]);
-    expect(result.assets[0]).toMatchObject({
-      circulating: { peggedEUR: 5_200_000 },
-      supplySource: "coingecko-fallback",
-      supplyObservedAt: NOW_SEC,
-    });
-    // A fresh supplemental observation is not stale carry-forward: the
-    // `supplyRestored` marker would skip it in snapshot generation and show
-    // "Stale supply" on the detail page.
-    expect(result.assets[0].supplyRestored).toBeUndefined();
-  });
-
-  it("publishes an observed zero rather than a positive supplemental substitute", () => {
-    const redeemedPrimary = asset({
-      id: "eurq-quantoz",
-      symbol: "EURQ",
-      circulating: { peggedEUR: 0 },
-      supplySource: "defillama",
-    });
-    const supplemental = asset({
-      id: "eurq-quantoz",
-      symbol: "EURQ",
-      circulating: { peggedEUR: 5_200_000 },
-    });
-
-    const result = replaceZeroSupplyPrimaryAssets([redeemedPrimary], [supplemental]);
-
-    expect(result.replacedIds).toEqual([]);
-    expect(result.assets[0]).toBe(redeemedPrimary);
-  });
-
-  it("does not replace positive primary supply or substitute zero supplemental supply", () => {
-    const positivePrimary = asset({
-      id: "eurq-quantoz",
-      symbol: "EURQ",
-      circulating: { peggedEUR: 5_000_000 },
-    });
-    const zeroPrimary = asset({
-      id: "gramg-token-teknoloji",
-      symbol: "GRAMG",
-      circulating: { peggedGOLD: 0 },
-    });
-    const supplements = [
-      asset({ id: "eurq-quantoz", symbol: "EURQ", circulating: { peggedEUR: 5_200_000 } }),
-      asset({ id: "gramg-token-teknoloji", symbol: "GRAMG", circulating: { peggedGOLD: 0 } }),
-    ];
-
-    const result = replaceZeroSupplyPrimaryAssets([positivePrimary, zeroPrimary], supplements);
-
-    expect(result.replacedIds).toEqual([]);
-    expect(result.assets).toEqual([positivePrimary, zeroPrimary]);
   });
 });

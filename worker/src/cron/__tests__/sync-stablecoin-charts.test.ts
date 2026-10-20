@@ -7,7 +7,7 @@ vi.mock("../../lib/fetch-retry", () => mockFetchRetry());
 
 import { syncStablecoinCharts } from "../sync-stablecoin-charts";
 import { STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS } from "../../lib/stablecoin-charts-reconciliation";
-import { normalizeStablecoinChartPoints } from "../../lib/stablecoin-charts-payload";
+import { normalizeStablecoinChartPoints, sampleHistoricalDatePoints } from "../../lib/stablecoin-charts-payload";
 import { handleStablecoinCharts } from "../../api/cache-handlers";
 
 const DEFAULT_CHART_D1_TABLES: MockTableConfig[] = [
@@ -92,6 +92,19 @@ describe("syncStablecoinCharts", () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.restoreAllMocks();
+  });
+
+  it("samples boundary and irregular dates without changing null buckets or keeping duplicate/latest points", () => {
+    const now = Math.floor(Date.now() / 1000);
+    const ages = [800, 799, 770, 740, 731, 730, 729, 723, 100, 96, 91, 90, 89, 88, 88, 87.5, 87, 0.5, 0];
+    const points = ages.map((age, index) => ({
+      date: now - age * 86400, totalCirculatingUSD: { peggedUSD: index, peggedEUR: null },
+    }));
+    const expected = [0, 2, 3, 5, 7, 8, 10, 11, 12, 13, 16, 17].map((index) => points[index]);
+    const sampled = sampleHistoricalDatePoints(points, now);
+    expect(JSON.stringify(sampled)).toBe(JSON.stringify(expected));
+    expect(sampled.every((point, index) => point === expected[index])).toBe(true);
+    expect(sampleHistoricalDatePoints([], now)).toEqual([]);
   });
 
   it("writes transformed chart payload to cache on happy path", async () => {

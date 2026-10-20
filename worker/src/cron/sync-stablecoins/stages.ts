@@ -1,17 +1,10 @@
-import type { PriceObservationEffectiveness } from "./price-corroboration-observations";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
-import type { DwellirNativeCapability } from "../../lib/dwellir-native";
 import type { NativePegQuoteSession } from "../../lib/native-peg-quotes";
 import type { BinanceFetchSession } from "../../lib/cex-tickers";
-import type { PriceCacheWriteEntry } from "../../lib/db-cache";
+import type { PriceValidationReferences } from "../../lib/price-validation";
 import type { CronProgressReporter } from "../../lib/cron-logger";
 import { createEmptyGtProbeStats } from "../../lib/geckoterminal-price-probe-stats";
-import { syncViaCoingeckoFallback } from "./fallback";
-import { loadStablecoinsIntake } from "./intake";
-import type {
-  CanonicalDeduplicationResult,
-} from "./phase-helpers";
 import {
   applyConsensusResults,
   applyProtocolPriceOverrides,
@@ -23,136 +16,24 @@ import {
 import {
   createAuthoritativeLivePriceOverrideStats,
   fetchAuthoritativeLivePriceOverrides,
-  type AuthoritativeLivePriceOverrideStats,
 } from "../../lib/authoritative-price-sources";
 import {
   fetchPrimaryPrices,
   hasMissingPrice,
+  type PeggedAsset,
 } from "./enrich-prices";
 import {
-  abortResult,
   reportStablecoinsStage,
   returnIfAborted,
 } from "./runtime";
 import {
-  loadFreshFxRates,
   loadReplayPriceCacheForTrustedContinuity,
-  type CronResult,
-  type PreviousStablecoinsCacheState,
-  type TrackedCoverageRestoreResult,
 } from "./shared";
 import {
   isAbortResult,
   runSharedPriceCompletion,
 } from "./post-enrichment";
-import type { CoinGeckoMcapData } from "./supplemental-assets";
-import type { SupplyGapReconciliationResult } from "./supply-gap-reconciliation";
-import type { SupplyChainGuardResult } from "./chain-dropout-guard";
-import type { PeggedAsset } from "./enrich-prices";
 
-interface StablecoinsIntakeStageOptions {
-  signal?: AbortSignal;
-  reportProgress?: CronProgressReporter;
-  db: D1Database;
-  syncStartSec: number;
-  cmcApiKey?: string;
-  jupiterApiKey?: string | null;
-  coingeckoApiKey?: string | null;
-  chainRpcs?: Map<string, ChainRpcConfig>;
-  dwellirNative?: DwellirNativeCapability;
-}
-
-export type StablecoinsIntakeStageResult =
-  | {
-      kind: "fallback";
-      result: CronResult;
-      errorMessage: string;
-    }
-  | {
-      kind: "ok";
-      fxFallbackRates: Awaited<ReturnType<typeof loadFreshFxRates>>["fxFallbackRates"];
-      validationReferences: Awaited<ReturnType<typeof loadFreshFxRates>>["validationReferences"];
-      assets: PeggedAsset[];
-      rawAssetCount: number;
-      droppedMalformedAssets: number;
-      canonicalDeduplication: CanonicalDeduplicationResult;
-      previousAssetsById: Map<string, PeggedAsset>;
-      previousCacheState: PreviousStablecoinsCacheState;
-      cgData: CoinGeckoMcapData;
-      supplyGapReconciliation: SupplyGapReconciliationResult;
-      supplyChainGuard: SupplyChainGuardResult;
-      trackedCoverage: TrackedCoverageRestoreResult;
-    };
-
-export async function runStablecoinsIntakeStage(
-  options: StablecoinsIntakeStageOptions,
-): Promise<StablecoinsIntakeStageResult | CronResult> {
-  const { fxFallbackRates: freshFxFallbackRates, validationReferences } = await loadFreshFxRates(
-    options.db,
-  );
-
-  const preFetchAbort = returnIfAborted(options.signal, "fetch-stablecoins-and-supplementals");
-  if (preFetchAbort) return preFetchAbort;
-  await reportStablecoinsStage(options.reportProgress, "intake", "Loading DefiLlama stablecoin intake");
-  const intake = await loadStablecoinsIntake({
-    db: options.db,
-    signal: options.signal,
-    syncStartSec: options.syncStartSec,
-    fxFallbackRates: freshFxFallbackRates,
-    coingeckoApiKey: options.coingeckoApiKey,
-    chainRpcs: options.chainRpcs,
-    dwellirNative: options.dwellirNative,
-    fallbackToCoingecko: (cgData) =>
-      syncViaCoingeckoFallback(
-        options.db,
-        cgData,
-        options.cmcApiKey,
-        options.syncStartSec,
-        options.signal,
-        options.coingeckoApiKey,
-        options.reportProgress,
-        options.jupiterApiKey,
-        options.chainRpcs,
-        options.dwellirNative,
-      ),
-  });
-
-  if (intake.kind === "withheld") return intake.result;
-  if (intake.kind === "fallback") {
-    return {
-      kind: "fallback",
-      result: intake.result,
-      errorMessage: intake.errorMessage,
-    };
-  }
-
-  const fxFallbackRates = freshFxFallbackRates ?? intake.fxFallbackRates;
-  await reportStablecoinsStage(options.reportProgress, "intake", "Loaded DefiLlama stablecoin intake", {
-    itemsDone: intake.assets.length,
-    itemsTotal: intake.rawAssetCount,
-    metadata: {
-      rawAssetCount: intake.rawAssetCount,
-      droppedMalformedAssets: intake.droppedMalformedAssets,
-      canonicalDuplicateRows: intake.canonicalDeduplication.duplicateRows,
-    },
-  });
-
-  return {
-    kind: "ok",
-    assets: intake.assets,
-    rawAssetCount: intake.rawAssetCount,
-    droppedMalformedAssets: intake.droppedMalformedAssets,
-    canonicalDeduplication: intake.canonicalDeduplication,
-    previousAssetsById: intake.previousAssetsById,
-    previousCacheState: intake.previousCacheState,
-    cgData: intake.cgData,
-    fxFallbackRates,
-    validationReferences,
-    supplyGapReconciliation: intake.supplyGapReconciliation,
-    supplyChainGuard: intake.supplyChainGuard,
-    trackedCoverage: intake.trackedCoverage,
-  };
-}
 
 interface StablecoinsPricingStageOptions {
   signal?: AbortSignal;
@@ -162,8 +43,8 @@ interface StablecoinsPricingStageOptions {
   previousAssetsById: Map<string, PeggedAsset>;
   previousMissingGenerationsById?: ReadonlyMap<string, number>;
   syncStartSec: number;
-  fxFallbackRates: Awaited<ReturnType<typeof loadFreshFxRates>>["fxFallbackRates"];
-  validationReferences: Awaited<ReturnType<typeof loadFreshFxRates>>["validationReferences"];
+  fxFallbackRates?: Record<string, number>;
+  validationReferences?: PriceValidationReferences;
   coingeckoApiKey?: string | null;
   chainRpcs?: Map<string, ChainRpcConfig>;
   binanceSession?: BinanceFetchSession;
@@ -172,23 +53,7 @@ interface StablecoinsPricingStageOptions {
 
 export async function runStablecoinsPricingStage(
   options: StablecoinsPricingStageOptions,
-): Promise<
-  | CronResult
-  | {
-      enrichStats: null;
-      priceValidationStats: Awaited<ReturnType<typeof fetchPrimaryPrices>>["stats"];
-      gtProbe: { stats: ReturnType<typeof createEmptyGtProbeStats> };
-      authoritativeOverrideCount: number;
-      authoritativeOverrideStats: AuthoritativeLivePriceOverrideStats;
-      rejectedCount: number;
-      nativePegCorrectionCount: number;
-      nativePegFillCount: number;
-      priceObservationEffectiveness?: PriceObservationEffectiveness;
-      cachedFallbackCount: number;
-      priceCacheEntries: PriceCacheWriteEntry[];
-      providerDiagnostics: NonNullable<Awaited<ReturnType<typeof fetchPrimaryPrices>>["providerDiagnostics"]>;
-    }
-> {
+) {
   const validationContexts = createValidationContextResolver();
   const replayPriceCache = await loadReplayPriceCacheForTrustedContinuity(options.db);
   const previousTrustedPrices = buildPreviousTrustedPriceLookup(
@@ -297,7 +162,6 @@ export async function runStablecoinsPricingStage(
     syncStartSec: options.syncStartSec,
     authoritativeOverrideStats,
   });
-  const enrichStats = null;
 
   const priceCompletion = await runSharedPriceCompletion({
     chainRpcs: options.chainRpcs,
@@ -316,20 +180,13 @@ export async function runStablecoinsPricingStage(
     previousMissingGenerationsById: options.previousMissingGenerationsById,
     priceCache: replayPriceCache,
     nativePegSession: options.nativePegSession,
-    returnIfAborted,
-    abortResult,
   }, "");
   if (isAbortResult(priceCompletion)) return priceCompletion;
+  const { priceCacheEntries, providerDiagnostics: nativePegProviderDiagnostics, ...metadata } = priceCompletion;
   const {
-    authoritativeOverrideCount,
-    rejectedCount,
-    cachedFallbackCount,
-    nativePegCorrectionCount,
-    nativePegFillCount,
-    priceObservationEffectiveness,
-    priceCacheEntries,
-    providerDiagnostics: nativePegProviderDiagnostics,
-  } = priceCompletion;
+    authoritativeOverrideCount, rejectedCount, cachedFallbackCount,
+    nativePegCorrectionCount, nativePegFillCount, priceObservationEffectiveness,
+  } = metadata;
 
   if (authoritativeOverrideCount > 0) {
     logWorkerEventArgs("handler", "info",
@@ -363,16 +220,12 @@ export async function runStablecoinsPricingStage(
   });
 
   return {
-    enrichStats,
-    priceValidationStats,
-    gtProbe,
-    authoritativeOverrideCount,
-    authoritativeOverrideStats,
-    rejectedCount,
-    nativePegCorrectionCount,
-    nativePegFillCount,
-    priceObservationEffectiveness,
-    cachedFallbackCount,
+    metadata: {
+      ...metadata,
+      enrichStats: null,
+      priceValidationStats,
+      gtProbe,
+    },
     priceCacheEntries,
     providerDiagnostics: [
       ...primaryProviderDiagnostics,

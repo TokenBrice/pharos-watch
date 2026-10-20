@@ -1,7 +1,10 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { enrichMissingPrices, hasMissingPrice } from "../enrich-prices";
 import type { EnrichmentProgressReporter } from "../enrich-prices-progress";
 import { makePeggedAsset } from "./_fixtures";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
+
+afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 describe("enrichMissingPrices", () => {
   it("returns all-zero stats and completes progress without any provider pass when no price is missing", async () => {
@@ -37,5 +40,21 @@ describe("enrichMissingPrices", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
     // Already-priced assets pass through untouched.
     expect(assets.map((asset) => asset.price)).toEqual([1.0002, 0.998]);
+  });
+
+  it("stamps explicit fallback confidence and the provider clock before returning a recovered price", async () => {
+    const now = 1_800_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    const geckoId = ACTIVE_META_BY_ID.get("dllr-sovryn")!.geckoId!;
+    vi.stubGlobal("fetch", vi.fn(async (url: string | URL | Request) => Response.json(
+      String(url).includes("/simple/price") ? { [geckoId]: { usd: 1, last_updated_at: now - 30 } } : { coins: {}, pairs: [] },
+    )));
+    const assets = [makePeggedAsset({ id: "dllr-sovryn", geckoId, price: null })];
+    const stats = await enrichMissingPrices(assets);
+    expect(stats).toMatchObject({ passCgLowVolume: 1, finalMissing: 0 });
+    expect(assets[0]).toMatchObject({
+      price: 1, priceSource: "coingecko-low-volume", priceConfidence: "fallback",
+      priceObservedAt: now - 30, priceObservedAtMode: "upstream",
+    });
   });
 });

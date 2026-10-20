@@ -42,6 +42,7 @@ import { makePeggedAsset } from "../sync-stablecoins/__tests__/_fixtures";
 import { isAbortResult, runDepegPipeline, runPostEnrichmentPricePipeline } from "../sync-stablecoins/post-enrichment";
 import type { PrimaryPriceResult } from "../sync-stablecoins/enrich-prices";
 import { buildPriceValidationContext, type PriceValidationContext } from "../../lib/price-validation";
+import { createAuthoritativeLivePriceOverrideStats } from "../../lib/authoritative-price-sources";
 
 function makeValidationContext(asset: PeggedAsset): PriceValidationContext {
   return buildPriceValidationContext({
@@ -89,8 +90,8 @@ function nativePipelineInput(
       typeByPeg: { peggedEUR: "fresh" },
     },
     validationContexts: { get: makeValidationContext },
-    previousTrustedPrices: new Map(), returnIfAborted: () => null,
-    abortResult: () => ({ status: "error", metadata: "{}" }),
+    previousTrustedPrices: new Map(), priceCache: new Map(),
+    authoritativeOverrides: new Map(), authoritativeOverrideStats: createAuthoritativeLivePriceOverrideStats(),
   };
 }
 
@@ -103,7 +104,7 @@ describe("runDepegPipeline capacity holds", () => {
     else confirm.mockResolvedValue({ ...held, providerDiagnostics: [] });
     try {
       await expect(runDepegPipeline(mockD1(), [], undefined, undefined, undefined,
-        () => null, () => ({ status: "error" }), "", "")).resolves.toMatchObject({
+        "", "")).resolves.toMatchObject({
         depegHeldReason: "depeg-open-event-limit-reached", depegErrorCount: 0, depegErrors: [],
       });
     } finally {
@@ -150,8 +151,8 @@ describe("runPostEnrichmentPricePipeline", () => {
         assets: [asset], db, syncStartSec: now,
         priceCache: new Map(), validationContexts: { get: makeValidationContext },
         validationReferences: { rates: { [pegType]: pegType === "peggedUSD" ? 1 : price }, type: "fresh", updatedAt: now },
-        previousTrustedPrices: new Map(), returnIfAborted: () => null,
-        abortResult: () => ({ status: "error", metadata: "{}" }),
+        previousTrustedPrices: new Map(),
+        authoritativeOverrides: new Map(), authoritativeOverrideStats: createAuthoritativeLivePriceOverrideStats(),
       }, "");
       expect(isAbortResult(result)).toBe(false);
       const normalized = normalizeStablecoinsPayload({ peggedAssets: [asset] }).peggedAssets[0]!;
@@ -398,8 +399,8 @@ describe("runPostEnrichmentPricePipeline", () => {
       syncStartSec: 1_700_000_050,
       validationContexts: { get: makeValidationContext },
       previousTrustedPrices: new Map(),
-      returnIfAborted: () => null,
-      abortResult: () => ({ status: "error", metadata: "{}" }),
+      priceCache: new Map(), authoritativeOverrides: new Map(),
+      authoritativeOverrideStats: createAuthoritativeLivePriceOverrideStats(),
     }, "");
 
     expect(isAbortResult(result)).toBe(false);
@@ -456,8 +457,8 @@ describe("runPostEnrichmentPricePipeline", () => {
       validationContexts: { get: makeValidationContext },
       primaryPriceResults,
       previousTrustedPrices: new Map(),
-      returnIfAborted: () => null,
-      abortResult: () => ({ status: "error", metadata: "{}" }),
+      priceCache: new Map(), authoritativeOverrides: new Map(),
+      authoritativeOverrideStats: createAuthoritativeLivePriceOverrideStats(),
     }, "");
 
     expect(isAbortResult(result)).toBe(false);
@@ -495,8 +496,8 @@ describe("runPostEnrichmentPricePipeline", () => {
         assets: [asset], db: createSqliteD1(sqlite), syncStartSec: now,
         priceCache: new Map([[asset.id, legacyParRow]]), validationContexts: { get: makeValidationContext },
         validationReferences: { rates: { peggedCHF: 1.27 }, type: "fresh", updatedAt: now, typeByPeg: { peggedCHF: "fresh" } },
-        previousTrustedPrices: new Map(), returnIfAborted: () => null,
-        abortResult: () => ({ status: "error", metadata: "{}" }),
+        previousTrustedPrices: new Map(),
+        authoritativeOverrides: new Map(), authoritativeOverrideStats: createAuthoritativeLivePriceOverrideStats(),
       }, "");
       if (isAbortResult(result)) throw new Error("unexpected abort");
       expect(asset.price ?? null).toBe(expected);

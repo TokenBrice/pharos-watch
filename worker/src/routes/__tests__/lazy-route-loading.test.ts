@@ -3,7 +3,7 @@ import type { FullRouteContext } from "../shared";
 
 const loads = vi.hoisted(() => ({
   health: vi.fn(), requestDispatch: vi.fn(), scheduled: vi.fn(),
-  apiUtils: vi.fn(), freshness: vi.fn(), canary: vi.fn(), apiKeys: vi.fn(),
+  apiUtils: vi.fn(), freshness: vi.fn(), canary: vi.fn(), apiKeyAdmin: vi.fn(),
 }));
 vi.mock("../../api/health", () => {
   loads.health();
@@ -29,8 +29,8 @@ vi.mock("../../lib/canary-checks", async (importOriginal) => {
   loads.canary();
   return importOriginal();
 });
-vi.mock("../../lib/api-keys", async (importOriginal) => {
-  loads.apiKeys();
+vi.mock("../../lib/api-key-admin", async (importOriginal) => {
+  loads.apiKeyAdmin();
   return importOriginal();
 });
 
@@ -71,7 +71,7 @@ describe("lazy route loading", () => {
     for (const [load, forbidden] of [
       [() => import("../../lib/api-response"), loads.freshness],
       [() => import("../dependency-hydrators"), loads.canary],
-      [() => import("../../handlers/http/gates"), loads.apiKeys],
+      [() => import("../../handlers/http/gates"), loads.apiKeyAdmin],
     ] as const) {
       vi.resetModules();
       forbidden.mockClear();
