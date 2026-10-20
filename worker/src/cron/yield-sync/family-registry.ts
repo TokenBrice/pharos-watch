@@ -87,6 +87,11 @@ export const SUPPLEMENTAL_SOURCE_FAMILY_KEYS = Object.keys(
   SUPPLEMENTAL_SOURCE_FAMILY_REGISTRY,
 ) as SupplementalSourceFamilyKey[];
 
+/** Price-dependent Aave runs only after the stablecoins producer; siblings keep their existing slots. */
+export const INDEPENDENT_SUPPLEMENTAL_SOURCE_FAMILY_KEYS = SUPPLEMENTAL_SOURCE_FAMILY_KEYS.filter(
+  (family) => family !== "aaveV3",
+);
+
 /** Families whose retained snapshot gates the publication lane (partial-family-cache). */
 export const REQUIRED_SUPPLEMENTAL_SOURCE_FAMILY_KEYS = SUPPLEMENTAL_SOURCE_FAMILY_KEYS.filter(
   (family) => SUPPLEMENTAL_SOURCE_FAMILY_REGISTRY[family].required,

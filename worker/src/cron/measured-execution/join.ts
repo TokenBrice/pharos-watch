@@ -143,11 +143,12 @@ function increment(record: Record<string, number>, reason: string): void {
 
 export async function loadDexMeasuredExecutionJoinEvidence(
   db: D1Database,
+  assessmentAtSec: number,
   signal?: AbortSignal,
   options: { publishedAtCeilingSec?: number } = {},
 ): Promise<LoadedDexMeasuredQuoteEvidence | null> {
   try {
-    return await loadLatestPublishedDexMeasuredQuoteEvidence(db, signal, {
+    return await loadLatestPublishedDexMeasuredQuoteEvidence(db, assessmentAtSec, signal, {
       deferProfiles: true,
       ...(options.publishedAtCeilingSec === undefined
         ? {}

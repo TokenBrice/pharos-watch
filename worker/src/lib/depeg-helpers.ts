@@ -1,6 +1,6 @@
 import { logWorkerEvent, logWorkerEventArgs } from "./structured-log";
 import { MAX_OPEN_DEPEG_EVENTS } from "./constants";
-import { DEX_PROTOCOL_SOURCE_FRESHNESS_SEC } from "@shared/lib/depeg-config";
+import { DEX_FRESHNESS_SEC, DEX_PROTOCOL_SOURCE_FRESHNESS_SEC } from "@shared/lib/depeg-config";
 import { DepegAuditVerdictSchema } from "@shared/types/depeg-audit";
 import { DEPEG_EVENT_CLOSE_REASON_VALUES, DepegPriceCoverageSchema } from "@shared/types/peg";
 import type { DepegEvent, DepegEventCloseReason } from "@shared/types/market";
@@ -125,6 +125,8 @@ export interface DexPoolSource {
   price: number;
   tvl: number;
   updatedAt: number;
+  observedAt?: number;
+  aggregateObservedAt?: number;
   sourceFamily?: string;
 }
 
@@ -205,7 +207,7 @@ export async function loadDexPoolChallengers(
         tvlUsd: row.tvlUsd,
         protocol: row.protocol,
         chain: row.chain,
-        observedAt: row.snapshotAt,
+        observedAt: row.priceObservedAt === undefined ? row.snapshotAt : row.priceObservedAt ?? undefined,
         sourceFamily: row.sourceFamily,
       })),
     ]),
@@ -285,7 +287,8 @@ export interface LoadedDexPrices {
 /**
  * Read aggregate prices and protocol sources from one dex_prices observation.
  * nowSec is the caller's plan/run clock, not the wall clock after D1 resolves.
- * Aggregate rows remain unfiltered; only source rows/observations use maxAgeSec.
+ * Aggregate rows remain unfiltered for downstream policies. Affirmative sources
+ * need original family and aggregate clocks; publication cannot renew either.
  */
 export async function loadDexPrices(
   db: D1Database,
@@ -312,6 +315,7 @@ export async function loadDexPrices(
       // Match the old source SELECT: NULL is absent, not malformed or stale.
       if (row.price_sources_json == null) continue;
       const ageSec = nowSec - row.updated_at;
+      // Run-start age remains telemetry, not a veto on later original observations.
       if (ageSec > maxAgeSec) {
         telemetry?.staleRows.push({
           stablecoinId: row.stablecoin_id,
@@ -319,7 +323,6 @@ export async function loadDexPrices(
           ageSec,
           maxAgeSec,
         });
-        continue;
       }
       const decoded = decodeJsonString<DexPoolSource[], DexJsonDecodeReason>(row.price_sources_json, {
         updatedAt: row.updated_at,
@@ -348,17 +351,15 @@ export async function loadDexPrices(
       }
       if (decoded.payload.length === 0) continue;
       const sources = decoded.payload
-        .map((source) => ({
-          ...source,
-          updatedAt:
-            typeof source.updatedAt === "number" && Number.isFinite(source.updatedAt) && source.updatedAt > 0
-              ? source.updatedAt
-              : row.updated_at,
-        }))
         .filter((source) => {
-          const ageSec = nowSec - source.updatedAt;
-          return ageSec >= 0 && ageSec <= maxAgeSec;
-        });
+          if (typeof source.observedAt !== "number" || !Number.isFinite(source.observedAt) || source.observedAt <= 0 ||
+            typeof source.aggregateObservedAt !== "number" || !Number.isFinite(source.aggregateObservedAt) || source.aggregateObservedAt <= 0) return false;
+          const sourceAgeSec = nowSec - source.observedAt;
+          const aggregateAgeSec = nowSec - source.aggregateObservedAt;
+          return sourceAgeSec >= 0 && sourceAgeSec <= maxAgeSec &&
+            aggregateAgeSec >= 0 && aggregateAgeSec <= DEX_FRESHNESS_SEC;
+        })
+        .map((source) => ({ ...source, updatedAt: source.observedAt! }));
       if (sources.length > 0) {
         dexPriceSources.set(row.stablecoin_id, sources);
       }

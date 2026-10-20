@@ -100,6 +100,27 @@ const PRIMARY_POOL_LOOKUPS = {
   symbolToChainScopedIds: new Map([["USDC", new Map([["ethereum", ["usdc-circle"]]])]]),
 };
 
+describe("primary identity census", () => {
+  it("collapses identical repeats without making derived candidates ambiguous and excludes conflicts", () => {
+    const row: LlamaPool = {
+      pool: "provider-uuid", chain: "ethereum", project: "uniswap-v3", symbol: "USDC-USDT",
+      tvlUsd: 100_000, volumeUsd1d: 10_000, volumeUsd7d: 70_000,
+      underlyingTokens: ["0xusdc", "0xusdt"], stablecoin: true,
+      apyBase: null, apyReward: null, apy: 0, sigma: 0, exposure: "multi", count: 1,
+    };
+    const identity = buildPoolIdentity({
+      chain: row.chain, protocol: row.project, poolAddressOrId: row.pool,
+      tokenAddresses: row.underlyingTokens!, poolType: "uniswap-v3", isStable: true,
+    });
+    const known = buildKnownPoolAddresses([row, { ...row }], new Set([row.project]), new Map(), new Map());
+    expect(known.derivedKeyCounts.get(identity.derivedMatchKey!)).toBe(1);
+    expect(known.exactKeys.size).toBe(0);
+    const conflicting = buildKnownPoolAddresses([row, { ...row, tvlUsd: 200_000 }],
+      new Set([row.project]), new Map(), new Map());
+    expect(conflicting.derivedKeyCounts.size).toBe(0);
+  });
+});
+
 function mockDlYieldsSuccess(curveResponse: (() => Promise<{ response: Response; body: unknown } | null>) | null = async () => ({ response: new Response("", { status: 200 }), body: { data: { poolData: [] } } })) {
   vi.mocked(fetchJsonWithRetry).mockImplementation(async (url: string | URL | Request) => {
     const urlStr = typeof url === "string" ? url : url instanceof URL ? url.toString() : url.url;
@@ -368,6 +389,64 @@ describe("fetchDataSources", () => {
 });
 
 describe("buildCurveLookups", () => {
+  it.each([
+    ["poolBalance", undefined], ["poolBalance", null], ["poolBalance", ""],
+    ["poolBalance", "100oops"], ["poolBalance", "Infinity"], ["poolBalance", "NaN"],
+    ["poolBalance", "-1"], ["decimals", undefined], ["decimals", ""],
+    ["decimals", "6oops"], ["decimals", "6.5"], ["decimals", "-1"],
+    ["decimals", "256"], ["decimals", "Infinity"], ["usdPrice", undefined],
+    ["usdPrice", Number.NaN], ["usdPrice", Infinity], ["usdPrice", 0], ["usdPrice", -1],
+    ["usdPrice", "1"],
+  ])("retains Curve identity and TVL but withholds incomplete %s=%s balance evidence", async (field, value) => {
+    const address = "0x1111111111111111111111111111111111111111";
+    const pool = makeApiPool(address, [
+      { symbol: "USDC", address: "0xusdc" }, { symbol: "USDT", address: "0xusdt" },
+    ]);
+    Object.assign(pool.coins[0]!, { [field!]: value });
+    const { curvePoolMap, priceObservations } = await buildCurveLookups(
+      [{ data: { poolData: [pool] } }] as CurveApiPayload[],
+      new Map([["USDC", ["usdc-circle"]]]), new Map(), new Map(),
+    );
+    expect(curvePoolMap.get(`ethereum:${address}`)).toMatchObject({
+      poolAddress: address, tvl: 200_000, metapoolAdjustedTvl: 200_000, balanceRatio: null,
+    });
+    expect(curvePoolMap.get(`ethereum:${address}`)?.balanceDetails).toBeUndefined();
+    expect(curvePoolMap.get(`ethereum:${address}`)?.executionCoins).toBeUndefined();
+    expect(priceObservations.size).toBe(0);
+  });
+
+  it.each(["0", " +0e0 "])("keeps explicit Curve zero %s measured", async (zero) => {
+    const pool = makeApiPool("0xpool", [
+      { symbol: "USDC", address: "0xusdc" }, { symbol: "USDT", address: "0xusdt" },
+    ]);
+    pool.coins[0]!.poolBalance = zero;
+    const { curvePoolMap } = await buildCurveLookups(
+      [{ data: { poolData: [pool] } }] as CurveApiPayload[],
+      new Map([["USDC", ["usdc-circle"]]]), new Map(), new Map(),
+    );
+    expect(curvePoolMap.get("ethereum:0xpool")).toMatchObject({
+      balanceRatio: 0,
+      balanceDetails: [
+        { symbol: "USDC", balancePct: 0, isTracked: true },
+        { symbol: "USDT", balancePct: 100, isTracked: false },
+      ],
+    });
+  });
+
+  it("withholds overflowed Curve USD legs and aggregate balances", async () => {
+    for (const usdPrice of [2, 1]) {
+      const pool = makeApiPool("0xpool", [
+        { symbol: "USDC", address: "0xusdc" }, { symbol: "USDT", address: "0xusdt" },
+      ]);
+      for (const coin of pool.coins) Object.assign(coin, { poolBalance: "1e308", decimals: "0", usdPrice });
+      const { curvePoolMap } = await buildCurveLookups(
+        [{ data: { poolData: [pool] } }] as CurveApiPayload[], new Map(), new Map(), new Map(),
+      );
+      expect(curvePoolMap.get("ethereum:0xpool")?.balanceRatio).toBeNull();
+      expect(curvePoolMap.get("ethereum:0xpool")?.balanceDetails).toBeUndefined();
+    }
+  });
+
   it("uses one computed Curve USD balance surface for ratio and balance details", async () => {
     const curvePayloads = [
       {

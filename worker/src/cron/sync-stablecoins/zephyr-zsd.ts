@@ -22,6 +22,7 @@ export interface ZephyrZsdStats {
   mcap: number;
   mcapPrice: number;
   observedAt?: number | null;
+  observedAtRejected?: boolean;
   priceReported?: boolean;
 }
 
@@ -42,10 +43,9 @@ export interface ZephyrZsdPriceResolution {
 // Zephyr Scanner stamps protocol observations with `captured_at` (ISO) on reserve
 // snapshots and `block_timestamp`/`timestamp` (unix seconds) on stats records. Live
 // stats may omit all of them; absence stays absent rather than becoming fetch time.
-// The provider's timestamps become both price and supply provenance, so they face
-// the registered `zephyr-scanner` trust window like every other observation: a
-// future-skewed or stale scanner clock drops the provenance (with a logged,
-// machine-readable reason) instead of publishing an impossible observation time.
+// A missing clock retains the intentional undated-price policy. A present clock
+// that fails parsing or the registered trust window must not regain eligibility
+// as an undated quote; supply admission remains independent of price admission.
 function normalizeZephyrObservedAt(value: unknown, nowSec: number): number | null {
   const numeric = toPositiveFiniteNumber(value);
   const parsed = numeric != null
@@ -93,15 +93,16 @@ function parseZephyrAssetStats(
     : undefined;
   const mcapPrice = reportedPrice ?? fallbackPrice;
   if (mcapPrice == null) return null;
-  const observedAt = normalizeZephyrObservedAt(
-    record.captured_at ?? record.block_timestamp ?? record.timestamp,
-    nowSec,
-  );
+  const rawObservedAt = record.captured_at !== undefined
+    ? record.captured_at
+    : record.block_timestamp !== undefined ? record.block_timestamp : record.timestamp;
+  const observedAt = normalizeZephyrObservedAt(rawObservedAt, nowSec);
   return {
     supply,
     mcapPrice,
     mcap: supply * mcapPrice,
     observedAt,
+    observedAtRejected: rawObservedAt !== undefined && observedAt == null,
     priceReported: reportedPrice != null,
   };
 }
@@ -147,7 +148,7 @@ function resolveZephyrPrice(
     };
   }
 
-  if (stats.priceReported) {
+  if (stats.priceReported && !stats.observedAtRejected) {
     return {
       price: stats.mcapPrice,
       source: ZEPHYR_SUPPLY_SOURCE,
@@ -178,6 +179,9 @@ function buildZephyrPeggedAsset(
   nowSec = Math.floor(Date.now() / 1000),
 ): PeggedAsset | null {
   if (!isZephyrScannerAssetId(meta.id)) return null;
+  // ZYS's USD supply valuation depends on the scanner NAV; ZSD can retain its
+  // independently admitted market-price or nominal-par supply valuation.
+  if (meta.id === ZEPHYR_ZYS_ASSET_ID && stats.observedAtRejected) return null;
 
   const pKey = pegTypeKey(meta);
   const priceForCirculatingMcap = priceResolution?.price != null

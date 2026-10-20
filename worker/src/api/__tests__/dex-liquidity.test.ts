@@ -18,6 +18,22 @@ function mockDexD1(tables: MockTableConfig[]) {
 describe("handleDexLiquidity", () => {
   const row = makeDexLiquidityRow();
 
+
+  it.each([null, 0, 12_000])("round-trips measured weights through the shared API schema (%s)", async (weight) => {
+    const db = mockDexD1([
+      { match: "dex_liquidity_history", rows: [] },
+      { match: "dex_prices", rows: [] },
+      { match: "dex_liquidity", rows: [makeDexLiquidityRow({
+        balance_measured_tvl_usd: weight, organic_measured_tvl_usd: weight,
+        weighted_balance_ratio: 0.75, organic_fraction: 0.5,
+      })] },
+    ]);
+    const body = DexLiquidityMapSchema.parse(await (await handleDexLiquidity(db)).json());
+    expect(body["usdt-tether"]).toMatchObject({
+      balanceMeasuredTvlUsd: weight, organicMeasuredTvlUsd: weight,
+      weightedBalanceRatio: 0.75, organicFraction: 0.5,
+    });
+  });
   it.each([
     ["6.95", "6.92", null, null],
     ["6.95", "6.94", 100, 300],
@@ -589,8 +605,8 @@ describe("handleDexLiquidity", () => {
       hasMeasuredLiquidityEvidence: false,
       trendworthy: false,
       effectiveTvlUsd: 0,
-      balanceMeasuredTvlUsd: 0,
-      organicMeasuredTvlUsd: 0,
+      balanceMeasuredTvlUsd: null,
+      organicMeasuredTvlUsd: null,
     });
   });
 

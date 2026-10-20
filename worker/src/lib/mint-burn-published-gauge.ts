@@ -20,6 +20,8 @@ import {
   MintBurnValuationCompletenessSchema,
   MintBurnFlowsResponseSchema,
   MintBurnValuationSchema,
+  MintBurnCoinFlowSchema,
+  type MintBurnCoinCoverage,
   type MintBurnValuation,
   type MintBurnValuationCompleteness,
   type MintBurnFlowsResponse,
@@ -59,6 +61,7 @@ export interface PublishedGaugeCoin {
   valuation24h: MintBurnValuation;
   /** Pressure baseline valuation; `unknown` on publications that predate completeness. */
   baselineValuation: MintBurnValuationCompleteness;
+  scanCoverage: MintBurnCoinCoverage["windows"] | null;
 }
 
 export interface PublishedGaugeChain {
@@ -142,6 +145,8 @@ function parseCoins(value: unknown): PublishedGaugeCoin[] | null {
       valuation24h = window24h.data;
       baselineValuation = baseline.data;
     }
+    const coverage = MintBurnCoinFlowSchema.shape.coverage.safeParse(entry.coverage);
+    if (!coverage.success) return null;
     coins.push({
       id: stablecoinId,
       symbol,
@@ -149,6 +154,7 @@ function parseCoins(value: unknown): PublishedGaugeCoin[] | null {
       net24hUsd: net24hUsd.value,
       valuation24h: resolveMintBurnValuation(valuation24h),
       baselineValuation: resolveMintBurnValuationCompleteness(baselineValuation),
+      scanCoverage: coverage.data?.windows ?? null,
     });
   }
   return coins;

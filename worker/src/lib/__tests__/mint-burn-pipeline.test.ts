@@ -67,7 +67,7 @@ import {
 import type { MintBurnRow } from "../mint-burn-pipeline/types";
 import type { MintBurnContractConfig, MintBurnEventDef } from "../mint-burn-contracts";
 import type { AlchemyLogEntry } from "../alchemy-logs";
-import { makeMintBurnConfig } from "../../test-helpers/__shared/mint-burn";
+import { makeMintBurnConfig } from "../../test-helpers/__shared/mint-burn-config";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 

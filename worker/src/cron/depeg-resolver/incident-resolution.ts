@@ -32,7 +32,7 @@ const MINT_SURGE_WINDOW_SEC = 7 * DAY;
 function supplyAt(snapshots: { date: number; usd: number }[], ts: number): number | null {
   let val: number | null = null;
   for (const s of snapshots) {
-    if (s.date <= ts) val = s.usd;
+    if (s.date <= ts) val = Number.isFinite(s.usd) && s.usd >= 0 ? s.usd : null;
     else break;
   }
   return val;
@@ -50,17 +50,19 @@ export function deriveMintSurge(
   startedAt: number,
   change7dPct: number | null,
   hourlyRows: DdrMintBurnHourlyRow[],
-  hasMintBurnCoverage: boolean,
+  hasMintBurnCoverage: boolean | null,
 ): Pick<DdrSupplyContext, "mintSurge" | "mintSurgeCoverage"> {
+  if (hasMintBurnCoverage === null) return { mintSurge: null, mintSurgeCoverage: "unavailable" };
   if (hasMintBurnCoverage) {
-    const onset = supplyAt(snapshots, startedAt) ?? snapshots[snapshots.length - 1]?.usd ?? null;
+    const onset = supplyAt(snapshots, startedAt);
     if (onset == null || !Number.isFinite(onset) || onset <= 0) {
       return { mintSurge: null, mintSurgeCoverage: "unavailable" };
     }
+    const end = Math.floor(startedAt / 3600) * 3600;
     const windowedRows = hourlyRows.filter(
-      (row) => row.hourTs >= startedAt - MINT_SURGE_WINDOW_SEC && row.hourTs <= startedAt,
+      (row) => row.hourTs >= end - MINT_SURGE_WINDOW_SEC && row.hourTs < end,
     );
-    if (windowedRows.length === 0 || windowedRows.some((row) => !Number.isFinite(row.netFlowUsd))) {
+    if (windowedRows.some((row) => !Number.isFinite(row.netFlowUsd))) {
       return { mintSurge: null, mintSurgeCoverage: "unavailable" };
     }
     const valuation = emptyMintBurnValuationTally();
@@ -97,7 +99,7 @@ export function buildSupplyContext(
   startedAt: number,
   evaluatedAt: number,
   mintBurnHourly: DdrMintBurnHourlyRow[],
-  hasMintBurnCoverage: boolean,
+  hasMintBurnCoverage: boolean | null,
 ) {
   if (snapshots.length < 2) {
     return {
@@ -108,14 +110,14 @@ export function buildSupplyContext(
       mintSurgeCoverage: "unavailable" as const,
     };
   }
-  const onset = supplyAt(snapshots, startedAt) ?? snapshots[snapshots.length - 1].usd;
-  const current = supplyAt(snapshots, evaluatedAt) ?? snapshots[snapshots.length - 1].usd;
+  const onset = supplyAt(snapshots, startedAt);
+  const current = supplyAt(snapshots, evaluatedAt);
   const d7 = supplyAt(snapshots, startedAt - 7 * DAY);
   const d30 = supplyAt(snapshots, evaluatedAt - 30 * DAY);
-  const change7dPct = d7 != null && d7 > 0 ? ((onset - d7) / d7) * 100 : null;
-  const change30dPct = d30 != null && d30 > 0 ? ((current - d30) / d30) * 100 : null;
+  const change7dPct = onset != null && d7 != null && d7 > 0 ? ((onset - d7) / d7) * 100 : null;
+  const change30dPct = current != null && d30 != null && d30 > 0 ? ((current - d30) / d30) * 100 : null;
   return {
-    covered: true,
+    covered: onset != null && onset > 0 && change7dPct != null && Number.isFinite(change7dPct),
     change7dPct,
     change30dPct,
     ...deriveMintSurge(snapshots, startedAt, change7dPct, mintBurnHourly, hasMintBurnCoverage),
@@ -146,13 +148,13 @@ function dewsSignalAtLeast(
 export function resolveDdrIncidents(context: DdrLoadedContext, nowSec: number): DdrRow[] {
   return context.active.map((ev) => {
     const meta = TRACKED_META_BY_ID.get(ev.stablecoinId);
-    const coin = meta ? toStructural(meta) : fallbackStructural(ev.stablecoinId, ev.symbol, ev.pegType);
+    const coin = meta ? toStructural(meta, context.structuralContext) : fallbackStructural(ev.stablecoinId, ev.symbol, ev.pegType);
     const supply = buildSupplyContext(
       context.supplyByCoin.get(ev.stablecoinId) ?? [],
       ev.startedAt,
       nowSec,
       context.mintBurnHourlyByCoin.get(ev.stablecoinId) ?? [],
-      MINT_BURN_COVERED_COIN_IDS.has(ev.stablecoinId),
+      MINT_BURN_COVERED_COIN_IDS.has(ev.stablecoinId) ? context.mintBurnCoveredEventIds.has(ev.id) ? true : null : false,
     );
     const dews = context.dewsByCoin.get(ev.stablecoinId);
     const liq = context.liqByCoin.get(ev.stablecoinId);

@@ -27,6 +27,29 @@ afterEach(() => {
 
 
 describe("insertBlacklistRows", () => {
+  it.each(["event", "historical_balance", "derived", "unavailable"] as const)(
+    "persists EURC mirror suppression only for event-time zero proof (%s)",
+    async (amountSource) => {
+      const { db, sqlite } = fixtures.open();
+      const [config] = getBlacklistConfigsForSymbolAndChain("EURC", "ethereum");
+      await insertBlacklistRows(db, [makePendingBlacklistRow({
+        id: "eurc-zero-proof", stablecoin: "EURC", config_key: config.configKey,
+        contract_address: config.contractAddress,
+      })]);
+      await buildRecoveredBlacklistAmountPersistence(db, {
+        eventId: "eurc-zero-proof", eventType: "blacklist", config,
+        amount: 0, amountUsd: null, amountSource, amountStatus: "resolved",
+        attemptedAt: 200, lastErrorClass: null, lastProvider: "event_receipt",
+      }, { requireUnresolvedAmount: true }).statement.run();
+      expect(sqlite.prepare(`SELECT amount_native, amount_usd_at_event, amount_status, suppression_reason
+        FROM blacklist_events WHERE id = 'eurc-zero-proof'`).get()).toEqual({
+        amount_native: 0, amount_usd_at_event: null,
+        amount_status: amountSource === "event" ? "permanently_unavailable" : "resolved",
+        suppression_reason: amountSource === "event" ? "circle_mirror_zero_balance" : null,
+      });
+    },
+  );
+
   it.each([true, false])("fences provenance-only repairs against a newer operator generation (success=%s)", async (success) => {
     const { db, sqlite } = fixtures.open();
     const [config] = getBlacklistConfigsForSymbolAndChain("USDC", "ethereum");

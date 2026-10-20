@@ -1,5 +1,6 @@
-import { z } from "zod";
+import type { z } from "zod";
 import type { MintAuthorityDirectMintAbility, MintAuthorityProfile } from "./core";
+import { issue } from "./safety-schema-primitives";
 const PRIVILEGED_MINT_PATHS = new Set([
   "user-collateralized-governed", "issuer-direct-mint", "permissioned-minter",
   "offchain-attested-minter", "facilitator-bucket-mint", "amo-or-custodian-hybrid",
@@ -48,11 +49,7 @@ function validateScopedControlReferences({ profile, ctx, controls }: MintAuthori
         control.label.toLowerCase() === question.controlRef.toLowerCase(),
     );
     if (!matched) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "scoped question controlRef must name an authored control's chain:address or label",
-        path: ["review", "scopedQuestions", index, "controlRef"],
-      });
+      issue(ctx, ["review", "scopedQuestions", index, "controlRef"], "scoped question controlRef must name an authored control's chain:address or label");
     }
   }
 }
@@ -61,47 +58,27 @@ function validateUpgradeAndSourceEvidence(state: MintAuthorityRefinementState): 
   const { profile, ctx, controls, profileHasSourceLinks } = state;
   const controlsHaveSourceLinks = controls.some((control) => hasSourceLinks(control.sources));
   if (profile.review.disposition === "unresolved" && profile.confidence !== "unknown") {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "unresolved mint-authority disposition requires unknown confidence",
-      path: ["confidence"],
-    });
+    issue(ctx, ["confidence"], "unresolved mint-authority disposition requires unknown confidence");
   }
   if (profile.upgradeability?.model === "immutable" && profile.upgradeability.canChangeMintLogic !== false) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "immutable upgradeability requires canChangeMintLogic false",
-      path: ["upgradeability", "canChangeMintLogic"],
-    });
+    issue(ctx, ["upgradeability", "canChangeMintLogic"], "immutable upgradeability requires canChangeMintLogic false");
   }
   if (
     profile.upgradeability != null &&
     profile.upgradeability.canChangeMintLogic === true &&
     !controls.some((control) => control.label === profile.upgradeability?.controlRef)
   ) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "upgradeable mint logic must reference an existing reviewed control",
-      path: ["upgradeability", "controlRef"],
-    });
+    issue(ctx, ["upgradeability", "controlRef"], "upgradeable mint logic must reference an existing reviewed control");
   }
   if (
     (profile.confidence === "verified" || profile.confidence === "probable") &&
     !profileHasSourceLinks &&
     !controlsHaveSourceLinks
   ) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "verified or probable mintAuthority confidence requires at least one source link",
-      path: ["review", "sources"],
-    });
+    issue(ctx, ["review", "sources"], "verified or probable mintAuthority confidence requires at least one source link");
   }
   if (PRIVILEGED_MINT_PATHS.has(profile.mintPath) && profile.confidence !== "unknown" && controls.length === 0 && !profile.executionCertificates?.sharedBookRef) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "privileged mintAuthority mintPath requires at least one control when confidence is not unknown",
-      path: ["controls"],
-    });
+    issue(ctx, ["controls"], "privileged mintAuthority mintPath requires at least one control when confidence is not unknown");
   }
 }
 
@@ -117,11 +94,7 @@ function validateAuthoredControls({ profile, ctx, controls, profileHasSourceLink
       !controlHasEvidence &&
       !profileHasSourceLinks
     ) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "addressed or mint-capable controls require control-level sources/evidence or profile-level sources",
-        path: ["controls", index, "sources"],
-      });
+      issue(ctx, ["controls", index, "sources"], "addressed or mint-capable controls require control-level sources/evidence or profile-level sources");
     }
     if (
       control.address == null &&
@@ -130,43 +103,23 @@ function validateAuthoredControls({ profile, ctx, controls, profileHasSourceLink
       !profile.review.sourceFreeRationale &&
       (profile.review.unresolvedQuestions?.length ?? 0) === 0
     ) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "non-addressable controls require evidence, sources, sourceFreeRationale, or unresolvedQuestions",
-        path: ["controls", index, "address"],
-      });
+      issue(ctx, ["controls", index, "address"], "non-addressable controls require evidence, sources, sourceFreeRationale, or unresolvedQuestions");
     }
     if (control.authorityType === "safe" && control.safe == null && !control.executionScope?.paths.some((path) => path.activation === "counterfactual" && path.counterfactual)) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "authorityType safe requires safe details",
-        path: ["controls", index, "safe"],
-      });
+      issue(ctx, ["controls", index, "safe"], "authorityType safe requires safe details");
     }
     if (
       (control.authorityType === "safe" || control.authorityType === "multisig") &&
       profile.confidence === "verified" && control.weightedQuorum == null
     ) {
       if (control.threshold == null) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "verified safe or multisig controls require threshold",
-          path: ["controls", index, "threshold"],
-        });
+        issue(ctx, ["controls", index, "threshold"], "verified safe or multisig controls require threshold");
       }
       if (control.signerCount == null) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "verified safe or multisig controls require signerCount",
-          path: ["controls", index, "signerCount"],
-        });
+        issue(ctx, ["controls", index, "signerCount"], "verified safe or multisig controls require signerCount");
       }
       if (control.modulesOrGuardsStatus == null) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "verified safe or multisig controls require modulesOrGuardsStatus",
-          path: ["controls", index, "modulesOrGuardsStatus"],
-        });
+        issue(ctx, ["controls", index, "modulesOrGuardsStatus"], "verified safe or multisig controls require modulesOrGuardsStatus");
       }
       if (
         control.authorityType === "safe" &&
@@ -175,11 +128,7 @@ function validateAuthoredControls({ profile, ctx, controls, profileHasSourceLink
         control.safe.observedBlock == null &&
         !control.executionScope?.paths.some((path) => path.activation === "counterfactual" && path.counterfactual)
       ) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "verified onchain or safe-api Safe controls require observedBlock",
-          path: ["controls", index, "safe", "observedBlock"],
-        });
+        issue(ctx, ["controls", index, "safe", "observedBlock"], "verified onchain or safe-api Safe controls require observedBlock");
       }
     }
     if (
@@ -187,11 +136,7 @@ function validateAuthoredControls({ profile, ctx, controls, profileHasSourceLink
       (profile.confidence === "verified" || profile.confidence === "probable") &&
       control.modulesOrGuardsStatus === "unknown"
     ) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "unknown Safe modules/guards status caps confidence at manual-review",
-        path: ["controls", index, "modulesOrGuardsStatus"],
-      });
+      issue(ctx, ["controls", index, "modulesOrGuardsStatus"], "unknown Safe modules/guards status caps confidence at manual-review");
     }
   }
 }
@@ -204,23 +149,19 @@ function validateAuthorityPosture({ profile, ctx, controls }: MintAuthorityRefin
       profile.mintPath !== "wrapped-or-variant-inherited" &&
       !(profile.authorityPosture === "none-resolved-mint" && profile.review.noLocalIssuance != null)
     ) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: `authorityPosture ${profile.authorityPosture} requires a non-privileged mintPath`,
-        path: ["authorityPosture"],
-      });
+      issue(ctx, ["authorityPosture"], `authorityPosture ${profile.authorityPosture} requires a non-privileged mintPath`);
     }
   }
   if (profile.authorityPosture === "none-resolved") {
     const privilegedControlIndex = controls.findIndex((control) =>
-      PRIVILEGED_DIRECT_MINT_ABILITIES.has(control.directMintAbility),
+      PRIVILEGED_DIRECT_MINT_ABILITIES.has(control.directMintAbility) || control.canRaiseCap === true,
     );
     if (privilegedControlIndex >= 0) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "authorityPosture none-resolved cannot include mint-capable controls",
-        path: ["controls", privilegedControlIndex, "directMintAbility"],
-      });
+      const capOnly = !PRIVILEGED_DIRECT_MINT_ABILITIES.has(controls[privilegedControlIndex]!.directMintAbility);
+      issue(ctx, ["controls", privilegedControlIndex, capOnly ? "canRaiseCap" : "directMintAbility"],
+        capOnly
+          ? "authorityPosture none-resolved cannot include cap-raising controls"
+          : "authorityPosture none-resolved cannot include mint-capable controls");
     }
   }
   // Only an ability that is itself a mint path disqualifies mint-scoped resolution.
@@ -229,11 +170,8 @@ function validateAuthorityPosture({ profile, ctx, controls }: MintAuthorityRefin
       PRIVILEGED_MINT_PATH_ABILITIES.has(control.directMintAbility),
     );
     if (mintCapableControlIndex >= 0) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "authorityPosture none-resolved-mint cannot include a control that can mint or authorize minting",
-        path: ["controls", mintCapableControlIndex, "directMintAbility"],
-      });
+      issue(ctx, ["controls", mintCapableControlIndex, "directMintAbility"],
+        "authorityPosture none-resolved-mint cannot include a control that can mint or authorize minting");
     }
   }
 }
@@ -252,20 +190,12 @@ function validateEconomicControlEvidence({ profile, ctx, profileHasSourceLinks }
     .filter((value): value is string => value !== null)
     .join(" and ");
   if (!profileHasSourceLinks) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: `${claimed} is a positive economic-control claim and requires at least one review source`,
-      path: ["review", "sources"],
-    });
+    issue(ctx, ["review", "sources"], `${claimed} is a positive economic-control claim and requires at least one review source`);
   }
   if ((profile.review.evidence ?? "").trim().length < MIN_ECONOMIC_CONTROL_EVIDENCE_LENGTH) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message:
-        `${claimed} requires a review evidence sentence of at least ` +
-        `${MIN_ECONOMIC_CONTROL_EVIDENCE_LENGTH} characters stating the internal issuance workflow, reconciliation, or supervisory/attestation scope`,
-      path: ["review", "evidence"],
-    });
+    issue(ctx, ["review", "evidence"],
+      `${claimed} requires a review evidence sentence of at least ` +
+      `${MIN_ECONOMIC_CONTROL_EVIDENCE_LENGTH} characters stating the internal issuance workflow, reconciliation, or supervisory/attestation scope`);
   }
 }
 
@@ -276,101 +206,61 @@ function validateGovernedIssuance({ profile, ctx, controls }: MintAuthorityRefin
   const sharedBook = profile.executionCertificates?.sharedBookRef;
   if (governed || operational || declaredOperational) {
     for (const field of ["executionCertificates", "authorityGraph"] as const) {
-      if (!profile[field] && !(field === "authorityGraph" && sharedBook)) ctx.addIssue({ code: "custom", path: [field], message: "Issuance process requires execution certificates and typed authority graph" });
+      if (!profile[field] && !(field === "authorityGraph" && sharedBook)) issue(ctx, [field], "Issuance process requires execution certificates and typed authority graph");
     }
   }
   if (operational || declaredOperational) {
-    if (governed?.decisionRule !== "affirmative-vote" && !(sharedBook && !governed)) ctx.addIssue({ code: "custom", path: governed ? ["governedIssuance", "decisionRule"] : ["governedIssuance"], message: "Operational issuance requires affirmative token governance" });
-    if (!operational && !sharedBook) ctx.addIssue({ code: "custom", path: ["operationalIssuance"], message: "Operational posture requires its operational evidence block" });
-    if (profile.economicCapSemantics !== "unbounded") ctx.addIssue({ code: "custom", path: ["economicCapSemantics"], message: "Operational issuance remains economically unbounded" });
-    if (profile.inheritedFrom != null || profile.mintPath === "wrapped-or-variant-inherited") ctx.addIssue({ code: "custom", path: ["operationalIssuance"], message: "Operational issuance requires native non-wrapper evidence" });
+    if (governed?.decisionRule !== "affirmative-vote" && !(sharedBook && !governed)) issue(ctx, governed ? ["governedIssuance", "decisionRule"] : ["governedIssuance"], "Operational issuance requires affirmative token governance");
+    if (!operational && !sharedBook) issue(ctx, ["operationalIssuance"], "Operational posture requires its operational evidence block");
+    if (profile.economicCapSemantics !== "unbounded") issue(ctx, ["economicCapSemantics"], "Operational issuance remains economically unbounded");
+    if (profile.inheritedFrom != null || profile.mintPath === "wrapped-or-variant-inherited") issue(ctx, ["operationalIssuance"], "Operational issuance requires native non-wrapper evidence");
   }
   if (governed) {
     if ((governed.decisionRule === "minority-veto") !== (governed.veto !== undefined)) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "governedIssuance.veto must be present if and only if decisionRule is minority-veto",
-        path: ["governedIssuance", "veto"],
-      });
+      issue(ctx, ["governedIssuance", "veto"], "governedIssuance.veto must be present if and only if decisionRule is minority-veto");
     }
     if (governed.decisionRule === "affirmative-vote" && governed.monetaryPolicyPaths !== undefined) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "monetaryPolicyPaths is forbidden for affirmative-vote issuance",
-        path: ["governedIssuance", "monetaryPolicyPaths"],
-      });
+      issue(ctx, ["governedIssuance", "monetaryPolicyPaths"], "monetaryPolicyPaths is forbidden for affirmative-vote issuance");
     }
     for (const [index, monetaryPath] of (governed.monetaryPolicyPaths ?? []).entries()) {
       const matching = controls.filter((control) => control.chain != null && control.address != null &&
         `${control.chain}:${control.address.toLowerCase()}` === monetaryPath.controlRef);
       if (matching.length !== 1 || !(matching[0]!.executionScope?.paths ??
           profile.executionCertificates?.classes.find((entry) => entry.id === matching[0]!.executionClassRef?.classId)?.paths ?? []).some((path) => path.id === monetaryPath.pathId)) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "monetaryPolicyPaths must resolve to an execution-scope path on exactly one authored control",
-          path: ["governedIssuance", "monetaryPolicyPaths", index],
-        });
+        issue(ctx, ["governedIssuance", "monetaryPolicyPaths", index], "monetaryPolicyPaths must resolve to an execution-scope path on exactly one authored control");
       }
     }
     if (profile.economicCapSemantics !== "unbounded") {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "governedIssuance requires economicCapSemantics unbounded",
-        path: ["economicCapSemantics"],
-      });
+      issue(ctx, ["economicCapSemantics"], "governedIssuance requires economicCapSemantics unbounded");
     }
     if (profile.inheritedFrom != null || profile.mintPath === "wrapped-or-variant-inherited") {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "governedIssuance is not allowed on inherited or wrapped mint profiles",
-        path: ["governedIssuance"],
-      });
+      issue(ctx, ["governedIssuance"], "governedIssuance is not allowed on inherited or wrapped mint profiles");
     }
     if (!controls.some((control) => (control.executionScope?.paths ??
       profile.executionCertificates?.classes.find((entry) => entry.id === control.executionClassRef?.classId)?.paths ?? []).some(
       (path) => path.capSemantics.kind === "unbounded" || path.capSemantics.kind === "unknown" ||
         path.claimImpairment === "unbounded" || path.claimImpairment === "unknown",
     ))) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "governedIssuance requires an unbounded or unknown execution-scope path",
-        path: ["governedIssuance"],
-      });
+      issue(ctx, ["governedIssuance"], "governedIssuance requires an unbounded or unknown execution-scope path");
     }
     const matchingControls = controls.filter(
       (control) => control.chain != null && control.address != null &&
         `${control.chain}:${control.address.toLowerCase()}` === governed.governorControlRef,
     );
     if (matchingControls.length !== 1) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "governedIssuance.governorControlRef must resolve to exactly one authored EVM control",
-        path: ["governedIssuance", "governorControlRef"],
-      });
+      issue(ctx, ["governedIssuance", "governorControlRef"], "governedIssuance.governorControlRef must resolve to exactly one authored EVM control");
     } else {
       const governor = matchingControls[0]!;
       if (governor.authorityType !== "dao-governor") {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "governedIssuance.governorControlRef must name a dao-governor control",
-          path: ["governedIssuance", "governorControlRef"],
-        });
+        issue(ctx, ["governedIssuance", "governorControlRef"], "governedIssuance.governorControlRef must name a dao-governor control");
       }
       if ((governed.votingPower === "holding-period-weighted" || governed.votingPower === "lock-escrowed" ||
           governed.votingPower === "past-block-checkpoint") &&
           (governor.weightedQuorum != null || governor.threshold != null || governor.signerCount != null)) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "governedIssuance token-voting governor must not carry weightedQuorum, threshold or signerCount",
-          path: ["governedIssuance", "governorControlRef"],
-        });
+        issue(ctx, ["governedIssuance", "governorControlRef"], "governedIssuance token-voting governor must not carry weightedQuorum, threshold or signerCount");
       }
       if (!governor.executionScope && !governor.executionClassRef) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "governedIssuance governor control requires executionScope",
-          path: ["controls", controls.indexOf(governor), "executionScope"],
-        });
+        issue(ctx, ["controls", controls.indexOf(governor), "executionScope"], "governedIssuance governor control requires executionScope");
       }
     }
   }
@@ -378,11 +268,7 @@ function validateGovernedIssuance({ profile, ctx, controls }: MintAuthorityRefin
     ? "minority-veto"
     : profile.authorityPosture === "unbounded-governed" || declaredOperational ? "affirmative-vote" : null;
   if (requiredDecisionRule !== null && governed?.decisionRule !== requiredDecisionRule && !(sharedBook && !governed)) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: `authorityPosture ${profile.authorityPosture} requires governedIssuance.decisionRule ${requiredDecisionRule}`,
-      path: governed ? ["governedIssuance", "decisionRule"] : ["governedIssuance"],
-    });
+    issue(ctx, governed ? ["governedIssuance", "decisionRule"] : ["governedIssuance"], `authorityPosture ${profile.authorityPosture} requires governedIssuance.decisionRule ${requiredDecisionRule}`);
   }
 }
 
@@ -397,38 +283,22 @@ function validateCapSemanticsReview({ profile, ctx, controls }: MintAuthorityRef
   if ((cap === "raiseable" || cap === "bounded" || cap === "collateral-gated") && hasIssuanceAuthority) {
     const requiredVerdict = cap === "raiseable" ? "raiseable-collateral-only" : "bounded-by-construction";
     if (!capReview) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: `economicCapSemantics ${cap} with issuance authority requires capSemanticsReview`,
-        path: ["capSemanticsReview"],
-      });
+      issue(ctx, ["capSemanticsReview"], `economicCapSemantics ${cap} with issuance authority requires capSemanticsReview`);
     } else if (capReview.verdict !== requiredVerdict) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: `economicCapSemantics ${cap} requires capSemanticsReview verdict ${requiredVerdict}`,
-        path: ["capSemanticsReview", "verdict"],
-      });
+      issue(ctx, ["capSemanticsReview", "verdict"], `economicCapSemantics ${cap} requires capSemanticsReview verdict ${requiredVerdict}`);
     }
   }
   if (capReview && (cap === "unbounded" || cap === "unknown")) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: `capSemanticsReview is not allowed with economicCapSemantics ${cap}`,
-      path: ["capSemanticsReview"],
-    });
+    issue(ctx, ["capSemanticsReview"], `capSemanticsReview is not allowed with economicCapSemantics ${cap}`);
   }
 }
 
 function validateActiveIncidentPosture({ profile, ctx }: MintAuthorityRefinementState): void {
   const activeIncident = profile.mintIncidents?.some((incident) => incident.status === "active") ?? false;
   if ((profile.authorityPosture === "compromised") !== activeIncident) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: activeIncident
-        ? "active mint incidents require authorityPosture compromised"
-        : "authorityPosture compromised requires an active mint incident",
-      path: ["authorityPosture"],
-    });
+    issue(ctx, ["authorityPosture"], activeIncident
+      ? "active mint incidents require authorityPosture compromised"
+      : "authorityPosture compromised requires an active mint incident");
   }
 }
 
@@ -446,12 +316,8 @@ function validateMintPathPostureConsistency({ profile, ctx, controls }: MintAuth
     !(profile.authorityPosture === "unbounded-adverse" && knownUnboundedAuthority) &&
     !(profile.authorityPosture === "none-resolved-mint" && profile.review.noLocalIssuance != null)
   ) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message:
-        "mintPath unknown should use authorityPosture unknown unless known unbounded authority supports unbounded-adverse or reviewed noLocalIssuance supports none-resolved-mint",
-      path: ["authorityPosture"],
-    });
+    issue(ctx, ["authorityPosture"],
+      "mintPath unknown should use authorityPosture unknown unless known unbounded authority supports unbounded-adverse or reviewed noLocalIssuance supports none-resolved-mint");
   }
 }
 

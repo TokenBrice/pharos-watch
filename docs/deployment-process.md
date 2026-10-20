@@ -315,6 +315,7 @@ The daily Pages refresh schedule is source-owned by [`rebuild-pages.yml`](../.gi
 - Worker deploy is skipped unless deployed Worker/runtime/config/shared inputs changed. Root package and lockfile changes conservatively deploy both surfaces.
 - Pages publish is skipped for non-publishable or test-only Pages changes.
 - A combined deployment publishes Pages only after the required Worker job succeeds; Pages-only deployment treats the skipped Worker job as expected.
+- Mint/burn scan-window activation preserves PR-B reader compatibility: an incomplete 24h scan emits legacy `has24hActivity: null` even when events were observed, with the observation in additive `observed24hActivity`. Do not replace that null gate with true until every supported reader understands scan coverage; older readers otherwise reconstruct invalid signed bounds from gross subtotals.
 
 ### Concurrency and Rollback Scope
 

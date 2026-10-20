@@ -194,6 +194,37 @@ describe("Safety Score V9 wrapper fact dispositions", () => {
     expect(strategyFacts.variantKind).toBe("strategy-vault");
   });
 
+  it.each(["serial-claim", "basket-exposure"] as const)(
+    "inherits %s Backing without fabricating wrapper applicability", (economicRole) => {
+      const fixed = makeV9TwoAssetFixedInput({ omitAlphaReserve: true });
+      const extension = makeV9RoleExtension(fixed, {
+        alpha: [{
+          upstreamAssetId: "beta", dependencyType: economicRole === "serial-claim" ? "mechanism" : "collateral",
+          economicRole, weight: 1, failureDomains: [],
+        }],
+      });
+      const alpha = extension.assets.find((asset) => asset.assetId === "alpha")!;
+      alpha.variantKind = null;
+      alpha.dependencies!.source = "curated-reserve";
+      alpha.dependencies!.baseSource = "curated-reserve";
+      const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension);
+      const facts = compiled.assets.find((asset) => asset.assetId === "alpha")!;
+      expect(facts.wrapperLocalFacts.applicability).not.toBe("wrapper");
+      expect(facts.reserveExposures).toHaveLength(0);
+      const evaluated = evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1);
+      const child = evaluated.assets.find((asset) => asset.assetId === "alpha")!;
+      const parent = evaluated.assets.find((asset) => asset.assetId === "beta")!;
+      expect(child.trace.wrapperParentLimit).toBeNull();
+      expect(child.backing.contributions).toContainEqual(expect.objectContaining({ upstreamAssetId: "beta" }));
+      if (economicRole === "serial-claim") {
+        expect(child.trace.finalScore!).toBeLessThanOrEqual(parent.trace.inheritableScore!);
+        expect(child.dependencyInputs.serial).toContainEqual(expect.objectContaining({
+          upstreamAssetId: "beta", score: parent.trace.inheritableScore,
+        }));
+      }
+    },
+  );
+
   it("marks an unprofiled direct serial wrapper's local custody classes not-applicable", () => {
     for (const variantKind of ["pure-wrapper", "savings-passthrough"] as const) {
       const { facts } = wrapperFacts(variantKind);

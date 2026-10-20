@@ -7,6 +7,7 @@ import {
   enrichCurveStableswapFactoryExecutionModels,
 } from "../curve-stableswap-factory";
 import type { PoolEntry } from "../types";
+import { resolveTrackedReferencePrices } from "../evm-capture-helpers";
 
 /**
  * Recorded 2026-09-01 from `https://rpc.plasma.to` against the Plasma Curve
@@ -254,11 +255,11 @@ const stablecoinPriceById = new Map([
   ["usdt-tether", 0.9999],
 ]);
 
-async function run(pool: PoolEntry, deps: ReturnType<typeof dependencies>) {
+async function run(pool: PoolEntry, deps: ReturnType<typeof dependencies>, prices = stablecoinPriceById) {
   await enrichCurveStableswapFactoryExecutionModels({
     metrics: metrics(pool),
     chainAddressToId,
-    stablecoinPriceById,
+    stablecoinPriceById: prices,
     chainRpcs: new Map([[PLASMA, {} as never]]),
     nowSec: BLOCK_TIMESTAMP + 60,
     sourceGenerationId: "dex-stage:fixture",
@@ -313,13 +314,37 @@ describe("Curve StableSwap-NG factory census capture", () => {
         sourceGenerationId: "dex-stage:fixture",
       },
       tokens: [
-        { address: YZUSD, symbol: "yzUSD", decimals: 18, trackedAssetId: "yzusd-yuzu" },
-        { address: USDT0, symbol: "USDT0", decimals: 6, trackedAssetId: "usdt-tether" },
+        { address: YZUSD, symbol: "yzUSD", decimals: 18, trackedAssetId: "yzusd-yuzu", referencePriceSource: "tracked-market", referencePriceUsd: 1 },
+        { address: USDT0, symbol: "USDT0", decimals: 6, trackedAssetId: "usdt-tether", referencePriceSource: "tracked-market" },
       ],
     });
     expect(model?.tokens[0]?.balance).toBeCloseTo(392_506.4191823241, 6);
     expect(model?.tokens[1]?.balance).toBeCloseTo(408_661.362052, 6);
     expect(model?.tokens[1]?.referencePriceUsd).toBeCloseTo(0.9999, 12);
+  });
+
+  it.each(["yzusd-yuzu", "usdt-tether"])("refuses a model without independent %s reference on asymmetric reserves", async (missingId) => {
+    const prices = new Map(stablecoinPriceById);
+    prices.delete(missingId);
+    if (missingId === "yzusd-yuzu") {
+      // The shared CP policy deliberately permits this inference, but Curve does not.
+      const inferred = resolveTrackedReferencePrices({
+        balances: [392_506.4191823241, 408_661.362052],
+        assetIds: ["yzusd-yuzu", "usdt-tether"], trackedTokenIndex: 0,
+        stablecoinPriceById: prices, implyUntrackedPrices: false,
+      });
+      expect(inferred.ok).toBe(true);
+      if (inferred.ok) {
+        expect(inferred.value.sources).toEqual(["pool-implied", "tracked-market"]);
+        expect(inferred.value.prices[0]).toBeCloseTo(408_661.362052 * 0.9999 / 392_506.4191823241, 12);
+      }
+    }
+    const pool = poolEntry();
+    await run(pool, dependencies(), prices);
+    expect(pool.extra?.ammExecutionModel).toBeUndefined();
+    expect(pool.extra?.executionCapabilityGate).toEqual({
+      family: "curve-stableswap", reason: "incomplete-exact-capture",
+    });
   });
 
   it.each([

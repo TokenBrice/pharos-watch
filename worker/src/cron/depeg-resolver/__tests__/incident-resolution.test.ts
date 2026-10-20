@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { StablecoinMeta } from "@shared/types/core";
 import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { buildDewsStablecoinIdsDigest } from "../../../lib/dews-publication-pointer";
@@ -21,17 +21,14 @@ import {
   supplyHistory,
 } from "./depeg-resolver.test-support";
 import { buildCurrentDeviationMap, loadDdrContext } from "../context";
-import { deriveMintSurge, resolveDdrIncidents } from "../incident-resolution";
+import { buildSupplyContext, deriveMintSurge, resolveDdrIncidents } from "../incident-resolution";
 import {
   allocateDdrRunId,
-  clearV9DependencyImpairment,
-  hydrateV9DependencyImpairment,
+  buildDdrStructuralContext,
   toStructural,
 } from "../utils";
 
-beforeEach(() => clearV9DependencyImpairment());
 afterEach(() => {
-  clearV9DependencyImpairment();
   vi.restoreAllMocks();
 });
 
@@ -102,6 +99,13 @@ describe("deriveMintSurge", () => {
       .toEqual({ mintSurge: true, mintSurgeCoverage: "supply-history-proxy" });
   });
 
+  it("never uses a post-onset supply denominator for measured issuance", () => {
+    expect(deriveMintSurge(
+      [{ date: startedAt + 1, usd: 1_000_000 }, { date: startedAt + DAY, usd: 2_000_000 }],
+      startedAt, null, [hour(startedAt - 3600, 500_000)], true,
+    )).toEqual({ mintSurge: null, mintSurgeCoverage: "unavailable" });
+  });
+
   it("marks mint-burn coverage unavailable when event-time onset supply is invalid", () => {
     expect(
       deriveMintSurge(
@@ -117,10 +121,12 @@ describe("deriveMintSurge", () => {
     ).toEqual({ mintSurge: null, mintSurgeCoverage: "unavailable" });
   });
 
-  it("marks mint-burn coverage unavailable without valid event-window observations", () => {
+  it("distinguishes unproved empty observations from a proved quiet window", () => {
+    expect(deriveMintSurge(snapshots, startedAt, 90, [], null)).toEqual({
+      mintSurge: null, mintSurgeCoverage: "unavailable",
+    });
     expect(deriveMintSurge(snapshots, startedAt, 90, [], true)).toEqual({
-      mintSurge: null,
-      mintSurgeCoverage: "unavailable",
+      mintSurge: false, mintSurgeCoverage: "mint-burn-hourly",
     });
     expect(
       deriveMintSurge(
@@ -148,6 +154,39 @@ describe("deriveMintSurge", () => {
   });
 });
 
+describe("buildSupplyContext", () => {
+  const startedAt = NOW_SEC - DAY;
+
+  it("keeps two post-onset snapshots uncovered instead of manufacturing onset evidence", () => {
+    expect(buildSupplyContext([
+      { date: startedAt + 1, usd: 1_000_000 },
+      { date: NOW_SEC, usd: 1_000_000 },
+    ], startedAt, NOW_SEC, [], false)).toMatchObject({
+      covered: false, change7dPct: null, mintSurge: null, mintSurgeCoverage: "unavailable",
+    });
+  });
+
+  it("requires the 7d baseline even when onset and current supply are measured", () => {
+    expect(buildSupplyContext([
+      { date: startedAt, usd: 1_000_000 },
+      { date: NOW_SEC, usd: 1_000_000 },
+    ], startedAt, NOW_SEC, [], false)).toMatchObject({
+      covered: false, change7dPct: null, mintSurge: null,
+    });
+  });
+
+  it("keeps unavailable current supply null and accepts measured stable event-window supply", () => {
+    const snapshots = [
+      { date: startedAt - 7 * DAY, usd: 1_000_000 },
+      { date: startedAt, usd: 1_000_000 },
+    ];
+    expect(buildSupplyContext(snapshots, startedAt, NOW_SEC, [], false)).toMatchObject({
+      covered: true, change7dPct: 0, change30dPct: null, mintSurge: false,
+    });
+    expect(buildSupplyContext(snapshots, startedAt, startedAt - 8 * DAY, [], false).change30dPct).toBeNull();
+  });
+});
+
 describe("toStructural", () => {
   it.each([
     ["bounded-admin", "unbounded-adverse", "unbounded-adverse"],
@@ -161,20 +200,19 @@ describe("toStructural", () => {
     ["bounded-admin", "unknown", "unknown"],
   ])("uses derived %s / %s with correct mint scope", (curated, derived, expected) => {
     const meta = { id: "posture-fixture", flags: {}, mintAuthority: { authorityPosture: curated } } as StablecoinMeta;
-    hydrateV9DependencyImpairment([{
+    const projection = buildDdrStructuralContext([{
       id: meta.id, dependencies: { serial: [] },
       breakdowns: { control: { components: [{ kind: "mint", posture: derived }] } },
     }]);
-    expect(toStructural(meta).authorityPosture).toBe(expected);
-    clearV9DependencyImpairment();
-    expect(toStructural(meta).authorityPosture).toBe(curated);
+    expect(toStructural(meta, projection).authorityPosture).toBe(expected);
+    expect(toStructural(meta, null).authorityPosture).toBe(curated);
   });
 
   it("projects the published V9 mint posture band and incident status", () => {
     // 9.1: the band is hydrated from the V9 publication, not recomputed from
     // curated metadata. An installed projection is authoritative, including
     // when it publishes no band for an asset.
-    hydrateV9DependencyImpairment([
+    const projection = buildDdrStructuralContext([
       {
         id: "fixture-k1",
         dependencies: { serial: [] },
@@ -214,7 +252,7 @@ describe("toStructural", () => {
           reviewedAt: "2026-05-25",
         },
       },
-    } as StablecoinMeta);
+    } as StablecoinMeta, projection);
 
     expect(structural.mintAuthorityScoreBand).toBe("concentrated");
     expect(structural.mintIncidents).toEqual([
@@ -227,7 +265,6 @@ describe("toStructural", () => {
     // leg was always evaluable. A held or unavailable V9 publication must not
     // silently drop it — that would fail *open* on a kill signal exactly when
     // the pipeline is degraded.
-    clearV9DependencyImpairment();
     const meta = {
       id: "fixture-k1-held",
       symbol: "FK1H",
@@ -253,13 +290,13 @@ describe("toStructural", () => {
       },
     } as StablecoinMeta;
 
-    expect(toStructural(meta).mintAuthorityScoreBand).toBe("exposed");
+    expect(toStructural(meta, null).mintAuthorityScoreBand).toBe("exposed");
 
     // With a projection installed, a published "no band" stays authoritative.
-    hydrateV9DependencyImpairment([
+    const projection = buildDdrStructuralContext([
       { id: "fixture-k1-held", dependencies: { serial: [] } },
     ]);
-    expect(toStructural(meta).mintAuthorityScoreBand).toBeNull();
+    expect(toStructural(meta, projection).mintAuthorityScoreBand).toBeNull();
   });
 });
 

@@ -87,6 +87,7 @@ export function twoTokenReserveModel(
       },
       uniswapV4PoolProvenance: {
         blockNumber: profile.blockNumber,
+        blockHash: profile.blockHash,
         poolId,
         poolManagerAddress: "0x000000000004444c5dc75cb358380d2e3de08a90",
         poolManagerCodeHash: "0x785f1014552b7ce7d5fb7d0c970ca60edee94fd00425d7ca21609acac7ce1293",
@@ -305,6 +306,7 @@ export function twoTokenReserveModel(
       retainedTvlUsdAtQuote: 20_501_133,
       retainedPoolPriceUsdAtQuote: 1,
       blockNumber: 25_601_359,
+      blockHash: `0x${"12".repeat(32)}`,
       executionEndpoint: {
         address: poolAddress,
         codeHash: "0x1c7b77a94bb42408ab6d5cfd76223f0c794db9b119bb6035db91d8b09da65512",
@@ -375,6 +377,7 @@ export function twoTokenReserveModel(
       retainedTvlUsdAtQuote: 27_477.27,
       retainedPoolPriceUsdAtQuote: 1.0331154651675625,
       blockNumber: 25_638_735,
+      blockHash: `0x${"34".repeat(32)}`,
       executionEndpoint: {
         address: poolAddress,
         codeHash: "0x1fb319d2b11164fe6584bf44ed640436ce07baa68c65e5b3b2338aa4ad8b6ac7",

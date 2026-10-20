@@ -5,11 +5,7 @@ import dynamic from "next/dynamic";
 import { useNearViewport } from "@/hooks/use-near-viewport";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import type { ReserveCompositionSlice } from "@/components/stablecoin-detail/reserve-presentation";
-import {
-  RESERVE_TREEMAP_LABEL_COLOR,
-  RISK_ACCENT_COLORS,
-  RISK_COLORS,
-} from "@/lib/chart-colors";
+import { RESERVE_TREEMAP_LABEL_COLOR } from "@/lib/chart-colors";
 import type { ReserveRisk } from "@shared/types";
 import { RESERVE_RISK_PRESENTATION } from "@shared/lib/classification/reserve-risk";
 import { ReserveRiskSwatch, formatReserveRiskTier, formatReserveSharePct } from "@/components/reserve-risk-swatch";
@@ -70,8 +66,8 @@ function DominantSliceBar({
             className="flex min-w-0 items-center"
             style={{
               flex: `${slice.pct} 1 0%`,
-              backgroundColor: RISK_COLORS[slice.risk],
-              boxShadow: `inset 0 0 0 1px ${RISK_ACCENT_COLORS[slice.risk]}80`,
+              backgroundColor: RESERVE_RISK_PRESENTATION[slice.risk].fillColor,
+              boxShadow: `inset 0 0 0 1px ${RESERVE_RISK_PRESENTATION[slice.risk].accentColor}80`,
             }}
           >
             {index === 0 ? (
@@ -134,8 +130,8 @@ function SingleSliceBar({ slice }: { slice: ReserveCompositionSlice }) {
           style={{
             width: isWhole ? "100%" : `${slice.pct}%`,
             flexShrink: 0,
-            backgroundColor: RISK_COLORS[slice.risk],
-            boxShadow: `inset 0 0 0 1px ${RISK_ACCENT_COLORS[slice.risk]}80`,
+            backgroundColor: RESERVE_RISK_PRESENTATION[slice.risk].fillColor,
+            boxShadow: `inset 0 0 0 1px ${RESERVE_RISK_PRESENTATION[slice.risk].accentColor}80`,
           }}
         >
           {isWhole ? <div className="flex items-center justify-between gap-3 px-3 py-1.5">{label}</div> : null}

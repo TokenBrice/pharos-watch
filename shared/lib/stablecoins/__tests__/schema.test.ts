@@ -13,7 +13,7 @@ import { BridgeRouteRiskProfileSchema, MintAuthorityProfileSchema, OracleRiskPro
 import { V9DeploymentControlFactBaseSchema } from "../../../types/safety-score-v9-facts";
 import { STABLECOIN_STATUS_VALUES } from "../../../types/core";
 import { reviewedScope, weightedQuorum, SCOPE_CONTROLLER } from "../../__tests__/safety-score-v9-control-scope.test-support";
-import { CANONICAL_STABLECOIN_FLAGS, makeRawStablecoinMeta as makeCoin } from "./test-support";
+import { CANONICAL_STABLECOIN_FLAGS, makeRawStablecoinMeta as makeCoin, makeStablecoinMeta } from "./test-support";
 import { makeBridgeAuthority, makeSafeControl } from "./schema.test-support";
 import { makeCompiledVotingControl } from "../../__tests__/safety-score-v9-fixtures.test-support";
 import { TRACKED_SOURCE_COINS, TRACKED_STABLECOINS } from "../registry";
@@ -21,6 +21,49 @@ import { LIVE_RESERVE_ADAPTER_DEFINITIONS, LiveReservesConfigSchema } from "../.
 import { CANONICAL_ETH_RESERVE_RISK } from "../../reserve-asset-risk";
 
 const baseFlags = CANONICAL_STABLECOIN_FLAGS;
+
+describe("bridge route deployment identity admission", () => {
+  const address = "0x52908400098527886E0F7030069857D2E4169EE7";
+  const normalizedId = "ethereum:0x52908400098527886e0f7030069857d2e4169ee7";
+  const source = { label: "Fixture review", url: "https://example.com/review" };
+  const fixture = makeStablecoinMeta({
+    contracts: [{ chain: "ethereum", address, decimals: 18 }],
+    bridgeRouteRisk: {
+      tier: "single-chain-or-native", summary: "Reviewed native deployment.",
+      reviewedAt: "1970-01-01", reviewer: "Fixture reviewer", confidence: "verified",
+      sources: [source],
+      routes: [{
+        id: normalizedId, destinationChain: "ethereum", contractAddress: address,
+        protocol: "Fixture issuer", issuanceModel: "native-issuance", routeClass: "native",
+        riskTier: "single-chain-or-native", semantics: "native-mint", scope: "canonical",
+        reviewDisposition: "reviewed", observedAt: "1970-01-01", sources: [source],
+      }],
+    },
+  });
+
+  it("admits a checksummed address with its normalized route ID", () => {
+    const [parsed] = parseStablecoinMetaAssets([fixture], "route identity fixture");
+    expect(parsed.bridgeRouteRisk!.routes![0].contractAddress).toBe(address);
+  });
+
+  it.each([
+    "base:0x52908400098527886e0f7030069857d2e4169ee7",
+    "ethereum:0x3333333333333333333333333333333333333333",
+  ])("rejects mismatched route ID %s despite matching authored destination fields", (id) => {
+    const coin = structuredClone(fixture);
+    coin.bridgeRouteRisk!.routes![0].id = id;
+    const result = StablecoinMetaAssetSchema.safeParse(coin);
+    expect(result.success).toBe(false);
+    if (result.success) throw new Error("expected route identity rejection");
+    expect(result.error.issues).toContainEqual(expect.objectContaining({
+      path: ["bridgeRouteRisk", "routes", 0, "id"],
+      message: expect.stringContaining("[mint-bridge-ownership:route-deployment-identity-mismatch]"),
+    }));
+    expect(() => parseStablecoinMetaAssets([coin], "route identity fixture")).toThrow(
+      "[mint-bridge-ownership:route-deployment-identity-mismatch]",
+    );
+  });
+});
 
 describe("calendar-only catalog dates", () => {
   const listingReview = { changedAt: "2024-02-29", reason: "Reviewed listing status." };
@@ -1279,6 +1322,73 @@ describe("StablecoinMeta schema — mint authority", () => {
         }),
       }),
     ], "fixture")).toThrow(/none-resolved/);
+  });
+
+  it.each([
+    ["none-resolved", true, true],
+    ["none-resolved", false, false],
+    ["none-resolved", "unknown", false],
+    ["none-resolved", undefined, false],
+    ["none-resolved-mint", true, false],
+  ] as const)("checks %s cap-raising authority %s at merged admission", (authorityPosture, canRaiseCap, rejected) => {
+    const coin = makeCoin({ mintAuthority: makeMintAuthority({
+      mintPath: "immutable-user-collateralized", authorityPosture, economicCapSemantics: "raiseable",
+      capSemanticsReview: {
+        verdict: "raiseable-collateral-only", reviewedAt: "2026-05-24", reviewer: "Fixture Reviewer",
+        sources: [mintAuthoritySource],
+        rationale: "The reviewed controller can raise the issuance cap, but every newly issued token still requires deposited collateral under the immutable mint path.",
+      },
+      controls: [{
+        label: "Cap administrator", role: "cap-admin", authorityType: "contract",
+        directMintAbility: "none", canRaiseCap,
+        evidence: "The reviewed controller can raise the cap but cannot directly mint tokens.",
+      }],
+    }) });
+    const result = StablecoinMetaAssetSchema.safeParse(coin);
+    if (rejected) {
+      expect(result.error?.issues).toEqual([{
+        code: "custom", path: ["mintAuthority", "controls", 0, "canRaiseCap"],
+        message: "authorityPosture none-resolved cannot include cap-raising controls",
+      }]);
+    } else {
+      expect(parseStablecoinMetaAssets([coin], "cap authority fixture")).toHaveLength(1);
+    }
+  });
+
+  it("preserves complete ordered mint-authority issues across independent invariants", () => {
+    const profile = makeMintAuthority({
+      mintPath: "immutable-user-collateralized", authorityPosture: "none-resolved",
+      review: {
+        sources: [mintAuthoritySource], evidence: "The reviewer has unresolved control evidence.",
+        reviewer: "Fixture Reviewer", reviewedAt: "2026-05-24", disposition: "unresolved",
+      },
+      controls: [{
+        label: "Unreviewed Safe", role: "direct-minter", authorityType: "safe",
+        directMintAbility: "direct", modulesOrGuardsStatus: "unknown",
+      }],
+    });
+    expect(MintAuthorityProfileSchema.safeParse(profile).error?.issues).toEqual([
+      { code: "custom", path: ["review", "unresolvedQuestions"], message: "unresolved mint-authority disposition requires unresolvedQuestions" },
+      { code: "custom", path: ["confidence"], message: "unresolved mint-authority disposition requires unknown confidence" },
+      { code: "custom", path: ["controls", 0, "address"], message: "non-addressable controls require evidence, sources, sourceFreeRationale, or unresolvedQuestions" },
+      { code: "custom", path: ["controls", 0, "safe"], message: "authorityType safe requires safe details" },
+      { code: "custom", path: ["controls", 0, "threshold"], message: "verified safe or multisig controls require threshold" },
+      { code: "custom", path: ["controls", 0, "signerCount"], message: "verified safe or multisig controls require signerCount" },
+      { code: "custom", path: ["controls", 0, "modulesOrGuardsStatus"], message: "unknown Safe modules/guards status caps confidence at manual-review" },
+      { code: "custom", path: ["controls", 0, "directMintAbility"], message: "authorityPosture none-resolved cannot include mint-capable controls" },
+    ]);
+
+    expect(MintAuthorityProfileSchema.safeParse(makeMintAuthority({
+      mintPath: "unknown", authorityPosture: "compromised", economicCapSemantics: "unknown", controls: [],
+      capSemanticsReview: {
+        verdict: "raiseable-collateral-only", reviewedAt: "2026-05-24", reviewer: "Fixture Reviewer",
+        sources: [mintAuthoritySource], rationale: "A reviewed collateral-only cap claim cannot coexist with unknown economic cap semantics.",
+      },
+    })).error?.issues).toEqual([
+      { code: "custom", path: ["capSemanticsReview"], message: "capSemanticsReview is not allowed with economicCapSemantics unknown" },
+      { code: "custom", path: ["authorityPosture"], message: "authorityPosture compromised requires an active mint incident" },
+      { code: "custom", path: ["authorityPosture"], message: "mintPath unknown should use authorityPosture unknown unless known unbounded authority supports unbounded-adverse or reviewed noLocalIssuance supports none-resolved-mint" },
+    ]);
   });
 
   it("lets none-resolved-mint keep non-mint control domains that none-resolved forbids", () => {

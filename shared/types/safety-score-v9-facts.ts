@@ -1,4 +1,5 @@
 import { z } from "zod";
+import methodologyPolicy from "../data/safety-score-v9/methodology-policy-candidate-v1.json";
 import { RedemptionRouteSuspensionSchema } from "./redemption";
 import { V9ReserveBoundedFactSchema } from "./reserve-bounded-facts";
 import { ReserveScopedAdmissionSchema } from "./safety-score-v9-reserve-scope";
@@ -2094,6 +2095,9 @@ function factStatuses(asset: V9AssetFactsBase): Array<{ label: string; status: V
     ? Object.entries(asset.mechanismRiskReview.review).flatMap(([key, value]) =>
         value !== null && typeof value === "object" && "status" in value
           ? [{ label: `mechanism-review:${key}`, status: value.status as V9FactStatusV2 },
+            ...((value as V9MechanismFactV1).constraints ?? []).map(constraint => ({
+              label: `mechanism-review:${key}:factor:${constraint.factKey}`, status: constraint.status,
+            })),
             ...((value as V9MechanismFactV1).scopedAssessments ?? []).map(fragment => ({
               label: `mechanism-review:${key}:scope:${fragment.scopeId}`, status: fragment.status,
             }))]
@@ -2495,7 +2499,8 @@ function validateFactSetCore(value: V9FactSetCoreV2 | V9FactSetCoreV3, ctx: z.Re
         if (!("causeProof" in gap)) continue;
         for (const message of findV9EvidenceCauseProofIssues({
           proof: gap.causeProof, assetId: asset.assetId, scope: gap.causeScope ?? null,
-          asOfSec: value.asOfSec, evidence: asset.evidence, researchMaxAgeSec: 365 * 86400,
+          asOfSec: value.asOfSec, evidence: asset.evidence,
+          researchMaxAgeSec: methodologyPolicy.semantic.evidence.evidenceExpiry.reviewedResearchMaxAgeSec,
           evidenceById,
         })) {
           addIssue(ctx, ["assets", assetIndex, "gaps", gapIndex, "causeProof"], message);

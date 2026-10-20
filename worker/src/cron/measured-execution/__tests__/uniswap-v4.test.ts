@@ -179,11 +179,13 @@ async function runV4ProofScenario({
     stateViewPoolManagerReturnData: poolManagerReturnData,
   };
   const bindings = await resolveUniswapV4PoolBindings({
+    blockHash: `0x${"ab".repeat(32)}`,
     requests: [{ target: measuredTarget, deployment, runtimeEvidence }],
     blockNumber: BLOCK,
     chainRpcs: new Map(),
   });
   const quotes = await quoteUniswapV4Requests({
+    blockHash: `0x${"ab".repeat(32)}`,
     requests: DEMANDED_GRID_USD.map((inputUsd) => ({
       target: measuredTarget,
       inputUsd,
@@ -198,6 +200,7 @@ async function runV4ProofScenario({
     throw new Error("missing V4 proof fixture");
   }
   const profile = buildDexMeasuredExecutionProfile({
+    blockHash: `0x${"ab".repeat(32)}`,
     target: measuredTarget,
     targetGenerationId: "targets",
     quoteGenerationId: "quotes",
@@ -230,6 +233,7 @@ describe("hook-free Uniswap V4 measured execution", () => {
     rpcMocks.fetchEvmCodeAtBlock.mockResolvedValue("0x00");
 
     await expect(verifyUniswapV4Deployment({
+      blockHash: `0x${"ab".repeat(32)}`,
       deployment,
       blockNumber: BLOCK,
       chainRpcs: new Map(),
@@ -238,6 +242,9 @@ describe("hook-free Uniswap V4 measured execution", () => {
       reason: "pool-manager-code-hash-mismatch",
     });
     expect(rpcMocks.fetchEvmCodeAtBlock).toHaveBeenCalledTimes(1);
+    expect(rpcMocks.fetchEvmCodeAtBlock.mock.calls[0]?.[3]).toMatchObject({
+      stateBlockHash: `0x${"ab".repeat(32)}`, maxRetries: 0,
+    });
   });
 
   it("builds only a reviewed exact hook-free PoolKey target", () => {
@@ -331,6 +338,13 @@ describe("hook-free Uniswap V4 measured execution", () => {
     });
     expect(quotes[0].point.costBps).toBeCloseTo(5, 8);
     expect(validateUniswapV4ProfileProof(profile)).toEqual([]);
+    for (const call of rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mock.calls) {
+      expect(call[2]).toBe(BLOCK);
+      expect(call[3].stateBlockHash).toBe(profile.blockHash);
+      expect(call[3].multicallFallbackBlockHash).toBeUndefined();
+    }
+    const mismatchedHash = { ...profile, blockHash: `0x${"cd".repeat(32)}` };
+    expect(validateUniswapV4ProfileProof(mismatchedHash)).toContain("v4-runtime-or-pool-identity-mismatch");
     const measuredExecution = toMaturePublicProfile(profile);
     expect(buildP4DexExitRouteObservations({
       stablecoinId: profile.tokenIn.trackedAssetId!,
@@ -456,6 +470,7 @@ describe("hook-free Uniswap V4 measured execution", () => {
     );
 
     const outcomes = await quoteUniswapV4Requests({
+      blockHash: `0x${"ab".repeat(32)}`,
       requests: Array.from({ length: 8 }, (_, index) => ({
         target: { ...measuredTarget, targetId: `${measuredTarget.targetId}-${index}` },
         inputUsd: 1_000 + index,
@@ -514,6 +529,7 @@ describe("hook-free Uniswap V4 measured execution", () => {
     };
 
     const outcomes = await resolveUniswapV4PoolBindings({
+      blockHash: `0x${"ab".repeat(32)}`,
       requests: Array.from({ length: 8 }, (_, index) => ({
         target: { ...measuredTarget, targetId: `${measuredTarget.targetId}-${index}` },
         deployment,
@@ -543,6 +559,7 @@ describe("hook-free Uniswap V4 measured execution", () => {
     rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mockResolvedValue(null);
 
     const [outcome] = await quoteUniswapV4Requests({
+      blockHash: `0x${"ab".repeat(32)}`,
       requests: [{
         target: measuredTarget,
         inputUsd: 1_000,
@@ -558,6 +575,9 @@ describe("hook-free Uniswap V4 measured execution", () => {
       failureReason: "quoter-rpc-unavailable",
     });
     expect(rpcMocks.fetchEvmMulticall3Aggregate3AtBlock).toHaveBeenCalledTimes(1);
+    expect(rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mock.calls[0]?.[3]).toMatchObject({
+      stateBlockHash: `0x${"ab".repeat(32)}`,
+    });
   });
 
   it("does not fragment a V4 batch after request-budget exhaustion", async () => {
@@ -581,6 +601,7 @@ describe("hook-free Uniswap V4 measured execution", () => {
     });
 
     const outcomes = await quoteUniswapV4Requests({
+      blockHash: `0x${"ab".repeat(32)}`,
       requests: Array.from({ length: 8 }, (_, index) => ({
         target: { ...measuredTarget, targetId: `${measuredTarget.targetId}-${index}` },
         inputUsd: 1_000 + index,

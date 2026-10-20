@@ -65,14 +65,16 @@ describe("historical Safety Score registry package scope", () => {
         "import { readFileSync, writeFileSync } from 'node:fs';\nconst coin = JSON.parse(readFileSync('shared/data/stablecoins/coins/fixture.json', 'utf8'));\nwriteFileSync('shared/data/stablecoins/coins.generated.json', JSON.stringify([coin]));");
       expect(existsSync(resolve(historicalRoot, "shared/data/stablecoins/coins.generated.json"))).toBe(false);
 
-      // Substitute local archive bytes for Git only; extraction, generation and Node/tsx
-      // module resolution run for real. No Git mutations or network are needed.
+      // Substitute an on-disk archive for Git; extraction, generation and Node/tsx
+      // module resolution run for real without buffering the catalog archive.
       vi.spyOn(process, "cwd").mockReturnValue(currentRoot);
       vi.mocked(execFileSync).mockImplementation((file, args, options) => {
         if (file === "git" && args?.[0] === "rev-parse") return `${COMMIT}\n`;
         if (file === "git" && args?.[0] === "archive") {
-          expect(args[1]).toBe(COMMIT);
-          return actualExecFileSync("tar", ["-cf", "-", "-C", historicalRoot, ...args.slice(2)]);
+          expect(args[1]).toBe("--output");
+          expect(args[3]).toBe(COMMIT);
+          expect(options?.maxBuffer).toBeUndefined();
+          return actualExecFileSync("tar", ["-cf", args[2]!, "-C", historicalRoot, ...args.slice(4)]);
         }
         return actualExecFileSync(file, args, options);
       });

@@ -152,6 +152,8 @@ export type DexPoolVolumeObservation = NonNullable<DexLiquidityPool["volumeObser
 
 export interface PoolEntry {
   poolId: string;
+  /** Candidate metadata only; never an exact aggregate or physical identity. */
+  candidateFingerprint?: string;
   project: string;
   chain: string;
   tvlUsd: number;
@@ -268,6 +270,10 @@ export interface GtPoolAttributes {
   pool_created_at: string | null;
   base_token_price_usd: string | null;
   quote_token_price_usd: string | null;
+  base_token_price_quote_token?: string | null;
+  quote_token_price_base_token?: string | null;
+  base_token_price_native_currency?: string | null;
+  quote_token_price_native_currency?: string | null;
   reserve_in_usd: string | null;
   volume_usd: { h24: string | null } | null;
 }
@@ -296,7 +302,8 @@ export interface CurvePoolEntry {
   poolAddress?: string;
   apiIsBroken?: boolean;
   A: number;
-  balanceRatio: number;
+  /** Null when any required coin USD leg is unreadable; explicit zero is measured. */
+  balanceRatio: number | null;
   /** Legacy captures measured the full coin roster; missing scope means full-pool. */
   balanceTvlScope?: "full-pool" | "base-pool-excluded";
   contributionTvlScope?: "full-pool" | "base-pool-excluded";
@@ -307,7 +314,7 @@ export interface CurvePoolEntry {
   basePoolAddress?: string;
   metapoolAdjustedTvl: number;
   creationTs: number;
-  balanceDetails: { symbol: string; balancePct: number; isTracked: boolean }[];
+  balanceDetails?: { symbol: string; balancePct: number; isTracked: boolean }[];
   /** Normalized symbol → USD price for each coin in the pool (from Curve API). */
   tokenPrices: Record<string, number>;
   /** Original API observation clock shared by the token prices. */
@@ -366,7 +373,7 @@ export interface DataSources {
   /** Compaction quarantine carried into the existing scoring-stage quality gate. */
   poolRejections: PoolProcessingRejection[];
   dexProjects: Set<string>;
-  /** DL protocol slug → total protocol TVL. Used to cap inflated CG/GT per-pool TVL. */
+  /** DL protocol slug -> observed total TVL; bounds fallback admission, never scales raw pool TVL. */
   protocolTvlCaps: Map<string, number>;
   curvePayloads: (CurveApiPayload | null)[];
   graphApiKey: string | null;

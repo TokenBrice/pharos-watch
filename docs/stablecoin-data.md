@@ -126,6 +126,8 @@ Native and bridge controls share quorum consistency checks: `threshold <= signer
 
 The shared deployment identity is normalized `chain:contractAddress`: lowercase canonical chain IDs and EVM addresses, but preserve case-sensitive non-EVM identifiers. References resolve to `bridgeRouteRisk.routes[].id`; when no route inventory exists, a Mint Authority reference may instead name an exact authored contract. Bridge control references always require a route.
 
+Every route's already-normalized `id` must equal the normalized identity of its own `destinationChain` and `contractAddress`, including unresolved and historical routes. Checksummed EVM addresses normalize for this comparison; non-EVM identifier case remains significant. Ownership validation rejects a mismatch as `route-deployment-identity-mismatch` at catalog admission, data checks, ownership audits and the compiler defense; it never silently rewrites either identity.
+
 For an active multi-deployment asset:
 
 - unless a reviewed `noLocalIssuance` exception applies, every `mintAuthority.controls[]` entry needs `deploymentRefs` resolving to reviewed `issuanceModel: "native-issuance"` routes;
@@ -141,6 +143,8 @@ A single-deployment asset without a route inventory may reference its exact auth
 
 Do not invent a native route for a product with no local issuance. Author `mintAuthority.review.noLocalIssuance` with `reviewedAt`, `reviewer`, and `rationale`; either exception kind is invalid when a reviewed native-issuance route exists. `kind: "inherited-parent-issuance"` additionally requires `mintPath: "wrapped-or-variant-inherited"` and `inheritedFrom`. `kind: "external-only-representation"` is valid only when every authored route is reviewed and every authored contract is covered by one of those routes.
 A reviewed `noLocalIssuance` exception of either kind admits the mint-scoped `none-resolved-mint` annotation independently of `mintPath`, mirroring the derivation that scores such records `none-resolved`; mint-capable controls remain forbidden and whole-chain `none-resolved` retains its non-privileged `mintPath` requirement.
+
+Whole-chain `none-resolved` also rejects an explicit `controls[].canRaiseCap: true`, even when `directMintAbility` is `none` and the collateral-only cap review is complete. Cap-only violations identify `controls[index].canRaiseCap`; mint-scoped `none-resolved-mint` retains its narrower direct-mint/authorization exclusion. Mint-authority refinements share the custom `issue` primitive in `shared/types/safety-schema-primitives.ts`, preserving diagnostic paths, text and order.
 
 A reviewer-scoped open question is authored as `mintAuthority.review.scopedQuestions[]`, each with `controlRef` (an authored control's `chain:address`, or its exact label for non-addressable controls such as Hedera keys), `question`, `reviewedAt`, `reviewer`, and optionally `sources`. The schema rejects a `controlRef` that names no authored control. Use a scoped question only when the reviewer investigated the control and can state exactly what stays unknown; a scoped question does not void the review of the other controls, unlike `unresolvedQuestions`, and it grants the named control the bounded `control-scoped-gap` ceiling only while the review date is inside the `V9_SCOPED_QUESTION_MAX_AGE_SEC` freshness window in `shared/lib/safety-score-v9/evidence.ts` (see [Mint Authority scoring](./mint-authority-scoring.md)).
 

@@ -107,6 +107,7 @@ export function buildRecoveredBlacklistAmountPersistence(
     input.config.stablecoin,
     input.eventType,
     input.amount,
+    input.amountSource,
   );
   const targetStatus = suppressed ? "permanently_unavailable" : input.amountStatus;
   const statement = db

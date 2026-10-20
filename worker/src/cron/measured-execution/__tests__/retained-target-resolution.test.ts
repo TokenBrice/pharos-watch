@@ -77,7 +77,8 @@ describe("retained measured-target resolution", () => {
     const fingerprint = buildPoolFingerprint("base", "aerodrome", [CADC, USDC])!;
     const common = {
       stablecoinId: "cadc-cad-coin",
-      retainedPoolId: fingerprint,
+      retainedPoolId: "base:defillama:provider-uuid",
+      retainedPoolFingerprint: fingerprint,
       retainedTvlUsd: 157_000,
       adapterProfileId: matching.adapterProfileId,
       exactTargets: targets,
@@ -85,6 +86,8 @@ describe("retained measured-target resolution", () => {
     };
 
     expect(resolveDexMeasuredTargetForRetainedPool(common)).toBe(matching);
+    expect(resolveDexMeasuredTargetForRetainedPool({ ...common, retainedPoolFingerprint: undefined })).toBeNull();
+    expect(resolveDexMeasuredTargetForRetainedPool({ ...common, retainedPoolId: "base:unmatched-physical-pool" })).toBeNull();
     expect(
       resolveDexMeasuredTargetForRetainedPool({
         ...common,
@@ -104,7 +107,8 @@ describe("retained measured-target resolution", () => {
     expect(
       resolveDexMeasuredTargetForRetainedPool({
         stablecoinId: first.stablecoinId,
-        retainedPoolId: buildPoolFingerprint("base", "aerodrome", [CADC, USDC])!,
+        retainedPoolId: "base:defillama:provider-uuid",
+        retainedPoolFingerprint: buildPoolFingerprint("base", "aerodrome", [CADC, USDC])!,
         retainedTvlUsd: 157_000,
         adapterProfileId: first.adapterProfileId,
         exactTargets: targets,
@@ -130,7 +134,8 @@ describe("retained measured-target resolution", () => {
     const matching = target(POOL, 9);
     const input = {
       stablecoinId: matching.stablecoinId,
-      retainedPoolId: buildPoolFingerprint("base", "aerodrome", [CADC, USDC])!,
+      retainedPoolId: "base:defillama:provider-uuid",
+      retainedPoolFingerprint: buildPoolFingerprint("base", "aerodrome", [CADC, USDC])!,
       retainedTvlUsd: 8,
       adapterProfileId: matching.adapterProfileId,
       exactTargets: new Map(),
@@ -146,7 +151,8 @@ describe("retained measured-target resolution", () => {
     const matching = target(POOL, 8);
     const input = {
       stablecoinId: matching.stablecoinId,
-      retainedPoolId: buildPoolFingerprint("base", "aerodrome", [CADC, USDC])!,
+      retainedPoolId: "base:defillama:provider-uuid",
+      retainedPoolFingerprint: buildPoolFingerprint("base", "aerodrome", [CADC, USDC])!,
       retainedTvlUsd: 8,
       adapterProfileId: matching.adapterProfileId,
       exactTargets: new Map(),

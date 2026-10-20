@@ -1,5 +1,6 @@
 import {
   DexMeasuredExecutionObservationHistorySchema,
+  getDexMeasuredExecutionFreshnessMaxSec,
   type DexMeasuredExecutionObservationHistory,
   type DexMeasuredExecutionProfile,
 } from "@shared/types/measured-execution";
@@ -72,7 +73,8 @@ function conservativeCurve(
 
 /**
  * Summarizes complete published producer cycles inside the score freshness
- * window. Only verified measured profiles influence the conservative curve.
+ * window. Only source-eligible measured profiles at the assessment clock
+ * influence success evidence and the conservative curve.
  */
 export function summarizeDexMeasuredExecutionHistory(input: {
   cycles: readonly DexMeasuredExecutionHistoryCycle[];
@@ -99,20 +101,25 @@ export function summarizeDexMeasuredExecutionHistory(input: {
   );
   const activeCycles =
     deterministicFailureIndex === -1 ? cycles : cycles.slice(0, deterministicFailureIndex + 1);
-  const successful = activeCycles.filter(
-    (cycle): cycle is DexMeasuredExecutionHistoryCycle & { profile: DexMeasuredExecutionProfile } =>
-      cycle.status === "measured" &&
-      !cycle.operationalFailure &&
-      cycle.profile !== null &&
-      cycle.profile.quoteGenerationId === cycle.generationId,
-  );
+  const isEligibleSuccess = (
+    cycle: DexMeasuredExecutionHistoryCycle,
+  ): cycle is DexMeasuredExecutionHistoryCycle & { profile: DexMeasuredExecutionProfile } =>
+    cycle.status === "measured" &&
+    !cycle.operationalFailure &&
+    cycle.profile !== null &&
+    cycle.profile.quoteGenerationId === cycle.generationId &&
+    Number.isFinite(cycle.profile.quotedAt) &&
+    cycle.profile.quotedAt <= input.nowSec + 60 &&
+    input.nowSec - cycle.profile.quotedAt <=
+      getDexMeasuredExecutionFreshnessMaxSec(cycle.profile.adapterProfileId);
+  const successful = activeCycles.filter(isEligibleSuccess);
   if (successful.length === 0) return null;
   const capacityCurve = conservativeCurve(successful.map((cycle) => cycle.profile));
   if (capacityCurve === null) return null;
 
   let consecutiveSuccessCount = 0;
   for (const cycle of activeCycles) {
-    if (cycle.status !== "measured" || cycle.profile === null) break;
+    if (!isEligibleSuccess(cycle)) break;
     consecutiveSuccessCount += 1;
   }
   const latestOperationalFailureAt =

@@ -245,30 +245,30 @@ const ISSUER_ENTITY_STOPWORDS = new Set([
   "as",
 ]);
 
-// Curated issuer-identity aliases. Some issuers publish the SAME legal or
-// governance identity under different display strings; without an explicit
-// mapping their normalized issuer keys diverge, so a same-issuer control group
-// (an issuer's own controller shared across its own products) fails closed.
-// Each entry maps a fully-normalized issuer-entity phrase to one canonical
-// issuer key. This is MINIMAL and NAMED — the only entry is the
-// MakerDAO <-> Sky Protocol governance identity: Sky is the rebranded MakerDAO,
-// governed by the same PauseProxy, described as "MakerDAO / Sky Protocol
-// governance" (DAI) and "Sky Protocol governance" (USDS/sUSDS). Matching is
-// exact on the normalized phrase (no fuzzy matching), so unrelated issuers that
-// merely share a leading token are never merged.
+// Reviewed exact governance or issuer-group aliases for common-mode controls;
+// these do not assert one legal issuer or a shared reserve pool.
+// MakerDAO/Sky retains the same governance identity after the rebrand.
+// The explicitly reviewed StraitsX SGD/USD issuer-group mapping preserves their
+// common group while keeping their distinct legal issuers in registry metadata:
+// https://www.straitsx.com/blog-post/straitsx-secures-major-payment-institution-licenses-and-launches-xusd-stablecoin
+// https://www.straitsx.com/legal/token
+// Unlisted normalized phrases stay distinct; shared leading words never join.
 const CANONICAL_ISSUER_KEY_BY_NORMALIZED_ENTITY = new Map<string, string>([
   ["makerdao sky protocol governance", "makerdao"],
   ["sky protocol governance", "makerdao"],
+  ["straitsx sgd issuance", "straitsx"],
+  ["straitsx usd issuance", "straitsx"],
 ]);
 
 function normalizedIssuerEntity(value: string): string | null {
-  const tokens = value
+  const entity = value
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, " ")
     .split(" ")
-    .filter((token) => token.length > 0 && !ISSUER_ENTITY_STOPWORDS.has(token));
-  if (tokens.length === 0) return null;
-  return CANONICAL_ISSUER_KEY_BY_NORMALIZED_ENTITY.get(tokens.join(" ")) ?? tokens[0]!;
+    .filter((token) => token.length > 0 && !ISSUER_ENTITY_STOPWORDS.has(token))
+    .join(" ");
+  if (entity.length === 0) return null;
+  return CANONICAL_ISSUER_KEY_BY_NORMALIZED_ENTITY.get(entity) ?? entity;
 }
 
 function rawIssuerKey(assetId: string, meta: V9ExtensionRegistryMeta): string | null {
@@ -1232,17 +1232,6 @@ function dependencyFailureDomains(
 }
 
 
-function hasAdmissibleCuratedReserveComposition(
-  meta: V9ExtensionRegistryMeta,
-  clockSec: number,
-  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
-): boolean {
-  if (buildSafetyScoreV9ReviewedStaticReserveRows(meta, clockSec, fixedInput) !== null) return true;
-  return meta.liveReservesConfig !== undefined
-    ? buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(meta, clockSec, fixedInput) !== null
-    : buildSafetyScoreV9ReviewedStandaloneReserveRows(meta, clockSec, fixedInput) !== null;
-}
-
 function prepareDependency(
   meta: V9ExtensionRegistryMeta,
   liveReserveSlices: readonly ReserveSlice[] | undefined,
@@ -1267,7 +1256,7 @@ function prepareDependency(
     derived.dependencies.some(
       (dependency) => (dependency.type ?? "collateral") === "collateral",
     ) &&
-    !hasAdmissibleCuratedReserveComposition(meta, clockSec, fixedInput);
+    resolveReviewedReserveRows({ meta, clockSec, fixedInput, liveReserveRows: [] }) === null;
   const issueCodes: string[] = [];
   issueCodes.push(...derived.rejectionReasons
     .filter((rejection) => rejection.reason === "coinId-without-depType" || rejection.reason === "reviewed-dependency-type-conflict" || rejection.reason === "reviewed-dependency-identity-conflict" || rejection.reason === "manual-collateral-not-in-reserves")

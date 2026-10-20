@@ -4,6 +4,7 @@ import {
   type VerdictInputs,
   type StablecoinVerdictArchetype,
 } from "@shared/lib/stablecoin-verdict";
+import { VERDICT_LABELS } from "@shared/lib/classification/verdict";
 
 const BASE_INPUTS: VerdictInputs = {
   status: "active",
@@ -21,7 +22,9 @@ function inputs(overrides: Partial<VerdictInputs>): VerdictInputs {
 }
 
 function archetypeOf(overrides: Partial<VerdictInputs>): StablecoinVerdictArchetype {
-  return deriveStablecoinVerdict(inputs(overrides)).archetype;
+  const verdict = deriveStablecoinVerdict(inputs(overrides));
+  expect(verdict.label).toBe(VERDICT_LABELS[verdict.archetype]);
+  return verdict.archetype;
 }
 
 describe("deriveStablecoinVerdict — rule precedence", () => {

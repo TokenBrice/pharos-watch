@@ -785,6 +785,53 @@ describe("curated reserve dependency admission", () => {
     ).not.toContain("unreviewed-dependency-relationships");
   });
 
+  it.each(["current", "expired", "mismatched"] as const)(
+    "keeps probable named-report basket admission aligned with reserves: %s",
+    (reportState) => {
+      const fixed = makeV9TwoAssetFixedInput({
+        omitAlphaReserve: true, liveToFallbackCoins: ["alpha"], clockSec: DEPENDENCY_CLOCK_SEC,
+      });
+      const metaById = dependencyMetaById("2026-08-19");
+      const meta = metaById.get("alpha")!;
+      const periodEnd = reportState === "expired" ? "2026-01-01" : "2026-08-18";
+      meta.reserveReview = {
+        ...meta.reserveReview!, confidence: "probable", compositionAsOf: periodEnd,
+      };
+      meta.proofOfReserves = {
+        type: "attestation", url: "https://example.com/transparency", provider: "BDO Italia",
+        attestorTier: "regional", cadence: "monthly",
+        latestReport: {
+          periodEnd: reportState === "mismatched" ? "2026-08-17" : periodEnd,
+          publishedAt: "2026-08-19", assuranceMethod: "attestation",
+          scope: "assets-and-liabilities", liabilityReconciliation: "partial",
+          reviewer: "Fixture reviewer", confidence: "probable",
+          sources: [{ label: "BDO Italia signed reserve report", url: "https://example.com/reserves" }],
+        },
+      };
+      expect(buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(meta, fixed.clockSec)).toBeNull();
+      const audited = buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(meta, fixed.clockSec);
+      const extension = buildSafetyScoreV9BaselineExtension(fixed, { metaById });
+      const alpha = extension.assets.find((asset) => asset.assetId === "alpha")!;
+      const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension)
+        .assets.find((asset) => asset.assetId === "alpha")!;
+      if (reportState === "current") {
+        expect(audited).toMatchObject({ provenance: "audited-fallback", rows: LINKED_RESERVES });
+        expect(alpha.reviewedStaticReserveRows).toMatchObject({ provenance: "audited-fallback" });
+        expect(compiled.reserveExposures).toContainEqual(expect.objectContaining({
+          trackedAssetId: "beta", weight: 0.5,
+        }));
+        expect(compiled.dependencies.edges).toEqual([expect.objectContaining({
+          upstreamAssetId: "beta", dependencyType: "collateral", weight: 0.5,
+        })]);
+      } else {
+        expect(audited).toBeNull();
+        expect(alpha.dependencies!.edges).toEqual([]);
+        expect(compiled.dependencies.edges).toEqual([]);
+        expect(compiled.reserveStatus.observationState).toBe(reportState === "expired" ? "stale" : "missing");
+      }
+    },
+  );
+
   it("leaves live-derived edges unchanged even when the curated review is expired", () => {
     const fixed = makeV9TwoAssetFixedInput({
       mapAlphaCollateral: true,

@@ -66,6 +66,54 @@ describe("v10.01 mechanism factor admission", () => {
     expect(result.structuralReasons).toEqual([]);
   });
 
+  it.each((["failed", "weak", "strong"] as const).flatMap((quality) =>
+    (["A", "B", "C", "U"] as const).map((cause) => ({ quality, cause })),
+  ))("retains supported $quality and independent $cause constraints on one mechanism component", ({ quality, cause }) => {
+    const unknown = missingMechanism("insurance", `gap:${cause}`, "mechanism.required", "Unavailable insurance");
+    const gap: V9FactGapV3 = cause === "A" || cause === "B" ? exclusionGap(cause) : {
+      ...unknown.gap, responsibility: cause === "C" ? "issuer-undisclosed" : "unresearched",
+      causeProof: cause === "U" ? { cause: "U", reason: "not-yet-researched", evidenceRefIds: [] } : {
+        cause: "C", classificationId: "research:insurance", proofOrigin: "typed-review", reviewedAt: "2026-10-01",
+        assertion: "researched-nondisclosure", evidenceRefIds: ["research:insurance"],
+        rationale: "Current issuer sources do not publish insurance terms.",
+        sources: [{ url: "https://example.com/insurance", location: "Insurance",
+          excerpt: "Insurance terms are not disclosed.", assertion: "The exact insurance terms are undisclosed." }],
+      },
+    };
+    const excludedSibling = cause === "C" ? exclusionGap("A") : null;
+    const result = evaluateV9Backing(asset(excludedSibling === null ? [gap] : [gap, excludedSibling]), {
+      ...reviews["fiat-cash"],
+      custodyContinuity: {
+        ...unknown.fact,
+        constraints: [
+          { factKey: "custody", quality, status: knownStatus("evidence:custody") },
+          { factKey: "insurance", quality: null, status: { ...unknown.fact.status, gapIds: [gap.gapId] } },
+          ...(excludedSibling === null ? [] : [{
+            factKey: "pipeline-sibling", quality: null,
+            status: { ...unknown.fact.status, gapIds: [excludedSibling.gapId] },
+          }]),
+        ],
+      },
+    }, V9_CANDIDATE_POLICY_V1);
+    const row = result.contributions.find((entry) => entry.componentKey === "mechanism:custody-continuity")!;
+    const knownQuality = quality === "failed" ? 10 : quality === "weak" ? 35 : 95;
+    expect(row.score).toBe(cause === "A" || cause === "B" ? knownQuality : Math.min(knownQuality, 35));
+    expect(row.observationState).not.toBe("known");
+    expect(row.factors).toContainEqual(expect.objectContaining({
+      componentKey: "mechanism:custody-continuity:factor:insurance", cause, causeGapIds: [gap.gapId],
+      score: cause === "A" || cause === "B" ? null : 35,
+      effectiveScoringWeight: cause === "A" || cause === "B" ? 0 : 1,
+    }));
+    expect(row.factors).toContainEqual(expect.objectContaining({
+      componentKey: "mechanism:custody-continuity:factor:custody", score: knownQuality,
+      cause: quality === "failed" ? "D" : null,
+    }));
+    if (excludedSibling !== null) expect(row.factors).toContainEqual(expect.objectContaining({
+      componentKey: "mechanism:custody-continuity:factor:pipeline-sibling", cause: "A",
+      score: null, effectiveScoringWeight: 0, causeGapIds: [excludedSibling.gapId],
+    }));
+  });
+
   it("keeps researched C and unresearched U at ordinary minima while attributing a separately proved failure only to D", () => {
     const claim = missingMechanism("claim-and-segregation", "gap:researched-claim", "fiat.claim.required", "Exact claim is undisclosed");
     const gap: V9FactGapV3 = {

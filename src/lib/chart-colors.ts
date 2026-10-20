@@ -1,7 +1,7 @@
 /* ═══════════════════════════════════════════════════════════════════
    Chart Color Tokens
-   Single source of truth for all chart colors. Hex values here match
-   the --*-hex CSS custom properties in semantic.css.
+   General chart palette and tokens; classification colors live in
+   shared/lib/classification children. Hex tokens here match semantic.css.
    Recharts needs literal hex strings — CSS var() doesn't work in SVG
    fill/stroke attributes rendered by React.
    ═══════════════════════════════════════════════════════════════════ */
@@ -59,23 +59,6 @@ export { THREAT_BAND_HEX } from "@shared/lib/classification";
 // ---------------------------------------------------------------------------
 // Extracted inline chart colors -- previously defined inside components.
 // ---------------------------------------------------------------------------
-
-/** Reserve risk tiers on the site's ordered severity ramp (green → teal →
- *  amber → orange → red, the order PSI and DEWS bands use), drawn from the
- *  chart tokens. Accents carry the hue in legends, outlines and tooltips. */
-export const RISK_ACCENT_COLORS: Record<string, string> = {
-  "very-low": TOKEN.green,
-  low: TOKEN.teal,
-  medium: TOKEN.yellow,
-  high: TOKEN.orange,
-  "very-high": TOKEN.red,
-};
-
-/** Treemap tile fills: the tier hue at ~24% over the card, so one label ink
- *  (`RESERVE_TREEMAP_LABEL_COLOR`) reads on every tier in both themes. */
-export const RISK_COLORS: Record<string, string> = Object.fromEntries(
-  Object.entries(RISK_ACCENT_COLORS).map(([risk, hex]) => [risk, `${hex}3d`]),
-);
 
 /** In-block label ink for the tinted reserve treemap fills. */
 export const RESERVE_TREEMAP_LABEL_COLOR = "var(--color-foreground)";

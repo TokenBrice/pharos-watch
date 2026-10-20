@@ -106,7 +106,7 @@ describe("subgraph enrichment phase", () => {
     const result = await runPhase(db);
 
     expect(result.failedSources).toEqual(["univ3-subgraph:ethereum"]);
-    expect(result.uniV3ExecutionCandidates.get(ETH_KEY)).toEqual([ETH_POOL]);
+    expect(result.uniV3ExecutionCandidates.get(ETH_KEY)).toEqual([{ ...ETH_POOL, carriedFromSnapshot: true }]);
     expect(result.uniV3CandidateCarryForward).toContainEqual({
       chain: "ethereum", outcome: "carried", fetchedAt: NOW, ageSec: 0, candidates: 1, added: 1,
     });
@@ -122,7 +122,7 @@ describe("subgraph enrichment phase", () => {
     const result = await runPhase(db);
 
     expect(result.failedSources).toEqual(["univ3-subgraph"]);
-    expect(result.uniV3ExecutionCandidates.get(ETH_KEY)).toEqual([ETH_POOL]);
+    expect(result.uniV3ExecutionCandidates.get(ETH_KEY)).toEqual([{ ...ETH_POOL, carriedFromSnapshot: true }]);
     expect(result.uniV3CandidateCarryForward.map((entry) => entry.outcome)).toEqual(
       Object.keys(UNIV3_SUBGRAPHS).map(() => "carried"),
     );

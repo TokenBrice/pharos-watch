@@ -1,5 +1,22 @@
 [
   {
+    "version": "6.28",
+    "title": "Proven supply destruction and complete window coverage",
+    "date": "2026-10-20",
+    "effectiveAt": 1792454400,
+    "summary": "Reviewed zero-address transfers require destruction evidence, and flow windows require durable scan proof before publishing net activity, direction or pressure.",
+    "impact": [
+      "Zero-recipient transfers are observations, not automatic destruction for reviewed false-event identities. Exact custom issuance receipts or validated direct source paths can admit burns; router selectors alone cannot. Unproven or context-unavailable observations remain review-required and non-counted.",
+      "Bounded retained-hour reclassification records durable materialization debt and keeps raw conservation separate from economic classification. Per-config keyset cursors advance through retained burns; unavailable receipts retain a named reason and are retried when the cursor wraps. Pruned historical hours cannot be exactly repaired without audited replay; rebasing and unverified-source exclusions are not blanket burn exclusions.",
+      "Each closed window needs current-fingerprint scan proof. Without it, legacy has24hActivity stays null even when events were observed; additive observed24hActivity preserves that observed fact, and false does not prove quiet. Signed net, bounds, direction and pressure remain scan-gated, while observed gross/count subtotals remain separately available. Quiet-zero days and gauge inclusion require affirmative coverage.",
+      "Cache v5 rejects incompatible coverage payloads. Finalized-scan fingerprint v2 reflects changed classification: retained v1 proof cannot authorize v2 history or immediately establish long-window coverage.",
+      "Aggregate, per-coin, DDR and OG readers batch hourly totals, scan proof and materialization debt atomically; DEWS batches hourly totals with debt. A dirty post-v2 hour still withholds exact affected windows until rebuild debt drains, so an already-issued v2 scan proof cannot bless stale hourly materialization.",
+      "Release B11 and B12 together after writer soak. The existing PR-B null-tolerant Pages prerequisite remains; the additive observed-activity field does not require new scan-aware Pages before this Worker's output. Sealed historical bytes and original identities remain unchanged. Planned release date is 2026-10-20."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.27",
     "title": "Literal minting pressure needs fully valued volumes",
     "date": "2026-10-19",

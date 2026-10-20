@@ -20,7 +20,9 @@ import {
 import { normalizeProtocol } from "./pool-helpers";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { CG_TICKER_PRICE_MIN_VOLUME_USD, dexPriceEvidenceWeight } from "./coingecko-tickers-shared";
+import { canonicalExitRouteChain, canonicalExitRouteScopedKey } from "@shared/types/exit-route-identity";
 
+import type { DexLiquidityProtocolTvlQuarantine } from "../../lib/schemas";
 /** Evaluation clock for DEC-19 volume windows: the run's source clock plus the producer budget. */
 export type DexVolumeClock = Parameters<typeof summarizeDexVolumeWindow>[2];
 
@@ -317,7 +319,7 @@ export function filterRetainedPools(
   });
 }
 
-function shouldStrictlyCapSource(source: LiquidityMetrics["topPools"][number]["source"]): boolean {
+function isProtocolTvlFallbackSource(source: LiquidityMetrics["topPools"][number]["source"]): boolean {
   return source === "cg_onchain" ||
     source === "gecko_terminal" ||
     source === "dexscreener" ||
@@ -331,60 +333,57 @@ function shouldStrictlyCapSource(source: LiquidityMetrics["topPools"][number]["s
     source === "noble-swap";
 }
 
-export function applyProtocolCaps(
-  pools: LiquidityMetrics["topPools"],
+/**
+ * Reject the suspect fallback group, never scale its observations to fit.
+ * Headroom is evaluated per coin as before; a rejection follows the physical
+ * fallback pool across every coin attribution. Trusted sources remain intact.
+ */
+export function quarantineProtocolTvlOutliers(
+  poolsByStablecoin: Map<string, LiquidityMetrics["topPools"]>,
   protocolTvlCaps: Map<string, number>,
-) {
-  if (protocolTvlCaps.size === 0 || pools.length === 0) {
-    return { cappedPoolCount: 0, cappedProtocols: 0, reducedTvlUsd: 0 };
-  }
-
-  const cappedTvlByProto = new Map<string, number>();
-  const trustedTvlByProto = new Map<string, number>();
-
-  for (const pool of pools) {
-    const proto = normalizeProtocol(pool.project);
-    if (shouldStrictlyCapSource(pool.source)) {
-      cappedTvlByProto.set(proto, (cappedTvlByProto.get(proto) ?? 0) + pool.tvlUsd);
-      continue;
-    }
-    trustedTvlByProto.set(proto, (trustedTvlByProto.get(proto) ?? 0) + pool.tvlUsd);
-  }
-
-  let cappedPoolCount = 0;
-  let cappedProtocols = 0;
-  let reducedTvlUsd = 0;
-
-  for (const [proto, cappedTvl] of cappedTvlByProto) {
-    const cap = protocolTvlCaps.get(proto);
-    if (cap == null || cap <= 0 || cappedTvl <= 0) continue;
-    const trustedTvl = trustedTvlByProto.get(proto) ?? 0;
-    const headroom = Math.max(0, cap - trustedTvl);
-    if (cappedTvl <= headroom) continue;
-
-    cappedProtocols++;
-    const scale = headroom / cappedTvl;
-    for (const pool of pools) {
-      if (!shouldStrictlyCapSource(pool.source) || normalizeProtocol(pool.project) !== proto) continue;
-      const previousTvl = pool.tvlUsd;
-      pool.tvlUsd = Math.round(pool.tvlUsd * scale);
-      reducedTvlUsd += Math.max(0, previousTvl - pool.tvlUsd);
-      if (pool.extra) {
-        if (typeof pool.extra.qualityAdjustedTvl === "number") {
-          pool.extra.qualityAdjustedTvl = Math.round(pool.extra.qualityAdjustedTvl * scale);
-        }
-        if (typeof pool.extra.effectiveTvl === "number") {
-          pool.extra.effectiveTvl = Math.round(pool.extra.effectiveTvl * scale);
-        }
-        const measurement = pool.extra.measurement ?? {};
-        measurement.capped = true;
-        pool.extra.measurement = measurement;
+): DexLiquidityProtocolTvlQuarantine {
+  const rejectedPools = new Map<string, PoolEntry>();
+  const rejectedProtocols = new Set<string>();
+  if (protocolTvlCaps.size > 0) {
+    for (const pools of poolsByStablecoin.values()) {
+      const fallbackTvl = new Map<string, number>();
+      const trustedTvl = new Map<string, number>();
+      for (const pool of pools) {
+        const proto = normalizeProtocol(pool.project);
+        const totals = isProtocolTvlFallbackSource(pool.source) ? fallbackTvl : trustedTvl;
+        totals.set(proto, (totals.get(proto) ?? 0) + pool.tvlUsd);
       }
-      cappedPoolCount++;
+      const suspectProtocols = new Set<string>();
+      for (const [proto, tvl] of fallbackTvl) {
+        const cap = protocolTvlCaps.get(proto);
+        if (cap == null || !Number.isFinite(cap) || cap <= 0) continue;
+        if (tvl > Math.max(0, cap - (trustedTvl.get(proto) ?? 0))) suspectProtocols.add(proto);
+      }
+      for (const pool of pools) {
+        const proto = normalizeProtocol(pool.project);
+        if (!isProtocolTvlFallbackSource(pool.source) || !suspectProtocols.has(proto)) continue;
+        const key = canonicalExitRouteScopedKey(pool.chain, pool.poolId);
+        const previous = rejectedPools.get(key);
+        if (!previous || pool.tvlUsd > previous.tvlUsd) rejectedPools.set(key, pool);
+        rejectedProtocols.add(proto);
+      }
     }
   }
-
-  return { cappedPoolCount, cappedProtocols, reducedTvlUsd: Math.round(reducedTvlUsd) };
+  if (rejectedPools.size > 0) {
+    for (const [id, pools] of poolsByStablecoin) {
+      poolsByStablecoin.set(id, pools.filter((pool) =>
+        !isProtocolTvlFallbackSource(pool.source) ||
+        !rejectedPools.has(canonicalExitRouteScopedKey(pool.chain, pool.poolId))));
+    }
+  }
+  let tvlUsd = 0;
+  for (const pool of rejectedPools.values()) tvlUsd += pool.tvlUsd;
+  return {
+    reason: "fallback-protocol-tvl-exceeds-headroom",
+    poolCount: rejectedPools.size,
+    protocolCount: rejectedProtocols.size,
+    tvlUsd: Math.round(tvlUsd),
+  };
 }
 
 export function applyRebuiltMetrics(
@@ -429,8 +428,11 @@ export function accumulateGlobalAggregate(
 
   for (const pool of pools) {
     const proto = normalizeProtocol(pool.project);
-    const chainKey = pool.chain;
-    const prev = seenPoolTvl.get(pool.poolId);
+    const chainKey = canonicalExitRouteChain(pool.chain);
+    const poolKey = pool.poolId.startsWith(`${chainKey}:defillama:`)
+      ? pool.poolId
+      : canonicalExitRouteScopedKey(chainKey, pool.poolId);
+    const prev = seenPoolTvl.get(poolKey);
 
     if (prev) {
       // The highest-TVL occurrence owns the deduped pool, including its volume reading.
@@ -441,12 +443,12 @@ export function accumulateGlobalAggregate(
         globalProtocolTvl[proto] = (globalProtocolTvl[proto] ?? 0) + pool.tvlUsd;
         globalChainTvl[chainKey] = (globalChainTvl[chainKey] ?? 0) + pool.tvlUsd;
         globalChains.add(chainKey);
-        seenPoolTvl.set(pool.poolId, { tvl: pool.tvlUsd, reading: pool.volumeReading, proto, chain: chainKey });
+        seenPoolTvl.set(poolKey, { tvl: pool.tvlUsd, reading: pool.volumeReading, proto, chain: chainKey });
       }
       continue;
     }
 
-    seenPoolTvl.set(pool.poolId, { tvl: pool.tvlUsd, reading: pool.volumeReading, proto, chain: chainKey });
+    seenPoolTvl.set(poolKey, { tvl: pool.tvlUsd, reading: pool.volumeReading, proto, chain: chainKey });
     totalTvl += pool.tvlUsd;
     poolCount++;
     globalChains.add(chainKey);
@@ -650,6 +652,23 @@ export function aggregateProtocolSources(
   return aggregated.sort((left, right) => right.tvl - left.tvl || left.protocol.localeCompare(right.protocol));
 }
 
+/** Quote provenance and support are independent of the retained value observation. */
+export function projectRetainedPoolPrice(pool: LiquidityMetrics["topPools"][number]): DexPriceObs | null {
+  const tvl = Math.min(pool.tvlUsd, pool.priceEvidenceTvlUsd ?? pool.tvlUsd);
+  if (typeof pool.price !== "number" || !Number.isFinite(pool.price) || pool.price <= 0 ||
+      !Number.isFinite(tvl) || tvl <= 0) return null;
+  return {
+    price: pool.price,
+    observedAt: pool.priceObservedAt ?? null,
+    tvl,
+    chain: pool.chain,
+    protocol: pool.project,
+    poolKey: pool.poolId,
+    identityConfidence: "exact",
+    sourceFamily: pool.priceSource ?? pool.source,
+  };
+}
+
 export function buildDexPriceObservationsFromRetainedPools(
   retainedPoolsByStablecoin: Map<string, LiquidityMetrics["topPools"]>,
   exactPriceEvidenceByStablecoin?: Map<string, DexPriceObs[]>,
@@ -687,26 +706,12 @@ export function buildDexPriceObservationsFromRetainedPools(
       }
 
       if (typeof pool.price === "number" && Number.isFinite(pool.price) && pool.price > 0) {
-        const priceEvidenceTvl = Math.min(pool.tvlUsd, pool.priceEvidenceTvlUsd ?? pool.tvlUsd);
-        if (!Number.isFinite(priceEvidenceTvl) || priceEvidenceTvl <= 0) {
+        const priceEvidence = projectRetainedPoolPrice(pool);
+        if (!priceEvidence) {
           rejectedPriceEvidenceCount++;
           continue;
         }
-        pricedPools.push({
-          price: pool.price,
-          observedAt: pool.priceObservedAt ?? null,
-          // A cross-source price (value row and price row from different
-          // registry observations) is weighted by the TVL the price-observing
-          // row itself claims, never by the value row's larger TVL.
-          tvl: priceEvidenceTvl,
-          chain: pool.chain,
-          protocol: pool.project,
-          poolKey: pool.poolId,
-          identityConfidence: "exact",
-          // Confidence and published attribution follow the family that
-          // observed the price, not the family that supplied the value.
-          sourceFamily: pool.priceSource ?? pool.source,
-        });
+        pricedPools.push(priceEvidence);
         continue;
       }
 

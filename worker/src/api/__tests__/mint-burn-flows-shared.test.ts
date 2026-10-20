@@ -13,7 +13,13 @@ import {
 } from "../../lib/mint-burn-flows-service";
 import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { mintBurnScenario } from "../../test-helpers/__shared/mint-burn";
+import { makeMintBurnScanSegments, mintBurnScenario } from "../../test-helpers/__shared/mint-burn";
+
+function proofMap(end: number, days: number, config: typeof MINT_BURN_CONFIGS[number]) {
+  return new Map(makeMintBurnScanSegments(Math.floor(end / 3600) * 3600, days,
+    MINT_BURN_CONFIGS.filter((entry) => entry.stablecoinId === config.stablecoinId))
+    .map((segment) => [segment.config_key, [segment]]));
+}
 
 describe("readCachedFlow", () => {
   it("returns only the requested cached window and rejects missing entries", async () => {
@@ -249,7 +255,7 @@ describe("readMintBurnCronSnapshot", () => {
       const config = MINT_BURN_CONFIGS[0]!;
       const coverage = buildCoinCoverageMap(
         1_700_000_000,
-        [],
+        new Map(),
         new Map(),
         snapshot.value.chainHeads,
         snapshot.error ? "cron-snapshot-unavailable" : null,
@@ -403,7 +409,7 @@ describe("buildCoinCoverageMap", () => {
     const referenceHead = config.startBlock + 1_000_000;
     const coverage = buildCoinCoverageMap(
       200 * DAY_SECONDS,
-      [{ stablecoin_id: config.stablecoinId, chain_id: config.chain.chainId, first_hour_ts: 50 * DAY_SECONDS }],
+      proofMap(200 * DAY_SECONDS, 150, config),
       new Map([[`${config.chain.chainId}-${config.contractAddress}`, referenceHead]]),
       new Map([[config.chain.chainId, referenceHead]]),
     );
@@ -420,21 +426,20 @@ describe("buildCoinCoverageMap", () => {
     });
   });
 
-  it("returns bootstrapping when lastSyncedBlock is very close to startBlock", () => {
+  it("returns unknown when a recent cursor has no durable scan proof", () => {
     const config = pickSingleConfigCoin();
-    // lastSyncedBlock only 50 blocks past startBlock.
-    // No first-seen data and less than 24h of scanned range → bootstrapping.
+    // Cursor distance alone cannot certify the duration or continuity of a scan.
     const lastSynced = config.startBlock + 50;
     const chainHead = config.startBlock + 1_000_000;
     const coverage = buildCoinCoverageMap(
       200 * DAY_SECONDS,
-      [], // no first-seen rows for this coin
+      new Map(),
       new Map([[`${config.chain.chainId}-${config.contractAddress}`, lastSynced]]),
       new Map([[config.chain.chainId, chainHead]]),
     );
 
     expect(coverage.get(config.stablecoinId)).toMatchObject({
-      status: "bootstrapping",
+      status: "unknown",
       isPartial: true,
       has24hWindow: false,
     });
@@ -447,13 +452,13 @@ describe("buildCoinCoverageMap", () => {
     const chainHead = 25_631_350;
     const coverage = buildCoinCoverageMap(
       1_785_243_764,
-      [], // XAUT's last issuance event is older than hourly retention.
+      proofMap(1_785_243_764, 90, config!),
       new Map([[`${config!.chain.chainId}-${config!.contractAddress}`, chainHead - 5]]),
       new Map([[config!.chain.chainId, chainHead]]),
     );
 
     expect(coverage.get(config!.stablecoinId)).toMatchObject({
-      historyStartAt: null,
+      historyStartAt: Math.floor(1_785_243_764 / 3600) * 3600 - 90 * DAY_SECONDS,
       has24hWindow: true,
       has30dWindow: true,
       has90dWindow: true,
@@ -469,13 +474,13 @@ describe("buildCoinCoverageMap", () => {
     const chainHead = config.startBlock + tenDaysOfBlocks;
     const coverage = buildCoinCoverageMap(
       200 * DAY_SECONDS,
-      [],
+      proofMap(200 * DAY_SECONDS, 10, config),
       new Map([[`${config.chain.chainId}-${config.contractAddress}`, chainHead]]),
       new Map([[config.chain.chainId, chainHead]]),
     );
 
     expect(coverage.get(config.stablecoinId)).toMatchObject({
-      historyStartAt: null,
+      historyStartAt: 190 * DAY_SECONDS,
       has24hWindow: true,
       has30dWindow: false,
       has90dWindow: false,
@@ -491,7 +496,7 @@ describe("buildCoinCoverageMap", () => {
     const lastSynced = chainHead - 301;
     const coverage = buildCoinCoverageMap(
       200 * DAY_SECONDS,
-      [{ stablecoin_id: config.stablecoinId, chain_id: config.chain.chainId, first_hour_ts: 50 * DAY_SECONDS }],
+      proofMap(200 * DAY_SECONDS, 150, config),
       new Map([[`${config.chain.chainId}-${config.contractAddress}`, lastSynced]]),
       new Map([[config.chain.chainId, chainHead]]),
     );
@@ -508,7 +513,7 @@ describe("buildCoinCoverageMap", () => {
     const referenceHead = config.startBlock + 1_000_000;
     const coverage = buildCoinCoverageMap(
       200 * DAY_SECONDS,
-      [{ stablecoin_id: config.stablecoinId, chain_id: config.chain.chainId, first_hour_ts: 50 * DAY_SECONDS }],
+      proofMap(200 * DAY_SECONDS, 150, config),
       new Map([[`${config.chain.chainId}-${config.contractAddress}`, referenceHead]]),
       new Map(),
     );
@@ -524,12 +529,11 @@ describe("buildCoinCoverageMap", () => {
   it("returns partial-history when coin is tracked for < 30 days", () => {
     const config = pickSingleConfigCoin();
     const nowSec = 100 * DAY_SECONDS;
-    // first_hour_ts 10 days ago → has 24h window but NOT 30d window
-    const firstHourTs = nowSec - 10 * DAY_SECONDS;
+    // Ten days of durable proof admit 24h but not 30d.
     const referenceHead = config.startBlock + Math.ceil((10 * DAY_SECONDS) / 12);
     const coverage = buildCoinCoverageMap(
       nowSec,
-      [{ stablecoin_id: config.stablecoinId, chain_id: config.chain.chainId, first_hour_ts: firstHourTs }],
+      proofMap(nowSec, 10, config),
       new Map([[`${config.chain.chainId}-${config.contractAddress}`, referenceHead]]),
       new Map([[config.chain.chainId, referenceHead]]),
     );

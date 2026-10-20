@@ -233,13 +233,16 @@ export function refineCard(
       }
       if (item.source === "peg-performance") {
         const pegMultiplier = stages.pegMultiplier;
+        // A six-decimal value represents a half-open rounding interval. Its
+        // lower edge must intersect raw values strictly below the policy floor;
+        // equality at the upper-exclusive floor + half-step is not adversity.
         const expectedMessage =
           pegMultiplier === null
             ? null
             : `Measured peg multiplier is ${roundAttributionValue(pegMultiplier, 6)}.`;
         if (
           pegMultiplier === null ||
-          pegMultiplier >= DANGER_PEG_MULTIPLIER_FLOOR ||
+          pegMultiplier >= DANGER_PEG_MULTIPLIER_FLOOR + 0.5 / 1_000_000 ||
           item.path !== "peg:historical-performance" ||
           item.message !== expectedMessage
         ) {

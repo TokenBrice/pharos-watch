@@ -234,7 +234,7 @@ describe("Curve legacy StableSwap 3pool policy", () => {
     const verify = createCurveStableSwapDeploymentVerifier({
       fetchCodeStatus,
       fetchCall: vi.fn(async () => null),
-      fetchBlockTimestamp: vi.fn(async () => BLOCK_TIMESTAMP),
+      fetchBlockHeader: vi.fn(async () => ({ number: BLOCK_NUMBER, timestamp: BLOCK_TIMESTAMP, hash: `0x${"ab".repeat(32)}` as const })),
     });
 
     await expect(verify({
@@ -256,7 +256,7 @@ describe("Curve legacy StableSwap 3pool policy", () => {
       createCurveStableSwapDeploymentVerifier({
         fetchCodeStatus: vi.fn(async () => ({ status })),
         fetchCall: vi.fn(async () => null),
-        fetchBlockTimestamp: vi.fn(async () => BLOCK_TIMESTAMP),
+        fetchBlockHeader: vi.fn(async () => ({ number: BLOCK_NUMBER, timestamp: BLOCK_TIMESTAMP, hash: `0x${"ab".repeat(32)}` as const })),
       })({
         blockNumber: BLOCK_NUMBER,
         nowSec: BLOCK_TIMESTAMP + 60,
@@ -318,7 +318,7 @@ describe("Curve legacy StableSwap 3pool policy", () => {
         code: address === policy.poolAddress ? "0x6000" as const : "0x6001" as const,
       })),
       fetchCall,
-      fetchBlockTimestamp: vi.fn(async () => BLOCK_TIMESTAMP),
+      fetchBlockHeader: vi.fn(async () => ({ number: BLOCK_NUMBER, timestamp: BLOCK_TIMESTAMP, hash: `0x${"ab".repeat(32)}` as const })),
       hashCode: (code) =>
         code === "0x6000" ? policy.expectedPoolCodeHash : policy.expectedRegistryCodeHash,
     });
@@ -333,6 +333,7 @@ describe("Curve legacy StableSwap 3pool policy", () => {
       ok: true,
       codeHash: policy.expectedPoolCodeHash,
       blockTimestamp: BLOCK_TIMESTAMP,
+      blockHash: `0x${"ab".repeat(32)}`,
       registryBindingProof: {
         registryAddress: policy.registryAddress,
         registryCodeHash: policy.expectedRegistryCodeHash,
@@ -411,6 +412,7 @@ describe("Curve legacy StableSwap 3pool quoting", () => {
           target: usdtToUsdc,
           inputUsd: 25_000_000,
           blockNumber: BLOCK_NUMBER,
+          blockHash: `0x${"ab".repeat(32)}`,
           blockObservedAt: BLOCK_TIMESTAMP + 60,
           endpointAddress: CURVE_3POOL_STABLESWAP_POLICY.poolAddress,
           runtimeEvidence: runtimeEvidence(),
@@ -419,6 +421,7 @@ describe("Curve legacy StableSwap 3pool quoting", () => {
           target: usdcToUsdt,
           inputUsd: 25_000_000,
           blockNumber: BLOCK_NUMBER,
+          blockHash: `0x${"ab".repeat(32)}`,
           blockObservedAt: BLOCK_TIMESTAMP + 60,
           endpointAddress: CURVE_3POOL_STABLESWAP_POLICY.poolAddress,
           runtimeEvidence: runtimeEvidence(),
@@ -462,6 +465,7 @@ describe("Curve legacy StableSwap 3pool quoting", () => {
       target: quoteTarget,
       inputUsd: 100_000,
       blockNumber: BLOCK_NUMBER,
+      blockHash: `0x${"ab".repeat(32)}` as const,
       blockObservedAt: BLOCK_TIMESTAMP + 60,
       endpointAddress: CURVE_3POOL_STABLESWAP_POLICY.poolAddress,
       runtimeEvidence: runtimeEvidence(),
@@ -505,6 +509,7 @@ describe("Curve legacy StableSwap 3pool quoting", () => {
         target: measuredTarget,
         inputUsd: 100_000,
         blockNumber: BLOCK_NUMBER,
+        blockHash: `0x${"ab".repeat(32)}`,
         blockObservedAt: BLOCK_TIMESTAMP + 60,
         endpointAddress: CURVE_3POOL_STABLESWAP_POLICY.poolAddress,
         runtimeEvidence: runtimeEvidence(),
@@ -532,6 +537,7 @@ describe("Curve legacy StableSwap 3pool quoting", () => {
       result: 999_500_000n,
     });
     const profile = buildDexMeasuredExecutionProfile({
+      blockHash: `0x${"ab".repeat(32)}`,
       target: measuredTarget,
       targetGenerationId: "targets-1",
       quoteGenerationId: "quotes-1",

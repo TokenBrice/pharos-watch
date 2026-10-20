@@ -120,17 +120,19 @@ function normalizeMechanismReview(
     }
   }
 
-  for (const [componentKey, value] of Object.entries(normalized)) {
-    if (value === null || typeof value !== "object" || !("status" in value)) continue;
+  function normalizeComponent(
+    componentField: string,
+    componentKey: string,
+    originalFact: V9MechanismFactV1,
+    factorKey: string | null,
+  ): V9MechanismFactV1 {
     // Components can be equal interned objects but acquire field-specific gaps.
-    const originalFact = value as V9MechanismFactV1;
     const fact: V9MechanismFactV1 = {
       ...originalFact,
       ...(originalFact.scopedAssessments == null ? {} : {
         scopedAssessments: originalFact.scopedAssessments.map((fragment) => ({ ...fragment })),
       }),
     };
-    (normalized as unknown as Record<string, unknown>)[componentKey] = fact;
     const specificEvidenceKey = `mechanism-risk-review:${componentKey}`;
     const factEvidenceIds = context.asset.componentEvidence.some(
       (binding) => binding.componentKey === specificEvidenceKey,
@@ -160,7 +162,7 @@ function normalizeMechanismReview(
         evidenceRefIds: factEvidenceIds,
       });
       for (const evidenceId of factEvidenceIds) componentEvidenceIds.add(evidenceId);
-      continue;
+      return fact;
     }
     // A missing non-serial component is bounded like a stale or
     // bounded-unknown one: it scores at the bounded-unknown quality and the
@@ -181,6 +183,12 @@ function normalizeMechanismReview(
             ? context.asset.mechanismReviewGapDisposition.responsibility
             : reviewedGapResponsibility(original.observationState),
         path: { kind: "local-component", componentKey: `mechanism-review:${componentKey}` },
+        ...(factorKey === null ? {} : {
+          causeScope: {
+            pillar: "backing" as const, componentKey: `mechanism-review:${componentField}`,
+            factorKey, routeKey: null, exposureId: null, requiredDatum: factorKey,
+          },
+        }),
         message:
           context.asset.mechanismReviewGapDisposition?.componentKeys.includes(componentKey) === true
             ? context.asset.mechanismReviewGapDisposition.rationale
@@ -227,6 +235,39 @@ function normalizeMechanismReview(
     componentGapIds.push(gapId);
     if (fact.status.evidenceRefIds.length > 0) {
       for (const evidenceId of factEvidenceIds) componentEvidenceIds.add(evidenceId);
+    }
+    return fact;
+  }
+
+  for (const [componentField, value] of Object.entries(normalized)) {
+    if (value === null || typeof value !== "object" || !("status" in value)) continue;
+    const componentFact = value as V9MechanismFactV1;
+    if (componentFact.constraints === undefined) {
+      (normalized as unknown as Record<string, unknown>)[componentField] =
+        normalizeComponent(componentField, componentField, componentFact, null);
+    } else {
+      const normalizedConstraints = componentFact.constraints.map((constraint) => {
+        const fact = normalizeComponent(componentField, `${componentField}:${constraint.factKey}`, {
+          quality: constraint.quality, status: constraint.status, failureDomains: componentFact.failureDomains,
+        }, constraint.factKey);
+        return { factKey: constraint.factKey, quality: fact.quality, status: fact.status };
+      });
+      const statuses = normalizedConstraints.map((constraint) => constraint.status);
+      const state = statuses.some((row) => row.observationState === "unsupported") ? "unsupported"
+        : statuses.some((row) => row.observationState === "missing") ? "missing"
+        : statuses.some((row) => row.observationState === "stale") ? "stale"
+        : statuses.some((row) => row.observationState !== "known") ? "bounded-unknown" : "known";
+      (normalized as unknown as Record<string, unknown>)[componentField] = {
+        ...componentFact,
+        constraints: normalizedConstraints,
+        status: createV9FactStatus({
+          applicability: componentFact.status.applicability,
+          observationState: state,
+          // Supported sibling evidence belongs to its constraint, not an unsupported aggregate.
+          evidenceRefIds: state === "unsupported" ? [] : [...new Set(statuses.flatMap((row) => row.evidenceRefIds))],
+          gapIds: [...new Set(statuses.flatMap((row) => row.gapIds))],
+        }),
+      };
     }
   }
 
@@ -380,27 +421,50 @@ export function buildDependencies(context: AssetBuildContext): V9EffectiveDepend
   const source = overlay.dependencyFromLive
     ? context.extension.sources.liveReserves
     : context.extension.sources.researchOverlays;
-  const evidenceIds = overlay.dependencyFromLive
-    ? [
-        addEvidence(
-          context,
-          createV9EvidenceReference(
-            {
-              evidenceId: `${context.asset.assetId}:effective-dependencies`,
-              sourceId: "report-cards-live-reserves",
-              sourceGenerationId: source.generationId,
-              disposition: "observed",
-              observedAtSec: source.observedAtSec,
-              contentSha256: domainDigest("safety-score-v9.effective-dependencies.v1", overlay),
-              maxAgeSec: source.maxAgeSec,
-            },
-            context.fixedInput.clockSec,
-          ),
-        ),
-      ]
-    : componentResearchEvidence(context, "dependencies");
+  const provenance = context.fixedInput.liveReserveProvenanceMap[context.asset.assetId];
+  const evidenceIds = overlay.dependencyFromLive ? [] : componentResearchEvidence(context, "dependencies");
+  if (overlay.dependencyFromLive && provenance !== undefined) {
+    evidenceIds.push(addEvidence(
+      context,
+      createV9EvidenceReference(
+        {
+          evidenceId: `${context.asset.assetId}:effective-dependencies`,
+          sourceId: provenance.source,
+          sourceGenerationId: source.generationId,
+          disposition: "observed",
+          observedAtSec: provenance.fetchedAt,
+          contentSha256: domainDigest("safety-score-v9.effective-dependencies.v1", overlay),
+          maxAgeSec: source.maxAgeSec,
+        },
+        context.fixedInput.clockSec,
+      ),
+    ));
+  }
   let status: V9FactStatusV2;
-  if (overlay.diagnostics.graphState === "valid") {
+  const staleLiveEvidence = overlay.dependencyFromLive &&
+    evidenceIds.some((id) => context.evidence.get(id)?.freshness.state === "stale");
+  if (overlay.dependencyFromLive && provenance === undefined) {
+    status = missingLocalFact(context, {
+      componentKey: "effective-dependencies",
+      reasonCode: "unreviewed-dependency-relationships",
+      ownerDomain: "dependency",
+      responsibility: "integration-missing",
+      policyRuleId: "v9.dependencies.effective-set",
+      message: "The retained live reserve dependency graph has no asset fetch provenance.",
+      evidenceRefIds: evidenceIds,
+    }).status;
+  } else if (staleLiveEvidence) {
+    status = missingLocalFact(context, {
+      componentKey: "effective-dependencies",
+      reasonCode: "unreviewed-dependency-relationships",
+      ownerDomain: "dependency",
+      responsibility: "integration-missing",
+      policyRuleId: "v9.dependencies.effective-set",
+      message: "The retained live reserve dependency observation exceeds its producer freshness budget.",
+      observationState: "stale",
+      evidenceRefIds: evidenceIds,
+    }).status;
+  } else if (overlay.diagnostics.graphState === "valid") {
     assertKnownComponentEvidenceCurrent(context, "dependencies", evidenceIds);
     status = createV9FactStatus({
       applicability: requiredV9Applicability("v9.dependencies.effective-set"),

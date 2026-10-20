@@ -74,6 +74,28 @@ describe("processFetchedBlacklistRows", () => {
     vi.useRealTimers();
   });
 
+  it.each(["event", "historical_balance", "derived", "unavailable"] as const)(
+    "requires event-time zero evidence before suppressing EURC (%s)",
+    async (amountSource) => {
+      const row = makePendingBlacklistRow({
+        id: "eurc-zero", stablecoin: "EURC", amount_native: 0, amount_source: amountSource,
+        amount_status: "resolved",
+      });
+      const db = mockD1([{ match: "SELECT id FROM blacklist_events WHERE id IN", rows: [] }]);
+      vi.mocked(enrichRowBalances).mockResolvedValue({ attempted: 0, succeeded: 0, failed: 0 });
+      vi.mocked(insertBlacklistRows).mockResolvedValue(1);
+      vi.mocked(syncCurrentBalanceCacheForRows).mockResolvedValue({
+        updated: 0, failed: 0, skippedDueBudget: 0, budgetExhausted: false,
+      });
+      await processFetchedBlacklistRows(postFetchOptions(db, [row]));
+      expect(row.suppression_reason).toBe(amountSource === "event" ? "circle_mirror_zero_balance" : null);
+      expect(row.amount_status).toBe(amountSource === "event" ? "permanently_unavailable" : "resolved");
+      expect(syncCurrentBalanceCacheForRows).toHaveBeenCalledWith(
+        db, config, amountSource === "event" ? [] : [row], expect.anything(),
+      );
+    },
+  );
+
   it("honors abort before a post-fetch D1 read", async () => {
     const controller = new AbortController();
     controller.abort(new Error("stop post-fetch"));

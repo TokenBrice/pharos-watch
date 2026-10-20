@@ -11,6 +11,8 @@ import {
 } from "../mint-burn-contracts";
 import { MINT_BURN_CONFIG_SPECS } from "../mint-burn-contracts-data";
 import { MINT_BURN_COVERED_COIN_IDS } from "../../cron/depeg-resolver/mint-burn-coverage";
+import { getMintBurnConservationRuntimeEntry, requiresReviewedSupplyBurnProof } from "../mint-burn-conservation";
+import { reviewedBurnFixture, reviewedFalseBurnEntries } from "./mint-burn-supply-proof.test-support";
 
 const TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
 const ZERO_ADDRESS_PADDED = "0x0000000000000000000000000000000000000000000000000000000000000000";
@@ -370,6 +372,27 @@ describe("BUIDL Ethereum supply scope", () => {
       expect(config.startBlockSource).toBe("default-coverage-floor-2026-03-24");
       expect(config.startBlockConfidence).toBe("low");
       expect(config.events).toEqual(EXPECTED_TRANSFER_EVENTS);
+    }
+  });
+});
+
+describe("reviewed false-burn identity admission", () => {
+  it("derives its complete guard set from the reviewed sidecar, not generic conservation support", () => {
+    for (const entry of reviewedFalseBurnEntries) {
+      const { config, source } = reviewedBurnFixture(entry.stablecoinId);
+      expect(getMintBurnConfigsForStablecoin(entry.stablecoinId)
+        .filter((item) => item.chain.chainId === entry.chainId), entry.stablecoinId).toHaveLength(1);
+      expect(requiresReviewedSupplyBurnProof(config), entry.stablecoinId).toBe(true);
+      expect(getMintBurnConservationRuntimeEntry(config)?.supplyBurnProof, entry.stablecoinId).toEqual(entry.supplyBurnProof);
+      expect(source.eventTopic ?? source.selector, entry.stablecoinId).toBeTruthy();
+      expect(requiresReviewedSupplyBurnProof({ ...config, decimals: config.decimals + 1 })).toBe(false);
+      expect(requiresReviewedSupplyBurnProof({ ...config, contractAddress: "0x1111111111111111111111111111111111111111" })).toBe(false);
+    }
+    for (const config of MINT_BURN_CONFIGS) {
+      const reason = getMintBurnConservationRuntimeEntry(config)?.unsupportedReason;
+      if (!reason?.startsWith("zero-address-transfer-without-supply-change:")) {
+        expect(requiresReviewedSupplyBurnProof(config), config.stablecoinId).toBe(false);
+      }
     }
   });
 });

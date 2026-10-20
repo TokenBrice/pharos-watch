@@ -94,6 +94,21 @@ function isTerminalEvidenceSettledBy(
   return terminalEvidenceInterval.end <= endedAt;
 }
 
+/** Episode chronology shared by prediction reviews and the unsealed coverage ledger. */
+export function classifyActualEpisode(event: DdrrActualEventInput): "recovered" | "terminal" | "orphan_closed" | "active" {
+  const closure = classifyDepegClosure(event);
+  const recovered = event.endedAt != null && (closure === "recovered" || closure === "legacy_recovered");
+  if (hasTerminalEvidence(event) && (
+    !recovered || (event.endedAt != null && isTerminalEvidenceSettledBy(
+      event.terminalEvidenceAt ?? null,
+      event.terminalEvidenceInterval ?? null,
+      event.endedAt,
+    ))
+  )) return "terminal";
+  if (recovered) return "recovered";
+  return event.endedAt != null ? "orphan_closed" : "active";
+}
+
 export function getAssessmentReviewAnchorSec(assessment: DdrrAssessmentInput): number {
   return assessment.lockedAt ?? assessment.assessedAt;
 }
@@ -142,14 +157,8 @@ export function deriveActualOutcome(
   const terminalEvidenceAt = event.terminalEvidenceAt ?? null;
   const terminalEvidenceInterval = event.terminalEvidenceInterval ?? null;
   const terminalEvidencePrecision = event.terminalEvidencePrecision ?? null;
-  const closure = classifyDepegClosure(event);
-  const recovered = closure === "recovered" || closure === "legacy_recovered";
-  if (
-    terminalObserved &&
-    recovered &&
-    event.endedAt != null &&
-    isTerminalEvidenceSettledBy(terminalEvidenceAt, terminalEvidenceInterval, event.endedAt)
-  ) {
+  const episodeState = classifyActualEpisode(event);
+  if (episodeState === "terminal") {
     return terminalOutcome({
       actualEndedAt: event.endedAt,
       terminalEvidenceAt,
@@ -157,7 +166,7 @@ export function deriveActualOutcome(
       terminalEvidencePrecision,
     });
   }
-  if (recovered && event.endedAt != null) {
+  if (episodeState === "recovered" && event.endedAt != null) {
     return {
       actualOutcome: "recovered",
       sourceEventState: "recovered",
@@ -169,14 +178,6 @@ export function deriveActualOutcome(
       terminalEvidencePrecision,
       dataIssueReason: null,
     };
-  }
-  if (terminalObserved && !recovered) {
-    return terminalOutcome({
-      actualEndedAt: event.endedAt,
-      terminalEvidenceAt,
-      terminalEvidenceInterval,
-      terminalEvidencePrecision,
-    });
   }
   if (event.endedAt != null) {
     return {

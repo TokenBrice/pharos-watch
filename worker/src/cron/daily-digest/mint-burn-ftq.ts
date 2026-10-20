@@ -53,6 +53,9 @@ export async function computeDigestMintBurnFtqFlows(
     return unavailable(classification.reason, source.snapshot.safetyScoreIdentity);
   }
   const gradeClassification = classification.classification;
+  if (coinNets.some((coin) => coin.knownNetUsd === null)) {
+    return unavailable("flow-window-unavailable", gradeClassification.safetyScoreIdentity);
+  }
   const ftq = detectFlightToQualityFromValuedNets({
     safe: coinNets.filter((coin) => gradeClassification.safeIds.has(coin.id)),
     risky: coinNets.filter((coin) => gradeClassification.riskyIds.has(coin.id)),

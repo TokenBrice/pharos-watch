@@ -9,7 +9,7 @@ import { MINT_BURN_CONFIGS, type MintBurnContractConfig } from "../mint-burn-con
 import { mintBurnConservationCacheKey, mintBurnConservationFingerprint, readMintBurnConservationRecords, getMintBurnConservationEligibility } from "../mint-burn-conservation";
 import { emptyReserveCompositionOverview } from "@shared/types/live-reserves";
 import { logWorkerEvent } from "../structured-log";
-import { loadMintBurnFirstHourRows } from "../mint-burn-hourly-queries";
+import { readMintBurnScanCoverage, type MintBurnScanSegment } from "../mint-burn-pipeline/scan-coverage";
 import { readDewsPublishedGenerationResult } from "../dews-publication-pointer";
 import { loadActiveSafetyScoreSource } from "../safety-score-active-source";
 import { CONFIRMED_CRON_OUTPUT_AT_SQL } from "../cron-output";
@@ -276,18 +276,11 @@ export async function getMintBurnReconciliation(
   let lastBlocks: Map<string, number>;
   let cronSnapshot: MintBurnCronSnapshot;
   let extendedSnapshot: MintBurnCronSnapshot;
-  let firstSeenRows: Array<{ stablecoin_id: string; chain_id: string; first_hour_ts: number }>;
+  let scanSegments: Map<string, MintBurnScanSegment[]>;
   let conservationRecords: Map<string, unknown>;
   try {
-    [firstSeenRows, lastBlocks, cronSnapshot, extendedSnapshot, conservationRecords] = await Promise.all([
-      loadMintBurnFirstHourRows(
-        db,
-        activeConfigs.map((config) => ({
-          stablecoinId: config.stablecoinId,
-          chainId: config.chain.chainId,
-        })),
-        "status",
-      ),
+    [scanSegments, lastBlocks, cronSnapshot, extendedSnapshot, conservationRecords] = await Promise.all([
+      readMintBurnScanCoverage(db, activeConfigs, Math.floor(now / 3600) * 3600 - 90 * 86400, Math.floor(now / 3600) * 3600),
       readMintBurnSyncStateBatch(db, activeConfigs),
       readMintBurnCronSnapshot(db),
       readMintBurnCronSnapshot(db, "sync-mint-burn-extended"),
@@ -316,7 +309,7 @@ export async function getMintBurnReconciliation(
       freshHeads.set(chainId, Math.max(freshHeads.get(chainId) ?? 0, head));
     }
   }
-  const coverageMap = buildCoinCoverageMap(now, firstSeenRows, lastBlocks, freshHeads);
+  const coverageMap = buildCoinCoverageMap(now, scanSegments, lastBlocks, freshHeads, null, activeConfigs);
 
   const rows = [...configsByStablecoin.entries()]
     .map<MintBurnReconciliationRow>(([stablecoinId, configs]) => {

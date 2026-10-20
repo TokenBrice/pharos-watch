@@ -231,14 +231,26 @@ function DewsTechnicalDetails() {
           redistributed proportionally across available signals.
         </p>
         <p>
+          Supply Velocity blends its readable 0.6/0.4 legs and Liquidity Erosion its readable 0.5/0.5 legs,
+          dividing by the sum of available leg weights rather than counting missing deltas as calm. Coverage is
+          1 for full evidence, 0.6 or 0.4 for one supply leg, 0.5 for one liquidity leg, and 0 with a tagged
+          unavailable result when neither is readable. Historical missing coverage remains unknown. Curves,
+          dampening, signal-family weights and detector thresholds are unchanged.
+        </p>
+        <p>
+          Current DEX corroboration and recovery use original observations: family quotes must fit 35 minutes
+          and aggregate contributors 75 minutes. Republishing an aggregate cannot renew undated, future or
+          expired quotes. Conservative pool warnings remain negative-only evidence, not fresh recovery proof.
+        </p>
+        <p>
           Bootstrap tolerance is one-time only. Missing optional tables can be ignored before the first successful
           publication. After that, stale or missing core liquidity inputs are recorded as source failures. The cron
           still writes rows that meet signal coverage, then marks the run degraded instead of treating the missing input as startup noise.
         </p>
         <p>
-          Mint/Burn Flow requires both a mature 30-day baseline and a fresh 24-hour hourly row. Fresh zero-volume rows
-          remain available as calm flow evidence, while stale baseline-only input is recorded as a source-freshness
-          failure and its signal weight is redistributed.
+          Mint/Burn Flow requires a mature 30-day baseline, fresh 24-hour input and durable current-fingerprint
+          scan coverage. A proof-backed zero-volume row is calm; absent coverage or stale baseline-only input is
+          unavailable, with its signal weight redistributed rather than an invented quiet observation.
         </p>
         <p>
           Pool Balance Drift blends 40% balance stress, 35% average pool stress, and 25% worst single-pool imbalance

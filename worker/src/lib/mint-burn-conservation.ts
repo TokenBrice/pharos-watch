@@ -1,5 +1,6 @@
 import type { MintBurnConservationRecord } from "@shared/types/status";
 import type { MintBurnContractConfig, MintBurnEventDef } from "./mint-burn-contracts";
+import type { MintBurnSupplyBurnProof } from "./mint-burn-contracts-types";
 import type { AlchemyLogEntry } from "./alchemy-logs";
 import { readDataWord, type SubrequestBudget } from "./evm-logs";
 import type { MintBurnRow } from "./mint-burn-pipeline/types";
@@ -100,6 +101,7 @@ export interface MintBurnConservationRuntimeEntry {
   conservationOnlyEvents?: ConservationEventDef[];
   requiresNotDeprecated?: boolean;
   invariantParams?: ConservationInvariantParams;
+  supplyBurnProof?: MintBurnSupplyBurnProof;
 }
 
 export interface MintBurnConservationRuntimeLookup {
@@ -239,6 +241,11 @@ export function resolveMintBurnConservationEligibility(entry: MintBurnConservati
 export function getMintBurnConservationRuntimeEntry(config: MintBurnContractConfig): MintBurnConservationRuntimeEntry | undefined {
   return REVIEWED_CONSERVATION_INDEX.get(
     reviewedConservationIdentityKey(config.chain.chainId, config.stablecoinId, config.contractAddress, config.decimals));
+}
+
+export function requiresReviewedSupplyBurnProof(config: MintBurnContractConfig): boolean {
+  return getMintBurnConservationRuntimeEntry(config)?.unsupportedReason
+    ?.startsWith("zero-address-transfer-without-supply-change:") === true;
 }
 
 export function getMintBurnConservationEligibility(config: MintBurnContractConfig): MintBurnConservationEligibility {

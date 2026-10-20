@@ -18,10 +18,10 @@ import type {
   V9ReasonCode,
   V9ValidatedPolicyEnvelope,
 } from "../../types/safety-score-v9";
-import type { V9EvidenceResponsibility, V1005ProcessDiagnostic, V1005AssetIssuanceFacts } from "../../types/safety-score-v9-facts";
+import type { V1005ProcessDiagnostic, V1005AssetIssuanceFacts } from "../../types/safety-score-v9-facts";
 import { projectV9CompactPartialEvidence } from "../../types/safety-score-v9-causes";
 import { projectExitExecutionCertificate } from "./exit-execution";
-import { V9EvidenceResponsibilitySchema } from "../../types/safety-score-v9-fact-primitives";
+import { V9_PUBLIC_EVIDENCE_RESPONSIBILITIES as RESPONSIBILITIES } from "../../types/safety-score-v9-vocabulary";
 import { countV9EvidenceObligations } from "../../types/safety-score-v9-public-evidence-facts";
 import { round4 } from "../math";
 import type { V9DependencyEconomicRole } from "../../types/dependency-types";
@@ -127,14 +127,6 @@ const EVIDENCE_RANK: Readonly<Record<V9EvidenceLevel, number>> = {
   limited: 2,
   insufficient: 3,
 };
-// Derived from the canonical enum, not restated. This list was hand-mirrored and
-// silently lost `published-evidence-expired` when that value was added: the
-// `satisfies` clause only checks assignability, so an omission never failed. The
-// published projection must enumerate every responsibility, so sort the enum
-// itself and keep exactly one source of truth.
-const RESPONSIBILITIES: readonly V9EvidenceResponsibility[] = [
-  ...V9EvidenceResponsibilitySchema.options,
-].sort((left, right) => (left < right ? -1 : left > right ? 1 : 0));
 const EXIT_COMPONENTS = [
   ["access", "Access"],
   ["settlement", "Settlement"],

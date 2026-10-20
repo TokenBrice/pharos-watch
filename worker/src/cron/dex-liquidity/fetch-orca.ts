@@ -72,8 +72,7 @@ function isOrcaToken(value: unknown): value is OrcaPool["tokenA"] {
   return isDexApiRecord(value) &&
     typeof value.address === "string" &&
     typeof value.symbol === "string" &&
-    typeof value.decimals === "number" &&
-    Number.isFinite(value.decimals);
+    typeof value.decimals === "number";
 }
 
 function isOrcaPool(value: unknown): value is OrcaPool {
@@ -216,11 +215,19 @@ export async function fetchOrcaPools(signal?: AbortSignal, db?: D1Database): Pro
       const volume = volumeText == null ? Number.NaN : parseFloat(volumeText);
       const balA = parseFloat(pool.tokenBalanceA);
       const balB = parseFloat(pool.tokenBalanceB);
-      const normalizedBalA = Number.isFinite(balA) ? balA / 10 ** pool.tokenA.decimals : NaN;
-      const normalizedBalB = Number.isFinite(balB) ? balB / 10 ** pool.tokenB.decimals : NaN;
+      const decimalsValid = Number.isInteger(pool.tokenA.decimals) &&
+        pool.tokenA.decimals >= 0 && pool.tokenA.decimals <= 255 &&
+        Number.isInteger(pool.tokenB.decimals) &&
+        pool.tokenB.decimals >= 0 && pool.tokenB.decimals <= 255;
+      const normalizedBalA = decimalsValid && Number.isFinite(balA) ? balA / 10 ** pool.tokenA.decimals : NaN;
+      const normalizedBalB = decimalsValid && Number.isFinite(balB) ? balB / 10 ** pool.tokenB.decimals : NaN;
+      const balances = Number.isFinite(normalizedBalA) && Number.isFinite(normalizedBalB)
+        ? [normalizedBalA, normalizedBalB]
+        : null;
 
       if (!Number.isFinite(tvlUsd) || tvlUsd < DIRECT_API_POOL_MIN_TVL_USD) continue;
       pageHasEligiblePool = true;
+      if (!decimalsValid) warnings.push(`pool ${pool.address}: invalid-token-decimals; balances unavailable`);
 
       results.push({
         source: "orca",
@@ -237,9 +244,8 @@ export async function fetchOrcaPools(signal?: AbortSignal, db?: D1Database): Pro
         volume24hUsd: Number.isFinite(volume) && volume >= 0 ? volume : null,
         // Orca feeRate is in hundredths of a basis point (100 = 1bp = 0.0001)
         feeRate: Number.isFinite(pool.feeRate) ? pool.feeRate / 1_000_000 : null,
-        balances: Number.isFinite(normalizedBalA) && Number.isFinite(normalizedBalB)
-          ? [normalizedBalA, normalizedBalB]
-          : null,
+        balances,
+        balancesNormalized: balances != null,
       });
     }
     if (malformedRows > 0) {

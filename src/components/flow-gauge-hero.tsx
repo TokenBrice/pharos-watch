@@ -265,6 +265,7 @@ export function FlowGaugeHero({ gauge, coins, sync, dataHealth = null, isLoading
                   valueUsd={aggregate.mintVolumeUsd}
                   completeness={aggregate.mintCompleteness}
                   unpricedEventCount={aggregate.unpricedMintEventCount}
+                  scanComplete={aggregate.scanComplete}
                   format={formatCurrency}
                 />
               }
@@ -276,6 +277,7 @@ export function FlowGaugeHero({ gauge, coins, sync, dataHealth = null, isLoading
                   valueUsd={aggregate.burnVolumeUsd}
                   completeness={aggregate.burnCompleteness}
                   unpricedEventCount={aggregate.unpricedBurnEventCount}
+                  scanComplete={aggregate.scanComplete}
                   format={formatCurrency}
                 />
               }

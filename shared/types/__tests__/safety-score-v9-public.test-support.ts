@@ -1,21 +1,11 @@
 import type { z } from "zod";
 import type { SafetyScoreV9CurrentResponseSchema } from "../safety-score-v9-public";
 import type { SafetyScoreV9BreakdownsSchema } from "../safety-score-v9-public-breakdowns";
+import { V9_PUBLIC_EVIDENCE_RESPONSIBILITIES as EVIDENCE_RESPONSIBILITIES } from "../safety-score-v9-vocabulary";
 
 type CurrentResponse = z.output<typeof SafetyScoreV9CurrentResponseSchema>;
 
 const DIGEST = "a".repeat(64);
-
-const EVIDENCE_RESPONSIBILITIES = [
-  "integration-missing",
-  "issuer-undisclosed",
-  "measured-adverse",
-  "method-unsupported",
-  "producer-failed",
-  "public-data-uncurated",
-  "published-evidence-expired",
-  "unresearched",
-] as const;
 
 function emptyAttribution<S extends string>(semantics: S) {
   return { semantics, items: [] as never[] };

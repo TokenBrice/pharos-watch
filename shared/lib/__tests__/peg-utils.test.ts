@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { mergeDepegSeconds, worstDeviation } from "../peg-utils";
+import { medianOfRounded, mergeDepegSeconds, worstDeviation } from "../peg-utils";
 
 describe("mergeDepegSeconds", () => {
   const cases = [
@@ -124,5 +124,17 @@ describe("worstDeviation", () => {
 
   it.each(cases)("$name", ({ events, expected }) => {
     expect(worstDeviation(events as never)).toBe(expected);
+  });
+});
+
+describe("medianOfRounded", () => {
+  it.each([
+    { name: "empty cohort", values: [], expected: null },
+    { name: "no finite observations", values: [NaN, Infinity, -Infinity], expected: null },
+    { name: "observed parity", values: [0], expected: 0 },
+    { name: "odd cohort", values: [30.8, 10.2, 20.6], expected: 21 },
+    { name: "even cohort", values: [10, 21], expected: 16 },
+  ])("preserves absence and rounds the median for $name", ({ values, expected }) => {
+    expect(medianOfRounded(values)).toBe(expected);
   });
 });

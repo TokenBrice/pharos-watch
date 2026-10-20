@@ -6,7 +6,7 @@ import { ChartSkeleton } from "@/components/chart-skeleton";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { PharosChartTooltip, TooltipLabel, TooltipRow } from "@/components/pharos-chart-tooltip";
 import type { ReserveCompositionSlice } from "@/components/stablecoin-detail/reserve-presentation";
-import { RESERVE_TREEMAP_LABEL_COLOR, RISK_ACCENT_COLORS, RISK_COLORS } from "@/lib/chart-colors";
+import { RESERVE_TREEMAP_LABEL_COLOR } from "@/lib/chart-colors";
 import type { ReserveRisk } from "@shared/types";
 import { RESERVE_RISK_PRESENTATION } from "@shared/lib/classification/reserve-risk";
 import { formatReserveSharePct } from "@/components/reserve-risk-swatch";
@@ -71,7 +71,7 @@ function TreemapCell({ x, y, width, height, label, risk, pct, depth, hideLabel }
   // Recharts renders the synthetic root node (depth=0) via content too — skip it
   if (depth === 0) return <g />;
 
-  const fill = risk === null ? "none" : RISK_COLORS[risk];
+  const fill = risk === null ? "none" : RESERVE_RISK_PRESENTATION[risk].fillColor;
   const labelFill = risk === null ? "var(--color-foreground)" : RESERVE_TREEMAP_LABEL_COLOR;
   // 11 px floor: smaller tiles wrap or drop the label (tooltip) rather than shrink it.
   const fontSize = 11;
@@ -115,7 +115,7 @@ function TreemapCell({ x, y, width, height, label, risk, pct, depth, hideLabel }
           height={height - 3}
           rx={3}
           fill="none"
-          stroke={RISK_ACCENT_COLORS[risk]}
+          stroke={RESERVE_RISK_PRESENTATION[risk].accentColor}
           strokeOpacity={0.5}
           strokeWidth={1}
         />
@@ -167,7 +167,7 @@ function ReserveTooltip({
     <PharosChartTooltip active={active}>
       <TooltipLabel>{label}</TooltipLabel>
       <TooltipRow
-        color={risk === null ? undefined : RISK_ACCENT_COLORS[risk]}
+        color={risk === null ? undefined : RESERVE_RISK_PRESENTATION[risk].accentColor}
         label={risk === null ? "Not covered by the reviewed composition" : RESERVE_RISK_PRESENTATION[risk].longLabel}
         value={formatReserveSharePct(pct)}
       />

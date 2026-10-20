@@ -19,7 +19,7 @@ export interface MintBurnScanCoverage {
 export function mintBurnScanFingerprint(config: MintBurnContractConfig): string {
   const { chain, symbol: _symbol, enabled: _enabled, tier: _tier, ...source } = config;
   return sha256Hex(stableJsonStringifyV1({
-    domain: "mint-burn-finalized-scan-v1", chainId: chain.chainId, source,
+    domain: "mint-burn-finalized-scan-v2", chainId: chain.chainId, source,
   }));
 }
 
@@ -72,25 +72,76 @@ export function mintBurnScanCoverageStatements(db: D1Database, proof: MintBurnSc
   ];
 }
 
-/** Closed UTC windows require continuous block AND time evidence for every required config.
- * No public reader uses this until the separate nullable-window activation.
- */
-export async function hasMintBurnScanCoverage(
+export interface MintBurnScanSegment {
+  config_key: string;
+  from_block: number;
+  to_block: number;
+  from_timestamp: number;
+  to_timestamp: number;
+  /** A debt row is evidence against admission, never a scan segment. */
+  dirty_hour_ts?: number | null;
+}
+
+/** Include proof and materialization debt in the same snapshot as the certified data. */
+export function prepareMintBurnScanCoverage(
   db: D1Database, configs: readonly MintBurnContractConfig[], fromTimestamp: number, toTimestamp: number,
-): Promise<boolean> {
+): D1PreparedStatement {
+  const identities = configs.map((config) =>
+    [mintBurnConfigKey(config), mintBurnScanFingerprint(config), config.chain.chainId, config.stablecoinId]);
+  const identitiesJson = JSON.stringify(identities);
+  return db.prepare(`
+    SELECT /* pharos:mint-burn-scan-coverage:read */
+      config_key, from_block, to_block, from_timestamp, to_timestamp, NULL AS dirty_hour_ts
+    FROM mint_burn_scan_coverage
+    WHERE (config_key, config_fingerprint, chain_id) IN (
+      SELECT json_extract(value, '$[0]'), json_extract(value, '$[1]'), json_extract(value, '$[2]')
+      FROM json_each(?)
+    ) AND finality_tag = 'finalized' AND finalized_block >= to_block
+      AND accepted_at >= to_timestamp AND to_timestamp >= ? AND from_timestamp <= ?
+    UNION ALL
+    SELECT json_extract(i.value, '$[0]') AS config_key, 0, 0, d.hour_ts, d.hour_ts, d.hour_ts AS dirty_hour_ts
+    FROM json_each(?) i JOIN mint_burn_dirty_hours d
+      ON d.stablecoin_id = json_extract(i.value, '$[3]') AND d.chain_id = json_extract(i.value, '$[2]')
+    WHERE d.hour_ts >= ? AND d.hour_ts < ?
+    ORDER BY config_key, from_block
+  `).bind(identitiesJson, fromTimestamp, toTimestamp, identitiesJson, fromTimestamp, toTimestamp);
+}
+
+export function decodeMintBurnScanCoverage(
+  result: D1Result<MintBurnScanSegment>,
+): Map<string, MintBurnScanSegment[]> {
+  const segments = new Map<string, MintBurnScanSegment[]>();
+  for (const row of result.results) {
+    const existing = segments.get(row.config_key) ?? [];
+    existing.push(row);
+    segments.set(row.config_key, existing);
+  }
+  return segments;
+}
+
+export async function readMintBurnScanCoverage(
+  db: D1Database, configs: readonly MintBurnContractConfig[], fromTimestamp: number, toTimestamp: number,
+): Promise<Map<string, MintBurnScanSegment[]>> {
+  return decodeMintBurnScanCoverage(
+    await prepareMintBurnScanCoverage(db, configs, fromTimestamp, toTimestamp).all<MintBurnScanSegment>(),
+  );
+}
+
+/** Closed UTC hours require continuous block AND time evidence for every config. */
+export function mintBurnScanCoverageAdmits(
+  configs: readonly MintBurnContractConfig[], segments: ReadonlyMap<string, readonly MintBurnScanSegment[]>,
+  fromTimestamp: number, toTimestamp: number,
+): boolean {
   if (configs.length === 0 || !Number.isSafeInteger(fromTimestamp) || !Number.isSafeInteger(toTimestamp)
-    || fromTimestamp <= 0 || fromTimestamp >= toTimestamp || fromTimestamp % 86_400 !== 0 || toTimestamp % 86_400 !== 0) return false;
+    || fromTimestamp <= 0 || fromTimestamp >= toTimestamp || fromTimestamp % 3600 !== 0 || toTimestamp % 3600 !== 0) return false;
   for (const config of configs) {
-    const rows = await db.prepare(`
-      SELECT from_block, to_block, from_timestamp, to_timestamp FROM mint_burn_scan_coverage
-      WHERE config_key = ? AND config_fingerprint = ? AND chain_id = ? AND finality_tag = 'finalized'
-        AND to_timestamp >= ? AND from_timestamp <= ?
-      ORDER BY from_block
-    `).bind(mintBurnConfigKey(config), mintBurnScanFingerprint(config), config.chain.chainId, fromTimestamp, toTimestamp)
-      .all<{ from_block: number; to_block: number; from_timestamp: number; to_timestamp: number }>();
+    const rows = segments.get(mintBurnConfigKey(config)) ?? [];
+    if (rows.some((row) => row.dirty_hour_ts != null
+      && row.dirty_hour_ts < toTimestamp && row.dirty_hour_ts + 3600 > fromTimestamp)) return false;
     let frontier: { block: number; timestamp: number } | null = null;
     let covered = false;
-    for (const row of rows.results) {
+    for (const row of rows) {
+      if (row.dirty_hour_ts != null) continue;
       if (frontier == null || row.from_block > frontier.block + 1) {
         frontier = row.from_timestamp <= fromTimestamp ? { block: row.to_block, timestamp: row.to_timestamp } : null;
       } else {
@@ -102,4 +153,11 @@ export async function hasMintBurnScanCoverage(
     if (!covered) return false;
   }
   return true;
+}
+
+export async function hasMintBurnScanCoverage(
+  db: D1Database, configs: readonly MintBurnContractConfig[], fromTimestamp: number, toTimestamp: number,
+): Promise<boolean> {
+  return mintBurnScanCoverageAdmits(configs,
+    await readMintBurnScanCoverage(db, configs, fromTimestamp, toTimestamp), fromTimestamp, toTimestamp);
 }

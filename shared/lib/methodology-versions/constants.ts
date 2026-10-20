@@ -4,7 +4,7 @@ function methodologyLabel(version: string): string {
   return `v${version}`;
 }
 
-export const BLACKLIST_TRACKER_METHODOLOGY_VERSION = "4.5";
+export const BLACKLIST_TRACKER_METHODOLOGY_VERSION = "4.6";
 export const BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL = methodologyLabel(BLACKLIST_TRACKER_METHODOLOGY_VERSION);
 export const BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH = "/methodology/blacklist-tracker-changelog/";
 
@@ -12,15 +12,15 @@ export const CHAIN_HEALTH_METHODOLOGY_VERSION = "1.7";
 export const CHAIN_HEALTH_METHODOLOGY_VERSION_LABEL = methodologyLabel(CHAIN_HEALTH_METHODOLOGY_VERSION);
 export const CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH = "/methodology/chain-health-changelog/";
 
-export const DEPEG_DEWS_METHODOLOGY_VERSION = "6.35";
+export const DEPEG_DEWS_METHODOLOGY_VERSION = "6.36";
 export const DEPEG_DEWS_METHODOLOGY_VERSION_LABEL = methodologyLabel(DEPEG_DEWS_METHODOLOGY_VERSION);
 export const DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH = "/methodology/depeg-changelog/";
 
-export const DDR_METHODOLOGY_VERSION = "4.8";
+export const DDR_METHODOLOGY_VERSION = "4.9";
 export const DDR_METHODOLOGY_VERSION_LABEL = methodologyLabel(DDR_METHODOLOGY_VERSION);
 export const DDR_METHODOLOGY_CHANGELOG_PATH = "/methodology/depeg-resolver-changelog/";
 
-export const LIQUIDITY_METHODOLOGY_VERSION = "6.96";
+export const LIQUIDITY_METHODOLOGY_VERSION = "6.97";
 export const LIQUIDITY_METHODOLOGY_VERSION_LABEL = methodologyLabel(LIQUIDITY_METHODOLOGY_VERSION);
 export const LIQUIDITY_METHODOLOGY_CHANGELOG_PATH = "/methodology/liquidity-score-changelog/";
 
@@ -28,15 +28,15 @@ export const MINT_AUTHORITY_METHODOLOGY_VERSION = "1.3";
 export const MINT_AUTHORITY_METHODOLOGY_VERSION_LABEL = methodologyLabel(MINT_AUTHORITY_METHODOLOGY_VERSION);
 export const MINT_AUTHORITY_METHODOLOGY_PATH = "/methodology/#mint-authority-score";
 
-export const MINT_BURN_FLOW_METHODOLOGY_VERSION = "6.27";
+export const MINT_BURN_FLOW_METHODOLOGY_VERSION = "6.28";
 export const MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL = methodologyLabel(MINT_BURN_FLOW_METHODOLOGY_VERSION);
 export const MINT_BURN_FLOW_METHODOLOGY_CHANGELOG_PATH = "/methodology/mint-burn-flow-changelog/";
 
-export const PRICING_PIPELINE_METHODOLOGY_VERSION = "6.53";
+export const PRICING_PIPELINE_METHODOLOGY_VERSION = "6.54";
 export const PRICING_PIPELINE_METHODOLOGY_VERSION_LABEL = methodologyLabel(PRICING_PIPELINE_METHODOLOGY_VERSION);
 export const PRICING_PIPELINE_METHODOLOGY_CHANGELOG_PATH = "/methodology/pricing-pipeline-changelog/";
 
-export const REDEMPTION_BACKSTOP_METHODOLOGY_VERSION = "4.51";
+export const REDEMPTION_BACKSTOP_METHODOLOGY_VERSION = "4.52";
 export const REDEMPTION_BACKSTOP_METHODOLOGY_VERSION_LABEL = methodologyLabel(REDEMPTION_BACKSTOP_METHODOLOGY_VERSION);
 export const REDEMPTION_BACKSTOP_METHODOLOGY_PATH = "/methodology/#redemption-backstop-methodology";
 export const REDEMPTION_BACKSTOP_METHODOLOGY_CHANGELOG_PATH = "/methodology/redemption-backstop-changelog/";
@@ -49,6 +49,6 @@ export const PSI_METHODOLOGY_VERSION = "3.67";
 export const PSI_METHODOLOGY_VERSION_LABEL = methodologyLabel(PSI_METHODOLOGY_VERSION);
 export const PSI_METHODOLOGY_CHANGELOG_PATH = "/methodology/stability-index-changelog/";
 
-export const YIELD_METHODOLOGY_VERSION = "8.49";
+export const YIELD_METHODOLOGY_VERSION = "8.5";
 export const YIELD_METHODOLOGY_VERSION_LABEL = methodologyLabel(YIELD_METHODOLOGY_VERSION);
 export const YIELD_METHODOLOGY_CHANGELOG_PATH = "/methodology/yield-changelog/";

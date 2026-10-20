@@ -8,11 +8,8 @@ const V9_EVIDENCE_RESPONSIBILITIES = [
 ] as const;
 export const V9EvidenceResponsibilitySchema = z.enum(V9_EVIDENCE_RESPONSIBILITIES);
 export const V9BoundedEvidenceResponsibilitySchema = V9EvidenceResponsibilitySchema.exclude(["measured-adverse"]);
-export const V9_PUBLIC_EVIDENCE_RESPONSIBILITIES = [
-  "integration-missing", "issuer-undisclosed", "measured-adverse",
-  "method-unsupported", "producer-failed", "public-data-uncurated",
-  "published-evidence-expired", "unresearched",
-] as const satisfies readonly (typeof V9_EVIDENCE_RESPONSIBILITIES)[number][];
+export const V9_PUBLIC_EVIDENCE_RESPONSIBILITIES: readonly (typeof V9_EVIDENCE_RESPONSIBILITIES)[number][] =
+  [...V9EvidenceResponsibilitySchema.options].sort();
 
 export const V9_ACCESS_POSTURE_FIELDS = ["transfer", "freezeExposure", "primaryExit", "governance"] as const;
 export const V9AccessPostureFieldSchema = z.enum(V9_ACCESS_POSTURE_FIELDS);

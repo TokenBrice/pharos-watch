@@ -1,9 +1,9 @@
 "use client";
 
-import { EventCard, SEVERITY_LABEL } from "@/components/tape/event-card";
+import { EventCard } from "@/components/tape/event-card";
 import { tapeClassRowBg } from "@/lib/tape-class-style";
 import type { DigestedClass } from "@/lib/tape-digest";
-import { SEVERITY_TEXT_CLASS } from "@shared/types/tape-event";
+import { SEVERITY_LABEL_INCLUSIVE as SEVERITY_LABEL, SEVERITY_TEXT_CLASS } from "@shared/lib/classification/tape";
 import { getLogoSrc } from "@/lib/logos";
 
 interface ClassDigestRowProps {

@@ -18,6 +18,14 @@ export interface MintBurnTxContext {
   logAddresses: string[];
   /** Paired emitter/topic/data evidence; absent context cannot certify a receive. */
   receiptLogs?: Array<{ address: string; topics: string[]; data: string; logIndex?: string }>;
+  /** Full transaction identity is required for reviewed supply-destruction admission. */
+  supplyProofContext?: {
+    from: string;
+    input: string;
+    blockHash: string;
+    blockNumber: number;
+    success: boolean;
+  };
 }
 
 export interface MintBurnBridgeClassifiableRow {

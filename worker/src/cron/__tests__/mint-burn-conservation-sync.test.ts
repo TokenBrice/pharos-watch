@@ -18,9 +18,12 @@ vi.mock("../../lib/alchemy-logs", async (importOriginal) => ({
   resolveBlockTimestamps: vi.fn(),
 }));
 vi.mock("../../lib/mint-burn-pipeline/parse", () => ({ parseMintBurnLogs: vi.fn() }));
-vi.mock("../../lib/mint-burn-pipeline/classification", () => ({ classifyBridgeBurnRows: vi.fn() }));
+vi.mock("../../lib/mint-burn-pipeline/classification", () => ({
+  classifyBridgeBurnRows: vi.fn(), reconcileReviewedSupplyBurns: vi.fn(async () => 0),
+}));
 vi.mock("../../lib/mint-burn-pipeline/persistence", () => ({ persistMintBurnRows: vi.fn() }));
 vi.mock("../../lib/mint-burn-conservation", () => ({ getMintBurnConservationEligibility: () => ({ supported: true }),
+  requiresReviewedSupplyBurnProof: () => false,
   conservationOnlyEventDefsFor: vi.fn(() => []),
   completeMintBurnConservationAudit: vi.fn(), persistMintBurnConservation: vi.fn(), validateMintBurnParsedConservation: vi.fn(),
   verifyPersistedMintBurnConservation: vi.fn() }));

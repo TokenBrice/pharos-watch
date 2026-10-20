@@ -2,7 +2,8 @@
 
 import { useSyncExternalStore, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
-import { DRIFT_STATUS_LABEL, PHASE_DOT, formatFuzzyDate, type DriftDisplayStatus } from "@/lib/pre-launch";
+import { PHASE_DOT, formatFuzzyDate, type DriftDisplayStatus } from "@/lib/pre-launch";
+import { DRIFT_STATUS_LABEL } from "@shared/lib/classification/pre-launch";
 import {
   computeLaunchClock,
   describeLaunchWindow,

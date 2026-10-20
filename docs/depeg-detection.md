@@ -6,7 +6,7 @@ Two-stage depeg detection pipeline for stablecoins. Stage 1 runs every 15 minute
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-detection -->`v6.35`<!-- GENERATED-END: methodology-version-depeg-detection -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-detection -->`v6.36`<!-- GENERATED-END: methodology-version-depeg-detection -->
 - **Runtime/version source:** `shared/lib/methodology-versions/registry.ts`
 - **Public changelog route:** `/methodology/depeg-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/depeg-dews/`
@@ -14,6 +14,8 @@ Two-stage depeg detection pipeline for stablecoins. Stage 1 runs every 15 minute
 The shared `v6.34` release preserves native/USD quote domains, rejects mismatched identities and incomparable peaks, and excludes policy-rejected pool peaks. Pending confirmation's single-$5M-pool exception obeys the opposing-group vote; live recovery retains its high-TVL veto. Historical supply gates use timestamp-valued USD supply and at-peg summaries use raw detector precision. Projection failures withhold recomputed analytics; retained snapshots keep their original clock. Archives and Worst Depeg are not display-capped. Numeric triggers and weights are unchanged. Activation is provisional at 2026-10-11 00:00 UTC, re-dated at release, with [DEWS replay prerequisites](./dews.md#methodology-versioning).
 
 The shared `v6.33` release of 2026-10-08 changes only DEWS weekly DEX-history admission; depeg onset, confirmation, recovery and PegScore rules are unchanged. Its release remains conditional on owner-approved production-history replay described in [DEWS](./dews.md#methodology-versioning).
+
+DEWS supply/liquidity composites renormalize their existing internal weights over readable legs and persist explicit component coverage; missing component deltas remain null. This changes prospective DEWS scores and potentially bands, not detector onset, confirmation, recovery or PegScore thresholds. The [DEWS component contracts](./dews.md#sub-signal-details) govern full, partial, unavailable and legacy-unknown coverage; retained historical rows keep their original bytes and methodology identity.
 
 ## Downstream: Depeg Duration Resolver
 
@@ -153,7 +155,9 @@ Open-event hydration explicitly joins `depeg_event_provenance.quote_mode`. This 
 
 `dex_prices` rows are only trusted for depeg logic when they are both fresh (`updated_at < 75 min`, covering the hourly producer plus one bounded delay) and deep enough (`source_total_tvl >= $1M`). Thin DEX rows remain visible in storage for analytics, but they do not suppress or confirm events.
 
-The DEX writer also preserves per-protocol/source-family `observedAt` and aggregate-contributor `aggregateObservedAt` inside source JSON, separately from publication `updated_at`. Retained price evidence keeps its original quote clock rather than the value row's clock or the source-stage start. This is an additive writer contract only: the existing depeg reader admission remains unchanged until the strict quote-age reader is activated after an accepted clocked-publication soak. A fresh wrapper around a six-hour quote must fail that later 35-minute protocol-source gate; writer publication alone is not proof that stale-evidence admission is fixed.
+Affirmative DEX corroboration and positive recovery additionally require original per-protocol/source-family `observedAt` within the caller's 35-minute source budget and original aggregate-contributor `aggregateObservedAt` within the 75-minute depeg budget; both boundaries are inclusive and reject future clocks. A fresh publication wrapping a six-hour quote fails admission. Legacy unclocked sources, including those with a fresh compatibility `updatedAt`, cannot prove current corroboration or recovery: neither clock falls back to publication `updated_at`. Raw aggregate rows remain available to their separate downstream policies, and existing pool-challenger conservative recovery vetoes remain veto-only rather than being reclassified as fresh positive evidence. Activate this reader only after observing an accepted clocked-writer generation; historical events and sealed artifacts are not rewritten.
+
+The `dex_prices.updated_at` run-start clock is retained for row-age telemetry and independent aggregate-row policies, not as an affirmative source-admission veto. A row older than 35 minutes can still contain later original observations inside both source budgets; those source groups remain admissible.
 
 The stablecoin detail page can show live deviation below the event-creation floor with an explicit coverage-limited label. An existing row closes as `coverage-lost-supply` with `recovery_price = NULL` only on observed sub-floor supply, including zero. Unavailable supply opens no new row and leaves the existing lifecycle and peak unchanged, but records blind price coverage rather than extending trusted intervals.
 
@@ -222,7 +226,7 @@ Detection persistence commits all mutations for one stablecoin as one ordered at
 - If a supported CoinGecko native-currency quote still shows the same-direction depeg: keep the event open and ignore the derived recovery
 - If a fresh trusted aggregate DEX row still crosses the depeg threshold in the existing event direction, with at least 2 protocol-level DEX groups corroborating that direction: keep the event open and ignore the primary recovery print
 - Qualifying pool challengers veto primary recovery when either one same-direction pool has at least $5M TVL, or at least 2 independent protocol/source-family groups match or outnumber groups corroborating recovery. The single-high-TVL recovery veto is independent of that group vote; only the ordinary group-based path rejects a diverging minority.
-- Challenger snapshots retain publication timestamps, not original pool-price observation timestamps. Only diverging/corroborating group counts and the high-TVL veto are derived; no positive recovery price is computed. Ambiguous primary recovery requires the fresh trusted aggregate DEX lane until original pool-price time provenance is retained end to end.
+- V2 challenger payloads retain original pool-price observation clocks separately from source/publication clocks and immutable membership. Their TVL evidence and source family follow the price observation, bounded by retained pool TVL; unrelated inventory cannot trigger a high-TVL veto. Legacy snapshots retain their historical clock limitations. Only diverging/corroborating group counts and the high-TVL veto are derived; no positive recovery price is computed. Ambiguous primary recovery still requires the fresh trusted aggregate DEX lane; retaining quote provenance does not activate a new recovery policy.
 - A qualifying recovery must be at or inside 50% of the trigger threshold: 50 bps for USD pegs and 75 bps for non-USD pegs. The first qualifying observation sets both recovery timestamps; each consecutive qualifying observation refreshes `recovery_last_seen_at`. The row closes only after total recovery age reaches 15 minutes and the gap from the prior qualified observation is no more than 1200 seconds.
 - A later qualifying recovery after a gap greater than 1200 seconds resets both recovery timestamps to the new observation. Missing data leaves the event open, but the missing interval never proves recovery.
 - A reading between the recovery and trigger thresholds is a deadband: keep the event open and clear any partial recovery timer.

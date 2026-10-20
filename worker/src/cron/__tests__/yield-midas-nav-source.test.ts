@@ -198,10 +198,21 @@ describe("fetchMidasMmevNavOracleSource", () => {
 
     expect(result?.yield).toEqual(expect.objectContaining({
       currentApy: 0,
+      observationKind: "anchor-only",
       apyBase: null,
       exchangeRate: expect.closeTo(1.042, 6),
       comparisonAnchorObservedAt: null,
     }));
+  });
+
+  it("keeps a flat measured NAV return distinct from a bootstrap anchor", async () => {
+    mockMidasRpc({ answer: 100_000_000n, updatedAt: NOW_SEC });
+    const result = await fetchMidasMmevNavOracleSource({
+      prevExchangeRate: 1, comparisonAnchorObservedAt: NOW_SEC - 7 * 86400,
+      chainRpcs: makeChainRpcs(), nowSec: NOW_SEC,
+    });
+    expect(result?.yield).toMatchObject({ currentApy: 0, apyBase: 0, exchangeRate: 1 });
+    expect(result?.yield.observationKind).toBeUndefined();
   });
 
   it("returns null when the oracle round is stale", async () => {

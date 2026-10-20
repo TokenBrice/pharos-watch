@@ -498,6 +498,7 @@ function compositeProfile(
     ? 999n * 10n ** 18n
     : 999_000_000n;
   return buildDexMeasuredExecutionProfile({
+    blockHash: evidence.proof.blockHash as `0x${string}`,
     target,
     targetGenerationId: "targets-1",
     quoteGenerationId: "quotes-1",
@@ -1132,6 +1133,7 @@ describe("reviewed Curve rate-bearing and metapool targets", () => {
           target: directTarget,
           inputUsd: 1_000,
           blockNumber: BLOCK_NUMBER,
+          blockHash: `0x${"11".repeat(32)}`,
           blockObservedAt: BLOCK_TIMESTAMP + 60,
           endpointAddress: CURVE_DOLA_SUSDE_RATE_BEARING_POLICY.poolAddress,
           runtimeEvidence: rateEvidence(),
@@ -1140,6 +1142,7 @@ describe("reviewed Curve rate-bearing and metapool targets", () => {
           target: metaTarget,
           inputUsd: 1_000,
           blockNumber: BLOCK_NUMBER,
+          blockHash: `0x${"22".repeat(32)}`,
           blockObservedAt: BLOCK_TIMESTAMP + 60,
           endpointAddress: CURVE_USD1_METAPOOL_POLICY.poolAddress,
           runtimeEvidence: metapoolEvidence(),
@@ -1148,6 +1151,7 @@ describe("reviewed Curve rate-bearing and metapool targets", () => {
           target: nxusd,
           inputUsd: 1_000,
           blockNumber: BLOCK_NUMBER,
+          blockHash: `0x${"22".repeat(32)}`,
           blockObservedAt: BLOCK_TIMESTAMP + 60,
           endpointAddress: CURVE_NXUSD_METAPOOL_POLICY.poolAddress,
           runtimeEvidence: metapoolEvidence(CURVE_NXUSD_METAPOOL_POLICY),
@@ -1166,10 +1170,11 @@ describe("reviewed Curve rate-bearing and metapool targets", () => {
     expect(outcomes[0]!.point?.costBps).toBeCloseTo((1 - 996 / 999.999999) * 10_000, 8);
     expect(outcomes[1]!.point?.outputUsd).toBe(999);
     expect(outcomes[2]!.point?.outputUsd).toBe(999);
-    expect(executeMulticall).toHaveBeenCalledTimes(2);
-    expect(executeMulticall.mock.calls.map(([call]) => call.chain)).toEqual([
-      "ethereum",
+    expect(executeMulticall).toHaveBeenCalledTimes(3);
+    expect(executeMulticall.mock.calls.map(([call]) => call.chain).sort()).toEqual([
       "avalanche",
+      "ethereum",
+      "ethereum",
     ]);
   });
 });

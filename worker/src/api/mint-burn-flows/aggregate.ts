@@ -9,7 +9,8 @@ import {
   summarizeMintBurnValuation,
   type MintBurnValuationTally,
 } from "@shared/lib/mint-burn-valuation";
-import type { MintBurnSignedNetBound, MintBurnValuation, MintBurnValuationCompleteness } from "@shared/types/mint-burn";
+import type { MintBurnCoinFlow, MintBurnValuation } from "@shared/types/mint-burn";
+import { decodeMintBurnScanCoverage, prepareMintBurnScanCoverage, type MintBurnScanSegment } from "../../lib/mint-burn-pipeline/scan-coverage";
 import { getLatestSuccessfulCronTimestampResult, type CronTimestampLookupResult } from "../../lib/api-freshness";
 import type { FlightToQualityClassification } from "../../lib/flight-to-quality-classification";
 import {
@@ -28,7 +29,6 @@ import {
   type FlightToQualityResult,
   type ValuedNetFlow24h,
 } from "../../lib/mint-burn-scoring";
-import { buildMintBurnFirstHourSeekStatements } from "../../lib/mint-burn-hourly-queries";
 import {
   MINT_BURN_HOURLY_BUCKET_COLUMNS_SQL,
   MINT_BURN_HOURLY_VALUATION_TALLY_SQL,
@@ -53,64 +53,10 @@ import {
   selectLargestEvents,
 } from "../../lib/mint-burn-flows-service";
 
-const ACTIVE_MINT_BURN_CONFIGS = MINT_BURN_CONFIGS.filter((config) => ACTIVE_IDS.has(config.stablecoinId));
+export const ACTIVE_MINT_BURN_CONFIGS = MINT_BURN_CONFIGS.filter((config) => ACTIVE_IDS.has(config.stablecoinId));
 export const TRACKED_IDS = new Set(ACTIVE_MINT_BURN_CONFIGS.map((config) => config.stablecoinId));
 
-export interface CoinFlowSummary {
-  stablecoinId: string;
-  symbol: string;
-  pressureShiftScore: number | null;
-  pressureShiftState: "improving" | "stable" | "worsening" | "nr";
-  netFlowDirection24h: "minting" | "burning" | "flat" | "inactive" | null;
-  has24hActivity: boolean;
-  baselineDailyNetUsd: number | null;
-  baselineDailyAbsUsd: number | null;
-  baselineDataDays: number | null;
-  /** Observed tracked-chain supply weight in the gauge; `null` when unavailable (excluded, never zeroed). */
-  gaugeWeightUsd: number | null;
-  netFlow24hUsd: number | null;
-  mintVolume24hUsd: number;
-  burnVolume24hUsd: number;
-  mintCount24h: number;
-  burnCount24h: number;
-  netFlow7dUsd: number | null;
-  netFlow30dUsd: number | null;
-  netFlow90dUsd: number | null;
-  largestEvent24h: {
-    direction: string;
-    amountUsd: number;
-    txHash: string;
-    timestamp: number;
-  } | null;
-  coverage: {
-    startBlock: number;
-    lastSyncedBlock: number | null;
-    lagBlocks: number | null;
-    historyStartAt: number | null;
-    has24hWindow: boolean;
-    has30dWindow: boolean;
-    has90dWindow: boolean;
-    isPartial: boolean;
-    adapterKinds?: string[];
-    startBlockSource?: string;
-    startBlockConfidence?: "high" | "medium" | "low";
-    status: "full" | "partial-history" | "lagging" | "bootstrapping" | "unknown" | "disabled";
-    unavailableReason?: "cron-snapshot-unavailable" | null;
-  };
-  valuation: CoinFlowValuation;
-}
-
-/** Mirrors the public per-coin `valuation` block (see `shared/types/mint-burn.ts`). */
-export interface CoinFlowValuation {
-  window24h: MintBurnValuation;
-  baseline: MintBurnValuationCompleteness;
-  netFlow7d: MintBurnValuationCompleteness;
-  netFlow30d: MintBurnValuationCompleteness;
-  netFlow90d: MintBurnValuationCompleteness;
-  netFlow7dBound: MintBurnSignedNetBound | null;
-  netFlow30dBound: MintBurnSignedNetBound | null;
-  netFlow90dBound: MintBurnSignedNetBound | null;
-}
+export type CoinFlowSummary = MintBurnCoinFlow & Required<Pick<MintBurnCoinFlow, "coverage" | "valuation">>;
 
 /** Known-valuation window net with its valuation tally. */
 interface WindowNetFlow {
@@ -143,6 +89,8 @@ export interface AggregateData {
   latestSuccessfulSyncAt: number | null;
   freshnessLookup: CronTimestampLookupResult;
   freshnessLookupWarning: string | null;
+  scanSegments: Map<string, MintBurnScanSegment[]>;
+  windowEnd: number;
 }
 
 interface GroupedNetFlowRow extends MintBurnValuationTallyRow {
@@ -209,15 +157,7 @@ export async function fetchAggregateData(
   const trackedPairs = getMintBurnTrackedPairs(ACTIVE_MINT_BURN_CONFIGS);
   const trackedPairsJson = JSON.stringify([...trackedPairs].map((pair) => pair.split("|")));
   const hourlyScanStart = Math.min(params.windowStart, params.window24h);
-  const firstHourSeekStatements = buildMintBurnFirstHourSeekStatements(
-    db,
-    ACTIVE_MINT_BURN_CONFIGS.map((config) => ({
-      stablecoinId: config.stablecoinId,
-      chainId: config.chain.chainId,
-    })),
-    "flows",
-  );
-  const eventResultIndex = 5 + firstHourSeekStatements.length;
+  const eventResultIndex = 5;
 
   // Tracked-pair membership is expressed as a row-value IN over json_each so
   // SQLite drives each (chain, coin) prefix of idx_mbh_chain_coin_hour /
@@ -296,7 +236,6 @@ export async function fetchAggregateData(
            GROUP BY stablecoin_id, chain_id, day_ts`,
         )
         .bind(trackedPairsJson, params.baselineWindowStart, params.nowDayTs),
-      ...firstHourSeekStatements,
       db
         .prepare(
           `WITH ranked_events AS (
@@ -319,24 +258,19 @@ export async function fetchAggregateData(
            WHERE row_num = 1`,
         )
         .bind(trackedPairsJson, params.window24h, params.windowEnd),
+      prepareMintBurnScanCoverage(db, ACTIVE_MINT_BURN_CONFIGS, params.window90d, params.windowEnd),
     ]),
     Promise.all([
       readMintBurnSyncStateBatch(db, ACTIVE_MINT_BURN_CONFIGS),
       readMintBurnCronSnapshotResult(db),
     ]),
   ]);
+  const scanSegments = decodeMintBurnScanCoverage(batchResults[6] as D1Result<MintBurnScanSegment>);
 
   const scannedHourlyRows = filterRowsToTrackedPairs((batchResults[0].results ?? []) as HourlyRow[], trackedPairs);
   const hourlyRows = filterRowsByWindow(scannedHourlyRows, params.windowStart, params.windowEnd);
   const hourly24hRows = filterRowsByWindow(scannedHourlyRows, params.window24h, params.windowEnd);
   const baselineRows = filterRowsToTrackedPairs((batchResults[4].results ?? []) as DailyBaselineRow[], trackedPairs);
-  const firstSeenRows = filterRowsToTrackedPairs(
-    batchResults
-      .slice(5, eventResultIndex)
-      .flatMap((result) => (result.results ?? []) as Array<FirstSeenRow & { first_hour_ts: number | null }>)
-      .filter((row): row is FirstSeenRow => row.first_hour_ts != null),
-    trackedPairs,
-  );
   const largestEventRows = filterRowsToTrackedPairs(
     (batchResults[eventResultIndex]?.results ?? []) as EventRow[],
     trackedPairs,
@@ -347,6 +281,17 @@ export async function fetchAggregateData(
   const freshnessLookupWarning = latestSuccessfulSyncLookup.status === "lookup_failed"
     ? "Mint/burn freshness lookup failed; producer observation is unavailable."
     : null;
+  const coverageMap = buildCoinCoverageMap(
+    params.nowSec, scanSegments, lastBlocks, latestCronSnapshot.chainHeads,
+    latestCronSnapshotResult.error ? "cron-snapshot-unavailable" : null, ACTIVE_MINT_BURN_CONFIGS,
+  );
+  // Baseline denominators start at the first fully proven day, never at the first event.
+  const baselineStarts: FirstSeenRow[] = [];
+  for (const [stablecoinId, coverage] of coverageMap) {
+    if (coverage.historyStartAt != null) baselineStarts.push({
+      stablecoin_id: stablecoinId, chain_id: "", first_hour_ts: Math.ceil(coverage.historyStartAt / DAY_SECONDS) * DAY_SECONDS,
+    });
+  }
 
   return {
     hourlyRows,
@@ -354,15 +299,11 @@ export async function fetchAggregateData(
     net7dMap: buildGroupedNetFlowMap((batchResults[1].results ?? []) as GroupedNetFlowRow[], trackedPairs),
     net30dMap: buildGroupedNetFlowMap((batchResults[2].results ?? []) as GroupedNetFlowRow[], trackedPairs),
     net90dMap: buildGroupedNetFlowMap((batchResults[3].results ?? []) as GroupedNetFlowRow[], trackedPairs),
-    baselineMap: buildBaselineMap(params.nowSec, baselineRows, firstSeenRows),
+    baselineMap: buildBaselineMap(params.nowSec, baselineRows, baselineStarts),
     largestEventMap: selectLargestEvents(largestEventRows),
-    coverageMap: buildCoinCoverageMap(
-      params.nowSec,
-      firstSeenRows,
-      lastBlocks,
-      latestCronSnapshot.chainHeads,
-      latestCronSnapshotResult.error ? "cron-snapshot-unavailable" : null,
-    ),
+    coverageMap,
+    scanSegments,
+    windowEnd: params.windowEnd,
     sync: buildMintBurnSyncHealth(params.nowSec, latestSuccessfulSyncAt, latestCronSnapshot.status),
     latestSuccessfulSyncAt,
     freshnessLookup: latestSuccessfulSyncLookup,
@@ -432,16 +373,19 @@ export function buildCoinSummaries(
       trackedMcapUsd += mcap;
     }
 
+    const coverage = data.coverageMap.get(id);
+    const has24hWindow = coverage?.has24hWindow === true;
     const knownNetFlow24h = agg?.netFlow ?? 0;
-    const has24hActivity = (agg?.mintCount ?? 0) > 0
+    const observedActivity = (agg?.mintCount ?? 0) > 0
       || (agg?.burnCount ?? 0) > 0
       || (agg?.mintVolume ?? 0) > 0
       || (agg?.burnVolume ?? 0) > 0;
+    const has24hActivity = observedActivity ? true : has24hWindow ? false : null;
     const valuation24h = summarizeMintBurnValuation(agg?.valuation ?? emptyMintBurnValuationTally());
     // No baseline means no pressure input from it: vacuously complete.
     const baselineValuation = baseline?.valuation ?? "complete";
     const valuationAdmitsPressure = valuation24h.completeness === "complete" && baselineValuation !== "partial";
-    const pressureShiftScore = has24hActivity && baseline && valuationAdmitsPressure
+    const pressureShiftScore = has24hWindow && has24hActivity && baseline && valuationAdmitsPressure
       ? computeFlowIntensity({
           currentDailyNet: knownNetFlow24h,
           baselineDailyNet: baseline.avgNet,
@@ -455,14 +399,14 @@ export function buildCoinSummaries(
       gaugeInputs.push({ intensity: pressureShiftScore, mcap });
       if (pressureShiftScore !== null) scoredMcapUsd += mcap;
       // A baseline shorter than the minimum history is NR whatever the valuation.
-      if (has24hActivity && baseline && baseline.dataDays >= FLOW_INTENSITY_MIN_DATA_DAYS && !valuationAdmitsPressure) {
+      if (has24hWindow && has24hActivity && baseline && baseline.dataDays >= FLOW_INTENSITY_MIN_DATA_DAYS && !valuationAdmitsPressure) {
         partialValuationInputs += 1;
         partialValuationMcapUsd += mcap;
       }
     }
 
     if (gradeClassification) {
-      const flow = { knownNetUsd: knownNetFlow24h, valuation: valuation24h };
+      const flow = { knownNetUsd: has24hWindow ? knownNetFlow24h : null, valuation: valuation24h };
       if (gradeClassification.safeIds.has(id)) {
         safeFlows.push(flow);
       } else if (gradeClassification.riskyIds.has(id)) {
@@ -471,21 +415,11 @@ export function buildCoinSummaries(
     }
 
     const largest = data.largestEventMap.get(id);
-    const coverage = data.coverageMap.get(id) ?? {
-      startBlock: 0,
-      lastSyncedBlock: null,
-      lagBlocks: null,
-      historyStartAt: null,
-      has24hWindow: false,
-      has30dWindow: false,
-      has90dWindow: false,
-      isPartial: true,
-      status: "bootstrapping" as const,
-    };
+    if (!coverage) throw new Error(`Missing mint/burn coverage for ${id}`);
     const net7d = data.net7dMap.get(id);
     const net30d = data.net30dMap.get(id);
     const net90d = data.net90dMap.get(id);
-    // A window without buckets is genuinely empty, hence complete.
+    // Empty observed buckets are valuation-complete; scan completeness is independent.
     const net7dSummary = summarizeMintBurnValuation(net7d?.valuation ?? emptyMintBurnValuationTally());
     const net30dSummary = summarizeMintBurnValuation(net30d?.valuation ?? emptyMintBurnValuationTally());
     const net90dSummary = summarizeMintBurnValuation(net90d?.valuation ?? emptyMintBurnValuationTally());
@@ -493,32 +427,35 @@ export function buildCoinSummaries(
     const net30dValuation = net30dSummary.completeness;
     const net90dValuation = net90dSummary.completeness;
     // A withheld (partial) net publishes only its proven one-sided bound, never the known net itself.
-    const windowBound = (window: WindowNetFlow | undefined, summary: MintBurnValuation) =>
-      window && summary.completeness === "partial" ? mintBurnSignedNetBound(window.netUsd, summary) : null;
+    const windowBound = (window: WindowNetFlow | undefined, summary: MintBurnValuation, admitted: boolean) =>
+      admitted && window && summary.completeness === "partial" ? mintBurnSignedNetBound(window.netUsd, summary) : null;
     coins.push({
       stablecoinId: id,
       symbol: config.symbol,
       pressureShiftScore,
       pressureShiftState: getPressureShiftState(pressureShiftScore),
-      netFlowDirection24h: provenNetFlowDirection24h({
+      netFlowDirection24h: has24hWindow ? provenNetFlowDirection24h({
         knownNetUsd: knownNetFlow24h,
-        has24hActivity,
+        has24hActivity: has24hActivity === true,
         valuation: valuation24h,
-      }),
-      has24hActivity,
+      }) : null,
+      // PR-B readers use this null gate before reconstructing bounds from gross subtotals.
+      has24hActivity: has24hWindow ? has24hActivity : null,
+      observed24hActivity: observedActivity,
       baselineDailyNetUsd: baseline?.avgNet ?? null,
       baselineDailyAbsUsd: baseline?.avgAbs ?? null,
       baselineDataDays: baseline?.dataDays ?? null,
       gaugeWeightUsd: mcap,
-      netFlow24hUsd: valuation24h.completeness === "partial" ? null : knownNetFlow24h,
+      netFlow24hUsd: !has24hWindow || valuation24h.completeness === "partial" ? null : knownNetFlow24h,
       mintVolume24hUsd: agg?.mintVolume ?? 0,
       burnVolume24hUsd: agg?.burnVolume ?? 0,
       mintCount24h: agg?.mintCount ?? 0,
       burnCount24h: agg?.burnCount ?? 0,
-      netFlow7dUsd: net7dValuation === "partial" ? null : net7d?.netUsd ?? 0,
-      netFlow30dUsd: net30dValuation === "partial" ? null : net30d?.netUsd ?? 0,
-      netFlow90dUsd: net90dValuation === "partial" ? null : net90d?.netUsd ?? 0,
-      largestEvent24h: largest && largest.amount_usd != null
+      totalsSemantics: "observed-subtotals",
+      netFlow7dUsd: !coverage.has7dWindow || net7dValuation === "partial" ? null : net7d?.netUsd ?? 0,
+      netFlow30dUsd: !coverage.has30dWindow || net30dValuation === "partial" ? null : net30d?.netUsd ?? 0,
+      netFlow90dUsd: !coverage.has90dWindow || net90dValuation === "partial" ? null : net90d?.netUsd ?? 0,
+      largestEvent24h: largest && largest.amount_usd != null && (largest.direction === "mint" || largest.direction === "burn")
         ? { direction: largest.direction, amountUsd: largest.amount_usd, txHash: largest.tx_hash, timestamp: largest.timestamp }
         : null,
       coverage,
@@ -528,9 +465,9 @@ export function buildCoinSummaries(
         netFlow7d: net7dValuation,
         netFlow30d: net30dValuation,
         netFlow90d: net90dValuation,
-        netFlow7dBound: windowBound(net7d, net7dSummary),
-        netFlow30dBound: windowBound(net30d, net30dSummary),
-        netFlow90dBound: windowBound(net90d, net90dSummary),
+        netFlow7dBound: windowBound(net7d, net7dSummary, coverage.has7dWindow === true),
+        netFlow30dBound: windowBound(net30d, net30dSummary, coverage.has30dWindow),
+        netFlow90dBound: windowBound(net90d, net90dSummary, coverage.has90dWindow),
       },
     });
   }

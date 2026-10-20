@@ -11,7 +11,7 @@ import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-sche
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import type { DexApiPool } from "../../../lib/dex-api-common";
 import type { UniV3ExecutionCandidate } from "../../measured-execution/candidate-types";
-import { buildUniV3ExecutionCandidateKey } from "../../measured-execution/inventory";
+import { buildUniV3ExecutionCandidateKey, buildUniV3MeasuredExecutionTarget } from "../../measured-execution/inventory";
 import { joinDexMeasuredExecutionEvidence } from "../../measured-execution/join";
 import { buildDexMeasuredExecutionProfile } from "../../measured-execution/profiles";
 import { getDexMeasuredExecutionDeployment } from "../../measured-execution/registry";
@@ -100,8 +100,29 @@ describe("reconcileUniV3CandidateSnapshots", () => {
     ]);
     const eurcUsdc = candidates.get(buildUniV3ExecutionCandidateKey("ethereum", [EURC, USDC], 500)!);
     const eurcUsdt = candidates.get(buildUniV3ExecutionCandidateKey("ethereum", [EURC, USDT], 3000)!);
-    expect(eurcUsdc).toEqual([ETH_EURC_USDC]);
-    expect(eurcUsdt).toEqual([ETH_EURC_USDT]);
+    expect(eurcUsdc).toEqual([{ ...ETH_EURC_USDC, carriedFromSnapshot: true }]);
+    expect(eurcUsdt).toEqual([{ ...ETH_EURC_USDT, carriedFromSnapshot: true }]);
+  });
+
+  it("carries pool identity without admitting its cached spot as an output USD reference", async () => {
+    const { db } = fixtures.open();
+    const unknown = "0x4444444444444444444444444444444444444444";
+    const cached = candidate("ethereum", ETH_EURC_USDC.poolAddress, [USDC, unknown]);
+    await reconcileUniV3CandidateSnapshots({
+      db, nowSec: NOW - 3_600, chains: ["ethereum"], failedChains: new Set(), candidates: candidateMap(cached),
+    });
+    const candidates = candidateMap();
+    await reconcileUniV3CandidateSnapshots({
+      db, nowSec: NOW, chains: ["ethereum"], failedChains: new Set(["ethereum"]), candidates,
+    });
+    const carried = [...candidates.values()][0]![0]!;
+    expect(carried).toMatchObject({ poolAddress: cached.poolAddress, carriedFromSnapshot: true });
+    expect(buildUniV3MeasuredExecutionTarget({
+      stablecoinId: "usdc-circle", candidate: carried,
+      stablecoinPriceById: new Map([["usdc-circle", 1]]),
+      chainAddressToId: new Map([[`ethereum:${USDC}`, "usdc-circle"]]),
+      retainedTvlUsd: 3_000_000, capturedAt: NOW,
+    })).toBeNull();
   });
 
   it("does not overwrite a good snapshot with the partial pages of a failed chain", async () => {
@@ -180,7 +201,7 @@ describe("mergeUniV3CandidateSnapshot", () => {
     const livePoolCopy = { ...ETH_EURC_USDC, poolAddress: ETH_EURC_USDC.poolAddress.toUpperCase() };
 
     expect(mergeUniV3CandidateSnapshot(into, [livePoolCopy, ETH_EURC_USDT, ETH_EURC_USDT])).toBe(1);
-    expect([...into.values()].flat()).toEqual([ETH_EURC_USDC, ETH_EURC_USDT]);
+    expect([...into.values()].flat()).toEqual([ETH_EURC_USDC, { ...ETH_EURC_USDT, carriedFromSnapshot: true }]);
   });
 });
 
@@ -246,6 +267,7 @@ describe("carried Uni V3 identity through the target and quote join", () => {
     // Raw amounts must round-trip through the target's own reference prices (EURC ≈ $1.08 in, USDC $1 out).
     const quote = (points: readonly (readonly [number, number])[], quotedAt: number) =>
       buildDexMeasuredExecutionProfile({
+        blockHash: `0x${"ab".repeat(32)}`,
         target, targetGenerationId: "dex-measured-targets-carried", quoteGenerationId: `dex-measured-quotes-${quotedAt}`,
         quotedAt, blockNumber: 23_000_000, endpointAddress: deployment.endpointAddress,
         endpointCodeHash: deployment.expectedCodeHash,

@@ -202,6 +202,11 @@ const UNALLOWLISTABLE_DEGRADED_WARNING_CODES = new Set([
   "material-unknown-exposure",
 ]);
 
+/** Fatal evidence is never excused by a coin's degraded-warning policy. */
+export function hasFatalReserveWarnings(warnings: readonly LiveReserveWarning[]): boolean {
+  return warnings.some((warning) => warning.effect === "fatal");
+}
+
 /**
  * Degrading warnings the coin's scoring allowlist does not excuse. A snapshot
  * carrying one is stored and displayed but never enters V9 scoring. Judged on

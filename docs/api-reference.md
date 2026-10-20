@@ -129,7 +129,7 @@ A failed liquidity producer-status read is not an empty advisory: each row carri
 
 DDR secondary errata/lock-deferral read failures retain immutable forecasts with `_meta.degradedReason: "secondary-overlay-unavailable"` and `errata-overlay-read-failed` / `lock-deferral-overlay-read-failed` details; responses are `no-store`. Canonical projection failures return `503` for `/api/depeg-events`, naming `incident-projection-read-failed`, `incident-projection-invalid`, or `incident-projection-dangling-reference` (missing active first/current events, membership, or constituent link targets, including single-event incidents); see [projection admission](./depeg-detection.md#api). These failures never return raw history or successful empty cohorts; genuinely empty cohorts remain successful. `/api/peg-summary` retains accepted history as degraded/no-store with that reason and its original clock, or returns `503`. Non-NAV assets with missing/nominal primary prices expose `currentPriceUnavailable: true` and null deviation, excluded from observed at-peg counts.
 
-Peg-summary readers accept `summary.medianDeviationBps` as `number | null`: null is unavailable and renders as `—`, independently of valid numeric cohort and historical-event counts. An observed zero remains `0 bps`. Deploy null-tolerant readers before enabling an empty-cohort null producer; accepting null does not itself change the producer's current output.
+`/api/peg-summary` publishes `summary.medianDeviationBps: null` when no admitted live deviations exist, even if historical coin analytics remain available. Readers render null as `—`, independently of valid numeric cohort and historical-event counts; an observed parity price yields `0 bps`. External clients must accept `number | null`. Deploy and verify null-tolerant Pages readers before enabling the Worker producer; retain those readers on producer rollback.
 
 `/api/depeg-events` orders and paginates by public effective `startedAt` descending, then numeric event `id` descending, including DDR-projected incident onsets. The first returned event's effective onset supplies methodology `asOf`; the raw current-fragment clock is not the public pagination key. Opaque cursors are version 2; older raw-onset tokens return `400` and require restarting pagination. Projection admission, event selection and any exact count share one transactional D1 snapshot even when `includeTotal=false`; a concurrent incident-pointer advance cannot silently turn a projected incident into raw history.
 
@@ -380,6 +380,12 @@ Compatibility `activeFrozenTotal` and `activeAmountGapCount` use the last succes
 
 Producer-written `blacklist-summary` snapshots also publish optional `refresh: { observedAt, behindConfigs[] }`: when the scheduled producer rebuilt the observed totals, and each config (`configKey`, `symbol`, `chainName`, nullable `lastSucceededAt`) that did not reach its safe head that run. The freshness headers keep the oldest full-coverage clock; `refresh` lets clients say which sources hold it back rather than calling the whole tracker stalled. Absent `refresh` (request-path materialization) means no producer catch-up detail.
 
+## Mint-Burn Scan Availability
+
+`GET /api/mint-burn-flows` publishes exact signed 24h/7d/30d/90d windows only with continuous current-fingerprint finalized scan proof on every required config and chain. Window boundaries use closed UTC hours. Each coin's `coverage.windows` records independent `window24h`, `window7d`, `window30d` and `window90d` admission as `{ complete, unavailableReason }`; incomplete evidence has reason `scan-coverage-incomplete` and a null signed net, direction and pressure. Valuation remains an independent qualifier. For deployed-reader compatibility, `has24hActivity` is null for every incomplete 24h scan, true for proved activity, and false only for proved quiet. Additive `observed24hActivity` preserves whether events were observed even without complete scan proof; false is not a quiet-window claim.
+
+Counts and gross volumes are observed subtotals (`totalsSemantics: "observed-subtotals"`), not proof of full history. Per-coin requested totals, chains and hourly signed nets carry their own `scanCoverage`. The gauge score/band are null when a required 24h scan is incomplete. Versioned v5 aggregate/per-coin caches reject pre-cutover exact-zero claims; old sparse events and cursors never synthesize historical proof. See [scan and valuation admission](./mint-burn-flows.md#valuation-completeness). The shared schema owns coverage reasons and producer DTOs. PR-B's null-tolerant Pages readers remain compatible during normal Worker-before-Pages activation: incomplete scans keep the legacy null activity gate rather than enabling subtotal-derived bounds.
+
 ## Chain Supply Availability
 
 `GET /api/chains` readers must accept `null` for `globalTotalUsd`, `chainAttributedTotalUsd`, `unattributedTotalUsd`, `attributionDiscrepancyUsd`, `dominanceGeometryTotalUsd` and each chain's `dominanceShare`. Null means unavailable, not observed zero; derived ratios and conservation claims require their observed totals. Published chain rows and optional `chainDetail` retain numeric observed totals. The shared PharosVille chains contract uses the same schema: external consumers must deploy null guards before a producer introduces null values.
@@ -422,7 +428,7 @@ Aggregate FTQ also publishes `gauge.classificationReason` and independent `_meta
 
 `GET /api/stablecoin-summary/{stablecoinId}`: `supplyUsd` fields `current`, `prevDay`, `prevWeek`, `prevMonth`, `change1d`, `change7d`, `change30d` are `number | null`. Absent/empty/wholly invalid current peg buckets yield null `current` and `currentUnavailableReason: "supply-buckets-missing"`; observed supply, including `0`, clears the reason to null. Changes require observed current and historical values; missing current never implies a negative delta. `supplyByPegUsd` contains only finite buckets (`{}` if none). Assets absent from the stablecoins publication return `404`.
 `GET /api/dex-liquidity` and history publish nullable `totalVolume24hUsd`, `totalVolume7dUsd`, history `volume24h`, pool `volumeUsd1d` and `scoreComponents.volumeActivity`. [Measured volume availability (v6.9)](./dex-liquidity.md#measured-volume-availability) owns 72h admission, complete-only totals, availability-record fields, measured zero, global/legacy rows and the 50% activity/score coverage gate. Each `/api/dex-liquidity` row also carries optional `liquidityScoreUnavailableReason`: `null` when rated, otherwise the machine code of whoever nulled the score — `activity-coverage-below-floor`, `activity-missing`, `activity-stale`, `activity-completeness-unknown`, `no-retained-pools`, or `invalid-coverage-evidence` (publisher quarantine). Rows scored before the field existed publish `null`; consumers must not infer a cause. See [DEX Liquidity Score](./dex-liquidity.md#dex-liquidity-score).
-The `GET /api/dex-liquidity` read contract accepts `balanceMeasuredTvlUsd` and `organicMeasuredTvlUsd` as `number | null`. Consumers must distinguish unavailable `null` from observed numeric `0`, require both a ratio/fraction and its independently observed weight before weighted aggregation, and never render missing coverage as 0%.
+`GET /api/dex-liquidity` also publishes `balanceMeasuredTvlUsd` and `organicMeasuredTvlUsd` as `number | null`. Null is unavailable measurement weight, including legacy rows, not measured zero; numeric `0` remains valid. Consumers must require both a ratio/fraction and its independently observed weight before weighted aggregation, and must not render missing coverage as 0%.
 DEX [price publication](./dex-liquidity.md#dex-price-cross-validation). Malformed coverage is quarantined per asset/point, retaining independent measurements. Price admission, nullable fields and the separate 24h clock do not alter liquidity `X-Data-Age`.
 `GET /api/mint-burn-flows` valuation-gated nullable fields: aggregate `coins[]`: `netFlow24hUsd`, `netFlow7dUsd`, `netFlow30dUsd`, `netFlow90dUsd`, `netFlowDirection24h`; `chains[].netFlow24hUsd`, `hourly[].netFlowUsd`, `gauge.flightToQuality`, `gauge.flightIntensity`; per-coin `netFlowUsd`, `chains[].netFlowUsd`. [Valuation completeness (v6.23)](./mint-burn-flows.md#valuation-completeness) owns gates, exact/partial/legacy semantics and gauge reweighting. `valuation` shapes: coin `{ window24h, baseline, netFlow7d, netFlow30d, netFlow90d, netFlow7dBound?, netFlow30dBound?, netFlow90dBound? }` (v6.25 bounds: `{ kind: "lower" | "upper", valueUsd }` or `null`; a proven one-sided bound on a withheld net); aggregate chain/hourly completeness labels; per-coin totals/chains `{ completeness, mintCompleteness, burnCompleteness, unpricedMintEventCount, unpricedBurnEventCount }`. Absent records are `unknown`, never complete.
 `GET /api/stablecoin-charts` retains invalid/omitted buckets as null, explicit zero as zero; see [chart publication](./supply-snapshot.md#supply-pipeline).
@@ -590,8 +596,8 @@ Normalized issuer freeze, unfreeze, blacklist, and destruction events with optio
 
 ```json
 {
-  "currentVersion": "4.5",
-  "currentVersionLabel": "v4.5"
+  "currentVersion": "4.6",
+  "currentVersionLabel": "v4.6"
 }
 ```
 
@@ -619,7 +625,7 @@ Historical and active depeg incidents with constituent threshold-crossing counts
 
 ```json
 {
-  "currentVersion": "6.35"
+  "currentVersion": "6.36"
 }
 ```
 
@@ -657,7 +663,7 @@ Per-coin peg scores, reference evidence, coverage-aware recent metrics, and aggr
 
 ```json
 {
-  "currentVersion": "6.35"
+  "currentVersion": "6.36"
 }
 ```
 
@@ -934,10 +940,10 @@ Modeled issuer/protocol redemption routes and effective-exit scoring for configu
 {
   "coins": {},
   "methodology": {
-    "version": "4.51",
-    "versionLabel": "v4.51",
-    "currentVersion": "4.51",
-    "currentVersionLabel": "v4.51",
+    "version": "4.52",
+    "versionLabel": "v4.52",
+    "currentVersion": "4.52",
+    "currentVersionLabel": "v4.52",
     "changelogPath": "/methodology/redemption-backstop-changelog/",
     "asOf": 0,
     "isCurrent": true,
@@ -995,8 +1001,8 @@ Yield-bearing stablecoin rankings with safety, benchmark-aware context, and opti
 
 ```json
 {
-  "currentVersion": "8.49",
-  "methodologyVersion": "10.23"
+  "currentVersion": "8.5",
+  "methodologyVersion": "10.24"
 }
 ```
 
@@ -1014,7 +1020,7 @@ Machine-readable source-list manifest for every yield-bearing asset, including a
 
 ```json
 {
-  "methodologyVersion": "v8.49"
+  "methodologyVersion": "v8.5"
 }
 ```
 
@@ -1032,8 +1038,8 @@ Historical yield observations for a stablecoin, with optional publication/source
 
 ```json
 {
-  "currentVersion": "8.49",
-  "methodologyVersion": "8.49"
+  "currentVersion": "8.5",
+  "methodologyVersion": "8.5"
 }
 ```
 
@@ -1073,8 +1079,8 @@ Freshness threshold: 1800 s.
 
 ```json
 {
-  "currentVersion": "6.35",
-  "methodologyVersion": "6.35"
+  "currentVersion": "6.36",
+  "methodologyVersion": "6.36"
 }
 ```
 

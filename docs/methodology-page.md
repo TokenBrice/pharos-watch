@@ -58,6 +58,8 @@ Update section body and markdown summary when explanation changes; composition o
 
 Producer explanations follow runtime ownership: DDR cadence comes from `CRON_INTERVALS["compute-depeg-resolver"]`, not stablecoin-sync placement. Lifecycle Active describes collection eligibility, not blanket aggregate membership; PSI monetary scope follows listing-class admission. The pricing source inventory describes current adapters and their admission qualifications; retired providers belong in the canonical pricing changelog, and DexScreener exact-pool fallback remains distinct from the address-provider lane.
 
+For redemption payout changes, keep the public redemption section and Safety Exit explanation aligned with the [selected-output contract](./redemption-backstops.md#scoring-model). Payout dependency shares are distinct from the structural backing/exposure graph; retain unknown basket shares rather than copying reserve allocations into output examples.
+
 ## Definitions
 
 `src/lib/definitions.ts` is the single term source. Listed entries supply citation-ready A–Z long text, `#definitions` and `#def-<key>` anchors, DefinedTermSet JSON-LD and markdown export. Tooltip/context/glossary consumers project the same entries; do not copy them. Numeric text interpolates owning constants, not manual weights/bands. Product names are not definitions. Preserve the `/learn/glossary/` redirect to `/methodology/#definitions`.

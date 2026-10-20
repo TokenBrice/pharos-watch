@@ -5,10 +5,8 @@ import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { EventCard } from "@/components/tape/event-card";
-import {
-  SEVERITY_LABEL as SEVERITY_LABEL_BARE,
-  type TapeEvent,
-} from "@shared/types/tape-event";
+import { SEVERITY_LABEL as SEVERITY_LABEL_BARE } from "@shared/lib/classification/tape";
+import type { TapeEvent } from "@shared/types/tape-event";
 import type { ApiMeta } from "@/lib/api";
 import type { DepegEvent } from "@shared/types";
 import type { DataHealthInfo } from "@/lib/data-health";

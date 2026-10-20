@@ -211,7 +211,6 @@ describe("Safety Score v9 production-shaped archetype fixtures", () => {
           basket: [],
           cycleBlocked: false,
         },
-        undefined,
       ),
     ).toBe("pure");
 

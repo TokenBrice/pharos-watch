@@ -46,7 +46,7 @@ Options:
 
 Apply also requires the existing blacklist current-balance writer pause and no active sync-blacklist lease.
 The tool captures a Time Travel restore point immediately before its atomic import; it is not a concurrency token.
-Never changes cursors. Missing historical balances remain NULL; no latest-state event amount fallback.`;
+Never changes cursors. Amountless events remain NULL without exact event-position proof; current snapshots are separate.`;
 
 export interface ReplayOptions {
   help: boolean;
@@ -215,7 +215,6 @@ export async function runConfigHistoryReplay(options: ReplayOptions, dependencie
   }).map(([, row]) => row);
   const now = Math.floor((dependencies.now ?? Date.now)() / 1000);
   const observations: unknown[] = [];
-  const headers = new Map<number, Header>();
   const readBalance = async (address: string, block: Header): Promise<number | null> => {
     try {
       const raw = await rpc("eth_call", [{ to: config.contractAddress, data: encodeBalanceOfCallData(address) },
@@ -232,30 +231,15 @@ export async function runConfigHistoryReplay(options: ReplayOptions, dependencie
   };
   for (const row of missing) {
     if (row.amount_native != null) continue; // Emitted amounts always win, including destroy amounts.
-    row.amount_attempt_count = 1;
-    row.amount_last_attempted_at = now;
-    row.amount_last_provider = "chain_rpc";
-    let amount: number | null = null;
-    try {
-      assert(row.block_number > 0, "Genesis events have no pre-block balance");
-      const height = row.block_number - 1;
-      let block = headers.get(height);
-      if (!block) {
-        block = header(await rpc("eth_getBlockByNumber", [`0x${height.toString(16)}`, false]), height);
-        headers.set(height, block);
-      }
-      amount = await readBalance(row.address, block);
-    } catch {
-      observations.push({ eventId: row.id, unavailable: "pre_block_header_unavailable" });
-    }
-    row.amount_native = amount;
-    row.amount_usd_at_event = computeBlacklistAmountUsdAtEvent(config.stablecoin, amount);
-    row.amount_source = amount == null ? "unavailable" : "historical_balance";
-    row.amount_status = amount == null ? "provider_failed" : "resolved";
-    row.amount_last_error_class = amount == null ? "provider_null" : null;
+    // A hash-pinned preceding-block balance still cannot prove the balance at
+    // this event's log position. Keep historical attribution unavailable.
+    row.amount_source = "unavailable";
+    row.amount_status = "provider_failed";
+    row.amount_last_provider = "none";
+    row.amount_last_error_class = "event_time_unproven";
   }
   for (const row of missing) {
-    if (shouldSuppressAsMirrorZero(row.stablecoin, row.event_type, row.amount_native)) {
+    if (shouldSuppressAsMirrorZero(row.stablecoin, row.event_type, row.amount_native, row.amount_source)) {
       row.suppression_reason = "circle_mirror_zero_balance";
     }
   }

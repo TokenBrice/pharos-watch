@@ -614,6 +614,19 @@ describe("yield config registry", () => {
     });
   });
 
+  it("uses the return reference rather than benchmark availability for USD-price fallback eligibility", () => {
+    expect(isPriceDerivedYieldEligible("xgld-unitas")).toBe(false);
+    const gold = YIELD_ADAPTER_MANIFEST.find((entry) => entry.stablecoinId === "xgld-unitas");
+    expect(gold?.strategies.some((entry) => entry.kind === "deterministic-onchain")).toBe(true);
+    expect(gold?.strategies.some((entry) => entry.kind === "price-derived")).toBe(false);
+    expect(PRICE_DERIVED_FALLBACK_IDS.has("xgld-unitas")).toBe(false);
+    for (const id of ["fpi-frax", "isc-international-stable-currency", "sdai-sky"]) {
+      expect(isPriceDerivedYieldEligible(id), id).toBe(true);
+      expect(YIELD_ADAPTER_MANIFEST.find((entry) => entry.stablecoinId === id)
+        ?.strategies.some((entry) => entry.kind === "price-derived"), id).toBe(true);
+    }
+  });
+
   it("wires v8.16 coverage additions to runtime source keys", () => {
     // silk-shade-protocol left this pin list when it was quarantined on
     // 2026-08-18 (invalid upstream supply); the manifest only covers active coins.

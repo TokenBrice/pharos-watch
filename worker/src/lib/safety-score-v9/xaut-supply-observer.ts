@@ -366,6 +366,7 @@ export async function observeXautRepresentationGroupSupplyAttributionAttempt(
 
   const options = {
     ...rpcOptions(input.chainRpcs, input.signal),
+    stateBlockHash: blockHeader.hash,
     recentStatePin: { chainId: XAUT_CANONICAL_CHAIN_ID, header: blockHeader,
       finalized: pin.finalized, observedAtSec: input.scoringClockSec,
       maxAgeSec: XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC },

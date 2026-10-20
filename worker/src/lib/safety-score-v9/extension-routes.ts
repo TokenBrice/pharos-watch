@@ -1051,36 +1051,30 @@ export function buildSafetyScoreV9RouteReviews(
   assetId: string,
 ): RouteReview[] {
   const reviews: RouteReview[] = [];
-  const seenResources = new Set<string>();
-  const addReview = (review: RouteReview): void => {
-    // A physical resource may only back one score-bearing route; further
-    // observations of the same resource stay diagnostic across both lanes.
-    const reused = review.physicalResourceKeys.some((key) => seenResources.has(key));
-    for (const key of review.physicalResourceKeys) seenResources.add(key);
-    reviews.push(reused ? { ...review, coverageClass: "diagnostic" } : review);
-  };
+  // Alternatives retain their own admission; Exit selection and capacity
+  // aggregation enforce physical-resource exclusion only among combined routes.
   const dexObservations = [...(fixedInput.dexLiqMap[assetId]?.exitRouteObservations ?? [])].sort((left, right) =>
     compareText(left.routeId, right.routeId),
   );
   for (const observation of dexObservations) {
-    addReview(buildDexRouteReview(fixedInput, assetId, observation));
+    reviews.push(buildDexRouteReview(fixedInput, assetId, observation));
   }
   const composedExit = getRedemptionBackstopConfig(assetId)?.v9ComposedDexExit;
   if (composedExit) {
     for (const retained of buildSafetyScoreV9ComposedDexRoutes(fixedInput, assetId)) {
-      addReview(buildDexRouteReview(fixedInput, assetId, retained.observation, composedExit));
+      reviews.push(buildDexRouteReview(fixedInput, assetId, retained.observation, composedExit));
     }
   }
   const redemption = fixedInput.redemptionBackstopMap[assetId];
   const retainedRedemption = buildSafetyScoreV9RetainedRedemptionRoutes(fixedInput, assetId);
   for (const retained of retainedRedemption.filter((route) => route.observation.physicalToUsd)) {
-    addReview(buildPhysicalRouteReview(fixedInput, assetId, retained.observation));
+    reviews.push(buildPhysicalRouteReview(fixedInput, assetId, retained.observation));
   }
   for (const observation of redemption?.capacityProfile?.exitRouteObservations ?? []) {
-    addReview(buildRedemptionRouteReview(fixedInput, redemption!, observation));
+    reviews.push(buildRedemptionRouteReview(fixedInput, redemption!, observation));
   }
   for (const retained of retainedRedemption.filter((route) => !route.observation.physicalToUsd)) {
-    addReview(buildRedemptionRouteReview(fixedInput, redemption!, retained.observation));
+    reviews.push(buildRedemptionRouteReview(fixedInput, redemption!, retained.observation));
   }
   return reviews.sort((left, right) => compareText(`${left.lane}:${left.routeId}`, `${right.lane}:${right.routeId}`));
 }

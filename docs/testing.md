@@ -274,6 +274,8 @@ Use [`src/test-utils/frontend.ts`](../src/test-utils/frontend.ts) for matchMedia
 
 Use [`shared/test-utils/mock-d1.ts`](../shared/test-utils/mock-d1.ts); unmatched SQL always throws. Prefer statement markers to broad substrings, and strict normalized matching for exact SQL contracts. A supplied `first: null` is an explicit empty result, not fallback inference.
 
+For SQLite D1 fixture wrappers, use the structural `D1Database` interface from [`shared/types/cloudflare-runtime.d.ts`](../shared/types/cloudflare-runtime.d.ts), matching the shared SQLite adapter. Spreading a fixture typed as the Worker global abstract class drops its method types; preserve the structural fixture contract when overriding `batch`. Typed row builders used by `mockD1` must also satisfy its `Record<string, unknown>` row contract without weakening production row interfaces.
+
 Enable fixture match accounting: unused scenario fixtures invalidate the scenario. An `allowUnused` shared fallback must not exempt the scenario's own evidence; accounting counts selected entries, not only recorded SQL text. Telegram mocks always account for matches; use strict writes when the scenario must declare its own mutations.
 
 Cron entrypoint suites share their existing module-specific harness. Import mocked real-module bindings after the harness, never re-exported fixture aliases (which resolve to `undefined` under Vitest 4). Cross-runtime maintenance clients use [`scripts/test-utils/d1.ts`](../scripts/test-utils/d1.ts); Pages Functions use the existing D1 harness with prepare/batch/history support.
@@ -423,6 +425,8 @@ Use the actual [`blacklist.test.ts`](../worker/src/api/__tests__/blacklist.test.
 ## ESLint Configuration
 
 [`eslint.config.mjs`](../eslint.config.mjs) and [`eslint.typed.config.mjs`](../eslint.typed.config.mjs) own scopes, rules and exclusions; do not duplicate their rule tables, allowlists or ignored-path arrays. Typed unsafe-value and promise rules remain blocking in configured scopes. Decode external data as `unknown` and validate it at the typed boundary.
+
+The inherited Next plugin scope includes CommonJS source files so global React Hooks rule overrides always resolve their plugin. Frozen, compiled compatibility-reader fixtures are excluded from source linting to preserve their historical bytes; config regression tests cover both boundaries.
 
 `Array.isArray` narrows an unknown collection to `any[]`, not validated elements. Keep decoded elements in an `unknown[]` view and narrow each member with the owning record guards or schema before accessing it; preserve existing element types on already-typed readonly collections. Explicitly parameterize empty `Map` and length-only `Array` constructors so their storage cannot introduce implicit `any`.
 

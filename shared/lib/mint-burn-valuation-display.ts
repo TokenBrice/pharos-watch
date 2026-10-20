@@ -112,8 +112,13 @@ export function sumMintBurnSignedNets(parts: readonly MintBurnSignedNetView[]): 
 export function describeMintBurnVolumeBound(
   completeness: MintBurnValuationCompleteness | null | undefined,
   unpricedEventCount?: number | null,
+  scanComplete = true,
 ): string | null {
   const resolved = resolveMintBurnValuationCompleteness(completeness);
+  if (!scanComplete) {
+    const valuationNote = resolved === "complete" ? "" : `; ${describeMintBurnVolumeBound(completeness, unpricedEventCount)}`;
+    return `Observed subtotal, lower bound: scan coverage incomplete${valuationNote}`;
+  }
   if (resolved === "complete") return null;
   if (resolved === "partial") {
     return unpricedEventCount != null
@@ -128,6 +133,7 @@ export function formatMintBurnVolume(
   valueUsd: number,
   completeness: MintBurnValuationCompleteness | null | undefined,
   format: (value: number) => string,
+  scanComplete = true,
 ): string {
-  return resolveMintBurnValuationCompleteness(completeness) === "complete" ? format(valueUsd) : `≥ ${format(valueUsd)}`;
+  return scanComplete && resolveMintBurnValuationCompleteness(completeness) === "complete" ? format(valueUsd) : `≥ ${format(valueUsd)}`;
 }

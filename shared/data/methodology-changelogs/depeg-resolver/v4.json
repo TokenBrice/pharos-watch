@@ -1,5 +1,20 @@
 [
   {
+    "version": "4.9",
+    "title": "Measured recovery evidence and chronological duration cohorts",
+    "date": "2026-10-20",
+    "effectiveAt": 1792454400,
+    "summary": "DDR requires measured onset evidence, uses run-local admitted structural posture and groups duration intervals without losing open or overlapping members.",
+    "impact": [
+      "R3 requires measured event-time supply/onset and affirmative non-anomaly evidence. Missing onset or seven-day evidence is unavailable, never replaced by a post-onset denominator or recovery anchor.",
+      "Training and live duration strata share admitted run-local mint posture rather than isolate-global hydration. Overlapping and nested intervals union monotonically, with open-member dominance, terminal-boundary closure ownership and conservative equal-end ties.",
+      "Coverage and prediction review share chronology-aware recovery/terminal classification. Later freezes cannot relabel earlier recoveries; coarse day/month evidence must be fully settled before overriding recovery.",
+      "Readiness and future cohorts can change. Frozen forecasts retain contents, hashes, original methodology and publication identity; this release does not regrade them. Planned release date is 2026-10-20."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "4.8",
     "title": "TVL trend evidence respects stored liquidity measurement epochs",
     "date": "2026-10-19",

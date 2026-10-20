@@ -840,7 +840,6 @@ const BASE_ENDPOINT_DEFINITIONS = [
   adminAction({
     key: "remediate-blacklist-amount-gaps",
     path: API_PATHS.remediateBlacklistAmountGaps(),
-    routeDependencies: ["chainRpcs"],
   }, {
       label: "Remediate Blacklist Gaps",
       confirm: "Run targeted blacklist amount-gap remediation? Prefer dry-run first.",

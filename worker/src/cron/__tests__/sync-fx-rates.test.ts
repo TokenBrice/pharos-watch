@@ -1006,7 +1006,7 @@ describe("syncFxRates", () => {
     expect(recordedRecord.lastFailureAt).toBeGreaterThan(0);
   });
 
-  it("fetches only Frankfurter when every secondary and overlay TTL is fresh", async () => {
+  it.each(["sourceLastSuccessAtBySource", "sourceLastSuccessAt"])("fetches only Frankfurter when %s TTL metadata is fresh", async (field) => {
     const nowSec = Math.floor(Date.now() / 1000);
     const previousRates = makeCompleteFxRates();
     const previousMeta = makeCacheRow({
@@ -1014,7 +1014,7 @@ describe("syncFxRates", () => {
         usableSyncAt: nowSec - 60,
         updatedAt: nowSec - 60,
       }),
-      sourceLastSuccessAtBySource: {
+      [field]: {
         "secondary:jsdelivr": nowSec - 60,
         "secondary:pages.dev": nowSec - 60,
         "secondary:jsdelivr-versioned": nowSec - 60,
@@ -1042,6 +1042,10 @@ describe("syncFxRates", () => {
 
     expect(result.itemCount).toBeGreaterThan(0);
     expect(fetchSpy).toHaveBeenCalledTimes(1);
+    // Source-success decisions use one coherent pair read, never detached metadata.
+    expect(db.getHistory().filter((entry) =>
+      entry.sql.trimStart().startsWith("SELECT") && entry.binds.includes("fx-rates-meta"),
+    )).toHaveLength(1);
     expect(fetchSpy.mock.calls[0]?.[0]).toContain("api.frankfurter.dev");
     const metadata = JSON.parse(result.metadata ?? "{}") as { sources?: Record<string, string> };
     expect(metadata.sources?.fawazahmed0).toBe("cached");
@@ -1049,6 +1053,27 @@ describe("syncFxRates", () => {
     expect(metadata.sources?.chainlink).toBe("cached");
     expect(findCacheWrite(db, "fx-rates-meta")).toBeDefined();
   });
+
+  it.each(["expired", "missing", "generation-mismatch"] as const)(
+    "fetches secondary mirrors when source-success metadata is %s", async (condition) => {
+      const now = Math.floor(Date.now() / 1000);
+      const previousRates = makeCompleteFxRates();
+      const previousMeta = condition === "missing" ? null : makeCacheRow({
+        ...makeFxRatesMeta(previousRates, { usableSyncAt: now - 60, updatedAt: now - 60 }),
+        sourceLastSuccessAtBySource: {
+          "secondary:jsdelivr": now - (condition === "expired" ? 21600 : 60),
+          "secondary:pages.dev": now - (condition === "expired" ? 21600 : 60),
+          "secondary:jsdelivr-versioned": now - (condition === "expired" ? 21600 : 60),
+        },
+      }, now - (condition === "generation-mismatch" ? 120 : 60));
+      const fetchSpy = mockFetch(fxMirrors());
+      await syncFxRates(makeFxRatesDb({
+        previousRates: makeCacheRow(previousRates, now - 60), previousMeta,
+      }));
+      const urls = fetchSpy.mock.calls.map(([url]) => String(url));
+      expect(urls.filter((url) => url.includes("currency-api"))).toHaveLength(3);
+    },
+  );
 
   it("attempts all secondary mirrors when Frankfurter fails despite fresh mirror TTLs", async () => {
     const nowSec = Math.floor(Date.now() / 1000);

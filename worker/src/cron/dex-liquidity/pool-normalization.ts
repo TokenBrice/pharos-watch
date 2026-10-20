@@ -34,7 +34,7 @@ export function normalizeProtocol(project: string): string {
   return project;
 }
 
-/** Build the canonical cross-source pool fingerprint for token-pair dedup. */
+/** Candidate token-pair metadata for unique joins; never an exact aggregate key. */
 export function buildPoolFingerprint(chain: string, protocol: string, tokenAddresses: string[]): string | null {
   if (tokenAddresses.length < 2) return null;
   const canonicalChain = canonicalExitRouteChain(chain);

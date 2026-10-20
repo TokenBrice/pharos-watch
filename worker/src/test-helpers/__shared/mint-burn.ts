@@ -3,11 +3,10 @@ import {
   type MockD1Database,
   type MockTableConfig,
 } from "@shared/test-utils/mock-d1";
-import type {
-  MintBurnBridgeDetectionConfig,
-  MintBurnContractConfig,
-  MintBurnEventDef,
-} from "../../lib/mint-burn-contracts";
+import type { MintBurnContractConfig } from "../../lib/mint-burn-contracts-types";
+import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
+import { mintBurnConfigKey } from "../../lib/mint-burn-pipeline/sync-state";
+import type { MintBurnScanSegment } from "../../lib/mint-burn-pipeline/scan-coverage";
 
 type MockRows = MockTableConfig["rows"];
 
@@ -23,6 +22,7 @@ export interface MintBurnScenarioRows {
   syncState?: MockRows;
   cronSnapshot?: MockRows;
   latestSuccessfulSync?: MockRows;
+  scanCoverage?: MockRows;
 }
 
 export interface MintBurnCacheEntry {
@@ -95,6 +95,16 @@ const DEFAULT_STABLECOINS_CACHE = JSON.stringify({
   ],
 });
 
+/** Explicit synthetic proof for existing flow fixtures; override with [] for bootstrap/legacy cases. */
+export function makeMintBurnScanSegments(
+  end: number, days = 90, configs: readonly MintBurnContractConfig[] = MINT_BURN_CONFIGS,
+): Array<MintBurnScanSegment & Record<string, unknown>> {
+  return configs.map((config) => ({
+    config_key: mintBurnConfigKey(config), from_block: config.startBlock, to_block: config.startBlock + 1_000_000,
+    from_timestamp: end - days * 86400, to_timestamp: end,
+  }));
+}
+
 export function mintBurnScenario({
   nowSec = Math.floor(Date.now() / 1000),
   rows = {},
@@ -122,6 +132,7 @@ export function mintBurnScenario({
     { match: "pharos:mint-burn-flows:first-hour-seek", rows: rows.firstSeen ?? [] },
     { match: "FROM mint_burn_events", rows: rows.events ?? [] },
     { match: "FROM mint_burn_sync_state", rows: rows.syncState ?? [] },
+    { match: "pharos:mint-burn-scan-coverage:read", rows: rows.scanCoverage ?? makeMintBurnScanSegments(Math.floor(nowSec / 3600) * 3600) },
     {
       match: "SELECT started_at, status, metadata",
       rows: rows.cronSnapshot ?? [],
@@ -141,72 +152,4 @@ export function mintBurnScenario({
     { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
     { match: "INSERT INTO cache (key, value, updated_at)", rows: [] },
   ]);
-}
-
-export interface MakeMintBurnConfigOverrides {
-  chain?: Partial<MintBurnContractConfig["chain"]>;
-  asset?: Partial<
-    Pick<
-      MintBurnContractConfig,
-      | "stablecoinId"
-      | "symbol"
-      | "contractAddress"
-      | "decimals"
-      | "dustThreshold"
-      | "startBlock"
-      | "enabled"
-      | "tier"
-      | "startBlockSource"
-      | "startBlockConfidence"
-    >
-  >;
-  adapter?: MintBurnContractConfig["adapterKind"];
-  events?: MintBurnEventDef[];
-  bridgeDetection?: MintBurnBridgeDetectionConfig | null;
-}
-
-const DEFAULT_MINT_BURN_CHAIN: MintBurnContractConfig["chain"] = {
-  chainId: "ethereum",
-  chainName: "Ethereum",
-  evmChainId: 1,
-  explorerUrl: "https://etherscan.io",
-  type: "evm",
-};
-
-const DEFAULT_MINT_BURN_ASSET: Pick<
-  MintBurnContractConfig,
-  | "stablecoinId"
-  | "symbol"
-  | "contractAddress"
-  | "decimals"
-  | "dustThreshold"
-  | "startBlock"
-  | "startBlockSource"
-  | "startBlockConfidence"
-> = {
-  stablecoinId: "usdt-tether",
-  symbol: "USDT",
-  contractAddress: "0x0000000000000000000000000000000000000001",
-  decimals: 6,
-  dustThreshold: 10_000,
-  startBlock: 21_900_000,
-  startBlockSource: "reviewed-contract-specific",
-  startBlockConfidence: "high",
-};
-
-export function makeMintBurnConfig({
-  chain,
-  asset,
-  adapter = "transfer-zero-address",
-  events = [],
-  bridgeDetection,
-}: MakeMintBurnConfigOverrides = {}): MintBurnContractConfig {
-  return {
-    chain: { ...DEFAULT_MINT_BURN_CHAIN, ...chain },
-    ...DEFAULT_MINT_BURN_ASSET,
-    ...asset,
-    adapterKind: adapter,
-    events,
-    ...(bridgeDetection ? { bridgeDetection } : {}),
-  };
 }

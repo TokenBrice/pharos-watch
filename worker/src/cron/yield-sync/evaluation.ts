@@ -926,7 +926,10 @@ function resolveSourceAgeSeconds(
 
 
 function prepareYieldEvaluation(input: EvaluateYieldSourcesInput): PreparedYieldEvaluation {
-  const resolvedWithYield = input.resolved.filter(isResolvedYieldEntryWithYield);
+  // Current bootstrap/re-anchor seeds are persistence inputs, never return samples
+  // or arbitration candidates. Historical seed filtering below stays independent.
+  const resolvedWithYield = input.resolved.filter(isResolvedYieldEntryWithYield)
+    .filter((entry) => entry.yield.observationKind !== "anchor-only");
   const resolvedCountByCoin = new Map<string, number>();
   for (const entry of resolvedWithYield) {
     resolvedCountByCoin.set(entry.id, (resolvedCountByCoin.get(entry.id) ?? 0) + 1);

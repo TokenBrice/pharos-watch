@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { admitExitExecutionCertificate, exitExecutionInputGenerationId, projectExitExecutionCertificate, resolveExitExecutionRequestPoint } from "../safety-score-v9/exit-execution";
+import { admitExitExecutionCertificate, exitExecutionInputGenerationId, exitExecutionReviewDigest, projectExitExecutionCertificate, resolveExitExecutionRequestPoint } from "../safety-score-v9/exit-execution";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 import { evaluateV9Exit, selectV9ExitStressRequest } from "../safety-score-v9/exit";
 import { makeExitRoute } from "./safety-score-v9-exit.test-support";
@@ -97,6 +97,26 @@ describe("exact-request execution certificate admission", () => {
     certificate.gates[0]!.observedAtSec = executionClockSec;
     certificate.points[0]!.outputs[0]!.observedAtSec -= 301;
     expect(admission(certificate)).toMatchObject({ state: "unavailable", reason: "execution-price-stale" });
+  });
+
+  it.each([
+    { offset: -1, admitted: true },
+    { offset: 0, admitted: true },
+    { offset: 1, admitted: false },
+  ])("uses an inclusive execution-review expiry (offset $offset)", ({ offset, admitted }) => {
+    const expiresAtSec = executionClockSec + 1;
+    const review = { ...executionReview, expiresAt: new Date(expiresAtSec * 1000).toISOString() };
+    const certificate = makeExecutionCertificate();
+    certificate.reviewDigest = exitExecutionReviewDigest(review);
+    const result = admitExitExecutionCertificate({
+      certificate, envelope: V9_CANDIDATE_POLICY_V1, assetId: "fixture-dollar",
+      clockSec: expiresAtSec + offset, inputGenerationId: certificate.inputGenerationId,
+      observationGenerationId: certificate.observationGenerationId,
+      request: { requestedNotionalUsd: 100_000, maxCostBps: 200 }, reviews: [review],
+    });
+    expect(result).toMatchObject(admitted
+      ? { state: "observed", point: { executableUsd: 100_000 } }
+      : { state: "unavailable", reason: "execution-review-expired", responsibility: "method-unsupported" });
   });
 
   it("rejects mismatched input units, deployment, implementation and generation", () => {

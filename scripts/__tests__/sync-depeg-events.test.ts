@@ -205,6 +205,111 @@ describe("sync-depeg-events", () => {
     expect(() => assertStaticDepegArchivePreserved([published], deleted)).toThrow("lost 1 published slug");
   });
 
+  it("preserves a consolidated member's reserved page across repeated captures with a subthreshold representative", async () => {
+    const dataDir = makeRoot();
+    const indexPath = join(dataDir, "index.json");
+    const original = event({
+      id: 90453, stablecoinId: "usda-alpha-partner", symbol: "USDA", peakDeviationBps: -503,
+      startedAt: 1783297163,
+    });
+    const representative = event({
+      ...original, id: 90773, peakDeviationBps: -129, constituentEventCount: 2,
+    });
+    const lineage = {
+      rows: [{
+        eventId: original.id, stablecoinId: original.stablecoinId, direction: original.direction,
+        incidentKey: "ddr2:usda", live: { currentEventId: representative.id, eventState: "active" },
+      }],
+    };
+    let apiEvents = [original];
+    const fetchMock = vi.fn(async (input: string) => new URL(input).pathname.endsWith("/depeg-resolver")
+      ? Response.json(lineage)
+      : Response.json({ events: apiEvents, total: apiEvents.length }));
+    vi.stubGlobal("fetch", fetchMock);
+    const args = ["--api-url", "https://api.example.test/_site-data/depeg-events", "--output", indexPath];
+    await runDepegSync(args);
+    const shardPath = join(dataDir, "2026.json");
+    const published = DepegEventStoredSnapshotSchema.parse(JSON.parse(readFileSync(shardPath, "utf8")))[0];
+    expect(published.slug).toBe("usda-2026-07-06");
+
+    apiEvents = [representative];
+    for (let capture = 0; capture < 2; capture++) {
+      await runDepegSync(args);
+      const captured = DepegEventStoredSnapshotSchema.parse(JSON.parse(readFileSync(shardPath, "utf8")));
+      expect(captured.find((entry) => entry.id === original.id)).toEqual(published);
+      expect(captured.find((entry) => entry.id === representative.id)).toMatchObject({
+        slug: "usda-2026-07-06-down", peakDeviationBps: -129,
+      });
+      expect(JSON.parse(readFileSync(indexPath, "utf8"))).toEqual([expect.objectContaining({ slug: published.slug })]);
+      expect(readDepegLedgerCapture(dataDir)).toMatchObject({ eventCount: 2, apiTotal: 1 });
+    }
+    expect(fetchMock.mock.calls.filter(([url]) => url.endsWith("/depeg-resolver")).map(([url]) => url))
+      .toEqual(Array(2).fill("https://api.example.test/_site-data/depeg-resolver"));
+    const paths = [indexPath, shardPath, join(dataDir, "metadata/capture.json")];
+    const before = paths.map((path) => readFileSync(path, "utf8"));
+    await runDepegSync([...args, "--dry-run"]);
+    expect(paths.map((path) => readFileSync(path, "utf8"))).toEqual(before);
+
+    apiEvents = [event({ ...representative, id: 99999 })];
+    await expect(runDepegSync([...args, "--allow-existing-on-fetch-failure"]))
+      .rejects.toThrow("lost 1 published slug(s): usda-2026-07-06");
+    expect(paths.map((path) => readFileSync(path, "utf8"))).toEqual(before);
+  });
+
+  it.each([
+    { name: "unlinked matching onset", eventId: 3 },
+    { name: "absent representative", currentEventId: 3 },
+    { name: "different incident coin", stablecoinId: "another-usdc" },
+    { name: "different incident direction", direction: "above" as const },
+    { name: "inactive incident", eventState: "closed_pending_review" as const },
+    { name: "empty incident identity", incidentKey: "" },
+    { name: "single-row representative", constituentEventCount: 1 },
+    { name: "different representative coin", representativeCoin: "another-usdc" },
+    { name: "different representative direction", representativeDirection: "above" as const },
+  ])("still rejects an unexplained missing slug: $name", (scenario) => {
+    const previous = assignSlugs([event({ peakDeviationBps: -800 })]);
+    const current = assignSlugs([event({
+      id: 2, peakDeviationBps: -129, constituentEventCount: scenario.constituentEventCount ?? 2,
+      stablecoinId: scenario.representativeCoin ?? event().stablecoinId,
+      direction: scenario.representativeDirection ?? "below",
+    })], previous);
+    const merged = preserveStaticDepegArchiveEntries(previous, current, [{
+      eventId: scenario.eventId ?? 1,
+      incidentKey: scenario.incidentKey ?? "ddr2:test",
+      stablecoinId: scenario.stablecoinId ?? event().stablecoinId,
+      direction: scenario.direction ?? "below",
+      live: { currentEventId: scenario.currentEventId ?? 2, eventState: scenario.eventState ?? "active" },
+    }]);
+    expect(() => assertStaticDepegArchivePreserved(previous, merged)).toThrow("lost 1 published slug");
+  });
+
+  it.each(["malformed JSON", "invalid representative ID", "unrelated lineage"])(
+    "rejects %s incident lineage without changing outputs or capture metadata",
+    async (scenario) => {
+      const dataDir = makeRoot();
+      const indexPath = join(dataDir, "index.json");
+      const args = ["--api-url", "https://api.example.test", "--output", indexPath];
+      vi.stubGlobal("fetch", vi.fn(async () => Response.json({ events: [event({ peakDeviationBps: -800 })], total: 1 })));
+      await runDepegSync(args);
+      const paths = [indexPath, join(dataDir, "2026.json"), join(dataDir, "metadata/capture.json")];
+      const before = paths.map((path) => readFileSync(path, "utf8"));
+      vi.stubGlobal("fetch", vi.fn(async (input: string) => {
+        if (!new URL(input).pathname.endsWith("/depeg-resolver")) {
+          return Response.json({ events: [event({ id: 2, constituentEventCount: 2 })], total: 1 });
+        }
+        return scenario === "malformed JSON" ? new Response("{invalid") : Response.json({
+          rows: [{
+            eventId: scenario === "unrelated lineage" ? 3 : 1,
+            stablecoinId: event().stablecoinId, direction: "below", incidentKey: "ddr2:test",
+            live: { currentEventId: scenario === "invalid representative ID" ? "2" : 2, eventState: "active" },
+          }],
+        });
+      }));
+      await expect(runDepegSync([...args, "--allow-existing-on-fetch-failure"])).rejects.toThrow(SnapshotIntegrityError);
+      expect(paths.map((path) => readFileSync(path, "utf8"))).toEqual(before);
+    },
+  );
+
   it("exhausts more than 20 full pages and writes the API's complete event total", async () => {
     vi.spyOn(console, "log").mockImplementation(() => {});
     const root = makeRoot();

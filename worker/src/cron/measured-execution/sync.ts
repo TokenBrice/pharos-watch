@@ -41,6 +41,7 @@ import {
 } from "./profiles";
 import { quoteQuoterV2Requests, resolveQuoterV2PoolBindings, validateQuoterV2ProfileProof } from "./quoter-v2";
 import { verifyDexMeasuredExecutionDeployment } from "./registry";
+import { canonicalEvmHash } from "./evm-codecs";
 import {
   quoteCurveCryptoSwapRequests,
   validateCurveCryptoSwapProfileProof,
@@ -104,6 +105,7 @@ interface TargetQuoteState {
   target: DexMeasuredExecutionTarget;
   deployment: TargetDeployment | null;
   blockNumber: number | null;
+  blockHash: `0x${string}` | null;
   blockObservedAt: number | null;
   endpointCodeHash: `0x${string}` | null;
   curveRuntimeEvidence: CurveCryptoSwapRuntimeEvidence | null;
@@ -175,6 +177,7 @@ interface MeasuredQuoteAdapter {
   verify(input: {
     deployment: TargetDeployment;
     blockNumber: number;
+    blockHash: `0x${string}` | null;
     nowSec: number;
     chainRpcs: Map<string, ChainRpcConfig>;
     signal?: AbortSignal;
@@ -222,15 +225,16 @@ const DEX_EXACT_QUOTE_V1_COMPATIBILITY_RUNNERS: Readonly<
       (input, requests) => quoteQuoterV2Requests({
         requests,
         blockNumber: input.requests[0]!.state.blockNumber!,
+        blockHash: input.requests[0]!.state.blockHash!,
         chainRpcs: input.chainRpcs,
         signal: input.signal,
         rpcBudget: input.rpcBudget,
       }),
     ),
-    verify: async ({ deployment, blockNumber, chainRpcs, signal, rpcBudget }) => {
+    verify: async ({ deployment, blockNumber, blockHash, chainRpcs, signal, rpcBudget }) => {
       if (deployment.kind !== "quoter-v2") throw new TypeError("QuoterV2 deployment kind mismatch");
       const verified = await verifyDexMeasuredExecutionDeployment({
-        deployment: deployment.config, blockNumber, chainRpcs, signal, rpcBudget,
+        deployment: deployment.config, blockNumber, blockHash: blockHash!, chainRpcs, signal, rpcBudget,
       });
       return verified.ok
         ? { ok: true, patch: { endpointCodeHash: verified.codeHash } }
@@ -248,15 +252,16 @@ const DEX_EXACT_QUOTE_V1_COMPATIBILITY_RUNNERS: Readonly<
       (input, requests) => quoteUniswapV4Requests({
         requests,
         blockNumber: input.requests[0]!.state.blockNumber!,
+        blockHash: input.requests[0]!.state.blockHash!,
         chainRpcs: input.chainRpcs,
         signal: input.signal,
         rpcBudget: input.rpcBudget,
       }),
     ),
-    verify: async ({ deployment, blockNumber, chainRpcs, signal, rpcBudget }) => {
+    verify: async ({ deployment, blockNumber, blockHash, chainRpcs, signal, rpcBudget }) => {
       if (deployment.kind !== "uniswap-v4") throw new TypeError("Uniswap V4 deployment kind mismatch");
       const verified = await verifyUniswapV4Deployment({
-        deployment: deployment.config, blockNumber, chainRpcs, signal, rpcBudget,
+        deployment: deployment.config, blockNumber, blockHash: blockHash!, chainRpcs, signal, rpcBudget,
       });
       return verified.ok
         ? {
@@ -276,6 +281,7 @@ const DEX_EXACT_QUOTE_V1_COMPATIBILITY_RUNNERS: Readonly<
         target: state.target,
         inputUsd,
         blockNumber: state.blockNumber!,
+        blockHash: state.blockHash!,
         endpointAddress: state.deployment!.config.endpointAddress,
         runtimeEvidence: state.curveRuntimeEvidence ?? undefined,
       }),
@@ -283,10 +289,10 @@ const DEX_EXACT_QUOTE_V1_COMPATIBILITY_RUNNERS: Readonly<
         requests, chainRpcs: input.chainRpcs, signal: input.signal, rpcBudget: input.rpcBudget,
       }),
     ),
-    verify: async ({ deployment, blockNumber, chainRpcs, signal, rpcBudget }) => {
+    verify: async ({ deployment, blockNumber, blockHash, chainRpcs, signal, rpcBudget }) => {
       if (deployment.kind !== "curve-cryptoswap") throw new TypeError("Curve CryptoSwap deployment kind mismatch");
       const verified = await verifyCurveCryptoSwapDeployment({
-        policy: deployment.config, blockNumber, chainRpcs, signal, rpcBudget,
+        policy: deployment.config, blockNumber, blockHash: blockHash!, chainRpcs, signal, rpcBudget,
       });
       return verified.ok
         ? {
@@ -306,6 +312,7 @@ const DEX_EXACT_QUOTE_V1_COMPATIBILITY_RUNNERS: Readonly<
         target: state.target,
         inputUsd,
         blockNumber: state.blockNumber!,
+        blockHash: state.blockHash!,
         blockObservedAt: state.blockObservedAt!,
         endpointAddress: state.deployment!.config.endpointAddress,
         runtimeEvidence: state.curveStableSwapRuntimeEvidence ?? undefined,
@@ -325,6 +332,7 @@ const DEX_EXACT_QUOTE_V1_COMPATIBILITY_RUNNERS: Readonly<
             patch: {
               endpointCodeHash: verified.codeHash,
               blockObservedAt: verified.blockTimestamp,
+              blockHash: verified.blockHash,
               curveStableSwapRuntimeEvidence: verified.runtimeEvidence,
               registryBindingProof: verified.registryBindingProof,
             },
@@ -339,6 +347,7 @@ const DEX_EXACT_QUOTE_V1_COMPATIBILITY_RUNNERS: Readonly<
         target: state.target,
         inputUsd,
         blockNumber: state.blockNumber!,
+        blockHash: state.blockHash!,
         blockObservedAt: state.blockObservedAt!,
         endpointAddress: state.deployment!.config.endpointAddress,
         runtimeEvidence: state.curveStableSwapNgRuntimeEvidence ?? undefined,
@@ -357,6 +366,7 @@ const DEX_EXACT_QUOTE_V1_COMPATIBILITY_RUNNERS: Readonly<
             ok: true,
             patch: {
               blockNumber: verified.blockNumber,
+              blockHash: canonicalEvmHash(verified.factoryBindingProof.blockHash),
               endpointCodeHash: verified.codeHash,
               blockObservedAt: verified.blockTimestamp,
               curveStableSwapNgRuntimeEvidence: verified.runtimeEvidence,
@@ -373,6 +383,7 @@ const DEX_EXACT_QUOTE_V1_COMPATIBILITY_RUNNERS: Readonly<
         target: state.target,
         inputUsd,
         blockNumber: state.blockNumber!,
+        blockHash: state.blockHash!,
         blockObservedAt: state.blockObservedAt!,
         endpointAddress: state.deployment!.config.endpointAddress,
         runtimeEvidence: state.curveCompositeRuntimeEvidence ?? undefined,
@@ -391,6 +402,7 @@ const DEX_EXACT_QUOTE_V1_COMPATIBILITY_RUNNERS: Readonly<
             ok: true,
             patch: {
               blockNumber: verified.blockNumber,
+              blockHash: canonicalEvmHash(verified.proof.blockHash),
               endpointCodeHash: verified.codeHash,
               blockObservedAt: verified.blockTimestamp,
               curveCompositeRuntimeEvidence: verified.runtimeEvidence,
@@ -512,6 +524,7 @@ async function syncDexMeasuredExecutionLane(
     target,
     deployment: resolveTargetDeployment(target),
     blockNumber: null,
+    blockHash: null,
     blockObservedAt: null,
     endpointCodeHash: null,
     curveRuntimeEvidence: null,
@@ -574,6 +587,7 @@ async function syncDexMeasuredExecutionLane(
     // Other adapters share one header read per chain rather than minting a
     // collection timestamp for a responsive but stale RPC head.
     let blockObservedAt: number | null = null;
+    let blockHash: `0x${string}` | null = null;
     if (rows.some((state) => !hasAdapterOwnedDexSourceHeader(state.deployment!.kind))) {
       const blockHeader = await fetchEvmBlockHeader(chain, blockNumber, {
         chainRpcs,
@@ -581,6 +595,7 @@ async function syncDexMeasuredExecutionLane(
         timeoutMs: DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
         deadlineMs: rpcBudget.deadlineMs,
         beforeRequest: () => rpcBudget.tryConsume(),
+        minTimestampSec: Math.floor(Date.now() / 1000) - DEX_MEASURED_FRESHNESS_MAX_SEC,
         maxRetries: 0,
       });
       rpcBudget.recordChainResult(chain, blockHeader != null);
@@ -591,6 +606,7 @@ async function syncDexMeasuredExecutionLane(
       const sourceAge = assessFreshnessTimestamp(Math.floor(Date.now() / 1000), blockHeader?.timestamp);
       const sourceFailure = blockHeader == null ? "block-header-unavailable"
         : blockHeader.number !== blockNumber ? "block-header-mismatch"
+        : !/^0x[0-9a-f]{64}$/.test(blockHeader.hash) ? "block-header-mismatch"
         : sourceAge.reason != null ? (sourceAge.reason === "future-timestamp" ? "future-pinned-block" : "block-header-unavailable")
         : sourceAge.ageSeconds > DEX_MEASURED_FRESHNESS_MAX_SEC ? "stale-pinned-block" : null;
       if (sourceFailure != null || blockHeader == null) {
@@ -598,9 +614,11 @@ async function syncDexMeasuredExecutionLane(
         return;
       }
       blockObservedAt = blockHeader.timestamp;
+      blockHash = blockHeader.hash;
     }
     for (const state of rows) {
       state.blockNumber = blockNumber;
+      state.blockHash = blockHash;
       state.blockObservedAt = blockObservedAt;
     }
 
@@ -618,6 +636,7 @@ async function syncDexMeasuredExecutionLane(
       const verified = await DEX_EXACT_QUOTE_V1_COMPATIBILITY_RUNNERS[deployment.kind].verify({
         deployment,
         blockNumber,
+        blockHash,
         nowSec: startedAt,
         chainRpcs,
         signal,
@@ -660,6 +679,7 @@ async function syncDexMeasuredExecutionLane(
         runtimeEvidence: state.uniswapV4RuntimeEvidence!,
       })),
       blockNumber: rows[0]!.blockNumber!,
+      blockHash: rows[0]!.blockHash!,
       chainRpcs,
       signal,
       rpcBudget,
@@ -718,6 +738,7 @@ async function syncDexMeasuredExecutionLane(
           factoryCodeHash: deployment.config.expectedFactoryCodeHash,
         })),
         blockNumber: deploymentRows[0]!.blockNumber!,
+        blockHash: deploymentRows[0]!.blockHash!,
         chainRpcs,
         signal,
         rpcBudget,
@@ -897,6 +918,7 @@ async function syncDexMeasuredExecutionLane(
       state.failedReason ||
       !state.deployment ||
       state.blockNumber == null ||
+      state.blockHash == null ||
       state.blockObservedAt == null ||
       !state.endpointCodeHash
     ) {
@@ -915,6 +937,7 @@ async function syncDexMeasuredExecutionLane(
         quoteGenerationId,
         quotedAt: state.blockObservedAt,
         blockNumber: state.blockNumber,
+        blockHash: state.blockHash,
         endpointAddress: state.deployment.config.endpointAddress,
         endpointCodeHash: state.endpointCodeHash,
         ...(state.poolBindingProof ? { poolBindingProof: state.poolBindingProof } : {}),

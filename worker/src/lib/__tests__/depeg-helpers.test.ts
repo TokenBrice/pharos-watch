@@ -1,11 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   collectDexProtocolCorroborations,
+  loadDexPrices,
   rowPriceCoverage,
   serializeDepegPriceCoverage,
   rowToDepegEvent,
   type DepegRow,
 } from "../depeg-helpers";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
 describe("buildInsertDepegEventStmt + rowToDepegEvent provenance", () => {
   const baseDepegRow = {
@@ -130,5 +132,47 @@ describe("collectDexProtocolCorroborations", () => {
 
     expect(groups).toHaveLength(1);
     expect(groups[0]!.key).toBe("unknown");
+  });
+});
+
+describe("original DEX source observation admission", () => {
+  it.each(["confirm", "recover"] as const)("admits %s groups using their original clock, never a compatibility clock", async (mode) => {
+    const now = 1_700_000_000;
+    const observedAt = now - 60;
+    const price = mode === "confirm" ? 0.98 : 1;
+    const sources = ["curve", "uniswap"].map((protocol) => ({
+      protocol, sourceFamily: protocol, chain: "ethereum", price, tvl: 2_000_000,
+      observedAt, aggregateObservedAt: observedAt, updatedAt: now + 100,
+    }));
+    const db = makeNoopD1({ prepare: () => ({ all: async () => ({ results: [{
+      stablecoin_id: "usdt-tether", dex_price_usd: price, source_total_tvl: 4_000_000,
+      source_pool_count: 2, deviation_from_primary_bps: 0, updated_at: now,
+      price_sources_json: JSON.stringify(sources),
+    }] }) }) });
+    const loaded = await loadDexPrices(db, now);
+    const admitted = loaded.dexPriceSources.get("usdt-tether");
+    expect(admitted?.map((source) => source.updatedAt)).toEqual([observedAt, observedAt]);
+    expect(collectDexProtocolCorroborations(admitted, 1, 100, "below", mode)).toHaveLength(2);
+  });
+  it.each(["confirm", "recover"] as const)("admits %s at original-clock boundaries despite an expired run-start row", async (mode) => {
+    const now = 1_700_000_000;
+    const observedAt = now - 35 * 60;
+    const aggregateObservedAt = now - 75 * 60;
+    const price = mode === "confirm" ? 0.98 : 1;
+    const sources = ["curve", "uniswap"].map((protocol) => ({
+      protocol, sourceFamily: protocol, chain: "ethereum", price, tvl: 2_000_000,
+      observedAt, aggregateObservedAt, updatedAt: now,
+    }));
+    const db = makeNoopD1({ prepare: () => ({ all: async () => ({ results: [{
+      stablecoin_id: "usdt-tether", dex_price_usd: price, source_total_tvl: 4_000_000,
+      source_pool_count: 2, deviation_from_primary_bps: 0, updated_at: observedAt - 1,
+      price_sources_json: JSON.stringify(sources),
+    }] }) }) });
+    const telemetry = { staleRows: [], malformedRows: [] };
+    const loaded = await loadDexPrices(db, now, 35 * 60, telemetry);
+    expect(telemetry.staleRows).toEqual([{ stablecoinId: "usdt-tether", updatedAt: observedAt - 1,
+      ageSec: 35 * 60 + 1, maxAgeSec: 35 * 60 }]);
+    expect(collectDexProtocolCorroborations(loaded.dexPriceSources.get("usdt-tether"), 1, 100, "below", mode)).toHaveLength(2);
+    expect(loaded.dexPriceRows.get("usdt-tether")?.updated_at).toBe(observedAt - 1);
   });
 });

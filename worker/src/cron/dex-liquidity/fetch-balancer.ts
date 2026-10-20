@@ -1,5 +1,5 @@
 import { makeDexApiFetchResult, type DexApiFetchResult, type DexApiPool } from "../../lib/dex-api-common";
-import { isDexApiRecord } from "./direct-api-json";
+import { isDexApiRecord, parseStrictFiniteDecimal } from "./direct-api-json";
 import { DIRECT_API_DEFAULT_MAX_PAGES } from "./direct-api-policy";
 import { runPaginatedDirectApiFetch } from "./direct-api-paginated";
 import { canonicalEvmAddress } from "@shared/lib/evm-address";
@@ -173,18 +173,6 @@ function isOptionalBoolean(value: unknown): value is boolean | null | undefined 
   return value == null || typeof value === "boolean";
 }
 
-/**
- * GraphQL scalar fields arrive as strings. Exact-execution inputs must reject
- * permissive numeric prefixes (for example `250junk`) rather than silently
- * turning them into invariant parameters.
- */
-function parseStrictFiniteDecimal(value: string): number | null {
-  const normalized = value.trim();
-  const unsigned = normalized[0] === "+" || normalized[0] === "-" ? normalized.slice(1) : normalized;
-  if (!unsigned || ["0x", "0o", "0b"].includes(unsigned.slice(0, 2).toLowerCase())) return null;
-  const parsed = Number(normalized);
-  return Number.isFinite(parsed) ? parsed : null;
-}
 
 function isBalancerDynamicData(value: unknown): value is BalancerPool["dynamicData"] {
   return isDexApiRecord(value) &&

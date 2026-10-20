@@ -56,6 +56,19 @@ describe("review evidence timestamp admission", () => {
     expect(builder.finish()).toEqual({ researchEvidence: [], componentEvidence: [] });
   });
 
+  it.each([
+    { reviewedAt: "2026-09-19", observedAt: "2026-09-20" },
+    { reviewedAtSec: CLOCK_SEC - 86400 * 2, observedAt: "2026-09-20" },
+    { reviewedAt: "2026-09-19", observedAtSec: CLOCK_SEC - 86400 },
+  ])("rejects observation-after-review in every date representation without partial bindings: %j", (dates) => {
+    const builder = new ReviewEvidenceBuilder("alpha", CLOCK_SEC, sha256HexFromUtf8Chunks);
+    builder.add(base);
+    const before = builder.finish();
+    expect(() => builder.add({ componentKeys: ["new", "allocation"], sourceId: "invalid", payload: {}, ...dates }))
+      .toThrow("Evidence observation cannot postdate review");
+    expect(builder.finish()).toEqual(before);
+  });
+
   it("preserves numeric observation and publication provenance and deduplicates evidence bindings", () => {
     const builder = new ReviewEvidenceBuilder("alpha", CLOCK_SEC);
     const args = {

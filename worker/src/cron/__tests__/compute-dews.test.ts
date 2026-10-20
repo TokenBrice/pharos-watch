@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { batchExecute } from "../../lib/db";
 import { createDewsDb, dewsCache, dewsCoin } from "./compute-dews.test-support";
+import * as publishedMintBurn from "../../lib/mint-burn-published-gauge";
 
 vi.mock("@shared/lib/stablecoins/registry", async () => {
   const actual = await vi.importActual<typeof import("@shared/lib/stablecoins/registry")>(
@@ -166,6 +167,7 @@ interface MakeDbOptions {
     updated_at?: number | null;
   }>;
   mintBurn24hRows?: Array<{
+    // Observed raw rows are independent of the publication's scan proof.
     stablecoin_id: string;
     chain_id?: string;
     total_burn: number;
@@ -223,9 +225,26 @@ interface MakeDbOptions {
   failDexPublicationDiagnostics?: boolean;
   psiSample?: { score: number; stored_at: number } | null;
   onBind?: (sql: string, args: unknown[]) => void;
+  mintBurnProofAvailable?: boolean;
 }
 
 function makeDb(sqlSeen: string[], opts: MakeDbOptions = {}): D1Database {
+  const proofEnd = Math.floor(Date.now() / 1000 / 3600) * 3600;
+  const proofRows = [...(opts.mintBurn24hRows ?? []), ...(opts.mintBurn30dRows ?? [])];
+  if (proofRows.length > 0 && opts.mintBurnProofAvailable !== false) {
+    const complete = { complete: true, unavailableReason: null } as const;
+    vi.spyOn(publishedMintBurn, "readPublishedMintBurnGauge").mockResolvedValue({ kind: "ok", gauge: {
+      score: null, partialValuationInputs: 0, partialValuationMcapUsd: 0, scoredMcapUsd: 0, chains: [],
+      window: { start: proofEnd - 86400, end: proofEnd, semantics: "closed-utc-hours" },
+      updatedAt: proofEnd, publishedAt: proofEnd, stale: false,
+      coins: [...new Set(proofRows.map((row) => row.stablecoin_id))].map((id) => ({
+        id, symbol: id, intensity: null, net24hUsd: null, baselineValuation: "unknown",
+        valuation24h: { completeness: "unknown", mintCompleteness: "unknown", burnCompleteness: "unknown",
+          unpricedMintEventCount: 0, unpricedBurnEventCount: 0 },
+        scanCoverage: { window24h: complete, window7d: complete, window30d: complete, window90d: complete },
+      })),
+    } });
+  }
   const computedSnapshotIds = new Set<string>();
   const stmt = (sql: string) => {
     sqlSeen.push(sql);
@@ -322,7 +341,7 @@ function makeDb(sqlSeen: string[], opts: MakeDbOptions = {}): D1Database {
       }
       if (sql.includes("FROM mint_burn_hourly")) {
         const freshHourTs = Math.floor(Date.now() / 1000) - 3600;
-        if (sql.includes("days_with_data")) {
+        if (sql.includes("pharos:dews:mint-burn-30d")) {
           return {
             results: (opts.mintBurn30dRows ?? []).map((row) => ({
               chain_id: "ethereum",
@@ -373,10 +392,11 @@ function makeDb(sqlSeen: string[], opts: MakeDbOptions = {}): D1Database {
     };
 
     return {
+      sql,
       bind: (...args: unknown[]) => {
         boundArgs = args;
         opts.onBind?.(sql, args);
-        return { all, first, run };
+        return { sql, all, first, run };
       },
       all,
       first,
@@ -425,6 +445,7 @@ describe("computeAndStoreDEWS", () => {
     vi.mocked(computeDEWS).mockClear();
     vi.mocked(derivePegRates).mockClear();
     vi.mocked(writeFreshnessSentinel).mockClear();
+    vi.spyOn(publishedMintBurn, "readPublishedMintBurnGauge").mockResolvedValue({ kind: "unavailable", reason: "missing" });
     vi.mocked(getCache).mockImplementation(async (_db, key) => {
       if (key === "dews:bootstrap-complete") return null;
       if (key === "dews:published-generation") return null;
@@ -745,22 +766,23 @@ describe("computeAndStoreDEWS", () => {
         stablecoinId: "usdt-tether",
         burnVolume24hUsd: 0,
         mintVolume24hUsd: 0,
-        burnBaseline30dUsd: 250_000,
+        burnBaseline30dUsd: 3_500_000 / 30,
         flowDataAgeDays: expect.any(Number),
-        flowBaselineDays: 14,
-        sourceAges: expect.objectContaining({ mintBurn: 3600 }),
+        flowBaselineDays: 30,
+        sourceAges: expect.objectContaining({ mintBurn: 0 }),
         staleFlags: expect.objectContaining({ mintBurn: false }),
       }),
     );
     const calls = vi.mocked(computeDEWS).mock.calls;
     const input = calls[calls.length - 1]?.[0];
-    expect(input?.flowDataAgeDays).toBeCloseTo(1 / 24, 5);
+    expect(input?.flowDataAgeDays).toBe(0);
   });
 
-  it("marks mature mint/burn baselines stale when no fresh 24h data exists", async () => {
+  it("withholds an old eventful baseline when current scan proof is unavailable", async () => {
     const sqlSeen: string[] = [];
     const nowSec = Math.floor(Date.now() / 1000);
     const db = makeDb(sqlSeen, {
+      mintBurnProofAvailable: false,
       mintBurn30dRows: [
         {
           stablecoin_id: "usdt-tether",
@@ -778,13 +800,12 @@ describe("computeAndStoreDEWS", () => {
     expect(computeDEWS).toHaveBeenCalledWith(
       expect.objectContaining({
         stablecoinId: "usdt-tether",
-        burnVolume24hUsd: 0,
-        mintVolume24hUsd: 0,
-        burnBaseline30dUsd: 250_000,
-        flowDataAgeDays: 2,
-        flowBaselineDays: 14,
-        sourceAges: expect.objectContaining({ mintBurn: 2 * 86400 }),
-        staleFlags: expect.objectContaining({ mintBurn: true }),
+        burnVolume24hUsd: null,
+        mintVolume24hUsd: null,
+        burnBaseline30dUsd: null,
+        flowDataAgeDays: 9999,
+        flowBaselineDays: null,
+        sourceAges: expect.objectContaining({ mintBurn: null }),
       }),
     );
     const metadata = JSON.parse(result.metadata ?? "{}") as {
@@ -794,7 +815,7 @@ describe("computeAndStoreDEWS", () => {
     expect(metadata.sourceFailures).toContainEqual(
       expect.objectContaining({ source: "mint-burn-hourly-freshness" }),
     );
-    expect(metadata.sourceCoverage.mintBurnHourlyStaleRows).toBe(1);
+    expect(metadata.sourceCoverage.mintBurnHourlyStaleRows).toBe(0);
     expect(metadata.sourceCoverage.mintBurnHourlyFreshRows).toBe(0);
   });
 
@@ -1360,7 +1381,7 @@ describe("computeAndStoreDEWS", () => {
     expect(metadata.sourceCoverage.previousStressSignalsStaleRows).toBe(1);
   });
 
-  it("scales partial mint/burn baseline by observed baseline days", async () => {
+  it("includes proved quiet days instead of scaling a baseline by eventful days", async () => {
     const sqlSeen: string[] = [];
     const db = makeDb(sqlSeen, {
       mintBurn24hRows: [
@@ -1385,15 +1406,15 @@ describe("computeAndStoreDEWS", () => {
     expect(computeDEWS).toHaveBeenCalledWith(
       expect.objectContaining({
         stablecoinId: "usdt-tether",
-        burnBaseline30dUsd: 100_000,
+        burnBaseline30dUsd: 700_000 / 30,
         flowDataAgeDays: expect.any(Number),
-        flowBaselineDays: 7,
+        flowBaselineDays: 30,
         staleFlags: expect.objectContaining({ mintBurn: false }),
       }),
     );
     const calls = vi.mocked(computeDEWS).mock.calls;
     const input = calls[calls.length - 1]?.[0];
-    expect(input?.flowDataAgeDays).toBeCloseTo(1 / 24, 5);
+    expect(input?.flowDataAgeDays).toBe(0);
   });
 
   it("leaves complete 30-day mint/burn baselines unchanged", async () => {
@@ -1432,7 +1453,7 @@ describe("computeAndStoreDEWS", () => {
     );
     const calls = vi.mocked(computeDEWS).mock.calls;
     const input = calls[calls.length - 1]?.[0];
-    expect(input?.flowDataAgeDays).toBeCloseTo(1 / 24, 5);
+    expect(input?.flowDataAgeDays).toBe(0);
   });
 
   it.each([

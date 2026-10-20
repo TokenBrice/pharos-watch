@@ -21,7 +21,7 @@ function resetFetchRetryMocks(): void {
   vi.mocked(fetchJsonWithRetry).mockClear();
 }
 
-import { loadExchangeRateApiPayload, loadSecondaryCurrencyCandidate } from "../sync-fx-rates-sources";
+import { loadExchangeRateApiPayload, loadFrankfurterPayload, loadSecondaryCurrencyCandidate } from "../sync-fx-rates-sources";
 
 describe("syncFxRates", () => {
   beforeEach(() => {
@@ -51,7 +51,7 @@ describe("syncFxRates", () => {
       },
       {
         match: "open.er-api.com",
-        body: { result: "success", time_last_update_unix: 1_750_000_000, rates: { EUR: 0.92 } },
+        body: { result: "success", time_last_update_unix: Math.floor(Date.now() / 1000) - 60, rates: { EUR: 0.92 } },
       },
     ]);
     fetchRetryMocks.fetchWithRetry.mockImplementation(async () => {
@@ -172,5 +172,25 @@ describe("syncFxRates", () => {
     expect(candidate?.endpoint).toBe("jsdelivr");
     expect(candidate?.payload.date).toBe("2026-05-19");
     expect(candidate?.payload.usd.cnh).toBe(7.28);
+  });
+
+  it.each(["2099-01-01", "2025-06-16", "2025-02-30"])("rejects source date %s before ranking mirrors", async (date) => {
+    mockFetch([
+      { match: "api.frankfurter.dev", body: { base: "USD", date, rates: { EUR: 0.92 } } },
+      { match: "@latest", body: { date, usd: { cnh: 7.28 } } },
+      { match: "pages.dev", body: { date: "2025-06-15", usd: { cnh: 7.29 } } },
+      { match: "@2025.6.15", body: { date, usd: { cnh: 7.28 } } },
+    ]);
+    expect(await loadFrankfurterPayload(["EUR"])).toMatchObject({ ok: false, kind: "invalid-payload" });
+    expect(await loadSecondaryCurrencyCandidate()).toMatchObject({
+      endpoint: "pages.dev", successfulEndpoints: ["pages.dev"],
+    });
+  });
+
+  it("rejects ExchangeRate-API's future raw epoch", async () => {
+    mockFetch([{ match: "open.er-api.com", body: {
+      result: "success", time_last_update_unix: Date.now() / 1000 + 301, rates: { EUR: 0.92 },
+    } }]);
+    expect(await loadExchangeRateApiPayload()).toBeNull();
   });
 });

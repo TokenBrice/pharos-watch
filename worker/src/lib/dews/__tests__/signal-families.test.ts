@@ -21,6 +21,9 @@ describe("DEWS signal family curves", () => {
     }))).toEqual({
       value: 0,
       available: false,
+      componentCoverage: 0,
+      delta1d: null,
+      delta7d: null,
       unavailableReason: "supply-history-anchors-missing",
     });
 
@@ -37,6 +40,27 @@ describe("DEWS signal family curves", () => {
     expect(result.delta1d).toBe(-2);
     expect(result.delta7d).toBe(-2);
     expect(result.sizeFactor).toBe(1);
+    expect(result.componentCoverage).toBe(1);
+  });
+
+  it.each([
+    [true, false, 0.6, 27.5, -2, null],
+    [false, true, 0.4, 10, null, -2],
+  ] as const)("renormalizes supply with day=%s week=%s readable", (day, week, coverage, value, delta1d, delta7d) => {
+    const input = makeDewsInput({
+      mcapUsd: 1_000_000_000, circulatingCurrent: 98, circulatingPrevDay: 100, circulatingPrevWeek: 100,
+      circulatingPrevDayAvailable: day, circulatingPrevWeekAvailable: week,
+    });
+    const result = computeSupplySignal(input);
+    expect(result).toMatchObject({ available: true, componentCoverage: coverage, delta1d, delta7d });
+    expect(result.value).toBeCloseTo(value, 5);
+    const measuredCalm = computeSupplySignal({
+      ...input, circulatingPrevDayAvailable: true, circulatingPrevWeekAvailable: true,
+      circulatingPrevDay: day ? 100 : 98, circulatingPrevWeek: week ? 100 : 98,
+    });
+    expect(measuredCalm.componentCoverage).toBe(1);
+    expect(result.value).toBeGreaterThan(measuredCalm.value);
+    expect(computeSupplySignal({ ...input, mcapUsd: 10_000_000 }).value).toBeCloseTo(value / 3, 5);
   });
 
   it("pins pool blend, TVL floor, and smoothing behavior", () => {
@@ -144,7 +168,7 @@ describe("DEWS signal family curves", () => {
       liquidityScore7dAgo: 100,
       tvlCurrent: 75,
       tvl7dAgo: 100,
-    }))).toEqual({ value: 0, available: false });
+    }))).toEqual({ value: 0, available: false, componentCoverage: 0, scoreDelta7d: null, tvlDelta7d: null });
 
     const result = computeLiquiditySignal(makeDewsInput({
       liquidityScore: 80,
@@ -157,6 +181,32 @@ describe("DEWS signal family curves", () => {
     expect(result.value).toBe(45);
     expect(result.scoreDelta7d).toBe(-20);
     expect(result.tvlDelta7d).toBe(-25);
+    expect(result.componentCoverage).toBe(1);
+  });
+
+  it.each([
+    [null, 100, 40, null, -25],
+    [100, null, 50, -20, null],
+    [0, 100, 40, null, -25],
+    [100, 0, 50, -20, null],
+    [Number.NaN, 100, 40, null, -25],
+  ])("renormalizes liquidity score anchor %s and TVL anchor %s", (scoreAnchor, tvlAnchor, value, scoreDelta7d, tvlDelta7d) => {
+    const input = makeDewsInput({
+      liquidityScore: 80, liquidityScore7dAgo: scoreAnchor, tvlCurrent: 75, tvl7dAgo: tvlAnchor,
+    });
+    const result = computeLiquiditySignal(input);
+    expect(result).toMatchObject({ available: true, componentCoverage: 0.5, value, scoreDelta7d, tvlDelta7d });
+    const measuredCalm = computeLiquiditySignal({
+      ...input, liquidityScore7dAgo: scoreDelta7d === null ? 80 : 100, tvl7dAgo: tvlDelta7d === null ? 75 : 100,
+    });
+    expect(measuredCalm.componentCoverage).toBe(1);
+    expect(measuredCalm.value).toBe(value! / 2);
+  });
+
+  it("publishes explicit unavailable liquidity coverage and null deltas when neither leg is readable", () => {
+    expect(computeLiquiditySignal(makeDewsInput({
+      liquidityScore: 80, liquidityScore7dAgo: null, tvlCurrent: null, tvl7dAgo: null,
+    }))).toEqual({ value: 0, available: false, componentCoverage: 0, scoreDelta7d: null, tvlDelta7d: null });
   });
 
   it("pins price confidence scores and transition bonus exceptions", () => {

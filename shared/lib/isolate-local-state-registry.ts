@@ -144,18 +144,6 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     durableTruth: "D1 detail cache rows and provider circuit state are authoritative; this gate only bounds simultaneous body materialization.",
   },
   {
-    sourcePath: "worker/src/cron/depeg-resolver/utils.ts",
-    stateNames: [
-      "v9DependencyImpairmentByCoin",
-      "v9MintPostureByCoin",
-      "v9MintPostureProjectionInstalled",
-    ],
-    owner: "Depeg resolver V9 dependency and mint-posture projection",
-    kind: "cache",
-    resetOrTtl: "All three hydrated from the current V9 cards at resolver-run start; cleared when V9 publication is unavailable and reset with the isolate. The installed flag distinguishes a published 'no band' from an absent publication so K1 can fall back to the curated posture instead of failing open.",
-    durableTruth: "The current Safety Score V9 publication inputs and stablecoin registry statuses are authoritative; this only avoids repeated per-coin dependency and mint-component scans inside one run.",
-  },
-  {
     sourcePath: "worker/src/cron/dex-discovery/crawl-cosmos-pools.ts",
     stateNames: ["cosmosRequestState"],
     owner: "Cosmos DEX discovery pacing",

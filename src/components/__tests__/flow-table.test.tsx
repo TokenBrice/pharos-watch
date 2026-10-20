@@ -125,6 +125,28 @@ describe("FlowTable", () => {
     expect(html).toContain("signed net unavailable");
   });
 
+  it.each([0, 100])("labels fully priced unscanned gross volumes (%i) as observed lower bounds", (volume) => {
+    const incomplete = { complete: false, unavailableReason: "scan-coverage-incomplete" as const };
+    const html = renderToStaticMarkup(<FlowTable coins={[{
+      ...coin,
+      has24hActivity: null,
+      observed24hActivity: volume > 0,
+      netFlow24hUsd: null,
+      netFlowDirection24h: null,
+      mintVolume24hUsd: volume,
+      burnVolume24hUsd: 0,
+      totalsSemantics: "observed-subtotals",
+      valuation: makeMintBurnCoinValuation(),
+      coverage: { ...coin.coverage, has24hWindow: false, windows: {
+        window24h: incomplete, window7d: incomplete, window30d: incomplete, window90d: incomplete,
+      } },
+    }]} isLoading={false} />);
+    expect(html).toContain(`≥ $${volume.toFixed(2)}`);
+    expect(html).toContain("≥ $0.00");
+    expect(html).toContain("Observed subtotal, lower bound: scan coverage incomplete");
+    expect(html).not.toContain("events unpriced");
+  });
+
   it("ranks worst pressure against the 30-day norm first, with NR last", () => {
     const html = renderToStaticMarkup(
       <FlowTable

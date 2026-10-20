@@ -22,6 +22,12 @@ import {
 import type { LiquidityMetrics, PoolEntry } from "../types";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 import archivedSolidly from "./fixtures/solidly-v2-2026-10-05-archive.json";
+import * as measuredExecutionJoin from "../../measured-execution/join";
+import { computeStablecoinScores } from "../scoring";
+import { mergeUniV3CandidateSnapshot } from "../univ3-candidate-snapshot";
+import { buildUniV3MeasuredExecutionTarget, type UniV3ExecutionCandidate } from "../../measured-execution/inventory";
+import { materializeEvmQuotePoint } from "../../measured-execution/evm-quote-plan";
+import { encodeQuoterV2ExactInputSingle } from "../../measured-execution/quoter-v2";
 
 const openDatabases: ReturnType<typeof createLatestSchemaSqlite>["sqlite"][] = [];
 const textEncoder = new TextEncoder();
@@ -167,6 +173,10 @@ function sourceState(): DexLiquidityScoringSourceState {
       updatedAt: 1_000,
       updatedAtByPeg: { peggedEUR: 1_000 },
       typeByPeg: { peggedEUR: "fresh" },
+      sourceModeByPeg: { peggedEUR: "cached" },
+      sourceCadenceByPeg: { peggedEUR: "business-daily" },
+      sourceDateByPeg: { peggedEUR: "1970-01-01" },
+      maxAgeSec: 21_600,
     },
     stablecoinPriceById: new Map([
       ["major", 1.0001],
@@ -292,6 +302,24 @@ afterEach(() => {
 });
 
 describe("DEX liquidity scoring stage", () => {
+  it("passes the scoring assessment clock independently of the measured publication ceiling", async () => {
+    const { db, sqlite } = createLatestSchemaSqlite();
+    openDatabases.push(sqlite);
+    const loadEvidence = vi.spyOn(measuredExecutionJoin, "loadDexMeasuredExecutionJoinEvidence").mockResolvedValue(null);
+    const signal = new AbortController().signal;
+    try {
+      await computeStablecoinScores(
+        db, new Map(), new Map(), new Map(), 20_999.75,
+        new Map(), signal, new Map(), "none", 1_000,
+      );
+      expect(loadEvidence).toHaveBeenCalledWith(db, 20_999, signal, {
+        publishedAtCeilingSec: 20_999,
+      });
+    } finally {
+      loadEvidence.mockRestore();
+    }
+  });
+
   it.each(archivedSolidly)("retains original state/reference clocks while retiring stored $poolId augmentation", (fixture) => {
     const pool = poolState(1);
     const entry = pool.metrics.get("major")!.topPools[0]!;
@@ -330,9 +358,52 @@ describe("DEX liquidity scoring stage", () => {
     }
   });
 
+  it("preserves carried identity and independent output valuation through the source-stage handoff", () => {
+    const usdc = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
+    const eurc = "0x1abaea1f7c830bd89acc67ec4af516284b1bc33c";
+    const candidates = new Map<string, UniV3ExecutionCandidate[]>();
+    mergeUniV3CandidateSnapshot(candidates, [{
+      chain: "ethereum", poolAddress: "0x95dbb3c7546f22bce375900abfdd64a4e5bd73d6",
+      feePips: 500, tvlUsd: 5_000_000, token0Price: 1.25, token1Price: 1 / 1.25,
+      tokens: [{ address: usdc, symbol: "USDC", decimals: 6 }, { address: eurc, symbol: "EURC", decimals: 6 }],
+    }]);
+    const candidate = [...candidates.values()][0]![0]!;
+    const input = {
+      stablecoinId: "usdc-circle", candidate,
+      chainAddressToId: new Map([[`ethereum:${usdc}`, "usdc-circle"], [`ethereum:${eurc}`, "eurc-circle"]]),
+      stablecoinPriceById: new Map([["usdc-circle", 1]]),
+      retainedTvlUsd: 4_000_000, capturedAt: 1_000,
+    };
+    expect(buildUniV3MeasuredExecutionTarget(input)).toBeNull();
+    input.stablecoinPriceById.set("eurc-circle", 1.08);
+    const target = buildUniV3MeasuredExecutionTarget(input)!;
+    expect(target).toMatchObject({ carriedFromSnapshot: true, tokenOut: { referencePriceUsd: 1.08 } });
+    const pool = poolState(1);
+    pool.metrics.get("major")!.topPools[0]!.extra = { measuredExecutionTarget: target };
+    const decoded = decodeDexLiquidityScoringStageChunks(
+      [...encodeDexLiquidityScoringStageChunks(sourceState(), pool)],
+    );
+    const staged = DexMeasuredExecutionTargetSchema.parse(
+      decoded.poolState.metrics.get("major")!.topPools[0]!.extra!.measuredExecutionTarget,
+    );
+    expect(staged.carriedFromSnapshot).toBe(true);
+    expect(staged.tokenOut.referencePriceUsd).toBe(1.08);
+    // The real QuoterV2 plan's USD materializer values raw EURC output using
+    // the independently admitted reference, never the stored candidate spot.
+    const point = materializeEvmQuotePoint({
+      amountInRaw: 1_080_000_000n, amountOutRaw: 1_000_000_000n,
+      callData: encodeQuoterV2ExactInputSingle(staged, 1_080_000_000n), returnData: "0x",
+      tokenIn: staged.tokenIn, tokenOut: staged.tokenOut, adapterMetadata: {},
+    });
+    expect(point).toMatchObject({ inputUsd: 1_080, outputUsd: 1_080, costBps: 0 });
+  });
+
   it("round-trips the production-shaped 7,402-pool graph in bounded ordered chunks", () => {
     const source = sourceState();
     const pool = poolState();
+    const opaquePool = pool.metrics.get("major")!.topPools[0]!;
+    opaquePool.poolId = "ethereum:defillama:10000000-0000-4000-8000-000000000000";
+    opaquePool.candidateFingerprint = "fp:ethereum:uniswap-v3:token-a:token-b";
     const chunks = [...encodeDexLiquidityScoringStageChunks(source, pool)];
 
     expect(chunks.length).toBeGreaterThan(10);
@@ -355,6 +426,7 @@ describe("DEX liquidity scoring stage", () => {
     expect(decodedMajor.topPools).toHaveLength(6_181);
     expect(decodedMajor.topPools.every((entry, index) => entry.poolId === originalMajor.topPools[index]?.poolId))
       .toBe(true);
+    expect(decodedMajor.topPools[0]?.candidateFingerprint).toBe(opaquePool.candidateFingerprint);
     expect([...decodedMajor.chains]).toEqual([...originalMajor.chains]);
     expect([...decodedMajor.pairs]).toEqual([...originalMajor.pairs]);
 
@@ -505,6 +577,13 @@ describe("DEX liquidity scoring stage", () => {
     });
     expect(loaded.generationId).toBe(stored.generationId);
     expect(loaded.syncStartSec).toBe(sourceSlotStartedAt + 10);
+    expect(loaded.sourceState.validationReferences).toMatchObject({
+      updatedAtByPeg: { peggedEUR: 1_000 },
+      sourceModeByPeg: { peggedEUR: "cached" },
+      sourceCadenceByPeg: { peggedEUR: "business-daily" },
+      sourceDateByPeg: { peggedEUR: "1970-01-01" },
+      maxAgeSec: 21_600,
+    });
     expect(loaded.poolState.metrics.get("major")?.topPools.map((entry) => entry.poolId)).toEqual(
       expectedMajorPoolIds,
     );
@@ -836,10 +915,10 @@ describe("DEX liquidity scoring stage", () => {
         ),
       ])
     ).toThrow("unknown target lane");
-    // Previous payloads omit volume readings, dead-pool signatures or the
-    // registry evaluation basis: reject them, never score under the new label.
+    // Old payloads lack the current volume, registry, provider identity or
+    // carried-reference/raw-TVL admission basis; never relabel their evidence.
     const [header, ...rest] = base[0]!.payload.split("\n");
-    for (const schemaVersion of [1, 2, 3]) {
+    for (const schemaVersion of [1, 2, 3, 4, 5]) {
       expect(() =>
         decodeDexLiquidityScoringStageChunks([
           withPayload([JSON.stringify({ ...JSON.parse(header!), schemaVersion }), ...rest].join("\n")),

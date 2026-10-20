@@ -7,7 +7,7 @@ import type { RpcEndpoint } from "../../lib/chain-registry";
 import { fetchMintBurnLogs, resolveMintBurnBlockTimestamps } from "../../lib/mint-burn-pipeline/rpc";
 import { budgetExhausted, createBudget, decodeUint256AtSlotOrNull } from "../../lib/evm-logs";
 import type { MintBurnTxContext } from "../../lib/mint-burn-bridge-classifier";
-import { classifyBridgeBurnRows } from "../../lib/mint-burn-pipeline/classification";
+import { classifyBridgeBurnRows, reconcileReviewedSupplyBurns } from "../../lib/mint-burn-pipeline/classification";
 import { parseMintBurnLogs } from "../../lib/mint-burn-pipeline/parse";
 import { DECODE_QUARANTINE_REASON, mintBurnSuccessfulScanFrontier, shouldQuarantineDecodeFailure } from "../../lib/mint-burn-pipeline/scan-policy";
 import { persistMintBurnRows } from "../../lib/mint-burn-pipeline/persistence";
@@ -22,6 +22,8 @@ import type {
   MintBurnEventDef,
   MintBurnTier,
 } from "../../lib/mint-burn-contracts";
+import { requiresReviewedSupplyBurnProof } from "../../lib/mint-burn-conservation";
+import { MINT_BURN_EVENT_RETENTION_SEC } from "./retention";
 
 export interface MintBurnConfigSummary {
   key: string;
@@ -420,7 +422,7 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
     configBudget,
     txContextCache,
     signal,
-    { deadlineMs, blockHashesByTx: rpcEndpoints.length > 1 ? new Map(allConfigLogs.flatMap(({ logs }) =>
+    { deadlineMs, blockHashesByTx: rpcEndpoints.length > 1 || requiresReviewedSupplyBurnProof(config) ? new Map(allConfigLogs.flatMap(({ logs }) =>
       logs.filter((log) => typeof log.blockHash === "string")
         .map((log) => [log.transactionHash, log.blockHash.toLowerCase()] as const))) : undefined },
   );
@@ -598,6 +600,8 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
       };
     }
   }
+  await reconcileReviewedSupplyBurns(db, config, rpcEndpoints, configBudget, txContextCache,
+    Math.ceil((runTimestamp - MINT_BURN_EVENT_RETENTION_SEC) / 3600) * 3600, signal, { deadlineMs });
   summary.requestBudgetUsed = configBudget.count;
 
   return {

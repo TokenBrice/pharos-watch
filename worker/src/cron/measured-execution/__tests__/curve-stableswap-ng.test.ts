@@ -556,6 +556,7 @@ describe("reviewed Curve StableSwap-NG quoting", () => {
         target: measuredTarget,
         inputUsd,
         blockNumber: BLOCK_NUMBER,
+        blockHash: BLOCK_HASH,
         blockObservedAt: BLOCK_TIMESTAMP + 60,
         endpointAddress: CURVE_USDG_USDC_STABLESWAP_NG_POLICY.poolAddress,
         runtimeEvidence: runtimeEvidence(),
@@ -577,6 +578,7 @@ describe("reviewed Curve StableSwap-NG quoting", () => {
       target: target(),
       inputUsd: 100_000,
       blockNumber: BLOCK_NUMBER,
+      blockHash: BLOCK_HASH,
       blockObservedAt: BLOCK_TIMESTAMP + 60,
       endpointAddress: CURVE_USDG_USDC_STABLESWAP_NG_POLICY.poolAddress,
       runtimeEvidence: runtimeEvidence(),
@@ -600,6 +602,7 @@ describe("reviewed Curve StableSwap-NG quoting", () => {
   it("admits fresh finalized source quotes before target capture without refreshing their clock", () => {
     const measuredTarget = { ...target(), capturedAt: BLOCK_TIMESTAMP + 600 };
     const profile = buildDexMeasuredExecutionProfile({
+      blockHash: BLOCK_HASH,
       target: measuredTarget, targetGenerationId: "targets-1", quoteGenerationId: "quotes-1",
       quotedAt: BLOCK_TIMESTAMP, blockNumber: BLOCK_NUMBER,
       endpointAddress: CURVE_USDG_USDC_STABLESWAP_NG_POLICY.poolAddress,
@@ -642,6 +645,7 @@ describe("reviewed Curve StableSwap-NG quoting", () => {
       result: 999_900_000n,
     });
     const profile = buildDexMeasuredExecutionProfile({
+      blockHash: BLOCK_HASH,
       target: measuredTarget,
       targetGenerationId: "targets-1",
       quoteGenerationId: "quotes-1",

@@ -14,6 +14,8 @@ import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9/fa
 import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 
+import { mockD1Strict } from "@shared/test-utils/mock-d1";
+import { buildRedemptionBackstopEntry } from "../redemption-backstop/sources";
 const now = Date.UTC(2026, 9, 12, 12) / 1_000;
 const supplyUsd = 100_000_000;
 const db = {} as D1Database;
@@ -86,6 +88,41 @@ function assertConsumerGaps(row: RedemptionBackstopEntry, clockSec = now) {
 }
 
 describe("RD2 legal entitlement remains eventual diagnostic evidence", () => {
+  it.each([
+    ["fusd-finchain", "usdt-tether"],
+    ["usdn-noble", "usdc-circle"],
+    ["gusd-gate", "usdc-circle"],
+    ["usdk-kast", "m-m0"],
+  ])("preserves %s's reviewed token endpoint through the real producer and Safety review", async (id, outputId) => {
+    const config = getRedemptionBackstopConfig(id)!;
+    const row = await buildRedemptionBackstopEntry(
+      mockD1Strict([]), id, config, supplyUsd, null, now,
+      { reserveSnapshotMetadata: null, exitExecutionReviews: [] },
+    );
+    expect(row.outputAssetType).toBe("stable-single");
+    expect(row.immediateCapacityUsd).toBeNull();
+    expect(row.capacityProfile?.scoringUsd).toBeNull();
+    const observation = row.capacityProfile?.exitRouteObservations?.[0] ??
+      deriveSupplyModelExitRouteObservation(row, now, undefined, config);
+    expect(observation?.output).toEqual({ kind: "tracked-stablecoin", trackedAssetIds: [outputId] });
+    const fixed = fixedInput(row);
+    const unpriced = buildSafetyScoreV9RouteReviews(fixed, id);
+    expect(unpriced).toHaveLength(1);
+    expect(unpriced[0]!.output).toEqual({
+      kind: "tracked-stablecoin", assetKeys: [outputId], basketWeights: [], valuation: null,
+    });
+    fixed.pegDataById[outputId] = {
+      ...makeV9FixedInput({ assetId: outputId, clockSec: now }).pegDataById[outputId]!,
+      currentDeviationBps: -100, pegCurrency: "USD", priceObservedAt: now,
+    };
+    const priced = buildSafetyScoreV9RouteReviews(fixed, id);
+    expect(priced[0]!.output).toMatchObject({
+      kind: "tracked-stablecoin", assetKeys: [outputId],
+      valuation: { referenceAssetKey: outputId },
+    });
+    expect(priced[0]!.output?.assetKeys).not.toContain("fiat:USD");
+  });
+
   it("withdraws only the reviewed ordinary YieldFi yUSD channel even with retained positive telemetry", () => {
     const id = "yusd-yieldfi";
     const config = getRedemptionBackstopConfig(id)!;

@@ -462,15 +462,15 @@ function recoveryAnchors(coin: DdrCoinStructural, supply: DdrSupplyContext, live
   }
 
   // R3 — no supply anomaly
-  if (supply.covered) {
-    if (supply.mintSurge === false && (supply.change7dPct == null || Math.abs(supply.change7dPct) < 10)) {
+  if (supply.covered && supply.mintSurge === false && supply.change7dPct != null && Number.isFinite(supply.change7dPct)) {
+    if (Math.abs(supply.change7dPct) < 10) {
       out.push({
         code: "R3_no_supply_anomaly",
         kind: "anchor",
         severity: "strong",
         label: "No supply anomaly — market dislocation, not structural",
       });
-    } else if (supply.mintSurge !== true && (supply.change7dPct == null || Math.abs(supply.change7dPct) < 20)) {
+    } else if (Math.abs(supply.change7dPct) < 20) {
       out.push({
         code: "R3_no_supply_anomaly",
         kind: "anchor",

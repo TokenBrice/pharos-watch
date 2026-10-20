@@ -15,6 +15,8 @@ export interface DexPriceChallengerLoadRow {
   tvlUsd: number;
   snapshotAt: number;
   publishedAt: number;
+  /** Present for v2 payloads; null is unknown, never the publication clock. */
+  priceObservedAt?: number | null;
 }
 
 export interface DexPriceChallengerLoadDiagnostics {

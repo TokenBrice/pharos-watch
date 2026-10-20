@@ -87,6 +87,7 @@ describe("FlowChart", () => {
       "—",
       "—",
       "—",
+      "—",
     ]);
     expect(screen.getByText(/shown as breaks and excluded from rolling averages/i)).toBeTruthy();
   });
@@ -124,10 +125,21 @@ describe("FlowChart", () => {
       "—",
       "—",
       "Partial valuation: net unavailable",
+      "—",
     ]);
     expect(screen.getByText(/1 hourly bucket has unpriced events/i)).toBeTruthy();
     // The withheld net is a hatched column over its bucket, and the line's last proven point is marked.
     expect(chartState.hatchedFrom).toEqual([(firstHour + 3_600) * 1000 - 1_800_000]);
     expect(chartState.stopDot).toEqual({ x: firstHour * 1000, y: 7 });
+  });
+  it.each([0, 100])("labels fully priced unscanned chart volumes (%i) as observed subtotals", (volume) => {
+    render(<FlowChart isLoading={false} hourly={[{
+      hourTs: 3_600_000, mintVolumeUsd: volume, burnVolumeUsd: 0, netFlowUsd: null,
+      valuation: "complete", scanCoverage: { complete: false, unavailableReason: "scan-coverage-incomplete" },
+    }]} />);
+    expect(chartState.data[0]).toMatchObject({ valuation: "complete", scanComplete: false, net: null });
+    const row = screen.getAllByRole("row")[1];
+    expect(within(row).getAllByRole("cell").map((cell) => cell.textContent))
+      .toEqual([`≥ $${volume}`, "≥ $0", "—", "—", "Complete", "Observed subtotals"]);
   });
 });

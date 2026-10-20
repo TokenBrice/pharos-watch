@@ -70,7 +70,7 @@ describe("fetchPrimaryPrices", () => {
         {
           stablecoin_id: "usr-resolv",
           price_sources_json: JSON.stringify([
-            { protocol: "balancer", chain: "base", price: 1.042315, tvl: 14_000_000 },
+            { protocol: "balancer", chain: "base", price: 1.042315, tvl: 14_000_000, observedAt: nowSec - 60, aggregateObservedAt: nowSec - 60 },
           ]),
           updated_at: nowSec - 60,
         },
@@ -122,7 +122,7 @@ describe("fetchPrimaryPrices", () => {
       poolSources: [
         {
           stablecoin_id: "usdc-circle",
-          price_sources_json: JSON.stringify([{ protocol: "balancer", chain: "base", price: 1.0002, tvl: 25_000_000 }]),
+          price_sources_json: JSON.stringify([{ protocol: "balancer", chain: "base", price: 1.0002, tvl: 25_000_000, observedAt: nowSec - 60, aggregateObservedAt: nowSec - 60 }]),
           updated_at: nowSec - 60,
         },
       ],
@@ -160,7 +160,7 @@ describe("fetchPrimaryPrices", () => {
         {
           stablecoin_id: "usdt-tether",
           price_sources_json: JSON.stringify([
-            { protocol: "uniswap-v3", chain: "ethereum", price: 1.0001, tvl: 3_000_000 },
+            { protocol: "uniswap-v3", chain: "ethereum", price: 1.0001, tvl: 3_000_000, observedAt: nowSec - 60, aggregateObservedAt: nowSec - 60 },
           ]),
           updated_at: nowSec - 60,
         },

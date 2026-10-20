@@ -1,6 +1,7 @@
 import type { AlchemyLogEntry } from "../alchemy-logs";
 import { decodeAddress, decodeUint256AtSlotOrNull, readDataWord } from "../evm-logs";
 import type { MintBurnContractConfig, MintBurnEventDef } from "../mint-burn-contracts";
+import { requiresReviewedSupplyBurnProof } from "../mint-burn-conservation";
 import { resolveMintBurnEventPrice } from "./context";
 import type { MintBurnPriceContext, MintBurnRow } from "./types";
 
@@ -23,6 +24,7 @@ export function parseMintBurnLogs(
 } {
   const rows: MintBurnRow[] = [];
   const direction = eventDef.direction;
+  const requiresSupplyProof = direction === "burn" && requiresReviewedSupplyBurnProof(config);
   let dropped = 0;
   let droppedDecode = 0;
   let earliestDecodeFailureBlock: number | null = null;
@@ -83,8 +85,8 @@ export function parseMintBurnLogs(
       price_used: eventPrice?.price ?? null,
       price_timestamp: eventPrice?.priceTimestamp ?? null,
       price_source: eventPrice ? PARSE_PRICE_SOURCE_BY_EVIDENCE[eventPrice.evidence] : null,
-      burn_type: direction === "burn" ? "effective_burn" : null,
-      burn_review_reason: null,
+      burn_type: direction === "burn" ? (requiresSupplyProof ? "review_required" : "effective_burn") : null,
+      burn_review_reason: requiresSupplyProof ? "unproven-supply-destruction" : null,
       flow_type: "standard",
       counterparty,
       tx_hash: log.transactionHash,

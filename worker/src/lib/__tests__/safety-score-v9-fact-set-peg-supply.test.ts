@@ -3,6 +3,7 @@ import { SUPPLEMENTAL_RESTORE_MAX_AGE_SEC } from "@shared/lib/supply";
 import { buildPeg, buildSupply } from "../safety-score-v9/fact-set-peg-supply";
 import { makeV9Extension, makeV9FixedInput } from "../../test-helpers/v9-fixed-input";
 import { factBuilderContext } from "./safety-score-v9-fact-builders.test-support";
+import { createReportCardsFixedInput } from "../../test-helpers/report-cards-fixed-input";
 
 describe("direct peg fact builder", () => {
   it.each([
@@ -24,6 +25,27 @@ describe("direct peg fact builder", () => {
       sourceGenerationId: context.extension.sources.peg.generationId,
       freshness: { state: state === "known" ? "current" : "stale", ageSec, maxAgeSec: 500 },
     });
+  });
+
+  it.each([true, undefined])("does not hide an explicit current-price failure behind a quiet history: %s", (currentPriceUnavailable) => {
+    const { baseInputGenerationId: _base, ...draft } = makeV9FixedInput({
+      currentDeviationBps: null, eventCount: 0, worstDeviationBps: null, lastEventAt: null, activeDepeg: false,
+    });
+    const assetId = draft.activeAssetIds[0]!;
+    const fixed = createReportCardsFixedInput({ ...draft, pegDataById: {
+      ...draft.pegDataById, [assetId]: { ...draft.pegDataById[assetId]!, currentPriceUnavailable },
+    } });
+    const context = factBuilderContext(fixed);
+    const peg = buildPeg(context);
+    expect(peg.status.observationState).toBe(currentPriceUnavailable ? "bounded-unknown" : "known");
+    expect(peg.currentDeviationBps).toBe(currentPriceUnavailable ? null : 0);
+    if (currentPriceUnavailable) {
+      expect([...context.gaps.values()]).toContainEqual(expect.objectContaining({
+        causeProof: expect.objectContaining({ cause: "A", producerState: "producer-failed", rejectionCode: "peg-current-price-unavailable" }),
+      }));
+    } else {
+      expect(context.gaps.size).toBe(0);
+    }
   });
 
   it("does not replace an absent peg observation with neutral peg values", () => {

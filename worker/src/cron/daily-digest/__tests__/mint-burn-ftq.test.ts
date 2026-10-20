@@ -60,6 +60,14 @@ describe("digest mint/burn flight-to-quality flows", () => {
     });
   });
 
+  it("does not turn an unscanned nullable coin net into an inactive FTQ claim", async () => {
+    classify(["usdt-tether"], ["usdc-circle"]);
+    await expect(computeDigestMintBurnFtqFlows(db, [
+      { id: "usdt-tether", knownNetUsd: null, valuation: COMPLETE },
+      { id: "usdc-circle", knownNetUsd: -150_000_000, valuation: COMPLETE },
+    ])).resolves.toMatchObject({ kind: "unavailable", reason: "flow-window-unavailable" });
+  });
+
   it("withholds FTQ when missing valuation could flip it", async () => {
     const snapshot = classify(["usdt-tether"], ["usdc-circle"]);
     // The risky outflow looks decisive, but unpriced risky mints of unknown size can

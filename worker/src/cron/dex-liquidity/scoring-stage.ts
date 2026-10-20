@@ -23,9 +23,13 @@ const DEX_LIQUIDITY_SCORING_STAGE_SCHEMA_VERSION = 1;
 // 6.9): pools carry raw DEC-19 volume readings (`volumeReading`) and nullable
 // volumes. v3 (6.92): the staged merge stamps the dead-pool signature onto those
 // readings. v4 (6.93): the header pins registry evaluation to its read-consumption
-// clock. Older payloads lack the consumer's scoring basis and are rejected
-// rather than silently rescored under a different clock or methodology.
-const DEX_LIQUIDITY_SCORING_STAGE_PAYLOAD_VERSION = 4;
+// clock. v5: primary opaque provider identities and candidate fingerprints are
+// separate; exact repeats/conflicts are resolved before per-coin accumulation.
+// v6: carried UniV3 identity cannot imply USD references; crawler raw TVL uses
+// named quarantine rather than retained clamped values.
+// Older payloads lack the consumer's scoring basis and are rejected rather than
+// silently rescored under a different clock or methodology.
+const DEX_LIQUIDITY_SCORING_STAGE_PAYLOAD_VERSION = 6;
 export const DEX_LIQUIDITY_SCORING_STAGE_MAX_CHUNK_BYTES = 192 * 1024;
 export const DEX_LIQUIDITY_SCORING_STAGE_PROGRESS_CHUNK_INTERVAL = 24;
 const DEX_LIQUIDITY_SCORING_STAGE_READ_PAGE_SIZE = 4;

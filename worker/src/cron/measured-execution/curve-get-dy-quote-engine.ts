@@ -74,6 +74,7 @@ interface CurveGetDyQuoteEngineDescriptor<
     chain: string;
     calls: TPlan["call"][];
     blockNumber: number;
+    blockHash: `0x${string}`;
     chainRpcs: Map<string, ChainRpcConfig>;
     signal?: AbortSignal;
     rpcBudget?: DexMeasuredExecutionRpcBudget;

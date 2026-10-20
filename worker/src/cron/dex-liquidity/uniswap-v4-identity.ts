@@ -268,7 +268,7 @@ export async function enrichUniswapV4ExecutionTargets(input: {
       const header = blockNumber == null ? null : await deps.header(chain, blockNumber, rpcOptions);
       const nowSec = Math.floor(Date.now() / 1_000);
       if (!header || header.timestamp > nowSec + 60 || nowSec - header.timestamp > MAX_BLOCK_AGE_SEC) { mark("identity-block-unavailable"); continue; }
-      const verified = await deps.verify({ deployment: chainProbes[0]!.deployment, blockNumber: header.number, chainRpcs: input.chainRpcs, signal: input.signal, rpcBudget: budget });
+      const verified = await deps.verify({ deployment: chainProbes[0]!.deployment, blockNumber: header.number, blockHash: header.hash, chainRpcs: input.chainRpcs, signal: input.signal, rpcBudget: budget });
       if (!verified.ok) { mark(verified.reason); continue; }
       const pending: { pool: PoolEntry; target: DexMeasuredExecutionTarget }[] = [];
       for (const probe of chainProbes) {

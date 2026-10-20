@@ -113,6 +113,7 @@ export function makeMeasuredProfile(
     retainedPoolPriceUsdAtQuote: 1,
     quotedAt,
     blockNumber: 25_536_894,
+    blockHash: `0x${"ab".repeat(32)}`,
     executionEndpoint: {
       address: "0x4444444444444444444444444444444444444444",
       codeHash: `0x${"ab".repeat(32)}`,

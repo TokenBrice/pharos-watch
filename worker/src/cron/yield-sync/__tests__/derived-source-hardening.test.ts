@@ -4,10 +4,10 @@ import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { YIELD_ADAPTER_MANIFEST } from "../../../lib/yield-config/yield-config";
 import { INTENTIONAL_GAP_REASONS } from "../../../lib/yield-config/yield-config-rate-sources";
 import { isPriceDerivedYieldEligible } from "../../../lib/yield-config/yield-config-registry";
-import { resolveTrackedYieldSources } from "../resolve";
+import { appendLinkedVariantParentYieldSources, resolveTrackedYieldSources } from "../resolve";
 import { getPriceDerivedApy } from "../state";
 import { buildHardcodedUsdBenchmark, type ParsedYieldBenchmarkMeta } from "../benchmarks";
-import { baseEvaluationInput, freshUsdBenchmark } from "../../__tests__/yield-evaluation.test-support";
+import { baseEvaluationInput, freshUsdBenchmark, resolvedYield } from "../../__tests__/yield-evaluation.test-support";
 import { evaluateYieldSources } from "../evaluation";
 import { parseRiskFreeRateCache } from "../cache";
 
@@ -57,6 +57,42 @@ describe("derived source admission", () => {
     }
     expect(isPriceDerivedYieldEligible("usda-avalon")).toBe(false);
     expect(isPriceDerivedYieldEligible("aa-falconx-mev-capital", INTENTIONAL_GAP_REASONS["stkgho-umbrella-aave"])).toBe(false);
+  });
+
+  it.each([true, false])("does not mistake gold USD movement for xGLD return (RPC available: %s)", async (rpcAvailable) => {
+    vi.useFakeTimers().setSystemTime(now * 1000);
+    const result = await resolveTrackedYieldSources({
+      db: mockD1([
+        { match: "pharos:yield-sync:tier1-previous-rate", rows: [
+          { stablecoin_id: "xgld-unitas", exchange_rate: 1, recorded_at: now - 7 * DAY_SECONDS },
+        ] },
+        { match: "snapshot_date BETWEEN", rows: [{ price: 1, snapshot_date: now - 30 * DAY_SECONDS }] },
+        { match: "SELECT price, snapshot_date FROM supply_history", rows: [{ price: 1.01, snapshot_date: now }] },
+      ]),
+      startSec: now, sevenDaysAgoSec: now - 7 * DAY_SECONDS, dlPools: [],
+      onChainRates: rpcAvailable ? new Map([["xgld-unitas", { rate: 1 }]]) : new Map(),
+      safetyScores: new Map(), riskFreeRates: benchmarks(),
+    });
+    const goldSources = result.resolved.filter((entry) => entry.id === "xgld-unitas" && entry.yield != null);
+    if (rpcAvailable) {
+      expect(goldSources).toHaveLength(1);
+      expect(goldSources[0].yield).toMatchObject({ dataSource: "onchain", currentApy: 0, apyBase: 0 });
+    } else {
+      expect(goldSources).toEqual([]);
+    }
+    for (const id of ["fpi-frax", "isc-international-stable-currency"]) {
+      expect(result.resolved.find((entry) => entry.id === id && entry.yield?.dataSource === "price-derived")
+        ?.yield?.currentApy).toBeCloseTo((Math.pow(1.01, 365.25 / 30) - 1) * 100);
+    }
+  });
+
+  it("does not project a bootstrap anchor into a parent yield opportunity", () => {
+    const sources = [{ id: "xgld-unitas", symbol: "xGLD", yield: resolvedYield({
+      observationKind: "anchor-only", dataSource: "onchain", sourceKey: "onchain:xgld-unitas",
+      currentApy: 0, apyBase: null, exchangeRate: 1,
+    }) }];
+    expect(appendLinkedVariantParentYieldSources(sources)).toBe(0);
+    expect(sources).toHaveLength(1);
   });
 
   it("rejects hardcoded product yield despite a healthy comparison hurdle", async () => {

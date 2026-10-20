@@ -37,7 +37,7 @@ beforeEach(() => {
     return response(history);
   });
   owners.psi.mockImplementation(async () => response({ current, history: [], methodology: method }));
-  owners.peg.mockImplementation(async () => response({ coins: [], summary: { activeDepegCount: 2, medianDeviationBps: 0, worstCurrent: null, coinsAtPeg: 0, totalTracked: 0, depegEventsToday: 0, depegEventsYesterday: 0 }, methodology: method }));
+  owners.peg.mockImplementation(async () => response({ coins: [], summary: { activeDepegCount: 2, medianDeviationBps: null, worstCurrent: null, coinsAtPeg: 0, totalTracked: 0, depegEventsToday: 0, depegEventsYesterday: 0 }, methodology: method }));
 });
 afterEach(() => { vi.restoreAllMocks(); vi.clearAllMocks(); vi.unstubAllGlobals(); });
 
@@ -90,7 +90,7 @@ describe("compact homepage snapshot", () => {
 
   it("preserves an old PSI sample clock and explicit degraded owner warnings", async () => {
     owners.psi.mockImplementation(async () => response({ current: { ...current, computedAt: now - 86400 }, history: [], methodology: method }));
-    owners.peg.mockImplementation(async () => response({ coins: [], summary: { activeDepegCount: 0, medianDeviationBps: 0, worstCurrent: null, coinsAtPeg: 0, totalTracked: 0, depegEventsToday: 0, depegEventsYesterday: 0 }, methodology: method }, now, '199 - "retained analytics"'));
+    owners.peg.mockImplementation(async () => response({ coins: [], summary: { activeDepegCount: 0, medianDeviationBps: null, worstCurrent: null, coinsAtPeg: 0, totalTracked: 0, depegEventsToday: 0, depegEventsYesterday: 0 }, methodology: method }, now, '199 - "retained analytics"'));
     const body = HomepageSnapshotSchema.parse(await (await handleHomepageSnapshot(mockD1())).json());
     expect(body.psi.meta).toMatchObject({ updatedAt: now - 86400, status: "stale", reason: "stale-generation" });
     expect(body.incidents.data?.activeDepegCount).toBe(0);

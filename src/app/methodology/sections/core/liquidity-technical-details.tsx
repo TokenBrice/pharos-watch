@@ -129,9 +129,22 @@ export function LiquidityTechnicalDetails() {
           <li>
             <span className="text-foreground">Global population basis</span> &mdash; headline TVL, protocol and
             chain breakdowns, and volume-coverage TVL denominators use the same retained pools deduplicated
-            across coins. External protocol totals are not a second global clamp, and observed volume is never
-            scaled to fit them. Existing per-pool exclusions and per-coin secondary-source caps still apply;
-            retained upstream valuations are not guaranteed to be economically correct
+            across coins. External protocol totals gate fallback admission, never rescale trusted raw TVL or
+            observed volume. Over-headroom fallback groups are quarantined across physical-pool attributions,
+            with excluded counts and raw TVL disclosed separately. Quality-adjusted and effective TVL are
+            separate scoring models, not replacements for observed statistics; provider valuations are not guaranteed correct
+          </li>
+          <li>
+            <span className="text-foreground">Measured evidence</span> &mdash; complete finite provider values,
+            valid token scales and complete matching-scope balance legs are required. Unknown balances stay
+            unmeasured, while measured zero remains zero. Factory references must be independently current;
+            carried pool identity cannot supply a current USD price. Each historical quote ages at assessment,
+            and canonical block hashes and fresh non-future per-peg FX bind measured capacity
+          </li>
+          <li>
+            <span className="text-foreground">Measurement epochs</span> &mdash; v6.97 records the changed retained
+            population without rewriting history. Paired source stages reject incompatible older admission
+            policies; TVL trends do not interpret a policy step as a market withdrawal
           </li>
         </ul>
       </div>

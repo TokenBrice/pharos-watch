@@ -969,7 +969,7 @@ export function appendLinkedVariantParentYieldSources(resolved: ResolvedYieldEnt
   const additions: ResolvedYieldEntry[] = [];
 
   for (const entry of resolved) {
-    if (!entry.yield) continue;
+    if (!entry.yield || entry.yield.observationKind === "anchor-only") continue;
     if (entry.yield.dataSource === "defillama-auto") continue;
 
     const childMeta = getActiveStablecoinMeta(entry.id);
@@ -1454,6 +1454,7 @@ export async function resolveTrackedYieldSources(params: {
           id,
           symbol,
           yield: {
+            observationKind: "anchor-only",
             currentApy: 0,
             apyBase: null,
             apyReward: null,
@@ -1625,7 +1626,7 @@ export async function resolveTrackedYieldSources(params: {
       if (!optionalYield) continue;
 
       resolved.push({ id, symbol, yield: optionalYield });
-      hasAnySource = true;
+      if (optionalYield.observationKind !== "anchor-only") hasAnySource = true;
     }
 
     if (!hasAnySource) {

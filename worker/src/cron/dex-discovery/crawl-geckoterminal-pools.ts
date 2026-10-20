@@ -113,12 +113,12 @@ export async function crawlGeckoTerminalPoolsStage({
       });
     },
     parsePool: parseGtPool,
-    buildNewPool: ({ parsed, chain, price, cappedTvlUsd, maturityDays }) => ({
+    buildNewPool: ({ parsed, chain, price, maturityDays }) => ({
       address: parsed.poolAddress,
       chain,
       dexId: parsed.dexId,
       name: parsed.poolName,
-      tvlUsd: cappedTvlUsd,
+      tvlUsd: parsed.tvlUsd,
       volume24hUsd: parsed.volume24hUsd,
       qualityMultiplier: getGtDexQuality(parsed.dexId),
       maturityDays,

@@ -2,7 +2,7 @@ import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { afterEach, describe, it, expect, vi } from "vitest";
 import { PEG_CURRENCY_VALUES, type PegCurrency } from "@shared/types/core";
 import type { PegSummaryCoin } from "@shared/types/peg";
-import type { StablecoinData } from "@shared/types/market";
+import { PegSummaryResponseSchema, type StablecoinData } from "@shared/types/market";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import { __pegSummaryTestHooks, handlePegSummary } from "../peg-summary";
@@ -145,6 +145,37 @@ function makeCachedPegCoin(overrides: Partial<PegSummaryCoin> = {}): PegSummaryC
 }
 
 describe("handlePegSummary", () => {
+  it.each([null, 1])("keeps historical analytics when the live price is %s", async (price) => {
+    const asset = makeAsset({ price, priceObservedAt: nowSec, priceUpdatedAt: nowSec });
+    const db = mockD1([
+      { match: "cache", matchBinds: ["stablecoins"], rows: [{
+        key: "stablecoins", value: JSON.stringify({ peggedAssets: [asset] }), updated_at: nowSec,
+      }] },
+      { match: "cache", matchBinds: ["peg-analytics"], rows: [{
+        key: "peg-analytics", updated_at: nowSec,
+        value: JSON.stringify({ computedAtSec: nowSec, depegEventsToday: 2, depegEventsYesterday: 1, pegData: [makeCachedPegCoin()] }),
+      }] },
+      { match: "dex_prices", rows: [] },
+    ]);
+    const body = PegSummaryResponseSchema.parse(await readJsonResponse(await handlePegSummary(db), 200));
+    expect(body.coins).toHaveLength(1);
+    expect(body.coins[0]).toMatchObject({
+      currentDeviationBps: price === null ? null : 0,
+      pegScore: 99,
+      eventCount: 1,
+      worstDeviationBps: -120,
+    });
+    expect(body.summary).toMatchObject({
+      activeDepegCount: 0,
+      medianDeviationBps: price === null ? null : 0,
+      worstCurrent: price === null ? null : { id: "usdt-tether", symbol: "USDT", bps: 0 },
+      coinsAtPeg: price === null ? 0 : 1,
+      totalTracked: price === null ? 0 : 1,
+      depegEventsToday: 2,
+      depegEventsYesterday: 1,
+    });
+  });
+
   it("marks the peg reference unavailable when the current observation is missing", async () => {
     const observationSpy = vi.spyOn(currentPegObservations, "deriveCurrentPegObservationMap")
       .mockReturnValue(new Map());
@@ -347,14 +378,14 @@ describe("handlePegSummary", () => {
   });
 
   it("returns 200 with coins and summary", async () => {
-    const asset = makeAsset({ id: "usdt-tether", symbol: "USDT" });
+    const asset = makeAsset({ id: "usdt-tether", symbol: "USDT", price: 1 });
     const db = makePegSummaryDb([asset]);
     const res = await handlePegSummary(db);
     const body = (await readJsonResponse(res, 200)) as {
       coins: Array<{ id: string; methodologyVersion: string; currentDeviationBps: number | null }>;
       summary: {
         activeDepegCount: number;
-        medianDeviationBps: number;
+        medianDeviationBps: number | null;
         totalTracked: number;
         worstCurrent: { id: string; symbol: string; bps: number } | null;
         fallbackPegRates?: string[];

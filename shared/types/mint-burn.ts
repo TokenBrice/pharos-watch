@@ -16,8 +16,8 @@ const NetFlowDirection24hSchema = z.enum(NET_FLOW_DIRECTION_24H_VALUES);
 
 /**
  * USD valuation completeness of a flow window (or one side of it).
- * - `complete`: every counted event carried a USD valuation, so totals are exact. A window with no
- *   counted events is complete (genuine zero activity).
+ * - `complete`: every counted event carried a USD valuation, including an empty observed subtotal.
+ *   Exact totals and genuine zero activity additionally require independent complete scan proof.
  * - `partial`: counted events without a USD valuation exist. Mint/burn volumes are known-subtotal lower
  *   bounds; the known signed net is a one-sided bound only when exactly one side is partial.
  * - `unknown`: part of the window was aggregated before valuation completeness was recorded.
@@ -52,6 +52,11 @@ export type MintBurnSignedNetBound = z.infer<typeof MintBurnSignedNetBoundSchema
 /** Market-wide FTQ dependency; coin flow totals do not consume Safety Scores. */
 export const MINT_BURN_FTQ_DEPENDENCY_KEY = "flightToQuality";
 
+export const MintBurnScanWindowSchema = z.object({
+  complete: z.boolean(),
+  unavailableReason: z.literal("scan-coverage-incomplete").nullable(),
+});
+export type MintBurnScanWindow = z.infer<typeof MintBurnScanWindowSchema>;
 const MintBurnGaugeSchema = z.object({
   score: SignedFlowIntensitySchema.nullable(),
   band: z.string().nullable(),
@@ -59,6 +64,7 @@ const MintBurnGaugeSchema = z.object({
   /** `null` when classification is unavailable or missing valuation can alter the conclusion. */
   flightToQuality: z.boolean().nullable(),
   flightIntensity: z.number().finite().nullable(),
+  scanCoverage: MintBurnScanWindowSchema.optional(),
   // The retired cache label is accepted for rolling/historical payload reads.
   classificationSource: z
     .enum(["safety-score-v9-publication", "report-card-cache", "unavailable"])
@@ -115,12 +121,14 @@ export const MintBurnCoverageStatusSchema = z.enum([
 ]);
 export type MintBurnCoverageStatus = z.infer<typeof MintBurnCoverageStatusSchema>;
 
+
 const MintBurnCoinCoverageSchema = z.object({
   startBlock: z.number(),
   lastSyncedBlock: z.number().nullable(),
   lagBlocks: z.number().nullable(),
   historyStartAt: z.number().nullable(),
   has24hWindow: z.boolean(),
+  has7dWindow: z.boolean().optional(),
   has30dWindow: z.boolean(),
   has90dWindow: z.boolean(),
   isPartial: z.boolean(),
@@ -128,6 +136,13 @@ const MintBurnCoinCoverageSchema = z.object({
   startBlockSource: z.string().optional(),
   startBlockConfidence: z.enum(["high", "medium", "low"]).optional(),
   status: MintBurnCoverageStatusSchema,
+  unavailableReason: z.enum(["cron-snapshot-unavailable", "scan-coverage-incomplete"]).nullable().optional(),
+  windows: z.object({
+    window24h: MintBurnScanWindowSchema,
+    window7d: MintBurnScanWindowSchema,
+    window30d: MintBurnScanWindowSchema,
+    window90d: MintBurnScanWindowSchema,
+  }).optional(),
 });
 export type MintBurnCoinCoverage = z.infer<typeof MintBurnCoinCoverageSchema>;
 
@@ -147,15 +162,17 @@ const MintBurnCoinValuationSchema = z.object({
   netFlow90dBound: MintBurnSignedNetBoundSchema.nullable().optional(),
 });
 
-const MintBurnCoinFlowSchema = z.object({
+export const MintBurnCoinFlowSchema = z.object({
   stablecoinId: z.string(),
   symbol: z.string(),
   pressureShiftScore: SignedFlowIntensitySchema.nullable(),
   pressureShiftState: PressureShiftStateSchema,
   /** `null` when missing valuation or scan evidence leaves the direction unproven. */
   netFlowDirection24h: NetFlowDirection24hSchema.nullable(),
-  /** True: observed activity; false: proven quiet; null: activity is unknown. */
+  /** Legacy reader safety gate: null unless the full 24h scan is proved. */
   has24hActivity: z.boolean().nullable(),
+  /** Additive observation fact; false means no observed events, not proof of a quiet window. */
+  observed24hActivity: z.boolean().optional(),
   baselineDailyNetUsd: z.number().nullable(),
   baselineDailyAbsUsd: z.number().nullable(),
   baselineDataDays: z.number().nullable(),
@@ -172,10 +189,12 @@ const MintBurnCoinFlowSchema = z.object({
    * keeps its known-valuation net only when scan evidence admits it, labelled by `valuation`.
    */
   netFlow24hUsd: z.number().finite().nullable(),
-  /** Known-valuation subtotals: lower bounds unless the matching `valuation` side is `complete`. */
+  /** Observed gross subtotals: exact only with complete scan proof and matching `valuation` side. */
   mintVolume24hUsd: z.number().finite().nonnegative(),
   burnVolume24hUsd: z.number().finite().nonnegative(),
   mintCount24h: z.number().int().nonnegative(),
+  /** Counts and gross volumes are observed subtotals, not a complete-history claim. */
+  totalsSemantics: z.literal("observed-subtotals").optional(),
   burnCount24h: z.number().int().nonnegative(),
   netFlow7dUsd: z.number().finite().nullable(),
   netFlow30dUsd: z.number().finite().nullable(),
@@ -201,6 +220,7 @@ const MintBurnHourlyBucketSchema = z.object({
   burnVolumeUsd: z.number().finite().nonnegative(),
   /** Absent on payloads produced before valuation completeness existed (unknown). */
   valuation: MintBurnValuationCompletenessSchema.optional(),
+  scanCoverage: MintBurnScanWindowSchema.optional(),
 });
 export type MintBurnHourlyBucket = z.infer<typeof MintBurnHourlyBucketSchema>;
 
@@ -215,6 +235,7 @@ const MintBurnAggregateChainSchema = z.object({
   netFlow24hUsd: z.number().finite().nullable(),
   /** Absent on payloads produced before valuation completeness existed (unknown). */
   valuation: MintBurnValuationCompletenessSchema.optional(),
+  scanCoverage: MintBurnScanWindowSchema.optional(),
 });
 
 const MintBurnHourlyWindowSchema = z.object({
@@ -246,6 +267,7 @@ const MintBurnPerCoinChainSchema = z.object({
   burnCount: z.number().int().nonnegative(),
   netFlowUsd: z.number().finite().nullable(),
   valuation: MintBurnValuationSchema.optional(),
+  scanCoverage: MintBurnScanWindowSchema.optional(),
 });
 
 export const MintBurnPerCoinResponseSchema = z.object({
@@ -260,6 +282,8 @@ export const MintBurnPerCoinResponseSchema = z.object({
   hourly: z.array(MintBurnHourlyBucketSchema),
   /** Qualifies the window totals. Absent on payloads produced before valuation completeness existed (unknown). */
   valuation: MintBurnValuationSchema.optional(),
+  scanCoverage: MintBurnScanWindowSchema.optional(),
+  totalsSemantics: z.literal("observed-subtotals").optional(),
   updatedAt: z.number(),
   windowHours: z.number().int().positive().optional(),
   window: MintBurnHourlyWindowSchema.optional(),

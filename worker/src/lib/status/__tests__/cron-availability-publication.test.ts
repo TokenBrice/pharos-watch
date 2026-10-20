@@ -59,14 +59,14 @@ describe("cron availability retains independently confirmed publication evidence
     }
 
     const snapshot = await loadCronHealth(fixture.db, NOW);
-    for (const { job } of CONDITIONALLY_ADMITTED_SCHEDULED_TASKS) {
+    for (const { scheduleKey, job } of CONDITIONALLY_ADMITTED_SCHEDULED_TASKS) {
       const cron = snapshot.crons[job];
       expect(cron.healthy, job).toBe(output === "fresh");
       expect(cron.runs[0]?.status).toBe("skipped_neutral");
       expect(cron.runs.some((run) => run.status === "error")).toBe(false);
       expect(snapshot.cronFindingJobs.watchErrors).not.toContain(job);
-      expect(fixture.sqlite.prepare("SELECT COUNT(*) AS count FROM cron_runs WHERE job = ? AND status = 'error'")
-        .get(job)?.count).toBe(2);
+      expect(fixture.sqlite.prepare("SELECT COUNT(*) AS count FROM cron_runs WHERE job = ? AND schedule_key = ? AND status = 'error'")
+        .get(job, scheduleKey)?.count).toBe(2);
     }
   });
 

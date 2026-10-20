@@ -43,7 +43,7 @@ afterEach(() => {
 });
 
 describe("fetchCurveOnchainPrices", () => {
-  it("includes verified safe direct Curve configs with explicit indices and decimals", () => {
+  it("includes verified Curve configs with explicit indices, decimals and USD dependencies", () => {
     const byId = new Map(CURVE_POOL_CONFIGS.map((config) => [config.stablecoinId, config]));
     const expectedConfigs = [
       ["usdat-saturn", "0xF4d0CF32908b2C7f1021339c43Df0F77f06896d7", 0, 1, 6, 6],
@@ -65,7 +65,7 @@ describe("fetchCurveOnchainPrices", () => {
         outputIndex,
         inputDecimals,
         outputDecimals,
-        routeType: "direct",
+        routeType: ["usat-tether", "usdq-quantoz", "susds-sky"].includes(stablecoinId) ? "one-hop" : "direct",
       });
     }
   });
@@ -83,7 +83,8 @@ describe("fetchCurveOnchainPrices", () => {
         expect.objectContaining({
           stablecoinId: "dola-inverse-finance",
           hop: { viaStablecoinId: "susds-sky" },
-          routeType: "trusted-wrapper",
+          routeType: "chained-hop",
+          maxHopDepth: 2,
         }),
         expect.objectContaining({
           stablecoinId: "msusd-metronome",
@@ -259,6 +260,55 @@ describe("fetchCurveOnchainPrices", () => {
     expect(outcome.value.prices.get("gho-aave")).toBeCloseTo(expectedGho, 3);
     expect(outcome.value.routeTypeByCoinId.get("gho-aave")).toBe("one-hop");
     expect(outcome.value.hopDepthByCoinId.get("gho-aave")).toBe(1);
+  });
+
+  it.each(["usat-tether", "usdq-quantoz", "susds-sky"])(
+    "converts the authored %s USDT ratio to USD and preserves the older parent clock", async (id) => {
+      vi.useFakeTimers();
+      vi.setSystemTime(1_800_000_000_000);
+      const target = CURVE_POOL_CONFIGS.find((config) => config.stablecoinId === id)!;
+      const usdt = { ...CURVE_POOL_CONFIGS.find((config) => config.stablecoinId === "usdt-tether")!, chain: "arbitrum" };
+      mockBlockTimestamp.mockImplementation(async (chain) => chain === "arbitrum" ? 1_799_999_800 : 1_799_999_980);
+      mockEvmCall.mockImplementation(async (_chain, address) => hexWord(
+        address === target.poolAddress ? 10n ** BigInt(target.outputDecimals) : 1_020_000n,
+      ));
+      const outcome = await fetchCurveOnchainPrices([target, usdt]);
+      expect(outcome.value.prices.get(id)).toBeCloseTo(1 / 1.02, 8);
+      expect(outcome.value.routeTypeByCoinId.get(id)).toBe("one-hop");
+      expect(outcome.value.hopDepthByCoinId.get(id)).toBe(1);
+      expect(outcome.value.observedAtByCoinId.get(id)).toBe(1_799_999_800);
+    },
+  );
+
+  it.each(["missing", "stale"] as const)("withholds USDT-reference quotes when USDT is %s", async (dependency) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_800_000_000_000);
+    const targets = CURVE_POOL_CONFIGS.filter((config) => ["usat-tether", "usdq-quantoz", "susds-sky"].includes(config.stablecoinId));
+    const usdt = { ...CURVE_POOL_CONFIGS.find((config) => config.stablecoinId === "usdt-tether")!, chain: "arbitrum" };
+    mockBlockTimestamp.mockImplementation(async (chain) => chain === "arbitrum" ? 1_799_999_699 : 1_799_999_980);
+    mockEvmCall.mockImplementation(async (_chain, address) => {
+      const config = targets.find((target) => target.poolAddress === address) ?? usdt;
+      return hexWord(10n ** BigInt(config.outputDecimals));
+    });
+    const outcome = await fetchCurveOnchainPrices(dependency === "missing" ? targets : [...targets, usdt]);
+    expect(outcome.value.prices.size).toBe(0);
+  });
+
+  it.each([1, 2])("admits the DOLA -> sUSDS -> USDT route only at explicit depth %s", async (maxHopDepth) => {
+    const usdt = CURVE_POOL_CONFIGS.find((config) => config.stablecoinId === "usdt-tether")!;
+    const susds = CURVE_POOL_CONFIGS.find((config) => config.stablecoinId === "susds-sky")!;
+    const dola = CURVE_POOL_CONFIGS.find((config) => config.stablecoinId === "dola-inverse-finance")!;
+    mockEvmCall.mockImplementation(async (_chain, address) => hexWord(
+      address === usdt.poolAddress ? 1_020_000n : 10n ** 18n,
+    ));
+    const outcome = await fetchCurveOnchainPrices([usdt, susds, maxHopDepth === 2 ? dola : { ...dola, maxHopDepth }]);
+    expect(outcome.value.prices.get("susds-sky")).toBeCloseTo(1 / 1.02, 8);
+    if (maxHopDepth === 2) {
+      expect(outcome.value.prices.get("dola-inverse-finance")).toBeCloseTo(1 / 1.02, 8);
+      expect(outcome.value.hopDepthByCoinId.get("dola-inverse-finance")).toBe(2);
+    } else {
+      expect(outcome.value.prices.has("dola-inverse-finance")).toBe(false);
+    }
   });
 
   it("pins each cross-chain hop and propagates the older dependency timestamp", async () => {

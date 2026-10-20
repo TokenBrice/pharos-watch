@@ -14,7 +14,8 @@ import {
 const CCIP_SEND_REQUESTED_TOPIC = "0xd0c3c799bf9e2639de44391e7f524d229b2b55f5b1ea94b2bf7da42f7243dddd";
 
 vi.mock("../../lib/mint-burn-contracts", async () => {
-  const { makeMintBurnConfig } = await import("../../test-helpers/__shared/mint-burn");
+  // The hoisted factory runs before static bindings; use the registry-free builder to avoid a mock import cycle.
+  const { makeMintBurnConfig } = await import("../../test-helpers/__shared/mint-burn-config");
   return {
     buildMintBurnScope: vi.fn((configs: Array<{ chain: { chainId: string } }>) => ({
       chainIds: [...new Set(configs.map((config) => config.chain.chainId))],
@@ -974,8 +975,8 @@ describe("syncMintBurn", () => {
     const invalidation = history.find(
       (entry) =>
         entry.sql.includes("DELETE FROM cache")
-        && entry.binds[0] === "mint-burn-flows:v4:"
-        && entry.binds[1] === "mint-burn-flows:v4:\uffff",
+        && entry.binds[0] === "mint-burn-flows:v5:"
+        && entry.binds[1] === "mint-burn-flows:v5:\uffff",
     );
     expect(invalidation).toBeDefined();
   });
@@ -989,12 +990,12 @@ describe("syncMintBurn", () => {
     const cacheDeletes = history.filter(({ sql }) => sql.includes("DELETE FROM cache"));
     expect(
       cacheDeletes.some(
-        (entry) => entry.binds[0] === "mint-burn-flows:v4:coin:" && entry.binds[1] === "mint-burn-flows:v4:coin:\uffff",
+        (entry) => entry.binds[0] === "mint-burn-flows:v5:coin:" && entry.binds[1] === "mint-burn-flows:v5:coin:\uffff",
       ),
     ).toBe(true);
     expect(
       cacheDeletes.some(
-        (entry) => entry.binds[0] === "mint-burn-flows:v4:" || entry.binds[0] === "mint-burn-flows:v4:aggregate:",
+        (entry) => entry.binds[0] === "mint-burn-flows:v5:" || entry.binds[0] === "mint-burn-flows:v5:aggregate:",
       ),
     ).toBe(false);
   });

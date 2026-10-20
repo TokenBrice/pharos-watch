@@ -7,6 +7,7 @@ import {
   collapseDuplicateObservations,
   buildDexPriceObservationsFromRetainedPools,
   filterRetainedPools,
+  quarantineProtocolTvlOutliers,
   summarizeRetainedPoolVolume,
   type GlobalPoolAggregateEntry,
 } from "../scoring-helpers";
@@ -365,6 +366,67 @@ describe("buildDexPriceObservationsFromRetainedPools", () => {
   });
 });
 
+describe("quarantineProtocolTvlOutliers", () => {
+  it.each([
+    "cg_onchain", "gecko_terminal", "dexscreener", "cg_tickers", "horizon", "aquarius",
+    "tezos", "icon-balanced", "kava-swap", "osmosis-sqs", "noble-swap",
+  ] as const)("rejects the entire oversized %s group, preserving raw and modeled values", (source) => {
+    const trusted = makePool({ source: "direct_api", tvlUsd: 150_000 });
+    const fallback = makePool({
+      poolId: "ethereum:0xfallback", source, tvlUsd: 80_000,
+      extra: { qualityAdjustedTvl: 40_000, effectiveTvl: 20_000 },
+    });
+    const pools = new Map([["coin", [trusted, fallback]]]);
+    expect(quarantineProtocolTvlOutliers(pools, new Map([["balancer", 180_000]]))).toEqual({
+      reason: "fallback-protocol-tvl-exceeds-headroom", poolCount: 1, protocolCount: 1, tvlUsd: 80_000,
+    });
+    expect(pools.get("coin")).toEqual([trusted]);
+    expect(fallback).toMatchObject({
+      tvlUsd: 80_000, extra: { qualityAdjustedTvl: 40_000, effectiveTvl: 20_000 },
+    });
+    expect(fallback.extra?.measurement).toBeUndefined();
+  });
+
+  it("rejects the whole fallback group when individually plausible pools exceed shared headroom", () => {
+    const trusted = makePool({ source: "dl", tvlUsd: 70_000 });
+    const a = makePool({ poolId: "ethereum:a", source: "gecko_terminal", tvlUsd: 20_000 });
+    const b = makePool({ poolId: "ethereum:b", source: "dexscreener", tvlUsd: 25_000 });
+    for (const fallback of [[a, b], [b, a]]) {
+      const pools = new Map([["coin", [trusted, ...fallback]]]);
+      expect(quarantineProtocolTvlOutliers(pools, new Map([["balancer", 100_000]]))).toMatchObject({
+        poolCount: 2, protocolCount: 1, tvlUsd: 45_000,
+      });
+      expect(pools.get("coin")).toEqual([trusted]);
+    }
+    expect([a.tvlUsd, b.tvlUsd]).toEqual([20_000, 25_000]);
+  });
+
+  it("propagates a physical fallback rejection across coin views and counts it once", () => {
+    const trusted = makePool({ source: "dl", tvlUsd: 90_000 });
+    const suspect = makePool({ poolId: "ethereum:0xfallback", source: "gecko_terminal", tvlUsd: 20_000 });
+    const healthy = makePool({ poolId: "base:0xhealthy", project: "orca", source: "gecko_terminal", tvlUsd: 20_000 });
+    const pools = new Map([["usdc-circle", [trusted, suspect]], ["usdt-tether", [{ ...suspect }, healthy]]]);
+    expect(quarantineProtocolTvlOutliers(pools, new Map([["balancer", 100_000]]))).toMatchObject({
+      poolCount: 1, protocolCount: 1, tvlUsd: 20_000,
+    });
+    expect(pools.get("usdc-circle")).toEqual([trusted]);
+    expect(pools.get("usdt-tether")).toEqual([healthy]);
+  });
+
+  it.each([100_000, 200_000, 0, Number.NaN, undefined])("admits raw fallback at/below a usable bound or without evidence (%s)", (cap) => {
+    const pool = makePool({
+      source: "gecko_terminal", tvlUsd: 100_000,
+      extra: { qualityAdjustedTvl: 60_000, effectiveTvl: 30_000 },
+    });
+    const pools = new Map([["coin", [pool]]]);
+    expect(quarantineProtocolTvlOutliers(pools, cap == null ? new Map() : new Map([["balancer", cap]]))).toMatchObject({
+      poolCount: 0, protocolCount: 0, tvlUsd: 0,
+    });
+    expect(pools.get("coin")?.[0]).toBe(pool);
+    expect(pool).toMatchObject({ tvlUsd: 100_000, extra: { qualityAdjustedTvl: 60_000, effectiveTvl: 30_000 } });
+  });
+});
+
 describe("filterRetainedPools", () => {
   it("drops large direct pools when zero volume is explicitly unmeasured", () => {
     const retained = filterRetainedPools([
@@ -521,6 +583,24 @@ describe("DEC-19 retained pool volume", () => {
 });
 
 describe("accumulateGlobalAggregate", () => {
+  it("scopes physical and provider IDs to their chain while deduping proven cross-source attributions", () => {
+    const seen = new Map<string, GlobalPoolAggregateEntry>();
+    const protocols: Record<string, number> = {};
+    const chainTvl: Record<string, number> = {};
+    const chains = new Set<string>();
+    const address = "0xabc0000000000000000000000000000000000000";
+    const pools = [
+      makePool({ poolId: address, chain: "Ethereum", source: "dl", tvlUsd: 100_000 }),
+      makePool({ poolId: `ethereum:${address}`, chain: "ethereum", source: "direct_api", tvlUsd: 100_000 }),
+      makePool({ poolId: address, chain: "base", tvlUsd: 200_000 }),
+      makePool({ poolId: "ethereum:defillama:uuid", chain: "ethereum", tvlUsd: 50_000 }),
+      makePool({ poolId: "base:defillama:uuid", chain: "base", tvlUsd: 75_000 }),
+    ];
+    const result = accumulateGlobalAggregate(pools, protocols, chainTvl, chains, seen);
+    expect(result).toEqual({ totalTvl: 425_000, poolCount: 4 });
+    expect(chainTvl).toEqual({ ethereum: 150_000, base: 275_000 });
+  });
+
   it("dedupes the same poolId across stablecoins", () => {
     const seenTvl = new Map<string, GlobalPoolAggregateEntry>();
     const protoTvl: Record<string, number> = {};

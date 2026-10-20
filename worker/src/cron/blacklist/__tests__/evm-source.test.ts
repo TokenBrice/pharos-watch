@@ -145,6 +145,26 @@ function makeEtherscanLog(blockNumber: number, index: number): EtherscanLogEntry
 }
 
 describe("parseEvmLogs", () => {
+  it.each(["incoming", "outgoing"] as const)("does not infer an amountless freeze quantity from a preceding same-block %s transfer", (direction) => {
+    const affected = "0x" + "11".repeat(20);
+    const other = "0x" + "22".repeat(20);
+    const affectedTopic = "0x" + affected.slice(2).padStart(64, "0");
+    const otherTopic = "0x" + other.slice(2).padStart(64, "0");
+    const base = { ...makeEtherscanLog(100, 0), address: USDC_CONFIG.contractAddress };
+    const rows = parseEvmLogsWithCoverage(USDC_CONFIG, [{
+      ...base, topics: ["0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
+        direction === "incoming" ? otherTopic : affectedTopic, direction === "incoming" ? affectedTopic : otherTopic],
+      data: "0x" + (50_000000n).toString(16).padStart(64, "0"),
+    }, {
+      ...base, logIndex: "0x1", topics: [USDC_CONFIG.events[0].topicHash, affectedTopic], data: "0x",
+    }]).rows;
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      event_type: "blacklist", address: affected, amount_native: null,
+      amount_source: "unavailable", amount_status: "recoverable_pending",
+    });
+  });
+
   it("extracts address from topics[2] when addressTopicIndex is 2 (USD1)", () => {
     const callerAddr = "0x0000000000000000000000001111111111111111111111111111111111111111";
     const frozenAddr = "0x0000000000000000000000002222222222222222222222222222222222222222";

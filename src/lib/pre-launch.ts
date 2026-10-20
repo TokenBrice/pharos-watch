@@ -4,21 +4,13 @@ import {
   PRE_LAUNCH_PHASE_CLASSES,
   PRE_LAUNCH_NO_CURRENT_TARGET_BADGE_CLASS,
   type PreLaunchDriftStatus,
-} from "@shared/lib/classification";
+} from "@shared/lib/classification/pre-launch";
 import { formatUtcDayLabel } from "@shared/lib/format";
 import type { DateHistoryEntry, LaunchMilestoneType, LaunchPhase } from "@shared/types";
 
 // ---------------------------------------------------------------------------
 // Launch-phase display constants
 // ---------------------------------------------------------------------------
-
-export const LAUNCH_PHASE_LABELS: Record<LaunchPhase, string> = {
-  announced: "Announced",
-  testnet: "Testnet",
-  auditing: "Auditing",
-  beta: "Beta",
-  "launching-soon": "Launching soon",
-};
 
 /** Phase → solid accent dot class (static for Tailwind scanner). */
 export const PHASE_DOT: Record<LaunchPhase, string> = {
@@ -42,16 +34,6 @@ export const PHASE_BADGE: Record<LaunchPhase, string> = {
 // Milestone display constants
 // ---------------------------------------------------------------------------
 
-export const MILESTONE_TYPE_LABELS: Record<LaunchMilestoneType, string> = {
-  announcement: "Announcement",
-  milestone: "Milestone",
-  delay: "Delay",
-  partnership: "Partnership",
-  regulatory: "Regulatory",
-  audit: "Audit",
-  testnet: "Testnet",
-};
-
 /** Milestone type → badge class string (static for Tailwind scanner). */
 export const MILESTONE_TYPE_BADGE: Record<LaunchMilestoneType, string> = PRE_LAUNCH_MILESTONE_BADGE_CLASSES;
 
@@ -73,14 +55,6 @@ export type DriftDisplayStatus = DriftStatus | "no-current-target";
 export const DRIFT_STATUS_BADGE: Record<DriftDisplayStatus, string> = {
   ...PRE_LAUNCH_DRIFT_BADGE_CLASSES,
   "no-current-target": PRE_LAUNCH_NO_CURRENT_TARGET_BADGE_CLASS,
-};
-
-export const DRIFT_STATUS_LABEL: Record<DriftDisplayStatus, string> = {
-  "on-track": "On track",
-  "pushed-once": "Pushed once",
-  "pushed-multiple": "Delayed",
-  overdue: "Overdue",
-  "no-current-target": "No current target",
 };
 
 /** The one mapping from a drift status to what tracker rows and the dossier display. */

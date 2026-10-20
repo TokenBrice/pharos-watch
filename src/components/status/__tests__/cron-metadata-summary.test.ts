@@ -10,14 +10,14 @@ describe("summarizeCronMetadata", () => {
     expect(summary).toContain("reason status-self-check-persistence-failed");
   });
 
-  it("separates observed global excess from actual per-coin cap reductions", () => {
+  it("separates observed global excess from named source quarantine", () => {
     expect(summarizeCronMetadata("sync-dex-liquidity", {
       sourceCoverage: {
         globalProtocolOverCapUsd: 60,
-        protocolCapReductions: { cappedPoolCount: 1, reducedTvlUsd: 50 },
+        protocolTvlQuarantine: { reason: "fallback-protocol-tvl-exceeds-headroom", poolCount: 1, tvlUsd: 50 },
       },
     })).toEqual([
-      "protocol caps 1 pools, 50 TVL reduced",
+      "protocol TVL quarantine 1 pools, 50 TVL excluded (fallback-protocol-tvl-exceeds-headroom)",
       "global protocol TVL excess 60 observed (not reduced)",
     ]);
   });

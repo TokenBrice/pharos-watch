@@ -219,6 +219,41 @@ describe("Mint Authority / Bridge Risk ownership boundary", () => {
     },
   );
 
+  it.each([
+    ["chain", makeRoute(ARBITRUM_ROUTE, { destinationChain: "base" })],
+    ["address", makeRoute(ARBITRUM_ROUTE, { contractAddress: BASE_TOKEN })],
+    ["non-EVM case", makeRoute("osmosis:ibc/AbCd", { contractAddress: "ibc/abcd" })],
+  ] as const)("rejects a route whose %s identifies a different destination deployment", (_label, route) => {
+    const meta = makeStablecoinMeta({ bridgeRouteRisk: makeBridgeProfile([route]) });
+    for (const enforce of [false, true]) {
+      expect(validateMintBridgeOwnership(meta, { enforce })).toContainEqual(expect.objectContaining({
+        code: "route-deployment-identity-mismatch",
+        path: "bridgeRouteRisk.routes[0].id",
+        severity: "error",
+      }));
+    }
+    expect(meta.bridgeRouteRisk!.routes![0]).toEqual(route);
+  });
+
+  it.each([
+    makeRoute("ethereum:0x52908400098527886e0f7030069857d2e4169ee7", {
+      contractAddress: "0x52908400098527886E0F7030069857D2E4169EE7",
+    }),
+    makeRoute("osmosis:ibc/AbCd"),
+  ])("admits matching normalized route identity $id", (route) => {
+    const meta = makeStablecoinMeta({ bridgeRouteRisk: makeBridgeProfile([route]) });
+    expectNoOwnershipViolations(validateMintBridgeOwnership(meta, { enforce: true }));
+  });
+
+  it("keeps every current catalog route bound to its destination deployment", () => {
+    const mismatches = [...TRACKED_META_BY_ID.values()].flatMap((meta) =>
+      validateMintBridgeOwnership(meta).filter((violation) =>
+        violation.code === "route-deployment-identity-mismatch",
+      ),
+    );
+    expectNoOwnershipViolations(mismatches);
+  });
+
   it("rejects a representation deployment referenced from Mint Authority at the schema boundary", () => {
     const representation = representationRoute(BASE_ROUTE);
     expect(() =>

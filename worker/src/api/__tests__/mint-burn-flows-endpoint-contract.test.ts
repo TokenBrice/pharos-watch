@@ -58,6 +58,21 @@ describe("handleMintBurnFlows contract tests", () => {
     expect(body).not.toHaveProperty("gauge");
   });
 
+  it("retains the producer's declared unavailable reason through the authoritative shared DTO", async () => {
+    const unavailableDb = mintBurnScenario({ rows: { scanCoverage: [] } });
+    const body = MintBurnFlowsResponseSchema.parse(await readJsonResponse(
+      await handleMintBurnFlows(unavailableDb, new URL("https://x/api/mint-burn-flows")), 200));
+    expect(body.coins.length).toBeGreaterThan(0);
+    for (const coin of body.coins) {
+      expect(coin.coverage?.unavailableReason).toBe("scan-coverage-incomplete");
+      for (const window of Object.values(coin.coverage?.windows ?? {})) {
+        expect(window).toEqual({ complete: false, unavailableReason: "scan-coverage-incomplete" });
+      }
+      expect(coin.has24hActivity).toBeNull();
+      expect(coin.totalsSemantics).toBe("observed-subtotals");
+    }
+  });
+
   registerStablecoinParameterContract({
     name: "mint/burn flows",
     path: "/api/mint-burn-flows",

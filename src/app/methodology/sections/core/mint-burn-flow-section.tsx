@@ -115,6 +115,27 @@ export function MintBurnFlowMethodologySection() {
                 stays counted. Historical valuation requires an actual observation within the inclusive 24-hour
                 distance from the event; retention preserves all hourly siblings until repair and aggregation settle.
               </p>
+              <p>
+                Reviewed zero-recipient transfers require supply-destruction evidence. Exact custom issuance
+                receipts can admit internal or batch burns; router selectors alone cannot. Unproven observations
+                remain review-required and non-counted. Rebasing and unverified-source exclusions are not blanket
+                burn exclusions. Retained-hour repairs track materialization debt; per-config reconciliation
+                advances through retained burns and revisits unavailable receipts when its cursor wraps, preserving
+                their named reason. Pruned history needs audited replay rather than an invented exact repair.
+              </p>
+              <p>
+                Every closed window requires durable scan proof under the current classification fingerprint.
+                Without it, signed net, bounds, direction and pressure are unavailable, while observed gross
+                and event-count subtotals remain visible separately. The legacy has24hActivity field stays null
+                for an incomplete scan, even when events were observed; the additive observed24hActivity field
+                preserves that observed fact without requiring older readers to understand it. A false observed
+                activity value is not proof of quiet. Quiet-zero days need affirmative scan coverage.
+                Earlier fingerprint evidence does not establish current long-window coverage, and sealed
+                historical bytes keep their original identity.
+                Hourly totals and repair debt are read atomically; readers using scan proof include it in that
+                same batch. Dirty hours withhold exact affected windows until their materialization debt drains,
+                even when current-fingerprint scan proof was already issued.
+              </p>
               <MethodologyFacts
                 facts={[
                   { label: "Data source", value: "On-chain mint + burn events" },
@@ -171,7 +192,7 @@ export function MintBurnFlowMethodologySection() {
                       USD valuation
                     </li>
                     <li>
-                      <span className="text-foreground">No activity</span> &mdash; no 24h mint/burn events in the window
+                      <span className="text-foreground">No activity</span> &mdash; no observed 24h mint/burn events with complete current-fingerprint scan coverage
                     </li>
                     <li>
                       <span className="text-foreground">Invariant</span> &mdash; minting vs burning always comes from raw
@@ -180,9 +201,10 @@ export function MintBurnFlowMethodologySection() {
                     <li>
                       <span className="text-foreground">Valuation completeness</span> &mdash; events without a USD price
                       are counted as unpriced, never as $0. Known mint and burn totals are then lower bounds, and a partial
-                      window publishes no net. Because unpriced mints can only raise the net and unpriced burns can only
-                      lower it, a window with only one side unpriced shows the known net as an explicit bound (&ge; or
-                      &le;); a direction is shown only when missing valuation cannot flip it. Buckets aggregated before v6.22 read as coverage unknown and keep their
+                      window publishes no exact net. With complete scan coverage, unpriced mints can only raise the
+                      net and unpriced burns can only lower it, so a window with only one side unpriced shows the
+                      known net as an explicit bound (&ge; or &le;); direction also requires complete scan coverage
+                      and missing valuation that cannot flip it. Buckets aggregated before v6.22 read as coverage unknown and keep their
                       old-method net, labelled, until they leave the 30-day baseline and 7/30/90-day windows.
                     </li>
                     <li>
@@ -224,11 +246,11 @@ export function MintBurnFlowMethodologySection() {
                       or less than $50K absolute 24h flow are marked NR and excluded from gauge weighting
                     </li>
                     <li>
-                      <span className="text-foreground">Valuation gate</span> &mdash; pressure is NR, and the coin leaves
-                      gauge weighting, unless the 24h window is fully valued and the baseline has no known unpriced events.
-                      A baseline aggregated before v6.22 (coverage unknown) is still used, labelled, until it ages out.
-                      The gauge discloses how many weighted coins with at least seven days of history, and how much market cap, it left out
-                      this way; the daily digest drops the gauge only when that weight could move it across a band edge
+                      <span className="text-foreground">Coverage and valuation gates</span> &mdash; pressure is NR,
+                      and the coin leaves gauge weighting, unless current-fingerprint scan proof covers the window,
+                      the 24h window is fully valued and the baseline has no known unpriced events. Legacy scan
+                      coverage remains unknown, not proof of quiet activity. Omitted coin counts and market-cap
+                      weight remain disclosed; observed gross subtotals cannot establish a signed net or pressure
                     </li>
                     <li>
                       <span className="text-foreground">Literal minting pressure</span> &mdash; stablecoin pages also show

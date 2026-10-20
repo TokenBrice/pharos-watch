@@ -344,6 +344,7 @@ function buildMeasuredProfile(input: {
     input.replay.counterAddress,
   ).slice(2)}`;
   return buildDexMeasuredExecutionProfile({
+    blockHash: `0x${"ab".repeat(32)}`,
     target: input.target,
     targetGenerationId: "evm-v2-fixture-targets",
     quoteGenerationId: "evm-v2-fixture-quotes",

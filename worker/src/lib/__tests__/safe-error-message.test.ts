@@ -80,6 +80,19 @@ describe("safeErrorMessage", () => {
     ).toBe("oxr https://openexchangerates.org/api/latest.json?app_id=[redacted]&symbols=EUR&base=USD failed");
   });
 
+  it("redacts mixed-case query credentials and preserves nonsecret issuer context", () => {
+    expect(redactProviderUrls(
+      "fetched https://api.example.com/v1?ApiKey=abc and https://other.example.com/data?TOKEN=xyz now",
+    )).toBe(
+      "fetched https://api.example.com/v1?ApiKey=[redacted] and https://other.example.com/data?TOKEN=[redacted] now",
+    );
+    expect(redactProviderUrls(
+      "https://issuer.example.com/reserves?api_key=1&auth=2&access_token=3&secret=4&keep=ok",
+    )).toBe(
+      "https://issuer.example.com/reserves?api_key=[redacted]&auth=[redacted]&access_token=[redacted]&secret=[redacted]&keep=ok",
+    );
+  });
+
 });
 
 describe("stripSensitive email redaction linearity", () => {

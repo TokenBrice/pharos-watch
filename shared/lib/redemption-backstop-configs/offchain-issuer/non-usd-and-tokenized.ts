@@ -427,6 +427,7 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
   "fusd-finchain": {
     ...issuerBase,
     ...documentedBoundSupplyFull("2026-05-24"),
+    outputAssets: ["usdt-tether"],
     settlementModel: "days",
     v9RouteReviewTerms: {
       businessDayTerms: {
@@ -720,6 +721,7 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
   "usdn-noble": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
+    outputAssets: ["usdc-circle"],
     costModel: undisclosedReviewedFee(
       "USDN users mint and redeem via USDC through Noble Express; public redemption fees are not disclosed",
     ),

@@ -13,6 +13,7 @@ import {
 import { buildEmptyDdrrSummary } from "../../lib/depeg-resolver-review-response";
 import type { DdrV2StoreContracts } from "../compute-depeg-resolver";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
+import { coverageRowForIncident } from "../depeg-resolver-review/coverage-rows";
 
 afterEach(() => {
   vi.useRealTimers();
@@ -800,6 +801,50 @@ describe("buildDepegResolverReviewSnapshot", () => {
     });
   });
 
+  it.each([
+    { terminalEvidenceAt: ELIGIBLE_AT + 5_000, terminalEvidenceInterval: null, terminalEvidencePrecision: "unknown" as const },
+    { terminalEvidenceAt: ELIGIBLE_AT + 3_000, terminalEvidenceInterval: { start: ELIGIBLE_AT + 3_000, end: ELIGIBLE_AT + 5_000 }, terminalEvidencePrecision: "day" as const },
+    { terminalEvidenceAt: ELIGIBLE_AT + 3_000, terminalEvidenceInterval: { start: ELIGIBLE_AT + 3_000, end: ELIGIBLE_AT + 30 * 86400 }, terminalEvidencePrecision: "month" as const },
+  ])("keeps coverage recovered before later or unsettled terminal evidence ($terminalEvidencePrecision)", (evidence) => {
+    const actual = {
+      eventId: 42, currentEventId: 42, startedAt: STARTED_AT, endedAt: ELIGIBLE_AT + 4_000,
+      recoveryPrice: null, closeReason: "recovered-native", stablecoinStatus: "frozen",
+      terminalObserved: true, ...evidence,
+    };
+    expect(coverageRowForIncident(makeReviewIncident(), actual, ELIGIBLE_AT + 10_000)).toMatchObject({
+      sourceEventState: "recovered", actualOutcome: "recovered", predictionState: "missed_lock_recovered",
+    });
+    expect(coverageRowForIncident(makeReviewIncident({ eligibleAt: ELIGIBLE_AT + 6_000 }), actual,
+      ELIGIBLE_AT + 10_000)).toMatchObject({
+      sourceEventState: "recovered", actualOutcome: "recovered", predictionState: "resolved_before_prediction",
+    });
+    expect(coverageRowForIncident(makeReviewIncident({ eligibleAt: ELIGIBLE_AT + 6_000 }), {
+      ...actual, terminalEvidenceAt: ELIGIBLE_AT + 3_000, terminalEvidenceInterval: null,
+    }, ELIGIBLE_AT + 10_000)).toMatchObject({
+      sourceEventState: "terminal", actualOutcome: "terminal", predictionState: "terminal_before_prediction",
+    });
+  });
+
+  it("does not retroactively turn a recovered episode terminal after a later tracked freeze", async () => {
+    const startedAt = USR_FROZEN_AT - 10 * 86400;
+    const incident = makeReviewIncident({
+      stablecoinId: "usr-resolv", startedAt, eligibleAt: startedAt + 86400,
+    });
+    const db = reviewDb([eventRow({
+      stablecoin_id: "usr-resolv", started_at: startedAt,
+      ended_at: USR_FROZEN_AT - 2 * 86400, recovery_price: 1, close_reason: "recovered-primary",
+    })]);
+    const snapshot = await buildDepegResolverReviewSnapshot(db, USR_FROZEN_AT + 2 * 86400, undefined, {
+      storeContracts: durableStores({ loadCanonicalIncidents: vi.fn(async () => [incident]) }),
+    });
+    expect(snapshot.rows[0]).toMatchObject({
+      kind: "coverage", sourceEventState: "recovered", actualOutcome: "recovered",
+      predictionState: "missed_lock_recovered", actualEndedAt: USR_FROZEN_AT - 2 * 86400,
+    });
+    expect(snapshot.summary.headline.missedLockRecoveredCount).toBe(1);
+    expect(snapshot.summary.headline.missedLockTerminalCount).toBe(0);
+  });
+
   it("characterizes durable v2 coverage row states and headline counts", async () => {
     const nowSec = ELIGIBLE_AT + 3_600;
     const pendingEligibleAt = nowSec + 3_600;
@@ -1210,7 +1255,7 @@ describe("buildDepegResolverReviewSnapshot", () => {
     expect(snapshot.summary.headline.missedLockTerminalCount).toBe(1);
   });
 
-  it("keeps interval-anchored terminal evidence when a recovery closes before the interval end", async () => {
+  it("preserves interval-anchored evidence without overriding a recovery before the interval end", async () => {
     // Recovered event (ended_at + recovery_price) whose terminal-evidence
     // interval extends past ended_at. The publication-failed row reads
     // actual.terminalEvidenceAt directly, so the materialized at-timestamp must
@@ -1253,9 +1298,9 @@ describe("buildDepegResolverReviewSnapshot", () => {
       kind: "coverage",
       incidentKey: incident.incidentKey,
       predictionState: "publication_failed",
-      sourceEventState: "terminal",
-      // Regression guard: pre-fix this was zeroed to null because
-      // interval.end > ended_at.
+      sourceEventState: "recovered",
+      // Unsettled day evidence cannot override this earlier recovery, but its
+      // original interval-start anchor must remain available diagnostically.
       terminalEvidenceAt: USR_FROZEN_AT,
       terminalEvidenceInterval: { start: USR_FROZEN_AT, end: USR_FROZEN_AT + 86_400 },
       terminalEvidencePrecision: "day",

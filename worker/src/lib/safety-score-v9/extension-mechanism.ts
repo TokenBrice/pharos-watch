@@ -324,11 +324,28 @@ function profileComponentFact(
   component: V9MechanismProfileComponentProjection,
 ): V9MechanismFactV1 {
   const componentKey = kebabCase(componentField);
-  if (component.observationState === "known" && component.quality !== null) {
-    return knownFact(componentKey, component.quality);
-  }
-  if (component.observationState === "unsupported") return unsupportedFact(componentKey);
-  return boundedFact(componentKey, component.observationState === "bounded-unknown");
+  const aggregate = component.observationState === "known" && component.quality !== null
+    ? knownFact(componentKey, component.quality)
+    : component.observationState === "unsupported"
+      ? unsupportedFact(componentKey)
+      : boundedFact(componentKey, component.observationState === "bounded-unknown");
+  if (component.unavailableFacts.length === 0) return aggregate;
+  return {
+    ...aggregate,
+    constraints: [
+      ...(component.quality === null ? [] : [{
+        factKey: component.supportedFactKeys.join("+"),
+        quality: component.quality,
+        status: status("known", `${componentKey}:supported`),
+      }]),
+      ...component.unavailableFacts.map(({ factKey, disposition }) => ({
+        factKey,
+        quality: null,
+        status: status(disposition === "issuer-undisclosed" ? "bounded-unknown"
+          : disposition === "method-unsupported" ? "unsupported" : "missing", `${componentKey}:${factKey}`),
+      })),
+    ],
+  };
 }
 
 export function expandOverlayReview(

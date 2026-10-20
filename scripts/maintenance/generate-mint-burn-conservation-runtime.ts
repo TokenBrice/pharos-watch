@@ -35,6 +35,7 @@ const RUNTIME_ENTRY_KEYS = [
   "conservationOnlyEvents",
   "requiresNotDeprecated",
   "invariantParams",
+  "supplyBurnProof",
 ] as const;
 
 export interface MintBurnConservationRuntimeEntry {
@@ -49,6 +50,7 @@ export interface MintBurnConservationRuntimeEntry {
   conservationOnlyEvents?: unknown[];
   requiresNotDeprecated?: boolean;
   invariantParams?: Record<string, unknown>;
+  supplyBurnProof?: Record<string, unknown>;
 }
 
 export interface MintBurnConservationRuntimeLookup {

@@ -61,6 +61,7 @@ export function executeCurveGetDyMulticall(input: {
   chain: string;
   calls: readonly EvmMulticall3Call[];
   blockNumber: number;
+  blockHash: `0x${string}`;
   chainRpcs: Map<string, ChainRpcConfig>;
   signal?: AbortSignal;
   rpcBudget?: DexMeasuredExecutionRpcBudget;
@@ -69,6 +70,7 @@ export function executeCurveGetDyMulticall(input: {
   const { rpcBudget } = input;
   return fetchEvmMulticall3Aggregate3AtBlock(input.chain, input.calls, input.blockNumber, {
     chainRpcs: input.chainRpcs,
+    stateBlockHash: input.blockHash,
     signal: input.signal,
     timeoutMs: DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
     maxRetries: 1,
@@ -393,6 +395,7 @@ export function createCurveFamilyDeploymentVerifier<
     };
     const block = await spec.resolveBlock(input, policy, requestOptions);
     if ("ok" in block) return block;
+    requestOptions.stateBlockHash = block.hash;
     const { readCode, readCall } = createCurveStableSwapPinnedReaders(
       { policy, blockNumber: block.number, rpcBudget: input.rpcBudget },
       spec.dependencies,
@@ -523,6 +526,7 @@ interface CurveStableSwapExecutionRequest<Evidence> {
   target: DexMeasuredExecutionTarget;
   inputUsd: number;
   blockNumber: number;
+  blockHash: `0x${string}`;
   blockObservedAt: number;
   endpointAddress: `0x${string}`;
   runtimeEvidence?: Evidence;
@@ -598,6 +602,7 @@ export interface CurveGetDyQuoteDependencies {
     chain: string;
     calls: readonly EvmMulticall3Call[];
     blockNumber: number;
+    blockHash: `0x${string}`;
     chainRpcs: Map<string, ChainRpcConfig>;
     signal?: AbortSignal;
     rpcBudget?: DexMeasuredExecutionRpcBudget;

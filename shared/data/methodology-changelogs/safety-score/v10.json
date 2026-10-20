@@ -1,5 +1,28 @@
 [
   {
+    "version": "10.24",
+    "title": "Source-bound evidence and conservative risk composition",
+    "date": "2026-10-20",
+    "effectiveAt": 1792454400,
+    "summary": "The coordinated T1 release corrects reserve, redemption, measured execution, dependency, on-chain observation and issuer-identity admission. It preserves independent constraints and original evidence clocks without changing pillar weights, score ladders or freshness budgets. Broader whole-liability supply attribution, independent ordinary bridge-route clocks and structured pillar-freshness metadata are deferred.",
+    "impact": [
+      "Fatal reserve warnings invalidate retained independent backing regardless of display severity or degraded-warning exceptions. Invalid accepted members retain census identity with null snapshots; later failed attempts do not revoke independently clean retained evidence.",
+      "Exit impairment follows the selected payout, not backing allocations. Single stablecoin outputs have full weight; baskets require admitted payout weights or retain an unquantified affected share. FinChain FUSD pays USDT, Noble USDN and Gate GUSD pay USDC, and KAST USDK pays M; token identity does not close missing valuation, funded capacity, cost, access or settlement evidence.",
+      "Every measured-history success ages from its original quote clock at consumer assessment. Expired minima and maturity counts can change selection without becoming execution failures or measured zero. EVM proof and quote reads bind one canonical chain/number/hash; number-only or unsupported hash reads remain unavailable. CryptoSwap method absence requires an executed inner refusal, not unavailable transport.",
+      "Measured non-USD peg fallbacks require fresh non-future per-peg FX with original source mode, date, clock and cadence. Staged evidence is reassessed at capture; stale diagnostic rates and carried spots cannot manufacture current USD capacity.",
+      "Public six-decimal rounding preserves raw peg-adversity admission. Explicit failed current-price collection remains unavailable even on zero-event histories, superseding only the clean-record exception of the 2026-07-29 P4 ruling. Observation chronology is checked independently of date/numeric representation before hashing; valid original representations remain unchanged.",
+      "Evaluated upstream constraints survive C/U provenance. Same-slice known and unresolved losses compose as max(K,U), not K+U; supported profile constraints survive unknown siblings. Unsupported aggregate status does not borrow published evidence from supported siblings; constituent constraints and review-level evidence remain intact. Inherited Backing alone does not establish a wrapper.",
+      "Whole-liability supply-attribution and independent ordinary bridge-route clock changes, together with their dependent clock, measured-exposure, attribution-gap and mint-scope followups, are deferred. Existing supply, bridge-route and mint-scope behavior remains; the deferred route-clock change must preserve independently admitted active incidents before reconsideration.",
+      "Same-resource routes remain selectable alternatives. Exit chooses the best feasible singleton or independent pair; overlapping inventory earns no diversification credit and contributes at most the maximum admitted executable capacity. Stale or diagnostic observations cannot reserve resources against current alternatives.",
+      "Admitted probable named-report audited-fallback baskets retain tracked dependencies. Expired or mismatched evidence supplies neither composition nor new authority. Live dependency graphs age from each asset's reserve fetch, never a fresh sibling/cohort clock; stale edges retain their identity with unavailable provenance.",
+      "Issuer keys retain full normalized phrases. Exact reviewed aliases cover MakerDAO/Sky governance and the user-approved StraitsX SGD/USD issuance group for common-mode controls, supported by primary StraitsX disclosures and separate MAS entity listings. Grouping preserves distinct legal issuers and reserve pools; common leading words alone never join names. Mento phrase/slug and Bridge legal-name/slug equivalence remain unadmitted. Unresolved or crossed mint/upgrade groups retain common-mode risk.",
+      "XAUT supply attribution pins quantity and executable identity to the canonical hash without numeric/latest fallback. CCIP receipt discovery routes exact ramp/event/destination before authentication; foreign sends neither reject the reviewed lane nor add liability.",
+      "Exact-request execution review expiry remains inclusive and score-neutral. Structured pillar-freshness metadata is deferred after resource qualification failed; existing categorical freshness remains. Planned release date is 2026-10-20; fixed-input checkpoint acceptance and first production publication are separate release obligations, not established by this entry."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "10.23",
     "title": "Archive-free CCIP origins and coherent attribution captures",
     "date": "2026-10-19",

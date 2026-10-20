@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { DRIFT_STATUS_LABEL } from "@shared/lib/classification/pre-launch";
 import {
   DRIFT_STATUS_BADGE,
-  DRIFT_STATUS_LABEL,
   dateScore,
   getDriftStatus,
   parseFuzzyDate,

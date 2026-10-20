@@ -42,6 +42,14 @@ export function DepegResolverMethodologySection() {
         parent supply cannot expand.
       </p>
       <p>
+        Recovery-anchor evidence requires measured event-time supply and onset, a valid seven-day comparison and
+        affirmative non-anomaly proof; missing evidence is unavailable, not a post-onset substitute. Training and
+        live duration strata share run-local admitted mint posture. Overlapping and nested intervals use a
+        monotonic union with open-member dominance, terminal-boundary closure ownership and conservative equal-end
+        ties. Later freezes cannot relabel earlier recoveries; coarse day/month evidence must be fully settled
+        before overriding a measured recovery. Frozen forecasts retain their original contents and identity.
+      </p>
+      <p>
         Stage 2 runs only when Stage 1 is not terminal-leaning. It is an empirical landmark-survival estimate over the
         clean corpus of recovered incidents, conditioned on the depeg&rsquo;s structural stratum (depth, direction,
         structural class, and peg currency) most-dependable-first. Labels follow canonical incident grouping, and

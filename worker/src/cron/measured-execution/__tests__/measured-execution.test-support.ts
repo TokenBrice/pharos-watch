@@ -95,6 +95,7 @@ export function makeCurve3PoolPacket() {
       };
     });
     return buildDexMeasuredExecutionProfile({
+      blockHash: `0x${"ab".repeat(32)}`,
       target: measuredTarget,
       targetGenerationId: "curve-target-generation",
       quoteGenerationId: "curve-quote-generation",
@@ -151,6 +152,7 @@ function makeRoutePacket(
   return {
     measuredTarget,
     profile: buildDexMeasuredExecutionProfile({
+      blockHash: `0x${"ab".repeat(32)}`,
       target: measuredTarget,
       ...input,
       quotedAt: 1_060,
@@ -330,6 +332,7 @@ export function makeCurveQuoteRequests(
     target,
     inputUsd: inputUsd(index),
     blockNumber,
+    blockHash: `0x${"ab".repeat(32)}` as const,
     endpointAddress,
   }));
 }

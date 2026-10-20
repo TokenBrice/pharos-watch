@@ -17,6 +17,7 @@ function buildPrevState(rates: Record<string, number>): FxRateState {
     sourceModeByPeg: Object.fromEntries(keys.map((key) => [key, "live"])),
     sourceCadenceByPeg: Object.fromEntries(keys.map((key) => [key, "intraday" as FxSourceCadence])),
     sourceDateByPeg: Object.fromEntries(keys.map((key) => [key, null])),
+    sourceLastSuccessAtBySource: {},
     consecutiveFallbackRuns: 0,
     metadataIdentity: "verified",
   };
@@ -139,5 +140,46 @@ describe("FxSyncRunState partial Frankfurter coverage", () => {
     expect(state.usableRates.peggedMYR).toBeCloseTo(0.22);
     expect(state.getMissingPegKeys()).toEqual(["peggedEUR"]);
     expect(state.sourceUpdatedAtByPeg.peggedEUR).toBeUndefined();
+  });
+});
+
+describe("FxSyncRunState source-day admission", () => {
+  it.each(["2099-01-01", "2025-06-16", "2025-02-30", "2025-13-01"])(
+    "does not apply primary or secondary rates dated %s", (date) => {
+      const state = createState();
+      state.applyFrankfurterRates({ MYR: 4.5 }, date, { MYR: "peggedMYR" });
+      expect(state.usableRates).toEqual({});
+      state.applySecondaryRates({ endpoint: "jsdelivr", payload: { date, usd: { myr: 4.5 } } }, [["myr", "peggedMYR"]]);
+      expect(state.usableRates).toEqual({});
+      expect(state.hasFreshFullFxCoverage()).toBe(false);
+    },
+  );
+
+  it.each([
+    ["2025-06-15T08:00:00Z", "2025-06-15"],
+    ["2025-06-15T12:00:00Z", "2025-06-13"],
+    ["2026-04-06T19:00:00Z", "2026-04-02"],
+  ])("admits dated primary rates at %s with source day %s", (clock, date) => {
+    const now = Date.parse(clock) / 1000;
+    const state = new FxSyncRunState({
+      prevState: null, syncStartSec: now, expectedPegKeys: ["peggedMYR"],
+      initialSources: {}, validateRate: () => true,
+    });
+    state.applyFrankfurterRates({ MYR: 4.5 }, date, { MYR: "peggedMYR" });
+    expect(state.usableRates.peggedMYR).toBeCloseTo(1 / 4.5);
+    expect(state.sourceDateByPeg.peggedMYR).toBe(date);
+    expect(state.hasFreshFullFxCoverage()).toBe(true);
+  });
+
+  it.each([301, 86400])("rejects a raw ExchangeRate-API epoch %s seconds ahead", (ahead) => {
+    const state = createState();
+    state.applyExchangeRateApiRates({ time_last_update_unix: syncStartSec + ahead, rates: { MYR: 4.5 } }, [["MYR", "peggedMYR"]]);
+    expect(state.usableRates).toEqual({});
+  });
+
+  it("preserves an admissible ExchangeRate-API epoch without clamping it", () => {
+    const state = createState();
+    state.applyExchangeRateApiRates({ time_last_update_unix: syncStartSec + 60, rates: { MYR: 4.5 } }, [["MYR", "peggedMYR"]]);
+    expect(state.sourceUpdatedAtByPeg.peggedMYR).toBe(syncStartSec + 60);
   });
 });

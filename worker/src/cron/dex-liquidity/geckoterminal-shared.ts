@@ -6,6 +6,7 @@ import { fetchPagedTokenPools, type PagedTokenPoolsResult } from "../../lib/page
 import type { ParsedPool } from "./crawl-helpers";
 import type { GtPool } from "./types";
 import { GT_TOKEN_POOLS_MAX_PAGES, GT_TOKEN_POOLS_PAGE_SIZE } from "./constants";
+import { parseStrictFiniteDecimal } from "./direct-api-json";
 
 /**
  * Hard per-response byte cap for GeckoTerminal token-pool pages. A 20-row page
@@ -92,7 +93,7 @@ type GtShapedPool = {
 // `null` "present but unusable" (the provider broken-price signature).
 function parseOptionalPairRatio(value: string | null | undefined): number | null | undefined {
   if (value === undefined) return undefined;
-  const parsed = Number.parseFloat(value ?? "");
+  const parsed = parseStrictFiniteDecimal(value) ?? Number.NaN;
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }
 
@@ -116,12 +117,12 @@ export function parseGtShapedPool<TVolume extends number | null>(
   return {
     dexId,
     poolAddress,
-    tvlUsd: parseFloat(attrs.reserve_in_usd ?? ""),
+    tvlUsd: parseStrictFiniteDecimal(attrs.reserve_in_usd) ?? Number.NaN,
     volume24hUsd,
     baseTokenAddress,
     quoteTokenAddress,
-    baseTokenPriceUsd: parseFloat(attrs.base_token_price_usd ?? ""),
-    quoteTokenPriceUsd: parseFloat(attrs.quote_token_price_usd ?? ""),
+    baseTokenPriceUsd: parseStrictFiniteDecimal(attrs.base_token_price_usd) ?? Number.NaN,
+    quoteTokenPriceUsd: parseStrictFiniteDecimal(attrs.quote_token_price_usd) ?? Number.NaN,
     baseTokenPriceQuoteToken: parseOptionalPairRatio(attrs.base_token_price_quote_token),
     quoteTokenPriceBaseToken: parseOptionalPairRatio(attrs.quote_token_price_base_token),
     baseTokenPriceNativeCurrency: parseOptionalPairRatio(attrs.base_token_price_native_currency),
@@ -137,7 +138,7 @@ export function parseGtShapedPool<TVolume extends number | null>(
  * field is no reading (`null`, DEC-19), never a fresh 0.
  */
 function parseGtVolume24hUsd(h24: string | null | undefined): number | null {
-  const parsed = h24 == null ? Number.NaN : Number.parseFloat(h24);
+  const parsed = parseStrictFiniteDecimal(h24) ?? Number.NaN;
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 }
 

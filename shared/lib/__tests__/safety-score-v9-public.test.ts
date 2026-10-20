@@ -30,6 +30,10 @@ import supplyAttributionReviews from "../../data/safety-score-v9/supply-attribut
 import { ReviewedProviderRowExclusionSchema } from "../../types/safety-score-v9-supply-attribution";
 import { isV9OperationallyGovernedIssuanceQualified } from "../safety-score-v9/control-primitives";
 import type { V1005ProcessDiagnostic } from "../../types/safety-score-v9-facts";
+import { scoreV9EvaluatedAsset } from "../safety-score-v9/score";
+import { makeV9ProductionScoreInput } from "./safety-score-v9-score.test-support";
+import { V9EvidenceResponsibilitySchema, V9_PUBLIC_EVIDENCE_RESPONSIBILITIES } from "../../types/safety-score-v9-vocabulary";
+import { DANGER_PEG_MULTIPLIER_FLOOR } from "../../types/safety-score-v9-public-facts";
 
 const DIGESTS = {
   policy: "a".repeat(64),
@@ -317,6 +321,75 @@ function cap(args: Pick<V9CapTrace, "kind" | "limit" | "source" | "reason" | "bi
 }
 
 describe("Safety Score v9 public projection", () => {
+  it.each([
+    [0.8999994999, 0.899999], [0.8999995, 0.9], [0.8999995001, 0.9],
+    [0.8999999999, 0.9], [0.9, 0.9], [0.9000000001, 0.9],
+    [0.9000004999, 0.9], [0.9000005, 0.900001], [0.9000005001, 0.900001],
+  ])(
+    "projects the evaluator's full-precision peg boundary without moving scores or grades: %s", (multiplier, publishedMultiplier) => {
+      const input = fixture("peg-boundary", { score: 91.8, grade: "A+" });
+      const exponent = input.policy.policy.semantic.formula.pegExponent;
+      const pegScore = 100 * multiplier ** (1 / exponent);
+      const rawMultiplier = (pegScore / 100) ** exponent;
+      const scoreInput = makeV9ProductionScoreInput({
+        assetId: "peg-boundary", pillars: input.scoreInput.pillars,
+        peg: { ...input.scoreInput.peg, score: pegScore },
+      });
+      input.trace = scoreV9EvaluatedAsset(scoreInput, input.policy);
+      input.scoreInput = scoreInput;
+      const { card } = projectSafetyScoreV9Card(input);
+      expect(card.score).toBe(input.trace.finalScore);
+      expect(card.grade).toBe(input.trace.finalGrade);
+      expect(card.pegMultiplier).toBe(publishedMultiplier);
+      expect(card.scoreTrace.adverseAttribution.items.some((item) => item.source === "peg-performance"))
+        .toBe(rawMultiplier < DANGER_PEG_MULTIPLIER_FLOOR);
+      expect(input.trace.adverseAttribution.filter((item) => item.source === "peg-performance"))
+        .toEqual(rawMultiplier < DANGER_PEG_MULTIPLIER_FLOOR ? [{
+          source: "peg-performance", path: "peg:historical-performance",
+          message: `Measured peg multiplier is ${card.pegMultiplier}.`, responsibility: "measured-adverse",
+        }] : []);
+    },
+  );
+
+  it("admits only rounding intervals intersecting the raw adverse side, with exact path and message reconciliation", () => {
+    const input = fixture("peg-interval", { score: 91.8, grade: "A+" });
+    const scoreInput = makeV9ProductionScoreInput({
+      assetId: "peg-interval", pillars: input.scoreInput.pillars,
+      peg: { ...input.scoreInput.peg, score: 100 * DANGER_PEG_MULTIPLIER_FLOOR ** (1 / input.policy.policy.semantic.formula.pegExponent) },
+    });
+    input.trace = scoreV9EvaluatedAsset(scoreInput, input.policy);
+    input.scoreInput = scoreInput;
+    const card = projectSafetyScoreV9Card(input).card;
+    const floor = DANGER_PEG_MULTIPLIER_FLOOR;
+    for (const multiplier of [floor - 0.000001, floor, floor + 0.5 / 1_000_000, floor + 0.000001]) {
+      const candidate = structuredClone(card);
+      candidate.scoreTrace.stages.pegMultiplier = multiplier;
+      candidate.pegMultiplier = multiplier;
+      candidate.scoreTrace.adverseAttribution.items = [{
+        source: "peg-performance", path: "peg:historical-performance",
+        message: `Measured peg multiplier is ${Math.round(multiplier * 1_000_000) / 1_000_000}.`,
+        responsibility: "measured-adverse",
+      }];
+      expect(SafetyScoreV9CurrentCardSchema.safeParse(candidate).success)
+        .toBe(multiplier < floor + 0.5 / 1_000_000);
+      for (const field of ["path", "message"] as const) {
+        const invalid = structuredClone(candidate);
+        invalid.scoreTrace.adverseAttribution.items[0]![field] = "wrong";
+        expect(SafetyScoreV9CurrentCardSchema.safeParse(invalid).success).toBe(false);
+      }
+    }
+  });
+
+  it("derives public owner order and the peg validator floor from their canonical authorities", () => {
+    expect(DANGER_PEG_MULTIPLIER_FLOOR)
+      .toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.formula.danger.adverseAttributionPegMultiplierFloor);
+    const { card } = projectSafetyScoreV9Card(fixture("owner-order", { score: 91.8, grade: "A+" }));
+    const owners = [...V9EvidenceResponsibilitySchema.options].sort();
+    expect(V9_PUBLIC_EVIDENCE_RESPONSIBILITIES).toEqual(owners);
+    expect(card.scoreTrace.evidenceResponsibility.summaries.map((summary) => summary.responsibility)).toEqual(owners);
+    expect(new Set(owners).size).toBe(V9EvidenceResponsibilitySchema.options.length);
+  });
+
   it("publishes typed identity for the primary and included/excluded alternatives", () => {
     const input = fixture("identity", { score: 91.8, grade: "A+" });
     const exit = input.exit!;

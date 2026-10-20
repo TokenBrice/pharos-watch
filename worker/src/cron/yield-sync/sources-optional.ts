@@ -849,6 +849,7 @@ export async function fetchOndoUsdyOracleSource(
 
     if (prevExchangeRate == null || prevExchangeRate === 0 || daysDelta < 1) {
       return {
+        observationKind: "anchor-only",
         currentApy: 0, apyBase: null, apyReward: null,
         sourcePool: null, sourceTvlUsd: null, dataSource: "protocol-api",
         exchangeRate: currentPriceFloat, sourceKey: ONDO_USDY_SOURCE_KEY,
@@ -984,6 +985,7 @@ function isFreshMidasNavOracleUpdate(updatedAt: number, nowSec: number): boolean
 }
 
 function buildMidasMmevNavCandidate(params: {
+  observationKind?: "anchor-only";
   apy: number;
   apyBase: number | null;
   exchangeRate: number;
@@ -996,6 +998,7 @@ function buildMidasMmevNavCandidate(params: {
     chain: MIDAS_MMEV_CHAIN,
     address: MIDAS_MMEV_TOKEN,
     yield: {
+      observationKind: params.observationKind,
       currentApy: params.apy,
       apyBase: params.apyBase,
       apyReward: null,
@@ -1069,6 +1072,7 @@ export async function fetchMidasMmevNavOracleSource(
 
     if (prevPriceFloat == null || anchorObservedAt == null) {
       return buildMidasMmevNavCandidate({
+        observationKind: "anchor-only",
         apy: 0,
         apyBase: null,
         exchangeRate: currentPriceFloat,

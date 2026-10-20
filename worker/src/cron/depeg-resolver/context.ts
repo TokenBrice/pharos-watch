@@ -42,17 +42,19 @@ import {
   TRAINING_WINDOW_SEC,
 } from "./constants";
 import { MINT_BURN_COVERED_COIN_IDS } from "./mint-burn-coverage";
+import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
+import { decodeMintBurnScanCoverage, mintBurnScanCoverageAdmits, prepareMintBurnScanCoverage, type MintBurnScanSegment } from "../../lib/mint-burn-pipeline/scan-coverage";
 import { readDdrTrainingHistory } from "./training-history";
 import type {
   CurrentDeviationMapResult,
   DdrEventDbRow,
   DdrLineage,
+  DdrStructuralContext,
   QueryRowsResult,
 } from "./types";
 import {
-  clearV9DependencyImpairment,
+  buildDdrStructuralContext,
   formatDdrrFailure,
-  hydrateV9DependencyImpairment,
   toStructural,
 } from "./utils";
 
@@ -70,6 +72,7 @@ export interface DdrLoadedContext {
   quarantined: Set<string>;
   supplyByCoin: Map<string, { date: number; usd: number }[]>;
   mintBurnHourlyByCoin: Map<string, DdrMintBurnHourlyRow[]>;
+  mintBurnCoveredEventIds: Set<number>;
   dewsByCoin: Map<string, { stablecoin_id: string; score: number; band: string; signals_json: string | null; computed_at: number }>;
   liqByCoin: Map<string, { stablecoin_id: string; liquidity_score: number | null; concentration_hhi: number | null; total_tvl_usd: number | null; total_volume_24h_usd: number | null; updated_at: number; methodology_version: string | null }>;
   liqTvlChange7dByCoin: Map<string, number>;
@@ -79,6 +82,7 @@ export interface DdrLoadedContext {
   safetyByCoin: Map<string, { stablecoin_id: string; grade: string; score: number | null; recorded_at: number }>;
   v9ExitByCoin: Map<string, DdrV9ExitContext>;
   safetyContext: DdrSafetyContextProvenance;
+  structuralContext: DdrStructuralContext | null;
   lineage: DdrLineage;
 }
 
@@ -147,11 +151,9 @@ export async function queryRowsChunked<T>(
  * The resolver reads supply only through `buildSupplyContext`, which resolves
  * `supplyAt(snapshots, ts)` (the newest row at or before `ts`) at four targets
  * per active event — `startedAt`, `startedAt - 7d`, `nowSec`, and
- * `nowSec - 30d` — and falls back to the newest row plus the
- * `snapshots.length < 2` coverage guard. Rows older than the window start
- * (`resolveSupplyWindowStart`) can therefore only serve the earliest target
- * through its nearest-earlier row and the coverage guard, and two retained rows
- * below the window reproduce both exactly.
+ * `nowSec - 30d`. Rows older than the window start can only supply the
+ * nearest-earlier observation for the earliest target. Two retained rows
+ * also preserve the minimum two-observation guard.
  */
 export const SUPPLY_CONTEXT_LOOKBACK_ROWS = 2;
 
@@ -352,7 +354,6 @@ export async function loadDdrContext(
   activeRows: DdrEventDbRow[],
   nowSec: number,
 ): Promise<DdrContextLoadResult> {
-  clearV9DependencyImpairment();
   const currentDeviation = await buildCurrentDeviationMap(db, nowSec);
   if (!currentDeviation.healthy) {
     return {
@@ -377,25 +378,16 @@ export async function loadDdrContext(
   const directions = [...new Set(active.map((a) => a.direction))];
 
   const currencyOf = (id: string): string => TRACKED_META_BY_ID.get(id)?.flags.pegCurrency ?? "USD";
-  const classOf = (id: string) => {
-    const meta = TRACKED_META_BY_ID.get(id);
-    return meta ? structuralClass(toStructural(meta)) : ("fragile" as const);
-  };
 
   const windowStart = nowSec - TRAINING_WINDOW_SEC;
   const { historical, trainingRowsTruncated } = await loadDdrHistoricalEvents(db, directions, windowStart);
 
-  const incidents: DdrIncident[] = groupIncidents(historical, currencyOf).map((inc) => ({
-    ...inc,
-    structural: classOf(inc.stablecoinId),
-  }));
-  const quarantined = quarantinedCoins(incidents);
 
   // Every consumer reads supply through `buildSupplyContext`
   // (`supplyAt(snapshots, ts)`) at `startedAt`, `startedAt - 7d`, `nowSec`, and
   // `nowSec - 30d` for the active events only, so the read is windowed to
   // `min(startedAt) - 7d` plus the per-coin lookback rows that keep the
-  // nearest-earlier and coverage-guard behaviour identical.
+  // nearest-earlier observations and minimum two-observation guard identical.
   const supplyWindowStart = resolveSupplyWindowStart(
     active.map((event) => event.startedAt),
     nowSec,
@@ -409,27 +401,39 @@ export async function loadDdrContext(
   }
 
   const mintBurnCoinIds = activeCoinIds.filter((id) => MINT_BURN_COVERED_COIN_IDS.has(id));
-  const mintBurnResult = await queryRowsChunked("mint_burn_hourly", mintBurnCoinIds, (inClauseSql, binds) => db
-    .prepare(
-      `SELECT stablecoin_id, hour_ts, net_flow_usd, mint_count, burn_count, ` +
-        `mint_unpriced_event_count, burn_unpriced_event_count FROM mint_burn_hourly ` +
-        `WHERE stablecoin_id IN (${inClauseSql}) AND hour_ts >= ? AND hour_ts <= ? ` +
-        "ORDER BY stablecoin_id, hour_ts ASC",
-    )
-    .bind(
-      ...binds,
-      Math.min(...active.map((event) => event.startedAt - 7 * DAY)),
-      Math.max(...active.map((event) => event.startedAt)),
-    )
-    .all<{
-      stablecoin_id: string;
-      hour_ts: number;
-      net_flow_usd: number;
-      mint_count: number;
-      burn_count: number;
-      mint_unpriced_event_count: number | null;
-      burn_unpriced_event_count: number | null;
-    }>());
+  const scanConfigs = MINT_BURN_CONFIGS.filter((config) => mintBurnCoinIds.includes(config.stablecoinId));
+  let scanSegments = new Map<string, MintBurnScanSegment[]>();
+  const scanFrom = Math.floor(Math.min(...active.map((event) => event.startedAt)) / 3600) * 3600 - 7 * DAY;
+  const scanTo = Math.floor(Math.max(...active.map((event) => event.startedAt)) / 3600) * 3600;
+  type MintBurnStoredRow = {
+    stablecoin_id: string;
+    hour_ts: number;
+    net_flow_usd: number;
+    mint_count: number;
+    burn_count: number;
+    mint_unpriced_event_count: number | null;
+    burn_unpriced_event_count: number | null;
+  };
+  const mintBurnResult = await queryRows<MintBurnStoredRow>("mint_burn_hourly", async () => {
+    if (scanConfigs.length === 0) return { results: [] };
+    const snapshot = await db.batch([
+      db.prepare(
+        `SELECT stablecoin_id, hour_ts, net_flow_usd, mint_count, burn_count,
+                mint_unpriced_event_count, burn_unpriced_event_count FROM mint_burn_hourly
+         WHERE stablecoin_id IN (SELECT value FROM json_each(?)) AND hour_ts >= ? AND hour_ts < ?
+         ORDER BY stablecoin_id, hour_ts ASC`,
+      ).bind(JSON.stringify(mintBurnCoinIds), scanFrom, scanTo),
+      prepareMintBurnScanCoverage(db, scanConfigs, scanFrom, scanTo),
+    ]);
+    scanSegments = decodeMintBurnScanCoverage(snapshot[1] as D1Result<MintBurnScanSegment>);
+    return snapshot[0] as D1Result<MintBurnStoredRow>;
+  });
+  const scanCoverageError = mintBurnResult.error;
+  const mintBurnCoveredEventIds = new Set(active.filter((event) => {
+    const end = Math.floor(event.startedAt / 3600) * 3600;
+    return mintBurnScanCoverageAdmits(scanConfigs.filter((config) => config.stablecoinId === event.stablecoinId),
+      scanSegments, end - 7 * DAY, end);
+  }).map((event) => event.id));
   const mintBurnHourlyByCoin = new Map<string, DdrMintBurnHourlyRow[]>();
   for (const row of mintBurnResult.rows) {
     const list = mintBurnHourlyByCoin.get(row.stablecoin_id) ?? [];
@@ -570,6 +574,7 @@ export async function loadDdrContext(
 
   let safetyByCoin = new Map<string, { stablecoin_id: string; grade: string; score: number | null; recorded_at: number }>();
   let v9ExitByCoin = new Map<string, DdrV9ExitContext>();
+  let structuralContext: DdrStructuralContext | null = null;
   let safetyContext: DdrSafetyContextProvenance = {
     status: "cache-unavailable",
     reason: "safety-score-v9-unavailable",
@@ -584,7 +589,7 @@ export async function loadDdrContext(
         identity: activeSafetySource.snapshot.safetyScoreIdentity,
       };
     } else if (activeSafetySource.kind === "v9") {
-      hydrateV9DependencyImpairment(activeSafetySource.snapshot.cards);
+      structuralContext = buildDdrStructuralContext(activeSafetySource.snapshot.cards);
       safetyContext = {
         status: "v9-identified",
         reason: null,
@@ -634,9 +639,19 @@ export async function loadDdrContext(
     safetyContext = { status: "cache-unavailable", reason: "safety-score-v9-read-failed", identity: null };
   }
 
+  const incidents = groupIncidents(historical, currencyOf).map((inc): DdrIncident => {
+    const meta = TRACKED_META_BY_ID.get(inc.stablecoinId);
+    return {
+      ...inc,
+      structural: meta ? structuralClass(toStructural(meta, structuralContext)) : "fragile",
+    };
+  });
+  const quarantined = quarantinedCoins(incidents);
+
   const resolverHealthFailures = [
     supplyResult.error,
     mintBurnResult.error,
+    scanCoverageError,
     dewsResult.error,
     liqResult.error,
     liqHistResult.error,
@@ -656,6 +671,7 @@ export async function loadDdrContext(
       quarantined,
       supplyByCoin,
       mintBurnHourlyByCoin,
+      mintBurnCoveredEventIds,
       dewsByCoin,
       liqByCoin,
       liqTvlChange7dByCoin,
@@ -665,6 +681,7 @@ export async function loadDdrContext(
       safetyByCoin,
       v9ExitByCoin,
       safetyContext,
+      structuralContext,
       lineage: {
         trainingWindow: { start: windowStart, end: nowSec },
         eventCount: historical.length,

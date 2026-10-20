@@ -1,15 +1,12 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import type { StablecoinMeta } from "@shared/types/core";
 import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import {
-  clearV9DependencyImpairment,
   fallbackStructural,
-  hydrateV9DependencyImpairment,
+  buildDdrStructuralContext,
   toStructural,
 } from "../utils";
 
-beforeEach(() => clearV9DependencyImpairment());
-afterEach(() => clearV9DependencyImpairment());
 
 describe("peg taxonomy projection", () => {
   it("projects the canonical BRL currency for DefiLlama's peggedREAL type", () => {
@@ -41,31 +38,49 @@ describe("V9 dependency impairment", () => {
     const [upstreamAssetId] = [...FROZEN_IDS];
     if (!upstreamAssetId) throw new Error("The registry fixture requires a frozen upstream asset");
 
-    hydrateV9DependencyImpairment([
+    const projection = buildDdrStructuralContext([
       {
         id: "wrapper-fixture",
         dependencies: { serial: [{ upstreamAssetId }] },
       },
     ]);
 
-    expect(toStructural(fixtureMeta("wrapper-fixture", 0.1)).dependencyImpaired).toBe(true);
+    expect(toStructural(fixtureMeta("wrapper-fixture", 0.1), projection).dependencyImpaired).toBe(true);
 
   });
 
   it("keeps the legacy registry dependency check only when V9 is unavailable", () => {
-    expect(toStructural(fixtureMeta("legacy-wrapper", 0.1)).dependencyImpaired).toBe(false);
-    expect(toStructural(fixtureMeta("legacy-wrapper", 0.3)).dependencyImpaired).toBe(true);
+    expect(toStructural(fixtureMeta("legacy-wrapper", 0.1), null).dependencyImpaired).toBe(false);
+    expect(toStructural(fixtureMeta("legacy-wrapper", 0.3), null).dependencyImpaired).toBe(true);
   });
 
   it("does not propagate current depeg state through a healthy serial parent", () => {
-    hydrateV9DependencyImpairment([
+    const projection = buildDdrStructuralContext([
       {
         id: "wrapper-fixture",
         dependencies: { serial: [{ upstreamAssetId: "usdc-circle" }] },
       },
     ]);
 
-    expect(toStructural(fixtureMeta("wrapper-fixture", 1)).dependencyImpaired).toBe(false);
+    expect(toStructural(fixtureMeta("wrapper-fixture", 1), projection).dependencyImpaired).toBe(false);
 
+  });
+
+  it("keeps interleaved runs independent, including unavailable publication fallback", () => {
+    const [upstreamAssetId] = [...FROZEN_IDS];
+    if (!upstreamAssetId) throw new Error("The registry fixture requires a frozen upstream asset");
+    const impaired = buildDdrStructuralContext([{
+      id: "wrapper-fixture", dependencies: { serial: [{ upstreamAssetId }] },
+      breakdowns: { control: { components: [{ kind: "mint", posture: "unbounded-adverse" }] } },
+    }]);
+    const healthy = buildDdrStructuralContext([{
+      id: "wrapper-fixture", dependencies: { serial: [] },
+      breakdowns: { control: { components: [{ kind: "mint", posture: "bounded-admin" }] } },
+    }]);
+    const meta = fixtureMeta("wrapper-fixture", 0.1);
+    expect(toStructural(meta, impaired)).toMatchObject({ dependencyImpaired: true, authorityPosture: "unbounded-adverse" });
+    expect(toStructural(meta, healthy)).toMatchObject({ dependencyImpaired: false, authorityPosture: "bounded-admin" });
+    expect(toStructural(meta, null).dependencyImpaired).toBe(false);
+    expect(toStructural(meta, impaired)).toMatchObject({ dependencyImpaired: true, authorityPosture: "unbounded-adverse" });
   });
 });

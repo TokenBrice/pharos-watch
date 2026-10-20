@@ -31,7 +31,7 @@ USDFC is included in the reviewed CoinGecko low-volume fallback cohort. Its exac
 
 ## Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-pricing-pipeline -->`v6.53`<!-- GENERATED-END: methodology-version-pricing-pipeline -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-pricing-pipeline -->`v6.54`<!-- GENERATED-END: methodology-version-pricing-pipeline -->
 - **Canonical version module:** `shared/lib/methodology-versions/registry.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
@@ -94,6 +94,8 @@ Outcome bookkeeping and shared DEX read-clock handling follow the [implementatio
 
 Reserve NAV/supply share configuration-bound successful evidence, independent fetch/source-age checks and trusted FX, never nominal $1. JPMorgan requires current issuer-class/latest-attempt linkage; Chainlink/Superstate may retain current success after a failed attempt. [Decoder and valuation details](process/pricing-pipeline-appendix.md#primary-collection-bookkeeping) own adapter policies and unavailable-evidence handling.
 
+Curve USDT-reference pools first value USDT through its existing USDC anchor. USAT, Quantoz USDQ and sUSDS multiply their pool ratios by the admitted USDT USD quote; DOLA explicitly permits the two-dependency DOLA -> sUSDS -> USDT path. Missing or stale dependencies withhold the quote, and the oldest contributing observation dates the result.
+
 Promoted DEX corroboration is candidate-scoped. A hard-source match admits only the agreeing protocol lane, while DEX-only corroboration requires an independent protocol lane within the existing divergence threshold. Divergent siblings are excluded with `lacked_corroboration` telemetry rather than inheriting another lane's evidence.
 
 The primary CEX, ticker, oracle, promoted-DEX, reserve-telemetry and pool-challenge lanes protect depeg detection within publication. Exact-address transport remains detached; CoinGecko Onchain is the sole retained adapter and requires explicit allowlisting. Retired source registry keys, including `pyth`, remain renderable for historical provenance but cannot contribute live observations.
@@ -118,11 +120,7 @@ The DL coins API (`coins.llama.fi/prices/current/coingecko:{id}`) is excluded fr
 
 ### Consensus Rules
 
-Before clustering, repeated quotes with the same source key are collapsed to one provider observation using their median,
-maximum configured weight, and conservative observation time. Registered source keys that share a
-`depegSourceFamily` are then reduced to the strongest representative for that family. This prevents multiple
-deployments from one address provider, or correlated lanes such as CoinGecko list and CoinGecko ticker data, from
-creating false multi-source confidence or gaining extra median weight.
+Before clustering, duplicate source keys collapse to their median, maximum configured weight and conservative observation time. Keys sharing a `depegSourceFamily` then reduce to its strongest representative: correlated provider deployments or CoinGecko list/ticker lanes cannot add votes or median weight.
 
 `computePriceConsensus()` then behaves as follows:
 
@@ -142,43 +140,19 @@ When multiple clusters have the same size, the winner is chosen deterministicall
 4. proximity to peg reference (when available)
 5. stable alphabetical source label as the final tie-break
 
-Source labels list all agreeing sources alphabetically:
+Source labels list agreeing sources alphabetically, joined with `+` without truncation (one source uses its name directly). The published price is the winning cluster's median; internal provenance retains its best member, ranked by configured weight, trust tier, reference proximity, then alphabetical source key.
 
-- 1 source: source name directly
-- 2+ sources: `sourceA+sourceB+sourceC` (full list, no truncation)
+Severe fixed-peg downside candidate evidence survives prevalidation and post-enrichment validation while price, source and confidence match the selected primary result. If fallback replaces it, post-enrichment validation combines the current fallback quote with same-run primary candidates. Corroborated low-confidence depegs therefore survive without admitting unrelated fallback, correlated list-only or stale prices.
 
-High-confidence consensus now separates:
-
-- the **published price**: the median of the agreeing winning cluster
-- the **selected source**: the best cluster member kept internally for provenance and downstream trust policy
-
-Inside the winning cluster, the selected source is chosen by:
-
-1. higher configured weight
-2. stronger trust tier
-3. closer distance to the reference price
-4. alphabetical source key
-
-When severe fixed-peg downside publication is accepted because multiple candidate sources independently confirm the
-downside, that candidate-price evidence is carried through the later prevalidation and post-enrichment validation passes
-as long as the current asset price, source, and confidence still match the selected primary result. Post-enrichment
-validation also merges a same-run primary candidate set with a current fallback quote when fallback recovery replaced
-the selected result. This keeps a corroborated low-confidence depeg price from being cleared as if it were genuinely
-single-source, without loosening the guardrail for unrelated fallback, correlated list-only, or stale prices.
-
-Severe fixed-peg downside corroboration counts independent source families, not raw source labels. CoinGecko-derived
-sources share one lineage, DefiLlama list/detail/contract sources share one lineage, each CEX/oracle source keeps its own
-lineage, and promoted DEX protocol lanes count by protocol. A CoinGecko plus DefiLlama-list downside pair is treated as
-correlated list-aggregator evidence and cannot publish a severe downside price unless a separate hard or non-list family
-also corroborates it.
+Downside corroboration counts independent families: CoinGecko-derived lanes share one, DefiLlama list/detail/contract share one, CEX/oracle providers each retain theirs, and promoted DEX lanes count by protocol. CoinGecko plus DefiLlama-list alone is correlated list-aggregator evidence; severe downside needs another corroborating hard or non-list family.
 
 ### Publication Pool Challenge
 
 `sync-stablecoins` invokes the pool challenge after primary consensus on every 15-minute publication. It remains a critical depeg safeguard: current published challenger pools can downgrade a weak soft-source result or replace it when the independent-protocol rules below are satisfied. The hourly fallback/address corroboration phase does not replace this check.
 
-After consensus, weak soft-source results where the selected/agreeing source cluster is **pool-challenge eligible** are challenged against current individual priced pools from the published challenger snapshot (`dex_price_challenger_snapshots` + `dex_price_challengers`) that meet the live $100K TVL minimum and are fresh within `DEX_FRESHNESS_SEC`. Eligible source families include CoinGecko, DefiLlama-list, `dex-promoted`, and promoted protocol-level DEX sources (`fluid-dex`, `balancer-dex`, `curve-dex`, `uniswap-v3-dex`, `uniswap-v4-dex`, `raydium-dex`, `orca-dex`, `meteora-dex`, `pancakeswap-dex`, `aerodrome-dex`, `velodrome-dex`) as long as the selected cluster does not include an exempt hard source. Non-selected hard candidates do not by themselves exempt the selected soft result, but they can corroborate the narrow high-TVL replacement exception below. NAV tokens are excluded from the pool challenge entirely: their fair value is their published NAV and the peg-aware divergence threshold does not map to a meaningful DEX-liquidity check, so diverging pools cannot downgrade or replace a NAV price. The standard divergence threshold is **peg-type-aware**: 500 bps for USD pegs, `min(2× depeg threshold, 500)` for non-USD pegs (e.g., 300 bps for JPY/EUR). High-TVL replacement paths use the peg depeg threshold as their result-vs-pool trigger when the soft result is still inside that same threshold. If ANY qualifying protocol median diverges from the weak result beyond the applicable threshold:
+After consensus, weak soft-source results where the selected/agreeing source cluster is **pool-challenge eligible** are challenged against current individual priced pools from the accepted immutable challenger publication that meet the live $100K price-evidence TVL minimum and are fresh within `DEX_FRESHNESS_SEC`. Eligible source families include CoinGecko, DefiLlama-list, `dex-promoted`, and promoted protocol-level DEX sources (`fluid-dex`, `balancer-dex`, `curve-dex`, `uniswap-v3-dex`, `uniswap-v4-dex`, `raydium-dex`, `orca-dex`, `meteora-dex`, `pancakeswap-dex`, `aerodrome-dex`, `velodrome-dex`) as long as the selected cluster does not include an exempt hard source. Non-selected hard candidates do not by themselves exempt the selected soft result, but they can corroborate the narrow high-TVL replacement exception below. NAV tokens are excluded from the pool challenge entirely: their fair value is their published NAV and the peg-aware divergence threshold does not map to a meaningful DEX-liquidity check, so diverging pools cannot downgrade or replace a NAV price. The standard divergence threshold is **peg-type-aware**: 500 bps for USD pegs, `min(2× depeg threshold, 500)` for non-USD pegs (e.g., 300 bps for JPY/EUR). High-TVL replacement paths use the peg depeg threshold as their result-vs-pool trigger when the soft result is still inside that same threshold. If ANY qualifying protocol median diverges from the weak result beyond the applicable threshold:
 
-Challenger selection preserves protocol diversity before its 95% qualifying-TVL target and 50-row cap; only discovery-coherent pools qualify. [Selection and replacement details](process/pricing-pipeline-appendix.md#primary-collection-bookkeeping) retain exact ordering and source-map transitions.
+Challengers preserve protocol diversity before 95% coverage and the 50-row cap. Admission and weights use `min(retained TVL, priceEvidenceTvlUsd ?? retained TVL)` and `priceSource ?? source`; publication never renews quotes. [Selection details](process/pricing-pipeline-appendix.md#primary-collection-bookkeeping) own ordering and exact empty/fallback semantics.
 
 1. Confidence downgrades to `low` only while the divergence is unresolved: the downgrade is skipped when **≥2 independent protocol medians corroborate** the selected price and strictly outnumber the diverging protocols (`corroboratingProtocolGroupsOutvote` in `worker/src/lib/constants.ts`, the same authority as the replacement precedence test). A tie, a diverging majority, or a single corroborating protocol still downgrades, and any replacement that happens still downgrades because DEX evidence displaced the consensus.
 2. The price is **replaced** when diverging protocol-level challenger prices span **≥2 independent protocols**. A single protocol's pools may share data-quality issues (vault-token counterparties, misconfigured pairs), and one rogue pool inside an otherwise agreeing protocol does not make that protocol count as corroborating disagreement. A high-TVL multi-protocol path also replaces a near-peg soft result when at least two independent protocol medians each carry at least `$5M` TVL, are depeg-sized in the same direction, diverge from the soft result by at least the peg depeg threshold, and agree with each other inside the existing pool-challenge bps band. If an additional high-TVL protocol median shows the same direction but breaks pairwise coherence, Pharos selects the largest coherent same-direction high-TVL subset instead of letting that outlier veto the otherwise corroborated replacement. A narrow single-protocol exception exists when that protocol median carries at least the `$5M` high-TVL threshold, the protocol median itself is depeg-sized versus the peg reference, the DEX mark materially diverges from the published soft result, and a hard market/oracle/protocol primary candidate agrees with that protocol median within the normal consensus threshold. When replacement fires, Pharos first collapses each protocol to a TVL-weighted median price, then evaluates divergence and the final replacement from those protocol medians. When only one lower-TVL or uncorroborated protocol diverges, or no coherent high-TVL same-direction subset remains, the original price is preserved but confidence stays `low`. The diverging protocols must also not be outnumbered by the challenger protocols whose medians corroborate the current price: replacement weight is provider-reported challenger TVL and a dormant pool keeps its last traded price behind a large nominal reserve, so a two-protocol diverging minority could otherwise outvote a corroborated consensus (the 2026-09-24 `vchf-vnx` replacement used the Celo Uniswap v3 `VCHF/USD₮` pool, last traded 2026-03-15 behind a reported $4.7M reserve, against four protocols sitting on the ECB franc rate). A corroborating majority no longer downgrades confidence (see item 1); the high-TVL multi-protocol and single-protocol hard-corroborated exceptions above can still replace the price, and a replacement itself still downgrades.
@@ -213,7 +187,11 @@ This catches weak-source agreement derived from small pools while larger pools s
 - `priceUpdatedAt`: compatibility alias for the effective observation timestamp, preserved so existing consumers do not interpret sync-write time as source freshness
 - high-confidence cluster labels can describe multiple agreeing sources even when the published price is the cluster median rather than any one constituent source price
 
-The hourly DEX writer separately retains original quote clocks in `dex_prices.price_sources_json`: per-family `observedAt` and aggregate-contributor `aggregateObservedAt`, independent of the row's publication `updated_at`. Original registry price clocks survive pool shaping, deduplication and scoring-stage serialization; an old quote wrapped in a new generation remains old evidence. This writer-only addition leaves promoted-source and depeg reader admission unchanged until the strict-reader activation, so it alone does not close stale-evidence admission.
+Inherited protocol/NAV prices retain the parent's admitted source observation clock. A recent `priceSyncedAt` never rescues stale composite provenance, including pre-intake supply NAV valuation; without an admissible parent the child remains unavailable. Date-only FX observations must name a real ISO calendar day no later than the run's UTC day. Today's daily payload remains valid before its nominal publication hour; a future day cannot gain freshness by clamping its synthetic timestamp to the run clock.
+
+Zephyr Scanner distinguishes genuinely absent clocks from present-but-invalid, stale or excessively future-skewed clocks. A rejected scanner clock withholds its price rather than converting it into an undated or local-fetch quote; ZYS's dependent NAV supply valuation is also withheld. ZSD retains its separate official-circulation supply policy, and an independently admitted preferred market quote keeps its own observation clock. Genuinely absent scanner clocks retain the existing undated-price behavior; see the [Zephyr supplemental lane](process/pricing-pipeline-appendix.md#zephyr-scanner-supplemental-lane).
+
+The hourly DEX writer separately retains original quote clocks in `dex_prices.price_sources_json`: per-family `observedAt` and aggregate-contributor `aggregateObservedAt`, independent of the row's publication `updated_at`. Original registry price clocks survive pool shaping, deduplication and scoring-stage serialization; an old quote wrapped in a new generation remains old evidence. Shared source admission requires the original family quote within the caller's 35-minute source budget and the original aggregate contributors within the 75-minute depeg budget, inclusively and without future clocks. Missing or invalid clocks cannot inherit `updated_at` or a legacy source `updatedAt`; admitted sources expose their original `observedAt` as the internal `updatedAt` consumed by promoted lanes. Strict reader activation follows an accepted clocked-writer publication, not the writer deployment alone.
 
 ### Downstream Trust Semantics
 

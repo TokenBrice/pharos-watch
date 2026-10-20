@@ -102,6 +102,7 @@ export function buildDexMeasuredExecutionProfile(input: {
   quoteGenerationId: string;
   quotedAt: number;
   blockNumber: number;
+  blockHash: `0x${string}`;
   endpointAddress: `0x${string}`;
   endpointCodeHash: `0x${string}`;
   poolBindingProof?: DexMeasuredExecutionPoolBindingProof;
@@ -148,6 +149,7 @@ export function buildDexMeasuredExecutionProfile(input: {
     retainedPoolPriceUsdAtQuote: input.target.retainedPoolPriceUsd,
     quotedAt: input.quotedAt,
     blockNumber: input.blockNumber,
+    blockHash: input.blockHash,
     executionEndpoint: {
       address: input.endpointAddress.toLowerCase() as `0x${string}`,
       codeHash: input.endpointCodeHash.toLowerCase() as `0x${string}`,

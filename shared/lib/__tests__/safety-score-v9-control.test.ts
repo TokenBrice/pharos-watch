@@ -22,6 +22,7 @@ import { scoreV9Input } from "../safety-score-v9/formula";
 import { createV9FactGapV3 } from "@shared/lib/safety-score-v9/reasons";
 import { applyMergedMintSignals, gradeVerifiedControlAuthority } from "../safety-score-v9/control-mint-grade";
 import { V9CauseContributionSchema } from "../../types/safety-score-v9-causes";
+import { buildV9DependencyEvaluationPlan, resolveV9DependencyInputs, projectV9RoleDependencyPillarLimits } from "../safety-score-v9/dependencies";
 import {
   boundedUnknown,
   makeEconomicControlArgs as args,
@@ -2304,6 +2305,27 @@ describe("cause-aware Control minima", () => {
         score: component.score, scoringDisposition: component.scoringDisposition,
         effectiveScoringWeight: component.effectiveScoringWeight }).success).toBe(true);
       expect(result.structuralFailures).toContainEqual(expect.objectContaining({ kind: "centralized-mint", severity: "high" }));
+      const plan = buildV9DependencyEvaluationPlan({
+        activeAssetIds: ["operator", "dependent"],
+        assets: ["operator", "dependent"].map((assetId) => ({
+          assetId, reserveExposures: [], exitRoutes: [], controls: [],
+          peg: { failureDomains: [] }, supply: { failureDomains: [] },
+          dependencies: { edges: assetId === "operator" ? [] : [{
+            edgeKey: "operator", upstreamAssetId: "operator", dependencyType: "mechanism" as const,
+            economicRole: "control-operator" as const, weight: 1,
+            failureDomains: [{ kind: "mint-control" as const, key: "mint:operator" }],
+            evidenceRefIds: ["evidence:base"],
+          }] },
+        })),
+      });
+      const resolved = resolveV9DependencyInputs(plan, [{
+        assetId: "operator", score: 80, backingScore: 90, controlScore: result.score,
+        dimensionCauses: { control: cause }, causeGapIds: component.causeGapIds,
+      }]).find((input) => input.assetId === "dependent")!;
+      expect(projectV9RoleDependencyPillarLimits(resolved).control).toMatchObject({
+        limit: 25, knownLossPoints: 75, boundedUnknownLossPoints: 0,
+        events: [expect.objectContaining({ inheritedScore: 25, cause, causeGapIds: component.causeGapIds })],
+      });
     }
   });
 

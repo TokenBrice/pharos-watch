@@ -8,7 +8,8 @@ import type { StablecoinMeta } from "@shared/types";
 import { PreLaunchDetail } from "@/components/pre-launch-detail";
 import { PreLaunchReadiness, usePreLaunchNowMs } from "@/components/pre-launch-readiness";
 import { PreLaunchLaunchPath } from "@/components/pre-launch-launch-path";
-import { DRIFT_STATUS_LABEL, resolveDriftDisplay } from "@/lib/pre-launch";
+import { resolveDriftDisplay } from "@/lib/pre-launch";
+import { DRIFT_STATUS_LABEL } from "@shared/lib/classification/pre-launch";
 
 const coin: StablecoinMeta = {
   id: "test-launch",

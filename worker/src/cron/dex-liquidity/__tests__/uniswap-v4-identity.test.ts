@@ -141,6 +141,9 @@ describe("retained V4 target recovery", () => {
     f.pool.source = source;
     if (source === "dl") f.pool.poolType = "generic";
     expect(await enrichUniswapV4ExecutionTargets(f.input)).toMatchObject([{ chain: "ethereum", candidates: 1, attempted: 1, enriched: 1, dropReasons: {} }]);
+    expect(f.dependencies.verify).toHaveBeenCalledWith(expect.objectContaining({
+      deployment: f.deployment, blockNumber: BLOCK, blockHash: BLOCK_HASH,
+    }));
     expect(f.pool.extra?.measuredExecutionTarget).toMatchObject({ poolId: `ethereum:${POOL_ID}`, poolTokenAddresses: [TOKEN0, TOKEN1], feePips: 5, tickSpacing: 1, hookAddress: UNISWAP_V4_HOOK_FREE_ADDRESS, capturedAt: f.timestamp });
     expect(f.pool.extra?.executionCapabilityGate).toBeUndefined();
     expect(f.pool).toMatchObject({ source, tvlUsd: 2_000_000, volumeUsd1d: null });

@@ -58,3 +58,29 @@ export const PRE_LAUNCH_DRIFT_BADGE_CLASSES = {
 
 /** Display-only drift state: an earlier target exists but none is current. Neutral: nothing to slip against. */
 export const PRE_LAUNCH_NO_CURRENT_TARGET_BADGE_CLASS = "border-border/60 bg-muted/40 text-muted-foreground";
+
+export const LAUNCH_PHASE_LABELS = {
+  announced: "Announced",
+  testnet: "Testnet",
+  auditing: "Auditing",
+  beta: "Beta",
+  "launching-soon": "Launching soon",
+} as const satisfies Record<LaunchPhase, string>;
+
+export const MILESTONE_TYPE_LABELS = {
+  announcement: "Announcement",
+  milestone: "Milestone",
+  delay: "Delay",
+  partnership: "Partnership",
+  regulatory: "Regulatory",
+  audit: "Audit",
+  testnet: "Testnet",
+} as const satisfies Record<LaunchMilestoneType, string>;
+
+export const DRIFT_STATUS_LABEL = {
+  "on-track": "On track",
+  "pushed-once": "Pushed once",
+  "pushed-multiple": "Delayed",
+  overdue: "Overdue",
+  "no-current-target": "No current target",
+} as const satisfies Record<PreLaunchDriftStatus | "no-current-target", string>;

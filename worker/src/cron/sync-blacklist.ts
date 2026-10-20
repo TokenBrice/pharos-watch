@@ -141,11 +141,9 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
       amountBackfill = await backfillAmounts(
         db,
         etherscanApiKey,
-        drpcApiKey,
         etherscanLimiter,
         maintenanceRunBudget,
         signal,
-        chainRpcs,
         scanBudgetExhausted ? { maxRows: BLACKLIST_AMOUNT_REPAIR_EXHAUSTED_SCAN_LIMIT } : undefined,
       );
       runtimeBudgetHit ||= amountBackfill.runtimeBudgetReached;

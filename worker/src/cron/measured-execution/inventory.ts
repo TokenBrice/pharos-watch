@@ -201,6 +201,7 @@ function buildTwoTokenMeasuredExecutionTargets(
         input.symbolToChainScopedIds,
         input.validationReferences,
         input.stablecoinPriceById,
+        input.capturedAt,
       );
       const outputPrice = getTokenReferenceUsdPrice(
         tokenOut,
@@ -209,6 +210,7 @@ function buildTwoTokenMeasuredExecutionTargets(
         input.symbolToChainScopedIds,
         input.validationReferences,
         input.stablecoinPriceById,
+        input.capturedAt,
       );
       if (inputPrice == null || outputPrice == null || inputPrice <= 0 || outputPrice <= 0) continue;
       if (spec.hasCoherentSpot && !spec.hasCoherentSpot({
@@ -287,7 +289,7 @@ function resolveClImpliedOutputPrice(input: {
   candidate: Pick<
     UniV3ExecutionCandidate | SlipstreamExecutionCandidate | UniswapV4ExecutionCandidate,
     "chain" | "tokens" | "token0Price" | "token1Price"
-  > & { poolAddress?: string; poolId?: string };
+  > & { poolAddress?: string; poolId?: string; carriedFromSnapshot?: true };
   stablecoinId: string;
   inputIndex: number;
   inputPrice: number;
@@ -296,6 +298,7 @@ function resolveClImpliedOutputPrice(input: {
   source: string;
 }): number | null {
   if (input.outputPrice != null) return input.outputPrice;
+  if (input.candidate.carriedFromSnapshot) return null;
   const spotInputPerOutput =
     input.inputIndex === 0 ? input.candidate.token0Price : input.candidate.token1Price;
   const impliedOutputPrice = input.inputPrice * spotInputPerOutput;
@@ -364,6 +367,7 @@ function buildClMeasuredExecutionTarget(
     symbolToChainScopedIds,
     input.validationReferences,
     input.stablecoinPriceById,
+    input.capturedAt,
   );
   if (inputPrice == null || !Number.isFinite(inputPrice) || inputPrice <= 0) return null;
   const outputStablecoinId = input.chainAddressToId.get(buildChainAddressKey(candidate.chain, tokenOut.address));
@@ -379,6 +383,7 @@ function buildClMeasuredExecutionTarget(
       symbolToChainScopedIds,
       input.validationReferences,
       input.stablecoinPriceById,
+      input.capturedAt,
     ),
     rejectionEvent:
       adapter.protocol === "uniswap-v3"
@@ -415,6 +420,9 @@ function buildClMeasuredExecutionTarget(
     },
     ...(adapter.feePips != null ? { feePips: adapter.feePips } : {}),
     ...(adapter.tickSpacing != null ? { tickSpacing: adapter.tickSpacing } : {}),
+    ...("carriedFromSnapshot" in candidate && candidate.carriedFromSnapshot
+      ? { carriedFromSnapshot: true as const }
+      : {}),
     retainedTvlUsd: input.retainedTvlUsd,
     retainedPoolPriceUsd: inputPrice,
     capturedAt: input.capturedAt,
@@ -502,6 +510,7 @@ export function buildUniswapV4MeasuredExecutionTarget(input: {
     symbolToChainScopedIds,
     input.validationReferences,
     input.stablecoinPriceById,
+    input.capturedAt,
   );
   if (inputPrice == null || !Number.isFinite(inputPrice) || inputPrice <= 0) return null;
   const outputStablecoinId = input.chainAddressToId.get(buildChainAddressKey(chain, tokenOut.address));
@@ -518,6 +527,7 @@ export function buildUniswapV4MeasuredExecutionTarget(input: {
       symbolToChainScopedIds,
       input.validationReferences,
       input.stablecoinPriceById,
+      input.capturedAt,
     ),
     rejectionEvent: "uniswap_v4_implied_reference_rejected",
     source: "uniswap-v4",

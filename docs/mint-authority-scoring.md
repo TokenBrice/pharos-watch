@@ -44,6 +44,8 @@ The live mint component assesses native issuance on canonical deployments and co
 
 Mint controls and mutable mint-logic upgrade paths on active multi-deployment assets bind to reviewed native deployments. Structured bridge controls compile once per referenced route; absent structured evidence retains conservative route-derived controls. [Classification](./classification.md#mint-authority-taxonomy) owns the taxonomy boundary; [catalog authoring](./stablecoin-data.md#mint-authority-and-bridge-risk-ownership) owns schema enforcement.
 
+A controller shared across an issuer's own products is diagnostic only after the exact issuer join succeeds for every member. Full normalized legal/display phrases remain distinct unless a named, primary-evidence-reviewed equivalence joins them; sharing a leading word never removes mint/upgrade common-mode risk. The [issuer-identity contract](./process/report-cards-appendix.md#scoped-evidence-and-exit-evaluation) owns aliases, inheritance and fail-closed group review. This identity join does not improve the controller's own posture, custody or execution evidence.
+
 Curated route badges and compact list/filter status use the same runtime-neutral `resolveMintAuthorityStatusKind` in `shared/lib/classification/mint-authority.ts`. An unknown path remains Unknown even with reviewed controls or verified confidence; this taxonomy correction does not change the published mint component, posture band, or numeric Safety methodology.
 
 Published issuance diagnostics distinguish known adverse facts from missing proof: `active-incident` renders **Failed gate / Active incident**, not Missing evidence. Reader reason labels and statuses share `src/lib/mint-issuance-diagnostics.ts`; scoring and the published reason code are unchanged.

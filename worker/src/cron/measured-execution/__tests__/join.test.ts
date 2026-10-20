@@ -28,7 +28,7 @@ vi.mock("../uniswap-v4", async () => {
   return { ...actual, validateUniswapV4ProfileProof: vi.fn(() => []) };
 });
 
-import { buildDexMeasuredExecutionTargetId, type DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
+import { buildDexMeasuredExecutionTargetId, isDexMeasuredExecutionObservationHistoryMature, type DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { type SolanaDexNativeGeneration } from "@shared/types/solana-dex-bank";
 import { buildNativeDexExecutionTarget } from "../inventory";
@@ -37,6 +37,7 @@ import type { PoolEntry } from "../../dex-liquidity/types";
 import {
   buildDexMeasuredExecutionRetainedRoutePools,
   joinDexMeasuredExecutionEvidence,
+  loadDexMeasuredExecutionJoinEvidence,
   loadNativeDexExecutionDiagnostic,
   releaseDexMeasuredExecutionProofFields,
   stripDexMeasuredExecutionInternalFields,
@@ -78,10 +79,46 @@ import {
   makeObservationHistory,
   makeV3LkgRoute,
 } from "./join.test-support";
+import { seedGeneration } from "./persistence.test-support";
 
 
 
 describe("measured execution join activation", () => {
+  it("keeps a selected fresh quote while expiring historical capacity and maturity at assessment", async () => {
+    const { db, sqlite } = nativeFixtures.open();
+    const { measuredTarget, profile } = makeV3LkgRoute([[1_000, 1_000], [100_000, 99_000]]);
+    const older = makeV3LkgRoute([[1_000, 990]]).profile;
+    const current = { ...profile, targetGenerationId: "current-targets",
+      quoteGenerationId: "current", quotedAt: 20_000 };
+    seedGeneration(sqlite, {
+      generationId: "current", targetGenerationId: "current-targets", publishedAt: 20_000,
+      state: "published", rows: [{ target: measuredTarget, profile: current }],
+    });
+    seedGeneration(sqlite, {
+      generationId: "prior", targetGenerationId: "prior-targets", publishedAt: 19_000,
+      rows: [{ target: measuredTarget, profile: { ...older, targetGenerationId: "prior-targets",
+        quoteGenerationId: "prior", quotedAt: 9_200 } }],
+    });
+    for (const [nowSec, successes, capacityUsd] of [[20_000, 2, 1_000], [20_001, 1, 100_000]]) {
+      const evidence = await loadDexMeasuredExecutionJoinEvidence(db, nowSec, undefined, {
+        publishedAtCeilingSec: 20_000,
+      });
+      const pool = makeJoinPool(measuredTarget);
+      const diagnostics = joinDexMeasuredExecutionEvidence({
+        poolsByStablecoin: new Map([[measuredTarget.stablecoinId, [pool]]]), evidence, nowSec,
+      });
+      const measured = pool.extra?.measuredExecution;
+      expect(diagnostics).toMatchObject({ measuredCount: 1, gatedCount: 0 });
+      expect(measured?.quotedAt).toBe(20_000);
+      expect(measured?.observationHistory).toMatchObject({
+        completeProducerCycleCount: 2, successfulObservationCount: successes,
+        consecutiveSuccessCount: successes, latestOperationalFailureAt: null,
+      });
+      expect(measured?.observationHistory?.conservativeCapacityCurve[0]?.executableUsd).toBe(capacityUsd);
+      expect(isDexMeasuredExecutionObservationHistoryMature(measured?.observationHistory)).toBe(successes === 2);
+    }
+  });
+
   it("joins reviewed hook-free Ethereum V4 evidence without an activation gate", () => {
     const { measuredTarget, profile } = makeUniswapV4Route();
     const pool: PoolEntry = {
@@ -405,6 +442,7 @@ describe("measured execution join activation", () => {
   it("drops retired Optimism Uniswap V3 profiles at deployment validation", () => {
     const measuredTarget = makeV3Target({ chain: "optimism" });
     const profile = buildDexMeasuredExecutionProfile({
+      blockHash: `0x${"ab".repeat(32)}`,
       target: measuredTarget,
       targetGenerationId: "target-generation",
       quoteGenerationId: "quote-generation",
@@ -456,6 +494,7 @@ describe("measured execution join activation", () => {
     const deployment = getDexMeasuredExecutionDeployment(measuredTarget.adapterProfileId, measuredTarget.chain);
     if (deployment == null) throw new Error("missing Base Slipstream deployment");
     const profile = buildDexMeasuredExecutionProfile({
+      blockHash: `0x${"ab".repeat(32)}`,
       target: measuredTarget,
       targetGenerationId: "target-generation",
       quoteGenerationId: "quote-generation",
@@ -751,6 +790,7 @@ describe("measured execution join activation", () => {
     const callData = encodeCurveCryptoSwapGetDy({ inputIndex: 0, outputIndex: 1, amountInRaw });
     const returnData = `0x${amountOutRaw.toString(16).padStart(64, "0")}` as `0x${string}`;
     const profile = buildDexMeasuredExecutionProfile({
+      blockHash: `0x${"ab".repeat(32)}`,
       target: measuredTarget,
       targetGenerationId: "target-generation",
       quoteGenerationId: "quote-generation",

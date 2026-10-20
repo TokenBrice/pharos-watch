@@ -1182,7 +1182,7 @@ export function upstreamOracleNavProjection(
   const binding = localScore !== null && projection.limit !== null && projection.limit < localScore;
   const cause = binding
     ? projection.events.find((event) => event.exposureShare > 0 && (event.cause === "C" || event.cause === "U"))?.cause
-      ?? (projection.events.some((event) => event.cause === "D" && (event.modeledLossPoints ?? 0) > 0)
+      ?? (projection.events.some((event) => event.knownCause === "D" && (event.modeledLossPoints ?? 0) > 0)
         ? "D" : localCause)
     : localCause;
   return { score, cause };
@@ -1194,11 +1194,15 @@ function applyRoleDependencyProjection(
   envelope: V9ValidatedPolicyEnvelope,
 ): V9PillarEvaluation {
   if (projection.events.length === 0) return pillar;
-  const excludedEvents = projection.events.filter((event) => event.cause === "A" || event.cause === "B");
-  const boundedEvents = projection.events.filter((event) => event.cause === "C" || event.cause === "U");
+  const excludedEvents = projection.events.flatMap((event) => event.evidenceObligations
+    .filter((obligation) => obligation.cause === "A" || obligation.cause === "B")
+    .map((obligation) => ({ ...event, ...obligation })));
+  const boundedEvents = projection.events.flatMap((event) => event.evidenceObligations
+    .filter((obligation) => obligation.cause === "C" || obligation.cause === "U")
+    .map((obligation) => ({ ...event, ...obligation })));
   const adverseEvents = pillar.score !== null && projection.limit !== null &&
     projection.limit < pillar.score && pillar.aggregationDisposition === "included"
-    ? projection.events.filter((event) => event.cause === "D" && (event.modeledLossPoints ?? 0) > 0)
+    ? projection.events.filter((event) => event.knownCause === "D" && (event.modeledLossPoints ?? 0) > 0)
     : [];
   return {
     ...pillar,
@@ -1221,7 +1225,7 @@ function applyRoleDependencyProjection(
       ...boundedEvents.map((event) => pillarReason(
         envelope,
         projection.materialUnresolvedExposure ? "material-dependency-unavailable" : "nonmaterial-dependency-unavailable",
-        `dependency:${projection.targetPillar}:${event.exposureKey}`,
+        `dependency:${projection.targetPillar}:${event.exposureKey}:obligation:${event.cause}:${event.causeGapIds.join("+")}`,
         `Unavailable dependency evidence is bounded over ${(event.exposureShare * 100).toFixed(2)}% of this pillar.`,
         event.cause === "C" ? "issuer-undisclosed" : "unresearched", undefined, event.cause ?? "U", event.causeGapIds ?? [],
       )),
@@ -1331,7 +1335,6 @@ export type V9WrapperStrategyTier = "pure" | "staked" | "vault";
 export function resolveV9WrapperStrategyTier(
   asset: V9AssetFactsBase,
   resolved: V9ResolvedDependencyInputs,
-  inheritedStablecoinBacking: V9InheritedStablecoinBacking | undefined,
 ): V9WrapperStrategyTier | undefined {
   if (asset.wrapperLocalFacts?.applicability === "wrapper") {
     if (asset.wrapperLocalFacts.form === "pure") return "pure";
@@ -1341,10 +1344,6 @@ export function resolveV9WrapperStrategyTier(
   if (asset.variantKind === "pure-wrapper") return "pure";
   if (asset.variantKind === "strategy-vault") return "vault";
   if (asset.variantKind === "savings-passthrough" || asset.variantKind === "risk-absorption") return "staked";
-  // Fallback to the backing-inheritance tier only when no wrapper form is declared.
-  if (asset.variantKind == null && inheritedStablecoinBacking !== undefined) {
-    return inheritedStablecoinBacking.tier === "pure" ? "pure" : "vault";
-  }
   if (resolved.serial.length === 0) return undefined;
   const serialUpstreamIds = new Set(resolved.serial.map((dependency) => dependency.upstreamAssetId));
   const hasWrapperSerialEdge = asset.dependencies.edges.some(
@@ -1641,7 +1640,7 @@ export function evaluateV9Asset({
         )
       : undefined;
   const inheritedStablecoinBacking = resolveInheritedStablecoinBacking(asset, resolved, evaluatedById, envelope);
-  const wrapperStrategyTier = resolveV9WrapperStrategyTier(asset, resolved, inheritedStablecoinBacking);
+  const wrapperStrategyTier = resolveV9WrapperStrategyTier(asset, resolved);
   const trackRecordMonths = conservativeTrackRecordMonths(asset.implementation.launchedAtSec, identity.asOfSec);
   const dependencyStatusGaps = gapsForV9Ids(gapIndex, asset.dependencies.status.gapIds);
   const backingAsset = {

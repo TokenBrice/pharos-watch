@@ -35,9 +35,9 @@ if (cMinusThreshold === undefined) {
   throw new Error("Safety Score v9 grade thresholds must include C-");
 }
 export const C_MINUS_MIN_SCORE = cMinusThreshold.min;
-// Validation-only mirror of policy.semantic.formula.danger.adverseAttributionPegMultiplierFloor.
-// This remains validation-only; score calculation reads the canonical danger floor.
-export const DANGER_PEG_MULTIPLIER_FLOOR = 0.9;
+// Validation projects the policy authority without parsing a second policy envelope.
+export const DANGER_PEG_MULTIPLIER_FLOOR =
+  methodologyPolicy.semantic.formula.danger.adverseAttributionPegMultiplierFloor;
 // C/U treatment is numeric unless the registered reason is diagnostic; the
 // minimum-track-record exception remains a ceiling. Read the registry authority,
 // not the retired evidence-cap classification, without importing shared/lib.

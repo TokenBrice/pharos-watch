@@ -105,11 +105,11 @@ function queryFor<T>(state: MonitoringState, readyData: T, emptyData: T) {
 
 const pegReady = {
   coins: [{ id: "usdc-circle", activeDepeg: true, currentDeviationBps: -75 }],
-  summary: { activeDepegCount: 1, coinsAtPeg: 0, medianDeviationBps: 75, totalTracked: 1 },
+  summary: { activeDepegCount: 1, coinsAtPeg: 0, medianDeviationBps: 75 as number | null, totalTracked: 1 },
 };
 const pegEmpty = {
   coins: [],
-  summary: { activeDepegCount: 0, coinsAtPeg: 0, medianDeviationBps: 0, totalTracked: 0 },
+  summary: { activeDepegCount: 0, coinsAtPeg: 0, medianDeviationBps: null, totalTracked: 0 },
 };
 const activeReady = {
   events: [{
@@ -321,8 +321,7 @@ describe.each(SURFACES)(
 
 describe("PegHealthCard median availability", () => {
   it("renders an unavailable median without losing the observed empty cohort", () => {
-    const unavailableMedian = { ...pegEmpty, summary: { ...pegEmpty.summary, medianDeviationBps: null } };
-    usePegSummaryMock.mockReturnValue(queryFor("empty", unavailableMedian, unavailableMedian));
+    usePegSummaryMock.mockReturnValue(queryFor("empty", pegEmpty, pegEmpty));
     const view = render(<PegHealthCard />);
 
     expect(screen.getByText("—").closest("p")?.textContent).toContain("At peg (per-coin threshold) · — median");

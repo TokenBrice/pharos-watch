@@ -136,6 +136,45 @@ describe("geckoterminal shared helpers", () => {
     });
   });
 
+  it.each(["123.4usd", "", " ", "0x10", "Infinity", "1e999"])(
+    "withholds malformed numeric scalars instead of admitting a prefix: %j",
+    (value) => {
+      const parsed = parseGtPool({
+        ...GT_POOL_FIXTURE,
+        attributes: {
+          ...GT_POOL_FIXTURE.attributes,
+          reserve_in_usd: value, base_token_price_usd: value, quote_token_price_usd: value,
+          base_token_price_quote_token: value, quote_token_price_base_token: value,
+          base_token_price_native_currency: value, quote_token_price_native_currency: value,
+          volume_usd: { h24: value },
+        },
+      }, "ethereum")!;
+      expect(parsed.tvlUsd).toBeNaN();
+      expect(parsed.baseTokenPriceUsd).toBeNaN();
+      expect(parsed.quoteTokenPriceUsd).toBeNaN();
+      expect(parsed.volume24hUsd).toBeNull();
+      expect(parsed.baseTokenPriceQuoteToken).toBeNull();
+      expect(parsed.quoteTokenPriceBaseToken).toBeNull();
+      expect(parsed.baseTokenPriceNativeCurrency).toBeNull();
+      expect(parsed.quoteTokenPriceNativeCurrency).toBeNull();
+    },
+  );
+
+  it("preserves full signed decimals, exponent notation and genuine zero volume", () => {
+    const parsed = parseGtPool({
+      ...GT_POOL_FIXTURE,
+      attributes: {
+        ...GT_POOL_FIXTURE.attributes, reserve_in_usd: " +12345.67 ",
+        base_token_price_usd: "+1e0", quote_token_price_usd: ".9998",
+        base_token_price_quote_token: "1.", volume_usd: { h24: "0" },
+      },
+    }, "ethereum")!;
+    expect(parsed).toMatchObject({
+      tvlUsd: 12345.67, baseTokenPriceUsd: 1, quoteTokenPriceUsd: 0.9998,
+      baseTokenPriceQuoteToken: 1, volume24hUsd: 0,
+    });
+  });
+
   it.each([
     ["absent volume object", null, null],
     ["null h24", { h24: null }, null],

@@ -1,6 +1,5 @@
 import { logWorkerEventArgs } from "../lib/structured-log";
 import type { CronResult } from "../lib/cron-logger";
-import { getCache } from "../lib/db-cache";
 import { CIRCUIT_SOURCE } from "../lib/constants";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
 import type { ChainRpcConfig } from "../lib/chain-registry";
@@ -50,7 +49,6 @@ export interface SyncFxRatesOptions {
 const FX_CADENCE_SEC = 30 * 60;
 const FX_CADENCE_KEY = "sync-fx-rates:cadence";
 const FX_STALE_CLAIM_SEC = 12 * 60;
-const FX_SOURCE_SUCCESS_META_FIELD = "sourceLastSuccessAtBySource";
 const FX_SOURCE_TTL_SEC = {
   "secondary:jsdelivr": 6 * 3600,
   "secondary:pages.dev": 6 * 3600,
@@ -64,54 +62,8 @@ const SECONDARY_ENDPOINT_SOURCE_KEYS = {
   "pages.dev": "secondary:pages.dev",
   "jsdelivr-versioned": "secondary:jsdelivr-versioned",
 } as const;
-const FX_SOURCE_ALIASES: Record<keyof typeof FX_SOURCE_TTL_SEC, readonly string[]> = {
-  "secondary:jsdelivr": ["secondary:jsdelivr", "jsdelivr", "fawazahmed0"],
-  "secondary:pages.dev": ["secondary:pages.dev", "pages.dev"],
-  "secondary:jsdelivr-versioned": ["secondary:jsdelivr-versioned", "jsdelivr-versioned"],
-  openExchangeRates: ["openExchangeRates", "openexchange-rates"],
-  metals: ["metals", "gold-api.com"],
-  chainlink: ["chainlink", "chainlink-feeds"],
-};
 
 type FxSourceLastSuccess = Partial<Record<keyof typeof FX_SOURCE_TTL_SEC, number>>;
-type FxMetaWithSourceSuccess = FxRatesMeta & {
-  sourceLastSuccessAtBySource?: FxSourceLastSuccess;
-};
-
-function parseFxSourceLastSuccess(value: string | null | undefined): FxSourceLastSuccess {
-  if (!value) return {};
-  try {
-    const parsed = JSON.parse(value) as Record<string, unknown>;
-    const sourceLastSuccessAtBySource: FxSourceLastSuccess = {};
-    for (const source of Object.keys(FX_SOURCE_TTL_SEC) as Array<keyof typeof FX_SOURCE_TTL_SEC>) {
-      const timestamp = FX_SOURCE_ALIASES[source]
-        .map((alias) => parsed[alias])
-        .find((value) => typeof value === "number" && Number.isFinite(value) && value > 0);
-      if (typeof timestamp === "number") {
-        sourceLastSuccessAtBySource[source] = Math.floor(timestamp);
-      }
-    }
-    return sourceLastSuccessAtBySource;
-  } catch {
-    return {};
-  }
-}
-
-async function loadFxSourceLastSuccess(db: D1Database): Promise<FxSourceLastSuccess> {
-  const cache = await getCache(db, "fx-rates-meta");
-  if (!cache) return {};
-  try {
-    const parsed = JSON.parse(cache.value) as Record<string, unknown>;
-    const sourceLastSuccess = parsed[FX_SOURCE_SUCCESS_META_FIELD] ?? parsed.sourceLastSuccessAt;
-    return parseFxSourceLastSuccess(
-      sourceLastSuccess && typeof sourceLastSuccess === "object"
-        ? JSON.stringify(sourceLastSuccess)
-        : null,
-    );
-  } catch {
-    return {};
-  }
-}
 
 function isFxSourceDue(
   source: keyof typeof FX_SOURCE_TTL_SEC,
@@ -184,7 +136,7 @@ async function runFxRatePublication(
 
   try {
     const prevState = await loadFxRateState(db);
-    const sourceLastSuccessAtBySource = await loadFxSourceLastSuccess(db);
+    const sourceLastSuccessAtBySource = { ...prevState?.sourceLastSuccessAtBySource };
     let fallbackSecondaryCandidate: SecondaryCurrencyLoadResult | null = null;
     const loadSecondaryForFallback = async () => {
       const candidate = await loadSecondaryCurrencyCandidate(signal);
@@ -393,7 +345,7 @@ async function runFxRatePublication(
       logWorkerEventArgs("handler", "warn", `[sync-fx-rates] Missing rates for: ${missing.join(", ")}`);
     }
 
-    const meta: FxMetaWithSourceSuccess = {
+    const meta: FxRatesMeta = {
       ...syncState.buildPersistedMeta(),
       sourceLastSuccessAtBySource,
     };

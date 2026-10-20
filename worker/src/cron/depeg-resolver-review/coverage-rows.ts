@@ -1,6 +1,6 @@
-import { classifyDepegClosure } from "@shared/lib/depeg-closure";
 import {
   actualOutcomeFromSourceEventState,
+  classifyActualEpisode,
   hasTerminalEvidence,
   type DdrrActualEventInput,
   type DdrrV2CoverageInput,
@@ -80,23 +80,10 @@ export function baseFieldsForSealedExposure(
   };
 }
 
-function isRecoveredClosure(actual: DdrrActualEventInput): boolean {
-  const closure = classifyDepegClosure(actual);
-  return closure === "recovered" || closure === "legacy_recovered";
-}
-
 function sourceOutcome(
   actual: DdrrActualEventInput | null,
 ): Pick<DdrrV2CoverageInput, "sourceEventState" | "actualOutcome"> {
-  const sourceEventState: DdrrV2CoverageInput["sourceEventState"] = !actual
-    ? "missing"
-    : hasTerminalEvidence(actual)
-      ? "terminal"
-      : isRecoveredClosure(actual)
-        ? "recovered"
-        : actual.endedAt != null
-          ? "orphan_closed"
-          : "active";
+  const sourceEventState = actual == null ? "missing" : classifyActualEpisode(actual);
   return {
     sourceEventState,
     actualOutcome: actualOutcomeFromSourceEventState(sourceEventState),
@@ -138,6 +125,7 @@ function coverageStateForIncident(
   nowSec: number,
 ): Pick<DdrrV2CoverageInput, "predictionState" | "coverageCause" | "operationalCoverageCause" | "outcomeQualityState" | "reason"> {
   const reviewEligibleAt = coverageEligibilityAt(incident);
+  const episodeState = actual == null ? "missing" : classifyActualEpisode(actual);
   if (actual == null) {
     return {
       predictionState: "data_quality_gap",
@@ -147,7 +135,7 @@ function coverageStateForIncident(
       reason: "source_event_missing",
     };
   }
-  if (isRecoveredClosure(actual) && actual.endedAt != null && actual.endedAt < reviewEligibleAt) {
+  if (episodeState === "recovered" && actual.endedAt != null && actual.endedAt < reviewEligibleAt) {
     return {
       predictionState: "resolved_before_prediction",
       coverageCause: "pre_lock_recovered",
@@ -156,7 +144,7 @@ function coverageStateForIncident(
       reason: null,
     };
   }
-  if (hasTerminalStatusOrEvidence(actual) && hasTerminalBeforeEligibility(actual, reviewEligibleAt)) {
+  if (episodeState === "terminal" && hasTerminalBeforeEligibility(actual, reviewEligibleAt)) {
     return {
       predictionState: "terminal_before_prediction",
       coverageCause: "pre_lock_terminal",
@@ -174,13 +162,22 @@ function coverageStateForIncident(
       reason: null,
     };
   }
-  if (isRecoveredClosure(actual)) {
+  if (episodeState === "recovered") {
     return {
       predictionState: "missed_lock_recovered",
       coverageCause: "lock_missed",
       operationalCoverageCause: "lock_missed",
       outcomeQualityState: "classified",
       reason: "eligible_incident_closed_without_public_prediction",
+    };
+  }
+  if (episodeState === "terminal") {
+    return {
+      predictionState: "missed_lock_terminal",
+      coverageCause: "lock_missed",
+      operationalCoverageCause: "lock_missed",
+      outcomeQualityState: "classified",
+      reason: "eligible_terminal_incident_without_public_prediction",
     };
   }
   if (actual.endedAt != null) {
@@ -190,15 +187,6 @@ function coverageStateForIncident(
       operationalCoverageCause: null,
       outcomeQualityState: "orphan_closed",
       reason: "closed_without_recovery_or_terminal_evidence",
-    };
-  }
-  if (hasTerminalStatusOrEvidence(actual)) {
-    return {
-      predictionState: "missed_lock_terminal",
-      coverageCause: "lock_missed",
-      operationalCoverageCause: "lock_missed",
-      outcomeQualityState: "classified",
-      reason: "eligible_terminal_incident_without_public_prediction",
     };
   }
   if (incident.lockState?.lastState === "lock_deferred") {

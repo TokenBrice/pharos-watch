@@ -18,10 +18,12 @@ import {
   type DepegEventEntry,
 } from "@shared/types/market";
 import { formatIsoDate } from "@shared/lib/format";
+import { DdrResponseSchema, DdrV2BaseRowSchema, DdrV2LiveOverlaySchema } from "@shared/types/depeg-resolver";
 import { DEPEG_DEWS_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import type { z } from "zod";
 import { hasDedicatedDepegEventPage, selectStaticDepegEventPages } from "@/lib/depeg-event-config";
 
 import { parseStrictCliArgs, runCliEntrypoint, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
@@ -53,6 +55,19 @@ const DepegSyncResponseSchema = DepegEventsResponseSchema.extend({
   total: DepegEventsResponseSchema.shape.total.int().nonnegative().safe().optional(),
   nextCursor: DepegEventsResponseSchema.shape.nextCursor.unwrap().unwrap().min(1).nullable().optional(),
 });
+
+// Only the public incident identity and live representative are needed here.
+const DepegArchiveLineageSchema = DdrResponseSchema.pick({ rows: true }).extend({
+  rows: DdrV2BaseRowSchema.pick({
+    eventId: true,
+    incidentKey: true,
+    stablecoinId: true,
+    direction: true,
+  }).extend({
+    live: DdrV2LiveOverlaySchema.pick({ currentEventId: true, eventState: true }),
+  }).array(),
+});
+type DepegArchiveLineage = z.infer<typeof DepegArchiveLineageSchema>["rows"];
 
 const MAX_DEPEG_SYNC_PAGES = 1000;
 
@@ -115,20 +130,37 @@ export function findMissingStaticDepegArchiveSlugs(
 }
 
 /**
- * Keep a published page when the live event is later reclassified below the
- * static-page threshold. The archive is grow-only, so the older published row
- * remains the source for that URL while the current API projection continues
- * to describe the event in the live tracker.
+ * Keep a published page when the live event is reclassified below the static-page
+ * threshold, or verified public incident lineage identifies its present replacement.
+ * Keep the older published row at its reserved URL, not a redirect to a potentially
+ * sub-threshold representative. Unexplained disappearances still reach the guard.
  */
 export function preserveStaticDepegArchiveEntries(
   previous: readonly DepegEventEntry[],
   current: readonly DepegEventEntry[],
+  lineage: readonly DepegArchiveLineage[number][] = [],
 ): DepegEventEntry[] {
   const mergedBySlug = new Map(current.map((entry) => [entry.slug, entry] as const));
+  const representativesById = new Map(current
+    .filter((entry) => (entry.constituentEventCount ?? 1) > 1)
+    .map((entry) => [entry.id, entry] as const));
+  const replacementById = new Map(lineage
+    .filter((row) => row.incidentKey.length > 0 && row.live.eventState === "active")
+    .map((row) => [row.eventId, row] as const));
 
   for (const previousEntry of selectStaticDepegEventPages(previous)) {
     const currentEntry = mergedBySlug.get(previousEntry.slug);
-    if (currentEntry == null || hasDedicatedDepegEventPage(currentEntry)) continue;
+    if (currentEntry == null) {
+      const incident = replacementById.get(previousEntry.id);
+      const representative = incident?.live.currentEventId == null
+        ? undefined
+        : representativesById.get(incident.live.currentEventId);
+      if (!incident || !representative || representative.id === previousEntry.id ||
+        incident.stablecoinId !== previousEntry.stablecoinId ||
+        representative.stablecoinId !== previousEntry.stablecoinId ||
+        incident.direction !== previousEntry.direction ||
+        representative.direction !== previousEntry.direction) continue;
+    } else if (hasDedicatedDepegEventPage(currentEntry)) continue;
     mergedBySlug.set(previousEntry.slug, previousEntry);
   }
 
@@ -356,8 +388,30 @@ export async function runDepegSync(argv = process.argv.slice(2)) {
       });
 
       const computedEntries = assignSlugs(unique, previousEntries);
+      let lineage: DepegArchiveLineage = [];
+      if (unique.some((event) => (event.constituentEventCount ?? 1) > 1) &&
+        selectStaticDepegEventPages(previousEntries).some((entry) => !seen.has(entry.id))) {
+        // Keep the selected API lane (including /_site-data/) and authentication.
+        const lineageUrl = new URL("./depeg-resolver", apiUrl).href;
+        const response = await fetchWithRetry(lineageUrl, { headers }, { logLabel: "sync-depeg-events" });
+        if (!response.ok) throw new Error(`API returned ${response.status} for ${lineageUrl}`);
+        let payload: unknown;
+        try {
+          payload = await response.json();
+        } catch (error) {
+          if (error instanceof SyntaxError) {
+            throw new SnapshotIntegrityError("Invalid depeg incident lineage: malformed JSON");
+          }
+          throw error;
+        }
+        const parsed = DepegArchiveLineageSchema.safeParse(payload);
+        if (!parsed.success) {
+          throw new SnapshotIntegrityError(`Invalid depeg incident lineage: ${parsed.error.message}`);
+        }
+        lineage = parsed.data.rows;
+      }
       const stored = DepegEventStoredSnapshotSchema.safeParse(
-        preserveStaticDepegArchiveEntries(previousEntries, computedEntries),
+        preserveStaticDepegArchiveEntries(previousEntries, computedEntries, lineage),
       );
       if (!stored.success) {
         throw new SnapshotIntegrityError(`Invalid stored depeg snapshot: ${stored.error.message}`);

@@ -14,6 +14,9 @@ import {
   LIVE_RESERVE_REDEMPTION_ROUTE_STATUS_VALUES,
   LIVE_RESERVE_REDEMPTION_ROUTE_STATUS_SOURCE_VALUES,
 } from "@shared/types/live-reserves";
+import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
+import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
+import { evaluateLiveReserveAdmission } from "../live-reserves/store-snapshot-state";
 
 function row(slices: unknown[]) {
   return {
@@ -77,11 +80,15 @@ describe("stored live reserve slice integrity", () => {
   });
 
   it("decodes supported legacy warning severity and effect defaults without dropping members", () => {
+    const coin = WORKER_TRACKED_META_BY_ID.get("iusd-infinifi")!;
     const parsed = parseReserveCompositionRow(
-      { ...row([{ name: "Cash", pct: 100, risk: "low" }]), warnings: JSON.stringify([
-        { code: "stale", message: "source lagging", effect: "fatal" },
-        { code: "note", message: "fyi", severity: "info" },
-      ]), warning_count: null },
+      { ...row([{ name: "Cash", pct: 100, risk: "low" }]),
+        config_fingerprint: computeLiveReserveConfigFingerprint(coin.liveReservesConfig!),
+        metadata: JSON.stringify({ freshnessMode: "not-applicable" }),
+        warnings: JSON.stringify([
+          { code: "stale", message: "source lagging", effect: "fatal" },
+          { code: "note", message: "fyi", severity: "info" },
+        ]), warning_count: null },
       null,
     );
     expect(parsed.record?.warnings).toEqual([
@@ -89,6 +96,9 @@ describe("stored live reserve slice integrity", () => {
       { code: "note", message: "fyi", severity: "info", effect: "info" },
     ]);
     expect(parsed.record?.warningCount).toBe(2);
+    expect(parsed.issue).toBeNull();
+    expect(evaluateLiveReserveAdmission(parsed.record, { lastSuccessAt: 1_700_000_000, lastSuccessAttemptId: null }, coin, 1_700_000_001))
+      .toMatchObject({ eligible: false, reasons: ["degraded-snapshot"] });
   });
 
   it.each([

@@ -154,6 +154,7 @@ const quoterMulticallExecutor = createEvmQuotePlanMulticallExecutor({
 export async function quoteQuoterV2Requests(input: {
   requests: readonly QuoterV2Request[];
   blockNumber: number;
+  blockHash: `0x${string}`;
   chainRpcs: Map<string, ChainRpcConfig>;
   signal?: AbortSignal;
   rpcBudget?: DexMeasuredExecutionRpcBudget;
@@ -164,7 +165,7 @@ export async function quoteQuoterV2Requests(input: {
       ? { targetId: request.target.targetId, inputUsd: request.inputUsd, failureReason: "invalid-quote-input" }
       : { targetId: request.target.targetId, inputUsd: request.inputUsd },
   );
-  const plans = buildEvmSingleCallQuotePlans(encoded, input.blockNumber);
+  const plans = buildEvmSingleCallQuotePlans(encoded, input.blockNumber, input.blockHash);
   return executeEvmQuotePlan({
     plans,
     outcomes,
@@ -249,6 +250,7 @@ export async function resolveQuoterV2PoolBindings(input: {
     factoryCodeHash: `0x${string}`;
   }>;
   blockNumber: number;
+  blockHash: `0x${string}`;
   chainRpcs: Map<string, ChainRpcConfig>;
   signal?: AbortSignal;
   rpcBudget?: DexMeasuredExecutionRpcBudget;
@@ -273,6 +275,7 @@ export async function resolveQuoterV2PoolBindings(input: {
           index,
           chain: request.target.chain,
           blockNumber: input.blockNumber,
+          blockHash: input.blockHash,
           call: {
             label: request.label,
             target: request.factoryAddress,

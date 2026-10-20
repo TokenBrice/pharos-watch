@@ -80,7 +80,7 @@ describe("Safety Score v9 mechanism scoring profiles", () => {
         contractionCapacityRatio: 0.817,
       },
       components: {
-        contractionCapacity: { observationState: "bounded-unknown", quality: null },
+        contractionCapacity: { observationState: "bounded-unknown", quality: "adequate" },
         confidenceAndIncentives: { observationState: "known", quality: "limited" },
         oracleAndControlAssumptions: { observationState: "known", quality: "adequate" },
         emergencyRecovery: { observationState: "bounded-unknown", quality: null },
@@ -128,6 +128,10 @@ describe("Safety Score v9 mechanism scoring profiles", () => {
     });
     expect(projectV9MechanismProfile(review).components.custodyContinuity).toMatchObject({
       observationState, quality: null,
+      unavailableFacts: [
+        { factKey: "custodyContinuity", disposition: first },
+        { factKey: "insurance", disposition: second },
+      ],
     });
   });
 
@@ -144,6 +148,23 @@ describe("Safety Score v9 mechanism scoring profiles", () => {
     });
     expect(projectV9MechanismProfile(review).components.contractionCapacity).toMatchObject({
       observationState: "known", quality: "failed",
+    });
+  });
+
+  it.each((["failed", "weak", "strong"] as const).flatMap((quality) =>
+    (["issuer-undisclosed", "integration-missing", "method-unsupported"] as const).map((disposition) => ({ quality, disposition })),
+  ))("retains $quality independently of an unavailable $disposition sibling", ({ quality, disposition }) => {
+    const component = projectV9MechanismProfile(hybridReview({
+      collateralCoverage: { disposition: "supported", quality },
+      contractionLiquidity: { disposition },
+    })).components.contractionCapacity!;
+    expect(component).toEqual({
+      quality,
+      observationState: disposition === "issuer-undisclosed" ? "bounded-unknown"
+        : disposition === "integration-missing" ? "missing" : "unsupported",
+      factKeys: ["collateralCoverage", "contractionLiquidity"],
+      supportedFactKeys: ["collateralCoverage"],
+      unavailableFacts: [{ factKey: "contractionLiquidity", disposition }],
     });
   });
 

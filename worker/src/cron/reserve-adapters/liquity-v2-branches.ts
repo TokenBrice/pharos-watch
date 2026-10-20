@@ -31,7 +31,7 @@ import {
   reserveInfoWarning,
   valueUsdFromBigIntPrice,
 } from "./helpers";
-import { redactUrlSecrets } from "./warnings";
+import { redactProviderUrls } from "../../lib/safe-error-message";
 import {
   adaptBranchBalanceReserves,
   fetchBranchPriceMap,
@@ -39,7 +39,7 @@ import {
   type BranchBalanceEntry,
 } from "./branch-balances";
 import {
-  decodeAddressWord,
+  decodeStrictAddressWord,
   decodeStrictBoolWord,
   decodeUint8Word,
   decodeUint256Word,
@@ -115,7 +115,7 @@ async function fetchLiquityV2Batch(
   calls: readonly OnchainMulticall3Call[],
   signal: AbortSignal,
   ctx?: AdapterContext,
-): Promise<Map<string, `0x${string}` | null> | null> {
+): Promise<Map<string, `0x${string}` | false> | null> {
   const results = await fetchOnchainMulticall3({
     calls,
     chain: input.chain,
@@ -127,13 +127,15 @@ async function fetchLiquityV2Batch(
   });
   if (!results) return null;
   return new Map(
-    results.map((result) => [result.label, result.success ? result.returnData : null]),
+    results.map((result) => [result.label, result.success ? result.returnData : false]),
   );
 }
 
 type LiquityObservationCall = OnchainMulticall3Call & { raw?: true };
 type LiquityOnchainInput = Extract<LiveReservesConfig["inputs"]["primary"], { kind: "onchain-evm" }>;
-type LiquityObservationValue = string | bigint | null | undefined;
+// Only an executed aggregate member failure proves an unsupported selector.
+// Individual nulls and unavailable aggregates carry no such evidence.
+type LiquityObservationValue = string | bigint | false | null | undefined;
 
 // Numeric individual reads retain their existing uint256 transport; raw guards
 // and introspection retain their own ABI validation. Both feed one assembly path.
@@ -154,7 +156,7 @@ async function fetchLiquityV2Observations(
 }
 
 function decodeLiquityUint(value: LiquityObservationValue): bigint | null {
-  return typeof value === "bigint" ? value : decodeUint256Word(value);
+  return typeof value === "bigint" ? value : decodeUint256Word(typeof value === "string" ? value : null);
 }
 
 async function fetchLiquityV2BranchState(
@@ -253,15 +255,18 @@ async function adaptErc4626ShareEntries(
   }));
   const assetRawByLabel = await fetchLiquityV2Observations(input, params, assetCalls, signal, ctx, onchain);
 
+  const unavailableIndexes = new Set<number>();
   const probedEntries = positiveEntries
     .map(({ entry, index }) => {
       const assetRaw = assetRawByLabel.get(`branch:asset:${index}`);
-      return { entry, index, assetAddress: decodeAddressWord(typeof assetRaw === "string" ? assetRaw : null) };
+      const decodedAsset = decodeStrictAddressWord(typeof assetRaw === "string" ? assetRaw : null);
+      const assetAddress = decodedAsset === "0x0000000000000000000000000000000000000000" ? null : decodedAsset;
+      if (assetRaw !== false && assetAddress == null) unavailableIndexes.add(index);
+      return { entry, index, assetAddress };
     })
     .filter(
       (entry): entry is typeof entry & { assetAddress: `0x${string}` } => entry.assetAddress != null,
     );
-  if (probedEntries.length === 0) return entries;
 
   const metadataCalls = probedEntries.flatMap(({ entry, index, assetAddress }) => [
     {
@@ -284,20 +289,26 @@ async function adaptErc4626ShareEntries(
       raw: true as const,
     },
   ]);
-  const metadataRawByLabel = await fetchLiquityV2Observations(input, params, metadataCalls, signal, ctx, onchain);
+  const metadataRawByLabel = metadataCalls.length > 0
+    ? await fetchLiquityV2Observations(input, params, metadataCalls, signal, ctx, onchain)
+    : new Map<string, LiquityObservationValue>();
 
   const probedByIndex = new Map(probedEntries.map((entry) => [entry.index, entry]));
   return entries.map((entry, index) => {
+    if (unavailableIndexes.has(index)) return { ...entry, balanceRaw: null };
     const probed = probedByIndex.get(index);
     if (!probed || entry.balanceRaw == null) return entry;
     const totalAssetsRaw = decodeLiquityUint(metadataRawByLabel.get(`branch:total-assets:${index}`));
     const totalSupplyRaw = decodeLiquityUint(metadataRawByLabel.get(`branch:total-supply:${index}`));
-    if (totalAssetsRaw == null || totalSupplyRaw == null || totalSupplyRaw <= 0n) return entry;
     const decimalsRaw = metadataRawByLabel.get(`branch:asset-decimals:${index}`);
+    const balanceDecimals = decodeUint8Word(typeof decimalsRaw === "string" ? decimalsRaw : null);
+    if (totalAssetsRaw == null || totalSupplyRaw == null || totalSupplyRaw <= 0n || balanceDecimals == null) {
+      return { ...entry, balanceRaw: null };
+    }
     return {
       ...entry,
       balanceRaw: computeErc4626AssetsFromShares(entry.balanceRaw, totalAssetsRaw, totalSupplyRaw),
-      balanceDecimals: decodeUint8Word(typeof decimalsRaw === "string" ? decimalsRaw : null) ?? entry.branch.token.decimals,
+      balanceDecimals,
       branch: {
         ...entry.branch,
         priceToken: entry.branch.priceToken ?? {
@@ -337,7 +348,7 @@ async function fetchBranchProtocolPriceMap(
   const rawByLabel = await fetchLiquityV2Batch(input, params, calls, signal, ctx);
   await Promise.all(missingPricedBranches.map(async ({ branch }, index) => {
     const priceRaw = rawByLabel
-      ? decodeUint256Word(rawByLabel.get(`branch:protocol-price:${index}`))
+      ? decodeLiquityUint(rawByLabel.get(`branch:protocol-price:${index}`))
       : await onchain.uint256(branch.holder, BRANCH_PRICE_SELECTOR);
     if (priceRaw == null || priceRaw <= 0n) return;
     const priceUsd = decimalNumberFromBigInt(priceRaw, 18);
@@ -605,7 +616,7 @@ async function fetchLiquityV2MechanismMetrics(
     };
   } catch (error) {
     rethrowIfAborted(error, signal);
-    const detail = redactUrlSecrets(toErrorMessage(error));
+    const detail = redactProviderUrls(toErrorMessage(error));
     return {
       metadata: {},
       warnings: [

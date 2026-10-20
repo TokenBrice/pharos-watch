@@ -185,27 +185,14 @@ Cron expressions are source-owned by the two Wrangler configs. Logical schedule 
 
 Regenerate the schedule inventory and the appendix's [executable-task topology/new-job checklist](process/worker-infrastructure-appendix.md#scheduled-task-topology) with `node --import tsx scripts/maintenance/generate-cron-doc-view.ts`; use `--check` for read-only freshness or select `cron-doc-view` through `check:generated-artifacts`. The generator validates source/Wrangler agreement before writing. `ScheduledTaskDescriptor` in `shared/lib/scheduled-runner-registry.ts` carries configured timeouts, lease overrides and due policies from the existing slot inputs; `worker/src/lib/cron-timeouts.ts` only projects job caps and clips them to the inherited deadline, and the scheduled context consumes descriptor lease options. Implementation names `hourly-dex-source.ts` and `four-hourly-reserves.ts` reflect actual cadence; the durable `halfHourlyOffset` and `fourHourlyReserveSync` schedule keys are unchanged. CPU-class rationale, fencing and incident interpretation remain authored contracts, not inferred from generated tables.
 
+Due Aave-only refreshes follow safe stablecoins publication before snapshots. The full child has a 45-second wall-clock cap and requires 60 seconds of snapshot headroom, within the original slot deadline. Independent-family budgets, triggers and the serial `4/6` peak stay unchanged; [Yield operations](./yield-intelligence-operations.md#slot-context) owns deferral and settlement.
+
 ### Event-entry lifecycle and admission
 
 `runScheduledSlotWithFence()` arms the inherited absolute deadline before the first D1 await, not after claim or child-protocol stamping. Same-key presweeps no longer precede admission; same-slot stale takeover remains CAS-fenced. Mandatory await boundaries recheck expiry before admitting the next stage. Replay keeps the executing event's deadline and its separate producer/source identity.
 Decoders must terminate synchronously; ambiguous claim acknowledgements require exact owned-generation readback. [Lifecycle recovery details](process/worker-infrastructure-appendix.md#event-entry-recovery-details) retains these boundaries without granting fresh deadlines.
 
-
-
-| Await boundary | Contract |
-| --- | --- |
-| Version first-seen stamp | Best-effort telemetry off the admission path, observed within the same deadline. Missing telemetry cannot prevent claim. |
-| Slot insert/read, live-child admission, takeover/reconciliation | Mandatory fencing; expired results cannot start a runner or issue the next admission mutation. |
-| Child protocol stamp, memory-lane wait, runner import | Mandatory admission; recheck before child work. Protocol stamping is required evidence, not optional version telemetry. |
-| Child start/lease-owner marker, lease acquire/renew, terminal arbitration | Mandatory ownership/accounting inside the executing slot deadline. |
-| Detailed progress and completion reports | Best-effort telemetry behind the inherited deadline; progress stalls cannot extend the work allowance. Dwellir credit flushes use the same bounded deadline rather than requiring a background execution-context hook. |
-| Heartbeat drain, slot terminal write, failure cleanup | Work stops at the original deadline. Already-started settlement retains an observed continuation within the existing accounting reserve, never a new work budget; takeover wins over old writes. |
-
-Public and heavy scheduled callbacks capture event entry before any lazy import and pass it to the dispatcher. Expiry returns a controlled failure even when D1 has not resolved. A late admission continuation rechecks expiry before starting anything; cleanup requires drained work and no unterminated children. Its actual in-flight promise is retained with `waitUntil` only within the existing accounting reserve, independently of the already-aborted work signal. If the isolate disappears, stale sweeping remains recovery authority. `scheduled-slot-delivery` events distinguish `delivered-not-admitted` (also duplicate/live-slot refusals) from `claimed-failed`, carrying executing slot, invocation and event-entry deadline. An absent D1 slot is not proof of missing delivery.
-
-The existing public `digestTriggerPoll` lane starts with a DB-only sweep-only stage before outbox/demand/generation work, capped at 30 seconds and ten candidates and clipped to the inherited deadline. No trigger, fetch surface or connection reservation is added; connection peak and CPU placement stay unchanged. Global cleanup no longer shares reserve-recovery's lease/replay; reserve recovery retains targeted producer-slot preparation only. Every path imports `scheduled-slot-policy.ts`.
-
-`scheduled-slot-sweep` events record counts, applied policies and `maxReconciliationLagSec` from policy eligibility to the sweep observation clock (null without reconciled observations). After deployment require lag within two poll intervals outside documented platform/D1 stalls; fixtures are not production acceptance. Reconciled child errors and abandonment events share `parentIncidentId`; event `childIncidentCounts` groups started and proven-not-started children without making required unstarted errors neutral.
+The [same recovery contract](process/worker-infrastructure-appendix.md#event-entry-recovery-details) specifies every mandatory/best-effort await boundary, bounded settlement, delivery incidents and the DB-only `digestTriggerPoll` sweep. No continuation grants fresh work time; production reconciliation must meet its two-poll-interval lag requirement outside documented platform/D1 stalls.
 
 Scheduler measurement semantics and bounded cache pruning follow the [maintenance details](process/worker-infrastructure-appendix.md#database-maintenance-details).
 

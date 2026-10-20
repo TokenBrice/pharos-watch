@@ -1,18 +1,51 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-import { computeDuration, groupIncidents, type DdrStratumKey } from "@shared/lib/depeg-resolver";
+import { computeDuration, groupIncidents, structuralClass, type DdrStratumKey } from "@shared/lib/depeg-resolver";
 import { DDR_INELIGIBLE_AUDIT_VERDICTS } from "@shared/types/depeg-audit";
 import { loadDdrContext, loadDdrHistoricalEvents } from "../context";
 import { HISTORICAL_ROW_CAP, TRAINING_WINDOW_SEC } from "../constants";
 import { activeRow, NOW_SEC } from "./depeg-resolver.test-support";
 import { seedAssessmentSample, seedHistoricalEvent, seedResolverInputs } from "./context.test-support";
+import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
+import * as activeSafetyScoreSource from "../../../lib/safety-score-active-source";
+import { makeWorkerReportCardsV9Response, makeWorkerV9Card } from "../../../test-helpers/report-cards-v9";
+import { toStructural } from "../utils";
 
 const fixtures = createLatestSchemaFixtureTracker();
-afterEach(() => fixtures.closeAll());
+afterEach(() => {
+  fixtures.closeAll();
+  vi.restoreAllMocks();
+});
 const startedAt = NOW_SEC - 10 * 86400;
 const key: DdrStratumKey = { direction: "below", depth: "catastrophic", structural: "fragile", currency: "USD" };
 
 describe("DDR historical context", () => {
+  it("classifies historical and active coins from the same run-local admitted posture", async () => {
+    const { sqlite, db } = fixtures.open();
+    seedResolverInputs(sqlite);
+    seedHistoricalEvent(sqlite, { id: 1, coin: "usdc-circle", startedAt });
+    const card = makeWorkerV9Card({ id: "usdc-circle" });
+    if (card.breakdowns?.control == null) throw new Error("Missing fixture control breakdown");
+    card.breakdowns.control.components = card.breakdowns.control.components.map((component) => ({
+      ...component, posture: "bounded-admin",
+    }));
+    const snapshot = makeWorkerReportCardsV9Response({ updatedAt: NOW_SEC, cards: [card] });
+    const source = vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreSource").mockResolvedValue({ kind: "v9", snapshot });
+    const meta = WORKER_TRACKED_META_BY_ID.get("usdc-circle");
+    if (!meta) throw new Error("Missing USDC fixture metadata");
+    expect(structuralClass(toStructural(meta, null))).toBe("fragile");
+    const loaded = await loadDdrContext(db, [activeRow()], NOW_SEC);
+    if (loaded.kind !== "ok") throw new Error(loaded.reason);
+    expect(loaded.context.incidents[0].structural).toBe("robust");
+    expect(structuralClass(toStructural(meta, loaded.context.structuralContext))).toBe("robust");
+    source.mockResolvedValue({ kind: "error", reason: "v9-snapshot-unavailable", detail: "fixture", snapshot: null });
+    const unavailable = await loadDdrContext(db, [activeRow()], NOW_SEC);
+    if (unavailable.kind !== "ok") throw new Error(unavailable.reason);
+    expect(unavailable.context.structuralContext).toBeNull();
+    expect(unavailable.context.incidents[0].structural).toBe("fragile");
+    expect(structuralClass(toStructural(meta, loaded.context.structuralContext))).toBe("robust");
+  });
+
   it.each([
     ["6.95", "6.92", false],
     ["6.95", "6.94", true],

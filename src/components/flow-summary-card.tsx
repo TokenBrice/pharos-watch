@@ -152,6 +152,7 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
   // v6.27), the quadrant takes the same empty-state treatment the flow-history
   // feed two modules below already uses, naming why.
   const mintingPressure = coin.has24hActivity === null
+    || coin.coverage?.windows?.window24h.complete === false
     || (coin.netFlow24hUsd === null && window24h.completeness === "complete")
     ? { score: null, unavailableReason: "window-unavailable" as const }
     : getLiteralMintingPressureReading({

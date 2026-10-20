@@ -1,6 +1,6 @@
 import type { PriceValidationReferences } from "./price-validation";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { buildPriceValidationContext, getReferencePriceForContext } from "./price-validation";
+import { buildPriceValidationContext, getFreshReferencePriceForContext, getReferencePriceForContext } from "./price-validation";
 import { isUsdReferenceSymbol, normalizeDexSymbol } from "./dex-cron-constants";
 import { resolveTrackedStablecoinId } from "../cron/dex-liquidity/token-resolution";
 import type { DexApiPool, DexApiPoolToken } from "./dex-api-types";
@@ -39,6 +39,8 @@ export function getTokenReferenceUsdPrice(
   symbolToChainScopedIds: Map<string, Map<string, string[]>>,
   validationReferences?: PriceValidationReferences,
   trackedStablecoinPrices?: Map<string, number>,
+  /** Measured targets require current per-peg evidence; diagnostics omit this clock. */
+  measuredReferenceAtSec?: number,
 ): number | null {
   const resolved = resolveTrackedStablecoinId(
     { chain, address: token.address, symbol: token.symbol },
@@ -56,7 +58,9 @@ export function getTokenReferenceUsdPrice(
     if (TRACKED_META_BY_ID.get(resolved.stablecoinId)?.flags.navToken === true) return null;
 
     const context = buildPriceValidationContext({ stablecoinId: resolved.stablecoinId });
-    return getReferencePriceForContext(context, validationReferences);
+    return measuredReferenceAtSec === undefined
+      ? getReferencePriceForContext(context, validationReferences)
+      : getFreshReferencePriceForContext(context, validationReferences, measuredReferenceAtSec);
   }
 
   const normalizedAddress = (token.address ?? "").trim().toLowerCase();

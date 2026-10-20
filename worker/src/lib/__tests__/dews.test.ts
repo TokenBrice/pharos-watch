@@ -83,6 +83,9 @@ describe("computeDEWS", () => {
     );
     expect(result.signals.supply).toMatchObject({
       available: false,
+      componentCoverage: 0,
+      delta1d: null,
+      delta7d: null,
       unavailableReason: "supply-history-anchors-missing",
     });
     expect(result.effectiveWeights.supply).toBeUndefined();
@@ -103,8 +106,24 @@ describe("computeDEWS", () => {
       value: 0,
       delta1d: 0,
       delta7d: 0,
+      componentCoverage: 1,
     });
     expect(result.effectiveWeights.supply).toBeGreaterThan(0);
+  });
+
+  it("passes through renormalized one-anchor supply stress rather than a measured calm missing leg", () => {
+    const input = makeDewsInput({
+      mcapUsd: 1e9, circulatingCurrent: 95, circulatingPrevDay: 100,
+      circulatingPrevWeek: 95, circulatingPrevWeekAvailable: false,
+    });
+    const partial = computeDews(input);
+    const full = computeDews({ ...input, circulatingPrevWeekAvailable: true });
+    expect(partial.signals.supply).toMatchObject({
+      value: 65, available: true, componentCoverage: 0.6, delta1d: -5, delta7d: null,
+    });
+    expect(full.signals.supply).toMatchObject({ value: 39, componentCoverage: 1, delta7d: 0 });
+    expect(partial.effectiveWeights.supply).toBe(full.effectiveWeights.supply);
+    expect(partial.baseScore).toBeGreaterThan(full.baseScore);
   });
 
   it("dampens supply velocity for small coins", () => {
@@ -305,7 +324,9 @@ describe("computeDEWS", () => {
         tvl7dAgo: null,
       }),
     );
-    expect(result?.signals.liq.available).toBe(false);
+    expect(result?.signals.liq).toMatchObject({
+      available: false, componentCoverage: 0, scoreDelta7d: null, tvlDelta7d: null,
+    });
   });
 
   it("keeps liquidity signal available when only one of the two 7d anchors is present", () => {
@@ -317,7 +338,14 @@ describe("computeDEWS", () => {
         tvl7dAgo: 1.5e9,
       }),
     );
-    expect(result?.signals.liq.available).toBe(true);
+    expect(result?.signals.liq).toMatchObject({
+      available: true, componentCoverage: 0.5, scoreDelta7d: null, tvlDelta7d: -33.33,
+    });
+    expect(result?.signals.liq.value).toBeCloseTo(50, 5);
+    const measuredCalm = computeDews(makeDewsInput({
+      liquidityScore: 72, liquidityScore7dAgo: 72, tvlCurrent: 1e9, tvl7dAgo: 1.5e9,
+    }));
+    expect(measuredCalm.signals.liq.value).toBeCloseTo(25, 5);
   });
 });
 

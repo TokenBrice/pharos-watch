@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { DatabaseSync } from "node:sqlite";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
-import { makeMintBurnConfig } from "../../test-helpers/__shared/mint-burn";
+import { makeMintBurnConfig } from "../../test-helpers/__shared/mint-burn-config";
 import { hasMintBurnScanCoverage, mintBurnScanFingerprint, type MintBurnScanCoverage } from "../mint-burn-pipeline/scan-coverage";
 import { mintBurnConfigKey, upsertMintBurnSyncState } from "../mint-burn-pipeline/sync-state";
 
@@ -47,6 +47,18 @@ describe("durable finalized mint/burn scan coverage", () => {
     expect(segments(sqlite)).toEqual([{ from_block: 100, to_block: 130,
       from_timestamp: end - 3 * day, to_timestamp: end }]);
     expect(sqlite.prepare("SELECT last_block FROM mint_burn_sync_state").get()).toEqual({ last_block: 130 });
+    expect(await hasMintBurnScanCoverage(db, [config], end - day, end)).toBe(true);
+  });
+
+  it("fences only the coin-chain hours with pending materialization debt", async () => {
+    const { sqlite, db } = fixtures.open();
+    await commit(db, proof(100, 200, end - 2 * day, end));
+    const insert = sqlite.prepare("INSERT INTO mint_burn_dirty_hours (stablecoin_id, chain_id, hour_ts) VALUES (?, ?, ?)");
+    insert.run(config.stablecoinId, config.chain.chainId, end - 3600);
+    insert.run("other-coin", config.chain.chainId, end - day);
+    expect(await hasMintBurnScanCoverage(db, [config], end - day, end)).toBe(false);
+    expect(await hasMintBurnScanCoverage(db, [config], end - 2 * day, end - day)).toBe(true);
+    sqlite.prepare("DELETE FROM mint_burn_dirty_hours WHERE stablecoin_id = ?").run(config.stablecoinId);
     expect(await hasMintBurnScanCoverage(db, [config], end - day, end)).toBe(true);
   });
 
@@ -119,6 +131,15 @@ describe("durable finalized mint/burn scan coverage", () => {
     expect(await hasMintBurnScanCoverage(db, [config, other], start, end)).toBe(false);
     expect(await hasMintBurnScanCoverage(db, [config], start + 1, end)).toBe(false);
     expect(await hasMintBurnScanCoverage(db, [], start, end)).toBe(false);
+  });
+
+  it("admits closed-hour windows away from UTC midnight without rounding missing seconds into proof", async () => {
+    const { db, sqlite } = fixtures.open();
+    const hourlyEnd = end + 12 * 3600;
+    await commit(db, proof(100, 200, hourlyEnd - day, hourlyEnd));
+    expect(await hasMintBurnScanCoverage(db, [config], hourlyEnd - day, hourlyEnd)).toBe(true);
+    sqlite.prepare("UPDATE mint_burn_scan_coverage SET to_timestamp = ?").run(hourlyEnd - 1);
+    expect(await hasMintBurnScanCoverage(db, [config], hourlyEnd - day, hourlyEnd)).toBe(false);
   });
 
   it.each([

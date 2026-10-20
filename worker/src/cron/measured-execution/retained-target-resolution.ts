@@ -37,7 +37,7 @@ export function buildDexMeasuredTargetFingerprintIndex(
 }
 
 /**
- * Resolve an exact retained pool id first. Fingerprint-only retained rows may
+ * Resolve an exact retained pool id first. Provider rows with candidate fingerprints may
  * use one same-family target only when exactly one physical candidate is within
  * the bounded contemporaneous-TVL window; no match or multiple matches fail
  * closed.
@@ -45,6 +45,7 @@ export function buildDexMeasuredTargetFingerprintIndex(
 export function resolveDexMeasuredTargetForRetainedPool(input: {
   stablecoinId: string;
   retainedPoolId: string;
+  retainedPoolFingerprint?: string;
   retainedTvlUsd: number;
   adapterProfileId: DexMeasuredExecutionTarget["adapterProfileId"];
   exactTargets: ReadonlyMap<string, DexMeasuredExecutionTarget>;
@@ -58,7 +59,8 @@ export function resolveDexMeasuredTargetForRetainedPool(input: {
   if (exact) {
     return exact.adapterProfileId === input.adapterProfileId ? exact : null;
   }
-  if (!input.retainedPoolId.startsWith("fp:")) return null;
+  if (!/^[^:]+:defillama:/.test(input.retainedPoolId)) return null;
+  if (!input.retainedPoolFingerprint?.startsWith("fp:")) return null;
   if (!Number.isFinite(input.retainedTvlUsd) || input.retainedTvlUsd <= 0) return null;
 
   const maxTvlRelativeDrift =
@@ -66,7 +68,7 @@ export function resolveDexMeasuredTargetForRetainedPool(input: {
   if (!Number.isFinite(maxTvlRelativeDrift) || maxTvlRelativeDrift < 0) return null;
 
   const candidates = input.fingerprintTargets.get(
-    fingerprintDirectionKey(input.stablecoinId, input.retainedPoolId),
+    fingerprintDirectionKey(input.stablecoinId, input.retainedPoolFingerprint),
   ) ?? [];
   const matching = candidates.filter(
     (candidate) =>

@@ -1,5 +1,21 @@
 [
   {
+    "version": "4.6",
+    "title": "Event-position amounts and proven mirror suppression",
+    "date": "2026-10-20",
+    "effectiveAt": 1792454400,
+    "summary": "Historical freeze, release and wipe quantities require exact event-position evidence; preceding-block balances cannot masquerade as emitted amounts.",
+    "impact": [
+      "Amountless EVM actions remain unavailable across ingestion, scheduled repair, admin recovery and bounded replay without exact evidence. Earlier transfers or wipes in the same block can invalidate preceding-block balance approximations.",
+      "Receipt destroy amounts remain usable only when unambiguous for the affected account. Unbound burn Transfers and ambiguous wipes do not provide event quantities.",
+      "Deterministic EVM freeze/unfreeze event_time_unproven amounts are permanently unavailable across ingestion, scheduled repair and admin recovery, rather than occupying retry queues indefinitely. Destroy-receipt failures remain retryable; current-balance recovery has its separate evidence contract.",
+      "EURC mirror suppression requires emitted event-time zero proof, never historical, current or legacy-derived zero. Existing operator-evidence guards remain; previously suppressed history is not automatically restored.",
+      "Current-balance snapshots remain independent. No historical numeric backfill or Safety evaluator movement is implied. Planned release date is 2026-10-20."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "4.5",
     "title": "External-backing denominator for Upstream exposure",
     "date": "2026-10-19",

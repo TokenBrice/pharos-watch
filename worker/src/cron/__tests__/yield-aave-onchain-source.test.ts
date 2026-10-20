@@ -9,6 +9,8 @@ vi.mock("../../lib/evm-rpc", () => ({
 vi.mock("../../lib/db-cache", () => ({
   getCache: vi.fn(),
   getCaches: vi.fn(async () => new Map()),
+  setCache: vi.fn(async () => undefined),
+  setCacheIfNewer: vi.fn(async () => ({ written: true, skippedBecauseNewer: false })),
 }));
 
 // Every sibling supplemental family reaches the network. Only the Aave family is
@@ -42,13 +44,24 @@ vi.mock("../yield-sync/sources-rpc", async (importOriginal) => {
   };
 });
 
+vi.mock("../sync-stablecoins", () => ({ syncStablecoins: vi.fn() }));
+vi.mock("../sync-fx-rates", () => ({ syncFxRates: vi.fn(async () => ({ status: "ok" })) }));
+vi.mock("../snapshot-supply", () => ({ snapshotSupply: vi.fn(async () => ({ status: "ok" })) }));
+vi.mock("../snapshot-chain-supply", () => ({ snapshotChainSupply: vi.fn(async () => ({ status: "ok" })) }));
+vi.mock("../snapshot-psi", () => ({ snapshotPsiDaily: vi.fn() }));
+vi.mock("../snapshot-public-dataset", () => ({ snapshotPublicDataset: vi.fn() }));
+
 
 import { fetchEvmCallHexAtBlock, fetchEvmUint256AtBlock } from "../../lib/evm-rpc";
-import { getCache } from "../../lib/db-cache";
+import { getCache, setCacheIfNewer } from "../../lib/db-cache";
 import { fetchAaveV3SupplyRates, type AaveV3RateTarget } from "../yield-sync/sources-rpc";
 import { loadSupplementalSourceFamilies } from "../yield-sync/sources-supplemental";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { makeChainRpcConfig } from "../../test-helpers/chain-rpc-fixtures.test-support";
+import { syncStablecoins } from "../sync-stablecoins";
+import { runQuarterHourlySlot } from "../../handlers/scheduled/quarter-hourly";
+import { makeScheduledRuntime } from "../../test-helpers/scheduled-runtime.test-support";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 
 const mockFetchEvmCallHexAtBlock = vi.mocked(fetchEvmCallHexAtBlock);
 const mockFetchEvmUint256AtBlock = vi.mocked(fetchEvmUint256AtBlock);
@@ -123,6 +136,56 @@ const USDT_TARGET: AaveV3RateTarget = {
 };
 
 describe("fetchAaveV3SupplyRates", () => {
+  it("admits original composite quotes in the producer tail, not the old :25 slot", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    const generationAt = Date.parse("2026-10-20T08:16:03Z") / 1000;
+    const observedAt = generationAt + 20;
+    const producerFinishedAt = generationAt + 77;
+    const quote = { id: "usdc-circle", symbol: "USDC", price: 0.98,
+      priceSource: "coingecko+redstone", priceObservedAt: observedAt,
+      priceUpdatedAt: observedAt, priceObservedAtMode: "upstream" };
+    vi.mocked(getCache).mockResolvedValue({
+      value: JSON.stringify({ peggedAssets: ACTIVE_STABLECOINS.map((coin) => ({ ...quote, id: coin.id, symbol: coin.symbol })) }),
+      updatedAt: generationAt,
+    });
+    mockFetchEvmCallHexAtBlock.mockResolvedValue(buildGetReserveDataHex(RAY / 20n));
+    mockFetchEvmUint256AtBlock.mockResolvedValue(1_000_000_000_000n);
+    vi.setSystemTime((generationAt + 588) * 1000);
+    const delayed = await loadSupplementalSourceFamilies({
+      db: {} as D1Database, startSec: generationAt + 588,
+      chainRpcs: makeChainRpcs(), families: ["aaveV3"],
+    });
+    expect(delayed.candidates).toEqual([]);
+    expect(delayed.optionalRpcTelemetry.aaveV3.missingReasonCounts["usd-price-unavailable"]).toBeGreaterThan(0);
+
+    vi.setSystemTime(generationAt * 1000);
+    vi.mocked(syncStablecoins).mockImplementationOnce(async () => {
+      vi.setSystemTime(producerFinishedAt * 1000);
+      return { status: "ok", metadata: JSON.stringify({ capabilities: { stablecoinsCache: true } }) };
+    });
+    const jobs: string[] = [];
+    const runtime = makeScheduledRuntime({
+      db: {} as D1Database, scheduleKey: "quarterHourly",
+      // Before daily snapshot admission: unrelated daily prechecks need no DB.
+      slotStartedAt: generationAt - 3600, chainRpcs: makeChainRpcs(),
+      runLeasedCron: vi.fn(async (job, fn) => {
+        jobs.push(job);
+        return fn(new AbortController().signal, vi.fn());
+      }),
+    });
+    await runQuarterHourlySlot(runtime);
+    expect(jobs.slice(0, 3)).toEqual(["sync-fx-rates", "sync-stablecoins", "sync-yield-supplemental"]);
+    const write = vi.mocked(setCacheIfNewer).mock.calls.find((call) => call[1].endsWith(":aaveV3"));
+    expect(write).toBeDefined();
+    const snapshot = JSON.parse(write![2]);
+    expect(snapshot.data.length).toBeGreaterThan(0);
+    expect(snapshot.data.filter((row: { stablecoinId: string }) => row.stablecoinId === "usdc-circle")
+      .every((row: { yield: { sourceTvlUsd: number; sourceObservedAt: number } }) =>
+        row.yield.sourceTvlUsd === 980_000 && row.yield.sourceObservedAt === producerFinishedAt)).toBe(true);
+    expect(quote.priceObservedAt).toBe(observedAt);
+    expect(quote.priceUpdatedAt).toBe(observedAt);
+  });
+
   it("converts a RAY-encoded currentLiquidityRate to APY correctly", async () => {
     // 5% nominal annual rate expressed in RAY
     const nominalRate = 0.05; // 5%

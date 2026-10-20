@@ -169,6 +169,9 @@ export function YieldIntelligenceMethodologySection() {
                       XGLD&apos;s reviewed exchange-rate provider measures XAUt per XGLD, separating gold-denominated
                       NAV changes from gold&apos;s USD price. This is issuer-administered NAV, not reconciled strategy
                       profit; it supplies no measured TVL and still needs a valid historical comparison anchor.
+                      Initial and re-anchor observations remain durable history anchors, including Ondo/Midas NAV
+                      readers, but enter no current yield row, ranking, alternative or rolling sample until a return
+                      is measured. They never publish synthetic zero APY; genuine zero and negative returns remain.
                     </li>
                     <li>
                       <span className="text-foreground">Tier 2 &mdash; DeFiLlama pools</span>: matches the coin to a
@@ -190,8 +193,10 @@ export function YieldIntelligenceMethodologySection() {
                     <li>
                       <span className="text-foreground">Tier 3 &mdash; Price-derived</span>: derives APY from 7-45 day
                       USD price appreciation only for explicitly catalogued NAV-appreciation or lending-vault mechanisms
-                      with a USD or unmapped benchmark denomination and no intentional holder-return gap. USD price drift
-                      is not a measure of non-USD native return, distributed rewards, or rebasing yield
+                      with an actual USD return reference and no intentional holder-return gap. FPI and ISC retain
+                      explicitly reviewed USD-based variable-NAV exceptions. XGLD has no USD-price fallback:
+                      gold&apos;s USD appreciation is not its XAUt return. USD drift also cannot measure distributed
+                      rewards or rebasing yield
                     </li>
                     <li>
                       <span className="text-foreground">Tier 4 &mdash; Rate-derived</span>: for dividend-distributing and

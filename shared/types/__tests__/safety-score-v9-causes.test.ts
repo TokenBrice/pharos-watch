@@ -6,8 +6,11 @@ import {
 } from "../safety-score-v9-causes";
 import { createV9EvidenceReference, findV9CauseEvidenceBindingIssues, resolveV9EvidenceCause } from "../../lib/safety-score-v9/evidence";
 import { createV9FactGapV3 } from "../../lib/safety-score-v9/reasons";
+import { V9_CANDIDATE_POLICY_V1 } from "../../lib/safety-score-v9/policy";
+import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "../../lib/safety-score-v9/evidence";
 
 const clock = Date.parse("2026-10-03T00:01:00Z") / 1000;
+const researchMaxAgeSec = V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.reviewedResearchMaxAgeSec;
 const scope: V9EvidenceCauseScope = {
   pillar: "exit", componentKey: "exit-route", factorKey: "cost", routeKey: "redemption:g1:main",
   exposureId: null, requiredDatum: "same-notional fee formula",
@@ -23,7 +26,7 @@ const entry: V9EvidenceGapClassification = {
 };
 const registrySchema = createV9EvidenceGapClassificationsV1Schema({
   assetIds: new Set([entry.assetId]), scopeKeys: new Set([v9EvidenceCauseScopeKey(entry.assetId, scope, "research")]),
-  asOfSec: clock, researchMaxAgeSec: 365 * 86400,
+  asOfSec: clock, researchMaxAgeSec,
 });
 const resolverContext = {
   assetId: entry.assetId, scope, asOfSec: clock, sourceGenerationId: "route:g1", evidenceReferences: [],
@@ -140,7 +143,7 @@ describe("cause proofs and exact authored classification admission", () => {
         const capturedSchema = createV9EvidenceGapClassificationsV1Schema({
           assetIds: new Set([entry.assetId]),
           scopeKeys: new Set([v9EvidenceCauseScopeKey(entry.assetId, currentScope, "research")]),
-          asOfSec: clock, researchMaxAgeSec: 365 * 86400,
+          asOfSec: clock, researchMaxAgeSec,
         });
         expect(capturedSchema.safeParse({ schemaVersion: 1, entries: [authored] }).success).toBe(true);
         const c = { ...authored, id: "generation-collision", scope: currentScope,
@@ -196,12 +199,14 @@ describe("cause proofs and exact authored classification admission", () => {
   });
 
   it("bounds research freshness independently of the numerical datum clock", () => {
-    const expired = { ...entry, reviewedAt: "2025-10-02T00:01:00Z",
-      sources: [{ ...entry.sources[0]!, observedAt: "2025-10-02T00:00:59Z", datumAsOf: "2025-10-01" }],
+    expect(V9_REVIEW_EVIDENCE_MAX_AGE_SEC).toBe(researchMaxAgeSec);
+    const expiredAt = new Date((clock - researchMaxAgeSec - 1) * 1000).toISOString().replace(".000Z", "Z");
+    const expired = { ...entry, reviewedAt: expiredAt,
+      sources: [{ ...entry.sources[0]!, observedAt: expiredAt, datumAsOf: null }],
     };
     expect(resolveV9EvidenceCause({ ...resolverContext, classification: expired }).causeProof.cause).toBe("U");
-    const boundary = { ...entry, reviewedAt: new Date((clock - 365 * 86400) * 1000).toISOString().replace(".000Z", "Z"),
-      sources: [{ ...entry.sources[0]!, observedAt: new Date((clock - 365 * 86400) * 1000).toISOString().replace(".000Z", "Z"), datumAsOf: null }],
+    const boundary = { ...entry, reviewedAt: new Date((clock - researchMaxAgeSec) * 1000).toISOString().replace(".000Z", "Z"),
+      sources: [{ ...entry.sources[0]!, observedAt: new Date((clock - researchMaxAgeSec) * 1000).toISOString().replace(".000Z", "Z"), datumAsOf: null }],
     };
     expect(resolveV9EvidenceCause({ ...resolverContext, classification: boundary }).causeProof.cause).toBe("B");
     expect(resolveV9EvidenceCause({ ...resolverContext, asOfSec: clock + 1, classification: boundary }).causeProof.cause).toBe("U");

@@ -160,8 +160,8 @@ export interface NormalizedDexLiquidityEvidence {
   hasMeasuredLiquidityEvidence: boolean;
   trendworthy: boolean;
   effectiveTvlUsd: number;
-  balanceMeasuredTvlUsd: number;
-  organicMeasuredTvlUsd: number;
+  balanceMeasuredTvlUsd: number | null;
+  organicMeasuredTvlUsd: number | null;
 }
 
 export function normalizeDexLiquidityEvidence(row: DexLiquidityEvidenceRow): NormalizedDexLiquidityEvidence {
@@ -189,8 +189,8 @@ export function normalizeDexLiquidityEvidence(row: DexLiquidityEvidenceRow): Nor
     coverageConfidence,
     ...classifyLiquidityEvidence(row.total_tvl_usd, coverageClass, coverageConfidence),
     effectiveTvlUsd: row.effective_tvl_usd ?? 0,
-    balanceMeasuredTvlUsd: row.balance_measured_tvl_usd ?? 0,
-    organicMeasuredTvlUsd: row.organic_measured_tvl_usd ?? 0,
+    balanceMeasuredTvlUsd: row.balance_measured_tvl_usd ?? null,
+    organicMeasuredTvlUsd: row.organic_measured_tvl_usd ?? null,
   };
 }
 

@@ -2,6 +2,7 @@ import { logWorkerEventArgs } from "../lib/structured-log";
 import { validatePayloadWithSchema } from "../lib/api-schema";
 import { USER_AGENT } from "../lib/constants";
 import { fetchJsonWithRetry } from "../lib/fetch-retry";
+import { FX_SOURCE_MAX_FUTURE_SKEW_SEC, isAdmissibleFxSourceDate } from "../lib/fx-rate-state";
 import type {
   ExchangeRateApiPayload,
   SecondaryCurrencyCandidate,
@@ -13,20 +14,28 @@ const SECONDARY_FX_PRIMARY_URL = "https://cdn.jsdelivr.net/npm/@fawazahmed0/curr
 const SECONDARY_FX_FALLBACK_URL = "https://latest.currency-api.pages.dev/v1/currencies/usd.min.json";
 const TERTIARY_FX_URL = "https://open.er-api.com/v6/latest/USD";
 
+const FxSourceDateSchema = z.string().refine(
+  (date) => isAdmissibleFxSourceDate(date, Math.floor(Date.now() / 1000)),
+  "Expected a real ISO source date no later than today",
+);
+
 const FrankfurterResponseSchema = z.object({
   base: z.string(),
-  date: z.string(),
+  date: FxSourceDateSchema,
   rates: z.record(z.string(), z.number()),
 });
 
 const SecondaryCurrencyResponseSchema = z.object({
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  date: FxSourceDateSchema.optional(),
   usd: z.record(z.string(), z.number()),
 });
 
 const ExchangeRateApiResponseSchema = z.object({
   result: z.string().optional(),
-  time_last_update_unix: z.number().int().positive().optional(),
+  time_last_update_unix: z.number().int().positive().refine(
+    (timestamp) => timestamp - Math.floor(Date.now() / 1000) <= FX_SOURCE_MAX_FUTURE_SKEW_SEC,
+    "Source timestamp exceeds allowed future skew",
+  ).optional(),
   time_last_update_utc: z.string().optional(),
   rates: z.record(z.string(), z.number()),
 });

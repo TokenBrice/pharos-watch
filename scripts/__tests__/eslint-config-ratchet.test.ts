@@ -55,6 +55,16 @@ export function decode(raw: string): string {
 
 describe("ESLint config ratchets", () => {
 
+  it("registers inherited React Hooks rules for CommonJS sources", async () => {
+    const config = await eslint.calculateConfigForFile("scripts/__commonjs-probe.cjs");
+    expect(config.plugins["react-hooks"]).toBeDefined();
+    expect(config.rules["react-hooks/preserve-manual-memoization"][0]).toBe(2);
+  });
+
+  it("does not lint frozen compiled compatibility readers", async () => {
+    expect(await eslint.isPathIgnored("worker/src/api/__tests__/fixtures/pr-b-mint-burn-readers.cjs")).toBe(true);
+  });
+
   // .mts was outside the old scripts/**/*.{mjs,ts} carve-out; retain both sides.
   it.each([
     "scripts/lib/__security-probe.mts",

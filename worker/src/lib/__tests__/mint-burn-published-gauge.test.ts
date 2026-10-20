@@ -24,7 +24,7 @@ function payload(overrides: Record<string, unknown> = {}): Record<string, unknow
 function cacheTable(value: string, ageSec: number) {
   return {
     match: "SELECT value, updated_at FROM cache WHERE key = ?",
-    matchBinds: ["mint-burn-flows:v4:aggregate:24"],
+    matchBinds: ["mint-burn-flows:v5:aggregate:24"],
     rows: [],
     first: { value, updated_at: NOW_SEC - ageSec },
   };
@@ -57,10 +57,12 @@ describe("parsePublishedMintBurnGauge", () => {
         {
           id: "usdt-tether", symbol: "USDT", intensity: -20, net24hUsd: -5_000_000,
           valuation24h: UNKNOWN_VALUATION, baselineValuation: "unknown",
+          scanCoverage: null,
         },
         {
           id: "usdc-circle", symbol: "USDC", intensity: null, net24hUsd: 1_000_000,
           valuation24h: UNKNOWN_VALUATION, baselineValuation: "unknown",
+          scanCoverage: null,
         },
       ],
       chains: [{ chainId: "ethereum", net24hUsd: -4_000_000, valuation: "unknown" }],
@@ -136,7 +138,7 @@ describe("readPublishedMintBurnGauge", () => {
     const result = await readPublishedMintBurnGauge(mockD1([
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["mint-burn-flows:v4:aggregate:24"],
+        matchBinds: ["mint-burn-flows:v5:aggregate:24"],
         rows: [],
         first: null,
       },

@@ -14,6 +14,17 @@ import { completeMintBurnConservationAudit, fetchConservationBoundaries, getMint
 import reviewedConservationSidecar from "../mint-burn-conservation-reviewed.json";
 import type { AlchemyLogEntry } from "../alchemy-logs";
 import type { MintBurnRow } from "../mint-burn-pipeline/types";
+import type * as AlchemyLogsModule from "../alchemy-logs";
+import { getAlchemyTransactionContextBatchMany } from "../alchemy-logs";
+import { classifyBridgeBurnRows, reconcileReviewedSupplyBurns } from "../mint-burn-pipeline/classification";
+import { parseMintBurnLogs } from "../mint-burn-pipeline/parse";
+import { collectAffectedHours, insertMintBurnRows, persistMintBurnRows, recalcAffectedHours, updateEventClassifications } from "../mint-burn-pipeline/persistence";
+import { drainMintBurnMaterializationDebt } from "../mint-burn-pipeline/materialization-debt";
+import { abiWord, reviewedBurnFixture, reviewedFalseBurnEntries } from "./mint-burn-supply-proof.test-support";
+vi.mock("../alchemy-logs", async (importOriginal) => ({
+  ...(await importOriginal<typeof AlchemyLogsModule>()),
+  getAlchemyTransactionContextBatchMany: vi.fn(),
+}));
 vi.mock("../evm-rpc", () => ({ fetchEvmRpcBatchDetailed: vi.fn() }));
 const config = MINT_BURN_CONFIGS.find((item) => item.stablecoinId === "gusd-gemini")!;
 const sidecarEntries = reviewedConservationSidecar.entries as unknown as ReviewedConservationEntry[];
@@ -762,5 +773,157 @@ describe("reviewed alternative conservation laws", () => {
     expect(validateReviewedConservationEntry({ ...base, invariantParams: { boundaryViews: [
       { name: "x", address: "0xbad", call: { kind: "eth_call", selector: "0x430bf08a" } },
     ] } })[0]).toContain("address");
+  });
+});
+
+describe("reviewed burn economic materialization", () => {
+  for (const entry of reviewedFalseBurnEntries) {
+    it(`${entry.stablecoinId} counts proven burns only without turning an unsupported raw law into a mismatch`, async () => {
+      const fixture = reviewedBurnFixture(entry.stablecoinId);
+      const { db, sqlite } = fixtures.open();
+      const rows: MintBurnRow[] = [];
+      for (const actualBurn of [false, true]) {
+        const context = fixture.context(actualBurn);
+        const txHash = abiWord(actualBurn ? 21n : 20n);
+        const logs = context.receipt!.logs.map((item) => ({ ...item, transactionHash: txHash }));
+        context.tx!.hash = context.receipt!.transactionHash = txHash;
+        context.receipt!.logs = logs;
+        vi.mocked(getAlchemyTransactionContextBatchMany).mockResolvedValueOnce(new Map([[txHash, context]]));
+        const parsed = parseMintBurnLogs(fixture.config, fixture.eventDef, [logs[0]], fixture.timestamps, fixture.priceContext).rows;
+        await classifyBridgeBurnRows(parsed, fixture.config, [mintBurnAlchemyEndpoint("https://rpc.example")],
+          { count: 0, limit: 20 }, new Map());
+        parsed[0].amount_usd = 20_000;
+        rows.push(...parsed);
+      }
+      await persistMintBurnRows(db, rows);
+      await recalcAffectedHours(db, collectAffectedHours(rows));
+      expect(sqlite.prepare("SELECT burn_count, burn_volume_usd, net_flow_usd FROM mint_burn_hourly").get())
+        .toEqual({ burn_count: 1, burn_volume_usd: 20_000, net_flow_usd: -20_000 });
+      expect(sqlite.prepare("SELECT COUNT(*) AS n FROM mint_burn_events").get()).toEqual({ n: 2 });
+      expect(completeMintBurnConservationAudit({ ...input(), config: fixture.config }))
+        .toMatchObject({ status: "unsupported", reason: entry.unsupportedReason });
+    });
+  }
+
+  it("reconciles retained legacy classifications with durable hourly debt and preserves actual burns", async () => {
+    const fixture = reviewedBurnFixture("dai-makerdao");
+    const { db, sqlite } = fixtures.open();
+    const contexts = new Map<string, AlchemyLogsModule.AlchemyTransactionContextBatch>();
+    const rows: MintBurnRow[] = [];
+    for (const actualBurn of [false, true]) {
+      const context = fixture.context(actualBurn);
+      const txHash = abiWord(actualBurn ? 21n : 20n);
+      context.tx!.hash = context.receipt!.transactionHash = txHash;
+      context.receipt!.logs = context.receipt!.logs.map((item) => ({ ...item, transactionHash: txHash }));
+      contexts.set(txHash, context);
+      const parsed = parseMintBurnLogs(fixture.config, fixture.eventDef, [context.receipt!.logs[0]],
+        fixture.timestamps, fixture.priceContext).rows[0];
+      rows.push({ ...parsed, burn_type: "effective_burn", burn_review_reason: null, amount_usd: 20_000 });
+    }
+    await insertMintBurnRows(db, rows);
+    await recalcAffectedHours(db, collectAffectedHours(rows));
+    vi.mocked(getAlchemyTransactionContextBatchMany).mockResolvedValueOnce(contexts);
+    expect(await reconcileReviewedSupplyBurns(db, fixture.config, [mintBurnAlchemyEndpoint("https://rpc.example")],
+      { count: 0, limit: 20 }, new Map(), 1_699_999_200)).toBe(2);
+    // A crash here leaves old hourly bytes and recoverable durable debt, not a lost repair.
+    expect(sqlite.prepare("SELECT burn_count FROM mint_burn_hourly").get()).toEqual({ burn_count: 2 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM mint_burn_dirty_hours").get()).toEqual({ n: 1 });
+    await drainMintBurnMaterializationDebt(db);
+    expect(sqlite.prepare("SELECT burn_count, burn_volume_usd FROM mint_burn_hourly").get())
+      .toEqual({ burn_count: 1, burn_volume_usd: 20_000 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM mint_burn_dirty_hours").get()).toEqual({ n: 0 });
+    expect(await reconcileReviewedSupplyBurns(db, fixture.config, [mintBurnAlchemyEndpoint("https://rpc.example")],
+      { count: 0, limit: 20 }, new Map(), 1_699_999_200)).toBe(0);
+  });
+
+  it("bounds retained reconciliation and makes progress beyond the first batch", async () => {
+    const fixture = reviewedBurnFixture("eurs-stasis");
+    const { db, sqlite } = fixtures.open();
+    const contexts = new Map<string, AlchemyLogsModule.AlchemyTransactionContextBatch>();
+    const rows: MintBurnRow[] = [];
+    for (let index = 0; index < 25; index++) {
+      const context = fixture.context(false);
+      const txHash = abiWord(BigInt(30 + index));
+      context.tx!.hash = context.receipt!.transactionHash = txHash;
+      context.receipt!.logs = [{ ...fixture.log, transactionHash: txHash }];
+      contexts.set(txHash, context);
+      const row = parseMintBurnLogs(fixture.config, fixture.eventDef, context.receipt!.logs,
+        fixture.timestamps, fixture.priceContext).rows[0];
+      rows.push({ ...row, burn_type: "effective_burn", burn_review_reason: null });
+    }
+    await insertMintBurnRows(db, rows);
+    vi.mocked(getAlchemyTransactionContextBatchMany).mockResolvedValue(contexts);
+    const run = () => reconcileReviewedSupplyBurns(db, fixture.config, [mintBurnAlchemyEndpoint("https://rpc.example")],
+      { count: 0, limit: 20 }, new Map(), 1_699_999_200);
+    expect(await run()).toBe(20);
+    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM mint_burn_events WHERE burn_review_reason IS NULL").get()).toEqual({ n: 5 });
+    expect(await run()).toBe(5);
+    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM mint_burn_events WHERE burn_type = 'review_required'").get()).toEqual({ n: 25 });
+    expect(await run()).toBe(0);
+  });
+
+  it("advances past twenty unavailable receipts and wraps without losing retry eligibility", async () => {
+    const fixture = reviewedBurnFixture("dai-makerdao");
+    const { db, sqlite } = fixtures.open();
+    const rows: MintBurnRow[] = [];
+    const contexts = new Map<string, AlchemyLogsModule.AlchemyTransactionContextBatch>();
+    for (let index = 0; index < 21; index++) {
+      const context = fixture.context(true);
+      const txHash = abiWord(BigInt(30 + index));
+      context.tx!.hash = context.receipt!.transactionHash = txHash;
+      context.receipt!.logs = context.receipt!.logs.map((log) => ({ ...log, transactionHash: txHash }));
+      if (index === 20) contexts.set(txHash, context);
+      const row = parseMintBurnLogs(fixture.config, fixture.eventDef, [context.receipt!.logs[0]],
+        fixture.timestamps, fixture.priceContext).rows[0];
+      rows.push({ ...row, timestamp: row.timestamp + index, burn_type: "review_required",
+        burn_review_reason: "supply-proof-context-unavailable" });
+    }
+    await insertMintBurnRows(db, rows);
+    vi.mocked(getAlchemyTransactionContextBatchMany).mockResolvedValue(contexts);
+    const run = () => reconcileReviewedSupplyBurns(db, fixture.config, [mintBurnAlchemyEndpoint("https://rpc.example")],
+      { count: 0, limit: 20 }, new Map(), 1_699_999_200);
+    await run();
+    await run();
+    expect(sqlite.prepare("SELECT burn_type FROM mint_burn_events WHERE id = ?").get(rows[20].id))
+      .toEqual({ burn_type: "effective_burn" });
+    expect(sqlite.prepare(`SELECT COUNT(*) AS n FROM mint_burn_events
+      WHERE burn_review_reason = 'supply-proof-context-unavailable'`).get()).toEqual({ n: 20 });
+    vi.mocked(getAlchemyTransactionContextBatchMany).mockClear();
+    await run();
+    expect(getAlchemyTransactionContextBatchMany).toHaveBeenCalled();
+    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM mint_burn_events").get()).toEqual({ n: 21 });
+  });
+
+  it("does not reconstruct a partially pruned hour from its surviving raw burn", async () => {
+    const fixture = reviewedBurnFixture("dai-makerdao");
+    const { db, sqlite } = fixtures.open();
+    const parsed = parseMintBurnLogs(fixture.config, fixture.eventDef, [fixture.log],
+      fixture.timestamps, fixture.priceContext).rows[0];
+    const row: MintBurnRow = { ...parsed, timestamp: 1_699_999_199,
+      amount_usd: 20_000, burn_type: "effective_burn", burn_review_reason: null };
+    await insertMintBurnRows(db, [row]);
+    await recalcAffectedHours(db, collectAffectedHours([row]));
+    // The retained aggregate includes an already-pruned sibling.
+    sqlite.exec("UPDATE mint_burn_hourly SET burn_count = 2, burn_volume_usd = 45000, net_flow_usd = -45000");
+    expect(await reconcileReviewedSupplyBurns(db, fixture.config, [mintBurnAlchemyEndpoint("https://rpc.example")],
+      { count: 0, limit: 20 }, new Map(), 1_699_999_200)).toBe(0);
+    expect(sqlite.prepare("SELECT burn_count, burn_volume_usd FROM mint_burn_hourly").get())
+      .toEqual({ burn_count: 2, burn_volume_usd: 45_000 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM mint_burn_dirty_hours").get()).toEqual({ n: 0 });
+    expect(getAlchemyTransactionContextBatchMany).not.toHaveBeenCalled();
+  });
+
+  it("rolls back dirty-hour enqueue when its paired classification mutation fails", async () => {
+    const fixture = reviewedBurnFixture("dai-makerdao");
+    const { db, sqlite } = fixtures.open();
+    const row = parseMintBurnLogs(fixture.config, fixture.eventDef, [fixture.log],
+      fixture.timestamps, fixture.priceContext).rows[0];
+    await insertMintBurnRows(db, [{ ...row, burn_type: "effective_burn", burn_review_reason: null }]);
+    sqlite.exec(`CREATE TRIGGER refuse_burn_repair BEFORE UPDATE OF burn_type ON mint_burn_events
+      BEGIN SELECT RAISE(ABORT, 'refused repair'); END`);
+    await expect(updateEventClassifications(db, [row])).rejects.toThrow("refused repair");
+    expect(sqlite.prepare("SELECT burn_type, burn_review_reason FROM mint_burn_events").get())
+      .toEqual({ burn_type: "effective_burn", burn_review_reason: null });
+    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM mint_burn_dirty_hours").get()).toEqual({ n: 0 });
   });
 });

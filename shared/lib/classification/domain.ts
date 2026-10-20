@@ -1,4 +1,4 @@
-import type { BackingType, GovernanceType } from "../../types";
+import type { BackingType, GovernanceType, Infrastructure } from "../../types";
 import { BACKING_DESCRIPTORS, GOVERNANCE_DESCRIPTORS, projectDescriptors } from "./descriptors";
 
 // Governance (Type) labels
@@ -58,3 +58,9 @@ export function getGovernanceLabelShort(value: string): string {
 }
 
 // ---------------------------------------------------------------------------
+
+export const INFRASTRUCTURE_LABELS = {
+  "liquity-v1": "Liquity v1",
+  "liquity-v2": "Liquity v2",
+  m0: "M0",
+} as const satisfies Record<Infrastructure, string>;

@@ -37,6 +37,46 @@ function pendingCheckpoint(overrides: Record<string, unknown> = {}) {
 }
 describe("live-reserves-store", () => {
   it.each([
+    ["fatal", "warning", true, false], ["fatal", "info", true, false], ["fatal", "warning", false, false],
+    ["degraded", "warning", true, true], ["degraded", "warning", false, false], ["info", "warning", false, true],
+  ] as const)("judges %s effects independently of %s severity and degraded allowlisting (%s)", (effect, severity, allowed, eligible) => {
+    const coin = WORKER_TRACKED_META_BY_ID.get("iusd-infinifi")!;
+    const config = coin.liveReservesConfig!;
+    const record = reserveCompositionInput("retained", {
+      metadata: { freshnessMode: "not-applicable" }, warningCount: 1,
+      warnings: [{ code: "reviewed-gap", message: "Retained observation warning", severity, effect }],
+    });
+    const admission = evaluateLiveReserveAdmission(record, reserveSyncStateInput("retained", { lastStatus: "error" }), {
+      liveReservesConfig: { ...config, scoring: { ...config.scoring, allowedDegradedWarningCodes: allowed ? ["reviewed-gap"] : [] } },
+    }, 1_200);
+    expect(admission.eligible).toBe(eligible);
+    expect(admission.reasons).toEqual(eligible ? [] : ["degraded-snapshot"]);
+  });
+
+  it.each(["fatal", "info"] as const)("serves retained %s warnings without promoting fatal evidence", async (effect) => {
+    const warnings = JSON.stringify([{ code: "retained-warning", message: "Stored evidence warning", severity: "info", effect }]);
+    const composition = reserveCompositionRow({
+      metadata: JSON.stringify({ freshnessMode: "not-applicable" }), warnings, warning_count: 1,
+      adapter_source_model: "dynamic-mix", adapter_evidence_class: "independent",
+    });
+    const state = reserveSyncRow();
+    const db = mockD1([
+      { match: "FROM reserve_composition", rows: [composition], first: composition },
+      { match: "FROM reserve_sync_state", rows: [state], first: state },
+    ]);
+    expect((await loadFreshIndependentLiveReserveMap(db, 1_200)).has("iusd-infinifi")).toBe(effect === "info");
+    const detail = await resolveReserveResult(db, "iusd-infinifi", 1_200);
+    expect(detail?.mode).toBe(effect === "fatal" ? "curated-fallback" : "live");
+    expect(detail?.liveAt).toBe(effect === "fatal" ? undefined : 1_000);
+    if (effect === "fatal") {
+      expect(detail?.metadata).toBeUndefined();
+      expect(detail?.provenance).toBeUndefined();
+      expect(detail?.sync?.status).toBe("degraded");
+      expect(detail?.sync?.lastError).toContain("fatal warnings");
+    }
+  });
+
+  it.each([
     ["not-json", 1], ["{}", 0], ["null", 0], ['[{"code":"material-unknown-exposure","effect":"degraded"}]', 1],
     ['[{"code":"gap","message":"gap","severity":"broken"}]', 1], ["[]", 1],
     ['[{"code":"gap","message":"gap","severity":"info"}]', 0],

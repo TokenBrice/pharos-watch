@@ -16,6 +16,7 @@ import { rawAmountToDecimal } from "./staged-pool-recovery";
 import { DIRECT_API_REQUEST_TIMEOUT_MS } from "./direct-api-policy";
 import { rethrowIfAborted } from "../../lib/abort";
 import { isResponseBodyTooLargeError } from "../../lib/response-body";
+import { parseStrictFiniteDecimal } from "./direct-api-json";
 import type { LiquidityFallbackCounters } from "./types";
 
 const FLUID_API_BASE = "https://api.fluid.instadapp.io/v2";
@@ -165,25 +166,25 @@ async function enrichFluidPool(
     pool.feeRate = Number(fee) / 1_000_000;
   }
 
-  // Strict RPC decoding returns null where malformed bytes previously threw.
+  // Both independently decoded halves are required, including observed zero halves.
   if (!collateralReserves || !debtReserves) {
-    throw new Error("collateral or debt reserves unavailable");
+    const missing = !collateralReserves && !debtReserves ? "collateral and debt"
+      : !collateralReserves ? "collateral" : "debt";
+    throw new Error(`${missing} reserves unavailable`);
   }
   const token0Balance = collateralReserves[0] + debtReserves[2];
   const token1Balance = collateralReserves[1] + debtReserves[3];
   const token0Decimals = pool.tokens[0]?.decimals ?? 0;
   const token1Decimals = pool.tokens[1]?.decimals ?? 0;
-  if (token0Balance > 0n || token1Balance > 0n) {
-    if (Number.isFinite(token0Decimals) && token0Decimals > 0 && Number.isFinite(token1Decimals) && token1Decimals > 0) {
-      pool.balances = [
-        rawAmountToDecimal(token0Balance, token0Decimals),
-        rawAmountToDecimal(token1Balance, token1Decimals),
-      ];
-      pool.balancesNormalized = true;
-    } else {
-      pool.balances = [Number(token0Balance), Number(token1Balance)];
-      pool.balancesNormalized = false;
-    }
+  if (Number.isFinite(token0Decimals) && token0Decimals > 0 && Number.isFinite(token1Decimals) && token1Decimals > 0) {
+    pool.balances = [
+      rawAmountToDecimal(token0Balance, token0Decimals),
+      rawAmountToDecimal(token1Balance, token1Decimals),
+    ];
+    pool.balancesNormalized = true;
+  } else {
+    pool.balances = [Number(token0Balance), Number(token1Balance)];
+    pool.balancesNormalized = false;
   }
 }
 
@@ -229,10 +230,10 @@ export async function fetchFluidPools(
       }
 
       const pools = (tickers as FluidTicker[]).map((t): DexApiPool | null => {
-        const tvlUsd = parseFloat(t.liquidity_in_usd);
-        const price = parseFloat(t.last_price);
-        const baseVol = parseFloat(t.base_volume);
-        const targetVol = parseFloat(t.target_volume);
+        const tvlUsd = parseStrictFiniteDecimal(t.liquidity_in_usd) ?? Number.NaN;
+        const price = parseStrictFiniteDecimal(t.last_price) ?? Number.NaN;
+        const baseVol = parseStrictFiniteDecimal(t.base_volume) ?? Number.NaN;
+        const targetVol = parseStrictFiniteDecimal(t.target_volume) ?? Number.NaN;
         if (!Number.isFinite(tvlUsd) || tvlUsd <= 0) return null;
         if (!isEvmAddress(t.pool_id)) {
           const warning = `${chain} pool_id ${formatInvalidFluidPoolId(t.pool_id)} skipped: invalid EVM address`;

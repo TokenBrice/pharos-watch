@@ -44,7 +44,7 @@ describe("mint_burn projector", () => {
 
   it.each([
     { timestamp: 1777636800, version: "6.0" },
-    { timestamp: 1792497600, version: "6.27" },
+    { timestamp: 1792497600, version: "6.28" },
   ])("persists the flow methodology at source time $timestamp under later replay clocks", async ({ timestamp, version }) => {
     const { db, sqlite } = fixtures.open();
     sqlite.prepare(`INSERT INTO mint_burn_events

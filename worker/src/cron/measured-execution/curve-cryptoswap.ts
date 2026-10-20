@@ -9,6 +9,7 @@ import type { ChainRpcConfig } from "../../lib/chain-registry";
 import {
   fetchEvmCallHexAtBlock,
   fetchEvmCodeAtBlock,
+  fetchEvmMulticall3Aggregate3AtBlock,
   type EvmMulticall3Result,
 } from "../../lib/evm-rpc";
 import {
@@ -258,6 +259,7 @@ export type CurveCryptoSwapEligibilityFailure =
   | "execution-endpoint-mismatch"
   | "api-broken-or-unknown"
   | "ng-kill-method-not-proven-absent"
+  | "ng-kill-probe-unavailable"
   | "runtime-allowlist-incomplete"
   | "runtime-code-unavailable"
   | "runtime-code-hash-mismatch"
@@ -393,6 +395,7 @@ export type CurveCryptoSwapDeploymentVerification =
 export async function verifyCurveCryptoSwapDeployment(input: {
   policy: CurveCryptoSwapPoolPolicy;
   blockNumber: number;
+  blockHash: `0x${string}`;
   chainRpcs: Map<string, ChainRpcConfig>;
   signal?: AbortSignal;
   rpcBudget?: DexMeasuredExecutionRpcBudget;
@@ -400,6 +403,7 @@ export async function verifyCurveCryptoSwapDeployment(input: {
   const { policy, rpcBudget } = input;
   const requestOptions = {
     chainRpcs: input.chainRpcs,
+    stateBlockHash: input.blockHash,
     signal: input.signal,
     timeoutMs: DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
     ...(rpcBudget ? { deadlineMs: rpcBudget.deadlineMs } : {}),
@@ -462,13 +466,23 @@ export async function verifyCurveCryptoSwapDeployment(input: {
   const mathCodeHash = await readCodeHash(mathAddress);
   const onChainPoolTokenAddresses = [await readCoin(0), await readCoin(1)];
 
-  const killedRaw = await fetchEvmCallHexAtBlock(
+  if (rpcBudget && !rpcBudget.canRequestChain(policy.chain)) {
+    return { ok: false, reason: "ng-kill-probe-unavailable" };
+  }
+  const killResults = await fetchEvmMulticall3Aggregate3AtBlock(
     policy.chain,
-    policy.poolAddress,
-    encodeFunctionData({ abi: CURVE_CRYPTOSWAP_DEPENDENCY_ABI, functionName: "is_killed" }),
+    [{
+      label: "is-killed",
+      target: policy.poolAddress,
+      callData: encodeFunctionData({ abi: CURVE_CRYPTOSWAP_DEPENDENCY_ABI, functionName: "is_killed" }),
+      allowFailure: true,
+    }],
     input.blockNumber,
     requestOptions,
   );
+  const killResult = killResults?.length === 1 && killResults[0]?.label === "is-killed" ? killResults[0] : null;
+  rpcBudget?.recordChainResult(policy.chain, killResult != null);
+  if (killResult == null) return { ok: false, reason: "ng-kill-probe-unavailable" };
   const runtimeEvidence: CurveCryptoSwapRuntimeEvidence = {
     apiIsBroken: false,
     poolCodeHash,
@@ -478,7 +492,7 @@ export async function verifyCurveCryptoSwapDeployment(input: {
     ...(viewsCodeHash ? { viewsCodeHash } : {}),
     mathAddress,
     ...(mathCodeHash ? { mathCodeHash } : {}),
-    ngKillMethodUnavailable: killedRaw == null,
+    ngKillMethodUnavailable: killResult.success === false,
     transferSemanticsReviewed: policy.transferSemanticsReviewed,
     ...(onChainPoolTokenAddresses.every((address) => address != null)
       ? { onChainPoolTokenAddresses: onChainPoolTokenAddresses as [`0x${string}`, `0x${string}`] }
@@ -506,6 +520,7 @@ export interface CurveCryptoSwapRequest {
   target: DexMeasuredExecutionTarget;
   inputUsd: number;
   blockNumber: number;
+  blockHash: `0x${string}`;
   endpointAddress: `0x${string}`;
   runtimeEvidence?: CurveCryptoSwapRuntimeEvidence;
 }

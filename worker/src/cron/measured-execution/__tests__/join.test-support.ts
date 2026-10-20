@@ -54,6 +54,7 @@ export function makeV3LkgRoute(points: readonly (readonly [number, number])[]) {
   const deployment = getDexMeasuredExecutionDeployment(measuredTarget.adapterProfileId, measuredTarget.chain);
   if (deployment == null) throw new Error("missing Ethereum QuoterV2 deployment");
   const profile = buildDexMeasuredExecutionProfile({
+    blockHash: `0x${"ab".repeat(32)}`,
     target: measuredTarget,
     targetGenerationId: "target-generation-lkg",
     quoteGenerationId: "quote-generation-lkg",

@@ -17,6 +17,7 @@ import type { MechanismArchetype, StablecoinStatus, StablecoinFlags } from "../t
 import type { ReportCardGrade } from "../types/report-card-grade";
 import type { ThreatBand } from "./classification/risk";
 import { RISKY_GRADES, SAFE_GRADES } from "./safety-grade-buckets";
+import { VERDICT_LABELS } from "./classification/verdict";
 
 export type StablecoinVerdictArchetype =
   | "pre-launch"
@@ -46,19 +47,6 @@ export interface VerdictInputs {
   navToken?: boolean;
   activeDepeg: boolean;
 }
-
-const VERDICT_LABELS: Record<StablecoinVerdictArchetype, string> = {
-  "pre-launch": "Pre-launch",
-  "quarantined-record": "Quarantined Record",
-  "delisted-record": "Delisted Record",
-  "frozen-archive": "Frozen Archive",
-  distressed: "Distressed",
-  "low-safety-score": "Low Safety Score",
-  "yield-bearing-hybrid": "Yield-Bearing Hybrid",
-  "decentralized-benchmark": "Decentralized Benchmark",
-  "institutional-default": "Institutional Default",
-  uncategorized: "Uncategorized",
-};
 
 // The safe/risky grade boundary lives once, in `safety-grade-buckets.ts`.
 const DISTRESSED_BANDS: ReadonlySet<ThreatBand> = new Set(["WARNING", "DANGER"]);

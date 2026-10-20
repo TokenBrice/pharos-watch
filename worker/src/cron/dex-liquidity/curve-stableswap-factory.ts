@@ -260,7 +260,9 @@ function buildCurveStableswapFactoryExecutionModel(input: {
     stablecoinPriceById: input.stablecoinPriceById,
     implyUntrackedPrices: false,
   });
-  if (!resolvedPrices.ok) return { ok: false, reason: "incomplete-exact-capture" };
+  if (!resolvedPrices.ok || resolvedPrices.value.sources.some((source) => source !== "tracked-market")) {
+    return { ok: false, reason: "incomplete-exact-capture" };
+  }
 
   const tokens = state.coins.map((address, index) => {
     const referencePriceUsd = resolvedPrices.value.prices[index];
@@ -272,7 +274,7 @@ function buildCurveStableswapFactoryExecutionModel(input: {
       decimals: state.decimals[index]!,
       balance: balances[index]!,
       referencePriceUsd,
-      referencePriceSource: "source-token-usd" as const,
+      referencePriceSource: resolvedPrices.value.sources[index]!,
       ...(assetId ? { trackedAssetId: assetId } : {}),
     };
   });

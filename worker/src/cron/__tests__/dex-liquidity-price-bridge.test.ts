@@ -14,7 +14,8 @@ const aggregate = (id: string, updatedAt = NOW): DexPriceRow => ({
 });
 const source = (updatedAt?: number) => ({
   protocol: "fluid", sourceFamily: "fluid", chain: "ethereum", price: 0.98, tvl: 500_000,
-  ...(updatedAt === undefined ? {} : { updatedAt }),
+  aggregateObservedAt: NOW,
+  ...(updatedAt === undefined ? {} : { observedAt: updatedAt, updatedAt }),
 });
 function database(rows: Array<DexPriceRow & { price_sources_json: string | null }>) {
   const all = vi.fn(async () => ({ results: rows }));
@@ -27,7 +28,7 @@ afterEach(() => { vi.restoreAllMocks(); });
 describe("loadDexPrices", () => {
   it("loads both existing map shapes from one union SELECT", async () => {
     const row = aggregate("usdc");
-    const sources = [source(), { ...source(), protocol: "balancer", sourceFamily: "balancer" }];
+    const sources = [source(NOW), { ...source(NOW), protocol: "balancer", sourceFamily: "balancer" }];
     const { db, all } = database([{ ...row, price_sources_json: JSON.stringify(sources) }]);
     const result = await loadDexPrices(db, NOW);
     expect(result.dexPriceRows).toEqual(new Map([["usdc", row]]));
@@ -37,12 +38,31 @@ describe("loadDexPrices", () => {
     expect(all).toHaveBeenCalledOnce();
   });
 
-  it("preserves additive writer clocks without activating a different source-admission policy", async () => {
-    const clocked = { ...source(), observedAt: NOW - 6 * 3600, aggregateObservedAt: NOW - 6 * 3600 };
+  it("rejects six-hour source clocks even when the aggregate and compatibility clocks are fresh", async () => {
+    const clocked = { ...source(NOW), observedAt: NOW - 6 * 3600 };
     const { db } = database([{ ...aggregate("usdc"), price_sources_json: JSON.stringify([clocked]) }]);
     const result = await loadDexPrices(db, NOW);
-    // Writer-only rollout: the strict quote-age gate belongs to the subsequent reader activation.
-    expect(result.dexPriceSources.get("usdc")).toEqual([{ ...clocked, updatedAt: NOW }]);
+    expect(result.dexPriceRows.get("usdc")?.updated_at).toBe(NOW);
+    expect(result.dexPriceSources.has("usdc")).toBe(false);
+  });
+
+  it("requires original source and aggregate clocks instead of legacy publication fallbacks", async () => {
+    const { db } = database([{ ...aggregate("usdc"), price_sources_json: JSON.stringify([
+      source(), { ...source(), updatedAt: NOW },
+      { ...source(NOW), aggregateObservedAt: undefined },
+      { ...source(NOW), aggregateObservedAt: NOW - 6 * 3600 },
+    ]) }]);
+    const result = await loadDexPrices(db, NOW);
+    expect(result.dexPriceSources.size).toBe(0);
+  });
+
+  it("uses the separate source and aggregate budgets at their inclusive boundaries", async () => {
+    const clocked = { ...source(NOW - MAX_AGE), aggregateObservedAt: NOW - 4_500 };
+    const { db } = database([{ ...aggregate("usdc"), price_sources_json: JSON.stringify([
+      clocked, { ...clocked, aggregateObservedAt: NOW - 4_501 },
+      { ...clocked, aggregateObservedAt: NOW + 1 },
+    ]) }]);
+    expect((await loadDexPrices(db, NOW)).dexPriceSources.get("usdc")).toEqual([clocked]);
   });
 
   it("returns both empty maps only for a missing table", async () => {
@@ -72,7 +92,7 @@ describe("loadDexPrices", () => {
   it("logs malformed JSON and invalid shapes while preserving aggregate rows", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const { db } = database([
-      { ...aggregate("parse"), price_sources_json: "{bad-json" },
+      { ...aggregate("parse", NOW - MAX_AGE - 1), price_sources_json: "{bad-json" },
       { ...aggregate("shape"), price_sources_json: "{}" },
       { ...aggregate("empty"), price_sources_json: "[]" },
     ]);
@@ -81,19 +101,22 @@ describe("loadDexPrices", () => {
     expect(result.dexPriceRows.size).toBe(3);
     expect(result.dexPriceSources.size).toBe(0);
     expect(telemetry.malformedRows).toEqual([
-      { stablecoinId: "parse", updatedAt: NOW, reason: "json-parse-failed" },
+      { stablecoinId: "parse", updatedAt: NOW - MAX_AGE - 1, reason: "json-parse-failed" },
       { stablecoinId: "shape", updatedAt: NOW, reason: "invalid-shape" },
     ]);
+    expect(telemetry.staleRows).toEqual([{
+      stablecoinId: "parse", updatedAt: NOW - MAX_AGE - 1, ageSec: MAX_AGE + 1, maxAgeSec: MAX_AGE,
+    }]);
     expect(warnSpy.mock.calls.filter(([message]) => String(message).includes("owner=depeg-helpers")
       && String(message).includes("context=dex_prices.price_sources_json"))).toHaveLength(2);
   });
 
-  it("uses the explicit pre-await clock at the inclusive row and source freshness boundary", async () => {
+  it("uses the explicit pre-await source clock and reports row age without skipping decode", async () => {
     const clock = vi.spyOn(Date, "now").mockReturnValue(NOW * 1000);
     const boundary = NOW - MAX_AGE;
     const rows = [
       { ...aggregate("boundary", boundary), price_sources_json: JSON.stringify([source(boundary), source(), source(0), source(-1), source(NOW - MAX_AGE - 1), source(NOW + 1)]) },
-      { ...aggregate("stale", boundary - 1), price_sources_json: "{bad-json" },
+      { ...aggregate("stale", boundary - 1), price_sources_json: JSON.stringify([source(boundary)]) },
       { ...aggregate("future-row", NOW + 1), price_sources_json: JSON.stringify([source(), source(NOW)]) },
     ];
     const { db, all } = database(rows);
@@ -104,8 +127,8 @@ describe("loadDexPrices", () => {
     const telemetry = createDexPriceSourceLoadTelemetry();
     const result = await loadDexPrices(db, NOW, MAX_AGE, telemetry);
     expect(result.dexPriceRows.size).toBe(3);
-    expect(result.dexPriceSources.get("boundary")).toEqual(Array.from({ length: 4 }, () => source(boundary)));
-    expect(result.dexPriceSources.has("stale")).toBe(false);
+    expect(result.dexPriceSources.get("boundary")).toEqual([source(boundary)]);
+    expect(result.dexPriceSources.get("stale")).toEqual([source(boundary)]);
     expect(result.dexPriceSources.get("future-row")).toEqual([source(NOW)]);
     expect(telemetry).toEqual({
       staleRows: [{ stablecoinId: "stale", updatedAt: boundary - 1, ageSec: MAX_AGE + 1, maxAgeSec: MAX_AGE }],

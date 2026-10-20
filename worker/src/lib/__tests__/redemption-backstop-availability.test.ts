@@ -5,6 +5,7 @@ import {
   buildRedemptionCurrentDepegObservationMap,
   evaluateOutputDependencyImpairment,
   loadSevereActiveDepegAvailabilityMap,
+  resolveOutputDependencyWeights,
   type ActiveDepegAvailabilityRow,
   type EvaluatedOpenIncident,
 } from "../redemption-backstop/availability";
@@ -12,6 +13,8 @@ import { buildRedemptionBackstopEntry } from "../redemption-backstop/sources";
 import type { ReserveSnapshotMetadataRecord } from "../live-reserves/store";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import { defineReviewedStablecoinRedeemConfig } from "@shared/lib/redemption-backstop-configs/stablecoin-redeem/shared";
+import { LiveReserveRedemptionOutputValuationSchema } from "@shared/types/live-reserves";
+import { liveSnapshot } from "./redemption-backstop-sources.test-support";
 
 const REVIEW_DATE = "2026-04-22";
 const ACTIVE_DEPEG_AVAILABILITY_SQL = `SELECT stablecoin_id, direction, started_at
@@ -194,7 +197,7 @@ describe("loadSevereActiveDepegAvailabilityMap", () => {
     expect(result.has("usds-sky")).toBe(false);
   });
 
-  it("impairs configured collateral routes when their structured output dependency is depegged", async () => {
+  it("does not treat a reserve-only asset as a reviewed payout dependency", async () => {
     const db = mockD1Strict([
       activeDepegQuery([
         {
@@ -211,14 +214,10 @@ describe("loadSevereActiveDepegAvailabilityMap", () => {
       REVIEW_DATE,
       observations([["ausd-agora", -3600]]),
     );
-    const cusd = result.get("cusd-celo");
-    expect(cusd?.routeStatus).toBe("degraded");
-    expect(cusd?.outputImpairedDependencyId).toBe("ausd-agora");
-    expect(cusd?.outputImpairedShare).toBeCloseTo(0.252901331784, 6);
-    expect(cusd?.routeStatusReason).toContain("Output asset impairment");
+    expect(result.has("cusd-celo")).toBe(false);
   });
 
-  it("accumulates impaired shares across multiple basket dependencies without an over-leverage marker", async () => {
+  it("retains impaired basket identity without inventing reserve or equal payout shares", async () => {
     const db = mockD1Strict([
       activeDepegQuery([
         {
@@ -249,10 +248,8 @@ describe("loadSevereActiveDepegAvailabilityMap", () => {
     // worst impaired dependency wins attribution (USDC's -3000 bps beats USDT's -2600 bps)
     expect(cusd?.outputImpairedDependencyId).toBe("usdc-circle");
     expect(cusd?.activeDepegBps).toBe(3000);
-    // cUSD's reviewed USDC (4.2423024173%) and USDT (11.1910668211%)
-    // Mento reserve shares accumulate.
-    expect(cusd?.outputImpairedShare).toBeCloseTo(0.154333692384, 6);
-    // composition weights sum below 1.0, so no over-leverage marker is emitted
+    expect(cusd).not.toHaveProperty("outputImpairedShare");
+    expect(cusd?.routeStatusReason).toContain("share is unquantified");
     expect(cusd?.routeStatusReason).not.toContain("over-leveraged");
   });
 
@@ -279,7 +276,7 @@ describe("loadSevereActiveDepegAvailabilityMap", () => {
     expect(result.size).toBe(1);
   });
 
-  it("reports full output impairment when the sole backing asset is depegged", async () => {
+  it("does not mistake a sole backing asset for the full reviewed basket payout", async () => {
     const db = mockD1Strict([
       activeDepegQuery([
         {
@@ -299,11 +296,48 @@ describe("loadSevereActiveDepegAvailabilityMap", () => {
     const honey = result.get("honey-berachain");
     expect(honey?.routeStatus).toBe("degraded");
     expect(honey?.outputImpairedDependencyId).toBe("usde-ethena");
-    // Honey's reviewed live reserves are now a single USDe (Ethena) row at 100%,
-    // so a severe USDe depeg fully impairs the modeled route output.
-    expect(honey?.outputImpairedShare).toBe(1);
-    expect(honey?.routeStatusReason).toContain("modeled route output is impaired");
+    expect(honey).not.toHaveProperty("outputImpairedShare");
+    expect(honey?.routeStatusReason).toContain("share is unquantified");
   });
+
+  it.each(["fresh", "stale", "future", "mismatched", "rejected"] as const)(
+    "quantifies only the admitted complete current payout basket (%s)", async (state) => {
+      const now = 1_780_000_000;
+      const db = mockD1Strict([activeDepegQuery([{
+        stablecoin_id: "usdc-circle", direction: "below", started_at: now - 3600,
+      }])]);
+      const snapshot = liveSnapshot("cusd-cap", {
+        freshnessMode: "not-applicable",
+        redemption: {
+          capacityUsd: 30_000_000, capacityKind: "live-direct-bounded",
+          freshnessKind: "same-run-onchain", routeStatus: "open", routeStatusSource: "onchain",
+          outputValuation: {
+            sourceId: "cap-vault:chainlink-nav", unitValueUsd: 0.99,
+            observedAt: state === "stale" ? now - 1801 : state === "future" ? now + 1 : now - 120,
+            basketWeights: [
+              { assetId: "usdc-circle", weight: 0.93 },
+              { assetId: state === "mismatched" ? "usdt-tether" : "wtgxx-wisdomtree", weight: 0.07 },
+            ],
+          },
+        },
+      }, { fetchedAt: now - 60, ...(state === "rejected" ? { admission: {
+        eligible: false, reasons: ["config-mismatch"], freshness: null,
+      } } : {}) });
+      const result = await loadSevereActiveDepegAvailabilityMap(db, REVIEW_DATE,
+        observations([["usdc-circle", -3000]]),
+        { metadataById: new Map([["cusd-cap", snapshot]]), now });
+      expect(result.get("cusd-cap")).toMatchObject({
+        routeStatus: "degraded", outputImpairedDependencyId: "usdc-circle",
+      });
+      if (state === "fresh") expect(result.get("cusd-cap")?.outputImpairedShare).toBe(0.93);
+      else {
+        expect(result.get("cusd-cap")).not.toHaveProperty("outputImpairedShare");
+        expect(result.get("cusd-cap")?.routeStatusReason).toContain("share is unquantified");
+      }
+      expect(result.get("gusd-gate")?.outputImpairedShare).toBe(1);
+      expect(result.get("usdn-noble")?.outputImpairedShare).toBe(1);
+    },
+  );
 
   it("publishes unknown from stale evidence and never mutates the incident", async () => {
     const db = mockD1Strict([
@@ -327,6 +361,54 @@ describe("loadSevereActiveDepegAvailabilityMap", () => {
     expect(history).toHaveLength(1);
     expect(history[0].sql).toContain("source = 'live'");
     expect(history.every(({ sql }) => /^\s*SELECT\b/i.test(sql))).toBe(true);
+  });
+});
+
+describe("reviewed payout dependency weights", () => {
+  const meta = {
+    id: "test-payout", variantOf: "usde-ethena",
+    reserves: [{ name: "USDC", pct: 12, risk: "low" as const, coinId: "usdc-circle" }],
+  };
+  const singleConfig = getRedemptionBackstopConfig("dai-makerdao")!;
+  const incident: EvaluatedOpenIncident = {
+    row: { stablecoin_id: "usdc-circle", direction: "below", started_at: 2_000_000 },
+    state: "severe", currentDeviationBps: -3000,
+  };
+  const incidents = new Map([["usdc-circle", incident]]);
+
+  it.each([{ reserves: meta.reserves }, { reserves: [] }])("uses the selected single output at 100%% independently of reserves (%j)", ({ reserves }) => {
+    const resolved = resolveOutputDependencyWeights({ ...meta, reserves }, singleConfig);
+    expect([...resolved.weights]).toEqual([["usdc-circle", 1]]);
+    expect(resolved.reserveDerived).toBe(false);
+    expect(evaluateOutputDependencyImpairment(resolved.weights, incidents)).toMatchObject({
+      dependencyId: "usdc-circle", outputImpairedShare: 1,
+    });
+  });
+
+  it.each([null, "complete", "mismatched"] as const)("uses only complete admitted basket payout weights (%s)", (caseName) => {
+    const basketConfig = {
+      ...singleConfig, outputAssetType: "stable-basket" as const,
+      outputAssets: ["usdc-circle", "usdt-tether"],
+    };
+    const valuation = caseName === null ? null : LiveReserveRedemptionOutputValuationSchema.parse({
+      sourceId: "reviewed-payout", observedAt: 2_000_000, unitValueUsd: 0.99,
+      basketWeights: [
+        { assetId: "usdc-circle", weight: 0.8 },
+        { assetId: caseName === "complete" ? "usdt-tether" : "usde-ethena", weight: 0.2 },
+      ],
+    });
+    const resolved = resolveOutputDependencyWeights(meta, basketConfig, valuation);
+    const evaluation = evaluateOutputDependencyImpairment(resolved.weights, incidents);
+    expect(evaluation?.dependencyId).toBe("usdc-circle");
+    if (caseName === "complete") expect(evaluation?.outputImpairedShare).toBe(0.8);
+    else expect(evaluation).not.toHaveProperty("outputImpairedShare");
+  });
+
+  it("retains parent and backing fallback only when no payout identity was reviewed", () => {
+    const config = { ...singleConfig, outputAssets: undefined };
+    expect([...resolveOutputDependencyWeights(meta, config).weights]).toEqual([["usde-ethena", 1]]);
+    expect([...resolveOutputDependencyWeights({ ...meta, variantOf: undefined }, config).weights])
+      .toEqual([["usdc-circle", 0.12]]);
   });
 });
 

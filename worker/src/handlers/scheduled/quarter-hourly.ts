@@ -2,8 +2,8 @@ import { logWorkerEventArgs } from "../../lib/structured-log";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 /**
  * Quarter-hourly trigger (every 15 min):
- *   sync-fx-rates (3) -> sync-stablecoins (4) -> snapshots (0)
- *   -> supply snapshots (0)
+ *   sync-fx-rates (3) -> sync-stablecoins (4) -> due Aave supplemental (3)
+ *   -> snapshots / supply snapshots (0)
  *
  * All jobs run sequentially in-slot to avoid cross-job connection spikes.
  * Run FX first so Chainlink gets a clean RPC window before the heavier
@@ -17,6 +17,8 @@ import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
  */
 import { syncStablecoins } from "../../cron/sync-stablecoins";
 import { syncFxRates } from "../../cron/sync-fx-rates";
+import { syncYieldSupplemental } from "../../cron/sync-yield-supplemental";
+import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
 import { snapshotSupply } from "../../cron/snapshot-supply";
 import { snapshotChainSupply } from "../../cron/snapshot-chain-supply";
 import { snapshotPsiDaily } from "../../cron/snapshot-psi";
@@ -34,6 +36,11 @@ import {
   type ScheduledSlotJobSummary,
 } from "./slot-summary";
 import { logSkippedCronRun } from "./preflight-skip";
+import { createSlotDeadline } from "../../lib/cron-timeouts";
+
+export const AAVE_TAIL_TOTAL_BUDGET_MS = 45_000;
+export const QUARTER_HOURLY_SNAPSHOT_RESERVE_MS = 60_000;
+export const AAVE_TAIL_DEFERRED_REASON = "aave-refresh-deferred-deadline";
 
 const SAME_DAY_CATCH_UP_REASON = "same_day_catch_up";
 const BEFORE_DAILY_SLOT_REASON = "before_daily_slot";
@@ -124,6 +131,7 @@ export async function runQuarterHourlySlot(runtime: ScheduledRuntimeContext) {
     job: string,
     fn: ScheduledJobFn,
     notDue?: () => Promise<CronResult | null>,
+    bounded?: Parameters<ScheduledRuntimeContext["runLeasedCron"]>[2],
   ): Promise<void> => {
     if (notDue) {
       // A failed due-check read proves nothing about the period: record it as
@@ -150,7 +158,7 @@ export async function runQuarterHourlySlot(runtime: ScheduledRuntimeContext) {
       }
     }
     if (stablecoinsCacheSafe) {
-      outcomes.push((await runBestEffortScheduledJobWithOutcome(runtime, "quarter-hour slot", job, fn)).summary);
+      outcomes.push((await runBestEffortScheduledJobWithOutcome(runtime, "quarter-hour slot", job, fn, { bounded })).summary);
     } else {
       await logSkippedCronRun(runtime, {
         job,
@@ -160,6 +168,27 @@ export async function runQuarterHourlySlot(runtime: ScheduledRuntimeContext) {
       outcomes.push(summarizeSkippedScheduledJob(job, "stablecoins-cache-unsafe"));
     }
   };
+
+  // Price evidence is consumed before snapshot work, while the producer's
+  // original quote clocks are still within their per-source budgets.
+  const aaveStartedAtMs = Date.now();
+  const aaveDeadline = createSlotDeadline(runtime.deadline.eventEntryMs, Math.min(
+    aaveStartedAtMs + AAVE_TAIL_TOTAL_BUDGET_MS,
+    runtime.deadline.latestAdmissionMs(0, QUARTER_HOURLY_SNAPSHOT_RESERVE_MS),
+  ));
+  await runIfCacheSafe("sync-yield-supplemental", (signal, reportProgress) =>
+    syncYieldSupplemental(runtime.db, signal, runtime.chainRpcs, reportProgress, {
+      families: ["aaveV3"],
+      catchUpMinMarkerAgeSec: CRON_SCHEDULE_CADENCES.fourHourlyYieldSupplemental.intervalSec,
+    }),
+    async () => aaveDeadline.platformDeadlineMs - aaveStartedAtMs < AAVE_TAIL_TOTAL_BUDGET_MS
+      ? createNeutralSkippedCronResult(AAVE_TAIL_DEFERRED_REASON, {
+        reservedSnapshotMs: QUARTER_HOURLY_SNAPSHOT_RESERVE_MS,
+        remainingSlotMs: runtime.deadline.remainingMs(),
+      })
+      : null,
+    { deadline: aaveDeadline, deferredReason: AAVE_TAIL_DEFERRED_REASON },
+  );
 
   await runIfCacheSafe("snapshot-supply", (signal) => snapshotSupply(runtime.db, signal));
   await runIfCacheSafe("snapshot-chain-supply", (signal) => snapshotChainSupply(runtime.db, signal));

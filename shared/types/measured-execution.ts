@@ -130,6 +130,8 @@ export const DexMeasuredExecutionTargetSchema = /* @__PURE__ */ (() => z.object(
   retainedTvlUsd: z.number().finite().positive(),
   retainedPoolPriceUsd: z.number().finite().positive(),
   capturedAt: z.number().int().nonnegative(),
+  /** Identity was carried; USD references were independently admitted this run. */
+  carriedFromSnapshot: z.literal(true).optional(),
 }))();
 export type DexMeasuredExecutionTarget = z.infer<typeof DexMeasuredExecutionTargetSchema>;
 
@@ -251,6 +253,7 @@ export type DexMeasuredExecutionCurveCompositeProof = z.infer<
 
 const DexMeasuredExecutionUniswapV4PoolProofSchema = /* @__PURE__ */ (() => z.object({
   blockNumber: z.number().int().nonnegative(),
+  blockHash: CanonicalBytes32Schema,
   poolId: CanonicalBytes32Schema,
   poolManagerAddress: CanonicalEvmAddressSchema,
   poolManagerCodeHash: CanonicalBytes32Schema,
@@ -294,6 +297,7 @@ export const DexMeasuredExecutionProfileSchema = /* @__PURE__ */ (() => z.object
   retainedPoolPriceUsdAtQuote: z.number().finite().positive(),
   quotedAt: z.number().int().nonnegative(),
   blockNumber: z.number().int().nonnegative(),
+  blockHash: CanonicalBytes32Schema,
   executionEndpoint: z.object({
     address: CanonicalEvmAddressSchema,
     codeHash: z.string().regex(/^0x[a-f0-9]{64}$/),
@@ -364,6 +368,7 @@ export const DexMeasuredExecutionPublicProfileSchema = /* @__PURE__ */ (() => De
   }).optional(),
   uniswapV4PoolProvenance: z.object({
     blockNumber: z.number().int().nonnegative(),
+    blockHash: CanonicalBytes32Schema,
     poolId: CanonicalBytes32Schema,
     poolManagerAddress: CanonicalEvmAddressSchema,
     poolManagerCodeHash: CanonicalBytes32Schema,
@@ -465,6 +470,7 @@ export function toDexMeasuredExecutionPublicProfile(
       ? {
           uniswapV4PoolProvenance: {
             blockNumber: uniswapV4PoolProof.blockNumber,
+            blockHash: uniswapV4PoolProof.blockHash,
             poolId: uniswapV4PoolProof.poolId,
             poolManagerAddress: uniswapV4PoolProof.poolManagerAddress,
             poolManagerCodeHash: uniswapV4PoolProof.poolManagerCodeHash,
@@ -660,6 +666,11 @@ export function validateDexMeasuredExecutionProfile(input: {
     currentTarget.targetId !== quotedTarget.targetId ||
     profile.adapterProfileId !== currentTarget.adapterProfileId
   ) issues.add("identity-mismatch");
+  for (const proof of [profile.uniswapV4PoolProof, profile.stableSwapNgFactoryBindingProof, profile.curveCompositeProof]) {
+    if (proof && (proof.blockNumber !== profile.blockNumber || proof.blockHash !== profile.blockHash)) {
+      issues.add("identity-mismatch");
+    }
+  }
   if (profile.targetGenerationId !== input.expectedTargetGenerationId) issues.add("target-generation-mismatch");
   if (profile.quoteGenerationId !== input.expectedQuoteGenerationId) issues.add("quote-generation-mismatch");
   if (profile.tokenIn.trackedAssetId !== currentTarget.stablecoinId) issues.add("tracked-input-mismatch");

@@ -15,6 +15,7 @@ import { makeV3Target } from "../../measured-execution/__tests__/measured-execut
 import { computeDexPrices } from "../dex-price-publisher";
 import { seedPublishedDexGeneration } from "./scoring-test-support";
 import { makePool } from "./scoring-test-builders";
+import { loadDexPrices } from "../../../lib/depeg-helpers";
 
 const SOURCE_CLOCK = 1_791_403_833;
 const READ_CLOCK = SOURCE_CLOCK + 100;
@@ -134,6 +135,9 @@ describe("registry read-consumption clock", () => {
     expect(JSON.parse(row.price_sources_json)).toEqual([
       expect.objectContaining({ observedAt: quoteClock, aggregateObservedAt: quoteClock, price: 0.998 }),
     ]);
+    const admitted = await loadDexPrices(harness.db, READ_CLOCK);
+    expect(admitted.dexPriceRows.get("usdc-circle")?.updated_at).toBe(READ_CLOCK);
+    expect(admitted.dexPriceSources.has("usdc-circle")).toBe(false);
   });
 
   it("screens the post-stage-start zero-trade outlier in the same generation without losing a healthy refresh", async () => {

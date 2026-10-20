@@ -677,6 +677,7 @@ export interface ParsedYieldSupplementalRunOutcome {
   degradedFamilies: SupplementalSourceFamilyKey[];
   degradedFamilyReasons: Record<string, string>;
   familySnapshotHashes: Partial<Record<SupplementalSourceFamilyKey, string>>;
+  familyCacheResults?: Partial<Record<SupplementalSourceFamilyKey, SupplementalFamilyCacheResult>>;
 }
 
 
@@ -722,7 +723,18 @@ export function parseYieldSupplementalRunOutcomeDetailed(
         if (typeof hash === "string" && /^[a-f0-9]{64}$/.test(hash)) familySnapshotHashes[family] = hash;
       }
     }
-    return { degradedFamilies, degradedFamilyReasons, familySnapshotHashes };
+    const familyCacheResults: Partial<Record<SupplementalSourceFamilyKey, SupplementalFamilyCacheResult>> = {};
+    if (isRecord(parsed.familyCacheResults)) {
+      for (const family of SUPPLEMENTAL_SOURCE_FAMILY_KEYS) {
+        const result = parsed.familyCacheResults[family];
+        if (result === "published" || result === "skipped-newer" || result === "empty"
+          || result === "empty-published" || result === "retained-previous"
+          || result === "skipped-not-due" || result === "skipped-backoff") {
+          familyCacheResults[family] = result;
+        }
+      }
+    }
+    return { degradedFamilies, degradedFamilyReasons, familySnapshotHashes, familyCacheResults };
   } catch (err) {
     logWorkerEventArgs("handler", "warn",
       `[yield-sync] Failed to parse supplemental run outcome: ${toErrorMessage(err)}`,

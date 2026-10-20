@@ -8,6 +8,8 @@ export interface UniV3ExecutionCandidate {
   tvlUsd: number;
   token0Price: number;
   token1Price: number;
+  /** Snapshot identity only: its stored spot cannot supply a current USD reference. */
+  carriedFromSnapshot?: true;
   tokens: readonly [
     { address: string; symbol: string; decimals: number },
     { address: string; symbol: string; decimals: number },

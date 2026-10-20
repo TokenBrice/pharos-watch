@@ -21,6 +21,11 @@ export interface V9MechanismProfileComponentProjection {
   readonly observationState: V9ObservationState;
   readonly quality: V9MechanismQualityLevel | null;
   readonly factKeys: readonly string[];
+  readonly supportedFactKeys: readonly string[];
+  readonly unavailableFacts: readonly {
+    factKey: string;
+    disposition: Exclude<V9MechanismProfileFact["disposition"], "supported">;
+  }[];
 }
 
 export interface V9MechanismProfileProjection {
@@ -74,6 +79,19 @@ function combineProfileFacts(
     (fact): fact is Extract<V9MechanismProfileFact, { disposition: Exclude<V9MechanismProfileFact["disposition"], "supported"> }> =>
       fact.disposition !== "supported",
   );
+  const supported = selected.filter(
+    (fact): fact is Extract<V9MechanismProfileFact, { disposition: "supported" }> => fact.disposition === "supported",
+  );
+  const quality = supported.length === 0 ? null : supported.reduce(
+    (weakest, fact) =>
+      QUALITY_ORDER.indexOf(fact.quality) > QUALITY_ORDER.indexOf(weakest) ? fact.quality : weakest,
+    "strong" as V9MechanismQualityLevel,
+  );
+  const supportedFactKeys = factKeys.filter((key) => facts[key]!.disposition === "supported");
+  const unavailableFacts = factKeys.flatMap((factKey) => {
+    const fact = facts[factKey]!;
+    return fact.disposition === "supported" ? [] : [{ factKey, disposition: fact.disposition }];
+  });
   if (unavailable.length > 0) {
     const dispositions = new Set(unavailable.map((fact) => fact.disposition));
     const disposition = dispositions.has("method-unsupported")
@@ -83,17 +101,13 @@ function combineProfileFacts(
         : "issuer-undisclosed";
     return {
       observationState: unavailableObservationState(disposition),
-      quality: null,
+      quality,
       factKeys: [...factKeys],
+      supportedFactKeys,
+      unavailableFacts,
     };
   }
-  const supported = selected as Array<Extract<V9MechanismProfileFact, { disposition: "supported" }>>;
-  const quality = supported.reduce(
-    (weakest, fact) =>
-      QUALITY_ORDER.indexOf(fact.quality) > QUALITY_ORDER.indexOf(weakest) ? fact.quality : weakest,
-    "strong" as V9MechanismQualityLevel,
-  );
-  return { observationState: "known", quality, factKeys: [...factKeys] };
+  return { observationState: "known", quality, factKeys: [...factKeys], supportedFactKeys, unavailableFacts };
 }
 
 export function evaluateV9MechanismProfileCoverage(

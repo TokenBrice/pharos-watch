@@ -26,6 +26,7 @@ const PRESSURE_PARTIAL_VALUATION_NOTE =
 
 /** Preserve explicit unknown activity; only older payloads without a flag infer from fields. */
 export function inferHas24hActivity(coin: MintBurnCoinFlow): boolean | null {
+  if (coin.observed24hActivity === true) return true;
   if (coin.has24hActivity !== undefined) return coin.has24hActivity;
   return Boolean(
     coin.mintCount24h
@@ -36,8 +37,22 @@ export function inferHas24hActivity(coin: MintBurnCoinFlow): boolean | null {
   );
 }
 
+/** Legacy payloads lack subtotal semantics; new payloads need explicit scan proof for exact gross totals. */
+export function hasCompleteCoinScan(coin: MintBurnCoinFlow, window: MintBurnNetWindow): boolean {
+  const key = window === "24h" ? "window24h" : window === "7d" ? "window7d" : window === "30d" ? "window30d" : "window90d";
+  return coin.coverage?.windows?.[key].complete ?? coin.totalsSemantics !== "observed-subtotals";
+}
+
 /** Signed net for one window, gated by that window's valuation completeness (absent → `unknown`). */
 export function resolveCoinNetFlow(coin: MintBurnCoinFlow, window: MintBurnNetWindow): MintBurnSignedNetView {
+  const scanWindow = coin.coverage?.windows?.[
+    window === "24h" ? "window24h" : window === "7d" ? "window7d" : window === "30d" ? "window30d" : "window90d"
+  ];
+  if (scanWindow?.complete === false) return {
+    valueUsd: null,
+    completeness: resolveMintBurnValuation(coin.valuation?.window24h).completeness,
+    note: `${window} scan coverage incomplete; signed net unavailable`,
+  };
   if (window === "24h" && coin.has24hActivity === null) {
     return {
       valueUsd: null,
@@ -71,6 +86,7 @@ export function resolveCoinNetFlow(coin: MintBurnCoinFlow, window: MintBurnNetWi
  * pressure shift; `null` when the published score stands.
  */
 export function resolvePressureUnavailableNote(coin: MintBurnCoinFlow): string | null {
+  if (coin.coverage?.windows?.window24h.complete === false) return "24h scan coverage incomplete; pressure shift unavailable";
   if (coin.has24hActivity === null) return "24h scan coverage unknown; pressure shift unavailable";
   return coin.valuation?.window24h.completeness === "partial" || coin.valuation?.baseline === "partial"
     ? PRESSURE_PARTIAL_VALUATION_NOTE
@@ -97,6 +113,7 @@ export function resolveBaselineDailyNetUsd(coin: MintBurnCoinFlow): number | nul
  * proven-direction helper; a `null` wire direction is never replaced by a derived one.
  */
 export function resolveNetDirection(coin: MintBurnCoinFlow): NetFlowDirection24h | null {
+  if (coin.coverage?.windows?.window24h.complete === false) return null;
   const has24hActivity = inferHas24hActivity(coin);
   if (has24hActivity === null) return null;
   const valuation = resolveMintBurnValuation(coin.valuation?.window24h);
@@ -121,6 +138,8 @@ export interface MintBurnCoinsAggregate24h {
   burnVolumeUsd: number;
   mintCompleteness: MintBurnValuationCompleteness;
   burnCompleteness: MintBurnValuationCompleteness;
+  /** Independent of valuation: false means gross volumes are observed subtotals. */
+  scanComplete: boolean;
   unpricedMintEventCount: number;
   unpricedBurnEventCount: number;
   /** Summed signed net; unavailable when any coin's 24h net is null or partial. */
@@ -154,10 +173,11 @@ export function aggregateCoinFlows24h(coins: readonly MintBurnCoinFlow[]): MintB
     nets.push(resolveCoinNetFlow(coin, "24h"));
     // A partial coin publishes no signed net; its known subtotals still bound the aggregate range.
     const coinKnownNetUsd = coin.netFlow24hUsd
-      ?? (coin.has24hActivity !== null && valuation.completeness === "partial" ? coin.mintVolume24hUsd - coin.burnVolume24hUsd : null);
+      ?? (coin.has24hActivity !== null && coin.coverage?.windows?.window24h.complete !== false && valuation.completeness === "partial" ? coin.mintVolume24hUsd - coin.burnVolume24hUsd : null);
     knownNetUsd = knownNetUsd == null || coinKnownNetUsd == null ? null : knownNetUsd + coinKnownNetUsd;
     const activity = inferHas24hActivity(coin);
     if (activity === null) activityUnknown = true;
+    if (coin.coverage?.windows?.window24h.complete === false) activityUnknown = true;
     if (activity) has24hActivity = true;
     else if (activity === null && has24hActivity === false) has24hActivity = null;
   }
@@ -194,6 +214,7 @@ export function aggregateCoinFlows24h(coins: readonly MintBurnCoinFlow[]): MintB
     burnVolumeUsd,
     mintCompleteness,
     burnCompleteness,
+    scanComplete: coins.every((coin) => hasCompleteCoinScan(coin, "24h")),
     unpricedMintEventCount,
     unpricedBurnEventCount,
     net,

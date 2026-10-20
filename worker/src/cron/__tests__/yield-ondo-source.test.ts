@@ -38,9 +38,17 @@ describe("fetchOndoUsdyOracleSource", () => {
     const result = await fetchOndoUsdyOracleSource(null, 0, null);
     expect(result).toEqual(expect.objectContaining({
       currentApy: 0,
+      observationKind: "anchor-only",
       exchangeRate: expect.closeTo(1.085, 2),
       sourceKey: "protocol-api:ondo-usdy-oracle",
     }));
+  });
+
+  it("keeps a flat measured return distinct from a bootstrap anchor", async () => {
+    mockEvmCall.mockResolvedValue(1_000_000_000_000_000_000n);
+    const result = await fetchOndoUsdyOracleSource(1, 7, 1_771_000_000);
+    expect(result).toMatchObject({ currentApy: 0, apyBase: 0, exchangeRate: 1 });
+    expect(result?.observationKind).toBeUndefined();
   });
 
   it("returns null when oracle call fails", async () => {

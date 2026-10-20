@@ -17,6 +17,7 @@ export const DEFAULT_DDR_D1_TABLES: MockTableConfig[] = [
   },
   { match: "FROM supply_history", rows: [], allowUnused: true },
   { match: "FROM mint_burn_hourly", rows: [], allowUnused: true },
+  { match: "pharos:mint-burn-scan-coverage:read", rows: [], allowUnused: true },
   { match: "FROM dex_liquidity", rows: [], allowUnused: true },
   { match: "FROM dex_liquidity_history", rows: [], allowUnused: true },
   { match: "FROM redemption_backstop_runs", rows: [], allowUnused: true },
@@ -92,6 +93,7 @@ export function loadedContext(overrides: Partial<DdrLoadedContext> = {}): DdrLoa
     quarantined: new Set(),
     supplyByCoin: new Map([[active.stablecoinId, supplyHistory(active.startedAt)]]),
     mintBurnHourlyByCoin: new Map(),
+    mintBurnCoveredEventIds: new Set(),
     dewsByCoin: new Map(),
     liqByCoin: new Map(),
     liqTvlChange7dByCoin: new Map(),
@@ -101,6 +103,7 @@ export function loadedContext(overrides: Partial<DdrLoadedContext> = {}): DdrLoa
     safetyByCoin: new Map(),
     v9ExitByCoin: new Map(),
     safetyContext: { status: "identity-missing", reason: "test", identity: null },
+    structuralContext: null,
     lineage: {
       trainingWindow: { start: NOW_SEC - 365 * DAY, end: NOW_SEC },
       eventCount: 0,

@@ -402,9 +402,14 @@ describe("handleStatus", () => {
     const cronRows = Object.keys(fixtureCRON_INTERVALS).map((job) =>
       makeCronRow(job, job === "sync-mint-burn" ? "degraded" : "ok", 60),
     );
-    const db = fixtureMockD1([{ match: "mint_burn_hourly", rows: [], first: { total: 1234 } },
-    { match: "SELECT status", rows: [], first: { status: "degraded" } },
-    { match: "status = 'ok'", rows: [], first: { started_at: now - 600 } },
+    const db = fixtureMockD1([{
+      match: "SELECT job, item_count, metadata",
+      matchBinds: ["cron-sentinel", "mint-burn-growth-watchdog"],
+      rows: [],
+      first: { job: "mint-burn-growth-watchdog", item_count: 1234, metadata: null },
+    },
+    { match: "SELECT status", matchBinds: ["sync-mint-burn"], rows: [], first: { status: "degraded" } },
+    { match: "as started_at FROM cron_runs WHERE job = ?", matchBinds: ["sync-mint-burn"], rows: [], first: { started_at: now - 600 } },
     { match: "cron_runs", rows: cronRows },
     { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
     { match: "MAX(updated_at) as latest", rows: [], first: { latest: now - 5 * 86400, tracked: 12 } },], true);
