@@ -36,6 +36,7 @@ import {
   writeCliHelpIfRequested,
 } from "../lib/cli-args.mjs";
 import { reportViolations } from "../lib/report-violations.mts";
+import { decodeD1Envelopes } from "../lib/remote-d1";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const USAGE: string = `Usage: npm run check:dex-census-provider-drift -- --rows=<dump.json>
@@ -74,45 +75,39 @@ export interface DexCensusProviderDriftReport {
   drift: DexCensusProviderDrift[];
 }
 
-function stringField(row: Record<string, unknown>, key: string): string {
-  const value = row[key];
-  return typeof value === "string" ? value : "";
-}
-
 /** Accept both a wrangler `--json` envelope and a bare row array. */
 export function extractCensusRows(payload: unknown): DexCensusProviderRow[] {
-  const candidates: unknown[] = Array.isArray(payload)
-    ? payload.flatMap((entry) =>
-        isRecord(entry) && Array.isArray(entry.results) ? entry.results : [entry],
-      )
-    : isRecord(payload) && Array.isArray(payload.results)
-      ? payload.results
-      : [];
+  const rawRows = Array.isArray(payload) && payload.every((entry) =>
+    !isRecord(entry) || !["success", "results", "result", "error", "errors"].some((key) => key in entry));
+  const candidates = rawRows ? payload : decodeD1Envelopes(payload).flatMap((envelope) => envelope.results);
 
   const rows: DexCensusProviderRow[] = [];
   for (const candidate of candidates) {
-    if (!isRecord(candidate)) continue;
-    const stablecoinId = stringField(candidate, "stablecoin_id");
-    const chain = stringField(candidate, "chain");
-    const address = stringField(candidate, "contract_address");
-    if (!stablecoinId || !chain || !address) continue;
-    let persistedProviders: string[] | null = null;
-    try {
-      const parsed: unknown = JSON.parse(stringField(candidate, "provider_set_json"));
-      if (Array.isArray(parsed) && parsed.every((entry) => typeof entry === "string")) {
-        persistedProviders = parsed;
-      }
-    } catch {
-      persistedProviders = null;
+    if (!isRecord(candidate)) throw new Error("dex-census-row-invalid");
+    const { stablecoin_id: stablecoinId, chain, contract_address: address, outcome, reason, observed_at: observedAt } = candidate;
+    if (typeof stablecoinId !== "string" || !stablecoinId.trim() ||
+        typeof chain !== "string" || !chain.trim() || typeof address !== "string" || !address.trim() ||
+        typeof outcome !== "string" || typeof reason !== "string" ||
+        (observedAt !== null && (typeof observedAt !== "number" || !Number.isFinite(observedAt)))) {
+      throw new Error("dex-census-row-invalid");
     }
-    const observedAt = candidate.observed_at;
+    let persistedProviders: unknown;
+    try {
+      if (typeof candidate.provider_set_json !== "string") throw new Error("provider-set-unavailable");
+      persistedProviders = JSON.parse(candidate.provider_set_json);
+    } catch {
+      throw new Error("dex-census-provider-set-invalid");
+    }
+    if (!Array.isArray(persistedProviders) || !persistedProviders.every((entry) => typeof entry === "string")) {
+      throw new Error("dex-census-provider-set-invalid");
+    }
     rows.push({
       stablecoinId,
       chain,
       address,
-      outcome: stringField(candidate, "outcome"),
-      reason: stringField(candidate, "reason"),
-      observedAt: typeof observedAt === "number" ? observedAt : null,
+      outcome,
+      reason,
+      observedAt,
       persistedProviders,
     });
   }
@@ -192,6 +187,7 @@ export function runDexCensusProviderDriftCheck(
     return report.drift.length > 0 ? 1 : 0;
   }
 
+  process.stdout.write(`Census coverage: ${report.scannedRowCount} rows, ${report.trackedRowCount} tracked deployments.\n`);
   return reportViolations({
     label: "dex census provider drift",
     heading: "Census rows contradicted by the live discovery registry",

@@ -187,6 +187,18 @@ function sameHeader(before, after) {
   }
 }
 
+function admitEvmBlockResult(method, result, block) {
+  if (method !== "eth_getBlockByNumber" && method !== "eth_getBlockByHash") return;
+  try {
+    sameHeader(block, evmHeader(result, { number: BigInt(block.number) }));
+  } catch (error) {
+    if (error instanceof CliUsageError) {
+      throw new EvidenceError("invalid-block-header", "Provider returned a malformed EVM block header; result withheld");
+    }
+    throw error;
+  }
+}
+
 function normalizeEvm(method, params, block) {
   assertCliUsage(EVM_METHODS.has(method), `Unsupported evidence method: ${method}`);
   assertCliUsage(Array.isArray(params), `${method} --params must be an array`);
@@ -248,6 +260,7 @@ async function evmRead(transport, method, params, requested, record, maxLogBlock
     for (let index = 0; index < calls.length; index += 10) {
       result.push(...await transport.batch(calls.slice(index, index + 10)));
     }
+    result.forEach((value, index) => admitEvmBlockResult(calls[index].method, value, block));
     sameHeader(block, await readEvmHeader(transport.rpc, { number: BigInt(block.number) }));
     return result.map((value, index) => ({
       method: calls[index].method,
@@ -315,9 +328,7 @@ async function evmRead(transport, method, params, requested, record, maxLogBlock
     sameHeader(record.rangeStartBlock, await readEvmHeader(transport.rpc, { number: from }));
   } else {
     result = await transport.rpc(method, call.params);
-    if (method === "eth_getBlockByNumber" || method === "eth_getBlockByHash") {
-      sameHeader(block, evmHeader(result, { number: BigInt(block.number) }));
-    }
+    admitEvmBlockResult(method, result, block);
   }
   const after = await readEvmHeader(transport.rpc, { number: BigInt(block.number) });
   sameHeader(block, after);
@@ -325,6 +336,11 @@ async function evmRead(transport, method, params, requested, record, maxLogBlock
     if (integer(result?.blockNumber, "transaction block number") !== BigInt(after.number)
       || typeof result?.blockHash !== "string" || result.blockHash.toLowerCase() !== after.hash) {
       throw new EvidenceError("block-pin-mismatch", "Transaction result does not match the pinned canonical block; result withheld");
+    }
+    const identity = method === "eth_getTransactionReceipt" ? result.transactionHash : result.hash;
+    if (typeof identity !== "string" || !/^0x[0-9a-f]{64}$/i.test(identity)
+      || identity.toLowerCase() !== call.params[0].toLowerCase()) {
+      throw new EvidenceError("transaction-pin-mismatch", "Transaction result does not match the requested transaction hash; result withheld");
     }
   }
   return result;

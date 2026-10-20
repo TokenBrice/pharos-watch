@@ -46,7 +46,7 @@ type SafeBrowsingThreatMatch = z.output<typeof SafeBrowsingThreatMatchSchema>;
 
 const SafeBrowsingResponseSchema = z.object({
   matches: z.array(SafeBrowsingThreatMatchSchema).optional(),
-});
+}).strict();
 
 const SAFE_BROWSING_TIMEOUT_MS = 15_000;
 

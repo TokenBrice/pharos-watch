@@ -89,6 +89,14 @@ Run the commands below from the repository root with Wrangler authentication. Hi
    enforce continuity; local `npm run seo:check` compares prior URLs only
    when that variable is set. Existing USN redirects live in `public/_redirects`.
 
+   Sync reserves prior slugs by durable event ID, including slugs of removed IDs,
+   before assigning newcomers. Ordinary same-day additions need no shrink override.
+   If a reviewed backfill rewrites event IDs, retain an explicit old-ID/slug →
+   surviving-ID/slug mapping in the repair evidence and add the direct redirects
+   before running the shrink-approved refresh. Never infer identity from symbols
+   or globally rename existing URLs. Reusing an existing ID for another stablecoin
+   is rejected, including with the shrink override.
+
 5. **Verify.** Re-read the coin's history
    (`GET https://api.pharos.watch/api/depeg-events?stablecoin=<coin-id>` with a
    public API key) and confirm the rows are gone. Then confirm the next window

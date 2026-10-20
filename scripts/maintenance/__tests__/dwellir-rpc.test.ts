@@ -163,12 +163,60 @@ describe("pinned supplemental research RPC", () => {
     expect(record.params[1]).toBe("0x3e8");
   });
 
+  describe.each(["eth_getBlockByNumber", "eth_getBlockByHash"])("%s block-result admission", (method) => {
+    it.each(["1000", HASH])("accepts matching standalone and batch headers at pin %s", async (block) => {
+      const result = header("0x3e8");
+      fetchMock.mockImplementation(async (_url: string | URL, init: RequestInit) => {
+        const body = JSON.parse(String(init.body));
+        return Array.isArray(body)
+          ? new Response(JSON.stringify(body.map((item) => ({ jsonrpc: "2.0", id: item.id, result }))))
+          : rpcResponse(body.id, result);
+      });
+      const standalone = await invoke(["--block", block], "ethereum", method, "[]");
+      expect(standalone).toMatchObject({ state: "ok", result });
+      stdout = [];
+      const batch = await invoke(["--block", block], "ethereum", "batch", JSON.stringify([{ method, params: [] }]));
+      expect(batch).toMatchObject({ state: "ok", result: [{ method, result, state: "ok" }] });
+      expect(process.exitCode).toBeUndefined();
+    });
+
+    describe.each(["standalone", "batch"])("%s", (mode) => {
+      it.each([
+        { name: "wrong number", result: header("0x3e9"), reason: "block-pin-mismatch" },
+        { name: "wrong hash", result: { ...header("0x3e8"), hash: `0x${"c".repeat(64)}` }, reason: "block-changed" },
+        { name: "wrong timestamp", result: { ...header("0x3e8"), timestamp: "0x6553f101" }, reason: "block-changed" },
+        { name: "null header", result: null, reason: "missing-block-header" },
+        { name: "malformed hash", result: { ...header("0x3e8"), hash: "0x1234" }, reason: "missing-block-header" },
+        { name: "missing number", result: { hash: HASH, timestamp: "0x6553f100" }, reason: "invalid-block-header" },
+        { name: "malformed timestamp", result: { ...header("0x3e8"), timestamp: "invalid" }, reason: "invalid-block-header" },
+      ])("withholds the whole result for a $name", async ({ result, reason }) => {
+        let headerReads = 0;
+        fetchMock.mockImplementation(async (_url: string | URL, init: RequestInit) => {
+          const body = JSON.parse(String(init.body));
+          if (Array.isArray(body)) {
+            return new Response(JSON.stringify(body.map((item) => ({
+              jsonrpc: "2.0", id: item.id, result: item.method === method ? result : "0x25",
+            }))));
+          }
+          headerReads++;
+          return rpcResponse(body.id, mode === "standalone" && headerReads === 2 ? result : header("0x3e8"));
+        });
+        const record = await invoke(["--block", HASH], "ethereum", mode === "batch" ? "batch" : method,
+          mode === "batch" ? JSON.stringify([{ method: "eth_getBalance", params: ["0x1111111111111111111111111111111111111111"] },
+            { method, params: [] }]) : "[]");
+        expect(record).toMatchObject({ state: "error", reason, result: null });
+        expect(process.exitCode).toBe(1);
+      });
+    });
+  });
+
   describe.each(["eth_getTransactionReceipt", "eth_getTransactionByHash"])("%s", (method) => {
     const transactionHash = `0x${"b".repeat(64)}`;
     const params = JSON.stringify([transactionHash]);
+    const identityField = method === "eth_getTransactionReceipt" ? "transactionHash" : "hash";
 
     it.each(["1000", HASH])("accepts execution evidence matching the numeric and canonical hash pin %s", async (block) => {
-      const result = { transactionHash, blockNumber: "0x3e8", blockHash: HASH };
+      const result = { [identityField]: transactionHash, blockNumber: "0x3e8", blockHash: HASH };
       fetchMock.mockImplementation(async (_url: string | URL, init: RequestInit) => {
         const body = JSON.parse(String(init.body));
         if (body.method === method) expect(body.params).toEqual([transactionHash]);
@@ -188,7 +236,7 @@ describe("pinned supplemental research RPC", () => {
     ])("withholds execution evidence with a mismatched block: %j", async ({ block, blockNumber, blockHash }) => {
       fetchMock.mockImplementation(async (_url: string | URL, init: RequestInit) => {
         const body = JSON.parse(String(init.body));
-        return rpcResponse(body.id, body.method === method ? { blockNumber, blockHash } : header("0x3e8"));
+        return rpcResponse(body.id, body.method === method ? { [identityField]: transactionHash, blockNumber, blockHash } : header("0x3e8"));
       });
       const record = await invoke(["--block", block], "ethereum", method, params);
       expect(record).toMatchObject({ state: "error", reason: "block-pin-mismatch", result: null });
@@ -199,7 +247,7 @@ describe("pinned supplemental research RPC", () => {
       let headerReads = 0;
       fetchMock.mockImplementation(async (_url: string | URL, init: RequestInit) => {
         const body = JSON.parse(String(init.body));
-        if (body.method === method) return rpcResponse(body.id, { blockNumber: "0x3e8", blockHash: HASH });
+        if (body.method === method) return rpcResponse(body.id, { [identityField]: transactionHash, blockNumber: "0x3e8", blockHash: HASH });
         headerReads++;
         return rpcResponse(body.id, { ...header("0x3e8"), hash: headerReads === 1 ? HASH : `0x${"c".repeat(64)}` });
       });
@@ -216,6 +264,38 @@ describe("pinned supplemental research RPC", () => {
       const record = await invoke(["--block", "1000"], "ethereum", method, params);
       expect(record).toMatchObject({ state: "empty", reason: "empty-result-not-proof-of-absence", result: null });
       expect(fetchMock).toHaveBeenCalledTimes(3);
+    });
+
+    it.each([
+      { name: "wrong", identity: `0x${"c".repeat(64)}` },
+      { name: "missing", identity: undefined },
+      { name: "null", identity: null },
+      { name: "short", identity: "0x1234" },
+      { name: "nonhex", identity: `0x${"g".repeat(64)}` },
+      { name: "nonstring", identity: 42 },
+    ])("withholds a $name transaction identity even with the correct block and alternate field", async ({ identity }) => {
+      fetchMock.mockImplementation(async (_url: string | URL, init: RequestInit) => {
+        const body = JSON.parse(String(init.body));
+        return rpcResponse(body.id, body.method === method
+          ? { hash: transactionHash, transactionHash, [identityField]: identity, blockNumber: "0x3e8", blockHash: HASH }
+          : header("0x3e8"));
+      });
+      const record = await invoke(["--block", "1000"], "ethereum", method, params);
+      expect(record).toMatchObject({ state: "error", reason: "transaction-pin-mismatch", result: null });
+      expect(process.exitCode).toBe(1);
+    });
+
+    it.each([false, true])("compares transaction identity case-insensitively without rewriting it: uppercase request %s", async (uppercaseRequest) => {
+      const requestHash = uppercaseRequest ? transactionHash.toUpperCase() : transactionHash;
+      const identity = uppercaseRequest ? transactionHash : transactionHash.toUpperCase();
+      fetchMock.mockImplementation(async (_url: string | URL, init: RequestInit) => {
+        const body = JSON.parse(String(init.body));
+        return rpcResponse(body.id, body.method === method
+          ? { [identityField]: identity, blockNumber: "0x3e8", blockHash: HASH } : header("0x3e8"));
+      });
+      const record = await invoke(["--block", "1000"], "ethereum", method, JSON.stringify([requestHash]));
+      expect(record).toMatchObject({ state: "ok", reason: null, result: { [identityField]: identity } });
+      expect(process.exitCode).toBeUndefined();
     });
 
     it.each([[], ["0x1234"], [`0x${"g".repeat(64)}`], [42], [transactionHash, transactionHash]])(

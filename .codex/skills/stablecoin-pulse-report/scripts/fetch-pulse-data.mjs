@@ -1,10 +1,12 @@
 #!/usr/bin/env node
-// Node 20+, no dependencies. All peg-bucket amounts are already USD.
+// Repository Node >=24.16 <27 with installed workspace tsx; run with node --import tsx.
+// All peg-bucket amounts are already USD.
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { setTimeout as sleep } from 'node:timers/promises';
-import { parseStrictCliArgs, requireCliString } from '../../../../scripts/lib/cli-args.mjs';
+import { parseStrictCliArgs, requireCliString, runDirectCli } from '../../../../scripts/lib/cli-args.mjs';
+import { sumPegBucketsOrNull, getCirculatingRawOrNull, getPrevMonthRawOrNull } from '../../../../shared/lib/supply.ts';
 
 const DAY = 86400;
 const launched = Date.now();
@@ -19,10 +21,31 @@ const absDelta = (a, b) => Math.abs(b.deltaUsd) - Math.abs(a.deltaUsd);
 const pct = (now, before) => finite(now) && finite(before) && before > 0 ? (now / before - 1) * 100 : null;
 const usd = (n) => !finite(n) ? 'unavailable' : `${n < 0 ? '−' : ''}$${(Math.abs(n) / (Math.abs(n) >= 1e9 ? 1e9 : 1e6)).toFixed(2)}${Math.abs(n) >= 1e9 ? 'B' : 'M'}`;
 const percent = (n) => finite(n) ? `${n.toFixed(2)}%` : 'unavailable';
-function buckets(value) {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
-  const values = Object.values(value);
-  return values.length && values.every(finite) ? values.reduce((a, b) => a + b, 0) : null;
+export function aggregatePulseSupply(coins, field) {
+  const groups = new Map();
+  for (const coin of coins) {
+    if (numericId(coin.id)) continue;
+    const key = coin[field] ?? 'unknown';
+    const group = groups.get(key) ?? { currentUsd: null, previousUsd: null, comparableCurrentUsd: null, comparablePreviousUsd: null, totalCoins: 0, currentCoins: 0, previousCoins: 0, comparableCoins: 0, unavailableCurrent: 0, unavailableBaseline: 0 };
+    const now = getCirculatingRawOrNull(coin); const before = getPrevMonthRawOrNull(coin);
+    group.totalCoins++;
+    if (now == null) group.unavailableCurrent++;
+    else { group.currentUsd = (group.currentUsd ?? 0) + now; group.currentCoins++; }
+    if (before == null) group.unavailableBaseline++;
+    else { group.previousUsd = (group.previousUsd ?? 0) + before; group.previousCoins++; }
+    if (now != null && before != null) {
+      group.comparableCurrentUsd = (group.comparableCurrentUsd ?? 0) + now;
+      group.comparablePreviousUsd = (group.comparablePreviousUsd ?? 0) + before;
+      group.comparableCoins++;
+    }
+    groups.set(key, group);
+  }
+  return Object.fromEntries([...groups].map(([key, group]) => {
+    const coverage = (count) => count === 0 ? 'none' : count === group.totalCoins ? 'complete' : 'partial';
+    return [key, { ...group, currentCoverage: coverage(group.currentCoins), previousCoverage: coverage(group.previousCoins), comparableCoverage: coverage(group.comparableCoins),
+      deltaUsd: group.comparableCoins ? group.comparableCurrentUsd - group.comparablePreviousUsd : null,
+      deltaPct: pct(group.comparableCurrentUsd, group.comparablePreviousUsd) }];
+  }));
 }
 function required(condition, message) {
   if (!condition) throw new Error(`Missing required endpoint data: ${message}`);
@@ -41,7 +64,7 @@ function atDay(rows, target) {
 
 async function main() {
   const { values } = parseStrictCliArgs(process.argv.slice(2), { options: { out: { type: 'string' } } });
-  if (values.help) { console.log('Usage: node fetch-pulse-data.mjs --out <dir>'); return; }
+  if (values.help) { console.log('Usage: node --import tsx .codex/skills/stablecoin-pulse-report/scripts/fetch-pulse-data.mjs --out <dir>'); return; }
   const out = resolve(requireCliString(values.out, '--out'));
   const data = join(out, 'data');
   const repo = fileURLToPath(new URL('../../../../', import.meta.url));
@@ -132,8 +155,8 @@ async function main() {
   const movers = [];
   const excluded = [];
   for (const coin of coins) {
-    const now = buckets(coin.circulating);
-    const before = buckets(coin.circulatingPrevMonth);
+    const now = getCirculatingRawOrNull(coin);
+    const before = getPrevMonthRawOrNull(coin);
     const row = { id: coin.id, symbol: coin.symbol, pegType: coin.pegType, mechanism: coin.pegMechanism, supplyUsd_now: now, supplyUsd_30dAgo: before, deltaUsd: now != null && before != null ? now - before : null, deltaPct: pct(now, before) };
     const reasons = [numericId(coin.id) && 'numeric-id', now == null && 'absent-current', before == null && 'absent-baseline', before === 0 && 'zero-baseline'].filter(Boolean);
     if (reasons.length) excluded.push({ ...row, reason: reasons.join(';') }); else movers.push(row);
@@ -145,9 +168,11 @@ async function main() {
   const attribution = movers.slice(0, 25).map((row) => {
     const chains = []; const noBaseline = []; const unavailableCurrent = [];
     for (const [chain, value] of Object.entries(coinMap.get(row.id).chainCirculating ?? {})) {
-      if (!finite(value.current)) { unavailableCurrent.push(chain); continue; }
-      if (!finite(value.circulatingPrevMonth)) noBaseline.push({ chain, currentUsd: value.current });
-      else chains.push({ chain, currentUsd: value.current, previousUsd: value.circulatingPrevMonth, deltaUsd: value.current - value.circulatingPrevMonth });
+      const now = sumPegBucketsOrNull({ current: value.current });
+      const before = sumPegBucketsOrNull({ previous: value.circulatingPrevMonth });
+      if (now == null) { unavailableCurrent.push(chain); continue; }
+      if (before == null) noBaseline.push({ chain, currentUsd: now });
+      else chains.push({ chain, currentUsd: now, previousUsd: before, deltaUsd: now - before });
     }
     return { id: row.id, symbol: row.symbol, deltaUsd: row.deltaUsd, chains: chains.sort(absDelta), noBaseline, unavailableCurrent };
   });
@@ -170,19 +195,6 @@ async function main() {
   const baselineMtd = baselineFor(`${date(end).slice(0, 7)}-01`);
   const change = (baseline) => ({ baseline, deltaUsd: baseline ? current.totalMcapUsd - baseline.totalMcapUsd : null, deltaPct: baseline ? pct(current.totalMcapUsd, baseline.totalMcapUsd) : null });
   const peak = series.reduce((best, row) => row.totalMcapUsd > best.totalMcapUsd ? row : best);
-  const aggregate = (field) => {
-    const groups = new Map();
-    for (const coin of coins.filter((coin) => !numericId(coin.id))) {
-      const key = coin[field] ?? 'unknown';
-      const group = groups.get(key) ?? { currentUsd: 0, previousUsd: 0, comparableCurrentUsd: 0, comparablePreviousUsd: 0, comparableCoins: 0, unavailableCurrent: 0, unavailableBaseline: 0 };
-      const now = buckets(coin.circulating); const before = buckets(coin.circulatingPrevMonth);
-      if (now == null) group.unavailableCurrent++; else group.currentUsd += now;
-      if (before == null) group.unavailableBaseline++; else group.previousUsd += before;
-      if (now != null && before != null) { group.comparableCurrentUsd += now; group.comparablePreviousUsd += before; group.comparableCoins++; }
-      groups.set(key, group);
-    }
-    return Object.fromEntries([...groups].map(([key, group]) => [key, { ...group, deltaUsd: group.comparableCoins ? group.comparableCurrentUsd - group.comparablePreviousUsd : null, deltaPct: pct(group.comparableCurrentUsd, group.comparablePreviousUsd) }]));
-  };
   const psiHistory = raw.psi.history.filter((row) => row.date >= startDay && row.date <= end && finite(row.score)).sort((a, b) => a.date - b.date);
   required(psiHistory.length, 'PSI scores inside window');
   const nonUsd = [...raw['non-usd-share']].sort((a, b) => a.date - b.date);
@@ -191,8 +203,8 @@ async function main() {
     headlineSource: 'digest-archive.json: daily, positive totalMcapUsd, latest generatedAt per UTC day',
     dailySeries: series, current, change30d: change(baseline30d), monthToDate: change(baselineMtd),
     peak: { ...peak, drawdownPct: pct(current.totalMcapUsd, peak.totalMcapUsd) },
-    shares: Object.fromEntries(['usdt-tether', 'usdc-circle'].map((id) => { const value = buckets(coinMap.get(id)?.circulating); return [id, { supplyUsd: value, sharePct: value == null ? null : value / current.totalMcapUsd * 100 }]; })),
-    byPegType: aggregate('pegType'), byPegMechanism: aggregate('pegMechanism'),
+    shares: Object.fromEntries(['usdt-tether', 'usdc-circle'].map((id) => { const value = getCirculatingRawOrNull(coinMap.get(id)); return [id, { supplyUsd: value, sharePct: value == null ? null : value / current.totalMcapUsd * 100 }]; })),
+    byPegType: aggregatePulseSupply(coins, 'pegType'), byPegMechanism: aggregatePulseSupply(coins, 'pegMechanism'),
     nonUsdShare: { start: atDay(nonUsd, startDay), end: atDay(nonUsd, end) },
     psi: { daily: psiHistory, start: psiHistory[0], end: psiHistory.at(-1), min: Math.min(...psiHistory.map((row) => row.score)), max: Math.max(...psiHistory.map((row) => row.score)), bandsSeen: [...new Set(psiHistory.map((row) => row.band))] },
     pegSummary: { coinsAtPeg: raw['peg-summary'].summary.coinsAtPeg, totalTracked: raw['peg-summary'].summary.totalTracked },
@@ -234,7 +246,7 @@ async function main() {
   }
   await save('large-mints.json', largeMints);
   const pegMap = new Map(raw['peg-summary'].coins.map((coin) => [coin.id, coin]));
-  const depegs = [...events.values()].filter((event) => event.startedAt <= end && (event.endedAt == null || event.endedAt >= start) && Math.abs(event.peakDeviationBps) >= 100).map((event) => ({ ...event, currentMcapUsd: buckets(coinMap.get(event.stablecoinId)?.circulating), currentPrice: coinMap.get(event.stablecoinId)?.price ?? null, currentDeviationBps: pegMap.get(event.stablecoinId)?.currentDeviationBps ?? null, pendingReason: event.pendingReason ?? null })).sort((a, b) => (b.currentMcapUsd ?? -1) - (a.currentMcapUsd ?? -1));
+  const depegs = [...events.values()].filter((event) => event.startedAt <= end && (event.endedAt == null || event.endedAt >= start) && Math.abs(event.peakDeviationBps) >= 100).map((event) => ({ ...event, currentMcapUsd: getCirculatingRawOrNull(coinMap.get(event.stablecoinId)), currentPrice: coinMap.get(event.stablecoinId)?.price ?? null, currentDeviationBps: pegMap.get(event.stablecoinId)?.currentDeviationBps ?? null, pendingReason: event.pendingReason ?? null })).sort((a, b) => (b.currentMcapUsd ?? -1) - (a.currentMcapUsd ?? -1));
   await save('depegs.json', depegs);
   const digests = raw['digest-archive'].digests.filter((digest) => digest.generatedAt >= start && digest.generatedAt <= end).sort((a, b) => a.generatedAt - b.generatedAt);
   await save('digests.md', digests.map((digest) => `## ${date(digest.generatedAt)} [${digest.digestType}] ${digest.digestTitle ?? ''}\n\n${digest.digestExtended || digest.digestText || ''}\n`).join('\n'));
@@ -246,7 +258,7 @@ async function main() {
     `- Headline: ${usd(current.totalMcapUsd)} (${current.date}); Δ30d ${usd(market.change30d.deltaUsd)} / ${percent(market.change30d.deltaPct)} from ${baseline30d?.date ?? 'unavailable'}. MTD ${usd(market.monthToDate.deltaUsd)} / ${percent(market.monthToDate.deltaPct)}.`,
     `- Full daily-series peak: ${usd(peak.totalMcapUsd)} on ${peak.date}; drawdown ${percent(market.peak.drawdownPct)}.`,
     ...Object.entries(market.shares).map(([id, value]) => `- ${id}: ${usd(value.supplyUsd)}, ${percent(value.sharePct)} of headline.`),
-    ...Object.entries(market.byPegMechanism).map(([key, value]) => `- ${key}: ${usd(value.currentUsd)} now; comparable Δ30d ${usd(value.deltaUsd)} (${percent(value.deltaPct)}); missing baselines ${value.unavailableBaseline}.`),
+    ...Object.entries(market.byPegMechanism).map(([key, value]) => `- ${key}: ${usd(value.currentUsd)} now; current coverage ${value.currentCoins}/${value.totalCoins} (${value.currentCoverage}); baseline coverage ${value.previousCoins}/${value.totalCoins} (${value.previousCoverage}); comparable Δ30d ${usd(value.deltaUsd)} (${percent(value.deltaPct)}); comparable coverage ${value.comparableCoins}/${value.totalCoins} (${value.comparableCoverage}).`),
     `- PSI: ${market.psi.start.score} (${date(market.psi.start.date)}) → ${market.psi.end.score} (${date(market.psi.end.date)}); min/max ${market.psi.min}/${market.psi.max}; bands ${market.psi.bandsSeen.join(', ')}.`,
     `- At peg: ${market.pegSummary.coinsAtPeg}/${market.pegSummary.totalTracked}.`,
     `- Non-USD share: commodity ${percent(market.nonUsdShare.start?.commodityShare)} → ${percent(market.nonUsdShare.end?.commodityShare)}; fiat non-USD ${percent(market.nonUsdShare.start?.fiatNonUsdShare)} → ${percent(market.nonUsdShare.end?.fiatNonUsdShare)}.`,
@@ -277,7 +289,7 @@ async function main() {
   lines.push('', '## Data caveats',
     '- Headline, 30d/MTD changes, peak and drawdown use only the daily digest totalMcapUsd series, not chart totals or summed registry supply. Baselines use the last available UTC daily observation on/before the target day; dates are explicit in market.json.',
     '- Daily PSI, non-USD share and supply histories include the start UTC day. Event and digest-text filters use the exact rolling timestamps. Unit decomposition uses historical daily observations, not live circulatingPrevMonth; missing prices remain unavailable.',
-    '- Mechanism/peg aggregates use non-numeric registry ids; deltas compare only coins with both observations. Current totals can cover more coins than deltas. Explicit zero baselines remain observed in aggregates but are excluded from ranked movers.',
+    '- Mechanism/peg aggregates use non-numeric registry ids and canonical admitted supply; no observations means unavailable, not zero. Partial totals retain observed-member counts and coverage. Deltas compare only coins with both observations. Explicit zero baselines remain observed in aggregates but are excluded from ranked movers.',
     `- Excluded mover rows: ${excluded.length}; ids/reasons: ${excluded.map((row) => `${row.id} (${row.reason})`).join(', ')}. Full detail: movers-excluded.csv.`,
     `- Chain rows without a comparable baseline: ${chainRows.filter((row) => row.baseline === 'none').map((row) => row.chain).join(', ') || 'none'}. Never treat these as +100% growth. Per-coin unavailable chains are separate in chain-attribution.json.`,
     '- Chain attribution is raw and may not reconcile to global coin supply; no rescaling. Current coin prices come from stablecoins.json; deviations and peg counts come from peg-summary.json.',
@@ -289,4 +301,4 @@ async function main() {
   await save('fetch-info.json', run);
   console.log(`Wrote ${data}\nBrief: ${join(data, 'brief.md')}\nHeadline ${usd(current.totalMcapUsd)}; 30d ${percent(market.change30d.deltaPct)}; PSI ${market.psi.end.score}; at peg ${market.pegSummary.coinsAtPeg}/${market.pegSummary.totalTracked}\n${requestCount} requests; ${run.runtimeSeconds.toFixed(1)}s; ${issues.length} endpoint advisories (fetch-info.json)`);
 }
-main().catch((error) => { console.error(`fetch-pulse-data: ${error.message}`); process.exitCode = 1; });
+runDirectCli(import.meta.url, main, { label: 'fetch-pulse-data' });

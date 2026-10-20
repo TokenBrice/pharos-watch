@@ -10,6 +10,8 @@
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { z } from "zod";
+import { V9CdpStressCoverageFactSchema } from "../../shared/types/safety-score-v9-backing";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import { SHOCK_COVERAGE_TARGET_IDS } from "../lib/mechanism-measurement/shock-targets";
 
@@ -22,24 +24,55 @@ const TARGETS_PATH = "shared/data/safety-score-v9/shock-coverage-targets.json";
 // inside the policy bound so a single failed run still leaves usable slack.
 const MAX_AGE_FRACTION = 0.5;
 
-interface ShockMeasurement {
-  assetId: string;
-  block: {
-    number: number;
-    timestampIso: string;
-    timestampUnix: number;
-  };
-  applicability: string;
-  failureReason?: string | null;
-  complete: boolean;
-  blockers: string[];
-  exactReplayPassed: boolean;
-  replayVerification: unknown;
-}
-
-interface ShockCoverageRegistry {
-  measurements?: ShockMeasurement[];
-}
+const factFields = V9CdpStressCoverageFactSchema.shape;
+const sourceFields = factFields.source.unwrap().shape;
+const ShockMeasurementSchema = z.object({
+  assetId: z.string().trim().min(1),
+  family: factFields.family,
+  applicability: factFields.applicability,
+  failureReason: factFields.failureReason,
+  complete: factFields.complete,
+  blockers: factFields.blockers,
+  exactReplayPassed: factFields.exactReplayPassed,
+  replayVerification: factFields.replayVerification,
+  journalPath: sourceFields.journalPath,
+  journalSha256: sourceFields.journalSha256,
+  block: sourceFields.block,
+  sourcePin: sourceFields.sourcePin,
+  shockPolicy: factFields.shockPolicy,
+  measuredFacts: z.object({
+    stressShockFraction: factFields.stressShockFraction,
+    stressLiquidatableDebt: factFields.stressLiquidatableDebt,
+    stressPoolOffsetDebt: factFields.stressPoolOffsetDebt,
+    stressLiquidationCoverageRatio: factFields.stressLiquidationCoverageRatio,
+    branchContributions: factFields.branchContributions,
+  }),
+  codePins: factFields.codeHashPins,
+}).superRefine((measurement, ctx) => {
+  const result = V9CdpStressCoverageFactSchema.safeParse({
+    family: measurement.family,
+    applicability: measurement.applicability,
+    failureReason: measurement.failureReason,
+    complete: measurement.complete,
+    blockers: measurement.blockers,
+    exactReplayPassed: measurement.exactReplayPassed,
+    replayVerification: measurement.replayVerification,
+    source: {
+      journalPath: measurement.journalPath,
+      journalSha256: measurement.journalSha256,
+      block: measurement.block,
+      sourcePin: measurement.sourcePin,
+    },
+    shockPolicy: measurement.shockPolicy,
+    ...measurement.measuredFacts,
+    codeHashPins: measurement.codePins,
+    evidenceRefIds: [],
+  });
+  if (!result.success) {
+    for (const issue of result.error.issues) ctx.addIssue({ ...issue });
+  }
+});
+const ShockCoverageRegistrySchema = z.object({ measurements: z.array(ShockMeasurementSchema) });
 
 interface ShockCoverageTargetCatalog {
   targets?: unknown;
@@ -59,8 +92,8 @@ interface ShockCoveragePolicy {
   };
 }
 
-function readJson<T>(relativePath: string): T {
-  return JSON.parse(readFileSync(resolve(ROOT, relativePath), "utf8")) as T;
+function readJson(relativePath: string): unknown {
+  return JSON.parse(readFileSync(resolve(ROOT, relativePath), "utf8"));
 }
 
 export function readRequiredAssetIds(
@@ -99,7 +132,7 @@ export function readRequiredAssetIds(
 }
 
 function readPolicyMaxAgeSec() {
-  const policy = readJson<ShockCoveragePolicy>(POLICY_PATH);
+  const policy = readJson(POLICY_PATH) as ShockCoveragePolicy;
   const maxAgeSec = policy?.semantic?.backing?.structural?.cdp?.stressMeasurementFreshness?.maxAgeSec;
   if (typeof maxAgeSec !== "number" || !Number.isFinite(maxAgeSec) || maxAgeSec <= 0) {
     throw new Error(`Could not read cdp.stressMeasurementFreshness.maxAgeSec from ${POLICY_PATH}`);
@@ -113,16 +146,21 @@ export function evaluateShockCoverageFreshness({
   nowSec,
   requiredAssetIds,
 }: {
-  registry: ShockCoverageRegistry;
+  registry: unknown;
   maxAgeSec: number;
   nowSec: number;
   requiredAssetIds: readonly string[];
 }) {
   const failures: string[] = [];
   const successes: string[] = [];
+  const parsedRegistry = ShockCoverageRegistrySchema.safeParse(registry);
+  if (!parsedRegistry.success) {
+    failures.push(`${REGISTRY_PATH}: invalid registry: ${parsedRegistry.error.message}`);
+    return { failures, successes };
+  }
 
   for (const assetId of requiredAssetIds) {
-    const measurements = (registry.measurements ?? []).filter((entry) => entry.assetId === assetId);
+    const measurements = parsedRegistry.data.measurements.filter((entry) => entry.assetId === assetId);
     if (measurements.length === 0) {
       failures.push(`${assetId}: no measurement in ${REGISTRY_PATH}`);
       continue;
@@ -165,9 +203,9 @@ export function evaluateShockCoverageFreshness({
 }
 
 function main() {
-  const requiredAssetIds = readRequiredAssetIds(readJson<ShockCoverageTargetCatalog>(TARGETS_PATH));
+  const requiredAssetIds = readRequiredAssetIds(readJson(TARGETS_PATH) as ShockCoverageTargetCatalog);
   const result = evaluateShockCoverageFreshness({
-    registry: readJson<ShockCoverageRegistry>(REGISTRY_PATH),
+    registry: readJson(REGISTRY_PATH),
     maxAgeSec: readPolicyMaxAgeSec(),
     nowSec: Math.floor(Date.now() / 1000),
     requiredAssetIds,

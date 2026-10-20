@@ -9,6 +9,7 @@ import {
   runAnnotationCandidates,
   type AnnotationSnapshot,
 } from "../build-annotation-candidates";
+import { makeCoin } from "../../__tests__/stablecoin-catalog.test-support";
 
 
 describe("bounded tape collection", () => {
@@ -93,6 +94,44 @@ describe("retained annotation replay", () => {
   afterEach(() => {
     for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
     vi.unstubAllGlobals(); vi.unstubAllEnvs(); vi.useRealTimers();
+  });
+
+  it("bounds local launch signals and coverage to the captured run clock even after slow collection", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pharos-annotation-window-"));
+    roots.push(root);
+    const coinDir = join(root, "shared/data/stablecoins/coins");
+    mkdirSync(coinDir, { recursive: true });
+    const dates = ["2026-08-07", "2026-08-08", "2026-09-06", "2026-09-07", "2026-09-08", "2027-01-01"];
+    for (const status of ["active", "pre-launch"]) {
+      for (const date of dates) {
+        const coin = makeCoin(`${status}-${date}`, status === "active" ? { status, launchDate: date } : {
+          status, milestones: [{ date, type: "milestone", title: "Public launch",
+            description: "Registry launch milestone", sourceUrl: "https://example.com/launch" }],
+        });
+        writeFileSync(join(coinDir, `${coin.id}.json`), JSON.stringify(coin));
+      }
+    }
+    vi.useFakeTimers();
+    vi.setSystemTime("2026-09-07T00:00:00.000Z");
+    vi.stubEnv("PHAROS_API_KEY", "fixture");
+    const fetch = vi.fn(async () => {
+      vi.setSystemTime("2026-09-09T00:00:00.000Z");
+      return Response.json({ events: [], nextCursor: null });
+    });
+    vi.stubGlobal("fetch", fetch);
+    await runAnnotationCandidates([], root);
+    const snapshot = JSON.parse(readFileSync(join(root, "agents/annotation-candidates.json"), "utf8")) as AnnotationSnapshot;
+    expect(snapshot.candidates.map(({ coinId }) => coinId).sort()).toEqual([
+      "active-2026-08-08", "active-2026-09-06", "active-2026-09-07",
+      "pre-launch-2026-08-08", "pre-launch-2026-09-06", "pre-launch-2026-09-07",
+    ]);
+    expect(snapshot.generatedAt).toBe("2026-09-07T00:00:00.000Z");
+    expect(snapshot.coverage).toEqual([
+      { source: "depeg", since: "2026-08-24T00:00:00.000Z", until: snapshot.generatedAt, complete: true, pages: 1 },
+      { source: "freeze", since: "2026-08-24T00:00:00.000Z", until: snapshot.generatedAt, complete: true, pages: 1 },
+      { source: "registry", since: "2026-08-08T00:00:00.000Z", until: snapshot.generatedAt, complete: true, pages: 0 },
+    ]);
+    expect(JSON.parse(readFileSync(join(coinDir, "pre-launch-2027-01-01.json"), "utf8")).milestones[0].date).toBe("2027-01-01");
   });
 
   it.each(["", "<!-- last_swept_at: 2026-09-07 -->\n"])("preserves editorial state through actual generation and recovered sources (footer=%s)", async (footer) => {

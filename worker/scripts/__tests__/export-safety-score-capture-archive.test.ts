@@ -269,11 +269,26 @@ describe("Safety Score capture archive export", () => {
   });
 
   it("fails malformed/failed D1 reads instead of claiming an empty list", async () => {
-    for (const value of [[], [{ success: false, results: [] }], [{ success: true }]]) {
+    for (const value of [{}, [], [{ success: false, results: [] }], [{ success: true }],
+      { result: [{ success: true, results: [] }, { success: false, results: [] }] }]) {
       await expect(runSafetyScoreCaptureArchiveCli(["list", "--from", "2026-10-01", "--to", "2026-10-08"], {
         client: { queryRaw: () => JSON.stringify(value) },
-      })).rejects.toThrow("capture-archive-query");
+      })).rejects.toThrow(/d1-|capture-archive-query/);
     }
+  });
+
+  it("admits a nested successful empty list but rejects extra statements and invalid archive rows", async () => {
+    const stdout = vi.spyOn(process.stdout, "write").mockReturnValue(true);
+    const args = ["list", "--from", "2026-10-01", "--to", "2026-10-08"];
+    const empty = { success: true, results: [] };
+    await runSafetyScoreCaptureArchiveCli(args, { client: { queryRaw: () => JSON.stringify({ result: [empty] }) } });
+    expect(JSON.parse(String(stdout.mock.calls[stdout.mock.calls.length - 1]![0])).generations).toEqual([]);
+    await expect(runSafetyScoreCaptureArchiveCli(args, {
+      client: { queryRaw: () => JSON.stringify({ result: [empty, empty] }) },
+    })).rejects.toThrow("capture-archive-query-envelope-invalid");
+    await expect(runSafetyScoreCaptureArchiveCli(args, {
+      client: { queryRaw: () => JSON.stringify([{ success: true, results: [{ generation_id: "incomplete" }] }]) },
+    })).rejects.toThrow();
   });
 
 });

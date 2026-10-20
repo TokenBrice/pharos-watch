@@ -1,9 +1,20 @@
-import { describe, expect, it } from "vitest";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { describe, expect, it, vi } from "vitest";
+import type * as RemoteD1Module from "../lib/remote-d1";
+import { createRemoteD1Client } from "../lib/remote-d1";
+import { runSafetyScoreMovementLedgerCli } from "../safety-score-movement-ledger";
 import { buildSafetyScoreCompactCard } from "../../src/lib/safety-score-v9/publication-journal";
 import type { SafetyScoreCompactCard, SafetyScoreJournalIdentity } from "../../src/lib/safety-score-v9/publication-journal";
 import { buildSafetyScoreMovementLedger, classifySafetyScoreMovement, renderSafetyScoreMovementMarkdown, type SafetyScoreMovementRow } from "../lib/safety-score-movement-ledger";
 import { makeWorkerV9Card } from "../../src/test-helpers/report-cards-v9";
 
+
+vi.mock("../lib/remote-d1", async (importOriginal) => ({
+  ...(await importOriginal<typeof RemoteD1Module>()),
+  createRemoteD1Client: vi.fn(),
+}));
 const identityA: SafetyScoreJournalIdentity = { methodologyVersion: "10.12", policyDigest: "a".repeat(64), evaluationBuildDigest: "b".repeat(64) };
 
 function row(id: string, generation: string, clock: number, identity: SafetyScoreJournalIdentity, compact: SafetyScoreCompactCard, score: number | null): SafetyScoreMovementRow {
@@ -24,6 +35,32 @@ function card(score: number, backing: number, exit: number, control: number): Sa
 }
 
 describe("safety score movement ledger", () => {
+  it("rejects failed, unknown and extra-statement reads before writing a movement report", () => {
+    const dir = mkdtempSync(join(tmpdir(), "movement-ledger-envelope-"));
+    const prefix = join(dir, "ledger");
+    const empty = { success: true, results: [] };
+    try {
+      for (const payload of [{}, [], { success: false, results: [] }, { result: [empty, { success: false, results: [] }] },
+        { result: [empty, empty] }]) {
+        vi.mocked(createRemoteD1Client).mockReturnValue({
+          queryRaw: () => JSON.stringify(payload), query: vi.fn(), executeStatements: vi.fn(),
+        });
+        expect(() => runSafetyScoreMovementLedgerCli(["--from", "2026-10-01", "--to", "2026-10-08", "--output", prefix]))
+          .toThrow(/d1-|ledger-query/);
+        expect(existsSync(`${prefix}.json`)).toBe(false);
+        expect(existsSync(`${prefix}.md`)).toBe(false);
+      }
+      vi.mocked(createRemoteD1Client).mockReturnValue({
+        queryRaw: () => JSON.stringify({ result: [empty] }), query: vi.fn(), executeStatements: vi.fn(),
+      });
+      const stdout = vi.spyOn(process.stdout, "write").mockReturnValue(true);
+      try {
+        runSafetyScoreMovementLedgerCli(["--from", "2026-10-01", "--to", "2026-10-08", "--output", prefix]);
+        expect(JSON.parse(readFileSync(`${prefix}.json`, "utf8"))).toMatchObject({ movementCount: 0, availableChangedRows: 0 });
+      } finally { stdout.mockRestore(); }
+    } finally { rmSync(dir, { recursive: true, force: true }); }
+  });
+
   it("classifies pipeline-gap transitions and unexplained hold-adjacent movement as operational, without inventing a pillar delta", () => {
     const rated = row("usdc-circle", "g1", 100, identityA, card(70, 80, 75, 70), 70);
     const held = classifySafetyScoreMovement(rated, row("usdc-circle", "g2", 200, identityA, { ...card(70, 80, 75, 70) }, 70), ["dex-stale"]);

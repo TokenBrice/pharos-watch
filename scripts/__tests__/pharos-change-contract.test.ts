@@ -62,17 +62,18 @@ function expectIntegrityObligations(contract: Pick<ChangeContract, "docs">, meth
 
 // Exact measured byte ceilings, not rounded class allowances. Lower these when
 // reading shrinks; never regenerate them automatically or trade away obligations.
+// Manually ratcheted after moving implementation inventories/details into linked appendices.
 const ROUTE_FIXTURES = [
-  ["src/components/stablecoin-table.tsx", 20_359, 20_359],
-  ["src/app/yield/page.tsx", 49_528, 49_528],
-  ["worker/src/cron/dex-liquidity/orchestrator.ts", 43_300, 43_300],
-  ["worker/src/api/yield-history.ts", 70_767, 70_767],
-  ["shared/lib/safety-score-v9/evaluate-asset.ts", 64_211, 64_211],
-  ["shared/lib/classification.ts", 46_927, 46_927],
-  ["functions/safety-scores/map.json.ts", 26_202, 30_995],
-  ["shared/data/stablecoins/coins/usdt-tether.json", 46_927, 46_927],
-  ["worker/src/telegram/webhook/telegram-webhook.ts", 47_679, 47_679],
-  ["worker/migrations/0268_telegram_planning_lookup_indexes.sql", 27_532, 27_532],
+  ["src/components/stablecoin-table.tsx", 20_327, 20_327],
+  ["src/app/yield/page.tsx", 49_506, 49_506],
+  ["worker/src/cron/dex-liquidity/orchestrator.ts", 42_303, 42_303],
+  ["worker/src/api/yield-history.ts", 70_417, 70_417],
+  ["shared/lib/safety-score-v9/evaluate-asset.ts", 63_485, 63_485],
+  ["shared/lib/classification.ts", 46_914, 46_914],
+  ["functions/safety-scores/map.json.ts", 24_468, 29_549],
+  ["shared/data/stablecoins/coins/usdt-tether.json", 46_914, 46_914],
+  ["worker/src/telegram/webhook/telegram-webhook.ts", 46_593, 46_593],
+  ["worker/migrations/0268_telegram_planning_lookup_indexes.sql", 26_618, 26_618],
 ] as const;
 
 interface ReadingSignature {
@@ -862,6 +863,23 @@ describe("shell command analysis", () => {
     ]);
     expect(findShellCommandViolation(analysis)?.rule).toBe("git-destructive");
   });
+
+  it("preserves literal heredoc bytes, expansion mode and receiving command", () => {
+    const body = "\tg\\\nit status";
+    const analysis = analyzeShellCommand(`cat <<DATA; env CI=1 sh <<-'SCRIPT'\nexample\nDATA\n${body}\n\tSCRIPT`, process.cwd());
+    expect(analysis.hereDocs.map(({ body, quoted, stripTabs, receiver, feedsStdin }) =>
+      ({ body, quoted, stripTabs, receiver, feedsStdin }))).toEqual([
+      { body: "example", quoted: false, stripTabs: false, receiver: ["cat", "<<", "DATA"], feedsStdin: true },
+      { body, quoted: true, stripTabs: true, receiver: ["env", "CI=1", "sh", "<<-", "SCRIPT"], feedsStdin: true },
+    ]);
+    expect(Object.isFrozen(analysis.hereDocs[1].receiver)).toBe(true);
+  });
+
+  it("keeps single-quoted continuation bytes in arguments", () => {
+    const literal = "g\\\nit reset --hard HEAD";
+    const analysis = analyzeShellCommand(`printf '%s' '${literal}'`, process.cwd());
+    expect(analysis.invocations[0].tokens).toEqual(["printf", "%s", literal]);
+  });
 });
 
 describe("hard-block hook outputs", () => {
@@ -882,6 +900,68 @@ describe("hard-block hook outputs", () => {
 
   it("allows a read-only exec_command cmd payload", () => {
     const input = { tool_name: "exec_command", tool_input: { cmd: "git status --short" } };
+    expect(buildPreToolUseHookOutput(input)).toEqual({});
+    expect(buildPermissionRequestHookOutput(input)).toEqual({});
+  });
+
+  it.each([
+    ["continued executable", "g\\\nit reset --hard HEAD"],
+    ["continued argument boundary", "git reset \\\n--hard HEAD"],
+    ["continued subcommand", "git re\\\nset --hard HEAD"],
+    ["continued flag", "git reset --ha\\\nrd HEAD"],
+    ["double-quoted continuation", '"g\\\nit" "re\\\nset" "--ha\\\nrd" HEAD'],
+    ["continued deploy", "wrang\\\nler pages de\\\nploy out"],
+    ["continued D1", "wrangler d1 \\\nexecute stablecoin-db --re\\\nmote --command 'DELETE FROM cache'"],
+    ["nested continuation", "echo $(g\\\nit reset --hard HEAD)"],
+    ["quoted shell heredoc", "bash <<'EOF'\ngit reset --hard HEAD\nEOF"],
+    ["unquoted shell heredoc", "sh <<EOF\nwrangler deploy\nEOF"],
+    ["tab-stripped heredoc", "bash <<-'EOF'\n\twrangler pages deploy out\n\tEOF"],
+    ["wrapped shell heredoc", "env CI=1 command sh <<'EOF'\nwrangler d1 execute stablecoin-db --remote --command 'DELETE FROM cache'\nEOF"],
+    ["assignment-prefixed shell heredoc", "CI=1 sh <<'EOF'\ngit reset --hard HEAD\nEOF"],
+    ["continued heredoc header", 'ba\\\nsh <<"EO\\\nF"\ngit reset --hard HEAD\nEOF'],
+    ["continued heredoc script", "sh <<'EOF'\ng\\\nit reset --ha\\\nrd HEAD\nEOF"],
+    ["explicit stdin script with args", "sh -s -- example <<'EOF'\ngit reset --hard HEAD\nEOF"],
+    ["leading heredoc redirection", "<<'EOF' sh\ngit reset --hard HEAD\nEOF"],
+    ["explicit stdin descriptor", "sh 0<<'EOF'\ngit reset --hard HEAD\nEOF"],
+    ["heredoc with output redirection", "sh <<'EOF' > ./report.txt\ngit reset --hard HEAD\nEOF"],
+    ["escaped heredoc delimiter", "sh <<\\EOF\ngit reset --hard HEAD\nEOF"],
+    ["stdin script with unterminated delimiter", "sh <<'EOF'\ng\\\nit reset --hard HEAD"],
+    ["last stdin heredoc wins", "sh <<SAFE <<'SCRIPT'\ngit status\nSAFE\ngit reset --hard HEAD\nSCRIPT"],
+    ["separate command receivers", "cat <<DATA; sh <<'SCRIPT'\nexample\nDATA\nwrangler deploy\nSCRIPT"],
+    ["nested shell heredoc", 'bash -c "sh <<\'EOF\'\ngit reset --hard HEAD\nEOF"'],
+    ["continued unquoted delimiter", "cat <<EOF\nexample\nEO\\\nF\ngit reset --hard HEAD"],
+    ["continued expansion in data heredoc", "cat <<EOF\n$(g\\\nit reset --hard HEAD)\nEOF"],
+  ])("denies %s in both hook modes", (_label, command) => {
+    const input = { tool_input: { command } };
+    expect(buildPreToolUseHookOutput(input)).toMatchObject({
+      hookSpecificOutput: { permissionDecision: "deny" },
+    });
+    expect(buildPermissionRequestHookOutput(input)).toMatchObject({
+      hookSpecificOutput: { decision: { behavior: "deny" } },
+    });
+  });
+
+  it.each([
+    ["single-quoted literal", "echo 'g\\\nit reset --hard HEAD'"],
+    ["read-only continuation", "g\\\nit sta\\\ntus --short"],
+    ["read-only double-quoted continuation", '"g\\\nit" "sta\\\ntus" --short'],
+    ["read-only D1 continuation", "wrangler d1 \\\nexecute stablecoin-db --local --command 'SELECT 1'"],
+    ["read-only shell heredoc", "sh <<EOF\ng\\\nit status --short\nEOF"],
+    ["quoted read-only shell heredoc", "env CI=1 bash <<'EOF'\ngit status --short\nEOF"],
+    ["literal shell example", "sh <<'EOF'\necho 'git reset --hard HEAD'\nEOF"],
+    ["quoted Node example", "node - <<'EOF'\nconsole.log('git reset --hard HEAD');\nEOF"],
+    ["unquoted Node example without expansion", "node - <<EOF\nconsole.log('wrangler deploy');\nEOF"],
+    ["script filename consumes data", "sh ./report.sh <<'EOF'\ngit reset --hard HEAD\nEOF"],
+    ["wrapped script filename consumes data", "env CI=1 command bash --noprofile ./report.sh <<EOF\nwrangler deploy\nEOF"],
+    ["command argument consumes data", "sh -c 'cat' <<'EOF'\ngit reset --hard HEAD\nEOF"],
+    ["pipeline into a script filename", "printf '%s\\n' 'git reset --hard HEAD' | sh ./report.sh"],
+    ["overridden stdin heredoc", "sh <<'DATA' <<'SCRIPT'\ngit reset --hard HEAD\nDATA\ngit status --short\nSCRIPT"],
+    ["non-stdin heredoc", "sh 3<<'EOF'\ngit reset --hard HEAD\nEOF"],
+    ["file replaces heredoc stdin", "sh <<'EOF' < ./input.sh\ngit reset --hard HEAD\nEOF"],
+    ["quoted expansion stays inert", "cat <<'EOF'\n$(g\\\nit reset --hard HEAD)\nEOF"],
+    ["quoted input operator argument", "printf '%s' '<' 'git reset --hard HEAD'"],
+  ])("allows %s in both hook modes", (_label, command) => {
+    const input = { tool_input: { command } };
     expect(buildPreToolUseHookOutput(input)).toEqual({});
     expect(buildPermissionRequestHookOutput(input)).toEqual({});
   });

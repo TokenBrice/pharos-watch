@@ -28,8 +28,12 @@ export interface TelegramAdoptionReport {
     activeWatchers7d: number;
     configuredWatchersDaily: number | null;
     configuredWatchersSnapshotAt: string | null;
-    alertsSent7d: number;
-    alertsSent30d: number;
+    alertsSent7d: number | null;
+    alertsSent7dUnavailableReason: "delivery-window-coverage-unproven" | null;
+    alertsSent30d: number | null;
+    alertsSent30dUnavailableReason: "source-retention-shorter-than-window" | null;
+    retainedAlertsSent7d: number;
+    retainedAlertsSent30d: number;
   };
 }
 
@@ -43,13 +47,6 @@ type LifecycleRow = {
   day?: string | null;
   snapshot_at?: number | string | null;
   active_watchers?: number | string | null;
-};
-
-type UsageRow = {
-  day?: string | null;
-  event_type?: string | null;
-  outcome?: string | null;
-  count?: number | string | null;
 };
 
 type DeliveryRow = {
@@ -73,10 +70,10 @@ function utcDay(sec: number): string {
 
 
 function latestLifecycleSnapshot(rows: LifecycleRow[]): { count: number; observedAt: string | null } | null {
-  const latest = rows
+  const snapshots = rows
     .filter((row) => typeof row.day === "string" && numberValue(row.active_watchers) != null)
-    .sort((left, right) => String(left.day).localeCompare(String(right.day)))
-    .at(-1);
+    .sort((left, right) => String(left.day).localeCompare(String(right.day)));
+  const latest = snapshots[snapshots.length - 1];
   if (!latest) return null;
   const snapshotAt = numberValue(latest.snapshot_at);
   return {
@@ -86,20 +83,12 @@ function latestLifecycleSnapshot(rows: LifecycleRow[]): { count: number; observe
 }
 
 
-function usageAlertsSent(rows: UsageRow[]): number {
-  const alertEvents: Record<string, true> = {
-    alert_sent: true,
-    alert_delivery: true,
-    delivery: true,
-  };
-  return rows.reduce((total, row) => {
-    if (!alertEvents[row.event_type ?? ""] || row.outcome === "failure") return total;
-    return total + nonnegative(row.count);
-  }, 0);
-}
 
-function deliveryCount(rows: DeliveryRow[], cutoffSec: number): number {
-  return rows.filter((row) => nonnegative(row.final_delivery_at) >= cutoffSec).length;
+function deliveryCount(rows: DeliveryRow[], cutoffSec: number, nowSec: number): number {
+  return rows.filter((row) => {
+    const deliveredAt = numberValue(row.final_delivery_at);
+    return deliveredAt != null && deliveredAt >= cutoffSec && deliveredAt <= nowSec;
+  }).length;
 }
 
 
@@ -128,25 +117,15 @@ export function collectTelegramAdoptionReport(client: D1Client, nowSec: number):
       WHERE day >= ${sqlString(utcDay(activeWatcherStartSec))}
       ORDER BY day ASC`,
   );
-  const usageRows = client.query<UsageRow>(
-    `SELECT day, event_type, outcome, count
-       FROM telegram_usage_daily
-      WHERE day >= ${sqlString(utcDay(adoptionStartSec))}
-      ORDER BY day ASC`,
-  );
   const deliveryRows = client.query<DeliveryRow>(
     `SELECT final_delivery_at
        FROM telegram_alert_job_targets
       WHERE final_delivery_state = 'accepted'
-        AND final_delivery_at >= ${adoptionStartSec}`,
+        AND final_delivery_at >= ${adoptionStartSec}
+        AND final_delivery_at <= ${nowSec}`,
   );
 
   const lifecycleSnapshot = latestLifecycleSnapshot(lifecycleRows);
-  const usageAlerts = usageAlertsSent(usageRows);
-  const alertsSent30d = deliveryRows.length > 0 ? deliveryRows.length : usageAlerts;
-  const alertsSent7d = deliveryRows.length > 0
-    ? deliveryCount(deliveryRows, activeWatcherStartSec)
-    : usageAlertsSent(usageRows.filter((row) => row.day != null && row.day >= utcDay(activeWatcherStartSec)));
 
   return {
     generatedAt: new Date(nowSec * 1000).toISOString(),
@@ -155,8 +134,14 @@ export function collectTelegramAdoptionReport(client: D1Client, nowSec: number):
       activeWatchers7d: nonnegative(subscriberRow.active_watchers_7d),
       configuredWatchersDaily: lifecycleSnapshot?.count ?? null,
       configuredWatchersSnapshotAt: lifecycleSnapshot?.observedAt ?? null,
-      alertsSent7d,
-      alertsSent30d,
+      // Replay pruning uses source.completed_at; audit pruning uses target.created_at.
+      // Neither proves coverage of a final_delivery_at window, even for an empty read.
+      alertsSent7d: null,
+      alertsSent7dUnavailableReason: "delivery-window-coverage-unproven",
+      alertsSent30d: null,
+      alertsSent30dUnavailableReason: "source-retention-shorter-than-window",
+      retainedAlertsSent7d: deliveryCount(deliveryRows, activeWatcherStartSec, nowSec),
+      retainedAlertsSent30d: deliveryCount(deliveryRows, adoptionStartSec, nowSec),
     },
   };
 }
@@ -181,6 +166,9 @@ export function renderTelegramAdoptionBlock(report: TelegramAdoptionReport): str
     `| Configured watchers (daily snapshot) | ${displayNumber(report.adoption.configuredWatchersDaily)} |`,
     `| Configured watchers snapshot observed at | ${report.adoption.configuredWatchersSnapshotAt ?? "not measured"} |`,
     `| Alerts sent (7d / 30d) | ${displayNumber(report.adoption.alertsSent7d)} / ${displayNumber(report.adoption.alertsSent30d)} |`,
+    `| Alerts sent (7d) unavailable reason | ${report.adoption.alertsSent7dUnavailableReason ?? "none"} |`,
+    `| Alerts sent (30d) unavailable reason | ${report.adoption.alertsSent30dUnavailableReason ?? "none"} |`,
+    `| Retained accepted targets only (7d / 30d; not complete delivery totals) | ${displayNumber(report.adoption.retainedAlertsSent7d)} / ${displayNumber(report.adoption.retainedAlertsSent30d)} |`,
     END_MARKER,
   ].join("\n");
 }

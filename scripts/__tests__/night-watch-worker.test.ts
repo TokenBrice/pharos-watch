@@ -1,22 +1,36 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative, resolve } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { CONDITIONALLY_ADMITTED_SCHEDULED_TASKS } from "../../shared/lib/scheduled-runner-registry";
+import { CRON_JOB_DEFINITIONS, CRON_CONNECTION_BUDGET_ENTRIES } from "../../shared/lib/cron-jobs";
+import {
+  CONDITIONALLY_ADMITTED_SCHEDULED_TASKS,
+  SCHEDULED_SLOT_PLANS,
+  SHARED_SCHEDULED_JOB_IDENTITIES,
+} from "../../shared/lib/scheduled-runner-registry";
 import {
   buildNightWatchCoverage,
   collectD1Snapshot,
+  createNightWatchCollectionIdentity,
   loadNightWatchCheckpoint,
   parseArgs,
   persistNightWatchCheckpoint,
   renderNightWatchMarkdown,
   runCli,
 } from "../maintenance/night-watch-worker.mjs";
+import { collectWorkerCronSnapshot } from "../maintenance/watch-worker-cron.mjs";
+
+vi.mock("../maintenance/watch-worker-cron.mjs", async (importOriginal) => ({
+  ...await importOriginal<Record<string, unknown>>(),
+  collectWorkerCronSnapshot: vi.fn().mockRejectedValue(new Error("Unexpected D1 collection in offline resume test")),
+}));
 
 const generatedAt = "2026-06-24T10:00:00.000Z";
 const tempDirs: string[] = [];
 
 afterEach(() => {
+  vi.useRealTimers();
+  vi.clearAllMocks();
   for (const path of tempDirs.splice(0)) rmSync(path, { recursive: true, force: true });
 });
 
@@ -258,25 +272,131 @@ describe("night-watch-worker", () => {
     });
   });
 
-  it("atomically checkpoints redacted samples and resumes only the matching window", () => {
+  it.each(["quarterHourly", null, "wrong-schedule"])(
+    "attributes coincident supply rows only to their explicit schedule %s",
+    (scheduleKey) => {
+      const window = { start: "2026-06-24T08:00:00.000Z", end: "2026-06-24T08:01:00.000Z" };
+      const slot = Date.parse(window.start) / 1000;
+      const row = { job: "snapshot-supply", status: "error", schedule_key: scheduleKey, slot_started_at: slot, started_at: slot };
+      const matrix = {
+        cronJobs: CRON_JOB_DEFINITIONS,
+        budgetEntries: CRON_CONNECTION_BUDGET_ENTRIES,
+        slotPlans: SCHEDULED_SLOT_PLANS,
+        sharedJobPaths: SHARED_SCHEDULED_JOB_IDENTITIES,
+      };
+      const snapshots = [{
+        mode: "d1", recentRuns: [row],
+        probes: { status: { payload: { crons: { "snapshot-supply": { runs: [{ startedAt: slot, status: "error" }] } } } } },
+      }];
+      const coverage = buildNightWatchCoverage(matrix, snapshots, window);
+      expect(coverage.jobPaths.find((path: { pathKey: string }) => path.pathKey === "daily0800Utc:snapshot-supply"))
+        .toMatchObject({ expectedDue: 1, observedSlots: 0, evidenceGrade: "code-only", observed: false });
+      expect(coverage.jobPaths.find((path: { pathKey: string }) => path.pathKey === "quarterHourly:snapshot-supply"))
+        .toMatchObject(scheduleKey === "quarterHourly"
+          ? { observedSlots: 1, evidenceGrade: "confirmed", observed: true }
+          // At 08:00 this path is due too; missing schedule attribution is code-only, not not-due.
+          : { observedSlots: 0, evidenceGrade: "code-only", observed: false });
+      expect(coverage.unattributedRuns).toEqual(scheduleKey === "quarterHourly" ? [] : [row]);
+      const markdown = renderNightWatchMarkdown({
+        ...evidence(), options: { ...evidence().options, ...window }, scheduleMatrix: matrix, snapshots,
+      });
+      expect(markdown).toContain("| error | 1 |");
+      expect(markdown).toContain("| snapshot-supply | daily0800Utc | 1/0 | code-only |");
+    },
+  );
+
+  it("atomically checkpoints redacted samples and resumes only matching collection identity", () => {
     const dir = mkdtempSync(join(tmpdir(), "pharos-night-watch-checkpoint-"));
     tempDirs.push(dir);
-    const checkpointPath = relative(process.cwd(), join(dir, "samples.jsonl"));
-    const window = { start: generatedAt, end: "2026-06-24T14:00:00.000Z" };
+    const checkpointPath = join(dir, "samples.jsonl");
+    const options = evidence().options;
+    const collectionIdentity = createNightWatchCollectionIdentity(options);
     persistNightWatchCheckpoint(checkpointPath, [{
-      version: 1,
-      windowStart: window.start,
-      windowEnd: window.end,
-      targetAt: generatedAt,
+      version: 2, collectionIdentity, targetAt: generatedAt,
       snapshot: { collectedAt: generatedAt, apiKey: "private", recentRuns: [] },
     }]);
-
-    const checkpointText = readFileSync(resolve(process.cwd(), checkpointPath), "utf8");
+    const checkpointText = readFileSync(checkpointPath, "utf8");
     expect(checkpointText).not.toContain("private");
     expect(checkpointText).toContain("[redacted]");
-    expect(loadNightWatchCheckpoint(checkpointPath, window)).toHaveLength(1);
-    expect(loadNightWatchCheckpoint(checkpointPath, { ...window, start: "2026-06-25T10:00:00.000Z" })).toEqual([]);
+    expect(readdirSync(dir)).toEqual(["samples.jsonl"]);
+    expect(loadNightWatchCheckpoint(checkpointPath, options)).toHaveLength(1);
+    expect(loadNightWatchCheckpoint(checkpointPath, {
+      ...options, apiUrl: `${options.apiUrl}/`, adminApiUrl: `${options.adminApiUrl}/`,
+      outputPath: "different-report.md", cfAccessClientSecret: "different-credential",
+    })).toHaveLength(1);
+    for (const mismatch of [
+      { database: "other-db" }, { remote: false }, { apiUrl: "https://other.example" },
+      { adminApiUrl: "https://other-admin.example" }, { includeD1: false }, { includeStatus: false },
+      { includeStatusHistory: true }, { includeWorkerTail: true }, { intervalMinutes: 30 },
+      { start: "2026-06-25T10:00:00.000Z" }, { end: "2026-06-24T18:00:00.000Z" },
+      { cycles: 2 }, { sampleLimit: 1 }, { metadataBytes: 1 },
+    ]) {
+      expect(() => loadNightWatchCheckpoint(checkpointPath, { ...options, ...mismatch })).toThrow("identity mismatch");
+    }
+    expect(readFileSync(checkpointPath, "utf8")).toBe(checkpointText);
+    expect(createNightWatchCollectionIdentity({
+      ...options, apiUrl: "https://user:private@api.pharos.watch/path?secret=private",
+      cfAccessClientSecret: "private",
+    })).toEqual(collectionIdentity);
   });
+
+  it.each([true, false])("retains legacy and mixed-scope checkpoints without collecting (resume=%s)", async (resume) => {
+    const dir = mkdtempSync(join(tmpdir(), "pharos-night-watch-legacy-"));
+    tempDirs.push(dir);
+    const checkpointPath = join(dir, "samples.jsonl");
+    const options = evidence().options;
+    const record = {
+      version: 2, collectionIdentity: createNightWatchCollectionIdentity(options), targetAt: generatedAt,
+      snapshot: { mode: "d1", recentRuns: [{ status: "ok" }] },
+    };
+    for (const records of [
+      [{ version: 1, windowStart: options.start, windowEnd: options.end, snapshot: record.snapshot }],
+      [{ ...record, collectionIdentity: undefined }],
+      [{ ...record, collectionIdentity: { ...record.collectionIdentity, remote: false } }],
+      [record, { ...record, collectionIdentity: { ...record.collectionIdentity, remote: false } }],
+    ]) {
+      const original = records.map((entry) => JSON.stringify(entry)).join("\n");
+      writeFileSync(checkpointPath, original);
+      await expect(runCli([
+        "--start", options.start, "--end", options.end, "--include-status", "--include-d1",
+        "--checkpoint-jsonl", checkpointPath, ...(resume ? [] : ["--no-resume"]),
+      ], { write: vi.fn() } as unknown as typeof process.stdout)).rejects.toThrow("identity mismatch");
+      expect(readFileSync(checkpointPath, "utf8")).toBe(original);
+    }
+    expect(collectWorkerCronSnapshot).not.toHaveBeenCalled();
+  });
+
+  it("resumes completed matching local D1 targets without remote collection", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "pharos-night-watch-resume-"));
+    tempDirs.push(dir);
+    const checkpointPath = join(dir, "samples.jsonl");
+    const reportPath = join(dir, "report.md");
+    const evidencePath = join(dir, "evidence.json");
+    const argv = [
+      "--start", generatedAt, "--end", "2026-06-24T10:15:00.000Z", "--local", "--include-d1",
+      "--checkpoint-jsonl", checkpointPath, "--output", reportPath, "--evidence-json", evidencePath,
+    ];
+    const options = parseArgs(argv);
+    const collectionIdentity = createNightWatchCollectionIdentity(options);
+    persistNightWatchCheckpoint(checkpointPath, [options.start, options.end].map((targetAt) => ({
+      version: 2, collectionIdentity, targetAt,
+      snapshot: { mode: "d1", collectedAt: targetAt, recentRuns: [] },
+    })));
+    await expect(runCli(argv, { write: vi.fn() } as unknown as typeof process.stdout)).resolves.toBe(0);
+    const written = JSON.parse(readFileSync(evidencePath, "utf8"));
+    expect(written.snapshots).toHaveLength(2);
+    expect(written.collectionIdentity).toEqual(collectionIdentity);
+    expect(written.options).toMatchObject({ includeD1: true, remote: false });
+    expect(readFileSync(reportPath, "utf8")).toContain("D1 local");
+    expect(collectWorkerCronSnapshot).not.toHaveBeenCalled();
+  });
+
+  it.each([["--start", generatedAt], ["--end", "2026-06-24T11:00:00Z"], ["--include-d1"], ["--local"]])(
+    "rejects fixture collection/window overrides %j",
+    (...flags) => {
+      expect(() => parseArgs(["--fixture", "saved.json", ...flags])).toThrow("preserves collection scope and window");
+    },
+  );
 
   it("keeps completed capacity findings visible even when metadata previews are truncated", () => {
     const qualityEvidence = evidence();
@@ -397,13 +517,20 @@ describe("night-watch-worker", () => {
     expect(markdown).toContain("dex-liquidity: degraded");
   });
 
-  it("renders from a fixture while honoring output paths", async () => {
+  it("preserves historical fixture scope, window, counts and findings across delayed rendering", async () => {
     const dir = mkdtempSync(join(tmpdir(), "pharos-night-watch-fixture-"));
     tempDirs.push(dir);
     const fixturePath = relative(process.cwd(), join(dir, "fixture.json"));
     const reportPath = relative(process.cwd(), join(dir, "fixture-report.md"));
     const evidencePath = relative(process.cwd(), join(dir, "fixture-evidence.json"));
-    writeFileSync(resolve(process.cwd(), fixturePath), JSON.stringify(evidence()), "utf8");
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-20T12:00:00Z"));
+    const fixture = evidence();
+    fixture.options.remote = false;
+    fixture.snapshots[0]!.recentRuns[0]!.status = "error";
+    fixture.snapshots[0]!.recentRuns[0]!.started_at = Date.parse(generatedAt) / 1000 + 60;
+    const collectionIdentity = createNightWatchCollectionIdentity(fixture.options);
+    writeFileSync(resolve(process.cwd(), fixturePath), JSON.stringify({ ...fixture, collectionIdentity }), "utf8");
 
     await expect(runCli([
       "--fixture",
@@ -422,6 +549,23 @@ describe("night-watch-worker", () => {
     expect(written.options.evidenceJsonPath).toBe(evidencePath);
     expect(written.options.cfAccessClientId).toBe("[redacted]");
     expect(written.options.cfAccessClientSecret).toBe("[redacted]");
+    expect(written.options).toMatchObject({
+      start: fixture.options.start, end: fixture.options.end, includeD1: true, remote: false,
+      database: fixture.options.database, includeStatus: true,
+    });
+    expect(written.collectionIdentity).toEqual(collectionIdentity);
+    expect(written.analysis.runEvidence.counts.error).toBe(1);
+    expect(written.analysis.findings).toContainEqual(expect.objectContaining({ title: "1 non-ok cron run rows in collected window" }));
+    vi.setSystemTime(new Date("2027-01-01T00:00:00Z"));
+    await runCli(["--fixture", fixturePath, "--output", reportPath, "--evidence-json", evidencePath],
+      { write: vi.fn() } as unknown as typeof process.stdout);
+    const delayed = JSON.parse(readFileSync(resolve(process.cwd(), evidencePath), "utf8"));
+    expect(delayed.options).toMatchObject({ start: fixture.options.start, end: fixture.options.end, includeD1: true, remote: false });
+    expect(delayed.collectionIdentity).toEqual(collectionIdentity);
+    expect(delayed.analysis.runEvidence).toEqual(written.analysis.runEvidence);
+    expect(delayed.analysis.findings).toEqual(written.analysis.findings);
+    expect(readFileSync(resolve(process.cwd(), reportPath), "utf8")).toContain(`${fixture.options.start} to ${fixture.options.end}`);
+    expect(readFileSync(resolve(process.cwd(), reportPath), "utf8")).toContain("D1 local");
     expect(readFileSync(resolve(process.cwd(), reportPath), "utf8")).toContain("Canaries report 1 errors");
   });
 });

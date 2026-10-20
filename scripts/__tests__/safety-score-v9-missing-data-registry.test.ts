@@ -12,6 +12,7 @@ import { loadV9MethodologyPolicy } from "@shared/lib/safety-score-v9/policy";
 import {
   makeReportCardsV9Card,
   makeReportCardsV9Pillars,
+  makeReportCardsV9PipelineGapCard,
 } from "@shared/test-utils/report-cards-v9";
 import { makeCoin } from "./stablecoin-catalog.test-support";
 import { describe, expect, it } from "vitest";
@@ -130,6 +131,48 @@ function generateExitProjectionFixture(
 }
 
 describe("Safety Score v9 missing-data work routing", () => {
+  it.each([false, true])("reconciles rated, economic NR and pipeline-gap census (gap-only=%s)", (gapOnly) => {
+    const cards = [
+      ...(gapOnly ? [] : [
+        makeReportCardsV9Card({ id: "economic-nr", score: null, nrReasons: [{
+          code: "insufficient-evidence", field: null, message: "Economic evidence remains unresolved.", origin: "asset", causes: ["U"],
+        }] }),
+        makeReportCardsV9Card({ id: "rated" }),
+      ]),
+      makeReportCardsV9PipelineGapCard("control", "A", { id: "technical-gap" }),
+    ];
+    const ids = cards.map(card => card.id);
+    const compiledFacts = compileNativeV3FactSet({
+      ...coreFixture(), activeAssetIds: ids, assets: ids.map(id => minimalAsset(id)),
+    });
+    const policy = loadV9MethodologyPolicy(policyAsset);
+    const completeness = {
+      expectedCount: gapOnly ? 1 : 3, ratedCount: gapOnly ? 0 : 1, notRatedCount: gapOnly ? 0 : 1,
+      notRatedIds: gapOnly ? [] : ["economic-nr"], pipelineGapCount: 1, pipelineGapIds: ["technical-gap"],
+    };
+    const registry = generateV9MissingDataRegistry({
+      replay: { pipeline: { compiledFacts, candidate: {
+        model: "v9-critical-path", schemaVersion: 7, lifecycle: "active", candidateId: "safety-score-v9:fixture",
+        policyVersion: policy.policy.releaseVersion, publicationGenerationId: "report-cards:v9:fixture",
+        baseInputGenerationId: compiledFacts.baseInputGenerationId, factSetDigest: compiledFacts.v9FactSetDigest,
+        resultDigest: "b".repeat(64), policy: { id: policy.policy.policyId, semanticDigest: policy.semanticDigest },
+        evaluationBuildDigest: "c".repeat(64), sourceGenerations: { fixture: "fixture:g1" },
+        asOfSec: compiledFacts.asOfSec, publishedAtSec: compiledFacts.asOfSec, completeness, foreignCauseGaps: [], cards,
+      } } },
+      policy: policyAsset,
+      catalogEntries: ids.map(id => ({ id, file: `shared/data/stablecoins/coins/${id}.json`, coin: makeCoin(id) })),
+    });
+    expect(registry.summary).toMatchObject({
+      stablecoinCount: completeness.expectedCount, rateableStablecoinCount: completeness.ratedCount,
+      notRatedStablecoinCount: completeness.notRatedCount, pipelineGapStablecoinCount: completeness.pipelineGapCount,
+      // Registry v2 publishes deterministic key/count rows, not the former keyed object.
+      ratingStatusCounts: gapOnly ? [{ key: "pipeline-gap", count: 1 }]
+        : [{ key: "not-rated", count: 1 }, { key: "pipeline-gap", count: 1 }, { key: "rated", count: 1 }],
+    });
+    expect(registry.summary.rateableStablecoinCount + registry.summary.notRatedStablecoinCount +
+      registry.summary.pipelineGapStablecoinCount).toBe(registry.summary.stablecoinCount);
+  });
+
   it("stores shared contexts once without changing compiled or supplemental task context", () => {
     const registry = generateExitProjectionFixture(["unsupported-same-notional-route", "unproven-settlement-bound"]);
     const stablecoin = registry.stablecoins[0]!;

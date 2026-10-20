@@ -22,8 +22,10 @@ Prerequisites: `PHAROS_API_KEY` in the process environment or root `.env.local` 
 
 ### 1. Pull data
 
+Use the supported repository Node runtime (`>=24.16 <27`) with workspace dependencies installed, including `tsx`; the fetcher imports canonical shared TypeScript supply helpers.
+
 ```bash
-node .codex/skills/stablecoin-pulse-report/scripts/fetch-pulse-data.mjs --out agents/<YYYY-MM-DD>-pulse-report
+node --import tsx .codex/skills/stablecoin-pulse-report/scripts/fetch-pulse-data.mjs --out agents/<YYYY-MM-DD>-pulse-report
 ```
 
 Read `data/brief.md` end to end, then the data traps in editorial-rules.md. Before any research, list the candidate stories: the top gainers and losers by USD, material percentage movers, chain shifts, flagged single mints or burns (`large-mints.json`), unit-versus-price splits (`unit-moves.json`), and depegs. Resolve identity collisions (same ticker, different issuer) now.

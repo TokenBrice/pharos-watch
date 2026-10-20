@@ -45,6 +45,30 @@ describe("scanSqlInterpolationSafety", () => {
     });
   });
 
+  it.each([
+    "// SAFETY: fixed table only.\nconst safe = `SELECT * FROM ${fixedTable}`;\nconst unsafe = `SELECT * FROM ${requestTable}`;",
+    "const unsafe = `SELECT * FROM ${requestTable}`;\n// SAFETY: fixed table only.\nconst safe = `SELECT * FROM ${fixedTable}`;",
+    "const note = '// SAFETY: not a review comment';\nconst unsafe = `SELECT * FROM ${requestTable}`;",
+    "// SAFETY: reviews the outer statement, not a statement inside the callback.\nconst query = () => { return `SELECT * FROM ${requestTable}`; };",
+    "const queries = {\n// SAFETY: fixed table only.\nsafe: `SELECT * FROM ${fixedTable}`,\nunsafe: `SELECT * FROM ${requestTable}`,\n};",
+  ])("does not let a SAFETY review exempt an unrelated SQL site: %s", (source) => {
+    withTempRepo("pharos-sql-safety", { "worker/src/query.ts": source }, (cwd) => {
+      expect(scanSqlInterpolationSafety(["worker/src"], cwd).violations).toHaveLength(1);
+    });
+  });
+
+  it.each([
+    "// SAFETY: fixed table only.\nconst query = `SELECT * FROM ${fixedTable}`;",
+    "const query = (\n// SAFETY: fixed table only.\n`SELECT * FROM ${fixedTable}`);",
+    "const queries = {\n// SAFETY: fixed table only.\nsafe: { sql: `SELECT * FROM ${fixedTable}` },\n};",
+    "// SAFETY: fixed table in this concise callback.\nconst query = () => `SELECT * FROM ${fixedTable}`;",
+    "const query = db\n// SAFETY: fixed table only.\n.prepare(`SELECT * FROM ${fixedTable}`);",
+  ])("accepts a review attached to the SQL template or its own statement: %s", (source) => {
+    withTempRepo("pharos-sql-safety", { "worker/src/query.ts": source }, (cwd) => {
+      expect(scanSqlInterpolationSafety(["worker/src"], cwd).violations).toEqual([]);
+    });
+  });
+
   it("accepts safe fixtures and flags unsafe worker and root script interpolation", () => {
     const report = scanSqlInterpolationSafety([fileURLToPath(FIXTURE_ROOT)], process.cwd());
 

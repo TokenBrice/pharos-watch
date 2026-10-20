@@ -15,6 +15,7 @@ import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseStrictCliArgs, runCliEntrypoint } from "../../scripts/lib/cli-args.mjs";
+import { decodeD1Envelopes } from "../../scripts/lib/remote-d1";
 import { createRemoteD1Client, sqlString } from "./lib/remote-d1";
 
 const DAY = 86400;
@@ -157,22 +158,12 @@ export function buildCaptureQueries(from: number, to: number, clock: number): Re
   };
 }
 
-function executeCaptureQuery(sql: string, queryRaw: (sql: string) => string, limit?: number): QueryCapture {
+export function executeCaptureQuery(sql: string, queryRaw: (sql: string) => string, limit?: number): QueryCapture {
   const queriedAt = new Date().toISOString();
   let raw: unknown = null;
   try {
     raw = JSON.parse(queryRaw(sql));
-    const envelopes = Array.isArray(raw) ? raw : [raw];
-    const rows: Row[] = [];
-    for (const value of envelopes) {
-      const envelope = object(value);
-      if (envelope.success === false) throw new Error(`d1-query-failed: ${JSON.stringify(envelope.errors ?? envelope.error)}`);
-      const result = Array.isArray(envelope.results) ? envelope.results
-        : Array.isArray(envelope.result) ? object(envelope.result[0]).results : object(envelope.result).results;
-      if (!Array.isArray(result)) throw new Error("d1-result-unavailable");
-      rows.push(...result.map(object));
-    }
-    if (envelopes.length === 0) throw new Error("d1-envelope-unavailable");
+    const rows = decodeD1Envelopes(raw).flatMap((envelope) => envelope.results.map(object));
     return { sql, queriedAt, raw, rows, rowCount: rows.length, limit: limit ?? null, truncated: limit != null && rows.length >= limit, error: null };
   } catch (error) {
     return { sql, queriedAt, raw, rows: null, rowCount: null, limit: limit ?? null, truncated: false, error: error instanceof Error ? error.message : String(error) };

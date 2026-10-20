@@ -2,6 +2,7 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import ts from "typescript";
 import { reportViolations } from "../lib/report-violations.mts";
 import { collectSourceFilesUnderRoots, normalizeRelPath } from "../lib/source-files.mts";
 import { runDirectCli } from "../lib/cli-args.mjs";
@@ -50,33 +51,52 @@ interface FetchCall {
 }
 
 
-function lineNumberForIndex(source: string, index: number): number {
-  return source.slice(0, index).split("\n").length;
-}
-
 export function findBareFetchCalls(source: string, file = "<source>"): FetchCall[] {
+  const scanFile = file === "<source>" ? "scan.ts" : file;
+  const sourceFile = ts.createSourceFile(scanFile, source, ts.ScriptTarget.Latest, true);
+  const options: ts.CompilerOptions = { noLib: true, noResolve: true, allowJs: true };
+  const host = ts.createCompilerHost(options);
+  host.getSourceFile = (name) => name === scanFile ? sourceFile : undefined;
+  const checker = ts.createProgram([scanFile], options, host).getTypeChecker();
+  const aliases = new Set<ts.Symbol>();
   const calls: FetchCall[] = [];
-  const pattern = /\bfetch\s*\(/g;
-  for (const match of source.matchAll(pattern)) {
-    const index = match.index ?? 0;
-    const lineStart = source.lastIndexOf("\n", index) + 1;
-    const lineEnd = source.indexOf("\n", index);
-    const line = source.slice(lineStart, lineEnd === -1 ? source.length : lineEnd);
-    const trimmed = line.trim();
-    if (trimmed.startsWith("//") || trimmed.startsWith("*")) continue;
+  const lines = source.split("\n");
 
-    const before = line[index - lineStart - 1] ?? "";
-    if (before === "." || before === "$" || /[A-Za-z0-9_]/.test(before)) continue;
-
-    const beforeText = line.slice(0, index - lineStart).trim();
-    if (beforeText === "async" || beforeText.endsWith(" async") || beforeText.endsWith("function")) continue;
-
-    calls.push({
-      file,
-      line: lineNumberForIndex(source, index),
-      text: trimmed,
-    });
+  function isGlobalFetch(expression: ts.Expression): boolean {
+    if (ts.isParenthesizedExpression(expression)) return isGlobalFetch(expression.expression);
+    if (!ts.isIdentifier(expression)) return false;
+    const symbol = checker.getSymbolAtLocation(expression);
+    return symbol ? aliases.has(symbol) : expression.text === "fetch";
   }
+
+  function assign(name: ts.Identifier, value: ts.Expression | undefined): void {
+    const symbol = checker.getSymbolAtLocation(name);
+    if (!symbol) return;
+    const isFetch = value !== undefined && isGlobalFetch(value);
+    if (isFetch) aliases.add(symbol);
+    else aliases.delete(symbol);
+  }
+
+  function visit(node: ts.Node): void {
+    if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name)) {
+      if (node.initializer) visit(node.initializer);
+      assign(node.name, node.initializer);
+      return;
+    }
+    if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken
+      && ts.isIdentifier(node.left)) {
+      visit(node.right);
+      assign(node.left, node.right);
+      return;
+    }
+    if (ts.isCallExpression(node) && isGlobalFetch(node.expression)) {
+      const line = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line;
+      calls.push({ file, line: line + 1, text: lines[line]!.trim() });
+    }
+    ts.forEachChild(node, visit);
+  }
+
+  visit(sourceFile);
   return calls;
 }
 

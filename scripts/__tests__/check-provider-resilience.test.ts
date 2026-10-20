@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  findBareFetchCalls,
   scanProviderResilience,
 } from "../ci/check-provider-resilience.ts";
 import { PROVIDER_RESILIENCE_REGISTRY } from "../lib/provider-resilience-registry.mjs";
@@ -26,6 +27,20 @@ const validDirectFetchRegistry = [
 ];
 
 describe("provider resilience checker", () => {
+  it.each([
+    ["fetch(url);", 1],
+    ["const request = fetch; request(url);", 1],
+    ["const request = fetch; let copy; copy = request; copy(url);", 1],
+    ["let request = fetch; const copy = request; request = local; copy(url); request(url);", 1],
+    ["const request = fetch; function run(request) { request(url); } request(url);", 1],
+    ["function run(fetch) { const request = fetch; request(url); }", 0],
+    ["import { fetch } from './adapter'; const request = fetch; request(url);", 0],
+    ["const adapter = { fetch(url) {} }; adapter.fetch(url);", 0],
+    ["// fetch(url)\nconst note = 'fetch(url)'; const pattern = /fetch\\(/;", 0],
+  ] as const)("discovers global fetch aliases without confusing local or inert syntax: %s", (source, count) => {
+    expect(findBareFetchCalls(source)).toHaveLength(count);
+  });
+
   it("keeps circuit-source enforcement without duplicated required markers", () => {
     for (const entry of PROVIDER_RESILIENCE_REGISTRY) {
       for (const circuitSource of entry.resilience.circuitSources) {
@@ -51,13 +66,14 @@ describe("provider resilience checker", () => {
     });
   });
 
-  it("passes a registered direct provider with timeout, body, circuit, and test coverage", () => {
+  it.each(["fetch", "request"])("passes a registered direct %s provider with resilience coverage", (callee) => {
     withTempRepo("pharos-provider-resilience", {
       "worker/src/provider.ts": `
         const marker = "CIRCUIT_SOURCE.DEMO";
+        const request = fetch;
         async function cancelResponseBodyQuietly(res: Response) { await res.body?.cancel(); }
         export async function run() {
-          const res = await fetch("https://example.test", { signal: AbortSignal.timeout(1000) });
+          const res = await ${callee}("https://example.test", { signal: AbortSignal.timeout(1000) });
           await cancelResponseBodyQuietly(res);
         }
       `,
@@ -74,12 +90,13 @@ describe("provider resilience checker", () => {
     });
   });
 
-  it("fails when a registered fetchWithRetry surface adds bare fetch", () => {
+  it.each(["fetch", "request"])("fails when a registered fetchWithRetry surface adds bare %s", (callee) => {
     withTempRepo("pharos-provider-resilience", {
       "worker/src/provider.ts": `
         import { fetchWithRetry } from "./fetch-retry";
+        const request = fetch;
         export async function run() {
-          await fetch("https://example.test", { signal: AbortSignal.timeout(1000) });
+          await ${callee}("https://example.test", { signal: AbortSignal.timeout(1000) });
           await fetchWithRetry("https://example.test");
         }
       `,
@@ -110,11 +127,12 @@ describe("provider resilience checker", () => {
     });
   });
 
-  it("fails when a new direct fetch file is not registered", () => {
+  it.each(["fetch", "request"])("fails when a new direct %s file is not registered", (callee) => {
     withTempRepo("pharos-provider-resilience", {
       "worker/src/unregistered.ts": `
+        const request = fetch;
         export async function run() {
-          return fetch("https://example.test", { signal: AbortSignal.timeout(1000) });
+          return ${callee}("https://example.test", { signal: AbortSignal.timeout(1000) });
         }
       `,
     }, (cwd) => {

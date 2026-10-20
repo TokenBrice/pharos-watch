@@ -6,6 +6,7 @@ import { SAFETY_SCORE_CAPTURE_ARCHIVE_RETENTION_SEC } from "@shared/lib/safety-s
 import { CliUsageError, parseStrictCliArgs, runDirectCli, writeFileResolved } from "../../scripts/lib/cli-args.mjs";
 import { createR2MeasurementsClient } from "../../scripts/lib/r2-measurements-client";
 import { CRON_RUNS_RETENTION_SEC } from "@shared/lib/retention-policy";
+import { decodeD1Envelopes } from "../../scripts/lib/remote-d1";
 import { createWorkerD1Client, sqlString } from "./lib/remote-d1";
 import { archiveObjectKey, decodeArchiveExport, mergeArchiveGapEvidence, parseArchiveBoundary, parseArchiveTimeBoundary, parseArchiveDate, resolveArchiveBoundary, SafetyScoreCaptureArchiveIndexSchema, SafetyScoreCaptureArchiveJournalGapSchema, SafetyScoreCaptureArchiveRecentCronEvidenceSchema, SafetyScoreCaptureArchiveRecentCronRowSchema, SafetyScorePublicationGenerationIdSchema, type ArchiveBoundary, type SafetyScoreCaptureArchiveCronGapEvidence, type SafetyScoreCaptureArchiveGap, type SafetyScoreCaptureArchiveIndex, type SafetyScoreCaptureArchiveJournalGap, type SafetyScoreCaptureArchiveRecentCronEvidence, type SafetyScoreCaptureArchiveRecentCronRow } from "./lib/safety-score-capture-archive";
 
@@ -64,10 +65,10 @@ export async function runSafetyScoreCaptureArchiveCli(argv: readonly string[], d
   } catch (error) { throw new CliUsageError(error instanceof Error ? error.message : String(error)); }
   const client = dependencies.client ?? createWorkerD1Client(typeof values.database === "string" ? values.database : "stablecoin-db", values.local === true ? "local" : "remote");
   const select = <T>(sql: string, schema: { parse(value: unknown): T }): T[] => {
-    const raw: unknown = JSON.parse(client.queryRaw(sql));
-    if (!Array.isArray(raw) || raw.length !== 1) throw new Error("capture-archive-query-envelope-invalid");
-    const envelope = raw[0] as { success?: boolean; results?: unknown[] };
-    if (envelope.success !== true || !Array.isArray(envelope.results)) throw new Error("capture-archive-query-failed");
+    const envelopes = decodeD1Envelopes(JSON.parse(client.queryRaw(sql)));
+    if (envelopes.length !== 1) throw new Error("capture-archive-query-envelope-invalid");
+    const envelope = envelopes[0]!;
+    if (envelope.success !== true) throw new Error("capture-archive-query-failed");
     return envelope.results.map((row) => schema.parse(row));
   };
   if (mode === "export") {

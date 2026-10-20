@@ -46,6 +46,23 @@ describe("kyc.rip fetch validation", () => {
     }
   });
 
+  it.each(["", " ", "\t\n", "not-a-number", "-1", "NaN", "Infinity", "0x10", "1,000", "1e309"])(
+    "rejects malformed balance %j without discarding explicit zero or decimal evidence",
+    async (frozen_balance) => {
+      const admitted = ["0", "12.5", "1e-7", 0].map((amount) => ({
+        ...validCurrentRow, frozen_balance: amount,
+      }));
+      const result = await fetchKycRipRows({
+        mode: "current-balances", timeoutMs: 1000, minRows: 4,
+        fetchImpl: vi.fn().mockResolvedValue(okPayload([
+          { ...validCurrentRow, frozen_balance }, ...admitted,
+        ])),
+      });
+      expect(result.rows).toEqual(admitted.map((row) => ({ ...row, frozen_balance: String(row.frozen_balance) })));
+      expect(result.stats).toMatchObject({ fetchedRows: 5, acceptedRows: 4, malformedRows: 1 });
+    },
+  );
+
   it("validates event transaction hashes while excluding Tron from accepted minimums", async () => {
     const row = { address: validCurrentRow.address, asset: "USDT", chain: "ETH", tx_hash: `0x${"a".repeat(64)}` };
     const payload = [row, { ...row, tx_hash: "0x123" }, { ...row, chain: "TRON" }];

@@ -76,6 +76,7 @@ Tracked ownership handoffs and source-attribution corrections use `worker/script
 ## Abort Conditions
 
 - Abort cleanup if `cron_leases` or `/api/status` shows `sync-yield-data` actively leased or in flight.
+- Abort cleanup and restore when a writer-pause or lease read fails, returns an error envelope, or has an unrecognized/malformed result container. The shared Node D1 decoder throws before mutation; failed reads and top-level `[]` are not proof of an idle writer. A recognized successful `results: []` remains a valid absent-lease observation.
 - Abort remote mutation or restore if no export artifact exists.
 - Abort if the local delete + restore rehearsal has not passed.
 - Abort if another worker/operator owns yield API contracts, D1 migrations, or cleanup logic for the same release.

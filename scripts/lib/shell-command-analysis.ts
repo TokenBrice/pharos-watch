@@ -10,11 +10,21 @@ export interface AnalyzedShellInvocation extends ShellInvocation {
   readonly cwd: string | null;
 }
 
+interface ShellHereDoc {
+  readonly body: string;
+  readonly expansionText: string | null;
+  readonly quoted: boolean;
+  readonly stripTabs: boolean;
+  readonly tokenIndex: number;
+  readonly receiver: readonly string[];
+  readonly feedsStdin: boolean;
+}
+
 export interface ShellCommandAnalysis {
   readonly command: string;
   readonly cwd: string;
   readonly executableText: string;
-  readonly hereDocBodies: readonly string[];
+  readonly hereDocs: readonly ShellHereDoc[];
   /** Lines swallowed by a heredoc whose delimiter never arrived; non-empty means the parser diverged from the shell. */
   readonly unresolvedHereDocBody: string;
   readonly tokens: readonly string[];
@@ -22,8 +32,8 @@ export interface ShellCommandAnalysis {
   readonly hasBackgroundSeparator: boolean;
   readonly hasNestedCommands: boolean;
   readonly hasOpaqueSyntax: boolean;
-  readonly hasPipedShell: boolean;
-  readonly pipedShellInputs: readonly { readonly text: string; readonly script: string | null }[];
+  readonly hasShellStdin: boolean;
+  readonly shellStdinInputs: readonly { readonly text: string; readonly script: string | null }[];
   readonly hasXargsShell: boolean;
   readonly isRawPatchPayload: boolean;
 }
@@ -79,8 +89,41 @@ export function commandIsRawPatchPayload(command: unknown): boolean {
 }
 
 
+/** Heredoc expansion treats quote characters as data; executable text honors single quotes. */
+function removeShellContinuations(text: string, initialQuote = "", heredocExpansion = false): string {
+  let result = "";
+  let quote = initialQuote;
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+    if (char === "\\" && quote !== "'") {
+      if (text[index + 1] === "\n") {
+        index += 1;
+        continue;
+      }
+      result += char;
+      if (index + 1 < text.length) result += text[++index];
+      continue;
+    }
+    if (quote) {
+      if (char === quote) quote = "";
+    } else if (!heredocExpansion && (char === "'" || char === '"')) {
+      quote = char;
+    }
+    result += char;
+  }
+  return result;
+}
+
+const INPUT_REDIRECTION_RE = /^\d*(?:<<<-|<<-|<<<|<<|<&|<)$/;
+
+interface HereDocMarker {
+  marker: string;
+  quoted: boolean;
+  stripTabs: boolean;
+  offset: number;
+}
 interface HereDocScan {
-  bodies: string[];
+  records: ShellHereDoc[];
   executableText: string;
   /** Lines swallowed by a heredoc that never met its delimiter; empty when every heredoc terminated. */
   unresolvedBody: string;
@@ -97,41 +140,80 @@ interface HereDocScan {
  */
 function scanHereDocs(command: unknown): HereDocScan {
   const lines = String(command ?? "").split(/\r?\n/g);
-  const bodies: string[] = [];
+  const records: ShellHereDoc[] = [];
   const kept: string[] = [];
-  const pending: Array<{ lines: string[]; marker: string; quoted: boolean }> = [];
+  const pending: Array<HereDocMarker & { lines: string[]; tokenIndex: number }> = [];
   let quote = "";
 
-  for (const line of lines) {
+  for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
+    let line = lines[lineIndex];
     const active = pending[0];
     if (active) {
-      if (line.trim() === active.marker) {
-        if (!active.quoted) bodies.push(active.lines.join("\n"));
+      const bodyLines = [line];
+      let delimiterLine = active.stripTabs ? line.replace(/^\t+/, "") : line;
+      while (!active.quoted && lineIndex + 1 < lines.length &&
+          (delimiterLine.match(/\\+$/)?.[0].length ?? 0) % 2 === 1) {
+        line = lines[++lineIndex];
+        bodyLines.push(line);
+        delimiterLine = delimiterLine.slice(0, -1) + (active.stripTabs ? line.replace(/^\t+/, "") : line);
+      }
+      if (delimiterLine === active.marker) {
+        records.push({
+          body: active.lines.join("\n"), quoted: active.quoted, stripTabs: active.stripTabs,
+          expansionText: active.quoted ? null : removeShellContinuations(active.lines.join("\n"), "", true),
+          tokenIndex: active.tokenIndex, receiver: [], feedsStdin: false,
+        });
         pending.shift();
         quote = "";
       } else {
-        active.lines.push(line);
+        active.lines.push(...bodyLines);
       }
       continue;
     }
 
+    // Join executable logical lines before finding markers; heredoc bodies above stay literal.
+    while (lineIndex + 1 < lines.length && !removeShellContinuations(`${line}\n`, quote).endsWith("\n")) {
+      line += `\n${lines[++lineIndex]}`;
+    }
+    line = removeShellContinuations(line, quote);
+    const prefix = kept.length === 0 ? "" : `${kept.join("\n")}\n`;
     kept.push(line);
     const scanned = scanHereDocMarkers(line, quote);
     quote = scanned.quote;
-    for (const marker of scanned.markers) pending.push({ lines: [], marker: marker.marker, quoted: marker.quoted });
+    for (const marker of scanned.markers) {
+      pending.push({ ...marker, lines: [], tokenIndex: tokenizeShell(prefix + line.slice(0, marker.offset)).length });
+    }
   }
   const active = pending[0];
-  if (active && !active.quoted) bodies.push(active.lines.join("\n"));
+  if (active) {
+    records.push({
+      body: active.lines.join("\n"), quoted: active.quoted, stripTabs: active.stripTabs,
+      expansionText: active.quoted ? null : removeShellContinuations(active.lines.join("\n"), "", true),
+      tokenIndex: active.tokenIndex, receiver: [], feedsStdin: false,
+    });
+  }
+  const tokens = tokenizeShell(kept.join("\n"));
+  const associated = records.map((record) => {
+    let start = record.tokenIndex;
+    while (start > 0 && !isShellControlToken(tokens[start - 1])) start -= 1;
+    let end = record.tokenIndex;
+    while (end < tokens.length && !isShellControlToken(tokens[end])) end += 1;
+    let lastStdin = -1;
+    for (let index = start; index < end; index += 1) {
+      if (INPUT_REDIRECTION_RE.test(tokens[index]) && !/^[1-9]\d*</.test(tokens[index])) lastStdin = index;
+    }
+    return { ...record, receiver: tokens.slice(start, end), feedsStdin: lastStdin === record.tokenIndex };
+  });
 
   return {
-    bodies,
+    records: associated,
     executableText: kept.join("\n"),
     unresolvedBody: active ? active.lines.join("\n") : "",
   };
 }
 
-function scanHereDocMarkers(line: string, carriedQuote: string): { markers: Array<{ marker: string; quoted: boolean }>; quote: string } {
-  const markers: Array<{ marker: string; quoted: boolean }> = [];
+function scanHereDocMarkers(line: string, carriedQuote: string): { markers: HereDocMarker[]; quote: string } {
+  const markers: HereDocMarker[] = [];
   let quote = carriedQuote;
   let word = false;
 
@@ -157,6 +239,10 @@ function scanHereDocMarkers(line: string, carriedQuote: string): { markers: Arra
     }
     if (char === "#" && !word) break;
     if (char === "<" && line[index + 1] === "<") {
+      let offset = index;
+      while (offset > 0 && /\d/.test(line[offset - 1])) offset -= 1;
+      if (offset > 0 && !/[\s;()&|]/.test(line[offset - 1])) offset = index;
+      const stripTabs = line[index + 2] === "-";
       let cursor = index + 2;
       if (line[cursor] === "<" || line[cursor] === "=") {
         word = true;
@@ -167,27 +253,25 @@ function scanHereDocMarkers(line: string, carriedQuote: string): { markers: Arra
       while (line[cursor] === " " || line[cursor] === "\t") cursor += 1;
       let quoted = false;
       let marker = "";
-      if (line[cursor] === "'" || line[cursor] === "\"") {
-        const delimiter = line[cursor];
-        quoted = true;
+      let delimiterQuote = "";
+      while (cursor < line.length) {
+        const delimiterChar = line[cursor];
+        if (!delimiterQuote && /[\s;<>&|()]/.test(delimiterChar)) break;
+        if (delimiterChar === "\\" && delimiterQuote !== "'") {
+          quoted = true;
+          if (cursor + 1 < line.length) marker += line[++cursor];
+        } else if (delimiterQuote) {
+          if (delimiterChar === delimiterQuote) delimiterQuote = "";
+          else marker += delimiterChar;
+        } else if (delimiterChar === "'" || delimiterChar === '"') {
+          quoted = true;
+          delimiterQuote = delimiterChar;
+        } else {
+          marker += delimiterChar;
+        }
         cursor += 1;
-        while (cursor < line.length && /[A-Za-z0-9_.-]/.test(line[cursor])) {
-          marker += line[cursor];
-          cursor += 1;
-        }
-        if (line[cursor] !== delimiter || !marker) {
-          word = true;
-          index = cursor - 1;
-          continue;
-        }
-        cursor += 1;
-      } else {
-        while (cursor < line.length && /[A-Za-z0-9_.-]/.test(line[cursor])) {
-          marker += line[cursor];
-          cursor += 1;
-        }
       }
-      if (marker) markers.push({ marker, quoted });
+      if (marker) markers.push({ marker, quoted, stripTabs, offset });
       index = cursor - 1;
       word = false;
       continue;
@@ -198,25 +282,17 @@ function scanHereDocMarkers(line: string, carriedQuote: string): { markers: Arra
   return { markers, quote };
 }
 
-function stripHereDocBodies(command: unknown): string {
-  return scanHereDocs(command).executableText;
-}
-
-function getExecutableShellText(command: unknown): string {
-  if (commandIsRawPatchPayload(command)) return "";
-  return stripHereDocBodies(command);
-}
 function tokenizeShell(command: unknown): string[] {
   const tokens: string[] = [];
   let token = "";
   let quote = "";
   let escaping = false;
   let literalToken = false;
-  const text = String(command ?? "");
+  const text = removeShellContinuations(String(command ?? ""));
 
   const pushToken = () => {
     if (token) {
-      tokens.push(literalToken && (SHELL_PREFIX_TOKENS.has(token) || SHELL_CONTROL_TOKENS.has(token) || token.startsWith(">"))
+      tokens.push(literalToken && (SHELL_PREFIX_TOKENS.has(token) || SHELL_CONTROL_TOKENS.has(token) || /^[<>]/.test(token))
         ? SHELL_LITERAL_PREFIX + token : token);
       token = "";
       literalToken = false;
@@ -281,6 +357,21 @@ function tokenizeShell(command: unknown): string[] {
     if (char === "&" || char === "|" || char === ";" || char === "(" || char === ")") {
       pushToken();
       tokens.push(char);
+      continue;
+    }
+
+    if (char === "<") {
+      const fd = /^\d+$/.test(token) ? token : "";
+      if (fd) token = "";
+      pushToken();
+      let operator = "<";
+      if (text[i + 1] === "<") {
+        operator += text[++i];
+        if (text[i + 1] === "-" || text[i + 1] === "<") operator += text[++i];
+      } else if (text[i + 1] === "&") {
+        operator += text[++i];
+      }
+      tokens.push(fd + operator);
       continue;
     }
 
@@ -503,7 +594,7 @@ function getShellEvalArgument(tokens: readonly string[]): string {
 }
 
 function getNestedShellCommands(command: unknown): string[] {
-  const text = String(command ?? "");
+  const text = removeShellContinuations(String(command ?? ""));
   const commands: string[] = [];
   let quote = "";
   let escaping = false;
@@ -688,18 +779,41 @@ function getStaticStdinScript(tokens: readonly string[]): string | null {
   return script;
 }
 
+/** A script filename or -c consumes stdin as data, not as a shell program. */
+function shellReadsStdin(tokens: readonly string[]): boolean {
+  const args = tokens.filter((token, index) =>
+    !INPUT_REDIRECTION_RE.test(token) && ![">", ">>", ">|"].includes(token) &&
+    !(index > 0 && (INPUT_REDIRECTION_RE.test(tokens[index - 1]) || [">", ">>", ">|"].includes(tokens[index - 1]))) &&
+    !(/^\d+$/.test(token) && [">", ">>", ">|"].includes(tokens[index + 1])));
+  let start = 0;
+  while (isEnvAssignment(args[start]) || SHELL_PREFIX_TOKENS.has(args[start])) start += 1;
+  const executableIndex = resolveExecutableIndex(args, start);
+  if (executableIndex === null || !SHELL_EVAL_COMMANDS.has(shellCommandName(args[executableIndex]))) return false;
+  let stdin = false;
+  for (let index = executableIndex + 1; index < args.length; index += 1) {
+    const arg = shellValue(args[index]);
+    if (arg === "--command" || /^-[A-Za-z]*c[A-Za-z]*$/.test(arg)) return false;
+    if (arg === "--") return stdin || index + 1 === args.length || args[index + 1] === "-";
+    if (arg === "-") return true;
+    if (!arg.startsWith("-")) return stdin;
+    if (/^-[A-Za-z]*s[A-Za-z]*$/.test(arg)) stdin = true;
+    if (["-o", "-O", "--rcfile", "--init-file"].includes(arg)) index += 1;
+  }
+  return true;
+}
+
 function getShellCommandInvocations(
   command: unknown,
   depth = 0,
   pretokenized?: readonly string[],
   state: {
     hasNestedCommands: boolean;
-    pipedShellInputs: Array<{ text: string; script: string | null }>;
-  } = { hasNestedCommands: false, pipedShellInputs: [] },
+    shellStdinInputs: Array<{ text: string; script: string | null }>;
+  } = { hasNestedCommands: false, shellStdinInputs: [] },
+  suppliedHereDocs?: HereDocScan,
 ): ShellInvocation[] {
-  const executableText = pretokenized === undefined
-    ? getExecutableShellText(command)
-    : String(command ?? "");
+  const hereDocs = suppliedHereDocs ?? scanHereDocs(command);
+  const executableText = commandIsRawPatchPayload(command) ? "" : hereDocs.executableText;
   const tokens = pretokenized ?? tokenizeShell(executableText);
   const invocations: ShellInvocation[] = [];
   let atCommandStart = true;
@@ -709,10 +823,10 @@ function getShellCommandInvocations(
     const shellToken = tokens[index];
     if (isShellControlToken(shellToken)) {
       if (shellToken === "|") {
-        const consumerIndex = resolveExecutableIndex(tokens, index + 1);
-        if (consumerIndex !== null && SHELL_EVAL_COMMANDS.has(shellCommandName(tokens[consumerIndex]))) {
+        const consumerEnd = tokens.findIndex((token, next) => next > index && isShellControlToken(token));
+        if (shellReadsStdin(tokens.slice(index + 1, consumerEnd === -1 ? tokens.length : consumerEnd))) {
           const producerTokens = tokens.slice(pipelineStart, index);
-          state.pipedShellInputs.push({
+          state.shellStdinInputs.push({
             text: producerTokens.map(shellValue).join(" "),
             script: producerTokens.some(isShellControlToken) ? null : getStaticStdinScript(producerTokens),
           });
@@ -725,6 +839,10 @@ function getShellCommandInvocations(
     }
 
     if (!atCommandStart) continue;
+    if (INPUT_REDIRECTION_RE.test(shellToken)) {
+      index += 1;
+      continue;
+    }
     if (isEnvAssignment(shellToken)) continue;
     if (SHELL_PREFIX_TOKENS.has(shellToken)) continue;
 
@@ -763,6 +881,18 @@ function getShellCommandInvocations(
   if (depth < 3) {
     for (const nestedCommand of nestedCommands) {
       invocations.push(...getShellCommandInvocations(nestedCommand, depth + 1, undefined, state));
+    }
+  }
+
+  if (!commandIsRawPatchPayload(command)) {
+    for (const hereDoc of hereDocs.records) {
+      if (!hereDoc.feedsStdin || !shellReadsStdin(hereDoc.receiver)) continue;
+      const script = hereDoc.stripTabs ? hereDoc.body.replace(/^\t+/gm, "") : hereDoc.body;
+      state.hasNestedCommands = true;
+      state.shellStdinInputs.push({ text: script, script });
+      if (depth < 3) {
+        invocations.push(...getShellCommandInvocations(script, depth + 1, undefined, state));
+      }
     }
   }
 
@@ -806,8 +936,8 @@ export function analyzeShellCommand(command: string, cwd: string): ShellCommandA
   const isRawPatchPayload = commandIsRawPatchPayload(commandText);
   const executableText = isRawPatchPayload ? "" : hereDocs.executableText;
   const tokens = tokenizeShell(executableText);
-  const traversalState = { hasNestedCommands: false, pipedShellInputs: [] as Array<{ text: string; script: string | null }> };
-  const invocations = getShellCommandInvocations(executableText, 0, tokens, traversalState);
+  const traversalState = { hasNestedCommands: false, shellStdinInputs: [] as Array<{ text: string; script: string | null }> };
+  const invocations = getShellCommandInvocations(commandText, 0, tokens, traversalState, hereDocs);
   const hasNestedCommands = traversalState.hasNestedCommands;
   const directories = invocationWorkingDirectories(invocations, tokens, cwd, hasNestedCommands);
   const analyzedInvocations = invocations.map((invocation, index) => Object.freeze({
@@ -819,7 +949,9 @@ export function analyzeShellCommand(command: string, cwd: string): ShellCommandA
     command: commandText,
     cwd,
     executableText,
-    hereDocBodies: Object.freeze([...hereDocs.bodies]),
+    hereDocs: Object.freeze(hereDocs.records.map((record) => Object.freeze({
+      ...record, receiver: Object.freeze([...record.receiver]),
+    }))),
     unresolvedHereDocBody: hereDocs.unresolvedBody,
     tokens: Object.freeze([...tokens]),
     invocations: Object.freeze(analyzedInvocations),
@@ -828,8 +960,8 @@ export function analyzeShellCommand(command: string, cwd: string): ShellCommandA
     ),
     hasNestedCommands,
     hasOpaqueSyntax: OPAQUE_SHELL_CONSTRUCT_RE.some((construct) => construct.test(executableText)),
-    hasPipedShell: traversalState.pipedShellInputs.length > 0,
-    pipedShellInputs: Object.freeze(traversalState.pipedShellInputs.map((input) => Object.freeze(input))),
+    hasShellStdin: traversalState.shellStdinInputs.length > 0,
+    shellStdinInputs: Object.freeze(traversalState.shellStdinInputs.map((input) => Object.freeze(input))),
     hasXargsShell: tokens.some((token, index) => {
       if (shellCommandName(token) !== "xargs") return false;
       for (let nextIndex = index + 1; nextIndex < tokens.length; nextIndex += 1) {

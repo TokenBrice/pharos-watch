@@ -256,7 +256,22 @@ describe("remote D1 backfill statements", () => {
   it("fails closed on malformed, unsuccessful or truncated result envelopes", async () => {
     for (const raw of ["{}", "[]", '[{"success":false,"results":[],"meta":{"changes":0}}]', '[{"success":true,"results":[]}]']) {
       const db = createBackfillDatabase({ queryRaw: () => raw });
-      await expect(db.prepare("SELECT 1").all()).rejects.toThrow("backfill-d1");
+      await expect(db.prepare("SELECT 1").all()).rejects.toThrow(/d1-/);
     }
+  });
+
+  it("admits nested results without weakening exact statement counts or metadata requirements", async () => {
+    const receipt = { success: true, results: [], meta: { changes: 0, duration: 1 } };
+    const client = { queryRaw: vi.fn(() => JSON.stringify({ success: true, result: [receipt] })) };
+    const db = createBackfillDatabase(client);
+    expect((await db.prepare("SELECT 1").all()).results).toEqual([]);
+    client.queryRaw.mockReturnValueOnce(JSON.stringify({ result: [receipt, receipt] }));
+    await expect(db.prepare("SELECT 1").all()).rejects.toThrow("backfill-d1-envelope-invalid");
+    client.queryRaw.mockReturnValueOnce(JSON.stringify({ result: [
+      receipt, { success: true, results: [{ __pharos_changes: -1 }], meta: { duration: 1 } },
+    ] }));
+    await expect(db.prepare("DELETE FROM cache").run()).rejects.toThrow("backfill-d1-receipt-invalid");
+    client.queryRaw.mockReturnValueOnce(JSON.stringify({ result: [receipt, { success: false, results: [] }] }));
+    await expect(db.prepare("SELECT 1").all()).rejects.toThrow("d1-query-failed");
   });
 });

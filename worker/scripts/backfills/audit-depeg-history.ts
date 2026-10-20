@@ -32,6 +32,19 @@ import {
 // upstreamReachable=false and refuse to persist provenance for the batch.
 const AUDIT_UPSTREAM_OUTAGE_ERROR_RATIO = 0.5;
 const AUDIT_MIN_SUPPLY_LOOKUP_MARGIN_SEC = 30 * DAY_SECONDS;
+const AUDIT_SUPPLY_EXCLUSION_DETAIL_LIMIT = 25;
+
+type AuditSupplyObservation =
+  | { supply: number; reason?: never }
+  | { supply: null; reason: "history-missing" | "history-outside-tolerance" };
+
+interface AuditSupplyExclusion {
+  id: number;
+  stablecoinId: string;
+  symbol: string;
+  startedAt: number;
+  reason: NonNullable<AuditSupplyObservation["reason"]>;
+}
 
 class AuditMutationCommitError extends Error {
   constructor(message: string) {
@@ -64,7 +77,12 @@ interface DdrSealedEventConflict {
 }
 
 interface AuditResult {
+  /** Symbol-matching events with known qualifying supply when minSupply > 0. */
   totalMatching: number;
+  unavailableSupplyExcludedCount: number;
+  unavailableSupplyExclusions: AuditSupplyExclusion[];
+  unavailableSupplyExclusionsTruncated: boolean;
+  belowMinSupplyExcludedCount: number;
   offset: number;
   limit: number;
   dryRun: boolean;
@@ -73,6 +91,7 @@ interface AuditResult {
   deletedEvents: { id: number; symbol: string; startedAt: number; peakBps: number }[];
   daysRecomputed: number;
   rejectedByValidationCount: number;
+  rejectedByTimestampCount: number;
   /** Number of attempted CG fetches that failed (non-ok response or fetch/parse error). */
   upstreamErrorCount: number;
   /**
@@ -595,7 +614,7 @@ export async function auditEvents(
     : events;
 
   // Build supply lookup only when min-supply > 0
-  let getSupplyAtTime: ((coinId: string, ts: number) => number) | null = null;
+  let getSupplyAtTime: ((coinId: string, ts: number) => AuditSupplyObservation) | null = null;
   if (minSupply > 0 && symbolFilteredEvents.length > 0) {
     const supplyWindow = getAuditMinSupplyHistoryWindow(symbolFilteredEvents);
     const supplyRows = supplyWindow
@@ -608,22 +627,41 @@ export async function auditEvents(
       supplyByCoin.set(r.stablecoin_id, list);
     }
 
-    getSupplyAtTime = (coinId: string, ts: number): number => {
+    getSupplyAtTime = (coinId: string, ts: number): AuditSupplyObservation => {
       const snaps = supplyByCoin.get(coinId);
-      if (!snaps || snaps.length === 0) return 0;
+      if (!snaps || snaps.length === 0) return { supply: null, reason: "history-missing" };
       let best = snaps[0];
       for (const s of snaps) {
         if (Math.abs(s.date - ts) < Math.abs(best.date - ts)) best = s;
         if (s.date > ts) break;
       }
-      return Math.abs(best.date - ts) <= 30 * DAY_SECONDS ? best.supply : 0;
+      return Math.abs(best.date - ts) <= AUDIT_MIN_SUPPLY_LOOKUP_MARGIN_SEC
+        ? { supply: best.supply }
+        : { supply: null, reason: "history-outside-tolerance" };
     };
   }
 
-  // Apply filters: symbol, min-supply, geckoId presence
+  let unavailableSupplyExcludedCount = 0;
+  let belowMinSupplyExcludedCount = 0;
+  const unavailableSupplyExclusions: AuditSupplyExclusion[] = [];
+  // Supply admission is fail-closed; missing observations are not measured zero.
   const filtered = symbolFilteredEvents.filter((e) => {
-    if (minSupply > 0 && getSupplyAtTime) {
-      if (getSupplyAtTime(e.stablecoin_id, e.started_at) < minSupply) return false;
+    if (getSupplyAtTime) {
+      const observation = getSupplyAtTime(e.stablecoin_id, e.started_at);
+      if (observation.supply === null) {
+        unavailableSupplyExcludedCount++;
+        if (unavailableSupplyExclusions.length < AUDIT_SUPPLY_EXCLUSION_DETAIL_LIMIT) {
+          unavailableSupplyExclusions.push({
+            id: e.id, stablecoinId: e.stablecoin_id, symbol: e.symbol, startedAt: e.started_at,
+            reason: observation.reason,
+          });
+        }
+        return false;
+      }
+      if (observation.supply < minSupply) {
+        belowMinSupplyExcludedCount++;
+        return false;
+      }
     }
     return true;
   });
@@ -632,6 +670,10 @@ export async function auditEvents(
 
   const result: AuditResult = {
     totalMatching: filtered.length,
+    unavailableSupplyExcludedCount,
+    unavailableSupplyExclusions,
+    unavailableSupplyExclusionsTruncated: unavailableSupplyExcludedCount > unavailableSupplyExclusions.length,
+    belowMinSupplyExcludedCount,
     offset,
     limit,
     dryRun,
@@ -640,6 +682,7 @@ export async function auditEvents(
     deletedEvents: [],
     daysRecomputed: 0,
     rejectedByValidationCount: 0,
+    rejectedByTimestampCount: 0,
     upstreamErrorCount: 0,
     upstreamReachable: true,
   };
@@ -656,6 +699,7 @@ export async function auditEvents(
     result.auditedEvents.push(outcome.auditedEvent);
     if (outcome.upstreamError) result.upstreamErrorCount++;
     result.rejectedByValidationCount += outcome.rejectedByValidationCount;
+    result.rejectedByTimestampCount += outcome.rejectedByTimestampCount;
     if (outcome.falsePositiveFound) result.falsePositivesFound++;
 
     if (!dryRun && outcome.provenanceVerdict != null) {

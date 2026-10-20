@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import committedRegistry from "../../shared/data/safety-score-v9/shock-coverage-measurements-v1.json";
 import {
   evaluateShockCoverageFreshness,
   readRequiredAssetIds,
@@ -11,18 +12,15 @@ import {
 const NOW_SEC = 1_000_000;
 
 function measurement(assetId: string) {
+  const entry = structuredClone(committedRegistry.measurements[0]);
   return {
+    ...entry,
     assetId,
     block: {
-      number: 1,
+      ...entry.block,
       timestampIso: new Date(NOW_SEC * 1_000).toISOString(),
       timestampUnix: NOW_SEC,
     },
-    applicability: "measured",
-    complete: true,
-    blockers: [],
-    exactReplayPassed: true,
-    replayVerification: {},
   };
 }
 
@@ -64,5 +62,83 @@ describe("shock coverage target authority", () => {
     }).failures).toEqual([
       "temporary-shock-target: no measurement in shared/data/safety-score-v9/shock-coverage-measurements-v1.json",
     ]);
+  });
+});
+
+describe("shock coverage registry admission", () => {
+  function evaluate(entries: unknown[], nowSec = NOW_SEC) {
+    return evaluateShockCoverageFreshness({
+      registry: { measurements: entries },
+      maxAgeSec: 72 * 60 * 60,
+      nowSec,
+      requiredAssetIds: ["bd-basedollar"],
+    });
+  }
+
+  it("admits a real registry-shaped measurement with valid replay and source provenance", () => {
+    expect(evaluate([measurement("bd-basedollar")])).toEqual({
+      failures: [],
+      successes: [expect.stringContaining("bd-basedollar: OK")],
+    });
+    const entry = committedRegistry.measurements[0];
+    expect(evaluate([entry], entry.block.timestampUnix).failures).toEqual([]);
+  });
+
+  it.each([undefined, null, "not-a-clock", NaN, Infinity, -1, 1.5])(
+    "rejects malformed block clocks (%s) before choosing the newest row",
+    (timestampUnix) => {
+      const entry = measurement("bd-basedollar");
+      const result = evaluate([
+        entry,
+        { ...entry, block: { ...entry.block, timestampUnix } },
+      ]);
+      expect(result.successes).toEqual([]);
+      expect(result.failures).toEqual([expect.stringContaining("invalid registry")]);
+    },
+  );
+
+  it.each([undefined, null, {}])("rejects absent or empty replay attestation (%j)", (replayVerification) => {
+    const result = evaluate([{ ...measurement("bd-basedollar"), replayVerification }]);
+    expect(result.successes).toEqual([]);
+    expect(result.failures).toEqual([expect.stringContaining("replayVerification")]);
+  });
+
+  it.each([
+    { number: -1 }, { number: 1.5 }, { number: Infinity }, { timestampIso: "invalid" },
+  ])("rejects malformed block identity or ISO clocks (%j)", (overrides) => {
+    const entry = measurement("bd-basedollar");
+    expect(evaluate([{ ...entry, block: { ...entry.block, ...overrides } }]).failures).toEqual([
+      expect.stringContaining("invalid registry"),
+    ]);
+  });
+
+  it("rejects an omitted replay attestation", () => {
+    const entry: Record<string, unknown> = measurement("bd-basedollar");
+    delete entry.replayVerification;
+    expect(evaluate([entry]).failures).toEqual([expect.stringContaining("replayVerification")]);
+  });
+
+  it.each([
+    { blockers: ["missing branch"] },
+    { journalSha256: "invalid" },
+    { codePins: [] },
+    { exactReplayPassed: false },
+  ])("rejects incoherent complete measurement provenance (%j)", (overrides) => {
+    const result = evaluate([{ ...measurement("bd-basedollar"), ...overrides }]);
+    expect(result.successes).toEqual([]);
+    expect(result.failures).toEqual([expect.stringContaining("invalid registry")]);
+  });
+
+  it.each([
+    { nowSec: NOW_SEC - 1, reason: "future-dated" },
+    { nowSec: NOW_SEC + 36 * 60 * 60 + 1, reason: "over the 36h refresh budget" },
+  ])("keeps the independent wall-clock rejection: $reason", ({ nowSec, reason }) => {
+    expect(evaluate([measurement("bd-basedollar")], nowSec).failures).toEqual([
+      expect.stringContaining(reason),
+    ]);
+  });
+
+  it("admits the unchanged inclusive 36h refresh boundary", () => {
+    expect(evaluate([measurement("bd-basedollar")], NOW_SEC + 36 * 60 * 60).failures).toEqual([]);
   });
 });

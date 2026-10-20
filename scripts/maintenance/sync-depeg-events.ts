@@ -13,6 +13,7 @@
 
 import {
   DepegEventStoredSnapshotSchema,
+  DepegEventsResponseSchema,
   type DepegEvent,
   type DepegEventEntry,
 } from "@shared/types/market";
@@ -47,11 +48,11 @@ Options:
   --dry-run         Fetch and validate without writing the output file
   -h, --help        Show this help`;
 
-interface DepegEventsResponse {
-  events: DepegEvent[];
-  total?: number;
-  nextCursor?: string | null;
-}
+// Legacy captures can omit total; supplied totals and cursors must still be valid.
+const DepegSyncResponseSchema = DepegEventsResponseSchema.extend({
+  total: DepegEventsResponseSchema.shape.total.int().nonnegative().safe().optional(),
+  nextCursor: DepegEventsResponseSchema.shape.nextCursor.unwrap().unwrap().min(1).nullable().optional(),
+});
 
 const MAX_DEPEG_SYNC_PAGES = 1000;
 
@@ -213,11 +214,15 @@ function writeDepegEventLedger(
 }
 
 /**
- * Resolve slug collisions deterministically. If two events for the same coin
- * share a day, append `-up`/`-down` from `direction`. Stable across rebuilds
- * because input order is sorted by `startedAt DESC, id DESC`.
+ * Reserve historical URLs by durable event ID before naming newcomers. Missing
+ * IDs keep their slugs reserved so a newcomer cannot conceal an archive deletion.
  */
-export function assignSlugs(events: readonly DepegEvent[]): DepegEventEntry[] {
+export function assignSlugs(
+  events: readonly DepegEvent[],
+  previous: readonly DepegEventEntry[] = [],
+): DepegEventEntry[] {
+  const previousById = new Map(previous.map((entry) => [entry.id, entry]));
+  const reserved = new Set(previous.map((entry) => entry.slug));
   const byBase = new Map<string, DepegEvent[]>();
   for (const event of events) {
     const key = baseSlug(event);
@@ -226,25 +231,28 @@ export function assignSlugs(events: readonly DepegEvent[]): DepegEventEntry[] {
     else byBase.set(key, [event]);
   }
 
-  const result: DepegEventEntry[] = [];
-  for (const event of events) {
+  return events.map((event) => {
+    const prior = previousById.get(event.id);
+    if (prior) {
+      if (prior.stablecoinId !== event.stablecoinId) {
+        throw new SnapshotIntegrityError(`Depeg event ${event.id} changed stablecoin identity; review the archive migration`);
+      }
+      return { ...event, slug: prior.slug };
+    }
     const key = baseSlug(event);
     const bucket = byBase.get(key) ?? [event];
-    if (bucket.length === 1) {
-      result.push({ ...event, slug: key });
-      continue;
-    }
-    // Same-day collisions: append direction. If still colliding (very rare —
-    // multiple events on same coin/day/direction), append id for stability.
     const directionSuffix = event.direction === "above" ? "up" : "down";
-    let candidate = `${key}-${directionSuffix}`;
-    const sameDirectionCount = bucket.filter((e) => e.direction === event.direction).length;
-    if (sameDirectionCount > 1) {
-      candidate = `${candidate}-${event.id}`;
+    let candidate = key;
+    if (bucket.length > 1 || reserved.has(candidate)) {
+      candidate = `${key}-${directionSuffix}`;
+      if (bucket.filter((entry) => entry.direction === event.direction).length > 1 || reserved.has(candidate)) {
+        candidate = `${candidate}-${event.id}`;
+      }
     }
-    result.push({ ...event, slug: candidate });
-  }
-  return result;
+    while (reserved.has(candidate)) candidate = `${candidate}-${event.id}`;
+    reserved.add(candidate);
+    return { ...event, slug: candidate };
+  });
 }
 
 export async function runDepegSync(argv = process.argv.slice(2)) {
@@ -287,9 +295,25 @@ export async function runDepegSync(argv = process.argv.slice(2)) {
           },
         );
         if (!res.ok) throw new Error(`API returned ${res.status} for ${pagedUrl}`);
-        const body = (await res.json()) as DepegEventsResponse;
+        let payload: unknown;
+        try {
+          payload = await res.json();
+        } catch (error) {
+          if (error instanceof SyntaxError) {
+            throw new SnapshotIntegrityError("Invalid depeg response: malformed JSON");
+          }
+          throw error;
+        }
+        const parsed = DepegSyncResponseSchema.safeParse(payload);
+        if (!parsed.success) {
+          throw new SnapshotIntegrityError(`Invalid depeg response: ${parsed.error.message}`);
+        }
+        const body = parsed.data;
         if (page === 0) expectedTotal = body.total;
-        const batch = Array.isArray(body.events) ? body.events : [];
+        else if (body.total !== expectedTotal) {
+          throw new SnapshotIntegrityError("Depeg pagination changed its API total during traversal");
+        }
+        const batch = body.events;
         collected.push(...batch);
         cursor = body.nextCursor ?? null;
         console.log(
@@ -331,7 +355,14 @@ export async function runDepegSync(argv = process.argv.slice(2)) {
         return b.id - a.id;
       });
 
-      const computedEntries = assignSlugs(unique);
+      const computedEntries = assignSlugs(unique, previousEntries);
+      const stored = DepegEventStoredSnapshotSchema.safeParse(
+        preserveStaticDepegArchiveEntries(previousEntries, computedEntries),
+      );
+      if (!stored.success) {
+        throw new SnapshotIntegrityError(`Invalid stored depeg snapshot: ${stored.error.message}`);
+      }
+      const archivePreservedEntries = stored.data;
 
       // Guard against API returning an empty list (e.g. token expiry, partial
       // outage, or a misconfigured API base). Wiping the seed event would purge
@@ -351,7 +382,6 @@ export async function runDepegSync(argv = process.argv.slice(2)) {
         }
       }
 
-      const archivePreservedEntries = preserveStaticDepegArchiveEntries(previousEntries, computedEntries);
       assertStaticDepegArchivePreserved(
         previousEntries,
         archivePreservedEntries,

@@ -48,7 +48,13 @@ The active frontend operator mode is now:
 
 Public `/status/` is read-only, public/indexable, and uses public read endpoints. Access-gated `/admin/` and `/admin-api/` are private/noindex. `ADMIN_WORKSPACES` in `src/lib/admin-workspaces.ts` owns stable workspace navigation; `OpsShell` omits public navigation, tape, feedback and footer. Workspace clients mount only their own queries and active modes: Triage answers act/watch, Pipeline inspects producers, Reliability owns endpoint/demand reads, Crons owns attempts, Actions owns mutations, Comms owns delivery/audience evidence, History owns transitions/audits, and API Management owns credential inventory/mutations. Triage reads only counts from `/api/api-keys/lifecycle-summary`; missing counts are Unknown, never zero.
 
+API Management drafts preserve every canonical `API_KEY_TIER_VALUES` member, including donor, through unrelated edits and saves. Only unknown historical free-form tiers fall back to standard; operators may still deliberately select a different canonical tier.
+
+History orders admin-action attempts and credential-audit mutation receipts together while retaining their separate source records and outcomes. Neither key/action similarity nor matching timestamps prove a shared request identity. Without a shared durable identity, even a single nearby pair remains separate; a failed retry or unknown/post-write response never replaces a recorded mutation receipt.
+
 `InboxRow` in `src/app/admin/status-dashboard/triage-summary.tsx` owns row presentation. Triage and incident history share `getCausesVerdict`: public-impacting/critical causes mean Act now; other causes mean Watch. Recurrence is descriptive co-occurrence, not causal attribution. Material-duration and unknown-coverage causes remain independently actionable. Unknown/stale evidence cannot answer the operator question. Rows without a transition use the named cron's last success for duration; next primary opportunity and freshness budget come from the cron registry, not an inferred catch-up promise. Triage and Actions share recommendations. Recovery hold preserves required consecutive-check progress; public headline, raw held status and `/api/health` remain distinct evidence.
+
+Triage keeps failed cron-history evidence in Crons attention as unavailable, with the named summary reason; Actions shows unavailable cron badges rather than zero errors. Pipeline attention likewise retains source-specific unknowns: failed price-cache, blacklist-gap and on-chain reads render unavailable for that source only, without hiding independently measured siblings or changing global health thresholds.
 
 The public route follows [Public status projection](#public-status-projection), not the worst admin diagnostic. `src/lib/status/public-status.ts` falls back to `projectPublicStatus` for legacy payloads without headline/components. The site's status links use `PUBLIC_HEADLINE_TONE`. Thirty-day component bars use the worst observed state per UTC day; days before `publicHistoryStartedAt` are unknown, never operational. Public history is bounded (`hasMore`), and failed reads are not empty logs. A live recovery awaiting persistence is marked pending the next check.
 
@@ -82,7 +88,7 @@ The pure `status-dashboard-model.ts` and memoized `use-critical-ops-model.ts` re
 
 Cron semantics belong to [Cron health model](#cron-health-model); `deriveCronVerdict` in `src/lib/cron-workbench-model.ts` owns the operator verdict. Registry group/cadence/impact and next primary opportunity are not physical-trigger membership or catch-up promises. Public-critical jobs past twice cadence or with ≥2 failures need action; single/watch failures, warnings and public-critical findings are Watch; successful admin-watch findings stay neutral. Fresh in-flight evidence is Running without replacing the previous terminal outcome; unknown is Unavailable. A neutral skip never lends time/runtime to an inherited failure. Bounded history retains required-attempt/readback evidence rather than hiding it behind newer skips. Slot metadata distinguishes successful, degraded, errored and neutral children so best-effort continuation cannot hide failed children. Budget-only surfaces remain separate from `crons`; orphaned progress/expired leases are stale artifacts, not running work.
 
-For optional Telegram telemetry, missing means Unknown. The sole legacy exception is absent `freshRetryQueued` on a completed-ok dispatch with `pendingRetryQueued` present, which means zero fresh retries. Delivery health and audience eligibility stay separate: the eligible alert audience counts chats that can receive matching alerts, not attempted, failed or delivered messages. Safety/reserve source suppression can degrade the workspace even when the latest dispatch is `ok`; its reason names each suppressed family and the recorded source state instead of claiming the dispatch itself degraded. Dispatch errors and permanent failures still take precedence, followed by backlog, rate limiting and retries. Suppression remains fail-closed.
+For optional Telegram telemetry, missing means Unknown. Current dispatch retry and permanent-failure counts come from the shared pending transport; no absent fresh-side counter is interpreted as zero. Delivery health and audience eligibility stay separate: the eligible alert audience counts chats that can receive matching alerts, not attempted, failed or delivered messages. Safety/reserve source suppression can degrade the workspace even when the latest dispatch is `ok`; its reason names each suppressed family and the recorded source state instead of claiming the dispatch itself degraded. Dispatch errors and permanent failures still take precedence, followed by backlog, rate limiting and retries. Suppression remains fail-closed.
 
 ### Endpoint groups
 
@@ -125,6 +131,8 @@ When the DB sentinel fails, `/api/status` publishes `dataQuality: null` with `se
 
 FX health admits its publication clock with canonical `assessFreshnessTimestamp` (60-second allowed skew): excessive future clocks publish null `ageSeconds` / `publishedAt`, `timestampReason: "future-timestamp"`, and a stale availability floor. Per-peg provenance continues to use the shared `assessFxPegAdmission` path: source clocks more than 300 seconds ahead already reject with `source-time-future`, used in `fx-source-provenance-unknown:<peg>=<reason>`; rejected clocks never create a healthy source claim. Blacklist cards also preserve partial evidence: `recentMissingAmounts: null` means recent gap evidence unavailable, not “no new gaps”.
 
+DEX status readers accept optional `liquidityHealth.baselineReadFailures` for named coverage-count, global-TVL, top-ten, cron-history, coverage-class, watchlist and per-coin read failures. Prior baseline totals and `previousCoverageClasses` may be null; the card renders unavailable prior evidence rather than a zero mix. These null-tolerant readers must be deployed before the Worker producer begins emitting newly nullable baseline fields. Reader admission does not itself change publication guards or classify optional telemetry as required.
+
 Related extracted loaders:
 
 - `worker/src/lib/status/derived-data.ts`
@@ -133,6 +141,12 @@ Related extracted loaders:
   - empty fallback builders for dataset freshness / reserve composition
 - `worker/src/lib/status/data-quality.ts`
   - canonical stablecoins-cache / blacklist-gap / active-depeg / on-chain-supply quality aggregation
+
+`datasetFreshness.safetyGrades` describes the accepted **Safety Score publication**, including the
+original clock of a held publication, not daily grade history. `shared/lib/status-dataset-freshness.ts`
+owns public labels and cadence owners for both the Worker and table; this row belongs to
+`compute-safety-score-v9` (1,800-second cadence). `snapshot-safety-grade-history` remains an independent
+daily cron row. Private table/publication/cron-output read targets stay in `derived-data.ts`.
 
 The backend contract is split into bounded sections. Select the evidence family affected by the change:
 
@@ -148,6 +162,7 @@ The backend contract is split into bounded sections. Select the evidence family 
 - Response cache policy: `Cache-Control: no-store`
 - Even when the persisted operator assessment snapshot (`status:raw-snapshot:v1`, payload v2) is fresh, `/api/status` reads current cron history, progress, leases, and scheduled slots through `loadCronHealth()`. Per-job availability, cron/slot summary counts, and the informational cron availability causes (`degraded_cron_warning`, `watch_cron_error_runs`, `watch_unhealthy_crons_present`, and the `cron_*_query_failed` notices) all describe that one live read at the response `timestamp`, so a cause count never disagrees with its `summary` counterpart in the same response; the aggregate assessment, caches, and expensive supplements retain the persisted assessment generation. A failed live cron read remains unknown rather than replaying a cached success.
 - Every health/status request live-reads `schedulerLiveness` from actual D1 slot starts, including fresh-snapshot paths. The public aggregate and its three lanes remain unchanged; `schedulerLiveness.heavy` adds independent registry-owned heavy delivery evidence (`scheduleKey`, `lastStartedAt`, `ageSeconds`, `warningAfterSec`, `staleAfterSec`, `status`, `unavailableReason`). Cached unhealthy scheduler floors for either role force live recomputation to clear only obsolete scheduler causes; independent blockers remain. Admin snapshots are bypassed when reserve review applicability changes, and pre-feature reserve projections are rejected.
+- Cached `/api/health` responses retain `assessedAt` as the original evidence assessment clock while `timestamp` records the current request. The cheap snapshot path advances admitted cache ages and re-evaluates the current cache impact floor and public components without rerunning the full assessment. Existing raw/quality blockers remain floors; only scheduler evidence is read live. Full assessments set both clocks to the request time.
 
 The operator assessment envelope `status:raw-snapshot:v1` uses payload version 2 (`{version: 2, producedAt, cronJobs, raw, supplements?}`). It holds the aggregate assessment, caches, budget-only surfaces, scheduler liveness and supplements, but no per-job cron records and no public health: `cronJobs` preserves cohort identity for admission while `/api/status` always live-reads cron history through `loadCronHealth()`. Public health is published separately to `status:public-health-snapshot:v1` (`{version: 1, producedAt, publicHealth}`), which `/api/health` reads alongside its live scheduler overlay. A version-1 raw-snapshot row is unreadable and is served by the live fallback until the next self-check.
 
@@ -179,9 +194,30 @@ existing freshness bands. Captured-run consumers can supply a separate read cloc
 allowance: DEWS uses wall time during hydration so an overlapping producer published after run
 start is not falsely rejected.
 
+Cron progress admits both `startedAt` and `updatedAt` against the reader clock with this same allowance before a heartbeat can establish availability or suppress an earlier error. Rejected clocks leave `inFlight: null` and retain the progress row's diagnostic fields in optional `inFlightUnavailable`, with `stale: true`, raw clock evidence and `timestampReason`. Required numeric clocks in admitted `inFlight` remain unchanged for existing readers. Terminal and confirmed-output evidence are evaluated independently.
+
+`FreshnessIndicator` keeps its generation in `<time datetime>` and state in `data-state`, and
+discloses the exact effective predicate budget in `data-stale-after-ms`. Timestamp help names
+that same threshold in human-readable units: stale means age strictly greater than the budget.
+Compact chips retain their existing 2× headroom; noncompact chips use the supplied budget exactly,
+including the redemption card's already doubled budget. Disclosure does not change timers,
+visibility handling, freshness windows or transition-only screen-reader announcements.
+
 Ordinary cache, table fallback, cron fallback and yield-health clocks use that same admission boundary.
 Rejected clocks expose null ages and the exact `timestampReason` (yield rankings use
 `rankingTimestampReason`), never a negative age or a clamped healthy future generation.
+
+Dataset freshness uses canonical `assessFreshnessTimestamp` with an explicit **zero future-skew
+allowance** at the read boundary. Missing, non-finite or future clocks publish a null dataset value
+and `datasetFreshness.unavailableReasons[dataset]` (`missing-timestamp`, `invalid-timestamp`, or
+`future-timestamp`). An admitted observed zero remains zero. The table also rejects invalid retained
+clocks and renders unavailable, never a future clock clamped to zero-age “on time”.
+
+Cached public health ages each admitted cache from its immutable `publishedAt`. Legacy evidence without
+that clock advances its original measured age by the elapsed time since `assessedAt` (or the retained
+assessment's original `timestamp` when `assessedAt` is absent). Null ages and rejected clocks remain
+unavailable; the passage of time cannot admit previously rejected evidence. Cache generation identity,
+age budgets and independent input-quality fields remain unchanged.
 
 Cache freshness sentinels retain strict future-clock rejection with no skew allowance.
 Their validation clock is D1 `unixepoch()` from the same cache SELECT, rather than
@@ -217,32 +253,16 @@ summaries. `degradedCrons` counts fresh degraded execution statuses only (includ
 behind neutral skips), never successful `metadata.quality` findings or legacy blacklist maintenance
 warnings. Errors and freshness remain independently evaluated.
 
-### Cron metadata persistence budget
+Duration-watchdog summaries treat runtime and slot-abandonment breach evidence independently.
+Only a validated empty string array renders `none`; absent, null, non-array or malformed-member
+evidence renders `unavailable`, without discarding a valid sibling dimension. Sentinel-nested
+summaries retain each source's status and reason (or its supplied error when no reason exists),
+so a failed source is not presented as a clean no-breach observation.
 
-`worker/src/lib/cron-metadata-persistence.ts` owns write-time UTF-8 admission: **8 KiB per job** by default,
-including scheduler/lease identity. Explicit exceptions preserve existing consumer contracts: **16 KiB**
-for `sync-dex-liquidity` source coverage; **32 KiB** for each mint/burn lane's cursor/head coverage and
-`sync-live-reserves` exact breaker names / warning cohorts; **64 KiB minus one byte** for
-`sync-stablecoins` complete missing-asset continuity and `cron-sentinel` nested source /
-stale-generation evidence. These are ceilings, not producer targets.
+Daily and weekly digest generation share `degraded` / `anthropic-circuit-open` terminals when Anthropic's circuit blocks generation. Missing Anthropic credentials are an intentional `skipped_neutral` / `missing-api-key` outcome, not a delivery-channel failure; required channel credentials still use degraded delivery accounting. Other deliberate no-work outcomes carry named neutral reasons. None of these no-generation attempts advances the confirmed output clock; the logger persists `outputPublishedAt: null` and projects the terminal reason into `degraded_reason`.
 
-Above budget, named forensic diagnostics (`adapterLatency`, `priceSourceAttemptLedger`,
-`providerDiagnostics`, `fullAssets`, `bridgeJoinDiagnostics`) are summarized first. Remaining unread
-collections can move into bounded `diagnostics`; compaction records its original size, budget and omitted
-diagnostic count. Consumer-read fields stay at their original paths and retain their complete shape:
-publication/reason/quality, mode, stale rows and source evidence, `resourcePressure`, `d1Cost`, retention /
-truncation flags, coverage, ledger and scheduler identity. `breakerKeys` remains an exact list because the
-reserve summary renders names; `activePriceCoverage` retains full missing IDs/state because the next run
-and public health reconstruct streaks from it. These two fields must not become counts. If contractual
-evidence alone exceeds its job exception, terminal persistence still proceeds with
-`persistenceCompaction.overBudget: true` and a warning log naming the job, budget and actual persisted
-bytes. Consumer evidence is never dropped to meet the budget, and a budget exception cannot prevent
-terminal accounting. Normally compacted rows carry `overBudget: false`.
+The [persistence appendix](#cron-metadata-persistence-budget) owns write-time byte budgets and diagnostic compaction. Consumer fields/counters retain their shape and unavailable values; persistence limits never drop evidence or prevent terminal accounting.
 
-`cron_runs.metadata` is the sole rich terminal payload. Producer history keeps only `mxLedger*` activation
-evidence plus accepted-terminal arbitration scalars; the child-attempt table stores fencing columns, not
-another JSON copy. Live `cron_run_progress` remains a separate bounded, temporary observation. Lease
-normalization never sacrifices consumer evidence to reserve space for adapter diagnostics.
 
 
 The retired `compute-safety-score-v9-workflow` observer is no longer a registered producer or freshness/watchdog obligation. Historical failures remain in D1 as forensic evidence. Raw snapshot loading compares the payload's entire `cronJobs` cohort against the current registered cohort; mismatches invalidate the whole assessment and trigger live recomputation, including severity. Filtering a retired job while preserving its cached OOM severity is not a valid cutover. Newly produced post-activation snapshots must use the current cohort, and genuine canonical/other failures remain visible.
@@ -312,6 +332,8 @@ Subject to a successful history read, cron availability is healthy when:
 - The job is **not** reported healthy when the cron-history query itself failed: `crons[*].healthy` is `null` with `crons[*].telemetryUnknown = true` and `crons[*].telemetryUnknownReason` naming the failed read, and the job is excluded from unhealthy/error counters rather than reported falsely unhealthy or falsely healthy, or
 - The job is a watch-tier bootstrap (`crons[*].bootstrap = true`): no required non-neutral attempt yet and at most one recorded run. Critical-tier jobs always require real availability evidence. The admin describes this as an initial admission window, without claiming a successful run
 
+History-derived wire summary counters are null on a failed history read, with `summary.cronHistoryUnavailableReason: "cron-history-read-failed"` and `sectionErrors.crons` carrying the same code. A successful empty history keeps numeric zero and an explicit null reason. The optional reason admits legacy rolling-deploy payloads; `summary.unavailableReason: "db-unavailable"` remains reserved for whole-DB loss. Lease, progress and running-slot aggregate measurements retain their own read outcomes: failed history alone never nulls independently observed companion counts.
+
 The display starts with ten runs. A full window with fewer than two required attempts triggers an indexed, two-row required-attempt lookup; duplicate evidence is removed. A fresh proven-satisfied readback is recovered separately when absent, preserving error supersession behind generic admissions. Appended attempts/readbacks keep verdicts attributable in `crons[*].runs` (newest first, behind the ten-row display window) and remain visible in the admin history. A full window without fresh confirmed `ok` output also triggers the bounded `CONFIRMED_CRON_OUTPUT_AT_SQL` aggregate, retaining successful and degraded output clocks separately; no-op attempts never renew publication. Duration trends count only executed `ok`/`degraded`/`error` attempts, excluding admission skips from averages and sample floors; cap-hit and graceful-deferral policy is unchanged.
 
 Conditional retry/poll membership is authored in `ScheduledTaskDescriptor.due` (the slot plan's `taskPolicies`) in `shared/lib/scheduled-runner-registry.ts`; `CONDITIONALLY_ADMITTED_SCHEDULED_TASKS` is a derived view. A missed slot does not prove those children were required: their demand/output prechecks must first admit work. Reconciliation therefore does not invent a failure for an unstarted conditional child. Status excludes retained `error` rows only when the exact registered job/schedule pair carries `reason = "stale-slot-reconciled"` and `childDisposition = "not_started"`; raw database records remain intact. Started/unknown attempts, actual read failures, and canonical scheduled obligations remain actionable. This exclusion never creates publication evidence or renews output freshness.
@@ -350,9 +372,13 @@ For the split DEX pipeline:
 - `sync-live-reserves` now emits structured metadata (`synced`, `failed`, `skipped`, `warningCount`, `coinsWithWarnings`, `coinsWithErrors`, `breakerKeys`) summarized in the cron card.
 - `sync-redemption-backstops` keeps market-implied route impairments visible through `availabilityDegraded` metadata and impaired rows, but those expected row-level availability states do not by themselves mark the cron run degraded. The capacity coverage floor (`unresolvedMissingCapacity` above `missingCapacityOkThreshold`) is published the same way, under `metadata.quality.reason = "capacity-coverage-floor"`; only unresolved routes, a stale liquidity feed, no active configured rows or post-write warnings degrade the run.
 
+Demand-refreshed detail rows use `detail-write-failure:*` markers rather than a cron age budget. Recovery cleanup deletes only the exact scanned marker key, `updated_at`, and value while the current corresponding detail row still has a later write clock. A concurrent replacement, including a different value written in the same second, is retained for reassessment; `updated_at` alone is not a unique generation. Expired-marker pruning remains bounded independently of recovery cleanup.
+
 ## Resource-pressure evidence
 
 Cron detail displays **current progress** and **last terminal** resource evidence separately; it never combines measurements across attempts. Both use the validated `ResourcePressureSchema` block from the Access-protected `GET /api/status-cron-detail?job=<job>`: `cron.inFlight.metadata` for current progress and `cron.runs[0].metadata` for the last terminal. The block records phase and observation time, source body/cache/entry caps, concurrent decode policy, input/catalog admission, actual streamed intake, estimated retained cache and estimate basis, rejection count, guard, and reconciliation platform evidence. The default `/api/status` summary omits progress metadata and carries only the registry-selected `latestRunFacts`, so full run metadata is served only by the detail endpoint. Generic metadata summaries append the same resource phase/intake/guard lines.
+
+Resource presentation follows detail-read admission: disabled reads are not requested, pending reads are loading, and failed reads name the same detail failure. A failed refresh retains previously admitted evidence with a refresh-failure warning. Progress/lease read failures make only current-progress resource evidence unavailable; a failed cron-history read makes terminal resource evidence unavailable with `telemetryUnknownReason`, without hiding an independently valid progress block. Missing or invalid blocks are unavailable for the labelled attempt, not proof that the runtime never measured telemetry. Only a successfully read, validated block with `guard: "not-measured"` establishes that state for its own attempt.
 
 `logCronRun()` ingests evidence before progress suppression/coalescing and carries the latest snapshot into success or thrown terminals; an equally recent result snapshot wins. Persisted metadata compaction preserves the complete block. Synthetic reconciliation preserves the last durable observation clock and measurements, adding only its existing proven `platform-abandoned` or `platform-interrupted` classification with source `slot-reconciliation`. Neither classification proves Cloudflare OOM or CPU exhaustion.
 
@@ -413,6 +439,8 @@ Unknown FX provenance is never healthy. A present non-USD rate whose metadata ge
 ## Data quality status
 
 Computed from publication/price coverage, blacklist gaps, on-chain integrity and reserve health. Read-failure impact is source-specific.
+
+Compact Pipeline summaries honor `stablecoinsCacheStatus`, `blacklistGapStatus`, `onchainSupplyQueryStatus` and `onchainSupplyMonitoring` before formatting counts. Unread source placeholders never become zero missing prices, zero gaps or zero stale feeds. These evidence gaps keep Pipeline in Triage attention without changing the severity thresholds below; successful observed zeros and healthy sibling measurements remain visible.
 
 - `stale` if any of:
   - stablecoins cache is unavailable/corrupt (`dataQuality.stablecoinsCacheStatus === "error"`)
@@ -521,8 +549,9 @@ Additional response fields:
 - `discrepancy`: divergence between effective status and synthetic probe status
 - `timeline`: recent status transitions
 - `telegramBot`: admin-only Telegram bot subscriber aggregates (`null` when Telegram tables are unavailable)
-- `datasetFreshness`: confirmed output/publication clocks for operational domains; `DATASET_FRESHNESS_TARGETS` in `worker/src/lib/status/derived-data.ts` owns the table, publication-pointer, and cron-output evidence for each field
+- `datasetFreshness`: admitted confirmed output/publication clocks for operational domains, with optional per-dataset `unavailableReasons`; `DATASET_FRESHNESS_TARGETS` in `worker/src/lib/status/derived-data.ts` owns private read targets, while `shared/lib/status-dataset-freshness.ts` binds labels and producer cadence. The informational table retains its 2x-cadence grace basis and intentional 8x/12x on-time/aging/late bands; these are not overall-status or Safety methodology thresholds.
 - `summary`: compact availability and diagnostics rollup (`unhealthyCrons`, `availabilityImpactingUnhealthyCrons`, `watchUnhealthyCrons`, `degradedCrons`, `cronErrors`, `availabilityImpactingCronErrors`, `availabilityImpactingConsecutiveCronErrors`, `staleCronArtifacts`, `expiredCronLeases`, `orphanedCronProgressRows`, `diagnosticIssueCount`, `worstCacheRatio`, `transitionsLast24h`)
+  A failed history read makes only the history-derived cron counts unavailable; see [Cron health model](#cron-health-model) for `cronHistoryUnavailableReason` and independent companion-read provenance.
 - `producerHeads`: one row per canonical schedule/job/path/kind, including budget-only paths, with separate last invocation/completion, productive output, publication, invocation ID, Worker version, and observed/missing state
 - `workerVersions`: independently verified public/heavy activation markers; nullable evidence, not inferred current execution versions.
 - `/api/status` intentionally omits the legacy top-level `gtProbe`, `priceProviderDiagnostics`, `cacheBlobSizes`, and `alertBroker` projections. The retired alert-broker summary is neither assessed nor published on any surface; DB and capacity health floors remain authoritative.
@@ -536,9 +565,10 @@ Since 2026-10-13 the public `/status/` verdict is a component projection, not th
 - **Safety Scores.** Public assessment reads the canonical `report-cards:v9:publication-health` sidecar even when yield has no safety snapshot, sharing that read with yield's independent availability check. `acceptedAtSec` and `acceptedPublicationGenerationId` name the accepted generation; a newer `attemptedAtSec` never renews freshness. A held publication is degraded with `safety-score-publication-held` and bounded `safety-score-publication-held:<code>` reasons (including `redemption-stale`). Accepted age strictly past `API_FRESHNESS_MAX_AGE_SEC.reportCards` degrades immediately: its delayed and degraded bands coincide with that existing budget, with the standard outage grace at twice the budget. Fresh accepted scores remain operational. Missing, malformed, unreadable, or invalid-clock publication evidence degrades with a named unavailable/read/timestamp reason, never operational.
 - **Headline.** `major-outage` when the database fails, a core component (website and API, stablecoin listings and prices) is in outage, or two components are; `partial-outage` for one non-core outage; then `degraded`, `delayed`, `operational`. The headline names the affected components.
 - **Compatibility.** `/api/health` keeps `status` as the worst raw input (probe semantics, API consumers) and adds `headline` and `components`. If no component explains a non-healthy `status`, the projection reports `website-api` degraded with `unattributed-public-health:<status>` rather than an operational headline.
-- **Persistence and `since`.** The status self-check reconciles the projection into `status_state` / `status_transitions` under scope `public` (`worker/src/lib/status/public-status-state.ts`). A row is written when the headline or any component state changes, a newly monitored component is enrolled, or bounded circuit/scheduler cause identity changes; `since` carries forward while a component keeps its state, and the first observation has no known start. Operator readers filter scope `global`, so the two streams never mix. `/api/health` re-projects over the live scheduler overlay and keeps persisted `since` only for components the overlay did not change.
-- **Public history.** `/api/public-status-history` serves the `public` rows (`source: "public"`, with `headline` and non-operational `components`) and, only for time before `publicHistoryStartedAt`, legacy operator transitions filtered by the public-impact allowlist (`source: "legacy"`; read with an upper bound at the cutover so post-cutover operator rows cannot crowd them out). `componentHistoryStartedAt` carries each component's first actual persisted observation. Existing monitored IDs retain the original public-history start when the state is upgraded; a newly added ID starts at its first reconciliation, even if operational. Bars leave earlier days unknown instead of inventing Safety Score history. Missing component-start evidence also stays unknown. `hasMore` marks a bounded page (R7); bars leave days before the oldest loaded row as no data. An operator incident still open at the cutover is closed there and labelled as handed off to the component log. `currentStatus` stays the worst raw input; `lastChangedAt` compares public rows against the headline's level and legacy rows against `currentStatus`.
-- **Sampling limits.** Public rows are written only by the status self-check (four runs an hour). A scheduler stall stops those runs, so a stall that recovers between runs, or a Worker rollback gap, leaves no public row; `/api/health` still reports the live overlay. When `/api/health` falls back to a live assessment (snapshot missing or its scheduler state unhealthy), `since` is null.
+- **Checked clock.** The public hero displays `assessedAt`, not the time a cached payload was served. Legacy responses without it use their original `timestamp`. A live scheduler read has its own D1 `observedAt` and cannot renew the assessment clock.
+- **Persistence and `since`.** The status self-check reconciles the projection into `status_state` / `status_transitions` under scope `public` (`worker/src/lib/status/public-status-state.ts`). A row is written when the headline or any component state changes, a newly monitored component is enrolled, or bounded circuit/scheduler cause identity changes; `since` carries forward while a component keeps its state, and the first observation has no known start. Operator readers filter scope `global`, so the two streams never mix. `/api/health` re-projects over advancing cache ages and the live scheduler overlay, keeping persisted `since` only for components whose state did not change.
+- **Public history.** `/api/public-status-history` serves the `public` rows (`source: "public"`, with `headline` and non-operational `components`) and, only for time before `publicHistoryStartedAt`, legacy operator transitions filtered by the public-impact allowlist (`source: "legacy"`; read with an upper bound at the cutover so post-cutover operator rows cannot crowd them out). `componentHistoryStartedAt` carries each component's first actual persisted observation. Existing monitored IDs retain the original public-history start when the state is upgraded; a newly added ID starts at its first reconciliation, even if operational. Bars leave earlier days unknown instead of inventing Safety Score history. Missing component-start evidence also stays unknown. `boundary` contains `{ at, components }` from the latest schema-admitted public transition at or before the requested window, ordered by observation time then row id; it is null when unavailable, malformed or separated from the returned rows by truncation. Historical bars use this persisted seed and in-window public rows, never the current live verdict or the oldest row's headline-level `from` value. Legacy cached responses without a seed leave the unproven interval as no data. `hasMore` marks a bounded page (R7); bars leave days before the oldest loaded row as no data. An operator incident still open at the cutover is closed there and labelled as handed off to the component log. `currentStatus` stays the worst raw input; `lastChangedAt` compares public rows against the headline's level and legacy rows against `currentStatus`.
+- **Sampling limits.** Public rows are written only by the status self-check (four runs an hour). A scheduler stall stops those runs, so a stall that recovers between runs, or a Worker rollback gap, leaves no public row; `/api/health` still reports the live overlay. The daily bars include that live verdict only in today's cell when its own assessment clock (`assessedAt`, otherwise the original `timestamp`) falls within today and is not in the future. A new outage cannot repaint earlier days, and a live recovery cannot erase an outage already observed during today. When `/api/health` falls back to a live assessment (snapshot missing or its scheduler state unhealthy), `since` is null.
 - **Thresholds.** `PUBLIC_COMPONENT_OUTAGE_GRACE_MULTIPLIER` and `MINT_BURN_PUBLIC_FRESHNESS_DEGRADED_RATIO` live in `shared/lib/public-health.ts`, not `shared/lib/status-thresholds.ts`, because the latter is a pinned Safety Score V9 evaluation input.
 
 ## Cron error escalation
@@ -554,6 +584,7 @@ Availability escalation on cron errors follows a transient-vs-sustained split:
   Status evaluation preserves that unavailable branch without running numeric coverage or stale-feed array rules, so a failed reserve read still returns the degraded status response rather than aborting the endpoint.
   The `shared/lib/status-reserve-composition.ts` factory owns this unavailable shape for Worker evaluation and status contract fixtures.
 - `liquidityHealth`: admin-only DEX liquidity coverage summary derived from the newest `sync-dex-liquidity` run that actually carries `metadata.sourceCoverage`, within that cron's `2 * expectedIntervalSec` freshness budget. The half-hourly cadence only remeasures once per hour, so the cadence-reuse `skipped_neutral` partner run persists `sourceCoverage: null`; the supplement falls back to the previous `ok` run's measurement instead of publishing `null` beside a populated cron entry. `sourceRunStartedAt` names the run the numbers came from, and a sync stalled beyond the budget publishes `null` — no stale coverage presented as current.
+  Selected telemetry is admitted through the shared `LiquidityHealthSchema`, including explicit run identity and `metadata.failedSources`; incomplete or malformed evidence yields `liquidityHealth: null` plus `sectionErrors.liquidityHealth.code: "liquidity_health_extraction_failed"`. Values are not coerced or defaulted: complete observed zero/false telemetry stays valid, as do deliberately nullable prior baselines/classes with their named `baselineReadFailures`. A malformed section does not discard unrelated supplements.
 - `yieldHealth`: admin-only yield health summary sourced from existing cache rows and cron metadata (`yield-rankings`, `yield:supplemental-sources:v1:*`, `yield-coverage-audit`, and `sync-yield-data`). It reports ranking count/update age, previous-vs-current ranking-count delta, live-safety hydration coverage, per-family supplemental cache age, per-key benchmark registry health, coverage-audit age, source-risk field coverage, comparison-anchor freshness, latest cron status, a field-level status, status-impact class, and the yield runbook link. The retired legacy USD-only `benchmark` projection is no longer published.
 - `publicationHealth`: admin-only read-only publication generation summary for `dex-liquidity`, `yield-rankings`, `stablecoins`, `dews`, `psi`, and `safety-score-v9`. The V9 surface is derived from the canonical `report-cards:v9` publication and matching publication-health row; it does not consult the retired V8 compact cache.
 - `dependencyHealth`: admin-only derived dependency matrix built from existing `caches`, `crons`, and `publicationHealth` plus `shared/lib/data-dependency-registry.ts`. Cache-backed signals use the same override-aware availability ratio bands as public cache health, so `maxAge` remains a baseline rather than an immediate stale cutoff; producer-source degradation remains independently visible. It groups degraded/stale downstream symptoms under the most likely stale upstream dependency (for example DEX liquidity -> DEWS/report-card/redemption symptoms) without changing `availabilityStatus`, `dataQualityStatus`, or publication behavior.
@@ -677,7 +708,7 @@ The UI consumes the typed block and dispatch metadata; missing optional telemetr
 
 Recent sending stays separate; active executionUnknown includes unexpired explicit fresh-target unknown outcomes plus pending/fresh sends older than 15 minutes, with source splits, oldest unknown age and bounded-sample saturation. Expired unknown rows remain evidence. `deliverySli` is a bounded 24h event/target-ledger rollup with availability/quality/freshness: acceptance means Bot API accepted, not received/opened/read. Query failure returns availability/quality unavailable, freshness unknown and rollup null, never zeroes.
 
-Latest run/breakdown comes from the Access-protected `GET /api/status-cron-detail?job=dispatch-telegram-alerts` → `cron.runs[0].metadata`: `subscribersNotified`, `messagesSent`, `blockedUsersCleanedUp`, `eventsDetected`, `snapshotSeeded`, `cappedAtLimit`, plus `freshRetryQueued`, `freshPermanentFailures`, `pendingRetryQueued`, `pendingDeferred`, `pendingRateLimited`, `pendingRetryAfterSec`, `pendingDropped`, `pendingDroppedTtlExpired`, `pendingDroppedPermanentFailure`, `pendingDroppedMaxAttemptsFallback`.
+Current run/breakdown comes from the Access-protected `GET /api/status-cron-detail?job=dispatch-telegram-alerts` → `cron.runs[0].metadata`: `subscribersNotified`, `messagesSent`, `blockedUsersCleanedUp`, `eventsDetected`, `snapshotSeeded`, `cappedAtLimit`, and the pending transport's retries, deferrals, rate limits and classified drops. The default summary's `latestRunFacts` retains the current counters needed by Comms, not retired fresh-send or per-family compatibility metrics. Comms renders bounded `deliverySli.rollup.authoritativeTargetOutcomes` with evidence freshness/quality and separate mixed-family lineage; failed SLI reads remain unavailable. Historical fresh-send and dominant-family metadata remains available only in raw cron detail, not as current measurements.
 
 ## Synthetic self-check
 
@@ -838,7 +869,7 @@ Handler-dispatched operator catalog actions are audited in `admin_action_audit`,
 
 An unconfirmed handler response at HTTP 5xx after idempotent execution has started is returned as `execution_unknown`; the Worker attempts to persist that terminal state. A successful write makes the same key replay it. If the terminal write fails, durable terminal unknown evidence is not guaranteed, but the started reservation remains the recovery fence. If the action result exists but its canonical audit write fails, the router returns `503 audit_persistence_failed` with the original idempotency key/replay marker and `X-Execution-Certainty: audit-incomplete`. Retrying that key replays the stored result and attempts to backfill the audit row without repeating the action.
 
-`GET /api/admin-action-log?limit=100` feeds persistent execution history. The Actions and History workspaces reconcile it with current-session state, but session-only results remain explicitly labeled until the deployed backend can return their durable row.
+`GET /api/admin-action-log?limit=100` feeds persistent execution history. The Actions and History workspaces reconcile current-session intents only when the canonical action path and `details.idempotencyKeyHash` match the session request's SHA-256 `Idempotency-Key` hash. One matched identity contributes one persisted activity, retaining its authoritative outcome, actor, target and audit clock alongside session-local status, in-flight state and scope context. Different hashes remain distinct regardless of display labels, mode text or nearby timestamps. Historical rows without identity evidence remain separate persisted provenance; session-only results stay explicitly labeled until their durable row is available. Raw idempotency keys are not added to audit history.
 
 Persisted audit coverage boundary (intentional):
 
@@ -879,6 +910,8 @@ High confidence means independent agreeing sources or a validated authoritative 
 ## CoinGecko Price Drift Card
 
 `CoinGeckoPriceDiffCard` (`src/components/status/coingecko-price-diff.tsx`) reads the admin `/api/status` supplement. It flags active tracked assets with `geckoId`, a current comparable Pharos price, and a live CoinGecko difference above 5%, sorted by `diffPct` descending. The batched `simple/price` read admits only upstream timestamps accepted by the shared freshness validator; missing, invalid, stale or materially future timestamps are not comparable. A failed lookup returns `null` and `sectionErrors.coingeckoPriceDiff`, not a no-drift claim.
+
+The retained operator-only historical depeg audit is separate from this live card. Its [sample-admission and completeness contract](./runbooks/one-shot-backfills.md#audit-depeg-history) rejects malformed or out-of-window millisecond clocks before price validation and reports `rejectedByTimestampCount`; rejected temporal evidence cannot establish a confirmed, disputed or false-positive verdict. It neither changes the live drift threshold nor automatically rewrites retained audit provenance.
 
 ## D1 Usage Card
 
@@ -935,3 +968,38 @@ Producer behavior, budgets and recovery are documented in [Mint/Burn Flows: Raw 
 | Thresholds, cron metadata, endpoint registry | `shared/lib/status-thresholds.ts`, `shared/lib/cron-jobs.ts`, `shared/lib/api-endpoints/` |
 | Status APIs and persistence | `worker/src/api/status.ts`, `worker/src/api/status-history.ts`, `worker/src/lib/status/`, `worker/src/lib/status-state-store.ts` |
 | Synthetic verification | `worker/src/cron/status-self-check.ts` |
+
+## Cron Implementation Appendix
+
+### Cron metadata persistence budget
+
+`worker/src/lib/cron-metadata-persistence.ts` owns write-time UTF-8 admission: **8 KiB per job** by default,
+including scheduler/lease identity. Explicit exceptions preserve existing consumer contracts: **16 KiB**
+for `sync-dex-liquidity` source coverage; **32 KiB** for each mint/burn lane's cursor/head coverage and
+`sync-live-reserves` exact breaker names / warning cohorts; **64 KiB minus one byte** for
+`sync-stablecoins` complete missing-asset continuity and `cron-sentinel` nested source /
+stale-generation evidence. These are ceilings, not producer targets.
+
+Above budget, named forensic diagnostics (`adapterLatency`, `priceSourceAttemptLedger`,
+`providerDiagnostics`, `fullAssets`, `bridgeJoinDiagnostics`) are summarized first. Remaining unread
+collections can move into bounded `diagnostics`; compaction records its original size, budget and omitted
+diagnostic count. Consumer-read fields stay at their original paths and retain their complete shape:
+publication/reason/quality, mode, stale rows and source evidence, `resourcePressure`, `d1Cost`, retention /
+truncation flags, coverage, ledger and scheduler identity. `breakerKeys` remains an exact list because the
+reserve summary renders names; `activePriceCoverage` retains full missing IDs/state because the next run
+and public health reconstruct streaks from it. These two fields must not become counts. If contractual
+evidence alone exceeds its job exception, terminal persistence still proceeds with
+`persistenceCompaction.overBudget: true` and a warning log naming the job, budget and actual persisted
+bytes. Consumer evidence is never dropped to meet the budget, and a budget exception cannot prevent
+terminal accounting. Normally compacted rows carry `overBudget: false`.
+
+`cron_runs.metadata` is the sole rich terminal payload. Producer history keeps only `mxLedger*` activation
+evidence plus accepted-terminal arbitration scalars; the child-attempt table stores fencing columns, not
+another JSON copy. Live `cron_run_progress` remains a separate bounded, temporary observation. Lease
+normalization never sacrifices consumer evidence to reserve space for adapter diagnostics.
+
+Scheduler-normalized row and validation counters (`rowsRead`, `rowsWritten`, `rowsDropped`,
+`validationFailures`) preserve explicit `null` and use `null` for missing measurements. Numeric values
+come from producer observations: zero means an observed zero, not absent telemetry. `itemCount` is not
+a write count and does not populate `rowsWritten`. Terminal compaction retains these values unchanged;
+forensic consumers must treat null as unavailable and must not reinterpret historical defaults as measured counts.

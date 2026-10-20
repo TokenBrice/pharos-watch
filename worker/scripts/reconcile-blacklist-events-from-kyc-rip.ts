@@ -26,6 +26,8 @@ type ExistingRow = {
   stablecoin: "USDT" | "USDC";
   chain_id: "ethereum";
   address: string;
+  contract_address: string | null;
+  tx_hash: string;
 };
 
 type ParsedReceiptLog = {
@@ -73,20 +75,20 @@ export function parseEventArgs(argv: string[]): EventCliOptions {
   return parseKycRipCliArgs(argv, EVENT_CLI_HELP);
 }
 
-function buildAddressKey(stablecoin: "USDT" | "USDC", address: string): string {
-  return `${stablecoin}:${address.toLowerCase()}`;
+function buildEventKey(stablecoin: "USDT" | "USDC", chainId: string, contractAddress: string | null, txHash: string, address: string): string {
+  return `${stablecoin}:${chainId}:${contractAddress?.toLowerCase() ?? ""}:${txHash.toLowerCase()}:${address.toLowerCase()}`;
 }
 
 function loadExistingEthereumBlacklistSet(d1: RemoteD1Client): Set<string> {
   const rows = d1.query<ExistingRow>(
-    `SELECT stablecoin, chain_id, address
+    `SELECT stablecoin, chain_id, contract_address, tx_hash, address
      FROM blacklist_events
      WHERE chain_id = 'ethereum'
        AND stablecoin IN ('USDT', 'USDC')
        AND event_type = 'blacklist'`,
   );
 
-  return new Set(rows.map((row) => buildAddressKey(row.stablecoin, row.address)));
+  return new Set(rows.map((row) => buildEventKey(row.stablecoin, row.chain_id, row.contract_address, row.tx_hash, row.address)));
 }
 
 function getEthereumConfig(stablecoin: "USDT" | "USDC"): ContractEventConfig {
@@ -105,7 +107,7 @@ async function fetchReceiptRow(
   const block = await client.getBlock({ blockNumber: receipt.blockNumber });
   const parsed = parseEvmLogsWithCoverage(
     config,
-    receipt.logs.map((log) => ({
+    receipt.logs.filter((log) => log.address.toLowerCase() === config.contractAddress.toLowerCase()).map((log) => ({
       address: log.address,
       topics: [...log.topics],
       data: log.data,
@@ -196,7 +198,10 @@ export async function runEventReconciliation(
 
   const d1 = dependencies.d1 ?? createRemoteD1Client(options.database);
   const existing = loadExistingEthereumBlacklistSet(d1);
-  const candidates = rows.filter((row) => !existing.has(buildAddressKey(row.asset, row.address)));
+  const candidates = rows.filter((row) => {
+    const config = getEthereumConfig(row.asset);
+    return !existing.has(buildEventKey(row.asset, config.chain.chainId, config.contractAddress, row.tx_hash, row.address));
+  });
   const rpcUrl = process.env.ETHEREUM_RPC_URL ?? "https://ethereum-rpc.publicnode.com";
   const client = dependencies.client ?? createPublicClient({ chain: mainnet, transport: http(rpcUrl) });
   const insertedRows: BlacklistRow[] = [];

@@ -7,7 +7,7 @@ import { mockFetchRetry } from "../../../src/test-helpers/cron";
 import { D1_BATCH_SIZE } from "../../../src/lib/constants";
 import { makeAuditEvent } from "../../../src/api/__tests__/depeg-replay.test-support";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-import { seedPsiPairedHistory, seedPsiEvent, readPsiDay } from "../../../src/api/__tests__/psi-replay.test-support";
+import { seedPsiPairedHistory, seedPsiSupply, seedPsiEvent, readPsiDay } from "../../../src/api/__tests__/psi-replay.test-support";
 import { buildRecomputeStabilityStatements } from "../audit-depeg-history/stability-recompute";
 import { loadPsiEligibleDepegEvents } from "../../../src/lib/psi-replay-inputs";
 
@@ -539,6 +539,56 @@ describe("handleAuditDepegHistory method safety", () => {
     ]);
   });
 
+  it("separates missing and stale supply from observed zero, below-threshold and qualifying history", async () => {
+    fetchWithRetryMock.mockReset();
+    const { sqlite, db } = fixtures.open();
+    const startedAt = 1_800_000_000;
+    const events = ["missing", "stale", "zero", "below", "qualifying"].map((stablecoin_id, index) =>
+      makeAuditEvent({
+        id: 200 + index, stablecoin_id, symbol: "TEST",
+        started_at: startedAt + (stablecoin_id === "qualifying" ? 100 * DAY_SECONDS : 0),
+      }));
+    seedPsiSupply(sqlite, [
+      { stablecoin_id: "stale", snapshot_date: startedAt + 31 * DAY_SECONDS, circulating_usd: 200_000_000 },
+      { stablecoin_id: "zero", snapshot_date: startedAt, circulating_usd: 0 },
+      { stablecoin_id: "below", snapshot_date: startedAt, circulating_usd: 99_999_999 },
+      { stablecoin_id: "qualifying", snapshot_date: startedAt + 70 * DAY_SECONDS, circulating_usd: 100_000_000 },
+    ]);
+    const result = await auditEvents(db, {
+      events, minSupply: 100_000_000, symbolFilter: null, offset: 0, limit: 10,
+      dryRun: true, coingeckoApiKey: "cg-test-key",
+    });
+    expect(result.totalMatching).toBe(1);
+    expect(result.auditedEvents).toEqual([expect.objectContaining({ id: 204, verdict: "skipped" })]);
+    expect(result.belowMinSupplyExcludedCount).toBe(2);
+    expect(result.unavailableSupplyExcludedCount).toBe(2);
+    expect(result.unavailableSupplyExclusions).toEqual([
+      { id: 200, stablecoinId: "missing", symbol: "TEST", startedAt, reason: "history-missing" },
+      { id: 201, stablecoinId: "stale", symbol: "TEST", startedAt, reason: "history-outside-tolerance" },
+    ]);
+    expect(result.unavailableSupplyExclusionsTruncated).toBe(false);
+    expect(fetchWithRetryMock).not.toHaveBeenCalled();
+  });
+
+  it("counts unavailable supply before pagination while bounding detail identities", async () => {
+    const { db } = fixtures.open();
+    const events = Array.from({ length: 30 }, (_, index) => makeAuditEvent({
+      id: 300 + index, stablecoin_id: "missing", symbol: "TEST",
+    }));
+    const result = await auditEvents(db, {
+      events: [...events, makeAuditEvent({ id: 999, symbol: "OTHER" })],
+      minSupply: 1, symbolFilter: "TEST", offset: 100, limit: 1,
+      dryRun: true, coingeckoApiKey: "cg-test-key",
+    });
+    expect(result.totalMatching).toBe(0);
+    expect(result.auditedEvents).toEqual([]);
+    expect(result.unavailableSupplyExcludedCount).toBe(30);
+    expect(result.unavailableSupplyExclusions).toHaveLength(25);
+    expect(result.unavailableSupplyExclusions[24]).toMatchObject({ id: 324, reason: "history-missing" });
+    expect(result.unavailableSupplyExclusionsTruncated).toBe(true);
+    expect(result.belowMinSupplyExcludedCount).toBe(0);
+  });
+
   it("does not confirm a below-peg event with above-peg CoinGecko movement", async () => {
     fetchWithRetryMock.mockReset();
     fetchWithRetryMock.mockResolvedValue(
@@ -764,6 +814,58 @@ describe("audit provenance PSI transaction", () => {
     new Response(JSON.stringify({ prices: [[(day + 3600) * 1000, price]] }), {
       headers: { "Content-Type": "application/json" },
     }));
+
+  it.each([
+    { label: "null envelope", body: null, rejected: 0 },
+    { label: "missing prices", body: {}, rejected: 0 },
+    { label: "non-array prices", body: { prices: {} }, rejected: 0 },
+    { label: "wrong range", body: { prices: [[0, 1], [0, 0.97], [0, 1.02]] }, rejected: 3 },
+    { label: "seconds instead of milliseconds", body: { prices: [[day + 3600, 1]] }, rejected: 1 },
+    {
+      label: "invalid clocks and tuples",
+      body: { prices: [[null, 1], ["invalid", 1], [-1, 1], [Number.MAX_SAFE_INTEGER + 1, 1],
+        [(day + 3600) * 1000 + 0.5, 1], null, [day * 1000]] },
+      rejected: 7,
+    },
+    {
+      label: "just outside inclusive bounds",
+      body: { prices: [[day * 1000 - 1, 1], [(day + 10800) * 1000 + 1, 1]] },
+      rejected: 2,
+    },
+  ])("retains prior provenance and PSI for $label", async ({ body, rejected }) => {
+    const { sqlite, db, event } = await setup();
+    const original = readPsiDay(sqlite, day);
+    fetchWithRetryMock.mockImplementation(async () =>
+      new Response(JSON.stringify(body), { headers: { "Content-Type": "application/json" } }));
+    const result = await auditEvents(db, {
+      events: [event], minSupply: 0, symbolFilter: null, offset: 0, limit: 10,
+      dryRun: false, coingeckoApiKey: "cg-test-key",
+    });
+    expect(result.auditedEvents[0]).toMatchObject({ verdict: "error", cgMaxBps: null });
+    expect(result.rejectedByTimestampCount).toBe(rejected);
+    expect(result.rejectedByValidationCount).toBe(0);
+    expect(result.falsePositivesFound).toBe(0);
+    expect(result.upstreamReachable).toBe(false);
+    expect(sqlite.prepare("SELECT audit_verdict FROM depeg_event_provenance WHERE event_id = 1").get())
+      .toMatchObject({ audit_verdict: "confirmed" });
+    expect(readPsiDay(sqlite, day)).toEqual(original);
+  });
+
+  it.each([
+    { price: 1, verdict: "false_positive", bps: 0 },
+    { price: 0.97, verdict: "confirmed", bps: 300 },
+    { price: 1.02, verdict: "disputed", bps: 200 },
+  ])("admits inclusive in-window samples at $price with $verdict verdict", async ({ price, verdict, bps }) => {
+    const event = makeAuditEvent({ started_at: day + 3600, ended_at: day + 7200, direction: "below" });
+    fetchWithRetryMock.mockImplementation(async () => new Response(JSON.stringify({
+      prices: [[day * 1000 - 1, 0.9], [day * 1000, price], [(day + 10800) * 1000, price]],
+    }), { headers: { "Content-Type": "application/json" } }));
+    const result = await runCoinGeckoAuditBatch(mockD1([]), [event], "cg-test-key");
+    expect(result.outcomes[0]).toMatchObject({
+      auditedEvent: { verdict, cgMaxBps: bps }, provenanceVerdict: verdict,
+      rejectedByTimestampCount: 1, rejectedByValidationCount: 0, upstreamError: false,
+    });
+  });
 
   it("excludes invalidated events and restores confirmed events in the same provenance-plus-PSI commit", async () => {
     const { sqlite, db, event } = await setup();

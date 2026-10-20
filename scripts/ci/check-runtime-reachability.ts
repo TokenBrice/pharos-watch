@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { existsSync, statSync } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
 import { argv as processArgv } from "node:process";
 import { build, type Metafile, type Plugin } from "esbuild";
@@ -71,9 +71,13 @@ function isFile(path: string): boolean {
 }
 
 
-function hasUseClientDirective(source: string): boolean {
-  const withoutBom = source.charCodeAt(0) === 0xfeff ? source.slice(1) : source;
-  return /^["']use client["'];/.test(withoutBom.trimStart());
+function hasUseClientDirective(path: string): boolean {
+  const { sourceFile } = parseSourceFile(path);
+  for (const statement of sourceFile.statements) {
+    if (!ts.isExpressionStatement(statement) || !ts.isStringLiteral(statement.expression)) break;
+    if (statement.expression.text === "use client") return true;
+  }
+  return false;
 }
 
 function resolveRelativeModule(root: string, fromFile: string, specifier: string): string | null {
@@ -151,7 +155,7 @@ function resolveEntrypoints(
   }).filter(isProductionSourceFile);
   const entrypoints = selector.kind === "source-files"
     ? files
-    : files.filter((path) => hasUseClientDirective(readFileSync(resolve(root, path), "utf8")));
+    : files.filter((path) => hasUseClientDirective(resolve(root, path)));
   return {
     configurationErrors: entrypoints.length === 0
       ? [`Configured entrypoint root resolved no entrypoints: ${toRepoPath(root, selector.root)}`]
@@ -365,9 +369,13 @@ export async function checkRuntimeReachabilityPolicy(
       configurationErrors.push(`Configured direct-import source is missing: ${toRepoPath(root, entrypoint)}`);
       continue;
     }
-    const source = readFileSync(absolutePath, "utf8");
+    const { sourceFile } = parseSourceFile(absolutePath);
+    const imports = new Set(sourceFile.statements.flatMap((statement) =>
+      ts.isImportDeclaration(statement) && ts.isStringLiteral(statement.moduleSpecifier)
+        ? [statement.moduleSpecifier.text] : [],
+    ));
     for (const specifier of policy.directImports?.forbiddenSpecifiers ?? []) {
-      if (source.includes(`from "${specifier}"`) || source.includes(`from '${specifier}'`)) {
+      if (imports.has(specifier)) {
         violations.push({ entrypoint, forbidden: specifier, kind: "direct-import" });
       }
     }

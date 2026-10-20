@@ -5,7 +5,8 @@ import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import type { ScheduledWorkerRole } from "@shared/lib/scheduled-runner-registry";
 
 const EXPECTED_CUSTOM_DOMAINS = ["api.pharos.watch", "ops-api.pharos.watch", "site-api.pharos.watch"] as const;
-const EXPECTED_RULE_TYPES = ["CompiledWasm", "Data"] as const;
+const EXPECTED_RULE_GLOBS: Record<string, string> = { CompiledWasm: "**/*.wasm", Data: "**/*.ttf" };
+const EXPECTED_RULE_TYPES = Object.keys(EXPECTED_RULE_GLOBS).sort();
 const EXPECTED_ADDRESS_PRICE_PROVIDER_SETTING = "coingecko-onchain-address";
 const PAIRED_RUNTIME_FIELDS = [
   { section: "root", key: "compatibility_date" },
@@ -170,6 +171,11 @@ export function evaluateWorkerWranglerConfig(
     if (!type) {
       issues.push("Every [[rules]] entry must declare a string type.");
       continue;
+    }
+    const expectedGlob = EXPECTED_RULE_GLOBS[type];
+    const globs = rule.find(({ key }) => key === "globs")?.value.match(/^\[\s*(["'])([^"']*)\1\s*,?\s*\]$/);
+    if (expectedGlob && globs?.[2] !== expectedGlob) {
+      issues.push(`[[rules]] entry ${type} must set globs = ["${expectedGlob}"].`);
     }
     const fallthrough = rule.find(({ key }) => key === "fallthrough")?.value.trim();
     if (fallthrough !== "true") {

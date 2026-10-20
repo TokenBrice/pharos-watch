@@ -46,12 +46,18 @@ export function findFetchBodyTimeoutViolations(
   function assign(name: ts.Identifier, value: ts.Expression | undefined, declaration: ts.Node): void {
     const symbol = checker.getSymbolAtLocation(name);
     if (!symbol) return;
+    const expression = value && (ts.isAwaitExpression(value) ? value.expression : value);
+    const sourceSymbol = expression && ts.isIdentifier(expression) ? checker.getSymbolAtLocation(expression) : undefined;
+    const response = sourceSymbol && tracked.get(sourceSymbol);
+    const fetchAlias = value && isFetchCallee(value);
     tracked.delete(symbol);
     aliases.delete(symbol);
-    if (!value) return;
-    if (isFetchCallee(value)) aliases.add(symbol);
-    const expression = ts.isAwaitExpression(value) ? value.expression : value;
-    if (!ts.isCallExpression(expression) || !isFetchCallee(expression.expression)) return;
+    if (fetchAlias) aliases.add(symbol);
+    if (response) {
+      tracked.set(symbol, { ...response, name: name.text });
+      return;
+    }
+    if (!expression || !ts.isCallExpression(expression) || !isFetchCallee(expression.expression)) return;
     const line = sourceFile.getLineAndCharacterOfPosition(declaration.getStart(sourceFile)).line + 1;
     tracked.set(symbol, { name: name.text, line });
   }

@@ -358,10 +358,11 @@ export async function runParallelExecutionUnits<
   }
 
   const firstAborted = results.find((result) => result?.aborted);
+  const aborted = firstAborted != null || signal?.aborted === true || nextIndex < units.length;
   return {
-    status: firstAborted?.status ?? 0,
+    status: firstAborted?.status ?? (aborted ? 130 : 0),
     failedCmd: firstAborted?.failedCmd ?? null,
-    aborted: firstAborted?.aborted ?? false,
+    aborted,
     failures,
     results: results.filter((result): result is ExecutionUnitResult<TUnit> => result != null),
   };

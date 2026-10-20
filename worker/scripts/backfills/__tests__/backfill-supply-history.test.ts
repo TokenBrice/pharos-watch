@@ -1,6 +1,7 @@
 import { readJsonResponse } from "../../../src/test-helpers/__shared/auth";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 as baseMockD1 } from "@shared/test-utils/mock-d1";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../../src/test-helpers/__shared/auth";
 import { registerStablecoinParameterContract } from "../../../src/test-helpers/__shared/endpoint-contracts";
 import type { ChainRpcConfig } from "../../../src/lib/chain-registry";
@@ -21,6 +22,8 @@ function mockD1(
 type PsiEligibleCoin = (typeof import("@shared/lib/psi-eligible"))["PSI_ELIGIBLE_STABLECOINS"][number];
 
 stubCryptoForAuth();
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(() => fixtures.closeAll());
 
 const evmRpcMocks = vi.hoisted(() => ({
   resolveClosestBlockAtOrBeforeTimestamp: vi.fn(),
@@ -199,6 +202,79 @@ describe("handleBackfillSupplyHistory", () => {
         headers: expect.objectContaining({ "User-Agent": expect.any(String) }),
       }),
     );
+  });
+
+  it.each([false, true])("persists observed zero, replacing a prior positive row when present (%s)", async (seedPrior) => {
+    const { db, sqlite } = fixtures.open();
+    const day = Date.UTC(2026, 3, 9) / 1000;
+    if (seedPrior) {
+      sqlite.prepare("INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price) VALUES (?, ?, ?, ?)")
+        .run("usdt-tether", day, 100_000_000, 0.99);
+    }
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () =>
+      Response.json({ tokens: [{ date: day, circulating: { peggedUSD: 0 } }] }));
+    const path = "/api/backfill-supply-history?stablecoin=usdt-tether&startDay=2026-04-09&endDay=2026-04-09";
+    const res = await handleBackfillSupplyHistoryTrusted({
+      db, url: makeApiUrl(path), request: makeApiRequest(path, { adminKey: "secret" }),
+    });
+    expect((await readJsonResponse<{ rowsInserted: number }>(res, 200)).rowsInserted).toBe(1);
+    expect(sqlite.prepare("SELECT circulating_usd, price FROM supply_history WHERE stablecoin_id = ? AND snapshot_date = ?")
+      .get("usdt-tether", day)).toEqual({ circulating_usd: 0, price: null });
+  });
+
+  it.each([false, true])("persists native non-USD zero without valuation even alongside an unpriceable positive (%s)", async (mixed) => {
+    const { db, sqlite } = fixtures.open();
+    const day = Date.UTC(2026, 3, 9) / 1000;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () => Response.json({
+      tokens: [
+        { date: day, circulating: { peggedEUR: 0 } },
+        ...(mixed ? [{ date: day + 86_400, circulating: { peggedEUR: 100 } }] : []),
+      ],
+    }));
+    const path = "/api/backfill-supply-history?stablecoin=euro3-3a-dao&startDay=2026-04-09&endDay=2026-04-10";
+    const res = await handleBackfillSupplyHistoryTrusted({
+      db, url: makeApiUrl(path), request: makeApiRequest(path, { adminKey: "secret" }),
+    });
+    const body = await readJsonResponse<{ rowsInserted: number; errors?: string[] }>(res, 200);
+    expect(body.rowsInserted).toBe(1);
+    if (mixed) expect(body.errors?.[0]).toContain("non-USD coin missing historical prices");
+    else expect(body.errors).toBeUndefined();
+    expect(sqlite.prepare("SELECT snapshot_date, circulating_usd, price FROM supply_history WHERE stablecoin_id = ?")
+      .all("euro3-3a-dao")).toEqual([{ snapshot_date: day, circulating_usd: 0, price: null }]);
+  });
+
+  it.each([undefined, null, {}, { peggedUSD: null }, { peggedUSD: "0" }, { peggedUSD: -1 }, { peggedUSD: 0, other: null }])(
+    "withholds absent or malformed buckets without replacing history (%j)", async (circulating) => {
+      const { db, sqlite } = fixtures.open();
+      const day = Date.UTC(2026, 3, 9) / 1000;
+      sqlite.prepare("INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price) VALUES (?, ?, ?, ?)")
+        .run("usdt-tether", day, 100, 0.99);
+      vi.spyOn(globalThis, "fetch").mockImplementation(async () =>
+        Response.json({ tokens: [{ date: day, circulating }] }));
+      const path = "/api/backfill-supply-history?stablecoin=usdt-tether&startDay=2026-04-09&endDay=2026-04-09";
+      const res = await handleBackfillSupplyHistoryTrusted({
+        db, url: makeApiUrl(path), request: makeApiRequest(path, { adminKey: "secret" }),
+      });
+      expect((await readJsonResponse<{ rowsInserted: number }>(res, 200)).rowsInserted).toBe(0);
+      expect(sqlite.prepare("SELECT circulating_usd, price FROM supply_history WHERE stablecoin_id = ? AND snapshot_date = ?")
+        .get("usdt-tether", day)).toEqual({ circulating_usd: 100, price: 0.99 });
+    },
+  );
+
+  it("retains prior history when an observed-zero replacement fails during persistence", async () => {
+    const { db, sqlite } = fixtures.open();
+    const day = Date.UTC(2026, 3, 9) / 1000;
+    sqlite.prepare("INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price) VALUES (?, ?, ?, ?)")
+      .run("usdt-tether", day, 100, 0.99);
+    sqlite.exec("CREATE TRIGGER fail_supply_write AFTER INSERT ON supply_history BEGIN SELECT RAISE(ABORT, 'injected supply write failure'); END");
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () =>
+      Response.json({ tokens: [{ date: day, circulating: { peggedUSD: 0 } }] }));
+    const path = "/api/backfill-supply-history?stablecoin=usdt-tether&startDay=2026-04-09&endDay=2026-04-09";
+    await expect(handleBackfillSupplyHistoryTrusted({
+      db, url: makeApiUrl(path), request: makeApiRequest(path, { adminKey: "secret" }),
+    })).rejects.toThrow("injected supply write failure");
+    expect(sqlite.prepare("SELECT circulating_usd, price FROM supply_history WHERE stablecoin_id = ? AND snapshot_date = ?")
+      .get("usdt-tether", day)).toEqual({ circulating_usd: 100, price: 0.99 });
   });
 
   it("preserves unbounded history for bare backfill calls", async () => {
@@ -931,8 +1007,82 @@ describe("handleBackfillSupplyHistory", () => {
     expect(body.errors?.[0]).toContain("CoinGecko market caps all zero");
   });
 
+  it.each([
+    [undefined, "100", "equivalence unavailable"],
+    ["null", "100", "equivalence unavailable"],
+    ["0", "100", "equivalence unavailable"],
+    ["-1", "100", "equivalence unavailable"],
+    ['"100"', "100", "equivalence unavailable"],
+    ["1e400", "100", "equivalence unavailable"],
+    ["100", "0", "equivalence unavailable"],
+    ["100", "-1", "equivalence unavailable"],
+    ["100", "1e400", "equivalence unavailable"],
+    ["84", "100", "divergence"],
+    ["116", "100", "divergence"],
+    ["85", "100", null],
+    ["100", "100", null],
+    ["115", "100", null],
+  ])("requires usable in-band TVL equivalence (mcap=%s, latest TVL=%s)", async (mcap, latestTvl, error) => {
+    const { db, sqlite } = fixtures.open();
+    const day = Date.UTC(2026, 3, 9) / 1000;
+    sqlite.prepare("INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price) VALUES (?, ?, ?, ?)")
+      .run("xaut-tether", day, 77, 2_000);
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.includes("/market_chart")) return Response.json({ market_caps: [], prices: [] });
+      if (url.includes("/coins/tether-gold?")) return Response.json({ market_data: { circulating_supply: 0 } });
+      if (url.includes("/protocol/tether-gold")) {
+        // JSON's numeric exponent exercises a non-finite parsed number, not null serialization.
+        return new Response(`{${mcap === undefined ? "" : `"mcap":${mcap},`}"tvl":[{"date":${day},"totalLiquidityUSD":50},{"date":${day + 86_400},"totalLiquidityUSD":${latestTvl}}]}`,
+          { headers: { "Content-Type": "application/json" } });
+      }
+      if (url.includes("/chart/coingecko:tether-gold")) return Response.json({ coins: {} });
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+    const path = "/api/backfill-supply-history?stablecoin=xaut-tether&startDay=2026-04-09&endDay=2026-04-09";
+    const res = await handleBackfillSupplyHistoryTrusted({
+      db, url: makeApiUrl(path), request: makeApiRequest(path, { adminKey: "secret" }),
+    });
+    const body = await readJsonResponse<{ rowsInserted: number; errors?: string[] }>(res, 200);
+    expect(body.rowsInserted).toBe(error ? 0 : 1);
+    if (error) expect(body.errors?.[0]).toContain(error);
+    else expect(body.errors).toBeUndefined();
+    expect(sqlite.prepare("SELECT circulating_usd, price FROM supply_history WHERE stablecoin_id = ? AND snapshot_date = ?")
+      .get("xaut-tether", day)).toEqual(error
+        ? { circulating_usd: 77, price: 2_000 }
+        : { circulating_usd: 50, price: null });
+  });
+
+  it.each([
+    { pegCurrency: "USD" as const, protocolSlug: "tether-gold" },
+    { pegCurrency: "GOLD" as const, protocolSlug: "multi-token-protocol" },
+  ])("rejects protocol TVL without dedicated commodity identity (%j)", async ({ pegCurrency, protocolSlug }) => {
+    const source = psiEligibleMocks.metaById.get("xaut-tether")!;
+    const fixture = { ...source, flags: { ...source.flags, pegCurrency }, protocolSlug };
+    psiEligibleMocks.metaById.set(fixture.id, fixture);
+    psiEligibleMocks.stablecoins.splice(0, psiEligibleMocks.stablecoins.length, fixture);
+    const { db, sqlite } = fixtures.open();
+    const day = Date.UTC(2026, 3, 9) / 1000;
+    sqlite.prepare("INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price) VALUES (?, ?, ?, ?)")
+      .run(fixture.id, day, 77, 2_000);
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      if (String(input).includes("/market_chart")) return Response.json({ market_caps: [], prices: [] });
+      if (String(input).includes("/coins/tether-gold?")) return Response.json({ market_data: { circulating_supply: 0 } });
+      throw new Error(`Unexpected fallback fetch: ${input}`);
+    });
+    const path = "/api/backfill-supply-history?stablecoin=xaut-tether&startDay=2026-04-09&endDay=2026-04-09";
+    const res = await handleBackfillSupplyHistoryTrusted({
+      db, url: makeApiUrl(path), request: makeApiRequest(path, { adminKey: "secret" }),
+    });
+    const body = await readJsonResponse<{ rowsInserted: number; errors?: string[] }>(res, 200);
+    expect(body.rowsInserted).toBe(0);
+    expect(body.errors?.[0]).toContain("requires a dedicated commodity-token mapping");
+    expect(sqlite.prepare("SELECT circulating_usd, price FROM supply_history WHERE stablecoin_id = ? AND snapshot_date = ?")
+      .get(fixture.id, day)).toEqual({ circulating_usd: 77, price: 2_000 });
+  });
+
   it("does not extrapolate TVL fallback prices beyond the DefiLlama price chart range", async () => {
-    const db = mockD1([{ match: "INSERT OR REPLACE INTO supply_history", rows: [] }]);
+    const { db, sqlite } = fixtures.open();
     const day1 = Math.floor(Date.UTC(2026, 3, 9) / 1000);
     const day2 = day1 + 86_400;
 
@@ -954,6 +1104,7 @@ describe("handleBackfillSupplyHistory", () => {
       if (url.includes("/protocol/tether-gold")) {
         return new Response(
           JSON.stringify({
+            mcap: 101_000_000,
             tvl: [
               { date: day1, totalLiquidityUSD: 100_000_000 },
               { date: day2, totalLiquidityUSD: 101_000_000 },
@@ -990,12 +1141,12 @@ describe("handleBackfillSupplyHistory", () => {
     expect(body.rowsInserted).toBe(2);
     expect(body.errors).toBeUndefined();
 
-    const inserts = db.getHistory().filter((stmt) =>
-      stmt.sql.includes("INSERT OR REPLACE INTO supply_history"),
-    );
-    expect(inserts).toHaveLength(2);
-    expect(inserts[0].binds).toEqual(["xaut-tether", day1, 100_000_000, 2_300]);
-    expect(inserts[1].binds).toEqual(["xaut-tether", day2, 101_000_000, null]);
+    expect(sqlite.prepare(
+      "SELECT snapshot_date, circulating_usd, price FROM supply_history WHERE stablecoin_id = ? ORDER BY snapshot_date",
+    ).all("xaut-tether")).toEqual([
+      { snapshot_date: day1, circulating_usd: 100_000_000, price: 2_300 },
+      { snapshot_date: day2, circulating_usd: 101_000_000, price: null },
+    ]);
   });
 
   it("consumes the parallel price response before returning a protocol fallback error", async () => {

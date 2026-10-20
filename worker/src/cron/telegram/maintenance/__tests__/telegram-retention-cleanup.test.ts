@@ -2,6 +2,7 @@ import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import { collectTelegramAdoptionReport } from "../../../../../../scripts/maintenance/report-telegram-adoption";
 import {
   TELEGRAM_PROCESSED_UPDATE_PRUNE_BATCH_LIMIT,
   runTelegramRetentionCleanup,
@@ -1070,5 +1071,54 @@ describe("telegram authoritative retention", () => {
     expect(result.status).toBe("degraded");
     expect(metadata.highGrowthRetention.error).toContain("injected Telegram high-growth cleanup failure");
     expect(metadata.usageDailyPruned).toBe(0);
+  });
+  it.each([
+    { sourceAgeDays: 20, targetAgeDays: 20, remaining: 0 },
+    { sourceAgeDays: 14, targetAgeDays: 14, remaining: 1 },
+    { sourceAgeDays: 0, targetAgeDays: 91, remaining: 0 },
+    { sourceAgeDays: 0, targetAgeDays: 90, remaining: 1 },
+  ])("keeps delivery-window coverage unknown across source/creation prune boundaries: %j", async ({
+    sourceAgeDays, targetAgeDays, remaining,
+  }) => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const clock = vi.spyOn(Date, "now").mockReturnValue(NOW_SEC * 1000);
+    try {
+      const completedAt = NOW_SEC - sourceAgeDays * DAY_SEC;
+      const createdAt = NOW_SEC - targetAgeDays * DAY_SEC;
+      sqlite.prepare(`INSERT INTO telegram_alert_source_events (
+        source_event_id, schema_version, status, detected_at, expires_at,
+        event_payload, baseline_payload, target_plan_state, target_plan_generation, completed_at
+      ) VALUES ('source', 1, 'planned', ?, ?, '{}', '{}', 'planning', 1, ?)`)
+        .run(completedAt, NOW_SEC + DAY_SEC, completedAt);
+      sqlite.prepare(`INSERT INTO telegram_alert_jobs (
+        job_id, alert_type, source_event_id, severity, created_at, expires_at, status
+      ) VALUES ('job', 'dews', 'source', 'risk', ?, ?, 'sent')`)
+        .run(createdAt, NOW_SEC + DAY_SEC);
+      sqlite.prepare(`INSERT INTO telegram_alert_job_targets (
+        job_id, target_key, chat_id, chunk_index, alert_type, status,
+        pending_dedupe_key, created_at, effect_state, source_event_id,
+        plan_generation, plan_key, final_delivery_state, final_delivery_at
+      ) VALUES ('job', 'target', 'chat', 0, 'dews', 'sent',
+        'dedupe', ?, 'complete', 'source', 1, 'plan', 'accepted', ?)`)
+        .run(createdAt, NOW_SEC - 2 * DAY_SEC);
+      sqlite.exec(`UPDATE telegram_alert_source_events
+        SET status = 'complete', target_plan_state = 'delivery_open' WHERE source_event_id = 'source'`);
+      const client = {
+        queryRaw: () => "",
+        executeStatements: () => undefined,
+        query<T>(sql: string): T[] { return sqlite.prepare(sql).all() as T[]; },
+      };
+      expect(collectTelegramAdoptionReport(client, NOW_SEC).adoption.retainedAlertsSent7d).toBe(1);
+      await runTelegramRetentionCleanup(db);
+      const report = collectTelegramAdoptionReport(client, NOW_SEC);
+      expect(report.adoption.retainedAlertsSent7d).toBe(remaining);
+      expect(report.adoption.retainedAlertsSent30d).toBe(remaining);
+      expect(report.adoption.alertsSent7d).toBeNull();
+      expect(report.adoption.alertsSent30d).toBeNull();
+      expect(report.adoption.alertsSent7dUnavailableReason).toBe("delivery-window-coverage-unproven");
+    } finally {
+      clock.mockRestore();
+      sqlite.close();
+    }
   });
 });

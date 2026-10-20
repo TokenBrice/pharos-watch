@@ -84,6 +84,27 @@ describe("fetch body timeout guardrail", () => {
     ]);
   });
 
+  it.each(["json", "text"])("detects %s reads through copied and reassigned alias chains", (method) => {
+    const violations = findFetchBodyTimeoutViolations([
+      "async function run() {",
+      "  let res = await fetchWithRetry(url);",
+      "  const copy = res;",
+      "  let chain; chain = copy; chain = chain;",
+      "  res = otherResponse;",
+      `  await copy.${method}();`,
+      `  await chain.${method}();`,
+      "  chain = otherResponse;",
+      `  await chain.${method}();`,
+      `  await res.${method}();`,
+      `  { const copy = otherResponse; await copy.${method}(); }`,
+      "}",
+    ].join("\n"));
+    expect(violations.map(({ variable, fetchLine, bodyLine }) => ({ variable, fetchLine, bodyLine }))).toEqual([
+      { variable: "copy", fetchLine: 2, bodyLine: 6 },
+      { variable: "chain", fetchLine: 2, bodyLine: 7 },
+    ]);
+  });
+
   it("reports every raw body read without a debt allowlist", () => {
     withTempRepo("pharos-fetch-body-timeouts", {
       "worker/src/cron/provider.ts": `

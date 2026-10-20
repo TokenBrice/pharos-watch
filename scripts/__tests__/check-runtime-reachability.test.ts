@@ -305,15 +305,34 @@ describe("runtime reachability policies", () => {
     });
   });
 
-  it("rejects the fat stablecoin registry from a client bundle", async () => {
+  it.each([
+    '"use client";',
+    '"use client"',
+    '// client boundary\n"use client"',
+    '/* client boundary */\n"use strict";\n"use client"',
+    "\uFEFF'use client';",
+  ])("rejects the fat stablecoin registry from a client directive prologue: %s", async (directive) => {
     const root = makeRoot();
-    writeText(root, "src/client.tsx", '"use client";\nimport { coins } from "@shared/lib/stablecoins/registry";\nexport { coins };\n');
+    writeText(root, "src/client.tsx", `${directive}\nimport { coins } from "@shared/lib/stablecoins/registry";\nexport { coins };\n`);
     writeText(root, "shared/lib/stablecoins/registry.ts", "export const coins = [];\n");
 
     const result = await checkRuntimeReachabilityPolicy(policy("client-registry"), root);
+    expect(result.configurationErrors).toEqual([]);
+    expect(result.entrypointCount).toBe(1);
     expect(result.violations).toEqual([
       { entrypoint: "src/client.tsx", forbidden: "shared/lib/stablecoins/registry.ts", kind: "reachable" },
     ]);
+  });
+
+  it("ignores use-client strings outside the directive prologue", async () => {
+    const root = makeRoot();
+    writeText(root, "src/client.tsx", '"use client"; export const ok = true;');
+    writeText(root, "src/server.tsx", 'export const server = true;\n"use client";\nexport { coins } from "@shared/lib/stablecoins/registry";');
+    writeText(root, "shared/lib/stablecoins/registry.ts", "export const coins = [];");
+    const result = await checkRuntimeReachabilityPolicy(policy("client-registry"), root);
+    expect(result.configurationErrors).toEqual([]);
+    expect(result.entrypointCount).toBe(1);
+    expect(result.violations).toEqual([]);
   });
 
   it("limits importer allowances to each entrypoint's reachable graph", async () => {
@@ -343,9 +362,15 @@ describe("runtime reachability policies", () => {
     ]);
   });
 
-  it("rejects forbidden direct imports even when unused exports are tree-shaken", async () => {
+  it.each([
+    'import { value } from "./restricted";',
+    'import { value } from /* boundary */ "./restricted";',
+    "import { value } from\n'./restricted';",
+    'import "./restricted";',
+    'import type { Value } from /* boundary */ "./restricted";',
+  ])("rejects forbidden direct imports even when tree-shaken: %s", async (declaration) => {
     const root = makeRoot();
-    writeText(root, "src/entry.ts", 'import { value } from "./restricted"; export const ok = true;');
+    writeText(root, "src/entry.ts", `${declaration}\nexport const ok = true;`);
     writeText(root, "src/restricted.ts", "export const value = 42;");
     const result = await checkRuntimeReachabilityPolicy({
       ...policy("client-registry"),
@@ -356,5 +381,19 @@ describe("runtime reachability policies", () => {
     expect(result.violations).toEqual([
       { entrypoint: "src/entry.ts", forbidden: "./restricted", kind: "direct-import" },
     ]);
+  });
+
+  it("ignores forbidden import spellings in inert strings and comments", async () => {
+    const root = makeRoot();
+    writeText(root, "src/entry.ts", `// import { value } from "./restricted";
+export const example = 'from "./restricted"';`);
+    const result = await checkRuntimeReachabilityPolicy({
+      ...policy("client-registry"),
+      entrypoints: { kind: "paths", paths: ["src/entry.ts"] },
+      forbidden: { kind: "paths", paths: [] },
+      directImports: { entrypoints: ["src/entry.ts"], forbiddenSpecifiers: ["./restricted"] },
+    }, root);
+    expect(result.configurationErrors).toEqual([]);
+    expect(result.violations).toEqual([]);
   });
 });

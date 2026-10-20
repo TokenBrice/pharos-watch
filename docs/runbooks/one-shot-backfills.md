@@ -24,6 +24,8 @@ Before writing, record the exact scope, schema/release identity, a fresh D1 Time
 
 Ordinary jobs (`backfill-supply-history`, `backfill-cg-prices`, `backfill-yield-history`, `backfill-tape`) use `wrangler d1 execute --command --json`, not D1 file imports. Each write is followed by `SELECT changes()` in the same command; batches of independent writes run sequentially. Earlier commands can commit before a later failure: there is **no cross-command rollback**, no automatic retry and no import-induced availability outage. Ordinary query contention/latency still applies. A DDL receipt records zero, not the stale count from the preceding DML.
 
+The Node D1 codec admits every query envelope, including all entries under supported Wrangler `result` wrappers, before the facade consumes rows or receipts. Failed/error envelopes, unknown objects and malformed/empty envelope containers abort; only a recognized `results: []` is empty evidence. Full metadata survives decoding. The backfill facade additionally requires explicit success, metadata and the exact expected statement-envelope count; ordered `changes()` receipts and atomic-import consent remain mandatory. A successful neighboring statement never masks a failed read or receipt.
+
 The atomic jobs listed below (owned by `ATOMIC_IMPORT_BACKFILL_JOBS` in `worker/scripts/one-shot-backfill.ts`) require **`--execute --allow-atomic-import`** for live writes, including with `--local`:
 
 | Job | Atomic boundary that must not be split |
@@ -121,7 +123,11 @@ Epoch text requires unsigned integer digits or calendar-valid ISO date/date-time
 
 Backfills per-coin supply history snapshots. When historical market-price series are available, the job also persists daily `supply_history.price` values on restored rows so historical PSI replay can use day-level deviation instead of blunt peak fallback.
 
+DefiLlama detail history preserves complete observed zero circulation, inserting missing days or replacing prior positive rows. Native non-USD zero needs no USD valuation and may carry `price: null`; positive native observations still require historical valuation or the explicitly enabled recent-window emergency fallback. Missing, empty or malformed circulating buckets never become zero and leave existing history unchanged.
+
 Commodity/CoinGecko history pairs prices and caps at the same timestamp, selecting the first valid pair per UTC day. Missing caps may use historical EVM `totalSupply()` at day close only for a complete roster containing exactly one canonically supported EVM deployment; mixed-family/multi-deployment rosters fail closed with `unsupported-complete-roster`. Current supply is never projected backward. Protocol-TVL fallback stores `price: null` outside returned price-chart coverage rather than extrapolating jobs.
+
+Protocol-TVL fallback additionally requires a commodity peg and a dedicated token slug admitted by `shared/lib/commodity-protocols.ts`. Both the protocol market cap and latest TVL must be finite and strictly positive, with their market-cap/TVL ratio in the inclusive `0.85`–`1.15` band. Missing or unusable equivalence evidence returns an explicit error without replacing history. An admitted fallback stores historical TVL points, not today's market cap or current supply projected backward; non-finite/nonpositive historical TVL points are withheld.
 
 **Query parameters**
 
@@ -269,17 +275,21 @@ If `configKey` is omitted, the job auto-selects one tracked config using a criti
 | ----------- | --------- | --------------- | ---------------------------------------------------------------------------------------- |
 | `configKey` | `string`  | auto-selected   | Optional config key: `{chainId}-{contractAddress}` across the tracked issuance-chain set |
 | `fromBlock` | `integer` | from sync state | Start block override                                                                     |
-| `toBlock`   | `integer` | chain head      | End block override (clamped to chain head)                                               |
+| `toBlock`   | `integer` | finalized head  | End block override (clamped to the validated chain-specific finalized head)              |
 | `chunkSize` | `integer` | `50000`         | Block span per fetch chunk (max 50000)                                                   |
 | `maxChunks` | `integer` | `24`            | Maximum chunks to process per request                                                    |
 
-Successful chunks materialize hours before committing a safe cursor: default/live-tip scans anchor to the newest parsed event, or `min(scanTo, head-75)` when empty. Explicit historical chunks at least 75 blocks behind head may commit their full range. `done`/`nextFromBlock` reflect committed coverage, not the requested tip.
+Successful chunks materialize hours before committing a safe cursor. Both eventful and quiet chunks advance through the complete requested range capped to CHAIN's validated `finalized` header; explicit historical chunks retain full-range advancement below that ceiling. A missing, refused or unsupported finalized head returns `502` with `finality-head-unavailable: <chain>`, without tip fallback or ingestion writes. `done`/`nextFromBlock` reflect committed finalized coverage, not the provisional tip; a later request can resume when finality advances.
 
 Decode failures count in `rowsDropped` and `rowsDroppedDecode`; valid peers persist while the cursor holds below `earliestDecodeFailureBlock`. Shared per-log retries quarantine on observation three (`rowsQuarantinedDecode`, `decodeQuarantines[]`, reason `amount-decode-retry-exhausted`), then release the frontier. A held chunk ends the request; retry with a new observation.
 
 ## reclassify-atomic-roundtrips
 
-Retroactively reclassifies `(tx_hash, stablecoin_id, chain_id)` groups using the shared amount-match tolerance, then recalculates affected hours.
+Retroactively reclassifies `(tx_hash, stablecoin_id, chain_id)` groups using the shared amount-match tolerance. Apply migration `0280_mint_burn_dirty_hours.sql` and the compatible maintenance writers/drain before running this job; production writes still require a coordinated maintenance window and `--execute --allow-atomic-import`.
+
+Every tag update atomically enqueues all matching source hours in `mint_burn_dirty_hours`, including hours beyond the discovery group's earliest timestamp. Source writes use bounded atomic batches; they are not one whole-job transaction. The job drains persisted debt on entry and after both passes, independently of `since` and `stablecoinId`, so an interrupted run is repairable even when its changed transactions no longer match either scan. Each shared drain atomically rebuilds current hourly totals, finalizes eligible priced `pending_aggregate` repairs and removes that hour's debt. A concurrent mutation either enters that rebuild or leaves fresh debt afterward; it is never cleared against a stale pre-read aggregate.
+
+After any failure, reconcile uncertain atomic-import receipts using [Interruption and cleanup](#interruption-and-cleanup) before an explicitly authorized retry. Keep every dirty-hour row and the additive table through code rollback; do not manually delete debt or rely on process cleanup to repair aggregates.
 
 **Query parameters**
 
@@ -303,14 +313,23 @@ Retroactively reclassifies `(tx_hash, stablecoin_id, chain_id)` groups using the
 }
 ```
 
-Each forward and reverse pass processes up to 1000 `(tx_hash, stablecoin_id, chain_id)` groups. Repeat until `done=true` (both passes return fewer than 1000 groups).
+Each forward and reverse pass processes up to 1000 `(tx_hash, stablecoin_id, chain_id)` groups. Repeat until `done=true`: both scans must return fewer than 1000 groups and the final durable-debt read must be empty. Entry/exit drains process bounded chunks until the selected backlog is exhausted; `hoursRecalculated` counts completed hour rebuilds, including debt from prior runs and other discovery scopes, rather than newly changed transaction groups. A failed read, write or rebuild fails the job, not an empty-success response. New debt observed after the final drain keeps `done=false` for the next run.
 
 ## audit-depeg-history
 
 `--method GET` supports only `dry-run=true`; mutations use default POST. Shared audit/repair parameters are below. The default CoinGecko audit uses `COINGECKO_API_KEY`, the Pro host and `x-cg-pro-api-key`, 200 ms start spacing and concurrency 4. Missing key attempts no upstream request: HTTP 200 retains `upstreamErrorReason: "coingecko_api_key_missing"`, `upstreamReachable: false`, per-event `verdict: "error"` and no persisted provenance. Delete and both repair modes skip CoinGecko and need no key.
+
+Historical samples must have an array `prices` envelope and two-member tuples with nonnegative safe-integer millisecond clocks inside the inclusive requested window (`started_at - 1h` through `ended_at + 1h`). Clock/tuple rejections increment `rejectedByTimestampCount` before price validation; valid in-window peg-par samples retain a measured zero deviation. A malformed envelope or a nonempty series containing only rejected clocks yields `error`, with no provenance for that event; an empty or price-validation-rejected series retains `no_data`. No source substitution or automatic historical-verdict rewrite is performed.
+
+With `min-supply > 0`, `totalMatching` counts only symbol-matching events whose nearest observed supply within the existing inclusive 30-day tolerance meets the threshold. `belowMinSupplyExcludedCount` counts measured exclusions, including observed zero. Missing or too-distant history stays unavailable and fails admission: `unavailableSupplyExcludedCount` covers the full pre-pagination cohort, while `unavailableSupplyExclusions` retains at most 25 event identities (`id`, `stablecoinId`, `symbol`, `startedAt`) and `history-missing` / `history-outside-tolerance` reasons; `unavailableSupplyExclusionsTruncated` identifies omitted details. With no minimum-supply filter these diagnostics remain zero/empty; no current-supply substitution is used.
+
 ```json
 {
   "totalMatching": 5,
+  "unavailableSupplyExcludedCount": 0,
+  "unavailableSupplyExclusions": [],
+  "unavailableSupplyExclusionsTruncated": false,
+  "belowMinSupplyExcludedCount": 0,
   "offset": 0,
   "limit": 25,
   "dryRun": true,
@@ -321,6 +340,7 @@ Each forward and reverse pass processes up to 1000 `(tx_hash, stablecoin_id, cha
   "deletedEvents": [],
   "daysRecomputed": 0,
   "rejectedByValidationCount": 0,
+  "rejectedByTimestampCount": 0,
   "upstreamErrorCount": 5,
   "upstreamReachable": false,
   "upstreamErrorReason": "coingecko_api_key_missing"

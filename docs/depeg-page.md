@@ -93,6 +93,11 @@ must not repeat verdict or accuracy headlines. The resolver header does repeat
 book size, past-peak count, and calibration lineage; the embedded alert queue
 suppresses its own count.
 
+The control board's attention count is scoped to its filtered rows: confirmed active
+or pending incidents, plus validated DEWS bands at `THREAT_BAND_ORDER.ALERT` or above.
+It shares the hero's canonical band ladder, not a separate numeric score threshold;
+missing signals alone do not establish attention or a measured calm score.
+
 ### Universe scope
 
 Reader-visible universes must be distinguished; `summary.*` is not one cohort:
@@ -188,6 +193,12 @@ entry. Before its first read, the hero's track record stays unavailable rather t
 claiming an empty or safe ledger. Retained review evidence keeps its original clock
 and freshness notice. DDR/DDRR feature flags still gate the section and query.
 
+Recovery-call progress reads `summary.headline.pendingRecoveryLikelihoodCount`:
+published prediction reviews with a pending verdict, in exactly the headline
+accuracy policy scope. Pending locks remain coverage debt, not maturing forecasts.
+Neither capped browse rows nor all-policy per-coin totals supply this count.
+Retained bodies without the additive field show “maturing unavailable,” not zero.
+
 ---
 
 ## Event History And Crawlability
@@ -215,6 +226,11 @@ published URL must remain submitted or receive a direct 301 to its surviving
 submitted incident when DDR consolidates fragments. Reviewed artifact removals use
 the shrink override plus one-hop redirects in `public/_redirects`; follow
 [artifact removal](./runbooks/depeg-artifact-removal.md#removal-sequence).
+
+Published slugs and slug-keyed editorial entries are reserved by event ID before naming
+new rows. Adding or reordering same-day events, including cross-coin duplicate symbols,
+cannot rename existing URLs. An identity-rewriting repair must explicitly review the
+old-to-surviving event/slug mapping and redirects; the sync never infers it from symbols.
 
 Events sharing a coin, UTC date and direction include their exact UTC start time in
 metadata, H1, metrics and adjacent navigation. Each has a factual synopsis and its

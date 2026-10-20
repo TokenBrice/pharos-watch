@@ -23,4 +23,32 @@ describe("Safe Browsing provider boundary", () => {
 
     await expect(findThreats("fixture-key", cleanFetch)).resolves.toEqual([]);
   });
+
+  it.each([
+    { error: { code: 403, message: "Permission denied" } },
+    { status: "unavailable" },
+    { matches: [], error: { code: 500, message: "Provider failure" } },
+  ])("rejects HTTP-200 error or unknown envelopes: %j", async (payload) => {
+    const fetchImpl = vi.fn(async () => Response.json(payload)) as unknown as typeof fetch;
+
+    await expect(findThreats("fixture-key", fetchImpl)).rejects.toThrow();
+  });
+
+  it("returns validated threat matches instead of reporting a clean verdict", async () => {
+    const match = {
+      threat: { url: "https://pharos.watch/" },
+      threatType: "SOCIAL_ENGINEERING",
+      platformType: "ANY_PLATFORM",
+      cacheDuration: "300s",
+    };
+    const fetchImpl = vi.fn(async () => Response.json({ matches: [match] })) as unknown as typeof fetch;
+
+    await expect(findThreats("fixture-key", fetchImpl)).resolves.toEqual([match]);
+  });
+
+  it("rejects HTTP failures instead of reporting them clean", async () => {
+    const fetchImpl = vi.fn(async () => new Response("unavailable", { status: 503 })) as unknown as typeof fetch;
+
+    await expect(findThreats("fixture-key", fetchImpl)).rejects.toThrow("Safe Browsing API error 503");
+  });
 });
