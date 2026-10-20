@@ -9,6 +9,57 @@ import { logMalformedJsonPath } from "../lib/json-decode-observability";
 import { selectDigestRiskSignal } from "./digest-risk-summary";
 import { selectDigestIntelligence } from "./digest-intelligence-summary";
 
+// json_each exposes strings unquoted and booleans as SQL integers. Re-encode
+// those scalars without losing their JSON type; containers are already raw JSON.
+// Reading the member value (not its path) also preserves last-key-wins behavior
+// when legacy captures contain duplicate object keys.
+function jsonMemberFragmentSql(alias: string): string {
+  return `CASE ${alias}.type
+    WHEN 'true' THEN 'true'
+    WHEN 'false' THEN 'false'
+    WHEN 'object' THEN ${alias}.value
+    WHEN 'array' THEN ${alias}.value
+    ELSE json_quote(${alias}.value)
+  END`;
+}
+
+// Project before crossing D1's result boundary: weekly captures contain entire
+// daily inputs, but archive risk selection only reads these two nested fields.
+// Raw JSON fragments preserve booleans, strings, explicit nulls and absent keys.
+// Invalid JSON/primitive roots use tiny representatives with the same decoder
+// outcome, so malformed-row diagnostics never require transferring the capture.
+const ARCHIVE_INPUT_SQL = `CASE
+  WHEN input_data IS NULL THEN NULL
+  WHEN NOT json_valid(input_data) THEN '{'
+  WHEN json_type(input_data) = 'array' THEN '[]'
+  WHEN json_type(input_data) != 'object' THEN 'null'
+  ELSE (
+    SELECT json_group_object(field.key, json(
+      CASE WHEN field.key = 'dailyDigests' AND field.type = 'array' THEN (
+        SELECT json_group_array(json(
+          CASE WHEN entry.type = 'object' THEN (
+            SELECT json_group_object(detail.key, json(
+              CASE WHEN detail.key = 'inputData' AND detail.type = 'object' THEN (
+                SELECT json_group_object(risk.key, json(${jsonMemberFragmentSql("risk")}))
+                FROM json_each(detail.value) AS risk
+                WHERE risk.key IN ('activeDepegCount', 'topDepegs')
+              ) ELSE ${jsonMemberFragmentSql("detail")} END
+            ))
+            FROM json_each(entry.value) AS detail
+            WHERE detail.key IN ('date', 'inputData')
+          ) ELSE 'null' END
+        ))
+        FROM json_each(field.value) AS entry
+      ) ELSE ${jsonMemberFragmentSql("field")} END
+    ))
+    FROM json_each(input_data) AS field
+    WHERE field.key IN (
+      'stabilityIndex', 'totalMcapUsd', 'supplyCoverage', 'activeDepegCount',
+      'topDepegs', 'dailyDigests', 'nextTriggers', 'forwardLookOutcomes', 'riskTape'
+    )
+  )
+END`;
+
 type DigestArchiveInput = {
   stabilityIndex?: { score: number; band: string } | null;
   totalMcapUsd?: number;
@@ -109,7 +160,8 @@ export const handleDigestArchive = async (db: D1Database, url?: URL): Promise<Re
     // Number full non-blocked history (including sentinels) before keyset
     // pagination. The insertion horizon also excludes later backdated inserts.
     `SELECT * FROM (
-       SELECT rowid AS archive_id, digest_text, digest_title, generated_at, digest_extended, input_data, digest_meta,
+       SELECT rowid AS archive_id, digest_text, digest_title, generated_at, digest_extended,
+         ${ARCHIVE_INPUT_SQL} AS input_data, digest_meta,
          ${completeHistory ? "COUNT(*) OVER () AS archive_total, MAX(rowid) OVER () AS archive_horizon," : ""}
          ROW_NUMBER() OVER (
            PARTITION BY CASE WHEN json_extract(digest_meta, '$.type') = 'weekly' THEN 'weekly' ELSE 'daily' END
