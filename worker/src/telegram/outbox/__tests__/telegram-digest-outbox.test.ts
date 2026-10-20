@@ -809,7 +809,7 @@ describe("Telegram digest outbox", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it("rolls back every success action and weekly metadata on terminal SQL failure without replaying acceptance", async () => {
+  it("rolls back every success action on terminal SQL failure without touching historical metadata or replaying acceptance", async () => {
     const { sqlite, db } = fixtures.open();
     const { generatedAt } = await enqueueWeeklyWithActions(db, sqlite);
     const beforeEffects = loadFinalizationEffects(sqlite, generatedAt);
@@ -836,9 +836,9 @@ describe("Telegram digest outbox", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it("commits exact-owner appendix actions and weekly metadata once with sent, without replay or timestamp extension", async () => {
+  it("commits exact-owner appendix actions once with sent, leaving historical weekly metadata inert", async () => {
     const { sqlite, db } = fixtures.open();
-    const { generatedAt } = await enqueueWeeklyWithActions(db, sqlite);
+    const { generatedAt, digestMeta } = await enqueueWeeklyWithActions(db, sqlite);
     const fetchMock = mockFetch([{ match: () => true, body: { ok: true } }]);
 
     await deliverTelegramDigestEdition(db, creds, "weekly:2026-07-10");
@@ -846,11 +846,7 @@ describe("Telegram digest outbox", () => {
     const row = sqlite.prepare("SELECT digest_meta FROM daily_digest WHERE generated_at = ?").get(generatedAt) as {
       digest_meta: string;
     };
-    expect(JSON.parse(row.digest_meta)).toMatchObject({
-      telegramDelivered: true,
-      telegramDeliveryStatus: "ok",
-      telegramDeliveredAt: Math.floor(Date.now() / 1000),
-    });
+    expect(row.digest_meta).toBe(digestMeta);
     expect(loadEdition(sqlite, "weekly:2026-07-10")).toMatchObject({
       state: "sent",
       next_chunk_index: 1,

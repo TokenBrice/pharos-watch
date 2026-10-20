@@ -32,13 +32,14 @@ or resent.
 
 An expired `sending` claim becomes `execution_unknown`. It is never returned to `pending` automatically.
 
-Finalization commits the stored appendix cache writes, retained weekly
-delivered metadata and terminal `sent` transition in one atomic D1 batch.
+Finalization commits the stored appendix cache writes and terminal `sent`
+transition in one atomic D1 batch. The outbox is the sole Telegram authority;
+historical weekly `digest_meta` delivery fields are inert and never synchronized.
 Every write requires the same edition key, `sending` state, delivery owner and
 generation, media state `none` or `sent`, and text cursor at the exact stored
 chunk count. Success actions cannot alter this eligibility predicate; the
-terminal transition is last. A stale or incomplete claim changes no appendix,
-weekly metadata or edition state. SQL failure rolls back every batch write;
+terminal transition is last. A stale or incomplete claim changes no appendix
+or edition state. SQL failure rolls back every batch write;
 post-send persistence failure retains the existing `execution_unknown` policy.
 A later diagnostic changes-count exception is not a rollback mechanism.
 Replaying a sent edition neither reapplies its actions nor refreshes their
@@ -173,7 +174,7 @@ After the next five-minute poll:
 2. Confirm `next_chunk_index <= json_array_length(payload_chunks_json)`.
 3. Confirm `telegram-digest-outbox-drain` telemetry reports the attempted outcome.
 4. For daily appendices, confirm the cache pointers in `success_actions_json` advanced only after `sent`.
-5. For weekly rows, confirm `daily_digest.digest_meta.telegramDelivered` is `true`.
+5. For weekly rows, confirm the `weekly:YYYY-MM-DD` outbox state is `sent`; ignore historical `daily_digest.digest_meta` delivery fields.
 
 ## Rollback
 
@@ -184,3 +185,5 @@ rollback; those migration files are squashed lineage now absorbed by
 `sending` and `execution_unknown` rows; the legacy sender does not understand
 this effect fence. Keep terminal rows for forensics rather than deleting them
 during rollback.
+
+Before deploying the ledger-only weekly cutover, retain a read-only inventory of every retry-eligible legacy edition joined to its X cache marker/ledger and Telegram outbox. Missing durable evidence is unknown, not permission to resend; reconcile it before retrying. Both weekly readers and writers must change in one Worker deployment, after the finalizer fence. A rollback must not restore automatic sending from stale weekly metadata; keep ambiguous legacy delivery stopped until durable evidence is reconciled.

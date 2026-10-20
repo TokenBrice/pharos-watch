@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { isValidIsoDateOnly } from "./date-primitives";
 
 // shared/types must stay dependency-free of shared/lib (ESLint pharos/shared-types-imports), so the
@@ -10,71 +11,18 @@ export const DIGEST_SAFETY_MAP_TIERS = ["A", "B", "C", "D", "F"] as const;
 export type DigestSafetyMapTier = typeof DIGEST_SAFETY_MAP_TIERS[number];
 export type DigestSafetyMapProfile = "canonical" | "archive-compatible";
 
-export interface DigestSafetyMapTierSummary {
-  tier: DigestSafetyMapTier;
-  range: string;
-  count: number;
-  mcapUsd: number;
-  /** Percentage points on a 0-100 scale, not a 0-1 ratio. */
-  sharePct: number;
-  leaders: Array<{ symbol: string; score: number; mcapUsd: number }>;
-}
-
-export interface DigestSafetyMapSummary {
-  date: string;
-  asOfSec: number;
-  methodologyVersion: string;
-  gradedCount: number;
-  notRatedCount: number;
-  totalMcapUsd: number;
-  supplyCoverage?: {
-    complete: boolean; observedCount: number; unavailableCount: number;
-    unavailableById: Record<string, string>; shareBasis: "known-mapped-supply";
-  };
-  floorMcapByTier: { a: number; other: number };
-  tiers: DigestSafetyMapTierSummary[];
-}
-
-export interface DigestSafetyMapManifest {
-  date: string;
-  asOfSec: number;
-  renderedAtSec: number;
-  edition: "daily";
-  bytes: { png: number };
+export type DigestSafetyMapSummary = z.output<typeof DigestSafetyMapSummarySchema>;
+export type DigestSafetyMapTierSummary = DigestSafetyMapSummary["tiers"][number];
+export type DigestSafetyMapManifest = z.output<typeof CanonicalReaderManifestSchema> & {
   mapSummary?: DigestSafetyMapSummary;
-}
-
-export interface DigestSafetyMapCapture {
-  imageUrl: string;
-  freshness: "current" | "carried-forward";
-  ageDays: number;
-  manifest: DigestSafetyMapManifest & { mapSummary: DigestSafetyMapSummary };
-}
-
-export type DigestSafetyMapArchiveTier = Pick<DigestSafetyMapTierSummary, "tier" | "count" | "mcapUsd" | "sharePct">;
-export interface DigestSafetyMapArchiveCapture {
-  imageUrl: string;
-  freshness: "current" | "carried-forward";
-  ageDays: number | null;
-  manifest: {
-    date: string;
-    mapSummary: Pick<DigestSafetyMapSummary, "date" | "asOfSec" | "methodologyVersion" | "gradedCount" | "notRatedCount" | "totalMcapUsd" | "supplyCoverage"> & {
-      tiers: DigestSafetyMapArchiveTier[];
-    };
-  };
-}
+};
+export type DigestSafetyMapCapture = z.output<typeof DigestSafetyMapCaptureSchema>;
+export type DigestSafetyMapArchiveCapture = z.output<typeof ArchiveReaderCaptureSchema>;
+export type DigestSafetyMapArchiveTier = DigestSafetyMapArchiveCapture["manifest"]["mapSummary"]["tiers"][number];
 
 export interface DigestSafetyMapContractIssue {
   path: (string | number)[];
   message: string;
-}
-
-function isNonNegativeFinite(value: unknown): value is number {
-  return typeof value === "number" && Number.isFinite(value) && value >= 0;
-}
-
-function isNonNegativeInteger(value: unknown): value is number {
-  return isNonNegativeFinite(value) && Number.isInteger(value);
 }
 
 export function parseDigestSafetyMapUtcDateMs(value: unknown): number | null {
@@ -87,7 +35,9 @@ export function parseDigestSafetyMapUtcDateMs(value: unknown): number | null {
 export const isDigestSafetyMapUtcDate = isValidIsoDateOnly;
 
 export function getDigestSafetyMapSummaryIssues(
-  summary: Pick<DigestSafetyMapSummary, "gradedCount" | "totalMcapUsd" | "tiers">,
+  summary: Pick<DigestSafetyMapSummary, "gradedCount" | "totalMcapUsd"> & {
+    tiers: Array<Pick<DigestSafetyMapTierSummary, "tier" | "count" | "mcapUsd" | "sharePct">>;
+  },
 ): DigestSafetyMapContractIssue[] {
   const issues: DigestSafetyMapContractIssue[] = [];
   if (new Set(summary.tiers.map((tier) => tier.tier)).size !== DIGEST_SAFETY_MAP_TIERS.length) {
@@ -134,115 +84,152 @@ export function getDigestSafetyMapCaptureIssues(capture: DigestSafetyMapCapture)
   return issues;
 }
 
+// PURE boundaries keep unused strict-schema construction out of reader-only bundles.
+const mapFields = /* @__PURE__ */ (() => {
+  const nonnegative = z.number().nonnegative();
+  const integer = z.number().int().nonnegative();
+  const text = z.string().trim().min(1);
+  const coverage = z.object({
+    complete: z.boolean(), observedCount: integer, unavailableCount: integer,
+    unavailableById: z.record(z.string(), z.string()), shareBasis: z.literal("known-mapped-supply"),
+  });
+  const leader = z.object({ symbol: text, score: nonnegative.max(100), mcapUsd: nonnegative }).strict();
+  const tier = z.object({
+    tier: z.enum(DIGEST_SAFETY_MAP_TIERS), range: text, count: integer, mcapUsd: nonnegative,
+    sharePct: nonnegative.max(100).describe("Percentage points, 0-100 scale (not a 0-1 ratio)"),
+    leaders: z.array(leader).max(3),
+  }).strict();
+  return { nonnegative, integer, text, coverage, leader, tier };
+})();
+
+export const DigestSafetyMapUtcDateSchema = /* @__PURE__ */ (() => z.string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/)
+  .refine(isDigestSafetyMapUtcDate, "Safety Map date must be a real UTC calendar day"))();
+
+const summaryFields = /* @__PURE__ */ (() => ({
+  date: DigestSafetyMapUtcDateSchema, asOfSec: mapFields.integer, methodologyVersion: mapFields.text,
+  gradedCount: mapFields.integer, notRatedCount: mapFields.integer, totalMcapUsd: mapFields.nonnegative,
+  supplyCoverage: mapFields.coverage.optional(),
+  floorMcapByTier: z.object({ a: mapFields.nonnegative, other: mapFields.nonnegative }).strict(),
+  tiers: z.array(mapFields.tier).length(5),
+}))();
+
+export const DigestSafetyMapSummarySchema = /* @__PURE__ */ (() => z.object(summaryFields).strict()
+  .superRefine((summary, ctx) => {
+    for (const issue of getDigestSafetyMapSummaryIssues(summary)) ctx.addIssue({ code: "custom", ...issue });
+  }))();
+
+const manifestFields = /* @__PURE__ */ (() => ({
+  date: summaryFields.date, asOfSec: summaryFields.asOfSec, renderedAtSec: mapFields.integer,
+  edition: z.literal("daily"), bytes: z.object({ png: z.number().positive() }).strict(),
+}))();
+const captureFields = /* @__PURE__ */ (() => ({
+  imageUrl: mapFields.text, freshness: z.enum(["current", "carried-forward"]), ageDays: mapFields.integer,
+}))();
+
+export const DigestSafetyMapCaptureSchema = /* @__PURE__ */ (() => z.object({
+  ...captureFields, manifest: z.object({ ...manifestFields, mapSummary: DigestSafetyMapSummarySchema }).strict(),
+}).strict()
+  .superRefine((capture, ctx) => {
+    for (const issue of getDigestSafetyMapCaptureIssues(capture)) ctx.addIssue({ code: "custom", ...issue });
+  }))();
+
+const readerText = /* @__PURE__ */ (() => z.string().refine((value) => value.trim().length > 0))();
+// Readers historically used Number.isInteger, not Zod's stricter safe-integer bound.
+const readerInteger = /* @__PURE__ */ (() => mapFields.nonnegative.refine(Number.isInteger))();
+const readerCoverage = /* @__PURE__ */ (() => mapFields.coverage.extend({
+  observedCount: readerInteger, unavailableCount: readerInteger,
+  // Legacy JSON readers accepted array-shaped reason records too; preserve that admission.
+  unavailableById: z.custom<Record<string, string>>((value) => isRecord(value)
+    && Object.values(value).every((reason) => typeof reason === "string")),
+}).refine((coverage) => coverage.complete === (coverage.unavailableCount === 0)
+  && isRecord(coverage.unavailableById) && Object.keys(coverage.unavailableById).length === coverage.unavailableCount))();
+const readerSummaryFields = /* @__PURE__ */ (() => ({
+  ...summaryFields, methodologyVersion: readerText, supplyCoverage: readerCoverage.optional(),
+  asOfSec: readerInteger, gradedCount: readerInteger, notRatedCount: readerInteger,
+}))();
+const archiveTierSchema = /* @__PURE__ */ (() => mapFields.tier.pick({
+  tier: true, count: true, mcapUsd: true, sharePct: true,
+}).strip().extend({ count: readerInteger }))();
+const archiveSummarySchema = /* @__PURE__ */ (() => z.object({
+  ...readerSummaryFields, totalMcapUsd: summaryFields.totalMcapUsd.positive(),
+  tiers: z.array(archiveTierSchema).length(5),
+}).omit({ floorMcapByTier: true }))();
+const canonicalSummarySchema = /* @__PURE__ */ (() => z.object({
+  ...readerSummaryFields,
+  floorMcapByTier: summaryFields.floorMcapByTier.strip(),
+  tiers: z.array(mapFields.tier.extend({
+    range: readerText, count: readerInteger,
+    leaders: z.array(mapFields.leader.extend({ symbol: readerText }).strip()).max(3),
+  }).strip()).length(5),
+}))();
+
+function refineReaderSummary(
+  summary: Pick<DigestSafetyMapSummary, "gradedCount" | "totalMcapUsd" | "tiers" | "supplyCoverage">
+    | z.output<typeof archiveSummarySchema>,
+  ctx: z.RefinementCtx,
+) {
+  for (const issue of getDigestSafetyMapSummaryIssues(summary)) ctx.addIssue({ code: "custom", ...issue });
+  if (summary.supplyCoverage && summary.supplyCoverage.observedCount + summary.supplyCoverage.unavailableCount !== summary.gradedCount) {
+    ctx.addIssue({ code: "custom", path: ["supplyCoverage"], message: "Safety Map coverage must equal gradedCount" });
+  }
+}
+
+const CanonicalReaderSummarySchema = /* @__PURE__ */ (() => canonicalSummarySchema.superRefine(refineReaderSummary)
+  .transform(({ supplyCoverage, ...summary }) => ({ ...summary, ...(supplyCoverage ? { supplyCoverage } : {}) })))();
+const ArchiveReaderSummarySchema = /* @__PURE__ */ (() => archiveSummarySchema.superRefine(refineReaderSummary)
+  .transform(({ supplyCoverage, ...summary }) => ({ ...summary, ...(supplyCoverage ? { supplyCoverage } : {}) })))();
+const CanonicalReaderManifestSchema = /* @__PURE__ */ (() => z.object({
+  ...manifestFields, asOfSec: z.number(), renderedAtSec: z.number(), bytes: manifestFields.bytes.strip(),
+}))();
+const archiveCaptureFields = /* @__PURE__ */ (() => ({
+  imageUrl: readerText, freshness: captureFields.freshness, ageDays: readerInteger.optional(),
+  manifest: z.object({ date: summaryFields.date, mapSummary: ArchiveReaderSummarySchema }),
+}))();
+const ArchiveReaderCaptureSchema = /* @__PURE__ */ (() => z.object(archiveCaptureFields).transform((capture) => ({
+  ...capture, ageDays: capture.ageDays ?? null,
+})))();
+const CanonicalReaderCaptureSchema = /* @__PURE__ */ (() => z.object({
+  ...captureFields, imageUrl: readerText, ageDays: readerInteger,
+  manifest: z.object({
+    ...manifestFields, asOfSec: readerInteger, renderedAtSec: readerInteger,
+    bytes: manifestFields.bytes.strip(), mapSummary: CanonicalReaderSummarySchema,
+  }),
+}).superRefine((capture, ctx) => {
+  for (const issue of getDigestSafetyMapCaptureIssues(capture)) ctx.addIssue({ code: "custom", ...issue });
+}))();
+
 export function parseDigestSafetyMapSummary(value: unknown, profile: "canonical"): DigestSafetyMapSummary | null;
 export function parseDigestSafetyMapSummary(value: unknown, profile: "archive-compatible"): DigestSafetyMapArchiveCapture["manifest"]["mapSummary"] | null;
 export function parseDigestSafetyMapSummary(value: unknown, profile: DigestSafetyMapProfile) {
-  if (!isRecord(value)) return null;
-  const { date, asOfSec, methodologyVersion, gradedCount, notRatedCount, totalMcapUsd, tiers: rawTiers } = value;
-  const floor = value.floorMcapByTier;
-  if (
-    !isDigestSafetyMapUtcDate(date)
-    || !isNonNegativeInteger(asOfSec)
-    || typeof methodologyVersion !== "string" || methodologyVersion.trim().length === 0
-    || !isNonNegativeInteger(gradedCount) || !isNonNegativeInteger(notRatedCount)
-    || !isNonNegativeFinite(totalMcapUsd) || (profile === "archive-compatible" && totalMcapUsd <= 0)
-    || !Array.isArray(rawTiers) || rawTiers.length !== DIGEST_SAFETY_MAP_TIERS.length
-    || (profile === "canonical" && (!isRecord(floor) || !isNonNegativeFinite(floor.a) || !isNonNegativeFinite(floor.other)))
-  ) return null;
-  const coverage = value.supplyCoverage;
-  let supplyCoverage: DigestSafetyMapSummary["supplyCoverage"];
-  if (coverage !== undefined) {
-    if (!isRecord(coverage) || typeof coverage.complete !== "boolean"
-      || !isNonNegativeInteger(coverage.observedCount) || !isNonNegativeInteger(coverage.unavailableCount)
-      || coverage.observedCount + coverage.unavailableCount !== gradedCount
-      || coverage.complete !== (coverage.unavailableCount === 0)
-      || coverage.shareBasis !== "known-mapped-supply" || !isRecord(coverage.unavailableById)
-      || Object.values(coverage.unavailableById).some((reason) => typeof reason !== "string")
-      || Object.keys(coverage.unavailableById).length !== coverage.unavailableCount) return null;
-    supplyCoverage = {
-      complete: coverage.complete, observedCount: coverage.observedCount, unavailableCount: coverage.unavailableCount,
-      unavailableById: coverage.unavailableById as Record<string, string>, shareBasis: "known-mapped-supply",
-    };
-  }
-
-  const seen = new Set<DigestSafetyMapTier>();
-  const tiers: Array<DigestSafetyMapTierSummary | DigestSafetyMapArchiveTier> = [];
-  for (const rawTier of rawTiers) {
-    if (!isRecord(rawTier)) return null;
-    const { tier, count, mcapUsd, sharePct } = rawTier;
-    if (
-      typeof tier !== "string" || !DIGEST_SAFETY_MAP_TIERS.includes(tier as DigestSafetyMapTier)
-      || seen.has(tier as DigestSafetyMapTier) || !isNonNegativeInteger(count)
-      || !isNonNegativeFinite(mcapUsd) || !isNonNegativeFinite(sharePct) || sharePct > 100
-    ) return null;
-    seen.add(tier as DigestSafetyMapTier);
-    if (profile === "archive-compatible") {
-      tiers.push({ tier: tier as DigestSafetyMapTier, count, mcapUsd, sharePct });
-      continue;
-    }
-    if (typeof rawTier.range !== "string" || rawTier.range.trim().length === 0 || !Array.isArray(rawTier.leaders) || rawTier.leaders.length > 3) return null;
-    const leaders: DigestSafetyMapTierSummary["leaders"] = [];
-    for (const rawLeader of rawTier.leaders) {
-      if (!isRecord(rawLeader) || typeof rawLeader.symbol !== "string" || rawLeader.symbol.trim().length === 0
-        || !isNonNegativeFinite(rawLeader.score) || rawLeader.score > 100 || !isNonNegativeFinite(rawLeader.mcapUsd)) return null;
-      leaders.push({ symbol: rawLeader.symbol, score: rawLeader.score, mcapUsd: rawLeader.mcapUsd });
-    }
-    tiers.push({ tier: tier as DigestSafetyMapTier, range: rawTier.range, count, mcapUsd, sharePct, leaders });
-  }
-  const common = { date, asOfSec, methodologyVersion, gradedCount, notRatedCount, totalMcapUsd, ...(supplyCoverage ? { supplyCoverage } : {}), tiers };
-  if (!DIGEST_SAFETY_MAP_TIERS.every((tier) => seen.has(tier)) || getDigestSafetyMapSummaryIssues(common as DigestSafetyMapSummary).length > 0) return null;
-  return profile === "canonical"
-    ? {
-        date,
-        asOfSec,
-        methodologyVersion,
-        gradedCount,
-        notRatedCount,
-        totalMcapUsd,
-        ...(supplyCoverage ? { supplyCoverage } : {}),
-        floorMcapByTier: { a: (floor as { a: number }).a, other: (floor as { other: number }).other },
-        tiers,
-      }
-    : common;
+  const result = (profile === "canonical" ? CanonicalReaderSummarySchema : ArchiveReaderSummarySchema).safeParse(value);
+  return result.success ? result.data : null;
 }
 
 export function parseDigestSafetyMapManifest(value: unknown, _profile: "canonical"): DigestSafetyMapManifest | null {
-  if (!isRecord(value) || !isDigestSafetyMapUtcDate(value.date) || !Number.isFinite(value.asOfSec)
-    || !Number.isFinite(value.renderedAtSec) || value.edition !== "daily" || !isRecord(value.bytes)
-    || !Number.isFinite(value.bytes.png) || (value.bytes.png as number) <= 0) return null;
-  const manifest: DigestSafetyMapManifest = {
-    date: value.date,
-    asOfSec: value.asOfSec as number,
-    renderedAtSec: value.renderedAtSec as number,
-    edition: value.edition,
-    bytes: { png: value.bytes.png as number },
-  };
-  const summary = parseDigestSafetyMapSummary(value.mapSummary, "canonical");
-  return summary && summary.date === manifest.date && summary.asOfSec === manifest.asOfSec
-    ? { ...manifest, mapSummary: summary }
-    : manifest;
+  const result = CanonicalReaderManifestSchema.safeParse(value);
+  if (!result.success) return null;
+  const summary = isRecord(value) ? parseDigestSafetyMapSummary(value.mapSummary, "canonical") : null;
+  return summary && summary.date === result.data.date && summary.asOfSec === result.data.asOfSec
+    ? { ...result.data, mapSummary: summary }
+    : result.data;
 }
 
 export function parseDigestSafetyMapCapture(value: unknown, profile: "archive-compatible"): DigestSafetyMapArchiveCapture | null;
 export function parseDigestSafetyMapCapture(value: unknown, profile: "canonical"): DigestSafetyMapCapture | null;
 export function parseDigestSafetyMapCapture(value: unknown, profile: DigestSafetyMapProfile) {
-  if (!isRecord(value) || !isRecord(value.manifest)) return null;
-  const { imageUrl, freshness, ageDays, manifest } = value;
-  if (typeof imageUrl !== "string" || imageUrl.trim().length === 0 || (freshness !== "current" && freshness !== "carried-forward")
-    || !isDigestSafetyMapUtcDate(manifest.date) || (ageDays === undefined ? profile === "canonical" : !isNonNegativeInteger(ageDays))) return null;
-  try {
-    const url = profile === "canonical" ? new URL(imageUrl) : new URL(imageUrl, "https://pharos.watch");
-    if (!url.pathname.endsWith("/safety-scores/map.png") || url.searchParams.get("date") !== manifest.date) return null;
-  } catch { return null; }
-  if (profile === "archive-compatible") {
-    const summary = parseDigestSafetyMapSummary(manifest.mapSummary ?? value.mapSummary ?? value.summary, profile);
-    return summary && summary.date === manifest.date
-      ? { imageUrl, freshness, ageDays: typeof ageDays === "number" ? ageDays : null, manifest: { date: manifest.date, mapSummary: summary } }
-      : null;
+  if (profile === "canonical") {
+    const result = CanonicalReaderCaptureSchema.safeParse(value);
+    return result.success ? result.data : null;
   }
-  if (!isNonNegativeInteger(manifest.asOfSec) || !isNonNegativeInteger(manifest.renderedAtSec)) return null;
-  const parsedManifest = parseDigestSafetyMapManifest(manifest, profile);
-  if (!parsedManifest?.mapSummary) return null;
-  const capture: DigestSafetyMapCapture = { imageUrl, freshness, ageDays: ageDays as number, manifest: parsedManifest as DigestSafetyMapCapture["manifest"] };
-  return getDigestSafetyMapCaptureIssues(capture).length === 0 ? capture : null;
+  if (!isRecord(value) || !isRecord(value.manifest)) return null;
+  const result = ArchiveReaderCaptureSchema.safeParse({
+    ...value, manifest: { ...value.manifest, mapSummary: value.manifest.mapSummary ?? value.mapSummary ?? value.summary },
+  });
+  if (!result.success || result.data.manifest.date !== result.data.manifest.mapSummary.date) return null;
+  try {
+    const url = new URL(result.data.imageUrl, "https://pharos.watch");
+    return url.pathname.endsWith("/safety-scores/map.png") && url.searchParams.get("date") === result.data.manifest.date
+      ? result.data : null;
+  } catch { return null; }
 }

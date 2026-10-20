@@ -22,7 +22,6 @@ export interface StablecoinCardData {
   pegScore: number | null;
   backing: string | null;
   governance: string | null;
-  redemptionScore: number | null;
   change24h: number | null;
   variantLabel?: string | null;
   variantParentSymbol?: string | null;
@@ -161,7 +160,7 @@ export function StablecoinCard({ data }: { data: StablecoinCardData }) {
     { label: "LIQUIDITY", value: data.liquidityScore != null ? data.liquidityScore.toFixed(0) : "—", color: TEXT_SECONDARY },
   ];
 
-  // Build secondary metrics row (6 items)
+  // Build secondary metrics row (5 items)
   const secondaryMetrics: Metric[] = [
     { 
       label: "MARKET CAP", 
@@ -180,10 +179,6 @@ export function StablecoinCard({ data }: { data: StablecoinCardData }) {
     { 
       label: "TYPE", 
       value: data.governance != null ? getGovernanceLabelShort(data.governance) : "—",
-    },
-    { 
-      label: "REDEMPTION", 
-      value: data.redemptionScore != null ? data.redemptionScore.toFixed(0) : "—",
     },
   ];
 
@@ -237,7 +232,7 @@ export function StablecoinCard({ data }: { data: StablecoinCardData }) {
         {/* Primary metrics row - 5 items */}
         <MetricRow metrics={primaryMetrics} valueFontSize={32} marginBottom={32} />
 
-        {/* Secondary metrics row - 6 items */}
+        {/* Secondary metrics row - 5 items */}
         <MetricRow metrics={secondaryMetrics} valueFontSize={24} />
       </div>
 

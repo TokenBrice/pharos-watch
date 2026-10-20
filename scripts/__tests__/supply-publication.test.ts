@@ -1,8 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ESLint } from "eslint";
 import { buildMapSummary, projectSafetyMapCoin, radiusForMcap, summarizeMapCoins } from "../maintenance/build-safety-score-map";
-import { parseDigestSafetyMapSummary } from "@shared/types/digest-safety-map-contract";
-import { DigestSafetyMapSummarySchema } from "@shared/types/digest";
+import { DigestSafetyMapSummarySchema, parseDigestSafetyMapSummary } from "@shared/types/digest-safety-map-contract";
 
 const supplyCases: Array<Record<string, number> | undefined> = [undefined, {}, { peggedUSD: 0 }];
 

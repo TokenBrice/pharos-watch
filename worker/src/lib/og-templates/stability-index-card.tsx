@@ -12,8 +12,6 @@ export interface StabilityIndexCardData {
   avg7d: number | null;
   retainedSampleHigh: number | null;
   retainedSampleLow: number | null;
-  flightToQuality: boolean;
-  flightIntensity: number | null;
   lastUpdated?: string;
 }
 
@@ -85,7 +83,7 @@ export function StabilityIndexCard({
         )}
       </div>
 
-      {/* Context row: retained sample bounds + Flight to Quality */}
+      {/* Context row: retained sample bounds */}
       <div
         style={{
           display: "flex",
@@ -103,11 +101,6 @@ export function StabilityIndexCard({
             Low: <span style={{ color: SEMANTIC_COLORS.negative, fontWeight: 600 }}>{data.retainedSampleLow == null ? "—" : data.retainedSampleLow.toFixed(1)}</span>
           </span>
         </div>
-        {data.flightToQuality && (
-          <span style={{ color: SEMANTIC_COLORS.warning, fontWeight: 600 }}>
-            ⚠ FLIGHT TO QUALITY {data.flightIntensity ? `(${(data.flightIntensity * 100).toFixed(0)}%)` : ""}
-          </span>
-        )}
       </div>
 
       {/* Thermometer-style band visualization */}

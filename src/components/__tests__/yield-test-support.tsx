@@ -1,10 +1,19 @@
 import { render } from "@testing-library/react";
-import { vi } from "vitest";
+import { afterEach, beforeEach, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { YieldMobileCard } from "@/components/yield-leaderboard";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
 import type { YieldBenchmarkRegistry } from "@shared/types";
 import type { YieldRankingProvenance } from "@shared/types/yield";
+
+beforeEach(() => {
+  vi.stubGlobal("ResizeObserver", class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  });
+});
+afterEach(() => vi.unstubAllGlobals());
 
 /** Complete provenance record: spreading the factory's own (nullable) field widens the type. */
 export const YIELD_TEST_PROVENANCE: YieldRankingProvenance = {

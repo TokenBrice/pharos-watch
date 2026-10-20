@@ -40,7 +40,7 @@ function ranking(overrides: Partial<YieldRanking> = {}): YieldRanking {
 }
 
 describe("buildYieldSourceExplorerModel", () => {
-  it("returns selected source, retained alternates, risk labels, switch metadata, and benchmark context", () => {
+  it("returns selected source, retained alternates, risk labels, and switch metadata", () => {
     const model = buildYieldSourceExplorerModel(ranking({
       sourceRisk: mergeSourceRiskGoldenFixtures([
         "reward-heavy",
@@ -88,12 +88,6 @@ describe("buildYieldSourceExplorerModel", () => {
       previousSourceKey: "compound-usdc",
       previousSourceDisplayLabel: "Compound",
     });
-    expect(model.benchmarkContext).toMatchObject({
-      label: "T-bill",
-      rate: 0.04,
-      isFallback: false,
-      selectionMode: "native",
-    });
   });
 
   it("keeps duplicate labels identifiable and missing URLs safe", () => {
@@ -115,7 +109,7 @@ describe("buildYieldSourceExplorerModel", () => {
 
     expect(model.selectedSource.displayLabel).toBe("Aave (aave-usdc)");
     expect(model.retainedAlternates[0]?.displayLabel).toBe("Aave (aave-usdt)");
-    expect(model.sourceIdentity.url).toBeNull();
+    expect(model.selectedSource.url).toBeNull();
     expect(model.historySources.map((source) => source.yieldSource)).toEqual([
       "Aave (aave-usdc)",
       "Aave (aave-usdt)",

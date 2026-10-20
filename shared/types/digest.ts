@@ -1,12 +1,6 @@
 import { V9RatingStatusSchema, V9CompactPartialEvidenceSchema } from "./safety-score-v9-causes";
 import { z } from "zod";
-import {
-  DIGEST_SAFETY_MAP_TIERS,
-  getDigestSafetyMapCaptureIssues,
-  getDigestSafetyMapSummaryIssues,
-  isDigestSafetyMapUtcDate,
-  type DigestSafetyMapCapture,
-} from "./digest-safety-map-contract";
+import { DigestSafetyMapUtcDateSchema, type DigestSafetyMapCapture } from "./digest-safety-map-contract";
 import type { DepegDirection } from "./market";
 import type { MintBurnFlowsResponse } from "./mint-burn";
 import {
@@ -17,7 +11,6 @@ import {
   type SafetyScoreV8PublicationIdentity,
   type SafetyScoreV9PublicationIdentity,
 } from "./safety-score-publication";
-export type { DigestSafetyMapCapture, DigestSafetyMapSummary } from "./digest-safety-map-contract";
 
 export const DigestKindSchema = z.enum(["daily", "weekly"]);
 export type DigestKind = z.output<typeof DigestKindSchema>;
@@ -273,81 +266,6 @@ export interface DigestEditorialAudit {
   qualityIssueCodes?: string[];
 }
 
-const DigestSafetyMapTierSchema = z
-  .object({
-    tier: z.enum(DIGEST_SAFETY_MAP_TIERS),
-    range: z.string().trim().min(1),
-    count: z.number().int().nonnegative(),
-    mcapUsd: z.number().nonnegative(),
-    sharePct: z.number().min(0).max(100)
-      .describe("Percentage points, 0-100 scale (not a 0-1 ratio)"),
-    leaders: z
-      .array(
-        z
-          .object({
-            symbol: z.string().trim().min(1),
-            score: z.number().min(0).max(100),
-            mcapUsd: z.number().nonnegative(),
-          })
-          .strict(),
-      )
-      .max(3),
-  })
-  .strict();
-
-const DigestSafetyMapUtcDateSchema = z
-  .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/)
-  .refine(isDigestSafetyMapUtcDate, "Safety Map date must be a real UTC calendar day");
-
-export const DigestSafetyMapSummarySchema = z
-  .object({
-    date: DigestSafetyMapUtcDateSchema,
-    asOfSec: z.number().int().nonnegative(),
-    methodologyVersion: z.string().trim().min(1),
-    gradedCount: z.number().int().nonnegative(),
-    notRatedCount: z.number().int().nonnegative(),
-    totalMcapUsd: z.number().nonnegative(),
-    supplyCoverage: z.object({
-      complete: z.boolean(),
-      observedCount: z.number().int().nonnegative(),
-      unavailableCount: z.number().int().nonnegative(),
-      unavailableById: z.record(z.string(), z.string()),
-      shareBasis: z.literal("known-mapped-supply"),
-    }).optional(),
-    floorMcapByTier: z
-      .object({
-        a: z.number().nonnegative(),
-        other: z.number().nonnegative(),
-      })
-      .strict(),
-    tiers: z.array(DigestSafetyMapTierSchema).length(5),
-  })
-  .strict()
-  .superRefine((summary, ctx) => {
-    for (const issue of getDigestSafetyMapSummaryIssues(summary)) ctx.addIssue({ code: "custom", ...issue });
-  });
-
-export const DigestSafetyMapCaptureSchema = z
-  .object({
-    imageUrl: z.string().trim().min(1),
-    freshness: z.enum(["current", "carried-forward"]),
-    ageDays: z.number().int().nonnegative(),
-    manifest: z
-      .object({
-        date: DigestSafetyMapUtcDateSchema,
-        asOfSec: z.number().int().nonnegative(),
-        renderedAtSec: z.number().int().nonnegative(),
-        edition: z.literal("daily"),
-        bytes: z.object({ png: z.number().positive() }).strict(),
-        mapSummary: DigestSafetyMapSummarySchema,
-      })
-      .strict(),
-  })
-  .strict()
-  .superRefine((capture, ctx) => {
-    for (const issue of getDigestSafetyMapCaptureIssues(capture)) ctx.addIssue({ code: "custom", ...issue });
-  });
 
 export const DigestSupplyCoverageSchema = z.object({
   complete: z.boolean(),

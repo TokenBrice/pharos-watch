@@ -492,8 +492,6 @@ export function YieldMobileCard({
     confidenceLabel,
     freshness,
     sourceRiskScore,
-    rawSourceRiskPenalty,
-    sourceRiskMaterial,
     sourceRiskDrivers,
     rankChip,
     pysNullReasonText,
@@ -603,8 +601,7 @@ export function YieldMobileCard({
         ) : null}
         <YieldSignalsIndicator
           row={row}
-          sourceRiskMaterial={sourceRiskMaterial}
-          rawSourceRiskPenalty={rawSourceRiskPenalty}
+          sourceRiskSummary={sourceRiskSummary}
           variant="mobile"
         />
       </div>

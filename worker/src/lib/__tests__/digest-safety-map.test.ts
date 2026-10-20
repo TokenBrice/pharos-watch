@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { DigestSafetyMapSummary } from "@shared/types/digest-safety-map-contract";
 import {
   buildDigestSafetyMapCaptions,
   MAX_SAFETY_MAP_CARRY_FORWARD_DAYS,
   resolveDigestSafetyMap,
-  type DigestSafetyMapSummary,
 } from "../digest-safety-map";
 
 const NOW_SEC = 1_777_000_000;

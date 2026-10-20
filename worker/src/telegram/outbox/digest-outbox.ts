@@ -707,28 +707,6 @@ async function finalizeSentEdition(
       )
       .bind(action.key, action.value, nowSec, ...eligibilityBindings)
   );
-  const weeklyMetaStatementIndex = claim.row.digest_kind === "weekly"
-    ? statements.length
-    : -1;
-  if (claim.row.digest_kind === "weekly") {
-    statements.push(
-      db
-        .prepare(
-          `UPDATE daily_digest
-              SET digest_meta = json_set(
-                    COALESCE(digest_meta, '{}'),
-                    '$.telegramDelivered', json('true'),
-                    '$.telegramDeliveryStatus', 'ok',
-                    '$.telegramDeliveryUpdatedAt', ?,
-                    '$.telegramDeliveredAt', ?
-                  )
-            WHERE generated_at = ?
-              AND json_extract(digest_meta, '$.type') = 'weekly'
-              AND ${eligibleEdition}`,
-        )
-        .bind(nowSec, nowSec, claim.row.digest_generated_at, ...eligibilityBindings),
-    );
-  }
   statements.push(
     db
       .prepare(
@@ -760,9 +738,7 @@ async function finalizeSentEdition(
     );
     throw error;
   }
-  const failedStrictStatementIndex = results.findIndex((result, index) =>
-    index !== weeklyMetaStatementIndex && Number(result.meta?.changes ?? 0) !== 1
-  );
+  const failedStrictStatementIndex = results.findIndex((result) => Number(result.meta?.changes ?? 0) !== 1);
   // This confirms the result; safety comes from the identical SQL guards, not
   // from an exception after the batch has already committed.
   if (results.length !== statements.length || failedStrictStatementIndex !== -1) {

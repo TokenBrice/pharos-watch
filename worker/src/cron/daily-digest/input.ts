@@ -1,9 +1,6 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
-import {
-  DigestSafetyMapCaptureSchema,
-  type DigestInputData,
-  type DigestSafetyMapCapture,
-} from "@shared/types/digest";
+import type { DigestInputData } from "@shared/types/digest";
+import { DigestSafetyMapCaptureSchema, type DigestSafetyMapCapture } from "@shared/types/digest-safety-map-contract";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { isRecord } from "@shared/lib/type-guards";
 import { round1 } from "@shared/lib/math";

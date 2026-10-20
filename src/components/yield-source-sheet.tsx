@@ -136,8 +136,8 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, benchmar
             <div className="mt-1.5 flex flex-wrap items-baseline justify-between gap-2">
               <div className="flex items-center gap-2">
                 <YieldSourceIdentity
-                  displayLabel={sourceExplorer.sourceIdentity.displayLabel}
-                  url={sourceExplorer.sourceIdentity.url}
+                  displayLabel={sourceExplorer.selectedSource.displayLabel}
+                  url={sourceExplorer.selectedSource.url}
                   confidenceStyle={confidenceStyle}
                   confidenceLabel={confidenceLabel}
                   sourceChanged={sourceExplorer.sourceSwitch.changed}

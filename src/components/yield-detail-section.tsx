@@ -201,8 +201,8 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
           <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
             {rolePrefix ? <span className="font-medium">{rolePrefix} ·</span> : null}
             <YieldSourceIdentity
-              displayLabel={view.sourceExplorer.sourceIdentity.displayLabel}
-              url={view.sourceExplorer.sourceIdentity.url}
+              displayLabel={view.sourceExplorer.selectedSource.displayLabel}
+              url={view.sourceExplorer.selectedSource.url}
               confidenceStyle={confidence ? YIELD_SOURCE_CONFIDENCE_STYLES[confidence] : null}
               confidenceLabel={confidence ? YIELD_SOURCE_CONFIDENCE_DEFINITIONS[confidence].label : null}
               sourceChanged={view.sourceExplorer.sourceSwitch.changed}

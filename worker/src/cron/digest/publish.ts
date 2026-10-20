@@ -15,6 +15,7 @@ import type { TelegramDigestSuccessAction } from "../../telegram/digest/digest-a
 import {
   deliverTelegramDigestEdition,
   enqueueTelegramDigestEdition,
+  type TelegramDigestOutboxState,
 } from "../../telegram/outbox/digest-outbox";
 import { postDigestTweet, type TwitterCreds } from "../../lib/twitter";
 import { buildTweetText } from "../../lib/twitter-digest-text";
@@ -116,6 +117,16 @@ export function buildDigestTelegramPublication(
     required: missingCredentialNames != null,
     missingCredentialNames,
   };
+}
+
+/** A stored Telegram edition belongs to the drain, never to a rebuilt enqueue. */
+export async function readDigestTelegramOutboxState(
+  db: D1Database,
+  editionKey: string,
+): Promise<TelegramDigestOutboxState | null> {
+  const row = await db.prepare("SELECT state FROM telegram_digest_outbox WHERE edition_key = ?")
+    .bind(editionKey).first<{ state: TelegramDigestOutboxState }>();
+  return row?.state ?? null;
 }
 
 interface DigestEditionDeliveryInput {

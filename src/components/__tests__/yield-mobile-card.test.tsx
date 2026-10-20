@@ -26,6 +26,17 @@ const row = makeYieldViewModelRow({
 });
 
 describe("YieldMobileCard", () => {
+  it.each([{ warningSignals: [] }, { warningSignals: ["reward-heavy"] }])("discloses score-only risk without manufacturing a penalty alongside $warningSignals", async ({ warningSignals }) => {
+    renderYieldMobileCard({
+      ...row, warningSignals, sourceRisk: { sourceRiskScore: 42, sourceRiskPenalty: null },
+    });
+    fireEvent.focus(screen.getByText(warningSignals.length ? "1 warning" : "Source-risk"));
+    const tooltip = await screen.findByRole("tooltip");
+    expect(tooltip.textContent).toContain("Source risk 42/100 | n/a");
+    expect(tooltip.textContent).not.toMatch(/0\.00[x×]|1\.00[x×]/);
+    expect(screen.queryByText("No warnings")).toBeNull();
+  });
+
   it("exposes mobile history and source-sheet controls", () => {
     const onToggleExpanded = vi.fn();
     const onOpenSourceSheet = vi.fn();
