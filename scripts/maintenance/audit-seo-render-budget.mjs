@@ -262,8 +262,8 @@ function formatTable(rows) {
   return lines.join("\n");
 }
 
-async function main() {
-  const args = parseSeoRenderBudgetArgs(process.argv.slice(2));
+export async function runSeoRenderBudget(argv = process.argv.slice(2)) {
+  const args = parseSeoRenderBudgetArgs(argv);
   if (args.help) {
     console.log("Usage: node scripts/maintenance/audit-seo-render-budget.mjs [--url <url>] [--routes <comma-separated-routes>] [--wait-ms <n>] [--json]\nRead-only browser render-budget audit; defaults to the live site and waits 4000 ms.");
     return;
@@ -291,4 +291,4 @@ async function main() {
   }
 }
 
-runDirectCli(import.meta.url, main);
+runDirectCli(import.meta.url, runSeoRenderBudget);
