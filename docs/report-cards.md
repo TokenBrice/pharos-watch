@@ -10,7 +10,7 @@ The public grade-distribution total is labeled **assets**, since its A/B/C/D/F/N
 ## Methodology Identity
 
 - Active model: <!-- GENERATED-START: report-cards-active-model -->`v10`<!-- GENERATED-END: report-cards-active-model -->
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-safety-score -->`v10.24`<!-- GENERATED-END: methodology-version-safety-score -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-safety-score -->`v10.25`<!-- GENERATED-END: methodology-version-safety-score -->
 - Public breakdown/publication schema v7, API wrapper v8 and score trace v4; retained older publications require explicit historical dispatch or refusal, never fabricated causes or route identity
 - Policy: `shared/data/safety-score-v9/methodology-policy-candidate-v1.json`, parsed and digested by `shared/lib/safety-score-v9/policy.ts`
 - **Evaluation build:** `SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST` in `shared/data/safety-score-v9/evaluation-build-manifest-v1.ts` binds the offline candidate runtime import graph: captured fixed-input normalization, extension construction, fact-set compilation, evaluation and projection, including executable admission schemas, reviewed score-input data and full-catalog bytes/decoder. Edits anywhere in that evaluation-time closure rotate replay/publication identity. Capture-only network observers/producers and build-time generators are outside it; exact-input/fact digests bind their admitted output. Capture binding and runtime identity consumers are unchanged.
@@ -66,7 +66,7 @@ The public U label is “Unresolved”: researched inputs can still lack a concl
 
 Reviewed suspension removes only the exact channel's capacity/credit and masked obligations; it proves neither exhaustion nor whole-asset danger. Independent alternatives remain evaluable, and insufficient alternatives retain a scoped U whole-Exit census witness. [Admission details](https://github.com/TokenBrice/pharos-watch/blob/main/docs/process/report-cards-appendix.md#model-admission-details) prevent suspension from bypassing genuine uncertainty/NR.
 
-Independent wrapper-local reviews establish scoped accounting, mutability and withdrawal facts, never executable capacity or aggregate closure. [Detailed gates](https://github.com/TokenBrice/pharos-watch/blob/main/docs/process/report-cards-appendix.md#model-admission-details) retain adverse floors and fail-closed admission.
+Wrapper reviews scope accounting/mutability/withdrawals, not capacity/aggregate closure. Terms price access, execution model, settlement/fees, not measurement/model certainty; adverse floors, certificate freshness and independent fail-closed unwind gates remain.
 
 ### Morpho lender collateral-book Backing (v10.19)
 
@@ -133,7 +133,7 @@ The response includes:
 See [Report schema v8](#report-schema-v8) for cause-aware fields and typed route identity. `/api/report-cards/v9` wraps public publication 7 as body schema 8; old public v6 is rejected rather than inferred current. Completeness reconciles `expectedCount = ratedCount + notRatedCount + pipelineGapCount`, with disjoint sorted NR/pipeline IDs. Index 2 and free-grades 1 preserve compact status/partial metadata; graph/scenario schema 2 preserves technical parent/model nulls separately from NR.
 
 
-Pillar `freshness` is `current`, `stale`, or `unknown`. Only Exit is wired: age the DEX liquidity input at route observation against the inclusive 4-hour `DEX_LIQUIDITY_EVIDENCE_MAX_AGE_SEC` bound (compiler `routeFreshness.dexMaxAgeSec`); older evidence is `stale`, absent DEX rows `unknown`. Backing/Economic Control remain `unknown` pending lane-age projection. Card `evidence.freshness` is `stale` if any wired pillar is stale, otherwise `unknown`. This presentation metadata never affects scores, caps or publication identity digests.
+Pillar freshness stays categorical; opt-in operands follow the compact-representation contract above. Scores and legacy wire stay unchanged.
 
 See the [public API reference](https://pharos.watch/api/) for the wire contract.
 

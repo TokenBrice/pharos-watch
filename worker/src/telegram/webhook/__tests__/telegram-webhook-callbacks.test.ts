@@ -32,6 +32,13 @@ import {
 beforeEach(resetCallbackTest);
 
 describe("handleCallbackQuery", () => {
+  it.each(["recap:on", "recap:off", "recap:h:9"])("rejects retired %s callbacks without preference access", async (data) => {
+    const db = mockTelegramD1();
+    await handleCallbackQuery(db, "fake-token", makeCallbackQuery(data));
+    expect(lastAckBody().text).toBe("Action not recognized.");
+    expect(db.getHistory().every((entry) => !/telegram_(?:subscribers|recap_)/.test(entry.sql))).toBe(true);
+    expect(fetchSpy.mock.calls.some(([url]) => String(url).endsWith("/sendMessage"))).toBe(false);
+  });
   it.each(["setup", "forget"] as const)("refuses old %s confirmation and cancellation buttons after same-owner replacement", async (kind) => {
     const fixtures = createLatestSchemaFixtureTracker();
     const { sqlite, db } = fixtures.open();

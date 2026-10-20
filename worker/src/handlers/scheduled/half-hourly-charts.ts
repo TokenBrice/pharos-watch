@@ -17,6 +17,7 @@ import {
   DEX_LIQUIDITY_EVIDENCE_MAX_AGE_SEC,
   isDailyDexShadowTargetPublicationSlot,
 } from "@shared/lib/cron-cadences";
+import { getCronSlotStartedAtForSchedule } from "@shared/lib/cron-jobs";
 import { prepareSafetyScoreV9Input } from "../../cron/prepare-safety-score-v9-input";
 import { runCronSentinel } from "../../cron/cron-sentinel";
 import { syncStablecoinCharts } from "../../cron/sync-stablecoin-charts";
@@ -260,6 +261,7 @@ export function buildHalfHourlyChartsSlotGroups(runtime: ScheduledRuntimeContext
           runtime.env.CF_VERSION_METADATA,
           runtime.deadline,
           runtime.dwellirNative,
+          getCronSlotStartedAtForSchedule("quarterHourly", runtime.slotStartedAt * 1_000),
         );
         if (recovery === null) {
           return result;

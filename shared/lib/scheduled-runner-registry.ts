@@ -217,7 +217,6 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
     worker: "public",
     jobChains: [[
       "dispatch-telegram-alerts",
-      "telegram-personalized-recap-planner",
       "telegram-degradation-watchdog",
       "telegram-disambiguation-cleanup",
       "telegram-pulse-snapshot",

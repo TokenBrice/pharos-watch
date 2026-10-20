@@ -13,7 +13,7 @@ import {
   TELEGRAM_START_PAYLOAD_MAX_LENGTH,
 } from "@shared/lib/telegram-mini-app-payloads";
 import {
-  getTelegramPrivateBotCommands,
+  TELEGRAM_BOT_COMMANDS,
 } from "@shared/lib/telegram-bot-registration";
 import { TELEGRAM_PUBLIC_ALERT_SAMPLES } from "@shared/lib/telegram-alert-samples";
 import { telegramAdoptionEntryForPlacement, telegramAdoptionSource } from "@shared/lib/telegram-adoption-analytics";
@@ -38,8 +38,8 @@ describe("PharosWatchBotPage", () => {
         group.commands.map((entry) => entry.command.match(/^\/([a-z]+)/)?.[1]).filter(Boolean),
       ),
     );
-    expect([...publicCommands].sort()).toEqual(getTelegramPrivateBotCommands(true).map((entry) => entry.command).sort());
-    for (const retiredCommand of ["import", "export"]) {
+    expect([...publicCommands].sort()).toEqual(TELEGRAM_BOT_COMMANDS.map((entry) => entry.command).sort());
+    for (const retiredCommand of ["import", "export", "recap"]) {
       expect(publicCommands.has(retiredCommand)).toBe(false);
     }
   });

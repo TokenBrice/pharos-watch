@@ -268,6 +268,9 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
                 </TableCell>
                 <TableCell className="text-right">
                   <span
+                    title={(coin.coverage?.windows?.window24h?.provenance ?? coin.coverage?.provenance) === "legacy-pre-cutover"
+                      ? "24h scan evidence uses legacy pre-cutover coverage, not durable-v2 scan proof."
+                      : undefined}
                     className={cn(
                       "pharos-numeric text-sm font-semibold",
                       PRESSURE_VALUE_CLASS[pressureState],

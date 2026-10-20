@@ -44,11 +44,6 @@ import {
   type TelegramStatusPathBudgetResult as StatusPathBudgetResult,
 } from "../lib/telegram-load-report";
 import {
-  simulateTelegramRecapLoadScenarios,
-  type TelegramRecapLoadScenarioResult,
-} from "../lib/telegram-recap-load-scenarios";
-import { TELEGRAM_RECAP_TAPE_PAGE_LIMIT } from "@shared/lib/telegram-recap-policy";
-import {
   ACTIVE_PRESET_FLAGS_SQL,
   ACTIVE_SUBSCRIPTION_FLAGS_SQL,
   ACTIVE_WATCHER_SQL_CONDITION,
@@ -66,7 +61,6 @@ export {
   simulateProductionCalibratedDispatch,
   summarizeFixture,
 } from "../lib/telegram-load-scenarios";
-export { simulateTelegramRecapLoadScenarios } from "../lib/telegram-recap-load-scenarios";
 export type {
   LoadScenarioResult,
   ProductionCalibratedDispatchScenario,
@@ -106,7 +100,7 @@ export interface StatusPathBudget {
 
 export interface QueryPlanCheckDefinition {
   id: string;
-  category: "fan-out" | "pulse-status" | "pending-drain" | "lifecycle" | "recap-planner";
+  category: "fan-out" | "pulse-status" | "pending-drain" | "lifecycle";
   sql: string;
   binds: Array<string | number | null>;
   requiredDetails?: string[];
@@ -164,19 +158,6 @@ export function findTtlMarginBreaches(report: TelegramLoadCheckReport): LoadScen
   );
 }
 
-export function findRecapLoadBreaches(report: TelegramLoadCheckReport): TelegramRecapLoadScenarioResult[] {
-  return report.recapScenarios.filter((scenario) =>
-    scenario.targetRecipients === REQUIRED_TARGET
-    && (
-      scenario.ttlMarginFraction < report.assumptions.minimumTtlMarginFraction
-      || scenario.peakPlannerCpuMs > report.assumptions.cpuBudgetCeilingMs
-      || scenario.peakDispatchCpuMs > report.assumptions.cpuBudgetCeilingMs
-      || !scenario.priorityPreserved
-      || scenario.aiCalls !== 0
-      || scenario.externalPlanningFetches !== 0
-    ),
-  );
-}
 function runExplainQueryPlan(db: DatabaseSync, check: QueryPlanCheckDefinition): QueryPlanCheckResult {
   // Cast: better-sqlite3 .all() returns unknown[]; EXPLAIN QUERY PLAN's row shape is stable per SQLite docs
   const rows = db.prepare(`EXPLAIN QUERY PLAN ${check.sql}`).all(...check.binds) as unknown as QueryPlanRow[];
@@ -679,85 +660,6 @@ export function buildQueryPlanChecks(): QueryPlanCheckDefinition[] {
       requiredDetails: ["idx_telegram_pending_alerts_chat_id"],
     },
     {
-      id: "recap-due-preferences",
-      category: "recap-planner",
-      sql: `SELECT p.chat_id, p.delivery_hour_local, p.next_due_at, s.preference_generation
-        FROM telegram_recap_preferences p
-        JOIN telegram_subscribers s ON s.chat_id = p.chat_id
-       WHERE p.enabled = 1 AND p.chat_kind = 'private'
-         AND p.next_due_at IS NOT NULL AND p.next_due_at <= ?
-       ORDER BY p.next_due_at ASC, p.chat_id ASC
-       LIMIT ?`,
-      binds: [1_800_000_000, 90],
-      requiredDetails: ["idx_telegram_recap_preferences_due", "sqlite_autoindex_telegram_subscribers_1"],
-      note: "Mirrors the bounded due-page read used by the personalized recap planner.",
-    },
-    {
-      id: "recap-tape-window",
-      category: "recap-planner",
-      sql: `SELECT id, event_id, type, severity, ts, coin_id, chain, payload_json
-        FROM tape_events
-       WHERE ts > ? AND ts <= ?
-         AND type IN (?, ?, ?, ?, ?, ?)
-       ORDER BY ts ASC, id ASC
-       LIMIT ?`,
-      binds: [1_799_870_400_000, 1_800_000_000_000, "depeg.opened", "dews.escalated", "score.downgraded", "freeze.blocked", "mint_burn.large_mint", "yield.warning_emitted", TELEGRAM_RECAP_TAPE_PAGE_LIMIT + 1],
-      requiredDetails: ["idx_tape_type_ts"],
-      note: "Reviews the Tape type/time index and cap-plus-one bounded scan used by recap planning.",
-    },
-    {
-      id: "recap-direct-membership",
-      category: "recap-planner",
-      sql: `SELECT chat_id, stablecoin_id, alert_snooze_until_ts
-        FROM telegram_subscriptions
-       WHERE chat_id IN (?, ?, ?)
-         AND (${ACTIVE_SUBSCRIPTION_FLAGS_SQL})`,
-      binds: ["recap-1", "recap-2", "recap-3"],
-      requiredDetails: ["sqlite_autoindex_telegram_subscriptions_1"],
-      note: "Mirrors the planner's bounded direct-watchlist membership read by due chat ids.",
-    },
-    {
-      id: "recap-preset-membership",
-      category: "recap-planner",
-      sql: `SELECT chat_id, preset_id
-        FROM telegram_preset_subscriptions
-       WHERE chat_id IN (?, ?, ?)
-         AND (${ACTIVE_PRESET_FLAGS_SQL})`,
-      binds: ["recap-1", "recap-2", "recap-3"],
-      requiredDetails: ["idx_telegram_preset_followers_cursor"],
-      note: "Mirrors the planner's bounded preset membership read by due chat ids; the 0268 covering chat/preset cursor index serves it.",
-    },
-    {
-      id: "recap-target-guarded-transition",
-      category: "recap-planner",
-      sql: `UPDATE telegram_recap_preferences
-         SET next_due_at = ?, updated_at = ?
-       WHERE chat_id = ? AND enabled = 1 AND next_due_at = ?
-         AND EXISTS (
-           SELECT 1
-             FROM telegram_recap_targets target
-             JOIN telegram_subscribers subscriber ON subscriber.chat_id = target.chat_id
-            WHERE target.recap_key = ? AND target.status = 'queued'
-              AND target.preference_generation = ?
-              AND subscriber.preference_generation = ?
-         )`,
-      binds: [1_800_086_400, 1_800_000_000, "recap-1", 1_800_000_000, "recap:recap-1:2026-07-11:v1", 1, 1],
-      requiredDetails: [
-        "sqlite_autoindex_telegram_recap_preferences_1",
-        "sqlite_autoindex_telegram_recap_targets_1",
-        "sqlite_autoindex_telegram_subscribers_1",
-      ],
-      note: "Mirrors the target-state and preference-generation-fenced schedule transition.",
-    },
-    {
-      id: "recap-pending-handoff",
-      category: "recap-planner",
-      sql: "SELECT id FROM telegram_pending_alerts WHERE dedupe_key = ?",
-      binds: ["recap:recap-1:2026-07-11:v1"],
-      requiredDetails: ["idx_tpa_dedupe_key"],
-      note: "Mirrors the exact pending-row lookup used to attach a recap target after its idempotent handoff.",
-    },
-    {
       id: "pulse-aggregate",
       category: "pulse-status",
       sql: statusSql.get("computeTelegramCurrentLifecycleSnapshot")!,
@@ -1007,14 +909,6 @@ export function buildTelegramLoadCheckReport(
   const targets = options.targets ?? WATCHER_TARGETS;
   const fixtures = targets.map((target) => buildSyntheticTelegramFixture(target));
   const scenarios = fixtures.flatMap((fixture) => simulateLoadScenarios(fixture));
-  const recapScenarios = fixtures.flatMap((fixture) => {
-    const riskBurst = scenarios.find((scenario) =>
-      scenario.targetActiveWatchers === fixture.activeWatchers && scenario.scenarioId === "market-wide-burst",
-    );
-    return simulateTelegramRecapLoadScenarios(fixture.activeWatchers, {
-      riskBurstChunks: riskBurst?.messageChunks ?? fixture.activeWatchers,
-    });
-  });
   const requiredPlanningScenarios = scenarios.filter((scenario) => scenario.targetActiveWatchers === REQUIRED_TARGET);
   const worstCasePlanningDelaySeconds = Math.max(
     0,
@@ -1047,7 +941,6 @@ export function buildTelegramLoadCheckReport(
     },
     fixtureSummaries: fixtures.map(summarizeFixture),
     scenarios,
-    recapScenarios,
     productionDispatchScenario: simulateProductionCalibratedDispatch(),
     queryPlans: options.skipQueryPlans ? [] : runQueryPlanChecks(options.migrationsDir),
     statusPathBudgets: options.skipQueryPlans ? [] : runStatusPathBudgetChecks(options.migrationsDir),
@@ -1088,7 +981,6 @@ function main(): void {
   // of the per-invocation cap. Always enforced (not gated on --enforce-target-slo).
   const cpuBudgetBreaches = findCpuBudgetBreaches(report);
   const ttlMarginBreaches = enforceTargetSlo ? findTtlMarginBreaches(report) : [];
-  const recapLoadBreaches = enforceTargetSlo ? findRecapLoadBreaches(report) : [];
   const productionDispatchBreaches = findProductionDispatchBreaches(report);
 
   if (
@@ -1098,7 +990,6 @@ function main(): void {
     spikeTargetSloBreaches.length > 0 ||
     cpuBudgetBreaches.length > 0 ||
     ttlMarginBreaches.length > 0 ||
-    recapLoadBreaches.length > 0 ||
     productionDispatchBreaches.length > 0
   ) {
     if (failedPlans.length > 0) {
@@ -1132,13 +1023,6 @@ function main(): void {
       console.error(
         `\n${ttlMarginBreaches.length} required ${REQUIRED_TARGET.toLocaleString()}-watcher scenario(s) missed the ${(MINIMUM_TTL_MARGIN_FRACTION * 100).toFixed(0)}% TTL margin: ${ttlMarginBreaches
           .map((scenario) => `${scenario.scenarioId} ${(scenario.ttlMarginFraction * 100).toFixed(1)}%`)
-          .join(", ")}.`,
-      );
-    }
-    if (recapLoadBreaches.length > 0) {
-      console.error(
-        `\n${recapLoadBreaches.length} required ${REQUIRED_TARGET.toLocaleString()}-recipient recap scenario(s) failed the TTL, CPU, priority, or zero-call boundary: ${recapLoadBreaches
-          .map((scenario) => scenario.scenarioId)
           .join(", ")}.`,
       );
     }

@@ -21,6 +21,7 @@ import {
   projectV9CompactPartialEvidence,
 } from "./safety-score-v9-causes";
 import { refineV9PublicGapContext } from "./safety-score-v9-public-causes";
+import { SafetyScoreV9PillarFreshnessSchema, refineSafetyScoreV9PillarFreshness } from "./safety-score-v9-public-facts";
 
 export const REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION = 8;
 
@@ -361,17 +362,24 @@ const ReportCardsV9CurrentEnvelopeShape = {
   schemaVersion: z.literal(REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION),
   publicationHealth: V9PublicationHealthSchema,
   foreignCauseGaps: canonicalTextArray(),
+  pillarFreshness: SafetyScoreV9PillarFreshnessSchema.optional(),
 };
 export const ReportCardsV9CurrentResponseSchema = z.object({
   ...ReportCardsV9CurrentEnvelopeShape,
   cards: z.array(SafetyScoreV9ResolvedCurrentCardSchema),
-}).strict().superRefine(refineReportCardsV9Response);
+}).strict().superRefine((value, ctx) => {
+  refineReportCardsV9Response(value, ctx);
+  refineSafetyScoreV9PillarFreshness({ ...value, sourceGenerations: value.source.sourceGenerations }, ctx);
+});
 
 /** Trusted materializer input: canonical cards, with the same public refinements. */
 export const ReportCardsV9CanonicalProjectionSchema = z.object({
   ...ReportCardsV9CurrentEnvelopeShape,
   cards: z.array(SafetyScoreV9CurrentCardSchema),
-}).strict().superRefine(refineReportCardsV9Response);
+}).strict().superRefine((value, ctx) => {
+  refineReportCardsV9Response(value, ctx);
+  refineSafetyScoreV9PillarFreshness({ ...value, sourceGenerations: value.source.sourceGenerations }, ctx);
+});
 export type ReportCardsV9CurrentResponse = z.infer<typeof ReportCardsV9CurrentResponseSchema>;
 
 /**

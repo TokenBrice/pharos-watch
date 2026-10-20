@@ -146,7 +146,6 @@ Reserve continuations use a 300-second wall allowance with an explicit 125-coin 
 | --- | --- | --- |
 | Target planning/handoff | `shared/lib/telegram-delivery-policy.ts`, `worker/src/cron/telegram/dispatch/dispatch-telegram-authoritative-planning.ts` | Bound transitions, candidate/handoff pages and transaction size independently; drain due delivery first. Fan-out reuse requires unchanged preference generations. |
 | Retention | `worker/src/cron/telegram/maintenance/telegram-retention-cleanup.ts` | Bounded child-first deletion distinguishes settled replay, unresolved residue and ambiguous audit; pending/claimed/sending and `execution_unknown` remain protected. |
-| Personalized recap | `shared/lib/telegram-recap-policy.ts`, `worker/src/handlers/scheduled/five-minute-telegram.ts` | D1-only, below risk/admin priority. Page/recipient/Tape caps never authorize truncating incomplete Tape; remaining slot budget subtracts risk runtime and finalization reserve. |
 | Quiet dispatch / safety source | `worker/src/cron/telegram/dispatch/dispatch-telegram-queue-paths.ts`, `worker/src/lib/alert-safety-source-cache.ts` | Quiet runs drain/clean and refresh available snapshots without new source events/targets. Unavailable safety preserves its baseline; alerts need fresh generation-valid canonical data. [Telegram Architecture](./telegram-architecture.md) owns delivery. |
 
 ### Safety Score production budgets

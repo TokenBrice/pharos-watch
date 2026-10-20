@@ -85,6 +85,7 @@ export interface PublishedMintBurnGauge {
    */
   partialValuationMcapUsd: number | null;
   scoredMcapUsd: number | null;
+  scanCoverage?: MintBurnFlowsResponse["gauge"]["scanCoverage"];
   coins: PublishedGaugeCoin[];
   /** Per-chain 24 h net flow, sorted by absolute net flow (descending). */
   chains: PublishedGaugeChain[];
@@ -207,11 +208,13 @@ export function parsePublishedMintBurnGauge(
     && parsedWindow.data.end - parsedWindow.data.start === PUBLISHED_GAUGE_WINDOW_HOURS * 60 * 60
     && parsedWindow.data.start % 3600 === 0 && parsedWindow.data.end % 3600 === 0
     ? parsedWindow.data : null;
+  const scanCoverage = MintBurnFlowsResponseSchema.shape.gauge.shape.scanCoverage.safeParse(payload.gauge.scanCoverage);
+  if (!scanCoverage.success) return null;
   const producerClock = numberValue(payload.updatedAt);
   const updatedAt = producerClock !== null && Number.isInteger(producerClock) && producerClock >= 0
     ? producerClock : null;
   return { score, partialValuationInputs, partialValuationMcapUsd, scoredMcapUsd, coins, chains,
-    window, updatedAt, publishedAt, stale };
+    ...(scanCoverage.data ? { scanCoverage: scanCoverage.data } : {}), window, updatedAt, publishedAt, stale };
 }
 
 /** Read the single published gauge. Fails closed rather than recomputing. */
@@ -230,5 +233,8 @@ export async function readPublishedMintBurnGauge(
     ageSec > PUBLISHED_GAUGE_STALE_AFTER_SEC,
   );
   if (!gauge) return { kind: "unavailable", reason: "malformed" };
+  const watermark = gauge.window?.watermark;
+  if (watermark && (watermark.timestamp == null || watermark.unavailableReason != null
+    || nowSec - watermark.timestamp > watermark.maxAgeSec)) return { kind: "unavailable", reason: "expired" };
   return { kind: "ok", gauge };
 }

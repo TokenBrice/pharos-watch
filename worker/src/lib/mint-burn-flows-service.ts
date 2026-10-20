@@ -1,10 +1,15 @@
 import { logWorkerEventArgs } from "./structured-log";
 import { getCache, setCacheIfNewer } from "./db-cache";
 import { buildCronFreshnessHeaders, buildCronFreshnessMeta, type CronTimestampLookupResult } from "./api-freshness";
-import { jsonResponseWithHeaders } from "./api-response";
+import { jsonResponse, jsonResponseWithHeaders } from "./api-response";
 import { readCachedJsonOr503 } from "./api-cache-read";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC } from "./mint-burn-health-config";
+import { getCacheRatioThresholds } from "@shared/lib/status-thresholds";
+
+/** Same effective fresh budget returned by buildCronFreshnessMeta, not its base cadence. */
+export const MINT_BURN_WATERMARK_MAX_AGE_SEC =
+  MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC * getCacheRatioThresholds("cron-output").degraded;
 import { MINT_BURN_CONFIGS, type MintBurnContractConfig } from "./mint-burn-contracts";
 import { decodeJsonString } from "./cache-json";
 import { logMalformedJsonPath } from "./json-decode-observability";
@@ -18,8 +23,8 @@ import {
   tallyMintBurnHourlyBucket,
   type MintBurnValuationTally,
 } from "@shared/lib/mint-burn-valuation";
-import { MINT_BURN_FTQ_DEPENDENCY_KEY, type MintBurnCoinCoverage, type MintBurnScanWindow, type MintBurnValuationCompleteness } from "@shared/types/mint-burn";
-import { mintBurnScanCoverageAdmits, type MintBurnScanSegment } from "./mint-burn-pipeline/scan-coverage";
+import { MINT_BURN_FTQ_DEPENDENCY_KEY, type MintBurnCoinCoverage, type MintBurnScanWindow, type MintBurnValuationCompleteness, type MintBurnWatermark } from "@shared/types/mint-burn";
+import { mintBurnScanCoverageAdmits, mintBurnWindowAdmits, buildMintBurnLegacySpans, decodeMintBurnScanCoverage, prepareMintBurnScanCoverage, prepareMintBurnLegacyEvidence, MINT_BURN_LEGACY_CUTOVER, type MintBurnLegacySpan, type MintBurnLegacyRow, type MintBurnScanSegment } from "./mint-burn-pipeline/scan-coverage";
 import { mintBurnConfigKey } from "./mint-burn-pipeline/sync-state";
 import { type MintBurnValuationTallyRow, readMintBurnValuationTallyRow } from "./mint-burn-hourly-valuation";
 
@@ -34,6 +39,75 @@ export {
 export function mintBurnHourlyWindow(nowSec: number, hours: number) {
   const end = Math.floor(nowSec / 3600) * 3600;
   return { start: end - hours * 3600, end, semantics: "closed-utc-hours" as const };
+}
+
+export function resolveMintBurnWatermark(
+  nowSec: number, configs: readonly MintBurnContractConfig[],
+  segments: ReadonlyMap<string, readonly MintBurnScanSegment[]>,
+  legacy: ReadonlyMap<string, MintBurnLegacySpan> = new Map(),
+): MintBurnWatermark {
+  if (configs.length === 0) return {
+    timestamp: null, ageSec: null, maxAgeSec: MINT_BURN_WATERMARK_MAX_AGE_SEC,
+    unavailableReason: "scan-watermark-unavailable",
+  };
+  let end = mintBurnHourlyWindow(nowSec, 1).end;
+  for (const config of configs) {
+    const key = mintBurnConfigKey(config);
+    const rows = (segments.get(key) ?? []).filter((row) => row.dirty_hour_ts == null);
+    const acceptedEnd = Math.max(legacy.get(key)?.end ?? 0, ...rows.map((row) => row.to_timestamp));
+    if (acceptedEnd === 0) return {
+      timestamp: null, ageSec: null, maxAgeSec: MINT_BURN_WATERMARK_MAX_AGE_SEC,
+      unavailableReason: "scan-watermark-unavailable",
+    };
+    end = Math.min(end, Math.floor(acceptedEnd / 3600) * 3600);
+  }
+  // A rounded segment tail may land inside another source's gap. Search only the
+  // already-authorized freshness horizon for a genuinely common complete hour.
+  while (nowSec - end <= MINT_BURN_WATERMARK_MAX_AGE_SEC
+    && !mintBurnWindowAdmits(configs, segments, legacy, end - 3600, end)) end -= 3600;
+  const ageSec = Math.max(0, nowSec - end);
+  return {
+    timestamp: end, ageSec, maxAgeSec: MINT_BURN_WATERMARK_MAX_AGE_SEC,
+    unavailableReason: ageSec > MINT_BURN_WATERMARK_MAX_AGE_SEC ? "scan-watermark-stale" : null,
+  };
+}
+
+/** Select the full-roster frontier before querying buckets; callers re-read debt/proof
+ * with their data snapshot, so a concurrent dirty-hour mark can never be admitted.
+ */
+export async function readMintBurnWindowContext(
+  db: D1Database, nowSec: number, configs: readonly MintBurnContractConfig[],
+) {
+  const end = mintBurnHourlyWindow(nowSec, 1).end;
+  const start = end - 90 * DAY_SECONDS - MINT_BURN_WATERMARK_MAX_AGE_SEC;
+  const transitionActive = start < MINT_BURN_LEGACY_CUTOVER;
+  const results = await db.batch([
+    prepareMintBurnScanCoverage(db, configs, start, end),
+    ...(transitionActive ? [prepareMintBurnLegacyEvidence(db, configs)] : []),
+  ]);
+  const segments = decodeMintBurnScanCoverage(results[0] as D1Result<MintBurnScanSegment>);
+  const legacy = transitionActive ? buildMintBurnLegacySpans(
+    configs, results[1].results as MintBurnLegacyRow[], segments, expectedBlockTimeSec,
+  ) : new Map<string, MintBurnLegacySpan>();
+  return {
+    watermark: resolveMintBurnWatermark(nowSec, configs, segments, legacy),
+    legacy,
+  };
+}
+
+export function mintBurnWindowCoverage(
+  configs: readonly MintBurnContractConfig[], segments: ReadonlyMap<string, readonly MintBurnScanSegment[]>,
+  legacy: ReadonlyMap<string, MintBurnLegacySpan>, from: number, to: number,
+  watermark?: MintBurnWatermark,
+): MintBurnScanWindow {
+  // Existing Pages readers accept only this reason; watermark carries the detail.
+  if (watermark?.unavailableReason) return mintBurnScanWindow(false);
+  const complete = mintBurnWindowAdmits(configs, segments, legacy, from, to);
+  return {
+    ...mintBurnScanWindow(complete),
+    ...(complete ? { provenance: mintBurnScanCoverageAdmits(configs, segments, from, to)
+      ? "durable-v2" as const : "legacy-pre-cutover" as const } : {}),
+  };
 }
 
 export interface HourlyRow {
@@ -368,6 +442,12 @@ export function cachedFlowFallbackResponse(cached: { value: string; updatedAt: n
   if (!parsed.ok) {
     return parsed.response;
   }
+  const window = isRecord(parsed.data.window) ? parsed.data.window : null;
+  const watermark = isRecord(window?.watermark) ? window.watermark : null;
+  if (typeof watermark?.timestamp === "number"
+    && Math.floor(Date.now() / 1000) - watermark.timestamp > MINT_BURN_WATERMARK_MAX_AGE_SEC) {
+    return jsonResponse({ error: "Mint/burn scan watermark is stale", reason: "scan-watermark-stale" }, { status: 503, noStore: true });
+  }
   const timestamp = resolveCachedFlowFreshnessTimestamp(parsed.data, cached.updatedAt);
   const meta = isRecord(parsed.data._meta) ? parsed.data._meta : {};
   const freshness: CronTimestampLookupResult = {
@@ -603,6 +683,8 @@ export function buildCoinCoverageMap(
   chainHeads: Map<string, number>,
   unavailableReason: "cron-snapshot-unavailable" | null = null,
   requiredConfigs: readonly MintBurnContractConfig[] = MINT_BURN_CONFIGS,
+  legacy: ReadonlyMap<string, MintBurnLegacySpan> = new Map(),
+  watermark?: MintBurnWatermark,
 ) {
   const end = mintBurnHourlyWindow(nowSec, 24).end;
   const configsByCoin = new Map<string, MintBurnContractConfig[]>();
@@ -628,9 +710,16 @@ export function buildCoinCoverageMap(
     );
     const lastSyncedBlock = Math.min(...lastSyncedBlocks);
     // The newest continuous segment is history evidence only if every config reaches the window end.
-    const starts = configs.map((config) => (scanSegments.get(mintBurnConfigKey(config)) ?? [])
-      .filter((segment) => segment.to_timestamp >= end)
-      .map((segment) => segment.from_timestamp));
+    const starts = configs.map((config) => {
+      const key = mintBurnConfigKey(config);
+      const candidates = (scanSegments.get(key) ?? [])
+        .filter((segment) => segment.dirty_hour_ts == null && segment.to_timestamp >= end)
+        .map((segment) => segment.from_timestamp);
+      const legacyStart = legacy.get(key)?.start;
+      if (legacyStart != null && mintBurnWindowAdmits([config], scanSegments, legacy,
+        Math.ceil(legacyStart / 3600) * 3600, end)) candidates.push(legacyStart);
+      return candidates;
+    });
     const historyStartAt = starts.every((values) => values.length > 0)
       ? Math.max(...starts.map((values) => Math.min(...values))) : null;
     const disabled = configs.every((config) => config.enabled === false);
@@ -657,17 +746,19 @@ export function buildCoinCoverageMap(
       ? "medium"
       : "high";
 
-    const admits = (days: number) => mintBurnScanCoverageAdmits(configs, scanSegments, end - days * DAY_SECONDS, end);
-    const has24hWindow = admits(1);
-    const has7dWindow = admits(7);
-    const has30dWindow = admits(30);
-    const has90dWindow = admits(90);
+    const windowCoverage = (days: number) => mintBurnWindowCoverage(
+      configs, scanSegments, legacy, end - days * DAY_SECONDS, end, watermark,
+    );
     const windows = {
-      window24h: mintBurnScanWindow(has24hWindow),
-      window7d: mintBurnScanWindow(has7dWindow),
-      window30d: mintBurnScanWindow(has30dWindow),
-      window90d: mintBurnScanWindow(has90dWindow),
+      window24h: windowCoverage(1),
+      window7d: windowCoverage(7),
+      window30d: windowCoverage(30),
+      window90d: windowCoverage(90),
     };
+    const has24hWindow = windows.window24h.complete;
+    const has7dWindow = windows.window7d.complete;
+    const has30dWindow = windows.window30d.complete;
+    const has90dWindow = windows.window90d.complete;
 
     const status =
       disabled ? "disabled" :
@@ -694,7 +785,8 @@ export function buildCoinCoverageMap(
       adapterKinds,
       startBlockSource: startBlockSources.length === 1 ? startBlockSources[0]! : "mixed",
       startBlockConfidence,
-      unavailableReason: unavailableReason ?? (!has24hWindow ? "scan-coverage-incomplete" : null),
+      unavailableReason: unavailableReason ?? windows.window24h.unavailableReason,
+      provenance: windows.window90d.provenance ?? windows.window30d.provenance ?? windows.window24h.provenance,
       status,
     });
   }

@@ -392,11 +392,6 @@ describe("handleStatus", () => {
         first: { pending_count: 3 },
       },
       {
-        match: "AS due_count",
-        rows: [],
-        first: { pending_count: 4, due_count: 4, deferred_count: 0 },
-      },
-      {
         match: TELEGRAM_PENDING_CAPACITY_SQL,
         rows: [],
         first: {

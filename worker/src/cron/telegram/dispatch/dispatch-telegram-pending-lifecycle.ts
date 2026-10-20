@@ -133,7 +133,6 @@ export async function runPendingQueueLifecycle(
     maintenanceResult.staleSendingReconciled > 0 ||
     maintenanceResult.targetOutcomesProjected > 0 ||
     maintenanceResult.terminalPendingReconciled > 0 ||
-    maintenanceResult.recapOutcomesProjected > 0 ||
     changed;
   const pendingCapacityAfter = shouldRefresh
     ? await readTelegramPendingCapacitySnapshot(db, nowSec)

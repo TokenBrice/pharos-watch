@@ -706,7 +706,6 @@ A supplemental family without a cache-row timestamp is not admitted from its pay
 - `telegram_pending_disambiguation`
 - `telegram_pending_alerts`
 - `telegram_processed_updates` (webhook effect-state backlog)
-- `telegram_recap_preferences` and `telegram_recap_targets` (recap telemetry)
 
 It also folds in the lifecycle snapshot and delivery-SLI rollups (`telegram_alert_source_events`, `telegram_alert_job_targets`, `telegram_alert_dead_letters`) plus `cron_runs` (inactive-subscriber cleanup) and cached preset query-failure counters; `worker/src/lib/status/telegram-bot-stats.ts` is authoritative. Mini App usage (`telegram_usage_daily`) is not part of this block — it is served by `/api/telegram-pulse`.
 

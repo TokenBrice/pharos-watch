@@ -5,7 +5,6 @@ import {
   prepareTelegramJobTargetFinalDeliveryProjection,
   resolveTelegramJobTargetIdentityForPending,
 } from "./telegram-alert-job-target-outcomes";
-import { projectRecapPendingTerminalOutcome } from "./recap-terminal";
 import type { PendingAlertRow, PendingDeliveryClaim } from "./types";
 
 interface PendingSendingTargetGuard { sql: string; binds: readonly unknown[] }
@@ -118,12 +117,5 @@ export async function persistPendingTerminalOutcomes(
     throw new Error(state === "sent"
       ? `Telegram sent-state persistence was not confirmed (${changed}/${statements.length})`
       : `Telegram pending ambiguity state was not confirmed (${changed}/${statements.length})`);
-  }
-  for (const { row, errorClass } of outcomes) {
-    if (state === "sent") {
-      await projectRecapPendingTerminalOutcome(db, row, "accepted", nowSec);
-    } else {
-      await projectRecapPendingTerminalOutcome(db, row, "execution_unknown", nowSec, errorClass ?? null);
-    }
   }
 }

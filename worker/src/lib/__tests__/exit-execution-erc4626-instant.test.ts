@@ -497,6 +497,18 @@ describe("reviewed synchronous ERC4626 exact execution", () => {
       expect(rejectedAsset.evidence.find(evidence => rejectedRoute.status.evidenceRefIds.includes(evidence.evidenceId)))
         .toMatchObject({ disposition: "rejected", rejection: { code: scenario.reason } });
     }
+    certificate.points[0]!.outputs[0]!.observedAtSec = CLOCK - certificate.priceMaxAgeSec - 1;
+    const priceStaleAsset = compileAt(211_000_000);
+    const priceStaleRoute = priceStaleAsset.exitRoutes.find(candidate => candidate.routeId === observation.routeId)!;
+    expect(priceStaleRoute).toMatchObject({
+      scoreEligible: false, status: { observationState: "unsupported" },
+    });
+    expect(priceStaleAsset.evidence.find(evidence => priceStaleRoute.status.evidenceRefIds.includes(evidence.evidenceId)))
+      .toMatchObject({ disposition: "rejected", rejection: { code: "execution-price-stale" } });
+    expect(evaluateV9Exit({
+      assetId: "fixture-vault", clockSec: CLOCK, circulatingUsd: 211_000_000,
+      routes: [projectV9ExitEvaluationRoute(priceStaleRoute)],
+    }, envelope).routes[0]!.included).toBe(false);
   });
   it.each(["steakusdg-steakhouse", "krusdc-keyrock", "steakeurcv-steakhouse", "susdc-spark-v1"])("keeps %s scheduled baseline capacity unquantified without an execution receipt", async (assetId) => {
     const config = getRedemptionBackstopConfig(assetId)!;

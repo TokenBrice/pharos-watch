@@ -82,6 +82,8 @@ import type * as DbModule from "../../lib/db";
 import type * as PersistenceModule from "../../lib/mint-burn-pipeline/persistence";
 import type * as MintBurnRpcModule from "../../lib/mint-burn-pipeline/rpc";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
+import { mintBurnScanFingerprint } from "../../lib/mint-burn-pipeline/scan-coverage";
+import { upsertMintBurnSyncState } from "../../lib/mint-burn-pipeline/sync-state";
 
 const sqliteFixtures = createLatestSchemaFixtureTracker();
 
@@ -314,7 +316,7 @@ describe("syncMintBurn — multi-chain invariant", () => {
     ]);
   });
 
-  it("leaves a failed topic and an old-writer cursor gap unproved", async () => {
+  it("holds a failed topic and automatically repairs an old-writer cursor gap", async () => {
     const { sqlite, db } = sqliteFixtures.open();
     vi.mocked(batchExecute).mockImplementation((await vi.importActual<typeof DbModule>("../../lib/db")).batchExecute);
     const source = MINT_BURN_CONFIGS[0]!;
@@ -344,9 +346,50 @@ describe("syncMintBurn — multi-chain invariant", () => {
       vi.mocked(fetchAlchemyLogs).mockImplementation(quiet);
       await syncMintBurn(db, "alchemy-key", { disabledConfigIds: ["usdai-usd-ai"] });
       expect(sqlite.prepare("SELECT from_block, to_block FROM mint_burn_scan_coverage ORDER BY from_block").all())
-        .toEqual([{ from_block: 21_999_999, to_block: 21_999_999 }, { from_block: 22_000_001, to_block: 22_000_001 }]);
+        .toEqual([{ from_block: 21_999_999, to_block: 22_000_001 }]);
+      expect(sqlite.prepare("SELECT last_block FROM mint_burn_sync_state WHERE config_key = ?").get(key))
+        .toEqual({ last_block: 22_000_001 });
     } finally {
       source.events = events;
+    }
+  });
+
+  it.each(["success", "headers", "materialization"])("replays eventful holes through the materialization fence: %s", async (outcome) => {
+    const { sqlite, db } = sqliteFixtures.open();
+    vi.mocked(batchExecute).mockImplementation((await vi.importActual<typeof DbModule>("../../lib/db")).batchExecute);
+    vi.mocked(recalcAffectedHours).mockImplementation(
+      (await vi.importActual<typeof PersistenceModule>("../../lib/mint-burn-pipeline/persistence")).recalcAffectedHours);
+    const source = MINT_BURN_CONFIGS[0]!;
+    const key = `ethereum-${USDT_CONTRACT}`;
+    const timestamp = Math.floor(Date.now() / 1000) - 600;
+    for (const [fromBlock, toBlock] of [[21_999_998, 21_999_999], [22_000_001, 22_000_002]]) {
+      await upsertMintBurnSyncState(db, key, toBlock!, "monotonic-max", {
+        configKey: key, configFingerprint: mintBurnScanFingerprint(source), chainId: "ethereum",
+        fromBlock: fromBlock!, toBlock: toBlock!, fromTimestamp: timestamp - 60,
+        toTimestamp: timestamp + 60, finalizedBlock: 22_000_002, acceptedAt: timestamp + 600,
+      });
+    }
+    vi.mocked(getMintBurnFinalizedHead).mockResolvedValue({ number: 22_000_002, timestamp, hash: `0x${"a".repeat(64)}` });
+    vi.mocked(fetchAlchemyLogs).mockResolvedValue({ logs: [makeMintLog()], complete: true,
+      scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 });
+    vi.mocked(resolveBlockTimestamps).mockImplementation(async (_url, blocks) =>
+      outcome === "headers" ? new Map() : new Map(blocks.map((block) => [block, timestamp])));
+    if (outcome === "materialization") vi.mocked(recalcAffectedHours).mockRejectedValue(new Error("hourly write failed"));
+    const result = await syncMintBurn(db, "alchemy-key", { disabledConfigIds: ["usdai-usd-ai"] });
+    const metadata = JSON.parse(result.metadata);
+    expect(metadata.coverageRepairs[0]).toMatchObject({
+      scanFrom: 22_000_000, scanTo: 22_000_000,
+      repairReason: outcome === "headers" ? "scan-coverage-unproven"
+        : outcome === "materialization" ? "materialization-failed" : "proof-committed",
+    });
+    expect(sqlite.prepare("SELECT last_block FROM mint_burn_sync_state WHERE config_key = ?").get(key))
+      .toEqual({ last_block: 22_000_002 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM mint_burn_scan_coverage").get())
+      .toEqual({ count: outcome === "success" ? 1 : 2 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM mint_burn_hourly").get())
+      .toEqual({ count: outcome === "success" ? 1 : 0 });
+    if (outcome === "success") {
+      expect(sqlite.prepare("SELECT block_number FROM mint_burn_events").all()).toEqual([{ block_number: 22_000_000 }]);
     }
   });
 
@@ -368,7 +411,7 @@ describe("syncMintBurn — multi-chain invariant", () => {
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM mint_burn_scan_coverage").get()).toEqual({ count: 0 });
   });
 
-  it.each(["missing", "reversed", "future"])("leaves quiet coverage unknown with %s boundary timestamps", async (failure) => {
+  it.each(["missing", "reversed", "future"])("never certifies an invalid boundary, but retries a smaller prefix: %s", async (failure) => {
     const { sqlite, db } = sqliteFixtures.open();
     vi.mocked(batchExecute).mockImplementation((await vi.importActual<typeof DbModule>("../../lib/db")).batchExecute);
     const timestamp = Math.floor(Date.now() / 1000) - 60;
@@ -381,6 +424,44 @@ describe("syncMintBurn — multi-chain invariant", () => {
       [21_999_999, timestamp], [22_000_000, failure === "reversed" ? timestamp - 1 : timestamp + 120],
     ]));
     await syncMintBurn(db, "alchemy-key", { disabledConfigIds: ["usdai-usd-ai"] });
-    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM mint_burn_scan_coverage").get()).toEqual({ count: 0 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM mint_burn_scan_coverage").get())
+      .toEqual({ count: failure === "missing" ? 0 : 1 });
+    expect(sqlite.prepare("SELECT last_block FROM mint_burn_sync_state WHERE config_key = ?").get(`ethereum-${USDT_CONTRACT}`))
+      .toEqual({ last_block: failure === "missing" ? 21_999_998 : 21_999_999 });
+  });
+
+  it.each(["end", "first"])("bounds persistent %s-header failure retries and commits only a certified prefix", async (failure) => {
+    const { sqlite, db } = sqliteFixtures.open();
+    vi.mocked(batchExecute).mockImplementation((await vi.importActual<typeof DbModule>("../../lib/db")).batchExecute);
+    const key = `ethereum-${USDT_CONTRACT}`;
+    const timestamp = Math.floor(Date.now() / 1000) - 60;
+    sqlite.prepare("INSERT INTO mint_burn_sync_state (config_key, last_block) VALUES (?, ?)").run(key, 21_999_992);
+    vi.mocked(getMintBurnFinalizedHead).mockResolvedValue({ number: 22_000_000, timestamp, hash: `0x${"a".repeat(64)}` });
+    vi.mocked(fetchAlchemyLogs).mockImplementation(async (_url, _address, _topics, _from, to) => ({
+      logs: [], complete: true, scannedToBlock: to, calls: 1, maxDepth: 0,
+    }));
+    const failedBlock = failure === "end" ? 22_000_000 : 21_999_993;
+    vi.mocked(resolveBlockTimestamps).mockImplementation(async (_url, blocks) =>
+      new Map(blocks.filter((block) => block !== failedBlock).map((block) => [block, timestamp])));
+    const result = await syncMintBurn(db, "alchemy-key", { disabledConfigIds: ["usdai-usd-ai"] });
+    const summary = JSON.parse(result.metadata).configSamples.find((row: { key: string }) => row.key === key);
+    expect(summary).toMatchObject({
+      scanAttempts: failure === "end" ? 2 : 4,
+      advancedTo: failure === "end" ? 21_999_996 : null,
+      advanceReason: failure === "end" ? "partial-frontier" : "scan-coverage-unproven",
+    });
+    expect(sqlite.prepare("SELECT last_block FROM mint_burn_sync_state WHERE config_key = ?").get(key))
+      .toEqual({ last_block: failure === "end" ? 21_999_996 : 21_999_992 });
+    expect(sqlite.prepare("SELECT from_block, to_block FROM mint_burn_scan_coverage").all())
+      .toEqual(failure === "end" ? [{ from_block: 21_999_993, to_block: 21_999_996 }] : []);
+    if (failure === "first") {
+      expect(summary.scanAttemptRanges.map((attempt: { scanTo: number }) => attempt.scanTo))
+        .toEqual([22_000_000, 21_999_996, 21_999_994, 21_999_993]);
+      const retry = await syncMintBurn(db, "alchemy-key", { disabledConfigIds: ["usdai-usd-ai"] });
+      expect(JSON.parse(retry.metadata).configSamples[0]).toMatchObject({ scanAttempts: 4, advancedTo: null });
+      expect(JSON.parse(retry.metadata)).toMatchObject({ scanCoverageUnproven: 1, degradedSignal: true });
+      expect(retry.status).toBe("degraded");
+      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM mint_burn_scan_coverage").get()).toEqual({ count: 0 });
+    }
   });
 });

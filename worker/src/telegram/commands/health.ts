@@ -1,6 +1,6 @@
 import { escapeHtml } from "../delivery/telegram";
 import { isPausedSentinel } from "@shared/lib/telegram-delivery-policy";
-import { formatTelegramAge, formatTelegramIsoTimestamp } from "../common/format-age";
+import { formatTelegramAge } from "../common/format-age";
 import { coerceCount, loadTelegramChatHealthDiagnostics } from "../store/usage-analytics";
 import { isQuietHoursActive } from "../common/quiet-hours";
 import {
@@ -16,7 +16,6 @@ import {
 import type { WebhookCommandHandler } from "./context";
 import {
   loadTelegramPendingAlertCount,
-  loadTelegramRecapState,
 } from "../store/chat-state";
 
 interface RecentPendingFailureRow {
@@ -109,7 +108,6 @@ export const handleHealth: WebhookCommandHandler = async (ctx) => {
     pendingAlerts,
     recentPendingFailure,
     deliveryDiagnostics,
-    recap,
   ] = await Promise.all([
     loadSubscriberByChat(db, chatId),
     loadPresetSubscriptions(db, chatId),
@@ -117,7 +115,6 @@ export const handleHealth: WebhookCommandHandler = async (ctx) => {
     loadTelegramPendingAlertCount(db, chatId),
     loadRecentPendingFailureClass(db, chatId),
     loadTelegramChatHealthDiagnostics(db, chatId),
-    loadTelegramRecapState(db, chatId),
   ]);
 
   const recentFailure =
@@ -148,10 +145,6 @@ export const handleHealth: WebhookCommandHandler = async (ctx) => {
     )}`,
     `Snooze: ${formatSnooze(subscriber?.alert_snooze_until_ts, nowSec)}`,
     `Alert readiness: ${readiness}`,
-    `Daily recap: ${recap?.enabled === 1 ? "On" : "Off"}`,
-    `Recap next due: ${formatTelegramIsoTimestamp(recap?.next_due_at, "Not scheduled")}`,
-    `Recap last local date: ${recap?.last_delivered_local_date ?? "Not recorded yet"}`,
-    `Recap last outcome: ${recap?.last_outcome ?? "Not recorded yet"}`,
     "",
     "Use /list for full settings or /settings for inline controls.",
   ];

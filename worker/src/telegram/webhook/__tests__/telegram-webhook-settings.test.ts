@@ -357,10 +357,6 @@ describe("handleSettingsCallback — chat-level", () => {
       "",
     );
 
-    const upsert = db
-      .getHistory()
-      .find((h) => /INSERT INTO telegram_subscribers/.test(h.sql) && /alert_snooze_until_ts = NULL/.test(h.sql));
-    expect(upsert).toBeDefined();
     expect(ackCalls().length).toBe(1);
     expect(jsonBody(ackCalls()[0]).text).toContain("Snooze cleared");
   });

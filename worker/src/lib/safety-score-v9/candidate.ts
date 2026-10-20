@@ -494,7 +494,7 @@ function exitPillarFreshnessFromDexInput(
   dexMaxAgeSec: number,
 ): SafetyScoreV9EvidenceFreshness {
   const updatedAt = fixedInput.dexLiqMap[assetId]?.updatedAt;
-  if (updatedAt === undefined) return "unknown";
+  if (updatedAt === undefined || updatedAt > fixedInput.clockSec) return "unknown";
   return fixedInput.clockSec - updatedAt <= dexMaxAgeSec ? "current" : "stale";
 }
 
@@ -782,6 +782,7 @@ function buildSafetyScoreV9CandidatePipeline(
       control: asset.control,
       display: publicationFacts.displayByAssetId.get(asset.assetId),
       freshness: { exit: exitPillarFreshnessFromDexInput(fixedInput, asset.assetId, dexExitRouteMaxAgeSec) },
+      dexObservedAtSec: fixedInput.dexLiqMap[asset.assetId]?.updatedAt ?? null,
     };
   }
 
@@ -833,6 +834,7 @@ function buildSafetyScoreV9CandidatePipeline(
       publicationGenerationId,
       publishedAtSec: input.publishedAtSec,
       commonModeGroups: evaluated.commonModeGroups,
+      dexMaxAgeSec: dexExitRouteMaxAgeSec,
     };
     const candidate = projector === undefined
       ? buildSafetyScoreV9Response({ ...responseArgs, results: takePublicResults })

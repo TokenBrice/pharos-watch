@@ -69,9 +69,6 @@ const TELEGRAM_PUBLIC_ENTRIES: readonly (readonly [string, readonly string[]])[]
   ["worker/src/telegram/outbox/pending-capacity.ts", [
     "worker/src/lib/status/supplements.ts", "worker/src/lib/status/telegram-bot-stats.ts",
   ]],
-  ["worker/src/telegram/recap/recap-store.ts", [
-    "worker/src/handlers/scheduled/five-minute-telegram.ts",
-  ]],
   ["worker/src/telegram/delivery/transport-control.ts", [
     "worker/src/cron/digest/telegram-transport.ts",
   ]],
@@ -85,9 +82,6 @@ const TELEGRAM_PUBLIC_ENTRIES: readonly (readonly [string, readonly string[]])[]
     "worker/src/handlers/scheduled/five-minute-telegram.ts",
   ]],
   ["worker/src/cron/telegram/dispatch/dispatch-telegram-alerts.ts", [
-    "worker/src/handlers/scheduled/five-minute-telegram.ts",
-  ]],
-  ["worker/src/cron/telegram/recap/telegram-recap-planner.ts", [
     "worker/src/handlers/scheduled/five-minute-telegram.ts",
   ]],
   ["worker/src/cron/telegram/maintenance/telegram-degradation-watchdog.ts", [
@@ -110,7 +104,7 @@ for (const [entry, importers] of TELEGRAM_PUBLIC_ENTRIES) {
   }
 }
 
-type Rule = "reserve-network" | "frontend-routes" | "recap-cost" | "verification-url" | "stability-light" | "telegram-public-surface";
+type Rule = "reserve-network" | "frontend-routes" | "verification-url" | "stability-light" | "telegram-public-surface";
 interface Module {
   dependencies: string[];
   network: boolean;
@@ -300,7 +294,7 @@ class DependencyGraph {
 
 /** One gate with independently selectable policies for synthetic graph tests. */
 export function checkArchitectureBoundaries(root = ROOT, rules: readonly Rule[] = [
-  "reserve-network", "frontend-routes", "recap-cost", "verification-url", "stability-light", "telegram-public-surface",
+  "reserve-network", "frontend-routes", "verification-url", "stability-light", "telegram-public-surface",
 ]): string[] {
   // Entries and resolved dependencies use real paths; the root must share
   // their identity (for example macOS /var is a symlink to /private/var).
@@ -346,9 +340,6 @@ export function checkArchitectureBoundaries(root = ROOT, rules: readonly Rule[] 
           if (file !== `${directory}/index.ts`) violations.add(`${rule}: ${file}: route-owned content registry`);
         }
       }
-    } else if (rule === "recap-cost") {
-      walk(rule, ["worker/src/cron/telegram/recap/telegram-recap-planner.ts"],
-        (file) => /(?:^|\/)(?:daily-digest|weekly-recap|anthropic|openai|ai-request)(?:\.|\/|$)|\/cron\/digest\//i.test(file), true);
     } else if (rule === "verification-url") {
       walk(rule, [SCRUBBER], (file) => /^package:zod(?:\/|$)/.test(file)
         || file.startsWith("shared/types/") || file.startsWith("shared/contracts/"));

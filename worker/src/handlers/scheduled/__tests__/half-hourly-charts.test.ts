@@ -133,6 +133,7 @@ describe("half-hourly charts scheduling", () => {
       scheduledRuntime.db, expect.any(AbortSignal), "dex-liquidity-recovered",
       scheduledRuntime.chainRpcs, scheduledRuntime.env.CF_VERSION_METADATA, scheduledRuntime.deadline,
       scheduledRuntime.dwellirNative,
+      900,
     );
   });
 
@@ -315,6 +316,7 @@ describe("half-hourly charts scheduling", () => {
       scheduledRuntime.env.CF_VERSION_METADATA,
       scheduledRuntime.deadline,
       scheduledRuntime.dwellirNative,
+      900,
     );
     expect(mocks.syncStablecoinCharts).toHaveBeenCalled();
     expect(mocks.runCronSentinel).toHaveBeenCalledWith(scheduledRuntime.db, {
@@ -387,6 +389,7 @@ describe("half-hourly charts scheduling", () => {
       scheduledRuntime.env.CF_VERSION_METADATA,
       scheduledRuntime.deadline,
       scheduledRuntime.dwellirNative,
+      2_700,
     );
     expect(mocks.runCronSentinel).not.toHaveBeenCalled();
     expect(jobMetadata(results, "cron-sentinel")).toMatchObject({
@@ -448,6 +451,7 @@ describe("half-hourly charts scheduling", () => {
       scheduledRuntime.env.CF_VERSION_METADATA,
       scheduledRuntime.deadline,
       scheduledRuntime.dwellirNative,
+      900,
     );
     expect(summary.jobs[2]).toMatchObject({
       job: "prepare-safety-score-v9-input",
@@ -555,6 +559,7 @@ describe("half-hourly charts scheduling", () => {
       scheduledRuntime.db, expect.any(AbortSignal), "dex-liquidity-late",
       scheduledRuntime.chainRpcs, scheduledRuntime.env.CF_VERSION_METADATA, scheduledRuntime.deadline,
       scheduledRuntime.dwellirNative,
+      2_700,
     );
   });
 
@@ -589,6 +594,7 @@ describe("half-hourly charts scheduling", () => {
       scheduledRuntime.db, expect.any(AbortSignal), `dex-liquidity-${960 - 3_600}`,
       scheduledRuntime.chainRpcs, scheduledRuntime.env.CF_VERSION_METADATA, scheduledRuntime.deadline,
       scheduledRuntime.dwellirNative,
+      900,
     );
     expect(summary.jobs.map((job) => [job.job, job.outcome])).toEqual([
       ["sync-dex-liquidity", "skipped"], ["cron-sentinel", "skipped"],

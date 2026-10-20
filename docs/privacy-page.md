@@ -38,9 +38,9 @@ Unread artifacts expire after 90 days. Successful read attempts five-year retent
 
 ### Telegram alerts and Mini App
 
-Telegram processing includes subscriber identity/settings, follows/presets, quiet/snooze state, short-lived command state, delivery queues/outcomes/audit, personalized recap preferences/targets, authenticated diagnostics and identifier-free aggregate adoption/usage counters.
+Telegram processing includes subscriber identity/settings, follows/presets, quiet/snooze state, short-lived command state, delivery queues/outcomes/audit, retained records from the retired personalized recap feature, authenticated diagnostics and identifier-free aggregate adoption/usage counters.
 
-[Telegram architecture schema-purpose map](./telegram-architecture.md#d1-schema) owns storage categories; active Worker migrations are DDL authority. Durable follows/enabled recap preferences remain while configured; empty inactive profiles may prune under runtime policy. Short-lived/operational/audit categories have distinct retention; pending recap deliveries expire under shared six-hour `TELEGRAM_RECAP_TTL_SEC`, target outcomes separately. Runtime retention/inactive cleanup and `shared/lib/telegram-recap-policy.ts` own exact windows.
+[Telegram architecture schema-purpose map](./telegram-architecture.md#d1-schema) owns storage categories; active Worker migrations are DDL authority. Durable follows remain while configured; empty inactive profiles may prune under runtime policy. Personalized recap scheduling and delivery are removed, but existing preferences/targets remain for audit and rollback evidence until separately authorized forward-only schema cleanup after the 90-day evidence window and rollback floor close. Existing target outcomes retain their 30-day sent/skipped and 90-day cancelled/expired/unknown/permanent-failure policy; `/forget` still removes chat-attributable records immediately. Runtime retention/inactive cleanup owns short-lived and operational category lifecycles.
 
 Mini App validates signed initData but stores neither raw value nor hash. [Mini App](./telegram-mini-app.md) owns mutation freshness, read/session portability, cooldown and aggregate telemetry. General Telegram logs use allowlisted low-cardinality fields; chat-specific investigation stays in authenticated D1/admin diagnostics, not raw general-log identifiers.
 

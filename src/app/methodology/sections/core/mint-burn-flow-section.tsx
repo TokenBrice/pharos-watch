@@ -108,12 +108,19 @@ export function MintBurnFlowMethodologySection() {
                 and configured history does not establish a completed backfill or a mature flow baseline.
               </p>
               <p>
-                An N-hour flow window covers N closed UTC hours ending at the current hour boundary, not a rolling
-                window ending now. The open hour is excluded; the oldest included hour retains all valuation gaps.
-                The same boundary governs pressure, largest events and longer net-flow windows. Verified CCTP V2
-                destination recipient and fee mints are bridge transfers, while unrelated issuance in that transaction
+                An N-hour flow window covers N closed UTC hours ending at the common fully scanned hour
+                across configured sources, within the published freshness budget, not a rolling window ending now.
+                The response exposes that watermark; pressure, largest events, baselines and longer net-flow windows
+                share it. Verified CCTP V2 destination recipient and fee mints are bridge transfers, while unrelated issuance in that transaction
                 stays counted. Historical valuation requires an actual observation within the inclusive 24-hour
                 distance from the event; retention preserves all hourly siblings until repair and aggregation settle.
+              </p>
+              <p>
+                Historical hours before the fixed October 20, 2026 noon UTC cutover may use explicitly labelled
+                legacy cursor/event assurance. At and after the cutover, current-fingerprint durable scan proof is
+                mandatory. Dirty hours and missing valuation remain unavailable. This bounded transition expires
+                after the 90-day window passes the cutover. The Bank Run Gauge weights only admitted scored coins;
+                incomplete scan membership is disclosed, not silently counted as zero or presented as full coverage.
               </p>
               <p>
                 Reviewed zero-recipient transfers require supply-destruction evidence. Exact custom issuance
@@ -124,8 +131,8 @@ export function MintBurnFlowMethodologySection() {
                 their named reason. Pruned history needs audited replay rather than an invented exact repair.
               </p>
               <p>
-                Every closed window requires durable scan proof under the current classification fingerprint.
-                Without it, signed net, bounds, direction and pressure are unavailable, while observed gross
+                Every closed window requires admitted scan coverage, using durable current-fingerprint proof
+                after the cutover and the bounded legacy rule before it. Without admission, signed net, bounds, direction and pressure are unavailable, while observed gross
                 and event-count subtotals remain visible separately. The legacy has24hActivity field stays null
                 for an incomplete scan, even when events were observed; the additive observed24hActivity field
                 preserves that observed fact without requiring older readers to understand it. A false observed

@@ -41,7 +41,6 @@ import {
 } from "./slot-summary";
 import { NON_BLOCKED_DIGEST_SQL_FILTER } from "../../lib/digest-sql-filters";
 import { runWeeklyRecapForRuntime } from "./weekly-recap-invocation";
-import { resolveTelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
 import { SCHEDULED_SLOT_PLANS } from "@shared/lib/scheduled-runner-registry";
 import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
 import { SCHEDULED_EVENT_WALL_CLOCK_LIMIT_MS, SCHEDULED_SLOT_CONTROLLED_ERROR_RESERVE_MS } from "../../lib/cron-timeouts";
@@ -317,7 +316,6 @@ async function runDailyDigestWithResume(
     twitterMissing: missingTwitterCredentialNames(runtime.env),
     telegramMissing: missingTelegramCredentialNames(runtime.env),
   };
-  const recapRollout = resolveTelegramRecapRolloutPolicy(runtime.env);
   const resumed = await resumeDailyDigestDelivery(
     runtime.db,
     twitterCreds,
@@ -326,7 +324,6 @@ async function runDailyDigestWithResume(
     signal,
     reportProgress,
     credentialDiagnostics,
-    recapRollout,
   );
   if (resumed.kind === "resumed") {
     return {
@@ -346,7 +343,6 @@ async function runDailyDigestWithResume(
     credentialDiagnostics,
     // Checked-in daily LLM defaults; see daily-0805.ts.
     undefined,
-    recapRollout,
   );
 }
 

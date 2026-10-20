@@ -14,8 +14,7 @@ export type EndpointDependency =
   | "donorKeyClaimRateLimit"
   | "workerStatusConfig"
   | "workerVersion"
-  | "telegram"
-  | "telegramRecapRollout";
+  | "telegram";
 
 export type StatusPageActionGroup = "recovery" | "audit" | "communications";
 
@@ -566,7 +565,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
   publicGet({
     key: "report-cards-v9",
     path: API_PATHS.reportCardsV9(),
-    cacheKeyIgnoresQuery: true,
+    cacheKeyIgnoresQuery: false,
     cacheBypass: true,
     strictContract: true,
     probeGroup: "public",
@@ -676,12 +675,12 @@ const BASE_ENDPOINT_DEFINITIONS = [
   publicPostExempt({
     key: "telegram-mini-app-session",
     path: API_PATHS.telegramMiniAppSession(),
-    routeDependencies: ["telegram", "telegramRecapRollout"],
+    routeDependencies: ["telegram"],
   }),
   publicPostExempt({
     key: "telegram-mini-app-mutation",
     path: API_PATHS.telegramMiniAppMutation(),
-    routeDependencies: ["telegram", "telegramRecapRollout"],
+    routeDependencies: ["telegram"],
   }),
   publicPostExempt({
     key: "feedback",
@@ -698,7 +697,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
   publicPostExempt({
     key: "telegram-webhook",
     path: API_PATHS.telegramWebhook(),
-    routeDependencies: ["telegram", "telegramRecapRollout"],
+    routeDependencies: ["telegram"],
   }),
 
   // Admin status/probe endpoints.

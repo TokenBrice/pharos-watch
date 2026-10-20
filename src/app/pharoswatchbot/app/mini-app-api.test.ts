@@ -21,9 +21,7 @@ import {
 } from "./mini-app-api";
 import { makeMiniAppState } from "@shared/test-utils/telegram-mini-app-state";
 
-const { catalog: _catalog, ...mutableState } = makeMiniAppState({
-  subscriber: { recap: { available: false } },
-});
+const { catalog: _catalog, ...mutableState } = makeMiniAppState();
 
 const legacyState: TelegramMiniAppState = {
   ...mutableState,
@@ -87,7 +85,7 @@ describe("Mini App versioned API client", () => {
     const snapshot = await postMiniAppSnapshot("/api/telegram-mini-app/session", { initData: "signed" });
 
     expect(snapshot.state.catalog.searchableCoins).toEqual(legacyState.catalog.searchableCoins);
-    expect(snapshot.state.subscriber.recap.available).toBe(false);
+    expect(snapshot.state.subscriber).not.toHaveProperty("recap");
     expect(snapshot.stateRevision).toBe(telegramMiniAppStateRevision(normalizedLegacyState.mutable));
   });
 

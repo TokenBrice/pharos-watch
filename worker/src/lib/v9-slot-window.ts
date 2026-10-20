@@ -123,10 +123,11 @@ async function hasActiveV9MemoryLane(
  * current `stablecoins` cache generation — so a stale or no-write run cannot
  * match regardless of which Worker version wrote it.
  */
-async function hasMatchingCoreStablecoinsPublication(
+export async function loadMatchingCoreStablecoinsPublishedAt(
   db: D1Database,
   coreSlotStartedAt: number,
-): Promise<boolean> {
+  signal?: AbortSignal,
+): Promise<number | null> {
   const nextCoreSlotStartedAt = coreSlotStartedAt + 15 * 60;
   const row = await runWithOverloadRetry(() =>
     db
@@ -155,8 +156,8 @@ async function hasMatchingCoreStablecoinsPublication(
         nextCoreSlotStartedAt,
       )
       .first<StablecoinsPublicationRow>(),
-  );
-  return row != null;
+    3, signal);
+  return row?.published_at ?? null;
 }
 
 /**
@@ -240,10 +241,11 @@ export async function runV9AfterCoreWithinWindow(
         let coreStablecoinsPublicationMatched = false;
         try {
           coreStablecoinsPublicationMatched =
-            await hasMatchingCoreStablecoinsPublication(
+            (await loadMatchingCoreStablecoinsPublishedAt(
               options.db,
               coreSlotStartedAt,
-            );
+              signal,
+            )) != null;
         } catch (error) {
           return degradedAdmission(
             "v9-core-publication-evidence-unavailable",

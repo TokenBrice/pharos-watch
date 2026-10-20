@@ -29,6 +29,7 @@
     "shared/lib/status-dataset-freshness.ts": 100,
     "shared/lib/yield-benchmark-freshness.ts": 100,
     "shared/lib/yield-scoring.ts": 100,
+    "worker/src/api/report-cards-v9-freshness.ts": 100,
     "worker/src/api/safety-score-history-v2.ts": 100,
     "worker/src/api/safety-score-history.ts": 100,
     "worker/src/cron/compute-depeg-resolver-review.ts": 100,

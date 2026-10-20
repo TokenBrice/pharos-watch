@@ -1,6 +1,7 @@
 import { DatabaseSync } from "node:sqlite";
 import { setTimeout as delay } from "node:timers/promises";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { makeReportCardsV9Card, makeReportCardsV9PartialCard, makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
@@ -9,6 +10,7 @@ import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { FRESHNESS_RATIOS } from "@shared/lib/status-thresholds";
 import { API_FRESHNESS_ALLOWED_FUTURE_SKEW_SEC } from "../../lib/api-freshness-age";
 import { ReportCardsV9CurrentResponseSchema } from "@shared/types/report-cards-v9";
+import { ReportCardsV9DetailResponseSchema } from "@shared/types/report-cards-v9-projections";
 import type { V9PublicationHealth } from "@shared/types/report-cards-v9";
 import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
 import { V9_PUBLIC_READ_GRACE_SEC, V9_PUBLIC_FRAGMENT_MAX_BYTES } from "@shared/types/report-cards-v9-materialization";
@@ -91,6 +93,47 @@ async function assertServedEquivalent(db: D1Database) {
 }
 
 describe("materialized V9 response", () => {
+  it("negotiates compact freshness without changing cards, accepted storage or the old strict wire", async () => {
+    const { sqlite, db } = database();
+    const publication = makeWorkerSafetyScoreV9Publication();
+    publication.pillarFreshness = { dexMaxAgeSec: 5,
+      dexObservedAtSec: publication.cards.map(() => publication.asOfSec - 6) };
+    publication.sourceGenerations.dex = "captured-dex-generation";
+    for (const card of publication.cards) {
+      card.pillars.backing.freshness = "unknown";
+      card.pillars.exit.freshness = "stale";
+      card.pillars.control.freshness = "unknown";
+      card.evidence.freshness = "stale";
+    }
+    await persistSafetyScoreV9Publication(db, currentInput(publication));
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(publication.publishedAtSec * 1000);
+    const stored = sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(SAFETY_SCORE_V9_CACHE_KEYS.publication)!.value;
+    const plain = await handleReportCardsV9(db);
+    const marked = await handleReportCardsV9(db, new URL("https://example.com/api/report-cards/v9?freshness=operands"));
+    expect(plain.status).toBe(200);
+    expect(marked.status).toBe(200);
+    const legacy = await plain.json();
+    const operands = ReportCardsV9CurrentResponseSchema.parse(await marked.json());
+    const oldSchema = z.strictObject(ReportCardsV9CurrentResponseSchema.shape).omit({ pillarFreshness: true });
+    expect(oldSchema.safeParse(legacy).success).toBe(true);
+    expect(oldSchema.safeParse(operands).success).toBe(false);
+    expect(operands.pillarFreshness).toEqual(publication.pillarFreshness);
+    const { pillarFreshness: _metadata, ...withoutOperands } = operands;
+    expect(withoutOperands).toEqual(legacy);
+    expect(marked.headers.get("ETag")).not.toBe(plain.headers.get("ETag"));
+    const id = publication.cards[0]!.id;
+    const detail = await handleReportCardsV9Detail(db, new URL(`https://example.com/api/report-cards/v9-detail?stablecoin=${id}&freshness=operands`));
+    const detailBody = ReportCardsV9DetailResponseSchema.parse(await detail.json());
+    expect(detailBody.pillarFreshness).toEqual({
+      dexMaxAgeSec: 5, dexObservedAtSec: [publication.pillarFreshness.dexObservedAtSec[0]],
+    });
+    const oldDetail = await handleReportCardsV9Detail(db, new URL(`https://example.com/api/report-cards/v9-detail?stablecoin=${id}`));
+    expect(await oldDetail.json()).not.toHaveProperty("pillarFreshness");
+    expect(await (await handleReportCardsV9Table(db)).json()).not.toHaveProperty("pillarFreshness");
+    expect(sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(SAFETY_SCORE_V9_CACHE_KEYS.publication)!.value).toBe(stored);
+  });
+
   it("bounds 397-card fragment round trips under D1 latency without changing bytes, identity or ETag", async () => {
     const { sqlite, db, publication } = await seedCohort();
     vi.useFakeTimers({ toFake: ["Date"] });

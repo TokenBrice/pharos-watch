@@ -25,7 +25,6 @@
 | `data-invariant-canary` | 15m | 30m C | watch | No missing active checks hidden by clean measured checks; findings are separate from observer execution. |
 | `cron-sentinel` | 15m | 30m O | watch | No unavailable telemetry reclassified as zero incidents; bounded evidence collection can be partial with reasons. |
 | `dispatch-telegram-alerts` | 5m | 10m O | watch | Durable pending queue and bounded retries allowed; enqueue is not delivered evidence. |
-| `telegram-personalized-recap-planner` | 5m | 10m O | watch | Deferred recipients allowed only with durable pending identity; no duplicate or silently dropped plans. |
 | `telegram-degradation-watchdog` | 5m | 10m O | watch | Durable broker retry allowed; unavailable broker state remains unknown. |
 | `telegram-disambiguation-cleanup` | 5m | 10m O | watch | Bounded cleanup batches allowed; residual expiry backlog remains visible. |
 | `telegram-pulse-snapshot` | 5m | 10m C | watch | Quiet/empty measured pulse allowed; failed source read cannot become an empty pulse. |

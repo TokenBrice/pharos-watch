@@ -14,7 +14,6 @@ import {
   recordTelegramJobTargetFinalDelivery,
   type TelegramTargetFinalDeliveryState,
 } from "./telegram-alert-job-target-outcomes";
-import { projectRecapPendingTerminalOutcome } from "./recap-terminal";
 
 type SelectablePendingRow = DeadLetterPendingRow & { processing_owner?: string | null };
 type ExpiredPendingRow = SelectablePendingRow & { expires_at?: number | null };
@@ -71,14 +70,6 @@ async function projectTerminalPendingRows(
         { state, at: nowSec, error },
       );
     }
-    const recapOutcome = state === "execution_unknown"
-      ? "execution_unknown"
-      : state === "expired"
-      ? "expired"
-      : state === "cancelled"
-      ? "cancelled"
-      : "failed_permanent";
-    await projectRecapPendingTerminalOutcome(db, row, recapOutcome, nowSec, error);
   }
 }
 

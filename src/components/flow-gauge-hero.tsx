@@ -8,6 +8,7 @@ import { MethodologyLabel } from "@/components/methodology-hint";
 import { OpsStatusChip } from "@/components/ops-status-chip";
 import { UniverseChip } from "@/components/universe-chip";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { buildRunLineModel, selectRunLineDrivers, type RunLineModel } from "@/lib/flow-run-line-model";
 import { formatDataHealthWarning, type DataHealthInfo } from "@/lib/data-health";
 import { buildGaugeVerdict } from "@/lib/flow-signal-ui";
@@ -29,10 +30,18 @@ const SYNC_TIME_FORMAT = new Intl.DateTimeFormat("en-GB", {
   timeZone: "UTC",
 });
 
+const WATERMARK_TIME_FORMAT = new Intl.DateTimeFormat("en-GB", {
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+  timeZone: "UTC",
+});
+
 interface FlowGaugeHeroProps {
   gauge: MintBurnGauge | null;
   coins: MintBurnCoinFlow[];
   sync: MintBurnFlowsResponse["sync"] | null;
+  window?: MintBurnFlowsResponse["window"];
   /** The worst degraded or stale read behind the page (`deriveDataHealth`); a chip, never a banner. */
   dataHealth?: DataHealthInfo | null;
   isLoading?: boolean;
@@ -92,11 +101,13 @@ function GaugeStatusChips({
   sync,
   model,
   dataHealth,
+  watermark,
 }: {
   gauge: MintBurnGauge | null;
   sync: MintBurnFlowsResponse["sync"] | null;
   model: RunLineModel;
   dataHealth: DataHealthInfo | null;
+  watermark: NonNullable<MintBurnFlowsResponse["window"]>["watermark"];
 }) {
   const scoredCoins = model.ticks.length;
   const withheld = gauge?.partialValuationInputs ?? 0;
@@ -106,6 +117,36 @@ function GaugeStatusChips({
   const classificationReason = gauge?.classificationReason ?? ftqDependency?.reason ?? "classification-unavailable";
   return (
     <>
+      {(gauge?.scanCoverage?.excludedCoins ?? 0) > 0 ? (
+        <OpsStatusChip label="Partial" reasonCodes={["scan-coverage-incomplete"]}>
+          <p>
+            {gauge?.scanCoverage?.admittedCoins != null
+              ? `${gauge.scanCoverage.admittedCoins} of ${gauge.trackedCoins} flow-tracked coins have admitted 24h scan coverage. `
+              : ""}
+            {gauge?.scanCoverage?.excludedCoins} excluded from the gauge because their scan coverage is incomplete.
+            {" "}The score describes admitted coins, not the full tracked set.
+          </p>
+          <p className="text-muted-foreground">
+            Excluded supply weight: {gauge?.scanCoverage?.excludedMcapUsd != null
+              ? formatCurrency(gauge.scanCoverage.excludedMcapUsd, 1)
+              : "unavailable"}.
+          </p>
+        </OpsStatusChip>
+      ) : null}
+      {watermark?.unavailableReason ? (
+        <OpsStatusChip
+          label={watermark.unavailableReason === "scan-watermark-stale" ? "Data delayed" : "Data time unavailable"}
+          reasonCodes={[watermark.unavailableReason]}
+        >
+          <p>{watermark.unavailableReason === "scan-watermark-stale"
+            ? "The common closed-hour scan watermark is too old to admit current flow signals."
+            : "No common closed-hour scan watermark is available; current flow signals cannot be admitted."}</p>
+          <p className="text-muted-foreground">
+            Evidence budget: {formatElapsedSeconds(watermark.maxAgeSec)}
+            {watermark.ageSec != null ? ` · watermark ${formatElapsedSeconds(watermark.ageSec)} old` : ""}.
+          </p>
+        </OpsStatusChip>
+      ) : null}
       {gauge && gauge.score == null ? (
         <OpsStatusChip label="Not rated" reasonCodes={["gauge-score-null"]}>
           <p>
@@ -194,7 +235,7 @@ function GaugeStatusChips({
  * line showing why the gauge sits where it does. Degraded states are chips and
  * the beam label, never a headline.
  */
-export function FlowGaugeHero({ gauge, coins, sync, dataHealth = null, isLoading }: FlowGaugeHeroProps) {
+export function FlowGaugeHero({ gauge, coins, sync, window, dataHealth = null, isLoading }: FlowGaugeHeroProps) {
   const model = useMemo(() => buildRunLineModel(gauge, coins), [gauge, coins]);
   const aggregate = useMemo(() => aggregateCoinFlows24h(coins), [coins]);
 
@@ -205,6 +246,13 @@ export function FlowGaugeHero({ gauge, coins, sync, dataHealth = null, isLoading
   const withheld = model.withheldForValuation;
   const verdict = buildGaugeVerdict(model.bandUnsettled ? "unsettled" : band, selectRunLineDrivers(model));
   const trackedCoins = gauge?.trackedCoins ?? coins.length;
+  const watermark = window?.watermark;
+  const excludedCoins = gauge?.scanCoverage?.excludedCoins ?? 0;
+  const scoredLabel = `${scoredCoins} of ${trackedCoins} flow-tracked scored${excludedCoins > 0
+    ? ` · ${excludedCoins} excluded (${gauge?.scanCoverage?.excludedMcapUsd != null
+      ? `${formatCurrency(gauge.scanCoverage.excludedMcapUsd, 1)} mcap`
+      : "mcap unavailable"})`
+    : ""}`;
 
   return (
     <FeatureHeroSplit
@@ -226,7 +274,7 @@ export function FlowGaugeHero({ gauge, coins, sync, dataHealth = null, isLoading
           ) : null}
         </>
       }
-      status={<GaugeStatusChips gauge={gauge} sync={sync} model={model} dataHealth={dataHealth} />}
+      status={<GaugeStatusChips gauge={gauge} sync={sync} model={model} dataHealth={dataHealth} watermark={watermark} />}
       beamValue={
         score != null ? (
           <span className="inline-flex items-baseline gap-3">
@@ -251,7 +299,32 @@ export function FlowGaugeHero({ gauge, coins, sync, dataHealth = null, isLoading
         )
       }
       universe={
-        <UniverseChip universe="active" value={`${scoredCoins} of ${trackedCoins} flow-tracked scored`} />
+        <div className="flex flex-col items-start gap-2">
+          <UniverseChip universe="active" value={scoredLabel} />
+          {watermark ? (
+            <Popover>
+              <PopoverTrigger className="pharos-focus-ring text-left text-xs text-muted-foreground underline decoration-dotted underline-offset-4 hover:text-foreground">
+                {watermark.timestamp != null ? (
+                  <>Data through <time dateTime={new Date(watermark.timestamp * 1000).toISOString()}>
+                    {WATERMARK_TIME_FORMAT.format(new Date(watermark.timestamp * 1000))} UTC
+                  </time></>
+                ) : "Data time unavailable"}
+              </PopoverTrigger>
+              <PopoverContent align="start" className="w-72 space-y-1.5 p-3 text-xs leading-relaxed">
+                <p>
+                  {watermark.timestamp != null
+                    ? `Common closed-hour cutoff: ${SYNC_TIME_FORMAT.format(new Date(watermark.timestamp * 1000))} UTC.`
+                    : "No common closed-hour scan cutoff is available."}
+                  {" "}This is the flow evidence clock, not the latest sync attempt.
+                </p>
+                <p className="text-muted-foreground">
+                  Evidence budget: {formatElapsedSeconds(watermark.maxAgeSec)}
+                  {watermark.ageSec != null ? ` · watermark ${formatElapsedSeconds(watermark.ageSec)} old` : ""}.
+                </p>
+              </PopoverContent>
+            </Popover>
+          ) : null}
+        </div>
       }
       subKicker="Last 24 hours"
       sub={

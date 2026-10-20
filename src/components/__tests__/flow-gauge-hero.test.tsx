@@ -3,7 +3,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { FlowGaugeHero } from "@/components/flow-gauge-hero";
 import { makeMintBurnCoinValuation, makeMintBurnFlowCoin } from "@/test-utils/mint-burn-fixtures";
-import type { MintBurnGauge } from "@shared/types";
+import type { MintBurnFlowsResponse, MintBurnGauge } from "@shared/types";
 
 const gauge = (overrides: Partial<MintBurnGauge> = {}): MintBurnGauge => ({
   score: -47.6,
@@ -29,7 +29,95 @@ const coins = [
   }),
 ];
 
+const evidenceWindow = (overrides: Partial<NonNullable<NonNullable<MintBurnFlowsResponse["window"]>["watermark"]>> = {}): MintBurnFlowsResponse["window"] => ({
+  start: Date.UTC(2026, 0, 17, 16) / 1000,
+  end: Date.UTC(2026, 0, 18, 16) / 1000,
+  semantics: "closed-utc-hours",
+  watermark: {
+    timestamp: Date.UTC(2026, 0, 18, 16) / 1000,
+    ageSec: 7200,
+    maxAgeSec: 28800,
+    unavailableReason: null,
+    ...overrides,
+  },
+});
+
 describe("FlowGaugeHero", () => {
+  it("shows the common evidence hour separately from the newer sync clock", () => {
+    render(<FlowGaugeHero gauge={gauge()} coins={coins}
+      sync={{ lastSuccessfulSyncAt: Date.UTC(2026, 0, 18, 18) / 1000, freshnessStatus: "fresh", warning: null, criticalLaneHealthy: true }}
+      window={evidenceWindow()} />);
+
+    const cutoff = screen.getByRole("button", { name: "Data through 16:00 UTC" });
+    expect(cutoff.querySelector("time")?.dateTime).toBe("2026-01-18T16:00:00.000Z");
+    fireEvent.click(cutoff);
+    expect(screen.getByText(/Common closed-hour cutoff: 18 Jan, 16:00 UTC/)).toBeTruthy();
+    expect(screen.getByText(/Evidence budget: 8h · watermark 2h old/)).toBeTruthy();
+  });
+
+  it.each([undefined, { start: 0, end: 86400, semantics: "closed-utc-hours" as const }])(
+    "preserves the old hero when watermark metadata is absent",
+    (window) => {
+      render(<FlowGaugeHero gauge={gauge()} coins={coins} sync={null} window={window} />);
+      expect(screen.queryByRole("button", { name: /Data through|Data time unavailable/ })).toBeNull();
+      expect(screen.getByRole("button", { name: /Universe: Active, 2 of 3 flow-tracked scored/ })).toBeTruthy();
+      expect(screen.queryByRole("button", { name: /^Partial$/ })).toBeNull();
+    },
+  );
+
+  it("discloses excluded scan members without confusing admitted and scored counts", () => {
+    render(<FlowGaugeHero gauge={gauge({
+      trackedCoins: 133,
+      scanCoverage: { complete: false, unavailableReason: "scan-coverage-incomplete",
+        admittedCoins: 128, excludedCoins: 5, excludedMcapUsd: 12_000_000 },
+    })} coins={coins} sync={null} window={evidenceWindow()} />);
+    expect(screen.getByRole("button", { name: /2 of 133 flow-tracked scored · 5 excluded \(\$12\.0M mcap\)/ })).toBeTruthy();
+    const partial = screen.getByRole("button", { name: "Partial" });
+    expect(partial.getAttribute("data-reason-codes")).toBe("scan-coverage-incomplete");
+    fireEvent.click(partial);
+    expect(screen.getByText(/128 of 133 flow-tracked coins have admitted 24h scan coverage/)).toBeTruthy();
+    expect(screen.getByText(/Excluded supply weight: \$12\.0M/)).toBeTruthy();
+    expect(screen.getByText(/not the full tracked set/)).toBeTruthy();
+  });
+
+  it("does not claim a partial gauge when no scan members are excluded", () => {
+    render(<FlowGaugeHero gauge={gauge({ scanCoverage: {
+      complete: true, unavailableReason: null, admittedCoins: 3, excludedCoins: 0, excludedMcapUsd: 0,
+    } })} coins={coins} sync={null} />);
+    expect(screen.queryByRole("button", { name: "Partial" })).toBeNull();
+    expect(screen.getByRole("button", { name: /Universe: Active, 2 of 3 flow-tracked scored/ }).textContent).not.toContain("excluded");
+  });
+
+  it("labels missing excluded supply weight as unavailable, never zero", () => {
+    render(<FlowGaugeHero gauge={gauge({ scanCoverage: {
+      complete: false, unavailableReason: "scan-coverage-incomplete", excludedCoins: 1, excludedMcapUsd: null,
+    } })} coins={coins} sync={null} />);
+    expect(screen.getByRole("button", { name: /1 excluded \(mcap unavailable\)/ })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Partial" }));
+    expect(screen.getByText("Excluded supply weight: unavailable.")).toBeTruthy();
+  });
+
+  it("marks stale watermark evidence even when the sync itself is fresh", () => {
+    render(<FlowGaugeHero gauge={gauge()} coins={coins}
+      sync={{ lastSuccessfulSyncAt: Date.UTC(2026, 0, 19, 2) / 1000, freshnessStatus: "fresh", warning: null, criticalLaneHealthy: true }}
+      window={evidenceWindow({ ageSec: 36000, unavailableReason: "scan-watermark-stale" })} />);
+    expect(screen.getByRole("button", { name: "Data through 16:00 UTC" })).toBeTruthy();
+    const delayed = screen.getByRole("button", { name: "Data delayed" });
+    expect(delayed.getAttribute("data-reason-codes")).toBe("scan-watermark-stale");
+    fireEvent.click(delayed);
+    expect(screen.getByText(/Evidence budget: 8h · watermark 10h old/)).toBeTruthy();
+  });
+
+  it("does not substitute a sync timestamp for an unavailable watermark", () => {
+    const { container } = render(<FlowGaugeHero gauge={gauge()} coins={coins} sync={null}
+      window={evidenceWindow({ timestamp: null, ageSec: null, unavailableReason: "scan-watermark-unavailable" })} />);
+    expect(screen.queryByRole("button", { name: /Data through/ })).toBeNull();
+    const unavailable = container.querySelector('[data-reason-codes="scan-watermark-unavailable"]');
+    expect(unavailable?.textContent).toBe("Data time unavailable");
+    fireEvent.click(unavailable!);
+    expect(screen.getByText(/No common closed-hour scan watermark is available/)).toBeTruthy();
+  });
+
   it("leads with the gauge and its band chip, never a degraded headline", () => {
     const { container } = render(<FlowGaugeHero gauge={gauge()} coins={coins} sync={null} />);
     const hero = screen.getByRole("group", { name: "Bank Run Gauge overview" });

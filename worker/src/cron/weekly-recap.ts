@@ -5,7 +5,6 @@ import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import type { CronProgressReporter, CronResult } from "../lib/cron-logger";
 import { createCronResult, createNeutralSkippedCronResult } from "../lib/cron-result";
 import type { TelegramCreds } from "../telegram/delivery/telegram";
-import type { TelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
 import type { TwitterCreds } from "../lib/twitter";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { logMalformedJsonPath } from "../lib/json-decode-observability";
@@ -69,7 +68,6 @@ export async function generateWeeklyRecap(
   scheduledAtSec = Math.floor(Date.now() / 1000),
   credentialDiagnostics: DigestCredentialDiagnostics = {},
   llmConfig: DigestLlmConfig = WEEKLY_RECAP_LLM_CONFIG,
-  recapRollout: TelegramRecapRolloutPolicy | null = null,
 ): Promise<CronResult> {
   const resolvedLlmConfig = resolveDigestLlmConfig(WEEKLY_RECAP_LLM_CONFIG, llmConfig);
   await reportCronProgress(reportProgress, {
@@ -497,7 +495,6 @@ export async function generateWeeklyRecap(
       credentialDiagnostics.telegramMissing,
       {
         editionKey: `weekly:${digestDate}`,
-        recapRollout,
         title: `Weekly Recap: ${digestCopy.digestTitle || `Week of ${weeklyData.weekStartDate}`}`,
         routeDate: `${digestDate}-weekly`,
         alreadySentStatus: "ok+already-sent",

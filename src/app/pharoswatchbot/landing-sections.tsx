@@ -11,7 +11,6 @@ import {
   ShieldCheck,
   SlidersHorizontal,
   Smartphone,
-  Sunrise,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -151,12 +150,6 @@ const ALERT_CONTROLS: readonly { icon: LucideIcon; title: string; detail: string
     title: "Quiet hours and snooze",
     detail: "Silence nights in your own timezone, or pause for 1h, 4h or 24h during a noisy market.",
     command: "/mute 22-07",
-  },
-  {
-    icon: Sunrise,
-    title: "Daily recap",
-    detail: "One private summary each local day, sent only when your watched assets materially changed.",
-    command: "/recap on",
   },
   {
     icon: Users,

@@ -248,9 +248,12 @@ function DewsTechnicalDetails() {
           still writes rows that meet signal coverage, then marks the run degraded instead of treating the missing input as startup noise.
         </p>
         <p>
-          Mint/Burn Flow requires a mature 30-day baseline, fresh 24-hour input and durable current-fingerprint
-          scan coverage. A proof-backed zero-volume row is calm; absent coverage or stale baseline-only input is
-          unavailable, with its signal weight redistributed rather than an invented quiet observation.
+          Mint/Burn Flow requires complete 24-hour and 30-day coverage at the published common closed-hour
+          watermark, including explicitly admitted legacy pre-cutover windows with their weaker assurance.
+          Both windows and dirty-hour checks share that end; freshness uses the actual window end, not its
+          publication time. Existing freshness and valuation gates remain. An admitted fully valued zero-volume
+          window is calm; absent or stale evidence is unavailable, with its signal weight redistributed.
+          Restored inputs can move scores and bands in either direction; formulas and weights are unchanged.
         </p>
         <p>
           Pool Balance Drift blends 40% balance stress, 35% average pool stress, and 25% worst single-pool imbalance

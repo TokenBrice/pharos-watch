@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { baseState } from "@shared/test-utils/telegram-mini-app-state";
 import type { SettingsPanelProps } from "./SettingsPanel";
@@ -68,7 +68,7 @@ describe("SettingsPanel", () => {
     expect(onMutate).toHaveBeenNthCalledWith(2, { kind: "set-quiet-hours", enabled: false });
   });
 
-  it("selects timezone and daily-recap operations from direct props", () => {
+  it("selects timezone operations from direct props", () => {
     const onMutate = vi.fn();
     renderSettings({ onMutate });
 
@@ -78,37 +78,19 @@ describe("SettingsPanel", () => {
     expect(datalist?.querySelectorAll("option").length).toBeGreaterThan(compactPicker.options.length);
 
     fireEvent.change(screen.getByLabelText("Timezone"), { target: { value: "Europe/Paris" } });
-    fireEvent.change(screen.getByLabelText("Delivery hour"), { target: { value: "14" } });
-    fireEvent.click(screen.getByRole("switch", { name: "Daily recap" }));
     fireEvent.change(screen.getByLabelText("Timezone name"), { target: { value: "Europe/Paris" } });
     fireEvent.click(screen.getByRole("button", { name: "Apply timezone" }));
 
     expect(onMutate).toHaveBeenNthCalledWith(1, { kind: "set-timezone", timezone: "Europe/Paris" });
-    expect(onMutate).toHaveBeenNthCalledWith(2, { kind: "set-recap", enabled: false, deliveryHourLocal: 14 });
-    expect(onMutate).toHaveBeenNthCalledWith(3, { kind: "set-recap", enabled: true, deliveryHourLocal: 9 });
-    expect(onMutate).toHaveBeenNthCalledWith(4, { kind: "set-timezone", timezone: "Europe/Paris" });
+    expect(onMutate).toHaveBeenNthCalledWith(2, { kind: "set-timezone", timezone: "Europe/Paris" });
   });
 
-  it("hides an unavailable recap and gates enabling until timezone confirmation", () => {
-    const unavailable = {
-      ...baseState,
-      subscriber: { ...baseState.subscriber, recap: { ...baseState.subscriber.recap, available: false } },
-    };
-    renderSettings({ state: unavailable });
+  it("removes personalized recap controls while retaining quiet hours and timezone", () => {
+    renderSettings();
     expect(screen.queryByRole("switch", { name: "Daily recap" })).toBeNull();
-
-    cleanup();
-    const unconfirmed = {
-      ...baseState,
-      subscriber: {
-        ...baseState.subscriber,
-        quietHours: { ...baseState.subscriber.quietHours, timezone: null },
-        recap: { ...baseState.subscriber.recap, timezoneConfirmed: false },
-      },
-    };
-    renderSettings({ state: unconfirmed });
-    expect(screen.getByRole("switch", { name: "Daily recap" })).toHaveProperty("disabled", true);
-    expect(screen.getByText("Confirm a timezone below before enabling your recap.")).toBeTruthy();
+    expect(screen.queryByLabelText("Delivery hour")).toBeNull();
+    expect(screen.getByRole("heading", { name: "Quiet hours" })).toBeTruthy();
+    expect(screen.getByLabelText("Timezone")).toBeTruthy();
   });
 
   it("confirms UTC directly from an unconfirmed fallback and keeps clearing distinct", () => {
@@ -117,22 +99,19 @@ describe("SettingsPanel", () => {
       subscriber: {
         ...baseState.subscriber,
         quietHours: { ...baseState.subscriber.quietHours, timezone: null },
-        recap: { ...baseState.subscriber.recap, timezoneConfirmed: false },
       },
     };
     const { props, rerender } = renderSettings({ state });
     expect(screen.getByRole("button", { name: "Apply timezone" })).toHaveProperty("disabled", false);
     fireEvent.click(screen.getByRole("button", { name: "Confirm UTC" }));
     expect(props.onMutate).toHaveBeenCalledWith({ kind: "set-timezone", timezone: "UTC" });
-    expect(screen.getByRole("switch", { name: "Daily recap" })).toHaveProperty("disabled", true);
 
     rerender({ state: baseState });
-    expect(screen.getByRole("switch", { name: "Daily recap" })).toHaveProperty("disabled", false);
     expect(screen.getByRole("button", { name: "Apply timezone" })).toHaveProperty("disabled", true);
     fireEvent.click(screen.getByRole("button", { name: "Clear timezone (UTC fallback)" }));
     expect(props.onMutate).toHaveBeenLastCalledWith({ kind: "set-timezone", timezone: null });
     rerender({ state });
-    expect(screen.getByRole("switch", { name: "Daily recap" })).toHaveProperty("disabled", true);
+    expect(screen.getByRole("button", { name: "Confirm UTC" })).toHaveProperty("disabled", false);
   });
 
   it("releases acknowledged quiet-hour drafts before a later confirmed refresh", () => {

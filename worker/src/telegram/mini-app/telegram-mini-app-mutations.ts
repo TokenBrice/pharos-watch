@@ -1,6 +1,5 @@
 import { WORKER_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { fnv1a32Hex } from "@shared/lib/fnv1a";
-import { nextIanaLocalHourDueAt } from "@shared/lib/iana-local-time";
 import {
   TELEGRAM_MINI_APP_CATALOG_VERSION,
   TELEGRAM_MINI_APP_CONTRACT_VERSION,
@@ -67,7 +66,6 @@ import {
   type WatchlistImportPreview,
 } from "../store/watchlist-import";
 import { loadSubscriberByChat } from "../store/subscribers";
-import { setTelegramRecapPreference } from "../recap/recap-store";
 
 export type TelegramMiniAppMutationErrorCode =
   | "not-private"
@@ -77,9 +75,6 @@ export type TelegramMiniAppMutationErrorCode =
   | "preset-unavailable"
   | "invalid-coin-patch"
   | "invalid-timezone"
-  | "recap-timezone-required"
-  | "recap-subscriber-required"
-  | "stale-recap-preference"
   | "invalid-portable-token"
   | "empty-portable-state"
   | "stale-import-preview"
@@ -757,36 +752,6 @@ export async function applyTelegramMiniAppMutation(db: D1Database, auth: Telegra
       }
       await setSubscriberTimezone(db, chatId, username, operation.timezone);
       return;
-    case "set-recap": {
-      const subscriber = await loadSubscriberByChat(db, chatId);
-      if (subscriber == null) {
-        throw new TelegramMiniAppMutationError("recap-subscriber-required", 409);
-      }
-      // The schedule is computed from this row, so use its generation as the
-      // write fence and ask the client to retry after a concurrent mutation.
-      const timezone = subscriber.timezone ?? null;
-      const expectedPreferenceGeneration = Number(subscriber.preference_generation ?? 0);
-      if (operation.enabled && timezone == null) {
-        throw new TelegramMiniAppMutationError("recap-timezone-required", 409);
-      }
-      const nowSec = unixNow();
-      const nextDueMs = operation.enabled && timezone != null
-        ? nextIanaLocalHourDueAt(nowSec * 1000, timezone, operation.deliveryHourLocal)
-        : null;
-      if (operation.enabled && nextDueMs == null) {
-        throw new TelegramMiniAppMutationError("recap-timezone-required", 409);
-      }
-      const applied = await setTelegramRecapPreference(db, {
-        chatId,
-        enabled: operation.enabled,
-        deliveryHourLocal: operation.deliveryHourLocal,
-        nextDueAt: nextDueMs == null ? null : Math.floor(nextDueMs / 1000),
-        nowSec,
-        expectedPreferenceGeneration,
-      });
-      if (!applied) throw new TelegramMiniAppMutationError("stale-recap-preference", 409);
-      return;
-    }
     case "unsubscribe-all":
       await unsubscribeAll(db, chatId);
       return;
@@ -861,7 +826,6 @@ export function mutationActionDetail(operation: TelegramMiniAppOperation): strin
   if (operation.kind === "set-snooze") return "chat";
   if (operation.kind === "set-coin-snooze") return "coin";
   if (operation.kind === "set-timezone") return "timezone";
-  if (operation.kind === "set-recap") return "recap";
   if (operation.kind === "unsubscribe-all") return "all";
   return operation.kind;
 }

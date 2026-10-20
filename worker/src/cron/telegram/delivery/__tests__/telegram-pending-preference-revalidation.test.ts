@@ -112,33 +112,6 @@ function pendingRow(options: {
   };
 }
 
-function recapRow(options: { generation?: number; markupPolicyJson?: string | null } = {}): PendingAlertRow {
-  return {
-    ...pendingRow(),
-    source_type: "personalized_recap",
-    alert_type: null,
-    dedupe_key: "recap:42:2026-07-11:v1",
-    source_event_id: "recap:42:2026-07-11:v1",
-    alert_scope_json: null,
-    preference_generation: options.generation ?? 1,
-    markup_policy_json: options.markupPolicyJson ?? serializePendingMarkupPolicy({
-      replyMarkup: { inline_keyboard: [[{ text: "View watchlist", web_app: { url: "https://pharos.watch/pharoswatchbot" } }]] },
-    }),
-  };
-}
-
-function insertRecapTarget(generation = 1, enabled = 1): void {
-  sqlite.prepare(
-    `INSERT INTO telegram_recap_preferences (chat_id, chat_kind, enabled, created_at, updated_at)
-     VALUES (?, 'private', ?, 0, 0)`,
-  ).run(CHAT_ID, enabled);
-  sqlite.prepare(
-    `INSERT INTO telegram_recap_targets
-       (recap_key, chat_id, local_date, window_start_at, window_end_at, preference_generation,
-        watchlist_fingerprint, pending_dedupe_key, status, created_at, updated_at)
-     VALUES (?, ?, '2026-07-11', 0, 0, ?, 'fingerprint-v1', ?, 'queued', 0, 0)`,
-  ).run("recap:42:2026-07-11:v1", CHAT_ID, generation, "recap:42:2026-07-11:v1");
-}
 
 function stablecoinsResult(): StablecoinsCacheLoadResult {
   return {
@@ -358,70 +331,9 @@ describe("pending Telegram preference revalidation", () => {
     });
   });
 
-  it("revalidates a private enabled recap and preserves its exact persisted markup", async () => {
-    insertSubscriber({ generation: 4 });
-    insertRecapTarget(4);
-    const row = recapRow({ generation: 4 });
-    const outcome = await evaluate(row);
-    expect(outcome).toMatchObject({
-      kind: "eligible",
-      validatedPreferenceGeneration: 4,
-    });
-    if (outcome.kind !== "eligible") throw new Error("recap unexpectedly ineligible");
-    expect(outcome.markupPolicy).toEqual(JSON.parse(row.markup_policy_json!));
-  });
-
-  it("cancels a paused recap instead of deferring it to the pause sentinel", async () => {
-    insertSubscriber({ generation: 1, chatSnoozeUntil: 4_102_444_800 });
-    insertRecapTarget();
-    await expect(evaluate(recapRow())).resolves.toMatchObject({ kind: "cancel", reason: "recap_paused" });
-  });
-
-  it("defers a recap during a timed snooze until the subscriber becomes eligible", async () => {
-    insertSubscriber({ generation: 1, chatSnoozeUntil: NOW + 300 });
-    insertRecapTarget();
-
-    await expect(evaluate(recapRow())).resolves.toMatchObject({
-      kind: "defer",
-      reason: "recap_snoozed",
-      notBeforeAt: NOW + 300,
-    });
-  });
-
-  it("cancels a recap when the preference has been disabled", async () => {
-    insertSubscriber({ generation: 1 });
-    insertRecapTarget(1, 0);
-
-    await expect(evaluate(recapRow())).resolves.toMatchObject({ kind: "cancel", reason: "recap_disabled" });
-  });
-
-  it("cancels a recap whose durable preference or target has been removed", async () => {
-    insertSubscriber({ generation: 1 });
-
-    await expect(evaluate(recapRow())).resolves.toMatchObject({
-      kind: "cancel",
-      reason: "recap_preference_missing",
-    });
-  });
-
-  it("defers recap rows with invalid immutable provenance", async () => {
-    const row = recapRow();
-    row.markup_policy_json = null;
-
-    await expect(evaluate(row)).resolves.toMatchObject({
-      kind: "defer",
-      reason: "recap_markup_policy_missing",
-      notBeforeAt: NOW + 15 * 60,
-    });
-  });
-
-  it("cancels a recap when its target generation no longer matches the subscriber", async () => {
-    insertSubscriber({ generation: 2 });
-    insertRecapTarget(1);
-    await expect(evaluate(recapRow())).resolves.toMatchObject({
-      kind: "cancel",
-      reason: "recap_generation_changed",
-    });
+  it.each(["personalized_recap", "unsupported"])("cancels unsupported source %s without reading retired feature tables", async (sourceType) => {
+    const row = { ...pendingRow(), source_type: sourceType, alert_type: null };
+    await expect(evaluate(row)).resolves.toMatchObject({ kind: "cancel", reason: "unsupported_source_type" });
   });
 
   it("cancels a preset route after the preset no longer contains its coin", async () => {

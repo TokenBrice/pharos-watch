@@ -95,15 +95,6 @@ describe("handleTelegramMiniAppSession", () => {
       subscriber: {
         exists: boolean;
         snoozeUntilTs: number | null;
-        recap: {
-          enabled: boolean;
-          deliveryHourLocal: number;
-          timezoneConfirmed: boolean;
-          nextDueAt: number | null;
-          lastWindowEndAt: number | null;
-          lastDeliveredLocalDate: string | null;
-          lastOutcome: string | null;
-        };
       };
       subscriptions: Array<{ stablecoinId: string; symbol: string; alertTypes: { dews: boolean; depeg: boolean }; alertOverrides: { dews: boolean; depeg: boolean } }>;
       catalog: { searchableCoins: Array<{ stablecoinId: string }> };
@@ -115,16 +106,7 @@ describe("handleTelegramMiniAppSession", () => {
     expect(body.viewer.chatId).toBe("42");
     expect(body.subscriber.exists).toBe(true);
     expect(body.subscriber.snoozeUntilTs).toBeNull();
-    expect(body.subscriber.recap).toEqual({
-      available: true,
-      enabled: false,
-      deliveryHourLocal: 9,
-      timezoneConfirmed: false,
-      nextDueAt: null,
-      lastWindowEndAt: null,
-      lastDeliveredLocalDate: null,
-      lastOutcome: null,
-    });
+    expect(body.subscriber).not.toHaveProperty("recap");
     expect(body.subscriptions[0]).toMatchObject({
       stablecoinId: "usdc-circle",
       symbol: "USDC",
@@ -134,38 +116,6 @@ describe("handleTelegramMiniAppSession", () => {
     expect(body.catalog.searchableCoins.length).toBeGreaterThan(0);
   });
 
-  it("marks recap unavailable in an off rollout and rejects its mutation before a preference write", async () => {
-    const initData = await privateInitData();
-    const offPolicy = { mode: "off" as const };
-    const sessionDb = makeMiniAppDb(stateReadTables());
-
-    const session = await handleTelegramMiniAppSession(
-      sessionDb,
-      makeMiniAppRequest("/api/telegram-mini-app/session", { initData }),
-      BOT_TOKEN,
-      undefined,
-      offPolicy,
-    );
-
-    expect(session.status).toBe(200);
-    await expect(session.json()).resolves.toMatchObject({ subscriber: { recap: { available: false } } });
-
-    const mutationDb = makeMiniAppDb();
-    const mutation = await handleTelegramMiniAppMutation(
-      mutationDb,
-      makeMiniAppRequest("/api/telegram-mini-app/mutate", {
-        initData,
-        operation: { kind: "set-recap", enabled: true, deliveryHourLocal: 9 },
-      }),
-      BOT_TOKEN,
-      undefined,
-      offPolicy,
-    );
-
-    expect(mutation.status).toBe(404);
-    await expect(mutation.json()).resolves.toMatchObject({ code: "recap-unavailable" });
-    expect(historyMatches(mutationDb, "telegram_recap_preferences")).toBe(false);
-  });
 
   it("hides inert rows but keeps marker-backed local-off and snooze-only rows", async () => {
     const initData = await privateInitData();
@@ -495,7 +445,7 @@ describe("handleTelegramMiniAppSession", () => {
     expect(historyMatches(db, "INSERT INTO telegram_usage_daily", {1:"mini_app_mutation_denied"})).toBe(false);
   });
 
-  it("records aggregate recap button actions without storing user identifiers", async () => {
+  it("does not interpret retired recap launch tokens as an action", async () => {
     const initData = await privateInitData(60, "recap_watchlist");
     const db = makeMiniAppDb(stateReadTables());
 
@@ -509,7 +459,7 @@ describe("handleTelegramMiniAppSession", () => {
     const row = db.getHistory().find((entry) =>
       entry.sql.includes("INSERT INTO telegram_usage_daily")
       && entry.binds.includes("mini_app_session_valid"));
-    expect(row?.binds).toContain("recap_view_watchlist");
+    expect(row?.binds).not.toContain("recap_view_watchlist");
     expect(row?.binds).not.toContain("42");
     expect(row?.binds).not.toContain("alice");
   });

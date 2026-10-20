@@ -28,6 +28,7 @@ import {
 } from "../lib/safety-score-v9/capture-control";
 import { DEFAULT_CRON_TIMEOUT_MS } from "@shared/lib/scheduled-runner-registry";
 import type { SlotDeadline } from "../lib/cron-timeouts";
+import { loadMatchingCoreStablecoinsPublishedAt } from "../lib/v9-slot-window";
 
 export const V9_INPUT_STABLECOINS_SETTLE_MAX_WAIT_MS = 3 * 60_000;
 const V9_INPUT_STABLECOINS_SETTLE_POLL_MS = 2_500;
@@ -51,7 +52,7 @@ type StablecoinsCacheReadiness =
       status: "pending";
       waitedMs: number;
       cacheUpdatedAt: number | null;
-      pendingStartedAt: number;
+      pendingStartedAt: number | null;
       pendingStage: string | null;
     };
 
@@ -93,6 +94,7 @@ async function waitForStablecoinsCacheReadiness(
   options: {
     maxWaitMs?: number;
     pollMs?: number;
+    expectedSlotStartedAt?: number;
   } = {},
 ): Promise<StablecoinsCacheReadiness> {
   const maxWaitMs = options.maxWaitMs ?? V9_INPUT_STABLECOINS_SETTLE_MAX_WAIT_MS;
@@ -102,20 +104,32 @@ async function waitForStablecoinsCacheReadiness(
 
   while (true) {
     throwIfAborted(signal);
-    const [cacheUpdatedAt, progress] = await Promise.all([
+    const [cacheUpdatedAt, progress, admittedPublishedAt] = await Promise.all([
       getCacheUpdatedAt(db, "stablecoins"),
       readActiveStablecoinsProgress(db, signal),
+      options.expectedSlotStartedAt === undefined
+        ? Promise.resolve(null)
+        : loadMatchingCoreStablecoinsPublishedAt(db, options.expectedSlotStartedAt, signal),
     ]);
+    throwIfAborted(signal);
     pendingStartedAt = progress?.started_at ?? pendingStartedAt;
 
-    if (!progress || (cacheUpdatedAt != null && cacheUpdatedAt >= progress.started_at)) {
+    // Absence of a lease does not prove that the due producer has started.
+    // Require its live-cache publication evidence, retaining the active-run fence.
+    const expectedSlotReady = options.expectedSlotStartedAt === undefined
+      || (admittedPublishedAt != null && admittedPublishedAt === cacheUpdatedAt);
+    if (expectedSlotReady && (pendingStartedAt == null
+      || (cacheUpdatedAt != null && cacheUpdatedAt >= pendingStartedAt))) {
       const cache = await loadStablecoinsCache(db, { mode: "strict", contract: "published" });
-      return {
-        status: "ready",
-        cache,
-        waitedMs: Date.now() - waitStartedAt,
-        pendingStartedAt,
-      };
+      if (options.expectedSlotStartedAt === undefined
+        || (cache.kind === "ok" && cache.updatedAt === admittedPublishedAt)) {
+        return {
+          status: "ready",
+          cache,
+          waitedMs: Date.now() - waitStartedAt,
+          pendingStartedAt,
+        };
+      }
     }
 
     const waitedMs = Date.now() - waitStartedAt;
@@ -124,8 +138,8 @@ async function waitForStablecoinsCacheReadiness(
         status: "pending",
         waitedMs,
         cacheUpdatedAt,
-        pendingStartedAt: progress.started_at,
-        pendingStage: progress.stage,
+        pendingStartedAt,
+        pendingStage: progress?.stage ?? null,
       };
     }
 
@@ -150,12 +164,18 @@ export async function prepareSafetyScoreV9Input(
   workerMetadata?: V9WorkerProvenance,
   slotDeadline?: SlotDeadline,
   dwellirNative?: DwellirNativeCapability,
+  expectedStablecoinsSlotStartedAt?: number,
 ): Promise<CronResult> {
   throwIfAborted(signal);
   const preparationDeadlineMs = Math.min(Date.now() + DEFAULT_CRON_TIMEOUT_MS,
     slotDeadline?.platformDeadlineMs ?? Infinity);
 
-  const stablecoinsReadiness = await waitForStablecoinsCacheReadiness(db, signal);
+  const stablecoinsReadiness = await waitForStablecoinsCacheReadiness(db, signal, {
+    expectedSlotStartedAt: expectedStablecoinsSlotStartedAt,
+    maxWaitMs: Math.max(0, Math.min(
+      V9_INPUT_STABLECOINS_SETTLE_MAX_WAIT_MS, preparationDeadlineMs - Date.now(),
+    )),
+  });
   if (stablecoinsReadiness.status === "pending") {
     return createCronResult({
       status: "degraded",
@@ -167,6 +187,7 @@ export async function prepareSafetyScoreV9Input(
       metadata: {
         stage: "stablecoins-cache-readiness",
         reason: "stablecoins-generation-pending",
+        expectedStablecoinsSlotStartedAt: expectedStablecoinsSlotStartedAt ?? null,
         waitedMs: stablecoinsReadiness.waitedMs,
         cacheUpdatedAt: stablecoinsReadiness.cacheUpdatedAt,
         pendingStablecoinsStartedAt: stablecoinsReadiness.pendingStartedAt,
@@ -327,6 +348,7 @@ export async function prepareSafetyScoreV9Input(
       captureControl,
       transferMateriality,
       stablecoinsCacheReadiness: {
+        expectedSlotStartedAt: expectedStablecoinsSlotStartedAt ?? null,
         waitedMs: stablecoinsReadiness.waitedMs,
         pendingStartedAt: stablecoinsReadiness.pendingStartedAt,
       },

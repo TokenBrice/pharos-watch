@@ -9,14 +9,11 @@ import {
   appendTelegramOperationStatements,
   type TelegramOperationBatchOptions,
 } from "../delivery/operation-batch";
-import { nextIanaLocalHourDueAt } from "@shared/lib/iana-local-time";
-import { prepareCancelUnstartedTelegramRecaps } from "../recap/recap-store";
 
 /**
  * Replace the subscriber's IANA timezone (used to interpret quiet hours
  * locally). `timezone = null` clears any prior value, reverting the chat to
- * UTC. Routes through the single `buildSubscriberUpsert` builder so the
- * 15-column INSERT shape stays in lock-step with the rest of the file.
+ * UTC. The subscriber UPSERT preserves all other preferences.
  */
 export async function setSubscriberTimezone(
   db: D1Database,
@@ -26,15 +23,6 @@ export async function setSubscriberTimezone(
   options: TelegramOperationBatchOptions = {},
 ): Promise<void> {
   const nowSec = unixNow();
-  const recap = await db.prepare(
-    `SELECT enabled, delivery_hour_local
-       FROM telegram_recap_preferences
-      WHERE chat_id = ? AND chat_kind = 'private'`,
-  ).bind(chatId).first<{ enabled: number; delivery_hour_local: number }>();
-  const recapEnabled = recap?.enabled === 1;
-  const nextDueAt = recapEnabled && timezone != null
-    ? nextIanaLocalHourDueAt(nowSec * 1000, timezone, recap.delivery_hour_local)
-    : null;
   const { sql, binds } = buildSubscriberUpsert({
     kind: "preference",
     chatId,
@@ -43,31 +31,6 @@ export async function setSubscriberTimezone(
     timezone,
   });
   const statements: D1PreparedStatement[] = [db.prepare(sql).bind(...binds)];
-  if (recapEnabled) {
-    if (nextDueAt != null) {
-      statements.push(db.prepare(`
-        UPDATE telegram_recap_preferences
-           SET next_due_at = ?, updated_at = ?
-         WHERE chat_id = ? AND enabled = 1 AND chat_kind = 'private'
-      `).bind(Math.floor(nextDueAt / 1000), nowSec, chatId));
-    } else {
-      // A cleared zone can no longer meet the explicit-timezone contract. Do
-      // not leave a logically enabled recap stranded without a schedule.
-      statements.push(
-        db.prepare(`
-          UPDATE telegram_recap_preferences
-             SET enabled = 0, next_due_at = NULL, updated_at = ?
-           WHERE chat_id = ? AND enabled = 1 AND chat_kind = 'private'
-        `).bind(nowSec, chatId),
-        ...prepareCancelUnstartedTelegramRecaps(db, {
-          chatId,
-          reason: "timezone_cleared",
-          nowSec,
-          requireDisabledPreference: true,
-        }),
-      );
-    }
-  }
   await executeAtomicBatch(
     db,
     appendTelegramOperationStatements(statements, options),
@@ -152,7 +115,6 @@ export async function setSubscriptionSnooze(
   assertSubscribableCoin(stablecoinId);
   const now = unixNow();
   const parentUpsert = buildSubscriberUpsert({
-    kind: "bump",
     chatId,
     username: null,
     nowSec: now,

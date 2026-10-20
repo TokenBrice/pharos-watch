@@ -134,10 +134,9 @@ Structural boundaries:
 - Capture/planning reuse one invocation-local input page only while captured preference generations match. Payload bounds apply before materialization; durable ordinals/digests make partial pages resumable without widening the cohort or reformatting stored targets. Handoff is separately cursor-bounded and set-based.
 - The whole five-minute import graph uses `shared/lib/stablecoins/worker-runtime-registry.ts`, never the full stablecoin registry. Safety grade/score/publication identity comes only from the thin alert envelope via `loadActiveAlertSafetySourceAssessment`, never `loadActiveSafetyScoreSource`. `npm run check:runtime-reachability` protects this boundary; [ADR-24](./architecture.md#adr-24) owns the architectural decision.
 - `shared/types/status/telegram.ts` owns thin safety row, explanation and envelope schemas and inferred types. Persisted sources and dispatch baselines require explanations and publication identity; only the live source requires the V9 model. Admission strips unknown projection fields while retaining rating refinements, finite numbers and nullable/optional semantics. The publication writer projects already-decoded cards through `buildAlertSafetyV9SourceEnvelopeFromParts`; alert consumers assess only the persisted compact envelope plus publication health, not a decoded-response adapter.
-- `five-minute-telegram.ts` owns serial orchestration and token-independent DB sidecars. [Operational notes](./telegram-alerts.md#operational-notes) owns ordering, token absence, registration outcomes, and recap deadline behavior.
+- `five-minute-telegram.ts` owns serial orchestration and token-independent DB sidecars. [Operational notes](./telegram-alerts.md#operational-notes) owns ordering, token absence and registration outcomes.
 - Reserve dispatch consumes the producer's versioned D1 envelope; it performs no reserve-adapter I/O. The producer owns admission/continuity; dispatch owns its observed/dispatched baselines.
 - Freeze consumes fresh Tape through its own cursor/cohort outbox, not the five-family target-plan constraint. It still creates canonical source/job/target/item lineage and uses the same pending queue. Source suppression is revalidated for resumable candidates, queued-unsent admission and the final send CAS; cancellation records `freeze-claim-retracted`, while sent/uncertain effects remain untouched. [Tape source reconciliation](./tape-page.md#source-reconciliation) owns the hard-suppression policy.
-- Personalized recap is a separate DB-only planner, not another risk-alert fan-out. It shares bounded Tape windows, resolves direct/preset/global intent without materialization, and persists exact targets. No AI/provider client, per-recipient Tape query, or planner Bot API send is permitted. Queue owns terminal projection.
 - `admin-telegram-broadcast.ts` is the operator write surface, using Dispatch targeting and Queue lifecycle. [Broadcast safety](./runbooks/telegram-admin-broadcast-safety.md) owns canary/TTL authority; [operator queries](./runbooks/telegram-operator-queries.md) owns read-only incident access. There is no supported operator replay/clear/pause mutation.
 
 The [dispatch implementation appendix](#dispatch-implementation-appendix) maps concrete owners and their colocated suites; imports remain direct, never compatibility barrels.
@@ -165,12 +164,12 @@ Queue terminal evidence is source-scoped: the exact source-event and pending-ded
 The chat deadline is also stored independently in D1 `cache` under `telegram:chat-send-backoff:<chatId>`, monotonically checkpointed under the same sending proof. All pending enqueue paths and retry transitions inherit it even after the last carrier row disappears. Bounded pending maintenance removes only expired deadlines; chat erasure removes the exact key and migration takes the numeric maximum.
 
 **Owned files.**
-- `worker/src/cron/telegram/delivery/` (direct claim/drain, backoff, cleanup, dead-letter, preference revalidation, recap terminal projection, lifecycle, outcome and target-status modules; no barrel)
+- `worker/src/cron/telegram/delivery/` (claim/drain, backoff, cleanup, dead-letter, preference revalidation, lifecycle, outcome and target-status modules; no barrel)
 - `worker/src/telegram/outbox/pending-queue.ts` (enqueue, dedupe-key construction, priority and upsert SQL) and `worker/src/telegram/outbox/pending-capacity.ts` (capacity/watchdog read model)
 - `shared/lib/telegram-delivery-policy.ts` owns runtime-neutral queue, batch, TTL, rate-limit, deadline, and load-model policy. `worker/src/telegram/common/constants.ts` re-exports the established Worker import surface.
 - `shared/lib/telegram-alert-families.ts` owns family persistence identifiers used by dispatch, broadcast targeting and delivery revalidation. Local projections derive from `TELEGRAM_ALERT_PERSISTENCE`; the fan-out table retains event-route semantics only. Freeze outbox expiry uses `TELEGRAM_ALERT_TTL_SEC.freeze`, the same authority as queue admission.
 
-**Allowed inbound dependencies.** Dispatch and the personalized recap planner (the only legitimate alert/recap enqueuers), Admin Telegram routes (`admin-telegram-broadcast.ts`), Callback routing only via the `SNOOZE_REPLY_MARKUP` keyboard in `worker/src/telegram/common/alerts-formatting.ts`.
+**Allowed inbound dependencies.** Dispatch (risk-alert enqueue), Admin Telegram routes (`admin-telegram-broadcast.ts`), Callback routing only via the `SNOOZE_REPLY_MARKUP` keyboard in `worker/src/telegram/common/alerts-formatting.ts`.
 
 **Allowed outbound dependencies.** Outbound transport, State / persistence (cache helpers for global backoff), Common.
 
@@ -185,11 +184,13 @@ The chat deadline is also stored independently in D1 `cache` under `telegram:cha
 
 ## 7. State / persistence
 
-**Responsibility.** Own authoritative Telegram SQL builders and atomic mutation boundaries: subscriber/direct/preset state, pending command state, processed-update proof, cooldowns, chat migration, diagnostics, and recap preferences/targets.
+**Responsibility.** Own authoritative subscriber/direct/preset SQL, pending state, operation proof, cooldowns, chat migration and diagnostics. Retired recap tables remain for retention/privacy erasure pending separate destructive cleanup.
 
 Direct/local coin intent and persistent preset intent remain separate; neither setup nor Mini App import may flatten resolved presets into direct rows. Existing indistinguishable legacy rows remain conservatively direct/local. [Preset watchlists](./telegram-alerts.md#preset-watchlists) owns inheritance/override behavior; [Mini App portability](./telegram-mini-app.md#configuration-portability) owns signed preview/confirmation. Command import/export handlers and their portable-import callback payload are retired; malformed or retired confirmation payloads are rejected without mutation, while ordinary command bulk confirmations remain in Callback routing.
 
 `shared/types/status/telegram.ts` owns tuning value tuples, schema primitives and derived types; `shared/lib/telegram-alert-families.ts` owns reversible settings callback codes. DEWS classification remains owned by `shared/lib/classification/risk.ts`. The Store's `prepareSettingToSubscriptions` assembles subscriber activity, preference generation, direct override and tuning writes without executing them, preserving composition with webhook operation proof. First-follow attribution can be claimed once by an outer Mini App batch rather than by each nested setting.
+
+Subscriber UPSERTs use common chat/username/activity inputs and one SQL builder. Global bumps and overrides are exclusive with a runtime conflict guard; overrides retain precedence over per-coin bumps. Single-column timezone/snooze inserts rely on D1 defaults for untouched columns. Undefined preserves a preference; null clears it. Username coalescing, quiet hours, generation increments and operation-proof rollback are unchanged.
 
 Mini App watchlist import and bounded direct patches keep separate confirmation validators but share one generation-fenced atomic batch: ensure the parent when requested, claim the generation lease, apply guarded preference/adoption writes, restore the next generation, and prove the result from the lease claim. Import alone cleans empty rows; direct patches alone restore explicit undo snoozes. The retained Store import helper can compose an exact pending-preview deletion and operation proof in the same transaction, but Mini App portability does not create or consume command previews. Both paths retain D1 bind/statement bounds and overload retry.
 
@@ -266,15 +267,12 @@ Distinct-chat scheduling stays in `schedulePerChatBatches`; the durable queue dr
 - `worker/src/telegram/mini-app/telegram-mini-app.ts`
 - `worker/src/telegram/mini-app/telegram-mini-app-state.ts`
 - `worker/src/telegram/mini-app/telegram-mini-app-mutations.ts`
-- `worker/src/telegram/recap/recap-store.ts` (shared generation-fenced recap preference mutation)
 - `worker/src/telegram/mini-app/mini-app-auth.ts`
 - `shared/lib/telegram-mini-app-contract.ts`
 - `shared/lib/telegram-mini-app-catalog.ts`
 - `shared/lib/telegram-presets.ts`
 - `shared/data/stablecoins/coins.telegram-mini-app.generated.json`
 - `worker/src/telegram/mini-app/telegram-mini-app-rate-limit.ts`
-- `shared/lib/telegram-recap-policy.ts`
-- `shared/lib/iana-local-time.ts`
 
 **Allowed inbound dependencies.** The Next.js route `/pharoswatchbot/app/`, Worker route registry entries for `POST /api/telegram-mini-app/session` and `POST /api/telegram-mini-app/mutate`, and private-chat Web App buttons generated by Action handlers / Callback routing.
 
@@ -288,7 +286,6 @@ Distinct-chat scheduling stays in `schedulePerChatBatches`; the durable queue dr
 - Write analytics, aggregate counters, or cooldown rows before signed `initData` validation succeeds. Body-too-large, malformed JSON, and schema-denied Mini App requests must return without D1 writes because the endpoints are public API-key-exempt surfaces.
 - Apply or replay a mutation when the advertised contract/catalog version does not match. Version mismatch must stay a pre-write `409`; the client may refresh its static bundle once but must require a new user action for the mutation.
 - Duplicate per-coin or preset write SQL outside the existing State / persistence helpers.
-- Treat `set-recap` as a generic alert toggle: enabling without an explicitly confirmed IANA timezone must return `recap-timezone-required`, and group/stale-auth writes remain denied.
 - Use `Telegram.WebApp.sendData` without updating `allowed_updates` and treating incoming `web_app_data` as untrusted.
 
 ---
@@ -310,8 +307,6 @@ Files any seam may import:
 - `shared/lib/telegram-alert-families.ts` — persistence manifest plus the trusted active-watcher/subscription/preset SQL fragments derived from it, shared by pulse, lifecycle analytics, and the offline load guard. All six direct families participate; presets remain DEWS/depeg/safety only.
 - `worker/src/telegram/common/usd-profile.ts` — shared plain/signed compact-USD profiles. API formatters retain their null-producing input guards; alert context retains the visible `n/a` fallback.
 - `shared/lib/telegram-bot-registration.ts` — runtime-neutral `TELEGRAM_COMMAND_REFERENCE`/registration manifest: syntax, audience, examples, help and deprecated aliases. `COMMAND_HANDLERS` remains the handler authority; metadata is not a pipeline.
-- `shared/lib/telegram-recap-policy.ts` — runtime-neutral recap cadence, freshness, page, message, priority, TTL, and load bounds.
-- `shared/lib/iana-local-time.ts` — validated IANA local-date/hour scheduling and deterministic DST handling shared by controls and planner.
 
 ---
 
@@ -347,7 +342,7 @@ DDL authority is the active [Worker migration stream](../worker/migrations/MANIF
 | `telegram_alert_target_plan_pages`, `telegram_alert_target_plans`, `telegram_alert_target_plan_items`, `telegram_alert_target_expiry_progress` | Exact rendered manifest, bounds, item coverage and bounded expiry debt — Dispatch |
 | `telegram_alert_jobs`, `telegram_alert_job_targets`, `telegram_alert_job_target_items` | Exclusive final delivery truth and source-item lineage — Dispatch / Queue |
 | `telegram_freeze_alert_events`, `telegram_freeze_alert_targets` | Immutable Tape/blacklist identity and one-time freeze cohort — Dispatch |
-| `telegram_recap_preferences`, `telegram_recap_targets` | Private local schedule, exact recap plan and consumed-window outcome — State / Dispatch / Queue |
+| `telegram_recap_preferences`, `telegram_recap_targets` | Retired personalized-recap audit only; expiry and `/forget` erasure remain, no planner or preference mutation |
 | `telegram_usage_daily`, `telegram_adoption_daily`, `telegram_adoption_retention_daily` | Identifier-free usage/funnel and feature-retention aggregates — State |
 | `telegram_adoption_ingress_quota`, `telegram_adoption_client_quota` | Global and dedicated-pepper HMAC-IP CTA ingress ceilings — State |
 | `telegram_watcher_lifecycle_daily`, `telegram_watcher_lifecycle_events_daily` | Persisted lifecycle history and atomic transition counts — State |
@@ -432,9 +427,8 @@ Read-only status loads the accepted yield-rankings response once and projects AP
 - `worker/src/cron/telegram/target-plans/` — direct concrete modules for source state, cohort horizon, materialization, delivery handoff, read model and coordinator; `telegram-alert-target-plan-contract.ts` owns bounds and payload contracts.
 - `worker/src/cron/telegram/delivery/` — pending queue lifecycle plus exclusive job-target delivery outcomes and target-status projections; see Queue below.
 - `worker/src/cron/telegram/freeze/` — immutable freeze source/cohort outbox with its separate schema.
-- `worker/src/cron/telegram/recap/` — deterministic DB-only recap planner; persistence and pure facts/rank/format stay in `worker/src/telegram/recap/recap-store.ts`, `recap-facts.ts`, `recap-ranking.ts`, `recap-formatting.ts`.
 - `worker/src/cron/telegram/maintenance/` — degradation watchdog, inactive cleanup and retention cleanup; physical triggers stay owned by `shared/lib/cron-jobs.ts`.
-- Each cron seam keeps its suites/support in a matching `__tests__/` directory. Consumers import concrete modules directly, with no compatibility barrels. Source/planning hands exact targets to Delivery; Freeze retains its separate immutable outbox and Recap its separate planner. Shared queue/store/transport policy stays in its existing library owner.
+- Cron seams keep suites/support in matching `__tests__/` directories and direct imports. Source/planning hands exact targets to Delivery; Freeze retains its separate outbox. Shared queue/store/transport policy keeps its library owner.
 - `worker/src/cron/digest/telegram-transport.ts` — digest channel-edition publication, outside risk targeting.
 - `worker/src/telegram/common/quiet-hours.ts` — shared quiet-hours predicate and callback timezone validation.
 - `worker/src/handlers/scheduled/five-minute-telegram.ts` — serial orchestration with deferred imports of cron entrypoints.

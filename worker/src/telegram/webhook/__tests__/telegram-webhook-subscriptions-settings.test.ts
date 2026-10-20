@@ -85,7 +85,6 @@ describe("handleTelegramWebhook", () => {
     ["/unsnooze", true, "required", "clear-and-run", true, false],
     ["/cancel", false, "required", "cancel", false, false],
     ["/forget", true, "required", "clear-and-run", false, false],
-    ["/recap", false, "none", "passthrough", true, false],
   ] as const;
   it("pins every registered command in the pending-state matrix", () => {
     expect(commandPolicyCases.map(([command]) => command).sort()).toEqual(Object.keys(COMMAND_HANDLERS).sort());
@@ -411,7 +410,7 @@ describe("handleTelegramWebhook", () => {
     expect(body.reply_markup).toBeDefined();
   });
 
-  it.each(["/import legacy-token", "/export"])("treats retired %s as an unknown command without changing preferences", async (command) => {
+  it.each(["/import legacy-token", "/export", "/recap", "/recap on", "/recap off", "/recap time 9"])("treats retired %s as an unknown command without changing preferences", async (command) => {
     const { sqlite, db } = sqliteFixtures.open();
     sqlite.exec(`
       INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at, preference_generation)

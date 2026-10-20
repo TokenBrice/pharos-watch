@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { CalendarClock, SlidersHorizontal } from "lucide-react";
+import { SlidersHorizontal } from "lucide-react";
 import { ALERT_LABELS, DEPEG_STEP_OPTIONS } from "../constants";
 import { formatHour, formatQuietHoursRange, formatQuietHoursTimezone } from "../format";
 import type {
@@ -152,129 +152,6 @@ function QuietHoursPicker({ state, canMutate, isMutating, pendingOperation, onMu
   );
 }
 
-const RECAP_OUTCOME_LABELS: Record<string, string> = {
-  sent: "Sent",
-  queued: "Queued",
-  planned: "Planned",
-  skipped_no_changes: "No material changes",
-  skipped_paused: "Skipped while paused",
-  skipped_stale: "Waiting for fresh data",
-  cancelled: "Cancelled",
-  expired: "Expired",
-  execution_unknown: "Delivery unconfirmed",
-  failed_permanent: "Delivery failed",
-};
-
-function formatRecapSchedule(ts: number | null, timezone: string | null): string {
-  if (ts == null || timezone == null) return "Not scheduled";
-  try {
-    return new Intl.DateTimeFormat("en-US", {
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-      timeZone: timezone,
-      timeZoneName: "short",
-    }).format(new Date(ts * 1000));
-  } catch {
-    return "Not scheduled";
-  }
-}
-
-function DailyRecapSection({ state, canMutate, isMutating, pendingOperation, onMutate }: {
-  state: TelegramMiniAppState;
-  canMutate: boolean;
-  isMutating: boolean;
-  pendingOperation: TelegramMiniAppOperation | null;
-  onMutate: (operation: TelegramMiniAppOperation) => void;
-}) {
-  const recap = state.subscriber.recap;
-  if (!recap.available) return null;
-  const timezone = state.subscriber.quietHours.timezone;
-  const controlsDisabled = !canMutate || isMutating;
-  const enableDisabled = controlsDisabled || (!recap.enabled && !recap.timezoneConfirmed);
-  const outcome = recap.lastOutcome == null
-    ? "No recap history"
-    : (RECAP_OUTCOME_LABELS[recap.lastOutcome] ?? "Recorded");
-
-  return (
-    <section className="rounded-2xl border border-border/70 bg-card/90 p-4" aria-labelledby="daily-recap-heading">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <CalendarClock className="h-4 w-4 text-[color:var(--mini-accent)]" aria-hidden="true" />
-            <h2 id="daily-recap-heading" className="text-sm font-semibold text-foreground">Daily recap</h2>
-          </div>
-          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-            Sent only when watched assets materially changed. Immediate alert toggles are separate.
-          </p>
-        </div>
-        <button
-          type="button"
-          role="switch"
-          aria-checked={recap.enabled}
-          aria-label="Daily recap"
-          aria-busy={pendingOperation?.kind === "set-recap" && pendingOperation.enabled !== recap.enabled || undefined}
-          disabled={enableDisabled}
-          onClick={() => onMutate({
-            kind: "set-recap",
-            enabled: !recap.enabled,
-            deliveryHourLocal: recap.deliveryHourLocal,
-          })}
-          className={recap.enabled
-            ? "pharos-focus-ring relative inline-flex h-11 w-14 shrink-0 items-center rounded-full border border-[color:var(--mini-accent)] bg-[color:var(--mini-accent)] p-1 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-            : "pharos-focus-ring relative inline-flex h-11 w-14 shrink-0 items-center rounded-full border border-border/70 bg-background/70 p-1 transition-colors disabled:cursor-not-allowed disabled:opacity-50"}
-        >
-          <span className={recap.enabled
-            ? "h-5 w-5 translate-x-5 rounded-full bg-white shadow-sm transition-transform"
-            : "h-5 w-5 rounded-full bg-white shadow-sm transition-transform"} aria-hidden="true" />
-        </button>
-      </div>
-
-      <div className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)]">
-        <div>
-          <label htmlFor="mini-recap-hour" className="pharos-kicker">Delivery hour</label>
-          <select
-            id="mini-recap-hour"
-            className="pharos-focus-ring pharos-numeric mt-2 h-11 w-full rounded-lg border border-border/65 bg-background/70 px-3 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-50"
-            value={recap.deliveryHourLocal}
-            disabled={controlsDisabled}
-            onChange={(event) => onMutate({
-              kind: "set-recap",
-              enabled: recap.enabled,
-              deliveryHourLocal: Number(event.target.value),
-            })}
-          >
-            {Array.from({ length: 24 }, (_, hour) => (
-              <option key={`recap-${hour}`} value={hour}>
-                {formatHour(hour)} {timezone ?? "local"}
-              </option>
-            ))}
-          </select>
-        </div>
-        <dl className="grid grid-cols-2 gap-x-3 gap-y-2 rounded-lg border border-border/60 bg-background/45 p-3 text-xs">
-          <div className="min-w-0">
-            <dt className="text-muted-foreground">Next</dt>
-            <dd className="mt-1 font-medium text-foreground">{formatRecapSchedule(recap.nextDueAt, timezone)}</dd>
-          </div>
-          <div className="min-w-0">
-            <dt className="text-muted-foreground">Last result</dt>
-            <dd className="mt-1 font-medium text-foreground">{outcome}</dd>
-          </div>
-        </dl>
-      </div>
-
-      {!recap.timezoneConfirmed ? (
-        <p className="mt-3 text-xs text-amber-700 dark:text-amber-300" role="status">
-          Confirm a timezone below before enabling your recap.
-        </p>
-      ) : (
-        <p className="pharos-meta mt-3">Scheduled in {timezone}. <a href="#telegram-timezone" className="underline">Change timezone</a></p>
-      )}
-    </section>
-  );
-}
-
 function TimezonePicker({ state, canMutate, isMutating, pendingOperation, onMutate }: {
   state: TelegramMiniAppState;
   canMutate: boolean;
@@ -334,7 +211,7 @@ function TimezonePicker({ state, canMutate, isMutating, pendingOperation, onMuta
           {current}
         </span>
       </div>
-      <p className="mt-1 text-xs text-muted-foreground">Used for quiet hours and daily recap delivery.</p>
+      <p className="mt-1 text-xs text-muted-foreground">Used to interpret quiet hours in your local time.</p>
       <label className="sr-only" htmlFor="telegram-mini-app-timezone">Timezone</label>
       <select
         id="telegram-mini-app-timezone"
@@ -567,7 +444,6 @@ export function SettingsPanel({ state, canMutate, canReadPortability, isMutating
           </div>
         </div>
       </section>
-      <DailyRecapSection state={state} canMutate={canMutate} isMutating={isMutating} pendingOperation={pendingOperation} onMutate={onMutate} />
       <QuietHoursPicker state={state} canMutate={canMutate} isMutating={isMutating} pendingOperation={pendingOperation} onMutate={onMutate} />
       <TimezonePicker state={state} canMutate={canMutate} isMutating={isMutating} pendingOperation={pendingOperation} onMutate={onMutate} />
       <WatchlistPortabilityPanel

@@ -9,13 +9,10 @@ import {
 import { fnv1a32Hex } from "./fnv1a";
 import { TELEGRAM_MINI_APP_CATALOG_VERSION } from "./telegram-mini-app-catalog";
 import { TELEGRAM_PRESET_IDS } from "./telegram-presets";
-import { TELEGRAM_RECAP_DEFAULT_DELIVERY_HOUR_LOCAL } from "./telegram-recap-policy";
 
 export type { TelegramAlertType };
 
-export const TELEGRAM_MINI_APP_CONTRACT_VERSION = "6";
-// Accepted only for the v6 rolling deployment; remove at the next contract bump.
-export const TELEGRAM_MINI_APP_LEGACY_CONTRACT_VERSION = "5";
+export const TELEGRAM_MINI_APP_CONTRACT_VERSION = "7";
 export const TELEGRAM_MINI_APP_CONTRACT_VERSION_PARAM = "mini_app_contract";
 export const TELEGRAM_MINI_APP_CATALOG_VERSION_PARAM = "mini_app_catalog";
 export { TELEGRAM_MINI_APP_CATALOG_VERSION };
@@ -34,10 +31,6 @@ const TELEGRAM_MINI_APP_ERROR_CODES = [
   "invalid-coin-patch",
   "invalid-alert-types",
   "invalid-timezone",
-  "recap-timezone-required",
-  "recap-subscriber-required",
-  "recap-unavailable",
-  "stale-recap-preference",
   "invalid-portable-token",
   "empty-portable-state",
   "stale-import-preview",
@@ -251,13 +244,6 @@ export const TelegramMiniAppOperationSchema = z.discriminatedUnion("kind", [
       timezone: z.string().min(1).max(64).nullable(),
     })
     .strict(),
-  z
-    .object({
-      kind: z.literal("set-recap"),
-      enabled: z.boolean(),
-      deliveryHourLocal: z.number().int().min(0).max(23),
-    })
-    .strict(),
   z.object({ kind: z.literal("unsubscribe-all") }).strict(),
   z.object({ kind: z.literal("forget-me") }).strict(),
   z
@@ -383,27 +369,6 @@ export const TelegramMiniAppMutableStateSchema = z
             timezone: z.string().nullable(),
           })
           .passthrough(),
-        recap: z
-          .object({
-            available: z.boolean().default(false),
-            enabled: z.boolean(),
-            deliveryHourLocal: z.number().int().min(0).max(23),
-            timezoneConfirmed: z.boolean(),
-            nextDueAt: z.number().nullable(),
-            lastWindowEndAt: z.number().nullable(),
-            lastDeliveredLocalDate: z.string().nullable(),
-            lastOutcome: z.string().nullable(),
-          })
-          .default({
-            available: false,
-            enabled: false,
-            deliveryHourLocal: TELEGRAM_RECAP_DEFAULT_DELIVERY_HOUR_LOCAL,
-            timezoneConfirmed: false,
-            nextDueAt: null,
-            lastWindowEndAt: null,
-            lastDeliveredLocalDate: null,
-            lastOutcome: null,
-          }),
         snoozeUntilTs: z.number().nullable(),
       })
       .passthrough(),
@@ -545,15 +510,14 @@ export function createTelegramMiniAppSnapshot(state: TelegramMiniAppMutableState
 }
 
 export type TelegramMiniAppVersionCompatibility =
-  "legacy" | "legacy-v5" | "compatible" | "contract-version-mismatch" | "catalog-version-mismatch";
+  "legacy" | "compatible" | "contract-version-mismatch" | "catalog-version-mismatch";
 
 export function telegramMiniAppVersionCompatibility(input: {
   contractVersion?: string;
   catalogVersion?: string;
 }): TelegramMiniAppVersionCompatibility {
   if (input.contractVersion == null && input.catalogVersion == null) return "legacy";
-  if (input.contractVersion !== TELEGRAM_MINI_APP_CONTRACT_VERSION
-    && input.contractVersion !== TELEGRAM_MINI_APP_LEGACY_CONTRACT_VERSION) return "contract-version-mismatch";
+  if (input.contractVersion !== TELEGRAM_MINI_APP_CONTRACT_VERSION) return "contract-version-mismatch";
   if (input.catalogVersion !== TELEGRAM_MINI_APP_CATALOG_VERSION) return "catalog-version-mismatch";
-  return input.contractVersion === TELEGRAM_MINI_APP_LEGACY_CONTRACT_VERSION ? "legacy-v5" : "compatible";
+  return "compatible";
 }

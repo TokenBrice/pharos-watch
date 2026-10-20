@@ -11,7 +11,6 @@ import type { CloudflareD1StatusBindings } from "../lib/env";
 import type { ChainRpcConfig } from "../lib/chain-registry";
 import type { RpcProviderTrialEnv } from "../lib/rpc-provider-parity/report";
 import type { FeedbackEnv } from "../api/feedback";
-import type { TelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
 import type { WorkerCanaryMode } from "../lib/canary-checks";
 import type { InternalRouteProbe } from "../lib/catalog-action-audit";
 
@@ -35,9 +34,6 @@ export interface TelegramRouteFields {
   telegramBotTokenPrevious: string | undefined;
 }
 
-export interface TelegramRecapRolloutRouteFields {
-  telegramRecapRollout: TelegramRecapRolloutPolicy;
-}
 
 export interface DonorKeyClaimRouteFields {
   donorKeyClaimRateLimit: RateLimit | undefined;
@@ -93,7 +89,6 @@ export interface RouteDependencyFieldMap {
   workerStatusConfig: WorkerStatusConfigRouteFields;
   workerVersion: WorkerVersionRouteFields;
   telegram: TelegramRouteFields;
-  telegramRecapRollout: TelegramRecapRolloutRouteFields;
 }
 
 type UnionToIntersection<U> = (

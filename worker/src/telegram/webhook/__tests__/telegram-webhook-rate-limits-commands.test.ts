@@ -80,11 +80,6 @@ describe("command ingress policy", () => {
     ["/start", "garbage_xyz", "required", "clear-and-run", false],
     ["/timezone", "", "none", "clear-and-run", false],
     ["/timezone", " UTC ", "required", "clear-and-run", true],
-    ["/recap", "", "none", "passthrough", false],
-    ["/recap", " on ", "required", "clear-and-run", false],
-    ["/recap", "OFF", "required", "clear-and-run", false],
-    ["/recap", "time 23", "required", "clear-and-run", false],
-    ["/recap", "time 24", "none", "clear-and-run", false],
   ] as const)("classifies %s %j without changing argument-sensitive policy", (command, args, mutation, pending, requiresGroupAdmin) => {
     expect(classifyTelegramCommand(command, args)).toMatchObject({
       mutation, pending, requiresGroupAdmin, recoveryEligible: true,

@@ -1,5 +1,20 @@
 [
   {
+    "version": "6.37",
+    "title": "Mint/burn inputs share the published flow watermark",
+    "date": "2026-10-20",
+    "effectiveAt": 1792540800,
+    "summary": "DEWS admits mint/burn flow inputs at the published common closed-hour watermark, including explicitly admitted legacy pre-cutover windows, rather than requiring every source to reach the latest closed hour.",
+    "impact": [
+      "The 24-hour flow window, 30-day baseline and dirty-hour fence use the same published watermark. Each coin still requires complete 24-hour and 30-day coverage; legacy-pre-cutover assurance remains distinct from durable current-fingerprint proof.",
+      "Freshness is measured from the actual window end, not the publication clock. The existing published-reader freshness budget, DEWS 24-hour stale limit and valuation gates remain unchanged; missing or rejected evidence remains unavailable, not calm.",
+      "Restored flow inputs can change DEWS scores and threat bands in either direction. Signal curves, formula weights, dampening and depeg-detection rules are unchanged. Frozen Safety captures do not rerun this producer-side admission.",
+      "Planned activation is provisionally 2026-10-21 00:00 UTC (1792540800), following the next-UTC-midnight convention; re-date effectiveAt at release. First admitted flow and DEWS producer observations remain separate runtime requirements. No DEWS score replay or production recovery is claimed."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.36",
     "title": "Original quote clocks and readable-leg normalization",
     "date": "2026-10-20",

@@ -5,6 +5,7 @@ import type { ReportCardsV9CurrentResponse } from "./report-cards-v9";
 import type { SafetyScoreV9CurrentCard } from "./safety-score-v9-public";
 import { refineV9RatingStatusFields, V9CompactPartialEvidenceSchema } from "./safety-score-v9-causes";
 import { DependencyGraphResponseSchema } from "./dependency-graph";
+import { SafetyScoreV9PillarFreshnessSchema, refineSafetyScoreV9PillarFreshness } from "./safety-score-v9-public-facts";
 
 export type ReportCardsV9ProjectionSource = Omit<ReportCardsV9CurrentResponse, "cards"> & { cards: SafetyScoreV9CurrentCard[] };
 
@@ -72,6 +73,7 @@ export const ReportCardsV9DetailResponseSchema = z.object({
   neighborhood: z.array(ReportCardsV9NeighborhoodCardSchema),
   dependencyGraph: ReportCardsV9DependencyGraphSchema,
   commonModeGroups: DependencyGraphResponseSchema.shape.commonModeGroups,
+  pillarFreshness: SafetyScoreV9PillarFreshnessSchema.optional(),
   // Global indices are preserved verbatim; no compact table can rebind a numeric gap reference.
   foreignCauseGaps: z.record(z.string().regex(/^(0|[1-9][0-9]*)$/u), z.string().min(1)),
   scope: z.object({
@@ -83,6 +85,7 @@ export const ReportCardsV9DetailResponseSchema = z.object({
   }).strict(),
 }).strict().superRefine((value, ctx) => {
   refineEnvelope(value, ctx);
+  refineSafetyScoreV9PillarFreshness({ ...value, sourceGenerations: value.source.sourceGenerations }, ctx);
   const ids = value.neighborhood.map(row => row.id);
   const members = new Set(ids);
   const refs = value.cards[0]?.foreignCauseGapRefs ?? [];

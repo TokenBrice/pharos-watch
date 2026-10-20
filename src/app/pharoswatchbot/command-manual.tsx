@@ -49,7 +49,7 @@ export function CommandManual() {
           type="search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder='Filter commands — try "mute", "recap", "usdt"'
+          placeholder='Filter commands — try "mute", "timezone", "usdt"'
           className="pharos-focus-ring h-11 w-full rounded-md border border-border/60 bg-background/60 pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground/70"
         />
       </div>

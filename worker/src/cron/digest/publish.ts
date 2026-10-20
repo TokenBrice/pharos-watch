@@ -10,7 +10,6 @@ import {
   checkDigestSafetyContextForDelivery,
 } from "../../lib/digest-safety-context";
 import type { TelegramCreds } from "../../telegram/delivery/telegram";
-import type { TelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
 import type { TelegramDigestSuccessAction } from "../../telegram/digest/digest-appendices";
 import {
   deliverTelegramDigestEdition,
@@ -72,13 +71,6 @@ export interface DigestTelegramPublication {
     content: string;
   }[];
   successActions?: readonly TelegramDigestSuccessAction[];
-  /**
-   * Runtime rollout policy gating the private `/recap` CTA. Omitted or null
-   * means no CTA, which is the correct fail-closed default: the command is
-   * private-chat only and gated, so advertising it to a channel whose audience
-   * cannot use it would be worse than staying silent.
-   */
-  recapRollout?: TelegramRecapRolloutPolicy | null;
   required?: boolean;
   missingCredentialNames?: readonly string[];
   successStatus?: string;
@@ -336,7 +328,6 @@ export async function deliverDigestEdition(
       input.editionNumber,
       input.telegram.appendixHtml ?? null,
       htmlSections.join("\n\n") || null,
-      input.telegram.recapRollout ?? null,
     );
     wrapperEditorialAlerts.telegram = scanTelegramDigestWrapper({
       rendered: renderedTelegram,
@@ -366,7 +357,6 @@ export async function deliverDigestEdition(
           mapAppendixHtml: htmlSections.join("\n\n") || null,
           successActions: input.telegram.successActions ?? [],
           safetyContext: input.safetyContext ?? unavailableSafetyContext(),
-          recapRollout: input.telegram.recapRollout ?? null,
         }, input.signal);
         if (!enqueueResult.payloadMatched && enqueueResult.state !== "sent") {
           input.degradedReasons.push("telegram-outbox-payload-mismatch");

@@ -191,8 +191,8 @@ describe("PharosWatchBotMiniAppPage", () => {
     expect(isMiniAppErrorCode(null)).toBe(false);
     expect(miniAppErrorMessage(new MiniAppRequestError(429, "rate-limited", 12), "mutation"))
       .toBe("Pharos edit limit reached. Wait for the countdown before editing again.");
-    expect(miniAppErrorMessage(new MiniAppRequestError(409, "stale-recap-preference"), "mutation"))
-      .toBe("Your recap settings changed. Refresh and try again.");
+    expect(isMiniAppErrorCode("stale-recap-preference")).toBe(false);
+    expect(isMiniAppErrorCode("recap-unavailable")).toBe(false);
   });
 
   it("renders browser preview immediately without calling session APIs", () => {

@@ -4,7 +4,7 @@ import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { runPendingQueueLifecycle, type PendingQueueLifecycleContext } from "../dispatch-telegram-pending-lifecycle";
 import { readTelegramPendingCapacitySnapshot } from "../../../../telegram/outbox/pending-capacity";
 import { reconcilePendingQueueMaintenance } from "../../delivery/drain";
-import { insertPendingSqlite, insertRecapDeliveryFixture } from "../../delivery/__tests__/telegram-pending-queue.test-support";
+import { insertAlertJobFixture, insertAlertJobTargetFixture, insertPendingSqlite, insertSourceEventSqlite } from "../../delivery/__tests__/telegram-pending-queue.test-support";
 import type * as TelegramModule from "../../../../telegram/delivery/telegram";
 
 const mocks = vi.hoisted(() => ({ send: vi.fn(), outcome: vi.fn() }));
@@ -49,13 +49,16 @@ describe("pending lifecycle without due transport", () => {
   it("refreshes capacity for projection-only maintenance and reuses a supplied result", async () => {
     const { sqlite } = fixtures.open();
     const nowSec = Math.floor(Date.now() / 1000);
-    insertRecapDeliveryFixture(sqlite, nowSec);
-    sqlite.prepare("UPDATE telegram_pending_alerts SET delivery_state = 'sent'").run();
+    insertSourceEventSqlite(sqlite, { sourceEventId: "projection-source" });
+    insertAlertJobFixture(sqlite, { jobId: "projection-job", alertType: "dews", sourceEventId: "projection-source", severity: "warning" }, nowSec);
+    insertAlertJobTargetFixture(sqlite, { jobId: "projection-job", targetKey: "projection-target", chatId: "projection-chat", alertType: "dews", sourceEventId: "projection-source", planGeneration: 1, pendingDedupeKey: "projection-pending", status: "queued" }, nowSec);
+    insertPendingSqlite(sqlite, { id: 1, chatId: "projection-chat", html: "sent", dedupeKey: "projection-pending", sourceEventId: "projection-source" }, nowSec);
+    sqlite.exec("UPDATE telegram_pending_alerts SET delivery_state = 'sent'");
     let staleReads = 0;
     const db = createSqliteD1(sqlite, { onAll: (sql) => { if (sql.includes("SELECT id, delivery_owner")) staleReads++; } });
     const before = await readTelegramPendingCapacitySnapshot(db, nowSec);
     const maintenanceResult = await reconcilePendingQueueMaintenance(db, nowSec);
-    expect(maintenanceResult.recapOutcomesProjected).toBe(1);
+    expect(maintenanceResult.targetOutcomesProjected).toBe(1);
     const result = await runPendingQueueLifecycle({ db, nowSec, pendingCapacityBefore: before, maintenanceResult, cleanupExpired: "when-snapshot-shows-expired", capacityRefreshBasis: "drain-attempted", outcomePolicy: "attempted-only" });
     expect(result.pendingCapacityAfter).not.toBe(before);
     expect(staleReads).toBe(1);

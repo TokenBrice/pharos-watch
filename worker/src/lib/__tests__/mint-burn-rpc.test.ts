@@ -130,19 +130,30 @@ describe("mint/burn ordered RPC fallback", () => {
       if (call.method === "eth_blockNumber") {
         return { result: `0x${(url === endpoints[0].url ? 50_000 : fallbackHead).toString(16)}` };
       }
+      if (call.method === "eth_getBlockByNumber" && url === endpoints[1].url) {
+        return { result: { number: call.params[0], timestamp: "0x400", hash: word(12) } };
+      }
       // This provider would silently accept a future toBlock and return empty logs.
       return url === endpoints[0].url ? unavailable : { result: [] };
     });
     const config = MINT_BURN_CONFIGS.find((config) => config.chain.chainId === chain)!;
-    const result = await syncMintBurnConfig({
-      db: mockD1([{ match: "INSERT INTO cache", rows: [] }]), config, key: `${chain}-fixture`, tier: "critical", fromBlock: 1, scanTo: 50_000,
+    const input = {
+      db: mockD1([{ match: "INSERT INTO cache", rows: [] }]), config, key: `${chain}-fixture`, tier: "critical" as const, fromBlock: 1, scanTo: 50_000,
       chainHead: 50_000, rpcEndpoints: endpoints, configBudgetLimit: 60, runTimestamp: 1100,
       priceContext: { priceObservations: new Map(), priceHistory: new Map() }, chainTimestampCache: new Map(),
       txContextCache: new Map(), affectedHours: new Map(),
-    });
-    expect(result.newLastBlock).toBe(fallbackHead);
-    expect(result.summary.advanceReason).toBe("partial-frontier");
+    };
+    const result = await syncMintBurnConfig(input);
+    // A partial provider frontier alone is not proof, even when its head is safe.
+    expect(result.newLastBlock).toBeNull();
+    expect(result.scanCoverage).toBeUndefined();
+    expect(result.summary.advanceReason).toBe("scan-coverage-unproven");
+    expect(result.summary.coverageFrontier).toBe(fallbackHead);
     expect(result.summary.eventCoverage.every((coverage) => !coverage.complete && coverage.scannedToBlock === fallbackHead)).toBe(true);
+    // A fully re-scanned range ending at that head can advance with real headers.
+    const retry = await syncMintBurnConfig({ ...input, scanTo: fallbackHead });
+    expect(retry.newLastBlock).toBe(fallbackHead);
+    expect(retry.scanCoverage).toMatchObject({ fromBlock: 1, toBlock: fallbackHead, fromTimestamp: 1024, toTimestamp: 1024 });
     const fallbackPages = fetcher.mock.calls.filter(([url]) => url === endpoints[1].url)
       .map(([, options]) => JSON.parse(String(options.body)) as Call).filter((call) => call.method === "eth_getLogs");
     expect(fallbackPages.every((call) => Number(logRange(call).toBlock) <= fallbackHead)).toBe(true);

@@ -95,15 +95,20 @@ type ProgressRow = {
   lease_until: number;
 } | null;
 
-function makeDb(progressRows: ProgressRow[] = [null]): D1Database {
+function makeDb(
+  progressRows: ProgressRow[] = [null],
+  publicationRows: ({ published_at: number } | null)[] = [null],
+): D1Database {
   let progressIndex = 0;
+  let publicationIndex = 0;
   return makeNoopD1({
-    prepare: () => ({
+    prepare: (sql: string) => ({
       bind: () => ({
         first: async () => {
-          const row = progressRows[Math.min(progressIndex, progressRows.length - 1)] ?? null;
-          progressIndex += 1;
-          return row;
+          if (sql.includes("surface_publication_generations")) {
+            return publicationRows[Math.min(publicationIndex++, publicationRows.length - 1)] ?? null;
+          }
+          return progressRows[Math.min(progressIndex++, progressRows.length - 1)] ?? null;
         },
       }),
     }),
@@ -436,6 +441,101 @@ describe("prepareSafetyScoreV9Input", () => {
         pendingStartedAt: 200,
       },
     });
+  });
+
+  it("waits for a due stablecoins slot whose lease has not appeared yet", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(960_000);
+    const activeProgress = {
+      started_at: 963, updated_at: 964, stage: "pricing", lease_owner: "due-slot", lease_until: 1200,
+    };
+    const settledCache = stablecoinsCache(966);
+    mockGetCacheUpdatedAt.mockResolvedValueOnce(850).mockResolvedValueOnce(850).mockResolvedValue(966);
+    mockLoadStablecoinsCache.mockResolvedValue(settledCache);
+    const promise = prepareSafetyScoreV9Input(
+      makeDb([null, activeProgress, null], [null, null, { published_at: 966 }]),
+      undefined, undefined, new Map(), undefined, undefined, undefined, 900,
+    );
+    await vi.advanceTimersByTimeAsync(0);
+    expect(mockLoadStablecoinsCache).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(2_500);
+    expect(mockLoadInputs).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(2_500);
+    const result = await promise;
+    expect(mockLoadInputs).toHaveBeenCalledWith(expect.anything(), { preloadedStablecoinsCache: settledCache });
+    expect(JSON.parse(result.metadata ?? "{}").stablecoinsCacheReadiness).toEqual({
+      expectedSlotStartedAt: 900, waitedMs: 5_000, pendingStartedAt: 963,
+    });
+  });
+
+  it.each([false, true])("admits an already-published due generation with active lease=%s", async (active) => {
+    mockGetCacheUpdatedAt.mockResolvedValue(966);
+    mockLoadStablecoinsCache.mockResolvedValue(stablecoinsCache(966));
+    await prepareSafetyScoreV9Input(
+      makeDb([active ? {
+        started_at: 963, updated_at: 966, stage: "published", lease_owner: "due-slot", lease_until: 1200,
+      } : null], [{ published_at: 966 }]),
+      undefined, undefined, new Map(), undefined, undefined, undefined, 900,
+    );
+    expect(mockLoadInputs).toHaveBeenCalledExactlyOnceWith(expect.anything(), {
+      preloadedStablecoinsCache: stablecoinsCache(966),
+    });
+  });
+
+  it.each(["failed", "skipped", "never-started"] as const)(
+    "defers without capturing the previous generation when the due producer is %s",
+    async (outcome) => {
+      vi.useFakeTimers();
+      vi.setSystemTime(960_000);
+      mockGetCacheUpdatedAt.mockResolvedValue(850);
+      const started = outcome === "failed" ? {
+        started_at: 963, updated_at: 964, stage: "pricing", lease_owner: "due-slot", lease_until: 1200,
+      } : null;
+      const promise = prepareSafetyScoreV9Input(
+        makeDb([started, null]), undefined, undefined, new Map(), undefined, undefined, undefined, 900,
+      );
+      await vi.advanceTimersByTimeAsync(V9_INPUT_STABLECOINS_SETTLE_MAX_WAIT_MS);
+      const result = await promise;
+      expect(result).toMatchObject({
+        status: "degraded", itemCount: 0,
+        productivity: { productive: false, reason: "safety-score-v9-input-source-unavailable" },
+      });
+      expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+        reason: "stablecoins-generation-pending",
+        expectedStablecoinsSlotStartedAt: 900,
+        waitedMs: V9_INPUT_STABLECOINS_SETTLE_MAX_WAIT_MS,
+        pendingStablecoinsStartedAt: started?.started_at ?? null,
+      });
+      expect(mockLoadStablecoinsCache).not.toHaveBeenCalled();
+      expect(mockCommitCaptureControl).not.toHaveBeenCalled();
+    },
+  );
+
+  it("clips the due-slot wait to the inherited slot deadline", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(960_000);
+    const deadline = createSlotDeadline(950_000, 965_000);
+    const promise = prepareSafetyScoreV9Input(
+      makeDb(), undefined, undefined, new Map(), undefined, deadline, undefined, 900,
+    );
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(JSON.parse((await promise).metadata ?? "{}").waitedMs).toBe(5_000);
+    expect(mockCommitCaptureControl).not.toHaveBeenCalled();
+  });
+
+  it("does not capture a cache that changed after due-slot admission", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(960_000);
+    mockGetCacheUpdatedAt.mockResolvedValue(966);
+    mockLoadStablecoinsCache.mockResolvedValue(stablecoinsCache(967));
+    const promise = prepareSafetyScoreV9Input(
+      makeDb([null], [{ published_at: 966 }]),
+      undefined, undefined, new Map(), undefined, undefined, undefined, 900,
+    );
+    await vi.advanceTimersByTimeAsync(V9_INPUT_STABLECOINS_SETTLE_MAX_WAIT_MS);
+    expect((await promise).status).toBe("degraded");
+    expect(mockLoadInputs).not.toHaveBeenCalled();
+    expect(mockCommitCaptureControl).not.toHaveBeenCalled();
   });
 
   it("does not overwrite the fixed input while a newer stablecoins generation remains pending", async () => {

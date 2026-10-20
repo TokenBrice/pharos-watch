@@ -1,28 +1,20 @@
 import { classifyTelegramLogError, logTelegramEvent } from "../../telegram/common/log";
 /**
  * Five-minute Telegram trigger (2,7,12,... * * * *):
- *   serial: dispatch (with token) -> recap planner/off-mode cleanup -> watchdog -> cleanup -> pulse
+ *   serial: dispatch (with token) -> watchdog -> cleanup -> pulse
  *   budget-only, after critical lane: all four cached registration checks
  *
  * Subscriber alerts use a dedicated isolated Telegram lane.
  * Connection budget: 4/6 peak
  */
-// The five job graphs (alert dispatch, recap planner/store, pulse snapshot,
-// degradation watchdog, disambiguation cleanup) are loaded via dynamic
+// The four job graphs (alert dispatch, pulse snapshot, degradation watchdog,
+// disambiguation cleanup) are loaded via dynamic
 // import() at dispatch time, like the compile-time public-runners map.
 // Heavy entrypoints cannot reach this lane; public isolates still defer its
 // job initialization until dispatch. Only types may be imported statically.
 import type { TelegramDispatchSharedState } from "../../cron/telegram/dispatch/dispatch-telegram-alerts";
 import type * as TelegramRegistrationModule from "../../telegram/webhook/webhook-registration";
-import type { TelegramRecapRolloutCleanupResult } from "../../telegram/recap/recap-store";
-import { resolveTelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
-import {
-  TELEGRAM_RECAP_PLANNER_SOFT_DEADLINE_MS,
-  TELEGRAM_RECAP_SHARED_SLOT_BUDGET_MS,
-  TELEGRAM_RECAP_SLOT_RESERVE_MS,
-} from "@shared/lib/telegram-recap-policy";
 import { recordBudgetSurfaceTelemetry } from "../../lib/budget-surface-telemetry";
-import { parseJsonObject } from "../../lib/json-parse";
 import { createD1CostTracker } from "../../lib/d1-cost";
 import {
   getRuntimeProducerIdentity,
@@ -62,7 +54,6 @@ const TELEGRAM_REGISTRATIONS: readonly TelegramRegistration[] = [
       signal?: AbortSignal,
     ) => registration.reconcileTelegramCommandRegistration(runtime.db, {
       botToken,
-      includeRecap: resolveTelegramRecapRolloutPolicy(runtime.env).mode === "public",
       signal,
     }),
   },
@@ -170,138 +161,19 @@ function buildTelegramSlotGroups(
 ): ScheduledSlotTaskChain[][] {
   const sharedTelegramState: TelegramDispatchSharedState = {};
   const tasks: ScheduledSlotTask[] = [];
-  const recapRollout = resolveTelegramRecapRolloutPolicy(runtime.env);
-  // The shared drain must not see recap rows disallowed by the current mode.
-  // Reuse the result in the planner so cleanup is ordered once per slot.
-  let recapRolloutCleanup: TelegramRecapRolloutCleanupResult | null = null;
-  const ensureRecapRolloutCleanup = async (): Promise<TelegramRecapRolloutCleanupResult> => {
-    if (recapRollout.mode === "public") {
-      return { targetRowsCancelled: 0, pendingRowsDeleted: 0 };
-    }
-    if (recapRolloutCleanup == null) {
-      const { cancelQueuedTelegramRecapsForRollout } = await import("../../telegram/recap/recap-store");
-      recapRolloutCleanup = await cancelQueuedTelegramRecapsForRollout(
-        runtime.db,
-        recapRollout,
-        Math.floor(Date.now() / 1000),
-      );
-    }
-    return recapRolloutCleanup;
-  };
   if (botToken) {
     tasks.push({
       job: "dispatch-telegram-alerts",
       errorMessage: "[cron] dispatch-telegram-alerts failed:",
       run: async (signal, reportProgress) => {
         const { dispatchTelegramAlerts } = await import("../../cron/telegram/dispatch/dispatch-telegram-alerts");
-        await ensureRecapRolloutCleanup();
-        const startedAtMs = Date.now();
-        Object.assign(sharedTelegramState, {
-          dispatchStartedAtMs: startedAtMs,
-          dispatchCompleted: false,
-          dispatchFailed: false,
-          dispatchDurationMs: 0,
-        });
-        try {
-          return await dispatchTelegramAlerts(
-            runtime.db,
-            botToken,
-            signal,
-            sharedTelegramState,
-            reportProgress,
-          );
-        } catch (error) {
-          sharedTelegramState.dispatchFailed = true;
-          throw error;
-        } finally {
-          sharedTelegramState.dispatchCompleted = true;
-          sharedTelegramState.dispatchDurationMs = Math.max(0, Date.now() - startedAtMs);
-        }
-      },
-    });
-  }
-  const shouldRunRecap = recapRollout.mode === "off" || Boolean(botToken);
-  if (shouldRunRecap) {
-    tasks.push({
-      job: "telegram-personalized-recap-planner",
-      errorMessage: "[cron] telegram-personalized-recap-planner failed:",
-      run: async (signal) => {
-        const cleanup = await ensureRecapRolloutCleanup();
-        if (recapRollout.mode === "off") {
-          return {
-            status: "ok" as const,
-            itemCount: cleanup.targetRowsCancelled + cleanup.pendingRowsDeleted,
-            metadata: JSON.stringify({
-              rollout: { mode: recapRollout.mode, pendingEffects: false },
-              cleanup,
-              skipped: "recap-rollout-off",
-            }),
-          };
-        }
-        if (!botToken) {
-          return {
-            status: "skipped_neutral" as const,
-            metadata: JSON.stringify({
-              rollout: { mode: recapRollout.mode, pendingEffects: true },
-              cleanup,
-              skipped: "missing-telegram-bot-token",
-            }),
-          };
-        }
-        if (botToken && (
-          sharedTelegramState.dispatchStartedAtMs == null ||
-          sharedTelegramState.dispatchCompleted !== true ||
-          sharedTelegramState.dispatchFailed === true
-        )) {
-          return {
-            status: "skipped_neutral" as const,
-            metadata: JSON.stringify({
-              rollout: { mode: recapRollout.mode, pendingEffects: true },
-              cleanup,
-              skipped: sharedTelegramState.dispatchFailed
-                ? "risk-dispatch-failed"
-                : "risk-dispatch-locked-or-incomplete",
-            }),
-          };
-        }
-        const riskDispatchDurationMs = botToken
-          ? Math.max(0, sharedTelegramState.dispatchDurationMs ?? TELEGRAM_RECAP_SHARED_SLOT_BUDGET_MS)
-          : 0;
-        const recapBudgetMs = Math.min(
-          TELEGRAM_RECAP_PLANNER_SOFT_DEADLINE_MS,
-          TELEGRAM_RECAP_SHARED_SLOT_BUDGET_MS - riskDispatchDurationMs - TELEGRAM_RECAP_SLOT_RESERVE_MS,
+        return dispatchTelegramAlerts(
+          runtime.db,
+          botToken,
+          signal,
+          sharedTelegramState,
+          reportProgress,
         );
-        if (recapBudgetMs <= 0) {
-          return {
-            status: "skipped_neutral" as const,
-            metadata: JSON.stringify({
-              rollout: { mode: recapRollout.mode, pendingEffects: true },
-              cleanup,
-              skipped: "risk-dispatch-consumed-slot-budget",
-              riskDispatchDurationMs,
-              sharedSlotBudgetMs: TELEGRAM_RECAP_SHARED_SLOT_BUDGET_MS,
-              slotReserveMs: TELEGRAM_RECAP_SLOT_RESERVE_MS,
-            }),
-          };
-        }
-        // Keep the public-only job graph lazy; Heavy cannot initialize this lane.
-        const { planTelegramPersonalizedRecaps, planTelegramRecapRetirementNotices } = await import("../../cron/telegram/recap/telegram-recap-planner");
-        const planner = recapRollout.mode === "retirement-notice"
-          ? planTelegramRecapRetirementNotices
-          : planTelegramPersonalizedRecaps;
-        const planned = await planner(runtime.db, signal, {
-          rolloutPolicy: recapRollout,
-          softDeadlineMs: recapBudgetMs,
-        });
-        return {
-          ...planned,
-          metadata: JSON.stringify({
-            ...(parseJsonObject<Record<string, unknown>>(planned.metadata, "five-minute-telegram:recap-planner") ?? {}),
-            cleanup,
-            riskDispatchDurationMs,
-            recapBudgetMs,
-          }),
-        };
       },
     });
   }
@@ -367,8 +239,6 @@ function buildTelegramSlotGroups(
 export async function runFiveMinuteTelegramSlot(runtime: ScheduledRuntimeContext) {
   if (!runtime.env.TELEGRAM_BOT_TOKEN) {
     const reconciliationStartedMs = Date.now();
-    const recapRollout = resolveTelegramRecapRolloutPolicy(runtime.env);
-    const recapRequiresBotToken = recapRollout.mode !== "off";
     const message = "TELEGRAM_BOT_TOKEN missing; skipping Telegram transport work";
     const skippedJobs = [
       {
@@ -377,20 +247,12 @@ export async function runFiveMinuteTelegramSlot(runtime: ScheduledRuntimeContext
         error: "missing-telegram-bot-token",
       },
       summarizeSkippedScheduledJob("dispatch-telegram-alerts", "missing-telegram-bot-token"),
-      ...(recapRequiresBotToken
-        ? [summarizeSkippedScheduledJob("telegram-personalized-recap-planner", "missing-telegram-bot-token")]
-        : []),
     ];
-    for (const job of [
-      "dispatch-telegram-alerts",
-      ...(recapRequiresBotToken ? ["telegram-personalized-recap-planner"] : []),
-    ]) {
-      await logSkippedCronRun(runtime, {
-        job,
-        reason: "missing-telegram-bot-token",
-        message,
-      });
-    }
+    await logSkippedCronRun(runtime, {
+      job: "dispatch-telegram-alerts",
+      reason: "missing-telegram-bot-token",
+      message,
+    });
     await recordBudgetSurfaceTelemetry(runtime.db, {
       surface: "telegram-registration-reconciliation",
       durationMs: Date.now() - reconciliationStartedMs,

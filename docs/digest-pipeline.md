@@ -39,7 +39,7 @@ See [Failure handling](#failure-handling) for corrective retries, publication ho
 
 ### Data collection
 
-The cron assembles a `DigestInputData` object from the collector set below before calling the LLM:
+`DigestInputData` combines these collectors before the LLM call:
 
 Total market cap and supply change/velocity use `core-stablecoins-v1`: active `core-stablecoin` and `cash-equivalent` listings. PSI contribution uses `CORE_PSI_ELIGIBLE_IDS`, which also includes reviewed historical PSI assets. Tracked variants and stable-value investments remain monitored in depeg, DEWS, safety, yield, and liquidity signals. Mint/burn aggregates instead use the active tracked-pair universe described below. New daily snapshots persist `aggregateUniverse: "core-stablecoins-v1"`; weekly rollups prefer marked rows to avoid mixing legacy and core totals.
 
@@ -72,7 +72,7 @@ Organic grade accounting is separate from the top-five `gradeTransitions` presen
 | Safety scores | canonical V9 publication | Native V9 grades, three pillars, reviewed reasons, caps, and publication health |
 | Safety Map census | dated map manifest + validated `mapSummary` | Mapped supply, per-tier coin counts and supply shares, tier leaders, not-rated count, and explicit poster freshness/date |
 | Resolved depegs | `depeg_events` (last 24h) | Only closures positively classified by `classifyDepegClosure` as `recovered` or `legacy_recovered` are recovery evidence; filters: peak >100 bps AND observed mcap >$20M; top 5 by impact score |
-| Mint-burn flows | published `GET /api/mint-burn-flows` aggregate payload (`mint-burn-flows:v5:aggregate:24`, 24 closed UTC hours) | Bank Run Gauge (mcap-weighted, **re-binned, never recomputed**), Flight-to-Quality (canonical V9 classification), top pressure coins (\|FIS\| > 20), top 3 chains by absolute 24h net; incomplete scan-window nets remain unavailable, never inactive/zero |
+| Mint-burn flows | published `GET /api/mint-burn-flows` aggregate payload (versioned cache key owned by `mint-burn-flow-cache-keys.ts`, 24 closed UTC hours) | Bank Run Gauge (mcap-weighted, **re-binned, never recomputed**), Flight-to-Quality (canonical V9 classification), top pressure coins (\|FIS\| > 20), top 3 chains by absolute 24h net; incomplete scan-window nets remain unavailable, never inactive/zero |
 | Total mcap ATH | derived from core-marked `daily_digest` rows (`json_extract` on stored `totalMcapUsd`) | Anchors current core total mcap against its post-cutover Digest-window ATH value and date |
 | DEWS stress | Accepted `stress_signals` generation + `stress_signal_history` | Full band distribution, ALERT+ known-supply subtotal/coverage and band-change count; up to 5 band moves and 5 elevated coins (mcap >$10M) for presentation only |
 | Historical context | `daily_digest` + `stability_index` + `supply_history` | Prior digest PSI precedent and tracking days; canonical `getPsiBandStreak` counts the current observation plus consecutive completed UTC days (gaps/band changes stop it), anchored to the admitted PSI source time; supply mover ATH/largest weekly change |
@@ -324,12 +324,10 @@ If any of the four are absent or blank, Twitter posting returns `skipped: no-cre
   {extended}
 
   <a href="https://pharos.watch/digest/YYYY-MM-DD/">Read on Pharos →</a>
-
-  <a href="https://t.me/PharosWatchBot">Open @PharosWatchBot for a private /recap →</a>
   ```
 - Endpoints: `POST https://api.telegram.org/bot{token}/sendPhoto` for mapped editions, followed by `POST https://api.telegram.org/bot{token}/sendMessage` for text chunks
 
-The `extended` field is used instead of `text`. The four-line map block shown above is present only when the optional map summary and canonical Safety Score context are both available; every count, supply total, and share is computed from the summary's tier market caps. It is the first text section after the separate map photo so the numbers stay adjacent to the image. A deterministic `Standing:` chronic-conditions line is rendered as its own expandable context blockquote (still capped at five entries). `New Cemetery Entries` and `Tracking Changes` are each rendered as expandable blockquotes; they remain in the same message, so no second-message cursor is needed. The private-recap CTA is emitted only when the resolved rollout policy is `public`, and links to `@PharosWatchBot` rather than suggesting that a channel can receive a private recap; a missing policy deliberately emits no CTA. Telegram persists the dated map URL, depicted date, and media delivery state with the immutable edition. Delivery sends the map first through `sendPhoto`, durably records `media_state=sent`, then resumes text from the existing chunk cursor. Retryable photo failures do not advance that cursor, and text retries never resend an accepted photo. Editions without a map remain text-only with `media_state=none`. The final rendered HTML is split on safe structural boundaries below the 4096-character Bot API ceiling. Every chunk is persisted before the first external request, including unusually large appendix editions.
+`extended` replaces `text`. The optional map summary uses canonical Safety Score context and tier market caps, before the edition kicker after the map photo. `Standing:`, `New Cemetery Entries` and `Tracking Changes` retain expandable blockquotes. New editions omit the retired personalized-recap CTA; queued immutable payloads stay unchanged. Map URL/date/media state remain durable: sendPhoto acceptance is persisted before text resumes from its chunk cursor, retryable photo failure does not advance text, and text retries never resend an accepted photo. Mapless editions remain text-only. Safe structural splitting stays below 4096 characters and persists every chunk before external requests.
 
 Before the Telegram channel post is sent, `worker/src/cron/daily-digest.ts` also asks `worker/src/telegram/digest/digest-appendices.ts` for any pending deploy-diff notices. When present, those notices are appended beneath the digest body as expandable blockquotes:
 

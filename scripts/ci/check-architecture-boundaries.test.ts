@@ -17,7 +17,6 @@ function fixture() {
 }
 
 const ADAPTER = "worker/src/cron/reserve-adapters/example.ts";
-const RECAP = "worker/src/cron/telegram/recap/telegram-recap-planner.ts";
 const SCRUBBER = "src/lib/api-key-verification-url.ts";
 const ANALYTICS = "src/components/google-analytics.tsx";
 const LIGHT = "src/lib/api-query-domains/stability-light.ts";
@@ -58,23 +57,23 @@ describe("resolved architecture boundaries", () => {
     'export const run = () => new WebSocket("url");',
   ])("rejects acquisition of network capabilities: %s", (source) => {
     const root = fixture();
-    writeText(root, RECAP, 'export { run } from "@shared/lib/helper";');
+    writeText(root, ADAPTER, 'export { run } from "@shared/lib/helper";');
     writeText(root, "shared/lib/helper.ts", source);
-    expect(checkArchitectureBoundaries(root, ["recap-cost"])).toEqual([
-      `recap-cost: ${RECAP} -> shared/lib/helper.ts: network capability`,
+    expect(checkArchitectureBoundaries(root, ["reserve-network"])).toEqual([
+      `reserve-network: ${ADAPTER} -> shared/lib/helper.ts: network capability`,
     ]);
   });
 
   it("permits comments, type-only edges, and locally shadowed network names", () => {
     const root = fixture();
-    writeText(root, RECAP, `
+    writeText(root, ADAPTER, `
       import type { Secret } from "../../daily-digest";
       export type { Secret } from "../../daily-digest";
       // fetch("not executable"); import("../../daily-digest")
       export function run(window: string, fetch: () => number) { return window[0] + fetch(); }
       export const label = "api.openai.com fetch()";
     `);
-    expect(checkArchitectureBoundaries(root, ["recap-cost"])).toEqual([]);
+    expect(checkArchitectureBoundaries(root, ["reserve-network"])).toEqual([]);
   });
 
   it("rejects relative route reachability through a shared re-export and accepts the content-layer cutover", () => {
@@ -127,15 +126,15 @@ describe("resolved architecture boundaries", () => {
     ]);
   });
 
-  it.each(['import("../../weekly-recap")', 'require("../../weekly-recap")'])("rejects executable recap loading via %s", (load) => {
+  it.each(['import("../../lib/fetch-retry")', 'require("../../lib/fetch-retry")'])("rejects executable transport loading via %s", (load) => {
     const root = fixture();
-    writeText(root, RECAP, `export const run = () => ${load};`);
-    writeText(root, "worker/src/cron/weekly-recap.ts", "export const run = () => 1;");
-    expect(checkArchitectureBoundaries(root, ["recap-cost"])).toEqual([
-      `recap-cost: ${RECAP} -> worker/src/cron/weekly-recap.ts: forbidden dependency`,
+    writeText(root, ADAPTER, `export const run = () => ${load};`);
+    writeText(root, "worker/src/lib/fetch-retry.ts", "export const run = () => 1;");
+    expect(checkArchitectureBoundaries(root, ["reserve-network"])).toEqual([
+      `reserve-network: ${ADAPTER} -> worker/src/lib/fetch-retry.ts: forbidden dependency`,
     ]);
-    writeText(root, RECAP, "export const run = () => 1;");
-    expect(checkArchitectureBoundaries(root, ["recap-cost"])).toEqual([]);
+    writeText(root, ADAPTER, "export const run = () => 1;");
+    expect(checkArchitectureBoundaries(root, ["reserve-network"])).toEqual([]);
   });
 
   it("requires the analytics entry to reach a schema-free verification scrubber", () => {
@@ -196,33 +195,33 @@ describe("resolved architecture boundaries", () => {
 
   it("resolves import-equals and refuses escaped require loaders", () => {
     const root = fixture();
-    writeText(root, RECAP, 'import recap = require("../../weekly-recap"); export { recap };');
-    writeText(root, "worker/src/cron/weekly-recap.ts", "export const run = () => 1;");
-    expect(checkArchitectureBoundaries(root, ["recap-cost"])).toEqual([
-      `recap-cost: ${RECAP} -> worker/src/cron/weekly-recap.ts: forbidden dependency`,
+    writeText(root, ADAPTER, 'import transport = require("../../lib/fetch-retry"); export { transport };');
+    writeText(root, "worker/src/lib/fetch-retry.ts", "export const run = () => 1;");
+    expect(checkArchitectureBoundaries(root, ["reserve-network"])).toEqual([
+      `reserve-network: ${ADAPTER} -> worker/src/lib/fetch-retry.ts: forbidden dependency`,
     ]);
-    writeText(root, RECAP, 'const load = require; export const run = () => load("../../weekly-recap");');
-    expect(checkArchitectureBoundaries(root, ["recap-cost"])).toEqual([
-      `recap-cost: ${RECAP}: non-literal executable dependency (escaped require)`,
+    writeText(root, ADAPTER, 'const load = require; export const run = () => load("../../lib/fetch-retry");');
+    expect(checkArchitectureBoundaries(root, ["reserve-network"])).toEqual([
+      `reserve-network: ${ADAPTER}: non-literal executable dependency (escaped require)`,
     ]);
   });
 
   it.each(['import("./missing")', 'require(target)', 'import("node:not-a-real-builtin")'])("fails closed on unresolved graph edges: %s", (load) => {
     const root = fixture();
-    writeText(root, RECAP, `export const run = (target: string) => ${load};`);
-    expect(checkArchitectureBoundaries(root, ["recap-cost"])).toEqual([
-      expect.stringMatching(/recap-cost: .*: (unresolved dependency|non-literal executable dependency)/),
+    writeText(root, ADAPTER, `export const run = (target: string) => ${load};`);
+    expect(checkArchitectureBoundaries(root, ["reserve-network"])).toEqual([
+      expect.stringMatching(/reserve-network: .*: (unresolved dependency|non-literal executable dependency)/),
     ]);
   });
 
   it("expands template imports rather than hiding executable dependencies", () => {
     const root = fixture();
-    writeText(root, RECAP, 'export const load = (id: string) => import(`../../data/${id}.ts`);');
-    writeText(root, "worker/src/cron/data/safe.ts", "export const value = 1;");
-    expect(checkArchitectureBoundaries(root, ["recap-cost"])).toEqual([]);
-    writeText(root, "worker/src/cron/data/weekly-recap.ts", "export const value = 1;");
-    expect(checkArchitectureBoundaries(root, ["recap-cost"])).toEqual([
-      `recap-cost: ${RECAP} -> worker/src/cron/data/weekly-recap.ts: forbidden dependency`,
+    writeText(root, ADAPTER, 'export const load = (id: string) => import(`../../lib/${id}.ts`);');
+    writeText(root, "worker/src/lib/safe.ts", "export const value = 1;");
+    expect(checkArchitectureBoundaries(root, ["reserve-network"])).toEqual([]);
+    writeText(root, "worker/src/lib/fetch-retry.ts", "export const value = 1;");
+    expect(checkArchitectureBoundaries(root, ["reserve-network"])).toEqual([
+      `reserve-network: ${ADAPTER} -> worker/src/lib/fetch-retry.ts: forbidden dependency`,
     ]);
   });
 });
@@ -292,7 +291,6 @@ describe("Telegram public surface", () => {
 
   it.each([
     ["worker/src/handlers/scheduled/five-minute-telegram.ts", "worker/src/cron/telegram/dispatch/dispatch-telegram-alerts.ts"],
-    ["worker/src/handlers/scheduled/five-minute-telegram.ts", "worker/src/cron/telegram/recap/telegram-recap-planner.ts"],
     ["worker/src/handlers/scheduled/five-minute-telegram.ts", "worker/src/cron/telegram/maintenance/telegram-degradation-watchdog.ts"],
     ["worker/src/handlers/scheduled/daily-0300.ts", "worker/src/cron/telegram/maintenance/telegram-inactive-cleanup.ts"],
     ["worker/src/handlers/scheduled/daily-0300.ts", "worker/src/cron/telegram/maintenance/telegram-retention-cleanup.ts"],

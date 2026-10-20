@@ -502,9 +502,10 @@ export async function hydrateMintBurn(ctx: HydrationContext): Promise<MintBurnHy
   let mintBurnRowsRead = 0;
   let mintBurnLatestHourTs: number | null = null;
   try {
-    const end = Math.floor(ctx.nowSec / 3600) * 3600;
     const published = await readPublishedMintBurnGauge(ctx.db, ctx.nowSec);
-    const scanCoverageById = new Map(published.kind === "ok" && published.gauge.window?.end === end
+    const end = published.kind === "ok" && published.gauge.window != null
+      ? published.gauge.window.end : Math.floor(ctx.nowSec / 3600) * 3600;
+    const scanCoverageById = new Map(published.kind === "ok" && published.gauge.window != null
       ? published.gauge.coins.map((coin) => [coin.id, coin.scanCoverage] as const) : []);
     type FlowRow = MintBurnValuationTallyRow & {
       stablecoin_id: string;

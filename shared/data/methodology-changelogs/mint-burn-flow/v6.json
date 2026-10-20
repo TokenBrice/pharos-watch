@@ -1,5 +1,22 @@
 [
   {
+    "version": "6.29",
+    "title": "Bounded historical transition and common scan watermark",
+    "date": "2026-10-20",
+    "effectiveAt": 1792540800,
+    "summary": "Restore admitted historical flow windows without inventing v2 proofs, align public windows to a common fresh scanned hour, and retain admitted-member gauge weighting.",
+    "impact": [
+      "Hours strictly before 2026-10-20 12:00 UTC may use explicitly labelled legacy-pre-cutover cursor/event assurance for frozen source identities. The boundary is the last complete hour before the 12:03 deployment and 12:05:04 first T1 producer. At and after that boundary, exact current-fingerprint v2 proof remains mandatory; dirty hours and valuation debt remain unavailable.",
+      "The common fully scanned closed-hour watermark is bounded by the existing effective public freshness budget and exposed with timestamp, age, budget and failure reason. Totals, pressure, largest events, baselines and longer windows share it. Cached observations cannot renew an expired watermark.",
+      "Pre-T1 gauge semantics are restored: null pressure inputs are excluded, not zeroed, with no market-wide coverage-percentage quorum. The payload explicitly names admitted-coins score scope, scan completeness, admitted/excluded counts and excluded observed market cap. No scored weight means no gauge.",
+      "The transition expires after the 90-day window passes the fixed cutover, plus the watermark freshness budget: removal is safe after 2027-01-18 12:00 UTC plus that budget. Cache v6 separates the changed reader contract. No synthetic ledger proof, D1 migration or historical backfill is required for this reader transition.",
+      "The scanner advances only with matching accepted proof. Unproven live ranges receive up to four bounded attempts, halving from the same start; each prefix is re-scanned with fresh conservation boundaries, never skipped. Lane-local gap repair persists events and materializes hours before committing real proof without regressing the cursor. Repairs use whole raw-retained hours within eight days, never reconstructing older hourly-only history from pruned raw rows.",
+      "Planned activation is provisionally 2026-10-21 00:00 UTC (1792540800), following the next-UTC-midnight convention; re-date effectiveAt at release. This release timestamp is separate from the immutable historical assurance boundary at 2026-10-20 12:00 UTC. Production activation and real gap-repair observations remain release requirements."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.28",
     "title": "Proven supply destruction and complete window coverage",
     "date": "2026-10-20",

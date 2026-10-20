@@ -114,7 +114,8 @@ export function resetMintBurnMocks(): void {
     calls: 1,
     maxDepth: 0,
   });
-  vi.mocked(resolveBlockTimestamps).mockReset().mockResolvedValue(new Map());
+  vi.mocked(resolveBlockTimestamps).mockReset().mockImplementation(async (_url, blocks) =>
+    new Map(blocks.map((block) => [block, 1_718_650_752])));
   vi.mocked(batchExecute).mockReset().mockImplementation(recordMintBurnBatch);
   vi.mocked(recalcAffectedHours).mockReset().mockResolvedValue(undefined);
   vi.mocked(getNullPriceBacklog).mockReset().mockResolvedValue({ recent: 0, historical: 0 });
@@ -143,6 +144,7 @@ export function makeMintBurnDb(options: MintBurnDbOptions = {}): D1Database {
     { match: "mint_burn_sync_state", rows: options.syncRows ?? [] },
     { match: "pharos:mint-burn-scan-coverage:merge", rows: [] },
     { match: "pharos:mint-burn-scan-coverage:compact", rows: [] },
+    { match: "pharos:mint-burn-coverage-gaps", rows: [] },
     {
       match: "price_cache",
       rows: options.priceRows ?? [

@@ -468,6 +468,33 @@ describe("runTelegramRetentionCleanup", () => {
     expect(metadata.runBudgetTruncated).toBe(true);
   });
 
+  it("preserves retired recap audit cutoffs and never prunes nonterminal targets", async () => {
+    const { sqlite, db } = setupLatestSchema();
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW_SEC * 1000);
+    try {
+      const retained: string[] = [];
+      for (const status of ["sent", "skipped_no_changes", "skipped_paused", "skipped_stale", "cancelled", "expired", "execution_unknown", "failed_permanent", "planned", "queued"]) {
+        const retentionDays = status === "sent" || status.startsWith("skipped_") ? 30 : 90;
+        for (const offset of [-1, 0, 1]) {
+          const key = `${status}:${offset}`;
+          const updatedAt = NOW_SEC - retentionDays * DAY_SEC + offset;
+          sqlite.prepare(`INSERT INTO telegram_recap_targets
+            (recap_key, chat_id, local_date, window_start_at, window_end_at,
+             preference_generation, watchlist_fingerprint, status, created_at, updated_at)
+            VALUES (?, ?, '2026-07-11', 0, 0, 1, 'retired-watchlist', ?, ?, ?)`)
+            .run(key, key, status, updatedAt, updatedAt);
+          if (offset >= 0 || status === "planned" || status === "queued") retained.push(key);
+        }
+      }
+      await runTelegramRetentionCleanup(db);
+      expect(sqlite.prepare("SELECT recap_key FROM telegram_recap_targets ORDER BY recap_key").all())
+        .toEqual(retained.sort().map((recap_key) => ({ recap_key })));
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("caps processed-update retention to one bounded run and reports a lower-bound backlog", async () => {
     const { sqlite, db } = setupLatestSchema();
     const now = Math.floor(Date.now() / 1000);

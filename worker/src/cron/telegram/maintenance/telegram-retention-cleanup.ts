@@ -12,7 +12,6 @@ import {
   type TelegramProcessedUpdateBacklog,
 } from "../../../telegram/store/processed-updates";
 import { reconcileExpiredTelegramAlertJobTargets } from "../delivery/telegram-alert-target-status";
-import { pruneTelegramRecapTargets } from "../../../telegram/recap/recap-store";
 import {
   TELEGRAM_ADOPTION_SESSION_CACHE_PREFIX,
   TELEGRAM_ADOPTION_SESSION_TTL_SEC,
@@ -52,6 +51,24 @@ const RETENTION_DAYS = {
   reEngagementWarningCache: RE_ENGAGEMENT_WARNING_CACHE_RETENTION_SEC / DAY_SEC,
   processedUpdates: 7,
 } as const;
+
+/** Retired recap audit expiry remains until the separately authorized schema cleanup. */
+async function pruneTelegramRecapTargets(
+  db: D1Database,
+  nowSec: number,
+  options: { limit: number },
+): Promise<{ deletedTargets: number; cappedAtLimit: boolean }> {
+  const result = await db.prepare(`
+    DELETE FROM telegram_recap_targets WHERE rowid IN (
+      SELECT rowid FROM telegram_recap_targets
+       WHERE (status IN ('sent', 'skipped_no_changes', 'skipped_paused', 'skipped_stale') AND updated_at < ?)
+          OR (status IN ('cancelled', 'expired', 'execution_unknown', 'failed_permanent') AND updated_at < ?)
+       ORDER BY updated_at ASC, recap_key ASC LIMIT ?
+    )
+  `).bind(nowSec - 30 * DAY_SEC, nowSec - 90 * DAY_SEC, options.limit).run();
+  const deletedTargets = Number(result.meta?.changes ?? 0);
+  return { deletedTargets, cappedAtLimit: deletedTargets >= options.limit };
+}
 
 const SOURCE_EVENT_CHILD_TABLES = [
   "telegram_alert_target_plan_items",

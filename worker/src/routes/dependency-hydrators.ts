@@ -2,7 +2,6 @@ import type { EndpointDependency } from "@shared/lib/api-endpoints";
 import { buildChainRpcs } from "../lib/chain-registry";
 import { normalizeCgApiKey } from "../lib/coingecko";
 import type { Env } from "../lib/env";
-import { resolveTelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
 import type { FullRouteContext } from "./shared";
 import { normalizeWorkerCanaryMode } from "../lib/worker-canary-mode";
 
@@ -55,9 +54,6 @@ export const ROUTE_DEPENDENCY_HYDRATORS = {
     routeCtx.telegramWebhookSecretPrevious = env.TELEGRAM_WEBHOOK_SECRET_PREVIOUS;
     routeCtx.telegramBotToken = env.TELEGRAM_BOT_TOKEN;
     routeCtx.telegramBotTokenPrevious = env.TELEGRAM_BOT_TOKEN_PREVIOUS;
-  },
-  telegramRecapRollout(routeCtx, env) {
-    routeCtx.telegramRecapRollout = resolveTelegramRecapRolloutPolicy(env);
   },
   // The `satisfies Record<EndpointDependency, …>` above is the coverage proof:
   // a declared dependency without a hydrator fails to typecheck.

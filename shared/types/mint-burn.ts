@@ -55,8 +55,17 @@ export const MINT_BURN_FTQ_DEPENDENCY_KEY = "flightToQuality";
 export const MintBurnScanWindowSchema = z.object({
   complete: z.boolean(),
   unavailableReason: z.literal("scan-coverage-incomplete").nullable(),
+  provenance: z.enum(["durable-v2", "legacy-pre-cutover"]).optional(),
 });
 export type MintBurnScanWindow = z.infer<typeof MintBurnScanWindowSchema>;
+
+export const MintBurnWatermarkSchema = z.object({
+  timestamp: z.number().int().nonnegative().nullable(),
+  ageSec: z.number().nonnegative().nullable(),
+  maxAgeSec: z.number().positive(),
+  unavailableReason: z.enum(["scan-watermark-stale", "scan-watermark-unavailable"]).nullable(),
+});
+export type MintBurnWatermark = z.infer<typeof MintBurnWatermarkSchema>;
 const MintBurnGaugeSchema = z.object({
   score: SignedFlowIntensitySchema.nullable(),
   band: z.string().nullable(),
@@ -64,7 +73,13 @@ const MintBurnGaugeSchema = z.object({
   /** `null` when classification is unavailable or missing valuation can alter the conclusion. */
   flightToQuality: z.boolean().nullable(),
   flightIntensity: z.number().finite().nullable(),
-  scanCoverage: MintBurnScanWindowSchema.optional(),
+  /** Score is the observed admitted-member composite, not a full-roster claim. */
+  scoreScope: z.literal("admitted-coins").optional(),
+  scanCoverage: MintBurnScanWindowSchema.extend({
+    admittedCoins: z.number().int().nonnegative().optional(),
+    excludedCoins: z.number().int().nonnegative().optional(),
+    excludedMcapUsd: z.number().nonnegative().nullable().optional(),
+  }).optional(),
   // The retired cache label is accepted for rolling/historical payload reads.
   classificationSource: z
     .enum(["safety-score-v9-publication", "report-card-cache", "unavailable"])
@@ -137,6 +152,7 @@ const MintBurnCoinCoverageSchema = z.object({
   startBlockConfidence: z.enum(["high", "medium", "low"]).optional(),
   status: MintBurnCoverageStatusSchema,
   unavailableReason: z.enum(["cron-snapshot-unavailable", "scan-coverage-incomplete"]).nullable().optional(),
+  provenance: z.enum(["durable-v2", "legacy-pre-cutover"]).optional(),
   windows: z.object({
     window24h: MintBurnScanWindowSchema,
     window7d: MintBurnScanWindowSchema,
@@ -242,6 +258,7 @@ const MintBurnHourlyWindowSchema = z.object({
   start: z.number().int().nonnegative(),
   end: z.number().int().nonnegative(),
   semantics: z.literal("closed-utc-hours"),
+  watermark: MintBurnWatermarkSchema.optional(),
 });
 
 export const MintBurnFlowsResponseSchema = z.object({

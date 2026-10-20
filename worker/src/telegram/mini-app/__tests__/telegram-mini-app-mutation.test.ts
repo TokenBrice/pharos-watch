@@ -13,7 +13,6 @@ import {
   privateInitData,
   signedInitData,
   stateReadTables,
-  type MockTableConfig,
 } from "./telegram-mini-app.test-support.ts";
 import { PAUSE_SENTINEL_TS } from "@shared/lib/telegram-delivery-policy";
 import { encodeWatchlistTokenV3 } from "../watchlist-token";
@@ -34,26 +33,6 @@ function persistedDb(options: SqliteD1Options = {}) {
 }
 import { handleTelegramMiniAppMutation, handleTelegramMiniAppSession } from "../telegram-mini-app";
 
-function recapPreferenceTable(overrides: Partial<Record<string, unknown>> = {}): MockTableConfig {
-  const row = {
-    chat_id: "42",
-    enabled: 1,
-    cadence: "daily",
-    delivery_hour_local: 14,
-    next_due_at: NOW_SEC + 18_000,
-    last_window_end_at: null,
-    last_delivered_local_date: null,
-    created_at: NOW_SEC,
-    updated_at: NOW_SEC,
-    preference_generation: 1,
-    ...overrides,
-  };
-  return {
-    match: "FROM telegram_recap_preferences p",
-    first: row,
-    rows: [row],
-  };
-}
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -105,14 +84,13 @@ describe("handleTelegramMiniAppMutation", () => {
     expect(response.status).toBe(200);
     expect(sqlite.prepare("SELECT count(*) AS count FROM telegram_adoption_daily WHERE stage = 'first_follow'").get()).toEqual({ count: 0 });
   });
-  it("serves the v5 session envelope while the Worker advertises v6 to current clients", async () => {
-    const { db } = persistedDb();
+  it.each(["5", "6"])("rejects retired contract %s before database access", async (contractVersion) => {
+    const db = makeMiniAppDb();
     const response = await handleTelegramMiniAppSession(db, makeVersionedMiniAppRequest("/api/telegram-mini-app/session", {
       initData: await privateInitData(),
-    }, { contractVersion: "5" }), BOT_TOKEN);
-    expect(response.status).toBe(200);
-    expect(TelegramMiniAppSnapshotSchema.parse(await response.json()).contractVersion).toBe("5");
-    expect(TELEGRAM_MINI_APP_CONTRACT_VERSION).toBe("6");
+    }, { contractVersion }), BOT_TOKEN);
+    expect(await readJsonResponse(response, 409)).toMatchObject({ code: "contract-version-mismatch", contractVersion: TELEGRAM_MINI_APP_CONTRACT_VERSION });
+    expect(db.getHistory()).toEqual([]);
   });
 
   it.each([
@@ -139,7 +117,7 @@ describe("handleTelegramMiniAppMutation", () => {
     });
   });
 
-  it.each(["5", "6"])("persists preset Off with absent families unchanged for contract %s", async (contractVersion) => {
+  it.each([TELEGRAM_MINI_APP_CONTRACT_VERSION])("persists preset Off with absent families unchanged for contract %s", async (contractVersion) => {
     const { db, sqlite } = persistedDb();
     sqlite.prepare(`
       INSERT INTO telegram_preset_subscriptions
@@ -222,7 +200,7 @@ describe("handleTelegramMiniAppMutation", () => {
     expect(sqlite.prepare("SELECT * FROM telegram_preset_subscriptions").all()).toEqual(before);
   });
 
-  it.each(["export-watchlist", "preview-bulk-watchlist"] as const)("keeps v5 %s response envelopes readable during the legacy window", async (kind) => {
+  it.each(["export-watchlist", "preview-bulk-watchlist"] as const)("rejects stale v5 %s before mutation or telemetry", async (kind) => {
     const { db, sqlite } = persistedDb();
     sqlite.prepare(`
       INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, alert_dews, alert_dews_override)
@@ -232,8 +210,8 @@ describe("handleTelegramMiniAppMutation", () => {
     const response = await handleTelegramMiniAppMutation(db, makeVersionedMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData: await privateInitData(), operation,
     }, { contractVersion: "5" }), BOT_TOKEN);
-    expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({ contractVersion: "5", catalogVersion: TELEGRAM_MINI_APP_CATALOG_VERSION });
+    expect(await readJsonResponse(response, 409)).toMatchObject({ code: "contract-version-mismatch" });
+    expect(sqlite.prepare("SELECT count(*) AS count FROM telegram_usage_daily").get()).toEqual({ count: 0 });
   });
 
   it.each([
@@ -338,135 +316,14 @@ describe("handleTelegramMiniAppMutation", () => {
     expect(db.getHistory()).toEqual([]);
   });
 
-  it("enables a timezone-confirmed recap, records recap telemetry, and returns refreshed state", async () => {
-    const initData = await privateInitData();
-    const db = makeMiniAppDb([
-      recapPreferenceTable(),
-      ...stateReadTables({
-        subscriber: {
-          global_alert_dews: 0,
-          global_alert_depeg: 0,
-          global_alert_safety: 0,
-          global_alert_launch: 0,
-          global_alert_reserve: 0,
-          global_alert_freeze: 0,
-          global_depeg_worsening_bps_step: null,
-          quiet_hours_enabled: 0,
-          quiet_hours_start_utc: null,
-          quiet_hours_end_utc: null,
-          timezone: "Europe/Paris",
-          alert_snooze_until_ts: null,
-        },
-      }),
-    ]);
-
+  it.each([true, false])("rejects retired recap mutations before any database access (enabled=%s)", async (enabled) => {
+    const db = makeMiniAppDb();
     const response = await handleTelegramMiniAppMutation(db, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
-      initData,
-      operation: { kind: "set-recap", enabled: true, deliveryHourLocal: 14 },
+      initData: await privateInitData(),
+      operation: { kind: "set-recap", enabled, deliveryHourLocal: 9 },
     }), BOT_TOKEN);
-
-    expect(historyMatches(db, "INSERT INTO telegram_recap_preferences", { 0: "42", 1: 1, 2: 14 })).toBe(true);
-    expect(historyMatches(db, "INSERT INTO telegram_usage_daily", {1:"mini_app_recap",3:"recap"})).toBe(true);
-    expect(await readJsonResponse(response, 200)).toMatchObject({
-      subscriber: { recap: { enabled: true, deliveryHourLocal: 14, timezoneConfirmed: true } },
-    });
-  });
-
-  it("disables a recap without requiring a timezone and cancels uncommitted recap delivery", async () => {
-    const initData = await privateInitData();
-    const db = makeMiniAppDb([
-      recapPreferenceTable({ enabled: 0, delivery_hour_local: 9, next_due_at: null }),
-      ...stateReadTables(),
-    ]);
-
-    const response = await handleTelegramMiniAppMutation(db, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
-      initData,
-      operation: { kind: "set-recap", enabled: false, deliveryHourLocal: 9 },
-    }), BOT_TOKEN);
-
-    expect(response.status).toBe(200);
-    expect(historyMatches(db, "UPDATE telegram_recap_targets", {
-      0: "recap_disabled", 1: NOW_SEC, 2: NOW_SEC, 3: "42",
-    })).toBe(true);
-    expect(historyMatches(db, "DELETE FROM telegram_pending_alerts", {
-      0: "42", 1: "recap_disabled", 2: NOW_SEC,
-    })).toBe(true);
-    expect(historyMatches(db, "INSERT INTO telegram_usage_daily", {1:"mini_app_recap",3:"recap"})).toBe(true);
-  });
-
-  it("returns a retryable recap-preference conflict when the generation fence is stale", async () => {
-    const initData = await privateInitData();
-    const db = makeMiniAppDb([
-      recapPreferenceTable({ preference_generation: 2 }),
-      ...stateReadTables({
-        subscriber: {
-          global_alert_dews: 0,
-          global_alert_depeg: 0,
-          global_alert_safety: 0,
-          global_alert_launch: 0,
-          global_alert_reserve: 0,
-          global_alert_freeze: 0,
-          global_depeg_worsening_bps_step: null,
-          quiet_hours_enabled: 0,
-          quiet_hours_start_utc: null,
-          quiet_hours_end_utc: null,
-          timezone: "Europe/Paris",
-          alert_snooze_until_ts: null,
-          preference_generation: 0,
-        },
-      }),
-    ]);
-
-    const response = await handleTelegramMiniAppMutation(db, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
-      initData,
-      operation: { kind: "set-recap", enabled: true, deliveryHourLocal: 14 },
-    }), BOT_TOKEN);
-
-    expect(response.status).toBe(409);
-    await expect(response.json()).resolves.toMatchObject({
-      code: "stale-recap-preference",
-      error: "Your recap settings changed. Refresh and try again",
-    });
-    const recapWrite = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO telegram_recap_preferences"));
-    expect(recapWrite?.binds[recapWrite.binds.length - 1]).toBe(0);
-  });
-
-  it("requires an existing subscriber and confirmed timezone before enabling a recap", async () => {
-    const initData = await privateInitData();
-    const missingSubscriberDb = makeMiniAppDb([
-      { match: "FROM telegram_subscribers", first: null, rows: [] },
-    ]);
-    const missingTimezoneDb = makeMiniAppDb(stateReadTables());
-
-    const missingSubscriber = await handleTelegramMiniAppMutation(
-      missingSubscriberDb,
-      makeMiniAppRequest("/api/telegram-mini-app/mutate", {
-        initData,
-        operation: { kind: "set-recap", enabled: true, deliveryHourLocal: 9 },
-      }),
-      BOT_TOKEN,
-    );
-    const missingTimezone = await handleTelegramMiniAppMutation(
-      missingTimezoneDb,
-      makeMiniAppRequest("/api/telegram-mini-app/mutate", {
-        initData,
-        operation: { kind: "set-recap", enabled: true, deliveryHourLocal: 9 },
-      }),
-      BOT_TOKEN,
-    );
-
-    expect(missingSubscriber.status).toBe(409);
-    await expect(missingSubscriber.json()).resolves.toMatchObject({
-      code: "recap-subscriber-required",
-      error: "Add a watchlist before configuring the daily recap",
-    });
-    expect(missingTimezone.status).toBe(409);
-    await expect(missingTimezone.json()).resolves.toMatchObject({
-      code: "recap-timezone-required",
-      error: "Set and confirm a timezone before enabling the daily recap",
-    });
-    expect(historyMatches(missingSubscriberDb, "INSERT INTO telegram_usage_daily", { 1: "mini_app_mutation_denied", 3: "recap", 6: "recap-subscriber-required" })).toBe(true);
-    expect(historyMatches(missingTimezoneDb, "INSERT INTO telegram_usage_daily", { 1: "mini_app_mutation_denied", 3: "recap", 6: "recap-timezone-required" })).toBe(true);
+    expect(await readJsonResponse(response, 400)).toMatchObject({ code: "validation-error" });
+    expect(db.getHistory()).toEqual([]);
   });
 
   it("allows a stale signed session to export without consuming mutation burst capacity", async () => {
@@ -670,7 +527,8 @@ describe("handleTelegramMiniAppMutation", () => {
 
   it("clears subscriber snooze through the Mini App mutation path", async () => {
     const initData = await privateInitData();
-    const db = makeMiniAppDb(stateReadTables());
+    const { db, sqlite } = persistedDb();
+    sqlite.exec("UPDATE telegram_subscribers SET alert_snooze_until_ts = 2000000000");
 
     const response = await handleTelegramMiniAppMutation(db, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
       initData,
@@ -678,7 +536,7 @@ describe("handleTelegramMiniAppMutation", () => {
     }), BOT_TOKEN);
 
     expect(response.status).toBe(200);
-    expect(historyMatches(db, "alert_snooze_until_ts = NULL", { 0: "42", 1: "alice" })).toBe(true);
+    expect(sqlite.prepare("SELECT alert_snooze_until_ts FROM telegram_subscribers WHERE chat_id = '42'").get()).toEqual({ alert_snooze_until_ts: null });
   });
 
   it("does not re-enable an explicitly disabled coin alert family", async () => {
@@ -711,7 +569,6 @@ describe("handleTelegramMiniAppMutation", () => {
     expect(historyMatches(db, "alert_safety = excluded.alert_safety", { 0: "42", 1: "usdc-circle", 2: 1, 3: "downgrade-only" })).toBe(true);
     expect(historyMatches(db, "alert_launch = excluded.alert_launch", { 0: "42", 1: "usdc-circle", 2: 1 })).toBe(true);
     expect(batchSizes[0]).toBeGreaterThan(1);
-    expect(batchSizes).toContain(5);
   });
 
   it("enables per-coin depeg alerts when setting a worsening step", async () => {
@@ -917,7 +774,6 @@ describe("handleTelegramMiniAppMutation", () => {
     }), BOT_TOKEN);
 
     expect(response.status).toBe(200);
-    expect(historyMatches(db, "alert_snooze_until_ts = NULL", { 0: "42", 1: "alice" })).toBe(true);
     expect(historyMatches(db, "ON CONFLICT(key) DO NOTHING")).toBe(false);
   });
 
@@ -937,7 +793,6 @@ describe("handleTelegramMiniAppMutation", () => {
     expect(firstResponse.status).toBe(200);
     expect(secondResponse.status).toBe(200);
     const history = db.getHistory();
-    expect(history.some((entry) => entry.sql.includes("alert_snooze_until_ts = NULL"))).toBe(true);
     expect(history.some((entry) => entry.sql.includes("global_alert_safety = excluded.global_alert_safety"))).toBe(true);
     expect(history.some((entry) => entry.sql.includes("ON CONFLICT(key) DO NOTHING"))).toBe(false);
   });

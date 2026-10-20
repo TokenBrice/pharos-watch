@@ -42,7 +42,7 @@ export interface TelegramCommandVariant {
 export interface TelegramCommandReferenceEntry {
   /** BotFather menu description for the private scope (group remap below). */
   readonly description: string;
-  /** "private" hides the command from the group menu (start, forget, recap). */
+  /** "private" hides the command from the group menu (start, forget). */
   readonly audience: "private" | "chat";
   /** Syntax variants shared by /help and the public command reference. */
   readonly variants: readonly TelegramCommandVariant[];
@@ -261,22 +261,6 @@ export const TELEGRAM_COMMAND_REFERENCE = {
       },
     ],
   },
-  recap: {
-    description: "Set your private daily watchlist recap",
-    audience: "private",
-    variants: [
-      {
-        syntax: "/recap [on|off]",
-        help: "Show, enable, or disable your private daily watchlist recap (private chat only)",
-        example: "/recap on",
-      },
-      {
-        syntax: "/recap time <hour>",
-        help: "Set the recap delivery hour 0-23 in your confirmed timezone",
-        example: "/recap time 9",
-      },
-    ],
-  },
   unsnooze: {
     description: "Clear active alert snooze",
     audience: "chat",
@@ -310,12 +294,3 @@ export const TELEGRAM_BOT_COMMANDS = Object.entries(TELEGRAM_COMMAND_REFERENCE).
 export const TELEGRAM_BOT_GROUP_COMMANDS = Object.entries(TELEGRAM_COMMAND_REFERENCE)
   .filter(([, entry]) => entry.audience !== "private")
   .map(([command, entry]) => ({ command, description: entry.description }));
-
-/** `/recap` is only advertised after the rollout reaches the public mode. */
-export function getTelegramPrivateBotCommands(
-  includeRecap: boolean,
-): readonly (typeof TELEGRAM_BOT_COMMANDS)[number][] {
-  return includeRecap
-    ? TELEGRAM_BOT_COMMANDS
-    : TELEGRAM_BOT_COMMANDS.filter((entry) => entry.command !== "recap");
-}

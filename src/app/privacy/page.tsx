@@ -9,14 +9,12 @@ import {
   API_ACCESS_X_URL,
 } from "@shared/lib/public-api-contract";
 import { PENDING_TTL_SEC, TELEGRAM_ALERT_TTL_SEC } from "@shared/lib/telegram-delivery-policy";
-import { TELEGRAM_RECAP_TTL_SEC } from "@shared/lib/telegram-recap-policy";
 
 // Retention prose derives from the shared delivery policy so the public
 // inventory cannot drift from production TTL constants (TGB-028).
 const RISK_ALERT_TTL_HOURS = PENDING_TTL_SEC / 3600;
 const LAUNCH_ALERT_TTL_MINUTES = TELEGRAM_ALERT_TTL_SEC.launch / 60;
 const ADMIN_ALERT_TTL_MINUTES = TELEGRAM_ALERT_TTL_SEC.adminBroadcast / 60;
-const PERSONALIZED_RECAP_TTL_HOURS = TELEGRAM_RECAP_TTL_SEC / 3600;
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Pharos Privacy Policy: Analytics, API & Telegram Data",
@@ -57,7 +55,7 @@ export default function PrivacyPage() {
             PharosWatchBot Mini App, operator pages, and preview deployments are excluded from GA4 and Web Vitals collection. If you choose to share a Telegram
             or X handle in the feedback form, that handle is included in the GitHub issue created for the submission.
             Telegram alert subscriptions store chat ID, optional username, followed coins, alert settings, quiet hours,
-            snooze state, and an optional private-chat daily recap schedule,
+            snooze state,
             and short-lived pending-command or pending-alert metadata; subscriber rows with no follows or pending state
             and no Telegram activity for 180 days are automatically purged by a weekly cleanup job. If you request API
             access, Pharos receives your Telegram or X direct message and deletes it once the key is issued or rotated;
@@ -107,7 +105,7 @@ export default function PrivacyPage() {
           <ul className="list-disc space-y-1 pl-5">
             <li>
               <strong>Subscribers</strong> (chat ID, optional username, default alert flags, quiet hours, snooze state,
-              last-active timestamp): auto-purged after 180 days of inactivity once no follows, enabled daily recap, or
+              last-active timestamp): auto-purged after 180 days of inactivity once no follows or
               pending state remain.
             </li>
             <li>
@@ -124,14 +122,15 @@ export default function PrivacyPage() {
             <li>
               <strong>Pending alerts</strong> (overflow and retry queue for delivery): {RISK_ALERT_TTL_HOURS}-hour TTL
               for depeg, DEWS, safety, reserve, freeze, and legacy alerts; {LAUNCH_ALERT_TTL_MINUTES}-minute TTL for launch
-              alerts, {ADMIN_ALERT_TTL_MINUTES}-minute TTL for admin broadcasts, and {PERSONALIZED_RECAP_TTL_HOURS}-hour
-              TTL for an exact personalized recap message.
+              alerts and {ADMIN_ALERT_TTL_MINUTES}-minute TTL for admin broadcasts.
             </li>
             <li>
-              <strong>Personalized recap preferences and delivery audit</strong>: the private-chat timezone, local hour,
-              and enabled state are retained while configured. Sent and skipped aggregate target metadata is retained
-              for 30 days; cancelled, expired, execution-unknown, and permanently failed audit metadata is retained for
-              90 days. Pending message bodies follow the delivery-queue lifecycle above.{" "}
+              <strong>Retired personalized recap records</strong>: existing preference and delivery-target records are
+              retained for retirement audit and rollback evidence; there is no active recap schedule or delivery.
+              Existing sent and skipped aggregate target metadata follows its 30-day retention, while cancelled,
+              expired, execution-unknown, and permanently failed audit metadata follows its 90-day retention.
+              Destructive schema cleanup requires a separate migration after the 90-day evidence window and rollback
+              floor close.{" "}
               <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">/forget</code> removes the preference, target
               metadata, and chat-attributable pending or dead-letter rows immediately.
             </li>
@@ -180,11 +179,6 @@ export default function PrivacyPage() {
             Google Analytics or report Web Vitals. After signed authentication succeeds, the Worker records only
             low-cardinality daily counters for Mini App adoption, operation outcomes, and error categories; those
             aggregate rows contain no chat ID.
-          </p>
-          <p>
-            Personalized daily recaps are assembled deterministically from Pharos&apos;s existing D1 event Tape and the
-            subscriber&apos;s current watchlist. This path makes no AI-model request and no external planning-data request,
-            so watchlist intent and recap content are not sent to an AI provider or a separate personalization service.
           </p>
           <p>
             Inline-mode status queries use public tracked-coin data. Pharos stores only aggregate query and selected-card

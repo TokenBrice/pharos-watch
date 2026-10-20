@@ -348,7 +348,9 @@ describe("syncMintBurn", () => {
         calls: 1,
         maxDepth: 0,
       });
-    vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([[21_910_000, 1_718_650_752]]));
+    vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([
+      [21_955_001, 1_718_650_750], [21_960_000, 1_718_650_752],
+    ]));
 
     const result = await syncMintBurnConfig({
       db,
@@ -423,10 +425,10 @@ describe("syncMintBurn", () => {
     expect(result.summary.rowsDropped).toBe(0);
     expect(result.summary.rowsDroppedDecode).toBe(1);
     expect(result.summary.earliestDecodeFailureBlock).toBe(failedBlock);
-    expect(result.newLastBlock).toBe(failedBlock - 1);
+    expect(result.newLastBlock).toBeNull();
   });
 
-  it("advances past an undecodable log after its bounded retry quarantine", async () => {
+  it("keeps an undecodable quarantined log unproved and retryable", async () => {
     const config = MINT_BURN_CONFIGS[0]!;
     const failedBlock = 21_910_000;
     const failedLog = makeMintLog({ blockNumber: failedBlock });
@@ -475,7 +477,7 @@ describe("syncMintBurn", () => {
       affectedHours: new Map(),
     });
 
-    expect(result.newLastBlock).toBe(21_960_000);
+    expect(result.newLastBlock).toBeNull();
     expect(result.summary.rowsDroppedDecode).toBe(1);
     expect(result.summary.rowsQuarantinedDecode).toBe(1);
     expect(result.summary.decodeQuarantines).toEqual([expect.objectContaining({
@@ -483,7 +485,7 @@ describe("syncMintBurn", () => {
       reason: "amount-decode-retry-exhausted",
       attempts: 3,
     })]);
-    expect(result.summary.advanceReason).toBe("full-success-empty");
+    expect(result.summary.advanceReason).toBe("scan-coverage-unproven");
   });
 
   it("holds the durable sync-state frontier through a config-phase rejection and advances it on the retry run", async () => {
@@ -544,7 +546,7 @@ describe("syncMintBurn", () => {
       return { logs: topics.some((topic) => topic.index === 1 && topic.value === ZERO_TOPIC) ? [makeMintLog()] : [],
         complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 };
     });
-    vi.mocked(resolveBlockTimestamps).mockResolvedValue(new Map([[22_000_000, timestamp + 1]]));
+    vi.mocked(resolveBlockTimestamps).mockResolvedValue(new Map([[21_950_001, timestamp], [22_000_000, timestamp + 1]]));
     vi.mocked(recalcAffectedHours)
       .mockRejectedValueOnce(new Error("D1 hourly rebuild failed"))
       .mockImplementation(actualPersistence.recalcAffectedHours);
@@ -597,7 +599,7 @@ describe("syncMintBurn", () => {
     expect(meta.retention).toBeUndefined();
   });
 
-  it("does not advance when one eventDef fails with no safe frontier", async () => {
+  it("retries a failed event definition and commits a newly certified smaller prefix", async () => {
     const db = makeDb();
 
     vi.mocked(fetchAlchemyLogs)
@@ -612,11 +614,12 @@ describe("syncMintBurn", () => {
     const usdt = (meta.configSamples as Array<Record<string, unknown>>).find((row) => row.symbol === "USDT");
 
     expect(usdt?.failedEventDefs).toBeTruthy();
-    expect(usdt?.advancedTo).toBeNull();
-    expect(usdt?.advanceReason).toBe("no-safe-frontier");
+    expect(usdt?.advancedTo).toBe(21_975_000);
+    expect(usdt?.advanceReason).toBe("partial-frontier");
+    expect(usdt?.scanAttempts).toBe(2);
   });
 
-  it("advances only to the shared coverage frontier on partial event coverage", async () => {
+  it("re-scans partial event coverage before accepting a prefix proof", async () => {
     const db = makeDb();
 
     vi.mocked(fetchAlchemyLogs)
@@ -642,12 +645,12 @@ describe("syncMintBurn", () => {
     const meta = JSON.parse(result.metadata);
     const usdt = (meta.configSamples as Array<Record<string, unknown>>).find((row) => row.symbol === "USDT");
 
-    expect(usdt?.advancedTo).toBe(21_960_000);
-    expect(usdt?.coverageFrontier).toBe(21_960_000);
+    expect(usdt?.advancedTo).toBe(21_975_000);
+    expect(usdt?.coverageFrontier).toBe(21_975_000);
     expect(usdt?.advanceReason).toBe("partial-frontier");
   });
 
-  it("caps advancement before the earliest missing timestamp block", async () => {
+  it("retries missing event timestamps before advancing a certified prefix", async () => {
     const db = makeDb();
 
     vi.mocked(fetchAlchemyLogs)
@@ -672,8 +675,8 @@ describe("syncMintBurn", () => {
 
     expect(usdt?.missingTimestampCount).toBe(1);
     expect(usdt?.earliestMissingTimestampBlock).toBe(21_950_002);
-    expect(usdt?.advancedTo).toBe(21_950_001);
-    expect(usdt?.coverageFrontier).toBe(21_950_001);
+    expect(usdt?.advancedTo).toBe(21_975_000);
+    expect(usdt?.coverageFrontier).toBe(21_975_000);
     expect(usdt?.advanceReason).toBe("partial-frontier");
   });
 
@@ -851,7 +854,7 @@ describe("syncMintBurn", () => {
     expect(usdt?.txContextShortfalls).toBe(1);
     expect(usdt?.bridgeClassificationDeferredRows).toBe(1);
     expect(usdt?.failedEventDefs).toContain("tx-context:1");
-    expect(usdt?.advancedTo).toBe(21_999_999);
+    expect(usdt?.advancedTo).toBe(21_975_000);
     expect(usdt?.advanceReason).toBe("partial-frontier");
   });
 
@@ -904,7 +907,8 @@ describe("syncMintBurn", () => {
 
     expect(fetchedContracts[0]).toBe("0xdac17f958d2ee523a2206206994597c13d831ec7");
     expect(fetchedContracts).toContain("0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48");
-    expect(meta.configSamples[0].requestBudgetUsed).toBe(meta.configSamples[0].requestBudgetLimit);
+    expect(meta.configSamples[0].requestBudgetUsed).toBeLessThanOrEqual(meta.configSamples[0].requestBudgetLimit);
+    expect(meta.configSamples[0].scanAttempts).toBe(2);
   });
 
   it("stops before starting another config when the runtime budget tail is reserved", async () => {
@@ -975,8 +979,8 @@ describe("syncMintBurn", () => {
     const invalidation = history.find(
       (entry) =>
         entry.sql.includes("DELETE FROM cache")
-        && entry.binds[0] === "mint-burn-flows:v5:"
-        && entry.binds[1] === "mint-burn-flows:v5:\uffff",
+        && entry.binds[0] === "mint-burn-flows:v6:"
+        && entry.binds[1] === "mint-burn-flows:v6:\uffff",
     );
     expect(invalidation).toBeDefined();
   });
@@ -990,12 +994,12 @@ describe("syncMintBurn", () => {
     const cacheDeletes = history.filter(({ sql }) => sql.includes("DELETE FROM cache"));
     expect(
       cacheDeletes.some(
-        (entry) => entry.binds[0] === "mint-burn-flows:v5:coin:" && entry.binds[1] === "mint-burn-flows:v5:coin:\uffff",
+        (entry) => entry.binds[0] === "mint-burn-flows:v6:coin:" && entry.binds[1] === "mint-burn-flows:v6:coin:\uffff",
       ),
     ).toBe(true);
     expect(
       cacheDeletes.some(
-        (entry) => entry.binds[0] === "mint-burn-flows:v5:" || entry.binds[0] === "mint-burn-flows:v5:aggregate:",
+        (entry) => entry.binds[0] === "mint-burn-flows:v6:" || entry.binds[0] === "mint-burn-flows:v6:aggregate:",
       ),
     ).toBe(false);
   });

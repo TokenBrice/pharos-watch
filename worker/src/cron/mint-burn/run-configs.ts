@@ -7,8 +7,10 @@ import type { MintBurnAffectedHour, MintBurnPriceContext } from "../../lib/mint-
 import type { MintBurnScanCoverage } from "../../lib/mint-burn-pipeline/scan-coverage";
 import type { MintBurnContractConfig, MintBurnTier } from "../../lib/mint-burn-contracts";
 import { deferConfig, loadActiveConfigDeferrals, shouldDeferConfig } from "./run-state";
-import { createMintBurnConfigSummary, syncMintBurnConfig, type MintBurnConfigSummary } from "./sync-config";
+import { createMintBurnConfigSummary, type MintBurnConfigSummary } from "./sync-config";
+import { syncMintBurnConfigWithRetries } from "./scan-with-retry";
 import type { MintBurnChainContext } from "./chain-context";
+import type { MintBurnCoverageRepairSummary } from "./repair-coverage";
 import {
   conservationOnlyEventDefsFor, fetchConservationBoundaries, getMintBurnConservationEligibility, MINT_BURN_CONSERVATION_PREPASS_MAX_MS,
   type ConservationBoundaryRequest,
@@ -57,6 +59,7 @@ export interface MintBurnRunConfigPhaseResult {
   configBreakdown: MintBurnConfigSummary[];
   activeProviderDeferrals: Map<string, number>;
   runtimeBudgetHit: boolean;
+  coverageRepairs?: MintBurnCoverageRepairSummary[];
 }
 
 export async function runMintBurnConfigPhase(input: {
@@ -267,7 +270,7 @@ export async function runMintBurnConfigPhase(input: {
       ),
     );
     const boundaryRequest = boundaryRequests.get(key);
-    const result = await syncMintBurnConfig({
+    const result = await syncMintBurnConfigWithRetries({
       db: input.db,
       config,
       key,
@@ -304,13 +307,12 @@ export async function runMintBurnConfigPhase(input: {
     txContextShortfalls += summary.txContextShortfalls;
     bridgeClassificationDeferredRows += summary.bridgeClassificationDeferredRows;
 
-    if (result.newLastBlock != null) {
-      const previousLastBlock = input.lastBlocksAfterRun.get(key) ?? (config.startBlock - 1);
-      const nextLastBlock = Math.max(previousLastBlock, result.newLastBlock);
-      input.pendingCursorUpdates.set(key, nextLastBlock);
-      if (result.scanCoverage && result.scanCoverage.toBlock === nextLastBlock) {
-        input.pendingScanCoverage?.set(key, result.scanCoverage);
-      }
+    if (result.newLastBlock != null && result.scanCoverage?.toBlock === result.newLastBlock) {
+      input.pendingCursorUpdates.set(key, result.newLastBlock);
+      input.pendingScanCoverage?.set(key, result.scanCoverage);
+    } else if (result.newLastBlock != null) {
+      summary.advancedTo = null;
+      summary.advanceReason = "scan-coverage-unproven";
     }
     input.budget.count += summary.requestBudgetUsed;
 

@@ -9,8 +9,8 @@ import {
   summarizeMintBurnValuation,
   type MintBurnValuationTally,
 } from "@shared/lib/mint-burn-valuation";
-import type { MintBurnCoinFlow, MintBurnValuation } from "@shared/types/mint-burn";
-import { decodeMintBurnScanCoverage, prepareMintBurnScanCoverage, type MintBurnScanSegment } from "../../lib/mint-burn-pipeline/scan-coverage";
+import type { MintBurnCoinFlow, MintBurnValuation, MintBurnWatermark } from "@shared/types/mint-burn";
+import { decodeMintBurnScanCoverage, prepareMintBurnScanCoverage, mintBurnWindowAdmits, type MintBurnLegacySpan, type MintBurnScanSegment } from "../../lib/mint-burn-pipeline/scan-coverage";
 import { getLatestSuccessfulCronTimestampResult, type CronTimestampLookupResult } from "../../lib/api-freshness";
 import type { FlightToQualityClassification } from "../../lib/flight-to-quality-classification";
 import {
@@ -51,6 +51,7 @@ import {
   mintBurnHourlyWindow,
   readMintBurnCronSnapshotResult,
   selectLargestEvents,
+  readMintBurnWindowContext,
 } from "../../lib/mint-burn-flows-service";
 
 export const ACTIVE_MINT_BURN_CONFIGS = MINT_BURN_CONFIGS.filter((config) => ACTIVE_IDS.has(config.stablecoinId));
@@ -91,6 +92,8 @@ export interface AggregateData {
   freshnessLookupWarning: string | null;
   scanSegments: Map<string, MintBurnScanSegment[]>;
   windowEnd: number;
+  legacy: Map<string, MintBurnLegacySpan>;
+  watermark: MintBurnWatermark;
 }
 
 interface GroupedNetFlowRow extends MintBurnValuationTallyRow {
@@ -152,8 +155,13 @@ export function buildAggregateQueryParams(nowSec: number, hours: number): Aggreg
 
 export async function fetchAggregateData(
   db: D1Database,
-  params: AggregateQueryParams,
+  requestedParams: AggregateQueryParams,
 ): Promise<AggregateData> {
+  const { watermark, legacy } = await readMintBurnWindowContext(db, requestedParams.nowSec, ACTIVE_MINT_BURN_CONFIGS);
+  const params = buildAggregateQueryParams(
+    watermark.timestamp ?? requestedParams.windowEnd,
+    (requestedParams.windowEnd - requestedParams.windowStart) / 3600,
+  );
   const trackedPairs = getMintBurnTrackedPairs(ACTIVE_MINT_BURN_CONFIGS);
   const trackedPairsJson = JSON.stringify([...trackedPairs].map((pair) => pair.split("|")));
   const hourlyScanStart = Math.min(params.windowStart, params.window24h);
@@ -283,14 +291,19 @@ export async function fetchAggregateData(
     : null;
   const coverageMap = buildCoinCoverageMap(
     params.nowSec, scanSegments, lastBlocks, latestCronSnapshot.chainHeads,
-    latestCronSnapshotResult.error ? "cron-snapshot-unavailable" : null, ACTIVE_MINT_BURN_CONFIGS,
+    latestCronSnapshotResult.error ? "cron-snapshot-unavailable" : null, ACTIVE_MINT_BURN_CONFIGS, legacy, watermark,
   );
-  // Baseline denominators start at the first fully proven day, never at the first event.
+  // Only a continuous admitted suffix of complete UTC days enters the baseline.
   const baselineStarts: FirstSeenRow[] = [];
   for (const [stablecoinId, coverage] of coverageMap) {
-    if (coverage.historyStartAt != null) baselineStarts.push({
-      stablecoin_id: stablecoinId, chain_id: "", first_hour_ts: Math.ceil(coverage.historyStartAt / DAY_SECONDS) * DAY_SECONDS,
-    });
+    if (coverage.historyStartAt == null || watermark.unavailableReason) continue;
+    const configs = ACTIVE_MINT_BURN_CONFIGS.filter((config) => config.stablecoinId === stablecoinId);
+    let start = params.nowDayTs;
+    for (let day = params.nowDayTs - DAY_SECONDS; day >= params.baselineWindowStart; day -= DAY_SECONDS) {
+      if (!mintBurnWindowAdmits(configs, scanSegments, legacy, day, day + DAY_SECONDS)) break;
+      start = day;
+    }
+    if (start < params.nowDayTs) baselineStarts.push({ stablecoin_id: stablecoinId, chain_id: "", first_hour_ts: start });
   }
 
   return {
@@ -303,8 +316,10 @@ export async function fetchAggregateData(
     largestEventMap: selectLargestEvents(largestEventRows),
     coverageMap,
     scanSegments,
+    legacy,
+    watermark,
     windowEnd: params.windowEnd,
-    sync: buildMintBurnSyncHealth(params.nowSec, latestSuccessfulSyncAt, latestCronSnapshot.status),
+    sync: buildMintBurnSyncHealth(requestedParams.nowSec, latestSuccessfulSyncAt, latestCronSnapshot.status),
     latestSuccessfulSyncAt,
     freshnessLookup: latestSuccessfulSyncLookup,
     freshnessLookupWarning,

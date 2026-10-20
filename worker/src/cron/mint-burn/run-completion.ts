@@ -74,6 +74,8 @@ export async function completeMintBurnRun(input: CompleteMintBurnRunInput): Prom
     input.criticalContractsEnabled > 0 ? phase.criticalContractsSatisfied / input.criticalContractsEnabled : 1;
   const conservationFailures = phase.configBreakdown.filter((summary) => summary.conservationFailure).length;
   const conservationUnavailable = phase.configBreakdown.filter((summary) => summary.conservationStatus === "unavailable").length;
+  const scanCoverageUnproven = phase.configBreakdown.filter((summary) =>
+    summary.advanceReason === "scan-coverage-unproven").length;
   const finalityUnavailableChains = [...new Set(input.configs
     .filter((config) => !input.chainHeads.has(config.chain.chainId))
     .map((config) => config.chain.chainId))];
@@ -82,7 +84,7 @@ export async function completeMintBurnRun(input: CompleteMintBurnRunInput): Prom
   // 39–44 of 129 configs per run is healthy while the pass is still inside the
   // window. `cycle-in-progress` (no completed pass yet) stays neutral.
   const coverageCycleStalled = input.coverageCycle?.status === "stalled";
-  const degradedSignal = finalityUnavailableChains.length > 0 || conservationFailures > 0 || (
+  const degradedSignal = scanCoverageUnproven > 0 || finalityUnavailableChains.length > 0 || conservationFailures > 0 || (
     input.lane === "extended"
       ? phase.apiErrors > 1 || coverageCycleStalled
       : criticalCoverageRatio < 1 || phase.apiErrors > 1);
@@ -293,9 +295,12 @@ export async function completeMintBurnRun(input: CompleteMintBurnRunInput): Prom
       bridgeClassificationDeferredRows: summary.bridgeClassificationDeferredRows,
       requestBudgetUsed: summary.requestBudgetUsed,
       requestBudgetLimit: summary.requestBudgetLimit,
+      scanAttempts: summary.scanAttempts,
+      scanAttemptRanges: summary.scanAttemptRanges,
     }));
 
   const metadata = withBudgetMetadata(input.budget, {
+    scanCoverageUnproven,
     outputPublishedAt: status !== "error" && (
       phase.rowsInserted > 0
       || phase.configBreakdown.some((summary) =>

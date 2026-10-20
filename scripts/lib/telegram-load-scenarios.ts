@@ -18,10 +18,42 @@ import {
   TELEGRAM_TARGET_PLAN_ENQUEUE_PAGE_SIZE,
   TELEGRAM_TARGET_PLAN_HORIZON_PAGE_SIZE,
 } from "@shared/lib/telegram-delivery-policy";
-import { estimateTelegramQueueEnvelope } from "./telegram-recap-load-scenarios";
 type AlertType = "depeg" | "dews" | "safety" | "launch" | "reserve" | "freeze";
 type ScenarioId = "single-depeg" | "market-wide-burst" | "dews-safety-burst" | "freeze-event" | "admin-broadcast" | "telegram-429-storm";
 type SloStatus = "ok" | "slow" | "breach" | "outage-unavailable" | "exploratory";
+function ceilRuns(items: number, capacity: number): number {
+  return items <= 0 ? 0 : Math.ceil(items / capacity);
+}
+
+export function estimateTelegramQueueEnvelope(input: {
+  plannerRuns: number;
+  pendingEnqueued: number;
+  riskChunksAhead?: number;
+  outageUnavailableSeconds?: number;
+  minimumDeliverySeconds?: number;
+}): {
+  pendingDrainRuns: number;
+  planningSeconds: number;
+  deliverySeconds: number;
+  estimatedCompletionSeconds: number;
+} {
+  const pendingDrainRuns = ceilRuns(
+    (input.riskChunksAhead ?? 0) + input.pendingEnqueued,
+    TELEGRAM_PENDING_DRAIN_BUDGET,
+  );
+  const planningSeconds = input.plannerRuns * TELEGRAM_DISPATCH_INTERVAL_SEC;
+  const deliverySeconds = Math.max(
+    pendingDrainRuns * TELEGRAM_DISPATCH_INTERVAL_SEC,
+    input.minimumDeliverySeconds ?? 0,
+  );
+  return {
+    pendingDrainRuns,
+    planningSeconds,
+    deliverySeconds,
+    estimatedCompletionSeconds:
+      planningSeconds + deliverySeconds + (input.outageUnavailableSeconds ?? 0),
+  };
+}
 
 interface AlertFlags {
   depeg: boolean;

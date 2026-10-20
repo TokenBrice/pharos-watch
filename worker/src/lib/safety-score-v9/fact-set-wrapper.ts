@@ -811,11 +811,12 @@ function buildWrapperExitDimensions(
       routeEvidenceRefIds,
     );
   } else {
+    // Measurement/model certainty does not establish holder withdrawal terms.
+    // Actual access, discretionary execution, queue and fee restrictions remain priced.
     const termsRisk = knownRedemptionRoutes.map((route): V9WrapperRiskAssessment => {
       if (
         route.holderAccess === "issuer-only" ||
-        route.executionModel === "discretionary" ||
-        route.executionCertainty === "discretionary"
+        route.executionModel === "discretionary"
       ) {
         return "critical";
       }
@@ -825,8 +826,7 @@ function buildWrapperExitDimensions(
       if (
         route.holderAccess === "allowlisted" ||
         route.holderAccess === "institutional-eligible" ||
-        route.holderAccess === "verified-customer-neutral" ||
-        route.executionCertainty === "conditional"
+        route.holderAccess === "verified-customer-neutral"
       ) {
         return "moderate";
       }

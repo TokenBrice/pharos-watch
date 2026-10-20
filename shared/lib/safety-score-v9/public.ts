@@ -78,6 +78,7 @@ export interface V9PublicCardProjectionInput {
     }>>;
   };
   freshness?: Partial<Record<V9QualityPillar, SafetyScoreV9EvidenceFreshness>>;
+  dexObservedAtSec?: number | null;
   evidenceReasons?: readonly V9PillarReason[];
   reasonCodes?: readonly V9ReasonCode[];
 }
@@ -90,6 +91,7 @@ export interface BuildSafetyScoreV9ResponseArgs {
   /** A producer function hands the builder sole ownership of the returned array. */
   results: readonly V9PublicCardProjectionInput[] | (() => V9PublicCardProjectionInput[]);
   commonModeGroups?: readonly V9CommonModeGroup[];
+  dexMaxAgeSec?: number;
 }
 
 export interface V9ProjectedResponseArgs extends Omit<BuildSafetyScoreV9ResponseArgs, "results"> {
@@ -1297,11 +1299,13 @@ export function createSafetyScoreV9ResponseProjector(): V9PublicResponseProjecto
   const drafts = new Map<string, V9InternedPublicCardDraft>();
   const failures = new Map<string, z.core.$ZodIssue[]>();
   const commonModeResults: V9CommonModeProjectionResult[] = [];
+  const dexObservedAtSec = new Map<string, number | null>();
   return {
     project(input) {
       const { trace } = input;
       if (seen.has(trace.assetId)) throw new Error(`Duplicate Safety Score v9 result ${trace.assetId}`);
       seen.add(trace.assetId);
+      if (input.dexObservedAtSec !== undefined) dexObservedAtSec.set(trace.assetId, input.dexObservedAtSec);
       if (identity === null) {
         identity = {
           baseInputGenerationId: trace.baseInputGenerationId,
@@ -1385,6 +1389,13 @@ export function createSafetyScoreV9ResponseProjector(): V9PublicResponseProjecto
         },
         cards,
         foreignCauseGaps,
+        ...(args.dexMaxAgeSec === undefined ? {} : { pillarFreshness: {
+          dexMaxAgeSec: args.dexMaxAgeSec,
+          dexObservedAtSec: ids.map(id => {
+            if (!dexObservedAtSec.has(id)) throw new Error(`Missing DEX freshness clock for ${id}`);
+            return dexObservedAtSec.get(id)!;
+          }),
+        } }),
         ...(commonModeGroups === undefined ? {} : { commonModeGroups }),
       });
     },

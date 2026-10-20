@@ -22,7 +22,6 @@ import type {
   PendingDeadLetterReason,
 } from "./types";
 import { logTelegramEvent } from "../../../telegram/common/log";
-import { projectRecapPendingTerminalOutcome } from "./recap-terminal";
 import { recordTelegramJobTargetFinalDelivery } from "./telegram-alert-job-target-outcomes";
 import {
   persistPendingTerminalOutcomes,
@@ -99,18 +98,6 @@ export async function deadLetterAndDeleteTerminalPendingGroups(
         db,
         { pendingDedupeKey: row.dedupe_key, sourceEventId: row.source_event_id },
         { state: finalState, at: nowSec, error: row.last_error_class ?? group.reason },
-      );
-    }
-    const recapOutcome = group.reason === "preference_changed"
-      ? "cancelled"
-      : "failed_permanent";
-    for (const row of attemptedRows) {
-      await projectRecapPendingTerminalOutcome(
-        db,
-        row,
-        recapOutcome,
-        nowSec,
-        row.last_error_class ?? group.reason,
       );
     }
     const fencedRows = attemptedRows.filter((row) =>
