@@ -13,6 +13,9 @@ import { loadPublishedStressSignalGeneration } from "../../lib/stress-signals-cu
 import { handleStressSignals } from "../../api/stress-signals";
 import { loadPublicationHealth } from "../../lib/publication-contract";
 import { StressSignalsAllResponseSchema } from "@shared/types/market";
+import { computeLiquiditySignal, computeSupplySignal } from "../../lib/dews/signal-families";
+import { decodeLegacyStressSignals } from "../../lib/dews/source-state/legacy-bridge";
+import { makeDewsInput } from "../../lib/__tests__/dews.test-support";
 
 function buildDewsRow(stablecoinId: string, score = 12): DewsComputedRow {
   return {
@@ -108,6 +111,69 @@ async function observeDewsPublication(sqlite: DatabaseSync, db: D1Database, nowS
 }
 
 describe("persistDewsResults", () => {
+  it("roundtrips full, partial, unavailable and legacy-unknown composite coverage without rewriting history", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const nowSec = Math.floor(Date.now() / 1000);
+    const inputs = {
+      "usdt-tether": makeDewsInput({
+        mcapUsd: 1e9, circulatingCurrent: 95, circulatingPrevDay: 100, circulatingPrevWeek: 100,
+        liquidityScore: 80, liquidityScore7dAgo: 100, tvlCurrent: 75, tvl7dAgo: 100,
+      }),
+      "usdc-circle": makeDewsInput({
+        mcapUsd: 1e9, circulatingCurrent: 95, circulatingPrevDay: 100, circulatingPrevWeekAvailable: false,
+        liquidityScore: 80, liquidityScore7dAgo: null, tvlCurrent: 75, tvl7dAgo: 100,
+      }),
+      "dai-makerdao": makeDewsInput({
+        circulatingPrevDayAvailable: false, circulatingPrevWeekAvailable: false,
+        liquidityScore: 80, liquidityScore7dAgo: null, tvlCurrent: null, tvl7dAgo: null,
+      }),
+    };
+    const results: DewsComputedRow[] = Object.entries(inputs).map(([id, input]) => ({
+      ...buildDewsRow(id), signals: { supply: computeSupplySignal(input), liq: computeLiquiditySignal(input) },
+    }));
+    const legacy = buildDewsRow("usde-ethena");
+    legacy.signals = { supply: { value: 10, available: true }, liq: { value: 0, available: false } };
+    results.push(legacy);
+    const ids = new Set(results.map((row) => row.stablecoinId));
+    const expected = {
+      "usdt-tether": { supply: { componentCoverage: 1, delta1d: -5, delta7d: -5 }, liq: { value: 45, componentCoverage: 1 } },
+      "usdc-circle": {
+        supply: { value: 65, componentCoverage: 0.6, delta1d: -5, delta7d: null },
+        liq: { value: 40, componentCoverage: 0.5, scoreDelta7d: null, tvlDelta7d: -25 },
+      },
+      "dai-makerdao": {
+        supply: { available: false, componentCoverage: 0, delta1d: null, delta7d: null },
+        liq: { available: false, componentCoverage: 0, scoreDelta7d: null, tvlDelta7d: null },
+      },
+      "usde-ethena": legacy.signals,
+    };
+    try {
+      await persistDewsResults({ db, results, eligibleIds: ids, degradedSources: [], nowSec });
+      await reconcileDailyDewsHistorySnapshot(db, results, nowSec - 86_400);
+      for (const table of ["stress_signals", "stress_signals_latest", "stress_signal_publication_rows", "stress_signal_history"]) {
+        const rows = sqlite.prepare(`SELECT stablecoin_id, signals_json FROM ${table}`).all();
+        expect(rows).toHaveLength(4);
+        for (const row of rows) {
+          const decoded = decodeLegacyStressSignals(String(row.signals_json), nowSec);
+          expect(decoded.ok).toBe(true);
+          if (!decoded.ok) throw new Error(decoded.reason);
+          expect(decoded.payload).toMatchObject(expected[row.stablecoin_id as keyof typeof expected]);
+          if (row.stablecoin_id === "usde-ethena") {
+            expect(decoded.payload.supply).not.toHaveProperty("componentCoverage");
+            expect(decoded.payload.liq).not.toHaveProperty("componentCoverage");
+          }
+        }
+      }
+      const served = StressSignalsAllResponseSchema.parse(await (await handleStressSignals(db, new URL("https://x/api/stress-signals"))).json());
+      expect(served.signals["usdc-circle"]?.signals).toMatchObject(expected["usdc-circle"]);
+      const history = sqlite.prepare("SELECT * FROM stress_signal_history ORDER BY stablecoin_id").all();
+      await persistDewsResults({ db, results, eligibleIds: ids, degradedSources: [], nowSec: nowSec + 60 });
+      expect(sqlite.prepare("SELECT * FROM stress_signal_history ORDER BY stablecoin_id").all()).toEqual(history);
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it("updates every latest-row field in place while preserving publication and sparse history clocks", async () => {
     const { sqlite, db } = createLatestSchemaSqlite();
     const nowSec = Math.floor(Date.now() / 1000);

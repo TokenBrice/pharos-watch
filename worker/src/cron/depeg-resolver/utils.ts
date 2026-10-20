@@ -14,7 +14,7 @@ import {
 } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { isTerminalStablecoinStatus } from "@shared/lib/stablecoin-lifecycle";
 import type { DdrCanonicalIncident, DdrCanonicalIncidentInput, DdrDirection } from "../depeg-resolver-v2-contracts";
-import type { DdrEventDbRow } from "./types";
+import type { DdrEventDbRow, DdrStructuralContext } from "./types";
 
 type DdrRegistryMeta = Pick<WorkerRuntimeStablecoinMeta,
   "id" | "symbol" | "name" | "flags" | "status" | "mechanismArchetype" |
@@ -38,14 +38,6 @@ export interface DdrV9DependencyCard {
   } | null;
 }
 
-let v9DependencyImpairmentByCoin = new Map<string, boolean>();
-let v9MintPostureByCoin = new Map<string, string | null>();
-/**
- * Whether a V9 mint-posture projection was installed for this run. Needed to
- * tell "the publication says this asset has no band" from "there is no
- * publication", which `Map.get() ?? null` collapses.
- */
-let v9MintPostureProjectionInstalled = false;
 
 function hasFrozenOrDeadUpstream(card: DdrV9DependencyCard): boolean {
   return card.dependencies.serial.some((dependency) => {
@@ -59,23 +51,18 @@ function publishedMintPosture(card: DdrV9DependencyCard): string | null {
   return mint?.posture ?? null;
 }
 
-/** Install the current V9 serial dependency and mint-posture projection for this run. */
-export function hydrateV9DependencyImpairment(cards: readonly DdrV9DependencyCard[]): void {
-  v9DependencyImpairmentByCoin = new Map(cards.map((card) => [card.id, hasFrozenOrDeadUpstream(card)]));
-  v9MintPostureByCoin = new Map(cards.map((card) => [card.id, publishedMintPosture(card)]));
-  v9MintPostureProjectionInstalled = true;
+/** Project an admitted V9 publication without retaining run state in the isolate. */
+export function buildDdrStructuralContext(cards: readonly DdrV9DependencyCard[]): DdrStructuralContext {
+  return new Map(cards.map((card) => [card.id, {
+    dependencyImpaired: hasFrozenOrDeadUpstream(card),
+    mintPosture: publishedMintPosture(card),
+  }]));
 }
 
-/** Clear V9 dependency state before a run whose V9 publication is unavailable. */
-export function clearV9DependencyImpairment(): void {
-  v9DependencyImpairmentByCoin = new Map();
-  v9MintPostureByCoin = new Map();
-  v9MintPostureProjectionInstalled = false;
-}
-
-export function toStructural(meta: DdrRegistryMeta, dependencyImpaired?: boolean | null): DdrCoinStructural {
-  const v9DependencyImpaired = dependencyImpaired ?? v9DependencyImpairmentByCoin.get(meta.id);
-  const derivedPosture = v9MintPostureByCoin.get(meta.id);
+export function toStructural(meta: DdrRegistryMeta, context: DdrStructuralContext | null): DdrCoinStructural {
+  const projection = context?.get(meta.id);
+  const v9DependencyImpaired = projection?.dependencyImpaired;
+  const derivedPosture = projection?.mintPosture;
   // V9 proves absence on this token, not automatically on its upstream supply.
   const authorityPosture = derivedPosture === "none-resolved" && meta.mintAuthority?.authorityPosture !== "none-resolved"
     ? "none-resolved-mint"
@@ -100,7 +87,7 @@ export function toStructural(meta: DdrRegistryMeta, dependencyImpaired?: boolean
     // `dependencies` fallback below. A run *with* a projection keeps the
     // published answer verbatim, including a published "no band".
     mintAuthorityScoreBand: resolveV9MintPostureBand(derivedPosture)
-      ?? (v9MintPostureProjectionInstalled
+      ?? (context != null
         ? null
         : curatedMintPostureBand(meta.mintAuthority?.authorityPosture)),
     mintIncidents: meta.mintAuthority?.mintIncidents?.map((incident) => ({

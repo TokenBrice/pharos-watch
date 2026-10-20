@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import {
-  fetchEvmTokenBalance,
   fetchEvmTokenCurrentBalance,
   fetchTronTokenCurrentBalance,
 } from "../../../lib/blacklist/balance-providers";
@@ -141,21 +140,15 @@ describe("fetchEvmTokenCurrentBalance", () => {
 
     expect(amount).toBe(50);
   });
-});
 
-describe("fetchEvmTokenBalance", () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  it.each([0, 1, 2])("selects the first successful historical provider after %i failures", async (failures) => {
+  it.each([0, 1, 2])("selects the first successful current provider after %i failures", async (failures) => {
     const fetchMock = mockFetch([
       { match: "drpc.org", body: { result: failures > 0 ? null : "0x0f4240" } },
       { match: "chain-rpc.test", body: { result: failures > 1 ? null : "0x1e8480" } },
       { match: "etherscan.io", body: { result: "0x2dc6c0" } },
     ], { requireMatch: true });
-    const amount = await fetchEvmTokenBalance(
-      ethereumConfig, "0x0000000000000000000000000000000000000abc", 19000000,
+    const amount = await fetchEvmTokenCurrentBalance(
+      ethereumConfig, "0x0000000000000000000000000000000000000abc",
       "etherscan-key", "drpc-key", async (fn) => fn(), createBudget(10), undefined,
       chainRpcFixture(["https://chain-rpc.test"]),
     );
@@ -166,27 +159,8 @@ describe("fetchEvmTokenBalance", () => {
     );
     for (const request of history) {
       expect(request.body ? JSON.parse(request.body).params[1] : new URL(request.url).searchParams.get("tag"))
-        .toBe("0x121eac0");
+        .toBe("latest");
     }
   });
-
-  it("returns null when block number produces an invalid hex tag", async () => {
-    mockFetch([{
-      match: () => true,
-      body: { status: "1", message: "OK", result: "0x02faf080" },
-    }]);
-
-    const amount = await fetchEvmTokenBalance(
-      ethereumConfig,
-      "0x0000000000000000000000000000000000000abc",
-      -1, // produces blockTag "0x-1" -> parseInt("0x-1", 16) = NaN in fetchEvmBalanceAtTag
-      "test-key",
-      null, // no dRPC
-      async (fn) => fn(),
-      createBudget(10),
-    );
-
-    // Must be null — not a balance from "latest" block
-    expect(amount).toBeNull();
-  });
 });
+

@@ -6,7 +6,7 @@ Multi-chain blacklist/freeze event tracker for stablecoins. Every six hours, the
 
 ## Methodology And Ownership
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-blacklist-tracker -->`v4.5`<!-- GENERATED-END: methodology-version-blacklist-tracker -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-blacklist-tracker -->`v4.6`<!-- GENERATED-END: methodology-version-blacklist-tracker -->
 - **Version source:** `shared/lib/methodology-versions/registry.ts`
 - **Public changelog:** `/methodology/blacklist-tracker-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/blacklist-tracker/`
@@ -215,9 +215,9 @@ Current-balance cache telemetry preserves the canonical `skippedDueBudget` count
 
 ### Provider Paths
 
-- Etherscan v2 is an explorer source for supported EVM log scans and a best-effort final historical-call fallback.
+- Etherscan v2 is an explorer source for supported EVM log scans, emitted destroy-amount receipt recovery and a best-effort final current-balance fallback.
 - Base, Optimism, Avalanche, BSC, and Gnosis prefer chain RPC `eth_getLogs`; chain RPC configuration comes from `worker/src/lib/chain-registry.ts`.
-- Historical EVM balance lookup prefers dRPC when configured, then the shared chain RPC path, then best-effort Etherscan.
+- Current EVM balance snapshots prefer dRPC when configured, then the shared chain RPC path, then best-effort Etherscan. They never supply an amountless event's historical quantity.
 - Scheduled `logScanRpcEndpoints` puts Dwellir first on Gnosis (9,000-block pages; dRPC/public failover), Base/Optimism/Avalanche (10,000; Alchemy/public), independent of state placement. BSC is excluded. `DWELLIR_ROUTING_DISABLED_CHAINS` restores incumbents; mint/burn keeps Alchemy.
 - Ranges use the smaller caller/provider span; incumbent windows stay unchanged. Range errors (including HTTP-200 `-32005`) split serially within depth/call/deadline budgets; incomplete ranges cannot advance cursors. Log/timestamp/receipt reads use registered auth and meter Dwellir members/retries. Retained endpoints reject starts before `head - retainedBlocks`; zkSync stays excluded. Transaction-context singleton retries honor abort/deadline/budget, capped at eight/batch; failures stay unavailable.
 - Dwellir targets 100 serial log calls/config, up to 600 with ≥300 subrequests/≥240 s left in the shared 900-subrequest/10-minute budget (splits included). Reserve stops shorten targets, not coverage. Capacity: Gnosis 0.9–5.4M blocks/run; Base/Optimism/Avalanche 1–6M. Incumbent fallback spans: Base/Optimism Alchemy 500,000, public 50,000; Avalanche Alchemy 250,000, public eight ×2,000.
@@ -262,7 +262,8 @@ The durable rules are:
 
 1. Registry-defined topic/data/array/Tron fields determine decoding. Batch addresses expand to deterministic per-address rows; oversized batches are never truncated. Incomplete persistence withholds coverage beyond that block.
 2. Malformed required addresses, ABI booleans (only `0`/`1`), arrays or log identities are typed failures, never default freezes. The frontier holds before the failed block/millisecond for two distinct scans; a third scan may release it only after durable bounded evidence is written under `blacklist:decode-retry:<config>:<identity>`, without TTL. The record keeps the original reason, truncation flag and exhausted disposition; repeated observations in one run do not consume attempts. Valid empty arrays are complete. `decodeRetryCounts` reports retained per-config debt.
-3. Prefer an emitted destroy/seize amount; an amountless wipe requires proven `balanceOf` at the preceding block. Current Tron balances belong only to the freeze ledger, never event-time amounts.
+3. Prefer an emitted destroy/seize amount. A preceding-block `balanceOf` is not exact event-time evidence: earlier transfers or wipes in the same block can change the balance before the target log. Ingestion, scheduled recovery, admin remediation and history replay retain amountless EVM freezes/releases/wipes as unavailable (`event_time_unproven`) rather than promoting that approximation. A burn-shaped `Transfer` alone cannot supply a wipe quantity; receipt recovery requires one unambiguous emitted destroy amount for the affected address. Current Tron balances belong only to the freeze ledger, never event-time amounts.
+   Amountless EVM freezes/releases have no supported exact event-time recovery path: ingestion, scheduled repair and admin recovery mark them `permanently_unavailable` with `event_time_unproven`, and scheduled repair terminates their queue entries as `unrecoverable`. Missing destroy receipts remain `provider_failed`/retryable because the emitted-amount path can recover later. Neither outcome deletes the event or substitutes zero.
 4. Tron replay derives a freeze amount from complete confirmed signed token flows through the freeze millisecond. It requires the exact freeze receipt, unique composite transfer identities, no shared-millisecond transfer, and a complete ledger reconciling exactly with `balanceOf` reads bracketing the same solidified head. Negative freeze balances or duplicate records are rejected, even when offsetting duplicates leave the final balance unchanged. Writes require the amount still to be null and never overwrite snapshots or operator repairs.
 
 Transfer and quiet-settle windows must retain their filters, complete pagination and a minimum page response time at or after their proof boundary. A landing transfer or stale response is a state race, not a mismatch or counted attempt. TronGrid's [`meta.at`](https://developers.tron.network/reference/get-trc20-transaction-info-by-account-address) is a response timestamp, **not** indexed coverage: fresh timestamps and matching net flow cannot independently exclude omitted offsetting transfers; replay still trusts provider completeness.
@@ -286,7 +287,7 @@ For a bounded operator repair, `npx tsx worker/scripts/repair-tron-blacklist-amo
 Live repair requires `--execute --confirm repair-tron-blacklist-amounts`. The command captures a fresh Time Travel bookmark and uses one atomic D1 SQL import for the row-count guard, audit, exact-null event updates, and canonical derived-cache invalidation. Reconstructed values are marked `amount_source=derived`, with the immutable evidence SHA-256 in provenance and `admin_action_audit`. It does not overwrite existing amounts or change current balances, cursors, thresholds, or health checks. Re-running against resolved rows refuses mutation; preserve the evidence file with the audit/bookmark for review. Use this path for rows the scheduled replay refuses — a ledger that never reconciles, a history longer than the replay page cap, or a shared-millisecond transfer — and never as a substitute for the scheduled lane.
 
 5. Non-USD event valuation requires a historically attributed quote for that event, not the repair-time `price_cache` quote. The ingestion and automated/manual recovery lanes currently have no such historical quote source: they recover native amounts but retain null event-time USD. Fresh coin-specific quotes remain valid for current-balance observations only.
-6. Circle mirror actions can produce auditable zero-balance EURC rows. `circle_mirror_zero_balance` rows remain stored but are excluded from public events, active records, and frozen-value aggregates.
+6. Circle mirror actions can produce auditable zero-balance EURC rows. Mirror suppression requires an emitted event-time zero (`amount_source=event`), never a preceding-block, current-balance or legacy-derived zero. `circle_mirror_zero_balance` rows remain stored but are excluded from public events, active records, and frozen-value aggregates.
 7. Seize-only BUIDL coverage records destroy events; it does not create an active blacklist/freeze state.
 
 PAXG Ethereum scans both historical `AddressFrozen` / `AddressUnfrozen` and current
@@ -334,6 +335,8 @@ Canonical repair eligibility ignores legacy `amount`; exact identity, canonical-
 
 Scheduled EVM recovery and admin remediation compare the selected canonical amount, source/status, attempt generation, contract/config identity and evidence provenance before writing either success or failure. Suppressed rows are ineligible. A concurrent operator repair wins without losing its amount or provenance. This exact-state guard permits reviewed legacy-derived-zero retries and provenance-only repairs; a blanket null-amount guard would strand those candidates.
 
+The event-position admission rule does not rewrite existing resolved amounts or blindly unsuppress historical mirror rows. Re-review previously suppressed/approximated rows only with sufficient ordered same-block evidence; a preceding-block zero alone cannot establish either an empty freeze or a mirror action. Current-balance snapshots remain a separate observation and continue to be read normally.
+
 Before any column drop, reconcile/export legacy-only identity/value tuples, obtain external SQL/schema-owner signoff, retain a durable R2 export indefinitely and record a pre-window Time Travel bookmark. The compatible tool/Worker release must establish the rollback floor and pass its first six-hourly sync/API soak. DROP or a rehearsed identity/default/index/FK/repair-queue-preserving rebuild is a separate destructive release, not part of this cutover. Post-drop rollback requires compatible tools or verified schema/data restoration; Worker rollback alone cannot restore the column.
 
 Normal EVM row identity is `{chainId}-{lowercaseTxHash}-{minimalHexLogIndex}`; expanded arrays retain numeric element suffixes. An indexed semantic identity also admits retained decimal/padded-hex spellings without inserting another event generation. The shared public-event predicate excludes equivalent duplicates immediately; reconciliation retains redundant history as `duplicate_log_identity` audit rows without changing event IDs or repair-queue references.
@@ -346,10 +349,10 @@ Tron ingestion, existing-row folds and snapshot keys use validated lowercase `0x
 
 `identity-reconciliation.ts` runs before summary materialization, paging at most 100 events and 100 Tron snapshots with durable keyset cursors. Each call reads two cursors, two indexed pages and at most 100 bounded alias sets; `0267` indexes avoid inventory rescans. Only changed addresses, newly suppressed duplicates or unconsolidated snapshots write rows; cursors still wrap to catch operator imports. Public folds remain canonical during cutover.
 
-Active ingestion uses these amount-source meanings:
+Canonical event rows retain these amount-source meanings:
 
 - `event`: amount emitted by the event.
-- `historical_balance`: amount proven by a historical balance read.
+- `historical_balance`: retained legacy balance-read attribution; no new amount is admitted from a preceding-block read without ordered event-position proof.
 - `unavailable`: no defensible amount.
 
 `current_balance_snapshot` is retained for legacy read compatibility only. Current snapshots live in `blacklist_current_balances` and are never written into event-time columns.

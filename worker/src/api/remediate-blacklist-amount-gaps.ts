@@ -17,12 +17,12 @@ import {
   type ContractEventConfig,
 } from "../lib/blacklist-contracts";
 import { createBudget, createRateLimiter } from "../lib/evm-logs";
-import type { ChainRpcConfig } from "../lib/chain-registry";
 import { recoverBlacklistAmountForRow } from "../lib/blacklist/amount-recovery";
 import {
   buildBlacklistAmountAttemptUpdate, buildRecoveredBlacklistAmountPersistence,
   type BlacklistAmountSelectedState,
 } from "../lib/blacklist/amount-persistence";
+import { buildBlacklistAmountRepairQueueUpdate } from "../lib/blacklist/amount-repair-queue";
 import {
   blacklistRuntimeBudgetReached,
   blacklistSubrequestBudgetReached,
@@ -78,14 +78,12 @@ export interface RemediateBlacklistAmountGapsRouteContext {
   db: D1Database;
   url: URL;
   request?: Request;
-  chainRpcs?: Map<string, ChainRpcConfig>;
 }
 
 export async function handleRemediateBlacklistAmountGapsTrusted({
   db,
   url,
   request,
-  chainRpcs,
 }: RemediateBlacklistAmountGapsRouteContext): Promise<Response> {
   return runTrustedAdminMutation(async () => {
     const body = await parseOptionalRequestJsonObject(request);
@@ -211,10 +209,6 @@ export async function handleRemediateBlacklistAmountGapsTrusted({
       });
     }
 
-    if (!chainRpcs) {
-      return errorResponse(500, "chainRpcs are unavailable");
-    }
-
     const budget = createBudget(900);
     const limiter = createRateLimiter(4);
     const runBudget = {
@@ -223,7 +217,7 @@ export async function handleRemediateBlacklistAmountGapsTrusted({
       minimumConfigWindowMs: 0,
     } satisfies BlacklistRunBudget;
     const updates: D1PreparedStatement[] = [];
-    const outcomes: Array<"resolved" | "providerFailed" | "configMissing" | "configAmbiguous"> = [];
+    const outcomes: Array<"resolved" | "providerFailed" | "configMissing" | "configAmbiguous" | null> = [];
     const zeroAmounts: boolean[] = [];
     const attemptAt = Math.floor(Date.now() / 1000);
     let resolved = 0;
@@ -235,7 +229,8 @@ export async function handleRemediateBlacklistAmountGapsTrusted({
     let skippedDueBudget = 0;
 
     for (let index = 0; index < candidates.length; index++) {
-      if (blacklistRuntimeBudgetReached(runBudget) || blacklistSubrequestBudgetReached(runBudget)) {
+      if (blacklistRuntimeBudgetReached(runBudget) || blacklistSubrequestBudgetReached(runBudget)
+        || updates.length + 2 > D1_BATCH_SIZE) {
         budgetExhausted = true;
         skippedDueBudget = candidates.length - index;
         break;
@@ -260,10 +255,8 @@ export async function handleRemediateBlacklistAmountGapsTrusted({
       const { row, config } = candidate;
       const recovery = await recoverBlacklistAmountForRow(row, config, {
         etherscanApiKey: null,
-        drpcApiKey: null,
         etherscanLimiter: limiter,
         runBudget,
-        chainRpcs,
       });
 
       if (recovery.amount == null) {
@@ -278,6 +271,14 @@ export async function handleRemediateBlacklistAmountGapsTrusted({
             amountStatus: recovery.amountStatus,
           }, { selectedState: row }),
         );
+        if (recovery.amountStatus === "permanently_unavailable") {
+          updates.push(buildBlacklistAmountRepairQueueUpdate(db, {
+            eventId: row.id, outcome: "unrecoverable", attemptedAt: attemptAt,
+            priorAttempts: 0, errorClass: recovery.lastErrorClass, requireChangedEvent: true,
+          }));
+          outcomes.push(null);
+          zeroAmounts.push(false);
+        }
         continue;
       }
 
@@ -291,7 +292,7 @@ export async function handleRemediateBlacklistAmountGapsTrusted({
           amount: recovery.amount,
           amountUsd: recovery.amountUsd,
           amountSource: recovery.amountSource,
-          amountStatus: recovery.amountStatus,
+          amountStatus: "resolved",
           attemptedAt: attemptAt,
           lastErrorClass: recovery.lastErrorClass,
           lastProvider: recovery.lastProvider,
@@ -306,7 +307,7 @@ export async function handleRemediateBlacklistAmountGapsTrusted({
       // from that record. A chunked write that failed after an earlier chunk committed
       // would therefore strand partial status/attempt mutations behind stale derived
       // caches, with no retry path to finish the job. Write-mode candidates are capped at
-      // D1_BATCH_SIZE above so the whole set always fits one transaction.
+      // D1_BATCH_SIZE above and the per-candidate statement guard keep this one transaction.
       const results = await executeAtomicBatch(db, updates, { returnResults: true });
       for (const [index, result] of results.entries()) {
         if (Number(result.meta?.changes ?? 0) === 0) continue;

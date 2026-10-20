@@ -51,7 +51,7 @@ function ReceiptValue({ row }: { row: FlowPressureReceiptRow }) {
   if (row.valueUsd === null) return <span className={cn(className, "text-muted-foreground")}>NR</span>;
   return (
     <span className={cn(className, "text-foreground")} title={row.note ?? undefined}>
-      {formatMintBurnVolume(row.valueUsd, row.completeness, formatCurrency)}
+      {formatMintBurnVolume(row.valueUsd, row.completeness, formatCurrency, row.scanComplete)}
       {row.note ? <span className="sr-only"> ({row.note})</span> : null}
     </span>
   );

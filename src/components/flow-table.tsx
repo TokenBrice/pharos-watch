@@ -37,7 +37,7 @@ import {
 import { MethodologyHint } from "@/components/methodology-hint";
 import { OpsStatusChip } from "@/components/ops-status-chip";
 import { FlowSignedNetValue, FlowVolumeValue } from "@/components/flow-valuation-value";
-import { inferHas24hActivity, resolveCoinNetFlow, type MintBurnNetWindow } from "@shared/lib/mint-burn-coin-helpers";
+import { hasCompleteCoinScan, inferHas24hActivity, resolveCoinNetFlow, type MintBurnNetWindow } from "@shared/lib/mint-burn-coin-helpers";
 import { RUN_LINE_EXCLUSION_LABELS, resolveRunLineExclusionReason } from "@/lib/flow-run-line-model";
 import type { MintBurnSignedNetView } from "@shared/lib/mint-burn-valuation-display";
 import { stablecoinLabel } from "@/lib/stablecoin-label";
@@ -303,6 +303,7 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
                     valueUsd={coin.mintVolume24hUsd}
                     completeness={window24h.mintCompleteness}
                     unpricedEventCount={window24h.unpricedMintEventCount}
+                    scanComplete={hasCompleteCoinScan(coin, "24h")}
                     format={formatCurrency}
                   />
                 </TableCell>
@@ -311,6 +312,7 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
                     valueUsd={coin.burnVolume24hUsd}
                     completeness={window24h.burnCompleteness}
                     unpricedEventCount={window24h.unpricedBurnEventCount}
+                    scanComplete={hasCompleteCoinScan(coin, "24h")}
                     format={formatCurrency}
                   />
                 </TableCell>

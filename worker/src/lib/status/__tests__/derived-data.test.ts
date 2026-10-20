@@ -9,6 +9,7 @@ import { makeWorkerReportCardsV9Response } from "../../../test-helpers/report-ca
 import { DatasetFreshnessSchema } from "@shared/types/status/core";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { getDatasetFreshness, getMintBurnReconciliation } from "../derived-data";
+import { makeMintBurnScanSegments } from "../../../test-helpers/__shared/mint-burn";
 
 const NOW = 1_800_000_000;
 
@@ -46,7 +47,7 @@ async function reconcile(options: {
     configs.map((config, index) => [conservationModule.mintBurnConservationCacheKey(config), records[index]]),
   ));
   const db = mockD1([
-    { match: "pharos:status-derived:mint-burn-first-hour-seek", rows: [] },
+    { match: "pharos:mint-burn-scan-coverage:read", rows: makeMintBurnScanSegments(Math.floor(NOW / 3600) * 3600) },
     { match: "FROM mint_burn_sync_state", rows: options.coverage === "missing-cursor" ? [] : MINT_BURN_CONFIGS.map((config) => ({
       config_key: `${config.chain.chainId}-${config.contractAddress}`, last_block: LAST_BLOCK_BY_COVERAGE[options.coverage ?? ""] ?? 99_999_999,
     })) },

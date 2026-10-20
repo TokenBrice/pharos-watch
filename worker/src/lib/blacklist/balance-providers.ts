@@ -148,61 +148,6 @@ async function fetchBalanceViaChainRpc(
   return null;
 }
 
-export async function fetchEvmTokenBalance(
-  config: ContractEventConfig,
-  address: string,
-  blockNumber: number,
-  etherscanApiKey: string | null,
-  drpcApiKey: string | null,
-  rateLimit: RateLimitedFetch,
-  budget: SubrequestBudget,
-  signal?: AbortSignal,
-  chainRpcs?: Map<string, ChainRpcConfig>,
-): Promise<number | null> {
-  // All EVM chains share the same fallback chain: dRPC -> chain-RPC -> Etherscan.
-  throwIfAborted(signal);
-  if (drpcApiKey) {
-    const drpcAmount = await fetchBalanceViaDrpc(
-      config.chain.chainId,
-      config.contractAddress,
-      address,
-      blockNumber,
-      drpcApiKey,
-      config.decimals,
-      budget,
-      signal,
-    );
-    throwIfAborted(signal);
-    if (drpcAmount != null) return drpcAmount;
-  }
-
-  const rpcAmount = await fetchBalanceViaChainRpc(
-    config.chain.chainId,
-    config.contractAddress,
-    address,
-    blockNumber,
-    config.decimals,
-    budget,
-    signal,
-    chainRpcs,
-  );
-  throwIfAborted(signal);
-  if (rpcAmount != null) return rpcAmount;
-
-  // Etherscan is the last-resort fallback for all chains.
-  const blockTag = "0x" + blockNumber.toString(16);
-  return fetchEvmBalanceAtTag(
-    config.chain.evmChainId!,
-    config.contractAddress,
-    address,
-    blockTag,
-    etherscanApiKey,
-    rateLimit,
-    config.decimals,
-    budget,
-    signal,
-  );
-}
 
 export async function fetchEvmTokenCurrentBalance(
   config: ContractEventConfig,
@@ -216,8 +161,7 @@ export async function fetchEvmTokenCurrentBalance(
 ): Promise<number | null> {
   if (config.chain.evmChainId == null) return null;
 
-  // Mirror fetchEvmTokenBalance: dRPC -> chain-RPC -> Etherscan, so current-balance
-  // snapshots use the same primary provider as the historical path when dRPC is configured.
+  // Current snapshots retain the incumbent dRPC -> chain-RPC -> Etherscan fallback.
   if (drpcApiKey) {
     const drpcAmount = await fetchBalanceViaDrpc(
       config.chain.chainId,

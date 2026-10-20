@@ -10,7 +10,7 @@ import {
   combineMintBurnValuationCompleteness,
   resolveMintBurnValuationCompleteness,
 } from "@shared/lib/mint-burn-valuation";
-import { aggregateCoinFlows24h, resolveCoinNetFlow } from "@shared/lib/mint-burn-coin-helpers";
+import { aggregateCoinFlows24h, hasCompleteCoinScan, resolveCoinNetFlow } from "@shared/lib/mint-burn-coin-helpers";
 import { describeMintBurnVolumeBound, sumMintBurnSignedNets } from "@shared/lib/mint-burn-valuation-display";
 
 export type FlowReceiptTone = "mint" | "burn" | "net" | "scope";
@@ -29,6 +29,8 @@ export interface FlowPressureReceiptRow {
   detail: string;
   /** Valuation completeness; non-complete volumes are lower bounds, non-complete nets carry `note`. */
   completeness: MintBurnValuationCompleteness;
+  /** Scan completeness is separate from USD valuation completeness. */
+  scanComplete?: boolean;
   /** Accessible reason for a lower bound, unavailable net, or unknown coverage; `null` when complete. */
   note: string | null;
   /** Proven one-sided bound on an unavailable net row. */
@@ -117,6 +119,8 @@ export function buildFlowPressureReceiptModel({
   const weeklyCompleteness = combineMintBurnValuationCompleteness(
     ...(weeklyHourly ?? []).map((bucket) => resolveMintBurnValuationCompleteness(bucket.valuation)),
   );
+  const weeklyScanComplete = coins.every((coin) => hasCompleteCoinScan(coin, "7d"))
+    && (weeklyHourly ?? []).every((bucket) => bucket.scanCoverage?.complete !== false);
 
   const mint7dUsd = sumWeekly(weeklyHourly, "mintVolumeUsd");
   const burn7dUsd = sumWeekly(weeklyHourly, "burnVolumeUsd");
@@ -153,7 +157,8 @@ export function buildFlowPressureReceiptModel({
         tone: "mint",
         detail: "Tracked mints",
         completeness: aggregate.mintCompleteness,
-        note: describeMintBurnVolumeBound(aggregate.mintCompleteness, aggregate.unpricedMintEventCount),
+        scanComplete: aggregate.scanComplete,
+        note: describeMintBurnVolumeBound(aggregate.mintCompleteness, aggregate.unpricedMintEventCount, aggregate.scanComplete),
       },
       {
         id: "burn-24h",
@@ -162,7 +167,8 @@ export function buildFlowPressureReceiptModel({
         tone: "burn",
         detail: "Tracked burns",
         completeness: aggregate.burnCompleteness,
-        note: describeMintBurnVolumeBound(aggregate.burnCompleteness, aggregate.unpricedBurnEventCount),
+        scanComplete: aggregate.scanComplete,
+        note: describeMintBurnVolumeBound(aggregate.burnCompleteness, aggregate.unpricedBurnEventCount, aggregate.scanComplete),
       },
       {
         id: "net-24h",
@@ -181,7 +187,8 @@ export function buildFlowPressureReceiptModel({
         tone: "mint",
         detail: "Hourly covered window",
         completeness: weeklyCompleteness,
-        note: mint7dUsd == null ? null : describeMintBurnVolumeBound(weeklyCompleteness),
+        scanComplete: weeklyScanComplete,
+        note: mint7dUsd == null ? null : describeMintBurnVolumeBound(weeklyCompleteness, null, weeklyScanComplete),
       },
       {
         id: "burn-7d",
@@ -190,7 +197,8 @@ export function buildFlowPressureReceiptModel({
         tone: "burn",
         detail: "Hourly covered window",
         completeness: weeklyCompleteness,
-        note: burn7dUsd == null ? null : describeMintBurnVolumeBound(weeklyCompleteness),
+        scanComplete: weeklyScanComplete,
+        note: burn7dUsd == null ? null : describeMintBurnVolumeBound(weeklyCompleteness, null, weeklyScanComplete),
       },
       {
         id: "net-7d",

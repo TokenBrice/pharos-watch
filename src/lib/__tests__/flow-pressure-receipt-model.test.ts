@@ -194,4 +194,26 @@ describe("buildFlowPressureReceiptModel", () => {
     expect(model.burn24hUsd).toBe(5);
     expect(model.rows.find((row) => row.id === "net-24h")?.bound).toBeNull();
   });
+  it.each([0, 100])("keeps scan completeness independent for fully valued gross subtotals (%i)", (volume) => {
+    const incomplete = { complete: false, unavailableReason: "scan-coverage-incomplete" as const };
+    const model = buildFlowPressureReceiptModel({
+      gauge: null,
+      coins: [makeCoin({
+        has24hActivity: null, observed24hActivity: volume > 0,
+        mintVolume24hUsd: volume, burnVolume24hUsd: 0,
+        netFlow24hUsd: null, netFlow7dUsd: null,
+        totalsSemantics: "observed-subtotals",
+        valuation: completeValuation(),
+        coverage: makeCoverage({ has24hWindow: false, windows: {
+          window24h: incomplete, window7d: incomplete, window30d: incomplete, window90d: incomplete,
+        } }),
+      })],
+      weeklyHourly: [{ hourTs: 1, mintVolumeUsd: volume, burnVolumeUsd: 0, netFlowUsd: null,
+        valuation: "complete", scanCoverage: incomplete }],
+    });
+    for (const row of model.rows.filter((row) => row.tone === "mint" || row.tone === "burn")) {
+      expect(row).toMatchObject({ completeness: "complete", scanComplete: false,
+        note: "Observed subtotal, lower bound: scan coverage incomplete" });
+    }
+  });
 });

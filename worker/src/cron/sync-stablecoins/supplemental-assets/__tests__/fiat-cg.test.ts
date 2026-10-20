@@ -65,6 +65,15 @@ vi.mock("@shared/lib/stablecoins/registry", () => mockRegistry({
       contracts: [{ chain: "ethereum", address: "0xc26a6fa2c37b38e549a4a1807543801db684f99c", decimals: 18 }],
       flags: { pegCurrency: "USD", backing: "rwa-backed", governance: "centralized-dependent", yieldBearing: true, navToken: true },
     },
+    {
+      id: "zsd-zephyr-protocol", name: "Zephyr Stable Dollar", symbol: "ZSD",
+      geckoId: "zephyr-protocol-stable-dollar", detailProvider: "coingecko",
+      flags: { pegCurrency: "USD", backing: "crypto-backed", governance: "decentralized", yieldBearing: false, navToken: false },
+    },
+    {
+      id: "zys-zephyr-protocol", name: "Zephyr Yield Share", symbol: "ZYS", detailProvider: "coingecko",
+      flags: { pegCurrency: "USD", backing: "crypto-backed", governance: "decentralized", yieldBearing: true, navToken: true },
+    },
   ],
 }));
 
@@ -89,6 +98,9 @@ vi.mock("../../../../lib/authoritative-price-sources", () => ({
 }));
 
 import { fetchFiatCoinGeckoTokens } from "../fiat-cg";
+import { applyConsensusResults, createValidationContextResolver } from "../../pricing";
+import { normalizeStablecoinsPayload } from "../../shared";
+import { validatePublishedAssetPrice } from "../../../../lib/price-publish-policy";
 
 describe("fetchFiatCoinGeckoTokens", () => {
   beforeEach(() => {
@@ -304,5 +316,69 @@ describe("fetchFiatCoinGeckoTokens", () => {
     expect(result).toEqual([]);
     expect(resolveVaultNavSupplyPriceMock.mock.calls.filter(([id]) => id === "susds-sky")).toHaveLength(1);
     expect(resolveVaultNavSupplyPriceMock.mock.calls.filter(([id]) => id === "aa-falconx-mev-capital")).toHaveLength(1);
+  });
+
+  it.each([
+    ["stale", -14_401], ["future", 601], ["invalid", "not-a-clock"], ["null", null],
+  ])("cannot publish a %s scanner quote through supplemental intake and consensus carry", async (_label, clock) => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    fetchWithRetryMock.mockImplementation(async (url) => Response.json(
+      String(url).includes("/livestats")
+        ? {
+          zsd_circ: 1_000, zsd_price: 1.003, zys_circ: 200, zys_price: 1.9,
+          block_timestamp: typeof clock === "number" ? nowSec + clock : clock,
+        }
+        : { coins: {} },
+    ));
+    const assets = normalizeStablecoinsPayload({
+      peggedAssets: await fetchFiatCoinGeckoTokens({}),
+    }).peggedAssets;
+    const validationContexts = createValidationContextResolver();
+    applyConsensusResults({
+      assets, primaryPriceResults: new Map(), validationContexts, syncStartSec: nowSec, reason: "primary",
+    });
+    const zsd = assets.find((asset) => asset.id === "zsd-zephyr-protocol")!;
+    expect(zsd).toMatchObject({
+      price: null, priceConfidence: null, priceObservedAt: null, priceUpdatedAt: null,
+      priceSyncedAt: null, supplyObservedAt: null, circulating: { peggedUSD: 1_000 },
+    });
+    expect(validatePublishedAssetPrice({ asset: zsd, validationContext: validationContexts.get(zsd) }).accepted).toBe(false);
+    expect(assets.some((asset) => asset.id === "zys-zephyr-protocol")).toBe(false);
+  });
+
+  it.each(["fresh", "undated", "preferred"] as const)("retains the %s price lane through supplemental publication", async (lane) => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const observedAt = nowSec - 60;
+    fetchWithRetryMock.mockImplementation(async (url) => Response.json(
+      String(url).includes("/livestats")
+        ? {
+          zsd_circ: 1_000, zsd_price: 1.003, zys_circ: 200, zys_price: 1.9,
+          ...(lane === "undated" ? {} : { block_timestamp: lane === "preferred" ? nowSec - 14_401 : observedAt }),
+        }
+        : { coins: {} },
+    ));
+    const assets = normalizeStablecoinsPayload({
+      peggedAssets: await fetchFiatCoinGeckoTokens(lane === "preferred" ? {
+        "zephyr-protocol-stable-dollar": { usd: 0.998, last_updated_at: observedAt },
+      } : {}),
+    }).peggedAssets;
+    const validationContexts = createValidationContextResolver();
+    applyConsensusResults({
+      assets, primaryPriceResults: new Map(), validationContexts, syncStartSec: nowSec, reason: "primary",
+    });
+    const zsd = assets.find((asset) => asset.id === "zsd-zephyr-protocol")!;
+    expect(zsd).toMatchObject({
+      price: lane === "preferred" ? 0.998 : 1.003,
+      priceSource: lane === "preferred" ? "coingecko" : "zephyr-scanner",
+      priceObservedAt: lane === "undated" ? null : observedAt,
+      priceObservedAtMode: lane === "undated" ? null : "upstream",
+      circulating: { peggedUSD: lane === "preferred" ? 998 : 1_000 },
+    });
+    expect(validatePublishedAssetPrice({ asset: zsd, validationContext: validationContexts.get(zsd) }).accepted).toBe(true);
+    if (lane !== "preferred") {
+      expect(assets.find((asset) => asset.id === "zys-zephyr-protocol")).toMatchObject({
+        price: 1.9, priceObservedAt: lane === "undated" ? null : observedAt, circulating: { peggedUSD: 380 },
+      });
+    }
   });
 });

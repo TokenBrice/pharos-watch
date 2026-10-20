@@ -154,7 +154,7 @@ describe("configured blacklist history replay", () => {
     const audit = fixture.sqlite.prepare("SELECT details_json FROM admin_action_audit").get() as { details_json: string };
     const evidence = JSON.parse(audit.details_json).evidence;
     expect(evidence.currentHead).toEqual({ number: "0x12c", hash: HASH, timestamp: `0x${NOW.toString(16)}` });
-    expect(evidence.observations).toHaveLength(2);
+    expect(evidence.observations).toHaveLength(1);
     for (const observation of evidence.observations) {
       expect(Object.keys(observation.block).sort()).toEqual(["hash", "number", "timestamp"]);
     }
@@ -173,7 +173,7 @@ describe("configured blacklist history replay", () => {
     expect(fixture.sqlite.prepare("SELECT amount_native,status FROM blacklist_current_balances").get())
       .toEqual({ amount_native: null, status: "provider_failed" });
   });
-  it("uses real RPC envelopes and distinct hash-pinned historical/current balance observations", async () => {
+  it("uses real RPC envelopes for current snapshots without admitting block-before state as event amounts", async () => {
     const fixture = setup();
     fixture.dependencies.rpc = undefined;
     const calls: Array<{ method: string; params: unknown[] }> = [];
@@ -188,40 +188,38 @@ describe("configured blacklist history replay", () => {
         timestamp: `0x${NOW.toString(16)}`,
       };
       else if (request.method === "eth_call") {
-        result = `0x${(calls.filter((call) => call.method === "eth_call").length === 1 ? 5_000_000n : 42_000_000n).toString(16).padStart(64, "0")}`;
+        result = `0x${(42_000_000n).toString(16).padStart(64, "0")}`;
       } else throw new Error(`Unexpected RPC ${request.method}`);
       return new Response(JSON.stringify({ jsonrpc: "2.0", id: request.id, result }), { status: 200 });
     }));
     await fixture.execute();
     expect(fixture.sqlite.prepare("SELECT amount_native,amount_source FROM blacklist_events").get())
-      .toEqual({ amount_native: 5, amount_source: "historical_balance" });
+      .toEqual({ amount_native: null, amount_source: "unavailable" });
     expect(fixture.sqlite.prepare("SELECT amount_native,source FROM blacklist_current_balances").get())
       .toEqual({ amount_native: 42, source: "current_balance" });
     expect(calls.filter((call) => call.method === "eth_getBlockByNumber").map((call) => call.params[0]))
-      .toEqual(["0x6d", "latest"]);
+      .toEqual(["latest"]);
     expect(calls.filter((call) => call.method === "eth_call").map((call) => call.params[1])).toEqual([
-      { blockHash: HASH, requireCanonical: true },
       { blockHash: `0x${"b".repeat(64)}`, requireCanonical: true },
     ]);
   });
-  it("retains PAXG's proven pre-freeze native amount after an observed frozen zero without inventing historical USD", async () => {
+  it("does not substitute an unproved pre-freeze PAXG amount after an observed frozen zero", async () => {
     const fixture = setup();
     const paxg = getBlacklistConfigsForSymbolAndChain("PAXG", "ethereum")[0]!;
     fixture.sqlite.prepare("INSERT OR REPLACE INTO blacklist_sync_state(config_key,last_block,cursor_kind,cursor_value) VALUES (?,200,'evm_block',200)").run(paxg.configKey);
     const freeze = { ...log(), address: paxg.contractAddress,
       topics: [paxg.events.find((event) => event.signature === "FreezeAddress(address)")!.topicHash, log().topics[1]] };
     fixture.dependencies.loadLogs = async () => ({ logs: [freeze], timestamps: new Map([[110, NOW - 100]]) });
-    let balanceReads = 0;
     fixture.dependencies.rpc = async (method, params) => {
       if (method === "eth_chainId") return "0x1";
-      if (method === "eth_call") return `0x${(balanceReads++ === 0 ? 2n * 10n ** 18n : 0n).toString(16).padStart(64, "0")}`;
+      if (method === "eth_call") return `0x${"0".repeat(64)}`;
       return fixture.rpc(method, params);
     };
     await runConfigHistoryReplay({ ...fixture.options, configKey: paxg.configKey, apply: true }, fixture.dependencies);
     expect(fixture.sqlite.prepare("SELECT amount_native,amount_usd_at_event,amount_source FROM blacklist_events").get())
-      .toEqual({ amount_native: 2, amount_usd_at_event: null, amount_source: "historical_balance" });
+      .toEqual({ amount_native: null, amount_usd_at_event: null, amount_source: "unavailable" });
     expect(fixture.sqlite.prepare("SELECT amount_native,amount_usd,source,config_key FROM blacklist_current_balances").get())
-      .toEqual({ amount_native: 2, amount_usd: null, source: "gold_event_zero_balance", config_key: paxg.configKey });
+      .toEqual({ amount_native: 0, amount_usd: null, source: "current_balance", config_key: paxg.configKey });
   });
   it("folds later lifecycle history outside the replay window before rebuilding balances", async () => {
     const fixture = setup();
@@ -230,7 +228,7 @@ describe("configured blacklist history replay", () => {
     expect(fixture.sqlite.prepare("SELECT amount_native,source FROM blacklist_current_balances").get())
       .toEqual({ amount_native: 12.5, source: "destroy_event" });
   });
-  it("suppresses EURC mirror-zero events exactly like scheduled ingestion without capturing a balance", async () => {
+  it.each([0, 42])("retains EURC freezes when only a current balance of %s is observed", async (currentBalance) => {
     const fixture = setup();
     const eurc = getBlacklistConfigsForSymbolAndChain("EURC", "ethereum")[0]!;
     fixture.sqlite.prepare("INSERT OR REPLACE INTO blacklist_sync_state(config_key,last_block,cursor_kind,cursor_value) VALUES (?,200,'evm_block',200)").run(eurc.configKey);
@@ -239,14 +237,14 @@ describe("configured blacklist history replay", () => {
     fixture.dependencies.loadLogs = async () => ({ logs: [freeze], timestamps: new Map([[110, NOW - 100]]) });
     fixture.dependencies.rpc = async (method, params) => {
       if (method === "eth_chainId") return "0x1";
-      if (method === "eth_call") return `0x${"0".repeat(64)}`;
+      if (method === "eth_call") return `0x${(BigInt(currentBalance) * 1_000_000n).toString(16).padStart(64, "0")}`;
       return fixture.rpc(method, params);
     };
     const result = await runConfigHistoryReplay({ ...fixture.options, configKey: eurc.configKey, apply: true }, fixture.dependencies);
-    expect(result).toMatchObject({ insertedEventCount: 1, affectedBalanceCount: 0 });
+    expect(result).toMatchObject({ insertedEventCount: 1, affectedBalanceCount: 1 });
     expect(fixture.sqlite.prepare("SELECT amount_native,suppression_reason FROM blacklist_events").get())
-      .toEqual({ amount_native: 0, suppression_reason: "circle_mirror_zero_balance" });
-    expect(ledgerRows(fixture.sqlite)).toEqual([]);
+      .toEqual({ amount_native: null, suppression_reason: null });
+    expect(ledgerRows(fixture.sqlite)).toMatchObject([{ amount_native: currentBalance, source: "current_balance" }]);
   });
   it("leaves a resolved balance untouched when the latest destroy has no proven amount", async () => {
     const fixture = setup();

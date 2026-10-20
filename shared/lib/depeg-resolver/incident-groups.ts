@@ -10,7 +10,7 @@
  */
 
 import { median } from "../stats";
-import { classifyDepegClosure, type DepegClosureClassification } from "../depeg-closure";
+import { classifyDepegClosure } from "../depeg-closure";
 import type { DepegDirection } from "../../types/market";
 import type { DdrHistoricalEvent } from "./inputs";
 import {
@@ -47,7 +47,7 @@ export interface DdrIncident {
   startedAt: number;
   endedAt: number | null;
   durationSec: number | null;
-  /** true when the final fragment has an explicit or legacy-compatible recovery close */
+  /** True when the terminal union boundary has a recovery close; conflicting ties are not recovered. */
   recovered: boolean;
   /** Timed onset/severity observations relative to incident start; empty means legacy depth is unsupported. */
   fragments?: DdrIncidentFragment[];
@@ -71,6 +71,27 @@ function timedSeverityFragments(event: DdrHistoricalEvent, incidentStartedAt: nu
     });
   }
   return fragments;
+}
+
+function recoveredEvent(event: DdrHistoricalEvent): boolean {
+  const closure = classifyDepegClosure(event);
+  return closure === "recovered" || closure === "legacy_recovered";
+}
+
+/** Open members dominate; equal-end conflicts conservatively require both recovery labels. */
+function mergeIncidentBoundary(
+  current: Pick<DdrIncident, "endedAt" | "recovered">,
+  nextEnd: number | null,
+  nextRecovered: boolean,
+): void {
+  if (current.endedAt == null) {
+    current.recovered = false;
+  } else if (nextEnd == null || nextEnd > current.endedAt) {
+    current.endedAt = nextEnd;
+    current.recovered = nextEnd != null && nextRecovered;
+  } else if (nextEnd === current.endedAt) {
+    current.recovered = current.recovered && nextRecovered;
+  }
 }
 
 /**
@@ -98,7 +119,7 @@ export function groupIncidents(
       startedAt: number;
       endedAt: number | null;
       worstBps: number;
-      lastClosure: DepegClosureClassification;
+      recovered: boolean;
       fragments: DdrIncidentFragment[];
     } | null = null;
 
@@ -115,7 +136,7 @@ export function groupIncidents(
         startedAt: cur.startedAt,
         endedAt: cur.endedAt,
         durationSec,
-        recovered: cur.lastClosure === "recovered" || cur.lastClosure === "legacy_recovered",
+        recovered: cur.endedAt != null && cur.recovered,
         fragments: cur.fragments,
       });
       cur = null;
@@ -127,7 +148,7 @@ export function groupIncidents(
           startedAt: ev.startedAt,
           endedAt: ev.endedAt,
           worstBps: ev.peakDeviationBps,
-          lastClosure: classifyDepegClosure(ev),
+          recovered: recoveredEvent(ev),
           fragments: timedSeverityFragments(ev, ev.startedAt),
         };
         continue;
@@ -137,8 +158,7 @@ export function groupIncidents(
       const contiguous = prevEnd == null || ev.startedAt - prevEnd < MERGE_GAP_SEC;
       if (contiguous) {
         if (Math.abs(ev.peakDeviationBps) > Math.abs(cur.worstBps)) cur.worstBps = ev.peakDeviationBps;
-        cur.endedAt = ev.endedAt; // null if this fragment is open
-        cur.lastClosure = classifyDepegClosure(ev);
+        mergeIncidentBoundary(cur, ev.endedAt, recoveredEvent(ev));
         cur.fragments.push(...timedSeverityFragments(ev, cur.startedAt));
       } else {
         flush();
@@ -146,7 +166,7 @@ export function groupIncidents(
           startedAt: ev.startedAt,
           endedAt: ev.endedAt,
           worstBps: ev.peakDeviationBps,
-          lastClosure: classifyDepegClosure(ev),
+          recovered: recoveredEvent(ev),
           fragments: timedSeverityFragments(ev, ev.startedAt),
         };
       }
@@ -201,10 +221,9 @@ export function groupDurationLabelIncidents(incidents: DdrIncident[]): DdrIncide
         current.peakDeviationBps = incident.peakDeviationBps;
         current.depth = depthBucket(incident.peakDeviationBps);
       }
-      current.endedAt = incident.endedAt;
+      mergeIncidentBoundary(current, incident.endedAt, incident.recovered);
       current.durationSec =
-        incident.endedAt == null ? null : Math.max(0, incident.endedAt - current.startedAt);
-      current.recovered = incident.endedAt != null && incident.recovered;
+        current.endedAt == null ? null : Math.max(0, current.endedAt - current.startedAt);
       const offsetSec = Math.max(0, incident.startedAt - current.startedAt);
       current.fragments!.push(
         ...(incident.fragments ?? []).map((fragment) => ({

@@ -5,7 +5,7 @@ import { jsonResponseWithHeaders } from "./api-response";
 import { readCachedJsonOr503 } from "./api-cache-read";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC } from "./mint-burn-health-config";
-import { MINT_BURN_CONFIGS } from "./mint-burn-contracts";
+import { MINT_BURN_CONFIGS, type MintBurnContractConfig } from "./mint-burn-contracts";
 import { decodeJsonString } from "./cache-json";
 import { logMalformedJsonPath } from "./json-decode-observability";
 import { toErrorMessage } from "@shared/lib/error-utils";
@@ -18,7 +18,9 @@ import {
   tallyMintBurnHourlyBucket,
   type MintBurnValuationTally,
 } from "@shared/lib/mint-burn-valuation";
-import { MINT_BURN_FTQ_DEPENDENCY_KEY, type MintBurnValuationCompleteness } from "@shared/types/mint-burn";
+import { MINT_BURN_FTQ_DEPENDENCY_KEY, type MintBurnCoinCoverage, type MintBurnScanWindow, type MintBurnValuationCompleteness } from "@shared/types/mint-burn";
+import { mintBurnScanCoverageAdmits, type MintBurnScanSegment } from "./mint-burn-pipeline/scan-coverage";
+import { mintBurnConfigKey } from "./mint-burn-pipeline/sync-state";
 import { type MintBurnValuationTallyRow, readMintBurnValuationTallyRow } from "./mint-burn-hourly-valuation";
 
 import { FLOW_CACHE_PREFIX } from "./mint-burn-flow-cache-keys";
@@ -180,27 +182,34 @@ export function aggregateHourlyRowsByChain(rows: HourlyRow[]): Map<string, FlowA
   return aggregateHourlyRowsBy(rows, (row) => row.chain_id);
 }
 
+export function mintBurnScanWindow(complete: boolean): MintBurnScanWindow {
+  return { complete, unavailableReason: complete ? null : "scan-coverage-incomplete" };
+}
+
 /**
  * Hourly series. A partial hour publishes `netFlowUsd: null` (a partial net is
  * not a bound); volumes stay known subtotals and `valuation` qualifies them.
  */
-export function buildHourlyFlowSeries(rows: HourlyRow[]): Array<{
+export function buildHourlyFlowSeries(rows: HourlyRow[], admitsHour: (hourTs: number) => boolean): Array<{
   hourTs: number;
   netFlowUsd: number | null;
   mintVolumeUsd: number;
   burnVolumeUsd: number;
   valuation: MintBurnValuationCompleteness;
+  scanCoverage: MintBurnScanWindow;
 }> {
   return [...aggregateHourlyRowsBy(rows, (row) => row.hour_ts).entries()]
     .sort(([a], [b]) => a - b)
     .map(([ts, value]) => {
       const valuation = summarizeMintBurnValuation(value.valuation).completeness;
+      const scanCoverage = mintBurnScanWindow(admitsHour(ts));
       return {
         hourTs: ts,
-        netFlowUsd: valuation === "partial" ? null : value.netFlow,
+        netFlowUsd: !scanCoverage.complete || valuation === "partial" ? null : value.netFlow,
         mintVolumeUsd: value.mintVolume,
         burnVolumeUsd: value.burnVolume,
         valuation,
+        scanCoverage,
       };
     });
 }
@@ -589,39 +598,27 @@ export function buildBaselineMap(
 
 export function buildCoinCoverageMap(
   nowSec: number,
-  firstSeenRows: FirstSeenRow[],
+  scanSegments: ReadonlyMap<string, readonly MintBurnScanSegment[]>,
   lastBlocks: Map<string, number>,
   chainHeads: Map<string, number>,
   unavailableReason: "cron-snapshot-unavailable" | null = null,
+  requiredConfigs: readonly MintBurnContractConfig[] = MINT_BURN_CONFIGS,
 ) {
-  const firstSeenMap = new Map<string, number>();
-  for (const row of firstSeenRows) {
-    const previous = firstSeenMap.get(row.stablecoin_id);
-    if (previous == null || row.first_hour_ts < previous) {
-      firstSeenMap.set(row.stablecoin_id, row.first_hour_ts);
-    }
-  }
-  const configsByCoin = new Map<string, typeof MINT_BURN_CONFIGS>();
-  for (const config of MINT_BURN_CONFIGS) {
+  const end = mintBurnHourlyWindow(nowSec, 24).end;
+  const configsByCoin = new Map<string, MintBurnContractConfig[]>();
+  for (const config of requiredConfigs) {
     const existing = configsByCoin.get(config.stablecoinId) ?? [];
     existing.push(config);
     configsByCoin.set(config.stablecoinId, existing);
   }
 
-  const coverageMap = new Map<string, {
-    startBlock: number;
-    lastSyncedBlock: number | null;
-    lagBlocks: number | null;
-    historyStartAt: number | null;
-    has24hWindow: boolean;
-    has30dWindow: boolean;
-    has90dWindow: boolean;
-    isPartial: boolean;
-    adapterKinds: string[];
-    startBlockSource: string;
-    startBlockConfidence: "high" | "medium" | "low";
-    status: "full" | "partial-history" | "lagging" | "bootstrapping" | "disabled" | "unknown";
-    unavailableReason: "cron-snapshot-unavailable" | null;
+  const coverageMap = new Map<string, MintBurnCoinCoverage & {
+    windows: {
+      window24h: MintBurnScanWindow;
+      window7d: MintBurnScanWindow;
+      window30d: MintBurnScanWindow;
+      window90d: MintBurnScanWindow;
+    };
   }>();
 
   for (const [stablecoinId, configs] of configsByCoin) {
@@ -630,7 +627,12 @@ export function buildCoinCoverageMap(
       lastBlocks.get(`${config.chain.chainId}-${config.contractAddress}`) ?? (config.startBlock - 1),
     );
     const lastSyncedBlock = Math.min(...lastSyncedBlocks);
-    const historyStartAt = firstSeenMap.get(stablecoinId) ?? null;
+    // The newest continuous segment is history evidence only if every config reaches the window end.
+    const starts = configs.map((config) => (scanSegments.get(mintBurnConfigKey(config)) ?? [])
+      .filter((segment) => segment.to_timestamp >= end)
+      .map((segment) => segment.from_timestamp));
+    const historyStartAt = starts.every((values) => values.length > 0)
+      ? Math.max(...starts.map((values) => Math.min(...values))) : null;
     const disabled = configs.every((config) => config.enabled === false);
     let hasUnknownChainHead = false;
     const measuredLags: Array<{ chainId: string; lagBlocks: number }> = [];
@@ -655,36 +657,21 @@ export function buildCoinCoverageMap(
       ? "medium"
       : "high";
 
-    // Hourly rows are activity-sparse and retained for 95 days. A quiet,
-    // fully-scanned asset can therefore have no retained first-event row even
-    // though the sync cursor proves that its configured history was observed.
-    // Use the shortest scanned span across the coin's configs as a conservative
-    // fallback so retention cannot regress established coverage to
-    // "bootstrapping".
-    const expectedBlockTimes = configs.map((config) =>
-      expectedBlockTimeSec(config.chain.chainId),
-    );
-    const hasUnknownBlockTime = expectedBlockTimes.some((blockTimeSec) => blockTimeSec == null);
-    const scannedWindowSec = hasUnknownBlockTime
-      ? null
-      : Math.min(...configs.map((config, index) =>
-          Math.max(0, lastSyncedBlocks[index]! - config.startBlock + 1)
-            * expectedBlockTimes[index]!,
-        ));
-    const has24hWindow =
-      (historyStartAt != null && historyStartAt <= nowSec - (24 * 3600))
-      || (scannedWindowSec != null && scannedWindowSec >= 24 * 3600);
-    const has30dWindow =
-      (historyStartAt != null && historyStartAt <= nowSec - (30 * DAY_SECONDS))
-      || (scannedWindowSec != null && scannedWindowSec >= 30 * DAY_SECONDS);
-    const has90dWindow =
-      (historyStartAt != null && historyStartAt <= nowSec - (90 * DAY_SECONDS))
-      || (scannedWindowSec != null && scannedWindowSec >= 90 * DAY_SECONDS);
+    const admits = (days: number) => mintBurnScanCoverageAdmits(configs, scanSegments, end - days * DAY_SECONDS, end);
+    const has24hWindow = admits(1);
+    const has7dWindow = admits(7);
+    const has30dWindow = admits(30);
+    const has90dWindow = admits(90);
+    const windows = {
+      window24h: mintBurnScanWindow(has24hWindow),
+      window7d: mintBurnScanWindow(has7dWindow),
+      window30d: mintBurnScanWindow(has30dWindow),
+      window90d: mintBurnScanWindow(has90dWindow),
+    };
 
     const status =
       disabled ? "disabled" :
-      hasUnknownBlockTime && historyStartAt == null ? "unknown" :
-      !has24hWindow || lastSyncedBlock < startBlock ? "bootstrapping" :
+      !has24hWindow ? (historyStartAt == null ? "unknown" : "bootstrapping") :
       measuredLags.some((entry) => {
         const lagThreshold = coverageLagThresholdBlocks(entry.chainId);
         return lagThreshold != null && entry.lagBlocks > lagThreshold;
@@ -699,13 +686,15 @@ export function buildCoinCoverageMap(
       lagBlocks,
       historyStartAt,
       has24hWindow,
+      has7dWindow,
+      windows,
       has30dWindow,
       has90dWindow,
       isPartial: status !== "full",
       adapterKinds,
       startBlockSource: startBlockSources.length === 1 ? startBlockSources[0]! : "mixed",
       startBlockConfidence,
-      unavailableReason,
+      unavailableReason: unavailableReason ?? (!has24hWindow ? "scan-coverage-incomplete" : null),
       status,
     });
   }

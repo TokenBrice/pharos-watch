@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
-import { hydrateDexLiquidity, hydrateDexLiquidityHistory, hydrateLatestPsiScore, hydrateYieldRankingsCache } from "../source-state/hydration";
+import { hydrateDexLiquidity, hydrateDexLiquidityHistory, hydrateLatestPsiScore, hydrateMintBurn, hydrateYieldRankingsCache } from "../source-state/hydration";
 import { DEWS_PSI_FRESHNESS_BUDGET_SEC } from "../source-state/budgets";
 import { computeDEWS } from "../../dews";
 import { makeDewsInput } from "../../__tests__/dews.test-support";
@@ -9,6 +9,7 @@ import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlit
 import { loadDewsSourceState } from "../source-state";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { resolveCronTimeoutBudget } from "../../cron-timeouts";
+import { aggregateFlowCacheKey } from "../../mint-burn-flow-cache-keys";
 
 const RUN_AT = 1_800_000_000;
 const YIELD_BUDGET_SEC = CRON_INTERVALS["sync-yield-data"]
@@ -16,6 +17,39 @@ const YIELD_BUDGET_SEC = CRON_INTERVALS["sync-yield-data"]
 afterEach(() => vi.useRealTimers());
 
 describe("DEWS hydration timestamp admission", () => {
+  it.each(["missing", "incomplete", "wrong-window", "quiet", "eventful", "materialization-debt"] as const)(
+    "keeps mint/burn scan admission distinct from observed data: %s", async (state) => {
+      const { sqlite, db } = createLatestSchemaSqlite();
+      const end = Math.floor(RUN_AT / 3600) * 3600;
+      try {
+        if (state !== "missing") {
+          const window = { complete: state !== "incomplete", unavailableReason: state === "incomplete" ? "scan-coverage-incomplete" : null };
+          const value = { gauge: { score: null }, updatedAt: end,
+            window: { start: end - 86400, end: state === "wrong-window" ? end - 3600 : end, semantics: "closed-utc-hours" },
+            coins: [{ stablecoinId: "usdt-tether", symbol: "USDT", pressureShiftScore: null, netFlow24hUsd: null,
+              coverage: { startBlock: 1, lastSyncedBlock: 2, lagBlocks: 0, historyStartAt: end - 90 * 86400,
+                has24hWindow: state !== "incomplete", has30dWindow: true, has90dWindow: true, isPartial: false, status: "full",
+                windows: { window24h: window, window7d: window, window30d: window, window90d: window } } }] };
+          sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(aggregateFlowCacheKey(24), JSON.stringify(value), RUN_AT);
+        }
+        if (state === "eventful" || state === "missing" || state === "incomplete") {
+          sqlite.prepare(`INSERT INTO mint_burn_hourly (stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
+            mint_unpriced_event_count, burn_unpriced_event_count, mint_volume_usd, burn_volume_usd, net_flow_usd)
+            VALUES ('usdt-tether', 'ethereum', ?, 0, 1, 0, 0, 0, 700000, -700000)`).run(end - 3600);
+        }
+        if (state === "materialization-debt") {
+          sqlite.prepare("INSERT INTO mint_burn_dirty_hours (stablecoin_id, chain_id, hour_ts) VALUES ('usdt-tether', 'ethereum', ?)")
+            .run(end - 3600);
+        }
+        const hydrated = await hydrateMintBurn({ db, nowSec: RUN_AT, registerSourceFailure: vi.fn(), registerMalformedPersistedInput: vi.fn() });
+        const snapshot = hydrated.mintBurnMap.get("usdt-tether");
+        if (state === "quiet" || state === "eventful") {
+          expect(snapshot).toMatchObject({ burn24h: state === "quiet" ? 0 : 700_000, baselineDays: 30,
+            burnBaseline: state === "quiet" ? 0 : 700_000 / 30 });
+        } else expect(snapshot).toBeUndefined();
+      } finally { sqlite.close(); }
+    },
+  );
   it.each([
     ["valid", RUN_AT, 0, null],
     ["inclusive budget", RUN_AT - YIELD_BUDGET_SEC, 0, null],

@@ -92,7 +92,7 @@ export function insertDexPrice(
     sources.reduce((total, source) => total + source.tvl, 0),
     0,
     price,
-    JSON.stringify(sources),
+    JSON.stringify(sources.map((source) => ({ ...source, observedAt: updatedAt, aggregateObservedAt: updatedAt }))),
     updatedAt,
   );
 }

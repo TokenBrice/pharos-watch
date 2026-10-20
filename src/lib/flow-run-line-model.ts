@@ -10,6 +10,7 @@ export type RunLineExclusionReason =
   | "valuation-partial"
   /** Missing scan evidence cannot establish activity or quiet. */
   | "activity-unknown"
+  | "scan-coverage-incomplete"
   /** No mint or burn event in the 24h window. */
   | "no-24h-activity"
   /** Active, but under the history or activity floor (7 days, $50K of 24h flow). */
@@ -21,6 +22,7 @@ export type RunLineExclusionReason =
 export const RUN_LINE_EXCLUSION_LABELS: Record<RunLineExclusionReason, string> = {
   "valuation-partial": "Withheld: partial valuation",
   "activity-unknown": "24h activity unknown",
+  "scan-coverage-incomplete": "24h scan coverage incomplete",
   "no-24h-activity": "No 24h mint or burn",
   "below-scoring-floor": "Under history or activity floor",
   "weight-unavailable": "Weight unavailable",
@@ -73,6 +75,7 @@ export interface RunLineModel {
 export function resolveRunLineExclusionReason(coin: MintBurnCoinFlow): RunLineExclusionReason {
   const activity = inferHas24hActivity(coin);
   if (activity === null) return "activity-unknown";
+  if (coin.coverage?.windows?.window24h.complete === false) return "scan-coverage-incomplete";
   if (!activity) return "no-24h-activity";
   if (coin.baselineDataDays == null || coin.baselineDataDays < PRESSURE_SHIFT_MIN_BASELINE_DAYS) return "below-scoring-floor";
   const valuationAdmitsPressure =
@@ -110,7 +113,7 @@ export function buildRunLineModel(gauge: MintBurnGauge | null, coins: readonly M
   // The denominator is the weight the gauge actually scored; derive it from the
   // ticks so contributions always sum to the drawn score.
   const scoredWeightUsd = weightsPublished ? ticks.reduce((sum, tick) => sum + (tick.weightUsd ?? 0), 0) : 0;
-  if (scoredWeightUsd > 0) {
+  if (score != null && scoredWeightUsd > 0) {
     for (const tick of ticks) tick.pullPoints = (tick.score * (tick.weightUsd ?? 0)) / scoredWeightUsd;
   }
   ticks.sort((a, b) => a.score - b.score || a.symbol.localeCompare(b.symbol));

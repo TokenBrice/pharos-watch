@@ -223,8 +223,12 @@ JS-only list would silently drop the link hub.
 Permanent `/depeg/<event>/` pages cover confirmed events starting at or after
 2026-01-01 (`DEPEG_ARCHIVE_EPOCH_SECONDS`) with absolute peak deviation ≥5.0%,
 plus pinned authored pre-epoch incidents such as USDC 2023. The archive is grow-only:
-`sync-depeg-events.ts` carries previously published rows forward even if reclassification
-puts them below threshold and rejects disappearing slugs without the reviewed
+`sync-depeg-events.ts` carries previously published rows forward after below-threshold
+reclassification or consolidation verified by `/api/depeg-resolver` incident identity
+and its current representative in the fetched event ledger (same coin/direction,
+multiple constituents). The historical row keeps its reserved URL even when the
+representative is sub-threshold; no replacement route or redirect is invented.
+Unexplained missing IDs still fail the shrink guard without the reviewed
 `--allow-archive-shrink` override. The release SEO gate also compares the deployed
 sitemap, including refresh-only routes absent from the checked-in snapshot. Every
 published URL must remain submitted or receive a direct 301 to its surviving

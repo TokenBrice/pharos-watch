@@ -80,7 +80,7 @@ function filterCacheRepairLedgerRows(rows: BlacklistRow[]): BlacklistRow[] {
     (row) =>
       row.suppression_reason == null
       && (row.event_type === "unblacklist"
-        || !shouldSuppressAsMirrorZero(row.stablecoin, row.event_type, row.amount_native)),
+        || !shouldSuppressAsMirrorZero(row.stablecoin, row.event_type, row.amount_native, row.amount_source)),
   );
 }
 
@@ -204,15 +204,13 @@ export async function processFetchedBlacklistRows(
     rows: newRows,
     config: options.config,
     etherscanApiKey: options.etherscanApiKey,
-    drpcApiKey: options.drpcApiKey,
     etherscanLimiter: options.etherscanLimiter,
     runBudget: options.runBudget,
     signal: options.signal,
-    chainRpcs: options.chainRpcs,
   });
 
   for (const row of newRows) {
-    if (shouldSuppressAsMirrorZero(row.stablecoin, row.event_type, row.amount_native)) {
+    if (shouldSuppressAsMirrorZero(row.stablecoin, row.event_type, row.amount_native, row.amount_source)) {
       row.suppression_reason = "circle_mirror_zero_balance";
       row.amount_status = "permanently_unavailable";
     }

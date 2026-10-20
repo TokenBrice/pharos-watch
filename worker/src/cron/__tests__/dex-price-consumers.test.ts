@@ -127,7 +127,9 @@ for (const consumer of consumers) {
         ["null", { stablecoin_id: "null", dex_price_usd: 0.98, deviation_from_primary_bps: 0, source_pool_count: 2, source_total_tvl: 5_000_000, updated_at: BOUNDARY - 1 }],
         ["malformed", { stablecoin_id: "malformed", dex_price_usd: 0.98, deviation_from_primary_bps: 0, source_pool_count: 2, source_total_tvl: 5_000_000, updated_at: NOW }],
       ]));
-      expect(loaded.dexPriceSources).toEqual(new Map([["usdt-tether", sources.map((source) => ({ ...source, updatedAt: BOUNDARY }))]]));
+      expect(loaded.dexPriceSources).toEqual(new Map([["usdt-tether", sources.map((source) => ({
+        ...source, updatedAt: BOUNDARY, observedAt: BOUNDARY, aggregateObservedAt: BOUNDARY,
+      }))]]));
       expect(dexReads).toHaveLength(1);
       expect(console.warn).toHaveBeenCalledWith(expect.stringContaining("context=dex_prices.price_sources_json"));
     });

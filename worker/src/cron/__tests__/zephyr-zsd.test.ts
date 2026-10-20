@@ -56,6 +56,7 @@ describe("parseZephyrZsdStats", () => {
       mcapPrice: 1.003,
       mcap: 386_193.2106223749,
       observedAt: null,
+      observedAtRejected: false,
       priceReported: true,
     });
   });
@@ -75,20 +76,8 @@ describe("parseZephyrZsdStats", () => {
     }, nowSec)?.observedAt).toBe(1_789_996_640);
   });
 
-  it("rejects scanner timestamps outside the registered zephyr-scanner trust window", () => {
+  it("retains scanner timestamps inside the registered trust window", () => {
     const nowSec = 1_790_000_060;
-    // Future beyond the shared 10-minute pricing-source skew allowance.
-    expect(parseZephyrZsdStats({
-      zsd_circ: 385_038.0963333748,
-      zsd_price: 1.003,
-      block_timestamp: nowSec + 601,
-    }, nowSec)?.observedAt).toBeNull();
-    // Stale beyond the four-hour zephyr-scanner window.
-    expect(parseZephyrZsdStats({
-      zsd_circ: 385_038.0963333748,
-      zsd_price: 1.003,
-      block_timestamp: nowSec - 4 * 60 * 60 - 1,
-    }, nowSec)?.observedAt).toBeNull();
     // Inside the skew allowance the upstream observation is kept.
     expect(parseZephyrZsdStats({
       zsd_circ: 385_038.0963333748,
@@ -103,6 +92,31 @@ describe("parseZephyrZsdStats", () => {
     }, nowSec)?.observedAt).toBe(nowSec - 60);
   });
 
+  it.each([
+    ["future", { block_timestamp: 1_790_000_060 + 601 }],
+    ["stale", { block_timestamp: 1_790_000_060 - 4 * 60 * 60 - 1 }],
+    ["invalid", { captured_at: "not-a-clock" }],
+    ["null", { captured_at: null }],
+    ["invalid preferred clock", { captured_at: "not-a-clock", timestamp: 1_790_000_000 }],
+  ])("withholds %s scanner prices and dependent NAV without dropping independent ZSD supply", (_label, clock) => {
+    const nowSec = 1_790_000_060;
+    const stats = parseZephyrProtocolStats({
+      zsd_circ: 1_000, zsd_price: 1.003, zys_circ: 200, zys_price: 1.9, ...clock,
+    }, nowSec)!;
+    expect(stats.zsd).toMatchObject({ observedAt: null, observedAtRejected: true });
+    expect(buildZephyrProtocolPeggedAsset(makeZsdMeta(), stats, null, nowSec)).toMatchObject({
+      price: null, priceConfidence: null, priceSyncedAt: null,
+      supplyObservedAt: null, circulating: { peggedUSD: 1_000 },
+    });
+    expect(buildZephyrProtocolPeggedAsset(makeZysMeta(), stats, null, nowSec)).toBeNull();
+    expect(buildZephyrProtocolPeggedAsset(makeZsdMeta(), stats, {
+      price: 0.998, source: "coingecko", observedAt: nowSec - 60, observedAtMode: "upstream",
+    }, nowSec)).toMatchObject({
+      price: 0.998, priceSource: "coingecko", priceObservedAt: nowSec - 60,
+      priceObservedAtMode: "upstream", circulating: { peggedUSD: 998 },
+    });
+  });
+
   it("ignores unreasonable live zsd_price values for ZSD market-cap metadata", () => {
     expect(parseZephyrZsdStats({
       zsd_circ: 12_345,
@@ -112,6 +126,7 @@ describe("parseZephyrZsdStats", () => {
       mcapPrice: 1,
       mcap: 12_345,
       observedAt: null,
+      observedAtRejected: false,
       priceReported: false,
     });
 
@@ -123,6 +138,7 @@ describe("parseZephyrZsdStats", () => {
       mcapPrice: 1,
       mcap: 12_345,
       observedAt: null,
+      observedAtRejected: false,
       priceReported: false,
     });
   });
@@ -136,6 +152,7 @@ describe("parseZephyrZsdStats", () => {
       mcapPrice: 1,
       mcap: 385_038.0963333748,
       observedAt: null,
+      observedAtRejected: false,
       priceReported: false,
     });
   });
@@ -157,6 +174,7 @@ describe("parseZephyrZysStats", () => {
       mcapPrice: 1.9068,
       mcap: 315_741.9247128945,
       observedAt: null,
+      observedAtRejected: false,
       priceReported: true,
     });
   });

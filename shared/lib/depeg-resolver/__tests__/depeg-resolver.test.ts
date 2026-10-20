@@ -252,6 +252,25 @@ describe("DDR curated-posture set membership — pinned", () => {
 });
 
 describe("resolveOutlook — acceptance cases", () => {
+  it.each([
+    { mintSurge: null, change7dPct: null },
+    { mintSurge: false, change7dPct: null },
+    { mintSurge: null, change7dPct: 0 },
+    { mintSurge: false, change7dPct: Number.NaN },
+  ])("does not award R3 for unknown anomaly evidence %j", (supply) => {
+    const result = resolveOutlook(event(), coin({ authorityPosture: "bounded-admin" }), baseSupply(supply), baseLive());
+    expect(result.factors.some((factor) => factor.code === "R3_no_supply_anomaly")).toBe(false);
+  });
+
+  it.each([[0, "strong"], [10, "weak"], [-19, "weak"], [20, null]] as const)(
+    "awards R3 only from measured non-surge supply at %s percent",
+    (change7dPct, severity) => {
+      const result = resolveOutlook(event(), coin({ authorityPosture: "bounded-admin" }),
+        baseSupply({ mintSurge: false, change7dPct }), baseLive());
+      expect(result.factors.find((factor) => factor.code === "R3_no_supply_anomaly")?.severity ?? null).toBe(severity);
+    },
+  );
+
   it("USR-like: concentrated/unbounded minter + supply spike + deep below → recovery_unlikely", () => {
     const r = resolveOutlook(
       event({ stablecoinId: "usr-resolv", direction: "below", peakDeviationBps: -9025 }),
@@ -1013,6 +1032,32 @@ describe("incident grouping + quarantine", () => {
   const usd = () => "USD";
   const incidentForQuarantine = (stablecoinId: string, durationSec: number, i: number) =>
     incident(stablecoinId, i * 10000, durationSec, { peakDeviationBps: -120, depth: "minor", structural: "fragile" });
+
+  it.each(["live", "duration"] as const)("%s grouping preserves interval union and terminal-boundary closure", (pass) => {
+    const cases = [
+      { ends: [10000, 5000], closes: ["recovered-native", "superseded-direction"], end: 10000, recovered: true },
+      { ends: [5000, 10000, 8000], closes: ["superseded-direction", "recovered-native", "superseded-direction"], end: 10000, recovered: true },
+      { ends: [null, 5000], closes: [null, "recovered-native"], end: null, recovered: false },
+      { ends: [5000, null], closes: ["recovered-native", null], end: null, recovered: false },
+      { ends: [10000, 10000], closes: ["recovered-native", "superseded-direction"], end: 10000, recovered: false },
+      { ends: [10000, 10000], closes: ["superseded-direction", "recovered-native"], end: 10000, recovered: false },
+      { ends: [10000, 10000], closes: ["recovered-native", "recovered-native"], end: 10000, recovered: true },
+    ];
+    for (const fixture of cases) {
+      const events: DdrHistoricalEvent[] = fixture.ends.map((endedAt, index) => ({
+        stablecoinId: "union", direction: "below", startedAt: index * 1000,
+        endedAt, closeReason: fixture.closes[index], recoveryPrice: null,
+        peakDeviationBps: -300 - index * 100, onsetDeviationBps: -300 - index * 100,
+      }));
+      const groups = pass === "live"
+        ? groupIncidents([...events].reverse(), usd)
+        : groupDurationLabelIncidents(events.map((event) => groupIncidents([event], usd)[0]).reverse());
+      expect(groups).toEqual([expect.objectContaining({
+        endedAt: fixture.end, durationSec: fixture.end, recovered: fixture.recovered,
+      })]);
+      expect(groups[0].fragments).toHaveLength(events.length);
+    }
+  });
 
   it.each([6, 24])("uses a strict %ih merge gap with shuffled, direction-separated fragments", (hours) => {
     const fragments: DdrHistoricalEvent[] = [

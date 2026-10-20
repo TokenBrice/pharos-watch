@@ -672,7 +672,9 @@ A transport timeout assigned less than the full eight-second request budget is a
 
 ### `POST /api/remediate-blacklist-amount-gaps`
 
-Admin-only bounded remediation endpoint for recoverable **EVM** blacklist rows. Default candidate selection excludes Tron before applying the row limit; explicit `chainId=tron` returns `400` without reading or updating events. Tron event-time amounts require the scheduled confirmed transfer-replay lane or the guarded evidence-based operator CLI in [Blacklist Tracker](./blacklist-tracker.md), not this historical-balance route.
+Admin-only bounded remediation endpoint for recoverable **EVM** blacklist rows. Default candidate selection excludes Tron before applying the row limit; explicit `chainId=tron` returns `400` without reading or updating events. Tron event-time amounts require the scheduled confirmed transfer-replay lane or the guarded evidence-based operator CLI in [Blacklist Tracker](./blacklist-tracker.md), not this EVM receipt-recovery route. EVM amountless events remain unavailable with `event_time_unproven`; neither preceding-block balances nor unbound burn transfers prove the amount at the target log position. An unavailable amount cannot trigger EURC mirror-zero suppression. Existing amounts and suppressed history are not blindly rewritten.
+
+Event-amount remediation does not hydrate chain RPC endpoints or require a dRPC key: emitted destroy amounts use Etherscan receipt evidence, while unproved amountless events remain unavailable. Independent current-balance snapshots retain their own RPC provider configuration.
 
 **Authentication:** same admin auth as other ops endpoints.
 

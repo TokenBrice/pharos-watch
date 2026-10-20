@@ -12,8 +12,9 @@ export function seedOpenEvent(sqlite: DatabaseSync, overrides: Record<string, st
 }
 
 export function seedDexEvidence(sqlite: DatabaseSync, price: number, sources: Array<{ protocol: string; price: number; tvl: number }>) {
+  const observedAt = Math.floor(Date.now() / 1000) - 60;
   sqlite.prepare(`INSERT INTO dex_prices (stablecoin_id, symbol, dex_price_usd, deviation_from_primary_bps, source_pool_count, source_total_tvl, updated_at, price_sources_json) VALUES (?, 'USDT', ?, 0, ?, ?, ?, ?)`).run(
-    "usdt-tether", price, sources.length, sources.reduce((sum, source) => sum + source.tvl, 0), Math.floor(Date.now() / 1000) - 60,
-    JSON.stringify(sources.map((source) => ({ ...source, sourceFamily: source.protocol, chain: "ethereum" }))),
+    "usdt-tether", price, sources.length, sources.reduce((sum, source) => sum + source.tvl, 0), observedAt,
+    JSON.stringify(sources.map((source) => ({ ...source, sourceFamily: source.protocol, chain: "ethereum", observedAt, aggregateObservedAt: observedAt }))),
   );
 }

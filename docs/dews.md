@@ -8,7 +8,7 @@ Per-coin, forward-looking stress score (0-100) for depeg stress. It is not a cal
 
 DEWS shares its methodology versioning with the Depeg Tracker pipeline. Both resolve their published version and changelog through `shared/lib/methodology-versions/registry.ts`.
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-dews -->`v6.35`<!-- GENERATED-END: methodology-version-depeg-dews -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-dews -->`v6.36`<!-- GENERATED-END: methodology-version-depeg-dews -->
 - **Public changelog page:** `/methodology/depeg-changelog/`
 - **Canonical constants:** `shared/lib/methodology-versions/constants.ts`
 
@@ -81,9 +81,9 @@ Measures supply contraction rate. Only negative changes contribute stress.
 
 - **1d normalization:** `[0%, 0] → [1%, 15] → [3%, 40] → [5%, 65] → [10%, 85] → [20%, 100]`
 - **7d normalization:** `[0%, 0] → [3%, 15] → [7%, 40] → [15%, 70] → [30%, 100]`
-- **Blend:** `0.6 * norm1d + 0.4 * norm7d`
+- **Blend:** `(0.6 * norm1d + 0.4 * norm7d) / componentCoverage`, including only readable admitted legs; `componentCoverage` is their nominal weight sum (`0.6`, `0.4`, or `1`).
 - **Size dampening:** `sizeFactor = min(1, log10(max(mcap, $1M) / $1M) / 3)` — every coin below $1B gets reduced signal ($100M ≈ 0.67x, $50M ≈ 0.57x, $10M ≈ 0.33x); the factor reaches 1.0 only at $1B+
-- **Anchor availability:** if both previous-day and previous-week supply anchors are absent, the sub-signal is unavailable and its weight is redistributed. If one anchor is present, the present side is scored and the missing side contributes zero velocity. Explicit finite zero anchors stay available and produce zero velocity stress rather than a divide-by-zero or a false contraction
+- **Anchor availability:** if both previous-day and previous-week supply anchors are absent, the sub-signal is tagged unavailable with `componentCoverage: 0` and null deltas, and its family weight is redistributed. If only one anchor is readable, its weight is renormalized to the whole supply blend; the missing leg's delta is null, never a measured calm zero. Explicit finite zero anchors stay admitted with zero velocity stress rather than a divide-by-zero or a false contraction.
 
 ### S_pool — Pool Balance Drift
 
@@ -115,8 +115,10 @@ Live DEX history reads start at `now − 7 days − 36 hours` (8.5 days). Histor
 
 - **Score erosion anchors:** `[0%, 0] → [5%, 15] → [15%, 40] → [30%, 70] → [50%, 100]`
 - **TVL erosion anchors:** `[0%, 0] → [10%, 15] → [25%, 40] → [50%, 70] → [75%, 100]`
-- 50/50 blend
-- **Fail-closed:** current liquidity score is required, and at least one of the score or TVL 7-day anchors must be available. If both anchors are missing, the sub-signal is unavailable; if one anchor is missing, that side contributes 0 to the 50/50 blend.
+- **Blend:** the nominal 50/50 weights are renormalized over readable score and TVL erosion components. Full coverage is `1`; either leg alone has `componentCoverage: 0.5` and supplies the entire liquidity-erosion value.
+- **Fail-closed:** a finite current liquidity score remains required. A delta requires finite current and historical observations and a positive historical denominator. If neither delta is computable, the sub-signal is tagged unavailable with `componentCoverage: 0`. Missing or unusable component deltas remain null, including in unavailable signals; a measured zero change remains zero and retains its weight.
+
+Supply and liquidity `componentCoverage` and nullable deltas survive current, sparse-history, daily-history and accepted-publication JSON storage. Legacy rows with no coverage metadata remain unknown, not full coverage or unavailable coverage inferred from their score. New computations and calibration must distinguish full, renormalized partial and unavailable evidence; stored historical bytes, clocks and methodology identities are not rewritten by this policy change. Curves, supply size dampening, family weights and the unrelated optional-family admission policy are unchanged.
 
 ### S_price — Price Confidence Degradation
 
@@ -136,6 +138,8 @@ The primary price must pass `isObservedPrice(...)`. Nominal par references are n
 - Averaged with the previous reading only when that reading was available.
 
 Historical `stress_signal_history` rows do not retain the underlying DEX trust metadata (`source_total_tvl`, per-row freshness context) needed to replay this gate exactly. The Wave 5.9 repair path therefore refreshes current rows and prunes unrecomputable daily history from the Mar 9, 2026 trust-floor boundary onward instead of pretending those stored snapshots can be deterministically recomputed.
+
+The aggregate divergence input is distinct from affirmative protocol-family corroboration in depeg detection and pending confirmation. Those source groups require original family `observedAt` within 35 minutes and aggregate-contributor `aggregateObservedAt` within 75 minutes, not merely a fresh `dex_prices.updated_at`. Legacy unclocked sources cannot prove current corroboration or positive recovery; separately supported challenger vetoes remain conservative negative evidence, never fresh affirmative evidence. The shared Depeg/DEWS release changes new admission only and does not relabel stored scores, event history or sealed generations.
 
 ### S_black — Blacklist Activity
 

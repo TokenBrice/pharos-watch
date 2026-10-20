@@ -840,6 +840,10 @@
       "decimals": 6,
       "disposition": "unsupported",
       "unsupportedReason": "zero-address-transfer-without-supply-change:transfer",
+      "supplyBurnProof": {
+        "receiptEvent": { "signature": "Burned(address,address,uint256)", "topicHash": "0x6ab368f832c266c8eb942b84fbcaa20aedc24a699d2a05fae2568028733b1d09", "topicArity": 3, "dataWords": 1, "accountTopic": 2, "amountSlot": 0 }
+      },
+      "supplyBurnProofEvidence": "Verified Erc20Privileged.sol _burn:164-185 subtracts totalSupply, then emits Transfer and Burned(sender,burnFrom,value); Burned declaration:254. Ordinary Erc20Core._transfer never emits Burned. Receipt evidence preserves internal and batch burns without trusting the top-level selector.",
       "eventSet": "transfer",
       "invariant": "transfer-supply",
       "identity": {
@@ -2378,6 +2382,10 @@
       "decimals": 18,
       "disposition": "unsupported",
       "unsupportedReason": "zero-address-transfer-without-supply-change:transferFrom",
+      "supplyBurnProof": {
+        "directCalls": [{ "signature": "burn(address,uint256)", "selector": "0x9dc29fac", "dataWords": 2, "amountSlot": 1, "account": 0 }]
+      },
+      "supplyBurnProofEvidence": "Dai.sol:139-148 direct burn(usr,wad) decrements stored totalSupply and emits exactly Transfer(usr,0,wad); no external calls. Require successful transaction addressed to this token with exact calldata and matching receipt. Internal calls without separate path evidence remain review_required.",
       "eventSet": "transfer",
       "invariant": "transfer-supply",
       "identity": {
@@ -2672,6 +2680,10 @@
       "decimals": 18,
       "disposition": "unsupported",
       "unsupportedReason": "zero-address-transfer-without-supply-change:transfer",
+      "supplyBurnProof": {
+        "directCalls": [{ "signature": "burn(uint256)", "selector": "0x42966c68", "dataWords": 1, "amountSlot": 0, "account": "sender" }]
+      },
+      "supplyBurnProofEvidence": "contracts/ERC20.sol:80-94 burn(value) calls _burn(msg.sender,value), decreases totalSupply, and emits the matching Transfer; no external calls. Validate direct transaction destination, sender, exact calldata, successful receipt and event identity.",
       "eventSet": "transfer",
       "invariant": "transfer-supply",
       "identity": {
@@ -3624,6 +3636,10 @@
       "decimals": 2,
       "disposition": "unsupported",
       "unsupportedReason": "zero-address-transfer-without-supply-change:transfer",
+      "supplyBurnProof": {
+        "directCalls": [{ "signature": "burnTokens(uint256)", "selector": "0x6d1b229d", "dataWords": 1, "amountSlot": 0, "account": "sender" }]
+      },
+      "supplyBurnProofEvidence": "Current delegate EURSToken.sol:247-261 burnTokens(value) subtracts tokensCount and emits Transfer(msg.sender,0,value). Require successful direct token transaction and exact sender/amount receipt binding; ordinary/delegated transfers do not prove this path.",
       "eventSet": "transfer",
       "invariant": "transfer-supply",
       "identity": {
@@ -4669,6 +4685,10 @@
       "decimals": 18,
       "disposition": "unsupported",
       "unsupportedReason": "zero-address-transfer-without-supply-change:transfer",
+      "supplyBurnProof": {
+        "directCalls": [{ "signature": "burn(uint256)", "selector": "0x42966c68", "dataWords": 1, "amountSlot": 0, "account": "sender" }]
+      },
+      "supplyBurnProofEvidence": "GhoToken.sol:49-60 facilitator burn(amount) calls ERC20._burn(msg.sender,amount), decreasing totalSupply and emitting the same amount (ERC20.sol:174-184). Require direct successful token transaction and matching calldata/sender/event; facilitator bucket bookkeeping alone is not proof.",
       "eventSet": "transfer",
       "invariant": "transfer-supply",
       "identity": {
@@ -6678,6 +6698,10 @@
       "decimals": 18,
       "disposition": "unsupported",
       "unsupportedReason": "zero-address-transfer-without-supply-change:transferFrom",
+      "supplyBurnProof": {
+        "directCalls": [{ "signature": "burn(address,uint256)", "selector": "0x9dc29fac", "dataWords": 2, "amountSlot": 1, "account": 0 }]
+      },
+      "supplyBurnProofEvidence": "Verified Dai.sol fork:100-109 burn(usr,wad) directly subtracts totalSupply and emits the matching Transfer without external calls. Exact successful direct-call/receipt binding is required, not selector presence elsewhere in a transaction.",
       "eventSet": "transfer",
       "invariant": "transfer-supply",
       "identity": {
@@ -6843,6 +6867,10 @@
       "decimals": 6,
       "disposition": "unsupported",
       "unsupportedReason": "zero-address-transfer-without-supply-change:transfer",
+      "supplyBurnProof": {
+        "receiptEvent": { "signature": "Exit(address,address,uint256,address,uint256)", "topicHash": "0xe0c82280a1164680e0cf43be7db4c4c9f985423623ad7a544fb76c772bdc6043", "topicArity": 4, "dataWords": 2, "accountTopic": 3, "amountSlot": 1 }
+      },
+      "supplyBurnProofEvidence": "Verified BoringVault.sol:117-134 exit calls _burn(from,shareAmount) then emits Exit(to,asset,assetAmount,from,shareAmount). Indexed from is topic3; shares are data word1, not collateral word0. Pair exact tuple multiplicities across the receipt, including below-cutoff Transfers.",
       "eventSet": "transfer",
       "invariant": "transfer-supply",
       "identity": {
@@ -8164,6 +8192,10 @@
       "decimals": 6,
       "disposition": "unsupported",
       "unsupportedReason": "zero-address-transfer-without-supply-change:transfer",
+      "supplyBurnProof": {
+        "receiptEvent": { "signature": "Withdraw(address,address,address,uint256,uint256)", "topicHash": "0xfbde797d201c681b91056529119e0b02407c7bb96a4a2c75c01fc9667232c8db", "topicArity": 4, "dataWords": 2, "accountTopic": 3, "amountSlot": 1 }
+      },
+      "supplyBurnProofEvidence": "MaplePool.sol:1118-1132 calls ERC20._burn(owner,shares) then emits Withdraw(caller,receiver,owner,assets,shares); totalSupply subtraction is at 684-691. Owner is topic3 and shares data word1. Transfer/transferFrom do not emit Withdraw.",
       "eventSet": "transfer",
       "invariant": "transfer-supply",
       "identity": {
@@ -8246,6 +8278,10 @@
       "decimals": 6,
       "disposition": "unsupported",
       "unsupportedReason": "zero-address-transfer-without-supply-change:transfer",
+      "supplyBurnProof": {
+        "receiptEvent": { "signature": "Withdraw(address,address,address,uint256,uint256)", "topicHash": "0xfbde797d201c681b91056529119e0b02407c7bb96a4a2c75c01fc9667232c8db", "topicArity": 4, "dataWords": 2, "accountTopic": 3, "amountSlot": 1 }
+      },
+      "supplyBurnProofEvidence": "Byte-identical verified MaplePool source to syrupUSDC:1118-1132 pairs _burn(owner,shares) with Withdraw(caller,receiver,owner,assets,shares); totalSupply subtraction at 684-691. Match token emitter, indexed owner and raw shares, never collateral assets.",
       "eventSet": "transfer",
       "invariant": "transfer-supply",
       "identity": {
@@ -10035,6 +10071,10 @@
       "decimals": 18,
       "disposition": "unsupported",
       "unsupportedReason": "zero-address-transfer-without-supply-change:transferFrom",
+      "supplyBurnProof": {
+        "directCalls": [{ "signature": "burn(address,uint256)", "selector": "0x9dc29fac", "dataWords": 2, "amountSlot": 1, "account": 0 }]
+      },
+      "supplyBurnProofEvidence": "src/dss/usdd.sol:92-101 direct burn(usr,wad) subtracts totalSupply and emits Transfer(usr,0,wad), without external calls. Require successful direct token destination and full calldata/sender/receipt identity.",
       "eventSet": "transfer",
       "invariant": "transfer-supply",
       "identity": {
@@ -12309,6 +12349,14 @@
       "decimals": 6,
       "disposition": "unsupported",
       "unsupportedReason": "zero-address-transfer-without-supply-change:transferFrom",
+      "supplyBurnProof": {
+        "directCalls": [
+          { "signature": "burn(uint256)", "selector": "0x42966c68", "dataWords": 1, "amountSlot": 0, "account": "sender" },
+          { "signature": "burn(address,uint256)", "selector": "0x9dc29fac", "dataWords": 2, "amountSlot": 1, "account": 0 },
+          { "signature": "burnFor(address,uint256)", "selector": "0x1dd319cb", "dataWords": 2, "amountSlot": 1, "account": 0 }
+        ]
+      },
+      "supplyBurnProofEvidence": "YieldCoin.sol:165-194 burn overloads/burnFor reach ERC20._burn:108-117, subtracting stored supply and emitting the exact amount. The fund-admin transferFrom bypass never changes supply. Validate successful direct-call destination, complete calldata and unique matching token burn receipt; internal unproved calls stay review_required.",
       "eventSet": "transfer",
       "invariant": "transfer-supply",
       "identity": {

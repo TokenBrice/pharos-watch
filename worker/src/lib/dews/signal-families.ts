@@ -61,25 +61,29 @@ export const YIELD_WARNING_SCORES: Record<string, number> = {
 
 export function computeSupplySignal(input: DEWSInput): SignalResult {
   const { circulatingCurrent, circulatingPrevDay, circulatingPrevWeek, mcapUsd } = input;
-  const prevDayAvailable = input.circulatingPrevDayAvailable ?? true;
-  const prevWeekAvailable = input.circulatingPrevWeekAvailable ?? true;
+  const prevDayAvailable = (input.circulatingPrevDayAvailable ?? true)
+    && Number.isFinite(circulatingPrevDay) && circulatingPrevDay >= 0;
+  const prevWeekAvailable = (input.circulatingPrevWeekAvailable ?? true)
+    && Number.isFinite(circulatingPrevWeek) && circulatingPrevWeek >= 0;
+  const componentCoverage = (prevDayAvailable ? 0.6 : 0) + (prevWeekAvailable ? 0.4 : 0);
 
-  if (!prevDayAvailable && !prevWeekAvailable) {
-    return { value: 0, available: false, unavailableReason: "supply-history-anchors-missing" };
+  if (componentCoverage === 0) {
+    return {
+      value: 0, available: false, componentCoverage: 0, delta1d: null, delta7d: null,
+      unavailableReason: "supply-history-anchors-missing",
+    };
   }
 
-  if ((!prevDayAvailable || circulatingPrevDay <= 0) && (!prevWeekAvailable || circulatingPrevWeek <= 0)) {
-    return { value: 0, available: true, delta1d: 0, delta7d: 0 };
-  }
-
-  const delta1d =
-    prevDayAvailable && circulatingPrevDay > 0 ? (circulatingCurrent - circulatingPrevDay) / circulatingPrevDay : 0;
-  const delta7d =
-    prevWeekAvailable && circulatingPrevWeek > 0 ? (circulatingCurrent - circulatingPrevWeek) / circulatingPrevWeek : 0;
+  // An observed zero anchor remains admitted with no contraction stress; an
+  // absent anchor has no delta and contributes neither weight nor calm.
+  const delta1d = !prevDayAvailable ? null
+    : circulatingPrevDay > 0 ? (circulatingCurrent - circulatingPrevDay) / circulatingPrevDay : 0;
+  const delta7d = !prevWeekAvailable ? null
+    : circulatingPrevWeek > 0 ? (circulatingCurrent - circulatingPrevWeek) / circulatingPrevWeek : 0;
 
   // Only contraction contributes stress
   const norm1d =
-    delta1d >= 0
+    delta1d == null || delta1d >= 0
       ? 0
       : piecewiseLinear(Math.abs(delta1d) * 100, [
           // Supply contraction stress curve (1d).
@@ -96,7 +100,7 @@ export function computeSupplySignal(input: DEWSInput): SignalResult {
         ]);
 
   const norm7d =
-    delta7d >= 0
+    delta7d == null || delta7d >= 0
       ? 0
       : piecewiseLinear(Math.abs(delta7d) * 100, [
           // Supply contraction stress curve (7d).
@@ -111,7 +115,7 @@ export function computeSupplySignal(input: DEWSInput): SignalResult {
           [30, 100],
         ]);
 
-  const rawVelocity = 0.6 * norm1d + 0.4 * norm7d;
+  const rawVelocity = (0.6 * norm1d + 0.4 * norm7d) / componentCoverage;
 
   // Size-adjusted dampening: small coins (<$50M) have naturally volatile supply
   const sizeFactor = Math.min(1, Math.log10(Math.max(mcapUsd, 1e6) / 1e6) / 3);
@@ -121,8 +125,9 @@ export function computeSupplySignal(input: DEWSInput): SignalResult {
   return {
     value,
     available: true,
-    delta1d: Math.round(delta1d * 10000) / 100, // as percentage
-    delta7d: Math.round(delta7d * 10000) / 100,
+    componentCoverage,
+    delta1d: delta1d == null ? null : Math.round(delta1d * 10000) / 100, // as percentage
+    delta7d: delta7d == null ? null : Math.round(delta7d * 10000) / 100,
     sizeFactor: Math.round(sizeFactor * 100) / 100,
   };
 }
@@ -226,17 +231,23 @@ export function computePoolSignal(input: DEWSInput): SignalResult {
 export function computeLiquiditySignal(input: DEWSInput): SignalResult {
   const { liquidityScore, liquidityScore7dAgo, tvlCurrent, tvl7dAgo } = input;
 
-  const scoreDeltaComputable = liquidityScore !== null && liquidityScore7dAgo !== null && liquidityScore7dAgo > 0;
-  const tvlDeltaComputable = tvlCurrent !== null && tvl7dAgo !== null && tvl7dAgo > 0;
+  const currentScoreAvailable = liquidityScore !== null && Number.isFinite(liquidityScore);
+  const scoreDeltaComputable = currentScoreAvailable
+    && liquidityScore7dAgo !== null && Number.isFinite(liquidityScore7dAgo) && liquidityScore7dAgo > 0;
+  const tvlDeltaComputable = tvlCurrent !== null && Number.isFinite(tvlCurrent)
+    && tvl7dAgo !== null && Number.isFinite(tvl7dAgo) && tvl7dAgo > 0;
+  const componentCoverage = (scoreDeltaComputable ? 0.5 : 0) + (tvlDeltaComputable ? 0.5 : 0);
 
-  if (liquidityScore === null || (!scoreDeltaComputable && !tvlDeltaComputable)) {
-    return { value: 0, available: false };
+  if (!currentScoreAvailable || componentCoverage === 0) {
+    return { value: 0, available: false, componentCoverage: 0, scoreDelta7d: null, tvlDelta7d: null };
   }
+
+  const scoreDelta = scoreDeltaComputable ? (liquidityScore - liquidityScore7dAgo) / Math.max(liquidityScore7dAgo, 1) : null;
+  const tvlDelta = tvlDeltaComputable ? (tvlCurrent - tvl7dAgo) / tvl7dAgo : null;
 
   // Score erosion
   let scoreErosion = 0;
-  if (liquidityScore7dAgo !== null && liquidityScore7dAgo > 0) {
-    const scoreDelta = (liquidityScore - liquidityScore7dAgo) / Math.max(liquidityScore7dAgo, 1);
+  if (scoreDelta !== null) {
     if (scoreDelta < 0) {
       scoreErosion = piecewiseLinear(Math.abs(scoreDelta) * 100, [
         // Liquidity score erosion curve.
@@ -254,8 +265,7 @@ export function computeLiquiditySignal(input: DEWSInput): SignalResult {
 
   // TVL erosion
   let tvlErosion = 0;
-  if (tvlCurrent !== null && tvl7dAgo !== null && tvl7dAgo > 0) {
-    const tvlDelta = (tvlCurrent - tvl7dAgo) / tvl7dAgo;
+  if (tvlDelta !== null) {
     if (tvlDelta < 0) {
       tvlErosion = piecewiseLinear(Math.abs(tvlDelta) * 100, [
         // TVL erosion curve.
@@ -271,19 +281,14 @@ export function computeLiquiditySignal(input: DEWSInput): SignalResult {
     }
   }
 
-  const value = clamp(0.5 * scoreErosion + 0.5 * tvlErosion, 0, 100);
+  const value = clamp((0.5 * scoreErosion + 0.5 * tvlErosion) / componentCoverage, 0, 100);
 
   return {
     value,
     available: true,
-    scoreDelta7d:
-      liquidityScore7dAgo !== null
-        ? Math.round(((liquidityScore - liquidityScore7dAgo) / Math.max(liquidityScore7dAgo, 1)) * 10000) / 100
-        : null,
-    tvlDelta7d:
-      tvlCurrent !== null && tvl7dAgo !== null && tvl7dAgo > 0
-        ? Math.round(((tvlCurrent - tvl7dAgo) / tvl7dAgo) * 10000) / 100
-        : null,
+    componentCoverage,
+    scoreDelta7d: scoreDelta == null ? null : Math.round(scoreDelta * 10000) / 100,
+    tvlDelta7d: tvlDelta == null ? null : Math.round(tvlDelta * 10000) / 100,
   };
 }
 

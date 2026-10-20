@@ -33,6 +33,8 @@ export interface AlchemyTransactionEntry {
   to: string | null;
   input: string;
   blockHash?: string | null;
+  from?: string;
+  blockNumber?: string;
 }
 
 export interface AlchemyTransactionReceipt {
@@ -40,6 +42,8 @@ export interface AlchemyTransactionReceipt {
   to: string | null;
   logs: AlchemyLogEntry[];
   blockHash?: string;
+  blockNumber?: string;
+  status?: string;
 }
 
 export interface AlchemyTransactionContextBatch {

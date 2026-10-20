@@ -217,7 +217,7 @@ export const PYUSD_EVENT_FAMILY = defineEventFamily("paxos-pyusd-freeze", [
     signature: "FrozenAddressWiped(address)",
     topicHash: PYUSD_WIPED_TOPIC,
     eventType: "destroy",
-    hasAmount: false, // Amount not in event; fetched via balanceOf at blockNumber-1
+    hasAmount: false, // Amountless wipe: unavailable without exact event-position evidence.
   },
 ]);
 

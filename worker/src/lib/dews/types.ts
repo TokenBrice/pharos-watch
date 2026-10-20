@@ -46,8 +46,8 @@ export interface SignalResult {
   value: number; // 0-100
   available: boolean;
   // Debug fields per signal (optional, set by individual compute functions)
-  delta1d?: number;
-  delta7d?: number;
+  delta1d?: number | null;
+  delta7d?: number | null;
   sizeFactor?: number;
   balanceRatio?: number;
   avgPoolStress?: number;
@@ -55,8 +55,8 @@ export interface SignalResult {
   worstPool?: number | null;
   worstPoolStatus?: WorstPoolComponentStatus;
   worstPoolUnavailableReason?: WorstPoolUnavailableReason;
-  /** Share of the nominal pool blend weight backed by readable components (0.75 or 1). */
-  componentCoverage?: number;
+  /** Readable share of nominal supply/liquidity/pool blend weight; 0 = unavailable, null/omitted = legacy unknown. */
+  componentCoverage?: number | null;
   smoothing?: PoolSmoothingOutcome;
   scoreDelta7d?: number | null;
   tvlDelta7d?: number | null;

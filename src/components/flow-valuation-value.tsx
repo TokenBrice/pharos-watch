@@ -76,19 +76,21 @@ export function FlowVolumeValue({
   valueUsd,
   completeness,
   unpricedEventCount,
+  scanComplete,
   format,
   className,
 }: {
   valueUsd: number;
   completeness: MintBurnValuationCompleteness | null | undefined;
   unpricedEventCount?: number | null;
+  scanComplete?: boolean;
   format: (valueUsd: number) => string;
   className?: string;
 }) {
-  const note = describeMintBurnVolumeBound(completeness, unpricedEventCount);
+  const note = describeMintBurnVolumeBound(completeness, unpricedEventCount, scanComplete);
   return (
     <span className={className} title={note ?? undefined}>
-      {formatMintBurnVolume(valueUsd, completeness, format)}
+      {formatMintBurnVolume(valueUsd, completeness, format, scanComplete)}
       {note ? <span className="sr-only"> ({note})</span> : null}
     </span>
   );

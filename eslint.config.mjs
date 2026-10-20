@@ -413,7 +413,9 @@ const workerRestrictedImportPatterns = [
 ];
 
 const eslintConfig = defineConfig([
-  ...nextVitals,
+  ...nextVitals.map((config) => config.name === "next"
+    ? { ...config, files: [...config.files, "**/*.cjs"] }
+    : config),
   ...nextTs,
   // Override default ignores of eslint-config-next.
   globalIgnores([
@@ -432,6 +434,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Wrangler auto-generated build artifacts
     "worker/.wrangler/**",
+    // Frozen compatibility readers are compiled historical bytes, not source.
+    "worker/src/api/__tests__/fixtures/pr-b-mint-burn-readers.cjs",
     // Local-only agent scratch + planning artifacts (gitignored per repo convention)
     "agents/**",
   ]),

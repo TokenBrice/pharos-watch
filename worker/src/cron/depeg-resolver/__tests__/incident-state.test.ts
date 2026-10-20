@@ -35,7 +35,7 @@ describe("toStructural", () => {
       windDownAnnouncedAt: "2026-05-24",
     } as StablecoinMeta;
 
-    expect(toStructural(meta)).toMatchObject({
+    expect(toStructural(meta, null)).toMatchObject({
       id: "fixture-usd",
       symbol: "FXD",
       mintPath: "issuer-direct-mint",

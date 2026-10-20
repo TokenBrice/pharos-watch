@@ -75,7 +75,7 @@ export interface MintBurnSnapshot {
   mint24h: number;
   burnBaseline: number;
   mintBaseline: number;
-  /** Distinct baseline days observed in the 30-day mint/burn window. */
+  /** Proven baseline days, including quiet days, in the admitted 30-day scan window. */
   baselineDays: number;
   /** Valuation of the 24h window; both sides feed the flow signal. */
   valuation24h: MintBurnValuationCompleteness;

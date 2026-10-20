@@ -11,6 +11,7 @@ import {
 import {
   buildDdrrCoverageRow,
   deriveActualOutcome,
+  classifyActualEpisode,
   reviewDdrrV2Rows,
   reviewDepegResolverAssessment,
   reviewDepegResolverNoCall,
@@ -381,6 +382,22 @@ describe("DDRR scoring", () => {
     expect(row.verdictReview).toBe("correct_recoverable");
     expect(row.durationReview).not.toBe("duration_unscored");
     expect(row.actualRemainingSec).toBe(4_000);
+  });
+
+  it.each([
+    { terminalEvidenceAt: LOCKED_AT + 5_000, terminalEvidenceInterval: null, terminalEvidencePrecision: "unknown" as const },
+    { terminalEvidenceAt: LOCKED_AT + 3_000, terminalEvidenceInterval: { start: LOCKED_AT + 3_000, end: LOCKED_AT + 5_000 }, terminalEvidencePrecision: "day" as const },
+    { terminalEvidenceAt: LOCKED_AT + 3_000, terminalEvidenceInterval: { start: LOCKED_AT + 3_000, end: LOCKED_AT + 30 * 86400 }, terminalEvidencePrecision: "month" as const },
+  ])("preserves recovery before later or unsettled terminal evidence ($terminalEvidencePrecision)", (evidence) => {
+    const event = actualEvent({
+      endedAt: LOCKED_AT + 4_000, closeReason: "recovered-native", recoveryPrice: null,
+      stablecoinStatus: "frozen", terminalObserved: true, ...evidence,
+    });
+    expect(classifyActualEpisode(event)).toBe("recovered");
+    const row = reviewDepegResolverAssessment(assessment(), event, REVIEWED_AT);
+    expect(row.sourceEventState).toBe("recovered");
+    expect(row.actual.kind).toBe("recovered");
+    expect(row.verdictReview).toBe("correct_recoverable");
   });
 
   it("reviews horizons as hit, miss, pending, or unscored from lock-time horizons", () => {

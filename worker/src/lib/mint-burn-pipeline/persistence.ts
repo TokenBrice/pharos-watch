@@ -1,4 +1,4 @@
-import { batchExecute } from "../db";
+import { batchExecute, executeAtomicBatch } from "../db";
 import { throwIfAborted } from "../abort";
 import { detectAtomicRoundtrips } from "./roundtrip-detection";
 import { applyReviewedProtocolInternalFlows } from "./reviewed-protocol-flows";
@@ -84,7 +84,28 @@ export async function updateEventClassifications(
        WHERE id = ?`,
     ).bind(row.burn_type, row.burn_review_reason, row.flow_type, row.id),
   );
-  const rowsUpdated = await batchExecute(db, stmts, { signal: options.signal });
+  let rowsUpdated = 0;
+  const standardStmts: D1PreparedStatement[] = [];
+  for (let index = 0; index < needsUpdate.length; index++) {
+    const row = needsUpdate[index];
+    if (row.burn_review_reason === "reviewed-supply-destruction"
+      || row.burn_review_reason === "unproven-supply-destruction"
+      || row.burn_review_reason === "supply-proof-context-unavailable") {
+      // Reviewed burn repair must survive a crash before the hourly rebuild.
+      const results = await executeAtomicBatch(db, [
+        db.prepare(`INSERT OR REPLACE INTO mint_burn_dirty_hours (stablecoin_id, chain_id, hour_ts)
+          SELECT stablecoin_id, chain_id, (timestamp / 3600) * 3600
+          FROM mint_burn_events WHERE id = ?`).bind(row.id),
+        stmts[index],
+      ], { signal: options.signal, returnResults: true });
+      rowsUpdated += Number(results[1]?.meta?.changes ?? 0);
+    } else {
+      standardStmts.push(stmts[index]);
+    }
+  }
+  if (standardStmts.length > 0) {
+    rowsUpdated += await batchExecute(db, standardStmts, { signal: options.signal });
+  }
 
   // Per-column counters derived from classifier output rather than D1
   // meta.changes so a row that changed both columns counts once per column

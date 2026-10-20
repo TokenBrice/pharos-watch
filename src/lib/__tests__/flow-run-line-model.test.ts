@@ -69,6 +69,21 @@ describe("buildRunLineModel", () => {
     expect(model.band).toBeNull();
   });
 
+  it("names incomplete scanning even when activity is observed and never invents pulls on an unavailable composite", () => {
+    const incomplete = { complete: false, unavailableReason: "scan-coverage-incomplete" } as const;
+    const model = buildRunLineModel(gauge({ score: null, band: null }), [
+      makeMintBurnFlowCoin({ stablecoinId: "scanned", pressureShiftScore: 20, gaugeWeightUsd: 100 }),
+      makeMintBurnFlowCoin({ stablecoinId: "unknown", has24hActivity: true, netFlow24hUsd: null,
+        pressureShiftScore: null, gaugeWeightUsd: 100,
+        coverage: { startBlock: 1, lastSyncedBlock: 2, lagBlocks: 0, historyStartAt: null,
+          has24hWindow: false, has30dWindow: false, has90dWindow: false, status: "unknown", isPartial: true,
+          windows: { window24h: incomplete, window7d: incomplete, window30d: incomplete, window90d: incomplete } } }),
+    ]);
+    expect(model.stubs).toMatchObject([{ id: "unknown", reason: "scan-coverage-incomplete" }]);
+    expect(model.ticks[0]?.pullPoints).toBeNull();
+    expect(selectRunLineDrivers(model)).toEqual({ down: [], up: [] });
+  });
+
   it("does not encode height or pull when the payload predates per-coin weights", () => {
     const legacy = makeMintBurnFlowCoin({ pressureShiftScore: -20 });
     delete (legacy as { gaugeWeightUsd?: number | null }).gaugeWeightUsd;

@@ -33,6 +33,8 @@ export type LegacyDecodeResult<T> =
   | { ok: true; payload: T }
   | { ok: false; reason: PersistedJsonDecodeReason };
 
+
+type DecodedStressSignal = { value: number; available?: boolean; componentCoverage?: number | null };
 /**
  * Decodes a `stress_signals.signals_json` blob and unwraps the envelope if
  * present. Pre-envelope rows pass through unchanged; envelope rows surface as
@@ -41,8 +43,8 @@ export type LegacyDecodeResult<T> =
 export function decodeLegacyStressSignals(
   signalsJson: string | null,
   computedAt: number,
-): LegacyDecodeResult<Record<string, { value: number; available?: boolean }>> {
-  const decoded = decodeJsonString<Record<string, { value: number; available?: boolean }>, PersistedJsonDecodeReason>(signalsJson, {
+): LegacyDecodeResult<Record<string, DecodedStressSignal>> {
+  const decoded = decodeJsonString<Record<string, DecodedStressSignal>, PersistedJsonDecodeReason>(signalsJson, {
     updatedAt: computedAt,
     missingReason: "missing",
     parseErrorReason: "json-parse-failed",
@@ -51,12 +53,20 @@ export function decodeLegacyStressSignals(
       if (unwrapped == null) {
         return { ok: false, reason: "invalid-shape" as const };
       }
-      const signals: Record<string, { value: number; available?: boolean }> = {};
+      const signals: Record<string, DecodedStressSignal> = {};
       for (const [key, signal] of Object.entries(unwrapped.signals)) {
         const row = readRecord(signal);
         if (row != null && typeof row.value === "number" && Number.isFinite(row.value)) {
           const available = booleanValue(row.available);
-          signals[key] = { ...row, value: row.value, ...(available === null ? {} : { available }) };
+          // Coverage is source-owned: absent legacy metadata remains unknown,
+          // never inferred as full coverage (or zero from available:false).
+          const coverage = row.componentCoverage;
+          const componentCoverage = typeof coverage === "number" && Number.isFinite(coverage)
+            && coverage >= 0 && coverage <= 1 ? coverage : null;
+          signals[key] = {
+            ...row, value: row.value, ...(available === null ? {} : { available }),
+            ...("componentCoverage" in row ? { componentCoverage } : {}),
+          };
         }
       }
       return { ok: true, payload: signals };

@@ -1,8 +1,20 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { parseMintBurnLogs } from "../mint-burn-pipeline/parse";
 import type { MintBurnContractConfig, MintBurnEventDef } from "../mint-burn-contracts";
-import type { AlchemyLogEntry } from "../alchemy-logs";
+import type { AlchemyLogEntry, AlchemyTransactionContextBatch } from "../alchemy-logs";
+import type * as AlchemyLogsModule from "../alchemy-logs";
 import type { MintBurnPriceContext, MintBurnPriceHistoryPoint } from "../mint-burn-pipeline/types";
+import { getAlchemyTransactionContextBatchMany } from "../alchemy-logs";
+import { classifyBridgeBurnRows } from "../mint-burn-pipeline/classification";
+import { mintBurnAlchemyEndpoint } from "../mint-burn-pipeline/rpc";
+import { abiWord, reviewedBurnFixture, reviewedFalseBurnEntries } from "./mint-burn-supply-proof.test-support";
+import type { ReviewedBurnFixture } from "./mint-burn-supply-proof.test-support";
+
+vi.mock("../alchemy-logs", async (importOriginal) => ({
+  ...(await importOriginal<typeof AlchemyLogsModule>()),
+  getAlchemyTransactionContextBatchMany: vi.fn(),
+}));
+afterEach(() => vi.resetAllMocks());
 
 describe("parseMintBurnLogs — custom event encodings", () => {
   const ETHEREUM_CHAIN = {
@@ -440,5 +452,89 @@ describe("parseMintBurnLogs — price resolution", () => {
     expect(parseOne(context({ observedAt: EVENT_TS + 22 * 3600 }, [snapshot]))).toMatchObject({
       price_source: "supply-history-daily",
     });
+  });
+});
+
+describe("reviewed supply-destruction admission", () => {
+  async function classify(fixture: ReviewedBurnFixture, actualBurn: boolean,
+    mutate?: (context: AlchemyTransactionContextBatch) => void) {
+    const context = fixture.context(actualBurn);
+    mutate?.(context);
+    vi.mocked(getAlchemyTransactionContextBatchMany).mockResolvedValueOnce(new Map([[fixture.log.transactionHash, context]]));
+    const { rows } = parseMintBurnLogs(fixture.config, fixture.eventDef, [fixture.log], fixture.timestamps, fixture.priceContext);
+    expect(rows[0].burn_type).toBe("review_required");
+    const result = await classifyBridgeBurnRows(rows, fixture.config, [mintBurnAlchemyEndpoint("https://rpc.example")],
+      { count: 0, limit: 20 }, new Map(), undefined,
+      { blockHashesByTx: new Map([[fixture.log.transactionHash, fixture.log.blockHash]]) });
+    return { row: rows[0], result };
+  }
+
+  for (const entry of reviewedFalseBurnEntries) {
+    it(`${entry.chainId}/${entry.stablecoinId} retains ordinary zero transfers but counts its proven source burn`, async () => {
+      const fixture = reviewedBurnFixture(entry.stablecoinId);
+      expect(fixture.source.source).toBeTruthy();
+      const ordinary = await classify(fixture, false);
+      expect(ordinary.row).toMatchObject({ burn_type: "review_required", burn_review_reason: "unproven-supply-destruction",
+        amount: 20_000, flow_type: "standard" });
+      expect(ordinary.result).toMatchObject({ effectiveBurns: 0, reviewBurns: 1, deferredTxHashes: [] });
+      const actual = await classify(fixture, true);
+      expect(actual.row).toMatchObject({ burn_type: "effective_burn", burn_review_reason: "reviewed-supply-destruction",
+        amount: 20_000, flow_type: "standard" });
+      expect(actual.result).toMatchObject({ effectiveBurns: 1, reviewBurns: 0 });
+    });
+  }
+
+  it.each(["router", "amount", "owner", "failed", "wrong-block", "duplicate-index", "truncated", "extra-burn"])(
+    "refuses DAI selector-only or mismatched %s context", async (kind) => {
+      const fixture = reviewedBurnFixture("dai-makerdao");
+      const { row } = await classify(fixture, true, (context) => {
+        if (kind === "router") context.tx!.to = context.receipt!.to = "0x2222222222222222222222222222222222222222";
+        if (kind === "amount") context.tx!.input = `0x9dc29fac${context.tx!.input.slice(10, 74)}${abiWord(1n).slice(2)}`;
+        if (kind === "owner") context.tx!.input = `0x9dc29fac${abiWord(1n).slice(2)}${context.tx!.input.slice(74)}`;
+        if (kind === "failed") context.receipt!.status = "0x0";
+        if (kind === "wrong-block") context.receipt!.blockHash = abiWord(99n);
+        if (kind === "duplicate-index") context.receipt!.logs.push({ ...fixture.log });
+        if (kind === "truncated") context.tx!.input = "0x9dc29fac";
+        if (kind === "extra-burn") context.receipt!.logs.push({ ...fixture.log, logIndex: "0x2" });
+      });
+      expect(row.burn_type).toBe("review_required");
+    },
+  );
+
+  it.each(["emitter", "amount", "owner", "collateral-not-shares", "unpaired-transfer"])(
+    "requires exact custom-event %s evidence, not a transaction-wide fingerprint", async (kind) => {
+      const fixture = reviewedBurnFixture("pusd-plume");
+      const { row } = await classify(fixture, true, (context) => {
+        const proof = context.receipt!.logs[1];
+        if (kind === "emitter") proof.address = "0x2222222222222222222222222222222222222222";
+        if (kind === "amount") proof.data = `0x${abiWord(999n).slice(2)}${abiWord(1n).slice(2)}`;
+        if (kind === "owner") proof.topics = [...proof.topics.slice(0, 3), abiWord(1n)];
+        if (kind === "collateral-not-shares") proof.data = `0x${fixture.log.data.slice(2)}${abiWord(999n).slice(2)}`;
+        if (kind === "unpaired-transfer") context.receipt!.logs.push({ ...fixture.log, logIndex: "0x2" });
+      });
+      expect(row.burn_type).toBe("review_required");
+    },
+  );
+
+  it("admits repeated same-tuple internal Agora batch burns only with one proof per Transfer", async () => {
+    const fixture = reviewedBurnFixture("ausd-agora");
+    const context = fixture.context(true);
+    const secondBurn = { ...fixture.log, logIndex: "0x2" };
+    context.receipt!.logs.push(secondBurn, { ...fixture.proofLog!, logIndex: "0x3" });
+    vi.mocked(getAlchemyTransactionContextBatchMany).mockResolvedValueOnce(new Map([[fixture.log.transactionHash, context]]));
+    const { rows } = parseMintBurnLogs(fixture.config, fixture.eventDef, [fixture.log, secondBurn],
+      fixture.timestamps, fixture.priceContext);
+    expect(await classifyBridgeBurnRows(rows, fixture.config, [mintBurnAlchemyEndpoint("https://rpc.example")],
+      { count: 0, limit: 20 }, new Map())).toMatchObject({ effectiveBurns: 2, reviewBurns: 0 });
+    expect(rows.map((row) => row.burn_type)).toEqual(["effective_burn", "effective_burn"]);
+  });
+
+  it("keeps unavailable receipt context as a non-counted observation, not a dropped event", async () => {
+    const fixture = reviewedBurnFixture("eurs-stasis");
+    vi.mocked(getAlchemyTransactionContextBatchMany).mockResolvedValueOnce(new Map());
+    const { rows } = parseMintBurnLogs(fixture.config, fixture.eventDef, [fixture.log], fixture.timestamps, fixture.priceContext);
+    expect(await classifyBridgeBurnRows(rows, fixture.config, [mintBurnAlchemyEndpoint("https://rpc.example")],
+      { count: 0, limit: 20 }, new Map())).toMatchObject({ effectiveBurns: 0, reviewBurns: 1, deferredTxHashes: [] });
+    expect(rows[0].burn_review_reason).toBe("supply-proof-context-unavailable");
   });
 });

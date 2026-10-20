@@ -6,6 +6,25 @@ export type MintBurnType = "effective_burn" | "bridge_burn" | "review_required";
 export type MintBurnAdapterKind = "transfer-zero-address" | "custom-events" | "mixed";
 export type MintBurnStartBlockConfidence = "high" | "medium" | "low";
 
+/** Source-reviewed evidence needed before a burn-shaped Transfer changes supply. */
+export interface MintBurnSupplyBurnProof {
+  receiptEvent?: {
+    signature: string;
+    topicHash: string;
+    topicArity: number;
+    dataWords: number;
+    accountTopic: number;
+    amountSlot: number;
+  };
+  directCalls?: Array<{
+    signature: string;
+    selector: string;
+    dataWords: number;
+    amountSlot: number;
+    account: "sender" | number;
+  }>;
+}
+
 export interface MintBurnCcipBridgeDetectionConfig {
   protocol: "ccip";
   knownBridgePoolAddresses: string[];

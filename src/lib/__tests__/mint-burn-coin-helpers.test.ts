@@ -324,4 +324,24 @@ describe("nullable scan-window reader contract", () => {
     expect(resolvePressureState(coin)).toBe("nr");
     expect(aggregateCoinFlows24h([coin]).net.bound).toBeUndefined();
   });
+
+  it("does not derive a valuation bound from observed activity in an incompletely scanned window", () => {
+    const missing = { complete: false, unavailableReason: "scan-coverage-incomplete" } as const;
+    const coin = makeMintBurnFlowCoin({
+      has24hActivity: true, netFlow24hUsd: null, netFlow7dUsd: null, netFlow30dUsd: null, netFlow90dUsd: null,
+      mintVolume24hUsd: 100, valuation: valuation24h(PARTIAL_MINT_SIDE),
+      coverage: { startBlock: 1, lastSyncedBlock: 2, lagBlocks: 0, historyStartAt: null,
+        has24hWindow: false, has30dWindow: false, has90dWindow: false, isPartial: true, status: "unknown",
+        windows: { window24h: missing, window7d: missing, window30d: missing, window90d: missing } },
+    });
+    for (const window of ["24h", "7d", "30d", "90d"] as const) {
+      expect(resolveCoinNetFlow(coin, window)).toMatchObject({ valueUsd: null });
+      expect(resolveCoinNetFlow(coin, window).bound).toBeUndefined();
+    }
+    expect(inferHas24hActivity(coin)).toBe(true);
+    expect(resolveNetDirection(coin)).toBeNull();
+    expect(resolvePressureScore(coin)).toBeNull();
+    expect(aggregateCoinFlows24h([coin])).toMatchObject({ has24hActivity: true, direction: null, net: { valueUsd: null } });
+    expect(aggregateCoinFlows24h([coin]).net.bound).toBeUndefined();
+  });
 });

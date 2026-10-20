@@ -11,6 +11,7 @@ import type { CollectedConfirmationEvidence, ConfirmationEvidenceInput, DexPoolC
 import { collectConfirmationEvidence } from "../pending-depeg-confirmation-evidence";
 import { emptyEvidence } from "./pending-depeg-confirmation.test-support";
 import { makePendingDepegRow } from "../../test-helpers/pending-depeg-fixtures";
+import { loadDexPrices } from "../../lib/depeg-helpers";
 
 vi.mock("../../lib/circuit-breaker", () => ({ recordOutcomeSafe: vi.fn(async () => undefined) }));
 
@@ -152,6 +153,33 @@ describe("collectConfirmationEvidence DEX source grouping and freshness", () => 
     const evidence = await collect(noOffchain({ dexPriceRows: dexRows(stale), dexPriceSources: dexSources(stale) }));
     expect(evidence.dexStatus).toBe("insufficient");
     expect(evidence.unavailableSources).toContain("dex:aggregate-untrusted");
+  });
+
+  it.each([
+    { label: "legacy unclocked", clock: undefined },
+    { label: "six-hour original", clock: NOW_SEC - 6 * 3600 },
+  ])("cannot confirm or prove recovery from $label sources in a fresh aggregate", async ({ clock }) => {
+    for (const price of [0.95, 0.997]) {
+      const db = mockD1Strict([{
+        match: "FROM dex_prices",
+        rows: [{
+          ...dexRows(NOW_SEC, price).get(COIN_ID)!,
+          price_sources_json: JSON.stringify(["curve", "uniswap"].map((protocol) => ({
+            protocol, sourceFamily: protocol, chain: "ethereum", price, tvl: 3_000_000,
+            updatedAt: NOW_SEC,
+            ...(clock === undefined ? {} : { observedAt: clock, aggregateObservedAt: clock }),
+          }))),
+        }],
+      }]);
+      const loaded = await loadDexPrices(db, NOW_SEC);
+      expect(loaded.dexPriceSources.size).toBe(0);
+      const evidence = await collect(noOffchain({ db, ...loaded }));
+      expect(evidence.dexStatus).toBe("insufficient");
+      expect(evidence.dexConfirmationKeys).toEqual([]);
+      expect(evidence.dexPeakCandidates).toEqual([]);
+      expect(evidence.confirmingSources).toEqual([]);
+      expect(evidence.hardOpposingSources).toEqual([]);
+    }
   });
 });
 

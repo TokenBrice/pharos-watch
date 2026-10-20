@@ -83,7 +83,17 @@
       "disposition": "unsupported",
       "unsupportedReason": "zero-address-transfer-without-supply-change:transfer",
       "eventSet": "transfer",
-      "invariant": "transfer-supply"
+      "invariant": "transfer-supply",
+      "supplyBurnProof": {
+        "receiptEvent": {
+          "signature": "Burned(address,address,uint256)",
+          "topicHash": "0x6ab368f832c266c8eb942b84fbcaa20aedc24a699d2a05fae2568028733b1d09",
+          "topicArity": 3,
+          "dataWords": 1,
+          "accountTopic": 2,
+          "amountSlot": 0
+        }
+      }
     },
     {
       "chainId": "ethereum",
@@ -229,7 +239,18 @@
       "disposition": "unsupported",
       "unsupportedReason": "zero-address-transfer-without-supply-change:transferFrom",
       "eventSet": "transfer",
-      "invariant": "transfer-supply"
+      "invariant": "transfer-supply",
+      "supplyBurnProof": {
+        "directCalls": [
+          {
+            "signature": "burn(address,uint256)",
+            "selector": "0x9dc29fac",
+            "dataWords": 2,
+            "amountSlot": 1,
+            "account": 0
+          }
+        ]
+      }
     },
     {
       "chainId": "ethereum",
@@ -257,7 +278,18 @@
       "disposition": "unsupported",
       "unsupportedReason": "zero-address-transfer-without-supply-change:transfer",
       "eventSet": "transfer",
-      "invariant": "transfer-supply"
+      "invariant": "transfer-supply",
+      "supplyBurnProof": {
+        "directCalls": [
+          {
+            "signature": "burn(uint256)",
+            "selector": "0x42966c68",
+            "dataWords": 1,
+            "amountSlot": 0,
+            "account": "sender"
+          }
+        ]
+      }
     },
     {
       "chainId": "ethereum",
@@ -348,7 +380,18 @@
       "disposition": "unsupported",
       "unsupportedReason": "zero-address-transfer-without-supply-change:transfer",
       "eventSet": "transfer",
-      "invariant": "transfer-supply"
+      "invariant": "transfer-supply",
+      "supplyBurnProof": {
+        "directCalls": [
+          {
+            "signature": "burnTokens(uint256)",
+            "selector": "0x6d1b229d",
+            "dataWords": 1,
+            "amountSlot": 0,
+            "account": "sender"
+          }
+        ]
+      }
     },
     {
       "chainId": "ethereum",
@@ -439,7 +482,18 @@
       "disposition": "unsupported",
       "unsupportedReason": "zero-address-transfer-without-supply-change:transfer",
       "eventSet": "transfer",
-      "invariant": "transfer-supply"
+      "invariant": "transfer-supply",
+      "supplyBurnProof": {
+        "directCalls": [
+          {
+            "signature": "burn(uint256)",
+            "selector": "0x42966c68",
+            "dataWords": 1,
+            "amountSlot": 0,
+            "account": "sender"
+          }
+        ]
+      }
     },
     {
       "chainId": "ethereum",
@@ -700,7 +754,18 @@
       "disposition": "unsupported",
       "unsupportedReason": "zero-address-transfer-without-supply-change:transferFrom",
       "eventSet": "transfer",
-      "invariant": "transfer-supply"
+      "invariant": "transfer-supply",
+      "supplyBurnProof": {
+        "directCalls": [
+          {
+            "signature": "burn(address,uint256)",
+            "selector": "0x9dc29fac",
+            "dataWords": 2,
+            "amountSlot": 1,
+            "account": 0
+          }
+        ]
+      }
     },
     {
       "chainId": "ethereum",
@@ -719,7 +784,17 @@
       "disposition": "unsupported",
       "unsupportedReason": "zero-address-transfer-without-supply-change:transfer",
       "eventSet": "transfer",
-      "invariant": "transfer-supply"
+      "invariant": "transfer-supply",
+      "supplyBurnProof": {
+        "receiptEvent": {
+          "signature": "Exit(address,address,uint256,address,uint256)",
+          "topicHash": "0xe0c82280a1164680e0cf43be7db4c4c9f985423623ad7a544fb76c772bdc6043",
+          "topicArity": 4,
+          "dataWords": 2,
+          "accountTopic": 3,
+          "amountSlot": 1
+        }
+      }
     },
     {
       "chainId": "ethereum",
@@ -838,7 +913,17 @@
       "disposition": "unsupported",
       "unsupportedReason": "zero-address-transfer-without-supply-change:transfer",
       "eventSet": "transfer",
-      "invariant": "transfer-supply"
+      "invariant": "transfer-supply",
+      "supplyBurnProof": {
+        "receiptEvent": {
+          "signature": "Withdraw(address,address,address,uint256,uint256)",
+          "topicHash": "0xfbde797d201c681b91056529119e0b02407c7bb96a4a2c75c01fc9667232c8db",
+          "topicArity": 4,
+          "dataWords": 2,
+          "accountTopic": 3,
+          "amountSlot": 1
+        }
+      }
     },
     {
       "chainId": "ethereum",
@@ -848,7 +933,17 @@
       "disposition": "unsupported",
       "unsupportedReason": "zero-address-transfer-without-supply-change:transfer",
       "eventSet": "transfer",
-      "invariant": "transfer-supply"
+      "invariant": "transfer-supply",
+      "supplyBurnProof": {
+        "receiptEvent": {
+          "signature": "Withdraw(address,address,address,uint256,uint256)",
+          "topicHash": "0xfbde797d201c681b91056529119e0b02407c7bb96a4a2c75c01fc9667232c8db",
+          "topicArity": 4,
+          "dataWords": 2,
+          "accountTopic": 3,
+          "amountSlot": 1
+        }
+      }
     },
     {
       "chainId": "ethereum",
@@ -1013,7 +1108,18 @@
       "disposition": "unsupported",
       "unsupportedReason": "zero-address-transfer-without-supply-change:transferFrom",
       "eventSet": "transfer",
-      "invariant": "transfer-supply"
+      "invariant": "transfer-supply",
+      "supplyBurnProof": {
+        "directCalls": [
+          {
+            "signature": "burn(address,uint256)",
+            "selector": "0x9dc29fac",
+            "dataWords": 2,
+            "amountSlot": 1,
+            "account": 0
+          }
+        ]
+      }
     },
     {
       "chainId": "ethereum",
@@ -1265,7 +1371,32 @@
       "disposition": "unsupported",
       "unsupportedReason": "zero-address-transfer-without-supply-change:transferFrom",
       "eventSet": "transfer",
-      "invariant": "transfer-supply"
+      "invariant": "transfer-supply",
+      "supplyBurnProof": {
+        "directCalls": [
+          {
+            "signature": "burn(uint256)",
+            "selector": "0x42966c68",
+            "dataWords": 1,
+            "amountSlot": 0,
+            "account": "sender"
+          },
+          {
+            "signature": "burn(address,uint256)",
+            "selector": "0x9dc29fac",
+            "dataWords": 2,
+            "amountSlot": 1,
+            "account": 0
+          },
+          {
+            "signature": "burnFor(address,uint256)",
+            "selector": "0x1dd319cb",
+            "dataWords": 2,
+            "amountSlot": 1,
+            "account": 0
+          }
+        ]
+      }
     },
     {
       "chainId": "ethereum",

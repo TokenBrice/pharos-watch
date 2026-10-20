@@ -16,8 +16,10 @@ export function shouldSuppressAsMirrorZero(
   stablecoin: string,
   eventType: string,
   amountNative: number | null,
+  amountSource: string | null,
 ): boolean {
-  return stablecoin === "EURC" && (eventType === "blacklist" || eventType === "unblacklist") && amountNative === 0;
+  return stablecoin === "EURC" && (eventType === "blacklist" || eventType === "unblacklist")
+    && amountNative === 0 && amountSource === "event";
 }
 
 export interface BlacklistPersistedRow {
