@@ -137,9 +137,9 @@ The shared Dwellir registries own capabilities. Scheduled EVM/native reads share
 Native reads use `redirect: "manual"` (Workers rejects `"error"`); non-2xx is rejected, so keys never follow redirects.
 
 The EVM resolver separates recent finalized state, arbitrary historical state, headers/receipts and inclusive log intervals. Recent pins bind chain/number/hash, original clocks, finalized head, age and retained floor; batch eligibility intersects actual members. BSC/Monad/zkSync remain recent-only. Unknown incumbent retention is not archive proof; HyperEVM Alchemy numeric mispins stay excluded. No hash-to-number/latest fallback.
+RPC decoding, pinned CL recovery, timestamp batches, parity ancestry and capped-log splitting follow the [read admission details](process/worker-infrastructure-appendix.md#rpc-read-admission-details); failures never manufacture state, finality or completeness.
 
-CCIP pages use the first eligible provider's span, independent of state history; Monad retention needs an observed head. Refusal never advances cursors. Serial `noBatch`, exact IDs, per-attempt admission/credits/deadlines and run-local network-failure demotion remain. Unstarted denial is uncharged/undemoted. [Parity](./api-reference-admin.md#get-apirpc-provider-trial) is independent, diagnostic and non-promoting; preference adds no fan-out or evidence of asset acceptance.
-Capped inclusive Etherscan log ranges split sequentially; exhausted request budgets return incomplete `budget-exhausted` results and recursion beyond depth 8 returns `max-recursion-depth`. A capped singleton returns `etherscan-result-cap-unsplittable`, including when its parent spans two adjacent blocks.
+
 
 ---
 
@@ -212,6 +212,9 @@ Regenerate the schedule inventory and the appendix's [executable-task topology/n
 ### Event-entry lifecycle and admission
 
 `runScheduledSlotWithFence()` arms the inherited absolute deadline before the first D1 await, not after claim or child-protocol stamping. Same-key presweeps no longer precede admission; same-slot stale takeover remains CAS-fenced. Mandatory await boundaries recheck expiry before admitting the next stage. Replay keeps the executing event's deadline and its separate producer/source identity.
+Decoders must terminate synchronously; ambiguous claim acknowledgements require exact owned-generation readback. [Lifecycle recovery details](process/worker-infrastructure-appendix.md#event-entry-recovery-details) retains these boundaries without granting fresh deadlines.
+
+
 
 | Await boundary | Contract |
 | --- | --- |
@@ -228,6 +231,8 @@ The existing public `digestTriggerPoll` lane starts with a DB-only sweep-only st
 
 `scheduled-slot-sweep` events record counts, applied policies and `maxReconciliationLagSec` from policy eligibility to the sweep observation clock (null without reconciled observations). After deployment require lag within two poll intervals outside documented platform/D1 stalls; fixtures are not production acceptance. Reconciled child errors and abandonment events share `parentIncidentId`; event `childIncidentCounts` groups started and proven-not-started children without making required unstarted errors neutral.
 
+Scheduler measurement semantics and bounded cache pruning follow the [maintenance details](process/worker-infrastructure-appendix.md#database-maintenance-details).
+
 
 
 
@@ -235,7 +240,9 @@ The existing public `digestTriggerPoll` lane starts with a DB-only sweep-only st
 
 **Files:** `worker/src/lib/db.ts` owns generic D1 helpers; `worker/src/lib/db-cache.ts` owns `getCache`, `setCache`, `setCacheIfAbsent`, `setCacheIfNewer`, `getPriceCache` and `savePriceCache`.
 
-### Remote D1 Inspection
+[Inspection](#remote-d1-inspection).
+
+## Remote D1 Inspection
 
 From `worker/`, use `npx --no-install wrangler d1 execute stablecoin-db --remote --json --command "SELECT ..."` (or root with global `--config worker/wrangler.toml`). Never `--file`: D1's import API reports `changed_db: true` even for SELECT and locks writes. Reference: `scripts/maintenance/watch-worker-cron.mjs` (`d1Select`).
 
@@ -255,4 +262,5 @@ Feature guides own producer-specific algorithms and schemas; this document owns 
 | Redemption backstops | `worker/src/cron/sync-redemption-backstops.ts` | [Redemption Backstops](./redemption-backstops.md) |
 | Kinesis supply       | `worker/src/cron/sync-kinesis-supply.ts`       | [On-chain monitoring](./status-dashboard.md#data-quality-status) (monitoring only) |
 | Bluechip ratings     | `worker/src/cron/sync-bluechip.ts`             | [Bluechip Ratings](./bluechip-ratings.md)         |
+| Yield benchmarks     | `worker/src/cron/fetch-tbill-rate.ts`          | [Benchmark publication and recovery validation](./runbooks/yield-benchmark-fallback-stale.md#validation) |
 

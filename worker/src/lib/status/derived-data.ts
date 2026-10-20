@@ -13,6 +13,9 @@ import { loadMintBurnFirstHourRows } from "../mint-burn-hourly-queries";
 import { readDewsPublishedGenerationResult } from "../dews-publication-pointer";
 import { loadActiveSafetyScoreSource } from "../safety-score-active-source";
 import { CONFIRMED_CRON_OUTPUT_AT_SQL } from "../cron-output";
+import { STATUS_DATASET_FRESHNESS } from "@shared/lib/status-dataset-freshness";
+import type { DatasetFreshnessKey } from "@shared/types/status/core";
+import { assessFreshnessTimestamp } from "../api-freshness-age";
 
 export function emptyDatasetFreshness(): StatusResponse["datasetFreshness"] {
   return {
@@ -55,10 +58,10 @@ type DatasetFreshnessTarget =
       type: "report-card-publication";
     };
 
-const DATASET_FRESHNESS_TARGETS: Record<keyof StatusResponse["datasetFreshness"], DatasetFreshnessTarget> = {
+const DATASET_FRESHNESS_TARGETS: Record<DatasetFreshnessKey, DatasetFreshnessTarget> = {
   stablecoins: { type: "table", table: "cache", column: "updated_at", where: "key = 'stablecoins'" },
-  blacklist: { type: "cron", jobs: ["sync-blacklist"] },
-  mintBurn: { type: "cron", jobs: ["sync-mint-burn", "sync-mint-burn-extended"] },
+  blacklist: { type: "cron", jobs: STATUS_DATASET_FRESHNESS.blacklist.owners },
+  mintBurn: { type: "cron", jobs: STATUS_DATASET_FRESHNESS.mintBurn.owners },
   supply: { type: "table", table: "supply_history", column: "snapshot_date" },
   safetyGrades: { type: "report-card-publication" },
   yield: {
@@ -67,7 +70,7 @@ const DATASET_FRESHNESS_TARGETS: Record<keyof StatusResponse["datasetFreshness"]
     column: "updated_at",
     where: "is_best = 1 AND (publication_generation_id IS NULL OR publication_state = 'published')",
   },
-  depegs: { type: "cron", jobs: ["sync-stablecoins"] },
+  depegs: { type: "cron", jobs: STATUS_DATASET_FRESHNESS.depegs.owners },
   dews: { type: "dews-publication" },
   digest: { type: "table", table: "daily_digest", column: "generated_at" },
 };
@@ -193,30 +196,17 @@ async function getLastUpdate(db: D1Database, target: DatasetFreshnessTarget, now
 
 export async function getDatasetFreshness(db: D1Database): Promise<StatusResponse["datasetFreshness"]> {
   const now = Math.floor(Date.now() / 1000);
-  const [stablecoins, blacklist, mintBurn, supply, safetyGrades, yieldTs, depegs, dews, digest] =
-    await Promise.all([
-      getLastUpdate(db, DATASET_FRESHNESS_TARGETS.stablecoins, now),
-      getLastUpdate(db, DATASET_FRESHNESS_TARGETS.blacklist, now),
-      getLastUpdate(db, DATASET_FRESHNESS_TARGETS.mintBurn, now),
-      getLastUpdate(db, DATASET_FRESHNESS_TARGETS.supply, now),
-      getLastUpdate(db, DATASET_FRESHNESS_TARGETS.safetyGrades, now),
-      getLastUpdate(db, DATASET_FRESHNESS_TARGETS.yield, now),
-      getLastUpdate(db, DATASET_FRESHNESS_TARGETS.depegs, now),
-      getLastUpdate(db, DATASET_FRESHNESS_TARGETS.dews, now),
-      getLastUpdate(db, DATASET_FRESHNESS_TARGETS.digest, now),
-    ]);
-
-  return {
-    stablecoins,
-    blacklist,
-    mintBurn,
-    supply,
-    safetyGrades,
-    yield: yieldTs,
-    depegs,
-    dews,
-    digest,
-  };
+  const keys = Object.keys(STATUS_DATASET_FRESHNESS) as DatasetFreshnessKey[];
+  const clocks = await Promise.all(keys.map((key) => getLastUpdate(db, DATASET_FRESHNESS_TARGETS[key], now)));
+  const freshness = emptyDatasetFreshness();
+  const unavailableReasons: NonNullable<StatusResponse["datasetFreshness"]["unavailableReasons"]> = {};
+  keys.forEach((key, index) => {
+    // Dataset clocks describe observed output, never a future generation.
+    const assessment = assessFreshnessTimestamp(now, clocks[index], 0);
+    freshness[key] = assessment.reason == null ? clocks[index] : null;
+    if (assessment.reason != null) unavailableReasons[key] = assessment.reason;
+  });
+  return { ...freshness, unavailableReasons };
 }
 
 

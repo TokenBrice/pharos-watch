@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import {
   runScheduledSlotWithFence,
   sweepStaleScheduledSlotExecutions,
@@ -133,6 +134,107 @@ describe("runScheduledSlotWithFence", () => {
         },
       },
     });
+  });
+
+  it.each(["pre-commit", "post-commit", "post-commit heartbeat"] as const)(
+    "runs and finishes a stale takeover once after %s response loss",
+    async (failure) => {
+      const now = Math.floor(Date.now() / 1000);
+      const slotStartedAt = now - 3600;
+      const db = makeLeaseDb({
+        slots: [makeRunningSlot("halfHourlyOffset", slotStartedAt, "old-owner", now - 1800)],
+      });
+      let injected = false;
+      const faultDb = createSqliteD1(db.sqlite, {
+        onRun(sql) {
+          if (failure === "pre-commit" && !injected && sql.includes("SET execution_owner = ?")) {
+            injected = true;
+            throw new Error("Network connection lost");
+          }
+        },
+        rowsWritten(sql, changes) {
+          if (failure !== "pre-commit" && !injected && changes === 1 && sql.includes("SET execution_owner = ?")) {
+            injected = true;
+            if (failure === "post-commit heartbeat") setSlotUpdatedAt(db.sqlite, "halfHourlyOffset", slotStartedAt, now + 1);
+            throw new Error("Network connection lost");
+          }
+          return changes;
+        },
+      });
+      const work = vi.fn(async () => undefined);
+      const run = runScheduledSlotWithFence(faultDb, "halfHourlyOffset", work, {
+        slotStartedAt, owner: "claimant", invocationId: "claim-invocation",
+      });
+      await vi.advanceTimersByTimeAsync(200);
+      expect(await run).toMatchObject({ status: "ok" });
+      expect(injected).toBe(true);
+      expect(work).toHaveBeenCalledTimes(1);
+      expect(db.getSlot("halfHourlyOffset", slotStartedAt)).toMatchObject({
+        state: "finished", result_status: "ok", execution_owner: "claimant",
+        execution_generation: 2, invocation_id: "claim-invocation",
+      });
+      expect(db.getRuns()).toHaveLength(1);
+    },
+  );
+
+  it.each([
+    "execution_owner = 'new-owner', execution_generation = 3",
+    "execution_generation = 3",
+    "invocation_id = 'foreign-invocation'",
+    "state = 'finished'",
+    "slot_key = 'foreign-slot'",
+    "slot_started_at = slot_started_at + 1",
+  ])("refuses ambiguous takeover readback after %s", async (mutation) => {
+    const now = Math.floor(Date.now() / 1000);
+    const slotStartedAt = now - 3600;
+    const db = makeLeaseDb({
+      slots: [makeRunningSlot("halfHourlyOffset", slotStartedAt, "old-owner", now - 1800)],
+    });
+    let injected = false;
+    const faultDb = createSqliteD1(db.sqlite, { rowsWritten(sql, changes) {
+      if (!injected && changes === 1 && sql.includes("SET execution_owner = ?")) {
+        injected = true;
+        db.sqlite.prepare(`UPDATE cron_slot_executions SET ${mutation}`).run();
+        throw new Error("Network connection lost");
+      }
+      return changes;
+    } });
+    const work = vi.fn(async () => undefined);
+    const run = runScheduledSlotWithFence(faultDb, "halfHourlyOffset", work, {
+      slotStartedAt, owner: "claimant", invocationId: "claim-invocation",
+    });
+    await vi.advanceTimersByTimeAsync(200);
+    expect(await run).toMatchObject({ status: "skipped_running" });
+    expect(injected).toBe(true);
+    expect(work).not.toHaveBeenCalled();
+    expect(db.getRuns()).toEqual([]);
+    expect(db.sqlite.prepare("SELECT result_status FROM cron_slot_executions").get()).toEqual({ result_status: null });
+  });
+
+  it("does not admit an ambiguously committed takeover after the inherited deadline expires", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const slotStartedAt = now - 3600;
+    const db = makeLeaseDb({
+      slots: [makeRunningSlot("halfHourlyOffset", slotStartedAt, "old-owner", now - 1800)],
+    });
+    let injected = false;
+    const faultDb = createSqliteD1(db.sqlite, { rowsWritten(sql, changes) {
+      if (!injected && changes === 1 && sql.includes("SET execution_owner = ?")) {
+        injected = true;
+        throw new Error("Network connection lost");
+      }
+      return changes;
+    } });
+    const work = vi.fn(async () => undefined);
+    const run = runScheduledSlotWithFence(faultDb, "halfHourlyOffset", work, {
+      slotStartedAt, owner: "claimant", deadlineMs: Date.now() + 50,
+    });
+    const rejected = expect(run).rejects.toThrow("exceeded controlled deadline");
+    await vi.advanceTimersByTimeAsync(200);
+    await rejected;
+    expect(injected).toBe(true);
+    expect(work).not.toHaveBeenCalled();
+    expect(db.getRuns()).toEqual([]);
   });
 
   it.each([

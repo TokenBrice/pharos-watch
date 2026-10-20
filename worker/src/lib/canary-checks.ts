@@ -588,9 +588,14 @@ async function checkBenchmarkCurrent(
       });
     }
     const registry = parseRiskFreeRatesCache(ratesCache.value, ratesCache.updatedAt, observedAt);
+    const registryMetadata = parseObjectMetadata(ratesCache.value);
+    const generationId = typeof registryMetadata?.generationId === "string" && registryMetadata.generationId.length > 0
+      ? registryMetadata.generationId
+      : null;
     const benchmark = registry?.[options.currency] ?? null;
-    const streakCache = await getCache(db, options.streakCacheKey);
+    const streakCache = generationId == null ? null : await getCache(db, options.streakCacheKey);
     const streak = parseObjectMetadata(streakCache?.value ?? null);
+    const streakGenerationId = typeof streak?.generationId === "string" ? streak.generationId : null;
     const consecutiveFreshRuns = typeof streak?.consecutiveFreshRuns === "number"
       && Number.isSafeInteger(streak.consecutiveFreshRuns) && streak.consecutiveFreshRuns >= 0
       ? streak.consecutiveFreshRuns
@@ -606,6 +611,8 @@ async function checkBenchmarkCurrent(
       : null;
     const metadata = {
       currency: options.currency,
+      generationId,
+      streakGenerationId,
       source: benchmark?.source ?? null,
       recordDate: benchmark?.recordDate ?? null,
       fetchedAt: benchmark?.fetchedAt ?? null,
@@ -619,7 +626,18 @@ async function checkBenchmarkCurrent(
       requiredFreshPublications: 2,
     };
     if (!registry || !benchmark) return failedResult("benchmark-registry-unusable", metadata);
+    if (generationId == null) {
+      return skippedResult("benchmark-registry-generation-legacy", {
+        ...metadata, reason: "benchmark-registry-generation-legacy",
+      });
+    }
     if (consecutiveFreshRuns == null) return failedResult("benchmark-fresh-streak-unavailable", metadata);
+    if (streakGenerationId == null) {
+      return failedResult("benchmark-fresh-streak-generation-unavailable", metadata);
+    }
+    if (streakGenerationId !== generationId) {
+      return failedResult("benchmark-fresh-streak-generation-mismatch", metadata);
+    }
     const problems: string[] = [];
     if (benchmark?.isFallback) {
       problems.push(`${options.currency} benchmark is fallback (${benchmark.fallbackMode ?? "unknown"})`);

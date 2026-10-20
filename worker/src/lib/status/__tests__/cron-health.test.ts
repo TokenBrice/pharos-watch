@@ -709,6 +709,70 @@ describe("loadCronHealth — watch-tier bootstrap guard", () => {
   });
 });
 
+describe("loadCronHealth — progress timestamp admission", () => {
+  const NOW = 1_775_890_000;
+  const job = "sync-stablecoins";
+
+  it.each([
+    ["future heartbeat", NOW - 30, NOW + 61, "future-timestamp"],
+    ["future start", NOW + 61, NOW - 5, "future-timestamp"],
+    ["nonfinite heartbeat", NOW - 30, Infinity, "invalid-timestamp"],
+    ["malformed heartbeat", NOW - 30, "recent", "invalid-timestamp"],
+    ["malformed start", "recent", NOW - 5, "invalid-timestamp"],
+    ["nonfinite start", NaN, NOW - 5, "invalid-timestamp"],
+    ["missing heartbeat", NOW - 30, null, "missing-timestamp"],
+    ["missing start", null, NOW - 5, "missing-timestamp"],
+  ])("keeps %s diagnostic without manufacturing availability or hiding a terminal error", async (_label, startedAt, updatedAt, reason) => {
+    for (const priorStatus of [null, "error"] as const) {
+      const rows = seedWithOverrides(NOW, []).filter((row) => row.job !== job);
+      if (priorStatus) rows.push(makeCronRow(job, priorStatus, 60, NOW));
+      const snapshot = await loadCronHealth(mockD1([
+        { match: "UNION ALL", rows },
+        { match: "FROM cron_leases", rows: [{ job, lease_owner: "owner", lease_until: NOW + 300 }] },
+        { match: "FROM cron_run_progress", rows: [{
+          job, started_at: startedAt, updated_at: updatedAt, stage: "recovery", lease_owner: "owner",
+        }] },
+      ]), NOW);
+      expect(snapshot.crons[job].healthy).toBe(false);
+      expect(snapshot.crons[job].inFlight).toBeNull();
+      expect(snapshot.crons[job].inFlightUnavailable).toMatchObject({
+        timestampReason: reason, stale: true, stage: "recovery",
+      });
+      expect(snapshot.availabilityImpactingCronErrors).toBe(priorStatus ? 1 : 0);
+    }
+  });
+
+  it("admits the inclusive future-skew allowance for live recovery", async () => {
+    const snapshot = await loadCronHealth(mockD1([
+      { match: "UNION ALL", rows: seedWithOverrides(NOW, [{ job, status: "error", ageSec: 60 }]) },
+      { match: "FROM cron_leases", rows: [{ job, lease_owner: "owner", lease_until: NOW + 300 }] },
+      { match: "FROM cron_run_progress", rows: [{
+        job, started_at: NOW + 60, updated_at: NOW + 60, lease_owner: "owner",
+      }] },
+    ]), NOW);
+    expect(snapshot.crons[job].healthy).toBe(true);
+    expect(snapshot.crons[job].inFlight?.stale).toBe(false);
+    expect(snapshot.crons[job].inFlightUnavailable).toBeUndefined();
+    expect(snapshot.availabilityImpactingCronErrors).toBe(0);
+  });
+
+  it.each([
+    ["error", NOW + 120, true, false],
+    ["ok", NOW, false, true],
+  ] as const)("keeps %s terminal evidence independent of the actual heartbeat read clock", async (status, readNow, live, unavailable) => {
+    const snapshot = await loadCronHealth(mockD1([
+      { match: "UNION ALL", rows: seedWithOverrides(NOW, [{ job, status, ageSec: 60 }]) },
+      { match: "FROM cron_leases", rows: [{ job, lease_owner: "owner", lease_until: NOW + 300 }] },
+      { match: "FROM cron_run_progress", rows: [{
+        job, started_at: NOW + 120, updated_at: NOW + 120, lease_owner: "owner",
+      }] },
+    ]), NOW, { readNow });
+    expect(snapshot.crons[job].healthy).toBe(true);
+    expect(snapshot.crons[job].inFlight != null).toBe(live);
+    expect(snapshot.crons[job].inFlightUnavailable != null).toBe(unavailable);
+  });
+});
+
 describe("loadCronHealth — stale cron artifact readout", () => {
   const NOW = 1_775_890_000;
 

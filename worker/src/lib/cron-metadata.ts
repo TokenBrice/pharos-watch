@@ -18,18 +18,15 @@ export function normalizeCronMetadataWithLease(
     }
   }
 
-  const rowsWrittenDefault = typeof result?.itemCount === "number" ? result.itemCount : null;
-
-  // Defaults are applied AFTER the producer spread: an explicit `null` from a
-  // producer must fall back to the derived default, not defeat it.
+  // Only producers can report measurements; itemCount is not a write count.
   const metadata = {
     ...parsed,
     rowsRead: parsed.rowsRead ?? null,
-    rowsWritten: parsed.rowsWritten ?? rowsWrittenDefault,
-    rowsDropped: parsed.rowsDropped ?? 0,
+    rowsWritten: parsed.rowsWritten ?? null,
+    rowsDropped: parsed.rowsDropped ?? null,
     sourceCoverage: parsed.sourceCoverage ?? null,
     fallbackMode: parsed.fallbackMode ?? null,
-    validationFailures: parsed.validationFailures ?? 0,
+    validationFailures: parsed.validationFailures ?? null,
   };
   return JSON.stringify({ ...metadata, ...leaseMeta });
 }

@@ -19,6 +19,7 @@ import { confirmedCronOutputAt, CONFIRMED_CRON_OUTPUT_AT_SQL } from "../cron-out
 import { staleSlotEventCacheKey } from "../scheduled-slot-reconciliation";
 import { buildInClause } from "../db";
 import { logWorkerEvent } from "../structured-log";
+import { assessFreshnessTimestamp } from "../api-freshness-age";
 import { classifyFreshness } from "./freshness-oracle";
 import { projectCronRunOutcome } from "./cron-status-summary";
 
@@ -600,6 +601,8 @@ function summarizeRunningCronSlots(
 export interface LoadCronHealthOptions {
   /** Restrict history/lease/progress reads and records to these canonical jobs (per-job detail). */
   jobs?: readonly string[];
+  /** Actual read clock when the surrounding assessment retains an earlier run-start clock. */
+  readNow?: number;
 }
 
 export async function loadCronHealth(
@@ -607,6 +610,7 @@ export async function loadCronHealth(
   now: number,
   options: LoadCronHealthOptions = {},
 ): Promise<CronHealthSnapshot> {
+  const progressReadNow = options.readNow ?? now;
   const cronJobs = options.jobs ? [...options.jobs] : Object.keys(CRON_INTERVALS);
   const cronJobInClause = buildInClause(cronJobs);
   const scheduleKeys = Object.keys(SCHEDULED_SLOT_PLANS) as Array<keyof typeof SCHEDULED_SLOT_PLANS>;
@@ -808,7 +812,11 @@ export async function loadCronHealth(
     const lastRun = runs.length > 0 ? runs[0] : null;
     const inFlight = cronProgressByJob.get(job);
     const telemetryUnknown = cronHistoryQueryFailed;
-    const inFlightFresh = inFlight != null && now - inFlight.updatedAt <= Math.max(300, interval);
+    const progressStartedAt = inFlight ? assessFreshnessTimestamp(progressReadNow, inFlight.startedAt) : null;
+    const progressUpdatedAt = inFlight ? assessFreshnessTimestamp(progressReadNow, inFlight.updatedAt) : null;
+    const progressTimestampReason = progressStartedAt?.reason ?? progressUpdatedAt?.reason ?? null;
+    const inFlightFresh = inFlight != null && progressTimestampReason == null
+      && progressUpdatedAt?.ageSeconds != null && progressUpdatedAt.ageSeconds <= Math.max(300, interval);
     const isFresh = isFreshCronRun(lastRun, now, interval);
     const requiredRuns = runs.filter((run) => run.status !== NEUTRAL_CRON_RUN_STATUS);
     const latestRequiredRun = requiredRuns[0] ?? null;
@@ -921,11 +929,17 @@ export async function loadCronHealth(
       healthy,
       telemetryUnknown,
       ...(cronHistoryQueryError ? { telemetryUnknownReason: cronHistoryQueryError } : {}),
+      ...(inFlight && progressTimestampReason ? {
+        inFlightUnavailable: (() => {
+          const { metadata: _metadata, ...progress } = inFlight;
+          return { ...progress, stale: true, timestampReason: progressTimestampReason };
+        })(),
+      } : {}),
       inFlight: (() => {
-        if (!inFlight) return null;
+        if (!inFlight || progressTimestampReason != null) return null;
         return {
           ...inFlight,
-          stale: now - inFlight.updatedAt > Math.max(300, interval),
+          stale: !inFlightFresh,
         };
       })(),
       ...(staleArtifactsByJob.has(job) ? { staleArtifacts: staleArtifactsByJob.get(job) } : {}),

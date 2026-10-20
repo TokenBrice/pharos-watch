@@ -115,6 +115,14 @@ export const PublicStatusTransitionSchema = z
   .passthrough();
 export type PublicStatusTransition = z.output<typeof PublicStatusTransitionSchema>;
 
+export const PublicStatusHistoryBoundarySchema = z.object({
+  /** Observation clock of the latest admitted public row at or before the requested window. */
+  at: z.number().finite().nonnegative(),
+  /** Complete non-operational set at that observation; monitoring starts still gate absent ids. */
+  components: z.array(PublicStatusTransitionComponentSchema),
+});
+export type PublicStatusHistoryBoundary = z.output<typeof PublicStatusHistoryBoundarySchema>;
+
 export const PublicStatusHistoryResponseSchema = z
   .object({
     timestamp: z.number(),
@@ -125,6 +133,8 @@ export const PublicStatusHistoryResponseSchema = z
     publicHistoryStartedAt: z.number().nullable().optional(),
     /** First actual observation per component; absent entries have no known history. */
     componentHistoryStartedAt: z.record(z.string(), z.number()).optional(),
+    /** Null/absent when persisted boundary evidence or the intervening page is incomplete. */
+    boundary: PublicStatusHistoryBoundarySchema.nullable().optional(),
     /** True when the window holds more rows than `limit` returned (R7). */
     hasMore: z.boolean().optional(),
   })
@@ -186,6 +196,8 @@ export type SchedulerLiveness = z.output<typeof SchedulerLivenessSchema>;
 export const HealthResponseSchema = z.object({
   status: StatusHealthValueSchema,
   timestamp: z.number(),
+  /** Original evidence assessment time; `timestamp` is the response/request clock. */
+  assessedAt: z.number().finite().nonnegative().optional(),
   warnings: z.array(z.string()),
   caches: z.record(z.string(), CacheStatusSchema),
   blacklist: z.object({

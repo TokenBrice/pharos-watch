@@ -28,7 +28,7 @@ Start with the [shared read-only Yield Health checks](./yield-health.md#first-ch
 ```sql
 SELECT key, updated_at, value
 FROM cache
-WHERE key IN ('risk_free_rates', 'risk_free_rate', 'fetch-tbill-rate:gbp-retained-fallback-streak')
+WHERE key IN ('risk_free_rates', 'risk_free_rate', 'fetch-tbill-rate:gbp-retained-fallback-streak', 'fetch-tbill-rate:usd-fresh-streak')
 ORDER BY key;
 ```
 
@@ -66,6 +66,10 @@ Inspect the rankings prefix with the [shared cache SELECT](./yield-health.md#rea
 
 - `fetch-tbill-rate` has a recent `ok` or expected `degraded` run.
 - `cache['risk_free_rates']` parses as JSON with a current USD benchmark and any available non-USD benchmark entries.
+- The structured registry's `generationId` must match both streak markers' `generationId`. `fetch-tbill-rate` prepares monitor state without writes, then commits the structured registry, legacy USD row and prepared markers in one bounded D1 transaction. A failed/aborted publication cannot advance recovery counters. Missing monitor evidence or generationless/mismatched markers are unavailable, not recovery; fresh streaks restart after missing or unrelated evidence.
+- During rollout, a usable legacy registry without `generationId` yields skipped benchmark canaries with reason `benchmark-registry-generation-legacy`, not a failed check or verified recovery. A generation-bound registry with a generationless marker fails with `benchmark-fresh-streak-generation-unavailable`; two present but different identities fail with `benchmark-fresh-streak-generation-mismatch`.
+- A failed predecessor-generation read does not block publication: cron metadata retains `previousGenerationId: null` and `previousGenerationUnavailableReason: "benchmark-previous-generation-read-failed"`. Fresh GBP/USD streaks restart at one in the newly committed generation; they cannot claim two verified publications until the next matching fresh generation.
+- `gbp-retained-fallback-recovered` is emitted only after D1 confirms that publication. An ambiguous acknowledgement emits no recovery event, even if the transaction committed; inspect the persisted generation rather than inferring rollback or success from the missing event. Optional event-delivery failure does not undo confirmed publication.
 - After GBP recovery, `cache['fetch-tbill-rate:gbp-retained-fallback-streak']` must show `consecutiveRetainedRuns: 0`, `consecutiveFreshRuns >= 2`, and current `lastFreshSource` / `lastFreshRecordDate`. The canary requires a non-fallback row fetched within 48 hours and observed within the shared GBP bound (five days), plus two consecutive fresh publications; hourly retries also count.
 - New `yield-rankings` rows expose benchmark fields, and `metadata.quality.reasons` contains no benchmark finding after recovery. The yield run no longer has a top-level `fallbackMode`; benchmark-specific fallback fields remain.
 - The `yield-usd-benchmark-current` canary is `ok` only when the USD row is direct and current and has been published fresh in two consecutive generations.

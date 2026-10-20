@@ -156,7 +156,7 @@ export const ChainSummarySchema = z.object({
    * Chain supply over the canonical global total (`totalUsd / globalTotalUsd`), never rescaled. When chain
    * rows over-attribute supply these shares sum above 1; geometry uses `dominanceGeometryTotalUsd` instead.
    */
-  dominanceShare: z.number(),
+  dominanceShare: z.number().nullable(),
   healthScore: z.number().nullable(),
   healthBand: HealthBandSchema.nullable(),
   healthFactors: ChainHealthFactorsSchema,
@@ -184,15 +184,15 @@ export type ChainsSupplyCoverage = z.infer<typeof ChainsSupplyCoverageSchema>;
 
 export const ChainsResponseSchema = z.object({
   chains: z.array(ChainSummarySchema),
-  globalTotalUsd: z.number(),
+  globalTotalUsd: z.number().nullable(),
   /** Raw sum of the published chain rows' `totalUsd`; never capped at `globalTotalUsd`. */
-  chainAttributedTotalUsd: z.number(),
+  chainAttributedTotalUsd: z.number().nullable(),
   /** Positive residual `max(0, globalTotalUsd - chainAttributedTotalUsd)`. */
-  unattributedTotalUsd: z.number(),
+  unattributedTotalUsd: z.number().nullable(),
   /** Signed `chainAttributedTotalUsd - globalTotalUsd`: positive = over-attribution, negative = unattributed. */
-  attributionDiscrepancyUsd: z.number().optional(),
+  attributionDiscrepancyUsd: z.number().nullable().optional(),
   /** Normalized geometry denominator `max(globalTotalUsd, chainAttributedTotalUsd)`; never a share label. */
-  dominanceGeometryTotalUsd: z.number().nonnegative().optional(),
+  dominanceGeometryTotalUsd: z.number().nonnegative().nullable().optional(),
   supplyCoverage: ChainsSupplyCoverageSchema.optional(),
   globalChange24hPct: RatioSchema.nullable(),
   globalChange7dPct: RatioSchema.nullable(),

@@ -30,6 +30,7 @@ export async function runPruneDetailCache(db: D1Database, signal?: AbortSignal):
   let orphanCount = 0;
   let staleCount = 0;
   let scanned = 0;
+  let deleteCandidates = 0;
   let lastKey = "";
   let detailTruncated = false;
 
@@ -49,31 +50,37 @@ export async function runPruneDetailCache(db: D1Database, signal?: AbortSignal):
     if (pageRows.length === 0) break;
     scanned += pageRows.length;
 
-    const doomedKeys: string[] = [];
+    const orphanKeys: string[] = [];
+    const staleRows: Array<{ key: string; updated_at: number }> = [];
     for (const row of pageRows) {
-      if (orphanCount + staleCount >= RETENTION_DELETE_RUN_LIMIT) {
+      if (deleteCandidates >= RETENTION_DELETE_RUN_LIMIT) {
         detailTruncated = true;
         break;
       }
       const stablecoinId = row.key.slice(DETAIL_KEY_PREFIX.length);
       if (!WORKER_READABLE_IDS.has(stablecoinId)) {
-        orphanCount += 1;
-        doomedKeys.push(row.key);
+        orphanKeys.push(row.key);
+        deleteCandidates += 1;
       } else if (row.updated_at < cutoff && WORKER_ACTIVE_IDS.has(stablecoinId)) {
-        staleCount += 1;
-        doomedKeys.push(row.key);
+        staleRows.push(row);
+        deleteCandidates += 1;
       }
     }
 
-    if (doomedKeys.length > 0) {
-      await batchExecute(
-        db,
-        doomedKeys.map((key) => db.prepare("DELETE FROM cache WHERE key = ?").bind(key)),
-        { signal },
-      );
-    }
+    orphanCount += await batchExecute(
+      db,
+      orphanKeys.map((key) => db.prepare("DELETE FROM cache WHERE key = ?").bind(key)),
+      { signal },
+    );
+    staleCount += await batchExecute(
+      db,
+      staleRows.map((row) => db
+        .prepare("DELETE FROM cache WHERE key = ? AND updated_at = ? AND updated_at < ?")
+        .bind(row.key, row.updated_at, cutoff)),
+      { signal },
+    );
 
-    detailTruncated ||= orphanCount + staleCount >= RETENTION_DELETE_RUN_LIMIT;
+    detailTruncated ||= deleteCandidates >= RETENTION_DELETE_RUN_LIMIT;
     if (pageRows.length < DETAIL_CACHE_PAGE_SIZE) break;
     if (detailTruncated) break;
     const nextLastKey = pageRows[pageRows.length - 1]?.key;

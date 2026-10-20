@@ -1,11 +1,11 @@
 import { formatSchemaLikeIssues } from "@shared/lib/schema-like";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { z } from "zod";
-import { logWorkerEventArgs } from "../../lib/structured-log";
 import { CIRCUIT_SOURCE, DEFILLAMA_BASE } from "../../lib/constants";
 import { fetchTextWithRetry } from "../../lib/fetch-retry";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { ScheduledFetchBudget } from "../../lib/scheduled-fetch-budget";
+import { assessFreshnessTimestamp } from "../../lib/api-freshness-age";
 import type { ContractDeployment } from "@shared/types/core";
 import {
   type DetailResponseHelpers,
@@ -57,50 +57,34 @@ interface DefiLlamaDetailConfig {
   meta: PegMeta | undefined;
 }
 
-type PegBuckets = Record<string, number>;
-
 /**
  * Zod schema for the DefiLlama stablecoin detail response.
  * Validates essential fields used by normalizeDefiLlamaDetailBody.
  * Extra fields are allowed via passthrough so new DL fields don't cause failures.
  */
+const DlSupplyBucketsSchema = z.record(z.string(), z.number().finite().nonnegative());
 const DlTokenEntrySchema = z
   .object({
-    totalCirculatingUSD: z.record(z.string(), z.number()).optional(),
-    totalCirculating: z.record(z.string(), z.number()).optional(),
-    circulating: z.record(z.string(), z.number()).optional(),
+    date: z.number().int().positive().refine(
+      (date) => assessFreshnessTimestamp(Math.floor(Date.now() / 1000), date).reason == null,
+      "History date must be an admitted observation timestamp",
+    ),
+    totalCirculatingUSD: DlSupplyBucketsSchema.optional(),
+    totalCirculating: DlSupplyBucketsSchema.optional(),
+    circulating: DlSupplyBucketsSchema.optional(),
   })
-  .passthrough();
+  .passthrough()
+  .refine(
+    (entry) => [entry.totalCirculatingUSD, entry.totalCirculating, entry.circulating]
+      .some((buckets) => buckets != null && Object.keys(buckets).length > 0),
+    "History checkpoint must contain observed supply",
+  );
 
 const DlDetailResponseSchema = z
   .object({
-    price: z.number().optional(),
-    tokens: z.array(DlTokenEntrySchema).optional(),
+    tokens: z.array(DlTokenEntrySchema),
   })
   .passthrough();
-
-function isNonUsdPeg(meta: PegMeta | undefined): boolean {
-  return !!meta && meta.flags.pegCurrency !== "USD";
-}
-
-function toPegBuckets(value: unknown): PegBuckets | undefined {
-  if (!value || typeof value !== "object") return undefined;
-  const buckets: PegBuckets = {};
-  for (const [key, raw] of Object.entries(value as Record<string, unknown>)) {
-    if (typeof raw === "number" && Number.isFinite(raw)) {
-      buckets[key] = raw;
-    }
-  }
-  return Object.keys(buckets).length > 0 ? buckets : undefined;
-}
-
-function scalePegBuckets(buckets: PegBuckets, multiplier: number): PegBuckets {
-  const scaled: PegBuckets = {};
-  for (const [key, value] of Object.entries(buckets)) {
-    scaled[key] = value * multiplier;
-  }
-  return scaled;
-}
 
 function getCuratedPrimaryAddress(meta: DetailMeta | undefined): string | null {
   const contract = meta?.contracts?.find((entry) => entry.chain === "ethereum") ?? meta?.contracts?.[0];
@@ -156,28 +140,21 @@ export function applyCuratedDetailAddress(body: string, meta: DetailMeta | undef
 }
 
 /**
- * Validates upstream JSON and materializes consistent chart fields:
- * - totalCirculating: native units
- * - totalCirculatingUSD: USD market cap
- *
- * Raw upstream fields such as `circulating` are preserved for compatibility.
- * Throws on invalid JSON to preserve existing upstream-parse error behavior.
+ * Validates required upstream history and preserves its observed unit buckets.
+ * Native `circulating` aliases become `totalCirculating`; missing USD/native
+ * conversions stay unavailable, regardless of peg currency or today's quote.
+ * Raw upstream passthrough fields are retained after admission.
+ * Throws on invalid JSON or required history shape.
  */
 export function normalizeDefiLlamaDetailBody(
   body: string,
   meta: PegMeta | undefined,
 ): string {
-  const parsed = JSON.parse(body) as {
-    price?: unknown;
-    tokens?: Array<{
-      totalCirculatingUSD?: Record<string, number>;
-      totalCirculating?: Record<string, number>;
-      circulating?: Record<string, number>;
-      [key: string]: unknown;
-    }>;
-    address?: unknown;
-    chainBalances?: unknown;
-  };
+  return JSON.stringify(normalizeDefiLlamaDetail(body, meta));
+}
+
+function normalizeDefiLlamaDetail(body: string, meta: PegMeta | undefined): z.infer<typeof DlDetailResponseSchema> {
+  const parsed: unknown = JSON.parse(body);
 
   // Drop the per-chain full-history blob: for large coins it is ~98% of the
   // upstream payload (USDT: ~21.0 MB of 21.3 MB across 127 chains), has no
@@ -185,64 +162,30 @@ export function normalizeDefiLlamaDetailBody(
   // cache rows past D1's 2 MiB value cap — silently freezing flagship coins'
   // cached detail for weeks. Current per-chain supply remains available via
   // /api/stablecoins chainCirculating.
-  delete parsed.chainBalances;
+  if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+    delete (parsed as Record<string, unknown>).chainBalances;
+  }
 
   const schemaResult = DlDetailResponseSchema.safeParse(parsed);
   if (!schemaResult.success) {
     const issues = formatSchemaLikeIssues(schemaResult.error.issues);
-    logWorkerEventArgs("api", "warn", `[defillama-detail] Response schema mismatch: ${issues}`);
+    throw new Error(`Invalid DefiLlama detail history: ${issues}`);
   }
 
+  const normalized = schemaResult.data;
   const curatedAddress = getCuratedPrimaryAddress(meta);
   if (curatedAddress) {
-    parsed.address = curatedAddress;
+    normalized.address = curatedAddress;
   }
 
-  if (!Array.isArray(parsed.tokens)) {
-    // Serialize unconditionally so the chainBalances strip applies even when
-    // there is no curated address and no tokens array to normalize.
-    return JSON.stringify(parsed);
-  }
-
-  const isNonUsd = isNonUsdPeg(meta);
-  const price =
-    typeof parsed.price === "number" && Number.isFinite(parsed.price) && parsed.price > 0
-      ? parsed.price
-      : null;
-
-  for (const entry of parsed.tokens) {
-    const rawTotalCirculating = toPegBuckets(entry.totalCirculating);
-    const rawCirculating = toPegBuckets(entry.circulating);
-    const rawTotalCirculatingUsd = toPegBuckets(entry.totalCirculatingUSD);
-
-    if (isNonUsd) {
-      const nativeBuckets = rawTotalCirculating ?? rawCirculating;
-      if (nativeBuckets) {
-        entry.totalCirculating = nativeBuckets;
-      }
-      // Historical observations must not be revalued with the current quote,
-      // in either direction. Missing day-specific conversions stay unavailable.
-      if (rawTotalCirculatingUsd) {
-        entry.totalCirculatingUSD = rawTotalCirculatingUsd;
-      }
-      continue;
-    }
-
-    const nativeBuckets = rawTotalCirculating ?? rawCirculating;
-    if (nativeBuckets) {
-      entry.totalCirculating = nativeBuckets;
-    }
-    if (rawTotalCirculatingUsd) {
-      entry.totalCirculatingUSD = rawTotalCirculatingUsd;
-      if (!nativeBuckets) {
-        entry.totalCirculating = rawTotalCirculatingUsd;
-      }
-    } else if (nativeBuckets && price != null) {
-      entry.totalCirculatingUSD = scalePegBuckets(nativeBuckets, price);
+  for (const entry of normalized.tokens) {
+    const nativeBuckets = entry.totalCirculating;
+    if ((!nativeBuckets || Object.keys(nativeBuckets).length === 0) && entry.circulating) {
+      entry.totalCirculating = entry.circulating;
     }
   }
 
-  return JSON.stringify(parsed);
+  return normalized;
 }
 
 export async function handleDefiLlamaDetail(
@@ -308,9 +251,9 @@ async function fetchAndNormalizeDefiLlamaDetail(
     }
 
     const upstreamBody = result.body;
-    let body: string;
+    let normalized: z.infer<typeof DlDetailResponseSchema>;
     try {
-      body = normalizeDefiLlamaDetailBody(upstreamBody, config.meta);
+      normalized = normalizeDefiLlamaDetail(upstreamBody, config.meta);
     } catch (err) {
       await recordOutcomeSafe(config.db, CIRCUIT_SOURCE.DL_STABLECOIN_DETAIL, false);
       logUpstreamException("defillama-stablecoin-detail-parse", config.stablecoinId, err);
@@ -319,8 +262,15 @@ async function fetchAndNormalizeDefiLlamaDetail(
       return detail.staleCacheOrError(502, `Invalid upstream data for stablecoin ${config.stablecoinId}`);
     }
 
-    await recordOutcomeSafe(config.db, CIRCUIT_SOURCE.DL_STABLECOIN_DETAIL, true);
-    return detail.createFreshResponseFromBody(body);
+    const history = await detail.resolveTokensWithSupplyHistoryFallback(normalized.tokens, {
+      emptyReason: "defillama-history-empty",
+      staleReason: "defillama-history-stale",
+    });
+    await recordOutcomeSafe(config.db, CIRCUIT_SOURCE.DL_STABLECOIN_DETAIL, normalized.tokens.length > 0);
+    if (history.tokens.length === 0) {
+      return detail.staleCacheOrError(502, `Historical detail data unavailable for stablecoin ${config.stablecoinId}`);
+    }
+    return detail.createResponseFromResolvedTokens(history, normalized);
   } catch (err) {
     await recordOutcomeSafe(config.db, CIRCUIT_SOURCE.DL_STABLECOIN_DETAIL, false);
     logUpstreamException("defillama-stablecoin-detail", config.stablecoinId, err);

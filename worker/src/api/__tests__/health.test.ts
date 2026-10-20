@@ -337,6 +337,85 @@ describe("handleHealth", () => {
     db.assertAllMatchesUsed();
     vi.useRealTimers();
   });
+  it.each([
+    [4800, "healthy", "degraded", "delayed", true],
+    [7200, "degraded", "stale", "degraded", false],
+    [14400, "stale", "stale", "outage", false],
+  ] as const)("ages cached evidence across the %ss band within snapshot TTL", async (band, before, after, state, healthy) => {
+    vi.spyOn(Date, "now").mockReturnValue(Date.now());
+    const now = Math.floor(Date.now() / 1000);
+    const assessedAt = now - 60;
+    const publicHealth = await (await handleHealth(makeHealthyHealthDb(now))).json() as HealthResponse;
+    publicHealth.timestamp = assessedAt;
+    publicHealth.status = before;
+    for (const evidence of ["published", "legacy"] as const) {
+      publicHealth.assessedAt = assessedAt;
+      if (evidence === "legacy") delete publicHealth.assessedAt;
+      // An earlier cache hit's response clock must not renew the assessment.
+      publicHealth.timestamp = evidence === "published" ? now - 10 : assessedAt;
+      publicHealth.caches.stablecoins = {
+        ageSeconds: band - 30, maxAge: 600, healthy: band <= 7200,
+        ...(evidence === "published" ? { publishedAt: assessedAt - band + 30, generationId: "retained-generation" } : {}),
+      };
+      const row = makePublicHealthSnapshotRow(now, publicHealth);
+      const db = buildStatusD1Scenario({ sections: [], overrides: [{
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: [STATUS_PUBLIC_HEALTH_SNAPSHOT_CACHE_KEY], rows: [], first: row,
+      }] });
+      const body = await (await handleHealth(db)).json() as HealthResponse;
+      expect(body).toMatchObject({ status: after, timestamp: now, assessedAt });
+      expect(body.caches.stablecoins).toMatchObject({ ageSeconds: band + 30, healthy, maxAge: 600 });
+      if (evidence === "published") {
+        expect(body.caches.stablecoins).toMatchObject({
+          publishedAt: assessedAt - band + 30, generationId: "retained-generation",
+        });
+      }
+      expect(body.components!.find((item) => item.id === "stablecoin-data")).toMatchObject({
+        state, ageSeconds: band + 30, since: null,
+      });
+      expect(body.schedulerLiveness?.observedAt).toBe(now);
+      db.assertAllMatchesUsed();
+    }
+  });
+  it.each([false, true])("retains independent raw and quality blockers (rejected clock: %s)", async (rejectedClock) => {
+    vi.spyOn(Date, "now").mockReturnValue(Date.now());
+    const now = Math.floor(Date.now() / 1000);
+    const publicHealth = await (await handleHealth(makeHealthyHealthDb(now))).json() as HealthResponse;
+    publicHealth.timestamp = now - 60;
+    publicHealth.assessedAt = now - 60;
+    publicHealth.status = "stale";
+    publicHealth.warnings = ["independent-blocker"];
+    publicHealth.caches.stablecoins = {
+      ageSeconds: 30, maxAge: 600, publishedAt: now - 90, healthy: false,
+      degraded: true, degradedReason: "retained-input-failure", streakDegradedRuns: 3,
+    };
+    if (rejectedClock) {
+      publicHealth.caches["stablecoin-charts"] = {
+        ageSeconds: null, maxAge: 3600, healthy: false,
+        publishedAt: now - 30, timestampReason: "future-timestamp",
+      };
+    }
+    const row = makePublicHealthSnapshotRow(now, publicHealth);
+    const db = buildStatusD1Scenario({ sections: [], overrides: [{
+      match: "SELECT value, updated_at FROM cache WHERE key = ?",
+      matchBinds: [STATUS_PUBLIC_HEALTH_SNAPSHOT_CACHE_KEY], rows: [], first: row,
+    }] });
+    const body = await (await handleHealth(db)).json() as HealthResponse;
+    expect(body).toMatchObject({ status: "stale", timestamp: now, assessedAt: now - 60 });
+    expect(body.warnings).toContain("independent-blocker");
+    expect(body.caches.stablecoins).toMatchObject({
+      ageSeconds: 90, healthy: false, degraded: true,
+      degradedReason: "retained-input-failure", streakDegradedRuns: 3,
+    });
+    if (rejectedClock) {
+      expect(body.caches["stablecoin-charts"]).toMatchObject({
+        ageSeconds: null, healthy: false, timestampReason: "future-timestamp",
+      });
+    }
+    expect(body.schedulerLiveness).toMatchObject({ status: "healthy", observedAt: now });
+    expect(body.components!.find((item) => item.id === "stablecoin-data")!.reasons)
+      .toContain("cache:stablecoins:quality:retained-input-failure");
+  });
   it("detects a stall from live starts despite a healthy fresh snapshot", async () => {
     const now = Math.floor(Date.now() / 1000);
     const publicHealth = await (await handleHealth(makeHealthyHealthDb(now))).json() as HealthResponse;
@@ -785,6 +864,8 @@ describe("handleHealth", () => {
     [3600, 3600, "healthy"], [86400, 86400, "healthy"],
     [86401, 3600, "degraded"], [3600, 86401, "degraded"],
   ] as const)("keeps yield held-clock verdict %s/%s at %s while Safety Scores are degraded", async (yieldAge, safetyAge, status) => {
+    // Fixture creation must not advance an inclusive 86400-second clock to 86401.
+    vi.spyOn(Date, "now").mockReturnValue(Date.now());
     const now = Math.floor(Date.now() / 1000);
     const identity = JSON.parse(stampedYieldIdentityJson("a".repeat(64)));
     const envelope = JSON.parse(publicationEnvelopeIdentityJson("a".repeat(64)));

@@ -57,6 +57,7 @@ describe("status summary scheduled-slot query failures", () => {
       worstCacheRatio: 0,
       transitionsLast24h: 0,
       transitionsUnavailableReason: null,
+      cronHistoryUnavailableReason: null,
     });
     expect(summary).not.toHaveProperty("scheduledSlotRunningQueryFailed");
     expect(summary).not.toHaveProperty("scheduledSlotEventMarkerQueryFailed");
@@ -76,6 +77,34 @@ describe("status summary scheduled-slot query failures", () => {
 
     expect(summary.scheduledSlotEventMarkerQueryFailed).toBe(true);
     expect(summary).not.toHaveProperty("scheduledSlotRunningQueryFailed");
+  });
+
+  it("projects failed history as unavailable without hiding independently read artifacts and slots", () => {
+    const summary = buildSummary(makeCronHealth({
+      cronHistoryQueryFailed: true,
+      expiredCronLeases: 2,
+      orphanedCronProgressRows: 3,
+      staleCronArtifacts: 5,
+      scheduledSlots: { runningSlots: 7 },
+    }));
+    expect(summary).toMatchObject({
+      unhealthyCrons: null, availabilityImpactingUnhealthyCrons: null, watchUnhealthyCrons: null,
+      degradedCrons: null, cronErrors: null, availabilityImpactingCronErrors: null,
+      availabilityImpactingConsecutiveCronErrors: null, cronHistoryUnavailableReason: "cron-history-read-failed",
+      expiredCronLeases: 2, orphanedCronProgressRows: 3, staleCronArtifacts: 5, scheduledSlotRunning: 7,
+    });
+    expect(summary.unavailableReason).toBeUndefined();
+  });
+
+  it.each([
+    [{ cronLeaseQueryFailed: true }, { expiredCronLeases: null, orphanedCronProgressRows: null, staleCronArtifacts: null }],
+    [{ cronProgressQueryFailed: true }, { expiredCronLeases: 0, orphanedCronProgressRows: null, staleCronArtifacts: null }],
+    [{ scheduledSlots: { queryFailed: true } }, { scheduledSlotRunning: null, scheduledSlotStaleCandidates: null, scheduledSlotOldestRunningAgeSec: null }],
+  ])("keeps failed companion aggregates independent of successful empty history", (failures, unavailable) => {
+    const summary = buildSummary(makeCronHealth(failures));
+    expect(summary).toMatchObject({
+      ...unavailable, unhealthyCrons: 0, cronErrors: 0, degradedCrons: 0, cronHistoryUnavailableReason: null,
+    });
   });
 
 });

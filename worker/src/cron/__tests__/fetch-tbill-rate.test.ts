@@ -16,12 +16,15 @@ import {
   type BenchmarkFetchRoutes,
 } from "./rates-cron.test-support";
 import { YIELD_BENCHMARK_KEY_VALUES } from "@shared/types/yield";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import type { DatabaseSync } from "node:sqlite";
+import type * as DbCache from "../../lib/db-cache";
 
 vi.mock("../../lib/fetch-retry", () => mockFetchRetry({ fetchWithRetry: vi.fn(), passthroughNonResponse: true }));
 
-vi.mock("../../lib/db-cache", () => ({
+vi.mock("../../lib/db-cache", async (importOriginal) => ({
+  ...await importOriginal<typeof DbCache>(),
   getCache: vi.fn(),
-  setCache: vi.fn(),
 }));
 
 vi.mock("../../lib/cron-logger", () => ({
@@ -43,11 +46,11 @@ import {
   fetchTbillRate,
 } from "../fetch-tbill-rate";
 
-import { buildHardcodedUsdBenchmark, getBenchmarkKeyForPegCurrency, resolveBenchmarkForStablecoin, withYieldBenchmarkStaticMeta } from "../yield-sync/benchmarks";
+import { buildHardcodedUsdBenchmark, getBenchmarkKeyForPegCurrency, resolveBenchmarkForStablecoin, toYieldBenchmarkRegistry, withYieldBenchmarkStaticMeta } from "../yield-sync/benchmarks";
 import { classifyYieldBenchmarkFreshness, YIELD_BENCHMARK_RECORD_MAX_AGE_SEC } from "@shared/lib/yield-benchmark-freshness";
 import { loadRiskFreeRateRegistryWithState } from "../yield-sync/state";
 import { fetchWithRetry } from "../../lib/fetch-retry";
-import { getCache, setCache } from "../../lib/db-cache";
+import { getCache } from "../../lib/db-cache";
 import { logCronEvent } from "../../lib/cron-logger";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 
@@ -94,24 +97,27 @@ const GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY = "fetch-tbill-rate:gbp-retained-fa
 // that window instead of silently rerouting GBP to the BoE fallback once the
 // wall clock drifts past the fixtures.
 const FROZEN_NOW = new Date("2026-06-25T12:00:00Z");
+const fixtures = createLatestSchemaFixtureTracker();
+let db: D1Database;
+let sqlite: DatabaseSync;
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(FROZEN_NOW);
+  ({ db, sqlite } = fixtures.open());
 });
 
 afterEach(() => {
   vi.useRealTimers();
+  fixtures.closeAll();
 });
 
 describe("fetchTbillRate", () => {
-  const db = {} as D1Database;
 
   function latestCachePayload() {
-    const calls = vi.mocked(setCache).mock.calls;
-    const call = calls[calls.length - 1];
-    expect(call?.[1]).toBe("risk_free_rate");
-    return JSON.parse(String(call?.[2])) as {
+    const row = sqlite.prepare("SELECT value FROM cache WHERE key = ?").get("risk_free_rate");
+    expect(row).toBeDefined();
+    return JSON.parse(String(row?.value)) as {
       rate: number;
       source: string;
       fallbackMode: string | null;
@@ -121,11 +127,9 @@ describe("fetchTbillRate", () => {
   }
 
   function latestStructuredCachePayload() {
-    const call = [...vi.mocked(setCache).mock.calls]
-      .reverse()
-      .find((entry) => entry[1] === "risk_free_rates");
-    expect(call).toBeDefined();
-    return JSON.parse(String(call?.[2])) as {
+    const row = sqlite.prepare("SELECT value FROM cache WHERE key = ?").get("risk_free_rates");
+    expect(row).toBeDefined();
+    return JSON.parse(String(row?.value)) as {
       benchmarks: Record<string, {
         key: string;
         rate: number;
@@ -157,15 +161,14 @@ describe("fetchTbillRate", () => {
   }
 
   function cacheWritePayload(key: string) {
-    const call = vi.mocked(setCache).mock.calls.find((entry) => entry[1] === key);
-    expect(call).toBeDefined();
-    return JSON.parse(String(call?.[2])) as Record<string, unknown>;
+    const row = sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(key);
+    expect(row).toBeDefined();
+    return JSON.parse(String(row?.value)) as Record<string, unknown>;
   }
 
   beforeEach(() => {
     vi.mocked(fetchWithRetry).mockReset();
     vi.mocked(getCache).mockReset().mockResolvedValue(null);
-    vi.mocked(setCache).mockReset().mockResolvedValue(undefined);
     vi.mocked(logCronEvent).mockClear();
     vi.mocked(shouldAttemptFetch).mockReset().mockResolvedValue(true);
     vi.mocked(recordOutcome).mockReset().mockResolvedValue(mockCircuitOutcomeRecord());
@@ -281,6 +284,37 @@ describe("fetchTbillRate", () => {
       fallbackMode: null,
     });
     expect(Object.keys(latestStructuredCachePayload().benchmarks)).toEqual([...YIELD_BENCHMARK_KEY_VALUES]);
+    expect(latestStructuredCachePayload().benchmarks.AUD).toMatchObject({
+      rate: 4.3, source: "rba-cash-rate-target", label: "AUD cash-rate target",
+      isProxy: false, isFallback: false, fallbackMode: null,
+    });
+  });
+
+  it.each([
+    ["4.35", 4.35, "rba-cash-rate-target", "AUD cash-rate target", false],
+    ["", 4.36, "rba-interbank-overnight", "AUD interbank overnight (cash-rate proxy)", true],
+  ] as const)("persists and publicly projects RBA target '%s' with its consumed series", async (target, rate, source, label, isProxy) => {
+    mockTbillByUrl({
+      "rba.gov.au/statistics/tables/csv/f1-data.csv": new Response(
+        `23-Jun-2026,4.35,,4.36\n24-Jun-2026,${target},,4.36\n`, { status: 200 },
+      ),
+    });
+    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
+    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+    expect(metadata.audSource).toBe(source);
+    expect(metadata.audRate).toBe(rate);
+    const expected = {
+      key: "AUD", rate, recordDate: "2026-06-24", source, label,
+      isProxy, isFallback: isProxy, fallbackMode: isProxy ? "aud-interbank-overnight-proxy" : null,
+      lastMarketRate: rate, lastMarketSource: source,
+    };
+    expect(latestStructuredCachePayload().benchmarks.AUD).toMatchObject(expected);
+    installCacheByKey(vi.mocked(getCache), {
+      risk_free_rates: makeCacheRow(cacheWritePayload("risk_free_rates"), FROZEN_NOW.getTime() / 1000),
+    });
+    const loaded = await loadRiskFreeRateRegistryWithState(db);
+    expect(loaded.cacheState).toBe("valid");
+    expect(toYieldBenchmarkRegistry(loaded.registry).AUD).toMatchObject(expected);
   });
 
   it("fetches every benchmark descriptor on each daily run", async () => {
@@ -563,19 +597,12 @@ describe("fetchTbillRate", () => {
   });
 
   it("verifies GBP delivery after two consecutive fresh publications", async () => {
+    const cache = await vi.importActual<typeof DbCache>("../../lib/db-cache");
+    vi.mocked(getCache).mockImplementation(cache.getCache);
     mockTbillByUrl();
-    installCacheByKey(vi.mocked(getCache), {
-      [GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY]: {
-        value: JSON.stringify({
-          consecutiveRetainedRuns: 0,
-          consecutiveFreshRuns: 1,
-          lastFreshAt: 1774479600,
-          lastFreshSource: "fred-sonia-compounded-index",
-          lastFreshRecordDate: "2026-03-25",
-        }),
-        updatedAt: 1774479600,
-      },
-    });
+    await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
+    const firstGeneration = cacheWritePayload("risk_free_rates").generationId;
+    mockTbillByUrl();
 
     const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
@@ -587,7 +614,167 @@ describe("fetchTbillRate", () => {
     expect(cacheWritePayload(GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY)).toMatchObject({
       consecutiveFreshRuns: 2,
       lastFreshSource: "fred-sonia-compounded-index",
+      generationId: expect.any(String),
     });
+    expect(cacheWritePayload("risk_free_rates").generationId).not.toBe(firstGeneration);
+    for (const key of ["fetch-tbill-rate:usd-fresh-streak", GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY]) {
+      expect(cacheWritePayload(key)).toMatchObject({
+        consecutiveFreshRuns: 2,
+        generationId: cacheWritePayload("risk_free_rates").generationId,
+      });
+    }
+  });
+
+  it("publishes with an unknown predecessor when the previous-generation read fails", async () => {
+    const cache = await vi.importActual<typeof DbCache>("../../lib/db-cache");
+    vi.mocked(getCache).mockImplementation(cache.getCache);
+    mockTbillByUrl();
+    await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
+    const previousGenerationId = cacheWritePayload("risk_free_rates").generationId;
+    let registryReads = 0;
+    vi.mocked(getCache).mockImplementation(async (database, key) => {
+      if (key === "risk_free_rates" && ++registryReads === 2) {
+        throw new Error("previous generation unavailable");
+      }
+      return cache.getCache(database, key);
+    });
+    mockTbillByUrl();
+
+    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
+    const generationId = cacheWritePayload("risk_free_rates").generationId;
+    expect(result.status).toBe("ok");
+    expect(generationId).not.toBe(previousGenerationId);
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      generationId,
+      previousGenerationId: null,
+      previousGenerationUnavailableReason: "benchmark-previous-generation-read-failed",
+      registryCacheWrite: "written",
+      gbpFreshPublicationStreak: 1,
+      gbpFreshPublicationVerifiedTwice: false,
+      usdFreshPublicationStreak: 1,
+      usdFreshPublicationVerifiedTwice: false,
+    });
+    for (const key of ["fetch-tbill-rate:usd-fresh-streak", GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY]) {
+      expect(cacheWritePayload(key)).toMatchObject({ consecutiveFreshRuns: 1, generationId });
+    }
+    expect(latestCachePayload().rate).toBe(latestStructuredCachePayload().benchmarks.USD?.rate);
+    mockTbillByUrl();
+    const recovered = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
+    expect(JSON.parse(recovered.metadata ?? "{}")).toMatchObject({
+      previousGenerationId: generationId,
+      previousGenerationUnavailableReason: null,
+      gbpFreshPublicationStreak: 2,
+      usdFreshPublicationStreak: 2,
+    });
+  });
+
+  it.each(["registry-write", "abort-before-commit", "ambiguous-uncommitted", "ambiguous-committed", "confirmed", "confirmed-aborted"] as const)(
+    "keeps recovery evidence atomic with publication (%s)", async (failure) => {
+      const cache = await vi.importActual<typeof DbCache>("../../lib/db-cache");
+      vi.mocked(getCache).mockImplementation(cache.getCache);
+      mockTbillByUrl();
+      await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
+      const marker = cacheWritePayload(GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY);
+      sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?").run(
+        JSON.stringify({ ...marker, consecutiveFreshRuns: 0, consecutiveRetainedRuns: 2 }),
+        GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY,
+      );
+      const before = sqlite.prepare("SELECT * FROM cache ORDER BY key").all();
+      const controller = new AbortController();
+      let preparedWrites = 0;
+      const prepare = db.prepare.bind(db);
+      const prepareSpy = vi.spyOn(db, "prepare").mockImplementation((sql) => {
+        const statement = prepare(sql);
+        if (sql.startsWith("INSERT INTO cache")) {
+          preparedWrites += 1;
+          if (failure === "abort-before-commit" && preparedWrites === 4) controller.abort(new Error("before commit"));
+        }
+        return statement;
+      });
+      if (failure === "registry-write") {
+        sqlite.exec(`CREATE TRIGGER fail_benchmark_registry BEFORE INSERT ON cache
+          WHEN NEW.key = 'risk_free_rates' BEGIN SELECT RAISE(ABORT, 'registry rejected'); END`);
+      }
+      const batch = db.batch.bind(db);
+      const batchSpy = vi.spyOn(db, "batch");
+      if (failure.startsWith("ambiguous")) {
+        batchSpy.mockImplementationOnce(async (statements) => {
+          if (failure === "ambiguous-committed") await batch(statements);
+          throw new Error("acknowledgement lost");
+        });
+      }
+      if (failure === "confirmed-aborted") {
+        batchSpy.mockImplementationOnce(async (statements) => {
+          const results = await batch(statements);
+          controller.abort(new Error("after confirmed commit"));
+          return results;
+        });
+      }
+      vi.mocked(logCronEvent).mockClear();
+      if (failure.startsWith("confirmed")) {
+        vi.mocked(logCronEvent).mockImplementationOnce(async (_database, event) => {
+          expect(cacheWritePayload(GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY)).toMatchObject({
+            consecutiveRetainedRuns: 0, generationId: cacheWritePayload("risk_free_rates").generationId,
+          });
+          return { ...event, event: "cron_event", severity: event.severity ?? "info", recordedAt: Date.now() / 1000 };
+        });
+      }
+      mockTbillByUrl();
+      const publication = fetchTbillRate(db, controller.signal, BANXICO_TEST_ENV);
+      if (failure.startsWith("confirmed")) await expect(publication).resolves.toMatchObject({ status: "ok" });
+      else await expect(publication).rejects.toThrow(
+        failure === "registry-write" ? "registry rejected"
+          : failure === "abort-before-commit" ? "before commit"
+            : "acknowledgement lost",
+      );
+      if (failure === "abort-before-commit") expect(batchSpy).not.toHaveBeenCalled();
+      if (failure.startsWith("confirmed") || failure === "ambiguous-committed") {
+        const generationId = cacheWritePayload("risk_free_rates").generationId;
+        expect(generationId).not.toBe(marker.generationId);
+        expect(cacheWritePayload(GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY)).toMatchObject({
+          generationId, consecutiveRetainedRuns: 0, consecutiveFreshRuns: 1,
+        });
+        expect(cacheWritePayload("fetch-tbill-rate:usd-fresh-streak")).toMatchObject({
+          generationId, consecutiveFreshRuns: 2,
+        });
+        expect(cacheWritePayload("risk_free_rate").rate).toBe(
+          latestStructuredCachePayload().benchmarks.USD?.rate,
+        );
+      } else {
+        expect(sqlite.prepare("SELECT * FROM cache ORDER BY key").all()).toEqual(before);
+      }
+      expect(logCronEvent).toHaveBeenCalledTimes(failure.startsWith("confirmed") ? 1 : 0);
+      prepareSpy.mockRestore();
+      batchSpy.mockRestore();
+    },
+  );
+
+  it("does not make optional event delivery a prerequisite for committed recovery", async () => {
+    mockTbillByUrl();
+    installCacheByKey(vi.mocked(getCache), {
+      [GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY]: makeCacheRow({ consecutiveRetainedRuns: 2 }, Math.floor(FROZEN_NOW.getTime() / 1000)),
+    });
+    vi.mocked(logCronEvent).mockRejectedValueOnce(new Error("event unavailable"));
+    await expect(fetchTbillRate(db, undefined, BANXICO_TEST_ENV)).resolves.toMatchObject({ status: "ok" });
+    expect(cacheWritePayload(GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY)).toMatchObject({
+      consecutiveRetainedRuns: 0, consecutiveFreshRuns: 1,
+      generationId: cacheWritePayload("risk_free_rates").generationId,
+    });
+  });
+
+  it("does not certify a fresh candidate when either monitor read fails", async () => {
+    const cache = await vi.importActual<typeof DbCache>("../../lib/db-cache");
+    vi.mocked(getCache).mockImplementation(async (database, key) => {
+      if (key.includes("streak")) throw new Error("monitor unavailable");
+      return cache.getCache(database, key);
+    });
+    mockTbillByUrl();
+    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
+    expect(JSON.parse(result.metadata ?? "{}")).not.toHaveProperty("usdFreshPublicationVerifiedTwice");
+    expect(sqlite.prepare("SELECT key FROM cache ORDER BY key").all()).toEqual([
+      { key: "risk_free_rate" }, { key: "risk_free_rates" },
+    ]);
+    expect(logCronEvent).not.toHaveBeenCalled();
   });
 
   it("falls back to Treasury XML when FRED fails", async () => {
@@ -897,7 +1084,7 @@ describe("fetchTbillRate", () => {
     await expect(fetchTbillRate(db, controller.signal, BANXICO_TEST_ENV)).rejects.toThrow("slot deadline");
     expect(calls.filter(url => url.includes("api.bcb.gov.br"))).toHaveLength(1);
     expect(vi.mocked(recordOutcome).mock.calls.some(([, key]) => key === "TREASURY_RATES:BRL")).toBe(false);
-    expect(vi.mocked(setCache).mock.calls.some(([, key]) => key === "risk_free_rates")).toBe(false);
+    expect(sqlite.prepare("SELECT key FROM cache").all()).toEqual([]);
   });
 
   it("retains the last CHF benchmark when the SIX SARON fetch fails", async () => {
@@ -1012,13 +1199,12 @@ describe("fetchTbillRate", () => {
       name: "AbortError",
     });
 
-    expect(setCache).not.toHaveBeenCalled();
+    expect(sqlite.prepare("SELECT key FROM cache").all()).toEqual([]);
     expect(recordOutcome).not.toHaveBeenCalled();
   });
 
   it("retains last known good rate when both sources fail", async () => {
     mockUnavailableTbillByUrl();
-    vi.mocked(setCache).mockReset().mockResolvedValue(undefined);
     installCacheByKey(vi.mocked(getCache), {
       risk_free_rate: {
           value: JSON.stringify({
@@ -1051,7 +1237,6 @@ describe("fetchTbillRate", () => {
 
   it("retains the last market-derived rate across consecutive degraded fallback days", async () => {
     mockUnavailableTbillByUrl();
-    vi.mocked(setCache).mockReset().mockResolvedValue(undefined);
     installCacheByKey(vi.mocked(getCache), {
       risk_free_rate: {
           value: JSON.stringify({
@@ -1091,12 +1276,10 @@ describe("fetchTbillRate", () => {
 
 
 describe("fetchTbillRate — new currency fetchers", () => {
-  const db = {} as D1Database;
 
   beforeEach(() => {
     vi.mocked(fetchWithRetry).mockReset();
     vi.mocked(getCache).mockReset().mockResolvedValue(null);
-    vi.mocked(setCache).mockReset().mockResolvedValue(undefined);
     vi.mocked(shouldAttemptFetch).mockReset().mockResolvedValue(true);
     vi.mocked(recordOutcome).mockReset().mockResolvedValue(mockCircuitOutcomeRecord());
   });
@@ -1321,7 +1504,6 @@ describe("classifyYieldBenchmarkFreshness", () => {
 });
 
 describe("fetchTbillRate — benchmark observation guard and registry integrity", () => {
-  const db = {} as D1Database;
   const RETRY_BOUND_SEC = 24 * 3600;
 
   function runMetadata(result: { metadata?: string }) {
@@ -1329,11 +1511,9 @@ describe("fetchTbillRate — benchmark observation guard and registry integrity"
   }
 
   function writtenBenchmarks() {
-    const call = [...vi.mocked(setCache).mock.calls]
-      .reverse()
-      .find((entry) => entry[1] === "risk_free_rates");
-    expect(call).toBeDefined();
-    return (JSON.parse(String(call?.[2])) as {
+    const row = sqlite.prepare("SELECT value FROM cache WHERE key = ?").get("risk_free_rates");
+    expect(row).toBeDefined();
+    return (JSON.parse(String(row?.value)) as {
       benchmarks: Record<string, {
         rate: number;
         source: string;
@@ -1345,13 +1525,12 @@ describe("fetchTbillRate — benchmark observation guard and registry integrity"
   }
 
   function cacheKeysWritten(): string[] {
-    return vi.mocked(setCache).mock.calls.map((entry) => String(entry[1]));
+    return sqlite.prepare("SELECT key FROM cache ORDER BY key").all().map((row) => String(row.key));
   }
 
   beforeEach(() => {
     vi.mocked(fetchWithRetry).mockReset();
     vi.mocked(getCache).mockReset().mockResolvedValue(null);
-    vi.mocked(setCache).mockReset().mockResolvedValue(undefined);
     vi.mocked(logCronEvent).mockClear();
     vi.mocked(shouldAttemptFetch).mockReset().mockResolvedValue(true);
     vi.mocked(recordOutcome).mockReset().mockResolvedValue(mockCircuitOutcomeRecord());
@@ -1514,7 +1693,7 @@ describe("fetchTbillRate — benchmark observation guard and registry integrity"
       minRegistryAgeSec: RETRY_BOUND_SEC,
     });
     expect(calls).toEqual([]);
-    expect(setCache).not.toHaveBeenCalled();
+    expect(sqlite.prepare("SELECT key FROM cache").all()).toEqual([]);
   });
 
   it("does not force hourly catch-up for an unused old policy-rate record", async () => {

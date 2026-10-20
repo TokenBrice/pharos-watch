@@ -20,6 +20,8 @@ const STRIP_TOP_LEVEL: ReadonlySet<string> = new Set([
   "snapshotSchemaVersion",
   "timestamp",
   "perInputStaleness",
+  // Input provenance is persisted for replay but does not change content identity.
+  "canonicalSources",
 ]);
 
 /**

@@ -38,7 +38,7 @@ export interface DetailResponseHelpers {
   createFreshResponseFromBody(body: string): Response;
   createFreshResponseFromTokens(tokens: DetailTokens): Response;
   createFallbackResponseFromTokens(tokens: DetailTokens, observedAt: number | null): Response;
-  createResponseFromResolvedTokens(history: ResolvedDetailHistory): Response;
+  createResponseFromResolvedTokens(history: ResolvedDetailHistory, body?: Record<string, unknown>): Response;
   resolveTokensWithSupplyHistoryFallback(
     tokens: DetailTokens,
     reasons: { emptyReason: string; staleReason: string },
@@ -129,7 +129,7 @@ function staleCacheOrError(
   status: number,
   message: string,
 ): Response {
-  return createStaleCacheResponse(cached) ?? errorResponse(status, message);
+  return createStaleCacheResponse(cached) ?? errorResponse(status, message, { noStore: true });
 }
 
 export function createDetailResponseHelpers(config: {
@@ -224,7 +224,11 @@ export function createDetailResponseHelpers(config: {
   const createFreshResponseFromTokens = (tokens: DetailTokens): Response =>
     createFreshResponseFromBody(JSON.stringify({ tokens }));
 
-  const createFallbackResponseFromTokens = (tokens: DetailTokens, observedAt: number | null): Response => {
+  const createFallbackResponseFromTokens = (
+    tokens: DetailTokens,
+    observedAt: number | null,
+    body?: Record<string, unknown>,
+  ): Response => {
     const now = Math.floor(Date.now() / 1000);
     const assessment = assessFreshnessTimestamp(now, observedAt);
     const meta = assessment.reason == null && observedAt != null
@@ -235,7 +239,7 @@ export function createDetailResponseHelpers(config: {
       : { updatedAt: null, ageSeconds: null, assessedAt: now, status: "unknown" as const,
           freshBudgetSec: DETAIL_HISTORY_MAX_AGE_SECONDS, degradedBudgetSec: DETAIL_HISTORY_MAX_AGE_SECONDS,
           reason: assessment.reason };
-    const response = createJsonResponse(JSON.stringify({ tokens, _meta: meta }), CACHE_PROFILES.noStore);
+    const response = createJsonResponse(JSON.stringify({ ...body, tokens, _meta: meta }), CACHE_PROFILES.noStore);
     response.headers.set("X-Data-Updated-At", meta.updatedAt == null ? "unknown" : String(meta.updatedAt));
     response.headers.set("X-Data-Age", meta.ageSeconds == null ? "unavailable" : String(meta.ageSeconds));
     response.headers.set("X-Data-Freshness", meta.status);
@@ -244,10 +248,13 @@ export function createDetailResponseHelpers(config: {
     return response;
   };
 
-  const createResponseFromResolvedTokens = (history: ResolvedDetailHistory): Response =>
+  const createResponseFromResolvedTokens = (
+    history: ResolvedDetailHistory,
+    body?: Record<string, unknown>,
+  ): Response =>
     history.fallback || !isDetailHistoryFresh(history.tokens)
-      ? createFallbackResponseFromTokens(history.tokens, history.observedAt)
-      : createFreshResponseFromTokens(history.tokens);
+      ? createFallbackResponseFromTokens(history.tokens, history.observedAt, body)
+      : createFreshResponseFromBody(JSON.stringify({ ...body, tokens: history.tokens }));
 
   const resolveTokensWithSupplyHistoryFallback = async (
     tokens: DetailTokens,
@@ -299,8 +306,15 @@ async function fetchSupplyHistoryFallback(
     .bind(stablecoinId)
     .all<{ snapshot_date: number; circulating_usd: number; price: number | null }>();
 
+  const now = Math.floor(Date.now() / 1000);
   return (result.results ?? [])
-    .filter((row) => row.circulating_usd > 0)
+    .filter((row) => (
+      typeof row.circulating_usd === "number"
+      && Number.isFinite(row.circulating_usd)
+      && row.circulating_usd >= 0
+      && row.snapshot_date > 0
+      && assessFreshnessTimestamp(now, row.snapshot_date).reason == null
+    ))
     .map((row) => ({
       date: row.snapshot_date,
       totalCirculatingUSD: { [pegType]: row.circulating_usd },

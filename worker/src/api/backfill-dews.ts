@@ -1,3 +1,4 @@
+import { isDewsAlertBand, isThreatBand } from "@shared/lib/classification";
 import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import { resolvePsiInclusiveStablecoinId } from "@shared/lib/stablecoin-id-registry";
 import { percentileNearestRank } from "@shared/lib/stats";
@@ -526,28 +527,57 @@ async function handleHistoricalBacktest(db: D1Database): Promise<Response> {
 interface BacktestMetricsPerAnchor {
   stablecoinId: string;
   onsetAt: number;
-  detected: boolean;
+  detected: boolean | null;
   leadTimeDays: number | null;
   firstAlertBand: string | null;
   alertDays: number;
   bandTransitions: number;
   pegType: string | null;
+  evaluation: BacktestWindowEvaluation;
+}
+
+interface BacktestWindowEvaluation {
+  availability: "available" | "partial" | "unavailable";
+  reasons: string[];
+  observedDays: number;
+  expectedDays: number;
+}
+
+async function readBacktestWindow(db: D1Database, stablecoinId: string, windowStart: number, windowEnd: number) {
+  const rows = await db
+    .prepare(
+      "SELECT snapshot_date, score, band FROM stress_signal_history WHERE stablecoin_id = ? AND snapshot_date >= ? AND snapshot_date <= ? ORDER BY snapshot_date ASC",
+    )
+    .bind(stablecoinId, windowStart, windowEnd)
+    .all<{ snapshot_date: number; score: number; band: string }>();
+  // Daily history is sealed at UTC midnight; only midnights inside the exact
+  // inclusive window are required (an intraday onset does not add a prior day).
+  const firstDay = Math.ceil(windowStart / DAY_SECONDS) * DAY_SECONDS;
+  const lastDay = bucketUnixSecondsToUtcDay(windowEnd);
+  const expectedDays = Math.max(0, (lastDay - firstDay) / DAY_SECONDS + 1);
+  const observations = rows.results.filter((row) =>
+    row.snapshot_date % DAY_SECONDS === 0 &&
+    Number.isFinite(row.score) && row.score >= 0 && row.score <= 100 &&
+    isThreatBand(row.band),
+  );
+  const observedDays = observations.length; // Primary key guarantees one row per coin/day.
+  const complete = expectedDays > 0 && observedDays === expectedDays;
+  const evaluation: BacktestWindowEvaluation = {
+    availability: complete ? "available" : observedDays > 0 ? "partial" : "unavailable",
+    reasons: complete ? [] : [rows.results.length === 0 ? "history-unavailable" : "incomplete-daily-history"],
+    observedDays,
+    expectedDays,
+  };
+  return { alertRows: observations.filter((row) => isDewsAlertBand(row.band)), evaluation };
 }
 
 async function handleBacktestMetrics(db: D1Database): Promise<Response> {
   const perAnchor = await Promise.all(
     BACKTEST_ANCHORS.map(async (anchor): Promise<BacktestMetricsPerAnchor> => {
       const windowStart = anchor.onsetAt - BACKTEST_LOOKBACK_DAYS * DAY_SECONDS;
-      const rows = await db
-        .prepare(
-          "SELECT snapshot_date, band FROM stress_signal_history WHERE stablecoin_id = ? AND snapshot_date >= ? AND snapshot_date <= ? AND band IN ('ALERT', 'WARNING', 'DANGER') ORDER BY snapshot_date ASC",
-        )
-        .bind(anchor.stablecoinId, windowStart, anchor.onsetAt)
-        .all<{ snapshot_date: number; band: string }>();
-
-      const alertRows = rows.results ?? [];
+      const { alertRows, evaluation } = await readBacktestWindow(db, anchor.stablecoinId, windowStart, anchor.onsetAt);
       const row = alertRows[0] ?? null;
-      const detected = row != null;
+      const detected = evaluation.availability === "available" ? row != null : null;
       let bandTransitions = 0;
       for (let i = 1; i < alertRows.length; i++) {
         if (alertRows[i]?.band !== alertRows[i - 1]?.band) bandTransitions++;
@@ -556,10 +586,11 @@ async function handleBacktestMetrics(db: D1Database): Promise<Response> {
         stablecoinId: anchor.stablecoinId,
         onsetAt: anchor.onsetAt,
         detected,
-        leadTimeDays: detected ? (anchor.onsetAt - row.snapshot_date) / DAY_SECONDS : null,
+        leadTimeDays: detected === true && row ? (anchor.onsetAt - row.snapshot_date) / DAY_SECONDS : null,
         firstAlertBand: row?.band ?? null,
         alertDays: alertRows.length,
         bandTransitions,
+        evaluation,
         pegType: PSI_ELIGIBLE_META_BY_ID.get(anchor.stablecoinId)
           ? `pegged${PSI_ELIGIBLE_META_BY_ID.get(anchor.stablecoinId)!.flags.pegCurrency}`
           : null,
@@ -569,55 +600,65 @@ async function handleBacktestMetrics(db: D1Database): Promise<Response> {
 
   const negativeControls = await Promise.all(
     BACKTEST_NEGATIVE_CONTROLS.map(async (control) => {
-      const rows = await db
-        .prepare(
-          "SELECT snapshot_date, band FROM stress_signal_history WHERE stablecoin_id = ? AND snapshot_date >= ? AND snapshot_date <= ? AND band IN ('ALERT', 'WARNING', 'DANGER') ORDER BY snapshot_date ASC",
-        )
-        .bind(control.stablecoinId, control.windowStart, control.windowEnd)
-        .all<{ snapshot_date: number; band: string }>();
-      const alertRows = rows.results ?? [];
+      const { alertRows, evaluation } = await readBacktestWindow(db, control.stablecoinId, control.windowStart, control.windowEnd);
       return {
         stablecoinId: control.stablecoinId,
         windowStart: control.windowStart,
         windowEnd: control.windowEnd,
-        falsePositiveDays: alertRows.length,
+        falsePositiveDays: evaluation.availability === "available" ? alertRows.length : null,
         firstAlertBand: alertRows[0]?.band ?? null,
+        evaluation,
       };
     }),
   );
 
-  const detected = perAnchor.filter((entry) => entry.detected);
-  const falsePositiveDays = negativeControls.reduce((sum, entry) => sum + entry.falsePositiveDays, 0);
+  const evaluable = perAnchor.filter((entry) => entry.detected !== null);
+  const detected = evaluable.filter((entry) => entry.detected);
+  const evaluableControls = negativeControls.filter((entry) => entry.falsePositiveDays !== null);
+  const observedNegativeControlDays = evaluableControls.reduce((sum, entry) => sum + entry.evaluation.observedDays, 0);
+  const falsePositiveDays = observedNegativeControlDays === 0
+    ? null
+    : evaluableControls.reduce((sum, entry) => sum + entry.falsePositiveDays!, 0);
   const leadTimes = detected.map((entry) => entry.leadTimeDays!);
-  const byPegType: Record<string, { anchors: number; detected: number; recall: number }> = {};
+  const byPegType: Record<string, { anchors: number; evaluableAnchors: number; detected: number; recall: number | null }> = {};
   for (const entry of perAnchor) {
     const key = entry.pegType ?? "unknown";
-    const bucket = byPegType[key] ?? { anchors: 0, detected: 0, recall: 0 };
+    const bucket = byPegType[key] ?? { anchors: 0, evaluableAnchors: 0, detected: 0, recall: null };
     bucket.anchors++;
+    if (entry.detected !== null) bucket.evaluableAnchors++;
     if (entry.detected) bucket.detected++;
-    bucket.recall = bucket.anchors === 0 ? 0 : bucket.detected / bucket.anchors;
+    bucket.recall = bucket.evaluableAnchors === 0 ? null : bucket.detected / bucket.evaluableAnchors;
     byPegType[key] = bucket;
   }
   const truePositives = detected.length;
-  const falseNegativeIncidents = perAnchor.length - truePositives;
-  const precisionDenominator = truePositives + falsePositiveDays;
+  const falseNegativeIncidents = evaluable.length - truePositives;
+  const precisionDenominator = falsePositiveDays === null ? null : truePositives + falsePositiveDays;
+  const recall = evaluable.length === 0 ? null : truePositives / evaluable.length;
 
   return jsonResponse({
-    detectionRate: BACKTEST_ANCHORS.length === 0 ? 0 : truePositives / BACKTEST_ANCHORS.length,
-    precision: precisionDenominator === 0 ? null : truePositives / precisionDenominator,
-    recall: BACKTEST_ANCHORS.length === 0 ? 0 : truePositives / BACKTEST_ANCHORS.length,
+    detectionRate: recall,
+    precision: precisionDenominator === null || precisionDenominator === 0 ? null : truePositives / precisionDenominator,
+    precisionUnavailableReason: observedNegativeControlDays === 0
+      ? "no-observed-negative-control-exposure"
+      : precisionDenominator === 0 ? "no-positive-outcomes" : null,
+    recall,
+    evaluableAnchors: evaluable.length,
+    excludedAnchors: perAnchor.length - evaluable.length,
+    partialAnchors: perAnchor.filter((entry) => entry.evaluation.availability === "partial").length,
     falsePositiveDays,
     falseNegativeIncidents,
     leadTimeDaysP50: percentileNearestRank(leadTimes, 50),
     leadTimeDaysP90: percentileNearestRank(leadTimes, 90),
     alertChurn: {
       averageAlertDaysPerAnchor:
-        perAnchor.length === 0 ? 0 : perAnchor.reduce((sum, entry) => sum + entry.alertDays, 0) / perAnchor.length,
-      bandTransitions: perAnchor.reduce((sum, entry) => sum + entry.bandTransitions, 0),
+        evaluable.length === 0 ? null : evaluable.reduce((sum, entry) => sum + entry.alertDays, 0) / evaluable.length,
+      bandTransitions: evaluable.length === 0 ? null : evaluable.reduce((sum, entry) => sum + entry.bandTransitions, 0),
     },
     cohortMetrics: {
       byPegType,
       negativeControlCount: BACKTEST_NEGATIVE_CONTROLS.length,
+      evaluableNegativeControlCount: evaluableControls.length,
+      observedNegativeControlDays,
     },
     negativeControls,
     granularity: "daily",

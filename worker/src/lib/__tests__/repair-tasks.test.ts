@@ -76,42 +76,92 @@ describe("repair tasks", () => {
   });
 
   it("syncs current DDR repair tasks and closes stale DDR tasks", async () => {
-    const db = mockRepairD1();
+    const db = makeSqliteD1();
+    try {
+      await syncDdrRepairDebtTasks(db, [{ eventId: 41, reason: "obsolete" }], NOW - 100);
+      const result = await syncDdrRepairDebtTasks(
+        db,
+        [
+          { eventId: 42, reason: "incident-conflict" },
+          { eventId: 43, reason: "incident-conflict" },
+          { eventId: 42, reason: "updated-conflict" },
+        ],
+        NOW,
+      );
 
-    const result = await syncDdrRepairDebtTasks(
-      db,
-      [
-        { eventId: 42, reason: "incident-conflict" },
-        { eventId: 43, reason: "incident-conflict" },
-      ],
-      NOW,
-    );
+      expect(result).toEqual({ upserted: 3, closed: 1 });
+      expect(db.sqlite.prepare(
+        "SELECT subject_id, state, payload_json, closed_at FROM worker_repair_tasks ORDER BY subject_id",
+      ).all()).toEqual([
+        { subject_id: "41", state: "closed", payload_json: '{"eventId":41,"reason":"obsolete"}', closed_at: NOW },
+        { subject_id: "42", state: "open", payload_json: '{"eventId":42,"reason":"updated-conflict"}', closed_at: null },
+        { subject_id: "43", state: "open", payload_json: '{"eventId":43,"reason":"incident-conflict"}', closed_at: null },
+      ]);
+    } finally {
+      db.close();
+    }
+  });
 
-    expect(result).toEqual({ upserted: 2, closed: 1 });
-    const history = db.getHistory();
-    const upserts = history.filter((entry) => entry.sql.includes("INSERT INTO worker_repair_tasks"));
-    expect(upserts).toHaveLength(2);
-    expect(upserts[0].binds).toEqual([
-      "repair:ddr-repair-required-event:42",
-      "ddr-repair-required-event",
-      "42",
-      50,
-      null,
-      JSON.stringify({ eventId: 42, reason: "incident-conflict" }),
-      NOW,
-      NOW,
-    ]);
-    const close = history.find((entry) => entry.sql.includes("subject_id NOT IN"));
-    expect(close?.sql).toContain("state IN ('open', 'deferred')");
-    expect(close?.sql).toContain("state = 'failed'");
-    expect(close?.binds).toEqual([
-      NOW,
-      NOW,
-      "ddr-repair-required-event",
-      NOW,
-      "42",
-      "43",
-    ]);
+  it.each([0, 96, 97, 101])(
+    "reconciles %i active subjects within D1's bind limit without closing active debt",
+    async (eventCount) => {
+      const db = makeSqliteD1();
+      const prepare = db.prepare.bind(db);
+      const prepareSpy = vi.spyOn(db, "prepare").mockImplementation((sql) => {
+        const statement = prepare(sql);
+        const bind = statement.bind.bind(statement);
+        vi.spyOn(statement, "bind").mockImplementation((...values) => {
+          if (values.length > 100) throw new Error("D1_ERROR: too many SQL variables");
+          return bind(...values);
+        });
+        return statement;
+      });
+      try {
+        await syncDdrRepairDebtTasks(db, [{ eventId: 999, reason: "obsolete" }], NOW - 100);
+        const events = Array.from({ length: eventCount }, (_, index) => ({
+          eventId: index + 1,
+          reason: "still-quarantined",
+        }));
+
+        await expect(syncDdrRepairDebtTasks(db, events, NOW)).resolves.toEqual({
+          upserted: eventCount,
+          closed: 1,
+        });
+        expect(db.sqlite.prepare(
+          "SELECT subject_id FROM worker_repair_tasks WHERE state = 'open' ORDER BY CAST(subject_id AS INTEGER)",
+        ).all()).toEqual(events.map((event) => ({ subject_id: String(event.eventId) })));
+        expect(db.sqlite.prepare(
+          "SELECT state, closed_at, updated_at FROM worker_repair_tasks WHERE subject_id = '999'",
+        ).get()).toEqual({ state: "closed", closed_at: NOW, updated_at: NOW });
+      } finally {
+        prepareSpy.mockRestore();
+        db.close();
+      }
+    },
+  );
+
+  it("rejects failed reconciliation even after current debt was upserted", async () => {
+    const db = makeSqliteD1();
+    try {
+      await syncDdrRepairDebtTasks(db, [{ eventId: 999, reason: "obsolete" }], NOW - 100);
+      db.sqlite.exec(`
+        CREATE TEMP TRIGGER reject_repair_closure BEFORE UPDATE ON worker_repair_tasks
+        WHEN NEW.state = 'closed'
+        BEGIN SELECT RAISE(ABORT, 'closure failed'); END;
+      `);
+
+      await expect(syncDdrRepairDebtTasks(
+        db, [{ eventId: 42, reason: "still-quarantined" }], NOW,
+      )).rejects.toThrow("closure failed");
+      expect(db.sqlite.prepare(
+        "SELECT subject_id, state FROM worker_repair_tasks ORDER BY CAST(subject_id AS INTEGER)",
+      ).all()).toEqual([
+        { subject_id: "42", state: "open" },
+        { subject_id: "999", state: "open" },
+      ]);
+    } finally {
+      db.close();
+    }
   });
 
   it("preserves claimed tasks and failed backoff while reconciling obsolete repair debt", async () => {

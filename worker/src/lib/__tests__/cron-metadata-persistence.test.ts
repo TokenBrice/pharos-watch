@@ -6,6 +6,7 @@ import {
   getCronMetadataBudgetBytes,
 } from "../cron-metadata-persistence";
 import { buildResourcePressure } from "../cron-resource-pressure";
+import { normalizeCronMetadataWithLease } from "../cron-metadata";
 
 describe("compactCronMetadataForPersistence", () => {
   afterEach(() => vi.restoreAllMocks());
@@ -30,6 +31,22 @@ describe("compactCronMetadataForPersistence", () => {
     expect(result.compacted).toBe(true);
     expect(JSON.parse(result.metadata!).resourcePressure).toEqual(resourcePressure);
     expect(result.persistedBytes).toBeLessThanOrEqual(MAX_PERSISTED_CRON_METADATA_BYTES);
+  });
+
+  it.each([null, 0])("retains scheduler-enriched measurement evidence (%s) through oversized compaction", (measurement) => {
+    const measurements = {
+      rowsRead: measurement, rowsWritten: measurement, rowsDropped: measurement, validationFailures: measurement,
+    };
+    const normalized = normalizeCronMetadataWithLease({
+      itemCount: 99,
+      metadata: JSON.stringify({ ...measurements, providerDiagnostics: [{ body: "x".repeat(100_000) }] }),
+    }, { leaseOwner: "scheduled-test", scheduleKey: "quarterHourly", slotStartedAt: 600 });
+    const result = compactCronMetadataForPersistence(normalized);
+    expect(result.compacted).toBe(true);
+    expect(result.persistedBytes).toBeLessThanOrEqual(DEFAULT_CRON_METADATA_BUDGET_BYTES);
+    expect(JSON.parse(result.metadata!)).toMatchObject({
+      ...measurements, leaseOwner: "scheduled-test", scheduleKey: "quarterHourly", slotStartedAt: 600,
+    });
   });
 
   it("compacts rich results to the default 8 KiB budget while retaining named diagnostics as counts", () => {

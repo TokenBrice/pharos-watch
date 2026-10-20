@@ -21,6 +21,30 @@ describe("canonicalizeForSid — name-pattern strip", () => {
     });
     expect(a).toBe(b);
   });
+
+  it("keeps canonical source provenance identity-neutral while retaining verification content bindings", () => {
+    const base = {
+      datasetHash: "abc", engineVersion: "selector-v2.9",
+      verification: { kind: "pharos-server-recomputed-v1", datasetHash: "abc", engineVersion: "selector-v2.9" },
+    };
+    const stale = {
+      ...base,
+      verification: {
+        ...base.verification,
+        canonicalSources: [{
+          source: "stablecoins",
+          freshness: { updatedAt: 100, status: "stale", freshBudgetSec: 60, degradedBudgetSec: 120 },
+        }],
+      },
+    };
+    expect(canonicalizeForSid(stale)).toBe(canonicalizeForSid(base));
+    expect(canonicalizeForSid({
+      ...stale, verification: { ...stale.verification, canonicalSources: [{ source: "stablecoins", freshness: null }] },
+    })).toBe(canonicalizeForSid(base));
+    expect(canonicalizeForSid({
+      ...stale, verification: { ...stale.verification, datasetHash: "different" },
+    })).not.toBe(canonicalizeForSid(base));
+  });
 });
 
 describe("canonicalizeForSid — content fields contribute to sid", () => {

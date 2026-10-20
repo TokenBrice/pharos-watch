@@ -207,7 +207,9 @@ Structured evidence is additive with warning-string evidence and the final Yield
 
 DEWS publishes complete admitted generations, not whichever rows finished most recently. An interrupted or dependency-held run leaves the prior accepted generation readable at its original age; a healthy run advances publication and freshness together. Per-asset malformed inputs are quarantined before scoring/contagion while healthy peers can publish. Historical evidence and previously accepted buffers are retained, and stale latest rows cannot reintroduce a quarantined asset into a newly accepted generation.
 
-Foundational stablecoin inputs must pass canonical timestamp checks and the producer interval-plus-runtime freshness budget (inclusive). Stale/invalid foundational inputs stop before persistence. Stale DEX-liquidity or mint/burn inputs also withhold publication. Stale yield-ranking evidence is flagged but retained, rather than silently zeroing its stress contribution.
+Daily snapshots are emitted only after exact generation validation and publication acceptance. A dependency hold, validation failure or refused pointer cannot seed or reseal that day's admitted history. The first accepted same-cohort result supplies the day's values; later accepted runs with identical IDs deliberately leave them unchanged. An accepted membership change still reseals the owned identity set, preserving frozen and quarantined history. A subsequent daily-write failure is reported without invalidating the already accepted current publication.
+
+Foundational stablecoin inputs must pass canonical timestamp checks and the producer interval-plus-runtime freshness budget (inclusive). Stale/invalid foundational inputs stop before persistence. Stale DEX-liquidity or mint/burn inputs also withhold publication. Yield-ranking generation clocks use canonical timestamp admission with read-time future-skew allowance, so a producer finishing while hydration is in flight remains usable. Stale, missing, invalid or beyond-skew future clocks hold publication under `yield-rankings-freshness`; readable structured evidence remains available for diagnostics rather than silently becoming zero stress.
 
 PSI amplification requires a valid sample within two PSI producer intervals (inclusive). Missing, stale, future-dated or invalid retained samples leave that optional backdrop unavailable without holding publication; otherwise DEWS and PSI could deadlock after a missed slot. A failed PSI read is a source failure and does hold publication. Previous-reading smoothing uses only accepted-generation evidence within its maximum age.
 
@@ -225,11 +227,15 @@ Storage, retention, exact publication proofs and machine-readable run diagnostic
 
 Readers validate the accepted pointer's timestamp, row count and ID digest, using its exact buffered generation if latest materialization is incomplete, never a partially newer write. Telegram and smoothing share that loader. A null scoring result writes no row: if peers publish without that asset, aggregate `missingCount` increases and single-coin `current` is null. Held/zero-result runs preserve the prior accepted generation and its original age. PSI requires complete exact-generation coverage.
 
+Without a valid accepted publication pointer, current API data is unavailable (`current: null` for a single coin), Telegram has no current rows, and smoothing has no previous evidence, even if diagnostic latest or rolling rows are fresh. Supported legacy accepted pointers still bound their fallback reads; absence of a pointer is not legacy acceptance. The first healthy accepted publication restores these readers without synthesizing a bootstrap pointer.
+
 Historical missing/unavailable sub-signals are gaps (`null`) without numeric tooltips, not zero stress. Current missing signals retain their machine reason; “not applicable” requires an explicit applicability reason; observed zero remains measured `0/100`. The [public OpenAPI contract](https://pharos.watch/openapi.json#/paths/~1api~1stress-signals/get) owns response shapes and authentication.
 
 **Cache:** standard (s-maxage=300, max-age=60)
 
 Calibration and repair are operator-only tools, not public scoring inputs. Their command, authorization and historical-reconstruction limits are documented in the [operator API reference](https://github.com/TokenBrice/pharos-watch/blob/main/docs/api-reference-admin.md#get-apibackfill-dews).
+
+Calibration requires complete daily observation coverage for each curated anchor and negative-control window. Missing or partial windows retain `detected=null` with observed/expected days and a machine-readable reason; even a partial window containing an alert is excluded from scored recall. Fully observed calm windows remain real misses, not unavailable outcomes. Without fully observed negative-control exposure, precision and false-positive days are null, never fabricated perfect precision or measured zero. The retained precision ratio mixes detected incident anchors and control alert-days and is diagnostic, not a validated incident-level precision estimate. These coverage rules do not alter live DEWS scoring or add negative controls.
 
 ---
 

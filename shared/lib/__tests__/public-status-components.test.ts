@@ -68,6 +68,19 @@ describe("public status components", () => {
     expect(component(health, "safety-scores").state).toBe("outage");
   });
 
+  it("grades publication ages at response time without renewing the assessment clock", () => {
+    const health = makeHealthyHealthResponse();
+    health.assessedAt = NOW;
+    health.timestamp = NOW + 60;
+    health.safetyScorePublication = {
+      ...health.safetyScorePublication!, acceptedAtSec: NOW - API_FRESHNESS_MAX_AGE_SEC.reportCards,
+    };
+    expect(component(health, "safety-scores")).toMatchObject({
+      state: "degraded", ageSeconds: API_FRESHNESS_MAX_AGE_SEC.reportCards + 60,
+    });
+    expect(health.assessedAt).toBe(NOW);
+  });
+
   it("never treats failed or absent Safety Score evidence as operational", () => {
     const health = makeHealthyHealthResponse();
     health.safetyScorePublication = null;

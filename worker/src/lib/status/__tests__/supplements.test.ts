@@ -99,6 +99,16 @@ function cronsWithDexLiquidityRuns(
   };
 }
 
+const ZERO_COVERAGE = {
+  currentCoverage: 0, previousCoverage: 0,
+  currentGlobalTvl: 0, previousGlobalTvl: 0,
+  currentTop10CoveredTvl: 0, previousTop10CoveredTvl: 0,
+  currentTop10GuardTvl: 0, previousTop10GuardTvl: 0,
+  nearCoverageGuard: false, nearValueGuard: false, nearMajorCoverageGuard: false,
+  currentCoverageClasses: { primary: 0, mixed: 0, fallback: 0, legacy: 0, unobserved: 0 },
+  previousCoverageClasses: { primary: 0, mixed: 0, fallback: 0, legacy: 0, unobserved: 0 },
+};
+
 
 describe("loadStatusSupplements", () => {
   it("fails the CoinGecko supplement on overflow rather than accepting partial prices", async () => {
@@ -176,7 +186,9 @@ describe("loadStatusSupplements", () => {
         durationMs: 5000,
         status: "ok",
         metadata: {
+          failedSources: [],
           sourceCoverage: {
+            ...ZERO_COVERAGE,
             currentCoverage: 274,
             previousCoverage: 273,
             nearCoverageGuard: false,
@@ -211,6 +223,39 @@ describe("loadStatusSupplements", () => {
     const supplements = await loadStatusSupplements(statusDb(), NOW, crons);
 
     expect(supplements.liquidityHealth).toBeNull();
+    expect(supplements.sectionErrors.liquidityHealth?.code).toBe("liquidity_health_extraction_failed");
+  });
+
+  it.each([
+    ["missing coverage", undefined, []],
+    ["null coverage", null, []],
+    ["empty coverage", {}, []],
+    ["nonfinite coverage", { ...ZERO_COVERAGE, currentCoverage: Infinity }, []],
+    ["numeric string", { ...ZERO_COVERAGE, currentCoverage: "0" }, []],
+    ["boolean count", { ...ZERO_COVERAGE, currentCoverage: false }, []],
+    ["object count", { ...ZERO_COVERAGE, currentCoverage: {} }, []],
+    ["missing classes", { ...ZERO_COVERAGE, currentCoverageClasses: undefined }, []],
+    ["null current classes", { ...ZERO_COVERAGE, currentCoverageClasses: null }, []],
+    ["missing sources", ZERO_COVERAGE, undefined],
+    ["malformed sources", ZERO_COVERAGE, ["source", false]],
+    ["malformed guard", { ...ZERO_COVERAGE, nearCoverageGuard: "false" }, []],
+  ])("isolates %s instead of inventing zero coverage", async (_label, sourceCoverage, failedSources) => {
+    const supplements = await loadStatusSupplements(statusDb(), NOW, cronsWithDexLiquidityRuns([{
+      startedAt: NOW - 60, durationMs: 1, status: "ok", metadata: { sourceCoverage, failedSources },
+    }]));
+    expect(supplements.liquidityHealth).toBeNull();
+    expect(supplements.sectionErrors.liquidityHealth?.code).toBe("liquidity_health_extraction_failed");
+    expect(supplements.publicationHealth).toMatchObject({ surfaces: {}, failedSurfaces: [] });
+  });
+
+  it("retains explicit zero and false in complete admitted coverage", async () => {
+    const supplements = await loadStatusSupplements(statusDb(), NOW, cronsWithDexLiquidityRuns([{
+      startedAt: NOW - 60, durationMs: 1, status: "ok",
+      metadata: { sourceCoverage: ZERO_COVERAGE, failedSources: [] },
+    }]));
+    expect(supplements.liquidityHealth).toEqual({
+      ...ZERO_COVERAGE, failedSources: [], lastRunStatus: "ok", sourceRunStartedAt: NOW - 60,
+    });
     expect(supplements.sectionErrors.liquidityHealth).toBeUndefined();
   });
 });

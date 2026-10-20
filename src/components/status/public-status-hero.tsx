@@ -19,7 +19,7 @@ interface PublicStatusHeroProps {
   headline: PublicStatusHeadline;
   /** When the current headline state began; null when unknown. */
   since: number | null;
-  /** Server sample time of the health payload (epoch seconds). */
+  /** Original evidence assessment time, not the latest cached-response request time. */
   checkedAt: number;
   /** Set when the latest health refetch failed; the shown verdict is the last good read. */
   fetchError: Error | null;

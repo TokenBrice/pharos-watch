@@ -34,7 +34,7 @@ const CLOSE_TASKS_SQL = `UPDATE worker_repair_tasks
 SET state = 'closed', locked_by = NULL, locked_until = NULL, updated_at = ?, closed_at = ?
 WHERE kind = ?
   AND (state IN ('open', 'deferred') OR (state = 'failed' AND (next_attempt_at IS NULL OR next_attempt_at <= ?)))
-  AND subject_id NOT IN (?,?)`;
+  AND subject_id NOT IN (SELECT value FROM json_each(?))`;
 
 const SUMMARY_SQL = `SELECT COUNT(*) AS open_count, MIN(created_at) AS oldest_created_at, MIN(next_attempt_at) AS next_attempt_at
 FROM worker_repair_tasks

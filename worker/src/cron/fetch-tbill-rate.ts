@@ -1,8 +1,8 @@
 import { toErrorMessage } from "@shared/lib/error-utils";
-import { getCache, setCache } from "../lib/db-cache";
+import { getCache, prepareCacheUpsert, type CacheEntryWrite } from "../lib/db-cache";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
 import { FRED_EFFR_CSV_URL, FRED_TBILL_CSV_URL } from "../lib/constants";
-import { logCronEvent, recordCronFailure, type CronResult } from "../lib/cron-logger";
+import { logCronEvent, recordCronFailure, type CronEventInput, type CronResult } from "../lib/cron-logger";
 import {
   buildRiskFreeRateCachePayload,
   buildRiskFreeRatesCachePayload,
@@ -92,6 +92,7 @@ function buildFallbackBenchmarkMetadata(benchmarks: ParsedYieldBenchmarkRegistry
 }
 
 interface GbpRetainedFallbackStreak {
+  generationId?: string | null;
   consecutiveRetainedRuns: number;
   consecutiveFreshRuns: number;
   firstRetainedAt: number | null;
@@ -140,6 +141,7 @@ function parseGbpRetainedFallbackStreak(value: string | null | undefined): GbpRe
     lastMarketFetchedAt: null,
   });
   return readStreakRecord(value, empty, (parsed) => ({
+    generationId: stringOrNull(parsed.generationId),
     consecutiveRetainedRuns: Math.max(
       0,
       Math.floor(numberValue(parsed.consecutiveRetainedRuns) ?? 0),
@@ -177,14 +179,21 @@ function retainedFallbackMonitorErrorMessage(error: unknown): string {
 }
 
 interface BenchmarkFreshStreak {
+  generationId?: string | null;
   consecutiveFreshRuns: number;
   lastFreshAt: number | null;
   lastFreshSource: string | null;
   lastFreshRecordDate: string | null;
 }
 
+interface PreparedBenchmarkMonitor {
+  entry?: CacheEntryWrite;
+  metadata: Record<string, unknown>;
+  event?: CronEventInput;
+}
+
 function parseBenchmarkFreshStreak(value: string | null | undefined): BenchmarkFreshStreak {
-  return readStreakRecord(
+  return readStreakRecord<BenchmarkFreshStreak>(
     value,
     () => ({
       consecutiveFreshRuns: 0,
@@ -193,6 +202,7 @@ function parseBenchmarkFreshStreak(value: string | null | undefined): BenchmarkF
       lastFreshRecordDate: null,
     }),
     (parsed) => ({
+      generationId: stringOrNull(parsed.generationId),
       consecutiveFreshRuns: Math.max(
         0,
         Math.floor(numberValue(parsed.consecutiveFreshRuns) ?? 0),
@@ -212,13 +222,15 @@ function parseBenchmarkFreshStreak(value: string | null | undefined): BenchmarkF
  * retained/hardcoded rate" into a visible failed check before the 48h NR cliff
  * is reached.
  */
-async function updateUsdFreshStreakMonitor(params: {
+async function prepareUsdFreshStreakMonitor(params: {
   db: D1Database;
   benchmark: ParsedYieldBenchmarkMeta | null;
   fetchedAt: number;
+  generationId: string;
+  previousGenerationId: string | null;
   signal?: AbortSignal;
-}): Promise<Record<string, unknown>> {
-  const { db, benchmark, fetchedAt, signal } = params;
+}): Promise<PreparedBenchmarkMonitor> {
+  const { db, benchmark, fetchedAt, generationId, previousGenerationId, signal } = params;
   try {
     const cached = await getCache(db, USD_FRESH_STREAK_CACHE_KEY);
     throwIfAborted(signal);
@@ -226,20 +238,24 @@ async function updateUsdFreshStreakMonitor(params: {
     const isFresh = benchmark != null && benchmark.isFallback !== true;
     const streak: BenchmarkFreshStreak = isFresh
       ? {
-          consecutiveFreshRuns: previous.consecutiveFreshRuns + 1,
+          consecutiveFreshRuns: previousGenerationId != null && previous.generationId === previousGenerationId
+            ? previous.consecutiveFreshRuns + 1
+            : 1,
           lastFreshAt: fetchedAt,
           lastFreshSource: benchmark.source ?? null,
           lastFreshRecordDate: benchmark.recordDate ?? null,
         }
       : { ...previous, consecutiveFreshRuns: 0 };
 
-    await setCache(db, USD_FRESH_STREAK_CACHE_KEY, JSON.stringify(streak), signal);
     return {
-      usdFreshPublicationStreak: streak.consecutiveFreshRuns,
-      usdFreshPublicationVerifiedTwice: isFresh && streak.consecutiveFreshRuns >= 2,
-      usdLastFreshAt: streak.lastFreshAt,
-      usdLastFreshSource: streak.lastFreshSource,
-      usdLastFreshRecordDate: streak.lastFreshRecordDate,
+      entry: { key: USD_FRESH_STREAK_CACHE_KEY, value: JSON.stringify({ ...streak, generationId }) },
+      metadata: {
+        usdFreshPublicationStreak: streak.consecutiveFreshRuns,
+        usdFreshPublicationVerifiedTwice: isFresh && streak.consecutiveFreshRuns >= 2,
+        usdLastFreshAt: streak.lastFreshAt,
+        usdLastFreshSource: streak.lastFreshSource,
+        usdLastFreshRecordDate: streak.lastFreshRecordDate,
+      },
     };
   } catch (error) {
     if (signal?.aborted) throw error;
@@ -250,7 +266,7 @@ async function updateUsdFreshStreakMonitor(params: {
         message: retainedFallbackMonitorErrorMessage(error).slice(0, 200),
       },
     });
-    return {};
+    return { metadata: {} };
   }
 }
 
@@ -311,13 +327,15 @@ function resolveBenchmarkRefreshNeed(params: {
   };
 }
 
-async function updateGbpRetainedFallbackMonitor(params: {
+async function prepareGbpRetainedFallbackMonitor(params: {
   db: D1Database;
   benchmark: ParsedYieldBenchmarkMeta | null;
   fetchedAt: number;
+  generationId: string;
+  previousGenerationId: string | null;
   signal?: AbortSignal;
-}): Promise<Record<string, unknown>> {
-  const { db, benchmark, fetchedAt, signal } = params;
+}): Promise<PreparedBenchmarkMonitor> {
+  const { db, benchmark, fetchedAt, generationId, previousGenerationId, signal } = params;
   try {
     const cached = await getCache(db, GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY);
     throwIfAborted(signal);
@@ -339,9 +357,8 @@ async function updateGbpRetainedFallbackMonitor(params: {
         lastMarketFetchedAt: benchmark.lastMarketFetchedAt ?? benchmark.fetchedAt ?? null,
       };
 
-      const thresholdReached = consecutiveRetainedRuns >= GBP_RETAINED_FALLBACK_EVENT_THRESHOLD;
-      if (thresholdReached) {
-        await logCronEvent(db, {
+      const event: PreparedBenchmarkMonitor["event"] = consecutiveRetainedRuns >= GBP_RETAINED_FALLBACK_EVENT_THRESHOLD
+        ? {
           job: "fetch-tbill-rate",
           eventType: "gbp-retained-fallback-repeated",
           severity: "warning",
@@ -355,15 +372,18 @@ async function updateGbpRetainedFallbackMonitor(params: {
             lastMarketRecordDate: benchmark.lastMarketRecordDate,
             lastMarketFetchedAt: benchmark.lastMarketFetchedAt,
           },
-        });
-      }
+        }
+        : undefined;
 
-      await setCache(db, GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY, JSON.stringify(streak), signal);
       return {
-        gbpRetainedFallbackActive: true,
-        gbpRetainedFallbackStreak: consecutiveRetainedRuns,
-        gbpRetainedFallbackEventThreshold: GBP_RETAINED_FALLBACK_EVENT_THRESHOLD,
-        gbpFreshPublicationStreak: 0,
+        entry: { key: GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY, value: JSON.stringify({ ...streak, generationId }) },
+        event,
+        metadata: {
+          gbpRetainedFallbackActive: true,
+          gbpRetainedFallbackStreak: consecutiveRetainedRuns,
+          gbpRetainedFallbackEventThreshold: GBP_RETAINED_FALLBACK_EVENT_THRESHOLD,
+          gbpFreshPublicationStreak: 0,
+        },
       };
     }
 
@@ -372,16 +392,20 @@ async function updateGbpRetainedFallbackMonitor(params: {
         ...previous,
         consecutiveFreshRuns: 0,
       };
-      await setCache(db, GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY, JSON.stringify(unavailable), signal);
       return {
-        gbpRetainedFallbackActive: false,
-        gbpRetainedFallbackStreak: previous.consecutiveRetainedRuns,
-        gbpRetainedFallbackEventThreshold: GBP_RETAINED_FALLBACK_EVENT_THRESHOLD,
-        gbpFreshPublicationStreak: 0,
+        entry: { key: GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY, value: JSON.stringify({ ...unavailable, generationId }) },
+        metadata: {
+          gbpRetainedFallbackActive: false,
+          gbpRetainedFallbackStreak: previous.consecutiveRetainedRuns,
+          gbpRetainedFallbackEventThreshold: GBP_RETAINED_FALLBACK_EVENT_THRESHOLD,
+          gbpFreshPublicationStreak: 0,
+        },
       };
     }
 
-    const consecutiveFreshRuns = previous.consecutiveFreshRuns + 1;
+    const consecutiveFreshRuns = previousGenerationId != null && previous.generationId === previousGenerationId
+      ? previous.consecutiveFreshRuns + 1
+      : 1;
     const recovered: GbpRetainedFallbackStreak = {
       consecutiveRetainedRuns: 0,
       consecutiveFreshRuns,
@@ -397,10 +421,8 @@ async function updateGbpRetainedFallbackMonitor(params: {
       recoveredAt: previous.consecutiveRetainedRuns > 0 ? fetchedAt : previous.recoveredAt,
       recoveredSource: benchmark?.source ?? null,
     };
-    await setCache(db, GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY, JSON.stringify(recovered), signal);
-
-    if (previous.consecutiveRetainedRuns >= GBP_RETAINED_FALLBACK_EVENT_THRESHOLD) {
-      await logCronEvent(db, {
+    const event: PreparedBenchmarkMonitor["event"] = previous.consecutiveRetainedRuns >= GBP_RETAINED_FALLBACK_EVENT_THRESHOLD
+      ? {
         job: "fetch-tbill-rate",
         eventType: "gbp-retained-fallback-recovered",
         severity: "info",
@@ -412,15 +434,19 @@ async function updateGbpRetainedFallbackMonitor(params: {
           lastFallbackMode: previous.lastFallbackMode,
           lastMarketSource: previous.lastMarketSource,
         },
-      });
-    }
+      }
+      : undefined;
     return {
-      gbpRetainedFallbackActive: false,
-      gbpRetainedFallbackStreak: 0,
-      gbpRetainedFallbackEventThreshold: GBP_RETAINED_FALLBACK_EVENT_THRESHOLD,
-      gbpRetainedFallbackRecoveredAt: recovered.recoveredAt ?? null,
-      gbpFreshPublicationStreak: consecutiveFreshRuns,
-      gbpFreshPublicationVerifiedTwice: consecutiveFreshRuns >= 2,
+      entry: { key: GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY, value: JSON.stringify({ ...recovered, generationId }) },
+      event,
+      metadata: {
+        gbpRetainedFallbackActive: false,
+        gbpRetainedFallbackStreak: 0,
+        gbpRetainedFallbackEventThreshold: GBP_RETAINED_FALLBACK_EVENT_THRESHOLD,
+        gbpRetainedFallbackRecoveredAt: recovered.recoveredAt ?? null,
+        gbpFreshPublicationStreak: consecutiveFreshRuns,
+        gbpFreshPublicationVerifiedTwice: consecutiveFreshRuns >= 2,
+      },
     };
   } catch (error) {
     if (signal?.aborted) throw error;
@@ -431,7 +457,7 @@ async function updateGbpRetainedFallbackMonitor(params: {
         message: retainedFallbackMonitorErrorMessage(error).slice(0, 200),
       },
     });
-    return {};
+    return { metadata: {} };
   }
 }
 
@@ -480,20 +506,23 @@ function toCacheEntry(benchmark: ParsedYieldBenchmarkMeta | null) {
   });
 }
 
-async function writeStructuredBenchmarks(db: D1Database, benchmarks: ParsedYieldBenchmarkRegistry) {
+function prepareStructuredBenchmarks(benchmarks: ParsedYieldBenchmarkRegistry, generationId: string): CacheEntryWrite[] {
   const cacheEntries = Object.fromEntries(
     BENCHMARK_DESCRIPTORS
       .filter((descriptor) => descriptor.includeInCache)
       .map(({ key }) => [key, toCacheEntry(benchmarks[key] ?? null)]),
   ) as Parameters<typeof buildRiskFreeRatesCachePayload>[0];
-  await setCache(
-    db,
-    RISK_FREE_RATES_CACHE_KEY,
-    serializeRiskFreeRatesCache(
-      buildRiskFreeRatesCachePayload(cacheEntries),
-    ),
-  );
-  await setCache(db, LEGACY_USD_RISK_FREE_RATE_CACHE_KEY, serializeRiskFreeRateCache(toCacheEntry(benchmarks.USD)!));
+  const registryPayload = { ...buildRiskFreeRatesCachePayload(cacheEntries), generationId };
+  return [
+    {
+      key: RISK_FREE_RATES_CACHE_KEY,
+      value: serializeRiskFreeRatesCache(registryPayload),
+    },
+    {
+      key: LEGACY_USD_RISK_FREE_RATE_CACHE_KEY,
+      value: serializeRiskFreeRateCache(toCacheEntry(benchmarks.USD)!),
+    },
+  ];
 }
 
 function buildRetainedBenchmark(
@@ -923,19 +952,6 @@ export async function fetchTbillRate(
   // SGD: TODO — no stable public SORA endpoint identified yet; SGD pegs fall back to USD.
   const benchmarks = buildBenchmarkRegistry(usdMeta, resolvedByKey);
 
-  const gbpRetainedFallbackMonitor = await updateGbpRetainedFallbackMonitor({
-    db,
-    benchmark: benchmarks.GBP,
-    fetchedAt,
-    signal,
-  });
-  const usdFreshStreakMonitor = await updateUsdFreshStreakMonitor({
-    db,
-    benchmark: benchmarks.USD,
-    fetchedAt,
-    signal,
-  });
-
   const resolvedKeys: YieldBenchmarkKey[] = usdParsed ? ["USD"] : [];
   for (const descriptor of BENCHMARK_FETCH_DESCRIPTORS) {
     if (resolvedByKey[descriptor.key]?.parsed) resolvedKeys.push(descriptor.key);
@@ -948,8 +964,53 @@ export async function fetchTbillRate(
   const registryCacheWrite = loaded.cacheState === "invalid" && resolvedKeys.length === 0
     ? "skipped-unreadable-cache"
     : "written";
+  let gbpRetainedFallbackMonitor: PreparedBenchmarkMonitor = { metadata: {} };
+  let usdFreshStreakMonitor: PreparedBenchmarkMonitor = { metadata: {} };
+  let generationId: string | null = null;
+  let previousGenerationId: string | null = null;
+  let previousGenerationUnavailableReason: string | null = null;
   if (registryCacheWrite === "written") {
-    await writeStructuredBenchmarks(db, benchmarks);
+    generationId = crypto.randomUUID();
+    try {
+      const previousCache = await getCache(db, RISK_FREE_RATES_CACHE_KEY);
+      const previousRecord = readStreakRecord<Record<string, unknown>>(previousCache?.value, () => ({}), (record) => record);
+      previousGenerationId = stringOrNull(previousRecord.generationId);
+    } catch (error) {
+      if (signal?.aborted) throw error;
+      if (error instanceof DOMException && error.name === "AbortError") throw error;
+      previousGenerationUnavailableReason = "benchmark-previous-generation-read-failed";
+      recordCronFailure("fetch-tbill-rate", error, {
+        metadata: { stage: "benchmark-previous-generation", reason: previousGenerationUnavailableReason },
+      });
+    }
+    throwIfAborted(signal);
+    gbpRetainedFallbackMonitor = await prepareGbpRetainedFallbackMonitor({
+      db, benchmark: benchmarks.GBP, fetchedAt, generationId, previousGenerationId, signal,
+    });
+    usdFreshStreakMonitor = await prepareUsdFreshStreakMonitor({
+      db, benchmark: benchmarks.USD, fetchedAt, generationId, previousGenerationId, signal,
+    });
+    const entries = [
+      ...[gbpRetainedFallbackMonitor.entry, usdFreshStreakMonitor.entry]
+        .filter((entry): entry is CacheEntryWrite => entry != null),
+      ...prepareStructuredBenchmarks(benchmarks, generationId),
+    ];
+    const statements = entries.map((entry) => prepareCacheUpsert(db, { ...entry, updatedAt: fetchedAt }));
+    throwIfAborted(signal);
+    // One bounded transaction: preparing a marker never certifies an unpublished candidate.
+    // An ambiguous acknowledgement propagates without emitting a recovery event.
+    const results = await db.batch(statements);
+    if (results.length !== statements.length || results.some((result) => !result.success)) {
+      throw new Error("benchmark-publication-unconfirmed");
+    }
+    for (const monitor of [gbpRetainedFallbackMonitor, usdFreshStreakMonitor]) {
+      if (!monitor.event) continue;
+      try {
+        await logCronEvent(db, monitor.event);
+      } catch (error) {
+        recordCronFailure("fetch-tbill-rate", error, { metadata: { stage: "benchmark-monitor-event" } });
+      }
+    }
   }
 
   const degradationReasons = buildBenchmarkDegradationReasons(usdMeta, resolvedByKey);
@@ -963,8 +1024,11 @@ export async function fetchTbillRate(
       includeDetails: true,
       extraFields: {
         ...(degradationReasons.length > 0 ? { reason: degradationReasons.join(",") } : {}),
-        ...gbpRetainedFallbackMonitor,
-        ...usdFreshStreakMonitor,
+        ...gbpRetainedFallbackMonitor.metadata,
+        ...usdFreshStreakMonitor.metadata,
+        generationId,
+        previousGenerationId,
+        previousGenerationUnavailableReason,
         registryCacheState: loaded.cacheState,
         registryCacheWrite,
         resolvedBenchmarkKeys: resolvedKeys,

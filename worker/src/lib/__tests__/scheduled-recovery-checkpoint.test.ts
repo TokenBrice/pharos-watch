@@ -1,5 +1,5 @@
 import { DatabaseSync } from "node:sqlite";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import {
@@ -80,6 +80,7 @@ describe("scheduled recovery checkpoint", () => {
 
   afterEach(() => {
     for (const sqlite of openDatabases.splice(0)) sqlite.close();
+    vi.useRealTimers();
   });
 
   function harness() {
@@ -143,6 +144,84 @@ describe("scheduled recovery checkpoint", () => {
     await advanceLiveReserveCheckpoint(db, owner, { nextItemKey: null, itemsDone: 1 });
     await setLiveReserveCheckpointChildDisposition(db, owner, "sync-live-reserves", "running");
     await expect(continueLiveReserveCheckpoint(db, owner)).rejects.toBeInstanceOf(ScheduledCheckpointOwnershipLostError);
+  });
+
+  it.each(["pre-commit", "post-commit"] as const)("acknowledges its exact recovery claim after %s response loss", async (failure) => {
+    const { sqlite, db } = harness();
+    const checkpoint = await seedCheckpointFrontier(db, {
+      slotStartedAt: 1_700, invocationId: "original-producer", nextItemKey: "coin-suffix", nowSec: 1_700,
+    });
+    await continueLiveReserveCheckpoint(db, checkpoint);
+    let injected = false;
+    const faultDb = createSqliteD1(sqlite, {
+      onRun(sql) {
+        if (failure === "pre-commit" && !injected && sql.includes("SET state = 'recovering', invocation_id")) {
+          injected = true;
+          throw new Error("Network connection lost");
+        }
+      },
+      rowsWritten(sql, changes) {
+        if (failure === "post-commit" && !injected && changes === 1 && sql.includes("SET state = 'recovering', invocation_id")) {
+          injected = true;
+          throw new Error("Network connection lost");
+        }
+        return changes;
+      },
+    });
+    vi.useFakeTimers();
+    const pending = claimNextLiveReserveCheckpointRecovery(faultDb, {
+      owner: "recovery-owner", leaseSec: 900, nowSec: 1_711,
+    });
+    await vi.advanceTimersByTimeAsync(200);
+    expect(await pending).toMatchObject({ disposition: "claimed", checkpoint: {
+      scheduleKey: "fourHourlyReserveSync", slotStartedAt: 1_700, job: "sync-live-reserves",
+      attemptNo: 1, executionGeneration: 1, state: "recovering", invocationId: "recovery-owner",
+      recoveryOwner: "recovery-owner", recoveryLeaseUntil: 2_611, nextItemKey: "coin-suffix",
+    } });
+    expect(injected).toBe(true);
+    const claimed = await loadLiveReserveCheckpoint(db, checkpoint);
+    expect(claimed).toMatchObject({ invocationId: "recovery-owner", recoveryOwner: "recovery-owner" });
+    expect(await claimNextLiveReserveCheckpointRecovery(db, {
+      owner: "foreign-owner", leaseSec: 900, nowSec: 1_712,
+    })).toEqual({ disposition: "none" });
+    expect(await loadLiveReserveCheckpoint(db, checkpoint)).toEqual(claimed);
+  });
+
+  it.each([
+    "schedule_key = 'foreign-schedule'",
+    "slot_started_at = slot_started_at + 1",
+    "job = 'foreign-job'",
+    "attempt_no = attempt_no + 1",
+    "execution_generation = execution_generation + 1",
+    "state = 'ready'",
+    "invocation_id = 'original-producer'",
+    "recovery_owner = 'foreign-owner'",
+    "recovery_lease_until = recovery_lease_until + 1",
+  ])("refuses ambiguous recovery readback after %s", async (mutation) => {
+    const { sqlite, db } = harness();
+    const checkpoint = await seedCheckpointFrontier(db, {
+      slotStartedAt: 1_700, invocationId: "original-producer", nowSec: 1_700,
+    });
+    await continueLiveReserveCheckpoint(db, checkpoint);
+    let injected = false;
+    let replaced: unknown;
+    const faultDb = createSqliteD1(sqlite, { rowsWritten(sql, changes) {
+      if (!injected && changes === 1 && sql.includes("SET state = 'recovering', invocation_id")) {
+        injected = true;
+        sqlite.prepare(`UPDATE worker_scheduled_checkpoints SET ${mutation}`).run();
+        replaced = sqlite.prepare("SELECT * FROM worker_scheduled_checkpoints").all();
+        throw new Error("Network connection lost");
+      }
+      return changes;
+    } });
+    vi.useFakeTimers();
+    const pending = claimNextLiveReserveCheckpointRecovery(faultDb, {
+      owner: "recovery-owner", leaseSec: 900, nowSec: 1_711,
+    });
+    await vi.advanceTimersByTimeAsync(200);
+    expect(await pending).toEqual({ disposition: "none" });
+    expect(injected).toBe(true);
+    expect(sqlite.prepare("SELECT * FROM worker_scheduled_checkpoints").all()).toEqual(replaced);
   });
 
   async function claimUnstartedRecovery(db: D1Database) {

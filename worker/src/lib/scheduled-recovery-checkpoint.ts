@@ -986,6 +986,21 @@ export async function claimNextLiveReserveCheckpointRecovery(
         .run(),
     );
     if ((result.meta.changes ?? 0) !== 1) {
+      // The claim replaces invocation_id. Read back the resulting owner/lease,
+      // not the producer identity scanned before a possibly committed retry.
+      const current = await loadLiveReserveCheckpoint(db, checkpoint);
+      if (current?.scheduleKey === checkpoint.scheduleKey
+        && current.slotStartedAt === checkpoint.slotStartedAt
+        && current.job === checkpoint.job
+        && current.attemptNo === checkpoint.attemptNo
+        && current.executionGeneration === checkpoint.executionGeneration
+        && current.state === "recovering"
+        && current.invocationId === input.owner
+        && current.recoveryOwner === input.owner
+        && current.recoveryLeaseUntil === leaseUntil
+        && leaseUntil > (input.nowSec ?? nowSec())) {
+        return { disposition: "claimed", checkpoint: current };
+      }
       const priority = await getReserveProducerPriority(db, input.nowSec);
       if (priority) return { disposition: "priority", producerPriority: priority };
       continue;

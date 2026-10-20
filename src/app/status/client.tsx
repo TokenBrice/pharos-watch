@@ -73,13 +73,15 @@ export default function StatusClient({ faqItems }: { faqItems: readonly FaqItem[
     return buildComponentDayCells({
       transitions: historyData.transitions,
       liveComponents: projection.components,
+      liveObservedAt: healthData?.assessedAt ?? healthData?.timestamp,
+      boundary: historyData.boundary,
       publicHistoryStartedAt: historyData.publicHistoryStartedAt,
       componentHistoryStartedAt: historyData.componentHistoryStartedAt,
-      nowSec: historyData.timestamp,
+      nowSec: Math.floor(Math.max(nowMs, healthUpdatedAt) / 1000),
       days: HISTORY_DAYS,
       truncated: historyData.hasMore === true,
     });
-  }, [historyData, historyError, projection]);
+  }, [historyData, historyError, projection, healthData, healthUpdatedAt, nowMs]);
 
   let content: ReactNode;
 
@@ -109,7 +111,7 @@ export default function StatusClient({ faqItems }: { faqItems: readonly FaqItem[
         <PublicStatusHero
           headline={projection.headline}
           since={getHeadlineSince(projection.components)}
-          checkedAt={healthData.timestamp}
+          checkedAt={healthData.assessedAt ?? healthData.timestamp}
           fetchError={healthError}
           fetchStale={fetchStale}
           onRefresh={handleRefresh}

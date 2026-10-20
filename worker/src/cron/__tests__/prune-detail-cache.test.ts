@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { runPruneDetailCache } from "../prune-detail-cache";
 import { ACTIVE_IDS, FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 
 const fixtures = createLatestSchemaFixtureTracker();
 const createTestDb = fixtures.open;
@@ -94,6 +95,40 @@ describe("runPruneDetailCache", () => {
     expect(metadata.staleDeleted).toBe(1);
     expect(sqlite.prepare("SELECT key FROM cache WHERE key LIKE 'detail:%' ORDER BY key").all()).toEqual([
       { key: `detail:${otherLiveId}` },
+    ]);
+  });
+
+  it.each([
+    { name: "fresh generation", replacementAgeDays: 0 },
+    { name: "different stale generation", replacementAgeDays: 9 },
+  ])("keeps a $name published after the stale scan and counts only applied deletes", async ({ replacementAgeDays }) => {
+    const nowSec = 1_790_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+    const liveIds = [...ACTIVE_IDS];
+    const refreshedKey = `detail:${liveIds[0]}`;
+    const staleKey = `detail:${liveIds[1]}`;
+    const { sqlite } = createTestDb();
+    const insert = sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, '{}', ?)");
+    insert.run(refreshedKey, nowSec - 8 * 86_400);
+    insert.run(staleKey, nowSec - 8 * 86_400);
+    insert.run("detail:orphan", nowSec);
+    const replacementAt = nowSec - replacementAgeDays * 86_400;
+    let refreshed = false;
+    const db = createSqliteD1(sqlite, { onAll: (sql) => {
+      if (!refreshed && sql.startsWith("SELECT key, updated_at FROM cache")) {
+        refreshed = true;
+        sqlite.prepare("UPDATE cache SET value = ?, updated_at = ? WHERE key = ?")
+          .run('{"generation":"replacement"}', replacementAt, refreshedKey);
+      }
+    } });
+
+    const result = await runPruneDetailCache(db);
+    expect(result.itemCount).toBe(2);
+    expect(JSON.parse(result.metadata!)).toMatchObject({
+      scanned: 3, orphansDeleted: 1, staleDeleted: 1, retentionTruncated: { detail: false },
+    });
+    expect(sqlite.prepare("SELECT key, value, updated_at FROM cache WHERE key LIKE 'detail:%'").all()).toEqual([
+      { key: refreshedKey, value: '{"generation":"replacement"}', updated_at: replacementAt },
     ]);
   });
 

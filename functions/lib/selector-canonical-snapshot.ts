@@ -1,9 +1,10 @@
+import { ApiMetaEnvelopeSchema } from "@pharos/contracts/api-meta";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { SITE_DATA_PROXY_SECRET_HEADER } from "@shared/lib/site-data-lane";
 import { buildSelectorRows } from "@shared/lib/selector/data-adapter";
 import { runSelector } from "@shared/lib/selector/engine";
 import { createVerifiedSelectorSnapshot } from "@shared/lib/selector/snapshot";
-import type { SelectorInput, SelectorOutput } from "@shared/lib/selector/types";
+import type { SelectorCanonicalSourceEvidence, SelectorInput, SelectorOutput } from "@shared/lib/selector/types";
 import {
   BluechipRatingsMapSchema,
   DexLiquidityMapSchema,
@@ -37,6 +38,7 @@ async function fetchCanonicalSource<T>(
   env: SelectorCanonicalSnapshotEnv,
   path: string,
   schema: RuntimeSchema<T>,
+  sourceEvidence?: SelectorCanonicalSourceEvidence,
 ): Promise<T> {
   const origin = resolveSiteApiOrigin(env);
   const secret = env.SITE_API_SHARED_SECRET?.trim();
@@ -62,6 +64,12 @@ async function fetchCanonicalSource<T>(
   }
 
   const raw = (await result.response.json()) as unknown;
+  if (sourceEvidence) {
+    const metadata = raw && typeof raw === "object" && "_meta" in raw
+      ? ApiMetaEnvelopeSchema.safeParse(raw._meta)
+      : null;
+    sourceEvidence.freshness = metadata?.success ? metadata.data : null;
+  }
   const payload =
     raw && typeof raw === "object" && !Array.isArray(raw) && "_meta" in raw
       ? Object.fromEntries(Object.entries(raw as Record<string, unknown>).filter(([key]) => key !== "_meta"))
@@ -74,10 +82,13 @@ async function fetchCanonicalSource<T>(
 }
 
 async function loadCanonicalSelectorSources(request: Request, env: SelectorCanonicalSnapshotEnv) {
+  const stablecoinsEvidence: SelectorCanonicalSourceEvidence = { source: "stablecoins", freshness: null };
   // Pages Functions share the Workers connection budget. Each batch fully
   // consumes at most four responses before the next group opens.
   const [stablecoinsData, pegData, reportData, stressData] = await Promise.all([
-    fetchCanonicalSource<StablecoinListResponse>(request, env, API_PATHS.stablecoins(), StablecoinListResponseSchema),
+    fetchCanonicalSource<StablecoinListResponse>(
+      request, env, API_PATHS.stablecoins(), StablecoinListResponseSchema, stablecoinsEvidence,
+    ),
     fetchCanonicalSource<PegSummaryResponse>(request, env, API_PATHS.pegSummary(), PegSummaryResponseSchema),
     fetchCanonicalSource<ReportCardsV9CurrentResponse>(
       request,
@@ -92,12 +103,16 @@ async function loadCanonicalSelectorSources(request: Request, env: SelectorCanon
       StressSignalsAllResponseSchema,
     ),
   ]);
-  const [dexData, yieldData, bluechipData] = await Promise.all([
+  const [dexData, yieldResponse, bluechipData] = await Promise.all([
     fetchCanonicalSource<DexLiquidityMap>(request, env, API_PATHS.dexLiquidity(), DexLiquidityMapSchema),
-    fetchCanonicalSource<YieldRankingsResponse>(request, env, API_PATHS.yieldRankings(), YieldRankingsResponseSchema),
+    fetchCanonicalSource<YieldRankingsResponse>(request, env, API_PATHS.yieldRankings(), YieldRankingsResponseSchema)
+      .then((yieldData) => ({ yieldData, yieldAgeAssessedAt: Date.now() })),
     fetchCanonicalSource<BluechipRatingsMap>(request, env, API_PATHS.bluechipRatings(), BluechipRatingsMapSchema),
   ]);
-  return { stablecoinsData, pegData, reportData, stressData, dexData, yieldData, bluechipData };
+  return {
+    stablecoinsData, pegData, reportData, stressData, dexData, ...yieldResponse, bluechipData,
+    canonicalSources: [stablecoinsEvidence],
+  };
 }
 
 export async function recomputeVerifiedSelectorSnapshot(
@@ -122,5 +137,6 @@ export async function recomputeVerifiedSelectorSnapshot(
         methodologyVersions: dataset.methodologyVersions,
       },
     ),
+    sources.canonicalSources,
   );
 }

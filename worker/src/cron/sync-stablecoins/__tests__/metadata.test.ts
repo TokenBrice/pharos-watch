@@ -173,6 +173,36 @@ function sizeGuardRungBudget(
 }
 
 describe("stablecoins pricing metadata", () => {
+  it.each(["main", "fallback"] as const)("reports capacity holds as degraded with no depeg capability on the %s path", (path) => {
+    const assets: PeggedAsset[] = ACTIVE_STABLECOINS.map((coin) => ({
+      id: coin.id, name: coin.name, symbol: coin.symbol, price: 1, circulating: { peggedUSD: 1 },
+    }));
+    const input = {
+      ...syncInput(assets),
+      providerDiagnostics: [],
+      depegHeldReason: "depeg-open-event-limit-reached" as const,
+      cacheKey: "stablecoins",
+      syncStartSec: 1_777_000_000,
+      authoritativeOverrideCount: 0, cachedFallbackCount: 0, nativePegCorrectionCount: 0, nativePegFillCount: 0,
+      activePriceCoverage: evaluateStablecoinActivePriceCoverage(assets),
+    };
+    const result = path === "main" ? buildStablecoinsSyncResult(input) : buildFallbackStablecoinsSyncResult(input);
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(result.metadata!)).toMatchObject({
+      reason: "depeg-open-event-limit-reached", depegHeldReason: "depeg-open-event-limit-reached",
+      depegPipelineSucceeded: false, capabilities: { stablecoinsCache: true, depegPipeline: false },
+    });
+    const { guard } = allMissingSizeGuardFixture();
+    guard.metadata.depegHeldReason = input.depegHeldReason;
+    guard.metadata.reason = input.depegHeldReason;
+    guard.capabilities.depegPipeline = false;
+    for (const budget of [100_000, 2000]) {
+      expect(JSON.parse(buildSizeGuardedStablecoinsSyncMetadata(guard, budget))).toMatchObject({
+        depegHeldReason: input.depegHeldReason, capabilities: { depegPipeline: false },
+      });
+    }
+  });
+
   it("retains disabled inline GeckoTerminal provenance in final publication metadata", () => {
     const assets: PeggedAsset[] = ACTIVE_STABLECOINS.map((asset) => ({
       id: asset.id, name: asset.name, symbol: asset.symbol, price: 1, priceSource: "coingecko",

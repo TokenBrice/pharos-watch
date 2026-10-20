@@ -103,6 +103,28 @@ describe("ChainsResponseSchema", () => {
     expect(parsed.chains[0].healthFactors.quality).toBeNull();
   });
 
+  it("preserves unavailable totals and shares without weakening observed chain rows", () => {
+    const unavailable = {
+      ...validChainsPayload,
+      globalTotalUsd: null,
+      chainAttributedTotalUsd: null,
+      unattributedTotalUsd: null,
+      attributionDiscrepancyUsd: null,
+      dominanceGeometryTotalUsd: null,
+      chains: [{ ...validChainsPayload.chains[0], dominanceShare: null }],
+    };
+    const parsed = ChainsResponseSchema.parse(unavailable);
+    expect(parsed.globalTotalUsd).toBeNull();
+    expect(parsed.chainAttributedTotalUsd).toBeNull();
+    expect(parsed.unattributedTotalUsd).toBeNull();
+    expect(parsed.attributionDiscrepancyUsd).toBeNull();
+    expect(parsed.dominanceGeometryTotalUsd).toBeNull();
+    expect(parsed.chains[0].dominanceShare).toBeNull();
+    expect(ChainsResponseSchema.safeParse({
+      ...unavailable, chains: [{ ...unavailable.chains[0], totalUsd: null }],
+    }).success).toBe(false);
+  });
+
   it("accepts an NR peg factor and NR composite with peg coverage alongside legacy payloads", () => {
     const chain = validChainsPayload.chains[0];
     const nrPeg = {

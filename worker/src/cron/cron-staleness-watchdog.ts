@@ -8,7 +8,7 @@ import type { CacheStatus } from "@shared/types/status";
 import { runWithOverloadRetry } from "../lib/d1-overload-retry";
 import { DETAIL_WRITE_FAILURE_KEY_PREFIX } from "../lib/constants";
 import type { CronResult } from "../lib/cron-logger";
-import { runChunkedInFilter } from "../lib/db";
+import { chunkArray, D1_MAX_BOUND_PARAMETERS, runChunkedInFilter } from "../lib/db";
 import { buildCacheStatuses } from "../lib/api-freshness";
 import { getCache, setCache } from "../lib/db-cache";
 import { escapeHtml, type TelegramCreds } from "../telegram/delivery/telegram";
@@ -144,7 +144,7 @@ export async function loadDetailWriteFailures(
   }
 
   const failures: DetailWriteFailureObservation[] = [];
-  const recoveredMarkerKeys: string[] = [];
+  const recoveredMarkers: typeof markerRows = [];
   for (const row of markerRows) {
     const stablecoinId = row.key.slice(DETAIL_WRITE_FAILURE_KEY_PREFIX.length);
 
@@ -153,7 +153,7 @@ export async function loadDetailWriteFailures(
     // degrading runs for up to 24h.
     const detailUpdatedAt = detailUpdatedAtByKey.get(detailKeyByMarkerKey.get(row.key) ?? "");
     if (detailUpdatedAt != null && detailUpdatedAt > row.updated_at) {
-      recoveredMarkerKeys.push(row.key);
+      recoveredMarkers.push(row);
       continue;
     }
 
@@ -174,19 +174,27 @@ export async function loadDetailWriteFailures(
     });
   }
 
-  // Drop recovered markers in a single batched delete instead of per-row.
-  if (recoveredMarkerKeys.length > 0) {
-    await runChunkedInFilter(
-      recoveredMarkerKeys,
-      (inClauseSql) => `DELETE FROM cache WHERE key IN (${inClauseSql})`,
-      async (sql, binds) => {
-        await runWithOverloadRetry(() =>
-          db
-            .prepare(sql)
-            .bind(...binds)
-            .run(),
-        );
-      },
+  // Fence cleanup to the scanned marker, including same-second replacements,
+  // and recheck recovery in the DELETE rather than trusting the earlier read.
+  for (const chunk of chunkArray(recoveredMarkers, Math.floor(D1_MAX_BOUND_PARAMETERS / 4))) {
+    await runWithOverloadRetry(() =>
+      db
+        .prepare(
+          `WITH recovered(marker_key, marker_updated_at, marker_value, detail_key) AS (
+             VALUES ${chunk.map(() => "(?, ?, ?, ?)").join(", ")}
+           )
+           DELETE FROM cache WHERE EXISTS (
+             SELECT 1 FROM recovered JOIN cache AS detail ON detail.key = recovered.detail_key
+             WHERE cache.key = recovered.marker_key
+               AND cache.updated_at = recovered.marker_updated_at
+               AND cache.value = recovered.marker_value
+               AND detail.updated_at > cache.updated_at
+           )`,
+        )
+        .bind(...chunk.flatMap((row) => [
+          row.key, row.updated_at, row.value, detailKeyByMarkerKey.get(row.key)!,
+        ]))
+        .run(),
     );
   }
   return failures;

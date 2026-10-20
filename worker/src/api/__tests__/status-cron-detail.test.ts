@@ -49,6 +49,34 @@ describe("handleStatusCronDetailRoute", () => {
     }
   });
 
+  it.each([
+    [NOW + 61, "future-timestamp"],
+    ["malformed", "invalid-timestamp"],
+  ])("serves rejected progress as diagnostic evidence without changing clock field nullability (%s)", async (updatedAt, reason) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW * 1000);
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      sqlite.prepare(`INSERT INTO cron_runs (job, started_at, duration_ms, status, error)
+        VALUES (?, ?, ?, ?, ?)`).run("sync-stablecoins", NOW - 60, 100, "error", "prior failure");
+      sqlite.prepare(`INSERT INTO cron_leases (job, lease_owner, lease_until, heartbeat_at, updated_at)
+        VALUES (?, ?, ?, ?, ?)`).run("sync-stablecoins", "owner", NOW + 300, NOW, NOW);
+      sqlite.prepare(`INSERT INTO cron_run_progress (job, started_at, updated_at, stage, lease_owner)
+        VALUES (?, ?, ?, ?, ?)`).run("sync-stablecoins", NOW - 30, updatedAt, "recovery", "owner");
+      const res = await handleStatusCronDetailRoute({ db, ...detailRequest("sync-stablecoins") });
+      const body = StatusCronDetailResponseSchema.parse(await res.json());
+      expect(body.cron.healthy).toBe(false);
+      expect(body.cron.runs[0].status).toBe("error");
+      expect(body.cron.inFlight).toBeNull();
+      expect(body.cron.inFlightUnavailable).toMatchObject({
+        updatedAt, timestampReason: reason, stale: true, stage: "recovery", leaseOwner: "owner",
+      });
+      expect(summarizeCronStatus("sync-stablecoins", body.cron).inFlightUnavailable).toEqual(body.cron.inFlightUnavailable);
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it("rejects missing and unknown jobs without reading history", async () => {
     const { sqlite, db } = createLatestSchemaSqlite();
     try {
@@ -69,7 +97,7 @@ describe("summarizeCronStatus", () => {
     inFlight: { startedAt: NOW - 10, updatedAt: NOW - 5, stale: false, metadata: { resourcePressure: undefined, cursor: "a" } },
     runs: [
       { startedAt: NOW - 60, durationMs: 10, status: "ok" as const, error: "y".repeat(800), reason: "r",
-        metadata: { freshSent: 3, perAlertType: { depeg: 1 }, authoritativePlanning: { big: true } } },
+        metadata: { messagesSent: 3, pendingDrained: 3, freshSent: 0, perAlertType: { depeg: 0 }, authoritativePlanning: { big: true } } },
       { startedAt: NOW - 360, durationMs: 10, status: "error" as const, metadata: { large: "z".repeat(2_000) } },
     ],
   };
@@ -80,7 +108,7 @@ describe("summarizeCronStatus", () => {
     for (const run of summary.runs) expect(run).not.toHaveProperty("metadata");
     expect(summary.runs[0]!.error!.length).toBeLessThanOrEqual(501);
     expect(summary.runs[0]!.reason).toBe("r");
-    expect(summary.latestRunFacts).toEqual({ freshSent: 3, perAlertType: { depeg: 1 } });
+    expect(summary.latestRunFacts).toEqual({ messagesSent: 3, pendingDrained: 3 });
     expect(Object.keys(summary.latestRunFacts!).every((key) =>
       CRON_STATUS_LATEST_FACT_KEYS["dispatch-telegram-alerts"]!.includes(key))).toBe(true);
     expect(summary.inFlight).not.toHaveProperty("metadata");

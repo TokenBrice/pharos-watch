@@ -192,12 +192,16 @@ function buildSectionPriority({ data, healthData, browserProbeSummary, issueGrou
       : (degradedCrons != null && degradedCrons > 0) || (watchUnhealthyCrons != null && watchUnhealthyCrons > 0) ? 1 : 0;
   const commsStatus = commsModel.delivery.health === "failed" ? 2 : commsModel.delivery.health === "degraded" ? 1 : 0;
   const pipelineIssues = [...issueGroups.impacting, ...issueGroups.warnings, ...issueGroups.maintenance].filter((issue) => issue.layer === "data-quality");
+  const quality = data.dataQuality;
+  const pipelineEvidenceUnavailable = quality == null || quality.stablecoinsCacheStatus === "error"
+    || quality.blacklistGapStatus === "failed" || quality.onchainSupplyQueryStatus !== "ok"
+    || quality.onchainSupplyMonitoring !== "active";
   return {
     pipeline: {
-      active: STATUS_PRIORITY[data.dataQualityStatus] > 0 || pipelineIssues.length > 0,
+      active: STATUS_PRIORITY[data.dataQualityStatus] > 0 || pipelineIssues.length > 0 || pipelineEvidenceUnavailable,
       severity: STATUS_PRIORITY[data.dataQualityStatus],
       publicImpact: pipelineIssues.some((issue) => issue.publicImpacting) ? 1 : 0,
-      evidenceRisk: 0,
+      evidenceRisk: pipelineEvidenceUnavailable ? 1 : 0,
       persistence: 0,
       count: pipelineIssues.length,
     },
@@ -265,8 +269,17 @@ function buildDashboardSections({ data, browserProbeSummary, cronGroups, running
   const impactingCrons = data.summary.availabilityImpactingUnhealthyCrons;
   const watchCrons = data.summary.watchUnhealthyCrons;
   const delivery = commsModel.delivery;
+  const quality = data.dataQuality;
+  const pipelineSummary = quality == null ? "Data-quality evidence unavailable" : [
+    quality.stablecoinsCacheStatus === "error"
+      ? "Price coverage unavailable" : `${quality.missingPrices} missing prices`,
+    quality.onchainSupplyQueryStatus !== "ok" || quality.onchainSupplyMonitoring !== "active"
+      ? "On-chain feed evidence unavailable" : `${quality.staleOnchainSupply} stale on-chain feeds`,
+    quality.blacklistGapStatus === "failed"
+      ? "Blacklist gap evidence unavailable" : `${quality.blacklistMissingAmounts} blacklist gaps`,
+  ].join(", ");
   return [
-    { id: "pipeline", title: "Pipeline", ...verdictValue(STATUS_VERDICT[data.dataQualityStatus]), summary: data.dataQuality == null ? "Data-quality evidence unavailable" : `${data.dataQuality.missingPrices} missing prices, ${data.dataQuality.staleOnchainSupply} stale on-chain feeds, ${data.dataQuality.blacklistMissingAmounts} blacklist gaps` },
+    { id: "pipeline", title: "Pipeline", ...verdictValue(STATUS_VERDICT[data.dataQualityStatus]), summary: pipelineSummary },
     {
       id: "reliability", title: "Reliability",
       ...(browserProbeSummary == null
@@ -285,7 +298,7 @@ function buildDashboardSections({ data, browserProbeSummary, cronGroups, running
           : watchCrons != null && watchCrons > 0
             ? verdictValue("watch", watchCrons)
             : verdictValue("ok")),
-      summary: `${cronGroups.length} groups, ${watchCrons ?? "unavailable"} watch unhealthy, ${data.summary.degradedCrons ?? "unavailable"} degraded jobs, ${runningCrons} running now`,
+      summary: `${cronGroups.length} groups, ${watchCrons ?? "unavailable"} watch unhealthy, ${data.summary.degradedCrons ?? "unavailable"} degraded jobs, ${runningCrons} running now${data.summary.cronHistoryUnavailableReason ? `; cron history unavailable (${data.summary.cronHistoryUnavailableReason})` : ""}`,
     },
     {
       id: "comms", title: "Comms",

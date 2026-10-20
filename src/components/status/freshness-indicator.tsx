@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { RefreshCw } from "lucide-react";
+import { formatWholeUnitDurationSeconds } from "@shared/lib/relative-time";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
@@ -98,7 +99,7 @@ export function FreshnessIndicator({
 
   const absolute = updatedAtMs > 0 ? new Date(updatedAtMs).toLocaleString(undefined, { timeZoneName: "long" }) : null;
   const fullLabel = absolute
-    ? `${labelPrefix ?? "Refreshed"} at ${absolute}`
+    ? `${labelPrefix ?? "Refreshed"} at ${absolute}. Stale when more than ${formatWholeUnitDurationSeconds(staleAfterMs / 1000)} old`
     : `${labelPrefix ?? "Refresh"} has not loaded`;
   const visibleLabel = compact ? label.replace(/\s+ago$/, "") : labelPrefix ? `${labelPrefix}: ${label}` : label;
   return (
@@ -110,6 +111,7 @@ export function FreshnessIndicator({
             dateTime={absolute ? new Date(updatedAtMs).toISOString() : undefined}
             data-state={isUnavailable ? "unavailable" : isStale ? "stale" : "current"}
             data-stale={isStale ? "true" : "false"}
+            data-stale-after-ms={staleAfterMs}
             className={cn(
               "inline-flex cursor-help items-center gap-1.5 rounded-full border px-2.5 py-1 text-2xs font-medium",
               compact && "min-h-6 rounded-md px-2 py-0 leading-none",

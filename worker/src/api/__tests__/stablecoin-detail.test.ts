@@ -121,7 +121,7 @@ function makeDLDetailBody(overrides: Partial<{ tokens: unknown[]; price: number 
   return JSON.stringify({
     tokens: overrides.tokens ?? [
       {
-        date: 1700000000,
+        date: Math.floor(Date.now() / 1000),
         totalCirculatingUSD: { peggedUSD: 100_000_000 },
         totalCirculating: { peggedUSD: 100_000_000 },
       },
@@ -223,7 +223,7 @@ describe("handleStablecoinDetail", () => {
       address: "0x4274cd7277c7bb0806bd5fe84b9adae466a8da0a",
       tokens: [
         {
-          date: 1700000000,
+          date: Math.floor(Date.now() / 1000),
           totalCirculatingUSD: { peggedUSD: 100_000_000 },
           totalCirculating: { peggedUSD: 100_000_000 },
         },
@@ -295,6 +295,147 @@ describe("handleStablecoinDetail", () => {
     expect(res.headers.get("X-Data-Updated-At")).toBe(String(now - 60));
   });
 
+  it.each([60, 61])("admits only permitted future cache skew at %ss without extending TTL", async (skew) => {
+    const now = Math.floor(Date.now() / 1000);
+    const clock = vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    try {
+      const { db, sqlite } = fixtures.open();
+      sqlite.prepare("INSERT INTO cache(key, value, updated_at) VALUES (?, ?, ?)")
+        .run("detail:usdt-tether", makeDLDetailBody(), now + skew);
+      queueFetch(new Response("unavailable", { status: 503 }));
+      const response = await handleStablecoinDetail(db, "usdt-tether", makeCtx());
+      if (skew === 60) {
+        expect(response.status).toBe(200);
+        expect(response.headers.get("X-Data-Age")).toBe("0");
+        expect(response.headers.get("Cache-Control")).toContain("s-maxage=300");
+        expect(fetchSpy).not.toHaveBeenCalled();
+      } else {
+        expect(response.status).toBe(502);
+        expect(response.headers.get("X-Data-Age")).toBeNull();
+        expect(response.headers.get("Cache-Control")).toBe("no-store");
+        expect(fetchSpy).toHaveBeenCalledTimes(1);
+      }
+      expect(sqlite.prepare("SELECT updated_at FROM cache WHERE key = 'detail:usdt-tether'").get())
+        .toEqual({ updated_at: now + skew });
+    } finally {
+      clock.mockRestore();
+    }
+  });
+
+  it.each(["missing", "non-array", "empty", "bad-date", "bad-bucket", "future"])(
+    "does not publish %s DefiLlama history",
+    async (scenario) => {
+      const now = Math.floor(Date.now() / 1000);
+      const validToken = { date: now, circulating: { peggedUSD: 100 } };
+      const upstream = {
+        missing: { price: 1 },
+        "non-array": { price: 1, tokens: "error" },
+        empty: { price: 1, tokens: [] },
+        "bad-date": { price: 1, tokens: [validToken, { ...validToken, date: "yesterday" }] },
+        "bad-bucket": { price: 1, tokens: [validToken, { date: now, circulating: { peggedUSD: null } }] },
+        future: { price: 1, tokens: [{ ...validToken, date: now + 3600 }] },
+      }[scenario];
+      const { db, sqlite } = fixtures.open();
+      queueFetch(new Response(JSON.stringify(upstream)));
+      const ctx = makeCtx();
+      const response = await handleStablecoinDetail(db, "usdt-tether", ctx);
+      expect(response.status).toBe(502);
+      expect(await response.json()).toMatchObject({ error: expect.any(String) });
+      expect(ctx.waitUntil).not.toHaveBeenCalled();
+      expect(sqlite.prepare("SELECT value FROM cache WHERE key = 'detail:usdt-tether'").get()).toBeUndefined();
+    },
+  );
+
+  it.each([false, true])("keeps obsolete history fallback-only with supply rescue=%s", async (rescue) => {
+    const now = Math.floor(Date.now() / 1000);
+    const upstreamDate = now - 40 * 86400;
+    const observedAt = rescue ? now - 86400 : upstreamDate;
+    const { db, sqlite } = fixtures.open();
+    if (rescue) {
+      sqlite.prepare("INSERT INTO supply_history(stablecoin_id, snapshot_date, circulating_usd, price) VALUES (?, ?, ?, ?)")
+        .run("usdt-tether", observedAt, 125, 2);
+    }
+    queueFetch(new Response(JSON.stringify({
+      price: 0.5, pegMechanism: "fiat-backed",
+      tokens: [{ date: upstreamDate, circulating: { peggedUSD: 100 }, minted: 0 }],
+    })));
+    const ctx = makeCtx();
+    const response = await handleStablecoinDetail(db, "usdt-tether", ctx);
+    expect(response.headers.get("X-Data-Updated-At")).toBe(String(observedAt));
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(response.headers.get("X-Data-Freshness-Reason")).toBe("detail-history-fallback");
+    expect(response.headers.get("Warning")).toMatch(/^110 /);
+    const body = await response.json() as { tokens: unknown[] };
+    expect(body).toMatchObject({
+      pegMechanism: "fiat-backed", _meta: { updatedAt: observedAt, status: "stale", reason: "detail-history-fallback" },
+    });
+    expect(body.tokens).toEqual(rescue
+      ? [{ date: observedAt, totalCirculatingUSD: { peggedUSD: 125 }, totalCirculating: { peggedUSD: 62.5 } }]
+      : [{ date: observedAt, circulating: { peggedUSD: 100 }, totalCirculating: { peggedUSD: 100 }, minted: 0 }]);
+    expect(ctx.waitUntil).not.toHaveBeenCalled();
+    expect(sqlite.prepare("SELECT value FROM cache WHERE key = 'detail:usdt-tether'").get()).toBeUndefined();
+  });
+
+  it("retains admitted cache rather than publishing malformed upstream history", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const { db, sqlite } = fixtures.open();
+    const value = makeDLDetailBody();
+    sqlite.prepare("INSERT INTO cache(key, value, updated_at) VALUES (?, ?, ?)")
+      .run("detail:usdt-tether", value, now - 18_000);
+    queueFetch(new Response(JSON.stringify({ tokens: [{ date: now }] })));
+    const ctx = makeCtx();
+    const response = await handleStablecoinDetail(db, "usdt-tether", ctx);
+    expect(response.headers.get("X-Data-Updated-At")).toBe(String(now - 18_000));
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(response.headers.get("Warning")).toContain("refresh failed");
+    // Registry identity normalization still applies when the generation is retained.
+    expect(await response.json()).toEqual({
+      ...JSON.parse(value),
+      address: "0xdac17f958d2ee523a2206206994597c13d831ec7",
+    });
+    expect(ctx.waitUntil).not.toHaveBeenCalled();
+    expect(sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = 'detail:usdt-tether'").get())
+      .toEqual({ value, updated_at: now - 18_000 });
+  });
+
+  it.each([false, true])("retains the newest observed zero supply-history checkpoint with earlier positive=%s", async (earlierPositive) => {
+    const now = Math.floor(Date.now() / 1000);
+    const { db, sqlite } = fixtures.open();
+    const insert = sqlite.prepare("INSERT INTO supply_history(stablecoin_id, snapshot_date, circulating_usd, price) VALUES (?, ?, ?, ?)");
+    if (earlierPositive) insert.run("usdt-tether", now - 86400, 100, 2);
+    insert.run("usdt-tether", now, 0, 2);
+    insert.run("usdt-tether", now + 3600, 999, 2);
+    // Malformed provider history must still find an admitted observed-zero rescue.
+    queueFetch(new Response(JSON.stringify({ price: 1 })));
+    const ctx = makeCtx();
+    const response = await handleStablecoinDetail(db, "usdt-tether", ctx);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("X-Data-Updated-At")).toBe(String(now));
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    const body = await response.json() as { tokens: unknown[] };
+    expect(body.tokens).toEqual([
+      ...(earlierPositive ? [{ date: now - 86400, totalCirculatingUSD: { peggedUSD: 100 }, totalCirculating: { peggedUSD: 50 } }] : []),
+      { date: now, totalCirculatingUSD: { peggedUSD: 0 }, totalCirculating: { peggedUSD: 0 } },
+    ]);
+    expect(ctx.waitUntil).not.toHaveBeenCalled();
+    expect(sqlite.prepare("SELECT value FROM cache WHERE key = 'detail:usdt-tether'").get()).toBeUndefined();
+  });
+
+  it("does not turn unavailable or invalid supply-history values into measured zero", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      { match: "cache", rows: [] },
+      { match: "FROM supply_history", rows: [null, undefined, NaN, -1].map((circulating_usd, index) => ({
+        snapshot_date: now - index * 86400, circulating_usd, price: 1,
+      })) },
+    ]);
+    queueFetch(new Response(JSON.stringify({ tokens: [] })));
+    const ctx = makeCtx();
+    const response = await handleStablecoinDetail(db, "usdt-tether", ctx);
+    expect(response.status).toBe(502);
+    expect(ctx.waitUntil).not.toHaveBeenCalled();
+  });
+
   it("returns 502 when upstream fails and no cache exists", async () => {
     const db = mockD1([
       { match: "cache", rows: [] },
@@ -338,7 +479,7 @@ describe("handleStablecoinDetail", () => {
       { date: 1690000000, totalCirculatingUSD: { peggedUSD: 80_000_000 }, totalCirculating: { peggedUSD: 80_000_000 } },
     ] });
     const freshUpstreamBody = makeDLDetailBody({ tokens: [
-      { date: 1700000000, totalCirculatingUSD: { peggedUSD: 120_000_000 }, totalCirculating: { peggedUSD: 120_000_000 } },
+      { date: Math.floor(Date.now() / 1000), totalCirculatingUSD: { peggedUSD: 120_000_000 }, totalCirculating: { peggedUSD: 120_000_000 } },
     ] });
     const now = Math.floor(Date.now() / 1000);
 
@@ -489,7 +630,7 @@ describe("handleStablecoinDetail", () => {
       { date: 1690000000, totalCirculatingUSD: { peggedUSD: 80_000_000 }, totalCirculating: { peggedUSD: 80_000_000 } },
     ] });
     const freshUpstreamBody = makeDLDetailBody({ tokens: [
-      { date: 1700000000, totalCirculatingUSD: { peggedUSD: 120_000_000 }, totalCirculating: { peggedUSD: 120_000_000 } },
+      { date: Math.floor(Date.now() / 1000), totalCirculatingUSD: { peggedUSD: 120_000_000 }, totalCirculating: { peggedUSD: 120_000_000 } },
     ] });
     const now = Math.floor(Date.now() / 1000);
     const staleDb = mockD1([
@@ -615,11 +756,12 @@ describe("handleStablecoinDetail", () => {
 
   it("preserves non-USD DefiLlama native history without inventing USD from today's quote", async () => {
     const db = mockD1([{ match: "cache", rows: [] }]);
+    const observedAt = Math.floor(Date.now() / 1000);
     const dlBody = JSON.stringify({
       price: 1.25,
       tokens: [
         {
-          date: 1700000000,
+          date: observedAt,
           circulating: { peggedEUR: 80 },
         },
       ],
@@ -638,7 +780,7 @@ describe("handleStablecoinDetail", () => {
       }>;
     };
     expect(body.tokens[0]).toEqual({
-      date: 1700000000,
+      date: observedAt,
       circulating: { peggedEUR: 80 },
       totalCirculating: { peggedEUR: 80 },
     });

@@ -13,6 +13,7 @@ import {
   PublicStatusHeadlineSchema,
   PublicStatusTransitionComponentSchema,
   type HealthResponse,
+  type PublicStatusHistoryBoundary,
   type PublicStatusTransition,
 } from "@shared/types/status";
 import { getStatusSeverity } from "@shared/lib/public-health";
@@ -228,8 +229,8 @@ export async function listPublicStatusTransitions(
   db: D1Database,
   limit: number,
   from: number,
-): Promise<{ transitions: PublicStatusTransition[]; startedAt: number | null; componentHistoryStartedAt: Record<string, number>; hasMore: boolean }> {
-  const [rows, first] = await Promise.all([
+): Promise<{ transitions: PublicStatusTransition[]; startedAt: number | null; componentHistoryStartedAt: Record<string, number>; boundary: PublicStatusHistoryBoundary | null; hasMore: boolean }> {
+  const [rows, first, boundaryRow] = await Promise.all([
     db.prepare(
       `/* pharos:public-status-transitions */ SELECT id, previous_status, next_status, transition_type, reason, causes_json, created_at
        FROM status_transitions
@@ -242,6 +243,13 @@ export async function listPublicStatusTransitions(
       FROM status_transitions WHERE scope = ?`)
       .bind(PUBLIC_STATUS_SCOPE)
       .first<{ started_at: number | null; state_json?: string | null }>(),
+    db.prepare(
+      `/* pharos:public-status-boundary */ SELECT causes_json, created_at
+       FROM status_transitions
+       WHERE scope = ? AND created_at <= ?
+       ORDER BY created_at DESC, id DESC
+       LIMIT 1`,
+    ).bind(PUBLIC_STATUS_SCOPE, from).first<Pick<PublicTransitionRow, "causes_json" | "created_at">>(),
   ]);
   const results = rows.results ?? [];
   const transitions = results.slice(0, limit).map((row): PublicStatusTransition => {
@@ -263,5 +271,11 @@ export async function listPublicStatusTransitions(
       state.data.components.flatMap((component) => first?.started_at == null ? [] : [[component.id, first.started_at]]),
     )
     : {};
-  return { transitions, startedAt: first?.started_at ?? null, componentHistoryStartedAt, hasMore: results.length > limit };
+  const hasMore = results.length > limit;
+  const boundaryState = PersistedTransitionSchema.safeParse(parseJson(boundaryRow?.causes_json ?? null));
+  const boundary = !hasMore && boundaryState.success && boundaryRow != null
+    && Number.isFinite(boundaryRow.created_at) && boundaryRow.created_at >= 0 && boundaryRow.created_at <= from
+    ? { at: boundaryRow.created_at, components: boundaryState.data.components }
+    : null;
+  return { transitions, startedAt: first?.started_at ?? null, componentHistoryStartedAt, boundary, hasMore };
 }

@@ -10,7 +10,7 @@ import {
   DDR_INCIDENT_REOPEN_MERGE_WINDOW_SEC,
   loadCanonicalIncidents,
 } from "./depeg-resolver-incident-store";
-import { buildInClause, isMissingTableError } from "./db";
+import { isMissingTableError } from "./db";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import {
   prepareRepairAuthorization,
@@ -237,7 +237,6 @@ async function closeRepairTasksNotInSubjects(
     return result.meta.changes ?? 0;
   }
 
-  const inClause = buildInClause(activeSubjectIds);
   const result = await runWithOverloadRetry(() =>
     db
       .prepare(
@@ -249,9 +248,9 @@ async function closeRepairTasksNotInSubjects(
              closed_at = ?
          WHERE kind = ?
            AND ${closableStateSql()}
-           AND subject_id NOT IN (${inClause.sql})`,
+           AND subject_id NOT IN (SELECT value FROM json_each(?))`,
       )
-      .bind(input.nowSec, input.nowSec, DDR_REPAIR_TASK_KIND, input.nowSec, ...inClause.binds)
+      .bind(input.nowSec, input.nowSec, DDR_REPAIR_TASK_KIND, input.nowSec, JSON.stringify(activeSubjectIds))
       .run(),
     3,
   );

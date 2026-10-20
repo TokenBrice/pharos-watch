@@ -74,4 +74,46 @@ describe("summarizeCronMetadata", () => {
     expect(summary).toContain("oldest ambiguous effect 65203s");
   });
 
+  describe.each(["cron-duration-watchdog", "cron-sentinel"])("%s breach evidence", (job) => {
+    const summarize = (metadata: Record<string, unknown>) => summarizeCronMetadata(
+      job,
+      job === "cron-sentinel" ? { sources: { duration: { status: "ok", metadata } } } : metadata,
+    );
+
+    it.each([undefined, null, "invalid", {}, [null], [""], [" "], ["slow-job", 42]].map((value) => ({ value })))(
+      "does not call missing or malformed arrays empty: $value",
+      ({ value }) => {
+        expect(summarize({ runtimeBreaching: value, slotAbandonmentBreaching: value })).toEqual(expect.arrayContaining([
+          "runtime breaches unavailable", "slot abandonment unavailable",
+        ]));
+        expect(summarize({ runtimeBreaching: value, slotAbandonmentBreaching: value }).join(" ")).not.toContain("none");
+      },
+    );
+
+    it("reserves none for validated empty arrays", () => {
+      expect(summarize({ runtimeBreaching: [], slotAbandonmentBreaching: [] })).toEqual(expect.arrayContaining([
+        "runtime breaches none", "slot abandonment none",
+      ]));
+    });
+
+    it("keeps each partially available dimension independent", () => {
+      expect(summarize({ runtimeBreaching: ["slow-job"] })).toEqual(expect.arrayContaining([
+        "runtime breaches slow-job", "slot abandonment unavailable",
+      ]));
+      expect(summarize({ slotAbandonmentBreaching: ["missed-slot"] })).toEqual(expect.arrayContaining([
+        "runtime breaches unavailable", "slot abandonment missed-slot",
+      ]));
+    });
+  });
+
+  it.each([
+    { status: "error", metadata: { reason: "duration-query-failed" } },
+    { status: "missing", reason: "source-state-missing", metadata: null },
+    { status: "error", error: "Invalid persisted sentinel source state" },
+  ])("preserves nested sentinel source status and reason: $status", (duration) => {
+    const summary = summarizeCronMetadata("cron-sentinel", { sources: { duration } });
+    expect(summary).toContain(`sources duration ${duration.status} (${duration.reason ?? duration.metadata?.reason ?? duration.error})`);
+    expect(summary.join(" ")).not.toContain("none");
+  });
+
 });

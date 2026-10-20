@@ -1,17 +1,57 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
-import { hydrateDexLiquidity, hydrateDexLiquidityHistory, hydrateLatestPsiScore } from "../source-state/hydration";
+import { hydrateDexLiquidity, hydrateDexLiquidityHistory, hydrateLatestPsiScore, hydrateYieldRankingsCache } from "../source-state/hydration";
 import { DEWS_PSI_FRESHNESS_BUDGET_SEC } from "../source-state/budgets";
 import { computeDEWS } from "../../dews";
 import { makeDewsInput } from "../../__tests__/dews.test-support";
 import { makeDexLiquidityRow } from "../../../test-helpers/__shared/fixtures";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { loadDewsSourceState } from "../source-state";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
+import { resolveCronTimeoutBudget } from "../../cron-timeouts";
 
 const RUN_AT = 1_800_000_000;
+const YIELD_BUDGET_SEC = CRON_INTERVALS["sync-yield-data"]
+  + resolveCronTimeoutBudget("sync-yield-data").configuredTimeoutMs / 1000;
 afterEach(() => vi.useRealTimers());
 
 describe("DEWS hydration timestamp admission", () => {
+  it.each([
+    ["valid", RUN_AT, 0, null],
+    ["inclusive budget", RUN_AT - YIELD_BUDGET_SEC, 0, null],
+    ["stale", RUN_AT - YIELD_BUDGET_SEC - 1, 0, "exceeds"],
+    ["run/read overlap", RUN_AT + 120, 120, null],
+    ["inclusive read skew", RUN_AT + 180, 120, null],
+    ["beyond read skew", RUN_AT + 181, 120, "future-timestamp"],
+    ["one day future", RUN_AT + 86400, 0, "future-timestamp"],
+    ["invalid", Number.POSITIVE_INFINITY, 0, "invalid-timestamp"],
+    ["missing", null, 0, "missing-timestamp"],
+  ] as const)("holds inadmissible %s yield clocks without discarding readable diagnostics", async (_label, updatedAt, readOffset, reason) => {
+    vi.useFakeTimers();
+    vi.setSystemTime((RUN_AT + readOffset) * 1000);
+    const registerSourceFailure = vi.fn();
+    const hydrated = await hydrateYieldRankingsCache({
+      db: mockD1([{ match: "pharos:dews:yield-rankings-cache", rows: [], first: {
+        updated_at: updatedAt,
+        value: JSON.stringify({ rankings: [{
+          id: "usdt-tether", sourceRisk: { rewardShare: 0.9 },
+          rankChangeAttribution: { rankDelta: -5, primaryDriver: "source-risk" },
+        }] }),
+      } }]),
+      nowSec: RUN_AT, registerSourceFailure, registerMalformedPersistedInput: vi.fn(),
+    });
+    expect(hydrated.yieldSourceRisk.get("usdt-tether")?.rewardShare).toBe(0.9);
+    expect(hydrated.yieldRankChangeAttribution.get("usdt-tether")).toMatchObject({
+      rankDelta: -5, primaryDriver: "source-risk",
+    });
+    if (reason == null) {
+      expect(registerSourceFailure).not.toHaveBeenCalled();
+    } else {
+      expect(registerSourceFailure).toHaveBeenCalledTimes(1);
+      expect(registerSourceFailure).toHaveBeenCalledWith("yield-rankings-freshness", expect.stringContaining(reason));
+    }
+  });
+
   it.each([
     ["fresh", RUN_AT, null],
     ["boundary", RUN_AT - DEWS_PSI_FRESHNESS_BUDGET_SEC, null],

@@ -115,6 +115,44 @@ describe("latest-schema fixture equivalence", () => {
     insertCacheKey(sqlite, "k");
     expect(() => insertCacheKey(sqlite, "k")).toThrow(/UNIQUE/);
   });
+
+  it.each([false, true])("keeps global DEX history reads and date deletes indexed (ANALYZE=%s)", (analyze) => {
+    const { sqlite } = fixtures.open();
+    const insert = sqlite.prepare("INSERT INTO dex_liquidity_history (stablecoin_id, snapshot_date, total_tvl_usd, liquidity_score) VALUES (?, ?, 100, 73)");
+    for (let coin = 0; coin < 32; coin += 1) {
+      for (let day = 0; day < 60; day += 1) insert.run(`coin-${coin}`, day * 86400);
+    }
+    if (analyze) sqlite.exec("ANALYZE");
+    const read = "SELECT stablecoin_id, snapshot_date, liquidity_score FROM dex_liquidity_history WHERE snapshot_date >= ? ORDER BY snapshot_date ASC";
+    const prune = "DELETE FROM dex_liquidity_history WHERE snapshot_date < ?";
+    const replace = "DELETE FROM dex_liquidity_history WHERE snapshot_date = ?";
+    for (const query of [read, prune, replace]) {
+      const plan = sqlite.prepare(`EXPLAIN QUERY PLAN ${query}`).all(59 * 86400);
+      expect(plan.map((row) => String(row.detail)).join("\n")).toMatch(/SEARCH dex_liquidity_history USING (?:COVERING )?INDEX idx_dex_hist_snapshot_date/);
+    }
+    expect(sqlite.prepare(read).all(59 * 86400).sort((a, b) => String(a.stablecoin_id).localeCompare(String(b.stablecoin_id))))
+      .toEqual(Array.from({ length: 32 }, (_, coin) => ({
+        stablecoin_id: `coin-${coin}`, snapshot_date: 59 * 86400, liquidity_score: 73,
+      })).sort((a, b) => a.stablecoin_id.localeCompare(b.stablecoin_id)));
+    expect(sqlite.prepare(prune).run(86400).changes).toBe(32);
+    expect(sqlite.prepare("SELECT DISTINCT snapshot_date FROM dex_liquidity_history WHERE snapshot_date <= ?").all(86400))
+      .toEqual([{ snapshot_date: 86400 }]);
+    expect(sqlite.prepare(replace).run(59 * 86400).changes).toBe(32);
+    expect(sqlite.prepare(read).all(59 * 86400)).toEqual([]);
+
+    const indexes = sqlite.prepare("PRAGMA index_list(dex_liquidity_history)").all();
+    expect(indexes).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: "idx_dex_hist_snapshot_date", unique: 0 }),
+      expect.objectContaining({ name: "idx_dex_hist_coin_date", unique: 0 }),
+      expect.objectContaining({ name: "idx_dex_hist_coin_date_unique", unique: 1 }),
+    ]));
+    expect(() => insert.run("coin-0", 86400)).toThrow(/UNIQUE/);
+    const expectedObjects = readFileSync(path.join(MIGRATIONS_DIR, "EXPECTED_SCHEMA.txt"), "utf8").split("\n");
+    for (const name of ["idx_dex_hist_snapshot_date", "idx_dex_hist_coin_date", "idx_dex_hist_coin_date_unique", "idx_blacklist_events_chain_block"]) {
+      expect(expectedObjects).toContain(`index\t${name}`);
+      expect(sqlite.prepare("SELECT name FROM sqlite_schema WHERE type = 'index' AND name = ?").get(name)).toEqual({ name });
+    }
+  });
 });
 
 describe("latest-schema fixture rollback", () => {

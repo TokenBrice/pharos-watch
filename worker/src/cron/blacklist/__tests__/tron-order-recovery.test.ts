@@ -153,6 +153,45 @@ afterEach(() => {
 });
 
 describe("resolveTronBlacklistOrder candidate selection", () => {
+  it.each([false, true])("indexes exact-block pending, conflict and debt reads on mixed-chain history (ANALYZE=%s)", (analyze) => {
+    const { sqlite } = fixtures.open();
+    for (const chainId of ["tron", "ethereum", "arbitrum"]) {
+      for (let block = 1; block <= 200; block += 1) {
+        seedEvent(sqlite, { id: `${chainId}-${block}`, chainId, block, tx: TX_A,
+          eventType: "blacklist", timestamp: BASE_TIMESTAMP + block });
+      }
+    }
+    seedConflictBlock(sqlite, { block: 1000 });
+    seedEvent(sqlite, { id: "suppressed", block: 1000, tx: TX_A, eventType: "blacklist",
+      timestamp: BASE_TIMESTAMP + 1000, suppressionReason: "operator-review" });
+    seedEvent(sqlite, { id: "positioned", block: 1000, tx: TX_A, eventType: "unblacklist",
+      timestamp: BASE_TIMESTAMP + 1000, transactionIndex: 3 });
+    seedEvent(sqlite, { id: "other-chain", chainId: "ethereum", block: 1000, tx: TX_A,
+      eventType: "blacklist", timestamp: BASE_TIMESTAMP + 1000 });
+    if (analyze) sqlite.exec("ANALYZE");
+    const pending = "SELECT id FROM blacklist_events WHERE chain_id = 'tron' AND block_number = ? AND transaction_index IS NULL";
+    const remaining = `SELECT 1 AS conflicting FROM blacklist_events
+      WHERE chain_id = 'tron' AND suppression_reason IS NULL AND block_number = ?
+      GROUP BY stablecoin, COALESCE(config_key, contract_address, ''), address
+      HAVING COUNT(DISTINCT tx_hash) > 1 AND COUNT(DISTINCT event_type) > 1
+        AND SUM(event_type = 'blacklist') > 0 AND SUM(transaction_index IS NULL) > 0 LIMIT 1`;
+    const debt = `INSERT OR IGNORE INTO cache (key, value, updated_at)
+      SELECT 'plan-debt:' || id, id, 1 FROM blacklist_events
+      WHERE chain_id = 'tron' AND block_number = ? AND suppression_reason IS NULL`;
+    for (const query of [pending, remaining, debt]) {
+      const plan = sqlite.prepare(`EXPLAIN QUERY PLAN ${query}`).all(1000);
+      expect(plan.map((row) => String(row.detail)).join("\n")).toMatch(/SEARCH blacklist_events USING (?:COVERING )?INDEX idx_blacklist_events_chain_block/);
+    }
+    const conflictIds = [`tron-${TX_A}-1000-0`, `tron-${TX_B}-1000-0`];
+    expect(sqlite.prepare(pending).all(1000).map((row) => row.id).sort()).toEqual(["suppressed", ...conflictIds].sort());
+    expect(sqlite.prepare(remaining).all(1000)).toEqual([{ conflicting: 1 }]);
+    expect(sqlite.prepare(debt).run(1000).changes).toBe(3);
+    expect(sqlite.prepare("SELECT value FROM cache WHERE key >= 'plan-debt:' AND key < 'plan-debt;' ORDER BY value").all())
+      .toEqual(["positioned", ...conflictIds].sort().map((value) => ({ value })));
+    expect(transactionIndexOf(sqlite, "suppressed")).toBeNull();
+    expect(transactionIndexOf(sqlite, "positioned")).toBe(3);
+  });
+
   it("attempts only conflicting, unsuppressed Tron groups with unresolved positions", async () => {
     const { sqlite, db } = fixtures.open();
     seedConflictBlock(sqlite, { block: 100 });

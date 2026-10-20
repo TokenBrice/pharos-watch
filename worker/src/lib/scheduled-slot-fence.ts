@@ -433,7 +433,11 @@ async function claimScheduledSlotExecution(
     return { status: "duplicate" };
   }
   if (existing.execution_owner === owner) {
-    return { status: "claimed", executionGeneration: existing.execution_generation };
+    return existing.state === "running"
+      && existing.execution_generation === 1
+      && existing.invocation_id === invocationId
+      ? { status: "claimed", executionGeneration: 1 }
+      : { status: "running" };
   }
 
   if (existing.updated_at <= staleBefore || (existing.state === "running" && existing.started_at <= nowSec - policy.hardDeadSec)) {
@@ -500,7 +504,18 @@ async function claimScheduledSlotExecution(
         .run(),
     );
     checkpoint();
-    if ((takeover.meta.changes ?? 0) > 0) {
+    // A transport retry can replay a committed CAS and report zero changes.
+    // Heartbeats may advance updated_at; only the resulting fence identifies us.
+    let claimed = (takeover.meta.changes ?? 0) > 0;
+    if (!claimed) {
+      const current = await getScheduledSlotExecution(db, slotKey, slotStartedAt);
+      checkpoint();
+      claimed = current?.state === "running"
+        && current.execution_owner === owner
+        && current.execution_generation === existing.execution_generation + 1
+        && current.invocation_id === invocationId;
+    }
+    if (claimed) {
       const reconciliation: StaleSlotReconciliationSummary = await reconcileStaleSlotArtifactsAndRecordEvent(
         db,
         staleSlot,
