@@ -111,4 +111,3 @@ export function buildRiskTape(data: DigestInputData): DigestRiskTapeItem[] {
 
   return items.slice(0, 5);
 }
-

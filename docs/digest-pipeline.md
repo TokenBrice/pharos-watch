@@ -549,4 +549,3 @@ Coverage does not rescore liquidity. Composite score movement need not be propor
 ### Flow provenance details
 
 New captures retain mint/burn `provenance`: the producer's exact `window` (`start`, `end`, `semantics: "closed-utc-hours"`), cache publication timestamp `publishedAt`, and independent body clock `updatedAt`. The producer has no unique flow-generation ID; equal-timestamp republications may replace a cache row, so its publication clock is not such an identity and no synthetic ID is inferred. The data-quality window is labelled **24 closed UTC hours** and uses the same source boundaries even for admitted stale publications or collection across an hour boundary. Absent or unreadable legacy window/clock provenance stays null and the prompt names the window unavailable; collection time never reconstructs it. Existing archived editions are not rewritten.
-

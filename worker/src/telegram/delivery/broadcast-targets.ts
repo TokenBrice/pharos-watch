@@ -40,4 +40,3 @@ export async function loadBroadcastTargetChatIds(
   const rows = await db.prepare(sql).all<{ chat_id: string }>();
   return (rows.results ?? []).map((row) => row.chat_id);
 }
-
