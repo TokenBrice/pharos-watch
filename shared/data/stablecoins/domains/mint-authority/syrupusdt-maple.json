@@ -2,26 +2,45 @@
   "id": "syrupusdt-maple",
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "bounded-admin",
+    "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "inheritedFrom": "usdt-tether",
-    "summary": "syrupUSDT is Maple's ERC-4626 strategy-vault receipt for USDT lent to institutional borrowers; shares are minted against USDT deposits and do not create base USDT supply, so its mint authority is inherited from USDT (usdt-tether). The vault token is an immutable non-proxy contract with no upgrade path.",
+    "summary": "syrupUSDT is Maple's ERC-4626 strategy-vault receipt for USDT lent to institutional borrowers; shares are minted against USDT deposits and do not create base USDT supply. The token itself is immutable, but native share pricing and mint eligibility depend on an upgradeable PoolManager. Its factory-approved upgrade path is controlled by the scheduled pool delegate or security admin. Underlying Tether issuance remains a separate inherited dependency.",
     "upgradeability": {
-      "model": "immutable",
-      "implementationAddresses": [
-        "0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d"
+      "model": "custom",
+      "deploymentRefs": [
+        "ethereum:0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d"
       ],
-      "canChangeMintLogic": false,
-      "observedAt": "2026-07-21",
-      "observedBlock": 25579746,
+      "proxyAddresses": [
+        "0x0cda32e08b48bfddbc7ee96b44b09cf286f9e21a"
+      ],
+      "implementationAddresses": [
+        "0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8"
+      ],
+      "adminAddresses": [
+        "0x93aa06f8a7bb4da3eb0dd5a5a38c01a7eb35501a",
+        "0x6b1a78c1943b03086f7ee53360f9b0672bd60818"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Maple syrupUSDT upgradeable PoolManager",
+      "observedAt": "2026-10-20",
+      "observedBlock": 26236800,
       "sources": [
         {
-          "label": "Maple syrupUSDT contract",
-          "url": "https://etherscan.io/address/0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d#code"
+          "label": "Verified immutable MaplePool delegates share pricing and mint eligibility to PoolManager",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d"
         },
         {
-          "label": "Maple Finance",
-          "url": "https://maple.finance/"
+          "label": "Verified current MaplePoolManager upgrade and accounting implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8"
+        },
+        {
+          "label": "Verified Maple PoolManager factory upgrade admission",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe463cd473ecc1d1a4ecf20b62624d84dd20a8339"
+        },
+        {
+          "label": "Exact syrupUSDT manager, implementation, factory, delegate and global admin reads; Ethereum block 26236800, hash 0xda3a69656ed26cce35220ce6575c32ca59074c2a6112038f73f00474da4e2d61, 2026-10-20T22:31:11Z; observed 2026-10-20T22:31:37Z to 22:33:43Z",
+          "url": "https://api-ethereum-mainnet.n.dwellir.com"
         }
       ]
     },
@@ -74,6 +93,41 @@
           }
         ],
         "evidence": "At Ethereum block 25584916 (2026-07-22T01:14:23Z), USDT getOwner() resolves to this 3-of-6 multisig-style owner. Tether's verified implementation exposes owner-only issue(uint256), which adds the requested amount to total supply without checking a fixed numeric cap; syrupUSDT shares inherit that base-asset authority."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x0cda32e08b48bfddbc7ee96b44b09cf286f9e21a",
+        "deploymentRefs": [
+          "ethereum:0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d"
+        ],
+        "label": "Maple syrupUSDT upgradeable PoolManager",
+        "role": "proxy-admin",
+        "authorityType": "contract",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "MaplePool delegates share-mint eligibility, liquidity limits and totalAssets accounting to this upgradeable manager. A scheduled pool-delegate call or security-admin call may request an enabled factory-approved upgrade. This affects the Maple share rather than base USDT monetary issuance; the immutable deposited-asset transfer requirement and D14 bounded economics are unchanged.",
+        "observedAt": "2026-10-20",
+        "observedBlock": 26236800,
+        "sources": [
+          {
+            "label": "Verified MaplePool manager-dependent native share issuance",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d"
+          },
+          {
+            "label": "Verified MaplePoolManager upgrade implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8"
+          },
+          {
+            "label": "Verified Maple PoolManager factory",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe463cd473ecc1d1a4ecf20b62624d84dd20a8339"
+          },
+          {
+            "label": "Pinned manager and administrator reads at Ethereum block 26236800, 2026-10-20T22:31:11Z; observed 2026-10-20T22:31:37Z to 22:33:43Z",
+            "url": "https://api-ethereum-mainnet.n.dwellir.com"
+          }
+        ],
+        "evidence": "ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required. C19 review 2026-10-20: token immutability was incorrectly generalized to the entire mint-critical path. At Ethereum block 26236800 (hash 0xda3a69656ed26cce35220ce6575c32ca59074c2a6112038f73f00474da4e2d61, 2026-10-20T22:31:11Z), token manager() is this address; manager implementation() is 0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8, factory() is 0xe463cd473ecc1d1a4ecf20b62624d84dd20a8339, poolDelegate() is 0x93aa06f8a7bb4da3eb0dd5a5a38c01a7eb35501a and globals() is 0x804a6f5f667170f545bf14e5ddb48c70b788390c. That globals securityAdmin() is 0x6b1a78c1943b03086f7ee53360f9b0672bd60818. Verified MaplePool mint/deposit calls depend on manager canCall and totalAssets; verified manager upgrade admits scheduled pool-delegate or security-admin calls through the factory's enabled upgrade path. No exhaustive enabled-version, signing-custody or protective-delay claim is made. The historical July 21 block 25579746 token-immutability observation and October 1 block 26095800 manager observation remain valid for their narrower scopes; the original aggregate review start is retained."
       }
     ],
     "economicCapSemantics": "bounded",
@@ -90,9 +144,9 @@
       ]
     },
     "reconciliation": "unknown",
-    "supervision": "attestation-only",
+    "supervision": "unknown",
     "review": {
-      "evidence": "syrupUSDT (variantOf usdt-tether, variantKind strategy-vault) is a Maple lending-vault receipt whose shares track deposited USDT and cannot create base USDT. The immutable wrapper result remains supported by zero EIP-1967 implementation/admin slots and non-proxy bytecode. At Ethereum block 25584916, the inherited USDT authority resolves to Tether's 3-of-6 owner; the verified owner-only issue(uint256) path can increase supply without a numeric contract ceiling. The Network Firm dashboard last verified 2026-09-29 at 01:00 UTC explicitly covers combined syrupUSDC and syrupUSDT loan collateral. Maple's May 7 announcement describes custodian-sourced collateral value and approved-custodian procedures, with loan-book collateralization marked coming soon. Neither source establishes exact syrupUSDT reserve-to-token-liability reconciliation, so the previous periodic label is withdrawn to unknown under owner ruling D22. This does not assert that internal checks stopped or change the inherited Tether mint path. Historical economic-posture review of 2026-08-15 is retained here. D14/D29 sweep 2026-10-03: At Ethereum block 26112822 (hash 0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a), the verified MaplePool runtime matches the canonical token deployment. deposit/mint and their permit variants exclusively enter the internal _mint(shares, assets, receiver, caller), which requires nonzero assets and a successful transferFrom of the underlying from the caller; bootstrap shares also arise only within that deposit transaction. No external arbitrary-share mint or share-minter authorization exists. PoolManager permissions, liquidity limits and asset-accounting parameters do not remove the deposited-asset transfer requirement. Manager upgrade power remains the separately recorded upgrade dimension, not a D14 mint trigger. Inherited issuer controls describe parent issuance carried by the serial-claim dependency edge, not wrapper-local share minting; parent D14 risk is not charged twice.",
+      "evidence": "syrupUSDT (variantOf usdt-tether, variantKind strategy-vault) is a Maple lending-vault receipt whose shares track deposited USDT and cannot create base USDT. The immutable wrapper result remains supported by zero EIP-1967 implementation/admin slots and non-proxy bytecode. At Ethereum block 25584916, the inherited USDT authority resolves to Tether's 3-of-6 owner; the verified owner-only issue(uint256) path can increase supply without a numeric contract ceiling. The Network Firm dashboard last verified 2026-09-29 at 01:00 UTC explicitly covers combined syrupUSDC and syrupUSDT loan collateral. Maple's May 7 announcement describes custodian-sourced collateral value and approved-custodian procedures, with loan-book collateralization marked coming soon. Neither source establishes exact syrupUSDT reserve-to-token-liability reconciliation, so the previous periodic label is withdrawn to unknown under owner ruling D22. This does not assert that internal checks stopped or change the inherited Tether mint path. Historical economic-posture review of 2026-08-15 is retained here. D14/D29 sweep 2026-10-03: At Ethereum block 26112822 (hash 0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a), the verified MaplePool runtime matches the canonical token deployment. deposit/mint and their permit variants exclusively enter the internal _mint(shares, assets, receiver, caller), which requires nonzero assets and a successful transferFrom of the underlying from the caller; bootstrap shares also arise only within that deposit transaction. No external arbitrary-share mint or share-minter authorization exists. PoolManager permissions, liquidity limits and asset-accounting parameters do not remove the deposited-asset transfer requirement. Manager upgrade power remains the separately recorded upgrade dimension, not a D14 mint trigger. Inherited issuer controls describe parent issuance carried by the serial-claim dependency edge, not wrapper-local share minting; parent D14 risk is not charged twice. ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required; C19 source review 2026-10-20: the current LedgerLens dashboard, last verified October 13, 2026 at 01:00 UTC, still verifies combined syrupUSDC/syrupUSDT loan collateral, not complete token liabilities against the full reserve basket. The cited sources do not establish D33 whole-liability attestation-only supervision for the local Maple share. Withdraw only that unsupported field to unknown; no finding of absent supervision, non-reconciliation or a shortfall follows. Tether parent process and original review/onchain pins are unchanged.",
       "reviewer": "Sol v10.02 D14/D29 sweep (U10BoundedWrappersA)",
       "reviewedAt": "2026-10-03",
       "disposition": "scoreable",
@@ -120,6 +174,10 @@
         {
           "label": "Maple transparency dashboard",
           "url": "https://maple.finance/transparency"
+        },
+        {
+          "label": "The Network Firm combined Maple collateral verification; retrieved 2026-10-20, source verification October 13, 2026 at 01:00 UTC",
+          "url": "https://dashboard.ledgerlens.io/c/maple"
         }
       ]
     }

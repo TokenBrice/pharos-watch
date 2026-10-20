@@ -2,7 +2,7 @@
   "id": "mapollo-midas",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-reconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "mAPOLLO is minted by the MApolloDepositVault proxy and an EOA holding M_APOLLO_MINT_OPERATOR_ROLE. Its token, deposit vault, shared access control, data feed, and manual aggregator are transparent proxies under one ProxyAdmin owned by a two-day Midas timelock.",
     "upgradeability": {
@@ -184,11 +184,11 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "periodic",
-    "supervision": "attestation-only",
+    "reconciliation": "unknown",
+    "supervision": "unknown",
     "review": {
-      "evidence": "At Ethereum block 25527135, the complete mAPOLLO mint-critical proxy inventory was token 0x7cf9dec92ca9fd46f8d86e7798b72624bc116c05, deposit vault 0xc21511edd1e6ecdc36e8ad4c82117033e50d5921, shared access control 0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b, data feed 0x9aebf5d6f9411bac355021ddfbe9b2c756bdd358, and manual aggregator 0x84303e5568c7b167fa4febc6253cddfe12b7ee4b. All five transparent proxies shared ProxyAdmin 0xbf25b58cb8dfad688f7bcb2b87d71c23a6600aac, owned by the two-day timelock. The timelock's sole initiating Safe remained 1-of-3 with no modules or guard. Economic-control evidence reviewed 2026-07-15: the Midas Attestation Engine creates periodic NAV and proof-of-reserve checkpoints, with source documents notarized by vLayer and independently verified by LlamaRisk or Canary; the live dashboard was reviewed on 2026-07-15. The FMA approval covers the prospectus and expressly is not issuer licensing or endorsement. Economic-posture fields reviewed 2026-08-15: issuer-controlled direct mint or immediate minter-administration paths are economically unbounded; existing whole-supply periodic reconciliation and independent attestation evidence remain supported.",
-      "reviewer": "Codex Safety Score V9 registry pass; Sol economic-posture batch 2026-08-15",
+      "evidence": "The retained Ethereum block 25527135 review establishes the five mint-critical proxies, common ProxyAdmin, two-day timelock and 1-of-3 initiating Safe; October 1 observations separately establish the deposit-vault minter, direct-minter EOA and immediate role-admin EOA. Original control pins and review start remain unchanged. Source-scope correction observed 2026-10-20: the engine announcement describes a general publication framework, while current documentation describes source/workflow fidelity and internal NAV consistency checks. The latest mAPOLLO checkpoint, published October 19 and recovered through the Ethereum registry at block 26236714, contains issuer-reported NAV/supply, oracle observations and a computed coverage ratio, but no signed portfolio inventory or complete native-liability-to-backing join on a committed cadence. Isolated totals and NAV checks do not establish the token-liability-creation ledger workflow required for internal-ledger. Under the shared D33 evidence standard, reconciliation and supervision remain unknown, withdrawing unsupported periodic and attestation-only credit without asserting measured non-reconciliation. FMA prospectus approval is not prudential issuer supervision. Direct minting and immediate minter authorization remain economically unbounded; no measured reserve shortfall is inferred.",
+      "reviewer": "Codex Safety Score V9 registry pass; Sol economic-posture batch 2026-08-15; NR1 source-scope correction 2026-10-20 (original review start preserved)",
       "reviewedAt": "2026-08-15",
       "disposition": "scoreable",
       "sources": [
@@ -219,6 +219,14 @@
         {
           "label": "Midas prospectus documents",
           "url": "https://docs.midas.app/resources/legal-documents/prospectus-documents"
+        },
+        {
+          "label": "Midas current attestation engine: workflow verification and internal consistency checks, retrieved 2026-10-20",
+          "url": "https://docs.midas.app/transparency/the-midas-attestation-engine"
+        },
+        {
+          "label": "mAPOLLO SAVE checkpoint published 2026-10-19T09:14:35Z; registry-linked content recovered at Ethereum block 26236714, issuer accounting only",
+          "url": "https://gateway.pinata.cloud/ipfs/QmSLx4Zc1mSurdJs4qUESZCNAUVFoyLauJKQkGyFvj6Kvm"
         }
       ]
     }

@@ -7155,6 +7155,75 @@
           ]
         }
       ]
+    },
+    {
+      "assetId": "usdat-saturn",
+      "reviewer": "C10 bottom-up refinement 2026-10-21",
+      "reviewedAt": "2026-10-20T22:33:43Z",
+      "observedAtSec": 1792535623,
+      "expiresAtSec": 1795127623,
+      "rationale": "The current Saturn FAQ dated October 12, 2026 distinguishes the Ethereum holder USDat-to-USDC M0 order route from approved-wallet USDat-to-PYUSDx Swap and from the separate sUSDat NFT withdrawal queue. The USDC route permits screened eligible wallets without Saturn direct-mint approval, can fill partially and has no guaranteed completion maximum. Published quote-cost caps exclude gas and conflict with the older mint/redeem page, so this review retains the more conservative 10 bps interface ceiling descriptively, not an all-in bound. This establishes restricted published withdrawal terms with high risk; it grants no solver funding, measured capacity, settled USD value, direct PYUSD ownership or bridge exit.",
+      "sources": [
+        {
+          "label": "Saturn FAQs, dated October 12 2026, sections 1, 5 and 9 (retrieved 2026-10-20)",
+          "url": "https://saturncredit.gitbook.io/saturn-docs/get-started/saturn-faqs.md"
+        },
+        {
+          "label": "Saturn USDat mint and redeem terms (retrieved 2026-10-20)",
+          "url": "https://saturncredit.gitbook.io/saturn-docs/solution/usdat-overview/mint-and-redeem.md"
+        },
+        {
+          "label": "Saturn official holder deployment roster (retrieved 2026-10-20)",
+          "url": "https://saturncredit.gitbook.io/saturn-docs/operations-and-governance/key-addresses.md"
+        },
+        {
+          "label": "Saturn governing terms dated August 31 2026, eligibility and fees",
+          "url": "https://saturn.credit/legal/terms-conditions"
+        }
+      ],
+      "observations": [
+        {
+          "sourceUrl": "https://saturncredit.gitbook.io/saturn-docs/get-started/saturn-faqs.md",
+          "description": "The dated Ethereum-flow FAQ says eligible wallets use the third-party M0 USDat-to-USDC route without direct-mint onboarding. Costs are at most max(3 USDC, 0.05% of input), excluding gas. Orders can fill partially; provider estimates/deadlines are not guaranteed settlement. The approved-wallet Swap route instead outputs PYUSDx, not USDC."
+        },
+        {
+          "sourceUrl": "https://saturncredit.gitbook.io/saturn-docs/solution/usdat-overview/mint-and-redeem.md",
+          "description": "The current mint/redeem page retains a different max($3, 10 bps) quote acceptance guard, excludes gas, and describes USDat escrow in M0 OrderBook followed by approved-solver USDC fills. The contradictory fee publications are retained rather than silently selecting 5 bps as an all-in ceiling."
+        }
+      ],
+      "identity": {
+        "assetId": "usdat-saturn",
+        "deployments": [
+          {
+            "chain": "ethereum",
+            "address": "0x23238f20b894f29041f48d88ee91131c395aaa71",
+            "sourceUrl": "https://saturncredit.gitbook.io/saturn-docs/operations-and-governance/key-addresses.md"
+          }
+        ]
+      },
+      "kind": "published-withdrawal-terms",
+      "terms": [
+        {
+          "routeKey": "redemption:usdat-saturn:queue-redeem",
+          "deploymentKey": "ethereum:0x23238f20b894f29041f48d88ee91131c395aaa71",
+          "sourceUrl": "https://saturncredit.gitbook.io/saturn-docs/get-started/saturn-faqs.md",
+          "outputAssetIds": ["usdc-circle"],
+          "holderAccess": "unknown",
+          "executionModel": "queued",
+          "cooldownSec": null,
+          "settlementBoundSec": null,
+          "fee": {
+            "kind": "formula",
+            "description": "Interface accepts quoted route costs no higher than max(3 USDC, 0.05% of input) in the October 12 FAQ; mint/redeem page still says max($3, 10 bps). Retain 10 bps conservatively as descriptive route-cost guard only; wallet gas is additional and all-in cost remains unproven."
+          },
+          "prerequisites": [
+            "Eligible supported wallet, provider screening and validated M0 route; no unrestricted any-holder access is asserted.",
+            "Approved solver must fund and fill the escrowed order; partial fills and pending cancellation remain possible.",
+            "No guarantee of provider-estimated timing, funded same-notional capacity or complete gas-inclusive deductions.",
+            "Only the native Ethereum USDat-to-USDC holder rail is described; the direct PYUSDx Swap, sUSDat NFT queue and bridged-token exits are distinct."
+          ]
+        }
+      ]
     }
   ]
 }

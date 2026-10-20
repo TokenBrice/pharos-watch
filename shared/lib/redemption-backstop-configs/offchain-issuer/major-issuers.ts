@@ -1,7 +1,6 @@
 import {
   documentedBoundSupplyFull,
   documentedVariableFee,
-  expandIds,
   undisclosedReviewedFee,
   fixedFee,
   type RedemptionBackstopConfig,
@@ -15,7 +14,7 @@ import {
 import { reviewedDirectRedemptionSupplyFull } from "./shared";
 import { REVIEWED_EXIT_CREDIT_AT, REVIEWED_WRAPPER_WAVE_AT } from "../review-dates";
 
-/** usdq-quantoz and eurq-quantoz are byte-identical (same base, cost, docs). */
+/** Shared Quantoz issuer settings; EURQ's scoped terms review overrides defaults below. */
 const quantozBase: RedemptionBackstopConfig = {
   ...issuerBase,
   ...reviewedDirectRedemptionSupplyFull,
@@ -55,6 +54,25 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
     costModel: undisclosedReviewedFee(
       "The publisher-branded FDUSD Webflow page advertises zero mint/redemption fees only when the client mints more than they redeem; it does not define the measurement period. The mirrored FD121 Account User Agreement allows changing or separately agreed fees and assigns bank/wallet charges to the client. No universally applicable numeric issuer-fee schedule or all-in cost ceiling was recovered.",
     ),
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["cost", "settlement"],
+      rationale:
+        "ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required. Retrieved 2026-10-20: the publisher-branded FD121 Account User Agreement, version August 1, 2025, sections 9.1-9.2 permits variable issuer fees and bank/wallet deductions, and section 19.3 expressly gives no representation or warranty about processing completion time. The conditional zero-fee product statement does not bound this modeled holder's all-in cost. Canonical legal pages remain Cloudflare-blocked, so current canonical-body equivalence is not claimed and the inherited same-day value is not admitted as an established final-payout SLA.",
+      reviewedAt: "2026-10-20",
+      docs: [
+        sourceRef(
+          "FD121 publisher-branded Account User Agreement sections 9 and 19.3 (retrieved 2026-10-20)",
+          "https://firstdigitallabs.webflow.io/legal/fd121-account-user-agreement",
+          ["route", "fees", "settlement"],
+        ),
+        sourceRef(
+          "FDUSD publisher-branded conditional zero-fee statement (retrieved 2026-10-20)",
+          "https://firstdigitallabs.webflow.io/fdusd",
+          ["fees"],
+        ),
+      ],
+    },
     docs: [
       sourceRefRouteCapacityAccess("First Digital Labs FDUSD", "https://www.firstdigitallabs.com/fdusd"),
       sourceRef(
@@ -86,24 +104,42 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
   },
   "usdon-ondo": {
     ...issuerBase,
-    ...documentedBoundSupplyFull("2026-04-20"),
+    capacityModel: { kind: "unquantified" },
+    reviewedAt: "2026-10-20",
+    accessModel: "whitelisted-onchain",
+    holderEligibility: "whitelisted-primary",
+    settlementModel: "atomic",
+    outputAssets: ["usdc-circle"],
     routeStatus: "open",
     costModel: undisclosedReviewedFee(
-      "Ondo Global Markets docs describe 1:1 USDC <-> USDon platform conversion when swapper liquidity is available; public materials reviewed do not publish a standalone fixed USDon redemption fee",
+      "Ondo documents gross 1:1 USDon/USDC swaps for separately whitelisted callers, subject to opposite-token inventory. The verified USDonManager delegates redemption to BaseRWAManager, including the configured redemption-fee module and user-specific registry/router checks. Public gross-parity wording does not establish a complete current request-specific fee, gas or net-output bound.",
     ),
+    v9RouteReviewTerms: {
+      settlementModel: "atomic",
+      settlementDelaySec: 0,
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "cost"],
+      rationale:
+        "The documented direct USDon-to-USDC swap is atomic when funded and authorized. Swapper replenishment has no guaranteed elapsed bound, public platform backing is not funded swap capacity, and no registered-caller same-notional fee/gas/net-output witness is available. No USD bank-wire redemption is currently supported.",
+      reviewedAt: "2026-10-20",
+      docs: [
+        sourceRef("Ondo Stocks USDon direct swaps (reviewed 2026-10-20)", "https://docs.ondo.finance/ondo-stocks/investing-and-redeeming.md", ["route", "access", "settlement"]),
+        sourceRef("Ondo USDonManager deployment (reviewed 2026-10-20)", "https://docs.ondo.finance/addresses.md", ["route"]),
+        sourceRef("USDonManager verified source (reviewed 2026-10-20)", "https://eth.blockscout.com/api/v2/smart-contracts/0x05CCbB4b74854f8A067b83475E8c34f5a413D7e1", ["route", "access", "fees", "settlement"]),
+      ],
+    },
     docs: [
-      sourceRefRouteCapacity("Ondo available assets", "https://docs.ondo.finance/ondo-global-markets/available-assets"),
+      sourceRef("Ondo available assets", "https://docs.ondo.finance/ondo-stocks/available-assets.md", ["route"]),
       sourceRef(
         "Ondo investing and redeeming",
         "https://docs.ondo.finance/ondo-global-markets/investing-and-redeeming",
-        ["route", "settlement"],
+        ["route", "access", "settlement"],
       ),
-      sourceRef("Ondo trust and transparency", "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency", [
-        "capacity",
-      ]),
+      sourceRef("Ondo Stocks fee and gas disclosure", "https://docs.ondo.finance/ondo-stocks/fees-and-taxes.md", ["fees"]),
+      sourceRef("USDonManager verified redemption source", "https://eth.blockscout.com/api/v2/smart-contracts/0x05CCbB4b74854f8A067b83475E8c34f5a413D7e1", ["route", "access", "fees", "settlement"]),
     ],
     notes: [
-      "Modeled as a whitelisted Ondo Global Markets settlement-cash route; current instant USDC output can depend on swapper liquidity, so this remains documented-bound eventual capacity rather than live immediate liquidity",
+      "Corrected 2026-10-20: the configured channel is an inventory-dependent, separately whitelisted on-chain USDon-to-USDC swap, not fiat USD redemption. The earlier full-supply documented-bound model was unsupported by the cited platform backing and stock-redemption disclosures and is withdrawn; neither full-supply eventual capacity nor a replenishment completion guarantee is inferred.",
     ],
   },
   "usdsui-sui": {
@@ -364,13 +400,17 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
     ...reviewedDirectRedemptionSupplyFull,
     v9RouteReviewTerms: {
       settlementModel: "days",
-      reviewedAt: "2026-07-18",
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["cost", "settlement"],
+      rationale: "The July 18, 2026 terms start the five-business-day bank-transfer period only after verification and processing and permit risk-review delays. No unconditional initial-request-to-final-payout maximum is established. The published USD 40 withdrawal charge and S$1 administrative fee exclude blockchain and intermediary/receiving-bank fees; the support article's typical USD 10-50 receiving-bank range is not an all-in ceiling.",
+      reviewedAt: "2026-10-20",
       docs: [
         sourceRef(
-          "StraitsX purchasing and redemption terms",
+          "StraitsX purchasing and redemption terms (effective 2026-07-18; retrieved 2026-10-20)",
           "https://www.straitsx.com/legal/purchasing-and-redemption",
-          ["route"],
+          ["route", "fees", "settlement"],
         ),
+        sourceRef("StraitsX USD deposit and withdrawal service fee (modified 2025-10-04; retrieved 2026-10-20)", "https://support.straitsx.com/support/solutions/articles/157000366277-usd-deposit-withdrawal-service-fee", ["fees"]),
       ],
     },
     costModel: documentedVariableFee(
@@ -379,7 +419,7 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
     docs: [
       sourceRefRouteCapacityFees(
         "StraitsX XUSD overview",
-        "https://support.straitsx.com/hc/en-us/articles/40297191431961-What-is-XUSD",
+        "https://support.straitsx.com/support/solutions/articles/157000366324-what-is-xusd-",
       ),
     ],
   },
@@ -419,7 +459,99 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
       "Five Luxembourg Business Days after receipt applies only to a completed-KYC holder whose EURI reached the burn wallet. Condition 13.1 specifies receipt-day notice, not an undisclosed intraday cutoff. Calendar admission takes the maximum end-of-day completion over the full reviewed 365-day horizon, including weekends, holidays and DST; no bound is claimed for initial requests with unresolved prerequisites.",
     ],
   },
-  ...expandIds(["usdq-quantoz", "eurq-quantoz"], quantozBase),
+  "usdq-quantoz": {
+    ...quantozBase,
+    accessModel: "manual",
+    settlementModel: "days",
+    holderEligibility: "verified-customer",
+    costModel: documentedVariableFee(
+      "Standard issuer redemption is free, but network costs, non-SEPA bank charges and the non-registered holder's EUR 0.01 verification transfer remain separate. No complete USDQ all-in ceiling is published.",
+      "formula",
+    ),
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["cost", "settlement"],
+      rationale:
+        "ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required. Researched 2026-10-20, retaining the original March 23 review start: the token terms dated 30 April 2026, sections 24.3-24.4 and 27, require up to one week of post-receipt compliance checks before amount-tiered business-day processing, with notice periods and exceptions up to six months. Processing does not establish a same-day completed bank-credit maximum. Sections 25.4 and 28.4 and the current redemption FAQ leave verification, blockchain and non-SEPA charges outside free issuer redemption; USD bank payout cannot inherit a zero all-in cost. The original eventual full-supply legal claim is unchanged and is not funded instant liquidity.",
+      reviewedAt: "2026-10-20",
+      docs: [
+        sourceRef(
+          "Quantoz token terms dated 30 April 2026, sections 24-28 (retrieved 2026-10-20)",
+          "https://www.quantoz.com/documents/terms-of-service-q-s-30-4-2026.pdf",
+          ["route", "access", "settlement", "fees"],
+        ),
+        sourceRef(
+          "Quantoz direct token redemption and FAQ (retrieved 2026-10-20)",
+          "https://www.quantoz.com/token-redemption/",
+          ["route", "access", "settlement", "fees"],
+        ),
+      ],
+    },
+    docs: [
+      ...(quantozBase.docs ?? []),
+      sourceRef(
+        "Quantoz token terms dated 30 April 2026",
+        "https://www.quantoz.com/documents/terms-of-service-q-s-30-4-2026.pdf",
+        ["route", "access", "settlement", "fees", "capacity"],
+      ),
+      sourceRef(
+        "Quantoz direct token redemption",
+        "https://www.quantoz.com/token-redemption/",
+        ["route", "access", "settlement", "fees"],
+      ),
+    ],
+    notes: [
+      "ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required. On 2026-10-20 the current primary terms did not support the inherited same-day settlement and complete zero-cost datums. Only those unsupported datums are withheld; the original full-supply capacity review and its start remain unchanged.",
+      "A pre-existing token account is not required to submit a request. Verification of identity, token ownership, source of funds and a same-name bank account remains mandatory; direct service requires an EEA, UK or Swiss address and bank account.",
+      "The USDQ whitepaper's narrower account-holder eligibility and the current direct-redemption webpage are not fully reconciled. This entry does not grant permissionless or unrestricted holder access.",
+    ],
+  },
+  "eurq-quantoz": {
+    ...quantozBase,
+    accessModel: "manual",
+    settlementModel: "days",
+    holderEligibility: "verified-customer",
+    costModel: documentedVariableFee(
+      "Standard issuer redemption is free, but blockchain costs, the non-registered holder's EUR 0.01 verification transfer and non-SEPA bank charges are separate; no complete all-in ceiling is published.",
+      "formula",
+    ),
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["cost", "settlement"],
+      rationale:
+        "The 30 April 2026 token terms, sections 24.3-24.4 and 27, require post-receipt compliance checks that may take one week, followed by amount-tiered business-day processing and applicable notice periods; exceptions can take up to six months. Processing is not an unconditional completed bank-credit maximum. Sections 25.4 and 28.4 and the current redemption FAQ retain verification, network and non-SEPA charges, so free issuer redemption is not zero all-in cost. The original full-supply eventual capacity review is retained, without asserting funded instantaneous liquidity.",
+      reviewedAt: "2026-10-20",
+      docs: [
+        sourceRef(
+          "Quantoz token terms dated 30 April 2026, sections 24-28 (retrieved 2026-10-20)",
+          "https://www.quantoz.com/documents/terms-of-service-q-s-30-4-2026.pdf",
+          ["route", "access", "settlement", "fees"],
+        ),
+        sourceRef(
+          "Quantoz direct token redemption and FAQ (retrieved 2026-10-20)",
+          "https://www.quantoz.com/token-redemption/",
+          ["route", "access", "settlement", "fees"],
+        ),
+      ],
+    },
+    docs: [
+      ...(quantozBase.docs ?? []),
+      sourceRef(
+        "Quantoz token terms dated 30 April 2026",
+        "https://www.quantoz.com/documents/terms-of-service-q-s-30-4-2026.pdf",
+        ["route", "access", "settlement", "fees", "capacity"],
+      ),
+      sourceRef(
+        "Quantoz direct token redemption",
+        "https://www.quantoz.com/token-redemption/",
+        ["route", "access", "settlement", "fees"],
+      ),
+    ],
+    notes: [
+      "2026-10-20 source-scoped correction: same-day settlement and zero complete cost were unsupported inherited defaults, not measured EURQ execution. Prior capacity evidence and its original review start are unchanged; owner review is required.",
+      "An existing Quantoz account is not required to initiate redemption, but identity, token ownership, source-of-funds and same-name bank verification remain required. The direct service requires an EEA, UK or Swiss address and bank account.",
+    ],
+  },
   "usd1-world-liberty-financial": {
     ...issuerBase,
     settlementModel: "days",
@@ -462,14 +594,25 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
     outputAssets: ["usdc-circle"],
-    reviewedAt: "2026-08-14",
+    reviewedAt: "2026-10-20",
     costModel: fixedFee(10, "OpenEden docs list a 10 bps redemption fee"),
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["cost", "settlement"],
+      rationale: "Reviewed 2026-10-20 against the issuer-linked User Agreement dated 2026-10-14. Schedule 1 section 2.4.7(c) provides a conditional T+2 US-business-day transmission target after processing acceptance, not an unconditional request-to-completed-USDC-credit maximum; section 2.3 permits a liquidity-dependent redemption queue. Section 10 assigns holder network, gas and bridge charges in addition to displayed issuer fees. The documented 10 bps issuer fee is retained but is not an all-in same-notional cost bound. These are researched terms gaps, not measured slow settlement, expensive execution or a finding that redemption is closed.",
+      reviewedAt: "2026-10-20",
+      docs: [
+        sourceRef("USDO legal page linking User Agreement dated 2026-10-14 (retrieved 2026-10-20)", "https://docs.openeden.com/usdo/legal/user-agreement", ["route", "access", "settlement", "fees"]),
+      ],
+    },
     docs: [
       sourceRefRouteCapacityFees("OpenEden Transparency", "https://openeden.com/usdo/transparency"),
       sourceRef("USDO redemption guide (reviewed 2026-09-30)", "https://docs.openeden.com/usdo/guides/usdo-redemption-via-etherscan", ["route"]),
+      sourceRef("USDO User Agreement dated 2026-10-14 (retrieved 2026-10-20)", "https://docs.openeden.com/usdo/legal/user-agreement", ["route", "access", "settlement", "fees"]),
     ],
     notes: [
       "Payout identity reviewed 2026-09-30: OpenEden's redemption guide specifies USDC for both instant and manual redemptions; Treasury backing is not the holder payout.",
+      "The October 14 User Agreement preserves segregated-account contractual recourse but not ownership of reserve assets; conditional transmission targets and issuer-fee quotations do not establish an all-in executed same-notional route.",
       "Live reserve-sync capacity telemetry remains suspended: a 2026-08-13 re-enable probe confirmed prod-gw.openeden.com serves ordinary clients but returns HTTP 500 to all Cloudflare Worker fetch strategies (first production cron, 2026-08-14). Falls back to documented 1:1 USDC redemption until the issuer unblocks Worker egress",
     ],
   },
@@ -559,6 +702,16 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
     costModel: undisclosedReviewedFee(
       "Redeemable at NAV through Securitize; public docs do not publish a separate redemption fee (50 bps annual management fee is charged separately)",
     ),
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["cost", "settlement"],
+      rationale: "ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required, verified 2026-10-20: the issuer-authored BUIDL STEP application describes same-day wire processing before the New York cutoff and payment generally on the Redemption Date. That is not an unconditional maximum for completed bank receipt. The separate Circle USDC sale facility is expressly discretionary and not guaranteed. Securitize's current broker-dealer fee table lists route-dependent wire/conversion charges and variable gas, but does not establish the complete BUIDL primary-redemption tariff; preserve the researched cost gap. Retain the original qualified-investor and eventual full-supply terms without manufacturing a one-day completion bound.",
+      reviewedAt: "2026-10-20",
+      docs: [
+        sourceRef("Securitize issuer-authored BUIDL STEP application: conditional processing and Circle facility", "https://forum.arbitrum.foundation/t/securitize-markets-buidl-step-application/23652", ["route", "access", "settlement"]),
+        sourceRef("Securitize broker-dealer Fee Schedule 2026 (not an exact complete BUIDL primary-redemption tariff)", "https://securitize.io/fee-schedule-table", ["fees"]),
+      ],
+    },
     docs: [
       sourceRefRouteCapacityAccess(
         "BlackRock BUIDL press release",

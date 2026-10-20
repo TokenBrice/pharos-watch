@@ -4,20 +4,23 @@
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "spUSDC shares are minted against deposited USDC in Spark's Ethereum and Avalanche ERC-4626 vaults and inherit Circle's reviewed USDC issuer mint authority. Both vaults are UUPS proxies: Ethereum upgrades resolve through Spark's SubProxy and Sky's 48-hour DSPause path, while Avalanche upgrades resolve through the Spark executor driven by its LayerZero governance receiver.",
+    "summary": "spUSDC shares are minted against deposited local USDC in Spark's Ethereum, Avalanche and X Layer ERC-4626 vaults and inherit Circle's reviewed USDC issuer mint authority. All three vaults are UUPS proxies. Ethereum's reviewed DSPause route is not asserted as a universal delay for the Avalanche or X Layer Executors. C15 added the previously omitted X Layer native vault and its exact upgrade controller on 2026-10-20; the original review starts and historical pins are retained. ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required: the aggregate 172800-second upgrade delay was removed because the cited evidence establishes an Ethereum governance path, not a minimum across every native deployment; its original scoped Ethereum control fact remains unchanged.",
     "inheritedFrom": "usdc-circle",
     "upgradeability": {
       "model": "uups",
       "deploymentRefs": [
         "avalanche:0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d",
-        "ethereum:0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d"
+        "ethereum:0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d",
+        "xlayer:0xf90e63079d97a0a1f479b2b168457f420caff6ba"
       ],
       "proxyAddresses": [
-        "0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d"
+        "0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d",
+        "0xf90e63079d97a0a1f479b2b168457f420caff6ba"
       ],
       "implementationAddresses": [
         "0x1b992302652a92611dcd5090d1cb388c6377f455",
-        "0xc2c0582d1cce30449cf561c7b9c4d6d527547f12"
+        "0xc2c0582d1cce30449cf561c7b9c4d6d527547f12",
+        "0xdce929a335c75a1676ef5957a4d7a3b928c48820"
       ],
       "adminAddresses": [
         "0x3300f198988e4c9c63f75df86de36421f06af8c4",
@@ -25,10 +28,10 @@
         "0xd905be48983D405C6fD7f5a983D2351fb61C691F",
         "0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB",
         "0xbE286431454714F511008713973d3B053A2d38f3",
-        "0x929d9A1435662357F54AdcF64DcEE4d6b867a6f9"
+        "0x929d9A1435662357F54AdcF64DcEE4d6b867a6f9",
+        "0xcf5af6f53cec74b791cb4182ac778ca9cd323510"
       ],
       "canChangeMintLogic": true,
-      "delaySec": 172800,
       "controlRef": "Spark/Sky SubProxy upgrade governance (48-hour DSPause)",
       "observedAt": "2026-07-21",
       "observedBlock": 25579815,
@@ -48,6 +51,14 @@
         {
           "label": "Avalanche spUSDC vault",
           "url": "https://snowscan.xyz/address/0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d"
+        },
+        {
+          "label": "Official X Layer SparkVault and Executor registry, retrieved 2026-10-20",
+          "url": "https://raw.githubusercontent.com/sparkdotfi/spark-address-registry/master/src/XLayer.sol"
+        },
+        {
+          "label": "Exact-match X Layer implementation and UUPS authorization, retrieved 2026-10-20",
+          "url": "https://sourcify.dev/server/v2/contract/196/0xdce929a335c75a1676ef5957a4d7a3b928c48820?fields=abi,sources"
         }
       ]
     },
@@ -192,6 +203,66 @@
           }
         ],
         "evidence": "At Ethereum block 26095794 on 2026-10-01, masterMinter() on the underlying USDC proxy 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 returned 0xe982615d461dd5cd06575bbea87624fda4e3de17. This confirms the inherited controller identity; Circle's reviewed issuer mint authority remains on usdc-circle, and the wrapper does not create base USDC."
+      },
+      {
+        "chain": "xlayer",
+        "address": "0xf90e63079d97a0a1f479b2b168457f420caff6ba",
+        "deploymentRefs": [
+          "xlayer:0xf90e63079d97a0a1f479b2b168457f420caff6ba"
+        ],
+        "label": "Spark Savings USDC X Layer vault",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Local ERC-4626 share issuance requires transfer of X Layer USDC and respects the mutable deposit cap; it does not mint base USDC.",
+        "observedAt": "2026-10-20",
+        "observedBlock": 73621689,
+        "sources": [
+          {
+            "label": "Official exact deployment and native underlying identity, retrieved 2026-10-20",
+            "url": "https://docs.spark.finance/dev/savings/spark-vaults-v2"
+          },
+          {
+            "label": "Exact-match X Layer SparkVault source, retrieved 2026-10-20",
+            "url": "https://sourcify.dev/server/v2/contract/196/0xdce929a335c75a1676ef5957a4d7a3b928c48820?fields=abi,sources"
+          },
+          {
+            "label": "X Layer block 73621689, timestamp 2026-10-19T06:18:45Z; observed 2026-10-20",
+            "url": "https://rpc.xlayer.tech"
+          }
+        ],
+        "evidence": "C15 observed 2026-10-20 at X Layer block 73621689 (hash 0xc9b913e415700edec90708aeacc6b06ef6454535784a9a626be7720cfb820cbc, 2026-10-19T06:18:45Z): name=Spark Savings USDC, symbol=spUSDC, decimals=6, asset=0xb6ceceab302e2e4948951ee7843fc24e92933061, implementation=0xdce929a335c75a1676ef5957a4d7a3b928c48820. The exact-match SparkVault source checks its deposit cap, excludes TAKER_ROLE mint participants and pulls underlying assets before increasing totalSupply. This extends the local deposit-funded issuance finding to the omitted native vault without claiming a hard cap against upgrades or whole-supply reconciliation."
+      },
+      {
+        "chain": "xlayer",
+        "address": "0xcf5af6f53cec74b791cb4182ac778ca9cd323510",
+        "deploymentRefs": [
+          "xlayer:0xf90e63079d97a0a1f479b2b168457f420caff6ba"
+        ],
+        "label": "Spark X Layer Executor native USDC vault upgrade authority",
+        "role": "governor",
+        "authorityType": "contract",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-20",
+        "observedBlock": 73621689,
+        "sources": [
+          {
+            "label": "Official X Layer Executor identity, retrieved 2026-10-20",
+            "url": "https://raw.githubusercontent.com/sparkdotfi/spark-address-registry/master/src/XLayer.sol"
+          },
+          {
+            "label": "Exact-match implementation UUPS and cap authorization, retrieved 2026-10-20",
+            "url": "https://sourcify.dev/server/v2/contract/196/0xdce929a335c75a1676ef5957a4d7a3b928c48820?fields=abi,sources"
+          },
+          {
+            "label": "X Layer block 73621689 role membership, observed 2026-10-20",
+            "url": "https://rpc.xlayer.tech"
+          }
+        ],
+        "evidence": "At X Layer block 73621689 (hash 0xc9b913e415700edec90708aeacc6b06ef6454535784a9a626be7720cfb820cbc, 2026-10-19T06:18:45Z), getRoleMemberCount(DEFAULT_ADMIN_ROLE)=1 and getRoleMember(DEFAULT_ADMIN_ROLE,0)=this Executor on the exact spUSDC vault. The official XLayer.sol registry agrees. SparkVault gates _authorizeUpgrade and setDepositCap to DEFAULT_ADMIN_ROLE. The controller can replace native share logic and raise the local cap. No current all-path execution delay, complete execution scope, key custody or independent signing quorum is inferred from the contract identity."
       }
     ],
     "economicCapSemantics": "raiseable",
@@ -208,6 +279,10 @@
         {
           "label": "Verified Avalanche SparkVault implementation",
           "url": "https://sourcify.dev/server/v2/contract/43114/0xc2c0582d1cce30449cf561c7b9c4d6d527547f12?fields=all"
+        },
+        {
+          "label": "C15 scope extension retrieved 2026-10-20: X Layer implementation at block 73621689 uses the same deposit-cap, taker exclusion and asset-transfer-before-share-mint checks; original October 3 review start retained",
+          "url": "https://sourcify.dev/server/v2/contract/196/0xdce929a335c75a1676ef5957a4d7a3b928c48820?fields=abi,sources"
         }
       ]
     },

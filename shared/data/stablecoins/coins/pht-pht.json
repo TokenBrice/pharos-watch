@@ -53,7 +53,7 @@
     }
   ],
   "collateralQuality": "exotic",
-  "custodyModel": "institutional-unregulated",
+  "custodyModel": "unknown",
   "governanceQuality": "single-entity",
   "launchDate": "2025-02-13"
 }

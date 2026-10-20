@@ -2,7 +2,7 @@
   "id": "ceur-celo",
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "unbounded-reconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "EURm minting on Celo routes through the Mento Broker contract (confirmed isMinter), while token ownership resolves to a 4/6 Mento Safe; identical structure to verified GBPm.",
     "upgradeability": {
@@ -113,7 +113,7 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "continuous",
+    "reconciliation": "unknown",
     "supervision": "none",
     "review": {
       "sources": [
@@ -140,9 +140,17 @@
         {
           "label": "Mento MGP-14 Wormhole NTT proposal",
           "url": "https://forum.mento.org/t/mgp-14-mento-v3-deployment-phase-1/103"
+        },
+        {
+          "label": "Mento reserve API (retrieved 2026-10-20; no source accounting timestamp)",
+          "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+        },
+        {
+          "label": "Mento stablecoins API (retrieved 2026-10-20; supply/debt/held/lost decomposition without a shared accounting checkpoint)",
+          "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/stablecoins"
         }
       ],
-      "evidence": "Celo block 69291541: owner() = 4/6 Safe (threshold 4, 6 owners, no modules); isMinter(Broker 0x777A...) = true. Both mint-capable surfaces confirmed. Safe lost one signer since prior review (7→6); threshold unchanged at 4. Identical pattern to verified gbpm-mento. Economic-posture fields reviewed 2026-08-15: the no-timelock 4-of-6 Safe can replace the Broker, raise exchange limits, or change mint logic; the Celo-only issuer reserve feed does not prove liability reconciliation across all five tracked deployments and no independent attestor or prudential supervisor is evidenced. Reconciliation finding 2026-08-15: Mento Protocol's live Reserve dashboard continuously publishes total Mento stablecoin supply, reserve debt and held supply against shared-Reserve collateral and its collateral ratio; EURm is documented as reserve-backed and minted or burned by ReserveLiquidityStrategy. The reviewed bridge graph maps Monad NTT and legacy Ethereum, Polygon, and Solana representations back to Celo canonical EURm claims, so this is continuous protocol supply-to-collateral reconciliation rather than a periodic attestation; supervision remains none because no prudential regulator is named.",
+      "evidence": "Celo block 69291541: owner() = 4/6 Safe (threshold 4, 6 owners, no modules); isMinter(Broker 0x777A...) = true. Both mint-capable surfaces confirmed. Safe lost one signer since prior review (7→6); threshold unchanged at 4. Identical pattern to verified gbpm-mento. Economic-posture fields reviewed 2026-08-15: the no-timelock 4-of-6 Safe can replace the Broker, raise exchange limits, or change mint logic; the Celo-only issuer reserve feed does not prove liability reconciliation across all five tracked deployments and no independent attestor or prudential supervisor is evidenced. Reconciliation finding 2026-08-15: Mento Protocol's live Reserve dashboard continuously publishes total Mento stablecoin supply, reserve debt and held supply against shared-Reserve collateral and its collateral ratio; EURm is documented as reserve-backed and minted or burned by ReserveLiquidityStrategy. The reviewed bridge graph maps Monad NTT and legacy Ethereum, Polygon, and Solana representations back to Celo canonical EURm claims, so this is continuous protocol supply-to-collateral reconciliation rather than a periodic attestation; supervision remains none because no prudential regulator is named. ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required (C23, 2026-10-20): the preceding dashboard-based continuous-reconciliation conclusion is withdrawn. The current reserve and stablecoins APIs publish collateral and supply/debt/reserve-held/lost figures but no shared accounting timestamp or independently anchored whole-liability reconciliation covering all native and representation paths, exclusions and pending claims. Ordinary Broker/strategy mint-and-burn accounting and a reviewed bridge map do not establish that missing whole-book comparison at a committed cadence. Reconciliation is unknown, not positively absent; no reserve shortfall or measured failure to reconcile is asserted. The unbounded economics, authority observations and original review start are unchanged; authorityPosture follows the D33-derived unbounded-adverse annotation without new process credit.",
       "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-4 (lead dai-makerdao); Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15",
       "reviewedAt": "2026-08-16"
     }

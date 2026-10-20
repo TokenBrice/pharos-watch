@@ -2,7 +2,7 @@
   "id": "uty-xsy",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "unbounded-reconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "Base is the sole native UTY issuance chain: the UUPS ERC-7540 vault accepts Base USDC through collateralized deposit()/mint() and has a mutable maxTotalAssets cap. The Base owner is a 3-of-4 Safe with no observed modules or guard; any of the three Base MANAGER_ROLE members can also raise the cap without delay. Avalanche and Katana are LayerZero OFT bridge representations and their bridge administration is assessed under Bridge Risk.",
     "upgradeability": {
@@ -184,14 +184,22 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "continuous",
-    "supervision": "attestation-only",
+    "reconciliation": "unknown",
+    "supervision": "unknown",
     "review": {
-      "evidence": "Base is the sole native UTY issuance deployment: the verified Base UUPS vault accepts Base USDC through collateralized deposit()/mint(), exposes maxDeposit()/maxMint(), and has a mutable maxTotalAssets cap. At Base block 50066315 the Base owner was Safe 0xb237eb3c71a0f351bd121b0c467248473fbc2cca, a 3-of-4 Safe with no observed modules or guard; the Safe can replace Base mint logic without a timelock, and the three Base MANAGER_ROLE members can independently call setMaxTotalAssets(). Avalanche and Katana use the same-address deployments only as LayerZero mint/burn OFT representations against the Base ShareOFTAdapter lockbox, so their bridge owner, peer, and upgrade powers are excluded from native Mint Authority and recorded under Bridge Risk. Economic-posture evidence remains unchanged: maxTotalAssets is currently uint256 max, reconciliation is continuous through Accountable telemetry, and supervision is attestation-only.",
+      "evidence": "Base is the sole native UTY issuance deployment: the verified Base UUPS vault accepts Base USDC through collateralized deposit()/mint(), exposes maxDeposit()/maxMint(), and has a mutable maxTotalAssets cap. At Base block 50066315 the Base owner was Safe 0xb237eb3c71a0f351bd121b0c467248473fbc2cca, a 3-of-4 Safe with no observed modules or guard; the Safe can replace Base mint logic without a timelock, and the three Base MANAGER_ROLE members can independently call setMaxTotalAssets(). Avalanche and Katana are LayerZero mint/burn OFT representations against the Base ShareOFTAdapter lockbox; their bridge owner, peer and upgrade powers remain in Bridge Risk. ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required (FD36, 2026-10-20; D33-ADJUDICATOR ruling): withdraw continuous reconciliation and attestation-only supervision. Accountable names a 15-minute verification cadence and reports aggregate assets/supply, but the public evidence does not bind the exact native tokens, conserved OFT/lockbox receipts, inventory and pending redemption liabilities to one complete backing denominator. The October 20 API gives total supply 12,992,551.93 and pre-minted inventory 11,765,662.850885097 with Base-only supply_split; no complete public address/book join establishes how every current claim is included. This is a scope gap, not a measured reserve shortfall or non-reconciliation finding. Accountable/Redstone transport is not itself a named whole-liability financial attestation. Unknown/unknown therefore re-derives unbounded-adverse under D33. Preserve the original August 16 review start, authority observations and economicCapSemantics; no historical state is renewed.",
       "reviewer": "Codex mint/bridge boundary migration",
       "reviewedAt": "2026-08-16",
       "disposition": "scoreable",
       "sources": [
+        {
+          "label": "Diagnostic October 20, 2026 Accountable book-scope observation; no review renewal",
+          "url": "https://cache.accountable.capital/dashboard/xsy"
+        },
+        {
+          "label": "Issuer September 23, 2025 continuous-proof claim; exact complete current liability scope remains unestablished",
+          "url": "https://paragraph.com/@yieldpoint/from-trust-me-bro-to-trustless-transparency-launching-real-time-proof-of-reserves-for-uty"
+        },
         {
           "label": "YieldPoint contract addresses",
           "url": "https://docs.yieldpoint.io/protocol/architecture/contracts"

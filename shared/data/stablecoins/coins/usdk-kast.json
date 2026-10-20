@@ -48,13 +48,18 @@
     }
   ],
   "collateralQuality": "rwa",
-  "custodyModel": "institutional-unregulated",
+  "custodyModel": "unknown",
   "governanceQuality": "single-entity",
   "liveReservesConfig": {
     "adapter": "m0",
     "version": 1,
     "semantics": "protocol-reserve",
     "breakerScope": "m0",
+    "suspended": {
+      "reason": "M0 gateway collateral observes upstream M backing, not USDK local Solana M-vault custody or liabilities; await an identity-bound USDK wrapper reserve producer. Sources: https://docs.m0.org/protocol/solana and https://www.m0.org/blog/how-kast-builds-stablecoin-products-with-m0",
+      "since": "2026-10-20",
+      "reviewBy": "2026-11-20"
+    },
     "display": {
       "url": "https://dashboard.m0.org/",
       "label": "M0 Dashboard"

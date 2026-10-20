@@ -55,7 +55,7 @@
       "decimals": 6
     }
   ],
-  "custodyModel": "institutional-unregulated",
+  "custodyModel": "unknown",
   "governanceQuality": "multisig",
   "liveReservesConfig": {
     "adapter": "curated-validated",

@@ -81,11 +81,11 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "none",
-    "supervision": "attestation-only",
+    "reconciliation": "unknown",
+    "supervision": "unknown",
     "review": {
-      "evidence": "At Ethereum block 25526129 (2026-07-13), the A7A5 token owner remains the custom 3-of-5 multisig with the same five EOA owners. The verified Ethereum source declares owner, compliance, and accountant as constructor-set immutable values, exposes no upgrade function, and the implementation and beacon slots are zero. On Tron, the independently deployed A7A5 runtime exposes the same direct token interface; Tronscan reports it fully verified and non-proxy, and opcode inspection of the 12,955-byte executable region found no DELEGATECALL, CALLCODE, or SELFDESTRUCT path. The Tron owner was previously confirmed at block 83506136 as a 3-of-5 multisig with five EOA owners. The issuer-backend control cannot be independently confirmed from chain state, but both addressable on-chain mint surfaces and both immutable token runtimes are resolved. Mint-tier review (2026-07-15): No credible recurring independent reconciliation was located: Old Vector LLC publishes issuer-controlled transparency and an ad hoc reserve document, without a named independent attestor, stable cadence, or current liability reconciliation. Kyrgyz Finnadzor virtual-asset registration for Old Vector LLC is VASP/issuance status, not prudential reserve supervision. Economic-posture fields reviewed 2026-08-15: issuer-controlled multisigs can mint without a firm cap, no recurring whole-supply attestation is evidenced, and no prudential product supervisor is named. Wave 2 external review 2026-08-15: Kreston's 4 July 2025 report independently reconciles Ethereum and Tron supply to reserves, establishing attestation-only supervision, but no second dated report was found to prove a recurring cadence. Boundary review 2026-08-16: Ethereum wA7A5 is a same-chain parent-backed wrapper, not a native issuance deployment; its conserved lock/mint route is authored under Bridge Risk. The proposed CEX transfer route between Ethereum and Tron remains unverified. ODR-A6 lane R reconciliation review 2026-09-01: two dated supply-to-reserve reports did exist in 2025: a 'Financial figures and reserves report' as of 2025-03-31, press-attributed to Kreston Bishkek, and an 'OLD VECTOR LLC — Reserves Report and Independent Auditors' Report' as at 2025-07-04 whose auditor's report is signed 2025-09-26 under ISAE 3000 (Revised) reasonable assurance and reconciles total A7A5 supply of 12,025,177,081.90 tokens (Tron 11,514,405,217.87 plus Ethereum 510,771,864.03) to an identical RUB bank-account balance, with procedures that expressly verify management's reconciliation between the accounting ledger and the blockchain ledgers. Neither is reachable today: https://www.a7a5.io/audit.pdf returns a 500-byte React SPA HTML shell where it served application/pdf as late as the 2025-10-08 Wayback capture and had flipped to HTML by 2025-12-14; the March report URL is likewise dead; every probed later-quarter filename returns the same shell; docs.a7a5.io/legal/transparency is two sentences with no attestation, Kreston or reserve reference; the docs sitemap lists 24 pages with no attestation or reserve page, only a smart-contract audits page; and the live site JS bundle contains no occurrence of audit, attest, kreston, reserve or .pdf. Nothing is dated after 2025-07-04, so the brief 2025 cadence has lapsed and no reconciliation regime is published today. Kyrgyz Finnadzor's only public statement confirms the token registration and states that backing is managed by the issuer itself, disclosing no audit, attestation or verification duty. reconciliation is therefore recorded as the positively-established 'none' rather than left at the unverified 'unknown' (MINT-LADDER 9.32); no supply figure is taken from any of these documents into Pharos. One correction to the prior review: the letterhead of the July report OCRs as 'Anderson — Audit, Tax, Outsourcing, Consulting', not Kreston, so the single-firm attribution behind supervision 'attestation-only' is not safe and that field is left for a dedicated supervision pass rather than changed here.",
-      "reviewer": "Codex SOL-V mint-tier research; Sol economic-posture batch 2026-08-15; mint-bridge-boundary migration 2026-08-16; ODR-A6 lane R reconciliation 2026-09-01",
+      "evidence": "Historical control observations are preserved without renewal: Ethereum block 25526129 (2026-07-13) identified the custom 3-of-5 token-owner multisig with five EOA owners, immutable owner/compliance/accountant values, no upgrade function, and zero implementation/beacon slots. Tron block 83506136 (2026-06-11) identified its separate 3-of-5 owner; the July review recorded a verified non-proxy runtime without DELEGATECALL, CALLCODE or SELFDESTRUCT. Both issuer-controlled native issue paths remain economically unbounded. Ethereum wA7A5 is a same-chain parent-backed wrapper, not another native liability. The September 1 research recorded two historical 2025 reserve-report leads, including a July 4 report signed September 26 under ISAE 3000, but neither original was retrievable and its auditor attribution was disputed between Kreston and Anderson. Those historical leads do not establish current attestation supervision or recurring reconciliation. FD21 source review on 2026-10-20 recovered the issuer's relocated English documentation, linked from the live a7a5.io website: docs-en.a7a5.tech/legal/transparency.md contains only a transparency statement and licensed-distribution claim; its complete llms.txt index has no financial reserve-report page; a7a5.io/transparency shows token distribution rather than a reserve schedule; audit.pdf is a 404 HTML page. The recovered Terms section 4.3 still describes deposits and short-term assets without reserve weights, banks or a reconciliation procedure. The recovered FAQ confirms one A7A5 equals one RUB and redemption through platforms/accredited agents but gives no reconciliation cadence. No current whole-liability reconciliation or independent financial engagement was found. Nondisclosure and failed report retrieval do not positively prove that no reconciliation regime exists, so the former none value is corrected to unknown; the unsupported current attestation-only supervision annotation is likewise unknown. The verified Ethereum source retrieved on 2026-10-20 still exposes uncapped onlyOwner issue(address,uint256), and no favorable cap/process credit is granted. ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required. Original control pins and review start remain unchanged.",
+      "reviewer": "Codex SOL-V mint-tier research; Sol economic-posture batch 2026-08-15; mint-bridge-boundary migration 2026-08-16; ODR-A6 lane R reconciliation 2026-09-01; FD21 source-scoped correction 2026-10-20 (no renewal)",
       "reviewedAt": "2026-09-01",
       "sources": [
         {
@@ -119,6 +119,30 @@
         {
           "label": "Kyrgyz Financial Market Supervision Service",
           "url": "https://fsa.gov.kg/"
+        },
+        {
+          "label": "Recovered issuer transparency, retrieved 2026-10-20: no financial reserve report",
+          "url": "https://docs-en.a7a5.tech/legal/transparency.md"
+        },
+        {
+          "label": "Recovered complete issuer documentation index, retrieved 2026-10-20",
+          "url": "https://docs-en.a7a5.tech/llms.txt"
+        },
+        {
+          "label": "Recovered issuer Terms section 4.3, retrieved 2026-10-20",
+          "url": "https://docs-en.a7a5.tech/legal/terms-of-use.md"
+        },
+        {
+          "label": "Current issuer distribution dashboard, retrieved 2026-10-20",
+          "url": "https://www.a7a5.io/transparency"
+        },
+        {
+          "label": "Recovered issuer FAQ, retrieved 2026-10-20",
+          "url": "https://docs-en.a7a5.tech/help/faq.md"
+        },
+        {
+          "label": "Exact Ethereum verified issuance source, retrieved 2026-10-20",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6fa0be17e4bea2fcfa22ef89bf8ac9aab0ab0fc9"
         }
       ]
     }

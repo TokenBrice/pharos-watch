@@ -2,7 +2,7 @@
   "id": "usdnr-nerona",
   "mintAuthority": {
     "mintPath": "m0-permissioned-minter",
-    "authorityPosture": "unbounded-reconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "USDnr's sole canonical native-issuance deployment is Ethereum, where M0's MinterGateway and SwapFacility back the extension's 1:1 wrapping path. Fluent USDnr is a spoke representation whose local M wrapping is bridge-backed, not an independent native issuance path; its Portal, Hyperlane, and Fluent upgrade controls are reviewed separately under Bridge Risk.",
     "controls": [
@@ -125,8 +125,8 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "continuous",
-    "supervision": "attestation-only",
+    "reconciliation": "unknown",
+    "supervision": "unknown",
     "upgradeability": {
       "model": "transparent-proxy",
       "deploymentRefs": [
@@ -173,9 +173,25 @@
         {
           "label": "SwapFacility on Blockscout",
           "url": "https://eth.blockscout.com/address/0xB6807116b3B1B321a390594e31ECD6e0076f6278"
+        },
+        {
+          "label": "Nerona current mechanism disclosure; retrieved 2026-10-20",
+          "url": "https://docs.nerona.xyz/how-it-works"
+        },
+        {
+          "label": "Nerona current redemption disclosure; retrieved 2026-10-20",
+          "url": "https://docs.nerona.xyz/redemptions"
+        },
+        {
+          "label": "Exact verified JMIExtension implementation; retrieved 2026-10-20, byte-for-byte runtime correspondence at Ethereum block 26236706",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x1028a0e146d2915c509c8e019e0e5c66d3d22ae0"
+        },
+        {
+          "label": "Pinned Ethereum native-book and non-M totalAssets reads at block 26236706, hash 0x8bb57ed0d97f347defc55a6d0d705b08bda8c37f58a66496505f3efdb61cc3b6, 2026-10-20T22:12:23Z",
+          "url": "https://api-ethereum-mainnet.n.dwellir.com"
         }
       ],
-      "evidence": "Canonical-chain review at Ethereum block 25770356 on 2026-08-16: the USDnr proxy 0xd48e565561416de59da1050ed70b8d75e8ef28f9 resolves to implementation 0x1028a0e146d2915c509c8e019e0e5c66d3d22ae0 and ProxyAdmin 0x9ffe615c92635e5b36de004dd78a94c51aa04256. The ProxyAdmin owner is the single EOA 0xc07F0b4556E0cc1bFd8A076a98d43E79ACD3Cd33 with empty bytecode, so the canonical wrapper's mint logic can be replaced immediately. The Ethereum MinterGateway remains immutable and its approved-minter, validator-attestation, mint-delay, and collateral/debt checks bound the underlying M route; SwapFacility remains a 1:1 wrapper with a 259200-second timelocked upgrade path. Fluent's local token, SwapFacility, Portal, Hyperlane, Mailbox, and ISM controls are representations/transfer-rail machinery and are intentionally excluded from Mint Authority. The route remains continuously reconciled through M0's underlying attestations, without product-specific prudential supervision.",
+      "evidence": "Canonical-chain review at Ethereum block 25770356 on 2026-08-16: the USDnr proxy 0xd48e565561416de59da1050ed70b8d75e8ef28f9 resolves to implementation 0x1028a0e146d2915c509c8e019e0e5c66d3d22ae0 and ProxyAdmin 0x9ffe615c92635e5b36de004dd78a94c51aa04256. The ProxyAdmin owner is the single EOA 0xc07F0b4556E0cc1bFd8A076a98d43E79ACD3Cd33 with empty bytecode, so the canonical wrapper's mint logic can be replaced immediately. The Ethereum MinterGateway remains immutable and its approved-minter, validator-attestation, mint-delay, and collateral/debt checks bound the underlying M route; SwapFacility remains a 1:1 wrapper with a 259200-second timelocked upgrade path. Fluent's local token, SwapFacility, Portal, Hyperlane, Mailbox, and ISM controls are representations/transfer-rail machinery and are intentionally excluded from Mint Authority. ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required; C29 process-only review 2026-10-20, original review start 2026-08-16 and every authority/observation pin retained. The prior claim that M0's underlying attestations continuously reconcile this wrapper is withdrawn. M0's per-minter collateral signatures do not establish independent whole-USDnr-liability reporting. Fresh Ethereum block 26236706, hash 0x8bb57ed0d97f347defc55a6d0d705b08bda8c37f58a66496505f3efdb61cc3b6, timestamp 2026-10-20T22:12:23Z, confirms the same JMIExtension implementation with byte-for-byte verified-source runtime correspondence, native totalSupply 1495954278 raw and M held 1499819572 raw, both six decimals. However, the exact implementation also has asset-cap-controlled non-M wrapping and replacement paths, and its pinned totalAssets() reports one raw unit of non-M accounting. That positive residual is not rounded to zero or silently treated as M; the complete alternate-asset census and backing join remain unresolved, so this is not an exhaustive pure-M mechanical book certificate. The current Nerona narrative calls its backing/output wM and denies bridging while the retained exact deployment review identifies M and a Fluent spoke; that unresolved narrative/deployment join cannot overwrite pinned identities. Reconciliation and supervision are unknown, not measured absence; economically unbounded native upgrades remain recorded.",
       "reviewer": "Claude Phase 0c continuation; Claude Safety Score V9 curation lane (upgrade-authority resolution, 2026-07-21); Sol economic-posture batch 2026-08-15",
       "reviewedAt": "2026-08-16"
     }

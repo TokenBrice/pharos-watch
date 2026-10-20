@@ -41,13 +41,13 @@
       "periodEnd": "2026-07-24",
       "publishedAt": "2026-07-24",
       "assuranceMethod": "examination",
-      "scope": "assets-and-liabilities",
-      "liabilityReconciliation": "full",
-      "reviewer": "OpenAI Codex current-source reserve refresh",
-      "confidence": "verified",
+      "scope": "unknown",
+      "liabilityReconciliation": "unknown",
+      "reviewer": "OpenAI Codex current-source reserve refresh; C30 scope-only correction 2026-10-20, historical dates preserved",
+      "confidence": "unknown",
       "sources": [
         {
-          "label": "BHR México reasonable-assurance report dated July 24, 2026",
+          "label": "Historical BHR México report dated July 24, 2026; ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required: upstream Etherfuse liabilities are not MXNe's all-chain liabilities (scope rechecked 2026-10-20; mutable latest endpoint now serves September 29)",
           "url": "https://api.etherfuse.com/statement/attestation/latest"
         },
         {

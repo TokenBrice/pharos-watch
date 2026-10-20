@@ -2,7 +2,7 @@
   "id": "mf-one-midas",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-reconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "mF-ONE has two live direct-minter controls on Ethereum: backend EOA 0x4f75307888fd06b16594cc93ed478625ad65eeea and DepositVault proxy 0x41438435c20b1c2f1fca702d387889f346a0c3de. A 1-of-3 Safe and a separate EOA can immediately rotate mint operators through DEFAULT_ADMIN_ROLE. The token, vault, and shared MidasAccessControl proxies share a ProxyAdmin owned by a two-day timelock.",
     "upgradeability": {
@@ -207,11 +207,11 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "periodic",
-    "supervision": "attestation-only",
+    "reconciliation": "unknown",
+    "supervision": "unknown",
     "review": {
-      "evidence": "At Ethereum block 25527148, the current mF-ONE direct minters were EOA 0x4f75307888fd06b16594cc93ed478625ad65eeea and DepositVault proxy 0x41438435c20b1c2f1fca702d387889f346a0c3de. The previously recorded 0x9419bfccf62469dd3abac731cac3fb24f5b8edaf was only a vault operator, not a live token minter. Safe 0xb60842e9dabcd1c52e354ac30e82a97661cb7e89 and EOA 0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227 each held DEFAULT_ADMIN_ROLE and could immediately change the role set. The complete mint-critical proxy inventory was token 0x238a700ed6165261cf8b2e544ba797bc11e466ba, DepositVault 0x41438435c20b1c2f1fca702d387889f346a0c3de, and shared MidasAccessControl 0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b, with implementations 0x32fb951ce9be3cd9a0a406ea86647a3c7d6406e2, 0xe802e0c7a2a65dd72926aa34c27236c83a80be50, and 0xdd5a54ba2ab379a5e642c58f98ad793a183960e2 respectively. Each EIP-1967 admin slot resolved to ProxyAdmin 0xbf25b58cb8dfad688f7bcb2b87d71c23a6600aac, owned by the 172800-second Midas timelock. The timelock's sole initiating Safe was 1-of-3 with no enabled modules and a zero guard. Economic-control evidence reviewed 2026-07-15: the Midas Attestation Engine creates periodic NAV and proof-of-reserve checkpoints, with source documents notarized by vLayer and independently verified by LlamaRisk or Canary; the live dashboard was reviewed on 2026-07-15. The exempt offering and FMA prospectus process do not establish prudential issuer supervision. Economic-posture fields reviewed 2026-08-15: issuer-controlled direct mint or immediate minter-administration paths are economically unbounded; existing whole-supply periodic reconciliation and independent attestation evidence remain supported.",
-      "reviewer": "Codex Safety Score V9 registry pass; Sol economic-posture batch 2026-08-15",
+      "evidence": "The retained Ethereum block 25527148 review establishes direct minting by EOA 0x4f75307888fd06b16594cc93ed478625ad65eeea and DepositVault 0x41438435c20b1c2f1fca702d387889f346a0c3de, immediate DEFAULT_ADMIN_ROLE authorization by the 1-of-3 Safe and separate EOA, and the two-day timelocked ProxyAdmin. Original control pins and review start remain unchanged. Source-scope correction observed 2026-10-20: the engine announcement describes a general publication framework, while current documentation describes source/workflow fidelity and internal NAV consistency checks. The registry-linked October 20 checkpoint contains Fasanara note valuation and redemption correspondence, issuer-reported cross-chain supply, rounded protocol aggregates and a computed coverage ratio, but no complete note-to-token/pending-liability join on a committed cadence. The base report already records partial liability reconciliation. NAV checks and side-by-side operational records do not independently establish a token-liability-creation ledger procedure; internal-ledger is not inferred. Under the shared D33 evidence standard, reconciliation and supervision remain unknown, withdrawing unsupported periodic and attestation-only credit. No prudential issuer mandate is established. Direct minting and immediate minter authorization remain economically unbounded; no measured backing shortfall or absence of every reconciliation process is inferred.",
+      "reviewer": "Codex Safety Score V9 registry pass; Sol economic-posture batch 2026-08-15; NR1 source-scope correction 2026-10-20 (original review start preserved)",
       "reviewedAt": "2026-08-15",
       "disposition": "scoreable",
       "sources": [
@@ -254,6 +254,14 @@
         {
           "label": "Midas prospectus documents",
           "url": "https://docs.midas.app/resources/legal-documents/prospectus-documents"
+        },
+        {
+          "label": "Midas current attestation engine: workflow verification and internal consistency checks, retrieved 2026-10-20",
+          "url": "https://docs.midas.app/transparency/the-midas-attestation-engine"
+        },
+        {
+          "label": "mFONE SAVE checkpoint published 2026-10-20T07:38:59Z; registry-linked content recovered at Ethereum block 26236714, note valuation and aggregate accounting only",
+          "url": "https://gateway.pinata.cloud/ipfs/QmXQXwn1WFrV1iPsDBz87gbYxV3bDCGA7h7AMBtRrzKgKX"
         }
       ]
     }

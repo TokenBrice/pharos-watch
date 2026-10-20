@@ -567,7 +567,7 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "periodic",
+    "reconciliation": "unknown",
     "supervision": "prudential",
     "review": {
       "scopedQuestions": [
@@ -629,9 +629,22 @@
       {
         "label": "Spiko official Token.sol source",
         "url": "https://github.com/spiko-tech/contracts/blob/main/contracts/token/Token.sol"
+      },
+      {
+        "label": "Spiko SICAV prospectus, 1 September 2026, retrieved 2026-10-20: USTBL AMF UCITS/MMF issuance, shareholder register and statutory accounting",
+        "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+      },
+      {
+        "label": "AMF agreement certificate dated 23 February 2026, retrieved 2026-10-20: SPIKO SICAV SCV20240012 and exact USTBL SCV20240013 supervised UCITS sub-fund",
+        "url": "https://cdn.spiko.finance/legal_docs/EN/SAFO_Letter_EN.pdf"
+      },
+      {
+        "label": "AMF GECO SPIKO SICAV/EUTBL register and current manager GP-11000029, retrieved 2026-10-20; USTBL exact sub-fund joined by AMF certificate",
+        "url": "https://geco.amf-france.org/back-office/funds/compartment/c79399"
       }
     ],
       "evidence": "The seven authored deployments are independently native issuance routes, not representations of a single canonical token: current reads on 2026-08-16 show nonzero local supply and live issuer authority on Ethereum, Arbitrum, Polygon, Base, Etherlink, Stellar, and Starknet. Arbitrum at block 485896559 has PermissionManager mint requirement mask 0x05, token and PermissionManager upgrade requirement mask 0x01, getGroupAdmins(0) 0x01, and group-0 membership in the single 3-of-6 Safe 0x7843225ba488cf780a4fe2c842b5dc2abcf8a03e; the six current operator-group members were each confirmed with getGroups(). Ethereum at block 25575138 shows the ADMIN group member is the 3-of-6 Safe 0x4eaa52b6280593a8820c45ce38f974290ae52cea and the deploying EOA holds no group. Starknet at block 13410761 confirms live local supply and owner 0x07bc8bbd7c7fcc89273726fd34bc1ffc4649ed3f2f1be43e12afe8a406a5ca9d; the latest detailed role observation at block 12085430 records that Argent multisig's five signers and threshold 3 hold DEFAULT_ADMIN_ROLE, MINTER_ROLE, PAUSER_ROLE, and WHITELISTER_ROLE on PermissionManager 0x7c7a6db2763d01aa889702bf5eb7b88a01a9df11da0e3d45c96a140c1f43ba3. Stellar current reads at ledger 63987834 confirm a live token and the owner/admin account GBYIQXBKEB655EB3WTRITS6RR5GXEP6SQRBLPREZHNFYKT7WBMTMPR3H; its latest detailed contract observation at ledger 63567141 records the same single-key account as token Owner and PermissionManager Admin, while Horizon confirms one signer of weight 1 with no quorum. The official Token.sol exposes permission-gated mint/burn without an amount or total-supply cap, so issuer-controlled native economic capacity remains unbounded; periodic fund/NAV reconciliation and AMF/UCITS prudential supervision remain separate annotations. Announced CCIP interoperability is reviewed in Bridge Risk only; no bridge capability is compiled into Mint Authority.",
+      "sourceFreeRationale": "ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required: reviewed 2026-10-20 under D33, periodic reconciliation is withdrawn to unknown. The preceding historical fund/NAV-reconciliation annotation was inferred from daily NAV accounting and a statutory-auditor appointment. The current prospectus and USTBL product page do not publish a current recurring complete all-chain USTBL-liability-to-backing comparison including pending claims. SPIKO SICAV's AMF UCITS/MMF prudential regime remains independently established. Original 2026-08-16 aggregate review start and all authority/block pins are preserved; no non-reconciliation or backing shortfall is inferred.",
       "reviewer": "Codex mint/bridge boundary migration",
       "reviewedAt": "2026-08-16",
       "disposition": "scoreable"

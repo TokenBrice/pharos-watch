@@ -560,6 +560,35 @@
             "url": "https://arbitrum.blockscout.com/address/0xC164b8232ca67D2f8dDA43CF75CbE8161E6861D8?tab=contract"
           }
         ]
+      },
+      {
+        "id": "stellar:savUSD-GBCSESJONU4FJGIRC4UTDHQFE43IL4U4I4HP5JKPKAJVNMQO76672MJJ",
+        "sourceChain": "avalanche",
+        "destinationChain": "stellar",
+        "canonicalChain": "avalanche",
+        "contractAddress": "savUSD-GBCSESJONU4FJGIRC4UTDHQFE43IL4U4I4HP5JKPKAJVNMQO76672MJJ",
+        "protocol": "Avant dedicated LayerZero Stellar OFT lane (control review unresolved)",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Identity researched 2026-10-20: Avant's deployment registry and stellar.toml identify this classic Stellar asset and SAC CBW5332J2RUTSOIUESSNBNLESPEIEUG6G4LOQOAM6IP3ANORCMN5CPQB. Horizon independently returns the exact asset code/issuer, matching SAC and seven-decimal amounts. The issuer describes a dedicated LayerZero lane backed by savUSD locked in Avalanche adapter 0x465EB8613Fd6aab041Ad92EEF2ABE72b2ae7E167. Exact deployed adapter/OFT/SACManager authority, message validation, escrow conservation, emergency state and whole-liability supply attribution are not established by these identity sources; no bridge tier, control or supply share is inferred.",
+        "sources": [
+          {
+            "label": "Avant deployment registry, Stellar savUSD and dedicated Avalanche adapter (retrieved 2026-10-20)",
+            "url": "https://docs.avantprotocol.com/security/contract-addresses.md"
+          },
+          {
+            "label": "Avant public-network Stellar asset descriptor (retrieved 2026-10-20)",
+            "url": "https://avantprotocol.com/.well-known/stellar.toml"
+          },
+          {
+            "label": "Stellar Horizon exact savUSD asset identity and SAC (retrieved 2026-10-20)",
+            "url": "https://horizon.stellar.org/assets?asset_code=savUSD&asset_issuer=GBCSESJONU4FJGIRC4UTDHQFE43IL4U4I4HP5JKPKAJVNMQO76672MJJ"
+          }
+        ]
       }
     ],
     "controls": [

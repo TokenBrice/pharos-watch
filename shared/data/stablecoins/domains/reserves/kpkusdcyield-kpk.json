@@ -2,6 +2,23 @@
   "id": "kpkusdcyield-kpk",
   "reserves": [
     {
+      "sourceKey": "erc4626-single-asset:ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "name": "KPK USDC Yield idle underlying",
+      "pct": 0,
+      "risk": "medium",
+      "coinId": "usdc-circle",
+      "depType": "wrapper",
+      "blacklistable": true,
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle USDC",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
       "sourceKey": "erc4626-single-asset:ethereum:0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13:deployed",
       "name": "USDC deposited into KPK-curated Morpho lending markets",
       "pct": 100,
@@ -62,9 +79,13 @@
       {
         "label": "Ethereum block 26191269, hash 0xc492993fd90ab9821b6b1124f9f844a8f2230cfc74f45c76767a773359bb2db7, 2026-10-14T14:14:47Z (1791987287); full adapter/market census",
         "url": "https://api-ethereum-mainnet.n.dwellir.com"
+      },
+      {
+        "label": "KPK idle-first withdrawal and exact vault/adapter custody categories; retrieved 2026-10-20, classification only, not a new composition observation",
+        "url": "https://docs.kpk.io/vaults/vaults/morpho.md"
       }
     ],
-    "rationale": "At Ethereum block 26191269 (2026-10-14), asset()=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, totalSupply()=12583798852158679851432343 raw 18-decimal shares and totalAssets()=13255106628776 raw 6-decimal USDC (13,255,106.628776 USDC). One adapter 0x4f74895557bea2de5d51d8c06e944da92dbc8550 enumerates 7 current markets; summed expectedSupplyAssets=13255106628776, idle underlying=0; their sum equals totalAssets() and adapter.realAssets(). Lender-claim allocation shares are savUSD 46.760%, USD3 25.558%, siUSD 9.901%, PT-siUSD-7JAN2027 7.549%, srRoyUSDC 6.795%, ftUSD 3.437% and weETH 0.0004%. Four off-list residuals retain 1 raw USDC unit each (srNUSD, YFI, matured PT-cUSD-23JUL2026 and ssftUSD), with allocation 0 and excluded from realAssets(). All current positions have zero borrow shares and zero posted collateral. The 100% slice identifies the denomination and standing parent dependency across idle and deployed lending positions; it does not assert that every asset is idle cash or invent borrower-collateral reserve weights. Weights are lender-claim allocation shares, not holdings of pledged collateral. Superseded 2026-10-02 review at block 26107704: totalSupply()=9792630120840452584390720, totalAssets()=10295065635649, 5 markets with summed expectedSupplyAssets=9983200606668 and idle underlying=311865028981.",
+    "rationale": "At Ethereum block 26191269 (2026-10-14), asset()=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, totalSupply()=12583798852158679851432343 raw 18-decimal shares and totalAssets()=13255106628776 raw 6-decimal USDC (13,255,106.628776 USDC). One adapter 0x4f74895557bea2de5d51d8c06e944da92dbc8550 enumerates 7 current markets; summed expectedSupplyAssets=13255106628776, idle underlying=0; their sum equals totalAssets() and adapter.realAssets(). Lender-claim allocation shares are savUSD 46.760%, USD3 25.558%, siUSD 9.901%, PT-siUSD-7JAN2027 7.549%, srRoyUSDC 6.795%, ftUSD 3.437% and weETH 0.0004%. Four off-list residuals retain 1 raw USDC unit each (srNUSD, YFI, matured PT-cUSD-23JUL2026 and ssftUSD), with allocation 0 and excluded from realAssets(). All current positions have zero borrow shares and zero posted collateral. The 100% slice identifies the denomination and standing parent dependency across idle and deployed lending positions; it does not assert that every asset is idle cash or invent borrower-collateral reserve weights. Weights are lender-claim allocation shares, not holdings of pledged collateral. Superseded 2026-10-02 review at block 26107704: totalSupply()=9792630120840452584390720, totalAssets()=10295065635649, 5 markets with summed expectedSupplyAssets=9983200606668 and idle underlying=311865028981. Classification completion 2026-10-20 (C17): the separately keyed idle-USDC category is immediate underlying held by this exact vault, as distinguished from deployed borrower claims in the issuer's custody and withdrawal documentation. Its zero weight is retained from the original October 14 observation, not a current balance assertion. Original review, composition date and deployed weight are unchanged. This classifies only actual idle USDC when the live producer observes it; it grants no whole-vault cash realization bound, measured unwind or independent exit capacity.",
     "compositionBasis": "Pinned full adapter census and underlying-asset denomination",
     "compositionAsOf": "2026-10-14",
     "scope": "full-composition",

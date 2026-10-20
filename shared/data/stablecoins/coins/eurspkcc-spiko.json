@@ -77,6 +77,16 @@
       "chain": "stellar",
       "address": "CDWOB6T7SVSMMQN5V3P2OPTBAXOP7DAZHGVW3PYTZIKHVFKN6TBSXR6A",
       "decimals": 5
+    },
+    {
+      "chain": "etherlink",
+      "address": "0x3868d4e336d14d38031cf680329d31e4712e11cc",
+      "decimals": 5
+    },
+    {
+      "chain": "solana",
+      "address": "H99pu9fKt15asYk3Mcs8rajaRX3aYx3kDwXy6pY3n6My",
+      "decimals": 5
     }
   ],
   "collateralQuality": "exotic",

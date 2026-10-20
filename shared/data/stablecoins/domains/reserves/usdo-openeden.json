@@ -127,9 +127,13 @@
       {
         "label": "OpenEden USDO FAQ on segregated Bermuda SAC reserves (accessed 2026-07-22)",
         "url": "https://docs.openeden.com/usdo/faqs"
+      },
+      {
+        "label": "Current USDO User Agreement dated 2026-10-14 and service-provider disclosures (retrieved 2026-10-20)",
+        "url": "https://docs.openeden.com/usdo/legal/user-agreement"
       }
     ],
-    "uncertainty": "OpenEden states that USDO reserve assets and liabilities are held in a segregated account of a Bermuda segregated-accounts company and are insulated from claims against other accounts. The current reserve API identifies asset holdings but not the account-level custodians, provider shares, underlying fund custody chains, or rehypothecation terms.",
+    "uncertainty": "OpenEden states that USDO reserve assets and liabilities are held in a segregated account of a Bermuda segregated-accounts company and are insulated from claims against other accounts. The current reserve API identifies asset holdings but not the account-level custodians, provider shares, underlying fund custody chains, or rehypothecation terms. Rechecked 2026-10-20 against the current service-provider page and issuer-linked User Agreement dated 2026-10-14: contractual segregated-account recourse is not ownership of reserve assets, and named service providers do not establish the complete allocated custody chain. The former whole-asset institutional-regulated custodyModel scalar is therefore withdrawn to unknown; BMA issuance supervision and the existing segregated-account facts are retained. Original custody review start is not renewed.",
     "knownUnknownExposurePct": 100
   }
 }

@@ -103,7 +103,7 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "not-applicable",
+    "reconciliation": "unknown",
     "supervision": "none",
     "review": {
       "sources": [
@@ -124,7 +124,7 @@
           "url": "https://safe-transaction-base.safe.global/api/v1/safes/0x519CA17DAE2E2A23396eBEC12DA1f645AccEC196/"
         }
       ],
-      "evidence": "At Base block 50258421, BD's token owner was renounced and its collateral registry was fixed to 0x7551ebfc8340b7f91874942be9c653733d4fb04f. Five launch branches provide collateral-gated issuance, but the registry's 4-of-6 Safe governor can immediately register additional branch contracts as minters. This keeps current issuance on-chain and collateralized while preserving a privileged, economically unbounded minter-authorization path.",
+      "evidence": "At Base block 50258421, BD's token owner was renounced and its collateral registry was fixed to 0x7551ebfc8340b7f91874942be9c653733d4fb04f. Five launch branches provide collateral-gated issuance, but the registry's 4-of-6 Safe governor can immediately register additional branch contracts as minters. This keeps current issuance on-chain and collateralized while preserving a privileged, economically unbounded minter-authorization path. FD05 correction 2026-10-20: verified branch/token code and the current protocol documentation do not establish that recurring whole-supply reconciliation is structurally inapplicable despite the mutable admission root, or provide a complete recurring comparison independent of that root. Reconciliation is unknown, not measured absent. Pinned Base block 52871979 (2026-10-20T21:55:05Z; hash 0xb7613b1b602846680de62db251e658d735f2c709d2a6b7c8e53a637fd1c56fd7) confirms both governors still resolve to the reviewed Safe with threshold four and token owner remains zero. This narrow current observation does not renew the original review start or certify the complete current branch/control census.",
       "reviewer": "Codex Base Dollar promotion review",
       "reviewedAt": "2026-08-21",
       "disposition": "scoreable"

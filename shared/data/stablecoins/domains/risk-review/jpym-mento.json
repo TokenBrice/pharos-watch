@@ -98,8 +98,8 @@
     "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
-    "tier": "standard-external",
-    "summary": "JPYm's sole Celo CDP branch prices its USDm collateral through Mento's onchain SortedOracles median and BreakerBox controls; an invalid rate permanently shuts down borrowing rather than switching to another provider.",
+    "tier": "single-source-or-laggy",
+    "summary": "JPYm has one authorized JPY/USD publisher through SortedOracles and no independent live failover. OracleAdapter and BreakerBox gate that source; shutdown lastValidPrice is not a second feed. C22 correction 2026-10-20 at Celo block 80633000: the sole Trove is not liquidatable because verified runtime rejects final-Trove liquidation. ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required.",
     "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
@@ -125,14 +125,26 @@
       {
         "label": "Mento FXPriceFeed ABI",
         "url": "https://github.com/mento-protocol/deployments-v2/blob/e2022291340d6883ef7a026cf83e38d2f10be94d/packages/contracts/abis/FXPriceFeed.json"
-      }
+      },
+        {
+          "label": "Celo block 80633000, 2026-10-20T22:02:38Z",
+          "url": "https://celo.blockscout.com/block/80633000"
+        },
+        {
+          "label": "Mento current single-source oracle disclosure, retrieved 2026-10-20",
+          "url": "https://docs.mento.org/mento-v3/dive-deeper/fpmm/oracles-and-circuit-breakers.md"
+        },
+        {
+          "label": "JPYm TroveManager verified source; exact runtime matched at block 80633000",
+          "url": "https://celo.blockscout.com/api/v2/smart-contracts/0xd2e65af47d927d5e84f384ae6bac4f97c3da65df"
+        }
     ],
     "branches": [
       {
         "id": "mento-jpym-usdm",
         "label": "Mento JPYm / USDm branch",
-        "tier": "standard-external",
-        "summary": "The live JPYm branch uses a one-reporter Mento SortedOracles JPY/USD feed with a five-minute report-expiry bound, a 110% MCR, Stability Pool offset, and active-Trove redistribution.",
+        "tier": "single-source-or-laggy",
+        "summary": "The JPYm/USDm CDP uses one authorized JPY/USD publisher, not independent medianization. At Celo block 80633000 getOracles(feed) returned only 0x1327a32fa7e3a0c3c0a5828d4f3ff16ce9e13ee9; getTroveIdsCount() was one and the deployed final-Trove guard blocks liquidation.",
         "collateralAssets": [
           "USDm"
         ],
@@ -166,8 +178,8 @@
             "note": "The live SystemParams proxy returned MCR 110%, CCR 135%, and SCR 110%; TroveManager shutdownTime was zero at Celo block 72133274."
           }
         ],
-        "liquidationMechanism": "Any caller can batch-liquidate eligible USDm-backed JPYm Troves below the 110% MCR. The Stability Pool offsets available debt and receives collateral; uncovered debt and collateral are redistributed to active Troves.",
-        "liquidationDelaySec": 0,
+        "liquidationMechanism": "At Celo block 80633000 (2026-10-20T22:02:38Z), exact JPYm TroveManager returned getTroveIdsCount() = 1 and shutdownTime() = 0. Its pinned runtime exactly matches verified source: _closeTrove requires more than one Trove for Status.closedByLiquidation, including after shutdown, reverting OnlyOneTroveLeft for the sole current Trove. Ordinary liquidation is therefore uncallable; the Stability Pool balance cannot bypass this guard.",
+        "liquidationState": "uncallable",
         "backstop": "The JPYm Stability Pool is the first liquidation backstop. Debt beyond available pool JPYm is redistributed with collateral across active Troves.",
         "shutdownOrBadDebtBehavior": "Oracle validation failure or a branch TCR at the 110% SCR permanently shuts down new borrowing. Shutdown enables urgent redemption, while liquidation debt not offset by the Stability Pool is redistributed to active Troves.",
         "failureDomainKeys": [
@@ -193,6 +205,64 @@
           {
             "label": "Mento TroveManager ABI",
             "url": "https://github.com/mento-protocol/deployments-v2/blob/e2022291340d6883ef7a026cf83e38d2f10be94d/packages/contracts/abis/TroveManager.json"
+          },
+            {
+              "label": "Celo block 80633000, 2026-10-20T22:02:38Z",
+              "url": "https://celo.blockscout.com/block/80633000"
+            },
+            {
+              "label": "Mento current single-source oracle disclosure, retrieved 2026-10-20",
+              "url": "https://docs.mento.org/mento-v3/dive-deeper/fpmm/oracles-and-circuit-breakers.md"
+            },
+            {
+              "label": "JPYm TroveManager verified source; exact runtime matched at block 80633000",
+              "url": "https://celo.blockscout.com/api/v2/smart-contracts/0xd2e65af47d927d5e84f384ae6bac4f97c3da65df"
+            }
+        ]
+      }
+    ],
+    "branchKindReviews": [
+      {
+        "kind": "feed",
+        "branchIds": [
+          "mento-jpym-usdm"
+        ],
+        "reviewedAt": "2026-10-20",
+        "reviewer": "C22 bottom-up refinement 2026-10-21",
+        "confidence": "verified",
+        "rationale": "C22 2026-10-20 pin 80633000 joins JPYm FXPriceFeed 0x8409587c8ba4f6850aee09a32b86022c3e88ad33 to OracleAdapter 0xa472fbbf4b890a54381977ac392bdf82eec4383a and feed 0xfde35b45cbd2504fb5dc514f007bc2de27034274. SortedOracles 0xefb84935239dacdecf7c5ba76d8de40b077b7b33 getOracles(feed) returned singleton 0x1327a32fa7e3a0c3c0a5828d4f3ff16ce9e13ee9. Current issuer documentation explicitly identifies Chainlink as the only source. Validity checks and shutdown last price are not independent fallback. Corrects only the feed review; no collateral, backstop or shutdown observation date is renewed.",
+        "sources": [
+          {
+            "label": "Celo block 80633000, 2026-10-20T22:02:38Z",
+            "url": "https://celo.blockscout.com/block/80633000"
+          },
+          {
+            "label": "Mento current single-source oracle disclosure, retrieved 2026-10-20",
+            "url": "https://docs.mento.org/mento-v3/dive-deeper/fpmm/oracles-and-circuit-breakers.md"
+          },
+          {
+            "label": "JPYm TroveManager verified source; exact runtime matched at block 80633000",
+            "url": "https://celo.blockscout.com/api/v2/smart-contracts/0xd2e65af47d927d5e84f384ae6bac4f97c3da65df"
+          }
+        ]
+      },
+      {
+        "kind": "liquidation",
+        "branchIds": [
+          "mento-jpym-usdm"
+        ],
+        "reviewedAt": "2026-10-20",
+        "reviewer": "C22 bottom-up refinement 2026-10-21",
+        "confidence": "verified",
+        "rationale": "ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required. At Celo block 80633000 (2026-10-20T22:02:38Z), exact JPYm TroveManager 0xd2e65af47d927d5e84f384ae6bac4f97c3da65df returned getTroveIdsCount() = 1 and shutdownTime() = 0, and StabilityPool 0x107ecce37c1fe3c8154b67f9ddd3d5a1446f084b returned getTotalBoldDeposits() = 0. Its pinned runtime exactly matches verified source: _closeTrove calls _requireMoreThanOneTroveInSystem whenever the close is liquidation, including after shutdown, and the helper reverts OnlyOneTroveLeft when count is one. The sole current Trove is not liquidatable; a documented liquidation function is not current callability. This changes only liquidationMechanics; original July review, historical metrics, and other component clocks remain unchanged. Re-review on a changed Trove census or runtime.",
+        "sources": [
+          {
+            "label": "Celo block 80633000, 2026-10-20T22:02:38Z",
+            "url": "https://celo.blockscout.com/block/80633000"
+          },
+          {
+            "label": "JPYm TroveManager verified source; exact runtime matched at block 80633000",
+            "url": "https://celo.blockscout.com/api/v2/smart-contracts/0xd2e65af47d927d5e84f384ae6bac4f97c3da65df"
           }
         ]
       }

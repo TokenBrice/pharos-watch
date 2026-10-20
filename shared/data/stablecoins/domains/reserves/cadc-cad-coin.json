@@ -18,16 +18,16 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Unknown wave W1R52; exact account-product maturity review",
+    "reviewedAt": "2026-10-20",
+    "reviewer": "C06 bottom-up refinement 2026-10-21",
     "confidence": "verified",
     "sources": [
       {
-        "label": "CADC August 2026 ATB Financial bank confirmation (newest as of 2026-09-29)",
+        "label": "CADC September 2026 ATB Financial bank confirmation; issuer API uploaded 2026-10-20T17:58:10.609Z",
         "url": "https://loon.finance/api/attestations"
       },
       {
-        "label": "CADC August 2026 report object",
+        "label": "CADC_Bank_Attestation_Sep_2026.pdf, visually reviewed 2026-10-20; SHA-256 91d4fab363e8b3f9ec22570ff5b7e000040231e39fc4465b4efffce3582444eb",
         "url": "https://loon.finance/api/attestations"
       },
       {
@@ -39,11 +39,11 @@
         "url": "https://www.atb.com/business/accounts-and-services/savings-accounts/business-growth-plus-savings-account/"
       }
     ],
-    "rationale": "The issuer API listed an August 2026 bank confirmation uploaded 2026-09-01. The ATB Financial form confirms CAD 1,820,785.35 in a Business Growth Plus deposit as of 2026-08-31. The single disclosed reserve asset is Canadian-dollar cash at the named bank. The form is not an accountant's opinion or audit and does not state CADC circulation or reconcile liabilities. W1R52 visually reviewed the exact bank confirmation and matched its Business Growth Plus account to ATB's public savings product: the bank expressly offers unlimited access to the money and contrasts it with GICs that prevent access for six months or more. The maximum contractual asset tenor is therefore zero days for this on-demand savings deposit, not a fabricated maturity for unidentified cash. This does not assert an unconditional holder redemption deadline or absence of bank account holds, transfer delays, liens or fees. Account-specific legal safeguards and CADC liability coverage remain unverified. The API still lists August 2026 as newest on 2026-10-03; reserve weights and composition date are unchanged. Supplemental source check 2026-10-09 by Sol curation campaign 2026-10-09 (Lane51Tokenised): the report API still lists CADC_Bank_Attestation_Aug_2026.pdf, amount 1820785.35 and uploadedAt 2026-09-01T17:52:34.117Z as its newest entry. The transparency page describes 100% cash at ATB but its visible report history ends in June; it supplies no newer dated holdings observation. This research does not renew August holdings, infer discontinued reporting, or turn an API auditor label into an accountant's opinion. The scoped campaign classification records the separate research timestamp.",
-    "compositionBasis": "ATB Financial bank confirmation for PayTrie AB Inc as listed in Loon's August 2026 attestation API",
-    "compositionAsOf": "2026-08-31",
+    "rationale": "The current issuer API lists CADC_Bank_Attestation_Sep_2026.pdf, uploaded 2026-10-20T17:58:10.609Z. The scanned ATB Financial bank confirmation, visually reviewed on 2026-10-20, confirms CAD 1,824,204.09 in a Business Growth Plus deposit for PayTrie AB Inc as of September 30, 2026. Loon's current reserve disclosure states that 100% of reserves are cash deposits at ATB; the new form independently identifies that same bank and account product. ATB's current product page offers unlimited access to Business Growth Plus savings and distinguishes it from fixed-term GICs, so the retained zero-day contractual tenor describes the account product rather than a synthetic security maturity. The form contains a financial-institution signature but leaves the requesting accountant fields blank, states no CADC circulation, and contains no supply-to-reserve reconciliation or assurance opinion. API auditor metadata is not an accountant's report, and the bank-account client differs from the issuer named in Loon's terms. This refreshes only the observed composition, not financial assurance, legal remoteness, current surplus, or executable holder redemption capacity. The prior August 31 composition and October 3 product review remain historical evidence, not today's portfolio.",
+    "compositionBasis": "ATB Financial September 30 bank confirmation for PayTrie AB Inc, retrieved through Loon's issuer API, plus the issuer's 100% ATB cash-deposit reserve disclosure",
+    "compositionAsOf": "2026-09-30",
     "scope": "full-composition",
-    "knownUnknownExposure": "No reserve asset class is unclassified. The confirmation does not establish CADC liability coverage, account legal safeguards, or withdrawal terms.",
+    "knownUnknownExposure": "No disclosed reserve asset class is unclassified. The September bank confirmation does not state CADC liabilities, reconcile all-chain circulation, establish account legal safeguards or identify the operative trust indenture. PayTrie AB Inc is the bank client while Loon Payments Inc is the issuer in current terms. No reserve-coverage ratio, enforceable holder insolvency protection or bank-payout settlement bound is inferred.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {

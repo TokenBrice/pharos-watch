@@ -2,7 +2,7 @@
   "id": "eurs-stasis",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-reconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "EURS native issuance is reviewed on Ethereum, Algorand, Stellar, and XDC. Ethereum mint, freeze, and delegate administration is controlled by the STASIS 3-of-7 Safe; verified source resolves storage slot 3 as the fee collector, not a control. Algorand uses a fixed 3-of-5 issuer multisig as the ASA manager/reserve/freeze account, XDC uses a 2-of-5 issuer controller, and Stellar uses a 3-of-5 issuer account. Polygon, Arbitrum, and Gnosis are external representations whose bridge controls are assessed only in Bridge Risk.",
     "upgradeability": {
@@ -199,10 +199,10 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "periodic",
+    "reconciliation": "unknown",
     "supervision": "none",
     "review": {
-      "evidence": "The corrected native review covers Ethereum, Algorand, Stellar, and XDC only. At Ethereum block 25770442, Safe 0x1bee4f735062cd00841d6997964f187f5f5f5ac9 remained the 3-of-7 owner/delegate authority: current createTokens and freeze/unfreeze call simulations succeeded from the Safe. The verified EURSToken storage layout places owner after the two inherited mappings at slot 2, feeCollector at slot 3, and delegate later in storage; source gates createTokens, freezeTransfers, and setDelegate on owner. The code-empty slot-3 address is therefore a fee recipient, not a control, and has been removed from the authority inventory. At Algorand round 64481636, ASA 227855942 used the unrekeyed issuer account as manager, reserve, and freeze authority with a maximum uint64 total; an outgoing transaction from that account exposes a fixed 3-of-5 Algorand multisig envelope. At Stellar ledger 63986038, the issuer account retained five weight-one signers and 3-of-5 thresholds. At XDC block 106140914, the 2-of-5 controller 0x527e5b61bc8806059aef098c97fb36db3bc4cc63 passed createTokens(1) and unrelated senders reverted. Polygon, Arbitrum, and Gnosis representation minting and upgrade/admin machinery are excluded from Mint Authority and retained under Bridge Risk. The native set remains economically unbounded, with periodic issuer-operated reconciliation and no verified prudential supervision; STASIS's live transparency page published an assets-and-liabilities statement for 2026-08-07 on 2026-08-08, while current independent assurance was not established.",
+      "evidence": "Historical native-control observations are retained, not renewed: the review covers Ethereum, Algorand, Stellar, and XDC only. At Ethereum block 25770442, Safe 0x1bee4f735062cd00841d6997964f187f5f5f5ac9 was the 3-of-7 owner/delegate authority; createTokens and freeze/unfreeze simulations succeeded from the Safe. Verified EURSToken source places owner at slot 2 and feeCollector at slot 3 and gates createTokens, freezeTransfers and setDelegate on owner. At Algorand round 64481636, ASA 227855942 used the unrekeyed 3-of-5 issuer account as manager, reserve and freeze authority with maximum uint64 total. Stellar ledger 63986038 showed five weight-one signers and 3-of-5 thresholds. The historical XDC 2-of-5 mint-controller proof and its separately dated October 1 observation remain unchanged. Polygon, Arbitrum and Gnosis representations remain Bridge Risk, not native issuance. FD23 source-scope correction on 2026-10-20: the cited transparency page shows 6,942,132 EURS and EUR 7,147,300.66 reserves but gives neither a common economic as-of time nor a complete liabilities-to-reserves reconciliation. The bankCirculation/getAll API likewise supplies undated amounts. The daily statement index ends on 2025-12-12, the verification index on 2024-08-02 and the annual audit index on 2024-05-20. No cited source retrieved in this review supports the former assertion of an assets-and-liabilities statement for 2026-08-07 published on 2026-08-08. A generic daily-publication promise, undated balance display and historical BDO report do not establish a currently performed recurring whole-native-supply reconciliation. Reconciliation is therefore unknown, not measured absent. Known unbounded issuer powers and the original no-verified-prudential-supervision disposition remain; the derived annotation is unbounded-adverse. Original review start and every on-chain pin are preserved.",
       "reviewer": "OpenAI Codex SOL-IV regulated-issuer review; Kimi P2 control cohort dc-4 (lead dai-makerdao); Codex lane 1 control-plane identity resolution",
       "reviewedAt": "2026-08-27",
       "disposition": "scoreable",
@@ -242,6 +242,22 @@
         {
           "label": "MFSA Financial Services Register",
           "url": "https://fsr.mfsa.mt/"
+        },
+        {
+          "label": "STASIS reserve allocation API, undated amounts; accessed 2026-10-20",
+          "url": "https://api-site.stasis.net/api/bankCirculation/getAll"
+        },
+        {
+          "label": "STASIS daily statements, latest listed 2025-12-12; accessed 2026-10-20",
+          "url": "https://api-site.stasis.net/api/dailyStatement?offset=0&limit=5"
+        },
+        {
+          "label": "STASIS verification index, latest listed 2024-08-02; accessed 2026-10-20",
+          "url": "https://api-site.stasis.net/api/weeklyStatement?offset=0&limit=2"
+        },
+        {
+          "label": "STASIS annual audit index, latest listed 2024-05-20; accessed 2026-10-20",
+          "url": "https://api-site.stasis.net/api/monthlyStatement?offset=0&limit=2"
         }
       ]
     }

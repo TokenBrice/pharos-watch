@@ -27,7 +27,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "AUDC issues AUDD natively on every tracked chain (Stellar, Ethereum, Solana, XDC, Base, Hedera, Redbelly, XRPL). Current issuer controls include an Ethereum ProxyAdmin-owner Safe, Stellar and XRPL 3-of-7 signing arrangements, a Solana SPL multisig and a Hedera issuer contract. XRPL's master key is disabled, but an active SignerList preserves native issuance capability; the earlier locked-account conclusion is superseded. These tracked tokens are native issuer deployments, not third-party bridge representations.",
+    "summary": "AUDC issues AUDD natively on every tracked chain (Stellar, Ethereum, Solana, XDC, Base, Hedera, Redbelly, XRPL and Arc). Historical issuer-control observations include an Ethereum ProxyAdmin-owner Safe, Stellar and XRPL 3-of-7 signing arrangements, a Solana SPL multisig and a Hedera issuer contract. XRPL's master key is disabled, but an active SignerList preserves native issuance capability; the earlier locked-account conclusion is superseded. Arc identity was separately reviewed on 2026-10-20 against the issuer homepage, September report and explorer; its current controller remains unresolved. These tracked tokens are native issuer deployments, not third-party bridge representations.",
     "reviewedAt": "2026-07-20",
     "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-2 (lead usdc-circle)",
     "confidence": "verified",
@@ -254,6 +254,39 @@
           {
             "label": "AUDD FAQ (official Redbelly address)",
             "url": "https://www.audd.digital/faq/"
+          }
+        ]
+      },
+      {
+        "id": "arc:0xdec15d98d8c16d9ca2f8cc94ba4b88fe4f259393",
+        "destinationChain": "arc",
+        "contractAddress": "0xdec15d98d8c16d9ca2f8cc94ba4b88fe4f259393",
+        "protocol": "AUDC AUDD",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Identity review retrieved 2026-10-20: AUDC's homepage links this exact Arc Mainnet AUDD contract, corroborated by the September 30 report's ninth native deployment and September 16 Arc launch announcement. Arc explorer token metadata independently identifies AUDD with six decimals; the proxy endpoint identifies AdminUpgradeabilityProxy. This is issuer-native AUDD, not an external bridge representation. No exact current controller, signing threshold, supply share, upgrade permissions or complete execution scope is established by this identity review.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-20",
+        "sources": [
+          {
+            "label": "AUDD official homepage, exact Arc address (retrieved 2026-10-20)",
+            "url": "https://www.audd.digital/"
+          },
+          {
+            "label": "September 2026 AUDD reserve/liability AUP, pages 3-5 (retrieved 2026-10-20)",
+            "url": "https://www.audd.digital/wp-content/uploads/2026/10/AUDC-Agreed-upon-procedures-report-Sep26_.pdf"
+          },
+          {
+            "label": "Arc Mainnet AUDD token identity and six decimals (retrieved 2026-10-20)",
+            "url": "https://explorer.arc.io/api/v2/tokens/0xdec15d98d8c16d9ca2f8cc94ba4b88fe4f259393"
+          },
+          {
+            "label": "Arc Mainnet AUDD proxy identity (retrieved 2026-10-20)",
+            "url": "https://explorer.arc.io/api/v2/smart-contracts/0xdec15d98d8c16d9ca2f8cc94ba4b88fe4f259393"
           }
         ]
       }

@@ -8,7 +8,7 @@
     "governance": "centralized-dependent"
   },
   "collateral": "On-chain collateral and fixed-price issuance routes on Ethereum. The current issuer snapshot lists active mint markets for frxUSD, wstETH, WETH, rETH, sUSDe and syrupUSDC. Historical isolated borrow/mint markets and USDC/frxUSD peg-stability routes remain distinct mechanisms; current limits and fees require contract review.",
-  "pegMechanism": "Overcollateralized minting via isolated lending markets (mint and borrow); peg backstopped by a PSM enabling 1:1 USDC↔DUSD swaps at 0.20% fee (5M USDC cap); arbitrageurs exploit the PSM rate vs. market price to restore peg; all markets governed by ALTO token holder votes",
+  "pegMechanism": "Collateralized mint markets create new DUSD; borrow markets redistribute existing DUSD. The documented public USDC PSM quotes 1:1 before a 0.20% fee in either direction and a 5M-USDC exposure cap, with redemption limited by actual USDC inventory. An Owner Multisig controls parameter changes through a timelock; a separate emergency multisig can freeze swaps.",
   "mechanismArchetype": "cdp",
   "detailProvider": "coingecko",
   "geckoId": "alto-dusd",
@@ -36,6 +36,6 @@
   ],
   "collateralQuality": "exotic",
   "custodyModel": "onchain",
-  "governanceQuality": "dao-governance",
+  "governanceQuality": "multisig",
   "launchDate": "2025-12-10"
 }

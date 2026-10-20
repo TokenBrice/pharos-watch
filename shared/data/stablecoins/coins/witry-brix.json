@@ -75,7 +75,7 @@
     }
   ],
   "collateralQuality": "rwa",
-  "custodyModel": "institutional-regulated",
+  "custodyModel": "mixed",
   "governanceQuality": "wrapper",
   "yieldConfig": {
     "yieldSource": "Brix iTRY staking",

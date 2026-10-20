@@ -71,7 +71,7 @@
       }
     ],
     "segregation": "unknown",
-    "bankruptcyRemoteness": "none",
+    "bankruptcyRemoteness": "unknown",
     "rehypothecation": "permitted",
     "reviewedAt": "2026-07-20",
     "reviewer": "Kimi P2 reserve cohort rc-3 (lead usdd-tron-dao-reserve)",
@@ -90,6 +90,6 @@
         "url": "https://github.com/astherus-contract/ass-usdf-earn-contract/blob/752903309d775b12d6583c879d1f64db88e051ee/contracts/asUSDFEarn.sol"
       }
     ],
-    "uncertainty": "At the asUSDF layer there is no legal custodian or holder-claim structure: deposited USDF sits in the asUSDFEarn wrapper contract, whose admin (a 4-of-8 Safe acting through a six-hour timelock, verified at BSC blocks 110184782/110184820) can upgrade wrapper logic and whose ADMIN_ROLE can pause transfers. Aster documents that upstream USDT is transferred to Aster's Ceffu custodial account and deployed into delta-neutral positions, which is documented asset reuse rather than segregation, hence rehypothecation permitted at the upstream layer; Ceffu account terms, venue-level segregation, bankruptcy treatment, and provider shares are unpublished. asUSDF-to-USDF withdrawal is documented at T+1 hour (two hours); upstream USDF-to-USDT redemption takes 1-2 days standard and up to 7 days for large amounts per the FAQ."
+    "uncertainty": "Source-scoped correction researched 2026-10-20, preserving the 2026-07-20 review start: the cited FAQ, minting guide and wrapper code establish no enforceable holder-level bankruptcy treatment. The prior bankruptcyRemoteness none was inferred from absent legal documentation; unknown is the supported state, without favorable legal-protection credit. Deposited USDF sits in the asUSDFEarn wrapper contract; the historical BSC blocks 110184782/110184820 establish a six-hour upgrade timelock and ADMIN_ROLE pause capability. Upstream USDT is transferred to Aster's Ceffu account and deployed into delta-neutral positions, so documented upstream asset reuse remains rehypothecation permitted. Ceffu account terms, venue-level segregation, insolvency priority and provider shares remain unpublished. asUSDF-to-USDF withdrawal is documented at T+1 hour (two hours); upstream USDF-to-USDT processing is 1-2 days standard and up to seven days for large amounts, without a final-payout guarantee."
   }
 }

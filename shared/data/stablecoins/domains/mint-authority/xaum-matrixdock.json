@@ -2,7 +2,7 @@
   "id": "xaum-matrixdock",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-reconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "XAUm MToken minting is operator- or receipt-NFT-controlled and budget-limited by reserve/mint-budget accounting; the owner can change the operator. Ethereum and Sui State controls confirmed: owner EOA and operator verified on both chains.",
     "upgradeability": {
@@ -143,8 +143,8 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "periodic",
-    "supervision": "attestation-only",
+    "reconciliation": "unknown",
+    "supervision": "unknown",
     "review": {
       "sources": [
         {
@@ -160,11 +160,19 @@
           "url": "https://etherscan.io/address/0x2103e845c5e135493bb6c2a4f0b8651956ea8682"
         },
         {
-          "label": "Matrixdock July 2026 XAUm and XAGm reserve reconciliation",
+          "label": "Matrixdock July 2026 issuer-published XAUm and XAGm token comparison; physical audit does not reconcile liabilities",
           "url": "https://www.prnewswire.com/apac/news-releases/reserve-transparency-built-through-continuous-operation-matrixdock-marks-two-years-of-independent-verification-302829449.html"
+        },
+        {
+          "label": "Bureau Veritas certificate SGMSG-26-00478, July 17, 2026; June 30 physical inventory only, re-read 2026-10-20",
+          "url": "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2FVaFEA9CzGKo22HcojuSO%2FMatrixdock%20Gold%20Bureau%20Veritas%20Audit%20Jul%202026.pdf?alt=media"
+        },
+        {
+          "label": "XAUm documented global and local mint-budget design, retrieved 2026-10-20; not a current whole-liability reconciliation",
+          "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/smart-contract/por-and-mint-budget.md"
         }
       ],
-      "evidence": "Historical Ethereum block 25295020 and Sui observations remain in the control evidence. At Ethereum block 26095797 on 2026-10-01, implementation 0x3194e478b6d3ebee969470295f271727b62adf7b, owner 0xb573c94260582f0715fc477928b04a2708dd36d7 (zero code), operator 0x89bb23e4a82e04a253d9f11767fedf321c127799, NFT 0x67dcc9c33363cc0e650738528fe4fef1d658c7ee and mintBudget zero were confirmed. delay() returned 14,400 seconds; verified source applies that delay to mint requests, operator/feed replacement and UUPS upgrades. increaseMintBudget is operator-only and checks the reserve feed; owner authority to replace the operator/feed/implementation remains. Both reserveFeed and fallbackFeed currently point to 0xb2624f7e72788f1ebf1c7877c646732957bbf72e. Bureau Veritas inspects physical inventory; the July token comparison is issuer-published, not an independent token-liability reconciliation.",
+      "evidence": "Historical Ethereum block 25295020 and Sui observations remain in the control evidence. At Ethereum block 26095797 on 2026-10-01, implementation 0x3194e478b6d3ebee969470295f271727b62adf7b, owner 0xb573c94260582f0715fc477928b04a2708dd36d7 (zero code), operator 0x89bb23e4a82e04a253d9f11767fedf321c127799, NFT 0x67dcc9c33363cc0e650738528fe4fef1d658c7ee and mintBudget zero were confirmed. delay() returned 14,400 seconds; verified source applies that delay to mint requests, operator/feed replacement and UUPS upgrades. increaseMintBudget is operator-only and checks the reserve feed; owner authority to replace the operator/feed/implementation remains. Both reserveFeed and fallbackFeed at that historical pin point to 0xb2624f7e72788f1ebf1c7877c646732957bbf72e. ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required: documentary re-read 2026-10-20 found the cited July 21 issuer release supplies its own token comparison, while Bureau Veritas certificate SGMSG-26-00478 inspects only the June 30 physical Parcel Ownership List and limits findings to the time and place of inspection. Neither source establishes recurring all-liability reconciliation or supervisory issuance-process assurance. Withdraw the unsupported periodic and attestation-only labels to unknown, consistently with the independently reviewed XAGm scope; do not assert that reconciliation or supervision is absent. The documented global/local mint-budget design does not establish actual complete current cross-chain accounting or an immutable collateral gate. Known economically unbounded operator, budget-administrator and upgrade powers remain adverse. Original aggregate review start and every historical control pin are preserved; no current on-chain state is recertified.",
       "reviewer": "Sol curation pass 2026-10-01 (CurA47sGHO)",
       "reviewedAt": "2026-10-01"
     }

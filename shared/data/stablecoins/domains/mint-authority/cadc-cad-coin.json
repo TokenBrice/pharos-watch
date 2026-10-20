@@ -2,7 +2,7 @@
   "id": "cadc-cad-coin",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-reconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "CADC is issued by Loon through issuer-controlled owner/masterMinter Safes. All five EVM tokens are upgradeable legacy ZeppelinOS FiatTokenProxy deployments: Ethereum, Polygon, Arbitrum, and Base share a 1-of-1 proxy-admin Safe, while Linea is immediately upgradeable by a single EOA. The Solana SPL mint has a separate direct-minter control for its live mint authority.",
     "upgradeability": {
@@ -348,13 +348,25 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "periodic",
-    "supervision": "attestation-only",
+    "reconciliation": "unknown",
+    "supervision": "unknown",
     "review": {
-      "evidence": "Sourcify verifies all five EVM deployments as FiatTokenProxy/ZeppelinOSProxy contracts whose AdminUpgradeabilityProxy path exposes upgradeTo and upgradeToAndCall. At Ethereum block 25531348, Polygon block 90221803, Arbitrum block 483787112, Base block 48624176, and Linea block 31369755, the legacy implementation slot resolved in contract order to 0x0c9b0169..., 0x82d095da..., 0x30828472..., 0xdd022586..., and 0x8056da37.... The legacy admin slot resolved to 0x616c8314... on the first four chains and 0xa0f5c8e8... on Linea. The shared-address admin is a 1-of-1 Safe on each of the first four chains with sole owner 0x568b35d8..., no modules, and no guard; the Linea admin is an EOA. The previously reviewed logic-level owner/masterMinter Safes remain separate controls. Solana mint 9ewjJpmD... remains owned by the SPL Token program with its distinct mint and freeze authorities and is now explicitly represented by the Solana direct-minter control; it is not included in the EVM proxy arrays. Mint-tier review (2026-07-15): HDCPA Professional Corporation independently attests CADC reserves monthly; the latest archive entry covers June 2026 and was uploaded 2026-07-06, reconciling CADC supply to CAD held at ATB Financial. FINTRAC's registry match for Loon Finance Inc. is an AML/MSB registration, not prudential stablecoin-issuer supervision. Economic-posture fields reviewed 2026-08-15: the issuer backend and owner Safes can raise mint allowances, while a 1-of-1 Safe or EOA can immediately replace proxy logic; monthly independent reserve reconciliation exists without prudential issuer supervision.",
+      "evidence": "Sourcify verifies all five EVM deployments as FiatTokenProxy/ZeppelinOSProxy contracts whose AdminUpgradeabilityProxy path exposes upgradeTo and upgradeToAndCall. At Ethereum block 25531348, Polygon block 90221803, Arbitrum block 483787112, Base block 48624176, and Linea block 31369755, the legacy implementation slot resolved in contract order to 0x0c9b0169..., 0x82d095da..., 0x30828472..., 0xdd022586..., and 0x8056da37.... The legacy admin slot resolved to 0x616c8314... on the first four chains and 0xa0f5c8e8... on Linea. The shared-address admin is a 1-of-1 Safe on each of the first four chains with sole owner 0x568b35d8..., no modules, and no guard; the Linea admin is an EOA. The previously reviewed logic-level owner/masterMinter Safes remain separate controls. Solana mint 9ewjJpmD... remains owned by the SPL Token program with its distinct mint and freeze authorities and is now explicitly represented by the Solana direct-minter control; it is not included in the EVM proxy arrays. Mint-tier review (2026-07-15): HDCPA Professional Corporation independently attests CADC reserves monthly; the latest archive entry covers June 2026 and was uploaded 2026-07-06, reconciling CADC supply to CAD held at ATB Financial. FINTRAC's registry match for Loon Finance Inc. is an AML/MSB registration, not prudential stablecoin-issuer supervision. Economic-posture fields reviewed 2026-08-15: the issuer backend and owner Safes can raise mint allowances, while a 1-of-1 Safe or EOA can immediately replace proxy logic; monthly independent reserve reconciliation exists without prudential issuer supervision. ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required. Current evidence retrieved 2026-10-20 supersedes only those favorable process claims: the newest API object CADC_Bank_Attestation_Sep_2026.pdf was uploaded 2026-10-20T17:58:10.609Z and visually shows an ATB bank confirmation dated September 30 for PayTrie AB Inc's Business Growth Plus savings balance of CAD 1,824,204.09. It has no CADC token-liability denominator, reserve-to-supply comparison, named requesting accountant, accountant opinion or recurring whole-book reconciliation procedure. The API's HDCPA metadata and Loon's monthly-attestation marketing/defined intended reports do not supply that missing examination or join; the assets-only August report was already correctly identified in catalog metadata. Withdraw periodic reconciliation and attestation-only supervision to unknown. Searched current issuer transparency, attestation API and latest PDF, support centre and February 2026 governing terms; none establishes an admitted current whole-CADC liability reconciliation. Preserve original August 16 review start, every historical authority pin and unbounded mint/upgrade semantics. This does not assert measured non-reconciliation, insolvency or reserve shortfall.",
       "reviewer": "Codex SOL-V mint-tier research; Kimi P2 control cohort dc-7 (lead pyusd-paypal); Sol economic-posture batch 2026-08-15",
       "reviewedAt": "2026-08-16",
       "sources": [
+        {
+          "label": "September 30 ATB bank confirmation, retrieved and visually reviewed 2026-10-20; CADC_Bank_Attestation_Sep_2026.pdf",
+          "url": "https://loon.finance/api/attestations"
+        },
+        {
+          "label": "Loon governing terms, February 2026 version; retrieved 2026-10-20",
+          "url": "https://loon.finance/terms-of-service/"
+        },
+        {
+          "label": "Loon current reserve and attestation assertions; retrieved 2026-10-20",
+          "url": "https://loon.finance/support-centre/"
+        },
         {
           "label": "Loon Finance",
           "url": "https://loon.finance/"

@@ -18,7 +18,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "USDY has six issuer-native liability surfaces on Ethereum, Plume, Sui, Aptos, Stellar, and Noble. Arbitrum, Mantle, Sei, BNB Chain, and Tempo are LayerZero burn/mint representations sourced from Ethereum; Solana is also a LayerZero bridge representation, with a 1-of-2 SPL mint multisig whose plain system-owned co-signer retains a token-level mint bypass that remains scoreable here. Osmosis, Mantra, and Injective are Noble-sourced IBC vouchers with reviewed escrow matches. DefiLlama also reports trace Penumbra and Glue labels (~$500 combined) that have no canonical chain mapping and remain an accepted bounded pool.",
+    "summary": "USDY has six issuer-native liability surfaces on Ethereum, Plume, Sui, Aptos, Stellar, and Noble. Arbitrum, Mantle, Sei, BNB Chain, and Tempo are LayerZero burn/mint representations sourced from Ethereum; Solana is also a LayerZero bridge representation with a historically observed 1-of-2 SPL mint multisig. Its BB7 authority is off-curve, so System ownership does not establish an independently signing key or a token-level bypass; its exact controlling-program reach remains unresolved. Osmosis, Mantra, and Injective are Noble-sourced IBC vouchers with reviewed escrow matches. DefiLlama also reports trace Penumbra and Glue labels (~$500 combined) that have no canonical chain mapping and remain an accepted bounded pool.",
     "reviewedAt": "2026-08-16",
     "reviewer": "OpenAI Codex C01 bridge-boundary review",
     "confidence": "verified",
@@ -237,7 +237,7 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Bridge representation verified at Solana slot 439719046: the SPL mint authority is 1-of-2 multisig 8n2uiRUd1A9NN78PKESkJe6k6zMqtKCZh3MrK1j9qkB1 with signers 7YNReenG6AXgVUfmSizt6hoVXrznS4zDdgCj1UTLJ2S3 (Ondo's documented Solana OFT adapter) and BB7W8gZouRNRGyr8Djx8zyoRcgckrDXkKiMjNMtPwaAQ (plain System-owned key). LayerZero route validation is represented by the first signer, while BB7 retains a token-level mint bypass outside the LayerZero route; both authorities are reviewed in bridgeRouteRisk.controls[1].",
+        "reviewNote": "Bridge representation verified at Solana slot 439719046: the SPL mint authority is 1-of-2 multisig 8n2uiRUd1A9NN78PKESkJe6k6zMqtKCZh3MrK1j9qkB1 with signers 7YNReenG6AXgVUfmSizt6hoVXrznS4zDdgCj1UTLJ2S3 (Ondo's documented Solana OFT adapter) and BB7W8gZouRNRGyr8Djx8zyoRcgckrDXkKiMjNMtPwaAQ. Source-scope correction verified 2026-10-20: BB7 is off the Ed25519 curve and cannot independently sign with a private key. Its reported System ownership does not prove EOA authority or a route-bypassing mint path. Exact controlling-program and invocation reach remain unresolved in bridgeRouteRisk.controls[1]; the original historical slot and 1-of-2 observation are retained.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-08-16",
         "sources": [
@@ -659,13 +659,10 @@
         "modulesOrGuardsStatus": "not-applicable",
         "routeChecks": {
           "trustedPeerOrRemote": "Signer 7YNReenG6AXgVUfmSizt6hoVXrznS4zDdgCj1UTLJ2S3 is documented as Ondo's Solana OFT adapter; the second signer BB7W8gZouRNRGyr8Djx8zyoRcgckrDXkKiMjNMtPwaAQ is not proven route-bound.",
-          "caps": "No numeric cap was verified. Because BB7W8gZouRNRGyr8Djx8zyoRcgckrDXkKiMjNMtPwaAQ is a plain System-owned key, it can participate in SPL Token Program minting outside LayerZero route validation.",
-          "pausersAdminsUpgraders": "The SPL mint authority is the 1-of-2 multisig 8n2uiRUd1A9NN78PKESkJe6k6zMqtKCZh3MrK1j9qkB1; custody and operational purpose of the plain system-owned co-signer remain unresolved."
+          "caps": "No numeric cap was verified. BB7W8gZouRNRGyr8Djx8zyoRcgckrDXkKiMjNMtPwaAQ is off-curve; neither System ownership nor its presence in the SPL multisig proves an independently signing key or an executable mint path outside LayerZero. Exact program-derived signing reach remains unresolved.",
+          "pausersAdminsUpgraders": "The historically observed SPL mint authority is the 1-of-2 multisig 8n2uiRUd1A9NN78PKESkJe6k6zMqtKCZh3MrK1j9qkB1; the second off-curve authority's exact controlling program, invocation scope, custody and operational purpose remain unresolved."
         },
         "canRaiseCap": true,
-        "bypassSurfaces": [
-          "plain system-owned signer BB7W8gZouRNRGyr8Djx8zyoRcgckrDXkKiMjNMtPwaAQ can mint at SPL Token Program level outside LayerZero"
-        ],
         "observedAt": "2026-08-16",
         "observedBlock": 439719046,
         "sources": [
@@ -684,9 +681,13 @@
           {
             "label": "Ondo Token Bridge docs",
             "url": "https://docs.ondo.finance/tools/ondo-bridge"
+          },
+          {
+            "label": "Solana primary PDA signing semantics; off-curve authorities have no private key (source-scope correction verified 2026-10-20)",
+            "url": "https://solana.com/docs/core/pda"
           }
         ],
-        "evidence": "At Solana slot 439719046, the USDY SPL mint authority was 1-of-2 multisig 8n2uiRUd1A9NN78PKESkJe6k6zMqtKCZh3MrK1j9qkB1 with signers 7YNReenG6AXgVUfmSizt6hoVXrznS4zDdgCj1UTLJ2S3 and BB7W8gZouRNRGyr8Djx8zyoRcgckrDXkKiMjNMtPwaAQ. The first is Ondo's documented Solana OFT adapter; BB7 is a plain System-owned key and remains an adverse, uncapped token-level mint bypass whose custody and purpose were not established."
+        "evidence": "At Solana slot 439719046, the USDY SPL mint authority was 1-of-2 multisig 8n2uiRUd1A9NN78PKESkJe6k6zMqtKCZh3MrK1j9qkB1 with signers 7YNReenG6AXgVUfmSizt6hoVXrznS4zDdgCj1UTLJ2S3 and BB7W8gZouRNRGyr8Djx8zyoRcgckrDXkKiMjNMtPwaAQ. The first is Ondo's documented Solana OFT adapter. ORCHESTRATOR-AUTHORIZED adverse-pin correction, owner review required: the prior assertion that BB7 was a plain independently signing key with a proven uncapped SPL mint bypass was inferred from System ownership and is withdrawn. Decoding this exact 32-byte address and testing Edwards25519 point decompression establishes that it is off-curve; Solana's primary PDA documentation states that no private key exists for such an authority. The current explorer's Squad Vault label is only a research lead, not a verified Squads parent, quorum or execution certificate. The exact controlling-program invocation path remains unresolved. Original observation date, slot, multisig threshold, cap-raising flag, failure-domain identities and unresolved incident/custody facts remain unchanged; no new favorable governance, cap, delay or incident claim is made."
       }
     ]
   }

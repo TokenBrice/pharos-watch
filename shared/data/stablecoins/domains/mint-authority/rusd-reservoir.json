@@ -2,7 +2,7 @@
   "id": "rusd-reservoir",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-reconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "rUSD issuance runs through Reservoir PSMs and the Credit Enforcer. Both the PSM and Credit Enforcer share the same DEFAULT_ADMIN_ROLE holder: Reservoir EOA 0xb7570e32.",
     "upgradeability": {
@@ -112,15 +112,27 @@
         {
           "label": "Reservoir GitHub",
           "url": "https://github.com/reservoir-protocol/reservoir"
+        },
+        {
+          "label": "Reservoir proof-of-reserves asset and liability scope",
+          "url": "https://docs.reservoir.xyz/products/proof-of-reserves"
+        },
+        {
+          "label": "Reservoir raw balance sheet; retrieved 2026-10-20 without an upstream observation clock",
+          "url": "https://fireworks-git-master-fortunafi.vercel.app/api/reserves/raw"
+        },
+        {
+          "label": "Reservoir Terms of Service; reserve-sale redemption delays",
+          "url": "https://docs.reservoir.xyz/security-and-compliance/terms-of-service"
         }
       ],
-      "evidence": "At Ethereum block 25295029: PSM and Credit Enforcer DEFAULT_ADMIN_ROLE confirmed as EOA 0xb7570e32 via hasRole() and RoleGranted/RoleRevoked log scan on Blockscout. Both contracts are non-proxy AccessControl deployments. All mint-capable surfaces confirmed. Re-verified at Ethereum block 25575157 on 2026-07-20: the Reservoir USDC Peg Stability Module 0x4809010926aec940b550D34a46A52739f996D75D and the Credit Enforcer 0x04716DB62C085D9e08050fcF6F7D775A03d07720 both still return hasRole(DEFAULT_ADMIN_ROLE, 0xb7570e32ded63b25163369d5eb4d8e89e70e5602) = true, both still read a zero EIP-1967 implementation slot confirming they are non-proxy deployments, and eth_getCode on the admin is still empty, confirming a codeless externally owned account. Economic-control adjudication: a single unprotected EOA administers both the PSM and the Credit Enforcer that sets the issuance ceiling, with no multisig, timelock, or independent bound, so the mint cap is economically unbounded. Reservoir publishes a real-time reserves view rather than a periodic report, so reconciliation cadence is continuous (the self attestor tier is already recorded separately under proofOfReserves), and no financial regulator supervises Reservoir.",
+      "evidence": "At Ethereum block 25295029, PSM and Credit Enforcer DEFAULT_ADMIN_ROLE were confirmed as EOA 0xb7570e32 through hasRole() and RoleGranted/RoleRevoked logs. Both contracts are non-proxy AccessControl deployments. At Ethereum block 25575157 on 2026-07-20, the USDC PSM 0x4809010926aec940b550D34a46A52739f996D75D and Credit Enforcer 0x04716DB62C085D9e08050fcF6F7D775A03d07720 still returned that admin role, their EIP-1967 implementation slots were zero and the admin had empty code. The single unprotected EOA administers the PSM and Credit Enforcer issuance ceiling without an independent economic bound. Source-scope correction researched 2026-10-20: the prior inference that a real-time reserves view establishes continuous reconciliation is withdrawn. The current issuer API lists assets and aggregate rUSD, srUSD and wsrUSD liabilities, but supplies no upstream as-of clock or complete exact-deployment escrow/in-flight liability reconciliation. The product documentation describes a shared balance sheet rather than an independently established recurring whole-token accounting process. Reconciliation is unknown, not a measured finding that reconciliation does not exist. The previous supervision none annotation lacked positive scoped absence evidence; current issuer reserve, audit and legal surfaces do not establish a token-specific supervisory regime, so supervision is unknown. Original review start and control pins are retained.",
       "reviewer": "Claude Phase 0c continuation; Claude V9 Phase 3 curation lane cur-14 (economic-control fields, 2026-07-20)",
       "reviewedAt": "2026-07-20",
       "disposition": "scoreable"
     },
     "economicCapSemantics": "unbounded",
-    "reconciliation": "continuous",
-    "supervision": "none"
+    "reconciliation": "unknown",
+    "supervision": "unknown"
   }
 }

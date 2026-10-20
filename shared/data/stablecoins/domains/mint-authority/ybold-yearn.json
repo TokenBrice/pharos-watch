@@ -2,9 +2,9 @@
   "id": "ybold-yearn",
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "none-resolved",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
-    "summary": "yBOLD is a Yearn vault share over BOLD; vault shares mint against deposited BOLD while base BOLD mint authority is inherited from the reviewed Liquity BOLD profile.",
+    "summary": "yBOLD deposits are BOLD-funded, but its fixed Yearn V3 implementation also issues accountant fee shares. Authorized removal from the RoleManager and acceptance by its fixed chad recipient exposes arbitrary role assignment and accountant replacement; repeated uncapped fee reports can dilute local shares. Base BOLD issuance remains inherited.",
     "inheritedFrom": "bold-liquity",
     "controls": [
       {
@@ -16,7 +16,7 @@
         "directMintAbility": "none",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "Shares are minted only against deposited BOLD and the fixed clone implementation cannot be replaced; wrapper minting does not create base BOLD supply.",
+        "capDescription": "Ordinary deposit/mint shares require BOLD and the fixed clone implementation cannot be replaced. This wrapper path does not create base BOLD; the separate mutable accountant authorization path is reviewed independently.",
         "sources": [
           {
             "label": "Yearn yBOLD docs",
@@ -34,6 +34,41 @@
         "evidence": "At Ethereum block 25573280, asset() returned BOLD 0x6440f144b7e50D6a8439336510312d2F54beB01D and apiVersion() returned 3.0.4. The yBOLD runtime was the 45-byte EIP-1167 minimal-proxy form with fixed implementation 0xd8063123bba3b480569244ae66bfe72b6c84b00d; that implementation had direct code and zero EIP-1967 implementation, admin, and beacon slots.",
         "observedAt": "2026-07-20",
         "observedBlock": 25573280
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xb3bd6b2e61753c311efbcf0111f75d29706d9a41",
+        "deploymentRefs": [
+          "ethereum:0x9f4330700a36b29952869fac9b33f45eedd8a3d8"
+        ],
+        "label": "Yearn yBOLD role-manager removal and accountant authorization",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-20",
+        "observedBlock": 26236749,
+        "capDescription": "Current DADDY/BRAIN role masks exclude ACCOUNTANT_MANAGER, but BRAIN can removeVault and transfer the vault role-manager position to fixed chad. That recipient can accept, assign ACCOUNTANT_MANAGER and REPORTING_MANAGER, and install an accountant returning arbitrary fee amounts. The vault has no immutable fee ceiling; repeated reports can issue local fee shares without matching new BOLD.",
+        "sources": [
+          {
+            "label": "Exact Yearn V3.0.4 implementation verified source (retrieved 2026-10-20)",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd8063123bba3b480569244ae66bfe72b6c84b00d"
+          },
+          {
+            "label": "Current RoleManager removal and fixed chad transfer source (retrieved 2026-10-20)",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb3bd6b2e61753c311efbcf0111f75d29706d9a41"
+          },
+          {
+            "label": "Pinned authority observation block 26236749",
+            "url": "https://etherscan.io/block/26236749"
+          },
+          {
+            "label": "Current yBOLD accountant: gain-only fee implementation (retrieved 2026-10-20)",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x53acebb9470cfc9d231075154f5dcf1586a4c6fa"
+          }
+        ],
+        "evidence": "ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required. At Ethereum block 26236749, hash 0x075b737aa6395c4c52dfa8e5e0665b1735fea7c97981efb726bc40a145247967, timestamp 2026-10-20T22:20:59Z, https://ethereum-rpc.publicnode.com pinned reads return role_manager 0xb3bd6b2e61753c311efbcf0111f75d29706d9a41, accountant 0x53acebb9470cfc9d231075154f5dcf1586a4c6fa and apiVersion 3.0.4. RoleManager getBrain is 0x16388463d60ffe0661cf7f1f31a7d658ac790ff7 with actual vault mask 14706; getDaddy and chad are 0xfeb4acf3df3cdea7399794d0869ef76a6efaff52 with actual mask 16374. Neither mask contains ACCOUNTANT_MANAGER. The verified RoleManager.removeVault BRAIN path nevertheless transfers role management to chad; the vault accept_role_manager and set_role paths then permit accountant/reporting authorization. _process_report accepts accountant-returned total_fees, computes fee shares and issues them to the accountant without a cumulative source-enforced fee ceiling. The currently installed accountant charges only actual gain and is not asserted malicious; mutability of its replacement path is the adverse fact, not a measured exploit. Header hash matched before and after all pinned reads; historical July observations are retained."
       }
     ],
     "upgradeability": {
@@ -59,7 +94,7 @@
         }
       ]
     },
-    "economicCapSemantics": "bounded",
+    "economicCapSemantics": "unbounded",
     "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
@@ -71,9 +106,21 @@
         {
           "label": "Existing BOLD mint authority review",
           "url": "https://etherscan.io/address/0x6440f144b7e50D6a8439336510312d2F54beB01D#code"
+        },
+        {
+          "label": "Yearn V3.0.4 fee-share implementation (retrieved 2026-10-20)",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd8063123bba3b480569244ae66bfe72b6c84b00d"
+        },
+        {
+          "label": "Yearn RoleManager removal and chad transfer source (retrieved 2026-10-20)",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb3bd6b2e61753c311efbcf0111f75d29706d9a41"
+        },
+        {
+          "label": "Pinned local authority observation block 26236749",
+          "url": "https://etherscan.io/block/26236749"
         }
       ],
-      "evidence": "At Ethereum block 25573280, yBOLD asset() returned the reviewed BOLD token and apiVersion() returned 3.0.4. The token is a 45-byte EIP-1167 clone fixed to Yearn V3 Vault implementation 0xd8063123bba3b480569244ae66bfe72b6c84b00d; the implementation's EIP-1967 implementation, admin, and beacon slots were zero. yBOLD shares are bounded by deposited BOLD and cannot create base BOLD supply. No named prudential supervisor applies to the wrapper.",
+      "evidence": "At Ethereum block 25573280, yBOLD asset() returned the reviewed BOLD token and apiVersion() returned 3.0.4. The token is a 45-byte EIP-1167 clone fixed to Yearn V3 Vault implementation 0xd8063123bba3b480569244ae66bfe72b6c84b00d; the implementation's EIP-1967 implementation, admin, and beacon slots were zero. The original review stated shares were bounded by deposited BOLD; base BOLD supply cannot be created locally and no named prudential supervisor applies. ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required (2026-10-20): immutable bytecode does not establish deposit-only share issuance. Exact implementation _process_report issues accountant fee shares. Current pinned block 26236749 establishes the mutable RoleManager removal-to-chad path described in the separate native minter-admin control; accepting role management permits arbitrary accountant/reporting roles and repeated local dilution without new BOLD. Current gain-only accountant behavior is not an immutable ceiling. Original July review start and pins are preserved; this is a source-supported authority correction, not an allegation of exploitation.",
       "reviewer": "P2 mint-free cohort",
       "reviewedAt": "2026-07-20",
       "disposition": "scoreable"

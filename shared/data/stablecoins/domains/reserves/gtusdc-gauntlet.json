@@ -8,8 +8,8 @@
       "risk": "medium",
       "coinId": "usdc-circle",
       "depType": "wrapper",
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "Circle Internet Financial, LLC and Circle Internet Financial Europe SAS (USDC issuers)",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Gauntlet-curated Morpho lending markets and their borrowers",
       "riskFactors": [
         "credit",
         "liquidity",
@@ -38,11 +38,19 @@
         "url": "https://docs.morpho.org/curate/"
       },
       {
+        "label": "Morpho liquidity curation: V1 allocations are lender positions in variable-rate markets; retrieved 2026-10-20",
+        "url": "https://docs.morpho.org/curate/concepts/liquidity.md"
+      },
+      {
+        "label": "Exact vault indexed state, block 26236794: total assets exceed withdrawable assets; retrieved 2026-10-20",
+        "url": "https://api.morpho.org/v0/vaults-v1/1:0xdd0f28e19c1780eb6396170735d45153d261490d/state"
+      },
+      {
         "label": "USDC Reserve Report May 2026: legal issuer entities (fetched 2026-10-01)",
         "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/USDCAttestationReports/2026/2026%20USDC_Examination%20Report%20May%2026.pdf"
       }
     ],
-    "rationale": "The official Morpho vault page identifies USDC as the sole deposit asset and describes Gauntlet's allocation across curated lending markets. The reserve envelope is therefore one 100% USDC dependency; market allocation and available withdrawal liquidity remain dynamic.",
+    "rationale": "The official Morpho vault page identifies USDC as the sole deposit asset and describes Gauntlet's allocation across curated lending markets. The reserve envelope remains one 100% USDC denomination dependency; market allocation and available withdrawal liquidity remain dynamic. ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required (2026-10-20): the exact :deployed source key represents claims on Morpho lending markets, not idle USDC held in the vault. Correct assetClass stablecoin to protocol-position and the immediate obligor to those markets and borrowers, matching the source-described instrument and the existing gtUSDCp/gtUSDTp treatment. Current issuer-indexed state at block 26236794 reports totalAssets 23798175929309 and withdrawableAssets 21839336279050 raw USDC; it supplies no full-book stressed realization deadline. No allocation, review start, liquidity horizon, parent dependency, independent assurance or custody protection is promoted.",
     "compositionBasis": "Morpho vault asset and Gauntlet curation disclosures",
     "scope": "full-composition",
     "knownUnknownExposure": "The sole tracked dependency is identified, but the current Morpho market allocation and available liquidity change over time.",

@@ -14,7 +14,7 @@
         "smart-contract",
         "concentration"
       ],
-      "liquidityHorizon": "immediate"
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
@@ -45,9 +45,13 @@
       {
         "label": "Pinned Nereus DegenBox strategy and master-contract permission source",
         "url": "https://raw.githubusercontent.com/nereusfinance/nereus-stablecoin-core/e75e91b072a9d2346503383aafa2d40abc7ea582/contracts/DegenBox.sol"
+      },
+      {
+        "label": "Pinned Nereus Cauldron withdrawal and approved-liquidator source, retrieved 2026-10-20",
+        "url": "https://raw.githubusercontent.com/nereusfinance/nereus-stablecoin-core/e75e91b072a9d2346503383aafa2d40abc7ea582/contracts/CauldronV2.sol"
       }
     ],
-    "rationale": "Write-time re-open 2026-08-08: Nereus still describes NXUSD as an overcollateralized borrow against crypto collateral in its Avalanche and Polygon lending markets. docs.nereus.finance now redirects to the marketing landing page, and neither the landing page nor the pinned GitHub deployment manifest publishes a reconciled, dated per-market collateral inventory or weights. The envelope therefore remains one aggregate classified basket rather than invented weights. The curated-validated adapter probes live token supply and carries this reviewed composition into runtime scoring. Sol curation campaign 2026-10-09 (Lane39Nereus), reviewed 2026-10-09T10:36:34Z: the issuer landing page and redirected docs still provide product links and expressly disclaim completeness/currentness. The functioning NXUSD interface exposes selected market TVL, borrowed and available amounts, but those figures do not establish an exhaustive common-clock, USD-valued reserve-to-liability inventory across deployments. The pinned deployment repository is a technical deployment inventory, not a current financial composition. No percentages, compositionAsOf, prior review date, financial assurance or custody claims are refreshed by this negative disclosure review; its exact reserve-composition cause is recorded separately in the campaign fragment.",
+    "rationale": "Write-time re-open 2026-08-08: Nereus still describes NXUSD as an overcollateralized borrow against crypto collateral in its Avalanche and Polygon lending markets. docs.nereus.finance now redirects to the marketing landing page, and neither the landing page nor the pinned GitHub deployment manifest publishes a reconciled, dated per-market collateral inventory or weights. The envelope therefore remains one aggregate classified basket rather than invented weights. The curated-validated adapter probes live token supply and carries this reviewed composition into runtime scoring. Sol curation campaign 2026-10-09 (Lane39Nereus), reviewed 2026-10-09T10:36:34Z: the issuer landing page and redirected docs still provide product links and expressly disclaim completeness/currentness. The functioning NXUSD interface exposes selected market TVL, borrowed and available amounts, but those figures do not establish an exhaustive common-clock, USD-valued reserve-to-liability inventory across deployments. The pinned deployment repository is a technical deployment inventory, not a current financial composition. No percentages, compositionAsOf, prior review date, financial assurance or custody claims are refreshed by this negative disclosure review; its exact reserve-composition cause is recorded separately in the campaign fragment. Source-scope correction researched 2026-10-20 by FD09: the aggregate basket's former immediate liquidity horizon had no whole-position realization evidence. CauldronV2.removeCollateral subtracts the caller's posted shares and requires solvency, and liquidate requires liquidatorManager approval; DegenBox conversion and underlying receipt realization remain separate. Current marketing and technical inventory do not establish a maximum realization time for all collateral across chains, so liquidityHorizon is unknown. Original review and composition dates are preserved.",
     "compositionBasis": "Nereus protocol documentation; per-market collateral weights are undisclosed",
     "compositionAsOf": "2026-08-08",
     "scope": "full-composition",

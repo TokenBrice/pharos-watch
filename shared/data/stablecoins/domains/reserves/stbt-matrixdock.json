@@ -77,12 +77,16 @@
       {
         "label": "Ethereum reserve feed and document roster pin, block 26197400, 2026-10-15T10:45:11Z",
         "url": "https://api-ethereum-mainnet.n.dwellir.com"
+      },
+      {
+        "label": "STBT Daily Asset Statement 2026-10-16, recovered from the 818-document roster at Ethereum block 26235000; SHA-256 84e6b34119db3e19e2505885abb0687a49598462b03df6dd7eb7ccc45f4bc502; reviewed 2026-10-20",
+        "url": "https://app.matrixdock.com/bond/anon/website/api/v1/doc-download/8V2Lm3"
       }
     ],
     "rationale": "Issuer dashboard and stats API retrieved 2026-10-15 attribute 95.24% of STBT to Treasury bills, 2.68% to USTB and 2.08% to BUIDL. These are the published rounded composition-of-STBT liability-allocation weights, not the separately published gross-reserve percentages. Surplus USTB and bank cash are not assigned fabricated holder weights. The October 8 statement identifies USTB as the Invesco Short Duration US Government Securities Fund on the Superstate platform. These undated dashboard weights do not close the common-clock reserve-composition gap.",
     "compositionBasis": "Undated rounded issuer dashboard and stats API composition-of-STBT column, retrieved 2026-10-15; no reserve observation date inferred",
     "scope": "full-composition",
-    "knownUnknownExposure": "The October 8 Daily Asset Statement originally recovered at Ethereum block 26154601 remains the newest document in the pinned 817-entry roster at block 26197400 (2026-10-15T10:45:11Z; hash 0xb6202c5ef87a0002783213622fc438e10b9d7d083afdc407e06945a2d16b2a74). A fresh download still matches on-chain SHA-256 c05e73d1e17d03907bca9de23e9057a1d6b27d9dd48932f2ad42b5dbd8baa80e. Treasury holdings and Fidelity sweep are dated October 8; bank cash is dated October 9; BUIDL/USTB screenshots are undated. Gross disclosed rows total $23,811,887.72. At the fresh pin the issuer feed remains $23,805,202.46, round 193 last updated 2026-10-09T11:30:47Z, still $6,685.26 below the disclosed row sum, exactly the Fidelity sweep amount. No source reconciles that exclusion or establishes a common-close whole-book denominator. Updated dashboard liability-allocation weights remain undated and distinct from gross reserves. The retained partial observation is not date-bumped; no compositionAsOf or independent reserve-to-liability assurance is inferred.",
+    "knownUnknownExposure": "The retained October 8 partial observation remains historical. Source recovery on 2026-10-20 found 818 on-chain documents at Ethereum block 26235000 (2026-10-20T16:29:47Z; hash 0x765073d1dc62c2afdd6ea04101782546a26c62333b8ac413b2a4f733024fffa2). The newest Daily_Asset_Statement_261016.pdf resolves to URI 8V2Lm3, last modified 2026-10-17T07:14:11Z; downloaded SHA-256 84e6b34119db3e19e2505885abb0687a49598462b03df6dd7eb7ccc45f4bc502 exactly matches getDocument. Treasury holdings and Fidelity sweep are dated October 16; bank cash is dated October 17; BUIDL/USTB screenshots are undated. Gross disclosed rows total $23,755,993.50, versus pinned getLatestReserve $23,748,940.72, a $7,052.78 difference exactly equal to the sweep balances. The statement warns of Treasury valuation/NAV timing differences but does not identify sweep exclusion or reconcile a common-close whole book. Current dashboard liability weights 95.26% Treasury bills, 2.66% USTB and 2.08% BUIDL remain undated and distinct from gross reserves. Both dated partial observations retain null wholeAssetDenominator; no compositionAsOf, normalized holder weights or independent reserve-to-liability assurance is inferred.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
@@ -141,6 +145,55 @@
         ],
         "kind": "portfolio-observation",
         "observedAtSec": 1791417600,
+        "wholeAssetDenominator": null
+      },
+      {
+        "scopeId": "matrixdock:stbt:daily-asset-statement:2026-10-16",
+        "liabilityBookKey": "matrixdock:stbt:issuer-underlying-assets",
+        "deploymentRefs": [],
+        "reviewer": "FD12 bottom-up refinement 2026-10-21; source reviewed 2026-10-20",
+        "confidence": "verified",
+        "sources": [
+          {
+            "url": "https://app.matrixdock.com/bond/anon/website/api/v1/doc-download/8V2Lm3",
+            "accessedAtSec": 1792534734,
+            "sha256": "84e6b34119db3e19e2505885abb0687a49598462b03df6dd7eb7ccc45f4bc502"
+          }
+        ],
+        "reviewedAtSec": 1792534734,
+        "expiresAtSec": 1794700800,
+        "sourceGeneration": "matrixdock:stbt:daily-asset-statement:2026-10-16:84e6b34119db3e19e2505885abb0687a49598462b03df6dd7eb7ccc45f4bc502",
+        "sourceSha256": "84e6b34119db3e19e2505885abb0687a49598462b03df6dd7eb7ccc45f4bc502",
+        "completeness": "partial",
+        "obligations": [
+          {
+            "key": "dated-treasury-holdings",
+            "disposition": "included",
+            "reason": "Page 1 dates settled Treasury holdings October 16, 2026: October 22 maturity $7,578,222.71, November 3 maturity $3,857,501.90 and November 24 maturity $11,011,225.12, totaling $22,446,949.73. Fidelity Treasury sweep balances $6,517.73 and $535.05 total $7,052.78. Total page assets are $22,454,002.51. The prior October 13 maturity is not assumed paid; this is a separately dated new holdings observation."
+          },
+          {
+            "key": "bank-cash-date-mismatch",
+            "disposition": "unresolved",
+            "reason": "Page 2 dates the $99,220.69 bank cash balance October 17, 2026, not the October 16 Treasury close."
+          },
+          {
+            "key": "undated-fund-screenshots",
+            "disposition": "unresolved",
+            "reason": "Page 2 shows BUIDL $489,483.69 and page 3 shows 63,421.215366 USTB valued at $713,286.61. Neither fund screenshot prints an observation date; neither becomes a dated known holder weight."
+          },
+          {
+            "key": "gross-denominator-reconciliation",
+            "disposition": "unresolved",
+            "reason": "All disclosed rows sum to $23,755,993.50. At Ethereum block 26235000, getLatestReserve returns $23,748,940.72. The $7,052.78 difference equals Fidelity sweep balances, but the timing-difference footnote does not establish their exclusion or a common-close complete gross denominator. No normalization to feed NAV is performed."
+          },
+          {
+            "key": "whole-economic-liability-book",
+            "disposition": "unresolved",
+            "reason": "The statement does not establish a complete current token-class liability, affiliate encumbrance and reserve-to-liability accounting perimeter. Empty deploymentRefs and null wholeAssetDenominator preserve diagnostic-only admission without financial assurance."
+          }
+        ],
+        "kind": "portfolio-observation",
+        "observedAtSec": 1792108800,
         "wholeAssetDenominator": null
       }
     ]

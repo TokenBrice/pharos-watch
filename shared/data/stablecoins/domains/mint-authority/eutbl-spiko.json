@@ -366,7 +366,7 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "periodic",
+    "reconciliation": "unknown",
     "supervision": "prudential",
     "upgradeability": {
       "model": "uups",
@@ -436,9 +436,21 @@
         {
           "label": "Stellar public Soroban RPC (mainnet.sorobanrpc.com)",
           "url": "https://mainnet.sorobanrpc.com"
+        },
+        {
+          "label": "Spiko SICAV prospectus, 1 September 2026, retrieved 2026-10-20: AMF UCITS, DLT share register, CACEIS accounting and PwC statutory audit; no current whole-register backing reconciliation",
+          "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+        },
+        {
+          "label": "AMF agreement certificate dated 23 February 2026, retrieved 2026-10-20: SPIKO SICAV SCV20240012 and exact EUTBL SCV20240014, USTBL, UKTBL and SAFO supervised UCITS sub-funds",
+          "url": "https://cdn.spiko.finance/legal_docs/EN/SAFO_Letter_EN.pdf"
+        },
+        {
+          "label": "AMF GECO current EUTBL/SPIKO SICAV register, retrieved 2026-10-20: Agrément, Vivant and current Twenty First Capital GP-11000029 supervisory mandate",
+          "url": "https://geco.amf-france.org/back-office/funds/compartment/c79399"
         }
       ],
-      "evidence": "Historical multichain review: Ethereum, Polygon, Base, and Etherlink use chain-local PermissionManager 0x344278aff344d6fb960705dc18a4912221608472; Arbitrum uses 0xa925c217e4c1c82ee721ebd496d3863d5c2d829a. The recorded July blocks resolved Polygon, Base, Etherlink, and Arbitrum ADMIN paths to 3-of-6 Safes, Starknet to a 3-of-5 Argent multisig, and Stellar to a single-key account. Re-verified 2026-10-01: current EVM token mint requirements remain 0x05 and upgrades require 0x01; current Ethereum ADMIN is 3-of-6 and the former group-1 Safe no longer intersects native mint permissions. Ethereum's rate-limited Minter holds group 2, with initiation group 10 and approval group 9; ADMIN can change limits and bypass the Minter by calling token mint. The AMF-regulated UCITS structure and prospectus-mandated statutory audit support the recorded supervision and periodic-reconciliation posture, but no dated audit report was obtained and quarterly PwC audit cadence is not established by the legal filing. Economic cap semantics remain unbounded because administrators can change limits and directly mint.",
+      "evidence": "Historical multichain review: Ethereum, Polygon, Base, and Etherlink use chain-local PermissionManager 0x344278aff344d6fb960705dc18a4912221608472; Arbitrum uses 0xa925c217e4c1c82ee721ebd496d3863d5c2d829a. The recorded July blocks resolved Polygon, Base, Etherlink, and Arbitrum ADMIN paths to 3-of-6 Safes, Starknet to a 3-of-5 Argent multisig, and Stellar to a single-key account. Re-verified 2026-10-01: current EVM token mint requirements remain 0x05 and upgrades require 0x01; current Ethereum ADMIN is 3-of-6 and the former group-1 Safe no longer intersects native mint permissions. Ethereum's rate-limited Minter holds group 2, with initiation group 10 and approval group 9; ADMIN can change limits and bypass the Minter by calling token mint. The AMF-regulated UCITS structure and prospectus-mandated statutory audit support the recorded supervision and periodic-reconciliation posture, but no dated audit report was obtained and quarterly PwC audit cadence is not established by the legal filing. Economic cap semantics remain unbounded because administrators can change limits and directly mint. ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required: reviewed 2026-10-20 under D33, the preceding periodic-reconciliation inference is withdrawn to unknown. The current prospectus, EUTBL product page and official contract/NAV disclosure establish daily valuation, a DLT shareholder register and statutory account certification, but no current recurring comparison of complete all-chain EUTBL liabilities, including pending claims, with backing. Prudential supervision of SPIKO SICAV under the AMF UCITS/MMF regime is retained. The original 2026-08-15 review start and every authority/block pin remain unchanged; no absence of reconciliation or reserve shortfall is asserted.",
       "reviewer": "P2 mint-free cohort; cur-8 Starknet/Stellar enumeration; OpenAI Codex V9 EVM completion; Sol economic-posture batch 2026-08-15",
       "reviewedAt": "2026-08-15",
       "disposition": "scoreable"

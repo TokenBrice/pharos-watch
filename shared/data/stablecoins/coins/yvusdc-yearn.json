@@ -37,7 +37,7 @@
     }
   ],
   "collateralQuality": "alt-lst-bridged-or-mixed",
-  "custodyModel": "onchain",
+  "custodyModel": "unknown",
   "governanceQuality": "wrapper",
   "yieldConfig": {
     "yieldSource": "Yearn v3 USDC vault",

@@ -98,7 +98,7 @@
     ],
     "economicCapSemantics": "unbounded",
     "reconciliation": "unknown",
-    "supervision": "none",
+    "supervision": "unknown",
     "review": {
       "sources": [
         {
@@ -116,9 +116,21 @@
         {
           "label": "Ethereum Gate GUSD token",
           "url": "https://etherscan.io/address/0xaf6186b3521b60e27396b5d23b48abc34bf585c5"
+        },
+        {
+          "label": "Gate GUSD canonical mobile product disclosure, retrieved 2026-10-20",
+          "url": "https://miniapp.gate.com/gusd"
+        },
+        {
+          "label": "Gate entity-specific license list, retrieved 2026-10-20",
+          "url": "https://miniapp.gate.com/gategroup/legal/licenses"
+        },
+        {
+          "label": "Pinned Ethereum authority read at block 26236714 on 2026-10-20",
+          "url": "https://api-ethereum-mainnet.n.dwellir.com"
         }
       ],
-      "evidence": "At Ethereum block 25526610, the UUPS proxy implementation was 0xC181Faf98a90993BBa78Af4A9d5DDe37D3DbAdAF with zero EIP-1967 admin and beacon slots. The implementation returned the standard proxiableUUID and exposes upgradeToAndCall guarded by UPGRADER_ROLE. Complete RoleGranted/RoleRevoked enumeration from proxy creation block 23237330 identifies EOA 0x83393a... as the sole minter and EOA 0x191af8... as both default admin and upgrader, with no revocations; current hasRole and eth_getCode reads confirmed both identities. On 2026-07-15, Gate's GUSD product page was rechecked: it makes issuer reserve claims but provides no dated recurring independent supply-to-reserve report or prudential issuer registry, so reconciliation remains unknown and the no-delay issuer-controlled mint is economically unbounded. Economic-posture fields reviewed 2026-08-15: the no-delay issuer minter and upgrader remain unbounded, and pooled self-reported exchange reserves neither reconcile GUSD liabilities nor establish supervision. Wave 2 external research reviewed 2026-08-15: Gate's March and June 2026 exchange proof-of-reserves disclosures report customer and platform GUSD holdings, not the assets backing issued GUSD, so whole-supply reconciliation remains unknown. Reconciliation review 2026-08-16: Gate's official GUSD page describes 1:1 subscriptions and redemption into the original asset, while its exchange proof-of-reserves page reports customer balances and Gate wallet holdings; neither is a dated recurring report reconciling all GUSD issued against backing assets, and no named examiner or attestor was found, so reconciliation remains unknown.",
+      "evidence": "At Ethereum block 25526610, the UUPS proxy implementation was 0xC181Faf98a90993BBa78Af4A9d5DDe37D3DbAdAF with zero EIP-1967 admin and beacon slots. The implementation returned the standard proxiableUUID and exposes upgradeToAndCall guarded by UPGRADER_ROLE. Complete RoleGranted/RoleRevoked enumeration from proxy creation block 23237330 identifies EOA 0x83393a... as the sole minter and EOA 0x191af8... as both default admin and upgrader, with no revocations; current hasRole and eth_getCode reads confirmed both identities. On 2026-07-15, Gate's GUSD product page was rechecked: it makes issuer reserve claims but provides no dated recurring independent supply-to-reserve report or prudential issuer registry, so reconciliation remains unknown and the no-delay issuer-controlled mint is economically unbounded. Economic-posture fields reviewed 2026-08-15: the no-delay issuer minter and upgrader remain unbounded, and pooled self-reported exchange reserves neither reconcile GUSD liabilities nor establish supervision. Wave 2 external research reviewed 2026-08-15: Gate's March and June 2026 exchange proof-of-reserves disclosures report customer and platform GUSD holdings, not the assets backing issued GUSD, so whole-supply reconciliation remains unknown. Reconciliation review 2026-08-16: Gate's official GUSD page describes 1:1 subscriptions and redemption into the original asset, while its exchange proof-of-reserves page reports customer balances and Gate wallet holdings; neither is a dated recurring report reconciling all GUSD issued against backing assets, and no named examiner or attestor was found, so reconciliation remains unknown. Source-scoped correction by FD38 on 2026-10-20: these sources establish no qualifying exact GUSD prudential mandate, not a positively measured absence of supervision; supervision is therefore unknown rather than none. The current Gate license page lists independently operating exchange/custody entities without binding one to GUSD issuance. Ethereum block 26236714 (0xf003f0fe817f2301e121aad3cf421eb46e98f95d3c284288ad60f5294a183e9d, 2026-10-20T22:13:59Z) reconfirms the same implementation, minter/admin/upgrader roles and codeless role holders. No whole-token reconciliation or favorable process rung is inferred; the original review start and control pins are unchanged.",
       "reviewer": "Codex Safety Score V9 data research / SOL-IV calibration; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15",
       "reviewedAt": "2026-08-15"
     }

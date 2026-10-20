@@ -4,7 +4,7 @@
     "mintPath": "amo-or-custodian-hybrid",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "OUSD user minting requires USDC deposits, but the 48-hour Origin governance timelock can approve and mint-whitelist an arbitrary strategy whose mintForStrategy calls need no collateral transfer or durable supply ceiling. Economic mint power is unbounded despite continuous on-chain reconciliation; the separately authored 2-of-8 Strategist Safe and its partially reviewed modules prevent a complete governor-only execution certificate.",
+    "summary": "OUSD user minting requires USDC deposits, but the 48-hour Origin governance timelock can approve and mint-whitelist an arbitrary strategy whose mintForStrategy calls need no collateral transfer or durable supply ceiling. The partially reviewed Strategist Safe prevents a complete governor-only execution certificate. Reconciliation confirmation retrieved 2026-10-20: Ethereum block 26224795 (hash 0x9e68b032274515547b54e965780b90fae8958c357d22473a71e77e1f473d7d86, 2026-10-19T06:21:11Z) enumerates exactly four strategies (Curve 0x26a02ec47acc2a3442b757f45e0a82b8e993ce11, Morpho 0x3643cafa6ef3dd7fcc2adad1cabf708075afff6e, CCTP masters 0xb1d624fc40824683e2bfbefd19eb208dbbe00866 and 0xe0228db13f8c4eb00fd1e08e076b09ef5cd0ea1e) plus idle USDC. Vault _checkBalance enumerates allStrategies and deducts queued claims; the CCTP masters include local cash, pendingAmount and authenticated remoteStrategyBalance. Their ordinary balance-check message acceptance rejects age over one day and mismatched nonces; transfer confirmations settle pending amounts. The one-day bound is an incoming-message acceptance bound, not a maximum age of a previously cached balance. This mechanically derivable complete book supports retained continuous reconciliation under the D33 mechanical-book ruling; it supplies no independent financial assurance, immutable issuance bound or timely redemption guarantee. Census artifact: agents/2026-10-20-safety-refinement/C09-origin-reserve-census.json. Original authority-review start and all authority/upgrade pins are unchanged.",
     "upgradeability": {
       "model": "transparent-proxy",
       "proxyAddresses": [
@@ -334,6 +334,22 @@
         {
           "label": "Pinned OUSD timelock RoleRevoked history through block 26113561",
           "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&fromBlock=0&toBlock=26113561&address=0x35918cde7233f2dd33fa41ae3cb6ae0e42e0e69f&topic0=0xf6391f5c32d9c69d2a47ea670b442974b53935d1edc7fd64eb21e047a839171b"
+        },
+        {
+          "label": "C09 whole reserve and supply census, pinned Ethereum 26224795, observed 2026-10-20 (authority facts not renewed)",
+          "url": "https://api-ethereum-mainnet.n.dwellir.com"
+        },
+        {
+          "label": "Verified CrossChainMasterStrategy: pending inclusion, authenticated cached remote balance and one-day incoming-message age check (retrieved 2026-10-20)",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2567fc741c6b9efe589f2583e4431ac4e69d8b8d"
+        },
+        {
+          "label": "Second verified CrossChainMasterStrategy accounting (retrieved 2026-10-20)",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0318d444b1da733dfeba55a5b7a0c3b134f39197"
+        },
+        {
+          "label": "Origin VaultCore complete strategy enumeration and queued-liability accounting (retrieved 2026-10-20)",
+          "url": "https://raw.githubusercontent.com/OriginProtocol/origin-dollar/master/contracts/contracts/vault/VaultCore.sol"
         }
       ]
     }

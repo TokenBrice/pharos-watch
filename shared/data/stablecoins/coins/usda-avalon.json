@@ -2,13 +2,13 @@
   "id": "usda-avalon",
   "name": "Avalon USDa",
   "symbol": "USDA",
-  "oneLiner": "USDa is Avalon's BTC-backed CDP stablecoin with 1:1 USDT convertibility, leveraging institutional credit lines and proprietary HFT liquidation logic.",
+  "oneLiner": "USDa is Avalon's CeDeFi stablecoin, discontinued across all supported chains in October 2026 with a separate holder claim-and-withdrawal process.",
   "flags": {
     "backing": "crypto-backed",
     "governance": "centralized-dependent"
   },
   "collateral": "FBTC collateralized borrowing and 1:1 USDT minting; the USDa risk table also lists USDC and USDT at 100% maximum LTV with no liquidation. Avalon names Cobo, Fireblocks, and Coinbase Prime as custody solution providers and describes institutional balance-sheet access as a lending capital source. The reviewed disclosures do not quantify USDa reserve composition or establish an institutional guarantee of its liabilities.",
-  "pegMechanism": "The issuer documents 1:1 conversion to USDT through its Ethereum mainnet conversion vault, with USDT claimable in one business day; withdrawing all CDP collateral requires repayment of principal and interest; FBTC collateral is priced by RedStone and liquidated on centralized exchanges to restore target LTV; cross-chain transfers use LayerZero OFT",
+  "pegMechanism": "The former ordinary rail offered USDa-to-USDT conversion through Ethereum. On October 3, 2026, Avalon announced all-chain USDa discontinuation and instructed holders to submit claims and withdraw by October 10; unredeemed balances incur a 5% monthly custodial fee. Recovery requires issuer verification and does not carry an established completion bound. Historical FBTC lending, RedStone pricing and LayerZero OFT transfers do not prove current conversion capacity.",
   "mechanismArchetype": "cdp",
   "llamaId": "220",
   "detailProvider": "defillama",
@@ -22,6 +22,10 @@
     {
       "label": "Twitter",
       "url": "https://x.com/avalonfinance_"
+    },
+    {
+      "label": "USDa discontinuation notice in Avalon's official publication feed",
+      "url": "https://medium.com/feed/@avalonlabs"
     },
     {
       "label": "Docs",
@@ -120,8 +124,16 @@
       "decimals": 18
     }
   ],
+  "marketAvailability": "legacy-or-wind-down",
+  "notices": [
+    {
+      "type": "warning",
+      "title": "USDa discontinued; holder recovery claims",
+      "message": "Avalon's October 3, 2026 notice discontinues USDa across all supported chains and requests claim submission and withdrawal by October 10 UTC. Balances not redeemed by that deadline incur a 5% monthly custodial fee until redemption completes. Contract-wallet, multisig and exchange-address holders are asked to contact Avalon before claiming. The issuer's ordinary conversion documentation is not a current unconditional redemption promise."
+    }
+  ],
   "collateralQuality": "alt-lst-bridged-or-mixed",
-  "custodyModel": "institutional-top",
+  "custodyModel": "unknown",
   "governanceQuality": "multisig",
   "launchDate": "2024-11-03"
 }

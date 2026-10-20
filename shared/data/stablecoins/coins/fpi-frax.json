@@ -2,7 +2,7 @@
   "id": "fpi-frax",
   "name": "Frax Price Index",
   "symbol": "FPI",
-  "oneLiner": "FPI is Frax's CPI-pegged unit-of-account stablecoin, tracking US CPI inflation with 100% FRAX reserves and FPIS token dilution as the algorithmic backstop.",
+  "oneLiner": "FPI is Frax's inflation-referenced unit of account, backed by legacy-FRAX-linked balances and AMO positions; its LayerZero bridge mesh is retired.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "VAR",
@@ -10,8 +10,8 @@
     "yieldBearing": true,
     "navToken": true
   },
-  "collateral": "FRAX stablecoins held at 100% collateral ratio, with AMOs generating yield; FPIS tokens sold via TWAMM when AMO yield falls below CPI inflation rate",
-  "pegMechanism": "Redemption price grows on-chain per second at the 12-month US CPI-U rate (BLS data); updated monthly via Chainlink oracle; 100% collateral ratio maintained via AMOs",
+  "collateral": "Legacy-FRAX-linked balances and AMO/liquidity positions. The design targets a 100% collateral ratio and describes FPIS sales when AMO yield falls short of CPI; that target does not establish a 100% liquid FRAX reserve composition.",
+  "pegMechanism": "The documented design applies the monthly CPI-U inflation input to an on-chain reference price and allows redemption into legacy FRAX through the Controller Pool. FIP-448 proposes freezing that reference price and disabling new minting during an orderly wind-down; the proposal alone does not prove completed execution.",
   "mechanismArchetype": "algorithmic",
   "llamaId": "66",
   "detailProvider": "defillama",

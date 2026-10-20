@@ -26,9 +26,11 @@
       "riskFactors": [
         "counterparty",
         "custody",
-        "smart-contract"
+        "smart-contract",
+        "liquidity",
+        "legal"
       ],
-      "liquidityHorizon": "immediate",
+      "liquidityHorizon": "unknown",
       "sourceKey": "mento:reserve:ausd"
     },
     {
@@ -233,9 +235,13 @@
       {
         "label": "Fixed-block representation symbols: Celo 78860375 and Monad 109288367 (2026-09-30)",
         "url": "https://forno.celo.org"
+      },
+      {
+        "label": "Agora Bermuda Terms of Use, as of September 1, 2026; liquidity review retrieved 2026-10-20",
+        "url": "https://static.agora.finance/termsofuse.pdf"
       }
     ],
-    "rationale": "cadm-mento retains the shared Mento Reserve backing model. All positive holdings are refreshed from one issuer API capture. Native parents keep their canonical collateral link; Celo axlUSDC and axlEUROC and Monad USDT0 carry explicit bridge annotations with registry contracts and fixed-block symbols confirmed at Celo 78860375 and Monad 109288367. Bridge verification establishes representation identity and documented issuer lineage, not independent escrow solvency. GBPm, JPYm and CHFm remain separate USDm-collateral CDPs; no underlying basket is duplicated on those coins.",
+    "rationale": "cadm-mento retains the shared Mento Reserve backing model. All positive holdings are refreshed from one issuer API capture. Native parents keep their canonical collateral link; Celo axlUSDC and axlEUROC and Monad USDT0 carry explicit bridge annotations with registry contracts and fixed-block symbols confirmed at Celo 78860375 and Monad 109288367. Bridge verification establishes representation identity and documented issuer lineage, not independent escrow solvency. GBPm, JPYm and CHFm remain separate USDm-collateral CDPs; no underlying basket is duplicated on those coins. FD32 liquidity-only correction retrieved 2026-10-20: the AUSD slice's unsupported immediate horizon is withdrawn to unknown. Governing Agora Bermuda terms page 6 require a verified customer, merely aim for redemption within 48 business hours normally or 96 under stress, and permit delay for illiquid, unavailable or lost reserves and in-kind payout. Mento's full-position eligible and funded realization is not established. Composition, percentages, original review start and compositionAsOf are unchanged. ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required.",
     "compositionBasis": "Issuer reserve API collateral.assets captured 2026-09-30; measured percentages grouped by native economic parent with axlUSDC, axlEUROC and USDT0 retained separately. Capture date is an observation date; the API supplies no independently verified source update clock.",
     "compositionAsOf": "2026-09-30",
     "scope": "full-composition",

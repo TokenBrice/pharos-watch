@@ -37,6 +37,7 @@
         "role": "wrapper",
         "authorityType": "contract",
         "directMintAbility": "none",
+        "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "Immutable DSR-style savings wrapper over deposited USDD; no admin, no proxy, no upgrade path. Shares minted/burned only by deposit/withdraw.",
         "observedAt": "2026-10-01",
@@ -47,11 +48,15 @@
             "url": "https://eth.blockscout.com/address/0xc5d6a7b61d18afa11435a889557b068bb9f29930"
           },
           {
+            "label": "Immutable SavingsUsdd source reviewed 2026-10-20: no cap setter or privileged share-mint entrypoint",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc5d6a7b61d18afa11435a889557b068bb9f29930"
+          },
+          {
             "label": "USDD website",
             "url": "https://usdd.io/"
           }
         ],
-        "evidence": "At Ethereum block 26095796 on 2026-10-01, name() = Savings Usdd, symbol() = sUSDD, asset() = 0x4f8e5de400de08b164e7421b3ee387f461becd1a, and usddJoin() = 0x983dfef6d71862d809e239845da5a959492f63b8. The EIP-1967 implementation slot was zero and owner() reverted, reconfirming the prior block 25771107 observation. Verified SavingsUsdd source has no owner, role admin, pause or upgrade path; shares mint against deposits and burn on withdrawal."
+        "evidence": "At Ethereum block 26095796 on 2026-10-01, name() = Savings Usdd, symbol() = sUSDD, asset() = 0x4f8e5de400de08b164e7421b3ee387f461becd1a, and usddJoin() = 0x983dfef6d71862d809e239845da5a959492f63b8. The EIP-1967 implementation slot was zero and owner() reverted, reconfirming the prior block 25771107 observation. Verified SavingsUsdd source has no owner, role admin, pause or upgrade path; shares mint against deposits and burn on withdrawal. Source re-read 2026-10-20 confirms both public mint overloads and deposit overloads use _mint, which increases share balances and totalSupply only after transferFrom, Join.join and Pot.join; no local cap setter, minter authorization or privileged share-mint path exists. canRaiseCap is false for this immutable wrapper only, not for inherited USDD governance; the historical state pin is unchanged."
       },
       {
         "chain": "bsc",
@@ -63,6 +68,7 @@
         "role": "wrapper",
         "authorityType": "contract",
         "directMintAbility": "none",
+        "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "Immutable DSR-style savings wrapper over deposited BNB Chain USDD; no admin, no proxy, no upgrade path. Shares minted/burned only by deposit/withdraw.",
         "observedAt": "2026-10-01",
@@ -73,11 +79,15 @@
             "url": "https://bscscan.com/address/0x8ba9da757d1d66c58b1ae7e2ed6c04087348a82d#code"
           },
           {
+            "label": "Exact-match immutable BSC SavingsUsdd source reviewed 2026-10-20",
+            "url": "https://sourcify.dev/server/v2/contract/56/0x8ba9da757d1d66c58b1ae7e2ed6c04087348a82d?fields=sources,compilation,proxyResolution"
+          },
+          {
             "label": "USDD sUSDD mechanism",
             "url": "https://docs.usdd.io/susdd-mechanism"
           }
         ],
-        "evidence": "At BSC block 125055874 on 2026-10-01, name() = Savings Usdd, symbol() = sUSDD, asset() = 0x45e51bc23d592eb2dba86da3985299f7895d66ba, and usddJoin() = 0x6b00039d76795fd59baf17e0c9c6d87011e7edac. The EIP-1967 implementation slot was zero and owner() reverted, reconfirming the prior block 116365577 observation. Verified SavingsUsdd source has no owner, role admin, pause or upgrade path; shares mint against local USDD deposits and burn on withdrawal."
+        "evidence": "At BSC block 125055874 on 2026-10-01, name() = Savings Usdd, symbol() = sUSDD, asset() = 0x45e51bc23d592eb2dba86da3985299f7895d66ba, and usddJoin() = 0x6b00039d76795fd59baf17e0c9c6d87011e7edac. The EIP-1967 implementation slot was zero and owner() reverted, reconfirming the prior block 116365577 observation. Verified SavingsUsdd source has no owner, role admin, pause or upgrade path; shares mint against local USDD deposits and burn on withdrawal. Exact-match source re-read 2026-10-20 confirms all mint/deposit entrypoints require transferFrom, Join.join and Pot.join, with no local cap setter or minter-registration path. canRaiseCap is false for this immutable wrapper only; inherited parent authority and the historical state pin are unchanged."
       },
       {
         "chain": "ethereum",

@@ -655,9 +655,27 @@
         "controllerChain": "fraxtal",
         "controllerAddress": "0x5f25218ed9474b721d6a38c115107428e832fa2e",
         "label": "fraxtal legacy sFRAX OFT governor",
-        "authorityType": "unknown",
-        "observedAt": "2026-10-15",
-        "observedBlock": 42625564,
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 6,
+        "safe": {
+          "threshold": 3,
+          "owners": [
+            "0x6e74053a3798e0fc9a9775f7995316b27f21c4d2",
+            "0x17e06ce6914e3969f7bd37d8b2a563890ca1c96e",
+            "0x8d8290d49e88d16d81c6adf6c8774ed88762274a",
+            "0x381e2495e683868f693aa5b1414f712f21d34b40",
+            "0xcbc616d595d38483e6adc45c7e426f44bf230928",
+            "0x8da4e997e051605878c9c0b793c496556eacc2c0"
+          ],
+          "masterCopy": "0xfb1bffc9d739b8d520daf37df666da4c687191ea",
+          "observedBlock": 42862029,
+          "observedAt": "2026-10-20",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-20",
+        "observedBlock": 42862029,
         "sources": [
           {
             "label": "Issuer OFT controller and ProxyAdmin disclosure",
@@ -666,9 +684,21 @@
           {
             "label": "fraxtal pinned owner and endpoint at block 42625564",
             "url": "https://rpc.frax.com"
+          },
+          {
+            "label": "Fraxtal block 42862029 (2026-10-20T22:19:29Z): token owner, Safe threshold/owners and singleton",
+            "url": "https://fraxscan.com/block/42862029"
+          },
+          {
+            "label": "Verified GnosisSafeL2 singleton matching the pinned Safe storage target",
+            "url": "https://fraxscan.com/address/0xfb1bffc9d739b8d520daf37df666da4c687191ea#code"
+          },
+          {
+            "label": "Issuer current chain-local Safe and separate Fraxtal ProxyAdmin owner",
+            "url": "https://docs.frax.com/protocol/crosschain/addresses"
           }
         ],
-        "evidence": "Pinned owner() and endpoint() match the issuer-listed OFT governor and LayerZero endpoint. No current Safe quorum, signer independence or minimum delay is asserted for this controller. The exact proxy implementation slot is 0x7feda252881b9c6166b387d3d11d1bdfc076d5cb and admin slot is 0x223a681fc5c5522c85c96157c0efa18cd6c5405c; upgrade authority is recorded separately, without treating source documentation as a current Safe execution certificate. Owner-configured peers authorize the message-credit mint/burn rail; this is bridge issuance control, not discretionary native Ethereum vault share issuance."
+        "evidence": "At Fraxtal block 42862029 (2026-10-20T22:19:29Z, hash 0x002ba1f700ae34bcaf75d9d698369ff82f79cb875f885bec2b0d27b7fc4327f1), legacy sFRAX owner() remains 0x5f25218ed9474b721d6a38c115107428e832fa2e. That exact Safe returns threshold 3 and six owners; slot zero targets verified GnosisSafeL2 0xfb1bffc9d739b8d520daf37df666da4c687191ea. The token implementation remains 0x7feda252881b9c6166b387d3d11d1bdfc076d5cb and admin remains 0x223a681fc5c5522c85c96157c0efa18cd6c5405c. Earlier endpoint/route semantics are preserved. Owner-configured peers authorize the representation credit rail; this is not native Ethereum share issuance. This establishes signing topology only: module/guard census, key custody, human independence, minimum delay, incident state and complete peer/minter/transport closure are not established."
       },
       {
         "id": "fraxtal-legacy-sfrax-proxy-admin",
@@ -679,11 +709,28 @@
           "upgrade"
         ],
         "controllerChain": "fraxtal",
-        "controllerAddress": "0x223a681fc5c5522c85c96157c0efa18cd6c5405c",
-        "label": "Fraxtal legacy sFRAX ProxyAdmin",
-        "authorityType": "contract",
-        "observedAt": "2026-10-15",
-        "observedBlock": 42625564,
+        "controllerAddress": "0xc4eb45d80dc1f079045e75d5d55de8ed1c1090e6",
+        "label": "Fraxtal legacy sFRAX ProxyAdmin owner Safe",
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "threshold": 3,
+          "owners": [
+            "0x8da4e997e051605878c9c0b793c496556eacc2c0",
+            "0x6e74053a3798e0fc9a9775f7995316b27f21c4d2",
+            "0x6933bcc3e96f1c4d2cb73cb391d854b18ab7a4f2",
+            "0x17e06ce6914e3969f7bd37d8b2a563890ca1c96e",
+            "0xcbc616d595d38483e6adc45c7e426f44bf230928"
+          ],
+          "masterCopy": "0xfb1bffc9d739b8d520daf37df666da4c687191ea",
+          "observedBlock": 42862029,
+          "observedAt": "2026-10-20",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-20",
+        "observedBlock": 42862029,
         "sources": [
           {
             "label": "Issuer OFT controller and ProxyAdmin disclosure",
@@ -692,9 +739,21 @@
           {
             "label": "fraxtal pinned owner and endpoint at block 42625564",
             "url": "https://rpc.frax.com"
+          },
+          {
+            "label": "Fraxtal block 42862029: exact token admin slot, ProxyAdmin owner and owner Safe quorum",
+            "url": "https://fraxscan.com/block/42862029"
+          },
+          {
+            "label": "Issuer separate Fraxtal 3-of-5 ProxyAdmin owner",
+            "url": "https://docs.frax.com/protocol/crosschain/addresses"
+          },
+          {
+            "label": "Verified GnosisSafeL2 singleton",
+            "url": "https://fraxscan.com/address/0xfb1bffc9d739b8d520daf37df666da4c687191ea#code"
           }
         ],
-        "evidence": "Pinned EIP-1967 admin slot identifies this ProxyAdmin; the issuer documents its upgrade-control role. No current ultimate ProxyAdmin ownership quorum, mandatory delay or complete replacement-path certificate is asserted."
+        "evidence": "At Fraxtal block 42862029 (2026-10-20T22:19:29Z, hash 0x002ba1f700ae34bcaf75d9d698369ff82f79cb875f885bec2b0d27b7fc4327f1), the exact legacy sFRAX EIP-1967 admin slot remains ProxyAdmin 0x223a681fc5c5522c85c96157c0efa18cd6c5405c. ProxyAdmin.owner() returns Safe 0xc4eb45d80dc1f079045e75d5d55de8ed1c1090e6, independently returning threshold 3, five owners and singleton 0xfb1bffc9d739b8d520daf37df666da4c687191ea. The controller identity now names that actual signing authority rather than stopping at its ProxyAdmin execution ingress. Upgrade capability and exact route scope are unchanged. No module/guard absence, independent humans, key custody, mandatory delay, incident absence or complete execution certificate is asserted."
       },
       {
         "id": "metis-legacy-sfrax-oft-governor",
@@ -710,9 +769,27 @@
         "controllerChain": "metis",
         "controllerAddress": "0xf4a4f32732f9b2fb84ee28c58616946f3bf80f7d",
         "label": "metis legacy sFRAX OFT governor",
-        "authorityType": "unknown",
-        "observedAt": "2026-10-15",
-        "observedBlock": 23279223,
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 6,
+        "safe": {
+          "threshold": 3,
+          "owners": [
+            "0x13fe84d36d7a507bb4bdac6dcaf13a10961fc470",
+            "0x17e06ce6914e3969f7bd37d8b2a563890ca1c96e",
+            "0x8d8290d49e88d16d81c6adf6c8774ed88762274a",
+            "0xcbc616d595d38483e6adc45c7e426f44bf230928",
+            "0xc8de9f45601da8c76158b8caf3e56e8a037f2228",
+            "0x6e74053a3798e0fc9a9775f7995316b27f21c4d2"
+          ],
+          "masterCopy": "0xfb1bffc9d739b8d520daf37df666da4c687191ea",
+          "observedBlock": 23300210,
+          "observedAt": "2026-10-20",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-20",
+        "observedBlock": 23300210,
         "sources": [
           {
             "label": "Issuer OFT controller and ProxyAdmin disclosure",
@@ -721,9 +798,17 @@
           {
             "label": "metis pinned owner and endpoint at block 23279223",
             "url": "https://andromeda.metis.io/?owner=1088"
+          },
+          {
+            "label": "Metis block 23300210 (2026-10-20T22:19:20Z): token owner, Safe threshold/owners, proxy and singleton runtime",
+            "url": "https://andromeda-explorer.metis.io/block/23300210"
+          },
+          {
+            "label": "Verified GnosisSafeL2 source; exact singleton runtime matches the Metis pinned runtime",
+            "url": "https://fraxscan.com/address/0xfb1bffc9d739b8d520daf37df666da4c687191ea#code"
           }
         ],
-        "evidence": "Pinned owner() and endpoint() match the issuer-listed OFT governor and LayerZero endpoint. No current Safe quorum, signer independence or minimum delay is asserted for this controller. The legacy OFT owner manages peers/delegate and auxiliary minter-burners; full active minter/validator census remains unestablished."
+        "evidence": "At Metis block 23300210 (2026-10-20T22:19:20Z, hash 0x17989aae004306056a15835bd09a81d124c0b289aee6c3e6a66355043decc194), legacy sFRAX owner() remains 0xf4a4f32732f9b2fb84ee28c58616946f3bf80f7d. That exact Safe returns threshold 3, six owners and singleton 0xfb1bffc9d739b8d520daf37df666da4c687191ea. Its proxy runtime is the standard storage-target Safe proxy, and its singleton runtime is byte-for-byte identical to Fraxtal's verified GnosisSafeL2 at block 42862029 (UTF-8 runtime-hex SHA256 3d06c66a744a520cb1a46c2017b13a724b95d163704f1363adee08235934f8f6). Earlier endpoint semantics are retained. The governor can configure peers/delegate and auxiliary minter-burners. This establishes cryptographic signing topology only; module/guard census, human independence, key custody, minimum delay, incident state and complete active minter/validator inventory remain unestablished."
       }
     ]
   }

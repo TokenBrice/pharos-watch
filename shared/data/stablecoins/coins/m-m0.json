@@ -126,7 +126,7 @@
       "decimals": 6
     }
   ],
-  "custodyModel": "institutional-unregulated",
+  "custodyModel": "unknown",
   "governanceQuality": "dao-governance",
   "liveReservesConfig": {
     "adapter": "m0",

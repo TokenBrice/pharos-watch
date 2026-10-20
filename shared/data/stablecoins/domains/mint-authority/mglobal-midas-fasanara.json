@@ -2,7 +2,7 @@
   "id": "mglobal-midas-fasanara",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-reconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "mGLOBAL has two live direct-minter controls on Ethereum: backend EOA 0x76e350c5a674db787918e5f728466c7356d4d361 and DepositVault proxy 0xce29c36c6d4556f2d01d79414c1354b968dddef1. A 1-of-3 Safe and a separate EOA can immediately rotate mint operators through DEFAULT_ADMIN_ROLE. The token, vault, and shared MidasAccessControl proxies share a ProxyAdmin owned by a two-day timelock.",
     "upgradeability": {
@@ -203,10 +203,10 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "periodic",
-    "supervision": "attestation-only",
+    "reconciliation": "unknown",
+    "supervision": "unknown",
     "review": {
-      "evidence": "At Ethereum block 25527148, the current mGLOBAL direct minters were EOA 0x76e350c5a674db787918e5f728466c7356d4d361 and DepositVault proxy 0xce29c36c6d4556f2d01d79414c1354b968dddef1. The previously recorded EOA 0x425bbc2cff0c7e7960baa9bac2f0cb67b41d3bef and address 0xd36f095556d5717fd9231a2091e8e98beb7cb621 were not live mGLOBAL mint controls; 0xd36f095556d5717fd9231a2091e8e98beb7cb621 is unrelated to the current vault. Safe 0xb60842e9dabcd1c52e354ac30e82a97661cb7e89 and EOA 0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227 each held DEFAULT_ADMIN_ROLE and could immediately change the role set. The complete mint-critical proxy inventory was token 0x7433806912eae67919e66aea853d46fa0aef98a8, DepositVault 0xce29c36c6d4556f2d01d79414c1354b968dddef1, and shared MidasAccessControl 0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b, with implementations 0xd22be883b7194ac2d1751bf8e6e4962d87f2f75a, 0x08e4432f84e660235821c63764fb2ffcc7e2b477, and 0xdd5a54ba2ab379a5e642c58f98ad793a183960e2 respectively. Each EIP-1967 admin slot resolved to ProxyAdmin 0xbf25b58cb8dfad688f7bcb2b87d71c23a6600aac, owned by the 172800-second Midas timelock. The timelock's sole initiating Safe was 1-of-3 with no enabled modules and a zero guard. Economic-control evidence reviewed 2026-07-15: JTC Luxembourg independently values the mGLOBAL underlying assets monthly, with the latest product period shown as 2026-05-01 through 2026-05-31; the Midas engine notarizes and independently verifies each checkpoint. The exempt Luxembourg securitisation compartment is not evidenced as a prudentially supervised fund. Economic-posture fields reviewed 2026-08-15: issuer-controlled direct mint or immediate minter-administration paths are economically unbounded; existing whole-supply periodic reconciliation and independent attestation evidence remain supported.",
+      "evidence": "At Ethereum block 25527148, the current mGLOBAL direct minters were EOA 0x76e350c5a674db787918e5f728466c7356d4d361 and DepositVault proxy 0xce29c36c6d4556f2d01d79414c1354b968dddef1. The previously recorded EOA 0x425bbc2cff0c7e7960baa9bac2f0cb67b41d3bef and address 0xd36f095556d5717fd9231a2091e8e98beb7cb621 were not live mGLOBAL mint controls; 0xd36f095556d5717fd9231a2091e8e98beb7cb621 is unrelated to the current vault. Safe 0xb60842e9dabcd1c52e354ac30e82a97661cb7e89 and EOA 0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227 each held DEFAULT_ADMIN_ROLE and could immediately change the role set. The complete mint-critical proxy inventory was token 0x7433806912eae67919e66aea853d46fa0aef98a8, DepositVault 0xce29c36c6d4556f2d01d79414c1354b968dddef1, and shared MidasAccessControl 0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b, with implementations 0xd22be883b7194ac2d1751bf8e6e4962d87f2f75a, 0x08e4432f84e660235821c63764fb2ffcc7e2b477, and 0xdd5a54ba2ab379a5e642c58f98ad793a183960e2 respectively. Each EIP-1967 admin slot resolved to ProxyAdmin 0xbf25b58cb8dfad688f7bcb2b87d71c23a6600aac, owned by the 172800-second Midas timelock. The timelock's sole initiating Safe was 1-of-3 with no enabled modules and a zero guard. Economic-control evidence reviewed 2026-07-15: JTC Luxembourg independently values the mGLOBAL underlying assets monthly, with the latest product period shown as 2026-05-01 through 2026-05-31; the Midas engine notarizes and independently verifies each checkpoint. The exempt Luxembourg securitisation compartment is not evidenced as a prudentially supervised fund. Economic-posture fields reviewed 2026-08-15: issuer-controlled direct mint or immediate minter-administration paths are economically unbounded; existing whole-supply periodic reconciliation and independent attestation evidence remain supported. ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required (C20, 2026-10-20): the preceding positive periodic-reconciliation and attestation-only conclusions are withdrawn, not renewed. The cited June 23 issuer disclosure describes monthly JTC asset valuation and source/workflow verification, not an independent comparison of the entire mGLOBAL liability book to backing. At Ethereum block 26236714 (hash 0xf003f0fe817f2301e121aad3cf421eb46e98f95d3c284288ad60f5294a183e9d; 2026-10-20T22:13:59Z), SAVE proofId 0x5f683091c2cfe327b5ea0efc5588908d6873b0675d43b6ba78da908b87f05121 still resolves to packet e8ceed07773f32cc481930b91ad1d5667e1276be5235869af56dcbaf55b129f3. Its recovered gzip reproduces that UnixFS DAG-PB digest; metadata expires October 5 and the embedded JTC/1token valuation is July 31. Its coverage calculation uses net supply 63819297.904411 versus ops-reported gross supply 66097489.2195035, with no independently verified complete pending/exclusion join. This is not a current whole-supply recurring reconciliation or financial-attestation regime. Reconciliation and supervision therefore remain unknown under D33, with original historical control pins and review start preserved. Unknown is not measured non-reconciliation, insolvency, or reserve shortfall.",
       "reviewer": "Codex Safety Score V9 registry pass; Sol economic-posture batch 2026-08-15",
       "reviewedAt": "2026-08-15",
       "disposition": "scoreable",
@@ -246,6 +246,22 @@
         {
           "label": "Midas Attestation Engine",
           "url": "https://blog.midas.app/introducing-the-midas-attestation-engine/"
+        }
+        ,{
+          "label": "Midas primary SAVE scope and interpretation guide, retrieved 2026-10-20",
+          "url": "https://raw.githubusercontent.com/midas-apps/midas-por-v2/main/INTEGRATION.md"
+        },
+        {
+          "label": "Exact mGLOBAL SAVE proof identity and exclusion metadata, retrieved 2026-10-20",
+          "url": "https://raw.githubusercontent.com/midas-apps/midas-por-v2/main/tokens.json"
+        },
+        {
+          "label": "Latest registry-bound mGLOBAL SAVE packet, retrieved 2026-10-20; underlying valuation July 31",
+          "url": "https://ipfs.filebase.io/ipfs/f01701220e8ceed07773f32cc481930b91ad1d5667e1276be5235869af56dcbaf55b129f3"
+        },
+        {
+          "label": "Pinned SAVE registry at Ethereum block 26236714, observed 2026-10-20",
+          "url": "https://ethereum-rpc.publicnode.com"
         }
       ]
     }

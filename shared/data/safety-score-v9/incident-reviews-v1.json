@@ -20549,6 +20549,321 @@
         "source:a4fc97ee6191825bff9233cc",
         "source:cef28c1e83ac7477d0560b3b"
       ]
+    },
+    {
+      "reviewId": "fd02-gho-xlayer-ccip-20261020",
+      "assetId": "gho-aave",
+      "scope": {
+        "kind": "control",
+        "controlKey": "bridge-meta:gho-aave:a622ea8869570121670b"
+      },
+      "reviewedAt": "2026-10-20T22:25:09Z",
+      "reviewer": "FD02 bottom-up refinement 2026-10-21",
+      "windowStartSec": 1782864000,
+      "windowEndSec": 1792534783,
+      "conclusion": "no-known-incident",
+      "searchedSurfacesRefs": [
+        "surface:c00edbb15c01d0097daba1c9",
+        "surface:51bb9401f793d37f7bb5d35e",
+        "surface:9490c711834489585870048a",
+        "surface:d947dd3b1a84eed9fdd96b33",
+        "surface:7167cf423d0f9a9647d9e748",
+        "surface:1ebaec1c85e277c69149ad56"
+      ],
+      "sourcesRefs": [
+        "source:dbc10b6a11edce126f8c3d29",
+        "source:04b8e37ca97d9725f9bdb526",
+        "source:c41b3f2ffae76a7af57d5a88",
+        "source:8816da782892f332c2e0f459",
+        "source:cdb2129ed538da18f185e5b7",
+        "source:32552e50bd10bd2eaef4c750",
+        "source:3b67decfde898a065304a2d7",
+        "source:79717d87df17757f52a28029",
+        "source:1eb885e54945fd4db746f233",
+        "source:c7a694873574d4eca4ba2e44",
+        "source:96c8494ac7ec4be903614e72"
+      ]
+    },
+    {
+      "reviewId": "fd07-deuro-optimism-20261020",
+      "assetId": "deuro-deuro",
+      "scope": {
+        "kind": "deployment",
+        "deploymentKey": "optimism:0x1b5f7fa46ed0f487f049c42f374ca4827d65a264",
+        "controlKinds": [
+          "bridge"
+        ]
+      },
+      "reviewedAt": "2026-10-20T22:23:20Z",
+      "reviewer": "FD07 bottom-up refinement 2026-10-21",
+      "windowStartSec": 1788220800,
+      "windowEndSec": 1792535000,
+      "conclusion": "no-known-incident",
+      "searchedSurfacesRefs": [
+        "surface:bd42dbaf3e6aa0f6f51cb07c",
+        "surface:24643fa783e8ed96276034c3",
+        "surface:77c581ae4e458cd0ca3c4bc3"
+      ],
+      "sourcesRefs": [
+        "source:7a1da09d034061990f053abf",
+        "source:830d735719d1385b7ca1f3f9",
+        "source:06877a2c3ca14879b3dceb4b"
+      ]
+    },
+    {
+      "reviewId": "fd07-deuro-base-20261020",
+      "assetId": "deuro-deuro",
+      "scope": {
+        "kind": "deployment",
+        "deploymentKey": "base:0x1b5f7fa46ed0f487f049c42f374ca4827d65a264",
+        "controlKinds": [
+          "bridge"
+        ]
+      },
+      "reviewedAt": "2026-10-20T22:23:20Z",
+      "reviewer": "FD07 bottom-up refinement 2026-10-21",
+      "windowStartSec": 1788220800,
+      "windowEndSec": 1792535000,
+      "conclusion": "no-known-incident",
+      "searchedSurfacesRefs": [
+        "surface:bd42dbaf3e6aa0f6f51cb07c",
+        "surface:24643fa783e8ed96276034c3",
+        "surface:51acb31bbbc9e46e4ddc0c27"
+      ],
+      "sourcesRefs": [
+        "source:7a1da09d034061990f053abf",
+        "source:830d735719d1385b7ca1f3f9",
+        "source:c7ac547dbd2fe4a77a789859"
+      ]
+    },
+    {
+      "reviewId": "fd14-wpen-ripio-bsc-negative-20261020",
+      "assetId": "wpen-ripio",
+      "scope": {
+        "kind": "deployment",
+        "deploymentKey": "bsc:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+        "controlKinds": [
+          "bridge"
+        ]
+      },
+      "reviewedAt": "2026-10-20T22:27:44Z",
+      "reviewer": "FD14 bottom-up refinement 2026-10-21",
+      "windowStartSec": 1792511976,
+      "windowEndSec": 1792534479,
+      "conclusion": "no-known-incident",
+      "sourcesRefs": [
+        "source:ac60c69fdbc2fcbad3d6c80d",
+        "source:8cec93284b3bd89ec8d76e86",
+        "source:a387ba1eb44466b22706f852",
+        "source:088a095123f3925e70552780",
+        "source:ab1b9b88168f099754ed67d8",
+        "source:aa4b4244c3fbecdba5c5cd64"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:64c530158ca755c09816b355",
+        "surface:ea28cca5a4309f3fea6ff17a",
+        "surface:824e620ccaad205e54005f61"
+      ]
+    },
+    {
+      "reviewId": "fd14-wmxn-ripio-bsc-negative-20261020",
+      "assetId": "wmxn-ripio",
+      "scope": {
+        "kind": "deployment",
+        "deploymentKey": "bsc:0x337e7456b420bd3481e7fa61fa9850343d610d34",
+        "controlKinds": [
+          "bridge"
+        ]
+      },
+      "reviewedAt": "2026-10-20T22:27:44Z",
+      "reviewer": "FD14 bottom-up refinement 2026-10-21",
+      "windowStartSec": 1792511976,
+      "windowEndSec": 1792534479,
+      "conclusion": "no-known-incident",
+      "sourcesRefs": [
+        "source:0a365c9ba467089a0b37d600",
+        "source:8cec93284b3bd89ec8d76e86",
+        "source:bdccdd41891eb05f1e73df6f",
+        "source:088a095123f3925e70552780",
+        "source:ab1b9b88168f099754ed67d8",
+        "source:aa4b4244c3fbecdba5c5cd64"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:64c530158ca755c09816b355",
+        "surface:ea28cca5a4309f3fea6ff17a",
+        "surface:6008808f8fc132bde1dd2fca"
+      ]
+    },
+    {
+      "reviewId": "fd14-wclp-ripio-bsc-negative-20261020",
+      "assetId": "wclp-ripio",
+      "scope": {
+        "kind": "deployment",
+        "deploymentKey": "bsc:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+        "controlKinds": [
+          "bridge"
+        ]
+      },
+      "reviewedAt": "2026-10-20T22:27:44Z",
+      "reviewer": "FD14 bottom-up refinement 2026-10-21",
+      "windowStartSec": 1792511976,
+      "windowEndSec": 1792534479,
+      "conclusion": "no-known-incident",
+      "sourcesRefs": [
+        "source:e1ceba7231fef3a5e8dbfc33",
+        "source:8cec93284b3bd89ec8d76e86",
+        "source:a765d8b54f3af9dec24f150a",
+        "source:088a095123f3925e70552780",
+        "source:ab1b9b88168f099754ed67d8",
+        "source:aa4b4244c3fbecdba5c5cd64"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:64c530158ca755c09816b355",
+        "surface:ea28cca5a4309f3fea6ff17a",
+        "surface:ae6c9d69ed5608c6e81ba3e9"
+      ]
+    },
+    {
+      "reviewId": "fd14-wpen-ripio-polygon-negative-20261020",
+      "assetId": "wpen-ripio",
+      "scope": {
+        "kind": "deployment",
+        "deploymentKey": "polygon:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+        "controlKinds": [
+          "bridge"
+        ]
+      },
+      "reviewedAt": "2026-10-20T22:27:44Z",
+      "reviewer": "FD14 bottom-up refinement 2026-10-21",
+      "windowStartSec": 1792459467,
+      "windowEndSec": 1792534481,
+      "conclusion": "no-known-incident",
+      "sourcesRefs": [
+        "source:7d04c8e683a734de249782da",
+        "source:8cec93284b3bd89ec8d76e86",
+        "source:088a095123f3925e70552780",
+        "source:ab1b9b88168f099754ed67d8",
+        "source:aa4b4244c3fbecdba5c5cd64"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:64c530158ca755c09816b355",
+        "surface:ea28cca5a4309f3fea6ff17a",
+        "surface:e9973a3b4530429756ec411e"
+      ]
+    },
+    {
+      "reviewId": "fd14-wpen-ripio-worldchain-negative-20261020",
+      "assetId": "wpen-ripio",
+      "scope": {
+        "kind": "deployment",
+        "deploymentKey": "worldchain:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+        "controlKinds": [
+          "bridge"
+        ]
+      },
+      "reviewedAt": "2026-10-20T22:27:44Z",
+      "reviewer": "FD14 bottom-up refinement 2026-10-21",
+      "windowStartSec": 1792434481,
+      "windowEndSec": 1792534479,
+      "conclusion": "no-known-incident",
+      "sourcesRefs": [
+        "source:3a1bb5421ba2c96121f202d0",
+        "source:8cec93284b3bd89ec8d76e86",
+        "source:088a095123f3925e70552780",
+        "source:ab1b9b88168f099754ed67d8",
+        "source:aa4b4244c3fbecdba5c5cd64"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:64c530158ca755c09816b355",
+        "surface:ea28cca5a4309f3fea6ff17a",
+        "surface:f72ccb5ed7c5ca8a693d99f5"
+      ]
+    },
+    {
+      "reviewId": "fd20-usdx-flare-negative-20261020",
+      "assetId": "usdx-hex-trust",
+      "scope": {
+        "kind": "control",
+        "controlKey": "bridge-meta:usdx-hex-trust:7bff7fbe009544a71611"
+      },
+      "reviewedAt": "2026-10-20T22:19:40Z",
+      "reviewer": "FD20 bottom-up refinement 2026-10-21",
+      "windowStartSec": 1710739947,
+      "windowEndSec": 1792534780,
+      "conclusion": "no-known-incident",
+      "searchedSurfacesRefs": [
+        "surface:065094981ba8c9aebcf23894",
+        "surface:26217a92e7981e2ad49b0b61",
+        "surface:c170a5e810002cb065954c5e"
+      ],
+      "sourcesRefs": [
+        "source:0b76fd463528eed411be032d",
+        "source:8164c6f2c3e54762ce23069f",
+        "source:ec474b688394d2e91252b359",
+        "source:6fe5b6133bcf4443f1ee0569",
+        "source:b0ac8cdcd465d4a02c6e33a7",
+        "source:7e41eba7d7c8aabcec2546ef",
+        "source:30861c65090aa029a9617eb9",
+        "source:1ee9f6a2f382b29b468d6da9"
+      ]
+    },
+    {
+      "reviewId": "fd26-strusd-tori-pharos-bridge-20261020",
+      "assetId": "strusd-tori",
+      "scope": {
+        "kind": "deployment",
+        "deploymentKey": "pharos:0x25419e949b485d481bed4ea0c5a0496f6c7f7c63",
+        "controlKinds": [
+          "bridge"
+        ]
+      },
+      "reviewedAt": "2026-10-20T22:22:50Z",
+      "reviewer": "FD26 bottom-up refinement 2026-10-21",
+      "windowStartSec": 1790067345,
+      "windowEndSec": 1792534448,
+      "conclusion": "no-known-incident",
+      "searchedSurfacesRefs": [
+        "surface:48a3b44eaa6bdd8cf1aaff2a",
+        "surface:17ad2c0dc3a24831f8e8f27e",
+        "surface:482075cf33c710170ff02575",
+        "surface:cd49c5cb5f7eeb00e0f5e082",
+        "surface:9b79152eff681868d3e4111b",
+        "surface:68bdb466e7c2933ae4eb82d5"
+      ],
+      "sourcesRefs": [
+        "source:84b70fbccb90fce8aa684ee2",
+        "source:260655f9ea7ddb599b6ef4f7",
+        "source:256cb233b587f49df3012a3a",
+        "source:1809ed4d7a27481e3847dec0",
+        "source:3f78cee56a945d9c2d83b4a5",
+        "source:41a9f64b874e95a58d150df0"
+      ]
+    },
+    {
+      "reviewId": "fd39-usdn-noble-bridge-negative-2026-10-20",
+      "assetId": "usdn-noble",
+      "scope": {
+        "kind": "deployment",
+        "deploymentKey": "noble:uusdn",
+        "controlKinds": [
+          "bridge"
+        ]
+      },
+      "reviewedAt": "2026-10-20T22:24:17Z",
+      "reviewer": "FD39 bottom-up refinement 2026-10-21",
+      "windowStartSec": 1789862400,
+      "windowEndSec": 1792534783,
+      "conclusion": "no-known-incident",
+      "searchedSurfacesRefs": [
+        "surface:84f81f3124494176861bad83",
+        "surface:a7d8ce8dd56a5ddcf38436e2",
+        "surface:e89dbdf9f77832a2abe72513"
+      ],
+      "sourcesRefs": [
+        "source:7d09e52df5efc54e519079be",
+        "source:a194e6ee0e0bb2f015074186",
+        "source:e9821d48bfb2051ad5356e94"
+      ]
     }
   ],
   "sourceObservations": [
@@ -56631,6 +56946,446 @@
         "location": "monad block 113592633, 2026-10-15T10:45:00Z, hash 0x2c5bd70d98facb6255ab73f1afe5bfe6766d9038fbc1da72b6543bc1fd208f68; integration/incident-refresh/strusd-monad-{events,emergency-pointers,curse,pool-restriction}.json; pool-creation-public.json; earlier strusd-monad-peers.json",
         "excerpt": "Expanded monad aggregate independently researches token 0x683fb58ee77172626d5b49087ddac71ef7825d20, pool 0x936a28338985b905f7e932af379533666df6d1ec, owner Safe 0x0c6bbfd2d5666d44bf28580edeec0263692c8316 and separate rate administrator 0x5a54bbae78a3f043a1a41d6f9eb39fb2a1f766c7. Exact-address all-event census over 113542634–113592633 inclusive (50,000 blocks) includes token/pool/Safe/rate-admin and contains ordinary token/pool activity, no observed pool ownership/role/admin/peer/rate-limit/emergency change. At block 113592633 (2026-10-15T10:45:00Z; hash 0x2c5bd70d98facb6255ab73f1afe5bfe6766d9038fbc1da72b6543bc1fd208f68), current owner/rate-admin unchanged, rate-admin nonce=0, RMN global isCursed=false and exact pool token-restriction flag=false. Current separately captured lane limiter state remains documented, not an immutable cap. Creation receipt and historical token creation establish the earlier start. Bounded event and current-state evidence is not a lifetime event census; holder-level blacklist, native mint, wrapper, key-custody and other-chain conclusions are excluded."
       }
+    },
+    {
+      "id": "source:dbc10b6a11edce126f8c3d29",
+      "value": {
+        "label": "Aave exact GHO deployment registry",
+        "url": "https://aave.com/docs/ecosystem/gho",
+        "observedAt": "2026-10-20T22:25:09Z",
+        "location": "GHO deployments and bridging",
+        "excerpt": "The current issuer directory identifies X Layer GHO 0xDe6539018B095353A40753Dc54C91C68c9487D4E and pool 0xA5Ba213867E175A182a5dd6A9193C6158738105A, with Chainlink CCIP bridging."
+      }
+    },
+    {
+      "id": "source:04b8e37ca97d9725f9bdb526",
+      "value": {
+        "label": "Chainlink exact GHO rail directory",
+        "url": "https://docs.chain.link/ccip/directory/mainnet/token/GHO",
+        "observedAt": "2026-10-20T22:25:09Z",
+        "location": "X Layer token row",
+        "excerpt": "The live CCIP mainnet GHO directory independently matches this X Layer token and BurnMintTokenPool 1.5.1 address; no route substitution is used."
+      }
+    },
+    {
+      "id": "source:c41b3f2ffae76a7af57d5a88",
+      "value": {
+        "label": "Exact X Layer CCIP pool explorer events",
+        "url": "https://www.oklink.com/xlayer/address/0xA5Ba213867E175A182a5dd6A9193C6158738105A",
+        "observedAt": "2026-10-20T22:25:09Z",
+        "location": "Events tab, latest 25 events rendered in Chromium",
+        "excerpt": "Recovered the actual event table after the initial API-loading/400 response. Latest listed events are Minted and TokensConsumed at block 69970061, transaction 0x5d94a64e1ffc7505bc0c01369dd95c43f9aaca82575bd65ee8f1a07b75702279 on 2026-09-07; older Burned events at blocks 69556146 and 66778218 and ChainConfigured at 65627373 are shown. This bounded latest-25 explorer surface is not an exhaustive lifetime log census."
+      }
+    },
+    {
+      "id": "source:8816da782892f332c2e0f459",
+      "value": {
+        "label": "X Layer explicit-block CCIP emergency-state reads",
+        "url": "https://rpc.xlayer.tech",
+        "observedAt": "2026-10-20T22:25:09Z",
+        "location": "Block 73765747 / 0x4f94029985013a45c774f8cf040a7c9e037054fc03fb7d48dd97508e9c2e0e4e / 2026-10-20T22:19:43Z; local FD02-xlayer-identity.json and FD02-xlayer-emergency-state.json",
+        "excerpt": "Pinned calls identify getToken() as the exact GHO token, typeAndVersion() as BurnMintTokenPool 1.5.1, and getRmnProxy() as 0x326b01f673681dad72cd386cce12fff717be32cd. All nine configured remote-chain isCursed(bytes16) reads return false; the GLOBAL_CURSE_SUBJECT 0x01000000000000000000000000000001 also returns false. All nine inbound and nine outbound limiter states are enabled with 5000000000000000000000000 available tokens/capacity and rate 1000000000000000000000. These states rule out an observed current RMN curse or exhausted configured bucket at this block, not every possible outage or unreported incident."
+      }
+    },
+    {
+      "id": "source:cdb2129ed538da18f185e5b7",
+      "value": {
+        "label": "Issuer GHO CCIP security discussion, explicitly a testnet proposal",
+        "url": "https://governance.aave.com/t/discussion-a-second-issuer-controlled-verifier-for-cross-chain-gho-on-ccip-2-0/25771",
+        "observedAt": "2026-10-20T22:25:09Z",
+        "location": "Post 1, 2026-10-04",
+        "excerpt": "A third-party proposal describes an additional GHO verifier running on public testnets and asks whether a pilot is worthwhile; it does not report an existing GHO/X Layer exploit or establish deployment of the proposed controls. Issuer-forum searches scoped to GHO/CCIP/X Layer incident, exploit and pause after 2026-07-01 surfaced no matching disclosed incident."
+      }
+    },
+    {
+      "id": "source:32552e50bd10bd2eaef4c750",
+      "value": {
+        "label": "Chainlink public security reporting surface",
+        "url": "https://chain.link/security",
+        "observedAt": "2026-10-20T22:25:09Z",
+        "location": "Security and Report a bug",
+        "excerpt": "Provider surface describes regular audits and official HackerOne/Immunefi reporting channels. This is not a complete incident register or a zero-incident certification. Provider-site searches for CCIP incident/exploit/security disclosures within 2026-07-01 through 2026-10-20 found no matching disclosure."
+      }
+    },
+    {
+      "id": "source:3b67decfde898a065304a2d7",
+      "value": {
+        "label": "Independent DefiLlama hacks dataset",
+        "url": "https://api.llama.fi/hacks",
+        "observedAt": "2026-10-20T22:25:09Z",
+        "location": "Complete JSON dataset fetched 2026-10-20",
+        "excerpt": "Inspected all 1313 returned records, latest date 2026-10-19. Searches for GHO, CCIP, X Layer/XLayer and Aave found only two Aave incidents (2024 Ethereum arbitrary external call and 2026-03-12 Ethereum oracle misconfiguration), neither an X Layer GHO CCIP incident and neither within this review window."
+      }
+    },
+    {
+      "id": "source:79717d87df17757f52a28029",
+      "value": {
+        "label": "Independent Rekt current disclosures",
+        "url": "https://rekt.news/",
+        "observedAt": "2026-10-20T22:25:09Z",
+        "location": "Current homepage and site-scoped GHO/CCIP/X Layer searches",
+        "excerpt": "Current feed reaches 2026-10-16. Site-scoped search found no X Layer or CCIP incident; GHO matches were a 2024 governance/peg article and January 2026 YO operator slippage. The latter is an external integration swap error, outside this window and not a GHO mint/CCIP failure."
+      }
+    },
+    {
+      "id": "source:1eb885e54945fd4db746f233",
+      "value": {
+        "label": "Rekt YO incident scope verification",
+        "url": "https://rekt.news/yo-protocols-slippage-bomb",
+        "observedAt": "2026-10-20T22:25:09Z",
+        "location": "January 14 2026 article, Anatomy and Damage Control",
+        "excerpt": "The article attributes the January 12 loss to YO operator bad swap/slippage settings, identifies swap transaction 0x6aff59e800dc219ff0d1614b3dc512e7a07159197b2a6a26969a9ca25c3e33b4, and reports a YO backstop. It explicitly says no exploit/hack. It supplies no evidence of an X Layer GHO CCIP control incident."
+      }
+    },
+    {
+      "id": "source:c7a694873574d4eca4ba2e44",
+      "value": {
+        "label": "CCIP reference pool emergency validation",
+        "url": "https://raw.githubusercontent.com/smartcontractkit/ccip/0df0625eea603ba8572d5382d72979a7f2b12bfb/contracts/src/v0.8/ccip/pools/TokenPool.sol",
+        "observedAt": "2026-10-20T22:25:09Z",
+        "location": "_validateLockOrBurn and _validateReleaseOrMint",
+        "excerpt": "Both reference pool validations query the RMN proxy with bytes16(uint128(remoteChainSelector)). This explains the nine subject encodings used in the read-only current-state calls; reference source alone is not asserted to be exact-bytecode verification of this deployment."
+      }
+    },
+    {
+      "id": "source:96c8494ac7ec4be903614e72",
+      "value": {
+        "label": "CCIP reference RMN global subject semantics",
+        "url": "https://raw.githubusercontent.com/smartcontractkit/ccip/0df0625eea603ba8572d5382d72979a7f2b12bfb/contracts/src/v0.8/ccip/rmn/RMNRemote.sol",
+        "observedAt": "2026-10-20T22:25:09Z",
+        "location": "GLOBAL_CURSE_SUBJECT and isCursed(bytes16)",
+        "excerpt": "GLOBAL_CURSE_SUBJECT is 0x01000000000000000000000000000001; a global curse makes subject-specific isCursed return true. The exact deployed RMN proxy was queried independently rather than assuming reference source establishes deployed custody or upgrade closure."
+      }
+    },
+    {
+      "id": "source:7a1da09d034061990f053abf",
+      "value": {
+        "label": "dEURO public governance announcements",
+        "url": "https://github.com/orgs/d-EURO/discussions",
+        "observedAt": "2026-10-20T22:23:20Z",
+        "location": "Public discussion index inspected; current visible topics and issuer-linked governance forum",
+        "excerpt": "Visible topics concern base-rate proposals, nDEPS pricing and referral support. No dEURO Base or Optimism token security incident is disclosed in the inspected index; this is a scoped no-known-incident search, not proof of universal absence."
+      }
+    },
+    {
+      "id": "source:830d735719d1385b7ca1f3f9",
+      "value": {
+        "label": "Complete independent incident dataset query",
+        "url": "https://api.llama.fi/hacks",
+        "observedAt": "2026-10-20T22:22:24.372Z",
+        "location": "Full 1313-row response searched for dEURO, Decentralized Euro, d-EURO and exact L2 token 0x1b5f7fa46ed0f487f049c42f374ca4827d65a264",
+        "excerpt": "No matching incident entry found. Other Euro or bridge incidents were not attributed to dEURO."
+      }
+    },
+    {
+      "id": "source:06877a2c3ca14879b3dceb4b",
+      "value": {
+        "label": "Exact optimism dEURO token event search",
+        "url": "https://optimism.blockscout.com/api/v2/addresses/0x1b5f7fa46ed0f487f049c42f374ca4827d65a264/logs",
+        "observedAt": "2026-10-20T22:23:20Z",
+        "location": "First 50 descending events; oldest entry precedes the finite search-window start; exact token identity",
+        "excerpt": "Exact token event index first 50 entries runs from 2026-01-24 back to 2025-10-23, before the 2026-09-01 search-window start. Inspected entries are Mint and Transfer; the verified immutable token exposes no emergency pause or upgrade method. No token-specific incident indication was found. The index is not an exhaustive proof of bridge-wide operational health."
+      }
+    },
+    {
+      "id": "source:c7ac547dbd2fe4a77a789859",
+      "value": {
+        "label": "Exact base dEURO token event search",
+        "url": "https://base.blockscout.com/api/v2/addresses/0x1b5f7fa46ed0f487f049c42f374ca4827d65a264/logs",
+        "observedAt": "2026-10-20T22:23:20Z",
+        "location": "First 50 descending events; oldest entry precedes the finite search-window start; exact token identity",
+        "excerpt": "Exact token event index first 50 entries runs from 2026-10-08 back to 2026-02-18, covering the 2026-09-01 search-window start. Nine visible events within the search window are ordinary Transfers; no token-specific incident indication was found. The verified immutable token exposes no emergency pause or upgrade method. This is not proof of bridge-wide operational health."
+      }
+    },
+    {
+      "id": "source:ac60c69fdbc2fcbad3d6c80d",
+      "value": {
+        "label": "Exact bsc bounded token and rail event search",
+        "url": "https://api-bsc-mainnet-full.n.dwellir.com",
+        "observedAt": "2026-10-20T22:24:34.464Z",
+        "location": "Numeric block range 128774264–128824263, 2026-10-20T15:59:36.000Z–2026-10-20T22:14:39.000Z; artifact evidence/FD14-bsc-incident-events-20261020.json",
+        "excerpt": "For 0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe and shared BridgeDeposit/LimitedMinterBridge addresses, the bounded 50000-block filter returned no Paused/Unpaused/Upgraded/RoleGranted/RoleRevoked/BlocklistEnforcementSet/UserBlocked/TokenUnregistered/DailyMintLimitUpdated/LimitedMinterUpdated/BridgeRoutesUpdated logs. Empty logs are not standalone absence proof or a lifetime census; the conclusion also relies on issuer/status/tracker research and exact current emergency reads."
+      }
+    },
+    {
+      "id": "source:8cec93284b3bd89ec8d76e86",
+      "value": {
+        "label": "Complete retrieved DeFiLlama hacks tracker",
+        "url": "https://api.llama.fi/hacks",
+        "observedAt": "2026-10-20T22:25:03Z",
+        "location": "All 1313 returned records, serialized-row case-insensitive name/address search; sha256 abee481a278fcdccef9c245c57254be0497cf20618c3037fe044813f6d1437fb",
+        "excerpt": "No Ripio, wFIAT, wBRL, wMXN, wCOP, wCLP, wPEN, BridgeDeposit, LimitedMinterBridge or exact bridge/adapter-address match. This establishes no known matching tracker report in this retrieved database, not absence of every incident."
+      }
+    },
+    {
+      "id": "source:a387ba1eb44466b22706f852",
+      "value": {
+        "label": "Exact bsc token and bridge emergency state",
+        "url": "https://bnb-mainnet.g.alchemy.com/v2/",
+        "observedAt": "2026-10-20T22:24:47.079Z",
+        "location": "Block 128824263, 0x1dcb797b6cd9f97a093de923b695d461996a31f7418093fe3d23f183d86d9dcc, 2026-10-20T22:14:39.000Z; artifact evidence/FD14-bsc-emergency-alchemy-20261020.json",
+        "excerpt": "For exact token 0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe, BridgeDeposit 0x465e642387d3d73a57cdc1368ffa53a800ba5d47 and LimitedMinterBridge 0x46167cb034fec6cec46caed4f61281f5aa0eb0e6, paused() returned false. BridgeDeposit.limitedMinter() equals the reviewed adapter. The token remains registered in that adapter with a positive cap, and the inspected seven other issuer-published EVM destinations are enabled. No mint-cap or favorable process/independence credit is inferred. The false pause read describes only this pinned state."
+      }
+    },
+    {
+      "id": "source:088a095123f3925e70552780",
+      "value": {
+        "label": "Issuer-published bridge security master report",
+        "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/audit/audit_381b6be3-9462-47ee-a24e-7d390f856e28/master_report.md",
+        "observedAt": "2026-10-20T22:25:04Z",
+        "location": "Master Synthesis Report, generated 2025-06-18; sha256 2862994c686189c05ae521321de2d4aa0fba9f29fffe61dad81aec7b73ecc7a2",
+        "excerpt": "The report identifies participating LLMs and prospective source-code findings, including mint-limit manipulation. It is not an independent financial/security assurance opinion and does not establish a realized current exploit or verified remediation. Known unbounded issuer powers are retained."
+      }
+    },
+    {
+      "id": "source:ab1b9b88168f099754ed67d8",
+      "value": {
+        "label": "Ripio status incident history",
+        "url": "https://ripio.statuspage.io/api/v2/incidents.json",
+        "observedAt": "2026-10-20T22:25:04Z",
+        "location": "All 50 returned incidents, created 2026-06-17 through 2026-10-15; sha256 f2cba890de797b18ed407a3a357b55209562ccf1824f5429afe2d6bc8fa35bbb",
+        "excerpt": "All returned incidents are resolved platform or network deposit/withdrawal/service events. Names and update bodies contain no wFIAT/wBRL/wMXN/wCOP/wCLP/wPEN/BridgeDeposit/LimitedMinterBridge or exact rail-address match. Platform deposit events on BSC/Base and other chains are not attributed to the token or issuer bridge without an exact-control binding. Older pages are outside this retrieved window."
+      }
+    },
+    {
+      "id": "source:aa4b4244c3fbecdba5c5cd64",
+      "value": {
+        "label": "Ripio issuer releases and updates",
+        "url": "https://www.ripio.com/en/cryptos/local-stablecoins",
+        "observedAt": "2026-10-20T22:25:04Z",
+        "location": "Local stablecoins and WFIAT Releases & Updates chronology; retrieved HTML sha256 1536895dfa2722965ee7a764c98b8af45171a962dc88f053604b5862b1a29bac",
+        "excerpt": "Issuer lists the assigned wFIAT assets and burn/mint bridge releases. Retrieved release text contains no hack, exploit, incident, pause or suspension disclosure. This is a bounded disclosure search, not proof of lifetime incident absence."
+      }
+    },
+    {
+      "id": "source:0a365c9ba467089a0b37d600",
+      "value": {
+        "label": "Exact bsc bounded token and rail event search",
+        "url": "https://api-bsc-mainnet-full.n.dwellir.com",
+        "observedAt": "2026-10-20T22:24:34.464Z",
+        "location": "Numeric block range 128774264–128824263, 2026-10-20T15:59:36.000Z–2026-10-20T22:14:39.000Z; artifact evidence/FD14-bsc-incident-events-20261020.json",
+        "excerpt": "For 0x337e7456b420bd3481e7fa61fa9850343d610d34 and shared BridgeDeposit/LimitedMinterBridge addresses, the bounded 50000-block filter returned no Paused/Unpaused/Upgraded/RoleGranted/RoleRevoked/BlocklistEnforcementSet/UserBlocked/TokenUnregistered/DailyMintLimitUpdated/LimitedMinterUpdated/BridgeRoutesUpdated logs. Empty logs are not standalone absence proof or a lifetime census; the conclusion also relies on issuer/status/tracker research and exact current emergency reads."
+      }
+    },
+    {
+      "id": "source:bdccdd41891eb05f1e73df6f",
+      "value": {
+        "label": "Exact bsc token and bridge emergency state",
+        "url": "https://bnb-mainnet.g.alchemy.com/v2/",
+        "observedAt": "2026-10-20T22:24:47.079Z",
+        "location": "Block 128824263, 0x1dcb797b6cd9f97a093de923b695d461996a31f7418093fe3d23f183d86d9dcc, 2026-10-20T22:14:39.000Z; artifact evidence/FD14-bsc-emergency-alchemy-20261020.json",
+        "excerpt": "For exact token 0x337e7456b420bd3481e7fa61fa9850343d610d34, BridgeDeposit 0x465e642387d3d73a57cdc1368ffa53a800ba5d47 and LimitedMinterBridge 0x46167cb034fec6cec46caed4f61281f5aa0eb0e6, paused() returned false. BridgeDeposit.limitedMinter() equals the reviewed adapter. The token remains registered in that adapter with a positive cap, and the inspected seven other issuer-published EVM destinations are enabled. No mint-cap or favorable process/independence credit is inferred. The false pause read describes only this pinned state."
+      }
+    },
+    {
+      "id": "source:e1ceba7231fef3a5e8dbfc33",
+      "value": {
+        "label": "Exact bsc bounded token and rail event search",
+        "url": "https://api-bsc-mainnet-full.n.dwellir.com",
+        "observedAt": "2026-10-20T22:24:34.464Z",
+        "location": "Numeric block range 128774264–128824263, 2026-10-20T15:59:36.000Z–2026-10-20T22:14:39.000Z; artifact evidence/FD14-bsc-incident-events-20261020.json",
+        "excerpt": "For 0x61d450a098b6a7f69fc4b98ce68198fe59768651 and shared BridgeDeposit/LimitedMinterBridge addresses, the bounded 50000-block filter returned no Paused/Unpaused/Upgraded/RoleGranted/RoleRevoked/BlocklistEnforcementSet/UserBlocked/TokenUnregistered/DailyMintLimitUpdated/LimitedMinterUpdated/BridgeRoutesUpdated logs. Empty logs are not standalone absence proof or a lifetime census; the conclusion also relies on issuer/status/tracker research and exact current emergency reads."
+      }
+    },
+    {
+      "id": "source:a765d8b54f3af9dec24f150a",
+      "value": {
+        "label": "Exact bsc token and bridge emergency state",
+        "url": "https://bnb-mainnet.g.alchemy.com/v2/",
+        "observedAt": "2026-10-20T22:24:47.079Z",
+        "location": "Block 128824263, 0x1dcb797b6cd9f97a093de923b695d461996a31f7418093fe3d23f183d86d9dcc, 2026-10-20T22:14:39.000Z; artifact evidence/FD14-bsc-emergency-alchemy-20261020.json",
+        "excerpt": "For exact token 0x61d450a098b6a7f69fc4b98ce68198fe59768651, BridgeDeposit 0x465e642387d3d73a57cdc1368ffa53a800ba5d47 and LimitedMinterBridge 0x46167cb034fec6cec46caed4f61281f5aa0eb0e6, paused() returned false. BridgeDeposit.limitedMinter() equals the reviewed adapter. The token remains registered in that adapter with a positive cap, and the inspected seven other issuer-published EVM destinations are enabled. No mint-cap or favorable process/independence credit is inferred. The false pause read describes only this pinned state."
+      }
+    },
+    {
+      "id": "source:7d04c8e683a734de249782da",
+      "value": {
+        "label": "Exact polygon token and bridge emergency state",
+        "url": "https://api-polygon-mainnet.n.dwellir.com",
+        "observedAt": "2026-10-20T22:24:35.623Z",
+        "location": "Block 95886075, 0x588146dddf66b692ccba2c9aec2134f6222516b3c7df139245c35550e9e53d71, 2026-10-20T22:14:41.000Z; artifact evidence/FD14-polygon-emergency-20261020.json; Numeric block range 95836076–95886075, 2026-10-20T01:24:27.000Z–2026-10-20T22:14:41.000Z; artifact evidence/FD14-polygon-incident-events-20261020.json",
+        "excerpt": "For exact token 0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe, BridgeDeposit 0x465e642387d3d73a57cdc1368ffa53a800ba5d47 and LimitedMinterBridge 0x46167cb034fec6cec46caed4f61281f5aa0eb0e6, paused() returned false. BridgeDeposit.limitedMinter() equals the reviewed adapter. The token remains registered in that adapter with a positive cap, and the inspected seven other issuer-published EVM destinations are enabled. No mint-cap or favorable process/independence credit is inferred. The false pause read describes only this pinned state. For 0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe and shared BridgeDeposit/LimitedMinterBridge addresses, the bounded 50000-block filter returned no Paused/Unpaused/Upgraded/RoleGranted/RoleRevoked/BlocklistEnforcementSet/UserBlocked/TokenUnregistered/DailyMintLimitUpdated/LimitedMinterUpdated/BridgeRoutesUpdated logs. Empty logs are not standalone absence proof or a lifetime census; the conclusion also relies on issuer/status/tracker research and exact current emergency reads."
+      }
+    },
+    {
+      "id": "source:3a1bb5421ba2c96121f202d0",
+      "value": {
+        "label": "Exact worldchain token and bridge emergency state",
+        "url": "https://api-worldchain-mainnet.n.dwellir.com",
+        "observedAt": "2026-10-20T22:24:35.623Z",
+        "location": "Block 36599420, 0x4cb5e530b4409f3722158db5132d15e54ecef3fb099f2895b77e45a043dd2399, 2026-10-20T22:14:39.000Z; artifact evidence/FD14-worldchain-emergency-20261020.json; Numeric block range 36549421–36599420, 2026-10-19T18:28:01.000Z–2026-10-20T22:14:39.000Z; artifact evidence/FD14-worldchain-incident-events-20261020.json",
+        "excerpt": "For exact token 0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe, BridgeDeposit 0x465e642387d3d73a57cdc1368ffa53a800ba5d47 and LimitedMinterBridge 0x46167cb034fec6cec46caed4f61281f5aa0eb0e6, paused() returned false. BridgeDeposit.limitedMinter() equals the reviewed adapter. The token remains registered in that adapter with a positive cap, and the inspected seven other issuer-published EVM destinations are enabled. No mint-cap or favorable process/independence credit is inferred. The false pause read describes only this pinned state. For 0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe and shared BridgeDeposit/LimitedMinterBridge addresses, the bounded 50000-block filter returned no Paused/Unpaused/Upgraded/RoleGranted/RoleRevoked/BlocklistEnforcementSet/UserBlocked/TokenUnregistered/DailyMintLimitUpdated/LimitedMinterUpdated/BridgeRoutesUpdated logs. Empty logs are not standalone absence proof or a lifetime census; the conclusion also relies on issuer/status/tracker research and exact current emergency reads."
+      }
+    },
+    {
+      "id": "source:0b76fd463528eed411be032d",
+      "value": {
+        "label": "Exact Flare USDX current emergency and transport state",
+        "url": "https://flare-api.flare.network/ext/C/rpc",
+        "observedAt": "2026-10-20T22:18:40.214Z",
+        "location": "Flare block 72586628, hash 0xb45e76fde9620c10a0c3df3c40a899f2ea7a697007671363e2d87862286e4488, timestamp 2026-10-20T22:16:38Z; agents/2026-10-20-safety-refinement/results/FD20-usdx-flare-evidence.json",
+        "excerpt": "Explicit-block eth_call returns paused() false; EndpointV2 0x1a44076050125825900e736c501f859c50fe728c; peers(30101) equals Ethereum USDX 0xf8750b54d86be7ae9e32b4a0c826811198d63313; msgInspector and preCrime are zero; owner/defaultAdmin 0xb8ce31ad8bad26e88db17e68f695c64f67ad31eb. Before/after explicit-block headers match. Provider rejects a 50,001-block query with maximum 30, then succeeds for blocks 72586599-72586628 with no selected pause/unpause/upgrade/peer/role/blacklist events. This is bounded research, not lifetime absence or DVN configuration closure."
+      }
+    },
+    {
+      "id": "source:8164c6f2c3e54762ce23069f",
+      "value": {
+        "label": "Exact Flare USDX creation transaction",
+        "url": "https://flare-explorer.flare.network/api/v2/transactions/0x65c41429f5d1b65243cc848b2014f4414c15692e1ed644c1b64771f233dc4cf2",
+        "observedAt": "2026-10-20T22:19:40Z",
+        "location": "created_contract.hash, block_number, timestamp and result",
+        "excerpt": "Successful creation of 0x4a771cc1a39fdd8aa08b8ea51f7fd412e73b3d2b at Flare block 21190641, 2024-03-18T05:32:27Z. This begins the researched window, not the later public launch."
+      }
+    },
+    {
+      "id": "source:ec474b688394d2e91252b359",
+      "value": {
+        "label": "Exact Flare USDX displayed explorer log page",
+        "url": "https://flare-explorer.flare.network/api/v2/addresses/0x4a771cc1a39fdd8aa08b8ea51f7fd412e73b3d2b/logs",
+        "observedAt": "2026-10-20T22:18:40.214Z",
+        "location": "First 50 displayed items, with next_page_params retained in agents/2026-10-20-safety-refinement/results/FD20-usdx-flare-evidence.json",
+        "excerpt": "The displayed 50 items decode as 49 Transfer and one Approval event. Pagination remains available; no full historical event census is claimed. Combined with a fresh pinned paused() read and provider-maximum emergency-event filter."
+      }
+    },
+    {
+      "id": "source:6fe5b6133bcf4443f1ee0569",
+      "value": {
+        "label": "Issuer current USDX disclosure and announcement search",
+        "url": "https://www.htdigitalassets.com/",
+        "observedAt": "2026-10-20T22:19:40Z",
+        "location": "October 2, 2026 published page; Trust and Transparency and Buy Hold and Redeem sections; targeted Hex Trust/USD X/Flare/LayerZero incident search",
+        "excerpt": "The current USDX page describes approved-party par redemption and ongoing supply/reserve display. It contains no known Flare USDX compromise or suspension announcement in the searched surface; regular-attestation marketing does not establish financial reconciliation."
+      }
+    },
+    {
+      "id": "source:b0ac8cdcd465d4a02c6e33a7",
+      "value": {
+        "label": "Issuer security-notice scope",
+        "url": "https://www.hextrust.com/security-notice",
+        "observedAt": "2026-10-20T22:19:40Z",
+        "location": "Security Notice heading and body",
+        "excerpt": "Stay safe and beware of fraudulent links and websites impersonating Hex Trust. This is a phishing warning, not evidence of a USDX token/bridge compromise or a lifetime no-incident assurance."
+      }
+    },
+    {
+      "id": "source:7e41eba7d7c8aabcec2546ef",
+      "value": {
+        "label": "Independent incident registry exact-name search",
+        "url": "https://api.llama.fi/hacks",
+        "observedAt": "2026-10-20T22:18:40.214Z",
+        "location": "Complete 1,313-record response searched case-insensitively for Hex Trust, HTMI and USDX",
+        "excerpt": "No matching record was returned. The empty name search is only one independent searched surface, not proof of no incident."
+      }
+    },
+    {
+      "id": "source:30861c65090aa029a9617eb9",
+      "value": {
+        "label": "Independent incident index and indexed exact-name search",
+        "url": "https://rekt.news/",
+        "observedAt": "2026-10-20T22:19:40Z",
+        "location": "Current index through October 16, 2026 and targeted site:rekt.news USDX/Hex Trust/Flare indexed search",
+        "excerpt": "The current index and targeted search identify no exact Hex Trust USDX Flare bridge incident. Unrelated HEX and TesseraDAO results are not this asset. No exhaustive archive claim."
+      }
+    },
+    {
+      "id": "source:1ee9f6a2f382b29b468d6da9",
+      "value": {
+        "label": "LayerZero primary incident report and exact unaffected scope",
+        "url": "https://layerzero.network/blog/layerzero-labs-kelpdao-incident-report",
+        "observedAt": "2026-10-20T22:19:40Z",
+        "location": "May 20, 2026 Executive Summary",
+        "excerpt": "The impact was made possible by the affected OApp’s single-verifier configuration. No other OApps, channels or transactions were compromised. The disclosed April 18 KelpDAO rsETH attack is not an incident in USDX’s Flare OApp; USDX DVN/quorum remains unresolved."
+      }
+    },
+    {
+      "id": "source:84b70fbccb90fce8aa684ee2",
+      "value": {
+        "label": "Exact Pharos strUSD pool/token/controller bounded event and emergency-state search",
+        "url": "https://api.zan.top/public/pharos-mainnet",
+        "observedAt": "2026-10-20T22:22:09.511Z",
+        "location": "Pharos blocks 20732606–20782605 (2026-10-20T08:49:44Z–2026-10-20T22:14:08Z); FD26-pharos-events/state/pool/rmn.json research receipts; exact token creation receipt at block 18257840/hash 0xe53b9f97cc51cd964baacab799ca39b536d822de73b63dd44942d8710a740abc, 2026-09-22T08:55:45Z",
+        "excerpt": "The exact token 0x25419e949b485d481bed4ea0c5a0496f6c7f7c63, pool 0x7305a63323d3171c6311d8f3218c3a7d164f3f0f, owner 0x07adfa5e8c7e8e80d1449dac46c3d6e739850e64 and rate administrator 0x5a54bbae78a3f043a1a41d6f9eb39fb2a1f766c7 returned no logs in the bounded 50000-block search. This empty result is not lifetime incident absence. At pin 20782605/hash 0xc06601f83ca1b4e57deed432b90c982c1a63207ef98f1b27762dc01d6d4b75c8, token/pool owner remains the known EOA; pool type is BurnMintTokenPool 2.0.0 and getRmnProxy returns 0xf4486d70ebed800204898ec99c812661551471dc, whose isCursed() is false. Separate static-config probe reverted and supplies no favorable fact. No incident was identified from these bounded event/state observations; ownership, key custody, materiality and other chains remain separate. Fresh creation receipt 0x598c056ff5027cdcf56f5d5eeb72aceb9e6517d8327c22b4d7ab3cc313200835 is successful and emits an event from the exact token. Current blackList(pool) is false; both Ethereum/Monad subject curses are false. Both default-finality inbound/outbound buckets are enabled with capacity 1500000 shares and refill 69.444444444444444444 shares/s; fast-finality buckets are disabled, not an enabled zero-capacity suspension."
+      }
+    },
+    {
+      "id": "source:260655f9ea7ddb599b6ef4f7",
+      "value": {
+        "label": "Current Tori issuer announcements",
+        "url": "https://x.com/tori_finance",
+        "observedAt": "2026-10-20T22:16:00Z",
+        "location": "Ten retrieved latest posts, dated 24 September–14 October 2026",
+        "excerpt": "Retrieved issuer posts discuss integrations, institutional custody, transparency and rewards; no exact Pharos strUSD control incident is disclosed in these retrieved posts. This is not an exhaustive historical announcement archive."
+      }
+    },
+    {
+      "id": "source:256cb233b587f49df3012a3a",
+      "value": {
+        "label": "Current complete independent incident tracker search",
+        "url": "https://api.llama.fi/hacks",
+        "observedAt": "2026-10-20T22:16:32.215512+00:00",
+        "location": "1313 complete serialized records, searched case-insensitively across all fields",
+        "excerpt": "No Tori, trUSD, strUSD, CCIP, Chainlink or Pharos match in all 1313 retrieved records. Tracker omission is corroboration only and does not establish no undisclosed incident."
+      }
+    },
+    {
+      "id": "source:1809ed4d7a27481e3847dec0",
+      "value": {
+        "label": "Current Tori security and exact deployment disclosure",
+        "url": "https://docs.tori.finance/security/overview.md",
+        "observedAt": "2026-10-20T22:15:00Z",
+        "location": "Monitoring, operational security and incident process sections",
+        "excerpt": "Issuer describes Hypernative monitoring, incident triage/containment/remediation/communication/post-mortem and reporting to security@tori.finance; no active exact Pharos strUSD incident is disclosed on the retrieved security page. Generic controls and audits alone are not negative incident proof."
+      }
+    },
+    {
+      "id": "source:3f78cee56a945d9c2d83b4a5",
+      "value": {
+        "label": "Current CCIP provider security disclosures",
+        "url": "https://github.com/smartcontractkit/chainlink-ccip/security",
+        "observedAt": "2026-10-20T22:22:50Z",
+        "location": "Security overview and published advisories section, retrieved this run",
+        "excerpt": "The provider repository states: There aren't any published security advisories. This surface is not proof of undisclosed-event absence or a lane-wide certificate."
+      }
+    },
+    {
+      "id": "source:41a9f64b874e95a58d150df0",
+      "value": {
+        "label": "Rekt current feed and indexed exact-asset search",
+        "url": "https://rekt.news/",
+        "observedAt": "2026-10-20T22:22:50Z",
+        "location": "Current feed and indexed site search for Tori/trUSD/strUSD with CCIP/Pharos/incident/hack",
+        "excerpt": "No exact Pharos strUSD/CCIP incident identified in retrieved feed or indexed search. Search locates a March 31 2026 Tori audit brief, not a reported realized bridge compromise; no incident inferred from that audit."
+      }
+    },
+    {
+      "id": "source:7d09e52df5efc54e519079be",
+      "value": {
+        "label": "Noble current USDN redemption application",
+        "url": "https://dollar.noble.xyz/",
+        "observedAt": "2026-10-20T22:23:50.837840+00:00",
+        "location": "Current redemption landing page; searched Noble/USDN incident, exploit, emergency and suspension notices",
+        "excerpt": "Redeem on Ethereum; Move your USDN to Ethereum as wM. Claim / Transfer / Relay."
+      }
+    },
+    {
+      "id": "source:a194e6ee0e0bb2f015074186",
+      "value": {
+        "label": "Exact Noble portal emergency state",
+        "url": "https://api.noble.xyz/noble/dollar/portal/v1/paused",
+        "observedAt": "2026-10-20T22:20:12.673438+00:00",
+        "location": "Requested and returned gRPC height62034705; block E1131206F98FCB0A3766CFD802C987D9B6A07D078EE3B846EA778B18D7DE3064 at2026-10-20T22:19:43.787364193Z",
+        "excerpt": "{\"paused\":false}"
+      }
+    },
+    {
+      "id": "source:e9821d48bfb2051ad5356e94",
+      "value": {
+        "label": "DefiLlama complete independent hack corpus",
+        "url": "https://api.llama.fi/hacks",
+        "observedAt": "2026-10-20T22:23:51.456461+00:00",
+        "location": "All1313 corpus rows; case-insensitive Noble/USDN search across complete serialized entries; corpus SHA256 abee481a278fcdccef9c245c57254be0497cf20618c3037fe044813f6d1437fb",
+        "excerpt": "Reviewer search result:[] for Noble and USDN; absence from this corpus is not a security guarantee."
+      }
     }
   ],
   "searchedSurfaceObservations": [
@@ -70480,6 +71235,238 @@
         "kind": "explorer-events",
         "url": "https://api-monad-mainnet-full.n.dwellir.com",
         "finding": "Expanded monad aggregate independently researches token 0x683fb58ee77172626d5b49087ddac71ef7825d20, pool 0x936a28338985b905f7e932af379533666df6d1ec, owner Safe 0x0c6bbfd2d5666d44bf28580edeec0263692c8316 and separate rate administrator 0x5a54bbae78a3f043a1a41d6f9eb39fb2a1f766c7. Exact-address all-event census over 113542634–113592633 inclusive (50,000 blocks) includes token/pool/Safe/rate-admin and contains ordinary token/pool activity, no observed pool ownership/role/admin/peer/rate-limit/emergency change. At block 113592633 (2026-10-15T10:45:00Z; hash 0x2c5bd70d98facb6255ab73f1afe5bfe6766d9038fbc1da72b6543bc1fd208f68), current owner/rate-admin unchanged, rate-admin nonce=0, RMN global isCursed=false and exact pool token-restriction flag=false. Current separately captured lane limiter state remains documented, not an immutable cap. Creation receipt and historical token creation establish the earlier start. Bounded event and current-state evidence is not a lifetime event census; holder-level blacklist, native mint, wrapper, key-custody and other-chain conclusions are excluded."
+      }
+    },
+    {
+      "id": "surface:c00edbb15c01d0097daba1c9",
+      "value": {
+        "kind": "issuer-announcements",
+        "url": "https://governance.aave.com/t/discussion-a-second-issuer-controlled-verifier-for-cross-chain-gho-on-ccip-2-0/25771",
+        "finding": "Reviewed current GHO/CCIP issuer-forum discussions and scoped after-2026-07-01 incident/exploit/pause searches. No matching disclosed X Layer GHO CCIP incident found; the cited new verifier is a testnet proposal, not activated mitigation."
+      }
+    },
+    {
+      "id": "surface:51bb9401f793d37f7bb5d35e",
+      "value": {
+        "kind": "issuer-announcements",
+        "url": "https://chain.link/security",
+        "finding": "Reviewed rail-provider security/reporting surface and date-bounded provider-site searches; no matching CCIP/X Layer GHO incident disclosure found. Reporting channels are not a complete disclosure census."
+      }
+    },
+    {
+      "id": "surface:9490c711834489585870048a",
+      "value": {
+        "kind": "explorer-events",
+        "url": "https://www.oklink.com/xlayer/address/0xA5Ba213867E175A182a5dd6A9193C6158738105A",
+        "finding": "Recovered exact pool event table with latest 25 events through September 7 and corroborating older burn/config events. This is a bounded explorer window, not a lifetime census. Current emergency state was separately pinned at block 73765747."
+      }
+    },
+    {
+      "id": "surface:d947dd3b1a84eed9fdd96b33",
+      "value": {
+        "kind": "explorer-events",
+        "url": "https://rpc.xlayer.tech",
+        "finding": "Exact pool/token identity and recent explicit-block emergency reads are saved in FD02-xlayer-identity.json and FD02-xlayer-emergency-state.json; all nine configured subjects and global subject are uncursed and configured inbound/outbound rate buckets have positive full headroom. No RPC state was used to fabricate supply attribution or key custody."
+      }
+    },
+    {
+      "id": "surface:7167cf423d0f9a9647d9e748",
+      "value": {
+        "kind": "incident-tracker",
+        "url": "https://api.llama.fi/hacks",
+        "finding": "All 1313 returned records examined for GHO, Aave, CCIP and X Layer spellings; only unrelated Ethereum Aave incidents outside the review window matched."
+      }
+    },
+    {
+      "id": "surface:1ebaec1c85e277c69149ad56",
+      "value": {
+        "kind": "incident-tracker",
+        "url": "https://rekt.news/",
+        "finding": "Reviewed current feed and scoped site searches. The GHO-related January YO swap error and 2024 governance/peg story do not establish an incident of this exact X Layer control; no matching in-window rail incident found."
+      }
+    },
+    {
+      "id": "surface:bd42dbaf3e6aa0f6f51cb07c",
+      "value": {
+        "kind": "issuer-announcements",
+        "url": "https://github.com/orgs/d-EURO/discussions",
+        "finding": "Visible topics concern base-rate proposals, nDEPS pricing and referral support. No dEURO Base or Optimism token security incident is disclosed in the inspected index; this is a scoped no-known-incident search, not proof of universal absence."
+      }
+    },
+    {
+      "id": "surface:24643fa783e8ed96276034c3",
+      "value": {
+        "kind": "incident-tracker",
+        "url": "https://api.llama.fi/hacks",
+        "finding": "Full 1313-row response searched for dEURO, Decentralized Euro, d-EURO and exact L2 token 0x1b5f7fa46ed0f487f049c42f374ca4827d65a264; no matching entry."
+      }
+    },
+    {
+      "id": "surface:77c581ae4e458cd0ca3c4bc3",
+      "value": {
+        "kind": "explorer-events",
+        "url": "https://optimism.blockscout.com/api/v2/addresses/0x1b5f7fa46ed0f487f049c42f374ca4827d65a264/logs",
+        "finding": "Exact token event index first 50 entries runs from 2026-01-24 back to 2025-10-23, before the 2026-09-01 search-window start. Inspected entries are Mint and Transfer; the verified immutable token exposes no emergency pause or upgrade method. No token-specific incident indication was found. The index is not an exhaustive proof of bridge-wide operational health."
+      }
+    },
+    {
+      "id": "surface:51acb31bbbc9e46e4ddc0c27",
+      "value": {
+        "kind": "explorer-events",
+        "url": "https://base.blockscout.com/api/v2/addresses/0x1b5f7fa46ed0f487f049c42f374ca4827d65a264/logs",
+        "finding": "Exact token event index first 50 entries runs from 2026-10-08 back to 2026-02-18, covering the 2026-09-01 search-window start. Nine visible events within the search window are ordinary Transfers; no token-specific incident indication was found. The verified immutable token exposes no emergency pause or upgrade method. This is not proof of bridge-wide operational health."
+      }
+    },
+    {
+      "id": "surface:64c530158ca755c09816b355",
+      "value": {
+        "kind": "issuer-announcements",
+        "url": "https://www.ripio.com/en/cryptos/local-stablecoins",
+        "finding": "Retrieved issuer WFIAT release chronology and 50-row status history on 2026-10-20. No exact assigned-token/bridge incident disclosed in those retrieved surfaces; resolved platform deposit/service events are retained as unrelated without exact-control proof. This is not a lifetime status census."
+      }
+    },
+    {
+      "id": "surface:ea28cca5a4309f3fea6ff17a",
+      "value": {
+        "kind": "incident-tracker",
+        "url": "https://api.llama.fi/hacks",
+        "finding": "On 2026-10-20 searched all 1313 returned DeFiLlama hacks records for Ripio, the five assigned token names, wFIAT, BridgeDeposit, LimitedMinterBridge and exact rail addresses: zero matches. Reviewed issuer security master report as prospective LLM-generated findings, not a realized incident or professional assurance."
+      }
+    },
+    {
+      "id": "surface:824e620ccaad205e54005f61",
+      "value": {
+        "kind": "explorer-events",
+        "url": "https://api-bsc-mainnet-full.n.dwellir.com",
+        "finding": "Exact bsc:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe and known local BridgeDeposit/LimitedMinterBridge contributors searched at numeric blocks 128774264–128824263 with matching header hashes/timestamps. No filtered emergency/authority-change event returned; current token and both rails are unpaused, adapter binding and positive token registration remain. This is a bounded local control search, not historical event completeness, no-escrow proof or an unknown transfer-rail certification."
+      }
+    },
+    {
+      "id": "surface:6008808f8fc132bde1dd2fca",
+      "value": {
+        "kind": "explorer-events",
+        "url": "https://api-bsc-mainnet-full.n.dwellir.com",
+        "finding": "Exact bsc:0x337e7456b420bd3481e7fa61fa9850343d610d34 and known local BridgeDeposit/LimitedMinterBridge contributors searched at numeric blocks 128774264–128824263 with matching header hashes/timestamps. No filtered emergency/authority-change event returned; current token and both rails are unpaused, adapter binding and positive token registration remain. This is a bounded local control search, not historical event completeness, no-escrow proof or an unknown transfer-rail certification."
+      }
+    },
+    {
+      "id": "surface:ae6c9d69ed5608c6e81ba3e9",
+      "value": {
+        "kind": "explorer-events",
+        "url": "https://api-bsc-mainnet-full.n.dwellir.com",
+        "finding": "Exact bsc:0x61d450a098b6a7f69fc4b98ce68198fe59768651 and known local BridgeDeposit/LimitedMinterBridge contributors searched at numeric blocks 128774264–128824263 with matching header hashes/timestamps. No filtered emergency/authority-change event returned; current token and both rails are unpaused, adapter binding and positive token registration remain. This is a bounded local control search, not historical event completeness, no-escrow proof or an unknown transfer-rail certification."
+      }
+    },
+    {
+      "id": "surface:e9973a3b4530429756ec411e",
+      "value": {
+        "kind": "explorer-events",
+        "url": "https://api-polygon-mainnet.n.dwellir.com",
+        "finding": "Exact polygon:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe and known local BridgeDeposit/LimitedMinterBridge contributors searched at numeric blocks 95836076–95886075 with matching header hashes/timestamps. No filtered emergency/authority-change event returned; current token and both rails are unpaused, adapter binding and positive token registration remain. This is a bounded local control search, not historical event completeness, no-escrow proof or an unknown transfer-rail certification."
+      }
+    },
+    {
+      "id": "surface:f72ccb5ed7c5ca8a693d99f5",
+      "value": {
+        "kind": "explorer-events",
+        "url": "https://api-worldchain-mainnet.n.dwellir.com",
+        "finding": "Exact worldchain:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe and known local BridgeDeposit/LimitedMinterBridge contributors searched at numeric blocks 36549421–36599420 with matching header hashes/timestamps. No filtered emergency/authority-change event returned; current token and both rails are unpaused, adapter binding and positive token registration remain. This is a bounded local control search, not historical event completeness, no-escrow proof or an unknown transfer-rail certification."
+      }
+    },
+    {
+      "id": "surface:065094981ba8c9aebcf23894",
+      "value": {
+        "kind": "issuer-announcements",
+        "url": "https://www.htdigitalassets.com/",
+        "finding": "Current issuer disclosure, Hex Trust security notice, Flare September 30 FCC announcement and targeted USDX/Hex Trust/Flare/LayerZero incident search reviewed. No exact Flare USDX compromise, unbacked mint or current suspension announcement found. Marketing or phishing warnings do not themselves prove absence."
+      }
+    },
+    {
+      "id": "surface:26217a92e7981e2ad49b0b61",
+      "value": {
+        "kind": "explorer-events",
+        "url": "https://flare-explorer.flare.network/api/v2/addresses/0x4a771cc1a39fdd8aa08b8ea51f7fd412e73b3d2b/logs",
+        "finding": "Exact creation starts 2024-03-18T05:32:27Z. First 50 displayed logs contain Transfer/Approval only; pagination is explicitly incomplete. Independently pinned Flare block 72586628, hash 0xb45e76fde9620c10a0c3df3c40a899f2ea7a697007671363e2d87862286e4488, 2026-10-20T22:16:38Z returns paused=false, current endpoint/peer/admin bindings, and no selected emergency events in the provider-stated 30-block maximum. No creation-to-now log completeness, zero blacklist population or resolved DVN scope is asserted."
+      }
+    },
+    {
+      "id": "surface:c170a5e810002cb065954c5e",
+      "value": {
+        "kind": "incident-tracker",
+        "url": "https://api.llama.fi/hacks",
+        "finding": "Full 1,313-record DefiLlama hacks response has no Hex Trust/HTMI/USDX name match. Current Rekt index and targeted exact-name search yield no exact USDX Flare incident. LayerZero primary KelpDAO report expressly limits compromise to the affected rsETH OApp and says no other OApps/channels/transactions compromised; no USDX-specific adverse report found."
+      }
+    },
+    {
+      "id": "surface:48a3b44eaa6bdd8cf1aaff2a",
+      "value": {
+        "kind": "explorer-events",
+        "url": "https://api.zan.top/public/pharos-mainnet",
+        "finding": "Exact Pharos token, pool, owner and rate-administrator logs searched over blocks 20732606–20782605. Empty logs do not independently prove absence; owner bindings and uncursed RMN state corroborate the finite no-known-incident review."
+      }
+    },
+    {
+      "id": "surface:17ad2c0dc3a24831f8e8f27e",
+      "value": {
+        "kind": "issuer-announcements",
+        "url": "https://x.com/tori_finance",
+        "finding": "Ten latest retrieved issuer posts contained no exact Pharos strUSD incident disclosure; the retrieved archive is bounded and not a lifetime announcement census."
+      }
+    },
+    {
+      "id": "surface:482075cf33c710170ff02575",
+      "value": {
+        "kind": "issuer-status",
+        "url": "https://docs.tori.finance/security/overview.md",
+        "finding": "Current issuer security/incident-response surface contains no disclosed active exact Pharos strUSD incident."
+      }
+    },
+    {
+      "id": "surface:cd49c5cb5f7eeb00e0f5e082",
+      "value": {
+        "kind": "incident-tracker",
+        "url": "https://api.llama.fi/hacks",
+        "finding": "All 1313 returned records searched across every serialized field for Tori/trUSD/strUSD/CCIP/Chainlink/Pharos; no match. Omission is corroborative, not absence proof."
+      }
+    },
+    {
+      "id": "surface:9b79152eff681868d3e4111b",
+      "value": {
+        "kind": "incident-tracker",
+        "url": "https://rekt.news/",
+        "finding": "Current feed plus exact asset/bridge/chain indexed search finds no exact Pharos strUSD incident. Historical audit coverage is not treated as a realized compromise."
+      }
+    },
+    {
+      "id": "surface:68bdb466e7c2933ae4eb82d5",
+      "value": {
+        "kind": "issuer-announcements",
+        "url": "https://github.com/smartcontractkit/chainlink-ccip/security",
+        "finding": "Rail provider security overview has no published advisories; no lane-wide absence claim inferred."
+      }
+    },
+    {
+      "id": "surface:84f81f3124494176861bad83",
+      "value": {
+        "kind": "issuer-status",
+        "url": "https://dollar.noble.xyz/",
+        "finding": "Current exact USDN product interface offers claim/transfer/relay redemption to Ethereum wM and carries no identified incident or suspension notice. The current architecture and indexed noble.xyz exact USDN incident/exploit search were also reviewed; no exact USDN portal compromise was found. The blog index returned404, so no complete issuer-archive search is asserted."
+      }
+    },
+    {
+      "id": "surface:a7d8ce8dd56a5ddcf38436e2",
+      "value": {
+        "kind": "explorer-events",
+        "url": "https://api.noble.xyz/noble/dollar/portal/v1/paused",
+        "finding": "Exact Native Noble uusdn portal emergency state: paused=false at height62034705, whose requested and returned gRPC metadata match; blockhash and timestamp are recorded. This scopes emergency-state evidence to the reviewed deployment, not global Wormhole infrastructure or lifetime incident absence."
+      }
+    },
+    {
+      "id": "surface:e89dbdf9f77832a2abe72513",
+      "value": {
+        "kind": "incident-tracker",
+        "url": "https://api.llama.fi/hacks",
+        "finding": "Fetched complete1313-row incident corpus and searched exact Noble/USDN aliases throughout names, descriptions, chains and source records. No matching event was returned. The historical2022 Wormhole exploit is upstream provider history, not an incident attributed to the later Noble USDN deployment."
       }
     }
   ]

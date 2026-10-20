@@ -2,9 +2,9 @@
   "id": "susd-solayer",
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "unbounded-reconciled",
-    "confidence": "verified",
-    "summary": "Solayer sUSD is minted through the Solayer sUSD Program after USDC/RWA workflow checks. The Token-2022 mint, freeze, interest-rate, and metadata update authorities resolve to a Solayer program-owned authority PDA. The Solayer program remains upgradeable by a plain keypair (EOA-equivalent) upgrade authority.",
+    "authorityPosture": "unbounded-adverse",
+    "confidence": "manual-review",
+    "summary": "Solayer sUSD is minted through the Solayer sUSD Program after USDC/RWA workflow checks. The Token-2022 mint, freeze, interest-rate and metadata authorities resolve to a Solayer program-owned PDA. The upgrade authority is a Squads v4 vault governed by a 3-of-5 multisig with no execution delay. Transaction-level mint accounting does not establish recurring reconciliation of all outstanding sUSD liabilities to backing.",
     "controls": [
       {
         "chain": "solana",
@@ -34,24 +34,35 @@
         "address": "7671j7qpSf9X5KbQDraXReGK8Dxg5xGjr9n913BWhqru",
         "label": "Solayer sUSD program upgrade authority",
         "role": "proxy-admin",
-        "authorityType": "eoa",
+        "authorityType": "multisig",
+        "threshold": 3,
+        "signerCount": 5,
+        "timelockDelaySec": 0,
         "directMintAbility": "upgrade-only",
         "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "not-applicable",
+        "modulesOrGuardsStatus": "unknown",
         "observedAt": "2026-10-01",
         "observedBlock": 452213349,
         "sources": [
           {
-            "label": "Solana RPC getAccountInfo",
-            "url": "https://api.mainnet-beta.solana.com"
+            "label": "Alchemy exact-slot Account Archive: original slot 452213349 and corroborating slot 458746867",
+            "url": "https://solana-mainnet.g.alchemy.com/v2/"
+          },
+          {
+            "label": "Squads v4 Multisig account layout",
+            "url": "https://github.com/Squads-Protocol/v4/blob/main/programs/squads_multisig_program/src/state/multisig.rs"
+          },
+          {
+            "label": "Squads v4 vault PDA derivation",
+            "url": "https://github.com/Squads-Protocol/v4/blob/main/sdk/multisig/src/pda.ts"
           }
         ],
-        "evidence": "At finalized Solana slot 452213349, one getMultipleAccounts response linked executable Solayer program s1aysqpEyZyijPybUV89oBGeooXrR22wMNLjnG2SWJA to ProgramData 7bzcebKDN8qDkftxobwArKJL8xSGaZ6zBPaY4C4wEhkf, whose upgrade authority was 7671j7qpSf9X5KbQDraXReGK8Dxg5xGjr9n913BWhqru. The authority account was System Program owned, non-executable, and empty. This re-verifies the plain-keypair upgrade path previously observed at slot 425792161."
+        "evidence": "The original finalized slot 452213349 was independently reproduced through Alchemy Account Archive on 2026-10-20: blockhash 61DMYEQauQj4uAaUdke7sqsGbqz6NMkC78j2w5qDyL7r, timestamp 2026-10-01T06:57:47Z. ProgramData 7bzcebKDN8qDkftxobwArKJL8xSGaZ6zBPaY4C4wEhkf records deployment slot 377365741 and upgrade authority 7671j7qpSf9X5KbQDraXReGK8Dxg5xGjr9n913BWhqru. That off-curve address exactly derives as Squads v4 vault index 0, bump 255, for multisig Bwp3EMRE3KfmDnhFEwtZ8hty1EhneKLnMczZAu1MQzry under SQDS4ep65T869zMMBKyuUq6aD6EgTu8psMjkvj52pCf. Its account discriminator, threshold 3, five on-curve members each with permissions 7, zero time_lock and zero config_authority are decoded at the original pin. The same state is corroborated at slot 458746867 (2orx4E1HrFcBAAyuy9McmZDUGtUADrnFGxVgKB3zQEhU, 2026-10-19T07:16:23Z). Original review and observation starts are preserved. A System Program-owned empty vault is not an EOA proof. Human independence, custody and exhaustive delegated execution remain unestablished; immediate upgrade and economically unbounded reach remain."
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "continuous",
-    "supervision": "none",
+    "reconciliation": "internal-ledger",
+    "supervision": "unknown",
     "review": {
       "sources": [
         {
@@ -71,8 +82,8 @@
           "url": "https://docs.solayer.org/susd/protocol-info/transparency%26security"
         }
       ],
-      "evidence": "At Solana finalized slot 425792161: Token-2022 mint authority FhVcYNEe confirmed via getAccountInfo jsonParsed on mint susdabGDNbhrnCa6ncrYo81u4s9GM8ecK2UwMyZiq4X; upgrade authority 7671j7qp confirmed as plain keypair (System Program owned, no data). All mint-capable surfaces resolved. Economic-posture fields reviewed 2026-08-15: a plain-keypair upgrade authority can replace mint logic without an independent timelock, while cUSDO composition disclosures do not reconcile all sUSD supply and no regulator or independent sUSD attestor is evidenced. Solayer's sUSD FAQ documents a continuous transaction-level mint gate: the Solayer sUSD Program issues the sUSD liability only after a qualified liquidity provider supplies a wrapped-T-Bill proof against the user's locked USDC; the Solayer program performs this supply-to-collateral reconciliation on each mint, rather than a named independent examiner.",
-      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15",
+      "evidence": "The original 2026-08-15 review start is retained. Source correction on 2026-10-20: Solayer's FAQ and RFQ process describe a transaction-level workflow in which a qualified liquidity provider delivers wrapped T-Bill proof before the program mints sUSD; its Transparency & Security page states that movements and holdings are recorded on-chain. This supports internal-ledger accounting only. These cited sources do not reconcile all outstanding sUSD liabilities, interest-extension accrual and reserve holdings on an explicit recurring cadence, and no independent sUSD attestor or prudential issuer mandate is established. The prior continuous annotation overstated this mint gate. The separately pinned upgrade controller is a 3-of-5 Squads vault rather than a plain keypair; it can still replace mint-critical program logic without delay, so economicCapSemantics remains unbounded.",
+      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15; FD39 source correction 2026-10-20",
       "reviewedAt": "2026-08-15"
     },
     "upgradeability": {
@@ -86,8 +97,8 @@
       "observedBlock": 452213349,
       "sources": [
         {
-          "label": "Solana RPC getAccountInfo",
-          "url": "https://api.mainnet-beta.solana.com"
+          "label": "Alchemy exact-slot Account Archive: original ProgramData pin 452213349 and corroborating pin 458746867",
+          "url": "https://solana-mainnet.g.alchemy.com/v2/"
         },
         {
           "label": "Solayer sUSD FAQ",

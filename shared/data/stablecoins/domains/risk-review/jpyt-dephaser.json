@@ -29,8 +29,8 @@
     "reviewedAt": "2026-10-01"
   },
   "oracleRisk": {
-    "tier": "standard-external",
-    "summary": "Optimism issuance reads Chainlink-style USDT/USD and JPY/USD feeds; Base issuance reads a Chainlink-style USDC/USD feed and Pyth USD/JPY. At Base block 52075154, pythValidTimePeriod() was 31,536,000 seconds. The managers reject non-positive deposit-token feed answers without checking their timestamps; no independent oracle fallback is implemented in the reviewed sources.",
+    "tier": "single-source-or-laggy",
+    "summary": "Optimism issuance reads Chainlink-style USDT/USD and JPY/USD feeds; Base issuance reads a Chainlink-style USDC/USD feed and Pyth USD/JPY. At the retained Base block 52075154, pythValidTimePeriod() was 31,536,000 seconds. Both verified manager sources discard latestRoundData timestamps and reject only non-positive token-feed answers; neither implements an independent oracle fallback. ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required: source reinspection on 2026-10-20 withdraws the unsupported standard-external classification in favor of single-source-or-laggy. The original review start and historical parameter pin are preserved, not renewed; this is not a claim that a stale answer was actually consumed or that the historical Pyth setting was freshly measured.",
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {

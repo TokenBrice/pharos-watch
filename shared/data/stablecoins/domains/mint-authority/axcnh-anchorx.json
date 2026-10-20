@@ -2,7 +2,7 @@
   "id": "axcnh-anchorx",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "AxCNH is issued by AnchorX Ltd against offshore-CNH reserves. The Ethereum and Conflux FiatTokenV2 deployments each use a 3-of-4 MultiSigWallet as masterMinter and an independently identified owner and proxy-admin path; masterMinters can configure bounded operational minters, owners can replace the masterMinter, and proxy-admin multisigs can replace mint logic. A historical Ethereum operational minter has zero remaining allowance.",
     "upgradeability": {
@@ -258,10 +258,10 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "periodic",
-    "supervision": "prudential",
+    "reconciliation": "unknown",
+    "supervision": "unknown",
     "review": {
-      "evidence": "AnchorX describes issuer-operated 1:1 AxCNH issuance and redemption against CNH reserves. At Ethereum block 25539995 and Conflux eSpace block 152153398, each FiatTokenV2 deployment had a 3-of-4 masterMinter that could configure minters, an owner that could replace the masterMinter, and a separate 3-of-4 proxy admin that could replace the implementation. Ethereum's MinterConfigured event ledger records operational-minter EOA 0x674241ca030bf7487d46d4fbf595c64a256e2c85 with a 1,000,000 AxCNH allowance, but it was fully consumed and had zero remaining allowance at the observed snapshot. The controlling multisigs are therefore the active mint and upgrade surfaces. Economic-posture fields reviewed 2026-08-15: issuer-controlled owners and multisigs can replace minters or logic, monthly Kreston AUP reports reconcile assets and liabilities, and AFSA authorizes AnchorX.KZ as a fiat-stablecoin issuer.",
+      "evidence": "AnchorX describes issuer-operated 1:1 AxCNH issuance and redemption against CNH reserves. At Ethereum block 25539995 and Conflux eSpace block 152153398, each FiatTokenV2 deployment had a 3-of-4 masterMinter that could configure minters, an owner that could replace the masterMinter, and a separate 3-of-4 proxy admin that could replace the implementation. Ethereum's MinterConfigured event ledger records operational-minter EOA 0x674241ca030bf7487d46d4fbf595c64a256e2c85 with a 1,000,000 AxCNH allowance, but it was fully consumed and had zero remaining allowance at the observed snapshot. The controlling multisigs are the active mint and upgrade surfaces. Scope correction observed 2026-10-20 by NR7: AFSA register BIN 250340900375 and licence AFSA-A-LA-2025-0013 identify AnchorX.KZ Limited specifically. The historical combined June report distinguishes AnchorX Global Limited and AnchorX.KZ liabilities; the KZ licence does not establish supervision of the entire tracked Global/KZ issuance book. The current issuer-linked Global report index still ends in June 2026 and the KZ index in March; the referenced June SharePoint URL returns HTTP 403. The existing monthly cadence annotation is not corroborated by a retrievable current recurring whole-book report or an evidenced publication-lag schedule. Under the D33 adjudication, aggregate reconciliation and supervision are unknown, not none, pending current exact-book evidence. This withdraws unsupported process credit, not the historical AUP findings or the actual KZ authorization; missing reports do not establish measured non-reconciliation. The original August 15 review start and all historical control pins are preserved.",
       "reviewer": "Codex Safety Score V9 deployment-control review; Sol economic-posture batch 2026-08-15",
       "reviewedAt": "2026-08-15",
       "disposition": "scoreable",
@@ -285,6 +285,22 @@
         {
           "label": "Conflux eSpace RPC",
           "url": "https://evm.confluxrpc.com"
+        },
+        {
+          "label": "AFSA exact AnchorX.KZ Limited entity and active fiat-stablecoin licence; not an AnchorX Global mandate",
+          "url": "https://publicreg.myafsa.com/details/250340900375/"
+        },
+        {
+          "label": "Issuer-linked historical combined June 2026 Kreston AUP report (Global/KZ books)",
+          "url": "https://anchorx-my.sharepoint.com/:b:/g/personal/sophiepu_anchorx_org/IQCIICwRyIxqTYlcEFCq_xhaARpGXEQU5c1pBNN5NowZ0HA?e=9k7D0I"
+        },
+        {
+          "label": "Issuer-bound Global reserve report index, accessed October 20, 2026; latest period June 2026",
+          "url": "https://raw.githubusercontent.com/v3-Swampy/anchorx-reserves/main/data.json"
+        },
+        {
+          "label": "Issuer-bound KZ reserve report index, accessed October 20, 2026; latest period March 2026",
+          "url": "https://raw.githubusercontent.com/v3-Swampy/anchorx-reserves/main/data_kz.json"
         }
       ]
     }

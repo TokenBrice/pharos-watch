@@ -843,7 +843,7 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "periodic",
+    "reconciliation": "unknown",
     "supervision": "prudential",
     "upgradeability": {
       "model": "custom",
@@ -1023,9 +1023,22 @@
         {
           "label": "Stellar Horizon admin account",
           "url": "https://horizon.stellar.org/accounts/GBYIQXBKEB655EB3WTRITS6RR5GXEP6SQRBLPREZHNFYKT7WBMTMPR3H"
+        },
+        {
+          "label": "Spiko SICAV prospectus, 1 September 2026, retrieved 2026-10-20: UKTBL AMF UCITS/MMF issuance, shareholder register and statutory accounting",
+          "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+        },
+        {
+          "label": "AMF agreement certificate dated 23 February 2026, retrieved 2026-10-20: SPIKO SICAV SCV20240012 and exact UKTBL SCV20250464 supervised UCITS sub-fund",
+          "url": "https://cdn.spiko.finance/legal_docs/EN/SAFO_Letter_EN.pdf"
+        },
+        {
+          "label": "AMF GECO SPIKO SICAV/EUTBL register and current manager GP-11000029, retrieved 2026-10-20; exact UKTBL joined by AMF certificate",
+          "url": "https://geco.amf-france.org/back-office/funds/compartment/c79399"
         }
       ],
     "evidence": "Full deployment-to-head GroupAdded/GroupRemoved reconciliation plus live role reads enumerate every native EVM UKTBL mint path: group 0 is the recorded 3-of-6 chain-local Safe and group 2 contains the chain-local Minter on Ethereum, Polygon, Base, Etherlink, and Arbitrum. The four EVM CCIP pools are transfer-rail return paths and are intentionally excluded from this native Mint Authority inventory; their bridge mint/burn, owner, peer, and rate-limit facts are preserved under bridgeRouteRisk.controls. All non-UKTBL group-2 pools were classified by getToken() and excluded. Minter group-10 initiators and group-9 approvers are explicitly recorded for every EVM chain. EIP-1967 reads at the cited heads resolve all five chain-level Minter proxy paths to their implementations; the recorded group-0 ADMIN Safes authorize their UUPS upgrades. On Starknet, complete RoleGranted/RoleRevoked history and live has_role reads at block 12329657 yield exactly four MINTER_ROLE holders: the 3-of-5 Argent owner/admin multisig and three single-key account contracts. On Stellar at ledger 63659619, enumerable PermissionManager reads yield exactly three MINTER accounts; Horizon shows those accounts and the owner/admin each have one visible ed25519 signer and zero transaction thresholds. EVM Minter daily limits are not hard bounds because group 9 can approve an over-limit pending request and ADMIN can change limits or logic. Public sources do not identify the operating entities or custody arrangements for the terminal EVM signer addresses. The current active Stellar roles are enumerated, and on 2026-07-27 Kimi data review independently decoded the Soroban pending-transfer state via mainnet.sorobanrpc.com getLedgerEntries at ledger 63675179: the token CDT3KU6TQZNOHKNOHNAFFDQZDURVC3MSTL4ML7TUTZGNOPBZCLABP4FR instance storage still lists Owner GBYIQXBKEB655EB3WTRITS6RR5GXEP6SQRBLPREZHNFYKT7WBMTMPR3H with no PendingOwner key, the PermissionManager CBGHLRSX5D5YMBPNK4ZGMUTJUHFIT7YGXGJURM5LFNZ7B6WNSXLGS26M instance storage still lists Admin GBYIQXBKEB655EB3WTRITS6RR5GXEP6SQRBLPREZHNFYKT7WBMTMPR3H with no PendingAdmin key, and the temporary-storage PendingOwner and PendingAdmin contract-data entries are absent on two independent public RPCs. Because the OpenZeppelin stellar-access 0.4.1 role-transfer helper stores pending transfers only in temporary storage, no pending owner or admin transfer exists at the pinned ledger and no future authority transition is staged.",
+      "sourceFreeRationale": "ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required: reviewed 2026-10-20 under D33, periodic reconciliation is withdrawn to unknown. The review's GroupAdded/GroupRemoved reconciliation enumerates permissions, not reserve coverage. Current prospectus and UKTBL product disclosures establish daily NAV/accounting and PwC statutory account audits but no current recurring complete all-chain UKTBL-liability-to-backing comparison including pending claims. AMF UCITS/MMF prudential supervision of SPIKO SICAV remains independently established. The original 2026-08-16 review start and every authority/block pin are preserved; neither absent reconciliation nor a reserve shortfall is asserted.",
       "reviewer": "OpenAI Codex CTRL-uktbl-spiko static control inventory; Kimi data review",
     "reviewedAt": "2026-08-16",
       "disposition": "scoreable"

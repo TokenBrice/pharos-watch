@@ -150,7 +150,7 @@
     }
   ],
   "collateralQuality": "exotic",
-  "custodyModel": "institutional-unregulated",
+  "custodyModel": "unknown",
   "governanceQuality": "multisig",
   "liveReservesConfig": {
     "adapter": "reservoir",

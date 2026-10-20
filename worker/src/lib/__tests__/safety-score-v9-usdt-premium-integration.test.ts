@@ -33,7 +33,11 @@ describe("Safety Score v9 USDT premium production integration", () => {
       productionCapture.draft as unknown as ReportCardsFixedInputDraft,
     );
     const extension =
-      buildSafetyScoreV9BaselineExtensionFromNormalizedInput(fixedInput, { metaById: capturedAccessMetaById });
+      buildSafetyScoreV9BaselineExtensionFromNormalizedInput(fixedInput, {
+        metaById: capturedAccessMetaById,
+        // Freeze optional transfer overlays as well as blacklist evidence.
+        reviewedTransferFacts: new Map(),
+      });
     const facts = compileSafetyScoreV9FactSetFromNormalizedInput(
       fixedInput,
       extension,

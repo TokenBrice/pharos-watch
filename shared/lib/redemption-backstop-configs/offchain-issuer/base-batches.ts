@@ -153,13 +153,32 @@ export const BASE_OFFCHAIN_ISSUER_ENTRIES: RedemptionBackstopRegistryEntry[] = [
     ["mxne-real-mxn"],
     {
       ...issuerBase,
-      ...documentedBoundSupplyFull("2026-05-17"),
+      reviewedAt: "2026-10-20",
+      holderEligibility: "verified-customer",
+      outputAssets: ["usdc-circle"],
+      capacityModel: { kind: "unquantified" },
+      settlementModel: "days",
+      costModel: documentedVariableFee("Brale's MXNe-specific all-in redemption and currency-conversion fee ceiling is not publicly disclosed; service fees are specified in the customer's Services Agreement."),
+      v9RouteReviewTerms: {
+        scoringDisposition: "bounded-terms-gap",
+        missingScoringFields: ["capacity", "settlement", "cost"],
+        rationale:
+          "ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required. Brale's exact MXNe launch disclosure establishes USDC or USDP conversion for onboarded U.S. businesses in supported states, not a bank-MXN payout, full-supply funded capacity, a finite terminal-receipt SLA or an all-in fee/FX ceiling. This entry models only the documented USDC branch; the alternatives are not a proportional basket. Original May 17 capacity review does not establish the withdrawn bounds.",
+        reviewedAt: "2026-10-20",
+        docs: [
+          sourceRef("Brale MXNe launch and approved-business USDC/USDP route (retrieved 2026-10-20)", "https://brale.xyz/blog/introducing-mxne", ["route", "access"]),
+          sourceRef("Brale public terms, fees governed by Services Agreement (retrieved 2026-10-20)", "https://brale.xyz/legal/terms", ["route", "fees", "access"]),
+        ],
+      },
       docs: [
-        sourceRefFull("Brale MXNe", "https://brale.xyz/stablecoins/MXNe"),
-        sourceRefRouteCapacity(
-          "Etherfuse MXNe launch",
-          "https://www.etherfuse.com/blogs/etherfuse-r-introduces-real-mxn-mxne-stablecoin-on-solana-base-and-stellar",
-        ),
+        sourceRef("Brale MXNe exact deployment inventory (retrieved 2026-10-20)", "https://brale.xyz/stablecoins/MXNe", ["route"]),
+        sourceRef("Brale MXNe launch and approved-business USDC/USDP route (retrieved 2026-10-20)", "https://brale.xyz/blog/introducing-mxne", ["route", "access"]),
+        sourceRef("Brale Etherfuse partnership and cross-currency swaps (retrieved 2026-10-20)", "https://brale.xyz/case-studies/etherfuse", ["route", "access"]),
+        sourceRef("Brale public terms, customer-specific service fees (retrieved 2026-10-20)", "https://brale.xyz/legal/terms", ["route", "fees", "access"]),
+      ],
+      notes: [
+        "MXNe is MXN-denominated. The issuer's 1:1 conversion language is not a claim that one MXNe pays one USDC; the route requires a current exact FX/amount observation.",
+        "The Brale launch also names USDP; this configuration deliberately models only the USDC payout choice, without claiming exclusivity or direct fiat-MXN delivery.",
       ],
     },
     { sourceFilePath: SOURCE_FILE_PATH },
@@ -280,6 +299,17 @@ export const BASE_OFFCHAIN_ISSUER_ENTRIES: RedemptionBackstopRegistryEntry[] = [
                   0,
                   "Telcoin Digital Asset Bank terms (dated 2026-06-15; reviewed 2026-10-03): no TDAB fee per eUSD redemption to third-party institutions. This is the issuer fee only; the receiving institutions may impose their own unquantified fees",
                 ),
+                v9RouteReviewTerms: {
+                  settlementModel: "days" as const,
+                  scoringDisposition: "bounded-terms-gap" as const,
+                  missingScoringFields: ["cost", "settlement"] as ("cost" | "settlement")[],
+                  rationale: "ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required. The June 15, 2026 customer agreement sections 7.1 and 7.3 describe redemptions as typically processed within two business days but permit longer delays, not an unconditional completed-payout deadline. Sections 10.1, 10.3 and 10.4 establish zero TDAB redemption fee but leave third-party bank and network charges unbounded. Preserve the original issuer-only fee review; neither zero all-in cost nor inherited same-day settlement is established.",
+                  reviewedAt: "2026-10-20",
+                  docs: [
+                    sourceRef("TDAB customer agreement, sections 7 and 10 (effective 2026-06-15; retrieved 2026-10-20)", "https://bank.telco.in/customer-agreement", ["route", "fees", "settlement"]),
+                    sourceRef("TDAB terms (effective 2026-06-15; retrieved 2026-10-20)", "https://bank.telco.in/terms-of-use", ["route", "fees", "settlement"]),
+                  ],
+                },
               }
             : entry.config,
   })),

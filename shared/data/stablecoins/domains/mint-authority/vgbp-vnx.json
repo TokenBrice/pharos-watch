@@ -2,9 +2,9 @@
   "id": "vgbp-vnx",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-adverse",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "VGBP has three independently mintable native deployments. Base and Celo use VNXCToken proxies whose chain-local VNXManager role-0 bearers can grant the minter role and set arbitrary per-minter allowances with no delay; 0xb65a...09c6 currently has a 1 billion VGBP allowance and all three roles on each chain, while 0xacc5...311a remains a role-0 bearer. Solana uses the classic SPL Token program with one unrestricted mint authority. No on-chain multisig, timelock, global supply cap, or disclosed MPC/HSM custody was found at the current cutoff. Bridge-only mechanics are not included in Mint Authority; the reviewed route inventory classifies all three deployments as native issuance.",
+    "summary": "VGBP's three catalogued native deployments retain arbitrarily expandable issuer mint/admin/upgrade powers, with historical on-chain signing observations unchanged. Current issuer documents establish daily whole-token bank/wallet/ledger and reserve-to-face-value reconciliation. The issuer also lists an Ethereum deployment whose supply is independently observed zero at all four July/August report testing instants and the October 19 pin; its full current authority inventory remains unclosed. Independent Apex reports exist for July and August, but no current September report is published, so no attestation-only or prudential supervision credit is granted.",
     "controls": [
       {
         "chain": "base",
@@ -278,13 +278,53 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "unknown",
-    "supervision": "none",
+    "reconciliation": "periodic",
+    "supervision": "unknown",
     "review": {
-      "evidence": "Current state was reconstructed from Base block 50066430 at 2026-08-16T23:16:47Z, Celo block 75021637 at 2026-08-16T23:19:55Z, and finalized Solana slot 439735891 at 2026-08-16T23:22:32Z. Base and Celo storage, role membership, token allowances, EIP-1967 implementation/admin slots, account ownership, and read-only mint simulations were checked; Solana mint metadata, supply, authority account, and post-slot mint transactions were checked. On both EVM deployments, 0xb65a...09c6 is token, manager, and proxy-admin owner, holds roles 0, 1, and 2, and has a 1e27 raw minter allowance; 0xacc5...311a remains role 0 only. The Solana mint remains controlled by 51b5...UksxaY. All three are independent native issuance paths, and their immediate mint or upgrade controls remain represented in Mint Authority with deploymentRefs; no bridge-only controller or route accounting is included here. EVM and Solana issuer keys are single-account controls on-chain, while off-chain MPC/HSM custody remains unknown. Mint-tier review (2026-07-15): No credible recurring current reconciliation was established for VGBP: AREVA General Auditing and Trust Company Limited issued a token-specific report only for 2024-12-31, published 2025-02-05, and VNX's current transparency page has no 2025 VGBP report. Liechtenstein FMA's exact VNX Commodities AG match is only a TT Service Provider registration, not prudential EMT-issuer supervision. Economic-posture fields reviewed 2026-08-15: immediate issuer-controlled mint and upgrade paths are unbounded; reconciliation remains unknown and supervision remains none. Wave 2 external verification 2026-08-15: VNX's transparency inventory still has no later VGBP report and the 2026 operational wind-down does not reconcile the current Base, Celo, and Solana supply; reconciliation remains unknown.",
-      "reviewer": "Codex SOL-V mint-tier research; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-16",
+      "evidence": "Historical native control observations remain at Base block 50066430 (2026-08-16T23:16:47Z), Celo block 75021637 (2026-08-16T23:19:55Z) and Solana slot 439735891 (2026-08-16T23:22:32Z). Base/Celo issuer role-0 bearers can authorize arbitrary minter allowances and immediately replace mint logic; the Solana issuer account retains the historically observed uncapped mint path. No historical control pin or unbounded economic semantics is renewed or withdrawn. Reconciliation-only research on 2026-10-20 establishes an issuer-operated daily whole-token comparison: current Minting and Redemption and Asset Segregation documents match bank balances and on-chain wallet balances to the internal ledger daily; Reserve Management requires daily valuation with reserve value at least the face value of all stablecoins outstanding. The authoritative Standards and Contracts registry binds every listed VGBP deployment to the same segregated reserve. Its fourth Ethereum VGBP contract 0x34c9c643becd939c950bb9f141e35777559817cb is independently identified as VNX British Pound, symbol VGBP, 18 decimals, and fixed-block totalSupply is zero at all four Apex testing instants: July 15 block 25541499, July 31 block 25656292, August 14 block 25756720 and August 31 block 25878704; zero is also observed at October 19 block 26224773, hash 0xb76bade8a7897afb028dbcb274932e63efd2d5ede3438010c924c00c84426757, timestamp 2026-10-19T06:16:47Z. These are observed zero liabilities at exact instants, not a continuous absence or immutable no-issuance claim. Ethereum implementation/admin resolve to 0xd1d7193ce1aa7808d577058f48ef8289fc2f81fc and 0x817f8afee1a758faf4492f4844b08dcb57658165; owner is 0x45a149f42ff0b77d148d05904dd7577df36a545a, but complete current role/upgrade authority closure is not certified here. The genuine July and August Apex examinations, signed August 10 and September 8, compare GBP 126,595.48 of Solana/Celo/Base VGBP liabilities to GBP 126,596.33 cash at Bermuda Commercial Bank. They supersede the old no-later-report narrative but no September report is observable, so current attestation-only supervision is not established. ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required: historical Liechtenstein TT-provider registration cannot establish absence of qualifying oversight of current issuer VNX Global Ltd.; supervision stays unknown, not none. D33 adjudication admits periodic issuer-operated reconciliation at base55 with supervision unknown, without independent-assurance or prudential grading. Existing unbounded powers and original on-chain observation dates remain unchanged.",
+      "reviewer": "Codex SOL-V mint-tier research; Sol economic-posture batch 2026-08-15; FD16 reconciliation-only review; D33-ADJUDICATOR",
+      "reviewedAt": "2026-10-20",
       "sources": [
+        {
+          "label": "VNX Global daily bank/wallet/internal-ledger reconciliation, retrieved 2026-10-20",
+          "url": "https://vnx.gitbook.io/vnx-global/institutional/products/minting-and-redemption"
+        },
+        {
+          "label": "VNX Global daily reserve valuation against all outstanding token face value, retrieved 2026-10-20",
+          "url": "https://vnx.gitbook.io/vnx-global/institutional/reserve/reserve-management"
+        },
+        {
+          "label": "VNX Global daily asset-segregation ledger procedure, retrieved 2026-10-20",
+          "url": "https://vnx.gitbook.io/vnx-global/institutional/custody/asset-segregation"
+        },
+        {
+          "label": "VNX Global current monthly independent report archive, retrieved 2026-10-20",
+          "url": "https://vnx.gitbook.io/vnx-global/transparency/audits"
+        },
+        {
+          "label": "Apex VNX Global August report, period 2026-08-31, signed 2026-09-08",
+          "url": "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf"
+        },
+        {
+          "label": "Apex VNX Global July report, period 2026-07-31, signed 2026-08-10",
+          "url": "https://vnx.io/reports/vnx-attestation-report-2026-07-31.pdf"
+        },
+        {
+          "label": "VNX Global authoritative four-deployment VGBP registry, retrieved 2026-10-20",
+          "url": "https://vnx.gitbook.io/vnx-global/transparency/standards-and-contracts"
+        },
+        {
+          "label": "Ethereum VGBP fixed-block totalSupply at 25541499, 25656292, 25756720, 25878704 and 26224773; observed 2026-10-20",
+          "url": "https://api-ethereum-mainnet.n.dwellir.com"
+        },
+        {
+          "label": "Verified Ethereum VGBP proxy and constructor identity",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x34c9c643becd939c950bb9f141e35777559817cb"
+        },
+        {
+          "label": "Current VNX Global Terms: exact Bermuda issuing entity and licence statement",
+          "url": "https://prod-global-terms.s3.sa-east-1.amazonaws.com/VNX-Global-Terms.pdf"
+        },
         {
           "label": "Base VGBP proxy",
           "url": "https://base.blockscout.com/address/0xaeb4bb7debd1e5e82266f7c3b5cff56b3a7bf411"

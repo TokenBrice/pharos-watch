@@ -1186,7 +1186,7 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "not-applicable",
+    "reconciliation": "unknown",
     "supervision": "none",
     "mintIncidents": [
       {
@@ -1207,7 +1207,7 @@
       }
     ],
     "review": {
-      "evidence": "October 9 per-chain census pins V3 Alchemist/Transmuter administration, MYT owner/curator/allocator, DAO Guardian/Sentinel membership, minter whitelist/pause/limits, the known V2 minters, V3 EIP-1967 implementations/ProxyAdmins and Safe owners/threshold/modules/guard. Ethereum block 26154553 is 2026-10-09T11:28:23Z, Arbitrum 513184751 is 2026-10-09T11:38:06Z and Optimism 157973535 is 2026-10-09T11:37:27Z; full hashes and keyless RPC sources are in the controls and lane evidence artifacts. L2 protocol-admin identities now resolve to 3-of-7 Safes rather than unknown contracts. Two L2 V3 minter mechanics now resolve to collateral-constrained paths, without economic hard-cap credit because parameters and implementation are mutable. Known V2 minters are unwhitelisted at these pins but reactivation and legacy upgrade powers remain. The source whitelist mappings are non-enumerable and whitelist setters emit no dedicated membership event; querying known addresses does not prove completeness. The aggregate review therefore remains unresolved. Representation powers stay in Bridge Risk.",
+      "evidence": "October 9 per-chain census pins V3 Alchemist/Transmuter administration, MYT owner/curator/allocator, DAO Guardian/Sentinel membership, minter whitelist/pause/limits, the known V2 minters, V3 EIP-1967 implementations/ProxyAdmins and Safe owners/threshold/modules/guard. Ethereum block 26154553 is 2026-10-09T11:28:23Z, Arbitrum 513184751 is 2026-10-09T11:38:06Z and Optimism 157973535 is 2026-10-09T11:37:27Z; full hashes and keyless RPC sources are in the controls and lane evidence artifacts. L2 protocol-admin identities now resolve to 3-of-7 Safes rather than unknown contracts. Two L2 V3 minter mechanics now resolve to collateral-constrained paths, without economic hard-cap credit because parameters and implementation are mutable. Known V2 minters are unwhitelisted at these pins but reactivation and legacy upgrade powers remain. The source whitelist mappings are non-enumerable and whitelist setters emit no dedicated membership event; querying known addresses does not prove completeness. The aggregate review therefore remains unresolved. Representation powers stay in Bridge Risk. FD05 correction 2026-10-20: current role, migration and MYT disclosures do not establish that whole-supply reconciliation cadence is structurally inapplicable to these mutable native paths, or provide a complete recurring backing-to-liability comparison. Reconciliation is unknown rather than not-applicable; no measured absence is asserted and the original review start and pins remain unchanged.",
       "reviewer": "Sol curation campaign 2026-10-09 (W2L21Alchemix)",
       "reviewedAt": "2026-10-09",
       "disposition": "unresolved",

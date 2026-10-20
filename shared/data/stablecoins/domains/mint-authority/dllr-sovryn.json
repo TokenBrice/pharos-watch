@@ -2,9 +2,9 @@
   "id": "dllr-sovryn",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "unbounded-reconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
-    "summary": "DLLR's current Mynt aggregator mints against deposited bAssets, but the token-owning 48-hour Timelock can replace the authorized MassetManager with any nonzero address, which can mint without a deposit or numeric cap. D14 is unbounded with continuous basket reconciliation. GovernorAlpha's nonzero guardian can change the Timelock admin without token voting, so the sole-governor gate fails.",
+    "summary": "DLLR's current Mynt aggregator documents 1:1 bAsset conversions, but the token-owning 48-hour Timelock can replace the authorized MassetManager with any nonzero address, which can mint without a deposit or numeric cap. D14 is unbounded; sampled basket equality does not establish a recurring whole-liability reconciliation regime or verified all-path deposit accounting. GovernorAlpha's nonzero guardian can change the Timelock admin without token voting, so the sole-governor gate fails.",
     "upgradeability": {
       "model": "transparent-proxy",
       "proxyAddresses": [
@@ -73,10 +73,10 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "continuous",
+    "reconciliation": "unknown",
     "supervision": "none",
     "review": {
-      "evidence": "At Rootstock block 8935202: MassetManager proxy 0x5f777270 owner() = Timelock 0x967c84b7; EIP-1967 proxy-admin 0x466e023d owner() = same Timelock. Timelock delay slot = 0x2a300 (48 h). Timelock admin() = GovernorAlpha 0x6496df39; GovernorAlpha timelock() = 0x967c84b7 (confirmed circular, correct). Full DAO governance chain verified on-chain. Economic-posture fields reviewed 2026-08-15: SOV governance can change basket capacity or mint logic only through the enforced 48-hour Timelock, live Rootstock basket balances continuously cover 1:1 issuance, and no independent attestor or prudential supervisor is evidenced. D14/D29 sweep 2026-10-03 supersedes the historical bounded classification: at Rootstock block 9293830 (hash 0x8f77258c9cfba3d0da535f26b47e1de9060951f7656ba25946725fdc3b160a41), DLLR.owner() is Timelock 0x967c84b731679e36a344002b8e3ce50620a7f69f. Verified DLLR.setMassetManagerProxy(address) admits any nonzero address; mint(address,uint256) checks only the configured minter, with no deposit or cap check. Read-only setter calls from Timelock and raw mint calls from the current manager succeed. This establishes unbounded minter authorization independently of basket admission or upgrades. Current aggregator issuance remains continuously deposit-accounted. D29 fails G1: GovernorAlpha.guardian() is 0x924f5ad34698fd20c90fe5d5a8a0abd3b42dc711, and verified __queueSetTimelockPendingAdmin/__executeSetTimelockPendingAdmin let it change Timelock admin without token voting. delay()=172800 and staking votes use past-block checkpoints, but neither removes that root. Complete recursive guardian/admin executionScope closure is not certified; no governed qualification is asserted. Fallback is unbounded-reconciled.",
+      "evidence": "Historical authority pins retained: at Rootstock block 8935202, MassetManager proxy 0x5f777270 owner() = Timelock 0x967c84b7; EIP-1967 proxy-admin 0x466e023d owner() = the same Timelock. Delay slot0x2a300 is172800 seconds. Timelock admin() = GovernorAlpha0x6496df39 and GovernorAlpha.timelock() returns the Timelock. The August15 review's continuous-basket assertion and October3 continuous-deposit-accounting assertion are withdrawn on2026-10-20 under the shared D33 evidence standard, without renewing the original October3 review start. The cited evidence establishes documented1:1 Mynt conversions and sampled basket/supply equality, not a recurring all-liability-to-backing procedure, explicit cadence or verified complete mint execution by construction. The live manager implementation remains unverified in the access review, so its complete deposit-only reach cannot be inferred from the token's minter check. This withdrawal does not assert a shortfall or measured non-reconciliation. D14/D29 pins remain: at Rootstock block9293830, hash0x8f77258c9cfba3d0da535f26b47e1de9060951f7656ba25946725fdc3b160a41, DLLR.owner() is Timelock0x967c84b731679e36a344002b8e3ce50620a7f69f. Verified setMassetManagerProxy(address) admits any nonzero address; mint(address,uint256) checks only the configured minter, with no deposit or cap check. Historical read-only setter calls from Timelock and raw mint calls from the manager succeeded; simulations are not executed issuance. D29 fails G1: GovernorAlpha.guardian() is0x924f5ad34698fd20c90fe5d5a8a0abd3b42dc711 and verified __queueSetTimelockPendingAdmin/__executeSetTimelockPendingAdmin permit Timelock-admin changes without token voting. delay()=172800 and past-block-checkpoint voting do not remove that root. Complete recursive guardian/admin execution closure is not certified; no governed qualification is asserted. With reconciliation unknown and no qualifying process or prudential supervision established, the annotation is unbounded-adverse. Current primary Mynt conversion documentation was re-read2026-10-20.",
       "reviewer": "Sol v10.02 D14/D29 sweep (U5GovAmbiguousA)",
       "reviewedAt": "2026-10-03",
       "sources": [
@@ -103,6 +103,10 @@
         {
           "label": "Rootstock pinned block 9293830",
           "url": "https://rootstock.blockscout.com/block/9293830"
+        },
+        {
+          "label": "Mynt documented 1:1 conversion scope re-read 2026-10-20",
+          "url": "https://build.sovryn.com/builder-portal/smart-contracts/mynt"
         }
       ]
     }

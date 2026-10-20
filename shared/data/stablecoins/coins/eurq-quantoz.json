@@ -101,6 +101,11 @@
       "chain": "algorand",
       "address": "2768422954",
       "decimals": 6
+    },
+    {
+      "chain": "stellar",
+      "address": "EURQ-GCA6KZBWPBOEF6M2MZBTXRMKLMWRZOUCL2JFSIDT3WTDBOFIVDC4C4CE",
+      "decimals": 7
     }
   ],
   "custodyModel": "institutional-regulated",

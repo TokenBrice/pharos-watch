@@ -14,8 +14,7 @@
         "counterparty",
         "legal",
         "concentration"
-      ],
-      "liquidityHorizon": "immediate"
+      ]
     }
   ],
   "reserveReview": {
@@ -52,7 +51,7 @@
         "url": "https://www.dropbox.com/scl/fo/7rlmba8f49nvbp3xwz1of/ABv0vSjd6cIDAUTIlwm2KwA?rlkey=hokf0tffqvezfmsto25cvpovs&st=7ohgw8sv&dl=0"
       }
     ],
-    "rationale": "Re-opened 2026-10-01: Ondo states that each USDon is backed 1:1 by cash or equivalents in a brokerage account. The issuer-linked September 28, 2026 daily report and August 2026 monthly report name platform cash accounts at Alpaca, BitGo and SVB, list USDon quantities by Ethereum, BNB Chain and Solana, and include aggregate assets and liabilities; Ankura confirms amounts, valuations and calculations as to the listed collateral. These reports contradict the earlier blanket nondisclosure of broker identity and assurance. They do not allocate particular cash accounts or instruments to USDon, separately reconcile its reserve backing, or disclose USDon-specific custody rights. Platform balances cannot be converted into USDon portfolio weights; the 100% insufficient-evidence disposition remains.",
+    "rationale": "Re-opened 2026-10-01: Ondo states that each USDon is backed 1:1 by cash or equivalents in a brokerage account. The issuer-linked September 28, 2026 daily report and August 2026 monthly report name platform cash accounts at Alpaca, BitGo and SVB, list USDon quantities by Ethereum, BNB Chain and Solana, and include aggregate assets and liabilities; Ankura confirms amounts, valuations and calculations as to the listed collateral. These reports contradict the earlier blanket nondisclosure of broker identity and assurance. They do not allocate particular cash accounts or instruments to USDon, separately reconcile its reserve backing, or disclose USDon-specific custody rights. Platform balances cannot be converted into USDon portfolio weights; the 100% insufficient-evidence disposition remains. Source-scope correction verified 2026-10-20: the unallocated cash-or-equivalents row does not have an evidenced immediate liquidation horizon. The immediate horizon is withdrawn without renewing the October 1 review, changing weights, or treating atomic USDon/USDC conversion as reserve realization.",
     "compositionBasis": "Ondo USDon cash-or-equivalent brokerage-account disclosure with independent DefiLlama corroboration",
     "scope": "full-composition",
     "knownUnknownExposure": "Ondo's daily and monthly Ankura reports publish platform-wide cash balances, named accounts and USDon quantities within aggregate liabilities. The USDon-specific cash-versus-cash-equivalent allocation, account assignment, liability reconciliation and custody terms remain undisclosed; no platform account share is inferred as a USDon reserve weight.",

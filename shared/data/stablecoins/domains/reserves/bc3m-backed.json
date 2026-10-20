@@ -16,12 +16,12 @@
         "legal",
         "concentration"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "over-seven-days"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-15",
-    "reviewer": "Pharos reserve evidence recovery review",
+    "reviewedAt": "2026-10-20",
+    "reviewer": "Pharos reserve evidence recovery review; C28 classification-only review (historical composition retained)",
     "confidence": "verified",
     "sources": [
       {
@@ -39,9 +39,13 @@
       {
         "label": "Backed issuer-maintained inventory exclusion policy (pinned commit)",
         "url": "https://github.com/backed-fi/DefiLlama-Adapters/blob/f84435184a132be71222dfa3eedba8d3774c727e/projects/backed/index.js"
+      },
+      {
+        "label": "Amundi FR0010754200 Prospectus and Reglement updated 2026-04-16, redemption gates and Article 3 (retrieved 2026-10-20)",
+        "url": "https://www.amundi.fr/fr_part/dl/doc/prospectus/FR0010754200/FRA/FRA"
       }
     ],
-    "rationale": "Backed identifies bC3M as a tracker certificate whose sole underlying is the Amundi C3M UCITS ETF, which tracks 0-6 month Eurozone government bills. The live chainlink-por adapter emits the source's exact assetLabel \"AMUNDI GOVIES 0-6 Months Euro Investment Grade ETF shares\"; the reviewed sidecar preserves that identity and classifies it as one fund-share position with Amundi as issuer/obligor. Backed's public assetReserves feed reported the C3M.MI reserve and total bC3M circulation with Chainlink as provider on July 21, 2026; Backed states that The Network Firm reads custody-account balances and Chainlink publishes the proof daily or after a material deviation. The reserve is recorded as one fund-share position without estimating the ETF's changing sovereign holdings. September 15, 2026 review independently reproduced distributed circulation by subtracting the two issuer-documented working-capital and treasury inventories from same-block gross supply. All eight issuer-documented EVM deployments were checked, including zero-supply Fantom. Current raw amounts match the issuer API on every reported chain; omitted BSC and Fantom deployments independently have zero gross and circulating supply. This establishes a current distributed-certificate denominator without treating the undated API or gross premint inventory as current liabilities. The reserve oracle retains its own observation clock; no fund look-through or legal segregation is inferred.",
+    "rationale": "Backed identifies bC3M as a tracker certificate whose sole underlying is the Amundi C3M UCITS ETF, which tracks 0-6 month Eurozone government bills. The live chainlink-por adapter emits the source's exact assetLabel \"AMUNDI GOVIES 0-6 Months Euro Investment Grade ETF shares\"; the reviewed sidecar preserves that identity and classifies it as one fund-share position with Amundi as issuer/obligor. Backed's public assetReserves feed reported the C3M.MI reserve and total bC3M circulation with Chainlink as provider on July 21, 2026; Backed states that The Network Firm reads custody-account balances and Chainlink publishes the proof daily or after a material deviation. The reserve is recorded as one fund-share position without estimating the ETF's changing sovereign holdings. September 15, 2026 review independently reproduced distributed circulation by subtracting the two issuer-documented working-capital and treasury inventories from same-block gross supply. All eight issuer-documented EVM deployments were checked, including zero-supply Fantom. Current raw amounts match the issuer API on every reported chain; omitted BSC and Fantom deployments independently have zero gross and circulating supply. This establishes a current distributed-certificate denominator without treating the undated API or gross premint inventory as current liabilities. The reserve oracle retains its own observation clock; no fund look-through or legal segregation is inferred. Classification-only review 2026-10-20: the preceding current/zero statements describe the September 15 observation, not a new supply pin. July 21 composition and all September authority/supply pins are preserved. The exact underlying ISIN FR0010754200 is independently joined by the current Backed product page to the Amundi Prospectus and Reglement updated April 16, 2026. Prospectus redemption provisions permit gates for up to 20 NAV dates over three months; Reglement Article 3 permits exceptional payment extension to 30 days and temporary suspension. The reserve liquidity horizon is therefore conservatively over-seven-days, not an immediate or seven-day whole-position liquidation promise. This establishes an adverse contractual liquidity category without inventing executable capacity, a stressed realization guarantee, current holdings or a finite fund-share maturity.",
     "compositionBasis": "Backed bC3M product disclosure and Chainlink/The Network Firm reserve proof",
     "compositionAsOf": "2026-07-21",
     "scope": "full-composition",

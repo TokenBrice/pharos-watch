@@ -238,7 +238,7 @@
       ]
     },
     "reconciliation": "continuous",
-    "supervision": "attestation-only",
+    "supervision": "unknown",
     "review": {
       "sources": [
         {
@@ -268,9 +268,17 @@
         {
           "label": "Ethereum SwapFacility",
           "url": "https://eth.blockscout.com/address/0xB6807116b3B1B321a390594e31ECD6e0076f6278"
+        },
+        {
+          "label": "Startale USD current issuer FAQ (retrieved 2026-10-20)",
+          "url": "https://usd.startale.com/faq"
+        },
+        {
+          "label": "Startale USD terms revised 2025-12-03 (retrieved 2026-10-20)",
+          "url": "https://usd.startale.com/terms"
         }
       ],
-      "evidence": "Canonical Mint Authority is scoped to Ethereum. M0 MinterGateway supplies backing M, SwapFacility transfers M into the approved extension, and verified MExtension logic mints USDSC after that transfer and burns it on unwrap. At Ethereum block 26095804, the wrapper's M and SwapFacility bindings and both proxy implementations/admins match the recorded identities. The USDSC ProxyAdmin owner is the recorded 3-of-5 Safe. The SwapFacility ProxyAdmin owner has changed from the EOA recorded at block 25771218 to verified TimelockController 0x23ca665c8a73292fc7ac2cc4493d2ce883bba468 with getMinDelay() = 259200 seconds. The facility's former EOA bypass is historical; the token's separate immediate Safe upgrade path remains current. Timelock role membership and issuer key custody remain unverified. Soneium representation and Portal/Hyperlane controls remain in Bridge Risk. D14/D29 sweep (2026-10-03): The extension-local verified USDSC/MYieldToOne/MExtension code permits wrap only from the immutable SwapFacility, transfers the matching M before minting, and limits claimYield to the positive difference between M custody and existing supply. Raising router capacity cannot bypass that transfer. The authored MinterGateway backing-rail control represents parent M issuance, carried by the serial-claim dependency rather than charged twice. Separate Safe/Timelock proxy replacement remains Upgrade Risk and is not a D14 trigger. Pinned block hashes read this review: ethereum 25771196 0x46efe9c8c4b56754ecfb37d48b0430a35cf32478dd5ab29f5042a8619fcbea97; ethereum 25771218 0xb8dd44092a6d2f672a60e17a5a1a0fe1b13bd0e9827ef77bb7364c6e4fa417c2; ethereum 26095804 0xfcc44bc3466e370b5a60c71c43c84f6821b6d3e3a3ac4f2aabfa54fefdf1c5c9. No transaction was sent; no governed-issuance qualification is claimed.",
+      "evidence": "Canonical Mint Authority is scoped to Ethereum. M0 MinterGateway supplies backing M, SwapFacility transfers M into the approved extension, and verified MExtension logic mints USDSC after that transfer and burns it on unwrap. At Ethereum block 26095804, the wrapper's M and SwapFacility bindings and both proxy implementations/admins match the recorded identities. The USDSC ProxyAdmin owner is the recorded 3-of-5 Safe. The SwapFacility ProxyAdmin owner has changed from the EOA recorded at block 25771218 to verified TimelockController 0x23ca665c8a73292fc7ac2cc4493d2ce883bba468 with getMinDelay() = 259200 seconds. The facility's former EOA bypass is historical; the token's separate immediate Safe upgrade path remains current. Timelock role membership and issuer key custody remain unverified. Soneium representation and Portal/Hyperlane controls remain in Bridge Risk. D14/D29 sweep (2026-10-03): The extension-local verified USDSC/MYieldToOne/MExtension code permits wrap only from the immutable SwapFacility, transfers the matching M before minting, and limits claimYield to the positive difference between M custody and existing supply. Raising router capacity cannot bypass that transfer. The authored MinterGateway backing-rail control represents parent M issuance, carried by the serial-claim dependency rather than charged twice. Separate Safe/Timelock proxy replacement remains Upgrade Risk and is not a D14 trigger. Pinned block hashes read this review: ethereum 25771196 0x46efe9c8c4b56754ecfb37d48b0430a35cf32478dd5ab29f5042a8619fcbea97; ethereum 25771218 0xb8dd44092a6d2f672a60e17a5a1a0fe1b13bd0e9827ef77bb7364c6e4fa417c2; ethereum 26095804 0xfcc44bc3466e370b5a60c71c43c84f6821b6d3e3a3ac4f2aabfa54fefdf1c5c9. No transaction was sent; no governed-issuance qualification is claimed. ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required, verified 2026-10-20; original 2026-10-03 review start and every control pin retained. The reopened verified MExtension/MYieldToOne source supports local M-balance/supply accounting and surplus-only yield minting, so continuous local wrapper accounting is retained. The current FAQ's unspecified independent monitoring and parent-M dashboard do not identify a named recurring independent comparison covering the complete USDSC liability book; the public terms provide no such attestation. Supervision is corrected from attestation-only to unknown without changing D14 collateral-only semantics or inheriting a parent attestation as a child claim.",
       "reviewer": "Sol v10.02 D14/D29 sweep (MiscRaiseable)",
       "reviewedAt": "2026-10-03",
       "disposition": "scoreable"

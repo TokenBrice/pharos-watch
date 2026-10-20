@@ -2,7 +2,7 @@
   "id": "fusd-finchain",
   "name": "FinChain Dollar",
   "symbol": "FUSD",
-  "oneLiner": "FUSD is FinChain's BMA-licensed, rebasing dollar stablecoin backed by tokenized U.S. Treasury bills and money-market funds.",
+  "oneLiner": "FUSD is FinChain's rebasing dollar stablecoin backed by tokenized U.S. Treasury bills and money-market funds; its issuer claims a Bermuda license.",
   "flags": {
     "backing": "rwa-backed",
     "governance": "centralized",
@@ -78,8 +78,8 @@
     }
   ],
   "collateralQuality": "rwa",
-  "custodyModel": "institutional-regulated",
-  "governanceQuality": "regulated-entity",
+  "custodyModel": "unknown",
+  "governanceQuality": "single-entity",
   "yieldConfig": {
     "yieldSource": "FinChain FUSD daily reserve-yield rebase",
     "yieldType": "rebase"

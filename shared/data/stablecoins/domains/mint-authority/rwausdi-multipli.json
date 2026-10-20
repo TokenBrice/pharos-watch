@@ -2,7 +2,7 @@
   "id": "rwausdi-multipli",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-reconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "manual-review",
     "summary": "A shared zero-code EOA has direct-mint permission on all seven authored native rwaUSDi deployments on Ethereum, Base, Monad, Arbitrum, X Layer, Robinhood Chain, and Pharos through chain-local RolesAuthority contracts. Pinned 2026-10-01 simulations of a mint far above reported reserves succeeded on every deployment. The four existing Safe mint-governance and UUPS upgrade reviews cover 3-of-8 on Ethereum, 3-of-7 on Base, 4-of-8 on Monad, and 4-of-8 on Arbitrum, all with no timelock; the added minter scope does not imply that X Layer, Robinhood, or Pharos upgrade controls have been fully reviewed. The token's CCIP-admin/IBurnMintERC20-compatible surface is bridge-adjacent but no active TokenPool, remote-token, or lane binding is verified; those unresolved bridge facts stay in Bridge Risk and do not alter the native Mint Authority scope.",
     "upgradeability": {
@@ -385,8 +385,8 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "periodic",
-    "supervision": "attestation-only",
+    "reconciliation": "unknown",
+    "supervision": "unknown",
     "review": {
       "sources": [
         {
@@ -440,10 +440,18 @@
         {
           "label": "Chainlink CCIP Directory",
           "url": "https://docs.chain.link/ccip/directory"
+        },
+        {
+          "label": "AFI exact rwaUSDi issuance inventory and reported circulation, retrieved 2026-10-20",
+          "url": "https://api.afiprotocol.xyz/por/multipli/rwaUSDi/issuance-parameters"
+        },
+        {
+          "label": "AFI data pipeline: private inputs and computation-only verification, retrieved 2026-10-20",
+          "url": "https://docs.afiprotocol.xyz/proof-of-reserve-network/the-data-pipeline.md"
         }
       ],
-      "evidence": "At the current fixed observations on Ethereum block 25771300, Base block 50069092, Arbitrum block 495314430, and Monad block 96636315, all four positive-supply deployments exposed the shared mint, Auth, RolesAuthority, and UUPS surfaces; each token and RolesAuthority owner() returned the chain-local Safe. The shared role-5 EOA remained authorized for mint(address,uint256), and the mint surface exposes no cap or minter-allowance entry point. The Safe observations showed 3-of-8 on Ethereum, 3-of-7 on Base, 4-of-8 on Arbitrum, and 4-of-8 on Monad, with empty module lists, zero guard/module-guard storage, the same fallback handler, and current implementation slot 0xec9c824543dd3d635c1d71029f385a6eba511dc0 on all four. The verified predecessor source and current bytecode indicate CCIP-admin/IBurnMintERC20 compatibility, but the current implementation is not source-verified and no active TokenPool, remote-token, or lane binding was established. Those bridge-evidence gaps remain in bridgeRouteRisk and do not convert the four native routes into representations. M-2 evidence binding 2026-08-08: reconciliation periodic re-verified live - the sourced AFI POR middleware serves a current zk reserves proof and a weekly periodic-report series (Period 32, snapshot 2026-08-02, solvency verified by AFI POR Middleware) for rwaUSDi; the series is current and third-party-operated.",
-      "reviewer": "Codex mint/bridge boundary migration",
+      "evidence": "Historical observations on Ethereum block 25771300, Base block 50069092, Arbitrum block 495314430, and Monad block 96636315 established shared mint, Auth, RolesAuthority, and UUPS surfaces and chain-local Safe owners. The shared role-5 EOA was authorized for uncapped mint(address,uint256). Those original control pins and the separate seven-deployment 2026-10-01 simulations above are retained, not refreshed. Favorable process correction reviewed 2026-10-20: the earlier periodic reconciliation and attestation-only supervision conclusions exceeded the cited sources' scope. The exact AFI rwaUSDi issuance inventory lists five contracts (chain IDs 1, 8453, 143, 42161 and 1672), not all seven authored native deployments; the current proof publishes five opaque liability records and aggregate liabilities of $479,782,100 without a complete deployment-to-liability reconciliation or documented exclusions. Weekly reports through Period 43 (October 18, 2026) assert middleware solvency, but do not supply that accounting join. AFI's data-pipeline documentation expressly limits verification to computation over private inputs and does not establish their truth. Its generic independent-attestation FAQ describes AFI receipt vaults, not a named financial attestor or supervised issuance mandate for this rwaUSDi token. Whole-supply recurring reserve reconciliation and qualifying supervisory assurance therefore remain unknown. This does not establish insolvency, reserve shortfall, absence of a process, or an economic supply cap. Known unbounded issuance remains unchanged; the original review start is preserved.",
+      "reviewer": "Codex mint/bridge boundary migration; FD31 source-scope correction 2026-10-20",
       "reviewedAt": "2026-08-16"
     }
   }

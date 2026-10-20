@@ -127,7 +127,7 @@
     ],
     "economicCapSemantics": "unbounded",
     "reconciliation": "unknown",
-    "supervision": "attestation-only",
+    "supervision": "unknown",
     "review": {
       "sources": [
         {
@@ -157,9 +157,17 @@
         {
           "label": "Ripio wFIAT current attestations and releases",
           "url": "https://www.ripio.com/en/wfiat"
+        },
+        {
+          "label": "Current official wFIAT attestation archive (retrieved 2026-10-20)",
+          "url": "https://action.ripio.com/en/wfiat-attestations"
+        },
+        {
+          "label": "wMXN June 30, 2026 certification, signed July 28 (retrieved 2026-10-20)",
+          "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/Aug%202026/Token%20wMXN%2006.30.2026%20Certification%20vf.pdf?hsLang=en"
         }
       ],
-      "evidence": "Current native-scope review on 2026-08-16 found issuer EOA 0x466c02e2cc67b81a696af5afdb61605c41fe247b with MINTER_ROLE and immediate UUPS UPGRADER_ROLE on the six independent Ethereum, Base, Worldchain, BSC, Polygon, and Gnosis deployments. The 4-of-7 Safe 0x2b839174fe62466067c22e2a4c8054071f9d8d68 remains DEFAULT_ADMIN_ROLE on the native routes; its current Ethereum read at block 25770925 returned the refreshed owner set recorded above. LatamStable.mint() has no intrinsic supply ceiling, so the native issuer posture remains unbounded. The separate fixed-destination LimitedMinter is retained only on its currently authorized native deployments. LimitedMinterBridge arbitrary-recipient bridge minting, daily limits, pause, BridgeDeposit/operator controls, and the Celo representation are intentionally excluded from Mint Authority and retained in bridgeRouteRisk. Supervision review (2026-08-08): wMXN has its own independent certification - Pablo Eduardo Soto, CPA (CPCECABA Vol. 275 Folio 153) reconciled 518,689 wMXN outstanding across six chains against MXN 937,364.13 in a Mexican bank account as of 2026-03-31 - so reserve evidence is attestation-backed. Reconciliation stays unknown because Ripio labels it the first attestation of wMXN collateral, the whitepaper's cadence language is permissive, and later-period certifications return 404. No prudential regime applies to the unnamed Ripio group affiliate that issues wFIAT.",
+      "evidence": "Current native-scope review on 2026-08-16 found issuer EOA 0x466c02e2cc67b81a696af5afdb61605c41fe247b with MINTER_ROLE and immediate UUPS UPGRADER_ROLE on the six independent Ethereum, Base, Worldchain, BSC, Polygon, and Gnosis deployments. The 4-of-7 Safe 0x2b839174fe62466067c22e2a4c8054071f9d8d68 remains DEFAULT_ADMIN_ROLE on the native routes; its current Ethereum read at block 25770925 returned the refreshed owner set recorded above. LatamStable.mint() has no intrinsic supply ceiling, so the native issuer posture remains unbounded. The separate fixed-destination LimitedMinter is retained only on its currently authorized native deployments. LimitedMinterBridge arbitrary-recipient bridge minting, daily limits, pause, BridgeDeposit/operator controls, and the Celo representation are intentionally excluded from Mint Authority and retained in bridgeRouteRisk. Supervision review (2026-08-08): wMXN has its own independent certification - Pablo Eduardo Soto, CPA (CPCECABA Vol. 275 Folio 153) reconciled 518,689 wMXN outstanding across six chains against MXN 937,364.13 in a Mexican bank account as of 2026-03-31 - so reserve evidence is attestation-backed. Reconciliation stays unknown because Ripio labels it the first attestation of wMXN collateral, the whitepaper's cadence language is permissive, and later-period certifications return 404. No prudential regime applies to the unnamed Ripio group affiliate that issues wFIAT. Source-scope correction verified 2026-10-20 by FD14: supervision attestation-only is withdrawn to unknown. The current official index still links only the June 30, 2026 ad-hoc certification (signed July 28), not a committed current recurring whole-liability assurance regime; its historical seven-network checkpoint cannot establish complete current deployment coverage. The whitepaper's 'may publish' wording and generic group licences do not establish a recurring assurance process or prudential supervision of the exact unnamed issuing affiliate for this token. Reconciliation remains unknown; native unbounded authority, every other adverse fact, original review start and all historical observation pins are unchanged. No non-reconciliation, shortfall or incident is inferred.",
       "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15",
       "reviewedAt": "2026-08-16",
       "disposition": "scoreable"

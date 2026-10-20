@@ -69,7 +69,7 @@
     }
   ],
   "collateralQuality": "rwa",
-  "custodyModel": "institutional-regulated",
+  "custodyModel": "unknown",
   "governanceQuality": "wrapper",
   "yieldConfig": {
     "yieldSource": "OpenEden cUSDO wrapper",

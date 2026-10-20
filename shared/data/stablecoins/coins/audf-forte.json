@@ -90,9 +90,14 @@
       "chain": "redbelly",
       "address": "0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b",
       "decimals": 6
+    },
+    {
+      "chain": "arc",
+      "address": "0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b",
+      "decimals": 6
     }
   ],
-  "custodyModel": "institutional-regulated",
+  "custodyModel": "unknown",
   "governanceQuality": "regulated-entity",
   "launchDate": "2024-01-09"
 }

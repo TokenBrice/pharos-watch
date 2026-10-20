@@ -10,8 +10,7 @@ import { deriveEffectiveDependencySet } from "@shared/lib/dependency-derivation"
 import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9/fact-set";
 import { createReportCardsFixedInput } from "../../test-helpers/report-cards-fixed-input";
 import { makeV9TwoAssetFixedInput } from "../../test-helpers/v9-fixed-input";
-import usdyCoin from "@shared/data/stablecoins/coins/usdy-ondo-finance.json";
-import usdyReserveEnvelope from "@shared/data/stablecoins/domains/reserves/usdy-ondo-finance.json";
+import septemberUsdy from "./fixtures/safety-score-v9-usdy-september-reserves.json";
 import dusdCoin from "@shared/data/stablecoins/coins/dusd-alto.json";
 import dusdReserveEnvelope from "@shared/data/stablecoins/domains/reserves/dusd-alto.json";
 
@@ -167,8 +166,8 @@ describe("classification-qualified reserve reviews", () => {
     expect(withoutLive.dependencies.edges).toEqual([]);
   });
 
-  it("admits USDY's current LLC holdings without attributing its exact excluded BVI/timing tail", () => {
-    const meta = { ...usdyCoin, ...usdyReserveEnvelope, id: "alpha" } as unknown as V9ExtensionRegistryMeta;
+  it("admits the frozen September USDY LLC holdings without attributing the excluded BVI/timing tail", () => {
+    const meta = { ...septemberUsdy, id: "alpha" } as unknown as V9ExtensionRegistryMeta;
     const usdyClockSec = Date.UTC(2026, 9, 2) / 1_000;
     const asset = compiledFixture(meta, [], usdyClockSec, true);
     const tail = 5.9490355116630695 / 100;

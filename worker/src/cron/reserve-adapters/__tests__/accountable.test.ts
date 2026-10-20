@@ -112,10 +112,18 @@ describe("adaptAccountableDashboard", () => {
     }
   });
 
-  it("classifies October 19 Yuzu labels without certifying new claim identities", async () => {
+  it("classifies unmapped synthetic Yuzu labels without certifying claim identities", async () => {
     // Official exposure_split observed 2026-10-19 includes all four labels,
     // including both [AAVE]_USDT and [Aave]_USDT. Values are synthetic.
-    const result = await runAccountablePayload(yzusd.liveReservesConfig as LiveReservesConfig, makeTimestampedYuzuPayload({
+    const config = structuredClone(yzusd.liveReservesConfig) as LiveReservesConfig;
+    const params = parseLiveReserveAdapterParams("accountable", config.params);
+    // Freeze the no-identity premise independently of later reviewed mappings.
+    for (const label of ["[AAVE]_USDT", "[Global_Dollar]_USDG", "[Sky]_sUSDS_Loop"]) {
+      delete params.coinIdMap?.[label];
+      delete params.depTypeMap?.[label];
+    }
+    config.params = params;
+    const result = await runAccountablePayload(config, makeTimestampedYuzuPayload({
       exposure_split: {
         "[AAVE]_USDT": { "": 350 },
         "[Global_Dollar]_USDG": { "": 300 },

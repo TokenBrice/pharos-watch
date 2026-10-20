@@ -2,7 +2,7 @@
   "id": "brlv-crown",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-reconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "BRLV's canonical native issuance is on Base. Crown's issuer relay, the Base token DEFAULT_ADMIN and UPGRADE_ROLE paths, and the canonical-domain BRLVRewards branch remain in Mint Authority; Ethereum bridgedBRLV, the Base canonical gateway's cross-chain branch, and bridge-only role administrators are scored under Bridge Risk.",
     "upgradeability": {
@@ -627,8 +627,8 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "continuous",
-    "supervision": "attestation-only",
+    "reconciliation": "unknown",
+    "supervision": "unknown",
     "review": {
       "sources": [
         {
@@ -654,9 +654,21 @@
         {
           "label": "Fact Finance BRLV proof-of-reserves report - May 2026",
           "url": "https://dfg4lo8c2lfcn.cloudfront.net/report_brlv_5_2026_79d38795ea.pdf"
+        },
+        {
+          "label": "Crown current whitepaper; retrieved 2026-10-20",
+          "url": "https://docs.crown-brlv.com/whitepaper.md"
+        },
+        {
+          "label": "Crown Portuguese monthly-report index; retrieved 2026-10-20",
+          "url": "https://www.crown-brlv.com/transparencia/"
+        },
+        {
+          "label": "Fact Finance September 30, 2026 technical verification memo; retrieved 2026-10-20",
+          "url": "https://dfg4lo8c2lfcn.cloudfront.net/report_brlv_9_2026_b6d73237cb.pdf"
         }
       ],
-        "evidence": "At Base block 50068610, the canonical BRLV proxy resolves through a zero EIP-1967 admin slot to verified implementation 0x1750731729b27cfd00ea55bc61e9dcfade2273f3; the shared DEFAULT_ADMIN EOA 0x239d4a can manage Base minters and grant UPGRADE_ROLE, while active Base UPGRADE_ROLE EOA 0xcdfc72 provides an immediate token upgrade path. Base's issuer relay directly mints, and BRLVRewards retains its canonical-domain surplus-bounded reward branch; the rewards proxy has active and role-admin upgrade EOAs with zero delay. Ethereum bridgedBRLV, the Base canonical gateway's remote mint/burn machinery, and their bridge administrators are retained as structured Bridge Risk controls rather than compiled into canonical Mint Authority. Crown backs BRLV with segregated Brazilian federal Treasury bonds and Tesouro Selic ETFs; Fact Finance performs daily independent reserve verification with full liability reconciliation published on Crown's transparency page, so supply is continuously reconciled. Reserve custody sits at BCB-regulated banks, but that is custodial regulation, not issuer supervision: no BCB or CVM registry names Crown/BRLV as a licensed stablecoin issuer, so supervision is attestation-only and BRLV remains in the high tier. R13's 2026-10-05 inventory correction at Base block 52199500 additionally authors BURNER_ROLE EOA 0x09dd8946662a9d60dbba9538d211cf45f819faba: arbitrary-from share burn and root collateral burn retain unbounded claim impairment in a complete 7702/direct-signer scope. The complete token census also identifies CLAIM_ROLE holder 0x38e47312ad5745c06fe097f997057dee31453737. This holder is explicitly excluded from executable native authority at this pin, not overlooked: verified inherited YieldStripping claimRewards, claimRewardsV2 and claimTax unconditionally revert, and BRLV's corresponding internal overrides also unconditionally revert. A CLAIM_ROLE grant alone cannot reactivate those entrypoints; native UUPS administrators can replace the implementation and are already inventoried with unrestricted root reach. No independent mint/burn/admin/upgrade authority is attributed to this dormant claim role.",
+        "evidence": "At Base block 50068610, the canonical BRLV proxy resolves through a zero EIP-1967 admin slot to verified implementation 0x1750731729b27cfd00ea55bc61e9dcfade2273f3; the shared DEFAULT_ADMIN EOA 0x239d4a can manage Base minters and grant UPGRADE_ROLE, while active Base UPGRADE_ROLE EOA 0xcdfc72 provides an immediate token upgrade path. Base's issuer relay directly mints, and BRLVRewards retains its canonical-domain surplus-bounded reward branch; the rewards proxy has active and role-admin upgrade EOAs with zero delay. Ethereum bridgedBRLV, the Base canonical gateway's remote mint/burn machinery, and their bridge administrators are retained as structured Bridge Risk controls rather than compiled into canonical Mint Authority. R13's 2026-10-05 inventory correction at Base block 52199500 additionally authors BURNER_ROLE EOA 0x09dd8946662a9d60dbba9538d211cf45f819faba: arbitrary-from share burn and root collateral burn retain unbounded claim impairment in a complete 7702/direct-signer scope. The complete token census also identifies CLAIM_ROLE holder 0x38e47312ad5745c06fe097f997057dee31453737. This holder is explicitly excluded from executable native authority at this pin, not overlooked: verified inherited YieldStripping claimRewards, claimRewardsV2 and claimTax unconditionally revert, and BRLV's corresponding internal overrides also unconditionally revert. A CLAIM_ROLE grant alone cannot reactivate those entrypoints; native UUPS administrators can replace the implementation and are already inventoried with unrestricted root reach. No independent mint/burn/admin/upgrade authority is attributed to this dormant claim role. ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required; C29 process-only review 2026-10-20, original authority review start 2026-08-16 and all observation pins retained. The prior daily full-liability verification assertion is withdrawn. The current issuer index publishes monthly technical memos, newest September 30, 2026, rather than observable daily reports. That memo compares aggregate BRLV liabilities and reserves but labels Base with the Ethereum representation address and does not reconcile the complete Base/Ethereum/Tempo liability inventory. The whitepaper's continuous-monitoring and daily-audit assertions do not supply that missing whole-book join. Neither continuous reconciliation nor a named independent recurring whole-supply attestation regime is established, so both process fields are unknown, not measured absence. Custodian regulation does not establish prudential supervision of Crown's issuance.",
         "reviewer": "Codex mint/bridge boundary migration; verified finding 2026-08-16",
         "reviewedAt": "2026-08-16",
       "scopedQuestions": [

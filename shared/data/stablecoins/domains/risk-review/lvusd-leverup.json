@@ -21,8 +21,8 @@
     "reviewedAt": "2026-07-30"
   },
   "oracleRisk": {
-    "tier": "oracleless",
-    "summary": "LeverUp describes lvUSD as a USDC-backed liquidity-layer token stabilized through protocol-internal TWAP anchoring, LV auctions, and redemption quotas rather than an external liquidation oracle.",
+    "tier": "opaque-or-unknown",
+    "summary": "Source-scoped correction reviewed 2026-10-20 without renewing the original review start: the cited LVUSD documentation explicitly makes LV auctions and quota redemption depend on LVUSD TWAP thresholds of 0.99 and 0.90. That is a price-sensitive top-level control, so absence of an external borrower-liquidation oracle does not establish oracleless operation. The reviewed issuer LVUSD page and documentation index do not identify the exact deployed TWAP pool/feed, averaging window, controller, stale-price or fallback configuration. Retain opaque topology rather than awarding oracleless credit; no unsafe feed or manual price setter is inferred.",
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {

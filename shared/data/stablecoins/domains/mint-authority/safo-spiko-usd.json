@@ -2205,10 +2205,10 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "periodic",
+    "reconciliation": "unknown",
     "supervision": "prudential",
     "review": {
-      "evidence": "Ethereum block 25576670: SAFO token authority = PM 0x344278aff. The PM ADMIN group 0 resolves to 0x4eaa52b6, a 6-signer legacy multisig with threshold 3. The PM requires that ADMIN group for upgradeToAndCall on both the token and PermissionManager; both are UUPS proxies with zero EIP-1967 admin slots. Group 2 (previously EOA 0x60a9, now removed via remGroup tx history) remains a separate mint group. Per-chain PM state differs; this verification covers the Ethereum deployment. Economic-control evidence reviewed 2026-07-15: CACEIS independently calculates daily fund NAV and PwC performs four statutory audits per year; the latest holdings data disclosed by Spiko was updated 2026-03-03. The AMF GECO registry matches the exact Spiko Amundi Overnight Swap Fund containing USD share class FR0014015LE1. Economic-posture fields reviewed 2026-08-15: unbounded Permission Manager mint and upgrade authority; existing periodic fund reconciliation and AMF product supervision remain supported.",
+      "evidence": "Ethereum block 25576670: SAFO token authority = PM 0x344278aff. The PM ADMIN group 0 resolves to 0x4eaa52b6, a 6-signer legacy multisig with threshold 3. The PM requires that ADMIN group for upgradeToAndCall on both the token and PermissionManager; both are UUPS proxies with zero EIP-1967 admin slots. Group 2 (previously EOA 0x60a9, now removed via remGroup tx history) remains a separate mint group. Per-chain PM state differs; this verification covers the Ethereum deployment. Economic-control evidence reviewed 2026-07-15: CACEIS independently calculates daily fund NAV and PwC performs four statutory audits per year; the latest holdings data disclosed by Spiko was updated 2026-03-03. The AMF GECO registry matches the exact Spiko Amundi Overnight Swap Fund containing USD share class FR0014015LE1. Economic-posture fields reviewed 2026-08-15: unbounded Permission Manager mint and upgrade authority; existing periodic fund reconciliation and AMF product supervision remain supported. ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required (C21, 2026-10-20): the preceding periodic-reconciliation conclusion is withdrawn. The current product page, September 1, 2026 SICAV prospectus and issuer totals API establish fund NAV/accounting, a DLT shareholder register and fund-audit disclosures, but not an explicit recurring comparison of the complete native token-liability book, including pending claims, against backing. Reconciliation is unknown, not measured non-reconciliation. AMF prudential supervision is retained for the exact Spiko SICAV SAFO sub-fund managed by Twenty First Capital under the UCITS regime, independently identified by the AMF certificate dated February 23, 2026 (SCV20260075; management authorisation GP-11000029) and USD ISIN FR0014015LE1 in the prospectus. Historical review start and all execution pins remain unchanged.",
       "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-4 (lead dai-makerdao); Sol economic-posture batch 2026-08-15",
       "reviewedAt": "2026-08-15",
       "disposition": "scoreable",
@@ -2452,6 +2452,18 @@
         {
           "label": "AMF GECO - Spiko Amundi Overnight Swap Fund",
           "url": "https://geco.amf-france.org/produit-d-epargne/c79399"
+        },
+        {
+          "label": "C21 D33 scope correction, retrieved 2026-10-20: September 1, 2026 prospectus, SAFO USD identity and register, not whole-token supply-to-backing reconciliation",
+          "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+        },
+        {
+          "label": "C21 exact AMF UCITS authorisation certificate dated February 23, 2026, retrieved 2026-10-20",
+          "url": "https://cdn.spiko.finance/legal_docs/EN/SAFO_Letter_EN.pdf"
+        },
+        {
+          "label": "C21 issuer SAFO totals with October 20, 2026 NAV, retrieved 2026-10-20; no independent whole-native-liability comparison",
+          "url": "https://public-api.spiko.io/share-classes/SAFO/totals"
         }
       ]
     }

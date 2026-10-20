@@ -10,7 +10,7 @@
     "navToken": true
   },
   "collateral": "Diversified basket of off-chain and on-chain yield strategies: BMMF Turkey FX arbitrage (delta-neutral), DeFi protocol allocations (Ethena, Aave, Cap, Giza, Almanak, USD.AI), and cash stablecoins (USDC/USDT) as a buffer; allocation governed by PikuDAO",
-  "pegMechanism": "NAV-appreciating: starts at $1.00 backing; 90% of strategy yield flows back into backing pool, increasing token value over time; redemptions processed via FIFO smart-contract queue (0.2% fee, settled within 24 hours) with KYC/KYB required for minting and redeeming",
+  "pegMechanism": "NAV-based strategy-fund share; redemptions use a FIFO smart-contract queue with a published 0.2% fee and KYC/KYB requirements. The current vault page states a two-day processing target, but governing Terms permit discretionary delays and do not guarantee completed payout within that period.",
   "llamaId": "331",
   "detailProvider": "defillama",
   "geckoId": "usp-yield-optimized-stablecoin",
@@ -36,7 +36,7 @@
     }
   ],
   "collateralQuality": "exotic",
-  "custodyModel": "institutional-unregulated",
+  "custodyModel": "unknown",
   "governanceQuality": "single-entity",
   "yieldConfig": {
     "yieldSource": "Turkey-FX delta-neutral arbitrage (BMMF) plus DeFi protocol allocations",

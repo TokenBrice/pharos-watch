@@ -2,7 +2,7 @@
   "id": "bc3m-backed",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-reconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "bC3M has independently mintable native transparent proxies on eight chains. The seven previously reviewed chains retain their dated Safe-control evidence. Fantom has a separately reviewed 3-of-5 direct minter and 2-of-3 token owner, but its ProxyAdmin is owned by one EOA with no on-chain delay. All native mint paths are uncapped.",
     "upgradeability": {
@@ -417,8 +417,8 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "periodic",
-    "supervision": "attestation-only",
+    "reconciliation": "unknown",
+    "supervision": "unknown",
     "review": {
       "disposition": "scoreable",
       "sources": [
@@ -457,9 +457,17 @@
         {
           "label": "Backed verified token implementation (matching Fantom runtime code)",
           "url": "https://etherscan.io/address/0x28a0b491650fe761c8a66528422bc7ca24ecaeda#code"
+        },
+        {
+          "label": "Backed current issuer all-deployment circulation API (POST assetReserves, retrieved 2026-10-20)",
+          "url": "https://api.backed.fi/graphql"
+        },
+        {
+          "label": "Backed Assets (JE) Limited Base Prospectus dated 2026-05-08: regulatory status and issuance/redemption",
+          "url": "https://cdn.prod.website-files.com/655f3efc4be468487052e35a/6a748b81c9b1aca19a11c102_Backed_Assets_Base%20Prospectus_20260727.pdf"
         }
       ],
-      "evidence": "Pinned blocks were Ethereum 25526129, Gnosis 47187209, Base 48592766, Polygon 90179923, BSC 109812367, Arbitrum 483535601, and Avalanche 90233120. Every bC3M deployment was a transparent proxy at the tracked address with implementation 0x28a0b491650fe761c8a66528422bc7ca24ecaeda, ProxyAdmin 0xf2057bdff8439dbffce073e14a9854945d5e5644, and zero beacon. Proxy, implementation, and ProxyAdmin runtime hashes were identical across all seven chains. Direct minters were chain-local 2-of-3 or 3-of-5 Safes, and every token-owner/ProxyAdmin-owner Safe instance resolved to the same separate 2-of-3 EOA signer set. Verified mint() has no cap; setMinter() and ProxyAdmin upgrades are immediate owner-only actions. Economic-control evidence reviewed 2026-07-15: The Network Firm obtains custody data directly and Chainlink refreshes Backed proof-of-reserve values every 24 hours or after a material deviation. The Jersey registration document expressly does not confer regulated status on Backed Assets (JE) Limited, so the recurring reconciliation has no qualifying prudential supervisor. Economic-posture fields reviewed 2026-08-15: chain-local Safes can mint without a cap and a separate issuer-controlled Safe can immediately replace minters or proxy logic; recurring independent proof-of-reserve reporting exists without prudential issuer supervision. Separately reviewed September 15, 2026: Fantom block 123272963 adds the issuer-listed native deployment with matching token/admin runtime code, a 3-of-5 minter, a distinct 2-of-3 token-owner Safe and a zero-delay EOA ProxyAdmin owner. Fantom controls have their own observation dates; earlier chain reviews are not refreshed. The legacy aggregate upgrade reference retains its July review; the additional Fantom upgrade-only control independently carries its EOA authority and Fantom deployment scope.",
+      "evidence": "Pinned blocks were Ethereum 25526129, Gnosis 47187209, Base 48592766, Polygon 90179923, BSC 109812367, Arbitrum 483535601, and Avalanche 90233120. Every bC3M deployment was a transparent proxy at the tracked address with implementation 0x28a0b491650fe761c8a66528422bc7ca24ecaeda, ProxyAdmin 0xf2057bdff8439dbffce073e14a9854945d5e5644, and zero beacon. Proxy, implementation, and ProxyAdmin runtime hashes were identical across all seven chains. Direct minters were chain-local 2-of-3 or 3-of-5 Safes, and every token-owner/ProxyAdmin-owner Safe instance resolved to the same separate 2-of-3 EOA signer set. Verified mint() has no cap; setMinter() and ProxyAdmin upgrades are immediate owner-only actions. Economic-control evidence reviewed 2026-07-15: The Network Firm obtains custody data directly and Chainlink refreshes Backed proof-of-reserve values every 24 hours or after a material deviation. The Jersey registration document expressly does not confer regulated status on Backed Assets (JE) Limited, so the recurring reconciliation has no qualifying prudential supervisor. Economic-posture fields reviewed 2026-08-15: chain-local Safes can mint without a cap and a separate issuer-controlled Safe can immediately replace minters or proxy logic; recurring independent proof-of-reserve reporting exists without prudential issuer supervision. Separately reviewed September 15, 2026: Fantom block 123272963 adds the issuer-listed native deployment with matching token/admin runtime code, a 3-of-5 minter, a distinct 2-of-3 token-owner Safe and a zero-delay EOA ProxyAdmin owner. Fantom controls have their own observation dates; earlier chain reviews are not refreshed. The legacy aggregate upgrade reference retains its July review; the additional Fantom upgrade-only control independently carries its EOA authority and Fantom deployment scope. ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required, verified 2026-10-20: the historical recurring-reconciliation sentence above is withdrawn as overbroad. The cited Network Firm/Chainlink methodology describes custody balances and in-transit assets, not an independent comparison to the complete bC3M liability book. The authored latest report itself is assets-only with liabilityReconciliation none. The current C3M.MI circulation API separately lists six deployments and omits tracked BSC and Fantom; the earlier September zero-balance pins cannot establish their current absence. No current all-deployment liability comparison or ongoing independent whole-liability attestation is established. Reconciliation and supervision are therefore unknown, not measured non-reconciliation or a reserve-shortfall finding. The May 8, 2026 prospectus confirms that JFSC registration/consents do not confer regulated status and are not prudential issuance supervision. Original August 15 review start and every authority/observation pin are preserved; this withdrawal renews none of them.",
       "reviewer": "Codex Safety Score V9 registry pass; Sol economic-posture batch 2026-08-15",
       "reviewedAt": "2026-08-15"
     }

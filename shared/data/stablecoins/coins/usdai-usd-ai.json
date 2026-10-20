@@ -8,7 +8,7 @@
     "governance": "centralized-dependent"
   },
   "collateral": "PYUSD held by the canonical USDai contract on Arbitrum and reconciled 1:1 against canonical plus bridged USDai liabilities; GPU-loan DEAL exposure belongs to the separate sUSDai yield layer",
-  "pegMechanism": "Whitelisted institutions mint and redeem canonical USDai against PYUSD through the Arbitrum hub. Satellite USDai liabilities share the same PYUSD pool. The separate sUSDai vault can burn USDai to release PYUSD for loan deployment; repayments can mint USDai again. These supply changes do not by themselves measure investor deposits or withdrawals.",
+  "pegMechanism": "Canonical USDai can be minted and redeemed directly against PYUSD through the Arbitrum hub without a holder whitelist, subject to blacklists, pause and available PYUSD. The issuer's October 1, 2026 update withdrew its earlier whitelist restriction; the native v1.7 implementation was rechecked at Arbitrum block 516733430 on October 20. Satellite USDai liabilities share the same PYUSD pool. The separate sUSDai vault can burn USDai to release PYUSD for loan deployment; repayments can mint USDai again. These supply changes do not by themselves measure investor deposits or withdrawals.",
   "mechanismArchetype": "fiat-cash",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
@@ -119,10 +119,11 @@
       "baseTokenAddress": "0x46850aD61C2B7d64d08c9C754F45254596696984",
       "implementationAddress": "0xe6ee2cd3e4f2b3844689aa1be176e4dff744a6f9",
       "redemptionCapacity": {
-        "holderEligibility": "whitelisted-primary",
+        "holderEligibility": "any-holder",
         "sourceUrls": [
-          "https://usd.ai/insights/usdai-mint-redeem-upgrade",
-          "https://docs.usd.ai/technical-overview/contract-addresses"
+          "https://usd.ai/blog/usdai-mint-redeem-upgrade",
+          "https://docs.usd.ai/technical-overview/contract-addresses.md",
+          "https://arbitrum.blockscout.com/api/v2/smart-contracts/0xe6ee2cd3e4f2b3844689aa1be176e4dff744a6f9"
         ]
       }
     }

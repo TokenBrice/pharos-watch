@@ -75,6 +75,89 @@
         ]
       },
       {
+        "label": "PicWe BSC published native mint/redeem contract",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "chain": "bsc",
+        "address": "0x5d54f1092fd1750a3ab96972dc1867c5b23ef22c",
+        "deploymentRefs": [
+          "bsc:0xdd73ea766b80417c0607a3f08e34a0c415d89d56"
+        ],
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-10-01",
+        "observedBlock": 125063414,
+        "evidence": "Independently retrieved 2026-10-20 at BSC block 125063414, hash 0xbab0708773795ff028a6da5f7562f2265dd413c1be529d3926919e5569c93ea8, timestamp 2026-10-01T07:50:06Z: hasRole(keccak256(MINTER_ROLE),0x5d54f1092fd1750a3ab96972dc1867c5b23ef22c) on canonical WEUSD returned true and eth_getCode returned 13149 bytes. The issuer directory names this exact 40-hex-digit contract, whereas the earlier exclusion omitted the final C. Verified WeUSDMintRedeem source exposes public mintWeUSD against its configured stablecoin and an ADMIN_ROLE-controlled setStablecoin, plus cross-chain reserve withdrawal and accounting functions. This records the positively identified BSC native mint path only; no immutable collateral gate, complete execution inventory, new signer independence or current all-chain reserve reconciliation is asserted. The separately retained issuer EOA's unrestricted mint/admin powers remain binding.",
+        "sources": [
+          {
+            "label": "Issuer exact native mint/redeem directory, retrieved 2026-10-20",
+            "url": "https://docs.picwe.org/developers/contracts"
+          },
+          {
+            "label": "Pinned BSC account and MINTER_ROLE observations, block 125063414",
+            "url": "https://bnb-mainnet.g.alchemy.com/v2/"
+          },
+          {
+            "label": "Exact published WeUSDMintRedeem verified source, retrieved 2026-10-20",
+            "url": "https://sourcify.dev/server/v2/contract/56/0x5d54f1092fd1750a3ab96972dc1867c5b23ef22c?fields=sources,abi"
+          }
+        ]
+      },
+      {
+        "label": "PicWe Base published native mint/redeem contract",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "chain": "base",
+        "address": "0x5d54f1092fd1750a3ab96972dc1867c5b23ef22c",
+        "deploymentRefs": ["base:0xdd73ea766b80417c0607a3f08e34a0c415d89d56"],
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-08-16",
+        "observedBlock": 50067179,
+        "evidence": "Independently retrieved 2026-10-20 at Base block 50067179, hash 0x1db23e7435345383f5bcd913a8141e0ae1036476ef02b39072c8a99d0f6b0e3b, timestamp 2026-08-16T23:41:45Z: the exact issuer-published contract ending F22C holds MINTER_ROLE on native WEUSD and has 13149 bytes of code, byte-equal to the independently observed BSC mint/redeem runtime. Restores a native path wrongly excluded through a truncated address; no complete execution certificate, immutable collateral gate, signer independence or refreshed sibling observation is asserted.",
+        "sources": [
+          {"label": "Issuer exact native mint/redeem directory, retrieved 2026-10-20", "url": "https://docs.picwe.org/developers/contracts"},
+          {"label": "Pinned Base role and runtime observations at block 50067179", "url": "https://base-mainnet.g.alchemy.com/v2/"},
+          {"label": "Verified native mint/redeem source with byte-equal observed sibling runtime", "url": "https://sourcify.dev/server/v2/contract/56/0x5d54f1092fd1750a3ab96972dc1867c5b23ef22c?fields=sources,abi"}
+        ]
+      },
+      {
+        "label": "PicWe Arbitrum published native mint/redeem contract",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "chain": "arbitrum",
+        "address": "0x5d54f1092fd1750a3ab96972dc1867c5b23ef22c",
+        "deploymentRefs": ["arbitrum:0xdd73ea766b80417c0607a3f08e34a0c415d89d56"],
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-08-16",
+        "observedBlock": 495300024,
+        "evidence": "Independently retrieved 2026-10-20 at Arbitrum block 495300024, hash 0xf0747fdc519a41a1ef24bc4527aba1b7602b5e97c050156af7a252eba7d63c0e, timestamp 2026-08-16T23:44:24Z: the exact issuer-published contract ending F22C holds MINTER_ROLE on native WEUSD and has 13149 bytes of code, byte-equal to the independently observed BSC mint/redeem runtime. Restores a native path wrongly excluded through a truncated address; no complete execution certificate, immutable collateral gate, signer independence or refreshed sibling observation is asserted.",
+        "sources": [
+          {"label": "Issuer exact native mint/redeem directory, retrieved 2026-10-20", "url": "https://docs.picwe.org/developers/contracts"},
+          {"label": "Pinned Arbitrum role and runtime observations at block 495300024", "url": "https://arb-mainnet.g.alchemy.com/v2/"},
+          {"label": "Verified native mint/redeem source with byte-equal observed sibling runtime", "url": "https://sourcify.dev/server/v2/contract/56/0x5d54f1092fd1750a3ab96972dc1867c5b23ef22c?fields=sources,abi"}
+        ]
+      },
+      {
+        "label": "PicWe Plume published native mint/redeem contract",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "chain": "plume",
+        "address": "0x5d54f1092fd1750a3ab96972dc1867c5b23ef22c",
+        "deploymentRefs": ["plume:0xdd73ea766b80417c0607a3f08e34a0c415d89d56"],
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-08-16",
+        "observedBlock": 87694882,
+        "evidence": "Independently retrieved 2026-10-20 at Plume block 87694882, hash 0x696693292187ce31cd750ec0e19326d941fcbd86f08cec75e917640ebb59715e, timestamp 2026-08-16T23:44:35Z: the exact issuer-published contract ending F22C holds MINTER_ROLE on native WEUSD and has 13149 bytes of code, byte-equal to the independently observed BSC mint/redeem runtime. Restores a native path wrongly excluded through a truncated address; no complete execution certificate, immutable collateral gate, signer independence or refreshed sibling observation is asserted.",
+        "sources": [
+          {"label": "Issuer exact native mint/redeem directory, retrieved 2026-10-20", "url": "https://docs.picwe.org/developers/contracts"},
+          {"label": "Pinned Plume role and runtime observations at block 87694882", "url": "https://rpc.plume.org"},
+          {"label": "Verified native mint/redeem source with byte-equal observed sibling runtime", "url": "https://sourcify.dev/server/v2/contract/56/0x5d54f1092fd1750a3ab96972dc1867c5b23ef22c?fields=sources,abi"}
+        ]
+      },
+      {
         "label": "PicWe WEUSD Movement package publisher",
         "role": "proxy-admin",
         "authorityType": "eoa",
@@ -111,10 +194,10 @@
     ],
     "economicCapSemantics": "unbounded",
     "reconciliation": "unknown",
-    "supervision": "none",
+    "supervision": "unknown",
     "review": {
-      "evidence": "2026-08-16 Mint/bridge boundary review: BSC block 116362149, Base block 50067179, Arbitrum block 495300024, and Plume block 87694882 confirm PicWe admin EOA 0xc12233455beac4e094a5de022be692a264c0c0bc as DEFAULT_ADMIN_ROLE and MINTER_ROLE holder on the four independent native EVM WEUSD deployments. The previously authored EVM mint/redeem address 0x5D54f1092FD1750A3ab96972dc1867c5B23eF22 has no code and no MINTER_ROLE on those deployments and is removed; the live Cross-Chain contract 0x4b3495391ebb170af31185aed7bb4dfa903ed1fd is bridge machinery and is authored only under bridgeRouteRisk. Movement ledger version 196018785 / block height 85281248 confirms the PicWe package at upgrade_number 0 with compatible upgrade policy 1: its publisher controls native weusd_mint_redeem mint-critical logic with no on-chain timelock. The Movement cross_mint_role_contract relayer 0x86e5136fa2a1416717ff8a08e6d6d31ff9e2f0b1bff6ee8ceefeaed8c5fce8a3 is bridge-only and is authored under bridgeRouteRisk, as is the publisher's bridge-module upgrade capability. All tracked native issuance surfaces are resolved; no multisig or timelock was found. Economic-posture fields reviewed 2026-08-15: issuer EOAs and an undelayed Movement upgrade path permit unbounded minting, while conflicting multi-chain reserve data has no whole-supply attestation and no prudential supervisor. Wave 2 external verification 2026-08-15: PicWe's current documentation still makes only a generic on-chain and real-time auditability claim and publishes no inventory or report reconciling all native EVM and Movement mint paths; reconciliation remains unknown. Codex wave 1 review 2026-08-15: PicWe's Mint & Redeem page describes USDC being locked in the mint contract against equal WEUSD issuance, but publishes no dated recurring reconciliation or live supply-wide reserve feed covering the native EVM and Movement minters; reconciliation remains unknown.",
-      "reviewer": "SOL-7 blocker challenge batch 01; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15; Mint/bridge boundary migration 2026-08-16",
+      "evidence": "Historical August 16 observations are preserved without renewal: the issuer EOA 0xc12233455beac4e094a5de022be692a264c0c0bc holds DEFAULT_ADMIN_ROLE and MINTER_ROLE on native EVM WEUSD deployments, and Movement ledger version 196018785 / height 85281248 identifies a compatibly upgradeable native mint/redeem package controlled by its publisher. Cross-Chain 0x4b3495391ebb170af31185aed7bb4dfa903ed1fd, the Movement cross_mint_role_contract relayer and the publisher's bridge-module powers remain Bridge Risk machinery. Issuer mint/admin powers and the undelayed native package-upgrade path retain unbounded economics. FD21 correction on 2026-10-20: the earlier native mint/redeem exclusion used a truncated address ending F22 instead of the issuer-published 40-digit address ending F22C. Independent exact archived reads establish MINTER_ROLE=true and 13149 runtime bytes at the correct address on BSC block 125063414 (2026-10-01T07:50:06Z), Base block 50067179 (2026-08-16T23:41:45Z), Arbitrum block 495300024 (2026-08-16T23:44:24Z) and Plume block 87694882 (2026-08-16T23:44:35Z). All four observed minter runtimes are byte-equal; each native control is separately chain-qualified with its own original pin. This repairs the demonstrated exclusion, not an exhaustive controller census. The exact verified minter source allows public deposits against its configured stablecoin, but ADMIN_ROLE can change that token; no construction-enforced economic cap is inferred. The October 20 issuer documentation still contains no dated reserve inventory or recurring whole-liability reconciliation spanning EVM and Movement native issuance. Reconciliation remains unknown, supervision is unchanged, and all independently established issuer EOA/upgrade adverse powers remain. Original aggregate review start and sibling control pins are preserved. FIX-ROUND1 correction 2026-10-20: change supervision none to unknown because no positive-absence establishment is recorded. The retrieved https://docs.picwe.org/what-is-weusd describes 1:1 USDC collateral and real-time auditability but does not establish either a named whole-liability independent attestor or the absence of supervision. This supersedes supervision is unchanged above; no favorable process credit, authority renewal or reserve-solvency finding follows.",
+      "reviewer": "SOL-7 blocker challenge batch 01; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15; Mint/bridge boundary migration 2026-08-16; FD21 exact-address correction 2026-10-20 (no renewal)",
       "reviewedAt": "2026-08-16",
       "sources": [
         {

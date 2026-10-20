@@ -2,6 +2,19 @@
   "id": "gtusdtp-gauntlet",
   "reserves": [
     {
+      "sourceKey": "erc4626-single-asset:ethereum:0xdac17f958d2ee523a2206206994597c13d831ec7",
+      "name": "Gauntlet USDT Prime V2 idle underlying",
+      "pct": 0,
+      "risk": "high",
+      "coinId": "usdt-tether",
+      "depType": "wrapper",
+      "blacklistable": true,
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Tether International, S.A. de C.V.",
+      "riskFactors": ["credit", "custody"],
+      "liquidityHorizon": "immediate"
+    },
+    {
       "sourceKey": "erc4626-single-asset:ethereum:0xf3557ad5e984211ac8a0874a670344f2c3376471:deployed",
       "name": "USDT deposited into Gauntlet-curated Morpho lending markets",
       "pct": 100,
@@ -64,12 +77,24 @@
         "url": "https://www.wbtc.network/"
       },
       {
+        "label": "Morpho Vault V2 liquidity curation: idle underlying serves withdrawals directly; retrieved 2026-10-20",
+        "url": "https://docs.morpho.org/curate/concepts/liquidity.md"
+      },
+      {
+        "label": "Ethereum block 26236686, hash 0x17abc2e22130ea049bb5bc9819534811753fa3f664e8e4d22aa8b5d9a278c039, 2026-10-20T22:08:23Z; asset and permanently abdicated exit-gate reads observed 2026-10-20T22:29:47.927Z",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
+      },
+      {
+        "label": "USDT issuer identity and retained freeze rights, retrieved 2026-10-20",
+        "url": "https://tether.to/en/legal/"
+      },
+      {
         "label": "Gauntlet branded vault disclaimer: no custodial product, guarantee or vault-user contractual obligation",
         "url": "https://storage.googleapis.com/gauntlet-public-web-assets/gauntlet-branded-vault-disclaimer-dec-2025.pdf"
       }
     ],
     "rationale": "At Ethereum block 26197394 (2026-10-15T10:43:59.000Z), asset()=0xdac17f958d2ee523a2206206994597c13d831ec7; totalSupply()=256704082652908784980765 raw 18-decimal shares; totalAssets()=263483878807 raw 6-decimal USDT. The sole adapter 0x0fc9b889756e1241a4d89472db701c0417c26d89 enumerates eight current markets; expectedSupplyAssets sums to 263483878807, equal to adapter realAssets() and vault totalAssets(), with zero idle USDT. Each adapter position has zero borrow shares and zero posted collateral. Current lender allocation grouped by borrower collateral is WBTC 147170.970642 USDT (55.855778% of NAV), sUSDS 116312.189320 USDT (44.143949% of NAV), cbBTC 0.391864 USDT (0.000149% of NAV), wstETH 0.326981 USDT (0.000124% of NAV). These weights classify the collateral supporting loans, not borrower-owned tokens held directly by the vault. The existing 100% USDT lender-position denomination slice and parent wrapper dependency are unchanged. Ordinary withdrawal capacity is separate from NAV; no finite full-book liquidation deadline or guaranteed fiat redemption follows.",
-    "compositionBasis": "Complete eight-market adapter census plus idle balance at one pinned Ethereum block; sum equals whole vault totalAssets",
+    "compositionBasis": "Complete eight-market adapter census plus idle balance at the original October 15 block; sum equals whole vault totalAssets. Metadata-only supplement reviewed by C04 on 2026-10-20: the zero-percent keyed idle row classifies producer-observed direct USDT without asserting a current allocation or changing the historical 100% deployed weight. Exact asset(), zero sendSharesGate()/receiveAssetsGate() and true abdicated(setSendSharesGate/setReceiveAssetsGate) reads at Ethereum block 26236686 establish permanently ungated local exit. Source exit() sends available idle underlying directly; immediate applies only to this idle category, not deployed loans, full-book capacity or USDT-to-fiat redemption. Original review start and compositionAsOf remain October 15.",
     "compositionAsOf": "2026-10-15",
     "scope": "full-composition",
     "knownUnknownExposure": "All eight lender positions and the complete USDT denominator are identified. WBTC establishes a material off-chain Bitcoin custody layer behind borrower collateral, supporting mixed whole-book custody. Exact custodian allocation, enforceable holder segregation/insolvency rights, independent whole-vault financial assurance and a maximum illiquid-position realization interval remain unestablished.",

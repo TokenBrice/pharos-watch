@@ -78,6 +78,11 @@
     "version": 1,
     "semantics": "protocol-reserve",
     "breakerScope": "m0",
+    "suspended": {
+      "reason": "The shared M0 gateway adapter observes upstream M collateral rather than USDN's immediate locked-M representation claim and local liabilities. Resume only with an identity-bound Noble wrapper reserve producer.",
+      "since": "2026-10-20",
+      "reviewBy": "2026-11-20"
+    },
     "display": {
       "url": "https://dashboard.m0.org/",
       "label": "M0 Dashboard"

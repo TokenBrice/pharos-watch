@@ -2,7 +2,7 @@
   "id": "qcad-stablecorp",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-reconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "QCAD token ownership and immediate proxy upgrades on Ethereum and Base use distinct chain-local 3/6 Safe instances. At Ethereum block 26095807 and Base block 52024171, the token-owner and proxy-admin Safes had identical six-owner sets, with no enabled modules or guard. The prior review recorded different signer compositions. Solana has a separate SPL-token mint authority and is not governed by these EVM Safe controls.",
     "controls": [
@@ -16,7 +16,7 @@
         "role": "direct-minter",
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
-        "evidence": "Stablecorp (FINTRAC MSB) administers the QCAD Program as servicer; authorized dealers/qualified holders mint QCAD 1:1 on CAD deposit and redeem at par against trust-held reserves, so Stablecorp controls supply creation."
+        "evidence": "Stablecorp administers issuance for the QCAD Program. The OSC trust framework establishes deposit-before-mint and qualified-holder redemption for prospectus-qualified liabilities only. Stablecorp separately services excluded legacy QCAD; the backend's deploymentRefs identify issuance reach, not proof that Trust protections or reserve reconciliation cover every referenced liability book."
       },
       {
         "deploymentRefs": [
@@ -114,10 +114,10 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "periodic",
-    "supervision": "prudential",
+    "reconciliation": "unknown",
+    "supervision": "unknown",
     "review": {
-      "evidence": "At Ethereum block 26095807 and Base block 52024171, chain-local token-owner Safes at 0x4ff9ace93dd7a18bd7014aa9a179117adf20f6a9 and separate proxy-admin Safes at 0x6c4c5c74a29b1985f08149fb422f5afa03b4f59e are 3/6 with identical owner sets and no enabled modules or guard. The correct EIP-1967 slots confirm both existing implementations and ProxyAdmin paths. Solana mint and freeze authority at finalized slot 452213632 is 8386AjvCDAtuAWujQJt8RUkcGaMdDUEoTNL53dAhESeJ, separate from the EVM Safes. The OSC exemptive-relief decision dated 2025-11-20 identifies QCAD Digital Trust, its Stablecorp servicer, and Davidson & Company LLP as auditor; the prior Kingston Ross Pasnak attribution was incorrect. The decision requires daily reserve parity, segregated reserve accounts, monthly attestations, and annual audited financial statements. The fetched July 2026 CSAE 3000 report directly reconciles reserves to circulating QCAD. Unbounded backend mint and immediate Safe-controlled upgrades remain adverse control facts; FINTRAC MSB registration remains AML-only evidence.",
+      "evidence": "At Ethereum block 26095807 and Base block 52024171, chain-local token-owner Safes at 0x4ff9ace93dd7a18bd7014aa9a179117adf20f6a9 and separate proxy-admin Safes at 0x6c4c5c74a29b1985f08149fb422f5afa03b4f59e are 3/6 with identical owner sets and no enabled modules or guard. The correct EIP-1967 slots confirm both existing implementations and ProxyAdmin paths. Solana mint and freeze authority at finalized slot 452213632 is 8386AjvCDAtuAWujQJt8RUkcGaMdDUEoTNL53dAhESeJ, separate from the EVM Safes. The OSC decision dated November 20, 2025 identifies QCAD Digital Trust, Stablecorp as servicer and Davidson & Company LLP as auditor, and requires daily reserve parity, segregated accounts and monthly attestations for prospectus-qualified Trust liabilities. Scope correction observed 2026-10-20 by NR7: Stablecorp expressly excludes pre-November 20, 2025 legacy QCAD from that framework and holds its reserves separately. The July 2026 CSAE 3000 report reconciles Trust liabilities and Appendix A identifies Ethereum only, with Solana N/A. No complete current Trust/legacy deployment-and-book attribution establishes recurring reconciliation or a prudential issuance mandate across this profile's entire Ethereum/Base/Solana scope. Aggregate reconciliation and supervision are unknown, not none; the positive Trust-only evidence remains valid within its own scope. Original October 1 review start and all control pins are preserved. Unbounded backend mint and immediate Safe-controlled upgrades remain adverse control facts; FINTRAC registration is AML-only evidence.",
       "reviewer": "Sol curation pass 2026-10-01 (CurB18BOLD)",
       "reviewedAt": "2026-10-01",
       "sources": [
@@ -144,6 +144,10 @@
         {
           "label": "QCAD Digital Trust prospectus filing under CSA VRCA framework",
           "url": "https://www.prweb.com/releases/qcad-digital-trust-stablecorp-files-prospectus-for-the-qcad-stablecoin-under-csas-unique-interim-regulatory-framework-302481938.html"
+        },
+        {
+          "label": "Davidson July 2026 Trust-only reasonable-assurance report, signed September 14 (archived original)",
+          "url": "https://web.archive.org/web/20260926003714id_/https://www.sedarplus.ca/csa-party/records/document.html?id=6666d890fab71d252fa9af1a8666a452030d94252e83ba6cd3c1b3ddcb90c53d"
         }
       ]
     },

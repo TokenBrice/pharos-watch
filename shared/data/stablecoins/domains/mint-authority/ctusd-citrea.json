@@ -146,9 +146,25 @@
     ],
     "economicCapSemantics": "unbounded",
     "reconciliation": "continuous",
-    "supervision": "attestation-only",
+    "supervision": "unknown",
     "review": {
       "sources": [
+        {
+          "label": "Exact ctUSD implementation and inherited wrap/yield source, retrieved 2026-10-20",
+          "url": "https://explorer.mainnet.citrea.xyz/api/v2/smart-contracts/0xf15e4de65adf1d0a5c057f0165a50072fd76804c"
+        },
+        {
+          "label": "Sourcify ctUSD runtime correspondence, matchId 27314708, retrieved 2026-10-20",
+          "url": "https://sourcify.dev/server/v2/contract/4114/0xf15e4de65adf1d0a5c057f0165a50072fd76804c?fields=runtimeBytecode"
+        },
+        {
+          "label": "MoonPay public monthly-examination portal, approved counterparties only; rendered 2026-10-20",
+          "url": "https://www.moonpay.com/business/transparency"
+        },
+        {
+          "label": "Citrea exact ctUSD deployment and reserve disclosure, retrieved 2026-10-20",
+          "url": "https://docs.citrea.xyz/developer-documentation/citrea-usd-ctusd"
+        },
         {
           "label": "M0 protocol docs",
           "url": "https://docs.m0.org/protocol/minting-burning"
@@ -162,7 +178,7 @@
           "url": "https://eth.blockscout.com/address/0xf7f9638cb444D65e5A40bF5ff98ebE4ff319F04E"
         }
       ],
-      "evidence": "The inherited MinterGateway was previously reviewed as immutable with M0 collateral, approved-minter, validator, and mint-delay checks. At Ethereum block 26095808 on 2026-10-01 its bytecode was present and the corrected EIP-1967 admin and implementation slots were zero. At Citrea block 13367610, ctUSD and SwapFacility implementations remained 0xf15e4de65adf1d0a5c057f0165a50072fd76804c and 0xd87c75a92db19fe334fe7812890f893449ff1bda. The ctUSD ProxyAdmin owner was EOA 0x55a8103041a1bda35c6ae4c8e4c26656fa83e961; the SwapFacility ProxyAdmin owner was Safe 0x8c645e201dd944677864479357f8255ea943b18b, confirmed 3-of-5 with no enabled modules and zero guard. A prior GS105 pagination revert was not proof of absent modules; the new correctly parameterized read supplies that observation. The old Safe address in the block-8546189 narrative is historical and is not the current upgrade controller. Economic posture remains unbounded: these local upgrade paths can replace mint-critical logic. M0 issuance and canonical extension wrapping are not bridge route checks; this review does not authorize an additional ctUSD bridge deployment.",
+      "evidence": "The inherited MinterGateway was previously reviewed as immutable with M0 collateral, approved-minter, validator, and mint-delay checks. At Ethereum block 26095808 on 2026-10-01 its bytecode was present and the corrected EIP-1967 admin and implementation slots were zero. At Citrea block 13367610, ctUSD and SwapFacility implementations remained 0xf15e4de65adf1d0a5c057f0165a50072fd76804c and 0xd87c75a92db19fe334fe7812890f893449ff1bda. The ctUSD ProxyAdmin owner was EOA 0x55a8103041a1bda35c6ae4c8e4c26656fa83e961; the SwapFacility ProxyAdmin owner was Safe 0x8c645e201dd944677864479357f8255ea943b18b, confirmed 3-of-5 with no enabled modules and zero guard. A prior GS105 pagination revert was not proof of absent modules; the new correctly parameterized read supplies that observation. The old Safe address in the block-8546189 narrative is historical and is not the current upgrade controller. Economic posture remains unbounded: these local upgrade paths can replace mint-critical logic. M0 issuance and canonical extension wrapping are not bridge route checks; this review does not authorize an additional ctUSD bridge deployment. ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required. Retrieved 2026-10-20: Citrea's independent-oracle assertion and M0 validator checks do not name an independent firm reporting coverage of all ctUSD liabilities. MoonPay's rendered portal claims monthly AICPA-standard examinations but restricts actual reports to approved counterparties; no named firm or dated whole-ctUSD report was available. Withdraw attestation-only supervision to unknown, without asserting non-reconciliation or a shortfall. Retain continuous solely for the mechanical local-M book: the October 19 risk-review pin at Citrea block 14144181 resolves this same implementation; Sourcify runtimeMatch=match, matchId 27314708, verifiedAt 2026-03-29T01:03:56Z, varies only 11 immutable replacements and CBOR metadata. Exact source _wrap transfers M before equal minting, _unwrap burns before M transfer, claimYield mints only positive M-balance-minus-totalSupply, and forced transfer changes balances without supply. That construction reconciles the local complete token book to locked M, not M0's offchain reserves or independent financial assurance. Original review start, authority facts and historical pins are unchanged.",
       "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
       "reviewedAt": "2026-08-16"
     }

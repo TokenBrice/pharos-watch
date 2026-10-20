@@ -20,8 +20,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-01",
-    "reviewer": "Sol curation pass 2026-10-01 (FixInv9)",
+    "reviewedAt": "2026-10-20",
+    "reviewer": "NR2 bottom-up refinement 2026-10-21",
     "confidence": "verified",
     "sources": [
       {
@@ -39,13 +39,17 @@
       {
         "label": "Midas mRe7YIELD Key Information Document",
         "url": "https://content.gitbook.com/content/MndxFHqGeA4nzBBeKDTV/blobs/9Xz2l1mKa8bDtQufrvS0/KID_mRe7YIELD.pdf"
+      },
+      {
+        "label": "Accepted mRE7 transparency API argument returns reports={} without a publisher date; retrieved October 20, 2026",
+        "url": "https://api-prod.midas.app/api/transparency?token=mRE7"
       }
     ],
-    "rationale": "Re-reviewed the complete issuer-prepared September 10, 2026 weekly report on 2026-10-01. It reports Market Neutral Strategy $8,070,595.48, Settlement Reserve $65,124.54, and Settlement Funds in Process $75,478.00, totaling $8,211,198.02. These are broad accounting categories, not identified underlying positions or custody allocations. The existing 100% Re7-managed strategy NAV envelope was re-verified against this report and retains high risk, unknown liquidity, and 100% unresolved look-through exposure. The chainlink-nav adapter owns the live portfolio NAV row; report categories are not substituted for that row or treated as verified dependency weights.",
+    "rationale": "October 20, 2026 disclosure review confirms that the accepted exact-product mRE7 API returns reports={} without a publisher timestamp. The September 10, 2026 report remains historical: Market Neutral Strategy $8,070,595.48, Settlement Reserve $65,124.54 and Settlement Funds in Process $75,478.00 are broad categories, not identified positions or custody allocations. Preserve the 100% high-risk NAV envelope, September 10 compositionAsOf and 100% unresolved look-through. The whole-book institutional-unregulated custody label is withdrawn because Fordefi's issuer workspace description does not establish every material underlying custody layer.",
     "compositionBasis": "September 10, 2026 issuer-prepared mRe7YIELD weekly report, re-verified as an unresolved whole-portfolio NAV envelope; live row identity remains owned by the Midas Chainlink NAV adapter",
     "compositionAsOf": "2026-09-10",
     "scope": "full-composition",
-    "knownUnknownExposure": "The historical September 10 report provides broad strategy/settlement categories without complete positions, liabilities, venue weights or custody. Source-maintenance check 2026-10-07: accepted transparency argument mRE7 returns reports={} without date; mRE7YIELD returns HTTP 400 enum validation, not a valid empty portfolio. No usable current composition packet exists. Preserve the 7-day scoring/14-day NAV transport distinction; a source accepted for transport can still be expired for scoring. Weekly publication is not dated underlying composition, and neither access time nor historical report categories justify suppressing the portfolio warning or renewing curated dates.",
+    "knownUnknownExposure": "October 20, 2026 source review: accepted mRE7 API still returns reports={} with no publisher date; this is no usable current composition packet, not zero reserves. The historical September 10 report supplies broad strategy/settlement categories without complete positions, liabilities, venue weights or custody. Preserve the 7-day scoring/14-day NAV transport distinction; neither current access time nor weekly publication language renews historical holdings or assurance.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
@@ -60,8 +64,8 @@
   "custodyProfile": {
     "providers": [
       {
-        "name": "Fordefi",
-        "role": "custodian"
+        "name": "Fordefi (MPC infrastructure for issuer self-custody)",
+        "role": "other"
       }
     ],
     "segregation": "mixed",
@@ -80,6 +84,6 @@
         "url": "https://midas.app/mre7yield"
       }
     ],
-    "uncertainty": "Fordefi documents dedicated Midas workspaces in which the strategy manager holds an MPC share and Midas holds an administrative policy share. Assets are actively deployed across protocols and venues, so provider allocation, venue segregation, and reuse conditions remain strategy-dependent."
+    "uncertainty": "Fordefi documents issuer self-custody through dedicated Midas workspaces: the strategy manager holds an MPC share and Midas holds an administrative policy share. Fordefi is infrastructure, not an independently established legal custodian. Complete underlying custody allocation, segregation and reuse conditions remain unestablished for mRe7YIELD; the whole-book custodyModel is unknown. Original custody review start is retained."
   }
 }

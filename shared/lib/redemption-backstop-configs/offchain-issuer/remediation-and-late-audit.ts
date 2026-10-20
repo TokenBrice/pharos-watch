@@ -247,6 +247,18 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
   "usdgo-osl": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
+    settlementModel: "days",
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["settlement"],
+      rationale: "ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required. Anchorage Covered Stablecoin Terms section 6 promises commercially reasonable efforts to process redemption promptly, with discretionary limits and verification, operational and liquidity-management delays. Neither those terms nor the fee schedule establishes completed bank-payout timing. Withdraw the inherited same-day default, preserving documented eventual redemption and the separately evidenced zero issuer service fee.",
+      reviewedAt: "2026-10-20",
+      docs: [sourceRef(
+        "Anchorage Covered Stablecoin Terms, section 6 (retrieved 2026-10-20)",
+        "https://www.anchorage.com/anchorage-digital-bank-n-a-covered-stablecoin-terms",
+        ["route", "access", "settlement"],
+      )],
+    },
     costModel: fixedFee(
       0,
       "Anchorage Covered Stablecoin Service Fee Schedule (updated 2026-08-25): no Covered Stablecoin Service Fees are charged in connection with USDGO. This is the issuer service fee only; client, bank and network costs remain separate.",
@@ -336,23 +348,38 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
     ...issuerBase,
     outputAssetType: "stable-basket",
     outputAssets: ["usdc-circle", "usdt-tether"],
-    capacityModel: { kind: "supply-ratio", ratio: 0.05, confidence: "documented-bound" },
+    capacityModel: { kind: "unquantified" },
+    settlementModel: "days",
     costModel: fixedFee(
       10,
       "StandX User Terms: the redemption pricing quote includes a 10 bps reimbursement charge covering hedge execution and blockchain gas; the product FAQ agrees that redeeming DUSD incurs a 0.1% fee",
     ),
-    reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
+    reviewedAt: "2026-10-20",
+    v9RouteReviewTerms: {
+      minRedeemUsd: 10,
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "settlement"],
+      rationale: "The issuer publishes a seven-day redemption lock and a January 31, 2027 request cutoff with final scheduled completion by February 7, not same-day settlement or a current same-notional funded buffer. The reserve ratio is variable and no cited source supplies the formerly modeled 5% executable capacity. Dynamic withdrawal limits, order acceptance and emergency pause remain. Keep the governing 10 bps reimbursement tariff, but withhold quantified capacity and an unconditional rolling completed-settlement bound.",
+      reviewedAt: "2026-10-20",
+      docs: [
+        sourceRef("StandX exact redemption procedure and seven-day lock", "https://docs.standx.com/docs/dusd-solutions/redeeming-dusd", ["route", "access", "settlement"]),
+        sourceRef("StandX User Terms: dynamic limits and reimbursement charge", "https://docs.standx.com/docs/resources/user-terms-conditions", ["route", "access", "fees"]),
+        sourceRef("StandX October 15, 2026 wind-down announcement", "https://x.com/StandX_Official/status/2110613283967230232", ["route", "settlement"]),
+      ],
+    },
     docs: [
       sourceRef("StandX payout FAQ (reviewed 2026-09-30; fee re-read 2026-10-03)", "https://docs.standx.com/docs/dusd-overview/product-faq", ["route", "fees"]),
       sourceRef("StandX user terms and conditions (reviewed 2026-10-03)", "https://docs.standx.com/docs/resources/user-terms-conditions", ["fees"]),
-      sourceRefRouteCapacity("StandX docs", "https://docs.standx.com/"),
+      sourceRef("StandX seven-day redemption procedure", "https://docs.standx.com/docs/dusd-solutions/redeeming-dusd", ["route", "access", "settlement"]),
+      sourceRef("StandX October 15, 2026 wind-down announcement", "https://x.com/StandX_Official/status/2110613283967230232", ["route", "settlement"]),
       sourceRef("StandX website", "https://www.standx.com/", ["route"]),
     ],
     notes: [
       "Payout identity reviewed 2026-09-30: StandX's product FAQ says holders get back USDT/USDC after redemption; the multi-output route retains conservative stable-basket semantics.",
-      "Tracked metadata describes 1:1 USDT and USDC redemption from a delta-neutral strategy wrapper",
-      "The reviewed 5% bound matches the tracked stability-reserve stablecoin fund rather than assuming the full hedged book is instantly withdrawable",
+      "USDT is redeemable 1:1 before fees; USDC is priced at redemption, and issuer terms pass adverse reserve losses through pro rata. A choice of payout is not a weighted basket.",
+      "FD36 source correction 2026-10-20: withdraw the unsupported documented-bound 5% stability-reserve capacity and inherited same-day settlement. No reserve percentage, full-supply executable capacity or unconditional rolling settlement maximum is established by the current cited sources.",
       "Fee reviewed 2026-10-03: the governing User Terms fix the redemption reimbursement charge at 10 bps and the product FAQ agrees; separate product redemption prose describing a market-variable fee is inconsistent with both and is not given precedence over the legal terms.",
+      "All yield ended October 15, 2026 and new minting closes October 20. The issuer continues to accept holder redemptions until January 31, 2027 and schedules all final seven-day requests to complete by February 7. Its own PancakeSwap/Raydium liquidity will be removed January 31; this notice does not declare the current redemption route suspended.",
     ],
   },
   "brla-brla-digital": {
@@ -395,6 +422,29 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
       "MoonPay Stablecoin Terms section 4.1: MoonPay does not currently charge fees for redeeming Stablecoins. This is the issuer fee only; bank, processor, network, and ecosystem charges may still apply",
     ),
     reviewedAt: "2026-08-31",
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "cost", "settlement"],
+      rationale:
+        "ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required. Reviewed 2026-10-20: MoonPay Stablecoin Terms sections 3.3 and 4.1 establish neither a maximum final USD payout time nor an all-in fee ceiling. The reserve adapter observes M held by the Citrea extension and a SwapFacility identity, not funded fiat-USD payout capacity for this offchain-issuer channel. Preserve the current zero issuer fee separately; no M balance, ordinary processing target, or unmeasured swap is an exact USD exit certificate.",
+      reviewedAt: "2026-10-20",
+      docs: [
+        sourceRef("MoonPay Stablecoin Terms (retrieved 2026-10-20)", "https://www.moonpay.com/legal/stablecoin_terms", [
+          "route",
+          "access",
+          "fees",
+          "settlement",
+        ]),
+        sourceRef("Citrea USD exact deployment and M0 transparency (retrieved 2026-10-20)", "https://docs.citrea.xyz/developer-documentation/citrea-usd-ctusd", [
+          "route",
+          "capacity",
+        ]),
+        sourceRef("M0 extension and SwapFacility mechanics (retrieved 2026-10-20)", "https://docs.m0.org/protocol/extensions", [
+          "route",
+          "capacity",
+        ]),
+      ],
+    },
     docs: [
       sourceRefRouteCapacity("Citrea", "https://citrea.xyz/"),
       sourceRef("Citrea documentation", "https://docs.citrea.xyz/", ["route"]),
@@ -402,22 +452,21 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
     ],
     notes: [
       "Fiat-backed via MoonPay; reserves cryptographically attested on-chain by M0 Validators before minting",
-      "Fresh live reserve metadata reads the current M balance held by the ctUSD extension and verifies the configured M0 SwapFacility path before admitting redemption capacity.",
+      "Live reserve metadata reads the M balance held by the ctUSD extension and verifies the configured M0 SwapFacility identity. This is direct backing evidence, not fiat-USD redemption capacity; a separately documented and enrolled ctUSD-to-M execution path would require its own exact output and execution proof.",
     ],
   },
   "xo-exodus": {
     ...issuerBase,
     ...documentedBoundSupplyFull("2026-04-16"),
-    costModel: fixedFee(
-      0,
-      "MoonPay currently charges no fee for stablecoin redemption; bank, wallet, processing, network, ecosystem, or pass-through banking fees may still apply",
+    costModel: undisclosedReviewedFee(
+      "MoonPay Stablecoin Terms section 4.1 sets the current issuer redemption fee at zero but permits unbounded bank, wallet, processing, network, ecosystem and pass-through banking deductions; zero issuer fee is not a complete all-in cost ceiling",
     ),
     v9RouteReviewTerms: {
       scoringDisposition: "bounded-terms-gap",
-      missingScoringFields: ["settlement"],
+      missingScoringFields: ["cost", "settlement"],
       rationale:
-        "MoonPay Stablecoin Terms retain the documented 0 bps redemption charge but refer to an unpublished redemption schedule and expose no publication/update date; the 2026-09-04 re-open found no dated end-to-end settlement SLA, so settlement remains withheld.",
-      reviewedAt: "2026-09-04",
+        "Terms last modified January 25, 2026, re-opened October 20: section 3.3 promises commercially reasonable efforts after compliance and an unpublished redemption schedule, not a maximum final payout time. Section 4.1's zero issuer charge excludes unbounded third-party and pass-through deductions. Keep both all-in cost and settlement withheld; no change to eventual full-liability redemption capacity is inferred.",
+      reviewedAt: "2026-10-20",
       docs: [
         sourceRef("MoonPay Stablecoin Terms", "https://www.moonpay.com/legal/stablecoin_terms", [
           "route",
@@ -449,15 +498,34 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
   },
   "usdm-mega": {
     ...issuerBase,
-    ...documentedBoundSupplyFull("2026-04-16"),
+    capacityModel: { kind: "unquantified" },
+    holderEligibility: "whitelisted-primary",
+    settlementModel: "days",
+    outputAssets: ["usdc-circle"],
+    reviewedAt: "2026-10-20",
     costModel: undisclosedReviewedFee(
-      "USDM is issued on Ethena's USDtb rails; primary redemption follows USDtb's documented issuer rail and is KYC-gated; public USDM-specific redemption fees are not published",
+      "MegaUSD (BVI) Ltd's April 2026 Mint User Agreement discloses fees only before transaction confirmation; gas, financial-institution fees and other transaction costs are additional. No complete fee schedule or all-in cost ceiling is published.",
     ),
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "settlement", "cost"],
+      rationale:
+        "The exact MegaUSD issuer agreement commits to supported-asset redemption of a Mint User's pro-rata reserve value, subject to whitelisting, compliance and issuer discretion. The issuer may impose transaction limits and suspend services; no funded same-notional capacity, completed-payout maximum or all-in fee bound is established. USDtb's own issuer terms do not bind MegaUSD's distinct liability.",
+      reviewedAt: "2026-10-20",
+      docs: [
+        sourceRef("MegaUSD Mint User Agreement (April 2026; retrieved 2026-10-20)", "https://app.megausd.money/mint-agreement", ["route", "capacity", "access", "settlement", "fees"]),
+        sourceRef("MegaUSD Terms of Service (April 2026; retrieved 2026-10-20)", "https://app.megausd.money/terms", ["route", "access", "settlement", "fees"]),
+      ],
+    },
     docs: [
-      sourceRef("MegaETH", "https://www.megaeth.com/", ["route"]),
-      sourceRefRouteCapacity("Ethena USDtb", "https://ethena.fi/usdtb"),
+      sourceRef("MegaUSD Mint User Agreement (April 2026; retrieved 2026-10-20)", "https://app.megausd.money/mint-agreement", ["route", "capacity", "access", "settlement", "fees"]),
+      sourceRef("MegaUSD Terms of Service (April 2026; retrieved 2026-10-20)", "https://app.megausd.money/terms", ["route", "access", "settlement", "fees"]),
     ],
-    notes: ["USDM reuses Ethena's USDtb issuer redemption rail; reserve yield funds MegaETH sequencer costs"],
+    notes: [
+      "The direct counterparty is MegaUSD (BVI) Ltd. Only onboarded Mint Users with whitelisted wallets may redeem; U.S. persons and other restricted jurisdictions are excluded.",
+      "The terms expressly name USDC as a redemption asset and permit other supported assets. No USD cash payout or direct holder claim against USDtb's issuer is inferred.",
+      "Reserve balances and upstream USDtb redemption arrangements do not establish MegaUSD's executable capacity, a 24-hour completion guarantee or a 200-bps cost bound.",
+    ],
   },
   "usdkg-gold-dollar": {
     ...issuerBase,
@@ -536,21 +604,28 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
   "moveusd-cfx": {
     ...issuerBase,
     ...documentedBoundSupplyFull(REVIEWED_FOLLOWUP_REMEDIATION_AT),
+    settlementModel: "days",
     costModel: documentedVariableFee(
-      "CFX documents 1:1 MOVEUSD redemption through designated channels; fees, currency conversions, and account-maintenance charges may apply, and no single fixed public redemption fee is published",
+      "CFX offers customer-authenticated binding withdrawal quotes with route-specific amounts and fees. Public documentation does not establish a complete numeric MOVEUSD-to-USD deduction ceiling.",
     ),
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["cost", "settlement"],
+      rationale: "Reviewed 2026-10-20: CFX's Platform Overview describes ACH withdrawals as 1-2 day settlement and U.S. wire withdrawals as same day, while Create Quote requires a verified identity and authenticated customer quote. These product descriptions and customer-specific quotes do not establish an unconditional request-to-completed-bank-credit maximum or a public all-in fee ceiling. The inherited same-day category is withdrawn; eventual documented redemption capacity is not converted into an immediate payout guarantee.",
+      reviewedAt: "2026-10-20",
+      docs: [
+        sourceRef("CFX Platform Overview, updated 2025-10-21; retrieved 2026-10-20", "https://docs.cfx.to/docs/key-features.md", ["route", "access", "settlement"]),
+        sourceRef("CFX Create Withdrawal Quote, updated 2026-05-08; retrieved 2026-10-20", "https://docs.cfx.to/reference/post_v1-withdrawal-quote.md", ["route", "access", "fees", "settlement"]),
+      ],
+    },
     docs: [
-      sourceRefRouteCapacityAccess("MoveUSD overview", "https://docs.moveusd.com/docs/what-is-moveusd"),
-      sourceRef("MoveUSD disclosures", "https://docs.moveusd.com/docs/disclosures-disclaimers", [
-        "route",
-        "access",
-        "fees",
-        "settlement",
-      ]),
+      sourceRefRouteCapacityAccess("CFX tokenized-deposit mint and redemption overview", "https://cfx.to/on-chain"),
+      sourceRef("CFX Platform Overview", "https://docs.cfx.to/docs/key-features.md", ["route", "access", "settlement"]),
+      sourceRef("CFX Create Withdrawal Quote", "https://docs.cfx.to/reference/post_v1-withdrawal-quote.md", ["route", "access", "fees"]),
     ],
     notes: [
       "Modeled as CFX's verified-customer designated-channel redemption rail, not secondary-market Perena or Solana liquidity.",
-      "Docs state redemptions can use designated bank accounts, authorized OTC partners, or direct transfer mechanisms, with KYC/AML and good-standing account requirements.",
+      "Current public API documents verified-identity wallet or ledger withdrawals into supported bank/payment instruments. Historical MoveUSD overview/disclosure URLs now redirect to generic platform documentation and do not independently supply current contractual fee or completion bounds.",
     ],
   },
 };

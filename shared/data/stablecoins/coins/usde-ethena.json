@@ -16,21 +16,25 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://app.ethena.fi/dashboards/transparency",
-    "provider": "Chaos Labs / Chainlink / Harris & Trotter / LlamaRisk (monthly custodian report published 2026-09-03 covers the 2026-08-26 snapshot; real-time dashboard and monthly custodian reporting are separate evidence layers)",
+    "provider": "Chaos Labs / Chainlink / Harris & Trotter / LlamaRisk (monthly custodian report published 2026-10-10 covers the 2026-09-27 snapshot; real-time dashboard and monthly custodian reporting are separate evidence layers)",
     "attestorTier": "niche",
     "cadence": "real-time",
     "latestReport": {
-      "periodEnd": "2026-08-26",
-      "publishedAt": "2026-09-03",
+      "periodEnd": "2026-09-27",
+      "publishedAt": "2026-10-10",
       "assuranceMethod": "unknown",
       "scope": "assets-only",
       "liabilityReconciliation": "unknown",
-      "reviewer": "Sol curation pass 2026-10-01 (CurA04USDe)",
+      "reviewer": "C23 bottom-up refinement (report retrieved 2026-10-20)",
       "confidence": "verified",
       "sources": [
         {
           "label": "Ethena August custodian report (2026-08-26 snapshot, published 2026-09-03)",
           "url": "https://ethena.fi/blog/custodian-attestations-of-assets-backing-usde-august-3"
+        },
+        {
+          "label": "Ethena September custodian report (2026-09-27 23:59 UTC snapshot, published 2026-10-10; retrieved 2026-10-20)",
+          "url": "https://ethena.fi/blog/custodian-attestations-of-assets-backing-usde-september-3"
         }
       ]
     }

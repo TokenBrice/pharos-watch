@@ -30,8 +30,8 @@
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://reserves.bridge.xyz/ousd",
     "redemptionPolicyPresent": true,
-    "monthlyAttestationPresent": false,
-    "notes": "Reviewed 2026-10-07. Bridge's token-specific OUSD overview states that OUSD reserves are maintained in compliance with U.S. regulatory requirements and expressly names the GENIUS Act. Issuer-announced-intent records this issuer-stated GENIUS posture, not verified statutory compliance or official authorization. Bridge's September 30 launch names Bridge Building Inc. as the current issuer and expressly states that Bridge National Trust Bank is a separate entity in organization, is not operational and does not issue OUSD. OCC Corporate Decision 1365 is preliminary conditional charter approval of that proposed bank, not a GENIUS PPSI approval of the current issuer. The issuer pathway remains unknown. Binding BBI terms provide eligible-user redemption for one U.S. dollar, subject to onboarding, compliance and stated processing conditions. The public OUSD dashboard itemizes reserve assets but links no independent reserve attestation. Open Standard promises monthly attestations; Bridge's FAQ describes future quarterly transparency reports. MonthlyAttestationPresent is false because a published monthly OUSD attestation was not located on the opened disclosure pages. DASP posture records the pre-effective GENIUS timing described by Treasury, not general legality under all U.S. laws. No enforcement-history conclusion or primary federal regulator assignment is asserted.",
+    "monthlyAttestationPresent": true,
+    "notes": "Authorization posture reviewed 2026-10-07 and not renewed here: Bridge's token-specific OUSD overview names the GENIUS Act, supporting issuer-announced intent rather than statutory compliance or official authorization. Bridge Building Inc. remains the named current issuer; the separate Bridge National Trust Bank in organization and its preliminary conditional charter approval do not establish current OUSD prudential supervision or PPSI approval. Issuer pathway stays unknown. Binding BBI terms provide eligible-user redemption subject to onboarding, compliance and processing conditions. Disclosure-only correction retrieved 2026-10-20: the dashboard now links an EY independent examination of the August 31 OUSD reserves and whole redeemable supply, signed October 1, with all four exact native deployments. The original no-report finding is superseded, and monthlyAttestationPresent records this published report plus the issuer's monthly-report commitment. Canonical report dates are authored only in proofOfReserves.latestReport; no current holdings or authorization claim is inferred from the report. DASP posture remains the prior pre-effective finding, and no enforcement-history or primary-regulator assignment is added.",
     "references": [
       {
         "label": "Bridge OUSD launch: current BBI issuer and explicit national trust bank limitation",
@@ -98,6 +98,13 @@
         "sourceKind": "federal-regulator",
         "accessedAt": "2026-10-07",
         "sourceDate": "2026-08-17"
+      },
+      {
+        "label": "EY Open USD reserve examination, signed October 1; disclosure-presence correction only",
+        "url": "https://reserves.bridge.xyz/attestations/ousd/2026/ousd_attestation_2026_08.pdf",
+        "sourceKind": "auditor-report",
+        "accessedAt": "2026-10-20",
+        "sourceDate": "2026-10-01"
       }
     ],
     "reviewer": "Pharos compliance research",

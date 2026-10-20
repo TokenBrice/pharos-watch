@@ -2,7 +2,7 @@
   "id": "frxusd-frax",
   "mintAuthority": {
     "mintPath": "amo-or-custodian-hybrid",
-    "authorityPosture": "unbounded-reconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "Ethereum frxUSD can be minted and redeemed through governance-approved FrxUSDCustodian contracts with per-custodian caps; the token and custodians are owned by the current 4/7 frxUSD owner/custodian admin Safe, while Ethereum proxy upgrades require the same Safe to pass through a 24-hour timelock. Fraxtal frxUSD3 also exposes a direct minter_mint path to an owner/timelock-controlled minter set with no source-level cap or max-supply check; the Fraxtal L2 bridge and canonical-side lockboxes are bridge machinery assessed separately under bridgeRouteRisk, and Tempo remains unresolved.",
     "upgradeability": {
@@ -381,8 +381,8 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "continuous",
-    "supervision": "attestation-only",
+    "reconciliation": "internal-ledger",
+    "supervision": "unknown",
     "review": {
       "sources": [
         {
@@ -428,9 +428,25 @@
         {
           "label": "Fraxtal RPC",
           "url": "https://rpc.frax.com"
+        },
+        {
+          "label": "frxUSD current reserve and liability ledger (retrieved 2026-10-20)",
+          "url": "https://api.frax.finance/v2/frxusd/balance-sheet/latest"
+        },
+        {
+          "label": "FIP430 distinct reserve and liability accounting (retrieved 2026-10-20)",
+          "url": "https://gov.frax.finance/t/fip-430-preparation-for-frxusd-payment-stablecoin-charter-compliance/3698"
+        },
+        {
+          "label": "Chaos Labs historical cross-chain supply-versus-backing feed announcement, 2025-12-26 (retrieved 2026-10-20)",
+          "url": "https://governance.aave.com/t/arfc-onboard-frxusd-to-aave-v3-core-instance-on-ethereum/23513/10"
+        },
+        {
+          "label": "Chaos Labs frxUSD feed: DNS ENOTFOUND when checked 2026-10-20",
+          "url": "https://oracles.chaoslabs.xyz/por-feeds/frxusd_por"
         }
       ],
-      "evidence": "At Ethereum block 25546949, the frxUSD token and all five custodian proxies published by Frax resolved distinct EIP-1967 implementations and ProxyAdmins. Every ProxyAdmin had identical verified runtime and owner() = 0xb898Ad2976b4d8f2E21521C9db16b7497825E503. That verified timelock had admin 0xfFFffF4F3baC444b2C0ecf2A1840d018bE783937, pendingAdmin zero, and a 86400-second delay. The same 4-of-7 Safe directly owned the token and every custodian, could raise their mint caps, and had no enabled modules, guard, or module guard. This establishes the complete published Ethereum token/custodian upgrade and mint-control chain; replacing mint-critical logic requires the Safe-controlled 24-hour timelock. At Fraxtal block 40053263, native frxUSD at 0xfc00000000000000000000000000000000000001 returned BRIDGE() = 0x4200000000000000000000000000000000000010, REMOTE_TOKEN() = 0xcacd6fd266af91b8aed52accc382b4e165586e29, owner() = timelock_address() = 0xc4eb45d80dc1f079045e75d5d55de8ed1c1090e6, and active minters 0xc4eb45d80dc1f079045e75d5d55de8ed1c1090e6, 0xfc0000000000000000000000000000000000000d, 0x96a394058e2b84a89bac9667b19661ed003cf5d4, and 0x8c33cd6e5bed3bcb43b116410842bdd21630bff4. The reviewed source has no cap or max-supply check on minter_mint(); the Fraxtal ProxyAdmin owner/delay is not independently resolved, so the Ethereum 86400-second delay is not applied to Fraxtal. Economic-posture fields reviewed 2026-08-16: the Ethereum Safe can raise custodian caps directly outside the upgrade timelock, Fraxtal owner-controlled minters can mint without a source-level economic bound, and the live full-composition Frax/Chaos reserve feed provides continuous third-party reconciliation without named prudential supervision.",
+      "evidence": "At Ethereum block 25546949, the frxUSD token and all five custodian proxies published by Frax resolved distinct EIP-1967 implementations and ProxyAdmins. Every ProxyAdmin had identical verified runtime and owner() = 0xb898Ad2976b4d8f2E21521C9db16b7497825E503. That verified timelock had admin 0xfFFffF4F3baC444b2C0ecf2A1840d018bE783937, pendingAdmin zero, and a 86400-second delay. The same 4-of-7 Safe directly owned the token and every custodian, could raise their mint caps, and had no enabled modules, guard, or module guard. This establishes the complete published Ethereum token/custodian upgrade and mint-control chain; replacing mint-critical logic requires the Safe-controlled 24-hour timelock. At Fraxtal block 40053263, native frxUSD at 0xfc00000000000000000000000000000000000001 returned BRIDGE() = 0x4200000000000000000000000000000000000010, REMOTE_TOKEN() = 0xcacd6fd266af91b8aed52accc382b4e165586e29, owner() = timelock_address() = 0xc4eb45d80dc1f079045e75d5d55de8ed1c1090e6, and active minters 0xc4eb45d80dc1f079045e75d5d55de8ed1c1090e6, 0xfc0000000000000000000000000000000000000d, 0x96a394058e2b84a89bac9667b19661ed003cf5d4, and 0x8c33cd6e5bed3bcb43b116410842bdd21630bff4. The reviewed source has no cap or max-supply check on minter_mint(); the Fraxtal ProxyAdmin owner/delay is not independently resolved, so the Ethereum 86400-second delay is not applied to Fraxtal. Economic-posture fields reviewed 2026-08-16: the Ethereum Safe can raise custodian caps directly outside the upgrade timelock and Fraxtal owner-controlled minters can mint without a source-level economic bound. ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required (C27, 2026-10-20): withdraw continuous reconciliation to internal-ledger and attestation-only supervision to unknown. The custodian workflow, FIP430 separate accounting, and issuer balance sheet disclose liability creation and reserve accounting, but do not establish an explicit recurring whole-book reconciliation cadence. The 2026-10-20T22:23:47Z balance sheet includes WTGXX in Frax Inc's BitGo Trust Account and an off-chain Erebor Bank reserve account, so its complete backing is not mechanically enumerable on-chain. Chaos Labs' 2025-12-26 announcement positively establishes historical independent cross-chain supply-versus-backing monitoring, but the cited feed returned DNS ENOTFOUND on 2026-10-20 and no current full-book artifact covering the expanded custody/reserve inventory was retrieved. A historical feed announcement, current self-published totals, or underlying-fund audits do not establish current whole-token independent assurance. Known unbounded native authorization remains unchanged and derives unbounded-adverse; no insolvency, measured non-reconciliation, or absence of supervision is asserted. Preserve the original 2026-08-16 review start and every authority and observation pin.",
       "reviewer": "Codex mint-bridge-boundary FIX2-07",
       "reviewedAt": "2026-08-16"
     }

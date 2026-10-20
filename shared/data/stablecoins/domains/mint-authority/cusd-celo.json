@@ -2,7 +2,7 @@
   "id": "cusd-celo",
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "unbounded-reconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "USDm has one canonical native issuance deployment on Celo. The Mento Broker and ReserveLiquidityStrategy are active Celo minters; the Broker is Timelock-backed for configuration while the token owner Safe can authorize minters and replace StableTokenV3 immediately. Monad NTT, NEAR, Ethereum, Solana, and Klaytn are bridge representations and are excluded from Mint Authority. Native Celo issuance remains economically unbounded because the owner can authorize additional minters or replace mint-critical logic.",
     "upgradeability": {
@@ -273,7 +273,7 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "continuous",
+    "reconciliation": "unknown",
     "supervision": "none",
     "review": {
       "disposition": "scoreable",
@@ -305,9 +305,17 @@
         {
           "label": "Celo Forno RPC",
           "url": "https://forno.celo.org"
+        },
+        {
+          "label": "Mento reserve API (retrieved 2026-10-20; no source accounting timestamp)",
+          "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+        },
+        {
+          "label": "Mento stablecoins API (retrieved 2026-10-20; supply/debt/held/lost decomposition without a shared accounting checkpoint)",
+          "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/stablecoins"
         }
       ],
-      "evidence": "Canonical-chain review at Celo block 75020227 on 2026-08-16: USDm proxy 0x765de816845861e75a25fca122bb6898b8b1282a used StableTokenV3 implementation 0x815795c30d0758a297b08cd4e0643620c974c318 and was owned/administered by the 4-of-6 Mento Safe 0x58099b74f4acd642da77b4b7966b4138ec5ba458. Broker 0x777a8255ca72412f0d706dc03c9d1987306b4cad and ReserveLiquidityStrategy 0xa0fb8b16ce6af3634ff9f3f4f40e49e1c1ae4f0b both returned true from isMinter(). Broker configuration and upgradeability resolve to Timelock 0x890db8a597940165901372dd7db61c9f246e2147 with getMinDelay() = 172800 seconds; the strategy implementation 0x420fbdb50dadf0286144bff91ed62a6893dee148 is behind ProxyAdmin 0x30fcd4fd891f7de98606bf97cb8654f7ba33c4e7 owned by the same Safe, and reserve() returned 0x4255cf38e51516766180b33122029a88cb853806 with four configured pools. The token owner can replace mint-critical logic and authorize another native minter immediately, so native economic cap semantics remain unbounded. The reserve dashboard and live strategy support continuous reconciliation, and no prudential supervisor was identified. The canonical-side NTT minter role and all non-Celo deployments are bridge machinery and are reviewed separately under bridgeRouteRisk; a complete historical MinterUpdated event sweep was not recovered, so these are not claimed to be the only minters.",
+      "evidence": "Canonical-chain review at Celo block 75020227 on 2026-08-16: USDm proxy 0x765de816845861e75a25fca122bb6898b8b1282a used StableTokenV3 implementation 0x815795c30d0758a297b08cd4e0643620c974c318 and was owned/administered by the 4-of-6 Mento Safe 0x58099b74f4acd642da77b4b7966b4138ec5ba458. Broker 0x777a8255ca72412f0d706dc03c9d1987306b4cad and ReserveLiquidityStrategy 0xa0fb8b16ce6af3634ff9f3f4f40e49e1c1ae4f0b both returned true from isMinter(). Broker configuration and upgradeability resolve to Timelock 0x890db8a597940165901372dd7db61c9f246e2147 with getMinDelay() = 172800 seconds; the strategy implementation 0x420fbdb50dadf0286144bff91ed62a6893dee148 is behind ProxyAdmin 0x30fcd4fd891f7de98606bf97cb8654f7ba33c4e7 owned by the same Safe, and reserve() returned 0x4255cf38e51516766180b33122029a88cb853806 with four configured pools. The token owner can replace mint-critical logic and authorize another native minter immediately, so native economic cap semantics remain unbounded. The reserve dashboard and live strategy support continuous reconciliation, and no prudential supervisor was identified. The canonical-side NTT minter role and all non-Celo deployments are bridge machinery and are reviewed separately under bridgeRouteRisk; a complete historical MinterUpdated event sweep was not recovered, so these are not claimed to be the only minters. ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required (C23, 2026-10-20): the preceding dashboard/strategy-based continuous-reconciliation conclusion is withdrawn. The current reserve and stablecoins APIs publish collateral and supply/debt/reserve-held/lost figures but no shared accounting timestamp or independently anchored whole-liability reconciliation covering all native and representation paths, exclusions and pending claims. Ordinary collateral transfers during a swap do not establish the reserve-to-total-liability comparison for the whole issuance book. Reconciliation is unknown, not positively absent; no reserve shortfall or measured failure to reconcile is asserted. The unbounded economics, authority observations and original review start are unchanged; authorityPosture follows the D33-derived unbounded-adverse annotation without new process credit.",
       "reviewer": "Codex cusd-celo mint/bridge boundary migration",
       "reviewedAt": "2026-08-16"
     }

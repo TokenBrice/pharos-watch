@@ -4,7 +4,7 @@
     "mintPath": "amo-or-custodian-hybrid",
     "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
-    "summary": "dUSD mint authority is now enumerated on all four deployments. Every chain runs a transparent proxy whose ProxyAdmin is governed by a 3-of-5 Safe behind a 1-day TimelockController on Ethereum, Fraxtal and Katana, while Sonic's ProxyAdmin and token DEFAULT_ADMIN_ROLE sit directly under a 2-of-4 Safe with no timelock. Six contracts hold MINTER_ROLE across the four tokens and the dUSD token exposes no supply cap, so authorized minting is economically unbounded.",
+    "summary": "dUSD mint authority is enumerated on all four deployments. Transparent proxy administration is governed by a 3-of-5 Safe behind a 1-day TimelockController on Ethereum, Fraxtal and Katana. Sonic's ProxyAdmin and token DEFAULT_ADMIN_ROLE sit directly under a 2-of-3 Safe with no timelock, observed on 2026-10-20. Six contracts held MINTER_ROLE in the reviewed four-chain inventory and the token exposes no supply cap, so authorized minting remains economically unbounded.",
     "upgradeability": {
       "model": "transparent-proxy",
       "deploymentRefs": [
@@ -33,7 +33,7 @@
       ],
       "canChangeMintLogic": true,
       "delaySec": 0,
-      "controlRef": "dTRINITY Sonic Governance 2-of-4 Safe (no timelock)",
+      "controlRef": "dTRINITY Sonic Governance 2-of-3 Safe (no timelock)",
       "observedAt": "2026-07-20",
       "sources": [
         {
@@ -392,44 +392,43 @@
         "deploymentRefs": [
           "sonic:0x53a6abb52b2f968fa80df6a894e4f1b1020da975"
         ],
-        "label": "dTRINITY Sonic Governance 2-of-4 Safe (no timelock)",
+        "label": "dTRINITY Sonic Governance 2-of-3 Safe (no timelock)",
         "role": "governor",
         "authorityType": "safe",
         "directMintAbility": "can-authorize",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
         "threshold": 2,
-        "signerCount": 4,
+        "signerCount": 3,
         "safe": {
           "owners": [
             "0x64dbdd2aad00383defc305398f18a019161558cb",
-            "0xdc672ba6e55b71b39fa5423d42b88e7adf9d24a4",
             "0x4b58ff1aae6add7465a5584ebcaeb876ec8f21fd",
             "0x9e0c8376940abe845a89b7304147a95c72644f59"
           ],
           "threshold": 2,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
-          "observedBlock": 80200872,
-          "observedAt": "2026-10-01",
+          "observedBlock": 81379950,
+          "observedAt": "2026-10-20",
           "source": "onchain"
         },
         "failureDomainKeys": [
           "safe:sonic:0xe83c188a7be46b90715c757a06cf917175f30262"
         ],
-        "observedAt": "2026-10-01",
-        "observedBlock": 80200872,
+        "observedAt": "2026-10-20",
+        "observedBlock": 81379950,
         "sources": [
           {
             "label": "Sonic dUSD token (DEFAULT_ADMIN_ROLE hasRole read 2026-07-20)",
             "url": "https://sonicscan.org/address/0x53a6abb52b2f968fa80df6a894e4f1b1020da975"
           },
           {
-            "label": "Sonic Governance Safe (2-of-4 owners read 2026-07-20)",
-            "url": "https://sonicscan.org/address/0xE83c188a7BE46B90715C757A06cF917175f30262"
+            "label": "Sonic Governance Safe current 2-of-3 topology, modules, guard and role reads at block 81379950 (2026-10-20)",
+            "url": "https://sonic-rpc.publicnode.com"
           }
         ],
-        "evidence": "At Sonic block 80200872 on 2026-10-01, this Safe holds dUSD DEFAULT_ADMIN_ROLE directly (hasRole = true) and owns Sonic ProxyAdmin 0x0a0808f20743278d566fc954d3dcf8c082fb0bc5 directly, with no TimelockController in that path. getOwners()/getThreshold() returned the four listed owners and threshold 2; getModulesPaginated() returned no enabled modules and the guard slot was zero. This confirms the recorded binding 2-of-4, zero-delay authorization path; it does not establish collateral reconciliation or signer key custody."
+        "evidence": "At Sonic block 81379950, hash 0x7c194a82429ff1584d978ceaa16d24227dca7ca97026adad95e2f824fa0041f1, timestamp 2026-10-20T22:24:35Z, with matching before/after headers, getThreshold returned 2 and getOwners returned the three listed owners. getModulesPaginated from the sentinel returned an empty module list with sentinel next pointer; the guard slot was zero. Current hasRole(DEFAULT_ADMIN_ROLE, this Safe) on dUSD returned true and owner() on ProxyAdmin 0x0a0808f20743278d566fc954d3dcf8c082fb0bc5 returned this Safe directly. This supersedes the October 1 four-owner topology while preserving the direct, zero-delay economically unbounded authorization path. It establishes neither signer independence/key custody nor collateral reconciliation."
       }
     ],
     "economicCapSemantics": "unbounded",

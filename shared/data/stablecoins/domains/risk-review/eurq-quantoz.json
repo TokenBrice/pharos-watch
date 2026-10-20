@@ -159,6 +159,43 @@
             "url": "https://mainnet-idx.algonode.cloud/v2/assets/2768422954"
           }
         ]
+      },
+      {
+        "id": "stellar:EURQ-GCA6KZBWPBOEF6M2MZBTXRMKLMWRZOUCL2JFSIDT3WTDBOFIVDC4C4CE",
+        "destinationChain": "stellar",
+        "contractAddress": "EURQ-GCA6KZBWPBOEF6M2MZBTXRMKLMWRZOUCL2JFSIDT3WTDBOFIVDC4C4CE",
+        "protocol": "Quantoz native EURQ",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Supplemental identity review 2026-10-20: Quantoz's current token register, April 30 EURQ whitepaper and issuer-controlled Stellar TOML identify EURQ with issuer GCA6KZBWPBOEF6M2MZBTXRMKLMWRZOUCL2JFSIDT3WTDBOFIVDC4C4CE as live native issuer issuance, not a third-party bridge representation. Horizon independently returns the exact credit_alphanum4 code and issuer. Stellar classic-asset precision is seven decimal places; TOML display_decimals=2 is presentation only. No current supply share, signing topology or cross-network transfer rail is inferred. Original sibling route pins and aggregate review start are unchanged.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-20",
+        "sources": [
+          {
+            "label": "Quantoz official token network register (retrieved 2026-10-20)",
+            "url": "https://www.quantoz.com/tokens/"
+          },
+          {
+            "label": "Quantoz EURQ whitepaper v1.4, native supported networks",
+            "url": "https://www.quantoz.com/documents/eurq-wp-1.4-30-4-2026.pdf"
+          },
+          {
+            "label": "Quantoz Stellar issuer metadata",
+            "url": "https://quantozpay.com/.well-known/stellar.toml"
+          },
+          {
+            "label": "Horizon exact EURQ classic-asset identity, retrieved 2026-10-20; not a pinned capacity observation",
+            "url": "https://horizon.stellar.org/assets?asset_code=EURQ&asset_issuer=GCA6KZBWPBOEF6M2MZBTXRMKLMWRZOUCL2JFSIDT3WTDBOFIVDC4C4CE"
+          },
+          {
+            "label": "Stellar classic asset identity and seven-decimal amount precision",
+            "url": "https://developers.stellar.org/docs/learn/fundamentals/stellar-data-structures/assets"
+          }
+        ]
       }
     ]
   }

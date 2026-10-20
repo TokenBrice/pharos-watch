@@ -2,7 +2,7 @@
   "id": "usdm-moneta",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-reconciled",
+    "authorityPosture": "unknown",
     "confidence": "manual-review",
     "summary": "USDM is centrally issued on Cardano by Moneta and NBX against stated segregated reserves; the mint is enforced on-chain by a PlutusV2 policy gated on a one-shot state-thread token whose counter datum reconciles cumulative supply, but the validator that guards the controlling token has not been decompiled, so the terminal signer set remains unattributed.",
     "controls": [
@@ -73,8 +73,8 @@
       }
     ],
     "economicCapSemantics": "unknown",
-    "reconciliation": "continuous",
-    "supervision": "attestation-only",
+    "reconciliation": "unknown",
+    "supervision": "unknown",
     "upgradeability": {
       "model": "immutable",
       "canChangeMintLogic": false,
@@ -92,7 +92,7 @@
       ]
     },
     "review": {
-      "evidence": "Re-reviewed 2026-07-20. Moneta's materials describe centrally operated, KYC-gated 1:1 USDM issuance by Moneta/NBX against stated segregated reserves; the live Charli3 feed is described as a reserve check before mint, supporting continuous reserve gating. CoinGecko identifies the Cardano policy c48cbb3d5e57ed56e276bc45f99ab39abe94e6cd7ac39fb402da47ad0014df10. Koios script_info, native_script_list, asset_info, and asset_summary yielded no policy or asset record, while no Blockfrost or Maestro credential is present and public explorers were blocked or unreachable. NBX has named Finanstilsynet registry material, but the reviewed evidence does not establish a complete prudential supervisor for the combined Moneta/NBX USDM issuance path, so supervision is not promoted. Re-reviewed 2026-07-27 (Kimi data review): no new issuer admin-control inventory has been published since the 2026-07-20 structural read. Moneta's launch-delay statement (carried by Cardano Feed) describes integrated multi-signature controls and time-delay mechanisms for significant protocol modifications, consistent with the script-gated mint structure already recorded. Upgradeability resolved 2026-07-28 (Grok wave-8 controls): write-time re-open of Koios script_info at Cardano tip block 13733605 returns policy id c48cbb3d5e57ed56e276bc45f99ab39abe94e6cd7ac39fb402da47ad as PlutusV2 size 392 created in tx c6b0831fa16e101ae18de65c2a0c8825cebffe17ccfe38385e711c900f62d261, and Koios asset_info confirms fungible USDM under that exact policy. On Cardano the policy ID is the minting-policy script hash (Aiken glossary PolicyId / Minting policy entries; Intersect Plutus script-hash docs), so any change to the minting-script bytes yields a different policy ID and a non-fungible successor asset, there is no proxy/admin path to replace mint logic while retaining the same USDM asset identity. Upgradeability is therefore model immutable with canChangeMintLogic false. Operational mint path remains issuer-controlled via the USDM_COUNT/USDM_CONTROL script gates already recorded; those control who may satisfy the fixed policy, they do not upgrade it. Confidence stays manual-review because two operational unknowns remain without decompiling validators or issuer disclosure: (1) the signer set, threshold, and recovery path of the USDM_CONTROL validator 6b3cb86f8aee9b5d754ba7aff3acea986297e833d52af0b00efe37c7; (2) whether the USDM_COUNT validator's third appended parameter (CBOR uint 1209008128) is an enforced supply ceiling, so economicCapSemantics stays unknown; and (3) who may rotate the USDM_ORACLE token under policy 59607e564f796b426e13e2add2b1ceca5274509fabef6a10d2367fe9. Economic-posture fields reviewed 2026-08-15: the Charli3 oracle gates the sole Cardano mint continuously and supports attestation-only supervision, while the compiled cap semantics and complete co-issuer prudential coverage remain unresolved. Wave 2 external research reviewed 2026-08-15: the Sundae Labs audit documents oracle-bounded minting and delayed owner upgrades in the original design, while current Koios datum reads identify 5-of-7 owner and 2-of-3 minter scripts; however, the active count-validator hash differs from the audited validator and remains undecompiled, so its enforced ceiling and terminal control authority are still unknown.",
+      "evidence": "Historical control observations retain their original review start of 2026-08-15. The July 20 first pass used an invalid Cardano asset-unit query as a policy hash; the corrected 56-character policy query returned the PlutusV2 policy c48cbb3d5e57ed56e276bc45f99ab39abe94e6cd7ac39fb402da47ad. July 28 Koios script_info at block 13733605 identified its 392-byte script and creation transaction c6b0831fa16e101ae18de65c2a0c8825cebffe17ccfe38385e711c900f62d261. Policy identity is immutable because changing the mint-policy bytes changes the native asset ID; USDM_COUNT/USDM_CONTROL spending conditions remain separate from replacing that policy. The earlier datum observations reconciled the supply counter to native-token supply, not financial reserves to all holder liabilities. The Sundae Labs audit concerns the original oracle-bounded design, while the active count-validator hash differed and its ceiling and terminal authority remained undecompiled. Those historical pins, unknown economic cap and evidence of an oracle are retained. ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required: favorable continuous reconciliation and attestation-only supervision credit are withdrawn on 2026-10-20 because the cited pre-mint reserve-feed description does not establish whole-token supply-to-backing reconciliation by a named independent party. The current NBX whitepaper notified 2026-09-24 defines legally distinct Moneta and NBX reserve books with no pooled or cross-backed reserve, excludes NBX own-account tokens from its backing denominator, and describes a reserve-verification oracle for the relevant issuer's post-mint circulation; it does not name the current provider. Moneta's February 19 reserve-architecture article describes daily Moneta-signed reserve data relayed by an oracle, while its current transparency page supplies no matched combined-book liability partition. No recurring whole-token reserve-to-liability accounting identity or named whole-liability attestation regime is established. Reconciliation, supervision and the authored aggregate posture are therefore unknown; no absence of all issuer accounting, actual reserve shortfall, arbitrary mint exploit or complete prudential coverage is asserted. The original control and review dates are not renewed by this correction.",
       "reviewer": "Grok wave-8 controls research; Sol economic-posture batch 2026-08-15; Sol Wave 2 external research 2026-08-15",
       "reviewedAt": "2026-08-15",
       "disposition": "scoreable",
@@ -124,6 +124,18 @@
         {
           "label": "Koios datum API",
           "url": "https://api.koios.rest/api/v1/datum_info"
+        },
+        {
+          "label": "NBX modified USDM whitepaper notified 2026-09-24: separate issuer books, exclusions and oracle scope",
+          "url": "https://cdn.prod.website-files.com/6152dfaed2ce58d94ef37b88/6ab4e90ceb46558d48fc093a_USDM%20White%20Paper%20-%20Modified%20version%202026-09-24.pdf"
+        },
+        {
+          "label": "Moneta reserve architecture dated 2026-02-19: issuer-signed daily reserve feed",
+          "url": "https://moneta.global/learn/usdm-reserve-architecture/"
+        },
+        {
+          "label": "Current Moneta reserve disclosure without combined issuer-book partition",
+          "url": "https://moneta.global/transparency/"
         }
       ]
     }

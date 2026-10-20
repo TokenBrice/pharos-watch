@@ -34,17 +34,18 @@
     "attestorJurisdiction": "United States",
     "attestorLicense": "AICPA attestation standards",
     "latestReport": {
-      "periodEnd": "2026-08-31",
-      "publishedAt": "2026-09-15",
+      "periodEnd": "2026-09-30",
+      "publishedAt": "2026-10-13",
+      "publishedAtBasis": "signed-date-standin",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "Claude curation campaign 2026-09-21 (Resv20)",
+      "reviewer": "C05 bottom-up refinement 2026-10-21; report retrieved 2026-10-20",
       "confidence": "verified",
       "sources": [
         {
-          "label": "MCCPA SBC Reserve Attestation Report - August 2026",
-          "url": "https://brale.xyz/assets/reports/SBC-Stable-Coin-Reserve-Attestation-Report-08-2026.pdf"
+          "label": "MCCPA SBC Reserve Attestation Report - September 2026 (dated October 13)",
+          "url": "https://brale.xyz/assets/reports/SBC-Stable-Coin-Reserve-Attestation-Report-09-2026.pdf"
         }
       ]
     }

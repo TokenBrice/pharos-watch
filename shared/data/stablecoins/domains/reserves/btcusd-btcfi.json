@@ -39,6 +39,8 @@
       "pct": 13.53,
       "risk": "high",
       "assetClass": "stablecoin",
+      "coinId": "jpyc-jpyc",
+      "depType": "collateral",
       "issuerOrObligor": "Bifrost bridge / JPYC Inc.",
       "riskFactors": ["counterparty", "custody", "smart-contract", "liquidity", "market"],
       "liquidityHorizon": "unknown"
@@ -106,15 +108,19 @@
         "url": "https://www.btcfi.one/api/getAvailablePairs?isTestnet=false"
       },
       {
+        "label": "JPYC issuer official exact-address security notice (published 2025-10-28; retrieved 2026-10-20)",
+        "url": "https://corporate.jpyc.co.jp/news/posts/Notice"
+      },
+      {
         "label": "Bifrost mainnet pinned block 39083783: handler getERC20Addr and held token identity",
         "url": "https://explorer.mainnet.bifrostnetwork.com/address/0x6894ae31cae97f228590f6dc7bbea7449f4db980"
       }
     ],
-    "rationale": "Historical weights and composition date are unchanged. New classification research resolves handler 5 through the issuer frontend's underlying call-proxy (0x6894ae31cae97f228590f6dc7bbea7449f4db980). At Bifrost block 39083783, both getERC20Addr() and getErc20Addr() return 0x84122a4a75bfe65ef455dba5f6d43d61359ca77e; its name is Unified JPYC. Official bridge pairs bind that token to Ethereum/Polygon 0xe7c3d8c9a439fede00d2600032d5db0be71c3c29. The sidecar sourceKey now matches captured btcfi:jpyc through independently verified handler identity. This technical identity establishes neither exact legal redemption rights nor a requirement for a tracked dependency link. No fiat-realization SLA or bridge custody guarantee is inferred.",
+    "rationale": "Historical weights, composition date and review start are unchanged. Handler 5 is resolved through the issuer frontend's underlying call-proxy (0x6894ae31cae97f228590f6dc7bbea7449f4db980): at Bifrost block 39083783, getERC20Addr() and getErc20Addr() return 0x84122a4a75bfe65ef455dba5f6d43d61359ca77e (Unified JPYC). Official bridge pairs bind that representation to Ethereum/Polygon 0xe7c3d8c9a439fede00d2600032d5db0be71c3c29. JPYC Inc.'s 2025-10-28 official security notice, retrieved 2026-10-20, independently identifies that exact underlying address as its current JPYC on both networks, matching tracked jpyc-jpyc rather than the differently addressed prepaid token. The collateral dependency now follows that exact underlying identity; it does not confer a direct issuer claim on the Bifrost representation. Whole-position bridge exit and USD-realization timing remain unknown. ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required: an absence of tracked linkage was not supported once the issuer's exact-address source was considered; no historical quantity or review age is renewed.",
     "compositionBasis": "BTCFi current market API positive deposit_value across handlers, captured 2026-09-04 and normalized over the $8,917,531.02 positive-deposit total; the historical handler 5 weight is preserved while its previously unknown identity is classified separately.",
     "compositionAsOf": "2026-09-04",
     "scope": "full-composition",
-    "knownUnknownExposure": "All historical collateral categories now have exact technical identities. Unified JPYC remains exposed to Bifrost representation custody, unestablished exact-address legal redemption rights and an unestablished whole-position USD liquidity horizon. Metadata research does not refresh historical weights or establish full-book assurance.",
+    "knownUnknownExposure": "All historical collateral categories have exact technical identities. Unified JPYC is linked to tracked jpyc-jpyc through the issuer-identified underlying address, but remains exposed to Bifrost representation custody, unestablished direct holder redemption rights and an unestablished whole-position USD liquidity horizon. Metadata research does not refresh historical weights or establish full-book assurance.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
@@ -130,13 +136,6 @@
         "pct": 39.44,
         "disposition": "untracked-exogenous-asset",
         "rationale": "BTCB is wrapped Bitcoin collateral rather than a tracked stablecoin dependency."
-      },
-      {
-        "reserveIndex": 2,
-        "reserveName": "Unified JPYC (Bifrost JPYC representation)",
-        "pct": 13.53,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "Exact held technical identity is Bifrost Unified JPYC, bound by official bridge pairs to Ethereum/Polygon 0xe7c3d8c9a439fede00d2600032d5db0be71c3c29. An issuer source binding legal redemption rights to that exact underlying address is not established; no tracked dependency link is asserted from technical identity alone."
       },
       {
         "reserveIndex": 3,

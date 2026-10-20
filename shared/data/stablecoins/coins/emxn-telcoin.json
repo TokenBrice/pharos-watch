@@ -57,7 +57,7 @@
       "decimals": 6
     }
   ],
-  "custodyModel": "institutional-unregulated",
+  "custodyModel": "unknown",
   "governanceQuality": "regulated-entity",
   "launchDate": "2024-03-25"
 }

@@ -50,11 +50,11 @@
         "url": "https://github.com/resupplyfi/resupply/blob/537b5a0424efd1663b7a2c3262d4a2d0536fc670/src/protocol/ResupplyPair.sol"
       }
     ],
-    "rationale": "The independent resupply-pairs producer enumerated every configured positive-collateral pair and converted its ERC-4626 shares at the same on-chain capture. A 2026-08-08 replay of all eleven configured pairs at the latest Ethereum block (underlying(), getPairAccounting(), collateral(), convertToAssets()) returned $24,371,493 crvUSD-side and $1,713,015 frxUSD-side converted assets, i.e. 93.4% Curve crvUSD lending-market exposure and 6.6% Fraxlend frxUSD lending-market exposure. Both are layered protocol positions whose upstream issuer and smart-contract failure domains remain explicit.",
-    "compositionBasis": "Exact live Resupply pair registry and ERC-4626 collateral conversion captured on 2026-08-08 via the configured resupply-pairs adapter against public Ethereum RPC",
+    "rationale": "Historical 2026-08-08 configured-pair observation: all eleven configured pairs were read for underlying(), getPairAccounting(), collateral() and convertToAssets(), yielding $24,371,493 crvUSD-side and $1,713,015 frxUSD-side converted assets, or 93.4% and 6.6% of that configured subtotal. Source-scope correction reviewed 2026-10-20: this configured roster and its unpinned latest-block description do not establish an exhaustive Registry census or a current whole-book denominator. Retain the historical percentages only as classification scaffolding for the exact two source keys, not as a renewed full composition. Current weights and census completeness belong to the admitted live resupply-pairs producer. Both rows remain layered protocol positions with explicit upstream issuer, smart-contract and liquidity risks.",
+    "compositionBasis": "Historical eleven-configured-pair ERC-4626 conversion subtotal reported on 2026-08-08; classification scaffolding only, not a pinned exhaustive Registry or current whole-book observation",
     "compositionAsOf": "2026-08-08",
-    "scope": "full-composition",
-    "knownUnknownExposure": "No positive-collateral pair is omitted; vault liquidity, borrower collateral, and upstream crvUSD or frxUSD solvency remain structured risk factors within the two classified positions.",
+    "scope": "classification-only",
+    "knownUnknownExposure": "Zero refers only to unidentified categories within the two reviewed classification rows, not to proof that the eleven-pair historical configuration covered every registered positive-collateral position. Whole-book omitted exposure and current liquidity are not measured by this static scaffold; no whole-book percentage or withdrawal horizon is inferred. Current admitted live composition must establish its own census and denominator.",
     "knownUnknownExposurePct": 0
   }
 }

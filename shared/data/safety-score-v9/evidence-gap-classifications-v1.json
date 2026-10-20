@@ -2,6 +2,638 @@
   "schemaVersion": 1,
   "entries": [
     {
+      "id": "c24-usx-reconciliation-20261020",
+      "assetId": "usx-solstice",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "economic-control:mint",
+        "factorKey": "reconciliation",
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "reconciliation"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-20T22:39:34Z",
+      "reviewer": "C24 bottom-up refinement 2026-10-21; D33-ADJUDICATOR concurrence",
+      "sourcesRefs": [
+        "source:b136f355a7763602429dd207"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:4ed150c83be7539757117175",
+        "surface:45fc09e9f61e00bdf8e278d0",
+        "surface:a575cf31856886181f7b7a6c",
+        "surface:77f3883ca3c3bb68a9bc1fd6"
+      ],
+      "rationale": "The weekly whole-USX Accountable commitment is real, but the newest matched report remains October 9 on October 20, outside one weekly cadence; later cryptographic timestamps do not provide a newer matched book. Withdraw periodic to unknown while preserving original authority/review pins. This is unestablished current process, not proof of non-reconciliation, insolvency or reserve shortfall."
+    },
+    {
+      "id": "c24-usx-supervision-20261020",
+      "assetId": "usx-solstice",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "economic-control:mint",
+        "factorKey": "supervision",
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "supervision"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-20T22:39:34Z",
+      "reviewer": "C24 bottom-up refinement 2026-10-21; D33-ADJUDICATOR concurrence",
+      "sourcesRefs": [
+        "source:b136f355a7763602429dd207"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:4ed150c83be7539757117175",
+        "surface:45fc09e9f61e00bdf8e278d0",
+        "surface:a575cf31856886181f7b7a6c",
+        "surface:77f3883ca3c3bb68a9bc1fd6"
+      ],
+      "rationale": "Named Accountable verification is historical evidence, but the latest matched October 9 report is outside the committed weekly cadence. Current attestation-only process coverage is not established, so supervision is unknown, not positively none. No unrelated supervisory or custody claim is inferred."
+    },
+    {
+      "id": "c24-suiusde-reconciliation-20261020",
+      "assetId": "suiusde-sui",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "economic-control:mint",
+        "factorKey": "reconciliation",
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "reconciliation"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-20T22:39:34Z",
+      "reviewer": "C24 bottom-up refinement 2026-10-21; D33-ADJUDICATOR concurrence",
+      "sourcesRefs": [
+        "source:415af2a84b2c1f99b1f6bc68"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:574f3c6c8e8f2224ecb4dbe3",
+        "surface:7b900b84b6cd9b52c19a406a",
+        "surface:405fcf4a908c3a43b196601e"
+      ],
+      "rationale": "The exact suiUSDe dashboard/API display balances and a backing ratio, and Sui Treasury reads establish controls. Neither establishes an authoritative recurring whole-book reconciliation procedure or a verified complete mechanically enumerable reserve set across custody legs. Withdraw continuous to unknown, retaining known unbounded authority and all original pins; no measured non-reconciliation is asserted."
+    },
+    {
+      "id": "c24-ftusd-reconciliation-20261020",
+      "assetId": "ftusd-flying-tulip",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "economic-control:mint",
+        "factorKey": "reconciliation",
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "reconciliation"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-20T22:39:34Z",
+      "reviewer": "C24 bottom-up refinement 2026-10-21; D33-ADJUDICATOR concurrence",
+      "sourcesRefs": [
+        "source:991a1bee41b41a29dd087b73",
+        "source:3f532057b61be76b230689af"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:512813742e5a8240c3c0baff",
+        "surface:5092499718b5caf3cb408f21",
+        "surface:36dd1f42c683b4805bd64332"
+      ],
+      "rationale": "FtUSDCore positively documents moduleDebt/totalDebt mint-minus-burn liability accounting, supporting internal-ledger. Current official mechanism, directory and dashboard do not establish complete backing-versus-whole-supply mechanical reconstruction or recurring backing reconciliation. Internal-ledger clears no whole-book assurance question and grants no D33 reconciled rung."
+    },
+    {
+      "id": "c24-yusd-reconciliation-20261020",
+      "assetId": "yusd-aegis",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "economic-control:mint",
+        "factorKey": "reconciliation",
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "reconciliation"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-20T22:39:34Z",
+      "reviewer": "C24 bottom-up refinement 2026-10-21; D33-ADJUDICATOR concurrence",
+      "sourcesRefs": [
+        "source:0e696f0c7ba7b9ebc2bfba93",
+        "source:90a43d68f109ad9053e34839"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:0ec51e3661ebffc7ed97af99",
+        "surface:2c4329278134f5f28dc88f7c",
+        "surface:b0acaf0592e9df605b931205"
+      ],
+      "rationale": "The current Accountable four-chain supply split does not include Base. Exact report-clock block 52872624 proves 11.626401 YUSD on the verified Base burn/mint deployment, but not its economic exclusion from the compared denominator. FIX-ROUND1 proof-limit correction 2026-10-20: the original source observation's positive omitted-liability conclusion is not established by a missing display row. The retained API/issuer surfaces do not disclose the unrounded per-chain liability inputs and conserved aggregation/netting join needed to determine inclusion; C24 confirms that join was not collected. Whole-token scope remains unestablished, so reconciliation stays unknown pending the exact join. The de-minimis concern (about 0.00003366% of displayed supply, not an admitted materiality share) is routed to an owner methodology proposal, never treated as insolvency, measured non-reconciliation or proof of economic exclusion."
+    },
+    {
+      "id": "c24-yusd-supervision-20261020",
+      "assetId": "yusd-aegis",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "economic-control:mint",
+        "factorKey": "supervision",
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "supervision"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-20T22:39:34Z",
+      "reviewer": "C24 bottom-up refinement 2026-10-21; D33-ADJUDICATOR concurrence",
+      "sourcesRefs": [
+        "source:0e696f0c7ba7b9ebc2bfba93",
+        "source:90a43d68f109ad9053e34839"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:0ec51e3661ebffc7ed97af99",
+        "surface:2c4329278134f5f28dc88f7c",
+        "surface:b0acaf0592e9df605b931205"
+      ],
+      "rationale": "Accountable's independent verification is real, but the retrieved API and issuer methodology do not establish the complete deployment-to-liability join. FIX-ROUND1 proof-limit correction 2026-10-20: the original positive omitted-Base-liability assertion overstates the pin and display evidence; whether Base is included in the compared denominator remains unresolved. Supervision stays unknown because whole-liability assurance scope has not been independently established, not because absence of an examiner or exclusion of Base has been proved. Preserve historical engagement and authority evidence; restore attestation-only when the exact complete liability inputs/netting join is verified."
+    },
+    {
+      "id": "c24-yusd-binance-liquidity-20261020",
+      "assetId": "yusd-aegis",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "factorKey": "liquidity",
+        "routeKey": null,
+        "exposureId": "reserve:c9259960f189ddb88ecce792",
+        "requiredDatum": "liquidityHorizon"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-20T22:39:34Z",
+      "reviewer": "C24 bottom-up refinement 2026-10-21",
+      "sourcesRefs": [
+        "source:0e696f0c7ba7b9ebc2bfba93"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:0ec51e3661ebffc7ed97af99",
+        "surface:2c4329278134f5f28dc88f7c",
+        "surface:b0acaf0592e9df605b931205",
+        "surface:92d74fbdf119a8a1e62f1f24"
+      ],
+      "rationale": "Current issuer and Accountable disclosures identify the Binance BTC/COIN-M strategy bucket and its amount, but no binding full-position realization maximum, constituent derivative/margin split or stressed depth/settlement schedule. Class and venue identity can be curated; whole-position liquidity remains researched nondisclosure, not measured illiquidity."
+    },
+    {
+      "id": "c24-ftusd-crvusd-liquidity-20261020",
+      "assetId": "ftusd-flying-tulip",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "factorKey": "liquidity",
+        "routeKey": null,
+        "exposureId": "reserve:b796d68ac821a87c31595a14",
+        "requiredDatum": "liquidityHorizon"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-20T22:39:34Z",
+      "reviewer": "C24 bottom-up refinement 2026-10-21",
+      "sourcesRefs": [
+        "source:3f532057b61be76b230689af"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:512813742e5a8240c3c0baff",
+        "surface:36dd1f42c683b4805bd64332",
+        "surface:5092499718b5caf3cb408f21"
+      ],
+      "rationale": "The exact current Ethereum crvUSD wrapper 0xce447e0a379f1cb37fd25f83f43eeedb9aea74bc has a disclosed partial circuit-breaker window, but no complete position-realization deadline. Variable cooldowns, lending liquidity and strategy rebalances prevent promoting the 10% window into a full horizon. Separate current-availability producer work remains possible and is not converted into executable USD capacity."
+    },
+    {
+      "id": "fd17-usda-reconciliation-current-series-20261020",
+      "assetId": "usda-anzens",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "economic-control:mint",
+        "factorKey": "reconciliation",
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "reconciliation"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-20T22:30:37Z",
+      "reviewer": "FD17 bottom-up refinement 2026-10-21; D33-ADJUDICATOR concurrence",
+      "sourcesRefs": [
+        "source:09423f178f8cdc3e16f56c37"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:4d11851dc6c4830f46eb6e3f",
+        "surface:70a44a98a30bc9ab2dd39b04",
+        "surface:127819fc96bbf347802232de",
+        "surface:f0ef12fe24c9b0a6253acc0d"
+      ],
+      "rationale": "ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required: historical January 31 and May 31 Network Firm examinations are real, but latest May 31 is 142 days old and no current quarterly-or-better independent series was established on current issuer homepage, terms, official RSS or public LinkedIn disclosures. The January published-monthly assertion cannot preserve periodic/attestation-only process credit four months after the last retrieved examination. D33-ADJUDICATOR explicitly applies cadence currency to independent series. Both authored process fields become unknown, not none; this C proof preserves the researched unanswered reconciliation question without asserting non-reconciliation, insolvency or a reserve shortfall. Original mint review start and all authority/economic pins remain unchanged."
+    },
+    {
+      "id": "fd22-pusd-polymarket-reconciliation-20261020",
+      "assetId": "pusd-polymarket",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "economic-control:mint",
+        "factorKey": "reconciliation",
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "reconciliation"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-20T22:26:09Z",
+      "reviewer": "FD22 bottom-up refinement 2026-10-21",
+      "sourcesRefs": [
+        "source:ffd24ef43836cf86bb22b5a8",
+        "source:4cc9e1745d531ea31f61f647"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:ac6842512ee1a0f818e7481a",
+        "surface:2f5382f3c260b23f453bc9e2",
+        "surface:704a872124c6e91278f573a1",
+        "surface:b67ec1b216889082971774c1",
+        "surface:e1fc0cf0befb4e5aa6ed7315"
+      ],
+      "rationale": "Current exact pUSD documentation, registry, international transparency and August 11 Terms were reviewed on 2026-10-20. They describe USDC receipt accounting, wrapping and position settlement, but disclose no recurring complete local-liability-to-backing reconciliation regime covering the independently unbounded local minter-administration path. Parent USDC reconciliation does not establish reconciliation of arbitrary local pUSD liabilities. The former not-applicable conclusion is withdrawn to unknown, not none; all known unbounded authority facts and original pins remain."
+    },
+    {
+      "id": "fd22-pusd-polymarket-supervision-20261020",
+      "assetId": "pusd-polymarket",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "economic-control:mint",
+        "factorKey": "supervision",
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "supervision"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-20T22:26:09Z",
+      "reviewer": "FD22 bottom-up refinement 2026-10-21",
+      "sourcesRefs": [
+        "source:4cc9e1745d531ea31f61f647",
+        "source:ffd24ef43836cf86bb22b5a8"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:ac6842512ee1a0f818e7481a",
+        "surface:2f5382f3c260b23f453bc9e2",
+        "surface:704a872124c6e91278f573a1",
+        "surface:b67ec1b216889082971774c1",
+        "surface:e1fc0cf0befb4e5aa6ed7315"
+      ],
+      "rationale": "The current primary transparency page explicitly separates Polymarket International from the CFTC-regulated US venue. Neither that page, the exact Polygon pUSD docs/registry nor international Terms identifies a prudential regime supervising the exact pUSD issuer and issuance mandate. The evidence also does not positively prove absence of every supervisory regime. Supervision is unknown rather than none; no US-affiliate licence or parent-USDC supervisory credit is inherited."
+    },
+    {
+      "id": "fd22-scusd-rings-reconciliation-20261020",
+      "assetId": "scusd-rings",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "economic-control:mint",
+        "factorKey": "reconciliation",
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "reconciliation"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-20T22:26:09Z",
+      "reviewer": "FD22 bottom-up refinement 2026-10-21",
+      "sourcesRefs": [
+        "source:6cfd5d4399742f42b046b23d",
+        "source:afb4abe6e67332516480afd0"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:26bd703c0fcc634664486803",
+        "surface:d430f529433c048cc51673a3",
+        "surface:f3660cd8cee8660b6ca70a4f",
+        "surface:8e938d28d91fb58b1dbf60e0",
+        "surface:92c2039b0965514812a3bbbe"
+      ],
+      "rationale": "Current Trevee backing, security, contract and ecosystem surfaces and Veda Accountant architecture were reviewed on 2026-10-20. Accepted-asset lists, vault addresses and offchain-calculated exchange-rate updates do not establish a recurring whole-native-supply-to-strategy-assets reconciliation. The previous no-offchain-reserve-claim inference does not make reconciliation inapplicable to independently unbounded native enter/authorization powers. Reconciliation is unknown, not positively none, and the original D14 adverse facts and review starts remain."
+    },
+    {
+      "id": "fd22-scusd-rings-supervision-20261020",
+      "assetId": "scusd-rings",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "economic-control:mint",
+        "factorKey": "supervision",
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "supervision"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-20T22:26:09Z",
+      "reviewer": "FD22 bottom-up refinement 2026-10-21",
+      "sourcesRefs": [
+        "source:6cfd5d4399742f42b046b23d",
+        "source:afb4abe6e67332516480afd0"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:26bd703c0fcc634664486803",
+        "surface:d430f529433c048cc51673a3",
+        "surface:f3660cd8cee8660b6ca70a4f",
+        "surface:8e938d28d91fb58b1dbf60e0",
+        "surface:92c2039b0965514812a3bbbe"
+      ],
+      "rationale": "The reviewed current issuer/technology surfaces identify Mithras/Trevee, Veda vaults, audits and permission controls, but no prudential regulator and exact supervised scUSD issuing entity/mandate. Code audits are not prudential or attestation-only supervision. The sources do not establish affirmative absence of every supervisory regime either, so supervision is unknown rather than none with no numerical process credit."
+    },
+    {
+      "id": "fd30-isc-supervision-nondisclosure-20261020",
+      "assetId": "isc-international-stable-currency",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "economic-control:mint",
+        "factorKey": "supervision",
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "supervision"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-20T22:20:55Z",
+      "reviewer": "FD30 bottom-up refinement 2026-10-21",
+      "sourcesRefs": [
+        "source:081c3e8e8f1ab7a18825acbe",
+        "source:1af94f438bd3618d8cae6711"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:b5fbf6ea95aee8aa4f70eba9",
+        "surface:7628d59ef384021fab0cb1bd",
+        "surface:88c3720630cb3e46fbc02ca9",
+        "surface:9acefa52649fbbf89c639d95"
+      ],
+      "rationale": "Withdraw the prior supervision none: the retrieved issuer/reserve mechanics, entities, oversight and dashboard do not positively establish absence of a supervisory regime. They also do not identify an exact supervised issuing legal entity and prudential token-issuance mandate or a named recurring independent whole-liability attestor. Oversight describes a proposed audit scheme under consideration. Keep supervision unknown with scoped researched non-disclosure; do not assert non-regulation, infer prudential coverage from reserve institutions or award financial assurance."
+    },
+    {
+      "id": "fd27-nbasis-mint-reconciliation-20261020",
+      "assetId": "nbasis-nest",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "economic-control:mint",
+        "factorKey": "reconciliation",
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "reconciliation"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-20T22:23:13Z",
+      "reviewer": "FD27 bottom-up refinement 2026-10-21",
+      "sourcesRefs": [
+        "source:d90986fe316de2312de3cdb1",
+        "source:2f4b456d883a0a847d5d873f"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:d470f3a876629897afe56faa",
+        "surface:5208c71f73bece943bff6a7d"
+      ],
+      "rationale": "Current exact nBASIS positions, price-update, operations, terms and audit surfaces were researched 2026-10-20. Itemized issuer balances and floating supplyByChain rows do not document a recurring complete native-liability-to-backing reconciliation procedure or cadence, including all deployments and outstanding claims. The former continuous grant was inferred rather than positively evidenced and is withdrawn. Reconciliation remains unknown, not positively none; known unbounded mint authority and its original pins remain."
+    },
+    {
+      "id": "fd27-inalpha-mint-reconciliation-20261020",
+      "assetId": "inalpha-nest",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "economic-control:mint",
+        "factorKey": "reconciliation",
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "reconciliation"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-20T22:23:13Z",
+      "reviewer": "FD27 bottom-up refinement 2026-10-21",
+      "sourcesRefs": [
+        "source:d90986fe316de2312de3cdb1",
+        "source:2f4b456d883a0a847d5d873f"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:d470f3a876629897afe56faa",
+        "surface:5208c71f73bece943bff6a7d"
+      ],
+      "rationale": "Current operations, terms, audits and exact legacy inALPHA feeds were researched 2026-10-20. The legacy 0x64ab176c545bb85eca75d53c3ffcb361deafb855 feed retains February 23 accountant updates and unreconciled visible positions versus NAV. Active nALPHA at 0x593ccca4c4bf58b7526a4c164ceef4003c6388db is another claim. Neither source set supplies an exact legacy complete recurring reconciliation procedure and cadence. Withdraw the inferred continuous grant; retain unknown reconciliation and known unbounded power, not a claim of reserve loss or no private procedure."
+    },
+    {
+      "id": "fd30-isc-reconciliation-nondisclosure-20261020",
+      "assetId": "isc-international-stable-currency",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "economic-control:mint",
+        "factorKey": "reconciliation",
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "reconciliation"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-20T22:20:55Z",
+      "reviewer": "FD30 bottom-up refinement 2026-10-21",
+      "sourcesRefs": [
+        "source:cb1752dc8a571a0de03bf651",
+        "source:1af94f438bd3618d8cae6711"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:9acefa52649fbbf89c639d95",
+        "surface:7d9c32021f9c4f0469d86f06",
+        "surface:a317e448d75b2d0e0d7aa2e8",
+        "surface:7628d59ef384021fab0cb1bd",
+        "surface:88c3720630cb3e46fbc02ca9"
+      ],
+      "rationale": "Unsupported favorable continuous-reconciliation credit is withdrawn. The issuer publishes numeric Reserve A/B assets and ISC liabilities, but no source-owned holdings timestamp, report period or actual-backing versus whole-liability reconciliation cadence. Dashboard implementation fetches reserves once per mount; only separate price/supply feeds poll every sixty seconds, and Last update renders the browser date. The proposed audit scheme remains under consideration. These retrieved surfaces support researched uncertainty, not a finding that no reconciliation exists. Preserve original native authority pins and unbounded power; no recurring process, financial assurance or reserve allocation is inferred."
+    },
+    {
+      "id": "fd18-moveusd-redemption-settlement-20261020",
+      "assetId": "moveusd-cfx",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "settlement",
+        "routeKey": "redemption:redemption:9ac40a01-6614-462d-b348-eab2dda17d4b:redemption:moveusd-cfx:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "settlement"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-20T22:21:32Z",
+      "reviewer": "FD18 bottom-up refinement 2026-10-21",
+      "sourcesRefs": [
+        "source:defa77b847cb94713bb67a0d"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:7f6452258eb5eb00b5f3eab0",
+        "surface:4d1f18b310dcbcc4c2e4335c",
+        "surface:245985f6a9b9d213e558b05e",
+        "surface:7e3a31ab436ce67bb77ac1d4"
+      ],
+      "rationale": "The current CFX Platform Overview describes generic ACH withdrawals as 1-2 day settlement and U.S. wire withdrawals as same day; the current withdrawal quote API requires authenticated customer-specific quotes and a verified identity. The on-chain product page and docs index provide no unconditional exact MOVEUSD request-to-completed-bank-credit maximum. The inherited same-day category is withdrawn rather than converted into a guaranteed completion claim. This records researched missing timing evidence, not a measured slow payout or a finding that the real redemption channel is unavailable."
+    },
+    {
+      "id": "fd18-zaru-redemption-capacity-20261020",
+      "assetId": "zaru-blocktower",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "capacity",
+        "routeKey": "redemption:redemption:9ac40a01-6614-462d-b348-eab2dda17d4b:redemption:zaru-blocktower:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "capacity"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-20T22:19:57Z",
+      "reviewer": "FD18 bottom-up refinement 2026-10-21",
+      "sourcesRefs": [
+        "source:396b20998f6a11b26097353e",
+        "source:70744b3aa9c612f0843a2ff5"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:15d03d97591765cddecdfec2",
+        "surface:f86d939e037d3271c7f27c83",
+        "surface:82b629fd34c43a9f0f0350db",
+        "surface:eaf45616b49163a6cce24978"
+      ],
+      "rationale": "The current issuer homepage, whitepaper and binding holder/platform terms disclose conditional par redemption for approved BlockTower account holders, but no funded same-notional payout amount, throughput ceiling or current executable payout observation. Historical reserve values and supply-full legal entitlement are not funded execution capacity. This exact channel remains missing; no zero-capacity or whole-asset no-exit finding is made."
+    },
+    {
+      "id": "fd18-zaru-redemption-cost-20261020",
+      "assetId": "zaru-blocktower",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "cost",
+        "routeKey": "redemption:redemption:9ac40a01-6614-462d-b348-eab2dda17d4b:redemption:zaru-blocktower:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "cost"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-20T22:19:57Z",
+      "reviewer": "FD18 bottom-up refinement 2026-10-21",
+      "sourcesRefs": [
+        "source:396b20998f6a11b26097353e",
+        "source:70744b3aa9c612f0843a2ff5"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:15d03d97591765cddecdfec2",
+        "surface:f86d939e037d3271c7f27c83",
+        "surface:82b629fd34c43a9f0f0350db",
+        "surface:eaf45616b49163a6cce24978"
+      ],
+      "rationale": "Holder terms section 12 permits advance-disclosed issuer charges and holder-paid bank charges; Platform section 17 also assigns network fees to the holder. The current issuer homepage, whitepaper and binding terms provide no complete numeric ceiling covering every deduction for this exact ZAR redemption channel. The conditional no-undisclosed-issuer-fee clause is not an all-in zero fee. The cost remains unknown rather than measured expensive."
+    },
+    {
+      "id": "fd18-zaru-redemption-settlement-20261020",
+      "assetId": "zaru-blocktower",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "settlement",
+        "routeKey": "redemption:redemption:9ac40a01-6614-462d-b348-eab2dda17d4b:redemption:zaru-blocktower:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "settlement"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-20T22:19:57Z",
+      "reviewer": "FD18 bottom-up refinement 2026-10-21",
+      "sourcesRefs": [
+        "source:396b20998f6a11b26097353e",
+        "source:70744b3aa9c612f0843a2ff5"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:15d03d97591765cddecdfec2",
+        "surface:f86d939e037d3271c7f27c83",
+        "surface:82b629fd34c43a9f0f0350db",
+        "surface:eaf45616b49163a6cce24978"
+      ],
+      "rationale": "Platform User Agreement section 11 expressly provides no guarantee of the redemption processing period and subjects payout to banking and operational processes. The whitepaper's commercially reasonable efforts and up-to-five-business-day partner language do not establish an unconditional completed-bank-credit deadline. No such exact completion bound was disclosed on the current issuer homepage, whitepaper or binding holder/platform terms. No measured delay or exhaustion is inferred."
+    },
+    {
+      "id": "fd17-euri-reconciliation-nondisclosure-20261020",
+      "assetId": "euri-banking-circle",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "economic-control:mint",
+        "factorKey": "reconciliation",
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "reconciliation"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-20T22:18:45Z",
+      "reviewer": "FD17 bottom-up refinement 2026-10-21",
+      "sourcesRefs": [
+        "source:4755f420cfcf20178bad5f8d"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:a2056b7c702df4fc47d94775",
+        "surface:7601e1fd85c04cda27f2de39",
+        "surface:5492c197f55320aec11a7fe1"
+      ],
+      "rationale": "ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required: the former reconciliation none inferred no regime from absence of a public report or a statutory publication duty. The cited issuer about page expressly asserts periodic EY EURI reserve-to-circulation attestation. Current homepage, about/report inventory and legal whitepaper still provide no dated EURI reserve examination or evidenced whole-liability cadence. The truthful datum is unknown with researched issuer non-disclosure, not measured absence and not verified periodic. This classification establishes no financial assurance or reserve composition and leaves independently evidenced prudential supervision and unbounded issuance/upgrade powers unchanged."
+    },
+    {
+      "id": "fd28-apxusd-reconciliation-scope-20261020",
+      "assetId": "apxusd-apyx",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-20T22:15:05Z",
+      "reviewer": "FD28 bottom-up refinement 2026-10-21",
+      "sourcesRefs": [
+        "source:34b2693bd7504d560a3005d4"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:dcb8bf2bed07219128a54b55",
+        "surface:c7c5e8aedaa26d0438410369",
+        "surface:d94b6e4dc7abb07d0b2c30a8"
+      ],
+      "rationale": "The latest Wolf examination, signed October 13 for September 15 and 30, covers only specified securities. The issuer's attestation archive, Accountable accounting definitions and governing terms do not establish recurring reconciliation of all native apxUSD liabilities, canonical escrow, remote representations and pending transfers to the complete external reserve book. The previous periodic annotation inferred whole-token reconciliation from securities ownership reporting and is withdrawn. Unknown is researched scope non-disclosure, not measured non-reconciliation; the known unbounded issuance authority remains separately evidenced."
+    },
+    {
+      "id": "fd28-rusd-reconciliation-scope-20261020",
+      "assetId": "rusd-reservoir",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "reconciliation",
+        "pillar": "control",
+        "requiredDatum": "reconciliation",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-20T22:15:05Z",
+      "reviewer": "FD28 bottom-up refinement 2026-10-21",
+      "sourcesRefs": [
+        "source:784e44d82ba772fd270e6298"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:bc2e3d3c417e648861946e1b",
+        "surface:18b4d96414ef5a6da3f21fa7",
+        "surface:1e5554947cc2924cf463bd28",
+        "surface:3b4fbbb606480e582663caea"
+      ],
+      "rationale": "The accessible protocol balance sheet and current proof-of-reserves, legal and deployment documentation describe assets and aggregate rUSD/srUSD/wsrUSD liabilities. They do not establish a recurring whole-token reconciliation process with a complete exact-deployment escrow and in-flight liability perimeter. The API also lacks an upstream observation clock. Publishing a real-time balances view alone does not establish continuous reconciliation. The previous inference is withdrawn; no finding of absent reconciliation or extra financial supervision is invented, and the independently evidenced unbounded EOA authority remains."
+    },
+    {
       "id": "erc4626-deployed-liquidity-bbqusdc-steakhouse-v2",
       "assetId": "bbqusdc-steakhouse-v2",
       "scope": {
@@ -10105,26 +10737,6 @@
       "rationale": "Neither the issuer physical-redemption route nor the composed physical-to-spendable-USD route publishes an end-to-end maximum. KYC, reverse swap, appointment and physical pickup are disclosed without deadlines. NFT buyback pays USDT after confirmation without a maximum; it is not a final spendable USD SLA."
     },
     {
-      "id": "uw-gldt-gold-dao-4d85e1c0e1b31a90",
-      "assetId": "gldt-gold-dao",
-      "scope": {
-        "pillar": "exit",
-        "componentKey": "exit-route",
-        "factorKey": "cost",
-        "routeKey": "redemption:redemption:ebdf5ef5-e7ab-4b14-87dd-f0807db29fa0:redemption:gldt-gold-dao:offchain-issuer",
-        "exposureId": null,
-        "requiredDatum": "cost"
-      },
-      "cause": "B",
-      "assertion": "required-data-public",
-      "reviewedAt": "2026-10-09T10:37:38Z",
-      "reviewer": "Sol curation campaign 2026-10-09 (Lane10Kpk)",
-      "sourcesRefs": [
-        "source:2723c4cc7420f04a774c1677",
-        "source:ca6edf4bac3826b2a6e78b8e"
-      ]
-    },
-    {
       "id": "uw-gldt-gold-dao-3892111dfe422652",
       "assetId": "gldt-gold-dao",
       "scope": {
@@ -10189,13 +10801,18 @@
         "requiredDatum": "cost",
         "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:usda-anzens:offchain-issuer"
       },
-      "cause": "B",
-      "assertion": "required-data-public",
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
       "reviewedAt": "2026-10-03T23:16:31Z",
       "reviewer": "Unknown-resolver wave 2026-10-04 (W1R77)",
       "sourcesRefs": [
         "source:c4e17df99c40ab3b02c16313"
-      ]
+      ],
+      "searchedSurfacesRefs": [
+        "surface:4d11851dc6c4830f46eb6e3f",
+        "surface:70a44a98a30bc9ab2dd39b04"
+      ],
+      "rationale": "ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required: correct the unsupported favorable public-data classification while retaining its original October 3 source observation and review start. The source itself describes $30/$70 wire components plus variable network/account fees, not a complete same-notional route cost. Reopened unchanged Anzens terms on October 20: sections 10, 12 and 15 retain variable burn/network fees and additional banking, custody, ACH and partner fees without a complete all-in ceiling or selected payout rail. These missing deductions are issuer non-disclosure after research, not available public values awaiting arithmetic. No fee, capacity or settlement value is invented, and the missing cost sentinel remains open."
     },
     {
       "id": "uw-fidd-fidelity-2d05fb8170d647d4",
@@ -14892,13 +15509,21 @@
         "requiredDatum": "cost",
         "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:idrx-idrx:offchain-issuer"
       },
-      "cause": "B",
-      "assertion": "required-data-public",
-      "reviewedAt": "2026-10-03T22:48:43Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R22)",
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-20T22:38:46Z",
+      "reviewer": "C07 bottom-up refinement 2026-10-21",
       "sourcesRefs": [
-        "source:dea6bd9ced4c3e7432186f37"
-      ]
+        "source:238eb32e7aa22620a09e5bcb",
+        "source:6aba0057e4a216314d1b5d19",
+        "source:995a67ebe97aab7b943f4422"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:870bdf84ad3c411ad9846295",
+        "surface:04ac3cb22a917be0035549e6",
+        "surface:ebecd666a87a9d912269b7fc"
+      ],
+      "rationale": "The previously public-data-uncurated classification covered only a published base tariff. Current issuer fee, bank-specific additional-fee API and redemption-process documentation were reviewed together. IDR 35,000 bounds a base bank-rail charge, not every deduction for the canonical request: applicable fees depend on payment and bankCode, large requests require support review, API tiers omit amounts at or above IDR 1,000,000,000, and payout cardinality is not guaranteed. No public complete all-in ceiling or genuine exact authenticated quote was established. Cost remains unknown due to researched issuer non-disclosure, not measured high cost; this classification grants no capacity, settlement or zero-fee credit."
     },
     {
       "id": "uw-uscc-superstate-553ffbe0bde60ee3",
@@ -43842,9 +44467,986 @@
         "surface:37f9b2bba447e9efcdb68d01"
       ],
       "rationale": "The public three-Hong-Kong-Business-Day universal FUSD-to-USDT target and 08:00 cutoff/next-business-day rollover are curated without substituting 259200 calendar seconds. Review of the exact redemption and cutoff pages found an operational typically/up-to statement, not an unconditional binding payment guarantee. KYC/KYB and funded order are access prerequisites. The remaining settlement maximum is researched issuer non-disclosure, not a calendar representation gap."
+    },
+    {
+      "id": "fd23-mxnt-tether-reserve-composition-20261020",
+      "assetId": "mxnt-tether",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-composition",
+        "factorKey": null,
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "reserve-composition"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-20T22:21:40Z",
+      "reviewer": "FD23 bottom-up refinement 2026-10-21",
+      "sourcesRefs": [
+        "source:5ba23108e40558ab27bf2d96",
+        "source:7ebdf882dfdd507827730e9e",
+        "source:64855ceb200dcd37b1b142e0"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:e014884c108933a7177bef5f",
+        "surface:9d007526aaa738d67b1b00a7",
+        "surface:13cab72ebf97c2f97678ad4d"
+      ],
+      "rationale": "Current holder terms identify MXNT as a claim backed by the shared fiat-token reserve pool. The independently reconciled June 30, 2026 report publicly identifies the full common-pool asset categories and denominator; those historical categories are not undisclosed and a dedicated peso-only allocation is not inherently required for a genuinely shared pool. The current report index publishes no newer reporting period, and the report expressly provides no assurance outside June 30. Current whole-book composition and complete MXNT/common-pool claim, exclusion and priority correspondence remain unestablished for admission. This is a researched current-disclosure gap, not an unperformed composition search or a claim that the historical pooled roster is unavailable. No old portfolio is re-dated, no USDT-specific proxy weights are copied and no MXNT liability feed is treated as asset composition."
+    },
+    {
+      "id": "fd23-eurs-stasis-reconciliation-20261020",
+      "assetId": "eurs-stasis",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "economic-control:mint",
+        "factorKey": "reconciliation",
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "reconciliation"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-20T22:15:35Z",
+      "reviewer": "FD23 bottom-up refinement 2026-10-21",
+      "sourcesRefs": [
+        "source:b550894d01c90df9098ad2e0",
+        "source:966b52693883801f9ca75182"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:16fcec099f92f7910bf0f3b3",
+        "surface:96c2f72d89db5b9908ab1913"
+      ],
+      "rationale": "The issuer transparency page displays undated reserve and circulation totals and promises daily statements, but its current archive ends on December 12, 2025. Neither the page nor the retrieved daily index supplies a current common-as-of reserve-versus-all-native-liability reconciliation or substantiates the previously authored August 7, 2026 statement. Unknown reconciliation records researched non-disclosure, not measured non-reconciliation. Favorable unsupported periodic-process credit is withdrawn while known unbounded authority and all original control pins remain."
+    },
+    {
+      "id": "fd23-emxn-telcoin-supervision-20261020",
+      "assetId": "emxn-telcoin",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "economic-control:mint",
+        "factorKey": "supervision",
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "supervision"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-20T22:15:35Z",
+      "reviewer": "FD23 bottom-up refinement 2026-10-21",
+      "sourcesRefs": [
+        "source:8932d51aa9ec5d8e9c919a75",
+        "source:9f56a85b26b77ebf9db7efdb"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:e51814293ed9decacd12b8b8",
+        "surface:d6e097ab0ae600e14ab83521",
+        "surface:9037ba0d972993bb9451aae1"
+      ],
+      "rationale": "Binding eXYZ terms name Telcoin LLC as issuer and MSB and explicitly separate eUSD issued by Telcoin Inc. (Telcoin Digital Asset Bank). The bank terms likewise define eUSD and separate affiliate services. These searched issuer surfaces do not publish a prudential eMXN issuing mandate for Telcoin LLC. The Nebraska affiliate charter cannot supply that missing token-and-issuer scope; unknown supervision is not a finding of no regulation. Favorable misattributed prudential credit is withdrawn without renewing historical native-control observations."
+    },
+    {
+      "id": "fd23-stusd-stoneyield-reconciliation-20261020",
+      "assetId": "stusd-stoneyield",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "economic-control:mint",
+        "factorKey": "reconciliation",
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "reconciliation"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-20T22:19:43Z",
+      "reviewer": "FD23 bottom-up refinement 2026-10-21",
+      "sourcesRefs": [
+        "source:1cd3edfe4ab8214298d79bbe"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:e9f70de6e6b7cc7c46a1769e",
+        "surface:194a3075d19b678490471d31",
+        "surface:137e6db7fdb849982bca19dc",
+        "surface:97d38e5edc81241cbc1afdc1"
+      ],
+      "rationale": "ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required. The earlier not-applicable reconciliation label was inferred from the wrapper form and nominal fixed supply cap, not a primary fact of structural inapplicability. Monitoring counters disclose cumulative deposits and minted rewards separately from local USDC cash; issuer architecture, wrapper and official repository disclose no dated complete recurring liabilities-to-current-strategy-assets reconciliation. Correct only reconciliation to unknown with researched non-disclosure. Known arbitrary admin-authorized unbacked minting remains unbounded-adverse; no financial assurance, economic bound, reserve allocation or withdrawal credit is created."
+    },
+    {
+      "id": "c04-gldt-mint-reconciliation-scope-20261020",
+      "assetId": "gldt-gold-dao",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "economic-control:mint",
+        "factorKey": "reconciliation",
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "reconciliation"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-20T22:34:09Z",
+      "reviewer": "C04 bottom-up refinement 2026-10-21",
+      "sourcesRefs": [
+        "source:c409ed5df502489b4299373a"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:f2708de7d2c79bed0000e15b",
+        "surface:af8d103c4a1f9b9f7551ba8f",
+        "surface:95b173b88b4594c15ab39e4a",
+        "surface:372ce848a2404eb8e25c3154"
+      ],
+      "rationale": "ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required: the latest indexed Swiss AS 920 factual-findings engagement, September 21 2025 signed October 2 2025, compares gold with GLD NFT certificates, expressly disclaims assurance and does not reconcile GLDT ledger liabilities. Current issuer audit index, GLDT documentation, terms and application surface establish no current recurring whole-GLDT-liability reconciliation or independent reserve-to-liability assurance. Withdraw unsupported periodic/attestation-only fields to unknown without asserting none, reserve shortfall or newly proved arbitrary issuance. Preserve historical pins and aggregate review start; this C disposition records the researched unanswered cadence/scope question."
+    },
+    {
+      "id": "c04-gldt-all-in-redemption-cost-20261020",
+      "assetId": "gldt-gold-dao",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "cost",
+        "routeKey": "redemption:redemption:9ac40a01-6614-462d-b348-eab2dda17d4b:redemption:gldt-gold-dao:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "cost"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-20T22:34:09Z",
+      "reviewer": "C04 bottom-up refinement 2026-10-21",
+      "sourcesRefs": [
+        "source:3a8183b9b203e793d9b42fd4"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:3151abd155f23c208dfffe9e",
+        "surface:372ce848a2404eb8e25c3154",
+        "surface:b825b97ca980bfc28f9d9974",
+        "surface:8980e6c22edd6174e2fb7aa6"
+      ],
+      "rationale": "Existing config already structures CHF 300 as a native-currency pickup component and documents the 1-GLDT-per-NFT reverse-swap charge. The fee depends on selected NFT count/denominations; pickup has no complete sale/logistics/tax/FX USD ceiling. Bity's separate buyback quotes USDT at LBMA spot less 3%, not guaranteed final spendable USD. Current public terms do not establish a complete same-request physical-to-USD all-in cost bound. Retain missing cost and do not relabel published partial fees as unresearched or turn them into a universal zero/maximum."
+    },
+    {
+      "id": "c05-eurau-redemption-cost-20261020",
+      "assetId": "eurau-allunity",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "cost",
+        "routeKey": "redemption:redemption:9ac40a01-6614-462d-b348-eab2dda17d4b:redemption:eurau-allunity:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "cost"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-20T22:39:51Z",
+      "reviewer": "C05 bottom-up refinement 2026-10-21",
+      "sourcesRefs": [
+        "source:640b44c21af33247248f9ba2"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:215ad9e9f3b378685faa4b46",
+        "surface:6f3eed9b3a6f12da940a8f91",
+        "surface:5a9c1fbf8ba0294805b6db05"
+      ],
+      "rationale": "ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required. The true zero issuer fee does not bound dynamically priced holder gas or establish a complete same-notional all-in cost ceiling. Current policy, whitepaper and bridge/product documentation supply no replacement all-deduction maximum."
+    },
+    {
+      "id": "c05-eurau-redemption-settlement-20261020",
+      "assetId": "eurau-allunity",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "settlement",
+        "routeKey": "redemption:redemption:9ac40a01-6614-462d-b348-eab2dda17d4b:redemption:eurau-allunity:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "settlement"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-20T22:39:51Z",
+      "reviewer": "C05 bottom-up refinement 2026-10-21",
+      "sourcesRefs": [
+        "source:3f7f1498c196d81a9f39c57f"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:215ad9e9f3b378685faa4b46",
+        "surface:6f3eed9b3a6f12da940a8f91",
+        "surface:5a9c1fbf8ba0294805b6db05"
+      ],
+      "rationale": "ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required. The five-business-day aim is conditional on completed verification and is not an unconditional final-bank-credit deadline; recovery/redemption measures and compliance holds remain. The inherited one-day completed-settlement credit is unsupported."
+    },
+    {
+      "id": "c05-eurau-reserve-liquidity-20261020",
+      "assetId": "eurau-allunity",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "factorKey": "liquidity",
+        "routeKey": null,
+        "exposureId": "reserve:6ee50e3568a681d294d6eb07",
+        "requiredDatum": "liquidityHorizon"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-20T22:39:51Z",
+      "reviewer": "C05 bottom-up refinement 2026-10-21",
+      "sourcesRefs": [
+        "source:1d7b0af224eefe8bd9c2afaa"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:ac85c57455d1f7f5bc4dbd10",
+        "surface:5a9c1fbf8ba0294805b6db05"
+      ],
+      "rationale": "ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required. The complete reserve category has no disclosed account type, withdrawal condition or one-day realization bound. Generic bank reserves and a cash-or-HQLA permission do not establish the full captured position as demand deposits. Keep original composition and review dates; only unsupported one-day liquidity becomes unknown."
+    },
+    {
+      "id": "c05-sbc-cash-reserve-liquidity-20261020",
+      "assetId": "sbc-brale",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "factorKey": "liquidity",
+        "routeKey": null,
+        "exposureId": "reserve:9e7886f3d8c9de33ee88b1c4",
+        "requiredDatum": "liquidityHorizon"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-20T22:39:51Z",
+      "reviewer": "C05 bottom-up refinement 2026-10-21",
+      "sourcesRefs": [
+        "source:c37e5958c3dfc521ee52eab7"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:9872fdf39398173de349ec49",
+        "surface:7671d96a91238ba7ca885893",
+        "surface:3075e8ad3cdbe2efbd9dd8a8",
+        "surface:fd119bae1e95f30ecf588148"
+      ],
+      "rationale": "ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required. Neither the September nor preceding August examination identifies the complete cash-equivalent holdings, deposit account types, withdrawal terms or an immediate final-realization bound. The security page and reserve docs describe typical categories and generic liquidity, not an exact all-category horizon. Withdraw only unsupported immediate liquidity; retain financial assurance and segregation."
+    },
+    {
+      "id": "c09-usdgo-redemption-settlement-20261020",
+      "assetId": "usdgo-osl",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "settlement",
+        "routeKey": "redemption:redemption:9ac40a01-6614-462d-b348-eab2dda17d4b:redemption:usdgo-osl:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "settlement"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-20T22:33:30Z",
+      "reviewer": "C09 bottom-up refinement 2026-10-21",
+      "sourcesRefs": [
+        "source:8e38c6a35ee49fa363a5db6f"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:772333e45b3b413b9f476ed2",
+        "surface:b3d11da23447b4489474b783",
+        "surface:5d1720fd9e6f2124d3a15e6c"
+      ],
+      "rationale": "ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required. Current Anchorage Covered Stablecoin Terms section 6 supplies no unconditional USDGO completed-payout bound; it promises only commercially reasonable prompt processing, permits discretionary limits and names verification, operations and liquidity-management delays. The service-fee schedule establishes zero issuer service fees, not a settlement SLA. The USDGO transparency dashboard describes reserve liquidity, not completed holder bank credit. Withdraw inherited same-day treatment without declaring actual slow settlement or unavailable redemption. Client eligibility, documented eventual redeemability and the separate issuer-fee fact remain."
+    },
+    {
+      "id": "c30-ustb-superstate-reconciliation-20261020",
+      "assetId": "ustb-superstate",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "economic-control:mint",
+        "factorKey": "reconciliation",
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "reconciliation"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-20T22:36:52Z",
+      "reviewer": "C30 bottom-up refinement 2026-10-21",
+      "sourcesRefs": [
+        "source:425a2e6d40b457f2c3d8ec6f",
+        "source:63060e06204e3731aa051518"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:79d6b4bdbd7d947691bad5c5",
+        "surface:5d2f419fa3a2d85d28f4fcd7",
+        "surface:76ba5e64a376528b42a7b677",
+        "surface:8d2ed83a404e59a14499d827"
+      ],
+      "rationale": "Current exact USTB fund, holdings, security and balances documentation discloses the token/book-entry ownership register and recurring NAV, supporting internal-ledger recordkeeping. It does not supply a public current complete-liability comparison to backing on a committed cadence. Provider names and a price oracle do not establish the withdrawn periodic claim. This is researched non-disclosure of whole-book assurance, not a finding that private reconciliation does not occur; known unbounded mint powers remain unchanged."
+    },
+    {
+      "id": "c30-ustb-superstate-supervision-20261020",
+      "assetId": "ustb-superstate",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "economic-control:mint",
+        "factorKey": "supervision",
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "supervision"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-20T22:36:52Z",
+      "reviewer": "C30 bottom-up refinement 2026-10-21",
+      "sourcesRefs": [
+        "source:425a2e6d40b457f2c3d8ec6f",
+        "source:63060e06204e3731aa051518"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:79d6b4bdbd7d947691bad5c5",
+        "surface:5d2f419fa3a2d85d28f4fcd7",
+        "surface:76ba5e64a376528b42a7b677"
+      ],
+      "rationale": "USTB is a private fund series, explicitly not registered under the Investment Company Act. Naming PwC as auditor, a regulated custodian, investment manager and transfer agent does not establish prudential supervision of this exact issuance or a named recurring whole-liability reserve attestation. No such positive process was found on the searched current issuer surfaces. Retain supervision unknown, not none, without importing unrelated affiliate or registered-fund permissions."
+    },
+    {
+      "id": "c30-mxne-real-mxn-reconciliation-20261020",
+      "assetId": "mxne-real-mxn",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "economic-control:mint",
+        "factorKey": "reconciliation",
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "reconciliation"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-20T22:36:52Z",
+      "reviewer": "C30 bottom-up refinement 2026-10-21",
+      "sourcesRefs": [
+        "source:96a2b1307268e052edd43c79"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:f2664bf814d31770eb490330",
+        "surface:ad6ca8328378df02c5d0c11e",
+        "surface:54c1842162c1bafeed8a7412",
+        "surface:165adf883811061f1d9abb7b",
+        "surface:77abcef411c2de57636f8b98"
+      ],
+      "rationale": "The current September 29 BHR examination reconciles upstream Etherfuse Stablebond liabilities including distinct MEX/CETES identities. Brale's exact MXNe product, partnership, public terms and reserve portal supply no MXNe all-chain supply denominator joined to its Stablebond account on a recurring cadence. D33 adjudicator upheld the wrong-liability-scope withdrawal; retain unknown reconciliation without asserting measured non-reconciliation or changing the historical authority pins."
+    },
+    {
+      "id": "c30-mxne-real-mxn-supervision-20261020",
+      "assetId": "mxne-real-mxn",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "economic-control:mint",
+        "factorKey": "supervision",
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "supervision"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-20T22:36:52Z",
+      "reviewer": "C30 bottom-up refinement 2026-10-21",
+      "sourcesRefs": [
+        "source:96a2b1307268e052edd43c79"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:f2664bf814d31770eb490330",
+        "surface:ad6ca8328378df02c5d0c11e",
+        "surface:54c1842162c1bafeed8a7412",
+        "surface:165adf883811061f1d9abb7b",
+        "surface:77abcef411c2de57636f8b98"
+      ],
+      "rationale": "BHR's independent report covers Etherfuse-issued Stablebonds, not Brale's complete MXNe liability book. Brale's stated money-transmission permissions do not establish prudential token-issuance supervision, and no named independent recurring MXNe full-book attestation was found on the exact searched surfaces. D33 adjudicator upheld unknown/unknown. This does not assert that private audits or supervisory relationships are absent."
+    },
+    {
+      "id": "c30-usdsc-startale-supervision-20261020",
+      "assetId": "usdsc-startale",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "economic-control:mint",
+        "factorKey": "supervision",
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "supervision"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-20T22:36:52Z",
+      "reviewer": "C30 bottom-up refinement 2026-10-21",
+      "sourcesRefs": [
+        "source:72ab858979338ef5f491451a"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:446ccb7b02ecfbac63f8286d",
+        "surface:af3ca0b7b04c8df39ae18a4e"
+      ],
+      "rationale": "The current issuer FAQ mentions independent monitoring but names no independent complete-USDSC-book attestor or report cadence. Its linked M0 dashboard is parent collateral evidence, not a child-liability attestation. The public terms establish proprietary discretionary swaps and no prudential issuance mandate. Correct attestation-only to unknown; retain exact local mechanical M-wrapper accounting and existing D14 collateral-only semantics."
+    },
+    {
+      "id": "fd04-usdd-current-wholebook-composition-20261020",
+      "assetId": "usdd-tron-dao-reserve",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-composition",
+        "factorKey": null,
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "reserve-composition"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-20T22:19:00Z",
+      "reviewer": "FD04 bottom-up refinement 2026-10-21",
+      "sourcesRefs": [
+        "source:2f7035329a924a85770cb9d1",
+        "source:ce9b71c6d87d68c086c575d9",
+        "source:3d6d34347aa828c74b3e1213"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:3d981045d09ae129cdd3acf1",
+        "surface:239b71d2f8eef1337e6eb04f",
+        "surface:4e4294e75e291fc76c54b1e5",
+        "surface:33a179747b73d6a1a02e895a",
+        "surface:11e9c89dc1663ac00cdd86c8",
+        "surface:b0e620326c9605e806f801eb",
+        "surface:0de091bc82165857737bcdc7",
+        "surface:8a90f02e3da3e632727c70d5",
+        "surface:92cb54529f170e1c4c611b0a"
+      ],
+      "rationale": "Current source-bound whole-USDD reserve composition is not established by the successful issuer snapshots. The reviewed Tron, Ethereum and BSC collateral APIs itemize gross lockedValue, debt and supply/earn totals but publish no accounting timestamp. The global allocator lists strategy holdings separately from origin-chain SA001-A debt, without a common checkpoint or position-to-origin-debt attribution. The API documentation, transparency surface, Smart Allocator description and security-audit index provide no replacement dated reconciled whole-book allocation. This is a researched disclosure boundary, not a failed HTTP fetch or proof that no reserves exist. The September 4 Tron scaffold remains historical; no weights, source dates, whole-supply reconciliation or favorable reserve admission are renewed. The live producer must continue withholding undated snapshots; any separate infrastructure defect retains its own cause. The reserve-composition gap remains open."
+    },
+    {
+      "id": "fd09-pmusd-reconciliation-scope-20261020",
+      "assetId": "pmusd-precious-metals",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "economic-control:mint",
+        "factorKey": "reconciliation",
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "reconciliation"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-20T22:21:00Z",
+      "reviewer": "FD09 bottom-up refinement 2026-10-21",
+      "sourcesRefs": [
+        "source:24c0b7d3648d31afe0b28792"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:b04b07a6a901be20eb18d102",
+        "surface:ca11464dcf004800f5e4ce8f",
+        "surface:bcc95d9a782419b93620c8b6",
+        "surface:88d5335a73ef4aa44dc4b8d3"
+      ],
+      "rationale": "ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required. The prior continuous reconciliation and attestation-only supervision relied on a technical paired-balance dashboard plus a Chainlink/Instruxi upstream ION reserve feed. Current successful issuer collateral, PSM/parameter and September-report searches do not establish a complete pmUSD supply-to-pledged-backing reconciliation process on an evidenced recurring cadence or independent pmUSD-specific attestation. Unknown records the unestablished exact process, not measured absence; the independently established RAAC Safe mint-logic replacement and all gold/liquidity/peg adverse facts remain. Reviewed source scope was discussed with METHOD-AUDIT; no methodology change is requested."
+    },
+    {
+      "id": "fd13-ggbr-reserve-composition-20261020",
+      "assetId": "ggbr-goldfish-gold",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-composition",
+        "factorKey": null,
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "reserve-composition"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-20T22:21:51Z",
+      "reviewer": "FD13 bottom-up refinement 2026-10-21",
+      "sourcesRefs": [
+        "source:22e0a9b27505f427f93f391b"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:9abc239b3a49afbf8e96f229",
+        "surface:66295910d757e12b5dc47619",
+        "surface:fc97c166bbd995e500e4c82d",
+        "surface:666549e5f12949f02afd0ad6",
+        "surface:64de7ebee10f28c9ea87ebe0"
+      ],
+      "rationale": "Current collateral, support, terms, risk and security surfaces were searched on 2026-10-20. Issuer claims identify Happy 2 in-situ gold and a trust, but no dated complete economic reserve-rights schedule and current token-liability reconciliation is published on those surfaces. The September 4 sidecar remains historical; an undated collateral page cannot renew it. Risk disclosures describe digital assets/cash, support retains ION.au references, and terms permit underlying-asset substitution. Do not normalize those scopes into favorable current 100% bullion composition. Researched non-disclosure only; no reserve shortfall or numerical closure is claimed."
+    },
+    {
+      "id": "fd28-apxusd-apyx-supervision-scope-20261020",
+      "assetId": "apxusd-apyx",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "supervision",
+        "pillar": "control",
+        "requiredDatum": "supervision",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-20T22:15:05Z",
+      "reviewer": "FD28 bottom-up refinement 2026-10-21",
+      "sourcesRefs": [
+        "source:34b2693bd7504d560a3005d4"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:dcb8bf2bed07219128a54b55",
+        "surface:c7c5e8aedaa26d0438410369",
+        "surface:d94b6e4dc7abb07d0b2c30a8"
+      ],
+      "rationale": "The current issuer attestation/accounting/legal surfaces and latest September Wolf securities-only examination do not establish a named independent whole-token reserve-to-liability supervisory engagement or exact token issuance prudential regime. Securities ownership/valuation is not whole-liability attestation-only supervision. Unknown preserves the unestablished scope; no absence of supervision is measured."
+    },
+    {
+      "id": "fd28-apyusd-apyx-supervision-scope-20261020",
+      "assetId": "apyusd-apyx",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "supervision",
+        "pillar": "control",
+        "requiredDatum": "supervision",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-20T22:15:05Z",
+      "reviewer": "FD28 bottom-up refinement 2026-10-21",
+      "sourcesRefs": [
+        "source:34b2693bd7504d560a3005d4"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:dcb8bf2bed07219128a54b55",
+        "surface:c7c5e8aedaa26d0438410369",
+        "surface:d94b6e4dc7abb07d0b2c30a8"
+      ],
+      "rationale": "The current issuer attestation/accounting/legal surfaces and latest September Wolf securities-only examination do not establish a named independent whole-token reserve-to-liability supervisory engagement or exact token issuance prudential regime. Securities ownership/valuation is not whole-liability attestation-only supervision. Unknown preserves the unestablished scope; no absence of supervision is measured."
+    },
+    {
+      "id": "fd28-rusd-reservoir-supervision-scope-20261020",
+      "assetId": "rusd-reservoir",
+      "scope": {
+        "componentKey": "economic-control:mint",
+        "exposureId": null,
+        "factorKey": "supervision",
+        "pillar": "control",
+        "requiredDatum": "supervision",
+        "routeKey": null
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-20T22:15:05Z",
+      "reviewer": "FD28 bottom-up refinement 2026-10-21",
+      "sourcesRefs": [
+        "source:784e44d82ba772fd270e6298"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:bc2e3d3c417e648861946e1b",
+        "surface:18b4d96414ef5a6da3f21fa7",
+        "surface:1e5554947cc2924cf463bd28",
+        "surface:3b4fbbb606480e582663caea"
+      ],
+      "rationale": "Current issuer balance-sheet, legal and deployment disclosures do not establish a named token-specific prudential supervisor or independent whole-liability attestation engagement. The prior none annotation lacked positive scoped absence evidence; unknown records researched issuer disclosure limits rather than a measured absence or transfer of reserve-asset regulation."
+    },
+    {
+      "id": "fd31-rwausdi-whole-liability-reconciliation-20261020",
+      "assetId": "rwausdi-multipli",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "economic-control:mint",
+        "factorKey": "reconciliation",
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "reconciliation"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-20T22:21:18Z",
+      "reviewer": "FD31 bottom-up refinement 2026-10-21",
+      "sourcesRefs": [
+        "source:dabcfd462a05dba411cdb6bf",
+        "source:c06b1d4f08bc43c62fd0f69a"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:7aaa2252b7901a0cd86936ea",
+        "surface:f1691f5d71452f4ae366f80d",
+        "surface:2a89f62116d68031d6e2295b",
+        "surface:a4f589fa9251615420340535",
+        "surface:0dba385059c85a8de6d59154",
+        "surface:00974f2755c3a79b8ff93059"
+      ],
+      "rationale": "The exact public rwaUSDi feed reports five opaque liability records and its issuance inventory names only five contracts, while the authored native issuance scope contains seven deployments. The current proof and weekly middleware solvency assertions publish neither a complete deployment-to-liability reconciliation nor documented exclusions and a whole-supply accounting denominator. The generic AFI receipt-vault FAQ does not supply that token-specific join. Recurring whole-liability reserve reconciliation remains undisclosed, not proven absent. This classification does not claim insolvency, a reserve shortfall, or failure of cryptographic computation; independently established uncapped issuance is retained. Source-scope correction preserves the mint review's original start, while this new nondisclosure research admits only at its actual review instant. Owner review required."
+    },
+    {
+      "id": "fd31-rwausdi-exact-supervision-20261020",
+      "assetId": "rwausdi-multipli",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "economic-control:mint",
+        "factorKey": "supervision",
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "supervision"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-20T22:21:18Z",
+      "reviewer": "FD31 bottom-up refinement 2026-10-21",
+      "sourcesRefs": [
+        "source:c06b1d4f08bc43c62fd0f69a"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:7aaa2252b7901a0cd86936ea",
+        "surface:f1691f5d71452f4ae366f80d",
+        "surface:2a89f62116d68031d6e2295b",
+        "surface:a4f589fa9251615420340535",
+        "surface:0dba385059c85a8de6d59154",
+        "surface:00974f2755c3a79b8ff93059"
+      ],
+      "rationale": "The cited AFI FAQ describes an independent attestation network for AFI receipt vaults, not a named financial attestor's engagement or a prudential mandate covering this exact rwaUSDi issuer and its seven native deployments. The data pipeline expressly proves computations over confidential inputs without establishing their truth. Current exact proof, issuance, report and Multipli legal surfaces do not identify qualifying token-specific supervisory assurance. Supervision therefore remains unknown, not a finding that no supervision exists. No independent financial-assurance credit is inferred from a TEE or a generic network description. Original control evidence and review starts remain unchanged; this new research is prospective from its actual timestamp. Owner review required."
+    },
+    {
+      "id": "fd36-uscc-superstate-reconciliation-20261020",
+      "assetId": "uscc-superstate",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "economic-control:mint",
+        "factorKey": "reconciliation",
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "reconciliation"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-20T22:17:50Z",
+      "reviewer": "FD36 bottom-up refinement 2026-10-21",
+      "sourcesRefs": [
+        "source:d87363a63d816fe413869e21",
+        "source:c56c57f29c8212c62f9b693d"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:e24a65d0c587ce6b681ba07a",
+        "surface:1221a31e56f021c1e629eb55",
+        "surface:5d2f419fa3a2d85d28f4fcd7"
+      ],
+      "rationale": "Current USCC terms disclose business-day NAV calculation from assets less liabilities and adjusted outstanding shares, and the security page discloses overlapping ownership records. These support the already-authored internal-ledger workflow, not a public common-checkpoint whole-fund reserve-to-liability reconciliation covering token and book-entry claims. October 19 holdings remain explicitly unaudited signed notionals. Named EY/NAV providers and a portal do not substitute for a retrieved current reconciliation report. Preserve internal-ledger and known unbounded issuer power; the remaining whole-supply assurance question is researched non-disclosure, not unresearched and not measured non-reconciliation."
+    },
+    {
+      "id": "fd36-uscc-superstate-supervision-20261020",
+      "assetId": "uscc-superstate",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "economic-control:mint",
+        "factorKey": "supervision",
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "supervision"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-20T22:17:50Z",
+      "reviewer": "FD36 bottom-up refinement 2026-10-21",
+      "sourcesRefs": [
+        "source:d87363a63d816fe413869e21",
+        "source:c56c57f29c8212c62f9b693d"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:e24a65d0c587ce6b681ba07a",
+        "surface:1221a31e56f021c1e629eb55",
+        "surface:5d2f419fa3a2d85d28f4fcd7"
+      ],
+      "rationale": "The exact product is a Delaware statutory-trust private crypto carry fund restricted to Qualified Purchasers. Current fund, investor and security disclosures name the manager, transfer agent, NAV agent and Anchorage custody but establish no prudential issuance mandate for this exact fund share. A regulated asset custodian, adviser or tokenization service is not prudential supervision of USCC issuance. Keep supervision unknown, rather than invent none or inherit a custodian license; the unestablished issuing mandate is now a researched question."
+    },
+    {
+      "id": "fd37-usdo-buidl-share-maturity-20261020",
+      "assetId": "usdo-openeden",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "factorKey": "maturity",
+        "routeKey": null,
+        "exposureId": "reserve:b1ec2618d1ba75f6761741da",
+        "requiredDatum": "maturityDaysMax"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-20T22:29:29Z",
+      "reviewer": "FD37 bottom-up refinement 2026-10-21",
+      "sourcesRefs": [
+        "source:0078f2c6e49de0c0b12013b9",
+        "source:2fd8e45812806c13e58bfe8a"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:232f263c8a0d83232f7a0811",
+        "surface:56d09a1cefe85b7f3c130fee",
+        "surface:44b59c906cf69f257ccd7d67"
+      ],
+      "rationale": "Current issuer reserve inventory, exact October20 API snapshot and October14 user agreement were researched October20. BUIDL holdings are reported on Polygon but no exact governing share-class instrument or hard maturity of the held BUIDL claim is provided on these surfaces. Holdings maturity/WAM or another fund product cannot substitute for share maturity. This closes the research classification, not the missing maturity datum, and makes no measured long-duration or impairment claim."
+    },
+    {
+      "id": "nr1-mtbill-residual-classification-20261020",
+      "assetId": "mtbill-midas",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-residual",
+        "factorKey": null,
+        "routeKey": null,
+        "exposureId": "reserve:73d591005fcab70e93e48de3",
+        "requiredDatum": "reserveClassification"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-20T22:17:46Z",
+      "reviewer": "NR1 bottom-up refinement 2026-10-21",
+      "sourcesRefs": [
+        "source:17b7a67c63569b1fa35a55e7",
+        "source:3312e348efaa5bfcef353d63"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:eef105109ccb58dad98f96ba",
+        "surface:dc29d6c9f54045fb31915377",
+        "surface:c23d3da4c729ff04428bcb0a"
+      ],
+      "rationale": "Current primary mTBILL API, the registry-linked October 20 SAVE checkpoint and canonical issuer documentation were successfully retrieved. Rounded USTB/BUIDL positions leave a nonzero unidentified remainder; the checkpoint supplies only aggregate protocol equity and no itemized residual. Retain the current captured/curated remainder and all dates and weights. Research changes U to C for the exact residual-classification question, not to known composition and not to zero. Complete instrument/obligor identification and a matched full book remain required."
     }
   ],
   "sourceObservations": [
+    {
+      "id": "source:b136f355a7763602429dd207",
+      "value": {
+        "url": "https://attestation-api.solstice.finance/dashboard",
+        "observedAt": "2026-10-20T22:29:41Z",
+        "datumAsOf": "2026-10-09",
+        "location": "data.ts; data.reserves.interval; data.reserves.timeline final point",
+        "excerpt": "interval periodic; last timeline date 2026-10-09; reserves 213223802.57; supply 210694003.63",
+        "assertion": "The newest matched reserve/supply report remains October 9 despite a weekly issuer commitment. Later cryptographic-attestation timestamps are not a newer matched whole-book comparison."
+      }
+    },
+    {
+      "id": "source:415af2a84b2c1f99b1f6bc68",
+      "value": {
+        "url": "https://docs.ethena.fi/overview/ethena-whitelabel",
+        "observedAt": "2026-10-20T22:39:34Z",
+        "datumAsOf": null,
+        "location": "Client dashboard; Security and transparency; Live deployments",
+        "excerpt": "Partners retain real-time visibility and control over their stablecoin through a dedicated client dashboard, covering supply, backing composition, reserve activity, and operational status.",
+        "assertion": "The exact suiUSDe deployment and operational/custody services are described, but no authoritative recurring whole-supply backing-reconciliation procedure is specified. The separate daily balance API does not prove mechanical complete-book reconciliation."
+      }
+    },
+    {
+      "id": "source:991a1bee41b41a29dd087b73",
+      "value": {
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x986841b77f3aa934d315d48121842e3c622e5440",
+        "observedAt": "2026-10-20T22:39:34Z",
+        "datumAsOf": null,
+        "location": "contracts/FtUSDCore.sol: moduleDebt, totalDebt, mint and burn",
+        "excerpt": "Net outstanding ftUSD minted via each module (mint - burn); Sum of all module debts (system debt attributed to modules).",
+        "assertion": "Verified issuer implementation documents a liability mint/burn ledger, without an asset-side comparison. Complete backing-to-whole-supply reconstruction or recurring reconciliation is not established by the current docs and dashboard."
+      }
+    },
+    {
+      "id": "source:0e696f0c7ba7b9ebc2bfba93",
+      "value": {
+        "url": "https://aegis.accountable.capital:10443/dashboard/YUSD",
+        "observedAt": "2026-10-20T22:29:41Z",
+        "datumAsOf": "2026-10-20T22:16:36Z",
+        "location": "data.reserves.supply_split, total_supply, reserves_split",
+        "excerpt": "Supply split: Ethereum Chain 32830055.27; BNB Smart Chain 1628876.52; Avalanche 83335.24; Arbitrum 10.09. Binance reserve bucket 225361.46306819795.",
+        "assertion": "The report publishes no Base row and no complete ten-deployment liability join. Its Binance reserve bucket does not disclose constituent margin or a complete stressed-realization schedule."
+      }
+    },
+    {
+      "id": "source:3f532057b61be76b230689af",
+      "value": {
+        "url": "https://docs.flyingtulip.com/product-suite/ft-usd/",
+        "observedAt": "2026-10-20T22:39:34Z",
+        "datumAsOf": null,
+        "location": "Selling ftUSD; Risks: Liquidity/exit timing and Parameter risk",
+        "excerpt": "Timing and any small exit/cooldown parameters are shown in-app (subject to change with risk settings and network conditions). Staked assets (LSTs) may require queues; large rebalances can take time.",
+        "assertion": "The current terms do not supply a maximum whole-crvUSD-strategy realization horizon. Same-snapshot partial circuit-breaker availability is a separate producer candidate, not a whole-position unwind guarantee."
+      }
+    },
+    {
+      "id": "source:90a43d68f109ad9053e34839",
+      "value": {
+        "url": "https://mainnet.base.org",
+        "observedAt": "2026-10-20T22:37:50Z",
+        "datumAsOf": "2026-10-20T22:16:35Z",
+        "location": "Base block 52872624 / 0x81a7cb820656e0b4f590ef1db86d0c1c998befe0aba0866d380f444f5bb277ae; eth_call totalSupply/decimals and eth_getCode at exact YUSDOFT",
+        "excerpt": "0xca2671dcd031a72359f456c212f62a9bda737cd7 totalSupply=11626401000000000000; decimals=18; runtime equals Sourcify onchainBytecode.",
+        "assertion": "11.626401 YUSD exists on the exact Base direct burn/mint deployment at the Accountable report clock. This positive omitted liability defeats whole-supply process credit, without estimating its material share or alleging insolvency."
+      }
+    },
+    {
+      "id": "source:09423f178f8cdc3e16f56c37",
+      "value": {
+        "url": "https://www.linkedin.com/posts/anzens-usda_attestation-report-activity-7475533327001821184-awG3",
+        "observedAt": "2026-10-20T22:21:06Z",
+        "datumAsOf": "2026-05-31",
+        "location": "Attached Network Firm examination pages 2-5; issuer publication June 24 2026",
+        "excerpt": "The expressed examination opinion on the above assertions is limited solely to the USDA Reserves Report at the Report Date and Time noted above.",
+        "assertion": "The recovered latest examination is for May 31 2026, signed June 22. It establishes historical whole-USDA reconciliation, not a current recurring report series or present independent supervision; no later current report was established on the searched issuer surfaces."
+      }
+    },
+    {
+      "id": "source:ffd24ef43836cf86bb22b5a8",
+      "value": {
+        "url": "https://docs.polymarket.com/concepts/pusd",
+        "observedAt": "2026-10-20T22:26:09Z",
+        "datumAsOf": null,
+        "location": "Why pUSD; Key facts; Unwrapping",
+        "excerpt": "pUSD is a standard ERC-20 wrapper that represents a USDC claim.",
+        "assertion": "The current wrapper description documents receipt accounting and pause-dependent unwrapping, not a whole-local-liability-to-backing reconciliation regime or cadence."
+      }
+    },
+    {
+      "id": "source:4cc9e1745d531ea31f61f647",
+      "value": {
+        "url": "https://polymarket.com/transparency",
+        "observedAt": "2026-10-20T22:26:09Z",
+        "datumAsOf": null,
+        "location": "Two Platforms, Same Conduct Rules; Scope",
+        "excerpt": "Everything below on this page describes Polymarket International, unless a section names Polymarket US explicitly.",
+        "assertion": "The page distinguishes the international platform from the CFTC-regulated US venue; it does not establish a prudential mandate for the exact Polygon pUSD issuance or a financial reconciliation cadence."
+      }
+    },
+    {
+      "id": "source:6cfd5d4399742f42b046b23d",
+      "value": {
+        "url": "https://docs.trevee.xyz/trevee-earn/sonic-scassets/treasury-backing-address",
+        "observedAt": "2026-10-20T22:26:09Z",
+        "datumAsOf": null,
+        "location": "ETHEREUM - Underlying Stablecoin; final disclosure",
+        "excerpt": "These funds are strategically deployed across different protocols",
+        "assertion": "Accepted assets, vault addresses and third-party portfolio links do not disclose a complete dated native-liability-to-strategy-assets reconciliation, cadence or token-issuer supervisory mandate."
+      }
+    },
+    {
+      "id": "source:afb4abe6e67332516480afd0",
+      "value": {
+        "url": "https://docs.veda.tech/architecture-and-flow-of-funds/core-components.md",
+        "observedAt": "2026-10-20T22:26:09Z",
+        "datumAsOf": null,
+        "location": "Accountant",
+        "excerpt": "Exchange rates are updated offchain and pushed onchain",
+        "assertion": "Operator-published exchange-rate updates with deviation and interval bounds establish pricing mechanics, not whole-book reserve-to-liability reconciliation or prudential supervision."
+      }
+    },
+    {
+      "id": "source:081c3e8e8f1ab7a18825acbe",
+      "value": {
+        "url": "https://wp.isc.money/how-isc-works/the-isc-reserves/key-entities.md",
+        "observedAt": "2026-10-20T22:20:55Z",
+        "datumAsOf": null,
+        "location": "ISC Issuer and ISC Reserves sections",
+        "excerpt": "The ISC Issuer will be operated by the ISC Foundation. ISC users do not have direct ownership rights over the assets themselves.",
+        "assertion": "Issuer functions and reserve ownership are described without an exact supervised legal issuer, prudential token-issuance mandate or named independent whole-liability attestor. This supports unresolved supervision, not proof that no regime exists."
+      }
+    },
+    {
+      "id": "source:d90986fe316de2312de3cdb1",
+      "value": {
+        "url": "https://docs.nest.credit/about/vault-operations-and-valuation",
+        "observedAt": "2026-10-20T22:23:13Z",
+        "datumAsOf": null,
+        "location": "Subscriptions and Minting; NAV and Price Updates",
+        "excerpt": "Routine NAV updates are handled by Nest operations.",
+        "assertion": "NAV inputs, pending movements and price bounds are disclosed, but no complete recurring native-liability-to-backing reconciliation procedure and cadence are stated."
+      }
+    },
+    {
+      "id": "source:2f4b456d883a0a847d5d873f",
+      "value": {
+        "url": "https://docs.nest.credit/security-and-compliance/audits/",
+        "observedAt": "2026-10-20T22:23:13Z",
+        "datumAsOf": null,
+        "location": "Nest Vault Audit Coverage; What the Nest Audits Cover",
+        "excerpt": "Accounting and pricing",
+        "assertion": "The listed engagements concern smart-contract accounting, cross-chain and compliance code; the page publishes no exact-vault recurring financial supply-to-backing reconciliation report."
+      }
+    },
+    {
+      "id": "source:cb1752dc8a571a0de03bf651",
+      "value": {
+        "url": "https://isc.money/assets/index-C7fM2Vnd.js",
+        "observedAt": "2026-10-20T22:20:55Z",
+        "datumAsOf": null,
+        "location": "D$ reserve table; O$ price/supply polling; Transparency Report display",
+        "excerpt": "fetch(\"/api/reserve-balances\"); children:\"ISC Liability\"; children:[\"Last update: \",new Date().toLocaleDateString()]",
+        "assertion": "The reserve table fetches once on mount and labels holdings.ISC as liability. Only separate supply/price feeds poll every sixty seconds; browser date supplies no reserve observation clock or reconciliation cadence."
+      }
+    },
+    {
+      "id": "source:1af94f438bd3618d8cae6711",
+      "value": {
+        "url": "https://wp.isc.money/how-isc-works/the-isc-reserves/oversight.md",
+        "observedAt": "2026-10-20T22:20:55Z",
+        "datumAsOf": null,
+        "location": "ISC Reserves Audit opening notice",
+        "excerpt": "The specific details of this auditing scheme are under consideration and are subject to significant changes.",
+        "assertion": "Proposed quarterly audits are not a completed dated recurring actual-backing versus whole-liability reconciliation."
+      }
+    },
+    {
+      "id": "source:defa77b847cb94713bb67a0d",
+      "value": {
+        "url": "https://docs.cfx.to/docs/key-features.md",
+        "observedAt": "2026-10-20T22:21:32Z",
+        "datumAsOf": "2025-10-21",
+        "location": "Product Capabilities table, Withdrawals",
+        "excerpt": "ACH withdrawals providing 1-2 day settlement; Wire withdrawals with same day settlement.",
+        "assertion": "These generic product timing descriptions do not specify an unconditional MOVEUSD request-to-completed-bank-credit maximum."
+      }
+    },
+    {
+      "id": "source:396b20998f6a11b26097353e",
+      "value": {
+        "url": "https://blocktower.tech/legal/zaru-terms-of-use",
+        "observedAt": "2026-10-20T22:19:57Z",
+        "datumAsOf": "2026-09-16",
+        "location": "Sections 3 and 12",
+        "excerpt": "BlockTower commits to redeem 1 ZARU for 1 ZAR, subject to these Terms, applicable law, and any fees where applicable. Except as disclosed in the Platform User Agreement, the BlockTower Website, or as otherwise disclosed to you prior to completing a transaction in your BlockTower Account, BlockTower will not charge you any fees for minting ZARU with ZAR, or redeeming ZARU for ZAR. You also agree to pay any other fees that may be charged by your bank in connection with sending funds to BlockTower or receiving funds from BlockTower from time to time.",
+        "assertion": "Conditional par entitlement does not establish a complete numeric deduction ceiling or funded same-notional payout capacity."
+      }
+    },
+    {
+      "id": "source:70744b3aa9c612f0843a2ff5",
+      "value": {
+        "url": "https://blocktower.tech/legal/platform-user-agreement",
+        "observedAt": "2026-10-20T22:19:57Z",
+        "datumAsOf": "2026-09-16",
+        "location": "Sections 11 and 17, Redemptions and ZARU Transfers",
+        "excerpt": "You accept and agree that BlockTower provides no guarantee in relation to the Redemption processing period. The person initiating the transfer is solely responsible for executing the transaction properly, which may include, among other things, payment of sufficient network or miners’ fees.",
+        "assertion": "No guaranteed completed-payment maximum or complete numeric bank/network fee bound is supplied by these binding terms."
+      }
+    },
+    {
+      "id": "source:4755f420cfcf20178bad5f8d",
+      "value": {
+        "url": "https://www.eurite.com/about-us/",
+        "observedAt": "2026-10-20T22:18:45Z",
+        "datumAsOf": null,
+        "location": "Safeguarded and secure reserves / Financial Statements for Banking Circle / periodic attestation paragraph",
+        "excerpt": "Ernst & Young conducts periodic attestation on Banking Circle S.A. to ensure that Eurite (EURI) is always backed by reserves on a 1:1 basis.",
+        "assertion": "Issuer asserts periodic EURI attestation but the linked report inventory exposes bank financial statements and a PeckShield contract audit, not a dated EURI reserve-to-supply examination. This does not prove no reconciliation regime exists."
+      }
+    },
+    {
+      "id": "source:34b2693bd7504d560a3005d4",
+      "value": {
+        "url": "https://1731598137-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2F6XK8DXRkFImTNSbo86o2%2Fuploads%2FEaBiRX7mNiG9XqfFOLm9%2FSeptember%202026%20Attestation%20Opinion%20(Final).pdf?alt=media",
+        "observedAt": "2026-10-20T22:15:05Z",
+        "datumAsOf": "2026-10-13",
+        "location": "September 2026 report, pages 1-3; signed October 13",
+        "excerpt": "The securities included in this Report consist of preferred equity securities and on-chain tokenized representations",
+        "assertion": "The September examination covers STRC, STRCx and SATA existence, ownership and valuation at September 15 and 30; it does not reconcile complete apxUSD supply or liabilities to all external reserves."
+      }
+    },
+    {
+      "id": "source:784e44d82ba772fd270e6298",
+      "value": {
+        "url": "https://fireworks-git-master-fortunafi.vercel.app/api/reserves/raw",
+        "observedAt": "2026-10-20T22:15:05Z",
+        "datumAsOf": null,
+        "location": "assets, liabilities, totalAssets and totalLiabilities response fields",
+        "excerpt": "liabilities: rUSD, srUSD, srUSDv2 (wsrUSD)",
+        "assertion": "The accessible issuer balance sheet identifies three aggregate protocol liabilities and reserve positions but provides no upstream observation timestamp or complete deployment/escrow/in-flight reconciliation process and cadence."
+      }
+    },
     {
       "id": "source:dda71e95c984dfeb5e60826b",
       "value": {
@@ -62665,9 +64267,462 @@
         "excerpt": "Any requests submitted after the deadline will be carried over to the next business day. The daily deadline is 8:00 AM Hong Kong time (UTC+8).",
         "assertion": "Hong Kong business-day processing and 08:00 rollover are explicit and can be curated with the reviewed Hong Kong banking calendar. The cutoff page does not turn the operational redemption estimate into a binding end-to-end SLA."
       }
+    },
+    {
+      "id": "source:5ba23108e40558ab27bf2d96",
+      "value": {
+        "url": "https://tether.to/en/legal/",
+        "observedAt": "2026-10-20T22:15:35Z",
+        "datumAsOf": "2026-02-26",
+        "location": "Token Terms section 4.1",
+        "excerpt": "The Reserves are comprised of cash, cash equivalents and other assets and may include loan receivables and other assets from Affiliates.",
+        "assertion": "The terms explicitly include MXNT in the shared reserve model but disclose no MXNT-specific constituent weights or dated full composition."
+      }
+    },
+    {
+      "id": "source:b550894d01c90df9098ad2e0",
+      "value": {
+        "url": "https://api-site.stasis.net/api/dailyStatement?offset=0&limit=5",
+        "observedAt": "2026-10-20T22:15:35Z",
+        "datumAsOf": "2025-12-12",
+        "location": "Newest dailyStatement index object",
+        "excerpt": "id 2301; date 2025-12-12T14:45:08.208Z; amount NaN",
+        "assertion": "The retrieved daily statement archive does not substantiate the previously claimed August 7, 2026 assets-and-liabilities statement or a current recurring whole-supply reconciliation."
+      }
+    },
+    {
+      "id": "source:966b52693883801f9ca75182",
+      "value": {
+        "url": "https://stasis.net/transparency",
+        "observedAt": "2026-10-20T22:15:35Z",
+        "datumAsOf": null,
+        "location": "Digital Asset Transparency; settlement-layer allocation and blockchains",
+        "excerpt": "6 942 132 EURS in circulation; Lithuanian Central Bank via Nexpay EUR 7 147 300.66 100.00%",
+        "assertion": "Displayed reserve and circulation amounts have no common as-of timestamp or complete native-liability reconciliation; retrieval time is not an economic observation date."
+      }
+    },
+    {
+      "id": "source:8932d51aa9ec5d8e9c919a75",
+      "value": {
+        "url": "https://www.telco.in/en/terms-of-use",
+        "observedAt": "2026-10-20T22:15:35Z",
+        "datumAsOf": "2026-06-30",
+        "location": "Section XXIX.25 United States",
+        "excerpt": "Telcoin LLC is registered as a Money Services Business in the US ... eUSD stablecoin services are NOT provided by Telcoin LLC. Rather, eUSD and related services are provided by Telcoin Inc. (Telcoin Digital Asset Bank).",
+        "assertion": "The eXYZ issuer is Telcoin LLC, distinct from the Nebraska-chartered eUSD bank; these terms do not establish prudential supervision of eMXN issuance."
+      }
+    },
+    {
+      "id": "source:9f56a85b26b77ebf9db7efdb",
+      "value": {
+        "url": "https://bank.telco.in/terms-of-use",
+        "observedAt": "2026-10-20T22:15:35Z",
+        "datumAsOf": "2026-06-15",
+        "location": "Sections 2 and 3.2",
+        "excerpt": "eUSD or Stablecoin means the U.S. dollar-backed digital asset stablecoin issued and managed by TDAB ... These affiliate services are provided by separate legal entities and are governed by their own terms and conditions",
+        "assertion": "TDAB bank status and eUSD mandate cannot be transposed to Telcoin LLC eMXN issuance."
+      }
+    },
+    {
+      "id": "source:1cd3edfe4ab8214298d79bbe",
+      "value": {
+        "url": "https://docs.stoneyield.io/docs/protocol/analytics-monitoring",
+        "observedAt": "2026-10-20T22:19:43Z",
+        "datumAsOf": null,
+        "location": "Protocol Statistics",
+        "excerpt": "totalUSDCDeposited: Aggregate USDC ever deposited; totalRewardsDistributed: Total rewards minted; contractUSDCBalance: USDC balance held by protocol",
+        "assertion": "Cumulative deposit/reward counters and current local cash balance do not establish a recurring complete STUSD liabilities-to-current-strategy-assets reconciliation; no dated performed reconciliation is published on this monitoring surface."
+      }
+    },
+    {
+      "id": "source:238eb32e7aa22620a09e5bcb",
+      "value": {
+        "url": "https://docs.idrx.co/services/fees",
+        "observedAt": "2026-10-20T22:38:46Z",
+        "datumAsOf": null,
+        "location": "Redeem IDRX to IDR fee table",
+        "excerpt": "Rp250,000,000 and above: Rp35,000. Some banks have a lower BI-FAST limit.",
+        "assertion": "The published IDR 35,000 base tariff is not a complete bound on all bank-specific and transaction-specific charges."
+      }
+    },
+    {
+      "id": "source:6aba0057e4a216314d1b5d19",
+      "value": {
+        "url": "https://docs.idrx.co/api/transaction-api/get-api-transaction-get-additional-fees",
+        "observedAt": "2026-10-20T22:38:46Z",
+        "datumAsOf": null,
+        "location": "Parameters payment and bankCode; tiered redemption fees",
+        "excerpt": "Some fees depend on the receiving bank. The fee returned without payment and bankCode is not necessarily the fee that will be charged.",
+        "assertion": "Exact applicable deductions require bank and amount inputs; the illustrative API response is not a current authenticated quote. The documented API tiers stop below IDR 1,000,000,000."
+      }
+    },
+    {
+      "id": "source:995a67ebe97aab7b943f4422",
+      "value": {
+        "url": "https://docs.idrx.co/services/redeem-idr",
+        "observedAt": "2026-10-20T22:38:46Z",
+        "datumAsOf": null,
+        "location": "How a redeem is processed; large requests",
+        "excerpt": "For large amounts, send your request to support@idrx.co to be processed. The payout is released by IDRX after review, not automatically at burn time.",
+        "assertion": "The public direct-redemption guide supplies no complete policy-notional all-in fee ceiling or guaranteed single-payout cardinality; release timing does not guarantee final bank receipt."
+      }
+    },
+    {
+      "id": "source:c409ed5df502489b4299373a",
+      "value": {
+        "url": "https://docs.gold-dao.org/other/audit-reports",
+        "observedAt": "2026-10-20T22:34:09Z",
+        "datumAsOf": "2025-09-21",
+        "location": "Current audit index and September 2025 KPMG Swiss AS 920 report, pages 1-2, signed October 2 2025",
+        "excerpt": "Because the above procedures do not constitute either an audit or a review made in accordance with Swiss Auditing Standards, we do not express any assurance on the 7.9 KG gold.",
+        "assertion": "The latest indexed report compares physical gold with GLD NFT certificates, not GLDT ledger liabilities; the index lists March, June and September 2025 only. No current recurring whole-GLDT-supply reconciliation or independent reserve-to-liability attestation is established."
+      }
+    },
+    {
+      "id": "source:ac99df73da89883b8bb49ee4",
+      "value": {
+        "url": "https://help.bity.com/en/articles/9680077-how-can-i-redeem-the-physical-gold-bar-from-my-nfts",
+        "observedAt": "2026-10-20T22:34:09Z",
+        "location": "Steps 3-4; read with GLDT reverse-swap and Bity NFT buyback disclosures",
+        "excerpt": "This fee applies regardless of the size or quantity of gold. At present, physical gold can only be redeemed in Zurich, Switzerland.",
+        "assertion": "CHF 300 is a published pickup component, not a complete physical-to-spendable-USD cost ceiling. Reverse-swap charges depend on NFT count; the separate buyback quotes USDT less 3% and does not establish the physical route all-in USD deductions."
+      }
+    },
+    {
+      "id": "source:590251486c9ecd78271cc2b5",
+      "value": {
+        "url": "https://framerusercontent.com/assets/keEVPCLx5HJ504alVRJUCVRjBz0.pdf",
+        "observedAt": "2026-10-20T22:39:51Z",
+        "location": "Redemption Policy section 3.5",
+        "excerpt": "The EMT Holder is solely responsible for initiating the on-chain transfer and for paying the associated native network/blockchain transaction fees.",
+        "assertion": "The true zero issuer fee does not bound dynamically priced holder gas or establish a complete same-notional all-in cost ceiling. Current policy, whitepaper and bridge/product documentation supply no replacement all-deduction maximum."
+      }
+    },
+    {
+      "id": "source:7cac5be3ff7e52590b09ab56",
+      "value": {
+        "url": "https://framerusercontent.com/assets/keEVPCLx5HJ504alVRJUCVRjBz0.pdf",
+        "observedAt": "2026-10-20T22:39:51Z",
+        "location": "Redemption Policy sections 4.2-4.3",
+        "excerpt": "AllUnity aims to complete the process within five (5) business days, provided that all required documentation has been fully received and verified.",
+        "assertion": "The five-business-day aim is conditional on completed verification and is not an unconditional final-bank-credit deadline; recovery/redemption measures and compliance holds remain. The inherited one-day completed-settlement credit is unsupported."
+      }
+    },
+    {
+      "id": "source:f6bdb16e8a89f0ab83f315cb",
+      "value": {
+        "url": "https://allunity.com/trust-center/",
+        "observedAt": "2026-10-20T22:39:51Z",
+        "location": "Trust Center Audit & security; EURAU whitepaper I.06 cash-or-HQLA envelope",
+        "excerpt": "AllUnity stablecoins are fully backed by reserves, securely held at CRR credit institutions within the European Union and entirely segregated from AllUnity’s operational funds.",
+        "assertion": "The complete reserve category has no disclosed account type, withdrawal condition or one-day realization bound. Generic bank reserves and a cash-or-HQLA permission do not establish the full captured position as demand deposits. Keep original composition and review dates; only unsupported one-day liquidity becomes unknown."
+      }
+    },
+    {
+      "id": "source:a47b4041c3737348d78ea6ea",
+      "value": {
+        "url": "https://brale.xyz/assets/reports/SBC-Stable-Coin-Reserve-Attestation-Report-09-2026.pdf",
+        "observedAt": "2026-10-20T22:39:51Z",
+        "location": "September30 SBC Reserve Report, page2 category table and Criteria & Notes3",
+        "excerpt": "Cash and cash equivalents $20,185,277; U.S. denominated assets held by Brale in unencumbered accounts that are segregated from other accounts of Brale.",
+        "assertion": "Neither the September nor preceding August examination identifies the complete cash-equivalent holdings, deposit account types, withdrawal terms or an immediate final-realization bound. The security page and reserve docs describe typical categories and generic liquidity, not an exact all-category horizon. Withdraw only unsupported immediate liquidity; retain financial assurance and segregation."
+      }
+    },
+    {
+      "id": "source:8e38c6a35ee49fa363a5db6f",
+      "value": {
+        "url": "https://www.anchorage.com/anchorage-digital-bank-n-a-covered-stablecoin-terms",
+        "observedAt": "2026-10-20T22:33:30Z",
+        "datumAsOf": "2025-10-13",
+        "location": "Section 6, Redemption of Covered Stablecoins: Eligibility and Timing",
+        "excerpt": "ADB uses commercially reasonable efforts to process redemption requests promptly. Redemption may be delayed or suspended due to verification procedures, compliance requirements, operational or technical issues, liquidity management, or other factors outside ADB’s control.",
+        "assertion": "USDGO holder redemption is conditional on Client eligibility; no unconditional request-to-completed-bank-payout maximum is stated. The inherited same-day authoring default is unsupported, not a measured slow redemption."
+      }
+    },
+    {
+      "id": "source:425a2e6d40b457f2c3d8ec6f",
+      "value": {
+        "url": "https://superstate.com/assets/ustb",
+        "observedAt": "2026-10-20T22:36:52Z",
+        "datumAsOf": "2026-09-21",
+        "location": "Holdings; Service providers; Disclaimers",
+        "excerpt": "Portfolio holdings are shown as of the date indicated and are unaudited.",
+        "assertion": "PwC and NAV Fund Services are named providers; this public page supplies no current dated complete-liability independent reconciliation report."
+      }
+    },
+    {
+      "id": "source:63060e06204e3731aa051518",
+      "value": {
+        "url": "https://docs.superstate.com/investors/security.md",
+        "observedAt": "2026-10-20T22:36:52Z",
+        "datumAsOf": null,
+        "location": "Overview",
+        "excerpt": "Superstate has overlapping, redundant records of ownership of our funds, including at our fund calculation agent, internally, and on-chain.",
+        "assertion": "The disclosed ownership-record workflow supports internal-ledger recordkeeping, not public whole-fund backing reconciliation or exact prudential issuance supervision."
+      }
+    },
+    {
+      "id": "source:96a2b1307268e052edd43c79",
+      "value": {
+        "url": "https://api.etherfuse.com/statement/attestation/latest",
+        "observedAt": "2026-10-20T22:36:52Z",
+        "datumAsOf": "2026-09-29",
+        "location": "BHR Mexico report pages 1, 6 and 10",
+        "excerpt": "the tokens issued by Etherfuse MX, S.A. de C.V. are backed by available funds in bank accounts and investments in financial instruments",
+        "assertion": "The report enumerates separate MEX and CETES Etherfuse token books, not Brale MXNe liabilities on Base, Solana and Stellar; no MXNe denominator or backing-account join is supplied."
+      }
+    },
+    {
+      "id": "source:72ab858979338ef5f491451a",
+      "value": {
+        "url": "https://usd.startale.com/faq",
+        "observedAt": "2026-10-20T22:36:52Z",
+        "datumAsOf": null,
+        "location": "How can I trust that Startale USD will always be equivalent to a dollar?",
+        "excerpt": "The backing for USDSC is monitored by independent entities, ensuring it is always backed 1:1.",
+        "assertion": "The FAQ names no independent attestor or recurring complete-USDSC-liability report. The linked parent dashboard does not establish such child financial assurance."
+      }
+    },
+    {
+      "id": "source:2f7035329a924a85770cb9d1",
+      "value": {
+        "url": "https://app-api.usdd.io/data-platform/latest-collateral?chain=tron",
+        "observedAt": "2026-10-20T22:19:00Z",
+        "datumAsOf": null,
+        "location": "JSON data.items and data totals",
+        "excerpt": "SA001-A lockedValue=809431711; usddTotalSupply=1297276911.9872293; totalCollateralValue=1999865156.78.",
+        "assertion": "The successful Tron collateral snapshot publishes itemized categories and totals but no source accounting timestamp or cross-chain reserve attribution."
+      }
+    },
+    {
+      "id": "source:ce9b71c6d87d68c086c575d9",
+      "value": {
+        "url": "https://openapi.usdd.io/api/v1/smart-allocator/detail-overview",
+        "observedAt": "2026-10-20T22:19:00Z",
+        "datumAsOf": null,
+        "location": "JSON data.platformSummaryInfos, data.vaultInfos and data.debt",
+        "excerpt": "vaultInfos: tron SA001-A debt=809431711; eth SA001-A debt=435509896; bsc SA001-A debt=0; debt=1244941607.",
+        "assertion": "Global strategy holdings are listed separately from origin-chain debts; no position-to-origin-debt allocation or common accounting checkpoint is supplied."
+      }
+    },
+    {
+      "id": "source:3d6d34347aa828c74b3e1213",
+      "value": {
+        "url": "https://docs.usdd.io/developers/usdd-public-api.md",
+        "observedAt": "2026-10-20T22:19:00Z",
+        "datumAsOf": null,
+        "location": "Common conventions and endpoint index sections 2 and 4",
+        "excerpt": "Public, read-only REST APIs for protocol data — supply, yield, collateral, Vaults and Smart Allocator allocations. statisticTime: Millisecond Unix timestamp.",
+        "assertion": "The issuer documents per-chain collateral snapshots, history and global allocator APIs, but does not supply an accounting checkpoint or origin-debt-to-position join in the inspected successful snapshot responses."
+      }
+    },
+    {
+      "id": "source:24c0b7d3648d31afe0b28792",
+      "value": {
+        "url": "https://pmusd.raac.io/collateral",
+        "observedAt": "2026-10-20T22:21:00Z",
+        "datumAsOf": null,
+        "location": "Reserve Transparency and Collateralization; Directions on Verifying the Collateral; Regulatory and Financial Validation",
+        "excerpt": "The chart provides a real-time visualization of the asset-collateralized structure, displaying the balance between the custodied gold reserves and the corresponding quantity of pmUSD tokens issued against these reserves. ION.au is a product of I-ON Digital Corp. (OTCQB: IONI) and is formally pledged on I-ON's balance sheet as an Intangible Asset.",
+        "assertion": "The issuer pairs pmUSD supply with designated ION.au collateral and links corporate financial filings and geological/legal claims. It does not establish a dated recurring complete pmUSD reserve-to-all-liability reconciliation process or an independent attestation of that token-specific accounting perimeter. Upstream ION reserves are not an exact pmUSD assurance engagement."
+      }
+    },
+    {
+      "id": "source:22e0a9b27505f427f93f391b",
+      "value": {
+        "url": "https://goldfishgold.com/collateral",
+        "observedAt": "2026-10-20T22:21:51Z",
+        "datumAsOf": null,
+        "location": "The coverage; The Happy 2 claims; Collateral FAQ",
+        "excerpt": "The GGBR Trust holds 1,000,000 troy ounces of in-situ gold from the historic Happy 2 claims, and every GGBR holder is a beneficiary of that trust.",
+        "assertion": "The current issuer page states mineral collateral and a 25,000,000-token denominator but provides no dated complete reserve-rights schedule, executed trust/title packet or independent current full-book composition. Spot-price fallback and issuer assertions cannot supply a composition date."
+      }
+    },
+    {
+      "id": "source:dabcfd462a05dba411cdb6bf",
+      "value": {
+        "url": "https://api.afiprotocol.xyz/por/multipli/rwaUSDi/issuance-parameters",
+        "observedAt": "2026-10-20T22:15:38Z",
+        "datumAsOf": null,
+        "location": "token.contracts and token.total_circulation",
+        "excerpt": "The exact rwaUSDi inventory lists chain_id 1, 8453, 143, 42161 and 1672 and total_circulation 479782100.",
+        "assertion": "The published five-contract inventory does not reconcile every authored native rwaUSDi deployment or document exclusions for the complete liability scope."
+      }
+    },
+    {
+      "id": "source:c06b1d4f08bc43c62fd0f69a",
+      "value": {
+        "url": "https://docs.afiprotocol.xyz/proof-of-reserve-network/the-data-pipeline.md",
+        "observedAt": "2026-10-20T22:15:38Z",
+        "datumAsOf": null,
+        "location": "Step 2: Validation",
+        "excerpt": "The system can only prove that computations were done correctly. It can't know if the input data itself is truthful.",
+        "assertion": "Computation over confidential inputs does not establish a named independent financial assurance or supervised rwaUSDi issuance mandate."
+      }
+    },
+    {
+      "id": "source:d87363a63d816fe413869e21",
+      "value": {
+        "url": "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc",
+        "observedAt": "2026-10-20T22:17:50Z",
+        "datumAsOf": null,
+        "location": "NAV per share; Documents",
+        "excerpt": "Outstanding shares are determined based on prior-day balances adjusted for subscriptions and redemptions. Fund documents and statements are available in the Investor Portal.",
+        "assertion": "Daily NAV accounting is disclosed; no public whole-fund token plus book-entry supply-to-backing reconciliation report or prudential issuer mandate is supplied on this page."
+      }
+    },
+    {
+      "id": "source:c56c57f29c8212c62f9b693d",
+      "value": {
+        "url": "https://superstate.com/assets/uscc",
+        "observedAt": "2026-10-20T22:17:50Z",
+        "datumAsOf": "2026-10-19",
+        "location": "Holdings; Disclaimers",
+        "excerpt": "Portfolio holdings are shown as of the date indicated and are unaudited.",
+        "assertion": "October 19 holdings disclose signed futures notional values and fund providers, not a public complete financial-assurance reconciliation or a prudential stablecoin issuance license."
+      }
+    },
+    {
+      "id": "source:0078f2c6e49de0c0b12013b9",
+      "value": {
+        "url": "https://prod-gw.openeden.com/usdo/sys/reserve-composition-last",
+        "observedAt": "2026-10-20T22:29:29Z",
+        "datumAsOf": "2026-10-20T08:00:19Z",
+        "location": "reserve-composition-last: buidlAmount and Polygon chainReserveInfo",
+        "excerpt": "buidlAmount:1499892.2699999998; Polygon hot and cold wallet quantities report the fund position but no governing token/share-class maturity instrument.",
+        "assertion": "Issuer-held BUIDL reserve position is identified; this API does not establish a hard maturity bound for that exact held claim."
+      }
+    },
+    {
+      "id": "source:2fd8e45812806c13e58bfe8a",
+      "value": {
+        "url": "https://docs.openeden.com/usdo/usdo-token/reserve-assets",
+        "observedAt": "2026-10-20T22:29:29Z",
+        "datumAsOf": null,
+        "location": "USDO reserve-asset inventory",
+        "excerpt": "BUIDL is identified as a USDO reserve asset alongside TBILL, VBILL, RLUSD and USDC.",
+        "assertion": "Product reserve identification is not a hard token/share maturity commitment; underlying security duration is not fund-share maturity."
+      }
+    },
+    {
+      "id": "source:17b7a67c63569b1fa35a55e7",
+      "value": {
+        "url": "https://api-prod.midas.app/api/transparency?token=mTBILL",
+        "observedAt": "2026-10-20T22:11:06Z",
+        "datumAsOf": "2026-10-20T21:06:19Z",
+        "location": "reports.main_positions.pv_usd; reports.assets_by_protocol.equity; reports.assets_by_protocol_chain.equity",
+        "excerpt": "USTB 73.8; BUIDL 4.821; equity total 78.6276929124 (USD millions).",
+        "assertion": "The complete reported aggregate is larger than the rounded named holdings by $6,692.9124. The source does not identify the instrument or obligor of that remainder; the Ethereum/Base aggregate gap is included in it, not a second reserve."
+      }
+    },
+    {
+      "id": "source:3312e348efaa5bfcef353d63",
+      "value": {
+        "url": "https://gateway.pinata.cloud/ipfs/QmZTPuoV1fKZ3ej9Fvs58bS3SWJWVP1GZkQQg217xs6NWH",
+        "observedAt": "2026-10-20T22:17:46Z",
+        "datumAsOf": "2026-10-20T09:00:00Z",
+        "location": "claims[onetoken_report]; metadata.proofId; Ethereum registry block 26236714",
+        "excerpt": "onetoken_report equity: total=78.6272269627, wallet=78.6272269627; liabilities={}.",
+        "assertion": "The recovered registry-linked checkpoint authenticates aggregate protocol equity only. It contains no itemized residual instrument or custodian disclosure, and an empty signed liabilities object does not prove complete obligations."
+      }
+    },
+    {
+      "id": "source:3a8183b9b203e793d9b42fd4",
+      "value": {
+        "url": "https://help.bity.com/en/articles/9680077-how-can-i-redeem-the-physical-gold-bar-from-my-nfts",
+        "observedAt": "2026-10-20T22:34:09Z",
+        "datumAsOf": null,
+        "location": "Steps 3-4; read with GLDT reverse-swap and Bity NFT buyback disclosures",
+        "excerpt": "This fee applies regardless of the size or quantity of gold. At present, physical gold can only be redeemed in Zurich, Switzerland.",
+        "assertion": "CHF 300 is a published pickup component, not a complete physical-to-spendable-USD cost ceiling. Reverse-swap charges depend on NFT count; the separate buyback quotes USDT less 3% and does not establish the physical route all-in USD deductions."
+      }
+    },
+    {
+      "id": "source:640b44c21af33247248f9ba2",
+      "value": {
+        "url": "https://framerusercontent.com/assets/keEVPCLx5HJ504alVRJUCVRjBz0.pdf",
+        "observedAt": "2026-10-20T22:39:51Z",
+        "datumAsOf": null,
+        "location": "Redemption Policy section 3.5",
+        "excerpt": "The EMT Holder is solely responsible for initiating the on-chain transfer and for paying the associated native network/blockchain transaction fees.",
+        "assertion": "The true zero issuer fee does not bound dynamically priced holder gas or establish a complete same-notional all-in cost ceiling. Current policy, whitepaper and bridge/product documentation supply no replacement all-deduction maximum."
+      }
+    },
+    {
+      "id": "source:3f7f1498c196d81a9f39c57f",
+      "value": {
+        "url": "https://framerusercontent.com/assets/keEVPCLx5HJ504alVRJUCVRjBz0.pdf",
+        "observedAt": "2026-10-20T22:39:51Z",
+        "datumAsOf": null,
+        "location": "Redemption Policy sections 4.2-4.3",
+        "excerpt": "AllUnity aims to complete the process within five (5) business days, provided that all required documentation has been fully received and verified.",
+        "assertion": "The five-business-day aim is conditional on completed verification and is not an unconditional final-bank-credit deadline; recovery/redemption measures and compliance holds remain. The inherited one-day completed-settlement credit is unsupported."
+      }
+    },
+    {
+      "id": "source:1d7b0af224eefe8bd9c2afaa",
+      "value": {
+        "url": "https://allunity.com/trust-center/",
+        "observedAt": "2026-10-20T22:39:51Z",
+        "datumAsOf": null,
+        "location": "Trust Center Audit & security; EURAU whitepaper I.06 cash-or-HQLA envelope",
+        "excerpt": "AllUnity stablecoins are fully backed by reserves, securely held at CRR credit institutions within the European Union and entirely segregated from AllUnity’s operational funds.",
+        "assertion": "The complete reserve category has no disclosed account type, withdrawal condition or one-day realization bound. Generic bank reserves and a cash-or-HQLA permission do not establish the full captured position as demand deposits. Keep original composition and review dates; only unsupported one-day liquidity becomes unknown."
+      }
+    },
+    {
+      "id": "source:c37e5958c3dfc521ee52eab7",
+      "value": {
+        "url": "https://brale.xyz/assets/reports/SBC-Stable-Coin-Reserve-Attestation-Report-09-2026.pdf",
+        "observedAt": "2026-10-20T22:39:51Z",
+        "datumAsOf": null,
+        "location": "September30 SBC Reserve Report, page2 category table and Criteria & Notes3",
+        "excerpt": "Cash and cash equivalents $20,185,277; U.S. denominated assets held by Brale in unencumbered accounts that are segregated from other accounts of Brale.",
+        "assertion": "Neither the September nor preceding August examination identifies the complete cash-equivalent holdings, deposit account types, withdrawal terms or an immediate final-realization bound. The security page and reserve docs describe typical categories and generic liquidity, not an exact all-category horizon. Withdraw only unsupported immediate liquidity; retain financial assurance and segregation."
+      }
     }
   ],
   "searchedSurfaceObservations": [
+    {
+      "id": "surface:405fcf4a908c3a43b196601e",
+      "value": "https://docs.ethena.fi/overview/ethena-whitelabel"
+    },
+    {
+      "id": "surface:b0acaf0592e9df605b931205",
+      "value": "https://paragraph.com/@aegis-im-2/transparency-dashboard-guide"
+    },
+    {
+      "id": "surface:92d74fbdf119a8a1e62f1f24",
+      "value": "https://paragraph.com/@aegis-im-2/aegis-x-accountable-redefining-yield"
+    },
+    {
+      "id": "surface:127819fc96bbf347802232de",
+      "value": "https://anzensofficial.medium.com/feed"
+    },
+    {
+      "id": "surface:f0ef12fe24c9b0a6253acc0d",
+      "value": "https://www.linkedin.com/posts/anzens-usda_attestation-report-activity-7475533327001821184-awG3"
+    },
+    {
+      "id": "surface:704a872124c6e91278f573a1",
+      "value": "https://polymarket.com/transparency"
+    },
+    {
+      "id": "surface:26bd703c0fcc634664486803",
+      "value": "https://docs.trevee.xyz/"
+    },
+    {
+      "id": "surface:92c2039b0965514812a3bbbe",
+      "value": "https://docs.veda.tech/architecture-and-flow-of-funds/core-components.md"
+    },
+    {
+      "id": "surface:b5fbf6ea95aee8aa4f70eba9",
+      "value": "https://wp.isc.money/how-isc-works/the-isc-reserves/key-entities.md"
+    },
+    {
+      "id": "surface:3b4fbbb606480e582663caea",
+      "value": "https://fireworks-git-master-fortunafi.vercel.app/api/reserves/raw"
+    },
     {
       "id": "surface:02104660b92fdb0837bc2da7",
       "value": "https://morpho.org/terms-of-use/"
@@ -74267,6 +76322,102 @@
     {
       "id": "surface:37f9b2bba447e9efcdb68d01",
       "value": "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token/cut-off-time.md"
+    },
+    {
+      "id": "surface:04ac3cb22a917be0035549e6",
+      "value": "https://docs.idrx.co/api/transaction-api/get-api-transaction-get-additional-fees"
+    },
+    {
+      "id": "surface:ebecd666a87a9d912269b7fc",
+      "value": "https://docs.idrx.co/services/redeem-idr"
+    },
+    {
+      "id": "surface:af8d103c4a1f9b9f7551ba8f",
+      "value": "https://docs.gold-dao.org/tokens/gldt.md"
+    },
+    {
+      "id": "surface:95b173b88b4594c15ab39e4a",
+      "value": "https://docs.gold-dao.org/legal/terms-of-service.md"
+    },
+    {
+      "id": "surface:372ce848a2404eb8e25c3154",
+      "value": "https://gldt.org/"
+    },
+    {
+      "id": "surface:215ad9e9f3b378685faa4b46",
+      "value": "https://framerusercontent.com/assets/keEVPCLx5HJ504alVRJUCVRjBz0.pdf"
+    },
+    {
+      "id": "surface:ac85c57455d1f7f5bc4dbd10",
+      "value": "https://allunity.com/trust-center/"
+    },
+    {
+      "id": "surface:9872fdf39398173de349ec49",
+      "value": "https://brale.xyz/assets/reports/SBC-Stable-Coin-Reserve-Attestation-Report-09-2026.pdf"
+    },
+    {
+      "id": "surface:8d2ed83a404e59a14499d827",
+      "value": "https://docs.superstate.com/investors/api/balances-api.md"
+    },
+    {
+      "id": "surface:3d981045d09ae129cdd3acf1",
+      "value": "https://usdd.io/data"
+    },
+    {
+      "id": "surface:239b71d2f8eef1337e6eb04f",
+      "value": "https://docs.usdd.io/developers/usdd-public-api.md"
+    },
+    {
+      "id": "surface:4e4294e75e291fc76c54b1e5",
+      "value": "https://app-api.usdd.io/data-platform/latest-collateral?chain=tron"
+    },
+    {
+      "id": "surface:33a179747b73d6a1a02e895a",
+      "value": "https://openapi.usdd.io/api/v1/data-platform/latest-collateral?chain=eth"
+    },
+    {
+      "id": "surface:11e9c89dc1663ac00cdd86c8",
+      "value": "https://openapi.usdd.io/api/v1/data-platform/latest-collateral?chain=bsc"
+    },
+    {
+      "id": "surface:b0e620326c9605e806f801eb",
+      "value": "https://openapi.usdd.io/api/v1/data-platform/overview/info"
+    },
+    {
+      "id": "surface:92cb54529f170e1c4c611b0a",
+      "value": "https://docs.usdd.io/security/audits.md"
+    },
+    {
+      "id": "surface:ca11464dcf004800f5e4ce8f",
+      "value": "https://docs.raac.io/psm-vault/"
+    },
+    {
+      "id": "surface:bcc95d9a782419b93620c8b6",
+      "value": "https://docs.raac.io/parameters-psm/"
+    },
+    {
+      "id": "surface:88d5335a73ef4aa44dc4b8d3",
+      "value": "https://blog.raac.io/research/market-report-september-2026"
+    },
+    {
+      "id": "surface:7aaa2252b7901a0cd86936ea",
+      "value": "https://api.afiprotocol.xyz/por/multipli/rwaUSDi/issuance-parameters"
+    },
+    {
+      "id": "surface:a4f589fa9251615420340535",
+      "value": "https://docs.afiprotocol.xyz/resources/faqs.md"
+    },
+    {
+      "id": "surface:0dba385059c85a8de6d59154",
+      "value": "https://docs.afiprotocol.xyz/proof-of-reserve-network/the-data-pipeline.md"
+    },
+    {
+      "id": "surface:44b59c906cf69f257ccd7d67",
+      "value": "https://docs.openeden.com/usdo/legal/user-agreement"
+    },
+    {
+      "id": "surface:dc29d6c9f54045fb31915377",
+      "value": "https://gateway.pinata.cloud/ipfs/QmZTPuoV1fKZ3ej9Fvs58bS3SWJWVP1GZkQQg217xs6NWH"
     }
   ]
 }

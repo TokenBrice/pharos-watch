@@ -7,7 +7,7 @@
     "backing": "rwa-backed",
     "governance": "centralized"
   },
-  "collateral": "USD reserve assets described in Anzens' terms. The January 31, 2026 accountant examination identifies fiat reserves custodied through BitGo Trust and Superstate Short Duration U.S. Government Securities Fund shares held directly by Anzens; current constituent weights are not disclosed.",
+  "collateral": "The May 31, 2026 independent accountant examination identifies $8,390,019 of Superstate Short Duration U.S. Government Securities Fund book-entry shares held directly by Anzens and $556,609 of U.S. dollars under BitGo Trust custody. This historical report does not establish current reserve weights.",
   "pegMechanism": "Direct 1:1 USD redemption through Anzens via KYC-verified bank transfers; minting and burning available to retail and institutional users in eligible U.S. states",
   "mechanismArchetype": "fiat-cash",
   "mechanismArchetypeReview": {
@@ -31,6 +31,41 @@
   "detailProvider": "defillama",
   "geckoId": "anzens-usda",
   "cmcSlug": "anzens",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://www.linkedin.com/posts/anzens-usda_attestation-report-activity-7475533327001821184-awG3",
+    "provider": "The Network Firm LLP (AICPA examination; latest retrieved period May 31, 2026, signed June 22)",
+    "attestorTier": "niche",
+    "cadence": "ad-hoc",
+    "latestReport": {
+      "periodEnd": "2026-05-31",
+      "publishedAt": "2026-06-24",
+      "publishedAtBasis": "explicit",
+      "assuranceMethod": "examination",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "FD17 bottom-up refinement 2026-10-21; report retrieved 2026-10-20, historical period retained",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Anzens issuer publication, June 24 2026: five-page May 31 USDA examination signed June 22",
+          "url": "https://www.linkedin.com/posts/anzens-usda_attestation-report-activity-7475533327001821184-awG3"
+        },
+        {
+          "label": "The Network Firm USDA examination PDF recovered from issuer document attachment",
+          "url": "https://media.licdn.com/dms/document/media/v2/D561FAQHjBb-cNmmw-w/feedshare-document-pdf-analyzed/B56Z723v_nH4AY-/0/1782258271385?e=1793232000&v=beta&t=QtGXfpP88xOgN5eTs5mxNCZOUx10Y7I4PmuXDgIFshw"
+        },
+        {
+          "label": "Koios exact USDA policy/asset-name to examined fingerprint correspondence",
+          "url": "https://api.koios.rest/api/v1/policy_asset_list?_asset_policy=fe7c786ab321f41c654ef6c1af7b3250a613c24e4213e0425a7ae456"
+        },
+        {
+          "label": "Issuer monthly USDA examination publication statement",
+          "url": "https://www.linkedin.com/posts/anzens-usda_anzens-january-attestation-report-activity-7430042803411271680-9qRD"
+        }
+      ]
+    }
+  },
   "links": [
     {
       "label": "Website",

@@ -2,7 +2,7 @@
   "id": "mxne-real-mxn",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-reconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "MXNe is issued by Brale across Base (BraleToken ERC1967 proxy), Solana (SPL mint), and Stellar (issuer account); on each chain a single issuer-controlled EOA/keypair holds all mint and admin rights.",
     "upgradeability": {
@@ -82,10 +82,10 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "periodic",
-    "supervision": "attestation-only",
+    "reconciliation": "unknown",
+    "supervision": "unknown",
     "review": {
-      "evidence": "At Base block 47200644: BraleToken proxy 0x269cae7dc59803e5c596c95756faeebb6030e0af (ERC1967 → impl 0x2a6c613bd6288b1f7e1c02393f1cf92444eadee5, source BraleToken confirmed on Blockscout). MINTER_ROLE and DEFAULT_ADMIN_ROLE both held by EOA 0xb180f98037a63a3dca66b6b4ddbf250265b65110. Solana: mintAuthority and freezeAuthority = keypair 3mdd4X7wJjWmhF99jfTNGmSr39EXSAXcdEiS47GejduH (Solana System Program owner = regular keypair). Stellar: issuer GCQCNWT…KHZR is a single-key account. All three chains show Brale-controlled single-EOA/keypair issuer model consistent with documented permissioned mint/redeem. Mint-tier review (2026-07-15): BHR Mexico performs recurring independent reasonable-assurance examinations for Etherfuse MX, S.A. de C.V.; the current primary latest endpoint returns the report dated 2026-06-26, reconciling token commitments to bank and investment assets. FinCEN and state transmitter records match Brale Inc., but those are AML/payments permissions rather than prudential stablecoin-issuer supervision. Economic-posture fields reviewed 2026-08-15: issuer-controlled direct mint or immediate minter-administration paths are economically unbounded; existing whole-supply periodic reconciliation and independent attestation evidence remain supported.",
+      "evidence": "At Base block 47200644: BraleToken proxy 0x269cae7dc59803e5c596c95756faeebb6030e0af (ERC1967 → impl 0x2a6c613bd6288b1f7e1c02393f1cf92444eadee5, source BraleToken confirmed on Blockscout). MINTER_ROLE and DEFAULT_ADMIN_ROLE both held by EOA 0xb180f98037a63a3dca66b6b4ddbf250265b65110. Solana: mintAuthority and freezeAuthority = keypair 3mdd4X7wJjWmhF99jfTNGmSr39EXSAXcdEiS47GejduH (Solana System Program owner = regular keypair). Stellar: issuer GCQCNWT…KHZR is a single-key account. All three chains show Brale-controlled single-EOA/keypair issuer model consistent with documented permissioned mint/redeem. Mint-tier review (2026-07-15): BHR Mexico performs recurring independent reasonable-assurance examinations for Etherfuse MX, S.A. de C.V.; the primary latest endpoint then returned the report dated 2026-06-26, reconciling Etherfuse token commitments to bank and investment assets. FinCEN and state transmitter records match Brale Inc., but those are AML/payments permissions rather than prudential stablecoin-issuer supervision. ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required, verified 2026-10-20; original economic-posture review start 2026-08-15 and all authority pins retained. The current BHR report dated 2026-09-29 compares Etherfuse's own enumerated Stablebond liabilities (including separate MEX and CETES token identities) with its backing. It does not enumerate the Brale-issued MXNe liabilities on Base, Solana and Stellar or join them to the upstream Stablebond account. Brale's current MXNe product, Etherfuse partnership case study, launch disclosure and public service terms do not supply that missing complete-book comparison or a named recurring independent MXNe attestation. Consequently the earlier whole-supply periodic/attestation-only assertion is withdrawn to unknown/unknown. The documented CETES backing relationship remains; no absence of private reconciliation, measured reserve deficit or insolvency is asserted.",
       "reviewer": "Codex SOL-V mint-tier research; Sol economic-posture batch 2026-08-15",
       "reviewedAt": "2026-08-15",
       "sources": [
@@ -112,6 +112,14 @@
         {
           "label": "BHR Mexico latest Etherfuse assurance report",
           "url": "https://api.etherfuse.com/statement/attestation/latest"
+        },
+        {
+          "label": "Brale Etherfuse case study and MXNe reserve-management scope (retrieved 2026-10-20)",
+          "url": "https://brale.xyz/case-studies/etherfuse"
+        },
+        {
+          "label": "Brale public service terms, updated 2026-05-27 (retrieved 2026-10-20)",
+          "url": "https://brale.xyz/legal/terms"
         }
       ]
     }

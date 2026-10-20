@@ -108,12 +108,12 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "continuous",
+    "reconciliation": "periodic",
     "supervision": "none",
     "review": {
-      "evidence": "At Sui checkpoint 328957731, USDsui's TreasuryCap remained wrapped inside Stablecoin<RESERVE_LEDGER, USDSUI> in the shared TokenAuthority. Bridge's operational minter retained the typed USDsui and reserve-ledger MinterRole entries, each with max_amount 100000000000000 and amount_used 99223549490000 base units. These parameters do not prove an immutable whole-system cap; reset and modification semantics remain unresolved. Bridge mint-package UpgradeCap policy 0, version 1 remained address-owned by 0xb7fec6160bbb02eed26e2ffd24c458e1a391c88cd47018e973ef82d2d7519423. Bridge's USDsui public transparency response dated 2026-10-01T06:50:42Z reports matching total_onchain_amount and total_reserve_amount of 76870543.2 and collateralization_ratio 1.0. This is issuer-reported supply-to-reserve reconciliation, not independent assurance.",
-      "reviewer": "Sol curation pass 2026-10-01 (CurA36SOFID)",
-      "reviewedAt": "2026-10-01",
+      "evidence": "At Sui checkpoint 328957731, USDsui's TreasuryCap remained wrapped inside Stablecoin<RESERVE_LEDGER, USDSUI> in the shared TokenAuthority. Bridge's operational minter retained the typed USDsui and reserve-ledger MinterRole entries, each with max_amount 100000000000000 and amount_used 99223549490000 base units. These parameters do not prove an immutable whole-system cap; reset and modification semantics remain unresolved. Bridge mint-package UpgradeCap policy 0, version 1 remained address-owned by 0xb7fec6160bbb02eed26e2ffd24c458e1a391c88cd47018e973ef82d2d7519423. Bridge's USDsui public transparency response dated 2026-10-01T06:50:42Z reports matching total_onchain_amount and total_reserve_amount of 76870543.2 and collateralization_ratio 1.0. This is issuer-reported supply-to-reserve reconciliation, not independent assurance. Reconciliation-only correction 2026-10-20 C24: Bridge Building Inc stablecoin terms section 2 commits reserve market value at 5pm New York time on each Federal Reserve business day at least equal to all outstanding Bridge Stablecoins. The exact USDsui comparison API, source last_updated 2026-10-20T22:20:52Z, publishes total_onchain_amount = total_reserve_amount = $78,594,236.24 and collateralization_ratio = 1.0; the USDsui reserve page identifies only its canonical Sui deployment. This governing daily whole-book commitment plus observable exact-token comparison establishes issuer-operated periodic reconciliation under D33, not mechanical continuous reconciliation, independent assurance or prudential supervision. Original October 1 authority review and all checkpoint pins are retained without renewal; October 20 dates only this newly admitted process evidence.",
+      "reviewer": "C24 bottom-up refinement 2026-10-21 (reconciliation only); original authority review: Sol curation pass 2026-10-01 (CurA36SOFID)",
+      "reviewedAt": "2026-10-20",
       "sources": [
         {
           "label": "Bridge issuance overview",
@@ -146,6 +146,14 @@
         {
           "label": "Bridge reporting and transparency documentation",
           "url": "https://apidocs.bridge.xyz/platform/issuance/reporting-and-transparency"
+        },
+        {
+          "label": "Bridge Building Inc binding stablecoin terms section 2 daily whole-book coverage (retrieved 2026-10-20)",
+          "url": "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc"
+        },
+        {
+          "label": "Exact USDsui reserve comparison and Sui deployment inventory (retrieved 2026-10-20)",
+          "url": "https://reserves.bridge.xyz/usd_sui"
         }
       ]
     }

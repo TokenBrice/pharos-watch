@@ -2,9 +2,9 @@
   "id": "gldt-gold-dao",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "unbounded-reconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "manual-review",
-    "summary": "D14 review 2026-10-03: current ICRC ledger metadata still identifies 6f6ua-hqaaa-aaaar-qairq-cai as minting account; IC API reports its sole controller as Gold DAO Root and module hash 720c3678a3605755a1d010532235b6ecc2b8e441ca5ccfda05db1bda1ef5fd8c. The live module is not bound to verified source enforcing NFT-backed minting. The whitepaper is not a construction certificate. Economic cap is unknown, not an asserted arbitrary-mint finding; the existing direct minter conservatively encodes the unbounded branch and periodic reconciliation yields unbounded-reconciled. SNS upgrade authority alone is not a new D14 trigger. No D29 certificate is asserted.",
+    "summary": "ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required (2026-10-20): the existing direct-minter and unverified construction boundary remain, with economicCapSemantics unknown. KPMG's latest published Swiss AS 920 factual-findings report compares gold to GLD NFT certificates, expressly gives no assurance and does not reconcile GLDT liabilities; periodic reconciliation and attestation-only supervision are withdrawn to unknown. Current IC API observations identify ORIGYN Root leu43-oiaaa-aaaaq-aadgq-cai as sole controller of both ledger and swap canisters, replacing the historical Gold DAO root. No new arbitrary-mint finding or D29 certificate is asserted.",
     "controls": [
       {
         "label": "GLDT ledger minting account (Gold DAO dapp/swap canister)",
@@ -14,7 +14,7 @@
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "GLDT minting is economically bounded at 100 GLDT per gram of locked GLD NFT per the Gold DAO whitepaper; the live code path enforcing that bound inside the canister is not independently verified.",
-        "evidence": "Reproducible primary reads 2026-07-27: the ICRC API's GLDT ledger metadata (6c7su-kiaaa-aaaar-qaira-cai) returns icrc1_minting_account.owner = 6f6ua-hqaaa-aaaar-qairq-cai with total supply 59450000000000 (8 decimals), establishing this canister as the sole ledger minting account; the IC API shows the same canister (name \"Gold DAO Dapp\") controlled solely by Gold DAO Root tw2vt-hqaaa-aaaaq-aab6a-cai. The whitepaper fixes the mint rule at 100 GLDT per 1 g of locked GLD NFT.",
+        "evidence": "Reproducible primary reads 2026-07-27: the ICRC API's GLDT ledger metadata (6c7su-kiaaa-aaaar-qaira-cai) returns icrc1_minting_account.owner = 6f6ua-hqaaa-aaaar-qairq-cai with total supply 59450000000000 (8 decimals), establishing this canister as the sole ledger minting account; the IC API shows the same canister (name \"Gold DAO Dapp\") controlled solely by Gold DAO Root tw2vt-hqaaa-aaaaq-aab6a-cai. The whitepaper fixes the mint rule at 100 GLDT per 1 g of locked GLD NFT. Correction verified 2026-10-20: IC API record updated 2026-10-20T21:42:35.370037 names this same swap canister ORIGYN Dapp, with sole controller leu43-oiaaa-aaaaq-aadgq-cai and unchanged module hash 720c3678a3605755a1d010532235b6ecc2b8e441ca5ccfda05db1bda1ef5fd8c. Historical observations are retained, not treated as current controller evidence.",
         "chain": "icp",
         "address": "6f6ua-hqaaa-aaaar-qairq-cai",
         "deploymentRefs": [
@@ -44,17 +44,17 @@
       },
       {
         "chain": "icp",
-        "address": "tw2vt-hqaaa-aaaaq-aab6a-cai",
+        "address": "leu43-oiaaa-aaaaq-aadgq-cai",
         "deploymentRefs": [
           "icp:6c7su-kiaaa-aaaar-qaira-cai"
         ],
-        "label": "Gold DAO SNS governance (canister controller)",
+        "label": "ORIGYN SNS root (canister controller)",
         "role": "governor",
         "authorityType": "dao-governor",
         "directMintAbility": "upgrade-only",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "The Internet Computer SNS DAO is the controlling authority of the GLDT swap and ledger canisters and can upgrade their code, so governance can alter the mint rule and its economic bound; GLDT is issued and governed by the Gold DAO.",
+        "capDescription": "Current IC API observations identify ORIGYN Root as the sole controller of the GLDT swap and ledger canisters, with ORIGYN Governance controlling Root and Root controlling Governance. This SNS controller loop can upgrade their code; no construction-bound cap or complete governance-process certificate is established.",
         "sources": [
           {
             "label": "Internet Computer API: GLDT ledger",
@@ -65,15 +65,27 @@
             "url": "https://ic-api.internetcomputer.org/api/v3/canisters/tw2vt-hqaaa-aaaaq-aab6a-cai"
           },
           {
+            "label": "Current ORIGYN Root controller record, retrieved 2026-10-20",
+            "url": "https://ic-api.internetcomputer.org/api/v3/canisters/leu43-oiaaa-aaaaq-aadgq-cai"
+          },
+          {
+            "label": "Current ORIGYN Governance controller record, retrieved 2026-10-20",
+            "url": "https://ic-api.internetcomputer.org/api/v3/canisters/lnxxh-yaaaa-aaaaq-aadha-cai"
+          },
+          {
+            "label": "Gold DAO GLDT documentation: moved to ORIGYN, retrieved 2026-10-20",
+            "url": "https://docs.gold-dao.org/tokens/gldt.md"
+          },
+          {
             "label": "Internet Computer API: Gold DAO Governance",
             "url": "https://ic-api.internetcomputer.org/api/v3/canisters/tr3th-kiaaa-aaaaq-aab6q-cai"
           }
         ],
-        "evidence": "Re-read 2026-07-27: the Internet Computer API identifies 6c7su... as the Gold DAO GLDT Ledger controlled solely by Gold DAO Root tw2vt..., and the minting-account canister 6f6ua... is likewise controlled solely by Root. Gold DAO Root is controlled by Gold DAO Governance tr3th..., and Governance is in turn controlled by Root, confirming the live SNS controller loop for swap and ledger upgrades."
+        "evidence": "Historical pin 2026-07-27: GLDT ledger and minting-account canister were controlled by Gold DAO Root tw2vt-hqaaa-aaaaq-aab6a-cai, with Gold DAO Governance tr3th-kiaaa-aaaaq-aab6q-cai forming the SNS controller loop. Superseding primary IC API observations retrieved 2026-10-20, each updated 2026-10-20T21:42:35: ledger 6c7su-kiaaa-aaaar-qaira-cai and swap 6f6ua-hqaaa-aaaar-qairq-cai both name sole controller ORIGYN Root leu43-oiaaa-aaaaq-aadgq-cai; that Root names sole controller ORIGYN Governance lnxxh-yaaaa-aaaaq-aadha-cai, and Governance names Root. Official GLDT documentation independently states that GLDT moved to ORIGYN. The correction changes the current controller identity, not the preserved upgrade capability or historical pin."
       }
     ],
     "review": {
-      "evidence": "Follow-up 2026-07-27 resolves the 2026-07-20 open questions with reproducible primary ICP reads. (1) The ICRC API's GLDT ledger metadata returns icrc1_minting_account.owner = 6f6ua-hqaaa-aaaar-qairq-cai (total supply 59450000000000 at 8 decimals), binding the live ledger minting account to the Gold DAO dapp/swap canister. (2) The IC API enumerates the complete controller chain: the minting canister and the GLDT ledger are each controlled solely by Gold DAO Root tw2vt-hqaaa-aaaaq-aab6a-cai, Root is controlled by Gold DAO Governance tr3th-kiaaa-aaaaq-aab6q-cai, and Governance is controlled by Root, the standard SNS loop, so the Gold DAO SNS is the only authority that can alter the mint code or its economic bound, via proposal-driven canister upgrade. (3) The live code path enforcing the 100-GLDT-per-gram locked-GLD-NFT rule remains unverified at source level; the bound is taken from the issuer whitepaper, so confidence stays manual-review rather than verified. GLDT supply is backed by locked GLD NFTs representing KPMG-audited Swiss vault gold on a quarterly attestation cycle. D14 review 2026-10-03: current ICRC ledger metadata still identifies 6f6ua-hqaaa-aaaar-qairq-cai as minting account; IC API reports its sole controller as Gold DAO Root and module hash 720c3678a3605755a1d010532235b6ecc2b8e441ca5ccfda05db1bda1ef5fd8c. The live module is not bound to verified source enforcing NFT-backed minting. The whitepaper is not a construction certificate. Economic cap is unknown, not an asserted arbitrary-mint finding; the existing direct minter conservatively encodes the unbounded branch and periodic reconciliation yields unbounded-reconciled. SNS upgrade authority alone is not a new D14 trigger. No D29 certificate is asserted.",
+      "evidence": "Historical July 27 and October 3 reviews established minting account 6f6ua-hqaaa-aaaar-qairq-cai, its July supply pin 59450000000000 raw at 8 decimals, and the then-Gold DAO SNS controller loop. They did not bind live swap Wasm to verified NFT-backed construction; the whitepaper alone remains insufficient. The October 3 swap module hash was 720c3678a3605755a1d010532235b6ecc2b8e441ca5ccfda05db1bda1ef5fd8c. ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required (2026-10-20): the earlier phrase 'KPMG-audited ... quarterly attestation cycle' did not establish recurring whole-GLDT-liability reconciliation or independent financial assurance. The current audit index still ends at the September 21, 2025 Swiss AS 920 report, signed October 2, 2025, comparing 7.9 kg of gold to 790 GLD NFT certificates and expressly disclaiming any audit, review or assurance; GLDT circulating liabilities are outside its scope. Withdraw reconciliation periodic and supervision attestation-only to unknown, not none. This is withdrawal of unsupported favorable credit, not evidence of non-reconciliation, a reserve shortfall or a newly proved arbitrary mint. Preserve economicCapSemantics unknown and all historical source pins. Current IC API observations updated October 20 identify ORIGYN Root leu43-oiaaa-aaaaq-aadgq-cai as sole controller of both GLDT ledger and swap, with ORIGYN Governance lnxxh-yaaaa-aaaaq-aadha-cai forming the SNS loop; the swap module hash is unchanged. The historical Gold DAO controller identity is superseded without renewing the aggregate review start. No D29 certificate is asserted.",
       "reviewer": "Sol v10.02 D14/D29 sweep (U11BoundedB)",
       "reviewedAt": "2026-10-03",
       "sources": [
@@ -98,6 +110,26 @@
           "url": "https://ic-api.internetcomputer.org/api/v3/canisters/tr3th-kiaaa-aaaaq-aab6q-cai"
         },
         {
+          "label": "Gold DAO audit index, retrieved 2026-10-20: latest September 2025 factual findings",
+          "url": "https://docs.gold-dao.org/other/audit-reports"
+        },
+        {
+          "label": "KPMG Swiss AS 920 factual findings, September 21 2025, signed October 2 2025; retrieved 2026-10-20",
+          "url": "https://2669388926-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FhyYilEcr51QGR1f1ZQ8w%2Fuploads%2Fsq2DN60j11A1A0uL3tHX%2FAudit%20Report%2009-2025.pdf?alt=media&token=7a7a500e-1321-4e9d-8046-46ae8199e244"
+        },
+        {
+          "label": "Current ORIGYN Root controller record, retrieved 2026-10-20",
+          "url": "https://ic-api.internetcomputer.org/api/v3/canisters/leu43-oiaaa-aaaaq-aadgq-cai"
+        },
+        {
+          "label": "Current ORIGYN Governance controller record, retrieved 2026-10-20",
+          "url": "https://ic-api.internetcomputer.org/api/v3/canisters/lnxxh-yaaaa-aaaaq-aadha-cai"
+        },
+        {
+          "label": "GLDT moved to ORIGYN, retrieved 2026-10-20",
+          "url": "https://docs.gold-dao.org/tokens/gldt.md"
+        },
+        {
           "label": "Gold DAO whitepaper: GLDT swap",
           "url": "https://2669388926-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FhyYilEcr51QGR1f1ZQ8w%2Fuploads%2F1ybIyXj78WyXQ1UO6Clj%2FGoldDAO_Whitepaper.pdf?alt=media&token=7dce3beb-cc89-406f-a2df-a83b3737a021"
         }
@@ -110,7 +142,7 @@
         "icp:6c7su-kiaaa-aaaar-qaira-cai"
       ],
       "canChangeMintLogic": true,
-      "controlRef": "Gold DAO SNS governance (canister controller)",
+      "controlRef": "ORIGYN SNS root (canister controller)",
       "observedAt": "2026-07-27",
       "sources": [
         {
@@ -122,13 +154,17 @@
           "url": "https://ic-api.internetcomputer.org/api/v3/canisters/6c7su-kiaaa-aaaar-qaira-cai"
         },
         {
+          "label": "Current ORIGYN Root controller record, retrieved 2026-10-20",
+          "url": "https://ic-api.internetcomputer.org/api/v3/canisters/leu43-oiaaa-aaaaq-aadgq-cai"
+        },
+        {
           "label": "Internet Computer API: Gold DAO Root",
           "url": "https://ic-api.internetcomputer.org/api/v3/canisters/tw2vt-hqaaa-aaaaq-aab6a-cai"
         }
       ]
     },
     "economicCapSemantics": "unknown",
-    "reconciliation": "periodic",
-    "supervision": "attestation-only"
+    "reconciliation": "unknown",
+    "supervision": "unknown"
   }
 }

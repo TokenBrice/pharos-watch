@@ -83,17 +83,54 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
   "cadc-cad-coin": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
-    costModel: fixedFee(
-      0,
-      "Loon's support centre states no fees from Loon and that standard on-chain gas applies per transaction. This is the issuer fee only; partner-ramp, bank, and network charges are not promised to be zero",
+    costModel: undisclosedReviewedFee(
+      "Loon's support centre advertises no issuer fee, but governing terms section 17(j) permits a percentage-based exchange fee disclosed at the transaction and bank/wire charges, plus separate customer-bank fees. No complete current all-in deduction ceiling is published.",
     ),
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["cost", "settlement"],
+      rationale:
+        "ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required. Retrieved 2026-10-20: Loon Payments Inc. terms last updated February 2026 restrict direct redemption to approved Authorized Participants with Canadian bank accounts. Section 17(j) promises execution only as soon as commercially reasonable, disclaims payment-system/compliance/operational delays, and allows transaction-specific percentage fees and bank/wire deductions. Neither the support-page no-fee statement nor the reserve bank's on-demand account product proves a complete holder exit cost or final CAD bank-credit deadline.",
+      reviewedAt: "2026-10-20",
+      docs: [
+        sourceRef("Loon governing CADC terms, sections 1, 6 and 17(j) (retrieved 2026-10-20)", "https://loon.finance/terms-of-service/", [
+          "route",
+          "access",
+          "fees",
+          "settlement",
+        ]),
+        sourceRef("Loon support-page fee claim (retrieved 2026-10-20)", "https://loon.finance/support-centre/", ["fees"]),
+      ],
+    },
     docs: [
       sourceRefRouteCapacity("CADC FAQ", "https://faq.paytrie.com/col/cadc-faqs"),
       sourceRef("Loon website", "https://loon.finance/", ["route"]),
       sourceRef("Loon support centre (reviewed 2026-10-03)", "https://loon.finance/support-centre/", ["fees"]),
     ],
   },
-  ...expandIds(["vgbp-vnx"], vnxGitbookBase),
+  "vgbp-vnx": {
+    ...vnxGitbookBase,
+    reviewedAt: "2026-10-20",
+    costModel: {
+      ...documentedVariableFee(
+        "VNX Global Terms Annex III(C) charges GBP 30 for a GBP SWIFT withdrawal from the platform account. The separate 3% unused-funds charge depends on cumulative account funding above USD 100,000-equivalent and less than 75% usage; Annex III(A)'s 2% conversion fee applies to a separate instructed service. Account-history, payout-rail, network and third-party charges remain scenario-dependent and unbounded.",
+        "formula",
+      ),
+      feeComponents: [{ currency: "GBP", terms: { flatAmount: 30 } }],
+    },
+    docs: [
+      ...vnxGitbookBase.docs!,
+      sourceRef(
+        "VNX Global Terms Annex III(C), GBP SWIFT fee reviewed 2026-10-20",
+        "https://prod-global-terms.s3.sa-east-1.amazonaws.com/VNX-Global-Terms.pdf",
+        ["route", "fees", "access", "settlement"],
+      ),
+    ],
+    notes: [
+      ...vnxGitbookBase.notes!,
+      "FD16 fee-component review, 2026-10-20: GBP 30 binds one GBP SWIFT platform-account withdrawal only. The separate 3% unused-funds charge is account-history-dependent; payout count and other applicable charges are unbound. Preserve all capacity, settlement and cost scoring gaps and the October 17 terms-gap review; no all-in fee ceiling or completed bank-credit SLA is established.",
+    ],
+  },
   "vchf-vnx": {
     ...vnxGitbookBase,
     reviewedAt: "2026-10-17",
@@ -149,11 +186,23 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
   "jpyc-jpyc": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["cost", "settlement"],
+      reviewedAt: "2026-10-20",
+      rationale: "The current funds-transfer pre-contract disclosure, revised 2026-09-24, establishes a zero issuer issuance/redemption fee but requires holder-paid blockchain transaction costs. It describes immediate processing in principle, while section 4.3 explicitly permits AML/CFT review until the following business day or later. These are not a complete all-in cost ceiling or an unconditional final-bank-credit deadline. Terms articles 3/4 also restrict direct service to Japanese residents acting within Japan. The published JPY 3,000 minimum and JPY 1,000,000 per-transaction maximum are not a global funded-capacity or repeat-throughput guarantee; the eventual legal claim does not establish immediate liquidity.",
+      docs: [
+        sourceRef("JPYC pre-contract disclosure revised 2026-09-24: fees, limits and conditional processing", "https://jpyc.co.jp/legal/pre-contract-disclosure.pdf", ["route", "access", "fees", "settlement"]),
+        sourceRef("JPYC funds-transfer terms: residency, native-token redemption and holder-paid gas", "https://jpyc.co.jp/legal/terms.pdf", ["route", "access", "fees", "settlement"]),
+      ],
+    },
     costModel: fixedFee(
       0,
       "JPYC EX states that registered users redeem 1 JPYC for JPY 1 with no redemption fee; users still pay blockchain gas when sending JPYC",
     ),
     docs: [
+      sourceRef("JPYC pre-contract disclosure revised 2026-09-24", "https://jpyc.co.jp/legal/pre-contract-disclosure.pdf", ["route", "access", "fees", "settlement"]),
+      sourceRef("JPYC funds-transfer terms", "https://jpyc.co.jp/legal/terms.pdf", ["route", "access", "fees", "settlement"]),
       sourceRef("JPYC EX", "https://ex.jpyc.co.jp/", ["route", "fees", "access", "settlement"]),
       sourceRef("JPYC launch announcement", "https://corporate.jpyc.co.jp/news/posts/jpyc-ex-launch", [
         "route",
@@ -193,6 +242,7 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
   "idrt-rupiah-token": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
+    settlementModel: "days",
     costModel: {
       ...documentedVariableFee(
         "Issuer redemption fee is 0.5% plus an IDR 6,500 bank-transfer charge when applicable",
@@ -201,6 +251,30 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
       feeBpsMin: 50,
       feeComponents: [{ currency: "IDR", terms: { flatAmount: 6_500 } }],
     },
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["cost", "settlement"],
+      reviewedAt: "2026-10-20",
+      rationale:
+        "ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required. Primary FAQ research on 2026-10-20 retains the original March 23 review start. Bank receipt is described as less than one working hour after Confirm, depending on the queue; redemption operates Monday-Friday, 08:00-17:00, excluding national holidays. This is conditional business-time guidance, not an unconditional same-day elapsed completion bound, and no applicable Indonesian banking calendar is admitted. The existing 0.5% plus conditional IDR 6,500 tariff remains a partial cost schedule without proven payout cardinality or complete all-in deductions.",
+      docs: [
+        sourceRef(
+          "IDRT bank-credit timing FAQ (retrieved 2026-10-20)",
+          "https://rupiahtoken.com/faq/berapa-waktu-yang-dibutuhkan-hingga-rupiah-masuk-ke-rekening-bank-saya",
+          ["settlement"],
+        ),
+        sourceRef(
+          "IDRT redemption operating hours FAQ (retrieved 2026-10-20)",
+          "https://rupiahtoken.com/faq/apakah-layanan-pencairan-idrt-aktif-24-jam",
+          ["settlement"],
+        ),
+        sourceRef(
+          "IDRT redemption fee FAQ (retrieved 2026-10-20)",
+          "https://rupiahtoken.com/faq/berapa-biaya-pencairan-idrt-ke-idr",
+          ["fees"],
+        ),
+      ],
+    },
     docs: [
       sourceRefRouteCapacity("Rupiah Token website", "https://www.rupiahtoken.com/"),
       sourceRef(
@@ -208,10 +282,26 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
         "https://rupiahtoken.com/faq/berapa-biaya-pencairan-idrt-ke-idr",
         ["fees"],
       ),
+      sourceRef(
+        "IDRT verified-customer withdrawal process",
+        "https://rupiahtoken.com/faq/bagaimana-cara-withdraw-idrt-yang-saya-miliki-di-rupiahtoken-com",
+        ["route", "access"],
+      ),
+      sourceRef(
+        "IDRT queue-dependent bank receipt",
+        "https://rupiahtoken.com/faq/berapa-waktu-yang-dibutuhkan-hingga-rupiah-masuk-ke-rekening-bank-saya",
+        ["settlement"],
+      ),
+      sourceRef(
+        "IDRT business hours and national-holiday closure",
+        "https://rupiahtoken.com/faq/apakah-layanan-pencairan-idrt-aktif-24-jam",
+        ["settlement"],
+      ),
     ],
     notes: [
       "Re-reviewed 2026-10-09: the issuer fee FAQ binds 0.5% plus IDR 6,500 for a bank transfer when applicable. The component conservatively includes that conditional charge for one transfer; it does not assert that every scored request uses exactly one payout.",
       "The retained 50 bps minimum is a floor, not an all-in ceiling. No feeBpsMax, minFeeUsd or gasOrBridgeCostUsd is invented. Captured IDR/USD conversion is supported, but payout cardinality, charge applicability and any remaining bank charges are not bound; cost stays unresolved. Capacity, settlement and holder eligibility are unchanged.",
+      "ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required. On 2026-10-20 the issuer's conditional working-hour/queue statement did not establish the inherited one-day completed-settlement datum. Only unsupported cost/settlement scoring datums are withheld; original capacity and eligibility reviews and all historical pins remain unchanged.",
     ],
   },
   "idrx-idrx": {
@@ -285,14 +375,40 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
   "europ-schuman": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
-    costModel: fixedFee(
-      0,
-      "EURØP tokens can be redeemed and exchanged for the underlying legal tender currency at any time, as described in the Right to Redemption above, without fees.",
+    accessModel: "manual",
+    holderEligibility: "verified-customer",
+    settlementModel: "days",
+    costModel: documentedVariableFee(
+      "EUROP issuer redemption is free, but the Redemption Policy section 4.2 leaves holder-bank charges and currency-conversion/incoming fees with the holder; Platform T&Cs section 8.7 also leaves on-chain costs with the client. No complete all-in ceiling is established.",
+      "formula",
     ),
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["cost", "settlement"],
+      reviewedAt: "2026-10-20",
+      rationale:
+        "ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required. The current Redemption Policy sections 2-4, read 2026-10-20, requires verified eligibility, KYC/KYT, a same-name EEA SEPA bank account and post-deposit checks. Retail completion is expected within five business days unless discrepancies are identified, not guaranteed same-day completed bank credit. Section 4.2 assigns receiving-bank and conversion charges to the holder; free issuer redemption does not bound all deductions. Preserve the original March 23 eventual full-supply claim and review start, without asserting funded immediate capacity or an unconditional final-receipt maximum.",
+      docs: [
+        sourceRef(
+          "Schuman current Redemption Policy sections 2-4 and Platform T&Cs section 8.7 (retrieved 2026-10-20)",
+          "https://schuman.io/legal-center/",
+          ["route", "access", "settlement", "fees"],
+        ),
+      ],
+    },
     docs: [
       sourceRefRouteCapacity("EUROP white paper", "https://schuman.io/wp-content/uploads/2025/02/EUROP-White-Paper_1.3.pdf"),
       sourceRef("EUROP white paper v1.7", "https://schuman.io/wp-content/uploads/EUROP-White-Paper.pdf", ["fees"]),
       sourceRef("Schuman reserve audits", "https://schuman.io/reserve-attestations/", ["capacity"]),
+      sourceRef(
+        "Schuman current Redemption Policy and token/platform terms (retrieved 2026-10-20)",
+        "https://schuman.io/legal-center/",
+        ["route", "access", "settlement", "fees"],
+      ),
+    ],
+    notes: [
+      "ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required. Source-scoped research on 2026-10-20 withdraws only unsupported inherited same-day final-settlement and zero all-in-cost assumptions. The documented zero issuer fee, eventual statutory par claim, historical reserve evidence and original review starts remain unchanged.",
+      "Retail holders may use the redemption form after KYC/KYT; legal entities require a Schuman OMP account. The five-business-day statement is expressly expected and discrepancy-conditional; no French calendar surrogate is invented to turn it into an unconditional elapsed SLA.",
     ],
   },
   "eurau-allunity": {
@@ -301,6 +417,16 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
       0,
       "AllUnity's ecosystem page states institutions can mint and redeem AllUnity stablecoins at no cost. This is the currently advertised issuer fee only: the governing terms defer issuance and redemption fees to a separate fee schedule, and holders pay third-party blockchain gas",
     ),
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["settlement", "cost"],
+      rationale:
+        "ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required. Retrieved 2026-10-20: Redemption Policy section 4.3 only aims to complete the process within five business days after all documentation is received and verified; it establishes no unconditional completed-bank-credit maximum. Section 3.5 confirms zero issuer fees but expressly assigns dynamically priced blockchain gas to the holder. The inherited same-day category and zero issuer fee cannot establish a one-day final settlement or all-in cost bound. This scoped review preserves the original whole-config review start, eventual par redemption claim and actual zero issuer fee.",
+      reviewedAt: "2026-10-20",
+      docs: [
+        sourceRef("AllUnity Redemption Policy sections 3.3-3.5 and 4.2-4.3", "https://framerusercontent.com/assets/keEVPCLx5HJ504alVRJUCVRjBz0.pdf", ["route", "access", "fees", "settlement"]),
+      ],
+    },
     docs: [
       sourceRefRouteCapacity("AllUnity whitepaper", "https://allunity.com/whitepaper/"),
       sourceRef("AllUnity trust center", "https://allunity.com/trust-center/", ["capacity"]),
@@ -314,6 +440,20 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
       0,
       "AllUnity Redemption Policy section 3.5: the issuer does not charge administrative, processing, or redemption fees; holders pay third-party blockchain gas.",
     ),
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["settlement", "cost"],
+      rationale:
+        "Source-scoped correction researched 2026-10-20, retaining the original October 2 review start: Redemption Policy section 4.3 only aims to complete the process within five business days after all documentation is received and verified. It provides no unconditional maximum for completed bank credit. Section 3.5 establishes zero issuer fees but expressly leaves dynamically priced holder-paid blockchain gas outside that zero; no complete same-notional all-in cost bound is established. The statutory eventual par claim is retained.",
+      reviewedAt: "2026-10-02",
+      docs: [
+        sourceRef(
+          "AllUnity Redemption Policy sections 3.3-3.5 and 4.2-4.3",
+          "https://framerusercontent.com/assets/keEVPCLx5HJ504alVRJUCVRjBz0.pdf",
+          ["route", "access", "fees", "settlement"],
+        ),
+      ],
+    },
     docs: [
       sourceRefRouteCapacity("AllUnity whitepaper", "https://allunity.com/whitepaper/"),
       sourceRef("AllUnity trust center", "https://allunity.com/trust-center/", ["capacity"]),
@@ -324,7 +464,7 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
       ),
     ],
     notes: [
-      "AllUnity Redemption Policy section 4.3 aims to complete the process within five business days after documentation is fully received and verified; this is a target, not a guaranteed bank-credit deadline. Retain the platform's reviewed direct-redemption treatment pending a platform-wide owner ruling on settlement aims.",
+      "ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required. The original October 2 source/review start and true zero issuer fee are preserved. A conditional five-business-day aim cannot support the captured one-day completed-settlement assumption, and issuer-fee zero cannot establish all-in cost including holder gas. Only those two unsupported favorable scoring datums are withheld; eventual statutory redemption and other facts remain unchanged.",
     ],
   },
   "usda-anzens": {
@@ -395,19 +535,16 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
   "m-m0": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
-    v9ComposedDexExit: {
-      intermediateAssetId: "wm-m0",
-      conversionModel: "permissionless-atomic-wrap",
-      chain: "ethereum",
-      wrapperContract: "0x437cc33344a0B27A429f795ff6B469C72698B291",
-      reviewedAt: "2026-07-24",
+    capacityModel: { kind: "unquantified" },
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "cost", "settlement"],
+      reviewedAt: "2026-10-20",
+      rationale: "ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required. MXON Website Terms of Use, last updated March 2026, section 2 places services under separate written counterparty agreements. M0's current primary-market guide requires issuer onboarding and publishes no whole-M-supply funded payout guarantee or maximum completed settlement time. Neither a collateral balance, minter-debt burn nor any-size partial-fill orchestration marketing establishes funded same-notional holder capacity, a complete cost ceiling or one-day final receipt. The prior direct-wrapper composition is removed because the reviewed current WrappedMToken entrypoints are facility-only; no ordinary-holder native-M facility permission or current exact composite execution receipt was established. Preserve the original issuer-route review start; this review grants no capacity or SLA.",
       docs: [
-        sourceRef(
-          "M0 WrappedMToken source",
-          "https://github.com/m0-foundation/wrapped-m-token/blob/main/src/WrappedMToken.sol",
-          ["route", "fees", "access", "settlement"],
-        ),
-        sourceRef("M0 wM FAQ", "https://www.m0.org/faq", ["route", "fees", "access"]),
+        sourceRef("MXON separate service agreements, retrieved 2026-10-20", "https://www.mxon.co/terms-of-use", ["route", "access", "capacity", "fees", "settlement"]),
+        sourceRef("M0 source-specific liquidity and issuer onboarding, retrieved 2026-10-20", "https://docs.m0.org/build/accessing-liquidity", ["route", "access", "capacity", "fees", "settlement"]),
+        sourceRef("Reviewed WrappedMToken facility-only implementation", "https://eth.blockscout.com/api/v2/smart-contracts/0x6d9db63afccf515f393d5e65be69d38bb3b29d13", ["route", "access"]),
       ],
     },
     costModel: documentedVariableFee(
@@ -422,6 +559,7 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     notes: [
       "Base $M liquidity is institution-facing; most end users access M0 liquidity through branded extensions and integrations rather than direct M redemption",
       "Cost-only disclosure review observed 2026-10-10T23:34:49Z by Sol curation campaign 2026-10-11 (L31M): MXON Website Terms of Use section 2 places services under separate written agreements. The terms print Last updated: March 2026, without an exact day; no precise evidence date or fee value is inferred. This review does not refresh capacity, settlement, access configuration or the older composed-wrap checkpoint",
+      "C27 review 2026-10-20 withdraws the unsupported full-supply eventual capacity and inherited one-day completion assumption. The configured issuer channel remains diagnostic; a current complete same-request execution certificate or binding exact-holder service agreement is required for numerical exit credit.",
     ],
   },
   "fusd-finchain": {
@@ -473,6 +611,17 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     costModel: undisclosedReviewedFee(
       "MetaMask USD is issued 1:1 by Bridge on top of M0 reserve infrastructure; public redemption fees are not disclosed",
     ),
+    v9RouteReviewTerms: {
+      settlementModel: "days",
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["cost", "settlement"],
+      reviewedAt: "2026-10-20",
+      rationale: "ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required. Bridge Stablecoin Terms section 3 promises only processing within two business days after Bridge determines the order compliant, with delays outside its reasonable control permitted; neither the compliance start nor completed USD payout has an unconditional maximum. Section 5.9 permits applicable fees, while the issuer FAQ does not publish a complete mUSD redemption fee bound. Withhold cost and settlement instead of inheriting issuerBase's same-day assumption; retain the original documented eventual capacity and review start.",
+      docs: [
+        sourceRef("Bridge Building Inc Stablecoin Terms, sections 3 and 5.9-5.11; retrieved 2026-10-20", "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc", ["route", "access", "fees", "settlement"]),
+        sourceRef("Bridge issuance FAQ; retrieved 2026-10-20", "https://apidocs.bridge.xyz/platform/issuance/faq", ["route", "fees"]),
+      ],
+    },
     docs: [
       sourceRefRouteCapacity("MetaMask USD introduction", "https://musd.to/blog"),
       sourceRefRouteCapacityFees("Bridge issuance FAQ", "https://apidocs.bridge.xyz/platform/issuance/faq"),
@@ -720,30 +869,36 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
   },
   "usdn-noble": {
     ...issuerBase,
-    ...reviewedDirectRedemptionSupplyFull,
-    outputAssets: ["usdc-circle"],
+    capacityModel: { kind: "unquantified" },
+    outputAssets: ["wm-m0"],
+    accessModel: "permissionless-onchain",
+    holderEligibility: "any-holder",
+    settlementModel: "queued",
+    executionModel: "deterministic-onchain",
+    reviewedAt: "2026-10-20",
     costModel: undisclosedReviewedFee(
-      "USDN users mint and redeem via USDC through Noble Express; public redemption fees are not disclosed",
+      "Noble's current USDN redemption application transfers USDN to Ethereum as wM through claim, transfer and relay steps. The application offers a separate wM-to-USDC swap; no complete same-notional bridge, relay, gas and downstream-swap cost ceiling is published.",
     ),
     v9RouteReviewTerms: {
       scoringDisposition: "bounded-terms-gap",
       missingScoringFields: ["capacity", "settlement", "cost"],
       rationale:
-        "The NASD terms page is last revised 2025-02-26 but governs site use rather than a holder redemption commitment; the current USDN overview and architecture re-opened on 2026-09-04 still provide no dated issuer terms for capacity, settlement, or cost, while StableSwap has no measured bounds.",
-      reviewedAt: "2026-09-04",
+        "The current application identifies Ethereum wM as the direct bridge-redemption output and a separate swap for USDC. NASD's February 26, 2025 site terms disclaim an issuer/intermediary role and make third-party protocols responsible for transactions. Neither the current terms, architecture nor app provides funded same-notional capacity, a maximum completed-payout duration or an all-in cost bound. No direct USDC issuer-redemption commitment or full-supply capacity is inferred.",
+      reviewedAt: "2026-10-20",
       docs: [
         sourceRef("NASD terms (last revised 2025-02-26)", "https://dollar.noble.xyz/terms-of-use", ["route", "access"]),
-        sourceRef("Noble USDN launch", "https://noble.xyz/blog/introducing-usdn", ["route"]),
+        sourceRef("Noble current USDN-to-wM redemption application (retrieved 2026-10-20)", "https://dollar.noble.xyz/", ["route", "access", "settlement"]),
         sourceRef("USDN overview", "https://docs.noble.xyz/learn/usdn/overview/", ["route"]),
       ],
     },
     docs: [
-      sourceRefRouteCapacity("USDN overview", "https://docs.noble.xyz/learn/usdn/overview/"),
-      sourceRefRouteCapacity("USDN architecture", "https://docs.noble.xyz/learn/usdn/architecture/"),
-      sourceRef("M0 Dashboard", "https://dashboard.m0.org/", ["capacity"]),
+      sourceRef("Noble current USDN-to-wM redemption application (retrieved 2026-10-20)", "https://dollar.noble.xyz/", ["route", "access", "settlement"]),
+      sourceRef("Separate Ethereum wM-to-USDC swap (retrieved 2026-10-20)", "https://dollar.noble.xyz/swap", ["route", "fees"]),
+      sourceRef("USDN architecture", "https://docs.noble.xyz/learn/usdn/architecture/", ["route", "access"]),
+      sourceRef("NASD site terms, last revised February 26, 2025", "https://dollar.noble.xyz/terms-of-use", ["route", "access", "fees"]),
     ],
     notes: [
-      "Current model scores the documented Noble Express USDC mint-and-redeem rail as eventual issuer redemption rather than a separately measured live cash buffer",
+      "The retained configured channel is diagnostic and unquantified. The app's direct bridge output is wM on Ethereum, not fiat or USDC; a separate market swap is needed for USDC. Current capacity and cost need an exact Noble Portal/relay observation and independently valued output, not M0 gateway collateral or a supply-full issuer model.",
     ],
   },
   "aeur-anchored-coins": {
@@ -787,10 +942,41 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
   "eure-monerium": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
-    costModel: fixedFee(0, "Monerium currently states minting and burning EURe are free of charge"),
+    costModel: fixedFee(
+      0,
+      "Monerium's October 15, 2026 EURe SEPA disclosure states zero Monerium fees, but explicitly leaves third-party and onchain transaction costs outside that issuer fee",
+    ),
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["cost", "settlement"],
+      reviewedAt: "2026-10-20",
+      rationale:
+        "ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required. The October 15 issuer disclosure states zero Monerium SEPA fees but permits third-party and onchain transaction costs, so it does not establish a complete all-in payout cost ceiling. Business Terms section 4 promises execution as soon as possible and expressly cannot guarantee third-party transaction execution time; section 14 permits account-specific limits. Five-second SEPA Instant timing is typical, not an unconditional maximum completed-bank-credit deadline. Preserve the original route review start, verified-customer access and documented eventual par claim; no current liquidity or settlement guarantee is inferred.",
+      docs: [
+        sourceRef(
+          "Monerium EURe SEPA fee and typical-time disclosure, October 15, 2026",
+          "https://monerium.com/blog/2026/supply-and-borrow-regulated-euros-on-arbitrum-with-eure/",
+          ["route", "fees", "settlement"],
+        ),
+        sourceRef(
+          "Monerium governing Business Terms, sections 4 and 14 (effective May 20, 2025)",
+          "https://monerium.com/policies/business-terms-of-service/",
+          ["route", "access", "fees", "settlement"],
+        ),
+      ],
+    },
     docs: [
-      sourceRefRouteCapacity("EURe MiCA white paper", "https://monerium.com/whitepapers/eure-whitepaper/"),
-      sourceRef("Monerium fee schedule", "https://monerium.com/fee-schedule/", ["fees"]),
+      sourceRefRouteCapacity("EURe MiCA white paper", "https://monerium.com/whitepapers/eure-whitepaper.xhtml"),
+      sourceRef(
+        "Monerium EURe SEPA fees and third-party-cost disclosure, October 15, 2026",
+        "https://monerium.com/blog/2026/supply-and-borrow-regulated-euros-on-arbitrum-with-eure/",
+        ["route", "fees", "settlement"],
+      ),
+      sourceRef(
+        "Monerium Business Terms, sections 4 and 14",
+        "https://monerium.com/policies/business-terms-of-service/",
+        ["route", "access", "fees", "settlement"],
+      ),
     ],
   },
   "eurr-stablr": {

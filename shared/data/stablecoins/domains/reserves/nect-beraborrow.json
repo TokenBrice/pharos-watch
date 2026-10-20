@@ -56,7 +56,7 @@
       "pct": 5.8,
       "risk": "high",
       "assetClass": "cryptoasset",
-      "issuerOrObligor": "beraETH liquid-staking protocol and Berachain validators",
+      "issuerOrObligor": "Dinero / Redacted pxETH, underlying Ethereum staking and its bridged Berachain representation",
       "riskFactors": [
         "market",
         "liquidity",
@@ -220,6 +220,14 @@
       {
         "label": "Beraborrow collateral documentation",
         "url": "https://beraborrow.gitbook.io/docs"
+      },
+      {
+        "label": "Beraborrow derivative identity: beraETH is bridged pxETH from Redacted (retrieved 2026-10-20)",
+        "url": "https://beraborrow.gitbook.io/docs/borrowing/understanding-collateral/eth-and-btc-based-derivatives"
+      },
+      {
+        "label": "Current Dinero pxETH wind-down and WETH redemption surface (retrieved 2026-10-20)",
+        "url": "https://dinero.xyz/"
       },
       {
         "label": "Berachain public RPC observation at block 26483059",

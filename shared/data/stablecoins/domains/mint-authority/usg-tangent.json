@@ -2,7 +2,7 @@
   "id": "usg-tangent",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "unbounded-adverse",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "USG has three mint routes. At Ethereum block 26096134, the complete authorized market census is 16 markets: the prior 13 plus msETH/OETH, cbBTC/WBTC and reUSD/sDOLA. Thirteen have positive debt shares; authorized markets can remain paused or empty. mintDebt requires isMinter, mintIR requires the sole IRCalculator role and mints to the ControlTower fee treasury, and mintPegKeeper lets the owner mint uncapped USG into either registered peg keeper. USG, ControlTower and MarketCreator share a 3-of-5 Safe (v1.4.1, empty modules, zero guard) with a custom FeeTreasuryFallbackHandler. The owner can authorize arbitrary minters and change role assignments, so the economic authority remains unbounded.",
     "upgradeability": {
@@ -230,13 +230,13 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "unknown",
+    "reconciliation": "continuous",
     "supervision": "none",
     "review": {
       "disposition": "scoreable",
-      "reviewedAt": "2026-10-01",
-      "reviewer": "Sol curation pass 2026-10-01 (CurM14USDX)",
-      "evidence": "Current Ethereum block 26096134 confirms the historical role census plus three new factory-created markets (16 total), a 3-of-5 owner Safe and its custom fee-treasury fallback handler. The owner can still authorize arbitrary minters and mint uncapped USG into registered peg keepers. Historical role evidence is retained in individual controls; no favorable economic-cap, reconciliation or supervision change is inferred.",
+      "reviewedAt": "2026-10-20",
+      "reviewer": "FD11 bottom-up refinement 2026-10-21; reconciliation-only admission",
+      "evidence": "Original authority review start 2026-10-01 and every historical authority/Safe/role pin above are preserved. New reconciliation-only observation on 2026-10-20: at Ethereum block 26236645 (2026-10-20T22:00:11Z; hash 0xf38b2bd0053476d221004fafbc18da6ac77c23947336529b54eb1974d489280e), the complete factory census contains 18 authorized markets. Full factory, role and creator delta scans extend the previously reviewed census without an undisclosed creator or other role change. Every market's borrower collateral, exact underlying LP constituents, debt shares, stored interest index and bad debt are readable on-chain, so the complete backing-versus-liabilities book is mechanically derivable continuously, not merely asserted by a dashboard. USG totalSupply is 43,888,591.265957855; the two registered prefunded PegKeepers each hold exactly 20,000,000 unused USG with debt() zero. Outstanding supply outside those separately disclosed unused premints is 3,888,591.26595785 USG. Across all 18 markets, sum floor(totalDebtShares * IRCalculator.debtIndexes / RAY), where verified source defines RAY = 1e27, is the same 3,888,591.26595785 USG to displayed precision (2344 base-unit difference explicitly retained); badDebt() is zero on all 18, and IRCalculator.mintableInterests() is zero. The complete oracle-marked borrower-collateral book is $5,036,355.30149916 and its 21 underlying asset identities are enumerated in the reserve review. This establishes only the continuous whole-book accounting process. It does not establish an immutable mint cap, independent supervision, stress realizability, future solvency or a holder redemption right. Arbitrary minter grants and uncapped owner PegKeeper minting remain unbounded adverse authority facts; no authority pin or supervision credit is renewed.",
       "sources": [
         {
           "label": "Tangent USG docs",
@@ -269,6 +269,18 @@
         {
           "label": "Ethereum PublicNode RPC",
           "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Issuer PegKeeper mint/burn and pool-liability accounting",
+          "url": "https://docs.tangent.finance/docs/usg/peg_keepers"
+        },
+        {
+          "label": "Verified IRCalculator debt index and mintable-interest source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb4e1d3bbd2843263d58b4d648c599512cea6e88b"
+        },
+        {
+          "label": "Pinned whole reserve and liability book at Ethereum block 26236645",
+          "url": "https://api-ethereum-mainnet.n.dwellir.com/"
         }
       ],
       "unresolvedQuestions": []

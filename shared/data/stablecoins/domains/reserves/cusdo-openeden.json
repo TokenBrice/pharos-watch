@@ -69,9 +69,13 @@
       {
         "label": "OpenEden USDO FAQ and segregated-account disclosure",
         "url": "https://docs.openeden.com/usdo/faqs"
+      },
+      {
+        "label": "Current USDO User Agreement dated 2026-10-14 (retrieved 2026-10-20)",
+        "url": "https://docs.openeden.com/usdo/legal/user-agreement"
       }
     ],
-    "uncertainty": "OpenEden identifies the wrapper contracts and states that the underlying USDO issuer is a Bermuda segregated accounts company, but does not publish a rehypothecation term for wrapper-held USDO or current provider shares.",
+    "uncertainty": "OpenEden identifies the wrapper contracts and states that the underlying USDO issuer is a Bermuda segregated accounts company, but does not publish a rehypothecation term for wrapper-held USDO or current provider shares. Rechecked 2026-10-20: the current cUSDO documentation and issuer-linked User Agreement dated 2026-10-14 do not establish a complete allocated custody chain for all native cUSDO paths and the inherited USDO reserve basket. The former whole-asset institutional-regulated custodyModel scalar is withdrawn to unknown, without denying the Ethereum on-chain wrapper relationship or BMA-supervised underlying issuance. Original custody review start is not renewed.",
     "knownUnknownExposurePct": 100
   }
 }

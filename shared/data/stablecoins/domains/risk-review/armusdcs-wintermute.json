@@ -123,14 +123,14 @@
   },
   "oracleRisk": {
     "tier": "opaque-or-unknown",
-    "summary": "A complete adapter census at Ethereum block 26197390 (2026-10-15T10:43:11Z) identifies seven invested collateral markets, including Wildcat debt-token wrapper v-wmtUSDC and 3Jane USD3. Same-block reads refresh every market/oracle/LLTV, direct formula inputs, legacy feed aggregators and owners, Ojo clone inputs, meta-oracle settings and USD3 proxy slots. Nested signing, control independence and complete executable closure remain unresolved. VaultV2 share accounting is distinct from borrower collateral pricing.",
+    "summary": "The complete adapter census at Ethereum block 26236800 (2026-10-20T22:31:11Z) contains eight registered Morpho collateral markets, adding PT-USD3-17DEC2026 to the seven-market October 15 inventory. Every market's loan token, collateral, oracle, IRM and LLTV was read at the same block. The new oracle's exact runtime and Ojo clone target are verified, but nested source independence, price-age assumptions and reachable control closure remain unresolved. Original seven-branch observations retain their own dates. VaultV2 share accounting is distinct from borrower collateral pricing.",
     "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",
-      "reviewedAt": "2026-10-15",
-      "reviewer": "Batch64 pinned oracle review",
-      "rationale": "Ethereum block 26197390 (2026-10-15T10:43:11Z): the sole adapter has marketIdsLength=7 and indices 0-6 enumerate its complete registered inventory. Same-block Morpho idToMarketParams binds every loan token, collateral, oracle and LLTV. All seven positions have positive expectedSupplyAssets and their sum equals vault totalAssets=46779493778612 atomic USDC; all adapter borrow shares and posted collateral are zero. The issuer lists an additional reUSD candidate with zero allocation, which is not part of the adapter census. This establishes branch membership and allocation at the pin, without resolving nested feed/control assurances.",
+      "reviewedAt": "2026-10-20",
+      "reviewer": "C19 bottom-up refinement 2026-10-21",
+      "rationale": "At Ethereum block 26236800 (hash 0xda3a69656ed26cce35220ce6575c32ca59074c2a6112038f73f00474da4e2d61, 2026-10-20T22:31:11Z), adapter 0x3b9e060a2b05588126fda01b95e9485687fc91d7 marketIdsLength is 8 and every index 0-7 is retained. Same-pin Morpho idToMarketParams binds all eight loan/collateral/oracle/IRM/LLTV tuples. The eighth collateral is Pendle PT-USD3-17DEC2026, not a USD3 identity alias, with 86% LLTV and oracle 0x716021a5d598c22851764923271c90a0aa704754. This establishes complete registered branch membership at this pin, not new allocation weights, nested feed assurances or an executable liquidation bound. The October 15 block 26197390 seven-market investment/allocation proof remains historical and is not represented as today's allocation.",
       "sources": [
         {
           "label": "Ethereum block 26197390, hash 0x7b440503cf5ab984190e71b6363dc024da6e6944ed5cf22073f6eca2a26092de, 2026-10-15T10:43:11Z; complete market, gate and direct/nested configuration census",
@@ -155,6 +155,10 @@
         {
           "label": "Complete seven-market census at Ethereum block 26154200, hash 0xc9beb4276500c84291b521a60efba653d8326240f6c820438a10bae3721b9bf1, 2026-10-09T10:17:35Z; observed 2026-10-09T11:44:36Z",
           "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+        },
+        {
+          "label": "Complete eight-market adapter census and Morpho parameters at Ethereum block 26236800, hash 0xda3a69656ed26cce35220ce6575c32ca59074c2a6112038f73f00474da4e2d61, 2026-10-20T22:31:11Z; retrieved 2026-10-20",
+          "url": "https://api-ethereum-mainnet.n.dwellir.com"
         }
       ]
     },
@@ -193,6 +197,18 @@
       {
         "label": "Seven-market census and nested proxy/clone configuration at Ethereum block 26154200, hash 0xc9beb4276500c84291b521a60efba653d8326240f6c820438a10bae3721b9bf1, 2026-10-09T10:17:35Z",
         "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+      },
+      {
+        "label": "Complete eight-market adapter census, new PT identity and exact oracle runtime at Ethereum block 26236800, hash 0xda3a69656ed26cce35220ce6575c32ca59074c2a6112038f73f00474da4e2d61, 2026-10-20T22:31:11Z; retrieved 2026-10-20",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
+      },
+      {
+        "label": "Exact PT-USD3 Morpho oracle source, retrieved 2026-10-20",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x716021a5d598c22851764923271c90a0aa704754"
+      },
+      {
+        "label": "Exact PT-USD3 Ojo clone target and source, retrieved 2026-10-20",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5aab95e3c6f9ba0ccfa0a17c2c7235633c7c6585"
       }
     ],
     "branchKindReviews": [
@@ -205,12 +221,13 @@
           "0x1d09bf979a167075f5608686642fd3cdb458de742a234175892fa03f23693f6b",
           "0xc7e49dd404825da16988955201ed22ecf8a7b25f0337db8a698d70d7a9f343ea",
           "0xb323495f7e4148be5643a4ea4a8221eef163e4bccfdedc2a6f4696baacbc86cc",
-          "0xe3df58f9d3011b7481ff36b939fa5f8da642f34ea5792d25d3958dbf1efa26d7"
+          "0xe3df58f9d3011b7481ff36b939fa5f8da642f34ea5792d25d3958dbf1efa26d7",
+          "0xecabc12c73a97c766d0c6aeb4c15c635630d78158b2ac8370455a09efcc50837"
         ],
-        "reviewedAt": "2026-10-10T23:36:19Z",
-        "reviewer": "Sol curation campaign 2026-10-11 (K6OracleKinds)",
+        "reviewedAt": "2026-10-20",
+        "reviewer": "C19 bottom-up refinement 2026-10-21",
         "confidence": "verified",
-        "rationale": "All seven registered markets, including 3Jane USD3, have independently pinned idToMarketParams LLTV at Ethereum block 26154200 (2026-10-09T10:17:35Z). Exact creation/runtime-matched Morpho source sets immutable parameters at createMarket. These are liquidation thresholds, not share mint limits, portfolio weights or nested-feed assurances.",
+        "rationale": "All eight adapter-registered markets have same-pin idToMarketParams collateral/LLTV at Ethereum block 26236800 (2026-10-20T22:31:11Z). The newly registered PT-USD3 market has immutable 86% LLTV. The prior seven-market review of 2026-10-10 and exact Morpho createMarket source remain retained provenance. This extends parameter scope only, without share-mint limits, current allocation weights or nested-feed assurances.",
         "sources": [
           {
             "label": "Ethereum block 26197390, hash 0x7b440503cf5ab984190e71b6363dc024da6e6944ed5cf22073f6eca2a26092de, 2026-10-15T10:43:11Z; complete market, gate and direct/nested configuration census",
@@ -227,6 +244,10 @@
           {
             "label": "Ethereum block 26154200 evidence timestamp",
             "url": "https://etherscan.io/block/26154200"
+          },
+          {
+            "label": "All eight market IDs and exact immutable parameter tuples at Ethereum block 26236800, 2026-10-20T22:31:11Z; retrieved 2026-10-20",
+            "url": "https://api-ethereum-mainnet.n.dwellir.com"
           }
         ]
       },
@@ -239,12 +260,13 @@
           "0x1d09bf979a167075f5608686642fd3cdb458de742a234175892fa03f23693f6b",
           "0xc7e49dd404825da16988955201ed22ecf8a7b25f0337db8a698d70d7a9f343ea",
           "0xb323495f7e4148be5643a4ea4a8221eef163e4bccfdedc2a6f4696baacbc86cc",
-          "0xe3df58f9d3011b7481ff36b939fa5f8da642f34ea5792d25d3958dbf1efa26d7"
+          "0xe3df58f9d3011b7481ff36b939fa5f8da642f34ea5792d25d3958dbf1efa26d7",
+          "0xecabc12c73a97c766d0c6aeb4c15c635630d78158b2ac8370455a09efcc50837"
         ],
-        "reviewedAt": "2026-10-10T23:36:19Z",
-        "reviewer": "Sol curation campaign 2026-10-11 (K6OracleKinds)",
+        "reviewedAt": "2026-10-20",
+        "reviewer": "C19 bottom-up refinement 2026-10-21",
         "confidence": "verified",
-        "rationale": "All seven markets pinned at block 26154200 use Morpho Blue 0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb. Its exact creation/runtime-matched liquidate source tests oracle-valued health against LLTV, seizes collateral and requires loan-token repayment. This verifies mechanics, not feed correctness, successful liquidation latency, liquidator availability or funded insurance.",
+        "rationale": "The complete eight-market census at Ethereum block 26236800 binds the new PT-USD3 branch to the same immutable Morpho Blue core and its source-defined liquidate path: oracle-valued health against LLTV, collateral seizure and required loan-token repayment. The prior seven-market review of 2026-10-10 and exact core source proof are retained. This extends mechanical applicability only; feed correctness, liquidation latency, available liquidators and funded insurance remain unestablished.",
         "sources": [
           {
             "label": "Ethereum block 26197390, hash 0x7b440503cf5ab984190e71b6363dc024da6e6944ed5cf22073f6eca2a26092de, 2026-10-15T10:43:11Z; complete market, gate and direct/nested configuration census",
@@ -257,6 +279,10 @@
           {
             "label": "All seven market identities via exact adapter.morpho and idToMarketParams census, Ethereum block 26154200, 2026-10-09T10:17:35Z",
             "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+          },
+          {
+            "label": "All eight market IDs and exact Morpho core/parameter tuples at Ethereum block 26236800, 2026-10-20T22:31:11Z; retrieved 2026-10-20",
+            "url": "https://api-ethereum-mainnet.n.dwellir.com"
           }
         ]
       },
@@ -269,12 +295,13 @@
           "0x1d09bf979a167075f5608686642fd3cdb458de742a234175892fa03f23693f6b",
           "0xc7e49dd404825da16988955201ed22ecf8a7b25f0337db8a698d70d7a9f343ea",
           "0xb323495f7e4148be5643a4ea4a8221eef163e4bccfdedc2a6f4696baacbc86cc",
-          "0xe3df58f9d3011b7481ff36b939fa5f8da642f34ea5792d25d3958dbf1efa26d7"
+          "0xe3df58f9d3011b7481ff36b939fa5f8da642f34ea5792d25d3958dbf1efa26d7",
+          "0xecabc12c73a97c766d0c6aeb4c15c635630d78158b2ac8370455a09efcc50837"
         ],
-        "reviewedAt": "2026-10-10T23:36:19Z",
-        "reviewer": "Sol curation campaign 2026-10-11 (K6OracleKinds)",
+        "reviewedAt": "2026-10-20",
+        "reviewer": "C19 bottom-up refinement 2026-10-21",
         "confidence": "verified",
-        "rationale": "The exact creation/runtime-matched Morpho Blue liquidate implementation writes off remaining borrower debt at zero collateral and subtracts badDebtAssets from supplier assets for every one of the seven immutable markets pinned at block 26154200. This is loss recognition, not guaranteed recovery or funded backstop. Nested pricing and root profile confidence stay limited.",
+        "rationale": "The complete eight-market census at Ethereum block 26236800 binds the new PT-USD3 branch to the same immutable Morpho Blue core. Its source-defined liquidate path writes off residual borrower debt at zero collateral and deducts badDebtAssets from supplier assets. The prior seven-market review of 2026-10-10 and exact core source proof remain retained. This is loss recognition rather than guaranteed recovery or a funded backstop; nested pricing and root profile confidence remain limited.",
         "sources": [
           {
             "label": "Ethereum block 26197390, hash 0x7b440503cf5ab984190e71b6363dc024da6e6944ed5cf22073f6eca2a26092de, 2026-10-15T10:43:11Z; complete market, gate and direct/nested configuration census",
@@ -287,6 +314,10 @@
           {
             "label": "Complete seven-market parameter census, Ethereum block 26154200, 2026-10-09T10:17:35Z; original observation 2026-10-09T11:44:36Z",
             "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+          },
+          {
+            "label": "All eight market IDs and exact Morpho core/parameter tuples at Ethereum block 26236800, 2026-10-20T22:31:11Z; retrieved 2026-10-20",
+            "url": "https://api-ethereum-mainnet.n.dwellir.com"
           }
         ]
       }
@@ -720,6 +751,59 @@
             "url": "https://docs.3jane.xyz/usd3-susd3/suppliers.md"
           }
         ]
+      },
+      {
+        "id": "0xecabc12c73a97c766d0c6aeb4c15c635630d78158b2ac8370455a09efcc50837",
+        "label": "PT-USD3-17DEC2026 collateral market 0xecabc12c",
+        "tier": "opaque-or-unknown",
+        "summary": "The eighth registered market lends USDC against Pendle PT-USD3-17DEC2026. Its immutable MorphoChainlinkOracleV2 has one nonzero feed, the OjoPTFeed clone 0x8252e5bf13d74e483841035043e75d7e24c315af. The exact runtime matches the verified source; nested FEED_1/FEED_2 source independence, effective upstream observation-age protection and reachable pricing controls remain unestablished, so no standard-external quality is assigned.",
+        "collateralAssets": ["0x7f47c3e6b2c00fc4eb4d5ae50d0ab0ab6888eb4d"],
+        "chains": ["ethereum"],
+        "feeds": [
+          {
+            "provider": "OjoPTFeed composition; nested source/control assurances unresolved",
+            "path": "BASE_FEED_1 of Morpho oracle 0x716021a5d598c22851764923271c90a0aa704754",
+            "address": "0x8252e5bf13d74e483841035043e75d7e24c315af",
+            "chain": "ethereum",
+            "observedAt": "2026-10-20",
+            "observedBlock": 26236800
+          }
+        ],
+        "fallbackBehavior": "Pinned EIP-1167 clone runtime delegates to verified OjoPTFeed 0x5aab95e3c6f9ba0ccfa0a17c2c7235633c7c6585. It reads both configured feeds and returns the lower answer; either revert propagates. The 86400-second check ignores a zero updatedAt, and a wrapper-produced timestamp would not prove freshness of its underlying observation. At the pin FEED_1 is 0x3c95f7d9e6a1f3be25aa53610573b4bac672581b and FEED_2 is 0xf3162556e0a53edef51f97b8d84e7ec1c58f70b7. Their complete source/control graphs are not certified here. The outer Morpho helper discards returned timestamps. Two inputs do not establish independent redundancy.",
+        "observedAt": "2026-10-20",
+        "observedBlock": 26236800,
+        "collateralParameters": [
+          {
+            "asset": "0x7f47c3e6b2c00fc4eb4d5ae50d0ab0ab6888eb4d",
+            "maximumLtvPct": 86,
+            "note": "Same-pin Morpho idToMarketParams; this is liquidation LLTV, not an issuance cap or current allocation weight."
+          }
+        ],
+        "liquidationMechanism": "The same immutable Morpho Blue liquidate path checks oracle-valued health against LLTV, seizes collateral and requires loan-token repayment. No successful liquidation latency or funded liquidity is asserted.",
+        "backstop": "Exact-market funded insurance, a binding rescue commitment and measured stressed liquidation availability remain unestablished.",
+        "shutdownOrBadDebtBehavior": "Morpho Blue writes off residual debt at zero borrower collateral and subtracts badDebtAssets from supplier assets; PT expiry does not guarantee recovery.",
+        "sources": [
+          {
+            "label": "Complete eight-market census, PT identity and oracle runtime/configuration; Ethereum block 26236800, hash 0xda3a69656ed26cce35220ce6575c32ca59074c2a6112038f73f00474da4e2d61, 2026-10-20T22:31:11Z; retrieved 2026-10-20",
+            "url": "https://api-ethereum-mainnet.n.dwellir.com"
+          },
+          {
+            "label": "Armitage Select exact PT-USD3 market disclosure, retrieved 2026-10-20",
+            "url": "https://armitage.wintermute.com/docs/vaults/select"
+          },
+          {
+            "label": "Exact PT-USD3 Morpho oracle verified source and deployed runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x716021a5d598c22851764923271c90a0aa704754"
+          },
+          {
+            "label": "Exact OjoPTFeed clone implementation verified source and deployed runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5aab95e3c6f9ba0ccfa0a17c2c7235633c7c6585"
+          },
+          {
+            "label": "Exact immutable Morpho Blue core source proof retained from prior mechanical review",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb?fields=all"
+          }
+        ]
       }
     ],
     "paths": [
@@ -993,6 +1077,30 @@
             },
             {"label": "Pinned seven-market and parameter census, block 26154200", "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"},
             {"label": "Exact USD3 Morpho oracle and rate-input source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x68b4c2b2b2e245ab54a3bd55dfd5a9d84f029c06"}
+          ]
+        }
+      },
+      {
+        "id": "ethereum:0x716021a5d598c22851764923271c90a0aa704754",
+        "chain": "ethereum",
+        "address": "0x716021a5d598c22851764923271c90a0aa704754",
+        "pricingAuthority": "external-price",
+        "branchId": "0xecabc12c73a97c766d0c6aeb4c15c635630d78158b2ac8370455a09efcc50837",
+        "applicability": {
+          "disposition": "branches-required",
+          "reviewedAt": "2026-10-20",
+          "reviewer": "C19 bottom-up refinement 2026-10-21",
+          "confidence": "verified",
+          "rationale": "The eighth registered Morpho market prices PT-USD3 collateral through a Pendle/Ojo feed composition. Same-pin market parameters and exact outer/clone runtime identify this price-sensitive borrower branch; native share accounting cannot exempt it. Feed independence and complete nested control closure remain unresolved.",
+          "sources": [
+            {
+              "label": "Complete eight-market census and new PT oracle identity at Ethereum block 26236800, 2026-10-20T22:31:11Z; retrieved 2026-10-20",
+              "url": "https://api-ethereum-mainnet.n.dwellir.com"
+            },
+            {
+              "label": "Exact PT-USD3 Morpho pricing implementation, retrieved 2026-10-20",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x716021a5d598c22851764923271c90a0aa704754"
+            }
           ]
         }
       }

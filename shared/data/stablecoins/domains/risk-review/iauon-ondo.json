@@ -1,5 +1,36 @@
 {
   "id": "iauon-ondo",
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "IAUon Final Terms appoint the issuer and Ondo Finance as calculation agents and value issuance/redemption using broker-provided IAU prices and the attributable underlying units per token. Current Ondo Stocks pricing documentation says the investor quote is calculated using proprietary methodology, inventory, order size and market conditions. An independently published IAU NAV or a portfolio-scope Chainlink feed does not establish independent authority over the executable IAUon redemption quote.",
+    "reviewedAt": "2026-10-20",
+    "reviewer": "NR3 bottom-up refinement 2026-10-21",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "IAUon Final Terms: exact Ethereum token, calculation agents and broker-reference redemption formula; retrieved 2026-10-20",
+        "url": "https://cdn.sanity.io/files/8k2tqa6n/production/f8568100c8d43609c8d83e6d57c7130d590711b0.pdf"
+      },
+      {
+        "label": "Ondo Stocks proprietary indicative and order-specific quote pricing; retrieved 2026-10-20",
+        "url": "https://docs.ondo.finance/ondo-stocks/token-and-quote-pricing.md"
+      }
+    ],
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-20",
+      "reviewer": "NR3 bottom-up refinement 2026-10-21",
+      "rationale": "IAUon is an issuer-valued secured tracker of IAU, not a borrower collateral/liquidation mechanism. Its issue and redemption price authority remains economically applicable even though no borrower liquidation branches exist.",
+      "sources": [
+        {
+          "label": "IAUon Final Terms: tracker, issue and redemption valuation",
+          "url": "https://cdn.sanity.io/files/8k2tqa6n/production/f8568100c8d43609c8d83e6d57c7130d590711b0.pdf"
+        }
+      ]
+    }
+  },
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

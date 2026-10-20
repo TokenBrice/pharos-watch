@@ -378,7 +378,19 @@ const SPIKO_FUNDS: readonly {
     shareClassId: "USTBL",
     productRef: null,
     note: "Modeled as account-gated fund-share redemption at NAV; cutoff times and bank rails make the backstop slower than on-chain stablecoin liquidity.",
-    settlementReview: () => spikoProspectusSettlementReview(true),
+    settlementReview: () => ({
+      ...spikoProspectusSettlementReview(true),
+      missingScoringFields: ["settlement", "cost"],
+      rationale: "ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required (C26, 2026-10-20): ordinary USTBL D+1 dealing remains subject to market calendars, 10% gates and suspensions, with no unconditional final-receipt maximum. Zero fund redemption commission excludes investor-paid DLT transfer costs (September 1 prospectus p24; Terms of Use v2.2 articles 11.3.2 and 14.3). Internal-wallet sponsorship is not a complete cost bound for this generic-holder route. Original review start retained.",
+      docs: [
+        spikoProspectus(),
+        sourceRef(
+          "Spiko Terms of Use v2.2, June 30, 2026, articles 11.3.2 and 14.3; retrieved 2026-10-20",
+          "https://cdn.spiko.finance/legal_docs/EN/Terms_of_Use_EN.pdf",
+          ["route", "fees", "access"],
+        ),
+      ],
+    }),
   },
   {
     id: "safo-spiko-usd",
@@ -386,7 +398,24 @@ const SPIKO_FUNDS: readonly {
     shareClassId: "SAFO",
     productRef: sourceRef("Spiko dollar fund", "https://www.spiko.io/spiko-dollar", ["capacity", "fees", "access"]),
     note: "Modeled as account-gated Spiko / Amundi fund-share redemption at NAV; cutoff times and bank rails make the backstop slower than on-chain stablecoin liquidity.",
-    settlementReview: () => spikoProspectusSettlementReview(true),
+    settlementReview: () => ({
+      ...spikoProspectusSettlementReview(true),
+      missingScoringFields: ["settlement", "cost"],
+      rationale:
+        "ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required (C21, 2026-10-20): the September 1, 2026 SAFO prospectus retains conditional D+1 settlement, currency-market closures and 25% sub-fund gates, not an unconditional maximum to final receipt. Zero fund redemption fees do not bound this generic holder route's all-in cost: prospectus p66 and Terms of Use v2.2 articles 10.5 and 11.3.2 require external-wallet holders to fund the transfer to the internal wallet. Article 14.3 covers internal-wallet costs only; this route is not certified as that narrower cohort. Original review start retained.",
+      docs: [
+        sourceRef(
+          "Spiko SICAV prospectus September 1, 2026, SAFO pp61-66; retrieved 2026-10-20",
+          "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+          ["route", "settlement", "fees"],
+        ),
+        sourceRef(
+          "Spiko Terms of Use v2.2 June 30, 2026, articles 11.3.2 and 14.3; retrieved 2026-10-20",
+          "https://cdn.spiko.finance/legal_docs/EN/Terms_of_Use_EN.pdf",
+          ["route", "fees", "access"],
+        ),
+      ],
+    }),
   },
   {
     id: "spkcc-spiko",
@@ -394,7 +423,18 @@ const SPIKO_FUNDS: readonly {
     shareClassId: "SPKCC",
     productRef: sourceRef("Spiko cash and carry fund", "https://www.spiko.io/spiko-cash-and-carry", ["capacity", "fees", "access"]),
     note: "Modeled as account-gated Spiko cash-and-carry fund-share redemption at NAV; cutoff times and bank rails make the backstop slower than on-chain stablecoin liquidity.",
-    settlementReview: spikoCashAndCarrySettlementReview,
+    settlementReview: () => ({
+      ...spikoCashAndCarrySettlementReview(),
+      missingScoringFields: ["settlement", "cost"],
+      rationale: "ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required (C26, 2026-10-20): the exact SPKCC professional-fund prospectus retains conditional D+2 dealing, market-calendar exclusions, 10% gates for up to twenty NAVs in a month and exceptional asset-realization terms. These do not establish an unconditional elapsed maximum to completed payment. Zero fund exit commission excludes investor-paid DLT transaction charges without a numeric ceiling (February 1, 2026 prospectus pp15-16). Original review start retained.",
+      docs: [
+        sourceRef(
+          "Spiko Digital Assets Cash & Carry Fund prospectus, February 1, 2026, conditional dealing and investor DLT fees; retrieved 2026-10-20",
+          "https://cdn.spiko.finance/legal_docs/EN/Prospectus_SPKCC_EN.pdf",
+          ["route", "settlement", "fees", "access"],
+        ),
+      ],
+    }),
   },
   {
     id: "uktbl-spiko",
@@ -406,7 +446,19 @@ const SPIKO_FUNDS: readonly {
       "access",
     ]),
     note: "Modeled as account-gated GBP money-market fund-share redemption at NAV; cutoff times and bank rails make the backstop slower than on-chain stablecoin liquidity.",
-    settlementReview: spikoProspectusSettlementReview,
+    settlementReview: () => ({
+      ...spikoProspectusSettlementReview(),
+      missingScoringFields: ["settlement", "cost"],
+      rationale: "ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required (C26, 2026-10-20): ordinary UKTBL D+1 dealing remains subject to market calendars, 10% gates and suspensions, with no unconditional final-receipt maximum. Zero fund redemption commission excludes investor-paid DLT transfer costs (September 1 prospectus p47; Terms of Use v2.2 articles 11.3.2 and 14.3). Internal-wallet sponsorship does not establish this generic-holder route's all-in cost. Original review start retained.",
+      docs: [
+        spikoProspectus(),
+        sourceRef(
+          "Spiko Terms of Use v2.2, June 30, 2026, articles 11.3.2 and 14.3; retrieved 2026-10-20",
+          "https://cdn.spiko.finance/legal_docs/EN/Terms_of_Use_EN.pdf",
+          ["route", "fees", "access"],
+        ),
+      ],
+    }),
   },
   {
     id: "gbpsafo-spiko",
@@ -419,7 +471,7 @@ const SPIKO_FUNDS: readonly {
       scoringDisposition: "bounded-terms-gap",
       missingScoringFields: ["capacity", "settlement", "cost"],
       rationale:
-        "The SICAV prospectus permits redemption caps, deferred orders, market closures and suspensions, so normal NAV/order settlement does not establish an unconditional final-bank-receipt maximum or stressed executable capacity. Investor-paid DLT transaction fees and technical wallet recovery charges leave all-in cost unbounded.",
+        "Reviewed 2026-10-20: the SICAV prospectus permits 25% sub-fund redemption gates, deferred orders without priority, market closures and suspensions. Ordinary D+1 settlement does not establish an unconditional final-bank-receipt maximum or same-notional stressed executable capacity. Zero fund exit commission excludes investor-paid DLT transfer fees (prospectus p66); Terms of Use v2.2 article 11.3.2 requires external holders to pay the transfer into the internal wallet, while article 14.3 sponsors internal-wallet costs only. No generic all-in fee ceiling is established. Existing capacity, settlement and cost gaps and the original review start are retained.",
       reviewedAt: "2026-09-04",
       docs: [
         sourceRef(
@@ -432,6 +484,11 @@ const SPIKO_FUNDS: readonly {
           "https://cdn.spiko.finance/legal_docs/EN/KID_gbpSAFO_EN.pdf",
           ["fees", "settlement"],
         ),
+        sourceRef(
+          "Spiko Terms of Use v2.2, June 30, 2026, articles 11.3.2 and 14.3; retrieved 2026-10-20",
+          "https://cdn.spiko.finance/legal_docs/EN/Terms_of_Use_EN.pdf",
+          ["route", "fees", "access"],
+        ),
       ],
     }),
   },
@@ -441,7 +498,19 @@ const SPIKO_FUNDS: readonly {
     shareClassId: "EUTBL",
     productRef: null,
     note: "Modeled as account-gated fund-share redemption at NAV; instant withdrawals are eligibility-limited and standard withdrawals remain bank-rail dependent.",
-    settlementReview: () => spikoProspectusSettlementReview(true),
+    settlementReview: () => ({
+      ...spikoProspectusSettlementReview(true),
+      missingScoringFields: ["settlement", "cost"],
+      rationale: "ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required (C26, 2026-10-20): ordinary EUTBL dealing remains subject to market calendars, 10% gates and suspensions, with no unconditional final-receipt maximum. Investor/bank/day-limited instant withdrawals do not cover the whole-holder stress request. Zero fund redemption commission excludes investor-paid DLT transfer costs (September 1 prospectus p36; Terms of Use v2.2 articles 11.3.2 and 14.3). Internal-wallet sponsorship does not bound this generic-holder route's all-in cost. Original review start retained.",
+      docs: [
+        spikoProspectus(),
+        sourceRef(
+          "Spiko Terms of Use v2.2, June 30, 2026, articles 11.3.2 and 14.3; retrieved 2026-10-20",
+          "https://cdn.spiko.finance/legal_docs/EN/Terms_of_Use_EN.pdf",
+          ["route", "fees", "access"],
+        ),
+      ],
+    }),
   },
   {
     id: "eursafo-spiko",
@@ -558,20 +627,31 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
   "gbpe-monerium": {
     ...issuerBase,
     ...documentedBoundSupplyFull(REVIEWED_COVERAGE_EXPANSION_AT),
-    v9RouteReviewTerms: { settlementModel: "queued" },
+    holderEligibility: "issuer-discretionary",
+    v9RouteReviewTerms: {
+      settlementModel: "queued",
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["cost", "settlement"],
+      reviewedAt: "2026-10-20",
+      rationale: "Business terms section 4 requires an additional contractual agreement for non-EUR issuance/redemption and denies direct redemption without it. The GBP-specific knowledge-base page states that GBP IBANs are not currently offered and no launch timeline is confirmed. Neither source establishes the negotiated GBPe all-in fee maximum or final bank-credit deadline; EUR/SEPA terms and a par-value claim cannot supply them. This is a scoped GBP access/terms correction, not proof of token-wide suspension or zero redemption capacity.",
+      docs: [
+        sourceRef("Monerium business terms section 4: additional non-EUR contract and unguaranteed third-party settlement", "https://monerium.com/policies/business-terms-of-service/", ["route", "access", "fees", "settlement"]),
+        sourceRef("Monerium GBPe knowledge base: GBP IBANs unavailable, no confirmed timeline (updated 2025-10-01)", "https://help.monerium.com/article/12-gbpe-ibans", ["route", "access"]),
+      ],
+    },
     costModel: undisclosedReviewedFee(
-      "Monerium fee schedule and terms govern bank-transfer redemption; public materials reviewed do not publish a single fixed GBPe redemption fee",
+      "GBPe redemption requires an additional non-EUR contract; public business terms permit fees but publish no complete applicable GBP fee ceiling",
     ),
     docs: [
       sourceRef(
         "Monerium business terms",
         "https://monerium.com/policies/business-terms-of-service/",
-        ["route", "access", "settlement"],
+        ["route", "access", "settlement", "fees"],
       ),
       sourceRefFull("Monerium financial information", "https://monerium.com/financial-information/"),
-      sourceRef("Monerium fee schedule", "https://monerium.com/fee-schedule/", ["fees"]),
+      sourceRef("Monerium GBPe knowledge base: GBP IBANs not currently offered", "https://help.monerium.com/article/12-gbpe-ibans", ["route", "access"]),
     ],
-    notes: ["Modeled as regulated e-money redemption for onboarded Monerium customers through bank-transfer rails"],
+    notes: ["GBPe is not the generally available EUR/SEPA rail: direct non-EUR redemption requires Monerium's additional contractual agreement. The public GBP IBAN channel is unavailable; bespoke contractual redemption is not declared suspended or zero-capacity."],
   },
   "qcad-stablecorp": {
     ...issuerBase,
@@ -582,11 +662,16 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     ),
     v9RouteReviewTerms: {
       scoringDisposition: "bounded-terms-gap",
-      missingScoringFields: ["capacity", "settlement"],
+      missingScoringFields: ["capacity", "settlement", "cost"],
       rationale:
-        "The regulator-filed QCAD Token Terms and Conditions (SEDAR+) and the OSC decision dated 2025-11-20 establish a zero issuer redemption fee and no minimum redemption size, so cost is no longer withheld. They still publish no executable redemption limit and no accepted-request-to-bank-credit SLA: redemption is conditioned on circumstances rendering a sale through a CTP impractical or impossible, and the terms name no payment deadline.",
+        "Scope correction observed 2026-10-20 by NR7, retaining the October 7 review start: QCAD Terms Section 7.1 and OSC representation 11 establish zero issuer redemption fees, not a bound on all holder deductions. Section 7.2 expressly leaves each redeemer's own banking fees and permits issuer banking fees where a Purchase and Redemption Agreement explicitly provides them; the complete applicable agreement and all-in cost ceiling are not published here. Executable capacity and accepted-request-to-bank-credit completion also remain unbounded. Preserve the zero issuer fee as a diagnostic fact and withhold aggregate cost, consistently with the EURW route.",
       reviewedAt: "2026-10-07",
       docs: [
+        sourceRef(
+          "Archived original QCAD Terms, Article 7.1-7.3 (scope correction observed 2026-10-20)",
+          "https://web.archive.org/web/20260209142008id_/https://www.sedarplus.ca/csa-party/records/document.html?id=194b25dd3a2d2a8d59e108b3cf223b2fc41d68e33507899cbb350a659a9fea0a",
+          ["fees", "access"],
+        ),
         sourceRef("Stablecorp", "https://stablecorp.ca/", ["route", "access"]),
         sourceRef("Stablecorp transparency (published 2026-08-21)", "https://stablecorp.ca/transparency", ["route"]),
         sourceRef(
@@ -714,14 +799,14 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
     outputAssetType: "nav",
     costModel: undisclosedReviewedFee(
-      "Securitize materials describe VBILL subscription and redemption at fund NAV; public materials reviewed do not publish one fixed redemption fee",
+      "The current VBILL page publishes a 0.2% total unitary fund fee, not an all-in redemption tariff. Securitize's 2026 broker schedule separately lists conversion, outgoing-wire and variable gas charges without establishing the complete exact fund-redemption deductions.",
     ),
     v9RouteReviewTerms: {
       scoringDisposition: "bounded-terms-gap",
       missingScoringFields: ["capacity", "settlement", "cost"],
       rationale:
-        "The 2025-05-13 launch release and current Securitize VBILL page describe daily or real-time liquidity, but the 2026-09-04 re-open found no current dated governing terms for a guaranteed executable amount, maximum settlement SLA, or operative fee schedule; launch marketing is not a stress-capacity bound.",
-      reviewedAt: "2026-09-04",
+        "The fully rendered issuer product page was re-reviewed on 2026-10-20: direct fund redemptions are daily, third-party instant swaps are only potentially available, market or blockchain delays are explicit, and tokens cannot be transferred or redeemed for 72 hours after issuance. Neither that eligibility hold nor the 2pm ET liquidity cutoff is a maximum final-payout SLA. The public 0.2% unitary fee is a fund expense, not a complete holder redemption cost. The separate 2026 broker schedule has variable gas and route-dependent conversion/wire costs. No guaranteed same-notional executable amount, complete all-in cost bound or unconditional completed-settlement maximum is established; preserve all three gaps.",
+      reviewedAt: "2026-10-20",
       docs: [
         sourceRef("Securitize VBILL", "https://securitize.io/primary-market/vaneck-vbill", [
           "route",
@@ -733,6 +818,7 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
           "https://www.prnewswire.com/news-releases/vaneck-launches-first-tokenized-fund-vbill-on-securitize-302453863.html",
           ["route", "access", "settlement"],
         ),
+        sourceRef("Securitize broker-dealer fee schedule 2026 (not a complete VBILL redemption tariff)", "https://securitize.io/fee-schedule-table", ["fees"]),
       ],
     },
     docs: [
@@ -742,9 +828,11 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
         "https://www.prnewswire.com/news-releases/vaneck-launches-first-tokenized-fund-vbill-on-securitize-302453863.html",
         ["route", "access", "settlement"],
       ),
+      sourceRef("Securitize broker-dealer fee schedule 2026", "https://securitize.io/fee-schedule-table", ["fees"]),
     ],
     notes: [
       "Modeled as qualified-investor Securitize primary-market redemption at NAV, not as secondary exchange liquidity.",
+      "Current public terms impose a 72-hour postissuance transfer/redemption hold. This is an eligibility condition, not a 72-hour settlement guarantee; potential third-party smart-contract liquidity is not funded same-notional capacity.",
     ],
   },
   "jtrsy-anemoy": {
@@ -755,6 +843,16 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
       0,
       "Standard redemptions are free, for instant redemptions, please see the section about the Anemoy Liquidity Network (ALN).",
     ),
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["settlement"],
+      rationale: "ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required, verified 2026-10-20: Anemoy's current JTRSY page offers daily redemptions, while the issuer-authored STEP application describes standard T+1 banking-day redemptions and an expected 8-48-hour liquidation-to-payment window. These are ordinary operating windows, not an unconditional maximum completed-payout SLA. The instant and intraday ALN facilities are distinct paid liquidity routes, not the modeled fee-free standard redemption. Preserve eventual full-supply modeling and the separate standard-redemption fee evidence; withhold only the unsupported inherited one-day settlement bound.",
+      reviewedAt: "2026-10-20",
+      docs: [
+        sourceRef("Anemoy JTRSY daily-redemption disclosure (retrieved 2026-10-20)", "https://www.anemoy.io/funds/jtrsy", ["route", "access", "settlement"]),
+        sourceRef("Issuer-authored JTRSY STEP application: standard banking-day redemption and expected settlement", "https://forum.arbitrum.foundation/t/centrifuge-janus-henderson-anemoy-treasury-fund-jtrsy-step-ii-application/23496", ["route", "fees", "settlement"]),
+      ],
+    },
     docs: [
       sourceRefFull("Centrifuge JTRSY pool", "https://centrifuge.io/pools/jtrsy"),
       sourceRef("Centrifuge investor docs", "https://docs.centrifuge.io/user/investor/", [

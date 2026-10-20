@@ -58,6 +58,11 @@
     "version": 1,
     "semantics": "protocol-reserve",
     "breakerScope": "m0",
+    "suspended": {
+      "reason": "M0 gateway collateral observes upstream M backing, not XO local M custody/liabilities; await identity-bound wrapper reserve producer",
+      "since": "2026-10-20",
+      "reviewBy": "2026-11-20"
+    },
     "display": {
       "url": "https://dashboard.m0.org/",
       "label": "M0 Dashboard"

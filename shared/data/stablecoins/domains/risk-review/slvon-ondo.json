@@ -1,5 +1,36 @@
 {
   "id": "slvon-ondo",
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "SLVon Final Terms appoint the issuer and Ondo Finance as calculation agents and value issuance/redemption using broker-provided SLV prices and the attributable underlying units per token. Current Ondo Stocks pricing documentation says the investor quote is calculated using proprietary methodology, inventory, order size and market conditions. The displayed underlying ETF holdings and token price do not establish an independent SLVon redemption-price oracle.",
+    "reviewedAt": "2026-10-20",
+    "reviewer": "NR3 bottom-up refinement 2026-10-21",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "SLVon Final Terms: exact Ethereum token, calculation agents and broker-reference redemption formula; retrieved 2026-10-20",
+        "url": "https://cdn.sanity.io/files/8k2tqa6n/production/1e83310304939f644ad250b298c14f2a2ac6449c.pdf"
+      },
+      {
+        "label": "Ondo Stocks proprietary indicative and order-specific quote pricing; retrieved 2026-10-20",
+        "url": "https://docs.ondo.finance/ondo-stocks/token-and-quote-pricing.md"
+      }
+    ],
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-20",
+      "reviewer": "NR3 bottom-up refinement 2026-10-21",
+      "rationale": "SLVon is an issuer-valued secured tracker of SLV, not a borrower collateral/liquidation mechanism. Its issue and redemption price authority remains economically applicable even though no borrower liquidation branches exist.",
+      "sources": [
+        {
+          "label": "SLVon Final Terms: tracker, issue and redemption valuation",
+          "url": "https://cdn.sanity.io/files/8k2tqa6n/production/1e83310304939f644ad250b298c14f2a2ac6449c.pdf"
+        }
+      ]
+    }
+  },
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

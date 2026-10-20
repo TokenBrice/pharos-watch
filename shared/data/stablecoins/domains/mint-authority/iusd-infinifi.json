@@ -2,9 +2,9 @@
   "id": "iusd-infinifi",
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "unbounded-reconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
-    "summary": "IUSD user issuance is receipt-token accounting, but Core GOVERNOR can grant RECEIPT_TOKEN_MINTER to an arbitrary address whose ReceiptToken.mint call checks no collateral or durable supply ceiling. At Ethereum block 26113561, GOVERNOR includes the seven-day timelock and FluidRewardsClaimer; the timelock's sole Core proposer is the 4-of-8 admin Safe. The Safe root fails governed issuance qualification even though its delay exceeds two days; continuous reconciliation yields unbounded-reconciled.",
+    "summary": "IUSD user issuance is receipt-token accounting, but Core GOVERNOR can grant RECEIPT_TOKEN_MINTER to an arbitrary address whose ReceiptToken.mint call checks no collateral or durable supply ceiling. At Ethereum block 26113561, GOVERNOR includes the seven-day timelock and FluidRewardsClaimer; the timelock's sole Core proposer is the 4-of-8 admin Safe. The Safe root fails governed issuance qualification even though its delay exceeds two days. Disclosed native-path internal-ledger reconciliation does not establish a current complete all-chain supply-to-backing regime or prudential supervision; economically unbounded authority remains adverse under D33.",
     "upgradeability": {
       "model": "custom",
       "deploymentRefs": [
@@ -162,8 +162,8 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "continuous",
-    "supervision": "none",
+    "reconciliation": "internal-ledger",
+    "supervision": "unknown",
     "review": {
       "sources": [
         {
@@ -198,10 +198,26 @@
           "label": "Verified additional GOVERNOR: FluidRewardsClaimer",
           "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd0ec80032c0da717bd78b9569321d9069365241e"
         }
+        ,{
+          "label": "Issuer protocol accounting workflow, retrieved 2026-10-20",
+          "url": "https://docs.infinifi.xyz/dev-docs/finance/accounting.md"
+        },
+        {
+          "label": "Issuer source: YieldSharingV3 explicit native ledger comparison and accrual at commit aeb468eb, retrieved 2026-10-20",
+          "url": "https://raw.githubusercontent.com/InfiniFi-Labs/infinifi-protocol/aeb468ebc18433f4b4bf62ed14c8bd271a0404c8/src/finance/YieldSharingV3.sol"
+        },
+        {
+          "label": "Issuer source: Accounting enabled-farm valuation at commit aeb468eb, retrieved 2026-10-20",
+          "url": "https://raw.githubusercontent.com/InfiniFi-Labs/infinifi-protocol/aeb468ebc18433f4b4bf62ed14c8bd271a0404c8/src/finance/Accounting.sol"
+        },
+        {
+          "label": "Current issuer reserve-venue and valuation-cadence disclosures, retrieved 2026-10-20",
+          "url": "https://docs.infinifi.xyz/vaults.md"
+        }
       ],
-      "evidence": "Historical review at Ethereum block 25771089 established direct ReceiptToken/Core deployments, four native minters and Outland bridge machinery; YieldSharing implementation was 0x0d5dbf208a9a7540018d204a9a0ad08a091407e5 with ProxyAdmin 0x094227ee5e9c3877860ac212f1e5218441e5b4eb. The 2026-08-16 review established continuous protocol reserve reconciliation and no independent attestor or prudential supervisor. D14/D29 sweep 2026-10-03 at Ethereum block 26113561 (hash 0xf8669491a2d5c3e0dfe4c4233ed6861dcbe45f046fac9804a60c40ae5ee6846e): verified InfiniFiCore makes GOVERNOR the admin of RECEIPT_TOKEN_MINTER, and verified ReceiptToken.mint(address,uint256) accepts that role without checking collateral or a durable supply ceiling. Authorization of a new arbitrary minter is therefore economically unbounded; the previous raiseable inference from the seven-day delay is superseded. Core enumeration returned six receipt minters, including OutlandVaults 0x4197f2adfce9fdeb36b02e96737ddf646c841e45 and 0x77776f422b7eb0a95ccd35fbd088a5957d4408ea, while GOVERNOR returned Timelock 0x3d18480cc32b6ab3b833dcabd80e76cfd41c48a9 and FluidRewardsClaimer 0xd0ec80032c0da717bd78b9569321d9069365241e. The latter's verified claim entrypoint has fixed Fluid claim/transfer targets, not an arbitrary Core.grantRole entrypoint; its inherited emergencyAction and caller closure are not certified here. Timelock getMinDelay() remains 604800 and hasRole confirms the admin Safe as proposer/executor; Core PROPOSER_ROLE enumeration returns that Safe alone. Safe getThreshold/getOwners remains 4-of-8. D29 G1 fails because proposal power is rooted in that Safe, not a token-vote governor; seven days passes the nominal delay gate but cannot cure G1. Every-control execution closure, including the additional GOVERNOR contract, is not certified. No governedIssuance certificate is authored; continuous reconciliation yields unbounded-reconciled.",
+      "evidence": "Historical review at Ethereum block 25771089 established direct ReceiptToken/Core deployments, four native minters and Outland bridge machinery; YieldSharing implementation was 0x0d5dbf208a9a7540018d204a9a0ad08a091407e5 with ProxyAdmin 0x094227ee5e9c3877860ac212f1e5218441e5b4eb. The 2026-08-16 review established continuous protocol reserve reconciliation and no independent attestor or prudential supervisor. D14/D29 sweep 2026-10-03 at Ethereum block 26113561 (hash 0xf8669491a2d5c3e0dfe4c4233ed6861dcbe45f046fac9804a60c40ae5ee6846e): verified InfiniFiCore makes GOVERNOR the admin of RECEIPT_TOKEN_MINTER, and verified ReceiptToken.mint(address,uint256) accepts that role without checking collateral or a durable supply ceiling. Authorization of a new arbitrary minter is therefore economically unbounded; the previous raiseable inference from the seven-day delay is superseded. Core enumeration returned six receipt minters, including OutlandVaults 0x4197f2adfce9fdeb36b02e96737ddf646c841e45 and 0x77776f422b7eb0a95ccd35fbd088a5957d4408ea, while GOVERNOR returned Timelock 0x3d18480cc32b6ab3b833dcabd80e76cfd41c48a9 and FluidRewardsClaimer 0xd0ec80032c0da717bd78b9569321d9069365241e. The latter's verified claim entrypoint has fixed Fluid claim/transfer targets, not an arbitrary Core.grantRole entrypoint; its inherited emergencyAction and caller closure are not certified here. Timelock getMinDelay() remains 604800 and hasRole confirms the admin Safe as proposer/executor; Core PROPOSER_ROLE enumeration returns that Safe alone. Safe getThreshold/getOwners remains 4-of-8. D29 G1 fails because proposal power is rooted in that Safe, not a token-vote governor; seven days passes the nominal delay gate but cannot cure G1. Every-control execution closure, including the additional GOVERNOR contract, is not certified. No governedIssuance certificate is authored; continuous reconciliation yields unbounded-reconciled. ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required (C20, 2026-10-20; D33 adjudicated): the preceding continuous-reconciliation and categorical supervision-absence conclusions are superseded. Current issuer Accounting documentation and published YieldSharingV3 source at commit aeb468ebc18433f4b4bf62ed14c8bd271a0404c8 disclose a native protocol ledger workflow: unaccruedYield compares enabled-farm accounting value divided by receipt price with ReceiptToken.totalSupply, and accrue mints or burns receipt tokens to restore that accounting equality. This positively supports internal-ledger for the disclosed native accounting path, not continuous whole-liability backing reconciliation. No pinned exhaustive current reserve-venue/source correspondence or complete Outland/OFT escrow, remote-supply, pending-liability and conservation join is supplied. Daily API generation and monthly Fasanara NAV updates do not resolve that perimeter. Supervision is unknown because the searched issuer contract, vault, security and risk disclosures do not establish a named prudential regime or independent whole-liability financial attestor. Original review start, authority pins, unbounded cap semantics and all unresolved cross-chain controls remain unchanged. This withdrawal does not assert measured non-reconciliation, insolvency or reserve shortfall. D33 Generalization (iv), explicitly adjudicated for C20: reviewedAt 2026-10-20 dates only this newly verified native ledger workflow admission. The original 2026-10-03 review start, earlier 2026-08-16 history and every authority observation above are retained without renewal or re-pinning.",
       "reviewer": "Sol v10.02 D14/D29 sweep (U6GovAmbiguousB)",
-      "reviewedAt": "2026-10-03"
+      "reviewedAt": "2026-10-20"
     }
   }
 }

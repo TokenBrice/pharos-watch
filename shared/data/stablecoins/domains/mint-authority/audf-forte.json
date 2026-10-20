@@ -150,7 +150,7 @@
     ],
     "economicCapSemantics": "unbounded",
     "reconciliation": "periodic",
-    "supervision": "attestation-only",
+    "supervision": "unknown",
     "review": {
       "sources": [
         {
@@ -172,9 +172,17 @@
         {
           "label": "AUDF Redbelly deployment explorer linked by Forte (identity only; historical roles not refreshed)",
           "url": "https://redbelly.routescan.io/token/0xd2a530170D71a9Cfe1651Fb468E2B98F7Ed7456b"
+        },
+        {
+          "label": "AUDF August 2026 independent reserve-cash audit (retrieved 2026-10-20; assets-only opinion)",
+          "url": "https://www.forteaud.com/api/documents/view/audf-reserves-report-august-2026"
+        },
+        {
+          "label": "Cointree AUDF distributor PDS (retrieved 2026-10-20; explicit audit-scope limitation)",
+          "url": "https://www.cointree.com/company/pds/audf-pds/"
         }
       ],
-      "evidence": "On 2026-10-01, pinned reads reconfirmed the AUDF implementation and ProxyAdmin on Ethereum, Polygon, Base, and Avalanche. ProxyAdmin owner() names the Admin Safe. The Ethereum, Polygon, and Base Safe has five owners and threshold 2; Avalanche has three owners and threshold 2 and is now represented separately. The previous operational EOA mint claim confused BLACKLIST_ROLE hash 0x22435ed... with MINT_ROLE hash 0x154c008...; current MINT_ROLE reads on Polygon and Base return false for that EOA. Redbelly control facts retain their prior August scope because its endpoint was not recovered in this session. Direct Safe issuance and mutable ProxyAdmin powers remain adverse controls; no economic-cap or supervision tier is upgraded.",
+      "evidence": "On 2026-10-01, pinned reads reconfirmed the AUDF implementation and ProxyAdmin on Ethereum, Polygon, Base, and Avalanche. ProxyAdmin owner() names the Admin Safe. The Ethereum, Polygon, and Base Safe has five owners and threshold 2; Avalanche has three owners and threshold 2 and is now represented separately. The previous operational EOA mint claim confused BLACKLIST_ROLE hash 0x22435ed... with MINT_ROLE hash 0x154c008...; current MINT_ROLE reads on Polygon and Base return false for that EOA. Redbelly control facts retain their prior August scope because its endpoint was not recovered in this session. Direct Safe issuance and mutable ProxyAdmin powers remain adverse controls; no economic-cap or supervision tier is upgraded. ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required. Retrieved 2026-10-20: the August 31 Horizon Nexus audit, signed September 7, gives an opinion only on AUD 5,142,851.53 reserve-account cash. Cointree's November 27, 2025 distributor PDS expressly states that the audit does not verify AUDF circulation or the 1:1 peg and disclaims preparation by Forte. These sources do not establish a named independent recurring whole-liability attestation regime, so supervision is withdrawn from attestation-only to unknown, not none. Periodic issuer-operated reconciliation is retained on the issuer's March 14, 2024 whitepaper page 6, which specifies daily checks of reserves against total tokens on relevant blockchains; current issuer transparency and the distributor PDS corroborate that disclosed procedure. No continuous or independent-assurance credit is claimed. Original review start, historical blocks, quorum facts and economic-cap semantics are unchanged.",
       "reviewer": "Codex FIX-09 mint-bridge-boundary migration",
       "reviewedAt": "2026-08-16",
       "disposition": "scoreable"

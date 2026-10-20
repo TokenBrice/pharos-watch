@@ -346,6 +346,19 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
       0,
       "Falcon docs state users bear gas and execution costs while Falcon does not charge a separate protocol-specific redemption fee",
     ),
+    v9RouteReviewTerms: {
+      minRedeemUsd: 10_000,
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["cost", "settlement"],
+      reviewedAt: "2026-10-20",
+      rationale: "ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required. Sources retrieved 2026-10-20 establish a $10,000 minimum and seven-day cooldown until Falcon Account credit, followed by a separate withdrawal subject to a fee. They publish neither an all-in execution/withdrawal cost ceiling nor an unconditional request-to-completed-wallet-receipt maximum. Terms sections 3.2 and 9.1 permit suspension, while section 6 reserves fee discretion. The FAQ's zero protocol-specific mint/redeem fee is preserved separately; it does not bound the additional withdrawal or passed-through execution charges. Original route review and reserve observation clocks are retained.",
+      docs: [
+        sourceRef("Falcon redeem guide: minimum and account-credit cooldown, retrieved 2026-10-20", "https://docs.falcon.finance/resources/quick-app-guide/navigating-the-swap-tab/redeem.md", ["route", "access", "settlement"]),
+        sourceRef("Falcon withdrawal guide: separate wallet withdrawal subject to a fee, retrieved 2026-10-20", "https://docs.falcon.finance/resources/quick-app-guide/navigating-the-transfer-tab/withdraw-assets.md", ["route", "fees", "settlement"]),
+        sourceRef("Falcon FAQ: zero protocol-specific fee, passed-through gas and execution, retrieved 2026-10-20", "https://docs.falcon.finance/resources/frequently-asked-questions-faq.md", ["route", "fees", "access", "settlement"]),
+        sourceRef("Falcon terms dated 11 August 2026: fee discretion and suspension, retrieved 2026-10-20", "https://docs.falcon.finance/resources/terms-of-use.md", ["route", "fees", "access", "settlement"]),
+      ],
+    },
     reviewedAt: REVIEWED_QUEUE_REDEMPTION_AT,
     docs: [
       sourceRef(
@@ -476,18 +489,37 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     ],
   }),
   "asusdf-astherus": defineQueueRedeemConfig({
-    capacityModel: { kind: "supply-ratio", ratio: 0.5, confidence: "documented-bound", basis: "strategy-buffer" },
+    capacityModel: { kind: "unquantified" },
     reviewedAt: "2026-05-14",
     settlementModel: "same-day",
     executionModel: "rules-based-nav",
     costModel: fixedFee(0, "Aster FAQ says there are no fees to mint or withdraw asUSDF"),
     docs: [
       sourceRefFull("Aster asUSDF FAQ", "https://docs.asterdex.com/usdf-stablecoin/overview/faqs"),
-      sourceRef("Aster Earn asUSDF", "https://docs.asterdex.com/product/aster-earn/mint-asusdf", ["route"]),
+      sourceRef("Aster Earn asUSDF", "https://docs.asterdex.com/earn/overview/mint-asusdf", ["route"]),
     ],
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "settlement"],
+      rationale: "The cited Aster FAQ publishes a two-hour waiting period and a separate Claim action, but no quantified strategy buffer, same-notional completion capacity or unconditional maximum to completed USDF receipt. The former 50% supply ratio was unsupported by its cited source.",
+      reviewedAt: "2026-10-20",
+      docs: [
+        sourceRef(
+          "Aster asUSDF FAQ (retrieved 2026-10-20)",
+          "https://docs.asterdex.com/usdf-stablecoin/overview/faqs.md",
+          ["route", "capacity", "settlement"],
+        ),
+        sourceRef(
+          "Aster Earn asUSDF (retrieved 2026-10-20)",
+          "https://docs.asterdex.com/earn/overview/mint-asusdf.md",
+          ["route", "capacity"],
+        ),
+      ],
+    },
     notes: [
       "asUSDF is the yield-bearing asToken wrapper over USDF; withdrawals return USDF after the documented T+1 hour / two-hour waiting period.",
       "Downstream par-exit quality then depends on USDF's own USDT redemption route.",
+      "Capacity correction researched 2026-10-20: no 50% strategy-buffer bound is published in the cited issuer sources; backing balances and documented waiting periods do not prove executable withdrawal capacity.",
     ],
   }),
   "susd1plus-lorenzo": defineQueueRedeemConfig({
@@ -722,7 +754,7 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     outputAssets: ["usdc-circle"],
     accessModel: "whitelisted-onchain",
     settlementModel: "days",
-    capacityModel: { kind: "supply-ratio", ratio: 0.1, confidence: "documented-bound" },
+    capacityModel: { kind: "unquantified" },
     costModel: fixedFee(20, "Piku docs list a 20 bps redemption fee"),
     reviewedAt: REVIEWED_QUEUE_REDEMPTION_AT,
     docs: [
@@ -736,8 +768,8 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     ],
     v9RouteReviewTerms: {
       scoringDisposition: "bounded-terms-gap",
-      missingScoringFields: ["settlement"],
-      rationale: "The USP page states processing within 48 hours, but governing Terms sections 4.5 and 5.3 permit delay for illiquidity, unavailability or loss of backing assets and at the issuer's sole discretion. They promise commercially reasonable efforts and say completion may take several business days. No unconditional completed-holder-payout maximum is established. Reviewed by Sol curation campaign 2026-10-09 (Lane47Babelfish) at 2026-10-09T10:36:33Z.",
+      missingScoringFields: ["capacity", "settlement"],
+      rationale: "The USP page states processing within 48 hours, but governing Terms sections 4.5 and 5.3 permit delays for illiquidity, unavailable or lost backing and at issuer discretion. No unconditional completed-payout maximum is established. The previously assumed 10% supply-ratio buffer is not documented by these sources; the queue instead requires backing liquidation for larger requests. Neither AUM nor a qualitative liquidity-buffer policy establishes same-notional capacity. FD35 source-scope correction reviewed 2026-10-20.",
       reviewedAt: "2026-10-09",
       docs: [
         sourceRef(
@@ -754,7 +786,7 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     },
     notes: [
       "Piku's exact USP vault page describes FIFO redemptions processed within 48 hours, a 2-day redemption period, and a 0.20% redemption fee.",
-      "The existing 10% documented-bound capacity model is unchanged; the 2026-10-02 holder-terms review verifies the fee and 48-hour settlement disclosure, not a current 10% executable cash buffer.",
+      "The unsupported 10% documented-bound capacity assumption was withdrawn on 2026-10-20. Current issuer sources describe a liquidity buffer and backing liquidation without a numeric committed throughput or executable cash-capacity bound.",
     ],
   }),
   "aznd-mu-digital": defineReviewedQueueRedeemConfig(REVIEWED_QUEUE_REDEMPTION_AT, {
@@ -818,12 +850,23 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
   }),
   "usdu-unitas": defineQueueRedeemConfig({
     accessModel: "whitelisted-onchain",
-    settlementModel: "same-day",
+    settlementModel: "queued",
     outputAssetType: "mixed-collateral",
-    outputAssets: ["asset:sol", "asset:btc", "asset:eth"],
-    capacityModel: { kind: "supply-ratio", ratio: 0.05, confidence: "documented-bound" },
-    costModel: fixedFee(0, "Unitas docs list a 0% redemption fee"),
+    unresolvedOutputDisposition: "issuer-undisclosed",
+    capacityModel: { kind: "unquantified" },
+    costModel: undisclosedReviewedFee("Current Unitas terms section 4 permits mint/redeem fees and network/third-party costs displayed before confirmation; no current numeric redemption fee or all-in ceiling is published."),
     reviewedAt: REVIEWED_REDEMPTION_OUTPUTS_WAVE2_AT,
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "settlement", "cost"],
+      reviewedAt: "2026-10-20",
+      rationale: "ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required. Sources re-read 2026-10-20 establish whitelisted requests subject to protocol rules and throttles, not a funded 5%-of-supply immediate bound, zero fee or unconditional same-day completion. Typical OES rolling settlement cycles are provider timings, not a request-to-wallet maximum. A collateral strategy's asset list does not establish the assets paid by a current redemption order.",
+      docs: [
+        sourceRef("Unitas current minting and whitelist terms, retrieved 2026-10-20", "https://docs.unitas.so/solution-design/minting-usdu.md", ["route", "access", "capacity"]),
+        sourceRef("Unitas 27 August 2026 terms, retrieved 2026-10-20", "https://docs.unitas.so/resources/terms-of-service.md", ["route", "fees", "settlement"]),
+        sourceRef("Unitas OES conditional processing, retrieved 2026-10-20", "https://docs.unitas.so/off-exchange-settlement.md", ["settlement"]),
+      ],
+    },
     docs: [
       sourceRefRouteCapacityAccess("Unitas minting USDu", "https://docs.unitas.so/solution-design/minting-usdu"),
       sourceRef("Unitas overview", "https://docs.unitas.so/", ["route", "fees"]),
@@ -833,8 +876,8 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     ],
     notes: [
       "Direct USDu minting and redemption are restricted to whitelisted participants, while docs describe on-demand redemption flows supported by Unitas's OES settlement rails",
-      "Because USDu relies on a delta-neutral collateral stack rather than a pure cash-equivalent reserve bucket, the route keeps a conservative reviewed 5% immediate-capacity bound instead of scoring against full supply",
-      "Output declared 2026-07-19: the Unitas terms define redemption as burning USDu to withdraw a pro-rata share of the underlying collateral, and the delta-neutral design page names the collateral classes as SOL, BTC, and ETH (JLP and the short-perp hedge leg are strategy positions rather than deliverable collateral classes); no single-stablecoin payout is documented.",
+      "Historical 2026-07-19 curation used a conservative 5% immediate-capacity assumption and inferred SOL/BTC/ETH payouts from the reserve strategy. C25 re-review 2026-10-20 withdraws those unsupported assumptions and the historical zero-fee/same-day assertions; the original review start and source pins are retained.",
+      "Current terms describe pro-rata underlying collateral subject to protocol rules and throttles without a complete payout-identity commitment. Exact order output, pricing, available funded capacity and final settlement remain unresolved; the strategy holdings are not substituted as redemption outputs.",
     ],
   }),
   "yzusd-yuzu": defineReviewedQueueRedeemConfig(REVIEWED_QUEUE_REDEMPTION_AT, {
@@ -1111,24 +1154,28 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     executionModel: "rules-based-nav",
     outputAssetType: "stable-basket",
     costModel: undisclosedReviewedFee(
-      "Nest docs describe nALPHA/inALPHA redemption requests through the app and atomic queue; public materials reviewed do not publish one fixed redemption fee",
+      "Legacy inALPHA's exact public sources do not establish a current complete redemption-fee schedule; the active nALPHA token and its quotes are a different claim",
     ),
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["cost", "settlement"],
+      rationale: "Researched 2026-10-20 for legacy inALPHA 0x64ab176c545bb85eca75d53c3ffcb361deafb855. Its exact price/positions feeds remain unreconciled and its accountant observations remain February 23, 2026. The current nALPHA directory and integration guide identify another share token, 0x593ccca4c4bf58b7526a4c164ceef4003c6388db. Neither that token's up-to-seven-day estimate nor general liquidity-dependent T+2 to T+5 guidance establishes an unconditional same-notional completion maximum or complete fee bound for the legacy queue. Historical output identity is retained without a new capacity, fee or settlement assertion.",
+      reviewedAt: "2026-10-20",
+      docs: [
+        sourceRef("Exact legacy inALPHA positions", "https://api.nest.credit/v1/vaults/nest-alpha-lp-vault/positions", ["route"]),
+        sourceRef("Exact legacy inALPHA accountant clock", "https://api.nest.credit/v1/vaults/nest-alpha-lp-vault/last-price-update", ["route"]),
+        sourceRef("Current nALPHA is a different share token", "https://docs.nest.credit/developers/smart-contracts", ["route"]),
+        sourceRef("Nest conditional redemption estimates", "https://docs.nest.credit/about/liquidity-and-redemptions", ["settlement"]),
+      ],
+    },
     docs: [
-      sourceRefFull("Nest liquidity and redemptions", "https://docs.nest.credit/about/liquidity-and-redemptions"),
-      sourceRef("Nest available vaults", "https://docs.nest.credit/about/available-vaults", [
-        "route",
-        "capacity",
-        "settlement",
-      ]),
-      sourceRef(
-        "Nest nALPHA vault integration",
-        "https://docs.nest.credit/developers/evm-integration-guides/nalpha-vault",
-        ["route", "capacity", "access", "settlement"],
-      ),
+      sourceRef("Nest conditional liquidity and redemptions", "https://docs.nest.credit/about/liquidity-and-redemptions", ["settlement"]),
+      sourceRef("Exact legacy inALPHA share and NAV", "https://api.nest.credit/v1/vaults/nest-alpha-lp-vault/price", ["route"]),
+      sourceRef("Exact legacy inALPHA positions", "https://api.nest.credit/v1/vaults/nest-alpha-lp-vault/positions", ["route"]),
     ],
     notes: [
-      "Nest's nALPHA guide documents redemption requests from Plume or Ethereum into pUSD or USDC through the atomic queue; Pharos tracks inALPHA as the same Alpha vault LP exposure.",
-      "Nest docs list a 3-5 business day nALPHA redemption window and broader queue mechanics, so the route is modeled as delayed NAV redemption rather than instant stablecoin liquidity.",
+      "Legacy inALPHA is the Ethereum/Plume share token 0x64ab176c545bb85eca75d53c3ffcb361deafb855, not the active nALPHA vault at 0x593ccca4c4bf58b7526a4c164ceef4003c6388db.",
+      "Current active-vault redemption estimates cannot be transplanted to this legacy token; its exact all-in cost and final settlement bound remain unestablished.",
       "Output type corrected 2026-07-19: the documented payout assets (pUSD or USDC) were already declared, so the nav placeholder type was replaced with stable-basket, matching the four sibling Nest vault entries retyped in the 2026-07-15 output wave; the delayed-NAV settlement semantics are unchanged.",
     ],
   }),

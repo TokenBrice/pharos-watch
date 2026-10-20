@@ -41,33 +41,29 @@
     "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
-    "tier": "oracleless",
-    "summary": "Current Alchemix V3 positions can be liquidated when losses in the underlying MYT strategies push LTV to the fixed 95% threshold; ETH or USDC price volatility alone does not trigger liquidation because debt and collateral move together. The previous description of all alUSD loans as non-liquidating applies to legacy V2, not the current V3 mechanism. A deployment-scoped review of current MYT valuation authorities is still needed before changing the oracle tier.",
-    "role": "coin-price-feed",
+    "tier": "opaque-or-unknown",
+    "summary": "V3 alUSD uses USDC-denominated MYT collateral and liquidation at 95% LTV. The issuer explicitly identifies oracle-priced strategy losses as a possible liquidation trigger, so like-kind debt and collateral do not establish an oracleless mechanism. The current strategy-level valuation and fallback inventory across Ethereum, Optimism and Arbitrum remains unresolved; the distinct Base alUSDb is outside this review.",
+    "role": "collateral-pricing",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "top-level-only",
-      "reviewedAt": "2026-08-24",
-      "reviewer": "OpenAI Codex W1b oracleless-a review",
-      "rationale": "The earlier review documented legacy AlchemistV2 expected-value marks and administrator snap() powers as a top-level control. The issuer now states that all V2 borrower positions migrated to V3 in April 2026 and documents MYT-loss-triggered liquidation at 95% LTV. The preserved V2 review does not establish the current V3 borrower-valuation path or settle whether deployment-scoped branches are required.",
+      "disposition": "unresolved",
+      "reviewedAt": "2026-10-20",
+      "reviewer": "FD05 bottom-up refinement 2026-10-21",
+      "rationale": "Current issuer documentation confirms V2 positions migrated in April 2026, V3 MYT collateral is valued for borrowing and liquidation, and oracle-priced underlying strategies can cause MYT losses. Current per-chain strategy allocations are mutable. Collateral-valuation exposure is established, but a complete exact deployment and strategy branch inventory is unresolved. The single-path profile metadata grants no top-level-only exemption; the legacy V2 review cannot establish current topology, feed independence or fallback behavior.",
       "sources": [
         {
-          "label": "Alchemix Multisig Admin Rights (updated 2026-07-06)",
-          "url": "https://v2-docs.alchemix.fi/alchemix-dao/the-alchemix-dao/governance-process/multisig-admin-rights"
+          "label": "Current V3 MYT-loss and oracle-priced strategy liquidation triggers (retrieved 2026-10-20)",
+          "url": "https://docs.alchemix.fi/user/concepts/liquidations"
         }
       ]
     },
-    "reviewedAt": "2026-07-14",
-    "reviewer": "Codex ORCL curation batch 15",
-    "confidence": "verified",
+    "reviewedAt": "2026-10-20",
+    "reviewer": "FD05 bottom-up refinement 2026-10-21",
+    "confidence": "unknown",
     "sources": [
       {
-        "label": "Alchemix user docs",
-        "url": "https://v2-docs.alchemix.fi/"
-      },
-      {
-        "label": "Alchemix Alchemist overview",
-        "url": "https://v2-docs.alchemix.fi/alchemix-ecosystem/alchemist"
+        "label": "Current MYT strategy allocation and pricing categories (retrieved 2026-10-20)",
+        "url": "https://docs.alchemix.fi/user/concepts/myt-and-yield"
       },
       {
         "label": "Current V3 MYT-loss liquidation conditions",

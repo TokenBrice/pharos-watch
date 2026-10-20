@@ -80,13 +80,18 @@
         "Binance": "high",
         "Solana": "high",
         "Bnb_smartchain": "high",
+        "BNB Smart Chain": "high",
         "Aster": "high",
         "Bitcoin": "medium"
+      },
+      "renameMap": {
+        "BNB Smart Chain": "Bnb_smartchain"
       },
       "sourceKeyMap": {
         "Binance": "accountable:unitas:deployment:binance",
         "Solana": "accountable:unitas:deployment:solana",
         "Bnb_smartchain": "accountable:unitas:deployment:bnb-smartchain",
+        "BNB Smart Chain": "accountable:unitas:deployment:bnb-smartchain",
         "Aster": "accountable:unitas:deployment:aster",
         "Bitcoin": "accountable:unitas:deployment:bitcoin"
       }

@@ -29,8 +29,8 @@ import { createReportCardsFixedInput } from "../../test-helpers/report-cards-fix
 import { makeV9TwoAssetFixedInput } from "../../test-helpers/v9-fixed-input";
 import usdtCoin from "@shared/data/stablecoins/coins/usdt-tether.json";
 import usdtReserveEnvelope from "@shared/data/stablecoins/domains/reserves/usdt-tether.json";
-import usdyCoin from "@shared/data/stablecoins/coins/usdy-ondo-finance.json";
-import usdyReserveEnvelope from "@shared/data/stablecoins/domains/reserves/usdy-ondo-finance.json";
+// Frozen c6f5e2f36 admission inputs, not a claim about the current USDY book.
+import septemberUsdy from "./fixtures/safety-score-v9-usdy-september-reserves.json";
 import xagmCoin from "@shared/data/stablecoins/coins/xagm-matrixdock.json";
 import xagmReserveEnvelope from "@shared/data/stablecoins/domains/reserves/xagm-matrixdock.json";
 import mxneCoin from "@shared/data/stablecoins/coins/mxne-real-mxn.json";
@@ -131,6 +131,28 @@ function reviewedMeta(
   };
 }
 
+// Named-firm parsing is independent of live MXNE's now-withheld assurance scope.
+const ISSUER_PREFIXED_NAMED_REPORT: V9ExtensionRegistryMeta = {
+  ...reviewedMeta([{
+    name: "Fixture CETES holdings", pct: 100, risk: "low",
+    assetClass: "tokenized-security", issuerOrObligor: "Fixture issuer",
+    riskFactors: ["credit"], liquidityHorizon: "unknown",
+  }], { reviewedAt: "2026-08-20", compositionAsOf: "2026-07-24" }),
+  id: "fixture-issuer-prefixed-report",
+  proofOfReserves: {
+    type: "independent-audit", url: "https://issuer.example/reports",
+    provider: "Etherfuse third-party attestations (BHR Mexico)",
+    attestorTier: "regional", cadence: "monthly",
+    latestReport: {
+      periodEnd: "2026-07-24", publishedAt: "2026-07-24",
+      assuranceMethod: "examination", scope: "assets-and-liabilities",
+      liabilityReconciliation: "full", reviewer: "Fixture reviewer",
+      confidence: "verified",
+      sources: [{ label: "BHR Mexico signed examination", url: "https://issuer.example/report.pdf" }],
+    },
+  },
+};
+
 describe("v10.01 named reserve reports", () => {
   const asOfSec = Date.parse("2026-06-30T00:00:00Z") / 1000;
   const usdt = { ...usdtCoin, ...usdtReserveEnvelope } as unknown as V9ExtensionRegistryMeta;
@@ -215,8 +237,8 @@ describe("v10.01 named reserve reports", () => {
     expect(buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(meta, clockSec)).toBeNull();
   });
 
-  it("admits actual USDY through its explicit Ankura report signer without promoting partial assurance or the BVI tail", () => {
-    const meta = { ...usdyCoin, ...usdyReserveEnvelope } as unknown as V9ExtensionRegistryMeta;
+  it("admits the frozen September USDY fixture through its explicit Ankura signer without promoting partial assurance or the BVI tail", () => {
+    const meta = structuredClone(septemberUsdy) as unknown as V9ExtensionRegistryMeta;
     const clockSec = Date.parse(`${meta.proofOfReserves!.latestReport!.periodEnd}T00:00:00Z`) / 1000 + 94 * 86400;
     const admission = buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(meta, clockSec);
     expect(admission).toMatchObject({ evidenceClass: "static-validated", provenance: "audited-fallback" });
@@ -232,8 +254,8 @@ describe("v10.01 named reserve reports", () => {
   });
   it.each([
     { ...xagmCoin, ...xagmReserveEnvelope },
-    { ...mxneCoin, ...mxneReserveEnvelope },
-  ])("retains the actual named $id report despite a direct PDF or issuer-prefixed firm description", (registryMeta) => {
+    ISSUER_PREFIXED_NAMED_REPORT,
+  ])("retains the named $id fixture report despite a direct PDF or issuer-prefixed firm description", (registryMeta) => {
     const meta = registryMeta as unknown as V9ExtensionRegistryMeta;
     const clockSec = Date.parse("2026-10-03T07:16:45Z") / 1000;
     const admission = buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(meta, clockSec);
@@ -245,12 +267,18 @@ describe("v10.01 named reserve reports", () => {
     unnamed.proofOfReserves!.provider = "Unnamed independent auditor";
     expect(buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(unnamed, clockSec)).toBeNull();
   });
-  it("does not substitute MXNE's issuer prefix for corroboration of the actual BHR report firm", () => {
-    const meta = structuredClone({ ...mxneCoin, ...mxneReserveEnvelope }) as unknown as V9ExtensionRegistryMeta;
+  it("does not substitute an issuer prefix for corroboration of the actual named report firm", () => {
+    const meta = structuredClone(ISSUER_PREFIXED_NAMED_REPORT);
     const clockSec = Date.parse("2026-10-03T07:16:45Z") / 1000;
+    expect(buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(meta, clockSec)).not.toBeNull();
     for (const source of meta.proofOfReserves!.latestReport!.sources) source.label = "Etherfuse issuer figures";
     meta.proofOfReserves!.latestReport!.reviewer = "Pharos curation reviewer";
     expect(buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(meta, clockSec)).toBeNull();
+  });
+
+  it("keeps live MXNE's unknown report assurance unavailable", () => {
+    const meta = { ...mxneCoin, ...mxneReserveEnvelope } as unknown as V9ExtensionRegistryMeta;
+    expect(buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(meta, Date.UTC(2026, 9, 21) / 1000)).toBeNull();
   });
 
 

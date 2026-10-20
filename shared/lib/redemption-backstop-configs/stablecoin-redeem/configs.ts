@@ -308,10 +308,10 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     outputAssetType: "stable-single",
     costModel: {
       ...documentedVariableFee(
-        "OnRe charges a 25 bps service fee plus a state-dependent convex liquidity haircut; quote_swap_sell gives the executable USDG output",
+        "OnRe charges a minimum 30 bps service fee plus a state-dependent convex liquidity haircut; quote_swap_sell gives the executable USDG output",
         "formula",
       ),
-      feeBpsMin: 25,
+      feeBpsMin: 30,
     },
     v9RouteReviewTerms: {
       settlementModel: "atomic",
@@ -333,6 +333,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "The prior monthly 2.5%-of-NAV capacity and 30-day queue terms are not the current primary channel. The approximately 15% capital liquidity reserve is a changeable management target, not an executable capacity bound.",
       "Current quotes depend on vault balance, pressure-adjusted liquidity and demand. Global kill switch, offer/pair enablement and sufficient vault liquidity must be checked; no favorable capacity or all-in cost is inferred without that read.",
       "Executable USDG liquidity is unquantified, not an observed zero balance; the OnRe holdings adapter has no redeemable-capacity telemetry.",
+      "C21 correction, retrieved 2026-10-20: the current Redemptions and Onchain Liquidity and Fees and Commissions pages both state 30 bps (0.30%), superseding the historical 25 bps floor. This is not a maximum fee or measured same-notional quote; capacity and cost remain withheld, and the original review start is unchanged.",
     ],
   }),
   "usd3-3jane": erc4626InstantConfig({
@@ -701,7 +702,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   }),
   "usdf-astherus": defineStablecoinRedeemConfig({
     outputAssets: ["usdt-tether"],
-    capacityModel: { kind: "supply-ratio", ratio: 0.5, confidence: "documented-bound" },
+    capacityModel: { kind: "unquantified" },
     settlementModel: "days",
     executionModel: "rules-based-nav",
     costModel: fixedFee(
@@ -713,9 +714,27 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       sourceRefFull("Aster USDF FAQ", "https://docs.asterdex.com/usdf-stablecoin/overview/faqs"),
       sourceRef("Aster USDF page", "https://www.asterdex.com/en/usdf", ["route"]),
     ],
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "settlement"],
+      rationale: "The issuer FAQ describes 1-2 days processing for standard amounts and up to seven days for unspecified large amounts, followed by a separate Claim action. Neither that guidance nor Ceffu's T+1 off-exchange settlement establishes a same-notional capacity or unconditional maximum to completed USDT receipt.",
+      reviewedAt: "2026-10-20",
+      docs: [
+        sourceRef(
+          "Aster USDF FAQ (retrieved 2026-10-20)",
+          "https://docs.asterdex.com/usdf-stablecoin/overview/faqs.md",
+          ["route", "capacity", "settlement"],
+        ),
+        sourceRef(
+          "Aster USDF custody and risk management (retrieved 2026-10-20)",
+          "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management.md",
+          ["capacity", "settlement"],
+        ),
+      ],
+    },
     notes: [
       "Tracked metadata describes 1:1 USDT mint and redeem semantics for USDF",
-      "The reviewed 50% bound matches the tracked USDT custody share rather than assuming the strategy-deployed delta-neutral book is instantly withdrawable",
+      "Capacity correction researched 2026-10-20: the cited issuer sources publish no 50% USDT custody allocation or same-notional redemption bound. The delta-neutral book cannot establish withdrawable capacity.",
     ],
   }),
   "usr-resolv": defineStablecoinRedeemConfig({
@@ -880,22 +899,47 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     costModel: undisclosedReviewedFee(
       "KYC'd institutional partners mint USX with USDC, USDG or USDT and redeem for USDG as the primary output; the current no-spread statement does not disclose a numeric redemption fee schedule",
     ),
+    v9RouteReviewTerms: {
+      settlementModel: "days",
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["cost", "settlement"],
+      rationale: "Solstice terms section 4 reserves discretionary service charges and passes through transaction/network fees, so no-spread is not an all-in fee bound. Section 8.2 conditions collateral transfer on screening/verification and any cooling period, permits variable processing, and expressly disclaims guaranteed immediate processing or completion. No maximum completed-settlement time is established.",
+      reviewedAt: "2026-10-20",
+      docs: [
+        sourceRef("Solstice binding fees and completed-redemption terms, sections 4 and 8.2 (retrieved 2026-10-20)", "https://docs.solstice.finance/legal-documents/terms-and-conditions.md", ["route", "fees", "settlement"]),
+      ],
+    },
     docs: [
       sourceRef("Solstice current USX institutional redemption terms (reviewed 2026-10-07)", "https://docs.solstice.finance/solstice-for-users/usx", ["route", "access", "fees", "settlement"]),
+      sourceRef("Solstice binding fees and completed-redemption terms, sections 4 and 8.2 (retrieved 2026-10-20)", "https://docs.solstice.finance/legal-documents/terms-and-conditions.md", ["route", "fees", "settlement"]),
     ],
     notes: [
       "Retail users access USX primarily through DEX liquidity or the Solstice platform, while the primary mint/redeem rail is institution-only",
       "Reviewed 2026-10-07: current Solstice docs identify USDG as the primary redemption asset. Deposited USDC/USDT and a no-spread statement do not establish alternative redemption outputs, a numeric fee ceiling or completed settlement time.",
+      "ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required, C24 2026-10-20: the published instant/zero-second settlement inference is unsupported by the route's own binding terms. Only settlement scoring is withdrawn to an explicit researched gap; the original October 7 route review, output, access and capacity evidence remain unchanged. The separate cost gap is preserved, not newly closed.",
     ],
   }),
   "usda-avalon": defineReviewedStablecoinRedeemConfig("2026-10-07", {
+    routeStatus: "suspended",
+    routeSuspension: {
+      routeId: "redemption:usda-avalon:stablecoin-redeem",
+      channel: "Avalon ordinary USDa-to-USDT conversion facility",
+      suspendedAt: "2026-10-03",
+      reviewedAt: "2026-10-20",
+      reviewer: "FD05 bottom-up refinement 2026-10-21",
+      reason: "Avalon announced USDa discontinuation across all supported chains and replaced normal service with a claim-and-withdrawal process due by October 10. That ordinary-channel cessation does not establish exhaustion or closure of a separate recovery claim.",
+      sources: [{
+        url: "https://medium.com/feed/@avalonlabs",
+        quote: "After exhausting all available remediation options, we have concluded that discontinuing USDa across all supported chains is the most effective measure to protect remaining USDa holders from further harm.",
+      }],
+    },
     capacityModel: { kind: "unquantified" },
     holderEligibility: "unknown",
     outputAssets: ["usdt-tether"],
     settlementModel: "days",
     executionModel: "rules-based-nav",
     costModel: undisclosedReviewedFee(
-      "1:1 USDa-to-USDT conversion documented; numeric conversion/redemption fee unpublished; bridge/network charges separate",
+      "Legacy 1:1 conversion is not a current all-in fee commitment. The October 3 discontinuation notice imposes a 5% monthly custodial fee on balances unredeemed after October 10; claim verification, bridge and network costs remain separately unbounded.",
     ),
     v9RouteReviewTerms: {
       settlementModel: "days",
@@ -908,6 +952,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       ],
     },
     docs: [
+      sourceRef("Avalon October 3 USDa discontinuation notice, full primary RSS item (retrieved 2026-10-20)", "https://medium.com/feed/@avalonlabs", ["route", "access", "fees", "settlement"]),
       sourceRef(
         "How to Use USDa",
         "https://docs.avalonfinance.xyz/avalon-btcfi-products/cedefi-cdp-usda/how-to-use-usda",
@@ -920,7 +965,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       ),
     ],
     notes: [
-      "The modeled redemption rail is the documented USDa-to-USDT conversion vault on Ethereum mainnet rather than offchain BTC collateral withdrawals",
+      "The modeled rail is the ordinary Ethereum USDa-to-USDT conversion facility, now suspended by the issuer's October 3 all-chain discontinuation notice. The separate recovery process requires claim verification; the October 10 withdrawal deadline has passed and remaining balances incur a 5% monthly custodial fee. No funded recovery capacity, guaranteed completion date, reopened ordinary channel or whole-token exhaustion is inferred. Original October 7 conversion-term review dates remain historical and are not renewed.",
     ],
   }),
   "usd0-usual": defineReviewedStablecoinRedeemConfig(REVIEWED_DIRECT_REDEMPTION_AT, {
@@ -955,27 +1000,33 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   }),
   "usdai-usd-ai": defineReviewedStablecoinRedeemConfig(REVIEWED_DIRECT_REDEMPTION_AT, {
     capacityModel: { kind: "reserve-sync-metadata" },
-    reviewedAt: REVIEWED_EXIT_CREDIT_AT,
+    reviewedAt: "2026-10-20",
     outputAssets: ["pyusd-paypal"],
-    accessModel: "whitelisted-onchain",
+    accessModel: "permissionless-onchain",
+    holderEligibility: "any-holder",
     costModel: fixedFee(
-      10,
-      "USD.AI's mint/redeem upgrade notice states that direct mint and redeem are routed through market makers with a 10 bps fee applied to redemptions",
+      0,
+      "The pinned canonical USDai v1.7 withdraw burns USDai and transfers the decimal-scaled PYUSD amount without an issuer fee or market-maker deduction. This is protocol-only; integer rounding, transaction gas, bridge costs and downstream PYUSD redemption remain separate.",
     ),
     docs: [
-      sourceRefRouteCapacity("USD.AI buy / stake", "https://docs.usd.ai/app-guide/buy-stake"),
+      sourceRefRouteCapacity("USD.AI buy / stake", "https://docs.usd.ai/app-guide/depositor/buy-stake.md"),
       sourceRef("USD.AI app buy flow", "https://app.usd.ai/buy", ["route"]),
-      sourceRef("USD.AI mint and redeem upgrade", "https://usd.ai/insights/usdai-mint-redeem-upgrade", [
+      sourceRef("USD.AI October 1 permissionless mint/redeem correction (retrieved 2026-10-20)", "https://usd.ai/blog/usdai-mint-redeem-upgrade", [
         "route",
         "fees",
         "access",
       ]),
+      sourceRef(
+        "Canonical USDai v1.7 withdraw/access/fee source; implementation pinned at Arbitrum block 516733430 on 2026-10-20",
+        "https://arbitrum.blockscout.com/api/v2/smart-contracts/0xe6ee2cd3e4f2b3844689aa1be176e4dff744a6f9",
+        ["route", "fees", "access", "settlement"],
+      ),
     ],
     notes: [
       "Current route models the base USDai burn-and-withdraw path into PYUSD; the asynchronous queue applies to sUSDai unstaking, not direct USDai redemption",
       "Output declared 2026-07-19 from the existing reviewed note above: the modeled direct redemption pays PYUSD (tracked pyusd-paypal).",
-      "Fee bounded and access corrected 2026-08-12 from the same verified issuer notice: it applies a 10 bps redemption fee and restricts direct contract-level mint and redemption to a KYC'd set of whitelisted market makers and approved institutional depositors, so the route is whitelisted rather than permissionless and ordinary holders exit through secondary markets.",
-      "Fresh reserve telemetry reads the live PYUSD float held by the USDai contract as the executable bound, gated on baseToken() still resolving to that same PYUSD deployment. The prior full-supply model is dropped with no fallback: for a KYC-gated burn-and-withdraw route the float is the only honest bound, and supply-full would overstate the route precisely when the read is unavailable.",
+      "Access and protocol fee corrected 2026-10-20: the issuer's October 1 update explicitly withdrew the April whitelist/KYC restriction. At Arbitrum block 516733430 (hash 0xff1fe090f9551d1e174be90e7705db7e58b5e1edd5d0bef700528351657076f8, 2026-10-20T22:32:22Z), the hub implementation slot resolves to v1.7 at 0xe6ee2cd3e4f2b3844689aa1be176e4dff744a6f9, baseToken is PYUSD and paused is false. Its ordinary withdraw entrypoints have no whitelist/role requirement and _withdraw transfers the decimal-scaled principal without a 10 bps deduction. Local and inherited blacklists, pause, available PYUSD and ordinary-holder balances still constrain execution; no exemption from legal terms is asserted.",
+      "Fresh reserve telemetry reads the live PYUSD float held by the USDai contract as the executable bound, gated on baseToken() still resolving to that same PYUSD deployment. No full-supply fallback is restored: backing and an open native entrypoint alone do not establish exact-request executable capacity when the current read is unavailable.",
       "Verified 2026-08-12 on Arbitrum: baseToken() resolved to PYUSD 0x46850aD61C2B7d64d08c9C754F45254596696984, the contract's paused() read false, and its PYUSD balance was 174,318,300.42 against a USDai supply near 172.6M — the float currently exceeds supply, so the ratio is not a fixed fraction that a static model could stand in for.",
     ],
   }),
@@ -1337,35 +1388,48 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   "susdd-tron-dao-reserve": erc4626InstantConfig({
     symbol: "USDD",
     reviewedAt: REVIEWED_YIELD_COVERAGE_WAVE_AT,
-    feeDescription: "USDD docs describe sUSDD withdrawals to USDD with no lock-up or protocol fee",
+    feeDescription: "The immutable SavingsUsdd withdrawal implementation deducts no local protocol fee; issuer terms describe no lock-up. Gas, rounding and downstream USDD exit costs remain separate.",
     docs: [
-      sourceRefFull("USDD sUSDD mechanism", "https://docs.usdd.io/susdd-mechanism"),
+      sourceRefFull("USDD sUSDD mechanism", "https://docs.usdd.io/system-architecture/susdd-mechanism.md"),
+      sourceRefFull("Verified immutable SavingsUsdd withdrawal source", "https://eth.blockscout.com/api/v2/smart-contracts/0xc5d6a7b61d18afa11435a889557b068bb9f29930"),
       sourceRef("USDD savings guide", "https://docs.usdd.io/user-guide/usdd-savings", ["route"]),
     ],
     notes: [
       "sUSDD exits to USDD at the savings-vault exchange rate; downstream USDD par exit remains governed by the parent USDD route",
-      "Fresh ERC-4626 reserve telemetry reads the vault's idle USDD balance as current direct wrapper capacity; if the live snapshot is unavailable, the route is left unrated instead of using the prior full-supply model.",
+      "The configured atomic-full-backing observer follows the exact SavingsUsdd share-to-USDD accounting claim through Pot and UsddJoin. Zero idle ERC-20 USDD does not establish external strategy deployment or zero native savings withdrawal capacity. Only fresh admitted producer telemetry supplies capacity; unavailable observations remain unrated, without a static full-supply fallback. Source-scope correction reviewed 2026-10-20; the original config review start is unchanged.",
     ],
   }),
   "rusd-reservoir": RESERVOIR_REDEEM_CONFIGS["rusd-reservoir"]!,
   "srusd-reservoir": RESERVOIR_REDEEM_CONFIGS["srusd-reservoir"]!,
   "steakusdc-steakhouse": steakhousePrimeInstantConfig("USDC"),
   "steakusdt-steakhouse": steakhousePrimeInstantConfig("USDT"),
-  "syzusd-yuzu": erc4626InstantConfig({
-    symbol: "yzUSD",
+  "syzusd-yuzu": defineStablecoinRedeemConfig({
+    capacityModel: { kind: "reserve-sync-metadata" },
+    outputAssets: ["yzusd-yuzu"],
+    executionModel: "rules-based-nav",
     reviewedAt: REVIEWED_YIELD_COVERAGE_WAVE_AT,
     totalScoreCap: 65,
-    feeDescription:
-      "Yuzu syzUSD ERC-4626 unwrap charges no exit fee: on-chain previewRedeem == convertToAssets (Plasma 0xc8a8df9b210243c55d31c73090f06787ad0a1bf6), no fee selectors; downstream yzUSD primary redemption stays KYC-gated",
+    costModel: documentedVariableFee(
+      "StakedYuzuUSDV3 exposes instantRedeemFeePpm and redeemFeePpm, with role-managed setters and account fee exemptions. Both fees were zero at Plasma block 35592500 (2026-10-20T22:04:49Z), but that observation is not an immutable zero-fee schedule or a current request-sized execution certificate.",
+      "formula",
+    ),
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "settlement", "cost"],
+      rationale: "The current V3 implementation is source-verified and pinned, but idle yzUSD does not prove ordinary-holder executable capacity: instant enablement, pause state, account maturity/exemptions, min-withdraw and block/day throttles are independent guards. Sampled zero fees and zero redeemDelay do not establish a future all-in cost or completed-request bound. Preserve the exact execution gap pending a compatible funded ordinary-holder receipt and run-local guard/fee observations.",
+      reviewedAt: "2026-10-20",
+      docs: [
+        sourceRef("Verified StakedYuzuUSDV3 fee and redemption guards", "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x4ad9f1db810146b660eb863cc6f56649e0824a6e", ["route", "fees", "capacity", "settlement"]),
+        sourceRef("Pinned Plasma implementation and redemption state at block 35592500", "https://rpc.plasma.to", ["route", "fees", "capacity", "settlement"]),
+      ],
+    },
     docs: [
-      sourceRefFull("Yuzu syzUSD docs", "https://yuzu-money.gitbook.io/yuzu-money/defi-suite/staked-yzusd-syzusd"),
-      sourceRef("Yuzu yzUSD docs", "https://yuzu-money.gitbook.io/yuzu-money/defi-suite/yuzu-stablecoin-yzusd", [
-        "route",
-        "access",
-      ]),
+      sourceRef("Yuzu syzUSD wrapper and unstaking description", "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/staked-yzusd-syzusd.md", ["route"]),
+      sourceRef("Yuzu terms: eligibility, mutable fees, pauses and discretionary settlement", "https://yuzu-money.gitbook.io/yuzu-money/terms-and-conditions.md", ["route", "access", "fees", "settlement"]),
+      sourceRef("Verified StakedYuzuUSDV3 fee and redemption guards", "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x4ad9f1db810146b660eb863cc6f56649e0824a6e", ["route", "fees", "capacity", "settlement"]),
     ],
     notes: [
-      "Fresh ERC-4626 reserve telemetry reads the wrapper's idle yzUSD balance as current direct unwrap capacity; if the live snapshot is unavailable, the route is left unrated instead of using the prior full-supply model.",
+      "At Plasma block 35592500, hash 0xb5e75a73effe72ae00dea4ceb6e6d84bb60dfdcdb73861e2b69de0141ae3cb56, the canonical proxy still used StakedYuzuUSDV3, asset() returned yzUSD, paused() was false and instant redemption was enabled. These truthful current state reads replace the incorrect no-fee-selectors assertion without granting measured unwind or treating idle backing as executable capacity; downstream yzUSD primary redemption remains eligibility-gated.",
     ],
   }),
   "fxsave-f-x-protocol": defineStablecoinRedeemConfig({
@@ -1451,20 +1515,45 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   }),
   "usdcx-movement": defineReviewedStablecoinRedeemConfig(REVIEWED_STABLECOIN_AUDIT_AT, {
     outputAssets: ["usdc-circle"],
-    executionModel: "deterministic-onchain",
+    executionModel: "opaque",
+    settlementModel: "queued",
     capacityModel: { kind: "reserve-sync-metadata" },
     reviewedAt: REVIEWED_EXIT_CREDIT_AT,
     costModel: {
       ...documentedVariableFee(
-        "Circle's xReserve fee reference lists destination-specific withdrawal charges: Ethereum has no protocol fee plus a 1 USDC gas charge, with optional forwarding adding 0.20 USDC plus 0.80 USDC gas; other destinations list up to 2 protocol bps plus 2 USDC gas. The bounds below are the published ceiling across destinations; remote-chain execution gas is separate",
+        "Circle publishes destination-specific protocol, withdrawal gas and optional forwarding fees. The retained 2 bps and $2 figures cover only part of that schedule; forwarding can add $1.45 plus $0.50 and destination gas, while Movement execution gas is separate. They are not a complete all-in route ceiling",
       ),
       feeBpsMin: 0,
       feeBpsMax: 2,
       gasOrBridgeCostUsd: 2,
     },
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "settlement", "cost"],
+      reviewedAt: "2026-10-20",
+      rationale:
+        "ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required. Circle's withdrawal tutorial requires a remote-chain burn, remote attester signature, Circle validation, withdrawal attestation and finalized release; created, verified and unverified requests remain pending and failed requests require remediation. No unconditional completion bound is published. An Ethereum domain-10005 collateral balance is backing telemetry, not a funded same-notional execution certificate across Ethereum/Arc/Gateway and pending liabilities. Published protocol fees exclude some forwarding and remote/destination gas, so 2 bps plus $2 is not an all-in ceiling. Preserve original route review provenance, actual USDC output and partial published fee terms without importing zero-second settlement or treating the entire escrow balance as currently executable.",
+      docs: [
+        sourceRef(
+          "Circle xReserve burn, signature, validation and finalized-release steps",
+          "https://developers.circle.com/xreserve/tutorials/initiate-a-withdrawal-as-a-remote-blockchain",
+          ["route", "capacity", "access", "settlement"],
+        ),
+        sourceRef(
+          "Circle xReserve complete destination and forwarding fee tables",
+          "https://developers.circle.com/xreserve/references/fees",
+          ["fees"],
+        ),
+      ],
+    },
     docs: [
       sourceRefFull("Circle xReserve", "https://www.circle.com/xreserve"),
       sourceRef("Circle xReserve fees (reviewed 2026-10-03)", "https://developers.circle.com/xreserve/references/fees", ["fees"]),
+      sourceRef(
+        "Circle xReserve asynchronous withdrawal completion",
+        "https://developers.circle.com/xreserve/tutorials/initiate-a-withdrawal-as-a-remote-blockchain",
+        ["route", "capacity", "access", "settlement"],
+      ),
       sourceRefRouteCapacityAccess(
         "Movement USDCx announcement",
         "https://www.movementnetwork.xyz/article/introducing-usdcx-movements-native-usdc-backed-stablecoin",
@@ -1472,7 +1561,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ],
     notes: [
       "USDCx exits into tracked Circle USDC through the xReserve contract; final fiat redemption remains Circle's issuer route.",
-      "Fresh reserve telemetry reads xReserve's balanceOfNativeCollateral(USDC, Movement domain 10005) on Ethereum as the live escrowed-USDC exit bound; when that read is unavailable the route is left unrated instead of assuming the full supply is releasable.",
+      "The Ethereum balanceOfNativeCollateral(USDC, Movement domain 10005) read remains collateral evidence only. Exact releasable capacity, all-source accounting and an elapsed completion bound are unresolved; no funded instant or atomic USDC exit is certified.",
     ],
   }),
   ...defineConfigFamily(
@@ -1720,16 +1809,28 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     reviewedAt: REVIEWED_REDEMPTION_OUTPUTS_WAVE2_AT,
     settlementModel: "queued",
     outputAssetType: "stable-single",
+    v9RouteReviewTerms: {
+      settlementModel: "queued",
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "settlement"],
+      rationale: "The exact Ethereum sAID implementation queues loss-adjusted AID claims and permits partial FIFO fills only when operator-managed availableForUnstake is funded. At block 26236730 on 2026-10-20, getCooldownPeriod() is 2592000 seconds, but the cooldown is eligibility, not a request-to-final-receipt maximum. Neither idle AID nor availableForUnstake proves policy-size fully funded completion. The issuer memorandum also permits caps, freezes and deferral. Preserve both unknowns until a fresh exact funded completion receipt and unconditional settlement bound are admitted.",
+      reviewedAt: "2026-10-20",
+      docs: [
+        sourceRef("Exact sAID queue implementation, retrieved 2026-10-20", "https://eth.blockscout.com/api/v2/smart-contracts/0xe2986b3e5b3e77896ae0509f6740d1106273374d", ["route", "capacity", "settlement"]),
+        sourceRef("sAID Strategy Memorandum, page 5, retrieved 2026-10-20", "https://drive.google.com/file/d/1GMwfOw_XXHKXOXopqU8_QGu_y5ozM9hV/preview", ["route", "capacity", "settlement"]),
+      ],
+    },
     feeDescription:
-      "sAID exits to AID through a monthly FIFO withdrawal cycle at unstaking NAV; verified source exposes no separate unstaking-fee deduction",
+      "sAID queues loss-adjusted AID claims through a liquidity-dependent FIFO path; the verified implementation exposes no separate unstaking-fee deduction",
     docs: [
       sourceRefFull("GAIB sAID docs", "https://docs.gaib.ai/products/gaib-products/staked-ai-dollar-said"),
       sourceRef("GAIB AID docs", "https://docs.gaib.ai/products/gaib-products/ai-dollar-aid", ["route", "access"]),
+      sourceRef("Exact sAID queue implementation, retrieved 2026-10-20", "https://eth.blockscout.com/api/v2/smart-contracts/0xe2986b3e5b3e77896ae0509f6740d1106273374d", ["route", "capacity", "settlement"]),
     ],
     notes: [
       "sAID is not a $1-pegged wrapper; this route models the holder-exercisable withdrawal into AID at unstaking NAV, including possible unrealized-loss haircuts.",
       "Final AID redemption into supported stablecoins remains whitelisted for primary-market users, while regular users generally exit AID through app or DEX liquidity.",
-      "Fresh ERC-4626 reserve telemetry reads the vault's idle AID balance as the current redeemable bound while the monthly FIFO cycle still governs settlement; if the live snapshot is unavailable, the route is left unrated instead of using the prior full-supply model.",
+      "The verified implementation uses a request-relative cooldown and a separately funded FIFO queue with partial fills; issuer docs describe monthly cohorts. Neither representation establishes an unconditional completion maximum. Idle AID is diagnostic backing, not immediate same-notional executable withdrawal capacity. The async-request reserve declaration withholds that false credit on fresh producer cycles.",
       "Output type corrected 2026-07-19: the withdrawal pays AID (tracked aid-gaib, a $1-target stablecoin) — the previously declared output asset — so the nav placeholder type was replaced with stable-single; the unstaking-NAV conversion-rate and haircut caveats above are unchanged and remain captured by the queued rules-based-nav execution model.",
     ],
   }),
@@ -1807,27 +1908,27 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   "usdv-solomon": defineStablecoinRedeemConfig({
     accessModel: "whitelisted-onchain",
     outputAssets: ["usdc-circle"],
-    capacityModel: { kind: "supply-ratio", ratio: 0.005, confidence: "documented-bound", basis: "hot-buffer" },
+    capacityModel: { kind: "unquantified" },
     costModel: documentedVariableFee(
-      "Solomon docs disclose a 0.2% mint fee; redemption fee is not separately published, and access is limited to approved or whitelisted participants",
+      "No current all-in legacy USDv redemption fee bound is published; the former mint-fee disclosure is not a redemption quote and current documentation describes the separate replacement token",
     ),
-    reviewedAt: REVIEWED_FOLLOWUP_REMEDIATION_AT,
+    reviewedAt: "2026-10-20",
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "cost", "settlement"],
+      reviewedAt: "2026-10-20",
+      rationale:
+        "The legacy wind-down announcement directs holders to market swaps into USDC and sets October 16 as the front-end/support end. The old minting and peg-arbitrage URLs now redirect to replacement-token documentation. They do not establish a current legacy 0.5% hot buffer, all-in fee or maximum final settlement time. The elapsed support date does not itself prove that the onchain redemption path is suspended.",
+      docs: [
+        sourceRef("Solomon original USDv wind-down announcement", "https://blog.solomonlabs.org/p/winding-down-the-original-usdv", ["route", "access", "settlement"]),
+      ],
+    },
     docs: [
-      sourceRef("Solomon minting USDv", "https://docs.solomonlabs.org/usdv/usdv-and-susdv/minting-usdv", [
-        "route",
-        "access",
-        "fees",
-      ]),
-      sourceRef("Solomon peg arbitrage", "https://docs.solomonlabs.org/usdv/usdv-and-susdv/peg-arbitrage-mechanism", [
-        "route",
-        "capacity",
-        "access",
-        "settlement",
-      ]),
+      sourceRef("Solomon original USDv wind-down announcement", "https://blog.solomonlabs.org/p/winding-down-the-original-usdv", ["route", "access", "settlement"]),
     ],
     notes: [
       "Modeled as the whitelisted USDv to USDC redemption path via Solomon protocol reserves, not as full strategy-collateral redeemability.",
-      "The documented 0.5% reserve buffer is the immediate capacity bound; strategy assets and derivatives backing remain outside immediate redemption capacity.",
+      "The historical 0.5% reserve-buffer assumption is withdrawn: no current source establishes that buffer for the exact legacy mint. Strategy assets, replacement-token reserves and issuer statements about market liquidity are not executable redemption capacity.",
     ],
   }),
   "weusd-picwe": defineReviewedStablecoinRedeemConfig(REVIEWED_YIELD_COVERAGE_WAVE_AT, {
@@ -1887,13 +1988,26 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   }),
   "trusd-tori": defineStablecoinRedeemConfig({
     accessModel: "whitelisted-onchain",
-    outputAssetType: "stable-basket",
-    outputAssets: ["usdc-circle", "usdt-tether"],
-    capacityModel: { kind: "supply-ratio", ratio: 0.1, confidence: "heuristic", basis: "strategy-buffer" },
+    holderEligibility: "issuer-discretionary",
+    settlementModel: "queued",
+    outputAssetType: "stable-single",
+    unresolvedOutputAssetKeys: ["usdc-circle", "usdt-tether"],
+    unresolvedOutputDisposition: "reviewed-external",
+    capacityModel: { kind: "unquantified" },
     executionModel: "rules-based-nav",
     costModel: fixedFee(10, "Tori documents a 0.1% fee on direct trUSD minting and redemption"),
     routeExitCorrelation: "same-protocol-liquidity",
     reviewedAt: "2026-08-13",
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "settlement"],
+      reviewedAt: "2026-10-20",
+      rationale: "ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required. The current institutional page establishes a selected USDC or USDT payout and 10 bps protocol fee, not a simultaneous basket, funded 10%-of-supply buffer or request-to-completed-payout maximum. Binding terms make every repurchase discretionary, suspendable and priced no higher than USD 1 per trUSD. Missing capacity and timing are not zero capacity or an observed failed redemption.",
+      docs: [
+        sourceRef("Tori institutional redemption terms retrieved 2026-10-20", "https://docs.tori.finance/resources/institutional.md", ["route", "access", "fees"]),
+        sourceRef("Tori 8 August 2026 trUSD terms retrieved 2026-10-20", "https://docs.tori.finance/legal/trusd-terms.md", ["route", "access", "capacity", "settlement"]),
+      ],
+    },
     docs: [
       sourceRef("Institutional access and direct mint/redeem", "https://docs.tori.finance/resources/institutional", [
         "route",
@@ -1907,7 +2021,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ],
     notes: [
       "The modeled primary rail is direct trUSD redemption by KYC/AML and risk-verified participants using whitelisted wallets, paying USDC or USDT at NAV/market rate.",
-      "The reviewed 10% strategy-buffer heuristic avoids treating trUSD's delta-neutral reserve stack as immediately redeemable full supply; Tori does not publish a current USDC/USDT buffer or executable capacity.",
+      "The historical 2026-08-13 10% strategy-buffer heuristic is withdrawn after source re-review 2026-10-20: the cited sources publish no funded exact-request capacity. USDC or USDT is selected per signed order, not a measured basket; output-bound observations must preserve that branch identity and the shared protocol resource. The original review start and prior pins remain.",
       "Unverified users' market swaps are secondary liquidity and are excluded from the redemption backstop.",
     ],
   }),

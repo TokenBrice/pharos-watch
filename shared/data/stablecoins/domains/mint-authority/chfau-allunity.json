@@ -132,10 +132,14 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "unknown",
+    "reconciliation": "periodic",
     "supervision": "prudential",
     "review": {
       "sources": [
+        {
+          "label": "Current CHFAU exact six-deployment issuer registry, retrieved 2026-10-20",
+          "url": "https://allunity.com/chfau"
+        },
         {
           "label": "AllUnity CHFAU launch",
           "url": "https://allunity.com/news/allunity-launches-the-first-fully-reserved-micar-compliant-swiss-franc-stablecoin-chfau/"
@@ -161,7 +165,7 @@
           "url": "https://allunity.com/trust-center"
         },
         {
-          "label": "AllUnity CHFAU whitepaper v1.2",
+          "label": "CHFAU whitepaper v1.2, last amended 2026-06-09: B.12 six-network token identity and F.4(2)(ii), printed page 43, daily whole-CHFAU reconciliation",
           "url": "https://framerusercontent.com/assets/lfHzRwNo9LAdtDuKhicsDSTFM2g.pdf"
         },
         {
@@ -169,9 +173,9 @@
           "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
         }
       ],
-      "evidence": "On 2026-07-21, Ethereum block 25584014, Base block 48941293, and Polygon block 90644625 each resolved the CHFAU proxy to implementation 0x5cad3aaa... and confirmed the same active EOA MINTER_ROLE (0xd443f046...) and DEFAULT_ADMIN_ROLE (0xddaca43e...). AllUnity's live CHFAU page identifies those three deterministic EVM deployments plus native Tempo TIP-20 0x20c000...b28e1; the Tempo token reported symbol CHFAU, 6 decimals, and zero supply at block 31095212, while standard EVM role enumeration is unavailable. No independent attestor, cadence, or dated reserve report is public; AllUnity's Trust Center still says the reserve audit report is coming soon. The ESMA MiCA register and BaFin authorization match AllUnity GmbH as the EMI and CHFAU EMT issuer, so prudential supervision is present but independent reconciliation remains unknown. Economic-posture fields reviewed 2026-08-15: issuer EOAs can mint or replace mint logic without delay, no dated whole-supply reserve attestation is published, and BaFin supervises the authorized EMI issuer.",
-      "reviewer": "Codex SOL-V mint-tier research; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15"
+      "evidence": "Historical control observations remain unchanged: Ethereum block 25584014, Base block 48941293 and Polygon block 90644625 on 2026-07-21 resolved the CHFAU proxy to implementation 0x5cad3aaa... and confirmed the same active EOA MINTER_ROLE (0xd443f046...) and DEFAULT_ADMIN_ROLE (0xddaca43e...). The historical Tempo observation at block 31095212 established symbol CHFAU, six decimals and zero supply at that block only. Reconciliation-only research on 2026-10-20 corrects the previous unknown conclusion: the current authoritative CHFAU whitepaper v1.2, last amended 2026-06-09, F.4(2)(ii), printed page 43, expressly describes daily reconciliations ensuring that the par value of all outstanding CHFAUs is covered by the Reserve Assets. The accounting identity is all outstanding CHFAU at CHF par versus CHFAU Reserve Assets; cadence is daily. B.12 identifies Ethereum, Solana, Base, Tempo, Polygon and Arc, matching the six exact deployments currently listed on the issuer's CHFAU page and retained in this asset's route inventory. This establishes issuer-operated recurring whole-token supply-to-backing reconciliation, not independent financial assurance or current reserve weights. The Trust Center still marks the reserve audit report coming soon; no named independent reserve engagement is inferred. Existing BaFin prudential supervision, unbounded issuer mint/upgrade powers, chain-local authority uncertainties and all original on-chain observation dates remain unchanged.",
+      "reviewer": "Codex SOL-V mint-tier research; Sol economic-posture batch 2026-08-15; FD16 reconciliation-only bottom-up refinement",
+      "reviewedAt": "2026-10-20"
     }
   }
 }

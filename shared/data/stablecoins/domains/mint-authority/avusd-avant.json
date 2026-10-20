@@ -112,7 +112,7 @@
     ],
     "economicCapSemantics": "unbounded",
     "reconciliation": "unknown",
-    "supervision": "none",
+    "supervision": "unknown",
     "review": {
       "sources": [
         {

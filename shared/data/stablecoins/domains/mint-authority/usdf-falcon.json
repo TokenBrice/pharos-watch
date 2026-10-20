@@ -2,7 +2,7 @@
   "id": "usdf-falcon",
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "unbounded-reconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "USDf has one proven native issuance deployment on Ethereum. Its transparent proxy is administered through a zero-delay ProxyAdmin owned by a 4/6 Safe, while the Ethereum PreCollateralizedMinter authorizes native minting through signed requests without an on-chain collateral check or supply cap; BSC, Base, and XDC transfer-rail controls are reviewed separately under Bridge Risk.",
     "upgradeability": {
@@ -114,7 +114,7 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "periodic",
+    "reconciliation": "unknown",
     "supervision": "attestation-only",
     "review": {
       "sources": [
@@ -137,9 +137,37 @@
         {
           "label": "Ethereum JSON-RPC current Safe reads",
           "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Falcon rendered transparency report registry, retrieved 2026-10-20; newest formal assurance remains 30 April 2026",
+          "url": "https://app.falcon.finance/transparency"
+        },
+        {
+          "label": "HT Digital ISAE 3000 report: 30 April 2026 period, signed 19 June 2026, retrieved 2026-10-20",
+          "url": "https://falcon.finance/api/media/file/Final%20Falcon%20assurance%20report%20and%20opinion%20-%20signed%20final%2030%20April%202026.pdf?prefix=media"
+        },
+        {
+          "label": "HT Digital weekly collateral letter dated 19 October 2026, retrieved 2026-10-20",
+          "url": "https://falcon.finance/api/media/file/Falcon%20Letter%20-%2019%20October%202026-1.pdf?prefix=media"
+        },
+        {
+          "label": "HT Digital preceding weekly collateral letter dated 12 October 2026, retrieved 2026-10-20",
+          "url": "https://falcon.finance/api/media/file/Falcon%20Letter%20-%2012%20October%202026.pdf?prefix=media"
+        },
+        {
+          "label": "Falcon current deployment directory including Solana USDf, retrieved 2026-10-20",
+          "url": "https://docs.falcon.finance/resources/smart-contracts.md"
+        },
+        {
+          "label": "Chainlink USDf five-network token and pool inventory, retrieved 2026-10-20",
+          "url": "https://docs.chain.link/ccip/directory/mainnet/token/USDf"
+        },
+        {
+          "label": "Solana USDf explorer authority identity; not a pinned authority or conservation certificate, retrieved 2026-10-20",
+          "url": "https://solscan.io/token/9ksrtYx1vnRxr4X5YqmGxqRMRBhgsc6FfQwWjB1KZq2x"
         }
       ],
-      "evidence": "At Ethereum block 25770829 on 2026-08-16, the USDf proxy resolved to implementation 0x3adf34c09dac24e4baefb1b1df4c2992edc2b789 with ProxyAdmin 0x3ef1127fdf81b553066dae0faea58785a2aa6e14 owned by the reviewed 4-of-6 Safe. A current Ethereum read at block 25862870 on 2026-08-29 reconfirmed the same Safe's six owners, threshold 4, empty module list, and zero guard/module-guard slots. The Ethereum PreCollateralizedMinter remains the native MINTER_ROLE holder; its signed issuance path has no on-chain collateral balance check or supply cap. BSC, Base, and XDC BurnMintERC20 roles, pools, local unlimited-supply semantics, and CCIP route administration are bridge machinery and are recorded only in bridgeRouteRisk. The corrected native annotations remain partially-bounded-admin, unbounded, periodic reconciliation, and attestation-only supervision.",
+      "evidence": "At Ethereum block 25770829 on 2026-08-16, the USDf proxy resolved to implementation 0x3adf34c09dac24e4baefb1b1df4c2992edc2b789 with ProxyAdmin 0x3ef1127fdf81b553066dae0faea58785a2aa6e14 owned by the reviewed 4-of-6 Safe. A current Ethereum read at block 25862870 on 2026-08-29 reconfirmed the same Safe's six owners, threshold 4, empty module list, and zero guard/module-guard slots. The Ethereum PreCollateralizedMinter remains the native MINTER_ROLE holder; its signed issuance path has no on-chain collateral balance check or supply cap. BSC, Base, and XDC BurnMintERC20 roles, pools, local unlimited-supply semantics, and CCIP route administration are bridge machinery and are recorded only in bridgeRouteRisk. The former review annotated periodic reconciliation and attestation-only supervision. ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required, 2026-10-20: withdraw those two process claims to unknown under the binding D33 adjudication. The rendered issuer registry's newest formal HT Digital assurance report still examines 30 April 2026, signed 19 June 2026; it verified USDf issued against reserves at that instant but is outside a quarterly current-period window. The current weekly letters of 12 and 19 October, together with the dashboard's committed weekly recalculation, establish a current recurring comparison for the Ethereum-identified book; the 19 October letter lists 1727.154 million circulating units against 1837.951 million dollars of collateral. This can support periodic reconciliation only after its liability denominator is shown to include or conserve every representation. The current issuer and Chainlink directories also identify Solana mint 9ksrtYx1vnRxr4X5YqmGxqRMRBhgsc6FfQwWjB1KZq2x; its Solscan page identifies Squad Vault 6aFBcUtZoRtaMKhvfvDKy5qrqBBHnVYfDQWpefQeNpUH as authority, not the listed CCIP pool. Current pinned authority/permission state, local liabilities and the complete Ethereum-escrow/representation conservation join are not established. The weekly letters therefore remain diagnostic rather than whole-liability reconciliation credit. They also do not describe independent liability-verification procedures or a current assurance engagement, so attestation-only is not established. This withdrawal asserts neither no reconciliation nor a reserve shortfall. The original 2026-08-29 review start, all block pins, authority facts and unbounded economic cap semantics are preserved; the posture annotation follows the retained positive unbounded authority rather than treating missing process evidence as measured non-reconciliation. Review correction 2026-10-20 following Main's D33-AUDIT R-5 ruling: restore supervision to attestation-only. The retained HT Digital Ltd ISAE 3000 report dated 30 April 2026 and signed 19 June 2026 identifies the independent examiner, Falcon Digital Limited and the USDf reserves/liabilities subject; its procedures verify issued USDf, value the reserves and explicitly compare backing to issuance at the stated instant. That dated examiner/scope evidence remains valid evidence of attestation-only supervision; report currency is a condition of current recurring reconciliation, not a separate supervision-existence requirement. This supersedes only the preceding supervision withdrawal and conclusion. Reconciliation remains unknown because current complete liability inclusion/conservation is unproved, authorityPosture remains unbounded-adverse under D33, and no report period, review start, source block or current-assurance claim is renewed.",
       "reviewer": "Codex Safety Score V9 data research; Sol economic-posture batch 2026-08-15; Safe-state re-review 2026-08-29",
       "reviewedAt": "2026-08-29"
     }

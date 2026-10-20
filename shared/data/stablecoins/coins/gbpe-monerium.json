@@ -9,7 +9,7 @@
     "governance": "centralized"
   },
   "collateral": "British pound e-money claim backed by safeguarded client funds and permitted EMI reserve assets under Monerium's regulated e-money framework",
-  "pegMechanism": "Mint-and-burn through Monerium after onboarding/KYC: GBPe is issued when users deposit GBP through supported bank rails and burned when redeemed back to a bank account.",
+  "pegMechanism": "GBPe is Monerium's GBP e-money claim. Its business terms require onboarding/KYC and an additional agreement for direct non-EUR issuance and redemption; absent that agreement Monerium does not redeem GBPe directly. The GBP-specific knowledge base says GBP IBANs are not currently offered and no timeline is confirmed. These restrictions are distinct from Monerium's generally available EUR/SEPA rail.",
   "mechanismArchetype": "fiat-cash",
   "detailProvider": "coingecko",
   "geckoId": "monerium-gbp-emoney",

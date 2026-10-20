@@ -192,9 +192,13 @@
           {
             "label": "Ethereum block 26197300, pinned allocator role and Safe state",
             "url": "https://etherscan.io/block/26197300"
+          },
+          {
+            "label": "Soter Labs allocator operator disclosure, revision 8e7fdea, retrieved 2026-10-20",
+            "url": "https://raw.githubusercontent.com/soterlabs/morpho-allocator-bots/8e7fdea1bfed9be334fd0fcdb45244420056e907/README.md"
           }
         ],
-        "evidence": "Morpho's indexed role roster identifies this allocator, independently confirmed by isAllocator=true and isSentinel=false at Ethereum block 26197300 (2026-10-15T10:25:11Z). Safe getter/storage reads show 1-of-3 signing, no enabled modules, zero guard/module guard and the standard compatibility fallback handler. The allocator can allocate and deallocate within approved adapters and caps, set maxRate and change liquidityAdapter/data without a timelock; it cannot raise caps or mint arbitrary native shares. liquidityAdapter is currently zero, so ordinary redeem/withdraw uses idle USDS unless a separate deallocation occurs. Offchain signer custody, independence and a historical permission/pending-operation census are not established. Pinned RPC: https://eth-mainnet.g.alchemy.com/v2/."
+        "evidence": "Morpho's indexed role roster identifies this allocator, independently confirmed by isAllocator=true and isSentinel=false at Ethereum block 26197300 (2026-10-15T10:25:11Z). Safe getter/storage reads show 1-of-3 signing, no enabled modules, zero guard/module guard and the standard compatibility fallback handler. The allocator can allocate and deallocate within approved adapters and caps, set maxRate and change liquidityAdapter/data without a timelock; it cannot raise caps or mint arbitrary native shares. liquidityAdapter is currently zero, so ordinary redeem/withdraw uses idle USDS unless a separate deallocation occurs. Offchain signer custody, independence and a historical permission/pending-operation census are not established. Pinned RPC: https://eth-mainnet.g.alchemy.com/v2/. Additional source research on 2026-10-20: Soter Labs' operator-published repository at revision 8e7fdea1bfed9be334fd0fcdb45244420056e907 identifies this exact allocator Safe and its already-enumerated owner 0xd4351069bbbb2f73a850100ecb655e9fca0b7829 as the autonomous bot signer; the signing key is described as a sealed Railway environment variable. This is a disclosed software-signing workflow, not an HSM/MPC/hardware-wallet attestation, signer-independence proof or a new on-chain observation. Existing October 15 pins and review start are retained."
       }
     ],
     "review": {

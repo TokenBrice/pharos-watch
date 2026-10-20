@@ -55,9 +55,27 @@ describe("reviewed registry provenance identity", () => {
     const expanded = expandReviewedRegistryReferences(V9AuthoredEvidenceGapClassificationsEnvelopeSchema.parse(gaps), "entries", {
       sources: "sourceObservations", searchedSurfaces: "searchedSurfaceObservations",
     });
-    expect(sha256Hex(stableJsonStringifyV1(expanded))).toBe("45571e6ade9217a5f09bee8fb0ad7d8715a81bab8bb087ca0fe4fd6191aa8428");
+    // Full authored-registry identity pin; deliberate curation rotates this snapshot.
+    expect(sha256Hex(stableJsonStringifyV1(expanded))).toBe("06671e804130e2925ba0a568d0a406ff4ad9e7e7b8a3c6b931cf97e11884f4a1");
     expect(V9EvidenceGapClassificationsV1Schema.parse(expanded).entries).toHaveLength(gaps.entries.length);
     expect(V9EvidenceGapClassificationsV1Schema.safeParse(gaps).success).toBe(false);
+  });
+
+  it("preserves ordered reference expansion independently of live registry curation", () => {
+    const authored = {
+      schemaVersion: 1,
+      entries: [{ assetId: "alpha", id: "ordered", sourcesRefs: ["second", "first"], searchedSurfacesRefs: ["surface"] }],
+      sourceObservations: [{ id: "first", value: { label: "First" } }, { id: "second", value: { label: "Second" } }],
+      searchedSurfaceObservations: [{ id: "surface", value: "https://issuer.example/reports" }],
+    };
+    expect(expandReviewedRegistryReferences(authored, "entries", {
+      sources: "sourceObservations", searchedSurfaces: "searchedSurfaceObservations",
+    })).toEqual({
+      schemaVersion: 1,
+      entries: [{ assetId: "alpha", id: "ordered", sources: [{ label: "Second" }, { label: "First" }],
+        searchedSurfaces: ["https://issuer.example/reports"] }],
+    });
+    expect(authored.entries[0]).toHaveProperty("sourcesRefs", ["second", "first"]);
   });
 
   it("keeps shared observations independent by review scope and isolates a dangling asset", () => {

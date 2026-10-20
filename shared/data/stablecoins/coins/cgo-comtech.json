@@ -10,7 +10,7 @@
     "rwa": true
   },
   "collateral": "Physical gold (999.9 fineness, 24-carat) stored in insured, segregated vaults with Transguard (Emirates Group) in the UAE; each bar registered on DMCC Tradeflow with unique ID and refiner certificates; 1 CGO = 1 gram of gold",
-  "pegMechanism": "Direct redemption for physical gold coins via the ComTech Gold app; minimum physical delivery is 10 grams (in 1-gram multiples); gold movements endorsed and approved by DMCC",
+  "pegMechanism": "Issuer-managed gold trading and physical redemption. The FAQ advertises app delivery from 10 grams in one-gram multiples, while the governing 23 August 2022 terms require one kilogram and further one-kilogram denominations for direct reserve redemption. Authorized-partner gold or jewellery exchange is a separate route from one gram. Making and delivery charges apply; neither the FAQ nor terms establish a completed delivery or spendable-USD payout deadline.",
   "mechanismArchetype": "commodity-claim",
   "mechanismArchetypeReview": {
     "disposition": "resolved",

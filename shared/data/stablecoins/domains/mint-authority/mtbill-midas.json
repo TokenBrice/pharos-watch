@@ -2,7 +2,7 @@
   "id": "mtbill-midas",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-reconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "mTBILL has issuer-native deployments on Ethereum, Base, Rootstock, Plume, and Etherlink. October 1 pinned reads confirm the four listed deposit-vault minters on Ethereum, Base, Rootstock and Etherlink, and EOA 0x7ef55ff58dc56ef387bb73a3b63abe9fc47359dd on Rootstock and Etherlink. The listed Plume vault does not hold M_TBILL_MINT_OPERATOR_ROLE at Plume block 96620582. Previously recorded Base/Rootstock EOA and Rootstock/Etherlink Safe mint grants are no longer active; the remaining EOA's Plume grant is also absent. Chain-local 1-of-3 admin Safes and the shared admin EOA retain immediate grant authority; chain-local timelocks retain a two-day delay. Role enumeration is unavailable through the queried ABI, so this is not an exhaustive holder census.",
     "upgradeability": {
@@ -300,11 +300,11 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "periodic",
-    "supervision": "attestation-only",
+    "reconciliation": "unknown",
+    "supervision": "unknown",
     "review": {
-      "evidence": "Boundary migration review on 2026-08-16 confirms that all five authored deployment refs resolve only to reviewed native-issuance routes; no production bridge representation or bridge-only control is included in Mint Authority. Pinned chain state was reviewed at Ethereum 25527148, Base 48598894, Rootstock 9049318, Plume 80928370, and Etherlink 48212139. M_TBILL_MINT_OPERATOR_ROLE holders were: Ethereum vault 0x99361435420711723af805f08187c9e6bf796683; Base EOA 0x875c06a295c41c27840b9c9dfda7f3d819d8bc6a plus vault 0x8978e327fe7c72fa4eaf4649c23147e279ae1470; Rootstock 3-of-7 Safe 0x5b087db30433bcf5781f385312b1114e8c4819cc, vault 0xf454a52da2157686ef99702c0c19c0e8d66bc03c, and EOAs 0x875c06a295c41c27840b9c9dfda7f3d819d8bc6a and 0x7ef55ff58dc56ef387bb73a3b63abe9fc47359dd; Plume EOA 0x7ef55ff58dc56ef387bb73a3b63abe9fc47359dd plus vault 0xb05f6aa8c2ea9ab8537cf09a9b765a21de249224; Etherlink 2-of-5 Safe 0xbb065d6c7f08e783fd3d2d9593c4e363fee5cdd5, EOA 0x7ef55ff58dc56ef387bb73a3b63abe9fc47359dd, and vault 0xd65bfeb71271a4408ff335e59ecf6c5b21a33a70. Every chain also retained its local 1-of-3 Safe and shared EOA 0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227 as immediate DEFAULT_ADMIN_ROLE holders. All current mint-critical transparent proxies resolved through chain-local ProxyAdmins to two-day timelocks controlled by those local Safes. Economic-control evidence reviewed 2026-07-15: Ankura Trust Company has read-only collateral-account access and independently verifies mTBILL collateral eligibility and NAV daily; current reports remain available through the Midas transparency dashboard. FMA approval applies to the prospectus and is not prudential licensing of Midas Software GmbH. Economic-posture fields reviewed 2026-08-15: issuer-controlled direct mint or immediate minter-administration paths are economically unbounded; existing whole-supply periodic reconciliation and independent attestation evidence remain supported.",
-      "reviewer": "Codex Safety Score V9 registry pass; Sol economic-posture batch 2026-08-15; Codex Mint/Bridge boundary migration RELOC-10",
+      "evidence": "Boundary migration review on 2026-08-16 scopes the five authored deployments to native issuance. The retained July and October pinned control observations establish issuer-controlled direct minting, immediate DEFAULT_ADMIN_ROLE authorization through chain-local 1-of-3 Safes and an EOA, and two-day timelocked upgrades; original control pins and review start remain unchanged. Source-scope correction observed 2026-10-20: the cited Independent Reporting page describes daily collateral NAV and asset-eligibility verification, not reconciliation of all five native-deployment liabilities and pending claims to backing. Current engine documentation describes source/workflow fidelity and internal NAV consistency checks. The registry-linked October 20 checkpoint contains issuer-reported cross-chain supply, oracle, aggregate equity and a computed coverage ratio, but no complete native-deployment liability join on a committed cadence. NAV consistency and isolated operational totals do not establish the token-liability-creation ledger workflow required for internal-ledger either. Under the shared D33 evidence standard, reconciliation and supervision therefore remain unknown; this withdraws the previously unsupported periodic and attestation-only credit without asserting that no reconciliation exists. FMA prospectus approval is not prudential issuer supervision. The unbounded authority facts remain; no measured reserve shortfall is inferred.",
+      "reviewer": "Codex Safety Score V9 registry pass; Sol economic-posture batch 2026-08-15; Codex Mint/Bridge boundary migration RELOC-10; NR1 source-scope correction 2026-10-20 (original review start preserved)",
       "reviewedAt": "2026-08-16",
       "disposition": "scoreable",
       "sources": [
@@ -347,6 +347,14 @@
         {
           "label": "Midas price oracle verification",
           "url": "https://docs.midas.app/defi-integration/price-oracle"
+        },
+        {
+          "label": "Midas current attestation engine: workflow verification and internal consistency checks, retrieved 2026-10-20",
+          "url": "https://docs.midas.app/transparency/the-midas-attestation-engine"
+        },
+        {
+          "label": "mTBILL SAVE checkpoint published 2026-10-20T13:05:11Z; registry-linked content recovered at Ethereum block 26236714, aggregate issuer accounting only",
+          "url": "https://gateway.pinata.cloud/ipfs/QmZTPuoV1fKZ3ej9Fvs58bS3SWJWVP1GZkQQg217xs6NWH"
         }
       ]
     }

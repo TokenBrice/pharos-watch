@@ -17,20 +17,20 @@
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://loon.finance/transparency/",
-    "provider": "Monthly scanned ATB Financial bank-confirmation forms for PayTrie AB Inc (the August 2026 form names no requesting accountant, supplies no accountant's opinion, and contains no CADC circulation or liability reconciliation)",
+    "provider": "Monthly scanned ATB Financial bank-confirmation forms for PayTrie AB Inc (the September 2026 form names no requesting accountant, supplies no accountant's opinion, and contains no CADC circulation or liability reconciliation)",
     "attestorTier": "none",
     "cadence": "monthly",
     "attestorJurisdiction": "Canada",
     "latestReport": {
-      "periodEnd": "2026-08-31",
+      "periodEnd": "2026-09-30",
       "assuranceMethod": "unknown",
       "scope": "assets-only",
       "liabilityReconciliation": "none",
-      "reviewer": "Sol curation pass 2026-10-01 (CurM02USDK); bank confirmation visually reviewed; publication date not stated",
+      "reviewer": "C06 bottom-up refinement 2026-10-21; September bank confirmation visually reviewed 2026-10-20; issuer API uploadedAt 2026-10-20T17:58:10.609Z, no publication date printed in form",
       "confidence": "verified",
       "sources": [
         {
-          "label": "Loon attestation archive: CADC_Bank_Attestation_Aug_2026.pdf",
+          "label": "Loon attestation API: CADC_Bank_Attestation_Sep_2026.pdf, uploaded 2026-10-20; SHA-256 91d4fab363e8b3f9ec22570ff5b7e000040231e39fc4465b4efffce3582444eb",
           "url": "https://loon.finance/api/attestations"
         }
       ]

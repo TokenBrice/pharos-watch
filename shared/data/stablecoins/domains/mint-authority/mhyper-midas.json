@@ -2,7 +2,7 @@
   "id": "mhyper-midas",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-reconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "mHYPER has native issuer deployments on Ethereum and Plasma. The shared operator EOA can mint directly on both native deployments, Ethereum also authorizes its deposit-vault proxy, and the Plasma issuance-vault role is currently revoked. Monad and Katana are LayerZero bridge representations; their adapter, representation-token minter, admin, and upgrade exposures are reviewed separately in Bridge Risk. Native chain-local transparent proxies remain upgradeable through 1-of-3 Safes and two-day Midas timelocks.",
     "upgradeability": {
@@ -236,10 +236,10 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "periodic",
-    "supervision": "attestation-only",
+    "reconciliation": "unknown",
+    "supervision": "unknown",
     "review": {
-      "evidence": "Canonical issuance is limited to the independently listed Ethereum and Plasma mHYPER deployments. At Ethereum block 25770940, the shared operator EOA and Ethereum issuance vault held M_HYPER_MINT_OPERATOR_ROLE; at Plasma block 29982696, the shared operator still held the role while the documented Plasma issuance-vault role was revoked. DEFAULT_ADMIN_ROLE remains held by the shared EOA and chain-local 1-of-3 Safe authorities, so native minter grants and revocations remain immediate. The native token, access-control, and issuance-vault proxies resolve through the Ethereum and Plasma chain-local ProxyAdmins to two-day timelocks. Monad and Katana are LayerZero burn/mint representations, and their adapter, representation-token minter, admin, and upgrade facts are assessed only in bridgeRouteRisk. Economic-control evidence reviewed 2026-07-15: mHYPER is the first live Midas Attestation Engine feed; periodic NAV and reserve claims are notarized and published through Chainlink CRE, then independently verified onchain by LlamaRisk and Canary. FMA prospectus approval is not issuer prudential licensing. Economic-posture fields reviewed 2026-08-16: the native Ethereum and Plasma operator paths remain economically unbounded; existing whole-supply periodic reconciliation and independent attestation evidence remain supported.",
+      "evidence": "Canonical issuance remains the independently listed Ethereum and Plasma mHYPER deployments. At Ethereum block 25770940, the shared operator EOA and Ethereum issuance vault held M_HYPER_MINT_OPERATOR_ROLE; at Plasma block 29982696, the shared operator held that role while the documented Plasma issuance-vault role was revoked. DEFAULT_ADMIN_ROLE remains with the shared EOA and chain-local 1-of-3 Safes, allowing immediate minter changes. Native token, access-control and issuance-vault proxies resolve through chain-local ProxyAdmins to two-day timelocks. Monad and Katana representation controls remain in Bridge Risk. Source-scope correction reviewed October 20, 2026, preserving the original review start: publication-workflow verification is not whole-supply financial assurance. Exact SAVE checkpoint b06c4713-2dab-5480-9e04-af574f0b4de4 reports the October 20 13:00 UTC 1token book, selected supply 25,572,300.573966 tokens, oracle-valued TVL $29,020,096.74, reserve $29,066,264.53 and ratio 1.001591. This issuer-operated financial ratio is retained as partial accounting evidence, but does not independently join every native deployment and pending economic obligation or explicitly disclose the internal native-liability-creation/pending-claims ledger workflow required for internal-ledger. Neither whole-supply periodic reconciliation nor qualifying supervision is established; both fields remain unknown, not none. Workflow verifiers do not provide whole-liability financial attestation, and prospectus approval is not prudential licensing. Proven economically unbounded operator/admin powers remain unbounded-adverse under D33 without a measured reserve shortfall or incident. ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required: unsupported favorable process credit withdrawn consistently with the same Midas evidence class; original source/control pins and review starts retained.",
       "reviewer": "Codex mint/bridge boundary migration; RELOC-09",
       "reviewedAt": "2026-08-16",
       "disposition": "scoreable",
@@ -271,6 +271,18 @@
         {
           "label": "Midas mHYPER product",
           "url": "https://midas.app/mhyper"
+        },
+        {
+          "label": "Current issuer Attestation Engine: verifier scope is workflow fidelity, not independent financial reconciliation; retrieved October 20, 2026",
+          "url": "https://docs.midas.app/transparency/the-midas-attestation-engine"
+        },
+        {
+          "label": "Issuer proof workflow at pinned source revision: gross reserve and candidate supply accounting",
+          "url": "https://github.com/midas-apps/midas-por-v2/blob/bb7308eb5e3bdd4f882b039db580279c098c011f/README.md"
+        },
+        {
+          "label": "Exact mHYPER SAVE partial ledger comparison, published October 20, 2026 at 16:42:47 UTC; retrieved October 20, 2026",
+          "url": "https://gateway.pinata.cloud/ipfs/QmWfFX1aA4swRRcF4BQk3JQTh6JhbSMkMJiQXRdCrBf1he"
         }
       ]
     }

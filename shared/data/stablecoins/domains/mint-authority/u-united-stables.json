@@ -308,7 +308,7 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "continuous",
+    "reconciliation": "periodic",
     "supervision": "attestation-only",
     "review": {
       "sources": [
@@ -343,11 +343,19 @@
         {
           "label": "Chainlink reference data directory, BNB Chain: United Stables U Reserves, porAuditor Stablemint Labs",
           "url": "https://reference-data-directory.vercel.app/feeds-bsc-mainnet.json"
+        },
+        {
+          "label": "United Stables September 30 2026 reserves and four-network liabilities; Moore CPA Limited ISAE 3000 limited assurance",
+          "url": "https://u.tech/assets/audit-report/USL%20-%20Assurance%20%26%20Reserves%20Report%20for%20Sep_08102026.pdf"
+        },
+        {
+          "label": "United Stables monthly independent reserve report archive (retrieved 2026-10-20)",
+          "url": "https://u.tech/transparency/audit-report/"
         }
       ],
-      "evidence": "Deployment-wide review covered Ethereum, BSC, and Tron token proxies plus their AutoOwner mint endpoints. Ethereum and BSC use chain-local 2/4 Safe instances with identical signers; Tron uses a native 2/4 account permission. The owner paths can mint directly, change AutoOwner limits, and immediately administer the mixed transparent/UUPS upgrade surfaces. AutoOwner's 20,000,000 U limit is per call without a cumulative or time-window bound. Current Safe/API, explorer source, storage, owner, permission, and whitelist reads were pinned on 2026-07-13. Reconciliation review (2026-08-08): United Stables runs a live third-party Chainlink Proof of Reserve oracle - the United Stables U Reserves feed on BNB Chain returned 1,213,382,949 updated 2026-08-07, with Chainlink recording porType Off-chain, porSource Third-party and porAuditor Stablemint Labs - so reserve backing is continuously published by a party other than the issuer. Supervision is not prudential: the issuer terms state United Stables Limited has not obtained registration, authorization or licensing under MiCA, the Hong Kong Stablecoins Ordinance, the GENIUS Act or any securities or stablecoin law, and the only published report is a Ceffu custodian attestation of off-exchange custody balances rather than an accounting-firm reserve attestation against liabilities.",
-      "reviewer": "Codex Safety Score V9 data research / SOL-IV calibration",
-      "reviewedAt": "2026-08-08"
+      "evidence": "Deployment authority observations remain pinned to their original blocks and dates: Ethereum/BSC owner paths and Tron permissions establish economically unbounded native issuance, not a reserve-oracle-enforced mint cap. Process review 2026-10-20: the issuer archive publishes monthly reports, and Moore CPA Limited's ISAE 3000 limited-assurance report covers reserves and total minted-less-burned U at 2026-09-30T23:59:59Z across BNB Smart Chain 1,054,520,135 U, Ethereum 357,151,000 U, Tron 55,000,200 U and Robinhood Chain 30,000,200 U, totaling 1,496,671,535 U against USD 1,511,117,427 reserves. Moore independently verified supply and historical mint/burn records and obtained reconciliations between internal ledgers and external custody, exchange, bank, fund and blockchain records. This supports periodic full-supply reconciliation, not continuous reconciliation: a continuously published aggregate reserves-only Chainlink feed does not itself reconcile liabilities. The report excludes assurance on future reserve value, stablecoin/RWUSD parity, fund redemption availability, provider contractual protections and ongoing controls. Attestation-only supervision is retained; no prudential issuer supervision is established.",
+      "reviewer": "FD24 bottom-up refinement 2026-10-20",
+      "reviewedAt": "2026-10-20"
     }
   }
 }

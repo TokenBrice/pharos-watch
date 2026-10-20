@@ -139,7 +139,7 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "not-applicable",
+    "reconciliation": "unknown",
     "supervision": "none",
     "review": {
       "sources": [
@@ -162,9 +162,17 @@
         {
           "label": "USDa admin Safe state",
           "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0xdFB1b1c0E0f697829aF500D73364D863Cb3c6cE9/"
+        },
+        {
+          "label": "USDa issuance and conversion workflow (retrieved 2026-10-20)",
+          "url": "https://docs.avalonfinance.xyz/avalon-btcfi-products/cedefi-cdp-usda/how-to-use-usda"
+        },
+        {
+          "label": "Avalon legal disclosures, July 17 2025 terms (retrieved 2026-10-20)",
+          "url": "https://docs.avalonfinance.xyz/resources/terms-and-conditions.md"
         }
       ],
-      "evidence": "Complete Ethereum role-event replay through block 25712112 identifies exactly two live MINT_ROLE holders and the sole current admin Safe. Direct storage and owner() reads establish both transparent-proxy minter implementations, their two ProxyAdmins, and common 5-of-6 Safe ownership. Both implementations remain unverified, so no call-level issuance cap can be established; the Safe can grant MINT_ROLE or upgrade either minter proxy, making aggregate economic cap semantics unbounded.",
+      "evidence": "Complete Ethereum role-event replay through block 25712112 identifies exactly two live MINT_ROLE holders and the sole current admin Safe. Direct storage and owner() reads establish both transparent-proxy minter implementations, their two ProxyAdmins, and common 5-of-6 Safe ownership. Both implementations remain unverified, so no call-level issuance cap can be established; the Safe can grant MINT_ROLE or upgrade either minter proxy, making aggregate economic cap semantics unbounded. FD05 reviewed issuer usage, risk-management, audit-index and legal pages on 2026-10-20: the CeDeFi collateral and 1:1 issuance book makes reserve-to-liability reconciliation relevant, but these surfaces disclose no recurring whole-USDa matching process or independent liability report. Reconciliation is therefore unknown, not structurally not-applicable. This scoped correction does not renew the original control review, establish absence of reconciliation, or soften the positively verified unbounded admin powers.",
       "reviewer": "OpenAI Codex C03 control review",
       "reviewedAt": "2026-08-16",
       "disposition": "scoreable"

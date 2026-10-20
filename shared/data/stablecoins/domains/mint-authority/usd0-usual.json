@@ -2,7 +2,7 @@
   "id": "usd0-usual",
   "mintAuthority": {
     "mintPath": "amo-or-custodian-hybrid",
-    "authorityPosture": "unbounded-reconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "USD0 issuance runs through Usual's RWA/custody-backed DaoCollateral contract, which holds USD0_MINT on RegistryAccess; separate 8-of-15 Safes control role grants and the transparent-proxy upgrade path.",
     "upgradeability": {
@@ -177,7 +177,7 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "continuous",
+    "reconciliation": "unknown",
     "supervision": "none",
     "review": {
       "sources": [
@@ -204,9 +204,21 @@
         {
           "label": "Usual analytics: real-time collateral and four-chain USD0 supply verification",
           "url": "https://docs.usual.money/resources-and-ecosystem/analytics"
+        },
+        {
+          "label": "Usual current deployment inventory including TAC (retrieved 2026-10-20)",
+          "url": "https://tech.usual.money/smart-contracts/contract-deployments.md"
+        },
+        {
+          "label": "Usual UZR draft factsheet: USD0 loans secured by bUSD0 (retrieved 2026-10-20)",
+          "url": "https://docs.usual.money/resources-and-ecosystem/fact-sheets/usual-products/busd0/uzr.md"
+        },
+        {
+          "label": "USD0 mechanical backing check and privilege scope (retrieved 2026-10-20)",
+          "url": "https://tech.usual.money/smart-contracts/token-contracts/usd0.md"
         }
       ],
-      "evidence": "At Ethereum block 25530270, DaoCollateral held keccak256('USD0_MINT') while the prior SwapperEngine address did not and its current verified implementation exposed no mint function. USD0, DaoCollateral, and RegistryAccess are transparent proxies with distinct ProxyAdmins owned by the 8-of-15 0xaaDa24 Safe. RegistryAccess DEFAULT_ADMIN remains the separate 8-of-15 0x6e9d65 Safe. Contract-based issuance requires no off-chain mint reconciliation; no mint-authority incident is recorded in the reviewed sources. Economic-posture fields reviewed 2026-08-15: separate Usual Safes can grant mint roles or replace mint logic without an independent timelock, while branch balances identify collateral but do not establish whole-supply reconciliation across all tracked chains and no regulator or independent USD0 attestor is evidenced. Wave 2 external review 2026-08-15: Usual's current analytics documentation explicitly exposes on-chain collateral and USD0 supply and mint activity across Ethereum, Arbitrum, Base, and BNB Chain for real-time public verification, so every current token mint is visible in whole-supply collateral reconciliation.",
+      "evidence": "At Ethereum block 25530270, DaoCollateral held keccak256('USD0_MINT') while the prior SwapperEngine address did not and its current verified implementation exposed no mint function. USD0, DaoCollateral, and RegistryAccess are transparent proxies with distinct ProxyAdmins owned by the 8-of-15 0xaaDa24 Safe. RegistryAccess DEFAULT_ADMIN remains the separate 8-of-15 0x6e9d65 Safe. Contract-based issuance requires no off-chain mint reconciliation; no mint-authority incident is recorded in the reviewed sources. Economic-posture fields reviewed 2026-08-15: separate Usual Safes can grant mint roles or replace mint logic without an independent timelock, while branch balances identify collateral but do not establish whole-supply reconciliation across all tracked chains and no regulator or independent USD0 attestor is evidenced. Wave 2 external review 2026-08-15: Usual's current analytics documentation explicitly exposes on-chain collateral and USD0 supply and mint activity across Ethereum, Arbitrum, Base, and BNB Chain for real-time public verification, so every current token mint is visible in whole-supply collateral reconciliation. ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required, verified 2026-10-20: withdraw that final whole-supply conclusion and continuous reconciliation credit, not the historical authority observations. The current technical deployment inventory additionally lists TAC, while the cited analytics comparison still describes only four chains; it supplies no conserved complete deployment/escrow/pending-liability join. USD0's canonical mint backing check does not independently establish that missing global denominator or net the USD0-loan/bUSD0 collateral loop described by the draft February 16 UZR factsheet. The current reserve producer independently retains branch-reserve-book-partial rather than admitting a complete economic reserve book. No qualifying periodic whole-book series or complete issuer ledger reconciliation was recovered on the FAQ, analytics, token-contract, deployment and UZR surfaces. Reconciliation is therefore unknown, not a measured failure, reserve deficit or incident. Preserve original review start, historical block pins, supervision none and all control facts.",
       "reviewer": "Codex V9 control curation / SOL-IV calibration; Sol economic-posture batch 2026-08-15",
       "reviewedAt": "2026-08-15"
     }

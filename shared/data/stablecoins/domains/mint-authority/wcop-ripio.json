@@ -225,7 +225,7 @@
     ],
     "economicCapSemantics": "unbounded",
     "reconciliation": "unknown",
-    "supervision": "attestation-only",
+    "supervision": "unknown",
     "review": {
       "disposition": "unresolved",
       "unresolvedQuestions": [
@@ -271,9 +271,17 @@
         {
           "label": "Celo fixed-block native facility and Safe census",
           "url": "https://forno.celo.org"
+        },
+        {
+          "label": "Current official wFIAT attestation archive (retrieved 2026-10-20)",
+          "url": "https://action.ripio.com/en/wfiat-attestations"
+        },
+        {
+          "label": "wCOP June 30, 2026 certification, signed July 28 (retrieved 2026-10-20)",
+          "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/Aug%202026/Token%20wCOP%2006.30.2026%20Certification%20vf.pdf?hsLang=en"
         }
       ],
-      "evidence": "The prior six-chain native scope and October 1 EOA-role rechecks are retained without re-dating their observation points. R17 adds Celo using block 79288027, hash 0xafbc5ef1f610ed1960fa502b44cf5df85b80f230fe2ada290b153ca0bc556b8b: token implementation matches the verified LatamStable; the local Safe directly holds MINTER, DEFAULT_ADMIN and UPGRADER, while native LimitedMinter is an additional mint path. Current local Safe owners differ from the historical Ethereum snapshot and are recorded separately. Celo's complete 41-event explorer census from token creation identifies four mints, all authenticated against RPC receipts: 100 and 30000000 WCOP are native facility issuance, and 999943 and 2999943 WCOP are BridgeDeposit fulfillments paired with published source burns. All 33999986 WCOP of current supply is accounted for without treating native issuance as source-burn conservation. No unexplained Celo issuance or token upgrade was identified in this review; issuer launch/release disclosures, bridge sources, audit material and independent incident-index searches were checked. This does not independently reconcile September fiat backing: reconciliation remains unknown, native issuance remains unbounded and immediately replaceable, and ad-hoc CPA certification still supplies only attestation-only supervision. Celo LimitedMinterBridge and BridgeDeposit powers are separately retained under Bridge Risk. No execution-scope certificate, signer independence or prudential uplift is asserted. The issuer-announced Arc WCOP deployment remains outside this reviewed seven-chain scope pending exact identity, authority and liability research.",
+      "evidence": "The prior six-chain native scope and October 1 EOA-role rechecks are retained without re-dating their observation points. R17 adds Celo using block 79288027, hash 0xafbc5ef1f610ed1960fa502b44cf5df85b80f230fe2ada290b153ca0bc556b8b: token implementation matches the verified LatamStable; the local Safe directly holds MINTER, DEFAULT_ADMIN and UPGRADER, while native LimitedMinter is an additional mint path. Current local Safe owners differ from the historical Ethereum snapshot and are recorded separately. Celo's complete 41-event explorer census from token creation identifies four mints, all authenticated against RPC receipts: 100 and 30000000 WCOP are native facility issuance, and 999943 and 2999943 WCOP are BridgeDeposit fulfillments paired with published source burns. All 33999986 WCOP of current supply is accounted for without treating native issuance as source-burn conservation. No unexplained Celo issuance or token upgrade was identified in this review; issuer launch/release disclosures, bridge sources, audit material and independent incident-index searches were checked. This does not independently reconcile September fiat backing: reconciliation remains unknown, native issuance remains unbounded and immediately replaceable, and ad-hoc CPA certification still supplies only attestation-only supervision. Celo LimitedMinterBridge and BridgeDeposit powers are separately retained under Bridge Risk. No execution-scope certificate, signer independence or prudential uplift is asserted. The issuer-announced Arc WCOP deployment remains outside this reviewed seven-chain scope pending exact identity, authority and liability research. Source-scope correction verified 2026-10-20 by FD14: supervision attestation-only is withdrawn to unknown. The current official index still links only the June 30, 2026 ad-hoc certification (signed July 28), not a committed current recurring whole-liability assurance regime; its historical seven-network checkpoint cannot establish complete current deployment coverage. The whitepaper's 'may publish' wording and generic group licences do not establish a recurring assurance process or prudential supervision of the exact unnamed issuing affiliate for this token. Reconciliation remains unknown; native unbounded authority, every other adverse fact, original review start and all historical observation pins are unchanged. No non-reconciliation, shortfall or incident is inferred.",
       "reviewer": "Prior mint-boundary and economic reviews retained; R17 Celo native/transfer scope and issuance review",
       "reviewedAt": "2026-10-05"
     }

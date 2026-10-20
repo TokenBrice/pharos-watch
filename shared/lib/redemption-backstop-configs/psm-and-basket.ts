@@ -204,6 +204,8 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
   "eur0-usual": {
     ...basketRedeemBase,
     ...documentedBoundSupplyFull(REVIEWED_REDEMPTION_OUTPUTS_WAVE2_AT),
+    accessModel: "whitelisted-onchain",
+    holderEligibility: "whitelisted-primary",
     outputAssetType: "mixed-collateral",
     outputAssets: ["asset:eutbl"],
     costModel: fixedFee(
@@ -218,6 +220,7 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
       ]),
       sourceRef("Usual EUR0 product docs", "https://docs.usual.money/usual-products/usd0-stablecoin/eur0-stablecoin", [
         "route",
+        "access",
         "fees",
         "settlement",
       ]),
@@ -226,6 +229,7 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
       "Modeled as the Usual dApp basket redemption route into eligible euro-denominated RWA collateral, primarily Spiko EUTBL, rather than a direct fiat EUR issuer rail.",
       "Output declared 2026-07-19: the Usual EUR0 product docs state redemption burns EUR0 to receive euTBL (Spiko EU T-Bills MMF) at par on the permissioned route, and the tech docs list EUTBL by Spiko as the sole EUR0 collateral entry; the permissionless Swapper Engine leg settles in EURC subject to liquidity and is not the modeled route.",
       "Fee bound declared 2026-08-24 from the Usual EUR0 page updated 2026-02-16: the modeled permissioned direct route burns EUR0 for euTBL at par minus 3 bps. The separate permissionless EURC route can queue for T+1 to T+5 when buffers are empty and is not used for this cost bound.",
+      "ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required, verified 2026-10-20: the modeled direct euTBL path is restricted to Spiko Permission Manager allowlisted addresses and requires KYC/KYB. It must not inherit permissionless basket access from the separate EURC Swapper Engine path. Original output, fee and capacity review starts remain unchanged; no new capacity or settlement bound is asserted.",
     ],
   },
   "gho-aave": {
@@ -426,14 +430,27 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
     ...psmSwapBase,
     outputAssetType: "stable-basket",
     outputAssets: ["usdc-circle", "usdt-tether"],
-    capacityModel: { kind: "supply-ratio", ratio: 0.25, confidence: "documented-bound" },
-    costModel: fixedFee(30, "Modeled route uses PSM OUT at 30 bps; collateral redemptions use a separate dynamic fee"),
-    reviewedAt: "2026-07-14",
+    capacityModel: { kind: "unquantified" },
+    costModel: undisclosedReviewedFee(
+      "No current exact-BUCK PSM fee schedule was established. The published 30 bps PSM OUT tariff is for USDB, not legacy BUCK; fee-free BUCK-to-USDB migration does not bound the complete stablecoin exit.",
+    ),
+    reviewedAt: "2026-10-20",
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "cost"],
+      rationale: "Current Bucket disclosures distinguish legacy BUCK from V2 USDB. The former 25% reserve-share estimate is not current executable BUCK PSM capacity, and USDB's 30 bps tariff cannot certify a legacy BUCK exit. A complete BUCK-to-USDB-to-stablecoin route needs independently evidenced migration and PSM execution, current inventory and total costs.",
+      reviewedAt: "2026-10-20",
+      docs: [
+        sourceRef("Bucket legacy BUCK migration and fee-free 1:1 USDB conversion", "https://docs.bucketprotocol.io/user-guides/bucket-upgrade-and-migration.md", ["route", "fees"]),
+        sourceRef("Bucket USDB PSM tariff and output scope", "https://docs.bucketprotocol.io/mechanism/usdb-peg.md", ["route", "fees"]),
+      ],
+    },
     docs: [
-      sourceRefRouteCapacityFees("Bucket Protocol PSM", "https://docs.bucketprotocol.io/mechanisms/peg-stability-module"),
+      sourceRef("Bucket legacy BUCK migration and fee-free 1:1 USDB conversion", "https://docs.bucketprotocol.io/user-guides/bucket-upgrade-and-migration.md", ["route", "fees"]),
+      sourceRef("Bucket USDB PSM tariff and output scope", "https://docs.bucketprotocol.io/mechanism/usdb-peg.md", ["route", "fees"]),
     ],
     notes: [
-      "The reviewed 25% bound matches the tracked USDC/USDT PSM reserve share rather than assuming the full BUCK supply is instantly redeemable through the stablecoin module",
+      "Reviewed 2026-10-20: removed the unsupported 25% BUCK PSM capacity assumption and the USDB-scoped 30 bps tariff. Historical V1 reserve inventory and current V2 USDB collateral are not executable legacy BUCK payout capacity. This is a researched terms gap, not evidence of zero liquidity or a suspended channel.",
     ],
   },
   "lisusd-lista": {
@@ -523,10 +540,24 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
   "usd3-reserve-protocol": {
     ...basketRedeemBase,
     ...documentedBoundSupplyFull(REVIEWED_RESERVE_PROTOCOL_DTF_AT),
-    outputAssets: ["susds-sky", "usdc-circle", "steakusdc-steakhouse"],
+    unresolvedOutputAssetKeys: [
+      "susds-sky",
+      "asset:ethereum:0x0adc69041a2b086f8772acce2a754f410f211bed",
+      "asset:ethereum:0x27f2f159fe990ba83d57f39fd69661764bebf37a",
+      "asset:ethereum:0xbeef01735c132ada46aa9aa4c54623caa92a64cb",
+    ],
+    unresolvedOutputDisposition: "reviewed-external",
     executionModel: "deterministic-basket",
     outputAssetType: "stable-basket",
-    capacityModel: { kind: "reserve-sync-metadata" },
+    capacityModel: {
+      kind: "reserve-sync-metadata",
+      requiredOutputAssetKeys: [
+        "susds-sky",
+        "asset:ethereum:0x0adc69041a2b086f8772acce2a754f410f211bed",
+        "asset:ethereum:0x27f2f159fe990ba83d57f39fd69661764bebf37a",
+        "asset:ethereum:0xbeef01735c132ada46aa9aa4c54623caa92a64cb",
+      ],
+    },
     reviewedAt: REVIEWED_EXIT_CREDIT_AT,
     costModel: fixedFee(
       0,
@@ -536,6 +567,7 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
       "Capacity became live-only 2026-08-12: the adapter now reads the RToken's own `redemptionAvailable()` throttle each run as the direct redeemable bound, so the prior documented-bound full-supply model is removed. The throttle refills over time and shrinks as it is drawn down, so a static supply figure would consistently overstate what a holder can exit right now.",
       "The read also degrades on basket state: when the collateral basket is not SOUND the measured capacity is withheld rather than published, and if the throttle cannot be read at all the route is left unrated instead of falling back to a static bound",
       "Fee bound declared 2026-08-12: the Yield DTF overview states holders can mint by depositing the complete collateral basket and that a DTF is \"redeemed for the entire basket as well\", with protocol revenue coming from \"yield from lending collateral tokens onchain, revenue shares with collateral token issuers, or any other source of onchain yield\" — no redemption charge. Throttles still bound redemption size, which the documented-bound capacity model already carries, not its cost.",
+      "ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required. Source-scoped output correction researched 2026-10-20; the original August 12 route review and historical capacity/fee pins remain unchanged. Reserve's current exact USD3 basket and verified RTokenP1 redeemTo transfer sUSDS, Static Aave Ethereum USDC receipts, wrapped Compound USDCv3 receipts and legacy Steakhouse USDC V1 shares directly to the holder. These are not a payout of native USDC or the separately tracked Steakhouse V2 shares. The full four-member output identity set is retained as unresolved until exact receipt valuation or a measured composed unwrap route is admitted; underlying NAV conversion arithmetic is not executed holder unwind capacity.",
     ],
     docs: [
       sourceRefFull("Reserve Yield DTF overview", "https://docs.reserve.org/core-components/yield-dtfs/overview"),
@@ -545,12 +577,28 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
         "https://app.reserve.org/ethereum/token/0x0d86883faf4ffd7aeb116390af37746f45b6f378/overview",
         ["capacity"],
       ),
+      sourceRef(
+        "Verified exact USD3 RTokenP1 redeemTo collateral-transfer semantics (retrieved 2026-10-20)",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x258ce833cf9ad19208372763a00aa1565dd40b3c",
+        ["route"],
+      ),
+      sourceRef(
+        "Exact legacy Steakhouse USDC V1 receipt identity (retrieved 2026-10-20)",
+        "https://eth.blockscout.com/api/v2/tokens/0xbeef01735c132ada46aa9aa4c54623caa92a64cb",
+        ["route"],
+      ),
     ],
   },
   "xmd-metal-dollar": {
     ...basketRedeemBase,
     ...documentedBoundSupplyFull(REVIEWED_FOLLOWUP_REMEDIATION_AT),
-    outputAssets: ["usdc-circle", "pyusd-paypal", "usdp-paxos"],
+    unresolvedOutputAssetKeys: [
+      "asset:xpr-network:xtokens:XUSDC",
+      "asset:xpr-network:xtokens:XPYUSD",
+      "asset:xpr-network:xtokens:XPAX",
+    ],
+    unresolvedOutputDisposition: "reviewed-external",
+    reviewedAt: "2026-10-20",
     accessModel: "whitelisted-onchain",
     outputAssetType: "stable-basket",
     costModel: fixedFee(
@@ -571,16 +619,22 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
     notes: [
       "Holder must complete the XPR/Metal account-verification path and use WebAuth Wallet, so access is modeled as whitelisted onchain rather than permissionless.",
       "Pharos does not currently model XPR Network contracts, so this remains a static documented-bound route unless a supported-chain capacity adapter is added later.",
+      "ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required. The direct XMD redemption is an XPR Network treasury exchange into one selected basket token, including local xtokens XUSDC, XPYUSD or XPAX representations. These are not canonical Circle USDC, Paxos PYUSD or USDP. The reviewed guide does not establish a composed bridge withdrawal into those canonical assets, and current reserve research does not verify the wrapper escrow. Preserve the original documented route provenance and holder-verification requirement; keep the complete selected-output candidate set diagnostic without basket weights, combined capacity or canonical-parent valuation.",
     ],
   },
   "iusd-indigo-protocol": {
     ...psmSwapBase,
     outputAssetType: "stable-basket",
-    outputAssets: ["usdm-moneta", "usdc-circle"],
+    unresolvedOutputAssetKeys: [
+      "usdm-moneta",
+      "usdc-circle",
+      "asset:cardano:7d9e4a0ee1a3f5d5ff8159ea91a83310cf2795ee7a87170c7aea05ae.55534472",
+    ],
+    unresolvedOutputDisposition: "reviewed-external",
     capacityModel: { kind: "supply-ratio", ratio: 0.15577082, confidence: "heuristic", basis: "psm-balance-share" },
     costModel: fixedFee(100, "Indigo's current iUSD PSM data and app quote show a 1% redemption fee"),
     routeExitCorrelation: "same-protocol-liquidity",
-    reviewedAt: "2026-10-01",
+    reviewedAt: "2026-10-20",
     docs: [
       sourceRef("Indigo redemptions", "https://docs.indigoprotocol.io/readme/redemptions", [
         "route",
@@ -596,6 +650,7 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
       ),
       sourceRef("Current Indigo protocol parameters API", "https://analytics.indigoprotocol.io/api/v3/protocol-params", ["access"]),
       sourceRefRouteCapacityFees("Current Indigo assets API", "https://analytics.indigoprotocol.io/api/v3/assets"),
+      sourceRef("Koios exact iUSD PSM parameter output 4a595ebe037b6d1f4d2949edb9c775a748b5cfa9ac37cddf1fe6a9a66491b11d#0", "https://api.koios.rest/api/v1/utxo_info", ["route", "fees"]),
       sourceRef("Current Indigo asset analytics API", "https://analytics.indigoprotocol.io/api/v3/analytics/assets", ["capacity"]),
       sourceRef("Current Indigo swap application", "https://app.indigoprotocol.io/", ["route", "access", "fees"]),
       sourceRef(
@@ -605,10 +660,10 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
       ),
     ],
     notes: [
-      "Output re-reviewed 2026-10-01 from the official assets API: iUSD's complete current stablePools array contains USDM and USDCx, both redemption-enabled with a 1% fee. USDA appeared in the earlier September snapshot but is absent from the current holder-route list; the separate CDP redemption signer path is not included.",
-      "The API identifies USDM as `c48cbb3d5e57ed56e276bc45f99ab39abe94e6cd7ac39fb402da47ad.0014df105553444d` and USDCx as `1f3aec8bfe7ea4fe14c5f121e2a92e301afe414147860d557cac7e34.5553444378`, the exact tracked Cardano deployments. A sale chooses one funded pool; no equal-weight basket or pro-rata output weights are inferred.",
+      "Output re-reviewed 2026-10-20 from the official assets API: iUSD's stablePools array now contains three redemption-enabled pools, USDM, USDCx, and the additional exact Cardano asset 7d9e4a0ee1a3f5d5ff8159ea91a83310cf2795ee7a87170c7aea05ae.55534472 (USDr). Each reports a 1% redemption fee. The earlier two-pool census is not current.",
+      "USDM is c48cbb3d5e57ed56e276bc45f99ab39abe94e6cd7ac39fb402da47ad.0014df105553444d and USDCx is 1f3aec8bfe7ea4fe14c5f121e2a92e301afe414147860d557cac7e34.5553444378, the tracked Cardano deployments. The third output has no tracked Pharos identity or admitted USD valuation. Koios independently returned its exact unspent PSM parameter output 4a595ebe037b6d1f4d2949edb9c775a748b5cfa9ac37cddf1fe6a9a66491b11d#0, created at block 14093680, Unix time 1792513985, with matching asset bytes, 1:1 ratio, and 1/100 redemption fee. Keep the complete output-choice census diagnostic until a producer binds the selected pool and its output valuation; no equal weights, pro-rata payout, or partial-basket value is inferred.",
       "The 0.15577082 capacity ratio remains an explicitly historical heuristic, not a current inventory observation or lower bound. The 2026-10-01 analytics API reports psmSupply 80,450.178256 and totalSupply 1,409,341.531656; neither liability share nor a one-off availableLiquidity read is a durable executable-capacity floor. A reusable same-run pool observer is required before capacity-confidence promotion.",
-      "Both current pools report minRedemptionOrderAmount 10000 in raw API units. This is not evidence of a 10,000-token minimum; the former token-sized assertion is removed. Wallet connection remains ordinary onchain access rather than an allowlist.",
+      "All three observed pools report minRedemptionOrderAmount 10000 in raw API units. This is not evidence of a 10,000-token minimum. The docs describe direction-specific DAO enablement and optional fee management; observed enabled flags and balances are not permanent availability or a canonical-request receipt. Wallet connection remains ordinary onchain access rather than an allowlist.",
     ],
   },
 };

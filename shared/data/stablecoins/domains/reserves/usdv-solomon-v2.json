@@ -4,7 +4,7 @@
     {
       "sourceKey": "chancery:reserve:usdc",
       "name": "USDC in the Chancery reserve-authority token account",
-      "pct": 95.23864993,
+      "pct": 2.78714578,
       "risk": "low",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -22,7 +22,7 @@
     {
       "sourceKey": "chancery:reserve:usdg",
       "name": "USDG in the Chancery reserve-authority token account",
-      "pct": 4.76135007,
+      "pct": 97.21285422,
       "risk": "low",
       "coinId": "usdg-paxos",
       "depType": "collateral",
@@ -39,8 +39,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-15",
-    "reviewer": "Codex replacement USDv reserve review",
+    "reviewedAt": "2026-10-20",
+    "reviewer": "NR8 bottom-up refinement 2026-10-21",
     "confidence": "probable",
     "sources": [
       {
@@ -62,13 +62,21 @@
       {
         "label": "Chancery authority and reserve custody disclosure (published 2026-09-04; live quorums reviewed separately)",
         "url": "https://github.com/SolomonLabs/chancery-integrity-records/blob/main/docs/AUTHORITIES.md"
+      },
+      {
+        "label": "Solomon exact replacement-mint token-backing API, asOf 2026-10-20T22:17:09.498Z",
+        "url": "https://data.solomonlabs.io/api/solomon-protocol/token-backing"
+      },
+      {
+        "label": "Rendered Solomon reserve dashboard: USDG 97.21%, USDC 2.79%; retrieved 2026-10-20",
+        "url": "https://app.solomonlabs.org/stats"
       }
     ],
-    "rationale": "The replacement Token-2022 mint USDvUSpnhCr9yBgj3UyVrD239HRUv4RsHwH2FxsWuMk is separate from legacy USDv. At finalized Solana slot 447140697, canonical Chancery reserve-authority accounts held 19,998.646 USDC and 999.81 USDG. Their 20,998.456 nominal dollar units define the displayed 95.23864993% / 4.76135007% mix. The same batch read 21,000 outstanding USDv, leaving 1.544 nominal units unreconciled; that gap is not represented as a reserve asset. Both SPL Token and Token-2022 account inventories for the derived reserve authority exposed only those two reserve accounts; the disclosed treasury vault held zero USDC and no Token-2022 balances. These observations establish the on-chain reserve-account mix, not a complete financial reserve examination or market-valued coverage ratio. Current issuer docs name USDC and USDG and describe direct short-dated Treasury exposure as being added; no current Treasury allocation or custodian is evidenced. No legacy Ceffu holdings, derivatives, attestation or supply is inherited. Supplemental source review at 2026-10-09T11:44:58Z by Sol curation campaign 2026-10-09 (W2L09Som): deployed-revision reserve specification section 6.6 explicitly states that withdraw_reserve can move collateral to approved external treasury, operations, recovery or downstream-custody destinations without reading issued-token supply or an aggregate backing ledger. Per-transaction and daily withdrawal limits do not establish continued redeemability; the specification requires issuer-level reports to account for external destinations and later movement outside program visibility. This confirms the financial-scope omission rather than closing it. Historical balances, weights, compositionAsOf, reviewedAt and selected-slices scope are unchanged; no current reserve census, solvency ratio or financial assurance is claimed.",
-    "compositionBasis": "Nominal USD-stablecoin units in the replacement Chancery reserve-authority token accounts at finalized slot 447140697, normalized to their actual 20,998.456-unit balance; selected on-chain reserve scope only",
-    "compositionAsOf": "2026-09-15",
+    "rationale": "The issuer token-backing API at 2026-10-20T22:17:09.498Z identifies replacement mint USDvUSpnhCr9yBgj3UyVrD239HRUv4RsHwH2FxsWuMk and reserve authority 8anxfyoftY9hPwxdvReet2beFS2HXjcXraPEamo4nGyB. It reports 231,733.710375 USDC and 8,082,639.81 USDG, total 8,314,373.520375 nominal dollar units, with zero PYUSD and USDT reported in that selected account scope. Normalization of the two positive balances yields 2.78714578% USDC and 97.21285422% USDG. The rendered issuer dashboard exposes the same source presentation, rounded to 2.79% and 97.21%, with displayed USDv supply 8,314,324.72. This is a current issuer-reported selected-account composition, not a fresh pinned chain observation or independent corroboration. The dashboard's 100% backing label does not resolve assets at approved external destinations, complete economic obligations, or legal reserve segregation. The earlier September 15 on-chain observation remains historical and does not supply this review's current clock. No full-composition or financial-assurance admission is claimed.",
+    "compositionBasis": "Issuer-reported nominal USD-stablecoin holdings for the exact replacement Chancery mint at API asOf 2026-10-20T22:17:09.498Z; normalized selected-account scope only",
+    "compositionAsOf": "2026-10-20",
     "scope": "selected-slices",
-    "knownUnknownExposure": "All assets in the observed reserve-authority account scope are identified. The 1.544-unit difference from same-slot USDv supply remains unreconciled. Any assets, liabilities, encumbrances or Treasury positions outside these accounts are not independently reconciled; zero unknown exposure refers only to the selected account mix, not whole-system completeness.",
+    "knownUnknownExposure": "All positive assets in the issuer-reported selected reserve-authority account scope are identified. Complete reserve destinations, assets, liabilities, encumbrances and any off-account Treasury exposure are not independently reconciled. The displayed supply is not a same-slot independent liability measurement, and the nominal assets/supply difference is not treated as a surplus or shortfall. Zero unknown exposure refers only to this selected reported account mix, not whole-system completeness.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {

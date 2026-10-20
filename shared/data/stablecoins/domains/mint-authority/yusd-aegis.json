@@ -2,7 +2,7 @@
   "id": "yusd-aegis",
   "mintAuthority": {
     "mintPath": "offchain-attested-minter",
-    "authorityPosture": "unbounded-reconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "YUSD has independent native issuance on Ethereum and BSC. Each chain-local AegisMinting contract mints its YUSD against the native whitelisted order and single trusted-signer path; Ethereum's active mint cap is disabled and BSC's configurable cap is raiseable. The common 3-of-5 Safe owns the native YUSD, AegisMinting, and AegisConfig controls and can change minters and settings without a timelock. Avalanche and Katana are LayerZero V2 burn/mint representations; their adapter, OFT, peer, delegate, DVN, and cross-chain operator risks are assessed only in Bridge Risk.",
     "upgradeability": {
@@ -135,8 +135,8 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "continuous",
-    "supervision": "attestation-only",
+    "reconciliation": "unknown",
+    "supervision": "unknown",
     "review": {
       "sources": [
         {
@@ -166,9 +166,29 @@
         {
           "label": "Accountable live YUSD proof of reserves and liabilities",
           "url": "https://aegis.accountable.capital/"
+        },
+        {
+          "label": "Exact Accountable YUSD reserve and supply_split comparison, data.ts 2026-10-20T22:16:36.993Z (retrieved 2026-10-20)",
+          "url": "https://aegis.accountable.capital:10443/dashboard/YUSD"
+        },
+        {
+          "label": "Aegis Accountable continuous whole-liability verification claim (January 13 guide, retrieved 2026-10-20)",
+          "url": "https://paragraph.com/@aegis-im-2/transparency-dashboard-guide"
+        },
+        {
+          "label": "Pinned Base RPC: YUSDOFT supply, decimals and runtime at block 52872624, 2026-10-20T22:16:35Z",
+          "url": "https://mainnet.base.org"
+        },
+        {
+          "label": "Exact Base YUSDOFT verified source/runtime matched at block 52872624 (retrieved 2026-10-20)",
+          "url": "https://sourcify.dev/server/v2/contract/8453/0xca2671dcd031a72359f456c212f62a9bda737cd7?fields=all"
+        },
+        {
+          "label": "Issuer native burn/mint adapter source; retrieved 2026-10-20, not a dashboard denominator specification",
+          "url": "https://raw.githubusercontent.com/Aegis-im/aegis-contracts/b48bf0644a70c308a9eca005399d279ee14c5c25/contracts/YUSDMintBurnOFTAdapter.sol"
         }
       ],
-      "evidence": "Native Mint Authority review refreshed for Ethereum block 25770366 and BSC block 116345704. Ethereum YUSD.owner() remained 0x4Fe78eF65BD8EDDED480efaB030BA680646503c8, YUSD.minter() remained AegisMinting 0xC4Df68e592245cA5202fE8b7C438d2b799820fc2, and the Ethereum AegisMinting path requires a whitelisted collateral order and the single AegisConfig.trustedSigner() 0xb28c97E348C3078fC1F6Fcc61b79c8a0DA35008e. BSC YUSD.owner() remained the same Safe, YUSD.minter() remained AegisMinting 0x02bf8f0e046F471709E578b1E633077096ce65CF, and BSC AegisMinting.owner()/defaultAdmin() and AegisConfig.owner() remained the Safe with the same trusted signer. Ethereum mintLimit() has periodDuration = 0 and maxPeriodAmount = 0; BSC has a 600-second, 210,000e18 configurable period limit, so the native economic cap remains unbounded and raiseable. The Safe is 3-of-5 with no enabled modules and a zero guard, can call YUSD.setMinter immediately, and can change native AegisMinting settings without a timelock; all four native deployments are non-proxy. The native review covers mint(Order,signature), depositIncome, native owner/default-admin/settings powers, and Accountable-backed continuous reconciliation with attestation-only supervision. LayerZero adapters, OFTs, peers, delegates, DVNs, and mintForCrossChain/burnForCrossChain are bridge capabilities retained under Bridge Risk and are not counted here.",
+      "evidence": "Native Mint Authority review refreshed for Ethereum block 25770366 and BSC block 116345704. Ethereum YUSD.owner() remained 0x4Fe78eF65BD8EDDED480efaB030BA680646503c8, YUSD.minter() remained AegisMinting 0xC4Df68e592245cA5202fE8b7C438d2b799820fc2, and the Ethereum AegisMinting path requires a whitelisted collateral order and the single AegisConfig.trustedSigner() 0xb28c97E348C3078fC1F6Fcc61b79c8a0DA35008e. BSC YUSD.owner() remained the same Safe, YUSD.minter() remained AegisMinting 0x02bf8f0e046F471709E578b1E633077096ce65CF, and BSC AegisMinting.owner()/defaultAdmin() and AegisConfig.owner() remained the Safe with the same trusted signer. Ethereum mintLimit() has periodDuration = 0 and maxPeriodAmount = 0; BSC has a 600-second, 210,000e18 configurable period limit, so the native economic cap remains unbounded and raiseable. The Safe is 3-of-5 with no enabled modules and a zero guard, can call YUSD.setMinter immediately, and can change native AegisMinting settings without a timelock; all four native deployments are non-proxy. The native review covers mint(Order,signature), depositIncome, native owner/default-admin/settings powers, and Accountable-backed continuous reconciliation with attestation-only supervision. LayerZero adapters, OFTs, peers, delegates, DVNs, and mintForCrossChain/burnForCrossChain are bridge capabilities retained under Bridge Risk and are not counted here. ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required, C24 2026-10-20: the current Accountable denominator does not establish complete all-chain circulating liabilities. Its data.ts 1792534596993 (22:16:36.993Z) supply_split lists only Ethereum, BSC, Avalanche and Arbitrum, whose rounded entries sum to 34,542,277.12 YUSD against displayed total_supply 34,542,277.11. The omitted exact Base YUSDOFT 0xca2671dcd031a72359f456c212f62a9bda737cd7 has totalSupply 11626401000000000000 raw units, 11.626401 YUSD at 18 decimals, at Base block 52872624 (hash 0x81a7cb820656e0b4f590ef1db86d0c1c998befe0aba0866d380f444f5bb277ae, 2026-10-20T22:16:35Z; observed 22:37:31.241Z). Same-pin runtime exactly matches Sourcify's verified direct burn/mint YUSDOFT bytecode. This is a positive omitted-liability observation, not an assumed zero, an exact materiality partition or an insolvency finding. Accountable's real verification remains historical/partial evidence but cannot supply whole-token continuous reconciliation or attestation-only process credit under D33 until a complete conserved denominator includes all representations. Both process fields are withdrawn to unknown. Original August 16 review start and every native control/authority pin remain unchanged. FIX-ROUND1 proof-limit correction 2026-10-20: the phrase positive omitted-liability observation above overstates what the retained pin and display establish; Base supply is positive and absent from supply_split, but economic exclusion from Accountable's compared denominator has not been independently proved. Re-fetch of https://aegis.accountable.capital:10443/dashboard/YUSD yields data.ts 1792536338641, total_supply 34,542,277.11, four rounded chain rows totaling 34,542,277.12, and ZKP liabilities params total.mappedValues.USD 34542277.11404603. The 0.00595397 difference between rounded split sum and unrounded proof total is not evidence that the proof includes or excludes 11.626401 Base YUSD; that requires the unrounded per-chain liability inputs and cross-chain conservation/netting join. The issuer's January 13 dashboard guide claims independent real-time verification of all liabilities, while its published YUSDMintBurnOFTAdapter source burns on native debit and mints on credit rather than retaining permanent escrow; neither document specifies Accountable's exact aggregation inputs. C24 confirms no native-supply/adapter-balance denominator join was collected. Inclusion remains unresolved, not positively excluded. Retain unknown/unknown until complete scope is established; do not restore attestation-only without its own whole-liability scope. D33-AUDIT's de-minimis concern is recorded: 11.626401 relative to the displayed denominator is approximately 0.00003366%, not an admitted exact all-chain materiality share. A proposed materiality exception requires owner methodology approval and is not applied. No reserve deficiency or measured non-reconciliation follows; original August 16 start and all pins remain.",
       "reviewer": "Pharos V9 Phase 3 curation lane cur-12 (on-chain reads); Sol economic-posture batch 2026-08-15",
       "reviewedAt": "2026-08-16",
       "disposition": "scoreable"

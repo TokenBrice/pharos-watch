@@ -2,7 +2,7 @@
   "id": "suiusde-sui",
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "unbounded-reconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "suiUSDe minting routes through a shared Treasury object that wraps the TreasuryCap. One AdminRole address (0xe3dbc438…) also owns the compatible-policy package UpgradeCap and can replace mint-critical logic. Address ownership does not disclose whether signing custody is single-party or multisig.",
     "upgradeability": {
@@ -73,10 +73,10 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "continuous",
+    "reconciliation": "unknown",
     "supervision": "none",
     "review": {
-      "evidence": "At Sui checkpoint 285785957: TreasuryCap<SUI_USDE> (id 0xae5039…) is wrapped inside Treasury shared object 0xe6c3c84c… as a dynamic object field. AdminRole and all operational roles are held by EOA 0xe3dbc438…, which also owns the package UpgradeCap (policy=0). The deployer 0xcebe2945… initially held roles but they were rotated to 0xe3dbc438… before the current state. DenyCap is stored inside the Treasury (not externally owned). All mint-capable surfaces confirmed. Economic-posture fields reviewed 2026-08-15: one EOA controls minting and upgrades without an independent timelock, the live Ethena Whitelabel feed reconciles total backing across the sole Sui supply, and no prudential supervisor or independent attestor is identified.",
+      "evidence": "At Sui checkpoint 285785957: TreasuryCap<SUI_USDE> (id 0xae5039…) is wrapped inside Treasury shared object 0xe6c3c84c… as a dynamic object field. AdminRole and all operational roles are held by EOA 0xe3dbc438…, which also owns the package UpgradeCap (policy=0). The deployer 0xcebe2945… initially held roles but they were rotated to 0xe3dbc438… before the current state. DenyCap is stored inside the Treasury (not externally owned). All mint-capable surfaces confirmed. Economic-posture fields reviewed 2026-08-15: one EOA controls minting and upgrades without an independent timelock, the live Ethena Whitelabel feed reconciles total backing across the sole Sui supply, and no prudential supervisor or independent attestor is identified. ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required, C24 2026-10-20: the cited Sui RPC and Treasury observations establish issuance controls, not a whole-supply backing reconciliation workflow. The current Ethena Whitelabel documentation, transparency page and API retrieved 2026-10-20 show the exact suiUSDe backing/supply comparison but no authoritative recurring reconciliation procedure or mechanically enumerable complete reserve book across onchain and custody legs. The daily API snapshot alone does not establish continuous reconciliation under D33, so that field is withdrawn to unknown without asserting absent reconciliation or insolvency. Original August 15 review start and all historical checkpoint/control observations remain unchanged.",
       "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
       "reviewedAt": "2026-08-15",
       "sources": [
@@ -87,6 +87,14 @@
         {
           "label": "suiUSDe Treasury object on Sui",
           "url": "https://suiscan.xyz/mainnet/object/0xe6c3c84c34ba2f4869b5df23161ea8700c14e1de1328808258702567e40366ea"
+        },
+        {
+          "label": "Ethena Whitelabel exact suiUSDe transparency API (retrieved 2026-10-20)",
+          "url": "https://whitelabel.ethena.fi/api/transparency"
+        },
+        {
+          "label": "Ethena Whitelabel operational and custody disclosure (retrieved 2026-10-20)",
+          "url": "https://docs.ethena.fi/overview/ethena-whitelabel"
         }
       ]
     }

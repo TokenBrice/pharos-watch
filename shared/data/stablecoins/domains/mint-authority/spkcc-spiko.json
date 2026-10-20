@@ -406,7 +406,7 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "periodic",
+    "reconciliation": "unknown",
     "supervision": "prudential",
     "review": {
       "sources": [
@@ -445,9 +445,22 @@
         {
           "label": "AMF register of authorised portfolio management companies: TWENTY FIRST CAPITAL, GP-11000029, statut Vivant",
           "url": "https://object-api.infra.data.gouv.fr/amf/LISTESSGP/export_od_listesgp_20260807094500_20260807101000.csv"
+        },
+        {
+          "label": "AMF-origin certificate dated 5 September 2025, retrieved 2026-10-20: exact Spiko Digital Assets Cash and Carry FCP managed by AMF-authorized Twenty First Capital GP-11000029; no product-approval claim",
+          "url": "https://cdn.spiko.finance/legal_docs/EN/AMF_product_declaration_SPKCC_FPS_EN.pdf"
+        },
+        {
+          "label": "Live AMF GECO manager record nested in EUTBL, retrieved 2026-10-20: Twenty First Capital current GP-11000029, NSGP/VIV, AIFM and portfolio-management authorizations, published 18 October 2026",
+          "url": "https://geco.amf-france.org/back-office/funds/compartment/c79399"
+        },
+        {
+          "label": "SPKCC share-class totals, retrieved 2026-10-20: shares and NAV without a reserve-to-whole-liability comparison",
+          "url": "https://public-api.spiko.io/share-classes/SPKCC/totals"
         }
       ],
       "evidence": "The 2026-08-16 review enumerated seven native deployments, EVM PermissionManager mint/upgrade powers, a Starknet 3-of-5 owner, and a Stellar single-key owner. Its Etherlink EOA assertion was incorrect: on 2026-10-01 at Etherlink block 54659751, the recorded EOA has only PUBLIC membership; ADMIN is Safe 0x09991fbf6b16741f6fde3b1c16e8e4d95a5e5538 (3-of-6, v1.4.1, no enabled modules or guard). Explorer events show ADMIN added to that Safe and removed from the deployment EOA at block 0x627a18. Arbitrum and Polygon Safe owner arrays were also refreshed at pinned blocks 510591960 and 94756419; thresholds remain 3-of-6. These corrections do not introduce a mint cap or timelock. Historical reconciliation review (2026-08-08): the February 1, 2026 prospectus appoints CACEIS Fund Administration as daily D+1 NAV accountant, CACEIS Bank as independent depositary and PricewaterhouseCoopers Audit as statutory auditor. The FPS itself is not AMF-authorised; Twenty First Capital SAS is the AMF-authorised management company (GP-11000029). Current source and chain checks preserve the distinction between manager supervision and vehicle authorisation.",
+      "sourceFreeRationale": "ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required: reviewed 2026-10-20 under D33, periodic reconciliation is withdrawn to unknown. The cited 1 February 2026 prospectus appoints CACEIS for daily D+1 NAV accounting and PwC as statutory auditor, but does not publish current recurring whole-register SPKCC liabilities compared with backing, including pending claims. Current SPKCC share-class totals are shares multiplied by NAV, not independently joined backing. Prudential retention was confirmed by D33-ADJUDICATOR on 2026-10-20: the live AMF GECO record names Twenty First Capital GP-11000029 with current NSGP/VIV status, AIFM and portfolio-management authorization (last published 2026-10-18); the AMF-origin 2025-09-05 certificate joins that exact manager to this FCP; prospectus pages 3-4 and Article 3 assign the manager shareholder-register maintenance, order centralization and issuance duties. The August 2026 official CSV independently lists the same ongoing AIFM regime. FPS registration is not relabelled AMF product authorization. The original 2026-08-16 review start and all historical authority/block pins are preserved; no absence of reconciliation or reserve shortfall is inferred.",
       "reviewer": "Phase 3 cur-2 cross-chain mint-authority enumeration",
       "reviewedAt": "2026-08-16",
       "disposition": "scoreable"

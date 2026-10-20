@@ -199,7 +199,7 @@
     ],
     "economicCapSemantics": "unbounded",
     "reconciliation": "unknown",
-    "supervision": "none",
+    "supervision": "unknown",
     "review": {
       "sources": [
         {
@@ -217,9 +217,17 @@
         {
           "label": "Ripio wFIAT current attestations and releases",
           "url": "https://www.ripio.com/en/wfiat"
+        },
+        {
+          "label": "Current official wFIAT attestation archive (retrieved 2026-10-20)",
+          "url": "https://action.ripio.com/en/wfiat-attestations"
+        },
+        {
+          "label": "wFIAT whitepaper v1.0 October 2025 (retrieved 2026-10-20)",
+          "url": "https://cdn.prod.website-files.com/5f17344acf2c6d3c3a1d6238/691c742cb3658e24e24f7a3f_wFIAT%20-%20Whitepaper.pdf"
         }
       ],
-      "evidence": "Current native authority observations on 2026-10-01 retain the shared issuer EOA's MINTER_ROLE and UPGRADER_ROLE on the six original chains and the Safe's direct MINTER_ROLE and UPGRADER_ROLE on Celo and HyperEVM. Pinned reads confirm the separate native LimitedMinter contract on Ethereum, BSC, Polygon, and Gnosis. Ethereum and Celo Safe owners differ from the older recorded set; all reviewed Safes remain 4-of-7. Historical supply and prior role observations retain their original dates. BridgeDeposit and LimitedMinterBridge are separately assessed under Bridge Risk.",
+      "evidence": "Current native authority observations on 2026-10-01 retain the shared issuer EOA's MINTER_ROLE and UPGRADER_ROLE on the six original chains and the Safe's direct MINTER_ROLE and UPGRADER_ROLE on Celo and HyperEVM. Pinned reads confirm the separate native LimitedMinter contract on Ethereum, BSC, Polygon, and Gnosis. Ethereum and Celo Safe owners differ from the older recorded set; all reviewed Safes remain 4-of-7. Historical supply and prior role observations retain their original dates. BridgeDeposit and LimitedMinterBridge are separately assessed under Bridge Risk. Source-scope correction verified 2026-10-20 by FD14: supervision none is withdrawn to unknown. The retrieved issuer sources do not positively establish absence of supervision. The whitepaper's 'may publish' wording and generic group licences do not establish a recurring assurance process or prudential supervision of the exact unnamed issuing affiliate for this token. Reconciliation remains unknown; native unbounded authority, every other adverse fact, original review start and all historical observation pins are unchanged. No non-reconciliation, shortfall or incident is inferred.",
       "reviewer": "Codex CTRL root batch 05; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15; RipioRailsCloseout U5 Celo/HyperEVM closeout 2026-09-05",
       "reviewedAt": "2026-09-05"
     }

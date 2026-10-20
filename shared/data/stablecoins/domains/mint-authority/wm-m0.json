@@ -125,7 +125,7 @@
     ],
     "economicCapSemantics": "unbounded",
     "reconciliation": "continuous",
-    "supervision": "attestation-only",
+    "supervision": "unknown",
     "review": {
       "sources": [
         {
@@ -147,9 +147,13 @@
         {
           "label": "M0 minter gateway docs",
           "url": "https://docs.m0.org/protocol/minting-burning"
+        },
+        {
+          "label": "M0 Wrapped M native liability and locked-M solvency invariant (retrieved 2026-10-20)",
+          "url": "https://docs.m0.org/protocol/wrapped-m"
         }
       ],
-      "evidence": "Boundary review at Ethereum block 25773353 and finalized Solana slot 439806760: Ethereum wM remains a 1:1 M-backed wrapper with a current one-of-two migrationAdmin Safe and TTG-registered migrator gate; Solana m_ext likewise transfers canonical M into its extension vault before minting Token-2022 wM, but its ProgramData is upgradeable by 9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW, whose route-scoped upgrade control is retained in Bridge Risk. The inherited Ethereum MinterGateway is reviewed under m-m0 and is not duplicated as a direct wm-m0 control. Continuous M/wM reconciliation and M0 Validator attestations remain relevant, but wrapper code replacement makes the economic cap unbounded and there is no prudential supervisor.",
+      "evidence": "Boundary review at Ethereum block 25773353 and finalized Solana slot 439806760: Ethereum wM remains a 1:1 M-backed wrapper with a current one-of-two migrationAdmin Safe and TTG-registered migrator gate; Solana m_ext likewise transfers canonical M into its extension vault before minting Token-2022 wM, but its ProgramData is upgradeable by 9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW, whose route-scoped upgrade control is retained in Bridge Risk. The inherited Ethereum MinterGateway is reviewed under m-m0 and is not duplicated as a direct wm-m0 control. ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required (C27, 2026-10-20): withdraw attestation-only supervision to unknown. The cited sources establish no named independent party publishing a current whole-wM-liability reserves comparison; M0 Validator collateral attestations for native M do not transfer independent assurance to wM. Retain continuous only for the native wrapper's own mechanical reconciliation of its total liabilities against locked M, documented by the current Wrapped M solvency invariant and the reviewed wrap/burn correspondence. Parent fiat-collateral reconciliation remains on m-m0 and the serial-claim edge; this local invariant establishes neither fiat reserve assurance nor executable unwind capacity. The mutable migration root remains economically unbounded. Preserve the original 2026-08-16 review start and every authority, implementation and observation pin; no absence of supervision or non-reconciliation is asserted.",
       "reviewer": "Codex mint-bridge-boundary migration",
       "reviewedAt": "2026-08-16"
     }

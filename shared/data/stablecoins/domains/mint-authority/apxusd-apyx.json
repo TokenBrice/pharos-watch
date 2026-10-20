@@ -2,9 +2,9 @@
   "id": "apxusd-apyx",
   "mintAuthority": {
     "mintPath": "offchain-attested-minter",
-    "authorityPosture": "unbounded-reconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
-    "summary": "Ethereum is the only native issuance deployment. Its MinterV0 and OZ AccessManager path requires beneficiary-signed orders, maximum-mint and rolling-rate checks, and a four-hour token-mint delay; the 4/7 operator Safe can raise the native cap after one day and replace mint logic after three days. Base and BSC are CCIP bridge representations: their pool-gated mint/burn, caps, pool rotation, pause, and UUPS controls are assessed only in Bridge Risk and do not expand native Mint Authority. The Ethereum native mint remains economically unbounded, periodically reconciled, and attestation-supervised.",
+    "summary": "Ethereum is the only reviewed native issuance deployment. Its MinterV0 and OZ AccessManager path requires beneficiary-signed orders, maximum-mint and rolling-rate checks, and a four-hour token-mint delay; the 4/7 operator Safe can raise the native cap after one day and replace mint logic after three days. Base and BSC are CCIP bridge representations assessed separately in Bridge Risk. Native issuance remains economically unbounded. Wolf & Company's monthly securities examinations do not establish recurring reconciliation of complete apxUSD liabilities to backing.",
     "upgradeability": {
       "model": "uups",
       "deploymentRefs": [
@@ -164,8 +164,8 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "periodic",
-    "supervision": "attestation-only",
+    "reconciliation": "unknown",
+    "supervision": "unknown",
     "review": {
       "sources": [
         {
@@ -195,9 +195,17 @@
         {
           "label": "Apyx bridged-token source",
           "url": "https://github.com/apyx-labs/evm-contracts/blob/main/src/bridge/BridgedApyxToken.sol"
+        },
+        {
+          "label": "Wolf September 2026 securities examination, signed October 13; assets-only scope",
+          "url": "https://1731598137-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2F6XK8DXRkFImTNSbo86o2%2Fuploads%2FEaBiRX7mNiG9XqfFOLm9%2FSeptember%202026%20Attestation%20Opinion%20(Final).pdf?alt=media"
+        },
+        {
+          "label": "Apyx Accountable reserve and circulating-supply definitions",
+          "url": "https://docs.apyx.fi/collateral-and-custody/accountable-dashboard"
         }
       ],
-      "evidence": "Current fixed-block reads on 2026-08-16 resolved Ethereum's native UUPS implementation 0xdd71fd677fde2ed2579a3c45204f41a11016ccb4, AccessManager 0xe167330e2eac88666de253e9607c6d9ae0ca2824, 750,000,000 native cap, and MinterV0 delayed mint path at block 25770531. Base block 50064463 and BSC block 116350114 resolved their separate bridged-token implementations, AccessManagers, configured CCIP pools, and destination caps; those token-level mint/burn and upgrade/cap/pause controls are Bridge Risk representations, not native issuance. The Ethereum Safe remains 4-of-7 with no enabled modules, and the one-day cap delay plus three-day upgrade delay leave native issuance economically unbounded. Apyx's periodic Wolf & Company attestations and the BVI service-entity model support periodic reconciliation under attestation-only supervision.",
+      "evidence": "Fixed-block reads on 2026-08-16 resolved Ethereum's native UUPS implementation 0xdd71fd677fde2ed2579a3c45204f41a11016ccb4, AccessManager 0xe167330e2eac88666de253e9607c6d9ae0ca2824, 750,000,000 native cap, and MinterV0 delayed mint path at block 25770531. Base block 50064463 and BSC block 116350114 resolved their separate bridged-token implementations, AccessManagers, configured CCIP pools, and destination caps; those token-level controls remain Bridge Risk. The historical 4-of-7 Safe and one-day cap/three-day upgrade delays establish economically unbounded native issuance. Source-scope correction researched 2026-10-20: Wolf's September report, signed October 13, examines existence, ownership and valuation of STRC, STRCx and SATA at September 15 and 30; it does not reconcile apxUSD liabilities or the complete external reserve book. Accountable's published definitions describe Ethereum totalSupply less Inventory and POL and connected reserve balances, but do not establish complete current bridge/escrow/in-flight liability reconciliation. Monthly securities attestations and a BVI service-entity model therefore do not establish periodic whole-token reconciliation. Reconciliation remains unknown, not a measured absence. Securities-only reporting also fails the whole-liability attestation-only supervision standard; supervision is unknown rather than an invented absence. Original review start and all historical control pins are retained.",
       "reviewer": "OpenAI Codex control review / SOL-IV calibration",
       "reviewedAt": "2026-08-16"
     }

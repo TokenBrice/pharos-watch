@@ -301,7 +301,7 @@
       }
     ],
     "segregation": "unknown",
-    "bankruptcyRemoteness": "none",
+    "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
     "reviewedAt": "2026-07-20",
     "reviewer": "Kimi P2 reserve cohort rc-3 (lead usdd-tron-dao-reserve)",
@@ -318,8 +318,16 @@
       {
         "label": "Mento Celo deployment inventory",
         "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
+      },
+      {
+        "label": "Mento reserve stewardship and discretionary backstop, retrieved 2026-10-20",
+        "url": "https://forum.mento.org/t/mgp-19-bringing-stable-asset-issuance-home-to-celo-governance/139"
+      },
+      {
+        "label": "Mento Protocol Foundation privacy notice, retrieved 2026-10-20",
+        "url": "https://www.mento.org/privacy"
       }
     ],
-    "uncertainty": "The issuer reserve API retrieved on 2026-10-01 reports holdings on Celo, Ethereum, Monad and Polygon in reserve contracts, Safe wallets and operational addresses, so the former 100% single-Celo-contract custody attribution is not supported. The 48-hour governance timelock is verified for the ZARm token and Broker; it does not prove identical custody controls for every reported reserve wallet or yield position. No complete provider-control allocation or current legal segregation, trust, SPV, or bankruptcy-remoteness assurance was established. Parts of the basket are deployed into sUSDS savings shares and stETH staking; complete reuse terms remain unverified."
+    "uncertainty": "The issuer reserve API retrieved on 2026-10-01 reports holdings on Celo, Ethereum, Monad and Polygon in reserve contracts, Safe wallets and operational addresses, so the former 100% single-Celo-contract custody attribution is not supported. The 48-hour governance timelock is verified for the ZARm token and Broker; it does not prove identical custody controls for every reported reserve wallet or yield position. No complete provider-control allocation or current legal segregation, trust, SPV, or bankruptcy-remoteness assurance was established. Parts of the basket are deployed into sUSDS savings shares and stETH staking; complete reuse terms remain unverified. FD32 source-scope correction retrieved 2026-10-20: the cited API, dashboard and deployment inventory do not positively establish absence of bankruptcy remoteness. Current reserve stewardship disclosure and the Foundation privacy notice likewise do not establish a whole-material-book insolvency safeguard or its absence. The unsupported none verdict is withdrawn to unknown; original review start and all composition dates are retained. ORCHESTRATOR-AUTHORIZED adverse-pin correction — owner review required."
   }
 }

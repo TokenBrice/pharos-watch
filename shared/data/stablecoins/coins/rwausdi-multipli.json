@@ -118,7 +118,7 @@
     }
   ],
   "collateralQuality": "exotic",
-  "custodyModel": "institutional-unregulated",
+  "custodyModel": "unknown",
   "governanceQuality": "single-entity",
   "liveReservesConfig": {
     "adapter": "afi-proof",

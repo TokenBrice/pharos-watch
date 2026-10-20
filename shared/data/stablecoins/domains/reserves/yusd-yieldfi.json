@@ -76,11 +76,15 @@
         "url": "https://docs.yield.fi/legal-documents/token-terms/yusd"
       },
       {
+        "label": "Diagnostic re-opening 2026-10-20: rendered legacy transparency omits Saga assets; no custody review renewal",
+        "url": "https://v2.yield.fi/transparency"
+      },
+      {
         "label": "YieldFi Flow of Funds: deposited Series assets deployed into DeFi and exchange strategy accounts",
         "url": "https://docs.yield.fi/due-diligence-questionaire/flow-of-funds"
       }
     ],
-    "uncertainty": "yUSD token terms expressly permit borrowing and leverage looping, private LP deals, hedged carry and basis strategies; the documented fund flow deploys deposited Series assets into DeFi or exchange strategy accounts. Capital reuse is permitted, not prohibited. This is a contractual permission finding, not a measured allocation or assertion of actual current leverage. ForDeFi is named as an MPC provider; provider shares, enforceable segregation and insolvency treatment across the entire strategy book remain unverified.",
+    "uncertainty": "yUSD token terms expressly permit borrowing and leverage looping, private LP deals, hedged carry and basis strategies; the documented fund flow deploys deposited Series assets into DeFi or exchange strategy accounts. Capital reuse is permitted, not prohibited. This is a contractual permission finding, not a measured allocation or assertion of actual current leverage. ForDeFi is named as an MPC provider; provider shares, enforceable segregation and insolvency treatment across the entire strategy book remain unverified. FD36 reopened these same primary sources and the rendered transparency surface on 2026-10-20: the latter has empty account tables and explicitly excludes Saga assets from Debank coverage. This is not proof of zero assets or wholly on-chain custody. The unsupported whole-book onchain scalar was therefore corrected to unknown; the original custody review start and all contractual reuse/adverse facts remain unchanged.",
     "knownUnknownExposurePct": 100
   }
 }

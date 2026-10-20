@@ -352,7 +352,22 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
       outputAssetType: "mixed-collateral",
       outputAssets: ["asset:whype", "asset:feubtc", "asset:khype", "asset:wsthype"],
       reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
-      costModel: fixedFee(0, "Felix docs describe redemption as fee-free"),
+      costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),
+      docs: [
+        sourceRef(
+          "Felix feUSD redemption fee and collateral payout",
+          "https://usefelix.gitbook.io/docs/lending-products/quickstart/faq",
+          ["route", "fees", "access", "settlement"],
+        ),
+        sourceRef(
+          "Felix deployed collateral registry and redemption interface",
+          "https://usefelix.gitbook.io/docs/developers/market-1-feusd-cdp",
+          ["route", "fees", "access"],
+        ),
+      ],
+      notes: [
+        "Fee-only correction reviewed 2026-10-20: Felix documents min(0.5% + baseRate, 100%), not a generally fee-free route. Fresh reserve metadata may supply the current on-chain fee; the documented formula alone is not an evaluated same-notional cost or executable capacity. Original route review start is retained.",
+      ],
     }),
     "meusd-mezo": defineCollateralConfig({
       outputAssets: ["asset:btc"],
@@ -417,7 +432,7 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
       costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),
     }),
     "cdp-enosys": defineLiveCollateralConfig({
-      outputAssets: ["asset:fxrp", "asset:wflr"],
+      outputAssets: ["asset:fxrp", "asset:wflr", "asset:stxrp", "asset:sflr"],
       reviewedAt: REVIEWED_FOLLOWUP_REMEDIATION_AT,
       outputAssetType: "mixed-collateral",
       costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),
@@ -426,10 +441,15 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
           "Flare Enosys Loans launch update",
           "https://flare.network/news/enosys-loans-xrp-backed-stablecoin-flare",
         ),
+        sourceRef(
+          "Enosys verified collateral registry and redemption loop",
+          "https://flare-explorer.flare.network/api/v2/smart-contracts/0x9cbb9b5376f2ecf281ff66bba8fe2d70f48138f4",
+          ["route", "fees", "access", "settlement"],
+        ),
       ],
       notes: [
         "Modeled as a Liquity V2-style collateral redemption route on Flare; lowest-rate troves are redeemed first when CDP trades below peg.",
-        "Fresh live reserve metadata reads Enosys ActivePool branch debt and collateral balances on Flare as the current direct redemption-capacity bound.",
+        "Output-only correction reviewed 2026-10-20 at Flare block 72587009 (2026-10-20T22:23:33Z; hash 0x5dbc01dcb1ef538f77ddf676f7d368e6d25c1b3725d5ef649a6dafc55f301af5; observed 2026-10-20T22:23:35.904Z): CollateralRegistry 0x9474206bc035d03d142264fd9913d1d51246d3ac retains verified implementation 0x9cbb9b5376f2ecf281ff66bba8fe2d70f48138f4. totalCollaterals() is 4 and getToken(0..3) returns the exact FXRP, WFLR, stXRP and sFLR collateral tokens. The original route review start is retained. Gross branch debt and collateral are diagnostics, not proof of eligible-Trove same-notional execution: the redemption loop filters redeemable branches, truncates requests to unbacked debt when nonzero, and is iteration-limited.",
       ],
     }),
     "ausdt-tether-alloy": defineReviewedCollateralConfig("2026-04-20", {
@@ -458,8 +478,18 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
     "ussd-sonic-labs": defineLiveCollateralConfig({
       outputAssetType: "stable-single",
       outputAssets: ["frxusd-frax"],
-      reviewedAt: REVIEWED_EXIT_CREDIT_AT,
-      costModel: fixedFee(0, "The verified Sonic BrandedCustodian returned redeemFee() = 0 at Sonic block 77432523."),
+      reviewedAt: "2026-10-20",
+      costModel: documentedVariableFee("BrandedCustodian.setMintRedeemFee allows the owner to change redeemFee. The zero value at Sonic block 77432523 is a historical observation, not a permanent fee promise; a current request-sized fee and gas bound are required.", "formula"),
+      v9RouteReviewTerms: {
+        scoringDisposition: "bounded-terms-gap",
+        missingScoringFields: ["capacity", "cost"],
+        rationale: "The local USSD-to-frxUSD unwrap is contract-driven, but custody totalAssets alone does not certify request-sized executable output, current access/isolation guards or all-in execution cost. A historical redeemFee value cannot be a standing fixed-zero fee; exact current telemetry is required.",
+        reviewedAt: "2026-10-20",
+        docs: [
+          sourceRef("Frax BrandedCustodian fee, isolation and redemption mechanics (retrieved 2026-10-20)", "https://docs.frax.com/fraxnet/branded-stablecoins/brandedCustodian", ["route", "access", "capacity", "fees", "settlement"]),
+          sourceRef("USSD redemption disclaimer (retrieved 2026-10-20)", "https://files.gitbook.com/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FFigzFE2ScpiZHSkLRCev%2Fuploads%2F6pFXKqf7Kq4tnm3p3bmw%2FFRXUSD%20_%20USSD%20Disclaimer.pdf?alt=media", ["route", "access"]),
+        ],
+      },
       docs: [
         sourceRef("Sonic USSD docs", "https://docs.soniclabs.com/sonic/ussd", [
           "route",
@@ -473,10 +503,11 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
           ["route", "capacity", "fees", "settlement"],
         ),
         sourceRef("Sonic USSD page", "https://www.soniclabs.com/ussd", ["route", "capacity", "settlement"]),
+        sourceRef("Frax BrandedCustodian adjustable fees and isolation mode", "https://docs.frax.com/fraxnet/branded-stablecoins/brandedCustodian", ["route", "capacity", "access", "fees", "settlement"]),
       ],
       notes: [
         "Sonic's public page describes a broader upstream supported-USD-asset set, but the deployed direct holder route is the USSD BrandedCustodian. At Sonic block 77432523 its custodianTkn() returned Sonic frxUSD (0x80Eede496655FB9047dd39d9f418d5483ED600df).",
-        "Fresh reserve telemetry reads the BrandedCustodian's totalAssets() (its frxUSD balance) as the live executable exit bound; when the read is unavailable the route is left unrated instead of assuming full-supply immediacy.",
+        "The reserve feed reads the BrandedCustodian's totalAssets() frxUSD balance. This is custody backing, not an exact holder-execution certificate; no static full-supply fallback, request-sized capacity or downstream fiat payout is inferred.",
         "Re-read 2026-08-12 at Sonic block 77432523: totalAssets() and frxUSD.balanceOf(custodian) both returned 2,081,316.47, confirming the escrow read measures the asset the redemption pays out; redeemFee() was still 0 and paused() reverts, so the verified source exposes no pause surface.",
       ],
     }),
@@ -827,13 +858,15 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
       ],
       v9RouteReviewTerms: {
         settlementModel: "days",
-        scoringDisposition: "bounded-terms-gap",
-        missingScoringFields: ["settlement"],
-        rationale: "Hive documents automatic HBD-to-HIVE conversion after 3.5 days, but the median-price conversion window is not a completed same-notional USD exit. Debt-ratio haircuts, HIVE payout valuation and downstream realization remain separate, unbounded route facts.",
-        reviewedAt: "2026-10-09",
+        settlementDelaySec: 302_400,
+        rationale: "Reviewed 2026-10-20 against the node-reported Hive 1.28.8 revision 274384a8adddf54b69965a7fd43d8eb0ddda7701: native convert schedules the request for 302400 seconds and process_conversions automatically issues and credits HIVE to the owner for every due regular request. The completed endpoint is asset:hive, not fiat USD. Request 1041114513 for 1000 HBD in block 110848396 (2026-10-17T08:59:03Z) filled in block 110948374 (2026-10-20T20:59:00Z) for 20408.163 HIVE; both native block identities were corroborated on two nodes. This ordinary protocol completion bound assumes a progressing chain and established price feed; it grants neither same-notional executable capacity nor a USD realization guarantee. Debt-ratio haircut and current HIVE payout valuation remain unquantified cost/output facts.",
+        reviewedAt: "2026-10-20",
         docs: [
-          sourceRef("Hive HBD completed conversion terms (reviewed 2026-10-09)", "https://hive.io/hbd/", ["route", "fees", "settlement"]),
+          sourceRef("Hive HBD completed conversion terms (reviewed 2026-10-20)", "https://hive.io/hbd/", ["route", "fees", "settlement"]),
           sourceRef("Hive convert operation output-deposit specification", "https://developers.hive.io/apidefinitions/broadcast-ops.html#broadcast_ops_convert", ["route", "settlement"]),
+          sourceRef("Hive 1.28.8 native conversion scheduling and admission", "https://github.com/openhive-network/hive/blob/274384a8adddf54b69965a7fd43d8eb0ddda7701/libraries/chain/hive_evaluator_transfer.cpp#L474-L490", ["route", "settlement"]),
+          sourceRef("Hive 1.28.8 automatic HIVE credit for every due regular conversion", "https://github.com/openhive-network/hive/blob/274384a8adddf54b69965a7fd43d8eb0ddda7701/libraries/chain/database_conversion.cpp#L29-L175", ["route", "settlement"]),
+          sourceRef("Hive 1.28.8 mainnet conversion-delay constants", "https://github.com/openhive-network/hive/blob/274384a8adddf54b69965a7fd43d8eb0ddda7701/libraries/protocol/include/hive/protocol/config.hpp#L191-L199", ["settlement"]),
         ],
       },
       docs: [sourceRef("Hive HBD", "https://hive.io/hbd/", ["route", "capacity", "fees", "settlement"])],
