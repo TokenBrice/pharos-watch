@@ -476,7 +476,9 @@ export async function runYieldCoordinatorNormalizeStage(params: YieldCoordinator
     },
   });
 
-  const resolvedWithYield = resolved.filter((entry) => entry.yield != null);
+  const anchorOnlySources = resolved.filter((entry) => entry.yield?.observationKind === "anchor-only");
+  const resolvedWithYield = resolved.filter((entry) =>
+    entry.yield != null && entry.yield.observationKind !== "anchor-only");
   const resolvedYieldBearingIds = new Set(
     resolvedWithYield.filter((entry) => fetched.yieldCoinIdSet.has(entry.id)).map((entry) => entry.id),
   );
@@ -488,6 +490,7 @@ export async function runYieldCoordinatorNormalizeStage(params: YieldCoordinator
       countTotals: {
         resolvedSources: resolvedWithYield.length,
         resolvedCoins: resolvedIds.length,
+        anchorOnlySources: anchorOnlySources.length,
         resolvedYieldBearingCoins: resolvedYieldBearingIds.size,
         envelopeRejections: envelopeRejections.length,
         optionalSourceFailureCount: optionalSourceFailures.length,
@@ -624,6 +627,7 @@ export async function runYieldCoordinatorNormalizeStage(params: YieldCoordinator
 
   return {
     resolvedWithYield,
+    anchorOnlySources,
     resolvedYieldBearingIds,
     resolvedIds,
     envelopeRejections,
@@ -919,6 +923,7 @@ export async function runYieldCoordinatorHealthTelemetryStage(
     resolvedYieldBearingCount: normalized.resolvedYieldBearingIds.size,
     expectedYieldBearingCount: fetched.yieldCoins.length,
     evaluatedSourceCount: normalized.evaluatedSources.length,
+    anchorOnlySourceCount: normalized.anchorOnlySources.length,
     rejectedSourceCount: normalized.evaluatedSources.filter((source) => source.rejected).length,
     selectedSourceCoinCount: normalized.bestSourceKeyByCoin.size,
     dlPoolCount: fetched.dlPools.length,
@@ -1443,6 +1448,7 @@ export async function runYieldCoordinatorPersistStage(
     signal: params.signal,
     previewRankingsPayload: health.previewRankingsPayload,
     evaluatedSources: health.acceptedSources,
+    anchorOnlySources: normalized.anchorOnlySources,
     publicationViews: health.publicationViews,
     startSec: fetched.startSec,
     degradationReasons: health.degradationReasons,

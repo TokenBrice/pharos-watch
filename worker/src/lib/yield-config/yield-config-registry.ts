@@ -6,14 +6,22 @@ import type {
 } from "@shared/types/yield";
 import { buildOnChainSourceKey } from "../yield-utils";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { getBenchmarkKeyForPegCurrency } from "../../cron/yield-sync/benchmarks";
+
+// Reviewed variable-NAV products whose holder return is intentionally USD-based.
+const USD_RETURN_VARIABLE_NAV_IDS: Readonly<Record<string, true>> = {
+  "fpi-frax": true,
+  "isc-international-stable-currency": true,
+};
 
 export function isPriceDerivedYieldEligible(stablecoinId: string, intentionalGapReason?: string): boolean {
   const meta = TRACKED_META_BY_ID.get(stablecoinId);
   const yieldType = meta?.yieldConfig?.yieldType;
-  const benchmarkKey = getBenchmarkKeyForPegCurrency(meta?.flags.pegCurrency);
+  const referenceCurrency = meta?.pegReferenceId
+    ? TRACKED_META_BY_ID.get(meta.pegReferenceId)?.flags.pegCurrency
+    : meta?.flags.pegCurrency;
   return (yieldType === "nav-appreciation" || yieldType === "lending-vault")
-    && (benchmarkKey === null || benchmarkKey === "USD")
+    && (referenceCurrency === "USD"
+      || (referenceCurrency === "VAR" && USD_RETURN_VARIABLE_NAV_IDS[stablecoinId] === true))
     && !intentionalGapReason;
 }
 

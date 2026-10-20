@@ -35,8 +35,10 @@ import {
 } from "./yield-publication.test-support";
 import { handleBackfillYieldHistory } from "../../../scripts/backfills/backfill-yield-history";
 import { cleanupYieldSourceTest, mockYieldSourceRoutes } from "./yield-source.test-support";
-import { baseEvaluationInput } from "./yield-evaluation.test-support";
+import { baseEvaluationInput, resolvedYield } from "./yield-evaluation.test-support";
 import { evaluateYieldSources } from "../yield-sync/evaluation";
+import { loadTier1PrevRateRows } from "../yield-sync/resolve";
+import { computeApyFromRate } from "../yield-helpers";
 
 // Migrations absorbed by the 2026-07-30 baseline squash live on as frozen test fixtures.
 const MIGRATION_FIXTURES_DIR = path.resolve(__dirname, "../../test-helpers/migration-fixtures");
@@ -162,6 +164,68 @@ describe("publishYieldCoordinatorResults", () => {
       },
     };
   }
+
+  it.each([1, 1.001, 0.999])("persists an anchor without publishing zero, then publishes the measured return at rate %s", async (nextRate) => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
+    const id = "sdai-sky";
+    const sourceKey = `onchain:${id}`;
+    const seed = { id, symbol: "sDAI", yield: resolvedYield({
+      observationKind: "anchor-only", dataSource: "onchain", sourceKey, exchangeRate: 1,
+      currentApy: 0, apyBase: null, sourceObservedAt: startSec, sourceTvlUsd: null,
+    }) };
+    const publish = async (clock: number, sources: EvaluatedYieldSource[], anchors = [seed]) => {
+      const benchmark = makeBenchmarkMeta({ fetchedAt: clock });
+      const artifacts = buildPreviewYieldRankingsArtifacts({
+        evaluatedSources: sources, bestSourceKeyByCoin: new Map(sources.map((source) => [source.id, source.sourceKey])),
+        riskFreeRate: benchmark.rate, riskFreeRateMeta: benchmark, riskFreeRates: makeBenchmarkRegistry(benchmark),
+        dlPoolsMeta: makeYieldSourceMeta(), safetySnapshot: makeSafetySnapshotMeta(), medianApy: 4.8, startSec: clock,
+      });
+      return publishYieldCoordinatorResults({ ...makePublishParams({ db }), ...artifacts,
+        evaluatedSources: artifacts.acceptedSources, anchorOnlySources: anchors, startSec: clock });
+    };
+    try {
+      // Independent measured coverage admits the generation; a seed cannot satisfy
+      // the publication's unchanged empty/absolute-coverage guards by itself.
+      const other = makeEvaluatedSource();
+      expect((await publish(startSec, [other])).ok).toBe(true);
+      expect(sqlite.prepare("SELECT apy, apy_base, exchange_rate, is_best, pys_at_publish FROM yield_history WHERE stablecoin_id = ?")
+        .get(id)).toEqual({ apy: 0, apy_base: null, exchange_rate: 1, is_best: 0, pys_at_publish: null });
+      expect(sqlite.prepare("SELECT stablecoin_id FROM yield_data WHERE stablecoin_id = ?").all(id)).toEqual([]);
+      const firstPayload = JSON.parse(String(sqlite.prepare("SELECT value FROM cache WHERE key = 'yield-rankings'").get()!.value)) as {
+        rankings: Array<{ id: string; currentApy: number }>;
+      };
+      expect(firstPayload.rankings.some((row) => row.id === id)).toBe(false);
+      expect(sqlite.prepare("SELECT stablecoin_id FROM yield_source_decisions WHERE stablecoin_id = ?").all(id)).toEqual([]);
+
+      // An older generation cannot leak anchors through the atomic cache CAS.
+      await publish(startSec - 1, [other], [{ ...seed, id: "stale-seed" }]);
+      expect(sqlite.prepare("SELECT stablecoin_id FROM yield_history WHERE stablecoin_id = 'stale-seed'").all()).toEqual([]);
+
+      const nextSec = startSec + 7 * DAY_SECONDS;
+      const anchor = (await loadTier1PrevRateRows(db, [id], startSec)).get(id)!;
+      const apy = computeApyFromRate(nextRate, anchor.exchangeRate!, (nextSec - anchor.recordedAt) / DAY_SECONDS);
+      expect(typeof apy).toBe("number");
+      if (typeof apy !== "number") throw new Error("Expected measured return");
+      const evaluated = evaluateYieldSources(baseEvaluationInput({
+        startSec: nextSec, sevenDaysAgoSec: startSec,
+        resolved: [{ ...seed, yield: { ...seed.yield, observationKind: undefined,
+          currentApy: apy, apyBase: apy, exchangeRate: nextRate,
+          sourceObservedAt: nextSec, comparisonAnchorObservedAt: startSec } }],
+      }));
+      const measured = evaluated.evaluatedSources[0];
+      expect(measured).toMatchObject({ apy7d: apy, apy30d: apy });
+      expect((await publish(nextSec, [other, measured], [])).ok).toBe(true);
+      const nextPayload = JSON.parse(String(sqlite.prepare("SELECT value FROM cache WHERE key = 'yield-rankings'").get()!.value)) as {
+        rankings: Array<{ id: string; currentApy: number }>;
+      };
+      expect(nextPayload.rankings.find((row) => row.id === id)?.currentApy).toBeCloseTo(apy);
+      expect(sqlite.prepare("SELECT apy, apy_base, is_best FROM yield_history WHERE stablecoin_id = ? ORDER BY recorded_at DESC LIMIT 1")
+        .get(id)).toEqual({ apy, apy_base: apy, is_best: 1 });
+    } finally {
+      sqlite.close();
+    }
+  });
 
   it("deduplicates Zephyr cron generations and backfill without weakening generation CAS or trailing statistics", async () => {
     const { sqlite, db } = createLatestSchemaSqlite();

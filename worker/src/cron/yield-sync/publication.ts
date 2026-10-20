@@ -54,6 +54,7 @@ import {
   compareCandidates,
   buildYieldSourceRisk,
 } from "./evaluation";
+import type { ResolvedYieldEntry } from "./types";
 import {
   getRankingStaleThresholdMs,
   getComparisonAnchorStaleThresholdMs,
@@ -1812,6 +1813,7 @@ export async function persistEvaluatedYieldSources(
   input: {
     signal?: AbortSignal;
     evaluatedSources: EvaluatedYieldSource[];
+    anchorOnlySources?: ResolvedYieldEntry[];
     publicationViews: Map<string, YieldCoinPublicationView>;
     startSec: number;
     generationId: string;
@@ -1823,6 +1825,35 @@ export async function persistEvaluatedYieldSources(
   const historyRows: Array<Record<string, unknown>> = [];
   const decisionRows: Array<Record<string, unknown>> = [];
   const decisionAlternativeRows: Array<Record<string, unknown>> = [];
+
+  // Seeds share the publication's existing atomic CAS fence but are not current
+  // yield rows, selected sources, decision evidence or measured coverage.
+  for (const entry of input.anchorOnlySources ?? []) {
+    const seed = entry.yield;
+    if (seed?.observationKind !== "anchor-only") continue;
+    historyRows.push({
+      stablecoin_id: entry.id,
+      source_key: seed.sourceKey,
+      recorded_at: input.startSec,
+      source_observed_at: seed.sourceObservedAt ?? null,
+      is_best: 0,
+      apy: 0,
+      apy_base: null,
+      apy_reward: null,
+      exchange_rate: seed.exchangeRate,
+      source_tvl_usd: seed.sourceTvlUsd,
+      data_source: seed.dataSource,
+      warning_signals: null,
+      yield_source: seed.yieldSource ?? null,
+      yield_type: seed.yieldType ?? null,
+      publication_generation_id: input.generationId,
+      publication_state: "published",
+      pys_at_publish: null,
+      safety_at_publish: null,
+      variance_at_publish: null,
+      pys_inputs_at_publish: null,
+    });
+  }
 
   for (const source of input.evaluatedSources) {
     // The publication views are the sole owner of the selection decision; the
@@ -2065,6 +2096,7 @@ export async function publishYieldCoordinatorResults(params: {
   signal?: AbortSignal;
   previewRankingsPayload: ReturnType<typeof buildYieldRankingsPayloadFromEvaluatedSources>;
   evaluatedSources: EvaluatedYieldSource[];
+  anchorOnlySources?: ResolvedYieldEntry[];
   publicationViews: Map<string, YieldCoinPublicationView>;
   startSec: number;
   degradationReasons: string[];
@@ -2163,6 +2195,7 @@ export async function publishYieldCoordinatorResults(params: {
       publicationWrite = await persistEvaluatedYieldSources(params.db, {
         signal: params.signal,
         evaluatedSources: params.evaluatedSources,
+        anchorOnlySources: params.anchorOnlySources,
         publicationViews: params.publicationViews,
         startSec: params.startSec,
         generationId,

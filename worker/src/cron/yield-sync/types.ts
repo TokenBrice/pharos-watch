@@ -23,6 +23,8 @@ export interface DlPool {
 }
 
 export interface ResolvedYield {
+  /** Anchor-only observations retain the durable seed shape, not measured APY. */
+  observationKind?: "anchor-only";
   currentApy: number;
   apyBase: number | null;
   apyReward: number | null;
