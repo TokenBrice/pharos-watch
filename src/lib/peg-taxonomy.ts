@@ -24,7 +24,6 @@ export interface PegTaxonomyPage {
   description: string;
   intro: string;
   topCoins: StablecoinClientMeta[];
-  contextSummary: string;
   riskSummary: string;
   filterTag: ReturnType<typeof pegCurrencyToFilterTag>;
   coins: StablecoinClientMeta[];
@@ -120,7 +119,6 @@ export const PEG_TAXONOMY_PAGES: readonly PegTaxonomyPage[] = ACTIVE_PEGS.map((p
   const coins = ACTIVE_STABLECOINS.filter((coin) => coin.flags.pegCurrency === peg);
   const shortLabel = PEG_LABELS_SHORT[peg];
   const topCoins = getTopPegCoins(coins);
-  const contextSummary = PEG_MARKET_CONTEXT[peg] ?? `Compare tracked stablecoins pegged to ${PEG_LABELS[peg]}.`;
   const riskSummary = buildPegRiskSummary({ coins, shortLabel });
 
   return {
@@ -132,7 +130,6 @@ export const PEG_TAXONOMY_PAGES: readonly PegTaxonomyPage[] = ACTIVE_PEGS.map((p
     description: `${getTopCountLabel(coins.length)} pegged to ${PEG_LABELS[peg]}. Compare peg stability, liquidity, risk, and leading symbols like ${formatCoinSymbolList(topCoins.slice(0, 2))}.`,
     intro: buildPegIntro({ peg, coins, topCoins }),
     topCoins,
-    contextSummary,
     riskSummary,
     filterTag: pegCurrencyToFilterTag(peg),
     coins,
