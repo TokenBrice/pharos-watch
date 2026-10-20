@@ -153,4 +153,3 @@ export function mintBurnScenario({
     { match: "INSERT INTO cache (key, value, updated_at)", rows: [] },
   ]);
 }
-
