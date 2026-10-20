@@ -5,6 +5,7 @@ import {
   type DigestedDay,
 } from "@/lib/tape-digest";
 import type { TapeEvent, TapeEventSeverity } from "@shared/types/tape-event";
+import { PSI_CONDITION_BANDS } from "@shared/lib/psi-policy";
 
 // ---------------------------------------------------------------------------
 // Fixture helpers
@@ -99,6 +100,62 @@ describe("single-page digest", () => {
 // ---------------------------------------------------------------------------
 // class summaries
 // ---------------------------------------------------------------------------
+
+describe("freeze class summary", () => {
+  function recap(entries: Array<[string, number | null]>) {
+    return digestByDayForTest(entries.map(([type, amountUsdAtEvent], index) => makeEvent(
+      NOW_MS - index, type, { payload: { amountUsdAtEvent, address: "0xabc" } },
+    )), NOW_MS)[0]!.classes[0]!.summary;
+  }
+
+  it("keeps frozen, released and destroyed gross amounts separate", () => {
+    const summary = recap([["freeze.blocked", 10], ["freeze.unblocked", 20], ["freeze.destroyed", 30]]);
+    expect(summary).toContain("$10 frozen");
+    expect(summary).toContain("$20 released");
+    expect(summary).toContain("$30 destroyed");
+    expect(summary).not.toContain("$60");
+  });
+
+  it("does not net a same-address freeze then wipe into current exposure", () => {
+    const summary = recap([["freeze.blocked", 10], ["freeze.destroyed", 10]]);
+    expect(summary).toContain("$10 frozen");
+    expect(summary).toContain("$10 destroyed");
+  });
+
+  it.each([["freeze.unblocked", "released"], ["freeze.destroyed", "destroyed"]])(
+    "labels action-only %s groups without inventing a frozen total", (type, label) => {
+      const summary = recap([[type, 20]]);
+      expect(summary).toContain(`$20 ${label}`);
+      expect(summary).not.toContain("frozen");
+    },
+  );
+
+  it("marks partial and wholly unavailable valuations without converting missing to zero", () => {
+    const summary = recap([["freeze.blocked", 10], ["freeze.blocked", null], ["freeze.unblocked", null]]);
+    expect(summary).toContain("$10 frozen (valuation incomplete: 1 unpriced)");
+    expect(summary).toContain("USD unavailable released (valuation incomplete: 1 unpriced)");
+    expect(summary).not.toContain("$0");
+    expect(recap([["freeze.blocked", 0]])).toContain("$0 frozen");
+  });
+});
+
+describe("PSI class summary", () => {
+  it("selects the final canonical band as worst regardless of feed ordering", () => {
+    const events = PSI_CONDITION_BANDS.toReversed().map(({ band }, index) => makeEvent(
+      NOW_MS - index, "psi.band.shifted_down", { payload: { newBand: band } },
+    ));
+    expect(digestByDayForTest(events, NOW_MS)[0]!.classes[0]!.summary)
+      .toBe(`worst band ${PSI_CONDITION_BANDS.at(-1)!.band}`);
+  });
+
+  it("retains unknown-only labels but prefers a known band over an unknown one", () => {
+    const unknown = makeEvent(NOW_MS, "psi.band.shifted_down", { payload: { newBand: "UNKNOWN" } });
+    const known = makeEvent(NOW_MS - 1, "psi.band.shifted_down", { payload: { newBand: PSI_CONDITION_BANDS[0].band } });
+    expect(digestByDayForTest([unknown], NOW_MS)[0]!.classes[0]!.summary).toBe("worst band UNKNOWN");
+    expect(digestByDayForTest([unknown, known], NOW_MS)[0]!.classes[0]!.summary)
+      .toBe(`worst band ${PSI_CONDITION_BANDS[0].band}`);
+  });
+});
 
 describe("yield class summary", () => {
   it("reports the worst PYS drop from projector-style positive deltas", () => {

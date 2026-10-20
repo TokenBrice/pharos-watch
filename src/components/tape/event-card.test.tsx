@@ -91,6 +91,25 @@ function freezeEvent(overrides: Partial<TapeEvent> = {}): TapeEvent {
 }
 
 describe("EventCard enrichment", () => {
+  it("advances both relative labels for a stable event reference while retaining UTC timestamps", () => {
+    const nowMs = Date.UTC(2026, 9, 20, 12);
+    const event = makeEvent({ ts: nowMs - 60_000 });
+    const { container, rerender } = render(<EventCard event={event} nowMs={nowMs} />);
+    const timestamp = container.querySelector("time")!;
+    const absoluteTitle = timestamp.title;
+    expect(screen.getByText("1m")).toBeTruthy();
+    expect(screen.getByText("1m ago")).toBeTruthy();
+    rerender(<EventCard event={event} nowMs={nowMs} />);
+    expect(container.querySelector("time")).toBe(timestamp);
+    rerender(<EventCard event={event} nowMs={nowMs + 60_000} />);
+    expect(screen.getByText("2m")).toBeTruthy();
+    expect(screen.getByText("2m ago")).toBeTruthy();
+    expect(screen.queryByText("1m ago")).toBeNull();
+    expect(timestamp.dateTime).toBe("2026-10-20T11:59:00.000Z");
+    expect(timestamp.title).toBe(absoluteTitle);
+    expect(timestamp.textContent).toContain("11:59");
+  });
+
   it("depeg.opened renders signed bps text and an SR-only directional description", () => {
     render(<EventCard event={makeEvent()} />);
     expect(screen.getByText(/^−300 bps$/)).toBeTruthy();

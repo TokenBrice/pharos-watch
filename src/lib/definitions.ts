@@ -403,7 +403,9 @@ export const DEFINITIONS = {
   yieldStability: {
     label: "Yield Stability",
     short:
-      "30-day APY consistency metric. Higher means the yield series is steadier, not necessarily higher. Published at two-decimal precision and reused verbatim by the PYS consistency multiplier; rows with too little history resolve the neutral best-case default instead of a penalty.",
+      "30-day APY consistency metric. Higher means steadier yield, not higher yield. Published at two-decimal precision and reused by the PYS consistency multiplier.",
+    detail:
+      "Fewer than two observations, a near-zero mean, or non-finite variation make stability and variance unavailable; PYS is NR (null with missing-inputs), not neutral or measured zero. Measured zero variance with a nonzero mean gives stability 1.00 and full consistency credit.",
     ...YIELD,
   },
   yieldWarnings: {
@@ -458,14 +460,14 @@ export const DEFINITIONS = {
   chainHealthQuality: {
     label: "Quality",
     short: "Supply-weighted average of Pharos Safety Scores for stablecoins on this chain.",
-    detail: "Requires ≥50% of supply to have safety score coverage. Missing data penalizes the score rather than ignoring it.",
+    detail: "Unrated supply is excluded and the average renormalizes over rated supply. Below 50% rated supply coverage, Quality and the composite are NR; missing scores are not a numeric penalty.",
     ...CHAIN_HEALTH,
   },
   chainHealthEnvironment: {
     label: "Chain Environment",
-    short: "Infrastructure quality rating based on chain resilience tier.",
+    short: "Infrastructure quality rating using L2BEAT stage and risk evidence first for matched chains.",
     detail:
-      "Tier 1 (e.g., Ethereum) = 100, Tier 2 = 60, Tier 3 = 20. Factors decentralization, uptime history, and economic security.",
+      "Matched chains combine L2BEAT stage and sequencer failure, state validation, data availability, exit window, and proposer failure risks. Only unmatched chains fall back to Pharos resilience tiers: Tier 1 = 100, Tier 2 = 60, Tier 3 = 20.",
     ...CHAIN_HEALTH,
   },
   chainHealthConcentration: {

@@ -26,6 +26,7 @@ export function executeParsedVerb(
       return true;
     }
     case "screen": {
+      if (parsedVerb.error || Object.keys(parsedVerb.filters).length === 0) return false;
       executor.push(parsedVerb.href);
       executor.closePalette();
       return true;
@@ -79,6 +80,9 @@ export function buildVerbPreview(parsedVerb: ParsedVerb): CommandPaletteVerbPrev
       };
     }
     case "screen": {
+      if (parsedVerb.error) {
+        return { label: "Screen —", sublabel: parsedVerb.error, runnable: false };
+      }
       const keys = Object.keys(parsedVerb.filters);
       if (keys.length === 0) {
         return {

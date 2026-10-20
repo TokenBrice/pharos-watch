@@ -16,9 +16,17 @@ export interface LiquidityViewModel {
   rows: LiquidityRow[];
   /** Rated rows plus observed NR rows; the table sorts the NR rows last. */
   leaderboardRows: LiquidityRow[];
-  /** Tracked coins with no observed DEX market (the compact fold). */
+  /** Admitted tracked coins with no observed DEX market (the compact fold). */
   unobservedRows: LiquidityRow[];
+  /** Quarantined or unclassified evidence; raw depth is not admitted liquidity. */
+  unavailableRows: LiquidityRow[];
   summaryStats: LiquidityStatsData | null;
+}
+
+function isUnavailableDexEvidence(liq: DexLiquidityData): boolean {
+  return liq.unavailableReason != null ||
+    liq.liquidityScoreUnavailableReason === "invalid-coverage-evidence" ||
+    liq.coverageClass == null || liq.liquidityEvidenceClass == null;
 }
 
 /**
@@ -26,7 +34,7 @@ export interface LiquidityViewModel {
  * observed: an NR score is a missing activity reading, not a missing market.
  */
 export function isObservedOnDex(liq: DexLiquidityData): boolean {
-  return liq.poolCount > 0 && liq.totalTvlUsd > 0 &&
+  return !isUnavailableDexEvidence(liq) && liq.poolCount > 0 && liq.totalTvlUsd > 0 &&
     liq.coverageClass != null && liq.coverageClass !== "unobserved" &&
     liq.liquidityEvidenceClass != null && liq.liquidityEvidenceClass !== "unobserved";
 }
@@ -69,6 +77,7 @@ function computeLiquidityStats(
   let organicWeight = 0;
 
   for (const { liq } of allRows) {
+    if (isUnavailableDexEvidence(liq)) continue;
     if (liq.liquidityScore != null) ratedCount++;
     // Retained markets remain covered when required activity makes the score NR.
     if (isObservedOnDex(liq)) {
@@ -82,12 +91,12 @@ function computeLiquidityStats(
       tvlForChange += liq.totalTvlUsd;
       totalPrevTvl += prevTvl;
     }
-    if (liq.weightedBalanceRatio != null) {
+    if (liq.weightedBalanceRatio != null && liq.balanceMeasuredTvlUsd != null) {
       const measuredTvl = liq.balanceMeasuredTvlUsd;
       totalBalance += liq.weightedBalanceRatio * measuredTvl;
       balanceWeight += measuredTvl;
     }
-    if (liq.organicFraction != null) {
+    if (liq.organicFraction != null && liq.organicMeasuredTvlUsd != null) {
       const measuredTvl = liq.organicMeasuredTvlUsd;
       totalOrganic += liq.organicFraction * measuredTvl;
       organicWeight += measuredTvl;
@@ -121,7 +130,7 @@ export function buildLiquidityViewModel(
   searchQuery: string,
 ): LiquidityViewModel {
   if (!liquidityMap) {
-    return { rows: [], leaderboardRows: [], unobservedRows: [], summaryStats: null };
+    return { rows: [], leaderboardRows: [], unobservedRows: [], unavailableRows: [], summaryStats: null };
   }
   // Single pass: build all rows, then filter for display.
   const q = searchQuery.toLowerCase().trim();
@@ -134,8 +143,9 @@ export function buildLiquidityViewModel(
   });
   return {
     rows,
-    leaderboardRows: rows.filter((row) => row.liq.liquidityScore != null || isObservedOnDex(row.liq)),
-    unobservedRows: rows.filter((row) => row.liq.liquidityScore == null && !isObservedOnDex(row.liq)),
+    leaderboardRows: rows.filter(({ liq }) => !isUnavailableDexEvidence(liq) && (liq.liquidityScore != null || isObservedOnDex(liq))),
+    unobservedRows: rows.filter(({ liq }) => !isUnavailableDexEvidence(liq) && liq.liquidityScore == null && !isObservedOnDex(liq)),
+    unavailableRows: rows.filter(({ liq }) => isUnavailableDexEvidence(liq)),
     summaryStats: computeLiquidityStats(liquidityMap, allRows),
   };
 }

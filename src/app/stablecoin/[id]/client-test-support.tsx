@@ -108,11 +108,7 @@ export const obituary: StablecoinObituary = {
 
 function makeFeatureStates() {
   return {
-    liquidity: { status: "empty", dataUpdatedAt: 0, error: null },
-    yield: { status: "unsupported", dataUpdatedAt: 0, error: null },
-    stress: { status: "empty", dataUpdatedAt: 0, error: null },
-    flows: { status: "unsupported", dataUpdatedAt: 0, error: null },
-    blacklist: { status: "unsupported", dataUpdatedAt: 0, error: null },
+    redemption: { status: "empty", dataUpdatedAt: 0, error: null },
     reserves: { status: "empty", dataUpdatedAt: 0, error: null },
   };
 }
@@ -125,12 +121,8 @@ function makeViewModelBase(coin: StablecoinMeta) {
     summary: null, logoSrc: undefined, reportCard: null, reportCardsResponse: undefined, reportCardUpdatedAt: null,
     variantParent: null, variantSiblings: [],
     coinData: {
-      id: coin.id, name: coin.name, symbol: coin.symbol, pegType: "peggedUSD", price: 1,
-      circulating: { peggedUSD: 100 },
-      circulatingPrevDay: { peggedUSD: 99 },
-      circulatingPrevWeek: { peggedUSD: 98 },
-      circulatingPrevMonth: { peggedUSD: 97 },
-      chainCirculating: {}, chains: ["ethereum"],
+      pegType: `pegged${coin.flags.pegCurrency}`, price: 1, priceSource: "coingecko",
+      priceConfidence: null, priceUpdatedAt: null, priceObservedAt: null, chains: ["ethereum"],
     },
     mcap: 100, supply: 100, prevDay: 99, nativeSupply: { current: 100, prevWeek: 98, prevMonth: 97 },
     performanceVsUsd1y: null, pegRef: 1, deviationBps: 0,

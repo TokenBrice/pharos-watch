@@ -22,9 +22,11 @@ export function LifecyclePhasesMethodologySection() {
       <div className="space-y-2">
         <h3 className="text-foreground font-medium">Active</h3>
         <p>
-          Default state. Full worker ingestion (supply, price, blacklist, mint/burn, DEX liquidity,
-          yield), full inclusion in PSI, DEWS, Safety Scores, Liquidity Score, Bank Run Gauge, and
-          all live aggregates. Listed in the homepage table, search, compare picker, and sitemap.
+          Default state. Full worker data collection (supply, price, blacklist, mint/burn, DEX liquidity,
+          yield), subject to each domain&apos;s coverage and listing-class eligibility. Active status does
+          not guarantee inclusion in every score or live aggregate: PSI monetary aggregation includes
+          only active core stablecoins and cash equivalents, not tracked variants or stable-value
+          investment products. Listed in the homepage table, search, compare picker, and sitemap.
         </p>
       </div>
       <div className="space-y-2">
@@ -79,7 +81,7 @@ export function LifecyclePhasesMethodologySection() {
           },
           {
             label: "ACTIVE",
-            value: "Active subset only. Used by every write-side cron and live aggregate.",
+            value: "Active subset only. Write-side collection and live aggregates apply their domain coverage and listing-class eligibility within this subset.",
           },
           {
             label: "READABLE",

@@ -207,6 +207,19 @@ describe("buildCompareRadarCohortBaseline", () => {
 // ---------------------------------------------------------------------------
 
 describe("deriveComparisonCoins", () => {
+  it.each([
+    { name: "absent", bluechipMap: undefined, available: false },
+    { name: "null", bluechipMap: null, available: false },
+    { name: "published empty", bluechipMap: {}, available: true },
+  ])("preserves $name Bluechip publication separately from coin membership", ({ bluechipMap, available }) => {
+    const [coin] = deriveComparisonCoins(comparisonInput({
+      selectedIds: ["usdc"], assetMap: assetMapFor("usdc"), metaMap: metaMapFor("usdc"), bluechipMap,
+    }));
+    expect(coin.bluechipPublicationAvailable).toBe(available);
+    expect(coin.bluechipRating).toBeNull();
+    expect(coin.data.circulating).toEqual({ peggedUSD: 1_000_000 });
+  });
+
   it.each<{ name: string; input: Partial<ComparisonInput>; expectedIds: string[] }>([
     {
       name: "returns no coins when assetMap is empty",
@@ -394,6 +407,28 @@ describe("deriveFlowCardData", () => {
       metaMap: new Map([["usdc", { symbol: "USDC" }]]),
     });
     expect(card.netFlowDirection24h).toBeNull();
+    expect(card.netFlow24h.valueUsd).toBeNull();
+  });
+
+  it("keeps unknown scan activity unavailable in comparison cards", () => {
+    const coin = makeFlowCoin("usdc", {
+      has24hActivity: null,
+      netFlowDirection24h: null,
+      netFlow24hUsd: null,
+      netFlow7dUsd: null,
+      netFlow30dUsd: null,
+      netFlow90dUsd: null,
+      pressureShiftScore: null,
+      pressureShiftState: "nr",
+    });
+    const [card] = deriveFlowCardData({
+      selectedIds: ["usdc"],
+      flowCoinMap: new Map([["usdc", coin]]),
+      metaMap: new Map([["usdc", { symbol: "USDC" }]]),
+    });
+    expect(card.netFlowDirection24h).toBeNull();
+    expect(card.pressureShiftScore).toBeNull();
+    expect(card.pressureShiftState).toBe("nr");
     expect(card.netFlow24h.valueUsd).toBeNull();
   });
 

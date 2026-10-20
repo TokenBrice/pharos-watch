@@ -47,6 +47,7 @@ export interface CommandPaletteSearchResult extends CommandPaletteSectionedItem 
   frozen?: boolean;
   /** Live USD market cap, shown right-aligned on stablecoin rows. */
   marketCap?: number;
+  marketCapAsOf?: number;
   /** Live peg/NAV health state, shown on stablecoin rows. */
   stablecoinHealth?: CommandPaletteStablecoinHealth;
   /** Render the sublabel in the mono face (tickers, dates - data, not prose). */
@@ -228,6 +229,7 @@ function buildSearchResult(
             : undefined,
     frozen: descriptor.frozen,
     marketCap: descriptor.kind === "stablecoin" ? descriptor.marketCapUsd : undefined,
+    marketCapAsOf: descriptor.kind === "stablecoin" ? descriptor.marketCapAsOf : undefined,
     stablecoinHealth: descriptor.kind === "stablecoin" ? descriptor.stablecoinHealth : undefined,
     mono: descriptor.kind === "stablecoin" || descriptor.kind === "stablecoin-yield" || descriptor.kind === "depeg-event",
     onSelect,

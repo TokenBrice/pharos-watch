@@ -43,15 +43,7 @@ Equivalent complete descriptors may select explicit named profiles; shared telem
 
 Instrument identity, complete measurement perimeter and matching units constrain every class. A fund-share NAV is not portfolio composition; a token-supply probe is not bank reserves; issuer signatures, PDF hashes, render clocks and reachable endpoints do not establish assurance, custody or executable liquidity. Permanent static/AUP/weak tiers require new independently supported source evidence, not a class flip. Ratios require a reproducible gross or reviewed-net backing/liability denominator; share prices, leverage headlines and incomplete-chain totals remain diagnostics. Unknown holdings stay measured/unlinked where quantifiable; unreadable material scope cannot become a normalized known-only whole book. Family-specific applications and source owners are in [adapter-specific evidence boundaries](process/live-reserves-appendix.md#adapter-specific-evidence-boundaries).
 
-Forest Road USDfr uses physical token supply plus accrued unissued senior/fee claims as the reserve-liability denominator. Its physical, unissued and effective amounts remain separate diagnostics; this reserve accounting does not replace provider circulating-supply ingestion. See the Forest Road boundary in the linked appendix.
-
-mTBILL's version-two source binding uses an authorized registry-committed SAVE checkpoint plus the matching historical issuer portfolio, disclosed as issuer-reported composition. Its signed date/aggregate does not make API position rows independent assurance. Original checkpoint freshness and the explicit unlinked residual are retained; [source accounting and activation boundaries](process/live-reserves-appendix.md#issuer-balance-sheets-and-reviewed-reports) apply.
-
-Spark Legacy V1 inventory requires all five native Ethereum, Arbitrum, Base, Optimism and Unichain vaults, with chain-qualified holdings and independent block pins; the oldest pin sets aggregate freshness. Spark and Forest Road use version-two reserve bindings so retained Ethereum-only Spark inventory or physical-only Forest Road liability snapshots no longer match the current configuration.
-
-HCHF backing excludes depositor-owned Stability Pool gains; its [versioned ownership boundary](process/live-reserves-appendix.md#adapter-specific-evidence-boundaries) also governs retained-snapshot admission.
-
-EVM routing prefers Dwellir only when its method/history capability covers the exact read. Finalized Morpho lender-book, sfrxUSD cross-chain and finalized-tag xDAI observations pass their original header, finalized head, capture clock and unchanged age budget. Generic `pinnedBlockPlan` anchors validate one `latest` header and retain its number/timestamp across dependent reads. These anchors, xDAI's `safe` mode and standalone executable-redemption head pins remain unclassified historical state: numeric pins, recent timestamps and canonical hashes alone never prove finality. The executable redemption client preserves caller-authenticated options without manufacturing them; arbitrary historical and mixed-pin reads still require capable historical providers.
+Adapter-specific completeness, unit, source-clock and binding-version rules live in the [packet admission details](process/live-reserves-appendix.md#packet-admission-details); HCHF's [versioned ownership boundary](process/live-reserves-appendix.md#adapter-specific-evidence-boundaries) also governs retained-snapshot admission. Every class still obeys the shared gates below.
 
 ### Snapshot admission gates
 
@@ -238,6 +230,8 @@ New material-clock consumers must submit every material contributor to the cover
 ## Frontend Consumers
 
 Reserve composition and collateralization footers separate the source/report-as-of date from the last checked time, retain a stale label for out-of-window evidence, and never label a refreshed historical attestation as a new live measurement. Attestation-mix snapshots use the proof badge with an `Attestation` label. A source-age-only degradation explains that evidence is out of date; collection failures retain their separate sync-error notice.
+
+The checked-time formatter preserves present finite `liveAt` values, including epoch zero (`1970-01-01 00:00 UTC`). Only an absent or non-finite checked timestamp uses the previous-successful-run fallback; source/report dates and stale status remain separate.
 
 `buildReserveFeedStatus()` appends reviewed exclusion reason, evidence date/URL, owner, reviewed date and expiry to stale/error/bootstrap/fallback disclosure rows. The status card distinguishes raw evidence coverage from health-cohort exclusions; neither surface claims acknowledgement makes evidence fresh.
 

@@ -121,6 +121,49 @@ function buildCurrentTradingSnapshot(): Record<string, unknown> {
 }
 
 describe("selector snapshot contract", () => {
+  it("round-trips insufficient-control coverage and does not re-evaluate v2.9 frozen eligibility", () => {
+    const row = makeMergedRowWithIdentity(
+      { id: "usdc-circle", symbol: "USDC", name: "USD Coin" },
+      { governance: "decentralized", canBeBlacklisted: null },
+    );
+    const data = { rows: new Map([[row.id, row]]) };
+    const dataset = { ...FIXTURE_DATASET, datasetHash: "a".repeat(64) };
+    const strictInput = makeInput({ decentralization: "required" });
+    const current = runSelector(strictInput, data, dataset);
+    const replay = expectValid(current);
+    expect(replay.recommended).toEqual([]);
+    expect(replay.coverageWarnings.skippedForCoverage).toEqual([{
+      id: row.id, symbol: row.symbol, missingSignals: ["insufficient-control-evidence"],
+    }]);
+    // Persisted snapshots omit presentation prose and empty diagnostics; freeze that wire projection,
+    // not the current engine's decorated recommendations, before changing the replay version.
+    const old = expectValid(runSelector(makeInput(), data, dataset));
+    const historical = expectValid({
+      ...old, input: strictInput, engineVersion: "selector-v2.9",
+      methodologyVersions: { ...old.methodologyVersions, exclusionFilters: "selector-v2.9" },
+    });
+    expect(historical.engineVersion).toBe("selector-v2.9");
+    expect(historical.recommended).toEqual(old.recommended);
+    expect(JSON.stringify(historical)).toBe(JSON.stringify({
+      ...old, input: strictInput, engineVersion: "selector-v2.9",
+      methodologyVersions: { ...old.methodologyVersions, exclusionFilters: "selector-v2.9" },
+    }));
+  });
+
+  it("preserves v2.9 yield source clocks rather than aging a frozen projection", () => {
+    const row = makeYieldRailRow({ freshness: { capturedAt: 1_699_999_880, ageSeconds: 120 } });
+    const output = runSelector(
+      makeInput({ profile: "yield", venuePreferences: ["lend"] }),
+      { rows: new Map([[row.id, row]]) }, { ...FIXTURE_DATASET, datasetHash: "a".repeat(64) },
+    );
+    const replay = expectValid({
+      ...output, engineVersion: "selector-v2.9",
+      methodologyVersions: { ...output.methodologyVersions, exclusionFilters: "selector-v2.9" },
+    });
+    expect(replay.recommended[0]?.recommendedSource?.freshness)
+      .toEqual({ capturedAt: 1_699_999_880, ageSeconds: 120 });
+  });
+
   it.each([0, 1])("round-trips engine output with %i strict survivors and a relaxed recommendation", (strictCount) => {
     const relaxed = makeMergedRowWithIdentity(
       { id: "usdt-tether", symbol: "USDT", name: "Tether USD" },
@@ -189,6 +232,37 @@ describe("selector snapshot contract", () => {
     expect(legacyProjection.snapshot.provenance).toBe("client-unverified");
     expect(legacyProjection.snapshot.verification).toBeUndefined();
     expect(computeSelectorSnapshotSid(verified)).not.toBe(computeSelectorSnapshotSid(legacyProjection.snapshot));
+  });
+
+  it("round-trips trusted source evidence without promoting caller or historical freshness", () => {
+    const output = expectValid(buildSelectorSnapshotOutput());
+    const canonicalSources = [{
+      source: "stablecoins" as const,
+      freshness: {
+        updatedAt: 1_699_990_000, ageSeconds: 10_000, status: "stale" as const,
+        assessedAt: 1_700_000_000, freshBudgetSec: 777, degradedBudgetSec: 1_554,
+      },
+    }];
+    const verified = createVerifiedSelectorSnapshot(output, canonicalSources);
+    const replay = validateVerifiedSelectorSnapshot(JSON.parse(JSON.stringify(verified)));
+    expect(replay).toEqual({ ok: true, snapshot: verified });
+    expect(computeSelectorSnapshotSid(verified)).toBe(computeSelectorSnapshotSid(createVerifiedSelectorSnapshot(output)));
+    expect(expectValid(verified).verification).toBeUndefined();
+    expect(createVerifiedSelectorSnapshot(verified).verification?.canonicalSources).toBeUndefined();
+    const historical = validateVerifiedSelectorSnapshot(createVerifiedSelectorSnapshot(output));
+    expect(historical.ok && historical.snapshot.verification?.canonicalSources).toBeUndefined();
+    for (const evidence of [
+      [],
+      [{ ...canonicalSources[0], freshness: { ...canonicalSources[0]!.freshness, status: "healthy" } }],
+      [{ ...canonicalSources[0], freshness: { ...canonicalSources[0]!.freshness, freshBudgetSec: -1 } }],
+      [{ ...canonicalSources[0], freshness: { ...canonicalSources[0]!.freshness, inventedBudget: 60 } }],
+    ]) {
+      expect(validateVerifiedSelectorSnapshot({
+        ...verified, verification: { ...verified.verification, canonicalSources: evidence },
+      }).ok).toBe(false);
+    }
+    const unknown = createVerifiedSelectorSnapshot(output, [{ source: "stablecoins", freshness: null }]);
+    expect(validateVerifiedSelectorSnapshot(unknown)).toEqual({ ok: true, snapshot: unknown });
   });
 
   it("rejects invalid verification inputs and preserves legacy response validation", () => {

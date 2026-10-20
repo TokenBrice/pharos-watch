@@ -62,6 +62,8 @@ vi.mock("../use-mint-burn-flows", () => ({
 import { useCompareDataModel } from "../use-compare-data-model";
 import { COMPARE_COLORS } from "@/lib/compare-config";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
+import { makeStablecoin } from "@shared/test-utils/stablecoin";
+import { makeUnreportedBluechipRating } from "@shared/test-utils/bluechip.test-support";
 
 function makeQueryResult(overrides: Record<string, unknown> = {}) {
   return {
@@ -141,6 +143,36 @@ describe("useCompareDataModel", () => {
     expect(usePegSummaryMock).toHaveBeenCalledWith({ enabled: true });
   });
 
+
+  it.each(["pending", "failed", "empty", "matching", "retained"] as const)(
+    "preserves %s Bluechip publication state without gating the stablecoin list",
+    (state) => {
+      const rating = { ...makeUnreportedBluechipRating(), observationState: state === "retained" ? "retained" as const : "current" as const,
+        observationReason: state === "retained" ? "http-500" : null, lastObservedAt: 1_790_000_000 };
+      const error = state === "failed" || state === "retained" ? new Error("Bluechip unavailable") : null;
+      const data = state === "empty" ? {} : state === "matching" || state === "retained" ? { "usdc-circle": rating } : undefined;
+      useStablecoinsMock.mockReturnValue(makeQueryResult({
+        data: { peggedAssets: [makeStablecoin({ id: "usdc-circle" })], fxFallbackRates: {} },
+      }));
+      useBluechipRatingsMock.mockReturnValue(makeQueryResult({
+        data, error, isLoading: state === "pending", isError: error != null,
+        dataUpdatedAt: data ? 1_790_000_010_000 : 0,
+      }));
+      const { result } = renderHook(() => useCompareDataModel({
+        selectedIds: ["usdc-circle"], flowHours: 24, radarCohort: "peg",
+      }));
+      expect(result.current.hasPrimaryData).toBe(true);
+      expect(result.current.comparisonCoins).toHaveLength(1);
+      expect(result.current.comparisonCoins[0]).toMatchObject({
+        bluechipPublicationAvailable: data != null,
+        bluechipRating: state === "matching" || state === "retained" ? rating : null,
+      });
+      expect(result.current.globalError).toBe(error);
+      expect(result.current.freshnessQueries.find((query) => query.preset === "bluechip")).toMatchObject({
+        hasData: data != null, error, dataUpdatedAt: data ? 1_790_000_010_000 : 0,
+      });
+    },
+  );
 
   it("returns partial-failure freshness and symbol-bearing radar presentation models", () => {
     const stablecoinsMeta = { source: "stablecoins-fixture" };

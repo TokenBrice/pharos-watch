@@ -31,7 +31,7 @@ export const PUBLIC_STATIC_ROUTES = [
   defineLazyDbUrlRoute("dex-liquidity-chart-history", () => import("../api/dex-liquidity-history").then(({ handleDexLiquidityChartHistory }) => handleDexLiquidityChartHistory)),
   defineLazyDbUrlRoute("supply-history", () => import("../api/supply-history").then(({ handleSupplyHistory }) => handleSupplyHistory)),
   defineLazyDbRoute("daily-digest", () => import("../api/daily-digest").then(({ handleDailyDigest }) => handleDailyDigest)),
-  defineLazyDbRoute("digest-archive", () => import("../api/digest-archive").then(({ handleDigestArchive }) => handleDigestArchive)),
+  defineLazyDbUrlRoute("digest-archive", () => import("../api/digest-archive").then(({ handleDigestArchive }) => handleDigestArchive)),
   defineLazyDbRoute("digest-promo", () => import("../api/digest-promo").then(({ handleDigestPromo }) => handleDigestPromo)),
   defineLazyDbUrlRoute("digest-snapshot", () => import("../api/digest-snapshot").then(({ handleDigestSnapshot }) => handleDigestSnapshot)),
   defineLazyDbUrlRoute("snapshots-index", () => import("../api/snapshot").then(({ handleSnapshotsIndex }) => handleSnapshotsIndex)),

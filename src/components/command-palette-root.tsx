@@ -23,6 +23,9 @@ import {
 } from "@/components/command-palette/live-metadata";
 import { buildCommandPaletteSearchResults } from "@/components/command-palette/results";
 import { useCommandPaletteVerbActions } from "@/components/command-palette/use-verb-actions";
+import { useFreshnessBoundary } from "@/hooks/use-freshness-boundary";
+import { DATA_HEALTH_PRESETS } from "@/lib/data-health-config";
+import { formatDataHealthTimestamp } from "@/lib/data-health";
 
 /**
  * Result-row logo. Some coin assets are wide wordmarks that crop to an empty
@@ -82,15 +85,22 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const router = useRouter();
   const { isDark, toggleTheme } = useThemeToggle();
   const logos = logosById;
-  const { data: stablecoinsData } = useStablecoins();
+  const { data: stablecoinsData, meta, dataUpdatedAt, error } = useStablecoins();
   const { history, addToHistory, clearHistory } = useCommandPaletteHistory();
   const { ids: watchlistIds, add: addToWatchlist, remove: removeFromWatchlist, clear: clearWatchlist, count: watchlistCount } = useWatchlist();
+  const freshnessNow = useFreshnessBoundary([{
+    ...DATA_HEALTH_PRESETS.stablecoins,
+    dataUpdatedAt,
+    hasData: stablecoinsData != null,
+    error,
+    meta: meta ?? { updatedAt: null, ageSeconds: null, status: "unknown", reason: "producer-timestamp-unavailable" },
+  }], open);
 
   // Live metadata powers both ranking and row facts as the canonical observer
   // resolves; static registry search remains available while it is pending.
   const stablecoinLiveMetadata = useMemo(
-    () => buildStablecoinLiveMetadata(stablecoinsData),
-    [stablecoinsData],
+    () => buildStablecoinLiveMetadata(stablecoinsData, { meta, dataUpdatedAt, error }, freshnessNow ?? dataUpdatedAt),
+    [stablecoinsData, meta, dataUpdatedAt, error, freshnessNow],
   );
   const popularIds = useMemo(
     () => buildPopularStablecoinIds(stablecoinsData, stablecoinLiveMetadata),
@@ -449,6 +459,11 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                     {typeof item.marketCap === "number" ? (
                       <span className="shrink-0 pl-3 text-right pharos-numeric text-xs text-muted-foreground">
                         {formatCommandPaletteMarketCap(item.marketCap)}
+                        {item.marketCapAsOf != null ? (
+                          <span className="block text-3xs">
+                            As of {formatDataHealthTimestamp(item.marketCapAsOf * 1000, "en-US", "UTC")}
+                          </span>
+                        ) : null}
                       </span>
                     ) : item.section === "Stablecoins" ? (
                       <span className="shrink-0 pl-3 text-right pharos-numeric text-xs text-muted-foreground" title="Supply unavailable">—</span>

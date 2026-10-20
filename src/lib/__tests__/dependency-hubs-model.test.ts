@@ -72,4 +72,31 @@ describe("buildDependencyHubsModel", () => {
     expect(model.hubs[0].dependentCount).toBe(2);
     expect(model.mappedSupply.knownUsd).toBe(120);
   });
+
+  it("computes direct and claim knownness only over live edges", () => {
+    const liveEdges: ReportCardsV9DependencyEdge[] = [
+      { ...edges[0], wrapperForm: "pure" },
+      { ...edges[0], to: "dai-makerdao", wrapperForm: "strategy-vault" },
+    ];
+    const ignoredEdges: ReportCardsV9DependencyEdge[] = [
+      { ...edges[0], to: "retired", wrapperForm: "pure" },
+      { ...edges[0], to: "absent", wrapperForm: "strategy-vault" },
+    ];
+    const model = buildDependencyHubsModel({ cards: [...cards, { id: "retired", name: "Retired", symbol: "R", isDefunct: true }], edges: [...liveEdges, ...ignoredEdges], mcapMap: new Map([["retired", 100], ["absent", 100]]) });
+    expect(model.directEdgeCount).toBe(2);
+    expect(model.mappedSupply.known).toBe(false);
+    expect(model.hubs[0].directKnown).toBe(false);
+    for (const split of [model.mappedSupply, model.hubs[0]]) {
+      expect(Object.values(split.claimAvailability)).toEqual([
+        { known: false, complete: false }, { known: false, complete: false }, { known: false, complete: false },
+      ]);
+    }
+  });
+
+  it.each([0, 100])("keeps observed supply %s measurable and empty claims known", supply => {
+    const model = buildDependencyHubsModel({ cards, edges: [edges[1]], mcapMap: new Map([["dai-makerdao", supply]]) });
+    expect(model.mappedSupply.known).toBe(true);
+    expect(model.hubs[0].directKnown).toBe(true);
+    expect(model.hubs[0].claimAvailability.classified).toEqual({ known: true, complete: true });
+  });
 });

@@ -110,7 +110,7 @@ function setDefaultMocks() {
     refetch,
   });
   mocks.useReportCardsV9.mockReturnValue({
-    data: { cards: [] },
+    data: makeReportCardsV9Response({ cards: [] }),
     isLoading: false,
     error: null,
     dataUpdatedAt: 1_700_000_000,
@@ -222,6 +222,126 @@ describe("ScreenerClient freshness notices", () => {
     expect(table.dataState).toBe("ready");
     expect(table.rows.find((row: ScreenerRow) => row.id === "usdc-circle")?.liquidityScore).toBe(80);
     expect(mocks.TableExportMenu.mock.calls.at(-1)?.[0].disabled).toBe(false);
+  });
+
+  it.each([
+    ["report", "safetyScoreMin=100"],
+    ["dews", "dewsMin=100"],
+    ["peg", "pegScoreMin=100"],
+    ["liquidity", "liquidityScoreMin=100"],
+  ] as const)("requires an available %s publication before establishing zero matches", (source, query) => {
+    mocks.useStablecoins.mockReturnValue({
+      data: { peggedAssets: [makeStablecoin()] }, isLoading: false, error: null,
+      dataUpdatedAt: 1_700_000_000, meta: null, refetch,
+    });
+    mocks.useUrlFilters.mockReturnValue({ searchParams: new URLSearchParams(query), replaceParams: vi.fn() });
+    const hook = {
+      report: mocks.useReportCardsV9, dews: mocks.useStressSignals,
+      peg: mocks.usePegSummary, liquidity: mocks.useDexLiquidityTable,
+    }[source]!;
+    const empty = {
+      report: makeReportCardsV9Response({ cards: [] }), dews: { signals: {} },
+      peg: { coins: [] }, liquidity: {},
+    }[source];
+    hook.mockReturnValue({ data: undefined, isLoading: true, error: null, dataUpdatedAt: 0, meta: null, refetch });
+    const view = render(<ScreenerClient />);
+    expect(view.getByText("Loading screener inputs…")).toBeTruthy();
+    expect(mocks.ScreenerTable.mock.calls.at(-1)?.[0]).toMatchObject({ dataState: "loading", rows: [] });
+    expect(mocks.TableExportMenu.mock.calls.at(-1)?.[0]).toMatchObject({ disabled: true, data: [] });
+
+    hook.mockReturnValue({ data: undefined, isLoading: false, error: new Error("offline"), dataUpdatedAt: 0, meta: null, refetch });
+    view.rerender(<ScreenerClient />);
+    expect(view.getByText("Screener counts unavailable.")).toBeTruthy();
+    expect(view.queryByText(/tracked/)).toBeNull();
+    expect(mocks.ScreenerTable.mock.calls.at(-1)?.[0]).toMatchObject({ dataState: "unavailable", rows: [] });
+    expect(mocks.TableExportMenu.mock.calls.at(-1)?.[0]).toMatchObject({ disabled: true, data: [] });
+
+    hook.mockReturnValue({ data: empty, isLoading: false, error: null, dataUpdatedAt: 1_700_000_000, meta: null, refetch });
+    view.rerender(<ScreenerClient />);
+    expect(mocks.ScreenerTable.mock.calls.at(-1)?.[0]).toMatchObject({ dataState: "ready", rows: [] });
+    expect(mocks.TableExportMenu.mock.calls.at(-1)?.[0]).toMatchObject({ disabled: false, data: [] });
+    expect(view.queryByText("Screener counts unavailable.")).toBeNull();
+
+    hook.mockReturnValue({ data: empty, isLoading: false, error: new Error("refresh failed"), dataUpdatedAt: 1_700_000_000, meta: null, refetch });
+    view.rerender(<ScreenerClient />);
+    expect(mocks.ScreenerTable.mock.calls.at(-1)?.[0].dataState).toBe("ready");
+    expect(mocks.TableExportMenu.mock.calls.at(-1)?.[0].disabled).toBe(false);
+  });
+
+  it("does not turn a missing report feed into mint NR, but admits NR from an available empty publication", () => {
+    mocks.useStablecoins.mockReturnValue({ data: { peggedAssets: [makeStablecoin()] }, isLoading: false, error: null, dataUpdatedAt: 1, meta: null, refetch });
+    mocks.useUrlFilters.mockReturnValue({ searchParams: new URLSearchParams("mintAuthorityScores=nr"), replaceParams: vi.fn() });
+    mocks.useReportCardsV9.mockReturnValue({ data: undefined, isLoading: false, error: new Error("offline"), dataUpdatedAt: 0, meta: null, refetch });
+    const view = render(<ScreenerClient />);
+    expect(mocks.TableExportMenu.mock.calls.at(-1)?.[0]).toMatchObject({ disabled: true, data: [] });
+    mocks.useReportCardsV9.mockReturnValue({ data: makeReportCardsV9Response({ cards: [] }), isLoading: false, error: null, dataUpdatedAt: 1, meta: null, refetch });
+    view.rerender(<ScreenerClient />);
+    expect(mocks.TableExportMenu.mock.calls.at(-1)?.[0].disabled).toBe(false);
+    expect(mocks.TableExportMenu.mock.calls.at(-1)?.[0].data.length).toBeGreaterThan(0);
+    expect(mocks.TableExportMenu.mock.calls.at(-1)?.[0].data.every((row: ScreenerRow) => row.mintAuthorityScoreBand === "nr")).toBe(true);
+  });
+
+  it.each(["lifecycle=active", "coins=usdc-circle&safetyScoreMin=100&dewsMin=100&pegScoreMin=100&liquidityScoreMin=100"])(
+    "ignores unavailable feeds irrelevant to the admitted predicates: %s", (query) => {
+      mocks.useStablecoins.mockReturnValue({ data: { peggedAssets: [makeStablecoin()] }, isLoading: false, error: null, dataUpdatedAt: 1, meta: null, refetch });
+      mocks.useUrlFilters.mockReturnValue({ searchParams: new URLSearchParams(query), replaceParams: vi.fn() });
+      for (const hook of [mocks.useReportCardsV9, mocks.useStressSignals, mocks.usePegSummary, mocks.useDexLiquidityTable]) {
+        hook.mockReturnValue({ data: undefined, isLoading: false, error: new Error("offline"), dataUpdatedAt: 0, meta: null, refetch });
+      }
+      render(<ScreenerClient />);
+      expect(mocks.ScreenerTable.mock.calls.at(-1)?.[0].dataState).toBe("ready");
+      expect(mocks.TableExportMenu.mock.calls.at(-1)?.[0].disabled).toBe(false);
+      if (query.startsWith("coins=")) expect(mocks.TableExportMenu.mock.calls.at(-1)?.[0].data.map((row: ScreenerRow) => row.id)).toEqual(["usdc-circle"]);
+    },
+  );
+
+  it("exports mixed producer generations unchanged across later browser receipts and preserves unknown clocks", () => {
+    const feeds = [
+      { hook: mocks.useStablecoins, data: { peggedAssets: [makeStablecoin()] }, updatedAt: 1_700_000_100 },
+      { hook: mocks.usePegSummary, data: { coins: [] }, updatedAt: 1_700_000_000 },
+      { hook: mocks.useReportCardsV9, data: makeReportCardsV9Response({ cards: [] }), updatedAt: 1_700_000_200 },
+      { hook: mocks.useStressSignals, data: { signals: {} }, updatedAt: 1_700_000_300 },
+      { hook: mocks.useDexLiquidityTable, data: {}, updatedAt: 1_700_000_400 },
+    ];
+    for (const feed of feeds) feed.hook.mockReturnValue({
+      data: feed.data, isLoading: false, error: null, dataUpdatedAt: 1_900_000_000_000,
+      meta: { updatedAt: feed.updatedAt }, refetch,
+    });
+    const view = render(<ScreenerClient />);
+    const expected = {
+      stablecoins: "2023-11-14T22:15:00.000Z",
+      "peg-summary": "2023-11-14T22:13:20.000Z",
+      "report-cards": "2023-11-14T22:16:40.000Z",
+      "stress-signals": "2023-11-14T22:18:20.000Z",
+      "dex-liquidity": "2023-11-14T22:20:00.000Z",
+    };
+    expect(mocks.TableExportMenu.mock.calls.at(-1)?.[0]).toMatchObject({
+      asOfISO: "2023-11-14T22:13:20.000Z", sourceGenerations: expected,
+    });
+    for (const feed of feeds) feed.hook.mockReturnValue({
+      data: feed.data, isLoading: false, error: null, dataUpdatedAt: 1_950_000_000_000,
+      meta: { updatedAt: feed.updatedAt }, refetch,
+    });
+    view.rerender(<ScreenerClient />);
+    expect(mocks.TableExportMenu.mock.calls.at(-1)?.[0]).toMatchObject({
+      asOfISO: "2023-11-14T22:13:20.000Z", sourceGenerations: expected,
+    });
+    mocks.useReportCardsV9.mockReturnValue({
+      data: feeds[2].data, isLoading: false, error: null, dataUpdatedAt: 1_950_000_000_000, meta: null, refetch,
+    });
+    view.rerender(<ScreenerClient />);
+    expect(mocks.TableExportMenu.mock.calls.at(-1)?.[0]).toMatchObject({
+      asOfISO: "unknown", sourceGenerations: { ...expected, "report-cards": null }, disabled: false,
+    });
+  });
+
+  it("keeps an inadmissible report publication unavailable rather than treating it as issuer NR", () => {
+    mocks.useStablecoins.mockReturnValue({ data: { peggedAssets: [makeStablecoin()] }, isLoading: false, error: null, dataUpdatedAt: 1, meta: null, refetch });
+    mocks.useUrlFilters.mockReturnValue({ searchParams: new URLSearchParams("mintAuthorityScores=nr"), replaceParams: vi.fn() });
+    mocks.useReportCardsV9.mockReturnValue({ data: { cards: [] }, isLoading: false, error: null, dataUpdatedAt: 1, meta: null, refetch });
+    render(<ScreenerClient />);
+    expect(mocks.ScreenerTable.mock.calls.at(-1)?.[0]).toMatchObject({ dataState: "unavailable", rows: [] });
+    expect(mocks.TableExportMenu.mock.calls.at(-1)?.[0]).toMatchObject({ disabled: true, data: [] });
   });
   it("keeps the global data gate tied to the primary stablecoin rows", () => {
     const stablecoinsError = new Error("stablecoin list unavailable");
@@ -361,7 +481,7 @@ describe("ScreenerClient freshness notices", () => {
     // Max-only supply filter: explicit zero and in-range supply pass; unknown supply (empty,
     // invalid-only, or an asset absent from the list such as a pre-launch row) never matches.
     expect(exported).toEqual({ "usdc-circle": 0, "usds-sky": 500 });
-    expect(props.asOfISO).toBe("2026-05-16T06:00:00.000Z");
+    expect(props.asOfISO).toBe("unknown");
   });
 
   it("exports unknown supply as an empty cell when no supply filter is active", () => {

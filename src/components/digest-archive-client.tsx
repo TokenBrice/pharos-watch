@@ -485,6 +485,13 @@ export function DigestArchiveClient() {
           )}
           {wireDigests.map((d, index) => {
             const isWeekly = d.digestType === "weekly";
+            const coverage = d.supplyCoverage;
+            const mcapLabel = coverage?.observedCount === 0
+              ? "Mcap unavailable (0 coins observed)"
+              : d.totalMcapUsd == null ? null
+                : `${coverage?.complete ? "Total mcap" : "Known mcap subtotal"}: ${formatCurrency(d.totalMcapUsd, 0)} · ${
+                  coverage ? `${coverage.observedCount}/${coverage.observedCount + coverage.unavailableCount} coins observed` : "coverage unproven"
+                }`;
             // The risk signal often repeats verbatim across consecutive editions;
             // show it where it first appears or changes, not on every row.
             const previousSignal = index > 0 ? wireDigests[index - 1]?.riskSignal : null;
@@ -537,8 +544,8 @@ export function DigestArchiveClient() {
                       <span className="font-mono text-[0.65rem] text-muted-foreground/70">#{d.editionNumber}</span>
                     )}
                   </span>
-                  {(d.psiBand || d.totalMcapUsd != null || riskSignal) && (
-                    <div className="flex items-center gap-2 mt-0.5 sm:hidden">
+                  {(d.psiBand || mcapLabel || riskSignal) && (
+                    <div className="flex flex-wrap items-center gap-2 mt-0.5 sm:hidden">
                       {riskSignal && (
                         <span
                           className={cn(
@@ -558,9 +565,9 @@ export function DigestArchiveClient() {
                           {d.psiBand} {d.psiScore.toFixed(1)}
                         </span>
                       )}
-                      {d.totalMcapUsd != null && (
+                      {mcapLabel && (
                         <span className="text-xs font-mono text-muted-foreground">
-                          {formatCurrency(d.totalMcapUsd, 0)}
+                          {mcapLabel}
                         </span>
                       )}
                     </div>
@@ -573,9 +580,9 @@ export function DigestArchiveClient() {
                     {d.psiBand} {d.psiScore.toFixed(1)}
                   </span>
                 )}
-                {d.totalMcapUsd != null && (
-                  <span className="text-xs font-mono text-muted-foreground shrink-0 hidden sm:inline">
-                    {formatCurrency(d.totalMcapUsd, 0)}
+                {mcapLabel && (
+                  <span className="max-w-64 text-right text-xs font-mono text-muted-foreground hidden sm:inline">
+                    {mcapLabel}
                   </span>
                 )}
                 <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5 sm:mt-0" />

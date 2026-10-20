@@ -80,6 +80,7 @@ export function ContagionGraphBody({ graph, logos, detailNodePresentation, commo
             visibleLinks={graph.visibleLinks}
             fullLinks={graph.fullResolvedLinks}
             directExposureById={graph.directExposureById}
+            directExposureKnownIds={graph.directExposureKnownIds}
             nodeMap={graph.nodeMap}
             logos={logos}
             onTraceNode={graph.handleTraceNodeChange}
@@ -103,6 +104,7 @@ export function ContagionGraphBody({ graph, logos, detailNodePresentation, commo
             visibleLinks={graph.visibleLinks}
             fullLinks={graph.fullResolvedLinks}
             directExposureById={graph.directExposureById}
+            directExposureKnownIds={graph.directExposureKnownIds}
             nodeMap={graph.nodeMap}
             logos={logos}
             onTraceNode={graph.handleTraceNodeChange}

@@ -17,10 +17,9 @@
 import { COMMAND_PALETTE_STABLECOINS } from "@/lib/command-palette-search-data";
 import { MAX_COMPARE_COINS } from "@/lib/compare-config";
 import { buildLiveCompareUrl, buildStaticComparisonSlug, STATIC_COMPARE_PAIRS } from "@/lib/compare-links";
-import { encodeState, type UrlStateField } from "@/lib/url-state";
+import { decodeState, encodeState } from "@/lib/url-state";
 import {
   SCREENER_URL_SCHEMA,
-  SCREENER_FILTER_DEFAULTS,
   type ScreenerFilters,
 } from "@/lib/screener-filters";
 
@@ -28,7 +27,7 @@ import {
 
 export type ParsedVerb =
   | { kind: "compare"; coinSymbols: string[]; resolvedCoinIds: string[]; unresolved: string[]; href: string }
-  | { kind: "screen"; filters: Record<string, string | string[] | number>; href: string }
+  | { kind: "screen"; filters: Record<string, string | string[] | number>; href: string; error?: string }
   | { kind: "pin"; coinSymbol: string; resolvedCoinId: string | null }
   | { kind: "unpin"; coinSymbol: string | "all"; resolvedCoinId: string | null }
   | { kind: "tape"; filters: Record<string, string>; href: string }
@@ -231,8 +230,7 @@ const SCREEN_TOKEN_MAP: Record<string, ScreenTokenMapping> = {
   mechanism: {
     resolve: (op, value) => {
       if (op !== "eq") return [];
-      // Singular alias the screener already normalises into `mechanisms`.
-      return [["mechanism", value.toLowerCase()]];
+      return [["mechanisms", value.toLowerCase()]];
     },
   },
   type: {
@@ -249,22 +247,36 @@ const SCREEN_TOKEN_MAP: Record<string, ScreenTokenMapping> = {
   },
 };
 
-function parseScreenTokens(rest: string): Record<string, string | string[] | number> {
+interface ScreenTokens {
+  filters: Record<string, string | string[]>;
+  error?: string;
+}
+
+function parseScreenTokens(rest: string): ScreenTokens {
   const tokens = rest.split(/\s+/).filter(Boolean);
   const filters: Record<string, string | string[]> = {};
+  let error: string | undefined;
 
   const setOrAppend = (key: string, value: string) => {
-    const existing = filters[key];
-    if (existing == null) {
-      filters[key] = value;
-      return;
-    }
-    if (Array.isArray(existing)) {
-      if (!existing.includes(value)) existing.push(value);
-      return;
-    }
-    if (existing !== value) {
-      filters[key] = [existing, value];
+    const field = SCREENER_URL_SCHEMA[key as keyof ScreenerFilters];
+    if (field.kind === "boundedNumber") {
+      const n = Number(value);
+      if (!Number.isFinite(n) || (field.min != null && n < field.min) || (field.max != null && n > field.max)) {
+        error = `Cannot represent ${key}=${value} in the screener.`;
+        return;
+      }
+      const existing = filters[key];
+      filters[key] = String(existing == null ? n : key.endsWith("Min")
+        ? Math.max(Number(existing), n)
+        : Math.min(Number(existing), n));
+    } else if (field.kind === "enumList") {
+      const existing = filters[key];
+      if (existing == null) filters[key] = value;
+      else {
+        const values = Array.isArray(existing) ? existing : [existing];
+        if (!values.includes(value)) values.push(value);
+        filters[key] = values;
+      }
     }
   };
 
@@ -283,51 +295,37 @@ function parseScreenTokens(rest: string): Record<string, string | string[] | num
     for (const [k, v] of pairs) setOrAppend(k, v);
   }
 
-  return filters;
+  if (Number(filters.dewsMin ?? 0) > Number(filters.dewsMax ?? 100) ||
+      (filters.supplyMax != null && Number(filters.supplyMin ?? 0) > Number(filters.supplyMax))) {
+    error = "Conflicting screener bounds: the minimum exceeds the maximum.";
+  }
+  return { filters, ...(error ? { error } : {}) };
 }
 
-/**
- * Encode the parsed screener filter map into a query string by overlaying onto
- * the canonical SCREENER_URL_SCHEMA. Unknown keys fall through as raw URL
- * params so the screener's existing alias normaliser (`mechanism=`) keeps
- * working.
- */
-function buildScreenerHrefFromFilters(filters: Record<string, string | string[] | number>): string {
-  // First, project numeric / list values onto the typed ScreenerFilters shape.
-  const overlay: Partial<ScreenerFilters> = {};
-  const raw: Record<string, string> = {};
-
-  for (const [key, value] of Object.entries(filters)) {
-    if (key in SCREENER_URL_SCHEMA) {
-      const field = SCREENER_URL_SCHEMA[key as keyof ScreenerFilters] as UrlStateField<unknown>;
-      if (field.kind === "boundedNumber") {
-        const n = typeof value === "number" ? value : Number(value);
-        if (Number.isFinite(n)) {
-          (overlay as Record<string, unknown>)[key] = n;
-        }
-      } else if (field.kind === "enumList") {
-        const next = Array.isArray(value) ? value : [String(value)];
-        (overlay as Record<string, unknown>)[key] = next;
-      } else if (field.kind === "string" || field.kind === "enum") {
-        (overlay as Record<string, unknown>)[key] = String(value);
-      } else if (field.kind === "boolean") {
-        (overlay as Record<string, unknown>)[key] = String(value) === "true";
-      }
-    } else if (typeof value === "string") {
-      // Fall-through for alias keys like `mechanism=` that the screener
-      // normalises on mount.
-      raw[key] = value;
-    }
+/** Admit through the destination codec, then derive both the URL and preview. */
+function buildScreenerResult(
+  parsed: ScreenTokens,
+): Extract<ParsedVerb, { kind: "screen" }> {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(parsed.filters)) {
+    params.set(key, Array.isArray(value) ? value.join(",") : value);
   }
-
-  const merged: ScreenerFilters = { ...SCREENER_FILTER_DEFAULTS, ...overlay };
-  const qs = encodeState(merged, SCREENER_URL_SCHEMA);
-  const params = new URLSearchParams(qs);
-  for (const [k, v] of Object.entries(raw)) {
-    if (!params.has(k)) params.set(k, v);
+  const admitted = decodeState(params, SCREENER_URL_SCHEMA);
+  // Preserve the single-mechanism alias's active-only deep-link behavior.
+  if (admitted.mechanisms.length > 0 && parsed.filters.lifecycle == null) admitted.lifecycle = ["active"];
+  const qs = encodeState(admitted, SCREENER_URL_SCHEMA);
+  const encoded = new URLSearchParams(qs);
+  const filters: Record<string, string | string[]> = {};
+  for (const [key, value] of encoded) {
+    const field = SCREENER_URL_SCHEMA[key as keyof ScreenerFilters];
+    filters[key] = field.kind === "enumList" && value.includes(",") ? value.split(",") : value;
   }
-  const finalQs = params.toString();
-  return finalQs ? `/screener/?${finalQs}` : "/screener/";
+  return {
+    kind: "screen",
+    filters,
+    href: qs ? `/screener/?${qs}` : "/screener/",
+    ...(parsed.error ? { error: parsed.error } : {}),
+  };
 }
 
 // ── Tape filter mini-parser ─────────────────────────────────────────────────
@@ -377,14 +375,8 @@ export function parsePaletteInput(input: string): ParsedVerb {
         return buildCompareVerb(tokens);
       }
 
-      case "screen": {
-        const filters = parseScreenTokens(lead.rest);
-        return {
-          kind: "screen",
-          filters,
-          href: buildScreenerHrefFromFilters(filters),
-        };
-      }
+      case "screen":
+        return buildScreenerResult(parseScreenTokens(lead.rest));
 
       case "pin": {
         const token = lead.rest.split(/\s+/)[0] ?? "";

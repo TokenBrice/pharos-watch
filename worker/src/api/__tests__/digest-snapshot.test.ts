@@ -3,6 +3,7 @@ import { afterEach, describe, it, expect } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { handleDigestSnapshot } from "../digest-snapshot";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { DigestSnapshotResponseSchema } from "@shared/types/digest";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => fixtures.closeAll());
@@ -139,6 +140,84 @@ describe("handleDigestSnapshot", () => {
     const res = await handleDigestSnapshot(db, new URL(`https://x/api/digest-snapshot?date=${todayStr}`));
     const body = (await readJsonResponse(res, 200)) as { inputData: unknown };
     expect(body.inputData).toBeNull();
+  });
+
+  it.each([
+    [0, { complete: false, observedCount: 0, unavailableCount: 2 }],
+    [100e9, { complete: false, observedCount: 1, unavailableCount: 1 }],
+    [100e9, undefined],
+  ])("preserves optional captured supply coverage without upgrading legacy proof", async (totalMcapUsd, supplyCoverage) => {
+    const { sqlite, db } = fixtures.open();
+    const day = Date.parse("2026-10-01T00:00:00Z") / 1000;
+    sqlite.prepare("INSERT INTO daily_digest (generated_at, digest_text, input_data) VALUES (?, '', ?)")
+      .run(day + 3600, JSON.stringify({ totalMcapUsd, supplyCoverage }));
+    const body = DigestSnapshotResponseSchema.parse(await (await handleDigestSnapshot(
+      db, new URL("https://x/api/digest-snapshot?date=2026-10-01"),
+    )).json());
+    expect(body.inputData?.totalMcapUsd).toBe(totalMcapUsd);
+    expect(body.inputData?.supplyCoverage).toEqual(supplyCoverage);
+    expect(body.comparison).toBeNull();
+  });
+
+  it.each([
+    { complete: true, observedCount: 2, unavailableCount: 1 },
+    { complete: false, observedCount: -1, unavailableCount: 2 },
+    { complete: true, observedCount: 2, unavailableCount: 0, memberFingerprint: "not-a-hash" },
+  ])("withholds malformed supply proof at the snapshot boundary", async (supplyCoverage) => {
+    const { sqlite, db } = fixtures.open();
+    sqlite.prepare("INSERT INTO daily_digest (generated_at, digest_text, input_data) VALUES (?, '', ?)")
+      .run(Date.parse("2026-10-01T01:00:00Z") / 1000, JSON.stringify({ totalMcapUsd: 100e9, supplyCoverage }));
+    const body = DigestSnapshotResponseSchema.parse(await (await handleDigestSnapshot(
+      db, new URL("https://x/api/digest-snapshot?date=2026-10-01"),
+    )).json());
+    expect(body.inputData).toBeNull();
+    expect(body.comparison).toBeNull();
+  });
+
+  it.each(["matched", "changed", "partial", "legacy", "counts-only"])(
+    "returns the actual skipped-day endpoint and requires cohort proof (%s)",
+    async (kind) => {
+      const { sqlite, db } = fixtures.open();
+      const day = Date.parse("2026-10-01T00:00:00Z") / 1000;
+      const coverage = { complete: true, observedCount: 2, unavailableCount: 0, memberFingerprint: "a".repeat(64) };
+      const priorCoverage = kind === "legacy" ? undefined
+        : kind === "changed" ? { ...coverage, memberFingerprint: "b".repeat(64) }
+          : kind === "partial" ? { ...coverage, complete: false, observedCount: 1, unavailableCount: 1 }
+            : kind === "counts-only" ? { complete: true, observedCount: 2, unavailableCount: 0 }
+              : coverage;
+      const insert = sqlite.prepare("INSERT INTO daily_digest (generated_at, digest_text, input_data) VALUES (?, '', ?)");
+      insert.run(day - 2 * 86400 + 3600, JSON.stringify({
+        aggregateUniverse: "core-stablecoins-v1", totalMcapUsd: 90e9, supplyCoverage: priorCoverage,
+      }));
+      insert.run(day + 3600, JSON.stringify({
+        aggregateUniverse: "core-stablecoins-v1", totalMcapUsd: 100e9, supplyCoverage: coverage,
+      }));
+      const body = DigestSnapshotResponseSchema.parse(await (await handleDigestSnapshot(
+        db, new URL("https://x/api/digest-snapshot?date=2026-10-01"),
+      )).json());
+      expect(body.comparison).toEqual({
+        fromDate: "2026-09-29", toDate: "2026-10-01", supplyComparable: kind === "matched",
+      });
+    },
+  );
+
+  it.each([true, false])("keeps weekly first-to-last endpoint semantics only with known dates (%s)", async (dated) => {
+    const { sqlite, db } = fixtures.open();
+    const supplyCoverage = { complete: true, observedCount: 2, unavailableCount: 0, memberFingerprint: "a".repeat(64) };
+    sqlite.prepare("INSERT INTO daily_digest (generated_at, digest_text, digest_meta, input_data) VALUES (?, '', ?, ?)")
+      .run(Date.parse("2026-10-05T08:00:00Z") / 1000, '{"type":"weekly"}', JSON.stringify({
+        dailyDigests: [
+          { ...(dated ? { date: "2026-09-29" } : {}), inputData: { aggregateUniverse: "core-stablecoins-v1", totalMcapUsd: 90e9, supplyCoverage } },
+          { ...(dated ? { date: "2026-10-05" } : {}), inputData: { aggregateUniverse: "core-stablecoins-v1", totalMcapUsd: 100e9, supplyCoverage } },
+        ],
+      }));
+    const body = DigestSnapshotResponseSchema.parse(await (await handleDigestSnapshot(
+      db, new URL("https://x/api/digest-snapshot?date=2026-10-05-weekly"),
+    )).json());
+    expect(body.inputData?.totalMcapUsd).toBe(100e9);
+    expect(body.prevInputData?.totalMcapUsd).toBe(90e9);
+    expect(body.comparison).toEqual(dated
+      ? { fromDate: "2026-09-29", toDate: "2026-10-05", supplyComparable: true } : null);
   });
 
   it("orders snapshot depeg events by absolute deviation", async () => {

@@ -162,6 +162,8 @@ export function buildCoverageMatrixModel(input: CoverageMatrixModelInput) {
       consensusSources: pegCoin?.consensusSources,
       priceConfidence: pegCoin?.priceConfidence ?? undefined,
       safetyScore: reportCard?.score ?? null,
+      safetyRatingStatus: reportCard?.ratingStatus,
+      safetyReasonCodes: reportCard?.reasonCodes,
       dexCoverageClass: input.dexLiquidity.data?.[coin.id]?.coverageClass ?? null,
       redemptionEntry: input.redemptionBackstops.data?.coins?.[coin.id] ?? null,
       hasYieldCoverage: yieldIds.has(coin.id),

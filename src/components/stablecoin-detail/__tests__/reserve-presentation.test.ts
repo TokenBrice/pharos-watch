@@ -104,6 +104,17 @@ describe("buildReserveFetchNotice", () => {
 });
 
 describe("buildReserveFootnoteModel", () => {
+  it.each([
+    [undefined, "the previous successful run"],
+    [0, "1970-01-01 00:00 UTC"],
+    [1_700_000_000, "2023-11-14 22:13 UTC"],
+  ] as const)("preserves the represented checked time for liveAt %s", (liveAt, checked) => {
+    const reserves = makeReserves({ mode: "live", liveAt });
+    expect(formatReserveSnapshotLabel(reserves)).toBe(`Source date unavailable · Checked ${checked}`);
+    expect(buildReserveFootnoteModel(reserves, true, "rwa backed")?.text)
+      .toBe(`Source date unavailable · Checked ${checked}`);
+  });
+
   it("live → fresh label, includes source + evidence references", () => {
     const result = buildReserveFootnoteModel(
       makeReserves({ mode: "live", liveAt: 1_700_000_000, displayUrl: "https://src", evidenceUrls: ["https://e1", "https://e2"] }),

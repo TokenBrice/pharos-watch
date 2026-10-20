@@ -4,7 +4,10 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { API_PATHS, type StatusPageAction } from "@shared/lib/api-endpoints";
 import { AdminActionButton } from "@/components/status/admin-action-button";
-import { AdminActionExecutionProvider } from "@/components/status/admin-action-execution-provider";
+import {
+  AdminActionExecutionProvider,
+  useAdminActionExecutions,
+} from "@/components/status/admin-action-execution-provider";
 import type { ActionReadinessCheck } from "@/lib/status/admin-ops-insights";
 import { mockFetch, type MockFetchSpy } from "@shared/test-utils/mock-fetch";
 
@@ -53,6 +56,11 @@ function requestIdempotencyKey(callIndex: number): string | null {
   return new Headers(init?.headers).get("Idempotency-Key");
 }
 
+function ExecutionIdentity() {
+  const execution = useAdminActionExecutions()[0];
+  return <output aria-label="Execution identity">{execution?.idempotencyKeyHash}</output>;
+}
+
 function selectAsset(search: string, optionName: RegExp): void {
   fireEvent.click(screen.getByRole("button", { name: "Add stablecoin..." }));
   fireEvent.change(screen.getByRole("combobox", { name: "Search coins" }), { target: { value: search } });
@@ -73,6 +81,21 @@ describe("AdminActionButton", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
+  });
+
+  it("projects the SHA-256 hash of the exact key sent with the session request", async () => {
+    render(
+      <AdminActionExecutionProvider createIdempotencyKey={() => "key-1"}>
+        <AdminActionButton action={makeAction()} />
+        <ExecutionIdentity />
+      </AdminActionExecutionProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Repair Blacklist Gaps" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(requestIdempotencyKey(0)).toBe("key-1");
+    expect(screen.getByLabelText("Execution identity").textContent)
+      .toBe("be2974546978e3739e6d6da85c4be9f334ce32df2b9fd4b6ff1b55c0d57e9d44");
   });
 
 

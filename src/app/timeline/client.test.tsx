@@ -6,6 +6,7 @@ import type { TapeEvent } from "@shared/types/tape-event";
 import { renderToString } from "react-dom/server";
 import { makeTapeEvent } from "@shared/test-utils/tape-event";
 import type { ApiMeta } from "@/lib/api";
+import type { DepegEvent } from "@shared/types";
 
 type UseEventsResult = {
   data: { events: TapeEvent[]; nextCursor: string | null };
@@ -31,6 +32,21 @@ type LatestEventsResult = {
 
 const useEventsMock = vi.fn<(...args: Parameters<typeof import("@/hooks/use-events").useEvents>) => UseEventsResult>();
 const useLatestEventsMock = vi.fn<() => LatestEventsResult>();
+interface ActiveEventsResult {
+  data: { events: DepegEvent[]; total: number; totalExact: boolean; nextCursor: string | null; pending: [] } | undefined;
+  isLoading: boolean;
+  error: Error | null;
+  isFullyLoaded: boolean;
+  isAutoLoadCapped: boolean;
+  meta: ApiMeta | null;
+  dataUpdatedAt: number;
+  refetch: () => Promise<unknown>;
+}
+const useActiveDepegEventsMock = vi.fn<() => ActiveEventsResult>();
+
+vi.mock("@/hooks/use-depeg-events", () => ({
+  useActiveDepegEvents: () => useActiveDepegEventsMock(),
+}));
 
 vi.mock("@/hooks/use-events", async () => {
   const actual = await vi.importActual<typeof import("@/hooks/use-events")>("@/hooks/use-events");
@@ -62,6 +78,9 @@ afterEach(() => {
 beforeEach(() => {
   useEventsMock.mockReset();
   useLatestEventsMock.mockReset();
+  useActiveDepegEventsMock.mockReset();
+  mockActiveEvents([]);
+  window.history.replaceState(null, "", "/timeline/");
   useLatestEventsMock.mockReturnValue({
     data: { events: [], nextCursor: null, total: null, totalExact: false },
     isLoading: false,
@@ -90,6 +109,25 @@ function mockEvents(events: TapeEvent[], overrides: Partial<UseEventsResult> = {
   });
 }
 
+function activeEvent(overrides: Partial<DepegEvent> = {}): DepegEvent {
+  return {
+    id: 200, stablecoinId: "eurs-stasis", symbol: "EURS", pegType: "peggedEUR",
+    direction: "above", peakDeviationBps: 589, startedAt: Math.floor(Date.now() / 1000) - 60,
+    endedAt: null, startPrice: 1.2, peakPrice: 1.25, recoveryPrice: null,
+    pegReference: 1.17, source: "live", provenance: null, closeReason: null,
+    confirmationSources: null, pendingReason: null, ...overrides,
+  };
+}
+
+function mockActiveEvents(events: DepegEvent[], overrides: Partial<ActiveEventsResult> = {}) {
+  useActiveDepegEventsMock.mockReturnValue({
+    data: { events, total: events.length, totalExact: true, nextCursor: null, pending: [] },
+    isLoading: false, error: null, isFullyLoaded: true, isAutoLoadCapped: false,
+    meta: null, dataUpdatedAt: Date.now(), refetch: vi.fn().mockResolvedValue(undefined),
+    ...overrides,
+  });
+}
+
 describe("TimelineClient", () => {
   it("does not read the browser clock or query during server rendering", () => {
     const clock = vi.spyOn(Date, "now");
@@ -100,6 +138,34 @@ describe("TimelineClient", () => {
     } finally {
       clock.mockRestore();
     }
+  });
+
+  it("threads the page clock through digest, pinned and source-direct incident rows", () => {
+    vi.useFakeTimers();
+    const nowMs = Date.UTC(2026, 9, 20, 12);
+    vi.setSystemTime(nowMs);
+    const event = makeTapeEvent({ id: "clock-feed", type: "depeg.peak_worsened", ts: nowMs - 60_000 });
+    const pinned = makeTapeEvent({ id: "clock-pinned", ts: nowMs - 60_000 });
+    mockEvents([event]);
+    useLatestEventsMock.mockReturnValue({
+      data: { events: [pinned], nextCursor: null, total: 1, totalExact: true },
+      isLoading: false, error: null, meta: null,
+    });
+    mockActiveEvents([activeEvent({ startedAt: (nowMs - 60_000) / 1000 })]);
+    window.history.replaceState(null, "", "/timeline/?event=clock-pinned");
+    render(<TimelineClient />);
+    const feedRow = document.querySelector('[data-event-id="clock-feed"]')!;
+    const pinnedRow = document.querySelector('[data-event-id="clock-pinned"]')!;
+    expect(feedRow.textContent).toContain("1m ago");
+    expect(pinnedRow.textContent).toContain("1m ago");
+    expect(screen.getByRole("region", { name: /Currently open/ }).textContent).toContain("OPEN 1m ago");
+    const querySince = useEventsMock.mock.calls[0][0]?.since;
+    act(() => { vi.advanceTimersByTime(60_000); });
+    expect(feedRow.textContent).toContain("2m ago");
+    expect(pinnedRow.textContent).toContain("2m ago");
+    expect(screen.getByRole("region", { name: /Currently open/ }).textContent).toContain("OPEN 2m ago");
+    expect(feedRow.querySelector("time")?.dateTime).toBe("2026-10-20T11:59:00.000Z");
+    for (const [params] of useEventsMock.mock.calls) expect(params?.since).toBe(querySince);
   });
 
   it("keeps timeline pagination manual on initial page load", () => {
@@ -196,7 +262,7 @@ describe("TimelineClient", () => {
     expect(screen.getByText("3 similar events grouped")).toBeTruthy();
   });
 
-  it("renders the Currently open banner for unmatched depeg.opened events", () => {
+  it("renders the Currently open banner from explicit active authority", () => {
     const now = Date.now();
     mockEvents([
       makeTapeEvent({
@@ -225,15 +291,17 @@ describe("TimelineClient", () => {
         sourceRowId: "200",
       }),
     ]);
+    mockActiveEvents([activeEvent()]);
 
     render(<TimelineClient />);
 
     expect(screen.getByText(/Currently open · 1 incident/i)).toBeTruthy();
-    // The unmatched EURS open appears both in the banner and in the day feed.
-    expect(screen.getAllByRole("link", { name: /EURS.*depeg opened.*severity Warning/i }).length).toBeGreaterThanOrEqual(1);
+    const banner = screen.getByRole("region", { name: /Currently open/ });
+    expect(within(banner).getByRole("link", { name: /EURS active depeg incident 200/ })).toBeTruthy();
+    expect(within(banner).queryByRole("link", { name: /USDC/ })).toBeNull();
   });
 
-  it("does not render the Currently open banner when no depegs are unmatched", () => {
+  it("does not render the Currently open banner for an empty canonical cohort", () => {
     const now = Date.now();
     mockEvents([
       makeTapeEvent({
@@ -258,6 +326,67 @@ describe("TimelineClient", () => {
     render(<TimelineClient />);
 
     expect(screen.queryByText(/Currently open/i)).toBeNull();
+  });
+
+  it.each([
+    ["notice+", "/timeline/"],
+    ["opened-only", "/timeline/?type=depeg.opened"],
+    ["search mismatch", "/timeline/?q=unrelated"],
+    ["coverage-loss closure", "/timeline/?type=depeg.opened"],
+    ["superseded closure", "/timeline/?severity=warning"],
+  ])("does not infer current incidents from unmatched historical openings: %s", (_label, url) => {
+    window.history.replaceState(null, "", url);
+    mockEvents([makeTapeEvent({ type: "depeg.opened", sourceRowId: "100" })], { hasNextPage: true });
+    mockActiveEvents([]);
+    render(<TimelineClient />);
+    expect(screen.queryByRole("region", { name: /Currently open/ })).toBeNull();
+    expect(screen.queryByText(/1 open incident/)).toBeNull();
+  });
+
+  it("renders canonical same-coin episodes without a matching tape opening or guessed constituent IDs", () => {
+    window.history.replaceState(null, "", "/timeline/?type=freeze.blocked&q=unrelated");
+    mockEvents([makeTapeEvent({ sourceRowId: "100" })], { hasNextPage: true });
+    mockActiveEvents([
+      activeEvent({ id: 201, constituentEventCount: 3 }),
+      activeEvent({ id: 202, startedAt: Math.floor(Date.now() / 1000) - 120 }),
+    ]);
+    render(<TimelineClient />);
+    const banner = screen.getByRole("region", { name: /Currently open/ });
+    const links = within(banner).getAllByRole("link");
+    expect(links.map((link) => link.getAttribute("data-depeg-event-id"))).toEqual(["202", "201"]);
+    // The canonical path helper appends the fragment without a redundant slash.
+    expect(links[0].getAttribute("href")).toBe("/stablecoin/eurs-stasis#peg-history");
+    expect(within(banner).getByText("3 threshold crossings")).toBeTruthy();
+    expect(banner.querySelector("[data-event-id]")).toBeNull();
+  });
+
+  it.each([
+    { label: "failed refresh", error: new Error("active read failed"), isFullyLoaded: true, isLoading: false, isAutoLoadCapped: false },
+    { label: "incomplete traversal", error: null, isFullyLoaded: false, isLoading: false, isAutoLoadCapped: false },
+    { label: "capped traversal", error: null, isFullyLoaded: false, isLoading: false, isAutoLoadCapped: true },
+    { label: "loading", error: null, isFullyLoaded: false, isLoading: true, isAutoLoadCapped: false },
+  ])("withholds OPEN claims for $label even with retained source records", ({ label, ...overrides }) => {
+    mockEvents([makeTapeEvent()]);
+    mockActiveEvents([activeEvent()], overrides);
+    render(<TimelineClient />);
+    expect(screen.queryByRole("region", { name: /Currently open/ })).toBeNull();
+    expect(screen.queryByText(/1 open incident/)).toBeNull();
+    expect(screen.getByRole("region", { name: "Active incident status" }).textContent)
+      .toMatch(label === "loading" ? /Loading/ : label.includes("traversal") ? /incomplete/ : /unavailable/);
+  });
+
+  it("ages the active producer independently of a fresh tape publication", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(Date.parse("2026-10-20T12:00:00Z"));
+    mockEvents([makeTapeEvent()]);
+    mockActiveEvents([activeEvent()], {
+      meta: { updatedAt: Date.now() / 1000, ageSeconds: 0, status: "fresh", freshBudgetSec: 30, degradedBudgetSec: 60 },
+    });
+    render(<TimelineClient />);
+    expect(screen.getByRole("region", { name: /Currently open/ })).toBeTruthy();
+    act(() => { vi.advanceTimersByTime(60_000); });
+    expect(screen.queryByRole("region", { name: /Currently open/ })).toBeNull();
+    expect(screen.getByRole("region", { name: "Active incident status" }).textContent).toMatch(/unavailable/);
   });
 
   it("renders the summary band with event count and window", () => {

@@ -15,7 +15,6 @@ import { EVENT_BADGE_STYLES, EVENT_LABELS } from "@shared/lib/classification";
 import type { BlacklistEvent, BlacklistSortDirection, BlacklistSortKey } from "@shared/types";
 import {
   formatBlacklistAmountOrStatus,
-  formatBlacklistNativeAmount,
   getBlacklistAmountSourceLabel,
 } from "@/lib/blacklist-event-presentation";
 
@@ -100,9 +99,7 @@ export function BlacklistTable({
         {
           header: "Amount (Native)",
           accessor: (row) =>
-            row.amountNative == null
-              ? ""
-              : formatBlacklistNativeAmount(row),
+            row.amountNative != null && Number.isFinite(row.amountNative) ? row.amountNative : null,
         },
         { header: "Amount Unit", accessor: (row) => row.stablecoin },
         { header: "Amount (USD at event)", accessor: (row) => row.amountUsdAtEvent },

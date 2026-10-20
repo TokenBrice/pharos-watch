@@ -1,5 +1,6 @@
 // @vitest-environment node
 
+import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import type { StatusPageAction } from "@shared/lib/api-endpoints";
 import {
@@ -8,6 +9,7 @@ import {
   getSafeActionFollowUpHref,
   reconcileActionActivity,
   type AdminActionAuditEntry,
+  type SessionActionExecutionLike,
 } from "@/lib/actions-workbench-model";
 import type { ActionReadinessCheck } from "@/lib/status/admin-ops-insights";
 
@@ -50,6 +52,36 @@ const auditEntry: AdminActionAuditEntry = {
   details: null,
 };
 
+function sessionExecution(overrides: Partial<SessionActionExecutionLike> = {}): SessionActionExecutionLike {
+  const intentId = overrides.intentId ?? "intent-1";
+  return {
+    action: action(),
+    intentId,
+    idempotencyKeyHash: createHash("sha256").update(intentId).digest("hex"),
+    scopeLabel: "USD Coin (usdc-circle)",
+    status: "succeeded",
+    requestInFlight: false,
+    ok: true,
+    createdAt: 99_000,
+    startedAt: 100_000,
+    completedAt: 100_000,
+    httpStatus: 200,
+    ...overrides,
+  };
+}
+
+function canonicalAudit(intentId = "intent-1", overrides: Partial<AdminActionAuditEntry> = {}): AdminActionAuditEntry {
+  return {
+    ...auditEntry,
+    details: {
+      path: "/api/remediate-blacklist-amount-gaps",
+      idempotencyKeyHash: createHash("sha256").update(intentId).digest("hex"),
+      mode: "live",
+    },
+    ...overrides,
+  };
+}
+
 describe("actions workbench model", () => {
   it("preserves canonical unknown outcomes from persisted audit details", () => {
     const activities = reconcileActionActivity(
@@ -65,6 +97,75 @@ describe("actions workbench model", () => {
     );
 
     expect(activities[0]?.status).toBe("unknown");
+  });
+
+  it("reconciles exact shared identity despite different labels, mode text and clocks", () => {
+    const session = sessionExecution({ scopeLabel: "USD Coin (usdc-circle) (dry run)", completedAt: 120_000 });
+    const persisted = canonicalAudit("intent-1", {
+      details: { path: action().path, idempotencyKeyHash: session.idempotencyKeyHash, mode: "dry-run", outcome: "queued" },
+      httpStatus: 202,
+    });
+    const activities = reconcileActionActivity([action()], [session], [persisted]);
+
+    expect(activities).toHaveLength(1);
+    expect(activities[0]).toMatchObject({
+      id: "persisted:7", actor: "operator@example.com", target: "usdc-circle",
+      at: 100_000, status: "queued", httpStatus: 202, source: "persisted",
+      session: { scopeLabel: session.scopeLabel, completedAt: 120_000 },
+    });
+  });
+
+  it.each(["succeeded", "failed"] as const)(
+    "retains authoritative persisted %s and local unknown/in-flight context for one identity",
+    (outcome) => {
+      const session = sessionExecution({ status: "unknown", requestInFlight: true });
+      const persisted = canonicalAudit("intent-1", {
+        result: outcome === "failed" ? "error" : "ok",
+        details: { path: action().path, idempotencyKeyHash: session.idempotencyKeyHash, outcome },
+      });
+      const activities = reconcileActionActivity([action()], [session], [persisted]);
+      expect(activities).toHaveLength(1);
+      expect(activities[0]).toMatchObject({
+        status: outcome === "failed" ? "error" : "succeeded", actor: "operator@example.com",
+        source: "persisted", session: { status: "unknown", requestInFlight: true },
+      });
+    },
+  );
+
+  it("keeps same-second distinct intents and actors separate regardless of dry-run/live labels", () => {
+    const session = sessionExecution({ intentId: "dry-run-intent", scopeLabel: "usdc-circle" });
+    const persisted = canonicalAudit("live-intent", { actor: "another@example.com" });
+    const activities = reconcileActionActivity([action()], [session], [persisted]);
+    expect(activities).toHaveLength(2);
+    expect(activities.map(({ source, actor }) => [source, actor])).toEqual([
+      ["session", null], ["persisted", "another@example.com"],
+    ]);
+  });
+
+  it("does not match the same hash across different exact action paths", () => {
+    const otherAction = action({ path: "/api/another-action" });
+    const activities = reconcileActionActivity(
+      [action(), otherAction], [sessionExecution({ action: otherAction })], [canonicalAudit()],
+    );
+    expect(activities).toHaveLength(2);
+    expect(activities.map(({ actionPath }) => actionPath)).toEqual([otherAction.path, action().path]);
+  });
+
+  it("retains historical identity-absent provenance even at the same target and time", () => {
+    const activities = reconcileActionActivity(
+      [action()], [sessionExecution({ scopeLabel: "usdc-circle" })], [auditEntry],
+    );
+    expect(activities).toHaveLength(2);
+    expect(activities.map(({ source, session }) => [source, session?.status ?? null])).toEqual([
+      ["session", "succeeded"], ["persisted", null],
+    ]);
+  });
+
+  it("counts repeated canonical evidence once without admitting ready session intents", () => {
+    const persisted = canonicalAudit();
+    expect(reconcileActionActivity(
+      [action()], [sessionExecution({ status: "ready" })], [persisted, persisted],
+    )).toMatchObject([{ id: "persisted:7", source: "persisted", session: null }]);
   });
 
   it("blocks stale or unhealthy evidence only for live writes and exposes no override", () => {

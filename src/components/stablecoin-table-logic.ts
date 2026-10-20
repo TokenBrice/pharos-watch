@@ -223,6 +223,7 @@ export function sortStablecoins({
 
 export function exportStablecoinsCsv(
   sorted: StablecoinData[],
+  sortedRankById: ReadonlyMap<string, number>,
   pegScores?: Map<string, PegSummaryCoin>,
   dexLiquidity?: DexLiquidityTableMap,
   reportCards?: Record<string, V9SafetyTableRow>,
@@ -231,7 +232,7 @@ export function exportStablecoinsCsv(
   downloadCsvWithPreamble(
     sorted,
     [
-      { header: "Rank", accessor: (_row, i) => i + 1 },
+      { header: "Rank", accessor: (row, i) => sortedRankById.get(row.id) ?? i + 1 },
       { header: "Name", accessor: (row) => row.name },
       { header: "Symbol", accessor: (row) => row.symbol },
       { header: "Price", accessor: (row) => isObservedPrice(row) ? row.price ?? null : null },

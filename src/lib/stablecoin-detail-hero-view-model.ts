@@ -1,4 +1,5 @@
 import type { NativeSupplyCheckpoints } from "@shared/types/stablecoin-live-summary";
+import type { DetailQuote } from "@/lib/stablecoin-detail-view-model-types";
 import { CASE_STUDY_OUTCOME_CHIPS, CASE_STUDY_OUTCOME_LABELS } from "@/lib/case-study-outcomes";
 import { CASE_STUDY_CLIENT_BY_COIN_ID } from "@/lib/case-study-client-index";
 import { getResolvedBlacklistStatus } from "@shared/lib/blacklist-status";
@@ -38,7 +39,6 @@ import type {
   MechanismArchetype,
   PegSummaryCoin,
   RedemptionBackstopEntry,
-  StablecoinData,
   StablecoinMeta,
   StressSignalEntry,
   VariantKind,
@@ -73,7 +73,7 @@ export interface HeroCaseStudyCalloutViewModel {
 
 export interface HeroCardViewModel {
   coin: StablecoinMeta;
-  coinData: StablecoinData;
+  coinData: DetailQuote;
   logoSrc?: string;
   reportCard: V9ConsumerCard | null;
   verdict: StablecoinVerdict;
@@ -119,7 +119,7 @@ export interface HeroSupplyTrendViewModel {
 
 export interface BuildHeroCardViewModelParams {
   coin: HeroPassportCoin;
-  coinData: StablecoinData;
+  coinData: DetailQuote;
   logoSrc?: string;
   isNavToken: boolean;
   mcap: number | null;

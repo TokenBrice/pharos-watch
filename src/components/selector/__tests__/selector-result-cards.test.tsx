@@ -7,6 +7,10 @@ import type { SelectorRecommendation } from "@shared/lib/selector";
 import { SelectorShortlistCard } from "@/components/selector/selector-shortlist-card";
 import { cleanupFrontendTest } from "@/test-utils/frontend";
 
+const { trendHistory } = vi.hoisted(() => ({
+  trendHistory: { data: [] as Array<{ date: number; price: number | null; circulatingUsd: number }> },
+}));
+
 vi.mock("next/link", async () => {
   const { createNextLinkMock } = await import("@/test-utils/frontend");
   return createNextLinkMock();
@@ -14,7 +18,7 @@ vi.mock("next/link", async () => {
 
 vi.mock("@/hooks/use-stablecoins", () => ({
   useSupplyHistory: () => ({
-    data: [],
+    data: trendHistory.data,
     dataUpdatedAt: 1,
     isLoading: false,
     isSuccess: true,
@@ -24,6 +28,7 @@ vi.mock("@/hooks/use-stablecoins", () => ({
 
 afterEach(() => {
   cleanupFrontendTest();
+  trendHistory.data = [];
 });
 
 const baseRecommendation: SelectorRecommendation = {
@@ -69,6 +74,32 @@ const baseRecommendation: SelectorRecommendation = {
 };
 
 describe("SelectorShortlistCard", () => {
+  it.each([
+    { symbol: "USD-OFF", prices: [0.8, 0.8, 0.8] },
+    { symbol: "EUR", prices: [1.1, 1.15, 1.2] },
+  ])("describes $symbol samples as price trajectory, never peg deviation", ({ symbol, prices }) => {
+    trendHistory.data = prices.map((price, index) => ({
+      date: 1_790_000_000 + index * 86_400, price, circulatingUsd: 1000,
+    }));
+    render(<SelectorShortlistCard rank={1} recommendation={{ ...baseRecommendation, symbol }}
+      profile="treasury" isMobile={false} />);
+    expect(screen.getByText("7d price")).toBeTruthy();
+    expect(screen.getByRole("img", { name: (name) => name.startsWith(`${symbol} 7-day price trajectory relative to latest observed price`) })).toBeTruthy();
+    expect(screen.queryByText("7d peg")).toBeNull();
+    expect(screen.queryByRole("img", { name: /current peg level|peg deviation/i })).toBeNull();
+  });
+
+  it("keeps price gaps disconnected in the mobile price-only strip", () => {
+    trendHistory.data = [0.8, null, 0.8].map((price, index) => ({
+      date: 1_790_000_000 + index * 86_400, price, circulatingUsd: 1000,
+    }));
+    render(<SelectorShortlistCard rank={1} recommendation={baseRecommendation}
+      profile="treasury" isMobile />);
+    const price = screen.getByRole("img", { name: /7-day price trajectory relative to latest observed price/ });
+    expect(price.querySelector("polyline, path")).toBeNull();
+    expect(screen.queryByText("30d supply")).toBeNull();
+  });
+
 
   it("renders evidence chip accessible text as screen-reader content", () => {
     render(

@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { RailSafetySummary } from "../rail-safety-summary";
 
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
@@ -14,6 +15,9 @@ const mockGetSnapshotSafetyAssessment = vi.hoisted(() =>
 );
 vi.mock("@/lib/safety-grade-snapshot", () => ({
   getSnapshotSafetyAssessment: mockGetSnapshotSafetyAssessment,
+}));
+vi.mock("@/lib/datasets/public-dataset-current", () => ({
+  PUBLIC_DATASET_CURRENT_DATE: "2026-10-19",
 }));
 
 const { StablecoinDetailSeoContent, buildStablecoinFaqItems } = await import("../static-seo-content");
@@ -206,29 +210,60 @@ describe("StablecoinDetailSeoContent", () => {
     try {
       mockGetSnapshotSafetyAssessment.mockReturnValue({ grade: "A-", score: 88, bucket: "safe" });
       let answer = buildStablecoinFaqItems(coin)[1].answer;
-      expect(answer).toContain("TSTD holds an A- Safety Score grade (88/100)");
-      expect(answer).toContain("overall safe, though no stablecoin is entirely risk-free");
+      expect(answer).toContain("TSTD held an A- Safety Score grade (88/100)");
+      expect(answer).toContain("overall safe at that date, though no stablecoin is entirely risk-free");
       expect(answer).toContain("CeFi-Dependent governance model");
       expect(answer).toContain("Treat the live peg, liquidity, reserve, dependency, and Safety Score sections below");
 
       mockGetSnapshotSafetyAssessment.mockReturnValue({ grade: "C+", score: 55, bucket: "neutral" });
       answer = buildStablecoinFaqItems(coin)[1].answer;
-      expect(answer).toContain("TSTD holds a C+ Safety Score grade (55/100)");
-      expect(answer).toContain("does not consider it clearly safe");
+      expect(answer).toContain("TSTD held a C+ Safety Score grade (55/100)");
+      expect(answer).toContain("did not consider it clearly safe at that date");
 
       mockGetSnapshotSafetyAssessment.mockReturnValue({ grade: "F", score: 12, bucket: "risky" });
       answer = buildStablecoinFaqItems(coin)[1].answer;
-      expect(answer).toContain("Pharos does not assess TSTD as safe");
+      expect(answer).toContain("Pharos did not assess TSTD as safe");
       expect(answer).toContain("an F Safety Score grade (12/100)");
 
       mockGetSnapshotSafetyAssessment.mockReturnValue({ grade: "B", score: null, bucket: "safe" });
       answer = buildStablecoinFaqItems(coin)[1].answer;
-      expect(answer).toContain("TSTD holds a B Safety Score grade in Pharos's latest published rating");
+      expect(answer).toContain("TSTD held a B Safety Score grade");
 
       // Frozen archives never surface a snapshot grade.
       const frozenAnswer = buildStablecoinFaqItems({ ...coin, status: "frozen", frozenAt: "2026-05-01" })[1].answer;
       expect(frozenAnswer).toContain("frozen Pharos archive");
       expect(frozenAnswer).not.toContain("Safety Score grade");
+    } finally {
+      mockGetSnapshotSafetyAssessment.mockReturnValue(null);
+    }
+  });
+
+  it.each([
+    { grade: "A-", score: 88, bucket: "safe" },
+    { grade: "C+", score: 55, bucket: "neutral" },
+    { grade: "F", score: 12, bucket: "risky" },
+    { grade: "B", score: null, bucket: "safe" },
+  ])("dates the $grade FAQ and JSON-LD independently of a changing live grade", (assessment) => {
+    mockGetSnapshotSafetyAssessment.mockReturnValue(assessment);
+    try {
+      const items = buildStablecoinFaqItems(coin);
+      const answer = items[1].answer;
+      const content = (liveGrade: string) => <>
+        <RailSafetySummary items={[{
+          key: "safety", label: "Safety", primary: liveGrade, secondary: null,
+          href: "#report-card", colorClass: "",
+        }]} />
+        <FaqSection items={items} includeJsonLd collapsed />
+      </>;
+      const { container, rerender } = render(content("D"));
+      rerender(content("C-"));
+      expect(screen.getByRole("link", { name: "C-" })).toBeTruthy();
+      expect(screen.getByText(answer).textContent).toContain("2026-10-19");
+      expect(answer).toContain("scores-latest release dataset");
+      expect(answer).not.toMatch(/latest published rating/i);
+      const jsonLd = JSON.parse(container.querySelector('script[type="application/ld+json"]')!.textContent!);
+      expect(jsonLd.mainEntity[1].acceptedAnswer.text).toBe(answer);
+      expect(jsonLd.mainEntity[1].acceptedAnswer.text).toContain("2026-10-19");
     } finally {
       mockGetSnapshotSafetyAssessment.mockReturnValue(null);
     }

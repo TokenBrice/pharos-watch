@@ -144,7 +144,7 @@ export function buildReserveFetchNotice(
 
 /** `YYYY-MM-DD HH:MM UTC`: the `as of` half of the sentence is UTC, so both halves share one frame. */
 function formatReserveUpdatedAt(timestamp: number | undefined): string {
-  return timestamp && Number.isFinite(timestamp)
+  return timestamp != null && Number.isFinite(timestamp)
     ? `${formatIsoTimestamp(timestamp).slice(0, 16).replace("T", " ")} UTC`
     : "the previous successful run";
 }

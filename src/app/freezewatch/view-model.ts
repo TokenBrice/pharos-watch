@@ -9,6 +9,7 @@ import { trackEvent, trackSearch } from "@/lib/analytics";
 import { blacklistSummaryCatchUp } from "@/lib/blacklist-api";
 import { buildBlacklistStatusBuckets, type BlacklistStatusBucket } from "@shared/lib/blacklist-status-buckets";
 import { buildV9SafetyTableMap } from "@/lib/safety-score-v9-consumers";
+import type { StaleQuery } from "@/components/stale-data-banner";
 import type {
   BlacklistStablecoin,
   BlacklistEventType,
@@ -86,6 +87,7 @@ export function useFreezeWatchPageController() {
     data: stablecoinData,
     isLoading: supportStablecoinsLoading,
     error: supportStablecoinsError,
+    dataUpdatedAt: stablecoinsUpdatedAt,
     refetch: refetchStablecoins,
     meta: stablecoinsMeta,
   } = useStablecoins();
@@ -93,6 +95,7 @@ export function useFreezeWatchPageController() {
     data: reportCardsData,
     isLoading: supportReportCardsLoading,
     error: supportReportCardsError,
+    dataUpdatedAt: reportCardsUpdatedAt,
     refetch: refetchReportCards,
     meta: reportCardsMeta,
   } = useReportCardsV9Table();
@@ -168,9 +171,27 @@ export function useFreezeWatchPageController() {
     includeTotal: true,
   });
   const error = summaryError ?? pageError ?? supportStablecoinsError ?? supportReportCardsError;
-  const dataUpdatedAt = Math.max(summaryUpdatedAt, pageUpdatedAt);
-  const freshnessMeta = summaryMeta ?? pageMeta;
-  const freshnessCatchUp = summaryMeta ? blacklistSummaryCatchUp(summary?.refresh) : null;
+  const freshnessQueries: StaleQuery[] = [
+    {
+      preset: "blacklist", label: "Blacklist summary", dataUpdatedAt: summaryUpdatedAt,
+      error: summaryError, hasData: summary != null, isLoading: summaryLoading, meta: summaryMeta,
+      catchUp: summaryMeta ? blacklistSummaryCatchUp(summary?.refresh) : null,
+    },
+    {
+      preset: "blacklist", label: "Blacklist ledger", dataUpdatedAt: pageUpdatedAt,
+      error: pageError, hasData: pageData != null, isLoading: pageQueryLoading, meta: pageMeta,
+    },
+    {
+      preset: "stablecoins", label: "Supply", dataUpdatedAt: stablecoinsUpdatedAt,
+      error: supportStablecoinsError, hasData: stablecoinData != null,
+      isLoading: supportStablecoinsLoading, meta: stablecoinsMeta,
+    },
+    {
+      preset: "reportCards", dataUpdatedAt: reportCardsUpdatedAt,
+      error: supportReportCardsError, hasData: reportCardsData != null,
+      isLoading: supportReportCardsLoading, meta: reportCardsMeta,
+    },
+  ];
 
   const updateFilters = useCallback(
     (updates: Partial<FreezeWatchPageFilters>) => {
@@ -227,6 +248,15 @@ export function useFreezeWatchPageController() {
     (v: string) => {
       trackEvent("filter_applied", { page: "freezewatch", filter_type: "chain", filter_value: v });
       updateFilters({ chainFilter: v });
+    },
+    [updateFilters],
+  );
+
+  const handleLatticeSelection = useCallback(
+    ({ stablecoin, chainId }: { stablecoin: BlacklistStablecoin; chainId: string }) => {
+      trackEvent("filter_applied", { page: "freezewatch", filter_type: "stablecoin", filter_value: stablecoin });
+      trackEvent("filter_applied", { page: "freezewatch", filter_type: "chain", filter_value: chainId });
+      updateFilters({ stablecoinFilter: stablecoin, chainFilter: chainId });
     },
     [updateFilters],
   );
@@ -309,9 +339,7 @@ export function useFreezeWatchPageController() {
     summaryLoading,
     summaryError,
     error,
-    dataUpdatedAt,
-    freshnessMeta,
-    freshnessCatchUp,
+    freshnessQueries,
     sourceGenerations: { stablecoins: stablecoinsMeta?.updatedAt, reportCards: reportCardsMeta?.updatedAt },
     stablecoins: stablecoinData?.peggedAssets as StablecoinData[] | undefined,
     stablecoinFxFallbackRates: stablecoinData?.fxFallbackRates,
@@ -338,6 +366,7 @@ export function useFreezeWatchPageController() {
     drilldownRef,
     handleStablecoinChange,
     handleChainChange,
+    handleLatticeSelection,
     handleEventTypeChange,
     handleSearchChange,
     handleSortChange,

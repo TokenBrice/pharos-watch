@@ -23,6 +23,7 @@ import { getResolvedBlacklistStatus } from "@shared/lib/blacklist-status";
 import { isBlacklistStablecoin } from "@shared/lib/blacklist";
 import { buildLiveCompareUrl, getPrimaryStaticComparisonLinkForCoin } from "@/lib/compare-links";
 import { buildContractDeploymentParts } from "@/lib/contract-deployment-summary";
+import { PUBLIC_DATASET_CURRENT_DATE } from "@/lib/datasets/public-dataset-current";
 import type { FaqItem } from "@/lib/faq";
 import { normalizeWhitespace } from "@/lib/page-metadata";
 import { getSnapshotSafetyAssessment } from "@/lib/safety-grade-snapshot";
@@ -264,11 +265,11 @@ function buildSafetyAnswer(coin: StablecoinMeta): string {
 
   switch (assessment.bucket) {
     case "safe":
-      return `${coin.symbol} holds ${gradeClause} in Pharos's latest published rating — a safe-tier grade, so Pharos assesses it as overall safe, though no stablecoin is entirely risk-free. ${staticContext} ${liveRead}`;
+      return `${coin.symbol} held ${gradeClause} in Pharos's scores-latest release dataset as of ${PUBLIC_DATASET_CURRENT_DATE} — a safe-tier grade, so Pharos assessed it as overall safe at that date, though no stablecoin is entirely risk-free. ${staticContext} ${liveRead}`;
     case "neutral":
-      return `${coin.symbol} holds ${gradeClause} in Pharos's latest published rating — a middle-tier grade that meets baseline expectations but carries meaningful weaknesses, so Pharos does not consider it clearly safe. ${staticContext} ${liveRead}`;
+      return `${coin.symbol} held ${gradeClause} in Pharos's scores-latest release dataset as of ${PUBLIC_DATASET_CURRENT_DATE} — a middle-tier grade that met baseline expectations but carried meaningful weaknesses, so Pharos did not consider it clearly safe at that date. ${staticContext} ${liveRead}`;
     case "risky":
-      return `Pharos does not assess ${coin.symbol} as safe: it holds ${gradeClause} in the latest published rating, which flags significant structural risk. ${staticContext} ${liveRead}`;
+      return `Pharos did not assess ${coin.symbol} as safe as of ${PUBLIC_DATASET_CURRENT_DATE}: it held ${gradeClause} in the scores-latest release dataset, which flagged significant structural risk. ${staticContext} ${liveRead}`;
   }
 }
 

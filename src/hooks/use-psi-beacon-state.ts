@@ -1,6 +1,6 @@
 "use client";
 
-import { useHydrated } from "@/hooks/use-hydrated";
+import { useFreshnessBoundary } from "@/hooks/use-freshness-boundary";
 import { deriveDataHealth, formatDataHealthTimestamp, type DataHealthInfo } from "@/lib/data-health";
 import { DATA_HEALTH_PRESETS } from "@/lib/data-health-config";
 import type { ApiMeta } from "@/lib/api";
@@ -22,13 +22,32 @@ export interface PsiBeaconHealth {
   state: PsiBeaconState;
 }
 
+function getPsiHealthInput(query: PsiQueryLike): Parameters<typeof deriveDataHealth>[0] | null {
+  const { current, meta } = query;
+  if (!current) return null;
+  const generationUpdatedAt = Math.min(meta?.updatedAt ?? current.computedAt, current.computedAt);
+  const generationMeta: ApiMeta = meta?.updatedAt === null ? meta : {
+    ...meta,
+    updatedAt: generationUpdatedAt,
+    ageSeconds: meta?.ageSeconds ?? Math.max(0, query.dataUpdatedAt / 1000 - generationUpdatedAt),
+    status: meta?.status ?? "fresh",
+  };
+  return {
+    ...DATA_HEALTH_PRESETS.stabilityIndex,
+    dataUpdatedAt: query.dataUpdatedAt,
+    error: query.error,
+    hasData: true,
+    meta: generationMeta,
+  };
+}
+
 /**
  * Derives PSI freshness from the generation the payload carries (the older of
  * meta.updatedAt and current.computedAt), so a fresh response holding an old
  * sample never reads as current. Shared by every PSI beacon surface.
  */
 function derivePsiBeaconHealth(query: PsiQueryLike, nowMs?: number): PsiBeaconHealth {
-  const { current, meta } = query;
+  const { current } = query;
   if (!current) {
     return {
       health: null,
@@ -37,20 +56,7 @@ function derivePsiBeaconHealth(query: PsiQueryLike, nowMs?: number): PsiBeaconHe
       state: derivePsiBeaconState({ current: null, isLoading: query.isLoading, isFresh: false }),
     };
   }
-  const generationUpdatedAt = Math.min(meta?.updatedAt ?? current.computedAt, current.computedAt);
-  const generationMeta: ApiMeta | null | undefined = meta?.updatedAt === null ? meta : {
-    ...meta,
-    updatedAt: generationUpdatedAt,
-    ageSeconds: meta?.ageSeconds ?? Math.max(0, query.dataUpdatedAt / 1000 - generationUpdatedAt),
-    status: meta?.status ?? "fresh",
-  };
-  const health = deriveDataHealth({
-    ...DATA_HEALTH_PRESETS.stabilityIndex,
-    dataUpdatedAt: query.dataUpdatedAt,
-    error: query.error,
-    hasData: true,
-    meta: generationMeta,
-  }, nowMs);
+  const health = deriveDataHealth(getPsiHealthInput(query)!, nowMs);
   const isCurrent = health.state === "fresh";
   const asOfLabel = formatDataHealthTimestamp(current.computedAt * 1000, "en-US", "UTC");
   return {
@@ -63,6 +69,7 @@ function derivePsiBeaconHealth(query: PsiQueryLike, nowMs?: number): PsiBeaconHe
 
 /** Before hydration, health is judged at the query's own update time so SSR and first paint agree. */
 export function usePsiBeaconState(query: PsiQueryLike): PsiBeaconHealth {
-  const hydrated = useHydrated();
-  return derivePsiBeaconHealth(query, hydrated ? undefined : query.dataUpdatedAt);
+  const input = getPsiHealthInput(query);
+  const nowMs = useFreshnessBoundary(input ? [input] : []);
+  return derivePsiBeaconHealth(query, nowMs ?? query.dataUpdatedAt);
 }

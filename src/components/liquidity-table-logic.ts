@@ -36,16 +36,16 @@ export const LIQUIDITY_NR_REASON_LABELS: Record<LiquidityScoreUnavailableReason,
 const compareByColumn = createTableComparator<LiquiditySortKey, LiquidityRow>({
   score: (r) => r.liq.liquidityScore,
   tvl: (r) => r.liq.totalTvlUsd,
-  tvlTrend: (r) => r.liq.tvlChange7d ?? 0,
+  tvlTrend: (r) => r.liq.tvlChange7d,
   // Unavailable volume (null) is not zero activity: it sorts last in both directions.
   volume: (r) => r.liq.totalVolume24hUsd,
   volume7d: (r) => r.liq.totalVolume7dUsd,
   vtRatio: (r) => dexVolumeToTvlRatio(r.liq.totalVolume24hUsd, r.liq.totalTvlUsd),
   pools: (r) => r.liq.poolCount,
   chains: (r) => r.liq.chainCount,
-  balance: (r) => r.liq.weightedBalanceRatio ?? 0,
-  organic: (r) => r.liq.organicFraction ?? 0,
-  durability: (r) => r.liq.durabilityScore ?? 0,
+  balance: (r) => r.liq.weightedBalanceRatio,
+  organic: (r) => r.liq.organicFraction,
+  durability: (r) => r.liq.durabilityScore,
 });
 
 /**

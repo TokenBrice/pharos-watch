@@ -1,5 +1,5 @@
 import type { SupplyHistoryPoint } from "@shared/types";
-import type { NativeSupplyCheckpoints } from "@shared/types/stablecoin-live-summary";
+import type { NativeSupplyCheckpoints, StablecoinLiveSummary } from "@shared/types/stablecoin-live-summary";
 import type { ApiMeta } from "@/lib/api";
 import type { MintAuthorityDetailViewModel } from "@/lib/stablecoin-detail-mint-authority-view-model";
 import type { HeroCardViewModel } from "@/lib/stablecoin-detail-hero-view-model";
@@ -20,8 +20,6 @@ import type {
   RedemptionBackstopsResponse,
   ReportCardsV9CurrentResponse,
   StablecoinAiSummary,
-  StablecoinData,
-  StablecoinListResponse,
   StressSignalEntry,
   StressSignalsAllResponse,
   YieldRanking,
@@ -46,24 +44,17 @@ export interface DetailSupplyHistoryInput extends DetailQueryResource<SupplyHist
   isLoading: boolean;
 }
 
-/**
- * The page's live-summary lane in list shape. List rows are USD-only, so the summary's native
- * token-count checkpoints ride beside them; absent means the lane could not supply them.
- */
-export interface DetailStablecoinListData extends StablecoinListResponse {
-  nativeSupply?: NativeSupplyCheckpoints;
-}
-
-export interface DetailStablecoinListInput extends DetailQueryResource<DetailStablecoinListData> {
-  isLoading: boolean;
-  isError: boolean;
-}
+/** Detail quote plus registry-only presentation context; never a fabricated list row. */
+export type DetailQuote = Pick<StablecoinLiveSummary,
+  "price" | "priceSource" | "priceConfidence" | "priceUpdatedAt" | "priceObservedAt"
+  | "priceObservedAtMode" | "priceSyncedAt" | "nominalPriceReference" | "supplyRestored"
+> & Partial<Pick<StablecoinLiveSummary, "supplyObservedAt">> & { pegType: string; chains: string[] };
 
 export interface StablecoinDetailViewModelQueryInputs {
   supplyHistory: DetailSupplyHistoryInput;
   /** Eligible assets only; independent of the initial chart's 90-day window. */
   annualPriceHistory?: DetailSupplyHistoryInput;
-  stablecoinList: DetailStablecoinListInput;
+  liveSummary: DetailQueryResource<StablecoinLiveSummary>;
   pegSummary: DetailQueryResource<PegSummaryResponse>;
   dexLiquidity: DetailQueryResource<DexLiquidityMap>;
   reportCards: DetailQueryResource<ReportCardsV9CurrentResponse | ReportCardsV9DetailResponse>;
@@ -138,12 +129,11 @@ export interface StablecoinDetailFeatureState {
   error: unknown | null;
 }
 
+/** Empty is authoritative only after a successful redemption response. */
+export type DetailRedemptionReadState = "deferred" | "loading" | "unavailable" | "retained" | "empty" | "ready";
+
 export interface StablecoinDetailFeatureStates {
-  liquidity: StablecoinDetailFeatureState;
-  yield: StablecoinDetailFeatureState;
-  stress: StablecoinDetailFeatureState;
-  flows: StablecoinDetailFeatureState;
-  blacklist: StablecoinDetailFeatureState;
+  redemption: { status: DetailRedemptionReadState; dataUpdatedAt: number; error: unknown | null };
   reserves: StablecoinDetailFeatureState;
 }
 
@@ -152,7 +142,6 @@ export type StablecoinDetailSummary = StablecoinAiSummary;
 interface BaseViewModel { handleRetryAll: () => void }
 interface LoadingViewModel extends BaseViewModel { status: "loading" }
 interface ListErrorViewModel extends BaseViewModel { status: "list-error"; listError: unknown }
-interface NotFoundViewModel extends BaseViewModel { status: "not-found" }
 
 export interface StablecoinDetailReadyViewModel extends BaseViewModel {
   status: "ready";
@@ -168,7 +157,7 @@ export interface StablecoinDetailReadyViewModel extends BaseViewModel {
   childVariants: StablecoinClientMeta[];
   isVariant: boolean;
   hasVariants: boolean;
-  coinData: StablecoinData;
+  coinData: DetailQuote;
   mcap: number | null;
   supply: number | null;
   prevDay: number | null;
@@ -206,7 +195,6 @@ export interface StablecoinDetailReadyViewModel extends BaseViewModel {
 export type StablecoinDetailViewModel =
   | LoadingViewModel
   | ListErrorViewModel
-  | NotFoundViewModel
   | StablecoinDetailReadyViewModel;
 
 export interface StablecoinDetailViewModelCoreInputs {

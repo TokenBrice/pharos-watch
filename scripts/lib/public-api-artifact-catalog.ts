@@ -834,9 +834,15 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   {
     key: "digest-archive",
     summary: "Digest archive",
-    description: "Archive of daily and weekly digests.",
+    description: "Daily and weekly digest archive. The default response is bounded to the latest 365 rows. Use history=all and follow pagination.nextCursor until null for complete history within a captured insertion horizon; edition numbers are assigned before pagination.",
     tags: ["Digest"],
     responseSchema: "DigestArchiveResponse",
+    parameters: [
+      { name: "history", in: "query", required: false, schema: { type: "string", enum: ["all"] },
+        description: "Opt into bounded cursor pages of complete retained history." },
+      { name: "cursor", in: "query", required: false, schema: { type: "string" },
+        description: "Continuation returned by pagination.nextCursor; requires history=all. Reuse unchanged." },
+    ],
     postman: {
       order: 6,
     },

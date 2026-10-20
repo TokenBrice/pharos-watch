@@ -66,6 +66,14 @@ const amountMatrix: Array<{ event: BlacklistEvent; expected: string }> = [
     expected: "125.5 USDT",
   },
   {
+    event: { ...event, id: "sub-cent", amountNative: 0.00123456, amountUsdAtEvent: null, amountSource: "event", amountStatus: "resolved" },
+    expected: "0.00123 USDT",
+  },
+  {
+    event: { ...event, id: "small-gold", stablecoin: "PAXG", amountNative: 0.00000123, amountUsdAtEvent: null, amountSource: "event", amountStatus: "resolved" },
+    expected: "0.00000123 PAXG",
+  },
+  {
     event: { ...event, id: "zero-unknown", amountNative: 0, amountUsdAtEvent: null, amountSource: "unavailable", amountStatus: "provider_failed" },
     expected: "provider failed",
   },
@@ -131,25 +139,38 @@ describe("BlacklistTable", () => {
     }
   });
 
-  it("exports provenance and contract metadata columns in CSV", () => {
-    renderTable();
+  it.each([
+    { amountNative: 0.00123456, expected: "0.00123456" },
+    { amountNative: 1234.56789, expected: "1234.56789" },
+    { amountNative: 0, expected: "0" },
+    { amountNative: null, expected: "" },
+    { amountNative: Number.NaN, expected: "" },
+    { amountNative: Number.POSITIVE_INFINITY, expected: "" },
+  ])(
+    "exports unrounded native amount $amountNative, provenance, and contract metadata in CSV",
+    ({ amountNative, expected }) => {
+      renderTable([{ ...event, amountNative }]);
 
-    fireEvent.click(screen.getByRole("button", { name: /export current page csv/i }));
+      fireEvent.click(screen.getByRole("button", { name: /export current page csv/i }));
 
-    expect(downloadMock).toHaveBeenCalledTimes(1);
-    const csv = downloadMock.mock.calls[0][0].join("").replace(/^\uFEFF/, "");
-    const [header, row] = csv.trim().split("\n").map((line: string) =>
-      Array.from(line.matchAll(/(?:^|,)("(?:[^"]|"")*"|[^,]*)/g), (match) =>
-        match[1].replace(/^"|"$/g, "").replaceAll('""', '"')),
-    );
-    const values = Object.fromEntries(header.map((name: string, index: number) => [name, row[index]]));
-    expect(values).toMatchObject({
-      "Amount Source": "current_balance_snapshot",
-      "Amount Status": "provider_failed",
-      "Contract Address": "0xdac17f958d2ee523a2206206994597c13d831ec7",
-      "Config Key": "ethereum-0xdac17f958d2ee523a2206206994597c13d831ec7",
-      "Event Signature": "AddedBlackList(address)",
-      "Event Topic0": "0x42e160154868087d6bfdc0ca23d96a1c1cfa32f1b72ba9ba27b69b98a0d819dc",
-    });
-  });
+      expect(downloadMock).toHaveBeenCalledTimes(1);
+      const csv = downloadMock.mock.calls[0][0].join("").replace(/^\uFEFF/, "");
+      const [header, row] = csv.trim().split("\n").map((line: string) =>
+        Array.from(line.matchAll(/(?:^|,)("(?:[^"]|"")*"|[^,]*)/g), (match) =>
+          match[1].replace(/^"|"$/g, "").replaceAll('""', '"')),
+      );
+      const values = Object.fromEntries(header.map((name: string, index: number) => [name, row[index]]));
+      expect(values).toMatchObject({
+        "Amount (Native)": expected,
+        "Amount Unit": "USDT",
+        "Amount (USD at event)": "",
+        "Amount Source": "current_balance_snapshot",
+        "Amount Status": "provider_failed",
+        "Contract Address": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+        "Config Key": "ethereum-0xdac17f958d2ee523a2206206994597c13d831ec7",
+        "Event Signature": "AddedBlackList(address)",
+        "Event Topic0": "0x42e160154868087d6bfdc0ca23d96a1c1cfa32f1b72ba9ba27b69b98a0d819dc",
+      });
+    },
+  );
 });

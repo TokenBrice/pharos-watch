@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { render as renderWithTestingLibrary, screen } from "@testing-library/react";
+import { fireEvent, render as renderWithTestingLibrary, screen } from "@testing-library/react";
 import { useCallback, useRef, useState, type ReactElement, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -78,13 +78,15 @@ vi.mock("@/components/stablecoin-detail/price-transparency-card", () => ({
   PriceTransparencyCard: () => <div data-testid="price-transparency-card" />,
 }));
 
-vi.mock("@/components/stablecoin-detail/redemption-backstop-card", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@/components/stablecoin-detail/redemption-backstop-card")>()),
-  RedemptionRouteSection: ({ entry }: { entry: { stablecoinId: string } | null }) => (
-    <section data-testid="redemption-route-section">{entry?.stablecoinId ?? "no-route"}</section>
-  ),
-  hasRedemptionRouteModule: (entry: unknown) => entry != null,
-}));
+vi.mock("@/components/stablecoin-detail/redemption-backstop-card", async (importOriginal) => {
+  const original = await importOriginal<typeof import("@/components/stablecoin-detail/redemption-backstop-card")>();
+  return {
+    ...original,
+    RedemptionRouteSection: (props: Parameters<typeof original.RedemptionRouteSection>[0]) => props.entry
+      ? <section data-testid="redemption-route-section">{props.entry.stablecoinId}</section>
+      : <original.RedemptionRouteSection {...props} />,
+  };
+});
 
 // Freeze & seizure reads blacklist usage near the viewport; no query client here.
 vi.mock("@/hooks/use-blacklist-events", () => ({
@@ -508,6 +510,56 @@ describe("StablecoinDetailClient", () => {
     const row = rail.querySelector('[aria-label="Evidence index"] a[href="#redemption"]');
     expect(row?.textContent).toContain("Redemption route");
     expect(row?.textContent).toContain("Not reviewed");
+  });
+
+  it.each([
+    ["deferred", "Waiting for section"],
+    ["loading", "Loading"],
+    ["unavailable", "Unavailable"],
+    ["empty", "Not reviewed"],
+  ] as const)("uses the same redemption %s state in the main strip and index", (status, label) => {
+    const base = makeReadyViewModel();
+    const handleRetryAll = vi.fn();
+    useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel({
+      handleRetryAll,
+      featureStates: { ...base.featureStates, redemption: { status, dataUpdatedAt: 0, error: status === "unavailable" ? new Error("offline") : null } },
+    }));
+    const { container } = renderDetail();
+    const main = container.querySelector("#redemption")!;
+    const index = container.querySelector('[aria-label="Evidence index"] a[href="#redemption"]')!;
+    expect(main.textContent).toContain(label);
+    expect(index.textContent).toContain(label);
+    expect(main.getAttribute("data-evidence-state") === "not-reviewed").toBe(status === "empty");
+    if (status === "unavailable") {
+      fireEvent.click(screen.getByRole("button", { name: "Retry redemption" }));
+      expect(handleRetryAll).toHaveBeenCalledOnce();
+    } else {
+      expect(screen.queryByRole("button", { name: "Retry redemption" })).toBeNull();
+    }
+  });
+
+  it("preserves a retained redemption route instead of replacing it with unavailable", () => {
+    const base = makeReadyViewModel();
+    useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel({
+      redemptionBackstop: { stablecoinId: base.coin.id, score: 79, routeFamily: "offchain-issuer" },
+      featureStates: { ...base.featureStates, redemption: { status: "retained", dataUpdatedAt: 1, error: new Error("offline") } },
+    }));
+    const { container } = renderDetail();
+    expect(screen.getByTestId("redemption-route-section").textContent).toBe(base.coin.id);
+    expect(container.querySelector('[aria-label="Evidence index"] a[href="#redemption"]')?.textContent).toContain("79");
+    expect(screen.queryByRole("button", { name: "Retry redemption" })).toBeNull();
+  });
+
+  it("keeps reviewed no-holder evidence authoritative before the live read settles", () => {
+    const coin = TRACKED_META_BY_ID.get("frax-frax")!;
+    const base = makeReadyViewModel();
+    useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel({
+      id: coin.id, coin,
+      featureStates: { ...base.featureStates, redemption: { status: "deferred", dataUpdatedAt: 0, error: null } },
+    }));
+    const { container } = renderDetail(coin);
+    expect(container.querySelector("#redemption")?.textContent).toContain("No holder");
+    expect(container.querySelector('[aria-label="Evidence index"] a[href="#redemption"]')?.textContent).toContain("No holder route");
   });
 
   it.each([

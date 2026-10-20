@@ -76,6 +76,11 @@ export interface EvidencePlaceholder {
   reason?: string;
 }
 
+type RedemptionEvidence =
+  | { kind: "route" }
+  | { kind: "hidden" }
+  | { kind: "placeholder"; label: string; status: ReadyDetailViewModel["featureStates"]["redemption"]["status"] };
+
 /**
  * Everything the Risk zone and the `xl+` summary rail both read, built once
  * per render so the pillar boards and the rail index can never disagree about
@@ -97,9 +102,7 @@ export interface DetailSharedModules {
   custody: CustodyClientSummary | null;
   /** The archetype custodies assets but no custody review is published (decision S14). */
   custodyNotReviewed: boolean;
-  hasRedemption: boolean;
-  /** No redemption route module and no reviewed no-holder disposition (decision S14). */
-  redemptionNotReviewed: boolean;
+  redemptionEvidence: RedemptionEvidence;
   accessRows: StablecoinSafetyScoreV9AccessRow[];
   hasMintAuthority: boolean;
   /** Null when neither a bridge review nor shared failure domains exist. */
@@ -208,8 +211,17 @@ export function buildDetailSharedModules({
   });
   const custody = coin.custodyProfileSummary ?? null;
   const custodyNotReviewed = custody === null && !frozen && needsCustodyReview(coin);
-  const hasRedemption = hasRedemptionRouteModule(viewModel.redemptionBackstop, coin.id);
-  const redemptionNotReviewed = !hasRedemption && !frozen;
+  const redemptionRead = viewModel.featureStates.redemption.status;
+  const redemptionEvidence: RedemptionEvidence = hasRedemptionRouteModule(viewModel.redemptionBackstop, coin.id)
+    ? { kind: "route" }
+    : frozen ? { kind: "hidden" }
+      : {
+          kind: "placeholder",
+          status: redemptionRead,
+          label: redemptionRead === "empty" ? "Not reviewed"
+            : redemptionRead === "unavailable" ? "Unavailable"
+              : redemptionRead === "deferred" ? "Waiting for section" : "Loading",
+        };
   const hasMintAuthority = hasMintAuthorityModuleData(viewModel.mintAuthority);
   const failureDomains = buildFailureDomainsView(card);
   const bridgeSummary = coin.bridgeRouteRiskSummary ?? null;
@@ -241,7 +253,7 @@ export function buildDetailSharedModules({
   }
 
   const exitRows: EvidenceIndexRow[] = [];
-  if (hasRedemption || redemptionNotReviewed) {
+  if (redemptionEvidence.kind !== "hidden") {
     const entry = viewModel.redemptionBackstop ?? null;
     const score = entry?.score ?? null;
     const exitNote = entry ? resolveRedemptionExitNote(card, entry) : null;
@@ -256,9 +268,9 @@ export function buildDetailSharedModules({
         ? score === null
           ? { label: exitNote ? `NR · ${exitNote}` : "NR", toneClass: SEVERITY_TONE_CLASS.neutral.pill }
           : null
-        : hasRedemption
+        : redemptionEvidence.kind === "route"
           ? { label: "No holder route", toneClass: SEVERITY_TONE_CLASS.neutral.pill }
-          : NOT_REVIEWED_CHIP,
+          : { label: redemptionEvidence.label, toneClass: SEVERITY_TONE_CLASS.neutral.pill },
       limiting: false,
     });
   }
@@ -330,8 +342,7 @@ export function buildDetailSharedModules({
     backingMetrics,
     custody,
     custodyNotReviewed,
-    hasRedemption,
-    redemptionNotReviewed,
+    redemptionEvidence,
     accessRows: card ? buildSafetyScoreV9AccessRows(card) : [],
     hasMintAuthority,
     bridgingForm,

@@ -33,6 +33,13 @@ export interface HubExposure {
 export function edgeShare(edge: ReportCardsV9DependencyEdge): number | null {
   return edge.kind === "serial" ? 1 : edge.weight;
 }
+
+/** Empty sets and measured contributions (including zero) are known; all-unknown sets are not. */
+export function exposureKnown(totals: ExposureTotals, edges: readonly ReportCardsV9DependencyEdge[]): boolean {
+  const excluded = new Set(totals.excludedSupplyUnknownIds);
+  return totals.knownUsd > 0 || edges.length === 0
+    || edges.some(edge => !excluded.has(edge.to) && edgeShare(edge) !== null);
+}
 export function v9DependencyEdgeWeight(edge: ReportCardsV9DependencyEdge): number | null {
   return edgeShare(edge);
 }

@@ -153,9 +153,11 @@ All active safety consumers resolve the canonical V9 publication:
 
 The stability-index OG consumer renders an explicit unavailable state when no PSI sample exists; absence is never presented as score `0` or the `MELTDOWN` band.
 
+The score-input coverage module labels `completeness.expectedCount` as assets assessed, covering rated, not-rated and pipeline-gap cards. Its detail reconciles those statuses separately; only `ratedCount` can describe a scored/rated population, and a publication hold continues to replace the headline.
+
 Consumers that require current ratings reject held publications. Display surfaces may show the held accepted snapshot with an explicit notice, and a producer that stamps the accepted identity on its own payload (yield publication) may consume the held accepted ratings inside the same stale-coherent window the yield read path applies. No active consumer uses the V8 compact score cache or computes V8 cards on request.
 
-Yield readers keep null Safety coverage denominators/ratios unavailable, never `0%`/`100%`; held accepted coverage stays measured, distinct from missing evidence. [Yield Public Wire Contract](./yield-intelligence.md#public-wire-contract) owns presentation.
+The downstream canonical score-map helper keeps unavailable source denominators/coverage ratios null, with an empty returned score map, upstream reason and null publication identity/time. Yield readers preserve that unavailable state, never `0%`/`100%`; measured zero and held accepted coverage remain distinct from missing evidence. [Yield Public Wire Contract](./yield-intelligence.md#public-wire-contract) owns presentation.
 
 Selector creation recomputes against the live V9 publication (`functions/lib/selector-canonical-snapshot.ts`); a `503` now indicates canonical-source or schema failure, not a policy hold. Existing signed selector snapshots remain readable through their historical contract.
 

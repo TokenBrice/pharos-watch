@@ -26,9 +26,28 @@ import { getActionsForCronJob, getRecommendedActionsForCause } from "@/lib/statu
 import { CRON_DETAIL_ID, formatLastGood, formatTimestamp } from "./cron-lane-format";
 import { CronRunHistoryPanel, StaleArtifactEvidence } from "./cron-run-history";
 
-function ResourcePressureEvidence({ metadata, label }: { metadata: Record<string, unknown> | undefined; label: string }) {
+function ResourcePressureEvidence({
+  metadata,
+  label,
+  attempt,
+  readError,
+}: {
+  metadata: Record<string, unknown> | undefined;
+  label: string;
+  attempt: string;
+  readError?: string;
+}) {
   const parsed = ResourcePressureSchema.safeParse(metadata?.resourcePressure);
-  if (!parsed.success) return null;
+  if (readError || !parsed.success) {
+    return (
+      <section aria-label={label} className="mt-4 border-t border-border/55 pt-3 text-xs">
+        <h4 className="font-medium text-foreground">{label}</h4>
+        <p className="mt-2 text-muted-foreground">
+          Resource evidence unavailable for {attempt}: {readError ?? "missing or invalid resource block"}.
+        </p>
+      </section>
+    );
+  }
   const pressure = parsed.data;
   const bytes = (value: number | null) => value == null ? "Unavailable" : `${value.toLocaleString()} bytes`;
   const evidence = [
@@ -57,10 +76,6 @@ function ResourcePressureEvidence({ metadata, label }: { metadata: Record<string
       </dl>
     </section>
   );
-}
-
-function hasResourcePressure(metadata: Record<string, unknown> | undefined): boolean {
-  return ResourcePressureSchema.safeParse(metadata?.resourcePressure).success;
 }
 
 function CopyTailCommand({ command }: { command: string }) {
@@ -110,8 +125,10 @@ export function CronDetailPanel({
   // Full run/progress metadata is fetched for the opened job only.
   const detailQuery = useStatusCronDetail(row.job, { enabled: detailEnabled });
   const detail = detailEnabled && detailQuery.data?.job === row.job ? detailQuery.data : undefined;
-  const detailLatestRun = detail?.cron.runs[0];
-  const detailInFlight = detail?.cron.inFlight ?? null;
+  const detailLatestRun = detail?.cron.telemetryUnknown ? undefined : detail?.cron.runs[0];
+  const detailInFlight = detail?.sectionErrors.cronProgress || detail?.sectionErrors.cronLeases
+    ? null
+    : detail?.cron.inFlight ?? null;
   const detailErrors = detail ? Object.values(detail.sectionErrors) : [];
   const metadataSummary = summarizeCronMetadata(row.job, detailLatestRun?.metadata, lastRun?.degradedReason);
   const next = getCronNextExpected(row.cron, nowSeconds, row.job);
@@ -119,7 +136,6 @@ export function CronDetailPanel({
   const runbooks = getCronRunbooks(row, causes);
   const actions = getCronActions(row, causes);
   const historyHref = jobCauses[0] ? `/admin/history/?cause=${encodeURIComponent(jobCauses[0].code)}` : "/admin/history/";
-  const resourceMeasured = hasResourcePressure(detailInFlight?.metadata) || hasResourcePressure(detailLatestRun?.metadata);
 
   return (
     <aside
@@ -279,18 +295,23 @@ export function CronDetailPanel({
 
       {!detailEnabled ? (
         <p className="mt-4 border-t border-border/55 pt-3 text-xs text-muted-foreground">
-          Select this job to load run history and metadata.
+          Select this job to load run history, metadata and resource evidence. Resource evidence not requested.
         </p>
       ) : detailQuery.isError && !detail ? (
         <p role="alert" className="mt-4 border-t border-border/55 pt-3 text-xs text-state-danger-strong">
-          Job detail unavailable: {detailQuery.error.message}. Run history and metadata are not shown.
+          Job detail unavailable: {detailQuery.error.message}. Run history, metadata and resource evidence are unavailable.
         </p>
       ) : !detail ? (
         <p role="status" className="mt-4 border-t border-border/55 pt-3 text-xs text-muted-foreground">
-          Loading run history and metadata…
+          Loading run history and metadata… Resource evidence is loading.
         </p>
       ) : (
         <>
+          {detailQuery.isError ? (
+            <p role="alert" className="mt-4 text-xs text-state-warn-strong">
+              Job detail refresh unavailable: {detailQuery.error.message}. Retained run history, metadata and resource evidence are shown.
+            </p>
+          ) : null}
           {detailErrors.map((error) => (
             <p key={error.code} role="alert" className="mt-4 text-xs text-state-warn-strong">{error.message}</p>
           ))}
@@ -298,18 +319,24 @@ export function CronDetailPanel({
         </>
       )}
 
-      {resourceMeasured ? (
+      {detail ? (
         <>
-          {detailInFlight ? (
-            <ResourcePressureEvidence metadata={detailInFlight.metadata} label="Current progress resource evidence" />
+          {detailInFlight || row.cron.inFlight || detail.sectionErrors.cronProgress || detail.sectionErrors.cronLeases ? (
+            <ResourcePressureEvidence
+              metadata={detailInFlight?.metadata}
+              label="Current progress resource evidence"
+              attempt={detailInFlight ? `current attempt started ${formatTimestamp(detailInFlight.startedAt)}` : "the current attempt"}
+              readError={detail.sectionErrors.cronProgress?.message ?? detail.sectionErrors.cronLeases?.message}
+            />
           ) : null}
-          <ResourcePressureEvidence metadata={detailLatestRun?.metadata} label="Last terminal resource evidence" />
+          <ResourcePressureEvidence
+            metadata={detailLatestRun?.metadata}
+            label="Last terminal resource evidence"
+            attempt={detailLatestRun ? `terminal attempt started ${formatTimestamp(detailLatestRun.startedAt)}` : "the last terminal attempt in the bounded detail read"}
+            readError={detail.cron.telemetryUnknown ? detail.cron.telemetryUnknownReason ?? "cron history read failed" : undefined}
+          />
         </>
-      ) : (
-        <p className="mt-4 border-t border-border/55 pt-3 text-xs text-muted-foreground">
-          Resource telemetry not measured on this runtime.
-        </p>
-      )}
+      ) : null}
 
       {detailLatestRun?.metadata && Object.keys(detailLatestRun.metadata).length > 0 ? (
         <details className="mt-4 text-xs">

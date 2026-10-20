@@ -10,6 +10,21 @@ import { makeStablecoinMeta } from "@shared/test-utils/stablecoin";
 
 
 describe("CoverageFeatureSnapshotRow", () => {
+  it("renders a pipeline gap as unavailable, never NR or an ordinary missing safety row", () => {
+    const row = buildCoverageRow({
+      coin: makeStablecoinMeta(), marketCapUsd: 100, hasPegCoverage: true,
+      safetyScore: null, safetyRatingStatus: "pipeline-gap",
+      safetyReasonCodes: ["single-pillar-pipeline-gap"],
+      dexCoverageClass: null, hasYieldCoverage: false, flowCoverageStatus: null,
+    });
+    const feature = COVERAGE_FEATURES.find((entry) => entry.key === "safety")!;
+    const { container } = render(<CoverageFeatureSnapshotRow summary={buildCoverageFeatureSummary(feature, [row])} />);
+    expect(screen.getByRole("img").getAttribute("aria-label")).toBe("Safety Score coverage: data n/a 1");
+    expect(container.textContent).toContain("n/a 1");
+    expect(container.textContent).toContain("/0");
+    expect(container.textContent).not.toMatch(/NR|Not rated|not covered/);
+  });
+
   it("uses only mint-authority route buckets for stacked-bar semantics", () => {
     const summary: CoverageFeatureSummary = {
       feature: COVERAGE_FEATURES.find((feature) => feature.key === "mintAuthority")!,
@@ -99,7 +114,7 @@ describe("CoverageFeatureSnapshotRow", () => {
     const feature = COVERAGE_FEATURES.find((entry) => entry.key === "yield")!;
     const base = buildCoverageRow({
       coin: makeStablecoinMeta(), marketCapUsd: 100, hasPegCoverage: true,
-      safetyScore: null, dexCoverageClass: null, hasYieldCoverage: true, flowCoverageStatus: null,
+      safetyScore: null, safetyRatingStatus: "not-rated", dexCoverageClass: null, hasYieldCoverage: true, flowCoverageStatus: null,
     });
     const summary = buildCoverageFeatureSummary(feature, [
       base, { ...base, id: "unknown", marketCapAvailable: false },

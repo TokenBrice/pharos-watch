@@ -124,17 +124,44 @@ function getFreshBudgetMs(staleTime: number, meta: ApiMeta | null | undefined): 
     : FRESHNESS_RATIOS.FRESH * staleTime;
 }
 
+function getDegradedBudgetMs(staleTime: number, meta: ApiMeta | null | undefined): number {
+  const budget = meta && "degradedBudgetSec" in meta ? meta.degradedBudgetSec : undefined;
+  return typeof budget === "number" && Number.isFinite(budget) && budget >= 0
+    ? budget * 1000
+    : FRESHNESS_RATIOS.DEGRADED * staleTime;
+}
+
+function getUpdatedAtMs(input: QueryHealthInput): number {
+  return input.meta?.updatedAt === null
+    ? 0
+    : input.meta?.updatedAt != null && input.meta.updatedAt > 0
+      ? input.meta.updatedAt * 1000
+      : input.dataUpdatedAt;
+}
+
+/** First integer millisecond beyond each effective health budget (comparisons are inclusive). */
+export function getDataHealthBoundaries(input: QueryHealthInput): number[] {
+  const updatedAt = getUpdatedAtMs(input);
+  if (!(input.hasData ?? input.dataUpdatedAt > 0) || !(updatedAt > 0)) return [];
+  const freshBudget = getFreshBudgetMs(input.staleTime, input.meta);
+  const boundaries = [updatedAt + freshBudget, updatedAt + getDegradedBudgetMs(input.staleTime, input.meta)];
+  if (input.catchUp) {
+    boundaries.push(input.catchUp.observedAt * 1000 + freshBudget);
+    for (const source of input.catchUp.sources) {
+      if (source.lastSucceededAt != null) boundaries.push(source.lastSucceededAt * 1000 + freshBudget);
+    }
+  }
+  return boundaries.filter(Number.isFinite).map((boundary) => Math.floor(boundary) + 1);
+}
+
 function pickBaseState(
   ageMs: number | null,
   staleTime: number,
   meta: ApiMeta | null | undefined,
 ): Exclude<DataHealthState, "error"> {
   if (ageMs === null) return "unavailable";
-  const degradedBudgetSec = meta && "degradedBudgetSec" in meta ? meta.degradedBudgetSec : undefined;
   const freshBudgetMs = getFreshBudgetMs(staleTime, meta);
-  const degradedBudgetMs = typeof degradedBudgetSec === "number" && Number.isFinite(degradedBudgetSec) && degradedBudgetSec >= 0
-    ? degradedBudgetSec * 1000
-    : FRESHNESS_RATIOS.DEGRADED * staleTime;
+  const degradedBudgetMs = getDegradedBudgetMs(staleTime, meta);
   if (ageMs <= freshBudgetMs) return "fresh";
   if (ageMs <= degradedBudgetMs) return "degraded";
   return "stale";
@@ -155,11 +182,7 @@ function getBaseMessage(state: Exclude<DataHealthState, "error">): string {
 export function deriveDataHealth(input: QueryHealthInput, nowMs = Date.now()): DataHealthInfo {
   const hasData = input.hasData ?? input.dataUpdatedAt > 0;
   const authorityUnavailable = input.meta?.updatedAt === null;
-  const updatedAtMs = authorityUnavailable
-    ? 0
-    : input.meta?.updatedAt != null && input.meta.updatedAt > 0
-      ? input.meta.updatedAt * 1000
-      : input.dataUpdatedAt;
+  const updatedAtMs = getUpdatedAtMs(input);
   const ageMs = updatedAtMs > 0 ? Math.max(0, nowMs - updatedAtMs) : null;
   const classifiedState = authorityUnavailable
     ? input.meta?.status === "stale" ? "stale" : "unavailable"

@@ -4,7 +4,9 @@ import { useMemo } from "react";
 import { useEvents, useLatestEvents } from "@/hooks/use-events";
 import { digestPage, mergeDigestedPages } from "@/lib/tape-digest";
 import type { TimelineEventQueryParams } from "./timeline-controller";
-import { deriveOpenIncidents } from "./timeline-feed-helpers";
+import { useActiveDepegEvents } from "@/hooks/use-depeg-events";
+import { deriveDataHealth } from "@/lib/data-health";
+import { CRON_15MIN } from "@/lib/cron-intervals";
 
 interface UseTimelineFeedDataArgs {
   queryParams: TimelineEventQueryParams;
@@ -13,6 +15,21 @@ interface UseTimelineFeedDataArgs {
 }
 export function useTimelineFeedData({ queryParams, permalinkId, nowMs }: UseTimelineFeedDataArgs) {
   const events = useEvents(queryParams, { autoLoadAll: false });
+  const activeIncidents = useActiveDepegEvents({ autoLoadAll: true });
+  const activeHealth = deriveDataHealth({
+    label: "Active incidents",
+    staleTime: CRON_15MIN,
+    dataUpdatedAt: activeIncidents.dataUpdatedAt,
+    meta: activeIncidents.meta,
+    error: activeIncidents.error,
+    hasData: activeIncidents.data != null,
+  }, nowMs);
+  const activeStatus: "available" | "loading" | "incomplete" | "unavailable" = activeIncidents.error ? "unavailable"
+    : activeIncidents.isLoading ? "loading"
+    : !activeIncidents.data ? "unavailable"
+    : !activeIncidents.isFullyLoaded ? "incomplete"
+    : activeHealth.state !== "fresh" ? "unavailable"
+    : "available";
 
   const {
     data: { events: rawEvents },
@@ -22,7 +39,14 @@ export function useTimelineFeedData({ queryParams, permalinkId, nowMs }: UseTime
   // Peg is filtered server-side (`pegCurrency` SQL clause in /api/events);
   // no client-side re-filter is needed.
   const visibleEvents = rawEvents;
-  const openIncidents = useMemo(() => deriveOpenIncidents(visibleEvents), [visibleEvents]);
+  // Only a complete, fresh canonical read can establish current activity.
+  // Tape openings, recoveries and filters never participate in this authority.
+  const openIncidents = useMemo(
+    () => activeStatus === "available"
+      ? [...activeIncidents.data!.events].sort((a, b) => a.startedAt - b.startedAt || a.id - b.id)
+      : null,
+    [activeStatus, activeIncidents.data],
+  );
 
   // Per-page digestion + seam reducer. Each TanStack Query page reference is
   // stable across renders (see use-events.ts), so memoising on `pages` keeps
@@ -55,6 +79,9 @@ export function useTimelineFeedData({ queryParams, permalinkId, nowMs }: UseTime
     events,
     visibleEvents,
     openIncidents,
+    activeIncidents,
+    activeStatus,
+    activeHealth,
     digestedDays,
     permalinkBuffer,
     bufferEvent,

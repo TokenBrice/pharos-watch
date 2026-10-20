@@ -28,6 +28,7 @@ import type {
 import { SectionBanner } from "@/components/stablecoin-detail/section-banner";
 import { SECTION_SCROLL_MT } from "@/components/stablecoin-detail/section-title-class";
 import { LazySection } from "@/components/lazy-section";
+import { Button } from "@/components/ui/button";
 import type { StablecoinDetailViewModel } from "@/hooks/use-stablecoin-detail-view-model";
 import type { MechanismBackingView } from "@/lib/mechanism-backing";
 import { isCustodyStructureUndisclosed } from "@/lib/stablecoin-detail-custody-client";
@@ -81,7 +82,7 @@ function resolveBoardVisibility(allWidths: boolean, belowXl: boolean): PillarEvi
 function resolvePillarEvidenceAnchors(shared: DetailSharedModules): PillarEvidenceAnchors {
   return {
     backing: resolveBoardVisibility(shared.custody !== null || shared.custodyNotReviewed, shared.backingMetrics !== null),
-    exit: resolveBoardVisibility(shared.hasRedemption || shared.redemptionNotReviewed, shared.accessRows.length > 0),
+    exit: resolveBoardVisibility(shared.redemptionEvidence.kind !== "hidden", shared.accessRows.length > 0),
     // Mint Authority or its "Not reviewed" state always renders, so the board does too.
     control: "all",
   };
@@ -291,15 +292,31 @@ function ExitBoard({
 }) {
   return (
     <PillarBoard id="exit-evidence" title="Exit evidence" visibility={visibility}>
-      {shared.hasRedemption ? (
+      {shared.redemptionEvidence.kind === "route" ? (
         <RedemptionRouteSection
           entry={viewModel.redemptionBackstop}
           reportCard={viewModel.reportCard}
           coinId={viewModel.coin.id}
           variant="module"
         />
-      ) : shared.redemptionNotReviewed ? (
-        <EvidenceStateStrip id="redemption" title="Redemption route" state="not-reviewed" density="main" />
+      ) : shared.redemptionEvidence.kind === "placeholder" ? (
+        shared.redemptionEvidence.status === "empty" ? (
+          <EvidenceStateStrip id="redemption" title="Redemption route" state="not-reviewed" density="main" />
+        ) : (
+          <section id="redemption" aria-labelledby="redemption-heading" className={cn(SECTION_SCROLL_MT, "py-4")}>
+            <h3 id="redemption-heading" className="pharos-label">Redemption route · {shared.redemptionEvidence.label}</h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {shared.redemptionEvidence.status === "unavailable"
+                ? "The redemption evidence could not be read."
+                : shared.redemptionEvidence.status === "deferred"
+                  ? "Redemption evidence loads when the Risk section approaches the viewport."
+                  : "Reading redemption evidence…"}
+            </p>
+            {shared.redemptionEvidence.status === "unavailable" ? (
+              <Button variant="outline" size="sm" className="mt-3" onClick={viewModel.handleRetryAll}>Retry redemption</Button>
+            ) : null}
+          </section>
+        )
       ) : null}
       {/* The xl rail carries the Access posture card; below xl this strip
           keeps it with the exit evidence it scores. */}

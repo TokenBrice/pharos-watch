@@ -5,7 +5,7 @@ import {
   API_KEY_MIN_RATE_LIMIT_PER_MINUTE,
 } from "@shared/lib/ops-limits";
 import { THIRTY_DAYS_SECONDS, WEEK_SECONDS } from "@shared/lib/time-constants";
-import type { ApiKeySummary, ApiKeyTier, ApiKeyTrafficClass } from "@pharos/contracts/api-keys";
+import { API_KEY_TIER_VALUES, type ApiKeySummary, type ApiKeyTier, type ApiKeyTrafficClass } from "@pharos/contracts/api-keys";
 
 export interface EditableKeyState {
   name: string;
@@ -141,7 +141,7 @@ export function buildEditableKeyState(key: ApiKeySummary): EditableKeyState {
     name: key.name,
     ownerEmail: key.ownerEmail ?? "",
     // Legacy rows can carry a free-form tier written before the union narrowed.
-    tier: key.tier === "self-serve" ? "self-serve" : "standard",
+    tier: API_KEY_TIER_VALUES.find((tier) => tier === key.tier) ?? "standard",
     rateLimitPerMinute: String(key.rateLimitPerMinute),
     expiryMode: key.expiresAt == null ? "non-expiring" : "custom",
     expiresAtInput: key.expiresAt == null ? "" : formatDateTimeLocalValue(key.expiresAt),

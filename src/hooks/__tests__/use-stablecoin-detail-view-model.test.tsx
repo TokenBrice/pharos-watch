@@ -234,7 +234,7 @@ describe("useStablecoinDetailViewModel", () => {
     renderHook(() => useStablecoinDetailViewModel({
       id: coin.id, coin, summary: null, supplementalQueryControls: DISABLED_DETAIL_QUERY_CONTROLS,
     }));
-    const coinData = mocks.buildStablecoinDetailViewModel.mock.calls.at(-1)![0].queries.stablecoinList.data.peggedAssets[0];
+    const coinData = mocks.buildStablecoinDetailViewModel.mock.calls.at(-1)![0].queries.liveSummary.data;
     expect(coinData.supplyRestored === true).toBe(restored);
     expect(coinData.supplyObservedAt).toBe(1_790_793_000);
   });
@@ -386,7 +386,7 @@ describe("useStablecoinDetailViewModel", () => {
           : queryResult({ refetch: mocks.refetchRedemptionBackstops }));
     }
 
-    function renderedStablecoinList() {
+    function renderedSummary() {
       renderHook(() =>
         useStablecoinDetailViewModel({
           id: coin.id,
@@ -396,17 +396,16 @@ describe("useStablecoinDetailViewModel", () => {
           supplementalQueryControls: DISABLED_DETAIL_QUERY_CONTROLS,
         }),
       );
-      return mocks.buildStablecoinDetailViewModel.mock.calls.at(-1)![0].queries.stablecoinList;
+      return mocks.buildStablecoinDetailViewModel.mock.calls.at(-1)![0].queries.liveSummary;
     }
 
     it("backs the page with the archived row when the live detail row is gone", () => {
       mockLiveSummary({ isError: true, error: new Error("HTTP 404") });
 
-      const list = renderedStablecoinList();
+      const summary = renderedSummary();
 
-      expect(list).toMatchObject({ isError: false, isLoading: false, error: null, enabled: false, dataUpdatedAt: 0, meta: null });
-      expect(list.data.peggedAssets[0]).toMatchObject({
-        id: coin.id,
+      expect(summary).toMatchObject({ isLoading: false, error: null, enabled: false, dataUpdatedAt: 0, meta: null });
+      expect(summary.data).toMatchObject({
         price: archived.price,
         circulating: archived.circulating,
         supplyObservedAt: archived.supplyObservedAt,
@@ -419,10 +418,10 @@ describe("useStablecoinDetailViewModel", () => {
         meta: { updatedAt: 0.005, ageSeconds: 0, status: "fresh" },
       } as Parameters<typeof queryResult>[0]);
 
-      const list = renderedStablecoinList();
+      const summary = renderedSummary();
 
-      expect(list).toMatchObject({ isError: false, enabled: true, dataUpdatedAt: 100, meta: { updatedAt: 0.005 } });
-      expect(list.data.peggedAssets[0].price).toBe(0.42);
+      expect(summary).toMatchObject({ enabled: true, dataUpdatedAt: 100, meta: { updatedAt: 0.005 } });
+      expect(summary.data.price).toBe(0.42);
     });
   });
 });

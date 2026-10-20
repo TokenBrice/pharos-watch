@@ -25,8 +25,12 @@ function getBlacklistNativeFractionDigits(event: BlacklistEvent): 2 | 4 {
 export function formatBlacklistNativeAmount(event: BlacklistEvent): string {
   const amountNative = event.amountNative;
   if (amountNative == null) return "";
+  const fractionDigits = getBlacklistNativeFractionDigits(event);
+  if (amountNative !== 0 && Math.abs(amountNative) < 10 ** -fractionDigits) {
+    return amountNative.toLocaleString(undefined, { maximumSignificantDigits: 3 });
+  }
   return amountNative.toLocaleString(undefined, {
-    maximumFractionDigits: getBlacklistNativeFractionDigits(event),
+    maximumFractionDigits: fractionDigits,
   });
 }
 

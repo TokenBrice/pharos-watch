@@ -1,7 +1,5 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { makeStablecoin } from "@shared/test-utils/stablecoin";
-import type { StablecoinData } from "@shared/types";
-import type { NativeSupplyCheckpoints } from "@shared/types/stablecoin-live-summary";
+import type { NativeSupplyCheckpoints, StablecoinLiveSummary } from "@shared/types/stablecoin-live-summary";
 import { buildStablecoinDetailViewModel } from "@/lib/stablecoin-detail-view-model";
 
 type BuildStablecoinDetailViewModelParams = Parameters<typeof buildStablecoinDetailViewModel>[0];
@@ -10,7 +8,7 @@ export type BuildStablecoinDetailViewModelOverrides = {
   core?: Partial<BuildStablecoinDetailViewModelParams["core"]>;
   queries?: {
     supplyHistory?: Partial<BuildStablecoinDetailViewModelParams["queries"]["supplyHistory"]>;
-    stablecoinList?: Partial<BuildStablecoinDetailViewModelParams["queries"]["stablecoinList"]>;
+    liveSummary?: Partial<BuildStablecoinDetailViewModelParams["queries"]["liveSummary"]>;
     pegSummary?: Partial<BuildStablecoinDetailViewModelParams["queries"]["pegSummary"]>;
     dexLiquidity?: Partial<BuildStablecoinDetailViewModelParams["queries"]["dexLiquidity"]>;
     reportCards?: Partial<BuildStablecoinDetailViewModelParams["queries"]["reportCards"]>;
@@ -31,8 +29,7 @@ export type BuildStablecoinDetailViewModelOverrides = {
 export type ReadyDetailParamsOverrides = {
   id: string;
   coin: BuildStablecoinDetailViewModelParams["core"]["coin"];
-  asset?: Partial<StablecoinData>;
-  fxFallbackRates?: Record<string, number>;
+  asset?: Partial<StablecoinLiveSummary>;
   nativeSupply?: NativeSupplyCheckpoints;
   queries?: BuildStablecoinDetailViewModelOverrides["queries"];
   supplemental?: BuildStablecoinDetailViewModelOverrides["supplemental"];
@@ -61,14 +58,13 @@ export function makeBuildStablecoinDetailViewModelParams(
         meta: null,
         ...overrides.queries?.supplyHistory,
       },
-      stablecoinList: {
-        data: { peggedAssets: [] } as never,
+      liveSummary: {
+        data: undefined,
         isLoading: false,
-        isError: false,
         error: null,
         dataUpdatedAt: 0,
         meta: null,
-        ...overrides.queries?.stablecoinList,
+        ...overrides.queries?.liveSummary,
       },
       pegSummary: {
         data: undefined,
@@ -151,18 +147,18 @@ export function makeReadyDetailParams({
   id,
   coin,
   asset,
-  fxFallbackRates,
   nativeSupply,
   queries,
   supplemental,
 }: ReadyDetailParamsOverrides): BuildStablecoinDetailViewModelParams {
-  const readyAsset = makeStablecoin({
-    id,
-    name: coin.name,
-    symbol: coin.symbol,
+  const readySummary: StablecoinLiveSummary = {
+    price: 1, priceSource: "coingecko", priceConfidence: "single-source",
+    priceUpdatedAt: null, priceObservedAt: null, supplyObservedAt: null,
     circulating: { peggedUSD: 100 },
+    circulatingPrevDay: {}, circulatingPrevWeek: {}, circulatingPrevMonth: {},
+    nativeSupply: nativeSupply ?? { current: null, prevWeek: null, prevMonth: null },
     ...asset,
-  });
+  };
 
   return makeBuildStablecoinDetailViewModelParams({
     core: { id, coin },
@@ -172,14 +168,10 @@ export function makeReadyDetailParams({
         data: [{ date: 1_700_000_000, circulatingUsd: 100, price: 1 }],
         ...queries?.supplyHistory,
       },
-      stablecoinList: {
-        data: {
-          peggedAssets: [readyAsset],
-          fxFallbackRates: fxFallbackRates ?? {},
-          ...(nativeSupply ? { nativeSupply } : {}),
-        },
+      liveSummary: {
+        data: readySummary,
         dataUpdatedAt: 1,
-        ...queries?.stablecoinList,
+        ...queries?.liveSummary,
       },
     },
     supplemental,

@@ -33,29 +33,37 @@ export function buildStablecoinDetailViewModel({
   queries,
   supplemental,
 }: BuildStablecoinDetailViewModelParams): StablecoinDetailViewModel {
-  const { supplyHistory, stablecoinList, pegSummary, dexLiquidity, reportCards, redemptionBackstops } = queries;
-  if (supplyHistory.isLoading || stablecoinList.isLoading) return { status: "loading", handleRetryAll };
-  const listData = stablecoinList.data;
-  if (!listData) {
+  const { supplyHistory, liveSummary, pegSummary, dexLiquidity, reportCards, redemptionBackstops } = queries;
+  if (supplyHistory.isLoading || liveSummary.isLoading) return { status: "loading", handleRetryAll };
+  const summaryData = liveSummary.data;
+  if (!summaryData) {
     return {
       status: "list-error",
-      listError: stablecoinList.error ?? new Error("Stablecoin list data unavailable"),
+      listError: liveSummary.error ?? new Error("Stablecoin list data unavailable"),
       handleRetryAll,
     };
   }
-  const coinData = listData.peggedAssets?.find((candidate) => candidate.id === id);
-  if (!coinData) {
-    return stablecoinList.isError
-      ? { status: "list-error", listError: stablecoinList.error, handleRetryAll }
-      : { status: "not-found", handleRetryAll };
-  }
+  const coinData = {
+    price: summaryData.price,
+    priceSource: summaryData.priceSource,
+    priceConfidence: summaryData.priceConfidence,
+    priceUpdatedAt: summaryData.priceUpdatedAt,
+    priceObservedAt: summaryData.priceObservedAt,
+    priceObservedAtMode: summaryData.priceObservedAtMode,
+    priceSyncedAt: summaryData.priceSyncedAt,
+    nominalPriceReference: summaryData.nominalPriceReference,
+    supplyObservedAt: summaryData.supplyObservedAt,
+    supplyRestored: summaryData.supplyRestored,
+    pegType: `pegged${coin.flags.pegCurrency}`,
+    chains: [...new Set(coin.contracts?.map((contract) => contract.chain) ?? [])],
+  };
 
   const isNavToken = coin.flags.navToken ?? false;
   const resolvedSupplyHistory = supplyHistory.data ?? [];
   const market = buildDetailMarketSnapshot(
     coin,
-    coinData,
-    listData.nativeSupply ?? null,
+    summaryData,
+    summaryData.nativeSupply,
     queries.annualPriceHistory?.data ?? resolvedSupplyHistory,
     supplemental.nowMs ?? Date.now(),
   );

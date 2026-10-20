@@ -5,6 +5,8 @@ import type { UseQueryResult } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { CronStatus, CronStatusDetail, StatusCronDetailResponse, StatusResponse } from "@shared/types";
 import { CronsSection, type CronGroup } from "@/app/admin/sections/crons-section";
+import { CronDetailPanel } from "@/app/admin/sections/cron-detail-panel";
+import { buildCronWorkbenchModel } from "@/lib/cron-workbench-model";
 import { degraded, makeHealthyStatusResponse } from "@/test-utils/status-fixtures";
 import { useStatusCronDetail } from "@/hooks/admin-api-hooks";
 
@@ -45,26 +47,39 @@ function makeData(overrides: Partial<StatusResponse> = {}): StatusResponse {
 
 
 
+const pressure = {
+  phase: "current-intake", observedAt: 1_699_999_900, bodyCapBytes: 4096, cacheCapBytes: null,
+  cacheEntryCapBytes: null, maxConcurrentDecodes: null, inputCapBytes: null, catalogMaxAssets: null,
+  intakeBytes: 0, cacheBytes: null, rejectedBodies: 0, inputBytes: null, catalogAssets: null,
+  intakeBasis: "actual-stream" as const, cacheBasis: "unavailable" as const, guard: "within-policy" as const,
+  platformOutcome: null, platformOutcomeSource: null, heapUsedBytes: null,
+  heapUnavailableReason: "workers-runtime-no-heap-api" as const,
+};
+
 function renderCrons({
   groups,
   data = makeHealthyStatusResponse(),
   details = {},
   detailState = "success",
+  sectionErrors = {},
+  retainDetail = false,
 }: {
   groups: CronGroup[];
   data?: StatusResponse;
   details?: Record<string, CronStatusDetail>;
   detailState?: "success" | "loading" | "error";
+  sectionErrors?: StatusCronDetailResponse["sectionErrors"];
+  retainDetail?: boolean;
 }) {
   const selectedJob = groups.flatMap((group) => group.entries)[0]?.[0];
   window.history.replaceState(null, "", selectedJob ? `?job=${encodeURIComponent(selectedJob)}` : "/");
   const summaries = new Map(groups.flatMap((group) => group.entries));
   vi.mocked(useStatusCronDetail).mockImplementation((job) => ({
-    data: detailState === "success" ? {
+    data: detailState === "success" || retainDetail ? {
       timestamp: data.timestamp,
       job,
       cron: details[job] ?? summaries.get(job)!,
-      sectionErrors: {},
+      sectionErrors,
     } : undefined,
     isError: detailState === "error",
     isLoading: detailState === "loading",
@@ -201,18 +216,11 @@ describe("CronsSection", () => {
     expect(within(actions).getByRole("link", { name: "View status history" }).getAttribute("href")).toMatch(/^\/admin\/history\/?$/);
     expect(within(actions).getByText("wrangler tail stablecoin-api --format pretty --search sync-blacklist")).toBeTruthy();
     expect(within(actions).getAllByRole("link").length).toBeGreaterThanOrEqual(3);
-    expect(within(detail).getByText("Resource telemetry not measured on this runtime.")).toBeTruthy();
+    expect(within(detail).getByRole("region", { name: "Last terminal resource evidence" }).textContent).toMatch(/unavailable.*last terminal attempt/i);
+    expect(within(detail).queryByText(/not measured on this runtime/i)).toBeNull();
   });
 
   it("surfaces running lease, stale artifacts, and orphaned progress evidence", () => {
-    const pressure = {
-      phase: "current-intake", observedAt: 1_699_999_900, bodyCapBytes: 4096, cacheCapBytes: null,
-      cacheEntryCapBytes: null, maxConcurrentDecodes: null, inputCapBytes: null, catalogMaxAssets: null,
-      intakeBytes: 0, cacheBytes: null, rejectedBodies: 0, inputBytes: null, catalogAssets: null,
-      intakeBasis: "actual-stream" as const, cacheBasis: "unavailable" as const, guard: "within-policy" as const,
-      platformOutcome: null, platformOutcomeSource: null, heapUsedBytes: null,
-      heapUnavailableReason: "workers-runtime-no-heap-api" as const,
-    };
     const cron = makeCronStatus({
       healthy: false,
       runs: [{ startedAt: 1_699_999_700, durationMs: 100, status: "ok" }],
@@ -320,11 +328,93 @@ describe("CronsSection", () => {
     const detail = screen.getByRole("complementary", { name: /Details for/ });
     expect(within(detail).queryByText("Recent runs and retained evidence")).toBeNull();
     expect(within(detail).queryByText("Full progress metadata")).toBeNull();
+    expect(within(detail).queryByText(/not.measured/i)).toBeNull();
+    expect(within(detail).queryByRole("region", { name: /resource evidence/ })).toBeNull();
     if (detailState === "error") {
       expect(within(detail).getByRole("alert").textContent).toContain("Job detail unavailable: Access denied");
+      expect(within(detail).getByRole("alert").textContent).toMatch(/resource evidence.*unavailable/i);
     } else {
-      expect(within(detail).getByText("Loading run history and metadata…").getAttribute("role")).toBe("status");
+      expect(within(detail).getByText(/Resource evidence is loading/).getAttribute("role")).toBe("status");
     }
+  });
+
+  it("does not infer resource measurements from a disabled read, even with cached detail", () => {
+    const cron = makeCronStatus();
+    vi.mocked(useStatusCronDetail).mockReturnValue({
+      data: { timestamp: 1_700_000_000, job: "sync-stablecoins", cron, sectionErrors: {} },
+    } as UseQueryResult<StatusCronDetailResponse, Error>);
+    const row = buildCronWorkbenchModel([makeGroup([["sync-stablecoins", cron]])]).allRows[0]!;
+    render(<CronDetailPanel row={row} nowSeconds={1_700_000_000} detailEnabled={false} />);
+    expect(screen.getByText(/resource evidence not requested/i)).toBeTruthy();
+    expect(screen.queryByText(/not.measured/i)).toBeNull();
+    expect(screen.queryByRole("region", { name: /resource evidence/ })).toBeNull();
+  });
+
+  it.each([undefined, { phase: "invalid" }])("marks a successfully read %j resource block unavailable for its attempt", (resourcePressure) => {
+    const cron = makeCronStatus();
+    renderCrons({
+      groups: [makeGroup([["sync-stablecoins", cron]])],
+      details: { "sync-stablecoins": {
+        ...cron, runs: [{ ...cron.runs[0]!, metadata: { resourcePressure } as unknown as CronStatusDetail["runs"][number]["metadata"] }],
+      } },
+    });
+    const terminal = screen.getByRole("region", { name: "Last terminal resource evidence" });
+    expect(terminal.textContent).toMatch(/unavailable for terminal attempt started/i);
+    expect(within(terminal).queryByText("Guard")).toBeNull();
+    expect(screen.queryByText(/not.measured/i)).toBeNull();
+  });
+
+  it.each(["progress", "leases", "history"] as const)("keeps independent resource evidence when %s admission fails", (failure) => {
+    const cron = makeCronStatus();
+    const currentFailed = failure !== "history";
+    const reason = `${failure}-read-failed`;
+    renderCrons({
+      groups: [makeGroup([["sync-stablecoins", cron]])],
+      details: { "sync-stablecoins": {
+        ...cron, telemetryUnknown: !currentFailed, telemetryUnknownReason: currentFailed ? undefined : reason,
+        runs: [{ ...cron.runs[0]!, metadata: { resourcePressure: { ...pressure, phase: "terminal", intakeBytes: 123 } } }],
+        inFlight: {
+          startedAt: 1_699_999_800, updatedAt: 1_699_999_900, stale: false,
+          metadata: { resourcePressure: pressure },
+        },
+      } },
+      sectionErrors: currentFailed ? {
+        [failure === "progress" ? "cronProgress" : "cronLeases"]: { code: reason, message: reason },
+      } : {},
+    });
+    const unavailable = screen.getByRole("region", { name: currentFailed ? "Current progress resource evidence" : "Last terminal resource evidence" });
+    const available = screen.getByRole("region", { name: currentFailed ? "Last terminal resource evidence" : "Current progress resource evidence" });
+    expect(unavailable.textContent).toMatch(/Resource evidence unavailable/);
+    expect(unavailable.textContent).toContain(reason);
+    expect(within(unavailable).queryByText("Guard")).toBeNull();
+    expect(within(available).getByText(currentFailed ? "123 bytes · actual-stream" : "0 bytes · actual-stream")).toBeTruthy();
+    expect(screen.queryByText(/not.measured/i)).toBeNull();
+  });
+
+  it("retains valid measured evidence after a failed detail refresh with the named failure", () => {
+    const cron = makeCronStatus();
+    renderCrons({
+      groups: [makeGroup([["sync-stablecoins", cron]])], detailState: "error", retainDetail: true,
+      details: { "sync-stablecoins": { ...cron, runs: [{ ...cron.runs[0]!, metadata: { resourcePressure: pressure } }] } },
+    });
+    expect(screen.getByRole("alert").textContent).toContain("Access denied");
+    expect(within(screen.getByRole("region", { name: "Last terminal resource evidence" })).getByText("0 bytes · actual-stream")).toBeTruthy();
+    expect(screen.queryByText(/not.measured/i)).toBeNull();
+  });
+
+  it("shows not-measured only from a validated resource block for the terminal attempt", () => {
+    const cron = makeCronStatus();
+    renderCrons({
+      groups: [makeGroup([["sync-stablecoins", cron]])],
+      details: { "sync-stablecoins": { ...cron, runs: [{ ...cron.runs[0]!, metadata: { resourcePressure: {
+        ...pressure, bodyCapBytes: null, intakeBytes: null, rejectedBodies: null,
+        intakeBasis: "unavailable", guard: "not-measured",
+      } } }] } },
+    });
+    const terminal = screen.getByRole("region", { name: "Last terminal resource evidence" });
+    expect(within(terminal).getByText("not-measured")).toBeTruthy();
+    expect(within(terminal).getAllByText("Unavailable · unavailable").length).toBeGreaterThan(0);
+    expect(screen.queryByText(/not measured on this runtime/i)).toBeNull();
   });
 
 });

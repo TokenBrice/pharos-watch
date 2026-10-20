@@ -89,6 +89,23 @@ describe("TableExportMenu", () => {
     expect(typeof preamble.sourceUrl).toBe("string");
   });
 
+  it("forwards mixed and unknown producer generations unchanged to every export format", () => {
+    const sourceGenerations = { stablecoins: SOURCE_AS_OF_ISO, reportCards: null, pegSummary: "2026-05-16T05:00:00.000Z" };
+    render(<TableExportMenu data={ROWS} columns={COLUMNS} filename="screener" asOfISO="unknown"
+      endpoint="screener" methodologyLabel="mixed-source export" sourceGenerations={sourceGenerations} />);
+    fireEvent.click(screen.getByRole("button", { name: "Download CSV" }));
+    fireEvent.click(screen.getByRole("button", { name: "Download NDJSON" }));
+    fireEvent.click(screen.getByRole("button", { name: "Copy as Markdown" }));
+    for (const preamble of [
+      downloadCsvWithPreambleMock.mock.calls[0]?.[3],
+      downloadNdjsonWithPreambleMock.mock.calls[0]?.[3],
+      copyMarkdownWithPreambleMock.mock.calls[0]?.[2],
+    ]) {
+      expect(preamble).toMatchObject({ asOfISO: "unknown", sourceGenerations });
+      expect(preamble.sourceGenerations.reportCards).toBeNull();
+    }
+  });
+
   it("does not dispatch export writers while disabled", () => {
     render(
       <TableExportMenu

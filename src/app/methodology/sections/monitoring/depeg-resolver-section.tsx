@@ -2,6 +2,7 @@ import { DDR_METHODOLOGY_CHANGELOG_PATH, DDR_METHODOLOGY_VERSION_LABEL } from "@
 import { MethodologyDetails, MethodologyFacts, MethodologySectionShell } from "../../methodology-shared";
 import { DEPEG_RESOLVER_SECTION_CONTENT } from "@/lib/methodology-content";
 import { METHODOLOGY_SECTION_ACCENT_CLASSES } from "@shared/lib/classification";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 
 export function DepegResolverMethodologySection() {
   return (
@@ -86,7 +87,7 @@ export function DepegResolverMethodologySection() {
         facts={[
           { label: "Trigger", value: "Forecast readiness >0.75 or first healthy run at/after 72h" },
           { label: "Readouts", value: "Immutable DDR forecasts/no-calls + DDRR coverage and first-publication review" },
-          { label: "Update frequency", value: "Precomputed in the sync-stablecoins flow; served from D1 cache" },
+          { label: "Update frequency", value: `Precomputed by the dedicated compute-depeg-resolver scheduled producer every ${CRON_INTERVALS["compute-depeg-resolver"] / 60} minutes; served from D1 cache` },
         ]}
       />
       <MethodologyDetails summary="Technical details: limitations and backtest gates">

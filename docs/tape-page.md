@@ -32,6 +32,12 @@ Read rows must pass JSON/object and `TapeEventSchema` validation. Invalid payloa
 
 `tape_events` is a permanent product archive. Filters/cursors/windows/severity bound reads, not retention: all-time browsing, permalinks, homepage reads and DDRR review need historical events. The baseline migration owns table schema; event IDs remain `${ts_ms}-${type}-${hash8}` for permalinks.
 
+Peak-worsened observations are insert-if-absent on their source key: identical-peak replay retains the first permalink, numeric ingestion ID, observation timestamp, creation time and payload. A genuinely larger peak has a distinct source identity. Other event classes retain their source-correction replacement behavior.
+
+Historical flow, yield and DEWS events use the persisted source methodology identity where the source retains it, otherwise the domain registry at the source timestamp, never the projector's current version. Static catalogs build their authoritative source identity into each event; the shared helper only probes/inserts those events.
+
+Archive methodology correction is a separately reviewed metadata operation, not a projector replay. First census the affected source tables/types by source-time range and stored version; compare each candidate to retained source identity or its registry epoch. Approve explicit IDs and old/new versions in bounded pages before updating only `methodology_version` with an ID/source-key/old-version guard. Retain before/after IDs, numeric ingestion IDs, timestamps, creation times and payloads and require exact equality outside that column. Do not change historical scores, thresholds, watermarks or alert state, and never blanket-replay the archive to repair metadata.
+
 ### Source Reconciliation
 
 Depeg open/recovery, freeze and large-flow projectors reconcile immutable source identities independent of watermark. Scheduled reconciliation uses the source-owned trailing event-time window; older repair uses explicit admin bounds (`since=0` for all history). Exclude already-projected identities/non-recovery closures before limiting. Source clocks own presentation; watermarks never regress. Freeze historical alerts retain the 24-hour recovery gate. Depeg alerts use active source episodes/exact prior episode IDs, not Tape insert IDs; backfills cannot replay historical depegs live.
@@ -41,6 +47,11 @@ Forced time seeks plus source-key existence probes bound freeze/flow candidates.
 ### Split-Scan Determinism
 
 PYS-drop carries the last usable selected score across null generations, seeded at/before watermark with source-defined timestamp/generation tie-break. Leading gaps invent no baseline. PSI shifts use immediately preceding sample, including unchanged bands. Split invocations/batches must match one-shot identities/payloads. Capped/bounded depeg peak scans preserve unscanned baselines; only full unbounded census prunes closed events.
+
+Yield warnings distinguish observed empty (SQL NULL or `[]`), valid signal lists and unavailable evidence. Malformed JSON, non-arrays and any invalid member quarantine only that row; they never clear warnings. Both the backward prior-row seek and batch walk use the same decoder and retain the last usable baseline, including source-key tie-breaking at a shared timestamp. Structured `warning-evidence-unavailable` logs expose machine-reason counts and at most ten row identities per invocation; no raw corrupt payload is logged.
+Existing-but-unavailable history is distinct from successful no-history bootstrap: when no usable predecessor survives a corrupt prefix, the first valid observation establishes state without emitting a transition. Later valid additions and observed-empty clears remain eligible.
+
+The peak seen-map checkpoint commits atomically with the final bounded event batch (or alone for a baseline-only scan). Larger scans can commit earlier batches before a later failure; the error propagates, the checkpoint remains unchanged, and source-key replay preserves every already-committed observation. No lease/checkpoint reset or production fault injection is needed for rollout.
 
 ### Freeze Chain Repair
 
@@ -56,9 +67,11 @@ DEWS sparse scans and prior-band seed join published `surface_publication_genera
 
 ## Behavior
 
-The hydration-safe browser clock seeds frozen query-window anchor and ticking presentation clock together after subscription. Server/first hydration uses null clock, not `Date.now()`; ticking ages labels/freshness without sliding query bounds.
+The hydration-safe browser clock seeds frozen query-window anchor and ticking presentation clock together after subscription. Server/first hydration uses null clock, not `Date.now()`; ticking ages labels/freshness without sliding query bounds. The same page-owned clock reaches digest, pinned and active-incident rows; memoized event cards update both compact and suffixed relative ages while absolute UTC timestamps stay fixed.
 
-UTC-day grouping persists across infinite-page seams. `digestPage`/`mergeDigestedPages` own recap thresholds; `collapseByCoinClass` merges matching coin/chain/full-type/severity/transition, not different event types. Summary counts describe loaded feed, not the full archive. Active-open band considers source episodes with no observed recovery-backed resolution in-window and deduplicates per coin; absence of a visible recovery is not a new on-chain measurement.
+UTC-day grouping persists across infinite-page seams. `digestPage`/`mergeDigestedPages` own recap thresholds; `collapseByCoinClass` merges matching coin/chain/full-type/severity/transition, not different event types. Summary counts describe loaded feed, not the full archive. Freeze recaps separately label gross frozen, released and destroyed USD amounts over those loaded rows, disclose unpriced members as incomplete valuation, and never net them into current exposure. PSI recaps use canonical condition-band ordering, retaining unknown-only labels without ranking them above known bands.
+
+The Currently open strip reads the complete canonical `GET /api/depeg-events?active=true` cohort through `useActiveDepegEvents`, independently of tape severity, type, search, coin and page scope. Canonical numeric event IDs identify incidents; repeated same-coin episodes remain distinct. Published onset, peak and constituent count render directly without fabricating tape provenance, joining by coin or reconstructing constituent IDs. Unmatched historical tape openings are not current-state evidence. Loading, failed, capped or incomplete active traversal withholds OPEN/count claims; unavailable or aged producer evidence likewise shows unavailable activity rather than an empty or current cohort. Active-source update labels retain their own producer clock and budget, not the tape publication clock.
 
 First Load more enables sentinel auto-loading. Exhausted cursors get an explicit terminal footer. Empty-state widening takes the smallest applicable step: clear active filters, then lower floor, then all-time. Shared freshness/error notices retain retry and producer clocks. CRT treatment is dark-only presentation, not data state.
 

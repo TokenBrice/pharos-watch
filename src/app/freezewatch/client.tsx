@@ -77,9 +77,7 @@ export default function FreezeWatchClient() {
     summaryLoading,
     summaryError,
     error,
-    dataUpdatedAt,
-    freshnessMeta,
-    freshnessCatchUp,
+    freshnessQueries,
     sourceGenerations,
     stablecoins,
     stablecoinFxFallbackRates,
@@ -100,6 +98,7 @@ export default function FreezeWatchClient() {
     searchInput,
     handleStablecoinChange,
     handleChainChange,
+    handleLatticeSelection,
     handleEventTypeChange,
     handleSearchChange,
     handleSortChange,
@@ -173,15 +172,13 @@ export default function FreezeWatchClient() {
       ) : null}
       <QueryFreshnessNotices
         error={error}
-        hasData={!!summary || events.length > 0}
+        hasData={freshnessQueries.some((query) => query.hasData)}
         onRetry={() => {
           void refetchSummary();
           void refetchPage();
           refetchSupport();
         }}
-        queries={[
-          { preset: "blacklist", dataUpdatedAt, error, hasData: !!summary || events.length > 0, meta: freshnessMeta, catchUp: freshnessCatchUp },
-        ]}
+        queries={freshnessQueries}
       />
       <SafetyScoreV9StatusNotice response={reportCardsResponse} />
 
@@ -342,10 +339,9 @@ export default function FreezeWatchClient() {
           stats={summary?.stats}
           chains={summary?.chains ?? []}
           isLoading={summaryLoading}
-          onCellSelect={({ stablecoin, chainId }) => {
-            handleStablecoinChange(stablecoin);
-            handleChainChange(chainId);
-          }}
+          error={summaryError}
+          onRetry={() => void refetchSummary()}
+          onCellSelect={handleLatticeSelection}
         />
       </FreezeWatchSection>
 
@@ -354,7 +350,13 @@ export default function FreezeWatchClient() {
         title="Quarterly freeze, release, and wipe events"
         description="Historical event volume by quarter. Use the ledger above for address-level rows."
       >
-        <InterventionSeismograph stats={summary?.stats} chart={summary?.chart} isLoading={summaryLoading} />
+        <InterventionSeismograph
+          stats={summary?.stats}
+          chart={summary?.chart}
+          isLoading={summaryLoading}
+          error={summaryError}
+          onRetry={() => void refetchSummary()}
+        />
       </FreezeWatchSection>
 
       <FreezeWatchSection

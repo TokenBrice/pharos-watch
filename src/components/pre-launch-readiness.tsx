@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useSyncExternalStore, type ReactNode } from "react";
+import { useSyncExternalStore, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { DRIFT_STATUS_LABEL, PHASE_DOT, formatFuzzyDate, type DriftDisplayStatus } from "@/lib/pre-launch";
 import {
@@ -13,18 +13,50 @@ import {
 import { formatUtcDayLabel } from "@shared/lib/format";
 import type { StablecoinMeta } from "@shared/types";
 
-const subscribeToHydration = () => () => {};
-const getClientHydrationSnapshot = () => true;
-const getServerHydrationSnapshot = () => false;
+const DAY_MS = 86_400_000;
+const clockListeners = new Set<() => void>();
+let clockNowMs: number | null = null;
+let clockTimer: number | undefined;
+
+function updateClock() {
+  window.clearTimeout(clockTimer);
+  clockNowMs = Date.now();
+  // Every fuzzy target expires at a UTC midnight, as do announcement day counts.
+  // Waking daily also advances the path after its last target has expired.
+  const nextDayMs = (Math.floor(clockNowMs / DAY_MS) + 1) * DAY_MS;
+  clockTimer = window.setTimeout(updateClock, nextDayMs - clockNowMs);
+  for (const listener of clockListeners) listener();
+}
+
+function resumeClock() {
+  if (document.visibilityState === "visible") updateClock();
+}
+
+function subscribeToClock(listener: () => void) {
+  clockListeners.add(listener);
+  if (clockListeners.size === 1) {
+    document.addEventListener("visibilitychange", resumeClock);
+    updateClock();
+  }
+  return () => {
+    clockListeners.delete(listener);
+    if (clockListeners.size === 0) {
+      window.clearTimeout(clockTimer);
+      document.removeEventListener("visibilitychange", resumeClock);
+      clockNowMs = null;
+    }
+  };
+}
+
+const getClockSnapshot = () => clockNowMs;
+const getServerClockSnapshot = () => null;
 
 /**
- * The visitor's clock, read once after hydration. The static export renders
- * `null`, so every clock-dependent reading starts as a placeholder instead of
- * freezing the build date into the HTML.
+ * One visitor-clock snapshot and UTC-boundary timer for readiness and path.
+ * Server and first hydration retain placeholders, never the build date.
  */
-export function useMountedNowMs(): number | null {
-  const isHydrated = useSyncExternalStore(subscribeToHydration, getClientHydrationSnapshot, getServerHydrationSnapshot);
-  return useMemo(() => (isHydrated ? new Date().getTime() : null), [isHydrated]);
+export function usePreLaunchNowMs(): number | null {
+  return useSyncExternalStore(subscribeToClock, getClockSnapshot, getServerClockSnapshot);
 }
 
 /**
@@ -66,7 +98,7 @@ export function PreLaunchReadiness({
 }: {
   coin: Pick<StablecoinMeta, "launchPhase" | "announcedDate" | "expectedLaunchDate" | "dateHistory">;
 }) {
-  const nowMs = useMountedNowMs();
+  const nowMs = usePreLaunchNowMs();
   const clock = nowMs == null ? null : computeLaunchClock(coin, nowMs);
   const target = coin.expectedLaunchDate ? parseFuzzyRange(coin.expectedLaunchDate) : null;
   const moves = coin.dateHistory?.length ?? 0;

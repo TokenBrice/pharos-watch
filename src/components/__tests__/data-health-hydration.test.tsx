@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ReactElement } from "react";
 import { hydrateRoot } from "react-dom/client";
 import { renderToString } from "react-dom/server";
-import { act, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import { DataHealthBanner } from "@/components/data-health-banner";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { deriveDataHealth } from "@/lib/data-health";
@@ -16,7 +16,8 @@ import type { StablecoinLiveSummary } from "@shared/types/stablecoin-live-summar
 
 import { buildDetailStaleQueries } from "@/lib/stablecoin-detail-query-view-model";
 import { makeBuildStablecoinDetailViewModelParams } from "@/lib/__tests__/fixtures/stablecoin-detail-view-model";
-afterEach(() => vi.restoreAllMocks());
+import { usePsiBeaconState } from "@/hooks/use-psi-beacon-state";
+afterEach(() => { vi.restoreAllMocks(); vi.useRealTimers(); vi.unstubAllGlobals(); });
 
 async function hydrateSavedHtml(html: string, element: ReactElement, expectedText: string) {
   const container = document.createElement("div");
@@ -46,6 +47,39 @@ describe("data-health hydration", () => {
     now.mockReturnValue(savedAt + 6 * 3600_000);
 
     await hydrateSavedHtml(html, element, "Showing an older snapshot");
+  });
+
+  it("ages unchanged mounted banner and PSI evidence without another read or incidental rerender", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(savedAt);
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => { callback(0); return 0; });
+    const fetch = vi.fn();
+    vi.stubGlobal("fetch", fetch);
+    const meta = { updatedAt: savedAt / 1000, ageSeconds: 0, status: "fresh" as const, freshBudgetSec: 1, degradedBudgetSec: 2 };
+    function Beacon() {
+      const beacon = usePsiBeaconState({
+        current: { score: 95, band: "STEADY", computedAt: savedAt / 1000 },
+        meta, dataUpdatedAt: savedAt,
+      });
+      return <output data-testid="beacon">{beacon.isCurrent ? "current" : "retained"}</output>;
+    }
+    const mounted = render(<>
+      <Beacon />
+      <StaleDataBanner persistent queries={[{ label: "Prices", dataUpdatedAt: savedAt, staleTime: 1000, hasData: true, meta }]} />
+    </>);
+    expect(screen.getByTestId("beacon").textContent).toBe("current");
+    // <output> is also a status region; inspect the banner's own reserved slot.
+    const banner = mounted.container.querySelector("[data-freshness-slot]")!;
+    expect(banner.getAttribute("role")).toBe("status");
+    expect(banner.getAttribute("data-health-state")).toBe("fresh");
+    act(() => vi.advanceTimersByTime(1001));
+    expect(screen.getByTestId("beacon").textContent).toBe("retained");
+    expect(banner.getAttribute("data-health-state")).toBe("degraded");
+    act(() => vi.advanceTimersByTime(1000));
+    expect(banner.getAttribute("data-health-state")).toBe("stale");
+    expect(fetch).not.toHaveBeenCalled();
+    mounted.unmount();
+    expect(vi.getTimerCount()).toBe(0);
   });
 
   it("hydrates a timestamp across browser timezones before displaying the local time", async () => {

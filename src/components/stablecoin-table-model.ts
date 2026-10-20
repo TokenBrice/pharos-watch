@@ -288,8 +288,8 @@ export function useStablecoinTableRows({
     [virtualizer],
   );
   const handleCsvExport = useCallback(() => {
-    exportStablecoinsCsv(displayed, pegScores, dexLiquidity, reportCards, sourceGenerations);
-  }, [dexLiquidity, displayed, pegScores, reportCards, sourceGenerations]);
+    exportStablecoinsCsv(displayed, sortedRankById, pegScores, dexLiquidity, reportCards, sourceGenerations);
+  }, [dexLiquidity, displayed, pegScores, reportCards, sortedRankById, sourceGenerations]);
   const onPreviousOverviewPage = useCallback(() => {
     setOverviewPageIndex((current) => Math.max(0, current - 1));
     scrollRef.current?.scrollTo({ top: 0 });

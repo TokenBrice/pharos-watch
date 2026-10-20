@@ -13,6 +13,8 @@ import { coverageFeature as micaCoverageFeature } from "@/lib/coverage/mica";
 import { coverageFeature as priceCoverageFeature } from "@/lib/coverage/price";
 import { coverageFeature as redemptionCoverageFeature } from "@/lib/coverage/redemption";
 import { coverageFeature as reserveCoverageFeature } from "@/lib/coverage/reserves";
+import { coverageFeature as safetyCoverageFeature } from "@/lib/coverage/safety";
+import { matchesCoverageFilter } from "@/lib/coverage-filtering";
 import { makeStablecoinMeta } from "@shared/test-utils/stablecoin";
 
 type TestCoin = StablecoinMeta & { mintAuthoritySummary?: MintAuthorityCoverageSummary };
@@ -98,6 +100,7 @@ function makeCoverageRow([id, symbol]: CoverageRowIdentity, overrides: CoverageR
     marketCapUsd: 100,
     hasPegCoverage: true,
     safetyScore: 82,
+    safetyRatingStatus: "rated",
     dexCoverageClass: "primary",
     redemptionEntry: null,
     hasYieldCoverage: false,
@@ -112,6 +115,31 @@ function coverageFeature(key: CoverageFeatureKey) {
 }
 
 describe("coverage helpers", () => {
+  it("keeps rated zero, genuine NR, and technical safety gaps in disjoint populations", () => {
+    expect(safetyCoverageFeature.resolve(0, "rated")).toMatchObject({ kind: "rated", available: true });
+    expect(safetyCoverageFeature.resolve(null, "not-rated")).toMatchObject({ kind: "nr", spokenLabel: "Not rated" });
+    // Membership belongs to the publication status, not a numeric score.
+    expect(safetyCoverageFeature.resolve(80, undefined).kind).toBe("data-unavailable");
+    const gap = makeCoverageRow(["gap", "GAP"], {
+      safetyScore: null, safetyRatingStatus: "pipeline-gap",
+      safetyReasonCodes: ["single-pillar-pipeline-gap"], marketCapUsd: 700,
+    });
+    const nr = makeCoverageRow(["nr", "NR"], { safetyScore: null, safetyRatingStatus: "not-rated", marketCapUsd: 100 });
+    const rated = makeCoverageRow(["zero", "ZERO"], { safetyScore: 0, marketCapUsd: 200 });
+    expect(gap.statuses.safety).toMatchObject({ kind: "data-unavailable", label: "Data n/a", available: false });
+    expect(gap.statuses.safety.detail).toContain("single-pillar-pipeline-gap");
+    expect(gap.statuses.safety.spokenLabel).not.toMatch(/NR|Not rated/);
+    expect(matchesCoverageFilter(gap, "missing-safety")).toBe(false);
+    expect(matchesCoverageFilter(nr, "missing-safety")).toBe(true);
+    const summary = buildCoverageFeatureSummary(coverageFeature("safety"), [rated, nr, gap]);
+    expect(summary).toMatchObject({ availableCount: 1, totalCount: 2, coveragePct: 50, mcapSharePct: 200 / 300 * 100 });
+    expect(summary.breakdown).toEqual([
+      { key: "rated", label: "rated", count: 1 },
+      { key: "nr", label: "NR", count: 1 },
+      { key: "data-unavailable", label: "data n/a", count: 1 },
+    ]);
+  });
+
   it("keeps market-cap reach unavailable when only uncovered rows have observed cap", () => {
     const summary = buildCoverageFeatureSummary(coverageFeature("yield"), [
       makeCoverageRow(["covered", "COV"], { hasYieldCoverage: true, marketCapAvailable: false }),
@@ -536,6 +564,7 @@ describe("coverage helpers", () => {
         marketCapUsd: 200,
         hasPegCoverage: false,
         safetyScore: null,
+        safetyRatingStatus: "not-rated",
         dexCoverageClass: "unobserved",
       }),
     ];
@@ -665,11 +694,13 @@ describe("coverage helpers", () => {
         }),
         marketCapUsd: 800,
         safetyScore: null,
+        safetyRatingStatus: "not-rated",
         dexCoverageClass: null,
       }),
       makeCoverageRow(["unknown", "UNK"], {
         marketCapUsd: 200,
         safetyScore: null,
+        safetyRatingStatus: "not-rated",
         dexCoverageClass: null,
       }),
     ];
@@ -761,12 +792,14 @@ describe("coverage helpers", () => {
         marketCapUsd: 500,
         consensusSources: ["coingecko", "defillama", "pyth", "binance", "coinbase"],
         safetyScore: null,
+        safetyRatingStatus: "not-rated",
         dexCoverageClass: null,
       }),
       makeCoverageRow(["shallow", "SHAL"], {
         marketCapUsd: 500,
         consensusSources: ["coingecko"],
         safetyScore: null,
+        safetyRatingStatus: "not-rated",
         dexCoverageClass: null,
       }),
     ];

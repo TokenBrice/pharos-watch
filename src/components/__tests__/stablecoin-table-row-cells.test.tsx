@@ -1,7 +1,9 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { StablecoinTableRowCells } from "@/components/stablecoin-table-row-cells";
+import { RowSparkline } from "@/components/row-sparkline";
+import type * as RowSparklineModule from "@/components/row-sparkline";
 import { buildStablecoinTableRowModel } from "@/components/stablecoin-table-row-model";
 import type { StablecoinTableRowCellProps } from "@/components/stablecoin-table-row-types";
 import { makePegSummaryCoin } from "@/test-utils/peg-summary-fixtures";
@@ -11,6 +13,11 @@ import { makeReportCardsV9Response } from "@/test/fixtures/safety-score-v9";
 import { makeReportCardsV9PartialCard, makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
 import { makeDexLiquidityData } from "@/test/fixtures/dex-liquidity";
 import { getScoreColor } from "@/lib/severity-colors";
+
+vi.mock("@/components/row-sparkline", async (importOriginal) => {
+  const actual = await importOriginal<typeof RowSparklineModule>();
+  return { ...actual, RowSparkline: vi.fn(actual.RowSparkline) };
+});
 
 function buildRow(): StablecoinTableRowCellProps {
   const coin = makeStablecoin({
@@ -119,6 +126,16 @@ describe("StablecoinTableRowCells supply availability", () => {
     expect(html).toContain("$0");
     expect(html).toContain("-100.00%");
     expect(html).not.toContain("Supply unavailable");
+  });
+
+  it("names the unchanged USD-valued history as a market-cap sparkline", () => {
+    vi.mocked(RowSparkline).mockClear();
+    const html = renderSupply({ peggedEUR: 110 });
+    expect(html).toContain("+10.00%");
+    expect(vi.mocked(RowSparkline).mock.calls[0]?.[0]).toMatchObject({
+      ariaLabel: "7-day USD market-cap trend", data: [100, 100, 110], decorative: true,
+    });
+    expect(html).toContain('aria-hidden="true"');
   });
 
   it("does not connect a supply sparkline across absent middle history", () => {

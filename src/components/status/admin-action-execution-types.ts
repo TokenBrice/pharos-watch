@@ -48,6 +48,7 @@ export interface AdminActionExecutionRequest {
 
 export interface AdminActionExecution extends AdminMutationExecution<AdminActionExecutionRequest> {
   action: StatusPageAction;
+  idempotencyKeyHash: string;
   executionKey: string;
   requestPath: string;
   requestMethod: EndpointMethod;

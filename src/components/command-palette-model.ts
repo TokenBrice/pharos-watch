@@ -250,10 +250,11 @@ function stablecoinLifecycleLabel(status: string | undefined, frozenAt?: string)
 function projectStablecoinLiveMetadata(
   stablecoinId: string,
   liveMetadata?: ReadonlyMap<string, CommandPaletteStablecoinLiveMetadata>,
-): Pick<CommandPaletteResultDescriptor, "marketCapUsd" | "stablecoinHealth"> {
+): Pick<CommandPaletteResultDescriptor, "marketCapUsd" | "marketCapAsOf" | "stablecoinHealth"> {
   const live = liveMetadata?.get(stablecoinId);
   return {
     marketCapUsd: live?.marketCapUsd,
+    marketCapAsOf: live?.marketCapAsOf,
     stablecoinHealth: live?.health,
   };
 }

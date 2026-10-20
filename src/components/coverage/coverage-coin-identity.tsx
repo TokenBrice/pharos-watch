@@ -34,7 +34,7 @@ function IdentityContent({
         </div>
         <div className="mt-1 flex flex-wrap items-center gap-1.5 text-2xs leading-relaxed text-muted-foreground">
           <span className="pharos-numeric text-foreground">
-            {row.marketCapUsd > 0 ? formatCurrency(row.marketCapUsd) : "Mcap -"}
+            {row.marketCapAvailable ? formatCurrency(row.marketCapUsd) : "Mcap -"}
           </span>
           <span aria-hidden>&middot;</span>
           <span>{row.pegLabel}</span>

@@ -99,6 +99,8 @@ export type CommandPaletteStablecoinHealth =
 
 export interface CommandPaletteStablecoinLiveMetadata {
   marketCapUsd?: number;
+  /** Producer Unix seconds; present only for a retained, not current, cap. */
+  marketCapAsOf?: number;
   health?: CommandPaletteStablecoinHealth;
 }
 
@@ -115,6 +117,7 @@ export interface CommandPaletteResultDescriptor extends CommandPaletteSectionedI
   /** Apply CSS invert in dark mode (used for chain logos with darkInvert). */
   imageDarkInvert?: boolean;
   marketCapUsd?: number;
+  marketCapAsOf?: number;
   stablecoinHealth?: CommandPaletteStablecoinHealth;
   frozen?: boolean;
   href?: string;

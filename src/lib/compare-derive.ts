@@ -71,6 +71,8 @@ export interface ComparisonCoinEntry {
   yield?: YieldRanking | null;
   stress?: StressSignalEntry | null;
   flow?: MintBurnCoinFlow | null;
+  /** A usable whole-feed publication exists, even when it contains no ratings. */
+  bluechipPublicationAvailable: boolean;
   bluechipRating?: BluechipRating | null;
 }
 
@@ -212,6 +214,7 @@ export function deriveComparisonCoins({
         yield: yieldMap?.get(id) ?? null,
         stress: stressMap?.[id] ?? null,
         flow: flowCoin ?? null,
+        bluechipPublicationAvailable: bluechipMap != null,
         bluechipRating: bluechipMap?.[id] ?? null,
       };
     })

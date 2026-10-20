@@ -322,12 +322,14 @@ export function sortScreenerRows(
   return copy;
 }
 
-export interface ScreenerScoreFilterLoadingState {
-  dewsLoading: boolean;
-  dewsHasData: boolean;
-  reportLoading: boolean;
-  reportHasData: boolean;
+export interface ScreenerFilterSourceState {
+  loading: boolean;
+  /** A publication, including a valid empty publication or retained data. */
+  hasData: boolean;
+  error?: unknown;
 }
+
+export type ScreenerFilterSources = Record<"dews" | "report" | "peg" | "liquidity", ScreenerFilterSourceState>;
 
 function isScoreRangeActive(minValue: number, maxValue: number): boolean {
   return minValue > 0 || maxValue < 100;
@@ -353,17 +355,13 @@ function passesMinimum(value: number | null | undefined, minValue: number): bool
   return value != null && value >= minValue;
 }
 
-export function hasLoadingScoreFilterData(
+export function resolveScreenerFilterDataState(
   filters: ScreenerFilters,
-  state: ScreenerScoreFilterLoadingState,
-): boolean {
+  sources: ScreenerFilterSources,
+): "ready" | "loading" | "unavailable" {
+  // Exact Picker inspection bypasses every broad predicate.
+  if (filters.coins.length > 0) return "ready";
   const dewsActive = isScoreRangeActive(filters.dewsMin, filters.dewsMax);
-  // Every filter listed here reads the same `reportCards` query. Since safety
-  // 9.1 the two mint filters do too — the route bucket stays curated, but the
-  // score and its band are re-sourced from the published V9 mint component. They
-  // were left out when the mint data moved, so an active mint-score filter
-  // silently narrowed the table during the first report fetch with no loading
-  // affordance at all.
   const reportActive =
     filters.safetyGrades.length > 0 ||
     filters.safetyScoreMin > 0 ||
@@ -374,10 +372,14 @@ export function hasLoadingScoreFilterData(
     filters.mintAuthorityScoreMin > 0 ||
     filters.mintAuthorityScores.length > 0;
 
-  return (
-    (dewsActive && state.dewsLoading && !state.dewsHasData) ||
-    (reportActive && state.reportLoading && !state.reportHasData)
-  );
+  const required = [
+    ...(dewsActive ? [sources.dews] : []),
+    ...(reportActive ? [sources.report] : []),
+    ...(filters.pegScoreMin > 0 ? [sources.peg] : []),
+    ...(filters.liquidityScoreMin > 0 ? [sources.liquidity] : []),
+  ];
+  if (required.some((source) => !source.hasData && (source.error || !source.loading))) return "unavailable";
+  return required.some((source) => !source.hasData) ? "loading" : "ready";
 }
 
 /**

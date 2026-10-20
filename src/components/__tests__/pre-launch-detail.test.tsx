@@ -1,10 +1,13 @@
 // @vitest-environment jsdom
 
-import { renderToStaticMarkup } from "react-dom/server";
-import { cleanup, render, screen } from "@testing-library/react";
+import { hydrateRoot } from "react-dom/client";
+import { renderToStaticMarkup, renderToString } from "react-dom/server";
+import { act, cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { StablecoinMeta } from "@shared/types";
 import { PreLaunchDetail } from "@/components/pre-launch-detail";
+import { PreLaunchReadiness, usePreLaunchNowMs } from "@/components/pre-launch-readiness";
+import { PreLaunchLaunchPath } from "@/components/pre-launch-launch-path";
 import { DRIFT_STATUS_LABEL, resolveDriftDisplay } from "@/lib/pre-launch";
 
 const coin: StablecoinMeta = {
@@ -41,8 +44,12 @@ function staticDocument(input: StablecoinMeta = coin) {
   return new DOMParser().parseFromString(html, "text/html");
 }
 
+function ClockSurfaces({ input }: { input: StablecoinMeta }) {
+  return <><PreLaunchReadiness coin={input} /><PreLaunchLaunchPath coin={input} /></>;
+}
+
 describe("PreLaunchDetail", () => {
-  afterEach(() => { cleanup(); vi.useRealTimers(); });
+  afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.useRealTimers(); });
 
   it("uses the dossier identity header and keeps the launch narrative in a closed module fold", () => {
     const document = staticDocument();
@@ -114,7 +121,7 @@ describe("PreLaunchDetail", () => {
   });
 
   it("reads the readiness clock from the browser, not the build", () => {
-    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-09-25T12:00:00Z"));
     const first = render(<PreLaunchDetail coin={coin} logoSrc={undefined} summary={null} />);
     expect(screen.getByText("Window opens in 6 d")).toBeTruthy();
@@ -126,5 +133,97 @@ describe("PreLaunchDetail", () => {
     render(<PreLaunchDetail coin={coin} logoSrc={undefined} summary={null} />);
     expect(screen.getByText("Window closed 2 d ago")).toBeTruthy();
     expect(screen.getByText("Overdue")).toBeTruthy();
+  });
+
+  it.each(["2026-09-30", "2026-09", "2026-Q3"])("expires the inclusive %s target and advances both mounted surfaces at UTC midnight", (target) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-30T23:59:00Z"));
+    const input = { ...coin, expectedLaunchDate: target, dateHistory: undefined, announcedDate: "2026-09-29" };
+    const mounted = render(<ClockSurfaces input={input} />);
+    const age = screen.getByText("Since announcement").parentElement!;
+    const today = screen.getByText("Today · Testnet");
+    const position = today.getAttribute("style");
+    expect(screen.getByText("On track")).toBeTruthy();
+    // The path also labels today's target; the countdown belongs to readiness.
+    expect(within(screen.getByRole("group", { name: "Launch readiness" }))
+      .getByText(target === "2026-09-30" ? "Today" : "Window open · closes in 1 d")).toBeTruthy();
+    expect(age.textContent).toContain("1d");
+    expect(vi.getTimerCount()).toBe(1);
+    act(() => vi.advanceTimersByTime(59_999));
+    expect(screen.queryByText("Overdue")).toBeNull();
+    act(() => vi.advanceTimersByTime(1));
+    expect(screen.getByText("Overdue")).toBeTruthy();
+    expect(screen.getByText(target === "2026-09-30" ? "Passed 0 d ago" : "Window closed 0 d ago")).toBeTruthy();
+    expect(age.textContent).toContain("2d");
+    expect(today.getAttribute("style")).not.toBe(position);
+    mounted.unmount();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("removes the shared visibility listener only when the last consumer unmounts", () => {
+    vi.useFakeTimers();
+    const add = vi.spyOn(document, "addEventListener");
+    const remove = vi.spyOn(document, "removeEventListener");
+    const first = render(<ClockSurfaces input={coin} />);
+    const second = render(<ClockSurfaces input={coin} />);
+    const subscriptions = add.mock.calls.filter(([event]) => event === "visibilitychange");
+    expect(subscriptions).toHaveLength(1);
+    first.unmount();
+    expect(remove.mock.calls.filter(([event]) => event === "visibilitychange")).toHaveLength(0);
+    expect(vi.getTimerCount()).toBe(1);
+    second.unmount();
+    expect(remove).toHaveBeenCalledWith("visibilitychange", subscriptions[0][1]);
+    expect(vi.getTimerCount()).toBe(0);
+    act(() => document.dispatchEvent(new Event("visibilitychange")));
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("resumes from a suspended tab and keeps aging after the target expires", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-30T23:59:00Z"));
+    const visibility = vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden");
+    render(<ClockSurfaces input={{ ...coin, expectedLaunchDate: "2026-09", dateHistory: undefined, announcedDate: "2026-09-29" }} />);
+    const today = screen.getByText("Today · Testnet");
+    const position = today.getAttribute("style");
+    vi.setSystemTime(new Date("2026-10-03T12:00:00Z"));
+    visibility.mockReturnValue("visible");
+    act(() => document.dispatchEvent(new Event("visibilitychange")));
+    expect(screen.getByText("Overdue")).toBeTruthy();
+    expect(screen.getByText("Window closed 2 d ago")).toBeTruthy();
+    expect(screen.getByText("Since announcement").parentElement?.textContent).toContain("4d");
+    expect(today.getAttribute("style")).not.toBe(position);
+    act(() => vi.advanceTimersByTime(12 * 60 * 60_000));
+    expect(screen.getByText("Window closed 3 d ago")).toBeTruthy();
+    expect(screen.getByText("Since announcement").parentElement?.textContent).toContain("5d");
+  });
+
+  it("retains null on the server and first hydration even when another clock consumer is mounted", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-30T23:59:00Z"));
+    render(<ClockSurfaces input={coin} />);
+    const snapshots: (number | null)[] = [];
+    function HydratedSurfaces() {
+      snapshots.push(usePreLaunchNowMs());
+      return <ClockSurfaces input={coin} />;
+    }
+    const container = document.createElement("div");
+    container.innerHTML = renderToString(<HydratedSurfaces />);
+    expect(snapshots).toEqual([null]);
+    expect(container.textContent).not.toContain("Pushed once");
+    expect(container.querySelector('[role="img"]')).toBeNull();
+    snapshots.length = 0;
+    const errors: unknown[] = [];
+    const root = hydrateRoot(container, <HydratedSurfaces />, { onRecoverableError: (error) => errors.push(error) });
+    try {
+      await act(async () => {});
+      expect(snapshots[0]).toBeNull();
+      expect(snapshots.at(-1)).toBe(Date.now());
+      expect(container.textContent).toContain("Pushed once");
+      expect(container.querySelector('[role="img"]')).not.toBeNull();
+      expect(errors).toEqual([]);
+      expect(vi.getTimerCount()).toBe(1);
+    } finally {
+      await act(() => root.unmount());
+    }
   });
 });

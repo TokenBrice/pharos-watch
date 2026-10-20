@@ -98,7 +98,8 @@ export function CoverageFeatureSnapshotRow({ summary }: CoverageFeatureSnapshotR
   // published as a coverage gap.
   const unavailableCount = barItems.find((item) => item.key === "data-unavailable")?.count ?? 0;
   const missingCount = Math.max(summary.totalCount - (stackedCount - unavailableCount), 0);
-  const missingPct = summary.totalCount > 0 ? (missingCount / summary.totalCount) * 100 : 0;
+  const barTotalCount = stackedCount + missingCount;
+  const missingPct = barTotalCount > 0 ? (missingCount / barTotalCount) * 100 : 0;
   const marketCapLabel = summary.mcapSharePct == null ? "n/a" : `${summary.mcapSharePct.toFixed(0)}%`;
   const segmentLabel = [
     ...barItems.map((item) => `${item.label} ${item.count}`),
@@ -147,7 +148,7 @@ export function CoverageFeatureSnapshotRow({ summary }: CoverageFeatureSnapshotR
         >
           {barItems.map((item) => {
             const visual = COVERAGE_BREAKDOWN_VISUAL_CLASSES[summary.feature.key]?.[item.key];
-            const pct = summary.totalCount > 0 ? (item.count / summary.totalCount) * 100 : 0;
+            const pct = barTotalCount > 0 ? (item.count / barTotalCount) * 100 : 0;
             const showLabel = pct >= BAR_LABEL_MIN_PCT;
             const visibleLabel = BAR_LABELS[item.key] ?? item.label;
             return (

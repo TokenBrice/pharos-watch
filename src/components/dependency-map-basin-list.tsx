@@ -10,7 +10,7 @@ import { downstreamHeadline } from "@/components/dependency-watershed/dependency
 import { computeDependencyExposure } from "@/hooks/use-dependency-exposure-mode";
 import { trackEvent } from "@/lib/analytics";
 import { formatEventTimestamp } from "@/lib/depeg-event-display";
-import { formatHubDirect, hubDirectKnown } from "@/lib/dependency-watershed/known";
+import { formatClaimSubtotal } from "@/lib/dependency-watershed/known";
 import type { DependencyHub, DependencyHubsModel } from "@shared/lib/dependency-hubs-model";
 
 const INITIAL_HUBS = 8;
@@ -19,8 +19,8 @@ const HOP_ROWS = 10;
 function HubSplit({ hub }: { hub: DependencyHub }) {
   return (
     <dl className="space-y-1 text-xs text-muted-foreground">
-      <div><dt className="inline">Of which own-family wrappers: </dt><dd className="inline">{hub.unknownFormCount > 0 && hub.passThroughCount + hub.vaultClaimCount === 0 ? "Split unavailable" : <>{formatCurrency(hub.ownFamilyUsd, 2)}{hub.unknownFormCount > 0 ? " (classified claims only)" : ""}</>}</dd></div>
-      <div><dt className="inline">Of which vault claims: </dt><dd className="inline">{hub.unknownFormCount > 0 && hub.vaultClaimCount === 0 ? "Split unavailable" : <>{formatCurrency(hub.vaultClaimUsd, 2)}{hub.unknownFormCount > 0 ? " (classified claims only)" : ""}</>}</dd></div>
+      <div><dt className="inline">Of which own-family wrappers: </dt><dd className="inline">{hub.unknownFormCount > 0 && hub.passThroughCount + hub.vaultClaimCount === 0 ? "Split unavailable" : <>{formatClaimSubtotal(hub.ownFamilyUsd, hub.claimAvailability.classified)}{hub.unknownFormCount > 0 ? " (classified claims only)" : ""}</>}</dd></div>
+      <div><dt className="inline">Of which vault claims: </dt><dd className="inline">{hub.unknownFormCount > 0 && hub.vaultClaimCount === 0 ? "Split unavailable" : <>{formatClaimSubtotal(hub.vaultClaimUsd, hub.claimAvailability["vault-claim"])}{hub.unknownFormCount > 0 ? " (classified claims only)" : ""}</>}</dd></div>
       {hub.unknownFormCount > 0 && <div>Wrapper/vault split unavailable{hub.unknownFormUsd === null ? "; supply unavailable" : ` for ${formatCurrency(hub.unknownFormUsd, 2)} of known serial exposure`}.</div>}
       <div>{hub.topDependent ? `${Math.round(hub.topDependent.shareOfHubExposure * 100)}% from ${hub.topDependentSymbol}` : "Top dependent share unavailable"} · {hub.edgeTypeBreakdown.map(entry => `${entry.type} ${entry.edgeCount}`).join(" · ")} · {hub.hubMcapUsd === null ? "mcap n/a" : `own market cap ${formatCurrency(hub.hubMcapUsd, 2)}`}</div>
       {!hub.direct.complete && <div>{hub.direct.excludedSupplyUnknownIds.length} supplies unavailable; {hub.direct.unknownShareEdgeCount} shares unknown{hub.direct.integrityFlag ? "; basket shares require review" : ""}.</div>}
@@ -99,8 +99,7 @@ export function DependencyMapBasinList({ model, publication, logos, labelOf, onE
   const hubIds = useMemo(() => new Set(model.hubs.map(hub => hub.id)), [model]);
   if (model.hubs.length === 0) return null;
   const hubs = showAll ? model.hubs : model.hubs.slice(0, INITIAL_HUBS);
-  const known = (hub: DependencyHub) => hubDirectKnown(hub, publication.edges);
-  const max = Math.max(0, ...model.hubs.filter(known).map(hub => hub.direct.knownUsd));
+  const max = Math.max(0, ...model.hubs.filter(hub => hub.directKnown).map(hub => hub.direct.knownUsd));
   return (
     <section className="pharos-card-shell space-y-3 px-4 py-4 md:hidden" aria-labelledby="dependency-basin-list-title">
       <div className="space-y-1">
@@ -123,10 +122,10 @@ export function DependencyMapBasinList({ model, publication, logos, labelOf, onE
                 <span className="min-w-0 flex-1 space-y-1">
                   <span className="flex items-baseline justify-between gap-2">
                     <span className="truncate text-sm font-semibold">{labelOf(hub.id)}</span>
-                    <span className="pharos-numeric shrink-0 text-xs">{formatHubDirect(hub, publication.edges, "n/a")} · {hub.dependentCount} {hub.dependentCount === 1 ? "dependent" : "dependents"}</span>
+                    <span className="pharos-numeric shrink-0 text-xs">{hub.directKnown ? `${formatCurrency(hub.direct.knownUsd, 2)}${hub.direct.complete ? "" : " (known only)"}` : "n/a"} · {hub.dependentCount} {hub.dependentCount === 1 ? "dependent" : "dependents"}</span>
                   </span>
                   <span className="block h-1.5 w-full rounded-full bg-muted" aria-hidden="true">
-                    {known(hub) && max > 0 && <span className="block h-1.5 rounded-full bg-foreground/60" style={{ width: `${(hub.direct.knownUsd / max) * 100}%` }} />}
+                    {hub.directKnown && max > 0 && <span className="block h-1.5 rounded-full bg-foreground/60" style={{ width: `${(hub.direct.knownUsd / max) * 100}%` }} />}
                   </span>
                 </span>
                 <span aria-hidden="true" className="text-muted-foreground">{open ? "▾" : "▸"}</span>

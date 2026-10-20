@@ -1,5 +1,5 @@
 import type { SupplyHistoryPoint } from "@shared/types";
-import type { NativeSupplyCheckpoints } from "@shared/types/stablecoin-live-summary";
+import type { NativeSupplyCheckpoints, StablecoinLiveSummary } from "@shared/types/stablecoin-live-summary";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { CRON_24H, CRON_RESERVE_SYNC } from "@/lib/cron-intervals";
 import { resolveQueryViewState } from "@/lib/query-view-state";
@@ -20,7 +20,6 @@ import type {
   PegSummaryCoin,
   PegSummaryResponse,
   ReportCardsV9CurrentResponse,
-  StablecoinData,
   StablecoinMeta,
   StressSignalEntry,
   YieldRanking,
@@ -104,7 +103,7 @@ function computePerformanceVsUsd1y(
 
 export function buildDetailMarketSnapshot(
   coin: StablecoinMeta,
-  coinData: StablecoinData,
+  coinData: StablecoinLiveSummary,
   nativeSupply: NativeSupplyCheckpoints | null,
   supplyHistory: SupplyHistoryPoint[],
   nowMs: number,
@@ -238,7 +237,7 @@ export function buildDetailStaleQueries(
   }
   const result: StablecoinDetailStaleQuery[] = [
     {
-      ...staleQueryFrom("stablecoins", queries.stablecoinList, (data) => Boolean(data?.peggedAssets?.length)),
+      ...staleQueryFrom("stablecoins", queries.liveSummary, (data) => data !== undefined),
       label: "Detail snapshot",
     },
     staleQueryFrom("pegSummary", queries.pegSummary, (data) => Boolean(data?.coins?.length)),
@@ -347,7 +346,6 @@ export function buildDetailFeatureSnapshot(
   supplemental: StablecoinDetailViewModelSupplementalInputs,
 ): DetailFeatureSnapshot {
   const { yieldRankings, stressSignals, flows, blacklist, reserves } = supplemental;
-  const liquidityEntry = queries.dexLiquidity.data?.[id];
   const yieldRanking = yieldRankings.data?.rankings.find((candidate) => candidate.id === id) ?? null;
   const stressSignal = stressSignals.data?.signals[id] ?? null;
   const flowEntry = flows.data?.coins.find((entry) => entry.stablecoinId === id) ?? null;
@@ -372,63 +370,15 @@ export function buildDetailFeatureSnapshot(
       blacklistSymbol,
     },
     states: {
-      liquidity: featureState(
-        resolveQueryViewState({
-          hasData: queries.dexLiquidity.data !== undefined,
-          isLoading: queries.dexLiquidity.isLoading ?? false,
-          error: queries.dexLiquidity.error,
-          isEmpty: liquidityEntry == null,
-        }),
-        queries.dexLiquidity.dataUpdatedAt,
-        queries.dexLiquidity.error,
-      ),
-      yield: featureState(
-        resolveQueryViewState({
-          hasData: yieldRankings.data !== undefined,
-          isLoading: yieldRankings.isLoading,
-          error: yieldRankings.error,
-          isEmpty: yieldRanking == null,
-          // A non-yield-bearing coin with no ranking has nothing to show, not an empty section.
-          emptyState: coin.flags.yieldBearing ? "empty" : "unsupported",
-        }),
-        yieldRankings.dataUpdatedAt,
-        yieldRankings.error,
-      ),
-      stress: featureState(
-        resolveQueryViewState({
-          supported: !coin.flags.navToken,
-          hasData: stressSignals.data !== undefined,
-          isLoading: stressSignals.isLoading,
-          error: stressSignals.error,
-          isEmpty: stressSignal == null,
-        }),
-        stressSignals.dataUpdatedAt,
-        stressSignals.error,
-      ),
-      flows: featureState(
-        resolveQueryViewState({
-          enabled: flows.enabled,
-          hasData: flows.data !== undefined,
-          isLoading: flows.isLoading,
-          error: flows.error,
-          isEmpty: flowEntry == null,
-          emptyState: "unsupported",
-        }),
-        flows.dataUpdatedAt,
-        flows.error,
-      ),
-      blacklist: featureState(
-        resolveQueryViewState({
-          supported: blacklistSupported,
-          enabled: blacklist.enabled,
-          hasData: blacklist.summary !== undefined,
-          isLoading: blacklist.isLoading,
-          error: blacklist.error,
-          isEmpty: blacklistEventCount === 0,
-        }),
-        blacklist.dataUpdatedAt,
-        blacklist.error,
-      ),
+      redemption: {
+        status: queries.redemptionBackstops.enabled === false ? "deferred"
+          : queries.redemptionBackstops.error
+            ? queries.redemptionBackstops.data?.coins[id] ? "retained" : "unavailable"
+            : queries.redemptionBackstops.data === undefined ? "loading"
+              : queries.redemptionBackstops.data.coins[id] ? "ready" : "empty",
+        dataUpdatedAt: queries.redemptionBackstops.dataUpdatedAt,
+        error: queries.redemptionBackstops.error ?? null,
+      },
       reserves: featureState(
         resolveQueryViewState({
           supported: Boolean(coin.liveReservesConfig),

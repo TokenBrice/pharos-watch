@@ -8,12 +8,13 @@ import { getLogoSrc } from "@/lib/logos";
 
 interface ClassDigestRowProps {
   digest: DigestedClass;
+  nowMs: number;
   logos: Record<string, string>;
   highlightedId: string | null;
   eventDomId: (id: string) => string;
 }
 
-export function ClassDigestRow({ digest, logos, highlightedId, eventDomId }: ClassDigestRowProps) {
+export function ClassDigestRow({ digest, nowMs, logos, highlightedId, eventDomId }: ClassDigestRowProps) {
   const tint = tapeClassRowBg(digest.classSlug);
   const severityText = SEVERITY_TEXT_CLASS[digest.maxSeverity];
   const severityLabel = SEVERITY_LABEL[digest.maxSeverity];
@@ -26,6 +27,7 @@ export function ClassDigestRow({ digest, logos, highlightedId, eventDomId }: Cla
         <EventCard
           key={key}
           event={event}
+          nowMs={nowMs}
           count={count}
           logoSrc={event.coinId ? getLogoSrc(logos, event.coinId) : undefined}
           highlighted={highlightedId === event.id}

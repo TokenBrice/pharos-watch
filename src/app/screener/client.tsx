@@ -20,7 +20,7 @@ import {
   SCREENER_URL_SCHEMA,
   applyFilters,
   countActiveScreenerFilters,
-  hasLoadingScoreFilterData,
+  resolveScreenerFilterDataState,
   hasActiveFilters,
   normalizeScreenerDeepLinkAliases,
   projectBlacklistable,
@@ -122,6 +122,7 @@ export function ScreenerClient() {
   } = useStablecoins();
   const {
     data: pegData,
+    isLoading: isPegLoading,
     dataUpdatedAt: pegUpdatedAt,
     error: pegError,
     refetch: refetchPeg,
@@ -145,6 +146,7 @@ export function ScreenerClient() {
   } = useStressSignals();
   const {
     data: dexData,
+    isLoading: isDexLoading,
     dataUpdatedAt: dexUpdatedAt,
     error: dexError,
     refetch: refetchDex,
@@ -180,10 +182,14 @@ export function ScreenerClient() {
   // Source-local projections must not be rebuilt (or readmitted) whenever a
   // sibling query arrives.
   const pegById = useMemo(() => buildPegSummaryCoinMap(pegData?.coins), [pegData?.coins]);
-  const safetyById = useMemo(() => {
-    const projected = reportData ? buildV9SafetyTableMap(reportData, reportData.safetyScoreIdentity) : null;
-    return projected?.status === "available" ? projected.value : {};
-  }, [reportData]);
+  const safetyProjection = useMemo(
+    () => reportData ? buildV9SafetyTableMap(reportData, reportData.safetyScoreIdentity) : null,
+    [reportData],
+  );
+  const safetyById = useMemo(
+    () => safetyProjection?.status === "available" ? safetyProjection.value : {},
+    [safetyProjection],
+  );
 
   // Build only after a primary dataset is available, including retained data.
   // Optional score reads preserve unknown values until their sources arrive.
@@ -250,13 +256,16 @@ export function ScreenerClient() {
     return rows;
   }, [stablecoinsData, pegById, safetyById, stressData, dexData]);
 
-  const filteredRows = useMemo(() => applyFilters(allRows, filters), [allRows, filters]);
-  const scoreFilterDataLoading = hasLoadingScoreFilterData(filters, {
-    dewsLoading: isStressLoading,
-    dewsHasData: stressData ? Object.keys(stressData.signals).length > 0 : false,
-    reportLoading: isReportLoading,
-    reportHasData: !!reportData?.cards?.length,
+  const scoreFilterDataState = resolveScreenerFilterDataState(filters, {
+    dews: { loading: isStressLoading, hasData: stressData != null, error: stressError },
+    report: { loading: isReportLoading, hasData: safetyProjection?.status === "available", error: reportError },
+    peg: { loading: isPegLoading, hasData: pegData != null, error: pegError },
+    liquidity: { loading: isDexLoading, hasData: dexData != null, error: dexError },
   });
+  const filteredRows = useMemo(
+    () => scoreFilterDataState === "ready" ? applyFilters(allRows, filters) : [],
+    [allRows, filters, scoreFilterDataState],
+  );
   const { sortKey, sortDirection, toggleSort, getAriaSortValue } = useSort<ScreenerSortKey>("safetyScore", "desc");
   const sortedRows = useMemo(
     () => sortScreenerRows(filteredRows, sortKey, sortDirection),
@@ -265,7 +274,7 @@ export function ScreenerClient() {
   const hasStablecoinRows = stablecoinsData?.peggedAssets !== undefined;
   const dataState: NonNullable<TablePaginationProps["dataState"]> = !hasStablecoinRows
     ? (stablecoinsError || !isStablecoinsLoading ? "unavailable" : "loading")
-    : scoreFilterDataLoading ? "loading" : "ready";
+    : scoreFilterDataState;
   const exportRows = dataState === "ready" ? sortedRows : [];
 
   const freshnessGroup = buildQueryFreshnessGroup([
@@ -283,7 +292,7 @@ export function ScreenerClient() {
       data: pegData?.coins,
       dataUpdatedAt: pegUpdatedAt,
       error: pegError,
-      hasData: !!pegData?.coins?.length,
+      hasData: pegData != null,
       meta: pegMeta,
       refetch: refetchPeg,
     },
@@ -292,7 +301,7 @@ export function ScreenerClient() {
       data: reportData?.cards,
       dataUpdatedAt: reportUpdatedAt,
       error: reportError,
-      hasData: !!reportData?.cards?.length,
+      hasData: safetyProjection?.status === "available",
       meta: reportMeta,
       refetch: refetchReport,
     },
@@ -301,7 +310,7 @@ export function ScreenerClient() {
       data: stressData?.signals,
       dataUpdatedAt: stressUpdatedAt,
       error: stressError,
-      hasData: stressData ? Object.keys(stressData.signals).length > 0 : false,
+      hasData: stressData != null,
       meta: stressMeta,
       refetch: refetchStress,
     },
@@ -310,20 +319,34 @@ export function ScreenerClient() {
       data: dexData,
       dataUpdatedAt: dexUpdatedAt,
       error: dexError,
-      hasData: dexData ? Object.keys(dexData).length > 0 : false,
+      hasData: dexData != null,
       meta: dexMeta,
       refetch: refetchDex,
     },
   ]);
-  const exportAsOfISO = new Date(
-    Math.max(
-      stablecoinsUpdatedAt,
-      pegUpdatedAt,
-      reportUpdatedAt,
-      stressUpdatedAt,
-      dexUpdatedAt,
-    ),
-  ).toISOString();
+  // Every live feed contributes exported columns, even when it is not needed
+  // to evaluate the active predicates. Receipt times never date these values.
+  const sourceGenerations: Record<string, string | null> = Object.fromEntries(
+    Object.entries({
+      stablecoins: stablecoinsMeta,
+      "peg-summary": pegMeta,
+      "report-cards": reportMeta,
+      "stress-signals": stressMeta,
+      "dex-liquidity": dexMeta,
+    }).map(([source, meta]) => {
+      const updatedAt = meta?.updatedAt;
+      return [source, typeof updatedAt === "number" && Number.isFinite(updatedAt) && updatedAt > 0
+        ? new Date(updatedAt * 1000).toISOString()
+        : null];
+    }),
+  );
+  const generations = Object.values(sourceGenerations);
+  // Conservative mixed-source convention: oldest producer, only if all known.
+  const exportAsOfISO = generations.reduce<string | null>(
+    (oldest, generation) => oldest === null || generation === null
+      ? null : generation < oldest ? generation : oldest,
+    generations[0] ?? null,
+  ) ?? "unknown";
 
   const totalTracked = SCREENABLE_COINS.length;
   const totalRows = hasStablecoinRows ? allRows.length : totalTracked;
@@ -362,11 +385,12 @@ export function ScreenerClient() {
             columns={EXPORT_COLUMNS}
             filename="screener"
             asOfISO={exportAsOfISO}
+            sourceGenerations={sourceGenerations}
             endpoint="screener"
             // 9.1: the mint columns are the published V9 mint component, so
             // they are stamped with the safety-score identity. The retired
             // standalone mint-authority lane no longer produces this value.
-            methodologyLabel={`safety-score ${reportData?.safetyScoreIdentity?.methodologyVersion ?? "v9"} (mint control columns included)`}
+            methodologyLabel={`safety-score ${reportData?.safetyScoreIdentity?.methodologyVersion ?? "v9"} (mint control columns included); mixed-source export, as-of oldest producer generation when all known`}
             triggerLabel={dataState === "loading" ? "Loading" : "Export"}
             triggerClassName="min-w-24"
             disabled={dataState !== "ready"}

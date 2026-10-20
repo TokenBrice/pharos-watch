@@ -114,7 +114,8 @@ export function useInfiniteDepegEvents({
     ...query,
     data,
     loadedCount: events.length,
-    isFullyLoaded: nextCursor == null && (!totalExact || total === 0 || events.length >= total),
+    isFullyLoaded: data != null && !error && !query.isLoading && !isFetchingNextPage &&
+      !hasNextPage && nextCursor == null && (!totalExact || total === 0 || events.length >= total),
     isAutoLoadCapped,
     meta,
   };

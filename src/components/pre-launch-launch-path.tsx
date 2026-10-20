@@ -11,7 +11,7 @@ import {
   pluralize,
   type LaunchPathModel,
 } from "@/lib/pre-launch-dossier";
-import { useMountedNowMs } from "@/components/pre-launch-readiness";
+import { usePreLaunchNowMs } from "@/components/pre-launch-readiness";
 import type { StablecoinMeta } from "@shared/types";
 
 type LaunchPathCoin = Pick<
@@ -63,7 +63,7 @@ function usePlotWidth() {
  * height. The Activity module below lists the same milestones as text.
  */
 export function PreLaunchLaunchPath({ coin }: { coin: LaunchPathCoin }) {
-  const nowMs = useMountedNowMs();
+  const nowMs = usePreLaunchNowMs();
   const { ref, width } = usePlotWidth();
 
   if (nowMs == null) {

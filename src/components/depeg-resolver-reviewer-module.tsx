@@ -223,7 +223,7 @@ function CalibrationLedger({ summary }: { summary: DdrrSummary }) {
   const scored = metrics.recoveryLikelihoodScoredCount;
   const pct = metrics.recoveryLikelihoodAccuracyPct;
   const durationScored = metrics.durationScoredCount;
-  const pending = metrics.pendingLockCount;
+  const pending = metrics.pendingRecoveryLikelihoodCount;
 
   const recoveryValue = scored > 0 ? `${correct} / ${scored}` : "—";
   const recoveryCaption =
@@ -244,7 +244,11 @@ function CalibrationLedger({ summary }: { summary: DdrrSummary }) {
             </span>
             <span className="text-xs text-muted-foreground">{recoveryCaption}</span>
           </div>
-          <CalibrationBar scored={scored} maturing={pending} />
+          {pending != null ? (
+            <CalibrationBar scored={scored} maturing={pending} />
+          ) : (
+            <p className="pharos-meta pharos-numeric">{scored} scored · maturing unavailable</p>
+          )}
         </div>
 
         <div className="space-y-2.5 sm:border-l sm:border-border/50 sm:pl-6">

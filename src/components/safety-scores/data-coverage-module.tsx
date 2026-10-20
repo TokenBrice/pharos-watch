@@ -42,7 +42,7 @@ function Count({ value }: { value: number }) {
 function StatsSentence({ model }: { model: DataCoverageModel }) {
   return (
     <p className="text-sm leading-relaxed text-muted-foreground">
-      <Count value={model.assetCount} /> {model.assetCount === 1 ? "asset is" : "assets are"} scored, thanks to the evaluation of{" "}
+      <Count value={model.assetCount} /> {model.assetCount === 1 ? "asset is" : "assets are"} assessed through the evaluation of{" "}
       <Count value={model.inputsEvaluated} /> inputs with <Count value={model.openGapCount} />{" "}
       remaining open data points.
     </p>
@@ -129,7 +129,7 @@ function GapOwnerDetail({ model }: { model: DataCoverageModel }) {
 function StatDetail({ model }: { model: DataCoverageModel }) {
   const rows = [
     {
-      label: "Assets scored",
+      label: "Assets assessed",
       detail: `${formatCount(model.ratedCount)} rated (${formatCount(model.partialRatedCount)} partial) · ${formatCount(model.notRatedCount)} not rated · ${formatCount(model.pipelineGapCount)} pipeline gap`,
     },
     {

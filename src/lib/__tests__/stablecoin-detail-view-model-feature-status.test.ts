@@ -16,56 +16,24 @@ describe("detail feature-status ladders", () => {
     return buildDetailFeatureSnapshot(coin.id, coin, params.queries, params.supplemental).states;
   }
 
-  it("gates deferred queries above every transport state", () => {
-    const states = featureStates({
-      supplemental: {
-        flows: { enabled: false, isLoading: true, error: new Error("offline") },
-        blacklist: { enabled: false, isLoading: true, error: new Error("offline") },
-        reserves: { enabled: false, isLoading: true, error: new Error("offline") },
-      },
-    });
-
-    expect(states.flows.status).toBe("deferred");
-    expect(states.blacklist.status).toBe("deferred");
-    expect(states.reserves.status).toBe("deferred");
+  it("keeps deferred and failed reserve reads distinct", () => {
+    expect(featureStates({ supplemental: { reserves: { enabled: false, isLoading: true } } }).reserves.status).toBe("deferred");
+    expect(featureStates({ supplemental: { reserves: { enabled: true, error: new Error("offline") } } }).reserves.status).toBe("unavailable");
+    const live = { mode: "live" as const, reserves: [], estimated: false };
+    expect(featureStates({ supplemental: { reserves: { live, isLoading: true, error: new Error("offline") } } }).reserves.status).toBe("stale-with-data");
   });
 
-  it("keeps error-with-data above loading", () => {
-    const error = new Error("offline");
-    const states = featureStates({
-      supplemental: {
-        flows: { data: { coins: [] } as never, isLoading: true, error },
-        blacklist: { summary: { stats: { perCoinTotalEvents: {} } } as never, isLoading: true, error },
-      },
-    });
-
-    expect(states.flows.status).toBe("stale-with-data");
-    expect(states.blacklist.status).toBe("stale-with-data");
-  });
-
-  it("reads an answered-but-rowless yield or flows lane as non-applicable, blacklist as empty", () => {
-    expect(coin.flags.yieldBearing).toBe(false);
-    const states = featureStates({
-      supplemental: {
-        yieldRankingsData: { rankings: [] } as never,
-        flows: { data: { coins: [] } as never },
-        blacklist: { summary: { stats: { perCoinTotalEvents: {} } } as never },
-      },
-    });
-
-    expect(states.yield.status).toBe("unsupported");
-    expect(states.flows.status).toBe("unsupported");
-    expect(states.blacklist.status).toBe("empty");
-  });
-
-  it("marks an unsupported subject before consulting the query at all", () => {
-    const navCoin = { ...coin, flags: { ...coin.flags, navToken: true } };
-    const params = makeBuildStablecoinDetailViewModelParams({
-      core: { coin: navCoin },
-      supplemental: { stressSignals: { isLoading: true } },
-    });
-
-    const states = buildDetailFeatureSnapshot(navCoin.id, navCoin, params.queries, params.supplemental).states;
-    expect(states.stress.status).toBe("unsupported");
+  it.each([
+    [{ enabled: false, isLoading: true, error: new Error("offline") }, "deferred"],
+    [{ isLoading: true }, "loading"],
+    [{ isLoading: false }, "loading"],
+    [{ error: new Error("offline") }, "unavailable"],
+    [{ data: { coins: {} } }, "empty"],
+    [{ data: { coins: {} }, error: new Error("offline") }, "unavailable"],
+    [{ data: { coins: { "usdt-tether": {} } }, error: new Error("offline") }, "retained"],
+    [{ data: { coins: { "usdt-tether": {} } } }, "ready"],
+  ] as const)("distinguishes redemption evidence read %s as %s", (query, status) => {
+    const states = featureStates({ queries: { redemptionBackstops: query as never } });
+    expect(states.redemption.status).toBe(status);
   });
 });

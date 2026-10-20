@@ -35,7 +35,6 @@ import {
   STABLECOIN_DETAIL_SUPPLY_HISTORY_DAYS,
 } from "@/lib/api-query-descriptors";
 import type { StablecoinLiveSummary } from "@shared/types/stablecoin-live-summary";
-import type { StablecoinData } from "@shared/types";
 
 export interface StablecoinDetailSupplementalQueryControls {
   liquidity?: boolean;
@@ -88,40 +87,6 @@ function useGatedQuerySlice<TData>(
   );
 }
 
-function projectLiveSummary(
-  coin: StablecoinDetailCoinMeta,
-  summary: StablecoinLiveSummary,
-): StablecoinData {
-  const chains = [...new Set(coin.contracts?.map((contract) => contract.chain) ?? [])];
-
-  return {
-    id: coin.id,
-    name: coin.name,
-    symbol: coin.symbol,
-    geckoId: coin.geckoId ?? null,
-    pegType: `pegged${coin.flags.pegCurrency}`,
-    pegMechanism: coin.pegMechanism ?? "unknown",
-    price: summary.price,
-    priceSource: summary.priceSource,
-    priceConfidence: summary.priceConfidence,
-    priceUpdatedAt: summary.priceUpdatedAt,
-    priceObservedAt: summary.priceObservedAt,
-    priceObservedAtMode: summary.priceObservedAtMode ?? null,
-    priceSyncedAt: summary.priceSyncedAt ?? null,
-    ...(summary.nominalPriceReference ? { nominalPriceReference: summary.nominalPriceReference } : {}),
-    consensusSources: summary.consensusSources ?? [],
-    agreeSources: summary.agreeSources ?? [],
-    supplySource: "stablecoin-detail",
-    ...(summary.supplyObservedAt != null ? { supplyObservedAt: summary.supplyObservedAt } : {}),
-    ...(summary.supplyRestored === true ? { supplyRestored: true } : {}),
-    circulating: summary.circulating,
-    circulatingPrevDay: summary.circulatingPrevDay,
-    circulatingPrevWeek: summary.circulatingPrevWeek,
-    circulatingPrevMonth: summary.circulatingPrevMonth,
-    chainCirculating: {},
-    chains,
-  };
-}
 
 export function useStablecoinDetailViewModel({
   id,
@@ -147,17 +112,14 @@ export function useStablecoinDetailViewModel({
   );
   const summaryIsSnapshot = isDetailSnapshotQuery(queryClient, FRONTEND_API_QUERY_DESCRIPTORS.stablecoinLiveSummary(id).queryKey);
   const displayedSummary = useDetailEvidence(id, liveSummaryQuery, summaryIsSnapshot || liveSummaryQuery.isError);
-  const listQuery = useMemo(() => {
+  const liveSummary = useMemo(() => {
     // Live detail wins when present (as in sync-stablecoins intake). A frozen coin's detail row
     // is never refreshed, so once that row is gone the archived row backs the page; it has no freshness clock.
     const summaryData = displayedSummary.data ?? archivedLiveSummary;
     const usingArchive = displayedSummary.data == null && archivedLiveSummary != null;
     return {
-      data: summaryData
-        ? { peggedAssets: [projectLiveSummary(coin, summaryData)], nativeSupply: summaryData.nativeSupply }
-        : undefined,
+      data: summaryData ?? undefined,
       isLoading: !usingArchive && !displayedSummary.data && liveSummaryQuery.isLoading,
-      isError: !usingArchive && liveSummaryQuery.isError,
       isFetching: !usingArchive && liveSummaryQuery.isFetching,
       isFetchedAfterMount: liveSummaryQuery.isFetchedAfterMount,
       isSnapshot: !usingArchive && !displayedSummary.isRetained && summaryIsSnapshot,
@@ -172,8 +134,8 @@ export function useStablecoinDetailViewModel({
       },
       enabled: !usingArchive,
     };
-  }, [archivedLiveSummary, coin, displayedSummary.data, displayedSummary.meta, displayedSummary.isRetained,
-    liveSummaryQuery.dataUpdatedAt, liveSummaryQuery.error, liveSummaryQuery.isError, liveSummaryQuery.isLoading,
+  }, [archivedLiveSummary, displayedSummary.data, displayedSummary.meta, displayedSummary.isRetained,
+    liveSummaryQuery.dataUpdatedAt, liveSummaryQuery.error, liveSummaryQuery.isLoading,
     liveSummaryQuery.isFetching, liveSummaryQuery.isFetchedAfterMount, summaryIsSnapshot]);
   useEffect(() => {
     // Early prefetch may finish before this observer mounts; explicit admitted
@@ -218,19 +180,18 @@ export function useStablecoinDetailViewModel({
     isSnapshot: supplyIsSnapshot,
   }), [supplyHistorySlice, supplyQuery.isFetching, supplyQuery.isFetchedAfterMount, supplyIsSnapshot]);
   const annualPriceHistory = useGatedQuerySlice(annualPriceQuery, annualPriceEnabled);
-  const stablecoinList = listQuery;
   const pegSummary = useQuerySlice(pegQuery);
   const queries = useMemo(
     () => ({
       supplyHistory,
       annualPriceHistory,
-      stablecoinList,
+      liveSummary,
       pegSummary,
       dexLiquidity: liquidity,
       reportCards,
       redemptionBackstops,
     }),
-    [supplyHistory, annualPriceHistory, stablecoinList, pegSummary, liquidity, reportCards, redemptionBackstops],
+    [supplyHistory, annualPriceHistory, liveSummary, pegSummary, liquidity, reportCards, redemptionBackstops],
   );
   const flowsSlice = useQuerySlice(flowsQuery);
   const blacklistSlice = useQuerySlice(blacklistQuery);

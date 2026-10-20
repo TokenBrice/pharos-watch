@@ -1,4 +1,5 @@
 import type { CoverageStatus } from "@/lib/coverage-types";
+import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
 import {
   createDataUnavailableStatus,
   createPresetStatus,
@@ -30,13 +31,24 @@ const SAFETY_STATUS_PRESETS = {
 
 function resolveSafety(
   safetyScore: number | null | undefined,
+  ratingStatus: SafetyScoreV9CurrentCard["ratingStatus"] | null | undefined,
   dataAvailable = true,
+  reasonCodes: readonly string[] = [],
 ): CoverageStatus {
-  if (!dataAvailable) {
+  if (!dataAvailable || ratingStatus == null) {
+    return createDataUnavailableStatus("Safety Score");
+  }
+  if (ratingStatus === "pipeline-gap") {
+    return {
+      ...createDataUnavailableStatus("Safety Score"),
+      detail: `Safety Score pipeline gap${reasonCodes.length > 0 ? ` (${reasonCodes.join(", ")})` : ""}. Technical evidence is unavailable; this state is not counted as a coverage gap.`,
+    };
+  }
+  if (ratingStatus === "rated" && safetyScore == null) {
     return createDataUnavailableStatus("Safety Score");
   }
 
-  return createPresetStatus(safetyScore != null ? SAFETY_STATUS_PRESETS.rated : SAFETY_STATUS_PRESETS.nr);
+  return createPresetStatus(ratingStatus === "rated" ? SAFETY_STATUS_PRESETS.rated : SAFETY_STATUS_PRESETS.nr);
 }
 
 // "NR" is shared with DEX; the dedicated "general" legend entry covers it.
@@ -45,6 +57,11 @@ const SAFETY_LEGEND: readonly CoverageLegendItem[] = [
     term: "Rated",
     description: "This asset currently receives an overall Safety Score.",
     kinds: ["rated"],
+  },
+  {
+    term: "Data n/a (pipeline gap)",
+    description: "Technical evidence is unavailable, not an issuer NR. Pipeline gaps and absent cards are excluded from known coverage reach.",
+    kinds: [DATA_UNAVAILABLE_KIND],
   },
 ] as const;
 

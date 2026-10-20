@@ -54,7 +54,7 @@ export function FiatEmblems({ clusters }: { clusters: readonly PegCluster[] }) {
             key={cluster.peg}
             coins={cluster.coins}
             cohortRank={cluster.rank}
-            summary={summarizeCohort(rankedCoins)}
+            summary={summarizeCohort(rankedCoins, cluster.cohort)}
             variant="fiat"
             loading={(_coin, index) => index === 0 ? "eager" : "lazy"}
           />

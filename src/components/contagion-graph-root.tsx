@@ -6,7 +6,7 @@ import { useContagionGraphModel } from "@/components/contagion-graph/use-contagi
 import type { ContagionGraphCard } from "@/lib/contagion-layout";
 import type { ReportCardsV9DependencyEdge } from "@shared/types/report-cards-v9";
 import type { ReactNode } from "react";
-import type { HubExposure } from "@shared/lib/dependency-exposure";
+import type { DependencyHubExposure } from "@shared/lib/dependency-hubs-model";
 import type { ExposureOverlay } from "@/components/contagion-graph/contagion-graph-exposure";
 import type { SharedFailureDomainGroups } from "@/lib/shared-failure-domains-model";
 
@@ -21,7 +21,7 @@ interface ContagionGraphProps {
   syncUrlState?: boolean;
   exposureOverlay?: ExposureOverlay | null;
   onUseAsExposureRoot?: (coinId: string) => void;
-  hubExposures?: readonly HubExposure[];
+  hubExposures?: readonly DependencyHubExposure[];
   modeControls?: ReactNode;
   commonModeGroups?: SharedFailureDomainGroups | null;
 }

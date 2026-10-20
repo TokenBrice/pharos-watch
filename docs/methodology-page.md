@@ -46,9 +46,13 @@ Follow all four [ADR-3](./architecture.md#adr-3) targets for behavior/version ch
 
 Update section body and markdown summary when explanation changes; composition only when order/sections change. Shell FAQ/metadata/guide claims are runtime-facing too. Retarget definitions/context, static params and sitemap together when IDs/public paths move. Pricing source changes also update [About disclosure](./about-page.md), its runtime roster, [pricing update rules](https://pharos.watch/docs/pricing-pipeline/#update-rules) and [supply pipeline](./supply-snapshot.md#supply-pipeline); the integrity ledger is [pricing appendix](./process/pricing-pipeline-appendix.md#data-integrity-guardrails). Native mint display/filter/export changes propagate to detail, homepage, coverage and Screener; do not recreate a separate mint scoring lane.
 
+Producer explanations follow runtime ownership: DDR cadence comes from `CRON_INTERVALS["compute-depeg-resolver"]`, not stablecoin-sync placement. Lifecycle Active describes collection eligibility, not blanket aggregate membership; PSI monetary scope follows listing-class admission. The pricing source inventory describes current adapters and their admission qualifications; retired providers belong in the canonical pricing changelog, and DexScreener exact-pool fallback remains distinct from the address-provider lane.
+
 ## Definitions
 
 `src/lib/definitions.ts` is the single term source. Listed entries supply citation-ready A–Z long text, `#definitions` and `#def-<key>` anchors, DefinedTermSet JSON-LD and markdown export. Tooltip/context/glossary consumers project the same entries; do not copy them. Numeric text interpolates owning constants, not manual weights/bands. Product names are not definitions. Preserve the `/learn/glossary/` redirect to `/methodology/#definitions`.
+
+Check metric explanations against their producers: yield consistency distinguishes unavailable history/variance (public PYS NR with a missing-inputs reason) from measured zero variance; chain Quality excludes unrated supply and withholds the factor/composite below its coverage gate; Environment uses matched L2BEAT stage/risk evidence before unmatched-chain tier fallback. These are existing scoring semantics, not new formulas or missing-data penalties.
 
 ## Methodology-Context Anchors
 

@@ -16,6 +16,7 @@ import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { getConditionBand } from "@shared/lib/psi-policy";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
+import { sha256Hex } from "../../lib/hash";
 import { SECONDS } from "../../lib/time-constants";
 import { assessFreshnessTimestamp } from "../../lib/api-freshness-age";
 import {
@@ -421,14 +422,17 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
   const crossDayTrends = crossDayTrendsResult.value;
   const totalMcapAth = totalMcapAthResult.value;
   const historicalContext = historicalContextResult.value;
-  const gradeTransitions = gradeTransitionsResult.value;
+  const { gradeTransitions, gradeTransitionAccounting } = gradeTransitionsResult.value;
 
   const inputData: DigestInputData = {
     digestVersion: 2,
     aggregateUniverse: CORE_STABLECOIN_AGGREGATE_UNIVERSE,
     totalMcapUsd,
     supplyCoverage: { complete: coreCoinCount === CORE_AGGREGATE_ACTIVE_IDS.size,
-      observedCount: coreCoinCount, unavailableCount: CORE_AGGREGATE_ACTIVE_IDS.size - coreCoinCount },
+      observedCount: coreCoinCount, unavailableCount: CORE_AGGREGATE_ACTIVE_IDS.size - coreCoinCount,
+      memberFingerprint: await sha256Hex(JSON.stringify([
+        CORE_STABLECOIN_AGGREGATE_UNIVERSE, [...CORE_AGGREGATE_ACTIVE_IDS].sort(),
+      ])) },
     mcap7dDelta: baselineMcapUsd - totalPrevWeek,
     mcap7dDeltaCoverage: {
       coveredCoins: baselineCoinCount,
@@ -456,9 +460,9 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
           end: nowSec,
         },
         mintBurnFlows: {
-          label: "rolling last 24h",
-          start: nowSec - SECONDS.ONE_DAY,
-          end: nowSec,
+          label: mintBurnFlows?.provenance?.window ? "24 closed UTC hours" : "unavailable",
+          start: mintBurnFlows?.provenance?.window?.start ?? null,
+          end: mintBurnFlows?.provenance?.window?.end ?? null,
         },
         supplyVelocity: {
           label: "UTC snapshots: today, yesterday, 7d ago",
@@ -495,6 +499,7 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
     historicalContext,
     psiContributors,
     gradeTransitions,
+    gradeTransitionAccounting,
     yieldAnomalies,
     liquidityShifts,
     crossDayTrends,

@@ -58,6 +58,18 @@ describe("buildRegulatoryStandingView", () => {
     expect(view.summary).not.toMatch(/announced intent|seek GENIUS authorization|filing pending|approved/);
   });
 
+  it("keeps a reviewed unknown public posture distinct from an unassessed profile", () => {
+    const view = buildRegulatoryStandingView({
+      symbol: "ZARSC",
+      genius: { ...GENIUS, authorizationStatus: "unknown", issuerPathway: "unknown" },
+    })!;
+    expect(view.reviewedAt).toBe(GENIUS.reviewedAt);
+    expect(view.summary).toMatch(/unresolved public GENIUS posture/);
+    expect(view.summary).not.toMatch(/unreviewed|unassessed/i);
+    expect(view.badgeLabel).toBe("Unknown");
+    expect(buildRegulatoryStandingView({ symbol: "ZARSC" })).toBeNull();
+  });
+
   it("builds both regimes as status rows, issuer disclosures apart from them, fold facts, merged sources, and review date", () => {
     const view = buildRegulatoryStandingView({
       symbol: "USDC", genius: GENIUS, mica: MICA,

@@ -71,6 +71,23 @@ function renderBoard(
 }
 
 describe("DepegControlBoard", () => {
+  it.each(["CALM", "WATCH", "ALERT", "WARNING", "DANGER", null] as const)(
+    "counts attention from the canonical %s band, retaining active and pending incidents",
+    (band) => {
+      // Deliberately disagree with the score so a duplicated numeric threshold cannot pass.
+      const signal = band == null ? null : makeDews({ band, score: band === "CALM" || band === "WATCH" ? 100 : 0 });
+      const pending = makeRow({ id: "pending", symbol: "PENDING", activeDepeg: false }, null);
+      pending.pendingIncident = makePendingIncident({ stablecoinId: "pending", symbol: "PENDING" });
+      renderBoard([
+        makeRow({ id: "signal", activeDepeg: false }, signal),
+        makeRow({ id: "active", activeDepeg: true }, null),
+        pending,
+      ]);
+      const expected = band === "ALERT" || band === "WARNING" || band === "DANGER" ? 3 : 2;
+      expect(screen.getByText(/need attention/).textContent).toBe(`${expected} need attention`);
+    },
+  );
+
   it.each([
     { currentDeviationBps: null, dews: null },
     { currentDeviationBps: null, dews: makeDews({ score: 0, band: "CALM" }) },

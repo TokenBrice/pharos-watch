@@ -1,6 +1,8 @@
 "use client";
 
 import { Skeleton } from "@/components/ui/skeleton";
+import { QueryStateNotice } from "@/components/query-state-notice";
+import { resolveQueryViewState } from "@/lib/query-view-state";
 import { cn } from "@/lib/utils";
 import { formatCurrency, formatDecimal } from "@shared/lib/format";
 import type { BlacklistStablecoin, BlacklistSummaryResponse } from "@shared/types";
@@ -12,6 +14,8 @@ interface SovereigntyLatticeProps {
   stats: BlacklistSummaryResponse["stats"] | undefined;
   chains: BlacklistSummaryResponse["chains"];
   isLoading: boolean;
+  error?: unknown;
+  onRetry?: () => void;
   onCellSelect: (selection: { stablecoin: BlacklistStablecoin; chainId: string }) => void;
 }
 
@@ -53,10 +57,12 @@ function buildRows(
   });
 }
 
-export function SovereigntyLattice({ coverage, stats, chains, isLoading, onCellSelect }: SovereigntyLatticeProps) {
+export function SovereigntyLattice({ coverage, stats, chains, isLoading, error, onRetry, onCellSelect }: SovereigntyLatticeProps) {
   const isMobile = useIsMobile();
+  const hasData = coverage != null && stats != null;
+  const state = resolveQueryViewState({ hasData, isLoading, error });
 
-  if (isLoading) {
+  if (state === "loading") {
     return (
       <section className="pharos-card-shell overflow-hidden">
         <div className="pharos-panel-header space-y-2">
@@ -66,6 +72,14 @@ export function SovereigntyLattice({ coverage, stats, chains, isLoading, onCellS
         <div className="p-4 sm:p-5">
           <Skeleton className="h-64 rounded-xl" />
         </div>
+      </section>
+    );
+  }
+
+  if (!hasData) {
+    return (
+      <section className="pharos-card-shell p-4 sm:p-5">
+        <QueryStateNotice state="unavailable" label="Watched contract coverage" onRetry={onRetry} />
       </section>
     );
   }
@@ -100,6 +114,9 @@ export function SovereigntyLattice({ coverage, stats, chains, isLoading, onCellS
       </div>
 
       <div className="min-w-0 max-w-full overflow-x-auto p-4 sm:p-5">
+        {state === "stale-with-data" ? (
+          <QueryStateNotice state={state} label="Watched contract coverage" onRetry={onRetry} />
+        ) : null}
         {rows.length > 0 && visibleChains.length > 0 ? (
           <div
             className="grid gap-1"

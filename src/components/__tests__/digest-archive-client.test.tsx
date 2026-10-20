@@ -111,3 +111,29 @@ describe("DigestArchiveClient risk-signal badges", () => {
     expect(screen.queryByText("PMUSD +5284 bps")).toBeNull();
   });
 });
+
+describe("DigestArchiveClient supply coverage", () => {
+  it.each([
+    [0, { complete: false, observedCount: 0, unavailableCount: 2 }, "Mcap unavailable", null],
+    [100e9, { complete: false, observedCount: 1, unavailableCount: 1 }, "Known mcap subtotal", "1/2 coins observed"],
+    [100e9, undefined, "Known mcap subtotal", "coverage unproven"],
+    [0, { complete: true, observedCount: 2, unavailableCount: 0 }, "Total mcap: $0", "2/2 coins observed"],
+  ])("keeps supply evidence qualified in archive links", (totalMcapUsd, supplyCoverage, label, qualifier) => {
+    useDigestArchiveMock.mockReturnValue({
+      data: { digests: [
+        digest(Date.parse("2026-08-31T00:30:00Z") / 1000, "Latest digest"),
+        { ...digest(Date.parse("2026-08-30T00:30:00Z") / 1000, "Supply evidence"), totalMcapUsd, supplyCoverage },
+      ] },
+      isLoading: false, dataUpdatedAt: 0, error: null, refetch: vi.fn(), meta: null,
+    });
+    useUrlFiltersMock.mockReturnValue({
+      searchParams: new URLSearchParams(), setParam: vi.fn(), replaceParams: vi.fn(),
+    });
+    render(<DigestArchiveClient />);
+    const link = screen.getByRole("link", { name: /Supply evidence/i });
+    expect(link.textContent).toContain(label);
+    if (qualifier) expect(link.textContent).toContain(qualifier);
+    if (supplyCoverage?.observedCount === 0) expect(link.textContent).not.toContain("$0");
+    if (!supplyCoverage?.complete) expect(link.textContent).not.toContain("Total mcap:");
+  });
+});

@@ -8,12 +8,13 @@ import { formatHeroNativePrice } from "@/components/stablecoin-detail/hero-card-
 import { PartialEvidenceChip } from "@/components/stablecoin-detail/ops-status-chip";
 import { isMobileStickySummaryEnabled } from "@/lib/feature-flags";
 import { useIsMobile } from "@/hooks/use-is-mobile";
-import type { StablecoinData, StablecoinMeta } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types";
+import type { DetailQuote } from "@/lib/stablecoin-detail-view-model-types";
 import type { V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
 
 interface MobileStickySummaryProps {
   coin: StablecoinMeta;
-  coinData: StablecoinData;
+  coinData: Pick<DetailQuote, "price" | "priceSource" | "priceObservedAtMode">;
   pegRef: number | null;
   logoSrc?: string;
   reportCard: V9ConsumerCard | null;
