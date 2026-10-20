@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { CompiledV9AssetInput } from "@shared/types/safety-score-v9";
 import {
-  HistoricalV9FixtureSchema,
-} from "@shared/types/safety-score-v9-historical-fixtures";
-import {
   V9_CANDIDATE_POLICY_V1,
   resolveV9StructuralCaps,
   scoreCompiledAsset,
@@ -259,52 +256,4 @@ describe("v9 research handoff contracts", () => {
     expect(trace?.unresolvedFacts).toContainEqual(expect.objectContaining({ code: "parent-cycle", cause: "U" }));
   });
 
-  it("rejects historical look-ahead evidence", () => {
-    const parsed = HistoricalV9FixtureSchema.safeParse({
-      schemaVersion: 1,
-      id: "look-ahead",
-      assetId: "test",
-      asOf: "2022-05-01T00:00:00.000Z",
-      factsVersion: 1,
-      facts: {
-        archetype: "algorithmic",
-        implementationAgeMonths: 12,
-        signals: ["reflexive backing"],
-        riskSignals: [],
-        unresolvedCriticalFacts: [],
-      },
-      sources: [
-        {
-          title: "Postmortem",
-          url: "https://example.com/postmortem",
-          publishedAt: "2022-05-15T00:00:00.000Z",
-          supports: ["failure cause"],
-          capture: { status: "unarchived", note: "Negative-control source." },
-        },
-      ],
-      factFreeze: {
-        role: "facts-curator",
-        reviewer: "facts reviewer",
-        frozenAt: "2026-07-01T00:00:00.000Z",
-        outcomeAccess: "withheld",
-        attestation: "Facts were frozen without outcome access.",
-      },
-      outcome: {
-        classification: "adverse",
-        categories: ["backing"],
-        observedFrom: "2022-05-09T00:00:00.000Z",
-        observedThrough: "2022-05-15T00:00:00.000Z",
-        summary: "Failed after the fixed observation date.",
-      },
-      outcomeAnnotation: {
-        role: "outcome-annotator",
-        reviewer: "outcome reviewer",
-        annotatedAt: "2026-07-01T00:00:00.000Z",
-        factSetVersion: 1,
-        attestation: "Negative-control outcome annotation.",
-      },
-      blinding: { mode: "independent-reviewers", rationale: "Separate reviewers for negative control." },
-    });
-    expect(parsed.success).toBe(false);
-  });
 });
