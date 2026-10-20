@@ -1,9 +1,10 @@
 import type { Server } from "node:http";
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, onTestFinished, vi } from "vitest";
+import { firefox } from "playwright";
 import { makeReportCardsV9Card, makeReportCardsV9PartialCard, makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
 
 import { runSafetyScoreMapCli, parseMapReportCards } from "../maintenance/build-safety-score-map";
@@ -57,6 +58,7 @@ let methodologyVersion = "9.19";
 let asOfSec = 0;
 let psiComputedAt = 0;
 let publicationStatus = "current";
+let supplyHeaders: Record<string, string> = {};
 let server: Server;
 let baseUrl = "";
 
@@ -114,6 +116,7 @@ beforeAll(async () => {
     stablecoinsPayload,
     psiPayload,
     publicationStatus: () => publicationStatus,
+    stablecoinsHeaders: () => supplyHeaders,
   }));
 });
 
@@ -184,6 +187,7 @@ function stageFixture(
     stopBeforeRender?: boolean;
     publicationStatus?: string;
     psiComputedAt?: number;
+    supplyHeaders?: Record<string, string>;
   } = {},
 ): { pngPath: string; outDir: string } {
   cards = fixture.cards;
@@ -192,6 +196,7 @@ function stageFixture(
   psiComputedAt = options.psiComputedAt ?? Math.floor(Date.now() / 1000) - 5 * 60;
   methodologyVersion = fixture.methodologyVersion ?? "9.19";
   publicationStatus = options.publicationStatus ?? "current";
+  supplyHeaders = options.supplyHeaders ?? { "X-Data-Updated-At": String(Math.floor(Date.now() / 1000) - 300) };
 
   const outDir = scratchDir("pharos-safety-map-test-");
   const pngPath = join(outDir, "map.png");
@@ -215,6 +220,7 @@ async function runGenerator(
     stopBeforeRender?: boolean;
     publicationStatus?: string;
     psiComputedAt?: number;
+    supplyHeaders?: Record<string, string>;
   } = {},
 ): Promise<RunResult> {
   const { pngPath, outDir } = stageFixture(fixture, options);
@@ -236,6 +242,62 @@ async function runGenerator(
 
 /** Marker proving the run reached the pre-render stop, i.e. every guard passed. */
 const REACHED_RENDER_GATE = /rendered in the future/;
+
+describe("safety-score map — output filename admission", () => {
+  it.each(["map.jpg", "map.PNG", "map", "map.png.svg", "map.png "])("rejects %s before credentials, requests, browser or output effects", async (filename) => {
+    const outDir = join(scratchDir("pharos-safety-map-out-"), "uncreated");
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const browserSpy = vi.spyOn(firefox, "launch");
+    const credentialSpy = vi.spyOn(process, "loadEnvFile");
+    onTestFinished(() => { fetchSpy.mockRestore(); browserSpy.mockRestore(); credentialSpy.mockRestore(); });
+    const errors: string[] = [];
+    const status = await runSafetyScoreMapCli({
+      argv: ["--out", join(outDir, filename)],
+      io: { log: () => {}, warn: () => {}, error: (message) => errors.push(message) },
+    });
+    expect(status).toBe(2);
+    expect(errors.join("")).toContain("--out must name a file ending in lowercase .png");
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(browserSpy).not.toHaveBeenCalled();
+    expect(credentialSpy).not.toHaveBeenCalled();
+    expect(existsSync(outDir)).toBe(false);
+  });
+});
+
+describe("safety-score map — independent supply freshness", () => {
+  const nowSec = () => Math.floor(Date.now() / 1000);
+  it.each([
+    ["absolute source", () => ({ "X-Data-Updated-At": String(nowSec() - 60), "X-Data-Age": "9999", Age: "120" })],
+    ["origin and edge ages", () => ({ Date: new Date().toUTCString(), "X-Data-Age": "60", Age: "120" })],
+    ["origin age without edge residence", () => ({ Date: new Date().toUTCString(), "X-Data-Age": "60" })],
+  ] satisfies Array<[string, () => Record<string, string>]>)("admits fresh %s independently of held, aged ratings", async (_label, headers) => {
+    const run = await runGenerator({ ...universe(), asOfSec: nowSec() - 49 * HOUR }, {
+      supplyHeaders: headers(), publicationStatus: "held", stopBeforeRender: true,
+    });
+    expect(run.stderr).toMatch(REACHED_RENDER_GATE);
+  });
+
+  it.each([
+    ["stale Warning", () => ({ Date: new Date().toUTCString(), "X-Data-Age": "0", Warning: '110 pharos "Response is stale"' }), "stale: stale-warning"],
+    ["future origin", () => ({ Date: new Date((nowSec() + HOUR) * 1000).toUTCString(), "X-Data-Age": "0" }), "future: future-source-clock"],
+    ["edge residence", () => ({ Date: new Date().toUTCString(), "X-Data-Age": "60", Age: "600" }), "stale: source-too-old"],
+    ["missing source", () => ({}), "unavailable: missing-source-provenance"],
+    ["missing origin date", () => ({ "X-Data-Age": "0" }), "unavailable: missing-source-provenance"],
+    ["malformed origin date", () => ({ Date: "", "X-Data-Age": "0" }), "unavailable: invalid-date"],
+    ["invalid absolute source", () => ({ "X-Data-Updated-At": "NaN", "X-Data-Age": "0" }), "unavailable: invalid-x-data-updated-at"],
+    ["negative age", () => ({ "X-Data-Age": "-1" }), "unavailable: invalid-x-data-age"],
+    ["nonfinite edge age", () => ({ "X-Data-Age": "0", Age: "Infinity" }), "unavailable: invalid-age"],
+    ["empty source age", () => ({ "X-Data-Age": "" }), "unavailable: invalid-x-data-age"],
+  ] satisfies Array<[string, () => Record<string, string>, string]>)("rejects %s despite recent ratings without browser or output writes", async (_label, headers, reason) => {
+    const browserSpy = vi.spyOn(firefox, "launch");
+    onTestFinished(() => browserSpy.mockRestore());
+    const run = await runGenerator({ ...universe(), asOfSec: nowSec() }, { supplyHeaders: headers() });
+    expect(run.status).toBe(1);
+    expect(run.stderr).toContain(`Stablecoin supply freshness ${reason}`);
+    expect(browserSpy).not.toHaveBeenCalled();
+    expect(readdirSync(run.outDir)).toEqual([]);
+  });
+});
 
 describe("safety-score map — canonical publication provenance", () => {
   it("renders an aged report-card capture with its source timestamp intact", async () => {

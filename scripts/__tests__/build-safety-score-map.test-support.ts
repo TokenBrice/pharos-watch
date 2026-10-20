@@ -130,11 +130,13 @@ export async function startSafetyMapFixtureServer({
   stablecoinsPayload,
   psiPayload,
   publicationStatus,
+  stablecoinsHeaders,
 }: {
   reportCardsPayload: () => unknown;
   stablecoinsPayload: () => unknown;
   psiPayload: () => unknown;
   publicationStatus: () => string;
+  stablecoinsHeaders?: () => Record<string, string>;
 }) {
   const server = createServer((req, res) => {
     const path = (req.url ?? "").split("?")[0];
@@ -151,6 +153,11 @@ export async function startSafetyMapFixtureServer({
       return;
     }
     if (path === "/api/report-cards/v9") res.setHeader("X-Safety-Score-Status", publicationStatus());
+    if (path === "/api/stablecoins") {
+      res.sendDate = false;
+      const headers = stablecoinsHeaders?.() ?? { "X-Data-Updated-At": String(Math.floor(Date.now() / 1000) - 300) };
+      for (const [name, value] of Object.entries(headers)) res.setHeader(name, value);
+    }
     res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
     res.end(JSON.stringify(body));
   });

@@ -536,28 +536,30 @@ function testSafetyScoreIdentity(
  * `coverageRatio` derive from the score map the way
  * `computeSafetyScoresSnapshot` derives them, so a fixture cannot claim a
  * coverage its map does not carry. A fixture without an identity is a
- * publication that does not exist, so it carries no publish time either.
+ * publication that does not exist, so its denominator, coverage and publish time are null.
  */
 function testSafetyScoresSnapshot(fixture: {
   kind?: "ok" | "degraded";
   reason?: string;
-  trackedCount?: number;
+  trackedCount?: number | null;
   scores?: Map<string, { score: number; grade: string }>;
   publishedAt?: number | null;
   safetyScoreIdentity?: SafetyScoreV9PublicationIdentity | null;
   publicationGenerationId?: string | null;
 } = {}): PublishedSafetyScoresResultMap {
   const scores = fixture.scores ?? new Map<string, { score: number; grade: string }>();
-  const trackedCount = fixture.trackedCount ?? Math.max(scores.size, 1);
   const safetyScoreIdentity =
     fixture.safetyScoreIdentity === undefined ? testSafetyScoreIdentity() : fixture.safetyScoreIdentity;
+  const trackedCount = safetyScoreIdentity === null
+    ? null
+    : fixture.trackedCount === undefined ? Math.max(scores.size, 1) : fixture.trackedCount;
   return {
     kind: fixture.kind ?? "ok",
     mode: "map",
     ...(fixture.reason === undefined ? {} : { reason: fixture.reason }),
     coveredCount: scores.size,
     trackedCount,
-    coverageRatio: trackedCount > 0 ? scores.size / trackedCount : 1,
+    coverageRatio: trackedCount == null ? null : trackedCount > 0 ? scores.size / trackedCount : 1,
     scores,
     source: "safety-score-v9-publication",
     safetyScoreIdentity,
