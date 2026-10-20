@@ -153,11 +153,11 @@ describe("read-only status profiling", () => {
 });
 
 describe("lane freshness draft", () => {
-  it("lists all 48 registered logical jobs exactly once and requires owner sign-off", () => {
+  it("lists every registered logical job exactly once and requires owner sign-off", () => {
     const doc = readFileSync("docs/process/lane-freshness-matrix.md", "utf8");
     const names = [...doc.matchAll(/^\| `([^`]+)` \|/gm)].map((match) => match[1]);
-    expect(names).toHaveLength(48);
-    expect(new Set(names).size).toBe(48);
+    expect(names).toHaveLength(CRON_JOB_DEFINITIONS.length);
+    expect(new Set(names).size).toBe(names.length);
     expect([...names].sort()).toEqual(CRON_JOB_DEFINITIONS.map((job) => job.job).sort());
     expect(doc).toContain("Draft for owner sign-off");
   });

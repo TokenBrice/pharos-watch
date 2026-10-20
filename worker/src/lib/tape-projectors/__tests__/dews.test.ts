@@ -44,6 +44,8 @@ describe("dews projector", () => {
   it.each([
     { timestamp: 1777636800, version: "5.95" },
     { timestamp: 1792497600, version: "6.36" },
+    { timestamp: 1792540799, version: "6.36" },
+    { timestamp: 1792540800, version: "6.37" },
   ])("persists the DEWS methodology at source time $timestamp during later replay", async ({ timestamp, version }) => {
     const { sqlite, db } = openDewsProjectorSqlite();
     try {

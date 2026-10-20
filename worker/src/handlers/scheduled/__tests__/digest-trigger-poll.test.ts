@@ -805,9 +805,7 @@ describe("runDigestTriggerPollSlot", () => {
         twitterMissing: expect.any(Array),
         telegramMissing: expect.any(Array),
       }),
-      // Weekly LLM config resolved from runtime env, then the recap rollout
-      // policy that gates the private /recap CTA.
-      expect.any(Object),
+      // Editorial weekly LLM configuration; personalized-recap CTA policy is retired.
       expect.any(Object),
     );
     expect(summary.jobs).toEqual([
