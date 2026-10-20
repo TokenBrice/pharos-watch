@@ -1,5 +1,20 @@
 [
   {
+    "version": "8.5",
+    "title": "Native-reference returns and anchor-only availability",
+    "date": "2026-10-20",
+    "effectiveAt": 1792454400,
+    "summary": "Price-derived yield requires a USD return reference; bootstrap anchors remain durable without posing as observed zero APY.",
+    "impact": [
+      "XGLD's XAUt return cannot be reconstructed from USD token prices. Gold-only USD movements no longer supply fallback yield when its deterministic reader is unavailable. FPI and ISC retain explicitly reviewed USD-based variable-NAV policies.",
+      "Initial and re-anchor observations from generic on-chain and Ondo/Midas NAV readers remain durable history anchors, but do not enter current rows, rankings, alternatives, arbitration, measured coverage or rolling samples until a return exists.",
+      "Genuine measured zero and negative returns remain observable. Historical seed filtering, ordinary coverage/common-input holds and atomic generation/CAS fencing are unchanged; no historical rows are rewritten or deleted.",
+      "PYS weights, calibration, benchmarks and freshness budgets are unchanged. Coverage and selected sources can change as incomparable or unmeasured inputs are removed. Planned release date is 2026-10-20."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "8.49",
     "title": "XGLD gold-denominated on-chain rate source",
     "date": "2026-10-15",

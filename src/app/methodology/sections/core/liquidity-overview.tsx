@@ -32,6 +32,14 @@ export function LiquidityOverview() {
         incomplete pool censuses cannot certify deployment-wide absence or erase independently valid pools.
       </p>
       <p>
+        Measured execution requires exact retained-pool identity, current admitted valuation and coherent
+        canonical chain/block/hash proof. History contributes only while each original quote remains fresh at
+        assessment; new publications cannot renew it. Non-USD peg fallback uses fresh non-future per-peg FX
+        under its source cadence, not a diagnostic rate or global cache clock. Unsupported hash reads,
+        number-only proof and unavailable method probes remain unavailable, not latest-state substitutes or
+        zero capacity. Carried spots cannot manufacture current output value.
+      </p>
+      <p>
         Methodology v6.95 adds pinned reviewed targets on already-active Pancake V3 and Uniswap V3 families.
         Active targets still need quote-time identity, freshness and execution checks; shadow pools remain
         score-ineligible. CHFSAFO&apos;s exact Aquarius identity supplies supplemental non-exhaustive coverage.

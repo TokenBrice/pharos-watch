@@ -1,5 +1,20 @@
 [
   {
+    "version": "4.52",
+    "title": "Selected payout identity and impairment authority",
+    "date": "2026-10-20",
+    "effectiveAt": 1792454400,
+    "summary": "Redemption impairment follows the exact reviewed payout, not parent or backing allocations. Unknown basket shares remain unquantified without losing affected output identity.",
+    "impact": [
+      "A single selected stablecoin is 100% of route output. Baskets quantify impaired shares only from complete admitted payout weights; reserve composition and equal-share assumptions cannot fill the gap.",
+      "FinChain FUSD pays USDT, Noble USDN and Gate GUSD pay USDC, and KAST USDK unwraps to M rather than an inferred partner fiat rail. Token identity supplies neither current price, funded capacity, all-in cost, holder access nor completed settlement.",
+      "A separately fresh nested redemption observation cannot rehabilitate a fatally invalid retained reserve snapshot. Permitted nonfatal degraded telemetry keeps its separate route-scoped policy.",
+      "Independent DEX alternatives retain source-clock, exact-hash and FX admission gates; withholding them does not prove redemption failure. Standalone formula weights and ladders are unchanged. Planned release date is 2026-10-20."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "4.51",
     "title": "Output-bound route status and measured capacity corrections",
     "date": "2026-10-15",

@@ -1,5 +1,23 @@
 [
   {
+    "version": "6.97",
+    "title": "Exact pool populations and source-bound measured evidence",
+    "date": "2026-10-20",
+    "effectiveAt": 1792454400,
+    "summary": "Liquidity preserves distinct provider deployments, quarantines conflicting or unsupported fallback observations without clipping trusted TVL, and requires complete balance, valuation and execution provenance. Component weights and request budgets are unchanged.",
+    "impact": [
+      "Token pairs are matching candidates, not pool identities. Chain-scoped opaque provider deployments remain distinct; exact repeats count once and conflicting exact observations are quarantined before attribution. One proven physical pool counts once globally across assets.",
+      "External protocol totals are fallback admission evidence, never published valuations. Fallback groups above per-coin headroom are rejected before price admission, with physical rejection propagated across coin views. Trusted observed raw TVL is not scaled; headline, breakdown and volume statistics use one admitted graph. Excluded pool/protocol counts and raw TVL replace cap reductions.",
+      "Provider values must be complete finite decimals rather than numeric prefixes. Orca token decimals must be integers in 0..255 for balance normalization. Curve requires complete USD balances and Fluid both reserve halves; missing evidence is unmeasured with neutral balance weighting, while complete zero-sided balances remain measured zero.",
+      "Curve factory models require independent tracked-market references; missing references withhold exact capture. Bounded UniV3 identity carry does not supply current output USD valuation; independent references are still required.",
+      "Measured-history constituents age at consumer assessment. Exact canonical hashes bind EVM proof and execution; unavailable probes do not prove method absence. Non-USD peg fallbacks require fresh non-future per-peg FX under original source cadence, reassessed at capture. These admission repairs do not alter aggregate TVL or volume by themselves.",
+      "The retained-population policy adds TVL-basis break 6.97. Paired source-stage payload v6 rejects incompatible older identity/admission stages. Historical rows retain their original bytes and measurement epoch; policy steps are not market withdrawals.",
+      "Planned release date is 2026-10-20. Fresh producer arithmetic, target admission and downstream acceptance remain distinct from fixed-input Safety replay."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.96",
     "title": "One retained population for global TVL and volume coverage",
     "date": "2026-10-19",

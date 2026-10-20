@@ -1,5 +1,21 @@
 [
   {
+    "version": "6.54",
+    "title": "Source-scoped weights and original price clocks",
+    "date": "2026-10-20",
+    "effectiveAt": 1792454400,
+    "summary": "Price consensus uses the quote source's own bounded TVL and preserves original composite, DEX, FX and scanner observation clocks.",
+    "impact": [
+      "Challenger eligibility and weights use the actual price source's bounded TVL evidence; unrelated retained inventory cannot amplify a quote. Challenger storage membership is maintained independently of price admission.",
+      "Inherited composite freshness cannot be renewed by sync-write time. Future/impossible FX days and raw epochs outside policy remain unavailable until genuinely replaced. Shared source-success metadata is not an observation clock.",
+      "USDT-denominated Curve ratios multiply by admitted USDT/USD; DOLA explicitly retains composite depth two. Original family and aggregate DEX contributors keep their ages through promoted-source collection rather than inheriting publication time.",
+      "Zephyr scanner quotes with known invalid, stale or excessively future clocks cannot publish as undated prices, including dependent ZYS NAV valuation. Genuinely absent clocks retain the existing undated policy; independent ZSD circulation and preferred market-price provenance remain unchanged.",
+      "Planned release date is 2026-10-20. No source-age budget, consensus formula weight schedule or historical observation is silently rewritten; changed admission may change consensus."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.53",
     "title": "Depth-gated native Hive HBD market cross-rate",
     "date": "2026-10-19",

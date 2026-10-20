@@ -33,10 +33,11 @@ export function LiquidityPoolMatchingDetails() {
         <p>
           Matching is chain-aware: `chain + address` resolves first, and symbol fallback is only allowed when it is
           unique on that chain for addressless tokens. If an upstream token already supplies an unknown address, it is
-          dropped instead of being remapped by symbol. Pool dedupe uses exact ids plus conservative derived identity
-          keys, so legitimate same-pair pools are not collapsed just because their token set matches. Balancer direct
-          pools now key exact identity off the API&apos;s real pool `address`, not the 32-byte vault pool id. Provider-specific
-          ids with underscores or suffixes are normalized into canonical protocol families before identity matching.
+          dropped instead of being remapped by symbol. A token pair is a matching candidate, not a pool identity:
+          opaque provider IDs remain distinct chain-scoped deployments until a physical match is proven.
+          Identical exact repeats count once; conflicting exact observations are quarantined with a named reason.
+          One physical pool attributed to several stablecoins counts once globally. Balancer uses its real pool
+          address, not the vault pool ID; candidate fingerprints support guarded unique joins, never TVL aggregates.
         </p>
         <p>
           Direct-source precedence is also measurement-aware. A protocol-native pool normally replaces an overlapping
@@ -68,6 +69,11 @@ export function LiquidityPoolMatchingDetails() {
           reads reserves and fee detail from the official DexReservesResolver on Ethereum, Arbitrum, Base, and Polygon,
           while Aerodrome and Velodrome Slipstream read pool state from the on-chain Sugar view contracts on Base and
           Optimism.
+          Curve requires complete USD-valued balances and Fluid both reserve halves. Incomplete evidence remains
+          unmeasured with neutral balance weighting; complete zero-sided balances remain measured zero.
+          Provider numbers must be complete finite decimals, not numeric prefixes, and Orca balance normalization
+          requires integer token decimals in 0..255. Independently admitted pool identity and TVL can survive
+          missing balance evidence, but that absence cannot establish measured coverage.
         </p>
         <p>
           Canonical Ethereum Uniswap V2 and BSC PancakeSwap V2 pools can publish exact constant-product execution only
@@ -105,6 +111,13 @@ export function LiquidityPoolMatchingDetails() {
           pools continue to contribute aggregate liquidity, price observations, and shaped exit-route evidence, but no
           native measured-execution profiles are collected or published for them, and the target-only SunSwap census is
           no longer fetched.
+        </p>
+        <p>
+          External protocol totals gate fallback admission, not published valuation. Fallback groups exceeding
+          per-coin protocol headroom are quarantined before price admission, and rejection follows the physical
+          pool across coin views; trusted raw TVL is never clipped to fit the external total. Curve factory
+          models need independent tracked-market references. Bounded UniV3 outage identity carry does not carry
+          current USD valuation: without an independent current reference, the measured target stays unresolved.
         </p>
         <p>
           Repeated sightings of the same physical pool across direct API, staged, and fallback sources are collapsed before

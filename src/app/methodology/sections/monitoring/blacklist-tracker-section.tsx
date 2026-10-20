@@ -36,6 +36,16 @@ export function BlacklistTrackerMethodologySection() {
                 historical event-time USD valuation requires a quote attributed to the event, never today&apos;s price.
               </p>
               <p>
+                Historical quantities must be attributable to the event&apos;s execution position. A preceding-block
+                balance can differ after earlier transfers or wipes in the same block, so amountless EVM actions
+                remain unavailable without exact evidence. Emitted destroy amounts are usable only when unambiguous
+                for the affected account. EURC mirror suppression requires emitted event-time zero, never a
+                block-before or current-balance approximation. Previously suppressed history is not automatically restored.
+                Deterministic EVM freeze/unfreeze quantities with event_time_unproven are permanently unavailable,
+                not indefinitely retried. Destroy-receipt failures remain retryable; current-balance snapshots
+                retain their independent recovery rules.
+              </p>
+              <p>
                 Public frozen totals are last-known successful freeze-ledger snapshots rather than live balance guarantees.
                 Provider refresh failures preserve the previous successful value and surface data-quality context. New
                 snapshot identities are contract/config scoped, while older rows can use legacy symbol/chain/address

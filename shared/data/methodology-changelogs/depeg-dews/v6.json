@@ -1,5 +1,20 @@
 [
   {
+    "version": "6.36",
+    "title": "Original quote clocks and readable-leg normalization",
+    "date": "2026-10-20",
+    "effectiveAt": 1792454400,
+    "summary": "DEX corroboration retains original observation ages, and DEWS blends only readable supply and liquidity legs rather than treating missing evidence as calm.",
+    "impact": [
+      "Affirmative DEX corroboration and recovery require original family observations within 35 minutes and aggregate contributors within 75 minutes. Publication and legacy compatibility clocks cannot renew undated, future or expired quotes; conservative challenger vetoes remain negative-only evidence.",
+      "Supply weights 0.6/0.4 and liquidity weights 0.5/0.5 are renormalized over readable legs. Missing deltas remain null; full, partial and unavailable coverage are persisted. No readable leg produces tagged unavailable, not measured calm.",
+      "Coverage is 1 for full evidence, 0.6 or 0.4 for a single supply leg, 0.5 for a single liquidity leg and 0 for unavailable. Historical missing coverage metadata remains unknown; curves, dampening, family totals and detector thresholds are unchanged.",
+      "Historical bytes and publication identities are not rewritten. Planned release date is 2026-10-20; writer soak, partial-input calibration and first accepted generation remain separate runtime requirements."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.35",
     "title": "TVL erosion compares stored liquidity measurement epochs",
     "date": "2026-10-19",

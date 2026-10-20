@@ -39,6 +39,15 @@ export function RedemptionBackstopMethodologySection() {
         from fiat proceeds. These corrections can move route scores; weights and ladders are unchanged.
       </p>
       <p>
+        Redemption output risk follows what the selected route pays. A single reviewed stablecoin payout is
+        100% of output regardless of backing allocations; basket percentages require complete admitted payout
+        weights, otherwise the affected output stays identified with an unknown share. FUSD pays USDT, Noble
+        USDN and Gate GUSD pay USDC, and KAST USDK unwraps to M, not an inferred partner fiat rail.
+        Output identity proves neither current price, funded liquidity, fees, holder access nor settlement.
+        A separately fresh nested observation cannot rehabilitate a fatally invalid reserve snapshot.
+        Independent DEX alternatives retain their own clock, hash and FX gates; their absence is not redemption failure.
+      </p>
+      <p>
         Methodology v4.5 withdraws unsupported capacity, completion and eligibility assumptions on reviewed
         existing routes. Avalon, Youves, hyUSD and wARS retain unquantified capacity; Solayer&apos;s USDC
         holder path is queued QLP fulfillment, not atomic redemption. pathUSD&apos;s processing target is
