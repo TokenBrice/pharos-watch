@@ -2,6 +2,8 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { computeLiveReserveConfigFingerprint, LiveReservesConfigSchema } from "@shared/lib/live-reserve-adapters";
+import { evaluateLiveReserveAdmission } from "../../../lib/live-reserves/store-snapshot-state";
 import { runAdapter, type AdapterRpcValue } from "./reserve-adapter.test-support";
 import {
   MAKINA_ASYNC_REDEEMER,
@@ -46,6 +48,30 @@ function capturedPostRedeemNetwork(rpc: Record<string, AdapterRpcValue> = {}) {
 }
 
 describe("fetchMakinaStrategyReserves redemption telemetry", () => {
+  it("rejects retained pre-sign-and-identity bindings without renewing their clocks", async () => {
+    const { result, coin, config } = await runRedemptionReplay();
+    expect(config.version).toBe(4);
+    const warnings = result.warnings ?? [];
+    const snapshot = {
+      stablecoinId: coin.id, source: config.adapter, slices: result.slices,
+      fetchedAt: NOW_SEC, metadata: result.metadata ?? {}, warnings, warningCount: warnings.length,
+      adapterSourceModel: "dynamic-mix" as const, adapterEvidenceClass: "independent" as const,
+      configFingerprint: computeLiveReserveConfigFingerprint(config),
+    };
+    const state = { lastSuccessAt: NOW_SEC, lastSuccessAttemptId: null };
+    expect(evaluateLiveReserveAdmission(snapshot, state, { liveReservesConfig: config }, NOW_SEC).eligible).toBe(true);
+    for (const version of [1, 2, 3]) {
+      const legacyConfig = { ...config, version };
+      expect(LiveReservesConfigSchema.safeParse(legacyConfig).success).toBe(false);
+      const admission = evaluateLiveReserveAdmission({
+        ...snapshot, configFingerprint: computeLiveReserveConfigFingerprint(legacyConfig),
+      }, state, { liveReservesConfig: config }, NOW_SEC);
+      expect(admission.eligible).toBe(false);
+      expect(admission.reasons).toContain("config-mismatch");
+    }
+    expect(result.metadata?.sourceTimestamp).toBe(1785265103);
+  });
+
   it("uses identity-verified pinned Machine AUM when issuer API AUM lags a finalized redeem", async () => {
     const networkSpec = capturedPostRedeemNetwork();
     const { result } = await runAdapter("makina-strategy", "dusd-dialectic", { network: networkSpec, nowSec: 1791307011 });

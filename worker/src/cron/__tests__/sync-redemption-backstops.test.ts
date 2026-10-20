@@ -9,6 +9,9 @@ import { CRON_INTERVALS, REDEMPTION_BACKSTOP_RESOLVE_CONCURRENCY } from "@shared
 import { createDeferredPromise } from "../../lib/__tests__/deferred.test-support";
 import { compactCronMetadataForPersistence } from "../../lib/cron-metadata-persistence";
 import { EvmCodeIdentityError } from "../../lib/evm-code-identity-error";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import type * as StoreWriteModule from "../../lib/redemption-backstops-store-write";
+import type * as ExecutableObserversModule from "../reserve-adapters/executable-redemption-observers";
 
 const DEFAULT_REDEMPTION_BACKSTOP_D1_TABLES: MockTableConfig[] = [
   { match: "FROM depeg_events", rows: [] },
@@ -23,6 +26,8 @@ const buildRedemptionBackstopEntryMock = vi.fn();
 const buildFailedRedemptionBackstopEntryMock = vi.fn();
 const upsertRedemptionBackstopSnapshotsMock = vi.fn();
 const loadAcceptedReserveGenerationMock = vi.fn();
+const observeExecutableRedemptionRouteMock = vi.fn();
+let directObserverEnabledMock = false;
 let configuredIdsMock = ["cusd-cap", "iusd-infinifi"];
 let outputAssetsByIdMock: Record<string, string[]> = {};
 const GATE_LOAD_TIMEOUT_MS = 15_000;
@@ -85,8 +90,18 @@ vi.mock("../../lib/redemption-backstop/sources", async (importOriginal) => ({
   resolveRedemptionBackstopEntry: resolveRedemptionBackstopEntryMock,
 }));
 
-vi.mock("../../lib/redemption-backstops-store-write", () => ({
+vi.mock("../../lib/redemption-backstops-store-write", async (importOriginal) => ({
+  ...(await importOriginal<typeof StoreWriteModule>()),
   upsertRedemptionBackstopSnapshots: upsertRedemptionBackstopSnapshotsMock,
+}));
+
+vi.mock("../reserve-adapters/executable-redemption-observers", async (importOriginal) => ({
+  ...(await importOriginal<typeof ExecutableObserversModule>()),
+  observeExecutableRedemptionRoute: observeExecutableRedemptionRouteMock,
+}));
+
+vi.mock("../../lib/exit-execution/runtime", () => ({
+  observeReviewedExitExecutionRoutes: async () => ({ observations: [] }),
 }));
 
 vi.mock("../../lib/accepted-reserve-generation", async (importOriginal) => ({
@@ -105,18 +120,24 @@ vi.mock("@shared/lib/redemption-backstops", async (importOriginal) => ({
           settlementModel: "atomic",
           executionModel: "deterministic-basket",
           outputAssetType: "stable-basket",
-          capacityModel: { kind: "supply-full" },
+          capacityModel: directObserverEnabledMock && id === "usdfr-forest-road"
+            ? { kind: "executable-observer", observerId: "usdfr-par-controller", requiredOutputAssetKeys: ["usdc-circle"] }
+            : { kind: "supply-full" },
           outputAssets: outputAssetsByIdMock[id],
           costModel: { kind: "dynamic-or-unclear" },
         }
       : null,
 }));
 
+// Cron/source/store imports below are deferred: their mock factories reference
+// non-hoisted suite state, so static imports would execute before initialization.
 describe("syncRedemptionBackstops", () => {
   beforeEach(() => {
     const now = Math.floor(Date.now() / 1000);
     configuredIdsMock = ["cusd-cap", "iusd-infinifi"];
     outputAssetsByIdMock = {};
+    directObserverEnabledMock = false;
+    observeExecutableRedemptionRouteMock.mockReset();
     vi.clearAllMocks();
     loadStablecoinsCacheMock.mockResolvedValue({
       kind: "ok",
@@ -184,6 +205,22 @@ describe("syncRedemptionBackstops", () => {
     expect(result.metadata).toContain("stablecoins-cache:missing-cache");
     expect(upsertRedemptionBackstopSnapshotsMock).not.toHaveBeenCalled();
   }, GATE_LOAD_TIMEOUT_MS);
+
+  it.each(["reserve", "stablecoins"])("opens no manifest or rows on a global %s admission hold", async (input) => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      if (input === "reserve") loadAcceptedReserveGenerationMock.mockRejectedValueOnce(new Error("unavailable"));
+      else loadStablecoinsCacheMock.mockResolvedValueOnce({ kind: "error", reason: "missing-cache", updatedAt: null });
+      const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+      const result = await syncRedemptionBackstops(db, new AbortController().signal);
+      expect(result.status).toBe("error");
+      expect(JSON.parse(result.metadata ?? "{}").reason).toBe(input === "reserve"
+        ? "accepted-reserve-view-unavailable" : "stablecoins-cache:missing-cache");
+      expect(upsertRedemptionBackstopSnapshotsMock).not.toHaveBeenCalled();
+      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM redemption_backstop_runs").get()).toEqual({ count: 0 });
+      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM redemption_backstop_run_rows").get()).toEqual({ count: 0 });
+    } finally { sqlite.close(); }
+  });
 
   it.each([
     ["stale", (clock: number) => clock - CRON_INTERVALS["sync-stablecoins"] * 2 - 1],
@@ -462,6 +499,88 @@ describe("syncRedemptionBackstops", () => {
     expect(first[0].outputDependencyResolution?.resolutionState).toBe("failed");
   });
 
+  it.each(["resolver", "post-resolution"])("completes the census around a schema-invalid %s member", async (stage) => {
+    const now = Math.floor(Date.now() / 1000);
+    configuredIdsMock = ["cusd-cap", "iusd-infinifi", "usdc-circle"];
+    outputAssetsByIdMock = { "cusd-cap": ["iusd-infinifi"] };
+    loadStablecoinsCacheMock.mockResolvedValueOnce({
+      kind: "ok", updatedAt: now, payload: { peggedAssets: configuredIdsMock.map((id) => makeAsset({ id })) },
+    });
+    resolveRedemptionBackstopEntryMock.mockImplementation((_db: unknown, asset: { id: string }) =>
+      Promise.resolve(makeResolvedSnapshot(asset.id, now, stage === "resolver" && asset.id === "iusd-infinifi"
+        ? { sourceUrls: ["not-a-url"] } : {})),
+    );
+    // Defer module loading until this suite's non-hoisted mock functions exist.
+    const sources = await import("../../lib/redemption-backstop/sources");
+    const originalJoin = sources.applyOutputDependencyResolution;
+    const join = vi.spyOn(sources, "applyOutputDependencyResolution");
+    if (stage === "post-resolution") join.mockImplementationOnce((entries, configs) => {
+      const transformed = originalJoin(entries, configs);
+      transformed[1] = { ...transformed[1], sourceUrls: ["not-a-url"] };
+      return transformed;
+    });
+    const writer = await vi.importActual<typeof StoreWriteModule>(
+      "../../lib/redemption-backstops-store-write",
+    );
+    upsertRedemptionBackstopSnapshotsMock.mockImplementationOnce(writer.upsertRedemptionBackstopSnapshots);
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      // The cron and reader share the mocked writer, initialized above.
+      const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+      const { loadRedemptionBackstopSnapshot } = await import("../../lib/redemption-backstops-store");
+      const result = await syncRedemptionBackstops(db, new AbortController().signal);
+      expect(result.status).toBe("degraded");
+      const metadata = JSON.parse(result.metadata ?? "{}");
+      expect(metadata.failedIds).toEqual(["iusd-infinifi"]);
+      expect(metadata.sourceFailureReasons["iusd-infinifi"]).toMatchObject({
+        code: "redemption-snapshot-schema-invalid", schemaPath: "sourceUrls.0", schemaReason: expect.any(String),
+      });
+      expect(sqlite.prepare("SELECT status, expected_count, written_count FROM redemption_backstop_runs").get())
+        .toEqual({ status: "completed", expected_count: 3, written_count: 3 });
+      const loaded = await loadRedemptionBackstopSnapshot(db);
+      expect(Object.keys(loaded.map).sort()).toEqual([...configuredIdsMock].sort());
+      expect(loaded.map["iusd-infinifi"]).toMatchObject({ resolutionState: "failed", score: null, immediateCapacityUsd: null });
+      expect(loaded.map["cusd-cap"]).toMatchObject({
+        resolutionState: "resolved", score: 88,
+        outputDependencyResolution: { stablecoinId: "iusd-infinifi", resolutionState: "failed" },
+      });
+      expect(loaded.map["usdc-circle"].resolutionState).toBe("resolved");
+    } finally { join.mockRestore(); sqlite.close(); }
+  });
+
+  it.each(["success", "unavailable", "rejected-output"])("records actual direct-observer %s execution and consumption", async (outcome) => {
+    const now = Math.floor(Date.now() / 1000);
+    configuredIdsMock = ["usdfr-forest-road"];
+    directObserverEnabledMock = true;
+    loadStablecoinsCacheMock.mockResolvedValueOnce({
+      kind: "ok", updatedAt: now, payload: { peggedAssets: [makeAsset({ id: "usdfr-forest-road" })] },
+    });
+    if (outcome === "unavailable") observeExecutableRedemptionRouteMock.mockRejectedValueOnce(new Error("RPC unavailable"));
+    else observeExecutableRedemptionRouteMock.mockResolvedValueOnce({
+      capacityRaw: 1_000_000n, capacitySource: "observed", capacityState: "measured", underlyingDecimals: 6,
+      capacityKind: "live-direct-bounded", freshnessKind: "same-run-onchain", sourceTimestamp: now, blockNumber: 123,
+      sourceUrls: ["https://example.com/route"], outputAssetKeys: outcome === "success" ? ["usdc-circle"] : ["wrong-output"],
+      routeStatus: "open", routeStatusSource: "onchain", routeStatusReason: "observed-open",
+      holderEligibility: "any-holder", feeBps: 0, allInFeeBps: 0, settlementDelaySec: 0, diagnostics: {},
+    });
+    const sources = await vi.importActual<typeof SourcesModule>("../../lib/redemption-backstop/sources");
+    resolveRedemptionBackstopEntryMock.mockImplementationOnce(sources.resolveRedemptionBackstopEntry);
+    // Static loading would evaluate this suite's mock factories before setup.
+    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+    const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
+    const metadata = JSON.parse(result.metadata ?? "{}");
+    expect(observeExecutableRedemptionRouteMock).toHaveBeenCalledTimes(1);
+    expect(metadata).toMatchObject({
+      routeStatusProducerFetches: true, directObserverAttemptedCount: 1,
+      directObserverConsumedCount: outcome === "success" ? 1 : 0,
+      directObserverUnavailableCount: outcome === "success" ? 0 : 1,
+    });
+    const row = upsertRedemptionBackstopSnapshotsMock.mock.calls[0][1][0];
+    expect(row.routeStatusSource).toBe(outcome === "success" ? "onchain" : "static-config");
+    expect(row).not.toHaveProperty("reserveInput");
+    expect(upsertRedemptionBackstopSnapshotsMock.mock.calls[0][2].metadata.directObserverAttemptedCount).toBe(1);
+  });
+
   it("writes snapshots and summarizes source-mode coverage", async () => {
     resolveRedemptionBackstopEntryMock
       .mockResolvedValueOnce(makeResolvedSnapshot("cusd-cap", 1_700_000_000))
@@ -517,8 +636,11 @@ describe("syncRedemptionBackstops", () => {
     expect(metadata.providerMissingCapacityBy).toBeUndefined();
     expect(metadata.dynamic).toBe(1);
     expect(metadata.estimated).toBe(1);
-    expect(metadata.routeStatusProducer).toBe("live-reserve-adapters-plus-static-policy");
-    expect(metadata.routeStatusProducerFetches).toBe(false);
+    expect(metadata.routeStatusProducer).toBe("live-reserve-adapters-plus-executable-observers-plus-static-policy");
+    expect(metadata).toMatchObject({
+      routeStatusProducerFetches: false,
+      directObserverAttemptedCount: 0, directObserverConsumedCount: 0, directObserverUnavailableCount: 0,
+    });
     expect(metadata.snapshotRunId).toBe("redemption:test-run");
     expect(metadata.runRowsWrittenCount).toBe(2);
     expect(metadata.currentMirroredCount).toBeUndefined();

@@ -94,19 +94,47 @@ describe("adaptKavaCdpState", () => {
     expect(result.warnings ?? []).toEqual([]);
   });
 
-  it("degrades with quantified unknown exposure when a positive collateral type has no price market", () => {
+  it("withholds the whole book when a positive collateral type has no price market", () => {
     const state = makeState();
     state.collateral.total_collateral.find((row) => row.collateral_type === "swp-a")!.amount.amount = "1000000000";
     state.principal.total_principal.find((row) => row.collateral_type === "swp-a")!.amount.amount = "750000000000";
-
     const result = adaptKavaCdpState(state);
-
     const expectedPct = (750000 / (expectedPrincipalTokens - 4889684 / 1e6 + 750000)) * 100;
-    expect(result.metadata!.unknownExposurePct).toBeCloseTo(expectedPct, 6);
-    const warning = result.warnings!.find((entry) => entry.code === "unpriced-collateral-type");
-    expect(warning).toMatchObject({ severity: "warning", effect: "degraded" });
-    // SWP must not be priced with any proxy value.
-    expect(result.slices.map((slice) => slice.name)).not.toContain("SWP");
+    expect(result.slices).toEqual([]);
+    expect(result.metadata).not.toHaveProperty("totalReserveUsd");
+    expect(result.metadata).not.toHaveProperty("collateralizationRatio");
+    expect(result.metadata).not.toHaveProperty("unknownExposurePct");
+    expect(result.metadata?.details).toMatchObject({
+      measuredCollateralUsd: expect.closeTo(expectedTotalCollateralUsd, 6),
+      unpricedCollateralTypes: ["swp-a"], unpricedPrincipalTokens: 750000,
+      unpricedPrincipalPct: expect.closeTo(expectedPct, 6),
+    });
+    expect(result.warnings).toContainEqual(expect.objectContaining({
+      code: "collateral-coverage-incomplete", effect: "fatal",
+    }));
+  });
+
+  it.each(["missing params", "missing collateral total"] as const)("withholds unmeasurable positive scope with %s", (missing) => {
+    const state = makeState();
+    if (missing === "missing params") {
+      state.params.params.collateral_params = state.params.params.collateral_params.filter((row) => row.type !== "bnb-a");
+    } else {
+      state.collateral.total_collateral = state.collateral.total_collateral.filter((row) => row.collateral_type !== "bnb-a");
+    }
+    const result = adaptKavaCdpState(state);
+    expect(result.slices).toEqual([]);
+    expect(result.metadata).not.toHaveProperty("totalReserveUsd");
+    expect(result.metadata?.details).toMatchObject({ unpricedCollateralTypes: ["bnb-a"] });
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "collateral-coverage-incomplete", effect: "fatal" }));
+  });
+
+  it("accepts an observed zero contributor without its unavailable valuation params", () => {
+    const state = makeState();
+    state.params.params.collateral_params = state.params.params.collateral_params.filter((row) => row.type !== "swp-a");
+    const result = adaptKavaCdpState(state);
+    expect(result.slices).toHaveLength(7);
+    expect(result.metadata?.totalReserveUsd).toBeCloseTo(expectedTotalCollateralUsd, 6);
+    expect(result.warnings ?? []).toEqual([]);
   });
 
   it("fails closed when the USDX liability price market is missing", () => {
@@ -129,9 +157,39 @@ describe("adaptKavaCdpState", () => {
 
     expect(() => adaptKavaCdpState(state)).toThrow("expected usdx");
   });
+
+  it.each(["249610005372", "0"])("rejects a collateral denomination mismatch before scaling amount %s", (amount) => {
+    const state = makeState();
+    state.collateral.total_collateral[0]!.amount = { denom: "ukava", amount };
+    expect(() => adaptKavaCdpState(state)).toThrow("expected bnb");
+  });
+
+  it.each(["collateral", "principal"] as const)("rejects conflicting duplicate %s identities", (ledger) => {
+    const state = makeState();
+    if (ledger === "collateral") {
+      state.collateral.total_collateral.push({ collateral_type: "bnb-a", amount: { denom: "ukava", amount: "1" } });
+    } else {
+      state.principal.total_principal.push({ collateral_type: "bnb-a", amount: { denom: "usdx", amount: "1" } });
+    }
+    expect(() => adaptKavaCdpState(state)).toThrow(`duplicate ${ledger} row for type bnb-a`);
+  });
 });
 
 describe("fetchKavaCdpReserves", () => {
+  it("rejects incomplete valuation at the HTTP boundary without replacement weights", async () => {
+    const collateral = structuredClone(TOTAL_COLLATERAL);
+    collateral.total_collateral.find((row) => row.collateral_type === "swp-a")!.amount.amount = "1000000000";
+    const { result, report } = await runAdapter("kava-cdp", makeCoin(), {
+      network: kavaNetwork({ [TOTAL_COLLATERAL_URL]: collateral }),
+      nowSec: BLOCK_TIME_SEC,
+      validate: false,
+    });
+    expect(report.valid).toBe(false);
+    expect(result.slices).toEqual([]);
+    expect(result.metadata).not.toHaveProperty("totalReserveUsd");
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "collateral-coverage-incomplete", effect: "fatal" }));
+  });
+
   it("fails closed when an upstream response drops a required field", async () => {
     await expect(runAdapter("kava-cdp", makeCoin(), {
       network: kavaNetwork({

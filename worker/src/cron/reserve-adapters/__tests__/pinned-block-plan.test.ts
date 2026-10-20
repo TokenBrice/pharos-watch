@@ -7,11 +7,13 @@ vi.mock("../../../lib/evm-rpc", async (importOriginal) => ({
   fetchEvmBlockHeaderAtTag: vi.fn(),
   fetchEvmMulticall3Aggregate3AtBlock: vi.fn(),
   fetchEvmUint256AtBlock: vi.fn(),
+  fetchEvmStorageAtBlock: vi.fn(),
 }));
 
-import { fetchEvmBlockNumber, fetchEvmBlockHeaderAtTag, fetchEvmMulticall3Aggregate3AtBlock, fetchEvmUint256AtBlock } from "../../../lib/evm-rpc";
+import { fetchEvmBlockNumber, fetchEvmBlockHeaderAtTag, fetchEvmMulticall3Aggregate3AtBlock, fetchEvmStorageAtBlock, fetchEvmUint256AtBlock } from "../../../lib/evm-rpc";
 import { pinnedBlockPlan } from "../evm-observation-plan";
 import { fetchOnchainMulticall3, makeOnchainCallers } from "../onchain";
+import { EIP1967_IMPLEMENTATION_SLOT, readImplementationSlotAddress } from "../onchain-identity";
 
 const chain = "ethereum";
 const contract = "0x0000000000000000000000000000000000000001";
@@ -55,6 +57,34 @@ describe("pinnedBlockPlan", () => {
     expect(fetchEvmBlockNumber).not.toHaveBeenCalled();
     expect(fetchEvmBlockHeaderAtTag).toHaveBeenCalledTimes(1);
     expect(fetchEvmBlockHeaderAtTag).toHaveBeenCalledWith(chain, "latest", expect.objectContaining({ signal }));
+  });
+
+  it("reads implementation identity at the retained chain-local pin without claiming finality", async () => {
+    vi.mocked(fetchEvmStorageAtBlock).mockResolvedValue(`0x${"0".repeat(63)}1`);
+    const observedBlock = { chain, number: 77, timestamp: 1_700_000_000 };
+    const plan = await pinnedBlockPlan({ chain, signal: new AbortController().signal, ctx: { observedBlock } });
+    const implementation = await readImplementationSlotAddress({
+      adapterKey: "test", input: { kind: "onchain-evm", chain, rpcMode: "public-rpc" }, contractAddress: contract,
+      params: {}, signal: new AbortController().signal, ctx: plan.ctx,
+    });
+    expect(implementation).toBe(contract);
+    expect(plan.observedBlock).toBe(observedBlock);
+    expect(fetchEvmBlockHeaderAtTag).not.toHaveBeenCalled();
+    expect(fetchEvmStorageAtBlock).toHaveBeenCalledWith(
+      chain, contract, EIP1967_IMPLEMENTATION_SLOT, 77, expect.objectContaining({ timeoutMs: 10_000 }),
+    );
+    expect(vi.mocked(fetchEvmStorageAtBlock).mock.calls[0][4]?.recentStatePin).toBeUndefined();
+  });
+
+  it.each([
+    [{}, /requires a pinned block/],
+    [{ observedBlock: { chain: "arbitrum", number: 100, timestamp: 1_800_000_000 } }, /does not match ethereum/],
+  ] as const)("rejects missing or foreign implementation pins before storage access (%j)", async (ctx, reason) => {
+    await expect(readImplementationSlotAddress({
+      adapterKey: "test", input: { kind: "onchain-evm", chain, rpcMode: "public-rpc" }, contractAddress: contract,
+      params: {}, signal: new AbortController().signal, ctx,
+    })).rejects.toThrow(reason);
+    expect(fetchEvmStorageAtBlock).not.toHaveBeenCalled();
   });
 
   it("fails closed when the anchor header cannot be established", async () => {

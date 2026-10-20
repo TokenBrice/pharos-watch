@@ -5,7 +5,7 @@ import type { AdapterContext, AdapterResult } from "./types";
 import {
   buildCoverageShortfallWarnings,
   fetchJsonWithRetry,
-  parsePositiveNumericLike,
+  parseFiniteNumber,
   parseTimestampLikeToUnixSeconds,
   requireJsonInput,
   reserveDegradedWarning,
@@ -52,15 +52,12 @@ export function adaptUnitedPorPayload(
   payload: UnitedPorPayload,
   slice: UnitedPorSliceConfig,
 ): AdapterResult {
-  const totalReserveUsd = parsePositiveNumericLike(payload.totalReserve);
-  if (totalReserveUsd == null) {
-    throw new Error("United PoR payload has invalid totalReserve");
-  }
-
-  const supplyUsd = parsePositiveNumericLike(payload.totalToken);
-  if (supplyUsd == null) {
-    throw new Error("United PoR payload has invalid totalToken");
-  }
+  const totalReserveUsd = parseFiniteNumber(payload.totalReserve, {
+    label: "United PoR payload has invalid totalReserve", min: 0,
+  });
+  const supplyUsd = parseFiniteNumber(payload.totalToken, {
+    label: "United PoR payload has invalid totalToken", min: 0,
+  });
 
   const sourceTimestamp = parseTimestampLikeToUnixSeconds(payload.updatedAt);
   if (sourceTimestamp == null) {
@@ -80,7 +77,7 @@ export function adaptUnitedPorPayload(
     throw new Error("United PoR payload has a missing or non-boolean ripcord alarm");
   }
 
-  const collateralizationRatio = totalReserveUsd / supplyUsd;
+  const collateralizationRatio = supplyUsd > 0 ? totalReserveUsd / supplyUsd : undefined;
   const ripcordDetails = normalizeRipcordDetails(payload.ripcordDetails);
 
   const warnings: LiveReserveWarning[] = buildCoverageShortfallWarnings({
@@ -88,6 +85,12 @@ export function adaptUnitedPorPayload(
     message: (pct) => `United PoR reserves cover ${pct}% of outstanding U token supply`,
     coverageRatio: collateralizationRatio,
   });
+  if (supplyUsd === 0) {
+    warnings.push(reserveDegradedWarning(
+      "united-por-zero-supply",
+      "United PoR reports zero outstanding token supply; reserve coverage is undefined",
+    ));
+  }
 
   // The attestor's own ripcord flag is a data-quality alarm, not just a low
   // ratio: treat it as degraded regardless of the measured ratio so a
@@ -116,7 +119,7 @@ export function adaptUnitedPorPayload(
     }],
     metadata: {
       ...verifiedFreshnessMetadata(sourceTimestamp),
-      collateralizationRatio,
+      ...(collateralizationRatio != null ? { collateralizationRatio } : {}),
       totalReserveUsd,
       supplyUsd,
       details: {

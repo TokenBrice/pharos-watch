@@ -1,11 +1,15 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { expectWarningEffect } from "./reserve-adapter.test-support";
 import { getReserveAdapter } from "../index";
 import { adaptMakinaStrategyReserves, buildMakinaRedemptionMetadata } from "../makina-strategy";
 import { validateAdapterOutput } from "../validate";
+import { CONFIGURED_COINS } from "../../sync-live-reserves-shared";
+import { syncReserveCoin } from "../../sync-live-reserves-core";
+import { getReserveSyncState } from "../../../lib/live-reserves/store-read";
 
 const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
 const STRATEGY_FIXTURE = JSON.parse(readFileSync(join(FIXTURES_DIR, "makina-strategy.json"), "utf8"));
@@ -45,6 +49,8 @@ const REDEMPTION_STATE = {
 };
 
 describe("makina-strategy adapter", () => {
+  const fixtures = createLatestSchemaFixtureTracker();
+  afterEach(() => fixtures.closeAll());
   it("replays October's stale allocation clocks and contradictory issuer AUM against pinned Machine authority", () => {
     const result = adaptMakinaStrategyReserves(OCTOBER_STRATEGY, OCTOBER_ALLOCATIONS, PARAMS, {
       ...REDEMPTION_STATE,
@@ -139,6 +145,108 @@ describe("makina-strategy adapter", () => {
     expect(financing).toHaveLength(debts.length);
     expect(financing.reduce((sum, bucket) => sum + bucket.liabilityUsd, 0)).toBe(50);
     expect(validateAdapterOutput(result, { adapter: getReserveAdapter("makina-strategy") ?? undefined }).valid).toBe(true);
+  });
+
+  it.each([undefined, null, "true", "false", 0, 1])(
+    "rejects a positive position with is_debt=%s even inside the AUM tolerance",
+    (isDebt) => {
+      const strategy = structuredClone(STRATEGY_FIXTURE);
+      strategy.data.aum = strategy.data.lastReportedAum = "9990000000";
+      const allocations = structuredClone(ALLOCATIONS_FIXTURE);
+      allocations.data.base_tokens = [{ accounting_token_value: "10000000000" }];
+      allocations.data.positions = [{ value: "10000000", is_debt: isDebt, updated_at: 1785310739 }];
+      // Misreading the $10 debt as an asset differs by just 0.2002%, so
+      // reconciliation cannot substitute for an explicit signed-book contract.
+      expect(() => adaptMakinaStrategyReserves(strategy, allocations, PARAMS)).toThrow(/is_debt/);
+    },
+  );
+
+  it("retains the accepted snapshot and original clocks when a below-tolerance debt loses its sign", async () => {
+    const { sqlite, db } = fixtures.open();
+    const coin = CONFIGURED_COINS.find((candidate) => candidate.id === "dusd-dialectic")!;
+    const adapter = getReserveAdapter("makina-strategy")!;
+    const sourceClock = Math.floor(Date.now() / 1000) - 120;
+    const strategy = structuredClone(STRATEGY_FIXTURE);
+    strategy.meta.generated_at = new Date(sourceClock * 1000).toISOString();
+    strategy.data.aum = strategy.data.lastReportedAum = "9990000000";
+    const allocations = structuredClone(ALLOCATIONS_FIXTURE);
+    allocations.meta.generated_at = strategy.meta.generated_at;
+    allocations.data.base_tokens = [{
+      accounting_token_value: "10000000000", token: structuredClone(STRATEGY_FIXTURE.data.accountingToken),
+    }];
+    allocations.data.positions = [{ protocol: "aave-v4", value: "10000000", is_debt: true, updated_at: sourceClock }];
+    const args = {
+      db, coin, adapter, signal: new AbortController().signal,
+      breakerCanFetch: new Map([["live-reserves:makina-strategy", true]]), d1FinalizeTimeoutMs: 30_000,
+      runAdapter: async () => adaptMakinaStrategyReserves(strategy, allocations, PARAMS),
+    };
+    expect((await syncReserveCoin({ ...args, previousState: null })).status).toBe("synced");
+    const before = sqlite.prepare("SELECT * FROM reserve_composition WHERE stablecoin_id = ?").get(coin.id);
+    expect(before).toBeDefined();
+    const previousState = await getReserveSyncState(db, coin.id);
+    delete allocations.data.positions[0].is_debt;
+    const attempt = await syncReserveCoin({ ...args, previousState });
+    expect(attempt.status).toBe("failed");
+    expect(sqlite.prepare("SELECT * FROM reserve_composition WHERE stablecoin_id = ?").get(coin.id)).toEqual(before);
+    const retainedState = await getReserveSyncState(db, coin.id);
+    expect(retainedState).toMatchObject({
+      lastStatus: "error", lastSuccessAt: previousState!.lastSuccessAt,
+      lastSuccessAttemptId: previousState!.lastSuccessAttemptId,
+      // Adapter exceptions are persisted as lastError, not synthesized warnings.
+      lastError: expect.stringMatching(/is_debt/),
+    });
+  });
+
+  it("keeps observed-zero positions outside the positive-row sign contract", () => {
+    const allocations = structuredClone(ALLOCATIONS_FIXTURE);
+    allocations.data.positions.push({ value: "0" });
+    const result = adaptMakinaStrategyReserves(STRATEGY_FIXTURE, allocations, PARAMS);
+    expect(result.metadata).toMatchObject({ totalReserveUsd: 11000, totalAssetsUsd: 11500, totalDebtUsd: 500 });
+    expect(result.metadata?.details?.positionCount).toBe(5);
+  });
+
+  it.each(["base_tokens", "positions"])("rejects an omitted %s census", (field) => {
+    const allocations = structuredClone(ALLOCATIONS_FIXTURE);
+    delete allocations.data[field];
+    expect(() => adaptMakinaStrategyReserves(STRATEGY_FIXTURE, allocations, PARAMS)).toThrow(field);
+  });
+
+  it.each([
+    { symbol: "USDC" },
+    { symbol: "USDC", chainId: 1, address: "0x000000000000000000000000000000000000dead" },
+    { symbol: "USDC", chainId: 8453, address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" },
+    { symbol: "USDC", chainId: 42161, address: "0xff970a61a04b1ca14834a43f5de4533ebddb5cc8" },
+    { symbol: "USDC", chainId: 100, address: "0xddafbb505ad214d7b80b1f830fccc89b60fb7a83" },
+  ])("keeps an unproven or bridged USDC holding measured but unlinked: %j", (token) => {
+    const allocations = structuredClone(ALLOCATIONS_FIXTURE);
+    allocations.data.base_tokens[0].token = token;
+    const result = adaptMakinaStrategyReserves(STRATEGY_FIXTURE, allocations, PARAMS);
+    expect(result.metadata).toMatchObject({ totalReserveUsd: 11000, totalAssetsUsd: 11500, totalDebtUsd: 500 });
+    expect(result.slices.some((slice) => slice.coinId === "usdc-circle" || slice.risk === "low")).toBe(false);
+    expect(result.metadata?.unknownExposurePct).toBeCloseTo(1000 / 11500 * 100);
+    expect(result.slices).toContainEqual(expect.objectContaining({ name: "Unknown Makina exposure", risk: "high" }));
+  });
+
+  it.each([
+    { symbol: "USDC" },
+    { symbol: "USDC", chainId: 1, address: "0x000000000000000000000000000000000000dead" },
+    { symbol: "USDC", chainId: 8453, address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" },
+  ])("rejects unproven required accounting-token identity: %j", (token) => {
+    const strategy = structuredClone(STRATEGY_FIXTURE);
+    strategy.data.accountingToken = token;
+    expect(() => adaptMakinaStrategyReserves(strategy, ALLOCATIONS_FIXTURE, PARAMS)).toThrow(/accounting token mismatch/);
+  });
+
+  it("recognizes a chain-qualified canonical Base USDC holding without relying on its symbol", () => {
+    const allocations = structuredClone(ALLOCATIONS_FIXTURE);
+    allocations.data.base_tokens[0].token = {
+      chainId: "8453", address: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", symbol: "not-an-identity",
+    };
+    const result = adaptMakinaStrategyReserves(STRATEGY_FIXTURE, allocations, PARAMS);
+    expect(result.slices).toContainEqual(expect.objectContaining({
+      sourceKey: "makina:base-token:usdc", coinId: "usdc-circle", risk: "low", pct: 6.1,
+    }));
+    expect(result.metadata?.sourceTimestamp).toBe(1785265103);
   });
 
   it("maps only the reviewed Monad PT-AUSD identity to Pendle", () => {

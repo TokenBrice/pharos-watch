@@ -2,6 +2,9 @@ import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { RedemptionBackstopsResponseSchema } from "@shared/types/redemption";
 import { assertAllD1MatchesUsed, mockD1Strict } from "@shared/test-utils/mock-d1";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import { makeRedemptionWriteRecord } from "../../lib/__tests__/redemption-backstops-store.test-support";
+import { upsertRedemptionBackstopSnapshots } from "../../lib/redemption-backstops-store";
 import { handleRedemptionBackstops } from "../redemption-backstops";
 import type * as RedemptionBackstopsStoreModule from "../../lib/redemption-backstops-store";
 
@@ -158,6 +161,39 @@ describe("handleRedemptionBackstops", () => {
     expect(response.headers.get("Cache-Control")).toBe("no-store");
     assertAllD1MatchesUsed(db);
   });
+  it.each(["not-json", null, '{"resolutionState":"resolved","reserveInput":{}}'])(
+    "keeps bulk and selected-row freshness on the prior run when an unrequested sibling has invalid details: %s",
+    async (details) => {
+      const { sqlite, db } = createLatestSchemaSqlite();
+      const older = 1_699_700_000;
+      const newer = 1_700_000_000;
+      vi.useFakeTimers();
+      vi.setSystemTime((newer + 60) * 1000);
+      try {
+        for (const [runId, clock] of [["prior", older], ["rejected", newer]] as const) {
+          await upsertRedemptionBackstopSnapshots(db, [
+            makeRedemptionWriteRecord({ updatedAt: clock }),
+            makeRedemptionWriteRecord({ stablecoinId: "usdc-circle", updatedAt: clock }),
+          ], { runId, nowSec: clock });
+        }
+        sqlite.prepare("UPDATE redemption_backstop_run_rows SET details_json = ? WHERE snapshot_run_id = 'rejected' AND stablecoin_id = 'usdc-circle'").run(details);
+        for (const id of [undefined, "eurc-circle", "never-published"]) {
+          const response = await handleRedemptionBackstops(db, id);
+          const body = await readJsonResponse(response, 200);
+          expect(body).toMatchObject({ updatedAt: older, methodology: { version: "1.1" } });
+          if (id) expect(body).toMatchObject({ projection: {
+            generationId: "prior", totalCount: 2,
+            updatedAt: id === "eurc-circle" ? older : null,
+            unavailableReason: id === "eurc-circle" ? null : "row-not-published",
+          } });
+          expect(response.headers.get("X-Data-Age")).toBe(String(newer + 60 - older));
+          expect(response.headers.get("Warning")).not.toBeNull();
+          expect(response.headers.get("Cache-Control")).toBe("no-store");
+        }
+      } finally { sqlite.close(); }
+    },
+  );
+
 
   it("attributes methodology.version from the completed run manifest", async () => {
     const details = JSON.parse(makeRedemptionRow().details_json);

@@ -91,7 +91,7 @@
   ],
   "liveReservesConfig": {
     "adapter": "river-protocol-info",
-    "version": 1,
+    "version": 2,
     "semantics": "protocol-reserve",
     "breakerScope": "satusd-river",
     "display": {

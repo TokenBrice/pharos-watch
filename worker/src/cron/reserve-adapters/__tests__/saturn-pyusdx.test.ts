@@ -101,6 +101,40 @@ describe("saturn-pyusdx adapter", () => {
     expect(output.warnings).toBeUndefined();
   });
 
+  it("binds wrapper backing and implementation to one block across an upgrade", async () => {
+    let head = 100;
+    const spec = installReads();
+    spec.block = { number: 100, timestamp: 1_757_000_000 };
+    spec.rpc!["eth_getBlockByNumber:latest"] = () => ({ number: head++, timestamp: 1_757_000_000 });
+    spec.rpc![`eth_getStorageAt:${ADDRESSES.wrapper}:${EIP1967_IMPLEMENTATION_SLOT}`] = ({ block }) =>
+      addressWord(block === "0x64" ? ADDRESSES.implementation : ADDRESSES.other);
+    spec.rpc![`${ADDRESSES.wrapper}:paused()`] = ({ block }) => {
+      head += 1;
+      return word(block === "0x64" ? 1n : 0n);
+    };
+    spec.rpc![`${ADDRESSES.pyusdx}:balanceOf(address)`] = ({ block }) =>
+      word(block === "0x64" ? BALANCE : BALANCE / 2n);
+    const { result, network } = await runAdapter("saturn-pyusdx", "usdat-saturn", { network: spec });
+    expect(head).toBeGreaterThan(100);
+    expect(result.metadata).toMatchObject({
+      collateralizationRatio: 1,
+      implementationAddress: ADDRESSES.implementation,
+      observedBlock: { chain: "ethereum", number: 100, timestamp: 1_757_000_000 },
+      redemption: { routeStatus: "paused" },
+    });
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "route-paused", effect: "degraded" }));
+    expect(network.rpcCalls.some((call) => call.method === "eth_getStorageAt")).toBe(true);
+    expect(new Set(network.rpcCalls.map((call) => call.block))).toEqual(new Set(["0x64"]));
+  });
+
+  it("withholds backing when the implementation cannot be read at the pin", async () => {
+    const spec = installReads();
+    spec.rpc![`eth_getStorageAt:${ADDRESSES.wrapper}:${EIP1967_IMPLEMENTATION_SLOT}`] = ({ block }) =>
+      block === "latest" ? addressWord(ADDRESSES.implementation) : null;
+    await expect(runAdapter("saturn-pyusdx", "usdat-saturn", { network: spec }))
+      .rejects.toThrow("implementation slot returned malformed payload");
+  });
+
   it("fails closed when the EIP-1967 implementation slot drifts", async () => {
     await expect(fetchFixture({ implementation: ADDRESSES.other })).rejects.toThrow("EIP-1967 implementation identity mismatch");
   });

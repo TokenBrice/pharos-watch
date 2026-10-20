@@ -163,10 +163,12 @@ export function adaptChronicleNavResponse(data: ChronicleNavData, params: Chroni
     ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
       navPerToken: decimalStringFromBigInt(data.navPerToken, CHRONICLE_NAV_DECIMALS),
-      totalSupplyFormatted: decimalStringFromBigInt(totalSupplyRaw, data.tokenDecimals),
-      totalSupplyRaw: totalSupplyRaw.toString(),
+      ...(!mixedDecimals ? {
+        totalSupplyFormatted: decimalStringFromBigInt(totalSupplyRaw, data.tokenDecimals),
+        totalSupplyRaw: totalSupplyRaw.toString(),
+        tokenDecimals: data.tokenDecimals,
+      } : {}),
       navDecimals: CHRONICLE_NAV_DECIMALS,
-      tokenDecimals: data.tokenDecimals,
       oracleUpdatedAt: data.updatedAt,
       oracleTimestampSource: "chronicle-readWithAge",
       supplyContributions: data.supply.contributions.map((contribution) => ({

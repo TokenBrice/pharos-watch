@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { adaptRiverProtocolInfo } from "../river-protocol-info";
 import { validateAdapterOutput } from "../validate";
 import { getReserveAdapter } from "../index";
+import type { AdapterContext } from "../types";
 import {
   expectValidAdapterOutput,
   runAdapter,
@@ -110,7 +111,7 @@ function riverNetwork(
 }
 
 /** Real catalog coin, restricted to the ethereum/base/bob contracts under test. */
-function runRiver(network: AdapterNetworkSpec, options: { signal?: AbortSignal } = {}) {
+function runRiver(network: AdapterNetworkSpec, options: { signal?: AbortSignal; ctx?: AdapterContext } = {}) {
   return runAdapter("river-protocol-info", "satusd-river", {
     network,
     nowSec: NOW_SEC,
@@ -123,6 +124,7 @@ function runRiver(network: AdapterNetworkSpec, options: { signal?: AbortSignal }
       ],
     },
     ...(options.signal ? { signal: options.signal } : {}),
+    ...(options.ctx ? { ctx: options.ctx } : {}),
   });
 }
 
@@ -248,6 +250,51 @@ describe("fetchRiverProtocolInfoReserves branch redemption telemetry", () => {
     // Aggregate protocol TVL stays a separate, unrelated reserve figure.
     expect(result.metadata?.totalReserveUsd).toBe(250_000_000);
     expectValidAdapterOutput("river-protocol-info", result);
+  });
+
+  it("keeps an original Ethereum pin and a separate Base pin across manager changes", async () => {
+    let baseHead = 200;
+    const spec = riverNetwork({});
+    spec.rpc!["eth_getBlockByNumber:latest"] = ({ chain }) => {
+      if (chain === "ethereum") throw new Error("must retain the original Ethereum pin");
+      return { number: baseHead++, timestamp: NOW_SEC };
+    };
+    for (const chain of ["ethereum", "base"]) {
+      for (const manager of TROVE_MANAGER_BY_CHAIN[chain]) {
+        spec.rpc![`${manager}:${DEBT_TOKEN_SELECTOR}`] = ({ block }) =>
+          block === (chain === "ethereum" ? "0x4d" : "0xc8")
+            ? SATUSD_BY_CHAIN[chain]
+            : "0x1111111111111111111111111111111111111111";
+      }
+    }
+    const { result, network } = await runRiver(spec, {
+      ctx: { observedBlock: { chain: "ethereum", number: 77, timestamp: NOW_SEC - 60 } },
+    });
+    expect(baseHead).toBe(201);
+    expect(result.metadata?.redemption).toMatchObject({ capacityUsd: 9_100_000, feeBps: 50, routeStatus: "open" });
+    expect(result.metadata?.observedBlocks).toEqual([
+      { chain: "ethereum", number: 77, timestamp: NOW_SEC - 60 },
+      { chain: "base", number: 200, timestamp: NOW_SEC },
+    ]);
+    expect(result.metadata?.details).toMatchObject({ redeemRoute: { chains: [
+      { chain: "ethereum", observedBlock: { number: 77, timestamp: NOW_SEC - 60 } },
+      { chain: "base", observedBlock: { number: 200, timestamp: NOW_SEC } },
+    ] } });
+    expect(network.rpcCalls.every((call) =>
+      call.block === (call.chain === "ethereum" ? "0x4d" : "0xc8"))).toBe(true);
+  });
+
+  it("drops only the chain whose observation pin is unavailable", async () => {
+    const spec = riverNetwork({});
+    spec.rpc!["base:eth_getBlockByNumber:latest"] = null;
+    const { result, network } = await runRiver(spec);
+    expect(result.metadata?.redemption?.capacityUsd).toBe(100_000);
+    expect(result.metadata?.details).toMatchObject({ redeemRoute: { droppedChains: ["base"] } });
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "river-redemption-partial-chain-coverage" }));
+    expect(network.rpcCalls.every((call) => call.chain === "ethereum")).toBe(true);
+    expect(result.metadata?.observedBlocks).toEqual([
+      { chain: "ethereum", number: 23_000_000, timestamp: 1_757_000_000 },
+    ]);
   });
 
   it.each([

@@ -22,6 +22,7 @@ import {
   requireJsonInput,
   requireOnchainInput,
   reserveDegradedWarning,
+  reserveFatalWarning,
   unverifiedFreshnessMetadata,
   valueUsdFromBigIntPrice,
 } from "./helpers";
@@ -48,6 +49,10 @@ interface YieldBasisMarketExposure {
   symbol: string;
   usd: number;
 }
+
+type YieldBasisReadOutcome =
+  | { complete: true; markets: YieldBasisMarketExposure[]; warnings: LiveReserveWarning[] }
+  | { complete: false; warnings: LiveReserveWarning[] };
 
 interface YieldBasisMarketPosition {
   marketId: number;
@@ -128,7 +133,7 @@ const CRVUSD_MAX_LLAMMA_MARKETS = 256;
 const CRVUSD_MAX_LLAMMA_BANDS_PER_MARKET = 2_048;
 const CRVUSD_MAX_YIELD_BASIS_MARKETS = 256;
 const YIELD_BASIS_FACTORY = "0x370a449febb9411c95bf897021377fe0b7d100c0";
-const YIELD_BASIS_OPTIONAL_TIMEOUT_MS = 6_000;
+const YIELD_BASIS_TIMEOUT_MS = 6_000;
 const CURVE_CONTROLLER_FACTORY_ABI = parseAbi([
   "function n_collaterals() view returns (uint256)",
   "function collaterals(uint256) view returns (address)",
@@ -200,7 +205,10 @@ function summarizeCrvUsdCollateralBuckets(
 
   for (const entry of entries) {
     const { symbol, usd } = entry;
-    if (!symbol || !Number.isFinite(usd) || usd <= 0) continue;
+    if (!Number.isFinite(usd) || usd < 0 || typeof symbol !== "string" || !symbol.trim()) {
+      throw new Error("crvusd-collateral-incomplete: every market requires a finite nonnegative value and collateral identity");
+    }
+    if (usd === 0) continue;
 
     if (entry.source === "direct") {
       directActiveMarkets++;
@@ -840,29 +848,29 @@ async function fetchYieldBasisMarketExposures(
   });
 }
 
-async function fetchOptionalYieldBasisMarketExposures(
+async function fetchYieldBasisOutcome(
   signal: AbortSignal,
   ctx?: AdapterContext,
-): Promise<{ markets: YieldBasisMarketExposure[]; warnings: LiveReserveWarning[] }> {
+): Promise<YieldBasisReadOutcome> {
   const timeout = createTimeoutSignal({
-    timeoutMs: YIELD_BASIS_OPTIONAL_TIMEOUT_MS,
-    timeoutReason: new Error("crvUSD Yield Basis optional leg timed out"),
+    timeoutMs: YIELD_BASIS_TIMEOUT_MS,
+    timeoutReason: new Error("crvUSD Yield Basis leg timed out"),
     parentSignal: signal,
   });
 
   try {
     const warnings: LiveReserveWarning[] = [];
     const markets = await fetchYieldBasisMarketExposures(timeout.signal, ctx, warnings);
-    return { markets, warnings };
+    return { complete: true, markets, warnings };
   } catch (error) {
     if (signal.aborted) throw signal.reason ?? error;
     const message = toErrorMessage(error);
     return {
-      markets: [],
+      complete: false,
       warnings: [
-        reserveDegradedWarning(
-          "yield-basis-read-failed",
-          `crvUSD Yield Basis collateral leg unavailable; using direct Curve collateral only. ${message}`,
+        reserveFatalWarning(
+          "yield-basis-incomplete",
+          `crvUSD Yield Basis collateral leg unavailable; whole-book replacement withheld. ${message}`,
         ),
       ],
     };
@@ -873,28 +881,40 @@ async function fetchOptionalYieldBasisMarketExposures(
 
 export function adaptCrvUsd(
   payload: CurveMarketsPayload,
-  yieldBasisMarkets: YieldBasisMarketExposure[] = [],
+  yieldBasis: YieldBasisReadOutcome,
   extraWarnings: LiveReserveWarning[] = [],
 ): AdapterResult {
-  const markets = payload.chains?.ethereum?.data ?? [];
-  // Upstream drift (renamed or dropped collateral fields) must not publish a
-  // silently empty collateral mix while markets are still being reported.
-  const hasReadableMarket = markets.some((market) =>
-    Boolean(market.collateral_token?.symbol)
-    && Number.isFinite(market.collateral_amount_usd)
-    && (market.collateral_amount_usd ?? 0) > 0
+  const markets = payload?.chains?.ethereum?.data;
+  if (!yieldBasis.complete) return {
+    slices: [], warnings: [...extraWarnings, ...yieldBasis.warnings],
+    metadata: { details: Array.isArray(markets) ? { measuredDirectCollateralUsd: markets.reduce((total, market) =>
+      typeof market?.collateral_amount_usd === "number" && Number.isFinite(market.collateral_amount_usd)
+        && market.collateral_amount_usd >= 0 ? total + market.collateral_amount_usd : total, 0) } : {} },
+  };
+  const yieldBasisMarkets = yieldBasis.markets;
+  extraWarnings = [...extraWarnings, ...yieldBasis.warnings];
+  if (!Array.isArray(markets)) {
+    return { slices: [], warnings: [reserveFatalWarning("curve-markets-incomplete", "Curve market census unavailable; whole-book replacement withheld")] };
+  }
+  const incompleteMarkets = markets.filter((market) =>
+    typeof market?.collateral_token?.symbol !== "string" || !market.collateral_token.symbol.trim()
+    || typeof market?.collateral_amount_usd !== "number"
+    || !Number.isFinite(market.collateral_amount_usd) || market.collateral_amount_usd < 0
   );
-  const unreadablePayloadWarnings = markets.length > 0 && !hasReadableMarket
-    ? [reserveDegradedWarning(
-        "curve-markets-unreadable",
-        `Curve market payload returned ${markets.length} markets with no readable collateral_amount_usd/collateral_token fields; refusing to publish an empty crvUSD collateral mix`,
-      )]
-    : [];
+  if (incompleteMarkets.length > 0) {
+    return {
+      slices: [],
+      warnings: [reserveFatalWarning("curve-markets-incomplete", `${incompleteMarkets.length} Curve markets lack a nonnegative amount or collateral identity; whole-book replacement withheld`)],
+      metadata: { details: { measuredDirectCollateralUsd: markets.reduce((total, market) =>
+        typeof market?.collateral_amount_usd === "number" && Number.isFinite(market.collateral_amount_usd)
+          && market.collateral_amount_usd >= 0 ? total + market.collateral_amount_usd : total, 0) } },
+    };
+  }
   const summary = summarizeCrvUsdCollateralBuckets([
     ...markets.map((market) => ({
       source: "direct" as const,
       symbol: market.collateral_token?.symbol,
-      usd: market.collateral_amount_usd ?? 0,
+      usd: market.collateral_amount_usd!,
       unknownWarning: (symbol: string) => `Unmapped crvUSD collateral market: ${symbol}`,
     })),
     ...yieldBasisMarkets.map((market) => ({
@@ -904,7 +924,7 @@ export function adaptCrvUsd(
       unknownWarning: (symbol: string) => `Unmapped crvUSD Yield Basis collateral market: ${symbol}`,
     })),
   ]);
-  if (!summary) return { slices: [], warnings: unreadablePayloadWarnings };
+  if (!summary) return { slices: [], warnings: extraWarnings };
 
   return buildCrvUsdResult(
     summary,
@@ -912,7 +932,7 @@ export function adaptCrvUsd(
       directMarketCount: markets.length,
       yieldBasisMarketCount: yieldBasisMarkets.length,
     },
-    [...unreadablePayloadWarnings, ...extraWarnings],
+    extraWarnings,
     unverifiedFreshnessMetadata(
       "curve-market-api + yield-basis-onchain",
       "Curve market payload does not expose a trustworthy source timestamp even though the Yield Basis leg is current-state on-chain",
@@ -922,9 +942,15 @@ export function adaptCrvUsd(
 
 export function adaptCrvUsdOnchain(
   llammaMarkets: readonly LlammaMarketExposure[],
-  yieldBasisMarkets: readonly YieldBasisMarketExposure[] = [],
+  yieldBasis: YieldBasisReadOutcome,
   extraWarnings: LiveReserveWarning[] = [],
 ): AdapterResult {
+  if (!yieldBasis.complete) return {
+    slices: [], warnings: [...extraWarnings, ...yieldBasis.warnings],
+    metadata: { details: { measuredDirectCollateralUsd: llammaMarkets.reduce((total, market) => total + market.collateralUsd, 0) } },
+  };
+  const yieldBasisMarkets = yieldBasis.markets;
+  extraWarnings = [...extraWarnings, ...yieldBasis.warnings];
   let softLiquidatedCrvUsdUsd = 0;
   let bandReadCount = 0;
 
@@ -983,17 +1009,17 @@ export async function fetchCrvUsdReserves(
     const warnings: LiveReserveWarning[] = [];
     const [llammaMarkets, yieldBasis] = await Promise.all([
       fetchLlammaMarketExposures(signal, ctx, warnings),
-      fetchOptionalYieldBasisMarketExposures(signal, ctx),
+      fetchYieldBasisOutcome(signal, ctx),
     ]);
-    const result = adaptCrvUsdOnchain(llammaMarkets, yieldBasis.markets, [...warnings, ...yieldBasis.warnings]);
+    const result = adaptCrvUsdOnchain(llammaMarkets, yieldBasis, warnings);
     return { ...result, metadata: { ...result.metadata, observedBlock: plan.observedBlock } };
   }
 
   const input = requireJsonInput(config.inputs.primary, "crvusd");
   const [payload, yieldBasis] = await Promise.all([
     fetchJsonWithRetry<CurveMarketsPayload>(input.url, signal, 12_000, ctx),
-    fetchOptionalYieldBasisMarketExposures(signal, ctx),
+    fetchYieldBasisOutcome(signal, ctx),
   ]);
-  const result = adaptCrvUsd(payload, yieldBasis.markets, yieldBasis.warnings);
+  const result = adaptCrvUsd(payload, yieldBasis);
   return { ...result, metadata: { ...result.metadata, observedBlock: plan.observedBlock } };
 }

@@ -96,6 +96,32 @@ describe("adaptSpikoShareClassTotals", () => {
     });
   });
 
+  it("publishes observed zero USD assets with positive issued share value as a degraded loss", () => {
+    const result = adaptSpikoShareClassTotals({
+      ...EURSAFO_TOTALS,
+      totalAssets: { value: "0", currency: "USD" },
+      netAssetValue: { ...EURSAFO_TOTALS.netAssetValue, amount: { value: "1", currency: "USD" } },
+    }, "SAFO", { name: "Test", risk: "medium" });
+    expect(result.metadata).toMatchObject({ totalReserveUsd: 0, supplyUsd: 660017933.22353, collateralizationRatio: 0 });
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "reserve-undercollateralized", effect: "degraded" }));
+  });
+
+  it.each([undefined, null, "-1", "", "Infinity"])("rejects unavailable or invalid assets (%s)", (value) => {
+    const payload = { ...EURSAFO_TOTALS, totalAssets: { value, currency: "EUR" } } as SpikoShareClassTotals;
+    expect(() => adaptSpikoShareClassTotals(payload, "eurSAFO", { name: "Test", risk: "medium" }))
+      .toThrow("invalid totalAssets.value");
+  });
+
+  it("preserves zero shares without an undefined ratio while requiring a positive NAV", () => {
+    const result = adaptSpikoShareClassTotals({ ...EURSAFO_TOTALS, totalShares: "0" }, "eurSAFO", { name: "Test", risk: "medium" });
+    expect(result.metadata).not.toHaveProperty("collateralizationRatio");
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "spiko-zero-share-value", effect: "degraded" }));
+    expect(() => adaptSpikoShareClassTotals({
+      ...EURSAFO_TOTALS,
+      netAssetValue: { ...EURSAFO_TOTALS.netAssetValue, amount: { value: "0", currency: "EUR" } },
+    }, "eurSAFO", { name: "Test", risk: "medium" })).toThrow("invalid netAssetValue.amount.value");
+  });
+
   it("emits the configured UK T-Bills slice at 100% for UKTBL", () => {
     const result = adaptSpikoShareClassTotals(UKTBL_TOTALS, "UKTBL", {
       name: "UK Treasury Bills and cash",

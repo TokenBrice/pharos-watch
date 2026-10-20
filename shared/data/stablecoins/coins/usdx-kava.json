@@ -62,7 +62,7 @@
   "governanceQuality": "dao-governance",
   "liveReservesConfig": {
     "adapter": "kava-cdp",
-    "version": 1,
+    "version": 2,
     "semantics": "collateral-mix",
     "display": {
       "url": "https://api.kava.io/kava/cdp/v1beta1/totalCollateral",

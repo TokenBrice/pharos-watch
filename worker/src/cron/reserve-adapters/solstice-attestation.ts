@@ -2,6 +2,7 @@ import type { ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
+  buildCoverageShortfallWarnings,
   fetchJsonAdapterInput,
   freshnessMetadataFromTimestamp,
   parseTimestampLikeToUnixSeconds,
@@ -124,6 +125,12 @@ function timelineTotalMismatchWarning(
       `Solstice dashboard omitted reserves.${label}; the headline total could not be cross-checked against the timeline`,
     );
   }
+  if (timelineValue === 0) {
+    return attestedTotal === 0 ? null : reserveDegradedWarning(
+      "solstice-timeline-total-mismatch",
+      `Solstice headline ${label} ${attestedTotal.toFixed(2)} differs from the observed zero timeline value`,
+    );
+  }
   const deviation = Math.abs(attestedTotal - timelineValue) / Math.abs(timelineValue);
   if (deviation <= SOLSTICE_TOTAL_MISMATCH_TOLERANCE) return null;
   return reserveDegradedWarning(
@@ -161,27 +168,35 @@ export function adaptSolsticeAttestation(payload: SolsticeDashboardPayload): Ada
   const totalReserveUsd = point?.reserves;
   const supplyUsd = point?.supply;
   if (
-    typeof totalReserveUsd !== "number" || !Number.isFinite(totalReserveUsd) || totalReserveUsd <= 0
-    || typeof supplyUsd !== "number" || !Number.isFinite(supplyUsd) || supplyUsd <= 0
+    typeof totalReserveUsd !== "number" || !Number.isFinite(totalReserveUsd) || totalReserveUsd < 0
+    || typeof supplyUsd !== "number" || !Number.isFinite(supplyUsd) || supplyUsd < 0
   ) {
     throw new Error("solstice-attestation missing reserve/supply timeline values");
   }
 
   const envelopeTimestamp = parseTimestampLikeToUnixSeconds(payload.data.ts);
   const pointTimestamp = timelinePointTimestamp(point);
-  const sourceTimestamp = envelopeTimestamp != null && pointTimestamp != null
-    ? Math.min(envelopeTimestamp, pointTimestamp)
-    : envelopeTimestamp ?? pointTimestamp;
+  const sourceTimestamp = pointTimestamp;
   const freshnessMetadata = freshnessMetadataFromTimestamp(
     sourceTimestamp,
     "solstice-attestation-api",
     "Solstice attestation payload did not expose a trustworthy source timestamp",
   );
-  const collateralizationRatio = totalReserveUsd / supplyUsd;
+  const collateralizationRatio = supplyUsd > 0 ? totalReserveUsd / supplyUsd : undefined;
 
   // SO2: same-run proof artifacts; SO3: headline totals must reconcile with the
   // timeline values the adapter actually scores.
-  const warnings: LiveReserveWarning[] = [];
+  const warnings: LiveReserveWarning[] = buildCoverageShortfallWarnings({
+    code: "reserve-undercollateralized",
+    message: (pct) => `Solstice attested reserves cover ${pct}% of reported supply`,
+    coverageRatio: collateralizationRatio,
+  });
+  if (supplyUsd === 0) {
+    warnings.push(reserveDegradedWarning(
+      "solstice-zero-supply",
+      "Solstice reports zero token supply; reserve coverage is undefined",
+    ));
+  }
   const evidenceBasis = buildEvidenceBasis(payload.data.attestations);
   if (!evidenceBasis) {
     warnings.push(reserveInfoWarning(
@@ -200,6 +215,7 @@ export function adaptSolsticeAttestation(payload: SolsticeDashboardPayload): Ada
   }
   // details carries freshness provenance on the unverified path; keep it.
   const details: Record<string, unknown> = { ...("details" in freshnessMetadata ? freshnessMetadata.details : {}) };
+  if (envelopeTimestamp != null) details.envelopeTimestamp = envelopeTimestamp;
   if (evidenceBasis) details.evidenceBasis = evidenceBasis;
   const rawAttestedReserves = payload.data.reserves.total_reserves?.value;
   const rawAttestedSupply = payload.data.reserves.total_supply?.value;
@@ -229,7 +245,7 @@ export function adaptSolsticeAttestation(payload: SolsticeDashboardPayload): Ada
       ...freshnessMetadata,
       totalReserveUsd,
       supplyUsd,
-      collateralizationRatio,
+      ...(collateralizationRatio != null ? { collateralizationRatio } : {}),
       publishedCollateralizationRatio: payload.data.collateralization,
       deltaNeutral: point?.delta_neutral,
       overcollateralized: point?.overcollateralized,

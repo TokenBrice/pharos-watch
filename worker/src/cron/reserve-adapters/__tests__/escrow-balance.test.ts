@@ -94,6 +94,7 @@ function escrowNetwork(options: {
   selectorBalance?: string | null;
   tokenBalance?: bigint | null;
   pauseCheck?: bigint | null;
+  supply?: bigint | null;
 } = {}) {
   const network = installAdapterNetwork({
     chains: { ethereum: "https://rpc.example" },
@@ -107,6 +108,7 @@ function escrowNetwork(options: {
       [`${"0xCAcd6fd266aF91b8AeD52aCCc382b4e165586E29"}:${multiBalanceCall}`]:
         options.tokenBalance === undefined ? 2_000_000_000_000_000_000n : options.tokenBalance,
       [`${PARALLELIZER}:${multiPauseCall}`]: options.pauseCheck === undefined ? 0n : options.pauseCheck,
+      [`${XRESERVE}:0x18160ddd`]: options.supply === undefined ? 100_000_000n : options.supply,
     },
   });
   return network;
@@ -185,8 +187,37 @@ describe("fetchEscrowBalanceReserves", () => {
     await expect(runEscrow(coin, config, { balance: null })).rejects.toThrow("escrow balance call failed");
   });
 
-  it("throws instead of publishing an empty escrow as zero capacity", async () => {
-    await expect(runEscrow(coin, config, { balance: 0n })).rejects.toThrow("escrow balance is zero");
+  it("publishes an observed zero with its asset identity and still probes the pause gate", async () => {
+    const { result, network } = await runEscrow(coin, config, { balance: 0n });
+    expect(result.slices).toMatchObject([{ coinId: "usdc-circle", depType: "wrapper", pct: 100 }]);
+    expect(result.metadata).toMatchObject({
+      escrowBalanceRaw: "0", escrowBalanceUsd: 0,
+      redemption: { capacityUsd: 0, routeStatus: "open", routeStatusSource: "onchain" },
+    });
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "escrow-balance-zero", effect: "degraded" }));
+    expect(network.rpcCalls.map((call) => call.data)).toContain(pauseCall);
+  });
+
+  it("uses the same observed-zero accounting for bounded multi-read capacity", async () => {
+    const { result } = await runEscrow(coin, multiReadConfig, {
+      selectorBalance: `0x${"0".repeat(128)}`, tokenBalance: 0n,
+    });
+    expect(result.metadata).toMatchObject({ escrowBalancesRaw: ["0", "0"], redemption: { capacityUsd: 0 } });
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "escrow-balance-zero", effect: "degraded" }));
+  });
+
+  it.each([0n, 100_000_000n])("keeps zero escrow ratios defined only for positive liabilities (%s)", async (supply) => {
+    const { result } = await runEscrow({
+      ...coin, contracts: [{ chain: "ethereum", address: XRESERVE, decimals: 6 }],
+    }, { ...config, params: { ...config.params, compareToCoinSupply: true } }, { balance: 0n, supply });
+    expect(result.metadata?.redemption?.capacityUsd).toBe(0);
+    if (supply === 0n) {
+      expect(result.metadata).not.toHaveProperty("collateralizationRatio");
+      expect(result.metadata?.redemption).not.toHaveProperty("capacityRatioOfSupply");
+    } else {
+      expect(result.metadata?.collateralizationRatio).toBe(0);
+      expect(result.metadata?.redemption?.capacityRatioOfSupply).toBe(0);
+    }
   });
 
   it("throws when the pause read fails rather than assuming an open route", async () => {

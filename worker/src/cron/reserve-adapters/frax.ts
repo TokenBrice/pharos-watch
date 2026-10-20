@@ -20,6 +20,7 @@ import {
   parseTimestampLikeToUnixSeconds,
   reconcileRowsWithSourceTotal,
   reserveDegradedWarning,
+  reserveFatalWarning,
   SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT,
   sourceKeySlug,
 } from "./helpers";
@@ -426,6 +427,7 @@ export function adaptFraxFpiCollateral(
     if (usd == null) {
       const estimateUsd = isFpiSelfHolding(asset) ? undefined : nonnegativeFinite(unpricedRowValuesUsd.get(asset));
       if (estimateUsd != null) {
+        if (estimateUsd === 0) continue;
         unpricedUsd += estimateUsd;
         unpricedAssetLabels.push(describeFpiCollateralRow(asset));
         continue;
@@ -481,7 +483,7 @@ export function adaptFraxFpiCollateral(
     ? totalCollateralUsd / netExternalLiabilitiesUsd
     : undefined;
   if (!compositionComplete) {
-    warnings.push(reserveDegradedWarning("asset-coverage-incomplete",
+    warnings.push(reserveFatalWarning("asset-coverage-incomplete",
       `Frax FPI asset values unavailable: ${unavailableAssetLabels.join(", ")}`));
   }
   if (!liabilityCoverageComplete || (netExternalLiabilitiesUsd != null && netExternalLiabilitiesUsd < 0)) {
@@ -553,7 +555,7 @@ export function adaptFraxFpiCollateral(
   }
 
   return {
-    slices: normalizeSlices(slices, null),
+    slices: compositionComplete ? normalizeSlices(slices, null) : [],
     ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
       ...(compositionComplete ? { totalCollateralUsd } : { knownCollateralUsd: totalCollateralUsd }),

@@ -96,7 +96,7 @@
   "governanceQuality": "single-entity",
   "liveReservesConfig": {
     "adapter": "saturn-pyusdx",
-    "version": 1,
+    "version": 2,
     "semantics": "single-asset",
     "breakerScope": "usdat-saturn",
     "display": {

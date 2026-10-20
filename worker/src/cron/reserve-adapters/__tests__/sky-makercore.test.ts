@@ -114,6 +114,52 @@ const SAMPLE_GROUPS: SkyGroupResult[] = [
 ];
 
 describe("adaptSkyModules", () => {
+  it.each([undefined, null, "7", -1, 1.5, 0, 6, 8])(
+    "rejects an invalid or incomplete publisher census count %s before RPC attribution",
+    async (count) => {
+      const network = installAdapterNetwork({ json: { [SKY_URL]: { count, results: SAMPLE_GROUPS } } });
+      await expect(runAdapter("sky-makercore", "usds-sky", { network, nowSec: SKY_NOW }))
+        .rejects.toThrow("incomplete-groups-census");
+      expect(network.rpcCalls).toEqual([]);
+      expect(network.requests).toHaveLength(1);
+    },
+  );
+
+  it.each([
+    { next: "https://info-sky.blockanalitica.com/groups/?page=2" },
+    { previous: "https://info-sky.blockanalitica.com/groups/?page=1" },
+    { next: false },
+  ])("rejects declared pagination despite count parity: %j", async (pagination) => {
+    const network = installAdapterNetwork({ json: {
+      [SKY_URL]: { count: SAMPLE_GROUPS.length, results: SAMPLE_GROUPS, ...pagination },
+    } });
+    await expect(runAdapter("sky-makercore", "usds-sky", { network, nowSec: SKY_NOW }))
+      .rejects.toThrow("incomplete-groups-census");
+    expect(network.rpcCalls).toEqual([]);
+  });
+
+  it("rejects a duplicate module even when the source count matches", async () => {
+    await expect(runSky([SAMPLE_GROUPS[0], SAMPLE_GROUPS[0]]))
+      .rejects.toThrow("incomplete-groups-census");
+  });
+
+  it("accepts a complete single-page publisher census without changing its shared book", async () => {
+    const spec = skyNetwork(SAMPLE_GROUPS);
+    spec.json = { [SKY_URL]: { count: 7, next: null, previous: null, results: SAMPLE_GROUPS } };
+    const { result } = await runAdapter("sky-makercore", "usds-sky", {
+      network: installAdapterNetwork(spec), nowSec: SKY_NOW,
+    });
+    expect(result.metadata).toMatchObject({
+      tokenCount: 7,
+      totalLiabilitiesUsd: 12_782_606_761,
+      totalReserveUsd: 15_063_945_708,
+      sourceTimestamp: SKY_NOW - 60,
+      sharedBookAssetIds: ["dai-makerdao", "usds-sky"],
+    });
+    expect(result.slices.find((slice) => slice.coinId === "usdc-circle")?.pct)
+      .toBeCloseTo(123_456 / 12_782_606_761.34 * 100, 12);
+  });
+
   it("rejects drift removing stablecoins.collateral", async () => {
     const groups = structuredClone(SAMPLE_GROUPS);
     Reflect.deleteProperty(groups[0], "collateral");
@@ -291,6 +337,40 @@ describe("resolveSkyTimestampSummary", () => {
 });
 
 describe("fetchSkyMakercoreReserves PSM attribution", () => {
+  it("pins identity, halted fees and the dependent pocket balance while latest advances", async () => {
+    let head = 100;
+    const spec = skyNetwork(SAMPLE_GROUPS);
+    spec.block = { number: 100, timestamp: SKY_NOW };
+    spec.rpc!["eth_getBlockByNumber:latest"] = () => ({ number: head++, timestamp: SKY_NOW });
+    spec.rpc![`ethereum:${POCKET_SELECTOR}`] = ({ block }) =>
+      encodeAddressWord(block === "0x64" ? SKY_LITE_PSM_USDC_POCKET : "0x0000000000000000000000000000000000000001");
+    spec.rpc![`ethereum:${TOUT_SELECTOR}`] = ({ block }) => {
+      head += 1;
+      return block === "0x64" ? HALTED_SWAP_FEE : 0n;
+    };
+    spec.rpc!["ethereum:0x70a08231"] = ({ block }) => block === "0x64" ? 123_456_000000n : 0n;
+    const { result, network } = await runAdapter("sky-makercore", "usds-sky", { network: spec, nowSec: SKY_NOW });
+    expect(head).toBeGreaterThan(100);
+    expect(result.metadata).toMatchObject({
+      observedBlock: { chain: "ethereum", number: 100, timestamp: SKY_NOW },
+      sharedBookMeasuredHoldings: { "usdc-circle": 123_456 },
+      redemption: { capacityUsd: 123_456, routeStatus: "paused" },
+    });
+    expect(network.rpcCalls).toHaveLength(5);
+    expect(new Set(network.rpcCalls.map((call) => call.block))).toEqual(new Set(["0x64"]));
+  });
+
+  it("retains the unlinked API book without live capacity when the Ethereum pin is unavailable", async () => {
+    const spec = skyNetwork(SAMPLE_GROUPS);
+    spec.rpc!["eth_getBlockByNumber:latest"] = null;
+    const { result, network } = await runAdapter("sky-makercore", "usds-sky", { network: spec, nowSec: SKY_NOW });
+    expect(result.slices.some((slice) => slice.coinId === "usdc-circle")).toBe(false);
+    expect(result.metadata?.redemption).toBeUndefined();
+    expect(result.metadata?.observedBlock).toBeUndefined();
+    expectWarningEffect(result, "litepsm-attribution-unavailable", "info");
+    expect(network.rpcCalls).toEqual([]);
+  });
+
   it.each(["usds-sky", "dai-makerdao"])("reconciles the capture-derived reconstruction for %s", async (coinId) => {
     const measuredUsd = Number(captureDerived.measuredUsdcBalanceRaw) / 1e6;
     const groupDebt = Number(captureDerived.groups[0].debt);

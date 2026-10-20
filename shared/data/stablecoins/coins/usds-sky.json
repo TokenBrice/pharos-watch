@@ -70,7 +70,7 @@
   "governanceQuality": "dao-governance",
   "liveReservesConfig": {
     "adapter": "sky-makercore",
-    "version": 2,
+    "version": 3,
     "semantics": "collateral-mix",
     "breakerScope": "sky-makercore-collateral",
     "display": {

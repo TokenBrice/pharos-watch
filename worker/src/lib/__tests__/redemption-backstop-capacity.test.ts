@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { resolveCapacityBasis, resolveRedemptionCapacity } from "../redemption-backstop/capacity";
 import { liveSnapshot } from "./redemption-backstop-sources.test-support";
 import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
+import { adaptCapVaultState } from "../../cron/reserve-adapters/cap-vault";
+import { makeCapAsset } from "../../cron/reserve-adapters/__tests__/cap-vault.test-support";
 
 const now = 1_780_000_000;
 const baseSnapshot = (metadata: Record<string, unknown>) => liveSnapshot("lusd-liquity", metadata, {
@@ -105,6 +107,56 @@ describe("resolveRedemptionCapacity — supply ratio capacity", () => {
 });
 
 describe("resolveRedemptionCapacity — reserve-sync over-provisioned clamp", () => {
+  it.each([null, true, false])("admits only measured Cap pause/capacity evidence (%s)", async (paused) => {
+    const result = adaptCapVaultState({
+      contractAddress: "0xcccc62962d17b8914c62d74ffb843d73b2a3cccc", supplyUsd: 100,
+      assets: [makeCapAsset({ paused, pausedStatusUnavailable: paused == null, available: 0 })],
+    });
+    const capacity = await resolveRedemptionCapacity(
+      {} as D1Database, "cusd-cap", { kind: "reserve-sync-metadata" }, 100, now,
+      { reserveSnapshotMetadata: liveSnapshot("cusd-cap", result.metadata, {
+        fetchedAt: now - 60, source: "cap-vault", warnings: result.warnings ?? [],
+        warningCount: result.warnings?.length ?? 0,
+      }) },
+    );
+    if (paused == null) {
+      expect(capacity.immediateCapacityUsd).toBeNull();
+      expect(capacity.scoringCapacityUsd).toBeNull();
+      expect(capacity.consumedReserveRouteStatus).not.toBe(true);
+      expect(capacity.routeStatus).toBeUndefined();
+    } else {
+      // Observed pauses retain the adverse route but do not bypass existing
+      // blocking-warning admission. A readable unpaused zero remains measured.
+      expect(capacity.immediateCapacityUsd).toBe(paused ? null : 0);
+      expect(capacity.scoringCapacityUsd).toBe(paused ? null : 0);
+      expect(capacity.routeStatus).toBe(paused ? "paused" : "degraded");
+    }
+  });
+
+  it.each([
+    { id: "usdcx-movement", codes: ["escrow-balance-zero"], amount: 0, source: "escrow-balance", expected: 0 },
+    { id: "usdso-somnia", codes: ["escrow-balance-zero", "reserve-undercollateralized"], amount: 0, source: "escrow-balance", expected: 0 },
+    { id: "usdcx-movement", codes: ["escrow-balance-zero", "reserve-undercollateralized"], amount: 0, source: "escrow-balance", expected: null },
+    { id: "usdcx-movement", codes: ["escrow-balance-zero", "unexpected-source-gap"], amount: 0, source: "escrow-balance", expected: null },
+    { id: "usdcx-movement", codes: ["escrow-balance-zero"], amount: 100, source: "escrow-balance", expected: null },
+    { id: "usdcx-movement", codes: ["escrow-balance-zero"], amount: 0, source: "cap-vault", expected: null },
+  ])("limits the observed-zero escrow exception to its measured/configured evidence ($id $codes $amount $source)", async ({
+    id, codes, amount, source, expected,
+  }) => {
+    const warnings = codes.map((code) => ({ code, message: "adverse fixture", severity: "warning" as const, effect: "degraded" as const }));
+    const capacity = await resolveRedemptionCapacity(
+      {} as D1Database, id, { kind: "reserve-sync-metadata" }, 100, now,
+      { reserveSnapshotMetadata: liveSnapshot(id, {
+        freshnessMode: "not-applicable", escrowBalanceUsd: amount,
+        redemption: { capacityUsd: amount, capacityKind: "live-direct-bounded", freshnessKind: "same-run-onchain",
+          routeStatus: "open", routeStatusSource: "onchain", settlementDelaySec: 0 },
+      }, { fetchedAt: now - 60, source, syncStatus: "degraded", warnings, warningCount: warnings.length }) },
+    );
+    expect(capacity.immediateCapacityUsd).toBe(expected);
+    expect(capacity.scoringCapacityUsd).toBe(expected);
+    expect(capacity.consumedReserveCapacity === true).toBe(expected === 0);
+  });
+
   it("rejects ratio-only live capacity above supply ratio bounds", async () => {
     const db = {} as D1Database;
     const supplyUsd = 1_000_000;

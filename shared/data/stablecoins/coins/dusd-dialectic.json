@@ -105,7 +105,7 @@
   },
   "liveReservesConfig": {
     "adapter": "makina-strategy",
-    "version": 3,
+    "version": 4,
     "semantics": "collateral-mix",
     "breakerScope": "makina-strategy",
     "display": {

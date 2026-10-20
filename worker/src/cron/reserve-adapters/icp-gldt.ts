@@ -56,8 +56,8 @@ export interface IcpGldtState {
   balances: bigint[];
   /** GLDT ledger `icrc1_total_supply` in 8-dp base units. */
   supplyBaseUnits: bigint;
-  /** Certified state time of the swap-config read, in nanoseconds since epoch. */
-  certifiedTimeNanos: bigint | null;
+  /** Unverified query-signature timestamp of the swap-config read, in nanoseconds. */
+  querySignatureTimeNanos: bigint | null;
 }
 
 function toBigInt(value: unknown, label: string): bigint {
@@ -97,8 +97,13 @@ export function parseIcpGldtSwapConfigs(decoded: unknown[]): IcpGldtSwapConfig[]
   if (!Array.isArray(configs)) {
     throw new Error(`${ADAPTER_KEY}: get_swap_configs returned no config vector`);
   }
+  const canisterIds = new Set<string>();
   return configs.map((entry) => {
     const canisterId = principalBytesToText(candidField(entry, "icrc7_canister_id"));
+    if (canisterIds.has(canisterId)) {
+      throw new Error(`${ADAPTER_KEY}: duplicate NFT canister config ${canisterId}`);
+    }
+    canisterIds.add(canisterId);
     const fractionalization = candidField(entry, "fractionalization_config");
     if (!(fractionalization instanceof Map)) {
       throw new Error(`${ADAPTER_KEY}: malformed fractionalization config`);
@@ -230,8 +235,8 @@ export function adaptIcpGldtState(state: IcpGldtState, params: IcpGldtParams): A
     coverageRatio: collateralizationRatio,
   });
 
-  const certifiedStateTimeSec = state.certifiedTimeNanos != null
-    ? Number(state.certifiedTimeNanos / 1_000_000_000n)
+  const querySignatureTimeSec = state.querySignatureTimeNanos != null
+    ? Number(state.querySignatureTimeNanos / 1_000_000_000n)
     : undefined;
 
   const slices: ReserveSlice[] = [{
@@ -260,7 +265,10 @@ export function adaptIcpGldtState(state: IcpGldtState, params: IcpGldtParams): A
         supplyGrams,
         lockedBaseUnits: lockedBaseUnits.toString(),
         supplyBaseUnits: state.supplyBaseUnits.toString(),
-        ...(certifiedStateTimeSec !== undefined ? { certifiedStateTimeSec } : {}),
+        ...(querySignatureTimeSec !== undefined ? {
+          querySignatureTimeSec,
+          querySignatureTimeVerification: "unverified",
+        } : {}),
         positions,
       },
     },
@@ -331,7 +339,7 @@ export async function fetchIcpGldtReserves(
       swapConfigs,
       balances,
       supplyBaseUnits,
-      certifiedTimeNanos: swapQuery.certifiedTimeNanos,
+      querySignatureTimeNanos: swapQuery.querySignatureTimeNanos,
     },
     params,
   );

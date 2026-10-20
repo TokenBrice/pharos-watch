@@ -165,7 +165,7 @@
   ],
   "liveReservesConfig": {
     "adapter": "parallelizer-balances",
-    "version": 1,
+    "version": 2,
     "semantics": "collateral-mix",
     "breakerScope": "usdp-parallel",
     "display": {

@@ -2,6 +2,20 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import type { ReserveAdapterCoin } from "@shared/types/core";
+import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import { installAdapterNetwork } from "../reserve-adapters/__tests__/reserve-adapter.test-support";
+import { fetchEscrowBalanceReserves } from "../reserve-adapters/escrow-balance";
+import { fetchCrvUsdReserves } from "../reserve-adapters/crvusd";
+import { fetchFraxFpiCollateralReserves } from "../reserve-adapters/frax";
+import { fetchFlyingTulipFtUsdReserves } from "../reserve-adapters/flying-tulip-ftusd";
+import flyingTulipCapture from "../reserve-adapters/__tests__/fixtures/flying-tulip-ftusd-dashboard-2026-09-30.json";
+import { fetchJupUsdReserves } from "../reserve-adapters/jupusd";
+import { fetchKavaCdpReserves } from "../reserve-adapters/kava-cdp";
+import { KAVA_LCD_FIXTURES, LATEST_BLOCK, TOTAL_COLLATERAL, TOTAL_COLLATERAL_URL } from "../reserve-adapters/__tests__/kava-cdp.test-support";
+import { adaptUnitedPorPayload } from "../reserve-adapters/united-por";
+import { UNITED_POR_PAYLOAD } from "../reserve-adapters/__tests__/united-por.test-support";
+import { resolveReserveResult } from "../../lib/live-reserves/store-views";
 import { buildChainRpcs, hasRegistryRpc } from "../../lib/chain-registry";
 import { unverifiedFreshnessMetadata } from "../reserve-adapters/freshness";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
@@ -406,6 +420,301 @@ describe("syncLiveReserves", () => {
       }
     },
   );
+
+  it.each(["observed-zero", "unavailable"] as const)(
+    "replaces positive escrow capacity only with an observed value (%s)", async (outcome) => {
+      let nowMs = Date.now();
+      vi.spyOn(Date, "now").mockImplementation(() => nowMs);
+      let balance: bigint | null = 100_000_000n;
+      const network = installAdapterNetwork({
+        chains: { ethereum: "https://rpc.example" },
+        rpc: { "0xc47cf5ef": () => balance, "0x5c975abb": false },
+      });
+      getReserveAdapterMock.mockImplementation((adapterKey: keyof typeof LIVE_RESERVE_ADAPTER_DEFINITIONS) => ({
+        ...LIVE_RESERVE_ADAPTER_DEFINITIONS[adapterKey],
+        key: adapterKey,
+        fetch: async (coin: ReserveAdapterCoin, config: LiveReservesConfig) => {
+          if (coin.id === "usdcx-movement") {
+            return fetchEscrowBalanceReserves(coin, config, new AbortController().signal, { chainRpcs: network.chainRpcs });
+          }
+          return { slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] };
+        },
+      }));
+      const { db, sqlite } = fixtures.open();
+      // This suite resets/mocks the producer module graph between cases.
+      const { syncLiveReserves } = await import("../sync-live-reserves");
+      await syncLiveReserves(db, new AbortController().signal, {});
+      const before = sqlite.prepare(
+        "SELECT fetched_at, attempt_id, metadata FROM reserve_composition WHERE stablecoin_id = ?",
+      ).get("usdcx-movement");
+      expect(before).toBeDefined();
+      expect((await resolveReserveResult(db, "usdcx-movement", Math.floor(nowMs / 1000)))?.metadata?.redemption)
+        .toMatchObject({ capacityUsd: 100 });
+      nowMs += 60_000;
+      balance = outcome === "observed-zero" ? 0n : null;
+      await syncLiveReserves(db, new AbortController().signal, {});
+      const after = sqlite.prepare(
+        "SELECT fetched_at, attempt_id, metadata FROM reserve_composition WHERE stablecoin_id = ?",
+      ).get("usdcx-movement");
+      const served = await resolveReserveResult(db, "usdcx-movement", Math.floor(nowMs / 1000));
+      expect(served?.metadata?.redemption).toMatchObject({ capacityUsd: outcome === "observed-zero" ? 0 : 100 });
+      if (outcome === "observed-zero") {
+        expect(after).not.toEqual(before);
+        expect(served?.liveAt).toBe(Math.floor(nowMs / 1000));
+        nowMs += 60_000;
+        balance = null;
+        await syncLiveReserves(db, new AbortController().signal, {});
+        expect(sqlite.prepare(
+          "SELECT fetched_at, attempt_id, metadata FROM reserve_composition WHERE stablecoin_id = ?",
+        ).get("usdcx-movement")).toEqual(after);
+        const retainedZero = await resolveReserveResult(db, "usdcx-movement", Math.floor(nowMs / 1000));
+        expect(retainedZero?.metadata?.redemption).toMatchObject({ capacityUsd: 0 });
+        expect(retainedZero?.liveAt).toBe(Math.floor(nowMs / 1000) - 60);
+      } else {
+        expect(after).toEqual(before);
+        expect(served?.liveAt).toBe(Math.floor(nowMs / 1000) - 60);
+      }
+    },
+  );
+
+  it("replaces retained healthy aggregate backing with observed zero and retains that loss after a failed read", async () => {
+    let nowMs = Date.now();
+    vi.spyOn(Date, "now").mockImplementation(() => nowMs);
+    let totalReserve = "110";
+    getReserveAdapterMock.mockImplementation((adapterKey: keyof typeof LIVE_RESERVE_ADAPTER_DEFINITIONS) => ({
+      ...LIVE_RESERVE_ADAPTER_DEFINITIONS[adapterKey],
+      key: adapterKey,
+      fetch: async (coin: ReserveAdapterCoin) => coin.id === "u-united-stables"
+        ? adaptUnitedPorPayload({
+            ...UNITED_POR_PAYLOAD, totalReserve, totalToken: "100", updatedAt: new Date(nowMs).toISOString(),
+          }, { name: "Aggregate backing", risk: "low" })
+        : { slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] },
+    }));
+    const { db, sqlite } = fixtures.open();
+    // The producer graph is reset between cases; load its current mocks.
+    const { syncLiveReserves } = await import("../sync-live-reserves");
+    await syncLiveReserves(db, new AbortController().signal, {});
+    const healthy = sqlite.prepare("SELECT * FROM reserve_composition WHERE stablecoin_id = ?").get("u-united-stables");
+    expect(healthy).toBeDefined();
+    expect((await resolveReserveResult(db, "u-united-stables", Math.floor(nowMs / 1000)))?.metadata)
+      .toMatchObject({ totalReserveUsd: 110, collateralizationRatio: 1.1 });
+    nowMs += 60_000;
+    totalReserve = "0";
+    await syncLiveReserves(db, new AbortController().signal, {});
+    const adverse = sqlite.prepare("SELECT * FROM reserve_composition WHERE stablecoin_id = ?").get("u-united-stables");
+    expect(adverse).not.toEqual(healthy);
+    const served = await resolveReserveResult(db, "u-united-stables", Math.floor(nowMs / 1000));
+    expect(served?.metadata).toMatchObject({ totalReserveUsd: 0, supplyUsd: 100, collateralizationRatio: 0 });
+    expect(served?.liveAt).toBe(Math.floor(nowMs / 1000));
+    const state = sqlite.prepare("SELECT last_status, warnings, last_success_at FROM reserve_sync_state WHERE stablecoin_id = ?")
+      .get("u-united-stables")!;
+    expect(state.last_status).toBe("degraded");
+    expect(state.last_success_at).toBe(Math.floor(nowMs / 1000));
+    expect(JSON.parse(String(state.warnings))).toContainEqual(expect.objectContaining({
+      code: "united-por-reserve-under-token", effect: "degraded",
+    }));
+    nowMs += 60_000;
+    totalReserve = "unavailable";
+    await syncLiveReserves(db, new AbortController().signal, {});
+    expect(sqlite.prepare("SELECT * FROM reserve_composition WHERE stablecoin_id = ?").get("u-united-stables")).toEqual(adverse);
+    const retained = await resolveReserveResult(db, "u-united-stables", Math.floor(nowMs / 1000));
+    expect(retained?.metadata).toMatchObject({ totalReserveUsd: 0, collateralizationRatio: 0 });
+    expect(retained?.liveAt).toBe(Math.floor(nowMs / 1000) - 60);
+  });
+
+  it.each(["curve-markets-incomplete", "yield-basis-incomplete"] as const)(
+    "retains the complete crvUSD book and original clocks after %s", async (reason) => {
+      let nowMs = Date.now();
+      vi.spyOn(Date, "now").mockImplementation(() => nowMs);
+      let incomplete = false;
+      const network = installAdapterNetwork({
+        chains: { ethereum: "https://rpc.example" },
+        rpc: { "market_count()": () => incomplete && reason === "yield-basis-incomplete" ? null : 0n },
+        json: { "https://curve.example/markets": () => ({ chains: { ethereum: { data: [
+          { collateral_amount_usd: 100, collateral_token: { symbol: "WBTC" } },
+          { ...(incomplete && reason === "curve-markets-incomplete" ? {} : { collateral_amount_usd: 100 }),
+            collateral_token: { symbol: "WETH" } },
+        ] } } }) },
+      });
+      getReserveAdapterMock.mockImplementation((adapterKey: keyof typeof LIVE_RESERVE_ADAPTER_DEFINITIONS) => ({
+        ...LIVE_RESERVE_ADAPTER_DEFINITIONS[adapterKey], key: adapterKey,
+        fetch: async (coin: ReserveAdapterCoin, config: LiveReservesConfig) => coin.id === "crvusd-curve"
+          ? fetchCrvUsdReserves(coin, {
+            ...config, inputs: { primary: { kind: "http-json", url: "https://curve.example/markets" } },
+          }, new AbortController().signal, { chainRpcs: network.chainRpcs })
+          : { slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] },
+      }));
+      const { db, sqlite } = fixtures.open();
+      // This suite resets/mocks the producer module graph between cases, so a static import would retain stale mocks.
+      const { syncLiveReserves } = await import("../sync-live-reserves");
+      await syncLiveReserves(db, new AbortController().signal, {});
+      const snapshot = sqlite.prepare("SELECT * FROM reserve_composition WHERE stablecoin_id = ?").get("crvusd-curve");
+      expect(snapshot).toBeDefined();
+      const original = await resolveReserveResult(db, "crvusd-curve", Math.floor(nowMs / 1000));
+      expect(original?.reserves.map((slice) => slice.pct)).toEqual([50, 50]);
+      for (let attempt = 0; attempt < 2; attempt++) {
+        incomplete = true;
+        nowMs += 60_000;
+        await syncLiveReserves(db, new AbortController().signal, {});
+        expect(sqlite.prepare("SELECT * FROM reserve_composition WHERE stablecoin_id = ?").get("crvusd-curve")).toEqual(snapshot);
+        const served = await resolveReserveResult(db, "crvusd-curve", Math.floor(nowMs / 1000));
+        expect(served?.reserves).toEqual(original?.reserves);
+        expect(served?.liveAt).toBe(original?.liveAt);
+        const state = sqlite.prepare("SELECT last_status, warnings, metadata FROM reserve_sync_state WHERE stablecoin_id = ?").get("crvusd-curve")!;
+        expect(state.last_status).toBe("error");
+        expect(JSON.parse(String(state.warnings))).toContainEqual(expect.objectContaining({ code: reason, effect: "fatal" }));
+        const diagnostics = JSON.parse(String(state.metadata)).adapterDiagnostics;
+        expect(diagnostics.details.measuredDirectCollateralUsd).toBe(reason === "curve-markets-incomplete" ? 100 : 200);
+        expect(diagnostics).not.toHaveProperty("yieldBasisCollateralUsd");
+        expect(diagnostics).not.toHaveProperty("yieldBasisCollateralPct");
+      }
+    },
+  );
+
+  it.each([
+    { id: "fpi-frax", adapter: "frax-fpi-collateral", reason: "asset-coverage-incomplete" },
+    { id: "ftusd-flying-tulip", adapter: "flying-tulip-ftusd", reason: "unexpected-chain" },
+  ] as const)("retains the complete $id book and original clocks after scope loss", async ({ id, adapter, reason }) => {
+    let nowMs = Date.now();
+    vi.spyOn(Date, "now").mockImplementation(() => nowMs);
+    let incomplete = false;
+    const endpoint = "https://reserves.example/book";
+    const network = installAdapterNetwork({
+      code: { "0x2397321b301b80a1c0911d6f9ed4b6033d43cf51": "0x" },
+      json: { [endpoint]: () => adapter === "frax-fpi-collateral"
+        ? {
+          updatedAtTimestampSec: Math.floor(nowMs / 1000),
+          assets: [
+            { tokenSymbol: "FRAX", valueUsd: 100 }, { tokenSymbol: "FXS", valueUsd: 100 },
+            ...(incomplete ? [{ tokenSymbol: "sfrxUSD", valueUsd: null }] : []),
+          ],
+          liabilities: [{ tokenSymbol: "FPI", valueUsd: 200 }],
+        }
+        : {
+          ...flyingTulipCapture, lastUpdated: new Date(nowMs).toISOString(),
+          chains: [
+            ...flyingTulipCapture.chains,
+            ...(incomplete ? [{ chainId: 137, chainName: "Polygon", tvlUsd: 900, metrics: { totalSupplyUsd: 900 } }] : []),
+          ],
+        },
+      },
+    });
+    getReserveAdapterMock.mockImplementation((adapterKey: keyof typeof LIVE_RESERVE_ADAPTER_DEFINITIONS) => ({
+      ...LIVE_RESERVE_ADAPTER_DEFINITIONS[adapterKey], key: adapterKey,
+      fetch: async (coin: ReserveAdapterCoin, config: LiveReservesConfig) => {
+        if (coin.id !== id) return { slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] };
+        const fetcher = adapter === "frax-fpi-collateral" ? fetchFraxFpiCollateralReserves : fetchFlyingTulipFtUsdReserves;
+        return fetcher(coin, { ...config, inputs: { primary: { kind: "http-json", url: endpoint } } },
+          new AbortController().signal, { chainRpcs: network.chainRpcs });
+      },
+    }));
+    const { db, sqlite } = fixtures.open();
+    // The suite resets the producer graph between cases; a static import would retain stale mocks.
+    const { syncLiveReserves } = await import("../sync-live-reserves");
+    await syncLiveReserves(db, new AbortController().signal, {});
+    const snapshot = sqlite.prepare("SELECT * FROM reserve_composition WHERE stablecoin_id = ?").get(id);
+    expect(snapshot).toBeDefined();
+    const original = await resolveReserveResult(db, id, Math.floor(nowMs / 1000));
+    expect(original?.mode).toBe("live");
+    expect(original?.reserves.length).toBeGreaterThan(0);
+    const success = sqlite.prepare("SELECT last_success_at, last_success_attempt_id FROM reserve_sync_state WHERE stablecoin_id = ?").get(id);
+    for (let attempt = 0; attempt < 2; attempt++) {
+      incomplete = true;
+      nowMs += 60_000;
+      await syncLiveReserves(db, new AbortController().signal, {});
+      expect(sqlite.prepare("SELECT * FROM reserve_composition WHERE stablecoin_id = ?").get(id)).toEqual(snapshot);
+      expect(sqlite.prepare("SELECT last_success_at, last_success_attempt_id FROM reserve_sync_state WHERE stablecoin_id = ?").get(id)).toEqual(success);
+      const served = await resolveReserveResult(db, id, Math.floor(nowMs / 1000));
+      expect(served?.reserves).toEqual(original?.reserves);
+      expect(served?.metadata?.sourceTimestamp).toBe(original?.metadata?.sourceTimestamp);
+      expect(served?.liveAt).toBe(original?.liveAt);
+      const state = sqlite.prepare("SELECT last_status, last_error, warnings, metadata FROM reserve_sync_state WHERE stablecoin_id = ?").get(id)!;
+      expect(state.last_status).toBe("error");
+      if (adapter === "frax-fpi-collateral") {
+        expect(JSON.parse(String(state.warnings))).toContainEqual(expect.objectContaining({ code: reason, effect: "fatal" }));
+        expect(JSON.parse(String(state.metadata)).adapterDiagnostics).toMatchObject({
+          compositionComplete: false, knownCollateralUsd: 200, totalLiabilitiesUsd: 200,
+        });
+      } else {
+        expect(state.last_error).toContain(reason);
+      }
+    }
+  });
+
+  it.each([
+    { id: "jupusd-jupiter", adapter: "jupusd", reason: "holdings-incomplete" },
+    { id: "usdx-kava", adapter: "kava-cdp", reason: "collateral-coverage-incomplete" },
+  ] as const)("retains the complete $id book and original clocks after unavailable valuation", async ({ id, adapter, reason }) => {
+    let nowMs = Date.now();
+    vi.spyOn(Date, "now").mockImplementation(() => nowMs);
+    let incomplete = false;
+    const endpoint = adapter === "jupusd" ? "https://jupusd.example/data" : TOTAL_COLLATERAL_URL;
+    installAdapterNetwork({
+      json: adapter === "jupusd" ? {
+        [endpoint]: () => ({
+          totalSupply: "200000000",
+          holdings: [
+            { name: "USDC", amount: "100000000", decimals: 6 },
+            { name: "USDtb", amount: "100000000", ...(incomplete ? {} : { decimals: 6 }) },
+          ],
+        }),
+        "https://jupusd.example/snapshots": () => ({ snapshots: [{ timestamp: Math.floor(nowMs / 1000) }] }),
+      } : {
+        ...KAVA_LCD_FIXTURES,
+        [TOTAL_COLLATERAL_URL]: () => {
+          const payload = structuredClone(TOTAL_COLLATERAL);
+          if (incomplete) payload.total_collateral.find((row) => row.collateral_type === "swp-a")!.amount.amount = "1000000000";
+          return payload;
+        },
+        "https://api.kava.io/cosmos/base/tendermint/v1beta1/blocks/latest": () => ({
+          block: { header: { ...LATEST_BLOCK.block.header, time: new Date(nowMs).toISOString() } },
+        }),
+      },
+    });
+    getReserveAdapterMock.mockImplementation((adapterKey: keyof typeof LIVE_RESERVE_ADAPTER_DEFINITIONS) => ({
+      ...LIVE_RESERVE_ADAPTER_DEFINITIONS[adapterKey], key: adapterKey,
+      fetch: async (coin: ReserveAdapterCoin, config: LiveReservesConfig) => {
+        if (coin.id !== id) return { slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] };
+        const fetcher = adapter === "jupusd" ? fetchJupUsdReserves : fetchKavaCdpReserves;
+        return fetcher(coin, {
+          ...config, inputs: { primary: { kind: "http-json", url: endpoint } },
+          ...(adapter === "jupusd" ? { params: { snapshotsUrl: "https://jupusd.example/snapshots" } } : {}),
+        }, new AbortController().signal, { nowSec: Math.floor(nowMs / 1000) });
+      },
+    }));
+    const { db, sqlite } = fixtures.open();
+    // The suite resets the producer module graph between cases; static imports retain stale mocks.
+    const { syncLiveReserves } = await import("../sync-live-reserves");
+    await syncLiveReserves(db, new AbortController().signal, {});
+    const snapshot = sqlite.prepare("SELECT * FROM reserve_composition WHERE stablecoin_id = ?").get(id);
+    expect(snapshot).toBeDefined();
+    const original = await resolveReserveResult(db, id, Math.floor(nowMs / 1000));
+    expect(original?.mode).toBe("live");
+    expect(original?.reserves.length).toBeGreaterThan(0);
+    const success = sqlite.prepare("SELECT last_success_at, last_success_attempt_id FROM reserve_sync_state WHERE stablecoin_id = ?").get(id);
+    for (let attempt = 0; attempt < 2; attempt++) {
+      incomplete = true;
+      nowMs += 60_000;
+      await syncLiveReserves(db, new AbortController().signal, {});
+      expect(sqlite.prepare("SELECT * FROM reserve_composition WHERE stablecoin_id = ?").get(id)).toEqual(snapshot);
+      expect(sqlite.prepare("SELECT last_success_at, last_success_attempt_id FROM reserve_sync_state WHERE stablecoin_id = ?").get(id)).toEqual(success);
+      const served = await resolveReserveResult(db, id, Math.floor(nowMs / 1000));
+      expect(served?.reserves).toEqual(original?.reserves);
+      expect(served?.liveAt).toBe(original?.liveAt);
+      expect(served?.metadata?.sourceTimestamp).toBe(original?.metadata?.sourceTimestamp);
+      const state = sqlite.prepare("SELECT last_status, warnings, metadata FROM reserve_sync_state WHERE stablecoin_id = ?").get(id)!;
+      expect(state.last_status).toBe("error");
+      expect(JSON.parse(String(state.warnings))).toContainEqual(expect.objectContaining({ code: reason, effect: "fatal" }));
+      const diagnostics = JSON.parse(String(state.metadata)).adapterDiagnostics;
+      expect(diagnostics).not.toHaveProperty("totalReserveUsd");
+      expect(diagnostics).not.toHaveProperty("collateralizationRatio");
+      expect(diagnostics).not.toHaveProperty("unknownExposurePct");
+      expect(diagnostics).not.toHaveProperty("redemption");
+      expect(diagnostics.details).toMatchObject(adapter === "jupusd"
+        ? { measuredHoldingsUsd: 100, unavailableHoldingNames: ["1:USDtb"] }
+        : { unpricedCollateralTypes: ["swp-a"], unpricedPrincipalTokens: 4.889684 });
+    }
+  });
 
   it("returns ok with warning metadata when the adapter yields warnings (warnings are metadata-only)", async () => {
     mockAdapterRegistry(

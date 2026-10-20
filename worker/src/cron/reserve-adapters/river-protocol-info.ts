@@ -18,7 +18,7 @@ import {
   type OnchainMulticall3Call,
 } from "./helpers";
 import { decodeAbiWordAt, decodeStrictAddressWord, decodeStrictBoolWord, decodeUint256Word } from "./abi-decode";
-import { executeEvmObservationPlan, rawObservation } from "./evm-observation-plan";
+import { executeEvmObservationPlan, pinnedBlockPlan, rawObservation } from "./evm-observation-plan";
 
 interface RiverTimeseriesPoint {
   chainId?: number;
@@ -136,6 +136,7 @@ interface RiverChainRedemption {
   troveManagerCount: number;
   feeBps: number | null;
   sunsettingBranches: number;
+  observedBlock: NonNullable<AdapterContext["observedBlock"]>;
 }
 
 interface RiverRedemptionProbe {
@@ -193,6 +194,10 @@ async function probeRiverChain(
   if (!app || !rpcUrl) return null;
 
   try {
+    const plan = await pinnedBlockPlan({
+      chain, signal, rpcUrl,
+      ctx: { ...ctx, observedBlock: ctx?.observedBlock?.chain === chain ? ctx.observedBlock : undefined },
+    });
     const appCalls: OnchainMulticall3Call[] = [
       { label: "app:debt-token", contract: app, data: DEBT_TOKEN_SELECTOR },
       { label: "app:balances", contract: app, data: GLOBAL_SYSTEM_BALANCES_SELECTOR },
@@ -207,7 +212,7 @@ async function probeRiverChain(
         allowFailure: true,
       });
     }
-    const appResults = await executeRiverObservation(appCalls, chain, signal, ctx, rpcUrl);
+    const appResults = await executeRiverObservation(appCalls, chain, signal, plan.ctx, rpcUrl);
 
     if (decodeStrictAddressWord(appResults.get("app:debt-token")) !== satUsdAddress.toLowerCase()) return null;
 
@@ -230,7 +235,7 @@ async function probeRiverChain(
       { label: `branch:mcr:${index}`, contract: troveManager, data: MCR_SELECTOR },
       { label: `branch:sunsetting:${index}`, contract: troveManager, data: SUNSETTING_SELECTOR },
     ]);
-    const branchResults = await executeRiverObservation(branchCalls, chain, signal, ctx, rpcUrl);
+    const branchResults = await executeRiverObservation(branchCalls, chain, signal, plan.ctx, rpcUrl);
 
     let maxRateRaw = 0n;
     let maxMcrRaw = 0n;
@@ -264,6 +269,7 @@ async function probeRiverChain(
     return {
       chain,
       app,
+      observedBlock: plan.observedBlock,
       capacityUsd,
       totalDebtRaw: totalDebtRaw.toString(),
       tcrRaw: tcrRaw.toString(),
@@ -343,6 +349,7 @@ function buildRiverRedemptionMetadata(
         });
   return {
     ...redemptionMetadata,
+    observedBlocks: probe.chains.map((entry) => entry.observedBlock),
     details: {
       redeemRoute: {
         proofKind: "satoshi-protocol-branch-trove-debt",
@@ -351,6 +358,7 @@ function buildRiverRedemptionMetadata(
         chains: probe.chains.map((entry) => ({
           chain: entry.chain,
           app: entry.app,
+          observedBlock: entry.observedBlock,
           totalDebtRaw: entry.totalDebtRaw,
           tcrRaw: entry.tcrRaw,
           troveManagerCount: entry.troveManagerCount,

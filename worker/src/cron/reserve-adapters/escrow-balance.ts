@@ -15,6 +15,7 @@ import {
   makeOnchainCallers,
   notApplicableFreshnessMetadata,
   requireOnchainInput,
+  reserveDegradedWarning,
 } from "./helpers";
 import type { AdapterContext, AdapterResult } from "./types";
 
@@ -136,17 +137,25 @@ async function fetchMultiReadCapacity(
 }
 
 function compareEscrowSupply(balanceUsd: number, supplyUsd: number | undefined) {
-  const coverageRatio = supplyUsd == null ? undefined : balanceUsd / supplyUsd;
+  const coverageRatio = supplyUsd != null && supplyUsd > 0 ? balanceUsd / supplyUsd : undefined;
   return {
-    warnings: buildCoverageShortfallWarnings({
-      code: "reserve-undercollateralized",
-      message: (pct) => `Escrow backing covers ${pct}% of coin supply`,
-      coverageRatio,
-    }),
+    warnings: [
+      ...buildCoverageShortfallWarnings({
+        code: "reserve-undercollateralized",
+        message: (pct) => `Escrow backing covers ${pct}% of coin supply`,
+        coverageRatio,
+      }),
+      ...(balanceUsd === 0 ? [reserveDegradedWarning(
+        "escrow-balance-zero", "The observed escrow balance is zero; no immediate redemption capacity remains",
+      )] : []),
+      ...(supplyUsd != null && supplyUsd <= 0 ? [reserveDegradedWarning(
+        "escrow-nonpositive-supply", "Observed coin liabilities are nonpositive; coverage ratios are unavailable",
+      )] : []),
+    ],
     metadata: supplyUsd == null ? {} : {
       totalReserveUsd: balanceUsd,
       supplyUsd,
-      collateralizationRatio: coverageRatio,
+      ...(coverageRatio != null ? { collateralizationRatio: coverageRatio } : {}),
     },
     capacityUsd: supplyUsd == null ? balanceUsd : Math.min(balanceUsd, supplyUsd),
     capacityRatioOfSupply: coverageRatio == null ? undefined : Math.min(1, coverageRatio),
@@ -183,7 +192,7 @@ export async function fetchEscrowBalanceReserves(
     if (!contract) throw new Error(`${ADAPTER}: no ${input.chain} coin contract configured for ${coin.id}`);
     const decimals = validateDecimals(contract.decimals, `${ADAPTER} coin supply decimals`);
     const supplyRaw = await onchain.uint256(contract.address, TOTAL_SUPPLY_SELECTOR);
-    if (supplyRaw == null || supplyRaw <= 0n) {
+    if (supplyRaw == null) {
       throw new Error(`${ADAPTER}: totalSupply() failed for ${coin.id}`);
     }
     supplyUsd = decimalNumberFromBigInt(supplyRaw, decimals);
@@ -233,9 +242,6 @@ export async function fetchEscrowBalanceReserves(
   );
   if (escrowBalanceRaw == null) {
     throw new Error(`${ADAPTER}: escrow balance call failed for ${coin.id}`);
-  }
-  if (escrowBalanceRaw <= 0n) {
-    throw new Error(`${ADAPTER}: escrow balance is zero for ${coin.id}`);
   }
 
   let routeStatus: RedemptionRouteStatus = "unknown";

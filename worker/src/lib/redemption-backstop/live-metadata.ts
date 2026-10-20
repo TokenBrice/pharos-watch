@@ -146,15 +146,36 @@ function hasScoreableNestedRedemptionEvidence(
 }
 
 
+function getAllowedSnapshotCapacityWarningReason(
+  stablecoinId: string,
+  warning: LiveReserveWarning,
+  snapshot: ReserveSnapshotMetadataRecord | null | undefined,
+): string | null {
+  if (warning.effect === "degraded" &&
+      (warning.code === "escrow-balance-zero" || warning.code === "reserve-undercollateralized")) {
+    const config = WORKER_TRACKED_META_BY_ID.get(stablecoinId)?.liveReservesConfig;
+    if (config?.adapter === "escrow-balance" && snapshot?.source === "escrow-balance" &&
+        snapshot.metadata.escrowBalanceUsd === 0 &&
+        (warning.code === "escrow-balance-zero" || config.params?.compareToCoinSupply === true)) {
+      const decoded = decodeLiveReserveRedemptionTelemetry(snapshot.metadata);
+      if (decoded.status === "valid" && decoded.telemetry.capacityUsd === 0) {
+        return "Retaining measured zero escrow capacity without excusing reserve backing degradation";
+      }
+    }
+  }
+  return getAllowedRedemptionCapacityWarningReason(stablecoinId, warning);
+}
+
 function hasBlockingRedemptionWarnings(
   stablecoinId: string,
   warnings: LiveReserveWarning[],
   warningCount: number,
+  snapshot: ReserveSnapshotMetadataRecord | null | undefined,
 ): boolean {
   if (warningCount <= 0) return false;
   if (warnings.length === 0) return true;
   return warnings.some(
-    (warning) => warning.effect !== "info" && !getAllowedRedemptionCapacityWarningReason(stablecoinId, warning),
+    (warning) => warning.effect !== "info" && !getAllowedSnapshotCapacityWarningReason(stablecoinId, warning, snapshot),
   );
 }
 
@@ -168,7 +189,7 @@ function canUseCapacityDespiteDegradedSync(
   let foundAllowedBlockingWarning = false;
   for (const warning of snapshotMetadata.warnings) {
     if (warning.effect === "info") continue;
-    if (!getAllowedRedemptionCapacityWarningReason(stablecoinId, warning)) return false;
+    if (!getAllowedSnapshotCapacityWarningReason(stablecoinId, warning, snapshotMetadata)) return false;
     foundAllowedBlockingWarning = true;
   }
   return foundAllowedBlockingWarning;
@@ -181,7 +202,7 @@ function resolveCapacityNotes(
   if (!canUseCapacityDespiteDegradedSync(stablecoinId, snapshotMetadata)) return [];
   const notes = new Set<string>();
   for (const warning of snapshotMetadata?.warnings ?? []) {
-    const note = getAllowedRedemptionCapacityWarningReason(stablecoinId, warning);
+    const note = getAllowedSnapshotCapacityWarningReason(stablecoinId, warning, snapshotMetadata);
     if (note) notes.add(note);
   }
   return [...notes];
@@ -400,6 +421,7 @@ export function readRedemptionBackstopLiveMetadata(
     stablecoinId,
     snapshotMetadata?.warnings ?? [],
     snapshotMetadata?.warningCount ?? 0,
+    snapshotMetadata,
   );
   const capacityNotes = resolveCapacityNotes(stablecoinId, snapshotMetadata);
   const telemetryCapacity = adapterDefinition?.redemptionTelemetry.capacity ?? "none";

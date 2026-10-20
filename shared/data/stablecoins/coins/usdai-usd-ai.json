@@ -100,7 +100,7 @@
   "governanceQuality": "multisig",
   "liveReservesConfig": {
     "adapter": "usdai-hub",
-    "version": 1,
+    "version": 2,
     "semantics": "single-asset",
     "breakerScope": "usdai-usd-ai",
     "display": {

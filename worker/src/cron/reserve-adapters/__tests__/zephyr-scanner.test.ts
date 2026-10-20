@@ -1,4 +1,9 @@
 import { describe, expect, it } from "vitest";
+import zsd from "@shared/data/stablecoins/coins/zsd-zephyr-protocol.json";
+import zys from "@shared/data/stablecoins/coins/zys-zephyr-protocol.json";
+import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import { computeLiveReserveConfigFingerprint, getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
+import { evaluateLiveReserveAdmission } from "../../../lib/live-reserves/store-snapshot-state";
 import { adaptZephyrScanner } from "../zephyr-scanner";
 import { expectValidAdapterOutput } from "./reserve-adapter.test-support";
 import { ZEPHYR_CAPTURE } from "./zephyr-scanner.test-support";
@@ -24,6 +29,102 @@ describe("adaptZephyrScanner", () => {
       hardForkVersion: 11,
     });
     expect(result.warnings).toBeUndefined();
+  });
+
+  it("bounds reserve freshness by the used price, not a newer capture", () => {
+    const snapshot = ZEPHYR_CAPTURE.results[0];
+    const result = adaptZephyrScanner({ results: [{
+      ...snapshot,
+      captured_at: "2026-10-19T12:00:00Z",
+    }] });
+    expect(result.metadata?.sourceTimestamp).toBe(1710000000);
+    expect(result.metadata?.details).toMatchObject({ capturedAt: "2026-10-19T12:00:00Z" });
+  });
+
+  it("does not borrow an unused alternative price clock", () => {
+    const result = adaptZephyrScanner({ results: [{
+      captured_at: "2026-10-19T12:00:00Z",
+      on_chain: { zeph_reserve: 100, zsd_circ: 50 },
+      pricing_record: { spot: 1_000_000_000_000 },
+      raw: { pr: { spot: 2_000_000_000_000, timestamp: 1_792_411_200 } },
+    }] });
+    expect(result.metadata).toMatchObject({
+      totalReserveUsd: 100, collateralizationRatio: 2, freshnessMode: "unverified",
+      details: { freshnessReason: expect.any(String) },
+    });
+    expect(result.metadata?.sourceTimestamp).toBeUndefined();
+  });
+
+  it("ignores stale clocks on unused alternatives", () => {
+    const timestamp = 1_792_411_200;
+    const result = adaptZephyrScanner({ results: [{
+      captured_at: new Date(timestamp * 1000).toISOString(),
+      on_chain: { zeph_reserve: 100, zsd_circ: 50 },
+      pricing_record: { spot: 1_000_000_000_000, timestamp },
+      raw: { pr: { spot: 2_000_000_000_000, timestamp: 1710000000 } },
+    }] });
+    expect(result.metadata?.sourceTimestamp).toBe(timestamp);
+  });
+
+  it.each([undefined, 1710000000])("requires the used ZYS coverage price clock (%s)", (timestamp) => {
+    const result = adaptZephyrScanner({ results: [{
+      captured_at: "2026-10-19T12:00:00Z",
+      on_chain: { zsd_yield_reserve: 200, zys_circ: 100, reserve_ratio: 2 },
+      pricing_record: { yield_price: 2_000_000_000_000, timestamp: 1_792_411_200 },
+      raw: { pr: { timestamp } },
+    }] }, "zys-zephyr-protocol");
+    expect(result.metadata?.freshnessMode).toBe(timestamp == null ? "unverified" : "verified");
+    expect(result.metadata?.sourceTimestamp).toBe(timestamp);
+    expect(result.metadata?.details).toMatchObject({ capturedAt: "2026-10-19T12:00:00Z" });
+  });
+
+  it("requires a capture clock for amounts even when the price is dated", () => {
+    const snapshot = ZEPHYR_CAPTURE.results[0];
+    const result = adaptZephyrScanner({ results: [{ ...snapshot, captured_at: undefined }] });
+    expect(result.metadata?.freshnessMode).toBe("unverified");
+    expect(result.metadata?.sourceTimestamp).toBeUndefined();
+  });
+
+  it("does not date raw USD assets with a different selected spot clock", () => {
+    const snapshot = ZEPHYR_CAPTURE.results[0];
+    const result = adaptZephyrScanner({ results: [{
+      ...snapshot,
+      raw: { ...snapshot.raw, pr: { timestamp: 1700000000 } },
+    }] });
+    expect(result.metadata?.sourceTimestamp).toBe(1700000000);
+  });
+
+  it("requires the selected ZYS share-price clock independently of coverage", () => {
+    const result = adaptZephyrScanner({ results: [{
+      captured_at: "2026-10-19T12:00:00Z",
+      on_chain: { zsd_yield_reserve: 200, zys_circ: 100 },
+      pricing_record: { yield_price: 2_000_000_000_000 },
+      raw: { pr: { reserve_ratio: 2_000_000_000_000, timestamp: 1_792_411_200 } },
+    }] }, "zys-zephyr-protocol");
+    expect(result.metadata?.freshnessMode).toBe("unverified");
+    expect(result.metadata?.sourceTimestamp).toBeUndefined();
+  });
+
+  it.each([zsd, zys])("rejects retained capture-dated v1/v2 packets for $id", (coin) => {
+    const config = coin.liveReservesConfig as LiveReservesConfig;
+    expect(config.version).toBe(3);
+    expect(getLiveReserveAdapterDefinition("zephyr-scanner")?.configValidation.allowedVersions).toEqual([3]);
+    const snapshot = {
+      stablecoinId: coin.id, source: config.adapter, fetchedAt: 1_778_000_000,
+      slices: [{ name: "Zephyr reserve", pct: 100, risk: "high" as const }],
+      metadata: { freshnessMode: "verified" as const, sourceTimestamp: 1_778_000_000 },
+      warnings: [], warningCount: 0,
+      adapterSourceModel: "single-bucket" as const, adapterEvidenceClass: "weak-live-probe" as const,
+      configFingerprint: computeLiveReserveConfigFingerprint(config),
+    };
+    const sync = { lastSuccessAt: snapshot.fetchedAt, lastSuccessAttemptId: null };
+    for (const version of [1, 2]) {
+      expect(evaluateLiveReserveAdmission({
+        ...snapshot, configFingerprint: computeLiveReserveConfigFingerprint({ ...config, version }),
+      }, sync, { liveReservesConfig: config }, snapshot.fetchedAt).reasons).toContain("config-mismatch");
+    }
+    expect(evaluateLiveReserveAdmission(snapshot, sync, { liveReservesConfig: config }, snapshot.fetchedAt).reasons)
+      .not.toContain("config-mismatch");
   });
 
   it("degrades undercollateralized snapshots", () => {
@@ -87,7 +188,7 @@ describe("adaptZephyrScanner", () => {
     ]);
     expect(result.metadata).toMatchObject({
       freshnessMode: "verified",
-      sourceTimestamp: 1784504788,
+      sourceTimestamp: 1784504312,
       reserveAmountZsd: 355_777.17907049524,
       liabilityAmountZsd: 355_777.04013880575,
       zysCirculating: 183_232.76192926418,

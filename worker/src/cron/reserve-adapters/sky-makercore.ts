@@ -18,6 +18,7 @@ import {
   verifiedFreshnessMetadata,
   unverifiedFreshnessMetadata,
 } from "./helpers";
+import { pinnedBlockPlan } from "./evm-observation-plan";
 
 // ---------------------------------------------------------------------------
 // Block Analitica groups API response
@@ -33,6 +34,8 @@ export interface SkyGroupResult {
 
 interface BlockAnaliticaGroupsResponse {
   count: number;
+  next?: unknown;
+  previous?: unknown;
   results: SkyGroupResult[];
 }
 
@@ -270,8 +273,14 @@ async function fetchSkyLitePsmUsdcCapacity(
   capacityRaw: string;
   routeObserved: boolean;
   routeStatus: "open" | "paused" | "unknown";
+  observedBlock: NonNullable<AdapterContext["observedBlock"]>;
 } | null> {
   try {
+    const plan = await pinnedBlockPlan({
+      chain: "ethereum", signal, ctx,
+      rpcUrl: SKY_LITE_PSM_RPC_URL, fallbackRpcUrl: SKY_LITE_PSM_FALLBACK_RPC_URL,
+    });
+    ctx = plan.ctx;
     const onchain = makeOnchainCallers(
       {
         chain: "ethereum",
@@ -305,6 +314,7 @@ async function fetchSkyLitePsmUsdcCapacity(
     if (balanceRaw == null) return null;
     const routeObserved = tin != null && tout != null;
     return {
+      observedBlock: plan.observedBlock,
       capacityUsd: decimalNumberFromBigInt(balanceRaw, SKY_LITE_PSM_USDC_DECIMALS),
       capacityRaw: balanceRaw.toString(),
       routeObserved,
@@ -334,6 +344,19 @@ export async function fetchSkyMakercoreReserves(
 
   if (!Array.isArray(payload.results) || payload.results.length === 0) {
     throw new Error("sky-makercore: groups results array is empty or missing");
+  }
+  if ((payload.next !== undefined && payload.next !== null) || (payload.previous !== undefined && payload.previous !== null)) {
+    throw new Error("sky-makercore: incomplete-groups-census: pagination declared");
+  }
+  if (!Number.isSafeInteger(payload.count) || payload.count < 0 || payload.count !== payload.results.length) {
+    throw new Error("sky-makercore: incomplete-groups-census: invalid or mismatched count");
+  }
+  const groupIds = new Set<string>();
+  for (const result of payload.results) {
+    if (typeof result.group !== "string" || !result.group.trim() || groupIds.has(result.group)) {
+      throw new Error("sky-makercore: incomplete-groups-census: invalid or duplicate group");
+    }
+    groupIds.add(result.group);
   }
   // An incomplete debt census cannot support any normalized shared-book mix.
   // Fail the attempt before on-chain attribution and retain the last good book.
@@ -424,6 +447,7 @@ export async function fetchSkyMakercoreReserves(
       sharedBookAssetIds: ["dai-makerdao", "usds-sky"],
       ...(litePsmCapacity
         ? {
+            observedBlock: litePsmCapacity.observedBlock,
             sharedBookMeasuredHoldings: { "usdc-circle": litePsmCapacity.capacityUsd },
             reconciliationExcessUsd: psmReconciliation.excessUsd,
             reconciliationExcessShare: psmReconciliation.excessShare,

@@ -468,7 +468,8 @@ export async function syncReserveCoin(args: {
       knownStablecoinIds: TRACKED_STABLECOIN_IDS,
     });
     if (!validation.valid) {
-      const message = validation.warnings.map((warning) => warning.message).join("; ");
+      const warnings = [...(result.warnings ?? []), ...validation.warnings];
+      const message = warnings.map((warning) => warning.message).join("; ");
       const staleOnly = validation.warnings.some((warning) => warning.code === "stale-redemption-source-timestamp")
         && validation.warnings.every((warning) => warning.effect !== "fatal" || warning.code === "stale-redemption-source-timestamp")
         && !(result.warnings ?? []).some((warning) => warning.effect === "fatal");
@@ -485,8 +486,10 @@ export async function syncReserveCoin(args: {
         });
       }
       logWorkerEventArgs("handler", "warn", `[sync-live-reserves] Adapter output invalid for ${coin.id}: ${message}`);
-      await recordFailure("error", `Validation failed: ${message}`, "validation-failed", validation.warnings, { durationMs });
-      return timedResult({ breakerKey, status: "failed", warningMessages: validation.warnings.map((warning) => `${coin.id}:${warning.code}`), hasWarnings: true });
+      await recordFailure("error", `Validation failed: ${message}`, "validation-failed", warnings, {
+        durationMs, adapterDiagnostics: result.metadata,
+      });
+      return timedResult({ breakerKey, status: "failed", warningMessages: warnings.map((warning) => `${coin.id}:${warning.code}`), hasWarnings: true });
     }
 
     if (result.slices.length === 0) {

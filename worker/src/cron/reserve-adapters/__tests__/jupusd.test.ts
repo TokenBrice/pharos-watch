@@ -122,7 +122,7 @@ describe("adaptJupUsdData", () => {
     ["negative", -1],
     ["fractional", 1.5],
     ["out of bounds", 1_000_000_000],
-  ] as const)("withholds complete-book totals when a holding decimal scale is %s", (_label, decimals) => {
+  ] as const)("withholds all replacement evidence when a holding decimal scale is %s", (_label, decimals) => {
     const result = adaptJupUsdData({
       totalSupply: "1000000000",
       holdings: [
@@ -134,16 +134,15 @@ describe("adaptJupUsdData", () => {
     expect(result.metadata).not.toHaveProperty("totalReserveUsd");
     expect(result.metadata).not.toHaveProperty("collateralizationRatio");
     expect(result.metadata).not.toHaveProperty("unknownExposurePct");
-    expect(result.metadata?.supplyUsd).toBe(1000);
+    expect(result.metadata).not.toHaveProperty("supplyUsd");
+    expect(result.metadata).not.toHaveProperty("redemption");
+    expect(result.metadata?.details).toMatchObject({
+      measuredHoldingsUsd: 1000, unavailableHoldingNames: ["1:USDC"],
+    });
     expect(result.warnings).toContainEqual(expect.objectContaining({
-      code: "unparseable-holding",
-      effect: "degraded",
+      code: "holdings-incomplete", effect: "fatal",
     }));
-    expect(result.warnings?.some((warning) => warning.code === "reserve-undercollateralized")).toBe(false);
-    expect(result.slices).toEqual([
-      { sourceKey: "jupusd:usdtb", name: "USDtb", pct: 100, risk: "low", coinId: "usdtb-ethena", depType: "collateral" },
-    ]);
-    expect(result.metadata?.redemption).toMatchObject({ capacityUsd: 1000 });
+    expect(result.slices).toEqual([]);
   });
 
   it.each([0, 6])("preserves an explicitly supplied %s decimal scale", (decimals) => {
@@ -161,14 +160,16 @@ describe("adaptJupUsdData", () => {
     expect(result.warnings).toBeUndefined();
   });
 
-  it("rejects a sole unscaled USDC holding instead of publishing its raw integer as USD", () => {
-    expect(() => adaptJupUsdData({
+  it("withholds a sole unscaled USDC holding instead of publishing its raw integer as USD", () => {
+    const result = adaptJupUsdData({
       totalSupply: "1000000000",
       holdings: [{ name: "USDC", amount: "1000000000" }],
-    })).toThrow();
+    });
+    expect(result.slices).toEqual([]);
+    expect(result.metadata?.details).toMatchObject({ measuredHoldingsUsd: 0, unavailableHoldingNames: ["0:USDC"] });
   });
 
-  it("keeps unknown holdings degraded without inventing a complete-book exposure share", () => {
+  it("retains readable unknown holdings only as diagnostics when the whole book is incomplete", () => {
     const result = adaptJupUsdData({
       totalSupply: "1000000000",
       holdings: [
@@ -179,14 +180,50 @@ describe("adaptJupUsdData", () => {
 
     expect(result.metadata).not.toHaveProperty("unknownExposurePct");
     expect(result.metadata).not.toHaveProperty("totalReserveUsd");
+    expect(result.slices).toEqual([]);
+    expect(result.metadata).not.toHaveProperty("redemption");
+    expect(result.metadata?.details).toMatchObject({
+      measuredHoldingsUsd: 1000,
+      measuredHoldings: [{ name: "Unmapped JupUSD reserve holdings", value: 1000, unknown: true }],
+    });
     expect(result.warnings).toContainEqual(expect.objectContaining({
-      code: "unknown-holding",
-      effect: "degraded",
+      code: "holdings-incomplete", effect: "fatal",
     }));
-    expect(result.warnings).toContainEqual(expect.objectContaining({
-      code: "unparseable-holding",
-      effect: "degraded",
-    }));
+  });
+
+  it("distinguishes measured zero holdings from unavailable amounts", () => {
+    const result = adaptJupUsdData({
+      totalSupply: "1000000000",
+      holdings: [
+        { name: "USDC", amount: "1000000000", decimals: 6 },
+        { name: "USDtb", amount: "0", decimals: 6 },
+      ],
+    });
+    expect(result.metadata?.totalReserveUsd).toBe(1000);
+    expect(result.slices).toEqual([
+      { sourceKey: "jupusd:usdc", name: "USDC", pct: 100, risk: "low", coinId: "usdc-circle", depType: "collateral" },
+    ]);
+    expect(result.warnings).toBeUndefined();
+  });
+
+  it.each([undefined, "-1", "bad"])("withholds unreadable holding amount %s", (amount) => {
+    const result = adaptJupUsdData({
+      totalSupply: "1000000000",
+      holdings: [
+        { name: "USDC", amount: "1000000000", decimals: 6 },
+        { name: "USDtb", amount, decimals: 6 },
+      ],
+    });
+    expect(result.slices).toEqual([]);
+    expect(result.metadata?.details).toMatchObject({ unavailableHoldingNames: ["1:USDtb"], measuredHoldingsUsd: 1000 });
+    expect(result.metadata).not.toHaveProperty("redemption");
+  });
+
+  it("distinguishes an unavailable holdings census from an observed empty book", () => {
+    const result = adaptJupUsdData({ totalSupply: "1000000000" });
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "holdings-incomplete", effect: "fatal" }));
+    expect(result.metadata?.details).toMatchObject({ unavailableHoldingNames: ["holdings"] });
+    expect(() => adaptJupUsdData({ totalSupply: "1000000000", holdings: [] })).toThrow("zero reserve holdings");
   });
 
 });
@@ -203,7 +240,7 @@ describe("fetchJupUsdReserves", () => {
   function makeConfig(): LiveReservesConfig {
     return {
       adapter: "jupusd",
-      version: 1,
+      version: 2,
       semantics: "collateral-mix",
       inputs: { primary: { kind: "http-json", url: baseUrl } },
       params: { snapshotsUrl, oracleUrl },
@@ -230,8 +267,8 @@ describe("fetchJupUsdReserves", () => {
     };
   }
 
-  it("degrades an unscaled holding at the HTTP boundary without publishing complete coverage", async () => {
-    const { result } = await runAdapter("jupusd", makeCoin(), {
+  it("rejects replacement at the HTTP boundary for an unscaled holding", async () => {
+    const { result, report } = await runAdapter("jupusd", makeCoin(), {
       network: network({
         data: {
           totalSupply: "1000000000",
@@ -242,15 +279,17 @@ describe("fetchJupUsdReserves", () => {
         },
       }),
       nowSec: 1_776_003_600,
+      validate: false,
     });
 
     expect(result.metadata).not.toHaveProperty("totalReserveUsd");
     expect(result.metadata).not.toHaveProperty("collateralizationRatio");
+    expect(report.valid).toBe(false);
     expect(result.warnings).toContainEqual(expect.objectContaining({
-      code: "unparseable-holding",
-      effect: "degraded",
+      code: "holdings-incomplete", effect: "fatal",
     }));
-    expect(result.slices.some((slice) => slice.coinId === "usdc-circle")).toBe(false);
+    expect(result.slices).toEqual([]);
+    expect(result.metadata).not.toHaveProperty("redemption");
   });
 
   it("emits jupusd-snapshots-unavailable info warning when snapshots feed fails", async () => {

@@ -126,6 +126,14 @@ describe("validateAdapterOutput redemption telemetry", () => {
     });
   });
 
+  it("rejects a zero-weight member even beside a valid full-weight slice", () => {
+    const result = validateAdapterOutput({
+      slices: [...slices, { name: "Empty credit book", pct: 0, risk: "high" }],
+    });
+    expect(result.valid).toBe(false);
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "invalid-pct", effect: "fatal" }));
+  });
+
   it("does not require a source timestamp for latest-state freshness", () => {
     expect(validateAdapterOutput(
       { slices, metadata: { freshnessMode: "not-applicable" } },

@@ -8,7 +8,7 @@ import {
   freshnessMetadataFromTimestamp,
   parseFiniteNumber,
   parsePositiveNumericLike,
-  parseTimestampLikeToUnixSeconds,
+  summarizeSourceTimestampsRequiringCoverage,
 } from "./helpers";
 
 const ZEPHYR_ATOM_DECIMALS = 12;
@@ -180,22 +180,45 @@ function adaptSnapshot(payload: ZephyrSnapshotPayload): AdapterResult {
   const reserveAssetAmount = positiveDecimalAtoms(snapshot.on_chain?.zeph_reserve_atoms, ZEPHYR_ATOM_DECIMALS)
     ?? positiveDecimalAtoms(snapshot.raw?.zeph_reserve, ZEPHYR_ATOM_DECIMALS)
     ?? parsePositiveNumericLike(snapshot.on_chain?.zeph_reserve);
-  const reserveAssetPriceUsd = positiveFixedPoint(snapshot.pricing_record?.spot, ZEPHYR_PRICE_DECIMALS)
+  const publishedSpot = positiveFixedPoint(snapshot.pricing_record?.spot, ZEPHYR_PRICE_DECIMALS);
+  const reserveAssetPriceUsd = publishedSpot
     ?? positiveFixedPoint(snapshot.raw?.pr?.spot, ZEPHYR_PRICE_DECIMALS);
-  const totalReserveUsd = positiveDecimalAtoms(snapshot.raw?.assets, ZEPHYR_ATOM_DECIMALS)
+  const rawAssets = positiveDecimalAtoms(snapshot.raw?.assets, ZEPHYR_ATOM_DECIMALS);
+  const totalReserveUsd = rawAssets
     ?? (reserveAssetAmount != null && reserveAssetPriceUsd != null ? reserveAssetAmount * reserveAssetPriceUsd : null);
   const supplyUsd = positiveDecimalAtoms(snapshot.raw?.liabilities, ZEPHYR_ATOM_DECIMALS)
     ?? positiveDecimalAtoms(snapshot.raw?.num_stables, ZEPHYR_ATOM_DECIMALS)
     ?? positiveDecimalAtoms(snapshot.on_chain?.zsd_circ_atoms, ZEPHYR_ATOM_DECIMALS)
     ?? parsePositiveNumericLike(snapshot.on_chain?.zsd_circ);
-  const collateralizationRatio = parsePositiveNumericLike(snapshot.on_chain?.reserve_ratio)
-    ?? parsePositiveNumericLike(snapshot.raw?.reserve_ratio)
-    ?? positiveFixedPoint(snapshot.pricing_record?.reserve_ratio, ZEPHYR_PRICE_DECIMALS)
-    ?? positiveFixedPoint(snapshot.raw?.pr?.reserve_ratio, ZEPHYR_PRICE_DECIMALS)
+  const observedRatio = parsePositiveNumericLike(snapshot.on_chain?.reserve_ratio)
+    ?? parsePositiveNumericLike(snapshot.raw?.reserve_ratio);
+  const publishedRatio = positiveFixedPoint(snapshot.pricing_record?.reserve_ratio, ZEPHYR_PRICE_DECIMALS);
+  const rawPricingRatio = positiveFixedPoint(snapshot.raw?.pr?.reserve_ratio, ZEPHYR_PRICE_DECIMALS);
+  const collateralizationRatio = observedRatio
+    ?? publishedRatio
+    ?? rawPricingRatio
     ?? (totalReserveUsd != null && supplyUsd != null ? totalReserveUsd / supplyUsd : null);
-  const sourceTimestamp = parseTimestampLikeToUnixSeconds(snapshot.captured_at)
-    ?? parseTimestampLikeToUnixSeconds(snapshot.pricing_record?.timestamp)
-    ?? parseTimestampLikeToUnixSeconds(snapshot.raw?.pr?.timestamp);
+  // Amounts belong to this captured height; raw USD assets and normalized
+  // coverage also incorporate its pricing record, not the capture clock.
+  const materialClocks: unknown[] = [snapshot.captured_at];
+  if (reserveAssetPriceUsd != null) {
+    materialClocks.push((publishedSpot != null ? snapshot.pricing_record : snapshot.raw?.pr)?.timestamp);
+  }
+  if (rawAssets != null || observedRatio != null) {
+    materialClocks.push((snapshot.raw?.pr ?? snapshot.pricing_record)?.timestamp);
+  }
+  if (observedRatio == null && collateralizationRatio != null && (
+    publishedRatio != null || rawPricingRatio != null
+  )) {
+    materialClocks.push((publishedRatio != null ? snapshot.pricing_record : snapshot.raw?.pr)?.timestamp);
+  }
+  const clocks = summarizeSourceTimestampsRequiringCoverage(materialClocks);
+  const sourceTimestamp = clocks.untimestampedCount === 0 ? clocks.sourceTimestamp : null;
+  const freshness = freshnessMetadataFromTimestamp(
+    sourceTimestamp,
+    "zephyr-scanner-reserve-snapshot",
+    "Zephyr reserve snapshot omitted a material amount or pricing clock",
+  );
 
   const requiredTotalReserveUsd = requirePositive(totalReserveUsd, "total reserve USD");
   const requiredSupplyUsd = requirePositive(supplyUsd, "ZSD supply USD");
@@ -205,11 +228,7 @@ function adaptSnapshot(payload: ZephyrSnapshotPayload): AdapterResult {
     slices: [buildZephyrReserveSlice()],
     ...(buildWarnings(requiredRatio).length > 0 ? { warnings: buildWarnings(requiredRatio) } : {}),
     metadata: {
-      ...freshnessMetadataFromTimestamp(
-        sourceTimestamp,
-        "zephyr-scanner-reserve-snapshot",
-        "Zephyr reserve snapshot did not expose a trustworthy source timestamp",
-      ),
+      ...freshness,
       totalReserveUsd: requiredTotalReserveUsd,
       supplyUsd: requiredSupplyUsd,
       collateralizationRatio: requiredRatio,
@@ -228,6 +247,8 @@ function adaptSnapshot(payload: ZephyrSnapshotPayload): AdapterResult {
       previousHeight: snapshot.previous_height,
       hardForkVersion: snapshot.hf_version,
       details: {
+        ...("details" in freshness ? freshness.details : {}),
+        capturedAt: snapshot.captured_at,
         proofKind: "zephyr-scanner-reserve-snapshot",
         reserveSourceLabel: "Zephyr Scanner reserve snapshot",
       },
@@ -253,10 +274,8 @@ function adaptYieldSnapshot(payload: ZephyrSnapshotPayload): AdapterResult {
   )
     ?? positiveDecimalAtoms(snapshot.raw?.num_zyield, ZEPHYR_ATOM_DECIMALS)
     ?? parsePositiveNumericLike(snapshot.on_chain?.zys_circ);
-  const publishedSharePrice = positiveFixedPoint(
-    snapshot.pricing_record?.yield_price,
-    ZEPHYR_PRICE_DECIMALS,
-  )
+  const publishedYieldPrice = positiveFixedPoint(snapshot.pricing_record?.yield_price, ZEPHYR_PRICE_DECIMALS);
+  const publishedSharePrice = publishedYieldPrice
     ?? positiveFixedPoint(snapshot.raw?.pr?.yield_price, ZEPHYR_PRICE_DECIMALS);
   const requiredReserveAmount = requirePositive(reserveAmount, "ZSD yield reserve");
   const requiredShareSupply = requirePositive(shareSupply, "ZYS circulation");
@@ -268,26 +287,37 @@ function adaptYieldSnapshot(payload: ZephyrSnapshotPayload): AdapterResult {
     sharePriceZsd,
   );
 
-  const zsdCoverageRatio = parsePositiveNumericLike(snapshot.on_chain?.reserve_ratio)
-    ?? parsePositiveNumericLike(snapshot.raw?.reserve_ratio)
-    ?? positiveFixedPoint(snapshot.pricing_record?.reserve_ratio, ZEPHYR_PRICE_DECIMALS)
+  const observedCoverage = parsePositiveNumericLike(snapshot.on_chain?.reserve_ratio)
+    ?? parsePositiveNumericLike(snapshot.raw?.reserve_ratio);
+  const publishedCoverage = positiveFixedPoint(snapshot.pricing_record?.reserve_ratio, ZEPHYR_PRICE_DECIMALS);
+  const zsdCoverageRatio = observedCoverage
+    ?? publishedCoverage
     ?? positiveFixedPoint(snapshot.raw?.pr?.reserve_ratio, ZEPHYR_PRICE_DECIMALS);
   const liabilityAmountZsd = requiredShareSupply * sharePriceZsd;
   const collateralizationRatio = requirePositive(zsdCoverageRatio, "ZSD ZEPH reserve coverage ratio");
-  const sourceTimestamp = parseTimestampLikeToUnixSeconds(snapshot.captured_at)
-    ?? parseTimestampLikeToUnixSeconds(snapshot.pricing_record?.timestamp)
-    ?? parseTimestampLikeToUnixSeconds(snapshot.raw?.pr?.timestamp);
+  const materialClocks: unknown[] = [
+    snapshot.captured_at,
+    (observedCoverage != null
+      ? snapshot.raw?.pr ?? snapshot.pricing_record
+      : publishedCoverage != null ? snapshot.pricing_record : snapshot.raw?.pr)?.timestamp,
+  ];
+  if (publishedSharePrice != null) {
+    materialClocks.push((publishedYieldPrice != null ? snapshot.pricing_record : snapshot.raw?.pr)?.timestamp);
+  }
+  const clocks = summarizeSourceTimestampsRequiringCoverage(materialClocks);
+  const sourceTimestamp = clocks.untimestampedCount === 0 ? clocks.sourceTimestamp : null;
+  const freshness = freshnessMetadataFromTimestamp(
+    sourceTimestamp,
+    "zephyr-scanner-yield-reserve-snapshot",
+    "Zephyr yield-reserve snapshot omitted a material amount, price or coverage clock",
+  );
   const warnings = buildYieldReserveWarnings(collateralizationRatio);
 
   return {
     slices: [buildZephyrYieldReserveSlice()],
     ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
-      ...freshnessMetadataFromTimestamp(
-        sourceTimestamp,
-        "zephyr-scanner-yield-reserve-snapshot",
-        "Zephyr yield-reserve snapshot did not expose a trustworthy source timestamp",
-      ),
+      ...freshness,
       reserveAmountZsd: requiredReserveAmount,
       liabilityAmountZsd,
       zysCirculating: requiredShareSupply,
@@ -297,6 +327,8 @@ function adaptYieldSnapshot(payload: ZephyrSnapshotPayload): AdapterResult {
       previousHeight: snapshot.previous_height,
       hardForkVersion: snapshot.hf_version,
       details: {
+        ...("details" in freshness ? freshness.details : {}),
+        capturedAt: snapshot.captured_at,
         proofKind: "zephyr-scanner-yield-reserve-snapshot",
         reserveSourceLabel: "Zephyr Scanner ZSD yield reserve snapshot",
         reserveAssetId: ZEPHYR_ZSD_ASSET_ID,

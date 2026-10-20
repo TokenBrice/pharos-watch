@@ -291,24 +291,16 @@ describe("adaptFlyingTulipFtUsd", () => {
     });
   });
 
-  it("degrades when an active chain outside the reviewed set appears", () => {
+  it("withholds the whole book when an active chain outside the reviewed set appears", () => {
     const withActiveUnexpectedChain = payload();
     withActiveUnexpectedChain.chains.push({
       chainId: 137,
       chainName: "Polygon",
-      tvlUsd: 1,
-      metrics: { totalSupplyUsd: 1 },
+      tvlUsd: 900,
+      metrics: { totalSupplyUsd: 900 },
     } as (typeof withActiveUnexpectedChain.chains)[number]);
 
-    const result = adaptFlyingTulipFtUsd(withActiveUnexpectedChain);
-    expect(result.warnings).toContainEqual(
-      expect.objectContaining({
-        code: "unexpected-chain",
-        severity: "warning",
-        effect: "degraded",
-        message: expect.stringContaining("Polygon"),
-      }),
-    );
+    expect(() => adaptFlyingTulipFtUsd(withActiveUnexpectedChain)).toThrow(/unexpected-chain/);
   });
 
   it.each<DashboardChain>([
@@ -319,10 +311,39 @@ describe("adaptFlyingTulipFtUsd", () => {
     { tvlUsd: 1, metrics: { totalSupplyUsd: 1 } },
   ])("does not call unavailable or contradictory unreviewed quantities inactive: %j", (chain) => {
     const source = payload();
-    const result = adaptFlyingTulipFtUsd({ ...source, chains: [...source.chains, chain] });
-    expect(result.warnings).toContainEqual(expect.objectContaining({
-      code: "unexpected-chain", effect: "degraded",
+    expect(() => adaptFlyingTulipFtUsd({ ...source, chains: [...source.chains, chain] }))
+      .toThrow(/unexpected-chain/);
+  });
+
+  it("cannot publish a reviewed-only ratio of one for a 1000/1900 whole-book scope", () => {
+    const source = payload();
+    const ethereum = {
+      ...source.chains[0], tvlUsd: 1_000, metrics: { totalSupplyUsd: 1_000 },
+      collaterals: [ { ...source.chains[0].collaterals[0], tvlAmountUsd: 1_000 } ],
+    };
+    const inactive = source.chains.slice(1).map((chain) => ({
+      chainId: chain.chainId, chainName: chain.chainName,
+      tvlUsd: 0, metrics: { totalSupplyUsd: 0 },
     }));
+    const reviewed = { ...source, chains: [ethereum, ...inactive] };
+    expect(adaptFlyingTulipFtUsd(reviewed).metadata?.collateralizationRatio).toBe(1);
+    expect(() => adaptFlyingTulipFtUsd({
+      ...reviewed,
+      chains: [...reviewed.chains, {
+        chainId: 137, chainName: "Polygon", tvlUsd: 0, metrics: { totalSupplyUsd: 900 },
+      }],
+    })).toThrow(/unexpected-chain/);
+  });
+
+  it("preserves the complete book with an explicitly zero unreviewed collateral placeholder", () => {
+    const source = payload();
+    expect(adaptFlyingTulipFtUsd({
+      ...source,
+      chains: [...source.chains, {
+        chainId: 137, tvlUsd: 0, metrics: { totalSupplyUsd: 0 },
+        collaterals: [{ tvlAmountUsd: 0 }],
+      }],
+    })).toEqual(adaptFlyingTulipFtUsd(source));
   });
 
   it("replays the current dashboard with new reviewed tokens and omitted zero FDUSD", () => {

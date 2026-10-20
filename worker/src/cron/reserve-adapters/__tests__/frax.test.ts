@@ -472,13 +472,14 @@ describe("frax balance-sheet fetch boundary", () => {
   });
 
   it.each([null, undefined, "broken", -1])(
-    "marks unavailable FPI assets incomplete and preserves independent liabilities (%s)", async (value) => {
-      const { result } = await runAdapter("frax-fpi-collateral", "fpi-frax", {
+    "withholds unavailable FPI books and preserves independent liabilities (%s)", async (value) => {
+      const { result, report } = await runAdapter("frax-fpi-collateral", "fpi-frax", {
         network: { code: { "0x2397321b301b80a1c0911d6f9ed4b6033d43cf51": "0x" }, json: { [FPI_COLLATERAL_ENDPOINT]: {
           ...FPI_COLLATERAL_SAMPLE,
           assets: [...FPI_COLLATERAL_SAMPLE.assets!, { tokenSymbol: "sfrxUSD", valueUsd: value }],
         } } },
         nowSec: FPI_COLLATERAL_SAMPLE.updatedAtTimestampSec!,
+        validate: false,
       });
       expect(result.metadata).toMatchObject({
         compositionComplete: false, unavailableAssetCount: 1,
@@ -487,7 +488,9 @@ describe("frax balance-sheet fetch boundary", () => {
       expect(result.metadata?.totalCollateralUsd).toBeUndefined();
       expect(result.metadata?.collateralizationRatio).toBeUndefined();
       expect(result.metadata?.redemption?.capacityUsd).toBeUndefined();
-      expect(result.warnings).toContainEqual(expect.objectContaining({ code: "asset-coverage-incomplete", effect: "degraded" }));
+      expect(result.slices).toEqual([]);
+      expect(report.valid).toBe(false);
+      expect(result.warnings).toContainEqual(expect.objectContaining({ code: "asset-coverage-incomplete", effect: "fatal" }));
     },
   );
 
@@ -523,6 +526,8 @@ describe("frax balance-sheet fetch boundary", () => {
       compositionComplete: true, liabilityCoverageComplete: true, collateralizationRatio: 1.04,
       redemption: { capacityUsd: 5_000_000 },
     });
+    expect(result.slices.reduce((sum, slice) => sum + slice.pct, 0)).toBeCloseTo(100, 10);
+    expect(result.warnings?.some((warning) => warning.effect === "fatal")).not.toBe(true);
   });
 
   describe("issuer row without a USD value", () => {
@@ -556,11 +561,13 @@ describe("frax balance-sheet fetch boundary", () => {
         },
         params: { fraxtalRpcUrl: "https://rpc.frax.com" },
         nowSec: FPI_COLLATERAL_SAMPLE.updatedAtTimestampSec!,
+        validate: false,
       });
 
     it("admits an immaterial dust balance as informational unpriced exposure and keeps valued capacity", async () => {
       const { result, report } = await runWithUnpricedSfrxusd(80_000_000_000_000_000n);
 
+      expect(report.valid).toBe(true);
       expect([...(result.warnings ?? []), ...report.warnings].filter((warning) => warning.effect !== "info")).toEqual([]);
       expect(result.warnings).toContainEqual(expect.objectContaining({ code: "asset-value-unavailable", effect: "info" }));
       expect(result.metadata).toMatchObject({
@@ -574,10 +581,12 @@ describe("frax balance-sheet fetch boundary", () => {
       });
     });
 
-    it("fails closed and withholds capacity when the unpriced row is material", async () => {
-      const { result } = await runWithUnpricedSfrxusd(1_000_000n * 10n ** 18n);
+    it("withholds the whole book when the unpriced row estimate is material", async () => {
+      const { result, report } = await runWithUnpricedSfrxusd(1_000_000n * 10n ** 18n);
 
-      expect(result.warnings).toContainEqual(expect.objectContaining({ code: "asset-coverage-incomplete", effect: "degraded" }));
+      expect(result.slices).toEqual([]);
+      expect(report.valid).toBe(false);
+      expect(result.warnings).toContainEqual(expect.objectContaining({ code: "asset-coverage-incomplete", effect: "fatal" }));
       expect(result.warnings?.some((warning) => warning.code === "asset-value-unavailable")).toBe(false);
       expect(result.metadata).toMatchObject({ compositionComplete: false, knownCollateralUsd: 5_200_000 });
       expect(result.metadata?.totalCollateralUsd).toBeUndefined();
@@ -590,17 +599,36 @@ describe("frax balance-sheet fetch boundary", () => {
       { timestamp: FPI_COLLATERAL_SAMPLE.updatedAtTimestampSec, confidence: 0.79 },
       { timestamp: FPI_COLLATERAL_SAMPLE.updatedAtTimestampSec! + 86400, confidence: 0.99 },
     ])("keeps unqualified quote estimates unavailable (case $#)", async (quoteOverrides) => {
-      const { result } = await runWithUnpricedSfrxusd(80_000_000_000_000_000n, quoteOverrides);
-      expect(result.warnings).toContainEqual(expect.objectContaining({ code: "asset-coverage-incomplete", effect: "degraded" }));
-      expect(result.metadata).toMatchObject({ compositionComplete: false, unavailableAssetLabels: ["sfrxUSD"] });
-      expect(result.metadata?.totalCollateralUsd).toBeUndefined();
-      expect(result.metadata?.redemption?.capacityUsd).toBeUndefined();
+      for (const balance of [80_000_000_000_000_000n, 1_000_000n * 10n ** 18n]) {
+        const { result, report } = await runWithUnpricedSfrxusd(balance, quoteOverrides);
+        expect(result.slices).toEqual([]);
+        expect(report.valid).toBe(false);
+        expect(result.warnings).toContainEqual(expect.objectContaining({ code: "asset-coverage-incomplete", effect: "fatal" }));
+        expect(result.metadata).toMatchObject({ compositionComplete: false, unavailableAssetLabels: ["sfrxUSD"] });
+        expect(result.metadata?.totalCollateralUsd).toBeUndefined();
+        expect(result.metadata?.redemption?.capacityUsd).toBeUndefined();
+      }
+    });
+
+    it("admits an observed zero balance without requiring a quote", async () => {
+      const { result, report } = await runWithUnpricedSfrxusd(0n);
+      expect(report.valid).toBe(true);
+      expect(result.metadata).toMatchObject({
+        compositionComplete: true, unavailableAssetCount: 0,
+        totalCollateralUsd: 5_200_000, redemption: { capacityUsd: 5_000_000 },
+      });
+      expect(result.slices.reduce((sum, slice) => sum + slice.pct, 0)).toBeCloseTo(100, 10);
+      expect(result.warnings?.some((warning) => warning.code === "asset-value-unavailable")).not.toBe(true);
+      expect(result.metadata).not.toHaveProperty("unpricedCollateralUsd");
+      expect(result.metadata).not.toHaveProperty("unpricedAssetLabels");
     });
 
     it("fails closed when the balance cannot be read", async () => {
-      const { result } = await runWithUnpricedSfrxusd(null);
+      const { result, report } = await runWithUnpricedSfrxusd(null);
 
-      expect(result.warnings).toContainEqual(expect.objectContaining({ code: "asset-coverage-incomplete", effect: "degraded" }));
+      expect(result.slices).toEqual([]);
+      expect(report.valid).toBe(false);
+      expect(result.warnings).toContainEqual(expect.objectContaining({ code: "asset-coverage-incomplete", effect: "fatal" }));
       expect(result.metadata).toMatchObject({ compositionComplete: false, unavailableAssetLabels: ["sfrxUSD"] });
       expect(result.metadata?.redemption?.capacityUsd).toBeUndefined();
     });

@@ -964,7 +964,7 @@ describe("tracked stablecoin metadata", () => {
     ]);
     expect(usdai?.liveReservesConfig).toMatchObject({
       adapter: "usdai-hub",
-      version: 1,
+      version: 2,
       semantics: "single-asset",
       breakerScope: "usdai-usd-ai",
       display: {
