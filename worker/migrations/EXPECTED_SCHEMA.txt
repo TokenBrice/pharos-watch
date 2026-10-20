@@ -137,6 +137,7 @@ index	idx_dex_native_generations_retention
 index	idx_dex_native_shadow_quotes_retention
 index	idx_dex_native_shadow_quotes_v2_retention
 index	idx_dex_pool_registry_refreshed
+index	idx_dex_price_challenger_heads_v2_publication
 index	idx_dex_price_challengers_lookup
 index	idx_dex_price_run_rows_retention
 index	idx_dex_prices_updated
@@ -412,6 +413,9 @@ table	dex_native_shadow_quotes
 table	dex_native_shadow_quotes_v2
 table	dex_pool_registry
 table	dex_pool_staging
+table	dex_price_challenger_heads_v2
+table	dex_price_challenger_payloads_v2
+table	dex_price_challenger_publications_v2
 table	dex_price_challenger_snapshots
 table	dex_price_challengers
 table	dex_price_run_rows
