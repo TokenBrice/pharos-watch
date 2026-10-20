@@ -48,7 +48,7 @@ Active Pharos taxonomy no longer exposes `algorithmic` as a standalone backing b
 
 - `yieldBearing` — token itself accrues yield (e.g., USDY, sUSDe, BUIDL)
 - `rwa` — backed by real-world assets like treasuries/bonds (distinct from `rwa-backed` which also includes plain fiat reserves)
-- `navToken` — price appreciates over time as yield accrues (USYC, USDY, TBILL, YLDS). Excluded from peg deviation metrics; table shows "NAV" instead of bps. Also used for CPI-indexed tokens (FPI) — table shows "CPI" for VAR-pegged navTokens
+- `navToken` — price appreciates over time as yield accrues (USYC, USDY, TBILL, YLDS). Excluded from peg deviation metrics; table shows "NAV" instead of bps, while the price column still shows the observed price in the peg currency (converted with a same-currency peer's published peg reference; USD when none exists). Also used for CPI-indexed tokens (FPI) — table shows "CPI" for VAR-pegged navTokens
 
 ### Listing Class And Lifecycle
 

@@ -139,6 +139,56 @@ describe("buildStablecoinTableRowModel peg deviation", () => {
   });
 });
 
+describe("buildStablecoinTableRowModel NAV price", () => {
+  const observed = { priceSource: "coingecko", priceConfidence: "high" } as const;
+  const eurPeer = makePegSummaryCoin({
+    id: "eurc-circle",
+    pegType: "peggedEUR",
+    pegCurrency: "EUR",
+    pegReference: { valueUsd: 1.1, source: "median", contributorCount: 3, asOf: 1_700_000_000 },
+  });
+
+  it("shows a USD NAV token's observed price without a peg reference", () => {
+    const model = buildStablecoinTableRowModel({
+      coin: makeStablecoin({ id: "susds-sky", price: 1.0834, ...observed }),
+      pegScores: new Map([["susds-sky", makePegSummaryCoin({ id: "susds-sky", pegReference: null })]]),
+      density: "spacious",
+      variant: "default",
+    });
+    expect(model.pegRef).toBeNull();
+    expect(model.priceCell).toBe("$1.0834");
+  });
+
+  it("converts a non-USD NAV token's price with a peer's currency reference", () => {
+    const model = buildStablecoinTableRowModel({
+      coin: makeStablecoin({ id: "eutbl-spiko", pegType: "peggedEUR", price: 1.21, ...observed }),
+      pegScores: new Map([[eurPeer.id, eurPeer]]),
+      density: "spacious",
+      variant: "default",
+    });
+    expect(model.priceCell).toBe("€1.1000");
+  });
+
+  it("falls back to the USD price when no peer published a currency reference", () => {
+    const model = buildStablecoinTableRowModel({
+      coin: makeStablecoin({ id: "eutbl-spiko", pegType: "peggedEUR", price: 1.21, ...observed }),
+      pegScores: new Map(),
+      density: "spacious",
+      variant: "default",
+    });
+    expect(model.priceCell).toBe("$1.2100");
+  });
+
+  it("keeps an unobserved NAV price unavailable", () => {
+    const model = buildStablecoinTableRowModel({
+      coin: makeStablecoin({ id: "susds-sky", price: null, ...observed }),
+      density: "spacious",
+      variant: "default",
+    });
+    expect(model.priceCell).toBe("N/A");
+  });
+});
+
 describe("buildStablecoinTableRowModel supply changes", () => {
   it("keeps changes null when previous supply is unavailable", () => {
     const model = buildStablecoinTableRowModel({

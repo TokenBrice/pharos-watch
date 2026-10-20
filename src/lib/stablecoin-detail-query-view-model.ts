@@ -3,6 +3,7 @@ import type { NativeSupplyCheckpoints, StablecoinLiveSummary } from "@shared/typ
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { CRON_24H, CRON_RESERVE_SYNC } from "@/lib/cron-intervals";
 import { resolveQueryViewState } from "@/lib/query-view-state";
+import { getNavPriceReference } from "@/lib/nav-price-reference";
 import { deriveSupplyFromMarketCap } from "@/lib/stablecoin-detail-derive";
 import type {
   DetailQueryResource,
@@ -127,7 +128,9 @@ export function buildDetailPegPriceSnapshot(
 ): DetailPegPriceSnapshot {
   const isNavToken = coin.flags.navToken ?? false;
   const pegScoreResult = pegSummaryData?.coins.find((candidate) => candidate.id === id) ?? null;
-  const pegRef = pegScoreResult?.pegReference?.valueUsd ?? null;
+  const pegRef = isNavToken
+    ? getNavPriceReference(coin.flags.pegCurrency, pegSummaryData?.coins)
+    : pegScoreResult?.pegReference?.valueUsd ?? null;
   const deviationBps = pegScoreResult?.currentDeviationBps ?? null;
   return {
     pegRef,

@@ -20,7 +20,9 @@ The embedded table's `page.filterTag` must match `shared/lib/filter-tags.ts` for
 
 `buildCohortTitle()` owns count interpolation and 61-character budget; its only compaction fallback drops Infrastructure. Backing/governance and peg overflow do not have a broad automatic fallback: choose fitting base titles. Counts must not become literals in docs/fixtures.
 
-Description serves metadata/hub blurb; intro is visible explanation. Peg intro/context is authored in `peg-landing.ts`, while top coins/risk composition derive from registry. Edit authored halves rather than generated sentences. Shared classification owns labels, tags and symbols.
+Description serves metadata/hub blurb and the one-line instrument-header deck; intro (plus the peg risk summary) is visible explanation folded under "About … stablecoins" but still server-rendered. Peg intro/context is authored in `peg-landing.ts`, while top coins/risk composition derive from registry; each authored sentence renders once per page. Edit authored halves rather than generated sentences. Shared classification owns labels, tags and symbols.
+
+Cohort pages lead with data: header (title, deck, Compare leaders/Alerts actions, folded intro), then the live table, then the static directory, linked directories and related hubs. Keep the table in the first desktop viewport; crawlable context belongs below it or in the fold, not above it.
 
 ## Crawlability
 

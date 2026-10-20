@@ -16,7 +16,8 @@ interface StablecoinTaxonomyShellProps {
   title: string;
   href: string;
   description: string;
-  intro: string;
+  /** Explanatory copy folded under the one-line deck; still server-rendered for crawlers. */
+  aboutParagraphs: readonly string[];
   shortLabel: string;
   coins: TaxonomyShellCoin[];
   directoryDescription: string;
@@ -28,6 +29,8 @@ interface StablecoinTaxonomyShellProps {
     title: string;
     coins: readonly TaxonomyShellCoin[];
   }>;
+  headerActions?: React.ReactNode;
+  /** The live table; rendered directly under the header, ahead of the static directory. */
   children: React.ReactNode;
 }
 
@@ -59,7 +62,7 @@ export function StablecoinTaxonomyShell({
   title,
   href,
   description,
-  intro,
+  aboutParagraphs,
   shortLabel,
   coins,
   directoryDescription,
@@ -67,6 +70,7 @@ export function StablecoinTaxonomyShell({
   definedTermSetHref,
   breadcrumbItems,
   relatedPages = [],
+  headerActions,
   children,
 }: StablecoinTaxonomyShellProps) {
   const visibleCoins = coins.slice(0, DIRECTORY_PREVIEW_COUNT);
@@ -78,7 +82,10 @@ export function StablecoinTaxonomyShell({
       path={href}
       breadcrumbItems={breadcrumbItems}
       title={title}
-      leadParagraphs={[intro]}
+      header="instrument"
+      headerActions={headerActions}
+      leadParagraphs={[description, ...aboutParagraphs]}
+      leadDisclosureLabel={`About ${shortLabel} stablecoins`}
       preface={
         <JsonLdScript
           json={safeJsonLd(
@@ -105,6 +112,8 @@ export function StablecoinTaxonomyShell({
         />
       }
     >
+      {children}
+
       <section className="space-y-3">
         <div className="space-y-1.5">
           <h2 className="pharos-label">Stablecoin directory</h2>
@@ -140,8 +149,8 @@ export function StablecoinTaxonomyShell({
           </details>
         )}
         <p className="text-xs leading-relaxed text-muted-foreground">
-          Source: checked-in StablecoinMeta profile fields in the current Pharos build. Counts and cohort membership are
-          static directory context; use the live table below for current market, coverage, and risk data.
+          Membership comes from the Pharos stablecoin registry in this build. Counts are static directory context; the
+          live table above carries current market, coverage, and risk data.
         </p>
       </section>
 
@@ -195,8 +204,6 @@ export function StablecoinTaxonomyShell({
           </div>
         </section>
       )}
-
-      {children}
     </FeaturePageShell>
   );
 }

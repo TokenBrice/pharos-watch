@@ -1,7 +1,7 @@
 import type { BackingType, GovernanceType } from "@shared/types";
 import { StablecoinFilteredTable } from "@/components/stablecoin-filtered-table";
 import { StablecoinTaxonomyShell } from "@/components/stablecoin-taxonomy-shell";
-import { TaxonomyNextCheckCta } from "@/components/taxonomy-next-check-cta";
+import { TaxonomyHeaderActions } from "@/components/taxonomy-header-actions";
 import type { InfrastructureTaxonomyValue, StablecoinTaxonomyPage as StablecoinTaxonomyPageConfig } from "@/lib/stablecoin-taxonomy";
 import { ALL_STABLECOIN_TAXONOMY_PAGES } from "@/lib/stablecoin-taxonomy";
 
@@ -35,19 +35,21 @@ export function StablecoinTaxonomyPage({ page }: StablecoinTaxonomyPageProps) {
         { name: page.title, url: page.href },
       ]}
       description={page.description}
-      intro={page.intro}
+      aboutParagraphs={[page.intro]}
       shortLabel={page.shortLabel}
       coins={page.coins}
-      directoryDescription={`Browse the current ${page.coins.length} tracked stablecoin${page.coins.length !== 1 ? "s" : ""} in this taxonomy before opening the live table.`}
+      directoryDescription={`Browse the current ${page.coins.length} tracked stablecoin${page.coins.length !== 1 ? "s" : ""} in this taxonomy by profile.`}
       definedTermCode={String(page.filterTag)}
       definedTermSetHref={`/stablecoins/${page.kind}/`}
       relatedPages={relatedPages}
+      headerActions={
+        <TaxonomyHeaderActions
+          shortLabel={page.shortLabel}
+          topCoinIds={page.coins.slice(0, 4).map((coin) => coin.id)}
+          bucketNoun={bucketNoun}
+        />
+      }
     >
-      <TaxonomyNextCheckCta
-        shortLabel={page.shortLabel}
-        topCoinIds={page.coins.slice(0, 4).map((coin) => coin.id)}
-        bucketNoun={bucketNoun}
-      />
       <StablecoinFilteredTable activeFilters={[page.filterTag]} />
     </StablecoinTaxonomyShell>
   );
