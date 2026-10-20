@@ -4,14 +4,14 @@ import { buildDexMeasuredExecutionTargetId, DexMeasuredExecutionTargetSchema } f
 import { attachPinnedReviewedExecutionTargets } from "../execution-targets/pinned-reviewed";
 import { estimateAdmissionCohortRpcRequestBreakdown, isDexMeasuredExecutionTargetScoreEligible } from "../../measured-execution/admission";
 import { getDexMeasuredExecutionDeployment } from "../../measured-execution/registry";
-import type { LiquidityMetrics } from "../types";
+import type { SourcePoolGraph } from "../types";
 
 describe("pinned retained shadow targets", () => {
   const policy = CURVE_STABLESWAP_NG_SHADOW_DEPLOYMENTS[0];
   function fixture(deployment: (typeof CURVE_STABLESWAP_NG_SHADOW_DEPLOYMENTS)[number] = policy) {
     const pool = { poolId: `${deployment.chain}:${deployment.poolAddress}`, chain: deployment.chain, project: "curve", tvlUsd: 1_000_000, symbol: "yield token / USDC", poolType: "cg-amm", source: "cg_onchain", volumeUsd1d: 0 };
     return {
-      metrics: new Map([[deployment.stablecoinId, { topPools: [pool] } as LiquidityMetrics]]),
+      metrics: new Map([[deployment.stablecoinId, { pools: [pool] } as SourcePoolGraph]]),
       stablecoinPriceById: new Map([[deployment.stablecoinId, 1.05], ["usdc-circle", 1]]),
       capturedAt: 1_800_000_000,
       chainAddressToId: new Map<string, string>(deployment.poolTokens.map((token) => [`${deployment.chain}:${token.address}`, token.trackedAssetId])),
@@ -21,7 +21,7 @@ describe("pinned retained shadow targets", () => {
   it.each(CURVE_STABLESWAP_NG_SHADOW_DEPLOYMENTS)("materializes $stablecoinId in reviewed order without scoring", (deployment) => {
     const input = fixture(deployment);
     attachPinnedReviewedExecutionTargets(input);
-    const target = input.metrics.get(deployment.stablecoinId)!.topPools[0]!.extra?.measuredExecutionTarget;
+    const target = input.metrics.get(deployment.stablecoinId)!.pools[0]!.extra?.measuredExecutionTarget;
     expect(DexMeasuredExecutionTargetSchema.safeParse(target).success).toBe(true);
     expect(target?.poolTokenAddresses).toEqual(deployment.poolTokens.map((token) => token.address));
     expect(target?.tokenIn.address).toBe(deployment.poolTokens[deployment.inputIndex].address);
@@ -34,21 +34,21 @@ describe("pinned retained shadow targets", () => {
     const input = fixture();
     input.chainAddressToId.set(`etherlink:${policy.poolTokens[0].address}`, "unrelated-asset");
     attachPinnedReviewedExecutionTargets(input);
-    expect(input.metrics.get(policy.stablecoinId)!.topPools[0]!.extra?.measuredExecutionTarget).toBeUndefined();
+    expect(input.metrics.get(policy.stablecoinId)!.pools[0]!.extra?.measuredExecutionTarget).toBeUndefined();
   });
 
   it("does not create a target without a current validated price", () => {
     const input = fixture();
     input.stablecoinPriceById.delete(policy.stablecoinId);
     attachPinnedReviewedExecutionTargets(input);
-    expect(input.metrics.get(policy.stablecoinId)!.topPools[0]!.extra?.measuredExecutionTarget).toBeUndefined();
+    expect(input.metrics.get(policy.stablecoinId)!.pools[0]!.extra?.measuredExecutionTarget).toBeUndefined();
   });
 
   it("does not manufacture a missing retained physical row", () => {
     const input = fixture();
-    input.metrics.get(policy.stablecoinId)!.topPools = [];
+    input.metrics.get(policy.stablecoinId)!.pools = [];
     attachPinnedReviewedExecutionTargets(input);
-    expect(input.metrics.get(policy.stablecoinId)!.topPools).toHaveLength(0);
+    expect(input.metrics.get(policy.stablecoinId)!.pools).toHaveLength(0);
   });
 });
 
@@ -64,7 +64,7 @@ describe("reviewed active retained-pool targets", () => {
       volumeUsd1d: 0,
     };
     return {
-      metrics: new Map([[stablecoinId, { topPools: [pool] } as LiquidityMetrics]]),
+      metrics: new Map([[stablecoinId, { pools: [pool] } as SourcePoolGraph]]),
       stablecoinPriceById: new Map<string, number>(policy.poolTokens.map((token) => [token.trackedAssetId, 1])),
       chainAddressToId: new Map<string, string>(policy.poolTokens.map((token) => [`${policy.chain}:${token.address}`, token.trackedAssetId])),
       capturedAt: 1_791_966_500,
@@ -75,7 +75,7 @@ describe("reviewed active retained-pool targets", () => {
     const { policy, stablecoinId } = direction;
     const input = fixture(direction);
     attachPinnedReviewedExecutionTargets(input);
-    const target = input.metrics.get(stablecoinId)!.topPools[0]!.extra?.measuredExecutionTarget;
+    const target = input.metrics.get(stablecoinId)!.pools[0]!.extra?.measuredExecutionTarget;
     expect(DexMeasuredExecutionTargetSchema.safeParse(target).success).toBe(true);
     expect(target).toMatchObject({
       adapterProfileId: policy.adapterProfileId, poolId: `${policy.chain}:${policy.poolAddress}`,
@@ -93,7 +93,7 @@ describe("reviewed active retained-pool targets", () => {
     const targets = directions.map((direction) => {
       const input = fixture(direction);
       attachPinnedReviewedExecutionTargets(input);
-      return input.metrics.get(direction.stablecoinId)!.topPools[0]!.extra!.measuredExecutionTarget!;
+      return input.metrics.get(direction.stablecoinId)!.pools[0]!.extra!.measuredExecutionTarget!;
     });
     expect(QUOTER_V2_REVIEWED_RETAINED_POOLS).toHaveLength(8);
     expect(targets).toHaveLength(9);
@@ -110,7 +110,7 @@ describe("reviewed active retained-pool targets", () => {
     (refusal) => {
       const direction = directions[0]!;
       const input = fixture(direction);
-      const pool = input.metrics.get(direction.stablecoinId)!.topPools[0]!;
+      const pool = input.metrics.get(direction.stablecoinId)!.pools[0]!;
       if (refusal === "missing-price") input.stablecoinPriceById.delete(direction.stablecoinId);
       if (refusal === "wrong-contract") input.chainAddressToId.set(`${direction.policy.chain}:${direction.policy.poolTokens[1].address}`, "unrelated-asset");
       if (refusal === "wrong-chain") pool.chain = "ethereum";
@@ -126,7 +126,7 @@ describe("reviewed active retained-pool targets", () => {
     const direction = directions[0]!;
     const input = fixture(direction);
     attachPinnedReviewedExecutionTargets(input);
-    const pool = input.metrics.get(direction.stablecoinId)!.topPools[0]!;
+    const pool = input.metrics.get(direction.stablecoinId)!.pools[0]!;
     const target = pool.extra!.measuredExecutionTarget!;
     attachPinnedReviewedExecutionTargets(input);
     expect(pool.extra!.measuredExecutionTarget).toBe(target);

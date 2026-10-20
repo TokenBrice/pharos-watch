@@ -18,7 +18,7 @@ import {
   BlacklistabilityReviewStatusSchema,
   ReviewDateSchema,
   StablecoinLinkSchema,
-} from "./stablecoin-meta-schemas";
+} from "./stablecoin-meta-primitives";
 
 export const BlacklistabilityReviewSchema = z
   .object({

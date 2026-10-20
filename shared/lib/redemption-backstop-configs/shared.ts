@@ -12,7 +12,6 @@ import type {
 import type {
   RedemptionBackstopConfig,
   RedemptionCostModel,
-  PhysicalToUsdRoute,
 } from "./schema";
 
 /**
@@ -74,131 +73,7 @@ export function expandIds(
 }
 
 export function cloneRedemptionBackstopConfig(config: RedemptionBackstopConfig): RedemptionBackstopConfig {
-  return {
-    ...config,
-    capacityModel: {
-      ...config.capacityModel,
-      ...((config.capacityModel.kind === "reserve-sync-metadata" || config.capacityModel.kind === "executable-observer")
-        && config.capacityModel.requiredOutputAssetKeys
-        ? { requiredOutputAssetKeys: [...config.capacityModel.requiredOutputAssetKeys] }
-        : {}),
-    },
-    costModel: { ...config.costModel, ...(config.costModel.feeComponents
-      ? { feeComponents: cloneFeeComponents(config.costModel.feeComponents) } : {}) },
-    ...(config.physicalCommodityDelivery
-      ? {
-          physicalCommodityDelivery: {
-            ...config.physicalCommodityDelivery,
-            feeModel: { ...config.physicalCommodityDelivery.feeModel },
-          },
-        }
-      : {}),
-    ...(config.physicalToUsd ? { physicalToUsd: clonePhysicalToUsdRoute(config.physicalToUsd) } : {}),
-    ...(config.routeSuspension
-      ? {
-          routeSuspension: {
-            ...config.routeSuspension,
-            sources: config.routeSuspension.sources.map((source) => ({ ...source })),
-          },
-        }
-      : {}),
-    ...(config.v9RouteCostTerms ? { v9RouteCostTerms: { ...config.v9RouteCostTerms,
-      ...(config.v9RouteCostTerms.feeComponents
-        ? { feeComponents: cloneFeeComponents(config.v9RouteCostTerms.feeComponents) } : {}),
-      ...(config.v9RouteCostTerms.publishedFeeSchedule
-        ? { publishedFeeSchedule: { ...config.v9RouteCostTerms.publishedFeeSchedule,
-          docs: config.v9RouteCostTerms.publishedFeeSchedule.docs.map(cloneRedemptionDocSource) } } : {}) } } : {}),
-    ...(config.v9RouteReviewTerms
-      ? {
-          v9RouteReviewTerms: {
-            ...config.v9RouteReviewTerms,
-            ...(config.v9RouteReviewTerms.businessDayTerms
-              ? {
-                  businessDayTerms: {
-                    ...config.v9RouteReviewTerms.businessDayTerms,
-                    cutoff: { ...config.v9RouteReviewTerms.businessDayTerms.cutoff },
-                    conditions: [...config.v9RouteReviewTerms.businessDayTerms.conditions],
-                    ...(config.v9RouteReviewTerms.businessDayTerms.accessPrerequisites
-                      ? { accessPrerequisites: [...config.v9RouteReviewTerms.businessDayTerms.accessPrerequisites] }
-                      : {}),
-                    ...(config.v9RouteReviewTerms.businessDayTerms.stages
-                      ? { stages: config.v9RouteReviewTerms.businessDayTerms.stages.map((stage) => ({ ...stage })) }
-                      : {}),
-                  },
-                }
-              : {}),
-            ...(config.v9RouteReviewTerms.missingScoringFields
-              ? { missingScoringFields: [...config.v9RouteReviewTerms.missingScoringFields] }
-              : {}),
-            ...(config.v9RouteReviewTerms.docs
-              ? { docs: config.v9RouteReviewTerms.docs.map(cloneRedemptionDocSource) }
-              : {}),
-          },
-        }
-      : {}),
-    ...(config.v9ComposedDexExit
-      ? {
-          v9ComposedDexExit: {
-            ...config.v9ComposedDexExit,
-            docs: config.v9ComposedDexExit.docs.map(cloneRedemptionDocSource),
-          },
-        }
-      : {}),
-    ...(config.outputAssets ? { outputAssets: [...config.outputAssets] } : {}),
-    ...(config.unresolvedOutputAssetKeys
-      ? { unresolvedOutputAssetKeys: [...config.unresolvedOutputAssetKeys] }
-      : {}),
-    ...(config.docs ? { docs: config.docs.map(cloneRedemptionDocSource) } : {}),
-    ...(config.notes ? { notes: [...config.notes] } : {}),
-  };
-}
-
-function cloneFeeComponents(components: NonNullable<RedemptionCostModel["feeComponents"]>) {
-  return components.map((component) => ({ ...component,
-    ...(component.terms ? { terms: { ...component.terms } } : {}),
-    ...(component.tiers ? { tiers: component.tiers.map((tier) => ({ ...tier, terms: { ...tier.terms } })) } : {}),
-  }));
-}
-
-function clonePhysicalLot(lot: PhysicalToUsdRoute["lot"]): PhysicalToUsdRoute["lot"] {
-  return { ...lot, bars: lot.bars.map((bar) => ({ ...bar })) };
-}
-
-function clonePhysicalThroughput(throughput: NonNullable<PhysicalToUsdRoute["throughput"]>) {
-  return { ...throughput, evidence: { ...throughput.evidence } };
-}
-
-function clonePhysicalToUsdRoute(route: PhysicalToUsdRoute): PhysicalToUsdRoute {
-  return {
-    ...route,
-    lot: clonePhysicalLot(route.lot),
-    ...(route.throughput ? { throughput: clonePhysicalThroughput(route.throughput) } : {}),
-    vaultLocations: [...route.vaultLocations],
-    fees: { ...route.fees },
-    settlementLegs: route.settlementLegs.map((leg) => ({ ...leg })),
-    ...(route.bestEffortIssuerCashOut
-      ? {
-          bestEffortIssuerCashOut: {
-            ...route.bestEffortIssuerCashOut,
-            lot: clonePhysicalLot(route.bestEffortIssuerCashOut.lot),
-            ...(route.bestEffortIssuerCashOut.throughput
-              ? { throughput: clonePhysicalThroughput(route.bestEffortIssuerCashOut.throughput) }
-              : {}),
-            fees: { ...route.bestEffortIssuerCashOut.fees },
-            settlementLegs: route.bestEffortIssuerCashOut.settlementLegs.map((leg) => ({ ...leg })),
-          },
-        }
-      : {}),
-    evidence: route.evidence.map((source) => ({ ...source })),
-  };
-}
-
-function cloneRedemptionDocSource(doc: RedemptionDocSource): RedemptionDocSource {
-  return {
-    label: doc.label,
-    url: doc.url,
-    ...(doc.supports ? { supports: [...doc.supports] } : {}),
-  };
+  return structuredClone(config);
 }
 
 export function resolveRedemptionPercentageFeeBps(

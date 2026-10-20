@@ -1,6 +1,6 @@
 import { z } from "zod";
 import candidatePolicy from "../data/safety-score-v9/methodology-policy-candidate-v1.json";
-import { Sha256Schema } from "../types/safety-schema-primitives";
+import { issue, Sha256Schema } from "../types/safety-schema-primitives";
 import {
   ContentAddressedJournalAssetIdSchema,
   ContentAddressedJournalSafeIdentifierSchema,
@@ -215,20 +215,11 @@ const SupplyAttributionJournalV1PayloadDomainSchema = z
         ? "issuer-disclosure-plus-onchain"
         : "onchain-observation";
     if (record.sourceOriginClass !== expectedOrigin) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["sourceOriginClass"],
-        message:
-          `Supply attribution source ${record.sourceId} requires ` +
-          `${expectedOrigin} origin`,
-      });
+      issue(ctx, ["sourceOriginClass"], `Supply attribution source ${record.sourceId} requires ` +
+                `${expectedOrigin} origin`);
     }
     if (record.completedAtSec < record.attemptedAtSec) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["completedAtSec"],
-        message: "Supply attribution journal completion cannot predate its attempt",
-      });
+      issue(ctx, ["completedAtSec"], "Supply attribution journal completion cannot predate its attempt");
     }
     const accepted =
       record.admissionCode === "supply-attribution.admission.accepted";
@@ -241,20 +232,11 @@ const SupplyAttributionJournalV1PayloadDomainSchema = z
       record.rejectionCode !== undefined &&
       !allowedRejectionCodes.has(record.rejectionCode)
     ) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["rejectionCode"],
-        message:
-          `Supply attribution source ${record.sourceId} cannot emit ` +
-          `${record.rejectionCode}`,
-      });
+      issue(ctx, ["rejectionCode"], `Supply attribution source ${record.sourceId} cannot emit ` +
+                `${record.rejectionCode}`);
     }
     if (accepted && record.rejectionCode !== undefined) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["rejectionCode"],
-        message: "Accepted supply attribution cannot carry a rejection code",
-      });
+      issue(ctx, ["rejectionCode"], "Accepted supply attribution cannot carry a rejection code");
     }
     if (
       !accepted &&
@@ -262,33 +244,19 @@ const SupplyAttributionJournalV1PayloadDomainSchema = z
       record.admissionCode !==
         admissionCodeForSupplyAttributionRejection(record.rejectionCode)
     ) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["admissionCode"],
-        message:
-          `Supply attribution rejection ${record.rejectionCode} requires ` +
-          `${admissionCodeForSupplyAttributionRejection(record.rejectionCode)}`,
-      });
+      issue(ctx, ["admissionCode"], `Supply attribution rejection ${record.rejectionCode} requires ` +
+                `${admissionCodeForSupplyAttributionRejection(record.rejectionCode)}`);
     }
     if (
       record.rejectionCode !== undefined &&
       TIMESTAMPED_REJECTION_CODES.has(record.rejectionCode) &&
       record.sourceObservedAtSec === null
     ) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["sourceObservedAtSec"],
-        message:
-          `Supply attribution rejection ${record.rejectionCode} requires ` +
-          "its rejected source timestamp",
-      });
+      issue(ctx, ["sourceObservedAtSec"], `Supply attribution rejection ${record.rejectionCode} requires ` +
+                "its rejected source timestamp");
     }
     if (accepted !== (record.fallbackCode === "supply-attribution.fallback.not-used")) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["fallbackCode"],
-        message: "Only accepted supply attribution may omit the aggregate-only fallback",
-      });
+      issue(ctx, ["fallbackCode"], "Only accepted supply attribution may omit the aggregate-only fallback");
     }
     if (
       accepted
@@ -297,12 +265,8 @@ const SupplyAttributionJournalV1PayloadDomainSchema = z
           record.failedRouteId !== null
         : record.contentSha256 !== null
     ) {
-      ctx.addIssue({
-        code: "custom",
-        message:
-          "Accepted supply attribution requires content and source time " +
-          "without a failed route; rejected attribution cannot carry content",
-      });
+      issue(ctx, undefined, "Accepted supply attribution requires content and source time " +
+                "without a failed route; rejected attribution cannot carry content");
     }
     const boundedWmPostClockObservation =
       record.assetId === "wm-m0" &&
@@ -323,13 +287,8 @@ const SupplyAttributionJournalV1PayloadDomainSchema = z
       !boundedWmPostClockObservation &&
       !rejectedXautClockSkew
     ) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["sourceObservedAtSec"],
-        message:
-          "Supply attribution evidence cannot follow its scoring clock " +
-          "outside the bounded wM finality exception",
-      });
+      issue(ctx, ["sourceObservedAtSec"], "Supply attribution evidence cannot follow its scoring clock " +
+                "outside the bounded wM finality exception");
     }
   });
 

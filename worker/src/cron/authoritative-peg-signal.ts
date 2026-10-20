@@ -4,7 +4,7 @@ import {
   type PegRateSource,
 } from "@shared/lib/peg-rates";
 import { isAuthoritativeDepegPegReference } from "@shared/lib/peg-reference-trust";
-import { deriveDepegSignal, type DepegSignal } from "../lib/depeg-signals";
+import { deriveDepegSignal, type DepegSignal } from "@shared/lib/depeg-signals";
 
 export type AuthoritativePegSignalRejectionReason =
   | "non-authoritative-reference"

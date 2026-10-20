@@ -243,7 +243,8 @@ async function adaptErc4626ShareEntries(
 ): Promise<BranchBalanceEntry[]> {
   const positiveEntries = entries
     .map((entry, index) => ({ entry, index }))
-    .filter(({ entry }) => entry.balanceRaw != null && entry.balanceRaw > 0n);
+    .filter(({ entry, index }) => params.branches[index].kind !== "plain-token"
+      && entry.balanceRaw != null && entry.balanceRaw > 0n);
   if (positiveEntries.length === 0) return entries;
 
   const assetCalls = positiveEntries.map(({ entry, index }) => ({
@@ -261,7 +262,9 @@ async function adaptErc4626ShareEntries(
       const assetRaw = assetRawByLabel.get(`branch:asset:${index}`);
       const decodedAsset = decodeStrictAddressWord(typeof assetRaw === "string" ? assetRaw : null);
       const assetAddress = decodedAsset === "0x0000000000000000000000000000000000000000" ? null : decodedAsset;
-      if (assetRaw !== false && assetAddress == null) unavailableIndexes.add(index);
+      if (assetAddress == null && (params.branches[index].kind === "erc4626" || assetRaw !== false)) {
+        unavailableIndexes.add(index);
+      }
       return { entry, index, assetAddress };
     })
     .filter(

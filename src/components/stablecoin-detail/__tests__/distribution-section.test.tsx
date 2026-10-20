@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { DistributionSection } from "@/components/stablecoin-detail/distribution-section";
 
+import type { ApiMeta } from "@/lib/api";
 const { useDexLiquidityMock, useStablecoinsMock } = vi.hoisted(() => ({
   useDexLiquidityMock: vi.fn(),
   useStablecoinsMock: vi.fn(),
@@ -11,9 +12,11 @@ const { useDexLiquidityMock, useStablecoinsMock } = vi.hoisted(() => ({
 
 vi.mock("@/hooks/api-hooks", () => ({ useDexLiquidityCoin: useDexLiquidityMock }));
 vi.mock("@/hooks/use-stablecoins", () => ({ useStablecoins: useStablecoinsMock }));
+vi.mock("@/hooks/use-hydrated", () => ({ useHydrated: () => true }));
 
 afterEach(() => {
   vi.clearAllMocks();
+  vi.useRealTimers();
 });
 
 it("keeps both distribution modules visible as unavailable when their sources fail", () => {
@@ -75,7 +78,7 @@ it.each(["not-yet-registered-chain", "sUSDe unattributed OFT escrow", "savUSD un
     });
     render(<DistributionSection stablecoinId="usdc-circle" />);
     const figure = screen.getByRole("figure");
-    expect(figure.getAttribute("aria-label")).toContain("2 chains");
+    expect(figure.getAttribute("aria-label")).toBe("Circulating supply distribution across 1 chain, plus $100.00K Unattributed supply");
     expect(screen.getByText("Unattributed")).toBeTruthy();
     expect(screen.getAllByText("50%")).toHaveLength(2);
     expect(screen.queryByText("100%")).toBeNull();
@@ -117,12 +120,44 @@ it("keeps a chain at exactly the Other threshold as its own slice", () => {
 
   render(<DistributionSection stablecoinId="usdc-circle" />);
 
-  expect(screen.getByRole("figure", { name: "Circulating supply distribution across 4 chains" })).toBeTruthy();
+  expect(screen.getByRole("figure", { name: "Circulating supply distribution across 5 chains" })).toBeTruthy();
   expect(screen.getByText("90%")).toBeTruthy();
   expect(screen.getByText("6%")).toBeTruthy();
   expect(screen.getByText("Other")).toBeTruthy();
   // Arbitrum at the threshold and the merged 2% remainder.
   expect(screen.getAllByText("2%")).toHaveLength(2);
+});
+
+it.each([
+  { name: "three members folded into Other", protocolTvl: { curve: 97_000, aave: 1_000, uniswap: 1_000, balancer: 1_000, zero: 0, invalid: -1 }, count: 4, other: true, shares: ["97%", "3%"] },
+  { name: "all small members folded into Other", protocolTvl: Object.fromEntries(Array.from({ length: 51 }, (_, i) => [`protocol-${i}`, 1_000])), count: 51, other: true, shares: ["100%"] },
+  { name: "one positive category", protocolTvl: { curve: 100_000, zero: 0 }, count: 1, other: false, shares: ["100%"] },
+])("announces underlying categories, not display groups ($name)", ({ protocolTvl, count, other, shares }) => {
+  useStablecoinsMock.mockReturnValue({
+    data: { peggedAssets: [{ id: "usdc-circle", chainCirculating: { Ethereum: { current: 100_000 } } }] },
+    isLoading: false, error: null, dataUpdatedAt: Date.now(), refetch: vi.fn(),
+  });
+  useDexLiquidityMock.mockReturnValue({
+    data: { "usdc-circle": { totalTvlUsd: 100_000, poolCount: count, protocolTvl } },
+    isLoading: false, error: null, dataUpdatedAt: Date.now(), refetch: vi.fn(),
+  });
+  render(<DistributionSection stablecoinId="usdc-circle" />);
+  expect(screen.getByRole("figure", { name: "Circulating supply distribution across 1 chain" })).toBeTruthy();
+  const figure = screen.getByRole("figure", { name: `DEX liquidity TVL distribution across ${count} ${count === 1 ? "protocol" : "protocols"}` });
+  const contents = within(figure.parentElement!);
+  expect(contents.queryByText("Other") != null).toBe(other);
+  for (const share of shares) expect(contents.getByText(share)).toBeTruthy();
+});
+
+it("names an entirely unattributed residual separately from known chains", () => {
+  useStablecoinsMock.mockReturnValue({
+    data: { peggedAssets: [{ id: "usdc-circle", chainCirculating: { "unknown-chain": { current: 100_000 } } }] },
+    isLoading: false, error: null, dataUpdatedAt: Date.now(), refetch: vi.fn(),
+  });
+  useDexLiquidityMock.mockReturnValue({ data: {}, isLoading: false, error: null, dataUpdatedAt: Date.now(), refetch: vi.fn() });
+  render(<DistributionSection stablecoinId="usdc-circle" />);
+  expect(screen.getByRole("figure", { name: "Circulating supply distribution across 0 chains, plus $100.00K Unattributed supply" })).toBeTruthy();
+  expect(screen.getByText("100%")).toBeTruthy();
 });
 
 it("preserves observed positive shares alongside an explicit zero chain balance", () => {
@@ -234,4 +269,85 @@ it("omits the protocol distribution for genuinely empty observed DEX aggregates"
   const { container } = render(<DistributionSection stablecoinId="usdc-circle" />);
   expect(container.querySelector("[role=alert]")).toBeNull();
   expect(screen.queryByText("Liquidity by Protocol")).toBeNull();
+});
+
+function mockDistributions(meta: ApiMeta | null, receipt = Date.now(), error: Error | null = null) {
+  const query = { meta, dataUpdatedAt: receipt, error, isLoading: false, refetch: vi.fn() };
+  useStablecoinsMock.mockReturnValue({
+    ...query,
+    data: { peggedAssets: [{ id: "usdc-circle", chainCirculating: { Ethereum: { current: 100_000 } } }] },
+  });
+  useDexLiquidityMock.mockReturnValue({
+    ...query,
+    data: { "usdc-circle": { totalTvlUsd: 100_000, poolCount: 1, protocolTvl: { curve: 100_000 } } },
+  });
+}
+
+it("keeps both old producer generations through a successful refetch and failed refresh", () => {
+  const receipt = Date.now();
+  const updatedAt = Math.floor(receipt / 1000) - 86_400;
+  const meta: ApiMeta = { updatedAt, status: "stale", ageSeconds: 86_400 };
+  mockDistributions(meta, receipt);
+  const { container, rerender } = render(<DistributionSection stablecoinId="usdc-circle" />);
+  const assertProducer = () => {
+    expect(container.querySelectorAll('time[datetime]')).toHaveLength(2);
+    for (const chip of container.querySelectorAll("time")) {
+      expect(chip.getAttribute("datetime")).toBe(new Date(updatedAt * 1000).toISOString());
+      expect(chip.getAttribute("data-state")).toBe("stale");
+    }
+  };
+  assertProducer();
+  expect(container.querySelectorAll('[data-health-state="stale"]')).toHaveLength(2);
+  mockDistributions(meta, receipt + 30_000);
+  rerender(<DistributionSection stablecoinId="usdc-circle" />);
+  assertProducer();
+  mockDistributions(meta, receipt + 30_000, new Error("refresh failed"));
+  rerender(<DistributionSection stablecoinId="usdc-circle" />);
+  assertProducer();
+  expect(screen.getAllByText(/refresh failed; showing the last available data/)).toHaveLength(2);
+});
+
+it.each([
+  { meta: { updatedAt: null, status: "unknown", ageSeconds: null }, state: "unavailable" },
+  { meta: { status: "stale" }, state: "stale" },
+  { meta: { status: "fresh", warning: "Source coverage incomplete" }, state: "degraded" },
+  { meta: { status: "fresh", dependencies: { source: { status: "stale", reason: "source-old" } } }, state: "degraded" },
+] as { meta: ApiMeta; state: string }[])("qualifies distribution metadata independently of a fresh receipt ($state)", ({ meta, state }) => {
+  const receipt = Date.now();
+  mockDistributions({ updatedAt: Math.floor(receipt / 1000), ...meta }, receipt);
+  const { container } = render(<DistributionSection stablecoinId="usdc-circle" />);
+  expect(container.querySelectorAll(`[data-health-state="${state}"]`)).toHaveLength(2);
+  if (state === "unavailable") {
+    for (const chip of container.querySelectorAll("time")) {
+      expect(chip.hasAttribute("datetime")).toBe(false);
+      expect(chip.getAttribute("data-state")).toBe("unavailable");
+      expect(chip.textContent).not.toContain("just now");
+    }
+  }
+});
+
+it("retains the receipt fallback only when legacy distribution metadata is absent", () => {
+  const receipt = Date.now();
+  mockDistributions(null, receipt);
+  const { container } = render(<DistributionSection stablecoinId="usdc-circle" />);
+  for (const chip of container.querySelectorAll("time")) {
+    expect(chip.getAttribute("datetime")).toBe(new Date(receipt).toISOString());
+  }
+});
+
+it("ages both distribution notices in place under their served budgets", () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date("2026-10-20T12:00:00Z"));
+  const receipt = Date.now();
+  mockDistributions({ updatedAt: receipt / 1000, status: "fresh", freshBudgetSec: 60, degradedBudgetSec: 120 }, receipt);
+  const { container } = render(<DistributionSection stablecoinId="usdc-circle" />);
+  expect(container.querySelector("[data-health-state]")).toBeNull();
+  act(() => vi.advanceTimersByTime(50));
+  act(() => vi.advanceTimersByTime(60_001));
+  expect(container.querySelectorAll('[data-health-state="degraded"]')).toHaveLength(2);
+  act(() => vi.advanceTimersByTime(60_000));
+  expect(container.querySelectorAll('[data-health-state="stale"]')).toHaveLength(2);
+  for (const chip of container.querySelectorAll("time")) {
+    expect(chip.getAttribute("datetime")).toBe(new Date(receipt).toISOString());
+  }
 });

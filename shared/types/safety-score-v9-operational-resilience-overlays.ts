@@ -1,5 +1,5 @@
 import { z } from "zod";
-import {
+import { issue,
   CanonicalKeySchema,
   CanonicalTextSchema,
   NonNegativeFiniteSchema,
@@ -70,11 +70,7 @@ const RedemptionThroughputSchema = z
     const hasRatio = redemption.cumulativeLifetimeRedeemedSupplyRatio !== null;
     const hasSources = redemption.cumulativeLifetimeRedeemedSupplyRatioSourceIds !== undefined;
     if (hasRatio !== hasSources) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["cumulativeLifetimeRedeemedSupplyRatioSourceIds"],
-        message: "A cumulative redemption ratio and its evidence sources must be supplied together",
-      });
+      issue(ctx, ["cumulativeLifetimeRedeemedSupplyRatioSourceIds"], "A cumulative redemption ratio and its evidence sources must be supplied together");
     }
   });
 
@@ -114,11 +110,7 @@ const IncidentReviewSchema = z.discriminatedUnion("state", [
     .strict()
     .superRefine((review, ctx) => {
       if (review.windowEnd < review.windowStart) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["windowEnd"],
-          message: "Incident review window cannot end before it begins",
-        });
+        issue(ctx, ["windowEnd"], "Incident review window cannot end before it begins");
       }
     }),
 ]);
@@ -183,11 +175,7 @@ export const SafetyScoreV9OperationalResilienceOverlaySchema =
     const reviewedAtMs = Date.parse(overlay.reviewedAt);
     const expiresAtMs = Date.parse(overlay.expiresAt);
     if (expiresAtMs <= reviewedAtMs) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["expiresAt"],
-        message: "Operational-resilience overlay must expire after it was reviewed",
-      });
+      issue(ctx, ["expiresAt"], "Operational-resilience overlay must expire after it was reviewed");
     }
 
     const sourceIds = overlay.sources.map((source) => source.sourceId);
@@ -198,39 +186,23 @@ export const SafetyScoreV9OperationalResilienceOverlaySchema =
     const referencedSourceIds = collectEvidenceSourceIds(overlay);
     for (const sourceId of referencedSourceIds) {
       if (!sourceById.has(sourceId)) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["sources"],
-          message: `Unknown operational-resilience sourceId: ${sourceId}`,
-        });
+        issue(ctx, ["sources"], `Unknown operational-resilience sourceId: ${sourceId}`);
       }
     }
     for (const sourceId of sourceIds) {
       if (!referencedSourceIds.includes(sourceId)) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["sources"],
-          message: `Unused operational-resilience sourceId: ${sourceId}`,
-        });
+        issue(ctx, ["sources"], `Unused operational-resilience sourceId: ${sourceId}`);
       }
     }
 
     const reviewedDate = overlay.reviewedAt.slice(0, 10);
     for (const [index, source] of overlay.sources.entries()) {
       if (source.publishedAt > reviewedDate) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["sources", index, "publishedAt"],
-          message: "Evidence source cannot post-date the review",
-        });
+        issue(ctx, ["sources", index, "publishedAt"], "Evidence source cannot post-date the review");
       }
     }
     if (overlay.eligibility.liveHistory.observedAt > reviewedDate) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["eligibility", "liveHistory", "observedAt"],
-        message: "Live-history observation cannot post-date the review",
-      });
+      issue(ctx, ["eligibility", "liveHistory", "observedAt"], "Live-history observation cannot post-date the review");
     }
 
     const episodeKeys = overlay.stressEpisodes.map((episode) => episode.episodeKey);
@@ -239,36 +211,20 @@ export const SafetyScoreV9OperationalResilienceOverlaySchema =
     }
     for (const [index, episode] of overlay.stressEpisodes.entries()) {
       if (episode.observedMonth > reviewedDate.slice(0, 7)) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["stressEpisodes", index, "observedMonth"],
-          message: "Stress episode cannot post-date the review",
-        });
+        issue(ctx, ["stressEpisodes", index, "observedMonth"], "Stress episode cannot post-date the review");
       }
     }
     const episodeKeySet = new Set(episodeKeys);
     const stressWindowKeys = overlay.redemptionThroughput?.stressWindows.map((window) => window.episodeKey) ?? [];
     if (new Set(stressWindowKeys).size !== stressWindowKeys.length) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["redemptionThroughput", "stressWindows"],
-        message: "Duplicate redemption stress-window episodeKey",
-      });
+      issue(ctx, ["redemptionThroughput", "stressWindows"], "Duplicate redemption stress-window episodeKey");
     }
     for (const [index, window] of (overlay.redemptionThroughput?.stressWindows ?? []).entries()) {
       if (!episodeKeySet.has(window.episodeKey)) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["redemptionThroughput", "stressWindows", index, "episodeKey"],
-          message: "Redemption stress window must reference a named stress episode",
-        });
+        issue(ctx, ["redemptionThroughput", "stressWindows", index, "episodeKey"], "Redemption stress window must reference a named stress episode");
       }
       if (window.observedAt > reviewedDate) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["redemptionThroughput", "stressWindows", index, "observedAt"],
-          message: "Redemption observation cannot post-date the review",
-        });
+        issue(ctx, ["redemptionThroughput", "stressWindows", index, "observedAt"], "Redemption observation cannot post-date the review");
       }
       if (window.settlement.state !== "unknown") {
         const requiredConfidence =
@@ -282,11 +238,7 @@ export const SafetyScoreV9OperationalResilienceOverlaySchema =
             : confidence === requiredConfidence;
         });
         if (!hasRequiredSource) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["redemptionThroughput", "stressWindows", index, "sourceIds"],
-            message: `Settlement verification requires a ${window.settlement.verification} source`,
-          });
+          issue(ctx, ["redemptionThroughput", "stressWindows", index, "sourceIds"], `Settlement verification requires a ${window.settlement.verification} source`);
         }
       }
     }
@@ -294,36 +246,20 @@ export const SafetyScoreV9OperationalResilienceOverlaySchema =
     const reconciliation = overlay.reserveReconciliation;
     if (reconciliation !== null) {
       if (reconciliation.latestReportPeriodEnd > reviewedDate) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["reserveReconciliation", "latestReportPeriodEnd"],
-          message: "Latest reserve report cannot post-date the review",
-        });
+        issue(ctx, ["reserveReconciliation", "latestReportPeriodEnd"], "Latest reserve report cannot post-date the review");
       }
       if (reconciliation.latestReportPeriodEnd < reconciliation.firstReportPeriodEnd) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["reserveReconciliation", "latestReportPeriodEnd"],
-          message: "Latest reserve report cannot pre-date the first report",
-        });
+        issue(ctx, ["reserveReconciliation", "latestReportPeriodEnd"], "Latest reserve report cannot pre-date the first report");
       }
       const expectedHistoryMonths = calendarMonthSpan(
         reconciliation.firstReportPeriodEnd,
         reconciliation.latestReportPeriodEnd,
       );
       if (reconciliation.observedReportHistoryMonths !== expectedHistoryMonths) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["reserveReconciliation", "observedReportHistoryMonths"],
-          message: `Observed report history must equal the ${expectedHistoryMonths}-month endpoint span`,
-        });
+        issue(ctx, ["reserveReconciliation", "observedReportHistoryMonths"], `Observed report history must equal the ${expectedHistoryMonths}-month endpoint span`);
       }
       if (reconciliation.latestAssurance.periodEnd !== reconciliation.latestReportPeriodEnd) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["reserveReconciliation", "latestAssurance", "periodEnd"],
-          message: "Latest assurance period must match the latest report period",
-        });
+        issue(ctx, ["reserveReconciliation", "latestAssurance", "periodEnd"], "Latest assurance period must match the latest report period");
       }
       const assuranceConfidence =
         reconciliation.latestAssurance.level === "audit"
@@ -334,11 +270,7 @@ export const SafetyScoreV9OperationalResilienceOverlaySchema =
         return confidence !== undefined && assuranceConfidence.includes(confidence);
       });
       if (!hasAssuranceSource) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["reserveReconciliation", "latestAssurance", "sourceIds"],
-          message: "Latest reserve assurance must cite evidence with matching independent confidence",
-        });
+        issue(ctx, ["reserveReconciliation", "latestAssurance", "sourceIds"], "Latest reserve assurance must cite evidence with matching independent confidence");
       }
       if (reconciliation.continuityEvidence === "independently-verified") {
         const hasIndependentHistorySource = reconciliation.historySourceIds.some((sourceId) => {
@@ -346,19 +278,11 @@ export const SafetyScoreV9OperationalResilienceOverlaySchema =
           return confidence === "independent-assurance" || confidence === "audited";
         });
         if (!hasIndependentHistorySource) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["reserveReconciliation", "historySourceIds"],
-            message: "Independently verified continuity requires independent history evidence",
-          });
+          issue(ctx, ["reserveReconciliation", "historySourceIds"], "Independently verified continuity requires independent history evidence");
         }
       }
       if (reconciliation.continuityEvidence === "unknown" && reconciliation.missedMaterialPeriods !== null) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["reserveReconciliation", "missedMaterialPeriods"],
-          message: "Unknown report continuity cannot assert a missed-period count",
-        });
+        issue(ctx, ["reserveReconciliation", "missedMaterialPeriods"], "Unknown report continuity cannot assert a missed-period count");
       }
       if (reconciliation.missedMaterialPeriods !== null) {
         const hasMatchingContinuitySource = reconciliation.historySourceIds.some((sourceId) => {
@@ -368,11 +292,7 @@ export const SafetyScoreV9OperationalResilienceOverlaySchema =
             : confidence === "independent-assurance" || confidence === "audited";
         });
         if (!hasMatchingContinuitySource) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["reserveReconciliation", "historySourceIds"],
-            message: "A missed-period count requires evidence matching the asserted continuity confidence",
-          });
+          issue(ctx, ["reserveReconciliation", "historySourceIds"], "A missed-period count requires evidence matching the asserted continuity confidence");
         }
       }
       const claimsReconciliationProcedure =
@@ -385,39 +305,23 @@ export const SafetyScoreV9OperationalResilienceOverlaySchema =
           return confidence === "independent-assurance" || confidence === "audited";
         });
       if (claimsReconciliationProcedure && !hasIndependentProcedureSource) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["reserveReconciliation", "latestReconciliationProcedures", "sourceIds"],
-          message: "Observed reserve-reconciliation procedures require independent assurance evidence",
-        });
+        issue(ctx, ["reserveReconciliation", "latestReconciliationProcedures", "sourceIds"], "Observed reserve-reconciliation procedures require independent assurance evidence");
       }
     }
 
     if (overlay.incidentReview.state === "reviewed") {
       if (overlay.incidentReview.windowEnd > reviewedDate) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["incidentReview", "windowEnd"],
-          message: "Incident review window cannot post-date the review",
-        });
+        issue(ctx, ["incidentReview", "windowEnd"], "Incident review window cannot post-date the review");
       }
       for (const [index, incident] of overlay.incidentReview.incidents.entries()) {
         if (
           incident.occurredAt < overlay.incidentReview.windowStart ||
           incident.occurredAt > overlay.incidentReview.windowEnd
         ) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["incidentReview", "incidents", index, "occurredAt"],
-            message: "Incident must occur within the reviewed window",
-          });
+          issue(ctx, ["incidentReview", "incidents", index, "occurredAt"], "Incident must occur within the reviewed window");
         }
         if (incident.resolvedAt !== null && incident.resolvedAt > reviewedDate) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["incidentReview", "incidents", index, "resolvedAt"],
-            message: "Incident resolution cannot post-date the review",
-          });
+          issue(ctx, ["incidentReview", "incidents", index, "resolvedAt"], "Incident resolution cannot post-date the review");
         }
       }
     }

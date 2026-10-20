@@ -141,12 +141,8 @@ export function preserveStaticDepegArchiveEntries(
   lineage: readonly DepegArchiveLineage[number][] = [],
 ): DepegEventEntry[] {
   const mergedBySlug = new Map(current.map((entry) => [entry.slug, entry] as const));
-  const representativesById = new Map(current
-    .filter((entry) => (entry.constituentEventCount ?? 1) > 1)
-    .map((entry) => [entry.id, entry] as const));
-  const replacementById = new Map(lineage
-    .filter((row) => row.incidentKey.length > 0 && row.live.eventState === "active")
-    .map((row) => [row.eventId, row] as const));
+  const representativesById = new Map(current.map((entry) => [entry.id, entry] as const));
+  const replacementById = new Map(lineage.map((row) => [row.eventId, row] as const));
 
   for (const previousEntry of selectStaticDepegEventPages(previous)) {
     const currentEntry = mergedBySlug.get(previousEntry.slug);
@@ -155,11 +151,33 @@ export function preserveStaticDepegArchiveEntries(
       const representative = incident?.live.currentEventId == null
         ? undefined
         : representativesById.get(incident.live.currentEventId);
-      if (!incident || !representative || representative.id === previousEntry.id ||
-        incident.stablecoinId !== previousEntry.stablecoinId ||
-        representative.stablecoinId !== previousEntry.stablecoinId ||
-        incident.direction !== previousEntry.direction ||
-        representative.direction !== previousEntry.direction) continue;
+      const reasons: string[] = [];
+      if (!incident) reasons.push("incident-not-found");
+      else {
+        if (incident.incidentKey.length === 0) reasons.push("empty-incident-key");
+        if (incident.live.eventState !== "active") reasons.push("incident-not-active");
+        if (incident.stablecoinId !== previousEntry.stablecoinId) reasons.push("incident-coin-mismatch");
+        if (incident.direction !== previousEntry.direction) reasons.push("incident-direction-mismatch");
+        if (!representative) reasons.push("representative-not-in-ledger");
+        else {
+          if (representative.id === previousEntry.id) reasons.push("representative-not-replaced");
+          if ((representative.constituentEventCount ?? 1) <= 1) reasons.push("representative-not-consolidated");
+          if (representative.stablecoinId !== previousEntry.stablecoinId) reasons.push("representative-coin-mismatch");
+          if (representative.direction !== previousEntry.direction) reasons.push("representative-direction-mismatch");
+        }
+      }
+      if (reasons.length > 0) {
+        console.warn(`[sync-depeg-events] Archive lineage rejected: ${JSON.stringify({
+          slug: previousEntry.slug,
+          eventId: previousEntry.id,
+          reasons,
+          incidentKey: incident?.incidentKey ?? null,
+          currentEventId: incident?.live.currentEventId ?? null,
+          eventState: incident?.live.eventState ?? null,
+          constituentEventCount: representative?.constituentEventCount ?? null,
+        })}`);
+        continue;
+      }
     } else if (hasDedicatedDepegEventPage(currentEntry)) continue;
     mergedBySlug.set(previousEntry.slug, previousEntry);
   }
@@ -389,10 +407,17 @@ export async function runDepegSync(argv = process.argv.slice(2)) {
 
       const computedEntries = assignSlugs(unique, previousEntries);
       let lineage: DepegArchiveLineage = [];
-      if (unique.some((event) => (event.constituentEventCount ?? 1) > 1) &&
-        selectStaticDepegEventPages(previousEntries).some((entry) => !seen.has(entry.id))) {
+      const missingPublishedEntries = selectStaticDepegEventPages(previousEntries).filter((entry) => !seen.has(entry.id));
+      const hasConsolidatedRepresentative = unique.some((event) => (event.constituentEventCount ?? 1) > 1);
+      if (missingPublishedEntries.length > 0 && !hasConsolidatedRepresentative) {
+        console.warn("[sync-depeg-events] Incident lineage lookup skipped: no multi-constituent API rows");
+      }
+      if (hasConsolidatedRepresentative && missingPublishedEntries.length > 0) {
         // Keep the selected API lane (including /_site-data/) and authentication.
         const lineageUrl = new URL("./depeg-resolver", apiUrl).href;
+        console.log(`[sync-depeg-events] Incident lineage source: ${lineageUrl}; missing published IDs: ${
+          missingPublishedEntries.map((entry) => entry.id).join(", ")
+        }`);
         const response = await fetchWithRetry(lineageUrl, { headers }, { logLabel: "sync-depeg-events" });
         if (!response.ok) throw new Error(`API returned ${response.status} for ${lineageUrl}`);
         let payload: unknown;
@@ -409,6 +434,7 @@ export async function runDepegSync(argv = process.argv.slice(2)) {
           throw new SnapshotIntegrityError(`Invalid depeg incident lineage: ${parsed.error.message}`);
         }
         lineage = parsed.data.rows;
+        console.log(`[sync-depeg-events] Incident lineage: ${lineage.length} resolver rows admitted`);
       }
       const stored = DepegEventStoredSnapshotSchema.safeParse(
         preserveStaticDepegArchiveEntries(previousEntries, computedEntries, lineage),

@@ -4,10 +4,10 @@ import {
   computeDurabilityScore,
   computeLiquidityScore,
   initLiquidityFallbackCounters,
-  initMetrics,
 } from "../pool-helpers";
 import { filterRetainedPools, rebuildMetricsFromPools } from "../scoring-helpers";
 import type { LiquidityMetrics } from "../types";
+import { initMetrics } from "./scoring-test-builders";
 
 function makeMetrics(overrides: Partial<LiquidityMetrics> = {}): LiquidityMetrics {
   return { ...initMetrics("usdc-circle", "USDC"), ...overrides };

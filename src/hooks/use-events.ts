@@ -161,6 +161,8 @@ export function useEvents(filter: UseEventsFilter = {}, options: UseEventsOption
 export interface UseLatestEventsOptions {
   /** Max events to request. Default 20. Backend caps at 500. */
   limit?: number;
+  /** Exact permalink lookup, independent of listing filters. */
+  eventId?: string;
   /** Restrict to a single coin id. */
   coin?: string;
   /** Restrict to events with type prefix (e.g. `depeg`). */
@@ -175,9 +177,11 @@ export interface UseLatestEventsOptions {
 }
 
 export function useLatestEvents(options: UseLatestEventsOptions = {}) {
-  const { limit = 20, coin, classSlug, since, type, severityFloor, enabled = true } = options;
+  const { limit = 20, eventId, coin, classSlug, since, type, severityFloor, enabled = true } = options;
   const typeFilters = classSlug ? [`${classSlug}.*`] : type;
-  const path = buildEventsPath({ coin, since, type: typeFilters, severityFloor }, { limit });
+  const path = eventId != null
+    ? `${API_PATHS.events()}?${new URLSearchParams({ event: eventId }).toString()}`
+    : buildEventsPath({ coin, since, type: typeFilters, severityFloor }, { limit });
   const result = useRegisteredApiQuery<TapeEventsResponseBody>(
     FRONTEND_API_QUERY_DESCRIPTORS.latestEvents({
       queryKey: [
@@ -189,6 +193,7 @@ export function useLatestEvents(options: UseLatestEventsOptions = {}) {
           since: since ?? null,
           type: typeFilters ? [...typeFilters].sort() : null,
           severityFloor: severityFloor ?? null,
+          ...(eventId == null ? {} : { event: eventId }),
         },
       ],
       path,

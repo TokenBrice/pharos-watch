@@ -28,7 +28,7 @@ import {
 } from "./evm-capture-helpers";
 import { buildPoolFingerprint, normalizeProtocol } from "./pool-helpers";
 import { resolveUniqueTrackedTokenIndex } from "./scoring-helpers";
-import type { EvmV2ExecutionCandidate, LiquidityMetrics, PoolEntry, SymbolLookups } from "./types";
+import type { EvmV2ExecutionCandidate, SourcePoolGraph, PoolEntry, SymbolLookups } from "./types";
 import { buildSolidlyV2ExecutionCandidate, enrichSolidlyV2ExecutionModels } from "./solidly-v2";
 import { enrichRaydiumStandardDiscoveryExecutionModels } from "./raydium-standard-discovery";
 
@@ -146,7 +146,7 @@ export function buildEvmV2ExecutionCandidate(input: {
 
 /** Attach an exact staged candidate to a retained primary row deduped by its token fingerprint. */
 export function attachEvmV2CandidateToRetainedPool(input: {
-  metrics: Map<string, LiquidityMetrics>;
+  metrics: Map<string, SourcePoolGraph>;
   stablecoinId: string;
   chain: string;
   candidate: EvmV2ExecutionCandidate;
@@ -161,7 +161,7 @@ export function attachEvmV2CandidateToRetainedPool(input: {
   let fingerprintMatch: PoolEntry | undefined;
   let exactCount = 0;
   let fingerprintCount = 0;
-  for (const pool of metric.topPools) {
+  for (const pool of metric.pools) {
     if (normalizeProtocol(pool.project) !== protocol) continue;
     if (pool.poolId === exactPoolId) {
       exactMatch = pool;
@@ -527,7 +527,7 @@ export function resolveV2EnrichmentDeadlineMs(deadline?: SlotDeadline): number {
 }
 
 export async function enrichEvmV2ExecutionModels(input: {
-  metrics: Map<string, LiquidityMetrics>;
+  metrics: Map<string, SourcePoolGraph>;
   chainAddressToId: SymbolLookups["chainAddressToId"];
   contractMetaByChainAddress: SymbolLookups["contractMetaByChainAddress"];
   stablecoinPriceById: Map<string, number>;
@@ -544,7 +544,7 @@ export async function enrichEvmV2ExecutionModels(input: {
   await enrichRaydiumStandardDiscoveryExecutionModels({ ...input, deadlineMs });
   const references: CandidateReference[] = [];
   for (const [stablecoinId, metric] of input.metrics) {
-    for (const pool of metric.topPools) {
+    for (const pool of metric.pools) {
       const candidate = pool.extra?.evmV2ExecutionCandidate;
       if (candidate && candidate.source !== "solidly-v2") references.push({ stablecoinId, pool, candidate });
     }

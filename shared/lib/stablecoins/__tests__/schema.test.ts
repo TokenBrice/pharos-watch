@@ -1,4 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
+import type { z } from "zod";
+import type { StablecoinMeta, StablecoinObituary, StablecoinListingStatusReview } from "../../../types";
+import { StablecoinMetaStructuralSchema, StablecoinObituarySchema, StablecoinListingStatusReviewSchema } from "../../../types/stablecoin-meta-schemas";
+import { StablecoinFlagsSchema } from "../../../types/stablecoin-meta-primitives";
 import {
   parseStablecoinMetaAssets,
   StablecoinComplianceSidecarSchema,
@@ -21,6 +25,23 @@ import { LIVE_RESERVE_ADAPTER_DEFINITIONS, LiveReservesConfigSchema } from "../.
 import { CANONICAL_ETH_RESERVE_RISK } from "../../reserve-asset-risk";
 
 const baseFlags = CANONICAL_STABLECOIN_FLAGS;
+
+describe("schema-derived catalog contracts", () => {
+  it("retains source defaults and canonical output types", () => {
+    expectTypeOf<z.output<typeof StablecoinMetaStructuralSchema>>().toEqualTypeOf<StablecoinMeta>();
+    expectTypeOf<z.output<typeof StablecoinObituarySchema>>().toEqualTypeOf<StablecoinObituary>();
+    expectTypeOf<z.output<typeof StablecoinListingStatusReviewSchema>>().toEqualTypeOf<StablecoinListingStatusReview>();
+    expectTypeOf<z.input<typeof StablecoinMetaSourceAssetSchema>["flags"]>().toEqualTypeOf<z.input<typeof StablecoinFlagsSchema>>();
+    expectTypeOf<z.output<typeof StablecoinMetaAssetSchema>>().toEqualTypeOf<StablecoinMeta>();
+    const source: z.input<typeof StablecoinMetaSourceAssetSchema> = {
+      id: "fixture-usd", name: "Fixture USD", symbol: "FUSD",
+      flags: { backing: "rwa-backed", governance: "centralized" },
+    };
+    expect(StablecoinMetaSourceAssetSchema.parse(source).flags).toEqual({
+      ...source.flags, pegCurrency: "USD", yieldBearing: false, rwa: false, navToken: false,
+    });
+  });
+});
 
 describe("bridge route deployment identity admission", () => {
   const address = "0x52908400098527886E0F7030069857D2E4169EE7";

@@ -225,7 +225,7 @@ describe("doc-ownership registry integrity", () => {
     // Existing out-of-scope sections only. Remove entries once bounded; new
     // primary sections must stay within 25KB.
     const legacySectionCeilings: Record<string, number> = {
-      "docs/digest-pipeline.md#generation": 32_770,
+      "docs/digest-pipeline.md#generation": 32_723,
     };
     const remainingExceptions = new Set(Object.keys(legacySectionCeilings));
     const domainIds = [

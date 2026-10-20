@@ -6,7 +6,7 @@ import {
   type ScenarioCheck,
   type ScenarioCheckContext,
   type ScenarioCheckVerdict,
-} from "./index";
+} from "./context";
 
 const usdcAbi = parseAbi([
   "function totalSupply() view returns (uint256)",

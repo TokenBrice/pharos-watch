@@ -17,7 +17,7 @@ import * as yieldHelpersModule from "../yield-helpers";
 import { getCache, setCacheIfNewer } from "../../lib/db-cache";
 import { shouldAttemptFetch } from "../../lib/circuit-breaker";
 import * as safetyScoresModule from "../../lib/safety-scores";
-import * as yieldConfigModule from "../../lib/yield-config/yield-config";
+import * as yieldPools from "../../lib/yield-config/yield-config-pools";
 import { cacheRow, dlPoolsCacheRow, installYieldCacheReader } from "./yield-cache.test-support";
 import { makeDlYieldPool } from "./yield-resolve.test-support";
 
@@ -249,7 +249,7 @@ describe("syncYieldData", () => {
   it.each([0.25, 0.75])("publishes held accepted evidence at the 24h boundary with coverage %s", async (coverageRatio) => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
-    const nativePoolMap = yieldConfigModule.YIELD_POOL_MAP as Record<string, string>;
+    const nativePoolMap = yieldPools.YIELD_POOL_MAP as Record<string, string>;
     nativePoolMap["100"] = "pool-sdai-native";
     const acceptedPublicationGenerationId = "report-cards:v9:accepted";
 

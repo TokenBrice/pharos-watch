@@ -340,6 +340,63 @@ export interface YieldRowsWriteStats {
 
 export type YieldRowsWriteResult = CacheWriteResult & { publicationStats: YieldRowsWriteStats };
 
+// Fixed local identifiers only; build projections once, never per row or retry.
+const cacheFreshGuard = "(SELECT json_extract(value, '$.publication.generationId') FROM cache WHERE key = 'yield-rankings') = ?";
+const YIELD_DATA_COLUMNS = [
+  "stablecoin_id", "source_key", "symbol", "current_apy", "apy_base", "apy_reward", "apy_7d", "apy_30d",
+  "yield_source", "yield_type", "source_pool", "source_tvl_usd", "data_source",
+  "safety_score", "safety_grade", "pharos_yield_score", "yield_to_risk", "excess_yield", "yield_stability",
+  "apy_variance_30d", "apy_min_30d", "apy_max_30d", "exchange_rate", "exchange_rate_prev", "warning_signals", "is_best",
+  "updated_at", "publication_generation_id", "publication_state",
+] as const;
+const YIELD_HISTORY_COLUMNS = [
+  "stablecoin_id", "source_key", "recorded_at", "is_best", "apy", "apy_base", "apy_reward", "exchange_rate", "source_tvl_usd",
+  "data_source", "warning_signals", "yield_source", "yield_type", "publication_generation_id", "publication_state",
+  "pys_at_publish", "safety_at_publish", "variance_at_publish", "pys_inputs_at_publish", "source_observed_at",
+] as const;
+const DECISION_RETENTION_EXPRESSION = `CASE
+  WHEN json_extract(value, '$.retention_reason') = 'trend' THEN 'trend'
+  WHEN json_extract(value, '$.retention_reason') = 'episode'
+   AND COALESCE((
+     SELECT previous.trend_fingerprint
+       FROM yield_source_decisions previous
+      WHERE previous.stablecoin_id = json_extract(value, '$.stablecoin_id')
+        AND previous.created_at < json_extract(value, '$.created_at')
+      ORDER BY previous.created_at DESC, previous.generation_id DESC
+      LIMIT 1
+   ), '') != COALESCE(json_extract(value, '$.trend_fingerprint'), '')
+  THEN 'trend'
+  ELSE 'audit'
+END`;
+const YIELD_DECISION_COLUMNS = [
+  "generation_id", "stablecoin_id", "selected_source_key", "selected_confidence_tier",
+  "selected_data_source", "selected_apy_30d", "selected_score", "selected_reason",
+  "previous_best_source_key", "source_switch", "rejected_count", "alternatives_json", "created_at",
+  ["retention_reason", DECISION_RETENTION_EXPRESSION], "trend_fingerprint",
+] as const;
+const YIELD_DECISION_ALTERNATIVE_COLUMNS = [
+  "generation_id", "stablecoin_id", "alt_source_key", "alt_yield_source",
+  "alt_apy30d_delta", "rejection_reason_code", "recorded_at",
+] as const;
+
+function yieldJsonProjection(columns: readonly (string | readonly [string, string])[]): string {
+  return `(${columns.map((column) => typeof column === "string" ? column : column[0]).join(", ")})
+    SELECT ${columns.map((column) => typeof column === "string"
+      ? `json_extract(value, '$.${column}')`
+      : column[1]).join(", ")}
+    FROM json_each(?)
+    WHERE ${cacheFreshGuard}`;
+}
+
+const YIELD_DATA_INSERT_SQL = `INSERT INTO yield_data ${yieldJsonProjection(YIELD_DATA_COLUMNS)}
+  ON CONFLICT(stablecoin_id, source_key) DO UPDATE SET
+    ${YIELD_DATA_COLUMNS.filter((column) => column !== "stablecoin_id" && column !== "source_key")
+      .map((column) => `${column} = excluded.${column}`).join(", ")}`;
+const YIELD_HISTORY_INSERT_SQL = `INSERT INTO yield_history ${yieldJsonProjection(YIELD_HISTORY_COLUMNS)}
+  ON CONFLICT(stablecoin_id, source_key, recorded_at) DO NOTHING`;
+const YIELD_DECISION_INSERT_SQL = `INSERT OR REPLACE INTO yield_source_decisions ${yieldJsonProjection(YIELD_DECISION_COLUMNS)}`;
+const YIELD_DECISION_ALTERNATIVE_INSERT_SQL = `INSERT OR REPLACE INTO yield_source_decision_alternatives ${yieldJsonProjection(YIELD_DECISION_ALTERNATIVE_COLUMNS)}`;
+
 export async function publishYieldRowsAtomically(
   db: D1Database,
   input: {
@@ -390,7 +447,6 @@ export async function publishYieldRowsAtomically(
     pysInputsPersistedCount: written ? pysInputsPersistedCount : 0,
     pysInputsNullCount: written ? input.historyRows.length - pysInputsPersistedCount : 0,
   });
-  const cacheFreshGuard = "(SELECT json_extract(value, '$.publication.generationId') FROM cache WHERE key = 'yield-rankings') = ?";
   const buildStatements = (): D1PreparedStatement[] => [
     db
       .prepare(
@@ -400,155 +456,16 @@ export async function publishYieldRowsAtomically(
       )
       .bind("yield-rankings", cacheValue, input.startSec),
     db
-      .prepare(
-        `INSERT INTO yield_data (
-            stablecoin_id, source_key, symbol, current_apy, apy_base, apy_reward, apy_7d, apy_30d,
-            yield_source, yield_type, source_pool, source_tvl_usd, data_source,
-            safety_score, safety_grade, pharos_yield_score, yield_to_risk, excess_yield, yield_stability,
-            apy_variance_30d, apy_min_30d, apy_max_30d, exchange_rate, exchange_rate_prev, warning_signals, is_best,
-            updated_at, publication_generation_id, publication_state
-          )
-          SELECT
-            json_extract(value, '$.stablecoin_id'),
-            json_extract(value, '$.source_key'),
-            json_extract(value, '$.symbol'),
-            json_extract(value, '$.current_apy'),
-            json_extract(value, '$.apy_base'),
-            json_extract(value, '$.apy_reward'),
-            json_extract(value, '$.apy_7d'),
-            json_extract(value, '$.apy_30d'),
-            json_extract(value, '$.yield_source'),
-            json_extract(value, '$.yield_type'),
-            json_extract(value, '$.source_pool'),
-            json_extract(value, '$.source_tvl_usd'),
-            json_extract(value, '$.data_source'),
-            json_extract(value, '$.safety_score'),
-            json_extract(value, '$.safety_grade'),
-            json_extract(value, '$.pharos_yield_score'),
-            json_extract(value, '$.yield_to_risk'),
-            json_extract(value, '$.excess_yield'),
-            json_extract(value, '$.yield_stability'),
-            json_extract(value, '$.apy_variance_30d'),
-            json_extract(value, '$.apy_min_30d'),
-            json_extract(value, '$.apy_max_30d'),
-            json_extract(value, '$.exchange_rate'),
-            json_extract(value, '$.exchange_rate_prev'),
-            json_extract(value, '$.warning_signals'),
-            json_extract(value, '$.is_best'),
-            json_extract(value, '$.updated_at'),
-            json_extract(value, '$.publication_generation_id'),
-            json_extract(value, '$.publication_state')
-          FROM json_each(?)
-          WHERE ${cacheFreshGuard}
-          ON CONFLICT(stablecoin_id, source_key) DO UPDATE SET
-            symbol = excluded.symbol, current_apy = excluded.current_apy,
-            apy_base = excluded.apy_base, apy_reward = excluded.apy_reward,
-            apy_7d = excluded.apy_7d, apy_30d = excluded.apy_30d,
-            yield_source = excluded.yield_source, yield_type = excluded.yield_type,
-            source_pool = excluded.source_pool, source_tvl_usd = excluded.source_tvl_usd,
-            data_source = excluded.data_source, safety_score = excluded.safety_score,
-            safety_grade = excluded.safety_grade, pharos_yield_score = excluded.pharos_yield_score,
-            yield_to_risk = excluded.yield_to_risk, excess_yield = excluded.excess_yield,
-            yield_stability = excluded.yield_stability, apy_variance_30d = excluded.apy_variance_30d,
-            apy_min_30d = excluded.apy_min_30d, apy_max_30d = excluded.apy_max_30d,
-            exchange_rate = excluded.exchange_rate, exchange_rate_prev = excluded.exchange_rate_prev,
-            warning_signals = excluded.warning_signals, is_best = excluded.is_best,
-            updated_at = excluded.updated_at,
-            publication_generation_id = excluded.publication_generation_id,
-            publication_state = excluded.publication_state`,
-      )
+      .prepare(YIELD_DATA_INSERT_SQL)
       .bind(yieldDataRowsJson, input.generationId),
     db
-      .prepare(
-        `INSERT INTO yield_history (
-              stablecoin_id, source_key, recorded_at, is_best, apy, apy_base, apy_reward, exchange_rate, source_tvl_usd,
-              data_source, warning_signals, yield_source, yield_type, publication_generation_id, publication_state,
-              pys_at_publish, safety_at_publish, variance_at_publish, pys_inputs_at_publish, source_observed_at
-            )
-            SELECT
-              json_extract(value, '$.stablecoin_id'),
-              json_extract(value, '$.source_key'),
-              json_extract(value, '$.recorded_at'),
-              json_extract(value, '$.is_best'),
-              json_extract(value, '$.apy'),
-              json_extract(value, '$.apy_base'),
-              json_extract(value, '$.apy_reward'),
-              json_extract(value, '$.exchange_rate'),
-              json_extract(value, '$.source_tvl_usd'),
-              json_extract(value, '$.data_source'),
-              json_extract(value, '$.warning_signals'),
-              json_extract(value, '$.yield_source'),
-              json_extract(value, '$.yield_type'),
-              json_extract(value, '$.publication_generation_id'),
-              json_extract(value, '$.publication_state'),
-              json_extract(value, '$.pys_at_publish'),
-              json_extract(value, '$.safety_at_publish'),
-              json_extract(value, '$.variance_at_publish'),
-              json_extract(value, '$.pys_inputs_at_publish'),
-              json_extract(value, '$.source_observed_at')
-            FROM json_each(?)
-            WHERE ${cacheFreshGuard}
-            ON CONFLICT(stablecoin_id, source_key, recorded_at) DO NOTHING`,
-      )
+      .prepare(YIELD_HISTORY_INSERT_SQL)
       .bind(historyRowsJson, input.generationId),
     db
-      .prepare(
-        `INSERT OR REPLACE INTO yield_source_decisions (
-              generation_id, stablecoin_id, selected_source_key, selected_confidence_tier,
-              selected_data_source, selected_apy_30d, selected_score, selected_reason,
-              previous_best_source_key, source_switch, rejected_count, alternatives_json, created_at,
-              retention_reason, trend_fingerprint
-            )
-            SELECT
-              json_extract(value, '$.generation_id'),
-              json_extract(value, '$.stablecoin_id'),
-              json_extract(value, '$.selected_source_key'),
-              json_extract(value, '$.selected_confidence_tier'),
-              json_extract(value, '$.selected_data_source'),
-              json_extract(value, '$.selected_apy_30d'),
-              json_extract(value, '$.selected_score'),
-              json_extract(value, '$.selected_reason'),
-              json_extract(value, '$.previous_best_source_key'),
-              json_extract(value, '$.source_switch'),
-              json_extract(value, '$.rejected_count'),
-              json_extract(value, '$.alternatives_json'),
-              json_extract(value, '$.created_at'),
-              CASE
-                WHEN json_extract(value, '$.retention_reason') = 'trend' THEN 'trend'
-                WHEN json_extract(value, '$.retention_reason') = 'episode'
-                 AND COALESCE((
-                   SELECT previous.trend_fingerprint
-                     FROM yield_source_decisions previous
-                    WHERE previous.stablecoin_id = json_extract(value, '$.stablecoin_id')
-                      AND previous.created_at < json_extract(value, '$.created_at')
-                    ORDER BY previous.created_at DESC, previous.generation_id DESC
-                    LIMIT 1
-                 ), '') != COALESCE(json_extract(value, '$.trend_fingerprint'), '')
-                THEN 'trend'
-                ELSE 'audit'
-              END,
-              json_extract(value, '$.trend_fingerprint')
-            FROM json_each(?)
-            WHERE ${cacheFreshGuard}`,
-      )
+      .prepare(YIELD_DECISION_INSERT_SQL)
       .bind(decisionRowsJson, input.generationId),
     db
-      .prepare(
-              `INSERT OR REPLACE INTO yield_source_decision_alternatives (
-                generation_id, stablecoin_id, alt_source_key, alt_yield_source,
-                alt_apy30d_delta, rejection_reason_code, recorded_at
-              )
-              SELECT
-                json_extract(value, '$.generation_id'),
-                json_extract(value, '$.stablecoin_id'),
-                json_extract(value, '$.alt_source_key'),
-                json_extract(value, '$.alt_yield_source'),
-                json_extract(value, '$.alt_apy30d_delta'),
-                json_extract(value, '$.rejection_reason_code'),
-                json_extract(value, '$.recorded_at')
-              FROM json_each(?)
-              WHERE ${cacheFreshGuard}`,
-      )
+      .prepare(YIELD_DECISION_ALTERNATIVE_INSERT_SQL)
       .bind(decisionAlternativeRowsJson, input.generationId),
     db
       .prepare(

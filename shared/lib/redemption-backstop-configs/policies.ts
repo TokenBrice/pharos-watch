@@ -221,13 +221,9 @@ const LEGACY_FRESHNESS_BRIDGE_APPROVALS = new Set<string>(
 );
 
 const DEGRADED_SYNC_WARNING_APPROVALS = new Map<string, RedemptionDegradedSyncWarningPolicyEntry>();
-const UNUSED_TELEMETRY_APPROVALS = new Map<string, RedemptionUnusedTelemetryPolicyEntry>();
 for (const entry of REDEMPTION_BACKSTOP_POLICY_ENTRIES) {
   if (entry.kind === "degraded-sync-warning-exception") {
     DEGRADED_SYNC_WARNING_APPROVALS.set(`${entry.stablecoinId}:${entry.warningCode}`, entry);
-  }
-  if (entry.kind === "unused-live-redemption-telemetry") {
-    UNUSED_TELEMETRY_APPROVALS.set(entry.stablecoinId, entry);
   }
 }
 

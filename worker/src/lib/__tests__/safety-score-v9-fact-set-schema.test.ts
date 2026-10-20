@@ -4,6 +4,7 @@ import { makeV9Extension, makeV9FixedInput, v9Status } from "../../test-helpers/
 import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9/fact-set";
 import { buildV9EvidenceGapQueue } from "@shared/lib/safety-score-v9/evidence-gap-queue";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { V9AssetFactsV3Schema, V9EffectiveDependenciesV3Schema } from "@shared/types/safety-score-v9-facts";
 
 describe("Safety Score V9 fact-set input primitives", () => {
   it("rejects surrounding whitespace instead of normalizing identity-bearing text", () => {
@@ -23,6 +24,77 @@ describe("Safety Score V9 fact-set input primitives", () => {
       rejectedAtSec: 1_783_891_200,
     };
     expect(RejectionSchema.parse(value)).toEqual(value);
+  });
+
+  it.each([
+    ["wrapper", "serial-claim", 1, true],
+    ["wrapper", "serial-claim", 0.5, false],
+    ["collateral", "serial-claim", 1, false],
+    ["mechanism", "basket-exposure", 0.5, false],
+    ["collateral", "basket-exposure", 0.5, true],
+    ["wrapper", "oracle-nav", 1, false],
+    ["mechanism", "oracle-nav", 0.5, true],
+  ] as const)("keeps producer/compiled role invariants for %s %s at %s", (dependencyType, economicRole, weight, accepted) => {
+    const extension = makeV9Extension();
+    const dependencies = {
+      source: "manual" as const, baseSource: "manual" as const, dependencyFromLive: false,
+      mappedLiveReserveWeight: null, fallbackReason: null,
+      diagnostics: { graphState: "valid" as const, issueCodes: [], sccMemberAssetIds: [] },
+      edges: [{ upstreamAssetId: "upstream", dependencyType, economicRole, weight,
+        failureDomains: [{ kind: "oracle-feed" as const, key: "upstream" }] }],
+    };
+    extension.assets[0]!.dependencies = dependencies;
+    const compiled = { ...dependencies, status: v9Status(), sourceGenerationId: "fixture:g1",
+      edges: dependencies.edges.map(edge => ({ ...edge, edgeKey: "edge:upstream", evidenceRefIds: ["evidence"],
+        pathKind: economicRole === "serial-claim" ? "serial-dependency"
+          : economicRole === "basket-exposure" ? "collateral-exposure" : "local-component" })) };
+    expect(SafetyScoreV9FactSetExtensionV2Schema.safeParse(extension).success).toBe(accepted);
+    expect(V9EffectiveDependenciesV3Schema.safeParse(compiled).success).toBe(accepted);
+    if (economicRole === "oracle-nav" && accepted) {
+      expect(V9EffectiveDependenciesV3Schema.safeParse({
+        ...compiled, edges: compiled.edges.map(edge => ({ ...edge, evidenceRefIds: [] })),
+      }).success).toBe(false);
+    }
+  });
+
+  it("retains producer role absence and canonical sorting without compiled envelope admission", () => {
+    const extension = makeV9Extension();
+    const dependencies = extension.assets[0]!.dependencies!;
+    dependencies.edges = ["z-upstream", "a-upstream"].map(upstreamAssetId => ({
+      upstreamAssetId, dependencyType: "mechanism", weight: 1, failureDomains: [],
+    }));
+    const parsed = SafetyScoreV9FactSetExtensionV2Schema.parse(extension).assets[0]!.dependencies!;
+    expect(parsed.edges.map(edge => edge.upstreamAssetId)).toEqual(["a-upstream", "z-upstream"]);
+    expect(parsed.edges.every(edge => !("economicRole" in edge))).toBe(true);
+    expect(parsed).not.toHaveProperty("rejectionReasons");
+    expect(V9EffectiveDependenciesV3Schema.safeParse({
+      ...parsed, status: v9Status(), sourceGenerationId: "fixture:g1",
+      edges: parsed.edges.map(edge => ({ ...edge, economicRole: "serial-claim", pathKind: "serial-dependency",
+        edgeKey: `serial-claim:mechanism:${edge.upstreamAssetId}`, evidenceRefIds: ["evidence"] })),
+    }).success).toBe(false);
+  });
+
+  it.each([undefined, "native", "controlled"] as const)("preserves bridge route optional kind %s through producer and compilation", (reviewedRouteKind) => {
+    const fixed = makeV9FixedInput();
+    const extension = makeV9Extension({ registryFingerprint: fixed.registryFingerprint });
+    const row = { deploymentRouteKey: "bridge:fixture", supplyUsd: 1_000_000, supplyShare: 0.1,
+      reviewState: "selected-reviewed" as const, ...(reviewedRouteKind === undefined ? {} : { reviewedRouteKind }) };
+    const supplyReview = extension.assets[0]!.supplyReview!;
+    supplyReview.selectedBridgeRoutes = [row];
+    supplyReview.selectedRouteSupplyShare = 0.1;
+    supplyReview.unknownRouteSupplyShare = 0.9;
+    const producer = SafetyScoreV9FactSetExtensionV2Schema.parse(extension);
+    const factSet = compileSafetyScoreV9FactSetFromFixedInput(fixed, producer);
+    expect(producer.assets[0]!.supplyReview!.selectedBridgeRoutes).toEqual([row]);
+    expect(factSet.assets[0]!.supply.selectedBridgeRoutes).toEqual([row]);
+    const invalid = structuredClone(extension);
+    invalid.assets[0]!.supplyReview!.selectedBridgeRoutes[0] = {
+      ...row, reviewState: "selected-unresolved", reviewedRouteKind: "native",
+    };
+    expect(SafetyScoreV9FactSetExtensionV2Schema.safeParse(invalid).success).toBe(false);
+    const invalidCompiled = structuredClone(factSet.assets[0]!);
+    invalidCompiled.supply.selectedBridgeRoutes[0] = invalid.assets[0]!.supplyReview!.selectedBridgeRoutes[0]!;
+    expect(V9AssetFactsV3Schema.safeParse(invalidCompiled).success).toBe(false);
   });
 });
 

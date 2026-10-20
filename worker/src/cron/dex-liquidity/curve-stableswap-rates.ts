@@ -27,7 +27,7 @@ import {
 import { hasScoreFacingMeasuredExecution } from "./scoring-helpers";
 import type {
   CurveStableswapRateInputExecutionCandidate,
-  LiquidityMetrics,
+  SourcePoolGraph,
   PoolEntry,
   SymbolLookups,
 } from "./types";
@@ -372,7 +372,7 @@ async function enrichChain(input: {
  * failure keeps the original rate-bearing gate.
  */
 export async function enrichCurveStableswapRateInputExecutionModels(input: {
-  metrics: Map<string, LiquidityMetrics>;
+  metrics: Map<string, SourcePoolGraph>;
   chainAddressToId: SymbolLookups["chainAddressToId"];
   chainRpcs?: Map<string, ChainRpcConfig>;
   signal?: AbortSignal;
@@ -382,7 +382,7 @@ export async function enrichCurveStableswapRateInputExecutionModels(input: {
 }): Promise<void> {
   const references: CandidateReference[] = [];
   for (const [stablecoinId, metric] of input.metrics) {
-    for (const pool of metric.topPools) {
+    for (const pool of metric.pools) {
       const candidate = pool.extra?.curveStableswapRateInputExecutionCandidate;
       if (!candidate) continue;
       const reference = { stablecoinId, pool, candidate };

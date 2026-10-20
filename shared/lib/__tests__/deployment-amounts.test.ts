@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { compareXrplIssuedCurrencyAmounts, isFixedDecimalDeployment, parseXrplIssuedCurrencyAmount } from "../deployment-amounts";
-import { ContractDeploymentSchema } from "../../types/stablecoin-meta-schemas";
+import { ContractDeploymentSchema } from "../../types/stablecoin-meta-primitives";
 import { resolveTrackedContractConfigCore } from "../stablecoins/tracked-contract-selection";
 const issuer = "rMkEuRii9w9uBMQDnWV5AA43gvYZR9JxVK";
 const parse = (value: string) => parseXrplIssuedCurrencyAmount({ value, issuer, currency: "EUR" });

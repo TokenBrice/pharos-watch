@@ -6,6 +6,7 @@
  *   - freeze.destroyed  : event_type = 'destroy'
  */
 import { formatCompactUsdShortLowerK } from "@shared/lib/format";
+import { FREEZE_CLAIM_RETRACTED_REASON } from "@shared/types/tape-event-constants";
 import { resolveChainId } from "@shared/types/chain-identity";
 import {
   buildTapeEventId,
@@ -38,6 +39,7 @@ type BlacklistSourceRow = Pick<BlacklistPersistedRow,
   | "amount_usd_at_event"
   | "timestamp"
   | "config_key"
+  | "suppression_reason"
 > & {
   methodology_version: string | null;
   rowid: number;
@@ -144,7 +146,35 @@ async function projectFreezeVariant(
     }
   }
 
-  const rows = await fetchRowsWithTieExpansion<BlacklistSourceRow>(db, {
+  // Revisit only changed, already-projected identities in the bounded source
+  // or recovery-attempt window. Old source timestamps alone never replay history.
+  const changedRows = (await db.prepare(
+    `SELECT b.id, b.stablecoin, b.chain_id, b.chain_name, b.event_type,
+            b.amount_usd_at_event, b.timestamp, b.methodology_version, b.config_key,
+            b.suppression_reason, b.rowid AS rowid
+       FROM blacklist_events AS b
+       JOIN tape_events AS t INDEXED BY idx_tape_source_key
+         ON t.source_table = 'blacklist_events' AND t.source_row_id = b.id AND t.transition = ?
+      WHERE b.event_type = ? AND t.suppressed_at IS NULL
+        AND (b.timestamp > ? OR b.amount_last_attempted_at > ?)
+        ${until == null ? "" : "AND b.timestamp <= ?"}
+        AND (b.suppression_reason IS NOT NULL OR
+          CASE WHEN json_valid(t.payload_json) THEN json_extract(t.payload_json, '$.amountUsdAtEvent') END
+            IS NOT b.amount_usd_at_event)
+      ORDER BY b.timestamp ASC, b.rowid ASC LIMIT ?`,
+  ).bind(spec.transition, spec.eventType, sourceReconciliationSince(options), sourceReconciliationSince(options),
+    ...(until == null ? [] : [until]), limit).all<BlacklistSourceRow>()).results ?? [];
+  const retracted = changedRows.filter((row) => row.suppression_reason != null);
+  if (options?.dryRun !== true) {
+    await batchExecute(db, retracted.map((row) => db.prepare(
+      `UPDATE tape_events SET suppressed_at = ?, suppression_reason = ?
+        WHERE source_table = 'blacklist_events' AND source_row_id = ? AND transition = ?
+          AND suppressed_at IS NULL
+          AND EXISTS (SELECT 1 FROM blacklist_events WHERE id = ? AND suppression_reason IS NOT NULL)`,
+    ).bind(Math.floor(Date.now() / 1000), FREEZE_CLAIM_RETRACTED_REASON, row.id, spec.transition, row.id)));
+  }
+
+  const freshRows = await fetchRowsWithTieExpansion<BlacklistSourceRow>(db, {
     selectSql: `SELECT id, stablecoin, chain_id, chain_name, event_type, amount_usd_at_event,
                       timestamp, methodology_version, config_key, rowid as rowid`,
     fromSql: "blacklist_events INDEXED BY idx_blacklist_events_public_event_page",
@@ -164,6 +194,7 @@ async function projectFreezeVariant(
     limit,
     getTime: (row) => row.timestamp,
   });
+  const rows = [...freshRows, ...changedRows.filter((row) => row.suppression_reason == null)];
   if (rows.length === 0) return { projected: 0, advanced: null };
 
   const events: TapeEventInsert[] = [];

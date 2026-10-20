@@ -3,7 +3,7 @@
 Run this sweep weekly to refresh the evidence-curation queue before reviewed reserve
 evidence loses admission. With the default 10-day lookahead, the preventive queue
 re-evaluates the applicable source-strength, freshness, and whole-asset denominator
-gates in production's `resolveReviewedReserveRows()`; expiry is not one universal
+gates in production's `resolveReviewedReserveAdmission()`; expiry is not one universal
 composition-age threshold.
 
 Run every command from the repository root. Use one fresh production capture for the
@@ -121,12 +121,10 @@ only known supply and is not a complete supply denominator:
 npm run safety-score-v9:expiry-queue -- --replay "${replay}"
 ```
 
-The queue is derived with the same admission gates production scoring uses, in
-production order: `buildSafetyScoreV9ReviewedStaticReserveRows`, then (only when
-the asset is in `fixedInput.liveToFallbackCoins`)
-`buildSafetyScoreV9ReviewedAuditedFallbackReserveRows` and
-`buildSafetyScoreV9ReviewedCuratedFallbackReserveRows`, or
-`buildSafetyScoreV9ReviewedStandaloneReserveRows` when there is no live producer.
+The queue consumes the `projected` rows from production's `resolveReviewedReserveAdmission()`
+in `extension-reserves.ts`: supervised named-report admission precedes the audited/curated
+fallback lanes for configured producers, or standalone admission without a live producer.
+The captured `liveToFallbackCoins` census is telemetry, not an independent disclosure gate.
 It is re-evaluated at the capture clock plus the lookahead (`--days`, default 10).
 `extension-reserves.ts` and the active policy's `evidenceExpiry` own the source-specific
 freshness and whole-asset admission gates; do not copy age cutoffs into this workflow.
@@ -164,6 +162,7 @@ touchpoints, current context, and disappearance sentinels are the routing contra
 Do not build another classifier from the evidence queue's coarse `action` field.
 Task rows, claim groups, and dispatch reachability are routing counts, not estimates of
 closable facts. No registry row closes a fact mechanically.
+The evidence queue uses the compiled fact schema's labelled status census, including nested factor, wrapper, access-graph and lender statuses. Shared gaps retain unresolved applicability if any referencing fact is unresolved; supply-evidence freshness is derived once per asset without changing queue keys, priority or cause accounting.
 
 The census has three disjoint buckets from the replay's admitted completeness:
 `rateableStablecoinCount` (`ratingStatus: "rated"`), `notRatedStablecoinCount`
@@ -184,8 +183,9 @@ to human review, not embedded registry data.
 
 The Markdown worklist is a compatibility renderer over this typed routing contract;
 it owns no reason-code classifier. The pre-expiry view likewise calls production's
-exported `resolveReviewedReserveRows()` branch instead of copying reserve-admission
-rules.
+exported `resolveReviewedReserveAdmission()` result instead of copying reserve-admission
+rules. The packet carries the selected source references through evidence construction,
+including expired named-report history; it is asset-local and never stored in `preparedById`.
 
 Mechanism overlays and component reviews use their actual evidence pin, never the capture clock. Date-only reviews wait until the next UTC midnight and temporarily re-attribute the same-day admission gap `method-unsupported`; exact UTC timestamps admit at that instant, not earlier. Both retain the 365-day expiry from the original review start (`worker/src/lib/safety-score-v9/extension-mechanism.ts`).
 

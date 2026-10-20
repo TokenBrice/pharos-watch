@@ -9,7 +9,7 @@ import {
 import { buildYieldSourceRisk, resolveYieldVenueProtocol } from "../evaluation";
 import type { EvaluatedYieldSource } from "../evaluation";
 import { getSupplementalCandidateFamily } from "../sources-supplemental";
-import { DIRECT_PROTOCOL_API_SOURCE_KEYS } from "../../../lib/yield-config/yield-config-rate-sources";
+import { DIRECT_PROTOCOL_API_STRATEGIES } from "../../../lib/yield-config/yield-config-rate-sources";
 import { resolveEvidenceClass } from "../evaluation";
 
 /**
@@ -87,7 +87,7 @@ describe("yield source-key routing table", () => {
   it("routes every emitted first-party protocol-api source key", () => {
     // B29: these keys are emitted by the adapter registry; an unrouted key loses
     // venue attribution and can never reach evidence completeness 1.
-    for (const sourceKey of Object.values(DIRECT_PROTOCOL_API_SOURCE_KEYS)) {
+    for (const { sourceKey } of Object.values(DIRECT_PROTOCOL_API_STRATEGIES)) {
       expect(resolveYieldSourceKeyRoute(sourceKey), sourceKey).not.toBeNull();
     }
     // The three `onchain:<coinId>` readers are part of the same set.

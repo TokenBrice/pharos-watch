@@ -4,7 +4,7 @@ import { cleanupYieldSourceTest, mockYieldSourceFetchRetryModule, mockYieldSourc
 vi.mock("../../lib/fetch-retry", () => mockYieldSourceFetchRetryModule());
 
 import { fetchHashnoteUsycSource } from "../yield-sync/sources-optional";
-import { RATE_DERIVED_CONFIGS } from "../../lib/yield-config/yield-config";
+import { RATE_DERIVED_CONFIGS } from "../../lib/yield-config/yield-config-rate-sources";
 
 describe("fetchHashnoteUsycSource", () => {
   afterEach(() => {

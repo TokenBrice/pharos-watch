@@ -9,7 +9,12 @@ import { sealEligibleLocks } from "../depeg-resolver/publication";
 import type { DdrEventDbRow } from "../depeg-resolver/types";
 import { computeDepegResolver, type DdrV2StoreContracts } from "../compute-depeg-resolver";
 import { buildDewsStablecoinIdsDigest } from "../../lib/dews-publication-pointer";
-import { makeDdrCanonicalIncident, makeDdrResolverRow } from "./depeg-public-projection.test-support";
+import {
+  makeDdrCanonicalIncident,
+  makeDdrPublicationManifest,
+  makeDdrResolverRow,
+  makeDdrSealedPublicPrediction,
+} from "./depeg-public-projection.test-support";
 
 afterEach(() => {
   vi.useRealTimers();
@@ -64,7 +69,7 @@ describe("computeDepegResolver", () => {
     outcomeKind: DdrSealedPublicPrediction["outcomeKind"],
     id = 700,
   ): DdrSealedPublicPrediction {
-    return {
+    return makeDdrSealedPublicPrediction({
       id,
       incidentKey: input.incidentKey,
       eventId: input.eventId,
@@ -72,14 +77,25 @@ describe("computeDepegResolver", () => {
       outcomeKind,
       predictionPolicyVersion: input.predictionPolicyVersion,
       predictionMethodologyVersion: input.methodologyVersion,
+      predictionMethodologyVersionLabel: input.methodologyVersionLabel,
+      resolutionRubricVersion: input.resolutionRubricVersion,
+      durationModelVersion: input.durationModelVersion,
+      incidentGroupingVersion: input.incidentGroupingVersion,
+      supportRulesVersion: input.supportRulesVersion,
       policyDelaySec: input.policyDelaySec,
       eligibleAt: input.eligibleAt,
       lockedAt: input.lockedAt,
       eventAgeAtLockSec: input.eventAgeAtLockSec,
       lockTiming: input.lockTiming,
+      lockTrigger: input.lockTrigger ?? null,
+      forecastReadinessScore: input.forecastReadinessScore ?? null,
+      forecastReadinessVersion: input.forecastReadinessVersion ?? null,
+      readinessThreshold: input.readinessThreshold ?? null,
+      backstopAt: input.backstopAt ?? null,
+      backstopDelaySec: input.backstopDelaySec ?? null,
       rowHash: computeDdrPublicRowHash(input.sealedPayload),
       sealedPayload: attachDdrPublicRowHash(input.sealedPayload, computeDdrPublicRowHash(input.sealedPayload)),
-    };
+    });
   }
 
   function stablecoinsCacheRow() {
@@ -159,25 +175,18 @@ describe("computeDepegResolver", () => {
   }
 
   function storesFor(incidentKey = "ddr2:11111111111111111111111111111111") {
-    const sealed = {
-      id: 7,
+    const sealed = makeDdrSealedPublicPrediction({
       incidentKey,
-      eventId: 42,
-      assessmentId: 70,
-      outcomeKind: "no_call" as const,
-      predictionPolicyVersion: "sticky-24h-v1",
-      predictionMethodologyVersion: "2.0",
-      policyDelaySec: 86_400,
+      outcomeKind: "no_call",
       eligibleAt: NOW_SEC - 3_600,
       lockedAt: NOW_SEC,
       eventAgeAtLockSec: 90_000,
-      lockTiming: "late_freeze" as const,
-      rowHash: "a".repeat(64),
+      lockTiming: "late_freeze",
       sealedPayload: {
         kind: "no_call",
         prediction: {},
       },
-    };
+    });
     const stores: DdrV2StoreContracts = {
       closeRecoveredPreLockIncidents: vi.fn(async () => 0),
       ensureCanonicalIncidents: vi.fn(async (_db, inputs) => [
@@ -201,8 +210,9 @@ describe("computeDepegResolver", () => {
       sealPublicPrediction: vi.fn(async () => {
         throw new Error("unexpected prediction seal");
       }),
-      sealPublicNoCall: vi.fn(async (_db, input) => ({
+      sealPublicNoCall: vi.fn(async (_db, input) => makeDdrSealedPublicPrediction({
         ...sealed,
+        outcomeKind: "no_call",
         lockedAt: input.lockedAt,
         eventAgeAtLockSec: input.eventAgeAtLockSec,
         lockTiming: input.lockTiming,
@@ -215,14 +225,7 @@ describe("computeDepegResolver", () => {
       loadPredictionErrata: vi.fn(
         async (): Promise<Awaited<ReturnType<NonNullable<DdrV2StoreContracts["loadPredictionErrata"]>>>> => [],
       ),
-      writePublicationManifest: vi.fn(async () => ({
-        snapshotToken: "ddr-public-1",
-        snapshotGeneration: 2,
-        snapshotSequence: 1,
-        publishedAt: NOW_SEC,
-        basePayloadHash: "b".repeat(64),
-        publicPredictionIds: [7],
-      })),
+      writePublicationManifest: vi.fn(async () => makeDdrPublicationManifest({ publishedAt: NOW_SEC })),
     };
     return { sealed, stores };
   }
@@ -254,10 +257,7 @@ describe("computeDepegResolver", () => {
     });
     stores.writePublicationManifest = vi.fn(async (_db, input) => {
       manifestPayloads.push(input.basePayload);
-      return {
-        snapshotToken: "ddr-public-1", snapshotGeneration: 2, snapshotSequence: 1,
-        publishedAt: NOW_SEC, basePayloadHash: "b".repeat(64), publicPredictionIds: [7],
-      };
+      return makeDdrPublicationManifest({ publishedAt: NOW_SEC });
     });
     const db = resolverDb([
       { match: "FROM depeg_events_with_provenance WHERE (provenance_audit_verdict", rows: [event] },
@@ -621,14 +621,7 @@ describe("computeDepegResolver", () => {
     stores.loadSealedPublicPredictions = vi.fn(async () => (created ? [created] : []));
     stores.writePublicationManifest = vi.fn(async (_db, input) => {
       manifestBasePayload = input.basePayload;
-      return {
-        snapshotToken: "ddr-public-1",
-        snapshotGeneration: 2,
-        snapshotSequence: 1,
-        publishedAt: NOW_SEC,
-        basePayloadHash: "b".repeat(64),
-        publicPredictionIds: [7],
-      };
+      return makeDdrPublicationManifest({ publishedAt: NOW_SEC });
     });
     const db = resolverDb([
       { match: "FROM depeg_events_with_provenance WHERE (provenance_audit_verdict", rows: [event] },
@@ -746,14 +739,7 @@ describe("computeDepegResolver", () => {
     let manifestBasePayload: unknown = null;
     stores.writePublicationManifest = vi.fn(async (_db, input) => {
       manifestBasePayload = input.basePayload;
-      return {
-        snapshotToken: "ddr-public-1",
-        snapshotGeneration: 2,
-        snapshotSequence: 1,
-        publishedAt: NOW_SEC,
-        basePayloadHash: "b".repeat(64),
-        publicPredictionIds: [7],
-      };
+      return makeDdrPublicationManifest({ publishedAt: NOW_SEC });
     });
     const db = resolverDb([
       { match: "FROM depeg_events_with_provenance WHERE (provenance_audit_verdict", rows: [event] },
@@ -1083,7 +1069,7 @@ describe("computeDepegResolver", () => {
     const incident = canonicalIncident();
     const db = mockD1([]);
     const { stores } = storesFor(incident.incidentKey);
-    const existing = {
+    const existing = makeDdrSealedPublicPrediction({
       id: 77,
       incidentKey: incident.incidentKey,
       eventId: 42,
@@ -1098,7 +1084,7 @@ describe("computeDepegResolver", () => {
       lockTiming: "late_freeze" as const,
       rowHash: "d".repeat(64),
       sealedPayload: { kind: "prediction" },
-    };
+    });
 
     const result = await sealEligibleLocks({
       stores,

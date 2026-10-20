@@ -3,6 +3,7 @@ import { mockD1, type MockD1Database, type MockTableConfig } from "@shared/test-
 import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
 import type { PublishedSafetyScoresResultMap } from "../../lib/safety-scores";
 import type * as ChainRegistryModule from "../../lib/chain-registry";
+import type * as YieldRateSourcesConfig from "../../lib/yield-config/yield-config-rate-sources";
 import type { MockRegistryStablecoin } from "../../test-helpers/cron/mock-registry";
 import {
   mockCircuitBreaker,
@@ -138,20 +139,23 @@ vi.mock("../yield-helpers", async (importOriginal) => {
   };
 });
 
-// Stub yield-config
-vi.mock("../../lib/yield-config/yield-config", () => ({
-  YIELD_VARIANT_MAP: {},
-  YIELD_POOL_MAP: {},
-  YIELD_WEIGHTED_POOL_GROUPS: {},
-  EXPLICIT_YIELD_SOURCE_POOL_MAP: {},
+// Stub the authored yield configuration modules.
+vi.mock("../../lib/yield-config/yield-config-variants", () => ({ YIELD_VARIANT_MAP: {} }));
+vi.mock("../../lib/yield-config/yield-config-pools", () => ({ YIELD_POOL_MAP: {} }));
+vi.mock("../../lib/yield-config/yield-config-weighted-pools", () => ({ YIELD_WEIGHTED_POOL_GROUPS: {} }));
+vi.mock("../../lib/yield-config/yield-config-explicit-pools", () => ({ EXPLICIT_YIELD_SOURCE_POOL_MAP: {} }));
+vi.mock("../../lib/yield-config/yield-config-rate-sources", async (importOriginal) => ({
+  ...await importOriginal<typeof YieldRateSourcesConfig>(),
   ON_CHAIN_RATE_CONFIGS: [],
+  PRICE_DERIVED_FALLBACK_IDS: new Set(),
+  RATE_DERIVED_CONFIGS: [],
+}));
+vi.mock("../../lib/yield-config/yield-config-lending-protocols", () => ({
   LENDING_PROTOCOL_ALLOWLIST: new Set(["venus-core-pool", "aave-v3"]),
   LENDING_PROTOCOL_LABELS: {
     "venus-core-pool": "Venus Core Pool",
     "aave-v3": "Aave V3",
   },
-  PRICE_DERIVED_FALLBACK_IDS: new Set(),
-  RATE_DERIVED_CONFIGS: [],
   AUTO_LENDING_POOL_MAP: {
     "u-united-stables": "pool-u-venus",
     "lusd-liquity": "pool-lusd-aave",
@@ -208,7 +212,9 @@ import type { CronProgressUpdate } from "../../lib/cron-logger";
 import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import * as safetyScoreActiveSourceModule from "../../lib/safety-score-active-source";
 import * as safetyScoresModule from "../../lib/safety-scores";
-import * as yieldConfigModule from "../../lib/yield-config/yield-config";
+import * as yieldRateSources from "../../lib/yield-config/yield-config-rate-sources";
+import * as yieldPools from "../../lib/yield-config/yield-config-pools";
+import * as yieldExplicitPools from "../../lib/yield-config/yield-config-explicit-pools";
 import * as yieldHelpersModule from "../yield-helpers";
 import {
   healthyRiskFreeRateCacheRow,
@@ -353,6 +359,7 @@ export function makeEthereumRpcHandler(
   const cases = Array.isArray(responses) ? responses : [responses];
   return async (request) => {
     const body = JSON.parse(await request.clone().text()) as {
+      id: number;
       params?: Array<{ data?: string } | string>;
     };
     const callData = typeof body.params?.[0] === "object" ? body.params[0]?.data : null;
@@ -366,8 +373,8 @@ export function makeEthereumRpcHandler(
     return new Response(
       JSON.stringify(
         response.upstreamError == null
-          ? { result: response.value ?? "0x" }
-          : { error: { message: response.upstreamError } },
+          ? { jsonrpc: "2.0", id: body.id, result: response.value ?? "0x" }
+          : { jsonrpc: "2.0", id: body.id, error: { message: response.upstreamError } },
       ),
       { status: 200, headers: { "Content-Type": "application/json" } },
     );
@@ -575,12 +582,12 @@ function testSafetyScoresSnapshot(fixture: {
 function resetSyncYieldDataTest() {
   vi.useFakeTimers();
   vi.setSystemTime(new Date("2025-06-15T12:00:00Z"));
-  (yieldConfigModule.ON_CHAIN_RATE_CONFIGS as typeof yieldConfigModule.ON_CHAIN_RATE_CONFIGS).length = 0;
-  (yieldConfigModule.RATE_DERIVED_CONFIGS as typeof yieldConfigModule.RATE_DERIVED_CONFIGS).length = 0;
-  const poolMap = yieldConfigModule.YIELD_POOL_MAP as Record<string, string>;
+  (yieldRateSources.ON_CHAIN_RATE_CONFIGS as typeof yieldRateSources.ON_CHAIN_RATE_CONFIGS).length = 0;
+  (yieldRateSources.RATE_DERIVED_CONFIGS as typeof yieldRateSources.RATE_DERIVED_CONFIGS).length = 0;
+  const poolMap = yieldPools.YIELD_POOL_MAP as Record<string, string>;
   for (const key of Object.keys(poolMap)) delete poolMap[key];
   const explicitPoolMap =
-    yieldConfigModule.EXPLICIT_YIELD_SOURCE_POOL_MAP as typeof yieldConfigModule.EXPLICIT_YIELD_SOURCE_POOL_MAP;
+    yieldExplicitPools.EXPLICIT_YIELD_SOURCE_POOL_MAP as typeof yieldExplicitPools.EXPLICIT_YIELD_SOURCE_POOL_MAP;
   for (const key of Object.keys(explicitPoolMap)) delete explicitPoolMap[key];
   // Reset mocks to factory defaults
   installYieldCacheReader(vi.mocked(getCache).mockReset(), {});

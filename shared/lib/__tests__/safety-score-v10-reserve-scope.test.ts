@@ -3,7 +3,7 @@ import { admitV10ReserveObservation, admitV10ReserveReportScope, resolveV10Reser
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 import { ReserveObservationEnvelopeSchema } from "../../types/safety-score-v9-reserve-scope";
 import { LiveReserveSnapshotProvenanceSchema } from "../safety-score-v9/reserve-provenance";
-import type { ProofOfReservesLatestReport } from "../../types/stablecoin-meta-schemas";
+import type { ProofOfReservesLatestReport } from "../../types/stablecoin-meta-primitives";
 import type { ReviewedEconomicDeploymentPartition } from "../../types/safety-score-v9-supply-attribution";
 
 const policy = V9_CANDIDATE_POLICY_V1.policy;

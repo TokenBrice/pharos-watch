@@ -7,7 +7,7 @@ import type {
   EvmV2ExecutionCandidate,
   LlamaPool,
   LiquidityFallbackCounters,
-  LiquidityMetrics,
+  SourcePoolGraph,
 } from "./types";
 import type {
   UniswapV4ExecutionCandidate,
@@ -56,7 +56,7 @@ export interface ProcessPoolMetricsInput {
 }
 
 export interface ProcessPoolMetricsResult {
-  metrics: Map<string, LiquidityMetrics>;
+  metrics: Map<string, SourcePoolGraph>;
   rejections: PoolProcessingRejection[];
 }
 
@@ -116,7 +116,7 @@ export interface PoolProtocolEnrichment {
 
 export interface PoolExecutionCapability {
   ammExecutionModel?: NonNullable<
-    NonNullable<LiquidityMetrics["topPools"][number]["extra"]>["ammExecutionModel"]
+    NonNullable<SourcePoolGraph["pools"][number]["extra"]>["ammExecutionModel"]
   >;
   evmV2ExecutionCandidate?: EvmV2ExecutionCandidate;
   curveStableswapRateInputExecutionCandidate?: CurveStableswapRateInputExecutionCandidate;

@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { Sha256Schema } from "@shared/types/safety-schema-primitives";
 import { PegSummaryCoinSchema } from "@shared/types/peg";
 import { ExitOutputPriceObservationSchema } from "@shared/types/exit-output-price";
 import { RedemptionBackstopMapSchema } from "@shared/types/redemption";
@@ -11,10 +10,9 @@ import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { ReportCardEvidenceJournalByIdV1Schema } from "@shared/lib/report-card-evidence-journal";
 import { SupplyAttributionJournalByIdV1Schema } from "@shared/lib/safety-score-v9-supply-attribution-journal";
-import { ReviewedEconomicDeploymentPartitionSchema } from "@shared/types/safety-score-v9-supply-attribution";
+import { ReviewedDeploymentUnitPartitionSchema, ReviewedEconomicDeploymentPartitionSchema, XautRepresentationGroupSupplyAttributionV2Schema } from "@shared/types/safety-score-v9-supply-attribution";
 import {
   projectSafetyScoreV9PegScoreResult,
-  projectSafetyScoreV9PegSummary,
   SafetyScoreV9PegProvenanceSummarySchema,
 } from "./safety-score-v9/peg-provenance";
 import {
@@ -26,7 +24,6 @@ import {
 import {
   normalizeXautRepresentationGroupAttribution,
   XAUT_ASSET_ID,
-  XautRepresentationGroupSupplyAttributionV2Schema,
   xautRepresentationGroupAttributionValidationError,
 } from "./safety-score-v9/xaut-supply-attribution-contract";
 import {
@@ -55,37 +52,6 @@ const CanonicalLockMintSupplyAttributionSchema = z.strictObject({
     .refine((rows) => Object.keys(rows).length >= 2, {
       message: "V9 lock/mint attribution requires canonical and pooled supply rows",
     }),
-});
-
-const ReviewedDeploymentSupplyRowSchema = z.strictObject({
-  routeId: z.string().trim().min(1),
-  chainId: z.string().trim().min(1),
-  contractAddress: z.string().trim().min(1),
-  decimals: z.number().int().min(0).max(36),
-  rawSupply: z.string().regex(/^(0|[1-9][0-9]*)$/),
-  blockNumberOrSlot: z.string().regex(/^(0|[1-9][0-9]*)$/),
-  blockTimeSec: z.number().int().nonnegative(),
-  blockHash: z.string().trim().min(1),
-  runtimeCodeSha256: Sha256Schema.optional(),
-  implementationAddress: z.string().trim().min(1).optional(),
-  implementationCodeSha256: Sha256Schema.optional(),
-  underlyingTokenAddress: z.string().trim().min(1).optional(),
-  controllerAddress: z.string().trim().min(1).optional(),
-  controllerProgramOwner: z.string().trim().min(1).optional(),
-  programOwner: z.string().trim().min(1).optional(),
-  mintAuthority: z.string().trim().min(1).optional(),
-  currentSupplyUsd: z.number().finite().nonnegative(),
-});
-
-const ReviewedDeploymentUnitPartitionSchema = z.strictObject({
-  model: z.literal("reviewed-deployment-unit-partition-v1"),
-  assetId: z.string().trim().min(1),
-  observedAtSec: z.number().int().nonnegative(),
-  captureStartedAtSec: z.number().int().nonnegative(),
-  captureEndedAtSec: z.number().int().nonnegative(),
-  registryFingerprint: Sha256Schema,
-  routeInventoryDigest: Sha256Schema,
-  deployments: z.array(ReviewedDeploymentSupplyRowSchema).min(2),
 });
 
 export const SafetyScoreV9SupplyAttributionSchema = z.discriminatedUnion("model", [
@@ -349,7 +315,7 @@ export function assertCommonFixedInputConsistency(
       }
       if (
         stableJsonStringifyV1(projectSafetyScoreV9PegScoreResult(summary.legacyInclusive.result)) !==
-        stableJsonStringifyV1(projectSafetyScoreV9PegSummary(pegSummary))
+        stableJsonStringifyV1(projectSafetyScoreV9PegScoreResult(pegSummary))
       ) {
         throw new Error(`V9 peg provenance score does not match peg row ${assetId}`);
       }

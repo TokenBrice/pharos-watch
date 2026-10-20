@@ -1,14 +1,15 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SLIPSTREAM_POOL_IDENTITY_REVIEW_VERSION, type StagedPool } from "../../dex-discovery/types";
-import { computeLiquidityScore, computePoolQualityContribution, initMetrics } from "../pool-helpers";
+import { computeLiquidityScore, computePoolQualityContribution, initSourcePoolGraph } from "../pool-helpers";
 import { buildPoolFingerprint } from "../pool-normalization";
 import { createKnownPoolIdentityIndex } from "../pool-identity";
 import { mergeStagedPools, type StagedPoolRow } from "../staging-merge";
 import { buildStagedPoolWriteback } from "../staged-pool-writeback";
-import { applyRebuiltMetrics, rebuildMetricsFromPools, summarizeRetainedPoolVolume } from "../scoring-helpers";
+import { summarizeRetainedPoolVolume } from "../scoring-helpers";
 import { DEX_VOLUME_OBSERVATION_MAX_AGE_SEC } from "@shared/lib/dex-volume-availability";
-import type { LiquidityMetrics, PoolEntry } from "../types";
+import type { LiquidityMetrics, SourcePoolGraph, PoolEntry } from "../types";
 import { makeStagedPoolRow } from "./staging-merge.test-support";
+import { scorePoolGraph } from "./scoring-test-builders";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 
 const NOW = 1_710_000_000;
@@ -37,9 +38,9 @@ function makePoolEntry(overrides: Partial<PoolEntry> = {}): PoolEntry {
   };
 }
 
-function makeMetrics(stablecoinId: string, pools: PoolEntry[]): LiquidityMetrics {
-  const metric = initMetrics(stablecoinId, "USDC");
-  metric.topPools.push(...pools);
+function makeMetrics(stablecoinId: string, pools: PoolEntry[]): SourcePoolGraph {
+  const metric = initSourcePoolGraph(stablecoinId, "USDC");
+  metric.pools.push(...pools);
   return metric;
 }
 
@@ -221,7 +222,7 @@ describe("buildStagedPoolWriteback", () => {
 
     // Provider outage for the pool's lane: nothing is observed this run, so the
     // written-back row is the only thing that can keep the pool alive.
-    const outageMetrics = new Map<string, LiquidityMetrics>();
+    const outageMetrics = new Map<string, SourcePoolGraph>();
     const merged = await mergeStagedPools(
       createMockDb(writeback.pools.map(toStagedPoolRow)),
       outageMetrics,
@@ -231,7 +232,7 @@ describe("buildStagedPoolWriteback", () => {
     );
 
     expect(merged.mergedCount).toBe(1);
-    expect(outageMetrics.get("usdc-circle")?.topPools[0]).toMatchObject({
+    expect(outageMetrics.get("usdc-circle")?.pools[0]).toMatchObject({
       poolId: `ethereum:${CURVE_POOL}`,
       source: "dl",
       tvlUsd: 1_000_000,
@@ -255,13 +256,13 @@ describe("buildStagedPoolWriteback", () => {
           })])]]),
           NOW,
         );
-        const metrics = new Map<string, LiquidityMetrics>();
+        const metrics = new Map<string, SourcePoolGraph>();
         const merged = await mergeStagedPools(
           createMockDb(writeback.pools.map(toStagedPoolRow)),
           metrics, createKnownPoolIdentityIndex(), NOW + 3_600, new Map(),
         );
         expect(merged.mergedCount).toBe(1);
-        const metric = metrics.get("usdc-circle")!;
+        const metric = scorePoolGraph(metrics.get("usdc-circle")!);
         const qualityMultiplier = writeback.pools[0]!.qualityMultiplier;
         expect(qualityMultiplier).not.toBeNull();
         const expected = computePoolQualityContribution({
@@ -278,7 +279,6 @@ describe("buildStagedPoolWriteback", () => {
             measurement: { balanceMeasured: true, decayed: false },
           },
         });
-        applyRebuiltMetrics(metric, rebuildMetricsFromPools(metric.topPools));
         metric.volumeAvailability = summarizeRetainedPoolVolume(
           metric.topPools.map((pool) => ({ reading: pool.volumeReading, tvlUsd: pool.tvlUsd })),
           { asOfSec: NOW + 3_600, maxObservationAgeSec: DEX_VOLUME_OBSERVATION_MAX_AGE_SEC },
@@ -329,7 +329,7 @@ describe("buildStagedPoolWriteback", () => {
 
     const backfilled = metrics
       .get("usdc-circle")
-      ?.topPools.find((pool) => pool.poolId === BACKFILLED_POOL);
+      ?.pools.find((pool) => pool.poolId === BACKFILLED_POOL);
     expect(merged.mergedCount).toBe(1);
     expect(backfilled?.extra?.measurement?.decayed).toBe(true);
 

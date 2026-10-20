@@ -11,7 +11,7 @@
 // Deliberately lightweight: no mint-burn contract registry import, so digest
 // and other hot paths can use it (see `mint-burn-canonical-chain.ts`).
 
-import { isRecord } from "@shared/lib/type-guards";
+import { isRecord, numberValue } from "@shared/lib/type-guards";
 import {
   resolveMintBurnValuation,
   resolveMintBurnValuationCompleteness,
@@ -102,21 +102,17 @@ export type PublishedMintBurnGaugeResult =
   | { kind: "ok"; gauge: PublishedMintBurnGauge }
   | { kind: "unavailable"; reason: "missing" | "malformed" | "expired" };
 
-function finiteNumber(value: unknown): number | null {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
-}
-
 /** Optional non-negative weight: absent is `null`; present but invalid is a contract break (`false`). */
 function parseOptionalWeight(value: unknown): number | null | false {
   if (value === undefined) return null;
-  const weight = finiteNumber(value);
+  const weight = numberValue(value);
   return weight === null || weight < 0 ? false : weight;
 }
 
 /** Required nullable net: `null` is a gated value; absent or non-finite is a contract break. */
 function parseNullableNet(value: unknown): { ok: true; value: number | null } | { ok: false } {
   if (value === null) return { ok: true, value: null };
-  const net = finiteNumber(value);
+  const net = numberValue(value);
   return net === null ? { ok: false } : { ok: true, value: net };
 }
 
@@ -131,7 +127,7 @@ function parseCoins(value: unknown): PublishedGaugeCoin[] | null {
     if (!net24hUsd.ok) return null;
     const intensity = entry.pressureShiftScore === null || entry.pressureShiftScore === undefined
       ? null
-      : finiteNumber(entry.pressureShiftScore);
+      : numberValue(entry.pressureShiftScore);
     // A present-but-unparseable intensity is a contract break, not an NR.
     if (entry.pressureShiftScore !== null && entry.pressureShiftScore !== undefined && intensity === null) return null;
     // Absent valuation predates completeness (unknown); a present but malformed one is a contract break.
@@ -194,10 +190,10 @@ export function parsePublishedMintBurnGauge(
 ): PublishedMintBurnGauge | null {
   if (!isRecord(payload) || !isRecord(payload.gauge)) return null;
   const rawScore = payload.gauge.score;
-  const score = rawScore === null || rawScore === undefined ? null : finiteNumber(rawScore);
+  const score = rawScore === null || rawScore === undefined ? null : numberValue(rawScore);
   if (rawScore !== null && rawScore !== undefined && score === null) return null;
   const rawPartialInputs = payload.gauge.partialValuationInputs;
-  const partialValuationInputs = rawPartialInputs === undefined ? null : finiteNumber(rawPartialInputs);
+  const partialValuationInputs = rawPartialInputs === undefined ? null : numberValue(rawPartialInputs);
   if (rawPartialInputs !== undefined && (partialValuationInputs === null || partialValuationInputs < 0)) return null;
   const partialValuationMcapUsd = parseOptionalWeight(payload.gauge.partialValuationMcapUsd);
   const scoredMcapUsd = parseOptionalWeight(payload.gauge.scoredMcapUsd);
@@ -211,7 +207,7 @@ export function parsePublishedMintBurnGauge(
     && parsedWindow.data.end - parsedWindow.data.start === PUBLISHED_GAUGE_WINDOW_HOURS * 60 * 60
     && parsedWindow.data.start % 3600 === 0 && parsedWindow.data.end % 3600 === 0
     ? parsedWindow.data : null;
-  const producerClock = finiteNumber(payload.updatedAt);
+  const producerClock = numberValue(payload.updatedAt);
   const updatedAt = producerClock !== null && Number.isInteger(producerClock) && producerClock >= 0
     ? producerClock : null;
   return { score, partialValuationInputs, partialValuationMcapUsd, scoredMcapUsd, coins, chains,

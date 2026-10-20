@@ -1,5 +1,6 @@
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { StatusHealthValue } from "@shared/types/status/core";
 import {
   buildFallbackStatusState,
   buildDiscrepancy,
@@ -16,7 +17,6 @@ import {
 } from "../status-reliability";
 import {
   STATUS_DEGRADED_TO_STALE_THRESHOLD,
-  type StatusLevel,
   type StatusPersistenceIssue,
 } from "../status-reliability-shared";
 import { decideNextStatus } from "../status-reliability-decision";
@@ -27,8 +27,8 @@ import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
 interface StatusStateRow {
   scope: string;
-  current_status: StatusLevel;
-  raw_status: StatusLevel;
+  current_status: StatusHealthValue;
+  raw_status: StatusHealthValue;
   last_evaluated_at: number;
   last_changed_at: number;
   consecutive_healthy: number;

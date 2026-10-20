@@ -88,13 +88,15 @@ describe("daily-digest lead policy (golden replay of the July 2026 USX era)", ()
   const nowSec = generatedAt(fixture.inputData);
 
   it.each(["2026-07-17", "2026-07-18"] as const)(
-    "%s semantic fixture retains its competing signals, winner, and liquidity order",
+    "%s semantic fixture retains its competing signals and liquidity order under prospective risk tiers",
     (date) => {
       const replay = loadFixture(date);
       const candidates = buildEditorialCandidates(replay.inputData, replay.prevInputData);
       const candidateIds = candidates.map((candidate) => candidate.id);
       expect(candidateIds).toEqual(expect.arrayContaining([...replay.expectedCompetingCandidateIds]));
-      expect(candidates[0]?.id).toBe(replay.expectedLeadCandidateId);
+      // D-9 applies prospectively: none-risk PSI now precedes low-risk impact
+      // leaders. Keep the historical fixture and published edition unchanged.
+      expect(candidates[0]?.id).toBe("psi:bedrock");
       expect(candidates.filter((candidate) => candidate.kind === "liquidity").map((candidate) => candidate.id))
         .toEqual(replay.expectedLiquidityOrder);
     },
@@ -170,6 +172,8 @@ describe("daily-digest lead policy (golden replay of the July 2026 USX era)", ()
     expect(topDepegs[0]?.suppressReason).toBeUndefined();
     const input: DigestInputData = { ...fixture.inputData, topDepegs, activeDepegCount };
     input.editorialCandidates = buildEditorialCandidates(input, null);
+    // A cleaner ordinary candidate cannot displace the independent hard lead.
+    expect(input.editorialCandidates[0]?.id).toBe("psi:bedrock");
     const requirements = buildCriticalDailyLeadRequirements(input);
     expect(requirements?.[0]?.severity).toBe("hard");
     expect(requirements?.[0]?.candidateIds).toContain("depeg:synthetic-crash:active");

@@ -10,6 +10,7 @@ import { DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES } from "../lib/fetch-retry";
 import { getProbePaths } from "@shared/lib/api-endpoints";
 import { SITE_DATA_PROXY_SECRET_HEADER } from "@shared/lib/site-data-lane";
 import type { StatusProbeComparison, StatusProbePlaneSummary, StatusProbeSummary } from "@shared/types/status";
+import type { StatusHealthValue } from "@shared/types/status/core";
 import { computeRawStatus } from "../lib/status-evaluation";
 import { assessPublicHealth, buildPublicHealthResponse, getPublicHealthEvidenceReadFailures } from "../lib/public-health-assessment";
 import { reconcilePublicStatusState } from "../lib/status/public-status-state";
@@ -22,7 +23,6 @@ import {
   reconcileStatusState,
   updateDiscrepancyObservation,
   writeStatusProbeRun,
-  type StatusLevel,
 } from "../lib/status-reliability";
 import { hasDivergence } from "../lib/status-discrepancy-view";
 import type { CloudflareD1StatusBindings, CloudflareD1StatusConfig } from "../lib/env";
@@ -43,7 +43,7 @@ interface ProbeResult {
   ok: boolean;
   error?: string;
   bootstrapMiss?: boolean;
-  semanticStatus?: StatusLevel;
+  semanticStatus?: StatusHealthValue;
 }
 
 interface ProbeLatencySummary {
@@ -69,9 +69,9 @@ interface ProbeStats {
   passCount: number;
   failCount: number;
   latencySummary: ProbeLatencySummary;
-  status: StatusLevel;
-  transportStatus: StatusLevel;
-  semanticStatus: StatusLevel | null;
+  status: StatusHealthValue;
+  transportStatus: StatusHealthValue;
+  semanticStatus: StatusHealthValue | null;
 }
 
 interface ExternalProductionProbeTarget {
@@ -127,7 +127,7 @@ const BOOTSTRAP_CACHE_PRODUCER_BY_PATH: Record<string, string> = {
   "/api/bluechip-ratings": "sync-bluechip",
   "/api/yield-rankings": "sync-yield-data",
 };
-const PROBE_STATUS_SEVERITY: Record<StatusLevel, number> = {
+const PROBE_STATUS_SEVERITY: Record<StatusHealthValue, number> = {
   healthy: 0,
   degraded: 1,
   stale: 2,
@@ -185,7 +185,7 @@ function computeProbeStats(probes: ProbeResult[]): ProbeStats {
   const passCount = connectivityProbes.filter((probe) => probe.ok).length;
   const failCount = connectivityProbes.length - passCount;
   const latencySummary = buildLatencySummary(connectivityProbes);
-  const semanticProbeStatus = probes.reduce<StatusLevel>(
+  const semanticProbeStatus = probes.reduce<StatusHealthValue>(
     (worst, probe) => (probe.semanticStatus ? maxProbeStatus(worst, probe.semanticStatus) : worst),
     "healthy",
   );
@@ -196,7 +196,7 @@ function computeProbeStats(probes: ProbeResult[]): ProbeStats {
     failCount,
     latencySummary,
     transportStatus,
-    semanticStatus: probes.reduce<StatusLevel | null>((worst, probe) =>
+    semanticStatus: probes.reduce<StatusHealthValue | null>((worst, probe) =>
       probe.semanticStatus && (probe.ok || probe.error?.startsWith("reported-"))
         ? (worst == null ? probe.semanticStatus : maxProbeStatus(worst, probe.semanticStatus)) : worst, null),
     status: maxProbeStatus(
@@ -308,7 +308,7 @@ export function selectStatusProbePathsForRun(
   };
 }
 
-export function classifyProbeStatus(sampleCount: number, failCount: number, p95LatencyMs: number): StatusLevel {
+export function classifyProbeStatus(sampleCount: number, failCount: number, p95LatencyMs: number): StatusHealthValue {
   if (sampleCount === 0) return "stale";
   const { healthyMaxFailCount, healthyP95MaxMs, degradedMaxFailRatio, degradedP95MaxMs } = STATUS_PROBE_THRESHOLDS;
   if (failCount <= healthyMaxFailCount && p95LatencyMs <= healthyP95MaxMs) return "healthy";
@@ -317,7 +317,7 @@ export function classifyProbeStatus(sampleCount: number, failCount: number, p95L
   return "stale";
 }
 
-function maxProbeStatus(left: StatusLevel, right: StatusLevel): StatusLevel {
+function maxProbeStatus(left: StatusHealthValue, right: StatusHealthValue): StatusHealthValue {
   return PROBE_STATUS_SEVERITY[left] >= PROBE_STATUS_SEVERITY[right] ? left : right;
 }
 
@@ -381,7 +381,7 @@ function buildProbeResult(config: {
   ok: boolean;
   error?: string;
   bootstrapMiss?: boolean;
-  semanticStatus?: StatusLevel;
+  semanticStatus?: StatusHealthValue;
 }): ProbeResult {
   return {
     path: config.path,

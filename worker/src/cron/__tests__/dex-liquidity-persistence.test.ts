@@ -16,8 +16,9 @@ import { batchExecute, executeAtomicBatch } from "../../lib/db";
 import type * as DbModule from "../../lib/db";
 import { computeDexDeploymentSupplyCoverage } from "../../lib/report-cards-snapshot-inputs";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-import { initMetrics } from "../dex-liquidity/pool-helpers";
-import { computeStablecoinScores } from "../dex-liquidity/scoring";
+import { initMetrics } from "../dex-liquidity/__tests__/scoring-test-builders";
+import { initSourcePoolGraph } from "../dex-liquidity/pool-helpers";
+import { computeStablecoinScores, loadConfidentHistoryStability } from "../dex-liquidity/scoring";
 import { makePool } from "../dex-liquidity/__tests__/scoring-test-builders";
 import {
   buildDexLiquidityPublicationGenerationId,
@@ -142,7 +143,7 @@ function makeDb(options: {
 
 
 
-const DEX_LIQUIDITY_RUN_ROW_BIND_COUNT = 30;
+const DEX_LIQUIDITY_RUN_ROW_BIND_COUNT = 31;
 
 function extractDexLiquidityRunRows(statements: readonly PreparedStatementWithMeta[]): unknown[][] {
   const rows: unknown[][] = [];
@@ -247,6 +248,7 @@ describe("dex-liquidity persistence", () => {
         chainTvl: { ethereum: 300_000 },
       },
       1_700_000_000,
+      new Map([["usdt-tether", 0.9], ["usdc-circle", 0.8], [INACTIVE_TRACKED_STABLECOIN.id, 0.7]]),
     );
 
     expect(result).toEqual({
@@ -364,6 +366,7 @@ describe("dex-liquidity persistence", () => {
       120_000,
       120_000,
       LIQUIDITY_METHODOLOGY_VERSION,
+      0.9,
       1_700_000_000,
     ]);
     expect(usdcPlaceholder).toEqual([
@@ -396,6 +399,7 @@ describe("dex-liquidity persistence", () => {
       0,
       0,
       LIQUIDITY_METHODOLOGY_VERSION,
+      0.8,
       1_700_000_000,
     ]);
     // Placeholders retain no pool: the vacuous complete-zero window at the run's volume clock.
@@ -445,6 +449,7 @@ describe("dex-liquidity persistence", () => {
       0,
       0,
       LIQUIDITY_METHODOLOGY_VERSION,
+      null,
       1_700_000_000,
     ]);
 
@@ -486,6 +491,7 @@ describe("dex-liquidity persistence", () => {
         chainTvl: {},
       },
       nowSec,
+      new Map(),
     );
 
     const row = extractDexLiquidityRunRows(
@@ -564,6 +570,7 @@ describe("dex-liquidity persistence", () => {
           poolCount: 0, chainCount: 0, protocolTvl: {}, chainTvl: {},
         },
         quoteSourceAtSec,
+        new Map(),
       );
       const row = extractDexLiquidityRunRows(
         getPreparedBatchStatements("INSERT OR REPLACE INTO dex_liquidity_run_rows"),
@@ -601,7 +608,7 @@ describe("dex-liquidity persistence", () => {
         })), new Map(), { asOfSec: readCompletedAtSec, maxOutcomeAgeSec: 172_800 });
         expect(supply).toMatchObject({ unknownSupplyUsd: 100, unknownSupplyRatio: 1 });
       }
-      expect(row?.[29]).toBe(quoteSourceAtSec);
+      expect(row?.[30]).toBe(quoteSourceAtSec);
       expect(deploymentOutcomeRows.every((outcome) => outcome.observed_at === observedAtSec)).toBe(true);
       expect(db.getHistory().filter(({ sql }) => sql.includes("FROM dex_deployment_outcomes"))).toHaveLength(1);
     },
@@ -656,6 +663,7 @@ describe("dex-liquidity persistence", () => {
         chainTvl: {},
       },
       nowSec,
+      new Map(),
     );
 
     const row = extractDexLiquidityRunRows(
@@ -710,6 +718,7 @@ describe("dex-liquidity persistence", () => {
         chainTvl: {},
       },
       1_700_000_000,
+      new Map([[INACTIVE_TRACKED_STABLECOIN.id, 0.7]]),
     );
 
     expect(result).toMatchObject({
@@ -768,6 +777,7 @@ describe("dex-liquidity persistence", () => {
         chainTvl: {},
       },
       1_700_000_000,
+      new Map(),
     );
 
     expect(result.orphanCleanupFailed).toBe(true);
@@ -822,6 +832,7 @@ describe("dex-liquidity persistence", () => {
         chainTvl: {},
       },
       nowSec,
+      new Map(),
     );
     await writeHistoricalSnapshots(db, scoreMap, undefined, nowSec);
 
@@ -867,6 +878,7 @@ describe("dex-liquidity persistence", () => {
           chainTvl: {},
         },
         1_700_000_000,
+        new Map(),
         controller.signal,
       ),
     ).rejects.toThrow("cron timed out");
@@ -900,6 +912,7 @@ describe("dex-liquidity persistence", () => {
           chainTvl: {},
         },
         1_700_000_000,
+        new Map(),
       ),
     ).rejects.toThrow("Incomplete DEX liquidity generation");
 
@@ -933,6 +946,7 @@ describe("dex-liquidity persistence", () => {
           chainTvl: {},
         },
         1_700_000_000,
+        new Map(),
       ),
     ).rejects.toThrow("candidate batch failed");
 
@@ -965,6 +979,7 @@ describe("dex-liquidity persistence", () => {
           chainTvl: {},
         },
         1_700_000_000,
+        new Map(),
       ),
     ).rejects.toThrow("second candidate batch failed");
 
@@ -1005,6 +1020,7 @@ describe("dex-liquidity persistence", () => {
           chainTvl: {},
         },
         1_700_000_000,
+        new Map(),
       ),
     ).rejects.toThrow("atomic generation publish failed");
 
@@ -1035,7 +1051,7 @@ describe("dex-liquidity persistence", () => {
       await expect(persistScores(db, new Map(), new Map(), {
         totalTvl: 1, totalVol24h: 1, totalVol7d: 1, volumeAvailability: makeCompleteVolumeAvailability(1, 1),
         poolCount: 1, chainCount: 1, protocolTvl: {}, chainTvl: {},
-      }, now)).rejects.toThrow("injected staging failure");
+      }, now, new Map())).rejects.toThrow("injected staging failure");
       expect(sqlite.prepare(`SELECT state, written_row_count, current_row_count,
         created_at, published_at, failed_at, failure_reason
         FROM dex_liquidity_publication_generations WHERE generation_id = ?`).get(generationId)).toEqual({
@@ -1055,16 +1071,16 @@ describe("dex-liquidity persistence", () => {
       vi.mocked(batchExecute).mockImplementation(actual.batchExecute);
       vi.mocked(executeAtomicBatch).mockImplementation(actual.executeAtomicBatch);
       const now = 1_800_000_000;
-      const usdc = initMetrics("usdc-circle", "USDC");
-      const usdt = initMetrics("usdt-tether", "USDT");
-      usdc.topPools = ["ethereum", "base"].map((chain) => makePool({
+      const usdc = initSourcePoolGraph("usdc-circle", "USDC");
+      const usdt = initSourcePoolGraph("usdt-tether", "USDT");
+      usdc.pools = ["ethereum", "base"].map((chain) => makePool({
         poolId: `${chain}:trusted`, project: "curve", chain, tvlUsd: 80_000_000,
         volumeReading: { volume24hUsd: 1_000_000, volume7dUsd: 7_000_000, observedAtSec: now - 60 },
       }));
-      usdt.topPools = [{ ...usdc.topPools[0]! }];
+      usdt.pools = [{ ...usdc.pools[0]! }];
       const metrics = new Map([["usdc-circle", usdc], ["usdt-tether", usdt]]);
       const result = await computeStablecoinScores(db, metrics, new Map([["curve", 100_000_000]]), undefined, now);
-      await persistScores(db, metrics, result.scores, result.globalAgg, now);
+      await persistScores(db, result.scoredMetrics, result.scores, result.globalAgg, now, result.tvlStabilityMap);
 
       const row = sqlite.prepare(`SELECT total_tvl_usd, total_volume_24h_usd, protocol_tvl_json,
         chain_tvl_json, volume_availability_json, methodology_version, publication_state
@@ -1096,8 +1112,8 @@ describe("dex-liquidity persistence", () => {
       vi.mocked(batchExecute).mockImplementation(actual.batchExecute);
       vi.mocked(executeAtomicBatch).mockImplementation(actual.executeAtomicBatch);
       const now = 1_800_000_000;
-      const usdc = initMetrics("usdc-circle", "USDC");
-      const usdt = initMetrics("usdt-tether", "USDT");
+      const usdc = initSourcePoolGraph("usdc-circle", "USDC");
+      const usdt = initSourcePoolGraph("usdt-tether", "USDT");
       const trusted = makePool({
         poolId: "ethereum:trusted", project: "orca", chain: "ethereum", source: "direct_api", tvlUsd: 150_000,
         extra: { qualityAdjustedTvl: 120_000, effectiveTvl: 90_000 },
@@ -1108,11 +1124,11 @@ describe("dex-liquidity persistence", () => {
         extra: { qualityAdjustedTvl: 40_000, effectiveTvl: 30_000 },
         volumeReading: { volume24hUsd: 15_000, volume7dUsd: 105_000, observedAtSec: now - 60 },
       });
-      usdc.topPools = [trusted, fallback];
-      usdt.topPools = [{ ...fallback }];
+      usdc.pools = [trusted, fallback];
+      usdt.pools = [{ ...fallback }];
       const metrics = new Map([["usdc-circle", usdc], ["usdt-tether", usdt]]);
       const result = await computeStablecoinScores(db, metrics, new Map([["orca", 180_000]]), undefined, now);
-      await persistScores(db, metrics, result.scores, result.globalAgg, now);
+      await persistScores(db, result.scoredMetrics, result.scores, result.globalAgg, now, result.tvlStabilityMap);
       for (const id of ["usdc-circle", "__global__"]) {
         const row = sqlite.prepare(`SELECT total_tvl_usd, total_volume_24h_usd, protocol_tvl_json,
           chain_tvl_json, volume_availability_json FROM dex_liquidity WHERE stablecoin_id = ?`).get(id) as {
@@ -1137,6 +1153,51 @@ describe("dex-liquidity persistence", () => {
         .toEqual({ total_tvl_usd: 0 });
       expect(fallback.tvlUsd).toBe(80_000);
       expect(fallback.extra?.effectiveTvl).toBe(30_000);
+    } finally {
+      fixtures.closeAll();
+    }
+  });
+
+  it("publishes the fixed-clock pre-snapshot depth sample for observed and placeholder assets", async () => {
+    const fixtures = createLatestSchemaFixtureTracker();
+    try {
+      const { sqlite, db } = fixtures.open();
+      const actual = await vi.importActual<typeof DbModule>("../../lib/db");
+      vi.mocked(batchExecute).mockImplementation(actual.batchExecute);
+      vi.mocked(executeAtomicBatch).mockImplementation(actual.executeAtomicBatch);
+      const now = 1_800_000_000;
+      const midnight = Math.floor(now / 86_400) * 86_400;
+      vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+      const insert = sqlite.prepare(`INSERT INTO dex_liquidity_history
+        (stablecoin_id, total_tvl_usd, total_volume_24h_usd, snapshot_date,
+         coverage_class, coverage_confidence, methodology_version)
+        VALUES (?, ?, 100000, ?, 'primary', 1, ?)`);
+      for (let day = 1; day <= 7; day++) {
+        insert.run("usdt-tether", 1_000_000, midnight - day * 86_400, LIQUIDITY_METHODOLOGY_VERSION);
+        insert.run("usdc-circle", day * 1_000_000, midnight - day * 86_400, LIQUIDITY_METHODOLOGY_VERSION);
+      }
+      const { tvlStabilityMap } = await loadConfidentHistoryStability(db);
+      expect(tvlStabilityMap.get("usdt-tether")).toBe(1);
+      expect(tvlStabilityMap.get("usdc-circle")).toBe(0.5);
+      const metrics = initMetrics("usdt-tether", "USDT");
+      metrics.totalTvlUsd = 100_000_000;
+      const scores = new Map([["usdt-tether", makeFullScoreResult({ tvl: 100_000_000 })]]);
+      await persistScores(db, new Map([["usdt-tether", metrics]]), scores, {
+        totalTvl: 100_000_000, totalVol24h: 0, totalVol7d: 0,
+        volumeAvailability: makeCompleteVolumeAvailability(0, 0),
+        poolCount: 0, chainCount: 0, protocolTvl: {}, chainTvl: {},
+      }, now, tvlStabilityMap);
+      expect(await writeHistoricalSnapshots(db, scores, undefined, now)).toMatchObject({ writeFailed: false });
+      expect((await loadConfidentHistoryStability(db)).tvlStabilityMap.get("usdt-tether")).toBe(0);
+      expect(sqlite.prepare(
+        "SELECT stablecoin_id, depth_stability FROM dex_liquidity ORDER BY stablecoin_id",
+      ).all()).toEqual(
+        [...ACTIVE_STABLECOINS.map((coin) => ({
+          stablecoin_id: coin.id,
+          depth_stability: coin.id === "usdt-tether" ? 1 : coin.id === "usdc-circle" ? 0.5 : null,
+        })), { stablecoin_id: "__global__", depth_stability: null }]
+          .sort((a, b) => a.stablecoin_id.localeCompare(b.stablecoin_id)),
+      );
     } finally {
       fixtures.closeAll();
     }

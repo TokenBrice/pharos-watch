@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { issue } from "./safety-schema-primitives";
 import { V9MechanismQualitySchema } from "./safety-score-v9-fact-input-primitives";
 
 const V9MechanismProfileFactSchema = z.union([
@@ -45,11 +46,7 @@ export const V9MechanismProfileReviewSchema = z.discriminatedUnion("profile", [
     .strict()
     .superRefine((review, ctx) => {
       if (review.exogenousBackingShare + review.reflexiveBackingShare > 1.000001) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["reflexiveBackingShare"],
-          message: "Inflation-index backing shares cannot exceed 1",
-        });
+        issue(ctx, ["reflexiveBackingShare"], "Inflation-index backing shares cannot exceed 1");
       }
     }),
 ]);

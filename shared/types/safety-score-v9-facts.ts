@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { issue } from "./safety-schema-primitives";
 import methodologyPolicy from "../data/safety-score-v9/methodology-policy-candidate-v1.json";
 import { RedemptionRouteSuspensionSchema } from "./redemption";
 import { V9ReserveBoundedFactSchema } from "./reserve-bounded-facts";
@@ -7,10 +8,11 @@ import { AdmittedProviderRowExclusionSchema } from "./safety-score-v9-supply-att
 import { V9AccessClaimGraphSchema, v9AccessClaimGraphStatuses } from "./safety-score-v9-access-lookthrough";
 import { V9InProcessControlExecutionScopeSchema, V9ExactControlPolicySchema, V9WeightedQuorumSchema, V9SameChainSystemTransportSchema, V9ControlQuestionSubjectSchema } from "./safety-score-v9-control-scope";
 import { createV9ValueInterner, deepFreeze } from "./safety-score-v9-immutable";
-import { DeploymentIdSchema } from "./stablecoin-meta-schemas";
+import { DeploymentIdSchema } from "./stablecoin-meta-primitives";
 import { ReserveIntermediarySchema } from "./reserves";
 import {
   DependencyTypeSchema,
+  defaultV9DependencyEconomicRole,
   V9DependencyEconomicRoleSchema,
 } from "./dependency-types";
 import { V9PathKindSchema, V9ReasonCodeSchema, V9ReasonOwnerDomainSchema } from "./safety-score-v9";
@@ -67,6 +69,8 @@ import {
   PositiveFractionSchema,
   Sha256Schema,
   UnixSecondsSchema,
+  V9BridgeSupplyRouteV2Schema,
+  V9PegReferenceKindSchema,
   V9ClaimImpairmentSchema,
   V9ControlCapSemanticsSchema,
   V9ControlCapabilitySchema,
@@ -162,11 +166,7 @@ export const V9EvidenceReferenceV2Schema = z
       ctx.addIssue({ code: "custom", path: ["publishedAtSec"], message: "Publication cannot predate observation" });
     }
     if (reference.rejection && reference.rejection.rejectedAtSec < reference.observedAtSec) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["rejection", "rejectedAtSec"],
-        message: "Rejection cannot predate observation",
-      });
+      issue(ctx, ["rejection", "rejectedAtSec"], "Rejection cannot predate observation");
     }
   });
 export type V9EvidenceReferenceV2 = z.infer<typeof V9EvidenceReferenceV2Schema>;
@@ -241,14 +241,40 @@ export const V9FactGapV3Schema = z
 export type V9FactGapV3 = z.infer<typeof V9FactGapV3Schema>;
 
 
-const V9EffectiveDependencyEdgeBaseSchema = z.object({
-  edgeKey: CanonicalTextSchema,
+export const V9DependencyEdgeInputSchema = z.object({
   upstreamAssetId: CanonicalTextSchema,
   dependencyType: DependencyTypeSchema,
   weight: PositiveFractionSchema,
-  evidenceRefIds: CanonicalStringArraySchema,
   failureDomains: CanonicalFailureDomainsSchema,
   intermediary: ReserveIntermediarySchema.optional(),
+});
+
+export function validateV9DependencyRole(
+  edge: z.infer<typeof V9DependencyEdgeInputSchema> & { economicRole?: z.infer<typeof V9DependencyEconomicRoleSchema> },
+  ctx: z.RefinementCtx,
+  basketTypeMessage = "Basket exposures must be collateral dependencies",
+): void {
+  const role = edge.economicRole ?? defaultV9DependencyEconomicRole(edge.dependencyType);
+  if (role === "serial-claim" && edge.dependencyType === "collateral") {
+    issue(ctx, ["dependencyType"], "Serial claims cannot be collateral edges");
+  } else if (role === "basket-exposure" && edge.dependencyType !== "collateral") {
+    issue(ctx, ["dependencyType"], basketTypeMessage);
+  } else if (role !== "serial-claim" && role !== "basket-exposure" && edge.dependencyType === "wrapper") {
+    issue(ctx, ["dependencyType"], "Wrapper edges must be serial claims");
+  }
+  if (role !== "serial-claim" && role !== "basket-exposure" && edge.failureDomains.length === 0) {
+    issue(ctx, ["failureDomains"], "Role dependencies require a failure domain");
+  }
+}
+
+const V9EffectiveDependencyEdgeBaseSchema = z.object({
+  edgeKey: CanonicalTextSchema,
+  upstreamAssetId: V9DependencyEdgeInputSchema.shape.upstreamAssetId,
+  dependencyType: V9DependencyEdgeInputSchema.shape.dependencyType,
+  weight: V9DependencyEdgeInputSchema.shape.weight,
+  evidenceRefIds: CanonicalStringArraySchema,
+  failureDomains: V9DependencyEdgeInputSchema.shape.failureDomains,
+  intermediary: V9DependencyEdgeInputSchema.shape.intermediary,
 });
 
 const V9EffectiveDependencyEdgeV2Schema = V9EffectiveDependencyEdgeBaseSchema.extend({
@@ -275,9 +301,7 @@ export const V9DependencyRejectionReasonsSchema = z.array(z.object({
   share: z.number().finite().min(0).max(1).optional(),
 }).strict());
 
-const V9EffectiveDependenciesBaseFields = {
-  status: V9FactStatusV2Schema,
-  sourceGenerationId: CanonicalTextSchema,
+export const V9EffectiveDependenciesInputFields = {
   source: z.enum(["live-reserve", "live-unmapped", "curated-reserve", "manual", "none", "variant"]),
   baseSource: z.enum(["live-reserve", "live-unmapped", "curated-reserve", "manual", "none"]),
   dependencyFromLive: z.boolean(),
@@ -295,6 +319,12 @@ const V9EffectiveDependenciesBaseFields = {
     .strict(),
 };
 
+const V9EffectiveDependenciesBaseFields = {
+  status: V9FactStatusV2Schema,
+  sourceGenerationId: CanonicalTextSchema,
+  ...V9EffectiveDependenciesInputFields,
+};
+
 function validateDependencyEnvelope(
   dependencies: Pick<
     V9EffectiveDependenciesV2 | V9EffectiveDependenciesV3,
@@ -306,27 +336,15 @@ function validateDependencyEnvelope(
     ctx.addIssue({ code: "custom", path: ["edges"], message: "A none dependency source cannot contain edges" });
   }
   if (dependencies.fallbackReason !== null && dependencies.source === "live-reserve") {
-    ctx.addIssue({
-      code: "custom",
-      path: ["fallbackReason"],
-      message: "Direct live dependencies cannot be a fallback",
-    });
+    issue(ctx, ["fallbackReason"], "Direct live dependencies cannot be a fallback");
   }
   if (dependencies.diagnostics.graphState === "valid") {
     if (dependencies.diagnostics.issueCodes.length > 0 || dependencies.diagnostics.sccMemberAssetIds.length > 0) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["diagnostics"],
-        message: "A valid dependency graph cannot carry issues",
-      });
+      issue(ctx, ["diagnostics"], "A valid dependency graph cannot carry issues");
     }
   }
   if (dependencies.diagnostics.graphState === "cycle" && dependencies.diagnostics.sccMemberAssetIds.length === 0) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["diagnostics", "sccMemberAssetIds"],
-      message: "A cycle requires SCC members",
-    });
+    issue(ctx, ["diagnostics", "sccMemberAssetIds"], "A cycle requires SCC members");
   }
   const collateralWeight = dependencies.edges
     .filter((edge) => edge.economicRole === "basket-exposure")
@@ -358,34 +376,11 @@ const V9EffectiveDependencyEdgeV3Schema = V9EffectiveDependencyEdgeBaseSchema.ex
           ? "collateral-exposure"
           : "local-component";
     if (edge.pathKind !== expectedPathKind) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["pathKind"],
-        message: `Dependency role ${edge.economicRole} requires ${expectedPathKind}`,
-      });
+      issue(ctx, ["pathKind"], `Dependency role ${edge.economicRole} requires ${expectedPathKind}`);
     }
-    if (edge.economicRole === "serial-claim") {
-      if (edge.dependencyType === "collateral") {
-        ctx.addIssue({ code: "custom", path: ["dependencyType"], message: "Serial claims cannot be collateral edges" });
-      }
-      if (edge.weight !== 1) {
-        ctx.addIssue({ code: "custom", path: ["weight"], message: "Serial dependencies must have weight 1" });
-      }
-    } else if (edge.economicRole === "basket-exposure" && edge.dependencyType !== "collateral") {
-      ctx.addIssue({
-        code: "custom",
-        path: ["dependencyType"],
-        message: "Basket exposures must be collateral dependencies",
-      });
-    } else if (edge.economicRole !== "basket-exposure" && edge.dependencyType === "wrapper") {
-      ctx.addIssue({ code: "custom", path: ["dependencyType"], message: "Wrapper edges must be serial claims" });
-    }
-    if (
-      edge.economicRole !== "serial-claim" &&
-      edge.economicRole !== "basket-exposure" &&
-      edge.failureDomains.length === 0
-    ) {
-      ctx.addIssue({ code: "custom", path: ["failureDomains"], message: "Role dependencies require a failure domain" });
+    validateV9DependencyRole(edge, ctx);
+    if (edge.economicRole === "serial-claim" && edge.weight !== 1) {
+      ctx.addIssue({ code: "custom", path: ["weight"], message: "Serial dependencies must have weight 1" });
     }
     if (
       edge.economicRole !== "serial-claim" &&
@@ -434,18 +429,10 @@ const V9ReserveExposureFactV2Schema = z
   .strict()
   .superRefine((exposure, ctx) => {
     if (exposure.provenance === "live" && exposure.evidenceClass !== undefined) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["evidenceClass"],
-        message: "Live reserve exposure must not carry a static evidence class",
-      });
+      issue(ctx, ["evidenceClass"], "Live reserve exposure must not carry a static evidence class");
     }
     if (exposure.provenance !== "live" && exposure.evidenceClass === undefined) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["evidenceClass"],
-        message: "Curated reserve exposure requires an evidence class",
-      });
+      issue(ctx, ["evidenceClass"], "Curated reserve exposure requires an evidence class");
     }
     if (exposure.status.observationState === "known" && exposure.status.applicability.state === "required") {
       if (exposure.assetClass === null && exposure.factorStatuses?.assetClass?.observationState === "known") {
@@ -458,11 +445,7 @@ const V9ReserveExposureFactV2Schema = z
         obligorStatus.applicability.state === "required" &&
         obligorStatus.observationState !== "known" && obligorStatus.gapIds.length > 0;
       if (exposure.failureDomains.length === 0 && !scopedUnknownObligor) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["failureDomains"],
-          message: "Known reserve exposure requires failure domains",
-        });
+        issue(ctx, ["failureDomains"], "Known reserve exposure requires failure domains");
       }
     }
   });
@@ -555,10 +538,7 @@ const V9RouteOutputV2Schema = z
     }
     if (output.status.observationState === "known" || output.status.observationState === "stale") {
       if (output.kind === "unknown" || output.assetKeys.length === 0 || output.valuation === null) {
-        ctx.addIssue({
-          code: "custom",
-          message: "Known or stale route output requires last-known identity and valuation",
-        });
+        issue(ctx, undefined, "Known or stale route output requires last-known identity and valuation");
       }
     }
     if (
@@ -566,11 +546,7 @@ const V9RouteOutputV2Schema = z
       output.status.observationState !== "stale" &&
       output.valuation !== null
     ) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["valuation"],
-        message: "Unavailable output cannot carry active valuation",
-      });
+      issue(ctx, ["valuation"], "Unavailable output cannot carry active valuation");
     }
   });
 
@@ -693,11 +669,7 @@ const V9ExitRouteFactV2Schema = V9ExitRouteFactBaseSchema
       ctx.addIssue({ code: "custom", path: ["evidenceKind"], message: "Evidence kind does not match its lane" });
     }
     if (route.coverageClass === "diagnostic" && route.scoreEligible) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["scoreEligible"],
-        message: "Diagnostic coverage cannot be score eligible",
-      });
+      issue(ctx, ["scoreEligible"], "Diagnostic coverage cannot be score eligible");
     }
     if (route.status.observationState === "known" || route.status.observationState === "stale") {
       if (route.request === null || route.capacityCurve.length === 0) {
@@ -713,10 +685,7 @@ const V9ExitRouteFactV2Schema = V9ExitRouteFactBaseSchema
         route.settlementEvidenceRefIds.length === 0 ||
         (route.settlementModel !== "atomic" && route.settlementSlaSec === null)
       ) {
-        ctx.addIssue({
-          code: "custom",
-          message: "Score-eligible route lacks resource identity or settlement evidence",
-        });
+        issue(ctx, undefined, "Score-eligible route lacks resource identity or settlement evidence");
       }
     }
   });
@@ -923,19 +892,11 @@ export const V9IssuanceGovernanceObjectSchema = z
 const V9IssuanceGovernanceSchema = V9IssuanceGovernanceObjectSchema.superRefine((governance, ctx) => {
     for (const field of ["vetoQuorumBps", "vetoOverride"] as const) {
       if ((governance.decisionRule === "affirmative-vote") !== (governance[field] === null)) {
-        ctx.addIssue({
-          code: "custom",
-          message: `${field} must be null if and only if decisionRule is affirmative-vote`,
-          path: [field],
-        });
+        issue(ctx, [field], `${field} must be null if and only if decisionRule is affirmative-vote`);
       }
     }
     if ((governance.coverage === "complete") !== (governance.incompleteReasons.length === 0)) {
-      ctx.addIssue({
-        code: "custom",
-        message: "Issuance governance incompleteReasons must be empty if and only if coverage is complete",
-        path: ["incompleteReasons"],
-      });
+      issue(ctx, ["incompleteReasons"], "Issuance governance incompleteReasons must be empty if and only if coverage is complete");
     }
   });
 
@@ -1037,11 +998,7 @@ const V9DeploymentControlFactV2Schema = V9DeploymentControlFactBaseSchema
         ctx.addIssue({ code: "custom", path: ["authority", "threshold"], message: "Multisig threshold is invalid" });
       }
     } else if (control.authority?.threshold !== null && control.authority !== null) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["authority", "threshold"],
-        message: "Only multisig controls use thresholds",
-      });
+      issue(ctx, ["authority", "threshold"], "Only multisig controls use thresholds");
     }
     if (control.status.observationState === "known" && control.status.applicability.state === "required") {
       if (control.authority === null || control.failureDomains.length === 0) {
@@ -1052,35 +1009,20 @@ const V9DeploymentControlFactV2Schema = V9DeploymentControlFactBaseSchema
         (control.claimImpairment === "unknown" && (control.factorStatuses?.claimImpairment?.observationState ?? "known") === "known") ||
         (control.economicLossScope === "unknown" && (control.factorStatuses?.economicLossScope?.observationState ?? "known") === "known")
       ) {
-        ctx.addIssue({
-          code: "custom",
-          message: "Known required controls need reviewed cap and economic-loss semantics",
-        });
+        issue(ctx, undefined, "Known required controls need reviewed cap and economic-loss semantics");
       }
     }
     if (control.capSemantics.kind === "bounded" && control.capSemantics.bound === null) {
       ctx.addIssue({ code: "custom", path: ["capSemantics", "bound"], message: "Bounded control requires a bound" });
     }
     if (control.capSemantics.kind === "not-applicable" && control.capSemantics.bound !== null) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["capSemantics", "bound"],
-        message: "Not-applicable cap cannot carry a bound",
-      });
+      issue(ctx, ["capSemantics", "bound"], "Not-applicable cap cannot carry a bound");
     }
     if (control.capSemantics.bound?.unit === "supply-fraction" && control.capSemantics.bound.amount > 1) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["capSemantics", "bound", "amount"],
-        message: "Supply-fraction bound cannot exceed 1",
-      });
+      issue(ctx, ["capSemantics", "bound", "amount"], "Supply-fraction bound cannot exceed 1");
     }
     if ((control.claimImpairment === "none") !== (control.economicLossScope === "access-only")) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["economicLossScope"],
-        message: "Access-only scope must be explicitly non-claim-impairing",
-      });
+      issue(ctx, ["economicLossScope"], "Access-only scope must be explicitly non-claim-impairing");
     }
     if (
       control.capabilities.length === 1 &&
@@ -1308,11 +1250,7 @@ const V9TransferAccessReviewV2Schema = z
       ctx.addIssue({ code: "custom", path: ["posture"], message: "Not-applicable transfer review has no posture" });
     }
     if (review.structuralDisposition !== undefined && review.status.observationState !== "known") {
-      ctx.addIssue({
-        code: "custom",
-        path: ["structuralDisposition"],
-        message: "Structural transfer disposition requires a known reviewed fact",
-      });
+      issue(ctx, ["structuralDisposition"], "Structural transfer disposition requires a known reviewed fact");
     }
     if (review.scopeBasis === "attributed" && review.status.observationState !== "known") {
       ctx.addIssue({ code: "custom", path: ["scopeBasis"], message: "Attributed transfer scope requires a known fact" });
@@ -1332,11 +1270,7 @@ const V9FreezeAccessReviewV2Schema = z
   .strict()
   .superRefine((review, ctx) => {
     if ((review.source === "upstream") !== (review.upstreamAssetId !== null)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["upstreamAssetId"],
-        message: "Only upstream freeze reviews identify an upstream asset",
-      });
+      issue(ctx, ["upstreamAssetId"], "Only upstream freeze reviews identify an upstream asset");
     }
     if (
       review.status.observationState === "known" &&
@@ -1402,7 +1336,7 @@ const V9PegFactV2Schema = z
     status: V9FactStatusV2Schema,
     pegKey: CanonicalTextSchema,
     sourceGenerationId: CanonicalTextSchema,
-    referenceKind: z.enum(["fiat", "asset", "index", "nav", "other"]),
+    referenceKind: V9PegReferenceKindSchema,
     referenceKey: CanonicalTextSchema,
     methodologyVersion: CanonicalTextSchema,
     pegScore: z.number().finite().min(0).max(100).nullable(),
@@ -1421,27 +1355,6 @@ const V9PegFactV2Schema = z
     }
     if (peg.activeDepeg === true && peg.activeDepegBps === null) {
       ctx.addIssue({ code: "custom", path: ["activeDepegBps"], message: "Active depeg requires peak basis points" });
-    }
-  });
-
-const V9BridgeSupplyRouteV2Schema = z
-  .object({
-    deploymentRouteKey: CanonicalTextSchema,
-    supplyUsd: NonNegativeUsdSchema,
-    supplyShare: FractionSchema,
-    reviewState: z.enum(["selected-reviewed", "selected-unresolved", "unmatched"]),
-    // Retained V2 facts predate this discriminator. Missing remains parseable
-    // but cannot prove a reviewed route native during evaluation.
-    reviewedRouteKind: z.enum(["native", "controlled"]).optional(),
-  })
-  .strict()
-  .superRefine((route, ctx) => {
-    if (route.reviewState !== "selected-reviewed" && route.reviewedRouteKind !== undefined) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["reviewedRouteKind"],
-        message: "Only selected-reviewed supply rows carry a reviewed route kind",
-      });
     }
   });
 
@@ -1522,26 +1435,14 @@ const V9SupplyFactV2Schema = z
       }
     }
     if (isUsdDenominatedSupplyKind(supply.sourceKind) && supply.referencePriceUsd !== null) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["referencePriceUsd"],
-        message: "USD-denominated circulating supply must not be multiplied by price",
-      });
+      issue(ctx, ["referencePriceUsd"], "USD-denominated circulating supply must not be multiplied by price");
     }
     if (supply.sourceKind === "aggregate-circulating" && supply.chainDistribution) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["chainDistribution"],
-        message: "Aggregate-only circulating supply must not carry a chain distribution",
-      });
+      issue(ctx, ["chainDistribution"], "Aggregate-only circulating supply must not carry a chain distribution");
     }
     if (supply.chainDistribution !== null && supply.chainDistribution !== undefined) {
       if (supply.circulatingUsd === null) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["chainDistribution"],
-          message: "Chain supply distribution requires circulating USD",
-        });
+        issue(ctx, ["chainDistribution"], "Chain supply distribution requires circulating USD");
       } else {
         const distributedUsd =
           supply.chainDistribution.chains.reduce((sum, row) => sum + row.supplyUsd, 0) +
@@ -1550,38 +1451,22 @@ const V9SupplyFactV2Schema = z
           supply.chainDistribution.chains.reduce((sum, row) => sum + row.supplyShare, 0) +
           supply.chainDistribution.unattributedSupplyShare;
         if (!supplyUsdValuesReconcile(distributedUsd, supply.circulatingUsd)) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["chainDistribution"],
-            message: "Chain supply USD must reconcile to circulating USD",
-          });
+          issue(ctx, ["chainDistribution"], "Chain supply USD must reconcile to circulating USD");
         }
         const expectedShareTotal = supply.circulatingUsd > 0 ? 1 : 0;
         if (!supplyShareValuesReconcile(distributedShare, expectedShareTotal)) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["chainDistribution"],
-            message: "Chain supply shares must reconcile to the circulating base",
-          });
+          issue(ctx, ["chainDistribution"], "Chain supply shares must reconcile to the circulating base");
         }
         for (const [index, row] of supply.chainDistribution.chains.entries()) {
           const expectedShare = supply.circulatingUsd > 0 ? row.supplyUsd / supply.circulatingUsd : 0;
           if (!supplyShareValuesReconcile(row.supplyShare, expectedShare)) {
-            ctx.addIssue({
-              code: "custom",
-              path: ["chainDistribution", index, "supplyShare"],
-              message: "Chain supply share must match its USD share of circulating supply",
-            });
+            issue(ctx, ["chainDistribution", index, "supplyShare"], "Chain supply share must match its USD share of circulating supply");
           }
         }
         const expectedUnattributedShare =
           supply.circulatingUsd > 0 ? supply.chainDistribution.unattributedSupplyUsd / supply.circulatingUsd : 0;
         if (!supplyShareValuesReconcile(supply.chainDistribution.unattributedSupplyShare, expectedUnattributedShare)) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["chainDistribution", "unattributedSupplyShare"],
-            message: "Unattributed chain supply share must match its USD share of circulating supply",
-          });
+          issue(ctx, ["chainDistribution", "unattributedSupplyShare"], "Unattributed chain supply share must match its USD share of circulating supply");
         }
       }
     }
@@ -1636,18 +1521,10 @@ const V9MechanismExitFactV1Schema = z
   .strict()
   .superRefine((fact, ctx) => {
     if ((fact.disposition === "supported") !== (fact.quality !== null)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["quality"],
-        message: "Supported mechanism exit facts require quality; unavailable facts cannot claim quality",
-      });
+      issue(ctx, ["quality"], "Supported mechanism exit facts require quality; unavailable facts cannot claim quality");
     }
     if (fact.disposition === "supported" && fact.evidenceRefIds.length === 0) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["evidenceRefIds"],
-        message: "Supported mechanism exit facts require evidence",
-      });
+      issue(ctx, ["evidenceRefIds"], "Supported mechanism exit facts require evidence");
     }
   });
 export type V9MechanismExitFactV1 = z.infer<typeof V9MechanismExitFactV1Schema>;
@@ -1662,22 +1539,22 @@ export const V1019LenderBookFactSchema = z.strictObject({
 }).superRefine((fact, ctx) => {
   const keys = fact.collaterals.map((collateral) => collateral.marketKey);
   if (keys.some((key, index) => index > 0 && keys[index - 1]! >= key)) {
-    addIssue(ctx, ["collaterals"], "Collateral resolutions must have unique sorted market/account keys");
+    issue(ctx, ["collaterals"], "Collateral resolutions must have unique sorted market/account keys");
   }
   const admitted = fact.status.observationState === "known" || fact.status.observationState === "bounded-unknown";
   if (admitted) {
     if (fact.observation?.status !== "ok") {
-      addIssue(ctx, ["observation"], "Admitted lender quality requires a complete successful observation");
+      issue(ctx, ["observation"], "Admitted lender quality requires a complete successful observation");
       return;
     }
     const marketKeys = fact.observation.deployments.flatMap((deployment) => deployment.markets.map(
       (market) => `${deployment.chain}:${market.morpho}:${market.marketId}:${market.account}`,
     )).sort();
     if (marketKeys.length !== keys.length || keys.some((key, index) => key !== marketKeys[index])) {
-      addIssue(ctx, ["collaterals"], "Every included lender claim must have exactly one collateral resolution");
+      issue(ctx, ["collaterals"], "Every included lender claim must have exactly one collateral resolution");
     }
   } else if (fact.collaterals.length !== 0) {
-    addIssue(ctx, ["collaterals"], "Unavailable lender facts cannot carry partial scoring resolutions");
+    issue(ctx, ["collaterals"], "Unavailable lender facts cannot carry partial scoring resolutions");
   }
 });
 export type V1019LenderBookFact = z.output<typeof V1019LenderBookFactSchema>;
@@ -1764,18 +1641,10 @@ function validateAssetFacts(asset: V9AssetFactsValidationInput, ctx: z.Refinemen
     }
   }
   if (asset.mechanismRiskReview.review && asset.mechanismRiskReview.review.archetype !== asset.archetype) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["mechanismRiskReview", "review", "archetype"],
-      message: "Mechanism review archetype does not match the asset archetype",
-    });
+    issue(ctx, ["mechanismRiskReview", "review", "archetype"], "Mechanism review archetype does not match the asset archetype");
   }
   if (asset.cdpStressCoverage !== undefined && asset.archetype !== "cdp") {
-    ctx.addIssue({
-      code: "custom",
-      path: ["cdpStressCoverage"],
-      message: "Only CDP assets may carry stress-coverage facts",
-    });
+    issue(ctx, ["cdpStressCoverage"], "Only CDP assets may carry stress-coverage facts");
   }
   const controlKeys = new Set(asset.controls.map((control) => control.controlKey));
   for (const [label, controlKey] of [
@@ -1786,11 +1655,7 @@ function validateAssetFacts(asset: V9AssetFactsValidationInput, ctx: z.Refinemen
     ...asset.accessReview.freeze.reviews.map((review) => [`access:${review.reviewKey}`, review.controlKey]),
   ] as Array<[string, string | null]>) {
     if (controlKey !== null && !controlKeys.has(controlKey)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["economicControlReview"],
-        message: `${label} review references unknown control ${controlKey}`,
-      });
+      issue(ctx, ["economicControlReview"], `${label} review references unknown control ${controlKey}`);
     }
   }
   for (const [index, fact] of (asset.allocationScopeFacts ?? []).entries()) {
@@ -1821,18 +1686,10 @@ function validateAssetFacts(asset: V9AssetFactsValidationInput, ctx: z.Refinemen
     asset.variantKind === "risk-absorption";
   const wrapperApplicable = explicitWrapperVariant || hasWrapperEdge;
   if (asset.wrapperLocalFacts?.applicability === "wrapper" && !wrapperApplicable) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["wrapperLocalFacts", "applicability"],
-      message: "Wrapper-local facts require an explicit wrapper variant or serial wrapper dependency",
-    });
+    issue(ctx, ["wrapperLocalFacts", "applicability"], "Wrapper-local facts require an explicit wrapper variant or serial wrapper dependency");
   }
   if (asset.wrapperLocalFacts?.applicability === "not-wrapper" && wrapperApplicable) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["wrapperLocalFacts", "applicability"],
-      message: "Wrapper assets cannot declare wrapper-local facts not applicable",
-    });
+    issue(ctx, ["wrapperLocalFacts", "applicability"], "Wrapper assets cannot declare wrapper-local facts not applicable");
   }
   if (asset.wrapperLocalFacts?.applicability === "wrapper") {
     const allowedForms =
@@ -1844,11 +1701,7 @@ function validateAssetFacts(asset: V9AssetFactsValidationInput, ctx: z.Refinemen
             ? ["native-staked", "strategy-vault"]
             : ["strategy-vault"];
     if (!allowedForms.includes(asset.wrapperLocalFacts.form)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["wrapperLocalFacts", "form"],
-        message: `Wrapper form must be one of ${allowedForms.join(", ")} for the compiled variant/dependency facts`,
-      });
+      issue(ctx, ["wrapperLocalFacts", "form"], `Wrapper form must be one of ${allowedForms.join(", ")} for the compiled variant/dependency facts`);
     }
   }
 }
@@ -1890,7 +1743,7 @@ function validateReserveFactorStatuses(
           row.fact.scope.kind !== "reserve-envelope" && row.fact.scope.exposureKey === exposure.exposureKey &&
           row.status.evidenceRefIds.some(id => status?.evidenceRefIds.includes(id)));
       if (missing && !carriesBoundEvidence && (!status || (status.observationState === "known" && status.applicability.state !== "not-applicable"))) {
-        addIssue(ctx, [...path, "reserveExposures", index, "factorStatuses", key], "Unknown reserve subfield requires its own cause-bearing status");
+        issue(ctx, [...path, "reserveExposures", index, "factorStatuses", key], "Unknown reserve subfield requires its own cause-bearing status");
       }
     }
   }
@@ -1902,16 +1755,16 @@ export const V9AssetFactsV3Schema = V9AssetFactsV3ObjectSchema.superRefine((asse
   // and serialized readers enforce the selected bound at the fact-set clock.
   validateReserveFactorStatuses(asset, ctx, []);
   if (asset.lenderBook?.observation && asset.lenderBook.observation.assetId !== asset.assetId) {
-    addIssue(ctx, ["lenderBook", "observation", "assetId"], "Lender observation must name its receiving asset");
+    issue(ctx, ["lenderBook", "observation", "assetId"], "Lender observation must name its receiving asset");
   }
   for (const [index, collateral] of (asset.lenderBook?.collaterals ?? []).entries()) {
     if (collateral.trackedAssetId === asset.assetId) {
-      addIssue(ctx, ["lenderBook", "collaterals", index, "trackedAssetId"], "Self-collateral must use class fallback without a tracked ID");
+      issue(ctx, ["lenderBook", "collaterals", index, "trackedAssetId"], "Self-collateral must use class fallback without a tracked ID");
     }
     if (collateral.qualitySource !== "previous-accepted-backing") {
       for (const id of collateral.sourceGapIds) {
         if (!asset.gaps.some((gap) => gap.gapId === id) || !asset.lenderBook!.status.gapIds.includes(id)) {
-          addIssue(ctx, ["lenderBook", "collaterals", index, "sourceGapIds"], "Class-fallback source gaps must resolve locally through lender status");
+          issue(ctx, ["lenderBook", "collaterals", index, "sourceGapIds"], "Class-fallback source gaps must resolve locally through lender status");
         }
       }
     }
@@ -2086,11 +1939,9 @@ const V9FactSetCoreV3Fields = {
 const V9FactSetCoreV3ObjectSchema = z.object(V9FactSetCoreV3Fields).strict();
 export type V9FactSetCoreV3 = z.infer<typeof V9FactSetCoreV3ObjectSchema>;
 
-function addIssue(ctx: z.RefinementCtx, path: PropertyKey[], message: string): void {
-  ctx.addIssue({ code: "custom", path, message });
-}
 
-function factStatuses(asset: V9AssetFactsBase): Array<{ label: string; status: V9FactStatusV2 }> {
+
+export function factStatuses(asset: V9AssetFactsBase): Array<{ label: string; status: V9FactStatusV2 }> {
   const mechanismStatuses = asset.mechanismRiskReview.review
     ? Object.entries(asset.mechanismRiskReview.review).flatMap(([key, value]) =>
         value !== null && typeof value === "object" && "status" in value
@@ -2171,28 +2022,28 @@ function validateAssetReferences(
   const referencedEvidenceIds = new Set<string>();
   const referencedGapIds = new Set<string>();
   for (const scope of asset.reserveScopeAdmissions ?? []) {
-    if (scope.admitted && scope.evidenceRefIds.length === 0) addIssue(ctx, ["assets", assetIndex, "reserveScopeAdmissions"], "Admitted reserve scopes require evidence");
+    if (scope.admitted && scope.evidenceRefIds.length === 0) issue(ctx, ["assets", assetIndex, "reserveScopeAdmissions"], "Admitted reserve scopes require evidence");
     for (const id of scope.evidenceRefIds) {
-      if (!evidenceIds.has(id)) addIssue(ctx, ["assets", assetIndex, "reserveScopeAdmissions"], "Reserve scope references missing evidence");
+      if (!evidenceIds.has(id)) issue(ctx, ["assets", assetIndex, "reserveScopeAdmissions"], "Reserve scope references missing evidence");
       referencedEvidenceIds.add(id);
     }
   }
   const claimGraph = asset.accessReview.freeze.claimGraph;
   if (claimGraph) {
     if (claimGraph.assetId !== asset.assetId || claimGraph.nodes.find((node) => node.nodeKey === claimGraph.rootNodeKey)?.assetId !== asset.assetId) {
-      addIssue(ctx, ["assets", assetIndex, "accessReview", "freeze", "claimGraph"], "Access graph receiving identity mismatch");
+      issue(ctx, ["assets", assetIndex, "accessReview", "freeze", "claimGraph"], "Access graph receiving identity mismatch");
     }
     for (const edge of claimGraph.edges) {
       if (edge.basis.kind === "reserve-position" && edge.weight !== null) {
         const exposureKey = edge.basis.exposureKey;
         if (!asset.reserveExposures.some((row) => row.exposureKey === exposureKey && row.status.observationState === "known")) {
-          addIssue(ctx, ["assets", assetIndex, "accessReview", "freeze", "claimGraph", "edges"], "Quantified graph edge requires an admitted reserve exposure");
+          issue(ctx, ["assets", assetIndex, "accessReview", "freeze", "claimGraph", "edges"], "Quantified graph edge requires an admitted reserve exposure");
         }
       }
       if (edge.basis.kind === "serial-claim" && edge.basis.dependencyEdgeKey !== null && edge.weight !== null) {
         const dependencyKey = edge.basis.dependencyEdgeKey;
         if (!asset.dependencies.edges.some((row) => row.edgeKey === dependencyKey && row.economicRole === "serial-claim")) {
-          addIssue(ctx, ["assets", assetIndex, "accessReview", "freeze", "claimGraph", "edges"], "Serial graph edge requires an admitted dependency");
+          issue(ctx, ["assets", assetIndex, "accessReview", "freeze", "claimGraph", "edges"], "Serial graph edge requires an admitted dependency");
         }
       }
     }
@@ -2202,12 +2053,12 @@ function validateAssetReferences(
     for (const evidenceId of evidenceRefIds) {
       referencedEvidenceIds.add(evidenceId);
       if (!evidenceIds.has(evidenceId)) {
-        addIssue(ctx, ["assets", assetIndex, label, "evidenceRefIds"], `Unknown evidence reference ${evidenceId}`);
+        issue(ctx, ["assets", assetIndex, label, "evidenceRefIds"], `Unknown evidence reference ${evidenceId}`);
       }
     }
     for (const gapId of statusGapIds) {
       referencedGapIds.add(gapId);
-      if (!gapIds.has(gapId)) addIssue(ctx, ["assets", assetIndex, label, "gapIds"], `Unknown gap reference ${gapId}`);
+      if (!gapIds.has(gapId)) issue(ctx, ["assets", assetIndex, label, "gapIds"], `Unknown gap reference ${gapId}`);
     }
   };
 
@@ -2218,21 +2069,21 @@ function validateAssetReferences(
       return reference ? [reference] : [];
     });
     if (status.observationState === "known" && references.some((reference) => reference.disposition === "rejected")) {
-      addIssue(ctx, ["assets", assetIndex, label, "evidenceRefIds"], "Known facts cannot rely on rejected evidence");
+      issue(ctx, ["assets", assetIndex, label, "evidenceRefIds"], "Known facts cannot rely on rejected evidence");
     }
     if (status.observationState === "stale" && !references.some((reference) => reference.freshness.state === "stale")) {
-      addIssue(ctx, ["assets", assetIndex, label, "evidenceRefIds"], "Stale facts require stale last-known evidence");
+      issue(ctx, ["assets", assetIndex, label, "evidenceRefIds"], "Stale facts require stale last-known evidence");
     }
     if (
       status.observationState === "unsupported" &&
       references.length > 0 &&
       !references.some((reference) => reference.disposition === "rejected")
     ) {
-      addIssue(
-        ctx,
-        ["assets", assetIndex, label, "evidenceRefIds"],
-        "Unsupported facts require rejected evidence when evidence is retained",
-      );
+      issue(
+              ctx,
+              ["assets", assetIndex, label, "evidenceRefIds"],
+              "Unsupported facts require rejected evidence when evidence is retained",
+            );
     }
   }
   const mechanismReview = asset.mechanismRiskReview.review;
@@ -2254,11 +2105,11 @@ function validateAssetReferences(
   if (asset.cdpStressCoverage !== undefined) {
     captureRefs("cdp-stress-coverage", asset.cdpStressCoverage.evidenceRefIds, []);
     if (asset.cdpStressCoverage.complete && asset.cdpStressCoverage.evidenceRefIds.length === 0) {
-      addIssue(
-        ctx,
-        ["assets", assetIndex, "cdpStressCoverage", "evidenceRefIds"],
-        "Complete stress coverage requires compiled journal evidence",
-      );
+      issue(
+              ctx,
+              ["assets", assetIndex, "cdpStressCoverage", "evidenceRefIds"],
+              "Complete stress coverage requires compiled journal evidence",
+            );
     }
     const source = asset.cdpStressCoverage.source;
     if (source !== null) {
@@ -2271,11 +2122,11 @@ function validateAssetReferences(
             reference.contentSha256 !== source.journalSha256 ||
             reference.observedAtSec !== source.block.timestampUnix)
         ) {
-          addIssue(
-            ctx,
-            ["assets", assetIndex, "cdpStressCoverage", "evidenceRefIds"],
-            `Stress evidence ${evidenceId} does not match its journal provenance`,
-          );
+          issue(
+                      ctx,
+                      ["assets", assetIndex, "cdpStressCoverage", "evidenceRefIds"],
+                      `Stress evidence ${evidenceId} does not match its journal provenance`,
+                    );
         }
       }
     }
@@ -2291,8 +2142,8 @@ function validateAssetReferences(
       if (reference && (reference.sourceId !== "safety-score-v9.scoped-allocation-review" ||
         reference.sourceGenerationId !== fact.sourceGenerationId || reference.observedAtSec !== fact.observedAtSec ||
         !fact.sources.some((source) => source.url === reference.url))) {
-        addIssue(ctx, ["assets", assetIndex, "allocationScopeFacts", fact.claimKey, "evidenceRefIds"],
-          `Allocation scope evidence ${evidenceId} does not match its source/clock/generation`);
+        issue(ctx, ["assets", assetIndex, "allocationScopeFacts", fact.claimKey, "evidenceRefIds"],
+                  `Allocation scope evidence ${evidenceId} does not match its source/clock/generation`);
       }
     }
   }
@@ -2374,11 +2225,11 @@ function validateAssetReferences(
 
   for (const evidenceId of evidenceIds) {
     if (!referencedEvidenceIds.has(evidenceId)) {
-      addIssue(ctx, ["assets", assetIndex, "evidence"], `Unreferenced evidence ${evidenceId}`);
+      issue(ctx, ["assets", assetIndex, "evidence"], `Unreferenced evidence ${evidenceId}`);
     }
   }
   for (const gapId of gapIds) {
-    if (!referencedGapIds.has(gapId)) addIssue(ctx, ["assets", assetIndex, "gaps"], `Unreferenced gap ${gapId}`);
+    if (!referencedGapIds.has(gapId)) issue(ctx, ["assets", assetIndex, "gaps"], `Unreferenced gap ${gapId}`);
   }
 
   const edgeKeys = new Set<string>();
@@ -2388,21 +2239,21 @@ function validateAssetReferences(
         ? `${edge.dependencyType}:${edge.upstreamAssetId}`
         : `${edge.economicRole}:${edge.dependencyType}:${edge.upstreamAssetId}`;
     if (edge.edgeKey !== expectedKey) {
-      addIssue(ctx, ["assets", assetIndex, "dependencies", "edges", edgeIndex, "edgeKey"], `Expected ${expectedKey}`);
+      issue(ctx, ["assets", assetIndex, "dependencies", "edges", edgeIndex, "edgeKey"], `Expected ${expectedKey}`);
     }
     const relationKey =
       schemaVersion === 2
         ? `${edge.upstreamAssetId}:${edge.dependencyType}`
         : `${edge.upstreamAssetId}:${edge.dependencyType}:${edge.economicRole}`;
     if (edgeKeys.has(relationKey)) {
-      addIssue(ctx, ["assets", assetIndex, "dependencies", "edges", edgeIndex], `Duplicate dependency ${relationKey}`);
+      issue(ctx, ["assets", assetIndex, "dependencies", "edges", edgeIndex], `Duplicate dependency ${relationKey}`);
     }
     edgeKeys.add(relationKey);
     if (edge.upstreamAssetId === asset.assetId) {
-      addIssue(ctx, ["assets", assetIndex, "dependencies", "edges", edgeIndex], "Self dependency is invalid");
+      issue(ctx, ["assets", assetIndex, "dependencies", "edges", edgeIndex], "Self dependency is invalid");
     }
     if (!activeAssetIds.has(edge.upstreamAssetId)) {
-      addIssue(ctx, ["assets", assetIndex, "dependencies", "edges", edgeIndex], "Dependency is outside active set");
+      issue(ctx, ["assets", assetIndex, "dependencies", "edges", edgeIndex], "Dependency is outside active set");
     }
   }
 
@@ -2420,16 +2271,16 @@ function validateAssetReferences(
            route.executionCertainty === "unknown" || route.observationConfidence === "unknown" ||
            route.modelConfidence === "unknown" || route.settlementModel === "unknown" ||
            route.capacityCurve.some((point) => point.executionCostBps === null))) {
-        addIssue(ctx, ["assets", assetIndex, "exitRoutes"], "Historic score-eligible routes require explicit access, execution, observation, settlement and cost facts");
+        issue(ctx, ["assets", assetIndex, "exitRoutes"], "Historic score-eligible routes require explicit access, execution, observation, settlement and cost facts");
       }
       for (const resourceKey of route.physicalResourceKeys) {
         const existingRoute = resourceOwners.get(resourceKey);
         if (existingRoute && existingRoute !== route.routeKey) {
-          addIssue(
-            ctx,
-            ["assets", assetIndex, "exitRoutes"],
-            `Physical resource ${resourceKey} is reused by score-bearing routes`,
-          );
+          issue(
+                      ctx,
+                      ["assets", assetIndex, "exitRoutes"],
+                      `Physical resource ${resourceKey} is reused by score-bearing routes`,
+                    );
         }
         resourceOwners.set(resourceKey, route.routeKey);
       }
@@ -2446,20 +2297,20 @@ function validateAssetReferences(
             edge.economicRole === "serial-claim",
         )
       ) {
-        addIssue(ctx, ["assets", assetIndex, "gaps", gapIndex, "path"], "Serial path does not reference a dependency");
+        issue(ctx, ["assets", assetIndex, "gaps", gapIndex, "path"], "Serial path does not reference a dependency");
       }
     } else if (path.kind === "collateral-exposure" && !exposures.has(path.exposureKey)) {
-      addIssue(ctx, ["assets", assetIndex, "gaps", gapIndex, "path"], "Collateral path does not reference an exposure");
+      issue(ctx, ["assets", assetIndex, "gaps", gapIndex, "path"], "Collateral path does not reference an exposure");
     } else if (path.kind === "optional-exit" && !routes.has(path.routeKey)) {
-      addIssue(ctx, ["assets", assetIndex, "gaps", gapIndex, "path"], "Exit path does not reference a route");
+      issue(ctx, ["assets", assetIndex, "gaps", gapIndex, "path"], "Exit path does not reference a route");
     } else if (path.kind === "deployment-control") {
       const control = controls.get(path.controlKey);
       if (!control || control.deploymentKey !== path.deploymentKey) {
-        addIssue(
-          ctx,
-          ["assets", assetIndex, "gaps", gapIndex, "path"],
-          "Control path does not reference a deployment control",
-        );
+        issue(
+                  ctx,
+                  ["assets", assetIndex, "gaps", gapIndex, "path"],
+                  "Control path does not reference a deployment control",
+                );
       }
     }
   }
@@ -2467,22 +2318,22 @@ function validateAssetReferences(
 
 function validateFactSetCore(value: V9FactSetCoreV2 | V9FactSetCoreV3, ctx: z.RefinementCtx): void {
   if (value.compiledAtSec < value.asOfSec) {
-    addIssue(ctx, ["compiledAtSec"], "compiledAtSec cannot predate asOfSec");
+    issue(ctx, ["compiledAtSec"], "compiledAtSec cannot predate asOfSec");
   }
   for (const [source, identity] of Object.entries(value.sourceFingerprints)) {
     if (identity.observedAtSec > value.asOfSec) {
-      addIssue(ctx, ["sourceFingerprints", source, "observedAtSec"], "Source observation is later than asOfSec");
+      issue(ctx, ["sourceFingerprints", source, "observedAtSec"], "Source observation is later than asOfSec");
     }
   }
 
   const assetIds = value.assets.map((asset) => asset.assetId);
   if (JSON.stringify(assetIds) !== JSON.stringify(value.activeAssetIds)) {
-    addIssue(ctx, ["assets"], "Assets must match the exact active asset set");
+    issue(ctx, ["assets"], "Assets must match the exact active asset set");
   }
   const activeAssetIds = new Set(value.activeAssetIds);
   const hasStressCoverage = value.assets.some((asset) => asset.cdpStressCoverage !== undefined);
   if (hasStressCoverage && value.sourceFingerprints.shockCoverage === undefined) {
-    addIssue(ctx, ["sourceFingerprints", "shockCoverage"], "Stress coverage requires a source fingerprint");
+    issue(ctx, ["sourceFingerprints", "shockCoverage"], "Stress coverage requires a source fingerprint");
   }
   for (const [assetIndex, asset] of value.assets.entries()) {
     if (value.schemaVersion === 4 && "reserveResiduals" in asset) {
@@ -2490,7 +2341,7 @@ function validateFactSetCore(value: V9FactSetCoreV2 | V9FactSetCoreV3, ctx: z.Re
     }
     const claimGraph = asset.accessReview.freeze.claimGraph;
     if (claimGraph && (claimGraph.clockSec !== value.asOfSec || claimGraph.generationId !== value.baseInputGenerationId)) {
-      addIssue(ctx, ["assets", assetIndex, "accessReview", "freeze", "claimGraph"], "Access graph must match the admitted clock and input generation");
+      issue(ctx, ["assets", assetIndex, "accessReview", "freeze", "claimGraph"], "Access graph must match the admitted clock and input generation");
     }
     if (value.schemaVersion === 4 && "reserveResiduals" in asset) {
       const evidenceById = new Map<string, V9EvidenceReferenceV2>();
@@ -2503,46 +2354,46 @@ function validateFactSetCore(value: V9FactSetCoreV2 | V9FactSetCoreV3, ctx: z.Re
           researchMaxAgeSec: methodologyPolicy.semantic.evidence.evidenceExpiry.reviewedResearchMaxAgeSec,
           evidenceById,
         })) {
-          addIssue(ctx, ["assets", assetIndex, "gaps", gapIndex, "causeProof"], message);
+          issue(ctx, ["assets", assetIndex, "gaps", gapIndex, "causeProof"], message);
         }
       }
     }
     for (const [evidenceIndex, evidence] of asset.evidence.entries()) {
       if (evidence.observedAtSec > value.asOfSec) {
-        addIssue(
-          ctx,
-          ["assets", assetIndex, "evidence", evidenceIndex, "observedAtSec"],
-          "Evidence is later than asOfSec",
-        );
+        issue(
+                  ctx,
+                  ["assets", assetIndex, "evidence", evidenceIndex, "observedAtSec"],
+                  "Evidence is later than asOfSec",
+                );
       }
       if (evidence.publishedAtSec !== null && evidence.publishedAtSec > value.asOfSec) {
-        addIssue(
-          ctx,
-          ["assets", assetIndex, "evidence", evidenceIndex, "publishedAtSec"],
-          "Publication is later than asOfSec",
-        );
+        issue(
+                  ctx,
+                  ["assets", assetIndex, "evidence", evidenceIndex, "publishedAtSec"],
+                  "Publication is later than asOfSec",
+                );
       }
       if (evidence.rejection && evidence.rejection.rejectedAtSec > value.asOfSec) {
-        addIssue(
-          ctx,
-          ["assets", assetIndex, "evidence", evidenceIndex, "rejection"],
-          "Rejection is later than asOfSec",
-        );
+        issue(
+                  ctx,
+                  ["assets", assetIndex, "evidence", evidenceIndex, "rejection"],
+                  "Rejection is later than asOfSec",
+                );
       }
       if (evidence.freshness.ageSec !== value.asOfSec - evidence.observedAtSec) {
-        addIssue(
-          ctx,
-          ["assets", assetIndex, "evidence", evidenceIndex, "freshness", "ageSec"],
-          "Evidence age is not clock-derived",
-        );
+        issue(
+                  ctx,
+                  ["assets", assetIndex, "evidence", evidenceIndex, "freshness", "ageSec"],
+                  "Evidence age is not clock-derived",
+                );
       }
     }
     if (asset.implementation.launchedAtSec !== null && asset.implementation.launchedAtSec > value.asOfSec) {
-      addIssue(
-        ctx,
-        ["assets", assetIndex, "implementation", "launchedAtSec"],
-        "Implementation date is later than asOfSec",
-      );
+      issue(
+              ctx,
+              ["assets", assetIndex, "implementation", "launchedAtSec"],
+              "Implementation date is later than asOfSec",
+            );
     }
     for (const [routeIndex, route] of asset.exitRoutes.entries()) {
       const expectedGeneration =
@@ -2550,27 +2401,27 @@ function validateFactSetCore(value: V9FactSetCoreV2 | V9FactSetCoreV3, ctx: z.Re
           ? value.sourceFingerprints.dex.generationId
           : value.sourceFingerprints.redemption.generationId;
       if (route.sourceGenerationId !== expectedGeneration) {
-        addIssue(
-          ctx,
-          ["assets", assetIndex, "exitRoutes", routeIndex, "sourceGenerationId"],
-          "Route generation does not match its lane",
-        );
+        issue(
+                  ctx,
+                  ["assets", assetIndex, "exitRoutes", routeIndex, "sourceGenerationId"],
+                  "Route generation does not match its lane",
+                );
       }
       const valuation = route.output.valuation;
       if (valuation) {
         if (valuation.asOfSec !== value.asOfSec || valuation.observedAtSec > value.asOfSec) {
-          addIssue(
-            ctx,
-            ["assets", assetIndex, "exitRoutes", routeIndex, "output", "valuation"],
-            "Valuation clock does not match fact-set clock",
-          );
+          issue(
+                      ctx,
+                      ["assets", assetIndex, "exitRoutes", routeIndex, "output", "valuation"],
+                      "Valuation clock does not match fact-set clock",
+                    );
         }
         if (valuation.freshness.ageSec !== value.asOfSec - valuation.observedAtSec) {
-          addIssue(
-            ctx,
-            ["assets", assetIndex, "exitRoutes", routeIndex, "output", "valuation", "freshness"],
-            "Valuation age is not clock-derived",
-          );
+          issue(
+                      ctx,
+                      ["assets", assetIndex, "exitRoutes", routeIndex, "output", "valuation", "freshness"],
+                      "Valuation age is not clock-derived",
+                    );
         }
       }
     }
@@ -2578,11 +2429,11 @@ function validateFactSetCore(value: V9FactSetCoreV2 | V9FactSetCoreV3, ctx: z.Re
       ? value.sourceFingerprints.liveReserves.generationId
       : value.sourceFingerprints.researchOverlays.generationId;
     if (asset.dependencies.sourceGenerationId !== expectedDependencyGeneration) {
-      addIssue(
-        ctx,
-        ["assets", assetIndex, "dependencies", "sourceGenerationId"],
-        "Dependency provenance generation is inconsistent",
-      );
+      issue(
+              ctx,
+              ["assets", assetIndex, "dependencies", "sourceGenerationId"],
+              "Dependency provenance generation is inconsistent",
+            );
     }
     for (const [exposureIndex, exposure] of asset.reserveExposures.entries()) {
       const expectedGeneration =
@@ -2590,11 +2441,11 @@ function validateFactSetCore(value: V9FactSetCoreV2 | V9FactSetCoreV3, ctx: z.Re
           ? value.sourceFingerprints.liveReserves.generationId
           : value.sourceFingerprints.researchOverlays.generationId;
       if (exposure.sourceGenerationId !== expectedGeneration) {
-        addIssue(
-          ctx,
-          ["assets", assetIndex, "reserveExposures", exposureIndex, "sourceGenerationId"],
-          "Reserve provenance generation is inconsistent",
-        );
+        issue(
+                  ctx,
+                  ["assets", assetIndex, "reserveExposures", exposureIndex, "sourceGenerationId"],
+                  "Reserve provenance generation is inconsistent",
+                );
       }
     }
     for (const [boundIndex, bound] of (asset.reserveBoundFacts ?? []).entries()) {
@@ -2603,48 +2454,48 @@ function validateFactSetCore(value: V9FactSetCoreV2 | V9FactSetCoreV3, ctx: z.Re
         : value.sourceFingerprints.researchOverlays.generationId;
       const references = asset.evidence.filter((reference) => bound.status.evidenceRefIds.includes(reference.evidenceId));
       if (bound.sourceGenerationId !== generation || references.some((reference) => reference.sourceGenerationId !== generation || reference.freshness.maxAgeSec !== bound.freshnessMaxAgeSec)) {
-        addIssue(ctx, ["assets", assetIndex, "reserveBoundFacts", boundIndex], "Bounded reserve generation or freshness budget is inconsistent");
+        issue(ctx, ["assets", assetIndex, "reserveBoundFacts", boundIndex], "Bounded reserve generation or freshness budget is inconsistent");
       }
       if (bound.status.observationState === "known" && (bound.fact.asOfSec > value.asOfSec || value.asOfSec - bound.fact.asOfSec > bound.freshnessMaxAgeSec || references.some((reference) => reference.observedAtSec !== bound.fact.asOfSec || reference.freshness.state !== "current"))) {
-        addIssue(ctx, ["assets", assetIndex, "reserveBoundFacts", boundIndex], "Known bounded reserve facts require their own current snapshot");
+        issue(ctx, ["assets", assetIndex, "reserveBoundFacts", boundIndex], "Known bounded reserve facts require their own current snapshot");
       }
     }
     for (const [controlIndex, control] of asset.controls.entries()) {
       if (control.sourceGenerationId !== value.sourceFingerprints.researchOverlays.generationId) {
-        addIssue(
-          ctx,
-          ["assets", assetIndex, "controls", controlIndex, "sourceGenerationId"],
-          "Control provenance generation is inconsistent",
-        );
+        issue(
+                  ctx,
+                  ["assets", assetIndex, "controls", controlIndex, "sourceGenerationId"],
+                  "Control provenance generation is inconsistent",
+                );
       }
     }
     for (const [branchIndex, branch] of asset.economicControlReview.oracle.branches.entries()) {
       if (branch.inheritedFromAssetId !== null && !activeAssetIds.has(branch.inheritedFromAssetId)) {
-        addIssue(
-          ctx,
-          ["assets", assetIndex, "economicControlReview", "oracle", "branches", branchIndex, "inheritedFromAssetId"],
-          "Inherited oracle branch is outside the active set",
-        );
+        issue(
+                  ctx,
+                  ["assets", assetIndex, "economicControlReview", "oracle", "branches", branchIndex, "inheritedFromAssetId"],
+                  "Inherited oracle branch is outside the active set",
+                );
       }
     }
     for (const [reviewIndex, review] of asset.accessReview.freeze.reviews.entries()) {
       if (review.upstreamAssetId !== null && !activeAssetIds.has(review.upstreamAssetId)) {
-        addIssue(
-          ctx,
-          ["assets", assetIndex, "accessReview", "freeze", "reviews", reviewIndex, "upstreamAssetId"],
-          "Upstream freeze review is outside the active set",
-        );
+        issue(
+                  ctx,
+                  ["assets", assetIndex, "accessReview", "freeze", "reviews", reviewIndex, "upstreamAssetId"],
+                  "Upstream freeze review is outside the active set",
+                );
       }
     }
     if (asset.peg.sourceGenerationId !== value.sourceFingerprints.peg.generationId) {
-      addIssue(ctx, ["assets", assetIndex, "peg", "sourceGenerationId"], "Peg provenance generation is inconsistent");
+      issue(ctx, ["assets", assetIndex, "peg", "sourceGenerationId"], "Peg provenance generation is inconsistent");
     }
     if (asset.supply.sourceGenerationId !== value.sourceFingerprints.chainSupply.generationId) {
-      addIssue(
-        ctx,
-        ["assets", assetIndex, "supply", "sourceGenerationId"],
-        "Supply provenance generation is inconsistent",
-      );
+      issue(
+              ctx,
+              ["assets", assetIndex, "supply", "sourceGenerationId"],
+              "Supply provenance generation is inconsistent",
+            );
     }
     validateAssetReferences(asset, activeAssetIds, assetIndex, value.schemaVersion, ctx);
   }

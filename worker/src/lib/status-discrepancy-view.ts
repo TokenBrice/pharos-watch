@@ -3,15 +3,15 @@ import type {
   StatusDiscrepancyReason,
   StatusProbeSummary,
 } from "@shared/types/status";
+import type { StatusHealthValue } from "@shared/types/status/core";
 import {
   SEVERITY,
   STATUS_SYSTEM_FRESHNESS_SEC,
-  type StatusLevel,
 } from "./status-reliability-shared";
 import { assessFreshnessTimestamp } from "./api-freshness-age";
 
 export function hasDivergence(
-  overallStatus: StatusLevel,
+  overallStatus: StatusHealthValue,
   probe: StatusProbeSummary,
   now: number,
 ): boolean {
@@ -27,7 +27,7 @@ export function hasDivergence(
 }
 
 export function buildDiscrepancy(
-  overallStatus: StatusLevel | null,
+  overallStatus: StatusHealthValue | null,
   probe: StatusProbeSummary,
   now: number,
   consecutiveDivergent: number | null,

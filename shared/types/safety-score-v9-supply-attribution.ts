@@ -2,8 +2,9 @@ import { z } from "zod";
 import candidatePolicy from "../data/safety-score-v9/methodology-policy-candidate-v1.json";
 import { BaseInputGenerationIdSchema, CanonicalChainIdSchema, CanonicalTextSchema, NonNegativeFiniteSchema, Sha256Schema, StrictIsoDateSchema, UnixSecondsSchema, uniqueKeyedCollectionSchema } from "./safety-schema-primitives";
 import { CHAIN_META } from "./chain-identity";
-import { NativeBankDenomSchema } from "./stablecoin-meta-schemas";
+import { NativeBankDenomSchema } from "./stablecoin-meta-primitives";
 import { L2MessengerPendingReadSchema, L2MessengerPendingProofSchema } from "./safety-score-v9-l2-messenger-pending";
+import { BridgeRouteRiskTierSchema } from "./core";
 
 const vocabulary = candidatePolicy.semantic.supplyAttribution;
 function vocabularySchema(values: string[]) { return z.enum(values as [string, ...string[]]); }
@@ -568,3 +569,94 @@ export const ReviewedEconomicDeploymentPartitionSchema = z.strictObject({
 export type ReviewedEconomicDeploymentPartition = z.infer<typeof ReviewedEconomicDeploymentPartitionSchema>;
 export type EconomicSupplyObservation = z.infer<typeof EconomicSupplyObservationSchema>;
 export type EconomicSupplyReference = z.infer<typeof EconomicSupplyReferenceSchema>;
+
+export const ReviewedDeploymentSupplyObservationSchema = z.strictObject({
+  routeId: z.string().trim().min(1),
+  chainId: z.string().trim().min(1),
+  contractAddress: z.string().trim().min(1),
+  decimals: z.number().int().min(0).max(36),
+  rawSupply: z.string().regex(/^(0|[1-9][0-9]*)$/),
+  blockNumberOrSlot: z.string().regex(/^(0|[1-9][0-9]*)$/),
+  blockTimeSec: z.number().int().nonnegative(),
+  blockHash: z.string().trim().min(1),
+  runtimeCodeSha256: Sha256Schema.optional(),
+  implementationAddress: z.string().trim().min(1).optional(),
+  implementationCodeSha256: Sha256Schema.optional(),
+  underlyingTokenAddress: z.string().trim().min(1).optional(),
+  controllerAddress: z.string().trim().min(1).optional(),
+  controllerProgramOwner: z.string().trim().min(1).optional(),
+  programOwner: z.string().trim().min(1).optional(),
+  mintAuthority: z.string().trim().min(1).optional(),
+});
+export type ReviewedDeploymentSupplyObservation = z.output<typeof ReviewedDeploymentSupplyObservationSchema>;
+export const ReviewedDeploymentSupplyRowSchema = ReviewedDeploymentSupplyObservationSchema.extend({
+  currentSupplyUsd: z.number().finite().nonnegative(),
+});
+export type ReviewedDeploymentSupplyRow = z.output<typeof ReviewedDeploymentSupplyRowSchema>;
+
+export const ReviewedDeploymentUnitPartitionSchema = z.strictObject({
+  model: z.literal("reviewed-deployment-unit-partition-v1"),
+  assetId: z.string().trim().min(1),
+  observedAtSec: z.number().int().nonnegative(),
+  captureStartedAtSec: z.number().int().nonnegative(),
+  captureEndedAtSec: z.number().int().nonnegative(),
+  registryFingerprint: Sha256Schema,
+  routeInventoryDigest: Sha256Schema,
+  deployments: z.array(ReviewedDeploymentSupplyRowSchema).min(2),
+});
+export type ReviewedDeploymentUnitPartitionV1 = z.output<typeof ReviewedDeploymentUnitPartitionSchema>;
+
+export const XautLockMintObservationSchema = z.strictObject({
+  chainId: z.literal("ethereum"),
+  canonicalTokenAddress: EvmAddressSchema,
+  adapterAddress: EvmAddressSchema,
+  decimals: z.number().int().min(0).max(36),
+  canonicalTotalSupplyRaw: z.string().regex(/^(0|[1-9][0-9]*)$/),
+  treasuryAddress: EvmAddressSchema,
+  treasuryBalanceRaw: z.string().regex(/^(0|[1-9][0-9]*)$/),
+  adapterLockedSupplyRaw: z.string().regex(/^(0|[1-9][0-9]*)$/),
+  blockNumber: z.number().int().nonnegative(),
+  blockTimeSec: z.number().int().nonnegative(),
+  blockHash: EvmWordSchema,
+  canonicalRuntimeCodeSha256: Sha256Schema,
+  canonicalImplementationAddress: EvmAddressSchema,
+  canonicalImplementationCodeSha256: Sha256Schema,
+  adapterRuntimeCodeSha256: Sha256Schema,
+  adapterImplementationAddress: EvmAddressSchema,
+  adapterImplementationCodeSha256: Sha256Schema,
+  adapterTokenAddress: EvmAddressSchema,
+  adapterEndpointAddress: EvmAddressSchema,
+  disclosure: z.strictObject({
+    sourceId: z.literal("tether-transparency:xaut:ethereum"),
+    sourceConfigDigest: Sha256Schema,
+    sourceTimestampSec: z.number().int().nonnegative(),
+    responseSha256: Sha256Schema,
+    totalAuthorizedRaw: z.string().regex(/^(0|[1-9][0-9]*)$/),
+    notIssuedRaw: z.string().regex(/^(0|[1-9][0-9]*)$/),
+    quarantinedRaw: z.string().regex(/^(0|[1-9][0-9]*)$/),
+  }),
+});
+export type XautLockMintObservation = z.output<typeof XautLockMintObservationSchema>;
+
+export const XautRepresentationGroupSupplyAttributionV2Schema = z.strictObject({
+  model: z.literal("canonical-lock-mint-group-partition-v2"),
+  assetId: z.literal("xaut-tether"),
+  observedAtSec: z.number().int().nonnegative(),
+  registryFingerprint: Sha256Schema,
+  routeInventoryDigest: Sha256Schema,
+  canonical: z.strictObject({
+    routeId: z.string().min(1),
+    chainId: z.literal("ethereum"),
+    currentSupplyUsd: z.number().finite().positive(),
+  }),
+  representationGroup: z.strictObject({
+    deploymentRouteKey: z.string().min(1),
+    representationId: z.literal("xaut0-omnichain"),
+    routeIds: z.array(z.string().min(1)).min(1),
+    riskTier: BridgeRouteRiskTierSchema,
+    failureDomainKeys: z.array(z.string().min(1)).min(1),
+    currentSupplyUsd: z.number().finite().positive(),
+  }),
+  observation: XautLockMintObservationSchema,
+});
+export type XautRepresentationGroupSupplyAttributionV2 = z.output<typeof XautRepresentationGroupSupplyAttributionV2Schema>;

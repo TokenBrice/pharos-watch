@@ -216,8 +216,6 @@ export interface V9CollateralizationApplication {
 export interface V9BackingResult {
   readonly assetId: string;
   readonly archetype: string;
-  readonly policyId: string;
-  readonly policySemanticDigest: string;
   readonly rateability: "rateable" | "NR";
   readonly score: number | null;
   readonly aggregationDisposition: "included" | "excluded-a-b";
@@ -231,7 +229,6 @@ export interface V9BackingResult {
   readonly evidenceRefIds: readonly string[];
   readonly failureDomains: readonly V9FailureDomainRef[];
   readonly collateralizationApplications?: readonly V9CollateralizationApplication[];
-  readonly traceDigest: string;
 }
 
 export interface V9MechanismComponentInput {

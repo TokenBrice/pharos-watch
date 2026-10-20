@@ -1,7 +1,7 @@
 import { concat, keccak256, pad, parseAbi, parseAbiItem, toHex, type Address, type Hex } from "viem";
 import proposerCheckpoint from "../../data/failure-scenarios/cusd-timelock-proposers.json";
-import type { ScenarioCheck, ScenarioCheckContext, ScenarioCheckValue } from "./index";
-import { memoizeRead, requireScenarioChain, scenarioDocumentWatch } from "./index";
+import type { ScenarioCheck, ScenarioCheckContext, ScenarioCheckValue } from "./context";
+import { memoizeRead, requireScenarioChain, scenarioDocumentWatch } from "./context";
 
 const implementationSlot = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
 const safeGuardSlot = "0x4a204f620c8c5ccdca3fd54d003badd85ba500436a431f0cbda4f558c93c34c8";

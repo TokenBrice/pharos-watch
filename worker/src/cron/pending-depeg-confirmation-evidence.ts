@@ -17,7 +17,7 @@ import {
   classifyDirectionalSignal,
   deriveDepegSignal,
   type DepegSignal,
-} from "../lib/depeg-signals";
+} from "@shared/lib/depeg-signals";
 import type { PendingDepegState } from "../lib/depeg-pending";
 import { fetchJsonWithRetry } from "../lib/fetch-retry";
 import { logWorkerEvent } from "../lib/structured-log";
@@ -33,11 +33,11 @@ import {
   isNativeQuoteForPending,
   type CollectedConfirmationEvidence,
   type ConfirmationEvidenceInput,
+  type ConfirmationTimestampStatus,
   type PoolConfirmation,
 } from "./pending-depeg-confirmation";
 
 type DirectionalSignalStatus = ReturnType<typeof classifyDirectionalSignal>;
-type ConfirmationTimestampStatus = "fresh" | "missing" | "invalid" | "future" | "stale";
 
 type OffchainUnavailableReason =
   | "non-ok"

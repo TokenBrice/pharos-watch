@@ -16,7 +16,6 @@ import type {
 } from "@shared/types/yield";
 import {
   type PysSourceRiskPenaltyReason,
-  computePYSFromComponents,
   computePysComponents,
   derivePysSourceRiskPenalty,
   PYS_MAX_SOURCE_RISK_PENALTY,
@@ -38,7 +37,8 @@ import {
 } from "@shared/lib/yield-benchmark-freshness";
 import {
   type YieldSourceFreshness,
-  derivePysNullReasonFromComponents,
+  qualifyYieldEvidence,
+  scoreYieldPys,
   resolveEvidenceNullReason,
   classifyYieldSourceFreshness,
   getComparisonAnchorStaleThresholdMs,
@@ -49,10 +49,8 @@ import type {
 import {
   TRACKED_META_BY_ID,
 } from "@shared/lib/stablecoins/registry";
-import {
-  LENDING_PROTOCOL_LABELS,
-  EXPLICIT_YIELD_SOURCE_POOL_MAP,
-} from "../../lib/yield-config/yield-config";
+import { LENDING_PROTOCOL_LABELS } from "../../lib/yield-config/yield-config-lending-protocols";
+import { EXPLICIT_YIELD_SOURCE_POOL_MAP } from "../../lib/yield-config/yield-config-explicit-pools";
 import type {
   ResolvedYield,
   ResolvedYieldEntry,
@@ -85,9 +83,6 @@ import {
 import {
   weightedMedian,
 } from "@shared/lib/stats";
-import {
-  assessYieldEvidence,
-} from "@shared/lib/yield-evidence";
 import {
   resolveYieldRowSafety,
 } from "@shared/lib/yield-opportunity-risk";
@@ -411,23 +406,18 @@ function resolvePenaltyOrderingFields(params: PenaltyFieldsInput): PenaltyDerive
 
 /** Full score computation is reserved for the final published candidate shape. */
 export function resolvePenaltyDerivedFields(params: PenaltyFieldsInput): PenaltyDerivedFields {
-  const components = computePysComponents(params);
-  const computedPharosYieldScore = computePYSFromComponents(params.apy30d, PYS_SCALING_FACTOR, components);
-  // One ladder decides both fields: a published reason always means no score,
-  // while a legitimately rounded-zero score keeps a null reason.
-  const pysNullReason = params.safetySnapshotUnavailable
-    ? "safety-unrated"
-    : params.evidenceNullReason
-      ?? derivePysNullReasonFromComponents(params.apy30d, PYS_SCALING_FACTOR, components);
+  const { components, pharosYieldScore, pysNullReason } = scoreYieldPys({
+    ...params,
+    scalingFactor: PYS_SCALING_FACTOR,
+    nullReason: params.safetySnapshotUnavailable ? "safety-unrated" : params.evidenceNullReason,
+  });
   return {
     sourceRiskPenalty: components.sourceRiskPenalty,
     sourceRiskPenaltyReason: components.sourceRiskPenaltyReason,
     sourceRiskPenaltyProvided: components.sourceRiskPenaltyProvided,
     sourceRiskAdjustedUtility: components.rowUtility,
     hurdleRebase: components.hurdleRebase,
-    pharosYieldScore: pysNullReason == null && Number.isFinite(computedPharosYieldScore)
-      ? computedPharosYieldScore
-      : null,
+    pharosYieldScore,
     pysNullReason,
   };
 }
@@ -1082,8 +1072,6 @@ function evaluateYieldSourceGroup(
     const {
       underlyingSafetyGrade,
       usedDefaultSafety,
-      safetyEvidenceObserved,
-      opportunityEvidenceComplete,
       venueRiskWeighted: resolvedVenueRiskWeighted,
       venueRiskTier: resolvedVenueRiskTier,
     } = safetyResolution;
@@ -1154,20 +1142,18 @@ function evaluateYieldSourceGroup(
     const referenceBenchmarkDegraded = rowReferenceBenchmarkFreshness !== "healthy";
     const calculationMode = resolveCalculationMode(y);
     const evidenceClass = resolveEvidenceClass(y);
-    const evidenceAssessment = assessYieldEvidence({
+    const evidenceAssessment = qualifyYieldEvidence({
+      safety: safetyResolution,
       evidenceClass,
-      safetyObserved: safetyEvidenceObserved,
       sourceFreshness,
       benchmarkFreshness,
       referenceBenchmarkFreshness: rowReferenceBenchmarkFreshness,
-      hasSourceDepth: sourceDepthRatio != null,
-      hasVenueRisk: resolvedVenueRiskTier !== "unknown",
-      // Distinct observation days, not raw row count: the read path can only see
-      // the published `observationCount30d`, so both sides test the same fact
-      // (legacy-history rows publish null and stay unqualified).
-      hasHistory: (distinctObservationDays30d ?? 0) > 1,
-      hasYieldDecomposition: y.apyBase != null || y.apyReward != null,
-      opportunityEvidenceComplete,
+      sourceDepthRatio,
+      observationCount30d: distinctObservationDays30d,
+      apyBase: y.apyBase,
+      apyReward: y.apyReward,
+      warnings: sourceFreshness === "stale" ? ["data-stale"]
+        : sourceFreshness === "unknown" ? ["data-freshness-unknown"] : [],
     });
     const { evidenceCompleteness, scoreQualification } = evidenceAssessment;
     const effectiveScoreQualification = safetySnapshotUnavailable ? "NR" : scoreQualification;
@@ -1200,12 +1186,7 @@ function evaluateYieldSourceGroup(
         derivePysSourceRiskPenalty(derivedPenaltyInput),
       );
     }
-    const evidenceNullReason = resolveEvidenceNullReason({
-      sourceFreshness,
-      benchmarkFreshness,
-      referenceBenchmarkFreshness: rowReferenceBenchmarkFreshness,
-      opportunityEvidenceComplete,
-    });
+    const { evidenceNullReason } = evidenceAssessment;
 
     const penaltyDerivedFields = resolvePenaltyOrderingFields({
       apy30d,
@@ -1242,11 +1223,7 @@ function evaluateYieldSourceGroup(
     if (benchmarkFreshness === "degraded") anomalies.push("benchmark-degraded");
     if (benchmarkFreshness === "stale") anomalies.push("benchmark-stale");
 
-    const freshnessWarnings: string[] = [];
-    if (sourceFreshness === "stale") freshnessWarnings.push("data-stale");
-    if (sourceFreshness === "unknown") freshnessWarnings.push("data-freshness-unknown");
-    if (!safetyEvidenceObserved) freshnessWarnings.push("safety-unrated");
-    if (!opportunityEvidenceComplete) freshnessWarnings.push("opportunity-evidence-missing");
+    const freshnessWarnings = evidenceAssessment.warnings;
     if (benchmarkFreshness === "degraded") freshnessWarnings.push("benchmark-degraded");
     if (benchmarkFreshness === "stale") freshnessWarnings.push("benchmark-stale");
     // A3: the row's score is no longer re-based on the USD reference, so say so.
@@ -1372,66 +1349,45 @@ function finalizeYieldEvaluation(accumulator: YieldEvaluationAccumulator): Evalu
   };
 }
 
-export function evaluateYieldSources(input: EvaluateYieldSourcesInput): EvaluateYieldSourcesResult {
-  return evaluateYieldSourcesCooperative(input, { synchronous: true });
-}
-
-export function evaluateYieldSourcesCooperative(
+export async function evaluateYieldSourcesCooperative(
   input: EvaluateYieldSourcesInput,
-  options: EvaluateYieldSourcesCooperativeOptions & { synchronous: true },
-): EvaluateYieldSourcesResult;
-export function evaluateYieldSourcesCooperative(
-  input: EvaluateYieldSourcesInput,
-  options?: EvaluateYieldSourcesCooperativeOptions,
-): Promise<EvaluateYieldSourcesResult>;
-export function evaluateYieldSourcesCooperative(
-  input: EvaluateYieldSourcesInput,
-  options: EvaluateYieldSourcesCooperativeOptions & { synchronous?: boolean } = {},
-): EvaluateYieldSourcesResult | Promise<EvaluateYieldSourcesResult> {
+  options: EvaluateYieldSourcesCooperativeOptions = {},
+): Promise<EvaluateYieldSourcesResult> {
   const prepared = prepareYieldEvaluation(input);
   const accumulator = createEvaluationAccumulator();
   const groups = [...prepared.resolvedByCoin.entries()];
 
-  if (options.synchronous) {
-    for (const [stablecoinId, entries] of groups) {
-      evaluateYieldSourceGroup(input, stablecoinId, entries, prepared, accumulator);
+  const yieldEveryCoins = Math.max(1, options.yieldEveryCoins ?? 10);
+  const yieldToEventLoop = options.yieldToEventLoop ?? defaultYieldToEventLoop;
+
+  const reportProgress = async (phase: EvaluateYieldSourcesProgress["phase"], coinsDone: number) => {
+    await options.onProgress?.({
+      phase,
+      coinsDone,
+      coinsTotal: groups.length,
+      evaluatedSources: accumulator.evaluatedSources.length,
+      bestSourceCoins: accumulator.bestSourceKeyByCoin.size,
+      rowsRejected: accumulator.rowsRejected,
+      divergenceFlags: accumulator.divergenceFlags,
+      sourceSwitches: accumulator.sourceSwitches,
+    });
+  };
+
+  await reportProgress("coin-evaluation", 0);
+
+  for (const [index, [stablecoinId, entries]] of groups.entries()) {
+    throwIfAborted(options.signal);
+    evaluateYieldSourceGroup(input, stablecoinId, entries, prepared, accumulator);
+    const coinsDone = index + 1;
+    if (coinsDone === groups.length || coinsDone % yieldEveryCoins === 0) {
+      await reportProgress("coin-evaluation", coinsDone);
+      await yieldToEventLoop(options.signal);
     }
-    return finalizeYieldEvaluation(accumulator);
   }
 
-  return (async () => {
-    const yieldEveryCoins = Math.max(1, options.yieldEveryCoins ?? 10);
-    const yieldToEventLoop = options.yieldToEventLoop ?? defaultYieldToEventLoop;
-
-    const reportProgress = async (phase: EvaluateYieldSourcesProgress["phase"], coinsDone: number) => {
-      await options.onProgress?.({
-        phase,
-        coinsDone,
-        coinsTotal: groups.length,
-        evaluatedSources: accumulator.evaluatedSources.length,
-        bestSourceCoins: accumulator.bestSourceKeyByCoin.size,
-        rowsRejected: accumulator.rowsRejected,
-        divergenceFlags: accumulator.divergenceFlags,
-        sourceSwitches: accumulator.sourceSwitches,
-      });
-    };
-
-    await reportProgress("coin-evaluation", 0);
-
-    for (const [index, [stablecoinId, entries]] of groups.entries()) {
-      throwIfAborted(options.signal);
-      evaluateYieldSourceGroup(input, stablecoinId, entries, prepared, accumulator);
-      const coinsDone = index + 1;
-      if (coinsDone === groups.length || coinsDone % yieldEveryCoins === 0) {
-        await reportProgress("coin-evaluation", coinsDone);
-        await yieldToEventLoop(options.signal);
-      }
-    }
-
-    throwIfAborted(options.signal);
-    const result = finalizeYieldEvaluation(accumulator);
-    await reportProgress("warning-finalization", groups.length);
-    await yieldToEventLoop(options.signal);
-    return result;
-  })();
+  throwIfAborted(options.signal);
+  const result = finalizeYieldEvaluation(accumulator);
+  await reportProgress("warning-finalization", groups.length);
+  await yieldToEventLoop(options.signal);
+  return result;
 }

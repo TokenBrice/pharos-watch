@@ -9,7 +9,7 @@ import {
   V9OperationalResilienceStressEpisodeSchema,
   V9OperationalResilienceStressSettlementSchema,
 } from "./safety-score-v9-operational-resilience-primitives";
-import {
+import { issue,
   CanonicalTextSchema,
   NonNegativeFiniteSchema,
   StrictIsoDateSchema,
@@ -134,20 +134,12 @@ export const V9OperationalResilienceFactSchema = z
   .strict()
   .superRefine((fact, ctx) => {
     if (fact.expiresAtSec <= fact.reviewedAtSec) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["expiresAtSec"],
-        message: "Operational-resilience facts must expire after their review",
-      });
+      issue(ctx, ["expiresAtSec"], "Operational-resilience facts must expire after their review");
     }
     const episodeKeys = new Set(fact.stressEpisodes.map((episode) => episode.episodeKey));
     for (const [index, window] of (fact.redemptionThroughput?.stressWindows ?? []).entries()) {
       if (!episodeKeys.has(window.episodeKey)) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["redemptionThroughput", "stressWindows", index, "episodeKey"],
-          message: "A redemption stress window must reference a compiled stress episode",
-        });
+        issue(ctx, ["redemptionThroughput", "stressWindows", index, "episodeKey"], "A redemption stress window must reference a compiled stress episode");
       }
     }
   });

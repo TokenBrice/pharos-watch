@@ -153,7 +153,7 @@ describe("analyzeDexLiquidityPostScoring", () => {
           creationTs: 0, balanceDetails: [], tokenPrices: {},
         }]]),
       });
-      const pools = metrics.get("usdc-circle")!.topPools;
+      const pools = metrics.get("usdc-circle")!.pools;
       const rebuilt = rebuildMetricsFromPools(pools);
       const measured = balanceTvlScope === "base-pool-excluded";
       const measuredTvl = measured ? 2_000_000 : 0;

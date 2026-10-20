@@ -10,7 +10,7 @@ import type {
   MintAuthorityProfile,
 } from "@shared/types/core";
 import { v9RepresentationGroupRouteKey } from "@shared/lib/safety-score-v9/facts";
-import { evaluateV9EconomicControlAssetFacts } from "@shared/lib/safety-score-v9/control";
+import { evaluateV9EconomicControl } from "@shared/lib/safety-score-v9/control";
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { reviewedScope, SCOPE_CLOCK, weightedQuorum } from "@shared/lib/__tests__/safety-score-v9-control-scope.test-support";
@@ -520,9 +520,7 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
       economicLossScope: "global-claim",
       materialSupplyShare: null,
     });
-    const result = evaluateV9EconomicControlAssetFacts(
-      asset, { assetId: asset.assetId, ...asset.economicControlReview }, V9_CANDIDATE_POLICY_V1,
-    );
+    const result = evaluateV9EconomicControl({ facts: asset, ...asset.economicControlReview, policy: V9_CANDIDATE_POLICY_V1 });
     expect(result.components.find((component) => component.kind === "mint")).toMatchObject({
       binding: true, posture: "unbounded-adverse", score: 25,
     });
@@ -548,9 +546,7 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
       const asset = compileFixture(input).compiled.assets[0]!;
       expect(asset.controls.filter((control) => control.capabilities.includes("mint")).map((control) => control.capSemantics.kind).sort())
         .toEqual(["raiseable", "unbounded"]);
-      const result = evaluateV9EconomicControlAssetFacts(
-        asset, { assetId: asset.assetId, ...asset.economicControlReview }, V9_CANDIDATE_POLICY_V1,
-      );
+      const result = evaluateV9EconomicControl({ facts: asset, ...asset.economicControlReview, policy: V9_CANDIDATE_POLICY_V1 });
       expect(result.components.find((component) => component.kind === "mint")).toMatchObject({
         binding: true, posture: "unbounded-adverse", score: 25,
       });
@@ -580,9 +576,7 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
       const input = structuredClone(metadata);
       if (reverse) input.mintAuthority!.controls!.reverse();
       const asset = compileFixture(input, { chainSupplyByChain: partition }).compiled.assets[0]!;
-      const result = evaluateV9EconomicControlAssetFacts(
-        asset, { assetId: asset.assetId, ...asset.economicControlReview }, V9_CANDIDATE_POLICY_V1,
-      );
+      const result = evaluateV9EconomicControl({ facts: asset, ...asset.economicControlReview, policy: V9_CANDIDATE_POLICY_V1 });
       const weak = asset.controls.find((control) => control.authority?.threshold?.required === 2)!;
       expect(result.components.find((component) => component.kind === "mint")).toMatchObject({
         binding: true, controlKeys: [weak.controlKey],
@@ -1613,7 +1607,7 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
       status: { observationState: "bounded-unknown" }, economicLossScope: "unknown",
       capSemantics: { kind: "bounded" }, claimImpairment: "bounded",
     });
-    const result = evaluateV9EconomicControlAssetFacts(asset, { assetId: asset.assetId, ...asset.economicControlReview }, V9_CANDIDATE_POLICY_V1);
+    const result = evaluateV9EconomicControl({ facts: asset, ...asset.economicControlReview, policy: V9_CANDIDATE_POLICY_V1 });
     expect(result.components.find((component) => component.kind === "mint")?.posture).toBe("unknown");
     expect(result.structuralFailures.some((failure) => failure.kind === "centralized-mint")).toBe(false);
     expect(result.reasons.map((reason) => reason.code)).toContain("unresolved-mint-authority");
@@ -1630,9 +1624,7 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
     });
     expect(asset.controlStatus.observationState).toBe("bounded-unknown");
     expect(asset.gaps.find((gap) => gap.gapId === control.status.gapIds[0])?.reasonCode).toBe("scoped-control-question");
-    const result = evaluateV9EconomicControlAssetFacts(
-      asset, { assetId: asset.assetId, ...asset.economicControlReview }, V9_CANDIDATE_POLICY_V1,
-    );
+    const result = evaluateV9EconomicControl({ facts: asset, ...asset.economicControlReview, policy: V9_CANDIDATE_POLICY_V1 });
     expect(result.reasons.map((reason) => reason.code)).toContain("scoped-control-question");
     expect(result.reasons.map((reason) => reason.code)).not.toContain("unresolved-control-identity");
     expect(evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!.scoreInput.pillars.control.evidenceLevel).toBe("limited");
@@ -1652,12 +1644,8 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
     });
     const after = compileFixture(metadata, { clockSec: SCOPE_CLOCK }).compiled.assets[0]!;
     expect(after.controls).toHaveLength(1);
-    const beforeResult = evaluateV9EconomicControlAssetFacts(
-      before, { assetId: before.assetId, ...before.economicControlReview }, V9_CANDIDATE_POLICY_V1,
-    );
-    const afterResult = evaluateV9EconomicControlAssetFacts(
-      after, { assetId: after.assetId, ...after.economicControlReview }, V9_CANDIDATE_POLICY_V1,
-    );
+    const beforeResult = evaluateV9EconomicControl({ facts: before, ...before.economicControlReview, policy: V9_CANDIDATE_POLICY_V1 });
+    const afterResult = evaluateV9EconomicControl({ facts: after, ...after.economicControlReview, policy: V9_CANDIDATE_POLICY_V1 });
     expect(afterResult.components.find((component) => component.kind === "mint")).toMatchObject({
       binding: true, posture: "unbounded-adverse", score: 25,
       controlKeys: [after.controls[0]!.controlKey],
@@ -1681,12 +1669,8 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
     expect(after.controls.map((row) => row.status.observationState)).toEqual(["known", "known"]);
     expect(after.gaps.map((gap) => ({ reasonCode: gap.reasonCode, path: gap.path })))
       .toEqual(before.gaps.map((gap) => ({ reasonCode: gap.reasonCode, path: gap.path })));
-    const beforeResult = evaluateV9EconomicControlAssetFacts(
-      before, { assetId: before.assetId, ...before.economicControlReview }, V9_CANDIDATE_POLICY_V1,
-    );
-    const afterResult = evaluateV9EconomicControlAssetFacts(
-      after, { assetId: after.assetId, ...after.economicControlReview }, V9_CANDIDATE_POLICY_V1,
-    );
+    const beforeResult = evaluateV9EconomicControl({ facts: before, ...before.economicControlReview, policy: V9_CANDIDATE_POLICY_V1 });
+    const afterResult = evaluateV9EconomicControl({ facts: after, ...after.economicControlReview, policy: V9_CANDIDATE_POLICY_V1 });
     expect(afterResult.score).toBe(beforeResult.score);
     expect(afterResult.reasons).toEqual(beforeResult.reasons);
   });
@@ -2265,9 +2249,7 @@ describe("native external-validation transfer tiers", () => {
     expect(control.claimImpairment).toBe("unknown");
     expect(asset.gaps.some((gap) => gap.reasonCode === "unresolved-control-identity")).toBe(true);
     expect(metadata.bridgeRouteRisk!.routes![0]!.issuanceModel).toBe("native-issuance");
-    const result = evaluateV9EconomicControlAssetFacts(
-      asset, { assetId: asset.assetId, ...asset.economicControlReview }, V9_CANDIDATE_POLICY_V1,
-    );
+    const result = evaluateV9EconomicControl({ facts: asset, ...asset.economicControlReview, policy: V9_CANDIDATE_POLICY_V1 });
     expect(result.components.some((component) =>
       component.kind === "bridge" && component.posture === "external-validated-network")).toBe(false);
     expect(result.reasons.map((reason) => reason.code)).toContain("selected-bridge-route-unresolved");
@@ -2387,9 +2369,7 @@ describe("independent bridge incident evidence", () => {
       try {
         const asset = compileFixture(metadata, { clockSec }).compiled.assets[0]!;
         expect(asset.controls.find(control => control.controlKey === target.controlKey)?.incidentState).toBe("active");
-        const result = evaluateV9EconomicControlAssetFacts(
-          asset, { assetId: asset.assetId, ...asset.economicControlReview }, V9_CANDIDATE_POLICY_V1,
-        );
+        const result = evaluateV9EconomicControl({ facts: asset, ...asset.economicControlReview, policy: V9_CANDIDATE_POLICY_V1 });
         expect(result.structuralFailures).toContainEqual(expect.objectContaining({
           kind: "active-control-incident", controlKeys: [target.controlKey],
         }));

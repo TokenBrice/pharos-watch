@@ -23,12 +23,10 @@ import {
   createPoolPriceCoherenceAdmissionGate,
   type PoolPriceCoherenceAdmissionGate,
 } from "../dex-liquidity/pool-price-coherence";
-import { buildChainAddressKey } from "../dex-liquidity/token-resolution";
 import { DISCOVERY_STAGE_TIMEOUT_MS, type CrawlStageContext, toStagedPool } from "./staged-pool";
 import { makeDexDeploymentProviderCheck, type DexDeploymentProviderCheck, type StagedPool } from "./types";
 
 export interface CoinGeckoPoolsStageResult {
-  priceObservationTargets: Set<string>;
   unresolvedChains: string[];
   stoppedEarly: boolean;
   providerChecks: DexDeploymentProviderCheck[];
@@ -209,7 +207,6 @@ export async function crawlCoinGeckoPoolsStage({
   context,
   dependencies = defaultCoinGeckoPoolsStageDependencies,
 }: CrawlCoinGeckoPoolsStageOptions): Promise<CoinGeckoPoolsStageResult> {
-  const priceObservationTargets = new Set<string>();
   const unresolvedChains: string[] = [];
   const apiKey = cgApiKey?.trim() ? cgApiKey : null;
   const coherenceRejections = createPoolPriceCoherenceAdmissionGate("dex-discovery", "CG onchain");
@@ -228,7 +225,7 @@ export async function crawlCoinGeckoPoolsStage({
   }
 
   if (!apiKey || !cgOnchainAllowed) {
-    return { priceObservationTargets, unresolvedChains, stoppedEarly: false, providerChecks };
+    return { unresolvedChains, stoppedEarly: false, providerChecks };
   }
 
   let cgRequests = 0;
@@ -236,7 +233,7 @@ export async function crawlCoinGeckoPoolsStage({
   for (const { chain, address } of coinTargets) {
     throwIfAborted(context.signal);
     if (context.timeExceeded()) {
-      return { priceObservationTargets, unresolvedChains, stoppedEarly: true, providerChecks };
+      return { unresolvedChains, stoppedEarly: true, providerChecks };
     }
 
     const providers = CHAIN_META[chain]?.providers;
@@ -257,7 +254,6 @@ export async function crawlCoinGeckoPoolsStage({
       await dependencies.sleepWithSignal(RATE_LIMITS.COINGECKO_ONCHAIN_MS, context.signal);
     }
     cgRequests++;
-    const targetKey = buildChainAddressKey(chain, address);
 
     try {
       const result = await dependencies.fetchCgTokenPoolsWithStatus(
@@ -301,15 +297,7 @@ export async function crawlCoinGeckoPoolsStage({
         context.addPool(stagedPool);
 
         if (stagedPool.priceUsd != null && parsed.tvlUsd >= DEX_PRICE_OBSERVATION_MIN_TVL_USD) {
-          context.addPriceObs({
-            stablecoinId: context.stablecoinId,
-            price: stagedPool.priceUsd,
-            observedAt: stagedPool.refreshedAt,
-            tvl: parsed.tvlUsd,
-            chain,
-            protocol: parsed.dexId,
-          });
-          priceObservationTargets.add(targetKey);
+          context.hasUsablePoolPrice = true;
         }
       }
     } catch (err) {
@@ -331,5 +319,5 @@ export async function crawlCoinGeckoPoolsStage({
 
   coherenceRejections.flush();
 
-  return { priceObservationTargets, unresolvedChains, stoppedEarly: false, providerChecks };
+  return { unresolvedChains, stoppedEarly: false, providerChecks };
 }

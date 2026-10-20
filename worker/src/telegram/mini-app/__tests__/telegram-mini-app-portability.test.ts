@@ -266,13 +266,14 @@ describe("Telegram Mini App portable watchlist lifecycle", () => {
     });
   });
 
-  it("exports, previews, and atomically confirms a versioned watchlist import", async () => {
+  it.each([null, "private", "sender"])("exports, previews, and atomically confirms a versioned watchlist import (%s)", async (chatType) => {
     const { db, sqlite } = setup();
-    const exported = await executeTelegramMiniAppPortabilityOperation(db, AUTH, { kind: "export-watchlist" });
+    const auth = { ...AUTH, chatType };
+    const exported = await executeTelegramMiniAppPortabilityOperation(db, auth, { kind: "export-watchlist" });
     expect(exported).toMatchObject({ result: { kind: "watchlist-export", directCount: 2, presetCount: 2 } });
     sqlite.prepare("UPDATE telegram_subscriptions SET alert_snooze_until_ts = ? WHERE chat_id = ? AND stablecoin_id = 'usdc-circle'")
       .run(NOW + 7_200, AUTH.userId);
-    expect(await executeTelegramMiniAppPortabilityOperation(db, AUTH, { kind: "export-watchlist" })).toEqual(exported);
+    expect(await executeTelegramMiniAppPortabilityOperation(db, auth, { kind: "export-watchlist" })).toEqual(exported);
 
     const token = await encodeWatchlistTokenV3({
       registryVersion: exported!.catalogVersion,
@@ -285,7 +286,7 @@ describe("Telegram Mini App portable watchlist lifecycle", () => {
         preset("usd-top10"),
       ],
     });
-    const preview = await executeTelegramMiniAppPortabilityOperation(db, AUTH, {
+    const preview = await executeTelegramMiniAppPortabilityOperation(db, auth, {
       kind: "preview-watchlist-import",
       token,
     });
@@ -302,14 +303,14 @@ describe("Telegram Mini App portable watchlist lifecycle", () => {
     if (!preview) throw new Error("expected watchlist import preview");
     const details = preview.result as Extract<typeof preview.result, { kind: "watchlist-import-preview" }>;
 
-    await expect(executeTelegramMiniAppPortabilityOperation(db, AUTH, {
+    await expect(executeTelegramMiniAppPortabilityOperation(db, auth, {
       kind: "confirm-watchlist-import",
       token,
       expectedPreferenceGeneration: 6,
       previewFingerprint: details.previewFingerprint,
     })).rejects.toMatchObject({ code: "stale-import-preview" } satisfies Partial<TelegramMiniAppMutationError>);
 
-    await expect(executeTelegramMiniAppPortabilityOperation(db, AUTH, {
+    await expect(executeTelegramMiniAppPortabilityOperation(db, auth, {
       kind: "confirm-watchlist-import",
       token,
       expectedPreferenceGeneration: details.expectedPreferenceGeneration,
@@ -321,6 +322,26 @@ describe("Telegram Mini App portable watchlist lifecycle", () => {
       .toEqual([{ stablecoin_id: "usdc-circle", alert_freeze: 1 }, { stablecoin_id: "usdt-tether", alert_freeze: 0 }]);
     expect(sqlite.prepare("SELECT preset_id, alert_depeg FROM telegram_preset_subscriptions WHERE chat_id = ? ORDER BY preset_id").all(AUTH.userId))
       .toEqual([{ preset_id: "usd-top10", alert_depeg: 0 }, { preset_id: "usd-top25", alert_depeg: 1 }]);
+  });
+
+  it.each(["group", "supergroup", "channel"])("keeps portability unavailable in %s contexts", async (chatType) => {
+    const { db, sqlite } = setup();
+    const auth = { ...AUTH, chatType, canMutatePrivateChat: false };
+    const readState = () => ({
+      subscriber: sqlite.prepare("SELECT * FROM telegram_subscribers").all(),
+      direct: sqlite.prepare("SELECT * FROM telegram_subscriptions").all(),
+      presets: sqlite.prepare("SELECT * FROM telegram_preset_subscriptions").all(),
+    });
+    const before = readState();
+    for (const operation of [
+      { kind: "export-watchlist" },
+      { kind: "preview-watchlist-import", token: "legacy-token" },
+      { kind: "confirm-watchlist-import", token: "legacy-token", expectedPreferenceGeneration: 7, previewFingerprint: "preview" },
+    ] as const) {
+      await expect(executeTelegramMiniAppPortabilityOperation(db, auth, operation))
+        .rejects.toMatchObject({ code: "not-private" });
+      expect(readState()).toEqual(before);
+    }
   });
 
   it("rejects empty exports and no-op or invalid portable confirmations", async () => {

@@ -13,7 +13,6 @@ import type {
   DdrCanonicalIncident,
   DdrSealedPublicPrediction,
 } from "../depeg-resolver-v2-contracts";
-import { publicPredictionIdOf } from "../depeg-resolver/storage-adapters";
 
 function payloadStringValue(value: unknown): string | null {
   return stringValue(value, { trim: false });
@@ -259,7 +258,7 @@ export function failedPublicationCoverageRow(
       : "sealed_prediction_not_in_first_publication_manifest",
     lineage,
     failedPublication: {
-      publicPredictionId: publicPredictionIdOf(sealed),
+      publicPredictionId: sealed.id,
       assessmentId: sealed.assessmentId,
       lockedAt: sealed.lockedAt,
       outcomeKind: sealed.outcomeKind,

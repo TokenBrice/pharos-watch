@@ -3,7 +3,7 @@ import { ReportCardGradeSchema, type ReportCardGrade } from "./report-card-grade
 import { MECHANISM_ARCHETYPE_VALUES } from "./stablecoin-taxonomy";
 import { V9EvidenceResponsibilitySchema } from "./safety-score-v9-fact-primitives";
 import { BRIDGE_ROUTE_RISK_TIER_VALUES, ORACLE_RISK_TIER_VALUES } from "./core";
-import { ScoreSchema } from "./safety-schema-primitives";
+import { issue, ScoreSchema } from "./safety-schema-primitives";
 import { V9SupplyAttributionPolicySchema } from "./safety-score-v9-supply-attribution";
 import { ExitExecutionModelPolicySchema } from "./exit-route";
 import { V9WrapperAllocationScopePolicySchema } from "./safety-score-v9-allocation";
@@ -151,18 +151,10 @@ const V9PillarEvidenceSchema = z
   .strict()
   .superRefine((value, ctx) => {
     if (value.score === null && !value.unresolved.some((fact) => fact.critical)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["unresolved"],
-        message: "A missing pillar score requires a critical unresolved reason",
-      });
+      issue(ctx, ["unresolved"], "A missing pillar score requires a critical unresolved reason");
     }
     if (value.score !== null && value.evidence.length === 0) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["evidence"],
-        message: "A scored pillar requires at least one evidence reference",
-      });
+      issue(ctx, ["evidence"], "A scored pillar requires at least one evidence reference");
     }
   });
 
@@ -231,11 +223,7 @@ const V9StructuralSignalSchema = z
       signal.economicLossScope === "deployment" &&
       (signal.exposureKey === undefined || signal.riskEventKey === undefined)
     ) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["exposureKey"],
-        message: "Deployment-scoped signals require explicit exposure and risk-event identities",
-      });
+      issue(ctx, ["exposureKey"], "Deployment-scoped signals require explicit exposure and risk-event identities");
     }
   });
 export type V9StructuralSignal = z.infer<typeof V9StructuralSignalSchema>;
@@ -285,19 +273,11 @@ export const CompiledV9AssetInputSchema = z
   .superRefine((value, ctx) => {
     const asOfMs = Date.parse(value.asOf);
     if (Date.parse(value.compiledAt) < asOfMs) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["compiledAt"],
-        message: "compiledAt cannot be earlier than asOf",
-      });
+      issue(ctx, ["compiledAt"], "compiledAt cannot be earlier than asOf");
     }
     for (const [source, timestamp] of Object.entries(value.sourceTimestamps)) {
       if (Date.parse(timestamp) > asOfMs) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["sourceTimestamps", source],
-          message: "Source observation cannot be later than asOf",
-        });
+        issue(ctx, ["sourceTimestamps", source], "Source observation cannot be later than asOf");
       }
     }
     const references = [
@@ -310,11 +290,7 @@ export const CompiledV9AssetInputSchema = z
         Date.parse(reference.observedAt) > asOfMs ||
         (reference.publishedAt && Date.parse(reference.publishedAt) > asOfMs)
       ) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["evidence", index],
-          message: "Compiled evidence cannot be observed or published later than asOf",
-        });
+        issue(ctx, ["evidence", index], "Compiled evidence cannot be observed or published later than asOf");
       }
     });
   });
@@ -426,18 +402,10 @@ const V9ReasonRegistryEntrySchema = z
   .strict()
   .superRefine((entry, ctx) => {
     if (!entry.permittedTreatments.includes(entry.defaultTreatment)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["defaultTreatment"],
-        message: "Default treatment must be one of the permitted treatments",
-      });
+      issue(ctx, ["defaultTreatment"], "Default treatment must be one of the permitted treatments");
     }
     if ((entry.defaultTreatment === "ceiling") !== (entry.ceilingRule !== null)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["ceilingRule"],
-        message: "A ceiling rule is required exactly when the default treatment is ceiling",
-      });
+      issue(ctx, ["ceilingRule"], "A ceiling rule is required exactly when the default treatment is ceiling");
     }
     for (const [field, values] of [
       ["archetypes", entry.archetypes],
@@ -525,25 +493,13 @@ const V9AssetPremiumPolicySchema = z
       !V9StructuralSignalKindSchema.safeParse(capKindParts[1]).success ||
       !V9SeveritySchema.safeParse(capKindParts[2]).success
     ) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["capRelief", "kind"],
-        message: "Asset premium cap relief must name one exact registered structural signal",
-      });
+      issue(ctx, ["capRelief", "kind"], "Asset premium cap relief must name one exact registered structural signal");
     }
     if (premium.capRelief.fromLimit >= premium.capRelief.toLimit) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["capRelief"],
-        message: "Asset premium cap relief must increase the named cap",
-      });
+      issue(ctx, ["capRelief"], "Asset premium cap relief must increase the named cap");
     }
     if (premium.capRelief.toLimit !== premium.maximumPublishedScore) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["capRelief", "toLimit"],
-        message: "Asset premium cap relief must stop at the maximum published score",
-      });
+      issue(ctx, ["capRelief", "toLimit"], "Asset premium cap relief must stop at the maximum published score");
     }
   });
 export type V9AssetPremiumPolicy = z.infer<typeof V9AssetPremiumPolicySchema>;
@@ -960,8 +916,7 @@ const V9ControlPolicySchema = z
       .strict()
       .superRefine((governed, ctx) => {
         if (governed.minUnavoidableDelaySec > governed.operationalFlow.annualWindowSec) {
-          ctx.addIssue({ code: "custom", path: ["minUnavoidableDelaySec"],
-            message: "Operational exposure anchor must not exceed the certified annual window" });
+          issue(ctx, ["minUnavoidableDelaySec"], "Operational exposure anchor must not exceed the certified annual window");
         }
       }),
     mintPostureGrading: z
@@ -1035,18 +990,10 @@ const V9ControlPolicySchema = z
       .superRefine((signals, ctx) => {
         const caps = signals.resolvedIncidentQualityCaps;
         if (!(caps.recent <= caps.aging && caps.aging <= caps.dated)) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["resolvedIncidentQualityCaps"],
-            message: "Resolved-incident caps must relax monotonically with incident age",
-          });
+          issue(ctx, ["resolvedIncidentQualityCaps"], "Resolved-incident caps must relax monotonically with incident age");
         }
         if (signals.resolvedIncidentDecayMinMonths.aging >= signals.resolvedIncidentDecayMinMonths.dated) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["resolvedIncidentDecayMinMonths"],
-            message: "The dated incident tier must begin after the aging tier",
-          });
+          issue(ctx, ["resolvedIncidentDecayMinMonths"], "The dated incident tier must begin after the aging tier");
         }
       }),
     oracleTierQuality: exactEnumScoreMapSchema(ORACLE_RISK_TIER_VALUES),
@@ -1195,18 +1142,10 @@ const V9ExitPolicySchema = z
   .strict()
   .superRefine((exit, ctx) => {
     if (exit.unboundedDeliveryCap >= exit.outputAssetScores["physical-commodity-delivery"]) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["unboundedDeliveryCap"],
-        message: "Unbounded delivery quality must be below bounded physical delivery quality",
-      });
+      issue(ctx, ["unboundedDeliveryCap"], "Unbounded delivery quality must be below bounded physical delivery quality");
     }
     if (exit.outputAssetScores["physical-commodity-delivery"] > exit.outputAssetScores["stable-single"]) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["outputAssetScores", "physical-commodity-delivery"],
-        message: "Physical commodity delivery quality must not exceed fiat-par output quality",
-      });
+      issue(ctx, ["outputAssetScores", "physical-commodity-delivery"], "Physical commodity delivery quality must not exceed fiat-par output quality");
     }
   });
 
@@ -1240,18 +1179,10 @@ const V9MaterialityPolicySchema = z
   .strict()
   .superRefine((materiality, ctx) => {
     if (materiality.unresolvedDeploymentBlendStartSharePct >= materiality.unresolvedDeploymentFullCeilingSharePct) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["unresolvedDeploymentFullCeilingSharePct"],
-        message: "Unresolved-deployment full-ceiling share must exceed the blend-start share",
-      });
+      issue(ctx, ["unresolvedDeploymentFullCeilingSharePct"], "Unresolved-deployment full-ceiling share must exceed the blend-start share");
     }
     if (materiality.commonModeShareThreshold >= materiality.commonModeHighShareThreshold) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["commonModeHighShareThreshold"],
-        message: "Common-mode high-share threshold must exceed the diagnostic-share threshold",
-      });
+      issue(ctx, ["commonModeHighShareThreshold"], "Common-mode high-share threshold must exceed the diagnostic-share threshold");
     }
   });
 
@@ -1431,9 +1362,7 @@ const V9MethodologyPolicyBaseSchema = z
   })
   .strict();
 
-function addPolicyIssue(ctx: z.RefinementCtx, path: PropertyKey[], message: string): void {
-  ctx.addIssue({ code: "custom", path, message });
-}
+
 
 function validateAscendingBreakpoints(
   values: readonly { value: number; score: number }[],
@@ -1442,10 +1371,10 @@ function validateAscendingBreakpoints(
 ): void {
   for (let index = 1; index < values.length; index += 1) {
     if (values[index]!.value <= values[index - 1]!.value) {
-      addPolicyIssue(ctx, [...path, index, "value"], "Breakpoint values must be strictly increasing");
+      issue(ctx, [...path, index, "value"], "Breakpoint values must be strictly increasing");
     }
     if (values[index]!.score < values[index - 1]!.score) {
-      addPolicyIssue(ctx, [...path, index, "score"], "Breakpoint scores cannot decrease");
+      issue(ctx, [...path, index, "score"], "Breakpoint scores cannot decrease");
     }
   }
 }
@@ -1464,31 +1393,31 @@ export const V9MethodologyPolicySchema = V9MethodologyPolicyBaseSchema.superRefi
   ];
   const nextOperationalRung = Math.min(...knownMintQualities.filter((quality) => quality > operationalQuality));
   if (operationalQuality !== 55 || nextOperationalRung !== 60) {
-    addPolicyIssue(ctx, ["semantic", "control", "mintPostureQuality"], "Operational governance must grade 55 with the next known rung at 60");
+    issue(ctx, ["semantic", "control", "mintPostureQuality"], "Operational governance must grade 55 with the next known rung at 60");
   }
   for (const row of v9UnknownRungLedger(policy.semantic)) {
     if (Math.abs(row.value - row.required) > 1e-9) {
-      addPolicyIssue(ctx, ["semantic", ...row.path.split(".")], "Unknown credit must be max(current, ordinary sub-family minimum); retained charges stay current");
+      issue(ctx, ["semantic", ...row.path.split(".")], "Unknown credit must be max(current, ordinary sub-family minimum); retained charges stay current");
     }
   }
   const weightTotal = Object.values(formula.pillarWeights).reduce((sum, value) => sum + value, 0);
   if (Math.abs(weightTotal - 1) > 1e-9) {
-    addPolicyIssue(
-      ctx,
-      ["semantic", "formula", "pillarWeights"],
-      `Pillar weights must sum to 1; received ${weightTotal}`,
-    );
+    issue(
+          ctx,
+          ["semantic", "formula", "pillarWeights"],
+          `Pillar weights must sum to 1; received ${weightTotal}`,
+        );
   }
   const componentWeightTotal = Object.values(policy.semantic.exit.componentWeights).reduce(
     (sum, value) => sum + value,
     0,
   );
   if (Math.abs(componentWeightTotal - 1) > 1e-9) {
-    addPolicyIssue(
-      ctx,
-      ["semantic", "exit", "componentWeights"],
-      `Exit component weights must sum to 1; received ${componentWeightTotal}`,
-    );
+    issue(
+          ctx,
+          ["semantic", "exit", "componentWeights"],
+          `Exit component weights must sum to 1; received ${componentWeightTotal}`,
+        );
   }
 
   const priority = formula.capTiePriority;
@@ -1496,30 +1425,30 @@ export const V9MethodologyPolicySchema = V9MethodologyPolicyBaseSchema.superRefi
     priority.length !== V9CapSourceSchema.options.length ||
     new Set(priority).size !== V9CapSourceSchema.options.length
   ) {
-    addPolicyIssue(
-      ctx,
-      ["semantic", "formula", "capTiePriority"],
-      "Cap tie priority must contain every cap source exactly once",
-    );
+    issue(
+          ctx,
+          ["semantic", "formula", "capTiePriority"],
+          "Cap tie priority must contain every cap source exactly once",
+        );
   }
 
   if (
     formula.wrapperStrategyCap.pure > formula.wrapperStrategyCap.staked ||
     formula.wrapperStrategyCap.staked > formula.wrapperStrategyCap.vault
   ) {
-    addPolicyIssue(
-      ctx,
-      ["semantic", "formula", "wrapperStrategyCap"],
-      "Wrapper-strategy discounts must be monotonic: pure <= staked <= vault",
-    );
+    issue(
+          ctx,
+          ["semantic", "formula", "wrapperStrategyCap"],
+          "Wrapper-strategy discounts must be monotonic: pure <= staked <= vault",
+        );
   }
   const assetPremiumIds = formula.assetPremiums.map((premium) => premium.assetId);
   if (new Set(assetPremiumIds).size !== assetPremiumIds.length) {
-    addPolicyIssue(
-      ctx,
-      ["semantic", "formula", "assetPremiums"],
-      "Asset premiums must have unique asset IDs",
-    );
+    issue(
+          ctx,
+          ["semantic", "formula", "assetPremiums"],
+          "Asset premiums must have unique asset IDs",
+        );
   }
   formula.assetPremiums.forEach((premium, index) => {
     const [signalPrefix, signalKind, severity] = premium.capRelief.kind.split(":");
@@ -1534,11 +1463,11 @@ export const V9MethodologyPolicySchema = V9MethodologyPolicyBaseSchema.superRefi
           ][severity as V9Severity]
         : undefined;
     if (configuredLimit !== premium.capRelief.fromLimit) {
-      addPolicyIssue(
-        ctx,
-        ["semantic", "formula", "assetPremiums", index, "capRelief", "fromLimit"],
-        "Asset premium cap relief must match the configured structural limit",
-      );
+      issue(
+              ctx,
+              ["semantic", "formula", "assetPremiums", index, "capRelief", "fromLimit"],
+              "Asset premium cap relief must match the configured structural limit",
+            );
     }
   });
 
@@ -1547,100 +1476,100 @@ export const V9MethodologyPolicySchema = V9MethodologyPolicyBaseSchema.superRefi
     grades.length !== V9_RATED_GRADES.length ||
     grades.some((entry, index) => entry.grade !== V9_RATED_GRADES[index])
   ) {
-    addPolicyIssue(
-      ctx,
-      ["semantic", "formula", "gradeThresholds"],
-      "Grade thresholds must contain every rated grade once in descending order",
-    );
+    issue(
+          ctx,
+          ["semantic", "formula", "gradeThresholds"],
+          "Grade thresholds must contain every rated grade once in descending order",
+        );
   }
   grades.forEach((entry, index) => {
     if (index > 0 && entry.minScore >= grades[index - 1]!.minScore) {
-      addPolicyIssue(
-        ctx,
-        ["semantic", "formula", "gradeThresholds", index, "minScore"],
-        "Grade thresholds must strictly decrease",
-      );
+      issue(
+              ctx,
+              ["semantic", "formula", "gradeThresholds", index, "minScore"],
+              "Grade thresholds must strictly decrease",
+            );
     }
   });
   if (grades[grades.length - 1]?.minScore !== 0) {
-    addPolicyIssue(ctx, ["semantic", "formula", "gradeThresholds"], "F threshold must begin at zero");
+    issue(ctx, ["semantic", "formula", "gradeThresholds"], "F threshold must begin at zero");
   }
   const bPlusFloor = grades.find((entry) => entry.grade === "B+")?.minScore;
   const aPlusFloor = grades.find((entry) => entry.grade === "A+")?.minScore;
   formula.assetPremiums.forEach((premium, index) => {
     if (premium.maximumPublishedScore !== aPlusFloor) {
-      addPolicyIssue(
-        ctx,
-        ["semantic", "formula", "assetPremiums", index, "maximumPublishedScore"],
-        "Asset premium publication must stop at the configured A+ floor",
-      );
+      issue(
+              ctx,
+              ["semantic", "formula", "assetPremiums", index, "maximumPublishedScore"],
+              "Asset premium publication must stop at the configured A+ floor",
+            );
     }
     if (
       bPlusFloor !== undefined &&
       aPlusFloor !== undefined &&
       premium.points < aPlusFloor - bPlusFloor
     ) {
-      addPolicyIssue(
-        ctx,
-        ["semantic", "formula", "assetPremiums", index, "points"],
-        "Market-anchor premium points must span the configured B+-to-A+ threshold gap",
-      );
+      issue(
+              ctx,
+              ["semantic", "formula", "assetPremiums", index, "points"],
+              "Market-anchor premium points must span the configured B+-to-A+ threshold gap",
+            );
     }
   });
 
   const trackBands = formula.trackRecordCeilings;
   if (trackBands[0]?.minMonthsInclusive !== 0) {
-    addPolicyIssue(ctx, ["semantic", "formula", "trackRecordCeilings", 0], "Track-record bands must start at zero");
+    issue(ctx, ["semantic", "formula", "trackRecordCeilings", 0], "Track-record bands must start at zero");
   }
   trackBands.forEach((band, index) => {
     const next = trackBands[index + 1];
     if (next && band.maxMonthsExclusive !== next.minMonthsInclusive) {
-      addPolicyIssue(
-        ctx,
-        ["semantic", "formula", "trackRecordCeilings", index, "maxMonthsExclusive"],
-        "Track-record bands must be contiguous and non-overlapping",
-      );
+      issue(
+              ctx,
+              ["semantic", "formula", "trackRecordCeilings", index, "maxMonthsExclusive"],
+              "Track-record bands must be contiguous and non-overlapping",
+            );
     }
     if (!next && band.maxMonthsExclusive !== null) {
-      addPolicyIssue(
-        ctx,
-        ["semantic", "formula", "trackRecordCeilings", index, "maxMonthsExclusive"],
-        "Final track-record band must be open-ended",
-      );
+      issue(
+              ctx,
+              ["semantic", "formula", "trackRecordCeilings", index, "maxMonthsExclusive"],
+              "Final track-record band must be open-ended",
+            );
     }
     if (band.maxMonthsExclusive !== null && band.maxMonthsExclusive <= band.minMonthsInclusive) {
-      addPolicyIssue(
-        ctx,
-        ["semantic", "formula", "trackRecordCeilings", index],
-        "Track-record band must have positive width",
-      );
+      issue(
+              ctx,
+              ["semantic", "formula", "trackRecordCeilings", index],
+              "Track-record band must have positive width",
+            );
     }
   });
 
   formula.activeDepegCaps.forEach((cap, index) => {
     const previous = formula.activeDepegCaps[index - 1];
     if (previous && cap.minimumBps >= previous.minimumBps) {
-      addPolicyIssue(
-        ctx,
-        ["semantic", "formula", "activeDepegCaps", index, "minimumBps"],
-        "Active-depeg thresholds must strictly decrease",
-      );
+      issue(
+              ctx,
+              ["semantic", "formula", "activeDepegCaps", index, "minimumBps"],
+              "Active-depeg thresholds must strictly decrease",
+            );
     }
     if (previous && cap.limit < previous.limit) {
-      addPolicyIssue(
-        ctx,
-        ["semantic", "formula", "activeDepegCaps", index, "limit"],
-        "Lower-severity active-depeg bands cannot impose a tighter limit",
-      );
+      issue(
+              ctx,
+              ["semantic", "formula", "activeDepegCaps", index, "limit"],
+              "Lower-severity active-depeg bands cannot impose a tighter limit",
+            );
     }
     const declaredGrade = V9_RATED_GRADES.find((grade) => cap.kind === `active-depeg:${grade.toLowerCase()}`);
     const resolvedGrade = grades.find((threshold) => cap.limit >= threshold.minScore)?.grade ?? "F";
     if (declaredGrade !== undefined && resolvedGrade !== declaredGrade) {
-      addPolicyIssue(
-        ctx,
-        ["semantic", "formula", "activeDepegCaps", index, "limit"],
-        `Active-depeg cap ${cap.kind} must remain inside its declared ${declaredGrade} grade band`,
-      );
+      issue(
+              ctx,
+              ["semantic", "formula", "activeDepegCaps", index, "limit"],
+              `Active-depeg cap ${cap.kind} must remain inside its declared ${declaredGrade} grade band`,
+            );
     }
   });
 
@@ -1650,15 +1579,15 @@ export const V9MethodologyPolicySchema = V9MethodologyPolicyBaseSchema.superRefi
     new Set(dispositionClasses).size !== V9FactClassSchema.options.length ||
     V9FactClassSchema.options.some((factClass) => !dispositionClasses.includes(factClass))
   ) {
-    addPolicyIssue(
-      ctx,
-      ["semantic", "evidence", "dispositions"],
-      "Evidence dispositions must cover every fact class exactly once",
-    );
+    issue(
+          ctx,
+          ["semantic", "evidence", "dispositions"],
+          "Evidence dispositions must cover every fact class exactly once",
+        );
   }
   const ranks = Object.values(policy.semantic.evidence.rank);
   if (new Set(ranks).size !== ranks.length || Math.min(...ranks) !== 0 || Math.max(...ranks) !== ranks.length - 1) {
-    addPolicyIssue(ctx, ["semantic", "evidence", "rank"], "Evidence ranks must be a complete zero-based ordering");
+    issue(ctx, ["semantic", "evidence", "rank"], "Evidence ranks must be a complete zero-based ordering");
   }
 
   const reasonCodes = policy.reasonRegistry.map((entry) => entry.code);
@@ -1667,7 +1596,7 @@ export const V9MethodologyPolicySchema = V9MethodologyPolicyBaseSchema.superRefi
     new Set(reasonCodes).size !== V9_REASON_CODES.length ||
     V9_REASON_CODES.some((code) => !reasonCodes.includes(code))
   ) {
-    addPolicyIssue(ctx, ["reasonRegistry"], "Reason registry must cover every V9 reason code exactly once");
+    issue(ctx, ["reasonRegistry"], "Reason registry must cover every V9 reason code exactly once");
   }
   const dispositionsByClass = new Map(
     policy.semantic.evidence.dispositions.map((disposition) => [disposition.factClass, disposition]),
@@ -1676,22 +1605,22 @@ export const V9MethodologyPolicySchema = V9MethodologyPolicyBaseSchema.superRefi
     const disposition = dispositionsByClass.get(entry.defaultFactClass);
     if (!disposition) return;
     if ((entry.defaultTreatment === "NR") !== (disposition.rateability === "NR")) {
-      addPolicyIssue(
-        ctx,
-        ["reasonRegistry", index, "defaultTreatment"],
-        "NR treatment and disposition rateability must agree",
-      );
+      issue(
+              ctx,
+              ["reasonRegistry", index, "defaultTreatment"],
+              "NR treatment and disposition rateability must agree",
+            );
     }
     if (entry.ceilingRule?.source === "minimum-track-record") {
       const minimumBand = [...policy.semantic.formula.trackRecordCeilings].sort(
         (left, right) => left.minMonthsInclusive - right.minMonthsInclusive,
       )[0];
       if (!minimumBand || minimumBand.limit === null) {
-        addPolicyIssue(
-          ctx,
-          ["reasonRegistry", index, "ceilingRule"],
-          "Minimum track-record reason ceiling requires a finite lowest-band limit",
-        );
+        issue(
+                  ctx,
+                  ["reasonRegistry", index, "ceilingRule"],
+                  "Minimum track-record reason ceiling requires a finite lowest-band limit",
+                );
       }
     }
   });
@@ -1699,39 +1628,39 @@ export const V9MethodologyPolicySchema = V9MethodologyPolicyBaseSchema.superRefi
   const backing = policy.semantic.backing;
   const reserveFactorWeight = Object.values(backing.reserve.factorWeights).reduce((sum, value) => sum + value, 0);
   if (Math.abs(reserveFactorWeight - 1) > 1e-9) {
-    addPolicyIssue(
-      ctx,
-      ["semantic", "backing", "reserve", "factorWeights"],
-      `Backing reserve factor weights must sum to 1; received ${reserveFactorWeight}`,
-    );
+    issue(
+          ctx,
+          ["semantic", "backing", "reserve", "factorWeights"],
+          `Backing reserve factor weights must sum to 1; received ${reserveFactorWeight}`,
+        );
   }
   if (
     new Set(backing.reserve.maturityNotApplicableClasses).size !== backing.reserve.maturityNotApplicableClasses.length
   ) {
-    addPolicyIssue(
-      ctx,
-      ["semantic", "backing", "reserve", "maturityNotApplicableClasses"],
-      "Maturity not-applicable classes must be unique",
-    );
+    issue(
+          ctx,
+          ["semantic", "backing", "reserve", "maturityNotApplicableClasses"],
+          "Maturity not-applicable classes must be unique",
+        );
   }
   const openMaturityBands = backing.reserve.maturityBands.filter((band) => band.maxDaysInclusive === null);
   const finiteMaturityBands = backing.reserve.maturityBands.filter(
     (band): band is { maxDaysInclusive: number; score: number } => band.maxDaysInclusive !== null,
   );
   if (openMaturityBands.length !== 1) {
-    addPolicyIssue(
-      ctx,
-      ["semantic", "backing", "reserve", "maturityBands"],
-      "Backing maturity bands require exactly one open-ended band",
-    );
+    issue(
+          ctx,
+          ["semantic", "backing", "reserve", "maturityBands"],
+          "Backing maturity bands require exactly one open-ended band",
+        );
   }
   finiteMaturityBands.forEach((band, index) => {
     if (index > 0 && band.maxDaysInclusive <= finiteMaturityBands[index - 1]!.maxDaysInclusive) {
-      addPolicyIssue(
-        ctx,
-        ["semantic", "backing", "reserve", "maturityBands", index, "maxDaysInclusive"],
-        "Backing maturity bands must be strictly increasing before the open-ended band",
-      );
+      issue(
+              ctx,
+              ["semantic", "backing", "reserve", "maturityBands", index, "maxDaysInclusive"],
+              "Backing maturity bands must be strictly increasing before the open-ended band",
+            );
     }
   });
   const concentrationThresholds = backing.reserve.concentrationBands.map((band) => band.minShareInclusive);
@@ -1740,45 +1669,45 @@ export const V9MethodologyPolicySchema = V9MethodologyPolicyBaseSchema.superRefi
     new Set(concentrationThresholds).size !== concentrationThresholds.length ||
     concentrationThresholds.some((threshold, index) => index > 0 && threshold <= concentrationThresholds[index - 1]!)
   ) {
-    addPolicyIssue(
-      ctx,
-      ["semantic", "backing", "reserve", "concentrationBands"],
-      "Backing concentration bands must start at zero and strictly increase",
-    );
+    issue(
+          ctx,
+          ["semantic", "backing", "reserve", "concentrationBands"],
+          "Backing concentration bands must start at zero and strictly increase",
+        );
   }
   const severityShares = backing.structural.severityShares;
   if (!(severityShares.moderate < severityShares.high && severityShares.high < severityShares.critical)) {
-    addPolicyIssue(
-      ctx,
-      ["semantic", "backing", "structural", "severityShares"],
-      "Backing severity shares must strictly increase",
-    );
+    issue(
+          ctx,
+          ["semantic", "backing", "structural", "severityShares"],
+          "Backing severity shares must strictly increase",
+        );
   }
   Object.entries(backing.archetypes).forEach(([archetype, archetypePolicy]) => {
     const componentWeight = Object.values(archetypePolicy.componentWeights).reduce((sum, value) => sum + value, 0);
     if (Math.abs(archetypePolicy.reserveWeight + componentWeight - 1) > 1e-9) {
-      addPolicyIssue(
-        ctx,
-        ["semantic", "backing", "archetypes", archetype, "componentWeights"],
-        `${archetype} backing weights must sum to 1`,
-      );
+      issue(
+              ctx,
+              ["semantic", "backing", "archetypes", archetype, "componentWeights"],
+              `${archetype} backing weights must sum to 1`,
+            );
     }
     if (
       new Set(archetypePolicy.serialComponentKeys).size !== archetypePolicy.serialComponentKeys.length ||
       archetypePolicy.serialComponentKeys.some((key) => !(key in archetypePolicy.componentWeights))
     ) {
-      addPolicyIssue(
-        ctx,
-        ["semantic", "backing", "archetypes", archetype, "serialComponentKeys"],
-        `${archetype} serial components must be unique weighted components`,
-      );
+      issue(
+              ctx,
+              ["semantic", "backing", "archetypes", archetype, "serialComponentKeys"],
+              `${archetype} serial components must be unique weighted components`,
+            );
     }
     if (Object.keys(archetypePolicy.structuralComponents).some((key) => !(key in archetypePolicy.componentWeights))) {
-      addPolicyIssue(
-        ctx,
-        ["semantic", "backing", "archetypes", archetype, "structuralComponents"],
-        `${archetype} structural components must be weighted components`,
-      );
+      issue(
+              ctx,
+              ["semantic", "backing", "archetypes", archetype, "structuralComponents"],
+              `${archetype} structural components must be weighted components`,
+            );
     }
   });
   const backingSignals = [
@@ -1796,40 +1725,40 @@ export const V9MethodologyPolicySchema = V9MethodologyPolicyBaseSchema.superRefi
   ];
   backingSignals.forEach((signal, index) => {
     if (policy.semantic.structural.signalLimits[signal.kind][signal.severity] === null) {
-      addPolicyIssue(
-        ctx,
-        ["semantic", "backing", "structural", "signals", index],
-        `Backing signal ${signal.kind}:${signal.severity} requires a finite central structural limit`,
-      );
+      issue(
+              ctx,
+              ["semantic", "backing", "structural", "signals", index],
+              `Backing signal ${signal.kind}:${signal.severity} requires a finite central structural limit`,
+            );
     }
   });
 
   const stress = policy.semantic.exit.stressRequest;
   if (!(stress.floorUsd <= stress.referenceNotionalUsd && stress.referenceNotionalUsd <= stress.capUsd)) {
-    addPolicyIssue(
-      ctx,
-      ["semantic", "exit", "stressRequest"],
-      "Exit reference notional must fall between the floor and cap",
-    );
+    issue(
+          ctx,
+          ["semantic", "exit", "stressRequest"],
+          "Exit reference notional must fall between the floor and cap",
+        );
   }
   if (!stress.notionalGridUsd.includes(stress.referenceNotionalUsd)) {
-    addPolicyIssue(
-      ctx,
-      ["semantic", "exit", "stressRequest", "notionalGridUsd"],
-      "Exit notional grid must contain the reference notional",
-    );
+    issue(
+          ctx,
+          ["semantic", "exit", "stressRequest", "notionalGridUsd"],
+          "Exit notional grid must contain the reference notional",
+        );
   }
   stress.notionalGridUsd.forEach((value, index) => {
     if (index > 0 && value <= stress.notionalGridUsd[index - 1]!) {
-      addPolicyIssue(
-        ctx,
-        ["semantic", "exit", "stressRequest", "notionalGridUsd", index],
-        "Exit notionals must be strictly increasing",
-      );
+      issue(
+              ctx,
+              ["semantic", "exit", "stressRequest", "notionalGridUsd", index],
+              "Exit notionals must be strictly increasing",
+            );
     }
   });
   if (policy.semantic.exit.ammModeledTvlRatio.min > policy.semantic.exit.ammModeledTvlRatio.max) {
-    addPolicyIssue(ctx, ["semantic", "exit", "ammModeledTvlRatio"], "AMM TVL ratio bounds are reversed");
+    issue(ctx, ["semantic", "exit", "ammModeledTvlRatio"], "AMM TVL ratio bounds are reversed");
   }
   validateAscendingBreakpoints(policy.semantic.exit.coverageRatioBreakpoints, ctx, [
     "semantic",
@@ -1846,21 +1775,21 @@ export const V9MethodologyPolicySchema = V9MethodologyPolicyBaseSchema.superRefi
   settlementBands.forEach((band, index) => {
     const previous = settlementBands[index - 1];
     if (index < settlementBands.length - 1 && band.maxSec === null) {
-      addPolicyIssue(
-        ctx,
-        ["semantic", "exit", "settlementDelayBands", index],
-        "Only the last settlement band may be open-ended",
-      );
+      issue(
+              ctx,
+              ["semantic", "exit", "settlementDelayBands", index],
+              "Only the last settlement band may be open-ended",
+            );
     }
     if (index === settlementBands.length - 1 && band.maxSec !== null) {
-      addPolicyIssue(
-        ctx,
-        ["semantic", "exit", "settlementDelayBands", index],
-        "Final settlement band must be open-ended",
-      );
+      issue(
+              ctx,
+              ["semantic", "exit", "settlementDelayBands", index],
+              "Final settlement band must be open-ended",
+            );
     }
     if (previous?.maxSec != null && band.maxSec != null && band.maxSec <= previous.maxSec) {
-      addPolicyIssue(ctx, ["semantic", "exit", "settlementDelayBands", index], "Settlement bands must increase");
+      issue(ctx, ["semantic", "exit", "settlementDelayBands", index], "Settlement bands must increase");
     }
   });
 
@@ -1871,10 +1800,10 @@ export const V9MethodologyPolicySchema = V9MethodologyPolicyBaseSchema.superRefi
     bands.forEach((band, index) => {
       const previous = bands[index - 1];
       if (previous && band.threshold >= previous.threshold) {
-        addPolicyIssue(ctx, ["semantic", "exit", field, index, "threshold"], `${field} thresholds must decrease`);
+        issue(ctx, ["semantic", "exit", field, index, "threshold"], `${field} thresholds must decrease`);
       }
       if (previous && band.multiplier < previous.multiplier) {
-        addPolicyIssue(ctx, ["semantic", "exit", field, index, "multiplier"], `${field} multipliers cannot decrease`);
+        issue(ctx, ["semantic", "exit", field, index, "multiplier"], `${field} multipliers cannot decrease`);
       }
     });
   }

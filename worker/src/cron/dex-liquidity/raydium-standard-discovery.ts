@@ -5,7 +5,7 @@ import type { PriceValidationReferences } from "../../lib/price-validation";
 import { isDexApiRecord } from "./direct-api-json";
 import { runPaginatedDirectApiFetch } from "./direct-api-paginated";
 import { normalizeProtocol } from "./pool-helpers";
-import type { LiquidityMetrics, SymbolLookups } from "./types";
+import type { SourcePoolGraph, SymbolLookups } from "./types";
 
 const RAYDIUM_STANDARD_PROGRAMS: Record<string, true> = {
   "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8": true,
@@ -42,16 +42,16 @@ export function parseRaydiumStandardDiscoveryPool(raw: unknown): DexApiPool | nu
 }
 
 export async function enrichRaydiumStandardDiscoveryExecutionModels(input: {
-  metrics: Map<string, LiquidityMetrics>;
+  metrics: Map<string, SourcePoolGraph>;
   chainAddressToId: SymbolLookups["chainAddressToId"];
   stablecoinPriceById: Map<string, number>;
   validationReferences?: PriceValidationReferences;
   signal?: AbortSignal;
   deadlineMs: number;
 }): Promise<void> {
-  const references = new Map<string, Array<{ stablecoinId: string; pool: LiquidityMetrics["topPools"][number] }>>();
+  const references = new Map<string, Array<{ stablecoinId: string; pool: SourcePoolGraph["pools"][number] }>>();
   for (const [stablecoinId, metric] of input.metrics) {
-    for (const pool of metric.topPools) {
+    for (const pool of metric.pools) {
       if (canonicalExitRouteChain(pool.chain) !== "solana" || normalizeProtocol(pool.project) !== "raydium" ||
         pool.poolType !== "cg-amm" || pool.extra?.ammExecutionModel) continue;
       const address = pool.poolId.startsWith("solana:") ? pool.poolId.slice(7) : "";

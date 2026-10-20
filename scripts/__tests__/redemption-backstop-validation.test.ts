@@ -266,6 +266,36 @@ describe("validateRedemptionBackstopRegistry", () => {
 
   it.each([
     {
+      name: "negative fixed fee",
+      overrides: { costModel: { kind: "fee-bps", feeBps: -1 } },
+      path: ["costModel", "feeBps"], code: "too_small",
+    },
+    {
+      name: "nonpositive supply ratio",
+      overrides: { capacityModel: { kind: "supply-ratio", ratio: 0 } },
+      path: ["capacityModel", "ratio"], code: "too_small",
+    },
+    {
+      name: "oversized supply ratio",
+      overrides: { capacityModel: { kind: "supply-ratio", ratio: 1.1 } },
+      path: ["capacityModel", "ratio"], code: "too_big",
+    },
+    {
+      name: "invalid reserve fallback ratio",
+      overrides: { capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 1.1 } },
+      path: ["capacityModel", "fallbackRatio"], code: "too_big",
+    },
+    {
+      name: "nonpositive score cap",
+      overrides: { totalScoreCap: 0 },
+      path: ["totalScoreCap"], code: "too_small",
+    },
+    {
+      name: "oversized score cap",
+      overrides: { totalScoreCap: 101 },
+      path: ["totalScoreCap"], code: "too_big",
+    },
+    {
       name: "live-derived static capacity confidence",
       overrides: { capacityModel: { kind: "supply-ratio", ratio: 0.1, confidence: "live-direct" } },
       path: ["capacityModel", "confidence"], code: "invalid_value",
@@ -319,14 +349,15 @@ describe("validateRedemptionBackstopRegistry", () => {
       expect(parsed.error.issues.map(({ code, path }) => ({ code, path }))).toEqual([{ code, path }]);
     }
     const result = validateFixture([singleOwner(config)]);
-    expect(result.findings).toContainEqual(expect.objectContaining({
-      severity: "error", code: "schema-validation", stablecoinId: "usdt-tether",
-    }));
-    if (path.join(".") === "capacityModel.confidence") {
-      expect(result.findings).toContainEqual(expect.objectContaining({
-        code: "static-live-capacity-confidence", stablecoinId: "usdt-tether",
-      }));
-    }
+    const schemaFindings = result.findings.filter((finding) => finding.code === "schema-validation");
+    expect(schemaFindings).toEqual([expect.objectContaining({
+      severity: "error", stablecoinId: "usdt-tether",
+      message: expect.stringContaining(`schema validation failed at ${path.join(".")}:`),
+    })]);
+    expect(result.findings.some((finding) => [
+      "negative-fee-bps", "supply-ratio-out-of-range", "static-live-capacity-confidence",
+      "reserve-sync-fallback-ratio-out-of-range", "total-score-cap-out-of-range",
+    ].includes(finding.code))).toBe(false);
   });
 
   it("enforces canonical identities for tracked, collateral, and unresolved outputs", () => {

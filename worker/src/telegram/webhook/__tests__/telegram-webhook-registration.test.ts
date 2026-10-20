@@ -2,6 +2,9 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { mockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { buildTelegramMiniAppUrl, TELEGRAM_MINI_APP_URL } from "../../common/mini-app-url";
+import { COMMAND_HANDLERS } from "../../commands";
+import { HELP_MESSAGE } from "../telegram-webhook-shared";
+import { TELEGRAM_COMMAND_POLICIES } from "../telegram-webhook-ingress-policy";
 import {
   buildTelegramWebhookUrl,
   reconcileTelegramCommandRegistration,
@@ -93,6 +96,18 @@ function expectedMenuCacheValue(url = TELEGRAM_MINI_APP_URL): string {
     },
   });
 }
+
+describe("retired watchlist commands", () => {
+  it("omits command portability from dispatch, policy, registration, and help", () => {
+    for (const command of ["import", "export"]) {
+      expect(COMMAND_HANDLERS[`/${command}`]).toBeUndefined();
+      expect(TELEGRAM_COMMAND_POLICIES[`/${command}`]).toBeUndefined();
+      expect(TELEGRAM_BOT_COMMANDS.some((entry) => entry.command === command)).toBe(false);
+      expect(TELEGRAM_BOT_GROUP_COMMANDS.some((entry) => entry.command === command)).toBe(false);
+      expect(HELP_MESSAGE).not.toContain(`/${command}`);
+    }
+  });
+});
 
 describe("buildTelegramWebhookUrl", () => {
   it("uses the configured SELF_URL when valid", () => {

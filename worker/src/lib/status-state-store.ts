@@ -3,6 +3,7 @@ import type {
   StatusStaleness,
   StatusTransition,
 } from "@shared/types/status";
+import type { StatusHealthValue } from "@shared/types/status/core";
 import { decideNextStatus } from "./status-reliability-decision";
 import {
   buildFallbackStatusState,
@@ -16,7 +17,6 @@ import {
   STATUS_SYSTEM_FRESHNESS_SEC,
   toStateInfo,
   transitionType,
-  type StatusLevel,
   type StatusPersistenceIssueReporter,
   type StatusStateRow,
   type StatusTransitionRow,
@@ -30,12 +30,12 @@ const STATUS_STATE_SELECT_COLUMNS =
 export async function reconcileStatusState(
   db: D1Database,
   now: number,
-  rawStatus: StatusLevel,
+  rawStatus: StatusHealthValue,
   confidence: number,
   causes: StatusCause[],
   onIssue?: StatusPersistenceIssueReporter,
 ): Promise<{
-  effectiveStatus: StatusLevel;
+  effectiveStatus: StatusHealthValue;
   state: ReturnType<typeof buildFallbackStatusState>;
   transition: StatusTransition | null;
   persistenceSucceeded: boolean;

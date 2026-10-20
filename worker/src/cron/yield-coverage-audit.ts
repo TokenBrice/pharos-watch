@@ -14,14 +14,11 @@ import { getCache, setCache } from "../lib/db-cache";
 import { CIRCUIT_SOURCE } from "../lib/constants";
 import { reportCronProgress } from "../lib/cron-progress";
 import { loadDlStablecoinPools } from "./yield-sync/sources-dl";
-import {
-  AUTO_LENDING_POOL_MAP,
-  EXPLICIT_YIELD_SOURCE_POOL_MAP,
-  LENDING_PROTOCOL_ALLOWLIST,
-  YIELD_ADAPTER_MANIFEST,
-  YIELD_POOL_MAP,
-  YIELD_WEIGHTED_POOL_GROUPS,
-} from "../lib/yield-config/yield-config";
+import { AUTO_LENDING_POOL_MAP, LENDING_PROTOCOL_ALLOWLIST } from "../lib/yield-config/yield-config-lending-protocols";
+import { EXPLICIT_YIELD_SOURCE_POOL_MAP } from "../lib/yield-config/yield-config-explicit-pools";
+import { YIELD_ADAPTER_MANIFEST } from "../lib/yield-config/yield-config";
+import { YIELD_POOL_MAP } from "../lib/yield-config/yield-config-pools";
+import { YIELD_WEIGHTED_POOL_GROUPS } from "../lib/yield-config/yield-config-weighted-pools";
 import { computeSafetyScoresSnapshot, type PublishedSafetyScoresResultMap } from "../lib/safety-scores";
 import { loadStablecoinSupplyMapFromCacheValue, type StablecoinSupplyMapLoadResult } from "./yield-sync/state";
 import type { YieldAdapterLifecycleEntry } from "../lib/yield-config/yield-config-registry";

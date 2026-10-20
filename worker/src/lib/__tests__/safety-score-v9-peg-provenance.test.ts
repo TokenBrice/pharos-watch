@@ -68,6 +68,16 @@ function build(
 const USDG_LEGACY_EVENTS = legacyEvents();
 
 describe("Safety Score V9 peg provenance", () => {
+  it("projects summary and score results to identical narrow bytes", () => {
+    const summary = pegSummary(USDG_LEGACY_EVENTS);
+    const result = computePegScore(USDG_LEGACY_EVENTS, TRACKING_START_SEC, CLOCK_SEC);
+    const projected = projectSafetyScoreV9PegScoreResult(summary);
+    expect(JSON.stringify(projected)).toBe(JSON.stringify(projectSafetyScoreV9PegScoreResult(result)));
+    expect(Object.keys(projected)).toHaveLength(9);
+    expect(projected).not.toHaveProperty("id");
+    expect(projected).not.toHaveProperty("scoredEventCount");
+  });
+
   it("keeps the USDG-shaped legacy-inclusive score unchanged and isolates the backfill-excluded scenario", () => {
     const before = structuredClone(USDG_LEGACY_EVENTS);
     const summary = build(USDG_LEGACY_EVENTS);

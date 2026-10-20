@@ -1,6 +1,6 @@
 import { BlacklistDecodeError, quarantineBlacklistDecodeFailure } from "../../lib/blacklist/decode-quarantine";
 import { logWorkerEventArgs } from "../../lib/structured-log";
-import { decodeAbiParameters } from "viem/utils";
+import { decodeBlacklistEvmPayload } from "../../lib/blacklist/evm-payload";
 import {
   blockHashesForLogs,
   fetchAlchemyLogs,
@@ -13,17 +13,12 @@ import { throwIfAborted } from "../../lib/abort";
 import {
   getBlacklistEventByTopic,
   getBlacklistTopicHashes,
-  type BlacklistEventDef,
   type ContractEventConfig,
 } from "../../lib/blacklist-contracts";
 import type { BlacklistEventType } from "@shared/types/market";
 import { getChainRpc, logScanRpcEndpoints, type ChainRpcConfig, type RpcEndpoint } from "../../lib/chain-registry";
 import {
-  decodeAddressWord,
-  decodeUint256AtSlotOrNull,
-  decodeUint256Word,
   fetchEvmLogsForTopicWithCompleteness,
-  readDataWord,
   type EtherscanLogEntry,
   type RateLimitedFetch,
 } from "../../lib/evm-logs";
@@ -145,31 +140,6 @@ export function getEvmSafeHead(evmChainId: number, chainHead: number): number {
 }
 
 
-function decodeAddressArrayData(data: string): string[] {
-  try {
-    const [addresses] = decodeAbiParameters([{ type: "address[]" }], data as `0x${string}`);
-    return [...addresses].map((address) => address.toLowerCase());
-  } catch {
-    throw new BlacklistDecodeError("invalid-address-array");
-  }
-}
-
-function decodeRequiredAddressWord(word: string | null | undefined): string | null {
-  return typeof word === "string" && /^(0x)?0{24}[0-9a-f]{40}$/i.test(word) ? decodeAddressWord(word) : null;
-}
-
-function decodeAddressAtDataSlot(data: string, slotIndex: number): string | null {
-  return decodeRequiredAddressWord(readDataWord(data, slotIndex));
-}
-
-/** Direction is required evidence; ABI bool accepts only zero or one. */
-function resolveEventTypeFromDataBool(data: string, slotIndex: number): BlacklistEventType {
-  const word = readDataWord(data, slotIndex);
-  if (word == null || !/^0x[0-9a-f]{64}$/i.test(word) || (BigInt(word) !== 0n && BigInt(word) !== 1n)) {
-    throw new BlacklistDecodeError("invalid-direction-bool");
-  }
-  return BigInt(word) === 1n ? "blacklist" : "unblacklist";
-}
 
 function buildEvmBlacklistRow(
   config: ContractEventConfig,
@@ -202,25 +172,6 @@ function buildEvmBlacklistRow(
   });
 }
 
-function decodeEvmLogAmount(
-  eventDef: BlacklistEventDef,
-  log: EvmLogLike,
-  decimals: number,
-  addressFromTopic: boolean,
-): number | null {
-  if (!eventDef.hasAmount) return null;
-
-  if (typeof eventDef.amountTopicIndex === "number") {
-    return decodeUint256Word(log.topics[eventDef.amountTopicIndex], decimals);
-  }
-  if (typeof eventDef.amountDataIndex === "number") {
-    return decodeUint256AtSlotOrNull(log.data, eventDef.amountDataIndex, decimals);
-  }
-  if (addressFromTopic) {
-    return decodeUint256Word(readDataWord(log.data, 0), decimals);
-  }
-  return decodeUint256Word(readDataWord(log.data, 1), decimals);
-}
 
 type ParsedEvmLogs = {
   rows: BlacklistRow[];
@@ -257,13 +208,9 @@ export function parseEvmLogsWithCoverage(
       continue;
     }
 
-    const eventTypeOverride =
-      typeof eventDef.eventTypeFromDataBoolIndex === "number"
-        ? resolveEventTypeFromDataBool(log.data, eventDef.eventTypeFromDataBoolIndex)
-        : undefined;
-
-    if (eventDef.addressArrayData) {
-      const addresses = decodeAddressArrayData(log.data);
+    const payload = decodeBlacklistEvmPayload(eventDef, log, config.decimals);
+    if (Array.isArray(payload.address)) {
+      const addresses = payload.address;
       addresses.forEach((affectedAddress, index) => {
         const row = buildEvmBlacklistRow(
           config,
@@ -273,27 +220,15 @@ export function parseEvmLogsWithCoverage(
           blockNumber,
           timestamp,
           `-${index}`,
-          eventTypeOverride,
+          payload.eventType,
         );
         if (row) rows.push(row);
       });
       continue;
     }
 
-    const topicIdx = eventDef.addressTopicIndex ?? 1;
-    const forcedDataAddress =
-      typeof eventDef.addressDataIndex === "number"
-        ? decodeAddressAtDataSlot(log.data, eventDef.addressDataIndex)
-        : null;
-    if (typeof eventDef.addressDataIndex === "number" && forcedDataAddress == null) {
-      throw new BlacklistDecodeError("invalid-address");
-    }
-    const addressFromTopic = forcedDataAddress == null && log.topics.length > topicIdx;
-    const affectedAddress =
-      forcedDataAddress ??
-      (addressFromTopic ? decodeRequiredAddressWord(log.topics[topicIdx]) : decodeRequiredAddressWord(readDataWord(log.data, 0)));
-    if (!affectedAddress) throw new BlacklistDecodeError("invalid-address");
-    const amount = decodeEvmLogAmount(eventDef, log, config.decimals, addressFromTopic);
+    const affectedAddress = payload.address;
+    const amount = payload.amount;
 
     const row = buildEvmBlacklistRow(
       config,
@@ -303,7 +238,7 @@ export function parseEvmLogsWithCoverage(
       blockNumber,
       timestamp,
       "",
-      eventTypeOverride,
+      payload.eventType,
     );
     if (row) rows.push(row);
     } catch (error) {

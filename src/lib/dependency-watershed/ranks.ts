@@ -1,3 +1,5 @@
+import { stronglyConnectedComponents } from "@shared/lib/strongly-connected-components";
+
 export interface DirectedLink {
   from: string;
   to: string;
@@ -22,37 +24,8 @@ function adjacency(ids: readonly string[], links: readonly DirectedLink[]) {
 export function findDependencyCycle(ids: readonly string[], links: readonly DirectedLink[]): string[] | null {
   const out = adjacency(ids, links);
   for (const link of links) if (link.from === link.to) return [link.from];
-  const index = new Map<string, number>(), low = new Map<string, number>();
-  const stack: string[] = [], onStack = new Set<string>();
-  let next = 0;
-  for (const start of [...ids].sort(compareIds)) {
-    if (index.has(start)) continue;
-    const work: { id: string; child: number }[] = [{ id: start, child: 0 }];
-    index.set(start, next); low.set(start, next++); stack.push(start); onStack.add(start);
-    while (work.length) {
-      const frame = work[work.length - 1]!;
-      const targets = out.get(frame.id) ?? [];
-      if (frame.child < targets.length) {
-        const target = targets[frame.child++]!;
-        if (!index.has(target)) {
-          index.set(target, next); low.set(target, next++); stack.push(target); onStack.add(target);
-          work.push({ id: target, child: 0 });
-        } else if (onStack.has(target)) low.set(frame.id, Math.min(low.get(frame.id)!, index.get(target)!));
-        continue;
-      }
-      work.pop();
-      const parent = work[work.length - 1];
-      if (parent) low.set(parent.id, Math.min(low.get(parent.id)!, low.get(frame.id)!));
-      if (low.get(frame.id) !== index.get(frame.id)) continue;
-      const members: string[] = [];
-      let member: string;
-      do {
-        member = stack.pop()!;
-        onStack.delete(member);
-        members.push(member);
-      } while (member !== frame.id);
-      if (members.length > 1) return members.sort(compareIds);
-    }
+  for (const members of stronglyConnectedComponents([...ids].sort(compareIds), id => out.get(id) ?? [])) {
+    if (members.length > 1) return members.sort(compareIds);
   }
   return null;
 }

@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { computeLiveReserveConfigFingerprint, LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 import { CONFIGURED_COINS, type ConfiguredCoin } from "../sync-live-reserves-shared";
-import type { LiveReserveSnapshotMetadata } from "@shared/types/live-reserves";
+import type { LiveReserveSnapshotMetadata, ReserveSyncStatus } from "@shared/types/live-reserves";
 import type { ReserveAdapterDefinition } from "../reserve-adapters/index";
 import { syncReserveCoin } from "../sync-live-reserves-core";
 import { computeReserveCompositionOverview, loadFreshIndependentLiveReserveMap } from "../../lib/live-reserves/store";
@@ -50,7 +50,7 @@ describe("syncLiveReserves", () => {
 
   function buildPreviousLiveReserveRows(args: {
     coin: ConfiguredCoin;
-    lastStatus: "ok" | "degraded" | "error" | "skipped";
+    lastStatus: ReserveSyncStatus;
     lastAttemptedAt: number;
     lastSuccessAt: number;
     lastError?: string | null;

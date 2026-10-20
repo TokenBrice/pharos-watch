@@ -191,7 +191,7 @@ function expectedTrackedStablecoinUnitValueUsd(
     : null;
 }
 
-function pinnedDexTrackedStablecoinValuation(
+function pinnedTrackedStablecoinValuation(
   fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   observation: ExitRouteObservation,
   trackedAssetId: string,
@@ -200,11 +200,12 @@ function pinnedDexTrackedStablecoinValuation(
   if (
     !isObservedPrice({ priceSource: observation.outputUnitValueSourceId }) ||
     observation.outputUnitValueUsd === undefined ||
-    observation.outputUnitValueSourceId === undefined ||
+    !observation.outputUnitValueSourceId ||
     observation.outputUnitValueObservedAt === undefined ||
     observation.outputUnitValueObservedAt > fixedInput.clockSec ||
     fixedInput.clockSec - observation.outputUnitValueObservedAt > DEPEG_PRIMARY_PRICE_MAX_AGE_SEC ||
-    (observation.outputUnitValueSourceId.startsWith("dex-amm-output-reference:") &&
+    ((observation.routeFamily === "dex-amm" || observation.routeFamily === "dex-orderbook") &&
+      observation.outputUnitValueSourceId.startsWith("dex-amm-output-reference:") &&
       !observation.outputUnitValueSourceId.endsWith(":tracked-market")) ||
     observation.outputUnitValueObservedAt > observedAtSec + 60
   ) {
@@ -227,30 +228,6 @@ function pinnedDexTrackedStablecoinValuation(
     basis: navPrice ? "nav" : "price",
     unitValueUsd: observation.outputUnitValueUsd,
     expectedUnitValueUsd,
-    confidence: observation.confidence,
-    observedAtSec: observation.outputUnitValueObservedAt,
-    sourceId: observation.outputUnitValueSourceId,
-    maxAgeSec: DEPEG_PRIMARY_PRICE_MAX_AGE_SEC,
-  };
-}
-
-function pinnedRedemptionTrackedStablecoinValuation(
-  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
-  observation: ExitRouteObservation,
-  trackedAssetId: string,
-  observedAtSec: number,
-): TrackedStablecoinValuation | null {
-  if (observation.outputUnitValueUsd === undefined || !observation.outputUnitValueSourceId ||
-      !isObservedPrice({ priceSource: observation.outputUnitValueSourceId }) ||
-      observation.outputUnitValueObservedAt === undefined ||
-      observation.outputUnitValueObservedAt > fixedInput.clockSec ||
-      fixedInput.clockSec - observation.outputUnitValueObservedAt > DEPEG_PRIMARY_PRICE_MAX_AGE_SEC ||
-      observation.outputUnitValueObservedAt > observedAtSec + 60) return null;
-  const expectedUnitValueUsd = expectedTrackedStablecoinUnitValueUsd(fixedInput, trackedAssetId);
-  if (expectedUnitValueUsd === null || observation.outputUnitValueUsd / expectedUnitValueUsd > 2) return null;
-  return {
-    basis: fixedInput.navPriceById?.[trackedAssetId] ? "nav" : "price",
-    unitValueUsd: observation.outputUnitValueUsd, expectedUnitValueUsd,
     confidence: observation.confidence,
     observedAtSec: observation.outputUnitValueObservedAt,
     sourceId: observation.outputUnitValueSourceId,
@@ -484,10 +461,10 @@ function buildOutputReview(
       observation.routeFamily === "dex-amm" || observation.routeFamily === "dex-orderbook"
         ? capturedValuation ??
           (carriesPinnedDexValuation
-            ? pinnedDexTrackedStablecoinValuation(fixedInput, observation, assetKeys[0]!, observedAtSec)
+            ? pinnedTrackedStablecoinValuation(fixedInput, observation, assetKeys[0]!, observedAtSec)
             : null)
         : observation.outputUnitValueUsd !== undefined
-          ? pinnedRedemptionTrackedStablecoinValuation(
+          ? pinnedTrackedStablecoinValuation(
               fixedInput,
               observation,
               assetKeys[0]!,

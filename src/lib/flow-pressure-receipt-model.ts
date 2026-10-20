@@ -1,7 +1,6 @@
 import type {
   MintBurnCoinCoverage,
   MintBurnCoinFlow,
-  MintBurnGauge,
   MintBurnHourlyBucket,
   MintBurnSignedNetBound,
   MintBurnValuationCompleteness,
@@ -10,7 +9,7 @@ import {
   combineMintBurnValuationCompleteness,
   resolveMintBurnValuationCompleteness,
 } from "@shared/lib/mint-burn-valuation";
-import { aggregateCoinFlows24h, hasCompleteCoinScan, resolveCoinNetFlow } from "@shared/lib/mint-burn-coin-helpers";
+import { hasCompleteCoinScan, resolveCoinNetFlow } from "@shared/lib/mint-burn-coin-helpers";
 import { describeMintBurnVolumeBound, sumMintBurnSignedNets } from "@shared/lib/mint-burn-valuation-display";
 
 export type FlowReceiptTone = "mint" | "burn" | "net" | "scope";
@@ -44,14 +43,6 @@ export interface FlowPressureReceiptCoverageRow {
 
 export interface FlowPressureReceiptModel {
   scopeLabel: string;
-  syncWarning: string | null;
-  trackedCoins: number;
-  mint24hUsd: number;
-  burn24hUsd: number;
-  net24hUsd: number | null;
-  mint7dUsd: number | null;
-  burn7dUsd: number | null;
-  net7dUsd: number | null;
   topMint: FlowPressureReceiptLeader | null;
   topBurn: FlowPressureReceiptLeader | null;
   coverageRows: FlowPressureReceiptCoverageRow[];
@@ -102,19 +93,16 @@ function sumWeekly(hourly: readonly MintBurnHourlyBucket[] | undefined, key: "mi
 }
 
 export function buildFlowPressureReceiptModel({
-  gauge,
   coins,
   weeklyHourly,
   scopeLabel = "Configured issuance chains",
   syncWarning = null,
 }: {
-  gauge: MintBurnGauge | null;
   coins: readonly MintBurnCoinFlow[];
   weeklyHourly?: readonly MintBurnHourlyBucket[];
   scopeLabel?: string;
   syncWarning?: string | null;
 }): FlowPressureReceiptModel {
-  const aggregate = aggregateCoinFlows24h(coins);
   const net7d = sumMintBurnSignedNets(coins.map((coin) => resolveCoinNetFlow(coin, "7d")));
   const weeklyCompleteness = combineMintBurnValuationCompleteness(
     ...(weeklyHourly ?? []).map((bucket) => resolveMintBurnValuationCompleteness(bucket.valuation)),
@@ -126,7 +114,7 @@ export function buildFlowPressureReceiptModel({
   const burn7dUsd = sumWeekly(weeklyHourly, "burnVolumeUsd");
   // Leaders rank only displayable nets; an unavailable net is never ranked as 0.
   const rankedNets = coins.flatMap((coin) => {
-    const valueUsd = resolveCoinNetFlow(coin, "24h").valueUsd;
+    const valueUsd = resolveCoinNetFlow(coin, "7d").valueUsd;
     return valueUsd == null ? [] : [{ symbol: coin.symbol, valueUsd }];
   });
   const topMint =
@@ -137,49 +125,11 @@ export function buildFlowPressureReceiptModel({
 
   return {
     scopeLabel,
-    syncWarning,
-    trackedCoins: gauge?.trackedCoins ?? coins.length,
-    mint24hUsd: aggregate.mintVolumeUsd,
-    burn24hUsd: aggregate.burnVolumeUsd,
-    net24hUsd: aggregate.net.valueUsd,
-    mint7dUsd,
-    burn7dUsd,
-    net7dUsd: net7d.valueUsd,
     topMint,
     topBurn,
     coverageRows,
     coverageSummary: summarizeCoverage(coverageRows, syncWarning),
     rows: [
-      {
-        id: "mint-24h",
-        label: "Printed 24h",
-        valueUsd: aggregate.mintVolumeUsd,
-        tone: "mint",
-        detail: "Tracked mints",
-        completeness: aggregate.mintCompleteness,
-        scanComplete: aggregate.scanComplete,
-        note: describeMintBurnVolumeBound(aggregate.mintCompleteness, aggregate.unpricedMintEventCount, aggregate.scanComplete),
-      },
-      {
-        id: "burn-24h",
-        label: "Shredded 24h",
-        valueUsd: aggregate.burnVolumeUsd,
-        tone: "burn",
-        detail: "Tracked burns",
-        completeness: aggregate.burnCompleteness,
-        scanComplete: aggregate.scanComplete,
-        note: describeMintBurnVolumeBound(aggregate.burnCompleteness, aggregate.unpricedBurnEventCount, aggregate.scanComplete),
-      },
-      {
-        id: "net-24h",
-        label: "Net 24h",
-        valueUsd: aggregate.net.valueUsd,
-        tone: "net",
-        detail: "Mint minus burn",
-        completeness: aggregate.net.completeness,
-        note: aggregate.net.note,
-        bound: aggregate.net.bound ?? null,
-      },
       {
         id: "mint-7d",
         label: "Printed 7d",

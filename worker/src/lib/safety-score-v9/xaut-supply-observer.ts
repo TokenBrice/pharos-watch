@@ -1,4 +1,5 @@
 import { sha256HexFromBytes } from "@shared/lib/sha256";
+import type { XautLockMintObservation, XautRepresentationGroupSupplyAttributionV2 } from "@shared/types/safety-score-v9-supply-attribution";
 import { throwIfAborted } from "../abort";
 import { getChainRpc, hasRegistryRpc, type ChainRpcConfig } from "../chain-registry";
 import { fetchTextWithRetry } from "../fetch-retry";
@@ -30,8 +31,6 @@ import {
   XAUT_TREASURY_ADDRESS,
   xautCirculatingLiabilityReconciles,
   xautLockMintIdentityValidationError,
-  type XautLockMintObservation,
-  type XautRepresentationGroupSupplyAttributionV2,
 } from "./xaut-supply-attribution-contract";
 import {
   decodeEvmAddress,

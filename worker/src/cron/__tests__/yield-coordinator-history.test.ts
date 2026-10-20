@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { buildYieldHistoryEvaluationInputs } from "../yield-sync/history";
+import { buildYieldHistoryEvaluationInputsCooperative } from "../yield-sync/history";
 import type { YieldHistorySnapshotRow } from "../yield-sync/history";
-import { evaluateYieldSources } from "../yield-sync/evaluation";
+import { evaluateYieldSourcesCooperative, type EvaluateYieldSourcesResult } from "../yield-sync/evaluation";
 import { baseEvaluationInput, resolvedYield } from "./yield-evaluation.test-support";
 
 function row(overrides: Partial<YieldHistorySnapshotRow>): YieldHistorySnapshotRow {
@@ -22,8 +22,45 @@ function row(overrides: Partial<YieldHistorySnapshotRow>): YieldHistorySnapshotR
 }
 
 describe("yield coordinator history", () => {
-  it("normalizes source, legacy, on-chain, TVL, and previous-best history inputs", () => {
-    const result = buildYieldHistoryEvaluationInputs({
+  it("reports each history phase in order before yielding at row cadence and phase completion", async () => {
+    const trace: string[] = [];
+    const result = await buildYieldHistoryEvaluationInputsCooperative({
+      historyRows: [100, 200, 300].map((recorded_at) => row({ recorded_at, is_best: 1 })),
+      prevTvlRows: [row({ source_tvl_usd: 9_000 }), row({ source_tvl_usd: 8_000 })],
+      prevBestRows: [row({ is_best: 1 })],
+    }, {
+      yieldEveryRows: 2,
+      onProgress: ({ phase, rowsDone, rowsTotal }) => { trace.push(`${phase}:${rowsDone}/${rowsTotal}`); },
+      yieldToEventLoop: async () => { trace.push("yield"); },
+    });
+    expect(trace).toEqual([
+      "history-rows:2/3", "yield", "history-rows:3/3", "yield",
+      "previous-tvl:2/2", "yield", "previous-best:1/1", "yield", "source-switches:1/1", "yield",
+    ]);
+    expect(result.sourceHistory.get("coin-a::source-a")?.map((entry) => entry.recorded_at)).toEqual([100, 200, 300]);
+    expect(result.prevTvlBySource.get("coin-a::source-a")).toBe(9_000);
+    expect(result.prevBestSourceKeyByCoin.get("coin-a")).toBe("source-a");
+    expect(result.sourceSwitchCount30dByCoin.get("coin-a")).toBe(0);
+  });
+
+  it("aborts after yielding without admitting the next history row or later phases", async () => {
+    const controller = new AbortController();
+    const trace: string[] = [];
+    await expect(buildYieldHistoryEvaluationInputsCooperative({
+      historyRows: [row({}), row({})],
+      prevTvlRows: [row({})],
+      prevBestRows: [row({})],
+    }, {
+      signal: controller.signal,
+      yieldEveryRows: 1,
+      onProgress: ({ phase, rowsDone }) => { trace.push(`${phase}:${rowsDone}`); },
+      yieldToEventLoop: async () => { trace.push("yield"); controller.abort(); },
+    })).rejects.toThrow();
+    expect(trace).toEqual(["history-rows:1", "yield"]);
+  });
+
+  it("normalizes source, legacy, on-chain, TVL, and previous-best history inputs", async () => {
+    const result = await buildYieldHistoryEvaluationInputsCooperative({
       historyRows: [
         row({ stablecoin_id: "coin-a", source_key: "source-a" }),
         row({
@@ -47,7 +84,7 @@ describe("yield coordinator history", () => {
       prevBestRows: [
         row({ stablecoin_id: "coin-a", source_key: "source-a", is_best: 1 }),
       ],
-    });
+    }, { yieldToEventLoop: () => Promise.resolve() });
 
     expect(result.sourceHistory.get("coin-a::source-a")).toHaveLength(1);
     expect(result.legacyHistoryById.get("coin-a")?.[0]?.source_key).toBe("legacy-best");
@@ -58,13 +95,13 @@ describe("yield coordinator history", () => {
     expect(result.prevBestSourceKeyByCoin.get("coin-a")).toBe("source-a");
   });
 
-  it("counts selected-source switches across 30d history rows, collapsing one-publication gaps", () => {
-    const switchesFor = (rows: YieldHistorySnapshotRow[]) =>
-      buildYieldHistoryEvaluationInputs({ historyRows: rows, prevTvlRows: [], prevBestRows: [] })
+  it("counts selected-source switches across 30d history rows, collapsing one-publication gaps", async () => {
+    const switchesFor = async (rows: YieldHistorySnapshotRow[]) =>
+      (await buildYieldHistoryEvaluationInputsCooperative({ historyRows: rows, prevTvlRows: [], prevBestRows: [] }, { yieldToEventLoop: () => Promise.resolve() }))
         .sourceSwitchCount30dByCoin.get("coin-a");
 
     // Durable runs: A A B B A A -> two switches.
-    expect(switchesFor([
+    expect(await switchesFor([
       row({ source_key: "source-a", is_best: 1, recorded_at: 100 }),
       row({ source_key: "source-a", is_best: 1, recorded_at: 200 }),
       row({ source_key: "source-b", is_best: 1, recorded_at: 300 }),
@@ -74,7 +111,7 @@ describe("yield coordinator history", () => {
     ])).toBe(2);
 
     // B2: a one-publication out-and-back is a fetch gap, not two switches.
-    expect(switchesFor([
+    expect(await switchesFor([
       row({ source_key: "source-a", is_best: 1, recorded_at: 100 }),
       row({ source_key: "source-a", is_best: 1, recorded_at: 200 }),
       row({ source_key: "source-b", is_best: 1, recorded_at: 300 }),
@@ -83,22 +120,22 @@ describe("yield coordinator history", () => {
     ])).toBe(0);
 
     // Non-best rows never participate in the selected-source series.
-    expect(switchesFor([
+    expect(await switchesFor([
       row({ source_key: "source-a", is_best: 1, recorded_at: 100 }),
       row({ source_key: "source-b", is_best: 0, recorded_at: 200 }),
       row({ source_key: "source-a", is_best: 1, recorded_at: 300 }),
     ])).toBe(0);
   });
 
-  it("skips the legacy-best sentinel in the durable selected-source series", () => {
-    const switchesFor = (rows: YieldHistorySnapshotRow[]) =>
-      buildYieldHistoryEvaluationInputs({ historyRows: rows, prevTvlRows: [], prevBestRows: [] })
+  it("skips the legacy-best sentinel in the durable selected-source series", async () => {
+    const switchesFor = async (rows: YieldHistorySnapshotRow[]) =>
+      (await buildYieldHistoryEvaluationInputsCooperative({ historyRows: rows, prevTvlRows: [], prevBestRows: [] }, { yieldToEventLoop: () => Promise.resolve() }))
         .sourceSwitchCount30dByCoin.get("coin-a");
 
     // A coin that only ever published legacy rows and then gains source-aware
     // rows has not switched sources: `isRealSourceSwitch` never charges the
     // sentinel, so the 30d count must not charge it either.
-    expect(switchesFor([
+    expect(await switchesFor([
       row({ source_key: "legacy-best", is_best: 1, recorded_at: 100 }),
       row({ source_key: "legacy-best", is_best: 1, recorded_at: 200 }),
       row({ source_key: "source-a", is_best: 1, recorded_at: 300 }),
@@ -107,7 +144,7 @@ describe("yield coordinator history", () => {
 
     // A durable legacy era between two runs of one real source is an unchanged
     // source, not two switches.
-    expect(switchesFor([
+    expect(await switchesFor([
       row({ source_key: "source-a", is_best: 1, recorded_at: 100 }),
       row({ source_key: "source-a", is_best: 1, recorded_at: 200 }),
       row({ source_key: "legacy-best", is_best: 1, recorded_at: 300 }),
@@ -117,7 +154,7 @@ describe("yield coordinator history", () => {
     ])).toBe(0);
 
     // A real switch still counts once when it straddles a legacy era.
-    expect(switchesFor([
+    expect(await switchesFor([
       row({ source_key: "source-a", is_best: 1, recorded_at: 100 }),
       row({ source_key: "source-a", is_best: 1, recorded_at: 200 }),
       row({ source_key: "legacy-best", is_best: 1, recorded_at: 300 }),
@@ -126,34 +163,34 @@ describe("yield coordinator history", () => {
     ])).toBe(1);
   });
 
-  it("publishes the switch series including the current run, not a transient increment", () => {
+  it("publishes the switch series including the current run, not a transient increment", async () => {
     const priorKey = "defillama:coin-a:prior";
     const challengerKey = "defillama:coin-a:challenger";
-    const run = (bestRows: YieldHistorySnapshotRow[], sourceKeys: string[]) => {
-      const inputs = buildYieldHistoryEvaluationInputs({
+    const run = async (bestRows: YieldHistorySnapshotRow[], sourceKeys: string[]) => {
+      const inputs = await buildYieldHistoryEvaluationInputsCooperative({
         historyRows: bestRows,
         prevTvlRows: [],
         prevBestRows: [row({ source_key: priorKey, is_best: 1 })],
-      });
-      return evaluateYieldSources(baseEvaluationInput({
+      }, { yieldToEventLoop: () => Promise.resolve() });
+      return await evaluateYieldSourcesCooperative(baseEvaluationInput({
         resolved: sourceKeys.map((sourceKey, index) => ({
           id: "coin-a",
           symbol: "A",
           yield: resolvedYield({ sourceKey, currentApy: index === 0 ? 5 : 6 }),
         })),
         ...inputs,
-      }));
+      }), { yieldToEventLoop: () => Promise.resolve() });
     };
-    const published = (result: ReturnType<typeof evaluateYieldSources>, sourceKey: string) =>
+    const published = (result: EvaluateYieldSourcesResult, sourceKey: string) =>
       result.evaluatedSources.find((source) => source.sourceKey === sourceKey);
     const priorRun = (recordedAt: number) => row({ source_key: priorKey, is_best: 1, recorded_at: recordedAt });
 
     // Durable switch: the challenger wins twice in a row. The first publication
     // sees one run of it, so the collapsed series still reads 0; the second run
     // is the second consecutive publication and charges exactly one switch.
-    const durableFirst = published(run([priorRun(100), priorRun(200)], [priorKey, challengerKey]), challengerKey);
+    const durableFirst = published(await run([priorRun(100), priorRun(200)], [priorKey, challengerKey]), challengerKey);
     const durableSecond = published(
-      run(
+      await run(
         [priorRun(100), priorRun(200), row({ source_key: challengerKey, is_best: 1, recorded_at: 300 })],
         [priorKey, challengerKey],
       ),
@@ -167,9 +204,9 @@ describe("yield coordinator history", () => {
     // One-publication excursion: the challenger wins once and the prior source
     // returns. Both publications read 0 — the count never publishes an increment
     // the next run erases.
-    const excursion = published(run([priorRun(100), priorRun(200)], [priorKey, challengerKey]), challengerKey);
+    const excursion = published(await run([priorRun(100), priorRun(200)], [priorKey, challengerKey]), challengerKey);
     const returned = published(
-      run(
+      await run(
         [priorRun(100), priorRun(200), row({ source_key: challengerKey, is_best: 1, recorded_at: 300 })],
         [priorKey],
       ),
@@ -179,7 +216,7 @@ describe("yield coordinator history", () => {
     expect(returned?.sourceSwitchCount30d).toBe(0);
   });
 
-  it("treats a resolved-but-rejected previous winner as no incumbent for both arms", () => {
+  it("treats a resolved-but-rejected previous winner as no incumbent for both arms", async () => {
     const incumbent = "defillama:coin-a:prior";
     const challenger = "defillama:coin-a:challenger";
     // History with a positive APY against a zero current APY is the
@@ -190,30 +227,30 @@ describe("yield coordinator history", () => {
       row({ source_key: challenger, is_best: 1, recorded_at: 100 }),
       row({ source_key: challenger, is_best: 1, recorded_at: 200 }),
     ];
-    const evaluate = (includeIncumbent: boolean) => {
-      const inputs = buildYieldHistoryEvaluationInputs({
+    const evaluate = async (includeIncumbent: boolean) => {
+      const inputs = await buildYieldHistoryEvaluationInputsCooperative({
         historyRows: bestRows,
         prevTvlRows: [],
         prevBestRows: [row({ source_key: incumbent, is_best: 1 })],
-      });
+      }, { yieldToEventLoop: () => Promise.resolve() });
       const entries = [
         ...(includeIncumbent
           ? [{ sourceKey: incumbent, currentApy: 0, apyBase: 0 }]
           : []),
         { sourceKey: challenger, currentApy: 6, apyBase: 6 },
       ];
-      return evaluateYieldSources(baseEvaluationInput({
+      return await evaluateYieldSourcesCooperative(baseEvaluationInput({
         resolved: entries.map((entry) => ({
           id: "coin-a",
           symbol: "A",
           yield: resolvedYield(entry),
         })),
         ...inputs,
-      }));
+      }), { yieldToEventLoop: () => Promise.resolve() });
     };
 
-    const withoutIncumbent = evaluate(false);
-    const withRejectedIncumbent = evaluate(true);
+    const withoutIncumbent = await evaluate(false);
+    const withRejectedIncumbent = await evaluate(true);
     // Same winner and same charged count: a rejected incumbent neither arms the
     // B3 arbitration margin nor blocks the switch series.
     expect(withRejectedIncumbent.bestSourceKeyByCoin.get("coin-a")).toBe(challenger);
@@ -231,9 +268,9 @@ describe("yield coordinator history", () => {
     expect(winnerRow?.anomalies).toContain("previous-source-transiently-missing");
   });
 
-  it("preserves linked on-chain identities across consecutive generations", () => {
+  it("preserves linked on-chain identities across consecutive generations", async () => {
     const linkedSourceKey = "linked-variant:child-coin:onchain:child-coin";
-    const result = buildYieldHistoryEvaluationInputs({
+    const result = await buildYieldHistoryEvaluationInputsCooperative({
       historyRows: [
         row({
           stablecoin_id: "parent-coin",
@@ -260,7 +297,7 @@ describe("yield coordinator history", () => {
         exchange_rate: 1.02,
         is_best: 1,
       })],
-    });
+    }, { yieldToEventLoop: () => Promise.resolve() });
 
     expect(result.prevBestSourceKeyByCoin.get("parent-coin")).toBe(linkedSourceKey);
     expect(result.sourceSwitchCount30dByCoin.get("parent-coin")).toBe(0);

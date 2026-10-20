@@ -143,14 +143,14 @@ export async function publishDexMeasuredTargetInventory(input: {
   capturedAt: number;
   signal?: AbortSignal;
 }): Promise<{ generationId: string; rowCount: number }> {
-  return publishNativeMeasuredTargetInventory(DEX_PERSISTENCE, input);
+  return publishEvmMeasuredTargetInventory(DEX_PERSISTENCE, input);
 }
 
 export async function loadLatestPublishedDexMeasuredTargets(
   db: D1Database,
   signal?: AbortSignal,
 ): Promise<PublishedDexMeasuredTargets | null> {
-  return loadLatestPublishedNativeMeasuredTargets(DEX_PERSISTENCE, db, signal);
+  return loadLatestPublishedEvmMeasuredTargets(DEX_PERSISTENCE, db, signal);
 }
 
 export async function publishDexShadowMeasuredTargetInventory(input: {
@@ -159,14 +159,14 @@ export async function publishDexShadowMeasuredTargetInventory(input: {
   capturedAt: number;
   signal?: AbortSignal;
 }): Promise<{ generationId: string; rowCount: number }> {
-  return publishNativeMeasuredTargetInventory(DEX_SHADOW_PERSISTENCE, input);
+  return publishEvmMeasuredTargetInventory(DEX_SHADOW_PERSISTENCE, input);
 }
 
 export async function loadLatestPublishedDexShadowMeasuredTargets(
   db: D1Database,
   signal?: AbortSignal,
 ): Promise<PublishedDexMeasuredTargets | null> {
-  return loadLatestPublishedNativeMeasuredTargets(DEX_SHADOW_PERSISTENCE, db, signal);
+  return loadLatestPublishedEvmMeasuredTargets(DEX_SHADOW_PERSISTENCE, db, signal);
 }
 
 export type DexActiveMeasuredExecutionScheduleKey =
@@ -182,7 +182,7 @@ export async function publishDexMeasuredQuoteGeneration(input: {
   producerScheduleKey?: DexActiveMeasuredExecutionScheduleKey;
   signal?: AbortSignal;
 }): Promise<{ generationId: string; measuredCount: number; failedCount: number }> {
-  return publishNativeMeasuredQuoteGeneration(
+  return publishEvmMeasuredQuoteGeneration(
     input.producerScheduleKey === "halfHourlyMeasuredExecutionSupplemental"
       ? DEX_SUPPLEMENTAL_PERSISTENCE : DEX_PERSISTENCE,
     input,
@@ -197,69 +197,32 @@ export async function publishDexShadowMeasuredQuoteGeneration(input: {
   generationId?: string;
   signal?: AbortSignal;
 }): Promise<{ generationId: string; measuredCount: number; failedCount: number }> {
-  return publishNativeMeasuredQuoteGeneration(DEX_SHADOW_PERSISTENCE, input);
+  return publishEvmMeasuredQuoteGeneration(DEX_SHADOW_PERSISTENCE, input);
 }
 
-interface NativeMeasuredTarget {
-  targetId: string;
-  stablecoinId: string;
-  adapterProfileId: string;
-  protocol: string;
-  chain: string;
-  poolId: string;
-  capturedAt: number;
-}
-
-interface NativeMeasuredProfile {
-  targetId: string;
-  targetGenerationId: string;
-  quoteGenerationId: string;
-  quotedAt: number;
-}
-
-interface NativePersistenceConfig<TTarget extends NativeMeasuredTarget, TProfile extends NativeMeasuredProfile> {
+interface EvmMeasuredPersistenceLane {
   label: string;
   activation: "active" | "shadow" | "target-ratified";
   targetSurface: string;
   quoteSurface: string;
   targetGenerationPrefix: string;
   quoteGenerationPrefix: string;
-  targetSchema: { parse(value: unknown): TTarget };
-  profileSchema: { parse(value: unknown): TProfile };
-  profileBlockNumber(profile: TProfile): number;
   targetProducer: { scheduleKey: string; job: string; path: string };
   quoteProducer: { scheduleKey: string; job: string; path: string };
 }
 
-interface NativePublishedTargets<TTarget> {
-  generationId: string;
-  targets: TTarget[];
-  publishedAt: number;
-}
-
-interface NativeQuoteOutcome<TTarget, TProfile> {
-  target: TTarget;
-  status: "measured" | "failed";
-  failureReason?: string;
-  profile?: TProfile;
-  rawPayload?: unknown;
-}
-
-const DEX_PERSISTENCE: NativePersistenceConfig<DexMeasuredExecutionTarget, DexMeasuredExecutionProfile> = {
+const DEX_PERSISTENCE: EvmMeasuredPersistenceLane = {
   label: "DEX",
   activation: "active",
   targetSurface: DEX_MEASURED_TARGET_SURFACE,
   quoteSurface: DEX_MEASURED_QUOTE_SURFACE,
   targetGenerationPrefix: "dex-measured-targets",
   quoteGenerationPrefix: "dex-measured-quotes",
-  targetSchema: DexMeasuredExecutionTargetSchema,
-  profileSchema: DexMeasuredExecutionProfileSchema,
-  profileBlockNumber: (profile) => profile.blockNumber,
   targetProducer: { scheduleKey: "halfHourlyChartsOffset", job: "sync-dex-liquidity", path: "halfHourlyChartsOffset" },
   quoteProducer: { scheduleKey: "halfHourlyMeasuredExecution", job: "sync-cl-exit-depth", path: "halfHourlyMeasuredExecution" },
 };
 
-const DEX_SUPPLEMENTAL_PERSISTENCE: NativePersistenceConfig<DexMeasuredExecutionTarget, DexMeasuredExecutionProfile> = {
+const DEX_SUPPLEMENTAL_PERSISTENCE: EvmMeasuredPersistenceLane = {
   ...DEX_PERSISTENCE,
   quoteProducer: {
     scheduleKey: "halfHourlyMeasuredExecutionSupplemental",
@@ -268,33 +231,27 @@ const DEX_SUPPLEMENTAL_PERSISTENCE: NativePersistenceConfig<DexMeasuredExecution
   },
 };
 
-const DEX_SHADOW_PERSISTENCE: NativePersistenceConfig<DexMeasuredExecutionTarget, DexMeasuredExecutionProfile> = {
+const DEX_SHADOW_PERSISTENCE: EvmMeasuredPersistenceLane = {
   label: "DEX shadow",
   activation: "shadow",
   targetSurface: DEX_SHADOW_MEASURED_TARGET_SURFACE,
   quoteSurface: DEX_SHADOW_MEASURED_QUOTE_SURFACE,
   targetGenerationPrefix: "dex-shadow-measured-targets",
   quoteGenerationPrefix: "dex-shadow-measured-quotes",
-  targetSchema: DexMeasuredExecutionTargetSchema,
-  profileSchema: DexMeasuredExecutionProfileSchema,
-  profileBlockNumber: (profile) => profile.blockNumber,
   targetProducer: { scheduleKey: "halfHourlyChartsOffset", job: "sync-dex-liquidity", path: "halfHourlyChartsOffset" },
   quoteProducer: { scheduleKey: "daily0810Utc", job: "sync-cl-exit-depth", path: "daily0810Utc" },
 };
 
-async function publishNativeMeasuredTargetInventory<
-  TTarget extends NativeMeasuredTarget,
-  TProfile extends NativeMeasuredProfile,
->(
-  config: NativePersistenceConfig<TTarget, TProfile>,
+async function publishEvmMeasuredTargetInventory(
+  config: EvmMeasuredPersistenceLane,
   input: {
     db: D1Database;
-    targets: readonly TTarget[];
+    targets: readonly DexMeasuredExecutionTarget[];
     capturedAt: number;
     signal?: AbortSignal;
   },
 ): Promise<{ generationId: string; rowCount: number }> {
-  const targets = input.targets.map((target) => config.targetSchema.parse(target));
+  const targets = input.targets.map((target) => DexMeasuredExecutionTargetSchema.parse(target));
   if (targets.length === 0) {
     throw new Error(`Refusing to publish an empty ${config.label} measured target generation`);
   }
@@ -387,14 +344,11 @@ async function publishNativeMeasuredTargetInventory<
   }
 }
 
-async function loadLatestPublishedNativeMeasuredTargets<
-  TTarget extends NativeMeasuredTarget,
-  TProfile extends NativeMeasuredProfile,
->(
-  config: NativePersistenceConfig<TTarget, TProfile>,
+async function loadLatestPublishedEvmMeasuredTargets(
+  config: EvmMeasuredPersistenceLane,
   db: D1Database,
   signal?: AbortSignal,
-): Promise<NativePublishedTargets<TTarget> | null> {
+): Promise<PublishedDexMeasuredTargets | null> {
   const generation = await latestPublishedGeneration(db, config.targetSurface, signal);
   if (!generation) return null;
   const result = await runWithOverloadRetry(
@@ -412,7 +366,7 @@ async function loadLatestPublishedNativeMeasuredTargets<
     signal,
   );
   const targets = (result.results ?? []).map((row) =>
-    config.targetSchema.parse(parsePersistedJson(row.target_json, `${config.label} measured target JSON`)),
+    DexMeasuredExecutionTargetSchema.parse(parsePersistedJson(row.target_json, `${config.label} measured target JSON`)),
   );
   if (
     (generation.expected_rows != null && generation.expected_rows !== targets.length) ||
@@ -427,15 +381,12 @@ async function loadLatestPublishedNativeMeasuredTargets<
   };
 }
 
-async function publishNativeMeasuredQuoteGeneration<
-  TTarget extends NativeMeasuredTarget,
-  TProfile extends NativeMeasuredProfile,
->(
-  config: NativePersistenceConfig<TTarget, TProfile>,
+async function publishEvmMeasuredQuoteGeneration(
+  config: EvmMeasuredPersistenceLane,
   input: {
     db: D1Database;
-    targetGeneration: NativePublishedTargets<TTarget>;
-    outcomes: readonly NativeQuoteOutcome<TTarget, TProfile>[];
+    targetGeneration: PublishedDexMeasuredTargets;
+    outcomes: readonly DexMeasuredQuoteOutcome[];
     quotedAt: number;
     generationId?: string;
     signal?: AbortSignal;
@@ -467,7 +418,7 @@ async function publishNativeMeasuredQuoteGeneration<
         `${config.label} measured quote outcome ${outcome.target.targetId} has an invalid terminal state`,
       );
     }
-    const profile = outcome.profile ? config.profileSchema.parse(outcome.profile) : null;
+    const profile = outcome.profile ? DexMeasuredExecutionProfileSchema.parse(outcome.profile) : null;
     if (
       profile &&
       (profile.targetId !== outcome.target.targetId ||
@@ -533,7 +484,7 @@ async function publishNativeMeasuredQuoteGeneration<
         outcome.status,
         outcome.failureReason ?? null,
         profile?.quotedAt ?? null,
-        profile ? config.profileBlockNumber(profile) : null,
+        profile?.blockNumber ?? null,
         profile ? JSON.stringify(profile) : null,
         // Raw producer envelopes duplicate the measured profile's quoteProof; persist them
         // only for failed outcomes, where they are the sole structured failure evidence.

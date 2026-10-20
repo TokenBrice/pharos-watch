@@ -1,12 +1,18 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
+import ts from "typescript";
 import { describe, expect, it, vi } from "vitest";
 import { FailureScenariosByIdSchema } from "@shared/lib/failure-scenarios";
+import * as scenarioRegistry from "@shared/lib/failure-scenario-checks";
 import {
-  FAILURE_SCENARIO_CHECKS, scenarioDocumentWatch, scenarioSourceAddress,
-  type ScenarioCheckContext, type ScenarioDocument, type ScenarioReadClient,
-} from "@shared/lib/failure-scenario-checks";
+  scenarioDocumentWatch, scenarioSourceAddress,
+} from "@shared/lib/failure-scenario-checks/context";
+import type {
+  ScenarioCheckContext, ScenarioDocument, ScenarioReadClient,
+} from "@shared/lib/failure-scenario-checks/context";
 import { documentText } from "../verify-failure-scenarios";
+
+const { FAILURE_SCENARIO_CHECKS } = scenarioRegistry;
 
 const records = FailureScenariosByIdSchema.parse(JSON.parse(readFileSync("data/failure-scenarios.json", "utf8")));
 const record = records["usds-sky"]!;
@@ -28,6 +34,28 @@ async function compareDocuments(recorded: ScenarioDocument, fetched: ScenarioDoc
 function html(noise: string, substance = "Verified customers may redeem at a minimum of $100,000.") {
   return `<html><head><script nonce="${noise}">window.timestamp="${noise}";window.session="${noise}";</script><link href="/assets/${noise}.css?cache=${noise}"></head><body><main data-build-id="${noise}"><h1>Redemption terms</h1><p>Last updated: February 26, 2026</p><p>${substance}</p><img src="/assets/${noise}.png?token=${noise}"><a href="/fees?session=${noise}">Fees</a></main><footer>Request ${noise}</footer></body></html>`;
 }
+
+describe("scenario check import direction", () => {
+  it("keeps helpers registry-free and every registered leaf below the registry", () => {
+    const imports = (name: string) => {
+      const source = readFileSync(`shared/lib/failure-scenario-checks/${name}.ts`, "utf8");
+      return ts.createSourceFile(`${name}.ts`, source, ts.ScriptTarget.Latest, true)
+        .statements.filter(ts.isImportDeclaration);
+    };
+    const contextImports = imports("context");
+    expect(contextImports.map((entry) => entry.moduleSpecifier.getText())).toEqual([
+      '"viem"', '"../../types/failure-scenarios"',
+    ]);
+    expect(contextImports.every((entry) => entry.importClause?.isTypeOnly)).toBe(true);
+    for (const id of Object.keys(FAILURE_SCENARIO_CHECKS)) {
+      const localImports = imports(id).map((entry) => entry.moduleSpecifier.getText())
+        .filter((specifier) => specifier.startsWith('"./'));
+      expect(localImports, id).toContain('"./context"');
+      expect(localImports.every((specifier) => specifier === '"./context"'), id).toBe(true);
+    }
+    expect(Object.keys(scenarioRegistry)).toEqual(["FAILURE_SCENARIO_CHECKS"]);
+  });
+});
 
 describe("scenario document substance fingerprints", () => {
   it("still detects an injected substantive redemption edit with unchanged transport headers", async () => {

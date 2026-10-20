@@ -8,7 +8,6 @@ vi.mock("../../lib/db", async (importOriginal) => {
     batchExecute: vi.fn(async (db: D1Database, stmts: D1PreparedStatement[]) => {
       const state = (db as unknown as {
         scoringTestState?: {
-          stagedDepthValues: number;
           stagedPriceRows: number;
           measuredTargetRows: number;
         };
@@ -16,7 +15,6 @@ vi.mock("../../lib/db", async (importOriginal) => {
       if (state) {
         for (const statement of stmts) {
           const sql = (statement as unknown as { sql?: string }).sql ?? "";
-          if (sql.includes("SET depth_stability = ?")) state.stagedDepthValues++;
           if (sql.includes("INSERT INTO dex_price_run_rows")) state.stagedPriceRows++;
           if (sql.includes("INSERT INTO dex_measured_execution_targets")) state.measuredTargetRows++;
         }
@@ -26,7 +24,6 @@ vi.mock("../../lib/db", async (importOriginal) => {
     executeAtomicBatch: vi.fn(async (db: D1Database, stmts: D1PreparedStatement[]) => {
       const state = (db as unknown as {
         scoringTestState?: {
-          expectedDepthRows: number;
           existingPriceRows: number;
           stagedPriceRows: number;
           publishedPriceRows: number;
@@ -34,9 +31,6 @@ vi.mock("../../lib/db", async (importOriginal) => {
       }).scoringTestState;
       const sql = stmts.map((statement) => (statement as unknown as { sql?: string }).sql ?? "").join("\n");
       if (!state) return stmts.length;
-      if (sql.includes("UPDATE dex_liquidity") && sql.includes("depth_stability")) {
-        return state.expectedDepthRows;
-      }
       if (sql.includes("DELETE FROM dex_prices")) {
         const stagedPriceRows = state.stagedPriceRows;
         const changes = 1 + state.existingPriceRows + stagedPriceRows;
@@ -56,11 +50,10 @@ import type { DexMeasuredExecutionTarget } from "@shared/types/measured-executio
 import { CURVE_R3_METAPOOL_POLICIES, CURVE_USD1_METAPOOL_POLICY } from "@shared/lib/curve-composite-policies";
 import { buildCurveCompositeMeasuredExecutionTarget } from "../measured-execution/curve-composite";
 import type { ExitRouteObservation } from "@shared/types/market";
-import { buildPoolFingerprint, initMetrics } from "../dex-liquidity/pool-helpers";
+import { buildPoolFingerprint, initSourcePoolGraph } from "../dex-liquidity/pool-helpers";
 import { makePool } from "../dex-liquidity/__tests__/scoring-test-builders";
 import { DEX_VOLUME_OBSERVATION_MAX_AGE_SEC, summarizeDexVolumeWindow } from "@shared/lib/dex-volume-availability";
 import {
-  computeDepthStability,
   computeDexPrices,
   computeStablecoinScores,
   publishStablecoinScoreTargets,
@@ -98,8 +91,6 @@ interface PreparedStatementWithMeta extends D1PreparedStatement {
 }
 
 interface ScoringTestState {
-  expectedDepthRows: number;
-  stagedDepthValues: number;
   existingPriceRows: number;
   stagedPriceRows: number;
   publishedPriceRows: number;
@@ -115,8 +106,6 @@ function toError(value: unknown): Error {
 // bounded ordering and measured-target orchestration contracts below.
 function makeQueryDb(configs: QueryConfig[]): D1Database & { scoringTestState: ScoringTestState } {
   const scoringTestState: ScoringTestState = {
-    expectedDepthRows: ACTIVE_STABLECOINS.length,
-    stagedDepthValues: 0,
     existingPriceRows: 0,
     stagedPriceRows: 0,
     publishedPriceRows: 0,
@@ -152,12 +141,6 @@ function makeQueryDb(configs: QueryConfig[]): D1Database & { scoringTestState: S
             current_row_count: ACTIVE_STABLECOINS.length + 1,
             staged_row_count: ACTIVE_STABLECOINS.length + 1,
             public_row_count: ACTIVE_STABLECOINS.length + 1,
-          } as T;
-        }
-        if (sql.includes("pharos:dex-scoring:depth-stage-coverage")) {
-          return {
-            row_count: ACTIVE_STABLECOINS.length,
-            stability_count: scoringTestState.stagedDepthValues,
           } as T;
         }
         if (sql.includes("pharos:dex-scoring:price-stage-coverage")) {
@@ -237,8 +220,8 @@ describe("dex-liquidity scoring", () => {
   });
 
   it("retains original price clocks while scoring a mixed-age pool graph", async () => {
-    const metrics = initMetrics("usdc-circle", "USDC");
-    metrics.topPools = withReadings([
+    const metrics = initSourcePoolGraph("usdc-circle", "USDC");
+    metrics.pools = withReadings([
       makePool({ poolId: "base:old", price: 0.998, priceObservedAt: SCORING_CLOCK_SEC - 6 * 3600 }),
       makePool({ poolId: "base:fresh", price: 1, priceObservedAt: SCORING_CLOCK_SEC - 60 }),
     ]);
@@ -441,18 +424,8 @@ describe("dex-liquidity scoring", () => {
       },
     ]);
 
-    const usdt = initMetrics("usdt-tether", "USDT");
-    usdt.totalVolume24hUsd = 777_000;
-    usdt.totalVolume7dUsd = 5_432_100;
-    usdt.balanceRatioWeightedSum = 150_000;
-    usdt.totalTvlForBalance = 200_000;
-    usdt.organicTvlWeightedSum = 250_000;
-    usdt.totalTvlForOrganic = 400_000;
-    usdt.stressWeightedSum = 0;
-    usdt.lockedLiqWeightedSum = 50_000;
-    usdt.totalTvlForLocked = 100_000;
-    usdt.oldestPoolDays = 500;
-    usdt.topPools = [
+    const usdt = initSourcePoolGraph("usdt-tether", "USDT");
+    usdt.pools = [
       {
         poolId: "ethereum:shared",
         project: "curve",
@@ -544,10 +517,8 @@ describe("dex-liquidity scoring", () => {
       })),
     ];
 
-    const usdc = initMetrics("usdc-circle", "USDC");
-    usdc.totalVolume24hUsd = 123_000;
-    usdc.totalVolume7dUsd = 860_000;
-    usdc.topPools = [
+    const usdc = initSourcePoolGraph("usdc-circle", "USDC");
+    usdc.pools = [
       {
         poolId: "ethereum:shared",
         project: "curve",
@@ -584,8 +555,8 @@ describe("dex-liquidity scoring", () => {
       },
     ];
 
-    withReadings(usdt.topPools);
-    withReadings(usdc.topPools);
+    withReadings(usdt.pools);
+    withReadings(usdc.pools);
     const { scores, globalAgg } = await computeStablecoinScores(
       db,
       new Map([
@@ -624,10 +595,8 @@ describe("dex-liquidity scoring", () => {
       { match: "FROM dex_liquidity_history", all: [] },
     ]);
 
-    const activeMetrics = initMetrics("usdt-tether", "USDT");
-    activeMetrics.totalVolume24hUsd = 10_000;
-    activeMetrics.totalVolume7dUsd = 70_000;
-    activeMetrics.topPools = [
+    const activeMetrics = initSourcePoolGraph("usdt-tether", "USDT");
+    activeMetrics.pools = [
       {
         poolId: "ethereum:active",
         project: "curve",
@@ -641,10 +610,8 @@ describe("dex-liquidity scoring", () => {
       },
     ];
 
-    const inactiveMetrics = initMetrics("usr-resolv", "USR");
-    inactiveMetrics.totalVolume24hUsd = 90_000;
-    inactiveMetrics.totalVolume7dUsd = 630_000;
-    inactiveMetrics.topPools = [
+    const inactiveMetrics = initSourcePoolGraph("usr-resolv", "USR");
+    inactiveMetrics.pools = [
       {
         poolId: "ethereum:inactive",
         project: "curve",
@@ -658,8 +625,8 @@ describe("dex-liquidity scoring", () => {
       },
     ];
 
-    withReadings(activeMetrics.topPools);
-    withReadings(inactiveMetrics.topPools);
+    withReadings(activeMetrics.pools);
+    withReadings(inactiveMetrics.pools);
     const result = await computeStablecoinScores(
       db,
       new Map([
@@ -682,23 +649,23 @@ describe("dex-liquidity scoring", () => {
 
   it("drops NEAR Intents rows from coin scoring and the global aggregate while other NEAR venues count", async () => {
     const db = makeQueryDb([{ match: "FROM dex_liquidity_history", all: [] }]);
-    const metrics = initMetrics("frax-frax", "FRAX");
+    const metrics = initSourcePoolGraph("frax-frax", "FRAX");
     const pool = (poolId: string, project: string, chain: string, tvlUsd: number, volumeUsd1d: number, source: PoolEntry["source"]): PoolEntry => ({
       poolId, project, chain, tvlUsd, symbol: "FRAX-X", volumeUsd1d, volumeUsd7d: volumeUsd1d * 7, poolType: "cg-amm", source,
     });
-    metrics.topPools = [
+    metrics.pools = [
       pool("near:intents-wnear", "near-intents", "near", 90_000_000, 3, "cg_onchain"),
       pool("near:refv1-4525", "rhea-finance", "near", 250_000, 35_000, "cg_onchain"),
       pool("ethereum:curve-frax", "curve", "Ethereum", 1_000_000, 100_000, "dl"),
     ];
-    withReadings(metrics.topPools);
+    withReadings(metrics.pools);
 
     const result = await computeStablecoinScores(db, new Map([["frax-frax", metrics]]), new Map(), undefined, SCORING_CLOCK_SEC);
 
     expect(result.retainedPoolsByStablecoin.get("frax-frax")?.map((retained) => retained.poolId).sort())
       .toEqual(["ethereum:curve-frax", "near:refv1-4525"]);
-    expect(metrics.totalTvlUsd).toBe(1_250_000);
-    expect(metrics.protocolTvl).toEqual({ "rhea-finance": 250_000, curve: 1_000_000 });
+    expect(result.scoredMetrics.get(metrics.stablecoinId)!.totalTvlUsd).toBe(1_250_000);
+    expect(result.scoredMetrics.get(metrics.stablecoinId)!.protocolTvl).toEqual({ "rhea-finance": 250_000, curve: 1_000_000 });
     expect(result.globalAgg.totalTvl).toBe(1_250_000);
     expect(result.globalAgg.poolCount).toBe(2);
     expect(result.globalAgg.protocolTvl["near-intents"]).toBeUndefined();
@@ -721,12 +688,12 @@ describe("dex-liquidity scoring", () => {
         ? {}
         : { volumeReading: { volume24hUsd: volumeUsd1d, volume7dUsd: null, observedAtSec: SCORING_CLOCK_SEC - ageSec } }),
     });
-    const rated = initMetrics("usdt-tether", "USDT");
+    const rated = initSourcePoolGraph("usdt-tether", "USDT");
     // 60% of retained TVL admitted; the stale pool's volume and TVL stay out of activity.
-    rated.topPools = [pool("ethereum:admitted", 600_000, 30_000, 3_600), pool("ethereum:stale", 400_000, 400_000, 72 * 3600 + 1)];
-    const notRated = initMetrics("usdc-circle", "USDC");
+    rated.pools = [pool("ethereum:admitted", 600_000, 30_000, 3_600), pool("ethereum:stale", 400_000, 400_000, 72 * 3600 + 1)];
+    const notRated = initSourcePoolGraph("usdc-circle", "USDC");
     // The exact 72h boundary is admitted, but it covers only 40% of retained TVL.
-    notRated.topPools = [pool("ethereum:boundary", 400_000, 20_000, 72 * 3600), pool("ethereum:missing", 600_000, null, null)];
+    notRated.pools = [pool("ethereum:boundary", 400_000, 20_000, 72 * 3600), pool("ethereum:missing", 600_000, null, null)];
 
     const { scores, globalAgg } = await computeStablecoinScores(
       db,
@@ -766,8 +733,8 @@ describe("dex-liquidity scoring", () => {
 
   it("keeps paused Balancer pools only in the P4 capability denominator", async () => {
     const db = makeQueryDb([{ match: "FROM dex_liquidity_history", all: [] }]);
-    const metrics = initMetrics("usdc-circle", "USDC");
-    metrics.topPools = [
+    const metrics = initSourcePoolGraph("usdc-circle", "USDC");
+    metrics.pools = [
       {
         poolId: "ethereum:0xpaused-balancer",
         project: "balancer-v3",
@@ -827,10 +794,10 @@ describe("dex-liquidity scoring", () => {
         "executionCapabilityGate:balancer-amm:rate-bearing-inputs": 1,
       },
     });
-    expect(metrics.totalTvlUsd).toBe(150_000);
-    expect(metrics.poolCount).toBe(1);
-    expect(metrics.topPools).toHaveLength(1);
-    expect(metrics.topPools[0]).toMatchObject({
+    expect(result.scoredMetrics.get(metrics.stablecoinId)!.totalTvlUsd).toBe(150_000);
+    expect(result.scoredMetrics.get(metrics.stablecoinId)!.poolCount).toBe(1);
+    expect(result.scoredMetrics.get(metrics.stablecoinId)!.topPools).toHaveLength(1);
+    expect(result.scoredMetrics.get(metrics.stablecoinId)!.topPools[0]).toMatchObject({
       poolId: "ethereum:0xrate-bearing-balancer",
       tvlUsd: 150_000,
     });
@@ -927,7 +894,7 @@ describe("dex-liquidity scoring", () => {
 
   it("selects exact route evidence below the display top ten without changing the visible pool list", async () => {
     const db = makeQueryDb([{ match: "FROM dex_liquidity_history", all: [] }]);
-    const metrics = initMetrics("usdc-circle", "USDC");
+    const metrics = initSourcePoolGraph("usdc-circle", "USDC");
     const originalPools = Array.from({ length: 12 }, (_, index): PoolEntry => ({
       poolId: `ethereum:pool-${index}`,
       project: "curve",
@@ -953,7 +920,7 @@ describe("dex-liquidity scoring", () => {
         measuredExecutionDiagnostic: { adapterProfileId: "test-adapter", targetId: `target-${index}` },
       },
     }));
-    metrics.topPools = originalPools;
+    metrics.pools = originalPools;
 
     const result = await computeStablecoinScores(
       db,
@@ -975,8 +942,8 @@ describe("dex-liquidity scoring", () => {
     } | undefined;
 
     expect(retainedPools).toHaveLength(12);
-    expect(metrics.topPools).toHaveLength(10);
-    expect(metrics.topPools.map((pool) => pool.poolId)).toEqual(
+    expect(result.scoredMetrics.get(metrics.stablecoinId)!.topPools).toHaveLength(10);
+    expect(result.scoredMetrics.get(metrics.stablecoinId)!.topPools.map((pool) => pool.poolId)).toEqual(
       Array.from({ length: 10 }, (_, index) => `ethereum:pool-${index}`),
     );
     expect(routeResult?.exitRouteObservations).toContainEqual(
@@ -1009,8 +976,8 @@ describe("dex-liquidity scoring", () => {
     const nowSec = 1_700_000_000;
     vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
     const db = makeQueryDb([{ match: "FROM dex_liquidity_history", all: [] }]);
-    const metrics = initMetrics("usdc-circle", "USDC");
-    metrics.topPools = [{
+    const metrics = initSourcePoolGraph("usdc-circle", "USDC");
+    metrics.pools = [{
       poolId: "ethereum:0x0000000000000000000000000000000000000010",
       project: "pancakeswap",
       chain: "Ethereum",
@@ -1089,8 +1056,8 @@ describe("dex-liquidity scoring", () => {
 
   it("leaves retained Solana and Tron pools ungated as shaped evidence after the native-lane removal", async () => {
     const db = makeQueryDb([{ match: "FROM dex_liquidity_history", all: [] }]);
-    const metrics = initMetrics("usdt-tether", "USDT");
-    metrics.topPools = [
+    const metrics = initSourcePoolGraph("usdt-tether", "USDT");
+    metrics.pools = [
       {
         poolId: "TFGDbUyP8xez44C76fin3bn3Ss6jugoUwJ",
         project: "sunswap-v2",
@@ -1139,8 +1106,8 @@ describe("dex-liquidity scoring", () => {
 
   it("fails coverage closed when reviewed route capabilities overflow the bounded payload", async () => {
     const db = makeQueryDb([{ match: "FROM dex_liquidity_history", all: [] }]);
-    const metrics = initMetrics("usdc-circle", "USDC");
-    metrics.topPools = Array.from({ length: 11 }, (_, index): PoolEntry => ({
+    const metrics = initSourcePoolGraph("usdc-circle", "USDC");
+    metrics.pools = Array.from({ length: 11 }, (_, index): PoolEntry => ({
       poolId: `ethereum:exact-pool-${index}`,
       project: "curve",
       chain: "Ethereum",
@@ -1171,7 +1138,7 @@ describe("dex-liquidity scoring", () => {
       };
     } | undefined;
 
-    expect(metrics.topPools.map((pool) => pool.poolId)).toEqual(
+    expect(result.scoredMetrics.get(metrics.stablecoinId)!.topPools.map((pool) => pool.poolId)).toEqual(
       Array.from({ length: 10 }, (_, index) => `ethereum:exact-pool-${index}`),
     );
     expect(routeResult?.exitRouteObservations).toHaveLength(7);
@@ -1199,8 +1166,8 @@ describe("dex-liquidity scoring", () => {
 
   it("packs DAI-shaped multi-output routes so every selected physical pool is emitted", async () => {
     const db = makeQueryDb([{ match: "FROM dex_liquidity_history", all: [] }]);
-    const metrics = initMetrics("dai-makerdao", "DAI");
-    metrics.topPools = [
+    const metrics = initSourcePoolGraph("dai-makerdao", "DAI");
+    metrics.pools = [
       ...Array.from({ length: 3 }, (_, index): PoolEntry => ({
         poolId: `ethereum:dai-balancer-three-token-${index}`,
         project: "balancer",
@@ -1318,8 +1285,8 @@ describe("dex-liquidity scoring", () => {
 
   it("keeps pool coverage complete when clipping only extra outputs from represented pools", async () => {
     const db = makeQueryDb([{ match: "FROM dex_liquidity_history", all: [] }]);
-    const metrics = initMetrics("usdc-circle", "USDC");
-    metrics.topPools = Array.from({ length: 2 }, (_, poolIndex): PoolEntry => ({
+    const metrics = initSourcePoolGraph("usdc-circle", "USDC");
+    metrics.pools = Array.from({ length: 2 }, (_, poolIndex): PoolEntry => ({
       poolId: `ethereum:balancer-eight-token-${poolIndex}`,
       project: "balancer",
       chain: "Ethereum",
@@ -1387,10 +1354,8 @@ describe("dex-liquidity scoring", () => {
       { match: "FROM dex_liquidity_history", throwError: new Error("no such table: dex_liquidity_history") },
     ]);
 
-    const metrics = initMetrics("usdt-tether", "USDT");
-    metrics.totalVolume24hUsd = 20_000;
-    metrics.totalVolume7dUsd = 140_000;
-    metrics.topPools = [
+    const metrics = initSourcePoolGraph("usdt-tether", "USDT");
+    metrics.pools = [
       {
         poolId: "ethereum:only",
         project: "curve",
@@ -1413,10 +1378,8 @@ describe("dex-liquidity scoring", () => {
       { match: "FROM dex_liquidity_history", all: [] },
     ]);
 
-    const metrics = initMetrics("usdc-circle", "USDC");
-    metrics.totalVolume24hUsd = 20_000;
-    metrics.totalVolume7dUsd = 140_000;
-    metrics.topPools = [
+    const metrics = initSourcePoolGraph("usdc-circle", "USDC");
+    metrics.pools = [
       {
         poolId: "base:orca-direct",
         project: "orca",
@@ -1439,7 +1402,7 @@ describe("dex-liquidity scoring", () => {
         extra: { effectiveTvl: 80_000 },
       },
     ];
-    const fallback = metrics.topPools[1]!;
+    const fallback = metrics.pools[1]!;
 
     const result = await computeStablecoinScores(
       db,
@@ -1447,9 +1410,9 @@ describe("dex-liquidity scoring", () => {
       new Map([["orca", 180_000]]),
     );
 
-    expect(metrics.totalTvlUsd).toBe(150_000);
-    expect(metrics.topPools).toHaveLength(1);
-    expect(metrics.topPools[0]?.tvlUsd).toBe(150_000);
+    expect(result.scoredMetrics.get(metrics.stablecoinId)!.totalTvlUsd).toBe(150_000);
+    expect(result.scoredMetrics.get(metrics.stablecoinId)!.topPools).toHaveLength(1);
+    expect(result.scoredMetrics.get(metrics.stablecoinId)!.topPools[0]?.tvlUsd).toBe(150_000);
     expect(fallback.tvlUsd).toBe(80_000);
     expect(fallback.extra?.effectiveTvl).toBe(80_000);
     expect(result.diagnostics.protocolTvlQuarantine).toEqual({
@@ -1461,18 +1424,18 @@ describe("dex-liquidity scoring", () => {
   });
 
   it.each([true, false])("keeps global retained TVL coherent above protocol caps (complete volume: %s)", async (complete) => {
-    const usdc = initMetrics("usdc-circle", "USDC");
-    const usdt = initMetrics("usdt-tether", "USDT");
+    const usdc = initSourcePoolGraph("usdc-circle", "USDC");
+    const usdt = initSourcePoolGraph("usdt-tether", "USDT");
     const [ethereum, base] = withReadings([
       makePool({ poolId: "ethereum:trusted", project: "curve", chain: "ethereum", tvlUsd: 80_000_000, source: "dl" }),
       makePool({ poolId: "base:trusted", project: "curve", chain: "base", tvlUsd: 80_000_000, source: "direct_api" }),
     ]);
     if (!complete) base!.volumeReading = undefined;
-    usdc.topPools = [ethereum!, base!, ...withReadings([
+    usdc.pools = [ethereum!, base!, ...withReadings([
       makePool({ poolId: "ethereum:blocked", project: "near-intents", tvlUsd: 20_000_000 }),
       makePool({ poolId: "base:low-flow", project: "curve", chain: "base", tvlUsd: 120_000_000, volumeUsd1d: 1 }),
     ])];
-    usdt.topPools = [{ ...ethereum! }]; // Same physical pool attributed to another coin.
+    usdt.pools = [{ ...ethereum! }]; // Same physical pool attributed to another coin.
 
     const result = await computeStablecoinScores(
       makeQueryDb([{ match: "FROM dex_liquidity_history", all: [] }]),
@@ -1507,9 +1470,9 @@ describe("dex-liquidity scoring", () => {
 
   it("publishes normalized Aerodrome Slipstream rows into the shadow target inventory", async () => {
     const db = makeQueryDb([{ match: "FROM dex_liquidity_history", all: [] }]);
-    const metrics = initMetrics("usdc-circle", "USDC");
+    const metrics = initSourcePoolGraph("usdc-circle", "USDC");
     const poolId = "base:0x1111111111111111111111111111111111111111";
-    metrics.topPools = [
+    metrics.pools = [
       {
         poolId,
         project: "aerodrome",
@@ -1597,8 +1560,8 @@ describe("dex-liquidity scoring", () => {
       retainedTvlUsd: 2_000_000, capturedAt: SCORING_CLOCK_SEC,
     });
     expect(target).not.toBeNull();
-    const metrics = initMetrics(policy.stablecoinId, policy.executionTokens[0]!.symbol);
-    metrics.topPools = withReadings([{
+    const metrics = initSourcePoolGraph(policy.stablecoinId, policy.executionTokens[0]!.symbol);
+    metrics.pools = withReadings([{
       poolId: target!.poolId, project: "curve", chain: policy.chain,
       symbol: policy.poolTokens.map((token) => token.symbol).join("-"),
       tvlUsd: 2_000_000, volumeUsd1d: 1_000, poolType: "curve-stableswap", source: "dl",
@@ -1684,8 +1647,8 @@ describe("dex-liquidity scoring", () => {
     const db = makeQueryDb([{ match: "FROM dex_liquidity_history", all: [] }]);
     const cadc = "0x043eb4b75d0805c43d7c834902e335621983cf03";
     const usdc = "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
-    const metrics = initMetrics("cadc-cad-coin", "CADC");
-    metrics.topPools = [
+    const metrics = initSourcePoolGraph("cadc-cad-coin", "CADC");
+    metrics.pools = [
       {
         poolId: "base:defillama:cadc-usdc",
         candidateFingerprint: buildPoolFingerprint("base", "aerodrome", [cadc, usdc])!,
@@ -1763,8 +1726,8 @@ describe("dex-liquidity scoring", () => {
 
   it("does not misattribute an unsupported Pancake pool family to the V3 adapter", async () => {
     const db = makeQueryDb([{ match: "FROM dex_liquidity_history", all: [] }]);
-    const metrics = initMetrics("cadc-cad-coin", "CADC");
-    metrics.topPools = [
+    const metrics = initSourcePoolGraph("cadc-cad-coin", "CADC");
+    metrics.pools = [
       {
         poolId: "base:0x31a98819f70438b162c6f9a6d342e9e84f84c825c0348dac23b9fbcb9d282139",
         project: "pancakeswap",
@@ -1794,10 +1757,8 @@ describe("dex-liquidity scoring", () => {
       { match: "FROM dex_liquidity_history", all: [] },
     ]);
 
-    const metrics = initMetrics("xaut-tether", "XAUT");
-    metrics.totalVolume24hUsd = 1_000_000;
-    metrics.totalVolume7dUsd = 7_000_000;
-    metrics.topPools = [
+    const metrics = initSourcePoolGraph("xaut-tether", "XAUT");
+    metrics.pools = [
       {
         poolId: "ethereum:0xc537e898cd774e2dcba3b14ea6f34c93d5ea45e1-2236",
         project: "carbon-defi-ethereum",
@@ -1810,9 +1771,9 @@ describe("dex-liquidity scoring", () => {
         extra: { effectiveTvl: 480_000_000 },
       },
     ];
-    const rawPool = metrics.topPools[0]!;
+    const rawPool = metrics.pools[0]!;
 
-    withReadings(metrics.topPools);
+    withReadings(metrics.pools);
     const result = await computeStablecoinScores(
       db,
       new Map([["xaut-tether", metrics]]),
@@ -1821,8 +1782,8 @@ describe("dex-liquidity scoring", () => {
       SCORING_CLOCK_SEC,
     );
 
-    expect(metrics.totalTvlUsd).toBe(0);
-    expect(metrics.topPools).toEqual([]);
+    expect(result.scoredMetrics.get(metrics.stablecoinId)!.totalTvlUsd).toBe(0);
+    expect(result.scoredMetrics.get(metrics.stablecoinId)!.topPools).toEqual([]);
     expect(result.globalAgg.protocolTvl["carbon-defi"]).toBeUndefined();
     expect(rawPool.tvlUsd).toBe(2_000_000_000);
     expect(rawPool.extra?.effectiveTvl).toBe(480_000_000);
@@ -1832,21 +1793,6 @@ describe("dex-liquidity scoring", () => {
       protocolCount: 1,
       tvlUsd: 2_000_000_000,
     });
-  });
-
-  it("constructs depth updates in bounded order", async () => {
-    const stabilityRows = new Map(
-      ACTIVE_STABLECOINS.slice(0, 60).map((coin, index) => [coin.id, index / 100] as const),
-    );
-
-    await computeDepthStability(makeQueryDb([]), stabilityRows, "dex-liquidity-test");
-
-    const calls = vi.mocked(batchExecute).mock.calls;
-    expect(calls.map(([, statements]) => statements.length)).toEqual([25, 25, 11]);
-    expect(calls.every(([, statements]) => statements.length <= DEX_LIQUIDITY_SCORING_BATCH_SIZE)).toBe(true);
-    const prepared = calls.flatMap(([, statements]) => statements as PreparedStatementWithMeta[]);
-    expect(prepared[0]?.sql).toContain("SET depth_stability = NULL");
-    expect(prepared.slice(1).map((statement) => statement.boundValues[1])).toEqual([...stabilityRows.keys()]);
   });
 
   it("stops constructing DEX prices after a bounded write aborts", async () => {
@@ -1875,7 +1821,7 @@ describe("dex-liquidity scoring", () => {
     });
 
     await expect(
-      computeDexPrices(makeQueryDb([]), retainedPools, 1_700_000_000, undefined, controller.signal, undefined, undefined, primaryPrices),
+      computeDexPrices({ db: makeQueryDb([]), retainedPoolsByStablecoin: retainedPools, nowSec: 1_700_000_000, signal: controller.signal, primaryPrices }),
     ).rejects.toThrow("DEX price publication timed out");
 
     expect(batchExecute).toHaveBeenCalledTimes(1);

@@ -482,13 +482,21 @@ const ARTIFACT_RISK_RANK: Record<DigestEditorialCandidateArtifactRisk, number> =
 };
 
 /**
- * Kinds whose entire evidence base is one ingestion pipeline, so an upstream
- * gap produces a coherent-looking story with no contradicting input.
+ * Total editorial order: unsuppressed first, then artifact risk
+ * (none < low < medium < high), descending impact, and ascending stable ID.
+ * Risk tiers apply at every impact gap and to every kind, including
+ * single-source liquidity/yield. Pair-dependent windows can form cycles.
+ * Suppression and critical-lead requirements remain separate authorities.
  */
-const SINGLE_SOURCE_KINDS: Partial<Record<DigestEditorialCandidateKind, true>> = {
-  liquidity: true,
-  yield: true,
-};
+export function compareEditorialCandidates(a: DigestEditorialCandidate, b: DigestEditorialCandidate): number {
+  const suppressionDelta = Number(Boolean(a.suppressReason)) - Number(Boolean(b.suppressReason));
+  if (suppressionDelta !== 0) return suppressionDelta;
+  const riskDelta = ARTIFACT_RISK_RANK[a.artifactRisk] - ARTIFACT_RISK_RANK[b.artifactRisk];
+  if (riskDelta !== 0) return riskDelta;
+  const impactDelta = b.impactScore - a.impactScore;
+  if (impactDelta !== 0) return impactDelta;
+  return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+}
 
 const MOMENTUM_NOVELTIES = new Set<DigestEditorialCandidateNovelty>(["new", "accelerating", "reversal"]);
 
@@ -513,18 +521,5 @@ export function buildEditorialCandidates(
   addLiquidityAndBlacklistCandidates(candidates, data);
   addPsiCandidate(candidates, data);
 
-  return candidates.sort((a, b) => {
-    const aSuppressed = a.suppressReason ? 1 : 0;
-    const bSuppressed = b.suppressReason ? 1 : 0;
-    if (aSuppressed !== bSuppressed) return aSuppressed - bSuppressed;
-
-    const riskDelta = ARTIFACT_RISK_RANK[a.artifactRisk] - ARTIFACT_RISK_RANK[b.artifactRisk];
-    // Single-source kinds cede to cleaner evidence at any impact gap. The
-    // 25-point window below is why a medium-risk USDS liquidity shift still
-    // outranked every corroborated signal in edition #179.
-    if (riskDelta !== 0 && (SINGLE_SOURCE_KINDS[a.kind] || SINGLE_SOURCE_KINDS[b.kind])) return riskDelta;
-    if (riskDelta !== 0 && Math.abs(a.impactScore - b.impactScore) < 25) return riskDelta;
-
-    return b.impactScore - a.impactScore;
-  });
+  return candidates.sort(compareEditorialCandidates);
 }

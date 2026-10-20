@@ -1,5 +1,6 @@
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { deleteCache, getCache, setCache } from "../../../lib/db-cache";
+import { buildInClause, chunkArray } from "../../../lib/db";
 import { parseJsonObject } from "../../../lib/json-parse";
 import { logTelegramEvent } from "../../../telegram/common/log";
 import type { FreezeAlert } from "../../../telegram/common/alerts-formatting";
@@ -104,6 +105,26 @@ function logDroppedFreezeRow(reason: FreezeRowDropReason): void {
   });
 }
 
+/** Exact queued identities only; source suppression wins even before projection. */
+export async function loadRetractedFreezeAlertIds(
+  db: D1Database,
+  sourceEventIds: readonly string[],
+): Promise<Set<string>> {
+  const retracted = new Set<string>();
+  const eventIds = [...new Set(sourceEventIds.filter((id) => id.startsWith("freeze:")).map((id) => id.slice(7)))];
+  for (const ids of chunkArray(eventIds)) {
+    const clause = buildInClause(ids);
+    const rows = await db.prepare(
+      `SELECT t.event_id FROM tape_events AS t
+         LEFT JOIN blacklist_events AS b ON t.source_table = 'blacklist_events' AND b.id = t.source_row_id
+        WHERE t.event_id IN (${clause.sql})
+          AND (t.suppressed_at IS NOT NULL OR b.suppression_reason IS NOT NULL)`,
+    ).bind(...clause.binds).all<{ event_id: string }>();
+    for (const row of rows.results ?? []) retracted.add(`freeze:${row.event_id}`);
+  }
+  return retracted;
+}
+
 export async function loadFreshFreezeAlerts(
   db: D1Database,
   cursor: number | null,
@@ -124,7 +145,8 @@ export async function loadFreshFreezeAlerts(
   if (cursor == null) {
     const latest = await db.prepare(
       `SELECT MAX(id) AS id FROM tape_events
-        WHERE type IN ('freeze.blocked', 'freeze.unblocked', 'freeze.destroyed')`,
+        WHERE suppressed_at IS NULL
+          AND type IN ('freeze.blocked', 'freeze.unblocked', 'freeze.destroyed')`,
     ).first<{ id: number | null }>();
     return { state: "unseeded", alerts: [], cursor: latest?.id == null ? null : Number(latest.id) };
   }
@@ -132,6 +154,10 @@ export async function loadFreshFreezeAlerts(
     `SELECT id, event_id, type, ts, payload_json
        FROM tape_events
       WHERE id > ?
+        AND suppressed_at IS NULL
+        AND NOT EXISTS (SELECT 1 FROM blacklist_events AS b
+          WHERE tape_events.source_table = 'blacklist_events'
+            AND b.id = tape_events.source_row_id AND b.suppression_reason IS NOT NULL)
         AND type IN ('freeze.blocked', 'freeze.unblocked', 'freeze.destroyed')
       ORDER BY id ASC
       LIMIT ?`,

@@ -32,6 +32,20 @@ describe("watershed ranks", () => {
     expect(findDependencyCycle(["a"], [{ from: "a", to: "a" }])).toEqual(["a"]);
     expect(findDependencyCycle(["a", "b"], [{ from: "a", to: "b" }])).toBeNull();
   });
+
+  it("prefers the first supplied self-loop even outside the layout IDs", () => {
+    const links = [["a", "b"], ["b", "a"], ["z", "z"], ["a", "a"]].map(([from, to]) => ({ from, to }));
+    expect(findDependencyCycle(["a", "b"], links)).toEqual(["z"]);
+    expect(findDependencyCycle(["a", "b"], [...links].reverse())).toEqual(["a"]);
+  });
+
+  it("keeps the first completed cycle rather than the lexically first cycle", () => {
+    const links = [["a", "b"], ["b", "a"], ["b", "y"], ["y", "z"], ["z", "y"]]
+      .map(([from, to]) => ({ from, to }));
+    for (const permutation of [links, [...links].reverse()]) {
+      expect(findDependencyCycle(["z", "y", "b", "a"], permutation)).toEqual(["y", "z"]);
+    }
+  });
 });
 
 describe("watershed geometry", () => {

@@ -157,6 +157,13 @@ receives a new identity.
 
 ## Process requirements
 
+The runtime-neutral `shared/lib/safety-score-v9/mechanism-fields.ts` descriptor owns
+component field/key pairs and required metric keys for overlay expansion and simple-family
+evaluation. Its schema-coverage test guards completeness; production does not inspect Zod
+internals. Compiler fallbacks share those fields, retaining explicit assurance, maturity and
+physical-redemption exceptions. Specialized CDP, synthetic, algorithmic and RWA evaluators
+remain separate; a descriptor grants no quality or applicability credit.
+
 - Every overlay entry carries `reviewedAt` (the evidence pin as strict `YYYY-MM-DD`
   or `YYYY-MM-DDTHH:MM:SSZ`, optionally with 1–3 fractional-second digits), descriptive
   source labels, and notes stating what was measured, at what timestamp/block, and why each

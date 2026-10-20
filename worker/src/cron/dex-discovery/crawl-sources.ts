@@ -18,7 +18,7 @@ import { crawlTezosPoolsStage } from "./crawl-tezos-pools";
 import { crawlIconBalancedPoolsStage } from "./crawl-icon-balanced-pools";
 import { crawlKavaSwapPoolsStage } from "./crawl-kava-swap-pools";
 import { crawlCosmosPoolsStage } from "./crawl-cosmos-pools";
-import { createCrawlStageContext, type StagedPriceObservation } from "./staged-pool";
+import { createCrawlStageContext } from "./staged-pool";
 import type { DexDeploymentProviderCheck, StagedPool } from "./types";
 import { classifyDexDeploymentOutcomes, type DexDeploymentOutcomeWrite } from "./deployment-outcomes";
 import {
@@ -92,7 +92,6 @@ export async function crawlCoin(
     return result;
   };
   const pools: StagedPool[] = [];
-  const priceObs: StagedPriceObservation[] = [];
   const providerChecks: DexDeploymentProviderCheck[] = [];
   const nowSec = Math.floor(Date.now() / 1000);
   const stablecoinMeta = WORKER_TRACKED_META_BY_ID.get(stablecoinId);
@@ -101,7 +100,6 @@ export async function crawlCoin(
     knownPoolIds,
     nowSec,
     pools,
-    priceObs,
     signal,
     deadlineMs,
     references,
@@ -165,14 +163,14 @@ export async function crawlCoin(
       });
     }
     if (leaf === "dexscreener") {
-      if ((pools.length === 0 || priceObs.length === 0) && stablecoinMeta?.geckoId && !context.timeExceeded()) {
+      if ((pools.length === 0 || !context.hasUsablePoolPrice) && stablecoinMeta?.geckoId && !context.timeExceeded()) {
         await onProviderStage?.("cg-tickers");
       }
       await crawlCoinGeckoTickersStage({
         cgApiKey,
         geckoId: stablecoinMeta?.geckoId,
         symbol: stablecoinMeta?.symbol,
-        shouldRun: pools.length === 0 || priceObs.length === 0,
+        shouldRun: pools.length === 0 || !context.hasUsablePoolPrice,
         context,
       });
     }

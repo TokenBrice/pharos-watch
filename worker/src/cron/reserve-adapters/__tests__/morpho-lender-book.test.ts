@@ -218,11 +218,12 @@ describe("Morpho NAV-accounted lender-book producer", () => {
       let probes = 0;
       vi.stubGlobal("fetch", async (...args: Parameters<typeof fetch>) => {
         const request = new Request(...args);
-        const body = await request.clone().json() as { method: string; params: { to?: string; data?: string }[] };
+        const body = await request.clone().json() as { id: number; method: string; params: { to?: string; data?: string }[] };
         if (body.method === "eth_call" && body.params[0]?.to?.toLowerCase() === ADAPTER &&
             body.params[0]?.data === toFunctionSelector("morphoVaultV1()")) {
           probes++;
           return new Response(JSON.stringify(outcome === "http" ? { error: "unavailable" } : {
+            id: body.id,
             error: outcome === "revert" ? { code: 3, message: "execution reverted" } :
               { code: -32000, message: "missing trie node" },
           }), { status: outcome === "http" ? 503 : 200 });

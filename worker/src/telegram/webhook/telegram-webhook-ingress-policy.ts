@@ -91,8 +91,6 @@ export const TELEGRAM_COMMAND_POLICIES: Readonly<Record<string, Readonly<Telegra
   "/unsnooze": MUTATING_COMMAND_POLICY,
   "/cancel": { ...UNKNOWN_COMMAND_POLICY, mutation: "required", pending: "cancel", setupTickerEscape: true },
   "/forget": { ...MUTATING_COMMAND_POLICY, recoveryEligible: false },
-  "/export": UNKNOWN_COMMAND_POLICY,
-  "/import": { ...MUTATING_COMMAND_POLICY, pending: "remind", recoveryEligible: false },
   "/recap": RECAP_READ_POLICY,
 };
 

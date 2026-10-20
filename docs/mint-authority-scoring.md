@@ -18,6 +18,8 @@ terminal version marker and interpretation anchors. The public
 
 For current mint scoring and evidence, start at [Current V9 scope](#current-v9-scope) (the implementation retains its V9 names in Safety Score V10), then read the applicable posture or process gates here. [Mint Authority Taxonomy](./classification.md#mint-authority-taxonomy) owns taxonomy meaning; `shared/lib/classification.ts` owns display labels. The [native issuance / Bridge Risk authoring boundary](./stablecoin-data.md#mint-authority-and-bridge-risk-ownership) owns schema and registry validation. [Report cards](./report-cards.md) owns overall aggregation and publication, not a second mint ladder.
 
+The scored `V9MintPosture` vocabulary derives from the methodology policy's `control.mintPostureQuality` keys. Curated `MintAuthorityPosture` remains a separate annotation vocabulary, including its mint-scoped `none-resolved-mint` distinction; annotations do not broaden scored policy keys.
+
 The sections from [Methodology Versioning](#methodology-versioning) through the historical formula, caps, and bands describe the retired lane only. Read them for historical interpretation, not live score changes.
 
 The advisory Mint Authority audit's default Markdown renders every queue, including open questions, source-free rationales, unknown upgrades and reused controllers. Audit counts, live probes and detail evidence links share the typed profile source collector, including no-local-issuance exceptions, upgrade reviews, incidents, controls and custody attestations; counts preserve occurrences while links/probes deduplicate URLs.

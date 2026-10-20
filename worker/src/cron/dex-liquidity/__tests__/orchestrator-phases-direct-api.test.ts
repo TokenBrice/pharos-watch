@@ -1,9 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { DexApiPool } from "../../../lib/dex-api-common";
-import { compactDirectApiFetchPhasePools, integrateDirectApiLiquidityPhase } from "../orchestrator-phases/direct-api";
+import { makeDexApiFetchResult, type DexApiPool } from "../../../lib/dex-api-common";
+import { integrateDirectApiLiquidityPhase } from "../orchestrator-phases/direct-api";
+import { fetchDirectApiFixture } from "../../__tests__/dex-liquidity-direct-api.test-support";
 import { buildAuthoritativeStagedPoolConfirmationIndex } from "../orchestrator-phases/authoritative";
 import { createKnownPoolIdentityIndex } from "../pool-identity";
-import { initMetrics } from "../pool-helpers";
+import { initSourcePoolGraph } from "../pool-helpers";
 import { buildChainAddressKey } from "../token-resolution";
 
 const SOLANA_POOL_ADDRESS = "11111111111111111111111111111111";
@@ -33,7 +34,7 @@ function makeSolanaDirectPool(overrides: Partial<DexApiPool> = {}): DexApiPool {
 type DirectApiScenarioOverrides = Partial<Parameters<typeof integrateDirectApiLiquidityPhase>[0]>;
 
 async function runDirectApiScenario(overrides: DirectApiScenarioOverrides = {}) {
-  return integrateDirectApiLiquidityPhase({
+  const params = {
     directApiPools: [makeSolanaDirectPool()],
     knownPoolIndex: createKnownPoolIdentityIndex(),
     contractMetaByChainAddress: new Map(),
@@ -51,7 +52,12 @@ async function runDirectApiScenario(overrides: DirectApiScenarioOverrides = {}) 
       ["usdt-tether", 1],
     ]),
     ...overrides,
-  });
+  };
+  const phase = await fetchDirectApiFixture([{
+    name: "fixture", circuitKey: "fixture", normalizedProtocol: "fixture", supportedChains: [],
+    censusScope: "bounded-sample", result: makeDexApiFetchResult(params.directApiPools, { ok: true, degraded: false, errors: [] }),
+  }], params);
+  return integrateDirectApiLiquidityPhase({ ...params, directApiPools: phase.pools, preprocessedPoolCounts: phase.counts });
 }
 
 describe("integrateDirectApiLiquidityPhase", () => {
@@ -131,7 +137,7 @@ describe("integrateDirectApiLiquidityPhase", () => {
     expect(result.excludedByReason).toEqual({ untracked_token: 1 });
   });
 
-  it("compacts direct results before identity work without losing raw source evidence", () => {
+  it("compacts direct results before identity work without losing raw source evidence", async () => {
     const rawPoolCount = 5;
     const retainedPoolCount = 2;
     const trackedAddress = "0x1111111111111111111111111111111111111111";
@@ -190,16 +196,16 @@ describe("integrateDirectApiLiquidityPhase", () => {
       degradedSources: [],
       attemptedProtocolChains: [],
       fallbackSignals: [],
-      sourceWarnings: ["balancer-api: bounded-tail"],
+      sourceWarnings: [],
       circuitEvents: [],
     };
 
-    const compacted = compactDirectApiFetchPhasePools(rawPhase, {
+    const compacted = await fetchDirectApiFixture((rawPhase).results, {
       chainAddressToId: new Map([[buildChainAddressKey("ethereum", trackedAddress), "tracked-stablecoin"]]),
       symbolToChainScopedIds: new Map(),
       contractMetaByChainAddress: new Map(),
     });
-    const authoritativeConfirmation = buildAuthoritativeStagedPoolConfirmationIndex(compacted.phase.results);
+    const authoritativeConfirmation = buildAuthoritativeStagedPoolConfirmationIndex(compacted.results);
 
     expect(compacted.counts).toEqual({
       rawPoolCount,
@@ -208,15 +214,15 @@ describe("integrateDirectApiLiquidityPhase", () => {
       skippedUntrackedCount: 3,
     });
     expect(compacted.pools).toHaveLength(retainedPoolCount);
-    expect(compacted.phase.results[0]?.result.pools).toHaveLength(retainedPoolCount);
-    expect(compacted.phase.results[0]?.result.pagination).toEqual(rawPhase.results[0]?.result.pagination);
-    expect(compacted.phase.sourceWarnings).toEqual(rawPhase.sourceWarnings);
+    expect(compacted.results[0]?.result.pools).toHaveLength(retainedPoolCount);
+    expect(compacted.results[0]?.result.pagination).toEqual(rawPhase.results[0]?.result.pagination);
+    expect(compacted.sourceWarnings).toEqual([]);
     const lastPoolKey = `ethereum:0x${(rawPoolCount - 1).toString(16).padStart(40, "0")}`;
-    expect(compacted.phase.results[0]?.authoritativeExactPoolKeys).toContain(lastPoolKey);
+    expect(compacted.results[0]?.authoritativeExactPoolKeys).toContain(lastPoolKey);
     expect(authoritativeConfirmation.confirmedExactKeysByProtocol.has("balancer")).toBe(false);
   });
 
-  it("keeps Fluid pools out of the measured-execution routing after the overlay removal", () => {
+  it("keeps Fluid pools out of the measured-execution routing after the overlay removal", async () => {
     const poolAddress = "0x218c659b6bbb73d47c7926fc90d9893342534b84";
     const paxg = "0x45804880de22913dafe09f4980848ece6ecbaf78";
     const xaut = "0x68749665ff8d2d112fa859aa293f07a622782f38";
@@ -262,7 +268,7 @@ describe("integrateDirectApiLiquidityPhase", () => {
       [buildChainAddressKey("ethereum", paxg), "paxg-paxos"],
       [buildChainAddressKey("ethereum", xaut), "xaut-tether"],
     ]);
-    const compacted = compactDirectApiFetchPhasePools(rawPhase, {
+    const compacted = await fetchDirectApiFixture((rawPhase).results, {
       chainAddressToId,
       symbolToChainScopedIds: new Map(),
       contractMetaByChainAddress: new Map(),
@@ -343,10 +349,8 @@ describe("integrateDirectApiLiquidityPhase", () => {
   it("enriches an exact primary duplicate with supported execution evidence without double counting", async () => {
     const knownPoolIndex = createKnownPoolIdentityIndex();
     knownPoolIndex.exactKeys.add(`solana:${SOLANA_POOL_ADDRESS}`);
-    const usdcMetrics = initMetrics("usdc-circle", "USDC");
-    usdcMetrics.totalTvlUsd = 4_000_000;
-    usdcMetrics.poolCount = 1;
-    usdcMetrics.topPools.push({
+    const usdcMetrics = initSourcePoolGraph("usdc-circle", "USDC");
+    usdcMetrics.pools.push({
       poolId: `solana:${SOLANA_POOL_ADDRESS}`,
       project: "raydium",
       chain: "Solana",
@@ -365,10 +369,10 @@ describe("integrateDirectApiLiquidityPhase", () => {
     });
 
     expect(result.directApiDedupSkippedByAddress).toBe(1);
-    expect(usdcMetrics.totalTvlUsd).toBe(4_000_000);
-    expect(usdcMetrics.poolCount).toBe(1);
-    expect(usdcMetrics.topPools).toHaveLength(1);
-    expect(usdcMetrics.topPools[0]?.extra?.ammExecutionModel).toMatchObject({
+    expect(usdcMetrics.pools.reduce((total, pool) => total + pool.tvlUsd, 0)).toBe(4_000_000);
+    expect(usdcMetrics.pools.length).toBe(1);
+    expect(usdcMetrics.pools).toHaveLength(1);
+    expect(usdcMetrics.pools[0]?.extra?.ammExecutionModel).toMatchObject({
       invariant: "constant-product",
       trackedTokenIndex: 0,
     });
@@ -409,10 +413,8 @@ describe("integrateDirectApiLiquidityPhase", () => {
   it("does not overwrite retained exact-pool evidence when protocol compatibility fails", async () => {
     const knownPoolIndex = createKnownPoolIdentityIndex();
     knownPoolIndex.exactKeys.add(`solana:${SOLANA_POOL_ADDRESS}`);
-    const usdcMetrics = initMetrics("usdc-circle", "USDC");
-    usdcMetrics.totalTvlUsd = 4_000_000;
-    usdcMetrics.poolCount = 1;
-    usdcMetrics.topPools.push({
+    const usdcMetrics = initSourcePoolGraph("usdc-circle", "USDC");
+    usdcMetrics.pools.push({
       poolId: `solana:${SOLANA_POOL_ADDRESS}`,
       project: "retained-primary-protocol",
       chain: "Solana",
@@ -456,9 +458,9 @@ describe("integrateDirectApiLiquidityPhase", () => {
       priceObservations: new Map(),
     });
 
-    expect(usdcMetrics.totalTvlUsd).toBe(4_000_000);
-    expect(usdcMetrics.poolCount).toBe(1);
-    expect(usdcMetrics.topPools[0]?.extra?.ammExecutionModel).toMatchObject({
+    expect(usdcMetrics.pools.reduce((total, pool) => total + pool.tvlUsd, 0)).toBe(4_000_000);
+    expect(usdcMetrics.pools.length).toBe(1);
+    expect(usdcMetrics.pools[0]?.extra?.ammExecutionModel).toMatchObject({
       source: "balancer",
       invariant: "stableswap",
       feeRate: 0.0001,

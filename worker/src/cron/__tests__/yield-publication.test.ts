@@ -36,7 +36,7 @@ import {
 import { handleBackfillYieldHistory } from "../../../scripts/backfills/backfill-yield-history";
 import { cleanupYieldSourceTest, mockYieldSourceRoutes } from "./yield-source.test-support";
 import { baseEvaluationInput, resolvedYield } from "./yield-evaluation.test-support";
-import { evaluateYieldSources } from "../yield-sync/evaluation";
+import { evaluateYieldSourcesCooperative } from "../yield-sync/evaluation";
 import { loadTier1PrevRateRows } from "../yield-sync/resolve";
 import { computeApyFromRate } from "../yield-helpers";
 
@@ -58,6 +58,8 @@ describe("yield current-row conflict updates", () => {
       is_best: 1, updated_at: 100, publication_generation_id: "first", publication_state: "published",
     };
     try {
+      expect(sqlite.prepare("PRAGMA table_info(yield_data)").all().map((column) => column.name).sort())
+        .toEqual(Object.keys(row).sort());
       await publishYieldRowsAtomically(db, {
         rankingsPayload: { publication: { generationId: "first" } }, startSec: 100, generationId: "first",
         yieldDataRows: [row, { ...row, source_key: "defillama:two" }],
@@ -207,12 +209,12 @@ describe("publishYieldCoordinatorResults", () => {
       const apy = computeApyFromRate(nextRate, anchor.exchangeRate!, (nextSec - anchor.recordedAt) / DAY_SECONDS);
       expect(typeof apy).toBe("number");
       if (typeof apy !== "number") throw new Error("Expected measured return");
-      const evaluated = evaluateYieldSources(baseEvaluationInput({
+      const evaluated = await evaluateYieldSourcesCooperative(baseEvaluationInput({
         startSec: nextSec, sevenDaysAgoSec: startSec,
         resolved: [{ ...seed, yield: { ...seed.yield, observationKind: undefined,
           currentApy: apy, apyBase: apy, exchangeRate: nextRate,
           sourceObservedAt: nextSec, comparisonAnchorObservedAt: startSec } }],
-      }));
+      }), { yieldToEventLoop: () => Promise.resolve() });
       const measured = evaluated.evaluatedSources[0];
       expect(measured).toMatchObject({ apy7d: apy, apy30d: apy });
       expect((await publish(nextSec, [other, measured], [])).ok).toBe(true);
@@ -253,7 +255,7 @@ describe("publishYieldCoordinatorResults", () => {
       expect(sqlite.prepare("SELECT recorded_at, source_observed_at FROM yield_history").all())
         .toEqual([{ recorded_at: bucket, source_observed_at: bucket }]);
 
-      const stats = (startSec: number, useLegacyHistory = false) => {
+      const stats = async (startSec: number, useLegacyHistory = false) => {
         const historyRows = sqlite.prepare("SELECT * FROM yield_history").all().map((row) => ({
           stablecoin_id: String(row.stablecoin_id), source_key: String(row.source_key),
           recorded_at: Number(row.recorded_at), is_best: Number(row.is_best), apy: Number(row.apy),
@@ -273,15 +275,15 @@ describe("publishYieldCoordinatorResults", () => {
             ...row, source_key: "legacy-best", apy: row.recorded_at === bucket + 3600 ? 2 : row.apy,
           }))]]);
         }
-        return evaluateYieldSources(input).evaluatedSources[0];
+        return (await evaluateYieldSourcesCooperative(input, { yieldToEventLoop: () => Promise.resolve() })).evaluatedSources[0];
       };
-      const before = stats(bucket + 3610);
+      const before = await stats(bucket + 3610);
       expect((await publish(bucket + 3610, bucket + 3600, 8)).ok).toBe(true);
-      const after = stats(bucket + 3625);
+      const after = await stats(bucket + 3625);
       expect(after.apy30d).toBeCloseTo(before.apy30d);
       expect(after.stdDev30d).toBeCloseTo(before.stdDev30d!);
       expect(sqlite.prepare("SELECT COUNT(*) AS n FROM yield_history").get()).toEqual({ n: 2 });
-      expect(stats(bucket + 3625, true).apy30d).toBeCloseTo((4.8 + 2 + 8) / 3);
+      expect((await stats(bucket + 3625, true)).apy30d).toBeCloseTo((4.8 + 2 + 8) / 3);
       const loser = await publish(bucket + 3605, bucket + 7200, 99);
       expect(loser.ok).toBe(true);
       if (!loser.ok) throw new Error("Expected a successful losing-generation publication");
@@ -1231,6 +1233,57 @@ describe("yield publication migration compatibility", () => {
       sqlite.close();
     }
   });
+
+  it("projects every schema column while ignoring only history conflicts and replacing decision evidence", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const history = {
+      stablecoin_id: "coin-a", source_key: "source-a", recorded_at: 90, is_best: 1, apy: -2,
+      apy_base: -3, apy_reward: 1, exchange_rate: 1.02, source_tvl_usd: 500_000,
+      data_source: "test", warning_signals: '["negative"]', yield_source: "Source A", yield_type: "lending-vault",
+      publication_generation_id: "g", publication_state: "published", pys_at_publish: 12,
+      safety_at_publish: 81, variance_at_publish: 0.2, pys_inputs_at_publish: '{"score":12}', source_observed_at: 80,
+    };
+    const decision = {
+      generation_id: "g", stablecoin_id: "coin-a", selected_source_key: "source-a",
+      selected_confidence_tier: "curated", selected_data_source: "test", selected_apy_30d: -1,
+      selected_score: 12, selected_reason: "test", previous_best_source_key: "source-b",
+      source_switch: 1, rejected_count: 2, alternatives_json: '[{"id":"b"}]', created_at: 100,
+      retention_reason: "trend", trend_fingerprint: "fingerprint-a",
+    };
+    const alternative = {
+      generation_id: "g", stablecoin_id: "coin-a", alt_source_key: "source-b", alt_yield_source: "Source B",
+      alt_apy30d_delta: -1.5, rejection_reason_code: "lower-confidence", recorded_at: 100,
+    };
+    try {
+      await publishYieldRowsAtomically(db, {
+        rankingsPayload: { publication: { generationId: "g" } }, generationId: "g", startSec: 100,
+        yieldDataRows: [], historyRows: [history], decisionRows: [decision],
+        decisionAlternativeRows: [alternative],
+      });
+      for (const [table, row] of [
+        ["yield_history", history], ["yield_source_decisions", decision],
+        ["yield_source_decision_alternatives", alternative],
+      ] as const) {
+        expect(sqlite.prepare(`PRAGMA table_info(${table})`).all().map((column) => column.name).sort())
+          .toEqual(Object.keys(row).sort());
+        expect(sqlite.prepare(`SELECT * FROM ${table}`).all()).toEqual([row]);
+      }
+      const nextDecision = { ...decision, selected_score: null, previous_best_source_key: null,
+        retention_reason: "audit", trend_fingerprint: null };
+      const nextAlternative = { ...alternative, alt_apy30d_delta: null, recorded_at: 200 };
+      await publishYieldRowsAtomically(db, {
+        rankingsPayload: { publication: { generationId: "g" } }, generationId: "g", startSec: 200,
+        yieldDataRows: [], historyRows: [{ ...history, apy: 99 }], decisionRows: [nextDecision],
+        decisionAlternativeRows: [nextAlternative],
+      });
+      expect(sqlite.prepare("SELECT * FROM yield_history").all()).toEqual([history]);
+      expect(sqlite.prepare("SELECT * FROM yield_source_decisions").all()).toEqual([nextDecision]);
+      expect(sqlite.prepare("SELECT * FROM yield_source_decision_alternatives").all()).toEqual([nextAlternative]);
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it("retains only anomaly episode boundaries as permanent trend decisions", async () => {
     const { sqlite, db } = createLatestSchemaSqlite();
     const publish = (generationId: string, startSec: number, fingerprint: string) =>

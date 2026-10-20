@@ -105,6 +105,23 @@ afterEach(() => {
 });
 
 describe("writeDepegResolverAssessments", () => {
+  it("covers each persisted column once and updates exactly the mutable latest columns", async () => {
+    const { db, sqlite } = fixtures.open();
+    const prepare = vi.spyOn(db, "prepare");
+    await writeDepegResolverAssessments(db, snapshot([baseRow]));
+    const sql = prepare.mock.calls.map(([query]) => query).find((query) => query.includes("ON CONFLICT"))!;
+    const columns = sql.match(/\(([^)]+)\)\s+VALUES/)![1].split(",").map((column) => column.trim());
+    const schemaColumns = sqlite.prepare("PRAGMA table_info(depeg_resolver_assessments)").all()
+      .map((row) => String(row.name)).filter((column) => column !== "id");
+    expect(new Set(columns).size).toBe(columns.length);
+    expect(columns).toEqual(schemaColumns);
+    expect(sql.match(/\?/g)).toHaveLength(schemaColumns.length);
+    const assignments = sql.split("DO UPDATE SET")[1].trim().split(/,\s*/);
+    expect(assignments).toEqual(schemaColumns
+      .filter((column) => !["event_id", "checkpoint", "methodology_version", "created_at"].includes(column))
+      .map((column) => `${column} = excluded.${column}`));
+  });
+
   it("persists threshold checkpoints immutably while updating latest median and IQR values", async () => {
     const { db, sqlite } = fixtures.open();
     const clock = vi.spyOn(Date, "now").mockReturnValue(2_000_000_000);
@@ -119,12 +136,32 @@ describe("writeDepegResolverAssessments", () => {
     ]);
     for (const row of firstRows) {
       expect(row).toMatchObject({
+        event_id: baseRow.eventId,
         stablecoin_id: baseRow.stablecoinId,
+        symbol: baseRow.symbol,
+        name: baseRow.name,
+        peg_currency: baseRow.pegCurrency,
+        governance: baseRow.governance,
+        direction: baseRow.direction,
+        started_at: baseRow.startedAt,
         assessed_at: 2_000_000,
         event_age_sec: 25 * 3600,
+        checkpoint: row.checkpoint,
+        methodology_version: DDR_METHODOLOGY_VERSION,
+        methodology_version_label: DDR_METHODOLOGY_VERSION_LABEL,
+        resolution_rubric_version: "resolution-rubric-v1",
+        duration_model_version: "duration-landmark-v1",
+        incident_grouping_version: "incident-group-v1",
+        support_rules_version: "support-rules-v1",
+        resolution_tier: "at_risk",
+        duration_suppressed: 0,
+        duration_suppressed_reason: null,
         median_remaining_sec: 7200,
         iqr_low_remaining_sec: 3600,
         iqr_high_remaining_sec: 14_400,
+        stratum: baseRow.duration.stratum,
+        horizons_json: JSON.stringify(baseRow.duration.horizons),
+        factors_json: JSON.stringify(baseRow.resolution.factors),
         row_json: JSON.stringify(baseRow),
         created_at: 2_000_000,
         updated_at: 2_000_000,

@@ -1,5 +1,17 @@
-import type { DdrRow } from "@shared/types/depeg-resolver";
-import type { DdrCanonicalIncident } from "../depeg-resolver-v2-contracts";
+import {
+  DdrFrozenDurationSchema,
+  DdrPredictionMetaSchema,
+  DdrV2BaseRowSchema,
+  DdrV2FrozenPayloadSchema,
+  DdrV2NoCallPayloadSchema,
+  type DdrRow,
+} from "@shared/types/depeg-resolver";
+import { readRecord } from "@shared/lib/type-guards";
+import type {
+  DdrCanonicalIncident,
+  DdrPublicationManifest,
+  DdrSealedPublicPrediction,
+} from "../depeg-resolver-v2-contracts";
 
 interface ResolverRowOptions {
   defaultAgeSec?: number;
@@ -92,6 +104,107 @@ export function makeDdrCanonicalIncident(
     rolloutActiveAtEnablement: true,
     confirmedAt: null,
     lockState: null,
+    ...overrides,
+  };
+}
+
+export type DdrSealedPredictionOverrides = Partial<Omit<DdrSealedPublicPrediction, "sealedPayload">> & {
+  sealedPayload?: Record<string, unknown>;
+};
+
+export function makeDdrSealedPublicPrediction(
+  overrides: DdrSealedPredictionOverrides = {},
+): DdrSealedPublicPrediction {
+  const payload = overrides.sealedPayload ?? {};
+  const lockedAt = overrides.lockedAt ?? 1_779_984_600;
+  const eventAgeAtLockSec = overrides.eventAgeAtLockSec ?? 86_400;
+  const row = makeDdrResolverRow({
+    eventId: overrides.eventId ?? 42,
+    startedAt: lockedAt - eventAgeAtLockSec,
+  });
+  const base = DdrV2BaseRowSchema.parse({ ...row, incidentKey: overrides.incidentKey ?? "ddr2:fixture", ...payload });
+  const prediction = DdrPredictionMetaSchema.partial().parse(payload.prediction ?? {});
+  const frozen = readRecord(payload.frozen);
+  const rawDuration = readRecord(frozen?.duration);
+  const duration = DdrFrozenDurationSchema.parse({
+    ...row.duration,
+    remainingAsOf: lockedAt,
+    medianResolveAt: lockedAt + 3600,
+    iqrResolveAt: [lockedAt + 1800, lockedAt + 7200],
+    ...rawDuration,
+    horizons: ((rawDuration?.horizons ?? row.duration.horizons) as DdrRow["duration"]["horizons"]).map((cell) => ({
+      ...cell,
+      horizonEndAt: lockedAt + ({ "6h": 21600, "24h": 86400, "7d": 604800, "30d": 2592000 } as const)[cell.horizon],
+      anchoredLabel: `within ${cell.horizon} of lock`,
+    })),
+  });
+  const sealedPayload = overrides.outcomeKind === "no_call"
+    ? {
+        ...base, kind: "no_call" as const, prediction, frozen: null,
+        noCall: DdrV2NoCallPayloadSchema.parse({
+          lockedAt, eventAgeAtLockSec, missingReasons: [], relatedContext: row.relatedContext,
+          ...readRecord(payload.noCall),
+        }),
+      }
+    : {
+        ...base, kind: "prediction" as const, prediction,
+        frozen: DdrV2FrozenPayloadSchema.parse({
+          resolution: row.resolution, relatedContext: row.relatedContext, sourceRow: row,
+          ...frozen, duration,
+        }),
+      };
+  const metadata: Omit<DdrSealedPublicPrediction, "outcomeKind" | "sealedPayload"> = {
+    id: 7,
+    incidentKey: "ddr2:fixture",
+    eventId: 42,
+    assessmentId: 70,
+    predictionPolicyVersion: "sticky-24h-v1",
+    predictionMethodologyVersion: "2.0",
+    predictionMethodologyVersionLabel: "v2.0",
+    resolutionRubricVersion: "resolution-rubric-v2",
+    durationModelVersion: "duration-landmark-v2",
+    incidentGroupingVersion: "incident-group-v2",
+    supportRulesVersion: "support-rules-v2",
+    policyDelaySec: 86_400,
+    eligibleAt: 1_779_984_600,
+    lockedAt: 1_779_984_600,
+    eventAgeAtLockSec: 86_400,
+    lockTiming: "on_time",
+    lockTrigger: null,
+    forecastReadinessScore: null,
+    forecastReadinessVersion: null,
+    readinessThreshold: null,
+    backstopAt: null,
+    backstopDelaySec: null,
+    rowHash: "a".repeat(64),
+    createdAt: overrides.lockedAt ?? 1_779_984_600,
+    ...overrides,
+    sealedPayloadJson: JSON.stringify(sealedPayload),
+  };
+  return sealedPayload.kind === "prediction"
+    ? { ...metadata, outcomeKind: "prediction", sealedPayload }
+    : { ...metadata, outcomeKind: "no_call", sealedPayload };
+}
+
+export function makeDdrPublicationManifest(
+  overrides: Partial<DdrPublicationManifest> = {},
+): DdrPublicationManifest {
+  return {
+    snapshotToken: "ddr-public-1",
+    snapshotKind: "ddr_public",
+    snapshotGeneration: 2,
+    snapshotSequence: 1,
+    publishedAt: 1_779_984_600,
+    basePayloadHash: "b".repeat(64),
+    publicPredictionIdsHash: "c".repeat(64),
+    publicPredictionIds: [7],
+    publicPredictionRowHashes: { 7: "a".repeat(64) },
+    basePayloadJson: JSON.stringify({ rows: [] }),
+    baseRowCount: 0,
+    publicPredictionCount: 1,
+    createdAt: 1_779_984_600,
+    finalizedAt: 1_779_984_600,
+    validatorVersion: "vitest",
     ...overrides,
   };
 }

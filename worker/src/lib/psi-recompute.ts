@@ -10,7 +10,7 @@ import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { canonicalizePsiStablecoinId } from "@shared/lib/stablecoin-id-registry";
 import { CORE_PSI_ELIGIBLE_IDS, PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import { getDepegThresholdBpsForPegCurrency } from "./constants";
-import { deriveDepegSignal } from "./depeg-signals";
+import { deriveDepegSignal } from "@shared/lib/depeg-signals";
 import { getNativeEventPrice, isNativePegEvent, type NativeEventPriceEvidence } from "@shared/lib/depeg-quote-domain";
 
 const HISTORICAL_PEAK_FLOOR_WINDOW_DAYS = 1;

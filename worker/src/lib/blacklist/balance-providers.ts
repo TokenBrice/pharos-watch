@@ -149,9 +149,10 @@ async function fetchBalanceViaChainRpc(
 }
 
 
-export async function fetchEvmTokenCurrentBalance(
+export async function fetchEvmTokenBalance(
   config: ContractEventConfig,
   address: string,
+  blockNumberOrTag: number | "latest",
   etherscanApiKey: string | null,
   drpcApiKey: string | null,
   rateLimit: RateLimitedFetch,
@@ -161,13 +162,13 @@ export async function fetchEvmTokenCurrentBalance(
 ): Promise<number | null> {
   if (config.chain.evmChainId == null) return null;
 
-  // Current snapshots retain the incumbent dRPC -> chain-RPC -> Etherscan fallback.
+  // Transport fallback is shared; the caller retains historical/snapshot evidence semantics.
   if (drpcApiKey) {
     const drpcAmount = await fetchBalanceViaDrpc(
       config.chain.chainId,
       config.contractAddress,
       address,
-      "latest",
+      blockNumberOrTag,
       drpcApiKey,
       config.decimals,
       budget,
@@ -180,7 +181,7 @@ export async function fetchEvmTokenCurrentBalance(
     config.chain.chainId,
     config.contractAddress,
     address,
-    "latest",
+    blockNumberOrTag,
     config.decimals,
     budget,
     signal,
@@ -192,7 +193,7 @@ export async function fetchEvmTokenCurrentBalance(
     config.chain.evmChainId,
     config.contractAddress,
     address,
-    "latest",
+    blockNumberOrTag === "latest" ? "latest" : "0x" + blockNumberOrTag.toString(16),
     etherscanApiKey,
     rateLimit,
     config.decimals,

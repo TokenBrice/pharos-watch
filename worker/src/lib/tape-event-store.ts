@@ -30,9 +30,9 @@ export async function setProjectorWatermark(
 
 /**
  * Source-key reclassification replaces ordinary events. Peak observations are
- * insert-if-absent: replay must preserve the first permalink, ingestion ID and
- * observation/creation clocks. An optional checkpoint commits with the final
- * bounded event batch; earlier batches remain replay-safe if that commit fails.
+ * insert-if-absent; freeze corrections update only current, unsuppressed source
+ * amounts. Both retain the first permalink, ingestion ID and source/creation
+ * clocks. An optional checkpoint commits with the final bounded event batch.
  */
 export async function insertTapeEvents(
   db: D1Database,
@@ -51,7 +51,22 @@ export async function insertTapeEvents(
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ${event.type === "depeg.peak_worsened"
            ? "ON CONFLICT(source_table, source_row_id, transition) DO NOTHING"
-           : ""}`,
+           : event.sourceTable === "blacklist_events" && event.type.startsWith("freeze.")
+             ? `ON CONFLICT(source_table, source_row_id, transition) DO UPDATE SET
+                  severity = excluded.severity, title = excluded.title,
+                  summary = excluded.summary, payload_json = excluded.payload_json
+                WHERE tape_events.suppressed_at IS NULL
+                  AND EXISTS (
+                    SELECT 1 FROM blacklist_events AS source
+                     WHERE source.id = excluded.source_row_id
+                       AND source.suppression_reason IS NULL
+                       AND source.amount_usd_at_event IS json_extract(excluded.payload_json, '$.amountUsdAtEvent')
+                  )
+                  AND (tape_events.severity IS NOT excluded.severity
+                    OR tape_events.title IS NOT excluded.title
+                    OR tape_events.summary IS NOT excluded.summary
+                    OR tape_events.payload_json IS NOT excluded.payload_json)`
+             : ""}`,
       )
       .bind(
         event.eventId,
@@ -157,7 +172,7 @@ function buildWhereClause(
   filters: TapeEventQueryFilters,
   cursor: { ts: number; id: number } | null,
 ): { sql: string; bindings: (string | number)[] } {
-  const conditions: string[] = [];
+  const conditions: string[] = ["suppressed_at IS NULL"];
   const bindings: (string | number)[] = [];
 
   const typeClauses: string[] = [];

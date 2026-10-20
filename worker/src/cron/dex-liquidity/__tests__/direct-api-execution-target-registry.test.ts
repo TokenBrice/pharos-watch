@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import type { DexApiPool } from "../../../lib/dex-api-common";
+import { makeDexApiFetchResult, type DexApiPool } from "../../../lib/dex-api-common";
 import {
   hasRegisteredDexExecutionTargetOutput,
 } from "../execution-target-registry";
 import { createKnownPoolIdentityIndex } from "../pool-identity";
-import { initMetrics } from "../pool-helpers";
+import { initSourcePoolGraph } from "../pool-helpers";
 import { integrateDirectApiLiquidityPhase } from "../orchestrator-phases/direct-api";
+import { fetchDirectApiFixture } from "../../__tests__/dex-liquidity-direct-api.test-support";
 import { buildUniV3ExecutionCandidateKey } from "../../measured-execution/inventory";
 
 const TOKEN0 = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
@@ -52,6 +53,18 @@ function baseParams(pool: DexApiPool) {
   };
 }
 
+async function runAdmittedScenario(params: Parameters<typeof integrateDirectApiLiquidityPhase>[0] | Omit<Parameters<typeof integrateDirectApiLiquidityPhase>[0], "preprocessedPoolCounts">) {
+  const phase = await fetchDirectApiFixture([{
+    name: "fixture", circuitKey: "fixture", normalizedProtocol: "fixture", supportedChains: [],
+    censusScope: "bounded-sample", result: makeDexApiFetchResult(params.directApiPools, { ok: true, degraded: false, errors: [] }),
+  }], params);
+  if (params.directApiPools.some((pool) => pool.source === "uniswap-v3-shadow")) {
+    expect(phase.measuredExecutionPools).toHaveLength(1);
+    expect(phase.pools).toHaveLength(0);
+  }
+  return integrateDirectApiLiquidityPhase({ ...params, directApiPools: phase.pools, preprocessedPoolCounts: phase.counts });
+}
+
 describe("direct API execution-target registry hook", () => {
   it("distinguishes no registered output from a fail-closed factory result", () => {
     expect(hasRegisteredDexExecutionTargetOutput({})).toBe(false);
@@ -66,15 +79,13 @@ describe("direct API execution-target registry hook", () => {
     { label: "ignores a provider display fee annotation", symbol: "USDC / USDT 0.01%", project: "uniswap-v3", attached: true },
     { label: "rejects different token constituents", symbol: "DAI-USDC", project: "uniswap-v3", attached: false },
     { label: "rejects a conflicting protocol", symbol: "USDT-USDC", project: "pancakeswap", attached: false },
-  ])("$label when attaching an exact registered target", async ({ symbol, project, attached }) => {
+  ])("$label without admitting shadow inventory to scoring", async ({ symbol, project }) => {
     const pool = exactV3DirectPool();
     const params = baseParams(pool);
     const key = buildUniV3ExecutionCandidateKey("ethereum", [TOKEN0, TOKEN1], 100)!;
     params.knownPoolIndex.exactKeys.add(`ethereum:${V3_POOL}`);
-    const metric = initMetrics("usdc-circle", "USDC");
-    metric.totalTvlUsd = pool.tvlUsd;
-    metric.poolCount = 1;
-    metric.topPools.push({
+    const metric = initSourcePoolGraph("usdc-circle", "USDC");
+    metric.pools.push({
       poolId: `ethereum:${V3_POOL}`,
       project,
       chain: "Ethereum",
@@ -92,7 +103,7 @@ describe("direct API execution-target registry hook", () => {
     });
     params.metrics.set("usdc-circle", metric);
 
-    await integrateDirectApiLiquidityPhase({
+    await runAdmittedScenario({
       ...params,
       executionTargetContext: {
         uniV3ExecutionCandidates: new Map([[key, [{
@@ -113,21 +124,10 @@ describe("direct API execution-target registry hook", () => {
       },
     });
 
-    expect(metric.totalTvlUsd).toBe(pool.tvlUsd);
-    expect(metric.poolCount).toBe(1);
-    if (!attached) {
-      expect(metric.topPools[0]?.extra?.measuredExecutionTarget).toBeUndefined();
-      expect(metric.topPools[0]?.extra?.executionCapabilityGate?.reason).toBe("target-unresolved");
-      return;
-    }
-    expect(metric.topPools[0]?.extra?.executionCapabilityGate).toBeUndefined();
-    expect(metric.topPools[0]?.extra?.measuredExecutionTarget).toMatchObject({
-      adapterProfileId: "uniswap-v3-quoter-v2",
-      poolId: `ethereum:${V3_POOL}`,
-      tokenIn: { trackedAssetId: "usdc-circle" },
-      feePips: 100,
-      retainedTvlUsd: pool.tvlUsd,
-    });
+    expect(metric.pools.reduce((total, pool) => total + pool.tvlUsd, 0)).toBe(pool.tvlUsd);
+    expect(metric.pools.length).toBe(1);
+    expect(metric.pools[0]?.extra?.measuredExecutionTarget).toBeUndefined();
+    expect(metric.pools[0]?.extra?.executionCapabilityGate?.reason).toBe("target-unresolved");
   });
 
   it("leaves an unregistered direct pool on the existing integration path", async () => {
@@ -157,8 +157,8 @@ describe("direct API execution-target registry hook", () => {
     const baseline = makeParams();
     const candidate = makeParams();
 
-    await integrateDirectApiLiquidityPhase(baseline);
-    await integrateDirectApiLiquidityPhase({
+    await runAdmittedScenario(baseline);
+    await runAdmittedScenario({
       ...candidate,
       executionTargetContext: {
         uniV3ExecutionCandidates: new Map(),

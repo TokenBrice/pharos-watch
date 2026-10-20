@@ -8,7 +8,6 @@ import {
   decimalNumberFromBigInt,
   fetchJsonPostWithRetry,
   fetchJsonWithRetry,
-  parseTimestampLikeToUnixSeconds,
   requireJsonInputFromConfig,
   slicesFromValues,
 } from "./helpers";
@@ -27,16 +26,6 @@ interface UsddLatestCollateralResponse {
   };
 }
 
-interface UsddHistoryResponse {
-  code?: number;
-  data?: {
-    items?: Array<{
-      statisticTime?: number;
-    }>;
-  };
-}
-
-const USDD_HISTORY_INTERVAL = "WEEKLY";
 const USDD_UNKNOWN_VAULT_SLICE_NAME = "Unknown / unmapped collateral vaults";
 
 type BucketValue = {
@@ -55,21 +44,6 @@ function assertSuccess<T extends { code?: number }>(payload: T, label: string): 
   return payload;
 }
 
-export function buildUsddHistoryUrl(latestUrl: string): string {
-  const latest = new URL(latestUrl);
-  const history = new URL(latest.toString());
-  history.pathname = latest.pathname.endsWith("/latest-collateral")
-    ? latest.pathname.replace(/\/latest-collateral$/, "/collateral-history")
-    : "/data-platform/collateral-history";
-  history.search = "";
-  history.searchParams.set("interval", USDD_HISTORY_INTERVAL);
-  const chain = latest.searchParams.get("chain");
-  if (chain) {
-    history.searchParams.set("chain", chain);
-  }
-  return history.toString();
-}
-
 function createUnknownVaultWarning(
   unknownVaultTypes: Iterable<string>,
   unknownExposurePct: number,
@@ -81,7 +55,6 @@ function createUnknownVaultWarning(
 
 export function adaptUsddLatestCollateral(
   latest: UsddLatestCollateralResponse,
-  history?: UsddHistoryResponse,
 ): AdapterResult {
   const items = assertSuccess(latest, "usdd latest collateral").data?.items ?? [];
 
@@ -134,17 +107,6 @@ export function adaptUsddLatestCollateral(
     }
   }
 
-  const historyItems = history ? (assertSuccess(history, "usdd collateral history").data?.items ?? []) : [];
-  // statisticTime may be a millisecond epoch; parseTimestampLikeToUnixSeconds auto-detects the unit.
-  const statisticTimeRaw = historyItems.reduce<number | null>((latestPoint, item) => {
-    if (typeof item.statisticTime !== "number" || !Number.isFinite(item.statisticTime)) {
-      return latestPoint;
-    }
-    return latestPoint == null || item.statisticTime > latestPoint
-      ? item.statisticTime
-      : latestPoint;
-  }, null);
-
   const bucketSlices: BucketValue[] = [
     {
       name: "Smart Allocator (stablecoin DeFi via Aave/JustLend)",
@@ -194,9 +156,6 @@ export function adaptUsddLatestCollateral(
     ? [createUnknownVaultWarning(unknownVaultTypes, unknownExposurePct)]
     : [];
   const stableRedeemableUsd = bucketValues.psmUsdtUsd + bucketValues.directUsdtUsd;
-  // The independently fetched history clock has no snapshot/value join to this
-  // undated composition. Retain it as a diagnostic, never as evidence freshness.
-  const historyTimestamp = parseTimestampLikeToUnixSeconds(statisticTimeRaw);
 
   return {
     slices: slicesFromValues(bucketSlices.sort((left, right) => right.value - left.value)),
@@ -211,7 +170,6 @@ export function adaptUsddLatestCollateral(
       details: {
         freshnessSource: "latest-collateral",
         freshnessReason: "composition timestamp unavailable; collateral-history is not joined to this snapshot",
-        ...(historyTimestamp != null ? { historyTimestamp } : {}),
       },
       stableVaultUsd: stableRedeemableUsd,
     },
@@ -382,14 +340,10 @@ export async function fetchUsddDataPlatformReserves(
 ): Promise<AdapterResult> {
   const input = requireJsonInputFromConfig(config, "usdd-data-platform");
   const timeout = 12_000;
-  const historyUrl = buildUsddHistoryUrl(input.url);
-  const [latest, history] = await Promise.all([
-    fetchJsonWithRetry<UsddLatestCollateralResponse>(input.url, signal, timeout, ctx),
-    fetchJsonWithRetry<UsddHistoryResponse>(historyUrl, signal, timeout, ctx),
-  ]);
-  const adapted = adaptUsddLatestCollateral(latest, history);
+  const latest = await fetchJsonWithRetry<UsddLatestCollateralResponse>(input.url, signal, timeout, ctx);
+  const adapted = adaptUsddLatestCollateral(latest);
 
-  // Sequenced after the collateral fetches so the PSM's reads never widen this
+  // Sequenced after the collateral fetch so the PSM's reads never widen this
   // adapter's peak connection count beyond the cron trigger's shared pool.
   const psm = isTronCollateralFeed(input.url) ? await probeUsddTronPsm(signal, ctx) : null;
   if (psm == null) return adapted;

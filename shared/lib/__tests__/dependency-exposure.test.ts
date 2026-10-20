@@ -190,6 +190,21 @@ describe("look-through dependency exposure", () => {
     expect(result.indirect.complete).toBe(false);
   });
 
+  it("keeps reachable self-loop uncertainty, zero-share branches, and disconnected cycles distinct", () => {
+    const edges = [edge("root", "loop", "serial", null), edge("loop", "loop", "serial", null),
+      edge("loop", "child", "serial", null), edge("loop", "zero", "basket", 0),
+      edge("root", "known", "serial", null), edge("hidden", "hidden", "serial", null)];
+    for (const permutation of [edges, [...edges].reverse()]) {
+      expect(Object.fromEntries(lookThroughShares(["root"], permutation))).toEqual({
+        loop: { share: null, minHop: 1, integrityFlag: true },
+        child: { share: null, minHop: 2, integrityFlag: true },
+        zero: { share: 0, minHop: 2, integrityFlag: true },
+        known: { share: 1, minHop: 1, integrityFlag: false },
+      });
+    }
+    expect(lookThroughShares(["loop"], edges).get("child")?.share).toBeNull();
+  });
+
   it("forms a joint root union without counting sUSDe as a dependent again", () => {
     const single = exposureFootprint(["usde-ethena"], capturedEdges, capturedSupply, opts);
     const joint = exposureFootprint(["usde-ethena", "susde-ethena"], capturedEdges, capturedSupply, opts);

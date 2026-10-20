@@ -15,7 +15,7 @@ import {
   evaluateV9Exit,
   projectV9ExitEvaluationRoute,
 } from "@shared/lib/safety-score-v9/exit";
-import { evaluateV9EconomicControlAssetFacts } from "@shared/lib/safety-score-v9/control";
+import { evaluateV9EconomicControl } from "@shared/lib/safety-score-v9/control";
 import {
   V9_CANDIDATE_POLICY_V1,
 } from "@shared/lib/safety-score-v9/policy";
@@ -424,10 +424,9 @@ describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage"
       V9_CANDIDATE_POLICY_V1,
     );
     expect(exit.score).toBeGreaterThan(0);
-    expect(exit.horizons.immediate).toEqual({ primaryRouteKey: null, score: null });
-    expect(exit.horizons.queued.primaryRouteKey).toBe(redemption.routeKey);
+    expect(exit.primaryRouteKey).toBe(redemption.routeKey);
     expect(exit.routes[0]).toMatchObject({
-      horizon: "queued",
+      capacityScoringHorizon: "queued",
       settlementDelaySec: 30 * 86_400,
       capsApplied: expect.arrayContaining(["queue-backlog:0.65", "minimum-redeem:0.75"]),
     });
@@ -1080,8 +1079,7 @@ describe("compiled Control causal minimum regressions", () => {
       materializeSafetyScoreV9FactSetExtension(normalized, reviewed));
     expect(compiled.quarantines).toEqual([]);
     const asset = compiled.factSet.assets[0]!;
-    const result = evaluateV9EconomicControlAssetFacts(asset, { assetId: asset.assetId, ...asset.economicControlReview },
-      V9_CANDIDATE_POLICY_V1);
+    const result = evaluateV9EconomicControl({ facts: asset, ...asset.economicControlReview, policy: V9_CANDIDATE_POLICY_V1 });
     const mint = result.components.find((component) => component.kind === "mint")!;
     if (missingWholeSupply) {
       const status = asset.economicControlReview.mint.factorStatuses!.reconciliation!;

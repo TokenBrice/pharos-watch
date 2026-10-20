@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import type { DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
+import { DexMeasuredExecutionPublicProfileSchema, toDexMeasuredExecutionPublicProfile,
+  type DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
 import { buildDexMeasuredExecutionProfile, createDexMeasuredExecutionRpcBudget } from "../profiles";
+import { makeFlatProvenanceCases, makeV3LkgRoute } from "./join.test-support";
 
 const TARGET: DexMeasuredExecutionTarget = {
   schemaVersion: "dex-measured-target-v1",
@@ -110,5 +112,19 @@ describe("measured execution profile construction", () => {
     expect(profile.marginalOutputRatio).toBe(0);
     expect(profile.capacityCurve.map(({ requestedNotionalUsd, executableUsd }) => [requestedNotionalUsd, executableUsd]))
       .toEqual([[100_000, 0], [1_000_000, 0], [10_000_000, 0], [25_000_000, 0]]);
+  });
+});
+
+describe("flat public proof projections", () => {
+  const { profile } = makeV3LkgRoute([[1_000, 1_000], [100_000, 99_000]]);
+  it.each(makeFlatProvenanceCases(profile))("preserves $name public bytes without private proof fields", ({ proofs, provenance }) => {
+    const expected = { ...toDexMeasuredExecutionPublicProfile(profile), ...provenance };
+    const projected = toDexMeasuredExecutionPublicProfile({ ...profile, ...proofs });
+    expect(JSON.stringify(projected)).toBe(JSON.stringify(expected));
+    expect(projected).toMatchObject({ chain: profile.chain, blockNumber: profile.blockNumber, blockHash: profile.blockHash });
+    expect(JSON.stringify(projected)).not.toMatch(/calldata|returndata|private-future-proof|quoteProof|BindingProof|PoolProof/i);
+    const polluted = { ...projected, ...Object.fromEntries(Object.entries(provenance)
+      .map(([key, value]) => [key, { ...value, callData: "0x12", returnData: "0x34", futurePrivateField: "private-future-proof" }])) };
+    expect(JSON.stringify(DexMeasuredExecutionPublicProfileSchema.parse(polluted))).toBe(JSON.stringify(expected));
   });
 });

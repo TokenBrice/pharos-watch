@@ -95,24 +95,6 @@ const A7A5_CONFIG: ContractEventConfig = {
   ],
 };
 
-const INDEXED_AMOUNT_CONFIG: ContractEventConfig = {
-  configKey: "ethereum-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48-indexed-amount-fixture",
-  chain: { chainId: "ethereum", chainName: "Ethereum", evmChainId: 1, explorerUrl: "https://etherscan.io", type: "evm" },
-  stablecoinId: "usdc-circle",
-  stablecoin: "USDC",
-  contractAddress: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-  decimals: 6,
-  events: [
-    {
-      signature: "FundsConfiscated(address,uint256,address)",
-      topicHash: "0x5a592536e075e29026312219123e24de374314962469686d4c992d3c7292c1b4",
-      eventType: "destroy",
-      hasAmount: true,
-      amountTopicIndex: 2,
-    },
-  ],
-};
-
 const BUIDL_CONFIG: ContractEventConfig = {
   configKey: "ethereum-0x7712c34205737192402172409a8f7ccef8aa2aec",
   chain: { chainId: "ethereum", chainName: "Ethereum", evmChainId: 1, explorerUrl: "https://etherscan.io", type: "evm" },
@@ -304,71 +286,6 @@ describe("parseEvmLogs", () => {
     expect(rows[0].amount_usd_at_event).toBeNull();
   });
 
-  it("extracts indexed uint256 amounts from configured amount topics", () => {
-    const confiscatedAddr = "0x8888888888888888888888888888888888888888";
-    const amountTopic = `0x${(5n * 10n ** 6n).toString(16).padStart(64, "0")}`;
-    const logs = [{
-      address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-      topics: [
-        "0x5a592536e075e29026312219123e24de374314962469686d4c992d3c7292c1b4",
-        `0x000000000000000000000000${confiscatedAddr.slice(2)}`,
-        amountTopic,
-        "0x0000000000000000000000009999999999999999999999999999999999999999",
-      ],
-      data: "0x",
-      blockNumber: "0x1234",
-      transactionHash: "0x" + "55".repeat(32),
-      logIndex: "0x4",
-      timeStamp: "0x65000000",
-    }];
-
-    const rows = parseEvmLogsWithCoverage(INDEXED_AMOUNT_CONFIG, logs).rows;
-
-    expect(rows).toHaveLength(1);
-    expect(rows[0]).toMatchObject({
-      stablecoin: "USDC",
-      event_type: "destroy",
-      address: confiscatedAddr,
-      amount_native: 5,
-      amount_usd_at_event: 5,
-    });
-  });
-
-  it("extracts address and amount from configured data slots when indexed topics are not the subject", () => {
-    const seizedAddr = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-    const logs = [{
-      address: "0x7712c34205737192402172409a8f7ccef8aa2aec",
-      topics: [
-        "0x5c719d01bb88860dfca685ad3818d8b61a083caaf8f68abe6fa0fba4e40e33a9",
-        "0x000000000000000000000000bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-      ],
-      data: encodeAbiParameters(
-        [
-          { type: "address" },
-          { type: "uint256" },
-          { type: "string" },
-          { type: "uint8" },
-        ],
-        [seizedAddr, 25_000_000n, "test", 0],
-      ),
-      blockNumber: "0x1234",
-      transactionHash: "0x" + "66".repeat(32),
-      logIndex: "0x5",
-      timeStamp: "0x65000000",
-    }];
-
-    const rows = parseEvmLogsWithCoverage(BUIDL_CONFIG, logs).rows;
-
-    expect(rows).toHaveLength(1);
-    expect(rows[0]).toMatchObject({
-      stablecoin: "BUIDL",
-      event_type: "destroy",
-      address: seizedAddr,
-      amount_native: 25,
-      amount_usd_at_event: 25,
-    });
-  });
-
   it("keeps rows recoverable when a configured amount data slot is missing", () => {
     const seizedAddr = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
     const rows = parseEvmLogsWithCoverage(BUIDL_CONFIG, [{
@@ -394,11 +311,11 @@ describe("parseEvmLogs", () => {
     });
   });
 
-  it("skips malformed scalar address data instead of creating a bogus 0x row", () => {
+  it.each(["0x1234", "0x" + "ff".repeat(32)])("skips malformed scalar address data %s instead of creating a bogus 0x row", (data) => {
     const parsed = parseEvmLogsWithCoverage(USDC_CONFIG, [{
       address: USDC_CONFIG.contractAddress,
       topics: ["0xffa4e6181777692565cf28528fc88fd1516ea86b56da075235fa575af6a4b855"],
-      data: "0x1234",
+      data,
       blockNumber: "0x1234",
       transactionHash: "0x" + "88".repeat(32),
       logIndex: "0x7",
@@ -564,48 +481,6 @@ describe("parseEvmLogs branch coverage", () => {
     expect(parsed.failures[0].reason).toBe("invalid-address-array");
   });
 
-
-  const boolTopic = "0xcf3473b85df1594d47b6958f29a32bea0abff9dd68296f7bf33443646793cfd8";
-  const boolConfig: ContractEventConfig = {
-    configKey: "ethereum-0x0000000000085d4780b73119b644ae5ecd22b376",
-    chain: { chainId: "ethereum", chainName: "Ethereum", evmChainId: 1, explorerUrl: "https://etherscan.io", type: "evm" },
-    stablecoinId: "tusd-trueusd",
-    stablecoin: "USDC",
-    contractAddress: "0x0000000000085d4780b73119b644ae5ecd22b376",
-    decimals: 18,
-    events: [{
-      signature: "Blacklisted(address,bool)",
-      topicHash: boolTopic,
-      eventType: "blacklist",
-      hasAmount: false,
-      eventTypeFromDataBoolIndex: 0,
-    }],
-  };
-
-  it.each([
-    ["one", "01".padStart(64, "0"), "blacklist"],
-    ["zero", "00".repeat(32), "unblacklist"],
-  ] as const)("decodes the %s bool word", (_name, word, eventType) => {
-    const rows = parseEvmLogsWithCoverage(boolConfig, [makeBlacklistLog({
-      address: boolConfig.contractAddress,
-      topics: [boolTopic, "0x" + "0".repeat(24) + "11".repeat(20)],
-      data: "0x" + word,
-    })]).rows;
-    expect(rows).toHaveLength(1);
-    expect(rows[0]).toMatchObject({
-      event_type: eventType,
-      address: "0x1111111111111111111111111111111111111111",
-    });
-  });
-
-  it.each(["0x", "0x" + "ff".repeat(32)])("fences absent or invalid direction evidence %s", (data) => {
-    const parsed = parseEvmLogsWithCoverage(boolConfig, [makeBlacklistLog({
-      address: boolConfig.contractAddress, topics: [boolTopic, "0x" + "0".repeat(24) + "11".repeat(20)], data,
-    })]);
-    expect(parsed.rows).toEqual([]);
-    expect(parsed.coverageCeiling).not.toBeNull();
-    expect(parsed.failures[0].reason).toBe("invalid-direction-bool");
-  });
 
   it("admits a valid empty address array without a frontier fence", () => {
     const parsed = parseEvmLogsWithCoverage(USDTB_CONFIG, [makeBlacklistLog({

@@ -9,13 +9,13 @@ import {
 import { recordDwellirCredits } from "./rpc-provider-budget";
 import { ETHERSCAN_V2_BASE } from "./constants";
 import { encodeAddress, encodeUint256 } from "./evm-selectors";
-import { fetchJsonWithRetry } from "./fetch-retry";
+import { fetchJsonWithRetry, fetchTextWithRetry } from "./fetch-retry";
 import { parseQuantityHex } from "./bigint";
 import { FetchRequestNotStartedError, rethrowIfAborted } from "./abort";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { isTronRpcUrl, requiresHistoricalEvmState } from "@shared/lib/tron-rpc";
 
-interface JsonRpcEnvelope<T> {
+export interface JsonRpcEnvelope<T> {
   result?: T;
   error?: { code?: number; message?: string };
 }
@@ -479,6 +479,86 @@ function buildJsonRpcHeaders(rpcUrl: string): Record<string, string> {
   };
 }
 
+interface JsonRpcRequest {
+  jsonrpc: string;
+  id: number;
+  method: string;
+  params: readonly unknown[];
+}
+
+type JsonRpcTransportOutcome =
+  | { status: "response" | "http-error" | "rpc-error" | "invalid-envelope"; response: Response;
+      body: unknown; rows: ReadonlyMap<number, JsonRpcEnvelope<unknown>>; invalidRows: number }
+  | { status: "parse-error"; response: Response; error: unknown }
+  | { status: "transport-error"; error: unknown | null }
+  | { status: "control-error"; error: unknown };
+
+/**
+ * One URL only: shared POST/auth, bounded intake and response identity checks.
+ * Callers retain admission/metering, failover, diagnostics and partial recovery.
+ * Text decoding preserves Alchemy's HTTP/non-JSON diagnostics; generic reads
+ * retain the fetch helper's JSON parse/transport-failure semantics.
+ */
+export async function requestJsonRpcAtUrl(
+  rpcUrl: string,
+  payload: JsonRpcRequest | JsonRpcRequest[],
+  options: Pick<EvmRpcOptions, "signal" | "timeoutMs" | "deadlineMs" | "maxResponseBytes" | "maxRetries"> & {
+    beforeRequest?: () => boolean;
+    responseMode?: "text";
+  },
+): Promise<JsonRpcTransportOutcome> {
+  try {
+    const fetched = await (options.responseMode === "text" ? fetchTextWithRetry : fetchJsonWithRetry<unknown>)(
+      rpcUrl,
+      { method: "POST", headers: buildJsonRpcHeaders(rpcUrl), signal: options.signal, body: JSON.stringify(payload) },
+      options.maxRetries ?? 0,
+      {
+        timeoutMs: options.timeoutMs,
+        deadlineMs: options.deadlineMs,
+        beforeRequest: options.beforeRequest,
+        retryMode: "network-only",
+        ...(options.responseMode === "text" ? { returnFinalResponse: true } : {}),
+        ...(options.maxResponseBytes === undefined ? {} : { maxResponseBytes: options.maxResponseBytes }),
+      },
+    );
+    if (!fetched) return { status: "transport-error", error: null };
+    let body = fetched.body;
+    if (options.responseMode === "text") {
+      try {
+        body = JSON.parse(body as string) as unknown;
+      } catch (error) {
+        return { status: "parse-error", response: fetched.response, error };
+      }
+    }
+    const batch = Array.isArray(payload);
+    const expectedIds = new Set(batch ? payload.map(request => request.id) : [payload.id]);
+    const candidates: unknown[] = batch ? Array.isArray(body) ? body : [] : [body];
+    const counts = new Map<number, number>();
+    for (const row of candidates) {
+      if (row && typeof row === "object" && "id" in row && typeof row.id === "number") {
+        counts.set(row.id, (counts.get(row.id) ?? 0) + 1);
+      }
+    }
+    const rows = new Map<number, JsonRpcEnvelope<unknown>>();
+    let invalidRows = 0;
+    for (const row of candidates) {
+      const id = row && typeof row === "object" && !Array.isArray(row) && "id" in row ? row.id : undefined;
+      if (typeof id !== "number" || !Number.isSafeInteger(id) || !expectedIds.has(id) || counts.get(id) !== 1) {
+        invalidRows++;
+      } else {
+        rows.set(id, row as JsonRpcEnvelope<unknown>);
+      }
+    }
+    const status = !fetched.response.ok ? "http-error"
+      : (batch ? !Array.isArray(body) : invalidRows > 0) ? "invalid-envelope"
+      : !batch && rows.get(payload.id)?.error ? "rpc-error" : "response";
+    return { status, response: fetched.response, body, rows, invalidRows };
+  } catch (error) {
+    return { status: error instanceof FetchRequestNotStartedError || options.signal?.aborted
+      ? "control-error" : "transport-error", error };
+  }
+}
+
 /** Key-free failure text for one attempt; never includes the URL query or headers. */
 function describeRpcFailure(result: { response: Response } | null, rpcUrl: string): string {
   if (result == null) return "HTTP no-response";
@@ -512,46 +592,38 @@ async function fetchJsonRpcOutcome<T>(
       break;
     }
     try {
-      const result = await fetchJsonWithRetry<JsonRpcEnvelope<unknown>>(
-        rpcUrl,
-        {
-          method: "POST",
-          headers: buildJsonRpcHeaders(rpcUrl),
-          signal: options?.signal,
-          body: JSON.stringify({
-            jsonrpc: "2.0",
-            id: 1,
-            method,
-            params,
-          }),
-        },
+      const result = await requestJsonRpcAtUrl(rpcUrl, { jsonrpc: "2.0", id: 1, method, params }, {
+        signal: options?.signal,
         maxRetries,
-        {
-          timeoutMs: Math.min(configuredTimeoutMs, remainingMs),
-          deadlineMs: options?.deadlineMs,
-          beforeRequest: () => {
-            if (requirement?.kind === "recent-pinned-state" && !validRecentPin(requirement.pin, chainId)) return false;
-            if (options?.beforeRequest?.(rpcUrl) === false) return false;
-            meterDwellirRpcRequest(rpcUrl, 1);
-            onRpcRequest?.({ providerOrigin: new URL(rpcUrl).origin, method, rpcCalls: 1, signal: options?.signal });
-            return true;
-          },
-          retryMode: "network-only",
-          ...(options?.maxResponseBytes === undefined ? {} : { maxResponseBytes: options.maxResponseBytes }),
+        timeoutMs: Math.min(configuredTimeoutMs, remainingMs),
+        deadlineMs: options?.deadlineMs,
+        maxResponseBytes: options?.maxResponseBytes,
+        beforeRequest: () => {
+          if (requirement?.kind === "recent-pinned-state" && !validRecentPin(requirement.pin, chainId)) return false;
+          if (options?.beforeRequest?.(rpcUrl) === false) return false;
+          meterDwellirRpcRequest(rpcUrl, 1);
+          onRpcRequest?.({ providerOrigin: new URL(rpcUrl).origin, method, rpcCalls: 1, signal: options?.signal });
+          return true;
         },
-      );
+      });
+      if (result.status === "control-error" || result.status === "transport-error") {
+        if (result.error != null) throw result.error;
+        demoteFailedDwellirAttempt(options?.chainRpcs, rpcUrl);
+        failures.push(`${rpcUrl}: ${describeRpcFailure(null, rpcUrl)}`);
+        continue;
+      }
 
-      if (result == null || !result.response.ok) {
-        // A null result is a transport failure (timeout/network) that never
-        // produced a status; a Dwellir 403 is a provider capability/plan
-        // rejection, so it is reported as such and never retried (network-only
-        // mode returns the first HTTP status instead of retrying it).
-        if (result == null) demoteFailedDwellirAttempt(options?.chainRpcs, rpcUrl);
+      if (result.status === "http-error") {
         failures.push(`${rpcUrl}: ${describeRpcFailure(result, rpcUrl)}`);
         continue;
       }
 
-      const body = result.body;
+      if (result.status === "parse-error") throw result.error;
+      if (result.status === "invalid-envelope") {
+        failures.push(`${rpcUrl}: invalid response identity`);
+        continue;
+      }
+      const body = result.rows.get(1)!;
       if (body.error) {
         failures.push(`${rpcUrl}: RPC error ${body.error.code ?? ""} ${body.error.message ?? ""}`);
         if (options?.stopOnExecutionBudgetError &&
@@ -648,18 +720,6 @@ function fitsRpcLogSpan(calls: readonly EvmRpcBatchCall[], maxLogBlockSpan: numb
   return true;
 }
 
-function addRpcResponseRow(
-  row: unknown,
-  byId: Map<number, JsonRpcEnvelope<unknown>>,
-  callsLength: number,
-  expectedId?: number,
-): boolean {
-  const id: unknown = row && typeof row === "object" && "id" in row ? row.id : undefined;
-  if (typeof id !== "number" || !Number.isSafeInteger(id) || id < 1 || id > callsLength ||
-      byId.has(id) || (expectedId !== undefined && id !== expectedId)) return false;
-  byId.set(id, row as JsonRpcEnvelope<unknown>);
-  return true;
-}
 
 /**
  * One JSON-RPC batch against the reviewed chain endpoints, with the envelope
@@ -701,45 +761,31 @@ async function runEvmRpcBatch<Value>(
         const payload = noBatch
           ? { jsonrpc: "2.0", id: requestIndex + 1, method: calls[requestIndex]!.method, params: calls[requestIndex]!.params }
           : calls.map((call, index) => ({ jsonrpc: "2.0", id: index + 1, method: call.method, params: call.params }));
-        const result = await fetchJsonWithRetry<unknown>(
-          rpcUrl,
-          {
-            method: "POST",
-            headers: buildJsonRpcHeaders(rpcUrl),
-            signal: options?.signal,
-            body: JSON.stringify(payload),
-          },
+        const result = await requestJsonRpcAtUrl(rpcUrl, payload, {
+          signal: options?.signal,
           maxRetries,
-          {
-            timeoutMs: Math.min(configuredTimeoutMs, remainingMs),
-            deadlineMs: options?.deadlineMs,
-            beforeRequest: () => {
-              if (requirements.some(requirement => requirement.kind === "recent-pinned-state" &&
-                !validRecentPin(requirement.pin, chainId))) return false;
-              if (options?.beforeRequest?.(rpcUrl) === false) return false;
-              meterDwellirRpcRequest(rpcUrl, noBatch ? 1 : calls.length);
-              onRpcRequest?.({ providerOrigin: new URL(rpcUrl).origin,
-                method: noBatch ? calls[requestIndex]!.method : calls.length === 1 ? calls[0]!.method : "batch",
-                rpcCalls: noBatch ? 1 : calls.length, signal: options?.signal });
-              return true;
-            },
-            retryMode: "network-only",
-            ...(options?.maxResponseBytes === undefined ? {} : { maxResponseBytes: options.maxResponseBytes }),
+          timeoutMs: Math.min(configuredTimeoutMs, remainingMs),
+          deadlineMs: options?.deadlineMs,
+          maxResponseBytes: options?.maxResponseBytes,
+          beforeRequest: () => {
+            if (requirements.some(requirement => requirement.kind === "recent-pinned-state" &&
+              !validRecentPin(requirement.pin, chainId))) return false;
+            if (options?.beforeRequest?.(rpcUrl) === false) return false;
+            meterDwellirRpcRequest(rpcUrl, noBatch ? 1 : calls.length);
+            onRpcRequest?.({ providerOrigin: new URL(rpcUrl).origin,
+              method: noBatch ? calls[requestIndex]!.method : calls.length === 1 ? calls[0]!.method : "batch",
+              rpcCalls: noBatch ? 1 : calls.length, signal: options?.signal });
+            return true;
           },
-        );
-        if (result == null) {
+        });
+        if (result.status === "control-error" || result.status === "transport-error") {
+          if (result.error != null) throw result.error;
           demoteFailedDwellirAttempt(options?.chainRpcs, rpcUrl);
           continue endpoints;
         }
-        if (!result.response.ok) continue endpoints;
-        if (noBatch) {
-          if (!addRpcResponseRow(result.body, byId, calls.length, requestIndex + 1)) continue endpoints;
-        } else {
-          if (!Array.isArray(result.body) || result.body.length !== calls.length) continue endpoints;
-          for (const row of result.body) {
-            if (!addRpcResponseRow(row, byId, calls.length)) continue endpoints;
-          }
-        }
+        if (result.status === "parse-error") throw result.error;
+        if (result.status === "http-error" || result.status === "invalid-envelope" || result.invalidRows > 0) continue endpoints;
+        for (const [id, row] of result.rows) byId.set(id, row);
       }
       if (byId.size !== calls.length) continue;
       const projected = project(byId);

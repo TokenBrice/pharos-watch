@@ -2,6 +2,7 @@ export * from "./chart-annotation";
 export * from "./bluechip";
 export * from "./live-reserves";
 export * from "./core";
+export type { StablecoinMeta, StablecoinObituary, StablecoinListingStatusReview } from "./stablecoin-meta-schemas";
 export * from "./cause-of-death";
 export * from "./digest";
 export * from "./market";

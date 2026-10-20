@@ -1,4 +1,4 @@
-import type { ProofOfReservesLatestReport } from "../../types/stablecoin-meta-schemas";
+import type { ProofOfReservesLatestReport } from "../../types/stablecoin-meta-primitives";
 import type { ReserveObservationEnvelope, ReserveScopedAdmission } from "../../types/safety-score-v9-reserve-scope";
 import type { ReviewedEconomicDeploymentPartition } from "../../types/safety-score-v9-supply-attribution";
 import type { V9MethodologyPolicy } from "../../types/safety-score-v9";

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fetchBalancerPools } from "../fetch-balancer";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
-import { compactDirectApiFetchPhasePools } from "../orchestrator-phases/direct-api";
+import { fetchDirectApiFixture } from "../../__tests__/dex-liquidity-direct-api.test-support";
 import { buildAuthoritativeStagedPoolConfirmationIndex } from "../orchestrator-phases/authoritative";
 
 function cleanPool() {
@@ -55,13 +55,13 @@ describe("fetchBalancerPools sanity cap and pool.price footgun", () => {
     const result = await fetchBalancerPools();
     expect(result.pools).toHaveLength(1);
     expect(result.pools.some((pool) => pool.poolAddress === rejectedAddress)).toBe(false);
-    const compacted = compactDirectApiFetchPhasePools({
+    const compacted = await fetchDirectApiFixture(({
       results: [{ name: "Balancer", circuitKey: "balancer-api", normalizedProtocol: "balancer",
-        supportedChains: ["ethereum", "base"], censusScope: "exhaustive", result }],
+        supportedChains: ["ethereum", "base"], censusScope: "exhaustive" as const, result }],
       failedSources: [], degradedSources: [], attemptedProtocolChains: [], fallbackSignals: [],
       sourceWarnings: [], circuitEvents: [],
-    }, { chainAddressToId: new Map(), symbolToChainScopedIds: new Map(), contractMetaByChainAddress: new Map() });
-    const index = buildAuthoritativeStagedPoolConfirmationIndex(compacted.phase.results);
+    }).results, { chainAddressToId: new Map(), symbolToChainScopedIds: new Map(), contractMetaByChainAddress: new Map() });
+    const index = buildAuthoritativeStagedPoolConfirmationIndex(compacted.results);
     // Independent staged observation has this exact physical key, despite rejected metadata.
     expect(index.confirmedExactKeysByProtocol.get("balancer")?.has(`ethereum:${rejectedAddress}`)).toBe(hasIdentity);
     expect(index.enforcedChainsByProtocol.get("balancer")?.has("ethereum")).toBe(hasIdentity);

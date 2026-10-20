@@ -9,7 +9,7 @@ import {
   deriveStatusAssessmentInputs,
   loadSupplementalStatusSections,
 } from "./status/evaluation-context";
-import type { StatusLevel } from "./status-reliability";
+import type { StatusHealthValue } from "@shared/types/status/core";
 import { maxStatus } from "./status-reliability-shared";
 import { scoreStatusConfidence } from "./status/evaluation-state";
 import { synthesizeOverallCauses } from "./status/evaluation-causes";
@@ -30,7 +30,7 @@ export interface RawStatusComputation {
   evidenceReadFailures?: string[];
   availabilityStatus: StatusResponse["availabilityStatus"];
   dataQualityStatus: StatusResponse["dataQualityStatus"];
-  rawOverallStatus: StatusLevel;
+  rawOverallStatus: StatusHealthValue;
   confidence: number;
   causes: StatusResponse["causes"];
   caches: StatusResponse["caches"];

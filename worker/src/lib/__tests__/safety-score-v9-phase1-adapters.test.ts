@@ -27,7 +27,7 @@ import {
   V9_CANDIDATE_POLICY_V1,
   type V9AssetFactsV2,
 } from "@shared/lib/__tests__/safety-score-v9-facts.fixture-support";
-import { addReviewedStaticReserveEvidence } from "../safety-score-v9/extension-reserves";
+import { addReviewedStaticReserveEvidence, resolveReviewedReserveAdmission } from "../safety-score-v9/extension-reserves";
 import {
   conservativeDateEndSec,
   reviewedObservationState,
@@ -401,7 +401,7 @@ describe("Phase 1 D6 issuer-attested reserve admission", () => {
     const evidence = new ReviewEvidenceBuilder(metadata.id, clockSec);
 
     expect(admitted).toBeNull();
-    addReviewedStaticReserveEvidence(metadata, admitted, evidence, clockSec);
+    addReviewedStaticReserveEvidence(resolveReviewedReserveAdmission({ meta: metadata, clockSec, liveReserveRows: [] }), evidence);
     const compiled = evidence.finish();
     const issuerReport = compiled.researchEvidence.find(
       (entry) => entry.publishedAtSec === Date.parse("2026-07-10T00:00:00.000Z") / 1_000,
@@ -431,7 +431,7 @@ describe("Phase 1 D6 issuer-attested reserve admission", () => {
 
     const expiredClockSec = Date.UTC(2027, 7, 1) / 1_000;
     const evidence = new ReviewEvidenceBuilder(metadata.id, expiredClockSec);
-    addReviewedStaticReserveEvidence(metadata, admitted, evidence, expiredClockSec);
+    addReviewedStaticReserveEvidence(resolveReviewedReserveAdmission({ meta: metadata, clockSec: expiredClockSec, liveReserveRows: [] }), evidence);
     expect(evidence.finish().componentEvidence).not.toContainEqual(
       expect.objectContaining({ componentKey: "reserve-composition-history" }),
     );
@@ -501,7 +501,7 @@ describe("Phase 1 D6 issuer-attested reserve admission", () => {
       expect(fallback !== null).toBe(audited);
 
       const evidence = new ReviewEvidenceBuilder(supervised.id, CLOCK_SEC);
-      addReviewedStaticReserveEvidence(supervised, admitted, evidence, CLOCK_SEC);
+      addReviewedStaticReserveEvidence(resolveReviewedReserveAdmission({ meta: supervised, clockSec: CLOCK_SEC, liveReserveRows: [] }), evidence);
       expect(evidence.finish().componentEvidence.some(
         (entry) => entry.componentKey === "reviewed-static-reserves",
       )).toBe(audited);
@@ -520,7 +520,7 @@ describe("Phase 1 D6 issuer-attested reserve admission", () => {
     expect(admitted).toMatchObject({ evidenceClass: "static-validated", provenance: "audited-fallback" });
 
     const evidence = new ReviewEvidenceBuilder(metadata.id, CLOCK_SEC);
-    addReviewedStaticReserveEvidence(metadata, admitted, evidence, CLOCK_SEC);
+    addReviewedStaticReserveEvidence(resolveReviewedReserveAdmission({ meta: metadata, clockSec: CLOCK_SEC, liveReserveRows: [] }), evidence);
     const compiled = evidence.finish();
     const emitted = compiled.researchEvidence.find(
       (entry) => entry.sourceId === "stablecoin-meta.reviewed-audited-fallback-reserves",

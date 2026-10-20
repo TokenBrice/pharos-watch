@@ -33,6 +33,10 @@ import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
 import { QueryStateNotice } from "@/components/query-state-notice";
 import { FreshnessIndicator } from "@/components/status/freshness-indicator";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import { StaleDataBanner } from "@/components/stale-data-banner";
+import { deriveDataHealth } from "@/lib/data-health";
+import { DATA_HEALTH_PRESETS } from "@/lib/data-health-config";
+import { resolveDetailFlowMeta } from "@/lib/stablecoin-detail-query-view-model";
 
 interface FlowSummaryCardProps {
   stablecoinId: string;
@@ -113,6 +117,16 @@ function describeMintingPressureUnavailable(
 export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
   const query = useMintBurnFlows();
   const { data, isLoading } = query;
+  const coin = data?.coins?.find((entry) => entry.stablecoinId === stablecoinId);
+  const healthInput = {
+    ...DATA_HEALTH_PRESETS.mintBurnFlows,
+    label: "Mint and burn flow data",
+    dataUpdatedAt: query.dataUpdatedAt,
+    meta: resolveDetailFlowMeta(query),
+    error: query.error,
+    hasData: !!coin,
+  };
+  const health = deriveDataHealth(healthInput, query.dataUpdatedAt);
 
   if (isLoading && !data) {
     return <SummarySkeleton />;
@@ -133,9 +147,6 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
     );
   }
 
-  if (!data?.coins) return null;
-
-  const coin = data.coins.find((entry) => entry.stablecoinId === stablecoinId);
   if (!coin) return null;
 
   const netDirection = resolveNetDirection(coin);
@@ -143,8 +154,8 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
   const pressureState = resolvePressureState(coin);
   const pressureUnavailableNote = resolvePressureUnavailableNote(coin);
   const pressureDisplay = pressureScore != null ? getPressureShiftDisplay(pressureScore) : null;
-  const netSignal = getFlowDirectionUi(netDirection, "summary");
-  const pressureSignal = getFlowPressureUi(pressureState, "summary");
+  const netSignal = getFlowDirectionUi(netDirection);
+  const pressureSignal = getFlowPressureUi(pressureState);
   const baselineDailyNetUsd = resolveBaselineDailyNetUsd(coin);
   const window24h = resolveMintBurnValuation(coin.valuation?.window24h);
   // A dial with a needle asserts a measurement. With no counted 24h volume, or
@@ -183,7 +194,7 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
         <div className="flex items-center gap-2">
         <FreshnessIndicator
           compact
-          updatedAtMs={query.dataUpdatedAt}
+          updatedAtMs={health.dataUpdatedAt}
           staleAfterMs={API_FRESHNESS_MAX_AGE_SEC.mintBurnFlows * 1000}
           labelPrefix="Updated"
         />
@@ -194,16 +205,16 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
         </div>
       </div>
 
-      {query.error ? (
-        <div className="border-b border-border/40 px-4 py-3 sm:px-5">
+      <div className="empty:hidden border-b border-border/40 px-4 py-3 sm:px-5">
+        {query.error ? (
           <QueryStateNotice
             state="stale-with-data"
             label="Mint and burn flow data"
-            dataUpdatedAt={query.dataUpdatedAt}
+            dataUpdatedAt={health.dataUpdatedAt}
             onRetry={() => void query.refetch()}
           />
-        </div>
-      ) : null}
+        ) : <StaleDataBanner queries={[healthInput]} />}
+      </div>
 
       <div className="grid border-b border-border/40 lg:grid-cols-2 lg:divide-x lg:divide-border/40">
         {/* Minting Pressure quadrant */}

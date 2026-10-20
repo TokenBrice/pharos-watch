@@ -34,6 +34,9 @@ import { scoreV9EvaluatedAsset } from "../safety-score-v9/score";
 import { makeV9ProductionScoreInput } from "./safety-score-v9-score.test-support";
 import { V9EvidenceResponsibilitySchema, V9_PUBLIC_EVIDENCE_RESPONSIBILITIES } from "../../types/safety-score-v9-vocabulary";
 import { DANGER_PEG_MULTIPLIER_FLOOR } from "../../types/safety-score-v9-public-facts";
+import { applyV9MeasuredCollateralization, evaluateV9ArchetypeBacking } from "../safety-score-v9/archetypes/evaluation";
+import { computeV9CompactResultDigest, projectCompactV9ScoreTrace } from "../safety-score-v9/trace";
+import { asset as backingAsset, exposure, knownStatus } from "./safety-score-v9-backing.test-support";
 
 const DIGESTS = {
   policy: "a".repeat(64),
@@ -321,6 +324,37 @@ function cap(args: Pick<V9CapTrace, "kind" | "limit" | "source" | "reason" | "bi
 }
 
 describe("Safety Score v9 public projection", () => {
+  it.each([null, 0.64])("ignores retired local Backing stamps for public and compact identity (ratio %s)", (ratio) => {
+    const ordinary = evaluateV9ArchetypeBacking({
+      archetype: "fiat-cash", asset: backingAsset([exposure({ key: "cash", weight: 1, issuer: "issuer:cash" })]),
+      components: Object.keys(V9_CANDIDATE_POLICY_V1.policy.semantic.backing.archetypes["fiat-cash"].componentWeights)
+        .map((componentKey) => ({ componentKey,
+          fact: { status: knownStatus(`evidence:${componentKey}`), quality: "strong" as const, failureDomains: [] } })),
+    }, V9_CANDIDATE_POLICY_V1);
+    const backing = applyV9MeasuredCollateralization(ordinary, ratio === null ? null : {
+      measurementId: "measurement:coverage", measuredAt: "2026-10-01", ratio,
+      sourceUrl: "https://example.com/coverage",
+      status: knownStatus("evidence:coverage", "mechanism.required"),
+    }, V9_CANDIDATE_POLICY_V1, Date.parse("2026-10-03T00:00:00Z") / 1000);
+    expect(backing.score).toBe(ordinary.score! * (ratio ?? 1));
+    const project = (result: typeof backing) => {
+      const input = fixture("asset", { score: 70, grade: "B",
+        pillars: { backing: result.score, exit: 90, control: 94 } });
+      input.backing = result;
+      const scoreInput = makeV9ProductionScoreInput({ pillars: input.scoreInput.pillars });
+      input.trace = scoreV9EvaluatedAsset(scoreInput, input.policy);
+      input.scoreInput = scoreInput;
+      return {
+        cardBytes: JSON.stringify(projectSafetyScoreV9Card(input).card),
+        compact: projectCompactV9ScoreTrace(input.trace),
+        digest: computeV9CompactResultDigest([projectCompactV9ScoreTrace(input.trace)]),
+      };
+    };
+    const stamped = { ...backing, policyId: "retained-policy",
+      policySemanticDigest: "a".repeat(64), traceDigest: "b".repeat(64) };
+    expect(project(backing)).toEqual(project(stamped));
+  });
+
   it.each([
     [0.8999994999, 0.899999], [0.8999995, 0.9], [0.8999995001, 0.9],
     [0.8999999999, 0.9], [0.9, 0.9], [0.9000000001, 0.9],

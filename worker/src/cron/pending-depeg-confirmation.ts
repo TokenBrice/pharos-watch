@@ -24,7 +24,7 @@ import {
   deriveDepegSignal,
   pickMoreSevereBps,
   type DepegSignal,
-} from "../lib/depeg-signals";
+} from "@shared/lib/depeg-signals";
 import type {
   PendingDepegRow,
   PendingDepegState,

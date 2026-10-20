@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { CanonicalTextSchema, StrictIsoDateSchema } from "./safety-schema-primitives";
+import { issue, CanonicalTextSchema, StrictIsoDateSchema } from "./safety-schema-primitives";
 
 export const V9OperationalResilienceSourceConfidenceSchema = z.enum([
   "issuer-reported",
@@ -114,25 +114,13 @@ export const V9OperationalResilienceIncidentSchema = z
   .strict()
   .superRefine((incident, ctx) => {
     if (incident.state === "active" && incident.resolvedAt !== null) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["resolvedAt"],
-        message: "An active incident cannot have a resolution date",
-      });
+      issue(ctx, ["resolvedAt"], "An active incident cannot have a resolution date");
     }
     if (incident.state === "resolved" && incident.resolvedAt === null) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["resolvedAt"],
-        message: "A resolved incident requires a resolution date",
-      });
+      issue(ctx, ["resolvedAt"], "A resolved incident requires a resolution date");
     }
     if (incident.resolvedAt !== null && incident.resolvedAt < incident.occurredAt) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["resolvedAt"],
-        message: "An incident cannot resolve before it occurred",
-      });
+      issue(ctx, ["resolvedAt"], "An incident cannot resolve before it occurred");
     }
   });
 

@@ -3,7 +3,6 @@ import { weightedMedian } from "@shared/lib/stats";
 import { relativeBps } from "@shared/lib/depeg-signals";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { executeAtomicBatch } from "../../lib/db";
-import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import { logWorkerEvent, logWorkerEventArgs } from "../../lib/structured-log";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import type { DexPriceObs, LiquidityMetrics } from "./types";
@@ -87,16 +86,25 @@ export interface DexPricePersistenceDiagnostics {
 const MAX_DEX_PRICE_REJECTION_ASSETS = 20;
 const MAX_DEX_PRICE_REJECTIONS_PER_ASSET = 5;
 
-export async function computeDexPrices(
-  db: D1Database,
-  retainedPoolsByStablecoin: Map<string, LiquidityMetrics["topPools"]>,
-  nowSec: number,
-  references?: PriceValidationReferences,
-  signal?: AbortSignal,
-  exactPriceEvidenceByStablecoin?: Map<string, DexPriceObs[]>,
+export async function computeDexPrices({
+  db,
+  retainedPoolsByStablecoin,
+  nowSec,
+  primaryPrices,
+  references,
+  signal,
+  exactPriceEvidenceByStablecoin,
   generationId = `dex-liquidity-${nowSec}`,
-  preloadedPrimaryPrices?: Map<string, number>,
-): Promise<DexPricePersistenceDiagnostics> {
+}: {
+  db: D1Database;
+  retainedPoolsByStablecoin: Map<string, LiquidityMetrics["topPools"]>;
+  nowSec: number;
+  primaryPrices: ReadonlyMap<string, number>;
+  references?: PriceValidationReferences;
+  signal?: AbortSignal;
+  exactPriceEvidenceByStablecoin?: Map<string, DexPriceObs[]>;
+  generationId?: string;
+}): Promise<DexPricePersistenceDiagnostics> {
   if (!generationId.trim()) throw new Error("DEX price publication requires a generation id");
   throwIfAborted(signal);
   await assertCurrentDexScoringGeneration(db, generationId, signal);
@@ -116,28 +124,6 @@ export async function computeDexPrices(
   throwIfAborted(signal);
   await db.prepare("DELETE FROM dex_price_run_rows WHERE generation_id = ?").bind(generationId).run();
   throwIfAborted(signal);
-
-  const primaryPrices = new Map(preloadedPrimaryPrices);
-  // A supplied map is already trust-filtered; missing entries are intentional.
-  let loadedStrictPrimaryPrices = preloadedPrimaryPrices !== undefined;
-  const loadPrimaryPrices = async (stablecoinId: string): Promise<Map<string, number>> => {
-    if (primaryPrices.has(stablecoinId) || loadedStrictPrimaryPrices) return primaryPrices;
-    loadedStrictPrimaryPrices = true;
-    const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict" });
-    if (stablecoinsCache.kind === "ok") {
-      for (const asset of stablecoinsCache.payload.peggedAssets) {
-        if (
-          !primaryPrices.has(asset.id)
-          && asset.price != null
-          && typeof asset.price === "number"
-          && asset.price > 0
-        ) {
-          primaryPrices.set(asset.id, asset.price);
-        }
-      }
-    }
-    return primaryPrices;
-  };
 
   const priceStmts: D1PreparedStatement[] = [];
   const queuePriceStatement = async (statement: D1PreparedStatement): Promise<void> => {
@@ -161,7 +147,6 @@ export async function computeDexPrices(
   for (const [id, observations] of priceEvidence) {
     throwIfAborted(signal);
     if (observations.length === 0) continue;
-    const prices = await loadPrimaryPrices(id);
 
     const {
       collapsed: collapsedObservations,
@@ -209,7 +194,7 @@ export async function computeDexPrices(
     // all of them into no-ops — the path that published an unguardable DEX row
     // from broken Sophon pools. Withhold the row with a machine-readable
     // reason instead of publishing as if the guards had passed.
-    const primaryPrice = prices.get(id);
+    const primaryPrice = primaryPrices.get(id);
     if (primaryPrice == null || !(primaryPrice > 0)) {
       withheldStablecoinCount++;
       if (withheldByStablecoin.length < MAX_DEX_PRICE_REJECTION_ASSETS) {

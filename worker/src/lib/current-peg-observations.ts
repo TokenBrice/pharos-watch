@@ -5,8 +5,7 @@ import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { isAuthoritativeDepegPegReference } from "@shared/lib/peg-reference-trust";
 import type { StablecoinData } from "@shared/types/market";
 import type { PegSummaryCoin } from "@shared/types/peg";
-import { deriveDepegSignal } from "./depeg-signals";
-import type { DepegSignal } from "@shared/lib/depeg-signals";
+import { deriveDepegSignal, type DepegSignal } from "@shared/lib/depeg-signals";
 
 export interface CurrentPegObservation {
   currentDeviationBps: number | null;

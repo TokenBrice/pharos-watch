@@ -59,10 +59,6 @@ export type HeroSupplyFields = Pick<HeroCardViewModel["market"], "supply" | "sup
 
 type HeroMetricVariant = "cell" | "card";
 
-function formatSupplyTrendPercent(current: number | null, previous: number | null): string {
-  return current == null || previous == null ? "—" : formatTrendPercent(current, previous);
-}
-
 function formatTrendPercent(current: number | null, previous: number | null): string {
   return current == null || previous == null ? "—" : formatPercentChange(current, previous);
 }
@@ -224,7 +220,7 @@ function HeroMarketCapMetric({
   );
 }
 
-function HeroSupplyMetric({
+export function HeroSupplyMetric({
   variant = "cell",
   supply,
   supplyTrend: { current, safePrevWeek, prevWeekTrendClass, hasPrevMonth, safePrevMonth, prevMonthTrendClass },
@@ -236,12 +232,12 @@ function HeroSupplyMetric({
         label="Supply"
         subline={
           <span className="pharos-numeric">
-            <span className={prevWeekTrendClass}>{formatSupplyTrendPercent(current, safePrevWeek)}</span>
+            <span className={prevWeekTrendClass}>{formatTrendPercent(current, safePrevWeek)}</span>
             <span className="text-muted-foreground"> 7D</span>
             {hasPrevMonth ? (
               <>
                 <span className="text-muted-foreground"> · </span>
-                <span className={prevMonthTrendClass}>{formatSupplyTrendPercent(current, safePrevMonth)}</span>
+                <span className={prevMonthTrendClass}>{formatTrendPercent(current, safePrevMonth)}</span>
                 <span className="text-muted-foreground"> 30D</span>
               </>
             ) : null}
@@ -268,11 +264,11 @@ function HeroSupplyMetric({
         </div>
         <div className="text-right">
           <p className={`text-xs pharos-numeric ${prevWeekTrendClass}`}>
-            {formatSupplyTrendPercent(current, safePrevWeek)} <span className="text-muted-foreground">7d</span>
+            {formatTrendPercent(current, safePrevWeek)} <span className="text-muted-foreground">7d</span>
           </p>
           {hasPrevMonth && (
             <p className={`text-xs pharos-numeric ${prevMonthTrendClass}`}>
-              {formatSupplyTrendPercent(current, safePrevMonth)} <span className="text-muted-foreground">30d</span>
+              {formatTrendPercent(current, safePrevMonth)} <span className="text-muted-foreground">30d</span>
             </p>
           )}
         </div>
@@ -280,8 +276,6 @@ function HeroSupplyMetric({
     </div>
   );
 }
-
-export { HeroSupplyMetric as HeroCompactSupplyCell };
 
 function HeroCompactTertiaryCell({ metric }: { metric: HeroTertiaryMetricConfig }) {
   return (

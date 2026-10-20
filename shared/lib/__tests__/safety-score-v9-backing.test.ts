@@ -170,7 +170,7 @@ describe("v10.01 cause-aware reserve quality", () => {
       status: { ...knownStatus("old-position"), observationState: "stale" as const, gapIds: [gap.gapId] },
       liquidityHorizon: "unknown" as const };
     const upstream = { exposureKey: "gold", upstreamAssetId: "parent", score: 90,
-      evidenceLevel: "strong" as const, reasonCodes: [], failureDomains: [], traceDigest: "parent", cause: null, causeGapIds: [] };
+      evidenceLevel: "strong" as const, reasonCodes: [], failureDomains: [], cause: null, causeGapIds: [] };
     const uncertain = evaluateV9ReserveExposures({
       ...asset([row], [gap]), resolvedUpstreamExposures: [upstream],
     }, V9_CANDIDATE_POLICY_V1);

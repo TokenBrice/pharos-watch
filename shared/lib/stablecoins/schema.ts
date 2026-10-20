@@ -6,8 +6,6 @@ import { LiveReservesConfigSchema } from "../live-reserve-adapters";
 import { isActiveStablecoinMeta, isReadableStablecoinMeta } from "./status";
 import { isCanonicalStablecoinId } from "../stablecoin-id";
 import { fuzzyDateRange } from "../classification/resolve-implementation-launch-date";
-import { DetailProviderSchema } from "../../types/core";
-import { CAUSE_OF_DEATH_VALUES } from "../../types/cause-of-death";
 import { FullAuthoredReserveCompositionSchema } from "../../types/reserves";
 import { defaultV9DependencyEconomicRole } from "../../types/dependency-types";
 import { validateMintBridgeOwnership } from "./mint-bridge-ownership";
@@ -16,25 +14,8 @@ import { normalizeDeploymentId } from "../../types/deployment-id";
 import { resolveV10ReserveObservationDeploymentRefs } from "../safety-score-v9/reserve-scope";
 import { findSummaryBudgetViolations } from "../summary-budget";
 import { parseCemeteryDeathDate } from "../cemetery";
-import {
-  CoinNoticeSchema,
-  ContractDeploymentSchema,
-  CustodyProfileSchema,
-  DateHistoryEntrySchema,
-  DependencyReviewSchema,
-  DependencyWeightSchema,
-  FeaturedContentSchema,
-  FuzzyDateSchema,
-  LaunchMilestoneSchema,
-  MechanismArchetypeReviewSchema,
-  ParentBackingInheritanceSchema,
-  ProofOfReservesSchema,
-  ReserveReviewSchema,
-  StablecoinFlagsSchema,
-  StablecoinLinkSchema,
-  StablecoinMetaEnumSchemas,
-  YieldConfigSchema,
-} from "../../types/stablecoin-meta-schemas";
+import { CustodyProfileSchema, ReserveReviewSchema } from "../../types/stablecoin-meta-primitives";
+import { StablecoinMetaStructuralSchema, StablecoinObituarySchema } from "../../types/stablecoin-meta-schemas";
 import {
   BridgeRouteRiskProfileSchema,
   MintAuthorityProfileSchema,
@@ -43,10 +24,8 @@ import {
 import {
   BlacklistabilityReviewSchema,
   GeniusProfileSchema,
-  JurisdictionSchema,
   MicaProfileSchema,
 } from "../../types/stablecoin-meta-compliance-schemas";
-const CommodityOuncesSchema = z.number().finite().positive();
 const REVIEW_QUANTITATIVE_TOLERANCE = 1e-6;
 const UNRESOLVED_RESERVE_DISPOSITIONS = new Set(["basket-needs-split", "insufficient-evidence"]);
 
@@ -134,109 +113,21 @@ const CemeteryAuthoredDeathDateSchema = z.string().refine((value) => {
   return parsed !== null && parsed.month !== null;
 }, { message: "Invalid cemetery death date: expected YYYY-MM or a valid YYYY-MM-DD" });
 
-const obituarySchema = z.object({
-  causeOfDeath: z.enum(CAUSE_OF_DEATH_VALUES),
-  deathDate: CemeteryAuthoredDeathDateSchema,
-  recordedAt: StrictIsoDateSchema.optional(),
-  epitaph: z.string().min(1),
-  obituary: z.string().min(1),
-  peakMcap: z.number().positive().optional(),
-  sourceUrl: z.string().url(),
-  sourceLabel: z.string().min(1),
-});
-const StablecoinMetaAssetSchemaShape = {
+const StablecoinMetaAssetRawSchema = StablecoinMetaStructuralSchema.extend({
   id: StablecoinIdSchema,
-  llamaId: z.string().optional(),
-  detailProvider: DetailProviderSchema.optional(),
-  marketAvailability: StablecoinMetaEnumSchemas.marketAvailability.optional(),
-  priceBasis: StablecoinMetaEnumSchemas.priceBasis.optional(),
-  exitMechanism: StablecoinMetaEnumSchemas.exitMechanism.optional(),
-  name: z.string(),
-  symbol: z.string(),
-  oneLiner: z.string().max(160).optional(),
-  flags: StablecoinFlagsSchema,
-  pegReferenceId: z.string().optional(),
-  collateral: z.string().optional(),
-  pegMechanism: z.string().optional(),
-  mechanismArchetype: StablecoinMetaEnumSchemas.mechanismArchetype.optional(),
-  mechanismArchetypeReview: MechanismArchetypeReviewSchema.optional(),
-  implementationLaunchDate: FuzzyDateSchema.optional(),
-  commodityOunces: CommodityOuncesSchema.optional(),
-  geckoId: z.string().optional(),
-  cmcSlug: z.string().optional(),
-  protocolSlug: z.string().optional(),
-  proofOfReserves: ProofOfReservesSchema.optional(),
-  links: z.array(StablecoinLinkSchema).optional(),
-  jurisdiction: JurisdictionSchema.optional(),
-  mica: MicaProfileSchema.optional(),
-  genius: GeniusProfileSchema.optional(),
-  mintAuthority: MintAuthorityProfileSchema.optional(),
-  // The deployment schema owns token-contract versus native bank-denom identity.
-  contracts: z.array(ContractDeploymentSchema).optional(),
-  tradedContracts: z.array(ContractDeploymentSchema).optional(),
-  dependencies: z.array(DependencyWeightSchema).optional(),
-  dependencyReview: DependencyReviewSchema.optional(),
-  blacklistabilityReview: BlacklistabilityReviewSchema.optional(),
-  collateralQuality: StablecoinMetaEnumSchemas.collateralQuality.optional(),
-  custodyModel: StablecoinMetaEnumSchemas.custodyModel.optional(),
-  governanceQuality: StablecoinMetaEnumSchemas.governanceQuality.optional(),
-  oracleRisk: OracleRiskProfileSchema.optional(),
-  bridgeRouteRisk: BridgeRouteRiskProfileSchema.optional(),
-  infrastructures: StablecoinMetaEnumSchemas.infrastructures.optional(),
-  variantOf: z.string().optional(),
-  variantKind: StablecoinMetaEnumSchemas.variantKind.optional(),
-  wrapperOperator: StablecoinMetaEnumSchemas.wrapperOperator.optional(),
-  parentBackingInheritance: ParentBackingInheritanceSchema.optional(),
-  archetypeOverride: z
-    .boolean()
-    .describe("When true, mechanismArchetype is an intentional departure from the parent's archetype.")
-    .optional(),
-  reserves: FullAuthoredReserveCompositionSchema.optional(),
-  reserveReview: ReserveReviewSchema.optional(),
-  custodyProfile: CustodyProfileSchema.optional(),
   liveReservesConfig: LiveReservesConfigSchema.optional(),
-  notices: z.array(CoinNoticeSchema).optional(),
-  tags: z.array(z.string()).optional(),
-  yieldConfig: YieldConfigSchema.optional(),
-  status: StablecoinMetaEnumSchemas.status.optional(),
-  listingStatusReview: z.object({
-    changedAt: StrictIsoDateSchema,
-    reason: z.string().trim().min(1).max(280),
-    reviewBy: StrictIsoDateSchema.optional(),
-    source: StablecoinLinkSchema.optional(),
-  }).strict().optional(),
-  windDownAnnouncedAt: StrictIsoDateSchema.optional(),
-  windDownSourceUrl: z.string().url().optional(),
-  frozenAt: StrictIsoDateSchema.optional(),
-  obituary: obituarySchema.optional(),
-  launchDate: FuzzyDateSchema.optional(),
-  pegScoreCoverage: z.object({
-    startDate: StrictIsoDateSchema,
-    basis: z.literal("audited-replay-and-live"),
-    reviewedAt: StrictIsoDateSchema,
-    replayRunId: z.string().trim().min(1).optional(),
-    notes: z.string().trim().min(1),
-  }).strict().optional(),
-  announcedDate: FuzzyDateSchema.optional(),
-  expectedLaunchDate: FuzzyDateSchema.optional(),
-  launchPhase: StablecoinMetaEnumSchemas.launchPhase.optional(),
-  launchPhaseDetail: z.string().optional(),
-  featuredContent: z.array(FeaturedContentSchema).optional(),
-  milestones: z.array(LaunchMilestoneSchema).optional(),
-  dateHistory: z.array(DateHistoryEntrySchema).optional(),
-} satisfies Record<keyof StablecoinMeta, z.ZodTypeAny>;
+  obituary: StablecoinObituarySchema.extend({ deathDate: CemeteryAuthoredDeathDateSchema }).optional(),
+});
 
-export const STABLECOIN_META_ASSET_FIELD_ORDER = Object.keys(StablecoinMetaAssetSchemaShape) as Array<
+export const STABLECOIN_META_ASSET_FIELD_ORDER = Object.keys(StablecoinMetaAssetRawSchema.shape) as Array<
   keyof StablecoinMeta
 >;
-
-const StablecoinMetaAssetRawSchema = z.object(StablecoinMetaAssetSchemaShape).strict();
 
 /**
  * Strict source-file shape validation before domain sidecars are merged.
  * Cross-field/catalog invariants run on `StablecoinMetaAssetSchema` after merge.
  */
-export const StablecoinMetaSourceAssetSchema: z.ZodType<StablecoinMeta, unknown> = StablecoinMetaAssetRawSchema;
+export const StablecoinMetaSourceAssetSchema = StablecoinMetaAssetRawSchema;
 
 type StablecoinSourceDomainField = Exclude<keyof StablecoinMeta, "id">;
 type StablecoinSourceDomainFieldSchemas = Partial<Record<StablecoinSourceDomainField, z.ZodTypeAny>>;
@@ -314,7 +205,7 @@ export const StablecoinRiskReviewSidecarSchema = STABLECOIN_SOURCE_DOMAIN_SCHEMA
 
 const ORACLE_RISK_PROVENANCE_FIELDS = ["reviewedAt", "reviewer", "confidence"] as const;
 
-export const StablecoinMetaAssetSchema: z.ZodType<StablecoinMeta, unknown> = StablecoinMetaAssetRawSchema.superRefine(
+export const StablecoinMetaAssetSchema = StablecoinMetaAssetRawSchema.superRefine(
   (meta, ctx) => {
     const bridgeRoutes = meta.bridgeRouteRisk?.routes ?? [];
     const contractKeys = new Set(
@@ -754,7 +645,7 @@ function refineDeploymentOwnership(stablecoins: StablecoinMeta[], ctx: z.Refinem
   });
 }
 
-export const StablecoinMetaAssetArraySchema: z.ZodType<StablecoinMeta[], unknown> = z
+export const StablecoinMetaAssetArraySchema = z
   .array(StablecoinMetaAssetSchema)
   .superRefine(refineMintAuthorityCatalog)
   .superRefine(refineDeploymentOwnership);
@@ -764,7 +655,7 @@ export const StablecoinMetaAssetArraySchema: z.ZodType<StablecoinMeta[], unknown
  * through `StablecoinMetaAssetSchema`, so the cross-record checks run without a
  * second per-record pass.
  */
-export const StablecoinMetaCatalogInvariantsSchema: z.ZodType<StablecoinMeta[], unknown> = z
+export const StablecoinMetaCatalogInvariantsSchema = z
   .array(z.custom<StablecoinMeta>())
   .superRefine(refineMintAuthorityCatalog)
   .superRefine(refineDeploymentOwnership);

@@ -10,6 +10,11 @@ import {
   V9WrapperLocalFactsSchema,
 } from "../safety-score-v9-wrapper";
 import { V9OperationalResilienceIncidentSchema } from "../safety-score-v9-operational-resilience-primitives";
+import { expandReviewedRegistryReferences } from "../../lib/safety-score-v9/reviewed-registry";
+
+const expandedIncidentReviews = expandReviewedRegistryReferences(incidentReviewsAsset, "negativeReviews", {
+  sources: "sourceObservations", searchedSurfaces: "searchedSurfaceObservations",
+});
 
 const BASE_INCIDENT = {
   incidentId: "fixture-control-incident",
@@ -109,8 +114,9 @@ describe("Safety Score v9 researched-negative incident schema", () => {
     }
   });
 
-  it("rejects duplicate negative-review IDs and preserves the legacy envelope", () => {
-    expect(V9ReviewedIncidentRegistrySchema.safeParse(incidentReviewsAsset).success).toBe(true);
+  it("rejects duplicate negative-review IDs and admits only the expanded runtime envelope", () => {
+    expect(V9ReviewedIncidentRegistrySchema.safeParse(incidentReviewsAsset).success).toBe(false);
+    expect(V9ReviewedIncidentRegistrySchema.safeParse(expandedIncidentReviews).success).toBe(true);
     expect(V9ReviewedIncidentRegistrySchema.safeParse({
       schemaVersion: 1, incidents: [], negativeReviews: [NEGATIVE_REVIEW, NEGATIVE_REVIEW],
     }).success).toBe(false);
@@ -142,7 +148,7 @@ describe("Safety Score v9 reviewed incident schema", () => {
 
 
   it("admits only scoped, verified, non-realized informational vulnerability history", () => {
-    const registry = V9ReviewedIncidentRegistrySchema.parse(incidentReviewsAsset);
+    const registry = V9ReviewedIncidentRegistrySchema.parse(expandedIncidentReviews);
     const history = registry.incidents.find((incident) => incident.assetId === "xaut-tether")!;
     expect(history).toMatchObject({
       domain: "security-history",

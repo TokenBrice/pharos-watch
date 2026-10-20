@@ -487,9 +487,10 @@ export function buildSafetyScoreV9ReviewedStaticReserveRows(
   meta: V9ExtensionRegistryMeta,
   clockSec: number,
   fixedInput?: Readonly<SafetyScoreV9CompilerInput>,
+  namedAdmission?: IndependentlyAttestedCompositionAdmission | null,
 ): ReviewedStaticReserveRows | null {
   if (meta.mintAuthority?.supervision !== "prudential") return null;
-  const admission = independentlyAttestedComposition(meta, clockSec, fixedInput);
+  const admission = namedAdmission === undefined ? independentlyAttestedComposition(meta, clockSec, fixedInput) : namedAdmission;
   if (admission?.freshness !== "fresh") return null;
   return {
     rows: admission.normalizedRows,
@@ -519,9 +520,10 @@ export function buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(
   meta: V9ExtensionRegistryMeta,
   clockSec: number,
   fixedInput?: Readonly<SafetyScoreV9CompilerInput>,
+  namedAdmission?: IndependentlyAttestedCompositionAdmission | null,
 ): ReviewedStaticReserveRows | null {
   if (meta.mintAuthority?.supervision === "prudential") return null;
-  const admission = independentlyAttestedComposition(meta, clockSec, fixedInput);
+  const admission = namedAdmission === undefined ? independentlyAttestedComposition(meta, clockSec, fixedInput) : namedAdmission;
   if (admission?.freshness !== "fresh") return null;
   return { rows: admission.normalizedRows, evidenceClass: "static-validated", provenance: "audited-fallback" };
 }
@@ -580,13 +582,13 @@ function buildSafetyScoreV9ReviewedCuratedReserveRows(
   clockSec: number,
   provenance: "curated" | "curated-fallback",
   fixedInput?: Readonly<SafetyScoreV9CompilerInput>,
+  namedAdmission = independentlyAttestedComposition(meta, clockSec, fixedInput),
 ): ReviewedStaticReserveRows | null {
   const rows = meta.reserves ?? [];
   const review = meta.reserveReview;
   const curatedRows = compositionRowsWithUnknownResidual(meta);
   if (review?.observations?.some(row => (row.kind === "standing-structure" || row.kind === "portfolio-observation") &&
     row.obligations.some(obligation => obligation.disposition !== "included"))) return null;
-  const namedAdmission = independentlyAttestedComposition(meta, clockSec, fixedInput);
   if (namedAdmission?.freshness === "expired") return null;
   const compositionMaxAgeSec = namedAdmission !== null
     ? NAMED_FIRM_RESERVE_REPORT_MAX_AGE_SEC : REVIEWED_RESERVE_COMPOSITION_ADMISSION_MAX_AGE_SEC;
@@ -656,9 +658,10 @@ export function buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(
   meta: V9ExtensionRegistryMeta,
   clockSec: number,
   fixedInput?: Readonly<SafetyScoreV9CompilerInput>,
+  namedAdmission?: IndependentlyAttestedCompositionAdmission | null,
 ): ReviewedStaticReserveRows | null {
   if (meta.liveReservesConfig == null) return null;
-  return buildSafetyScoreV9ReviewedCuratedReserveRows(meta, clockSec, "curated-fallback", fixedInput);
+  return buildSafetyScoreV9ReviewedCuratedReserveRows(meta, clockSec, "curated-fallback", fixedInput, namedAdmission);
 }
 
 /**
@@ -670,43 +673,80 @@ export function buildSafetyScoreV9ReviewedStandaloneReserveRows(
   meta: V9ExtensionRegistryMeta,
   clockSec: number,
   fixedInput?: Readonly<SafetyScoreV9CompilerInput>,
+  namedAdmission?: IndependentlyAttestedCompositionAdmission | null,
 ): ReviewedStaticReserveRows | null {
   if (meta.liveReservesConfig != null || meta.variantOf != null) return null;
-  return buildSafetyScoreV9ReviewedCuratedReserveRows(meta, clockSec, "curated", fixedInput);
+  return buildSafetyScoreV9ReviewedCuratedReserveRows(meta, clockSec, "curated", fixedInput, namedAdmission);
+}
+
+export type ReviewedReserveAdmission =
+  | { kind: "none"; projected: null }
+  | { kind: "history"; projected: null; source: IndependentlyAttestedCompositionAdmission }
+  | { kind: "named-report"; projected: ReviewedStaticReserveRows; source: Pick<IndependentlyAttestedCompositionAdmission, "review" | "proof" | "report">; named: boolean }
+  | { kind: "reviewed-composition"; projected: ReviewedStaticReserveRows; review: NonNullable<V9ExtensionRegistryMeta["reserveReview"]> }
+  | { kind: "scoped-observation"; projected: ReviewedStaticReserveRows; observation: ReserveObservationEnvelope };
+
+/** Ephemeral: consume evidence locally; never retain in the prepared cohort. */
+export function resolveReviewedReserveAdmission(input: {
+  meta: V9ExtensionRegistryMeta;
+  clockSec: number;
+  liveReserveRows: readonly ReserveSlice[];
+  fixedInput?: Readonly<SafetyScoreV9CompilerInput>;
+}): ReviewedReserveAdmission {
+  const { meta, clockSec, fixedInput } = input;
+  // Evidence historically uses the report-only scope context, while row
+  // admission also sees the current partition. Preserve both without
+  // repeating the named-report selector or renewing historical provenance.
+  const source = independentlyAttestedComposition(meta, clockSec);
+  const namedAdmission = fixedInput && reportScopeApplies(meta, clockSec, fixedInput) ? null : source;
+  const projected = input.liveReserveRows.length > 0 ? null :
+    buildSafetyScoreV9ReviewedStaticReserveRows(meta, clockSec, fixedInput, namedAdmission) ??
+    (meta.liveReservesConfig != null
+      ? buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(meta, clockSec, fixedInput, namedAdmission) ??
+        buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(meta, clockSec, fixedInput, namedAdmission)
+      : buildSafetyScoreV9ReviewedStandaloneReserveRows(meta, clockSec, fixedInput, namedAdmission));
+  if (!projected) return source?.freshness === "expired"
+    ? { kind: "history", projected: null, source } : { kind: "none", projected: null };
+  if (projected.sourceKind === "standing-structure" || projected.sourceKind === "portfolio-observation") {
+    const observation = meta.reserveReview?.observations?.find(row =>
+      row.scopeId === projected.scopeId && row.kind === projected.sourceKind);
+    if (!observation) throw new Error("Independent reserve admission has no source envelope");
+    return { kind: "scoped-observation", projected, observation };
+  }
+  if (source) return { kind: "named-report", projected, source, named: true };
+  const review = meta.reserveReview!;
+  const proof = meta.proofOfReserves;
+  if (projected.evidenceClass !== "static-validated" && proof?.latestReport) {
+    return { kind: "named-report", projected, source: { review, proof, report: proof.latestReport }, named: false };
+  }
+  return { kind: "reviewed-composition", projected, review };
 }
 
 export function addReviewedStaticReserveEvidence(
-  meta: V9ExtensionRegistryMeta,
-  admitted: ReviewedStaticReserveRows | null,
+  admission: ReviewedReserveAdmission,
   evidence: ReviewEvidenceBuilder,
-  clockSec: number,
 ): void {
-  const review = meta.reserveReview;
-  if (!review) return;
-  const report = meta.proofOfReserves?.latestReport;
-  if (admitted?.sourceKind === "standing-structure" || admitted?.sourceKind === "portfolio-observation") {
-    const structure = review.observations?.find(row => row.scopeId === admitted.scopeId && row.kind === admitted.sourceKind);
-    if (!structure) throw new Error("Independent reserve admission has no source envelope");
+  if (admission.kind === "none") return;
+  if (admission.kind === "scoped-observation") {
+    const structure = admission.observation;
     evidence.add({
-      componentKeys: ["reviewed-static-reserves", ...admitted.rows.map(row => `reserve-classification:${computeSafetyScoreV9ReserveExposureKey(row)}`)],
+      componentKeys: ["reviewed-static-reserves", ...admission.projected.rows.map(row => `reserve-classification:${computeSafetyScoreV9ReserveExposureKey(row)}`)],
       sourceId: `stablecoin-meta.reserve-${structure.kind}`, reviewedAtSec: structure.reviewedAtSec,
       observedAtSec: structure.observedAtSec ?? structure.reviewedAtSec,
       confidence: "verified", sources: structure.sources.map(source => ({ label: structure.kind, url: source.url })),
-      payload: { structure, rows: admitted.rows }, maxAgeSec: structure.kind === "standing-structure"
+      payload: { structure, rows: admission.projected.rows }, maxAgeSec: structure.kind === "standing-structure"
         ? V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.standingStructureMaxAgeSec
         : REVIEWED_RESERVE_COMPOSITION_ADMISSION_MAX_AGE_SEC,
     });
     return;
   }
-  if (!admitted) {
-    const admission = independentlyAttestedComposition(meta, clockSec);
-    if (admission?.freshness !== "expired") return;
+  if (admission.kind === "history") {
     const {
       proof,
       report: expiredReport,
       review: expiredReview,
       sourceRows,
-    } = admission;
+    } = admission.source;
     const sources = [...expiredReview.sources, ...expiredReport.sources].filter(
       (source, index, all) => all.findIndex((candidate) => candidate.url === source.url) === index,
     );
@@ -728,21 +768,17 @@ export function addReviewedStaticReserveEvidence(
     });
     return;
   }
-  const namedAdmission = independentlyAttestedComposition(meta, clockSec);
-  if (namedAdmission !== null && report) {
-    // The composition carries a named independent report, so it must keep the
-    // issuer attribution and the report's own dates. Emitting it as an
-    // anonymous standalone review would discard the publisher and, once the
-    // window lapses, blame the issuer for a document they did publish.
+  if (admission.kind === "named-report") {
+    const { review, report, proof } = admission.source;
     const auditedSources = [...review.sources, ...report.sources].filter(
       (source, index, all) => all.findIndex((candidate) => candidate.url === source.url) === index,
     );
     evidence.add({
       componentKeys: [
         "reviewed-static-reserves",
-        ...admitted.rows.map((row) => `reserve-classification:${computeSafetyScoreV9ReserveExposureKey(row)}`),
+        ...admission.projected.rows.map((row) => `reserve-classification:${computeSafetyScoreV9ReserveExposureKey(row)}`),
       ],
-      sourceId: "stablecoin-meta.reviewed-audited-fallback-reserves",
+      sourceId: admission.named ? "stablecoin-meta.reviewed-audited-fallback-reserves" : "stablecoin-meta.reviewed-static-reserves",
       reviewedAt: review.reviewedAt,
       observedAt: report.periodEnd,
       publishedAt: report.publishedAt,
@@ -751,23 +787,24 @@ export function addReviewedStaticReserveEvidence(
       sources: auditedSources,
       payload: {
         reserveReview: review,
-        reserves: admitted.rows,
-        evidenceClass: admitted.evidenceClass,
-        provenance: admitted.provenance,
-        proofOfReserves: meta.proofOfReserves,
+        reserves: admission.projected.rows,
+        evidenceClass: admission.projected.evidenceClass,
+        provenance: admission.projected.provenance,
+        proofOfReserves: proof,
       },
       maxAgeSec: NAMED_FIRM_RESERVE_REPORT_MAX_AGE_SEC,
     });
     return;
   }
-  if (admitted.evidenceClass === "static-validated") {
+  const { review, projected } = admission;
+  if (projected.evidenceClass === "static-validated") {
     evidence.add({
       componentKeys: [
         "reviewed-static-reserves",
-        ...admitted.rows.map((row) => `reserve-classification:${computeSafetyScoreV9ReserveExposureKey(row)}`),
+        ...projected.rows.map((row) => `reserve-classification:${computeSafetyScoreV9ReserveExposureKey(row)}`),
       ],
       sourceId:
-        admitted.provenance === "curated-fallback"
+        projected.provenance === "curated-fallback"
           ? "stablecoin-meta.reviewed-curated-fallback-reserves"
           : "stablecoin-meta.reviewed-standalone-reserves",
       reviewedAt: review.compositionAsOf!,
@@ -776,39 +813,14 @@ export function addReviewedStaticReserveEvidence(
       sources: review.sources,
       payload: {
         reserveReview: review,
-        reserves: admitted.rows,
-        evidenceClass: admitted.evidenceClass,
-        provenance: admitted.provenance,
+        reserves: projected.rows,
+        evidenceClass: projected.evidenceClass,
+        provenance: projected.provenance,
       },
       maxAgeSec: REVIEWED_RESERVE_COMPOSITION_ADMISSION_MAX_AGE_SEC,
     });
     return;
   }
-  if (!report) return;
-  const sources = [...review.sources, ...report.sources].filter(
-    (source, index, all) => all.findIndex((candidate) => candidate.url === source.url) === index,
-  );
-  evidence.add({
-    componentKeys: [
-      "reviewed-static-reserves",
-      ...admitted.rows.map((row) => `reserve-classification:${computeSafetyScoreV9ReserveExposureKey(row)}`),
-    ],
-    sourceId: "stablecoin-meta.reviewed-static-reserves",
-    reviewedAt: review.reviewedAt,
-    observedAt: report.periodEnd,
-    publishedAt: report.publishedAt,
-    publishedBy: "issuer",
-    confidence: confidenceForResearch(report.confidence),
-    sources,
-    payload: {
-      reserveReview: review,
-      reserves: admitted.rows,
-      proofOfReserves: meta.proofOfReserves,
-      evidenceClass: admitted.evidenceClass,
-      provenance: admitted.provenance,
-    },
-    maxAgeSec: NAMED_FIRM_RESERVE_REPORT_MAX_AGE_SEC,
-  });
 }
 
 export function addReserveClassificationEvidence(
@@ -863,7 +875,13 @@ function selectScopedReserveObservations(meta: V9ExtensionRegistryMeta, fixedInp
   return observedScopes;
 }
 
-export function buildSafetyScoreV10ScopedReserveAdmissions(meta: V9ExtensionRegistryMeta, fixedInput: Readonly<SafetyScoreV9CompilerInput>): ReserveScopedAdmission[] {
+export interface ScopedReserveAdmission {
+  admissions: ReserveScopedAdmission[];
+  observations: ReadonlyMap<string, { observation: ReserveObservationEnvelope; admission: ReserveScopedAdmission }>;
+  report: NonNullable<V9ExtensionRegistryMeta["proofOfReserves"]>["latestReport"];
+}
+
+export function buildSafetyScoreV10ScopedReserveAdmissions(meta: V9ExtensionRegistryMeta, fixedInput: Readonly<SafetyScoreV9CompilerInput>): ScopedReserveAdmission {
   if (fixedInput.liveReserveProvenanceMap[meta.id]?.reserveObservationFailure != null) {
     throw new Error(`${meta.id}: malformed-reserve-observation (producer-failed)`);
   }
@@ -877,19 +895,21 @@ export function buildSafetyScoreV10ScopedReserveAdmissions(meta: V9ExtensionRegi
       baseInputGenerationId: fixedInput.baseInputGenerationId });
     if (scope) admissions.push(scope);
   }
-  for (const { admission } of selectScopedReserveObservations(meta, fixedInput).values()) admissions.push(admission);
+  const observations = selectScopedReserveObservations(meta, fixedInput);
+  for (const { admission } of observations.values()) admissions.push(admission);
   if (new Set(admissions.map(row => row.scopeId)).size !== admissions.length) {
     throw new Error(`${meta.id}: overlapping-reserve-scope-identities`);
   }
-  return admissions.sort((a, b) => compareText(a.scopeId, b.scopeId));
+  return { admissions: admissions.sort((a, b) => compareText(a.scopeId, b.scopeId)), observations, report };
 }
 
-export function addScopedReserveEvidence(meta: V9ExtensionRegistryMeta, admissions: ReserveScopedAdmission[], fixedInput: Readonly<SafetyScoreV9CompilerInput>, evidence: ReviewEvidenceBuilder): void {
-  const observations = selectScopedReserveObservations(meta, fixedInput);
+export function addScopedReserveEvidence(
+  { admissions, observations, report }: ScopedReserveAdmission,
+  evidence: ReviewEvidenceBuilder,
+): void {
   for (const admission of admissions) {
     if (!admission.admitted) { admission.evidenceRefIds = []; continue; }
     const observation = observations.get(admission.scopeId)?.observation;
-    const report = meta.proofOfReserves?.latestReport;
     if (observation) {
       admission.evidenceRefIds = evidence.add({ componentKeys: [`reserve-scope:${admission.scopeId}`], sourceId: `reserve-observation:${observation.kind}`,
         reviewedAtSec: observation.reviewedAtSec, observedAtSec: observation.observedAtSec ?? observation.reviewedAtSec,

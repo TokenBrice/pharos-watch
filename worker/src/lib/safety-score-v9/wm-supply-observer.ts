@@ -1,5 +1,6 @@
 import { sha256HexFromBytes } from "@shared/lib/sha256";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import type { ReviewedDeploymentSupplyObservation } from "@shared/types/safety-score-v9-supply-attribution";
 import { sleepWithSignal, throwIfAborted } from "../abort";
 import type { SupplyAttributionRejectionCode } from "@shared/lib/safety-score-v9-supply-attribution-journal";
 import type { V9ExecutionWindow } from "../v9-slot-window";
@@ -15,8 +16,6 @@ import {
   expectedWmDeploymentIdentity,
   reviewedDeploymentIdentityValidationError,
   reviewedDeploymentObservationTimingIssue,
-  type ReviewedDeploymentSupplyObservation,
-  type ReviewedDeploymentUnitPartitionV1,
 } from "./supply-attribution-contract";
 import {
   decodeEvmAddress,
@@ -258,15 +257,4 @@ export async function observeWmReviewedDeploymentUnitPartitionAttempt(
   // Exactly one repair pass. Every reread revalidates the original inventory,
   // hash-pinned state and identity; unchanged siblings keep their true clocks.
   return observeReviewedDeploymentUnitPartitionAttempt(observationInput);
-}
-
-export async function observeWmReviewedDeploymentUnitPartition(
-  input: Parameters<typeof observeWmReviewedDeploymentUnitPartitionAttempt>[0],
-  dependencyOverrides: Parameters<typeof observeWmReviewedDeploymentUnitPartitionAttempt>[1] = {},
-): Promise<ReviewedDeploymentUnitPartitionV1 | null> {
-  const attempt = await observeWmReviewedDeploymentUnitPartitionAttempt(
-    input,
-    dependencyOverrides,
-  );
-  return attempt.status === "accepted" ? attempt.attribution : null;
 }

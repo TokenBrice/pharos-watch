@@ -35,6 +35,8 @@ four-state model as Report Cards: **Yes** (`true`), **Possible** (`"possible"`),
 an observed freeze. Apply the following procedure in order; a direct verdict takes precedence over
 upstream exposure.
 
+Retracting an observed freeze claim does not change issuer-control exposure. Source-suppressed claims, including recovered mirror-zero events, are removed from public Tape readers and unsent alert admission under the [source reconciliation contract](./tape-page.md#source-reconciliation); their exact permalink lookup returns `404` with reason `freeze-claim-retracted`, not an empty event.
+
 ### FreezeWatch Decision Procedure
 
 1. **Measure material deployments first.** Use each deployment's share of circulating supply against
@@ -217,7 +219,7 @@ Current-balance cache telemetry preserves the canonical `skippedDueBudget` count
 
 - Etherscan v2 is an explorer source for supported EVM log scans, emitted destroy-amount receipt recovery and a best-effort final current-balance fallback.
 - Base, Optimism, Avalanche, BSC, and Gnosis prefer chain RPC `eth_getLogs`; chain RPC configuration comes from `worker/src/lib/chain-registry.ts`.
-- Current EVM balance snapshots prefer dRPC when configured, then the shared chain RPC path, then best-effort Etherscan. They never supply an amountless event's historical quantity.
+- Current EVM balance snapshots use `fetchEvmTokenBalance` with the explicit `latest` tag: dRPC when configured, then the shared chain RPC path, then best-effort Etherscan. The same transport accepts a numeric block, but a block-bound balance is not proof of an amountless event's historical quantity; current snapshots and the rebuild CLI never supply that quantity.
 - Scheduled `logScanRpcEndpoints` puts Dwellir first on Gnosis (9,000-block pages; dRPC/public failover), Base/Optimism/Avalanche (10,000; Alchemy/public), independent of state placement. BSC is excluded. `DWELLIR_ROUTING_DISABLED_CHAINS` restores incumbents; mint/burn keeps Alchemy.
 - Ranges use the smaller caller/provider span; incumbent windows stay unchanged. Range errors (including HTTP-200 `-32005`) split serially within depth/call/deadline budgets; incomplete ranges cannot advance cursors. Log/timestamp/receipt reads use registered auth and meter Dwellir members/retries. Retained endpoints reject starts before `head - retainedBlocks`; zkSync stays excluded. Transaction-context singleton retries honor abort/deadline/budget, capped at eight/batch; failures stay unavailable.
 - Dwellir targets 100 serial log calls/config, up to 600 with ≥300 subrequests/≥240 s left in the shared 900-subrequest/10-minute budget (splits included). Reserve stops shorten targets, not coverage. Capacity: Gnosis 0.9–5.4M blocks/run; Base/Optimism/Avalanche 1–6M. Incumbent fallback spans: Base/Optimism Alchemy 500,000, public 50,000; Avalanche Alchemy 250,000, public eight ×2,000.
@@ -252,16 +254,17 @@ freshness still advance only at the proven safe head, not at a tolerated frontie
 
 ## Event And Coverage Rules
 
-`worker/src/lib/blacklist-contracts.ts` is the only registry for event signatures, topic hashes, address/amount decoding indices, array encodings, direction booleans, and deployment start blocks. Parsing is implemented in:
+`worker/src/lib/blacklist-contracts.ts` is the only registry for event signatures, topic hashes, address/amount decoding indices, array encodings, direction booleans, and deployment start blocks. Reviewed event arrays are composed directly; configurations still clone their event lists. Parsing is implemented in:
 
 - `worker/src/cron/blacklist/evm-source.ts`
+- `worker/src/lib/blacklist/evm-payload.ts` for the registry-defined payload decoding shared by EVM ingestion and destroy receipt recovery; identity/timestamps and receipt matching remain caller-owned
 - `worker/src/cron/blacklist/tron-source.ts`
 - `worker/src/lib/blacklist/shared.ts` for the shared row construction and suppression contract both sources use
 
 The durable rules are:
 
 1. Registry-defined topic/data/array/Tron fields determine decoding. Batch addresses expand to deterministic per-address rows; oversized batches are never truncated. Incomplete persistence withholds coverage beyond that block.
-2. Malformed required addresses, ABI booleans (only `0`/`1`), arrays or log identities are typed failures, never default freezes. The frontier holds before the failed block/millisecond for two distinct scans; a third scan may release it only after durable bounded evidence is written under `blacklist:decode-retry:<config>:<identity>`, without TTL. The record keeps the original reason, truncation flag and exhausted disposition; repeated observations in one run do not consume attempts. Valid empty arrays are complete. `decodeRetryCounts` reports retained per-config debt.
+2. Malformed required addresses (including non-zero ABI padding), ABI booleans (only `0`/`1`), arrays or log identities are typed failures, never default freezes. Ingestion and receipt recovery use the same payload checks. The frontier holds before the failed block/millisecond for two distinct scans; a third scan may release it only after durable bounded evidence is written under `blacklist:decode-retry:<config>:<identity>`, without TTL. The record keeps the original reason, truncation flag and exhausted disposition; repeated observations in one run do not consume attempts. Valid empty arrays are complete. `decodeRetryCounts` reports retained per-config debt.
 3. Prefer an emitted destroy/seize amount. A preceding-block `balanceOf` is not exact event-time evidence: earlier transfers or wipes in the same block can change the balance before the target log. Ingestion, scheduled recovery, admin remediation and history replay retain amountless EVM freezes/releases/wipes as unavailable (`event_time_unproven`) rather than promoting that approximation. A burn-shaped `Transfer` alone cannot supply a wipe quantity; receipt recovery requires one unambiguous emitted destroy amount for the affected address. Current Tron balances belong only to the freeze ledger, never event-time amounts.
    Amountless EVM freezes/releases have no supported exact event-time recovery path: ingestion, scheduled repair and admin recovery mark them `permanently_unavailable` with `event_time_unproven`, and scheduled repair terminates their queue entries as `unrecoverable`. Missing destroy receipts remain `provider_failed`/retryable because the emitted-amount path can recover later. Neither outcome deletes the event or substitutes zero.
 4. Tron replay derives a freeze amount from complete confirmed signed token flows through the freeze millisecond. It requires the exact freeze receipt, unique composite transfer identities, no shared-millisecond transfer, and a complete ledger reconciling exactly with `balanceOf` reads bracketing the same solidified head. Negative freeze balances or duplicate records are rejected, even when offsetting duplicates leave the final balance unchanged. Writes require the amount still to be null and never overwrite snapshots or operator repairs.

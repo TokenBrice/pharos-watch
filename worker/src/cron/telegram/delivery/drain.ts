@@ -338,6 +338,13 @@ async function markPendingRowsSending(
             AND (not_before_at IS NULL OR not_before_at <= ?)
             AND delivery_state = 'pending'
             AND delivery_generation = ?
+            AND (alert_type IS NOT 'freeze' OR NOT EXISTS (
+              SELECT 1 FROM tape_events AS t
+                LEFT JOIN blacklist_events AS b
+                  ON t.source_table = 'blacklist_events' AND b.id = t.source_row_id
+               WHERE t.event_id = substr(telegram_pending_alerts.source_event_id, 8)
+                 AND (t.suppressed_at IS NOT NULL OR b.suppression_reason IS NOT NULL)
+            ))
             AND (
               ? IS NULL
               OR EXISTS (

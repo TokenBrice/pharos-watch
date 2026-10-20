@@ -6,7 +6,7 @@ import {
   type ScenarioCheck,
   type ScenarioCheckContext,
   type ScenarioCheckVerdict,
-} from "./index";
+} from "./context";
 
 const facilitatorAbi = parseAbi([
   "function MINTER_ROLE() view returns (bytes32)",

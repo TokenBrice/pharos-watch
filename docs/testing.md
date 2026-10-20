@@ -47,6 +47,8 @@ Use `package.json` for the full live npm-script list. `scripts/lib/automation-re
 
 `npm run typecheck:tests` compiles the test entrypoints and TypeScript/TSX support files selected by `tsconfig.test-typecheck.json` under `functions/`, `scripts/`, `shared/`, and `src/`; Worker typing is separate. The lane runs in nightly/manual validation so shared fixtures and helpers cannot accumulate type errors outside Vitest's selected module graph.
 
+Worker test fixtures compile against the Worker's ES2021 library, not the frontend's DOM/ESNext environment. Keep frontend content assertions in frontend suites, use the current production signatures for mocks, and narrow nullable publication identities before passing them to SQL or downstream generation helpers.
+
 `check:verified-doc-links` validates local links, images, anchors **and cited source paths** using renderer-compatible Markdown/heading parsing. Absolute `https://pharos.watch/docs/<slug>/` links must resolve to a public-docs registry entry, and any fragment must match a heading in the rendered public Markdown; other HTTPS URLs remain external. Verified docs at or above 400 lines or 50 KB need a top `> **Agent navigation**` block; section-qualified ownership references are enforced separately by the doc-ownership registry test.
 
 Changed-file classification retains deletions and both sides of cross-area renames; ordinary Git selection failures stop the check rather than producing an empty plan. Classification uses frozen base/branch-head refs; CI executes on a tested merge checkout, so import-graph test discovery inspects that tree while ownership selection retains the branch diff. Nonexistent test files are filtered only before execution. Generic parallel commands cancel and settle siblings on failure unless continue-on-error is explicit; the local PR runner instead collects every independent leaf. Sources: [`changed-files.mts`](../scripts/lib/changed-files.mts) and [`run-pr-checks.ts`](../scripts/maintenance/run-pr-checks.ts).
@@ -344,6 +346,8 @@ Use the runtime's existing test project and harness. Source-only, class-token an
 ### Degraded-mode testing convention
 
 Test normal success, primary source failure/timeout, stale or unavailable cache and decision boundaries. Use deterministic clocks and scripted transport outcomes; assert the reason, fallback/publication outcome and retained last-good state, not merely no throw or a defined return.
+
+Freshness fixtures that require a specific age band should supply explicit producer budgets instead of assuming an elapsed day exceeds the cadence-derived defaults. Numeric boundary fixtures must account for the actual unrounded unit conversion: a percentage converted to a ratio and back may land just below the original cutoff. Keep direct exact-cutoff cases in the classifier's owning suite and assert badge/gauge agreement on the converted raw value.
 
 ### Registry Guardrails
 

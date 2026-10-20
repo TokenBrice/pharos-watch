@@ -3,11 +3,8 @@ import { compareText } from "@shared/lib/safety-score-v9/primitives";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import {
-  BridgeRouteRiskTierSchema,
-  type BridgeRouteRiskTier,
-} from "@shared/types/core";
-import { z } from "zod";
+import type { BridgeRouteRiskTier } from "@shared/types/core";
+import type { XautLockMintObservation, XautRepresentationGroupSupplyAttributionV2 } from "@shared/types/safety-score-v9-supply-attribution";
 
 // Explicit per-asset override (owner ruling 2026-07-29): xaut-tether alone runs
 // a 3600s observation window; every other attribution asset stays on the 1800s
@@ -44,7 +41,6 @@ const XAUT_TRANSPARENCY_CONFIG_DIGEST_DOMAIN =
   "safety-score-v9.xaut-transparency-source-config.v1";
 const SHARE_SCALE = 10n ** 18n;
 const RAW_SUPPLY_RE = /^(0|[1-9][0-9]*)$/;
-const EVM_ADDRESS_RE = /^0x[0-9a-f]{40}$/;
 const EVM_BLOCK_HASH_RE = /^0x[0-9a-f]{64}$/;
 const SHA256_RE = /^[0-9a-f]{64}$/;
 
@@ -83,117 +79,11 @@ export interface XautRepresentationGroupInventory {
   routes: XautRepresentationGroupInventoryRow[];
 }
 
-export interface XautLockMintObservation {
-  chainId: typeof XAUT_CANONICAL_CHAIN_ID;
-  canonicalTokenAddress: string;
-  adapterAddress: string;
-  decimals: number;
-  canonicalTotalSupplyRaw: string;
-  treasuryAddress: string;
-  treasuryBalanceRaw: string;
-  adapterLockedSupplyRaw: string;
-  blockNumber: number;
-  blockTimeSec: number;
-  blockHash: string;
-  canonicalRuntimeCodeSha256: string;
-  canonicalImplementationAddress: string;
-  canonicalImplementationCodeSha256: string;
-  adapterRuntimeCodeSha256: string;
-  adapterImplementationAddress: string;
-  adapterImplementationCodeSha256: string;
-  adapterTokenAddress: string;
-  adapterEndpointAddress: string;
-  disclosure: {
-    sourceId: typeof XAUT_TRANSPARENCY_SOURCE_ID;
-    sourceConfigDigest: string;
-    sourceTimestampSec: number;
-    responseSha256: string;
-    totalAuthorizedRaw: string;
-    notIssuedRaw: string;
-    quarantinedRaw: string;
-  };
-}
-
 export interface XautTransparencySource {
   sourceId: typeof XAUT_TRANSPARENCY_SOURCE_ID;
   url: string;
   configDigest: string;
 }
-
-export interface XautRepresentationGroupSupplyAttributionV2 {
-  model: "canonical-lock-mint-group-partition-v2";
-  assetId: typeof XAUT_ASSET_ID;
-  observedAtSec: number;
-  registryFingerprint: string;
-  routeInventoryDigest: string;
-  canonical: {
-    routeId: string;
-    chainId: typeof XAUT_CANONICAL_CHAIN_ID;
-    currentSupplyUsd: number;
-  };
-  representationGroup: {
-    deploymentRouteKey: string;
-    representationId: typeof XAUT_REPRESENTATION_ID;
-    routeIds: string[];
-    riskTier: BridgeRouteRiskTier;
-    failureDomainKeys: string[];
-    currentSupplyUsd: number;
-  };
-  observation: XautLockMintObservation;
-}
-
-const XautLockMintObservationSchema = z.strictObject({
-  chainId: z.literal(XAUT_CANONICAL_CHAIN_ID),
-  canonicalTokenAddress: z.string().regex(EVM_ADDRESS_RE),
-  adapterAddress: z.string().regex(EVM_ADDRESS_RE),
-  decimals: z.number().int().min(0).max(36),
-  canonicalTotalSupplyRaw: z.string().regex(RAW_SUPPLY_RE),
-  treasuryAddress: z.string().regex(EVM_ADDRESS_RE),
-  treasuryBalanceRaw: z.string().regex(RAW_SUPPLY_RE),
-  adapterLockedSupplyRaw: z.string().regex(RAW_SUPPLY_RE),
-  blockNumber: z.number().int().nonnegative(),
-  blockTimeSec: z.number().int().nonnegative(),
-  blockHash: z.string().regex(EVM_BLOCK_HASH_RE),
-  canonicalRuntimeCodeSha256: z.string().regex(SHA256_RE),
-  canonicalImplementationAddress: z.string().regex(EVM_ADDRESS_RE),
-  canonicalImplementationCodeSha256: z.string().regex(SHA256_RE),
-  adapterRuntimeCodeSha256: z.string().regex(SHA256_RE),
-  adapterImplementationAddress: z.string().regex(EVM_ADDRESS_RE),
-  adapterImplementationCodeSha256: z.string().regex(SHA256_RE),
-  adapterTokenAddress: z.string().regex(EVM_ADDRESS_RE),
-  adapterEndpointAddress: z.string().regex(EVM_ADDRESS_RE),
-  disclosure: z.strictObject({
-    sourceId: z.literal(XAUT_TRANSPARENCY_SOURCE_ID),
-    sourceConfigDigest: z.string().regex(SHA256_RE),
-    sourceTimestampSec: z.number().int().nonnegative(),
-    responseSha256: z.string().regex(SHA256_RE),
-    totalAuthorizedRaw: z.string().regex(RAW_SUPPLY_RE),
-    notIssuedRaw: z.string().regex(RAW_SUPPLY_RE),
-    quarantinedRaw: z.string().regex(RAW_SUPPLY_RE),
-  }),
-});
-
-export const XautRepresentationGroupSupplyAttributionV2Schema = z.strictObject({
-  model: z.literal("canonical-lock-mint-group-partition-v2"),
-  assetId: z.literal(XAUT_ASSET_ID),
-  observedAtSec: z.number().int().nonnegative(),
-  registryFingerprint: z.string().regex(SHA256_RE),
-  routeInventoryDigest: z.string().regex(SHA256_RE),
-  canonical: z.strictObject({
-    routeId: z.string().min(1),
-    chainId: z.literal(XAUT_CANONICAL_CHAIN_ID),
-    currentSupplyUsd: z.number().finite().positive(),
-  }),
-  representationGroup: z.strictObject({
-    deploymentRouteKey: z.string().min(1),
-    representationId: z.literal(XAUT_REPRESENTATION_ID),
-    routeIds: z.array(z.string().min(1)).min(1),
-    riskTier: BridgeRouteRiskTierSchema,
-    failureDomainKeys: z.array(z.string().min(1)).min(1),
-    currentSupplyUsd: z.number().finite().positive(),
-  }),
-  observation: XautLockMintObservationSchema,
-});
 
 function canonicalStrings(values: readonly string[]): string[] {
   return [...new Set(values)].sort(compareText);

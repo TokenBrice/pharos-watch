@@ -9,7 +9,7 @@ import {
   TRACKED_STABLECOINS,
   TRACKED_SOURCE_COINS,
 } from "@shared/lib/stablecoins/registry";
-import type { LiveReserveEvidenceClass, LiveReserveFreshnessMode } from "@shared/types/live-reserves";
+import { ReserveSyncStatusSchema, type LiveReserveEvidenceClass, type LiveReserveFreshnessMode, type ReserveSyncStatus } from "@shared/types/live-reserves";
 import type { ReserveSlice, StablecoinMeta } from "@shared/types";
 import {
   buildMarketCapMapFromStablecoins,
@@ -111,8 +111,6 @@ export interface ReserveConfigCensus {
   nonActiveConfiguredByLifecycle: Record<"quarantined" | "frozen" | "delisted" | "pre-launch", number>;
   dormantConfigs: AuthoredReserveConfigRow[];
 }
-
-export type ReserveSyncStatus = "ok" | "degraded" | "error" | "skipped";
 
 /** One coin's resolved prod reserve state, as carried by the `--reserve-states` input. */
 export interface ReserveStateRow {
@@ -412,9 +410,8 @@ export function extractReserveStateRows(payload: unknown): ReserveStateRow[] {
     if (id === "") continue;
     const provenance = isRecord(entry.provenance) ? entry.provenance : null;
     const sync = isRecord(entry.sync) ? entry.sync : null;
-    const status = sync?.status;
-    const syncStatus =
-      status === "ok" || status === "degraded" || status === "error" || status === "skipped" ? status : null;
+    const parsedStatus = ReserveSyncStatusSchema.safeParse(sync?.status);
+    const syncStatus = parsedStatus.success ? parsedStatus.data : null;
     const scoringEligible =
       provenance != null && typeof provenance.scoringEligible === "boolean"
         ? provenance.scoringEligible

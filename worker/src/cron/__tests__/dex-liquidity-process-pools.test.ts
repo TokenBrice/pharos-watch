@@ -91,7 +91,7 @@ describe("processPoolMetrics", () => {
         })]]),
         uniV3PoolFees: new Map(), uniV3SymbolFees: new Map(), volumeObservedAtSec: nowSec,
       });
-      const processed = metrics.get("usdc-circle")!.topPools[0]!;
+      const processed = metrics.get("usdc-circle")!.pools[0]!;
       expect(processed.extra?.measurement?.balanceMeasured).toBe(measured);
       expect(processed.extra?.balanceRatio).toBe(measured ? 0 : undefined);
       expect(processed.extra?.balanceDetails).toEqual(measured ? [
@@ -108,7 +108,7 @@ describe("processPoolMetrics", () => {
         weightedBalanceRatio: measured ? 0 : null,
         balanceMeasuredTvlUsd: measured ? 100_000 : 0,
       });
-      await persistScores(db, metrics, scored.scores, scored.globalAgg, nowSec);
+      await persistScores(db, scored.scoredMetrics, scored.scores, scored.globalAgg, nowSec, scored.tvlStabilityMap);
       const stored = sqlite.prepare(
         "SELECT top_pools_json, weighted_balance_ratio, balance_measured_tvl_usd FROM dex_liquidity WHERE stablecoin_id = ?",
       ).get("usdc-circle") as {
@@ -138,18 +138,18 @@ describe("processPoolMetrics", () => {
     });
     expect(rejections).toEqual([]);
     for (const metric of metrics.values()) {
-      expect(rebuildMetricsFromPools(metric.topPools)).toMatchObject({ totalTvlUsd: 300_000, poolCount: 2 });
-      expect(metric.topPools.map((pool) => pool.poolId)).toEqual([
+      expect(rebuildMetricsFromPools(metric.pools)).toMatchObject({ totalTvlUsd: 300_000, poolCount: 2 });
+      expect(metric.pools.map((pool) => pool.poolId)).toEqual([
         `ethereum:defillama:${first.pool}`, `ethereum:defillama:${second.pool}`,
       ]);
-      expect(metric.topPools[0]?.candidateFingerprint).toBe(metric.topPools[1]?.candidateFingerprint);
+      expect(metric.pools[0]?.candidateFingerprint).toBe(metric.pools[1]?.candidateFingerprint);
     }
     const seen = new Map<string, GlobalPoolAggregateEntry>();
     const protocolTvl: Record<string, number> = {};
     const chainTvl: Record<string, number> = {};
     const chains = new Set<string>();
     const deltas = [...metrics.values()].map((metric) =>
-      accumulateGlobalAggregate(metric.topPools, protocolTvl, chainTvl, chains, seen));
+      accumulateGlobalAggregate(metric.pools, protocolTvl, chainTvl, chains, seen));
     expect(deltas.reduce((sum, delta) => sum + delta.totalTvl, 0)).toBe(300_000);
     expect(deltas.reduce((sum, delta) => sum + delta.poolCount, 0)).toBe(2);
     expect(summarizeRetainedPoolVolume([...seen.values()].map((pool) => ({
@@ -167,7 +167,7 @@ describe("processPoolMetrics", () => {
         symbolToChainScopedIds: buildSymbolToChainScopedIds(new Map([["USDC", ["usdc-circle"]]]), ["ethereum"]),
         chainAddressToId: new Map(), curvePoolMap: new Map(), uniV3PoolFees: new Map(), uniV3SymbolFees: new Map(),
       });
-      expect(metrics.get("usdc-circle")?.topPools.map((pool) => pool.poolId)).toEqual(["ethereum:defillama:healthy-provider-uuid"]);
+      expect(metrics.get("usdc-circle")?.pools.map((pool) => pool.poolId)).toEqual(["ethereum:defillama:healthy-provider-uuid"]);
       expect(rejections).toEqual([{
         reason: "conflicting-pool-observations", poolIds: ["same-provider-uuid"],
         count: 2, tvlUsd: field === "tvlUsd" ? 300_000 : 200_000,
@@ -225,9 +225,9 @@ describe("processPoolMetrics", () => {
     const db = makeNoopD1({ prepare: () => ({ bind: () => ({ all: async () => ({ results: [staged] }) }) }) });
     const result = await mergeStagedPools(db, metrics, createKnownPoolIdentityIndex(), now, new Map());
     const metric = metrics.get("crvusd-curve")!;
-    expect(metric.topPools).toHaveLength(1);
-    expect(metric.topPools[0]).toMatchObject({ poolId: `ethereum:${address}`, tvlUsd: 2_800_000 });
-    expect(rebuildMetricsFromPools(metric.topPools).totalTvlUsd).toBe(2_800_000);
+    expect(metric.pools).toHaveLength(1);
+    expect(metric.pools[0]).toMatchObject({ poolId: `ethereum:${address}`, tvlUsd: 2_800_000 });
+    expect(rebuildMetricsFromPools(metric.pools).totalTvlUsd).toBe(2_800_000);
     expect(result.skippedByExactIdentityCount).toBe(1);
     expect(result.mergedCount).toBe(0);
   });
@@ -269,8 +269,8 @@ describe("processPoolMetrics", () => {
       },
     ]);
     const { metrics } = result;
-    expect(metrics.get("usdc-circle")?.topPools).toHaveLength(1);
-    expect(metrics.get("usdc-circle")?.topPools[0]?.poolId).toBe("ethereum:defillama:0xvalid");
+    expect(metrics.get("usdc-circle")?.pools).toHaveLength(1);
+    expect(metrics.get("usdc-circle")?.pools[0]?.poolId).toBe("ethereum:defillama:0xvalid");
     expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("[dex-liquidity] Matched 1 stablecoins with DEX liquidity"));
   });
 
@@ -352,12 +352,12 @@ describe("processPoolMetrics", () => {
     }).metrics;
 
     const usdt = metrics.get("usdt-tether");
-    const pool = usdt?.topPools[0];
+    const pool = usdt?.pools[0];
     expect(pool?.poolType).toBe("uniswap-v3-5bp");
     expect(pool?.extra?.amplificationCoefficient).toBeUndefined();
     expect(pool?.extra?.registryId).toBeUndefined();
     expect(pool?.extra?.measurement?.balanceMeasured).toBe(false);
-    expect(rebuildMetricsFromPools(usdt?.topPools ?? []).totalTvlForBalance).toBe(0);
+    expect(rebuildMetricsFromPools(usdt?.pools ?? []).totalTvlForBalance).toBe(0);
   });
 
   it("matches pools without mutating canonical addresses, protects symbol collisions, and enriches pool extras", () => {
@@ -500,7 +500,7 @@ describe("processPoolMetrics", () => {
 
     const usdt = metrics.get("usdt-tether");
     expect(usdt).toBeDefined();
-    const rebuiltUsdt = rebuildMetricsFromPools(usdt?.topPools ?? []);
+    const rebuiltUsdt = rebuildMetricsFromPools(usdt?.pools ?? []);
     expect(rebuiltUsdt.totalTvlUsd).toBe(2_650_000);
     expect(rebuiltUsdt.poolCount).toBe(5);
     expect(rebuiltUsdt.protocolTvl).toEqual({
@@ -518,7 +518,7 @@ describe("processPoolMetrics", () => {
     expect(rebuiltUsdt.totalTvlForOrganic).toBe(1_400_000);
     expect(rebuiltUsdt.oldestPoolDays).toBe(200);
 
-    const curveAddressPool = usdt?.topPools.find((pool) => pool.poolId === "ethereum:defillama:0xcurve1");
+    const curveAddressPool = usdt?.pools.find((pool) => pool.poolId === "ethereum:defillama:0xcurve1");
     expect(curveAddressPool).toMatchObject({
       poolType: "curve-stableswap-high-a",
       extra: {
@@ -533,7 +533,7 @@ describe("processPoolMetrics", () => {
     });
     expect(curveAddressPool?.extra?.effectiveTvl).toBe(643988);
 
-    const curveFallbackPool = usdt?.topPools.find((pool) => pool.poolId === "ethereum:defillama:0xcurve2");
+    const curveFallbackPool = usdt?.pools.find((pool) => pool.poolId === "ethereum:defillama:0xcurve2");
     expect(curveFallbackPool).toMatchObject({
       poolType: "curve-cryptoswap",
       extra: {
@@ -545,7 +545,7 @@ describe("processPoolMetrics", () => {
     });
     expect(curveFallbackPool?.extra?.effectiveTvl).toBe(132583);
 
-    const uniAddressPool = usdt?.topPools.find((pool) => pool.poolId === "ethereum:defillama:0xuni1");
+    const uniAddressPool = usdt?.pools.find((pool) => pool.poolId === "ethereum:defillama:0xuni1");
     expect(uniAddressPool).toMatchObject({
       poolType: "uniswap-v3-1bp",
       extra: {
@@ -556,11 +556,11 @@ describe("processPoolMetrics", () => {
     });
 
     const usdc = metrics.get("usdc-circle");
-    const rebuiltUsdc = rebuildMetricsFromPools(usdc?.topPools ?? []);
+    const rebuiltUsdc = rebuildMetricsFromPools(usdc?.pools ?? []);
     expect(rebuiltUsdc.poolCount).toBe(3);
     expect(rebuiltUsdc.totalTvlUsd).toBe(1_450_000);
 
-    const uniSymbolPool = usdc?.topPools.find((pool) => pool.poolId === "ethereum:defillama:0xuni2");
+    const uniSymbolPool = usdc?.pools.find((pool) => pool.poolId === "ethereum:defillama:0xuni2");
     expect(uniSymbolPool).toMatchObject({
       poolType: "uniswap-v3-30bp",
       extra: {
@@ -570,12 +570,12 @@ describe("processPoolMetrics", () => {
       },
     });
 
-    const aerodromePool = usdc?.topPools.find((pool) => pool.poolId === "base:defillama:0xaero");
+    const aerodromePool = usdc?.pools.find((pool) => pool.poolId === "base:defillama:0xaero");
     expect(aerodromePool?.poolType).toBe("aerodrome-volatile");
 
     const usde = metrics.get("usde-ethena");
-    expect(rebuildMetricsFromPools(usde?.topPools ?? []).poolCount).toBe(1);
-    expect(usde?.topPools[0]?.poolType).toBe("uniswap-v3-30bp");
+    expect(rebuildMetricsFromPools(usde?.pools ?? []).poolCount).toBe(1);
+    expect(usde?.pools[0]?.poolType).toBe("uniswap-v3-30bp");
   });
 
   it("does not learn wrapper addresses from positional DeFiLlama symbols", () => {
@@ -606,7 +606,7 @@ describe("processPoolMetrics", () => {
     }).metrics;
 
     expect(chainAddressToId.get("base:0xwabasgho")).toBeUndefined();
-    const rebuilt = rebuildMetricsFromPools(metrics.get("usr-resolv")?.topPools ?? []);
+    const rebuilt = rebuildMetricsFromPools(metrics.get("usr-resolv")?.pools ?? []);
     expect(rebuilt.poolCount).toBe(1);
     expect(rebuilt.totalTvlUsd).toBe(200_000);
   });
@@ -642,8 +642,8 @@ describe("processPoolMetrics", () => {
     expect(warnSpy).toHaveBeenCalledWith(
       expect.stringContaining("[dex-liquidity] DEX project index is empty — project whitelist filter disabled for this run"),
     );
-    expect(rebuildMetricsFromPools(metrics.get("usdt-tether")?.topPools ?? []).poolCount).toBe(1);
-    expect(rebuildMetricsFromPools(metrics.get("usdc-circle")?.topPools ?? []).poolCount).toBe(1);
+    expect(rebuildMetricsFromPools(metrics.get("usdt-tether")?.pools ?? []).poolCount).toBe(1);
+    expect(rebuildMetricsFromPools(metrics.get("usdc-circle")?.pools ?? []).poolCount).toBe(1);
   });
 
   it("skips blocked dead DEX variants including bunni", () => {
@@ -702,7 +702,7 @@ describe("processPoolMetrics", () => {
     const m = metrics.get("usdt-tether");
     expect(m).toBeDefined();
     // NaN apyBase should not mark organic fraction as measured
-    expect(rebuildMetricsFromPools(m!.topPools).totalTvlForOrganic).toBe(0);
+    expect(rebuildMetricsFromPools(m!.pools).totalTvlForOrganic).toBe(0);
   });
 
   it("uses apyBase fallback when apy is Infinity (avoids NaN from division)", () => {
@@ -725,7 +725,7 @@ describe("processPoolMetrics", () => {
     const m = metrics.get("usdt-tether");
     expect(m).toBeDefined();
     // apyBase is finite and positive → else-if branch sets organicFraction=1.0
-    expect(rebuildMetricsFromPools(m!.topPools).totalTvlForOrganic).toBe(100_000);
+    expect(rebuildMetricsFromPools(m!.pools).totalTvlForOrganic).toBe(100_000);
   });
 
   it("normalizes top-pool project labels for DeFiLlama Orca rows", () => {
@@ -761,8 +761,8 @@ describe("processPoolMetrics", () => {
       uniV3SymbolFees: new Map(),
     }).metrics;
 
-    expect(metrics.get("usdc-circle")?.topPools[0]?.project).toBe("orca");
-    expect(metrics.get("usdt-tether")?.topPools[0]?.project).toBe("orca");
+    expect(metrics.get("usdc-circle")?.pools[0]?.project).toBe("orca");
+    expect(metrics.get("usdt-tether")?.pools[0]?.project).toBe("orca");
   });
 
   it("Curve metapool dedup: uses metapoolAdjustedTvl not raw usdTotal for effective and protocol TVL", () => {
@@ -820,18 +820,18 @@ describe("processPoolMetrics", () => {
 
     const usdc = metrics.get("usdc-circle");
     expect(usdc).toBeDefined();
-    const rebuiltUsdc = rebuildMetricsFromPools(usdc?.topPools ?? []);
+    const rebuiltUsdc = rebuildMetricsFromPools(usdc?.pools ?? []);
     // totalTvlUsd (and protocolTvl) rebuilt from metapoolAdjustedTvl, not raw 100M
     expect(rebuiltUsdc.totalTvlUsd).toBe(60_000_000);
     expect(rebuiltUsdc.protocolTvl.curve).toBe(60_000_000);
     // Top-pool row mirrors the metapool-adjusted TVL — not the raw $100M DL number
-    expect(usdc?.topPools[0]?.tvlUsd).toBe(60_000_000);
+    expect(usdc?.pools[0]?.tvlUsd).toBe(60_000_000);
     // Quality and effective TVL both use Curve's base-pool-excluded value,
     // keeping the quality numerator on the retained TVL denominator's basis.
     expect(rebuiltUsdc.qualityAdjustedTvl).toBe(51_000_000);
     expect(rebuiltUsdc.effectiveTvl).toBe(51_000_000);
-    expect(usdc?.topPools[0]?.extra?.qualityAdjustedTvl).toBe(51_000_000);
-    expect(usdc?.topPools[0]?.extra?.effectiveTvl).toBe(51_000_000);
+    expect(usdc?.pools[0]?.extra?.qualityAdjustedTvl).toBe(51_000_000);
+    expect(usdc?.pools[0]?.extra?.effectiveTvl).toBe(51_000_000);
   });
 
 
@@ -882,7 +882,7 @@ describe("processPoolMetrics", () => {
 
     const usdc = metrics.get("usdc-circle");
     expect(usdc).toBeDefined();
-    const topPool = usdc!.topPools[0]!;
+    const topPool = usdc!.pools[0]!;
     // Address-grade fingerprint match: metapool-adjusted TVL replaces the row's own TVL.
     expect(topPool.tvlUsd).toBe(900_000);
     const model = topPool.extra?.ammExecutionModel;
@@ -936,13 +936,13 @@ describe("processPoolMetrics", () => {
       uniV3SymbolFees: new Map(),
     }).metrics;
 
-    expect(metrics.get("usdc-circle")?.topPools[0]?.extra).toMatchObject({
+    expect(metrics.get("usdc-circle")?.pools[0]?.extra).toMatchObject({
       executionCapabilityGate: {
         family: "curve-cryptoswap",
         reason: "unsupported-invariant",
       },
     });
-    expect(metrics.get("usdc-circle")?.topPools[0]?.extra?.ammExecutionModel).toBeUndefined();
+    expect(metrics.get("usdc-circle")?.pools[0]?.extra?.ammExecutionModel).toBeUndefined();
   });
 
   it("promotes a uniquely TVL-matched active Curve CryptoSwap row to an exact measured target", () => {
@@ -995,7 +995,7 @@ describe("processPoolMetrics", () => {
         measuredTargetCapturedAt: 1_752_500_000,
         validationReferences: undefined,
         curvePoolCandidatesByFingerprint: candidateMap,
-      }).metrics.get("crvusd-curve")?.topPools[0];
+      }).metrics.get("crvusd-curve")?.pools[0];
 
     const retained = run(new Map([[fingerprintKey, [candidate, sibling]]]));
     expect(retained?.tvlUsd).toBe(46_360_886);
@@ -1075,7 +1075,7 @@ describe("processPoolMetrics", () => {
         uniV3PoolFees: new Map(),
         uniV3SymbolFees: new Map(),
       }).metrics;
-      const retainedPools = metrics.get("usdc-circle")?.topPools ?? [];
+      const retainedPools = metrics.get("usdc-circle")?.pools ?? [];
       expect(retainedPools, testCase.name).toHaveLength(1);
       expect(retainedPools[0]?.extra, testCase.name).toMatchObject({
         executionCapabilityGate: {
@@ -1130,19 +1130,19 @@ describe("processPoolMetrics", () => {
     }).metrics.get("thusd-theo")!;
     const measured = run([candidate]);
     const unresolved = run([]);
-    expect(measured.topPools).toHaveLength(1);
-    expect(measured.topPools[0]).toMatchObject({ poolId: `ethereum:${poolId}`,
+    expect(measured.pools).toHaveLength(1);
+    expect(measured.pools[0]).toMatchObject({ poolId: `ethereum:${poolId}`,
       tvlUsd: 5_561_855, volumeUsd1d: 10_000, volumeUsd7d: 70_000,
       extra: { measuredExecutionTarget: { poolId: `ethereum:${poolId}`,
         tokenIn: { trackedAssetId: "thusd-theo" } } } });
-    expect(rebuildMetricsFromPools(measured.topPools)).toMatchObject({
+    expect(rebuildMetricsFromPools(measured.pools)).toMatchObject({
       totalTvlUsd: 5_561_855, poolCount: 1,
     });
-    expect(unresolved.topPools[0]).toMatchObject({
+    expect(unresolved.pools[0]).toMatchObject({
       tvlUsd: 5_561_855, volumeUsd1d: 10_000, volumeUsd7d: 70_000,
     });
-    expect(unresolved.topPools).toHaveLength(1);
-    expect(unresolved.topPools[0]?.extra?.executionCapabilityGate?.reason).toBe("target-unresolved");
+    expect(unresolved.pools).toHaveLength(1);
+    expect(unresolved.pools[0]?.extra?.executionCapabilityGate?.reason).toBe("target-unresolved");
   });
 
   it("attaches V4 targets only for one exact hook-free candidate", () => {
@@ -1216,7 +1216,7 @@ describe("processPoolMetrics", () => {
         validationReferences: undefined,
         curvePoolCandidatesByFingerprint: new Map(),
         uniswapV4ExecutionCandidates: new Map([[key, candidates]]),
-      }).metrics.get("usdc-circle")?.topPools[0];
+      }).metrics.get("usdc-circle")?.pools[0];
 
     expect(run([candidate])?.extra?.measuredExecutionTarget).toMatchObject({
       adapterProfileId: "uniswap-v4-hook-free-quoter-v1",

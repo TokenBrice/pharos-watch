@@ -29,14 +29,6 @@ export type DependencyRejectionReason =
 
 export type DerivedDependency = DependencyWeight & { intermediary?: ReserveIntermediary };
 
-class DependencyDerivationError extends Error {
-  readonly code = "manual-collateral-not-in-reserves";
-  constructor(readonly rejectionReasons: DependencyRejectionReason[]) {
-    super("Manual collateral dependencies must be represented by linked reserve identities");
-    this.name = "DependencyDerivationError";
-  }
-}
-
 export interface DerivedDependencySet {
   dependencies: DerivedDependency[];
   source: DependencyDerivationSource;
@@ -181,25 +173,6 @@ function mixedSourceRejections(
         }]
       : [],
   );
-}
-/**
- * Derives dependency weights from curated reserve composition.
- * Reserve slices with `coinId` are converted to dependency entries, and
- * manual collateral weights remain the fallback when reserves have no links.
- * Manual structural relationships survive either composition source.
- */
-export function deriveDependencies(
-  meta: Pick<StablecoinMeta, "reserves" | "dependencies"> & Partial<Pick<StablecoinMeta, "id">>,
-): DerivedDependency[] {
-  const reserves = meta.reserves;
-  if (!reserves?.length) return meta.dependencies ?? [];
-
-  const reserveDependencies = aggregateReserveDependencies(reserves, meta.id);
-  if (reserveDependencies.length === 0) return meta.dependencies ?? [];
-  const rejectionReasons = mixedSourceRejections(meta.dependencies ?? [], reserveDependencies);
-  if (rejectionReasons.length > 0) throw new DependencyDerivationError(rejectionReasons);
-
-  return injectStructuralDependencies(reserveDependencies, meta);
 }
 
 function deriveCuratedDependencySet(

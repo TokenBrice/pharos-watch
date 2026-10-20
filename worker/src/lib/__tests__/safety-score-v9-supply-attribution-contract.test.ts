@@ -4,6 +4,13 @@ import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { WM_SUPPLY_ATTRIBUTION_MAX_POST_CLOCK_SEC } from "@shared/lib/safety-score-v9-supply-attribution-journal";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
+  ReviewedDeploymentUnitPartitionSchema,
+  XautRepresentationGroupSupplyAttributionV2Schema,
+  type ReviewedDeploymentSupplyObservation,
+  type XautLockMintObservation,
+  type XautRepresentationGroupSupplyAttributionV2,
+} from "@shared/types/safety-score-v9-supply-attribution";
+import {
   corruptWmDeploymentObservation,
   corruptXautObservation,
   makeWmDeploymentObservations,
@@ -17,15 +24,12 @@ import {
   reviewedDeploymentAttributionValidationError,
   reviewedDeploymentObservationTimingIssue,
   reviewedDeploymentIdentityValidationError,
-  type ReviewedDeploymentSupplyObservation,
 } from "../safety-score-v9/supply-attribution-contract";
 import {
   buildXautRepresentationGroupInventory,
   deriveXautRepresentationGroupSupplyAttribution,
   XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC,
   xautRepresentationGroupAttributionValidationError,
-  type XautLockMintObservation,
-  type XautRepresentationGroupSupplyAttributionV2,
 } from "../safety-score-v9/xaut-supply-attribution-contract";
 
 const AGGREGATE_SUPPLY_USD = 87_020_618.58982982;
@@ -67,6 +71,24 @@ function derive(rows = observations(), clockSec = CLOCK_SEC) {
 }
 
 describe("reviewed deployment supply attribution contract", () => {
+  it("preserves canonical unit packets and strict observed-zero wire constraints", () => {
+    const attribution = derive()!;
+    expect(stableJsonStringifyV1(ReviewedDeploymentUnitPartitionSchema.parse(attribution)))
+      .toBe(stableJsonStringifyV1(attribution));
+    const zeroRow = attribution.deployments.find(row => row.rawSupply === "0")!;
+    expect(zeroRow.currentSupplyUsd).toBe(0);
+    expect(ReviewedDeploymentUnitPartitionSchema.safeParse({ ...attribution, deployments: [zeroRow] }).success).toBe(false);
+    for (const patch of [{ currentSupplyUsd: -1 }, { decimals: 37 }, { rawSupply: "01" }, { runtimeCodeSha256: "invalid" }, { extra: true }]) {
+      expect(ReviewedDeploymentUnitPartitionSchema.safeParse({
+        ...attribution, deployments: [{ ...zeroRow, ...patch }, ...attribution.deployments],
+      }).success).toBe(false);
+    }
+    const padded = { ...zeroRow, routeId: ` ${zeroRow.routeId} ` };
+    expect(ReviewedDeploymentUnitPartitionSchema.parse({
+      ...attribution, deployments: [padded, ...attribution.deployments],
+    }).deployments[0]!.routeId).toBe(zeroRow.routeId);
+  });
+
   it("checks only the pinned deployment identity when an expected deployment is supplied", () => {
     const row = observations()[0]!;
     expect(
@@ -487,6 +509,28 @@ function xautObservation(): XautLockMintObservation {
 }
 
 describe("XAUT representation-group supply attribution contract", () => {
+  it("preserves canonical XAUT packets and positive group wire constraints", () => {
+    const attribution = deriveXautRepresentationGroupSupplyAttribution({
+      aggregateSupplyUsd: XAUT_AGGREGATE_SUPPLY_USD,
+      registryFingerprint: REGISTRY_FINGERPRINT,
+      scoringClockSec: CLOCK_SEC,
+      observation: xautObservation(),
+    })!;
+    expect(stableJsonStringifyV1(XautRepresentationGroupSupplyAttributionV2Schema.parse(attribution)))
+      .toBe(stableJsonStringifyV1(attribution));
+    for (const patch of [{ currentSupplyUsd: 0 }, { routeIds: [] }, { failureDomainKeys: [] }, { extra: true }]) {
+      expect(XautRepresentationGroupSupplyAttributionV2Schema.safeParse({
+        ...attribution, representationGroup: { ...attribution.representationGroup, ...patch },
+      }).success).toBe(false);
+    }
+    expect(XautRepresentationGroupSupplyAttributionV2Schema.safeParse({
+      ...attribution, canonical: { ...attribution.canonical, currentSupplyUsd: 0 },
+    }).success).toBe(false);
+    expect(XautRepresentationGroupSupplyAttributionV2Schema.safeParse({
+      ...attribution, observation: { ...attribution.observation, canonicalTotalSupplyRaw: "01" },
+    }).success).toBe(false);
+  });
+
   it("binds all reviewed XAUt0 routes to one conserved group", () => {
     const inventory = buildXautRepresentationGroupInventory();
     expect(inventory).toMatchObject({

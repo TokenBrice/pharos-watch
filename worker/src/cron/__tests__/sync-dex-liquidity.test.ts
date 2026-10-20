@@ -73,6 +73,7 @@ const phaseFixtures = vi.hoisted(() => {
         deadPoolUnindexedChainSkips: {},
       },
       scores: {
+        scoredMetrics: new Map(),
         measuredTargetInventory: { mode: "active", active: [], shadow: [] },
         scores: new Map([["usdt-tether", { coverageClass: "primary", tvl: 0 }]]),
         globalAgg: { totalTvl: 0 },
@@ -139,7 +140,6 @@ vi.mock("../dex-liquidity/scoring", () => ({
   loadCurrentDexScoringGenerationId: vi.fn(async () => null),
   computeStablecoinScores: vi.fn(async () => phaseFixtures.current.scores),
   publishStablecoinScoreTargets: vi.fn(async () => {}),
-  computeDepthStability: vi.fn(async () => {}),
   computeDexPrices: vi.fn(async () => {}),
 }));
 
@@ -297,7 +297,6 @@ import { fetchPancakeSwapPools } from "../dex-liquidity/fetch-pancakeswap";
 import { fetchSlipstreamPools } from "../dex-liquidity/fetch-slipstream";
 import { fetchUniswapV3BscShadowPools } from "../dex-liquidity/fetch-uniswap-v3-bsc";
 import {
-  computeDepthStability,
   computeDexPrices,
   computeStablecoinScores,
   publishStablecoinScoreTargets,
@@ -545,7 +544,6 @@ describe("dex liquidity scoring stage cycle", () => {
     expect(computeDexPrices).not.toHaveBeenCalled();
     expect(publishDexPriceChallengerSnapshots).not.toHaveBeenCalled();
     expect(writeHistoricalSnapshots).not.toHaveBeenCalled();
-    expect(computeDepthStability).not.toHaveBeenCalled();
   });
 
   it("returns degraded when DL fails but Curve succeeds", async () => {
@@ -647,6 +645,7 @@ describe("dex liquidity scoring stage cycle", () => {
       dlProtocolsAvailable: true,
     });
     vi.mocked(computeStablecoinScores).mockResolvedValueOnce({
+      scoredMetrics: new Map(),
       measuredTargetInventory: { mode: "active", active: [], shadow: [] },
       scores: new Map([["usdt-tether", { coverageClass: "primary", tvl: 2_000_000_000 }]]),
       globalAgg: { totalTvl: 2_000_000_000 },
@@ -794,6 +793,7 @@ describe("dex liquidity scoring stage cycle", () => {
       phaseFixtures.current.scores.scores,
       phaseFixtures.current.scores.globalAgg,
       expect.any(Number),
+      phaseFixtures.current.scores.tvlStabilityMap,
       undefined,
       phaseFixtures.current.scores.diagnostics.routeRemovalEvidence,
     );
@@ -1260,7 +1260,7 @@ describe("dex liquidity scoring stage cycle", () => {
     let observations: unknown;
     const publishPrices = vi.mocked(computeDexPrices).getMockImplementation()!;
     vi.mocked(computeDexPrices).mockImplementationOnce(async (...args) => {
-      observations = structuredClone(args[5]?.get("usdc-circle"));
+      observations = structuredClone(args[0].exactPriceEvidenceByStablecoin?.get("usdc-circle"));
       return publishPrices(...args);
     });
     vi.spyOn(priceValidation, "loadPriceValidationReferences").mockResolvedValueOnce({
@@ -1345,6 +1345,7 @@ describe("dex liquidity scoring stage cycle", () => {
       ]),
     );
     vi.mocked(computeStablecoinScores).mockResolvedValueOnce({
+      scoredMetrics: new Map(),
       measuredTargetInventory: { mode: "active", active: [], shadow: [] },
       scores: new Map([
         [

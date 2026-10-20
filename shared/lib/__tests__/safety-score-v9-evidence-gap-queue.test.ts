@@ -9,7 +9,8 @@ import {
   V9EvidenceGapQueueV2Schema,
 } from "@shared/types/safety-score-v9-evidence-queue";
 import type { V9EvidenceResponsibility } from "@shared/types/safety-score-v9-fact-primitives";
-import type { V9FactSetCoreV3 } from "@shared/types/safety-score-v9-facts";
+import { factStatuses, V9FactStatusV2Schema, type V9FactSetCoreV3, type V9FactStatusV2 } from "@shared/types/safety-score-v9-facts";
+import { compileNativeV3FactSet, coreFixture } from "./safety-score-v9-facts.fixture-support";
 
 const AS_OF_SEC = 1_000;
 const BASE_INPUT_GENERATION_ID = `report-cards-input:v1:${"a".repeat(64)}`;
@@ -283,6 +284,114 @@ function factSetV3WithResponsibility(responsibility: V9EvidenceResponsibility) {
 }
 
 describe("Safety Score v9 evidence-gap queue", () => {
+  it("matches every nested status location against an independent structural census", () => {
+    const asset: V9FactSetCoreV3["assets"][number] =
+      structuredClone(compileNativeV3FactSet(coreFixture()).assets[0]!);
+    const status = asset.implementation.status;
+    const review = asset.mechanismRiskReview.review;
+    if (review?.archetype !== "fiat-cash") throw new Error("Expected fiat-cash fixture");
+    review.claimAndSegregation = {
+      ...review.claimAndSegregation,
+      constraints: [{ factKey: "constraint", quality: "strong", status }],
+      scopedAssessments: [{ scopeId: "scope", share: 1, quality: "strong", status }],
+    };
+    asset.lenderBook = { status, acceptedSourceStatus: status, latestAttemptStatus: status,
+      observation: null, collaterals: [] };
+    asset.reserveExposures[0]!.factorStatuses = { assetClass: status };
+    asset.reserveResiduals = [{ residualId: "residual", weight: 0.1, status }];
+    asset.reserveBoundFacts = [{
+      status, sourceGenerationId: "research:g1", freshnessMaxAgeSec: 200, rejectionReason: null,
+      fact: { factKey: "bound", kind: "maturity-applicability", scope: { kind: "exposure", exposureKey: "exposure:cash" },
+        asOfSec: 900, publisher: "fixture", sourceUrls: ["https://example.com/bound"], assertion: "Open-ended claim.",
+        contentDigest: "a".repeat(64), claimId: "claim", conclusion: "open-ended", governingInstrument: "terms",
+        allInScope: true, provenance: { kind: "reviewed-research", reviewedAt: "1970-01-01", reviewer: "fixture", confidence: "high" } },
+    }];
+    asset.exitRoutes[0]!.factorStatuses = { capacity: status };
+    asset.controls[0]!.factorStatuses = { authority: status };
+    asset.operationalResilienceStatus = status;
+    const localFact = { status, disposition: "unresearched" as const, assessment: null, signals: [], evidenceRefIds: [] };
+    asset.wrapperLocalFacts = {
+      schemaVersion: 1, applicability: "wrapper", form: "pure", formDisposition: "unresearched",
+      formStatus: status, formSignals: [], formEvidenceRefIds: [], evidenceRefIds: [],
+      facts: { contractMutability: localFact, custodyEscrow: localFact, strategyComplexity: localFact,
+        leverage: localFact, rehypothecationCorrelation: localFact, shareAccountingNavOracle: localFact,
+        withdrawalTerms: localFact, measuredUnwind: localFact, lossAbsorptionEmergencyControls: localFact },
+      riskTransfer: { status, disposition: "unresearched", mechanism: "unknown",
+        maximumParentLossAbsorptionPoints: 0, signals: [], evidenceRefIds: [] },
+    };
+    asset.economicControlReview.mint.factorStatuses = { reconciliation: status };
+    asset.economicControlReview.oracle.factorStatuses = { tier: status };
+    asset.economicControlReview.oracle.branches = [{ branch: "collateral-parameter", status,
+      controlKey: null, mechanismKey: null, inheritedFromAssetId: null }];
+    asset.economicControlReview.bridge.factorStatuses = { tier: status };
+    asset.economicControlReview.bridge.routes = [{ controlKey: "bridge", tier: "opaque-or-unknown", factorStatuses: { tier: status } }];
+    const identity = { chainId: "ethereum", claimAddress: "claim" };
+    asset.accessReview.freeze.reviews = [{ reviewKey: "freeze", source: "freeze", status,
+      reach: "none", controlKey: null, upstreamAssetId: null, failureDomains: [] }];
+    asset.accessReview.freeze.claimGraph = {
+      assetId: asset.assetId, graphKey: "graph", rootNodeKey: "node", clockSec: AS_OF_SEC, generationId: BASE_INPUT_GENERATION_ID,
+      nodes: [{ nodeKey: "node", identity, assetId: asset.assetId, noCurrentReach: true, status }],
+      edges: [{ edgeKey: "edge", fromNodeKey: "node", toNodeKey: "node", kind: "reserve-position",
+        positionKey: "position", partitionKey: "partition", basis: { kind: "selected-observation" },
+        reachesHeldClaim: false, enabled: true, weight: 1, status }],
+      authorities: [{ authorityKey: "authority", nodeKey: "node", actingDeployment: identity,
+        controllerKey: null, capability: "freeze", reach: "none", failureDomains: [], status }],
+      partitions: [{ partitionKey: "partition", nodeKey: "node", disjoint: true, complete: true,
+        denominatorEstablished: true, status }],
+      unresolved: [{ branchKey: "branch", nodeKey: "node", reason: "research-incomplete", responsibility: "unresearched", status }],
+    };
+    const structuralStatuses = (value: unknown): V9FactStatusV2[] => {
+      const parsed = V9FactStatusV2Schema.safeParse(value);
+      if (parsed.success) return [parsed.data];
+      return value !== null && typeof value === "object" ? Object.values(value).flatMap(structuralStatuses) : [];
+    };
+    const rows = factStatuses(asset);
+    expect(rows.map(row => JSON.stringify(row.status)).sort()).toEqual(
+      structuralStatuses(asset).map(status => JSON.stringify(status)).sort(),
+    );
+    expect(rows.map(row => row.label).sort()).toEqual([
+      "implementation", "mechanism-review", "dependencies", "reserve-envelope",
+      "mechanism-review:claimAndSegregation", "mechanism-review:custodyContinuity",
+      "mechanism-review:assuranceAndReconciliation",
+      "mechanism-review:claimAndSegregation:factor:constraint", "mechanism-review:claimAndSegregation:scope:scope",
+      "lenderBook", "lenderBook:accepted-source", "lenderBook:latest-attempt",
+      ...asset.reserveExposures.map(row => `reserve:${row.exposureKey}`),
+      `reserve:${asset.reserveExposures[0]!.exposureKey}:assetClass`, "residual:residual", "reserve-bound:bound",
+      "exit-envelope", ...asset.exitRoutes.flatMap(row => [`route:${row.routeKey}`, `route-output:${row.routeKey}`]),
+      `route:${asset.exitRoutes[0]!.routeKey}:capacity`,
+      "control-envelope", "operational-resilience", ...asset.controls.map(row => `control:${row.controlKey}`),
+      `control:${asset.controls[0]!.controlKey}:authority`,
+      "wrapper:form", "wrapper:contractMutability", "wrapper:custodyEscrow", "wrapper:strategyComplexity",
+      "wrapper:leverage", "wrapper:rehypothecationCorrelation", "wrapper:shareAccountingNavOracle",
+      "wrapper:withdrawalTerms", "wrapper:measuredUnwind", "wrapper:lossAbsorptionEmergencyControls", "wrapper:risk-transfer",
+      "economic-control:mint", "economic-control:mint:reconciliation", "economic-control:oracle",
+      "economic-control:oracle:tier", "economic-control:oracle:collateral-parameter", "economic-control:bridge",
+      "economic-control:bridge:tier", "economic-control:bridge:bridge:tier", "access:transfer", "access:freeze",
+      "access:freeze:freeze", "access:graph:node:node", "access:graph:edge:edge",
+      "access:graph:authority:authority", "access:graph:partition:partition", "access:graph:unresolved:branch",
+      "peg", "supply",
+    ].sort());
+    const { wrapperLocalFacts: _wrapper, reserveResiduals: _residuals, ...historical } = asset;
+    expect(factStatuses(historical).some(row => row.label.startsWith("wrapper:") || row.label.startsWith("residual:"))).toBe(false);
+  });
+
+  it.each([false, true])("keeps mixed shared-gap applicability unresolved with unresolved-first=%s", (unresolvedFirst) => {
+    const core = factSetCore();
+    const asset = core.assets[0]!;
+    const original = asset.implementation.status;
+    const status: V9FactStatusV2 = { ...original,
+      applicability: {
+        state: "unresolved", policyRuleId: original.applicability.policyRuleId, rationale: "Applicability remains unresolved.",
+        gapId: original.gapIds[0]!,
+      } };
+    asset.implementation.status = unresolvedFirst ? status : original;
+    asset.lenderBook = { status: unresolvedFirst ? original : status,
+      acceptedSourceStatus: original, observation: null, collaterals: [] };
+    const queue = buildV9EvidenceGapQueue({ factSet: compileV9FactSetV3(core), policy: loadV9MethodologyPolicy(policyAsset) });
+    expect(queue.entries).toHaveLength(1);
+    expect(queue.entries[0]).toMatchObject({ applicability: "unresolved", cause: "U", action: "resolve-applicability" });
+  });
+
   it("collects lender collateral, accepted-source and latest-attempt gaps from their fact statuses", () => {
     const core = factSetCore();
     const asset = core.assets[0]!;

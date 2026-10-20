@@ -149,6 +149,18 @@ describe("useEvents", () => {
     expect(schema?.safeParse({ events: [{ id: "incomplete" }], nextCursor: null }).success).toBe(false);
   });
 
+  it("resolves one exact permalink without reading a capped latest buffer", () => {
+    useRegisteredApiQueryMock.mockReturnValue({ data: undefined, meta: null });
+    renderHook(() => useLatestEvents({ eventId: "old freeze/id", coin: "usdc-circle", limit: 200 }));
+    expect(useRegisteredApiQueryMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        path: "/api/events?event=old+freeze%2Fid",
+        queryKey: ["events", "latest", expect.objectContaining({ event: "old freeze/id" })],
+      }),
+      { enabled: true },
+    );
+  });
+
   it("uses the canonical Tape events runtime schema for latest-event queries", async () => {
     useRegisteredApiQueryMock.mockReturnValue({ data: undefined, meta: null });
 

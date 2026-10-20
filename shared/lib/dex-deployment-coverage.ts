@@ -50,7 +50,6 @@ export interface DexDiscoveryProviderAdapter {
   scope: "exhaustive" | "paginated-exhaustive" | "supplemental";
   requestCostMs: number;
   executionOrder: number;
-  timeoutMs: number;
   crawlerLeaf?: DexDiscoveryCrawlerLeafId;
 }
 
@@ -367,54 +366,54 @@ export function isDexCensusAttemptComplete(
 export const DEX_DISCOVERY_PROVIDER_REGISTRY: readonly DexDiscoveryProviderAdapter[] = [
   {
     providerId: "coingecko", lifecycle: "active", supports: (chain) => Boolean(CG_CHAIN_MAP[chain]),
-    scope: "paginated-exhaustive", requestCostMs: 1_450, executionOrder: 10, timeoutMs: 15_000,
+    scope: "paginated-exhaustive", requestCostMs: 1_450, executionOrder: 10,
     crawlerLeaf: "coingecko",
   },
   {
     providerId: "geckoterminal", lifecycle: "active",
     supports: (chain, address) => getGeckoTerminalDiscoveryNetwork(chain, address) != null,
-    scope: "paginated-exhaustive", requestCostMs: 2_800, executionOrder: 20, timeoutMs: 15_000,
+    scope: "paginated-exhaustive", requestCostMs: 2_800, executionOrder: 20,
     crawlerLeaf: "geckoterminal",
   },
   {
     providerId: "dexscreener", lifecycle: "active", supports: (chain) => Boolean(DS_CHAIN_MAP[chain]),
-    scope: "exhaustive", requestCostMs: 1_700, executionOrder: 30, timeoutMs: 15_000,
+    scope: "exhaustive", requestCostMs: 1_700, executionOrder: 30,
     crawlerLeaf: "dexscreener",
   },
   {
     providerId: "curve", lifecycle: "active", supports: (chain) => CURVE_NATIVE_DISCOVERY_CHAINS.has(chain),
-    scope: "supplemental", requestCostMs: 1_200, executionOrder: 40, timeoutMs: 15_000, crawlerLeaf: "curve",
+    scope: "supplemental", requestCostMs: 1_200, executionOrder: 40, crawlerLeaf: "curve",
   },
   {
     providerId: "horizon", lifecycle: "active", supports: isHorizonDiscoveryDeployment,
-    scope: "paginated-exhaustive", requestCostMs: 1_600, executionOrder: 50, timeoutMs: 15_000,
+    scope: "paginated-exhaustive", requestCostMs: 1_600, executionOrder: 50,
     crawlerLeaf: "horizon",
   },
   {
     providerId: "aquarius", lifecycle: "active", supports: isAquariusSorobanDeployment,
-    scope: "supplemental", requestCostMs: 8_000, executionOrder: 60, timeoutMs: 15_000, crawlerLeaf: "aquarius",
+    scope: "supplemental", requestCostMs: 8_000, executionOrder: 60, crawlerLeaf: "aquarius",
   },
   {
     providerId: "tezos", lifecycle: "active", supports: isTezosDiscoveryDeployment,
-    scope: "exhaustive", requestCostMs: 16_000, executionOrder: 70, timeoutMs: 15_000, crawlerLeaf: "tezos",
+    scope: "exhaustive", requestCostMs: 16_000, executionOrder: 70, crawlerLeaf: "tezos",
   },
   {
     providerId: "icon-balanced", lifecycle: "active", supports: isIconBalancedDiscoveryDeployment,
-    scope: "supplemental", requestCostMs: 8_000, executionOrder: 80, timeoutMs: 15_000,
+    scope: "supplemental", requestCostMs: 8_000, executionOrder: 80,
     crawlerLeaf: "icon-balanced",
   },
   {
     providerId: "kava-swap", lifecycle: "active", supports: isKavaSwapDiscoveryDeployment,
-    scope: "supplemental", requestCostMs: 16_000, executionOrder: 90, timeoutMs: 15_000,
+    scope: "supplemental", requestCostMs: 16_000, executionOrder: 90,
     crawlerLeaf: "kava-swap",
   },
   {
     providerId: "osmosis-sqs", lifecycle: "active", supports: isOsmosisSqsDiscoveryDeployment,
-    scope: "exhaustive", requestCostMs: 2_800, executionOrder: 100, timeoutMs: 15_000, crawlerLeaf: "cosmos",
+    scope: "exhaustive", requestCostMs: 2_800, executionOrder: 100, crawlerLeaf: "cosmos",
   },
   {
     providerId: "noble-swap", lifecycle: "active", supports: isNobleSwapDiscoveryDeployment,
-    scope: "exhaustive", requestCostMs: 2_000, executionOrder: 110, timeoutMs: 15_000, crawlerLeaf: "cosmos",
+    scope: "exhaustive", requestCostMs: 2_000, executionOrder: 110, crawlerLeaf: "cosmos",
   },
 ] as const;
 

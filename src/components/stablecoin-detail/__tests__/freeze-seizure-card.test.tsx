@@ -1,7 +1,10 @@
 // @vitest-environment jsdom
 
-import { render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { act, render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+afterEach(() => vi.useRealTimers());
+vi.mock("@/hooks/use-hydrated", () => ({ useHydrated: () => true }));
 
 vi.mock("@/hooks/use-blacklist-events", () => ({
   useBlacklistSummary: vi.fn(),
@@ -13,6 +16,7 @@ import type { BlacklistabilityClientSummary } from "@/lib/stablecoin-detail-blac
 import type { TransferReviewView } from "@/lib/transfer-review";
 import type { ApiQueryWithMetaResult } from "@/hooks/use-api-query";
 import type { BlacklistSummaryResponse } from "@shared/types";
+import type { ApiMeta } from "@/lib/api";
 
 type UsageResult = ApiQueryWithMetaResult<BlacklistSummaryResponse>;
 
@@ -218,4 +222,45 @@ describe("FreezeSeizureModule", () => {
     // The power/scope rail fold plus the merged provenance fold.
     expect(document.querySelectorAll("details")).toHaveLength(2);
   });
+});
+
+it.each([
+  { meta: { updatedAt: Math.floor(Date.now() / 1000) - 86_400, status: "fresh", freshBudgetSec: 60, degradedBudgetSec: 120 }, state: "stale" },
+  { meta: { updatedAt: null, status: "unknown", ageSeconds: null }, state: "unavailable" },
+  { meta: { updatedAt: Math.floor(Date.now() / 1000), status: "fresh", dependencies: { scanner: { status: "stale", reason: "scan-old" } } }, state: "degraded" },
+] as { meta: ApiMeta; state: string }[])("qualifies observed zero freeze usage with its producer generation ($state)", ({ meta, state }) => {
+  const receipt = Date.now();
+  const result = { ...statsFor("USDT", { events: 0, addresses: 0, frozen: 0, destroyed: 0 }), meta, dataUpdatedAt: receipt };
+  usageResult(result);
+  const { container, rerender } = renderModule();
+  const producerTime = meta.updatedAt != null ? new Date(meta.updatedAt * 1000).toISOString() : null;
+  expect(container.querySelector("time")?.getAttribute("datetime")).toBe(producerTime);
+  expect(container.querySelector(`[data-health-state="${state}"]`)).toBeTruthy();
+  expect(rail().getAttribute("aria-label")).toMatch(/used/i);
+  usageResult({ ...result, dataUpdatedAt: receipt + 30_000 });
+  rerender(<FreezeSeizureModule summary={SUMMARY} symbol="USDT" variant="tile" />);
+  expect(container.querySelector("time")?.getAttribute("datetime")).toBe(producerTime);
+  usageResult({ ...result, error: new Error("refresh failed"), refetch: vi.fn() });
+  rerender(<FreezeSeizureModule summary={SUMMARY} symbol="USDT" variant="tile" />);
+  expect(container.querySelector("time")?.getAttribute("datetime")).toBe(producerTime);
+  expect(screen.getByText(/refresh failed; showing the last available data/)).toBeTruthy();
+  expect(rail().getAttribute("aria-label")).toMatch(/used/i);
+});
+
+it("ages retained freeze usage without changing its observation generation", () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date("2026-10-20T12:00:00Z"));
+  const receipt = Date.now();
+  usageResult({
+    ...statsFor("USDT", { events: 1, addresses: 1, frozen: 100, destroyed: 0 }), dataUpdatedAt: receipt,
+    meta: { updatedAt: receipt / 1000, status: "fresh", freshBudgetSec: 60, degradedBudgetSec: 120 },
+  });
+  const { container } = renderModule();
+  expect(container.querySelector("[data-health-state]")).toBeNull();
+  act(() => vi.advanceTimersByTime(50));
+  act(() => vi.advanceTimersByTime(60_001));
+  expect(container.querySelector('[data-health-state="degraded"]')).toBeTruthy();
+  act(() => vi.advanceTimersByTime(60_000));
+  expect(container.querySelector('[data-health-state="stale"]')).toBeTruthy();
+  expect(container.querySelector("time")?.getAttribute("datetime")).toBe(new Date(receipt).toISOString());
 });

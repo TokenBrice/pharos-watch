@@ -55,6 +55,8 @@ export const ChainEnvironmentRiskValueSchema = z.object({
   sentiment: z.enum(["good", "warning", "bad", "UnderReview", "neutral"]),
 });
 
+export type L2BeatRiskSentiment = z.output<typeof ChainEnvironmentRiskValueSchema>["sentiment"];
+
 export const L2BeatChainEnvironmentEvidenceSchema = z.object({
   source: z.literal("l2beat"),
   score: z.number(),
@@ -78,6 +80,8 @@ export const L2BeatChainEnvironmentEvidenceSchema = z.object({
     fetchedAt: z.string(),
   }),
 });
+
+export type L2BeatStage = z.output<typeof L2BeatChainEnvironmentEvidenceSchema>["stage"];
 
 export const TierChainEnvironmentEvidenceSchema = z.object({
   source: z.literal("pharos-chain-tier"),

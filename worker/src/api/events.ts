@@ -5,14 +5,16 @@ import {
   parseQueryParams,
   resolveOrReject,
 } from "../lib/api-params";
-import { errorResponse, jsonFreshResponse } from "../lib/api-response";
+import { errorResponse, jsonFreshResponse, jsonResponse } from "../lib/api-response";
 import { getLatestSuccessfulCronTimestampResult, buildCronFreshnessMeta, buildCronFreshnessHeaders } from "../lib/api-freshness";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { queryTapeEvents, type TapeEventQueryFilters } from "../lib/tape-event-store";
 import { mapTapeEventRow } from "../lib/tape-event-helpers";
 import { logWorkerEvent } from "../lib/structured-log";
+import type { TapeEventRow } from "../lib/tape-event-types";
 import {
   SEVERITY_RANK,
+  FREEZE_CLAIM_RETRACTED_REASON,
   TAPE_EVENT_SEVERITY_VALUES,
   type TapeEvent,
   type TapeEventSeverity,
@@ -107,6 +109,25 @@ function expandSeverityFloor(value: string | null): string[] | Response {
 
 export const handleEvents = async (db: D1Database, url: URL): Promise<Response> => {
   const params = url.searchParams;
+  const eventId = params.get("event");
+  if (eventId != null) {
+    if (eventId.length === 0 || eventId.length > 200) return errorResponse(400, "Invalid event id");
+    const row = await db.prepare("SELECT * FROM tape_events WHERE event_id = ?").bind(eventId).first<TapeEventRow>();
+    if (row?.suppressed_at != null) {
+      return jsonResponse({ error: "Event not found", reason: FREEZE_CLAIM_RETRACTED_REASON }, {
+        status: 404, noStore: true,
+      });
+    }
+    const event = row == null ? null : mapTapeEventRow(row).event;
+    if (event == null) {
+      return jsonResponse({ error: "Event not found", reason: "event-not-found" }, { status: 404, noStore: true });
+    }
+    const freshness = await getLatestSuccessfulCronTimestampResult(db, "project-tape");
+    return jsonFreshResponse({
+      events: [event], droppedRows: 0, nextCursor: null, total: 1, totalExact: true,
+      _meta: buildCronFreshnessMeta(freshness, FRESHNESS_MAX_AGE_SEC),
+    }, { headers: buildCronFreshnessHeaders(freshness, FRESHNESS_MAX_AGE_SEC, CACHE_PROFILES.realtime) });
+  }
 
   const typeFilters = expandTypeFilters(params);
   if (typeFilters instanceof Response) return typeFilters;

@@ -49,19 +49,15 @@ vi.mock("@shared/data/safety-score-v9/evidence-gap-classifications-v1.json", () 
       scope: { pillar: "backing", componentKey: "reserve-composition", factorKey: null,
         routeKey: null, exposureId: null, requiredDatum: "reserve-composition" },
       reviewedAt: "1970-01-01T01:00:00Z", reviewer: "fixture-curator",
-      sources: [{ url: "https://example.com/usdc-holdings", observedAt: "1970-01-01T01:00:00Z",
-        datumAsOf: "1970-01-01T01:00:00Z", location: "current holdings",
-        excerpt: "The current whole-token holdings are itemized.", assertion: "The exact required current composition is public." }],
+      sourcesRefs: ["usdc-holdings"],
     },
     {
       id: "fixture-researched-composition", assetId: "usdt-tether", cause: "C", assertion: "researched-nondisclosure",
       scope: { pillar: "backing", componentKey: "reserve-composition", factorKey: null,
         routeKey: null, exposureId: null, requiredDatum: "reserve-composition" },
       reviewedAt: "1970-01-01T01:00:00Z", reviewer: "fixture-curator",
-      sources: [{ url: "https://example.com/usdt-report", observedAt: "1970-01-01T01:00:00Z",
-        datumAsOf: null, location: "reserve report", excerpt: "Only a portfolio total is reported.",
-        assertion: "The required itemized composition is not published in the reviewed report." }],
-      searchedSurfaces: ["https://example.com/usdt-report"], rationale: "The current report does not itemize the required holdings.",
+      sourcesRefs: ["usdt-report"],
+      searchedSurfacesRefs: ["usdt-report"], rationale: "The current report does not itemize the required holdings.",
     },
     ...[["reserve:d9ea3402f80c2eba4fa0b228", "fixture-uncurated-maturity"], ["reserve:f56e5d5418b2b742f60e9dd0", "fixture-uncurated-mixed-maturity"]]
       .map(([exposureId, id]) => ({
@@ -69,11 +65,19 @@ vi.mock("@shared/data/safety-score-v9/evidence-gap-classifications-v1.json", () 
         scope: { pillar: "backing", componentKey: "reserve-exposure", factorKey: "maturity",
           routeKey: null, exposureId, requiredDatum: "maturityDaysMax" },
         reviewedAt: "1970-01-01T01:00:00Z", reviewer: "fixture-curator",
-        sources: [{ url: "https://example.com/alpha-maturity", observedAt: "1970-01-01T01:00:00Z",
-          datumAsOf: "1970-01-01T01:00:00Z", location: "holdings maturity table",
-          excerpt: "Every deposit's maximum term is listed.", assertion: "The exact required maturity datum is public." }],
+        sourcesRefs: ["alpha-maturity"],
       })),
-  ] },
+  ], sourceObservations: [
+    { id: "usdc-holdings", value: { url: "https://example.com/usdc-holdings", observedAt: "1970-01-01T01:00:00Z",
+      datumAsOf: "1970-01-01T01:00:00Z", location: "current holdings",
+      excerpt: "The current whole-token holdings are itemized.", assertion: "The exact required current composition is public." } },
+    { id: "usdt-report", value: { url: "https://example.com/usdt-report", observedAt: "1970-01-01T01:00:00Z",
+      datumAsOf: null, location: "reserve report", excerpt: "Only a portfolio total is reported.",
+      assertion: "The required itemized composition is not published in the reviewed report." } },
+    { id: "alpha-maturity", value: { url: "https://example.com/alpha-maturity", observedAt: "1970-01-01T01:00:00Z",
+      datumAsOf: "1970-01-01T01:00:00Z", location: "holdings maturity table",
+      excerpt: "Every deposit's maximum term is listed.", assertion: "The exact required maturity datum is public." } },
+  ], searchedSurfaceObservations: [{ id: "usdt-report", value: "https://example.com/usdt-report" }] },
 }));
 const ASSET_ID = "alpha";
 /** Far past the fixture composition, so its published evidence has expired. */

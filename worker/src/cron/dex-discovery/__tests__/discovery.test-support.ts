@@ -3,7 +3,7 @@ import type { StagedPool } from "../types";
 
 export function discoveryContext(stablecoinId: string, overrides: Partial<Parameters<typeof createCrawlStageContext>[0]> = {}) {
   const value = createCrawlStageContext({
-    stablecoinId, knownPoolIds: new Set(), nowSec: 1_800_000_000, pools: [], priceObs: [], ...overrides,
+    stablecoinId, knownPoolIds: new Set(), nowSec: 1_800_000_000, pools: [], ...overrides,
   });
   return { pools: value.pools, value };
 }

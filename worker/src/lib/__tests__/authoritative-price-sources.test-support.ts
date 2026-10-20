@@ -86,7 +86,7 @@ vi.mock("@shared/lib/stablecoins/worker-runtime-registry", async (importOriginal
   const actual = await importOriginal<typeof WorkerRuntimeRegistry>();
   const registry = await import("@shared/lib/stablecoins/registry");
   // Hoisted mock factories run before static imports initialize; load the deployment schema here.
-  const { ContractDeploymentSchema } = await import("@shared/types/stablecoin-meta-schemas");
+  const { ContractDeploymentSchema } = await import("@shared/types/stablecoin-meta-primitives");
   const trackedMetaById = new Map(actual.WORKER_TRACKED_META_BY_ID);
   for (const [id, mockMeta] of registry.TRACKED_META_BY_ID) {
     const canonicalMeta = trackedMetaById.get(id);

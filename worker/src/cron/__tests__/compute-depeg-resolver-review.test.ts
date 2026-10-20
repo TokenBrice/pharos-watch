@@ -14,6 +14,7 @@ import { buildEmptyDdrrSummary } from "../../lib/depeg-resolver-review-response"
 import type { DdrV2StoreContracts } from "../compute-depeg-resolver";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import { coverageRowForIncident } from "../depeg-resolver-review/coverage-rows";
+import { makeDdrSealedPublicPrediction, type DdrSealedPredictionOverrides } from "./depeg-public-projection.test-support";
 
 afterEach(() => {
   vi.useRealTimers();
@@ -110,11 +111,10 @@ function makeReviewIncident(overrides: Record<string, unknown> = {}) {
 type ReviewSealedPrediction = Awaited<ReturnType<DdrV2StoreContracts["loadSealedPublicPredictions"]>>[number];
 type ReviewFirstPublication = Awaited<ReturnType<DdrV2StoreContracts["loadFirstPublicationMembership"]>>[number];
 
-function sealedPrediction(overrides: Partial<ReviewSealedPrediction> = {}): ReviewSealedPrediction {
+function sealedPrediction(overrides: DdrSealedPredictionOverrides = {}): ReviewSealedPrediction {
   const { sealedPayload: payloadOverrides, ...recordOverrides } = overrides;
-  return {
+  return makeDdrSealedPublicPrediction({
     id: 55,
-    publicPredictionId: 55,
     incidentKey: makeReviewIncident().incidentKey,
     eventId: 42,
     assessmentId: 90,
@@ -146,7 +146,7 @@ function sealedPrediction(overrides: Partial<ReviewSealedPrediction> = {}): Revi
       },
       ...payloadOverrides,
     },
-  };
+  });
 }
 
 function firstPublication(overrides: Partial<ReviewFirstPublication> = {}): ReviewFirstPublication {
@@ -244,7 +244,7 @@ describe("buildDepegResolverReviewSnapshot", () => {
         }),
       ]),
       loadSealedPublicPredictions: vi.fn(async () => [
-        {
+        makeDdrSealedPublicPrediction({
           id: 9,
           incidentKey: "ddr2:22222222222222222222222222222222",
           eventId: 42,
@@ -259,7 +259,7 @@ describe("buildDepegResolverReviewSnapshot", () => {
           lockTiming: "on_time" as const,
           rowHash: "c".repeat(64),
           sealedPayload: {},
-        },
+        }),
       ]),
       loadFirstPublicationMembership: vi.fn(async () => [
         {
@@ -573,7 +573,6 @@ describe("buildDepegResolverReviewSnapshot", () => {
       loadCanonicalIncidents: vi.fn(async () => [reviewIncident]),
       loadSealedPublicPredictions: vi.fn(async () => [sealedPrediction({
         id: 56,
-        publicPredictionId: 56,
         incidentKey: reviewIncident.incidentKey,
         assessmentId: 91,
         eligibleAt: lockedAt,
@@ -628,7 +627,6 @@ describe("buildDepegResolverReviewSnapshot", () => {
       loadCanonicalIncidents: vi.fn(async () => [reviewIncident]),
       loadSealedPublicPredictions: vi.fn(async () => [sealedPrediction({
         id: 57,
-        publicPredictionId: 57,
         incidentKey: reviewIncident.incidentKey,
         eventId: 43,
         assessmentId: 92,
@@ -696,7 +694,6 @@ describe("buildDepegResolverReviewSnapshot", () => {
       loadCanonicalIncidents: vi.fn(async () => [canonical, duplicateAlias]),
       loadSealedPublicPredictions: vi.fn(async () => [sealedPrediction({
         id: 58,
-        publicPredictionId: 58,
         incidentKey: canonical.incidentKey,
         eventId: 43,
         assessmentId: 93,
@@ -1280,13 +1277,11 @@ describe("buildDepegResolverReviewSnapshot", () => {
     const stores = durableStores({
       loadCanonicalIncidents: vi.fn(async () => [incident]),
       loadSealedPublicPredictions: vi.fn(async () => [
-        {
-          ...sealedPrediction({
-            id: 11, publicPredictionId: 11, incidentKey: incident.incidentKey,
-            eventId: 95, assessmentId: 95, eligibleAt, lockedAt: eligibleAt, rowHash: "d".repeat(64),
-          }),
+        sealedPrediction({
+          id: 11, incidentKey: incident.incidentKey,
+          eventId: 95, assessmentId: 95, eligibleAt, lockedAt: eligibleAt, rowHash: "d".repeat(64),
           sealedPayload: { kind: "prediction", symbol: "USR" },
-        },
+        }),
       ]),
     });
 
@@ -1315,12 +1310,10 @@ describe("buildDepegResolverReviewSnapshot", () => {
     const stores = durableStores({
       loadCanonicalIncidents: vi.fn(async () => [incident]),
       loadSealedPublicPredictions: vi.fn(async () => [
-        {
-          ...sealedPrediction({
-            id: 9, publicPredictionId: 9, incidentKey: incident.incidentKey, rowHash: "c".repeat(64),
-          }),
+        sealedPrediction({
+          id: 9, incidentKey: incident.incidentKey, rowHash: "c".repeat(64),
           sealedPayload: { kind: "prediction", symbol: "LUSD" },
-        },
+        }),
       ]),
     });
 
@@ -1371,47 +1364,19 @@ describe("buildDepegResolverReviewSnapshot", () => {
     expect(snapshot.summary.headline.lockDeferredCount).toBe(1);
   });
 
-  it("marks published sealed rows with unparsable payloads as data quality gaps", async () => {
+  it("refuses a review when the store rejects a malformed sealed payload", async () => {
     const incident = makeReviewIncident({ incidentKey: "ddr2:published-bad-payload", eventId: 45 });
-    const db = reviewDb([
-      eventRow({ id: 45, ended_at: null, recovery_price: null }),
-    ]);
     const stores = durableStores({
       loadCanonicalIncidents: vi.fn(async () => [incident]),
-      loadSealedPublicPredictions: vi.fn(async () => [
-        {
-          ...sealedPrediction({
-            id: 11, publicPredictionId: 11, incidentKey: incident.incidentKey, eventId: 45, assessmentId: 92,
-          }),
-          sealedPayload: { symbol: "LUSD" },
-        },
-      ]),
-      loadFirstPublicationMembership: vi.fn(async () => [
-        firstPublication({
-          publicPredictionId: 11, incidentKey: incident.incidentKey,
-          snapshotToken: "ddr-public-bad-payload", snapshotGeneration: 3,
-        }),
-      ]),
+      loadSealedPublicPredictions: vi.fn(async () => { throw new Error("malformed sealed payload"); }),
     });
-
-    const snapshot = await buildDepegResolverReviewSnapshot(db, ELIGIBLE_AT + 3600, undefined, {
+    await expect(buildDepegResolverReviewSnapshot(reviewDb([]), ELIGIBLE_AT + 3600, undefined, {
       storeContracts: stores,
-    });
-
-    expect(snapshot.rows[0]).toMatchObject({
-      kind: "coverage",
-      incidentKey: incident.incidentKey,
-      predictionState: "data_quality_gap",
-      coverageCause: "data_quality_gap",
-      outcomeQualityState: "data_quality_gap",
-      reason: "sealed_payload_parse_failed",
-      failedPublication: null,
-    });
-    expect(snapshot.summary.headline.dataQualityGapCount).toBe(1);
+    })).rejects.toThrow("malformed sealed payload");
   });
 
   it.each([
-    { missingReasons: [null, 17, "supply_history_missing", "dex_history_missing"], reason: "supply_history_missing" },
+    { missingReasons: ["supply_history_missing", "dex_history_missing"], reason: "supply_history_missing" },
     { missingReasons: [], reason: "insufficient_signal" },
   ])("reviews a published no-call without manufacturing scored predictions: $reason", async ({ missingReasons, reason }) => {
     const incident = makeReviewIncident();
@@ -1469,10 +1434,9 @@ describe("buildDepegResolverReviewSnapshot", () => {
     const stores = durableStores({
       loadCanonicalIncidents: vi.fn(async () => [incident, otherIncident]),
       loadSealedPublicPredictions: vi.fn(async () => [
-        sealedPrediction({ id: 11, publicPredictionId: 11, eventId: 44, incidentKey: otherIncident.incidentKey }),
-        {
+        sealedPrediction({ id: 11, eventId: 44, incidentKey: otherIncident.incidentKey }),
+        makeDdrSealedPublicPrediction({
           id: 10,
-          publicPredictionId: 10,
           incidentKey: incident.incidentKey,
           eventId: 43,
           assessmentId: 91,
@@ -1492,7 +1456,7 @@ describe("buildDepegResolverReviewSnapshot", () => {
             governance: "decentralized",
             noCall: originalNoCall,
           },
-        },
+        }),
       ]),
       loadFirstPublicationMembership: vi.fn(async () => [
         firstPublication({ publicPredictionId: 11, incidentKey: otherIncident.incidentKey }),

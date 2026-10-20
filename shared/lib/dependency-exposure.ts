@@ -1,5 +1,6 @@
 import type { ReportCardsV9DependencyEdge } from "../types/report-cards-v9";
 import { V9_CANDIDATE_POLICY_V1 } from "./safety-score-v9/policy";
+import { stronglyConnectedComponents } from "./strongly-connected-components";
 
 export type SupplyOf = (id: string) => { usd: number; asOf: number | null; basis: "market-cap-proxy" | "publication-circulating" } | null;
 export interface ExposureTotals {
@@ -192,34 +193,15 @@ export function lookThroughShares(
     }
   }
 
-  // Tarjan identifies cycle members, not the acyclic descendants blocked by them.
-  const indices = new Map<string, number>(), low = new Map<string, number>();
-  const stack: string[] = [], onStack = new Set<string>(), cyclic = new Set<string>();
-  let nextIndex = 0;
-  function visit(id: string) {
-    indices.set(id, nextIndex);
-    low.set(id, nextIndex++);
-    stack.push(id);
-    onStack.add(id);
-    for (const edge of outgoing.get(id) ?? []) {
-      if (!indices.has(edge.to)) {
-        visit(edge.to);
-        low.set(id, Math.min(low.get(id)!, low.get(edge.to)!));
-      } else if (onStack.has(edge.to)) low.set(id, Math.min(low.get(id)!, indices.get(edge.to)!));
-    }
-    if (low.get(id) !== indices.get(id)) return;
-    const members: string[] = [];
-    let member: string;
-    do {
-      member = stack.pop()!;
-      onStack.delete(member);
-      members.push(member);
-    } while (member !== id);
-    if (members.length > 1 || (outgoing.get(id) ?? []).some(edge => edge.to === id)) {
-      for (const memberId of members) cyclic.add(memberId);
+  // SCCs identify cycle members, not the acyclic descendants blocked by them.
+  const cyclic = new Set<string>();
+  for (const members of stronglyConnectedComponents(queue, function* (id) {
+    for (const edge of outgoing.get(id) ?? []) yield edge.to;
+  })) {
+    if (members.length > 1 || (outgoing.get(members[0]) ?? []).some(edge => edge.to === members[0])) {
+      for (const member of members) cyclic.add(member);
     }
   }
-  for (const id of queue) if (!indices.has(id)) visit(id);
 
   const incoming = byDependent(edges);
   const values = new Map<string, LookThroughShare>();

@@ -3,6 +3,14 @@
 import { createContext, useContext, type ReactNode } from "react";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import {
+  DETAIL_MODULE_BODY_CLASS,
+  DETAIL_MODULE_HEADER_CLASS,
+  DETAIL_MODULE_SHELL_CLASS,
+  DETAIL_MODULE_TITLE_CLASS,
+} from "@/components/stablecoin-detail/section-title-class";
+import { cn } from "@/lib/utils";
 
 interface StablecoinDetailIdentity {
   symbol: string;
@@ -65,5 +73,25 @@ export function StablecoinModuleTitle({
         {children}
       </DetailSectionTitle>
     </div>
+  );
+}
+
+/** Plain main-column shell; caller-owned sections and query branches stay outside. */
+export function DetailModuleCard({ title, headerRight, id, className, bodyClassName, children }: {
+  title: ReactNode;
+  headerRight?: ReactNode;
+  id?: string;
+  className?: string;
+  bodyClassName?: string;
+  children: ReactNode;
+}) {
+  return (
+    <Card className={cn(DETAIL_MODULE_SHELL_CLASS, className)} id={id}>
+      <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
+        <StablecoinModuleTitle className={DETAIL_MODULE_TITLE_CLASS}>{title}</StablecoinModuleTitle>
+        {headerRight}
+      </CardHeader>
+      <CardContent className={cn(DETAIL_MODULE_BODY_CLASS, bodyClassName)}>{children}</CardContent>
+    </Card>
   );
 }

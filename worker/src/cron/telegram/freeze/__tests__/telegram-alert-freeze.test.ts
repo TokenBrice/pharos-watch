@@ -7,6 +7,7 @@ import { makeNoopD1 } from "../../../../test-helpers/noop-d1";
 import { createFreezeIdentityFixture } from "./telegram-alert-freeze.test-support";
 import { recordTelegramJobTargetFinalDelivery } from "../../delivery/telegram-alert-job-target-outcomes";
 import { TELEGRAM_ALERT_TTL_SEC } from "@shared/lib/telegram-delivery-policy";
+import { drainPendingQueue } from "../../delivery/drain";
 
 function db(rows: unknown[], latestRun: number | null): D1Database {
   return makeNoopD1({
@@ -141,6 +142,84 @@ describe("freeze Telegram source gate", () => {
 });
 
 describe("freeze dedicated outbox", () => {
+  it("rechecks suppression at the final send fence after candidate admission", async () => {
+    const { sqlite, db, now, insertFreeze } = await createFreezeIdentityFixture();
+    const clock = vi.spyOn(Date, "now").mockReturnValue((now + 10) * 1000);
+    const fetch = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("unexpected Bot API call"));
+    try {
+      insertFreeze("raced-retraction", now + 1);
+      expect((await dispatchFreezeAlertOutbox(db, now + 2)).queued).toBe(1);
+      const prepare = db.prepare.bind(db);
+      let retracted = false;
+      const spy = vi.spyOn(db, "prepare").mockImplementation((sql) => {
+        if (!retracted && sql.includes("SET delivery_state = 'sending'")) {
+          retracted = true;
+          sqlite.prepare(`UPDATE tape_events SET suppressed_at = ?, suppression_reason = 'freeze-claim-retracted'
+            WHERE event_id = 'raced-retraction'`).run(now + 10);
+        }
+        return prepare(sql);
+      });
+      expect(await drainPendingQueue(db, "not-a-real-token", 10)).toMatchObject({ attempted: 0, sent: 0 });
+      expect(retracted).toBe(true);
+      expect(fetch).not.toHaveBeenCalled();
+      spy.mockRestore();
+    } finally {
+      fetch.mockRestore();
+      clock.mockRestore();
+      sqlite.close();
+    }
+  });
+
+  it.each(["source", "projected"] as const)("suppresses queued-unsent %s retractions with a reason and never edits or resends sent alerts", async (marker) => {
+    const { sqlite, db, now, insertFreeze } = await createFreezeIdentityFixture();
+    const clock = vi.spyOn(Date, "now").mockReturnValue((now + 10) * 1000);
+    const fetch = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("unexpected Bot API call"));
+    try {
+      insertFreeze("pending-retraction", now + 1);
+      insertFreeze("sent-retraction", now + 2);
+      expect((await dispatchFreezeAlertOutbox(db, now + 3)).queued).toBe(2);
+      const sent = sqlite.prepare("SELECT * FROM telegram_pending_alerts WHERE source_event_id = 'freeze:sent-retraction'").get()!;
+      await recordTelegramJobTargetFinalDelivery(db, {
+        pendingDedupeKey: String(sent.dedupe_key), sourceEventId: "freeze:sent-retraction",
+      }, { state: "accepted", at: now + 4 });
+      sqlite.prepare(`UPDATE telegram_pending_alerts SET delivery_state = 'sent', delivery_completed_at = ?
+        WHERE source_event_id = 'freeze:sent-retraction'`).run(now + 4);
+      const sentPending = sqlite.prepare("SELECT * FROM telegram_pending_alerts WHERE source_event_id = 'freeze:sent-retraction'").get();
+      const sentTarget = sqlite.prepare("SELECT * FROM telegram_alert_job_targets WHERE source_event_id = 'freeze:sent-retraction'").get();
+      if (marker === "source") {
+        const insertSource = sqlite.prepare(`INSERT INTO blacklist_events
+          (id, stablecoin, chain_id, chain_name, event_type, address, tx_hash, block_number,
+           timestamp, explorer_tx_url, explorer_address_url, suppression_reason)
+          VALUES (?, 'USDC', 'ethereum', 'Ethereum', 'blacklist', '0xabc', '0xdef', 1, ?,
+                  'https://example.com', 'https://example.com', 'circle_mirror_zero_balance')`);
+        for (const id of ["pending-retraction", "sent-retraction"]) insertSource.run(`blacklist-${id}`, now);
+      } else {
+        sqlite.prepare(`UPDATE tape_events SET suppressed_at = ?, suppression_reason = 'freeze-claim-retracted'
+          WHERE event_id IN ('pending-retraction', 'sent-retraction')`).run(now + 5);
+      }
+      expect((await loadFreshFreezeAlerts(db, 1, now + 10)).alerts).toEqual([]);
+      expect((await dispatchFreezeAlertOutbox(db, now + 10)).queued).toBe(0);
+      expect(await drainPendingQueue(db, "not-a-real-token", 10)).toMatchObject({ attempted: 0, sent: 0 });
+      expect(fetch).not.toHaveBeenCalled();
+      expect(sqlite.prepare("SELECT * FROM telegram_pending_alerts WHERE source_event_id = 'freeze:pending-retraction'").get())
+        .toBeUndefined();
+      expect(sqlite.prepare(`SELECT cancellation_reason, final_delivery_state FROM telegram_alert_job_targets
+        WHERE source_event_id = 'freeze:pending-retraction'`).get())
+        .toEqual({ cancellation_reason: "freeze-claim-retracted", final_delivery_state: "cancelled" });
+      expect(sqlite.prepare(`SELECT last_error_class FROM telegram_alert_dead_letters
+        WHERE source_event_id = 'freeze:pending-retraction'`).get())
+        .toEqual({ last_error_class: "freeze-claim-retracted" });
+      expect(sqlite.prepare("SELECT * FROM telegram_pending_alerts WHERE source_event_id = 'freeze:sent-retraction'").get())
+        .toEqual(sentPending);
+      expect(sqlite.prepare("SELECT * FROM telegram_alert_job_targets WHERE source_event_id = 'freeze:sent-retraction'").get())
+        .toEqual(sentTarget);
+    } finally {
+      fetch.mockRestore();
+      clock.mockRestore();
+      sqlite.close();
+    }
+  });
+
   it("advances past newly inserted year-old Tape rows without outbox work while recovering recent events", async () => {
     const { sqlite, db, now, insertFreeze } = await createFreezeIdentityFixture();
     try {

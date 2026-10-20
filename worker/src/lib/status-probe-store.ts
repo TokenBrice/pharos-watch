@@ -3,18 +3,18 @@ import type {
   StatusProbePlaneSummary,
   StatusProbeSummary,
 } from "@shared/types/status";
+import type { StatusHealthValue } from "@shared/types/status/core";
 import { isRecord, numberValue as readNumber } from "@shared/lib/type-guards";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import {
   buildStatusProbeRunIdempotencyKey,
   reportStatusPersistenceIssue,
-  type StatusLevel,
   type StatusPersistenceIssueReporter,
 } from "./status-reliability-shared";
 
 interface StatusProbeRow {
   created_at: number;
-  status: StatusLevel;
+  status: StatusHealthValue;
   sample_count: number;
   pass_count: number;
   fail_count: number;
@@ -92,7 +92,7 @@ export async function writeStatusProbeRun(
   db: D1Database,
   now: number,
   row: {
-    status: StatusLevel;
+    status: StatusHealthValue;
     sampleCount: number;
     passCount: number;
     failCount: number;

@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { deriveDependencies } from "@shared/lib/dependency-derivation";
+import { deriveEffectiveDependencies, deriveEffectiveDependencySet } from "@shared/lib/dependency-derivation";
 import type { StablecoinMeta, DependencyWeight } from "@shared/types";
 
-// Minimal helper — only fields deriveDependencies reads
+// Minimal helper — only fields effective dependency derivation reads
 function makeMeta(overrides: Partial<StablecoinMeta> = {}): StablecoinMeta {
   return {
     id: "test",
@@ -13,16 +13,16 @@ function makeMeta(overrides: Partial<StablecoinMeta> = {}): StablecoinMeta {
   } as StablecoinMeta;
 }
 
-describe("deriveDependencies", () => {
+describe("deriveEffectiveDependencies", () => {
   it("returns empty array when no reserves and no dependencies", () => {
     const meta = makeMeta();
-    expect(deriveDependencies(meta)).toEqual([]);
+    expect(deriveEffectiveDependencySet(meta)).toMatchObject({ dependencies: [], rejectionReasons: [] });
   });
 
   it("falls back to manual dependencies when reserves is empty", () => {
     const deps: DependencyWeight[] = [{ id: "usdc-circle", weight: 0.5 }];
     const meta = makeMeta({ dependencies: deps, reserves: [] });
-    expect(deriveDependencies(meta)).toEqual(deps);
+    expect(deriveEffectiveDependencies(meta)).toEqual(deps);
   });
 
   it("falls back to manual dependencies when no reserve has coinId", () => {
@@ -34,7 +34,7 @@ describe("deriveDependencies", () => {
         { name: "Cash", pct: 20, risk: "very-low" },
       ],
     });
-    expect(deriveDependencies(meta)).toEqual(deps);
+    expect(deriveEffectiveDependencies(meta)).toEqual(deps);
   });
 
   it("derives dependencies from reserve coinId, ignoring manual dependencies", () => {
@@ -45,8 +45,9 @@ describe("deriveDependencies", () => {
         { name: "USDC buffer", pct: 10, risk: "low", coinId: "usdc-circle", depType: "collateral" },
       ],
     });
-    const result = deriveDependencies(meta);
-    expect(result).toEqual([
+    const result = deriveEffectiveDependencySet(meta);
+    expect(result.rejectionReasons).toEqual([]);
+    expect(result.dependencies).toEqual([
       { id: "usdtb-ethena", weight: 0.9, type: "collateral" },
       { id: "usdc-circle", weight: 0.1, type: "collateral" },
     ]);
@@ -62,7 +63,7 @@ describe("deriveDependencies", () => {
         { name: "USDT", pct: 5, risk: "low", coinId: "usdt-tether", depType: "collateral" },
       ],
     });
-    const result = deriveDependencies(meta);
+    const result = deriveEffectiveDependencies(meta);
     expect(result).toEqual([
       { id: "usdc-circle", weight: 0.15, type: "collateral" },
       { id: "usdt-tether", weight: 0.05, type: "collateral" },
@@ -75,7 +76,7 @@ describe("deriveDependencies", () => {
         { name: "USDe", pct: 100, risk: "low", coinId: "usde-ethena", depType: "wrapper" },
       ],
     });
-    const result = deriveDependencies(meta);
+    const result = deriveEffectiveDependencies(meta);
     expect(result).toEqual([
       { id: "usde-ethena", weight: 1.0, type: "wrapper" },
     ]);

@@ -247,6 +247,23 @@ describe("reviewed Curve StableSwap-NG policy", () => {
     })).toEqual({ ok: false, reason: "invalid-curve-stableswap-ng-target" });
   });
 
+  it("preserves eligibility reason precedence and inclusive source-time boundaries", () => {
+    for (const [blockNumber, timestamp, nowSec, reason] of [
+      [-1, undefined, BLOCK_TIMESTAMP, "invalid-pinned-block"],
+      [BLOCK_NUMBER, undefined, BLOCK_TIMESTAMP, "block-header-unavailable"],
+      [BLOCK_NUMBER, 0, BLOCK_TIMESTAMP, "block-header-unavailable"],
+      [BLOCK_NUMBER, BLOCK_TIMESTAMP, BLOCK_TIMESTAMP + 10_800, null],
+      [BLOCK_NUMBER, BLOCK_TIMESTAMP, BLOCK_TIMESTAMP + 10_801, "stale-pinned-block"],
+      [BLOCK_NUMBER, BLOCK_TIMESTAMP + 60, BLOCK_TIMESTAMP, null],
+      [BLOCK_NUMBER, BLOCK_TIMESTAMP + 61, BLOCK_TIMESTAMP, "future-pinned-block"],
+    ] as const) {
+      expect(evaluateCurveStableSwapNgEligibility({
+        chain: "ethereum", endpointAddress: CURVE_USDG_USDC_STABLESWAP_NG_POLICY.poolAddress, blockNumber, nowSec,
+        evidence: timestamp === undefined ? undefined : { ...runtimeEvidence(), blockTimestamp: timestamp },
+      })).toEqual(reason === null ? { ok: true } : { ok: false, reason });
+    }
+  });
+
   it("fails closed on pool, factory, membership, token-order, and decimal drift", () => {
     const base = runtimeEvidence();
     const evaluate = (evidence: CurveStableSwapNgRuntimeEvidence) =>

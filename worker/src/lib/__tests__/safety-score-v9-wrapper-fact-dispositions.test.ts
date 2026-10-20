@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import lorenzoMeta from "@shared/data/stablecoins/coins/susd1plus-lorenzo.json";
-import { ParentBackingInheritanceSchema } from "@shared/types/stablecoin-meta-schemas";
+import { ParentBackingInheritanceSchema } from "@shared/types/stablecoin-meta-primitives";
 import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9/fact-set";
 import { createAssetBuildContext, createRuntimeGapVerdict } from "../safety-score-v9/fact-set-context";
 import { buildWrapperLocalFacts } from "../safety-score-v9/fact-set-wrapper";

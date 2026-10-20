@@ -6,8 +6,8 @@ import { parseStablecoinMetaAssets } from "@shared/lib/stablecoins/schema";
 import type { ProofOfReservesLatestReport } from "@shared/types/core";
 import type { ReviewedEconomicDeploymentPartition } from "@shared/types/safety-score-v9-supply-attribution";
 import { buildSafetyScoreV9MechanismReview } from "../safety-score-v9/extension-mechanism";
-import { resolveReviewedReserveRows, type V9ExtensionRegistryMeta } from "../safety-score-v9/extension";
-import { addScopedReserveEvidence, buildSafetyScoreV9ReviewedAuditedFallbackReserveRows, buildSafetyScoreV9ReviewedStaticReserveRows, buildSafetyScoreV10ScopedReserveAdmissions } from "../safety-score-v9/extension-reserves";
+import type { V9ExtensionRegistryMeta } from "../safety-score-v9/extension";
+import { resolveReviewedReserveAdmission, addScopedReserveEvidence, buildSafetyScoreV9ReviewedAuditedFallbackReserveRows, buildSafetyScoreV9ReviewedStaticReserveRows, buildSafetyScoreV10ScopedReserveAdmissions } from "../safety-score-v9/extension-reserves";
 import type { SafetyScoreV9CompilerInput } from "../safety-score-v9/native-input";
 import type { ReserveObservationEnvelope } from "@shared/types/safety-score-v9-reserve-scope";
 import xdaiMetaSource from "@shared/data/stablecoins/coins/xdai-gnosis.json";
@@ -15,6 +15,7 @@ import xdaiReserveSource from "@shared/data/stablecoins/domains/reserves/xdai-gn
 import xdaiLiveObservation from "./fixtures/xdai-live-reserve-observation.json";
 import { ReserveObservationEnvelopeSchema } from "@shared/types/safety-score-v9-reserve-scope";
 import { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
+import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 
 const clockSec = Date.parse("2026-10-02T12:00:00Z") / 1000;
 const asOfSec = Date.parse("2026-08-31T23:59:59Z") / 1000;
@@ -92,8 +93,8 @@ describe("diagnostic report scope monotonicity", () => {
     expect(buildSafetyScoreV9ReviewedStaticReserveRows(scoped, clockSec)).toEqual(buildSafetyScoreV9ReviewedStaticReserveRows(unscoped, clockSec));
     for (const value of [unscoped, scoped]) { delete value.liveReservesConfig; delete value.mintAuthority; }
     const args = { clockSec, liveReserveRows: [], fixedInput: input() };
-    expect(resolveReviewedReserveRows({ ...args, meta: scoped })).toEqual(resolveReviewedReserveRows({ ...args, meta: unscoped }));
-    expect(resolveReviewedReserveRows({ ...args, meta: scoped })?.rows).toEqual(scoped.reserves);
+    expect(resolveReviewedReserveAdmission({ ...args, meta: scoped }).projected).toEqual(resolveReviewedReserveAdmission({ ...args, meta: unscoped }).projected);
+    expect(resolveReviewedReserveAdmission({ ...args, meta: scoped }).projected?.rows).toEqual(scoped.reserves);
   });
   it("allocates assurance only with a complete current economic and book join, retaining the unknown charge", () => {
     const after = backing(withBookJoin(), input(partition));
@@ -104,7 +105,7 @@ describe("diagnostic report scope monotonicity", () => {
     expect([known.score, residual.score, residual.observationState]).toEqual([policy.componentQuality.strong, policy.boundedUnknownQuality, "bounded-unknown"]);
     expect(known.normalizedWeight / residual.normalizedWeight).toBeCloseTo(1 / 3);
     expect(after.result.score!).toBeLessThan(backing(report).result.score!);
-    expect(resolveReviewedReserveRows({ meta: meta(withBookJoin()), clockSec, liveReserveRows: [], fixedInput: input(partition) })).toBeNull();
+    expect(resolveReviewedReserveAdmission({ meta: meta(withBookJoin()), clockSec, liveReserveRows: [], fixedInput: input(partition) }).projected).toBeNull();
   });
   it("lowers overbroad legacy credit only for an explicit verified still-owed exclusion, not a zero or extinguished liability", () => {
     const value = scopedReport();
@@ -113,7 +114,7 @@ describe("diagnostic report scope monotonicity", () => {
       source: { url: "https://example.com/report", accessedAtSec: clockSec - 60, sha256: "a".repeat(64) }, economicallyOwed: true };
     value.coverage!.liabilityExclusions = [exclusion]; value.coverage!.denominator.excluded = [exclusion.id];
     expect(backing(value).result.score!).toBeLessThan(backing(report).result.score!);
-    expect(resolveReviewedReserveRows({ meta: meta(value), clockSec, liveReserveRows: [], fixedInput: input() })).toBeNull();
+    expect(resolveReviewedReserveAdmission({ meta: meta(value), clockSec, liveReserveRows: [], fixedInput: input() }).projected).toBeNull();
     exclusion.amount = "0";
     expect(backing(value)).toEqual(backing(report));
     exclusion.amount = "50"; exclusion.economicallyOwed = false;
@@ -151,12 +152,13 @@ describe("diagnostic report scope monotonicity", () => {
     source.reserveReview!.observations = [observation];
     const parsed = parseStablecoinMetaAssets([source], "observation-fixture")[0]!;
     expect(parsed.contracts!.map(row => `${row.chain}:${row.address}`)).toEqual([deploymentRef]);
-    const admissions = buildSafetyScoreV10ScopedReserveAdmissions(parsed, input());
+    const scoped = buildSafetyScoreV10ScopedReserveAdmissions(parsed, input());
+    const { admissions } = scoped;
     expect(admissions[0]).toMatchObject({
       admitted: true, rejectionCodes: [], currentLiabilityShare: null, wholeAssetComposition: false,
     });
     const evidence = new ReviewEvidenceBuilder(parsed.id, clockSec);
-    addScopedReserveEvidence(parsed, admissions, input(), evidence);
+    addScopedReserveEvidence(scoped, evidence);
     const bindings = evidence.finish();
     expect(bindings.researchEvidence).toMatchObject([{
       sourceId: "reserve-observation:onchain-observation", observedAtSec: clockSec - 60,
@@ -165,7 +167,7 @@ describe("diagnostic report scope monotonicity", () => {
     expect(bindings.componentEvidence).toEqual([{
       componentKey: "reserve-scope:bridge-subset", evidenceKeys: admissions[0]!.evidenceRefIds,
     }]);
-    expect(buildSafetyScoreV10ScopedReserveAdmissions(parsed, { ...input(), clockSec: observation.expiresAtSec + 1 }))
+    expect(buildSafetyScoreV10ScopedReserveAdmissions(parsed, { ...input(), clockSec: observation.expiresAtSec + 1 }).admissions)
       .toEqual([]);
     expect(buildSafetyScoreV9MechanismReview(input(), parsed, "fiat-cash")).toEqual(buildSafetyScoreV9MechanismReview(input(), meta(), "fiat-cash"));
     observation.deploymentRefs.push("ethereum:0x9999999999999999999999999999999999999999");
@@ -182,13 +184,24 @@ describe("diagnostic report scope monotonicity", () => {
     const productionClock = 1790972280; // 20:18Z scoring clock of the accepted 20:22Z publication.
     const fixedInput = { ...input(), clockSec: productionClock,
       liveReserveProvenanceMap: { [parsed.id]: { source: "xdai-bridge", fetchedAt: 1790972022, reserveObservation: live } } };
-    const admissions = buildSafetyScoreV10ScopedReserveAdmissions(parsed, fixedInput);
+    const scoped = buildSafetyScoreV10ScopedReserveAdmissions(parsed, fixedInput);
+    const { admissions } = scoped;
     expect(admissions).toMatchObject([{
       scopeId: "xdai-bridge-accounting", admitted: true, observedAtSec: 1790971600,
       currentLiabilityShare: null, wholeAssetComposition: false, rejectionCodes: [],
     }]);
+    // Emission consumes the chosen revision, not a second selector over input.
+    fixedInput.liveReserveProvenanceMap[parsed.id]!.reserveObservation = { ...live, confidence: "unknown" };
     const evidence = new ReviewEvidenceBuilder(parsed.id, productionClock);
-    addScopedReserveEvidence(parsed, admissions, fixedInput, evidence);
+    addScopedReserveEvidence(scoped, evidence);
+    const expected = new ReviewEvidenceBuilder(parsed.id, productionClock);
+    expected.add({
+      componentKeys: [`reserve-scope:${live.scopeId}`], sourceId: `reserve-observation:${live.kind}`,
+      reviewedAtSec: live.reviewedAtSec, observedAtSec: live.observedAtSec ?? live.reviewedAtSec,
+      sources: live.sources.map(source => ({ label: live.kind, url: source.url })),
+      confidence: "verified", payload: live, maxAgeSec: live.expiresAtSec - (live.observedAtSec ?? live.reviewedAtSec),
+    });
+    expect(stableJsonStringifyV1(evidence.finish())).toBe(stableJsonStringifyV1(expected.finish()));
     const records = evidence.finish().researchEvidence;
     expect(records.map(row => row.observedAtSec)).toEqual(live.sources.map(() => live.observedAtSec));
     expect(records.map(row => row.url).sort()).toEqual(live.sources.map(row => row.url).sort());
@@ -205,10 +218,11 @@ describe("diagnostic report scope monotonicity", () => {
       reserveReview: { ...xdaiReserveSource.reserveReview, observations: [authored] } }], "xdai-fallback")[0]!;
     const liveInput = { ...input(), clockSec: 1790972280,
       liveReserveProvenanceMap: { [parsed.id]: { source: "xdai-bridge", fetchedAt: 1790972022, reserveObservation: live } } };
-    const liveAdmissions = buildSafetyScoreV10ScopedReserveAdmissions(parsed, liveInput);
+    const liveScoped = buildSafetyScoreV10ScopedReserveAdmissions(parsed, liveInput);
+    const liveAdmissions = liveScoped.admissions;
     expect(liveAdmissions).toMatchObject([{ admitted: true, observedAtSec: live.observedAtSec }]);
     const liveEvidence = new ReviewEvidenceBuilder(parsed.id, 1790972280);
-    addScopedReserveEvidence(parsed, liveAdmissions, liveInput, liveEvidence);
+    addScopedReserveEvidence(liveScoped, liveEvidence);
     expect(liveEvidence.finish().researchEvidence.map(row => row.url).sort()).toEqual(live.sources.map(row => row.url).sort());
     for (const condition of ["expired", "unverified"] as const) {
       const rejected = structuredClone(live);
@@ -216,17 +230,26 @@ describe("diagnostic report scope monotonicity", () => {
       else rejected.confidence = "unknown";
       const rejectedInput = { ...input(), clockSec: 1790972280,
         liveReserveProvenanceMap: { [parsed.id]: { source: "xdai-bridge", fetchedAt: 1790972022, reserveObservation: rejected } } };
-      const admissions = buildSafetyScoreV10ScopedReserveAdmissions(parsed, rejectedInput);
+      const scoped = buildSafetyScoreV10ScopedReserveAdmissions(parsed, rejectedInput);
+      const { admissions } = scoped;
       expect(admissions).toMatchObject([{ admitted: true, observedAtSec: authored.observedAtSec }]);
       const evidence = new ReviewEvidenceBuilder(parsed.id, 1790972280);
-      addScopedReserveEvidence(parsed, admissions, rejectedInput, evidence);
+      addScopedReserveEvidence(scoped, evidence);
       expect(evidence.finish().researchEvidence.map(row => row.url)).toEqual(["https://example.com/reviewed-rpc"]);
+      const expected = new ReviewEvidenceBuilder(parsed.id, 1790972280);
+      expected.add({
+        componentKeys: [`reserve-scope:${authored.scopeId}`], sourceId: `reserve-observation:${authored.kind}`,
+        reviewedAtSec: authored.reviewedAtSec, observedAtSec: authored.observedAtSec ?? authored.reviewedAtSec,
+        sources: authored.sources.map(source => ({ label: authored.kind, url: source.url })),
+        confidence: "verified", payload: authored, maxAgeSec: authored.expiresAtSec - (authored.observedAtSec ?? authored.reviewedAtSec),
+      });
+      expect(stableJsonStringifyV1(evidence.finish())).toBe(stableJsonStringifyV1(expected.finish()));
     }
     authored.expiresAtSec = 1790972279;
     parsed.reserveReview!.observations = [authored];
     const expiredLive = { ...live, expiresAtSec: 1790972279 };
     expect(buildSafetyScoreV10ScopedReserveAdmissions(parsed, { ...input(), clockSec: 1790972280,
-      liveReserveProvenanceMap: { [parsed.id]: { source: "xdai-bridge", fetchedAt: 1790972022, reserveObservation: expiredLive } } }))
+      liveReserveProvenanceMap: { [parsed.id]: { source: "xdai-bridge", fetchedAt: 1790972022, reserveObservation: expiredLive } } }).admissions)
       .toEqual([]);
   });
   it("rejects genuine same-source scope collisions and cross-source identity conflicts", () => {

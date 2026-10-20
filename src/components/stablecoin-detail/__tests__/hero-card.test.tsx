@@ -55,7 +55,6 @@ const coin: StablecoinMeta = {
   oneLiner: "Circle-issued dollar stablecoin backed by cash and short-duration reserves.",
   status: "active",
   infrastructures: ["liquity-v2"],
-  tags: ["major", "fiat-backed"],
   links: [
     { label: "Website", url: "https://www.circle.com/usdc" },
     { label: "Twitter", url: "https://x.com/circle" },

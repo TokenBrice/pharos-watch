@@ -118,6 +118,7 @@ import {
   buildSafetyScoreV9ReviewedStandaloneReserveRows,
   buildSafetyScoreV9ReviewedStaticReserveRows,
   dependencyReserveSlices,
+  resolveReviewedReserveAdmission,
 } from "./extension-reserves";
 import { collateralExposureMappingIssues } from "./fact-set-context";
 import { ReviewEvidenceBuilder, parseBoundedDateSec } from "@shared/lib/safety-score-v9/review-evidence";
@@ -149,28 +150,6 @@ export {
   buildSafetyScoreV9ReviewedStaticReserveRows,
 };
 
-type ReviewedReserveRows = ReturnType<typeof buildSafetyScoreV9ReviewedStaticReserveRows>;
-
-/**
- * Resolve the reviewed reserve rows admitted by the production extension.
- * Operator tooling calls this helper so preventive queues cannot drift from
- * the score-bearing static/fallback/standalone branch order.
- */
-export function resolveReviewedReserveRows(input: {
-  meta: V9ExtensionRegistryMeta;
-  clockSec: number;
-  liveReserveRows: readonly ReserveSlice[];
-  fixedInput?: Readonly<SafetyScoreV9CompilerInput>;
-}): ReviewedReserveRows {
-  if (input.liveReserveRows.length > 0) return null;
-  return (
-    buildSafetyScoreV9ReviewedStaticReserveRows(input.meta, input.clockSec, input.fixedInput) ??
-    (input.meta.liveReservesConfig != null
-      ? buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(input.meta, input.clockSec, input.fixedInput) ??
-        buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(input.meta, input.clockSec, input.fixedInput)
-      : buildSafetyScoreV9ReviewedStandaloneReserveRows(input.meta, input.clockSec, input.fixedInput))
-  );
-}
 
 export interface BuildSafetyScoreV9BaselineExtensionOptions {
   metaById?: ReadonlyMap<string, V9ExtensionRegistryMeta>;
@@ -1256,7 +1235,7 @@ function prepareDependency(
     derived.dependencies.some(
       (dependency) => (dependency.type ?? "collateral") === "collateral",
     ) &&
-    resolveReviewedReserveRows({ meta, clockSec, fixedInput, liveReserveRows: [] }) === null;
+    resolveReviewedReserveAdmission({ meta, clockSec, fixedInput, liveReserveRows: [] }).projected === null;
   const issueCodes: string[] = [];
   issueCodes.push(...derived.rejectionReasons
     .filter((rejection) => rejection.reason === "coinId-without-depType" || rejection.reason === "reviewed-dependency-type-conflict" || rejection.reason === "reviewed-dependency-identity-conflict" || rejection.reason === "manual-collateral-not-in-reserves")
@@ -2474,19 +2453,21 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
         // authority over independently dated, reviewed registry evidence.
         // Live rows still win; curated rows retain every source/scope/age gate.
         admissionPath = "reviewedStaticReserveRows";
-        const reviewedStaticReserveRows = resolveReviewedReserveRows({
+        const reviewedReserveAdmission = resolveReviewedReserveAdmission({
           meta,
           clockSec,
           fixedInput,
           liveReserveRows: liveReserves,
         });
+        const reviewedStaticReserveRows = reviewedReserveAdmission.projected;
         const reserveRows = reviewedStaticReserveRows?.rows ?? liveReserves;
         admissionPath = "reserveBoundFacts";
         const reserveBoundFacts = buildSafetyScoreV9ReserveBoundFacts(assetId, reserveRows, { clockSec, liveProvenance: fixedInput.liveReserveProvenanceMap[assetId], liveMaxAgeSec: sources.liveReserves.maxAgeSec });
         const reviewEvidence = new ReviewEvidenceBuilder(assetId, clockSec, sha256HexFromUtf8Chunks);
         admissionPath = "reserveScopeAdmissions";
-        const reserveScopeAdmissions = buildSafetyScoreV10ScopedReserveAdmissions(meta, fixedInput);
-        addScopedReserveEvidence(meta, reserveScopeAdmissions, fixedInput, reviewEvidence);
+        const scopedReserveAdmission = buildSafetyScoreV10ScopedReserveAdmissions(meta, fixedInput);
+        const reserveScopeAdmissions = scopedReserveAdmission.admissions;
+        addScopedReserveEvidence(scopedReserveAdmission, reviewEvidence);
         admissionPath = "reviewedIncidents";
         const reviewedIncidents = getSafetyScoreV9ReviewedIncidents(assetId, clockSec);
         addSafetyScoreV9IncidentEvidence(reviewEvidence, reviewedIncidents);
@@ -2596,7 +2577,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
         );
         addReserveClassificationEvidence(meta, reserveClassifications, reviewEvidence);
         admissionPath = "componentEvidence.reviewed-static-reserve-rows";
-        addReviewedStaticReserveEvidence(meta, reviewedStaticReserveRows, reviewEvidence, clockSec);
+        addReviewedStaticReserveEvidence(reviewedReserveAdmission, reviewEvidence);
         admissionPath = "componentEvidence.dependencies";
         addDependencyEvidence(meta, reviewEvidence);
         admissionPath = "componentEvidence.wrapper-custody";

@@ -127,7 +127,7 @@ export function LiquidityClient() {
         <LiquidityHero
           stats={summaryStats}
           liquidityMap={liquidityMap}
-          status={<LiquidityStatusChip meta={meta} stats={summaryStats} />}
+          status={<LiquidityStatusChip meta={meta} stats={summaryStats} dataUpdatedAt={dataUpdatedAt} error={error} />}
         />
       )}
 

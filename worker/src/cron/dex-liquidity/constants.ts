@@ -27,34 +27,12 @@ export const CURVE_CHAINS = [...CURVE_NATIVE_DISCOVERY_CHAINS] as const;
 export const CURVE_API_CHAIN_PATHS: Record<string, string> = { gnosis: "xdai" };
 export const DEX_LIQUIDITY_POOL_MIN_TVL_USD = 10_000;
 /**
- * Zero-volume provenance cutover (liquidity methodology 6.9). Before this clock,
- * the GeckoTerminal and DexScreener parsers and the v1 live-lane registry
- * write-back coerced an absent 24h volume to 0, so such a registry zero cannot be
- * told apart from a missing reading and the registry resolver treats it as
- * absent. Positive legacy readings stay usable. CoinGecko onchain rows are exempt
- * (see DEX_VOLUME_ZERO_PROVENANCE_EXEMPT_SOURCES). Set to the v6.9 Worker
- * activation, 2026-09-28 07:29:14 UTC. Inert once every earlier row is older than
- * the 72h volume admission window (after 2026-10-01 07:30 UTC); remove it then.
- */
-export const DEX_VOLUME_ZERO_PROVENANCE_SINCE_SEC = 1_790_580_554;
-/**
- * Registry sources whose pre-cutover zeros are trusted as measured. The old CoinGecko
- * onchain parser coerced only an absent field to 0, and a 600-pool live sample on
- * 2026-09-28 found 1 absent field against 187 explicit zeros, all with zero 24h trades.
- * The stale-first refresh re-reads every CoinGecko onchain row within about 20h
- * under the explicit zero-trades rule, so any rare legacy absent value is short-lived.
- */
-export const DEX_VOLUME_ZERO_PROVENANCE_EXEMPT_SOURCES: Readonly<Record<string, true>> = { cg_onchain: true };
-/**
  * Registry sources whose usable stored 24h zero is trade-verified (liquidity v6.92
  * dead-pool floor). The CoinGecko onchain intake (`cgPoolVolume24hReading`, used
  * by the token-pool crawl and the stale-pool refresh) stores 0 only when the
  * provider publishes an explicit zero volume and zero 24h buys and sells.
- * Pre-cutover CoinGecko onchain zeros carry the same trust through
- * DEX_VOLUME_ZERO_PROVENANCE_EXEMPT_SOURCES (187 of 188 sampled were explicit
- * zeros with zero trades); the resolver has already discarded every zero that is
- * not a usable reading. The GeckoTerminal parser stores any explicit "0" without a
- * trade-count check, and DeFiLlama and direct APIs publish 0 for venues they
+ * The resolver has already discarded unusable readings. The GeckoTerminal parser
+ * stores explicit "0" without a trade-count check, and DeFiLlama and direct APIs publish 0 for venues they
  * under-index, so their zeros are measured but not trade-verified.
  */
 export const DEX_VOLUME_TRADE_VERIFIED_ZERO_SOURCES: Readonly<Record<string, true>> = { cg_onchain: true };

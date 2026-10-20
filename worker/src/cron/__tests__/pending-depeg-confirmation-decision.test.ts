@@ -9,7 +9,7 @@ import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 
 import { normalizePendingDepegRow } from "../../lib/depeg-pending";
-import { deriveDepegSignal } from "../../lib/depeg-signals";
+import { deriveDepegSignal } from "@shared/lib/depeg-signals";
 import type {
   CollectedConfirmationEvidence,
   ConfirmationPlanReady,

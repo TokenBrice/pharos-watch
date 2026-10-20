@@ -3,6 +3,7 @@ import { compareText } from "./primitives";
 import { isRecord } from "../type-guards";
 import { sha256Hex } from "../sha256";
 import { stableJsonStringifyV1 } from "../stable-json";
+import { deepFreeze } from "../../types/safety-score-v9-immutable";
 
 type AttributedRow = { assetId: string; [key: string]: unknown };
 const EMPTY_REGISTRY_ROWS: readonly never[] = [];
@@ -12,6 +13,84 @@ export class ReviewedRegistryEntryError extends Error {
     super(message);
     this.name = "ReviewedRegistryEntryError";
   }
+}
+
+/** File-local tables share exact observations, never the scope or outcome of a review. */
+export function createReviewedRegistryReferenceExpander(
+  tables: Readonly<Record<string, readonly { id: string; value: unknown }[]>>,
+  path: string,
+) {
+  const indexes = Object.entries(tables).map(([field, entries]) => {
+    deepFreeze(entries);
+    const values = new Map<string, unknown>();
+    const duplicates = new Set<string>();
+    for (const entry of entries) {
+      if (values.has(entry.id)) duplicates.add(entry.id);
+      values.set(entry.id, entry.value);
+    }
+    return { field, values, duplicates };
+  });
+  return (row: AttributedRow, index = 0): AttributedRow => {
+    const expanded = { ...row };
+    for (const { field, values, duplicates } of indexes) {
+      const refField = `${field}Refs`;
+      if (field in row) {
+        throw new ReviewedRegistryEntryError(`${path}.${index}.${field}`, "Authored observations require references, not inline values");
+      }
+      if (!(refField in row)) continue;
+      const refs = row[refField];
+      if (!Array.isArray(refs)) {
+        throw new ReviewedRegistryEntryError(`${path}.${index}.${refField}`, "Observation references must be an array");
+      }
+      const seen = new Set<string>();
+      expanded[field] = refs.map((ref: unknown, refIndex) => {
+        const refPath = `${path}.${index}.${refField}.${refIndex}`;
+        if (typeof ref !== "string" || !values.has(ref)) {
+          throw new ReviewedRegistryEntryError(refPath, `Dangling observation reference: ${String(ref)}`);
+        }
+        if (duplicates.has(ref)) throw new ReviewedRegistryEntryError(refPath, `Duplicate observation reference: ${ref}`);
+        if (seen.has(ref)) throw new ReviewedRegistryEntryError(refPath, `Duplicate observation reference: ${ref}`);
+        seen.add(ref);
+        return values.get(ref);
+      });
+      delete expanded[refField];
+    }
+    return expanded;
+  };
+}
+
+/** Expand an authored envelope before its existing strict schema and digest boundary. */
+export function expandReviewedRegistryReferences(
+  value: Record<string, unknown>,
+  rowKey: string,
+  tableFields: Readonly<Record<string, string>>,
+): Record<string, unknown> {
+  const expanded = { ...value };
+  const tables: Record<string, { id: string; value: unknown }[]> = {};
+  for (const [field, tableKey] of Object.entries(tableFields)) {
+    const table = value[tableKey];
+    if (!Array.isArray(table) || table.some((entry) =>
+      !isRecord(entry) || typeof entry.id !== "string" || !("value" in entry) ||
+      Object.keys(entry).some((key) => key !== "id" && key !== "value"))) {
+      throw new ReviewedRegistryEntryError(tableKey, "Expected an authored observation table");
+    }
+    const ids = new Set<string>();
+    for (const [index, entry] of table.entries()) {
+      if (ids.has(entry.id)) {
+        throw new ReviewedRegistryEntryError(`${tableKey}.${index}.id`, `Duplicate observation reference: ${entry.id}`);
+      }
+      ids.add(entry.id);
+    }
+    tables[field] = table;
+    delete expanded[tableKey];
+  }
+  const expand = createReviewedRegistryReferenceExpander(tables, rowKey);
+  const rows = value[rowKey];
+  if (!Array.isArray(rows) || rows.some((row) => !isRecord(row) || typeof row.assetId !== "string")) {
+    throw new ReviewedRegistryEntryError(rowKey, "Expected attributed authored review rows");
+  }
+  expanded[rowKey] = rows.map(expand);
+  return expanded;
 }
 
 /** Share unchanged JSON subtrees only after successful schema admission. */
@@ -55,6 +134,7 @@ export function createReviewedAssetRegistry<T>(args: {
   path: string;
   keyOf?: (row: AttributedRow) => string | undefined;
   keyPath?: string;
+  expandRow?: (row: AttributedRow, index: number) => AttributedRow;
 }) {
   const byAsset = new Map<string, { row: AttributedRow; index: number }[]>();
   const keyOwners = new Map<string, { assetId: string; index: number }>();
@@ -82,7 +162,8 @@ export function createReviewedAssetRegistry<T>(args: {
     if (cached) return cached;
     const authored = byAsset.get(assetId);
     if (!authored) return EMPTY_REGISTRY_ROWS;
-    const rows = authored.map(({ row, index }) => {
+    const rows = authored.map(({ row: authoredRow, index }) => {
+      const row = args.expandRow ? args.expandRow(authoredRow, index) : authoredRow;
       const parsed = args.schema.safeParse(row);
       if (!parsed.success) {
         const issue = parsed.error.issues[0]!;

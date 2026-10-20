@@ -220,6 +220,15 @@ export async function handlePendingActionBeforeDispatch(args: {
   const pendingActive = Boolean(pendingRow && pendingAction && pendingNotExpired);
 
   if (pendingRow && !pendingAction && pendingNotExpired) {
+    if (parsedCommand?.command === "/cancel") {
+      if (!canActOnPendingOwner(pendingRow.initiator_user_id ?? null, actorUserId)) {
+        await reply("Only the user who started this pending selection can cancel it.");
+        return "finished";
+      }
+      await clearPendingWithIntent(db, chatId, pendingRow, "cancel", operation);
+      await reply("Pending selection cancelled.");
+      return "finished";
+    }
     if (!parsedCommand) {
       await clearPendingWithIntent(db, chatId, pendingRow, "invalid", operation);
       await reply("That pending selection could not be restored. Please rerun the command, or use /help for examples.");

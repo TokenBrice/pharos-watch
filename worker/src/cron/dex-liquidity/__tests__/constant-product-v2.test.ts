@@ -15,7 +15,7 @@ import {
   getDexExecutionCapabilityRegistration,
   isDexExecutionProfileAdmittedForScoring,
 } from "@shared/lib/p4-exit-route-capability-policy";
-import { buildPoolFingerprint, initMetrics } from "../pool-helpers";
+import { buildPoolFingerprint, initSourcePoolGraph } from "../pool-helpers";
 import { buildEvmV2RegisteredExecutionTarget } from "../execution-targets/evm-v2";
 import {
   EVM_V2_EXECUTION_DEPLOYMENTS,
@@ -128,8 +128,8 @@ async function runV2PriceLegScenario({
     tokenAddresses: candidateTokenAddresses,
     tokenSymbols: candidateTokenSymbols,
   })!;
-  const metric = initMetrics("kag-kinesis", "KAG");
-  metric.topPools.push({
+  const metric = initSourcePoolGraph("kag-kinesis", "KAG");
+  metric.pools.push({
     poolId: canonicalExitRouteAssetKey("ethereum", KAG_XAUT_PAIR),
     project: "uniswap-v2",
     chain: "Ethereum",
@@ -222,9 +222,9 @@ async function runReplay(
   } = {},
 ) {
   const candidate = replayCandidate(replay);
-  const metric = initMetrics(replay.assetId, replay.stablecoinSymbol);
+  const metric = initSourcePoolGraph(replay.assetId, replay.stablecoinSymbol);
   const pool = replayPool(replay, candidate);
-  metric.topPools.push(pool);
+  metric.pools.push(pool);
   const { chainAddressToId, contractMetaByChainAddress } = replayTokenLookups(replay);
   const pinnedBlock = options.blockNumber ?? EVM_V2_REPLAY_BLOCK;
   const fetchBlockNumber = vi.fn(async () => pinnedBlock);
@@ -395,8 +395,8 @@ describe("constant-product V2 execution", () => {
 
   it("transfers an exact staged candidate onto a retained DL fingerprint", () => {
     const candidate = makeCandidate();
-    const metric = initMetrics("u-united-stables", "U");
-    metric.topPools.push({
+    const metric = initSourcePoolGraph("u-united-stables", "U");
+    metric.pools.push({
       poolId: buildPoolFingerprint("bsc", "pancakeswap", [U, WBNB])!,
       project: "pancakeswap",
       chain: "BSC",
@@ -417,15 +417,15 @@ describe("constant-product V2 execution", () => {
         candidate,
       }),
     ).toBe(true);
-    expect(metric.topPools[0]!.extra?.evmV2ExecutionCandidate).toEqual(candidate);
+    expect(metric.pools[0]!.extra?.evmV2ExecutionCandidate).toEqual(candidate);
   });
 
   it("keeps conflicting fingerprint candidates unresolved in either arrival order", () => {
     const first = makeCandidate();
     const second = { ...first, poolAddress: "0x0000000000000000000000000000000000005bad" as const };
     for (const candidates of [[first, second], [second, first]]) {
-      const metric = initMetrics("u-united-stables", "U");
-      metric.topPools.push({
+      const metric = initSourcePoolGraph("u-united-stables", "U");
+      metric.pools.push({
         poolId: buildPoolFingerprint("bsc", "pancakeswap", [U, WBNB])!,
         project: "pancakeswap", chain: "BSC", tvlUsd: 2_000_000,
         symbol: "U-WBNB", volumeUsd1d: 100_000, poolType: "generic", source: "dl", extra: {},
@@ -436,8 +436,8 @@ describe("constant-product V2 execution", () => {
       expect(attachEvmV2CandidateToRetainedPool({ metrics, stablecoinId: metric.stablecoinId, chain: "bsc", candidate: candidates[0]! })).toBe(true);
       expect(attachEvmV2CandidateToRetainedPool({ metrics, stablecoinId: metric.stablecoinId, chain: "bsc", candidate: candidates[1]! })).toBe(false);
       expect(attachEvmV2CandidateToRetainedPool({ metrics, stablecoinId: metric.stablecoinId, chain: "bsc", candidate: candidates[0]! })).toBe(false);
-      expect(metric.topPools[0]!.extra?.evmV2ExecutionCandidate).toBeUndefined();
-      expect(metric.topPools[0]!.extra?.executionCapabilityGate).toEqual({
+      expect(metric.pools[0]!.extra?.evmV2ExecutionCandidate).toBeUndefined();
+      expect(metric.pools[0]!.extra?.executionCapabilityGate).toEqual({
         family: "constant-product-v2", reason: "exact-pool-join-unresolved",
       });
     }
@@ -445,25 +445,25 @@ describe("constant-product V2 execution", () => {
 
   it("prefers an exact physical row and refuses non-unique fingerprint joins", () => {
     const candidate = makeCandidate();
-    const metric = initMetrics("u-united-stables", "U");
+    const metric = initSourcePoolGraph("u-united-stables", "U");
     const fingerprintPool = {
       poolId: buildPoolFingerprint("bsc", "pancakeswap", [U, WBNB])!,
       project: "pancakeswap", chain: "BSC", tvlUsd: 2_000_000,
       symbol: "U-WBNB", volumeUsd1d: 100_000, poolType: "generic", source: "dl" as const,
     };
-    metric.topPools.push({ ...fingerprintPool }, { ...fingerprintPool });
+    metric.pools.push({ ...fingerprintPool }, { ...fingerprintPool });
     const metrics = new Map([[metric.stablecoinId, metric]]);
     expect(attachEvmV2CandidateToRetainedPool({ metrics, stablecoinId: metric.stablecoinId, chain: "bsc", candidate })).toBe(false);
-    metric.topPools.push({ ...fingerprintPool, poolId: canonicalExitRouteAssetKey("bsc", PAIR) });
+    metric.pools.push({ ...fingerprintPool, poolId: canonicalExitRouteAssetKey("bsc", PAIR) });
     expect(attachEvmV2CandidateToRetainedPool({ metrics, stablecoinId: metric.stablecoinId, chain: "bsc", candidate })).toBe(true);
-    expect(metric.topPools[2]!.extra?.evmV2ExecutionCandidate).toEqual(candidate);
-    expect(metric.topPools[0]!.extra?.evmV2ExecutionCandidate).toBeUndefined();
+    expect(metric.pools[2]!.extra?.evmV2ExecutionCandidate).toEqual(candidate);
+    expect(metric.pools[0]!.extra?.evmV2ExecutionCandidate).toBeUndefined();
   });
 
   it("builds a same-block Pancake V2 model after factory and pair verification", async () => {
     const candidate = makeCandidate();
-    const metric = initMetrics("u-united-stables", "U");
-    metric.topPools.push({
+    const metric = initSourcePoolGraph("u-united-stables", "U");
+    metric.pools.push({
       poolId: buildPoolFingerprint("bsc", "pancakeswap", [U, WBNB])!,
       project: "pancakeswap",
       chain: "BSC",
@@ -514,7 +514,7 @@ describe("constant-product V2 execution", () => {
       },
     });
 
-    const retained = metric.topPools[0]!;
+    const retained = metric.pools[0]!;
     expect(retained.poolId).toBe(`bsc:${PAIR}`);
     expect(retained.extra?.evmV2ExecutionCandidate).toBeUndefined();
     expect(retained.extra?.ammExecutionModel).toMatchObject({
@@ -561,8 +561,8 @@ describe("constant-product V2 execution", () => {
         tokenAddresses: [A7A5, USDT_ETHEREUM],
         tokenSymbols: ["A7A5", "USDT"],
       })!;
-      const metric = initMetrics("a7a5-old-vector", "A7A5");
-      metric.topPools.push({
+      const metric = initSourcePoolGraph("a7a5-old-vector", "A7A5");
+      metric.pools.push({
         poolId: canonicalExitRouteAssetKey("ethereum", A7A5_USDT_PAIR),
         project: "uniswap-v2",
         chain: "Ethereum",
@@ -590,7 +590,7 @@ describe("constant-product V2 execution", () => {
           hashCode: vi.fn(() => deployment.expectedFactoryCodeHash),
         },
       });
-      return metric.topPools[0]!;
+      return metric.pools[0]!;
     };
 
     const unpriced = await enrich(new Map());
@@ -652,8 +652,8 @@ describe("constant-product V2 execution", () => {
       tokenAddresses: [SPUSD, USDC_BSC],
       tokenSymbols: ["SPUSD", "USDC"],
     })!;
-    const metric = initMetrics("spusd-soulpeg", "SPUSD");
-    metric.topPools.push({
+    const metric = initSourcePoolGraph("spusd-soulpeg", "SPUSD");
+    metric.pools.push({
       poolId: canonicalExitRouteAssetKey("bsc", SPUSD_USDC_PAIR),
       project: "pancakeswap",
       chain: "BSC",
@@ -701,8 +701,8 @@ describe("constant-product V2 execution", () => {
       },
     });
 
-    expect(metric.topPools[0]!.extra?.executionCapabilityGate).toBeUndefined();
-    expect(metric.topPools[0]!.extra?.ammExecutionModel).toMatchObject({
+    expect(metric.pools[0]!.extra?.executionCapabilityGate).toBeUndefined();
+    expect(metric.pools[0]!.extra?.ammExecutionModel).toMatchObject({
       source: "pancakeswap-v2",
       invariant: "constant-product",
       trackedTokenIndex: 0,
@@ -733,8 +733,8 @@ describe("constant-product V2 execution", () => {
       stablecoinPriceById: new Map([["xaut-tether", 4_300]]),
     });
 
-    expect(metric.topPools[0]!.extra?.executionCapabilityGate).toBeUndefined();
-    expect(metric.topPools[0]!.extra?.ammExecutionModel).toMatchObject({
+    expect(metric.pools[0]!.extra?.executionCapabilityGate).toBeUndefined();
+    expect(metric.pools[0]!.extra?.ammExecutionModel).toMatchObject({
       source: "uniswap-v2",
       trackedTokenIndex: 0,
       tokens: [
@@ -761,7 +761,7 @@ describe("constant-product V2 execution", () => {
       actualReserve1: 1n * 10n ** 6n,
     });
 
-    const model = DexAmmExecutionModelSchema.parse(metric.topPools[0]!.extra?.ammExecutionModel);
+    const model = DexAmmExecutionModelSchema.parse(metric.pools[0]!.extra?.ammExecutionModel);
     expect(model).toMatchObject({
       source: "uniswap-v2",
       trackedTokenIndex: 0,
@@ -780,8 +780,8 @@ describe("constant-product V2 execution", () => {
       stablecoinPriceById: new Map(),
     });
 
-    expect(metric.topPools[0]!.extra?.ammExecutionModel).toBeUndefined();
-    expect(metric.topPools[0]!.extra?.executionCapabilityGate).toEqual({
+    expect(metric.pools[0]!.extra?.ammExecutionModel).toBeUndefined();
+    expect(metric.pools[0]!.extra?.executionCapabilityGate).toEqual({
       family: "constant-product-v2",
       reason: "incomplete-exact-capture",
     });
@@ -795,8 +795,8 @@ describe("constant-product V2 execution", () => {
       ]),
       stablecoinPriceById: new Map([["kag-kinesis", 75]]),
     });
-    expect(metric.topPools[0]!.extra?.ammExecutionModel).toBeUndefined();
-    expect(metric.topPools[0]!.extra?.executionCapabilityGate?.reason).toBe("incomplete-exact-capture");
+    expect(metric.pools[0]!.extra?.ammExecutionModel).toBeUndefined();
+    expect(metric.pools[0]!.extra?.executionCapabilityGate?.reason).toBe("incomplete-exact-capture");
   });
 
   it("keeps an untracked pool-implied output distinct from an independent USD reference", async () => {
@@ -804,13 +804,13 @@ describe("constant-product V2 execution", () => {
       chainAddressToId: new Map([[canonicalExitRouteAssetKey("ethereum", KAG), "kag-kinesis"]]),
       stablecoinPriceById: new Map([["kag-kinesis", 75]]),
     });
-    const output = metric.topPools[0]!.extra?.ammExecutionModel?.tokens[1];
+    const output = metric.pools[0]!.extra?.ammExecutionModel?.tokens[1];
     expect(output?.referencePriceSource).toBe("pool-implied");
     expect(trackedExactAmmOutputValuationFields(output!, "test-reference", 1_700_000_000)).toEqual({});
   });
 
   it("bounds deployment probes so one oversized request cannot gate every V2 pool", async () => {
-    const metric = initMetrics("u-united-stables", "U");
+    const metric = initSourcePoolGraph("u-united-stables", "U");
     const candidates = Array.from({ length: 5 }, (_, index) => {
       const poolAddress = `0x${(index + 1).toString(16).padStart(40, "0")}` as `0x${string}`;
       const candidate = buildEvmV2ExecutionCandidate({
@@ -821,7 +821,7 @@ describe("constant-product V2 execution", () => {
         tokenAddresses: [U, WBNB],
         tokenSymbols: ["U", "WBNB"],
       })!;
-      metric.topPools.push({
+      metric.pools.push({
         poolId: poolAddress,
         project: "pancakeswap",
         chain: "BSC",
@@ -875,12 +875,12 @@ describe("constant-product V2 execution", () => {
 
     expect(fetchMulticall).toHaveBeenCalledTimes(2);
     expect(fetchMulticall.mock.calls.map((call) => call[1].length)).toEqual([24, 6]);
-    expect(metric.topPools.every((pool) => pool.extra?.ammExecutionModel?.source === "pancakeswap-v2")).toBe(true);
+    expect(metric.pools.every((pool) => pool.extra?.ammExecutionModel?.source === "pancakeswap-v2")).toBe(true);
   });
 
   it("fails closed when the canonical factory runtime does not match", async () => {
-    const metric = initMetrics("u-united-stables", "U");
-    metric.topPools.push({
+    const metric = initSourcePoolGraph("u-united-stables", "U");
+    metric.pools.push({
       poolId: `bsc:${PAIR}`,
       project: "pancakeswap",
       chain: "BSC",
@@ -911,9 +911,9 @@ describe("constant-product V2 execution", () => {
       },
     });
 
-    expect(metric.topPools[0]!.extra?.ammExecutionModel).toBeUndefined();
-    expect(metric.topPools[0]!.extra?.evmV2ExecutionCandidate).toBeUndefined();
-    expect(metric.topPools[0]!.extra?.executionCapabilityGate).toEqual({
+    expect(metric.pools[0]!.extra?.ammExecutionModel).toBeUndefined();
+    expect(metric.pools[0]!.extra?.evmV2ExecutionCandidate).toBeUndefined();
+    expect(metric.pools[0]!.extra?.executionCapabilityGate).toEqual({
       family: "constant-product-v2",
       reason: "deployment-code-mismatch",
     });
@@ -935,7 +935,7 @@ describe("constant-product V2 execution", () => {
   for (const replay of EVM_V2_REPLAY_CASES) {
     it(`replays the exact U5 tuple and complete V2 curve for ${replay.assetId}`, async () => {
       const result = await runReplay(replay);
-      const retained = result.metric.topPools[0]!;
+      const retained = result.metric.pools[0]!;
       const model = DexAmmExecutionModelSchema.parse(retained.extra?.ammExecutionModel);
       const deployment = EVM_V2_EXECUTION_DEPLOYMENTS.find(
         (entry) => entry.source === "pancakeswap-v2",

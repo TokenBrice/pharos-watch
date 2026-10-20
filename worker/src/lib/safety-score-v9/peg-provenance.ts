@@ -138,23 +138,8 @@ const PegScoreProjectionSchema = z
   })
   .strict();
 
-export interface SafetyScoreV9PegScoreProjection {
-  pegScore: number | null;
-  pegPct: number | null;
-  severityScore: number;
-  spreadPenalty: number;
-  eventCount: number;
-  worstDeviationBps: number | null;
-  activeDepeg: boolean;
-  lastEventAt: number | null;
-  trackingSpanDays: number;
-}
-
-export interface SafetyScoreV9PegEvidenceClassStats {
-  eventCount: number;
-  worstDeviationBps: number | null;
-  latestEventAtSec: number | null;
-}
+export type SafetyScoreV9PegScoreProjection = z.infer<typeof PegScoreProjectionSchema>;
+export type SafetyScoreV9PegEvidenceClassStats = z.infer<typeof PegEvidenceClassStatsSchema>;
 
 const PegEvidenceClassStatsSchema = z
   .object({
@@ -629,7 +614,7 @@ function scoreCoverageEvents(
 }
 
 export function projectSafetyScoreV9PegScoreResult(
-  result: PegScoreResult,
+  result: SafetyScoreV9PegScoreProjection,
 ): SafetyScoreV9PegScoreProjection {
   return {
     pegScore: result.pegScore,
@@ -641,22 +626,6 @@ export function projectSafetyScoreV9PegScoreResult(
     activeDepeg: result.activeDepeg,
     lastEventAt: result.lastEventAt,
     trackingSpanDays: result.trackingSpanDays,
-  };
-}
-
-export function projectSafetyScoreV9PegSummary(
-  summary: PegSummaryCoin,
-): SafetyScoreV9PegScoreProjection {
-  return {
-    pegScore: summary.pegScore,
-    pegPct: summary.pegPct,
-    severityScore: summary.severityScore,
-    spreadPenalty: summary.spreadPenalty,
-    eventCount: summary.eventCount,
-    worstDeviationBps: summary.worstDeviationBps,
-    activeDepeg: summary.activeDepeg,
-    lastEventAt: summary.lastEventAt,
-    trackingSpanDays: summary.trackingSpanDays,
   };
 }
 
@@ -823,7 +792,7 @@ export function captureSafetyScoreV9PegProvenanceById(
       events: source.eventsByCoin.get(assetId) ?? [],
       trackingStartSec: pegSummary.historyCoverage?.startedAt ?? null,
       clockSec,
-      expectedLegacyInclusive: projectSafetyScoreV9PegSummary(pegSummary),
+      expectedLegacyInclusive: projectSafetyScoreV9PegScoreResult(pegSummary),
     });
   }
   return provenanceById;

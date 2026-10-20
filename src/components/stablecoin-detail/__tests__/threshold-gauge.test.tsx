@@ -43,6 +43,12 @@ describe("ThresholdGauge", () => {
   it.each([
     [96.4, "under"],
     [99.2, "under"],
+    [99.495, "under"],
+    [99.499, "under"],
+    [99.5, "par"],
+    [100.495, "par"],
+    [100.499, "par"],
+    [100.5, "over"],
     [100.2, "par"],
     [279.2, "over"],
   ])("tones %s %% as %s", (valuePct, tone) => {

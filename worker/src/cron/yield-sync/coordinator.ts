@@ -86,9 +86,7 @@ import {
   YIELD_HISTORY_CLEANUP_WRITER_PAUSE_KEY,
   parseYieldHistoryWriterPause,
 } from "../../lib/yield-history-cleanup";
-import {
-  ON_CHAIN_RATE_CONFIGS,
-} from "../../lib/yield-config/yield-config";
+import { ON_CHAIN_RATE_CONFIGS } from "../../lib/yield-config/yield-config-rate-sources";
 import {
   createYieldProgressReporter,
 } from "../yield-progress";

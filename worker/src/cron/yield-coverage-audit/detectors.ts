@@ -11,13 +11,10 @@ import type {
   YieldCoverageAuditQueueItemKind,
 } from "@shared/types/status";
 import { normalizeDexSymbol } from "../../lib/dex-cron-constants";
-import {
-  AUTO_LENDING_POOL_MAP,
-  LENDING_PROTOCOL_ALLOWLIST,
-  YIELD_POOL_MAP,
-  YIELD_VARIANT_MAP,
-  YIELD_WEIGHTED_POOL_GROUPS,
-} from "../../lib/yield-config/yield-config";
+import { AUTO_LENDING_POOL_MAP, LENDING_PROTOCOL_ALLOWLIST } from "../../lib/yield-config/yield-config-lending-protocols";
+import { YIELD_POOL_MAP } from "../../lib/yield-config/yield-config-pools";
+import { YIELD_VARIANT_MAP } from "../../lib/yield-config/yield-config-variants";
+import { YIELD_WEIGHTED_POOL_GROUPS } from "../../lib/yield-config/yield-config-weighted-pools";
 import { resolveYieldSourceKeyRoute } from "../yield-sync/family-registry";
 import { explainDeterministicAutoLendingEligibility, type AutoLendingEligibilityReasonCode } from "../yield-sync/resolve";
 import type { DlPool } from "../yield-sync/types";
@@ -900,7 +897,7 @@ export function identifyStaleAutoLendingOverrides(
   const stablecoinSupplyById = options.stablecoinSupplyById ?? new Map();
   const safetyScores = options.safetyScores;
 
-  for (const [stablecoinId, poolId] of Object.entries(AUTO_LENDING_POOL_MAP)) {
+  for (const [stablecoinId, poolId] of Object.entries(AUTO_LENDING_POOL_MAP).sort(([a], [b]) => a.localeCompare(b))) {
     const pool = poolById.get(poolId);
     if (!pool) {
       staleOverrides.push({
@@ -963,7 +960,7 @@ export function identifyDeadCuratedPins(
   };
   const pins: DeadCuratedPin[] = [];
 
-  for (const [stablecoinId, poolId] of Object.entries(YIELD_POOL_MAP)) {
+  for (const [stablecoinId, poolId] of Object.entries(YIELD_POOL_MAP).sort(([a], [b]) => a.localeCompare(b))) {
     if (snapshotPoolIds.has(poolId)) continue;
     pins.push({
       stablecoinId,
@@ -976,7 +973,7 @@ export function identifyDeadCuratedPins(
     });
   }
 
-  for (const [stablecoinId, variant] of Object.entries(YIELD_VARIANT_MAP)) {
+  for (const [stablecoinId, variant] of Object.entries(YIELD_VARIANT_MAP).sort(([a], [b]) => a.localeCompare(b))) {
     const variantSymbol = normalizeDexSymbol(variant.variantSymbol);
     const variantChain = variant.variantChain ? normalizeChainId(variant.variantChain) : null;
     const variantProject = variant.variantProject?.trim().toLowerCase() ?? "";

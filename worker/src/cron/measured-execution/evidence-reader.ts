@@ -57,26 +57,25 @@ interface QuoteGenerationSummaryRow {
   max_target_generation_id: string | null;
 }
 
+interface DexMeasuredQuoteEvidenceEntry {
+  quotedTarget: DexMeasuredExecutionTarget;
+  status: "measured" | "failed";
+  failureReason: string | null;
+  profile: DexMeasuredExecutionProfile | null;
+  /** Scoring-only lazy form; validated once on read and materialized per consumer target. */
+  deferredProfileJson?: string;
+  quoteGenerationId: string;
+  targetGenerationId: string;
+  resolution: "latest" | "last-known-good";
+  latestFailureReason: string | null;
+  observationHistory?: DexMeasuredExecutionObservationHistory;
+}
+
 export interface LoadedDexMeasuredQuoteEvidence {
   quoteGenerationId: string;
   targetGenerationId: string;
   publishedAt: number;
-  byTargetId: Map<
-    string,
-    {
-      quotedTarget: DexMeasuredExecutionTarget;
-      status: "measured" | "failed";
-      failureReason: string | null;
-      profile: DexMeasuredExecutionProfile | null;
-      /** Scoring-only lazy form; validated once on read and materialized per consumer target. */
-      deferredProfileJson?: string;
-      quoteGenerationId: string;
-      targetGenerationId: string;
-      resolution: "latest" | "last-known-good";
-      latestFailureReason: string | null;
-      observationHistory?: DexMeasuredExecutionObservationHistory;
-    }
-  >;
+  byTargetId: Map<string, DexMeasuredQuoteEvidenceEntry>;
 }
 
 const OPERATIONAL_DEX_MEASURED_FAILURE_REASONS = new Set([
@@ -106,7 +105,7 @@ export function isOperationalDexMeasuredFailure(reason: string | null | undefine
 }
 
 export function materializeDexMeasuredQuoteProfile(
-  entry: LoadedDexMeasuredQuoteEvidence["byTargetId"] extends Map<string, infer T> ? T : never,
+  entry: DexMeasuredQuoteEvidenceEntry,
 ): DexMeasuredExecutionProfile | null {
   if (entry.profile) return entry.profile;
   if (!entry.deferredProfileJson) return null;
@@ -122,8 +121,8 @@ export function materializeDexMeasuredQuoteProfile(
  */
 function isCoherentHistoricalQuoteRow(
   row: QuoteRow,
-  target: { targetId: string },
-  profile: { targetId: string; targetGenerationId: string; quoteGenerationId: string } | null,
+  target: DexMeasuredExecutionTarget,
+  profile: DexMeasuredExecutionProfile | null,
 ): boolean {
   if (target.targetId !== row.target_id) return false;
   if (row.status === "measured") {
@@ -138,34 +137,19 @@ function isCoherentHistoricalQuoteRow(
   return profile == null && Boolean(row.failure_reason?.trim());
 }
 
-function validateSparseQuoteRow<
-  TTarget extends { targetId: string },
-  TProfile extends {
-    targetId: string;
-    targetGenerationId: string;
-    quoteGenerationId: string;
-  },
->(
+function validateEvmMeasuredQuoteRow(
   row: SparseCurrentQuoteWithTargetRow,
   input: {
     label: string;
     quoteGenerationId: string;
     targetGenerationId: string;
-    targetSchema: { parse(value: unknown): TTarget };
-    profileSchema: { parse(value: unknown): TProfile };
     deferProfiles?: boolean;
   },
 ): {
-  entry: {
-    quotedTarget: TTarget;
-    status: "measured" | "failed";
-    failureReason: string | null;
-    profile: TProfile | null;
-    deferredProfileJson?: string;
-  };
+  entry: Pick<DexMeasuredQuoteEvidenceEntry, "quotedTarget" | "status" | "failureReason" | "profile" | "deferredProfileJson">;
   omitted: boolean;
 } {
-  const quotedTarget = input.targetSchema.parse(
+  const quotedTarget = DexMeasuredExecutionTargetSchema.parse(
     parsePersistedJson(row.target_json, `${input.label} measured target JSON`),
   );
   if (quotedTarget.targetId !== row.target_id) {
@@ -184,7 +168,7 @@ function validateSparseQuoteRow<
     };
   }
   const profile = row.quote_profile_json
-    ? input.profileSchema.parse(
+    ? DexMeasuredExecutionProfileSchema.parse(
         parsePersistedJson(row.quote_profile_json, `${input.label} measured profile JSON`),
       )
     : null;
@@ -216,20 +200,11 @@ function validateSparseQuoteRow<
   };
 }
 
-async function loadCurrentMeasuredQuoteEvidence<
-  TTarget extends { targetId: string },
-  TProfile extends {
-    targetId: string;
-    targetGenerationId: string;
-    quoteGenerationId: string;
-  },
->(input: {
+async function loadCurrentEvmMeasuredQuoteEvidence(input: {
   db: D1Database;
   quoteSurface: string;
   targetSurface: string;
   label: string;
-  targetSchema: { parse(value: unknown): TTarget };
-  profileSchema: { parse(value: unknown): TProfile };
   deferProfiles?: boolean;
   targetIds?: readonly string[];
   publishedAtCeilingSec?: number;
@@ -238,16 +213,7 @@ async function loadCurrentMeasuredQuoteEvidence<
   quoteGenerationId: string;
   targetGenerationId: string;
   publishedAt: number;
-  byTargetId: Map<
-    string,
-    {
-      quotedTarget: TTarget;
-      status: "measured" | "failed";
-      failureReason: string | null;
-      profile: TProfile | null;
-      deferredProfileJson?: string;
-    }
-  >;
+  byTargetId: Map<string, Pick<DexMeasuredQuoteEvidenceEntry, "quotedTarget" | "status" | "failureReason" | "profile" | "deferredProfileJson">>;
 } | null> {
   const generation = input.publishedAtCeilingSec === undefined
     ? await latestPublishedGeneration(input.db, input.quoteSurface, input.signal)
@@ -326,15 +292,7 @@ async function loadCurrentMeasuredQuoteEvidence<
     throw new Error(`${input.label} measured quote generation ${generation.generation_id} has incomplete targets`);
   }
 
-  const byTargetId = new Map<
-    string,
-    {
-      quotedTarget: TTarget;
-      status: "measured" | "failed";
-      failureReason: string | null;
-      profile: TProfile | null;
-    }
-  >();
+  const byTargetId = new Map<string, Pick<DexMeasuredQuoteEvidenceEntry, "quotedTarget" | "status" | "failureReason" | "profile" | "deferredProfileJson">>();
   if (input.targetIds) {
     const allTargetResult = await runWithOverloadRetry(
       () =>
@@ -386,12 +344,10 @@ async function loadCurrentMeasuredQuoteEvidence<
         input.signal,
       );
       for (const row of selectedResult.results ?? []) {
-        const validated = validateSparseQuoteRow(row, {
+        const validated = validateEvmMeasuredQuoteRow(row, {
           label: input.label,
           quoteGenerationId: generation.generation_id,
           targetGenerationId,
-          targetSchema: input.targetSchema,
-          profileSchema: input.profileSchema,
           deferProfiles: input.deferProfiles,
         });
         byTargetId.set(row.target_id, validated.entry);
@@ -449,12 +405,10 @@ async function loadCurrentMeasuredQuoteEvidence<
         throw new Error(`${input.label} measured quote evidence pagination did not advance`);
       }
       targetIds.push(row.target_id);
-      const validated = validateSparseQuoteRow(row, {
+      const validated = validateEvmMeasuredQuoteRow(row, {
         label: input.label,
         quoteGenerationId: generation.generation_id,
         targetGenerationId,
-        targetSchema: input.targetSchema,
-        profileSchema: input.profileSchema,
         deferProfiles: input.deferProfiles,
       });
       if (validated.omitted) omittedRowsSeen++;
@@ -498,13 +452,11 @@ export async function loadLatestPublishedDexMeasuredQuoteEvidence(
     publishedAtCeilingSec?: number;
   } = {},
 ): Promise<LoadedDexMeasuredQuoteEvidence | null> {
-  const currentEvidence = await loadCurrentMeasuredQuoteEvidence({
+  const currentEvidence = await loadCurrentEvmMeasuredQuoteEvidence({
     db,
     quoteSurface: DEX_MEASURED_QUOTE_SURFACE,
     targetSurface: DEX_MEASURED_TARGET_SURFACE,
     label: "DEX",
-    targetSchema: DexMeasuredExecutionTargetSchema,
-    profileSchema: DexMeasuredExecutionProfileSchema,
     deferProfiles: options.deferProfiles,
     targetIds: options.targetIds,
     ...(options.publishedAtCeilingSec === undefined
@@ -518,10 +470,7 @@ export async function loadLatestPublishedDexMeasuredQuoteEvidence(
     targetGenerationId,
     publishedAt: latestPublishedAt,
   } = currentEvidence;
-  const byTargetId = new Map<
-    string,
-    LoadedDexMeasuredQuoteEvidence["byTargetId"] extends Map<string, infer T> ? T : never
-  >();
+  const byTargetId = new Map<string, DexMeasuredQuoteEvidenceEntry>();
   const historyCyclesByTargetId = new Map<string, DexMeasuredExecutionHistoryCycle[]>();
   const currentProfileJsonByTargetId = new Map<string, string>();
   const historyFinalizedTargetIds = new Set<string>();

@@ -11,7 +11,7 @@ import {
 import {
   classifyDirectionalSignal,
   deriveDepegSignal,
-} from "../lib/depeg-signals";
+} from "@shared/lib/depeg-signals";
 import {
   buildDeletePendingStmt,
   buildOutcomeAndDeleteStmts,

@@ -3,7 +3,7 @@ import { roundTo } from "@shared/lib/math";
 import { buildP4DexExitRouteObservations } from "@shared/lib/p4-exit-route-capacity";
 import type { ExitRouteObservation, ExitRouteObservationCoverage } from "@shared/types/market";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
-import type { LiquidityFallbackCounters, LiquidityMetrics, FullScoreResult, GlobalAgg } from "./types";
+import type { LiquidityFallbackCounters, LiquidityMetrics, SourcePoolGraph, FullScoreResult, GlobalAgg } from "./types";
 import type { DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
 import { isCurveCompositeAdapterProfileId, matchesCurveCompositeTarget } from "@shared/lib/curve-composite-policies";
 import { buildMeasuredPoolDirectionKey } from "../measured-execution/inventory";
@@ -16,7 +16,6 @@ import {
   accumulateGlobalAggregate,
   applyPoolVolumeEligibility,
   quarantineProtocolTvlOutliers,
-  applyRebuiltMetrics,
   classifyCoverage,
   filterRetainedPools,
   rebuildMetricsFromPools,
@@ -27,7 +26,7 @@ import {
 } from "./scoring-helpers";
 import { DEX_DEAD_POOL_TVL_MIN_USD, DEX_VOLUME_OBSERVATION_MAX_AGE_SEC } from "@shared/lib/dex-volume-availability";
 import { applyDexRouteObservationBounds, collectDexRoutePackingOmissions, selectDexRouteObservationPoolSet, selectDexRouteObservationPools, selectDexRouteObservations, type DexRouteSelectionDiagnostic } from "./dex-route-observation-selection";
-import { DEX_LIQUIDITY_SCORING_BATCH_SIZE, DEX_PRICE_STAGE_RETENTION_GENERATIONS_PER_RUN, computeDepthStability, computeSeriesStability, loadConfidentHistoryStability, loadCurrentDexScoringGenerationId, pruneExpiredDexPriceStages } from "./dex-scoring-stage-store";
+import { DEX_LIQUIDITY_SCORING_BATCH_SIZE, DEX_PRICE_STAGE_RETENTION_GENERATIONS_PER_RUN, computeSeriesStability, loadConfidentHistoryStability, loadCurrentDexScoringGenerationId, pruneExpiredDexPriceStages } from "./dex-scoring-stage-store";
 import { computeDexPrices, type DexPricePersistenceDiagnostics } from "./dex-price-publisher";
 import { canonicalExitRouteScopedKey } from "@shared/types/exit-route-identity";
 import { getMeasuredTargetFunnelGroup, incrementReason, measuredPoolProfileIds, summarizeMeasuredTargetFunnel, type DexRouteRemovalEvidence, type MeasuredTargetFunnel, type MeasuredTargetFunnelGroup } from "./route-telemetry";
@@ -35,7 +34,7 @@ import type { DexLiquidityProtocolTvlQuarantine } from "../../lib/schemas";
 
 export {
   DEX_LIQUIDITY_SCORING_BATCH_SIZE, DEX_PRICE_STAGE_RETENTION_GENERATIONS_PER_RUN,
-  computeDepthStability, computeDexPrices,
+  computeDexPrices,
   computeSeriesStability, loadConfidentHistoryStability,
   loadCurrentDexScoringGenerationId,
   pruneExpiredDexPriceStages,
@@ -157,7 +156,7 @@ function weightedRatio(sum: number, total: number, places = 4): number | null {
 /** Compute HHI, durability, and 6-component composite score per stablecoin. */
 export async function computeStablecoinScores(
   db: D1Database,
-  metrics: Map<string, LiquidityMetrics>,
+  metrics: Map<string, SourcePoolGraph>,
   protocolTvlCaps: Map<string, number>,
   mcapById?: Map<string, number>,
   routeObservedAtSec = Math.floor(Date.now() / 1000),
@@ -168,6 +167,7 @@ export async function computeStablecoinScores(
   registryEvaluatedAtSec = routeObservedAtSec,
 ): Promise<{
   scores: Map<string, FullScoreResult>;
+  scoredMetrics: Map<string, LiquidityMetrics>;
   globalAgg: GlobalAgg;
   retainedPoolsByStablecoin: Map<string, LiquidityMetrics["topPools"]>;
   tvlStabilityMap: Map<string, number>;
@@ -177,6 +177,7 @@ export async function computeStablecoinScores(
   const { tvlStabilityMap, volumeStabilityMap } = await loadConfidentHistoryStability(db);
 
   const results = new Map<string, FullScoreResult>();
+  const scoredMetrics = new Map<string, LiquidityMetrics>();
   const retainedPoolsByStablecoin = new Map<string, LiquidityMetrics["topPools"]>();
   const routeSelectionDiagnostics: DexRouteSelectionDiagnostic[] = [];
   const targetFunnelGroups = new Map<string, MeasuredTargetFunnelGroup>();
@@ -212,8 +213,8 @@ export async function computeStablecoinScores(
     throwIfAborted(signal);
     // Eligibility first: retention filters and every later consumer see only
     // in-window volume (aged/absent readings are null, never decayed or zero).
-    applyPoolVolumeEligibility(m.topPools, volumeClock);
-    const candidatePools = m.topPools;
+    applyPoolVolumeEligibility(m.pools, volumeClock);
+    const candidatePools = m.pools;
     candidatePoolsByStablecoin.set(id, candidatePools);
     for (const pool of candidatePools) {
       for (const profile of measuredPoolProfileIds(pool)) {
@@ -226,22 +227,22 @@ export async function computeStablecoinScores(
         }
       }
     }
-    p4OnlyRetainedPools.set(id, m.topPools.filter(isP4OnlyPausedBalancerPool));
+    p4OnlyRetainedPools.set(id, m.pools.filter(isP4OnlyPausedBalancerPool));
     const deadPoolTally: DeadPoolExclusionTally = { poolCount: 0, tvlUsd: 0 };
-    m.topPools = filterRetainedPools(
-      m.topPools.filter((pool) => !isP4OnlyPausedBalancerPool(pool)),
+    m.pools = filterRetainedPools(
+      m.pools.filter((pool) => !isP4OnlyPausedBalancerPool(pool)),
       fallbackCounters,
       deadPoolTally,
     );
     if (deadPoolTally.poolCount > 0) deadPoolExclusionsByStablecoin.push({ stablecoinId: id, ...deadPoolTally });
-    preparedRetainedPools.set(id, m.topPools);
+    preparedRetainedPools.set(id, m.pools);
   }
 
   const protocolTvlQuarantine = quarantineProtocolTvlOutliers(preparedRetainedPools, protocolTvlCaps);
   for (const [id, retainedPools] of preparedRetainedPools) {
     throwIfAborted(signal);
     const m = metrics.get(id)!;
-    m.topPools = retainedPools;
+    m.pools = retainedPools;
     const candidatePools = candidatePoolsByStablecoin.get(id)!;
     candidatePoolsByStablecoin.delete(id);
     const retainedPoolSet = new Set(retainedPools);
@@ -439,7 +440,7 @@ export async function computeStablecoinScores(
   }
   joinEvidence?.byTargetId.clear();
 
-  for (const [id, m] of metrics) {
+  for (const [id, graph] of metrics) {
     if (!ACTIVE_IDS.has(id)) continue;
     throwIfAborted(signal);
     const retainedPools = preparedRetainedPools.get(id) ?? [];
@@ -473,16 +474,20 @@ export async function computeStablecoinScores(
     preparedRetainedPools.delete(id);
     p4OnlyRetainedPools.delete(id);
 
-    applyRebuiltMetrics(m, rebuilt);
     // Measured windows over the COMPLETE retained set, never the visible top 10;
     // coverage weighs each pool by its admitted raw TVL.
     const volume = summarizeRetainedPoolVolume(
       retainedPools.map((pool) => ({ reading: pool.volumeReading, tvlUsd: pool.tvlUsd })),
       volumeClock,
     );
-    m.totalVolume24hUsd = volume.totalVolume24hUsd;
-    m.totalVolume7dUsd = volume.totalVolume7dUsd;
-    m.volumeAvailability = volume.volumeAvailability;
+    const m: LiquidityMetrics = {
+      stablecoinId: graph.stablecoinId,
+      symbol: graph.symbol,
+      ...rebuilt,
+      topPools: rebuilt.visiblePools,
+      ...volume,
+    };
+    scoredMetrics.set(id, m);
     const globalDelta = accumulateGlobalAggregate(
       retainedPools,
       globalProtocolTvl,
@@ -576,6 +581,7 @@ export async function computeStablecoinScores(
 
   return {
     scores: results,
+    scoredMetrics,
     globalAgg,
     retainedPoolsByStablecoin,
     tvlStabilityMap,

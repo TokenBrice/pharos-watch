@@ -13,7 +13,6 @@ import {
 } from "../blacklist-coverage-manifest";
 import {
   CONTRACT_CONFIGS,
-  PYUSD_EVENT_FAMILY,
   getBlacklistConfigsForSymbolAndChain,
   getBlacklistEventBySignature,
   getBlacklistEventByTopic,
@@ -290,7 +289,9 @@ describe("blacklist-contracts shared metadata alignment", () => {
     );
     expect(config).toBeDefined();
     expect(config!.stablecoin).toBe("USDP");
-    expect(config!.events).toEqual(PYUSD_EVENT_FAMILY.events);
+    expect(config!.events).toEqual(CONTRACT_CONFIGS.find(
+      (entry) => entry.stablecoinId === "pyusd-paypal" && entry.chain.chainId === "ethereum",
+    )!.events);
   });
 
   it("tracks Avalon USDA blacklist events without a non-existent DestroyedBlackFunds event", () => {

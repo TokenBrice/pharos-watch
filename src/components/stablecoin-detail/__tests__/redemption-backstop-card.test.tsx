@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { render, within } from "@testing-library/react";
 import { RedemptionRouteSection } from "../redemption-backstop-card";
 import { buildRedemptionBackstopCardViewModel } from "../redemption-backstop-card-view-model";
-import { formatRedemptionDocsProvenance, formatRedemptionRouteStatus } from "@shared/lib/classification";
+import { formatRedemptionDocsProvenance, formatRedemptionRouteStatus, resolveScoreTier5, SCORE_TIER_5_CLASSES } from "@shared/lib/classification";
 import { makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS } from "@shared/data/coverage-dispositions/redemption-coverage-dispositions";
 import type { RedemptionBackstopEntry, SafetyScoreV9CurrentCard } from "@shared/types";
@@ -93,6 +93,32 @@ afterEach(() => {
 });
 
 describe("RedemptionBackstopCard", () => {
+  it.each([
+    [null, null], [34.99, "t0"], [35, "t35"], [49.99, "t35"], [50, "t50"],
+    [64.99, "t50"], [65, "t65"], [79.99, "t65"], [80, "t80"],
+  ] as const)("keeps pill, component text and spectrum tiers aligned at %s", (score, tier) => {
+    const entry = { ...BASE_ENTRY, score, accessScore: score };
+    const model = buildRedemptionBackstopCardViewModel(entry);
+    expect(resolveScoreTier5(score)).toBe(tier);
+    expect(model.score).toBe(score);
+    expect(model.scoreBreakdown.access.score).toBe(score);
+    expect(model.scoreToneClass).toBe(tier === null
+      ? "border-border/60 bg-muted/30 text-muted-foreground" : SCORE_TIER_5_CLASSES[tier].pill);
+    expect(model.scoreBreakdown.access.textClass).toBe(tier === null
+      ? "text-muted-foreground" : SCORE_TIER_5_CLASSES[tier].text);
+    const { container } = render(<RedemptionBackstopCard entry={entry} />);
+    const spectrum = container.querySelector('[aria-label^="Route score"]');
+    if (tier === null) {
+      expect(spectrum).toBeNull();
+    } else {
+      expect(spectrum?.getAttribute("aria-label")).toBe(`Route score ${score} of 100 on the redemption score track.`);
+      expect(spectrum?.querySelectorAll(".h-1\\.5")[["t0", "t35", "t50", "t65", "t80"].indexOf(tier)]?.className)
+        .toContain(SCORE_TIER_5_CLASSES[tier].fill);
+      expect(Array.from(spectrum!.querySelectorAll("[aria-hidden='true'] > span")).map((node) => node.textContent))
+        .toEqual(["<35", "35–49", "50–64", "65–79", "80+"]);
+    }
+  });
+
   it("uses the shared composition total and preserves component contribution order", () => {
     render(<RedemptionBackstopCard entry={BASE_ENTRY} />);
     const table = within(moduleRoot()).getByRole("table", { hidden: true });

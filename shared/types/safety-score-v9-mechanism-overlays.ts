@@ -5,7 +5,7 @@ import {
   safetyScoreV9MechanismProfileArchetype,
 } from "./safety-score-v9-mechanism-profile";
 import { MECHANISM_ARCHETYPE_VALUES } from "./stablecoin-taxonomy";
-import { StrictIsoDateOrUtcInstantSchema, uniqueKeyedCollectionSchema, reviewedAssetCollectionEnvelopeSchema } from "./safety-schema-primitives";
+import { issue, StrictIsoDateOrUtcInstantSchema, uniqueKeyedCollectionSchema, reviewedAssetCollectionEnvelopeSchema } from "./safety-schema-primitives";
 
 const SafetyScoreV9MechanismArchetypeSchema = z.enum(MECHANISM_ARCHETYPE_VALUES);
 
@@ -111,71 +111,42 @@ export const SafetyScoreV9MechanismReviewOverlaySchema = z
       }
       for (const [key, component] of Object.entries(overlay.components)) {
         if ("applicability" in component && component.applicability === "not-applicable") {
-          ctx.addIssue({
-            code: "custom", path: ["components", key],
-            message: "Native family components remain applicable; unavailable facts must be bounded",
-          });
+          issue(ctx, ["components", key], "Native family components remain applicable; unavailable facts must be bounded");
         }
       }
     }
     if (overlay.profileReview !== undefined) {
       const expectedArchetype = safetyScoreV9MechanismProfileArchetype(overlay.profileReview.profile);
       if (expectedArchetype !== overlay.archetype) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["profileReview", "profile"],
-          message: `Profile ${overlay.profileReview.profile} is incompatible with ${overlay.archetype}`,
-        });
+        issue(ctx, ["profileReview", "profile"], `Profile ${overlay.profileReview.profile} is incompatible with ${overlay.archetype}`);
       }
       if (Object.keys(overlay.metrics).length > 0 || Object.keys(overlay.components).length > 0) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["profileReview"],
-          message: "Profile-driven overlays cannot duplicate projected metrics or components",
-        });
+        issue(ctx, ["profileReview"], "Profile-driven overlays cannot duplicate projected metrics or components");
       }
     }
     const sourceUrls = new Set(overlay.sources.map((source) => source.url));
     if (overlay.collateralizationMeasurement && !sourceUrls.has(overlay.collateralizationMeasurement.sourceUrl)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["collateralizationMeasurement", "sourceUrl"],
-        message: "Collateralization measurement sourceUrl must match an overlay source",
-      });
+      issue(ctx, ["collateralizationMeasurement", "sourceUrl"], "Collateralization measurement sourceUrl must match an overlay source");
     }
     for (const [componentKey, component] of Object.entries(overlay.components)) {
       if (component.review !== undefined) {
         const componentUrls = new Set(component.review.sources.map(source => source.url));
         for (const [index, source] of component.review.sources.entries()) {
-          if (!sourceUrls.has(source.url)) ctx.addIssue({
-            code: "custom", path: ["components", componentKey, "review", "sources", index, "url"],
-            message: "Component review source must match an overlay source",
-          });
+          if (!sourceUrls.has(source.url)) issue(ctx, ["components", componentKey, "review", "sources", index, "url"], "Component review source must match an overlay source");
         }
-        if ("sourceUrl" in component && !componentUrls.has(component.sourceUrl)) ctx.addIssue({
-          code: "custom", path: ["components", componentKey, "sourceUrl"],
-          message: "Component sourceUrl must match its own review source",
-        });
+        if ("sourceUrl" in component && !componentUrls.has(component.sourceUrl)) issue(ctx, ["components", componentKey, "sourceUrl"], "Component sourceUrl must match its own review source");
       }
       if (
         "applicability" in component &&
         component.applicability !== "measured" &&
         !sourceUrls.has(component.sourceUrl)
       ) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["components", componentKey, "sourceUrl"],
-          message: "Non-measured component sourceUrl must match an overlay source",
-        });
+        issue(ctx, ["components", componentKey, "sourceUrl"], "Non-measured component sourceUrl must match an overlay source");
       }
     }
     for (const [metricKey, applicability] of Object.entries(overlay.metricApplicability ?? {})) {
       if (applicability.state !== "measured" && !sourceUrls.has(applicability.sourceUrl)) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["metricApplicability", metricKey, "sourceUrl"],
-          message: "Not-applicable metric sourceUrl must match an overlay source",
-        });
+        issue(ctx, ["metricApplicability", metricKey, "sourceUrl"], "Not-applicable metric sourceUrl must match an overlay source");
       }
     }
   });

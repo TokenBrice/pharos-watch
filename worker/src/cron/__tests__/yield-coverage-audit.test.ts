@@ -59,11 +59,9 @@ import {
   runYieldCoverageAudit,
   summarizeAdapterLifecycle,
 } from "../yield-coverage-audit";
-import {
-  YIELD_POOL_MAP,
-  YIELD_VARIANT_MAP,
-  YIELD_WEIGHTED_POOL_GROUPS,
-} from "../../lib/yield-config/yield-config";
+import { YIELD_POOL_MAP } from "../../lib/yield-config/yield-config-pools";
+import { YIELD_VARIANT_MAP } from "../../lib/yield-config/yield-config-variants";
+import { YIELD_WEIGHTED_POOL_GROUPS } from "../../lib/yield-config/yield-config-weighted-pools";
 import { loadDlStablecoinPools } from "../yield-sync/sources-dl";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import type { YieldAdapterLifecycleEntry } from "../../lib/yield-config/yield-config-registry";

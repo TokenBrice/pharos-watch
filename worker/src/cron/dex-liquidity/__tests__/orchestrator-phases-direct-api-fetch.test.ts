@@ -8,12 +8,17 @@ import type { DirectApiFetcher } from "../orchestrator-phases/direct-api";
 import {
   buildAttemptedProtocolChains,
   buildDexDirectApiFetchers,
-  compactDirectApiFetchPhasePools,
   runDirectApiFetchPhase,
 } from "../orchestrator-phases/direct-api";
 import { buildAuthoritativeStagedPoolConfirmationIndex } from "../orchestrator-phases/authoritative";
 import { DIRECT_API_PROVIDER_TIMEOUT_MS } from "../direct-api-policy";
 import { buildChainAddressKey } from "../token-resolution";
+
+const defaultLookups = {
+  chainAddressToId: new Map([["ethereum:0xtracked", "usdc-circle"]]),
+  symbolToChainScopedIds: new Map<string, Map<string, string[]>>(),
+  contractMetaByChainAddress: new Map(),
+};
 
 type MockCircuitRecord = {
   state: "closed" | "open" | "half-open";
@@ -95,6 +100,30 @@ function makeDeferred(): { promise: Promise<void>; resolve: () => void } {
 }
 
 describe("runDirectApiFetchPhase", () => {
+  it.each(["success", "partial", "failed", "circuit-open", "exception"] as const)("returns one admitted envelope for %s", async (outcome) => {
+    const counts = { rawPoolCount: 0, retainedPoolCount: 0, skippedInvalidUnitCount: 0, skippedUntrackedCount: 0 };
+    if (outcome === "circuit-open") circuitStore.records.set("fixture-circuit", {
+      state: "open", consecutiveFailures: 1, lastFailureAt: 1_800_000_000, lastSuccessAt: null, openedAt: 1_800_000_000,
+    });
+    const phase = await runDirectApiFetchPhase({} as D1Database, [makeFetcher("fixture", async () => {
+      if (outcome === "exception") throw new Error("unavailable");
+      return makeDexApiFetchResult([], { ok: outcome !== "failed", degraded: outcome === "partial" || outcome === "failed", errors: [] });
+    })], defaultLookups);
+    const failed = outcome !== "success" && outcome !== "partial";
+    expect(phase).toEqual({
+      results: [{ name: "fixture", circuitKey: "fixture-circuit", normalizedProtocol: "fixture", supportedChains: ["testnet"],
+        censusScope: outcome === "circuit-open" || outcome === "exception" ? "bounded-sample" : "exhaustive",
+        result: makeDexApiFetchResult([], { ok: !failed, degraded: outcome !== "success",
+          errors: outcome === "exception" ? ["Provider dex-direct-api:fixture failed: unavailable"] : outcome === "circuit-open" ? ["circuit open"] : [] }),
+        ...(outcome === "success" ? { authoritativeExactPoolKeys: new Set<string>() } : {}), counts, measuredExecutionPools: [] }],
+      pools: [], measuredExecutionPools: [], counts, failedSources: failed ? ["fixture-circuit"] : [],
+      degradedSources: outcome === "partial" ? ["fixture-circuit"] : [], attemptedProtocolChains: ["fixture:testnet"],
+      fallbackSignals: outcome === "success" ? [] : [`fixture-circuit-${outcome === "failed" ? "unavailable" : outcome}`],
+      sourceWarnings: [], circuitEvents: outcome === "failed" || outcome === "exception" ? [{
+        circuitKey: "fixture-circuit", from: "closed", to: "open", at: 1_800_000_000,
+      }] : [],
+    });
+  });
   beforeEach(() => {
     circuitStore.records.clear();
     vi.clearAllMocks();
@@ -108,7 +137,8 @@ describe("runDirectApiFetchPhase", () => {
     const now = vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000);
     const pool: DexApiPool = {
       source: "balancer", chain: "ethereum", poolAddress: "0xpool", poolType: "balancer-stable",
-      tokens: [], price: 1, tvlUsd: 100_000, volume24hUsd: null, feeRate: null, balances: null,
+      tokens: [{ address: "0xtracked", symbol: "USDC", decimals: 6 }, { address: "0xquote", symbol: "QUOTE", decimals: 6 }],
+      price: 1, tvlUsd: 100_000, volume24hUsd: null, feeRate: null, balances: null,
     };
     const phase = await runDirectApiFetchPhase({} as D1Database, [
       makeFetcher("first", async () => {
@@ -119,7 +149,7 @@ describe("runDirectApiFetchPhase", () => {
         { ...pool, poolAddress: "0xdated", priceObservedAt: 1_699_978_400 },
         { ...pool, poolAddress: "0xundated", priceObservedAt: undefined },
       ], { ok: true, degraded: false, errors: [] })),
-    ]);
+    ], defaultLookups);
     expect(phase.results.map((entry) => entry.result.pools.map((quote) => quote.priceObservedAt))).toEqual([
       [1_700_000_000], [1_699_978_400, 1_700_000_100],
     ]);
@@ -134,7 +164,7 @@ describe("runDirectApiFetchPhase", () => {
       censusScope: reported,
     }));
     fetcher.censusScope = declared;
-    const phase = await runDirectApiFetchPhase({} as D1Database, [fetcher]);
+    const phase = await runDirectApiFetchPhase({} as D1Database, [fetcher], defaultLookups);
     expect(phase.results[0].censusScope).toBe("bounded-sample");
   });
 
@@ -144,7 +174,7 @@ describe("runDirectApiFetchPhase", () => {
       censusScope: "exhaustive",
     }));
     Reflect.deleteProperty(fetcher, "censusScope");
-    const phase = await runDirectApiFetchPhase({} as D1Database, [fetcher]);
+    const phase = await runDirectApiFetchPhase({} as D1Database, [fetcher], defaultLookups);
     expect(phase.results[0].censusScope).toBe("bounded-sample");
   });
 
@@ -159,7 +189,7 @@ describe("runDirectApiFetchPhase", () => {
       await releases[index].promise;
       return makeDexApiFetchResult([], { ok: true, degraded: false, errors: [] });
     }));
-    const pending = runDirectApiFetchPhase({} as D1Database, fetchers);
+    const pending = runDirectApiFetchPhase({} as D1Database, fetchers, defaultLookups);
     try {
       for (let index = 0; index < names.length; index++) {
         await starts[index].promise;
@@ -225,11 +255,10 @@ describe("runDirectApiFetchPhase", () => {
       }),
     ];
 
-    const phase = await runDirectApiFetchPhase({} as D1Database, fetchers, undefined, lookups);
-    const compacted = compactDirectApiFetchPhasePools(phase, lookups);
-    const authoritative = buildAuthoritativeStagedPoolConfirmationIndex(compacted.phase.results);
+    const phase = await runDirectApiFetchPhase({} as D1Database, fetchers, lookups);
+    const authoritative = buildAuthoritativeStagedPoolConfirmationIndex(phase.results);
 
-    expect(compacted.counts).toEqual({
+    expect(phase.counts).toEqual({
       rawPoolCount,
       retainedPoolCount: 1,
       skippedInvalidUnitCount: 0,
@@ -238,7 +267,7 @@ describe("runDirectApiFetchPhase", () => {
     expect(poolsAtSecondProviderEntry).toBe(1);
     expect(phase.results.find((entry) => entry.name === "second")?.result.ok).toBe(true);
     expect(phase.failedSources).toEqual([]);
-    expect(compacted.pools.map((pool) => pool.poolAddress)).toEqual([
+    expect(phase.pools.map((pool) => pool.poolAddress)).toEqual([
       "0x0000000000000000000000000000000000000001",
     ]);
     expect(authoritative.confirmedExactKeysByProtocol.get("first")).toContain(
@@ -258,10 +287,7 @@ describe("runDirectApiFetchPhase", () => {
       makeDexApiFetchResult([], { ok: true, degraded: false, errors: [] })
     );
 
-    const result = await runDirectApiFetchPhase(
-      {} as D1Database,
-      [makeFetcher("blocked", fn)],
-    );
+    const result = await runDirectApiFetchPhase({} as D1Database, [makeFetcher("blocked", fn)], defaultLookups);
 
     expect(fn).not.toHaveBeenCalled();
     expect(result.failedSources).toEqual(["blocked-circuit"]);
@@ -272,12 +298,9 @@ describe("runDirectApiFetchPhase", () => {
 
   it("records thrown provider failures and keeps them non-fatal", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const result = await runDirectApiFetchPhase(
-      {} as D1Database,
-      [makeFetcher("broken", async () => {
-        throw new Error("upstream broke");
-      })],
-    );
+    const result = await runDirectApiFetchPhase({} as D1Database, [makeFetcher("broken", async () => {
+      throw new Error("upstream broke");
+    })], defaultLookups);
 
     expect(result.failedSources).toEqual(["broken-circuit"]);
     expect(result.fallbackSignals).toEqual(["broken-circuit-exception"]);
@@ -301,15 +324,12 @@ describe("runDirectApiFetchPhase", () => {
       const operationStarted = new Promise<void>((resolve) => {
         started = resolve;
       });
-      const resultPromise = runDirectApiFetchPhase(
-        {} as D1Database,
-        [makeFetcher("slow", async (signal) => {
-          started();
-          return await new Promise((_resolve, reject) => {
-            signal?.addEventListener("abort", () => reject(signal.reason), { once: true });
-          });
-        })],
-      );
+      const resultPromise = runDirectApiFetchPhase({} as D1Database, [makeFetcher("slow", async (signal) => {
+        started();
+        return await new Promise((_resolve, reject) => {
+          signal?.addEventListener("abort", () => reject(signal.reason), { once: true });
+        });
+      })], defaultLookups);
 
       await operationStarted;
       await vi.advanceTimersByTimeAsync(DIRECT_API_PROVIDER_TIMEOUT_MS);
@@ -337,16 +357,12 @@ describe("runDirectApiFetchPhase", () => {
     const operationStarted = new Promise<void>((resolve) => {
       started = resolve;
     });
-    const resultPromise = runDirectApiFetchPhase(
-      {} as D1Database,
-      [makeFetcher("aborted", async (signal) => {
-        started();
-        return await new Promise((_resolve, reject) => {
-          signal?.addEventListener("abort", () => reject(signal.reason), { once: true });
-        });
-      })],
-      controller.signal,
-    );
+    const resultPromise = runDirectApiFetchPhase({} as D1Database, [makeFetcher("aborted", async (signal) => {
+      started();
+      return await new Promise((_resolve, reject) => {
+        signal?.addEventListener("abort", () => reject(signal.reason), { once: true });
+      });
+    })], defaultLookups, controller.signal);
 
     await operationStarted;
     controller.abort(new Error("cron aborted"));
@@ -367,7 +383,7 @@ describe("runDirectApiFetchPhase", () => {
       ),
     ];
 
-    const result = await runDirectApiFetchPhase({} as D1Database, fetchers);
+    const result = await runDirectApiFetchPhase({} as D1Database, fetchers, defaultLookups);
 
     expect(result.failedSources).toEqual([]);
     expect(result.fallbackSignals).toEqual([]);
@@ -387,7 +403,7 @@ describe("runDirectApiFetchPhase", () => {
       ),
     ];
 
-    const result = await runDirectApiFetchPhase({} as D1Database, fetchers);
+    const result = await runDirectApiFetchPhase({} as D1Database, fetchers, defaultLookups);
 
     expect(result.failedSources).toEqual([]);
     expect(result.fallbackSignals).toEqual(["mixed-circuit-partial"]);
@@ -411,7 +427,7 @@ describe("runDirectApiFetchPhase", () => {
       ),
     ];
 
-    const result = await runDirectApiFetchPhase({} as D1Database, fetchers);
+    const result = await runDirectApiFetchPhase({} as D1Database, fetchers, defaultLookups);
 
     expect(result.failedSources).toEqual(["unavailable-circuit"]);
     expect(result.degradedSources).toEqual([]);
@@ -437,7 +453,7 @@ describe("runDirectApiFetchPhase", () => {
       },
     ];
 
-    const result = await runDirectApiFetchPhase({} as D1Database, fetchers);
+    const result = await runDirectApiFetchPhase({} as D1Database, fetchers, defaultLookups);
 
     expect(result.failedSources).toEqual([]);
     expect(result.degradedSources).toEqual(["pancakeswap-api:bsc"]);
@@ -460,7 +476,7 @@ describe("runDirectApiFetchPhase", () => {
       ),
     ];
 
-    const result = await runDirectApiFetchPhase({} as D1Database, fetchers);
+    const result = await runDirectApiFetchPhase({} as D1Database, fetchers, defaultLookups);
 
     expect(result.degradedSources).toEqual(["cursorless-circuit"]);
   });

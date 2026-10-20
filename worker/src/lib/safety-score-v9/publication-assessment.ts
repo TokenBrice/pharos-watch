@@ -2,7 +2,9 @@ import type {
   V9PublicationHoldReason,
 } from "@shared/types/report-cards-v9";
 import type { SafetyScoreV9CurrentResponse } from "@shared/types/safety-score-v9-public";
-import type { V9Grade } from "@shared/types/safety-score-v9";
+import { V9GradeSchema } from "@shared/types/safety-score-v9";
+import { NonNegativeFiniteSchema, ScoreSchema, Sha256Schema, UnixSecondsSchema } from "@shared/types/safety-schema-primitives";
+import { compareCodeUnits } from "@shared/lib/compare";
 import { compareText } from "@shared/lib/safety-score-v9/primitives";
 import { REPORT_CARD_GRADE_RANK } from "@shared/lib/report-card-core";
 import { z } from "zod";
@@ -133,19 +135,15 @@ const V9_PRODUCER_FAILURE_MINIMUM_HEALTHY_ASSET_DENOMINATOR = 10;
  */
 const V9_LIVE_RESERVE_MINIMUM_COVERAGE_RATIO = 0.6;
 
-export interface SafetyScoreV9AcceptedCardBaseline {
-  id: string;
-  grade: V9Grade | null;
-  score: number | null;
-  primaryRouteKey: string | null;
-  diversificationRouteKey: string | null;
-  primaryRouteCapacityUsd: number | null;
-  pillarScores: {
-    backing: number | null;
-    exit: number | null;
-    control: number | null;
-  } | null;
-}
+const AcceptedCardBaselineSchema = z.strictObject({
+  id: z.string().min(1), grade: V9GradeSchema.nullable(), score: ScoreSchema.nullable(),
+  primaryRouteKey: z.string().min(1).nullable(), diversificationRouteKey: z.string().min(1).nullable(),
+  primaryRouteCapacityUsd: NonNegativeFiniteSchema.nullable(),
+  pillarScores: z.strictObject({
+    backing: ScoreSchema.nullable(), exit: ScoreSchema.nullable(), control: ScoreSchema.nullable(),
+  }).nullable(),
+});
+export type SafetyScoreV9AcceptedCardBaseline = z.infer<typeof AcceptedCardBaselineSchema>;
 
 /**
  * The publication gate only needs identity, deterioration, and delta fields
@@ -153,16 +151,17 @@ export interface SafetyScoreV9AcceptedCardBaseline {
  * lets the full stored response be collected before the next candidate is
  * compiled inside Cloudflare's 128 MiB isolate.
  */
-export interface SafetyScoreV9AcceptedPublicationBaseline {
-  publicationGenerationId: string;
-  publishedAtSec: number;
-  policyVersion: string;
-  policyId: string;
-  policyDigest: string;
-  evaluationBuildDigest: string;
-  dexGenerationId: string | null;
-  cards: SafetyScoreV9AcceptedCardBaseline[];
-}
+export const AcceptedPublicationBaselineSchema = z.strictObject({
+  publicationGenerationId: z.string().min(1), publishedAtSec: UnixSecondsSchema,
+  policyVersion: z.string().min(1), policyId: z.string().min(1), policyDigest: Sha256Schema,
+  evaluationBuildDigest: Sha256Schema, dexGenerationId: z.string().min(1).nullable(),
+  cards: z.array(AcceptedCardBaselineSchema),
+}).superRefine((value, ctx) => {
+  if (value.cards.some((card, index) => index > 0 && compareCodeUnits(value.cards[index - 1]!.id, card.id) >= 0)) {
+    ctx.addIssue({ code: "custom", path: ["cards"], message: "Baseline card IDs must be unique and sorted" });
+  }
+});
+export type SafetyScoreV9AcceptedPublicationBaseline = z.infer<typeof AcceptedPublicationBaselineSchema>;
 
 export function buildSafetyScoreV9AcceptedPublicationBaseline(
   publication: SafetyScoreV9CurrentResponse,

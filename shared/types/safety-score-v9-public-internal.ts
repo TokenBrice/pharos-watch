@@ -1,3 +1,4 @@
+import { issue } from "./safety-schema-primitives";
 import {
   C_MINUS_MIN_SCORE,
   DANGER_PEG_MULTIPLIER_FLOOR,
@@ -103,11 +104,7 @@ export function refineCard(
         !capAgreesWithWrapperLimit(parentCaps[0]!.limit, wrapperParentLimit.limit)
       )
     ) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["scoreTrace", "wrapperParentLimit"],
-        message: "V9 wrapper parent limit must reconcile to the resolved minimum serial parent and parent cap",
-      });
+      issue(ctx, ["scoreTrace", "wrapperParentLimit"], "V9 wrapper parent limit must reconcile to the resolved minimum serial parent and parent cap");
     }
     if (
       card.bindingCap?.source === "parent" &&
@@ -120,11 +117,7 @@ export function refineCard(
         )
       )
     ) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["bindingCap"],
-        message: "V9 binding parent cap must reconcile to the resolved minimum serial parent",
-      });
+      issue(ctx, ["bindingCap"], "V9 binding parent cap must reconcile to the resolved minimum serial parent");
     }
     for (const [field, legacy, explicit] of [
       ["weightedPillarMean", card.qualityScore, stages.weightedPillarMean],
@@ -133,11 +126,7 @@ export function refineCard(
       ["publishedScore", card.score, stages.publishedScore],
     ] as const) {
       if (!numbersAgree(legacy, explicit)) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["scoreTrace", "stages", field],
-          message: `V9 explicit ${field} must match its retained card field`,
-        });
+        issue(ctx, ["scoreTrace", "stages", field], `V9 explicit ${field} must match its retained card field`);
       }
     }
     if ("scoreAdjustments" in scoreTrace) {
@@ -151,11 +140,7 @@ export function refineCard(
           relievedCaps.length !== 1 ||
           !numbersAgree(relievedCaps[0]!.limit, adjustment.capRelief.toLimit)
         ) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["scoreTrace", "scoreAdjustments", index, "capRelief"],
-            message: "V9 score adjustment cap relief must match exactly one current card cap",
-          });
+          issue(ctx, ["scoreTrace", "scoreAdjustments", index, "capRelief"], "V9 score adjustment cap relief must match exactly one current card cap");
         }
         const unchangedCaps = card.caps.filter(
           (cap) =>
@@ -167,11 +152,7 @@ export function refineCard(
             (cap) => adjustment.publishedScoreBefore > cap.limit + SCORE_TOLERANCE,
           )
         ) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["scoreTrace", "scoreAdjustments", index, "publishedScoreBefore"],
-            message: "V9 ordinary published score cannot exceed an unchanged card cap",
-          });
+          issue(ctx, ["scoreTrace", "scoreAdjustments", index, "publishedScoreBefore"], "V9 ordinary published score cannot exceed an unchanged card cap");
         }
       }
     }
@@ -184,11 +165,7 @@ export function refineCard(
         !numbersAgree(scoreTrace.aggregation.weightedPillarMean, card.qualityScore)
       )
     ) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["scoreTrace", "aggregation"],
-        message: "V9 aggregation trace must match the card's pillar summary",
-      });
+      issue(ctx, ["scoreTrace", "aggregation"], "V9 aggregation trace must match the card's pillar summary");
     }
     if (scoreTrace.aggregation !== null) {
       const aggregation = scoreTrace.aggregation;
@@ -207,11 +184,7 @@ export function refineCard(
         item.source === "active-depeg" &&
         (card.bindingCap?.source !== "active-depeg" || item.path !== "peg:active-depeg")
       ) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["scoreTrace", "adverseAttribution", "items"],
-          message: "V9 active-depeg attribution requires its canonical path and a binding active-depeg cap",
-        });
+        issue(ctx, ["scoreTrace", "adverseAttribution", "items"], "V9 active-depeg attribution requires its canonical path and a binding active-depeg cap");
       }
       if (item.source === "parent-score") {
         const parent = attributedSerialParent(card, item.path, item.message);
@@ -224,11 +197,7 @@ export function refineCard(
           rawParentScore === null ||
           !numbersAgree(parent.score, rawParentScore)
         ) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["scoreTrace", "adverseAttribution", "items"],
-            message: "V9 parent attribution requires the binding low minimum serial parent",
-          });
+          issue(ctx, ["scoreTrace", "adverseAttribution", "items"], "V9 parent attribution requires the binding low minimum serial parent");
         }
       }
       if (item.source === "peg-performance") {
@@ -246,11 +215,7 @@ export function refineCard(
           item.path !== "peg:historical-performance" ||
           item.message !== expectedMessage
         ) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["scoreTrace", "adverseAttribution", "items"],
-            message: "V9 peg-performance attribution must match the measured danger multiplier",
-          });
+          issue(ctx, ["scoreTrace", "adverseAttribution", "items"], "V9 peg-performance attribution must match the measured danger multiplier");
         }
       }
       if (item.source === "pillar-score") {
@@ -265,11 +230,7 @@ export function refineCard(
           ((card.grade === "D" || card.grade === "F") &&
             pillarScore >= C_MINUS_MIN_SCORE)
         ) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["scoreTrace", "adverseAttribution", "items"],
-            message: "V9 pillar attribution must name a score-bearing causal pillar",
-          });
+          issue(ctx, ["scoreTrace", "adverseAttribution", "items"], "V9 pillar attribution must name a score-bearing causal pillar");
         }
       }
       if (item.source === "reason") {
@@ -300,11 +261,7 @@ export function refineCard(
           ]),
         ];
         if (matchingReasonCodes.length === 0) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["scoreTrace", "adverseAttribution", "items"],
-            message: "V9 reason attribution must match a low pillar reason or binding evidence cap",
-          });
+          issue(ctx, ["scoreTrace", "adverseAttribution", "items"], "V9 reason attribution must match a low pillar reason or binding evidence cap");
         }
         let hasMeasuredReasonFact = false;
         for (const fact of iterateEvidenceResponsibilityFacts(scoreTrace.evidenceResponsibility)) {
@@ -315,11 +272,7 @@ export function refineCard(
           }
         }
         if (!hasMeasuredReasonFact) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["scoreTrace", "adverseAttribution", "items"],
-            message: "V9 measured-adverse reason attribution requires its exact D evidence fact",
-          });
+          issue(ctx, ["scoreTrace", "adverseAttribution", "items"], "V9 measured-adverse reason attribution requires its exact D evidence fact");
         }
         const conflictsWithBoundedAttribution =
           scoreTrace.boundedUncertaintyAttribution.items.some(
@@ -328,11 +281,7 @@ export function refineCard(
               candidate.message === item.message,
           );
         if (conflictsWithBoundedAttribution) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["scoreTrace", "adverseAttribution", "items"],
-            message: "V9 measured-adverse reason attribution cannot also be declared as bounded uncertainty",
-          });
+          issue(ctx, ["scoreTrace", "adverseAttribution", "items"], "V9 measured-adverse reason attribution cannot also be declared as bounded uncertainty");
         }
         const measuredSummary =
           scoreTrace.evidenceResponsibility.summaries.find(
@@ -345,11 +294,7 @@ export function refineCard(
             measuredSummary.reasonCodes?.includes(code),
           )
         ) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["scoreTrace", "adverseAttribution", "items"],
-            message: "V9 reason attribution must reconcile to a measured-adverse evidence reason code",
-          });
+          issue(ctx, ["scoreTrace", "adverseAttribution", "items"], "V9 reason attribution must reconcile to a measured-adverse evidence reason code");
         }
       }
       if (
@@ -357,18 +302,10 @@ export function refineCard(
         !/^structural:[a-z0-9-]+:(low|moderate|high|critical)$/.test(item.path) &&
         !/^scenario-(cap|pillar):/.test(item.path)
       ) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["scoreTrace", "adverseAttribution", "items"],
-          message: "V9 structural attribution requires a canonical structural or scenario path",
-        });
+        issue(ctx, ["scoreTrace", "adverseAttribution", "items"], "V9 structural attribution requires a canonical structural or scenario path");
       }
       if (item.source === "track-record") {
-        ctx.addIssue({
-          code: "custom",
-          path: ["scoreTrace", "adverseAttribution", "items"],
-          message: "V9 track-record ceilings cannot authorize measured-adverse attribution",
-        });
+        issue(ctx, ["scoreTrace", "adverseAttribution", "items"], "V9 track-record ceilings cannot authorize measured-adverse attribution");
       }
       if (item.source === "wrapper-local") {
         const limit = scoreTrace.wrapperParentLimit;
@@ -390,11 +327,7 @@ export function refineCard(
           adjustment === undefined ||
           item.message !== expectedMessage
         ) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["scoreTrace", "adverseAttribution", "items"],
-            message: "V9 wrapper adverse attribution must reconcile to a binding reviewed local-risk discount",
-          });
+          issue(ctx, ["scoreTrace", "adverseAttribution", "items"], "V9 wrapper adverse attribution must reconcile to a binding reviewed local-risk discount");
         }
       }
     }
@@ -424,11 +357,7 @@ export function refineCard(
             cap.reason === item.message,
         );
         if (!matchesPillarReason && !matchesReasonCap && !matchesBoundedBackingComponent(card, item)) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["scoreTrace", "boundedUncertaintyAttribution", "items"],
-            message: "V9 direct bounded attribution must match a low pillar reason, charged backing component, or binding reason cap",
-          });
+          issue(ctx, ["scoreTrace", "boundedUncertaintyAttribution", "items"], "V9 direct bounded attribution must match a low pillar reason, charged backing component, or binding reason cap");
         }
       } else if (item.source === "parent-score") {
         const parent = attributedSerialParent(card, item.path, item.message);
@@ -441,11 +370,7 @@ export function refineCard(
           rawParentScore === null ||
           !numbersAgree(parent.score, rawParentScore)
         ) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["scoreTrace", "boundedUncertaintyAttribution", "items"],
-            message: "V9 parent bounded attribution requires the binding low minimum serial parent",
-          });
+          issue(ctx, ["scoreTrace", "boundedUncertaintyAttribution", "items"], "V9 parent bounded attribution requires the binding low minimum serial parent");
         }
       } else {
         const limit = scoreTrace.wrapperParentLimit;
@@ -468,11 +393,7 @@ export function refineCard(
           missingFact === undefined ||
           item.message !== expectedMessage
         ) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["scoreTrace", "boundedUncertaintyAttribution", "items"],
-            message: "V9 wrapper bounded attribution must reconcile to a binding fallback discount",
-          });
+          issue(ctx, ["scoreTrace", "boundedUncertaintyAttribution", "items"], "V9 wrapper bounded attribution must reconcile to a binding fallback discount");
         }
       }
     }
@@ -482,29 +403,17 @@ export function refineCard(
         (summary) => (summary.criticalFactCount ?? 0) > 0,
       )
     ) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["scoreTrace", "evidenceResponsibility"],
-        message: "A rated V9 card cannot retain critical unresolved facts",
-      });
+      issue(ctx, ["scoreTrace", "evidenceResponsibility"], "A rated V9 card cannot retain critical unresolved facts");
     }
     if (
       card.grade === "D" &&
       scoreTrace.adverseAttribution.items.length === 0 &&
       scoreTrace.boundedUncertaintyAttribution.items.length === 0
     ) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["scoreTrace", "boundedUncertaintyAttribution"],
-        message: "A V9 D card requires causal measured-adverse or bounded-uncertainty attribution",
-      });
+      issue(ctx, ["scoreTrace", "boundedUncertaintyAttribution"], "A V9 D card requires causal measured-adverse or bounded-uncertainty attribution");
     }
     if (card.grade === "F" && scoreTrace.adverseAttribution.items.length === 0) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["scoreTrace", "adverseAttribution"],
-        message: "A V9 F card requires causal measured-adverse attribution",
-      });
+      issue(ctx, ["scoreTrace", "adverseAttribution"], "A V9 F card requires causal measured-adverse attribution");
     }
   }
 }

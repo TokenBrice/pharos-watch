@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { MintAuthorityProfile } from "@shared/types";
 import stkGhoAuthority from "@shared/data/stablecoins/domains/mint-authority/stkgho-umbrella-aave.json";
 import lorenzoMeta from "@shared/data/stablecoins/coins/susd1plus-lorenzo.json";
-import { ParentBackingInheritanceSchema } from "@shared/types/stablecoin-meta-schemas";
+import { ParentBackingInheritanceSchema } from "@shared/types/stablecoin-meta-primitives";
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";

@@ -43,7 +43,7 @@ import {
   PositiveIntegerSchema,
   ReviewDateSchema,
   StablecoinLinkSchema,
-} from "./stablecoin-meta-schemas";
+} from "./stablecoin-meta-primitives";
 
 // Pure scopes let bundlers omit unused schema graphs, including nested Zod
 // constructor arguments; annotating only the outer call leaves those allocated.

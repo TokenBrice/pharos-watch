@@ -5,14 +5,13 @@ import { makeExecutionContext } from "../../test-helpers/__shared/auth";
 import { makePublicHealth } from "../../lib/__tests__/public-health.test-support";
 import type * as PublicHealthModule from "../../lib/public-health-assessment";
 import type { HealthResponse } from "@shared/types/status";
+import type { StatusHealthValue } from "@shared/types/status/core";
 import { projectPublicStatus } from "@shared/lib/public-status-components";
 import { observeMockD1Cost } from "../../lib/__tests__/d1-cost.test-support";
 
-type HealthProbeStatus = "healthy" | "degraded" | "stale";
-
 function buildProbeResponse(
   input: unknown,
-  healthStatus: HealthProbeStatus = "healthy",
+  healthStatus: StatusHealthValue = "healthy",
   init?: RequestInit,
   health: { body?: unknown; status?: number } = {},
 ): Response {

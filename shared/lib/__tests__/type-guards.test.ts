@@ -13,7 +13,7 @@ describe("numeric coercion", () => {
     expect(coerceFiniteNumber(12.5)).toBe(12.5);
     expect(coerceFiniteNumber(" 12.5 ")).toBe(12.5);
     expect(coerceFiniteNumber(0)).toBe(0);
-    for (const value of ["", "  ", true, false, null, undefined, NaN, Infinity, "Infinity", "nope"]) {
+    for (const value of ["", "  ", true, false, null, undefined, NaN, Infinity, "Infinity", "nope", "1.5px"]) {
       expect(coerceFiniteNumber(value)).toBeNull();
     }
   });
@@ -55,8 +55,13 @@ describe("stringValue", () => {
 describe("numberValue", () => {
   it("returns finite numbers only", () => {
     expect(numberValue(42)).toBe(42);
+    expect(numberValue(0)).toBe(0);
+    expect(numberValue(-1)).toBe(-1);
+    expect(numberValue(true)).toBeNull();
+    expect(numberValue(false)).toBeNull();
     expect(numberValue(NaN)).toBeNull();
     expect(numberValue(Infinity)).toBeNull();
+    expect(numberValue(-Infinity)).toBeNull();
     expect(numberValue("42")).toBeNull();
   });
 });

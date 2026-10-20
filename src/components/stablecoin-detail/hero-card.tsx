@@ -226,28 +226,16 @@ export function HeroCard({ model }: HeroCardProps) {
   const {
     coin,
     coinData,
-    logoSrc,
-    reportCard,
     verdict,
-    variantParent,
-    variantChipClass,
-    infrastructures,
     price,
     market,
     peg,
   } = model;
   const tertiaryMetrics = model.tertiaryMetrics.map(toMetricConfig);
   const desktopTertiaryMetrics = model.desktopTertiaryMetrics.map(toMetricConfig);
-  const signalRailItems = model.signalRailItems;
   const sectionBaseProps: HeroSectionBaseProps = {
     coin,
     coinData,
-    logoSrc,
-    reportCard,
-    verdict,
-    variantParent,
-    variantChipClass,
-    infrastructures,
     price,
     market,
     peg,
@@ -259,7 +247,6 @@ export function HeroCard({ model }: HeroCardProps) {
       <HeroCardMobileSection {...sectionBaseProps} tertiaryMetrics={tertiaryMetrics} />
       <HeroCardDesktopSection
         {...sectionBaseProps}
-        signalRailItems={signalRailItems}
         tertiaryMetrics={desktopTertiaryMetrics}
       />
       <HeroPassportStrip items={model.passportItems} compactDesktop />

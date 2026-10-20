@@ -34,6 +34,44 @@ describe("canonical safety schema primitives", () => {
     ]);
   });
 
+  it("preserves minimal-sink payloads, undefined paths and PropertyKey identity", () => {
+    const issues: Array<{ code: "custom"; path?: PropertyKey[]; message: string }> = [];
+    const ctx = { addIssue: (value: (typeof issues)[number]) => { issues.push(value); } };
+    const key = Symbol("scope");
+    const path = ["assets", 2, key];
+    issue(ctx, path, "nested");
+    issue(ctx, undefined, "absent");
+    expect(issues).toEqual([
+      { code: "custom", path: ["assets", 2, key], message: "nested" },
+      { code: "custom", path: undefined, message: "absent" },
+    ]);
+    expect(issues[0]!.path).toBe(path);
+    expect(Object.prototype.hasOwnProperty.call(issues[1], "path")).toBe(true);
+  });
+
+  it("matches complete ordered Zod issues for nested, absent and repeated paths", () => {
+    const legacy = z.object({ assets: z.array(z.string().superRefine((value, ctx) => {
+      ctx.addIssue({ code: "custom", path: ["facts", 0], message: `Invalid ${value}` });
+      ctx.addIssue({ code: "custom", message: "Missing evidence" });
+      ctx.addIssue({ code: "custom", path: ["facts", 0], message: "Repeated scope" });
+    })) });
+    const candidate = z.object({ assets: z.array(z.string().superRefine((value, ctx) => {
+      issue(ctx, ["facts", 0], `Invalid ${value}`);
+      issue(ctx, undefined, "Missing evidence");
+      issue(ctx, ["facts", 0], "Repeated scope");
+    })) });
+    const input = { assets: ["first", "second"] };
+    const before = legacy.safeParse(input);
+    const after = candidate.safeParse(input);
+    expect(before.success).toBe(false);
+    expect(after.success).toBe(false);
+    expect(after.error!.issues).toEqual(before.error!.issues);
+    expect(after.error!.issues.map(({ path }) => path)).toEqual([
+      ["assets", 0, "facts", 0], ["assets", 0], ["assets", 0, "facts", 0],
+      ["assets", 1, "facts", 0], ["assets", 1], ["assets", 1, "facts", 0],
+    ]);
+  });
+
   it("rejects surrounding whitespace instead of silently normalizing it", () => {
     expect(CanonicalTextSchema.safeParse("canonical").success).toBe(true);
     expect(CanonicalTextSchema.safeParse(" canonical").success).toBe(false);

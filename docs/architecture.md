@@ -35,26 +35,13 @@ The shared schedule/runner registries own dispatch placement and budgets; see [C
 | Static artifacts/tooling | `data/`, `public/`, `src/generated/`, `scripts/`, `worker/scripts/` | Build inputs, exports and operational tooling; [Scripts](./scripts.md) owns generator/check interfaces. |
 | D1 migrations | `worker/migrations/` | Apply backward-compatible migrations before new Worker deployment; lineage is `worker/migrations/MANIFEST.md`. Destructive cleanup is a separate reviewed rollout. |
 
-`shared/types/` owns schemas, wire vocabulary and pure identity/validation; derived runtime admission belongs in `shared/lib/`, which types must not import (`pharos/shared-types-imports`). Provider maps derive canonical identities from `shared/types/chain-identity.ts`, `shared/types/deployment-id.ts` and `shared/types/exit-route-identity.ts`, not a second registry.
-Digest producers/archive readers import map-only `shared/types/digest-safety-map-contract.ts` directly, avoiding the digest/V9 graph. Strict, canonical-reader and archive-reader profiles share shapes, not admission/projection rules.
+`shared/types/` owns wire schemas, vocabulary and pure validation; admission stays in `shared/lib/` (types cannot import it: `pharos/shared-types-imports`). Provider maps use its `chain-identity.ts`, `deployment-id.ts` and `exit-route-identity.ts`, never another registry. Custom errors reuse `issue` in `shared/types/safety-schema-primitives.ts`; guards and ordering stay local.
 
 The private source-only `shared/contracts/` workspace exports only `@pharos/contracts/api-meta`, `@pharos/contracts/api-keys` and `@pharos/contracts/request-source`: API metadata, keys and attribution, with no root/wildcard export. Use exact subpaths, never physical/`@shared/contracts` bypasses (`pharos/contracts-imports`). Package implementations import relatively except root-pinned Zod; they cannot import `shared/lib/`. Other domain schemas stay in `shared/types/`, without compatibility re-exports for moved contracts.
 
-Mint/burn flow producer DTOs derive from `shared/types/mint-burn.ts`; the Worker strengthens required live coverage/valuation fields without mirroring the wire shape or declaring private reason extensions.
-
-`shared/types/status/` separates status domains; `shared/types/status.ts` remains the frontend/Worker compatibility barrel, including lazy schema loaders. Domain modules import lower-level siblings, never the barrel; internal primitives stay private.
-
-Stablecoin base records and whole-domain research sidecars merge through `scripts/lib/stablecoin-catalog-sources.ts` before full schema validation; generated registries consume only the merged projection. [Stablecoin Data](./stablecoin-data.md#source-files) owns authoring and source layout.
-
 `shared/lib/runtime-origins.json` and `shared/lib/runtime-origins.ts` own shared host/origin defaults for frontend inference, Pages proxies, Worker self/probes and local tooling. Do not embed production origins independently.
 
-Shared transport/identity primitives retain their own contracts: `shared/lib/drpc.ts` owns network slugs (research routes do not authorize runtime capability); `shared/lib/stable-json.ts` rejects undefined/sparse array entries in canonical output. Shared display policy belongs in `shared/lib/format.ts`, not consumer copies.
-
-Compact numeric wrappers render non-finite observations as `N/A`, including counts; `abbreviateNumberParts` returns `null` instead of zero parts. Consumers retain their established unavailable glyphs. Observed finite zero and signed-negative formatting remain distinct and unchanged.
-
-The Cemetery dataset and integration artifacts are static Pages exports, not Worker routes; see [Exports](./exports.md). Cron aborts use `worker/src/lib/abort.ts`; a domain needing an abort result builds it beside its stage runner.
-
-Reserve freshness and reviewed suspension admission remain runtime-neutral (`shared/lib/live-reserve-freshness.ts`, `shared/lib/redemption-route-suspension.ts`); schemas/vocabulary remain in `shared/types/`. Malformed nested telemetry is quarantined as a whole claim. Reserve sync seals its full cohort before redemption consumes it; an independent executable observer cannot manufacture reserve composition or `reserveInput`. Owners: [reserve admission](./live-reserves.md#snapshot-admission-gates) and [Redemption Backstops](./redemption-backstops.md).
+Domain schema splits, catalog merging, numeric/display admission, reserve/dependency helpers and their exact source owners are in the [shared implementation boundaries](process/architecture-appendix.md#shared-implementation-boundaries). These domain contracts remain applicable when changing their owners; the layer and import boundaries above apply to all shared work.
 
 ## Frontend Runtime And SEO Surface
 
@@ -293,6 +280,9 @@ Domain applications: [R3 source-clock boundaries](process/architecture-appendix.
 #### ADR-32
 
 - **ADR-32 — R5: one authority per cadence, threshold, and vocabulary.** Import schedules/budgets from `shared/lib/cron-jobs.ts` and `CRON_SCHEDULE_CADENCES`, availability from `STATUS_CACHE_RATIO_OVERRIDES`, labels/colors from `shared/lib/classification.ts`. Per-coin/chain maps must derive from registries or have registry-iterating completeness tests; “keep in sync” comments are not guards.
+Reserve sync status uses `ReserveSyncStatusSchema` and its derived type from `shared/types/live-reserves.ts` directly across wire schemas, Worker storage/views and the Node coverage audit; scheduler vocabulary remains a separate semantic authority.
+Status reliability consumers import `StatusHealthValue` directly from `shared/types/status/core.ts`; pending-depeg evidence imports `ConfirmationTimestampStatus` from its classifier owner, `worker/src/cron/pending-depeg-confirmation.ts`, rather than copying either vocabulary.
+Safety producer overlays and compiled facts reuse dependency input fields, role consistency, bridge-supply rows and peg reference vocabulary from shared fact schemas; compiled evidence/path/envelope admission remains separate.
 Domain applications: [R5 canonical policy projections](process/architecture-appendix.md#adr-32-applications).
 #### ADR-33
 

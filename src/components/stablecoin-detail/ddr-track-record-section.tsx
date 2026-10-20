@@ -2,18 +2,11 @@
 
 import { IntentLink } from "@/components/intent-link";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { QueryStateNotice } from "@/components/query-state-notice";
 import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
 import { FactGrid, type FactGridItem } from "@/components/stablecoin-detail/fact-grid";
-import { StablecoinModuleTitle } from "@/components/stablecoin-detail/module-title";
-import {
-  DETAIL_MODULE_BODY_CLASS,
-  DETAIL_MODULE_HEADER_CLASS,
-  DETAIL_MODULE_SHELL_CLASS,
-  DETAIL_MODULE_TITLE_CLASS,
-  SECTION_SCROLL_MT,
-} from "@/components/stablecoin-detail/section-title-class";
+import { DetailModuleCard } from "@/components/stablecoin-detail/module-title";
+import { SECTION_SCROLL_MT } from "@/components/stablecoin-detail/section-title-class";
 import { useDepegResolverReview } from "@/hooks/api-hooks";
 import { isDepegResolverEnabled, isDepegResolverReviewerEnabled } from "@/lib/feature-flags";
 import {
@@ -108,14 +101,14 @@ export function DdrTrackRecordSection({ stablecoinId }: { stablecoinId: string }
   ];
 
   return (
-    <Card className={cn(DETAIL_MODULE_SHELL_CLASS, SECTION_SCROLL_MT)}>
-      <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
-        <StablecoinModuleTitle className={DETAIL_MODULE_TITLE_CLASS}>DDR track record</StablecoinModuleTitle>
-        <Badge variant="outline" className={cn("text-2xs font-medium", limitedPopulation ? "text-muted-foreground" : record.chipToneClass)}>
+    <DetailModuleCard
+      title="DDR track record"
+      className={SECTION_SCROLL_MT}
+      bodyClassName="space-y-4"
+      headerRight={<Badge variant="outline" className={cn("text-2xs font-medium", limitedPopulation ? "text-muted-foreground" : record.chipToneClass)}>
           {limitedPopulation ? "Partial coverage" : record.chipLabel}
-        </Badge>
-      </CardHeader>
-      <CardContent className={cn(DETAIL_MODULE_BODY_CLASS, "space-y-4")}>
+        </Badge>}
+    >
         {unavailable ? (
           <QueryStateNotice
             state="stale-with-data"
@@ -155,7 +148,6 @@ export function DdrTrackRecordSection({ stablecoinId }: { stablecoinId: string }
             Full DDRR review
           </IntentLink>
         </EvidenceFooter>
-      </CardContent>
-    </Card>
+    </DetailModuleCard>
   );
 }

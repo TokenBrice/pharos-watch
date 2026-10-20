@@ -15,9 +15,6 @@ import {
   type RateLimitedFetch,
   type SubrequestBudget,
   budgetExhausted,
-  decodeAddressWord,
-  decodeUint256Word,
-  readDataWord,
 } from "../evm-logs";
 import { ETHERSCAN_V2_BASE } from "../constants";
 import { toErrorMessage } from "@shared/lib/error-utils";
@@ -29,6 +26,9 @@ import {
   buildBlacklistAmountAttemptUpdate, buildRecoveredBlacklistAmountPersistence,
   type BlacklistAmountSelectedState,
 } from "./amount-persistence";
+
+import { decodeBlacklistEvmPayload, type BlacklistEvmPayload } from "./evm-payload";
+import { BlacklistDecodeError } from "./decode-quarantine";
 
 // Conservative scheduled recovery cap: one D1 batch chunk and well below the
 // sync-blacklist 900-subrequest run budget observed in production.
@@ -151,52 +151,6 @@ function normalizeEvmAddress(address: string): string | null {
   return value;
 }
 
-function readTopicWord(topics: readonly string[], index: number): string | null {
-  const topic = topics[index];
-  if (typeof topic !== "string") return null;
-  return /^0x[0-9a-fA-F]{64}$/.test(topic) ? topic : null;
-}
-
-function resolveDestroyLogAddress(
-  matchingEvent: ReturnType<typeof getBlacklistEventByTopic>,
-  log: Pick<EtherscanLogEntry, "topics" | "data">,
-): { address: string | null; addressFromTopic: boolean } {
-  if (!matchingEvent) return { address: null, addressFromTopic: false };
-
-  if (typeof matchingEvent.addressDataIndex === "number") {
-    return {
-      address: decodeAddressWord(readDataWord(log.data, matchingEvent.addressDataIndex)),
-      addressFromTopic: false,
-    };
-  }
-
-  const topicIdx = matchingEvent.addressTopicIndex ?? 1;
-  const topicAddress = decodeAddressWord(readTopicWord(log.topics, topicIdx));
-  if (topicAddress) {
-    return { address: topicAddress, addressFromTopic: true };
-  }
-
-  return {
-    address: decodeAddressWord(readDataWord(log.data, 0)),
-    addressFromTopic: false,
-  };
-}
-
-function resolveDestroyLogAmount(
-  matchingEvent: NonNullable<ReturnType<typeof getBlacklistEventByTopic>>,
-  log: Pick<EtherscanLogEntry, "topics" | "data">,
-  decimals: number,
-  addressFromTopic: boolean,
-): number | null {
-  if (typeof matchingEvent.amountTopicIndex === "number") {
-    return decodeUint256Word(readTopicWord(log.topics, matchingEvent.amountTopicIndex), decimals);
-  }
-  if (typeof matchingEvent.amountDataIndex === "number") {
-    return decodeUint256Word(readDataWord(log.data, matchingEvent.amountDataIndex), decimals);
-  }
-
-  return decodeUint256Word(readDataWord(log.data, addressFromTopic ? 0 : 1), decimals);
-}
 
 export function extractDestroyAmountFromReceiptLogs(
   config: ContractEventConfig,
@@ -213,15 +167,21 @@ export function extractDestroyAmountFromReceiptLogs(
     const matchingEvent = getBlacklistEventByTopic(config, log.topics[0]);
     if (matchingEvent?.eventType !== "destroy") continue;
 
-    const { address, addressFromTopic } = resolveDestroyLogAddress(matchingEvent, log);
-    if (address !== normalizedAffectedAddress) continue;
+    let payload: BlacklistEvmPayload;
+    try {
+      payload = decodeBlacklistEvmPayload(matchingEvent, log, config.decimals);
+    } catch (error) {
+      if (!(error instanceof BlacklistDecodeError)) throw error;
+      continue;
+    }
+    if (payload.address !== normalizedAffectedAddress) continue;
 
     // A receipt can contain several wipes of the same account. Without an
     // exact target log identity, neither another wipe nor a burn-shaped Transfer
     // proves this event's quantity.
     matches++;
     if (matches > 1 || !matchingEvent.hasAmount) return null;
-    recovered = resolveDestroyLogAmount(matchingEvent, log, config.decimals, addressFromTopic);
+    recovered = payload.amount;
   }
 
   return recovered;

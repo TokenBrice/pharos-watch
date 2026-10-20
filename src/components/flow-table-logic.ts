@@ -23,7 +23,7 @@ export type FlowTableSortKey =
 export { getPressureScore, getPressureState };
 
 export const PRESSURE_VALUE_CLASS: Record<PressureShiftState, string> = Object.fromEntries(
-  PRESSURE_SHIFT_STATE_VALUES.map((s) => [s, getFlowPressureUi(s, "summary").valueClass]),
+  PRESSURE_SHIFT_STATE_VALUES.map((s) => [s, getFlowPressureUi(s).valueClass]),
 ) as Record<PressureShiftState, string>;
 
 export function getCoverageBadge(coin: MintBurnCoinFlow): { label: string; className: string } | null {

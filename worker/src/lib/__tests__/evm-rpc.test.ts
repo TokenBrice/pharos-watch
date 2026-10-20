@@ -47,6 +47,8 @@ const {
 } = await import("../evm-rpc");
 
 function rpcResponse(body: unknown): Response {
+  // Single-response fixtures must carry the same identity as the real request.
+  if (body && typeof body === "object" && !Array.isArray(body) && !("id" in body)) body = { id: 1, ...body };
   return new Response(JSON.stringify(body), { status: 200 });
 }
 
@@ -913,6 +915,12 @@ describe("evm-rpc helpers", () => {
     await expect(
       fetchJsonRpcHexAtUrl("https://rpc.example", "eth_chainId", []),
     ).resolves.toBeNull();
+  });
+
+  it.each([undefined, "1", 2, 1.5])("rejects an unmatched single response identity %s before admitting data", async id => {
+    fetchWithRetryMock.mockResolvedValueOnce(new Response(JSON.stringify({ id, result: "0x10" })));
+    expect(await fetchJsonRpcHexAtUrl("https://rpc.example", "eth_chainId", [])).toBeNull();
+    expect(fetchWithRetryMock).toHaveBeenCalledTimes(1);
   });
 
   it("fetches block numbers and timestamps through the shared RPC path", async () => {

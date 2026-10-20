@@ -25,7 +25,6 @@ import { computeLockTiming } from "./incident-state";
 import { buildSealPayload, buildV2PublicationBasePayload } from "./public-projection";
 import {
   firstPublicationByPredictionId,
-  publicPredictionIdOf,
   sealedByIncident,
 } from "./storage-adapters";
 import { formatDdrrFailure, publicationSnapshotToken } from "./utils";
@@ -155,7 +154,7 @@ export async function loadErrataForSealedPredictions(input: {
   if (!input.stores.loadPredictionErrata || input.sealed.length === 0) return { errata: [], error: null };
   try {
     const rows = await input.stores.loadPredictionErrata(input.db, {
-      publicPredictionIds: input.sealed.map(publicPredictionIdOf),
+      publicPredictionIds: input.sealed.map((sealed) => sealed.id),
       incidentKeys: input.sealed.map((sealed) => sealed.incidentKey),
     });
     return {
@@ -186,11 +185,11 @@ export async function writePublicationBeforeCache(input: {
 }> {
   const snapshotToken = publicationSnapshotToken(input.ddrRunId, input.nowSec);
   const existingFirstPublication = firstPublicationByPredictionId(input.firstPublication);
-  const retryPendingSealed = input.sealed.filter((sealed) => !existingFirstPublication.has(publicPredictionIdOf(sealed)));
+  const retryPendingSealed = input.sealed.filter((sealed) => !existingFirstPublication.has(sealed.id));
   const firstPublication = [
     ...input.firstPublication,
     ...retryPendingSealed.map((sealed): DdrFirstPublicationMembership => ({
-      publicPredictionId: publicPredictionIdOf(sealed),
+      publicPredictionId: sealed.id,
       incidentKey: sealed.incidentKey,
       snapshotToken,
       snapshotGeneration: DDR_SNAPSHOT_CACHE_GENERATION,
@@ -206,9 +205,9 @@ export async function writePublicationBeforeCache(input: {
     snapshotToken,
     nowSec: input.nowSec,
   });
-  const publicPredictionIds = input.sealed.map(publicPredictionIdOf).sort((a, b) => a - b);
+  const publicPredictionIds = input.sealed.map((sealed) => sealed.id).sort((a, b) => a - b);
   const publicPredictionRowHashes = Object.fromEntries(
-    input.sealed.map((sealed) => [String(publicPredictionIdOf(sealed)), sealed.rowHash]).sort(([a], [b]) => a.localeCompare(b)),
+    input.sealed.map((sealed) => [String(sealed.id), sealed.rowHash]).sort(([a], [b]) => a.localeCompare(b)),
   );
   try {
     const manifest = await input.stores.writePublicationManifest(input.db, {

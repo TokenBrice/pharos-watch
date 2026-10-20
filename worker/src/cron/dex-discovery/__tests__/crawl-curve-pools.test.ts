@@ -45,7 +45,6 @@ describe("Curve discovery pool fetching", () => {
         knownPoolIds: new Set(),
         nowSec: 1_800_000_000,
         pools: [],
-        priceObs: [],
       }),
     });
 
@@ -76,7 +75,7 @@ describe("Curve discovery pool fetching", () => {
     const result = await crawlCurvePoolsStage({
       coinTargets: [first, second],
       context: createCrawlStageContext({
-        stablecoinId: "test", knownPoolIds: new Set(), nowSec: 1_800_000_000, pools: [], priceObs: [],
+        stablecoinId: "test", knownPoolIds: new Set(), nowSec: 1_800_000_000, pools: [],
       }),
     });
     expect(fetchJsonWithRetry).toHaveBeenCalledTimes(1);
@@ -101,7 +100,6 @@ describe("Curve discovery pool fetching", () => {
         knownPoolIds: new Set(),
         nowSec: 1_800_000_000,
         pools: [],
-        priceObs: [],
       }),
     });
 

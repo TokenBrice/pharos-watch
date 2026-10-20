@@ -33,7 +33,7 @@ import {
   V9EvidenceGapClassificationSchema, V9TypedReviewGapClassificationSchema, v9EvidenceCauseScopeKey,
   type V9EvidenceCauseScope, type V9RuntimeProducerVerdict, type V9CauseResolutionDiagnostic,
 } from "@shared/types/safety-score-v9-causes";
-import { createReviewedAssetRegistry } from "@shared/lib/safety-score-v9/reviewed-registry";
+import { createReviewedAssetRegistry, createReviewedRegistryReferenceExpander } from "@shared/lib/safety-score-v9/reviewed-registry";
 import { usesPrimaryRedemptionReviewTerms } from "../redemption-exit-route-observations";
 import { allocationReviewClockSec as reviewAdmissionClockSec } from "@shared/types/safety-score-v9-allocation";
 
@@ -44,6 +44,10 @@ const classifications = createReviewedAssetRegistry({
   path: "evidenceGapClassifications.entries",
   keyOf: (row) => typeof row.id === "string" ? row.id : undefined,
   keyPath: "id",
+  expandRow: createReviewedRegistryReferenceExpander({
+    sources: classificationsAsset.sourceObservations,
+    searchedSurfaces: classificationsAsset.searchedSurfaceObservations,
+  }, "evidenceGapClassifications.entries"),
 });
 
 function scopeForGap(gap: Pick<V9FactGapV3, "path" | "ownerDomain" | "policyRuleId">): V9EvidenceCauseScope {
@@ -333,6 +337,7 @@ export function addGap(context: AssetBuildContext, gap: V9FactGapV3): string {
     const reference = context.evidence.get(id);
     return reference ? [reference] : [];
   });
+  // Observation state alone certifies no responsibility; only scoped proof resolves a U cause.
   const result: V9ResolvedEvidenceCause = gap.causeProof.cause === "U"
     ? resolveV9EvidenceCause({
         assetId: context.asset.assetId, scope, asOfSec: context.fixedInput.clockSec,
@@ -491,13 +496,6 @@ export function timestampSec(value: string, label: string, asOfSec: number): num
   return timestamp;
 }
 
-/** Observation state alone certifies no responsibility. */
-export function reviewedGapResponsibility(
-  _observationState: Exclude<V9FactStatusV2["observationState"], "known">,
-): V9EvidenceResponsibility {
-  return "unresearched";
-}
-
 export function normalizeReviewedFactStatus(
   context: AssetBuildContext,
   original: V9FactStatusV2,
@@ -509,7 +507,6 @@ export function normalizeReviewedFactStatus(
     ownerDomain: V9FactGapV3["ownerDomain"];
     componentKey: string;
     message: string;
-    responsibility?: V9EvidenceResponsibility;
     causeScope?: V9EvidenceCauseScope;
     adverseFactId?: string;
   },

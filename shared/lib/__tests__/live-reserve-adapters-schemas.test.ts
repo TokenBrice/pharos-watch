@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 import {
   LIVE_RESERVE_ADAPTER_DEFINITIONS,
   LiveReservesConfigSchema,
@@ -9,12 +9,40 @@ import {
 import { getReserveDisplayBadgeKindForAdapter } from "../live-reserve-display";
 import {
   baseLiveReserveConfigSchema,
-} from "../live-reserve-adapters";
+  type BaseLiveReserveConfig,
+  type LiveReserveInput,
+} from "../../types/live-reserve-core";
 import mxnt from "../../data/stablecoins/coins/mxnt-tether.json";
 import usdfc from "../../data/stablecoins/coins/usdfc-secured-finance.json";
 import meusd from "../../data/stablecoins/coins/meusd-mezo.json";
 import frnt from "../../data/stablecoins/coins/frnt-wyoming.json";
 import hchf from "../../data/stablecoins/coins/hchf-hedera-swiss-franc.json";
+import { ReserveSyncStatusSchema, ReserveSyncStateViewSchema, type LiveReservesConfig } from "../../types/live-reserves";
+import { AcceptedReserveGenerationSchema } from "../../types/accepted-reserve-generation";
+
+expectTypeOf<Pick<LiveReservesConfig, keyof BaseLiveReserveConfig>>().toEqualTypeOf<BaseLiveReserveConfig>();
+expectTypeOf<Extract<LiveReserveInput, { kind: "onchain-evm" }>>()
+  .toEqualTypeOf<{ kind: "onchain-evm"; chain: string; rpcMode: "etherscan-proxy" | "alchemy" | "public-rpc" }>();
+
+describe("reserve sync status admission", () => {
+  it.each(["ok", "degraded", "error", "skipped", null, "running", "skipped_locked", "", 0])(
+    "preserves wire admission for %j without accepting scheduler statuses", (status) => {
+      const valid = status === "ok" || status === "degraded" || status === "error" || status === "skipped";
+      expect(ReserveSyncStatusSchema.safeParse(status).success).toBe(valid);
+      expect(ReserveSyncStateViewSchema.safeParse({ enabled: true, status, stale: false, bootstrap: false }).success).toBe(valid);
+      const generation = {
+        schemaVersion: 2, generationId: "reserve:1:queue",
+        root: { scheduleKey: "fourHourlyReserveSync", slotStartedAt: 1, queueHash: "queue" },
+        sealedBy: { attemptNo: 1, executionGeneration: 1, invocationId: "invocation" },
+        producerCompletedAtSec: 2, contentSha256: "a".repeat(64),
+        members: [{ stablecoinId: "coin", snapshot: null, latestAttempt: { attemptId: null, attemptedAt: null, status } }],
+      };
+      const parsed = AcceptedReserveGenerationSchema.safeParse(generation);
+      expect(parsed.success).toBe(valid || status === null);
+      if (parsed.success) expect(JSON.stringify(parsed.data)).toBe(JSON.stringify(generation));
+    },
+  );
+});
 
 describe("baseLiveReserveConfigSchema", () => {
   it("accepts an operator suspension with ISO dates and rejects malformed ones", () => {
@@ -37,6 +65,14 @@ describe("baseLiveReserveConfigSchema", () => {
         suspended: { reason: "x", since: "next week" },
       }).success,
     ).toBe(false);
+  });
+
+  it("preserves legacy format-only suspension dates and strict nested fields", () => {
+    const base = { version: 1, semantics: "collateral-mix" };
+    const suspended = { reason: "legacy suspension", since: "2026-02-30", reviewBy: "2026-13-01" };
+    expect(baseLiveReserveConfigSchema.parse({ ...base, suspended })).toEqual({ ...base, suspended });
+    expect(baseLiveReserveConfigSchema.safeParse({ ...base, suspended: { ...suspended, extra: true } }).success).toBe(false);
+    expect(baseLiveReserveConfigSchema.safeParse({ ...base, display: { url: "/relative" } }).success).toBe(false);
   });
 });
 
@@ -229,6 +265,124 @@ describe("LiveReservesConfigSchema adapter policy validation", () => {
       capacity: "none",
       fee: "current-bps",
     });
+  });
+
+  // Post-correctness baseline: compare whole effective descriptors, not a
+  // nearest profile or partial capability match. Schema behavior also retains
+  // the catalog-backed registry cases; params and paramsSchema must be aliases.
+  const noTelemetry = { capacity: "none", fee: "none" };
+  const directTelemetry = { capacity: "direct", fee: "none" };
+  const latestState = { allowedFreshnessModes: ["not-applicable"] };
+  const verified = { allowedFreshnessModes: ["verified"] };
+  const dashboard = { maxSourceAgeSec: 259200, allowedFreshnessModes: ["verified", "unverified"] };
+  const unknownLatest = { maxUnknownExposurePct: 5, ...latestState };
+  const unknownDashboard = { ...dashboard, maxUnknownExposurePct: 5 };
+  const onchain = { primaryInputKinds: ["onchain-evm"] };
+  const singleBucket = { ...onchain, sourceModel: "single-bucket" };
+  const config = (semantics: string, ...versions: number[]) => ({
+    allowedSemantics: [semantics], allowedVersions: versions,
+  });
+  const issuerDashboard = {
+    sourceOriginClass: "issuer-attested", preferredFreshnessMode: "verified", validation: dashboard,
+  };
+  const cdp = {
+    sourceOriginClass: "onchain-observation", preferredFreshnessMode: "not-applicable", validation: unknownLatest,
+  };
+  const weakProbe = {
+    sourceModel: "single-bucket", evidenceClass: "weak-live-probe", sourceOriginClass: "issuer-attested",
+    displayBadgeKind: "proof", configValidation: config("single-asset", 1),
+  };
+  const descriptorBaseline = {
+    "leverup-lvusd": {
+      ...onchain, sourceOriginClass: "onchain-observation", preferredFreshnessMode: "not-applicable",
+      provenance: {
+        status: "active",
+        rationale: "Bound to lvusd-leverup: reviewed LVUSD-only Monad vault census and pinned supply reconciliation exclude LVMON and MON staking, fail closed on registry or identity drift, and retain measured undercollateralization without allowlisting the deficit or inferring redemption capacity.",
+      },
+    },
+    accountable: {
+      preferredFreshnessMode: "verified",
+      configValidation: { allowedSemantics: ["collateral-mix", "protocol-reserve"], allowedVersions: [1] },
+      validation: { ...dashboard, maxSourceAgeSec: 1209600 },
+    },
+    "moc-v3-buckets": { ...onchain, sourceOriginClass: "onchain-observation", configValidation: config("collateral-mix", 2) },
+    "bridge-transparency": issuerDashboard,
+    "chronicle-nav": {
+      ...singleBucket, sourceOriginClass: "independent-assurance",
+      configValidation: config("single-asset", 1), validation: verified,
+    },
+    "chainlink-por": { ...singleBucket, configValidation: config("attestation-mix", 3), validation: verified },
+    "ethena-whitelabel": {
+      ...issuerDashboard, displayBadgeKind: "proof",
+      configValidation: config("collateral-mix", 2), validation: unknownDashboard,
+    },
+    "parallelizer-balances": {
+      ...onchain, configValidation: config("collateral-mix", 2),
+      redemptionTelemetry: directTelemetry, validation: unknownLatest,
+    },
+    "xpr-account-balances": cdp,
+    "kava-cdp": { ...cdp, configValidation: config("collateral-mix", 2) },
+    "krwq-custodian": {
+      sourceOriginClass: "onchain-observation", preferredFreshnessMode: "verified", validation: unknownDashboard,
+    },
+    "megausd-custody": issuerDashboard,
+    "reserve-protocol-dtf": { ...onchain, preferredFreshnessMode: "not-applicable", redemptionTelemetry: directTelemetry },
+    "superstate-liquidity": {
+      ...singleBucket, preferredFreshnessMode: "verified", configValidation: config("single-asset", 1),
+      redemptionTelemetry: directTelemetry, validation: { allowedFreshnessModes: ["verified", "unverified"] },
+    },
+    "tether-transparency": {
+      ...issuerDashboard, displayBadgeKind: "proof", sharedSourceMode: "source-invariant",
+      configValidation: config("attestation-mix", 1, 2), validation: { ...dashboard, maxSourceAgeSec: 604800 },
+    },
+    "usdai-proof-of-reserves": {
+      sourceOriginClass: "issuer-attested", preferredFreshnessMode: "not-applicable", displayBadgeKind: "proof",
+      configValidation: config("collateral-mix", 2),
+      validation: { maxUnknownExposurePct: 5, maxSourceAgeSec: 604800, allowedFreshnessModes: ["not-applicable", "unverified"] },
+    },
+    "usd1-bundle-oracle": {
+      ...singleBucket, configValidation: config("single-asset", 3), validation: { ...verified, maxSourceAgeSec: 604800 },
+    },
+    "usdtb-transparency": { preferredFreshnessMode: "verified", validation: dashboard },
+    "youves-tezos": cdp,
+    "dgld-gold-mapper": { ...weakProbe, validation: { ...verified, maxSourceAgeSec: 259200, maxUnknownExposurePct: 0 } },
+    "afi-proof": {
+      ...weakProbe, validation: { maxUnknownExposurePct: 100, allowedFreshnessModes: ["unverified"] },
+      freshnessLimitation: "The AFI proof carries a generation timestamp, but proof generation does not establish the as-of dates of the underlying assets; ratio telemetry publishes as unverified.",
+    },
+    "coinbase-oned-por": {
+      ...weakProbe, preferredFreshnessMode: "verified", validation: { ...verified, maxSourceAgeSec: 259200 },
+      provenance: {
+        status: "active",
+        rationale: "Ordinary public persisted GraphQL GET verified200 on 2026-10-03; exact Base ONED stock and complete published USDC wallets reconcile. Source-controlled query hash/schema drift fail closed with stable machine reasons, without HTML/stale/partial fallback. This remains issuer-attested telemetry, not independent financial assurance or funded redemption capacity.",
+      },
+    },
+  };
+  it.each(Object.keys(descriptorBaseline) as (keyof typeof descriptorBaseline)[])(
+    "preserves the complete resolved %s descriptor", (key) => {
+      const { params, paramsSchema, ...descriptor } = LIVE_RESERVE_ADAPTER_DEFINITIONS[key];
+      expect(params).toBe(paramsSchema);
+      expect(paramsSchema.safeParse([]).success).toBe(false);
+      expect(descriptor).toEqual({
+        key, primaryInputKinds: ["http-json"], sourceModel: "dynamic-mix", evidenceClass: "independent",
+        sourceOriginClass: "unknown", sharedSourceMode: "none", displayBadgeKind: "live",
+        configValidation: config("collateral-mix", 1), redemptionTelemetry: noTelemetry, validation: latestState,
+        provenance: { status: "active", rationale: "Bound by at least one active stablecoin liveReservesConfig." },
+        ...descriptorBaseline[key],
+      });
+    },
+  );
+
+  it("keeps params-gated capacity explicit rather than inheriting ungated telemetry", () => {
+    const definition = LIVE_RESERVE_ADAPTER_DEFINITIONS["chainlink-nav"];
+    expect(definition.redemptionTelemetry).toEqual({ capacity: "direct", capacityParamsGated: true, fee: "none" });
+    expect(LIVE_RESERVE_ADAPTER_DEFINITIONS["superstate-liquidity"].redemptionTelemetry).toEqual(directTelemetry);
+    const address = "0x0000000000000000000000000000000000000001";
+    const params = { navScope: "native-fund-share", oracleAddress: address, tokenAddress: address, assetLabel: "Fund", assetRisk: "low" };
+    expect(parseLiveReserveAdapterParams("chainlink-nav", params)).not.toHaveProperty("redemptionCapacity");
+    const redemptionCapacity = { managerAddress: address, usdcAddress: address, routerAddress: address, sourceAddress: address };
+    expect(parseLiveReserveAdapterParams("chainlink-nav", { ...params, redemptionCapacity })).toEqual({ ...params, redemptionCapacity });
+    expect(() => parseLiveReserveAdapterParams("chainlink-nav", { ...params, redemptionCapacity: {} })).toThrow();
   });
 
   it("admits both ERC-4626 config generations for the measured exposure cutover", () => {

@@ -77,6 +77,7 @@ const DEX_LIQUIDITY_ROW_COLUMNS = [
   "balance_measured_tvl_usd",
   "organic_measured_tvl_usd",
   "methodology_version",
+  "depth_stability",
   "updated_at",
 ] as const;
 
@@ -702,6 +703,7 @@ export async function persistScores(
   scoreResults: Map<string, FullScoreResult>,
   globalAgg: GlobalAgg,
   nowSec: number,
+  tvlStabilityMap: ReadonlyMap<string, number>,
   signal?: AbortSignal,
   routeRemovalEvidence?: Map<string, DexRouteRemovalEvidence>,
 ): Promise<PersistScoresResult> {
@@ -956,6 +958,7 @@ export async function persistScores(
         sr.balanceMeasuredTvlUsd,
         sr.organicMeasuredTvlUsd,
         LIQUIDITY_METHODOLOGY_VERSION,
+        tvlStabilityMap.get(id) ?? null,
         nowSec,
       ]);
     }
@@ -1020,6 +1023,7 @@ export async function persistScores(
           0,
           0,
           LIQUIDITY_METHODOLOGY_VERSION,
+          tvlStabilityMap.get(meta.id) ?? null,
           nowSec,
         ]);
       }
@@ -1055,6 +1059,7 @@ export async function persistScores(
       0,
       0,
       LIQUIDITY_METHODOLOGY_VERSION,
+      null,
       nowSec,
     ]);
     await flushPendingRunRows();

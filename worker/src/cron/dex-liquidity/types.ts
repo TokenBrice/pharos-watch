@@ -53,6 +53,13 @@ export interface CurvePool {
   gaugeCrvApy: [number, number] | null;
 }
 
+/** Admitted source pools; score aggregates exist only after scoring rebuilds them. */
+export interface SourcePoolGraph {
+  stablecoinId: string;
+  symbol: string;
+  pools: PoolEntry[];
+}
+
 export interface LiquidityMetrics {
   stablecoinId: string;
   symbol: string;
@@ -61,7 +68,7 @@ export interface LiquidityMetrics {
   totalVolume24hUsd: number | null;
   /** DEC-19 full-window measured 7d sum over the retained pool set; null unless the window is complete. */
   totalVolume7dUsd: number | null;
-  /** Per-window availability over the retained pool set; null until scoring summarizes it. */
+  /** Per-window availability summarized over the scored retained pool set. */
   volumeAvailability: DexVolumeAvailabilityRecord | null;
   poolCount: number;
   chains: Set<string>;

@@ -2,6 +2,7 @@ import "../../test-helpers/reviewed-deployment-catalog.test-support";
 import { describe, expect, it, vi } from "vitest";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { StablecoinMeta } from "@shared/types/core";
+import type { ReviewedDeploymentSupplyObservation } from "@shared/types/safety-score-v9-supply-attribution";
 import currentJtrsyRisk from "@shared/data/stablecoins/domains/risk-review/jtrsy-anemoy.json";
 import type { ChainRpcConfig } from "../chain-registry";
 import { makeChainRpcs } from "../../test-helpers/chain-rpc-fixtures.test-support";
@@ -12,11 +13,9 @@ import type {
 import {
   buildReviewedDeploymentRouteInventory,
   expectedCentrifugeDeploymentIdentity,
-  type ReviewedDeploymentSupplyObservation,
 } from "../safety-score-v9/supply-attribution-contract";
 import {
   fetchSolanaCentrifugeDeploymentObservation,
-  observeCentrifugeReviewedDeploymentUnitPartition,
   observeCentrifugeReviewedDeploymentUnitPartitionAttempt,
   type CentrifugeSolanaRpcFetcher,
 } from "../safety-score-v9/centrifuge-supply-observer";
@@ -176,7 +175,7 @@ function dependencies() {
 async function observe(
   overrides: ReturnType<typeof dependencies> = dependencies(),
 ) {
-  return observeCentrifugeReviewedDeploymentUnitPartition(
+  const attempt = await observeCentrifugeReviewedDeploymentUnitPartitionAttempt(
     {
       assetId: ASSET_ID,
       aggregateSupplyUsd: AGGREGATE_SUPPLY_USD,
@@ -186,6 +185,7 @@ async function observe(
     },
     overrides,
   );
+  return attempt.status === "accepted" ? attempt.attribution : null;
 }
 
 describe("Centrifuge reviewed deployment observer", () => {

@@ -21,10 +21,6 @@ const { handleTelegramWebhook, TELEGRAM_GROUP_ADMIN_GATING } = await import("../
 const { resolveTicker } = await import("../../common/alerts-parser");
 const { FROZEN_STABLECOINS } = await import("@shared/lib/stablecoins/registry");
 const { resetTelegramInvalidSecretLogStateForTests } = await import("../../common/log");
-function encodeWatchlistToken(state: { coinIds: string[]; alertTypes: string[]; presetIds: string[] }): string {
-  const json = JSON.stringify({ v: 1, c: state.coinIds, t: state.alertTypes, p: state.presetIds });
-  return btoa(json).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
 
 function makeWebhookRequest(
   chatId: number,
@@ -249,7 +245,6 @@ export {
   resolveTicker,
   FROZEN_STABLECOINS,
   resetTelegramInvalidSecretLogStateForTests,
-  encodeWatchlistToken,
   makeWebhookRequest,
   makeMyChatMemberRequest,
   makeChatMigrationRequest,

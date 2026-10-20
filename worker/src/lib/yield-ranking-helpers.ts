@@ -1,7 +1,9 @@
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
-import { computePysComponents, PYS_APY_SANITY_MAX, type PysComponents } from "@shared/lib/yield-scoring";
-import type { YieldPysNullReason } from "@shared/types/yield";
+import { computePYSFromComponents, computePysComponents, PYS_APY_SANITY_MAX, type PysComponents } from "@shared/lib/yield-scoring";
+import type { YieldEvidenceClass, YieldPysNullReason } from "@shared/types/yield";
 import type { YieldBenchmarkFreshness } from "@shared/lib/yield-benchmark-freshness";
+import { assessYieldEvidence } from "@shared/lib/yield-evidence";
+import type { YieldRowSafetyResolution } from "@shared/lib/yield-opportunity-risk";
 
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
@@ -100,6 +102,54 @@ export function derivePysNullReasonFromComponents(
 export function derivePysNullReason(input: PysNullReasonInput): YieldPysNullReason | null {
   const components = computePysComponents(input);
   return derivePysNullReasonFromComponents(input.apy30d, input.scalingFactor, components);
+}
+
+/** Callers own freshness acquisition and provenance preference; this consumes normalized evidence. */
+export function qualifyYieldEvidence(input: {
+  safety: Pick<YieldRowSafetyResolution, "safetyEvidenceObserved" | "opportunityEvidenceComplete" | "venueRiskTier">;
+  evidenceClass: YieldEvidenceClass;
+  sourceFreshness: YieldSourceFreshness;
+  benchmarkFreshness: YieldBenchmarkFreshness;
+  referenceBenchmarkFreshness: YieldBenchmarkFreshness;
+  sourceDepthRatio: number | null;
+  observationCount30d: number | null;
+  apyBase: number | null;
+  apyReward: number | null;
+  warnings: string[];
+}) {
+  const { safetyEvidenceObserved: safetyObserved, opportunityEvidenceComplete, venueRiskTier } = input.safety;
+  const assessment = assessYieldEvidence({
+    ...input,
+    safetyObserved,
+    opportunityEvidenceComplete,
+    hasSourceDepth: input.sourceDepthRatio != null,
+    hasVenueRisk: venueRiskTier !== "unknown",
+    hasHistory: (input.observationCount30d ?? 0) > 1,
+    hasYieldDecomposition: input.apyBase != null || input.apyReward != null,
+  });
+  const warnings = input.warnings.filter(signal =>
+    (signal !== "safety-unrated" || !safetyObserved) &&
+    (signal !== "opportunity-evidence-missing" || !opportunityEvidenceComplete));
+  if (!safetyObserved && !warnings.includes("safety-unrated")) warnings.push("safety-unrated");
+  if (!opportunityEvidenceComplete && !warnings.includes("opportunity-evidence-missing")) warnings.push("opportunity-evidence-missing");
+  return {
+    ...assessment,
+    warnings,
+    evidenceNullReason: resolveEvidenceNullReason({ ...input, opportunityEvidenceComplete }),
+  };
+}
+
+/** An admitted evidence/safety reason takes precedence over the shared numeric ladder. */
+export function scoreYieldPys(input: PysNullReasonInput & { nullReason: YieldPysNullReason | null }) {
+  const components = computePysComponents(input);
+  const computedScore = computePYSFromComponents(input.apy30d, input.scalingFactor, components);
+  const pysNullReason = input.nullReason ??
+    derivePysNullReasonFromComponents(input.apy30d, input.scalingFactor, components);
+  return {
+    components,
+    pharosYieldScore: pysNullReason == null && Number.isFinite(computedScore) ? computedScore : null,
+    pysNullReason,
+  };
 }
 
 function isSupplementalOnchainSource(sourceKey: string | null | undefined): boolean {

@@ -2,8 +2,8 @@ import { describe, expect, it, vi } from "vitest";
 import { mockRegistry } from "../../test-helpers/cron/mock-registry";
 
 import { getFallbackTargets } from "../dex-liquidity/fetch-fallbacks";
-import { initMetrics } from "../dex-liquidity/pool-helpers";
-import type { LiquidityMetrics } from "../dex-liquidity/types";
+import { initSourcePoolGraph } from "../dex-liquidity/pool-helpers";
+import type { SourcePoolGraph } from "../dex-liquidity/types";
 
 /**
  * Builds a metric the way the pipeline does before scoring: only `topPools` is
@@ -13,13 +13,13 @@ import type { LiquidityMetrics } from "../dex-liquidity/types";
 function metricWithPools(
   stablecoinId: string,
   { poolCount, totalTvlUsd, balancedTvlUsd = 0 }: { poolCount: number; totalTvlUsd: number; balancedTvlUsd?: number },
-): LiquidityMetrics {
-  const metric = initMetrics(stablecoinId, "TEST");
+): SourcePoolGraph {
+  const metric = initSourcePoolGraph(stablecoinId, "TEST");
   const unbalancedPoolCount = balancedTvlUsd > 0 ? poolCount - 1 : poolCount;
   for (let index = 0; index < poolCount; index++) {
     const balanced = balancedTvlUsd > 0 && index === 0;
     const tvlUsd = balanced ? balancedTvlUsd : (totalTvlUsd - balancedTvlUsd) / unbalancedPoolCount;
-    metric.topPools.push({
+    metric.pools.push({
       poolId: `ethereum:0x${index.toString(16).padStart(40, "0")}`,
       project: "curve",
       chain: "ethereum",
@@ -73,7 +73,7 @@ describe("getFallbackTargets", () => {
     expect(ids(true)).toEqual(["usdt-tether", "usdc-circle", "dai-makerdao"]);
   });
   it("targets coins with zero pools, missing dex price observations, or weak partial coverage", () => {
-    const metrics = new Map<string, LiquidityMetrics>();
+    const metrics = new Map<string, SourcePoolGraph>();
     metrics.set("usdt-tether", metricWithPools("usdt-tether", { poolCount: 0, totalTvlUsd: 0 }));
     metrics.set("usdc-circle", metricWithPools("usdc-circle", { poolCount: 3, totalTvlUsd: 500_000, balancedTvlUsd: 200_000 }));
     metrics.set("dai-makerdao", metricWithPools("dai-makerdao", { poolCount: 4, totalTvlUsd: 500_000, balancedTvlUsd: 200_000 }));
@@ -99,8 +99,8 @@ describe("getFallbackTargets", () => {
   });
 
   it("can restrict orderbook fallback targets to coins with a geckoId", () => {
-    const metrics = new Map<string, LiquidityMetrics>();
-    const noGecko = initMetrics("rwausdi-multipli", "rwaUSDi");
+    const metrics = new Map<string, SourcePoolGraph>();
+    const noGecko = initSourcePoolGraph("rwausdi-multipli", "rwaUSDi");
     metrics.set("rwausdi-multipli", noGecko);
 
     const targetIds = new Set(getFallbackTargets(metrics, new Map(), { requireGeckoId: true }).map((meta) => meta.id));

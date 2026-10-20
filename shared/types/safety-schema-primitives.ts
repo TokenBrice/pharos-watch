@@ -5,7 +5,11 @@ const SHA256_PATTERN = /^[a-f0-9]{64}$/u;
 const BASE_INPUT_GENERATION_ID_PATTERN = /^report-cards-input:v1:[a-f0-9]{64}$/u;
 
 /** Emit a custom refinement issue without changing its path, message, or order. */
-export function issue(ctx: z.RefinementCtx, path: (string | number)[] | undefined, message: string): void {
+export function issue(
+  ctx: { addIssue: (issue: { code: "custom"; path?: PropertyKey[]; message: string }) => void },
+  path: PropertyKey[] | undefined,
+  message: string,
+): void {
   ctx.addIssue({ code: "custom", path, message });
 }
 

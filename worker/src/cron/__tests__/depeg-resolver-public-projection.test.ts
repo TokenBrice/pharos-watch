@@ -20,7 +20,12 @@ import {
   buildDiagnosticSnapshot,
   buildV2PublicationBasePayload,
 } from "../depeg-resolver/public-projection";
-import { makeDdrCanonicalIncident, makeDdrResolverRow } from "./depeg-public-projection.test-support";
+import {
+  makeDdrCanonicalIncident,
+  makeDdrPublicationManifest,
+  makeDdrResolverRow,
+  makeDdrSealedPublicPrediction,
+} from "./depeg-public-projection.test-support";
 
 describe("depeg-resolver public projection", () => {
   const NOW_SEC = 1_779_984_600;
@@ -75,9 +80,8 @@ describe("depeg-resolver public projection", () => {
   ): DdrSealedPublicPrediction {
     const lockedAt = overrides.lockedAt ?? NOW_SEC - 60;
     const policyDelaySec = overrides.policyDelaySec ?? DAY_SEC;
-    return {
+    return makeDdrSealedPublicPrediction({
       id,
-      publicPredictionId: id,
       incidentKey: incident.incidentKey,
       eventId: row.eventId,
       assessmentId: id * 10,
@@ -92,6 +96,32 @@ describe("depeg-resolver public projection", () => {
       lockTrigger: "forecast_readiness",
       rowHash: hashFor(String(id)),
       sealedPayload: {
+        eventId: row.eventId,
+        incidentKey: incident.incidentKey,
+        stablecoinId: row.stablecoinId,
+        symbol: row.symbol,
+        name: row.name,
+        pegCurrency: row.pegCurrency,
+        governance: row.governance,
+        status: row.status,
+        direction: row.direction,
+        startedAt: row.startedAt,
+        frozen: {
+          resolution: row.resolution,
+          duration: {
+            ...row.duration,
+            remainingAsOf: lockedAt,
+            medianResolveAt: lockedAt + 3600,
+            iqrResolveAt: [lockedAt + 1800, lockedAt + 7200],
+            horizons: row.duration.horizons.map((cell) => ({
+              ...cell,
+              horizonEndAt: lockedAt + ({ "6h": 21600, "24h": 86400, "7d": 604800, "30d": 2592000 } as const)[cell.horizon],
+              anchoredLabel: `within ${cell.horizon} of lock`,
+            })),
+          },
+          relatedContext: row.relatedContext,
+          sourceRow: row,
+        },
         kind: "prediction",
         prediction: {
           incidentKey: incident.incidentKey,
@@ -106,7 +136,7 @@ describe("depeg-resolver public projection", () => {
         },
       },
       ...overrides,
-    };
+    });
   }
 
   function firstPublication(
@@ -114,7 +144,7 @@ describe("depeg-resolver public projection", () => {
     overrides: Partial<DdrFirstPublicationMembership> = {},
   ): DdrFirstPublicationMembership {
     return {
-      publicPredictionId: sealed.publicPredictionId ?? sealed.id,
+      publicPredictionId: sealed.id,
       incidentKey: sealed.incidentKey,
       snapshotToken: "ddr-public-original",
       snapshotGeneration: DDR_SNAPSHOT_CACHE_GENERATION,
@@ -127,7 +157,7 @@ describe("depeg-resolver public projection", () => {
     return {
       id: 99,
       state: "invalidated",
-      publicPredictionId: sealed.publicPredictionId ?? sealed.id,
+      publicPredictionId: sealed.id,
       incidentKey: sealed.incidentKey,
       eventId: sealed.eventId,
       assessmentId: sealed.assessmentId,
@@ -177,14 +207,14 @@ describe("depeg-resolver public projection", () => {
       ]),
       sealed: [invalidatedSealed, retrySealed, publishedSealed],
       firstPublication: [firstPublication(publishedSealed)],
-      manifest: {
+      manifest: makeDdrPublicationManifest({
         snapshotToken: "ddr-public-manifest",
         snapshotGeneration: DDR_SNAPSHOT_CACHE_GENERATION,
         snapshotSequence: 7,
         publishedAt: NOW_SEC - 60,
         basePayloadHash: hashFor("d"),
         publicPredictionIds: [20, 30],
-      },
+      }),
       errata: [erratumFor(invalidatedSealed)],
       lineage: LINEAGE,
       nowSec: NOW_SEC,
@@ -310,6 +340,7 @@ describe("depeg-resolver public projection", () => {
     const row = resolverRow({ eventId: 6 });
     const incident = canonicalIncident(row);
     const sealed = sealedPrediction(row, incident, 6);
+    if (sealed.outcomeKind !== "prediction") throw new Error("Expected prediction seal");
     const publication = firstPublication(sealed);
     const fallback = buildDdrResponse({
       candidateRows: [row],
@@ -382,6 +413,30 @@ describe("depeg-resolver public projection", () => {
     expect(validateDdrPublicCacheContract(response)).toMatchObject({
       ok: true,
     });
+  });
+
+  it.each(["prediction", "no_call"] as const)("keeps the admitted %s outcome and hash independent of later live inputs", (kind) => {
+    const row = resolverRow();
+    const incident = canonicalIncident(row);
+    const sealed = sealedPrediction(row, incident, 7, { outcomeKind: kind });
+    const project = (candidate: DdrRow) => buildDdrResponse({
+      candidateRows: [candidate], incidentsByEventId: new Map([[row.eventId, incident]]),
+      sealed: [sealed], firstPublication: [firstPublication(sealed)],
+      manifest: null, errata: [], lineage: LINEAGE, nowSec: NOW_SEC,
+    }).rows[0]!;
+    const before = project(row);
+    const after = project(insufficientSignalRow({
+      eventId: row.eventId, symbol: "CHANGED", name: "Changed live name",
+      currentDeviationBps: -900, peakDeviationBps: -1200,
+    }));
+    expect(after.kind).toBe(kind);
+    expect(after.symbol).toBe(row.symbol);
+    expect(after.name).toBe(row.name);
+    expect(after.frozen).toEqual(before.frozen);
+    if (after.kind === "no_call" && before.kind === "no_call") expect(after.noCall).toEqual(before.noCall);
+    expect(after.live.currentDeviationBps).toBe(-900);
+    expect(computeDdrPublicRowHash(after)).toBe(computeDdrPublicRowHash(before));
+    expect(DdrResponseSchema.shape.rows.safeParse([after]).success).toBe(true);
   });
 
   it("sorts public prediction ids in v2 publication base payloads", () => {

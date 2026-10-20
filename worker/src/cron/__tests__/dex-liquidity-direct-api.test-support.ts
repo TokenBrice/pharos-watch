@@ -1,6 +1,24 @@
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import type { MockFetchOutcome, MockRoute } from "@shared/test-utils/mock-fetch";
 import { jsonResponse } from "@shared/test-utils/mock-fetch";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import { runDirectApiFetchPhase, type DirectApiFetchPhaseEntry } from "../dex-liquidity/orchestrator-phases/direct-api";
+import type { SymbolLookups } from "../dex-liquidity/types";
+
+/** Replay provider fixtures through the production fetch/admission boundary. */
+export async function fetchDirectApiFixture(
+  entries: Array<Omit<DirectApiFetchPhaseEntry, "counts" | "measuredExecutionPools">>,
+  lookups: Pick<SymbolLookups, "chainAddressToId" | "symbolToChainScopedIds" | "contractMetaByChainAddress">,
+) {
+  const fixture = createLatestSchemaSqlite();
+  try {
+    return await runDirectApiFetchPhase(fixture.db, entries.map(({ result, ...adapter }) => ({
+      ...adapter, fn: async () => result,
+    })), lookups);
+  } finally {
+    fixture.sqlite.close();
+  }
+}
 
 export function makeFluidRpcResponse(words: Array<number | bigint>): Response {
   const result = `0x${words.map((word) => BigInt(word).toString(16).padStart(64, "0")).join("")}`;

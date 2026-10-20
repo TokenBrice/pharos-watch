@@ -24,7 +24,7 @@ import type {
   DdrSealedPublicPrediction,
   DdrV2StoreContracts,
 } from "./depeg-resolver-v2-contracts";
-import { firstPublicationByPredictionId, publicPredictionIdOf } from "./depeg-resolver/storage-adapters";
+import { firstPublicationByPredictionId } from "./depeg-resolver/storage-adapters";
 import { throwIfAborted } from "../lib/abort";
 import {
   baseFieldsForSealedExposure,
@@ -185,7 +185,7 @@ function assessmentFromPrediction(
   const iqr = arrayValue(duration.iqrSec);
   const parsed = DdrrAssessmentSchema.safeParse({
     ...baseFieldsForSealedExposure(sealed, incident, payload),
-    publicPredictionId: publicPredictionIdOf(sealed),
+    publicPredictionId: sealed.id,
     assessmentId: sealed.assessmentId,
     lockedAt: sealed.lockedAt,
     publishedAt: publication.publishedAt,
@@ -220,7 +220,7 @@ function assessmentFromNoCall(
   const missingReasons = arrayValue(noCall.missingReasons).filter((entry): entry is string => typeof entry === "string");
   const parsed = DdrrAssessmentSchema.safeParse({
     ...baseFieldsForSealedExposure(sealed, incident, payload),
-    publicPredictionId: publicPredictionIdOf(sealed),
+    publicPredictionId: sealed.id,
     assessmentId: sealed.assessmentId,
     lockedAt: sealed.lockedAt,
     publishedAt: publication.publishedAt,
@@ -273,7 +273,7 @@ async function buildDurableDdrV2ReviewSnapshot(
     const incident = effectiveIncidentByKey.get(sealed.incidentKey) ?? incidentsByKey.get(sealed.incidentKey);
     if (!incident) continue;
     sealedIncidentKeys.add(incident.incidentKey);
-    const publicPredictionId = publicPredictionIdOf(sealed);
+    const publicPredictionId = sealed.id;
     const publication = firstPublication.get(publicPredictionId) ?? null;
     const actual = actualEventsById.get(incident.currentEventId) ?? actualEventsById.get(sealed.eventId) ?? null;
     const errata = errataByPredictionId.get(publicPredictionId);
@@ -403,7 +403,7 @@ async function buildDdrV2ReviewSnapshot(
   const errata = stores.loadPredictionErrata
     ? await stores.loadPredictionErrata(db, {
         incidentKeys,
-        publicPredictionIds: sealedPublicPredictions.map((prediction) => prediction.publicPredictionId ?? prediction.id),
+        publicPredictionIds: sealedPublicPredictions.map((prediction) => prediction.id),
       })
     : [];
   throwIfAborted(signal);

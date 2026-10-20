@@ -18,6 +18,7 @@ const { cleanup, makeRoot } = createTempRepoTracker("depeg-event-shards-test");
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
   cleanup();
 });
 
@@ -205,7 +206,10 @@ describe("sync-depeg-events", () => {
     expect(() => assertStaticDepegArchivePreserved([published], deleted)).toThrow("lost 1 published slug");
   });
 
-  it("preserves a consolidated member's reserved page across repeated captures with a subthreshold representative", async () => {
+  it.each([
+    "https://api.example.test/_site-data",
+    "https://api.example.test/_site-data/depeg-events",
+  ])("preserves consolidated member URLs using the release API environment %s", async (apiBase) => {
     const dataDir = makeRoot();
     const indexPath = join(dataDir, "index.json");
     const original = event({
@@ -226,7 +230,8 @@ describe("sync-depeg-events", () => {
       ? Response.json(lineage)
       : Response.json({ events: apiEvents, total: apiEvents.length }));
     vi.stubGlobal("fetch", fetchMock);
-    const args = ["--api-url", "https://api.example.test/_site-data/depeg-events", "--output", indexPath];
+    vi.stubEnv("DEPEG_EVENTS_API_URL", apiBase);
+    const args = ["--output", indexPath];
     await runDepegSync(args);
     const shardPath = join(dataDir, "2026.json");
     const published = DepegEventStoredSnapshotSchema.parse(JSON.parse(readFileSync(shardPath, "utf8")))[0];
@@ -268,6 +273,7 @@ describe("sync-depeg-events", () => {
     { name: "different representative direction", representativeDirection: "above" as const },
   ])("still rejects an unexplained missing slug: $name", (scenario) => {
     const previous = assignSlugs([event({ peakDeviationBps: -800 })]);
+    const warning = vi.spyOn(console, "warn").mockImplementation(() => {});
     const current = assignSlugs([event({
       id: 2, peakDeviationBps: -129, constituentEventCount: scenario.constituentEventCount ?? 2,
       stablecoinId: scenario.representativeCoin ?? event().stablecoinId,
@@ -281,6 +287,8 @@ describe("sync-depeg-events", () => {
       live: { currentEventId: scenario.currentEventId ?? 2, eventState: scenario.eventState ?? "active" },
     }]);
     expect(() => assertStaticDepegArchivePreserved(previous, merged)).toThrow("lost 1 published slug");
+    expect(warning).toHaveBeenCalledWith(expect.stringContaining('"slug":"usdc-2026-05-15"'));
+    expect(warning).toHaveBeenCalledWith(expect.stringContaining('"reasons":['));
   });
 
   it.each(["malformed JSON", "invalid representative ID", "unrelated lineage"])(
@@ -309,6 +317,42 @@ describe("sync-depeg-events", () => {
       expect(paths.map((path) => readFileSync(path, "utf8"))).toEqual(before);
     },
   );
+
+  it.each([false, true])("explains a rejected CI proxy input with constituent fields present=%s", async (hasConstituents) => {
+    const dataDir = makeRoot();
+    const indexPath = join(dataDir, "index.json");
+    vi.stubEnv("DEPEG_EVENTS_API_URL", "https://stablecoin-dashboard.pages.dev/_site-data");
+    vi.stubEnv("DEPEG_EVENTS_API_KEY", "");
+    vi.stubEnv("SMOKE_API_KEY", "");
+    const args = ["--output", indexPath];
+    let apiEvents = [event({ peakDeviationBps: -800 })];
+    const fetchMock = vi.fn(async (input: string) => new URL(input).pathname.endsWith("/depeg-resolver")
+      ? Response.json({ rows: [] })
+      : Response.json({ events: apiEvents, total: 1 }));
+    vi.stubGlobal("fetch", fetchMock);
+    await runDepegSync(args);
+    const paths = [indexPath, join(dataDir, "2026.json"), join(dataDir, "metadata/capture.json")];
+    const before = paths.map((path) => readFileSync(path, "utf8"));
+    apiEvents = [event({ id: 2, constituentEventCount: hasConstituents ? 2 : undefined })];
+    const warning = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    await expect(runDepegSync(args)).rejects.toThrow("lost 1 published slug");
+    expect(warning).toHaveBeenCalledWith(expect.stringContaining(
+      '"slug":"usdc-2026-05-15","eventId":1,"reasons":["incident-not-found"]',
+    ));
+    if (hasConstituents) {
+      expect(log).toHaveBeenCalledWith(expect.stringContaining(
+        "Incident lineage source: https://stablecoin-dashboard.pages.dev/_site-data/depeg-resolver; missing published IDs: 1",
+      ));
+      expect(log).toHaveBeenCalledWith("[sync-depeg-events] Incident lineage: 0 resolver rows admitted");
+    } else {
+      expect(warning).toHaveBeenCalledWith(
+        "[sync-depeg-events] Incident lineage lookup skipped: no multi-constituent API rows",
+      );
+      expect(fetchMock.mock.calls.some(([url]) => url.endsWith("/depeg-resolver"))).toBe(false);
+    }
+    expect(paths.map((path) => readFileSync(path, "utf8"))).toEqual(before);
+  });
 
   it("exhausts more than 20 full pages and writes the API's complete event total", async () => {
     vi.spyOn(console, "log").mockImplementation(() => {});

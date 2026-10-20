@@ -1,5 +1,5 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import type { LiquidityMetrics, DexPriceObs } from "./types";
+import type { SourcePoolGraph, DexPriceObs } from "./types";
 import { getTrackedContracts } from "./pool-helpers";
 
 const WEAK_COVERAGE_MIN_POOL_COUNT = 3;
@@ -13,20 +13,20 @@ interface PoolCoverageSummary {
   totalTvlForBalance: number;
 }
 
-// Pre-scoring metrics carry only `topPools`; the aggregate fields are rebuilt
+// Source graphs carry only identity and `pools`; aggregate fields are rebuilt
 // during scoring, so coverage is read from the pool list itself.
-function summarizePools(metric: LiquidityMetrics): PoolCoverageSummary {
+function summarizePools(metric: SourcePoolGraph): PoolCoverageSummary {
   let totalTvlUsd = 0;
   let totalTvlForBalance = 0;
-  for (const pool of metric.topPools) {
+  for (const pool of metric.pools) {
     totalTvlUsd += pool.tvlUsd;
     const balanceRatio = pool.extra?.balanceRatio;
     if (typeof balanceRatio === "number" && Number.isFinite(balanceRatio)) totalTvlForBalance += pool.tvlUsd;
   }
-  return { poolCount: metric.topPools.length, totalTvlUsd, totalTvlForBalance };
+  return { poolCount: metric.pools.length, totalTvlUsd, totalTvlForBalance };
 }
 
-function needsCoverageEnrichment(metric: LiquidityMetrics | undefined, observations: DexPriceObs[]): boolean {
+function needsCoverageEnrichment(metric: SourcePoolGraph | undefined, observations: DexPriceObs[]): boolean {
   if (!metric) return true;
   const pools = summarizePools(metric);
   if (needsDexScreenerEnrichment(pools, observations)) return true;
@@ -51,7 +51,7 @@ function needsDexScreenerEnrichment(
 }
 
 export function getFallbackTargets(
-  metrics: Map<string, LiquidityMetrics>,
+  metrics: Map<string, SourcePoolGraph>,
   priceObservations: Map<string, DexPriceObs[]>,
   options: {
     requireGeckoId?: boolean;

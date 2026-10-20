@@ -25,7 +25,9 @@ import { getCache, getCaches } from "../../lib/db-cache";
 import { recordOutcome, shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { getChainRpc } from "../../lib/chain-registry";
 import * as safetyScoresModule from "../../lib/safety-scores";
-import * as yieldConfigModule from "../../lib/yield-config/yield-config";
+import * as yieldRateSources from "../../lib/yield-config/yield-config-rate-sources";
+import * as yieldPools from "../../lib/yield-config/yield-config-pools";
+import * as yieldExplicitPools from "../../lib/yield-config/yield-config-explicit-pools";
 import { cacheRow, dlPoolsCacheRow, installYieldCacheReader, supplementalFamilyCacheRow } from "./yield-cache.test-support";
 import { makeDlYieldPool } from "./yield-resolve.test-support";
 import { getYieldSupplementalFamilyCacheKey } from "../yield-sync/cache";
@@ -188,7 +190,7 @@ describe("syncYieldData", () => {
   it("keeps a higher native wrapper APY ahead of a lower supplemental lending source that clears size gates", async () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
-    const poolMap = yieldConfigModule.YIELD_POOL_MAP as typeof yieldConfigModule.YIELD_POOL_MAP;
+    const poolMap = yieldPools.YIELD_POOL_MAP as typeof yieldPools.YIELD_POOL_MAP;
     poolMap["100"] = "pool-sdai-native";
 
     installYieldCacheReader(vi.mocked(getCache), {
@@ -423,7 +425,7 @@ describe("syncYieldData", () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
     const onChainConfigs =
-      yieldConfigModule.ON_CHAIN_RATE_CONFIGS as typeof yieldConfigModule.ON_CHAIN_RATE_CONFIGS;
+      yieldRateSources.ON_CHAIN_RATE_CONFIGS as typeof yieldRateSources.ON_CHAIN_RATE_CONFIGS;
     onChainConfigs.push({
       stablecoinId: "100",
       chain: "ethereum",
@@ -471,7 +473,7 @@ describe("syncYieldData", () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
     const onChainConfigs =
-      yieldConfigModule.ON_CHAIN_RATE_CONFIGS as typeof yieldConfigModule.ON_CHAIN_RATE_CONFIGS;
+      yieldRateSources.ON_CHAIN_RATE_CONFIGS as typeof yieldRateSources.ON_CHAIN_RATE_CONFIGS;
     onChainConfigs.push({
       stablecoinId: "100",
       chain: "ethereum",
@@ -579,7 +581,7 @@ describe("syncYieldData", () => {
       contracts: [{ chain: "ethereum", address: "0x68749665ff8d2d112fa859aa293f07a622782f38", decimals: 6 }],
     };
     const explicitPoolMap =
-      yieldConfigModule.EXPLICIT_YIELD_SOURCE_POOL_MAP as typeof yieldConfigModule.EXPLICIT_YIELD_SOURCE_POOL_MAP;
+      yieldExplicitPools.EXPLICIT_YIELD_SOURCE_POOL_MAP as typeof yieldExplicitPools.EXPLICIT_YIELD_SOURCE_POOL_MAP;
 
     mutableActiveStablecoins.push(xautMeta as never);
     mutableTrackedMetaById.set("xaut-tether", xautMeta as never);
@@ -691,7 +693,7 @@ describe("syncYieldData", () => {
   ] as const)("degrades and blocks auto-lending when the stablecoin supply map is %s", async (state, stablecoins) => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
-    const poolMap = yieldConfigModule.YIELD_POOL_MAP as Record<string, string>;
+    const poolMap = yieldPools.YIELD_POOL_MAP as Record<string, string>;
     poolMap["100"] = "pool-sdai-native";
 
     installYieldCacheReader(vi.mocked(getCache), {

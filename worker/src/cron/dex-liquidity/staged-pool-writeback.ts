@@ -7,7 +7,7 @@ import { isValidStagedPoolId } from "../dex-discovery/persistence";
 import { SLIPSTREAM_POOL_IDENTITY_REVIEW_VERSION, type StagedPool } from "../dex-discovery/types";
 import { getQualityMultiplier } from "./pool-helpers";
 import { isTrustworthyExactPoolId } from "./pool-identity";
-import type { LiquidityMetrics } from "./types";
+import type { SourcePoolGraph } from "./types";
 
 /**
  * Do not re-stamp a row the live lane refreshed within this window. The DO
@@ -58,7 +58,7 @@ export interface StagedPoolWriteback {
  * every hour.
  */
 export function buildStagedPoolWriteback(
-  metrics: Map<string, LiquidityMetrics>,
+  metrics: Map<string, SourcePoolGraph>,
   nowSec: number,
 ): StagedPoolWriteback {
   const pools: StagedPool[] = [];
@@ -66,7 +66,7 @@ export function buildStagedPoolWriteback(
   let skippedUntrustedIds = 0;
 
   for (const metric of metrics.values()) {
-    for (const entry of metric.topPools) {
+    for (const entry of metric.pools) {
       // `!== true` rather than truthiness: a persisted source string could name a
       // prototype member that plain Record indexing would return as a function.
       if (LIVE_LANE_SOURCE_FAMILY[entry.source] !== true) continue;

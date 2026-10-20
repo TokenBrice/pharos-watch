@@ -9,7 +9,7 @@ import { jsonResponse, mockFetch as createFetchMock } from "@shared/test-utils/m
 import { makeFluidTicker, makeFluidRpcResponse, makeBalancerPool, makeOrcaPool, makeCursorDb, orcaRoute } from "./dex-liquidity-direct-api.test-support";
 import { acknowledgeDexSourcePagination } from "../dex-liquidity/source-pagination-state";
 import { buildAuthoritativeStagedPoolConfirmationIndex } from "../dex-liquidity/orchestrator-phases/authoritative";
-import { compactDirectApiFetchPhasePools } from "../dex-liquidity/orchestrator-phases/direct-api";
+import { fetchDirectApiFixture } from "./dex-liquidity-direct-api.test-support";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 
 const fixtures = createLatestSchemaFixtureTracker();
@@ -859,13 +859,13 @@ describe("fetchRaydiumPools", () => {
     })).mockResolvedValueOnce(jsonResponse({ success: true, data: { data: [] } }));
     const result = await fetchRaydiumPools();
     expect(result.pools).toHaveLength(1);
-    const phase = compactDirectApiFetchPhasePools({
+    const phase = await fetchDirectApiFixture(({
       results: [{ name: "Raydium", circuitKey: "raydium", normalizedProtocol: "raydium",
-        supportedChains: ["solana"], censusScope: "exhaustive", result }],
+        supportedChains: ["solana"], censusScope: "exhaustive" as const, result }],
       failedSources: [], degradedSources: [], attemptedProtocolChains: [], fallbackSignals: [],
       sourceWarnings: [], circuitEvents: [],
-    }, { chainAddressToId: new Map(), symbolToChainScopedIds: new Map(), contractMetaByChainAddress: new Map() });
-    const index = buildAuthoritativeStagedPoolConfirmationIndex(phase.phase.results);
+    }).results, { chainAddressToId: new Map(), symbolToChainScopedIds: new Map(), contractMetaByChainAddress: new Map() });
+    const index = buildAuthoritativeStagedPoolConfirmationIndex(phase.results);
     expect(index.enforcedChainsByProtocol.get("raydium")?.has("solana") ?? false).toBe(hasIdentity);
     expect(index.confirmedExactKeysByProtocol.get("raydium")?.has("solana:brokenPool") ?? false).toBe(hasIdentity);
   });
@@ -996,13 +996,13 @@ describe("fetchOrcaPools", () => {
     const { db } = fixtures.open();
     const result = await fetchOrcaPools(undefined, db);
     expect(result.pools).toHaveLength(1);
-    const phase = compactDirectApiFetchPhasePools({
+    const phase = await fetchDirectApiFixture(({
       results: [{ name: "Orca", circuitKey: "orca", normalizedProtocol: "orca",
-        supportedChains: ["solana"], censusScope: "exhaustive", result }],
+        supportedChains: ["solana"], censusScope: "exhaustive" as const, result }],
       failedSources: [], degradedSources: [], attemptedProtocolChains: [], fallbackSignals: [],
       sourceWarnings: [], circuitEvents: [],
-    }, { chainAddressToId: new Map(), symbolToChainScopedIds: new Map(), contractMetaByChainAddress: new Map() });
-    const index = buildAuthoritativeStagedPoolConfirmationIndex(phase.phase.results);
+    }).results, { chainAddressToId: new Map(), symbolToChainScopedIds: new Map(), contractMetaByChainAddress: new Map() });
+    const index = buildAuthoritativeStagedPoolConfirmationIndex(phase.results);
     expect(result.pagination?.state).toBe(hasIdentity ? "complete" : "partial");
     expect(result.pendingPaginationUpdates).toHaveLength(hasIdentity ? 1 : 0);
     expect(index.enforcedChainsByProtocol.get("orca")?.has("solana") ?? false).toBe(hasIdentity);

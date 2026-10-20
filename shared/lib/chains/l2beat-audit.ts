@@ -1,5 +1,6 @@
 import type { BridgeRouteRiskTier, StablecoinMeta } from "../../types";
 import { CHAIN_META } from "../../types/chain-identity";
+import type { L2BeatRiskSentiment, L2BeatStage } from "../../types/chains";
 import {
   L2BEAT_INTEROP_SNAPSHOT_META,
   L2BEAT_INTEROP_PROTOCOLS,
@@ -13,8 +14,6 @@ import {
   L2BEAT_CHAIN_RISK_SNAPSHOT,
   computeL2BeatChainEnvironmentScore,
   resolveL2BeatProjectId,
-  type L2BeatRiskSentiment,
-  type L2BeatStage,
 } from "./l2beat-risk";
 
 type L2BeatProjectId = keyof typeof L2BEAT_CHAIN_RISK_SNAPSHOT;

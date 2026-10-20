@@ -11,12 +11,9 @@ import { parseIsoDateOrUtcInstantSec, reviewAdmissionSec } from "@shared/types/d
 import type { ProofOfReservesLatestReport, StablecoinMeta } from "@shared/types/core";
 import {
   V9MechanismRiskReviewSchema,
-  type V9CommodityClaimMechanismRiskReview,
-  type V9FiatCashMechanismRiskReview,
   type V9MechanismFactV1,
   type V9MechanismQualityLevel,
   type V9MechanismRiskReview,
-  type V9TbillMechanismRiskReview,
 } from "@shared/types/safety-score-v9-backing";
 import type { V9FactStatusV2 } from "@shared/types/safety-score-v9-facts";
 import {
@@ -24,8 +21,9 @@ import {
   SafetyScoreV9MechanismReviewOverlaySchema,
   type SafetyScoreV9MechanismReviewOverlay,
 } from "@shared/types/safety-score-v9-mechanism-overlays";
-import { MechanismArchetypeReviewSchema } from "@shared/types/stablecoin-meta-schemas";
-import { isoDateStartSec } from "./extension-shared";
+import { MechanismArchetypeReviewSchema } from "@shared/types/stablecoin-meta-primitives";
+import { isoDateStartSec, requiredStatus, notApplicableStatus } from "./extension-shared";
+import { V9_MECHANISM_FIELDS, type V9SimpleReview } from "@shared/lib/safety-score-v9/mechanism-fields";
 import type { SafetyScoreV9CompilerInput } from "./native-input";
 import { canonicalizeReviewedRegistryDigest, createReviewedAssetRegistry, reviewedRegistryEnvelopeDigest } from "@shared/lib/safety-score-v9/reviewed-registry";
 
@@ -39,16 +37,10 @@ type MechanismMeta = Pick<
 const MECHANISM_POLICY_RULE_ID = "v9.backing.mechanism-review";
 
 function status(observationState: V9FactStatusV2["observationState"], componentKey: string): V9FactStatusV2 {
-  // The fact-set compiler rebinds these statuses to the research-overlay
-  // evidence reference; the extension-level ids only carry the fact state.
-  const requiresEvidence =
-    observationState === "known" || observationState === "stale" || observationState === "bounded-unknown";
-  return {
-    applicability: { state: "required", policyRuleId: MECHANISM_POLICY_RULE_ID, rationale: null, gapId: null },
-    observationState,
-    evidenceRefIds: requiresEvidence ? [`extension-evidence:mechanism:${componentKey}`] : [],
-    gapIds: observationState === "known" ? [] : [`extension-gap:mechanism:${componentKey}`],
-  };
+  return requiredStatus(
+    MECHANISM_POLICY_RULE_ID, observationState, `mechanism:${componentKey}`,
+    [`extension-evidence:mechanism:${componentKey}`],
+  );
 }
 
 function boundedFact(componentKey: string, hasEvidence: boolean): V9MechanismFactV1 {
@@ -73,17 +65,9 @@ function knownFact(componentKey: string, quality: V9MechanismQualityLevel): V9Me
 
 function notApplicableFact(componentKey: string, rationale: string): V9MechanismFactV1 {
   return {
-    status: {
-      applicability: {
-        state: "not-applicable",
-        policyRuleId: MECHANISM_POLICY_RULE_ID,
-        rationale,
-        gapId: null,
-      },
-      observationState: "known",
-      evidenceRefIds: [`extension-evidence:mechanism:${componentKey}`],
-      gapIds: [],
-    },
+    status: notApplicableStatus(
+      MECHANISM_POLICY_RULE_ID, rationale, [`extension-evidence:mechanism:${componentKey}`],
+    ),
     quality: null,
     failureDomains: [],
   };
@@ -178,152 +162,50 @@ function hasReserveEvidence(fixedInput: Readonly<SafetyScoreV9CompilerInput>, me
   );
 }
 
-function buildFiatCashReview(
+function buildSimpleReview(
   fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   meta: MechanismMeta,
-): V9FiatCashMechanismRiskReview | null {
-  const reserves = hasReserveEvidence(fixedInput, meta);
+  archetype: string,
+): V9MechanismRiskReview | null {
+  const residualFamily = archetype === "ucits-trs-fund" || archetype === "shared-reserve" || archetype === "protocol-position";
+  if (!residualFamily && archetype !== "fiat-cash" && archetype !== "commodity-claim" && archetype !== "tbill") return null;
+  const reserves = !residualFamily && hasReserveEvidence(fixedInput, meta);
   const custody = reserves || meta.custodyProfile !== undefined;
-  if (!reserves && !custody && !meta.proofOfReserves) return null;
-  return {
-    archetype: "fiat-cash",
-    claimAndSegregation: boundedFact("claim-and-segregation", reserves || meta.proofOfReserves !== undefined),
-    custodyContinuity: boundedFact("custody-continuity", custody),
-    assuranceAndReconciliation: assuranceFact(fixedInput, meta),
-  };
-}
-
-/**
- * Commodity-claim compiler fallback. Mirrors the fiat-cash shape: every
- * component is bounded-unknown from the same reserve/custody/PoR evidence,
- * except `assuranceAndReconciliation`, which keeps the
- * `proofOfReserves.latestReport` auto-known shortcut (a bar-list or inventory
- * attestation is the same recorded report class). `physicalRedemption` has no
- * compiler-derivable evidence — redemption minimums, eligibility, and delivery
- * terms live only in issuer terms — so it stays bounded pending curation.
- */
-function buildCommodityClaimReview(
-  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
-  meta: MechanismMeta,
-): V9CommodityClaimMechanismRiskReview | null {
-  const reserves = hasReserveEvidence(fixedInput, meta);
-  const custody = reserves || meta.custodyProfile !== undefined;
-  if (!reserves && !custody && !meta.proofOfReserves) return null;
-  return {
-    archetype: "commodity-claim",
-    titleAndAllocation: boundedFact("title-and-allocation", reserves || meta.proofOfReserves !== undefined),
-    custodyContinuity: boundedFact("custody-continuity", custody),
-    assuranceAndReconciliation: assuranceFact(fixedInput, meta),
-    physicalRedemption: boundedFact("physical-redemption", false),
-  };
-}
-
-function buildTbillReview(
-  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
-  meta: MechanismMeta,
-): V9TbillMechanismRiskReview | null {
-  const reserves = hasReserveEvidence(fixedInput, meta);
-  if (!reserves && !meta.proofOfReserves) return null;
-  const maturityEvidence = (fixedInput.liveReserveMap[meta.id] ?? []).some(
-    (slice) => slice.maturityDaysMax != null || slice.liquidityHorizon != null,
-  );
-  return {
-    archetype: "tbill",
-    fundClaimAndSeniority: boundedFact("fund-claim-and-seniority", reserves || meta.proofOfReserves !== undefined),
-    navValuation: boundedFact("nav-valuation", reserves || meta.proofOfReserves !== undefined),
-    durationAndLiquidity: boundedFact("duration-and-liquidity", maturityEvidence || reserves),
-    lossRecoveryDesign: scoringReportScope(fixedInput, meta) !== null
-      ? boundedFact("loss-recovery-design", true)
-      : assuranceFact(fixedInput, meta),
-  };
+  if (!residualFamily && !reserves && !meta.proofOfReserves && (archetype === "tbill" || !custody)) return null;
+  const review: Record<string, unknown> & { archetype: string } = { archetype };
+  for (const [key, field] of V9_MECHANISM_FIELDS[archetype].components) {
+    // These shortcuts restate existing evidence only; no compiler-derived
+    // physical delivery terms or assurance for the native residual families.
+    if (field === "assuranceAndReconciliation") {
+      review[field] = assuranceFact(fixedInput, meta);
+      continue;
+    }
+    if (archetype === "tbill" && field === "lossRecoveryDesign") {
+      review[field] = scoringReportScope(fixedInput, meta) !== null ? boundedFact(key, true) : assuranceFact(fixedInput, meta);
+      continue;
+    }
+    const hasEvidence = residualFamily || (field === "physicalRedemption" ? false
+      : field === "custodyContinuity" ? custody
+      : field === "durationAndLiquidity" ? reserves || (fixedInput.liveReserveMap[meta.id] ?? []).some(
+        slice => slice.maturityDaysMax != null || slice.liquidityHorizon != null,
+      ) : reserves || meta.proofOfReserves !== undefined);
+    review[field] = boundedFact(key, hasEvidence);
+  }
+  return residualFamily ? V9MechanismRiskReviewSchema.parse(review) : review as V9SimpleReview;
 }
 
 export type MechanismReviewOverlay = SafetyScoreV9MechanismReviewOverlay;
 export const MechanismReviewOverlaySchema = SafetyScoreV9MechanismReviewOverlaySchema;
 
-// Component fields (camelCase) per archetype; numeric metric fields separate.
-const OVERLAY_ARCHETYPE_COMPONENTS: Record<MechanismReviewOverlay["archetype"], readonly string[]> = {
-  cdp: [
-    "collateralizationParameters",
-    "liquidationMechanics",
-    "backstop",
-    "branchIsolation",
-    "shutdownAndBadDebt",
-    "structuralRedemption",
-  ],
-  "synthetic-delta-neutral": [
-    "venueAndCustody",
-    "hedgeReconciliation",
-    "fundingBasisStress",
-    "marginAndLiquidation",
-    "unwindCapacity",
-    "lossAbsorption",
-  ],
-  algorithmic: [
-    "contractionCapacity",
-    "confidenceAndIncentives",
-    "oracleAndControlAssumptions",
-    "emergencyRecovery",
-    "lossRecovery",
-  ],
-  "rwa-credit-fund": [
-    "creditQuality",
-    "seniority",
-    "legalEnforceability",
-    "valuationCadence",
-    "maturityAndLiquidity",
-    "custody",
-    "recovery",
-  ],
-  // Fiat-cash and tbill components are compiler-bounded by design; a curated
-  // overlay may claim them only under the owner-approved evidence standard,
-  // ratified 2026-07-27: docs/process/mechanism-overlay-evidence-standard.md.
-  // Claims that do not meet its evidence classes stay uncurated (bounded).
-  "fiat-cash": ["claimAndSegregation", "custodyContinuity", "assuranceAndReconciliation"],
-  tbill: ["fundClaimAndSeniority", "navValuation", "durationAndLiquidity", "lossRecoveryDesign"],
-  // Commodity claims follow the same strict evidence standard as fiat-cash and
-  // tbill: components are compiler-bounded and only a curated, source-cited
-  // overlay may claim them.
-  "commodity-claim": [
-    "titleAndAllocation",
-    "custodyContinuity",
-    "assuranceAndReconciliation",
-    "physicalRedemption",
-  ],
-  "ucits-trs-fund": [
-    "fundClaimAndSegregation", "navAndReconciliation", "portfolioHedge",
-    "counterpartyAndCollateral", "custodyContinuity", "defaultRecovery",
-  ],
-  "shared-reserve": [
-    "holderClaim", "liabilityConservation", "reserveCustody", "encumbranceAndAllocation", "defaultRecovery",
-  ],
-  "protocol-position": [
-    "holderClaim", "liabilityConservation", "positionCustody", "encumbranceAndAllocation", "defaultRecovery",
-  ],
-};
-
-const OVERLAY_ARCHETYPE_METRICS: Record<MechanismReviewOverlay["archetype"], readonly string[]> = {
-  cdp: ["collateralizationRatio", "liquidationCapacityRatio"],
-  "synthetic-delta-neutral": ["hedgeCoverageRatio", "marginBufferPct", "lossAbsorptionShare"],
-  algorithmic: ["exogenousBackingShare", "reflexiveBackingShare", "contractionCapacityRatio"],
-  "rwa-credit-fund": ["weightedAverageMaturityDays", "valuationCadenceDays"],
-  "fiat-cash": [],
-  tbill: [],
-  "commodity-claim": [],
-  "ucits-trs-fund": [],
-  "shared-reserve": [],
-  "protocol-position": [],
-};
 
 function kebabCase(value: string): string {
   return value.replace(/[A-Z]/g, (char) => `-${char.toLowerCase()}`);
 }
 
 function profileComponentFact(
-  componentField: string,
+  componentKey: string,
   component: V9MechanismProfileComponentProjection,
 ): V9MechanismFactV1 {
-  const componentKey = kebabCase(componentField);
   const aggregate = component.observationState === "known" && component.quality !== null
     ? knownFact(componentKey, component.quality)
     : component.observationState === "unsupported"
@@ -355,13 +237,12 @@ export function expandOverlayReview(
 ): V9MechanismRiskReview {
   const profileProjection =
     overlay.profileReview === undefined ? null : projectV9MechanismProfile(overlay.profileReview);
-  const componentKeys = OVERLAY_ARCHETYPE_COMPONENTS[overlay.archetype];
-  const metricKeys = OVERLAY_ARCHETYPE_METRICS[overlay.archetype];
+  const { components: componentFields, metrics: metricKeys } = V9_MECHANISM_FIELDS[overlay.archetype];
   const projectedComponents = profileProjection?.components ?? null;
   const components = projectedComponents ?? overlay.components;
   const metrics = profileProjection?.metrics ?? overlay.metrics;
   for (const key of Object.keys(components)) {
-    if (!componentKeys.includes(key)) {
+    if (!componentFields.some(([, field]) => field === key)) {
       throw new Error(`Unknown ${overlay.archetype} mechanism component in overlay ${overlay.assetId}: ${key}`);
     }
   }
@@ -371,12 +252,12 @@ export function expandOverlayReview(
     }
   }
   for (const key of Object.keys(metrics)) {
-    if (!metricKeys.includes(key)) {
+    if (!(metricKeys as readonly string[]).includes(key)) {
       throw new Error(`Unknown ${overlay.archetype} mechanism metric in overlay ${overlay.assetId}: ${key}`);
     }
   }
   for (const key of Object.keys(overlay.metricApplicability ?? {})) {
-    if (!metricKeys.includes(key)) {
+    if (!(metricKeys as readonly string[]).includes(key)) {
       throw new Error(
         `Unknown ${overlay.archetype} mechanism metric applicability in overlay ${overlay.assetId}: ${key}`,
       );
@@ -428,20 +309,20 @@ export function expandOverlayReview(
   if (overlay.archetype === "synthetic-delta-neutral") {
     review.venueShares = overlay.venueShares ?? [];
   }
-  for (const componentField of componentKeys) {
+  for (const [componentKey, componentField] of componentFields) {
     const projected = projectedComponents?.[componentField];
     if (projected !== undefined) {
-      review[componentField] = profileComponentFact(componentField, projected);
+      review[componentField] = profileComponentFact(componentKey, projected);
       continue;
     }
     const curated = overlay.components[componentField];
     if (curated?.review && clockSec !== undefined && !isMechanismOverlayCurrent(curated.review, clockSec)) {
       const reviewSec = parseIsoDateOrUtcInstantSec(curated.review.reviewedAt);
       review[componentField] = clockSec < reviewSec
-        ? boundedFact(kebabCase(componentField), false)
+        ? boundedFact(componentKey, false)
         : clockSec < reviewAdmissionSec(curated.review.reviewedAt)
-          ? unsupportedFact(kebabCase(componentField))
-          : { ...boundedFact(kebabCase(componentField), true), status: status("stale", kebabCase(componentField)) };
+          ? unsupportedFact(componentKey)
+          : { ...boundedFact(componentKey, true), status: status("stale", componentKey) };
       continue;
     }
     // A component the curated review does not evidence keeps the built
@@ -454,11 +335,11 @@ export function expandOverlayReview(
     // required applicability of a bounded fact cannot carry a rationale.
     review[componentField] = curated
       ? !("applicability" in curated) || curated.applicability === "measured"
-        ? knownFact(kebabCase(componentField), curated.quality)
+        ? knownFact(componentKey, curated.quality)
         : curated.applicability === "not-applicable"
-          ? notApplicableFact(kebabCase(componentField), curated.rationale)
-          : boundedFact(kebabCase(componentField), true)
-      : (fallbackComponents?.[componentField] ?? boundedFact(kebabCase(componentField), true));
+          ? notApplicableFact(componentKey, curated.rationale)
+          : boundedFact(componentKey, true)
+      : (fallbackComponents?.[componentField] ?? boundedFact(componentKey, true));
   }
   return V9MechanismRiskReviewSchema.parse(review);
 }
@@ -509,22 +390,6 @@ export function hasAdmittedSafetyScoreV9NativeFamily(
   return reviewedAtSec + DAY_SEC <= clockSec && reviewedAtSec + MECHANISM_OVERLAY_MAX_AGE_SEC > clockSec;
 }
 
-function buildBoundedFamilyReview(
-  meta: MechanismMeta,
-  archetype: string,
-  clockSec: number,
-): V9MechanismRiskReview | null {
-  if (archetype !== "ucits-trs-fund" && archetype !== "shared-reserve" && archetype !== "protocol-position") {
-    return null;
-  }
-  if (!hasAdmittedSafetyScoreV9NativeFamily(meta, archetype, clockSec)) return null;
-  return V9MechanismRiskReviewSchema.parse({
-    archetype,
-    ...Object.fromEntries(
-      OVERLAY_ARCHETYPE_COMPONENTS[archetype].map((field) => [field, boundedFact(kebabCase(field), true)]),
-    ),
-  });
-}
 
 function currentMechanismOverlay(assetId: string, archetype: string, clockSec: number): MechanismReviewOverlay | null {
   const overlay = MECHANISM_REVIEW_OVERLAYS.get(assetId);
@@ -725,14 +590,7 @@ export function buildSafetyScoreV9MechanismReview(
   if (!hasAdmittedSafetyScoreV9NativeFamily(meta, archetype, fixedInput.clockSec)) return null;
   const overlay = currentMechanismOverlay(meta.id, archetype, fixedInput.clockSec);
   if (overlay) {
-    const fallbackReview =
-      archetype === "fiat-cash"
-        ? buildFiatCashReview(fixedInput, meta)
-        : archetype === "tbill"
-          ? buildTbillReview(fixedInput, meta)
-          : archetype === "commodity-claim"
-            ? buildCommodityClaimReview(fixedInput, meta)
-            : buildBoundedFamilyReview(meta, archetype, fixedInput.clockSec);
+    const fallbackReview = buildSimpleReview(fixedInput, meta, archetype);
     const expanded = expandOverlayReview(overlay, fallbackReview, fixedInput.clockSec);
     const report = meta.proofOfReserves?.latestReport;
     const technicalObservation = fixedInput.liveReserveProvenanceMap[meta.id]?.reserveObservation?.kind === "onchain-observation" ||
@@ -748,8 +606,5 @@ export function buildSafetyScoreV9MechanismReview(
     }
     return expanded;
   }
-  if (archetype === "fiat-cash") return buildFiatCashReview(fixedInput, meta);
-  if (archetype === "tbill") return buildTbillReview(fixedInput, meta);
-  if (archetype === "commodity-claim") return buildCommodityClaimReview(fixedInput, meta);
-  return buildBoundedFamilyReview(meta, archetype, fixedInput.clockSec);
+  return buildSimpleReview(fixedInput, meta, archetype);
 }

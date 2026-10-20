@@ -3,6 +3,7 @@ import type {
   DdrCanonicalIncident as StoreDdrCanonicalIncident,
   DdrCanonicalIncidentEventInput,
   DdrIncidentDirection,
+  LoadCanonicalIncidentsFilters,
 } from "../lib/depeg-resolver-incident-store";
 import type {
   DdrLockAuditAction,
@@ -14,20 +15,21 @@ import type {
   DdrPublicationManifest as StoreDdrPublicationManifest,
   DdrPublicPredictionLockTiming,
   DdrSealedPublicPrediction as StoreDdrSealedPublicPrediction,
+  DdrSealedPayload,
+  LoadSealedPublicPredictionsFilters,
 } from "../lib/depeg-resolver-publication-store";
 
 export type DdrDirection = DdrIncidentDirection;
 export type DdrLockTiming = DdrPublicPredictionLockTiming;
 export type DdrLockAction = DdrLockAuditAction;
-export type DdrCanonicalIncidentInput = Required<Pick<DdrCanonicalIncidentEventInput,
-  "eventId" | "stablecoinId" | "pegCurrency" | "direction" | "startedAt" | "endedAt"
-  | "peakDeviationBps" | "source" | "sourceFingerprint" | "publicTrackedAtFirstSeen" | "psiOffCatalogAtFirstSeen"
->> & { registrySnapshot: Record<string, unknown> };
+export type DdrCanonicalIncidentInput = Required<Omit<DdrCanonicalIncidentEventInput, "registrySnapshot">>
+  & { registrySnapshot: Record<string, unknown> };
 
 type StoreLockState = NonNullable<StoreDdrCanonicalIncident["lockState"]>;
 export type DdrPredictionLockState = Pick<StoreLockState, "eligibleAt" | "deferralCount" | "lastDeferralReason" | "lastState">
   & Partial<Pick<StoreLockState, "lockTrigger" | "forecastReadinessScore" | "forecastReadinessVersion" | "readinessThreshold" | "backstopAt" | "backstopDelaySec">>;
 
+// Unresolved source events have no persisted incident/audit record yet.
 export type DdrCanonicalIncident = Pick<StoreDdrCanonicalIncident,
   "incidentKey" | "eventId" | "currentEventId" | "stablecoinId" | "pegCurrency" | "direction" | "startedAt"
   | "eligibleAt" | "policyUniverseIncluded"
@@ -37,15 +39,7 @@ export type DdrCanonicalIncident = Pick<StoreDdrCanonicalIncident,
   lockState?: DdrPredictionLockState | null;
 };
 
-export type DdrSealedPublicPrediction = Pick<StoreDdrSealedPublicPrediction,
-  "id" | "incidentKey" | "eventId" | "assessmentId" | "outcomeKind" | "predictionPolicyVersion"
-  | "predictionMethodologyVersion" | "policyDelaySec" | "eligibleAt" | "lockedAt" | "eventAgeAtLockSec"
-  | "lockTiming" | "rowHash" | "sealedPayload"
-> & Partial<Pick<StoreDdrSealedPublicPrediction,
-  "lockTrigger" | "forecastReadinessScore" | "forecastReadinessVersion" | "readinessThreshold" | "backstopAt" | "backstopDelaySec"
->> & {
-  publicPredictionId?: number;
-};
+export type DdrSealedPublicPrediction = StoreDdrSealedPublicPrediction;
 
 export interface DdrSealIdentity {
   stablecoinId: string;
@@ -54,14 +48,9 @@ export interface DdrSealIdentity {
   startedAt: number;
 }
 
-export type DdrFirstPublicationMembership = Pick<StoreDdrFirstPublicationMembership,
-  "publicPredictionId" | "incidentKey" | "snapshotToken" | "snapshotGeneration" | "publishedAt"
->;
-
-export type DdrPublicationManifest = Pick<StoreDdrPublicationManifest,
-  "snapshotToken" | "snapshotGeneration" | "snapshotSequence" | "publishedAt" | "basePayloadHash"
-  | "publicPredictionIds"
->;
+// Publication staging precedes the store-assigned sequence and finalization clock.
+export type DdrFirstPublicationMembership = Omit<StoreDdrFirstPublicationMembership, "snapshotSequence" | "finalizedAt">;
+export type DdrPublicationManifest = StoreDdrPublicationManifest;
 
 export type DdrLockOpportunityInput = Omit<RecordLockDeferralInput,
   "createdAt" | "runId" | "reason" | "healthStatus" | "action"
@@ -96,7 +85,7 @@ export interface DdrSealInput {
   incidentGroupingVersion: string;
   supportRulesVersion: string;
   row: DdrRow;
-  sealedPayload: Record<string, unknown>;
+  sealedPayload: DdrSealedPayload;
 }
 
 export interface DdrPublicationManifestInput {
@@ -127,35 +116,18 @@ export interface DdrV2StoreContracts {
   ): Promise<DdrCanonicalIncident[]>;
   loadCanonicalIncidents(
     db: D1Database,
-    filters: {
-      incidentKeys?: string[];
-      eventIds?: number[];
-      predictionPolicyVersion?: string;
-      policyUniverseIncluded?: boolean;
-      includeSuperseded?: boolean;
-      policyDelaySec?: number;
-      limit?: number;
-    },
+    filters: LoadCanonicalIncidentsFilters,
   ): Promise<DdrCanonicalIncident[]>;
   recordLockDeferral(db: D1Database, input: DdrLockOpportunityInput): Promise<void>;
   sealPublicPrediction(db: D1Database, input: DdrSealInput): Promise<DdrSealedPublicPrediction>;
   sealPublicNoCall(db: D1Database, input: DdrSealInput): Promise<DdrSealedPublicPrediction>;
   loadSealedPublicPredictions(
     db: D1Database,
-    filters: {
-      publicPredictionIds?: number[];
-      incidentKeys?: string[];
-      eventIds?: number[];
-      predictionPolicyVersion?: string;
-    },
+    filters: LoadSealedPublicPredictionsFilters,
   ): Promise<DdrSealedPublicPrediction[]>;
   loadFirstPublicationMembership(
     db: D1Database,
-    filters: {
-      incidentKeys?: string[];
-      publicPredictionIds?: number[];
-      predictionPolicyVersion?: string;
-    },
+    filters: LoadSealedPublicPredictionsFilters,
   ): Promise<DdrFirstPublicationMembership[]>;
   writePublicationManifest(db: D1Database, input: DdrPublicationManifestInput): Promise<DdrPublicationManifest>;
   loadLatestPublicationManifest?(db: D1Database): Promise<DdrPublicationManifest | null>;

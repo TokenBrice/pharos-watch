@@ -67,6 +67,25 @@ afterEach(() => {
 });
 
 describe("telegram personalized recap planner", () => {
+  it("excludes retracted freeze claims before recap bounds and keeps valid peers", async () => {
+    const { sqlite, db } = setup();
+    insertSubscriber(sqlite, "suppression", { globalDepeg: true });
+    sqlite.prepare("UPDATE telegram_subscribers SET global_alert_freeze = 1 WHERE chat_id = 'suppression'").run();
+    markTapeFresh(sqlite);
+    insertTape(sqlite, "valid-peer", NOW - 60);
+    insertTape(sqlite, "retracted-freeze", NOW - 30);
+    sqlite.prepare(`UPDATE tape_events SET type = 'freeze.blocked', payload_json = ?,
+      suppressed_at = ?, suppression_reason = 'freeze-claim-retracted'
+      WHERE event_id = 'retracted-freeze'`).run(JSON.stringify({ chainName: "Ethereum" }), NOW);
+    const result = await planTelegramPersonalizedRecaps(db, undefined, {
+      nowSec: NOW, tapePageLimit: 1, rolloutPolicy: { mode: "public" },
+    });
+    expect(result.status).toBe("ok");
+    expect(JSON.parse(result.metadata)).toMatchObject({ factsLoaded: 1, factsAdmitted: 1, queued: 1 });
+    expect(sqlite.prepare("SELECT material_fact_count FROM telegram_recap_targets").get())
+      .toEqual({ material_fact_count: 1 });
+  });
+
   it("queues one notice-only final edition per opted-in private chat without Tape or watchlist changes", async () => {
     const { sqlite, db } = setup();
     for (const chatId of ["due", "later", "disabled"]) insertSubscriber(sqlite, chatId);

@@ -528,6 +528,17 @@ describe("enrichRowBalances", () => {
     ], address)).toBeNull();
   });
 
+  it.each([false, true])("rejects malformed destroy address padding with indexed=%s", (indexed) => {
+    const config = makeDestroyConfig();
+    const wanted = "0x1111111111111111111111111111111111111111";
+    const malformed = "f".repeat(24) + wanted.slice(2);
+    expect(extractDestroyAmountFromReceiptLogs(config, [{
+      address: config.contractAddress, topics: indexed ? ["0xdestroy", "0x" + malformed] : ["0xdestroy"],
+      data: "0x" + (indexed ? "" : malformed) + amountWord(123_000000n),
+      blockNumber: "0x1", timeStamp: "0x1", transactionHash: "0xtx", logIndex: "0x0",
+    }], wanted)).toBeNull();
+  });
+
   it("treats short destroy amount data as unresolved instead of zero", () => {
     const config = makeDestroyConfig();
     const wanted = "0x1111111111111111111111111111111111111111";

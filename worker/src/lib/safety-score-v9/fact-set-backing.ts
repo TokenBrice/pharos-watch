@@ -43,7 +43,6 @@ import {
   evidenceHistoryFor,
   missingLocalFact,
   researchEvidence,
-  reviewedGapResponsibility,
   stableFailureDomains,
   type AssetBuildContext,
 } from "./fact-set-context";
@@ -181,7 +180,7 @@ function normalizeMechanismReview(
         responsibility:
           context.asset.mechanismReviewGapDisposition?.componentKeys.includes(componentKey) === true
             ? context.asset.mechanismReviewGapDisposition.responsibility
-            : reviewedGapResponsibility(original.observationState),
+            : "unresearched",
         path: { kind: "local-component", componentKey: `mechanism-review:${componentKey}` },
         ...(factorKey === null ? {} : {
           causeScope: {

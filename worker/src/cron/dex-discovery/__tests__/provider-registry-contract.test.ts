@@ -9,7 +9,7 @@ import { CHAIN_META } from "@shared/types/chain-identity";
 import { estimateDeploymentCrawlCostMs } from "../target-window";
 
 describe("discovery provider registry", () => {
-  it("keeps pricing equal to the descriptors that drive execution", () => {
+  it("keeps estimated request cost equal to the descriptors that drive provider execution", () => {
     const expected = DEX_DISCOVERY_PROVIDER_REGISTRY
       .filter((entry) => entry.lifecycle === "active" && entry.supports("ethereum", "0x1111111111111111111111111111111111111111"))
       .reduce((sum, entry) => sum + entry.requestCostMs, 0);

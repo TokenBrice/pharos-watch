@@ -19,7 +19,10 @@ import { makeYieldHistoryRow } from "../../test-helpers/__shared/fixtures";
 import { registerStablecoinParameterContract } from "../../test-helpers/__shared/endpoint-contracts";
 import { handleYieldHistory } from "../yield-history";
 import { YIELD_HISTORY_OWNERSHIP_HANDOFFS } from "../../lib/yield-history-ownership-handoffs";
-import { YIELD_SOURCE_REGISTRY } from "../../lib/yield-config/yield-config";
+import { YIELD_POOL_MAP } from "../../lib/yield-config/yield-config-pools";
+import { YIELD_WEIGHTED_POOL_GROUPS } from "../../lib/yield-config/yield-config-weighted-pools";
+import { AUTO_LENDING_POOL_MAP } from "../../lib/yield-config/yield-config-lending-protocols";
+import { DIRECT_PROTOCOL_API_STRATEGIES, ON_CHAIN_RATE_CONFIGS } from "../../lib/yield-config/yield-config-rate-sources";
 import { YieldHistoryResponseSchema, type YieldHistoryResponse } from "@shared/types/yield";
 import {
   SOURCE_RISK_GOLDEN_PUBLICATION_GENERATION_ID,
@@ -31,6 +34,8 @@ import { YIELD_HISTORY_MAX_DAYS } from "@shared/lib/yield-history-policy";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { publishedYieldCache } from "./yield-history.test-support";
 import { getCache } from "../../lib/db-cache";
+
+const autoLendingPoolsById: Readonly<Partial<Record<string, string>>> = AUTO_LENDING_POOL_MAP;
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => {
@@ -459,23 +464,15 @@ describe("handleYieldHistory", () => {
     // actively emitted for the SAME stablecoin must therefore never appear in
     // its handoff list, or healthy publications would be deleted (as happened
     // when the active `protocol-api:re-protocol-reusd` key was listed).
-    const activeSourceKeysByStablecoin = new Map(
-      YIELD_SOURCE_REGISTRY.map((entry) => [
-        entry.stablecoinId,
-        new Set(
-          [
-            entry.nativePoolId,
-            entry.weightedPoolGroupSourceKey,
-            entry.onChainRate ? `onchain:${entry.stablecoinId}` : undefined,
-            entry.directProtocolApiSourceKey,
-            entry.autoLendingPoolId,
-          ].filter((sourceKey): sourceKey is string => typeof sourceKey === "string"),
-        ),
-      ]),
-    );
-
     for (const [stablecoinId, sourceKeys] of Object.entries(YIELD_HISTORY_OWNERSHIP_HANDOFFS)) {
-      const activeKeys = activeSourceKeysByStablecoin.get(stablecoinId) ?? new Set<string>();
+      const activeKeys = new Set([
+        YIELD_POOL_MAP[stablecoinId],
+        YIELD_WEIGHTED_POOL_GROUPS[stablecoinId]?.sourceKey,
+        ON_CHAIN_RATE_CONFIGS.some((config) => config.stablecoinId === stablecoinId)
+          ? `onchain:${stablecoinId}` : undefined,
+        DIRECT_PROTOCOL_API_STRATEGIES[stablecoinId]?.sourceKey,
+        autoLendingPoolsById[stablecoinId],
+      ].filter((sourceKey): sourceKey is string => typeof sourceKey === "string"));
       for (const sourceKey of sourceKeys) {
         expect(activeKeys.has(sourceKey), `${stablecoinId}:${sourceKey}`).toBe(false);
       }

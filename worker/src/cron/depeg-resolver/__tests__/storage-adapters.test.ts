@@ -5,7 +5,11 @@ import type {
   DdrSealedPublicPrediction,
   DdrSealInput,
 } from "../../depeg-resolver-v2-contracts";
-import { makeDdrResolverRow } from "../../__tests__/depeg-public-projection.test-support";
+import {
+  makeDdrPublicationManifest,
+  makeDdrResolverRow,
+  makeDdrSealedPublicPrediction,
+} from "../../__tests__/depeg-public-projection.test-support";
 
 const stores = vi.hoisted(() => ({
   closeRecoveredPreLockIncidents: vi.fn(),
@@ -46,7 +50,6 @@ vi.mock("../../../lib/depeg-resolver-errata-store", () => ({
 import {
   DEFAULT_DDR_V2_STORE_CONTRACTS,
   firstPublicationByPredictionId,
-  publicPredictionIdOf,
   sealedByIncident,
 } from "../storage-adapters";
 
@@ -70,39 +73,29 @@ const STORE_INCIDENT = {
   lockState: null,
 };
 
-const STORE_SEALED = {
+const STORE_SEALED = makeDdrSealedPublicPrediction({
   id: 77,
-  publicPredictionId: 77,
   incidentKey: "ddr:usdc:below",
   eventId: 42,
   assessmentId: 101,
-  outcomeKind: "prediction",
   predictionPolicyVersion: "ddr-policy-v1",
   predictionMethodologyVersion: "v4.0",
-  policyDelaySec: 86_400,
   eligibleAt: 1_700_086_400,
   lockedAt: 1_700_086_500,
   eventAgeAtLockSec: 86_500,
-  lockTiming: "on_time",
-  lockTrigger: "readiness",
+  lockTrigger: "forecast_readiness",
   forecastReadinessScore: 0.9,
   forecastReadinessVersion: "v1",
   readinessThreshold: 0.8,
-  backstopAt: null,
-  backstopDelaySec: null,
-  rowHash: "a".repeat(64),
-  sealedPayload: { kind: "prediction" },
-  sealedPayloadJson: JSON.stringify({ kind: "prediction" }),
-};
+});
 
-const STORE_MANIFEST = {
+const STORE_MANIFEST = makeDdrPublicationManifest({
   snapshotToken: "snapshot-1",
   snapshotGeneration: 4,
   snapshotSequence: 8,
   publishedAt: 1_800_000_000,
-  basePayloadHash: "b".repeat(64),
   publicPredictionIds: [77],
-};
+});
 
 function sealInput(tier: "recovery_likely" | "insufficient_signal"): DdrSealInput {
   const row = tier === "insufficient_signal"
@@ -124,7 +117,7 @@ function sealInput(tier: "recovery_likely" | "insufficient_signal"): DdrSealInpu
       })
     : makeDdrResolverRow();
   const lockedAt = 1_700_086_500;
-  const prediction = {
+  const prediction: DdrSealInput["sealedPayload"]["prediction"] = {
     incidentKey: "ddr:usdc:below",
     eligibleAt: 1_700_086_400,
     lockedAt,
@@ -149,18 +142,18 @@ function sealInput(tier: "recovery_likely" | "insufficient_signal"): DdrSealInpu
     pegCurrency: "USD",
     governance: row.governance,
     status: row.status,
-    direction: "below",
+    direction: "below" as const,
     startedAt: 1_700_000_000,
     prediction,
   };
-  const sealedPayload = tier === "insufficient_signal"
+  const sealedPayload: DdrSealInput["sealedPayload"] = tier === "insufficient_signal"
     ? {
         ...basePayload,
         kind: "no_call",
         noCall: {
           lockedAt,
           eventAgeAtLockSec: 86_500,
-          missingReasons: row.resolution.insufficientReasons,
+          missingReasons: row.resolution.insufficientReasons ?? [],
           relatedContext: row.relatedContext,
         },
         frozen: null,
@@ -170,7 +163,17 @@ function sealInput(tier: "recovery_likely" | "insufficient_signal"): DdrSealInpu
         kind: "prediction",
         frozen: {
           resolution: row.resolution,
-          duration: row.duration,
+          duration: {
+            ...row.duration,
+            remainingAsOf: lockedAt,
+            medianResolveAt: lockedAt + 3600,
+            iqrResolveAt: [lockedAt + 1800, lockedAt + 7200],
+            horizons: row.duration.horizons.map((cell) => ({
+              ...cell,
+              horizonEndAt: lockedAt + ({ "6h": 21600, "24h": 86400, "7d": 604800, "30d": 2592000 } as const)[cell.horizon],
+              anchoredLabel: `within ${cell.horizon} of lock`,
+            })),
+          },
           relatedContext: row.relatedContext,
           sourceRow: row,
         },
@@ -219,8 +222,6 @@ beforeEach(() => {
 
 describe("DDR storage adapters", () => {
   it("indexes sealed and first-publication rows by their public identities", () => {
-    const legacy = { id: 5 } as DdrSealedPublicPrediction;
-    const current = { id: 6, publicPredictionId: 60 } as DdrSealedPublicPrediction;
     const sealed = [
       { incidentKey: "first", id: 1 },
       { incidentKey: "second", id: 2 },
@@ -229,13 +230,17 @@ describe("DDR storage adapters", () => {
       { publicPredictionId: 2 },
     ] as DdrFirstPublicationMembership[];
 
-    expect(publicPredictionIdOf(legacy)).toBe(5);
-    expect(publicPredictionIdOf(current)).toBe(60);
     expect([...sealedByIncident(sealed).keys()]).toEqual(["first", "second"]);
     expect([...firstPublicationByPredictionId(memberships).keys()]).toEqual([2]);
   });
 
-  it("normalizes incident input and maps the durable incident contract", async () => {
+  it.each([
+    ["A".repeat(64), "a".repeat(64)],
+    [`  ${"B".repeat(64)}  `, "b".repeat(64)],
+    ["not-a-fingerprint", null],
+    ["", null],
+    [null, null],
+  ])("normalizes incident fingerprint %s and preserves the durable contract and defaults", async (sourceFingerprint, normalized) => {
     const event = {
       eventId: 42,
       stablecoinId: "usdc-circle",
@@ -245,7 +250,7 @@ describe("DDR storage adapters", () => {
       endedAt: null,
       peakDeviationBps: -150,
       source: "live",
-      sourceFingerprint: "A".repeat(64),
+      sourceFingerprint,
       publicTrackedAtFirstSeen: true,
       psiOffCatalogAtFirstSeen: false,
       registrySnapshot: { tracked: true },
@@ -258,16 +263,19 @@ describe("DDR storage adapters", () => {
       policyEffectiveAt: 1_600_000_000,
     };
 
-    await expect(DEFAULT_DDR_V2_STORE_CONTRACTS.ensureCanonicalIncidents(db, [event], options)).resolves.toEqual([
-      expect.objectContaining({ incidentKey: "ddr:usdc:below", currentEventId: 42 }),
-    ]);
-    expect(stores.ensureCanonicalIncidents.mock.calls[0]?.[1][0]?.sourceFingerprint).toBe("a".repeat(64));
-    expect(stores.ensureCanonicalIncidents.mock.calls[0]?.[2]).toMatchObject({ createdBy: "ddr-worker" });
-
-    await expect(DEFAULT_DDR_V2_STORE_CONTRACTS.loadCanonicalIncidents(db, {})).resolves.toEqual([
-      expect.objectContaining({ stablecoinId: "usdc-circle", lockState: null }),
-    ]);
+    const incidents = [STORE_INCIDENT];
+    stores.ensureCanonicalIncidents.mockResolvedValueOnce(incidents);
+    stores.loadCanonicalIncidents.mockResolvedValueOnce(incidents);
+    await expect(DEFAULT_DDR_V2_STORE_CONTRACTS.ensureCanonicalIncidents(db, [event], options)).resolves.toBe(incidents);
+    expect(stores.ensureCanonicalIncidents).toHaveBeenCalledWith(db, [{
+      ...event,
+      sourceFingerprint: normalized,
+    }], { ...options, createdBy: "ddr-worker" });
+    expect(event.sourceFingerprint).toBe(sourceFingerprint);
+    await expect(DEFAULT_DDR_V2_STORE_CONTRACTS.loadCanonicalIncidents(db, {})).resolves.toBe(incidents);
     expect(stores.loadCanonicalIncidents.mock.calls[0]?.[1].policyDelaySec).toBe(72 * 3600);
+    await DEFAULT_DDR_V2_STORE_CONTRACTS.loadCanonicalIncidents(db, { policyDelaySec: 86_400 });
+    expect(stores.loadCanonicalIncidents.mock.calls[1]?.[1].policyDelaySec).toBe(86_400);
     await expect(DEFAULT_DDR_V2_STORE_CONTRACTS.closeRecoveredPreLockIncidents?.(db, { nowSec: 10 })).resolves.toBe(2);
   });
 
@@ -284,11 +292,19 @@ describe("DDR storage adapters", () => {
     } as const;
 
     await DEFAULT_DDR_V2_STORE_CONTRACTS.recordLockDeferral(db, { ...base, action: "deferred" });
-    await DEFAULT_DDR_V2_STORE_CONTRACTS.recordLockDeferral(db, { ...base, action: "published" });
+    await DEFAULT_DDR_V2_STORE_CONTRACTS.recordLockDeferral(db, {
+      ...base, action: "published", confirmationAt: 95, outcomeAt: 100,
+    });
 
     expect(stores.recordLockDeferral).toHaveBeenCalledOnce();
     expect(stores.recordLockOpportunity).toHaveBeenCalledOnce();
-    expect(stores.recordLockOpportunity.mock.calls[0]?.[1]).toMatchObject({ action: "published", createdAt: 100 });
+    expect(stores.recordLockDeferral.mock.calls[0]?.[1]).toMatchObject({
+      action: "deferred", createdAt: 100, lockTrigger: null, forecastReadinessScore: null,
+      forecastReadinessVersion: null, readinessThreshold: null, backstopAt: null, backstopDelaySec: null,
+    });
+    expect(stores.recordLockOpportunity.mock.calls[0]?.[1]).toMatchObject({
+      action: "published", createdAt: 100, confirmationAt: 95, outcomeAt: 100,
+    });
   });
 
   it("seals predictions and no-calls with mapped inputs and canonical row hashes", async () => {
@@ -301,22 +317,17 @@ describe("DDR storage adapters", () => {
         rowHash: predictionHash,
       },
     };
-    stores.sealPublicPrediction.mockResolvedValueOnce({
+    const predictionResult = {
       ...STORE_SEALED,
       rowHash: predictionHash,
       sealedPayload: predictionPayload,
       sealedPayloadJson: JSON.stringify(predictionPayload),
-    });
+    };
+    stores.sealPublicPrediction.mockResolvedValueOnce(predictionResult);
 
     await expect(
       DEFAULT_DDR_V2_STORE_CONTRACTS.sealPublicPrediction(db, predictionInput),
-    ).resolves.toEqual(expect.objectContaining({
-      id: 77,
-      publicPredictionId: 77,
-      outcomeKind: "prediction",
-      rowHash: predictionHash,
-      sealedPayload: predictionPayload,
-    }));
+    ).resolves.toBe(predictionResult);
     expect(stores.sealPublicPrediction).toHaveBeenCalledWith(db, expect.objectContaining({
       incidentKey: predictionInput.incidentKey,
       eventId: predictionInput.eventId,
@@ -334,6 +345,12 @@ describe("DDR storage adapters", () => {
       sealedPayload: predictionPayload,
       rowHash: predictionHash,
       runId: predictionInput.runId,
+      createdAt: predictionInput.lockedAt,
+      forecastReadinessScore: null,
+      forecastReadinessVersion: null,
+      readinessThreshold: null,
+      backstopAt: null,
+      backstopDelaySec: null,
     }));
 
     const noCallInput = sealInput("insufficient_signal");
@@ -345,23 +362,18 @@ describe("DDR storage adapters", () => {
         rowHash: noCallHash,
       },
     };
-    stores.sealPublicNoCall.mockResolvedValueOnce({
+    const noCallResult = {
       ...STORE_SEALED,
       outcomeKind: "no_call",
       rowHash: noCallHash,
       sealedPayload: noCallPayload,
       sealedPayloadJson: JSON.stringify(noCallPayload),
-    });
+    };
+    stores.sealPublicNoCall.mockResolvedValueOnce(noCallResult);
 
     await expect(
       DEFAULT_DDR_V2_STORE_CONTRACTS.sealPublicNoCall(db, noCallInput),
-    ).resolves.toEqual(expect.objectContaining({
-      id: 77,
-      publicPredictionId: 77,
-      outcomeKind: "no_call",
-      rowHash: noCallHash,
-      sealedPayload: noCallPayload,
-    }));
+    ).resolves.toBe(noCallResult);
     expect(stores.sealPublicNoCall).toHaveBeenCalledWith(db, expect.objectContaining({
       resolutionTier: "insufficient_signal",
       sealedPayload: noCallPayload,
@@ -369,7 +381,7 @@ describe("DDR storage adapters", () => {
     }));
   });
 
-  it("maps publication, membership, manifest, and errata reads", async () => {
+  it("forwards publication, membership, manifest, and errata contracts without copying", async () => {
     stores.loadFirstPublicationMembership.mockResolvedValue([{
       publicPredictionId: 77,
       incidentKey: "ddr:usdc:below",
@@ -393,27 +405,32 @@ describe("DDR storage adapters", () => {
       createdBy: "operator",
     }]);
 
-    await expect(DEFAULT_DDR_V2_STORE_CONTRACTS.loadSealedPublicPredictions(db, {})).resolves.toEqual([
-      expect.objectContaining({ id: 77, publicPredictionId: 77, sealedPayload: { kind: "prediction" } }),
-    ]);
-    await expect(DEFAULT_DDR_V2_STORE_CONTRACTS.loadFirstPublicationMembership(db, {})).resolves.toEqual([
-      expect.objectContaining({ publicPredictionId: 77 }),
-    ]);
+    const sealed = [STORE_SEALED];
+    const memberships = await stores.loadFirstPublicationMembership();
+    const errata = await stores.loadPredictionErrata();
+    stores.loadSealedPublicPredictions.mockResolvedValueOnce(sealed);
+    await expect(DEFAULT_DDR_V2_STORE_CONTRACTS.loadSealedPublicPredictions(db, {})).resolves.toBe(sealed);
+    await expect(DEFAULT_DDR_V2_STORE_CONTRACTS.loadFirstPublicationMembership(db, {})).resolves.toBe(memberships);
     await expect(DEFAULT_DDR_V2_STORE_CONTRACTS.writePublicationManifest(db, {
       publishedAt: 1_800_000_000,
       snapshotGeneration: 4,
       basePayload: { rows: [] },
       publicPredictionIds: [77],
       publicPredictionRowHashes: { 77: "a".repeat(64) },
-    })).resolves.toEqual(expect.objectContaining({ snapshotToken: "snapshot-1", publicPredictionIds: [77] }));
+    })).resolves.toBe(STORE_MANIFEST);
+    expect(stores.writePublicationManifest).toHaveBeenCalledWith(db, {
+      publishedAt: 1_800_000_000,
+      createdAt: 1_800_000_000,
+      validatorVersion: "ddr-worker-v2",
+      snapshotGeneration: 4,
+      basePayload: { rows: [] },
+      publicPredictionIds: [77],
+      publicPredictionRowHashes: { 77: "a".repeat(64) },
+    });
     stores.loadLatestPublicationManifest.mockResolvedValueOnce(STORE_MANIFEST);
-    await expect(DEFAULT_DDR_V2_STORE_CONTRACTS.loadLatestPublicationManifest?.(db)).resolves.toEqual(
-      expect.objectContaining({ snapshotSequence: 8 }),
-    );
+    await expect(DEFAULT_DDR_V2_STORE_CONTRACTS.loadLatestPublicationManifest?.(db)).resolves.toBe(STORE_MANIFEST);
     await expect(DEFAULT_DDR_V2_STORE_CONTRACTS.loadLatestPublicationManifest?.(db)).resolves.toBeNull();
-    await expect(DEFAULT_DDR_V2_STORE_CONTRACTS.loadPredictionErrata?.(db, {})).resolves.toEqual([
-      expect.objectContaining({ id: 9, reason: "input_corruption" }),
-    ]);
+    await expect(DEFAULT_DDR_V2_STORE_CONTRACTS.loadPredictionErrata?.(db, {})).resolves.toBe(errata);
   });
 
 });

@@ -181,6 +181,23 @@ describe("Curve legacy StableSwap 3pool policy", () => {
     ]);
   });
 
+  it("preserves eligibility reason precedence and inclusive source-time boundaries", () => {
+    for (const [blockNumber, timestamp, nowSec, reason] of [
+      [-1, undefined, BLOCK_TIMESTAMP, "invalid-pinned-block"],
+      [BLOCK_NUMBER, undefined, BLOCK_TIMESTAMP, "block-timestamp-unavailable"],
+      [BLOCK_NUMBER, 0, BLOCK_TIMESTAMP, "block-timestamp-unavailable"],
+      [BLOCK_NUMBER, BLOCK_TIMESTAMP, BLOCK_TIMESTAMP + 10_800, null],
+      [BLOCK_NUMBER, BLOCK_TIMESTAMP, BLOCK_TIMESTAMP + 10_801, "stale-pinned-block"],
+      [BLOCK_NUMBER, BLOCK_TIMESTAMP + 60, BLOCK_TIMESTAMP, null],
+      [BLOCK_NUMBER, BLOCK_TIMESTAMP + 61, BLOCK_TIMESTAMP, "future-pinned-block"],
+    ] as const) {
+      expect(evaluateCurveStableSwapEligibility({
+        chain: "ethereum", endpointAddress: CURVE_3POOL_STABLESWAP_POLICY.poolAddress, blockNumber, nowSec,
+        evidence: timestamp === undefined ? undefined : { ...runtimeEvidence(), blockTimestamp: timestamp },
+      })).toEqual(reason === null ? { ok: true } : { ok: false, reason });
+    }
+  });
+
   it("fails closed on registry, token-order, decimals, code, and stale-block drift", () => {
     const base = runtimeEvidence();
     const evaluate = (evidence: CurveStableSwapRuntimeEvidence, nowSec = BLOCK_TIMESTAMP + 60) =>

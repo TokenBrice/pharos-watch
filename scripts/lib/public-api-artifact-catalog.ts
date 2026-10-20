@@ -12,7 +12,7 @@ export interface PublicApiArtifactParameter {
   name: string;
   in: "path" | "query";
   required?: boolean;
-  schema: { type: QueryParamType; enum?: string[]; minimum?: number; maximum?: number };
+  schema: { type: QueryParamType; enum?: string[]; minimum?: number; maximum?: number; minLength?: number; maxLength?: number };
   description: string;
 }
 
@@ -336,6 +336,12 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     tags: ["Risk"],
     responseSchema: "TapeEventsResponse",
     parameters: [
+      {
+        name: "event",
+        in: "query",
+        schema: { type: "string", minLength: 1, maxLength: 200 },
+        description: "Exact permalink event ID, independent of list filters. Returns one event with the normal response schema, or 404 with no event body. Retracted freeze claims return reason freeze-claim-retracted.",
+      },
       {
         name: "type",
         in: "query",

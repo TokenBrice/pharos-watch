@@ -1,4 +1,4 @@
-import type { DexMeasuredExecutionProfile, DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
+import type { DexMeasuredExecutionProfile, DexMeasuredExecutionPublicProfile, DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
 import type { PoolEntry } from "../../dex-liquidity/types";
 import type { LoadedDexMeasuredQuoteEvidence } from "../evidence-reader";
 import { buildDexMeasuredExecutionProfile, type DexMeasuredRawQuotePoint } from "../profiles";
@@ -65,4 +65,47 @@ export function makeV3LkgRoute(points: readonly (readonly [number, number])[]) {
     points: makeJoinPoints(points),
   });
   return { measuredTarget, profile };
+}
+
+/** Independent public allowlists paired with proof-heavy inputs, shared by projection and join tests. */
+export function makeFlatProvenanceCases(profile: DexMeasuredExecutionProfile): Array<{
+  name: string;
+  proofs: Partial<DexMeasuredExecutionProfile>;
+  provenance: Partial<Pick<DexMeasuredExecutionPublicProfile,
+    "poolProvenance" | "registryProvenance" | "stableSwapNgFactoryProvenance" | "uniswapV4PoolProvenance">>;
+}> {
+  const address = "0x5555555555555555555555555555555555555555";
+  const hash = `0x${"cd".repeat(32)}`;
+  const poolTokenAddresses = [profile.tokenIn.address, profile.tokenOut.address];
+  const privateFields = { callData: "0x12", returnData: "0x34", futurePrivateField: "private-future-proof" };
+  const poolCoinsProof = poolTokenAddresses.map((_, index) => ({ index, ...privateFields }));
+  const tokenDecimalsProof = [profile.tokenIn, profile.tokenOut]
+    .map((token) => ({ tokenAddress: token.address, decimals: token.decimals, ...privateFields }));
+  const poolProvenance = { factoryAddress: address, factoryCodeHash: hash, resolvedPoolAddress: address };
+  const registryProvenance = { registryAddress: address, registryCodeHash: hash,
+    registeredPoolAddress: address, lpTokenAddress: address, poolTokenAddresses };
+  const stableSwapNgFactoryProvenance = { blockNumber: profile.blockNumber, blockHash: profile.blockHash,
+    blockCommitment: "finalized" as const, factoryAddress: address, factoryCodeHash: hash,
+    poolIndex: 7, registeredPoolAddress: address, poolTokenAddresses };
+  const uniswapV4PoolProvenance = { blockNumber: profile.blockNumber, blockHash: profile.blockHash,
+    poolId: hash, poolManagerAddress: address, poolManagerCodeHash: hash,
+    stateViewAddress: address, stateViewCodeHash: hash, sqrtPriceX96: "1",
+    tick: 0, protocolFee: 0, lpFee: 100, liquidity: "1" };
+  return [
+    { name: "pool", proofs: { poolBindingProof: { ...poolProvenance, ...privateFields } },
+      provenance: { poolProvenance } },
+    { name: "registry", proofs: { registryBindingProof: { ...registryProvenance, ...privateFields,
+      lpTokenCallData: "0x12", lpTokenReturnData: "0x34",
+      registryCoinsCallData: "0x12", registryCoinsReturnData: "0x34", poolCoinsProof, tokenDecimalsProof } },
+      provenance: { registryProvenance } },
+    { name: "finalized NG factory", proofs: { stableSwapNgFactoryBindingProof: {
+      ...stableSwapNgFactoryProvenance, ...privateFields, poolListCallData: "0x12", poolListReturnData: "0x34",
+      factoryCoinsCallData: "0x12", factoryCoinsReturnData: "0x34", poolCoinsProof, tokenDecimalsProof } },
+      provenance: { stableSwapNgFactoryProvenance } },
+    { name: "V4 pool", proofs: { uniswapV4PoolProof: { ...uniswapV4PoolProvenance, ...privateFields,
+      quoterPoolManagerCallData: "0x12", quoterPoolManagerReturnData: "0x34",
+      stateViewPoolManagerCallData: "0x12", stateViewPoolManagerReturnData: "0x34",
+      slot0CallData: "0x12", slot0ReturnData: "0x34", liquidityCallData: "0x12", liquidityReturnData: "0x34" } },
+      provenance: { uniswapV4PoolProvenance } },
+  ];
 }

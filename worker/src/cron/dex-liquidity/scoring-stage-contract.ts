@@ -5,7 +5,7 @@ import type {
   DirectApiIntegrationResult,
 } from "./orchestrator-phases/direct-api";
 import type { DeadPoolUnindexedChainSkips, StagedPoolSkipDimension } from "./staging-merge";
-import type { DataSources, DexPriceObs, LiquidityMetrics } from "./types";
+import type { DataSources, DexPriceObs, SourcePoolGraph } from "./types";
 import type { PoolProcessingRejection } from "./process-pool-types";
 import type { TargetEnrichmentTelemetry } from "./route-telemetry";
 import type { UniV3CandidateCarryForwardTelemetry } from "./univ3-candidate-snapshot";
@@ -51,7 +51,7 @@ export interface DexLiquidityPoolState {
   /** Wall clock captured after the registry SELECT; frozen for every consumer. */
   registryEvaluatedAtSec: number;
   fallback: { weakCoverageCoinsBeforeFallback: number };
-  metrics: Map<string, LiquidityMetrics>;
+  metrics: Map<string, SourcePoolGraph>;
   poolRejections: PoolProcessingRejection[];
   pancakeMeasuredExecutionTargets: Map<string, DexMeasuredExecutionTarget>;
   slipstreamMeasuredExecutionTargets: Map<string, DexMeasuredExecutionTarget>;

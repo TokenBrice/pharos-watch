@@ -28,18 +28,19 @@ function stubScrvusdRpc(values: Record<string, bigint>) {
     match: "rpc.example/eth",
     respond: async (request) => {
       const body = await request.clone().json() as {
+        id: number;
         params?: Array<{ data?: string } | string>;
       };
       const callData = typeof body.params?.[0] === "object" ? body.params[0]?.data : null;
       const result = callData ? values[callData] : null;
       if (result == null) {
-        return new Response(JSON.stringify({ result: "0x" }), {
+        return new Response(JSON.stringify({ jsonrpc: "2.0", id: body.id, result: "0x" }), {
           status: 200,
           headers: { "Content-Type": "application/json" },
         });
       }
 
-      return new Response(JSON.stringify({ result: uint256Hex(result) }), {
+      return new Response(JSON.stringify({ jsonrpc: "2.0", id: body.id, result: uint256Hex(result) }), {
         status: 200,
         headers: { "Content-Type": "application/json" },
       });

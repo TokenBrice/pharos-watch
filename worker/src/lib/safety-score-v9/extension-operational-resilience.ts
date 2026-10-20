@@ -1,17 +1,11 @@
 import operationalResilienceOverlaysAsset from "@shared/data/safety-score-v9/operational-resilience-overlays-v1.json";
 import {
   SafetyScoreV9OperationalResilienceOverlaySchema,
-  SafetyScoreV9OperationalResilienceOverlayFileSchema,
   SafetyScoreV9OperationalResilienceOverlayEnvelopeSchema,
   type SafetyScoreV9OperationalResilienceOverlay,
 } from "@shared/types/safety-score-v9-operational-resilience-overlays";
 import { createReviewedAssetRegistry, reviewedRegistryEnvelopeDigest } from "@shared/lib/safety-score-v9/reviewed-registry";
 
-export {
-  SafetyScoreV9OperationalResilienceOverlaySchema,
-  SafetyScoreV9OperationalResilienceOverlayFileSchema,
-};
-export type { SafetyScoreV9OperationalResilienceOverlay };
 
 const OPERATIONAL_RESILIENCE_OVERLAY_FILE = SafetyScoreV9OperationalResilienceOverlayEnvelopeSchema.parse(
   operationalResilienceOverlaysAsset,
@@ -36,26 +30,4 @@ export function getSafetyScoreV9OperationalResilienceOverlay(
   if (!overlay) return null;
   const clockMs = clockSec * 1_000;
   return Date.parse(overlay.reviewedAt) <= clockMs && clockMs < Date.parse(overlay.expiresAt) ? overlay : null;
-}
-
-export function getSafetyScoreV9OperationalResilienceOverlayEvidence(
-  assetId: string,
-  clockSec: number,
-): {
-  reviewedAt: string;
-  expiresAt: string;
-  sources: SafetyScoreV9OperationalResilienceOverlay["sources"];
-  payload: SafetyScoreV9OperationalResilienceOverlay;
-  payloadSha256: string;
-} | null {
-  const overlay = getSafetyScoreV9OperationalResilienceOverlay(assetId, clockSec);
-  return overlay
-    ? {
-        reviewedAt: overlay.reviewedAt,
-        expiresAt: overlay.expiresAt,
-        sources: overlay.sources,
-        payload: overlay,
-        payloadSha256: SAFETY_SCORE_V9_OPERATIONAL_RESILIENCE_OVERLAYS_DIGEST,
-      }
-    : null;
 }

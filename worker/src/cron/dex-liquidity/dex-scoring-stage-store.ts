@@ -1,11 +1,10 @@
-import { ACTIVE_IDS, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { bucketUnixMillisecondsToUtcDay } from "@shared/lib/time-buckets";
 import { parseDexVolumeAvailabilityRecord, readStoredDexTurnover24h } from "@shared/lib/dex-volume-availability";
 import { liquidityTvlBasisEpoch } from "@shared/lib/dex-liquidity-evidence";
 import { throwIfAborted } from "../../lib/abort";
-import { batchExecute, executeAtomicBatch } from "../../lib/db";
+import { batchExecute } from "../../lib/db";
 import { runCappedPruneFamily } from "../shared/capped-delete";
-import { logWorkerEventArgs } from "../../lib/structured-log";
 import { normalizeDexLiquidityEvidence } from "../../lib/dex-liquidity";
 
 /** Limit the lifetime of prepared statements carrying serialized price/depth data. */
@@ -332,96 +331,4 @@ export async function loadConfidentHistoryStability(db: D1Database): Promise<{
   }
 
   return { tvlStabilityMap, volumeStabilityMap };
-}
-
-/** Compute depth stability (CV-based) and persist to D1. Accepts pre-loaded data to avoid redundant DB scan. */
-export async function computeDepthStability(
-  db: D1Database,
-  preloadedTvlStabilityMap: Map<string, number> | undefined,
-  generationId: string,
-  signal?: AbortSignal,
-): Promise<void> {
-  if (!generationId.trim()) throw new Error("DEX depth stability requires a publication generation id");
-  throwIfAborted(signal);
-  const tvlStabilityMap = preloadedTvlStabilityMap ?? (await loadConfidentHistoryStability(db)).tvlStabilityMap;
-  await assertCurrentDexScoringGeneration(db, generationId, signal, { requireRosterExpectation: true });
-
-  const stabilityStmts: D1PreparedStatement[] = [];
-  const queueStabilityStatement = async (statement: D1PreparedStatement): Promise<void> => {
-    stabilityStmts.push(statement);
-    if (stabilityStmts.length >= DEX_LIQUIDITY_SCORING_BATCH_SIZE) {
-      await flushScoringStatements(db, stabilityStmts, signal);
-    }
-  };
-  await queueStabilityStatement(
-    db
-      .prepare(
-        `UPDATE dex_liquidity_run_rows
-         SET depth_stability = NULL
-         WHERE generation_id = ? AND stablecoin_id != '__global__'`,
-      )
-      .bind(generationId),
-  );
-  let stagedStabilityCount = 0;
-  for (const [id, stability] of tvlStabilityMap) {
-    throwIfAborted(signal);
-    if (!ACTIVE_IDS.has(id)) continue;
-    stagedStabilityCount++;
-    await queueStabilityStatement(
-      db
-        .prepare(
-          `UPDATE dex_liquidity_run_rows
-           SET depth_stability = ?
-           WHERE stablecoin_id = ? AND generation_id = ?`,
-        )
-        .bind(stability, id, generationId),
-    );
-  }
-  await flushScoringStatements(db, stabilityStmts, signal);
-
-  const staged = await db
-    .prepare(
-      `/* pharos:dex-scoring:depth-stage-coverage */
-       SELECT COUNT(*) AS row_count,
-              COALESCE(SUM(CASE WHEN depth_stability IS NOT NULL THEN 1 ELSE 0 END), 0) AS stability_count
-       FROM dex_liquidity_run_rows
-       WHERE generation_id = ? AND stablecoin_id != '__global__'`,
-    )
-    .bind(generationId)
-    .first<{ row_count: number; stability_count: number }>();
-  if (staged?.row_count !== ACTIVE_STABLECOINS.length || staged.stability_count !== stagedStabilityCount) {
-    throw new Error(
-      `Incomplete DEX depth stability stage for ${generationId}` +
-        ` (rows=${staged?.row_count ?? 0}/${ACTIVE_STABLECOINS.length},` +
-        ` values=${staged?.stability_count ?? 0}/${stagedStabilityCount})`,
-    );
-  }
-
-  await assertCurrentDexScoringGeneration(db, generationId, signal, { requireRosterExpectation: true });
-  const publishedChanges = await executeAtomicBatch(
-    db,
-    [
-      db
-        .prepare(
-          `UPDATE dex_liquidity
-           SET depth_stability = (
-             SELECT staged.depth_stability
-             FROM dex_liquidity_run_rows staged
-             WHERE staged.generation_id = ?
-               AND staged.stablecoin_id = dex_liquidity.stablecoin_id
-           )
-           WHERE publication_generation_id = ?
-             AND publication_state = 'published'
-             AND stablecoin_id != '__global__'`,
-        )
-        .bind(generationId, generationId),
-    ],
-    { signal },
-  );
-  if (publishedChanges !== ACTIVE_STABLECOINS.length) {
-    throw new Error(
-      `DEX depth stability publication changed ${publishedChanges}/${ACTIVE_STABLECOINS.length} current rows`,
-    );
-  }
-  logWorkerEventArgs("handler", "info", `[dex-liquidity] Published depth stability for ${stagedStabilityCount} coins from ${generationId}`);
 }

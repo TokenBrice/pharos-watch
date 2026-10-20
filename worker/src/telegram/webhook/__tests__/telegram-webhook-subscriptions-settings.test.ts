@@ -14,7 +14,6 @@ import {
   handleTelegramWebhook,
   resolveTicker,
   FROZEN_STABLECOINS,
-  encodeWatchlistToken,
   makeWebhookRequest,
   makeCallbackRequest,
   sentMessageBody,
@@ -86,8 +85,6 @@ describe("handleTelegramWebhook", () => {
     ["/unsnooze", true, "required", "clear-and-run", true, false],
     ["/cancel", false, "required", "cancel", false, false],
     ["/forget", true, "required", "clear-and-run", false, false],
-    ["/export", false, "none", "remind", false, false],
-    ["/import", true, "required", "remind", false, false],
     ["/recap", false, "none", "passthrough", true, false],
   ] as const;
   it("pins every registered command in the pending-state matrix", () => {
@@ -414,119 +411,23 @@ describe("handleTelegramWebhook", () => {
     expect(body.reply_markup).toBeDefined();
   });
 
-  it("includes preset work in preset-only /import confirmation copy", async () => {
-    const token = encodeWatchlistToken({
-      coinIds: [],
-      alertTypes: ["dews", "reserve"],
-      presetIds: ["usd-top25"],
-    });
-    const db = makeTelegramWebhookDb([{ match: "INSERT INTO telegram_pending_disambiguation", rows: [] }]);
-
-    await handleTelegramWebhook(db, makeWebhookRequest(123, `/import ${token}`), "test-secret", "bot-token");
-
-    const history = db.getHistory();
-    const confirmInsert = history.find((entry) => entry.sql.includes("INSERT INTO telegram_pending_disambiguation"));
-    expect(confirmInsert).toBeDefined();
-    const payload = JSON.parse(String(confirmInsert?.binds[2] ?? "{}")) as {
-      coinIds: string[];
-      presetIds: string[];
-      alertTypes: string[];
-    };
-    expect(payload.coinIds).toEqual([]);
-    expect(payload.presetIds).toEqual(["usd-top25"]);
-    expect(payload.alertTypes).toEqual(["dews", "reserve"]);
-
-    const body = sentMessageBody();
-    expect(body.text).toContain("1 preset");
-    expect(body.text).toContain("Presets: USD Top 25");
-    expect(body.text).not.toContain("0 coins");
-    expect(body.reply_markup).toBeDefined();
-  });
-
-  it("counts unavailable ids in /import copy while deduping subscribable ids", async () => {
-    const token = encodeWatchlistToken({
-      coinIds: ["usdc-circle", "usdc-circle", "retired-stablecoin"],
-      alertTypes: ["dews"],
-      presetIds: [],
-    });
-    const db = makeTelegramWebhookDb([{ match: "INSERT INTO telegram_pending_disambiguation", rows: [] }]);
-
-    await handleTelegramWebhook(db, makeWebhookRequest(123, `/import ${token}`), "test-secret", "bot-token");
-
-    const confirmInsert = db
-      .getHistory()
-      .find((entry) => entry.sql.includes("INSERT INTO telegram_pending_disambiguation"));
-    expect(confirmInsert).toBeDefined();
-    const payload = JSON.parse(String(confirmInsert?.binds[2] ?? "{}")) as {
-      coinIds: string[];
-      presetIds: string[];
-      alertTypes: string[];
-    };
-    expect(payload.coinIds).toEqual(["usdc-circle"]);
-    expect(payload.presetIds).toEqual([]);
-    expect(payload.alertTypes).toEqual(["dews"]);
-
-    const body = sentMessageBody();
-    expect(body.text).toContain("Confirm?");
-    expect(body.text).toContain("USDC");
-    expect(body.text).toContain("(1 coin is not available for new alerts and was skipped.)");
-    expect(body.text).not.toContain("(2 coins are not available");
-    expect(body.reply_markup).toBeDefined();
-  });
-
-  it("filters frozen ids from /import without staging subscription writes", async () => {
-    const frozen = FROZEN_STABLECOINS[0];
-    if (!frozen) throw new Error("Expected a frozen stablecoin fixture");
-    const token = encodeWatchlistToken({
-      coinIds: ["usdc-circle", frozen.id],
-      alertTypes: ["dews"],
-      presetIds: [],
-    });
-    const db = makeTelegramWebhookDb([{ match: "INSERT INTO telegram_pending_disambiguation", rows: [] }]);
-
-    await handleTelegramWebhook(db, makeWebhookRequest(123, `/import ${token}`), "test-secret", "bot-token");
-
-    const confirmInsert = db
-      .getHistory()
-      .find((entry) => entry.sql.includes("INSERT INTO telegram_pending_disambiguation"));
-    expect(confirmInsert).toBeDefined();
-    const payload = JSON.parse(String(confirmInsert?.binds[2] ?? "{}")) as { coinIds: string[] };
-    expect(payload.coinIds).toEqual(["usdc-circle"]);
-    expect(sentMessageBody().text).toContain("1 coin is not available for new alerts");
-    expect(sentMessageBody().text).not.toContain(frozen.symbol);
-  });
-
-  it("rejects a frozen-only /import without creating pending state", async () => {
-    const frozen = FROZEN_STABLECOINS[0];
-    if (!frozen) throw new Error("Expected a frozen stablecoin fixture");
-    const token = encodeWatchlistToken({
-      coinIds: [frozen.id],
-      alertTypes: ["dews"],
-      presetIds: [],
-    });
-    const db = makeTelegramWebhookDb();
-
-    await handleTelegramWebhook(db, makeWebhookRequest(123, `/import ${token}`), "test-secret", "bot-token");
-
-    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO telegram_pending_disambiguation"))).toBe(false);
-    expect(sentMessageBody().text).toContain("No coins available for new alerts");
-  });
-
-  it("refuses to export an unavailable row instead of silently dropping it", async () => {
+  it.each(["/import legacy-token", "/export"])("treats retired %s as an unknown command without changing preferences", async (command) => {
     const { sqlite, db } = sqliteFixtures.open();
     sqlite.exec(`
-      INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at) VALUES ('123', 1, 1);
+      INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at, preference_generation)
+      VALUES ('123', 1, 1, 7);
       INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, alert_dews, alert_dews_override)
-      VALUES ('123', 'retired-stablecoin', 1, 1);
+      VALUES ('123', 'usdc-circle', 1, 1);
     `);
-
-    await handleTelegramWebhook(db, makeWebhookRequest(123, "/export"), "test-secret", "bot-token");
-
-    const body = sentMessageBody();
-    expect(body.text).toContain("retired or unknown entries");
-    expect(body.text).toContain("Nothing was changed");
-    expect(body.text).not.toContain("<pre>");
+    const before = sqlite.prepare("SELECT * FROM telegram_subscriptions WHERE chat_id = '123'").all();
+    await handleTelegramWebhook(db, makeWebhookRequest(123, command), "test-secret", "bot-token");
+    expect(latestSendMessageBody().text).toContain("Unknown command");
+    expect(sqlite.prepare("SELECT * FROM telegram_subscriptions WHERE chat_id = '123'").all()).toEqual(before);
+    expect(sqlite.prepare("SELECT preference_generation FROM telegram_subscribers WHERE chat_id = '123'").get())
+      .toEqual({ preference_generation: 7 });
+    expect(sqlite.prepare("SELECT * FROM telegram_pending_disambiguation").all()).toEqual([]);
   });
+
 
   it("gates /subscribe with a >10-coin preset and depeg-step modifier behind a confirmation prompt", async () => {
     const db = makeTelegramWebhookDb([

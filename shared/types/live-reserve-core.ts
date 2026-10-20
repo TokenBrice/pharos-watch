@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { StrictIsoDateSchema } from "./safety-schema-primitives";
+import { isValidIsoDateOnly } from "./date-primitives";
 
 /** Reviewed native denominations; a nominal relation is not custody assurance. */
 export const NativeReserveQuantityBasisSchema = /* @__PURE__ */ (() => z.object({
@@ -44,12 +45,61 @@ export type ReserveDisplayBadgeKind = (typeof RESERVE_DISPLAY_BADGE_KIND_VALUES)
 export type LiveReserveSemantics = (typeof LIVE_RESERVE_SEMANTICS_VALUES)[number];
 export type LiveReserveRpcMode = (typeof LIVE_RESERVE_RPC_MODE_VALUES)[number];
 
-export type LiveReserveInput =
-  | { kind: "http-json"; url: string }
-  | { kind: "http-html"; url: string }
-  | { kind: "indexer"; url: string }
-  | { kind: "onchain-solana" }
-  | { kind: "onchain-evm"; chain: string; rpcMode: LiveReserveRpcMode };
+const AbsoluteUrlSchema = /* @__PURE__ */ (() => z.string().url())();
+const LiveReserveRpcModeSchema = /* @__PURE__ */ (() => z.enum(LIVE_RESERVE_RPC_MODE_VALUES))();
+const LiveReserveSemanticsSchema = /* @__PURE__ */ (() => z.enum(LIVE_RESERVE_SEMANTICS_VALUES))();
+
+export const LiveReserveInputSchemaByKind = /* @__PURE__ */ (() => ({
+  "http-json": z.object({ kind: z.literal("http-json"), url: AbsoluteUrlSchema }).strict(),
+  "http-html": z.object({ kind: z.literal("http-html"), url: AbsoluteUrlSchema }).strict(),
+  indexer: z.object({ kind: z.literal("indexer"), url: AbsoluteUrlSchema }).strict(),
+  "onchain-solana": z.object({ kind: z.literal("onchain-solana") }).strict(),
+  "onchain-evm": z
+    .object({
+      kind: z.literal("onchain-evm"),
+      chain: z.string(),
+      rpcMode: LiveReserveRpcModeSchema,
+    })
+    .strict(),
+} as const))();
+export type LiveReserveInput = z.output<(typeof LiveReserveInputSchemaByKind)[keyof typeof LiveReserveInputSchemaByKind]>;
+
+const LiveReserveDisplaySchema = /* @__PURE__ */ (() => z
+  .object({
+    url: AbsoluteUrlSchema.optional(),
+    label: z.string().optional(),
+  })
+  .strict())();
+
+const liveReserveScoringPolicySchema = /* @__PURE__ */ (() => z
+  .object({
+    maxSourceAgeSec: z.number().positive().optional(),
+    allowedDegradedWarningCodes: z.array(z.string().min(1)).optional(),
+  })
+  .strict())();
+
+export const baseLiveReserveConfigSchema = /* @__PURE__ */ (() => z.object({
+  version: z.number().int().positive(),
+  semantics: LiveReserveSemanticsSchema,
+  breakerScope: z.string().min(1).optional(),
+  display: LiveReserveDisplaySchema.optional(),
+  scoring: liveReserveScoringPolicySchema.optional(),
+  /** One bounded reserve-only prerequisite attempt; never authorizes listing. */
+  bootstrapForSupplyAdmission: z.object({
+    reviewBy: z.string().refine(isValidIsoDateOnly, "reviewBy must be a valid ISO calendar date"),
+  }).strict().optional(),
+  // Registry loading strips suspended feeds; retain the full authoring config
+  // and legacy format-only suspension dates without tightening admission here.
+  suspended: z
+    .object({
+      reason: z.string().min(1),
+      since: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "since must be an ISO date (YYYY-MM-DD)"),
+      reviewBy: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "reviewBy must be an ISO date (YYYY-MM-DD)").optional(),
+    })
+    .strict()
+    .optional(),
+}))();
+export type BaseLiveReserveConfig = z.output<typeof baseLiveReserveConfigSchema>;
 
 export interface LiveReserveAdapterValidationPolicy {
   maxSourceAgeSec?: number;

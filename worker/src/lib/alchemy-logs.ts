@@ -1,11 +1,11 @@
-import { ALCHEMY_CHAINS, buildAlchemyRpcUrl, getRpcAuth, getRpcAuthHeaders, type RpcEndpoint } from "./chain-registry";
+import { ALCHEMY_CHAINS, buildAlchemyRpcUrl, getRpcAuth, type RpcEndpoint } from "./chain-registry";
 import { recordDwellirCredits } from "./rpc-provider-budget";
 import { parseQuantityHex } from "./bigint";
 import type { SubrequestBudget } from "./evm-logs";
 import { budgetExhausted } from "./evm-logs";
 import { batchExecute, buildInClause } from "./db";
 import { throwIfAborted } from "./abort";
-import { fetchTextWithRetry } from "./fetch-retry";
+import { requestJsonRpcAtUrl } from "./evm-rpc";
 import { logWorkerEvent } from "./structured-log";
 import type { CacheRetentionPolicy } from "./db-cache";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
@@ -157,26 +157,13 @@ async function jsonRpcCall<T>(
   timeoutMs = ALCHEMY_RPC_TIMEOUT_MS,
 ): Promise<JsonRpcCallResult<T>> {
   if (getRpcAuth(alchemyUrl)?.provider === "dwellir") recordDwellirCredits(1);
-  const fetched = await fetchTextWithRetry(
-    alchemyUrl,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(getRpcAuthHeaders(alchemyUrl) ?? {}),
-      },
-      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
-      signal,
-    },
-    0,
-    {
-      timeoutMs: Math.max(1, Math.min(ALCHEMY_RPC_TIMEOUT_MS, timeoutMs)),
-      maxResponseBytes: ALCHEMY_RPC_MAX_RESPONSE_BYTES,
-      returnFinalResponse: true,
-      retryMode: "network-only",
-    },
-  );
-  if (!fetched) {
+  const fetched = await requestJsonRpcAtUrl(alchemyUrl, { jsonrpc: "2.0", id: 1, method, params }, {
+    signal, responseMode: "text",
+    timeoutMs: Math.max(1, Math.min(ALCHEMY_RPC_TIMEOUT_MS, timeoutMs)),
+    maxResponseBytes: ALCHEMY_RPC_MAX_RESPONSE_BYTES,
+  });
+  if ((fetched.status === "transport-error" || fetched.status === "control-error") && fetched.error != null) throw fetched.error;
+  if (fetched.status === "transport-error" || fetched.status === "control-error") {
     logWorkerEvent({
       scope: "lib",
       level: "debug",
@@ -196,10 +183,8 @@ async function jsonRpcCall<T>(
 
   const transientHttpError = !res.ok && (res.status >= 500 || res.status === 429 || res.status === 408);
 
-  let json: JsonRpcResponse<T> | null = null;
-  try {
-    json = JSON.parse(fetched.body) as JsonRpcResponse<T>;
-  } catch (err) {
+  if (fetched.status === "parse-error") {
+    const err = fetched.error;
     logWorkerEvent({
       scope: "lib",
       level: "debug",
@@ -234,6 +219,10 @@ async function jsonRpcCall<T>(
       transientHttpError: false,
     };
   }
+  if (fetched.status === "invalid-envelope") {
+    return { result: null, error: { code: -1, message: "invalid response identity" }, status: res.status, transientHttpError };
+  }
+  const json = fetched.body as JsonRpcResponse<T> | null;
 
   if (json?.error) {
     logWorkerEvent({
@@ -338,26 +327,13 @@ export async function getAlchemyTransactionContextBatchMany(
   ]);
 
   if (getRpcAuth(alchemyUrl)?.provider === "dwellir") recordDwellirCredits(payload.length);
-  const fetched = await fetchTextWithRetry(
-    alchemyUrl,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(getRpcAuthHeaders(alchemyUrl) ?? {}),
-      },
-      body: JSON.stringify(payload),
-      signal,
-    },
-    0,
-    {
-      timeoutMs: Math.max(1, Math.min(ALCHEMY_RPC_TIMEOUT_MS, timeoutMs, deadlineMs != null ? deadlineMs - Date.now() : Infinity)),
-      maxResponseBytes: ALCHEMY_RPC_MAX_RESPONSE_BYTES,
-      returnFinalResponse: true,
-      retryMode: "network-only",
-    },
-  );
-  if (!fetched) {
+  const fetched = await requestJsonRpcAtUrl(alchemyUrl, payload, {
+    signal, responseMode: "text",
+    timeoutMs: Math.max(1, Math.min(ALCHEMY_RPC_TIMEOUT_MS, timeoutMs, deadlineMs != null ? deadlineMs - Date.now() : Infinity)),
+    maxResponseBytes: ALCHEMY_RPC_MAX_RESPONSE_BYTES,
+  });
+  if ((fetched.status === "transport-error" || fetched.status === "control-error") && fetched.error != null) throw fetched.error;
+  if (fetched.status === "transport-error" || fetched.status === "control-error") {
     logWorkerEvent({
       scope: "lib",
       level: "debug",
@@ -381,10 +357,8 @@ export async function getAlchemyTransactionContextBatchMany(
     return results;
   }
 
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(fetched.body) as unknown;
-  } catch (err) {
+  if (fetched.status === "parse-error") {
+    const err = fetched.error;
     logWorkerEvent({
       scope: "lib",
       level: "debug",
@@ -395,6 +369,7 @@ export async function getAlchemyTransactionContextBatchMany(
     });
     return results;
   }
+  const parsed = fetched.body;
 
   if (!Array.isArray(parsed)) {
     logWorkerEvent({
@@ -409,6 +384,7 @@ export async function getAlchemyTransactionContextBatchMany(
 
   let memberRetries = 0;
   for (const item of parsed as Array<JsonRpcResponse<unknown>>) {
+    if (!fetched.rows.has(item?.id)) continue;
     if (item?.error?.code === -32000 && (item.error.message ?? "").toLowerCase().includes("batch not executed")
       && Number.isInteger(item.id) && item.id >= 0 && item.id < payload.length && !budgetExhausted(budget)
       && memberRetries < TRANSACTION_CONTEXT_MAX_MEMBER_RETRIES && (deadlineMs == null || Date.now() < deadlineMs)) {
@@ -432,9 +408,6 @@ export async function getAlchemyTransactionContextBatchMany(
         provider: "alchemy",
         metadata: { rpcErrorCode: item.error.code, rpcErrorMessage: item.error.message },
       });
-      continue;
-    }
-    if (typeof item?.id !== "number" || !Number.isInteger(item.id) || item.id < 0) {
       continue;
     }
     const txHash = uniqueTxHashes[Math.floor(item.id / 2)];
@@ -770,26 +743,15 @@ async function fetchBlockTimestampBatch(
 
   try {
     if (getRpcAuth(alchemyUrl)?.provider === "dwellir") recordDwellirCredits(payload.length);
-    const fetched = await fetchTextWithRetry(
-      alchemyUrl,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(getRpcAuthHeaders(alchemyUrl) ?? {}),
-        },
-        body: JSON.stringify(payload),
-        signal,
-      },
-      0,
-      {
-        timeoutMs: Math.max(1, Math.min(ALCHEMY_RPC_TIMEOUT_MS, timeoutMs)),
-        maxResponseBytes: ALCHEMY_RPC_MAX_RESPONSE_BYTES,
-        returnFinalResponse: true,
-        retryMode: "network-only",
-      },
-    );
-    if (!fetched) return missingAll();
+    const fetched = await requestJsonRpcAtUrl(alchemyUrl, payload, {
+      signal, responseMode: "text",
+      timeoutMs: Math.max(1, Math.min(ALCHEMY_RPC_TIMEOUT_MS, timeoutMs)),
+      maxResponseBytes: ALCHEMY_RPC_MAX_RESPONSE_BYTES,
+    });
+    if (fetched.status === "transport-error" || fetched.status === "control-error") {
+      if (fetched.error != null) throw fetched.error;
+      return missingAll();
+    }
     const res = fetched.response;
     if (!res.ok) {
       logWorkerEvent({
@@ -804,7 +766,8 @@ async function fetchBlockTimestampBatch(
       return missingAll();
     }
 
-    const parsed = JSON.parse(fetched.body) as unknown;
+    if (fetched.status === "parse-error") throw fetched.error;
+    const parsed = fetched.body;
     if (!Array.isArray(parsed)) {
       logWorkerEvent({
         scope: "lib",
@@ -818,12 +781,6 @@ async function fetchBlockTimestampBatch(
     }
 
     const headers = new Map<number, { number: number; hash: string; timestamp: number }>();
-    const idCounts = new Map<number, number>();
-    for (const response of parsed) {
-      if (response && typeof response === "object" && Number.isInteger(response.id)) {
-        idCounts.set(response.id, (idCounts.get(response.id) ?? 0) + 1);
-      }
-    }
     let issueCount = 0;
     for (const response of parsed) {
       if (!response || typeof response !== "object") {
@@ -840,7 +797,7 @@ async function fetchBlockTimestampBatch(
         issueCount++;
         continue;
       }
-      if (idCounts.get(requestIndex) !== 1 || rpc.error) {
+      if (!fetched.rows.has(requestIndex) || rpc.error) {
         issueCount++;
         continue;
       }

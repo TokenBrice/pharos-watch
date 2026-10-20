@@ -5,7 +5,7 @@ import {
   compareText,
 } from "./safety-score-v9-fact-primitives";
 import { V9MechanismQualitySchema } from "./safety-score-v9-fact-input-primitives";
-import { StrictIsoDateOrUtcInstantSchema } from "./safety-schema-primitives";
+import { issue, StrictIsoDateOrUtcInstantSchema } from "./safety-schema-primitives";
 
 export type V9MechanismQualityLevel = z.infer<typeof V9MechanismQualitySchema>;
 
@@ -61,11 +61,7 @@ const V9MechanismFactV1Schema = z
       }
     }
     if (fact.status.applicability.state === "not-applicable" && fact.quality !== null) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["quality"],
-        message: "Not-applicable mechanism facts cannot claim quality",
-      });
+      issue(ctx, ["quality"], "Not-applicable mechanism facts cannot claim quality");
     }
     if (
       fact.status.observationState === "known" &&
@@ -343,18 +339,10 @@ export const V9CdpStressCoverageFactSchema = z
       fact.stressLiquidationCoverageRatio,
     ];
     if (fact.applicability === "measured" && fact.failureReason !== null) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["failureReason"],
-        message: "Measured stress facts cannot fail applicability",
-      });
+      issue(ctx, ["failureReason"], "Measured stress facts cannot fail applicability");
     }
     if (fact.applicability === "not-measured" && fact.failureReason === null) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["failureReason"],
-        message: "Unavailable stress facts need a failure reason",
-      });
+      issue(ctx, ["failureReason"], "Unavailable stress facts need a failure reason");
     }
     if (fact.complete) {
       if (
@@ -365,27 +353,15 @@ export const V9CdpStressCoverageFactSchema = z
         fact.codeHashPins.length === 0 ||
         fact.blockers.length > 0
       ) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["complete"],
-          message: "Complete stress facts require exact measured provenance",
-        });
+        issue(ctx, ["complete"], "Complete stress facts require exact measured provenance");
       }
     }
     if (fact.exactReplayPassed !== (fact.replayVerification !== null)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["replayVerification"],
-        message: "Exact replay status requires matching verification provenance",
-      });
+      issue(ctx, ["replayVerification"], "Exact replay status requires matching verification provenance");
     }
     const branchIndexes = fact.branchContributions.map((branch) => branch.branchIndex);
     if (branchIndexes.some((branchIndex, index) => branchIndex !== index)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["branchContributions"],
-        message: "Stress branches must preserve contiguous journal order",
-      });
+      issue(ctx, ["branchContributions"], "Stress branches must preserve contiguous journal order");
     }
     const pinNames = fact.codeHashPins.map((pin) => pin.name);
     if (new Set(pinNames).size !== pinNames.length) {

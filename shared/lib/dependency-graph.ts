@@ -1,4 +1,5 @@
 import { deriveEffectiveDependencies } from "./dependency-derivation";
+import { stronglyConnectedComponents } from "./strongly-connected-components";
 import type { DependencyType, ReserveSlice, StablecoinMeta } from "../types/core";
 
 export interface DependencyGraphEdge {
@@ -55,42 +56,12 @@ export function diagnoseDependencyGraph(edges: readonly DependencyGraphEdge[]): 
     outgoing.set(edge.from, targets);
   }
 
-  let nextIndex = 0;
-  const indices = new Map<string, number>();
-  const lowLinks = new Map<string, number>();
-  const stack: string[] = [];
-  const onStack = new Set<string>();
   const components: string[][] = [];
-
-  function visit(node: string): void {
-    indices.set(node, nextIndex);
-    lowLinks.set(node, nextIndex);
-    nextIndex += 1;
-    stack.push(node);
-    onStack.add(node);
-
-    for (const target of [...(outgoing.get(node) ?? [])].sort()) {
-      if (!indices.has(target)) {
-        visit(target);
-        lowLinks.set(node, Math.min(lowLinks.get(node)!, lowLinks.get(target)!));
-      } else if (onStack.has(target)) {
-        lowLinks.set(node, Math.min(lowLinks.get(node)!, indices.get(target)!));
-      }
-    }
-
-    if (lowLinks.get(node) !== indices.get(node)) return;
-    const component: string[] = [];
-    while (stack.length > 0) {
-      const member = stack.pop()!;
-      onStack.delete(member);
-      component.push(member);
-      if (member === node) break;
-    }
+  for (const component of stronglyConnectedComponents(
+    [...nodes].sort(),
+    (node) => [...(outgoing.get(node) ?? [])].sort(),
+  )) {
     if (component.length > 1) components.push(component.sort());
-  }
-
-  for (const node of [...nodes].sort()) {
-    if (!indices.has(node)) visit(node);
   }
 
   return {

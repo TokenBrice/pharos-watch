@@ -162,11 +162,19 @@ export function sealedPayload(
         ...base,
         frozen: {
           resolution: { tier: "at_risk", factors: [] },
-          duration: { suppressed: false, horizons: [] },
+          duration: {
+            suppressed: false, horizons: [], remainingAsOf: lockedAt,
+            medianResolveAt: null, iqrResolveAt: null,
+          },
           relatedContext: {},
           sourceRow: {
             eventId,
             stablecoinId,
+            symbol, name, pegCurrency, governance, status: "active",
+            direction, startedAt, ageSec: eventAgeAtLockSec,
+            resolution: { tier: "at_risk", factors: [] },
+            duration: { suppressed: false, horizons: [] },
+            relatedContext: {},
             peakDeviationBps: options.lockTimePeakDeviationBps ?? -300,
           },
         },

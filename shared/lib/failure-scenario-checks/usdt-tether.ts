@@ -1,7 +1,7 @@
 import { keccak256, parseAbi, zeroAddress } from "viem";
 import type { Address } from "viem";
-import type { ScenarioCheck, ScenarioCheckContext, ScenarioCheckValue } from "./index";
-import { requireScenarioChain, scenarioDocumentWatch, scenarioSourceAddress } from "./index";
+import type { ScenarioCheck, ScenarioCheckContext, ScenarioCheckValue } from "./context";
+import { requireScenarioChain, scenarioDocumentWatch, scenarioSourceAddress } from "./context";
 
 const abi = parseAbi([
   "function owner() view returns (address)",

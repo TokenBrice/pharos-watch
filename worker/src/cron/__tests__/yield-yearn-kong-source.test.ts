@@ -35,6 +35,7 @@ describe("fetchYearnKongSources", () => {
   });
 
   it("labels non-Yearn vaults as Kong", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(1_790_121_600_000);
     mockYieldSourceRoutes([
       {
         match: "kong.yearn.fi",
@@ -58,8 +59,16 @@ describe("fetchYearnKongSources", () => {
       { match: "kong.yearn.fi", body: { data: { vaults: [] } } },
     ]);
     const { candidates: results } = await fetchYearnKongSources();
-    expect(results[0].yield.yieldSource).toContain("Kong");
-    expect(results[0].yield.sourceKey).toContain("protocol-api:kong:");
+    expect(results[0]).toStrictEqual({
+      stablecoinId: undefined, symbol: "USDC", chain: "ethereum", address: null,
+      yield: {
+        currentApy: 3, apyBase: 3, apyReward: null, sourcePool: "0xabc",
+        sourceTvlUsd: 50_000_000, dataSource: "protocol-api", exchangeRate: null,
+        sourceKey: "protocol-api:kong:ethereum:0xabc",
+        yieldSource: "Kong: Steakhouse USDC", yieldType: "lending-opportunity",
+        sourceObservedAt: 1_790_121_600, comparisonAnchorObservedAt: null,
+      },
+    });
   });
 
   it("uses current net APY instead of monthly net APY", async () => {
@@ -137,6 +146,10 @@ describe("fetchYearnKongSources", () => {
   });
 
   it("keeps same-address vaults on distinct chains and deduplicates within a chain", async () => {
+    vi.spyOn(Date, "now")
+      .mockReturnValueOnce(1_790_121_600_000)
+      .mockReturnValueOnce(1_790_121_601_000)
+      .mockReturnValue(1_790_121_602_000);
     const vault = {
       address: "0xAbC", name: "USDC yVault", yearn: true, asset: { symbol: "USDC" },
       tvl: { close: 50_000_000 }, apy: { net: 0.03 },
@@ -149,14 +162,35 @@ describe("fetchYearnKongSources", () => {
       })),
       { match: "kong.yearn.fi", body: { data: { vaults: [] } } },
     ]);
-    expect((await fetchYearnKongSources()).candidates.map((result) => result.yield.sourceKey)).toEqual([
+    const { candidates } = await fetchYearnKongSources();
+    expect(candidates.map((result) => result.yield.sourceKey)).toEqual([
       "protocol-api:yearn:ethereum:0xabc", "protocol-api:yearn:base:0xabc",
     ]);
+    expect(candidates.map((result) => result.yield.sourceObservedAt)).toEqual([1_790_121_601, 1_790_121_602]);
   });
 
   it("reports a degraded fetch when a chain query fails", async () => {
     mockYieldSourceRoutes([{ match: "kong.yearn.fi", body: { error: "upstream unavailable" }, status: 500 }]);
 
     await expect(fetchYearnKongSources()).resolves.toEqual({ candidates: [], degraded: true });
+  });
+
+  it("keeps first-chain rows and continues after a second-chain parse failure", async () => {
+    const vault = {
+      address: "0xAbC", name: "USDC yVault", yearn: true, asset: { symbol: "USDC" },
+      tvl: { close: 1_000_000 }, apy: { net: 0.03 }, meta: { category: "Stablecoin" },
+    };
+    const fetch = mockYieldSourceRoutes([
+      { match: "kong.yearn.fi", matchBody: '"chainId":1}', body: { data: { vaults: [vault] } } },
+      { match: "kong.yearn.fi", matchBody: '"chainId":10}', respond: () => new Response("{") },
+      { match: "kong.yearn.fi", matchBody: '"chainId":8453}', body: { data: { vaults: [vault] } } },
+      { match: "kong.yearn.fi", body: { data: { vaults: [] } } },
+    ]);
+    const result = await fetchYearnKongSources();
+    expect(result.degraded).toBe(true);
+    expect(result.candidates.map((row) => row.yield.sourceKey)).toEqual([
+      "protocol-api:yearn:ethereum:0xabc", "protocol-api:yearn:base:0xabc",
+    ]);
+    expect(fetch).toHaveBeenCalledTimes(5);
   });
 });

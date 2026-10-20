@@ -7,7 +7,6 @@ import { CG_TICKERS_RATE_MS } from "../dex-liquidity/constants";
 import {
   aggregateCgTickersByExchange,
   buildCgTickerExchangeSummaries,
-  buildCgTickerPriceObservations,
   filterValidCgTickers,
 } from "../dex-liquidity/coingecko-tickers-shared";
 import type { CgTicker } from "../dex-liquidity/types";
@@ -99,14 +98,6 @@ export async function crawlCoinGeckoTickersStage({
         });
         pool.refreshedAt = summary.observedAt ?? readObservedAt;
         context.addPool(pool);
-      }
-
-      for (const observation of buildCgTickerPriceObservations(
-        context.stablecoinId,
-        exchangeSummaries,
-        context.references,
-      )) {
-        context.addPriceObs({ ...observation, stablecoinId: context.stablecoinId });
       }
     }
   } catch (err) {

@@ -7,6 +7,7 @@ import {
   finalizeBackstopRegistry,
 } from "@shared/lib/redemption-backstop-configs/factory";
 import {
+  cloneRedemptionBackstopConfig,
   documentedVariableFee,
   expandIds,
   fixedFee,
@@ -24,6 +25,7 @@ import {
   type RedemptionBackstopConfig,
 } from "@shared/lib/redemption-backstop-configs/shared";
 import { resolveFeeConfidence, resolveFeeModelKind } from "@shared/lib/redemption-backstop-confidence";
+import { REDEMPTION_BACKSTOP_CONFIGS } from "@shared/lib/redemption-backstops";
 
 function createBaseConfig(): RedemptionBackstopConfig {
   return {
@@ -40,6 +42,24 @@ function createBaseConfig(): RedemptionBackstopConfig {
 }
 
 describe("redemption backstop config helpers", () => {
+  it("preserves every registry value without sharing any nested object with its source", () => {
+    const sourceObjects = new WeakSet<object>();
+    const visitObjects = (value: unknown, visit: (object: object) => void): void => {
+      if (value === null || typeof value !== "object") return;
+      visit(value);
+      for (const child of Object.values(value)) visitObjects(child, visit);
+    };
+    expect(Object.keys(REDEMPTION_BACKSTOP_CONFIGS).length).toBeGreaterThan(0);
+    for (const config of Object.values(REDEMPTION_BACKSTOP_CONFIGS)) {
+      visitObjects(config, (object) => sourceObjects.add(object));
+    }
+    for (const config of Object.values(REDEMPTION_BACKSTOP_CONFIGS)) {
+      const cloned = cloneRedemptionBackstopConfig(config);
+      expect(cloned).toStrictEqual(config);
+      visitObjects(cloned, (object) => expect(sourceObjects.has(object)).toBe(false));
+    }
+  });
+
   it("expands shared configs as independent clones", () => {
     const baseConfig = createBaseConfig();
     const expanded = expandIds(["alpha", "beta"], {

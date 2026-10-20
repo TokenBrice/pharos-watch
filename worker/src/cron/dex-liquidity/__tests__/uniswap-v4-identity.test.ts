@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { encodeAbiParameters, encodeEventTopics, encodeFunctionResult, parseAbi, parseAbiParameters } from "viem/utils";
-import { initMetrics } from "../pool-helpers";
+import { initSourcePoolGraph } from "../pool-helpers";
 import { enrichUniswapV4ExecutionTargets, readUniswapV4ExecutionCandidate, resolveUniswapV4InitializePoolKey } from "../uniswap-v4-identity";
 import { computeUniswapV4PoolId, getUniswapV4Deployment, UNISWAP_V4_HOOK_FREE_ADDRESS } from "../../measured-execution/uniswap-v4";
 import { isDexMeasuredExecutionTargetScoreEligible } from "../../measured-execution/admission";
@@ -53,8 +53,8 @@ function fixture(chain = "ethereum") {
     poolType: "cg-concentrated", symbol: "USDC / USDT 0.00%", tvlUsd: 2_000_000,
     volumeUsd1d: null, extra: { measurement: { tvlMeasured: true, volumeMeasured: false, balanceMeasured: false, maturityMeasured: false, priceMeasured: true, synthetic: false } },
   };
-  const metric = initMetrics("usdc-circle", "USDC");
-  metric.topPools.push(pool);
+  const metric = initSourcePoolGraph("usdc-circle", "USDC");
+  metric.pools.push(pool);
   const input = {
     metrics: new Map([["usdc-circle", metric]]),
     chainAddressToId: new Map([[`${chain}:${TOKEN0}`, "usdc-circle"], [`${chain}:${TOKEN1}`, "usdt-tether"]]),

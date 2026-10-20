@@ -9,7 +9,7 @@ import { getDexMeasuredExecutionDeployment, isDexMeasuredExecutionDeploymentScor
 import { createDexMeasuredExecutionRpcBudget } from "../measured-execution/profiles";
 import { captureQuoterV2Pools, QUOTER_V2_CAPTURE_MAX_POOLS, QUOTER_V2_CAPTURE_MAX_REQUESTS, QUOTER_V2_CAPTURE_MAX_WALL_MS } from "./quoter-v2-pool-capture";
 import { normalizeProtocol } from "./pool-helpers";
-import type { LiquidityMetrics, PoolEntry, SymbolLookups } from "./types";
+import type { SourcePoolGraph, PoolEntry, SymbolLookups } from "./types";
 import { incrementReason, type TargetEnrichmentTelemetry } from "./route-telemetry";
 
 /** Bounded, hourly-rotating identity probes; selection is never execution evidence. */
@@ -48,7 +48,7 @@ export function selectQuoterV2EnrichmentCandidates(
 
 /** Address-bound recovery only; fingerprints continue through the unique-source candidate resolver. */
 export async function enrichQuoterV2ExecutionTargets(input: {
-  metrics: Map<string, LiquidityMetrics>;
+  metrics: Map<string, SourcePoolGraph>;
   chainAddressToId: SymbolLookups["chainAddressToId"];
   stablecoinPriceById: Map<string, number>;
   chainRpcs?: Map<string, ChainRpcConfig>;
@@ -60,7 +60,7 @@ export async function enrichQuoterV2ExecutionTargets(input: {
 }): Promise<{ exactPoolCount: number; exactCapableAssets: string[]; telemetry: TargetEnrichmentTelemetry }> {
   const groups = new Map<string, { chain: string; adapterProfileId: DexMeasuredExecutionDeployment["adapterProfileId"]; pools: Map<`0x${string}`, Array<{ stablecoinId: string; pool: PoolEntry }>> }>();
   for (const [stablecoinId, metric] of input.metrics) {
-    for (const pool of metric.topPools) {
+    for (const pool of metric.pools) {
       if (pool.extra?.measuredExecutionTarget || pool.extra?.ammExecutionModel || pool.extra?.measurement?.synthetic) continue;
       const protocol = normalizeProtocol(pool.project);
       const adapterProfileId = protocol === "uniswap-v3" ? "uniswap-v3-quoter-v2"

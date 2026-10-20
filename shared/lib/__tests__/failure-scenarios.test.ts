@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
-import { describe, expect, it } from "vitest";
-import type { FailureScenario } from "../../types/failure-scenarios";
+import { describe, expect, expectTypeOf, it } from "vitest";
+import type { z } from "zod";
+import { FailureScenarioStructuralSchema, type FailureScenario } from "../../types/failure-scenarios";
 import {
   FailureScenarioSchema,
   FailureScenariosByIdSchema,
@@ -130,6 +131,29 @@ describe("failure scenario publication", () => {
 });
 
 describe("failure scenario schema and identity", () => {
+  it("derives structural output while retaining lib-owned semantic admission", () => {
+    expectTypeOf<z.output<typeof FailureScenarioSchema>>().toEqualTypeOf<FailureScenario>();
+    expectTypeOf<z.input<typeof FailureScenarioSchema>["sources"][number]["url"]>().toEqualTypeOf<string>();
+    expectTypeOf<FailureScenario["sources"][number]["url"]>().toEqualTypeOf<`http${string}`>();
+    const scenario = fixture();
+    scenario.coinId = "unknown-fixture-coin";
+    scenario.stages[0]!.targets![0]!.address = "0xgg";
+    expect(FailureScenarioStructuralSchema.safeParse(scenario).success).toBe(true);
+    expect(FailureScenarioSchema.safeParse(scenario).success).toBe(false);
+  });
+
+  it("retains EVM admission for alternative branch targets", () => {
+    const scenario = branchedFixture();
+    scenario.branchPoint!.branches[0]!.stages[0]!.targets![0]!.address = "0xgg";
+    const result = FailureScenarioSchema.safeParse(scenario);
+    expect(result.success).toBe(false);
+    if (result.success) throw new Error("expected branch target rejection");
+    expect(result.error.issues).toContainEqual(expect.objectContaining({
+      path: ["branchPoint", "branches", 0, "stages", 0, "targets", 0, "address"],
+      message: "Expected a 20-byte hex EVM address",
+    }));
+  });
+
   it.each(["stages", "defenders", "keyFigures"] as const)("rejects dangling %s sourceIds", (field) => {
     const scenario = fixture();
     scenario[field][0]!.sourceIds = ["missing"];

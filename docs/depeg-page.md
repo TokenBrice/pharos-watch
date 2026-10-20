@@ -229,7 +229,9 @@ and its current representative in the fetched event ledger (same coin/direction,
 multiple constituents). The historical row keeps its reserved URL even when the
 representative is sub-threshold; no replacement route or redirect is invented.
 Unexplained missing IDs still fail the shrink guard without the reviewed
-`--allow-archive-shrink` override. The release SEO gate also compares the deployed
+`--allow-archive-shrink` override. Rejection logs name the slug, event/representative
+IDs, incident state and failed lineage checks; lookup logs identify the resolved
+API lane or explain why no lookup ran. The release SEO gate also compares the deployed
 sitemap, including refresh-only routes absent from the checked-in snapshot. Every
 published URL must remain submitted or receive a direct 301 to its surviving
 submitted incident when DDR consolidates fragments. Reviewed artifact removals use

@@ -3,7 +3,7 @@ import { mockD1 } from "@shared/test-utils/mock-d1";
 import { jsonResponse, mockFetch, type MockFetchSpy } from "@shared/test-utils/mock-fetch";
 import { buildAlchemyUrl } from "../../lib/alchemy-logs";
 import { mintBurnRpcEndpoints } from "../../lib/mint-burn-pipeline/rpc";
-import { fetchEvmTokenCurrentBalance } from "../../lib/blacklist/balance-providers";
+import { fetchEvmTokenBalance } from "../../lib/blacklist/balance-providers";
 import type { ContractEventConfig } from "../../lib/blacklist-contracts";
 import { createBlacklistRunBudget } from "../../lib/blacklist/run-budget";
 import {
@@ -233,9 +233,10 @@ describe("blacklist balance reads", () => {
       respond: rpcRespond(() => ({ result: word(50_000_000n) })),
     }], { requireMatch: true });
 
-    const amount = await fetchEvmTokenCurrentBalance(
+    const amount = await fetchEvmTokenBalance(
       config,
       "0x" + "aa".repeat(20),
+      "latest",
       null,
       null,
       limiter,
@@ -261,9 +262,10 @@ describe("blacklist balance reads", () => {
 
     const fetchMock = mockFetch([], { requireMatch: true });
 
-    const amount = await fetchEvmTokenCurrentBalance(
+    const amount = await fetchEvmTokenBalance(
       bscBlacklistConfig(),
       "0x" + "aa".repeat(20),
+      "latest",
       null,
       null,
       limiter,

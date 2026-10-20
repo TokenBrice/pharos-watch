@@ -5,7 +5,6 @@ import {
 } from "../dex-discovery/types";
 import { STAGED_POOL_PRICE_MAX_AGE_HOURS } from "../../lib/dex-cron-constants";
 import { DEX_VOLUME_OBSERVATION_MAX_AGE_SEC } from "@shared/lib/dex-volume-availability";
-import { DEX_VOLUME_ZERO_PROVENANCE_EXEMPT_SOURCES, DEX_VOLUME_ZERO_PROVENANCE_SINCE_SEC } from "./constants";
 
 export interface RegistryPoolView {
   stablecoinId: string;
@@ -21,8 +20,7 @@ export interface RegistryPoolView {
    * trusted row inside the volume admission window (72h), else the freshest row
    * with any reading (so an aged reading is classified stale, never counted),
    * else null when no source observed volume. Future observations are rejected
-   * whole before any field is resolved. A non-exempt zero refreshed before
-   * DEX_VOLUME_ZERO_PROVENANCE_SINCE_SEC is not a usable reading.
+   * whole before any field is resolved.
    */
   volume: StagedPool | null;
   discoveredAt: number;
@@ -81,9 +79,7 @@ export function resolveRegistryPools(rows: StagedPool[], nowSec: number): Regist
     const price = group.find((row) => row.priceUsd != null && row.priceUsd > 0
       && nowSec - row.refreshedAt <= STAGED_POOL_PRICE_MAX_AGE_HOURS * 3600) ?? null;
     const volumeRows = group.filter((row) =>
-      row.volume24h != null && Number.isFinite(row.volume24h) && row.volume24h >= 0
-      && !(row.volume24h === 0 && row.refreshedAt < DEX_VOLUME_ZERO_PROVENANCE_SINCE_SEC
-        && DEX_VOLUME_ZERO_PROVENANCE_EXEMPT_SOURCES[row.source] !== true));
+      row.volume24h != null && Number.isFinite(row.volume24h) && row.volume24h >= 0);
     const volume = volumeRows.find((row) => nowSec - row.refreshedAt <= STAGED_POOL_FRESH_HOURS * 3600)
       ?? volumeRows.find((row) => nowSec - row.refreshedAt <= DEX_VOLUME_OBSERVATION_MAX_AGE_SEC)
       ?? volumeRows.reduce<StagedPool | null>((best, row) => best == null || compareFreshness(row, best) < 0 ? row : best, null);

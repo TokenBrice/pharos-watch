@@ -87,40 +87,44 @@ interface DdrAssessmentRecord {
   updatedAt: number;
 }
 
-const DDR_ASSESSMENT_INSERT_COLUMNS = [
-  "event_id",
-  "stablecoin_id",
-  "symbol",
-  "name",
-  "peg_currency",
-  "governance",
-  "direction",
-  "started_at",
-  "assessed_at",
-  "event_age_sec",
-  "checkpoint",
-  "methodology_version",
-  "methodology_version_label",
-  "resolution_rubric_version",
-  "duration_model_version",
-  "incident_grouping_version",
-  "support_rules_version",
-  "resolution_tier",
-  "duration_suppressed",
-  "duration_suppressed_reason",
-  "median_remaining_sec",
-  "iqr_low_remaining_sec",
-  "iqr_high_remaining_sec",
-  "stratum",
-  "horizons_json",
-  "factors_json",
-  "row_json",
-  "created_at",
-  "updated_at",
-] as const;
+const DDR_ASSESSMENT_COLUMNS = [
+  ["event_id", "eventId"],
+  ["stablecoin_id", "stablecoinId"],
+  ["symbol", "symbol"],
+  ["name", "name"],
+  ["peg_currency", "pegCurrency"],
+  ["governance", "governance"],
+  ["direction", "direction"],
+  ["started_at", "startedAt"],
+  ["assessed_at", "assessedAt"],
+  ["event_age_sec", "eventAgeSec"],
+  ["checkpoint", "checkpoint"],
+  ["methodology_version", "methodologyVersion"],
+  ["methodology_version_label", "methodologyVersionLabel"],
+  ["resolution_rubric_version", "resolutionRubricVersion"],
+  ["duration_model_version", "durationModelVersion"],
+  ["incident_grouping_version", "incidentGroupingVersion"],
+  ["support_rules_version", "supportRulesVersion"],
+  ["resolution_tier", "resolutionTier"],
+  ["duration_suppressed", "durationSuppressed"],
+  ["duration_suppressed_reason", "durationSuppressedReason"],
+  ["median_remaining_sec", "medianRemainingSec"],
+  ["iqr_low_remaining_sec", "iqrLowRemainingSec"],
+  ["iqr_high_remaining_sec", "iqrHighRemainingSec"],
+  ["stratum", "stratum"],
+  ["horizons_json", "horizonsJson"],
+  ["factors_json", "factorsJson"],
+  ["row_json", "rowJson"],
+  ["created_at", "createdAt"],
+  ["updated_at", "updatedAt"],
+] as const satisfies readonly (readonly [string, keyof DdrAssessmentRecord])[];
 
-const DDR_ASSESSMENT_INSERT_COLUMNS_SQL = DDR_ASSESSMENT_INSERT_COLUMNS.join(", ");
-const DDR_ASSESSMENT_INSERT_PLACEHOLDERS_SQL = DDR_ASSESSMENT_INSERT_COLUMNS.map(() => "?").join(", ");
+const DDR_ASSESSMENT_INSERT_COLUMNS_SQL = DDR_ASSESSMENT_COLUMNS.map(([column]) => column).join(", ");
+const DDR_ASSESSMENT_INSERT_PLACEHOLDERS_SQL = DDR_ASSESSMENT_COLUMNS.map(() => "?").join(", ");
+const DDR_ASSESSMENT_LATEST_UPDATES_SQL = DDR_ASSESSMENT_COLUMNS
+  .filter(([column]) => column !== "event_id" && column !== "checkpoint" &&
+    column !== "methodology_version" && column !== "created_at")
+  .map(([column]) => `${column} = excluded.${column}`).join(", ");
 
 export function ddrAssessmentInsertSql(verb: "INSERT INTO" | "INSERT OR IGNORE INTO"): string {
   return `${verb} depeg_resolver_assessments
@@ -225,37 +229,7 @@ function buildAssessmentRecord(
 }
 
 export function bindDdrAssessmentInsert(stmt: D1PreparedStatement, record: DdrAssessmentRecord): D1PreparedStatement {
-  return stmt.bind(
-    record.eventId,
-    record.stablecoinId,
-    record.symbol,
-    record.name,
-    record.pegCurrency,
-    record.governance,
-    record.direction,
-    record.startedAt,
-    record.assessedAt,
-    record.eventAgeSec,
-    record.checkpoint,
-    record.methodologyVersion,
-    record.methodologyVersionLabel,
-    record.resolutionRubricVersion,
-    record.durationModelVersion,
-    record.incidentGroupingVersion,
-    record.supportRulesVersion,
-    record.resolutionTier,
-    record.durationSuppressed,
-    record.durationSuppressedReason,
-    record.medianRemainingSec,
-    record.iqrLowRemainingSec,
-    record.iqrHighRemainingSec,
-    record.stratum,
-    record.horizonsJson,
-    record.factorsJson,
-    record.rowJson,
-    record.createdAt,
-    record.updatedAt,
-  );
+  return stmt.bind(...DDR_ASSESSMENT_COLUMNS.map(([, property]) => record[property]));
 }
 
 export async function writeDepegResolverAssessments(
@@ -279,31 +253,7 @@ export async function writeDepegResolverAssessments(
   const upsertLatest = db.prepare(
     `${ddrAssessmentInsertSql("INSERT INTO")}
      ON CONFLICT(event_id, checkpoint, methodology_version) DO UPDATE SET
-       stablecoin_id = excluded.stablecoin_id,
-       symbol = excluded.symbol,
-       name = excluded.name,
-       peg_currency = excluded.peg_currency,
-       governance = excluded.governance,
-       direction = excluded.direction,
-       started_at = excluded.started_at,
-       assessed_at = excluded.assessed_at,
-       event_age_sec = excluded.event_age_sec,
-       methodology_version_label = excluded.methodology_version_label,
-       resolution_rubric_version = excluded.resolution_rubric_version,
-       duration_model_version = excluded.duration_model_version,
-       incident_grouping_version = excluded.incident_grouping_version,
-       support_rules_version = excluded.support_rules_version,
-       resolution_tier = excluded.resolution_tier,
-       duration_suppressed = excluded.duration_suppressed,
-       duration_suppressed_reason = excluded.duration_suppressed_reason,
-       median_remaining_sec = excluded.median_remaining_sec,
-       iqr_low_remaining_sec = excluded.iqr_low_remaining_sec,
-       iqr_high_remaining_sec = excluded.iqr_high_remaining_sec,
-       stratum = excluded.stratum,
-       horizons_json = excluded.horizons_json,
-       factors_json = excluded.factors_json,
-       row_json = excluded.row_json,
-       updated_at = excluded.updated_at`,
+       ${DDR_ASSESSMENT_LATEST_UPDATES_SQL}`,
   );
 
   const statements: D1PreparedStatement[] = [];

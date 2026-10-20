@@ -13,7 +13,8 @@ import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { syncYieldData } from "../sync-yield-data";
 import { getCache } from "../../lib/db-cache";
 import { shouldAttemptFetch } from "../../lib/circuit-breaker";
-import * as yieldConfigModule from "../../lib/yield-config/yield-config";
+import * as yieldRateSources from "../../lib/yield-config/yield-config-rate-sources";
+import * as yieldLendingProtocols from "../../lib/yield-config/yield-config-lending-protocols";
 import {
   cacheRow,
   healthyRiskFreeRateCacheRow,
@@ -69,7 +70,7 @@ describe("syncYieldData publication sentinels", () => {
   });
 
   it("selects fresh curated evidence over a deterministic modeled proxy", async () => {
-    const configs = yieldConfigModule.RATE_DERIVED_CONFIGS as typeof yieldConfigModule.RATE_DERIVED_CONFIGS;
+    const configs = yieldRateSources.RATE_DERIVED_CONFIGS as typeof yieldRateSources.RATE_DERIVED_CONFIGS;
     configs.push({
       stablecoinId: "100",
       spreadBps: 25,
@@ -284,7 +285,7 @@ describe("auto-lending safety availability", () => {
   it("retains eligible lending candidates as unrated when the expected safety snapshot is unavailable", () => {
     const resolved: ResolvedYieldEntry[] = [];
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    const autoLendingPoolMap = yieldConfigModule.AUTO_LENDING_POOL_MAP as Record<string, string>;
+    const autoLendingPoolMap = yieldLendingProtocols.AUTO_LENDING_POOL_MAP as Record<string, string>;
     autoLendingPoolMap["usdc-circle"] = "pool-usdc-aave";
 
     try {

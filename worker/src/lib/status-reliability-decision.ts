@@ -1,6 +1,6 @@
+import type { StatusHealthValue } from "@shared/types/status/core";
 import {
   STATUS_DEGRADED_TO_STALE_THRESHOLD,
-  type StatusLevel,
 } from "./status-reliability-shared";
 
 interface StatusHysteresisPolicy {
@@ -13,12 +13,12 @@ interface StatusHysteresisPolicy {
 }
 
 export function decideNextStatus(
-  current: StatusLevel,
-  raw: StatusLevel,
+  current: StatusHealthValue,
+  raw: StatusHealthValue,
   counters: { healthy: number; degraded: number; stale: number },
   dwellSec: number,
   policy: StatusHysteresisPolicy,
-): { next: StatusLevel; changed: boolean; reason: string } {
+): { next: StatusHealthValue; changed: boolean; reason: string } {
   if (current === "healthy" && raw === "stale" && counters.stale >= policy.escalateToStale) {
     return { next: "stale", changed: true, reason: "raw-stale-immediate-escalation" };
   }

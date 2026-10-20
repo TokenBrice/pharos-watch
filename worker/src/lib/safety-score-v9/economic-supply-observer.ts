@@ -1,14 +1,13 @@
 import { decodeAbiParameters, encodeAbiParameters, keccak256, parseAbiParameters, toFunctionSelector, toHex } from "viem/utils";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
-import { sha256Hex, sha256HexFromUtf8Chunks } from "@shared/lib/sha256";
+import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
-import { parseXrplIssuedCurrencyAmount } from "@shared/lib/deployment-amounts";
 import { CurveLzPendingCheckpointSchema, type CurveLzPendingCheckpoint, type CurveLzPendingRead, type EconomicSupplyObservation, type EconomicSupplyReference, type ReviewedEconomicSupplyPlan, type ReviewedEconomicDeploymentPartition } from "@shared/types/safety-score-v9-supply-attribution";
 import type { SupplyAttributionRejectionCode } from "@shared/lib/safety-score-v9-supply-attribution-journal";
 import { rethrowIfAborted, throwIfAborted } from "../abort";
-import { getRpcAuthHeaders, type ChainRpcConfig } from "../chain-registry";
+import type { ChainRpcConfig } from "../chain-registry";
 import type { DwellirNativeCapability } from "../dwellir-native";
 import { getCache, setCache } from "../db-cache";
 import { fetchEvmBlockHeader, fetchEvmBlockNumber, fetchEvmMulticall3Aggregate3AtBlock, fetchEvmRpcBatch, type EvmBlockHeader, type EvmMulticall3Call, type EvmMulticall3Result, type EvmRpcOptions, type RecentFinalizedRpcPin } from "../evm-rpc";
@@ -25,6 +24,7 @@ import { observeCcipPending } from "./ccip-pending-observer";
 import { cancelResponseBodyQuietly, isResponseBodyTooLargeError, readResponseTextWithinLimitWithSignal, type BodyReadObserver } from "../response-body";
 import type { SupplyAttributionAttemptDiagnostic } from "@shared/types/safety-score-v9-supply-attribution";
 import { emitSupplyAttributionDiagnostic, type SupplyAttributionPhase } from "./supply-attribution-diagnostics";
+import { readEconomicXrplHolding } from "./economic-supply-observer-readers";
 
 export const ECONOMIC_SUPPLY_BODY_CAPS = Object.freeze({ conversion: 256 * 1024, xrplGatewayBalances: 1024 * 1024, xrplLedger: 128 * 1024 });
 
@@ -390,6 +390,50 @@ export type ReviewedEconomicSupplyObservationAttempt =
   | { status: "accepted"; attribution: ReviewedEconomicDeploymentPartition }
   | { status: "rejected"; rejectionCode: SupplyAttributionRejectionCode; failedRouteId: string | null; rejectedSourceObservedAtSec?: number | null };
 
+type PendingProtocolRead = Exclude<Extract<NonNullable<ReviewedEconomicSupplyPlan["escrows"][number]["inFlightSource"]>, { kind: string }>, { kind: "evm-pending-state" }>;
+type PendingProofAttempt =
+  | { status: "accepted"; observation: EconomicSupplyObservation }
+  | { status: "rejected"; reason: string };
+
+/** Dispatch proof readers only; the caller owns pins, route names and phase order. */
+async function readReviewedPendingProof(
+  source: PendingProtocolRead, id: string, deploymentKey: string, liability: boolean,
+  headers: Map<string, EvmBlockHeader>,
+  input: Pick<Parameters<typeof observeReviewedEconomicDeploymentPartitionInternal>[0], "scoringClockSec" | "chainRpcs" | "signal" | "db" | "onDiagnostic" | "onPhase">,
+): Promise<PendingProofAttempt> {
+  const project = (
+    header: EvmBlockHeader, result: { amount: string; responseSha256: string },
+    proof: Pick<EconomicSupplyObservation, "ccipPendingProof" | "curvePendingProof" | "l2MessengerPendingProof" | "layerZeroOftPendingProof">,
+  ): PendingProofAttempt => ({ status: "accepted", observation: {
+    id, deploymentKey, amount: result.amount, observedAtSec: header.timestamp,
+    anchor: String(header.number), anchorHash: header.hash, responseSha256: result.responseSha256, ...proof,
+  } });
+  if (source.kind === "evm-ccip-pending") {
+    const result = await observeCcipPending({ source, headers, clockSec: input.scoringClockSec,
+      chainRpcs: input.chainRpcs, signal: input.signal, db: input.db, onDiagnostic: input.onDiagnostic, onPhase: input.onPhase });
+    if (result.status !== "accepted") return result;
+    const header = headers.get(source.chainId);
+    if (!header && liability) return { status: "rejected", reason: "pin-missing" };
+    return project(header!, result, { ccipPendingProof: result.proof });
+  }
+  const pins = source.kind === "evm-l2-messenger-pending"
+    ? [headers.get(source.chainId), headers.get(source.l2ChainId)]
+    : source.sides.map(side => headers.get(side.chainId));
+  if (pins.some(pin => pin === undefined)) return { status: "rejected", reason: "pin-missing" };
+  const options = { headers: pins as EvmBlockHeader[], clockSec: input.scoringClockSec,
+    chainRpcs: input.chainRpcs, signal: input.signal, db: input.db };
+  if (source.kind === "evm-curve-lz-pending") {
+    const result = await observeCurveLzPending({ source, ...options });
+    return result.status === "accepted" ? project(pins[0]!, result, { curvePendingProof: result.proof }) : result;
+  }
+  if (source.kind === "evm-l2-messenger-pending") {
+    const result = await observeL2MessengerPending({ source, ...options, onDiagnostic: input.onDiagnostic });
+    return result.status === "accepted" ? project(pins[0]!, result, { l2MessengerPendingProof: result.proof }) : result;
+  }
+  const result = await observeLayerZeroOftPending({ source, ...options, onDiagnostic: input.onDiagnostic, onPhase: input.onPhase });
+  return result.status === "accepted" ? project(pins[0]!, result, { layerZeroOftPendingProof: result.proof }) : result;
+}
+
 /** Reads only the reviewed census. The aggregate is always copied from admitted source input. */
 export async function observeReviewedEconomicDeploymentPartitionAttempt(
   input: Parameters<typeof observeReviewedEconomicDeploymentPartitionInternal>[0],
@@ -656,19 +700,6 @@ async function observeReviewedEconomicDeploymentPartitionInternal(input: {
         responseSha256: sha256Hex(stableJsonStringifyV1({ source, state, calls, messages, header,
           sourceGeneration: input.fixedInput.sourceGeneration, baseInputGenerationId: input.fixedInput.baseInputGenerationId })) };
     };
-    const readOftPending = async (
-      source: Extract<NonNullable<ReviewedEconomicSupplyPlan["liabilityInFlightSource"]>, { kind: "evm-layerzero-oft-pending" }>,
-      id: string, deploymentKey: string,
-    ): Promise<EconomicSupplyObservation | null> => {
-      const pins = source.sides.map(side => headers.get(side.chainId));
-      if (pins.some(pin => pin === undefined)) { failedRouteId = `${id}:pin-missing`; return null; }
-      const result = await observeLayerZeroOftPending({ source, headers: pins as EvmBlockHeader[], clockSec: input.scoringClockSec, chainRpcs: input.chainRpcs, signal: input.signal, db: input.db, onDiagnostic: input.onDiagnostic, onPhase: input.onPhase });
-      if (result.status !== "accepted") { failedRouteId = `${id}:${result.reason}`; return null; }
-      const header = pins[0]!;
-      return { id, deploymentKey, amount: result.amount, observedAtSec: header.timestamp,
-        anchor: String(header.number), anchorHash: header.hash,
-        responseSha256: result.responseSha256, layerZeroOftPendingProof: result.proof };
-    };
     input.onPhase?.("holdings");
     for (const row of plan.deployments) {
       throwIfAborted(input.signal); failedRouteId = row.routeId ?? row.deploymentKey;
@@ -704,29 +735,10 @@ async function observeReviewedEconomicDeploymentPartitionInternal(input: {
           anchorHash: result.blockHash, responseSha256: result.responseSha256 };
       } else if (row.read.kind === "xrpl-issued-currency" && row.chainId === "xrpl") {
         const url = input.chainRpcs.get("xrpl")?.endpoints[0]?.url ?? getPublicRpcUrl("xrpl");
-        if (url) {
-          const response = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json", ...getRpcAuthHeaders(url) }, body: JSON.stringify({ method: "gateway_balances", params: [{ account: row.read.issuer, ledger_index: "validated", strict: true }] }), signal: input.signal });
-          if (!response.ok) { await cancelResponseBodyQuietly(response); return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId }; }
-          bodyOrigin = new URL(url).origin; bodyMethod = "gateway_balances";
-          const text = await readResponseTextWithinLimitWithSignal(response, ECONOMIC_SUPPLY_BODY_CAPS.xrplGatewayBalances, input.signal, input.onBodyRead);
-          const body = JSON.parse(text) as { result?: { validated?: boolean; ledger_index?: number; ledger_hash?: string; obligations?: Record<string, string> } };
-          const result = body.result, value = result?.obligations?.[row.read.currency];
-          if (response.ok && result?.validated === true && Number.isSafeInteger(result.ledger_index) && typeof result.ledger_hash === "string" && /^[A-Fa-f0-9]{64}$/.test(result.ledger_hash) && typeof value === "string") {
-            const amount = parseXrplIssuedCurrencyAmount({ issuer: row.read.issuer, currency: row.read.currency, value }, row.read);
-            if (!amount.coefficient.startsWith("-")) {
-              const coefficient = amount.coefficient, exponent = amount.exponent;
-              const decimal = exponent >= 0 ? coefficient + "0".repeat(exponent) : coefficient.length + exponent > 0 ? `${coefficient.slice(0, coefficient.length + exponent)}.${coefficient.slice(coefficient.length + exponent)}` : `0.${"0".repeat(-exponent - coefficient.length)}${coefficient}`;
-              // Read the pinned ledger's true close clock; a response receipt clock is not a ledger clock.
-              const ledgerResponse = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json", ...getRpcAuthHeaders(url) }, body: JSON.stringify({ method: "ledger", params: [{ ledger_hash: result.ledger_hash }] }), signal: input.signal });
-              if (!ledgerResponse.ok) { await cancelResponseBodyQuietly(ledgerResponse); return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId }; }
-              bodyMethod = "ledger";
-              const ledgerText = await readResponseTextWithinLimitWithSignal(ledgerResponse, ECONOMIC_SUPPLY_BODY_CAPS.xrplLedger, input.signal, input.onBodyRead);
-              const ledger = JSON.parse(ledgerText) as { result?: { ledger?: { close_time?: number; ledger_hash?: string } } };
-              const close = ledger.result?.ledger?.close_time;
-              if (ledgerResponse.ok && ledger.result?.ledger?.ledger_hash === result.ledger_hash && Number.isInteger(close)) observation = { id: row.deploymentKey, deploymentKey: row.deploymentKey, amount: decimal.includes(".") ? decimal.replace(/0+$/, "").replace(/\.$/, "") : decimal, observedAtSec: close! + 946684800, anchor: String(result.ledger_index), anchorHash: result.ledger_hash.toLowerCase(), responseSha256: sha256HexFromUtf8Chunks([text, ledgerText]) };
-            }
-          }
-        }
+        if (url) observation = await readEconomicXrplHolding({
+          row, url, bodyCaps: ECONOMIC_SUPPLY_BODY_CAPS, signal: input.signal, onBodyRead: input.onBodyRead,
+          onBodyMethod: method => { bodyOrigin = new URL(url).origin; bodyMethod = method; },
+        });
       }
       if (!observation) return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId };
       observations.push(observation);
@@ -762,39 +774,14 @@ async function observeReviewedEconomicDeploymentPartitionInternal(input: {
       failedRouteId = escrow.id;
       if ("kind" in escrow.inFlightSource) {
         let pending: EconomicSupplyObservation | null;
-        if (escrow.inFlightSource.kind === "evm-ccip-pending") {
-          const source = escrow.inFlightSource;
-          const result = await observeCcipPending({ source, headers, clockSec: input.scoringClockSec,
-            chainRpcs: input.chainRpcs, signal: input.signal, db: input.db, onDiagnostic: input.onDiagnostic, onPhase: input.onPhase });
-          if (result.status !== "accepted") return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: `${escrow.id}:${result.reason}` };
-          const header = headers.get(source.chainId)!;
-          pending = { id: `in-flight:${escrow.id}`, deploymentKey: escrow.canonicalDeploymentKey, amount: result.amount,
-            observedAtSec: header.timestamp, anchor: String(header.number), anchorHash: header.hash,
-            responseSha256: result.responseSha256, ccipPendingProof: result.proof };
-        } else if (escrow.inFlightSource.kind === "evm-curve-lz-pending") {
-          const source = escrow.inFlightSource;
-          const pins = source.sides.map(side => headers.get(side.chainId));
-          if (pins.some(pin => pin === undefined)) return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: `${escrow.id}:pin-missing` };
-          const result = await observeCurveLzPending({ source, headers: pins as EvmBlockHeader[], clockSec: input.scoringClockSec, chainRpcs: input.chainRpcs, signal: input.signal, db: input.db });
-          if (result.status !== "accepted") return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: `${escrow.id}:${result.reason}` };
-          const header = pins[0]!;
-          pending = { id: `in-flight:${escrow.id}`, deploymentKey: escrow.canonicalDeploymentKey, amount: result.amount,
-            observedAtSec: header.timestamp, anchor: String(header.number), anchorHash: header.hash,
-            responseSha256: result.responseSha256, curvePendingProof: result.proof };
-        } else if (escrow.inFlightSource.kind === "evm-l2-messenger-pending") {
-          const source = escrow.inFlightSource;
-          const pins = [headers.get(source.chainId), headers.get(source.l2ChainId)];
-          if (pins.some(pin => pin === undefined)) return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: `${escrow.id}:pin-missing` };
-          const result = await observeL2MessengerPending({ source, headers: pins as EvmBlockHeader[], clockSec: input.scoringClockSec, chainRpcs: input.chainRpcs, signal: input.signal, db: input.db, onDiagnostic: input.onDiagnostic });
-          if (result.status !== "accepted") return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: `${escrow.id}:${result.reason}` };
-          const header = pins[0]!;
-          pending = { id: `in-flight:${escrow.id}`, deploymentKey: escrow.canonicalDeploymentKey, amount: result.amount,
-            observedAtSec: header.timestamp, anchor: String(header.number), anchorHash: header.hash,
-            responseSha256: result.responseSha256, l2MessengerPendingProof: result.proof };
-        } else if (escrow.inFlightSource.kind === "evm-layerzero-oft-pending") {
-          pending = await readOftPending(escrow.inFlightSource, `in-flight:${escrow.id}`, escrow.canonicalDeploymentKey);
-        } else {
+        if (escrow.inFlightSource.kind === "evm-pending-state") {
           pending = await readPendingState(escrow.inFlightSource, escrow);
+        } else {
+          const result = await readReviewedPendingProof(escrow.inFlightSource, `in-flight:${escrow.id}`,
+            escrow.canonicalDeploymentKey, false, headers, input);
+          if (result.status !== "accepted") return { status: "rejected", rejectionCode: "deployment-state-unavailable",
+            failedRouteId: `${escrow.inFlightSource.kind === "evm-layerzero-oft-pending" ? `in-flight:${escrow.id}` : escrow.id}:${result.reason}` };
+          pending = result.observation;
         }
         if (!pending) return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId };
         inFlight.push(pending);
@@ -809,22 +796,13 @@ async function observeReviewedEconomicDeploymentPartitionInternal(input: {
       failedRouteId = "in-flight:liability";
       const source = plan.liabilityInFlightSource;
       if ("kind" in source) {
-        if (source.kind === "evm-layerzero-oft-pending") {
-          const pending = await readOftPending(source, "in-flight:liability", plan.deployments[0]!.deploymentKey);
-          if (!pending) return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId };
-          inFlight.push(pending);
-        } else if (source.kind === "evm-ccip-pending") {
-          const result = await observeCcipPending({ source, headers, clockSec: input.scoringClockSec,
-            chainRpcs: input.chainRpcs, signal: input.signal, db: input.db, onDiagnostic: input.onDiagnostic, onPhase: input.onPhase });
-          if (result.status !== "accepted") return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: `in-flight:liability:${result.reason}` };
-          const header = headers.get(source.chainId);
-          if (!header) return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: "in-flight:liability:pin-missing" };
-          inFlight.push({ id: "in-flight:liability", deploymentKey: plan.deployments[0]!.deploymentKey, amount: result.amount,
-            observedAtSec: header.timestamp, anchor: String(header.number), anchorHash: header.hash,
-            responseSha256: result.responseSha256, ccipPendingProof: result.proof });
-        } else {
+        // Liability plans deliberately support fewer protocols than escrow plans.
+        if (source.kind !== "evm-layerzero-oft-pending" && source.kind !== "evm-ccip-pending") {
           return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: "in-flight:liability:unsupported-read" };
         }
+        const result = await readReviewedPendingProof(source, "in-flight:liability", plan.deployments[0]!.deploymentKey, true, headers, input);
+        if (result.status !== "accepted") return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: `in-flight:liability:${result.reason}` };
+        inFlight.push(result.observation);
       } else {
         bodyOrigin = new URL(source.url).origin; bodyMethod = "conversion";
         const pending = await readReviewedApiAmount(source, input.signal, input.onBodyRead);

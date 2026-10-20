@@ -154,6 +154,14 @@ export const V9EvidenceGapClassificationsV1Schema = z.object({
   });
 }).transform((registry) => ({ ...registry, entries: [...registry.entries].sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0) }));
 
+/** Authored tables are expanded at intake; runtime classifications remain full scoped rows. */
+export const V9AuthoredEvidenceGapClassificationsEnvelopeSchema = z.object({
+  schemaVersion: z.literal(1),
+  entries: z.array(z.object({ assetId: CanonicalKeySchema }).passthrough()),
+  sourceObservations: z.array(z.object({ id: CanonicalKeySchema, value: z.unknown() }).strict()),
+  searchedSurfaceObservations: z.array(z.object({ id: CanonicalKeySchema, value: z.unknown() }).strict()),
+}).strict();
+
 /** Catalog, captured scope and clock admission are required in addition to structural parsing. */
 export function createV9EvidenceGapClassificationsV1Schema(context: {
   assetIds: ReadonlySet<string>;

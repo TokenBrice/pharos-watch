@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { issue } from "./safety-schema-primitives";
 import { scoreToGrade } from "./safety-score-v9-grade";
 import { V9DependencyEconomicRoleSchema, DependencyTypeSchema } from "./dependency-types";
 import {
@@ -171,26 +172,14 @@ const SafetyScoreV9RoleDependencySchema = z
   .strict()
   .superRefine((dependency, ctx) => {
     if (!isUniqueSorted(dependency.propagationEventEdgeKeys)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["propagationEventEdgeKeys"],
-        message: "V9 role dependency propagation event keys must be unique and sorted",
-      });
+      issue(ctx, ["propagationEventEdgeKeys"], "V9 role dependency propagation event keys must be unique and sorted");
     }
     if (!isUniqueSorted(dependency.evidenceRefIds)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["evidenceRefIds"],
-        message: "V9 role dependency evidence references must be unique and sorted",
-      });
+      issue(ctx, ["evidenceRefIds"], "V9 role dependency evidence references must be unique and sorted");
     }
     const failureDomainKeys = dependency.failureDomains.map((domain) => `${domain.kind}:${domain.key}`);
     if (!isUniqueSorted(failureDomainKeys)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["failureDomains"],
-        message: "V9 role dependency failure domains must be unique and sorted",
-      });
+      issue(ctx, ["failureDomains"], "V9 role dependency failure domains must be unique and sorted");
     }
   });
 
@@ -224,29 +213,17 @@ const SafetyScoreV9DependencySummarySchema = z
     for (const field of ["serial", "basket"] as const) {
       const ids = summary[field].map((dependency) => dependency.upstreamAssetId);
       if (!isUniqueSorted(ids)) {
-        ctx.addIssue({
-          code: "custom",
-          path: [field],
-          message: `V9 ${field} dependencies must have unique, sorted upstream IDs`,
-        });
+        issue(ctx, [field], `V9 ${field} dependencies must have unique, sorted upstream IDs`);
       }
     }
     const roleKeys = (summary.roles ?? []).map(
       (dependency) => `${dependency.role}:${dependency.upstreamAssetId}:${dependency.edgeKey}`,
     );
     if (!isUniqueSorted(roleKeys)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["roles"],
-        message: "V9 role dependencies must have unique, sorted role/upstream/edge keys",
-      });
+      issue(ctx, ["roles"], "V9 role dependencies must have unique, sorted role/upstream/edge keys");
     }
     if (!isUniqueSorted(summary.reasonCodes)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["reasonCodes"],
-        message: "V9 dependency reasons must be unique and sorted",
-      });
+      issue(ctx, ["reasonCodes"], "V9 dependency reasons must be unique and sorted");
     }
   });
 
@@ -321,11 +298,7 @@ function refineCardBase(
     }
   }
   if (card.score !== null && card.grade !== scoreToGrade(card.score)) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["grade"],
-      message: "V9 numeric score and grade band must agree",
-    });
+    issue(ctx, ["grade"], "V9 numeric score and grade band must agree");
   }
   if (card.ratingStatus === "rated" && Object.values(card.pillars).filter((pillar) => pillar.aggregationDisposition !== "excluded-a-b" && pillar.score !== null).length < 2) {
     ctx.addIssue({ code: "custom", path: ["pillars"], message: "A rated result requires at least two included pillars" });
@@ -334,11 +307,7 @@ function refineCardBase(
     card.score !== null &&
     (card.qualityScore === null || card.pegAdjustedScore === null || card.pegMultiplier === null)
   ) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["qualityScore"],
-      message: "A rated result requires quality and peg-adjusted scores",
-    });
+    issue(ctx, ["qualityScore"], "A rated result requires quality and peg-adjusted scores");
   }
   if (card.ratingStatus === "not-rated" && card.nrReasons.length === 0) {
     ctx.addIssue({ code: "custom", path: ["nrReasons"], message: "An NR result requires an explicit reason" });
@@ -351,29 +320,17 @@ function refineCardBase(
     ctx.addIssue({ code: "custom", path: ["caps"], message: "At most one V9 cap candidate may bind" });
   }
   if (card.score === null && card.bindingCap !== null) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["bindingCap"],
-      message: "An NR result cannot carry a binding cap",
-    });
+    issue(ctx, ["bindingCap"], "An NR result cannot carry a binding cap");
   }
   if (card.score === null && bindingCaps.length > 0) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["caps"],
-      message: "An NR result cannot carry a binding cap candidate",
-    });
+    issue(ctx, ["caps"], "An NR result cannot carry a binding cap candidate");
   }
   if (
     card.bindingCap === null
       ? bindingCaps.length !== 0
       : JSON.stringify(bindingCaps) !== JSON.stringify([card.bindingCap])
   ) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["bindingCap"],
-      message: "V9 binding cap must match the binding cap candidate",
-    });
+    issue(ctx, ["bindingCap"], "V9 binding cap must match the binding cap candidate");
   }
   if (!isUniqueSorted(card.reasonCodes)) {
     ctx.addIssue({ code: "custom", path: ["reasonCodes"], message: "V9 reason codes must be unique and sorted" });
@@ -416,11 +373,7 @@ function refineCurrentCard(card: CardRefinementInput, ctx: z.RefinementCtx, reso
       ctx.addIssue({ code: "custom", path: ["scoreTrace"], message: "Pipeline gaps cannot publish an aggregate, grade stage, adjustment or binding cap" });
     }
     if ((card.breakdowns === null) !== (card.ratingStatus === "not-rated")) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["breakdowns"],
-        message: "V9 component breakdowns are required exactly when a card is rateable",
-      });
+      issue(ctx, ["breakdowns"], "V9 component breakdowns are required exactly when a card is rateable");
     }
     if (card.breakdowns !== null) {
       for (const pillar of ["backing", "exit", "control"] as const) {
@@ -431,11 +384,7 @@ function refineCurrentCard(card: CardRefinementInput, ctx: z.RefinementCtx, reso
         if (
           !numbersAgree(card.breakdowns[pillar].publishedScore, card.pillars[pillar].score)
         ) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["breakdowns", pillar, "publishedScore"],
-            message: "V9 breakdown published score must match the public pillar",
-          });
+          issue(ctx, ["breakdowns", pillar, "publishedScore"], "V9 breakdown published score must match the public pillar");
         }
       }
     }
@@ -533,12 +482,8 @@ function refineResponse(
       response.cards.filter((card) => card.ratingStatus === "rated").length !== response.completeness.ratedCount) {
     ctx.addIssue({ code: "custom", path: ["completeness"], message: "V9 rated and pipeline-gap membership does not reconcile" });
   }
-  for (const issue of findSafetyScoreV9ParentAttributionIssues(response)) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["cards"],
-      message: `${issue.cardId}: ${issue.message}`,
-    });
+  for (const finding of findSafetyScoreV9ParentAttributionIssues(response)) {
+    issue(ctx, ["cards"], `${finding.cardId}: ${finding.message}`);
   }
 }
 

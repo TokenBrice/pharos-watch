@@ -19,8 +19,11 @@ import {
   buildSafetyScoreV9ReviewedAuditedFallbackReserveRows,
   buildSafetyScoreV9ReviewedStaticReserveRows,
   addReviewedStaticReserveEvidence,
+  resolveReviewedReserveAdmission,
 } from "../safety-score-v9/extension-reserves";
 import { buildSafetyScoreV9MechanismReview } from "../safety-score-v9/extension-mechanism";
+import { confidenceForResearch } from "../safety-score-v9/extension-shared";
+import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
 import { createReportCardsFixedInput } from "../../test-helpers/report-cards-fixed-input";
 import { makeV9TwoAssetFixedInput } from "../../test-helpers/v9-fixed-input";
@@ -147,7 +150,27 @@ describe("v10.01 named reserve reports", () => {
       for (const [index, admission] of admissions.entries()) {
         const sourceMeta = index === 0 ? supervised : meta;
         const evidence = new ReviewEvidenceBuilder(meta.id, clockSec);
-        addReviewedStaticReserveEvidence(sourceMeta, admission, evidence, clockSec);
+        const packet = resolveReviewedReserveAdmission({ meta: sourceMeta, clockSec, liveReserveRows: [] });
+        addReviewedStaticReserveEvidence(packet, evidence);
+        const expected = new ReviewEvidenceBuilder(meta.id, clockSec);
+        const report = sourceMeta.proofOfReserves!.latestReport!;
+        const review = sourceMeta.reserveReview!;
+        const projected = packet.projected;
+        expected.add({
+          componentKeys: projected ? ["reviewed-static-reserves",
+            ...buildSafetyScoreV9ReserveClassifications(projected.rows).map(row => `reserve-classification:${row.exposureKey}`)]
+            : ["reserve-composition-history"],
+          sourceId: projected ? "stablecoin-meta.reviewed-audited-fallback-reserves" : "stablecoin-meta.expired-reviewed-static-reserves",
+          reviewedAt: review.reviewedAt, observedAt: report.periodEnd, publishedAt: report.publishedAt,
+          publishedBy: "issuer", confidence: confidenceForResearch(report.confidence),
+          sources: [...review.sources, ...report.sources].filter((source, index, all) =>
+            all.findIndex(candidate => candidate.url === source.url) === index),
+          payload: projected ? { reserveReview: review, reserves: projected.rows, evidenceClass: projected.evidenceClass,
+            provenance: projected.provenance, proofOfReserves: sourceMeta.proofOfReserves }
+            : { reserveReview: review, reserves: sourceMeta.reserves, proofOfReserves: sourceMeta.proofOfReserves },
+          maxAgeSec: 10368000,
+        });
+        expect(stableJsonStringifyV1(evidence.finish())).toBe(stableJsonStringifyV1(expected.finish()));
         const references = evidence.finish().researchEvidence;
         if (ageSec <= 10368000) {
           expect(admission).not.toBeNull();
@@ -459,6 +482,23 @@ describe("reviewed curated reserve admission", () => {
       provenance: "curated",
       rows,
     });
+    for (const meta of [fallbackMeta, reviewedMeta(rows)]) {
+      const packet = resolveReviewedReserveAdmission({ meta, clockSec: CLOCK_SEC, liveReserveRows: [] });
+      const actual = new ReviewEvidenceBuilder(meta.id, CLOCK_SEC);
+      addReviewedStaticReserveEvidence(packet, actual);
+      const projected = packet.projected!;
+      const review = meta.reserveReview!;
+      const expected = new ReviewEvidenceBuilder(meta.id, CLOCK_SEC);
+      expected.add({
+        componentKeys: ["reviewed-static-reserves", ...buildSafetyScoreV9ReserveClassifications(rows)
+          .map(row => `reserve-classification:${row.exposureKey}`)],
+        sourceId: meta.liveReservesConfig ? "stablecoin-meta.reviewed-curated-fallback-reserves" : "stablecoin-meta.reviewed-standalone-reserves",
+        reviewedAt: review.compositionAsOf!, publishedBy: "unknown", confidence: "verified", sources: review.sources,
+        payload: { reserveReview: review, reserves: projected.rows, evidenceClass: "static-validated", provenance: projected.provenance },
+        maxAgeSec: 38 * 86400,
+      });
+      expect(stableJsonStringifyV1(actual.finish())).toBe(stableJsonStringifyV1(expected.finish()));
+    }
   });
 
   function residualMeta(residualPct: number, portfolio: boolean): V9ExtensionRegistryMeta {
@@ -491,6 +531,36 @@ describe("reviewed curated reserve admission", () => {
     }
     return meta;
   }
+
+  it.each([false, true])("retains exact composition evidence bytes, standing=%s", (standing) => {
+    const meta = residualMeta(0, true);
+    const portfolio = meta.reserveReview!.observations![0]!;
+    if (portfolio.kind !== "portfolio-observation") throw new Error("Expected portfolio fixture");
+    if (standing) {
+      const { wholeAssetDenominator: _denominator, ...base } = portfolio;
+      meta.reserveReview!.observations = [{ ...base, kind: "standing-structure",
+        observedAtSec: null, wholeHolderClaim: true, instrumentKey: "fixture-fund" }];
+      meta.reserves = [{ name: "Whole fund claim", pct: 100, risk: "high", assetClass: "fund-share",
+        liquidityHorizon: "over-seven-days", issuerOrObligor: "fixture-fund" }];
+    }
+    const packet = resolveReviewedReserveAdmission({ meta, clockSec: CLOCK_SEC, liveReserveRows: [] });
+    expect(packet.kind).toBe("scoped-observation");
+    if (packet.kind !== "scoped-observation") throw new Error("Expected scoped composition");
+    const actual = new ReviewEvidenceBuilder(meta.id, CLOCK_SEC);
+    addReviewedStaticReserveEvidence(packet, actual);
+    const expected = new ReviewEvidenceBuilder(meta.id, CLOCK_SEC);
+    const structure = meta.reserveReview!.observations![0]!;
+    expected.add({
+      componentKeys: ["reviewed-static-reserves", ...buildSafetyScoreV9ReserveClassifications(packet.projected.rows)
+        .map(row => `reserve-classification:${row.exposureKey}`)],
+      sourceId: `stablecoin-meta.reserve-${structure.kind}`, reviewedAtSec: structure.reviewedAtSec,
+      observedAtSec: structure.observedAtSec ?? structure.reviewedAtSec, confidence: "verified",
+      sources: structure.sources.map(source => ({ label: structure.kind, url: source.url })),
+      payload: { structure, rows: packet.projected.rows },
+      maxAgeSec: standing ? V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.standingStructureMaxAgeSec : 38 * 86400,
+    });
+    expect(stableJsonStringifyV1(actual.finish())).toBe(stableJsonStringifyV1(expected.finish()));
+  });
 
   it.each(["omitted"] as const)("does not bypass %s portfolio obligations through ordinary curated admission", (disposition) => {
     const meta = residualMeta(0, true);
@@ -622,9 +692,9 @@ describe("reviewed curated reserve admission", () => {
       rows, evidenceClass: "static-validated", provenance: "curated-fallback",
     });
     const evidence = new ReviewEvidenceBuilder(meta.id, CLOCK_SEC);
-    addReviewedStaticReserveEvidence(
-      meta, buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(meta, CLOCK_SEC), evidence, CLOCK_SEC,
-    );
+    addReviewedStaticReserveEvidence(resolveReviewedReserveAdmission({
+      meta, clockSec: CLOCK_SEC, liveReserveRows: [],
+    }), evidence);
     expect(evidence.finish().researchEvidence).toMatchObject([{
       sourceId: "stablecoin-meta.reviewed-curated-fallback-reserves",
       observedAtSec: Date.UTC(2026, 5, 30) / 1_000,

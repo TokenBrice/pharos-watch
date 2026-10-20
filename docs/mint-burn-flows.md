@@ -21,6 +21,8 @@ Public `/api/mint-burn-flows` freshness assesses the confirmed critical-lane flo
 
 Fresh and cached flow responses without a sync timestamp retain their body sync warnings and return `Cache-Control: no-store`, `X-Data-Age: unavailable`, and HTTP `Warning: 199`. Neither response-generation time nor cache-write time substitutes for the missing sync clock.
 
+The detail flow card preserves that producer generation through successful refetches and failed refreshes with saved totals. Its local health notice shares the endpoint budgets and warning floors, ages without another fetch, and leaves an explicit unknown clock unavailable. Like the detail page health strip, it excludes only the typed flight-to-quality dependency and its matching advisory because the card renders coin totals, not the market-wide classification.
+
 Mint and burn events measure token creation and destruction, not investor intent. USDai is the reviewed counterexample: a burn can release PYUSD from the hub for sUSDai loan deployment without an equivalent fall in protocol assets. Since methodology v6.21, individually reviewed events of this kind are tagged `flow_type='protocol_internal'` and leave counted flow; see [Reviewed protocol-internal events](#reviewed-protocol-internal-events). The public FAQ and USDai's curated chart annotation keep the measured burn visible without calling it a redemption or investor outflow.
 
 ---
@@ -483,9 +485,11 @@ The public [Flows page](https://pharos.watch/flows/) uses the instrument header 
 - **Run line** (`FlowRunLine`, `src/components/flow-run-line.tsx`; model `src/lib/flow-run-line-model.ts`): x is each scored coin's pressure over the band zones from `GAUGE_BAND_RANGES`; tick height is its `gaugeWeightUsd` on a square-root scale with a 6px floor (uniform, with no driver labels, on payloads without weights); the ink rule is the gauge. Coins outside the score are dashed stubs in a counted gutter, each with a reason (`no-24h-activity`, `below-scoring-floor`, `valuation-partial`, `weight-unavailable`), resolved in the producer's order so weighted `valuation-partial` stubs equal `partialValuationInputs`; the per-coin table's NR cells name the same reason. Without published weights the stage collapses to a short strip. An sr-only table lists every coin's pressure, weight, pull in gauge points and status. It is static (no motion).
 - **Per-coin table**: sorted by pressure vs the 30-day norm, worst first, NR last. Coverage-unknown nets drop the per-cell `*` for one `Unverified` column-header chip with the count (`valuation-unknown`); each cell keeps its screen-reader reason.
 - **Aggregate chart**: partial buckets are hatched columns, the cumulative line's last proven point is labelled where it stops, and the rolling band is a light outlined area with a direct label.
-- **Folds**: "7-day receipt" (`FlowWeekReceipt`: weekly totals and the top 7-day net minter and burner) and "How to read flows" (interpretation and FAQ, JSON-LD kept). The footer names source, cadence and sync freshness and links to the Timeline once.
+- **Folds**: "7-day receipt" (`FlowWeekReceipt`: weekly printed/shredded/net rows, top 7-day net minter and burner, and coverage from one weekly receipt model; the hero owns 24h totals) and "How to read flows" (interpretation and FAQ, JSON-LD kept). Missing weekly hourly data leaves volumes NR; partial valuation and incomplete scans retain their lower-bound or unavailable-net reasons. The footer names source, cadence and sync freshness and links to the Timeline once.
 
 Leaders rank only displayable USD-valued nets/events. Missing chart buckets remain gaps in plots and accessible tables and do not enter rolling averages.
+
+Direction and pressure labels use one shared presentation across detail cards and the per-coin table. An unproven direction remains "Direction unavailable"; pressure retains its explanatory helper text.
 
 The aggregate chart initially selects 7d, sharing the authoritative 168h query with the overview receipt; 24h totals remain an independent query. The 720h variant is admitted only when 30d is selected. No shorter-window totals or valuation-completeness claims are synthesized from a longer response; selecting another window retains the existing canonical keys and cadence.
 

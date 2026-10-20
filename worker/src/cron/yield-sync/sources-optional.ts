@@ -38,7 +38,6 @@ import {
 } from "../../lib/abort";
 import {
   logWorkerEvent,
-  logWorkerEventArgs,
 } from "../../lib/structured-log";
 import {
   buildOnChainSourceKey,
@@ -295,85 +294,70 @@ export async function fetchBprotocolLqtyOnlySource(
     return null;
   }
 
-  try {
-    const lqtyPriceUsd = await fetchCoinGeckoUsdPrice(LIQUITY_LQTY_GECKO_ID, signal, coingeckoApiKey);
-    if (lqtyPriceUsd == null) return null;
+  const lqtyPriceUsd = await fetchCoinGeckoUsdPrice(LIQUITY_LQTY_GECKO_ID, signal, coingeckoApiKey);
+  if (lqtyPriceUsd == null) return null;
 
-    let totalLusdDepositsRaw: bigint | null = null;
-    let totalLqtyIssuedRaw: bigint | null = null;
-    const rpcUrls = resolveRpcUrls(rpc, { order: "primary-first" });
+  let totalLusdDepositsRaw: bigint | null = null;
+  let totalLqtyIssuedRaw: bigint | null = null;
+  const rpcUrls = resolveRpcUrls(rpc, { order: "primary-first" });
 
-    for (const rpcUrl of rpcUrls) {
-      throwIfAborted(signal);
-      const lusdDeposits = await fetchEthCallUint256(
-        rpcUrl,
-        "ethereum",
-        LIQUITY_STABILITY_POOL,
-        LIQUITY_TOTAL_LUSD_DEPOSITS_SELECTOR,
-        signal,
-      );
-      const lqtyIssued = await fetchEthCallUint256(
-        rpcUrl,
-        "ethereum",
-        LIQUITY_COMMUNITY_ISSUANCE,
-        LIQUITY_TOTAL_LQTY_ISSUED_SELECTOR,
-        signal,
-      );
-      if (lusdDeposits != null && lqtyIssued != null) {
-        totalLusdDepositsRaw = lusdDeposits;
-        totalLqtyIssuedRaw = lqtyIssued;
-        break;
-      }
-    }
-
-    if (totalLusdDepositsRaw == null || totalLqtyIssuedRaw == null) return null;
-
-    const totalLusdDeposits = Number(totalLusdDepositsRaw) / 1e18;
-    const totalLqtyIssued = Number(totalLqtyIssuedRaw) / 1e18;
-    if (!Number.isFinite(totalLusdDeposits) || totalLusdDeposits <= 0) return null;
-    if (!Number.isFinite(totalLqtyIssued) || totalLqtyIssued < 0) return null;
-
-    const remainingLqtyRewards = Math.max(
-      0,
-      LIQUITY_STABILITY_POOL_TOTAL_LQTY_REWARD - totalLqtyIssued,
+  for (const rpcUrl of rpcUrls) {
+    throwIfAborted(signal);
+    const lusdDeposits = await fetchEthCallUint256(
+      rpcUrl,
+      "ethereum",
+      LIQUITY_STABILITY_POOL,
+      LIQUITY_TOTAL_LUSD_DEPOSITS_SELECTOR,
+      signal,
     );
-    if (remainingLqtyRewards <= 0) return null;
-
-    const apr =
-      (remainingLqtyRewards * LIQUITY_DAILY_LQTY_ISSUANCE_FACTOR * lqtyPriceUsd * 365 * 100)
-      / totalLusdDeposits;
-    if (!Number.isFinite(apr) || apr <= 0) return null;
-
-    return {
-      currentApy: apr,
-      apyBase: null,
-      apyReward: apr,
-      sourcePool: null,
-      sourceTvlUsd: totalLusdDeposits,
-      dataSource: "onchain",
-      exchangeRate: null,
-      sourceKey: buildOnChainSourceKey(LIQUITY_V1_LUSD_ID),
-      yieldSource: BPROTOCOL_LQTY_ONLY_SOURCE_LABEL,
-      yieldType: BPROTOCOL_LQTY_ONLY_SOURCE_TYPE,
-      // B11 — without an observation timestamp the row classifies
-      // `source-freshness-unknown`, is rejected, and the coin can never score.
-      sourceObservedAt: startSec,
-      comparisonAnchorObservedAt: null,
-    };
-  } catch (error) {
-    if (signal?.aborted) {
-      throw error instanceof Error ? error : new Error(String(error));
+    const lqtyIssued = await fetchEthCallUint256(
+      rpcUrl,
+      "ethereum",
+      LIQUITY_COMMUNITY_ISSUANCE,
+      LIQUITY_TOTAL_LQTY_ISSUED_SELECTOR,
+      signal,
+    );
+    if (lusdDeposits != null && lqtyIssued != null) {
+      totalLusdDepositsRaw = lusdDeposits;
+      totalLqtyIssuedRaw = lqtyIssued;
+      break;
     }
-    logWorkerEvent({
-      scope: "lib",
-      job: "sync-yield-data",
-      level: "warn",
-      event: "bprotocol-source-failed",
-      message: "B.Protocol LQTY-only source failed",
-      error,
-    });
-    return null;
   }
+
+  if (totalLusdDepositsRaw == null || totalLqtyIssuedRaw == null) return null;
+
+  const totalLusdDeposits = Number(totalLusdDepositsRaw) / 1e18;
+  const totalLqtyIssued = Number(totalLqtyIssuedRaw) / 1e18;
+  if (!Number.isFinite(totalLusdDeposits) || totalLusdDeposits <= 0) return null;
+  if (!Number.isFinite(totalLqtyIssued) || totalLqtyIssued < 0) return null;
+
+  const remainingLqtyRewards = Math.max(
+    0,
+    LIQUITY_STABILITY_POOL_TOTAL_LQTY_REWARD - totalLqtyIssued,
+  );
+  if (remainingLqtyRewards <= 0) return null;
+
+  const apr =
+    (remainingLqtyRewards * LIQUITY_DAILY_LQTY_ISSUANCE_FACTOR * lqtyPriceUsd * 365 * 100)
+    / totalLusdDeposits;
+  if (!Number.isFinite(apr) || apr <= 0) return null;
+
+  return {
+    currentApy: apr,
+    apyBase: null,
+    apyReward: apr,
+    sourcePool: null,
+    sourceTvlUsd: totalLusdDeposits,
+    dataSource: "onchain",
+    exchangeRate: null,
+    sourceKey: buildOnChainSourceKey(LIQUITY_V1_LUSD_ID),
+    yieldSource: BPROTOCOL_LQTY_ONLY_SOURCE_LABEL,
+    yieldType: BPROTOCOL_LQTY_ONLY_SOURCE_TYPE,
+    // B11 — without an observation timestamp the row classifies
+    // `source-freshness-unknown`, is rejected, and the coin can never score.
+    sourceObservedAt: startSec,
+    comparisonAnchorObservedAt: null,
+  };
 }
 
 export async function fetchLiquityV2StabilityPoolSource(
@@ -404,102 +388,87 @@ export async function fetchLiquityV2StabilityPoolSource(
     return null;
   }
 
-  try {
-    // One JSON-RPC batch keeps every read on a single provider snapshot: the
-    // registry branch count plus the three per-branch reads. The count guard
-    // fails closed if the collateral governor registers a branch this adapter
-    // does not yet aggregate, so a partial sum can never publish as a
-    // "complete" APR.
-    const calls = [
-      {
-        method: "eth_call",
-        params: [{ to: config.collateralRegistry, data: LIQUITY_V2_TOTAL_COLLATERALS_SELECTOR }, "latest"],
-      },
-      ...config.branches.flatMap((branch) => [
-        { method: "eth_call", params: [{ to: branch.activePool, data: LIQUITY_V2_AGG_WEIGHTED_DEBT_SUM_SELECTOR }, "latest"] },
-        { method: "eth_call", params: [{ to: branch.activePool, data: LIQUITY_V2_SHUTDOWN_TIME_SELECTOR }, "latest"] },
-        { method: "eth_call", params: [{ to: branch.stabilityPool, data: LIQUITY_V2_TOTAL_BOLD_DEPOSITS_SELECTOR }, "latest"] },
-      ]),
-    ];
+  // One JSON-RPC batch keeps every read on a single provider snapshot: the
+  // registry branch count plus the three per-branch reads. The count guard
+  // fails closed if the collateral governor registers a branch this adapter
+  // does not yet aggregate, so a partial sum can never publish as a
+  // "complete" APR.
+  const calls = [
+    {
+      method: "eth_call",
+      params: [{ to: config.collateralRegistry, data: LIQUITY_V2_TOTAL_COLLATERALS_SELECTOR }, "latest"],
+    },
+    ...config.branches.flatMap((branch) => [
+      { method: "eth_call", params: [{ to: branch.activePool, data: LIQUITY_V2_AGG_WEIGHTED_DEBT_SUM_SELECTOR }, "latest"] },
+      { method: "eth_call", params: [{ to: branch.activePool, data: LIQUITY_V2_SHUTDOWN_TIME_SELECTOR }, "latest"] },
+      { method: "eth_call", params: [{ to: branch.stabilityPool, data: LIQUITY_V2_TOTAL_BOLD_DEPOSITS_SELECTOR }, "latest"] },
+    ]),
+  ];
 
-    throwIfAborted(signal);
-    const results = await fetchEvmRpcBatch(config.chain, calls, { chainRpcs, signal });
-    if (results === null) return null;
+  throwIfAborted(signal);
+  const results = await fetchEvmRpcBatch(config.chain, calls, { chainRpcs, signal });
+  if (results === null) return null;
 
-    const values: bigint[] = [];
-    for (const result of results) {
-      if (typeof result !== "string" || !/^0x[0-9a-fA-F]+$/.test(result)) return null;
-      values.push(BigInt(result));
-    }
+  const values: bigint[] = [];
+  for (const result of results) {
+    if (typeof result !== "string" || !/^0x[0-9a-fA-F]+$/.test(result)) return null;
+    values.push(BigInt(result));
+  }
 
-    const totalCollaterals = values[0]!;
-    if (totalCollaterals !== BigInt(config.branches.length)) {
-      logWorkerEvent({
-        scope: "lib",
-        job: "sync-yield-data",
-        level: "warn",
-        event: `${config.eventPrefix}-branch-count-mismatch`,
-        message:
-          `${config.sourceLabel}: CollateralRegistry reports ${totalCollaterals} branches but the adapter `
-          + `aggregates ${config.branches.length}; failing closed until the branch table is re-reviewed`,
-      });
-      return null;
-    }
-
-    let totalAggWeightedDebtSumRaw = 0n;
-    let totalDepositsRaw = 0n;
-    for (let index = 0; index < config.branches.length; index += 1) {
-      const aggWeightedDebtSumRaw = values[1 + index * 3]!;
-      const shutdownTimeRaw = values[2 + index * 3]!;
-      const depositsRaw = values[3 + index * 3]!;
-      // A shut-down branch accrues no interest; its deposits stay in the denominator.
-      if (shutdownTimeRaw === 0n) {
-        totalAggWeightedDebtSumRaw += aggWeightedDebtSumRaw;
-      }
-      totalDepositsRaw += depositsRaw;
-    }
-
-    if (totalDepositsRaw <= 0n) return null;
-
-    // APR% = 75 * sum(aggWeightedDebtSum) / (sum(SP deposits) * 1e18).
-    // This is interest-only: upfront borrowing fees and liquidation collateral gains are excluded.
-    const apr =
-      Number(LIQUITY_V2_SP_YIELD_SPLIT_PERCENT * totalAggWeightedDebtSumRaw)
-      / Number(totalDepositsRaw * 10n ** 18n);
-    const totalDeposits = Number(totalDepositsRaw) / 1e18;
-    if (!Number.isFinite(totalDeposits) || totalDeposits <= 0) return null;
-    if (!Number.isFinite(apr) || apr <= 0) return null;
-
-    return {
-      currentApy: apr,
-      apyBase: apr,
-      apyReward: null,
-      sourcePool: null,
-      sourceTvlUsd: totalDeposits,
-      dataSource: "onchain",
-      exchangeRate: null,
-      sourceKey: buildOnChainSourceKey(config.stablecoinId),
-      yieldSource: config.sourceLabel,
-      yieldType: LIQUITY_V2_SP_SOURCE_TYPE,
-      // B11 — see fetchBprotocolLqtyOnlySource: the missing stamp made
-      // lusd-liquity, bold-liquity and bd-basedollar permanently unscored.
-      sourceObservedAt: startSec,
-      comparisonAnchorObservedAt: null,
-    };
-  } catch (error) {
-    if (signal?.aborted) {
-      throw error instanceof Error ? error : new Error(String(error));
-    }
+  const totalCollaterals = values[0]!;
+  if (totalCollaterals !== BigInt(config.branches.length)) {
     logWorkerEvent({
       scope: "lib",
       job: "sync-yield-data",
       level: "warn",
-      event: `${config.eventPrefix}-source-failed`,
-      message: `${config.sourceLabel} source failed`,
-      error,
+      event: `${config.eventPrefix}-branch-count-mismatch`,
+      message:
+        `${config.sourceLabel}: CollateralRegistry reports ${totalCollaterals} branches but the adapter `
+        + `aggregates ${config.branches.length}; failing closed until the branch table is re-reviewed`,
     });
     return null;
   }
+
+  let totalAggWeightedDebtSumRaw = 0n;
+  let totalDepositsRaw = 0n;
+  for (let index = 0; index < config.branches.length; index += 1) {
+    const aggWeightedDebtSumRaw = values[1 + index * 3]!;
+    const shutdownTimeRaw = values[2 + index * 3]!;
+    const depositsRaw = values[3 + index * 3]!;
+    // A shut-down branch accrues no interest; its deposits stay in the denominator.
+    if (shutdownTimeRaw === 0n) {
+      totalAggWeightedDebtSumRaw += aggWeightedDebtSumRaw;
+    }
+    totalDepositsRaw += depositsRaw;
+  }
+
+  if (totalDepositsRaw <= 0n) return null;
+
+  // APR% = 75 * sum(aggWeightedDebtSum) / (sum(SP deposits) * 1e18).
+  // This is interest-only: upfront borrowing fees and liquidation collateral gains are excluded.
+  const apr =
+    Number(LIQUITY_V2_SP_YIELD_SPLIT_PERCENT * totalAggWeightedDebtSumRaw)
+    / Number(totalDepositsRaw * 10n ** 18n);
+  const totalDeposits = Number(totalDepositsRaw) / 1e18;
+  if (!Number.isFinite(totalDeposits) || totalDeposits <= 0) return null;
+  if (!Number.isFinite(apr) || apr <= 0) return null;
+
+  return {
+    currentApy: apr,
+    apyBase: apr,
+    apyReward: null,
+    sourcePool: null,
+    sourceTvlUsd: totalDeposits,
+    dataSource: "onchain",
+    exchangeRate: null,
+    sourceKey: buildOnChainSourceKey(config.stablecoinId),
+    yieldSource: config.sourceLabel,
+    yieldType: LIQUITY_V2_SP_SOURCE_TYPE,
+    // B11 — see fetchBprotocolLqtyOnlySource: the missing stamp made
+    // lusd-liquity, bold-liquity and bd-basedollar permanently unscored.
+    sourceObservedAt: startSec,
+    comparisonAnchorObservedAt: null,
+  };
 }
 
 export async function fetchCurveScrvusdCurrentRateSource(
@@ -529,96 +498,81 @@ export async function fetchCurveScrvusdCurrentRateSource(
     return null;
   }
 
-  try {
-    const rpcUrls = resolveRpcUrls(rpc, { order: "primary-first" });
+  const rpcUrls = resolveRpcUrls(rpc, { order: "primary-first" });
 
-    for (const rpcUrl of rpcUrls) {
-      throwIfAborted(signal);
-      const totalAssetsRaw = await fetchEthCallUint256(
-        rpcUrl,
-        "ethereum",
-        SCRVUSD_VAULT,
-        SCRVUSD_TOTAL_ASSETS_SELECTOR,
-        signal,
-      );
-      const totalSupplyRaw = await fetchEthCallUint256(
-        rpcUrl,
-        "ethereum",
-        SCRVUSD_VAULT,
-        SCRVUSD_TOTAL_SUPPLY_SELECTOR,
-        signal,
-      );
-      const profitUnlockingRateRaw = await fetchEthCallUint256(
-        rpcUrl,
-        "ethereum",
-        SCRVUSD_VAULT,
-        SCRVUSD_PROFIT_UNLOCKING_RATE_SELECTOR,
-        signal,
-      );
-      const fullProfitUnlockDateRaw = await fetchEthCallUint256(
-        rpcUrl,
-        "ethereum",
-        SCRVUSD_VAULT,
-        SCRVUSD_FULL_PROFIT_UNLOCK_DATE_SELECTOR,
-        signal,
-      );
+  for (const rpcUrl of rpcUrls) {
+    throwIfAborted(signal);
+    const totalAssetsRaw = await fetchEthCallUint256(
+      rpcUrl,
+      "ethereum",
+      SCRVUSD_VAULT,
+      SCRVUSD_TOTAL_ASSETS_SELECTOR,
+      signal,
+    );
+    const totalSupplyRaw = await fetchEthCallUint256(
+      rpcUrl,
+      "ethereum",
+      SCRVUSD_VAULT,
+      SCRVUSD_TOTAL_SUPPLY_SELECTOR,
+      signal,
+    );
+    const profitUnlockingRateRaw = await fetchEthCallUint256(
+      rpcUrl,
+      "ethereum",
+      SCRVUSD_VAULT,
+      SCRVUSD_PROFIT_UNLOCKING_RATE_SELECTOR,
+      signal,
+    );
+    const fullProfitUnlockDateRaw = await fetchEthCallUint256(
+      rpcUrl,
+      "ethereum",
+      SCRVUSD_VAULT,
+      SCRVUSD_FULL_PROFIT_UNLOCK_DATE_SELECTOR,
+      signal,
+    );
 
-      if (
-        totalAssetsRaw == null ||
-        totalSupplyRaw == null ||
-        profitUnlockingRateRaw == null ||
-        fullProfitUnlockDateRaw == null
-      ) {
-        continue;
-      }
-
-      const sourceTvlUsd = Number(totalAssetsRaw) / 1e18;
-      const totalSupply = Number(totalSupplyRaw) / 1e18;
-      if (!Number.isFinite(sourceTvlUsd) || sourceTvlUsd <= 0) return null;
-      if (!Number.isFinite(totalSupply) || totalSupply <= 0) return null;
-
-      const fullProfitUnlockDate = Number(fullProfitUnlockDateRaw);
-      const profitUnlockingSharesPerSecond =
-        Number(profitUnlockingRateRaw) / YEARN_V3_MAX_BPS_EXTENDED / 1e18;
-      const currentApy =
-        fullProfitUnlockDate > startSec && profitUnlockingSharesPerSecond > 0
-          ? compoundDailyAprToApy(
-            (profitUnlockingSharesPerSecond * SCRVUSD_SECONDS_PER_YEAR * 100) / totalSupply,
-          )
-          : 0;
-      if (!Number.isFinite(currentApy) || currentApy < 0) return null;
-
-      return {
-        currentApy,
-        apyBase: currentApy,
-        apyReward: null,
-        sourcePool: SCRVUSD_SOURCE_POOL,
-        sourceTvlUsd,
-        dataSource: "onchain",
-        exchangeRate: null,
-        sourceKey: SCRVUSD_CURRENT_RATE_SOURCE_KEY,
-        sourceObservedAt: startSec,
-        comparisonAnchorObservedAt: null,
-        yieldSource: SCRVUSD_SOURCE_LABEL,
-        yieldType: SCRVUSD_SOURCE_TYPE,
-      };
+    if (
+      totalAssetsRaw == null ||
+      totalSupplyRaw == null ||
+      profitUnlockingRateRaw == null ||
+      fullProfitUnlockDateRaw == null
+    ) {
+      continue;
     }
 
-    return null;
-  } catch (error) {
-    if (signal?.aborted) {
-      throw error instanceof Error ? error : new Error(String(error));
-    }
-    logWorkerEvent({
-      scope: "lib",
-      job: "sync-yield-data",
-      level: "warn",
-      event: "scrvusd-source-failed",
-      message: "Curve scrvUSD current-rate source failed",
-      error,
-    });
-    return null;
+    const sourceTvlUsd = Number(totalAssetsRaw) / 1e18;
+    const totalSupply = Number(totalSupplyRaw) / 1e18;
+    if (!Number.isFinite(sourceTvlUsd) || sourceTvlUsd <= 0) return null;
+    if (!Number.isFinite(totalSupply) || totalSupply <= 0) return null;
+
+    const fullProfitUnlockDate = Number(fullProfitUnlockDateRaw);
+    const profitUnlockingSharesPerSecond =
+      Number(profitUnlockingRateRaw) / YEARN_V3_MAX_BPS_EXTENDED / 1e18;
+    const currentApy =
+      fullProfitUnlockDate > startSec && profitUnlockingSharesPerSecond > 0
+        ? compoundDailyAprToApy(
+          (profitUnlockingSharesPerSecond * SCRVUSD_SECONDS_PER_YEAR * 100) / totalSupply,
+        )
+        : 0;
+    if (!Number.isFinite(currentApy) || currentApy < 0) return null;
+
+    return {
+      currentApy,
+      apyBase: currentApy,
+      apyReward: null,
+      sourcePool: SCRVUSD_SOURCE_POOL,
+      sourceTvlUsd,
+      dataSource: "onchain",
+      exchangeRate: null,
+      sourceKey: SCRVUSD_CURRENT_RATE_SOURCE_KEY,
+      sourceObservedAt: startSec,
+      comparisonAnchorObservedAt: null,
+      yieldSource: SCRVUSD_SOURCE_LABEL,
+      yieldType: SCRVUSD_SOURCE_TYPE,
+    };
   }
+
+  return null;
 }
 
 interface HashnoteReport {
@@ -692,139 +646,116 @@ const YEARN_YBOLD_MAX_APY_PERCENT = 100;
  * silently publish an unrelated vault's return under yBOLD.
  */
 export async function fetchYearnYboldSource(signal?: AbortSignal): Promise<ResolvedYield | null> {
-  try {
-    const yboldResult = await fetchJsonWithRetry<YdaemonVault>(
-      `${YDAEMON_ETHEREUM_VAULT_URL}${YEARN_YBOLD_VAULT}`,
-      { headers: { Accept: "application/json", "User-Agent": USER_AGENT }, signal },
-      0,
-      { timeoutMs: OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS },
-    );
-    if (!yboldResult?.response.ok) return null;
-    if (yboldResult.body.info?.isRetired) return null;
-    if (yboldResult.body.token?.address?.toLowerCase() !== LIQUITY_BOLD_TOKEN) return null;
+  const yboldResult = await fetchJsonWithRetry<YdaemonVault>(
+    `${YDAEMON_ETHEREUM_VAULT_URL}${YEARN_YBOLD_VAULT}`,
+    { headers: { Accept: "application/json", "User-Agent": USER_AGENT }, signal },
+    0,
+    { timeoutMs: OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS },
+  );
+  if (!yboldResult?.response.ok) return null;
+  if (yboldResult.body.info?.isRetired) return null;
+  if (yboldResult.body.token?.address?.toLowerCase() !== LIQUITY_BOLD_TOKEN) return null;
 
-    const sourceTvlUsd = getFiniteNumber(yboldResult.body.tvl?.tvl);
-    if (sourceTvlUsd == null || sourceTvlUsd < YEARN_YBOLD_MIN_TVL_USD) return null;
+  const sourceTvlUsd = getFiniteNumber(yboldResult.body.tvl?.tvl);
+  if (sourceTvlUsd == null || sourceTvlUsd < YEARN_YBOLD_MIN_TVL_USD) return null;
 
-    const stakedResult = await fetchJsonWithRetry<YdaemonVault>(
-      `${YDAEMON_ETHEREUM_VAULT_URL}${YEARN_YSYBOLD_VAULT}`,
-      { headers: { Accept: "application/json", "User-Agent": USER_AGENT }, signal },
-      0,
-      { timeoutMs: OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS },
-    );
-    if (!stakedResult?.response.ok) return null;
-    if (stakedResult.body.info?.isRetired) return null;
-    if (stakedResult.body.token?.address?.toLowerCase() !== YEARN_YBOLD_VAULT) return null;
+  const stakedResult = await fetchJsonWithRetry<YdaemonVault>(
+    `${YDAEMON_ETHEREUM_VAULT_URL}${YEARN_YSYBOLD_VAULT}`,
+    { headers: { Accept: "application/json", "User-Agent": USER_AGENT }, signal },
+    0,
+    { timeoutMs: OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS },
+  );
+  if (!stakedResult?.response.ok) return null;
+  if (stakedResult.body.info?.isRetired) return null;
+  if (stakedResult.body.token?.address?.toLowerCase() !== YEARN_YBOLD_VAULT) return null;
 
-    const netApr = getFiniteNumber(stakedResult.body.apr?.netAPR);
-    if (netApr == null) return null;
+  const netApr = getFiniteNumber(stakedResult.body.apr?.netAPR);
+  if (netApr == null) return null;
 
-    const apy = netApr * 100;
-    if (apy <= 0 || apy > YEARN_YBOLD_MAX_APY_PERCENT) return null;
+  const apy = netApr * 100;
+  if (apy <= 0 || apy > YEARN_YBOLD_MAX_APY_PERCENT) return null;
 
-    return {
-      currentApy: apy,
-      apyBase: apy,
-      apyReward: null,
-      sourcePool: YEARN_YBOLD_VAULT,
-      sourceTvlUsd,
-      dataSource: "protocol-api",
-      exchangeRate: null,
-      sourceKey: YEARN_YBOLD_SOURCE_KEY,
-      yieldSource: YEARN_YBOLD_SOURCE_LABEL,
-      yieldType: YEARN_YBOLD_SOURCE_TYPE,
-      sourceObservedAt: Math.floor(Date.now() / 1000),
-      comparisonAnchorObservedAt: null,
-    };
-  } catch (error) {
-    if (signal?.aborted) {
-      throw error instanceof Error ? error : new Error(String(error));
-    }
-    logWorkerEvent({
-      scope: "lib",
-      level: "warn",
-      event: "optional_yield_source_failed",
-      job: "sync-yield-data",
-      provider: "yearn",
-      source: "yBOLD",
-      message: "Optional yield source failed",
-      error,
-    });
-    return null;
-  }
+  return {
+    currentApy: apy,
+    apyBase: apy,
+    apyReward: null,
+    sourcePool: YEARN_YBOLD_VAULT,
+    sourceTvlUsd,
+    dataSource: "protocol-api",
+    exchangeRate: null,
+    sourceKey: YEARN_YBOLD_SOURCE_KEY,
+    yieldSource: YEARN_YBOLD_SOURCE_LABEL,
+    yieldType: YEARN_YBOLD_SOURCE_TYPE,
+    sourceObservedAt: Math.floor(Date.now() / 1000),
+    comparisonAnchorObservedAt: null,
+  };
 }
 
 
 export async function fetchHashnoteUsycSource(signal?: AbortSignal): Promise<ResolvedYield | null> {
-  try {
-    const result = await fetchJsonWithRetry<{ entity?: string; data?: HashnoteReport[] }>(
-      HASHNOTE_PRICE_REPORTS_URL,
-      {
-        headers: { Accept: "application/json", "User-Agent": USER_AGENT },
-        signal,
-      },
-      0,
-      { timeoutMs: OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS },
-    );
-    if (!result?.response.ok) return null;
+  const result = await fetchJsonWithRetry<{ entity?: string; data?: HashnoteReport[] }>(
+    HASHNOTE_PRICE_REPORTS_URL,
+    {
+      headers: { Accept: "application/json", "User-Agent": USER_AGENT },
+      signal,
+    },
+    0,
+    { timeoutMs: OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS },
+  );
+  if (!result?.response.ok) return null;
 
-    const body = result.body;
-    const reports = body.data;
-    if (!Array.isArray(reports) || reports.length < 2) return null;
+  const body = result.body;
+  const reports = body.data;
+  if (!Array.isArray(reports) || reports.length < 2) return null;
 
-    const nowSec = Math.floor(Date.now() / 1000);
-    const sortedReports = [...reports]
-      .map((report) => ({
-        ...report,
-        parsedTimestamp: Number(report.timestamp),
-      }))
-      .filter((report) => Number.isFinite(report.parsedTimestamp)
-        && report.parsedTimestamp > 0
-        && report.parsedTimestamp <= nowSec + HASHNOTE_MAX_FUTURE_SKEW_SEC)
-      .sort((a, b) => b.parsedTimestamp - a.parsedTimestamp);
-    if (sortedReports.length < 2) return null;
+  const nowSec = Math.floor(Date.now() / 1000);
+  const sortedReports = [...reports]
+    .map((report) => ({
+      ...report,
+      parsedTimestamp: Number(report.timestamp),
+    }))
+    .filter((report) => Number.isFinite(report.parsedTimestamp)
+      && report.parsedTimestamp > 0
+      && report.parsedTimestamp <= nowSec + HASHNOTE_MAX_FUTURE_SKEW_SEC)
+    .sort((a, b) => b.parsedTimestamp - a.parsedTimestamp);
+  if (sortedReports.length < 2) return null;
 
-    const latest = sortedReports[0];
-    const latestPrice = parseFloat(latest.price);
-    const latestTimeSec = latest.parsedTimestamp;
-    if (!Number.isFinite(latestPrice) || latestPrice <= 0) return null;
-    if (!Number.isFinite(latestTimeSec)) return null;
-    if (nowSec - latestTimeSec > HASHNOTE_MAX_FRESHNESS_SEC) return null;
+  const latest = sortedReports[0];
+  const latestPrice = parseFloat(latest.price);
+  const latestTimeSec = latest.parsedTimestamp;
+  if (!Number.isFinite(latestPrice) || latestPrice <= 0) return null;
+  if (!Number.isFinite(latestTimeSec)) return null;
+  if (nowSec - latestTimeSec > HASHNOTE_MAX_FRESHNESS_SEC) return null;
 
-    const targetAnchorSec = latestTimeSec - HASHNOTE_TARGET_LOOKBACK_SEC;
-    let anchor = sortedReports[sortedReports.length - 1];
-    for (const report of sortedReports) {
-      if (report.parsedTimestamp <= targetAnchorSec) {
-        anchor = report;
-        break;
-      }
+  const targetAnchorSec = latestTimeSec - HASHNOTE_TARGET_LOOKBACK_SEC;
+  let anchor = sortedReports[sortedReports.length - 1];
+  for (const report of sortedReports) {
+    if (report.parsedTimestamp <= targetAnchorSec) {
+      anchor = report;
+      break;
     }
-    const anchorPrice = parseFloat(anchor.price);
-    const anchorTimeSec = anchor.parsedTimestamp;
-    if (!Number.isFinite(anchorPrice) || anchorPrice <= 0) return null;
-
-    const lookbackSec = latestTimeSec - anchorTimeSec;
-    if (lookbackSec < HASHNOTE_MIN_LOOKBACK_SEC) return null;
-    const daysDelta = lookbackSec / DAY_SECONDS;
-
-    const apy = (Math.pow(latestPrice / anchorPrice, 365.25 / daysDelta) - 1) * 100;
-    // B12 — the NAV-oracle annualization is unbounded on a short anchor window; the
-    // shared deterministic envelope keeps an absurd print out of PYS.
-    if (!isDeterministicApyWithinSanityBounds(apy)) return null;
-
-    return {
-      currentApy: apy, apyBase: apy, apyReward: null,
-      sourcePool: null, sourceTvlUsd: null, dataSource: "protocol-api",
-      exchangeRate: null, sourceKey: HASHNOTE_USYC_SOURCE_KEY,
-      yieldSource: HASHNOTE_USYC_SOURCE_LABEL, yieldType: HASHNOTE_USYC_SOURCE_TYPE,
-      sourceObservedAt: latestTimeSec,
-      comparisonAnchorObservedAt: anchorTimeSec,
-    };
-  } catch (error) {
-    if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
-    logWorkerEventArgs("handler", "warn", "[yield] Hashnote USYC source failed:", error);
-    return null;
   }
+  const anchorPrice = parseFloat(anchor.price);
+  const anchorTimeSec = anchor.parsedTimestamp;
+  if (!Number.isFinite(anchorPrice) || anchorPrice <= 0) return null;
+
+  const lookbackSec = latestTimeSec - anchorTimeSec;
+  if (lookbackSec < HASHNOTE_MIN_LOOKBACK_SEC) return null;
+  const daysDelta = lookbackSec / DAY_SECONDS;
+
+  const apy = (Math.pow(latestPrice / anchorPrice, 365.25 / daysDelta) - 1) * 100;
+  // B12 — the NAV-oracle annualization is unbounded on a short anchor window; the
+  // shared deterministic envelope keeps an absurd print out of PYS.
+  if (!isDeterministicApyWithinSanityBounds(apy)) return null;
+
+  return {
+    currentApy: apy, apyBase: apy, apyReward: null,
+    sourcePool: null, sourceTvlUsd: null, dataSource: "protocol-api",
+    exchangeRate: null, sourceKey: HASHNOTE_USYC_SOURCE_KEY,
+    yieldSource: HASHNOTE_USYC_SOURCE_LABEL, yieldType: HASHNOTE_USYC_SOURCE_TYPE,
+    sourceObservedAt: latestTimeSec,
+    comparisonAnchorObservedAt: anchorTimeSec,
+  };
 }
 
 export async function fetchOndoUsdyOracleSource(
@@ -834,121 +765,100 @@ export async function fetchOndoUsdyOracleSource(
   signal?: AbortSignal,
   chainRpcs?: Map<string, ChainRpcConfig>,
 ): Promise<ResolvedYield | null> {
-  try {
-    const rpc = chainRpcs ? getChainRpc(chainRpcs, "ethereum") : undefined;
-    const fallbackRpcUrl = registryRpcUrls(rpc)[1];
-    const extraRpcUrls = fallbackRpcUrl ? [fallbackRpcUrl] : [];
-    const currentPrice = await fetchEvmUint256AtBlock(
-      "ethereum", ONDO_USDY_ORACLE, ONDO_GET_PRICE_SELECTOR, "latest",
-      { extraRpcUrls, signal },
-    );
-    if (!currentPrice || currentPrice === 0n) return null;
+  const rpc = chainRpcs ? getChainRpc(chainRpcs, "ethereum") : undefined;
+  const fallbackRpcUrl = registryRpcUrls(rpc)[1];
+  const extraRpcUrls = fallbackRpcUrl ? [fallbackRpcUrl] : [];
+  const currentPrice = await fetchEvmUint256AtBlock(
+    "ethereum", ONDO_USDY_ORACLE, ONDO_GET_PRICE_SELECTOR, "latest",
+    { extraRpcUrls, signal },
+  );
+  if (!currentPrice || currentPrice === 0n) return null;
 
-    const currentPriceFloat = finiteDecimalNumberFromBigInt(currentPrice, 18);
-    if (currentPriceFloat == null || !Number.isFinite(currentPriceFloat) || currentPriceFloat <= 0) return null;
+  const currentPriceFloat = finiteDecimalNumberFromBigInt(currentPrice, 18);
+  if (currentPriceFloat == null || !Number.isFinite(currentPriceFloat) || currentPriceFloat <= 0) return null;
 
-    if (prevExchangeRate == null || prevExchangeRate === 0 || daysDelta < 1) {
-      return {
-        observationKind: "anchor-only",
-        currentApy: 0, apyBase: null, apyReward: null,
-        sourcePool: null, sourceTvlUsd: null, dataSource: "protocol-api",
-        exchangeRate: currentPriceFloat, sourceKey: ONDO_USDY_SOURCE_KEY,
-        yieldSource: ONDO_USDY_SOURCE_LABEL, yieldType: ONDO_USDY_SOURCE_TYPE,
-        sourceObservedAt: Math.floor(Date.now() / 1000), comparisonAnchorObservedAt: null,
-      };
-    }
-
-    if (!Number.isFinite(prevExchangeRate) || prevExchangeRate <= 0) return null;
-    const apy = (Math.pow(currentPriceFloat / prevExchangeRate, 365.25 / daysDelta) - 1) * 100;
-    // B12 — same deterministic envelope as the other NAV oracles.
-    if (!isDeterministicApyWithinSanityBounds(apy)) return null;
-
+  if (prevExchangeRate == null || prevExchangeRate === 0 || daysDelta < 1) {
     return {
-      currentApy: apy, apyBase: apy, apyReward: null,
+      observationKind: "anchor-only",
+      currentApy: 0, apyBase: null, apyReward: null,
       sourcePool: null, sourceTvlUsd: null, dataSource: "protocol-api",
       exchangeRate: currentPriceFloat, sourceKey: ONDO_USDY_SOURCE_KEY,
       yieldSource: ONDO_USDY_SOURCE_LABEL, yieldType: ONDO_USDY_SOURCE_TYPE,
-      sourceObservedAt: Math.floor(Date.now() / 1000), comparisonAnchorObservedAt,
+      sourceObservedAt: Math.floor(Date.now() / 1000), comparisonAnchorObservedAt: null,
     };
-  } catch (error) {
-    if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
-    logWorkerEventArgs("handler", "warn", "[yield] Ondo USDY oracle source failed:", error);
-    return null;
   }
+
+  if (!Number.isFinite(prevExchangeRate) || prevExchangeRate <= 0) return null;
+  const apy = (Math.pow(currentPriceFloat / prevExchangeRate, 365.25 / daysDelta) - 1) * 100;
+  // B12 — same deterministic envelope as the other NAV oracles.
+  if (!isDeterministicApyWithinSanityBounds(apy)) return null;
+
+  return {
+    currentApy: apy, apyBase: apy, apyReward: null,
+    sourcePool: null, sourceTvlUsd: null, dataSource: "protocol-api",
+    exchangeRate: currentPriceFloat, sourceKey: ONDO_USDY_SOURCE_KEY,
+    yieldSource: ONDO_USDY_SOURCE_LABEL, yieldType: ONDO_USDY_SOURCE_TYPE,
+    sourceObservedAt: Math.floor(Date.now() / 1000), comparisonAnchorObservedAt,
+  };
 }
 
 export async function fetchReProtocolReusdSource(signal?: AbortSignal): Promise<ResolvedYield | null> {
-  try {
-    const result = await fetchJsonWithRetry<RePriceResponse>(
-      RE_REUSD_PRICE_URL,
-      {
-        headers: { Accept: "application/json", "User-Agent": USER_AGENT },
-        signal,
-      },
-      0,
-      { timeoutMs: OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS },
-    );
-    if (!result?.response.ok || result.body.success !== true) return null;
+  const result = await fetchJsonWithRetry<RePriceResponse>(
+    RE_REUSD_PRICE_URL,
+    {
+      headers: { Accept: "application/json", "User-Agent": USER_AGENT },
+      signal,
+    },
+    0,
+    { timeoutMs: OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS },
+  );
+  if (!result?.response.ok || result.body.success !== true) return null;
 
-    const observations = result.body.data?.reUSD;
-    if (!Array.isArray(observations) || observations.length === 0) return null;
+  const observations = result.body.data?.reUSD;
+  if (!Array.isArray(observations) || observations.length === 0) return null;
 
-    const parsed = observations
-      .map((observation) => {
-        const observedAt = typeof observation.date === "string"
-          ? Date.parse(`${observation.date}T00:00:00Z`) / 1000
-          : Number.NaN;
-        return {
-          apy: getFiniteNumber(observation.apy),
-          observedAt,
-          price: getFiniteNumber(observation.price),
-        };
-      })
-      .filter((observation) =>
-        observation.apy != null &&
-        observation.apy >= RE_REUSD_MIN_APY_PERCENT &&
-        observation.apy <= RE_REUSD_MAX_APY_PERCENT &&
-        Number.isFinite(observation.observedAt) &&
-        observation.price != null &&
-        observation.price > 0,
-      )
-      .sort((a, b) => b.observedAt - a.observedAt);
-    const latest = parsed[0];
-    if (!latest || latest.apy == null || latest.price == null) return null;
+  const parsed = observations
+    .map((observation) => {
+      const observedAt = typeof observation.date === "string"
+        ? Date.parse(`${observation.date}T00:00:00Z`) / 1000
+        : Number.NaN;
+      return {
+        apy: getFiniteNumber(observation.apy),
+        observedAt,
+        price: getFiniteNumber(observation.price),
+      };
+    })
+    .filter((observation) =>
+      observation.apy != null &&
+      observation.apy >= RE_REUSD_MIN_APY_PERCENT &&
+      observation.apy <= RE_REUSD_MAX_APY_PERCENT &&
+      Number.isFinite(observation.observedAt) &&
+      observation.price != null &&
+      observation.price > 0,
+    )
+    .sort((a, b) => b.observedAt - a.observedAt);
+  const latest = parsed[0];
+  if (!latest || latest.apy == null || latest.price == null) return null;
 
-    const nowSec = Math.floor(Date.now() / 1000);
-    if (latest.observedAt > nowSec || nowSec - latest.observedAt > RE_REUSD_MAX_FRESHNESS_SEC) {
-      return null;
-    }
-
-    return {
-      currentApy: latest.apy,
-      apyBase: latest.apy,
-      apyReward: null,
-      sourcePool: RE_REUSD_CONTRACT,
-      sourceTvlUsd: null,
-      dataSource: "protocol-api",
-      exchangeRate: latest.price,
-      sourceKey: RE_REUSD_SOURCE_KEY,
-      yieldSource: RE_REUSD_SOURCE_LABEL,
-      yieldType: RE_REUSD_SOURCE_TYPE,
-      sourceObservedAt: latest.observedAt,
-      comparisonAnchorObservedAt: null,
-    };
-  } catch (error) {
-    if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
-    logWorkerEvent({
-      scope: "lib",
-      level: "warn",
-      event: "optional_yield_source_failed",
-      job: "sync-yield-data",
-      provider: "re-protocol",
-      source: "reUSD",
-      message: "Optional yield source failed",
-      error,
-    });
+  const nowSec = Math.floor(Date.now() / 1000);
+  if (latest.observedAt > nowSec || nowSec - latest.observedAt > RE_REUSD_MAX_FRESHNESS_SEC) {
     return null;
   }
+
+  return {
+    currentApy: latest.apy,
+    apyBase: latest.apy,
+    apyReward: null,
+    sourcePool: RE_REUSD_CONTRACT,
+    sourceTvlUsd: null,
+    dataSource: "protocol-api",
+    exchangeRate: latest.price,
+    sourceKey: RE_REUSD_SOURCE_KEY,
+    yieldSource: RE_REUSD_SOURCE_LABEL,
+    yieldType: RE_REUSD_SOURCE_TYPE,
+    sourceObservedAt: latest.observedAt,
+    comparisonAnchorObservedAt: null,
+  };
 }
 
 const MIDAS_MMEV_ID = "mmev-midas";
@@ -1027,78 +937,73 @@ export async function fetchMidasMmevNavOracleSource(
     nowSec = Math.floor(Date.now() / 1000),
   } = options;
 
-  try {
-    const callOptions = {
-      chainRpcs,
-      signal,
-      timeoutMs: OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS,
-      maxRetries: 0,
-    };
-    const [rawDecimals, rawRoundData] = await Promise.all([
-      fetchEvmUint256AtBlock(
-        MIDAS_MMEV_CHAIN,
-        MIDAS_MMEV_NAV_ORACLE,
-        DECIMALS_SELECTOR,
-        "latest",
-        callOptions,
-      ),
-      fetchEvmCallHexAtBlock(
-        MIDAS_MMEV_CHAIN,
-        MIDAS_MMEV_NAV_ORACLE,
-        LATEST_ROUND_DATA_SELECTOR,
-        "latest",
-        callOptions,
-      ),
-    ]);
+  const callOptions = {
+    chainRpcs,
+    signal,
+    timeoutMs: OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS,
+    maxRetries: 0,
+  };
+  const [rawDecimals, rawRoundData] = await Promise.all([
+    fetchEvmUint256AtBlock(
+      MIDAS_MMEV_CHAIN,
+      MIDAS_MMEV_NAV_ORACLE,
+      DECIMALS_SELECTOR,
+      "latest",
+      callOptions,
+    ),
+    fetchEvmCallHexAtBlock(
+      MIDAS_MMEV_CHAIN,
+      MIDAS_MMEV_NAV_ORACLE,
+      LATEST_ROUND_DATA_SELECTOR,
+      "latest",
+      callOptions,
+    ),
+  ]);
 
-    const decimals = decodeMidasNavOracleDecimals(rawDecimals);
-    if (decimals == null || rawRoundData == null) return null;
+  const decimals = decodeMidasNavOracleDecimals(rawDecimals);
+  if (decimals == null || rawRoundData == null) return null;
 
-    const round = parseChainlinkLatestRoundData(rawRoundData, "midas-mmev-nav-oracle");
-    if (round.invalidReason) return null;
-    if (!isFreshMidasNavOracleUpdate(round.updatedAt, nowSec)) return null;
+  const round = parseChainlinkLatestRoundData(rawRoundData, "midas-mmev-nav-oracle");
+  if (round.invalidReason) return null;
+  if (!isFreshMidasNavOracleUpdate(round.updatedAt, nowSec)) return null;
 
-    const currentPriceFloat = finiteDecimalNumberFromBigInt(round.answer, decimals);
-    if (currentPriceFloat == null || currentPriceFloat <= 0) return null;
+  const currentPriceFloat = finiteDecimalNumberFromBigInt(round.answer, decimals);
+  if (currentPriceFloat == null || currentPriceFloat <= 0) return null;
 
-    const anchor = loadAnchor ? await loadAnchor(round.updatedAt) : {
-      exchangeRate: prevExchangeRate, observedAt: comparisonAnchorObservedAt,
-    };
-    const prevPriceFloat = typeof anchor?.exchangeRate === "number" && Number.isFinite(anchor.exchangeRate) && anchor.exchangeRate > 0
-      ? anchor.exchangeRate : null;
-    const anchorObservedAt = anchor?.observedAt;
-    const daysDelta = typeof anchorObservedAt === "number" && Number.isFinite(anchorObservedAt)
-      ? (round.updatedAt - anchorObservedAt) / DAY_SECONDS : 0;
+  const anchor = loadAnchor ? await loadAnchor(round.updatedAt) : {
+    exchangeRate: prevExchangeRate, observedAt: comparisonAnchorObservedAt,
+  };
+  const prevPriceFloat = typeof anchor?.exchangeRate === "number" && Number.isFinite(anchor.exchangeRate) && anchor.exchangeRate > 0
+    ? anchor.exchangeRate : null;
+  const anchorObservedAt = anchor?.observedAt;
+  const daysDelta = typeof anchorObservedAt === "number" && Number.isFinite(anchorObservedAt)
+    ? (round.updatedAt - anchorObservedAt) / DAY_SECONDS : 0;
 
-    if (prevPriceFloat == null || anchorObservedAt == null) {
-      return buildMidasMmevNavCandidate({
-        observationKind: "anchor-only",
-        apy: 0,
-        apyBase: null,
-        exchangeRate: currentPriceFloat,
-        sourceObservedAt: round.updatedAt,
-        comparisonAnchorObservedAt: null,
-      });
-    }
-    if (!Number.isFinite(daysDelta) || daysDelta < 1 || daysDelta > 45) return null;
-
-    const apy = (Math.pow(currentPriceFloat / prevPriceFloat, 365.25 / daysDelta) - 1) * 100;
-    // B12 — a short or mis-anchored window annualizes without bound; the shared
-    // deterministic envelope keeps an absurd NAV move out of PYS (and out of the
-    // published board) instead of clamping it to a perfect score.
-    if (!isDeterministicApyWithinSanityBounds(apy)) return null;
-
+  if (prevPriceFloat == null || anchorObservedAt == null) {
     return buildMidasMmevNavCandidate({
-      apy,
-      apyBase: apy,
+      observationKind: "anchor-only",
+      apy: 0,
+      apyBase: null,
       exchangeRate: currentPriceFloat,
       sourceObservedAt: round.updatedAt,
-      comparisonAnchorObservedAt: anchorObservedAt ?? null,
+      comparisonAnchorObservedAt: null,
     });
-  } catch (error) {
-    if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
-    return null;
   }
+  if (!Number.isFinite(daysDelta) || daysDelta < 1 || daysDelta > 45) return null;
+
+  const apy = (Math.pow(currentPriceFloat / prevPriceFloat, 365.25 / daysDelta) - 1) * 100;
+  // B12 — a short or mis-anchored window annualizes without bound; the shared
+  // deterministic envelope keeps an absurd NAV move out of PYS (and out of the
+  // published board) instead of clamping it to a perfect score.
+  if (!isDeterministicApyWithinSanityBounds(apy)) return null;
+
+  return buildMidasMmevNavCandidate({
+    apy,
+    apyBase: apy,
+    exchangeRate: currentPriceFloat,
+    sourceObservedAt: round.updatedAt,
+    comparisonAnchorObservedAt: anchorObservedAt ?? null,
+  });
 }
 
 const SCRVUSD_CURVE_ID = "scrvusd-curve";
@@ -1535,6 +1440,35 @@ function isSanePendleExpiry(expiry: string, nowMs: number): boolean {
   return expiryMs >= minExpiryMs && expiryMs <= maxExpiryMs;
 }
 
+function buildSupplementalCandidate(
+  identity: Omit<ResolvedYieldCandidate, "yield">,
+  currentApy: number,
+  sourcePool: string,
+  sourceTvlUsd: number,
+  sourceKey: string,
+  yieldSource: string,
+  yieldType: NonNullable<ResolvedYield["yieldType"]>,
+  sourceObservedAt: number,
+): ResolvedYieldCandidate {
+  return {
+    ...identity,
+    yield: {
+      currentApy,
+      apyBase: currentApy,
+      apyReward: null,
+      sourcePool,
+      sourceTvlUsd,
+      dataSource: "protocol-api",
+      exchangeRate: null,
+      sourceKey,
+      yieldSource,
+      yieldType,
+      sourceObservedAt,
+      comparisonAnchorObservedAt: null,
+    },
+  };
+}
+
 export async function fetchMorphoVaultSources(signal?: AbortSignal): Promise<SupplementalFamilyFetchResult> {
   const budget = createOptionalSourceBudget("Morpho vault sources", OPTIONAL_PROTOCOL_API_BUDGET_MS, signal);
   const filters = buildMorphoFilters();
@@ -1595,26 +1529,12 @@ export async function fetchMorphoVaultSources(signal?: AbortSignal): Promise<Sup
           const trackedAsset = resolveMorphoTrackedAsset(filters, chain, vault.asset);
           if (!trackedAsset) continue;
 
-          results.push({
-            stablecoinId: trackedAsset.stablecoinId,
-            symbol: trackedAsset.symbol,
-            chain,
-            address: vault.asset.address ?? null,
-            yield: {
-              currentApy: apy * 100,
-              apyBase: apy * 100,
-              apyReward: null,
-              sourcePool: vault.address,
-              sourceTvlUsd: tvl,
-              dataSource: "protocol-api",
-              exchangeRate: null,
-              sourceKey: `protocol-api:morpho-vault:${chain}:${vault.address.toLowerCase()}`,
-              yieldSource: `Morpho: ${vault.name}`,
-              yieldType: "lending-opportunity",
-              sourceObservedAt: Math.floor(Date.now() / 1000),
-              comparisonAnchorObservedAt: null,
-            },
-          });
+          results.push(buildSupplementalCandidate(
+            { stablecoinId: trackedAsset.stablecoinId, symbol: trackedAsset.symbol, chain, address: vault.asset.address ?? null },
+            apy * 100, vault.address, tvl,
+            `protocol-api:morpho-vault:${chain}:${vault.address.toLowerCase()}`,
+            `Morpho: ${vault.name}`, "lending-opportunity", Math.floor(Date.now() / 1000),
+          ));
         }
         skip += items.length;
         if (items.length < MORPHO_PAGE_SIZE) break;
@@ -1719,25 +1639,13 @@ export async function fetchPendleMarketSources(signal?: AbortSignal): Promise<Su
             const chain = normalizeChainId(market.chainId);
             if (!chain) continue;
 
-            results.push({
-              symbol: market.underlyingAsset.symbol,
-              chain,
-              address: market.underlyingAsset.address,
-              yield: {
-                currentApy: apy * 100,
-                apyBase: apy * 100,
-                apyReward: null,
-                sourcePool: market.address,
-                sourceTvlUsd: tvl,
-                dataSource: "protocol-api",
-                exchangeRate: null,
-                sourceKey: `protocol-api:pendle:${chain}:${market.address.toLowerCase()}`,
-                yieldSource: `Pendle fixed yield: ${market.protocol} ${market.assetRepresentation}`,
-                yieldType: "fixed-yield",
-                sourceObservedAt: Math.floor(Date.now() / 1000),
-                comparisonAnchorObservedAt: null,
-              },
-            });
+            results.push(buildSupplementalCandidate(
+              { symbol: market.underlyingAsset.symbol, chain, address: market.underlyingAsset.address },
+              apy * 100, market.address, tvl,
+              `protocol-api:pendle:${chain}:${market.address.toLowerCase()}`,
+              `Pendle fixed yield: ${market.protocol} ${market.assetRepresentation}`,
+              "fixed-yield", Math.floor(Date.now() / 1000),
+            ));
           }
 
           skip += body.results.length;
@@ -1850,26 +1758,16 @@ export async function fetchYearnKongSources(signal?: AbortSignal): Promise<Suppl
           const sourcePrefix = vault.yearn ? "Yearn" : "Kong";
           const sourceNamespace = isK3Sbold ? "k3" : vault.yearn ? "yearn" : "kong";
 
-          results.push({
-            stablecoinId: isK3Sbold ? "sbold-k3-capital" : undefined,
-            symbol: vault.asset.symbol,
-            chain,
-            address: vault.asset.address ?? null,
-            yield: {
-              currentApy: netApy * 100,
-              apyBase: netApy * 100,
-              apyReward: null,
-              sourcePool: vault.address,
-              sourceTvlUsd: tvl,
-              dataSource: "protocol-api",
-              exchangeRate: null,
-              sourceKey: `protocol-api:${sourceNamespace}:${chain}:${vault.address.toLowerCase()}`,
-              yieldSource: isK3Sbold ? "K3: sBOLD" : `${sourcePrefix}: ${vault.name}`,
-              yieldType: isK3Sbold ? "lending-vault" : "lending-opportunity",
-              sourceObservedAt: Math.floor(Date.now() / 1000),
-              comparisonAnchorObservedAt: null,
+          results.push(buildSupplementalCandidate(
+            {
+              stablecoinId: isK3Sbold ? "sbold-k3-capital" : undefined,
+              symbol: vault.asset.symbol, chain, address: vault.asset.address ?? null,
             },
-          });
+            netApy * 100, vault.address, tvl,
+            `protocol-api:${sourceNamespace}:${chain}:${vault.address.toLowerCase()}`,
+            isK3Sbold ? "K3: sBOLD" : `${sourcePrefix}: ${vault.name}`,
+            isK3Sbold ? "lending-vault" : "lending-opportunity", Math.floor(Date.now() / 1000),
+          ));
         }
       } catch (error) {
         if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
@@ -1952,25 +1850,12 @@ export async function fetchBeefySources(signal?: AbortSignal): Promise<Supplemen
       const tvl = resolveBeefyTvl(tvlMap, chain, vault.id);
       if (typeof tvl !== "number" || !Number.isFinite(tvl) || tvl < BEEFY_MIN_TVL_USD) continue;
 
-      results.push({
-        symbol: vault.assets[0],
-        chain,
-        address: vault.tokenAddress,
-        yield: {
-          currentApy: apy * 100,
-          apyBase: apy * 100,
-          apyReward: null,
-          sourcePool: vault.id,
-          sourceTvlUsd: tvl,
-          dataSource: "protocol-api",
-          exchangeRate: null,
-          sourceKey: `protocol-api:beefy:${chain}:${vault.id}`,
-          yieldSource: `Beefy: ${vault.name || vault.id}`,
-          yieldType: "lending-opportunity",
-          sourceObservedAt: Math.floor(Date.now() / 1000),
-          comparisonAnchorObservedAt: null,
-        },
-      });
+      results.push(buildSupplementalCandidate(
+        { symbol: vault.assets[0], chain, address: vault.tokenAddress },
+        apy * 100, vault.id, tvl,
+        `protocol-api:beefy:${chain}:${vault.id}`,
+        `Beefy: ${vault.name || vault.id}`, "lending-opportunity", Math.floor(Date.now() / 1000),
+      ));
     }
     return { candidates: results, degraded: false };
   } catch (error) {
