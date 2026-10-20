@@ -13,8 +13,8 @@ import { ReliabilityImpactPanel } from "@/components/status/reliability-impact-p
 import { RequestSourceAttributionCard } from "@/components/status/request-source-attribution-card";
 import { createWorkspaceModeIds, WorkspaceModeTabs } from "@/components/status/workspace-mode-tabs";
 import { useWorkspaceMode } from "@/hooks/use-workspace-mode";
+import { buildReliabilityWorkspaceModel } from "@/lib/reliability-workspace-issue-builder";
 import {
-  buildReliabilityWorkspaceModel,
   deriveInitialReliabilityMode,
   RELIABILITY_MODES,
 } from "@/lib/reliability-workspace-model";

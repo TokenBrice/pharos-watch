@@ -2,11 +2,9 @@
 
 import { describe, expect, it } from "vitest";
 import {
-  parseArraySearchParam,
   parseBooleanSearchParam,
   parseBoundedNumberSearchParam,
   parseEnumSearchParam,
-  parseStablecoinIdSearchParam,
   readJsonStorageValue,
   writeJsonStorageValue,
 } from "../url-storage-codecs";
@@ -33,17 +31,6 @@ describe("URL search codecs", () => {
     { query: "?dryRun=nope", fallback: false, expected: false },
   ])("parses boolean $query", ({ query, fallback, expected }) => {
     expect(parseBooleanSearchParam(query, "dryRun", fallback)).toBe(expected);
-  });
-
-  it("parses arrays and stablecoin IDs through caller-provided decoders", () => {
-    expect(parseArraySearchParam("?coins=a,b,,c", "coins", (value) => value || null)).toEqual(["a", "b", "c"]);
-    expect(parseStablecoinIdSearchParam("?coin=USDC", "coin", {
-      decode: (value) => value.toLowerCase(),
-      isKnownCoinId: (value) => value === "usdc",
-    })).toBe("usdc");
-    expect(parseStablecoinIdSearchParam("?coin=DAI", "coin", {
-      isKnownCoinId: (value) => value === "usdc",
-    })).toBeNull();
   });
 
 });

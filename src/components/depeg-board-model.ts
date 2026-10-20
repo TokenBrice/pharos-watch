@@ -51,14 +51,9 @@ export function getDeviationBarWidthPercent(abs: number): number {
   return 60 + severeRatio * 35;
 }
 
-export function metricTone(value: number | null | undefined, goodHigh = true): string {
+export function metricTone(value: number | null | undefined): string {
   if (value == null) return "bg-muted-foreground";
-  if (goodHigh) {
-    if (value >= 80) return QUALITY_TIER_3_CLASSES.good.bar;
-    if (value >= 55) return QUALITY_TIER_3_CLASSES.watch.bar;
-    return QUALITY_TIER_3_CLASSES.bad.bar;
-  }
-  if (value >= 75) return QUALITY_TIER_3_CLASSES.bad.bar;
-  if (value >= 36) return QUALITY_TIER_3_CLASSES.watch.bar;
-  return QUALITY_TIER_3_CLASSES.good.bar;
+  if (value >= 80) return QUALITY_TIER_3_CLASSES.good.bar;
+  if (value >= 55) return QUALITY_TIER_3_CLASSES.watch.bar;
+  return QUALITY_TIER_3_CLASSES.bad.bar;
 }

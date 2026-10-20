@@ -102,3 +102,5 @@ Footer research and about/legal links retain their crawlable anchors, order and 
 ## Update Rules
 
 Update this owner for cohort, unavailable/freshness, URL/persistence, server/live handoff and SEO contracts. Source owns layout/component order. [Architecture](./architecture.md) owns integrity rules, [Design Language](./design-language.md) visual grammar and [Data Flow Map](./data-flow-map.md) source-to-hook routing.
+
+Section composition stays in its live consumers; do not retain unused section-wrapper exports as a parallel layout API.

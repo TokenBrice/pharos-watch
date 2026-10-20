@@ -135,6 +135,7 @@ Chart accents in `chart-colors.ts` match `--chart-*-hex`; its `THREAT_BAND_HEX` 
 - Import `chart-colors.ts` or shared classification palettes for Recharts colors; `severity-colors.ts` supplies Tailwind classes.
 - Use the bridge vars (`--background`, `--card`, etc.) in existing code — no rush to migrate
 - Add new component tokens to `semantic.css` when needed
+- Reuse the live navigation, base shimmer, chip-entry and standard toast utilities in `globals.css` and their owning components; do not add unused alternate motion or shell recipes.
 
 ### Don't
 

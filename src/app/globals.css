@@ -864,36 +864,6 @@
     box-shadow: inset 0 0 0 1px var(--control-pill-active-ring);
   }
 
-  /* ── Sidebar navigation: "the watch column" ──────────────────────
-     Pharos is a lighthouse, so the active route reads as lit by the
-     beam: a frost wash falling from the icon side, a hairline frost
-     ring, and a soft halo — no left-edge accent stripe. The brand mark
-     casts a thin shaft of light along the header divider, and newly
-     activated rows get a single beam sweep. */
-  .pharos-nav-active {
-    color: var(--foreground);
-    background-image: linear-gradient(
-      90deg,
-      color-mix(in oklab, var(--frost-blue) 18%, transparent),
-      color-mix(in oklab, var(--frost-blue) 6%, transparent) 58%,
-      transparent
-    );
-    box-shadow:
-      inset 0 0 0 1px color-mix(in oklab, var(--frost-blue) 26%, transparent),
-      0 0 14px -4px color-mix(in oklab, var(--frost-blue) 24%, transparent);
-  }
-
-  .dark .pharos-nav-active {
-    background-image: linear-gradient(
-      90deg,
-      color-mix(in oklab, var(--frost-blue) 26%, transparent),
-      color-mix(in oklab, var(--frost-blue) 9%, transparent) 58%,
-      transparent
-    );
-    box-shadow:
-      inset 0 0 0 1px color-mix(in oklab, var(--frost-blue) 36%, transparent),
-      0 0 16px -3px color-mix(in oklab, var(--frost-blue) 32%, transparent);
-  }
 
   /* One-shot light sweep across a freshly-activated row. Lives behind the
      row content (z-index below the in-flow icon/label inside the row's
@@ -942,49 +912,9 @@
     }
   }
 
-  /* Footer wordmark hover animation */
-  @media (prefers-reduced-motion: no-preference) {
-    .group\/wordmark:hover .pharos-lighthouse-beam {
-      animation: pharos-lighthouse-sweep 4500ms cubic-bezier(0.45, 0.05, 0.55, 0.95) both;
-    }
-  }
 
-  @keyframes pharos-lighthouse-sweep {
-    0% {
-      opacity: 0;
-      stroke-dashoffset: 0.91;
-    }
-    20% {
-      opacity: 0.18;
-    }
-    80% {
-      opacity: 0.18;
-    }
-    100% {
-      opacity: 0;
-      stroke-dashoffset: -0.18;
-    }
-  }
-
-  /* Thin shaft of frost light cast from the brand mark along the header
-     divider — a bright core at the tower fading to nothing like a real
-     beam, with a soft bloom so it reads as light rather than a rule. */
-  .pharos-brand-beam {
-    background: linear-gradient(
-      90deg,
-      color-mix(in oklab, var(--frost-blue) 88%, transparent) 0%,
-      color-mix(in oklab, var(--frost-blue) 30%, transparent) 46%,
-      transparent 82%
-    );
-    box-shadow: 0 0 8px -1px color-mix(in oklab, var(--frost-blue) 42%, transparent);
-  }
-
-  /* ── Core top rail: the horizontal echo of the watch column ───────
-     The inline tab equivalents of the sidebar's lit rows. The base tab
-     is a calm ghost; the active tab is a self-contained frost-lit pill
-     (wash + hairline frost inset ring + soft halo) reusing the exact
-     color-mix recipe from .pharos-nav-active, scaled for a small inline
-     chip rather than a full-width row. No left-edge accent stripe. */
+  /* Core top rail: calm ghost tabs with a self-contained frost-lit active
+     pill (wash, hairline inset ring and soft halo). No accent stripe. */
   .pharos-rail-tab {
     color: var(--muted-foreground);
   }
@@ -994,10 +924,7 @@
     background-color: color-mix(in oklab, var(--frost-blue) 8%, transparent);
   }
 
-  /* Unlike the wide sidebar rows (.pharos-nav-active), which read a 90deg
-     wash as light raking across a full-width row, these are compact chips:
-     a directional fade leaves the right half empty. Fill the chip evenly
-     with a soft top-lit vertical wash so the pill reads as one lit unit. */
+  /* Compact chips use an even, top-lit wash so the whole pill reads as lit. */
   .pharos-rail-tab-active,
   .pharos-rail-tab-active:hover {
     color: var(--foreground);
@@ -1104,16 +1031,6 @@
     box-shadow: inset 0 0 0 1px var(--control-pill-active-ring);
   }
 
-  /* Faint frost-tinted ground that distinguishes "your navigation" from
-     the neutral-card "live ticker" tape stacked directly above it. Kept
-     very subtle — calm authority, not a loud fill. */
-  .pharos-rail-ground {
-    background-color: color-mix(in oklab, var(--frost-blue) 4%, var(--background));
-  }
-
-  .dark .pharos-rail-ground {
-    background-color: color-mix(in oklab, var(--frost-blue) 7%, var(--background));
-  }
 
   .pharos-chart-stage {
     @apply rounded-xl border p-3 sm:p-4;
@@ -1293,13 +1210,6 @@
     box-shadow: none;
   }
 
-  .pharos-table-sticky-primary {
-    position: sticky;
-    left: 0;
-    z-index: 1;
-    background: var(--table-sticky-column-bg);
-    box-shadow: var(--table-sticky-column-shadow);
-  }
 
   .pharos-table-sticky-metric {
     position: sticky;
@@ -1420,9 +1330,6 @@
 
   /* Skeleton → content crossfade overlay (M7). Both layers share the same
      box so opacity transitions don't cause layout reflow. */
-  .pharos-crossfade-shell {
-    position: relative;
-  }
 
   .pharos-crossfade-layer {
     transition: opacity 180ms var(--motion-ease-decelerate);
@@ -1451,24 +1358,11 @@
     }
   }
 
-  @keyframes pharos-chip-exit {
-    from {
-      opacity: 1;
-      transform: scale(1);
-    }
-    to {
-      opacity: 0;
-      transform: scale(0.9);
-    }
-  }
 
   .pharos-chip-animate-in {
     animation: pharos-chip-enter 200ms var(--motion-ease-spring) both;
   }
 
-  .pharos-chip-animate-out {
-    animation: pharos-chip-exit 150ms var(--motion-ease-standard) both;
-  }
 
   /* Score card grid entrance */
   .pharos-card-enter {
@@ -1480,36 +1374,6 @@
     animation: pharos-fade-in-up 300ms var(--motion-ease-standard) both;
   }
 
-  /* Toast animations */
-  @keyframes pharos-toast-enter {
-    from {
-      opacity: 0;
-      transform: translateY(100%) scale(0.95);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0) scale(1);
-    }
-  }
-
-  @keyframes pharos-toast-exit {
-    from {
-      opacity: 1;
-      transform: translateY(0) scale(1);
-    }
-    to {
-      opacity: 0;
-      transform: translateY(100%) scale(0.95);
-    }
-  }
-
-  .pharos-toast-enter {
-    animation: pharos-toast-enter 300ms var(--motion-ease-decelerate) both;
-  }
-
-  .pharos-toast-exit {
-    animation: pharos-toast-exit 200ms var(--motion-ease-standard) both;
-  }
 
   /* Confidence typography — visual weight reflects data confidence */
   .pharos-confidence-high {
@@ -1716,36 +1580,6 @@
     background-attachment: local, local, scroll, scroll;
   }
 
-  /* Scrollable strips that rely on edge-fade gradients for their overflow
-     affordance (core top rail). Keeps scroll behavior, hides the native bar. */
-  .pharos-scrollbar-none {
-    scrollbar-width: none;
-  }
-
-  .pharos-scrollbar-none::-webkit-scrollbar {
-    display: none;
-  }
-
-  @keyframes pharos-pulse {
-    0%,
-    100% {
-      opacity: 0.6;
-      transform: scale(1);
-    }
-    50% {
-      opacity: 1;
-      transform: scale(1.05);
-    }
-  }
-  /* Light mode: higher contrast for pulse animation */
-  :root .animate-pharos-pulse {
-    animation: pharos-pulse 2.5s ease-in-out infinite;
-    filter: brightness(0.85);
-  }
-  .dark .animate-pharos-pulse {
-    animation: pharos-pulse 2.5s ease-in-out infinite;
-    filter: none;
-  }
 
   /* --- Experience Elevation: motion primitives --- */
 
@@ -1952,39 +1786,6 @@
     background-size: 200% 100%;
   }
 
-  /* Tuned shimmer cadence — large hero/chart blocks breathe slower so the
-   * loading state feels purposeful, inline pills tick faster so short waits
-   * still read as "alive". Pair with `pharos-shimmer-stagger` on a parent to
-   * offset siblings by 80ms and avoid synchronized strobing across a row. */
-  .pharos-shimmer-lg {
-    animation-duration: 2s;
-  }
-  .pharos-shimmer-md {
-    animation-duration: 1.5s;
-  }
-  .pharos-shimmer-sm {
-    animation-duration: 1s;
-  }
-  .pharos-shimmer-stagger > .skeleton-shimmer:nth-child(2),
-  .pharos-shimmer-stagger > *:nth-child(2) .skeleton-shimmer {
-    animation-delay: 80ms;
-  }
-  .pharos-shimmer-stagger > .skeleton-shimmer:nth-child(3),
-  .pharos-shimmer-stagger > *:nth-child(3) .skeleton-shimmer {
-    animation-delay: 160ms;
-  }
-  .pharos-shimmer-stagger > .skeleton-shimmer:nth-child(4),
-  .pharos-shimmer-stagger > *:nth-child(4) .skeleton-shimmer {
-    animation-delay: 240ms;
-  }
-  .pharos-shimmer-stagger > .skeleton-shimmer:nth-child(5),
-  .pharos-shimmer-stagger > *:nth-child(5) .skeleton-shimmer {
-    animation-delay: 320ms;
-  }
-  .pharos-shimmer-stagger > .skeleton-shimmer:nth-child(n + 6),
-  .pharos-shimmer-stagger > *:nth-child(n + 6) .skeleton-shimmer {
-    animation-delay: 400ms;
-  }
 
   @media (prefers-reduced-motion: reduce) {
     .skeleton-shimmer {
@@ -1996,29 +1797,6 @@
     }
   }
 
-  /* Breathing animation for live indicators */
-  @keyframes pharos-breathe {
-    0%,
-    100% {
-      opacity: 0.5;
-      transform: scale(1);
-    }
-    50% {
-      opacity: 1;
-      transform: scale(1.2);
-    }
-  }
-
-  .animate-breathe {
-    animation: pharos-breathe 3s ease-in-out infinite;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .animate-breathe {
-      animation: none;
-      opacity: 1;
-    }
-  }
 
   .dark [data-slot="button"][data-variant="default"] {
     box-shadow:

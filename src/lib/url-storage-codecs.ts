@@ -68,36 +68,3 @@ export function parseStringSearchParam(
   const value = options?.trim === false ? raw : raw.trim();
   return value === "" ? options?.fallback ?? null : value;
 }
-
-export function parseArraySearchParam<T>(
-  input: SearchInput,
-  key: string,
-  decodeItem: (value: string) => T | null,
-  options?: {
-    delimiter?: string;
-    maxItems?: number;
-  },
-): T[] {
-  const raw = toSearchParams(input).get(key);
-  if (!raw) return [];
-  const delimiter = options?.delimiter ?? ",";
-  const items = raw
-    .split(delimiter)
-    .map((value) => decodeItem(value.trim()))
-    .filter((value): value is T => value !== null);
-  return options?.maxItems == null ? items : items.slice(0, options.maxItems);
-}
-
-export function parseStablecoinIdSearchParam(
-  input: SearchInput,
-  key: string,
-  options: {
-    decode?: (value: string) => string | null;
-    isKnownCoinId: (value: string) => boolean;
-  },
-): string | null {
-  const raw = toSearchParams(input).get(key);
-  if (!raw) return null;
-  const coinId = options.decode ? options.decode(raw) : raw;
-  return coinId && options.isKnownCoinId(coinId) ? coinId : null;
-}

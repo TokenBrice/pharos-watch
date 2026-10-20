@@ -86,7 +86,8 @@ export default function PrivacyPage() {
             this site, does not contain an IP address or user identifier, and remains until you clear browser site data.
             A tab-scoped <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">sessionStorage</code> key,{" "}
             <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">pharos.selector.sessionResult.v1</code>, can hold the
-            last successful live result for accidental navigation recovery and clears when the browser session ends.
+            answers from the last successful live run and their save time for accidental navigation recovery, not the
+            generated result. Restoring them regenerates a shortlist against current data. This clears when the browser session ends.
           </p>
           <p>
             Picker share links use a <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">sid</code> that points to a

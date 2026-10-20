@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 import { decodeState, encodeState, type UrlStateSchema } from "./url-state";
 
 interface SampleState {
@@ -25,6 +25,22 @@ const schema: UrlStateSchema<SampleState> = {
     allowedValues: ["usd", "eur", "gbp"],
   },
 };
+
+it("admits only schema kinds and options compatible with the state value", () => {
+  expectTypeOf(decodeState("", schema)).toEqualTypeOf<SampleState>();
+  expectTypeOf<UrlStateSchema<SampleState>["page"]["kind"]>().toEqualTypeOf<"boundedNumber">();
+  expectTypeOf<UrlStateSchema<SampleState>["expanded"]["kind"]>().toEqualTypeOf<"boolean">();
+  expectTypeOf<UrlStateSchema<SampleState>["pegs"]["kind"]>().toEqualTypeOf<"enumList">();
+  // @ts-expect-error Numeric fields cannot use a string decoder.
+  const numeric: UrlStateSchema<{ page: number }> = { page: { kind: "string", defaultValue: 1 } };
+  // @ts-expect-error Scalar fields cannot use a list decoder.
+  const scalar: UrlStateSchema<{ query: string }> = { query: { kind: "enumList", defaultValue: "" } };
+  // @ts-expect-error Enum options must belong to the declared literal union.
+  const enumValue: UrlStateSchema<Pick<SampleState, "view">> = { view: { kind: "enum", defaultValue: "table", allowedValues: ["other"] } };
+  // @ts-expect-error List options must belong to the declared item union.
+  const listValue: UrlStateSchema<Pick<SampleState, "pegs">> = { pegs: { kind: "enumList", defaultValue: [], allowedValues: ["jpy"] } };
+  void [numeric, scalar, enumValue, listValue];
+});
 
 describe("decodeState", () => {
   it("returns all defaults for an empty input", () => {
@@ -88,6 +104,19 @@ describe("decodeState", () => {
     });
     const encoded: NormalizedState = { window: "all", query: "" };
     expect(encodeState(encoded, normalizedSchema)).toBe("window=alltime");
+  });
+
+  it("normalizes list items before filtering, deduplication and limiting", () => {
+    const normalizedSchema: UrlStateSchema<Pick<SampleState, "pegs">> = {
+      pegs: { ...schema.pegs, delimiter: "|", maxItems: 2, normalizeItem: (value) => {
+        const item = value.toLowerCase();
+        return item === "usd" || item === "eur" || item === "gbp" ? item : null;
+      } },
+    };
+    const decoded = decodeState("pegs=USD|usd|skip|EUR|GBP", normalizedSchema);
+    expect(decoded.pegs).toEqual(["usd", "eur"]);
+    expect(encodeState(decoded, normalizedSchema)).toBe("pegs=usd%7Ceur");
+    expect(decodeState(encodeState(decoded, normalizedSchema), normalizedSchema)).toEqual(decoded);
   });
 });
 

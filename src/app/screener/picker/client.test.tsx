@@ -353,7 +353,7 @@ describe("SelectorClient — state machine", () => {
     vi.unstubAllGlobals();
   });
 
-  it("offers a session-scoped restore for the last live result", async () => {
+  it.each([false, true])("restores live answers and reevaluates current data with legacy output=%s", async (legacyOutput) => {
     setUrlSearch("p=treasury&h=6mplus&d=zero&v=custody&step=result");
     render(<SelectorClient />);
     expect(await screen.findByText("USDC")).toBeTruthy();
@@ -361,15 +361,25 @@ describe("SelectorClient — state machine", () => {
     await act(async () => {
       await Promise.resolve();
     });
+    const storageKey = "pharos.selector.sessionResult.v1";
+    const stored = JSON.parse(window.sessionStorage.getItem(storageKey)!);
+    expect(stored).toEqual({
+      state: { ...SELECTOR_STATE_DEFAULTS, profile: "treasury", horizon: "6mplus", depegTolerance: "zero", venue: ["custody"], step: "result" },
+      savedAt: expect.any(Number),
+    });
+    if (legacyOutput) window.sessionStorage.setItem(storageKey, JSON.stringify({ ...stored, output: mockSelectorOutput() }));
     cleanup();
+    runSelectorMock.mockClear();
     setUrlSearch("");
     render(<SelectorClient />);
 
     const restore = await screen.findByRole("button", { name: /Restore previous result/i });
+    expect(runSelectorMock).not.toHaveBeenCalled();
     fireEvent.click(restore);
 
     expect(await screen.findByText(/Restored from this tab/i)).toBeTruthy();
     expect(await screen.findByText("USDC")).toBeTruthy();
+    expect(runSelectorMock).toHaveBeenCalledWith(toSelectorInput(stored.state), expect.anything(), expect.anything());
   });
 });
 

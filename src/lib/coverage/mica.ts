@@ -4,7 +4,7 @@ import type { CoverageStatus } from "@/lib/coverage-types";
 import {
   createPresetStatus,
   definePresetCoverageFeature,
-  type CoverageLegendItem,
+  legendItemsFromPresets,
   type CoverageStatusPreset,
 } from "./shared";
 
@@ -76,39 +76,14 @@ function resolveMica(profile?: Pick<MicaProfile, "status" | "tokenType" | "compe
   return context.length > 0 ? { ...status, detail: `${status.detail} ${context.join(" ")}` } : status;
 }
 
-const MICA_LEGEND: readonly CoverageLegendItem[] = [
-  {
-    term: "Authorized",
-    description: MICA_STATUS_DESCRIPTIONS.authorized,
-    kinds: ["authorized"],
-  },
-  {
-    term: "Pending",
-    description: MICA_STATUS_DESCRIPTIONS.pending,
-    kinds: ["pending"],
-  },
-  {
-    term: "Transitional",
-    description: MICA_STATUS_DESCRIPTIONS.transitional,
-    kinds: ["transitional"],
-  },
-  {
-    term: "Non-Comp.",
-    description: MICA_STATUS_DESCRIPTIONS["non-compliant"],
-    kinds: ["non-compliant"],
-  },
-  {
-    term: "Out Scope",
-    description: MICA_STATUS_DESCRIPTIONS["out-of-scope"],
-    kinds: ["out-of-scope"],
-  },
-  {
-    term: "Not Assessed",
-    description:
-      "No structured MiCA assessment is available for this active stablecoin. Missing metadata is not an authorization, non-compliance, or out-of-scope finding.",
-    kinds: ["unassessed"],
-  },
-];
+const MICA_LEGEND = legendItemsFromPresets(MICA_STATUS_PRESETS, [
+  "authorized",
+  "pending",
+  "transitional",
+  "non-compliant",
+  "out-of-scope",
+  "unassessed",
+]);
 
 export const coverageFeature = definePresetCoverageFeature({
   presets: MICA_STATUS_PRESETS,

@@ -27,11 +27,6 @@
  *
  *   5. **No proprietary names without the band.** When referring to Pharos
  *      grades or signals, use the proper-noun form (PegScore, DEWS, Bluechip).
- *
- *   6. **Promotion threshold** lives in `qualifiesForEditorialBriefing()`:
- *      peak deviation ≥ 200 bps, duration ≥ 6 hours, curated annotation
- *      present, or explicit editorial entry. Below-threshold events keep the
- *      structural-record treatment.
  */
 
 export interface DepegEditorial {
@@ -58,34 +53,4 @@ const EDITORIALS: Record<string, DepegEditorial> = {
 
 export function getDepegEditorial(slug: string): DepegEditorial | null {
   return EDITORIALS[slug] ?? null;
-}
-
-/**
- * Promotion threshold for the authored briefing layout. Events below the
- * threshold retain the structural-record treatment.
- *
- * The thresholds mirror the brief: peak deviation ≥ 200 bps, duration ≥ 6
- * hours, curated annotation present, or an explicit editorial entry. The
- * MIN_DEPEG_PAGE_DEVIATION_BPS gate (500 bps) is a separate, stricter check
- * that controls whether the page exists at all; this gate decides only the
- * presentation register on pages that already qualify for a route.
- */
-const EDITORIAL_DEVIATION_THRESHOLD_BPS = 200;
-const EDITORIAL_DURATION_THRESHOLD_SEC = 6 * 60 * 60;
-
-export interface EditorialEligibilityInput {
-  peakDeviationBps: number;
-  startedAt: number;
-  endedAt: number | null;
-  hasCuratedAnnotation: boolean;
-  hasAuthoredEditorial: boolean;
-}
-
-export function qualifiesForEditorialBriefing(input: EditorialEligibilityInput): boolean {
-  if (input.hasAuthoredEditorial) return true;
-  if (Math.abs(input.peakDeviationBps) >= EDITORIAL_DEVIATION_THRESHOLD_BPS) return true;
-  if (input.hasCuratedAnnotation) return true;
-  const durationSec = input.endedAt != null ? input.endedAt - input.startedAt : null;
-  if (durationSec != null && durationSec >= EDITORIAL_DURATION_THRESHOLD_SEC) return true;
-  return false;
 }

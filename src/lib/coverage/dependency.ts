@@ -9,7 +9,7 @@ import {
   type CoverageStatusPreset,
 } from "./shared";
 
-type DependencyResolverInput = DependencyCoverageFact | boolean | null | undefined;
+type DependencyResolverInput = DependencyCoverageFact | null | undefined;
 
 const DEPENDENCY_PRESETS: Record<DependencyCoverageKind, CoverageStatusPreset> = {
   both: {
@@ -58,18 +58,7 @@ const DEPENDENCY_PRESETS: Record<DependencyCoverageKind, CoverageStatusPreset> =
   },
 };
 
-function legacyBooleanFact(hasDependencyCoverage: boolean): DependencyCoverageFact {
-  return {
-    kind: hasDependencyCoverage ? "dependent" : "unmapped-gap",
-    upstreamCount: hasDependencyCoverage ? 1 : 0,
-    dependentCount: 0,
-  };
-}
-
 function normalizeDependencyInput(input: DependencyResolverInput): DependencyCoverageFact {
-  if (typeof input === "boolean") {
-    return legacyBooleanFact(input);
-  }
   return input ?? {
     kind: "unmapped-gap",
     upstreamCount: 0,

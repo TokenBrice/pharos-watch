@@ -4,7 +4,6 @@ import {
   DEWS_SIGNAL_WEIGHTS,
   type DewsSignalKey,
 } from "@shared/lib/dews-config";
-import { formatRelativeAgeSeconds } from "@shared/lib/relative-time";
 import type { StressSignalEntry } from "@shared/types";
 
 export interface DewsContributor {
@@ -20,12 +19,6 @@ export interface DewsAmplifier {
   key: "psi" | "contagion";
   label: string;
   value: number;
-}
-
-export interface DewsFreshness {
-  ageSeconds: number | null;
-  stale: boolean;
-  label: string | null;
 }
 
 function isDewsSignalKey(key: string): key is DewsSignalKey {
@@ -74,25 +67,4 @@ export function getDewsAmplifiers(entry: Pick<StressSignalEntry, "amplifiers"> |
     { key: "psi", label: "PSI", value: amplifiers.psi },
     { key: "contagion", label: "Contagion", value: amplifiers.contagion },
   ] as const).filter((amp) => Number.isFinite(amp.value) && amp.value > 1);
-}
-
-export function getDewsFreshness(
-  computedAt: number | null | undefined,
-  nowSeconds: number,
-  staleAfterSeconds: number,
-): DewsFreshness {
-  if (computedAt == null || !Number.isFinite(computedAt)) {
-    return { ageSeconds: null, stale: false, label: null };
-  }
-
-  const ageSeconds = Math.max(0, Math.floor(nowSeconds - computedAt));
-  return {
-    ageSeconds,
-    stale: ageSeconds > staleAfterSeconds,
-    label: formatRelativeAgeSeconds(ageSeconds, {
-      suffix: "old",
-      nowLabel: "fresh",
-      dayThresholdSec: Number.POSITIVE_INFINITY,
-    }),
-  };
 }

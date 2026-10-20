@@ -59,13 +59,11 @@ vi.mock("@/components/stablecoin-logo", () => createStablecoinLogoMock());
 vi.mock("@/components/query-error-notice", () => createNoopComponentMock("QueryErrorNotice"));
 
 vi.mock("@/components/longform-scrollspy-nav", () => ({
-  LongformScrollspyNav: (props: { className?: string; railLabel?: string; variant?: "banner" | "rail" }) => {
+  LongformScrollspyNav: (props: { className?: string }) => {
     longformScrollspyNavMock(props);
     return (
       <nav
         data-testid="scrollspy"
-        data-rail-label={props.railLabel}
-        data-variant={props.variant ?? "banner"}
         className={props.className}
       />
     );

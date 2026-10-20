@@ -36,31 +36,6 @@ export function PageLoadingHeader({
   );
 }
 
-export function PageLoadingStatGrid({
-  count,
-  className,
-  labelWidth = "w-24",
-  valueWidth = "w-24",
-  valueHeight = "h-8",
-}: {
-  count: number;
-  className: string;
-  labelWidth?: string;
-  valueWidth?: string;
-  valueHeight?: string;
-}) {
-  return (
-    <div className={className}>
-      {Array.from({ length: count }).map((_, index) => (
-        <div key={index} className="pharos-card-shell space-y-2 p-4">
-          <Skeleton className={cn("h-3 rounded-sm", labelWidth)} />
-          <Skeleton className={cn("rounded-md", valueHeight, valueWidth)} />
-        </div>
-      ))}
-    </div>
-  );
-}
-
 /**
  * Placeholder shaped like the rail-page split hero (`FeatureHeroSplit`,
  * `DepegOutlookHero`): answer KPI + universe chip and sub rows on the left,

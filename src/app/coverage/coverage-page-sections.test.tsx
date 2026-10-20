@@ -41,7 +41,7 @@ function makeCoverageRow(index: number, overrides: Partial<Parameters<typeof bui
     dexCoverageClass: "primary",
     hasYieldCoverage: true,
     flowCoverageStatus: "full",
-    hasDependencyCoverage: true,
+    dependencyCoverage: { kind: "dependent", upstreamCount: 1, dependentCount: 0 },
     liveReserveFresh: true,
     ...overrides,
   });

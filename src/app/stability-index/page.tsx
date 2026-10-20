@@ -9,6 +9,7 @@ import {
   PSI_METHODOLOGY_CHANGELOG_PATH,
   PSI_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/methodology-versions/constants";
+import { PSI_CONDITION_BANDS } from "@shared/lib/psi-policy";
 
 const description = "Historical Pharos Stability Index scores, component breakdowns, and condition band analysis for the stablecoin market.";
 
@@ -21,7 +22,8 @@ const FAQ_ITEMS = [
   {
     question: "What do the condition bands mean?",
     answer:
-      "PSI scores map to six condition bands: BEDROCK (90–100), STEADY (75–89), TREMOR (60–74), FRACTURE (40–59), CRISIS (20–39), and MELTDOWN (0–19). Each lower band reflects broader and deeper stablecoin stress.",
+      `PSI scores map to ${PSI_CONDITION_BANDS.length} condition bands: ${PSI_CONDITION_BANDS.map(({ band, min }, index) =>
+        `${band} [${min}, ${index === 0 ? "100]" : `${PSI_CONDITION_BANDS[index - 1].min})`}`).join(", ")}. Each lower band reflects broader and deeper stablecoin stress.`,
   },
 ] as const satisfies readonly FaqItem[];
 

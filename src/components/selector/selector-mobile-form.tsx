@@ -1,11 +1,11 @@
 "use client";
 
 import { selectorProfileLabel } from "@shared/lib/selector/selector-labels";
+import type { SelectorProfile } from "@shared/lib/selector/types";
 import { SelectorQuestionCard } from "@/components/selector/selector-question-card";
 import { SELECTOR_QUESTIONS, computeTotalSteps } from "@/lib/selector-options";
 import type {
   SelectorAction,
-  SelectorProfile,
   SelectorWizardState,
 } from "@/lib/selector-state";
 import { shouldSkipExitStep } from "@/lib/selector-state";

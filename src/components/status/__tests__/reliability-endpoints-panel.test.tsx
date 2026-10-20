@@ -4,7 +4,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { EndpointProbeResult } from "@shared/types";
 import { ReliabilityEndpointsPanel } from "../reliability-endpoints-panel";
-import { buildReliabilityWorkspaceModel } from "@/lib/reliability-workspace-model";
+import { buildReliabilityWorkspaceModel } from "@/lib/reliability-workspace-issue-builder";
 import { makeHealthyHealthResponse, makeHealthyStatusResponse } from "@/test-utils/status-fixtures";
 
 const writeText = vi.fn();

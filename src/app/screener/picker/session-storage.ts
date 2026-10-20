@@ -1,4 +1,4 @@
-import type { SelectorOutput } from "@shared/lib/selector";
+import type { SelectorOutput } from "@shared/lib/selector/types";
 import {
   getWindowStorage,
   readJsonStorageValue,
@@ -17,27 +17,24 @@ const SESSION_RESULT_STORAGE_KEY = "pharos.selector.sessionResult.v1";
 
 export interface StoredSelectorRun {
   state: SelectorWizardState;
-  output: SelectorOutput;
   savedAt: number;
 }
 
 function decodeStoredSelectorRun(value: unknown): StoredSelectorRun | null {
   const parsed = value as Partial<StoredSelectorRun>;
-  if (!parsed.state || !parsed.output || typeof parsed.savedAt !== "number") return null;
+  if (!parsed.state || typeof parsed.savedAt !== "number") return null;
   const state = parsed.state;
   if (state.step !== "result" || highestValidStep(state) !== "result") return null;
   return {
     state: { ...state, sid: null, ev: null },
-    output: parsed.output,
     savedAt: parsed.savedAt,
   };
 }
 
-export function writeStoredSelectorRun(state: SelectorWizardState, output: SelectorOutput): void {
+export function writeStoredSelectorRun(state: SelectorWizardState): void {
   const storedState = { ...state, step: "result" as const, sid: null, ev: null };
   const payload: StoredSelectorRun = {
     state: storedState,
-    output,
     savedAt: Date.now(),
   };
   writeJsonStorageValue(getWindowStorage("session"), SESSION_RESULT_STORAGE_KEY, payload);

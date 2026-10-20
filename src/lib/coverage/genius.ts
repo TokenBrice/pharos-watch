@@ -7,7 +7,7 @@ import type { CoverageStatus } from "@/lib/coverage-types";
 import {
   createPresetStatus,
   definePresetCoverageFeature,
-  type CoverageLegendItem,
+  legendItemsFromPresets,
   type CoverageStatusPreset,
 } from "./shared";
 
@@ -87,49 +87,16 @@ function resolveGenius(profile?: GeniusClientProfile | null): CoverageStatus {
   return createPresetStatus(GENIUS_STATUS_PRESETS[profile.authorizationStatus]);
 }
 
-const GENIUS_LEGEND: readonly CoverageLegendItem[] = [
-  {
-    term: "PPSI Approved",
-    description: GENIUS_AUTHORIZATION_STATUS_DESCRIPTIONS["ppsi-approved"],
-    kinds: ["ppsi-approved"],
-  },
-  {
-    term: "State Qualified",
-    description: GENIUS_AUTHORIZATION_STATUS_DESCRIPTIONS["state-qualified"],
-    kinds: ["state-qualified"],
-  },
-  {
-    term: "Filing Pending",
-    description: GENIUS_AUTHORIZATION_STATUS_DESCRIPTIONS["official-application-pending"],
-    kinds: ["official-application-pending"],
-  },
-  {
-    term: "Issuer Intent",
-    description: GENIUS_AUTHORIZATION_STATUS_DESCRIPTIONS["issuer-announced-intent"],
-    kinds: ["issuer-announced-intent"],
-  },
-  {
-    term: "None Found",
-    description: GENIUS_AUTHORIZATION_STATUS_DESCRIPTIONS["no-public-authorization-found"],
-    kinds: ["no-public-authorization-found"],
-  },
-  {
-    term: "Not Applicable",
-    description: GENIUS_AUTHORIZATION_STATUS_DESCRIPTIONS["not-applicable"],
-    kinds: ["not-applicable"],
-  },
-  {
-    term: "Unknown",
-    description: GENIUS_AUTHORIZATION_STATUS_DESCRIPTIONS.unknown,
-    kinds: ["unknown"],
-  },
-  {
-    term: "Not Assessed",
-    description:
-      "No structured GENIUS Act assessment is available for this active stablecoin. Missing metadata is not an authorization, no-authorization, or not-applicable finding.",
-    kinds: ["unassessed"],
-  },
-];
+const GENIUS_LEGEND = legendItemsFromPresets(GENIUS_STATUS_PRESETS, [
+  "ppsi-approved",
+  "state-qualified",
+  "official-application-pending",
+  "issuer-announced-intent",
+  "no-public-authorization-found",
+  "not-applicable",
+  "unknown",
+  "unassessed",
+]);
 
 export const coverageFeature = definePresetCoverageFeature({
   presets: GENIUS_STATUS_PRESETS,

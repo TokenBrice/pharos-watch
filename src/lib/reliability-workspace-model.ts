@@ -147,9 +147,6 @@ export interface ReliabilityWorkspaceInput {
   requestSourceLoading?: boolean;
 }
 
-export { sanitizeReliabilityProbePath } from "@/lib/reliability-workspace-endpoint-builder";
-export { buildReliabilityWorkspaceModel } from "@/lib/reliability-workspace-issue-builder";
-
 export function deriveInitialReliabilityMode(
   model: Pick<ReliabilityWorkspaceModel, "modeSummaries">,
 ): ReliabilityMode {

@@ -4,6 +4,7 @@ import type { FaqItem } from "@/lib/faq";
 import { buildLiveRouteOgImageUrl, buildPageMetadata } from "@/lib/page-metadata";
 import FlowsClient from "./client";
 import { FlowsLoadingState } from "./loading";
+import { DEFINITIONS } from "@/lib/definitions";
 
 const FLOWS_DESCRIPTION =
   "Configured issuance-chain minting and redemption flows for tracked stablecoins. Net flow direction, pressure-vs-baseline signals, and the Bank Run Gauge.";
@@ -19,7 +20,7 @@ const FLOW_FAQ_ITEMS = [
   {
     question: "What is the Bank Run Gauge?",
     answer:
-      "The Bank Run Gauge is a market-cap-weighted composite of each tracked stablecoin's pressure shift versus its own trailing 30-day issuance-chain baseline. It is a signed -100 to +100 pressure signal, not a literal mint-versus-burn direction meter. Scores below -10 indicate worsening redemption pressure across tracked canonical issuance flows, while scores above +10 indicate improving issuance pressure versus baseline. It returns null only when all tracked coins lack sufficient history or current activity.",
+      DEFINITIONS.bankRunGauge.long,
   },
   {
     question: "What do mint and burn events indicate?",

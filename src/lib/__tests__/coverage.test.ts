@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { RedemptionBackstopEntry, StablecoinMeta } from "@shared/types";
 import type { MintAuthorityCoverageSummary } from "@shared/types/stablecoin-client-meta";
+import { GENIUS_AUTHORIZATION_STATUS_DESCRIPTIONS } from "@shared/lib/genius";
+import { MICA_STATUS_DESCRIPTIONS } from "@shared/lib/mica";
 import type { CoverageFeatureDefinition, CoverageFeatureKey } from "@/lib/coverage-types";
 import { buildCoverageFeatureSummary, buildCoverageRow, COVERAGE_FEATURES } from "@/lib/coverage";
 import { coverageFeature as blacklistCoverageFeature } from "@/lib/coverage/blacklist";
@@ -105,7 +107,7 @@ function makeCoverageRow([id, symbol]: CoverageRowIdentity, overrides: CoverageR
     redemptionEntry: null,
     hasYieldCoverage: false,
     flowCoverageStatus: null,
-    hasDependencyCoverage: false,
+    dependencyCoverage: { kind: "unmapped-gap", upstreamCount: 0, dependentCount: 0 },
     ...inputOverrides,
   });
 }
@@ -115,6 +117,44 @@ function coverageFeature(key: CoverageFeatureKey) {
 }
 
 describe("coverage helpers", () => {
+  // These independent expectations preserve the public legend payload during preset projection.
+  it.each([
+    ["genius", [
+      { term: "PPSI Approved", description: GENIUS_AUTHORIZATION_STATUS_DESCRIPTIONS["ppsi-approved"], kinds: ["ppsi-approved"] },
+      { term: "State Qualified", description: GENIUS_AUTHORIZATION_STATUS_DESCRIPTIONS["state-qualified"], kinds: ["state-qualified"] },
+      { term: "Filing Pending", description: GENIUS_AUTHORIZATION_STATUS_DESCRIPTIONS["official-application-pending"], kinds: ["official-application-pending"] },
+      { term: "Issuer Intent", description: GENIUS_AUTHORIZATION_STATUS_DESCRIPTIONS["issuer-announced-intent"], kinds: ["issuer-announced-intent"] },
+      { term: "None Found", description: GENIUS_AUTHORIZATION_STATUS_DESCRIPTIONS["no-public-authorization-found"], kinds: ["no-public-authorization-found"] },
+      { term: "Not Applicable", description: GENIUS_AUTHORIZATION_STATUS_DESCRIPTIONS["not-applicable"], kinds: ["not-applicable"] },
+      { term: "Unknown", description: GENIUS_AUTHORIZATION_STATUS_DESCRIPTIONS.unknown, kinds: ["unknown"] },
+      { term: "Not Assessed", description: "No structured GENIUS Act assessment is available for this active stablecoin. Missing metadata is not an authorization, no-authorization, or not-applicable finding.", kinds: ["unassessed"] },
+    ]],
+    ["mica", [
+      { term: "Authorized", description: MICA_STATUS_DESCRIPTIONS.authorized, kinds: ["authorized"] },
+      { term: "Pending", description: MICA_STATUS_DESCRIPTIONS.pending, kinds: ["pending"] },
+      { term: "Transitional", description: MICA_STATUS_DESCRIPTIONS.transitional, kinds: ["transitional"] },
+      { term: "Non-Comp.", description: MICA_STATUS_DESCRIPTIONS["non-compliant"], kinds: ["non-compliant"] },
+      { term: "Out Scope", description: MICA_STATUS_DESCRIPTIONS["out-of-scope"], kinds: ["out-of-scope"] },
+      { term: "Not Assessed", description: "No structured MiCA assessment is available for this active stablecoin. Missing metadata is not an authorization, non-compliance, or out-of-scope finding.", kinds: ["unassessed"] },
+    ]],
+    ["blacklist", [
+      { term: "Live", description: "Direct freeze controls are confirmed and live blacklist event tracking is published for this issuer.", kinds: ["live"] },
+      { term: "Yes", description: "Direct token, vault, or issuer controls can freeze, block, seize, or destroy user balances.", kinds: ["yes"] },
+      { term: "Upstream", description: "No direct control is resolved; exposure comes from freezable upstream collateral or parent assets.", kinds: ["upstream"] },
+      { term: "Possible", description: "Mutable or pause-capable admin surfaces indicate possible controls, but active address-level freezing is not confirmed.", kinds: ["possible"] },
+      { term: "No", description: "No direct, upstream, or possible freeze exposure is resolved in the current model.", kinds: ["no"] },
+    ]],
+    ["safety", [
+      { term: "Rated", description: "This asset currently receives an overall Safety Score.", kinds: ["rated"] },
+      { term: "Data n/a (pipeline gap)", description: "Technical evidence is unavailable, not an issuer NR. Pipeline gaps and absent cards are excluded from known coverage reach.", kinds: ["data-unavailable"] },
+    ]],
+    ["yield", [
+      { term: "Ranked", description: "This asset currently appears in the Yield Intelligence rankings.", kinds: ["ranked"] },
+    ]],
+  ] as const)("preserves the exact %s legend, order, and General-legend omissions", (key, expected) => {
+    expect(coverageFeature(key).legendItems).toEqual(expected);
+  });
+
   it("keeps rated zero, genuine NR, and technical safety gaps in disjoint populations", () => {
     expect(safetyCoverageFeature.resolve(0, "rated")).toMatchObject({ kind: "rated", available: true });
     expect(safetyCoverageFeature.resolve(null, "not-rated")).toMatchObject({ kind: "nr", spokenLabel: "Not rated" });
@@ -413,6 +453,12 @@ describe("coverage helpers", () => {
     ).toBe(false);
   });
 
+  it.each([null, undefined])("keeps absent dependency facts (%s) as gaps unless the feed is unavailable", (fact) => {
+    expect(dependencyCoverageFeature.resolve(fact)).toMatchObject({ kind: "unmapped-gap", available: false });
+    expect(dependencyCoverageFeature.resolve(fact, false)).toMatchObject({ kind: "data-unavailable", available: false });
+    expect(makeCoverageRow(["absent", "ABS"], { dependencyCoverage: fact }).statuses.dependency.kind).toBe("unmapped-gap");
+  });
+
   it("maps mint-authority summaries into descriptive coverage states", () => {
     expect(mintAuthorityCoverageFeature.resolve(null).kind).toBe("unknown");
     expect(mintAuthorityCoverageFeature.resolve(null).available).toBe(false);
@@ -548,7 +594,7 @@ describe("coverage helpers", () => {
         redemptionEntry: makeRedemptionEntry(),
         hasYieldCoverage: true,
         flowCoverageStatus: "full",
-        hasDependencyCoverage: true,
+        dependencyCoverage: { kind: "dependent", upstreamCount: 1, dependentCount: 0 },
       }),
       makeCoverageRow(["two", "TWO"], {
         coin: makeCoin({

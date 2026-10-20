@@ -2,10 +2,8 @@ import { describe, expect, it } from "vitest";
 import { STATUS_CACHE_RATIO_THRESHOLDS } from "@shared/lib/status-thresholds";
 import { getCacheImpactStatus } from "@shared/lib/cache-health";
 import type { StatusResponse } from "@shared/types";
-import {
-  buildReliabilityWorkspaceModel,
-  type ReliabilityWorkspaceInput,
-} from "@/lib/reliability-workspace-model";
+import { buildReliabilityWorkspaceModel } from "@/lib/reliability-workspace-issue-builder";
+import type { ReliabilityWorkspaceInput } from "@/lib/reliability-workspace-model";
 import {
   degraded,
   makeApiRequestAttributionResponse,

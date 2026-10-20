@@ -48,7 +48,7 @@ Telegram subscribe commands use deduplicated canonical IDs, not tickers; identic
 
 ## Input And Engine Contract
 
-The wizard's profile, peg, horizon, depeg tolerance, venue/custody and exit inputs are owned by `selector-state.ts`; profile/peg policies live with the engine. Stablecoin-list and report-card reads are critical: failure without retained data produces typed `selector-data-unavailable` with Adjust answers/Start over recovery. Optional gaps become coverage signals.
+The wizard's profile, peg, horizon, depeg tolerance, venue/custody and exit vocabularies come from `shared/lib/selector/types.ts`; `selector-state.ts` owns only route state, actions, steps and URL encoding. Profile/peg policies live with the engine; UI option labels and ordering remain authored separately. Stablecoin-list and report-card reads are critical: failure without retained data produces typed `selector-data-unavailable` with Adjust answers/Start over recovery. Optional gaps become coverage signals.
 
 Question steps are independent of evaluation feeds. The client enables the canonical source queries at the result/evaluation stage; URL-initialized results and `sid` snapshots enable them immediately when URL state is admitted. Cached data does not run the ranking engine while the reader is still answering questions. Pending evaluation stays loading, never an empty shortlist.
 
@@ -78,7 +78,7 @@ Desktop history walks completed wizard steps; mobile commits one result after re
 
 ## Browser Storage
 
-`pharos.selector.callout.v1` stores dismissal in localStorage; the legacy `pharos-selector-callout-v1` is read-only compatibility. `pharos.selector.sessionResult.v1` stores tab-session live-run recovery in sessionStorage. There is no long-lived result history. Recovery restores answers and regenerates against current data with a banner; it is not frozen replay. [Privacy](./privacy-page.md) owns user-facing categories.
+`pharos.selector.callout.v1` stores dismissal in localStorage; the legacy `pharos-selector-callout-v1` is read-only compatibility. `pharos.selector.sessionResult.v1` stores only completed wizard answers (`state`) and save time (`savedAt`) in sessionStorage, not generated output. Older envelopes' extra output is ignored. There is no long-lived result history. Recovery restores answers and regenerates against current data with a banner; it is not frozen replay. [Privacy](./privacy-page.md) owns user-facing categories.
 
 ## Snapshot Sharing
 
@@ -94,7 +94,7 @@ Unread snapshots expire after 90 days. Successful GET attempts a best-effort fiv
 
 Loaded output is frozen by default. Comparing its input with current data shows shortlist/rank, dataset hash, engine and methodology differences without overwriting the artifact. `snapshot-normalize.ts` treats `selector-v2.0`–`selector-v2.10` as current-generation replay, validating component keys against the profile vector and recomputing weights/contributions under current critical sets. Supported pre-v2.0 artifacts use legacy normalization: unique components with stored weights summing to 100 within tolerance, preserving stored normalized values/redistribution and legacy critical sets. Both branches recompute score/missing-critical reasons and require exclusion-filter version to match engine version. Accepted versions are allowlisted in `version.ts`, not every older version. Normalizing a stored projection does not rerun candidate selection or replace historical membership/authored text; pre-v2.10 eligibility and source clocks remain frozen. Session recovery is a separate current-data path.
 
-Schema/canonicalization/limits/origin/quota/retention/error details belong to `shared/lib/selector/snapshot.ts`, `canonicalize.ts`, the canonical recomputation module and `functions/selector-snapshot/[[path]].ts`; [API reference](./api-reference.md) owns HTTP semantics. Do not copy their validation matrix here.
+`snapshot.ts` owns structural schemas; wire types infer from them through type-only imports, keeping engine vocabulary independent of snapshot validation. The depth/reserved-key scan precedes parsing, including unknown fields and array children. Structural admission never replaces semantic normalization or verified binding; only those boundaries project stored output. Canonicalization, limits, origin, quota, retention and errors remain owned by `canonicalize.ts`, the snapshot modules and Pages handler; [API reference](./api-reference.md) owns HTTP semantics.
 
 ## Update Rules
 

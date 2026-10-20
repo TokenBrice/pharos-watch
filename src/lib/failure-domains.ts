@@ -1,6 +1,12 @@
 import { CHAIN_META, normalizeChainId } from "@shared/types/chain-identity";
 import { normalizeDeploymentId } from "@shared/types/deployment-id";
 import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
+import {
+  bridgeRouteChainId,
+  describeFailureDomain,
+  protocolSlug,
+  type FailureDomainKind,
+} from "@/lib/failure-domain-labels";
 import { humanizeSafetyScoreReason } from "@/lib/safety-score-reason-labels";
 import { bridgeRouteTierLabel } from "@/lib/stablecoin-detail-bridge-client";
 import { titleCaseSlug } from "@/lib/title-case-slug";
@@ -16,8 +22,6 @@ import { titleCaseSlug } from "@/lib/title-case-slug";
  * label but keep each entry as a member with its own share and reason; the
  * row's share is only a display summary of those members (see `shareSummary`).
  */
-
-export type FailureDomainKind = "chain" | "bridge" | "other";
 
 /**
  * Deployments a domain covers, in the join keys of `BridgeRouteClientRow`, so a
@@ -77,85 +81,9 @@ export interface FailureDomainsView {
   totalAdjustmentPoints: number;
 }
 
-/**
- * Casing for protocol slug words that title-casing gets wrong ("Layerzero
- * Oft"). Words not listed fall back to the chain registry, then to title case.
- */
-const PROTOCOL_WORDS: Record<string, string> = {
-  layerzero: "LayerZero",
-  oft: "OFT",
-  dvns: "DVNs",
-  ccip: "CCIP",
-  cctp: "CCTP",
-  ntt: "NTT",
-  ibc: "IBC",
-  ics20: "ICS20",
-  gmp: "GMP",
-  ism: "ISM",
-  evm: "EVM",
-  pos: "PoS",
-  op: "OP",
-  zkevm: "zkEVM",
-  lxly: "LxLy",
-  xreserve: "xReserve",
-  starkgate: "StarkGate",
-  cbridge: "cBridge",
-  hypercore: "HyperCore",
-  ovault: "OVault",
-  xdai: "xDAI",
-  m0: "M0",
-};
-
 const DEPLOYMENT_SLICE_PREFIX = "deployment-slice:";
-const PROTOCOL_PART_PREFIX = "bridge-route:protocol:";
 const BRIDGE_TIER_SLUG_PATTERN =
   /\b(?:single-chain-or-native|issuer-native-burn-mint|canonical-rollup-bridge|issuer-native-lock-mint|external-validated-network|liquidity-or-intent-route|external-lock-mint|opaque-or-unknown)\b/g;
-
-function protocolLabel(slug: string): string {
-  return slug
-    .split("-")
-    .map((word) => {
-      if (/^v\d+$/.test(word)) return word.toUpperCase();
-      return PROTOCOL_WORDS[word] ?? CHAIN_META[word]?.name ?? titleCaseSlug(word);
-    })
-    .join(" ");
-}
-
-function protocolSlug(key: string): string | null {
-  const part = key.split("+").find((segment) => segment.startsWith(PROTOCOL_PART_PREFIX));
-  return part ? part.slice(PROTOCOL_PART_PREFIX.length) : null;
-}
-
-/** `bridge-route:<kind>:<chain>:<id>` names the chain its first contract sits on. */
-function bridgeRouteChainId(key: string): string | null {
-  const chain = key.split("+")[0]?.split(":")[2] ?? "";
-  return chain ? normalizeChainId(chain) : null;
-}
-
-/**
- * Keys arrive as `chain:<id>`, `bridge-route:protocol:<slug>`, or a compound
- * `+`-joined contract key that often embeds the protocol it routes through.
- * Contract addresses are not a useful rail label, so a compound key resolves to
- * its protocol when one is present and to the routing chain otherwise.
- */
-export function describeFailureDomain(key: string): { label: string; kind: FailureDomainKind } {
-  if (key.startsWith("chain:")) {
-    const chainId = key.slice("chain:".length);
-    return { label: CHAIN_META[chainId]?.name ?? titleCaseSlug(chainId), kind: "chain" };
-  }
-
-  const slug = protocolSlug(key);
-  if (slug) return { label: protocolLabel(slug), kind: "bridge" };
-
-  if (key.startsWith("bridge-route:")) {
-    // `bridge-route:contract:<chain>:<address>` and its authority/program kin.
-    const chainId = bridgeRouteChainId(key);
-    const chainName = chainId ? (CHAIN_META[chainId]?.name ?? titleCaseSlug(chainId)) : "";
-    return { label: chainName ? `Bridge contract on ${chainName}` : "Bridge contract", kind: "bridge" };
-  }
-
-  return { label: titleCaseSlug(key.replace(/:/g, " ")), kind: "other" };
-}
 
 interface DomainMember {
   key: string;

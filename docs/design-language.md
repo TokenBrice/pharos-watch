@@ -201,6 +201,7 @@ Use `ControlPillToggle` in `src/components/control-pill-toggle.tsx` for plain co
 - Every interactive element is keyboard reachable and visibly focused.
 - Loading and mutation states use the appropriate `aria-busy`, status, or alert semantics without noisy duplicate announcements.
 - Respect `prefers-reduced-motion`; no information may depend on animation playing.
+- Filter chips retain entry motion; toasts use the standard animation utilities in `toast-container.tsx`. Base skeleton shimmer and the banner's active-pill beam remain distinct live treatments, not alternate loading or progress recipes.
 - Theme swaps run inside `document.startViewTransition` (`useThemeToggle`) so charts and chrome cross-fade together; the toggle falls back to an instant swap without the API or under reduced motion.
 - Decorative graphics are hidden from assistive technology. Data graphics expose a concise name and an equivalent accessible data surface as described in [data-visualization.md](./data-visualization.md).
 - Text and controls must meet the contrast baseline in both themes.

@@ -21,12 +21,9 @@ interface LongformSection {
 
 interface LongformScrollspyNavProps {
   sections: readonly LongformSection[];
-  railLabel?: string;
   navAriaLabel: string;
   rightSlot?: ReactNode;
   className?: string;
-  /** Show a subtle gradient fade below the nav hinting at content below */
-  showDepthHint?: boolean;
   /** Called whenever the currently-in-view section changes. */
   onActiveChange?: (id: string) => void;
   /**
@@ -38,24 +35,15 @@ interface LongformScrollspyNavProps {
   /** Reveal deferred content through the destination before measuring its final position. */
   onBeforeAlign?: (sectionId: string) => void;
   /**
-   * `banner` (default) renders a horizontal sticky bar.
-   * `rail` renders a thin vertical column intended for a sticky right-rail TOC.
+   * `pill-tabs` renders a rounded-full group on the neutral control fill,
+   * with an elevated-neutral active pill (no frost) and decorative hairlines
+   * on desktop. Omit for the default horizontal sticky banner.
    */
-  variant?: "banner" | "rail";
+  emphasis?: "pill-tabs";
   /**
-   * `watch-rail` (banner only) intensifies the lit pill and adds a
-   * reading-progress beam that fills along the bottom edge as the reader
-   * descends the sections. Opt-in for legacy dossier surfaces; other banner
-   * surfaces keep the calmer default recipe.
-   * `pill-tabs` (banner only) renders the Figma coin-template tab bar: a
-   * rounded-full group on the neutral control fill, elevated-neutral active
-   * pill (no frost), flanked by decorative hairlines on desktop.
-   */
-  emphasis?: "watch-rail" | "pill-tabs";
-  /**
-   * Banner only: fade the right edge of the scrolling pill row at every
-   * breakpoint, so a pill cut by the edge reads as "more to scroll" rather
-   * than a truncated label. Use when the rail cannot fit on desktop.
+   * Fade the right edge of the scrolling pill row at every breakpoint, so a
+   * pill cut by the edge reads as "more to scroll" rather than a truncated
+   * label. Use when the row cannot fit on desktop.
    */
   edgeFade?: boolean;
 }
@@ -143,15 +131,12 @@ function isDocumentBottom() {
 
 export function LongformScrollspyNav({
   sections,
-  railLabel = "Jump to",
   navAriaLabel,
   rightSlot,
   className,
-  showDepthHint,
   onActiveChange,
   stickyOffsetPx,
   onBeforeAlign,
-  variant = "banner",
   emphasis,
   edgeFade = false,
 }: LongformScrollspyNavProps) {
@@ -177,13 +162,12 @@ export function LongformScrollspyNav({
   // (it can sit off the right edge on narrow viewports). Skip the first run so
   // hydration doesn't hijack the page's initial scroll position.
   useEffect(() => {
-    if (variant !== "banner") return;
     if (!activePillSyncedRef.current) {
       activePillSyncedRef.current = true;
       return;
     }
     centerActivePill(bannerScrollerRef.current, activeAnchorRef.current);
-  }, [effectiveActiveId, variant]);
+  }, [effectiveActiveId]);
 
   useEffect(() => {
     const railNode = railRef.current;
@@ -204,10 +188,8 @@ export function LongformScrollspyNav({
     if (!railNode || sectionNodes.length === 0) return;
 
     const applyScrollMargins = () => {
-      // When two scrollspy navs are mounted in different responsive contexts
-      // (banner on <lg, rail on lg+), the hidden instance has display:none and
-      // a zero-size bounding box. Skip writing scroll margins from the hidden
-      // instance so the visible one wins.
+      // A hidden instance has a zero-size bounding box. Leave scroll
+      // margins to the visible navigation.
       const railRect = railNode.getBoundingClientRect();
       if (railRect.width === 0 && railRect.height === 0) return;
 
@@ -244,21 +226,6 @@ export function LongformScrollspyNav({
         }
       }
       if (nextActive) setActiveId(nextActive.sectionId);
-
-      // Reading-progress beam (watch-rail only): fraction of the dossier
-      // scrolled, from the first heading reaching the activation line (0) to
-      // the last section's bottom reaching the viewport bottom (1). Written
-      // straight to the DOM rather than React state so it tracks every scroll
-      // frame without a re-render.
-      if (emphasis === "watch-rail") {
-        const firstTop = sectionNodes[0].getBoundingClientRect().top + window.scrollY;
-        const lastBottom = sectionNodes[sectionNodes.length - 1].getBoundingClientRect().bottom + window.scrollY;
-        const start = firstTop - getScrollOffset(railNode, stickyOffsetPx);
-        const end = lastBottom - window.innerHeight;
-        const span = end - start;
-        const progress = span > 0 ? (window.scrollY - start) / span : window.scrollY >= start ? 1 : 0;
-        railNode.style.setProperty("--pharos-read-progress", String(Math.min(1, Math.max(0, progress))));
-      }
     };
 
     applyScrollMargins();
@@ -310,51 +277,9 @@ export function LongformScrollspyNav({
         node.style.scrollMarginTop = "";
       }
     };
-  }, [sectionSignature, emphasis, stickyOffsetPx, onBeforeAlign]);
+  }, [sectionSignature, stickyOffsetPx, onBeforeAlign]);
 
   if (sections.length === 0) return null;
-
-  if (variant === "rail") {
-    return (
-      <div
-        ref={railRef}
-        className={cn("sticky top-[calc(env(safe-area-inset-top)+4.5rem)] w-[14rem] self-start", className)}
-        style={stickyOffsetPx == null ? undefined : { top: stickyOffsetPx }}
-      >
-        <p className="pharos-label px-2 pb-3">
-          {railLabel}
-        </p>
-        <nav aria-label={navAriaLabel}>
-          <ul className="flex flex-col gap-px border-l border-border/60">
-            {sections.map((section) => {
-              const isActive = effectiveActiveId === section.id;
-              return (
-                <li key={section.id}>
-                  <a
-                    href={`#${section.id}`}
-                    onClick={(event) => {
-                      event.preventDefault();
-                      scheduleSectionAlignment(section.id, railRef.current, pendingScrollSyncRef, true, stickyOffsetPx, onBeforeAlign);
-                      setActiveId(section.id);
-                    }}
-                    aria-current={isActive ? "true" : undefined}
-                    className={cn(
-                      "pharos-focus-ring relative -ml-px block truncate border-l py-1.5 pl-3 pr-2 text-xs transition-colors",
-                      isActive
-                        ? "border-foreground text-foreground"
-                        : "border-transparent text-muted-foreground hover:border-foreground/40 hover:text-foreground",
-                    )}
-                  >
-                    {section.label}
-                  </a>
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
-      </div>
-    );
-  }
 
   const isPillTabs = emphasis === "pill-tabs";
 
@@ -367,7 +292,6 @@ export function LongformScrollspyNav({
           isPillTabs
             ? "mx-0 bg-transparent px-0 py-0"
             : "-mx-4 rounded-xl border border-border/60 bg-background px-3 py-2 md:px-4 md:py-2.5",
-          emphasis === "watch-rail" && "pharos-watch-rail overflow-hidden",
           className,
         )}
         style={stickyOffsetPx == null ? undefined : { top: stickyOffsetPx }}
@@ -422,7 +346,6 @@ export function LongformScrollspyNav({
                       isPillTabs ? "pharos-pill-tab" : "pharos-rail-tab",
                       isPillTabs && isActive && "pharos-pill-tab-active",
                       !isPillTabs && isActive && "pharos-rail-tab-active",
-                      emphasis === "watch-rail" && isActive && "font-semibold",
                     )}
                   >
                     {!isPillTabs && isActive ? <span aria-hidden className="pharos-nav-beam" /> : null}
@@ -461,20 +384,7 @@ export function LongformScrollspyNav({
           ) : null}
           {rightSlot && <div className="hidden shrink-0 sm:block">{rightSlot}</div>}
         </div>
-        {emphasis === "watch-rail" && (
-          <div
-            className="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 origin-left bg-frost-blue"
-            style={{ transform: "scaleX(var(--pharos-read-progress, 0))" }}
-            aria-hidden="true"
-          />
-        )}
       </div>
-      {showDepthHint && (
-        <div
-          className="pointer-events-none h-6 bg-gradient-to-b from-border/20 to-transparent motion-safe:animate-[pharos-fade-in-up_220ms_var(--motion-ease-standard)_both]"
-          aria-hidden="true"
-        />
-      )}
     </>
   );
 }

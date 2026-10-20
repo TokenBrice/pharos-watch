@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { median } from "@shared/lib/stats";
 import {
   PRICING_PIPELINE_METHODOLOGY_CHANGELOG_PATH,
@@ -5,6 +6,7 @@ import {
 } from "@shared/lib/methodology-versions/constants";
 import { ContentTable } from "@/components/table";
 import {
+  METHODOLOGY_LINK_CLASS,
   MethodologyDetails,
   MethodologyDiagramFlow,
   MethodologyFacts,
@@ -50,209 +52,16 @@ export function PricingPipelineMethodologySection({
       versionNote="Version increments when price sources, consensus algorithm, enrichment passes, or validation rules change."
       changelogClassName={METHODOLOGY_SECTION_ACCENT_CLASSES.pricing.changelogHover}
     >
-        <p>
-          Every score Pharos computes starts with a price. The pricing pipeline collects quotes from more than a dozen
-          live voices, requires fully pairwise agreement inside each cluster, and publishes the highest-confidence result
-          with explicit source-freshness semantics.
-        </p>
-
-        <p>
-          <strong className="text-foreground">Native HBD market evidence (v6.53).</strong>{" "}
-          Effective October 19, 2026.{" "}
-          Hive internal market (HBD/HIVE) quotes divide an independently fresh CoinGecko HIVE/USD price by the
-          two-sided native midpoint. Admission requires at least 500 HBD on each side within 2% of midpoint,
-          narrow spread and recent non-self turnover. This is one CoinGecko-dependent observation, not two
-          independent votes or a guaranteed conversion price. It remains soft, single-source without independent
-          agreement, subject to normal validation and pool challenge, and requires depeg confirmation.
-          A near-par direct CoinGecko HBD quote can still win that family over a depegged native quote.
-          Missing or stale evidence yields no native price; neither publication nor retry refreshes either leg.
-        </p>
-
-        <p>
-          <strong className="text-foreground">Observed SOFID market prices (v6.48).</strong>{" "}
-          SOFID&apos;s nominal protocol-par override is retired so its existing exact-identity CoinGecko/Kraken
-          consensus can reach price and peg consumers. Original clocks remain; Kraken still uses local-fetch
-          timing and requires independent depeg confirmation. Missing quotes and carried nominal references
-          stay unavailable, not $1. Source weights, freshness and liquidity gates are unchanged.
-        </p>
-
-        <p>
-          <strong className="text-foreground">Availability and original clocks (v6.46).</strong>{" "}
-          Supply quarantine survives disappearing chain rows; fallback aggregate provenance is retained while old
-          chain balances remain unavailable. Historical chart buckets need complete peg and supplemental evidence
-          within the existing 14-day as-of budget, so prehistory, expired contributors and missing buckets remain
-          null, not zero. Observed zero is still measured zero. Historical valuations and 7D/30D checkpoints use
-          timestamp-matched supply, while joined circulation and escrow reads require canonical block evidence.
-          USDC-denominated redemption ratios use observed USDC/USD rather than assumed par. FX carry and bounded
-          cached rescues preserve source cadence and original age; partial FX publication is explicitly incomplete.
-          Price coverage and replay provenance describe admitted rows, not rejected candidates.
-        </p>
-
-        <p>
-          <strong className="text-foreground">Source diversity.</strong>{" "}
-          Kraken and Bitstamp extend the direct venue set. Fresh RedStone prices need timestamped multi-venue breakdowns
-          and are attributed only to configured canonical stablecoin IDs.
-          The primary promoted DEX bridge now spans Fluid, Balancer, Curve, Uniswap V3, Uniswap V4, Raydium, Orca,
-          Meteora, PancakeSwap, Aerodrome Slipstream, and Velodrome Slipstream, with structured source-filter telemetry and DEX lane confidence
-          profiles attached when those lanes participate. CoinGecko Onchain is the sole enabled exact-address
-          augmentation lane, key-gated and allowlisted, for assets with missing prices or below-target source depth.
-          DexScreener exact-pool fallback remains a separate live enrichment path. DEX bridge and address-provider identity are canonical-only at runtime, so
-          addressed unknown tokens are dropped instead of being reinterpreted by symbol. Reviewed provider-specific
-          deployment narrowing applies only while the exact address remains in current metadata; stale configuration
-          produces no target, and eligible exact reviewed CoinGecko Onchain overrides reserve one bounded network request
-          before ordinary network round-robin. Promoted protocol DEX prices only enter consensus when corroborated or
-          when no non-DEX voices exist. Their presence withholds the overlapping aggregate DEX fallback even if those
-          candidates fail corroboration. Direct-API quote legs prefer tracked live stablecoin prices instead of unconditional{" "}
-          <code className="mx-1 text-xs">$1</code> symbol assumptions.
-        </p>
-
-        <p>
-          <strong className="text-foreground">Price-only exchange evidence (v6.44).</strong>{" "}
-          CoinGecko discovery tickers are separate from the curated primary ticker lane. Non-stale, non-anomalous
-          USD-equivalent quotes need a positive finite price and at least $1,000 reported USD flow; registry evidence
-          must be non-future and within 24 hours of its captured evaluation clock. Per-exchange prices are
-          volume-weighted, and aggregate price weights use observed flow &times; the existing ticker confidence (0.55),
-          never synthetic TVL or depth. Genuine pools keep TVL-based price weights. Tickers request no depth and
-          attribute zero TVL even for legacy rows. A price-only publication can therefore have zero source TVL, but
-          still needs a usable primary and passes the unchanged peg, outlier and display guards; it cannot independently
-          clear the primary, UI or depeg DEX trust floors. Price-observation counts can include exchange records, while
-          liquidity pool counts cannot. Liquidity v6.93 records the separate removal of synthetic ticker liquidity and
-          registry-clock correction; Safety formula is unchanged and improved Safety Score stability is unmeasured.
-        </p>
-
-        <p>
-          <strong className="text-foreground">Pool challenge.</strong>{" "}
-          A pool challenge guard downgrades confidence and replaces the price with a protocol-aware TVL-weighted median
-          only when large DEX pools from at least two independent protocols diverge from soft consensus, with divergence
-          evaluated from one TVL-weighted median per protocol so a single rogue pool cannot make an otherwise agreeing
-          protocol count as corroborating disagreement. A high-TVL multi-protocol path can also replace a near-peg soft
-          price when at least two protocol medians each carry $5M+ TVL, are depeg-sized in the same direction, and agree
-          with each other inside the pool-challenge bps band. A narrow one-protocol exception remains limited to cases
-          where that protocol median is depeg-sized, carries at least $5M TVL, and agrees with a hard primary candidate
-          within the normal consensus threshold, including
-          DEX-inclusive soft clusters unless an exempt hard source is present. NAV tokens are excluded because their
-          wide clustering threshold makes pool-level divergence a poor signal for redeemable-at-NAV assets. When the guard
-          replaces a price, the replacement is now also reflected in the per-source candidate list so downstream
-          corroboration continuity uses the replacement mark rather than the superseded candidate. Corroborated severe
-          downside from multiple candidate sources including a depeg-authoritative source can be downgraded by pool
-          challenge, but its price is preserved and the same evidence satisfies the temporal-jump guard. Dead blocked DEX
-          slugs such as Bunni are excluded upstream and never qualify as challenger or DEX-bridge inputs.
-          Challenger and DEX-bridge pools are built only from rows that passed the discovery-time pair-price coherence
-          gate — the tracked leg&apos;s USD price must agree with the pool&apos;s own pair ratio × the counter-leg&apos;s USD
-          price — so a provider row whose published leg prices conflict with its own pair ratio never becomes challenge
-          evidence. A DEX price row with no usable primary to anchor its deviation, outlier, and display-ratio guards is
-          withheld rather than published.
-        </p>
-
-        <p>
-          <strong className="text-foreground">Overrides &amp; FX.</strong>{" "}
-          Protocol-level redemption prices override market data for wrapper assets. Chainlink refreshes supported FX and
-          commodity reference rates, and the dated secondary FX mirror can temporarily carry the wider fiat reference stack
-          when Frankfurter is unavailable, with ExchangeRate-API as a tertiary daily fallback if both primary FX paths are
-          down. If those live FX fetches still fail but the last published daily references remain within cadence, Pharos
-          carries those dated references forward as a healthy refresh. Even cached-fallback FX runs keep probing the
-          independent OXR, Chainlink, and metals paths, so a recovered intraday subset can promote the lane back to live
-          without waiting for the full Frankfurter stack.
-        </p>
-
-        <p>
-          CZK and PLN use business-daily ECB references through Frankfurter; AED uses the calendar-daily secondary
-          currency feed. All three have currency-specific price and FX validation bands and support CoinGecko native
-          quotes. Those bands reject malformed inputs; neither the bands nor the dirham&apos;s currency peg substitute
-          for an admitted provider or eligible cached reference.
-        </p>
-
-        <p>
-          Since Pricing methodology v6.43, JLTXX must pass pinned native-share admission even when CoinGecko reports a
-          positive market cap. J.P. Morgan Asset Management&apos;s exact Token Class transaction NAV retains its original
-          dealing date and separate five-day business-day freshness checks. Finalized EIP-1898 reads bind raw shares,
-          observed decimals, canonical block hash and time to a reviewed legal perimeter and NAV-versus-block allowance.
-          Issuer class assets never become circulating supply. Staged bootstrap captures evidence only; it cannot activate
-          JLTXX or publish scores. The asset remains quarantined pending approval and a real runtime price/market-cap pass.
-        </p>
-
-        <p>
-          Universal USD can recover a missing price through its reviewed Ethereum Uniswap V3 USDU/USDT pool.
-          QuoterV2 sell quotes for 1,000 and 100,000 USDU must agree within 5%, fit actual token inventory and pass
-          reviewed code, implementation, pool identity and canonical-block checks. Proceeds use a fresh trusted USDT
-          price, with both block and parent newer than five minutes. The route never replaces a publishable price and
-          remains a fallback without replay-safe or standalone depeg authority.
-        </p>
-
-        <p>
-          When AUDm, CHFm, CADm, COPm or JPYm has no usable market price, Pharos can use its verified Mento pool or Broker sell quote
-          multiplied by a fresh USDm price. Contract identity, fees, available capacity and trading limits must support the exit. This remains a
-          short-lived fallback price, subject to the same depeg and weak-source safeguards as other soft sources.
-          BD can similarly recover a missing price from its reviewed Aerodrome BD/USDC stable pool, multiplied by a
-          fresh trusted USDC price. Reviewed runtime code, exact pool identity, current transferable inventory and
-          bounded sell-quote impact must all pass; the older block or parent timestamp governs its five-minute lifetime.
-          Legacy USDv can recover through its reviewed Meteora USDv/USDC route: Jupiter sell quotes must match independently
-          verified live Solana pool state, active-bin inventory and fresh chain timestamps. Its source retains fallback
-          confidence and the same weak-source publication safeguards.
-        </p>
-
-        <p>
-          <strong className="text-foreground">Freshness tracking.</strong>{" "}
-          The live payload distinguishes true upstream observation timestamps from locally stamped fetch-time freshness via{" "}
-          <code className="mx-1 text-xs">priceObservedAtMode</code>, so a hard single-source print only becomes
-          depeg-authoritative when its freshness is source-native rather than inferred from local collection time. The
-          source registry now also records each provider&apos;s freshness kind, maximum trusted age, and whether it truly
-          supports upstream timestamps. CoinGecko simple-price requests use <code className="mx-1 text-xs">precision=full</code> and rows use upstream <code className="mx-1 text-xs">last_updated_at</code>
-          when it is present, so threshold logic receives the unrounded quote and rejects it when that timestamp is outside the trusted freshness window. Bitstamp,
-          Coinbase, and Curve on-chain reads now publish upstream-observed freshness provenance rather than stamping rows
-          at local fetch time, and the <code className="mx-1 text-xs">crvUSD</code> Curve oracle feed enforces a 5-minute
-          on-chain staleness guard using the aggregator block timestamp and records against its own dedicated circuit
-          breaker. Replay cache now enforces each source&apos;s native max trusted age alongside the composite 6-hour cap.
-        </p>
-
-        <p>
-          <strong className="text-foreground">Recovery scope.</strong> Live protocol-override work is limited to the exact
-          active registry, so frozen and quarantined assets cannot consume the shared recovery budget. Optional
-          already-priced refresh failures do not poison a route-specific recovery circuit while a usable incumbent
-          price exists, and unresolved assets remain fail-closed until an admitted pricing lane resolves them.
-        </p>
-
-        <p>
-          <strong className="text-foreground">Native-peg corroboration.</strong>{" "}
-          For supported non-USD fiat assets with a reliable native-market quote, the pipeline now derives a fresh{" "}
-          <code className="mx-1 text-xs">native quote × FX reference</code> USD mark during post-enrichment. That lane can
-          correct materially divergent weak or mixed-source live USD publications, fill a missing live price for supported
-          assets, and still veto or resolve downstream depeg mutations when the direct native pair disagrees with a derived{" "}
-          <code className="mx-1 text-xs">USD price / FX reference</code> move. It remains a fresh validation lane rather
-          than a replay-safe primary consensus voice, so it does not become cached continuity on later runs.
-        </p>
-
-        <p>
-          <strong className="text-foreground">Historical replay parity.</strong>{" "}
-          Supported non-USD fiat backfills now prefer direct CoinGecko native-fiat history and compare that series to the
-          native <code className="mx-1 text-xs">1.0</code> peg before falling back to USD-denominated market history. That
-          removes long synthetic depeg streaks created only by replay-time <code className="mx-1 text-xs">USD / FX</code> mismatch.
-        </p>
-
-        <p>
-          <strong className="text-foreground">Enrichment &amp; confidence.</strong>{" "}
-          A 6-pass enrichment pipeline fills gaps for long-tail coins. Each asset is tagged with a confidence level so
-          downstream systems can react to data quality, and severe fixed-peg downside publication now requires corroboration
-          unless it comes from an explicit protocol redemption or pool-challenge replacement mark. Two-source clusters
-          composed only of list-style aggregators (CoinGecko, DefiLlama, DefiLlama-list) are now downgraded to
-          single-source regardless of which two combine, closing the CoinGecko + DefiLlama-detail tautology alongside the
-          existing CG + DL-list downgrade. Cluster tiebreak also prefers hard-tier clusters over equal-weight soft-tier
-          clusters before falling through to spread and peg-proximity rules. A lone promoted DEX protocol is admitted
-          only when no non-DEX source exists, or when a hard market/oracle/protocol source agrees within threshold.
-          Corroborating candidate prices now stay
-          attached through later validation when the selected primary result is unchanged, so a real severe depeg is not
-          cleared as a single-source mark. When a confirmed severe depeg briefly loses corroboration, the pipeline
-          preserves trusted continuity from fresh replay-safe{" "}
-          <code className="mx-1 text-xs">price_cache</code> rows instead of letting the asset flap to{" "}
-          <code className="mx-1 text-xs">N/A</code>. DefiLlama contract fallbacks must now pass the same peg-aware
-          plausibility gates before they can resolve an asset, and weak fallback/search-family address-provider quotes
-          must stay within 500 bps of a fixed peg unless a stronger source corroborates the move, so a noisy address
-          print falls through to exact-contract enrichment instead of publishing a false depeg. DexScreener symbol search
-          is retired so addressless assets are not probed through noisy symbol-only identity. DefiLlama{" "}
-          <code className="mx-1 text-xs">/coins</code> contract-price fallback and DexScreener dex-liquidity and
-          dex-discovery paths now record against their own dedicated circuit breakers instead of reusing unrelated
-          breaker state, and the same provider diagnostics and GeckoTerminal probe statistics collected during each run
-          are now surfaced on <code className="mx-1 text-xs">/api/status</code> for operator visibility.
+        {PRICING_PIPELINE_SECTION_CONTENT.markdownParagraphs.slice(0, 4).map((paragraph) => (
+          <p key={paragraph}>{paragraph}</p>
+        ))}
+        <p className="text-xs text-muted-foreground">
+          {PRICING_PIPELINE_SECTION_CONTENT.historyLinks.map(({ label, href }, index) => (
+            <span key={href}>
+              {index > 0 && " · "}
+              <Link href={href} className={METHODOLOGY_LINK_CLASS}>{label}</Link>
+            </span>
+          ))}
         </p>
         <MethodologyFacts
           facts={[
@@ -292,6 +101,12 @@ export function PricingPipelineMethodologySection({
           primary
           summary="Technical details: source weights, consensus algorithm, overrides, enrichment, and validation"
         >
+          <div className="space-y-2">
+            <h3 className="text-foreground font-medium">Current source admission and exceptions</h3>
+            {PRICING_PIPELINE_SECTION_CONTENT.markdownParagraphs.slice(4).map((paragraph) => (
+              <p key={paragraph}>{paragraph}</p>
+            ))}
+          </div>
           <MethodologyDiagramFlow
             inputCols={4}
             inputs={[

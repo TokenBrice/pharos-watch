@@ -113,6 +113,8 @@ The builder returns one of three states (unknown IDs remain the server route's r
 
 `ready` contains the derived market, peg, Safety Score, liquidity, redemption, reserve, history, yield, DEWS, Mint Authority and variant payloads, expanded stale-query inputs and section-availability flags. `featureStates` has only two consumed lanes: reserve presentation and redemption read state. Redemption distinguishes deferred, loading, unavailable, retained, successfully empty and ready reads; it feeds one shared evidence projection for the main Exit board and desktop index. Other optional sources retain their availability logic and independent stale/error health inputs rather than unused facade states.
 
+Client variant lookups live in `src/lib/client-variant-registry.ts` and read only the active compact client registry. Parent/relationship lookups require both variant fields and a resolvable active parent; unknown IDs and orphans return no relationship. Child lists match the direct parent ID in registry order, and siblings exclude the selected child without traversing indirect relationships.
+
 The client `loading` state now mirrors the server fallback more closely: it keeps the coin identity, classification line, and dossier framing visible instead of dropping back to anonymous skeleton blocks.
 
 ---
@@ -142,6 +144,8 @@ The active route has one server-owned screen-reader `h1` and one visible identit
 ### Scrollspy vs section rules
 
 Zone IDs and existing deep links are stable even when visible labels change. The outer compositor owns the sole `#overview`; child modules must not duplicate it. `LongformScrollspyNav` admits only visible zones; malformed fragments are ignored. Context requires dependency content, Activity requires yield or blacklist content, and How it breaks requires a publishable scenario. Flow availability alone cannot create an empty Activity destination. Without dependency context, below-`xl` reference cards may remain without a Context heading/pill.
+
+Detail navigation uses the shared horizontal `pill-tabs` recipe, with neutral selected pills and active-pill centering. Sticky-summary clearance, resume markers and deferred hash reveal remain part of the navigation contract; it does not render a separate vertical TOC or reading-progress beam.
 
 `src/lib/anchor-reveal.ts` owns disclosure/tab reveal, visible-twin resolution and bounded hydration alignment. Initial hashes and scrollspy jumps mount deferred islands above and within the destination zone, not later zones; no-hash visits retain their viewport gates and reserves. Top-level and nested hashes share instant 160/480/960/1800 ms corrections and layout/chunk-completion alignment during a bounded settling window. Passport clicks retain their initial CSS-controlled jump, then reuse the corrections. Hash changes, replacement jumps, user wheel/touch/pointer/key input and unmount cancel pending alignment; browser back/forward restoration remains native. Jumps retain sticky-chrome clearance and move focus to the target heading.
 
@@ -215,6 +219,8 @@ Mechanism is the first Risk module; the review is provenance inside its source f
 `src/lib/safety-score-v9-waterfall.ts` and `buildSafetyScoreV9Attribution` project published arithmetic, never rerun scoring. Construction mounts once inside Safety Score, with no rail copy. Pillar quality, measured peg multiplier, common-mode deployment adjustment and binding cap reconcile to the headline. Render only stages that moved the score; a cap explanation appears only when it actually bound, including plain parent-cap wording for wrappers. Held publication and partial-evidence notices retain plain-language detail and machine reason, independently of the numeric grade. Exit evidence names the selected venue/capacity and backup treatment.
 
 `SafetyScoreReasonList` / `src/lib/safety-score-reason-labels.ts` may humanize identifiers and group repeated templates but cannot strengthen claims. Preserve “up to” conservative upper bounds, severity bands and exposure scope: deployment exposure is not reserve exposure, and a DEX venue's capacity share is of the reference exit request, not supply. Missing evidence and adverse measured findings remain separate causes.
+
+`src/lib/failure-domain-labels.ts` owns chain/protocol/compound-key labels for both reason humanization and failure-domain aggregation. The label leaf never imports either consumer; `failure-domains.ts` retains member normalization and aggregation, with unchanged label casing and member reason wording.
 
 ### Backing KPI
 

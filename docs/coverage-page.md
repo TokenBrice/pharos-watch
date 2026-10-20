@@ -19,6 +19,8 @@ Compact `hasAuthoredDependencyEvidence` records variant parent, authored depende
 
 No deps (`resolved-none`) requires a report-card row, no graph role, no authored evidence and no coverage rows. It means no tracked dependency identified by those inputs, not absence of external dependencies. Whole-publication failure is Data n/a, never static-graph fallback or No deps.
 
+Row builders and dependency resolvers consume explicit dependency facts, not boolean coverage flags. An absent fact defaults to Gap; feed availability independently distinguishes Data n/a.
+
 ### Reserve And Mint Distinctions
 
 Reserve Score-grade means accepted live reserves actually entered report-card collateral scoring. Configured, Checking, Curated-Validated, Proof, Curated and Estimated describe different reader/detail states, not headline score coverage. Missing publication makes the reserve dimension Data n/a even with curated fallback. Only non-suspended configs project reader bindings; disabled sources fall back to curated/estimated/None, never Proof/Configured solely because a reader remains in an audit catalog. `shared/lib/live-reserve-display.ts` owns detail badge presentation.
@@ -61,3 +63,5 @@ The static indexable shell uses `createClientFeaturePage()`. Dataset JSON-LD is 
 ## Update Rules
 
 Change resolver, export and this contract together when status meaning, provenance, headline/denominator or feature coverage changes. Canonical source modules own label rosters and column order; do not copy them here. Route changes also update sitemap/metadata and owning architecture references.
+
+Single-kind legend entries project preset labels and details in an explicit selected order, using visual labels rather than spoken labels. NR/Gap entries already explained by General stay omitted. Independently worded entries (including the Safety pipeline-gap explanation) and grouped/multi-kind legends remain authored.

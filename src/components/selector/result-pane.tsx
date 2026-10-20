@@ -25,7 +25,8 @@ import {
 } from "@/components/selector/selector-empty-state";
 import { SelectorSkippedDisclosure } from "@/components/selector/selector-skipped-disclosure";
 import { SelectorSnapshotBanner } from "@/components/selector/selector-snapshot-banner";
-import type { SelectorProfile, SelectorStep, SelectorWizardState } from "@/lib/selector-state";
+import type { SelectorProfile } from "@shared/lib/selector/types";
+import type { SelectorStep, SelectorWizardState } from "@/lib/selector-state";
 import { PROFILE_LABEL } from "@/lib/selector-options";
 import {
   buildCompareShortlistHref,
