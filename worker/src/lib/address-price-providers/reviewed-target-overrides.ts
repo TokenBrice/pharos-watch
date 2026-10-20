@@ -1,6 +1,5 @@
 import { resolveChainId } from "@shared/types/chain-identity";
 import { normalizeAddressForKey } from "./shared";
-import type { AddressPriceProviderKey } from "./types";
 
 interface AddressPriceDeploymentLike {
   chain: string;
@@ -8,13 +7,11 @@ interface AddressPriceDeploymentLike {
 }
 
 interface ReviewedAddressPriceTargetOverride extends AddressPriceDeploymentLike {
-  provider: AddressPriceProviderKey;
   stablecoinId: string;
 }
 
 const REVIEWED_ADDRESS_PRICE_TARGET_OVERRIDES = [
   {
-    provider: "coingecko-onchain-address",
     stablecoinId: "vusd-virtue",
     chain: "iota-evm",
     address: "0x10740259a1860af3327dd0642ee35d6e8e7143ff",
@@ -37,26 +34,24 @@ export function isReviewedAddressPriceTargetOverride(
   const address = normalizeAddressForKey(target.address);
   if (!chain || !address) return false;
   return REVIEWED_ADDRESS_PRICE_TARGET_OVERRIDES.some(
-    (entry) => entry.provider === target.provider &&
-      entry.stablecoinId === target.stablecoinId &&
+    (entry) => entry.stablecoinId === target.stablecoinId &&
       matchesDeployment(entry, chain, address),
   );
 }
 
 /**
- * A reviewed override may narrow one asset/provider to a known deployment, but
+ * A reviewed override may narrow one asset to a known deployment, but
  * it may never introduce a target. Stale metadata or provider support fails
- * closed to no targets for that asset/provider.
+ * closed to no targets for that asset.
  */
 export function applyReviewedAddressPriceTargetOverride<T extends AddressPriceDeploymentLike>(params: {
-  provider: AddressPriceProviderKey;
   stablecoinId: string;
   deployments: readonly T[];
   metadataDeployments: readonly AddressPriceDeploymentLike[];
   providerChainMap: Readonly<Record<string, string>>;
 }): T[] {
   const override = REVIEWED_ADDRESS_PRICE_TARGET_OVERRIDES.find(
-    (entry) => entry.provider === params.provider && entry.stablecoinId === params.stablecoinId,
+    (entry) => entry.stablecoinId === params.stablecoinId,
   );
   if (!override) return [...params.deployments];
 

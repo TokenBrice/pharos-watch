@@ -432,6 +432,7 @@ describe("exact-address coverage refresh", () => {
     const cg = mockFetch(onchainRoutes());
     const before = Math.floor(Date.now() / 1_000);
     const recordOutcome = vi.spyOn(circuit, "recordOutcomeDecision").mockResolvedValue(undefined);
+    const collect = vi.spyOn(addressProviders, "collectAddressPriceProviderQuotes");
 
     const summary = await runPriceDexRefresh({ db, syncStartSec: now, addressProvider });
 
@@ -441,6 +442,9 @@ describe("exact-address coverage refresh", () => {
     expect(summary.addressRefresh.targetCount).toBeGreaterThan(5);
     // Unindexed deployments are a healthy negative answer, never a circuit failure.
     expect(recordOutcome).toHaveBeenCalledWith(db, CIRCUIT_SOURCE.CG_ONCHAIN, "success");
+    await expect(collect.mock.results[0]?.value).resolves.toMatchObject({
+      providerOutcome: "success", attemptedRequests: 5, successfulRequests: 1,
+    });
     const state = JSON.parse((await getCache(db, DEX_REFRESH_CACHE_KEY))!.value);
     const observation = state.observations.find((row: { source: string }) => row.source === "coingecko-onchain-address");
     expect(observation).toMatchObject({ id: "usda-avalon", chain: "berachain", price: 0.9822, observedAtMode: "local_fetch" });

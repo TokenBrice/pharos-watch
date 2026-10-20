@@ -6,9 +6,9 @@ import { savePriceCache, type PriceCacheWriteEntry } from "../../lib/db-cache";
 import { hasPublishableCurrentPrice } from "../../lib/price-publication-state";
 import { pricesAgreeWithinBps } from "../../lib/price-divergence";
 import {
-  buildAddressPriceTargetsByProvider,
+  buildAddressPriceTargets,
   collectAddressPriceProviderQuotes,
-  resolveEnabledAddressPriceProviders,
+  isCoingeckoOnchainAddressEnabled,
   type AddressPriceProviderRuntimeConfig,
   type AddressPriceQuote,
 } from "../../lib/address-price-providers";
@@ -207,22 +207,18 @@ export async function runPriceCorroboration(params: {
     params.chainRpcs,
   );
 
-  const providers = resolveEnabledAddressPriceProviders(params.addressProvider);
+  const addressProviderEnabled = isCoingeckoOnchainAddressEnabled(params.addressProvider);
   let addressQuotes = new Map<string, AddressPriceQuote[]>();
   let providerDiagnosticCount = 0;
-  if (providers.length > 0 && params.addressProvider) {
-    const targetsByProvider = buildAddressPriceTargetsByProvider({
+  if (addressProviderEnabled && params.addressProvider) {
+    const targets = buildAddressPriceTargets({
       assets: cohort,
       previousAssetsById,
-      providers,
       nowSec: params.syncStartSec,
     });
-    const sourceAllowed = {
-      "coingecko-onchain-address": await shouldAttemptFetch(params.db, CIRCUIT_SOURCE.CG_ONCHAIN),
-    };
+    const sourceAllowed = await shouldAttemptFetch(params.db, CIRCUIT_SOURCE.CG_ONCHAIN);
     const result = await collectAddressPriceProviderQuotes({
-      targetsByProvider,
-      providers,
+      targets,
       sourceAllowed,
       config: params.addressProvider,
       signal: params.signal,
@@ -230,11 +226,7 @@ export async function runPriceCorroboration(params: {
     });
     addressQuotes = result.quotesByStablecoinId;
     providerDiagnosticCount = result.diagnostics.length;
-    for (const [provider, outcome] of result.providerOutcomes) {
-      if (provider === "coingecko-onchain-address") {
-        await recordOutcomeDecision(params.db, CIRCUIT_SOURCE.CG_ONCHAIN, outcome);
-      }
-    }
+    await recordOutcomeDecision(params.db, CIRCUIT_SOURCE.CG_ONCHAIN, result.providerOutcome);
   }
 
   const fallbackProbesById = new Map(fallbackProbes.map((asset) => [asset.id, asset]));
@@ -262,7 +254,7 @@ export async function runPriceCorroboration(params: {
     cohortSize: cohort.length,
     cacheEntriesWritten: entries.length,
     fallbackStats,
-    addressProviderCount: providers.length,
+    addressProviderCount: Number(addressProviderEnabled),
     providerDiagnosticCount,
   };
 }

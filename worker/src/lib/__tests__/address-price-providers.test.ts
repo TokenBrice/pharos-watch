@@ -1,43 +1,45 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import {
-  buildAddressPriceTargetsByProvider,
+  buildAddressPriceTargets,
   collectAddressPriceProviderQuotes,
-  resolveEnabledAddressPriceProviders,
+  isCoingeckoOnchainAddressEnabled,
   resolveFallbackChain,
 } from "../address-price-providers";
 import { runCoingeckoOnchainAddressProvider } from "../address-price-providers/coingecko-onchain";
+import { finalizeAddressPriceDiagnosticAttempts } from "../address-price-providers/shared";
 import { makeTarget, coingeckoResponse } from "./address-price-providers.test-support";
 
 const LIVE_PROVIDER = "coingecko-onchain-address" as const;
 
 
 afterEach(() => {
+  vi.useRealTimers();
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
 
 describe("address price providers", () => {
   it("enables no provider when the allowlist is unset", () => {
-    expect(resolveEnabledAddressPriceProviders({ cgApiKey: "cg" })).toEqual([]);
+    expect(isCoingeckoOnchainAddressEnabled({ cgApiKey: "cg" })).toBe(false);
   });
 
   it("retains only the explicitly allowlisted CoinGecko Onchain provider", () => {
-    expect(resolveEnabledAddressPriceProviders({
+    expect(isCoingeckoOnchainAddressEnabled({
       enabledProviders: "coingecko-onchain-address,dexpaprika-address,moralis-address",
       cgApiKey: "cg",
-    })).toEqual(["coingecko-onchain-address"]);
-    expect(resolveEnabledAddressPriceProviders({
+    })).toBe(true);
+    expect(isCoingeckoOnchainAddressEnabled({
       enabledProviders: "coingecko-onchain-address",
-    })).toEqual([]);
-    expect(resolveEnabledAddressPriceProviders({
+    })).toBe(false);
+    expect(isCoingeckoOnchainAddressEnabled({
       enabledProviders: "none",
       cgApiKey: "cg",
-    })).toEqual([]);
+    })).toBe(false);
   });
 
   it("targets only missing or low-depth rows on CoinGecko-supported chains", () => {
-    const targets = buildAddressPriceTargetsByProvider({
-      providers: ["coingecko-onchain-address"],
+    const targets = buildAddressPriceTargets({
       previousAssetsById: new Map([
         ["thin", { id: "thin", symbol: "THIN", consensusSources: ["coingecko", "defillama-list"] }],
         ["deep", { id: "deep", symbol: "DEEP", consensusSources: ["a", "b", "c"] }],
@@ -62,7 +64,7 @@ describe("address price providers", () => {
       ],
     });
 
-    expect(targets.get("coingecko-onchain-address")).toMatchObject([{
+    expect(targets).toMatchObject([{
       stablecoinId: "thin",
       chain: "base",
       providerChainId: "base",
@@ -97,18 +99,17 @@ describe("address price providers", () => {
       },
     ];
     const shared = {
-      providers: [LIVE_PROVIDER] as const,
       assets,
       previousAssetsById: new Map(assets.map((asset) => [asset.id, asset])),
       nowSec: 1_800_000_100,
     };
 
-    expect(buildAddressPriceTargetsByProvider({ ...shared, cohort: "coverage-refresh" })
-      .get(LIVE_PROVIDER)?.map((target) => target.stablecoinId))
+    expect(buildAddressPriceTargets({ ...shared, cohort: "coverage-refresh" })
+      .map((target) => target.stablecoinId))
       .toEqual(["lane-owned", "no-price"]);
     // The hourly cohort still discovers a thin row whose fresh price comes from
     // somewhere else, because coverage depth rather than lifetime drives it.
-    expect(buildAddressPriceTargetsByProvider(shared).get(LIVE_PROVIDER)?.map((target) => target.stablecoinId))
+    expect(buildAddressPriceTargets(shared).map((target) => target.stablecoinId))
       .toEqual(expect.arrayContaining(["lane-owned", "priced-elsewhere", "no-price"]));
   });
 
@@ -124,12 +125,11 @@ describe("address price providers", () => {
       priceObservedAt: 1_800_000_000,
     };
     const targetChains = (hint?: { chain: string; address: string }) =>
-      buildAddressPriceTargetsByProvider({
-        providers: [LIVE_PROVIDER],
+      buildAddressPriceTargets({
         assets: [asset],
         cohort: "coverage-refresh",
         ...(hint ? { deploymentHints: new Map([[asset.id, hint]]) } : {}),
-      }).get(LIVE_PROVIDER)?.map((target) => target.chain);
+      }).map((target) => target.chain);
 
     expect(targetChains()).toEqual(["base", "ethereum"]);
     expect(targetChains({ chain: "base", address: asset.address })).toEqual(["base"]);
@@ -145,8 +145,7 @@ describe("address price providers", () => {
   });
 
   it("builds targets from explicit chain hints and bare Solana addresses", () => {
-    const targets = buildAddressPriceTargetsByProvider({
-      providers: [LIVE_PROVIDER],
+    const targets = buildAddressPriceTargets({
       assets: [
         {
           id: "chain-hint",
@@ -160,7 +159,7 @@ describe("address price providers", () => {
           address: "So11111111111111111111111111111111111111112",
         },
       ],
-    }).get(LIVE_PROVIDER);
+    });
 
     expect(targets).toEqual(expect.arrayContaining([
       expect.objectContaining({ stablecoinId: "chain-hint", chain: "base", providerChainId: "base" }),
@@ -170,23 +169,21 @@ describe("address price providers", () => {
 
   it("reports the live provider's empty and circuit-blocked branches", async () => {
     const empty = await collectAddressPriceProviderQuotes({
-      targetsByProvider: new Map(),
-      providers: [LIVE_PROVIDER],
-      sourceAllowed: { [LIVE_PROVIDER]: true },
+      targets: [],
+      sourceAllowed: true,
       config: { cgApiKey: "cg" },
       nowSec: 1_800_000_000,
     });
-    expect(empty.providerOutcomes.get(LIVE_PROVIDER)).toBe("success");
+    expect(empty.providerOutcome).toBe("success");
     expect(empty.diagnostics[0]?.stage).toBe("no-candidates");
 
     const blocked = await collectAddressPriceProviderQuotes({
-      targetsByProvider: new Map([[LIVE_PROVIDER, [makeTarget()]]]),
-      providers: [LIVE_PROVIDER],
-      sourceAllowed: { [LIVE_PROVIDER]: false },
+      targets: [makeTarget()],
+      sourceAllowed: false,
       config: { cgApiKey: "cg" },
       nowSec: 1_800_000_000,
     });
-    expect(blocked.providerOutcomes.get(LIVE_PROVIDER)).toBe("neutral");
+    expect(blocked.providerOutcome).toBe("neutral");
     expect(blocked.diagnostics[0]?.assetAttempts?.[0]).toMatchObject({
       state: "skipped",
       skipReason: "circuit-open",
@@ -201,14 +198,13 @@ describe("address price providers", () => {
     }]);
 
     const result = await collectAddressPriceProviderQuotes({
-      targetsByProvider: new Map([[LIVE_PROVIDER, [target]]]),
-      providers: [LIVE_PROVIDER],
-      sourceAllowed: { [LIVE_PROVIDER]: true },
+      targets: [target],
+      sourceAllowed: true,
       config: { cgApiKey: "cg" },
       nowSec: 1_800_000_000,
     });
 
-    expect(result.providerOutcomes.get(LIVE_PROVIDER)).toBe("success");
+    expect(result.providerOutcome).toBe("success");
     expect(result.quotesByStablecoinId.get(target.stablecoinId)).toEqual([
       expect.objectContaining({ source: LIVE_PROVIDER, priceUsd: 1.001 }),
     ]);
@@ -262,6 +258,63 @@ describe("address price providers", () => {
 
     expect(result.quotes).toEqual([]);
     expect(result.rejectedTargets).toEqual({ "missing-liquidity": 1 });
+  });
+
+  it("tracks resolved and request-cap-skipped live targets through the adapter", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_800_000_000_000);
+    const targets = Array.from({ length: 255 }, (_, i) => makeTarget({
+      stablecoinId: `fixture-${i}`, address: `0x${i.toString(16).padStart(40, "0")}`,
+    }));
+    const fetch = mockFetch([{ match: () => true, respond: (request) => {
+      const address = new URL(request.url).pathname.split("/tokens/multi/")[1]!.split(",")[0]!;
+      return coingeckoResponse(address, "1", "75000");
+    } }]);
+    const pending = runCoingeckoOnchainAddressProvider(targets, "cg", undefined, 1_800_000_000, Date.now() + 60_000);
+    await vi.runAllTimersAsync();
+    const result = await pending;
+    expect(fetch).toHaveBeenCalledTimes(5);
+    expect(result).toMatchObject({ attemptedRequests: 5, successfulRequests: 5 });
+    expect(result.diagnostics[0]?.assetAttempts?.[0]).toMatchObject({ result: "resolved", observedAt: 1_800_000_000 });
+    const capped = result.diagnostics[result.diagnostics.length - 1]!;
+    expect(capped.candidateCount).toBe(105);
+    expect(capped.assetAttempts).toHaveLength(100);
+    expect(capped.assetAttempts?.[0]).toMatchObject({ state: "skipped", skipReason: "request-cap", rejectionClass: "cap" });
+  });
+
+  it.each([
+    ["404", 404, "unindexed", "success", "non-ok"],
+    ["malformed JSON", 200, "{broken", "failure", "SyntaxError"],
+    ["upstream failure", 500, "unavailable", "failure", "non-ok"],
+  ])("preserves the outcome and failed asset evidence for %s", async (_label, status, body, outcome, errorClass) => {
+    mockFetch([{ match: () => true, respond: () => new Response(body, { status }) }]);
+    const result = await collectAddressPriceProviderQuotes({
+      targets: [makeTarget()], sourceAllowed: true, config: { cgApiKey: "cg" }, nowSec: 1_800_000_000,
+    });
+    expect(result.providerOutcome).toBe(outcome);
+    expect(result).toMatchObject({ attemptedRequests: 1, successfulRequests: 0 });
+    expect(result.diagnostics[0]?.assetAttempts?.[0]).toMatchObject({ result: "failed", rejectionClass: errorClass });
+  });
+
+  it("keeps a deadline-skipped request neutral without attempting transport", async () => {
+    const fetch = mockFetch([]);
+    const result = await collectAddressPriceProviderQuotes({
+      targets: [makeTarget()], sourceAllowed: true, config: { cgApiKey: "cg" }, nowSec: 1_800_000_000, budgetMs: 0,
+    });
+    expect(fetch).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ providerOutcome: "neutral", attemptedRequests: 0, successfulRequests: 0 });
+    expect(result.diagnostics[0]?.assetAttempts?.[0]).toMatchObject({ state: "skipped", skipReason: "deadline", rejectionClass: "timeout" });
+  });
+
+  it("marks unresolved attempts rejected from an exact shared provider rejection", () => {
+    const target = makeTarget();
+    const diagnostic = finalizeAddressPriceDiagnosticAttempts({
+      source: LIVE_PROVIDER, stage: "primary", endpoint: "rejected", status: 200, ok: true, success: true,
+      candidateCount: 1, rejectionReasonCounts: { "price-rejected": 1 },
+      assetAttempts: [{ assetId: target.stablecoinId, adapter: LIVE_PROVIDER, source: LIVE_PROVIDER,
+        chain: target.chain, target: target.address, state: "attempted", result: "unresolved", replaySafe: true }],
+    }, []);
+    expect(diagnostic.assetAttempts?.[0]).toMatchObject({ result: "rejected", rejectionClass: "price-rejected" });
   });
 
 });

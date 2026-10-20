@@ -12,13 +12,11 @@ const VUSD_DEPLOYMENT = {
 describe("reviewed address-price target overrides", () => {
   it("recognizes and selects only the reviewed canonical deployment", () => {
     expect(isReviewedAddressPriceTargetOverride({
-      provider: "coingecko-onchain-address",
       stablecoinId: "vusd-virtue",
       ...VUSD_DEPLOYMENT,
     })).toBe(true);
 
     expect(applyReviewedAddressPriceTargetOverride({
-      provider: "coingecko-onchain-address",
       stablecoinId: "vusd-virtue",
       deployments: [VUSD_DEPLOYMENT, {
         chain: "base",
@@ -31,7 +29,6 @@ describe("reviewed address-price target overrides", () => {
 
   it("fails closed when current metadata no longer contains the override", () => {
     expect(applyReviewedAddressPriceTargetOverride({
-      provider: "coingecko-onchain-address",
       stablecoinId: "vusd-virtue",
       deployments: [VUSD_DEPLOYMENT],
       metadataDeployments: [],
