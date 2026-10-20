@@ -1,10 +1,34 @@
 import {
+  DEX_MEASURED_MATURE_SUCCESSFUL_CYCLE_COUNT,
   DexMeasuredExecutionObservationHistorySchema,
   getDexMeasuredExecutionFreshnessMaxSec,
   type DexMeasuredExecutionObservationHistory,
   type DexMeasuredExecutionProfile,
+  type DexMeasuredLegacyHistoryProfile,
 } from "@shared/types/measured-execution";
 import { buildExitRouteCapacityPoint } from "@shared/lib/exit-route-capacity-point";
+import {
+  CURVE_STABLESWAP_ADAPTER_PROFILE_ID,
+  CURVE_STABLESWAP_MIN_SUCCESSFUL_OBSERVATIONS,
+} from "./curve-stableswap";
+import {
+  CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID,
+  CURVE_STABLESWAP_NG_MIN_SUCCESSFUL_OBSERVATIONS,
+} from "./curve-stableswap-ng";
+
+// T1 activation, 2026-10-20T12:03:00Z. Remove this transition once all routes
+// have mature hash-bound history or the existing source-age window expires.
+export const MEASURED_LEGACY_TRANSITION_CUTOFF_SEC = 1_792_497_780;
+
+function requiredHashBoundSuccesses(adapterProfileId: string): number {
+  if (adapterProfileId === CURVE_STABLESWAP_ADAPTER_PROFILE_ID) {
+    return CURVE_STABLESWAP_MIN_SUCCESSFUL_OBSERVATIONS;
+  }
+  if (adapterProfileId === CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID) {
+    return CURVE_STABLESWAP_NG_MIN_SUCCESSFUL_OBSERVATIONS;
+  }
+  return DEX_MEASURED_MATURE_SUCCESSFUL_CYCLE_COUNT;
+}
 
 export interface DexMeasuredExecutionHistoryCycle {
   generationId: string;
@@ -12,6 +36,8 @@ export interface DexMeasuredExecutionHistoryCycle {
   status: "measured" | "failed";
   operationalFailure: boolean;
   profile: DexMeasuredExecutionProfile | null;
+  /** Count-only evidence; cannot supply current/LKG execution or capacity. */
+  legacyProfile?: DexMeasuredLegacyHistoryProfile;
 }
 
 function pointKey(point: DexMeasuredExecutionProfile["capacityCurve"][number]): string {
@@ -117,17 +143,36 @@ export function summarizeDexMeasuredExecutionHistory(input: {
   const capacityCurve = conservativeCurve(successful.map((cycle) => cycle.profile));
   if (capacityCurve === null) return null;
 
+  const legacyEnabled =
+    successful.length < requiredHashBoundSuccesses(successful[0]!.profile.adapterProfileId);
+  const isCountedSuccess = (cycle: DexMeasuredExecutionHistoryCycle): boolean => {
+    if (isEligibleSuccess(cycle)) return true;
+    const legacy = cycle.legacyProfile;
+    return legacyEnabled &&
+      cycle.status === "measured" && !cycle.operationalFailure &&
+      cycle.profile === null && legacy !== undefined &&
+      legacy.quoteGenerationId === cycle.generationId &&
+      legacy.quotedAt < MEASURED_LEGACY_TRANSITION_CUTOFF_SEC &&
+      legacy.quotedAt <= input.nowSec + 60 &&
+      input.nowSec - legacy.quotedAt <= getDexMeasuredExecutionFreshnessMaxSec(legacy.adapterProfileId);
+  };
+  let successfulObservationCount = 0;
   let consecutiveSuccessCount = 0;
+  let consecutive = true;
   for (const cycle of activeCycles) {
-    if (!isEligibleSuccess(cycle)) break;
-    consecutiveSuccessCount += 1;
+    if (!isCountedSuccess(cycle)) {
+      consecutive = false;
+      continue;
+    }
+    successfulObservationCount += 1;
+    if (consecutive) consecutiveSuccessCount += 1;
   }
   const latestOperationalFailureAt =
     activeCycles.find((cycle) => cycle.status === "failed" && cycle.operationalFailure)?.publishedAt ?? null;
 
   const result = DexMeasuredExecutionObservationHistorySchema.safeParse({
     completeProducerCycleCount: activeCycles.length,
-    successfulObservationCount: successful.length,
+    successfulObservationCount,
     consecutiveSuccessCount,
     observationWindowStartedAt: Math.min(...activeCycles.map((cycle) => cycle.publishedAt)),
     observationWindowEndedAt: Math.max(...activeCycles.map((cycle) => cycle.publishedAt)),

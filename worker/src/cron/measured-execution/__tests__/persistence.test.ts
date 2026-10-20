@@ -20,6 +20,7 @@ import {
 import { buildDexMeasuredExecutionProfile } from "../profiles";
 import { makeV3Target } from "./measured-execution.test-support";
 import { databases, evidenceDb, seedGeneration, seedMeasuredProducerAttempt } from "./persistence.test-support";
+import { MEASURED_LEGACY_TRANSITION_CUTOFF_SEC } from "../history";
 
 afterEach(() => databases.closeAll());
 
@@ -343,6 +344,51 @@ describe("measured execution durable publication", () => {
 });
 
 describe("measured execution last-known-good selection", () => {
+  it.each([false, true])("counts only coherent pre-cutover legacy history, never LKG (deferred=%s)", async (deferProfiles) => {
+    const { db, sqlite } = databases.open();
+    const target = fixtureTarget("ethereum");
+    const cutoff = MEASURED_LEGACY_TRANSITION_CUTOFF_SEC;
+    for (const [generationId, quotedAt] of [["old", cutoff - 1], ["current", cutoff + 10]] as const) {
+      seedGeneration(sqlite, {
+        generationId, targetGenerationId: `${generationId}-targets`,
+        publishedAt: quotedAt, state: generationId === "current" ? "published" : "superseded",
+        rows: [{ target, profile: fixtureProfile(target, {
+          targetGenerationId: `${generationId}-targets`, quoteGenerationId: generationId, quotedAt,
+        }) }],
+      });
+    }
+    const { blockHash: _blockHash, ...legacy } = fixtureProfile(target, {
+      targetGenerationId: "old-targets", quoteGenerationId: "old", quotedAt: cutoff - 1,
+    });
+    const replaceLegacy = (value: unknown) => sqlite.prepare(
+      "UPDATE dex_measured_execution_quotes SET quote_profile_json = ? WHERE generation_id = 'old'",
+    ).run(JSON.stringify(value));
+    const load = () => loadLatestPublishedDexMeasuredQuoteEvidence(db, cutoff + 20, undefined, { deferProfiles });
+    replaceLegacy(legacy);
+    const restored = (await load())?.byTargetId.get(target.targetId);
+    expect(restored?.observationHistory?.successfulObservationCount).toBe(2);
+    expect(restored?.resolution).toBe("latest");
+    expect(materializeDexMeasuredQuoteProfile(restored!)?.blockHash).toBe(`0x${"ab".repeat(32)}`);
+    for (const invalid of [
+      { ...legacy, quotedAt: cutoff },
+      { ...legacy, quotedAt: cutoff + 1 },
+      { ...legacy, quoteGenerationId: "foreign" },
+      { ...legacy, targetGenerationId: "foreign" },
+      { ...legacy, adapterProfileId: "foreign" },
+      { ...legacy, blockHash: "malformed" },
+      { ...legacy, executionEndpoint: null },
+    ]) {
+      replaceLegacy(invalid);
+      expect((await load())?.byTargetId.get(target.targetId)?.observationHistory?.successfulObservationCount).toBe(1);
+    }
+    replaceLegacy(legacy);
+    sqlite.prepare("UPDATE dex_measured_execution_quotes SET status = 'failed', failure_reason = 'rpc-failure', quote_profile_json = NULL WHERE generation_id = 'current'").run();
+    const unavailable = (await load())?.byTargetId.get(target.targetId);
+    expect(unavailable?.status).toBe("failed");
+    expect(unavailable?.observationHistory).toBeUndefined();
+    expect(unavailable?.resolution).toBe("latest");
+  });
+
   it.each([false, true])("refuses retained number-only JSON without renewing it (deferred=%s)", async (deferProfiles) => {
     const target = fixtureTarget("ethereum");
     const profile = fixtureProfile(target, {

@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
-import type { DexMeasuredExecutionProfile } from "@shared/types/measured-execution";
-import { summarizeDexMeasuredExecutionHistory, type DexMeasuredExecutionHistoryCycle } from "../history";
+import {
+  DexMeasuredLegacyHistoryProfileSchema,
+  type DexMeasuredExecutionProfile,
+} from "@shared/types/measured-execution";
+import {
+  MEASURED_LEGACY_TRANSITION_CUTOFF_SEC,
+  summarizeDexMeasuredExecutionHistory,
+  type DexMeasuredExecutionHistoryCycle,
+} from "../history";
 
 function profile(
   generationId: string,
@@ -83,6 +90,65 @@ function measured(
 }
 
 describe("summarizeDexMeasuredExecutionHistory", () => {
+  it.each([
+    ["uniswap-v3-quoter-v2", 1, 3],
+    ["uniswap-v3-quoter-v2", 2, 2],
+    ["curve-stableswap-main-registry-get-dy-v1", 2, 4],
+    ["curve-stableswap-main-registry-get-dy-v1", 3, 3],
+    ["curve-stableswap-ng-factory-get-dy-v2", 2, 4],
+    ["curve-stableswap-ng-factory-get-dy-v2", 3, 3],
+  ])("bounds legacy maturity for %s with %s hash successes", (adapterProfileId, hashCount, expected) => {
+    const cutoff = MEASURED_LEGACY_TRANSITION_CUTOFF_SEC;
+    const cycles = Array.from({ length: hashCount }, (_, index) => {
+      const cycle = measured(`new-${index}`, cutoff + index, [100_000, 900_000, 8_000_000, 9_000_000]);
+      cycle.profile!.adapterProfileId = adapterProfileId;
+      return cycle;
+    });
+    for (let index = 1; index <= 2; index++) {
+      const old = profile(`old-${index}`, cutoff - index, [1, 1, 1, 1]);
+      old.adapterProfileId = adapterProfileId;
+      const { blockHash: _blockHash, ...legacy } = old;
+      cycles.push({
+        generationId: old.quoteGenerationId, publishedAt: cutoff - index,
+        status: "measured", operationalFailure: false, profile: null,
+        legacyProfile: DexMeasuredLegacyHistoryProfileSchema.parse(legacy),
+      });
+    }
+    const result = summarizeDexMeasuredExecutionHistory({ cycles, nowSec: cutoff + 10, freshnessMaxSec: 10_800 });
+    expect(result?.successfulObservationCount).toBe(expected);
+    expect(result?.consecutiveSuccessCount).toBe(expected);
+    expect(result?.conservativeCapacityCurve[0]?.executableUsd).toBe(100_000);
+    expect(summarizeDexMeasuredExecutionHistory({ cycles: cycles.slice(hashCount), nowSec: cutoff + 10, freshnessMaxSec: 10_800 })).toBeNull();
+  });
+
+  it.each([
+    [-1, 10, 10_800, 2],
+    [0, 10, 10_800, 1],
+    [1, 10, 10_800, 1],
+    [-1, 10_799, 10_800, 2],
+    [-1, 10_800, 10_800, 1],
+    [-1, 10, 5, 1],
+  ])("retains cutoff and source/publication windows (%s,%s,%s)", (offset, elapsed, freshnessMaxSec, expected) => {
+    const cutoff = MEASURED_LEGACY_TRANSITION_CUTOFF_SEC;
+    const current = measured("current", cutoff + elapsed, [100_000, 900_000, 8_000_000, 9_000_000]);
+    const { blockHash: _blockHash, ...legacy } = profile("old", cutoff + offset, [1, 1, 1, 1]);
+    const old: DexMeasuredExecutionHistoryCycle = {
+      generationId: "old", publishedAt: cutoff, status: "measured",
+      operationalFailure: false, profile: null, legacyProfile: DexMeasuredLegacyHistoryProfileSchema.parse(legacy),
+    };
+    const result = summarizeDexMeasuredExecutionHistory({
+      cycles: [current, old], nowSec: cutoff + elapsed, freshnessMaxSec,
+    });
+    expect(result?.successfulObservationCount).toBe(expected);
+    const failure: DexMeasuredExecutionHistoryCycle = {
+      generationId: "failure", publishedAt: cutoff + 1, status: "failed",
+      operationalFailure: false, profile: null,
+    };
+    expect(summarizeDexMeasuredExecutionHistory({
+      cycles: [current, failure, old], nowSec: cutoff + elapsed, freshnessMaxSec,
+    })?.successfulObservationCount).toBe(1);
+  });
+
   it("uses the pointwise minimum across complete successful cycles", () => {
     const result = summarizeDexMeasuredExecutionHistory({
       nowSec: 2_000,

@@ -2,6 +2,7 @@ import {
   DEX_MEASURED_FRESHNESS_MAX_SEC,
   DexMeasuredExecutionProfileSchema,
   DexMeasuredExecutionTargetSchema,
+  DexMeasuredLegacyHistoryProfileSchema,
   getDexMeasuredExecutionFreshnessMaxSec,
   type DexMeasuredExecutionObservationHistory,
   type DexMeasuredExecutionProfile,
@@ -13,7 +14,11 @@ import { logWorkerEvent } from "../../lib/structured-log";
 import { DEX_MEASURED_QUOTE_SURFACE, DEX_MEASURED_TARGET_SURFACE, hashMeasuredTargetIds, latestPublishedGeneration,
   latestPublishedGenerationAtOrBefore,
   loadSupersededQuoteGenerationIds, parsePersistedJson, type MeasuredQuoteGenerationDependency, type SurfaceGenerationRow } from "./generation-store";
-import { summarizeDexMeasuredExecutionHistory, type DexMeasuredExecutionHistoryCycle } from "./history";
+import {
+  MEASURED_LEGACY_TRANSITION_CUTOFF_SEC,
+  summarizeDexMeasuredExecutionHistory,
+  type DexMeasuredExecutionHistoryCycle,
+} from "./history";
 // This generation-level query must cover the longest adapter-specific freshness
 // window; row admission below still applies the exact per-adapter bound.
 const DEX_MEASURED_HISTORY_LOOKBACK_MAX_SEC = DEX_MEASURED_FRESHNESS_MAX_SEC;
@@ -662,6 +667,30 @@ export async function loadLatestPublishedDexMeasuredQuoteEvidence(
             : null;
           const profile = profileResult?.success ? profileResult.data : null;
           const quotedTarget = targetResult.success ? targetResult.data : null;
+          // A pre-cutover number-only success can season history, but never
+          // becomes an executable profile or an LKG replacement. All other
+          // malformed/torn rows retain their deterministic integrity barrier.
+          const legacyResult = profile === null && profileJson?.ok
+            ? DexMeasuredLegacyHistoryProfileSchema.safeParse(profileJson.value)
+            : null;
+          const legacyProfile = legacyResult?.success ? legacyResult.data : null;
+          if (
+            legacyProfile !== null &&
+            legacyProfile.quotedAt < MEASURED_LEGACY_TRANSITION_CUTOFF_SEC &&
+            quotedTarget !== null &&
+            legacyProfile.adapterProfileId === quotedTarget.adapterProfileId &&
+            isCoherentHistoricalQuoteRow(row, quotedTarget, legacyProfile)
+          ) {
+            recordCycle({
+              generationId: row.generation_id,
+              publishedAt: row.quote_published_at,
+              status: "measured",
+              operationalFailure: false,
+              profile: null,
+              legacyProfile,
+            });
+            continue;
+          }
           if (quotedTarget === null || !isCoherentHistoricalQuoteRow(row, quotedTarget, profile)) {
             recordIntegrityBarrier();
             continue;

@@ -41,7 +41,7 @@ export interface DexNativeExecutionDiagnostic {
     points: SolanaDexNativePoint[];
   }>;
 }
-const DEX_MEASURED_MATURE_SUCCESSFUL_CYCLE_COUNT = 2;
+export const DEX_MEASURED_MATURE_SUCCESSFUL_CYCLE_COUNT = 2;
 
 const CanonicalEvmAddressSchema = /* @__PURE__ */ (() => z.string().regex(/^0x[a-f0-9]{40}$/))();
 const CanonicalBytes32Schema = /* @__PURE__ */ (() => z.string().regex(/^0x[a-f0-9]{64}$/))();
@@ -313,6 +313,20 @@ export const DexMeasuredExecutionProfileSchema = /* @__PURE__ */ (() => z.object
   quoteProof: z.array(DexMeasuredExecutionQuotePointProofSchema).min(1).max(16),
 }))();
 export type DexMeasuredExecutionProfile = z.infer<typeof DexMeasuredExecutionProfileSchema>;
+
+/**
+ * Historical maturity only: never an executable/public profile. Remove after
+ * the pre-T1 source window expires or every route has mature hash-bound history.
+ * Missing hashes are preserved as missing, never synthesized.
+ */
+export const DexMeasuredLegacyHistoryProfileSchema = /* @__PURE__ */ (() =>
+  DexMeasuredExecutionProfileSchema.extend({
+    blockHash: z.never().optional(),
+    uniswapV4PoolProof: DexMeasuredExecutionUniswapV4PoolProofSchema.extend({
+      blockHash: z.never().optional(),
+    }).optional(),
+  }))();
+export type DexMeasuredLegacyHistoryProfile = z.infer<typeof DexMeasuredLegacyHistoryProfileSchema>;
 
 /** Public, proof-free projection retained on DEX pool rows. */
 export const DexMeasuredExecutionPublicProfileSchema = /* @__PURE__ */ (() => DexMeasuredExecutionProfileSchema.omit({
