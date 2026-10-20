@@ -56,6 +56,8 @@ Stablecoin base records and whole-domain research sidecars merge through `script
 
 Shared transport/identity primitives retain their own contracts: `shared/lib/drpc.ts` owns network slugs (research routes do not authorize runtime capability); `shared/lib/stable-json.ts` rejects undefined/sparse array entries in canonical output. Shared display policy belongs in `shared/lib/format.ts`, not consumer copies.
 
+Generic durations belong to `shared/lib/time-constants.ts`; Worker callers import its named second-based constants directly. Producer cadences and domain freshness or retention policies retain their own authorities.
+
 Numeric admission reuses `shared/lib/type-guards.ts`: `numberValue` accepts only finite numbers; `coerceFiniteNumber` additionally accepts non-blank numeric strings. Both preserve zero and reject booleans/non-finite values. Callers retain domain-specific bounds and throwing policies.
 
 Compact numeric wrappers render non-finite observations as `N/A`, including counts; `abbreviateNumberParts` returns `null` instead of zero parts. Consumers retain their established unavailable glyphs. Observed finite zero and signed-negative formatting remain distinct and unchanged.

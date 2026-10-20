@@ -55,7 +55,6 @@ const TELEGRAM_DIGEST_OUTBOX_DRAIN_SURFACE = "telegram-digest-outbox-drain";
 const SAFETY_MAP_PRODUCER_KICK_SURFACE = "safety-map-producer-kick";
 const DIGEST_TRIGGER_POLL_BUDGET_ONLY_JOBS = SCHEDULED_SLOT_PLANS.digestTriggerPoll.budgetOnlyJobs?.length ?? 0;
 export const MAX_ATTEMPTS = 3;
-export const DIGEST_TRIGGER_POLL_INTERVAL_SECONDS = 5 * 60;
 /**
  * A `running` state is only reclaimable after the scheduled invocation budget.
  * Each start consumes its attempt durably before work, including starts whose
@@ -686,7 +685,7 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
       const lastError = boundedErrorMessage(errorMessage ?? resultFailureMessage(result, job));
       const nextAttemptAt = deadLettered
         ? finishedAt
-        : finishedAt + 2 * DIGEST_TRIGGER_POLL_INTERVAL_SECONDS * nextAttempts;
+        : finishedAt + 2 * CRON_SCHEDULE_CADENCES.digestTriggerPoll.intervalSec * nextAttempts;
       try {
         await replaceForceRunRequest(runtime.db, JSON.stringify(attemptPayload), {
           ...attemptPayload,
@@ -741,7 +740,7 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
       state: finalState,
       attempts: nextAttempts,
       nextAttemptAt: claimedPayload !== null && failed && !deadLettered
-        ? finishedAt + 2 * DIGEST_TRIGGER_POLL_INTERVAL_SECONDS * nextAttempts
+        ? finishedAt + 2 * CRON_SCHEDULE_CADENCES.digestTriggerPoll.intervalSec * nextAttempts
         : null,
       intentCleared,
       deadLettered,

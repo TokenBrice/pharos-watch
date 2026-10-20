@@ -14,7 +14,7 @@ import { logWorkerEventArgs } from "../../lib/structured-log";
  */
 import { syncKinesisSupply } from "../../cron/sync-kinesis-supply";
 import type { ScheduledRuntimeContext } from "./context";
-import { runScheduledSlotGroups, type ScheduledSlotGroup } from "./slot-groups";
+import { runScheduledSlotGroups, type ScheduledSlotTask, type ScheduledSlotTaskChain } from "./slot-groups";
 import {
   buildScheduledSlotSummary,
   mergeScheduledSlotSummaries,
@@ -55,8 +55,8 @@ function isReserveQueueExhausted(checkpoint: ScheduledRecoveryCheckpoint): boole
 function checkpointTask(
   runtime: ScheduledRuntimeContext,
   checkpoint: ScheduledRecoveryCheckpoint,
-  task: ScheduledSlotGroup["tasks"][number],
-): ScheduledSlotGroup["tasks"][number] {
+  task: ScheduledSlotTask,
+): ScheduledSlotTask {
   return {
     ...task,
     run: async (signal, reportProgress) => {
@@ -92,10 +92,9 @@ function checkpointTask(
 function buildReserveSyncSlotGroups(
   runtime: ScheduledRuntimeContext,
   checkpoint: ScheduledRecoveryCheckpoint,
-): ScheduledSlotGroup[] {
-  const groups: ScheduledSlotGroup[] = [
+): ScheduledSlotTaskChain[] {
+  const groups: ScheduledSlotTaskChain[] = [
     {
-      mode: "serial",
       label: "reserve-adapters",
       stopOnFailure: true,
       stopOnNonNeutralSkip: true,
@@ -130,7 +129,6 @@ function buildReserveSyncSlotGroups(
       ],
     },
     {
-      mode: "serial",
       label: "redemption-backstops",
       tasks: [
         {
@@ -147,7 +145,6 @@ function buildReserveSyncSlotGroups(
       ],
     },
     {
-      mode: "serial",
       label: "kinesis-supply",
       tasks: [
         {
@@ -158,7 +155,6 @@ function buildReserveSyncSlotGroups(
       ],
     },
     {
-      mode: "serial",
       label: "reserve-post-sync",
       tasks: [
         {
@@ -198,7 +194,7 @@ function buildReserveSyncSlotGroups(
 async function recordContinuationTasks(
   runtime: ScheduledRuntimeContext,
   checkpoint: ScheduledCheckpointIdentity,
-  tasks: readonly ScheduledSlotGroup["tasks"][number][],
+  tasks: readonly ScheduledSlotTask[],
 ): Promise<ScheduledSlotSummary> {
   const reason = "reserve-cohort-continuation";
   for (const task of tasks) {
@@ -261,7 +257,7 @@ export async function runFourHourlyReserveSyncSlot(runtime: ScheduledRuntimeCont
   // Kinesis is independent. Consumers run only on an exhausted cohort in a
   // fresh invocation, avoiding repeated redemption behind partial slices.
   const main = syncTask
-    ? runScheduledSlotGroups(runtime, SLOT_LABEL, [{ ...reserveAdapterGroup, tasks: [syncTask] }])
+    ? runScheduledSlotGroups(runtime, SLOT_LABEL, [[{ ...reserveAdapterGroup, tasks: [syncTask] }]])
     : Promise.resolve(buildScheduledSlotSummary([]));
   // The independent one-minute lane declares 3/6, unlike the regular 4/6
   // producer slot. Keep the independent child, but never overlap its fetch.
@@ -269,7 +265,7 @@ export async function runFourHourlyReserveSyncSlot(runtime: ScheduledRuntimeCont
   const [mainSummary, kinesisSummary] = await Promise.all([
     main,
     kinesisTasks.length > 0 && kinesisGroup
-      ? runScheduledSlotGroups(runtime, SLOT_LABEL, [kinesisGroup])
+      ? runScheduledSlotGroups(runtime, SLOT_LABEL, [[kinesisGroup]])
       : buildScheduledSlotSummary([]),
   ]);
   const checkpointAfterMain = await loadLiveReserveCheckpoint(runtime.db, identity);
@@ -314,7 +310,7 @@ export async function runFourHourlyReserveSyncSlot(runtime: ScheduledRuntimeCont
     return summary;
   }
   if (redemptionTasks.length > 0 && redemptionGroup) {
-    summaries.push(await runScheduledSlotGroups(runtime, SLOT_LABEL, [redemptionGroup]));
+    summaries.push(await runScheduledSlotGroups(runtime, SLOT_LABEL, [[redemptionGroup]]));
     const admissionSkip = summaries[summaries.length - 1]?.jobs.find((job) =>
       job.reason === "producer-slot-priority" || job.reason === "same-role-slot-co-tenancy");
     if (admissionSkip) {
@@ -324,7 +320,7 @@ export async function runFourHourlyReserveSyncSlot(runtime: ScheduledRuntimeCont
     }
   }
   if (postSyncTasks.length > 0 && postSyncGroup) {
-    summaries.push(await runScheduledSlotGroups(runtime, SLOT_LABEL, [postSyncGroup]));
+    summaries.push(await runScheduledSlotGroups(runtime, SLOT_LABEL, [[postSyncGroup]]));
   }
   const summary = mergeScheduledSlotSummaries(summaries);
   const checkpointAfterChildren = await loadLiveReserveCheckpoint(runtime.db, identity);

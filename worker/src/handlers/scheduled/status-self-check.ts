@@ -18,8 +18,6 @@ import { bindScheduledSlotPlan, runScheduledSlotGroups } from "./slot-groups";
 
 export function buildStatusSelfCheckSlotGroups(runtime: ScheduledRuntimeContext) {
   return bindScheduledSlotPlan("statusSelfCheckOffset", {
-    mode: "serial",
-    label: "status-self-check",
     implementations: {
       "status-self-check": (signal, reportProgress) =>
         runStatusSelfCheck(runtime.db, {

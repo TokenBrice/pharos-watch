@@ -14,7 +14,7 @@ import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { getConditionBand } from "@shared/lib/psi-policy";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import { sha256Hex } from "../../lib/hash";
-import { SECONDS } from "../../lib/time-constants";
+import { DAY_SECONDS, HOUR_SECONDS } from "@shared/lib/time-constants";
 import { assessFreshnessTimestamp } from "../../lib/api-freshness-age";
 import {
   collectActiveDepegs,
@@ -251,7 +251,7 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
 
   const nowSec = Math.floor(Date.now() / 1000);
   const todayTs = bucketUnixSecondsToUtcDay(nowSec);
-  const yesterdayTs = todayTs - SECONDS.ONE_DAY;
+  const yesterdayTs = todayTs - DAY_SECONDS;
   const evidence: DigestEvidence = {};
 
   const ctx: CollectorContext = {
@@ -301,7 +301,7 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
       .first<{ score: number; band: string; components: string; stored_at: number }>(),
     db
       .prepare("SELECT AVG(score) as avg FROM stability_index_samples WHERE stored_at > ? AND stored_at <= ?")
-      .bind(nowSec - SECONDS.ONE_DAY, nowSec)
+      .bind(nowSec - DAY_SECONDS, nowSec)
       .first<{ avg: number | null }>(),
     db
       .prepare("SELECT score, band FROM stability_index WHERE computed_at = ?")
@@ -310,10 +310,10 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
   ]);
   const sampleAge = assessFreshnessTimestamp(nowSec, latestSample?.stored_at, 0);
   // Daily rows key the completed UTC observation day, not their publication instant.
-  const dailyWindowEnd = latestDaily == null ? undefined : latestDaily.stored_at + SECONDS.ONE_DAY;
+  const dailyWindowEnd = latestDaily == null ? undefined : latestDaily.stored_at + DAY_SECONDS;
   const dailyAge = assessFreshnessTimestamp(nowSec, dailyWindowEnd, 0);
-  const sampleFresh = sampleAge.reason == null && sampleAge.ageSeconds <= 2 * SECONDS.ONE_HOUR;
-  const dailyFresh = dailyAge.reason == null && dailyAge.ageSeconds <= SECONDS.ONE_DAY;
+  const sampleFresh = sampleAge.reason == null && sampleAge.ageSeconds <= 2 * HOUR_SECONDS;
+  const dailyFresh = dailyAge.reason == null && dailyAge.ageSeconds <= DAY_SECONDS;
   if (latestSample && !sampleFresh) {
     collectorResults.push(collectorDegraded(undefined, sampleAge.reason == null ? "psi-sample-stale" : `psi-sample-${sampleAge.reason}`));
   }
@@ -453,7 +453,7 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
       windows: {
         blacklistActivity: {
           label: "rolling last 24h",
-          start: nowSec - SECONDS.ONE_DAY,
+          start: nowSec - DAY_SECONDS,
           end: nowSec,
         },
         mintBurnFlows: {
@@ -463,7 +463,7 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
         },
         supplyVelocity: {
           label: "UTC snapshots: today, yesterday, 7d ago",
-          dates: [todayTs, yesterdayTs, todayTs - 7 * SECONDS.ONE_DAY],
+          dates: [todayTs, yesterdayTs, todayTs - 7 * DAY_SECONDS],
         },
         psi: {
           label: latestSample

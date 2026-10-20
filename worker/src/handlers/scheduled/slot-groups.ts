@@ -16,20 +16,10 @@ import {
 } from "./slot-summary";
 import { logSkippedCronRun } from "./preflight-skip";
 
-export type ScheduledSlotGroupMode = "serial" | "parallel";
-
 export interface ScheduledSlotTask {
   job: string;
   errorMessage?: string;
   run: Parameters<ScheduledRuntimeContext["runLeasedCron"]>[1];
-}
-
-export interface ScheduledSlotGroup {
-  mode: ScheduledSlotGroupMode;
-  label: string;
-  tasks: readonly ScheduledSlotTask[];
-  stopOnFailure?: boolean;
-  stopOnNonNeutralSkip?: boolean;
 }
 
 export interface ScheduledSlotTaskChain {
@@ -39,17 +29,7 @@ export interface ScheduledSlotTaskChain {
   stopOnNonNeutralSkip?: boolean;
 }
 
-export interface ScheduledSlotParallelSerialGroup {
-  mode: "parallel-serial";
-  label: string;
-  chains: readonly ScheduledSlotTaskChain[];
-}
-
-export type ScheduledSlotGroupDefinition = ScheduledSlotGroup | ScheduledSlotParallelSerialGroup;
-
 interface ScheduledSlotPlanBindingOptions {
-  mode: ScheduledSlotGroupMode | "parallel-serial";
-  label: string;
   implementations: Readonly<Record<string, ScheduledSlotTask["run"]>>;
   chainLabels?: readonly string[];
   stopOnFailure?: boolean;
@@ -59,7 +39,7 @@ interface ScheduledSlotPlanBindingOptions {
 export function bindScheduledSlotPlan(
   scheduleKey: CronScheduleKey,
   options: ScheduledSlotPlanBindingOptions,
-): ScheduledSlotGroupDefinition[] {
+): ScheduledSlotTaskChain[][] {
   const plan = SCHEDULED_SLOT_PLANS[scheduleKey];
   const chains = plan.jobChains.map((jobs, chainIndex) => ({
     label: options.chainLabels?.[chainIndex] ?? jobs.join(" → "),
@@ -72,23 +52,7 @@ export function bindScheduledSlotPlan(
     stopOnNonNeutralSkip: options.stopOnNonNeutralSkip,
   }));
 
-  if (options.mode === "serial") {
-    if (chains.length !== 1) {
-      throw new Error(`Serial scheduled slot ${scheduleKey} must have exactly one canonical chain`);
-    }
-    const [chain] = chains;
-    return [{
-      mode: "serial",
-      label: options.label,
-      tasks: chain.tasks,
-      stopOnFailure: chain.stopOnFailure,
-      stopOnNonNeutralSkip: chain.stopOnNonNeutralSkip,
-    }];
-  }
-  if (options.mode === "parallel-serial") {
-    return [{ mode: "parallel-serial", label: options.label, chains }];
-  }
-  throw new Error(`Unsupported scheduled slot mode for ${scheduleKey}`);
+  return [chains];
 }
 
 /**
@@ -161,39 +125,25 @@ async function runSerialScheduledJobs(
   return outcomes;
 }
 
-
+/**
+ * Stages run in order; each stage runs its serial chains concurrently.
+ */
 export async function runScheduledSlotGroups(
   runtime: ScheduledRuntimeContext,
   slotLabel: string,
-  groups: readonly ScheduledSlotGroupDefinition[],
+  stages: readonly (readonly ScheduledSlotTaskChain[])[],
 ): Promise<ScheduledSlotSummary> {
   const outcomes: ScheduledSlotJobSummary[] = [];
-  for (const group of groups) {
-    if (group.mode === "parallel-serial") {
-      const chainOutcomes = await Promise.all(
-        group.chains.map((chain) =>
-          runSerialScheduledJobs(runtime, slotLabel, chain.tasks, {
-            stopOnFailure: chain.stopOnFailure,
-            stopOnNonNeutralSkip: chain.stopOnNonNeutralSkip,
-          }),
-        ),
-      );
-      outcomes.push(...chainOutcomes.flat());
-      continue;
-    }
-
-    if (group.mode === "parallel") {
-      const taskOutcomes = await Promise.all(
-        group.tasks.map((task) => runSingleScheduledJobWithOutcome(runtime, slotLabel, task)),
-      );
-      outcomes.push(...taskOutcomes.map((outcome) => outcome.summary));
-      continue;
-    }
-
-    outcomes.push(...(await runSerialScheduledJobs(runtime, slotLabel, group.tasks, {
-      stopOnFailure: group.stopOnFailure,
-      stopOnNonNeutralSkip: group.stopOnNonNeutralSkip,
-    })));
+  for (const chains of stages) {
+    const chainOutcomes = await Promise.all(
+      chains.map((chain) =>
+        runSerialScheduledJobs(runtime, slotLabel, chain.tasks, {
+          stopOnFailure: chain.stopOnFailure,
+          stopOnNonNeutralSkip: chain.stopOnNonNeutralSkip,
+        }),
+      ),
+    );
+    outcomes.push(...chainOutcomes.flat());
   }
   return buildScheduledSlotSummary(outcomes);
 }

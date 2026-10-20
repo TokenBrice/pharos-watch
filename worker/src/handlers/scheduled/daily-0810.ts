@@ -14,8 +14,6 @@ import { runWeeklyRecapForRuntime } from "./weekly-recap-invocation";
 
 export function buildDaily0810SlotGroups(runtime: ScheduledRuntimeContext) {
   return bindScheduledSlotPlan("daily0810Utc", {
-    mode: "parallel-serial",
-    label: "weekly-jobs",
     chainLabels: ["weekly-recap", "measured-execution-shadow"],
     implementations: {
       "weekly-recap": (signal, reportProgress) => runWeeklyRecapForRuntime(runtime, signal, reportProgress),

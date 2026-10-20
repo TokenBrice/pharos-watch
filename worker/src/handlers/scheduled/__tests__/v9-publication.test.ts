@@ -96,14 +96,14 @@ describe("V9 publication scheduling", () => {
     mocks.runScheduledSlotGroups.mockImplementation(async (
       _scheduledRuntime: ScheduledRuntimeContext,
       _label: string,
-      groups: Array<{ tasks: Array<{
+      stages: Array<Array<{ tasks: Array<{
         run: (
           signal: AbortSignal,
           reportProgress: CronProgressReporter,
         ) => Promise<unknown>;
-      }> }>,
+      }> }>>,
     ) => {
-      await groups[0]?.tasks[0]?.run(new AbortController().signal, vi.fn());
+      await stages[0]?.[0]?.tasks[0]?.run(new AbortController().signal, vi.fn());
       return published;
     });
   });
@@ -154,9 +154,9 @@ describe("V9 publication scheduling", () => {
     mocks.runScheduledSlotGroups.mockImplementation(async (
       _scheduledRuntime: ScheduledRuntimeContext,
       _label: string,
-      groups: Array<{ tasks: Array<{ run: (signal: AbortSignal) => Promise<unknown> }> }>,
+      stages: Array<Array<{ tasks: Array<{ run: (signal: AbortSignal) => Promise<unknown> }> }>>,
     ) => {
-      const result = await groups[0]?.tasks[0]?.run(new AbortController().signal);
+      const result = await stages[0]?.[0]?.tasks[0]?.run(new AbortController().signal);
       return buildScheduledSlotSummary([
         summarizeCronResult("compute-safety-score-v9", result as CronResult),
       ]);

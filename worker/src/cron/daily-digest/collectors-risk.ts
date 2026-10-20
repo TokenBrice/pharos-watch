@@ -11,7 +11,7 @@ import {
 } from "../../lib/safety-score-history-v2";
 import { loadActiveSafetyScoreSource } from "../../lib/safety-score-active-source";
 import { digestSafetyContextFromSource } from "../../lib/digest-safety-context";
-import { SECONDS } from "../../lib/time-constants";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import {
   collectorDegraded,
   collectorOk,
@@ -342,7 +342,7 @@ export async function collectGradeTransitions(
   safetyGrades: CanonicalSafetyGradeRow[] | undefined,
   safetyIdentity: SafetyScoreV9PublicationIdentity | undefined,
 ): Promise<CollectorResult<Pick<DigestInputData, "gradeTransitions" | "gradeTransitionAccounting">>> {
-  const window = { start: ctx.nowSec - 2 * SECONDS.ONE_DAY, end: ctx.nowSec };
+  const window = { start: ctx.nowSec - 2 * DAY_SECONDS, end: ctx.nowSec };
   if (!safetyGrades || !safetyIdentity) {
     return collectorOk({
       gradeTransitionAccounting: { complete: false, window, reason: "safety-canonical-snapshot" },
@@ -472,7 +472,7 @@ export async function collectYieldAnomalies(
            AND updated_at > ?
          ORDER BY current_apy DESC`,
       )
-      .bind(ctx.nowSec - SECONDS.ONE_DAY)
+      .bind(ctx.nowSec - DAY_SECONDS)
       .all<{
         stablecoin_id: string;
         symbol: string;
