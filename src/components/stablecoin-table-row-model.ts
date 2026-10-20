@@ -4,6 +4,7 @@ import type { StablecoinTableRowVariant } from "@/components/stablecoin-table-ro
 import type { V9SafetyTableRow } from "@/lib/safety-score-v9-consumers";
 import { getResolvedBlacklistStatus } from "@shared/lib/blacklist-status";
 import { resolveMintAuthorityScoreDisplay, resolveMintAuthorityStatus } from "@/lib/mint-authority-display";
+import { getNavPriceReference } from "@/lib/nav-price-reference";
 import { deviationColorClass } from "@/lib/severity-colors";
 import { formatNativePrice } from "@shared/lib/format";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
@@ -35,6 +36,9 @@ export function buildStablecoinTableRowModel({
   const pegScore = pegSummary?.pegScore ?? null;
   const liquidityScore = dexLiquidity?.[coin.id]?.liquidityScore ?? null;
   const pegRef = pegSummary?.pegReference?.valueUsd ?? null;
+  // NAV tokens have no peg reference, but their observed price is still shown,
+  // converted to the peg currency (USD fallback inside formatNativePrice).
+  const priceRef = meta?.flags.navToken ? getNavPriceReference(meta.flags.pegCurrency, pegScores) : pegRef;
   const currentDeviationBps = !isObservedPrice(coin) || pegSummary?.pegReferenceUnavailable === true
     ? null
     : pegSummary?.currentDeviationBps ?? null;
@@ -72,7 +76,9 @@ export function buildStablecoinTableRowModel({
     pegRef,
     pegDeviationBps: currentDeviationBps,
     absPegDeviationBps,
-    priceCell: pegRef == null || !isObservedPrice(coin) ? "—" : formatNativePrice(coin.price, meta?.flags.pegCurrency ?? "USD", pegRef),
+    priceCell: !isObservedPrice(coin) || (pegRef == null && !meta?.flags.navToken)
+      ? "—"
+      : formatNativePrice(coin.price, meta?.flags.pegCurrency ?? "USD", priceRef),
     pegDeviationColorClass: absPegDeviationBps === null
       ? "text-muted-foreground"
       : deviationColorClass(absPegDeviationBps),
