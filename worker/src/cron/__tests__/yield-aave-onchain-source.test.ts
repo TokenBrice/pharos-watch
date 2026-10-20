@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 
 vi.mock("../../lib/evm-rpc", () => ({
   fetchEvmCallHexAtBlock: vi.fn(),
@@ -101,17 +100,11 @@ function expectedApy(rateFraction: number): number {
   return (Math.pow(1 + ratePerSecond, 31536000) - 1) * 100;
 }
 
-function priceEvidence(price = 1): NonNullable<AaveV3RateTarget["usdPriceEvidence"]> {
-  const observedAt = Math.floor(Date.now() / 1000);
-  return { price, priceSource: "coingecko", priceObservedAt: observedAt, priceUpdatedAt: observedAt, priceObservedAtMode: "upstream" };
-}
-
 const USDC_TARGET: AaveV3RateTarget = {
   stablecoinId: "usdc-circle",
   symbol: "USDC",
   chain: "ethereum",
   assetAddress: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-  get usdPriceEvidence() { return priceEvidence(); },
 };
 
 const USDT_TARGET: AaveV3RateTarget = {
@@ -119,7 +112,6 @@ const USDT_TARGET: AaveV3RateTarget = {
   symbol: "USDT",
   chain: "arbitrum",
   assetAddress: "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9",
-  get usdPriceEvidence() { return priceEvidence(); },
 };
 
 describe("fetchAaveV3SupplyRates", () => {
@@ -145,56 +137,35 @@ describe("fetchAaveV3SupplyRates", () => {
     expect(results[0]?.sourceTvlUsd).toBe(125_000_000);
   });
 
-  it.each([
-    { id: "eurc-circle", symbol: "EURC", quote: 1.2, expected: 1_200_000 },
-    { id: "usdc-circle", symbol: "USDC", quote: 0.98, expected: 980_000 },
-  ])("values $symbol underlying quantity in USD at its observed quote", async ({ id, symbol, quote, expected }) => {
-    mockFetchEvmCallHexAtBlock.mockResolvedValue(buildGetReserveDataHex(RAY / 20n));
-    mockFetchEvmUint256AtBlock.mockResolvedValue(1_000_000_000_000n);
-    const target = { ...USDC_TARGET, stablecoinId: id, symbol, assetDecimals: 6, usdPriceEvidence: priceEvidence(quote) };
-    const { results } = await fetchAaveV3SupplyRates([target], undefined, makeChainRpcs());
-    expect(results[0]?.sourceTvlUsd).toBe(expected);
-  });
-
-  it.each(["coingecko", "redstone", "coingecko+redstone"])("uses the source registry's inclusive quote budget for %s", async (source) => {
+  it.each([null, 600, 1_801])("retains pre-admission Aave refresh without consuming a stablecoins generation aged %s", async (generationAge) => {
     vi.useFakeTimers({ toFake: ["Date"] });
-    vi.setSystemTime(1_800_000_000_000);
+    const startSec = 1_800_000_000;
+    vi.setSystemTime(startSec * 1000);
+    vi.mocked(getCache).mockResolvedValue(generationAge == null ? null : {
+      value: JSON.stringify({ peggedAssets: [
+        { id: "usdc-circle", symbol: "USDC", price: 0.98,
+          priceSource: "bitstamp+coingecko+kraken+redstone",
+          priceObservedAt: startSec - 620, priceUpdatedAt: startSec - 620,
+          priceObservedAtMode: "local_fetch" },
+      ] }),
+      updatedAt: startSec - generationAge,
+    });
     mockFetchEvmCallHexAtBlock.mockResolvedValue(buildGetReserveDataHex(RAY / 20n));
     mockFetchEvmUint256AtBlock.mockResolvedValue(1_000_000_000_000n);
-    const budget = Math.min(...source.split("+").map((part) => getPricingSourceRegistryEntry(part)!.maxTrustedAgeSec!));
-    const now = Math.floor(Date.now() / 1000);
-    for (const age of [budget, budget + 1]) {
-      const target = { ...USDC_TARGET, usdPriceEvidence: {
-        ...priceEvidence(1.2), priceSource: source, priceObservedAt: now - age,
-      } };
-      const { results, telemetry } = await fetchAaveV3SupplyRates([target], undefined, makeChainRpcs());
-      expect(results).toHaveLength(age === budget ? 1 : 0);
-      if (age === budget) expect(results[0]?.sourceTvlUsd).toBe(1_200_000);
-      else expect(telemetry.missingReasonCounts).toMatchObject({ "usd-price-unavailable": 1 });
-    }
-  });
 
-  it.each([
-    undefined,
-    { price: null },
-    { price: 0 },
-    { price: -1 },
-    { price: Number.NaN },
-    { price: Number.POSITIVE_INFINITY },
-    { priceObservedAt: 1, priceUpdatedAt: Math.floor(Date.now() / 1000) },
-    { priceObservedAt: Math.floor(Date.now() / 1000) + 3600 },
-    { priceObservedAt: null, priceUpdatedAt: null },
-    { priceObservedAtMode: "nominal_reference" as const },
-    { priceSource: "protocol-par" },
-    { priceSource: "missing" },
-    { priceSource: "" },
-  ])("withholds measured USD TVL when quote evidence is unadmitted: %j", async (fault) => {
-    mockFetchEvmCallHexAtBlock.mockResolvedValue(buildGetReserveDataHex(RAY / 20n));
-    mockFetchEvmUint256AtBlock.mockResolvedValue(1_000_000_000_000n);
-    const target = { ...USDC_TARGET, usdPriceEvidence: fault ? { ...priceEvidence(), ...fault } : undefined };
-    const { results, telemetry } = await fetchAaveV3SupplyRates([target], undefined, makeChainRpcs());
-    expect(results).toEqual([]);
-    expect(telemetry.missingReasonCounts).toMatchObject({ "usd-price-unavailable": 1 });
+    const { candidates, familyResults } = await loadSupplementalSourceFamilies({
+      db: {} as D1Database,
+      startSec,
+      chainRpcs: makeChainRpcs(),
+    });
+    const aave = familyResults.find((family) => family.key === "aaveV3");
+    const usdc = candidates.find((candidate) =>
+      candidate.yield.sourceKey.startsWith("aave-v3-onchain:") && candidate.symbol === "USDC",
+    );
+    expect(aave?.telemetry?.emittedCount).toBeGreaterThan(0);
+    expect(aave?.telemetry?.missingReasonCounts["usd-price-unavailable"]).toBeUndefined();
+    expect(usdc?.yield.sourceTvlUsd).toBe(1_000_000);
+    expect(getCache).not.toHaveBeenCalled();
   });
 
   it("returns empty results when RPC returns null", async () => {
@@ -305,7 +276,6 @@ describe("fetchAaveV3SupplyRates", () => {
       symbol: "USDC",
       chain: "base",
       assetAddress: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
-      usdPriceEvidence: priceEvidence(),
     };
 
     mockFetchEvmCallHexAtBlock
@@ -383,13 +353,6 @@ describe("fetchAaveV3SupplyRates", () => {
     mockFetchEvmUint256AtBlock.mockResolvedValue(125_000_000_000_000n);
 
     const startSec = Math.floor(Date.now() / 1000);
-    vi.mocked(getCache).mockResolvedValue({
-      value: JSON.stringify({ peggedAssets: [
-        { id: "usdc-circle", symbol: "USDC", ...priceEvidence() },
-        { id: "usdt-tether", symbol: "USDT", ...priceEvidence() },
-      ] }),
-      updatedAt: startSec,
-    });
     const { candidates, familyResults } = await loadSupplementalSourceFamilies({
       db: {} as D1Database,
       startSec,
