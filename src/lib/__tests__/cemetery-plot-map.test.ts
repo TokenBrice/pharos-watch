@@ -1,7 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { CAUSE_ORDER, type CauseOfDeath } from "@shared/lib/cause-of-death";
 import { CEMETERY_ENTRIES } from "@shared/lib/cemetery-merged";
 import { formatDeathDate } from "@shared/lib/format";
+import * as hash from "@shared/lib/fnv1a";
 import {
   PLOT_HEIGHT,
   PLOT_LAYOUT,
@@ -19,7 +20,6 @@ import { buildCemeteryStats, formatCemeteryPeak } from "@/lib/cemetery-stats";
 import {
   PLOT_PROJECTIONS,
   PLOT_STEP_HEIGHT,
-  fnv1a,
   graveGeometry,
   plotShapeOf,
   portraitSiteMarks,
@@ -40,6 +40,36 @@ const byId = (map: CemeteryPlotMap) => new Map(map.graves.map((g) => [g.id, g]))
 
 const desktop = buildCemeteryPlotMap(CEMETERY_ENTRIES, { preset: "desktop" });
 const portrait = buildCemeteryPlotMap(CEMETERY_ENTRIES, { preset: "portrait" });
+
+describe("scene seed parity", () => {
+  it.each([["", 0x811c9dc5], ["a", 0xe40c292c], ["foobar", 0xbf9cf968]] as const)(
+    "retains the frozen FNV known vector for %j",
+    (input, expected) => expect(hash.fnv1a32(input)).toBe(expected),
+  );
+
+  it.each(["desktop", "portrait"] as const)("preserves %s scene bytes for legacy UTF-16 seeds", (preset) => {
+    const legacyHash = (id: string) => {
+      let value = 2166136261;
+      for (let index = 0; index < id.length; index++) value = Math.imul(value ^ id.charCodeAt(index), 16777619);
+      return value >>> 0;
+    };
+    const entries = [...CEMETERY_ENTRIES, row("abandoned", "2014-01", { id: "coin-😀" })];
+    const serialize = () => {
+      const map = buildCemeteryPlotMap(entries, { preset });
+      return JSON.stringify({ map, geometry: map.graves.map((g) => graveGeometry(PLOT_PROJECTIONS[map.projection], g)) });
+    };
+    for (const id of ["", "fixture", "legend", "coin-😀", "\ud83d", "\ude00"]) {
+      expect(hash.fnv1a32(id)).toBe(legacyHash(id));
+    }
+    const actual = serialize();
+    const legacy = vi.spyOn(hash, "fnv1a32").mockImplementation(legacyHash);
+    try {
+      expect(actual).toBe(serialize());
+    } finally {
+      legacy.mockRestore();
+    }
+  });
+});
 
 describe("buildCemeteryPlotMap: encodings", () => {
   it("scales height monotonically with peak between an explicit floor and ceiling", () => {
@@ -241,7 +271,7 @@ function stone(overrides: Partial<PlotGraveShapeInput> = {}): PlotGraveShapeInpu
     fresh: false,
     archived: false,
     footstone: null,
-    seed: fnv1a("fixture"),
+    seed: hash.fnv1a32("fixture"),
     lean: 0,
     cell: { i0: 0, i1: 1.1, j0: 0, j1: 0.92 },
     anchor: { i: 0.3, j: 0.46 },

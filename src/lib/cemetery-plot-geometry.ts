@@ -34,7 +34,7 @@ import {
   type ScenePoint,
   type SceneProjection,
 } from "@shared/lib/scene/projection";
-import { fnv1a, seededStream } from "@shared/lib/scene/seed";
+import { seededStream } from "@shared/lib/scene/seed";
 import { screenPolygon, worldPolygon, type SceneMark, type SceneObjectGeometry } from "@shared/lib/scene/marks";
 import { boxMarks, boxPoints, cylinder as sceneCylinder, faceMatrixE, faceMatrixG, shadowMark, type SceneCylinder } from "@shared/lib/scene/solids";
 import { lighthouseGeometry } from "@shared/lib/scene/objects/lighthouse";
@@ -42,7 +42,7 @@ import type { CauseOfDeath } from "@shared/lib/cause-of-death";
 import type { DesktopPlotMap, PlotGrave, PortraitPlotMap } from "@/lib/cemetery-plot-map";
 
 // The projection core, marks and solids live in the scene kit (`shared/lib/scene/`); the Cemetery keeps its names.
-export { bbox, fnv1a, hull, lighthouseGeometry, project, round1, roundBox, roundPoint, seededStream };
+export { bbox, hull, lighthouseGeometry, project, round1, roundBox, roundPoint, seededStream };
 export type PlotPoint = ScenePoint;
 /** Screen-space bounding box (SVG user units unless stated otherwise). */
 export type PlotBox = SceneBox;

@@ -140,6 +140,38 @@ describe("selector-snapshot Pages Function", () => {
     databases.closeAll();
   });
 
+  it.each([12, 13])("preserves the depth-%i admission boundary through POST and trusted GET", async (depth) => {
+    let nested: unknown = 0;
+    for (let index = 1; index < depth; index++) nested = [nested];
+    const snapshot = buildVerifiedSnapshot();
+    const value = { ...snapshot, ageSeconds: nested };
+    const kv = makeKV();
+    const env = makeEnv({ SELECTOR_SNAPSHOTS: kv });
+    const post = await onRequest(snapshotContext(postRequest(value), env));
+    expect(post.status).toBe(depth === 12 ? 200 : 400);
+    expect(recomputeVerifiedSelectorSnapshotMock).toHaveBeenCalledTimes(depth === 12 ? 1 : 0);
+    const sid = computeSelectorSnapshotSid(snapshot);
+    await kv.put(`s:${sid}`, JSON.stringify(value), { metadata: { trust: SELECTOR_SNAPSHOT_VERIFICATION_KIND } });
+    const get = await onRequest(snapshotContext(getRequest(sid), env));
+    expect(get.status).toBe(depth === 12 ? 200 : 502);
+    if (depth === 12) await expect(get.json()).resolves.toEqual(snapshot);
+  });
+
+  it.each(["__proto__", "constructor", "prototype"])("rejects nested array %s keys through POST and trusted GET", async (key) => {
+    const snapshot = buildVerifiedSnapshot();
+    const reserved = JSON.parse(`{"${key}":true}`) as Record<string, unknown>;
+    const value = { ...snapshot, ageSeconds: [{ nested: [reserved] }] };
+    const kv = makeKV();
+    const env = makeEnv({ SELECTOR_SNAPSHOTS: kv });
+    const post = await onRequest(snapshotContext(postRequest(value), env));
+    expect(post.status).toBe(400);
+    expect(recomputeVerifiedSelectorSnapshotMock).not.toHaveBeenCalled();
+    const sid = computeSelectorSnapshotSid(snapshot);
+    await kv.put(`s:${sid}`, JSON.stringify(value), { metadata: { trust: SELECTOR_SNAPSHOT_VERIFICATION_KIND } });
+    const get = await onRequest(snapshotContext(getRequest(sid), env));
+    expect(get.status).toBe(502);
+  });
+
   describe("origin gating", () => {
     it("rejects POST without Origin/Referer", async () => {
       const response = await onRequest(

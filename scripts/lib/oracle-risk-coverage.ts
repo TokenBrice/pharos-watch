@@ -1,5 +1,4 @@
 import type { OracleRiskProfile, StablecoinMeta } from "@shared/types";
-import type { ReviewedOracleRiskBranchDisposition } from "@shared/data/coverage-dispositions/oracle-risk-branch-dispositions";
 
 export type OracleRiskCoverageFindingKind =
   | "missing-profile"
@@ -8,8 +7,6 @@ export type OracleRiskCoverageFindingKind =
   | "branch-applicability-unresolved"
   | "missing-branches"
   | "missing-branch-evidence"
-  | "reviewed-inoperable-branch-evidence"
-  | "stale-branch-disposition"
   | "stale-review"
   | "stale-branch-observation";
 
@@ -26,7 +23,6 @@ const ADVISORY_FINDING_KINDS: Partial<Record<OracleRiskCoverageFindingKind, true
   "stale-branch-observation": true,
   "missing-branch-applicability": true,
   "branch-applicability-unresolved": true,
-  "reviewed-inoperable-branch-evidence": true,
 };
 
 export function isBlockingOracleRiskCoverageFinding(finding: OracleRiskCoverageFinding): boolean {
@@ -45,27 +41,12 @@ export interface OracleRiskCoverageResult {
   branchProfiles: number;
   branches: number;
   completeBranches: number;
-  /**
-   * Branches whose only outstanding evidence gap is covered by a reviewed
-   * inoperable disposition. Deliberately excluded from `completeBranches` —
-   * a researched impossibility is not the same claim as complete evidence.
-   */
-  reviewedInoperableBranches: number;
   findings: OracleRiskCoverageFinding[];
 }
 
 export interface OracleRiskCoverageOptions {
   asOf?: Date;
   staleDays?: number;
-  /**
-   * Reviewed branch/field exemptions to honour. The caller supplies them — the
-   * real register lives in
-   * `shared/data/coverage-dispositions/oracle-risk-branch-dispositions.ts` and is
-   * wired in by `scripts/ci/check-oracle-risk-coverage.ts`, mirroring how the
-   * redemption coverage audit passes its reviewed rows. Empty by default so the
-   * analyzer stays a pure function of the coins it is given.
-   */
-  reviewedBranchDispositions?: readonly ReviewedOracleRiskBranchDisposition[];
 }
 
 function isScoreActiveCryptoCdp(coin: StablecoinMeta): boolean {
@@ -118,10 +99,6 @@ function missingBranchEvidenceFields(branch: NonNullable<OracleRiskProfile["bran
   });
 }
 
-function dispositionKey(id: string, branchId: string, field: string): string {
-  return `${id}\0${branchId}\0${field}`;
-}
-
 function inventoryDisposition(profile: OracleRiskProfile, asOf: Date, staleDays: number) {
   if (!profile.paths) return profile.branchApplicability?.disposition;
   for (const path of profile.paths) {
@@ -148,15 +125,6 @@ export function analyzeOracleRiskCoverage(
   const asOf = options.asOf ?? new Date();
   const inScope = coins.filter(isScoreActiveCryptoCdp);
   const findings: OracleRiskCoverageFinding[] = [];
-
-  const reviewedDispositions = options.reviewedBranchDispositions ?? [];
-  const dispositionsByKey = new Map<string, ReviewedOracleRiskBranchDisposition>();
-  for (const row of reviewedDispositions) {
-    dispositionsByKey.set(dispositionKey(row.id, row.branchId, row.field), row);
-  }
-  /** Rows proven to still describe a real, still-unrecordable gap this run. */
-  const appliedDispositionKeys = new Set<string>();
-  const reviewedInoperableBranchKeys = new Set<string>();
 
   for (const coin of inScope) {
     const profile = coin.oracleRisk;
@@ -225,18 +193,7 @@ export function analyzeOracleRiskCoverage(
     }
 
     for (const branch of profile.branches ?? []) {
-      const missingBranchFields: string[] = [];
-      const reviewedInoperableFields: ReviewedOracleRiskBranchDisposition[] = [];
-      for (const field of missingBranchEvidenceFields(branch)) {
-        const key = dispositionKey(coin.id, branch.id, field);
-        const reviewed = dispositionsByKey.get(key);
-        if (reviewed) {
-          appliedDispositionKeys.add(key);
-          reviewedInoperableFields.push(reviewed);
-          continue;
-        }
-        missingBranchFields.push(field);
-      }
+      const missingBranchFields = missingBranchEvidenceFields(branch);
 
       if (missingBranchFields.length > 0) {
         findings.push({
@@ -246,22 +203,6 @@ export function analyzeOracleRiskCoverage(
           kind: "missing-branch-evidence",
           detail: `${branch.id} branch missing ${missingBranchFields.join(", ")}`,
         });
-      }
-
-      if (reviewedInoperableFields.length > 0) {
-        reviewedInoperableBranchKeys.add(`${coin.id}:${branch.id}`);
-        for (const reviewed of reviewedInoperableFields) {
-          findings.push({
-            id: coin.id,
-            symbol: coin.symbol,
-            name: coin.name,
-            kind: "reviewed-inoperable-branch-evidence",
-            detail:
-              `${branch.id} branch ${reviewed.field} reviewed inoperable (${reviewed.reasonCode}) `
-              + `by ${reviewed.reviewer} on ${reviewed.reviewedDate} at ${reviewed.observedBlocks.join(", ")} — `
-              + `${reviewed.finding} Evidence: ${reviewed.evidenceUrls.join(", ")}`,
-          });
-        }
       }
 
       const observedAt = parseReviewDate(branch.observedAt);
@@ -288,30 +229,6 @@ export function analyzeOracleRiskCoverage(
     }
   }
 
-  // A reviewed disposition is a claim about a specific gap that still exists.
-  // Once the coin, branch, or field moves under it, the claim is no longer
-  // evidence of anything — surface it as a blocking finding so the register
-  // cannot quietly keep excusing a gap that changed shape.
-  const coinsById = new Map(inScope.map((coin) => [coin.id, coin]));
-  for (const row of reviewedDispositions) {
-    const key = dispositionKey(row.id, row.branchId, row.field);
-    if (appliedDispositionKeys.has(key)) continue;
-    const coin = coinsById.get(row.id);
-    const branch = coin?.oracleRisk?.branches?.find((entry) => entry.id === row.branchId);
-    const reason = !coin
-      ? "no active crypto-backed CDP with that id"
-      : !branch
-        ? "profile has no branch with that id"
-        : `branch now records ${row.field}`;
-    findings.push({
-      id: row.id,
-      symbol: coin?.symbol ?? row.id,
-      name: coin?.name ?? row.id,
-      kind: "stale-branch-disposition",
-      detail: `${row.branchId} branch ${row.field} disposition no longer applies: ${reason}`,
-    });
-  }
-
   const withOracleRisk = inScope.filter((coin) => coin.oracleRisk != null).length;
   const missingOracleRisk = inScope.length - withOracleRisk;
   const incompleteIds = new Set(
@@ -335,10 +252,6 @@ export function analyzeOracleRiskCoverage(
       .filter((finding) => finding.kind === "missing-branch-evidence")
       .map((finding) => `${finding.id}:${finding.detail.split(" branch missing", 1)[0]}`),
   );
-  // Reviewed-inoperable branches are deliberately not complete: the audit knows
-  // why the field is blank, which is a different statement from having the
-  // evidence. Count them apart so the report can say both things.
-  for (const key of reviewedInoperableBranchKeys) incompleteBranchKeys.add(key);
   const reviewedBranchApplicability = inScope.filter((coin) =>
     coin.oracleRisk?.paths
       ? coin.oracleRisk.paths.every((path) => path.applicability != null)
@@ -366,7 +279,6 @@ export function analyzeOracleRiskCoverage(
     branchProfiles,
     branches,
     completeBranches: branches - incompleteBranchKeys.size,
-    reviewedInoperableBranches: reviewedInoperableBranchKeys.size,
     findings: findings.sort((left, right) => left.id.localeCompare(right.id) || left.kind.localeCompare(right.kind)),
   };
 }

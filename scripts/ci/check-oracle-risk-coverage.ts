@@ -7,10 +7,6 @@
 
 import type { StablecoinMeta } from "@shared/types";
 import {
-  REVIEWED_ORACLE_RISK_BRANCH_DISPOSITIONS,
-  type ReviewedOracleRiskBranchDisposition,
-} from "@shared/data/coverage-dispositions/oracle-risk-branch-dispositions";
-import {
   analyzeOracleRiskCoverage,
   isBlockingOracleRiskCoverageFinding,
 } from "../lib/oracle-risk-coverage";
@@ -24,7 +20,6 @@ interface OutputWriter {
 interface RunOracleRiskCoverageCheckOptions {
   stdout?: OutputWriter;
   stderr?: OutputWriter;
-  reviewedBranchDispositions?: readonly ReviewedOracleRiskBranchDisposition[];
 }
 
 export function runOracleRiskCoverageCheck(
@@ -33,7 +28,6 @@ export function runOracleRiskCoverageCheck(
   {
     stdout = process.stdout,
     stderr = process.stderr,
-    reviewedBranchDispositions = REVIEWED_ORACLE_RISK_BRANCH_DISPOSITIONS,
   }: RunOracleRiskCoverageCheckOptions = {},
 ): number {
   const retiredArg = argv.find((arg) => arg === "--advisory" || arg.startsWith("--advisory="));
@@ -49,15 +43,11 @@ export function runOracleRiskCoverageCheck(
     return 1;
   }
 
-  const result = analyzeOracleRiskCoverage(coins, {
-    staleDays,
-    reviewedBranchDispositions,
-  });
+  const result = analyzeOracleRiskCoverage(coins, { staleDays });
 
   stdout.write(
     `oracleRisk coverage: ${result.withOracleRisk}/${result.totalCryptoCdp} direct active crypto-backed CDPs have oracleRisk; ` +
       `${result.completeProfiles} complete profiles; ${result.completeBranches}/${result.branches} branches complete; ` +
-      `${result.reviewedInoperableBranches} branches reviewed inoperable (evidence recorded, field inexpressible); ` +
       `${result.reviewedBranchApplicability} reviewed branch dispositions ` +
       `(${result.branchesRequired} required, ${result.branchNotApplicable} not applicable, ` +
       `${result.branchApplicabilityUnresolved} unresolved).\n`,
@@ -66,11 +56,7 @@ export function runOracleRiskCoverageCheck(
   if (result.findings.length > 0) {
     stdout.write("Findings:\n");
     for (const finding of result.findings) {
-      const tag = finding.kind === "reviewed-inoperable-branch-evidence"
-        ? " (reviewed — not counted complete)"
-        : !isBlockingOracleRiskCoverageFinding(finding)
-          ? " (advisory)"
-          : "";
+      const tag = !isBlockingOracleRiskCoverageFinding(finding) ? " (advisory)" : "";
       stdout.write(`  - ${finding.id} (${finding.symbol}): ${finding.kind}${tag} — ${finding.detail}\n`);
     }
   }

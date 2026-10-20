@@ -8,7 +8,8 @@
  */
 import type { CSSProperties, ReactElement } from "react";
 import { CAUSE_HEX, CAUSE_HEX_DARK, CAUSE_ORDER, type CauseOfDeath } from "@shared/lib/cause-of-death";
-import { fnv1a, round1, seededStream, type PlotGraveGeometry, type PlotMark, type PlotMedallionMark, type PlotWeather } from "@/lib/cemetery-plot-geometry";
+import { fnv1a32 } from "@shared/lib/fnv1a";
+import { round1, seededStream, type PlotGraveGeometry, type PlotMark, type PlotMedallionMark, type PlotWeather } from "@/lib/cemetery-plot-geometry";
 import type { PlotLogoAtlas } from "@/lib/cemetery-plot-map-input";
 import { SceneDefs, type SceneGradient } from "../scene/scene-defs";
 import { AtlasWindow, SceneMarks } from "../scene/scene-marks";
@@ -101,7 +102,7 @@ export function PlotFlowers({ id, count, x, y, spread = 1 }: { id: string; count
   return (
     <g aria-hidden="true" data-plot-flowers>
       {Array.from({ length: Math.min(count, PLOT_FLOWER_MAX) }, (_, k) => {
-        const rnd = seededStream(fnv1a(`${id}:${k + 1}`));
+        const rnd = seededStream(fnv1a32(`${id}:${k + 1}`));
         const fx = round1(x + (rnd() - 0.2) * 14 * spread);
         const fy = round1(y + (10 + rnd() * 8) * spread);
         return (

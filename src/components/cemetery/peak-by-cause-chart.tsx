@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
 import { CAUSE_META, type CauseOfDeath } from "@shared/lib/cause-of-death";
+import { fnv1a32 } from "@shared/lib/fnv1a";
 import { ChartDataTable, type ChartDataTableColumn } from "@/components/chart-primitives/data-table";
 import { PharosChartTooltip, TooltipLabel } from "@/components/pharos-chart-tooltip";
 import { useCemeterySelection } from "@/components/cemetery/cemetery-selection-context";
@@ -53,12 +54,7 @@ const LABEL_ABOVE_END_PCT = 90;
 
 /** FNV-1a 32-bit hash of the record id, mapped to [-1, 1]: deterministic jitter without `Math.random`. */
 function jitterUnit(id: string): number {
-  let hash = 0x811c9dc5;
-  for (let index = 0; index < id.length; index += 1) {
-    hash ^= id.charCodeAt(index);
-    hash = Math.imul(hash, 0x01000193);
-  }
-  return ((hash >>> 0) / 0xffffffff) * 2 - 1;
+  return (fnv1a32(id) / 0xffffffff) * 2 - 1;
 }
 
 function tickLabel(value: number): string {
