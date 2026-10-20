@@ -105,6 +105,15 @@ describe("selectYieldSource ordering", () => {
     expect(byKey?.sourceKey).toBe("aaa");
   });
 
+  it("uses advanced source ages rather than a frozen published age to break a rail tie", () => {
+    const selected = selectYieldSource(makeRow([
+      candidate("a-old-primary", { freshness: { capturedAt: 1_699_999_940, ageSeconds: 3_660 } }),
+      candidate("z-newer-alternate", { freshness: { capturedAt: 1_700_003_000, ageSeconds: 600 } }),
+    ]), lendInput);
+    expect(selected?.sourceKey).toBe("z-newer-alternate");
+    expect(selected?.freshness).toEqual({ capturedAt: 1_700_003_000, ageSeconds: 600 });
+  });
+
   it("ranks a measured rail above one with no depth evidence, deepest band first", () => {
     // `sourceDepthRatio` is a share of tracked supply, so 0.02 is already the
     // top band. Scoring it as a 0-100 score put the deepest measurable rail at

@@ -1,13 +1,13 @@
 import { z } from "zod";
 import { NominalPriceReferenceSchema, PriceConfidenceSchema, PriceObservedAtModeSchema } from "./core";
 
-const StablecoinDetailPegBucketsSchema = z.record(z.string(), z.number());
+const StablecoinDetailPegBucketsSchema = z.record(z.string(), z.number().finite().nonnegative());
 
 /** Native token-count checkpoints from one history series; unavailable is never zero. */
 const NativeSupplyCheckpointsSchema = z.object({
-  current: z.number().nullable(),
-  prevWeek: z.number().nullable(),
-  prevMonth: z.number().nullable(),
+  current: z.number().finite().nonnegative().nullable(),
+  prevWeek: z.number().finite().nonnegative().nullable(),
+  prevMonth: z.number().finite().nonnegative().nullable(),
 });
 export type NativeSupplyCheckpoints = z.infer<typeof NativeSupplyCheckpointsSchema>;
 

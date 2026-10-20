@@ -101,10 +101,8 @@ function sourceFreshnessScore(candidate: YieldSourceCandidate): number {
   if (age == null) return 50;
   // Fail closed on an age the freshness contract cannot produce, exactly where
   // `clamp` already sends NaN: a non-finite or future-dated capture must never
-  // outrank a genuinely fresh reading. Ages are floored at zero by
-  // `data-adapter.ts` and `validateSelectorSnapshot` requires a nonnegative
-  // finite `ageSeconds`, so no storable snapshot's ordering changes here and
-  // the engine version stays put.
+  // outrank a genuinely fresh reading. The adapter preserves future source
+  // instants as negative ages so this existing ordering policy can apply.
   if (!Number.isFinite(age) || age < 0) return 0;
   return clamp(100 - (age / 172_800) * 100, 0, 100);
 }

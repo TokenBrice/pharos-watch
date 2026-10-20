@@ -337,6 +337,28 @@ describe("document data bootstrap", () => {
     expect(networkSignal.aborted).toBe(true);
   });
 
+  it("keeps source-less detail seeds unknown and immediately refetchable despite a current artifact clock", async () => {
+    const summary = projectStablecoinLiveSummary(StablecoinDetailResponseSchema.parse({ price: 1 }));
+    const queryClient = client();
+    const descriptor = FRONTEND_API_QUERY_DESCRIPTORS.stablecoinLiveSummary("usdt-tether");
+    seedStablecoinDetailQueryCache(queryClient, {
+      version: 1, stablecoinId: "usdt-tether", generatedAt: Date.now(), updatedAt: {},
+      lanes: { liveSummary: summary, supplyHistory: [] },
+    });
+    const historyKey = FRONTEND_API_QUERY_DESCRIPTORS.supplyHistory("usdt-tether", 90).queryKey;
+    for (const queryKey of [descriptor.queryKey, historyKey]) {
+      expect(queryClient.getQueryData(queryKey)).toMatchObject({
+        meta: { updatedAt: null, ageSeconds: null, status: "unknown", reason: "snapshot-producer-timestamp-unavailable" },
+      });
+      expect(queryClient.getQueryState(queryKey)?.dataUpdatedAt).toBe(0);
+    }
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json(summary, {
+      headers: { "X-Data-Updated-At": "1700000000" },
+    }));
+    await queryClient.fetchQuery(asMetaQueryOptions(createRegisteredApiPollingQueryOptions(descriptor)));
+    expect(fetchSpy).toHaveBeenCalledOnce();
+  });
+
   it("retains newer seeded detail values when an adopted response is older, without claiming live freshness", async () => {
     browser.location.pathname = "/stablecoin/usdt-tether/";
     const summary = {

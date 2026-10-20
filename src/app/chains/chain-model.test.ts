@@ -33,6 +33,16 @@ function chain(id: string, overrides: Partial<ChainSummary>): ChainSummary {
 }
 
 describe("sortChains", () => {
+  it("sorts unavailable global shares last in both directions, distinct from observed zero", () => {
+    const shares = [
+      chain("unknown", { dominanceShare: null }),
+      chain("zero", { dominanceShare: 0 }),
+      chain("observed", { dominanceShare: 0.5 }),
+    ];
+    expect(sortChains(shares, "dominanceShare", "asc").map((row) => row.id)).toEqual(["zero", "observed", "unknown"]);
+    expect(sortChains(shares, "dominanceShare", "desc").map((row) => row.id)).toEqual(["observed", "zero", "unknown"]);
+  });
+
   const rows = [
     chain("unknown", { healthScore: null }),
     chain("weak", { healthScore: 10 }),

@@ -1,4 +1,5 @@
 import type { DeploymentAmountEncoding } from "../../types/deployment-amounts";
+import { normalizeDeploymentId } from "../../types/deployment-id";
 
 interface FindTrackedContractOptions {
   source?: "primary" | "traded" | "any";
@@ -25,20 +26,22 @@ export interface TrackedStablecoinDeploymentsLike<TDeployment extends TrackedCon
 function findTrackedContract<TDeployment extends TrackedContractDeploymentLike>(
   stablecoin: TrackedStablecoinDeploymentsLike<TDeployment>,
   chainId: string,
-  options?: FindTrackedContractOptions,
+  options?: ResolveTrackedContractConfigOptions,
 ): TDeployment | undefined {
   const source = options?.source ?? "primary";
+  const overrideIdentity = options?.addressOverride
+    ? normalizeDeploymentId(`${chainId}:${options.addressOverride}`)
+    : undefined;
+  const matches = (deployment: TDeployment) => deployment.chain === chainId
+    && (overrideIdentity === undefined
+      || normalizeDeploymentId(`${deployment.chain}:${deployment.address}`) === overrideIdentity);
   if (source !== "traded") {
-    const contract = stablecoin.contracts?.find(
-      (deployment) => deployment.chain === chainId,
-    );
+    const contract = stablecoin.contracts?.find(matches);
     if (contract) return contract;
   }
 
   if (source === "primary") return undefined;
-  return stablecoin.tradedContracts?.find(
-    (deployment) => deployment.chain === chainId,
-  );
+  return stablecoin.tradedContracts?.find(matches);
 }
 
 /**
@@ -53,28 +56,16 @@ export function resolveTrackedContractConfigCore<TDeployment extends TrackedCont
   chainId: string,
   options?: ResolveTrackedContractConfigOptions,
 ): { contractAddress: string; decimals: number } | null {
-  const deployment = findTrackedContract(stablecoin, chainId, { source: options?.source ?? "primary" });
+  const deployment = findTrackedContract(stablecoin, chainId, options);
   // This selector interprets fixed raw event units, never native XRPL issued values.
   // Overrides cannot turn an issued-currency amount into a fixed-decimal amount.
   if (chainId === "xrpl" || deployment?.amountEncoding?.kind === "xrpl-issued-currency" || deployment?.decimals === null) return null;
-  const resolvedContract = options?.addressOverride
-    ? {
-        address: options.addressOverride,
-        decimals:
-          options.decimalsOverride
-          ?? findTrackedContract(stablecoin, chainId, { source: options.source ?? "primary" })?.decimals
-          ?? stablecoin.contracts?.[0]?.decimals
-          ?? 18,
-      }
-    : findTrackedContract(stablecoin, chainId, {
-        source: options?.source ?? "primary",
-      });
-
-  if (!resolvedContract) return null;
-  if (resolvedContract.decimals === null) return null;
+  const decimals = options?.decimalsOverride ?? deployment?.decimals;
+  const contractAddress = options?.addressOverride ?? deployment?.address;
+  if (!contractAddress || decimals == null) return null;
 
   return {
-    contractAddress: resolvedContract.address,
-    decimals: options?.decimalsOverride ?? resolvedContract.decimals,
+    contractAddress,
+    decimals,
   };
 }

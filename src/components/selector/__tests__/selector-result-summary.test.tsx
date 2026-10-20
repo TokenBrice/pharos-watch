@@ -10,6 +10,7 @@ import {
   type SelectorResultSummaryProps,
 } from "@/components/selector/selector-result-summary";
 import { SelectorSnapshotBanner } from "@/components/selector/selector-snapshot-banner";
+import { SelectorSkippedDisclosure } from "@/components/selector/selector-skipped-disclosure";
 
 vi.mock("next/link", async () => {
   const { createNextLinkMock } = await import("@/test-utils/frontend");
@@ -137,4 +138,15 @@ describe("SelectorSnapshotBanner", () => {
     expect(screen.queryByText("Unverified client snapshot")).toBeNull();
   });
 
+});
+
+describe("SelectorSkippedDisclosure", () => {
+  it("presents unavailable freeze-control evidence without exposing its diagnostic key", () => {
+    render(<SelectorSkippedDisclosure coins={[{
+      id: "usdc-circle", symbol: "USDC", missingSignals: ["insufficient-control-evidence"],
+    }]} />);
+    expect(screen.getByText("USDC")).toBeTruthy();
+    expect(screen.getByText(/missing:.*freeze-control evidence/i)).toBeTruthy();
+    expect(screen.queryByText(/insufficient-control-evidence/)).toBeNull();
+  });
 });

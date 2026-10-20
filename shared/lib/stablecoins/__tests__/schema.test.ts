@@ -3,6 +3,9 @@ import {
   parseStablecoinMetaAssets,
   StablecoinComplianceSidecarSchema,
   StablecoinMetaAssetSchema,
+  StablecoinMetaAssetArraySchema,
+  StablecoinMetaCatalogInvariantsSchema,
+  StablecoinMetaSourceAssetSchema,
   StablecoinMintAuthoritySidecarSchema,
   StablecoinRiskReviewSidecarSchema,
 } from "../schema";
@@ -19,6 +22,89 @@ import { CANONICAL_ETH_RESERVE_RISK } from "../../reserve-asset-risk";
 
 const baseFlags = CANONICAL_STABLECOIN_FLAGS;
 
+describe("calendar-only catalog dates", () => {
+  const listingReview = { changedAt: "2024-02-29", reason: "Reviewed listing status." };
+  const coverage = {
+    startDate: "2024-02-29", reviewedAt: "2024-03-01",
+    basis: "audited-replay-and-live", notes: "Reviewed continuous detector history.",
+  };
+  const fields: Array<[string, (date: string) => Record<string, unknown>]> = [
+    ["listingStatusReview.changedAt", (date) => ({ listingStatusReview: { ...listingReview, changedAt: date } })],
+    ["listingStatusReview.reviewBy", (date) => ({ listingStatusReview: { ...listingReview, reviewBy: date } })],
+    ["windDownAnnouncedAt", (date) => ({ windDownAnnouncedAt: date })],
+    ["frozenAt", (date) => ({ frozenAt: date })],
+    ["pegScoreCoverage.startDate", (date) => ({ pegScoreCoverage: { ...coverage, startDate: date } })],
+    ["pegScoreCoverage.reviewedAt", (date) => ({ pegScoreCoverage: { ...coverage, reviewedAt: date } })],
+  ];
+
+  describe.each(fields)("%s", (field, overrides) => {
+    it.each(["2023-02-29", "2024-02-30", "2024-04-31", "2024-13-01"])(
+      "rejects impossible calendar day %s at source admission",
+      (date) => {
+        const result = StablecoinMetaSourceAssetSchema.safeParse(makeCoin(overrides(date)));
+        expect(result.success).toBe(false);
+        if (result.success) throw new Error("impossible calendar date was admitted");
+        expect(result.error.issues.map((entry) => entry.path.join("."))).toContain(field);
+      },
+    );
+
+    it("preserves a valid leap day", () => {
+      const coin = makeCoin(overrides("2024-02-29"));
+      expect(StablecoinMetaSourceAssetSchema.parse(coin)).toEqual(coin);
+    });
+  });
+
+  it.each(["2024", "2024-02", "2024-Q1", "2024-H1", "2024-02-29"])(
+    "keeps fuzzy launch-date precision %s",
+    (date) => {
+      expect(StablecoinMetaAssetSchema.parse(makeCoin({ launchDate: date })).launchDate).toBe(date);
+    },
+  );
+});
+
+
+describe.each([StablecoinMetaAssetArraySchema, StablecoinMetaCatalogInvariantsSchema])(
+  "catalog deployment ownership",
+  (schema) => {
+    const deployment = { chain: "ethereum", address: "0xabcdef0000000000000000000000000000000000", decimals: 6 };
+
+    it("admits the full tracked source catalog", () => {
+      expect(schema.safeParse(TRACKED_SOURCE_COINS).success).toBe(true);
+    });
+
+    it.each([
+      ["contracts", "contracts"], ["contracts", "tradedContracts"],
+      ["tradedContracts", "contracts"], ["tradedContracts", "tradedContracts"],
+    ] as const)("rejects cross-ID %s/%s deployment ownership", (firstList, listName) => {
+      const coins = [
+        StablecoinMetaAssetSchema.parse(makeCoin({ id: "alpha-usd", [firstList]: [deployment] })),
+        StablecoinMetaAssetSchema.parse(makeCoin({
+          id: "beta-usd", [listName]: [{ ...deployment, address: deployment.address.toUpperCase().replace("0X", "0x") }],
+        })),
+      ];
+      const result = schema.safeParse(coins);
+      expect(result.success).toBe(false);
+      if (result.success) throw new Error("collision was admitted");
+      expect(result.error.issues.map((entry) => entry.path)).toEqual([
+        [0, firstList, 0, "address"], [1, listName, 0, "address"],
+      ]);
+      expect(result.error.issues[0].message).toContain(`alpha-usd.${firstList}[0]`);
+      expect(result.error.issues[0].message).toContain(`beta-usd.${listName}[0]`);
+    });
+
+    it("preserves chain separation and case-sensitive native deployment identities", () => {
+      const coins = [
+        makeCoin({ id: "alpha-usd", contracts: [deployment] }),
+        makeCoin({ id: "beta-usd", contracts: [{ ...deployment, chain: "arbitrum" }] }),
+        makeCoin({ id: "gamma-usd", contracts: [{ ...deployment, chain: "solana", address: "NativeMintAbC" }] }),
+        makeCoin({ id: "delta-usd", contracts: [{ ...deployment, chain: "solana", address: "NativeMintabc" }] }),
+      ].map((coin) => StablecoinMetaAssetSchema.parse(coin));
+      expect(schema.safeParse(coins).success).toBe(true);
+      const collision = [...coins.slice(0, 3), { ...coins[3], contracts: coins[2].contracts }];
+      expect(schema.safeParse(collision).success).toBe(false);
+    });
+  },
+);
 
 describe("StablecoinMeta schema — reserve and manual dependency roles", () => {
   function roleFixture(economicRole: "control-operator" | "basket-exposure") {

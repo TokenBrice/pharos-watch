@@ -90,6 +90,17 @@ describe("useChainProfileData", () => {
     expect(result.current.coins).toBe(payload.chainDetail?.coins);
   });
 
+  it("keeps absent detail unavailable and preserves an observed zero detail total", () => {
+    useRegisteredApiQueryMock.mockReturnValue(makeQuery(makeResponse({ chainDetail: undefined })));
+    const { result, rerender } = renderHook(() => useChainProfileData("ethereum"));
+    expect(result.current.totalUsd).toBeNull();
+    useRegisteredApiQueryMock.mockReturnValue(makeQuery(makeResponse({
+      chainDetail: { chainId: "ethereum", totalUsd: 0, coins: [] },
+    })));
+    rerender();
+    expect(result.current.totalUsd).toBe(0);
+  });
+
   it("confirms a missing chain only after the Worker response is available", () => {
     useRegisteredApiQueryMock.mockReturnValue(makeQuery(makeResponse({ chains: [], chainDetail: undefined })));
 

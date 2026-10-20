@@ -26,6 +26,18 @@ describe("DominanceBreakdown", () => {
     makeChain({ id: "tron", name: "Tron", dominanceShare: 0.2 }),
   ];
 
+  it("keeps observed geometry without claiming global shares or residuals for null totals", () => {
+    const rows = [makeChain({ dominanceShare: null, totalUsd: 100 })];
+    const { container } = render(
+      <DominanceBreakdown topBySupply={rows} chains={rows} globalTotalUsd={null}
+        chainAttributedTotalUsd={null} unattributedTotalUsd={null}
+        attributionDiscrepancyUsd={null} dominanceGeometryTotalUsd={null} />,
+    );
+    expect(dominanceBarLabel(container)).toBe("Supply dominance: Ethereum Unavailable");
+    expect(container.querySelector('div[role="img"]')?.firstElementChild?.getAttribute("style")).toContain("width: 100%");
+    expect(container.textContent).not.toMatch(/Other chains|Unattributed|0\\.0%|NaN|Infinity/);
+  });
+
   it("renders a legend entry per top chain with its dominance percent", () => {
     render(
       <DominanceBreakdown

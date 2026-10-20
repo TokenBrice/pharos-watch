@@ -82,6 +82,27 @@ function blacklistRow(overrides: Record<string, unknown> = {}): Record<string, u
 }
 
 describe("freeze projector", () => {
+  it.each([
+    ["blacklist", projectFreezeBlocked, "address frozen"],
+    ["destroy", projectFreezeDestroyed, "funds destroyed"],
+  ] as const)("preserves unavailable and finite amount presentation for %s", async (eventType, project, withoutAmount) => {
+    const { db, sqlite } = fixtures.open();
+    const amounts = [Infinity, NaN, -Infinity, 0, -1_500, 1_500_000];
+    const insert = sqlite.prepare(`INSERT INTO blacklist_events
+      (id, stablecoin, chain_id, chain_name, event_type, address, tx_hash, block_number,
+       timestamp, explorer_tx_url, explorer_address_url, amount_usd_at_event)
+      VALUES (?, 'USDT', 'ethereum', 'Ethereum', ?, '0xabc', '0xdef', 1, ?, 'https://example.com',
+              'https://example.com', ?)`);
+    amounts.forEach((amount, index) => insert.run(`amount-${index}`, eventType, SEC, amount));
+    await project(db);
+    const titles = sqlite.prepare("SELECT title FROM tape_events ORDER BY source_row_id").all().map((row) => row.title);
+    expect(titles).toEqual([
+      eventType === "blacklist" ? "USDT freeze N/A · Ethereum" : "USDT N/A destroyed · Ethereum",
+      ...Array(4).fill(`USDT ${withoutAmount} · Ethereum`),
+      eventType === "blacklist" ? "USDT freeze $1.5M · Ethereum" : "USDT $1.5M destroyed · Ethereum",
+    ]);
+  });
+
   it("persists canonical freeze chains and idempotently repairs archived rows for canonical and alias API filters", async () => {
     const { db, sqlite } = fixtures.open();
     const cases = [

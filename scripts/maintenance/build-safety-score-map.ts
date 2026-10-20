@@ -44,8 +44,9 @@ import { firefox, type Page } from "playwright";
 import sharp from "sharp";
 import type { ZodType } from "zod";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
-import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import { API_FRESHNESS_MAX_AGE_SEC, isFreshnessWarningHeader } from "@shared/lib/api-freshness";
 import { GRADE_RADAR_COLORS } from "@shared/lib/classification";
+import { detailSnapshotSourceUpdatedAt, parseDetailSnapshotSourceClock } from "@shared/lib/detail-snapshot-inputs";
 import { formatSafetyMapUsd as formatUsdCompact, formatScore } from "@shared/lib/format";
 import { getDisplayedPsi, getDisplayedPsiBasis } from "@shared/lib/psi-view-model";
 import { PSI_HEX_COLORS, type ConditionBand } from "@shared/lib/classification";
@@ -68,6 +69,7 @@ import {
 } from "../lib/map-annotations";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import { buildMaintenanceApiRequest, DEFAULT_MAINTENANCE_API_BASE_URL } from "../lib/maintenance-api";
+import { CliUsageError } from "../lib/cli-args.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, "../..");
@@ -196,11 +198,6 @@ export function chromeKeepOuts(): Array<Rect & { id: string }> {
   ];
 }
 
-/** True when no part of the rectangle lies inside the bounded outer ellipse. */
-export function rectClearsOuterField(rect: Rect): boolean {
-  return rectFitsOrbit({ innerRx: OUTER_RX, innerRy: OUTER_RY, outerRx: Number.POSITIVE_INFINITY, outerRy: Number.POSITIVE_INFINITY }, rect);
-}
-
 function inflateTowardMap(rect: Rect, clearance: number): Rect {
   const left = rect.x + rect.w / 2 > GALAXY_CX;
   const top = rect.y + rect.h / 2 < GALAXY_CY;
@@ -281,9 +278,24 @@ export interface MapPsi {
   computedAt: number;
 }
 
+interface MapTransportFreshness {
+  sourceUpdatedAtSec: number | null;
+  sourceClock: "x-data-updated-at" | "http-date-age" | null;
+  sourceHeaders: Record<"X-Data-Updated-At" | "X-Data-Age" | "Date" | "Age" | "Warning", string | null>;
+  reason: string | null;
+}
+
+interface MapSupplyFreshness extends MapTransportFreshness {
+  status: "fresh" | "stale" | "future" | "unavailable";
+  assessedAtSec: number;
+  ageSec: number | null;
+  maxAgeSec: number;
+}
+
 interface FetchJsonResult {
   body: unknown;
   publicationStatus: string | null;
+  transportFreshness: MapTransportFreshness;
 }
 
 type Edition = "daily" | "monthly";
@@ -332,6 +344,9 @@ function parseCliArgs(argv: readonly string[]): {
       issue: { type: "string" },
     },
   });
+  if (values.out != null && !/\.png$/.test(values.out)) {
+    throw new CliUsageError("--out must name a file ending in lowercase .png");
+  }
   const edition = values.edition ?? "daily";
   if (edition !== "daily" && edition !== "monthly") {
     throw new Error(`--edition must be "daily" or "monthly" (got "${edition}")`);
@@ -354,6 +369,59 @@ function loadApiKey(): string {
   return key;
 }
 
+function readMapTransportFreshness(headers: Headers): MapTransportFreshness {
+  const sourceHeaders = {
+    "X-Data-Updated-At": headers.get("X-Data-Updated-At"),
+    "X-Data-Age": headers.get("X-Data-Age"),
+    Date: headers.get("Date"),
+    Age: headers.get("Age"),
+    Warning: headers.get("Warning"),
+  };
+  const unavailable = (reason: string): MapTransportFreshness => ({
+    sourceHeaders, sourceUpdatedAtSec: null, sourceClock: null, reason,
+  });
+  for (const name of ["X-Data-Updated-At", "X-Data-Age", "Age"] as const) {
+    const value = sourceHeaders[name];
+    if (value !== null && parseDetailSnapshotSourceClock(value) === null) return unavailable(`invalid-${name.toLowerCase()}`);
+  }
+  const dateMs = Date.parse(sourceHeaders.Date ?? "");
+  if (sourceHeaders.Date !== null && (!Number.isFinite(dateMs) || dateMs < 0)) return unavailable("invalid-date");
+  const absoluteClock = sourceHeaders["X-Data-Updated-At"];
+  if (absoluteClock === null) {
+    // Date alone describes a response, not the source generation. Missing
+    // source provenance must never become a request-time source clock.
+    if (sourceHeaders.Date === null || sourceHeaders["X-Data-Age"] === null) return unavailable("missing-source-provenance");
+    const reconstructed = dateMs / 1000 - Number(sourceHeaders.Age ?? 0) - Number(sourceHeaders["X-Data-Age"]);
+    if (!Number.isFinite(reconstructed) || reconstructed < 0) return unavailable("invalid-source-clock");
+  }
+  let clockHeaders = headers;
+  if (absoluteClock === null && sourceHeaders.Age === null) {
+    // Preserve the raw absent header while making the map's existing
+    // zero-edge-residence policy explicit to the stricter shared helper.
+    clockHeaders = new Headers(headers);
+    clockHeaders.set("Age", "0");
+  }
+  const sourceUpdatedAtMs = detailSnapshotSourceUpdatedAt(undefined, clockHeaders);
+  if (sourceUpdatedAtMs === null) return unavailable("invalid-source-clock");
+  return {
+    sourceHeaders,
+    sourceUpdatedAtSec: sourceUpdatedAtMs / 1000,
+    sourceClock: absoluteClock === null ? "http-date-age" : "x-data-updated-at",
+    reason: null,
+  };
+}
+
+function assessMapSupplyFreshness(transport: MapTransportFreshness, assessedAtSec: number): MapSupplyFreshness {
+  const ageSec = transport.sourceUpdatedAtSec === null ? null : assessedAtSec - transport.sourceUpdatedAtSec;
+  const maxAgeSec = API_FRESHNESS_MAX_AGE_SEC.stablecoins;
+  const staleWarning = transport.sourceHeaders.Warning !== null && isFreshnessWarningHeader(transport.sourceHeaders.Warning);
+  const status = staleWarning ? "stale"
+    : ageSec === null ? "unavailable" : ageSec < 0 ? "future" : ageSec >= maxAgeSec ? "stale" : "fresh";
+  const reason = staleWarning ? "stale-warning"
+    : transport.reason ?? (status === "future" ? "future-source-clock" : status === "stale" ? "source-too-old" : null);
+  return { ...transport, assessedAtSec, ageSec, maxAgeSec, status, reason };
+}
+
 async function fetchJson(apiPath: string, apiKey: string, baseUrl: string): Promise<FetchJsonResult> {
   const { url, headers } = buildMaintenanceApiRequest(apiPath, apiKey, baseUrl);
   const res = await fetch(url, { headers, signal: AbortSignal.timeout(30_000) });
@@ -361,6 +429,7 @@ async function fetchJson(apiPath: string, apiKey: string, baseUrl: string): Prom
   return {
     body: await res.json(),
     publicationStatus: res.headers.get("X-Safety-Score-Status")?.trim().toLowerCase() ?? null,
+    transportFreshness: readMapTransportFreshness(res.headers),
   };
 }
 
@@ -1133,15 +1202,6 @@ function createEllipseArcSampler(rx: number, ry: number): EllipseArcSampler {
       return { x: GALAXY_CX + rx * Math.cos(theta), y: GALAXY_CY + ry * Math.sin(theta) };
     },
   };
-}
-
-export function packEllipticalOrbit(
-  radii: readonly number[],
-  orbitRx: number,
-  orbitRy: number,
-  phase: number,
-): Array<{ x: number; y: number }> | null {
-  return packAnchoredOrbit(radii, orbitRx, orbitRy, [{ index: 0, theta: phase }]);
 }
 
 /**
@@ -2120,6 +2180,7 @@ function buildSvg({
   chartKey,
   annotations,
   publicationHealth,
+  supplyFreshness,
 }: {
   bands: readonly BandLayout[];
   logos: ReadonlyMap<string, LogoRenderData | null>;
@@ -2133,6 +2194,7 @@ function buildSvg({
   chartKey: ChartKeyData;
   annotations: readonly PlacedAnnotation[];
   publicationHealth: MapPublicationHealth;
+  supplyFreshness: MapSupplyFreshness;
 }): string {
   const asOf = new Date(asOfSec * 1000);
   const stamp = stampCopy(edition, issue, asOf);
@@ -2140,6 +2202,7 @@ function buildSvg({
 
   const parts: string[] = [];
   parts.push(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${WIDTH} ${HEIGHT}" width="${WIDTH}" height="${HEIGHT}">`);
+  parts.push(`<metadata id="supply-freshness">${escapeXml(JSON.stringify(supplyFreshness))}</metadata>`);
   parts.push(`<defs><style>text { font-kerning: normal; font-variant-numeric: tabular-nums; }</style>`);
   parts.push(`<radialGradient id="space" cx="50%" cy="50%" r="76%"><stop offset="0" stop-color="#18243a"/><stop offset="0.46" stop-color="#0c1220"/><stop offset="1" stop-color="#05070d"/></radialGradient>`);
   parts.push(`<radialGradient id="vignette" cx="50%" cy="50%" r="72%"><stop offset="0.62" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity="0.42"/></radialGradient>`);
@@ -2451,6 +2514,7 @@ interface PreparedMapData {
   reportCardsResult: FetchJsonResult;
   reportCards: ReturnType<typeof parseMapReportCards>;
   psi: MapPsi;
+  supplyFreshness: MapSupplyFreshness;
   graded: MapCoin[];
   unjoined: string[];
   notRatedCount: number;
@@ -2481,6 +2545,10 @@ async function fetchAndValidateMapData(
   const psiAgeSec = nowSec - psi.computedAt;
   if (psiAgeSec < 0) throw new Error(`PSI reading is ${(psiAgeSec / 60).toFixed(1)}m old — refusing to render a future-dated level`);
   if (psiAgeSec >= API_FRESHNESS_MAX_AGE_SEC.stabilityIndex) throw new Error(`PSI reading is ${(psiAgeSec / 60).toFixed(1)}m old (must be under ${API_FRESHNESS_MAX_AGE_SEC.stabilityIndex / 60}m) — refusing to render a stale level`);
+  const supplyFreshness = assessMapSupplyFreshness(listResult.transportFreshness, nowSec);
+  if (supplyFreshness.status !== "fresh") {
+    throw new Error(`Stablecoin supply freshness ${supplyFreshness.status}: ${supplyFreshness.reason} (maxAgeSec=${supplyFreshness.maxAgeSec}, sourceUpdatedAtSec=${supplyFreshness.sourceUpdatedAtSec}) — refusing to render unadmitted supply`);
+  }
 
   const listById = new Map(list.peggedAssets.map((asset) => [asset.id, asset]));
   const graded: MapCoin[] = [];
@@ -2523,7 +2591,7 @@ async function fetchAndValidateMapData(
   if (missingLogos.length > 0) io.warn(`[safety-score-map] No logo for ${missingLogos.length} coins: ${missingLogos.slice(0, 12).map((b) => b.coin.id).join(", ")}${missingLogos.length > 12 ? ", …" : ""}`);
 
   io.log(`[safety-score-map] Render input graded=${graded.length} notRated=${notRatedCount} missingLogos=${missingLogos.length}`);
-  return { reportCardsResult, reportCards, psi, graded, unjoined, notRatedCount, tiers, lanes, bands, k, gravelFloor, logos, missingLogos };
+  return { reportCardsResult, reportCards, psi, supplyFreshness, graded, unjoined, notRatedCount, tiers, lanes, bands, k, gravelFloor, logos, missingLogos };
 }
 
 export class SafetyMapCapacityError extends Error {
@@ -2615,7 +2683,7 @@ async function buildMap(options: {
   const baseUrl = baseUrlOverride?.trim() || process.env.PHAROS_API_BASE?.trim() || DEFAULT_MAINTENANCE_API_BASE_URL;
 
   const prepared = await fetchAndValidateMapData(apiKey, baseUrl, io);
-  const { reportCardsResult, reportCards, psi, graded, unjoined, notRatedCount, tiers, lanes, bands, k, gravelFloor, logos, missingLogos } = prepared;
+  const { reportCardsResult, reportCards, psi, supplyFreshness, graded, unjoined, notRatedCount, tiers, lanes, bands, k, gravelFloor, logos, missingLogos } = prepared;
   const totalMcap = knownMapSupply(graded);
   const floorMcapByTier: FloorMcapByTier = {
     a: (R_MIN_A / k) ** 2,
@@ -2677,6 +2745,7 @@ async function buildMap(options: {
     chartKey,
     annotations,
     publicationHealth: reportCards.publicationHealth,
+    supplyFreshness,
   });
   if (unsupportedGlyphs.size > 0) {
     throw new Error(`[safety-score-map] Text uses codepoints missing from the embedded fonts: ${[...unsupportedGlyphs].join(" ")} — refusing to render an unsupported glyph`);
@@ -2776,7 +2845,7 @@ async function buildMap(options: {
 
   writeFileSync(
     sidecar(".alt.json"),
-    `${JSON.stringify({ edition, date: runDate, asOfSec: reportCards.asOfSec, psi, altText, table, tiers }, null, 2)}\n`,
+    `${JSON.stringify({ edition, date: runDate, asOfSec: reportCards.asOfSec, psi, supplyFreshness, altText, table, tiers }, null, 2)}\n`,
   );
   writeFileSync(
     manifestPath,
@@ -2791,6 +2860,7 @@ async function buildMap(options: {
         methodologyVersion: reportCards.methodologyVersion,
         updatedAt: reportCards.updatedAt,
         publicationHealth: reportCards.publicationHealth,
+        supplyFreshness,
         counts,
         totalMcap,
         bytes: statSync(pngPath).size,
@@ -2809,7 +2879,7 @@ async function buildMap(options: {
 /**
  * In-process entrypoint with the CLI's process semantics: a guard failure
  * surfaces through `io.error` with the `[safety-score-map]` prefix and
- * reports exit code 1, success reports 0. `apiKey`/`baseUrl` override the
+ * reports exit code 1 (invalid output filenames report usage code 2), success reports 0. `apiKey`/`baseUrl` override the
  * environment so tests can drive a fixture API without spawning a child
  * process or loading `.env.local`; the direct-run block below stays the
  * real-process owner of the exit contract.
@@ -2837,7 +2907,7 @@ export async function runSafetyScoreMapCli(
     return 0;
   } catch (error) {
     io.error(`[safety-score-map] ${error instanceof Error ? error.message : String(error)}`);
-    return 1;
+    return error instanceof CliUsageError ? 2 : 1;
   }
 }
 

@@ -127,6 +127,16 @@ describe("chains route card", () => {
 
   const coreAssets = () => [...CLIENT_CORE_AGGREGATE_ACTIVE_IDS].map((id) => makeAsset({ id, circulating: { peggedUSD: 1_000_000 } }));
 
+  it("uses a figure-null timeless fallback for unavailable global totals or chain shares", async () => {
+    for (const overrides of [
+      { globalTotalUsd: null },
+      { chains: [{ id: "ethereum", name: "Ethereum", totalUsd: 50, dominanceShare: null }] },
+    ]) {
+      mocks.handleChains.mockResolvedValue(json(chainsBody(overrides)));
+      await expect(OG_PAGE_LOADERS.chains(db, NOW)).resolves.toEqual({ kind: "unavailable", reason: "figure-null" });
+    }
+  });
+
   it("leads with the largest chain's share, then the next two and the observed total", async () => {
     mocks.handleChains.mockResolvedValue(json(chainsBody()));
     mocks.loadStablecoinsCache.mockResolvedValue(stablecoinsCache(coreAssets()));

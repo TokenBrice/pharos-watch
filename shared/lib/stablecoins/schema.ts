@@ -200,20 +200,20 @@ const StablecoinMetaAssetSchemaShape = {
   yieldConfig: YieldConfigSchema.optional(),
   status: StablecoinMetaEnumSchemas.status.optional(),
   listingStatusReview: z.object({
-    changedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    changedAt: StrictIsoDateSchema,
     reason: z.string().trim().min(1).max(280),
-    reviewBy: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+    reviewBy: StrictIsoDateSchema.optional(),
     source: StablecoinLinkSchema.optional(),
   }).strict().optional(),
-  windDownAnnouncedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  windDownAnnouncedAt: StrictIsoDateSchema.optional(),
   windDownSourceUrl: z.string().url().optional(),
-  frozenAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  frozenAt: StrictIsoDateSchema.optional(),
   obituary: obituarySchema.optional(),
   launchDate: FuzzyDateSchema.optional(),
   pegScoreCoverage: z.object({
-    startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    startDate: StrictIsoDateSchema,
     basis: z.literal("audited-replay-and-live"),
-    reviewedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    reviewedAt: StrictIsoDateSchema,
     replayRunId: z.string().trim().min(1).optional(),
     notes: z.string().trim().min(1),
   }).strict().optional(),
@@ -733,9 +733,31 @@ function refineMintAuthorityCatalog(stablecoins: StablecoinMeta[], ctx: z.Refine
   }
 }
 
+function refineDeploymentOwnership(stablecoins: StablecoinMeta[], ctx: z.RefinementCtx): void {
+  const owners = new Map<string, { id: string; path: (string | number)[]; label: string }>();
+  stablecoins.forEach((coin, coinIndex) => {
+    for (const listName of ["contracts", "tradedContracts"] as const) {
+      (coin[listName] ?? []).forEach((contract, contractIndex) => {
+        const key = normalizeDeploymentId(`${contract.chain}:${contract.address}`);
+        const path = [coinIndex, listName, contractIndex, "address"];
+        const label = `${coin.id}.${listName}[${contractIndex}]`;
+        const owner = owners.get(key);
+        if (owner && owner.id !== coin.id) {
+          const message = `deployment "${key}" is owned by both ${owner.label} and ${label}`;
+          issue(ctx, owner.path, message);
+          issue(ctx, path, message);
+        } else if (!owner) {
+          owners.set(key, { id: coin.id, path, label });
+        }
+      });
+    }
+  });
+}
+
 export const StablecoinMetaAssetArraySchema: z.ZodType<StablecoinMeta[], unknown> = z
   .array(StablecoinMetaAssetSchema)
-  .superRefine(refineMintAuthorityCatalog);
+  .superRefine(refineMintAuthorityCatalog)
+  .superRefine(refineDeploymentOwnership);
 
 /**
  * Catalog-level invariants only. Use when every record has already been parsed
@@ -744,7 +766,8 @@ export const StablecoinMetaAssetArraySchema: z.ZodType<StablecoinMeta[], unknown
  */
 export const StablecoinMetaCatalogInvariantsSchema: z.ZodType<StablecoinMeta[], unknown> = z
   .array(z.custom<StablecoinMeta>())
-  .superRefine(refineMintAuthorityCatalog);
+  .superRefine(refineMintAuthorityCatalog)
+  .superRefine(refineDeploymentOwnership);
 export const CanonicalOrderAssetSchema = z.array(StablecoinIdSchema);
 
 const DeadStablecoinAssetSchema: z.ZodType<DeadStablecoin> = DeadStablecoinSchema.extend({

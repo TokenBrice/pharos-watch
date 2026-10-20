@@ -1,6 +1,7 @@
 "use client";
 
 import type { SkippedCoin } from "@shared/lib/selector";
+import { selectorExclusionReasonLabel } from "@shared/lib/selector/selector-labels";
 
 interface SelectorSkippedDisclosureProps {
   coins: readonly SkippedCoin[];
@@ -26,7 +27,9 @@ export function SelectorSkippedDisclosure({ coins }: SelectorSkippedDisclosurePr
           <li key={coin.id} className="flex min-w-0 flex-wrap items-baseline gap-1.5">
             <span className="font-semibold text-foreground">{coin.symbol}</span>
             <span className="min-w-0 break-words text-xs">
-              missing: {coin.missingSignals.length > 0 ? coin.missingSignals.join(", ") : "data not yet captured"}
+              missing: {coin.missingSignals.length > 0
+                ? coin.missingSignals.map((signal) => selectorExclusionReasonLabel(signal) ?? signal).join(", ")
+                : "data not yet captured"}
             </span>
           </li>
         ))}

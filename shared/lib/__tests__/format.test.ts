@@ -18,6 +18,9 @@ import {
   formatCompactUsdWithOptions,
   formatCompactUsdShort,
   formatCompactUsdShortLowerK,
+  formatDexPricingAuditUsd,
+  formatSafetyMapUsd,
+  formatV9PresentationUsd,
   formatSignedCompactUsd,
   formatBps,
   formatEventDate,
@@ -228,7 +231,7 @@ describe.each<{
     name: "formatCompactUsdShortLowerK", format: formatCompactUsdShortLowerK,
     cases: [
       ["keeps one decimal for B/M and rounds thousands to a lowercase k", [[4.321e9, "$4.3B"], [8.76e6, "$8.8M"], [12_345, "$12k"], [1_000, "$1k"]]],
-      ["returns $0 for non-finite values", [[NaN, "$0"], [Infinity, "$0"]]],
+      ["returns N/A for non-finite values", [[NaN, "N/A"], [Infinity, "N/A"]]],
     ],
   },
   {
@@ -275,6 +278,26 @@ describe.each<{
   });
 });
 
+describe.each([
+  [formatCurrency, "$0.00", "-$2.50M"],
+  [formatCompactUsd, "$0", "-$2.5M"],
+  [formatCompactUsdShort, "$0", "$-2.5M"],
+  [formatCompactUsdShortLowerK, "$0", "$-2.5M"],
+  [formatSignedCompactUsd, "$0", "-$2.5M"],
+  [formatCompactCount, "0", "-2500k"],
+  [formatDexPricingAuditUsd, "$0", "$-2.50M"],
+  [formatSafetyMapUsd, "$0K", "$-2500K"],
+  [formatV9PresentationUsd, "$0", "$-2,500,000"],
+] as const)("compact availability for %s", (format, zero, negative) => {
+  it.each([NaN, Infinity, -Infinity])("marks %s unavailable without inventing zero", (value) => {
+    expect(format(value)).toBe("N/A");
+  });
+  it("preserves measured zero and signed-negative presentation", () => {
+    expect(format(0)).toBe(zero);
+    expect(format(-2_500_000)).toBe(negative);
+  });
+});
+
 describe("abbreviateNumberParts", () => {
   it("returns value/suffix pairs for large magnitudes", () => {
     expect(abbreviateNumberParts(1.5e9)).toEqual({ short: 1.5, suffix: "B" });
@@ -283,6 +306,12 @@ describe("abbreviateNumberParts", () => {
 
   it("returns the raw value for small magnitudes", () => {
     expect(abbreviateNumberParts(12)).toEqual({ short: 12, suffix: "" });
+    expect(abbreviateNumberParts(0)).toEqual({ short: 0, suffix: "" });
+    expect(abbreviateNumberParts(-2_500_000)).toEqual({ short: -2.5, suffix: "M" });
+  });
+
+  it.each([NaN, Infinity, -Infinity])("keeps invalid parts %s unavailable", (value) => {
+    expect(abbreviateNumberParts(value)).toBeNull();
   });
 });
 

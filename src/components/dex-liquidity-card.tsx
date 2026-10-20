@@ -291,17 +291,12 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
         >
         <div className="mt-3 space-y-4">
           {/* Health indicators — grouped into a cohesive block */}
-          {(liq.concentrationHhi != null ||
-            liq.depthStability != null ||
-            liq.durabilityScore != null ||
-            liq.weightedBalanceRatio != null ||
-            liq.organicFraction != null) && (
             <div className="rounded-lg bg-muted/20 px-3 py-2.5 space-y-1.5">
-              {(liq.concentrationHhi != null || liq.depthStability != null) && (
                 <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
-                  {liq.concentrationHhi != null &&
-                    (() => {
-                      const { label, color } = getConcentrationLabel(liq.concentrationHhi);
+                  {(() => {
+                      const concentration = getConcentrationLabel(liq.concentrationHhi);
+                      if (!concentration) return <span className="text-muted-foreground">Crowding not scored</span>;
+                      const { label, color } = concentration;
                       return (
                         <span className="text-muted-foreground">
                           Concentration: <span className={`font-medium ${color}`}>{label}</span>
@@ -318,7 +313,6 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
                     </span>
                   )}
                 </div>
-              )}
               {(liq.durabilityScore != null || liq.weightedBalanceRatio != null || liq.organicFraction != null) && (
                 <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
                   {liq.durabilityScore != null && (
@@ -346,7 +340,6 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
                 </div>
               )}
             </div>
-          )}
 
           {/* DEX-Implied Price — anchors the bottom of the summary zone */}
           {liq.dexPriceUsd != null && (

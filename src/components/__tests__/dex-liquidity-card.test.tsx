@@ -143,8 +143,35 @@ describe("DexLiquidityCard", () => {
   beforeEach(() => {
     useDexLiquidityMock.mockReset();
     useDexLiquidityHistoryMock.mockReset();
+    useDexLiquidityHistoryMock.mockReturnValue({ data: [], isLoading: false });
     chartReadyMock.mockReturnValue({ ref: vi.fn(), ready: false, width: 0, height: 0 });
   });
+
+  it.each([NaN, Infinity, -Infinity, null, -0.01, 1.01])("renders invalid HHI %s as unscored", (concentrationHhi) => {
+    useDexLiquidityMock.mockReturnValue({
+      // Concentration belongs to a retained market, not the empty fixture default.
+      data: { "usdc-circle": makeDexLiquidityData({ concentrationHhi, poolCount: 1, totalTvlUsd: 100_000 }) },
+      isLoading: false,
+    });
+    const { container } = render(<DexLiquidityCard stablecoinId="usdc-circle" />);
+    openMarketBreakdown(container);
+    expect(screen.getByText("Crowding not scored")).toBeTruthy();
+    expect(container.textContent).not.toMatch(/Concentration: (Low|Medium|High)/);
+  });
+
+  it.each([[0, "Low", "0%"], [0.18, "Medium", "18%"], [0.35, "High", "35%"]] as const)(
+    "preserves the rated concentration display for %s",
+    (concentrationHhi, label, percent) => {
+      useDexLiquidityMock.mockReturnValue({
+        data: { "usdc-circle": makeDexLiquidityData({ concentrationHhi, poolCount: 1, totalTvlUsd: 100_000 }) },
+        isLoading: false,
+      });
+      const { container } = render(<DexLiquidityCard stablecoinId="usdc-circle" />);
+      // The full market breakdown mounts its diagnostics only after opening.
+      openMarketBreakdown(container);
+      expect(screen.getByText(label).parentElement?.textContent).toBe(`Concentration: ${label}(${percent})`);
+    },
+  );
 
   it.each([0, 100_000])("renders invalid coverage as unavailable even with TVL %s", (totalTvlUsd) => {
     useDexLiquidityMock.mockReturnValue({

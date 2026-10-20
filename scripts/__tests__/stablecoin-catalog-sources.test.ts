@@ -292,6 +292,28 @@ describe("stablecoin catalog source helpers", () => {
     expect(() => syncGeneratedPerCoinAsset({ rootDir })).toThrow(/active variants require mintAuthority review/);
   });
 
+  it("rejects cross-ID primary/traded collisions with both source paths before overwriting the aggregate", () => {
+    const rootDir = makeTempRoot();
+    const deployment = { chain: "ethereum", address: "0xabcdef0000000000000000000000000000000000", decimals: 6 };
+    const alphaFile = "shared/data/stablecoins/coins/alpha-usd.json";
+    const betaFile = "shared/data/stablecoins/coins/beta-usd.json";
+    writeJson(rootDir, alphaFile, makeCoin("alpha-usd", { contracts: [deployment] }));
+    writeJson(rootDir, betaFile, makeCoin("beta-usd", { tradedContracts: [deployment] }));
+    writeJson(rootDir, "shared/data/stablecoins/coins.generated.json", []);
+
+    let failure: unknown;
+    try {
+      syncGeneratedPerCoinAsset({ rootDir });
+    } catch (error) {
+      failure = error;
+    }
+    expect(failure).toBeInstanceOf(Error);
+    expect(String(failure)).toContain(`${alphaFile}.contracts.0.address`);
+    expect(String(failure)).toContain(`${betaFile}.tradedContracts.0.address`);
+    expect(loadGeneratedPerCoinCoins(rootDir)).toEqual([]);
+    expect(() => syncGeneratedPerCoinAsset({ rootDir, check: true })).toThrow(/owned by both/);
+  });
+
   it("rejects copied per-coin files before generating the aggregate", () => {
     const rootDir = makeTempRoot();
     const duplicateCoin = makeCoin("duplicate-usd");

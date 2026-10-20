@@ -123,6 +123,12 @@ describe("buildMechanismBackingView", () => {
 });
 
 describe("protocol facts", () => {
+  it.each([NaN, Infinity, -Infinity])("does not display an invented zero for invalid protocol facts %s", (value) => {
+    useOverlay({ analogousMetrics: { reserveUsd: value, reserveAmount: value, capacityUsd: 0 } });
+    const facts = buildMechanismBackingView("controlled")?.protocolFacts ?? [];
+    expect(facts).toEqual([{ key: "capacityUsd", label: "Capacity", value: "$0.00" }]);
+  });
+
   it("preserves acronyms and formats signed money, percentages, and distinct ratios", () => {
     useOverlay({
       analogousMetrics: {

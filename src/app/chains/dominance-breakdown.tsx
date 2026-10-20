@@ -19,14 +19,14 @@ const UNATTRIBUTED_HATCH = (from: number, to: number) =>
 interface DominanceBreakdownProps {
   /** Top chains by supply (independent of table sort), already sliced to the legend size. */
   topBySupply: ChainSummary[];
-  globalTotalUsd: number;
-  chainAttributedTotalUsd: number;
-  unattributedTotalUsd: number;
-  /** Signed chain-attributed minus global supply; derived from the totals when absent. */
-  attributionDiscrepancyUsd?: number;
-  /** Bar geometry denominator; `max(global, attributed)` when absent. Never used for labels. */
-  dominanceGeometryTotalUsd?: number;
-  /** Used only as a fallback total when chainAttributedTotalUsd is not finite. */
+  globalTotalUsd: number | null;
+  chainAttributedTotalUsd: number | null;
+  unattributedTotalUsd: number | null;
+  /** Signed chain-attributed minus global supply; derived only for legacy omission, never null. */
+  attributionDiscrepancyUsd?: number | null;
+  /** Bar geometry denominator; observed row geometry stays separate from unavailable global ratios. */
+  dominanceGeometryTotalUsd?: number | null;
+  /** Observed rows may supply geometry, never a replacement global statistic. */
   chains: readonly ChainSummary[];
   /** The chain whose share the hero beam prints: its legend key names it without repeating the figure. */
   beamChainId?: string;
@@ -45,28 +45,30 @@ export function DominanceBreakdown({
   beamChainId,
 }: DominanceBreakdownProps) {
   // Labels are shares of the canonical global supply (`dominanceShare`); they are never rescaled.
-  const topShare = topBySupply.reduce((s, c) => s + c.dominanceShare, 0);
-  const attributedTotalUsd = Number.isFinite(chainAttributedTotalUsd)
+  const topShare = topBySupply.every((chain) => chain.dominanceShare != null)
+    ? topBySupply.reduce((sum, chain) => sum + chain.dominanceShare!, 0)
+    : null;
+  const observedTotalUsd = chains.reduce((sum, chain) => sum + chain.totalUsd, 0);
+  const attributedTotalUsd = chainAttributedTotalUsd != null && Number.isFinite(chainAttributedTotalUsd)
     ? chainAttributedTotalUsd
-    : chains.reduce((sum, chain) => sum + chain.totalUsd, 0);
-  const hasGlobal = globalTotalUsd > 0;
-  const chainAttributedShare = hasGlobal ? attributedTotalUsd / globalTotalUsd : 0;
-  const unattributedShare =
-    hasGlobal && Number.isFinite(unattributedTotalUsd) ? unattributedTotalUsd / globalTotalUsd : 0;
-  const otherChainsShare = Math.max(0, chainAttributedShare - topShare);
-  const discrepancyUsd = attributionDiscrepancyUsd != null && Number.isFinite(attributionDiscrepancyUsd)
-    ? attributionDiscrepancyUsd
-    : attributedTotalUsd - globalTotalUsd;
-  const overAttributedShare = hasGlobal ? Math.max(0, discrepancyUsd) / globalTotalUsd : 0;
-  // Geometry only: when chain rows over-attribute supply the bar normalizes to the larger raw total so
-  // every segment fits without clamping; the printed percentages keep the global denominator.
+    : chainAttributedTotalUsd === null ? null : observedTotalUsd;
+  const hasGlobal = globalTotalUsd != null && globalTotalUsd > 0;
+  const chainAttributedShare = hasGlobal && attributedTotalUsd != null ? attributedTotalUsd / globalTotalUsd : null;
+  const unattributedShare = hasGlobal && unattributedTotalUsd != null
+    ? unattributedTotalUsd / globalTotalUsd : null;
+  const otherChainsShare = chainAttributedShare != null && topShare != null ? Math.max(0, chainAttributedShare - topShare) : null;
+  const discrepancyUsd = attributionDiscrepancyUsd === undefined
+    ? attributedTotalUsd != null && globalTotalUsd != null ? attributedTotalUsd - globalTotalUsd : null
+    : attributionDiscrepancyUsd;
+  const overAttributedShare = hasGlobal && discrepancyUsd != null ? Math.max(0, discrepancyUsd) / globalTotalUsd : null;
+  // Unknown global ratios do not erase observed chain geometry or turn it into a global claim.
   const geometryTotalUsd = dominanceGeometryTotalUsd != null && Number.isFinite(dominanceGeometryTotalUsd)
     ? dominanceGeometryTotalUsd
-    : Math.max(globalTotalUsd, attributedTotalUsd);
+    : hasGlobal && attributedTotalUsd != null ? Math.max(globalTotalUsd, attributedTotalUsd) : observedTotalUsd;
   const geometryScale = hasGlobal && geometryTotalUsd > globalTotalUsd ? globalTotalUsd / geometryTotalUsd : 1;
-  const showOtherChains = otherChainsShare > RESIDUAL_LABEL_MIN_SHARE;
-  const showUnattributed = unattributedShare > RESIDUAL_LABEL_MIN_SHARE;
-  const showOverAttribution = overAttributedShare > RESIDUAL_LABEL_MIN_SHARE;
+  const showOtherChains = otherChainsShare != null && otherChainsShare > RESIDUAL_LABEL_MIN_SHARE;
+  const showUnattributed = unattributedShare != null && unattributedShare > RESIDUAL_LABEL_MIN_SHARE;
+  const showOverAttribution = overAttributedShare != null && overAttributedShare > RESIDUAL_LABEL_MIN_SHARE;
   const ariaLabel = [
     `Supply dominance: ${topBySupply.map((c) => `${c.name} ${formatChainShare(c.dominanceShare)}`).join(", ")}`,
     showOtherChains ? `Other chains ${formatChainShare(otherChainsShare)}` : null,
@@ -85,7 +87,7 @@ export function DominanceBreakdown({
             key={chain.id}
             className="h-full transition-all duration-500"
             style={{
-              width: `${chain.dominanceShare * geometryScale * 100}%`,
+              width: `${hasGlobal && chain.dominanceShare != null ? chain.dominanceShare * geometryScale * 100 : geometryTotalUsd > 0 && Number.isFinite(geometryTotalUsd) ? chain.totalUsd / geometryTotalUsd * 100 : 0}%`,
               backgroundColor: dominanceColor(idx),
             }}
           />
@@ -93,14 +95,14 @@ export function DominanceBreakdown({
         {showOtherChains && (
           <div
             className="h-full"
-            style={{ width: `${otherChainsShare * geometryScale * 100}%`, backgroundColor: OTHER_CHAINS_COLOR }}
+            style={{ width: `${otherChainsShare! * geometryScale * 100}%`, backgroundColor: OTHER_CHAINS_COLOR }}
           />
         )}
         {showUnattributed && (
           <div
             className="h-full"
             style={{
-              width: `${unattributedShare * geometryScale * 100}%`,
+              width: `${unattributedShare! * geometryScale * 100}%`,
               backgroundColor: UNATTRIBUTED_COLOR,
               backgroundImage: UNATTRIBUTED_HATCH(4, 6),
             }}

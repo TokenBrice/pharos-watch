@@ -21,7 +21,7 @@ export function useChainProfileData(chainId: string) {
     // The Worker detail payload is authoritative; do not re-aggregate the
     // stablecoins endpoint or reconcile two independently refreshed snapshots.
     coins: detail?.coins ?? [],
-    totalUsd: detail?.totalUsd ?? 0,
+    totalUsd: detail != null && Number.isFinite(detail.totalUsd) && detail.totalUsd >= 0 ? detail.totalUsd : null,
     canConfirmMissingChain,
     supplyCoverage,
     supplyUnavailable,

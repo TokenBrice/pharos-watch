@@ -21,14 +21,13 @@ export const PER_COIN_CACHE_TTL_SECONDS = 5 * 60;
 
 /** Edge/browser lifetime of a rendered OG image (the `ogImage` profile). */
 const OG_IMAGE_CACHE_TTL_SECONDS = 15 * 60;
-const OG_IMAGE_MIN_CACHE_TTL_SECONDS = 60;
 
 /**
  * A live share card may not be cached past its source's admission budget:
- * lifetime = min(15 min, seconds of freshness left), floored at one minute.
+ * lifetime = min(15 min, nonnegative whole seconds of freshness left).
  */
 export function buildOgImageCacheControl(freshSecondsLeft: number): string {
-  const ttl = Math.min(OG_IMAGE_CACHE_TTL_SECONDS, Math.max(OG_IMAGE_MIN_CACHE_TTL_SECONDS, Math.floor(freshSecondsLeft)));
+  const ttl = Math.min(OG_IMAGE_CACHE_TTL_SECONDS, Math.max(0, Math.floor(freshSecondsLeft)));
   return `public, max-age=${ttl}, s-maxage=${ttl}`;
 }
 

@@ -155,7 +155,9 @@ function utcStamp(seconds: number): string {
  * beam label and carried, with both excluded counts, by the status chip.
  */
 export function ChainsHero({ data, meta, retained }: { data: ChainsResponse; meta: ApiMeta | null | undefined; retained: boolean }) {
-  const byShare = [...data.chains].sort((a, b) => b.dominanceShare - a.dominanceShare);
+  const byShare = data.chains.every((chain) => chain.dominanceShare != null)
+    ? [...data.chains].sort((a, b) => b.dominanceShare! - a.dominanceShare!)
+    : [];
   const [first, second] = byShare;
   const topBySupply = [...data.chains].sort((a, b) => b.totalUsd - a.totalUsd).slice(0, 5);
   const coverage = data.supplyCoverage;
@@ -213,7 +215,7 @@ export function ChainsHero({ data, meta, retained }: { data: ChainsResponse; met
           : `Largest chain's share${partial ? " · partial" : ""}`
       }
       beamTitle="Share of observed global stablecoin supply held on the largest chain"
-      beamValue={first ? formatChainShare(first.dominanceShare) : "—"}
+      beamValue={first ? formatChainShare(first.dominanceShare) : "Unavailable"}
       status={status}
       universe={<UniverseChip universe="core" value={`${data.chains.length} of ${REGISTERED_CHAIN_COUNT} chains with supply`} />}
       expand={{ href: "#chains-leaderboard", label: "Jump to the chain leaderboard" }}
@@ -221,7 +223,7 @@ export function ChainsHero({ data, meta, retained }: { data: ChainsResponse; met
         <div className="divide-y divide-border/50">
           <HeroMetricRow
             label={excludedAssets > 0 ? "Known supply subtotal" : "Observed stablecoin supply"}
-            value={formatCompactUsd(data.globalTotalUsd)}
+            value={data.globalTotalUsd == null ? "Unavailable" : formatCompactUsd(data.globalTotalUsd)}
           />
           <HeroMetricRow
             label="7d change"
@@ -236,7 +238,7 @@ export function ChainsHero({ data, meta, retained }: { data: ChainsResponse; met
           {first && second ? (
             <HeroMetricRow
               label="Top two chains"
-              value={formatChainShare(first.dominanceShare + second.dominanceShare)}
+              value={formatChainShare(first.dominanceShare! + second.dominanceShare!)}
               detail={`${first.name} + ${second.name}`}
             />
           ) : null}
@@ -391,7 +393,7 @@ function ChainsLeaderboardTable({
                   <div className="h-1.5 w-16 overflow-hidden rounded-full bg-foreground/10">
                     <div
                       className="h-full rounded-full bg-foreground/55"
-                      style={{ width: chain.dominanceShare > 0 ? `max(2px, ${Math.min(100, chain.dominanceShare * 100)}%)` : 0 }}
+                      style={{ width: chain.dominanceShare != null && chain.dominanceShare > 0 ? `max(2px, ${Math.min(100, chain.dominanceShare * 100)}%)` : 0 }}
                     />
                   </div>
                   <span className="text-xs pharos-numeric text-muted-foreground w-10 text-right">

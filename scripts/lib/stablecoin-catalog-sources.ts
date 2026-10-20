@@ -71,12 +71,17 @@ export interface SyncGeneratedPerCoinAssetResult {
   perCoinCount: number;
 }
 
-function formatSchemaIssues(issues: Array<{ message: string; path?: unknown[] }>): string {
+function formatSchemaIssues(
+  issues: Array<{ message: string; path?: unknown[] }>,
+  sourceFiles?: string[],
+): string {
   return issues
     .slice(0, 8)
     .map((issue) => {
       const path = Array.isArray(issue.path) && issue.path.length > 0
-        ? issue.path.join(".")
+        ? issue.path.map((part, index) => (
+          index === 0 && typeof part === "number" ? sourceFiles?.[part] ?? part : part
+        )).join(".")
         : "<root>";
       return `${path}: ${issue.message}`;
     })
@@ -420,7 +425,9 @@ export function syncGeneratedPerCoinAsset({
   if (!catalogResult.success) {
     throw new Error(
       `[stablecoin-assets] Generated ${GENERATED_PER_COIN_ASSET_FILE} is invalid: ` +
-      formatSchemaIssues(catalogResult.error.issues),
+      formatSchemaIssues(catalogResult.error.issues, projection.map((coin) => (
+        perCoinEntries.find((entry) => entry.id === coin.id)!.file
+      ))),
     );
   }
   const expected = formatJson(projection);

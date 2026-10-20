@@ -71,6 +71,80 @@ describe("site-only stablecoin live summary", () => {
     expect(handleStablecoinDetail).toHaveBeenCalledExactlyOnceWith(db, "usdt-tether", ctx, "provider-key");
   });
 
+  it.each([-1, NaN, Infinity, Number.MAX_VALUE])("withholds malformed selected checkpoints (%s), without older-row rescue", (value) => {
+    const buckets = { peggedUSD: value, peggedEUR: value };
+    const tokens = [0, 1, 7, 30].flatMap((days) => [
+      { date: NOW - days * DAY - 1, totalCirculatingUSD: { peggedUSD: 50 }, totalCirculating: { peggedUSD: 25 } },
+      { date: NOW - days * DAY, totalCirculatingUSD: buckets, totalCirculating: buckets },
+    ]);
+    const summary = projectStablecoinLiveSummary({ price: 2, priceSource: "coingecko", tokens });
+    expect([summary.circulating, summary.circulatingPrevDay, summary.circulatingPrevWeek, summary.circulatingPrevMonth])
+      .toEqual([{}, {}, {}, {}]);
+    expect(summary).toMatchObject({
+      circulating: {}, circulatingPrevDay: {}, circulatingPrevWeek: {}, circulatingPrevMonth: {},
+      nativeSupply: { current: null, prevWeek: null, prevMonth: null },
+    });
+    const canonical = projectStablecoinLiveSummary({
+      price: 2, priceSource: "coingecko", tokens,
+      currentCirculatingUSD: { peggedUSD: 100 }, currentSupplyObservedAt: NOW,
+      currentCirculatingPrevDayUSD: buckets,
+    });
+    expect([canonical.circulatingPrevDay, canonical.circulatingPrevWeek, canonical.circulatingPrevMonth]).toEqual([{}, {}, {}]);
+    expect(canonical).toMatchObject({
+      circulating: { peggedUSD: 100 }, circulatingPrevDay: {}, circulatingPrevWeek: {}, circulatingPrevMonth: {},
+      nativeSupply: { current: 50, prevWeek: null, prevMonth: null },
+    });
+  });
+
+  it("preserves measured zero at every selected checkpoint, including legacy previous-day supply", () => {
+    const tokens = [0, 1, 7, 30].map((days) => ({
+      date: NOW - days * DAY, totalCirculatingUSD: { peggedUSD: 0 }, totalCirculating: { peggedUSD: 0 },
+    }));
+    const expected = {
+      circulating: { peggedUSD: 0 }, circulatingPrevDay: { peggedUSD: 0 },
+      circulatingPrevWeek: { peggedUSD: 0 }, circulatingPrevMonth: { peggedUSD: 0 },
+      nativeSupply: { current: 0, prevWeek: 0, prevMonth: 0 },
+    };
+    expect(projectStablecoinLiveSummary({ tokens })).toMatchObject(expected);
+    expect(projectStablecoinLiveSummary({
+      tokens, price: 2, priceSource: "coingecko", currentCirculatingUSD: { peggedUSD: 0 },
+      currentSupplyObservedAt: NOW, currentCirculatingPrevDayUSD: { peggedUSD: 0 },
+    })).toMatchObject(expected);
+  });
+
+  it("rejects negative and non-finite USD/native output checkpoints while admitting zero and unavailable values", () => {
+    const summary = projectStablecoinLiveSummary({});
+    for (const value of [-1, NaN, Infinity, -Infinity]) {
+      for (const field of ["circulating", "circulatingPrevDay", "circulatingPrevWeek", "circulatingPrevMonth"]) {
+        expect(StablecoinLiveSummarySchema.safeParse({ ...summary, [field]: { peggedUSD: value } }).success).toBe(false);
+      }
+      for (const field of ["current", "prevWeek", "prevMonth"]) {
+        expect(StablecoinLiveSummarySchema.safeParse({
+          ...summary, nativeSupply: { ...summary.nativeSupply, [field]: value },
+        }).success).toBe(false);
+      }
+    }
+    expect(StablecoinLiveSummarySchema.safeParse(summary).success).toBe(true);
+    expect(StablecoinLiveSummarySchema.safeParse({
+      ...summary, circulating: { peggedUSD: 0 }, circulatingPrevDay: { peggedUSD: 0 },
+      circulatingPrevWeek: { peggedUSD: 0 }, circulatingPrevMonth: { peggedUSD: 0 },
+      nativeSupply: { current: 0, prevWeek: 0, prevMonth: 0 },
+    }).success).toBe(true);
+  });
+
+  it("serves unavailable historical USD supply instead of negative live-summary values", async () => {
+    vi.mocked(handleStablecoinDetail).mockResolvedValue(detailResponse({
+      currentCirculatingUSD: { peggedUSD: 100 }, currentSupplyObservedAt: NOW,
+      currentCirculatingPrevDayUSD: { peggedUSD: -1 },
+      tokens: [{ date: NOW - 7 * DAY, totalCirculatingUSD: { peggedUSD: -1 } }],
+    }));
+    const response = await handleStablecoinLiveSummary(db, "usdt-tether", ctx);
+    expect(response.status).toBe(200);
+    const summary = await response.json() as Record<string, unknown>;
+    expect(summary.circulating).toEqual({ peggedUSD: 100 });
+    expect([summary.circulatingPrevDay, summary.circulatingPrevWeek, summary.circulatingPrevMonth]).toEqual([{}, {}, {}]);
+  });
+
   it("preserves settled failed-refresh warnings even for a recently produced generation", async () => {
     vi.mocked(handleStablecoinDetail).mockResolvedValue(detailResponse({}, {
       "Cache-Control": "no-store", "X-Data-Freshness": "stale", Warning: '110 - "Detail refresh failed"',

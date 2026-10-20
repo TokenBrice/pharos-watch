@@ -85,9 +85,9 @@ export function formatCompactUsdWithOptions(
     : `${sign}${currencyPrefix}${body}`;
 }
 
-const DEX_PRICING_AUDIT_USD = { decimals: { trillion: 2, billion: 2, million: 2, thousand: 1, unit: 0 }, invalidFallback: "$0", maximumTier: "billion", signPosition: "after-currency" } as const;
-const SAFETY_MAP_USD = { decimals: { trillion: 1, billion: 1, million: 0, thousand: 0, unit: 0 }, forcedLowestTier: "thousand", invalidFallback: "$0K", signPosition: "after-currency" } as const;
-const V9_PRESENTATION_USD = { compactNegative: false, decimals: { trillion: 1, billion: 1, million: 1, thousand: 1, unit: 0 }, invalidFallback: "$0", maximumTier: "million", signPosition: "after-currency", suffixes: { million: "m", thousand: "k" } } as const;
+const DEX_PRICING_AUDIT_USD = { decimals: { trillion: 2, billion: 2, million: 2, thousand: 1, unit: 0 }, invalidFallback: "N/A", maximumTier: "billion", signPosition: "after-currency" } as const;
+const SAFETY_MAP_USD = { decimals: { trillion: 1, billion: 1, million: 0, thousand: 0, unit: 0 }, forcedLowestTier: "thousand", invalidFallback: "N/A", signPosition: "after-currency" } as const;
+const V9_PRESENTATION_USD = { compactNegative: false, decimals: { trillion: 1, billion: 1, million: 1, thousand: 1, unit: 0 }, invalidFallback: "N/A", maximumTier: "million", signPosition: "after-currency", suffixes: { million: "m", thousand: "k" } } as const;
 
 export const formatDexPricingAuditUsd = (value: number): string => formatCompactUsdWithOptions(value, DEX_PRICING_AUDIT_USD);
 export const formatSafetyMapUsd = (value: number): string => formatCompactUsdWithOptions(value < 0 ? Math.round(value / 1e3) * 1e3 : value, value < 0 ? { ...SAFETY_MAP_USD, maximumTier: "thousand" } : SAFETY_MAP_USD);
@@ -108,8 +108,8 @@ export function formatCurrency(value: number, decimals = 2): string {
   });
 }
 
-export function abbreviateNumberParts(value: number): { short: number; suffix: string } {
-  if (!Number.isFinite(value)) return { short: 0, suffix: "" };
+export function abbreviateNumberParts(value: number): { short: number; suffix: string } | null {
+  if (!Number.isFinite(value)) return null;
   const abs = Math.abs(value);
   const selected = COMPACT_USD_TIERS.find(({ divisor }) => abs >= divisor);
   return selected
@@ -133,7 +133,7 @@ export function formatCompactUsdShort(value: number): string {
 export function formatCompactUsdShortLowerK(value: number): string {
   return formatCompactUsdWithOptions(value, {
     decimals: { trillion: 1, billion: 1, million: 1, thousand: 0, unit: 0 },
-    invalidFallback: "$0",
+    invalidFallback: "N/A",
     maximumTier: "billion",
     signPosition: "after-currency",
     thousandSuffix: "k",
@@ -147,7 +147,7 @@ export function formatSignedCompactUsd(value: number): string {
 }
 
 export function formatCompactCount(value: number): string {
-  if (!Number.isFinite(value)) return "0";
+  if (!Number.isFinite(value)) return "N/A";
   if (Math.abs(value) >= 1000) {
     return `${(value / 1000).toFixed(1).replace(/\.0$/u, "")}k`;
   }

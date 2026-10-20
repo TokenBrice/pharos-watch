@@ -10,6 +10,8 @@ Reviewed controls: [FreezeWatch](https://github.com/TokenBrice/pharos-watch/blob
 
 Display taxonomies are owned by `shared/lib/classification.ts` and its typed children: PYS text/gauges share one band ladder, status badges/runway bars share labels, and mint/redemption descriptors retain their compact and coverage variants. PSI chart colors, text classes, and animation timings share one descriptor; methodology tables consume its text styles.
 
+DEX concentration bands admit only finite HHI in `[0, 1]`. Nullish, non-finite and out-of-range values are unscored (`Crowding not scored` / unknown), never the favorable broad-diversity band. The reviewed boundaries remain Medium at `0.18` and High at `0.35`, inclusive.
+
 ## Stablecoin Classification System
 
 Each tracked stablecoin is defined in the checked-in per-coin data assets under `shared/data/stablecoins/coins/*.json`, loaded through `shared/lib/stablecoins/registry.ts` from the generated `shared/data/stablecoins/coins.generated.json` aggregate, and validated by `shared/lib/stablecoins/schema.ts` at generation/test time. Import stablecoin helpers from their explicit submodules; use the registry module for the complete catalog and explicit lifecycle splits. Each entry carries these flags:

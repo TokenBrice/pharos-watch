@@ -46,6 +46,23 @@ describe("PHAROSVILLE_API_CONTRACT", () => {
     expect(PHAROSVILLE_API_CONTRACT.reportCards.schema).toBe(ReportCardsV9CurrentResponseSchema);
   });
 
+  it("admits unavailable chain accounting without inventing zero totals", () => {
+    const payload = {
+      chains: [],
+      globalTotalUsd: null,
+      chainAttributedTotalUsd: null,
+      unattributedTotalUsd: null,
+      attributionDiscrepancyUsd: null,
+      dominanceGeometryTotalUsd: null,
+      globalChange24hPct: null,
+      globalChange7dPct: null,
+      globalChange30dPct: null,
+      updatedAt: 1777555000,
+      healthMethodologyVersion: "v1.0",
+    };
+    expect(PHAROSVILLE_API_CONTRACT.chains.schema.parse(payload)).toEqual(payload);
+  });
+
   it("pins freshness and producer cadence budgets for the standalone proxy client", () => {
     expect(PHAROSVILLE_API_CONTRACT.stablecoins.metaMaxAgeSec).toBe(API_FRESHNESS_MAX_AGE_SEC.stablecoins);
     expect(PHAROSVILLE_API_CONTRACT.chains.metaMaxAgeSec).toBe(API_FRESHNESS_MAX_AGE_SEC.chains);

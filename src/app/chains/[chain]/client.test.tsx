@@ -64,6 +64,16 @@ describe("ChainProfileClient", () => {
     useChainProfileDataMock.mockReturnValue(makeHookState());
   });
 
+  it("shows an unavailable share and suppresses composition without an admitted detail total", () => {
+    useChainProfileDataMock.mockReturnValue(makeHookState({
+      chain: makeChain({ dominanceShare: null }), totalUsd: null,
+    }));
+    render(<ChainProfileClient chainId="ethereum" />);
+    expect(screen.getByText("Unavailable")).toBeTruthy();
+    expect(screen.queryByText("Stablecoin composition")).toBeNull();
+    expect(screen.queryByRole("table")).toBeNull();
+  });
+
 
   it("renders the missing-chain fallback when the requested chain is absent", () => {
     useChainProfileDataMock.mockReturnValue(makeHookState({

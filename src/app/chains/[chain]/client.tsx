@@ -33,16 +33,17 @@ export function ChainProfileClient({ chainId }: { chainId: string }) {
   } = useChainProfileData(chainId);
 
   const routeModel = useMemo(
-    () => buildChainRouteViewModel(coins, totalUsd),
+    () => totalUsd != null ? buildChainRouteViewModel(coins, totalUsd) : null,
     [coins, totalUsd],
   );
 
   const filteredCoins = useMemo(() => {
+    if (!routeModel) return [];
     if (!backingFilter) {
       return routeModel.coins;
     }
     return routeModel.coins.filter((coin) => (coin.backing ?? "other") === backingFilter);
-  }, [routeModel.coins, backingFilter]);
+  }, [routeModel, backingFilter]);
 
   const hero = meta ? (
     <ChainHero meta={meta} chain={chain} apiMeta={chainsQuery.meta} supplyCoverage={supplyCoverage} supplyUnavailable={supplyUnavailable} />
@@ -107,7 +108,7 @@ export function ChainProfileClient({ chainId }: { chainId: string }) {
             chainName={chain.name}
           />
         )}
-        {chain && (
+        {chain && routeModel && (
           <>
             <CompositionSection model={routeModel} />
             <BackingBreakdown

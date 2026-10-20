@@ -97,6 +97,10 @@ export async function handleDetailSnapshotInputs(db: D1Database, url: URL): Prom
       }
       const liveSummaryUpdatedAt = detailSnapshotSourceUpdatedAt(detail, detailResponse.headers);
       const supplyHistoryUpdatedAt = detailSnapshotSourceUpdatedAt(history, historyResponse.headers);
+      if (liveSummaryUpdatedAt === null || supplyHistoryUpdatedAt === null) {
+        entries.push({ id, status: "unavailable", reason: "source-clock-unavailable", sources });
+        continue;
+      }
       const entry: DetailSnapshotInputEntry = {
         id,
         status: "available",

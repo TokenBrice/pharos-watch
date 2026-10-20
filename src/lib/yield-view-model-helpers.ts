@@ -8,7 +8,9 @@ import type { PegCurrency } from "@shared/types";
  * grouped integer form.
  */
 export function formatTvlOption(value: number): string {
-  const { short, suffix } = abbreviateNumberParts(value);
+  const parts = abbreviateNumberParts(value);
+  if (!parts) return "N/A";
+  const { short, suffix } = parts;
   if (value > 0 && (suffix === "T" || suffix === "B" || suffix === "M")) return `$${short}${suffix}+`;
   return `$${value.toLocaleString()}+`;
 }

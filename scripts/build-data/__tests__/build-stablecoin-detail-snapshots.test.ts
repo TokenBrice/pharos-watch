@@ -117,14 +117,14 @@ describe("stablecoin detail snapshot generator", () => {
     ))?.updatedAt).toBe(1_600_000_000_000);
   });
 
-  it.each(["", "invalid", "-1", "Infinity", "1e309", "0x10", ".5", "5.", "1..2", "1 2"])("rejects a malformed present origin clock (%s) without legacy fallback", async (sourceClock) => {
+  it.each(["", "invalid", "-1", "Infinity", "1e309", "0x10", ".5", "5.", "1..2", "1 2"])("retains payload without a malformed origin clock (%s) or legacy fallback", async (sourceClock) => {
     vi.stubEnv("PHAROS_API_KEY", "fixture-key");
     vi.stubGlobal("fetch", vi.fn(async () => Response.json([], { headers: {
-      "X-Data-Updated-At": sourceClock, Date: new Date(1_700_000_000_000).toUTCString(),
+      "X-Data-Updated-At": sourceClock, Date: new Date(1_700_000_000_000).toUTCString(), "X-Data-Age": "10", Age: "20",
     } })));
     await expect(fetchOptionalDetailSnapshotLane(
       "history", "https://api.pharos.watch/api/supply-history", SupplyHistoryResponseSchema,
-    )).rejects.toThrow(/Invalid X-Data-Updated-At/);
+    )).resolves.toEqual({ data: [] });
   });
 
   it("projects only compact above-fold fields from the full response", () => {
@@ -258,24 +258,33 @@ describe("stablecoin detail snapshot generator", () => {
     expect(serializedSnapshotBytes(snapshot)).toBeLessThanOrEqual(8 * 1024);
   });
 
-  it("normalizes fallback source clocks using both ages and clamps negative results", async () => {
+  it("requires complete valid legacy age evidence without inventing receipt-time clocks", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(100_000);
     vi.stubEnv("PHAROS_API_KEY", "fixture-key");
-    const cases: [Record<string, string>, number][] = [
-      [{ "X-Data-Age": "10", Age: "20" }, 70_000],
-      [{ Date: "invalid", "X-Data-Age": "10", Age: "20" }, 70_000],
-      [{}, 100_000],
-      [{ "X-Data-Age": "invalid", Age: "invalid" }, 100_000],
-      [{ Date: new Date(100_000).toUTCString(), "X-Data-Age": "10", Age: "20" }, 70_000],
+    const date = new Date(100_000).toUTCString();
+    const cases: [Record<string, string>, number | null][] = [
+      [{ "X-Data-Age": "10", Age: "20" }, null],
+      [{ Date: "invalid", "X-Data-Age": "10", Age: "20" }, null],
+      [{}, null],
+      [{ Date: date }, null],
+      [{ Date: date, "X-Data-Age": "10" }, null],
+      [{ Date: date, Age: "20" }, null],
+      [{ Date: date, "X-Data-Age": "invalid", Age: "invalid" }, null],
+      ...["", "-1", "Infinity", "0x10", "1e2"].flatMap((invalid): [Record<string, string>, null][] => [
+        [{ Date: date, "X-Data-Age": invalid, Age: "20" }, null],
+        [{ Date: date, "X-Data-Age": "10", Age: invalid }, null],
+      ]),
+      [{ Date: date, "X-Data-Age": "10", Age: "20" }, 70_000],
       [{ Date: new Date(120_000).toUTCString(), "X-Data-Age": "10", Age: "40" }, 70_000],
-      [{ "X-Data-Age": "90", Age: "20" }, 0],
+      [{ Date: date, "X-Data-Age": "90", Age: "20" }, 0],
+      [{ Date: date, "X-Data-Age": "0", Age: "0" }, 100_000],
     ];
     for (const [headers, expected] of cases) {
       vi.stubGlobal("fetch", vi.fn(async () => Response.json([], { headers })));
       expect(await fetchOptionalDetailSnapshotLane(
         "history", "https://api.pharos.watch/api/supply-history", SupplyHistoryResponseSchema,
-      )).toEqual({ data: [], updatedAt: expected });
+      )).toEqual({ data: [], ...(expected !== null ? { updatedAt: expected } : {}) });
     }
   });
 
@@ -326,6 +335,27 @@ describe("stablecoin detail snapshot generator", () => {
     expect(snapshots.map((snapshot) => snapshot.stablecoinId)).toEqual(TRACKED_STABLECOINS.map((coin) => coin.id));
   });
 
+  it("publishes healthy and unproven lanes without using the artifact clock as source provenance", async () => {
+    vi.stubEnv("PHAROS_API_KEY", "fixture-key");
+    for (const name of ["DIGEST_API_URL", "PUBLIC_DATASETS_API_URL", "SMOKE_API_BASE", "API_BASE_URL"]) vi.stubEnv(name, "");
+    vi.stubGlobal("fetch", vi.fn(async (raw: string) => {
+      const url = new URL(raw);
+      const history = url.pathname.endsWith("/supply-history");
+      const id = history ? url.searchParams.get("stablecoin") : url.pathname.split("/").at(-1);
+      return Response.json(history ? [] : { price: 1 }, {
+        headers: id === "usdt-tether" && !history ? {} : { "X-Data-Updated-At": "1700000000" },
+      });
+    }));
+    const snapshots = await generateSnapshots(false, { source: "per-coin", generatedAt: 1_700_000_100_000 });
+    const unproven = snapshots.find((snapshot) => snapshot.stablecoinId === "usdt-tether")!;
+    expect(unproven.lanes).toMatchObject({ liveSummary: { price: 1 }, supplyHistory: [] });
+    expect(unproven.updatedAt).toEqual({ supplyHistory: 1_700_000_000_000 });
+    expect(snapshots.find((snapshot) => snapshot.stablecoinId === "usdc-circle")?.updatedAt)
+      .toEqual({ liveSummary: 1_700_000_000_000, supplyHistory: 1_700_000_000_000 });
+    expect(reportSnapshotProducerAges([unproven], unproven.generatedAt))
+      .toContain("unavailable clocks=1; no summary lane=0");
+  });
+
   it.each([false, true])("produces identical bulk bytes and falls back only for unavailable coins (originClock=%s)", async (originClock) => {
     const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
     vi.stubEnv("PHAROS_API_KEY", "fixture-key");
@@ -345,7 +375,7 @@ describe("stablecoin detail snapshot generator", () => {
       ] };
     const history = [{ date: sourceClock, circulatingUsd: 100, price: 1 }];
     // Origin provenance also survives the one-second loss in legacy Date/age arithmetic.
-    const headers = new Headers({ Date: new Date((sourceClock + 1200 + Number(originClock)) * 1000).toUTCString(), Age: "1200" });
+    const headers = new Headers({ Date: new Date((sourceClock + 1200 + Number(originClock)) * 1000).toUTCString(), Age: "1200", "X-Data-Age": "0" });
     if (originClock) headers.set("X-Data-Updated-At", String(sourceClock));
     const perCoinIds: string[] = [];
     const batches: string[][] = [];

@@ -23,26 +23,24 @@ export function parseDetailSnapshotSourceClock(value: string): number | null {
 }
 
 /** Body provenance wins, then the origin clock, then legacy HTTP age reconstruction. */
-export function detailSnapshotSourceUpdatedAt(data: unknown, headers: Headers, now?: number): number {
+export function detailSnapshotSourceUpdatedAt(data: unknown, headers: Headers): number | null {
   const meta = isRecord(data) && isRecord(data._meta) ? data._meta : null;
   const sourceUpdatedAt = meta?.updatedAt ?? (isRecord(data) ? data.updatedAt : undefined);
-  if (typeof sourceUpdatedAt === "number" && Number.isFinite(sourceUpdatedAt) && sourceUpdatedAt >= 0) {
+  if (typeof sourceUpdatedAt === "number" && Number.isFinite(sourceUpdatedAt * 1000) && sourceUpdatedAt >= 0) {
     return sourceUpdatedAt * 1000;
   }
   const absoluteSourceClock = headers.get("X-Data-Updated-At");
   if (absoluteSourceClock !== null) {
     const seconds = parseDetailSnapshotSourceClock(absoluteSourceClock);
-    if (seconds === null) {
-      throw new Error("Invalid X-Data-Updated-At source clock");
-    }
-    return seconds * 1000;
+    return seconds === null ? null : seconds * 1000;
   }
   const date = Date.parse(headers.get("Date") ?? "");
-  const age = Number(headers.get("X-Data-Age") ?? 0);
-  const edgeAge = Number(headers.get("Age") ?? 0);
-  // Cloudflare rewrites Date on cached responses; X-Data-Age remains the age
-  // at origin acquisition. Subtract edge residence with or without Date.
-  const acquiredAt = (Number.isFinite(date) ? date : (now ?? Date.now())) -
-    (Number.isFinite(edgeAge) ? edgeAge * 1000 : 0);
-  return Math.max(0, acquiredAt - (Number.isFinite(age) ? age * 1000 : 0));
+  const sourceAge = headers.get("X-Data-Age");
+  const edgeAge = headers.get("Age");
+  const ageSeconds = sourceAge === null ? null : parseDetailSnapshotSourceClock(sourceAge);
+  const edgeAgeSeconds = edgeAge === null ? null : parseDetailSnapshotSourceClock(edgeAge);
+  if (!Number.isFinite(date) || ageSeconds === null || edgeAgeSeconds === null) return null;
+  // Cloudflare rewrites Date on cached responses; subtract both the origin's
+  // source age and edge residence only when all legacy evidence is proven.
+  return Math.max(0, date - edgeAgeSeconds * 1000 - ageSeconds * 1000);
 }

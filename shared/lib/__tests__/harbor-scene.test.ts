@@ -56,7 +56,7 @@ describe("buildHarborScene on the 2026-10-12 payload", () => {
 
   it("conserves supply: containers sum to attributed + unattributed within $1", () => {
     expect(scene.conservation.ok).toBe(true);
-    expect(Math.abs(scene.conservation.drawnUsd - (LIVE.chainAttributedTotalUsd + LIVE.unattributedTotalUsd))).toBeLessThanOrEqual(1);
+    expect(Math.abs(scene.conservation.drawnUsd - (LIVE.chainAttributedTotalUsd! + LIVE.unattributedTotalUsd!))).toBeLessThanOrEqual(1);
   });
 
   it("splits ships, craft and the tail by threshold", () => {
@@ -176,6 +176,20 @@ describe("buildHarborScene edge cases", () => {
     const scene = buildHarborScene(world([]));
     expect(scene.vessels).toEqual([]);
     expect(scene.conservation).toEqual({ ok: true, drawnUsd: 0, expectedUsd: 0 });
+  });
+
+  it("retains observed vessels but never confirms conservation or global ratios for unavailable totals", () => {
+    const scene = buildHarborScene({
+      ...world([chain("a", 5e9, { dominanceShare: null })]),
+      globalTotalUsd: null, chainAttributedTotalUsd: null,
+      unattributedTotalUsd: null, attributionDiscrepancyUsd: null,
+    });
+    expect(scene.ships).toHaveLength(1);
+    expect(scene.ships[0].accessibleName).toContain("global share unavailable");
+    expect(scene.unattributedTotalUsd).toBeNull();
+    expect(scene.unattributed).toBeNull();
+    expect(scene.overAttributionRatio).toBeNull();
+    expect(scene.conservation).toEqual({ ok: null, drawnUsd: 5e9, expectedUsd: null });
   });
 
   it("moves ships and craft beyond the caps to the tail barge", () => {

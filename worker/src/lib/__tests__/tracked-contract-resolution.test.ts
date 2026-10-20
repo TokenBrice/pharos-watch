@@ -21,23 +21,18 @@ describe("lightweight tracked contract resolution", () => {
     });
   });
 
-  it("preserves override decimal fallbacks", () => {
-    expect(
-      resolveRequiredTrackedContractConfig("usdt-tether", "bsc", {
+  it("rejects unreviewed foreign-address and missing-chain decimal inference", () => {
+    for (const chainId of ["bsc", "missing-chain"]) {
+      expect(() => resolveRequiredTrackedContractConfig("usdt-tether", chainId, {
         addressOverride: "0x0000000000000000000000000000000000000001",
-      }),
-    ).toMatchObject({
-      contractAddress: "0x0000000000000000000000000000000000000001",
-      decimals: 18,
-    });
-    expect(
-      resolveRequiredTrackedContractConfig("usdt-tether", "missing-chain", {
-        addressOverride: "0x0000000000000000000000000000000000000002",
-      }),
-    ).toMatchObject({
-      contractAddress: "0x0000000000000000000000000000000000000002",
-      decimals: 6,
-    });
+      })).toThrow(`Missing tracked contract for usdt-tether on ${chainId}`);
+    }
+  });
+
+  it("accepts explicit override scales and exact deployment identities", () => {
+    expect(resolveRequiredTrackedContractConfig("usdt-tether", "optimism", {
+      source: "traded", addressOverride: "0x01bff41798a0bcf287b996046ca68b395dbc1071",
+    })).toMatchObject({ decimals: 6 });
     expect(
       resolveRequiredTrackedContractConfig("usdt-tether", "bsc", {
         addressOverride: "0x0000000000000000000000000000000000000003",

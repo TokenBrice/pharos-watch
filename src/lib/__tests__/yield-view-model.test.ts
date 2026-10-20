@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { makeAltYieldSource, makeYieldProvenance, makeYieldRanking } from "@shared/test-utils/yield-ranking-fixtures";
 import { RISK_BUDGET_FILTER_KEYS, YIELD_FILTER_AXIS_REGISTRY, YIELD_LANDING_RISK_BUDGET, buildYieldViewModel, prepareYieldUniverse, riskBudgetUrlValue } from "@/lib/yield-view-model";
 import type { YieldViewModelUrlParams } from "@/lib/yield-view-config";
+import { formatTvlOption } from "@/lib/yield-view-model-helpers";
 
 const rows = [
   makeYieldRanking({
@@ -76,6 +77,17 @@ const rows = [
     }),
   }),
 ];
+
+describe("TVL filter capacity labels", () => {
+  it.each([NaN, Infinity, -Infinity])("keeps invalid capacity %s unavailable", (value) => {
+    expect(formatTvlOption(value)).toBe("N/A");
+  });
+  it("preserves finite thresholds, zero, and negatives", () => {
+    expect(formatTvlOption(250_000_000)).toBe("$250M+");
+    expect(formatTvlOption(0)).toBe("$0+");
+    expect(formatTvlOption(-250)).toBe("$-250+");
+  });
+});
 
 describe("buildYieldViewModel", () => {
   it("normalizes invalid URL params back to defaults without breaking the view", () => {

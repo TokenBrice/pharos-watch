@@ -417,7 +417,7 @@ export interface HarborCapacityIssue {
 }
 
 export interface HarborCapacityReport {
-  ok: boolean;
+  ok: boolean | null;
   issues: HarborCapacityIssue[];
   /** Smallest container top-face edge in CSS px at the preset's reference frame width. */
   facePx: number;
@@ -459,7 +459,7 @@ export function validateHarborCapacity(scene: HarborScene, preset: HarborPreset,
   }
   const heightPx = vbH * scale;
   if (heightPx > layout.heightBudgetPx) issues.push({ kind: "height-budget", detail: `scene ${heightPx.toFixed(0)} px > ${layout.heightBudgetPx} px` });
-  if (!scene.conservation.ok) issues.push({ kind: "conservation", detail: `drawn ${scene.conservation.drawnUsd} ≠ expected ${scene.conservation.expectedUsd}` });
+  if (scene.conservation.ok === false) issues.push({ kind: "conservation", detail: `drawn ${scene.conservation.drawnUsd} ≠ expected ${scene.conservation.expectedUsd}` });
   const tiered = scene.ships.some((s) => s.containers.length > MAX_BAYS_PER_TIER * CONTAINERS_PER_BAY);
-  return { ok: issues.length === 0, issues, facePx: Math.round(minFace * 100) / 100, heightPx: Math.round(heightPx), tiered };
+  return { ok: issues.length > 0 ? false : scene.conservation.ok, issues, facePx: Math.round(minFace * 100) / 100, heightPx: Math.round(heightPx), tiered };
 }
