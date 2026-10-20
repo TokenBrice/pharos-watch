@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { DatabaseSync } from "node:sqlite";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
-import { makeMintBurnConfig } from "../../test-helpers/__shared/mint-burn";
+import { makeMintBurnConfig } from "../../test-helpers/__shared/mint-burn-config";
 import { hasMintBurnScanCoverage, mintBurnScanFingerprint, type MintBurnScanCoverage } from "../mint-burn-pipeline/scan-coverage";
 import { mintBurnConfigKey, upsertMintBurnSyncState } from "../mint-burn-pipeline/sync-state";
 

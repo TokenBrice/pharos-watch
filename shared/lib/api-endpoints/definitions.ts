@@ -566,6 +566,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
   publicGet({
     key: "report-cards-v9",
     path: API_PATHS.reportCardsV9(),
+    cacheKeyIgnoresQuery: true,
     cacheBypass: true,
     strictContract: true,
     probeGroup: "public",

@@ -827,7 +827,7 @@ describe("curated reserve dependency admission", () => {
         expect(audited).toBeNull();
         expect(alpha.dependencies!.edges).toEqual([]);
         expect(compiled.dependencies.edges).toEqual([]);
-        expect(compiled.reserveStatus.observationState).toBe("missing");
+        expect(compiled.reserveStatus.observationState).toBe(reportState === "expired" ? "stale" : "missing");
       }
     },
   );

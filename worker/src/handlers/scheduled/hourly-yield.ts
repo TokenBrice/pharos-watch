@@ -3,6 +3,8 @@ import type { CronResult } from "../../lib/cron-logger";
 import { syncRpcProviderParity } from "../../cron/rpc-provider-parity";
 import { syncYieldData } from "../../cron/sync-yield-data";
 import { syncYieldSupplemental } from "../../cron/sync-yield-supplemental";
+import { INDEPENDENT_SUPPLEMENTAL_SOURCE_FAMILY_KEYS } from "../../cron/yield-sync/family-registry";
+import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
 import type { ScheduledRuntimeContext } from "./context";
 import { bindScheduledSlotPlan, runScheduledSlotGroups } from "./slot-groups";
 
@@ -11,7 +13,7 @@ import { bindScheduledSlotPlan, runScheduledSlotGroups } from "./slot-groups";
  * yield slot only catches up after a missed slot, so the catch-up skips while
  * the newest family marker is younger than one producer cadence.
  */
-export const SUPPLEMENTAL_CATCH_UP_MIN_MARKER_AGE_SEC = 4 * 3600;
+export const SUPPLEMENTAL_CATCH_UP_MIN_MARKER_AGE_SEC = CRON_SCHEDULE_CADENCES.fourHourlyYieldSupplemental.intervalSec;
 
 /** A4: refresh the benchmark registry mid-day only once the daily slot is overdue. */
 export const HOURLY_TBILL_MIN_REGISTRY_AGE_SEC = 24 * 3600;
@@ -54,6 +56,7 @@ function buildHourlyYieldSlotGroups(runtime: ScheduledRuntimeContext) {
     implementations: {
       "sync-yield-supplemental": async (signal, reportProgress) => {
         const result = await syncYieldSupplemental(runtime.db, signal, runtime.chainRpcs, reportProgress, {
+          families: INDEPENDENT_SUPPLEMENTAL_SOURCE_FAMILY_KEYS,
           catchUpMinMarkerAgeSec: SUPPLEMENTAL_CATCH_UP_MIN_MARKER_AGE_SEC,
         });
         supplementalCatchUpRan = result.status !== "skipped_neutral";

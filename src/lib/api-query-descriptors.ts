@@ -1,4 +1,4 @@
-import { API_PATHS, buildQueryPath } from "@shared/lib/api-endpoints/paths";
+import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { PER_COIN_CACHE_TTL_SECONDS } from "@shared/lib/api-cache-profiles";
 import type { SupplyHistoryWindow } from "@shared/lib/api-query-history";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
@@ -396,7 +396,7 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
   reportCardsV9: defineApiQuery(
     {
       queryKey: DATA_SURFACE_DESCRIPTORS.reportCards.queryKey,
-      path: buildQueryPath(API_PATHS.reportCardsV9(), { freshness: "assessments" }),
+      path: DATA_SURFACE_DESCRIPTORS.reportCards.apiPath,
       producerIntervalMs: DATA_SURFACE_PRODUCER_INTERVAL_MS.reportCards,
     },
     "meta",
@@ -423,7 +423,7 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
     ),
     (stablecoinId: string) => ({
       queryKey: ["report-cards", "v9", "detail", 1, stablecoinId] as const,
-      path: buildQueryPath(API_PATHS.reportCardsV9Detail(), { stablecoin: stablecoinId, freshness: "assessments" }),
+      path: API_PATHS.reportCardsV9Detail(stablecoinId),
       producerIntervalMs: DATA_SURFACE_PRODUCER_INTERVAL_MS.reportCards,
     }),
   ),

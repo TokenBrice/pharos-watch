@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { makeCompleteVolumeAvailability } from "../../__tests__/dex-liquidity-persistence.test-support";
-import { mockD1 } from "@shared/test-utils/mock-d1";
+import { mockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { analyzeDexLiquidityPostScoring } from "../orchestrator-analysis";
 import { isDexLiquidityDegraded } from "../orchestrator-metadata";
 import type { FullScoreResult, GlobalAgg } from "../types";
@@ -52,9 +52,24 @@ const BASE_GLOBAL_AGG: GlobalAgg = {
   chainTvl: { ethereum: 100 },
 };
 
+function mockAnalysisDb(overrides: MockTableConfig[] = []) {
+  return mockD1([
+    ...overrides,
+    { match: "SELECT COUNT(*) as cnt FROM dex_liquidity", rows: [{ cnt: 0 }], allowUnused: true },
+    ...[
+      "SELECT total_tvl_usd, updated_at",
+      "GROUP BY coverage_class",
+      "ORDER BY total_tvl_usd DESC",
+      "FROM cron_runs",
+      "SELECT stablecoin_id, pool_count",
+      "FROM dex_liquidity_run_rows r",
+    ].map((match) => ({ match, rows: [], allowUnused: true })),
+  ], { assertMatchesUsed: true });
+}
+
 function makeAnalysisInput(overrides: Partial<Parameters<typeof analyzeDexLiquidityPostScoring>[0]> = {}) {
   return {
-    db: mockD1(),
+    db: mockAnalysisDb(),
     scoreResults: new Map([["usdt-tether", BASE_SCORE_RESULT]]),
     globalAgg: BASE_GLOBAL_AGG,
     retainedPoolsByStablecoin: new Map(),
@@ -430,7 +445,7 @@ describe("analyzeDexLiquidityPostScoring", () => {
   ] as const)("keeps %s failure distinct from an empty bootstrap", async (match, reason, required) => {
     const empty = await analyzeDexLiquidityPostScoring(makeAnalysisInput());
     const failed = await analyzeDexLiquidityPostScoring(makeAnalysisInput({
-      db: mockD1([{ match, rows: [], throwError: new Error("baseline unavailable") }], { assertMatchesUsed: true }),
+      db: mockAnalysisDb([{ match, rows: [], throwError: new Error("baseline unavailable") }]),
     }));
     expect(empty.requiredBaselineUnavailable).toBe(false);
     expect(empty.previousCoverage).toBe(0);

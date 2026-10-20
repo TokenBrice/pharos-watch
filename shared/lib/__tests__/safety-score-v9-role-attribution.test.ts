@@ -68,7 +68,7 @@ function roleCohort(role: V9DependencyEconomicRole, nonBinding = false, unknownT
       root.gaps.push(gap);
       const status = { ...knownStatus(), observationState: "missing" as const, evidenceRefIds: [], gapIds: [gap.gapId] };
       root.economicControlReview.oracle = {
-        status, tier: "unknown", liquidationBranchesApplicable: false, branches: [], factorStatuses: { tier: status },
+        status, tier: "opaque-or-unknown", liquidationBranchesApplicable: false, branches: [], factorStatuses: { tier: status },
       };
     }
   } else {

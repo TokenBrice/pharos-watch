@@ -445,15 +445,9 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   {
     key: "report-cards-v9",
     summary: "Safety Score V9 report cards",
-    description: "Canonical API schema-8 Safety Score report cards from the accepted internal schema-7 publication. Public cards carry resolved witness text without card-local witness tables. Freshness defaults to legacy categorical verdicts for deployed-client compatibility; freshness=assessments returns the accepted pillar assessment objects and derived aggregate references without changing scores, identity or stored publication bytes. Rated partial cards retain excluded-pillar diagnostics; pipeline-gap is a null score and null grade, distinct from NR. See [Safety Score availability](https://pharos.watch/api/reference/#safety-score-availability).",
+    description: "Canonical API schema-8 Safety Score report cards from the accepted internal schema-7 publication. Public cards carry resolved witness text without card-local witness tables. Rated partial cards retain excluded-pillar diagnostics; pipeline-gap is a null score and null grade, distinct from NR. See [Safety Score availability](https://pharos.watch/api/reference/#safety-score-availability).",
     tags: ["Risk"],
     responseSchema: "ReportCardsV9Response",
-    parameters: [{
-      name: "freshness",
-      in: "query",
-      schema: { type: "string", enum: ["assessments"] },
-      description: "Opt into reproducible pillar freshness assessments. Omit to retain the legacy bare-verdict wire representation.",
-    }],
   },
   {
     key: "safety-grades",

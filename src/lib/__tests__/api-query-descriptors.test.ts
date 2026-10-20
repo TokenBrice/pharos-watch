@@ -289,9 +289,6 @@ describe("frontend API query descriptors", () => {
   });
 
   it("accepts only report-v5 at the live V9 reader boundary", async () => {
-    expect(FRONTEND_API_QUERY_DESCRIPTORS.reportCardsV9.path).toBe("/api/report-cards/v9?freshness=assessments");
-    expect(FRONTEND_API_QUERY_DESCRIPTORS.reportCardsV9Detail("usdc-circle").path)
-      .toBe("/api/report-cards/v9-detail?stablecoin=usdc-circle&freshness=assessments");
     const schema = await resolveSchemaLike(FRONTEND_API_QUERY_DESCRIPTORS.reportCardsV9.schema);
     if (schema === undefined) throw new Error("Expected a V9 report-card response schema");
     const reportV5 = makeReportCardsV9Response();

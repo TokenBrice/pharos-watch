@@ -243,7 +243,7 @@ describe("P4 DEX exit route observations", () => {
 
   it.each(["v4", "ng"] as const)("rejects incoherent %s source chain/number/hash provenance", (kind) => {
     const observedAt = 1_752_560_000;
-    const valid = kind === "v4" ? uniswapV4MeasuredProfile(observedAt) : curveStableSwapNgMeasuredProfile(observedAt);
+    const valid = kind === "v4" ? uniswapV4MeasuredProfile(observedAt) : curveStableSwapNgMeasuredProfile(observedAt, 3);
     const pool = retainedMeasuredPool(valid);
     const context = { pool, stablecoinId: valid.tokenIn.trackedAssetId!, observedAt };
     expect(validateMeasuredExecutionProfile(valid, context)).toEqual([]);

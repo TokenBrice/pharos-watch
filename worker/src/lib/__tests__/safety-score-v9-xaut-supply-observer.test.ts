@@ -24,7 +24,7 @@ import {
 } from "../safety-score-v9/xaut-supply-observer";
 
 import { expectRecentPinRouting } from "../../test-helpers/recent-pin-routing";
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 const BLOCK_NUMBER = 25_601_844;
 const BLOCK_TIME_SEC = 1_784_887_019;
@@ -281,12 +281,13 @@ describe("XAUT representation-group supply observer", () => {
   });
 
   it.each([true, false])("keeps state on the admitted fork when EIP-1898 support is %s", async supportsHash => {
+    vi.spyOn(Date, "now").mockReturnValue((BLOCK_TIME_SEC + 100) * 1_000);
     const selectors: unknown[] = [];
     const codes: Record<string, `0x${string}`> = {
       [XAUT_CANONICAL_TOKEN_ADDRESS]: "0x01", [XAUT0_ADAPTER_ADDRESS]: "0x02",
       [XAUT_CANONICAL_IMPLEMENTATION_ADDRESS]: "0x03", [XAUT0_ADAPTER_IMPLEMENTATION_ADDRESS]: "0x04",
     };
-    const transport = mockFetchStrict([{ match: "https://ethereum.example", respond: async request => {
+    const transport = mockFetchStrict([{ match: request => new URL(request.url).href === "https://ethereum.example/", respond: async request => {
       const rpc = await request.json() as { id: number; method: string; params: unknown[] };
       const selector = rpc.params[rpc.method === "eth_getStorageAt" ? 2 : 1];
       selectors.push(selector);

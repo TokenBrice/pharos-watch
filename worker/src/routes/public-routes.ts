@@ -36,7 +36,7 @@ export const PUBLIC_STATIC_ROUTES = [
   defineLazyDbUrlRoute("digest-snapshot", () => import("../api/digest-snapshot").then(({ handleDigestSnapshot }) => handleDigestSnapshot)),
   defineLazyDbUrlRoute("snapshots-index", () => import("../api/snapshot").then(({ handleSnapshotsIndex }) => handleSnapshotsIndex)),
   defineLazyDbUrlRoute("stability-index", () => import("../api/stability-index").then(({ handleStabilityIndex }) => handleStabilityIndex)),
-  defineLazyDbUrlRoute("report-cards-v9", () => import("../api/report-cards-v9").then(({ handleReportCardsV9 }) => handleReportCardsV9)),
+  defineLazyDbRoute("report-cards-v9", () => import("../api/report-cards-v9").then(({ handleReportCardsV9 }) => handleReportCardsV9)),
   defineLazyDbRoute("report-cards-v9-table", () => import("../api/report-cards-v9-projections").then(({ handleReportCardsV9Table }) => handleReportCardsV9Table)),
   defineLazyDbUrlRoute("report-cards-v9-detail", () => import("../api/report-cards-v9-projections").then(({ handleReportCardsV9Detail }) => handleReportCardsV9Detail)),
   defineLazyDbRoute("safety-grades", () => import("../api/safety-grades").then(({ handleSafetyGrades }) => handleSafetyGrades)),

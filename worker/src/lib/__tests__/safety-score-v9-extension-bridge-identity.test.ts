@@ -116,8 +116,17 @@ describe("reviewed bridge representation allocation identity", () => {
     expect(input.build().facts.facts.shareAccountingNavOracle).toMatchObject({ disposition: "reviewed", assessment: "none" });
   });
 
+  it("quarantines a route ID that contradicts its destination deployment", () => {
+    const input = fixture((route) => { route.id = `arbitrum:${BRIDGE_ADDRESS}`; });
+    expect(input.wrapper.admissionQuarantine).toMatchObject({
+      code: "fact-build-failed",
+      message: expect.stringContaining("route-deployment-identity-mismatch"),
+    });
+    expect(input.wrapper.allocationScopeIdentityReview).toBeUndefined();
+  });
+
   it.each(["stale-route", "missing-route", "stale-identity", "future-route", "future-identity", "unknown-route",
-    "missing-identity", "missing-block", "unbound-source", "wrong-chain", "wrong-address", "wrong-route-id", "wrong-block"] as const)(
+    "missing-identity", "missing-block", "unbound-source", "wrong-chain", "wrong-address", "wrong-block"] as const)(
     "blocks incomplete exhaustive review for %s without changing native identity", (fault) => {
       const input = fixture((route) => {
         switch (fault) {
@@ -132,7 +141,6 @@ describe("reviewed bridge representation allocation identity", () => {
           case "unbound-source": route.deploymentIdentity!.sourceUrl = "https://example.com/unbound"; break;
           case "wrong-chain": route.deploymentIdentity!.chain = "arbitrum"; break;
           case "wrong-address": route.deploymentIdentity!.address = NATIVE_ADDRESS; break;
-          case "wrong-route-id": route.id = `arbitrum:${BRIDGE_ADDRESS}`; break;
           case "wrong-block": route.deploymentIdentity!.block = 999; break;
         }
       });

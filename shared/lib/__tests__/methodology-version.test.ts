@@ -256,7 +256,7 @@ describe("methodology registry", () => {
     const methodology = METHODOLOGY_CHANGELOG_REGISTRY.find((candidate) => candidate.key === "pricing-pipeline")!;
     const release = methodology.entries.find((candidate) => candidate.version === "6.47")!;
     const previous = methodology.entries.find((candidate) => candidate.version === "6.46")!;
-    expect(methodology.currentLabel).toBe("v6.53");
+    expect(methodology.currentLabel).toBe("v6.54");
     expect(release).toMatchObject({
       version: "6.47",
       date: "2026-10-11",
@@ -272,7 +272,7 @@ describe("methodology registry", () => {
     expect(sofidRelease.effectiveAt).toBe(release.effectiveAt);
     expect(sofidRelease.title).toBe("Observed SOFID consensus without nominal-par override");
     expect(release.title).toBe("Conserved historical missing-chain attribution");
-    expect(methodology.entries.slice(0, 7).map((candidate) => candidate.version)).toEqual(["6.53", "6.52", "6.51", "6.50", "6.49", "6.48", "6.47"]);
+    expect(methodology.entries.slice(0, 8).map((candidate) => candidate.version)).toEqual(["6.54", "6.53", "6.52", "6.51", "6.50", "6.49", "6.48", "6.47"]);
   });
 
   it.each([
@@ -319,7 +319,7 @@ describe("methodology registry", () => {
 
   it("pins native Hive admission to its forward-only release boundary", () => {
     const methodology = METHODOLOGY_CHANGELOG_REGISTRY.find((candidate) => candidate.key === "pricing-pipeline")!;
-    const release = methodology.entries[0];
+    const release = methodology.entries.find((candidate) => candidate.version === "6.53")!;
     expect(release).toMatchObject({ version: "6.53", date: "2026-10-19", effectiveAt: 1_792_368_000, reconstructed: false });
     expect(getMethodologyVersionAt("pricing-pipeline", release.effectiveAt - 1)).toBe("6.52");
     expect(getMethodologyVersionAt("pricing-pipeline", release.effectiveAt)).toBe("6.53");
@@ -343,10 +343,10 @@ describe("methodology registry", () => {
     expect(release.impact.join(" ")).toMatch(/Morpho/);
   });
 
-  it("aligns current Safety identity with the archive-free attribution release", () => {
-    expect(SAFETY_SCORE_METHODOLOGY_VERSION).toBe("10.23");
+  it("retains the archive-free attribution release and aligns current Safety policy identity", () => {
+    expect(SAFETY_SCORE_METHODOLOGY_VERSION).toBe("10.24");
     expect(SAFETY_SCORE_POLICY.releaseVersion).toBe(SAFETY_SCORE_METHODOLOGY_VERSION);
-    const release = SAFETY_SCORE_METHODOLOGY_CHANGELOG[0];
+    const release = SAFETY_SCORE_METHODOLOGY_CHANGELOG.find((candidate) => candidate.version === "10.23")!;
     expect(release).toMatchObject({
       version: "10.23", date: "2026-10-19", effectiveAt: 1_792_368_000, reconstructed: false,
     });

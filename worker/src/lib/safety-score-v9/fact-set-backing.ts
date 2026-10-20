@@ -263,7 +263,8 @@ function normalizeMechanismReview(
         status: createV9FactStatus({
           applicability: componentFact.status.applicability,
           observationState: state,
-          evidenceRefIds: [...new Set(statuses.flatMap((row) => row.evidenceRefIds))],
+          // Supported sibling evidence belongs to its constraint, not an unsupported aggregate.
+          evidenceRefIds: state === "unsupported" ? [] : [...new Set(statuses.flatMap((row) => row.evidenceRefIds))],
           gapIds: [...new Set(statuses.flatMap((row) => row.gapIds))],
         }),
       };

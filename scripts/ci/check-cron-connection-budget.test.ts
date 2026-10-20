@@ -19,8 +19,8 @@ describe("check-cron-connection-budget", () => {
   });
 
   it.each([
-    // P2-03 registers the same-day PSI and public-dataset catch-ups in the declared quarter-hourly chain.
-    ["quarterHourly", ["sync-fx-rates", "sync-stablecoins", "snapshot-supply", "snapshot-chain-supply", "snapshot-psi", "snapshot-public-dataset"], 4],
+    // Aave follows stablecoins before the same-day PSI and public-dataset catch-ups; the serial peak stays four.
+    ["quarterHourly", ["sync-fx-rates", "sync-stablecoins", "sync-yield-supplemental", "snapshot-supply", "snapshot-chain-supply", "snapshot-psi", "snapshot-public-dataset"], 4],
     ["v9SupplyAttributionOffset", ["sync-v9-supply-attribution"], 3],
     ["depegResolverOffset", ["compute-depeg-resolver"], 0],
     ["v9PublicationOffset", ["compute-safety-score-v9"], 0],

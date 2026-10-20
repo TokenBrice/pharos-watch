@@ -633,6 +633,12 @@ describe("fetchLiquityV2BranchReserves Beraborrow branches", () => {
             [`berachain:${WBERA_VAULT_ASSET}`]: { price: 0.4, timestamp: NOW, confidence: 1 },
           },
         },
+        // Unavailable or zero receipt balances are excluded from price reads.
+        [llamaUrl([{ chain: wberaBranch.token.chain, address: WBERA_VAULT_ASSET }])]: {
+          coins: {
+            [`berachain:${WBERA_VAULT_ASSET}`]: { price: 0.4, timestamp: NOW, confidence: 1 },
+          },
+        },
       },
       rpc: {
         "balanceOf(address)": (call) => balanceByToken.get(call.contract) ?? 0n,

@@ -81,7 +81,7 @@ function mockDbWithPrevRows(
   };
   return makeNoopD1({
     prepare: (sql: string) => stmt(sql),
-    batch: async () => [],
+    batch: async <T>(statements: D1PreparedStatement[]) => Promise.all(statements.map((statement) => statement.all<T>())),
     exec: async () => ({ count: 0, duration: 0 }),
     dump: async () => new ArrayBuffer(0),
   });

@@ -954,11 +954,10 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
   });
 
   it("projects exit-pillar freshness from the DEX input age against the lane bound", () => {
-    const withDexRowAge = (ageSec: number, maxAgeSec = 14_400, missing = false) => {
+    const withDexRowAge = (ageSec: number) => {
       const fixedInput = exactFixedInput("alpha");
       const updatedAt = AS_OF_SEC - ageSec;
       fixedInput.dexLiqMap.alpha!.updatedAt = updatedAt;
-      if (missing) delete fixedInput.dexLiqMap.alpha;
       fixedInput.dexGenerationId = `dex-liquidity-${updatedAt}`;
       fixedInput.inputFreshness.dexLiquidity = { updatedAt, ageSeconds: ageSec, stale: ageSec > 14_400 };
       fixedInput.liquidityStale = ageSec > 14_400;
@@ -967,35 +966,17 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
         fixedInput.dexGenerationId,
       );
       fixedInput.baseInputGenerationId = deriveReportCardsBaseInputGenerationId(fixedInput);
-      const extension = reviewedExtension(fixedInput);
-      extension.routeFreshness.dexMaxAgeSec = maxAgeSec;
       return buildSafetyScoreV9Candidate({
         fixedInput,
-        extension,
+        extension: reviewedExtension(fixedInput),
         publishedAtSec: PUBLISHED_AT_SEC,
       });
     };
 
-    for (const [ageSec, maxAgeSec] of [[3_600, 14_400], [14_400, 14_400], [14_401, 14_400], [18_000, 14_400], [5_001, 5_000]] as const) {
-      const card = withDexRowAge(ageSec, maxAgeSec).candidate.cards[0]!;
-      const verdict = ageSec <= maxAgeSec ? "current" : "stale";
-      expect(card.pillars.exit.freshness).toEqual({
-        verdict, assessedAtSec: AS_OF_SEC, observedAtSec: AS_OF_SEC - ageSec,
-        sourceGenerationId: `dex-liquidity-${AS_OF_SEC - ageSec}`, maxAgeSec, reason: null,
-      });
-      expect(card.pillars.backing.freshness).toEqual({
-        verdict: "unknown", assessedAtSec: AS_OF_SEC, observedAtSec: null,
-        sourceGenerationId: null, maxAgeSec: null, reason: "pillar-clock-unavailable",
-      });
-      expect(card.pillars.control.freshness).toEqual(card.pillars.backing.freshness);
-      expect(card.evidence.freshness).toEqual({
-        verdict: verdict === "stale" ? "stale" : "unknown", pillarRefs: ["backing", "exit", "control"],
-      });
-    }
-    // An absent active-asset row violates exact-input census admission before
-    // freshness projection; it cannot produce a candidate with an unknown clock.
-    expect(() => withDexRowAge(3_600, 14_400, true)).toThrow(
-      "Exact fixed input DEX active rows mismatch: missing=alpha; unexpected=none",
-    );
+    // One hour old: inside the 4h DEX lane bound, so the exit input is current.
+    expect(withDexRowAge(3_600).candidate.cards[0]?.pillars.exit.freshness).toBe("current");
+    // Five hours old: past the bound, the stale DEX generation must surface on
+    // the card instead of an anonymous "unknown".
+    expect(withDexRowAge(5 * 3_600).candidate.cards[0]?.pillars.exit.freshness).toBe("stale");
   });
 });

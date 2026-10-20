@@ -474,7 +474,7 @@ Generated from `public/openapi.json` (`Pharos API` v1.0.0). Total OpenAPI operat
 | GET | `/api/public-status-history` | Public status history | Status | `X-API-Key` required | `limit` (query, optional, integer); `window` (query, optional, string) | 200, 400, 401, 429, 503 |
 | GET | `/api/telegram-pulse` | Telegram pulse | Status | `X-API-Key` required | — | 200, 400, 401, 429, 503 |
 | GET | `/api/stability-index` | Pharos Stability Index | Risk | `X-API-Key` required | `detail` (query, optional, boolean); `days` (query, optional, integer) | 200, 400, 401, 429, 503 |
-| GET | `/api/report-cards/v9` | Safety Score V9 report cards | Risk | `X-API-Key` required | `freshness` (query, optional, string) | 200, 400, 401, 429, 503 |
+| GET | `/api/report-cards/v9` | Safety Score V9 report cards | Risk | `X-API-Key` required | — | 200, 400, 401, 429, 503 |
 | GET | `/api/safety-grades` | Safety Score grades (no key) | Risk | exempt | — | 200, 400, 503 |
 | GET | `/api/dependency-graph/v1` | Dependency graph (no key) | Risk | exempt | — | 200, 400, 503 |
 | GET | `/api/dependency-scenarios/v1` | Modeled dependency scenarios (no key) | Risk | exempt | — | 200, 400, 503 |
@@ -890,7 +890,7 @@ Canonical API schema-8 Safety Score report cards from the accepted internal sche
 
 - **Operation ID:** `reportCardsV9`
 - **Path:** `/api/report-cards/v9`
-- **Parameters:** `freshness` (query, optional, string)
+- **Parameters:** None.
 - **Success response schema:** [`ReportCardsV9Response`](https://pharos.watch/openapi.json#/components/schemas/ReportCardsV9Response)
 - **Policy:** authentication `X-API-Key` required; bypass shared endpoint caching (`cacheBypass: true`).
 

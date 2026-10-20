@@ -330,9 +330,9 @@ describe("fetchFiatCoinGeckoTokens", () => {
         }
         : { coins: {} },
     ));
-    const assets = normalizeStablecoinsPayload({
-      peggedAssets: await fetchFiatCoinGeckoTokens({}),
-    }).peggedAssets;
+    const supplementalAssets = await fetchFiatCoinGeckoTokens({});
+    expect(supplementalAssets.find((asset) => asset.id === "zsd-zephyr-protocol")?.supplyObservedAt).toBeNull();
+    const assets = normalizeStablecoinsPayload({ peggedAssets: supplementalAssets }).peggedAssets;
     const validationContexts = createValidationContextResolver();
     applyConsensusResults({
       assets, primaryPriceResults: new Map(), validationContexts, syncStartSec: nowSec, reason: "primary",
@@ -340,8 +340,9 @@ describe("fetchFiatCoinGeckoTokens", () => {
     const zsd = assets.find((asset) => asset.id === "zsd-zephyr-protocol")!;
     expect(zsd).toMatchObject({
       price: null, priceConfidence: null, priceObservedAt: null, priceUpdatedAt: null,
-      priceSyncedAt: null, supplyObservedAt: null, circulating: { peggedUSD: 1_000 },
+      priceSyncedAt: null, circulating: { peggedUSD: 1_000 },
     });
+    expect(zsd).not.toHaveProperty("supplyObservedAt");
     expect(validatePublishedAssetPrice({ asset: zsd, validationContext: validationContexts.get(zsd) }).accepted).toBe(false);
     expect(assets.some((asset) => asset.id === "zys-zephyr-protocol")).toBe(false);
   });

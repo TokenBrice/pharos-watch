@@ -42,12 +42,7 @@ const DIGESTS = {
   build: "d".repeat(64),
 } as const;
 
-const freshness = {
-  exit: {
-    verdict: "current", assessedAtSec: 1_000, observedAtSec: 900,
-    sourceGenerationId: "dex:g1", maxAgeSec: 200, reason: null,
-  },
-} as const;
+const freshness = { backing: "current", exit: "current", control: "current" } as const;
 const access = {
   transfer: "permissionless" as const,
   freezeExposure: "none-known" as const,
@@ -864,7 +859,7 @@ describe("Safety Score v9 public projection", () => {
       label: "signal:material-bridge:high",
       value: 64,
       reason: "A material bridge binds.",
-      evidenceFreshness: "unknown",
+      evidenceFreshness: "current",
     });
 
     const pillarBound = projectSafetyScoreV9Card(fixture("pillar-bound", {
@@ -876,7 +871,7 @@ describe("Safety Score v9 public projection", () => {
       label: "exit",
       value: 90,
       reason: null,
-      evidenceFreshness: "unknown",
+      evidenceFreshness: "current",
     });
 
     const withheld = projectSafetyScoreV9Card(fixture("withheld", {
@@ -890,20 +885,8 @@ describe("Safety Score v9 public projection", () => {
       label: null,
       value: null,
       reason: "Backing is missing.",
-      evidenceFreshness: "unknown",
+      evidenceFreshness: "current",
     });
-    for (const card of [capBound, pillarBound, withheld]) {
-      expect(card.pillars.exit.freshness).toEqual(freshness.exit);
-      expect(card.pillars.backing.freshness).toEqual({
-        verdict: "unknown", assessedAtSec: 1_000, observedAtSec: null,
-        sourceGenerationId: null, maxAgeSec: null, reason: "pillar-clock-unavailable",
-      });
-      expect(card.pillars.control.freshness).toEqual(card.pillars.backing.freshness);
-      expect(card.evidence.freshness).toEqual({
-        verdict: "unknown", pillarRefs: ["backing", "exit", "control"],
-      });
-      expect(typeof projectTopDriver(card)!.evidenceFreshness).toBe("string");
-    }
   });
 
   it("publishes rated, NR and pipeline-gap cards with disjoint completeness counts", () => {
@@ -1127,7 +1110,7 @@ describe("Safety Score v9 public projection", () => {
         },
       ],
     };
-    input.freshness = { exit: { ...freshness.exit, verdict: "stale", observedAtSec: 799 } };
+    input.freshness = { backing: "current", exit: "stale", control: "current" };
     input.evidenceReasons = [{
       code: "historical-critical-input",
       path: "exit",
@@ -1161,7 +1144,7 @@ describe("Safety Score v9 public projection", () => {
       qualityScore: 91.8,
       pegMultiplier: 1,
       pegAdjustedScore: 91.8,
-      evidence: { level: "strong", freshness: { verdict: "stale", pillarRefs: ["backing", "exit", "control"] } },
+      evidence: { level: "strong", freshness: "stale" },
       accessPosture: { unknownFields: ["governance", "transfer"] },
       scoreTrace: {
         schemaVersion: 4,

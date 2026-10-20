@@ -9,6 +9,7 @@ import { logWorkerEvent } from "../../lib/structured-log";
 
 interface RunBestEffortScheduledJobOptions {
   errorMessage?: string;
+  bounded?: Parameters<ScheduledRuntimeContext["runLeasedCron"]>[2];
 }
 
 export interface BestEffortScheduledJobOutcome {
@@ -25,7 +26,7 @@ export async function runBestEffortScheduledJobWithOutcome(
   options: RunBestEffortScheduledJobOptions = {},
 ): Promise<BestEffortScheduledJobOutcome> {
   try {
-    const result = (await runtime.runLeasedCron(job, fn)) ?? null;
+    const result = (await runtime.runLeasedCron(job, fn, options.bounded)) ?? null;
     return {
       job,
       result,

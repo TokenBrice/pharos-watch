@@ -161,7 +161,7 @@ describe("collectConfirmationEvidence DEX source grouping and freshness", () => 
   ])("cannot confirm or prove recovery from $label sources in a fresh aggregate", async ({ clock }) => {
     for (const price of [0.95, 0.997]) {
       const db = mockD1Strict([{
-        match: "FROM dex_prices",
+        match: "SELECT stablecoin_id, dex_price_usd, deviation_from_primary_bps, source_pool_count, source_total_tvl, updated_at, price_sources_json FROM dex_prices",
         rows: [{
           ...dexRows(NOW_SEC, price).get(COIN_ID)!,
           price_sources_json: JSON.stringify(["curve", "uniswap"].map((protocol) => ({

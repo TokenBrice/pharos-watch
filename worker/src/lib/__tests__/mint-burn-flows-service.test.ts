@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { MINT_BURN_CONFIGS } from "../mint-burn-contracts";
 import { buildCoinCoverageMap } from "../mint-burn-flows-service";
 import { mintBurnConfigKey } from "../mint-burn-pipeline/sync-state";
-import { makeMintBurnConfig, makeMintBurnScanSegments } from "../../test-helpers/__shared/mint-burn";
+import { makeMintBurnConfig } from "../../test-helpers/__shared/mint-burn-config";
+import { makeMintBurnScanSegments } from "../../test-helpers/__shared/mint-burn";
 import type { MintBurnScanSegment } from "../mint-burn-pipeline/scan-coverage";
 
 const DAY = 86400;

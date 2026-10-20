@@ -1037,6 +1037,14 @@ describe("buildSafetyScoreV9MechanismReview", () => {
     expect(component.status.observationState).not.toBe("known");
     expect(component.constraints![0]).toMatchObject({ quality, status: { observationState: "known", gapIds: [] } });
     expect(component.constraints![0]!.status.evidenceRefIds).not.toContain("extension-evidence:mechanism:custody-continuity:supported");
+    const supportedEvidenceIds = component.constraints![0]!.status.evidenceRefIds;
+    expect(supportedEvidenceIds.length).toBeGreaterThan(0);
+    expect(asset.mechanismRiskReview.status.evidenceRefIds).toEqual(expect.arrayContaining(supportedEvidenceIds));
+    if (disposition === "method-unsupported") {
+      expect(component.status).toMatchObject({ observationState: "unsupported", evidenceRefIds: [] });
+    } else {
+      expect(component.status.evidenceRefIds).toEqual(expect.arrayContaining(supportedEvidenceIds));
+    }
     const gapId = "alpha:gap:mechanism-review:custodyContinuity:insurance";
     expect(component.constraints![1]!.status.gapIds).toEqual([gapId]);
     expect(asset.gaps.find((gap) => gap.gapId === gapId)?.causeScope).toMatchObject({

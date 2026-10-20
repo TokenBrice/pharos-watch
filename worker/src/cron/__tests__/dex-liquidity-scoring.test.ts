@@ -408,7 +408,7 @@ describe("dex-liquidity scoring", () => {
     expect(result.volumeStabilityMap).toEqual(new Map([["paxg-paxos", 1], ["usdb-blast", 1]]));
   });
 
-  it("filters and scales pools, truncates visible pools, and computes deduped global aggregates", async () => {
+  it("filters and quarantines pools, truncates visible pools, and computes deduped global aggregates", async () => {
     const nowMs = Date.UTC(2026, 0, 1);
     vi.spyOn(Date, "now").mockReturnValue(nowMs);
 
@@ -599,23 +599,23 @@ describe("dex-liquidity scoring", () => {
 
     const usdtScore = scores.get("usdt-tether");
     expect(usdtScore).toMatchObject({
-      tvl: 290_000,
-      vol24h: 364_000,
+      tvl: 210_000,
+      vol24h: 289_000,
       weightedBalanceRatio: 0.75,
       organicFrac: 0.625,
       avgStress: 0,
       lockedLiqPct: 0.5,
     });
-    expect(usdtScore?.hhi).toBeCloseTo(0.1726, 4);
+    expect(usdtScore?.hhi).toBeCloseTo(0.2562, 4);
 
-    expect(globalAgg.poolCount).toBe(15);
-    expect(globalAgg.totalVol24h).toBe(404_000);
-    expect(globalAgg.totalVol7d).toBe(272_000);
-    // Per-coin caps remain, but no second global clamp rewrites the retained population.
-    expect(globalAgg.totalTvl).toBeCloseTo(420_000, 6);
-    expect(globalAgg.protocolTvl.sushiswap).toBe(190_000);
-    expect(globalAgg.chainTvl.ethereum).toBe(252_667);
-    expect(globalAgg.chainTvl.arbitrum).toBe(37_333);
+    expect(globalAgg.poolCount).toBe(13);
+    expect(globalAgg.totalVol24h).toBe(329_000);
+    expect(globalAgg.totalVol7d).toBe(219_500);
+    // The oversized USDT fallback group is quarantined, not partially scaled.
+    expect(globalAgg.totalTvl).toBeCloseTo(340_000, 6);
+    expect(globalAgg.protocolTvl.sushiswap).toBe(110_000);
+    expect(globalAgg.chainTvl.ethereum).toBe(210_000);
+    expect(globalAgg.chainTvl.arbitrum ?? 0).toBe(0);
     expect(globalAgg.chainTvl.base).toBe(130_000);
   });
 
@@ -1687,7 +1687,8 @@ describe("dex-liquidity scoring", () => {
     const metrics = initMetrics("cadc-cad-coin", "CADC");
     metrics.topPools = [
       {
-        poolId: buildPoolFingerprint("base", "aerodrome", [cadc, usdc])!,
+        poolId: "base:defillama:cadc-usdc",
+        candidateFingerprint: buildPoolFingerprint("base", "aerodrome", [cadc, usdc])!,
         project: "aerodrome",
         chain: "Base",
         tvlUsd: 157_000,

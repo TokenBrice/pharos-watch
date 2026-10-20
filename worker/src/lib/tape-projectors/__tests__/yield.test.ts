@@ -639,7 +639,7 @@ describe("yield warning unavailable evidence", () => {
 describe("yield historical methodology", () => {
   it.each([
     { timestamp: 1777636800, version: "7.43", rawInputs: null },
-    { timestamp: 1792497600, version: "8.49", rawInputs: null },
+    { timestamp: 1792497600, version: "8.5", rawInputs: null },
     { timestamp: 1777636800, version: "6.09", rawInputs: '{"methodologyVersion":"6.09"}' },
     { timestamp: 1777636800, version: "7.43", rawInputs: "{" },
     { timestamp: 1777636800, version: "7.43", rawInputs: '{"methodologyVersion":42}' },

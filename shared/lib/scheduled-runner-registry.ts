@@ -74,6 +74,7 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
     jobChains: [[
       "sync-fx-rates",
       "sync-stablecoins",
+      "sync-yield-supplemental",
       "snapshot-supply",
       "snapshot-chain-supply",
       "snapshot-psi",
@@ -81,6 +82,7 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
     ]],
     taskPolicies: {
       "sync-stablecoins": { timeoutMs: 8 * 60_000, leaseOptions: LONG_RUNNING_LEASE_OPTIONS },
+      "sync-yield-supplemental": { ...YIELD_SUPPLEMENTAL_TASK_POLICY, due: "conditional-admission" },
       "snapshot-psi": { due: "conditional-admission" },
       "snapshot-public-dataset": { ...PUBLIC_DATASET_TASK_POLICY, due: "conditional-admission" },
     },
@@ -195,7 +197,7 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
     // the one invocation per hour the yield publication already pays for, is
     // strictly serial (one connection), and reads no yield output, so it must
     // neither delay the publication nor inherit its chain's stop-on-failure.
-    // Declared peak: max(3, 1, 2) + 1 = 4/6, including catch-up Royco/Aave fanouts.
+    // Declared peak: max(3, 1, 2) + 1 = 4/6, including catch-up Royco fanout.
     jobChains: [
       ["sync-yield-supplemental", "fetch-tbill-rate", "sync-yield-data"],
       ["observe-rpc-provider-parity"],

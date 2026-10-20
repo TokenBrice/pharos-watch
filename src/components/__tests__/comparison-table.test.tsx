@@ -109,17 +109,6 @@ function makeCoin(id: string, symbol: string): ComparisonCoinEntry {
 const PEG_RATES: Record<string, number> = { USD: 1 };
 
 describe("ComparisonTable", () => {
-  it("renders object freshness verdicts beside retained bare-verdict publications", () => {
-    const historical = makeCoin("usdt", "USDT");
-    const assessed = makeCoin("usdc", "USDC");
-    assessed.safetyCard!.evidence.freshness = { verdict: "stale", pillarRefs: ["backing", "exit", "control"] };
-    const html = renderToStaticMarkup(<ComparisonTable coins={[historical, assessed]} pegRates={PEG_RATES} />);
-    const evidenceRow = html.match(/<tr\b[^>]*>[\s\S]*?<\/tr>/g)?.find((row) => row.includes(">Evidence<"));
-    expect(evidenceRow).toBeDefined();
-    expect(evidenceRow?.match(/Adequate · Stale/g)).toHaveLength(2);
-    expect(html).not.toContain("[object Object]");
-  });
-
   it("does not frame unequal directional activity as a universal best value", () => {
     const minting = makeCoin("usdt", "USDT");
     const burning = makeCoin("usdc", "USDC");

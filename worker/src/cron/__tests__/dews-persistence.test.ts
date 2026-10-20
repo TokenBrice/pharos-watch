@@ -152,7 +152,7 @@ describe("persistDewsResults", () => {
       await reconcileDailyDewsHistorySnapshot(db, results, nowSec - 86_400);
       for (const table of ["stress_signals", "stress_signals_latest", "stress_signal_publication_rows", "stress_signal_history"]) {
         const rows = sqlite.prepare(`SELECT stablecoin_id, signals_json FROM ${table}`).all();
-        expect(rows).toHaveLength(4);
+        expect(rows).toHaveLength(table === "stress_signal_history" ? 8 : 4);
         for (const row of rows) {
           const decoded = decodeLegacyStressSignals(String(row.signals_json), nowSec);
           expect(decoded.ok).toBe(true);

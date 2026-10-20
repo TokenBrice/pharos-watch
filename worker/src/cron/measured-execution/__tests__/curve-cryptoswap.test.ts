@@ -398,8 +398,8 @@ describe("Curve CryptoSwap hash-bound kill-proof acquisition", () => {
       if (callData.startsWith("0x82ad56cb")) {
         killCalls++;
         const decoded = decodeFunctionData({ abi: aggregateAbi, data: callData });
-        expect(decoded.args[0]).toEqual([{
-          target: policy.poolAddress, allowFailure: true, callData: "0x9c868ac0",
+        expect(decoded.args[0].map((call) => ({ ...call, target: call.target.toLowerCase() }))).toEqual([{
+          target: policy.poolAddress.toLowerCase(), allowFailure: true, callData: "0x9c868ac0",
         }]);
         if (mode === "HTTP503") return new Response("unavailable", { status: 503 });
         if (mode === "timeout") throw new DOMException("RPC timeout", "TimeoutError");

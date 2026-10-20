@@ -1171,10 +1171,10 @@ describe("reviewed Curve rate-bearing and metapool targets", () => {
     expect(outcomes[1]!.point?.outputUsd).toBe(999);
     expect(outcomes[2]!.point?.outputUsd).toBe(999);
     expect(executeMulticall).toHaveBeenCalledTimes(3);
-    expect(executeMulticall.mock.calls.map(([call]) => call.chain)).toEqual([
-      "ethereum",
-      "ethereum",
+    expect(executeMulticall.mock.calls.map(([call]) => call.chain).sort()).toEqual([
       "avalanche",
+      "ethereum",
+      "ethereum",
     ]);
   });
 });

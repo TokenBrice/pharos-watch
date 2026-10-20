@@ -392,10 +392,11 @@ function makeDb(sqlSeen: string[], opts: MakeDbOptions = {}): D1Database {
     };
 
     return {
+      sql,
       bind: (...args: unknown[]) => {
         boundArgs = args;
         opts.onBind?.(sql, args);
-        return { all, first, run };
+        return { sql, all, first, run };
       },
       all,
       first,

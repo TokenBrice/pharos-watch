@@ -108,7 +108,9 @@ describe("RD2 legal entitlement remains eventual diagnostic evidence", () => {
     const fixed = fixedInput(row);
     const unpriced = buildSafetyScoreV9RouteReviews(fixed, id);
     expect(unpriced).toHaveLength(1);
-    expect(unpriced[0]!.output).toBeNull();
+    expect(unpriced[0]!.output).toEqual({
+      kind: "tracked-stablecoin", assetKeys: [outputId], basketWeights: [], valuation: null,
+    });
     fixed.pegDataById[outputId] = {
       ...makeV9FixedInput({ assetId: outputId, clockSec: now }).pegDataById[outputId]!,
       currentDeviationBps: -100, pegCurrency: "USD", priceObservedAt: now,

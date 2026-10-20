@@ -11,7 +11,8 @@ import {
 // Stub MINT_BURN_CONFIGS with two critical configs on different chains so the
 // orchestrator must produce distinct chain contexts and emit events for both.
 vi.mock("../../lib/mint-burn-contracts", async () => {
-  const { makeMintBurnConfig } = await import("../../test-helpers/__shared/mint-burn");
+  // The hoisted factory runs before static bindings; use the registry-free builder to avoid a mock import cycle.
+  const { makeMintBurnConfig } = await import("../../test-helpers/__shared/mint-burn-config");
   return {
     MINT_BURN_CONFIGS: [
       makeMintBurnConfig({

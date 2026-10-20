@@ -36,7 +36,14 @@ function network(options: { shutdown?: boolean; missingDebt?: boolean } = {}): A
   return {
     rpc,
     block: { number: 25_942_241, timestamp: NOW },
-    json: { [`https://coins.llama.fi/prices/current/${Object.keys(prices).sort().join(",")}`]: { coins: prices } },
+    json: {
+      [`https://coins.llama.fi/prices/current/${Object.keys(prices).sort().join(",")}`]: { coins: prices },
+      // Individual asset() failures withhold the two unclassified non-receipt
+      // branches, so only converted receipts participate in the price request.
+      [`https://coins.llama.fi/prices/current/${Object.keys(prices).filter((key) =>
+        assets.some((asset) => asset != null && key === `ethereum:${asset}`),
+      ).sort().join(",")}`]: { coins: prices },
+    },
   };
 }
 

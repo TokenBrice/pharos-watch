@@ -204,9 +204,10 @@ function makeDb(): D1Database {
     };
 
     return {
+      sql,
       bind: (...args: unknown[]) => {
         boundArgs = args;
-        return { all, first, run };
+        return { sql, all, first, run };
       },
       all,
       first,

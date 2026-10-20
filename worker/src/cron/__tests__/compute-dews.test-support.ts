@@ -3,7 +3,11 @@ import { makeNoopD1 } from "../../test-helpers/noop-d1";
 export function createDewsDb(prepare: (sql: string) => unknown): D1Database {
   return makeNoopD1({
     prepare,
-    batch: async (statements: D1PreparedStatement[]) => Promise.all(statements.map((statement) => statement.run())),
+    batch: async (statements: D1PreparedStatement[]) => Promise.all(statements.map((statement) =>
+      /^\s*SELECT\b/i.test((statement as D1PreparedStatement & { sql: string }).sql)
+        ? statement.all()
+        : statement.run(),
+    )),
     exec: async () => ({ count: 0, duration: 0 }),
     dump: async () => new ArrayBuffer(0),
   });

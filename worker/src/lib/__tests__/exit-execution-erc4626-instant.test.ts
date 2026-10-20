@@ -546,7 +546,7 @@ describe("reviewed synchronous ERC4626 exact execution", () => {
     const fxRateState: FxRateState = {
       rates: { peggedEUR: 1.2 }, usableSyncAt: CLOCK - 20, usableAgeSec: 20, mode: "live",
       sourceUpdatedAtByPeg: { peggedEUR: CLOCK - 30 }, sourceModeByPeg: { peggedEUR: "live" },
-      sourceCadenceByPeg: { peggedEUR: "intraday" }, sourceDateByPeg: { peggedEUR: "2026-10-06" },
+      sourceCadenceByPeg: { peggedEUR: "intraday" }, sourceDateByPeg: { peggedEUR: new Date(CLOCK * 1_000).toISOString().slice(0, 10) },
       sourceLastSuccessAtBySource: {},
       metadataIdentity: "verified", consecutiveFallbackRuns: 0,
     };

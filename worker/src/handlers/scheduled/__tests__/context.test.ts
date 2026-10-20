@@ -1,3 +1,4 @@
+import { makeScheduledEnv } from "../../../test-helpers/scheduled-runtime.test-support";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createScheduledRuntimeContext } from "../context";
@@ -57,6 +58,32 @@ describe("scheduled runtime context", () => {
     expect(runtime.executionFence).toBe(executionFence);
     expect(runtime.slotBudgetStartedAtMs).toBe(deadline.eventEntryMs);
   });
+
+  it.each(["hourlyYieldSync", "fourHourlyYieldSupplemental"] as const)(
+    "preserves the independent supplemental allowance in %s",
+    async (scheduleKey) => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-10-20T08:25:00Z"));
+      const { db } = fixtures.open();
+      const runtime = createScheduledRuntimeContext(makeScheduledEnv({ DB: db }), {} as ExecutionContext, {
+        cron: scheduleKey === "hourlyYieldSync" ? "55 * * * *" : "25 */4 * * *",
+        scheduleKey, scheduledTimeMs: Date.now(), slotStartedAt: Math.floor(Date.now() / 1000),
+      });
+      let release!: () => void;
+      const held = new Promise<void>((resolve) => { release = resolve; });
+      let signal: AbortSignal | undefined;
+      const pending = runtime.runLeasedCron("sync-yield-supplemental", async (childSignal) => {
+        signal = childSignal;
+        await held;
+        return { status: "ok", itemCount: 1 };
+      });
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(signal?.aborted).toBe(false);
+      expect(runtime.fetchBudget?.snapshot().allocated).toBe(3);
+      release();
+      expect(await pending).toMatchObject({ status: "ok", itemCount: 1 });
+    },
+  );
 
   it("writes the started progress row only after acquiring the job lease", async () => {
     const calls: DbCall[] = [];

@@ -120,11 +120,7 @@ The DL coins API (`coins.llama.fi/prices/current/coingecko:{id}`) is excluded fr
 
 ### Consensus Rules
 
-Before clustering, repeated quotes with the same source key are collapsed to one provider observation using their median,
-maximum configured weight, and conservative observation time. Registered source keys that share a
-`depegSourceFamily` are then reduced to the strongest representative for that family. This prevents multiple
-deployments from one address provider, or correlated lanes such as CoinGecko list and CoinGecko ticker data, from
-creating false multi-source confidence or gaining extra median weight.
+Before clustering, duplicate source keys collapse to their median, maximum configured weight and conservative observation time. Keys sharing a `depegSourceFamily` then reduce to its strongest representative: correlated provider deployments or CoinGecko list/ticker lanes cannot add votes or median weight.
 
 `computePriceConsensus()` then behaves as follows:
 
@@ -144,35 +140,11 @@ When multiple clusters have the same size, the winner is chosen deterministicall
 4. proximity to peg reference (when available)
 5. stable alphabetical source label as the final tie-break
 
-Source labels list all agreeing sources alphabetically:
+Source labels list agreeing sources alphabetically, joined with `+` without truncation (one source uses its name directly). The published price is the winning cluster's median; internal provenance retains its best member, ranked by configured weight, trust tier, reference proximity, then alphabetical source key.
 
-- 1 source: source name directly
-- 2+ sources: `sourceA+sourceB+sourceC` (full list, no truncation)
+Severe fixed-peg downside candidate evidence survives prevalidation and post-enrichment validation while price, source and confidence match the selected primary result. If fallback replaces it, post-enrichment validation combines the current fallback quote with same-run primary candidates. Corroborated low-confidence depegs therefore survive without admitting unrelated fallback, correlated list-only or stale prices.
 
-High-confidence consensus now separates:
-
-- the **published price**: the median of the agreeing winning cluster
-- the **selected source**: the best cluster member kept internally for provenance and downstream trust policy
-
-Inside the winning cluster, the selected source is chosen by:
-
-1. higher configured weight
-2. stronger trust tier
-3. closer distance to the reference price
-4. alphabetical source key
-
-When severe fixed-peg downside publication is accepted because multiple candidate sources independently confirm the
-downside, that candidate-price evidence is carried through the later prevalidation and post-enrichment validation passes
-as long as the current asset price, source, and confidence still match the selected primary result. Post-enrichment
-validation also merges a same-run primary candidate set with a current fallback quote when fallback recovery replaced
-the selected result. This keeps a corroborated low-confidence depeg price from being cleared as if it were genuinely
-single-source, without loosening the guardrail for unrelated fallback, correlated list-only, or stale prices.
-
-Severe fixed-peg downside corroboration counts independent source families, not raw source labels. CoinGecko-derived
-sources share one lineage, DefiLlama list/detail/contract sources share one lineage, each CEX/oracle source keeps its own
-lineage, and promoted DEX protocol lanes count by protocol. A CoinGecko plus DefiLlama-list downside pair is treated as
-correlated list-aggregator evidence and cannot publish a severe downside price unless a separate hard or non-list family
-also corroborates it.
+Downside corroboration counts independent families: CoinGecko-derived lanes share one, DefiLlama list/detail/contract share one, CEX/oracle providers each retain theirs, and promoted DEX lanes count by protocol. CoinGecko plus DefiLlama-list alone is correlated list-aggregator evidence; severe downside needs another corroborating hard or non-list family.
 
 ### Publication Pool Challenge
 

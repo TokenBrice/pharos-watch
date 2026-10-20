@@ -57,7 +57,7 @@ describe("producer-owned accepted reserve generations", () => {
     if (source === "snapshot") {
       h.sqlite.prepare("UPDATE reserve_composition SET warnings = ?, warning_count = 1").run(warnings);
     } else {
-      h.sqlite.exec("UPDATE reserve_composition SET attempt_id = NULL, metadata = '{}', warnings = NULL, warning_count = NULL");
+      h.sqlite.exec("UPDATE reserve_composition SET attempt_id = NULL, metadata = '{}', warnings = NULL, warning_count = 1");
       h.sqlite.prepare(`UPDATE reserve_sync_state SET last_success_attempt_id = NULL, last_attempted_at = last_success_at,
         last_status = 'ok', warnings = ?, warning_count = 1, metadata = '{"freshnessMode":"not-applicable"}'`).run(warnings);
     }

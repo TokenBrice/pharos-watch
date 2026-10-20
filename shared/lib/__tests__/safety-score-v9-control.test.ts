@@ -2312,7 +2312,9 @@ describe("cause-aware Control minima", () => {
           peg: { failureDomains: [] }, supply: { failureDomains: [] },
           dependencies: { edges: assetId === "operator" ? [] : [{
             edgeKey: "operator", upstreamAssetId: "operator", dependencyType: "mechanism" as const,
-            economicRole: "control-operator" as const, weight: 1, failureDomains: [],
+            economicRole: "control-operator" as const, weight: 1,
+            failureDomains: [{ kind: "mint-control" as const, key: "mint:operator" }],
+            evidenceRefIds: ["evidence:base"],
           }] },
         })),
       });

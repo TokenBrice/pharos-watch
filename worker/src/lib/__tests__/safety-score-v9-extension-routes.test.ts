@@ -208,8 +208,8 @@ describe("same-resource Exit alternatives", () => {
         current: 2_000_000, circulatingPrevDay: 2_000_000,
         circulatingPrevWeek: 2_000_000, circulatingPrevMonth: 2_000_000,
       } },
-      dexOverrides: { exitRouteObservations: observations },
     });
+    fixed.dexLiqMap.alpha!.exitRouteObservations = observations;
     const coverage = fixed.dexLiqMap.alpha!.exitRouteObservationCoverage!;
     coverage.observationCount = observations.length;
     coverage.scoreEligibleObservationCount = observations.filter((route) => route.scoreEligible).length;

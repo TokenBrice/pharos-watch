@@ -19,7 +19,6 @@ The [architectural decisions](../architecture.md#adr-28) remain the authority fo
 ## ADR-30 applications
 
 - [Measured DEX history](dex-liquidity-appendix.md#curve-capture-and-measured-profiles) ages each constituent's original source quote at the consumer assessment clock; complete-cycle publication clocks cannot renew success/maturity evidence.
-- [Safety pillar freshness](../report-cards.md#api) publishes scoring-time assessments with original source clock, generation, effective age budget and an explicit unknown reason. Publication age remains a separate consumer policy; retained bare-verdict publications remain historical verdicts, never synthetic assessments.
 - [Inherited pricing](../pricing-pipeline.md#timestamp-semantics) retains the admitted parent's source clock; a fresh selection/write clock cannot rescue stale composite provenance, including supply NAV valuation.
 - [Measured target valuation](dex-liquidity-appendix.md#measured-evm-joining) reassesses per-peg FX fallback at target capture using original source clocks and cadence; diagnostic stale references never certify score-bearing USD capacity.
 - [Safety dependency evidence](report-cards-appendix.md#dependency-coverage) ages each live-derived graph from its asset's reserve fetch under the existing producer budget, not the cohort's newest fetch. Expired graphs retain edges with scoped stale producer proof rather than newly current evidence or an asset-wide build exception.

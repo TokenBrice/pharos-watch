@@ -1,7 +1,6 @@
 import { DatabaseSync } from "node:sqlite";
 import { setTimeout as delay } from "node:timers/promises";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { z } from "zod";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { makeReportCardsV9Card, makeReportCardsV9PartialCard, makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
@@ -12,30 +11,18 @@ import { API_FRESHNESS_ALLOWED_FUTURE_SKEW_SEC } from "../../lib/api-freshness-a
 import { ReportCardsV9CurrentResponseSchema } from "@shared/types/report-cards-v9";
 import type { V9PublicationHealth } from "@shared/types/report-cards-v9";
 import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
-import { SafetyScoreV9ResolvedCurrentCardSchema, SafetyScoreV9PillarSchema, SafetyScoreV9EvidenceSummarySchema } from "@shared/types/safety-score-v9-public";
 import { V9_PUBLIC_READ_GRACE_SEC, V9_PUBLIC_FRAGMENT_MAX_BYTES } from "@shared/types/report-cards-v9-materialization";
 import { makeWorkerSafetyScoreV9Publication } from "../../test-helpers/report-cards-v9";
 import { currentInput } from "../../lib/__tests__/safety-score-v9-publication-store.test-support";
 import { persistSafetyScoreV9Publication } from "../../lib/safety-score-v9/publication-store";
 import { SAFETY_SCORE_V9_CACHE_KEYS } from "../../lib/safety-score-v9/publication-health";
 import { loadActiveSafetyScoreSource } from "../../lib/safety-score-active-source";
-import { handleReportCardsV9, legacyV9FreshnessBody } from "../report-cards-v9";
+import { handleReportCardsV9 } from "../report-cards-v9";
 import { getRouteMatch } from "../../routes/registry";
 import { handleReportCardsV9Table, handleReportCardsV9Detail } from "../report-cards-v9-projections";
 import * as publicationCodec from "../../lib/safety-score-v9/publication-codec";
 import { withRepresentationEtag } from "../../lib/api-response";
 import { sha256HexFromUtf8Chunks } from "../../lib/hash";
-
-// Freeze origin/main's pre-assessment freshness boundary, retaining the full
-// report/card validators for all unrelated fields. The production reader used
-// this strict enum for every pillar and the aggregate (public-facts.ts:107).
-const originMainFreshness = z.enum(["current", "stale", "unknown"]);
-const originMainPillar = SafetyScoreV9PillarSchema.safeExtend({ freshness: originMainFreshness });
-const originMainCard = SafetyScoreV9ResolvedCurrentCardSchema.safeExtend({
-  pillars: z.object({ backing: originMainPillar, exit: originMainPillar, control: originMainPillar }).strict(),
-  evidence: SafetyScoreV9EvidenceSummarySchema.safeExtend({ freshness: originMainFreshness }),
-});
-const originMainReport = ReportCardsV9CurrentResponseSchema.safeExtend({ cards: z.array(originMainCard) });
 
 function instrumentReads(db: D1Database, delayMs = 0) {
   const reads: { sql: string; bindings: unknown[] }[] = [];
@@ -104,83 +91,6 @@ async function assertServedEquivalent(db: D1Database) {
 }
 
 describe("materialized V9 response", () => {
-  it("serves origin/main's enum wire by default while opting new Pages into unchanged assessment bytes", async () => {
-    const { db, sqlite } = database();
-    const publication = makeWorkerSafetyScoreV9Publication();
-    const card = publication.cards[0]!;
-    const unknown = {
-      verdict: "unknown" as const, assessedAtSec: publication.asOfSec, observedAtSec: null,
-      sourceGenerationId: null, maxAgeSec: null, reason: "pillar-clock-unavailable" as const,
-    };
-    card.pillars.backing.freshness = { ...unknown };
-    card.pillars.control.freshness = { ...unknown };
-    card.pillars.exit.freshness = {
-      verdict: "current", assessedAtSec: publication.asOfSec, observedAtSec: publication.asOfSec,
-      sourceGenerationId: "dex:captured", maxAgeSec: 14_400, reason: null,
-    };
-    card.evidence.freshness = { verdict: "unknown", pillarRefs: ["backing", "exit", "control"] };
-    await persistSafetyScoreV9Publication(db, currentInput(publication));
-    vi.useFakeTimers({ toFake: ["Date"] });
-    vi.setSystemTime(publication.publishedAtSec * 1000);
-    expect(getRouteMatch("/api/report-cards/v9")?.endpoint?.cacheKeyIgnoresQuery).not.toBe(true);
-    const before = sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(SAFETY_SCORE_V9_CACHE_KEYS.publication);
-    const fragments = sqlite.prepare("SELECT * FROM safety_score_public_fragments ORDER BY ordinal").all();
-    const assessed = await handleReportCardsV9(db, new URL("https://api.pharos.watch/api/report-cards/v9?freshness=assessments"));
-    const assessedBody = ReportCardsV9CurrentResponseSchema.parse(await assessed.json());
-    expect(originMainReport.safeParse(assessedBody).success).toBe(false); // Negative control: live old Pages rejects objects.
-    expect(assessedBody.cards[0]!.pillars.exit.freshness).toEqual(card.pillars.exit.freshness);
-    for (const query of ["", "?freshness=unknown"]) {
-      const response = await handleReportCardsV9(db, new URL(`https://api.pharos.watch/api/report-cards/v9${query}`));
-      const legacy = originMainReport.parse(await response.json());
-      expect(response.headers.get("ETag")).not.toBe(assessed.headers.get("ETag"));
-      const expected = structuredClone(assessedBody);
-      for (const row of expected.cards) {
-        row.pillars.backing.freshness = "unknown";
-        row.pillars.exit.freshness = "current";
-        row.pillars.control.freshness = "unknown";
-        row.evidence.freshness = "unknown";
-      }
-      expect(legacy).toEqual(expected); // Every non-freshness field, score and identity is unchanged.
-    }
-    expect(sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(SAFETY_SCORE_V9_CACHE_KEYS.publication)).toEqual(before);
-    expect(sqlite.prepare("SELECT * FROM safety_score_public_fragments ORDER BY ordinal").all()).toEqual(fragments);
-  });
-
-  it.each([1, 7, 127])("projects card-local freshness across %i-byte UTF-8 boundaries without rewriting evidence text", async chunkSize => {
-    const card = makeReportCardsV9Card();
-    const assessment = {
-      verdict: "unknown" as const, assessedAtSec: 100, observedAtSec: null,
-      sourceGenerationId: null, maxAgeSec: null, reason: "pillar-clock-unavailable" as const,
-    };
-    for (const pillar of ["backing", "exit", "control"] as const) card.pillars[pillar].freshness = { ...assessment };
-    card.evidence.freshness = { verdict: "unknown", pillarRefs: ["backing", "exit", "control"] };
-    const text = '\uD83D\uDE80 braces { } and escaped "cards":[ plus \\\\ and "freshness":{"verdict":"current"}';
-    card.evidence.reasons = [{ code: "unresolved-control-identity", message: text, path: null }];
-    const suffix = `,"untouched":{"10":1e+2,"2":-0,"freshness":${stableJsonStringifyV1(assessment)}}}`;
-    const wire = stableJsonStringifyV1({ publicationHealth: {}, cards: [card, card], tail: text }).slice(0, -1) + suffix;
-    const legacyCard = structuredClone(card);
-    for (const pillar of ["backing", "exit", "control"] as const) legacyCard.pillars[pillar].freshness = "unknown";
-    legacyCard.evidence.freshness = "unknown";
-    const expectedWire = stableJsonStringifyV1({ publicationHealth: {}, cards: [legacyCard, legacyCard], tail: text }).slice(0, -1) + suffix;
-    const bytes = new TextEncoder().encode(wire);
-    const stream = new ReadableStream<Uint8Array>({
-      start(controller) {
-        for (let index = 0; index < bytes.length; index += chunkSize) controller.enqueue(bytes.slice(index, index + chunkSize));
-        controller.close();
-      },
-    });
-    const resultWire = await new Response(legacyV9FreshnessBody(stream)).text();
-    expect(resultWire).toBe(expectedWire);
-    const result = JSON.parse(resultWire) as { cards: SafetyScoreV9CurrentCard[]; tail: string };
-    expect(result.tail).toBe(text);
-    for (const row of result.cards) {
-      expect(row.evidence.reasons[0]!.message).toBe(text);
-      expect(row.pillars.exit.freshness).toBe("unknown");
-      expect(row.evidence.freshness).toBe("unknown");
-      expect(row.score).toBe(card.score);
-    }
-  });
-
   it("bounds 397-card fragment round trips under D1 latency without changing bytes, identity or ETag", async () => {
     const { sqlite, db, publication } = await seedCohort();
     vi.useFakeTimers({ toFake: ["Date"] });
@@ -213,7 +123,7 @@ describe("materialized V9 response", () => {
     const actualWire = await response.text();
     expect(actualWire).toBe(expectedWire);
     expect(JSON.parse(actualWire)).toEqual(source.snapshot);
-    const expectedEtag = withRepresentationEtag(new Response(null, { headers: { "Cache-Control": "public, max-age=60" } }), ["report-cards-v9", "legacy-verdicts", {
+    const expectedEtag = withRepresentationEtag(new Response(null, { headers: { "Cache-Control": "public, max-age=60" } }), ["report-cards-v9", {
       version: manifest.version, generationId: publication.publicationGenerationId, sha256: manifest.sha256,
     }, currentInput(publication).publicationHealth]).headers.get("ETag");
     expect(expectedEtag).not.toBeNull();
