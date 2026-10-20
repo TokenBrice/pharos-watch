@@ -76,6 +76,138 @@ it.each(["?cursor=1.2.3.4.5", "?history=all&cursor=bad", "?history=all&cursor=1.
   },
 );
 
+it.each([false, true])("matches raw-input archive output and diagnostics with bounded D1 bytes (history=%s)", async (completeHistory) => {
+  const sqlite = new DatabaseSync(":memory:");
+  const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+  try {
+    sqlite.exec(`CREATE TABLE daily_digest (
+      digest_text TEXT NOT NULL, digest_title TEXT, generated_at INTEGER NOT NULL,
+      digest_extended TEXT, input_data TEXT, digest_meta TEXT
+    )`);
+    const unused = "unused capture evidence ".repeat(800);
+    const depeg = { symbol: "RISK", bps: -6_000, currentBps: -5_500, mcapUsd: 20_000_000 };
+    const daily = {
+      stabilityIndex: { score: 72, band: "Stable" },
+      totalMcapUsd: 100e9,
+      supplyCoverage: { complete: true, observedCount: 2, unavailableCount: 0 },
+      topDepegs: [depeg],
+      riskTape: [{ id: "risk-tape:depegs", label: "Depegs", value: "RISK 5500bps", tone: "critical" }],
+      nextTriggers: [],
+      forwardLookOutcomes: [],
+      unused,
+    };
+    const weekly = {
+      totalMcapUsd: 100e9,
+      dailyDigests: [
+        null, false, 7, "not an entry", [],
+        { date: "ignored", inputData: null },
+        { date: "ignored", inputData: [] },
+        { date: "2026-10-18", inputData: { ...daily, activeDepegCount: 4 } },
+        // Equal candidates keep their stored order; the first day's count/date win.
+        { date: "2026-10-19", inputData: { ...daily, activeDepegCount: 5 } },
+        { date: "2026-10-20", inputData: {
+          topDepegs: [{ symbol: "WATCH", bps: -1_000, mcapUsd: 1e12 }], unused,
+        } },
+      ],
+      unused,
+    };
+    const fixtures: Array<{ name: string; input: string | null; meta?: string }> = [];
+    for (const activeDepegCount of [undefined, null, 0, 2, false, true, "2", [], { unknown: true }]) {
+      fixtures.push({
+        name: `daily-count-${JSON.stringify(activeDepegCount)}`,
+        input: JSON.stringify({ ...daily, activeDepegCount }),
+      });
+      fixtures.push({
+        name: `weekly-count-${JSON.stringify(activeDepegCount)}`,
+        input: JSON.stringify({ dailyDigests: [{ date: false, inputData: { ...daily, activeDepegCount } }] }),
+        meta: '{"type":"weekly"}',
+      });
+    }
+    fixtures.push(
+      { name: "weekly-candidates", input: JSON.stringify(weekly), meta: '{"type":"weekly"}' },
+      { name: "daily-precedence", input: JSON.stringify({ ...weekly, topDepegs: [] }) },
+      { name: "wrong-types", input: JSON.stringify({
+        stabilityIndex: false, totalMcapUsd: "100", supplyCoverage: null,
+        topDepegs: {}, dailyDigests: {}, riskTape: true, nextTriggers: null, forwardLookOutcomes: "bad",
+      }) },
+      { name: "empty-object", input: "{}" },
+      {
+        name: "duplicate-daily-keys",
+        input: `{"activeDepegCount":1,"activeDepegCount":2,"topDepegs":[],"topDepegs":${JSON.stringify([depeg])}}`,
+      },
+      {
+        name: "duplicate-weekly-keys",
+        input: `{"dailyDigests":[],"dailyDigests":[{"date":"first","date":"last","inputData":{},"inputData":{"activeDepegCount":1,"activeDepegCount":3,"topDepegs":${JSON.stringify([depeg])}}}]}`,
+        meta: '{"type":"weekly"}',
+      },
+      {
+        name: "extreme-number",
+        input: `{"activeDepegCount":1e999,"topDepegs":${JSON.stringify([depeg])}}`,
+      },
+      ...[null, "", " ", "{bad json", "null", "true", "12", '"scalar"', "[]"].map((input, index) => ({
+        name: `malformed-or-root-${index}`, input,
+      })),
+      { name: "internal", input: JSON.stringify(daily), meta: '{"internal":true}' },
+      { name: "blocked", input: JSON.stringify(daily), meta: '{"qualityGate":"blocked","styleGateMode":"enforce"}' },
+    );
+    for (let index = fixtures.length; index < 270; index++) {
+      fixtures.push({
+        name: `capture-${index}`,
+        input: JSON.stringify(index % 7 === 0 ? weekly : daily),
+        meta: index % 7 === 0 ? '{"type":"weekly"}' : undefined,
+      });
+    }
+    const insert = sqlite.prepare("INSERT INTO daily_digest VALUES (?, ?, ?, NULL, ?, ?)");
+    fixtures.forEach((fixture, index) => insert.run(
+      fixture.name, fixture.name, 1_700_000_000 + index, fixture.input, fixture.meta ?? null,
+    ));
+    let projectedRows: Record<string, unknown>[] = [];
+    const db = createSqliteD1(sqlite, {
+      onAll: (sql) => { projectedRows = sqlite.prepare(sql).all(); },
+    });
+    const url = new URL(`https://api.example.com/api/digest-archive${completeHistory ? "?history=all" : ""}`);
+    const projectedResponse = await handleDigestArchive(db, url);
+    const projected = await projectedResponse.json() as {
+      digests: Array<{ digestTitle: string; riskSignal: Record<string, unknown> | null }>;
+    };
+    const projectedWarnings = warn.mock.calls.map(([message]) => JSON.parse(String(message)) as { message: string });
+    warn.mockClear();
+    // Exercise the unchanged response mapper with the pre-projection D1 payload.
+    const rawRows = projectedRows.map((row) => ({
+      ...row,
+      input_data: fixtures[Number(row.archive_id) - 1].input,
+    }));
+    const rawResponse = await handleDigestArchive(mockD1([{ match: "FROM daily_digest", rows: rawRows }]), url);
+    expect(projected).toEqual(await rawResponse.json());
+    expect(projectedResponse.headers.get("X-Data-Age")).toBe(rawResponse.headers.get("X-Data-Age"));
+    const rawWarnings = warn.mock.calls.map(([message]) => JSON.parse(String(message)) as { message: string });
+    expect(projectedWarnings.map((entry) => entry.message)).toEqual(rawWarnings.map((entry) => entry.message));
+    expect(projectedWarnings.filter((entry) => entry.message.includes("reason=json-parse-failed"))).toHaveLength(3);
+    expect(projectedWarnings.filter((entry) => entry.message.includes("reason=invalid-shape"))).toHaveLength(4);
+    const byTitle = new Map(projected.digests.map((row) => [row.digestTitle, row]));
+    expect(byTitle.get("daily-count-undefined")?.riskSignal).not.toHaveProperty("activeCount");
+    expect(byTitle.get("daily-count-null")?.riskSignal).toHaveProperty("activeCount", null);
+    expect(byTitle.get("weekly-candidates")?.riskSignal).toMatchObject({
+      symbol: "RISK", bps: -5_500, date: "2026-10-18", activeCount: 4,
+    });
+    expect(byTitle.get("daily-precedence")?.riskSignal).toBeNull();
+    expect(byTitle.get("duplicate-daily-keys")?.riskSignal).toHaveProperty("activeCount", 2);
+    expect(byTitle.get("duplicate-weekly-keys")?.riskSignal).toMatchObject({ activeCount: 3, date: "last" });
+    expect(byTitle.get("extreme-number")?.riskSignal).toHaveProperty("activeCount", null);
+    expect(byTitle.has("internal")).toBe(false);
+    expect(byTitle.has("blocked")).toBe(false);
+    // Bound the actual row payload crossing D1, not merely the public response.
+    const projectedBytes = Buffer.byteLength(JSON.stringify(projectedRows));
+    const rawBytes = Buffer.byteLength(JSON.stringify(rawRows));
+    expect(projectedBytes).toBeLessThan(rawBytes / 10);
+    expect(projectedBytes).toBeLessThan(1_000_000);
+    expect(JSON.stringify(projectedRows)).not.toContain(unused);
+  } finally {
+    warn.mockRestore();
+    sqlite.close();
+  }
+});
+
 describe("handleDigestArchive", () => {
   it("returns 200 with empty digests when no data", async () => {
     const db = mockD1([{ match: "FROM daily_digest", rows: [] }]);
