@@ -1145,6 +1145,12 @@ const erc4626SingleAssetParamsSchema = z
   .object({
     slice: reserveSliceDescriptorSchema,
     deployedExposure: erc4626DeployedExposureSchema.optional(),
+    // Reviewed token balances outside totalAssets()/withdrawal accounting are
+    // observations only, never holder-owned idle backing or cash capacity.
+    walletCashAccounting: erc4626DeployedExposureSchema.extend({
+      mode: z.literal("excluded"),
+      sourceUrl: AbsoluteUrlSchema,
+    }).optional(),
     // Whole-token pooled claim, not an allocation to its accounting asset.
     // Underlying observations remain contextual and look-through stays unknown.
     pooledClaim: erc4626DeployedExposureSchema.optional(),
@@ -2736,7 +2742,8 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sourceModel: "single-bucket",
     evidenceClass: "independent",
     preferredFreshnessMode: "verified",
-    sharedSourceMode: "source-invariant",
+    // Subject-bound: gateway collateral is M backing, not an extension's M custody.
+    sharedSourceMode: "none",
     configValidation: CONFIG_PROTOCOL_V1,
     redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: DASHBOARD_VALIDATION,

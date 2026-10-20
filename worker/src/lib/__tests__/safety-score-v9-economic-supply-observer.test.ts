@@ -122,7 +122,23 @@ describe("reviewed economic supply observation", () => {
       observations: [expect.objectContaining({ anchor: "100" })],
     } });
     expect(vi.mocked(evmRpc.fetchEvmMulticall3Aggregate3AtBlock).mock.calls[0][3]?.recentStatePin).toBeUndefined();
-    expect(evmRpc.fetchEvmBlockHeader).toHaveBeenCalledWith("ethereum", "finalized", { chainRpcs: f.chainRpcs, signal: undefined });
+    expect(evmRpc.fetchEvmBlockHeader).toHaveBeenCalledWith("ethereum", "finalized",
+      expect.objectContaining({ chainRpcs: f.chainRpcs, signal: undefined, minTimestampSec: expect.any(Number) }));
+  });
+  it("falls back to the reviewed lag when optional finalized proof is stale", async () => {
+    const f = fixture();
+    f.plan.deployments[0]!.read = { kind: "evm-total-supply", safeBlockLag: 2, pinPolicy: "finalized-preferred" };
+    vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (_chain, number) => ({
+      number: number === "finalized" ? 90 : number,
+      timestamp: number === "finalized" || number === 90 ? CLOCK - 3600 : CLOCK - 60,
+      hash: HASH,
+    }));
+    expect(await f.run()).toMatchObject({ status: "accepted", attribution: {
+      observations: [expect.objectContaining({ anchor: "100", observedAtSec: CLOCK - 60 })],
+    } });
+    expect(evmRpc.fetchEvmBlockHeader).toHaveBeenCalledWith("ethereum", "finalized",
+      expect.objectContaining({ minTimestampSec: expect.any(Number) }));
+    expect(vi.mocked(evmRpc.fetchEvmMulticall3Aggregate3AtBlock).mock.calls[0][3]?.recentStatePin).toBeUndefined();
   });
   it.each([1847, 1790])("rejects %is-old pins without enough capture headroom before reading quantities", async age => {
     const f = fixture();

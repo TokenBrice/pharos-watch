@@ -6,6 +6,7 @@ import { computeUniswapV4PoolId, getUniswapV4Deployment, UNISWAP_V4_HOOK_FREE_AD
 import { isDexMeasuredExecutionTargetScoreEligible } from "../../measured-execution/admission";
 import type { PoolEntry } from "../types";
 import { createSlotDeadline } from "../../../lib/cron-timeouts";
+import type { EvmRpcOptions } from "../../../lib/evm-rpc";
 
 const TOKEN0 = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
 const TOKEN1 = "0xdac17f958d2ee523a2206206994597c13d831ec7";
@@ -182,6 +183,56 @@ describe("retained V4 target recovery", () => {
     expect(f.pool.extra?.measuredExecutionTarget).toBeUndefined();
     expect(f.pool.extra?.executionCapabilityGate?.reason).toBe("target-unresolved");
     expect(f.dependencies.multicall).not.toHaveBeenCalled();
+  });
+
+  it.each(["requests", "deadline"] as const)("reserves final header admission when identity %s run out", async (limit) => {
+    const f = fixture();
+    const secondKey = { ...KEY, feePips: 100 };
+    const second: PoolEntry = {
+      ...f.pool, poolId: `ethereum:${computeUniswapV4PoolId(secondKey)}`,
+      tvlUsd: 1_000_000, extra: { ...f.pool.extra },
+    };
+    f.input.metrics.get("usdc-circle")!.pools.push(second);
+    const rows = await f.dependencies.multicall();
+    f.dependencies.multicall.mockClear();
+    let nowMs = Date.now();
+    const clock = vi.spyOn(Date, "now").mockImplementation(() => nowMs);
+    let physicalRequests = 0;
+    const admit = (options: EvmRpcOptions) => {
+      if (options.beforeRequest?.("https://rpc.example.invalid") === false) return false;
+      physicalRequests++;
+      return true;
+    };
+    f.dependencies.header.mockImplementation(async (_chain, _block, options) =>
+      admit(options) ? { number: BLOCK, timestamp: f.timestamp, hash: BLOCK_HASH } : null);
+    f.dependencies.verify.mockImplementation(async ({ rpcBudget }) => {
+      if (limit === "requests") {
+        expect(rpcBudget.tryConsume(379)).toBe(true);
+        physicalRequests += 379;
+      }
+      return { ok: true };
+    });
+    f.dependencies.rpcBatch.mockImplementation(async (_chain, calls, options) => {
+      const secondPool = calls[0].params[0].topics[1] !== POOL_ID;
+      if (limit === "deadline" && secondPool) nowMs = options.deadlineMs;
+      if (!admit(options)) return null;
+      return [[initializeLog("ethereum", secondPool ? secondKey : KEY)]];
+    });
+    f.dependencies.multicall.mockImplementation(async (_chain, _calls, _block, options) =>
+      admit(options) ? rows : null);
+    try {
+      const telemetry = await enrichUniswapV4ExecutionTargets(f.input);
+      expect(f.pool.extra?.measuredExecutionTarget).toBeDefined();
+      expect(second.extra?.measuredExecutionTarget).toBeUndefined();
+      const reason = limit === "requests" ? "request-budget-exhausted" : "runtime-deadline-exceeded";
+      expect(second.extra?.measuredExecutionDiagnostic?.detail).toBe(reason);
+      expect(telemetry).toMatchObject([{ enriched: 1, dropReasons: { [reason]: 1 } }]);
+      expect(telemetry[0].dropReasons["identity-block-reorg-or-unavailable"]).toBeUndefined();
+      expect(physicalRequests).toBeLessThanOrEqual(384);
+      expect(f.dependencies.header).toHaveBeenCalledTimes(2);
+    } finally {
+      clock.mockRestore();
+    }
   });
 
   it("does not publish pending targets after a pinned-block reorg", async () => {
