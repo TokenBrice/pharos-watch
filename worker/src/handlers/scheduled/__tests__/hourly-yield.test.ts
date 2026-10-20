@@ -16,6 +16,7 @@ vi.mock("../../../cron/sync-yield-supplemental", () => ({
 }));
 
 import { HOURLY_TBILL_MIN_REGISTRY_AGE_SEC, SUPPLEMENTAL_CATCH_UP_MIN_MARKER_AGE_SEC } from "../hourly-yield";
+import { INDEPENDENT_SUPPLEMENTAL_SOURCE_FAMILY_KEYS } from "../../../cron/yield-sync/family-registry";
 import { runHourlyYieldSlot } from "../hourly-yield";
 import { runYieldSupplementalSlot } from "../yield-supplemental";
 
@@ -55,6 +56,7 @@ describe("runHourlyYieldSlot", () => {
     await runYieldSupplementalSlot(runtime);
     expect(mocks.syncYieldSupplemental).toHaveBeenCalledWith(
       runtime.db, signal, runtime.chainRpcs, reportProgress,
+      { families: INDEPENDENT_SUPPLEMENTAL_SOURCE_FAMILY_KEYS },
     );
   });
 
@@ -92,7 +94,7 @@ describe("runHourlyYieldSlot", () => {
       signal,
       runtime.chainRpcs,
       reportProgress,
-      { catchUpMinMarkerAgeSec: SUPPLEMENTAL_CATCH_UP_MIN_MARKER_AGE_SEC },
+      { families: INDEPENDENT_SUPPLEMENTAL_SOURCE_FAMILY_KEYS, catchUpMinMarkerAgeSec: SUPPLEMENTAL_CATCH_UP_MIN_MARKER_AGE_SEC },
     );
     expect(mocks.fetchTbillRate).toHaveBeenCalledWith(runtime.db, signal, runtime.env, {
       minRegistryAgeSec: HOURLY_TBILL_MIN_REGISTRY_AGE_SEC,

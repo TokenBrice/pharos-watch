@@ -97,6 +97,7 @@ import { loadSupplementalSourceFamilies, SUPPLEMENTAL_SOURCE_FAMILY_CONCURRENCY 
 import { SUPPLEMENTAL_SOURCE_FAMILY_KEYS } from "../yield-sync/family-registry";
 import { PENDLE_RATE_LIMIT_BACKOFF_REASON, buildYieldSupplementalFamilyCache, buildYieldSupplementalPendleBackoff, getYieldSupplementalFamilyCacheKey, getYieldSupplementalPendleBackoffCacheKey, getYieldSupplementalRunOutcomeCacheKey } from "../yield-sync/cache";
 import { supplementalFamilySnapshotHash } from "../yield-sync/cache";
+import { buildYieldSupplementalRunOutcome } from "../yield-sync/cache";
 
 async function flushMicrotasks() {
   for (let i = 0; i < 8; i += 1) {
@@ -122,6 +123,86 @@ describe("syncYieldSupplemental", () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.clearAllMocks();
+  });
+
+  describe("producer-adjacent family selection", () => {
+    const now = Date.parse("2026-03-26T12:00:00.000Z") / 1000;
+    const aaveKey = getYieldSupplementalFamilyCacheKey("aaveV3");
+    const siblingKey = getYieldSupplementalFamilyCacheKey("beefy");
+    const row = (at: number) => ({ value: buildYieldSupplementalFamilyCache([], at), updatedAt: at });
+    const selected = { families: ["aaveV3"] as const, catchUpMinMarkerAgeSec: 14_400 };
+
+    it("fetches overdue Aave despite a fresh sibling and preserves sibling diagnostics", async () => {
+      const siblingHash = "a".repeat(64);
+      vi.mocked(getCaches).mockResolvedValue(new Map([
+        [aaveKey, row(now - 14_400)],
+        [siblingKey, row(now - 10)],
+        [getYieldSupplementalRunOutcomeCacheKey(), {
+          value: buildYieldSupplementalRunOutcome(
+            Object.fromEntries(SUPPLEMENTAL_SOURCE_FAMILY_KEYS.map((family) => [family, "retained-previous"])) as
+              Record<typeof SUPPLEMENTAL_SOURCE_FAMILY_KEYS[number], "retained-previous">,
+            ["aaveV3", "beefy"], now - 10, { beefy: "sibling-failure" }, { beefy: siblingHash },
+          ), updatedAt: now - 10,
+        }],
+      ]));
+      const result = await syncYieldSupplemental({} as D1Database, undefined, new Map(), undefined, selected);
+      expect(fetchAaveV3SupplyRates).toHaveBeenCalledOnce();
+      expect(fetchBeefySources).not.toHaveBeenCalled();
+      expect(fetchMorphoVaultSources).not.toHaveBeenCalled();
+      expect(fetchCompoundV3SupplyRates).not.toHaveBeenCalled();
+      expect(vi.mocked(setCacheIfNewer).mock.calls.map((call) => call[1])).toEqual([aaveKey]);
+      const outcome = JSON.parse(vi.mocked(setCache).mock.calls[0]![2]);
+      expect(outcome.degradedFamilies).toEqual(["beefy"]);
+      expect(outcome.degradedFamilyReasons).toEqual({ beefy: "sibling-failure" });
+      expect(outcome.familyCacheResults.beefy).toBe("retained-previous");
+      expect(outcome.familySnapshotHashes.beefy).toBe(siblingHash);
+      expect(JSON.parse(result.metadata!).degradedFamilies).toEqual([]);
+    });
+
+    it("does not renew Aave or sibling clocks before the family cadence is due", async () => {
+      vi.mocked(getCaches).mockResolvedValue(new Map([[aaveKey, row(now - 14_399)]]));
+      const result = await syncYieldSupplemental({} as D1Database, undefined, new Map(), undefined, selected);
+      expect(result.status).toBe("skipped_neutral");
+      expect(fetchAaveV3SupplyRates).not.toHaveBeenCalled();
+      expect(setCacheIfNewer).not.toHaveBeenCalled();
+      expect(setCache).not.toHaveBeenCalled();
+    });
+
+    it("retries a failed Aave outcome even with a recent retained family marker", async () => {
+      vi.mocked(getCaches).mockResolvedValue(new Map([
+        [aaveKey, row(now - 30)],
+        [getYieldSupplementalRunOutcomeCacheKey(), {
+          value: JSON.stringify({ version: 1, degradedFamilies: ["aaveV3"] }), updatedAt: now - 10,
+        }],
+      ]));
+      await syncYieldSupplemental({} as D1Database, undefined, new Map(), undefined, selected);
+      expect(fetchAaveV3SupplyRates).toHaveBeenCalledOnce();
+    });
+
+    it("keeps Aave failure evidence when an independent family publishes", async () => {
+      const aaveHash = "b".repeat(64);
+      vi.mocked(getCaches).mockResolvedValue(new Map([
+        [getYieldSupplementalRunOutcomeCacheKey(), {
+          value: JSON.stringify({ version: 1, degradedFamilies: ["aaveV3"],
+            familyCacheResults: { aaveV3: "retained-previous" },
+            familySnapshotHashes: { aaveV3: aaveHash } }), updatedAt: now - 10,
+        }],
+      ]));
+      await syncYieldSupplemental({} as D1Database, undefined, new Map(), undefined, { families: ["beefy"] });
+      const outcome = JSON.parse(vi.mocked(setCache).mock.calls[0]![2]);
+      expect(outcome.degradedFamilies).toEqual(["aaveV3"]);
+      expect(outcome.familyCacheResults.aaveV3).toBe("retained-previous");
+      expect(outcome.familySnapshotHashes.aaveV3).toBe(aaveHash);
+      expect(fetchAaveV3SupplyRates).not.toHaveBeenCalled();
+    });
+
+    it("fails closed rather than overwriting unreadable sibling outcomes", async () => {
+      vi.mocked(getCaches).mockRejectedValueOnce(new Error("outcome read failed"));
+      await expect(syncYieldSupplemental({} as D1Database, undefined, new Map(), undefined, selected))
+        .rejects.toThrow("outcome read failed");
+      expect(fetchAaveV3SupplyRates).not.toHaveBeenCalled();
+      expect(setCache).not.toHaveBeenCalled();
+    });
   });
 
   it("reports supplemental source-family and empty-snapshot progress metadata", async () => {

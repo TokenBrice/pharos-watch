@@ -76,6 +76,7 @@ interface SupplementalSourceFamilyContext {
   startSec: number;
   signal?: AbortSignal;
   chainRpcs?: Map<string, ChainRpcConfig>;
+  families?: readonly SupplementalSourceFamilyKey[];
 }
 
 export interface SupplementalSourceFamilyResult {
@@ -588,6 +589,7 @@ async function runAaveFamily(
   context: SupplementalSourceFamilyContext,
 ): Promise<SupplementalSourceFamilyResult> {
   const stablecoins = context.db ? await loadStablecoinsCache(context.db, { mode: "lenient" }) : null;
+  context.signal?.throwIfAborted();
   const prices = new Map(
     stablecoins && stablecoins.kind !== "error" && stablecoins.payload &&
     stablecoins.updatedAt != null && Number.isSafeInteger(stablecoins.updatedAt) &&
@@ -674,7 +676,7 @@ function runSupplementalFamiliesWithConcurrency(
   context: SupplementalSourceFamilyContext,
 ): Promise<SupplementalSourceFamilyResult[]> {
   return mapWithConcurrency(
-    SUPPLEMENTAL_SOURCE_FAMILY_KEYS,
+    context.families ?? SUPPLEMENTAL_SOURCE_FAMILY_KEYS,
     SUPPLEMENTAL_SOURCE_FAMILY_CONCURRENCY,
     (family) => SUPPLEMENTAL_SOURCE_FAMILY_RUNNERS[family](context),
   );
@@ -715,7 +717,7 @@ export async function loadSupplementalSourceFamilies(
     sourceFamilyInventoryCounts,
     supplementalSourceAccounting: {
       familyExecution: {
-        familyCount: SUPPLEMENTAL_SOURCE_FAMILY_KEYS.length,
+        familyCount: familyResults.length,
         concurrencyLimit: SUPPLEMENTAL_SOURCE_FAMILY_CONCURRENCY,
       },
       malformedSourceDrops,

@@ -12,6 +12,7 @@ import {
   resolveCronTimeoutBudget,
   type SlotDeadline,
   assertSlotDeadline,
+  SCHEDULED_SLOT_CONTROLLED_ERROR_RESERVE_MS,
 } from "../../lib/cron-timeouts";
 import { logCronRun, type CronProgressReporter, type CronResult } from "../../lib/cron-logger";
 import { normalizeCgApiKey } from "../../lib/coingecko";
@@ -19,7 +20,7 @@ import { buildChainRpcs, type ChainRpcConfig } from "../../lib/chain-registry";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { flushDwellirCredits, loadDwellirBudgetState } from "../../lib/rpc-provider-budget";
-import { settleAfterAbort } from "../../lib/cron-abort-settlement";
+import { settleAfterAbort, retainUntilDeadline, CRON_ABORT_GRACE_MS, CRON_ABORT_OBSERVATION_MARGIN_MS } from "../../lib/cron-abort-settlement";
 import { createDwellirNativeCapability, type DwellirNativeCapability } from "../../lib/dwellir-native";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { normalizeCronMetadataWithLease } from "../../lib/cron-metadata";
@@ -86,6 +87,12 @@ function ensureDwellirEndpointsEnabled(runtime: ScheduledRuntimeContext): Promis
   return enablement;
 }
 
+export interface ScheduledChildDeadline {
+  /** Absolute end-to-end stop, including admission and terminal accounting. */
+  deadline: SlotDeadline;
+  deferredReason: string;
+}
+
 export interface ScheduledRuntimeContext {
   db: D1Database;
   env: ScheduledEnv;
@@ -116,6 +123,7 @@ export interface ScheduledRuntimeContext {
   runLeasedCron: (
     job: string,
     fn: (signal: AbortSignal, reportProgress: CronProgressReporter) => Promise<CronResult | void>,
+    bounded?: ScheduledChildDeadline,
   ) => Promise<CronResult | void>;
   runBudgetOnlyTask?: <T>(
     job: string,
@@ -240,20 +248,33 @@ export function createScheduledRuntimeContext(
     mintBurnFreshnessConfig,
     coingeckoApiKey,
     chainRpcs,
-    runLeasedCron: async (job, fn) => {
+    runLeasedCron: async (job, fn, bounded) => {
       const descriptor = getScheduledTaskDescriptor(scheduled.scheduleKey, job);
       if (!descriptor.statusTracked) {
         throw new Error(`${scheduled.scheduleKey}/${job} is budget-only and cannot use runLeasedCron`);
       }
-      const combinedSlotSignal = runtime.slotSignal && slotAbortSignal
-        ? AbortSignal.any([runtime.slotSignal, slotAbortSignal])
-        : runtime.slotSignal ?? slotAbortSignal;
+      const controller = bounded ? new AbortController() : null;
+      const deadline = bounded
+        ? createSlotDeadline(runtime.deadline.eventEntryMs, Math.min(
+          runtime.deadline.platformDeadlineMs,
+          bounded.deadline.platformDeadlineMs - CRON_ABORT_GRACE_MS - CRON_ABORT_OBSERVATION_MARGIN_MS,
+        ))
+        : runtime.deadline;
+      const stopError = bounded ? new Error(bounded.deferredReason) : null;
+      const timeout = controller
+        ? setTimeout(() => controller.abort(stopError), deadline.remainingMs())
+        : undefined;
+      const signals = [runtime.slotSignal, slotAbortSignal, controller?.signal]
+        .filter((signal): signal is AbortSignal => signal != null);
+      const combinedSlotSignal = signals.length > 0 ? AbortSignal.any(signals) : undefined;
 
-      return fetchBudget.run(descriptor.maxConnections, combinedSlotSignal, async () => {
+      let childWork: Promise<CronResult | void> | undefined;
+      const pending = fetchBudget.run(descriptor.maxConnections, combinedSlotSignal, async () => {
         // Contract C: opt this runtime into the Dwellir supplemental endpoints
         // (memoized, fail-closed) before the job body can read chainRpcs.
         await ensureDwellirEndpointsEnabled(runtime);
-        const timeoutBudget = resolveCronTimeoutBudget(job, { deadline: runtime.deadline });
+        assertSlotDeadline(deadline, combinedSlotSignal);
+        const timeoutBudget = resolveCronTimeoutBudget(job, { deadline });
         const timeoutBudgetMetadata = getCronTimeoutBudgetMetadata(timeoutBudget);
         try {
           return await logCronRun(db, job, async (signal, reportProgress): Promise<CronResult> => {
@@ -295,7 +316,7 @@ export function createScheduledRuntimeContext(
               owner: leaseOwner,
               abortSignal: signal,
               timeoutBudget,
-              deadline: runtime.deadline,
+              deadline,
               ...descriptor.leaseOptions,
             };
             if (scheduled.recoveryCheckpoint) leaseOptions.reserveRecoveryAdmission = true;
@@ -322,8 +343,9 @@ export function createScheduledRuntimeContext(
               await reportProgress({
                 stage: "lease-acquired", message: `Lease acquired for ${job}`, leaseOwner, metadata: slotMeta,
               });
-              assertSlotDeadline(runtime.deadline, leaseSignal);
-              return fn(leaseSignal, reportProgress);
+              assertSlotDeadline(deadline, leaseSignal);
+              childWork = fn(leaseSignal, reportProgress);
+              return childWork;
             }, leaseOptions);
 
             if (lease.status === "skipped_neutral") {
@@ -376,7 +398,7 @@ export function createScheduledRuntimeContext(
             abortSignal: combinedSlotSignal,
             executionFence: runtime.executionFence,
             jobAttemptNo,
-            deadline: runtime.deadline,
+            deadline,
             producer: {
               ...getRuntimeProducerIdentity(runtime, job),
             },
@@ -386,11 +408,39 @@ export function createScheduledRuntimeContext(
           // settles; flushing never throws, so it cannot change the job result.
           await settleAfterAbort(
             () => flushDwellirCredits(db, Math.floor(Date.now() / 1000)),
-            AbortSignal.timeout(runtime.deadline.remainingMs()),
-            { platformDeadlineMs: runtime.deadline.platformDeadlineMs },
+            combinedSlotSignal
+              ? AbortSignal.any([combinedSlotSignal, AbortSignal.timeout(deadline.remainingMs())])
+              : AbortSignal.timeout(deadline.remainingMs()),
+            { platformDeadlineMs: deadline.platformDeadlineMs },
           );
+          // A bounded caller may already have moved to DB-only snapshots.
+          // Keep its connection weight until the real provider work drains.
+          if (bounded && childWork) await childWork.catch(() => undefined);
         }
       });
+      if (!bounded || !controller) return pending;
+      try {
+        // Bound the entire invocation, not just RPC or the leased callback.
+        // The pending invocation retains its fetch reservation until settlement.
+        const outcome = await settleAfterAbort(() => pending, controller.signal, {
+          observer: true, platformDeadlineMs: bounded.deadline.platformDeadlineMs,
+        });
+        if (outcome.status === "fulfilled") return outcome.value;
+        if (outcome.status === "rejected") throw outcome.error;
+        // Terminal accounting may still be in flight. Keep its original fence
+        // and lease-retention rules; never clear a live/unsettled lease here.
+        runtime.ctx.waitUntil(retainUntilDeadline(
+          pending.catch(() => undefined),
+          runtime.deadline.platformDeadlineMs + SCHEDULED_SLOT_CONTROLLED_ERROR_RESERVE_MS,
+        ));
+        return {
+          status: "degraded",
+          metadata: JSON.stringify({ reason: bounded.deferredReason, retryOnNextDueTail: true }),
+          productivity: { productive: false, reason: bounded.deferredReason },
+        };
+      } finally {
+        clearTimeout(timeout);
+      }
     },
     runBudgetOnlyTask: (job, fn) => {
       const descriptor = getScheduledTaskDescriptor(scheduled.scheduleKey, job);

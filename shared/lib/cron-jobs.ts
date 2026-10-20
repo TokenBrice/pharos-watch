@@ -239,6 +239,9 @@ export const CRON_GROWTH_HEADROOM_POLICY = {
   // so the ceiling remains 34. Neither existing 5/6 DEX slot gains work.
   // WS4/D12 admits one private project-tape service-binding fetch (2026-10-18):
   // dewsPsiOffset rises 0/6 -> 1/6; no expressions or headroom-full slots added.
+  // 2026-10-20: move due Aave work into the stablecoins serial tail; shared
+  // supplemental identity deduplicates the added schedule-bound reservation.
+  // No new fetch surface, triggers or peak pressure (quarterHourly stays 4/6).
   maxFetchCapableEntriesBeforeRebalance: 35,
   maxHeadroomFullTriggersBeforeRebalance: 2,
   queuesOrWorkflowsReview: {
@@ -264,7 +267,7 @@ export const SHARED_SCHEDULED_JOB_IDENTITIES = {
   "snapshot-psi": ["quarterHourly", "daily0800Utc"],
   "snapshot-public-dataset": ["quarterHourly", "daily0800Utc"],
   "sync-cl-exit-depth": ["halfHourlyMeasuredExecution", "halfHourlyMeasuredExecutionSupplemental", "daily0810Utc"],
-  "sync-yield-supplemental": ["hourlyYieldSync", "fourHourlyYieldSupplemental"],
+  "sync-yield-supplemental": ["quarterHourly", "hourlyYieldSync", "fourHourlyYieldSupplemental"],
   "fetch-tbill-rate": ["hourlyYieldSync", "daily0800Utc"],
 } as const satisfies Record<string, readonly CronScheduleKey[]>;
 export type CronTriggerMode = "shared" | "isolated";

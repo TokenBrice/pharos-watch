@@ -55,7 +55,7 @@ ORDER BY rows DESC;
 
 - For `empty-snapshot`, verify successful family markers using [Validation](#validation); do not interpret zero candidates as a failed write.
 - For family-dominated misses, inspect `sourceCoverage.sourceFamilySummaries` status/raw/emitted counts, budgets, miss reasons and bounded examples; `sourceFamilyCounts` counts candidates. Keep heavy fetches off the publisher.
-- If the job is stale due to a stuck lease, clear it per [`lease-and-breaker-recovery.md`](./lease-and-breaker-recovery.md), job `sync-yield-supplemental`, and verify the next four-hour run.
+- If the job is stale due to a stuck lease, follow [`lease-and-breaker-recovery.md`](./lease-and-breaker-recovery.md) for `sync-yield-supplemental`; never clear a live owner. Verify the next due Aave producer tail or independent-family slot, as applicable.
 - If the cache is malformed, preserve the malformed value for debugging and let a later successful supplemental run replace it.
 
 ## Abort Conditions
@@ -67,6 +67,8 @@ ORDER BY rows DESC;
 ## Validation
 
 - Confirm `familyCacheResults` contains `published`, `empty-published`, or an understood `skipped-newer`/neutral Pendle skip, and `sourceCoverage.sourceFamilySummaries` explains failed or budget-exhausted families. `rowsWritten` counts candidates, not cache markers: successful empty writes have zero rows.
+- For Aave sequencing acceptance, observe a natural due refresh immediately after a safe stablecoins publication: original quotes must remain within each composite source's budget, productive reserves must emit USD-valued rows, and the Aave family cache/outcome must advance without changing sibling diagnostics. Confirm the next main yield publication no longer carries the recovered Aave failure. Genuinely stale/missing quotes must still retain the old family with `usd-price-unavailable`; do not force runs or widen budgets to manufacture recovery.
+- Require following snapshots to retain their reserved time. `aave-refresh-deferred-deadline` means insufficient headroom (neutral before admission) or an admitted timeout (degraded/error, never a successful refresh); inspect the slot outcome and child terminal together. Unsettled attempts retain the shared lease until normal expiry, not a manual reset.
 - The registry-enumerated `yield:supplemental-sources:v1:<family>` rows are present when expected, parseable, and recent. A per-family row with `sourceCount: 0` is valid when that family completed successfully with no deduplicated candidates. A single malformed family row should not block other fresh family rows; an all-empty surviving family snapshot remains valid.
 - The next yield run's `sourceCoverage.supplementalSourceMode` is `cache`; `sourceCoverage.supplementalSourceCount` may be zero for valid all-empty snapshots.
 - Public rankings/source board show expected optional family rows or alternatives.

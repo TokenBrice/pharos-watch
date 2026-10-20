@@ -5,6 +5,7 @@ import type { CronProgressReporter, CronResult } from "../lib/cron-logger";
 import { reportCronProgress } from "../lib/cron-progress";
 import { normalizeTokenAddress } from "./dex-liquidity/token-resolution";
 import { buildYieldSupplementalFamilyCache, buildYieldSupplementalRunOutcome, getYieldSupplementalFamilyCacheKey, getYieldSupplementalRunOutcomeCacheKey, type SupplementalFamilyCacheResult, parseYieldSupplementalSourcesCache, supplementalFamilySnapshotHash } from "./yield-sync/cache";
+import { parseYieldSupplementalRunOutcomeDetailed } from "./yield-sync/cache";
 import { loadSupplementalSourceFamilies, type SupplementalDedupeDiscardedValue } from "./yield-sync/sources-supplemental";
 import { SUPPLEMENTAL_SOURCE_FAMILY_KEYS, type SupplementalSourceFamilyKey } from "./yield-sync/family-registry";
 import type { ResolvedYieldCandidate } from "./yield-sync/types";
@@ -13,10 +14,12 @@ import type { ResolvedYieldCandidate } from "./yield-sync/types";
 const SUPPLEMENTAL_DEDUPE_DISCARDED_VALUE_LIMIT = 5;
 
 export interface SyncYieldSupplementalOptions {
+  /** Selected families share the existing global supplemental lease and outcome row. */
+  families?: readonly SupplementalSourceFamilyKey[];
   /**
-   * C16 hourly catch-up gate: when set, the run is skipped unless the newest
-   * family cache marker is at least this old, so the hourly slot only refetches
-   * families after a missed 4h slot instead of taking over its cadence.
+   * Group catch-up keeps the newest selected marker gate. A single-family
+   * producer tail skips only with a validated recent snapshot and no failed
+   * outcome, so a sibling's publication cannot defer that family's recovery.
    */
   catchUpMinMarkerAgeSec?: number;
 }
@@ -98,14 +101,19 @@ function dedupeCandidates(candidates: ResolvedYieldCandidate[]): {
  * A timestamp gates cadence, but only validated, current family artifacts prove
  * the supplemental output satisfied. A lone recent marker is not that proof.
  */
-async function loadSupplementalCatchUpEvidence(db: D1Database, nowSec: number, maxAgeSec: number) {
+async function loadSupplementalCatchUpEvidence(
+  db: D1Database,
+  nowSec: number,
+  maxAgeSec: number,
+  families: readonly SupplementalSourceFamilyKey[],
+) {
   const familyCacheRows = await getCaches(
     db,
-    SUPPLEMENTAL_SOURCE_FAMILY_KEYS.map((family) => getYieldSupplementalFamilyCacheKey(family)),
+    families.map((family) => getYieldSupplementalFamilyCacheKey(family)),
   );
   let newestMarkerSec: number | null = null;
   const provenFamilies: Array<{ family: SupplementalSourceFamilyKey; updatedAt: number; snapshotHash: string }> = [];
-  for (const family of SUPPLEMENTAL_SOURCE_FAMILY_KEYS) {
+  for (const family of families) {
     const row = familyCacheRows.get(getYieldSupplementalFamilyCacheKey(family));
     if (!row || !Number.isSafeInteger(row.updatedAt) || row.updatedAt <= 0 || row.updatedAt > nowSec) continue;
     newestMarkerSec = newestMarkerSec == null ? row.updatedAt : Math.max(newestMarkerSec, row.updatedAt);
@@ -128,15 +136,29 @@ export async function syncYieldSupplemental(
   reportProgress?: CronProgressReporter,
   options?: SyncYieldSupplementalOptions,
 ): Promise<CronResult> {
+  signal?.throwIfAborted();
   const startSec = Math.floor(Date.now() / 1000);
+  const families = options?.families ?? SUPPLEMENTAL_SOURCE_FAMILY_KEYS;
+  // Read failures must not erase sibling diagnostics. Scheduled callers hold
+  // the same supplemental lease across this read, family writes and merge.
+  const previousOutcomeRow = options?.families
+    ? (await getCaches(db, [getYieldSupplementalRunOutcomeCacheKey()])).get(getYieldSupplementalRunOutcomeCacheKey())
+    : null;
+  signal?.throwIfAborted();
+  const previousOutcome = previousOutcomeRow
+    ? parseYieldSupplementalRunOutcomeDetailed(previousOutcomeRow.value)
+    : null;
   const catchUpMinMarkerAgeSec = options?.catchUpMinMarkerAgeSec;
   if (catchUpMinMarkerAgeSec != null) {
     const { newestMarkerSec: newestFamilyMarkerSec, provenFamilies } =
-      await loadSupplementalCatchUpEvidence(db, startSec, catchUpMinMarkerAgeSec);
+      await loadSupplementalCatchUpEvidence(db, startSec, catchUpMinMarkerAgeSec, families);
+    signal?.throwIfAborted();
     const newestFamilyMarkerAgeSec =
       newestFamilyMarkerSec == null ? null : Math.max(0, startSec - newestFamilyMarkerSec);
-    if (newestFamilyMarkerAgeSec != null && newestFamilyMarkerAgeSec < catchUpMinMarkerAgeSec) {
-      const artifactProven = provenFamilies.length === SUPPLEMENTAL_SOURCE_FAMILY_KEYS.length;
+    const artifactProven = provenFamilies.length === families.length;
+    const selectedFamilyFailed = previousOutcome?.degradedFamilies.some((family) => families.includes(family)) ?? false;
+    if (newestFamilyMarkerAgeSec != null && newestFamilyMarkerAgeSec < catchUpMinMarkerAgeSec
+      && (families.length !== 1 || (artifactProven && !selectedFamilyFailed))) {
       const reason = artifactProven ? "supplemental-catch-up-not-due" : "supplemental-catch-up-marker-not-due";
       return {
         status: "skipped_neutral",
@@ -168,22 +190,23 @@ export async function syncYieldSupplemental(
       message,
       providerFamily: "yield-supplemental",
       itemsDone: options.itemsDone,
-      itemsTotal: options.itemsTotal ?? SUPPLEMENTAL_SOURCE_FAMILY_KEYS.length,
+      itemsTotal: options.itemsTotal ?? families.length,
       metadata: {
-        providerFamilies: SUPPLEMENTAL_SOURCE_FAMILY_KEYS,
+        providerFamilies: families,
         ...options.metadata,
       },
     });
   };
 
   const retainedFamilyRows = await getCaches(db,
-    SUPPLEMENTAL_SOURCE_FAMILY_KEYS.map((family) => getYieldSupplementalFamilyCacheKey(family))).catch((error) => {
+    families.map((family) => getYieldSupplementalFamilyCacheKey(family))).catch((error) => {
       if (signal?.aborted) throw error;
       logWorkerEventArgs("handler", "warn", "[yield-supplemental] Snapshot identity unavailable; retained outcomes remain unknown", error);
       return null;
     });
+  signal?.throwIfAborted();
   const familySnapshotHashes: Partial<Record<SupplementalSourceFamilyKey, string>> = retainedFamilyRows
-    ? Object.fromEntries(SUPPLEMENTAL_SOURCE_FAMILY_KEYS.map((family) => [
+    ? Object.fromEntries(families.map((family) => [
       family, supplementalFamilySnapshotHash(retainedFamilyRows.get(getYieldSupplementalFamilyCacheKey(family)) ?? null),
     ])) : {};
 
@@ -191,7 +214,7 @@ export async function syncYieldSupplemental(
     itemsDone: 0,
     metadata: {
       countTotals: {
-        sourceFamilies: SUPPLEMENTAL_SOURCE_FAMILY_KEYS.length,
+        sourceFamilies: families.length,
       },
     },
   });
@@ -209,12 +232,13 @@ export async function syncYieldSupplemental(
       startSec,
       signal,
       chainRpcs,
+      families,
     });
   await reportSupplementalProgress("source-family-fetch-complete", "Completed supplemental yield source fetches", {
     itemsDone: familyResults.length,
     metadata: {
       countTotals: {
-        sourceFamilies: SUPPLEMENTAL_SOURCE_FAMILY_KEYS.length,
+        sourceFamilies: families.length,
         rawSupplementalCandidates: candidates.length,
         successfulFamilies: familyResults.filter((family) => family.status === "ok").length,
       },
@@ -290,7 +314,7 @@ export async function syncYieldSupplemental(
         },
         countTotals: {
           familyCandidates: family.candidates.length,
-          sourceFamilies: SUPPLEMENTAL_SOURCE_FAMILY_KEYS.length,
+          sourceFamilies: families.length,
         },
       },
     });
@@ -321,10 +345,25 @@ export async function syncYieldSupplemental(
   }
   // B1/B16: publish the per-family outcome so the next publication can name the
   // families whose snapshot was retained.
+  const mergedResults = { ...previousOutcome?.familyCacheResults, ...Object.fromEntries(
+    families.map((family) => [family, familyCacheResults[family]]),
+  ) };
+  const mergedDegradedFamilies = [
+    ...(previousOutcome?.degradedFamilies.filter((family) => !families.includes(family)) ?? []),
+    ...degradedFamilies,
+  ];
+  const mergedReasons = Object.fromEntries(Object.entries(previousOutcome?.degradedFamilyReasons ?? {})
+    .filter(([family]) => !families.includes(family as SupplementalSourceFamilyKey)));
   await setCache(
     db,
     getYieldSupplementalRunOutcomeCacheKey(),
-    buildYieldSupplementalRunOutcome(familyCacheResults, degradedFamilies, startSec, degradedFamilyReasons, familySnapshotHashes),
+    buildYieldSupplementalRunOutcome(
+      { ...familyCacheResults, ...mergedResults },
+      mergedDegradedFamilies,
+      startSec,
+      { ...mergedReasons, ...degradedFamilyReasons },
+      { ...previousOutcome?.familySnapshotHashes, ...familySnapshotHashes },
+    ),
     signal,
   );
   await reportSupplementalProgress("complete", "Published supplemental yield source caches", {

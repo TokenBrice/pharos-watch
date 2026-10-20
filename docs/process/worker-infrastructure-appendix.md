@@ -572,10 +572,11 @@ Chain/task positions below are one-based. Separate chains run independently; tas
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `quarterHourly` | `sync-fx-rates` | chain 1, task 1 | scheduled-job | 3 | 300 | TTL-derived defaults | every occurrence |
 | `quarterHourly` | `sync-stablecoins` | chain 1, task 2 | scheduled-job | 4 | 480 | 30 / 3 | every occurrence |
-| `quarterHourly` | `snapshot-supply` | chain 1, task 3 | scheduled-job | 0 | 300 | TTL-derived defaults | every occurrence |
-| `quarterHourly` | `snapshot-chain-supply` | chain 1, task 4 | scheduled-job | 0 | 300 | TTL-derived defaults | every occurrence |
-| `quarterHourly` | `snapshot-psi` | chain 1, task 5 | scheduled-job | 0 | 300 | TTL-derived defaults | admission evidence required |
-| `quarterHourly` | `snapshot-public-dataset` | chain 1, task 6 | scheduled-job | 0 | 600 | 30 / 3 | admission evidence required |
+| `quarterHourly` | `sync-yield-supplemental` | chain 1, task 3 | scheduled-job | 3 | 720 | 30 / 3 | admission evidence required |
+| `quarterHourly` | `snapshot-supply` | chain 1, task 4 | scheduled-job | 0 | 300 | TTL-derived defaults | every occurrence |
+| `quarterHourly` | `snapshot-chain-supply` | chain 1, task 5 | scheduled-job | 0 | 300 | TTL-derived defaults | every occurrence |
+| `quarterHourly` | `snapshot-psi` | chain 1, task 6 | scheduled-job | 0 | 300 | TTL-derived defaults | admission evidence required |
+| `quarterHourly` | `snapshot-public-dataset` | chain 1, task 7 | scheduled-job | 0 | 600 | 30 / 3 | admission evidence required |
 | `v9SupplyAttributionOffset` | `sync-v9-supply-attribution` | chain 1, task 1 | scheduled-job | 3 | 300 | 30 / 3 | every occurrence |
 | `depegResolverOffset` | `compute-depeg-resolver` | chain 1, task 1 | scheduled-job | 0 | 300 | TTL-derived defaults | every occurrence |
 | `v9PublicationOffset` | `compute-safety-score-v9` | chain 1, task 1 | scheduled-job | 0 | 300 | TTL-derived defaults | every occurrence |
