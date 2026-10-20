@@ -32,6 +32,9 @@ export * from "./classification/pre-launch";
 export * from "./classification/provenance";
 export * from "./classification/score-tiers";
 export * from "./classification/brand";
+export * from "./classification/reserve-risk";
+export * from "./classification/tape";
+export * from "./classification/verdict";
 export type { BadgeStyle } from "./classification/common";
 
 export const HERO_CHIP_PEG_LABELS = PEG_HERO_CHIP_LABELS;

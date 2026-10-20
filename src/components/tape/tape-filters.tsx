@@ -8,10 +8,8 @@ import { PEG_FILTER_OPTIONS } from "@shared/lib/classification";
 import { CHAIN_META } from "@shared/types/chain-identity";
 
 import { TAPE_FILTER_SEVERITY_VALUES } from "@/hooks/use-events";
-import {
-  SEVERITY_LABEL_INCLUSIVE,
-  type TapeEventSeverity,
-} from "@shared/types/tape-event";
+import { SEVERITY_LABEL_INCLUSIVE } from "@shared/lib/classification/tape";
+import type { TapeEventSeverity } from "@shared/types/tape-event";
 import { TAPE_CLASSES } from "@/components/tape/tape-classes";
 
 export type TapeWindowKey = "24h" | "7d" | "30d" | "90d" | "all";

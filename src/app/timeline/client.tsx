@@ -10,7 +10,7 @@ import {
   type TapeFilterState,
   type TapeWindowKey,
 } from "@/components/tape/tape-filters";
-import { SEVERITY_LABEL } from "@/components/tape/event-card";
+import { SEVERITY_LABEL_INCLUSIVE as SEVERITY_LABEL } from "@shared/lib/classification/tape";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { PEG_FILTER_OPTIONS } from "@shared/lib/classification";
 import { CHAIN_META } from "@shared/types/chain-identity";

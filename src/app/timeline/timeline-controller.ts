@@ -1,4 +1,5 @@
-import { SEVERITY_LABEL_INCLUSIVE, type TapeEventSeverity } from "@shared/types/tape-event";
+import { SEVERITY_LABEL_INCLUSIVE } from "@shared/lib/classification/tape";
+import type { TapeEventSeverity } from "@shared/types/tape-event";
 import {
   TAPE_DEFAULT_SEVERITY,
   type TapeFilterState,

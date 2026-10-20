@@ -44,16 +44,8 @@ import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { CAUSE_META } from "@shared/lib/cause-of-death";
 import { formatCompactUsd, formatUtcDayLabel, getNetPrefix } from "@shared/lib/format";
 import { formatRelativeTimeMs } from "@shared/lib/relative-time";
-import {
-  SEVERITY_LABEL_INCLUSIVE,
-  SEVERITY_TEXT_CLASS,
-  type TapeEvent,
-  type TapeEventSeverity,
-} from "@shared/types/tape-event";
-
-// Re-exported for legacy consumers (`class-digest-row`, `timeline/client`).
-// The tape-event source-of-truth lives in `shared/types/tape-event.ts`.
-export const SEVERITY_LABEL = SEVERITY_LABEL_INCLUSIVE;
+import { SEVERITY_LABEL_INCLUSIVE as SEVERITY_LABEL, SEVERITY_TEXT_CLASS } from "@shared/lib/classification/tape";
+import type { TapeEvent, TapeEventSeverity } from "@shared/types/tape-event";
 
 // Non-color severity glyphs (WCAG 1.4.1) — wire-service / syslog idiom.
 // Rendered in mono with tabular-width so the column aligns across rows.

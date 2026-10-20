@@ -12,7 +12,8 @@ import {
   formatTapeEventTitle,
 } from "@/lib/tape-derive";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
-import { SEVERITY_LABEL, SEVERITY_TEXT_CLASS, type TapeEvent } from "@shared/types/tape-event";
+import { SEVERITY_LABEL, SEVERITY_TEXT_CLASS } from "@shared/lib/classification/tape";
+import type { TapeEvent } from "@shared/types/tape-event";
 import { DETAIL_MODULE_TITLE_CLASS } from "@/components/stablecoin-detail/section-title-class";
 
 interface TapeForCoinTeaserProps {

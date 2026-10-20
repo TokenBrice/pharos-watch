@@ -1,13 +1,13 @@
 import Link from "next/link";
 
-import { LAUNCH_PHASE_LABELS, PHASE_DOT, type DriftDisplayStatus } from "@/lib/pre-launch";
+import { PHASE_DOT, type DriftDisplayStatus } from "@/lib/pre-launch";
+import { LAUNCH_PHASE_LABELS } from "@shared/lib/classification/pre-launch";
 import {
   HORIZON_COINS_BY_PHASE,
   HORIZON_CONSTELLATION_LAYOUT,
   HORIZON_PHASE_FIELD_CLASSES,
   HORIZON_PHASE_LAYOUTS,
   HORIZON_PHASE_ORDER,
-  HORIZON_PHASE_SHORT_LABELS,
   HORIZON_UNPHASED_LAYOUT,
   HORIZON_UNPHASED_STABLECOINS,
   type HorizonPhaseLayout,
@@ -63,7 +63,7 @@ interface HorizonCell {
 
 const PHASE_CELLS: readonly HorizonCell[] = HORIZON_PHASE_ORDER.map((phase, index) => ({
   key: phase,
-  label: HORIZON_PHASE_SHORT_LABELS[phase],
+  label: LAUNCH_PHASE_LABELS[phase],
   srLabel: LAUNCH_PHASE_LABELS[phase],
   markerClass: PHASE_DOT[phase],
   fieldClass: HORIZON_PHASE_FIELD_CLASSES[phase],

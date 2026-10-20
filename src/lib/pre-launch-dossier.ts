@@ -1,7 +1,7 @@
 import { formatUtcDayLabel } from "@shared/lib/format";
 import type { DateHistoryEntry, LaunchMilestone, StablecoinMeta } from "@shared/types";
+import { LAUNCH_PHASE_LABELS } from "@shared/lib/classification/pre-launch";
 import {
-  LAUNCH_PHASE_LABELS,
   dateScore,
   formatFuzzyDate,
   getDriftStatus,

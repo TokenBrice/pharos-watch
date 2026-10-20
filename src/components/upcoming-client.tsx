@@ -24,8 +24,8 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { LAUNCH_PHASE_LABELS } from "@shared/lib/classification/pre-launch";
 import {
-  LAUNCH_PHASE_LABELS,
   PHASE_DOT,
   dateScore,
   formatFuzzyDate,

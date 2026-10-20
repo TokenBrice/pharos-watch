@@ -18,6 +18,7 @@ export type MintBridgeOwnershipViolationCode =
   | "unknown-deployment-ref"
   | "duplicate-deployment-ref"
   | "non-normalized-deployment-ref"
+  | "route-deployment-identity-mismatch"
   | "mint-ref-not-native"
   | "bridge-control-unknown-route"
   | "representation-route-without-bridge-mint"
@@ -370,6 +371,18 @@ export function validateMintBridgeOwnership(
         "non-normalized-deployment-ref",
         `bridgeRouteRisk.routes[${index}].id`,
         `bridge route ID "${value}" must be a normalized chain:contractAddress ID; normalized value is "${normalized || "<invalid>"}"`,
+        "error",
+      );
+    }
+    const deploymentIdentity = normalizeDeploymentId(`${route.destinationChain}:${route.contractAddress}`);
+    if (normalized !== deploymentIdentity) {
+      addViolation(
+        violations,
+        seen,
+        meta,
+        "route-deployment-identity-mismatch",
+        `bridgeRouteRisk.routes[${index}].id`,
+        `bridge route ID "${value}" must identify its destination deployment "${deploymentIdentity}"`,
         "error",
       );
     }

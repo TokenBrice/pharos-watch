@@ -567,12 +567,6 @@ export type BridgeRouteScopedQuestion = import("./stablecoin-meta-control-schema
 export const INFRASTRUCTURE_VALUES = ["liquity-v1", "liquity-v2", "m0"] as const;
 export type Infrastructure = (typeof INFRASTRUCTURE_VALUES)[number];
 
-export const INFRASTRUCTURE_LABELS: Record<Infrastructure, string> = {
-  "liquity-v1": "Liquity v1",
-  "liquity-v2": "Liquity v2",
-  m0: "M0",
-};
-
 export const VARIANT_KIND_VALUES = [
   "pure-wrapper",
   "savings-passthrough",

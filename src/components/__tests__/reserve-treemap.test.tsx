@@ -9,7 +9,6 @@ import { ReserveTreemapChart } from "@/components/reserve-treemap-chart";
 import { condenseReserveSlices, reviewedCompositionSlices } from "@/components/stablecoin-detail/reserve-presentation";
 import { projectReserveQualityClientSummary } from "@/lib/stablecoin-detail-reserve-quality-client";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { RISK_COLORS } from "@/lib/chart-colors";
 import type { ReserveCompositionSlice } from "@/components/stablecoin-detail/reserve-presentation";
 import { RESERVE_RISK_PRESENTATION } from "@shared/lib/classification/reserve-risk";
 
@@ -147,7 +146,7 @@ describe("ReserveTreemap", () => {
     expect(tiles).toHaveLength(7);
     tiles.forEach((tile, index) => {
       expect(areaShare(tile)).toBeCloseTo(slices[index]!.pct / 100);
-      expect(tile.querySelector("rect")!.getAttribute("fill")).toBe(RISK_COLORS[slices[index]!.risk]);
+      expect(tile.querySelector("rect")!.getAttribute("fill")).toBe(RESERVE_RISK_PRESENTATION[slices[index]!.risk].fillColor);
     });
     expect(tiles[5]!.querySelector("text")).toBeNull();
     expect(tiles[6]!.querySelector("title")!.textContent).toContain("Reviewed 6 · 2%");

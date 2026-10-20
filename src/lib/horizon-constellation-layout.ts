@@ -1,6 +1,6 @@
 import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import { isPreLaunchStablecoinMeta } from "@shared/lib/stablecoins/status";
-import { PRE_LAUNCH_PHASE_CLASSES } from "@shared/lib/classification";
+import { PRE_LAUNCH_PHASE_CLASSES } from "@shared/lib/classification/pre-launch";
 import type { LaunchPhase } from "@shared/types";
 import type { StablecoinClientMeta } from "@shared/types/stablecoin-client-meta";
 import { dateScore } from "@/lib/pre-launch";
@@ -14,14 +14,6 @@ export const HORIZON_PHASE_ORDER: readonly LaunchPhase[] = [
   "beta",
   "launching-soon",
 ];
-
-export const HORIZON_PHASE_SHORT_LABELS: Record<LaunchPhase, string> = {
-  announced: "Announced",
-  testnet: "Testnet",
-  auditing: "Auditing",
-  beta: "Beta",
-  "launching-soon": "Launching soon",
-};
 
 export const HORIZON_PHASE_FIELD_CLASSES: Record<LaunchPhase, string> = {
   announced: PRE_LAUNCH_PHASE_CLASSES.announced.orbit,

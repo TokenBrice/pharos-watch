@@ -351,6 +351,27 @@ function overlayEntry(
 }
 
 describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
+  it("quarantines a mismatched raw registry route before bridge adaptation", () => {
+    const mismatched = representationRoute(BASE_ROUTE, {
+      destinationChain: "arbitrum",
+      contractAddress: ARBITRUM_ROUTE.slice(ARBITRUM_ROUTE.indexOf(":") + 1),
+    });
+    const metadata = meta("fixture-mismatched-route-identity", {
+      bridgeRouteRisk: bridgeProfile([mismatched]),
+      contracts: [{ chain: "arbitrum", address: mismatched.contractAddress, decimals: 18 }],
+    });
+    const { extension, compiled } = compileFixture(metadata);
+    expect(extension.assets[0]).toMatchObject({
+      assetId: metadata.id,
+      admissionQuarantine: {
+        code: "fact-build-failed",
+        path: "registry.mintBridgeOwnership",
+        message: expect.stringContaining("route-deployment-identity-mismatch"),
+      },
+    });
+    expect(controlsFor(compiled, metadata.id)).toEqual([]);
+  });
+
   it("rejects a raw active Mint Authority bridge capability at both enforcement layers", () => {
     const contaminatedMeta = {
       ...meta("fixture-contaminated-mint-bridge", {
@@ -2333,4 +2354,49 @@ describe("native external-validation transfer tiers", () => {
       expect(BridgeRouteRiskProfileSchema.safeParse(input).success).toBe(false);
     },
   );
+});
+
+describe("independent bridge incident evidence", () => {
+  const budget = V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.reviewedResearchMaxAgeSec;
+  const clockSec = Date.parse("2026-10-11T00:00:00Z") / 1000;
+  const currentAt = new Date(clockSec * 1000).toISOString();
+
+  it.each(["current", "stale", "future"] as const)(
+    "retains an independently active incident when ordinary route identity is %s", (state) => {
+      const observedAt = new Date((state === "stale" ? clockSec - budget - 1 :
+        state === "future" ? clockSec + 1 : clockSec) * 1000).toISOString();
+      const metadata = meta("fixture-active-incident-route-clock", {
+        bridgeRouteRisk: bridgeProfile([
+          representationRoute(BASE_ROUTE, {
+            observedAt, controllerChain: "base", controllerAddress: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          }),
+        ], { reviewedAt: currentAt }),
+      });
+      const before = compileFixture(metadata, { clockSec }).compiled.assets[0]!;
+      const target = before.controls.find(control => control.controlKind === "bridge")!;
+      const original = incidentAdapters.getSafetyScoreV9ReviewedIncidents("usdp-parallel", clockSec)
+        .find(row => row.domain === "control")!;
+      if (original.domain !== "control") throw new Error("Expected control incident fixture");
+      const incident = V9ReviewedIncidentSchema.parse({
+        ...original, assetId: metadata.id, status: "active", resolvedAt: null,
+        remediation: { ...original.remediation, state: "verified" },
+        scope: { kind: "control", controlKey: target.controlKey },
+        posture: { ...original.posture, controlKinds: ["bridge"], incidentState: "active" },
+      });
+      const incidentMock = vi.spyOn(incidentAdapters, "getSafetyScoreV9ReviewedIncidents").mockReturnValue([incident]);
+      try {
+        const asset = compileFixture(metadata, { clockSec }).compiled.assets[0]!;
+        expect(asset.controls.find(control => control.controlKey === target.controlKey)?.incidentState).toBe("active");
+        const result = evaluateV9EconomicControlAssetFacts(
+          asset, { assetId: asset.assetId, ...asset.economicControlReview }, V9_CANDIDATE_POLICY_V1,
+        );
+        expect(result.structuralFailures).toContainEqual(expect.objectContaining({
+          kind: "active-control-incident", controlKeys: [target.controlKey],
+        }));
+      } finally {
+        incidentMock.mockRestore();
+      }
+    },
+  );
+
 });

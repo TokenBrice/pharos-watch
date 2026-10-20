@@ -666,7 +666,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/stablecoins/mint-bridge-ownership.ts",
-      "sha256": "3e92a632b4fb87240f17508960a0a2bf4a577cf6f916e24e317798e5728bb8f6"
+      "sha256": "e286f3ca619b6c76740deb15a0c54cac3266db6bbcf149a46bfe7666853a152e"
     },
     {
       "path": "shared/lib/stablecoins/registry-indexes.ts",
@@ -726,7 +726,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/core.ts",
-      "sha256": "1f5022bd10a560de2b1e84ccaf9ce45fc76e5e62d84fed99e4a2b5e9330f982f"
+      "sha256": "16d2cfc8bb7e7c4a05b5c7dbadc490ceb47ff8d66930437f6ec755bc14d8c0e6"
     },
     {
       "path": "shared/types/date-primitives.ts",
@@ -982,7 +982,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/stablecoin-meta-mint-authority-refinements.ts",
-      "sha256": "d04b18c0d8e78224bab368c7075d968479600d76e55486fb8883fd46b4538c1e"
+      "sha256": "0a8965e070057198318e7e0db64bf1f11f6d56546e43b79d4175b6690f69324d"
     },
     {
       "path": "shared/types/stablecoin-meta-schemas.ts",
@@ -1307,7 +1307,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-10-19-block-26225592-shock-coverage.json.gz"
     }
   ],
-  "digest": "3a03cd7e6d24c92b60ecadf2580e752395d5eba8399c3df4f3280bd5d20d76c5"
+  "digest": "a5611d6cdaefa23ec06a32b7f5027023986ce1089cfe754f77538e3245b0c045"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

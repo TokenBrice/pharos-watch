@@ -16,7 +16,7 @@ import {
   CORE_AGGREGATE_STABLECOIN_COUNT,
 } from "@/lib/stablecoin-static-data";
 import { UNIVERSES } from "@/lib/universe-vocabulary";
-import { SEVERITY_DOT_CLASS, SEVERITY_LABEL } from "@shared/types/tape-event-constants";
+import { SEVERITY_DOT_CLASS, SEVERITY_LABEL } from "@shared/lib/classification/tape";
 import type { TapeEvent } from "@shared/types/tape-event";
 
 function durationFromCount(count: number): string {

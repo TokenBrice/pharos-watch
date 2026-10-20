@@ -1,6 +1,5 @@
 import type { ReserveRisk } from "@shared/types";
 import { RESERVE_RISK_PRESENTATION } from "@shared/lib/classification/reserve-risk";
-import { RISK_ACCENT_COLORS, RISK_COLORS } from "@/lib/chart-colors";
 import { formatDecimal } from "@shared/lib/format";
 
 /** A risk-tier swatch is the tile itself in miniature: same fill, same accent border. */
@@ -9,7 +8,7 @@ export function ReserveRiskSwatch({ risk }: { risk: ReserveRisk }) {
     <span
       aria-hidden="true"
       className="size-2.5 shrink-0 rounded-[2px] border"
-      style={{ backgroundColor: RISK_COLORS[risk], borderColor: RISK_ACCENT_COLORS[risk] }}
+      style={{ backgroundColor: RESERVE_RISK_PRESENTATION[risk].fillColor, borderColor: RESERVE_RISK_PRESENTATION[risk].accentColor }}
     />
   );
 }
