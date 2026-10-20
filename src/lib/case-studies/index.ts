@@ -101,4 +101,3 @@ const CASE_STUDY_EVENT_WINDOWS: readonly CaseStudyEventWindowResolverItem[] =
 export function caseStudySlugForEvent(coinId: string, tsMs: number): string | undefined {
   return resolveCaseStudySlugForEvent(CASE_STUDY_EVENT_WINDOWS, coinId, tsMs);
 }
-
