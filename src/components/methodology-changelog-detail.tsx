@@ -2,10 +2,8 @@ import type { ReactNode } from "react";
 import {
   formatMethodologyDisplayDate,
   toMethodologyVersionLabel,
-  type MethodologyChangelogDetailBlock,
-  type MethodologyChangelogEntry,
-  type MethodologyChangelogRichText,
 } from "@shared/lib/methodology-versions/base";
+import type { MethodologyChangelogDetailBlock, MethodologyChangelogEntry, MethodologyChangelogRichText } from "@shared/types/editorial-content";
 import { slugifyId } from "@shared/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ContentTable } from "@/components/table";

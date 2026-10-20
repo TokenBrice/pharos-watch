@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { parseDestructiveOperationMode } from "../destructive-operation-guard";
+import { parseDestructiveOperationArgs } from "../destructive-operation-guard";
 
-describe("parseDestructiveOperationMode", () => {
+describe("parseDestructiveOperationArgs", () => {
   it("defaults to local dry-run mode", () => {
-    expect(parseDestructiveOperationMode({ argv: [], scriptName: "repair" })).toEqual({
+    expect(parseDestructiveOperationArgs({ argv: [], scriptName: "repair" }).mode).toEqual({
       dryRun: true,
       remote: false,
       targetFlag: "--local",
@@ -11,15 +11,15 @@ describe("parseDestructiveOperationMode", () => {
   });
 
   it("requires execute and script confirmation for live mode", () => {
-    expect(() => parseDestructiveOperationMode({ argv: ["--execute"], scriptName: "repair" })).toThrow(
+    expect(() => parseDestructiveOperationArgs({ argv: ["--execute"], scriptName: "repair" }).mode).toThrow(
       "live mutation requires --execute --confirm repair",
     );
 
     expect(
-      parseDestructiveOperationMode({
+      parseDestructiveOperationArgs({
         argv: ["--execute", "--confirm", "repair"],
         scriptName: "repair",
-      }),
+      }).mode,
     ).toEqual({
       dryRun: false,
       remote: false,
@@ -28,10 +28,10 @@ describe("parseDestructiveOperationMode", () => {
   });
 
   it("rejects confirmation naming another script", () => {
-    expect(() => parseDestructiveOperationMode({
+    expect(() => parseDestructiveOperationArgs({
       argv: ["--execute", "--confirm", "another-script"],
       scriptName: "repair",
-    })).toThrow("live mutation requires --execute --confirm repair");
+    }).mode).toThrow("live mutation requires --execute --confirm repair");
   });
 
   it("allows a custom dry-run condition without bypassing confirmation when false", () => {
@@ -40,40 +40,40 @@ describe("parseDestructiveOperationMode", () => {
       cliOptions: { preview: { type: "boolean" as const } },
       executeAsDryRunWhen: (values: Record<string, unknown>) => values.preview === true,
     };
-    expect(parseDestructiveOperationMode({
+    expect(parseDestructiveOperationArgs({
       ...options, argv: ["--execute", "--preview"],
-    }).dryRun).toBe(true);
-    expect(() => parseDestructiveOperationMode({
+    }).mode.dryRun).toBe(true);
+    expect(() => parseDestructiveOperationArgs({
       ...options, argv: ["--execute"],
-    })).toThrow("live mutation requires --execute --confirm repair");
-    expect(parseDestructiveOperationMode({
+    }).mode).toThrow("live mutation requires --execute --confirm repair");
+    expect(parseDestructiveOperationArgs({
       ...options, argv: ["--execute", "--confirm", "repair"],
-    }).dryRun).toBe(false);
+    }).mode.dryRun).toBe(false);
   });
 
   it("never authorizes mutation on the configured help path", () => {
-    expect(parseDestructiveOperationMode({
+    expect(parseDestructiveOperationArgs({
       argv: ["--execute", "--help", "--remote"],
       cliOptions: { help: { type: "boolean" } },
       scriptName: "repair",
-    })).toEqual({ dryRun: true, remote: true, targetFlag: "--remote" });
+    }).mode).toEqual({ dryRun: true, remote: true, targetFlag: "--remote" });
   });
 
   it("supports compatibility execute aliases without skipping confirmation", () => {
     expect(() =>
-      parseDestructiveOperationMode({
+      parseDestructiveOperationArgs({
         argv: ["--apply"],
         executeAliases: ["--apply"],
         scriptName: "repair",
-      }),
+      }).mode,
     ).toThrow("live mutation requires --execute (or --apply) --confirm repair");
 
     expect(
-      parseDestructiveOperationMode({
+      parseDestructiveOperationArgs({
         argv: ["--apply", "--confirm", "repair"],
         executeAliases: ["--apply"],
         scriptName: "repair",
-      }),
+      }).mode,
     ).toEqual({
       dryRun: false,
       remote: false,
@@ -83,12 +83,12 @@ describe("parseDestructiveOperationMode", () => {
 
   it("supports remote-only operations with remote as the default target", () => {
     expect(
-      parseDestructiveOperationMode({
+      parseDestructiveOperationArgs({
         argv: [],
         defaultTarget: "--remote",
         localAllowed: false,
         scriptName: "repair",
-      }),
+      }).mode,
     ).toEqual({
       dryRun: true,
       remote: true,
@@ -96,17 +96,17 @@ describe("parseDestructiveOperationMode", () => {
     });
 
     expect(() =>
-      parseDestructiveOperationMode({
+      parseDestructiveOperationArgs({
         argv: ["--local"],
         defaultTarget: "--remote",
         localAllowed: false,
         scriptName: "repair",
-      }),
+      }).mode,
     ).toThrow("--local is not supported");
   });
 
   it("allows explicit remote targeting without changing dry-run default", () => {
-    expect(parseDestructiveOperationMode({ argv: ["--remote"], scriptName: "repair" })).toEqual({
+    expect(parseDestructiveOperationArgs({ argv: ["--remote"], scriptName: "repair" }).mode).toEqual({
       dryRun: true,
       remote: true,
       targetFlag: "--remote",
@@ -115,13 +115,13 @@ describe("parseDestructiveOperationMode", () => {
 
   it("rejects contradictory mode flags", () => {
     expect(() =>
-      parseDestructiveOperationMode({
+      parseDestructiveOperationArgs({
         argv: ["--execute", "--dry-run", "--confirm", "repair"],
         scriptName: "repair",
-      }),
+      }).mode,
     ).toThrow("--execute and --dry-run are mutually exclusive");
 
-    expect(() => parseDestructiveOperationMode({ argv: ["--local", "--remote"], scriptName: "repair" })).toThrow(
+    expect(() => parseDestructiveOperationArgs({ argv: ["--local", "--remote"], scriptName: "repair" }).mode).toThrow(
       "--local and --remote are mutually exclusive",
     );
   });

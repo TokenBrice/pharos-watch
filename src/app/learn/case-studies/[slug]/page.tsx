@@ -1,6 +1,7 @@
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { createStaticSlugRoute } from "@/lib/static-slug-page";
-import { CASE_STUDY_LIST, type CaseStudy } from "@/lib/case-studies";
+import { CASE_STUDY_LIST } from "@/lib/case-studies";
+import type { CaseStudy } from "@shared/types/editorial-content";
 import { CaseStudyArticleJsonLd } from "../case-study-json-ld";
 import { CaseStudyBody } from "../case-study-body";
 import { LearnPageShell } from "../../_shared/learn-page-shell";

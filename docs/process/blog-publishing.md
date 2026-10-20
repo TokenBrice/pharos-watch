@@ -52,13 +52,13 @@ no RSS feed.
 
 - **Registry:** one JSON record per entry at `src/data/changelogs/<dateRange.to>.json`,
   statically imported by the generated `src/data/changelogs/index.ts` barrel,
-  which re-sorts newest-first. Type declarations live in
-  `src/data/changelogs/types.ts`; runtime field rules live in
-  `scripts/lib/editorial-content.ts`. `npm run check:editorial-content` validates
+  which re-sorts newest-first. `WeeklyContentSchema` and its inferred TypeScript
+  shapes share the runtime-neutral `shared/types/editorial-content.ts` authority;
+  renderer imports are type-only. `npm run check:editorial-content` validates
   metadata, source registration and internal references before build.
 - **The filename is data.** It must equal `dateRange.to`, and every dated file
   must be registered in the barrel. Both dates must be valid `YYYY-MM-DD` days:
-  `scripts/lib/editorial-content.ts` rejects malformed or impossible dates;
+  `shared/types/editorial-content.ts` rejects malformed or impossible dates;
   the barrel sorts lexicographically and the archive manifest groups those dates.
 - **One entry per Monday–Sunday week.** `dateRange.from` is a Monday and
   `dateRange.to` the following Sunday (UTC, inclusive). The editorial-content

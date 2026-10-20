@@ -5,7 +5,8 @@ import { createMethodologyVersion } from "@shared/lib/methodology-versions/base"
 import { METHODOLOGY_CHANGELOG_REGISTRY } from "@shared/lib/methodology-versions/registry";
 import { MINT_AUTHORITY_METHODOLOGY_PATH, MINT_AUTHORITY_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { PUBLIC_ROUTE_PATHS } from "../../src/lib/public-route-inventory";
-import { CaseStudyContentSchema, DependencyExposureContentSchema, DependencyMapContentSchema, MethodologyContentSchema, WeeklyContentSchema, editorialReferenceIssues } from "../lib/editorial-content";
+import { CaseStudyContentSchema, DependencyExposureContentSchema, DependencyMapContentSchema, MethodologyContentSchema, WeeklyContentSchema } from "@shared/types/editorial-content";
+import { editorialReferenceIssues } from "../lib/editorial-content";
 import { parseStrictCliArgs, runDirectCli, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
 import { collectSourceFiles } from "../lib/source-files.mts";
 

@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { sortCemeteryCoins } from "@shared/lib/cemetery";
 import { CAUSE_META } from "@shared/lib/cause-of-death";
 import { buildFrozenCemeteryProjection, CEMETERY_ENTRIES, CEMETERY_RECORDED_AT_DESCRIPTION, type CemeteryEntry } from "@shared/lib/cemetery-merged";
+import { escapeCsvField } from "@shared/lib/csv";
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
@@ -148,21 +149,11 @@ function normalizeCsvText(value: string): string {
   return value.replace(/\s+/g, " ").trim();
 }
 
-function formatCsvValue(value: unknown): string {
-  if (value == null) {
-    return "";
-  }
-
-  const raw = Array.isArray(value)
+function formatCsvValue(value: CemeteryDatasetRow[keyof CemeteryDatasetRow]): string {
+  const scalar = Array.isArray(value)
     ? value.map((entry) => `${entry.chain}:${entry.address}`).join("; ")
-    : String(value);
-  const text = normalizeCsvText(raw);
-
-  if (!/[",\n\r]/.test(text)) {
-    return text;
-  }
-
-  return `"${text.replaceAll("\"", "\"\"")}"`;
+    : typeof value === "boolean" ? String(value) : value;
+  return escapeCsvField(typeof scalar === "string" ? normalizeCsvText(scalar) : scalar);
 }
 
 function renderCsv(rows: CemeteryDatasetRow[]): string {

@@ -8,7 +8,7 @@ Contract for `/learn/case-studies/`, `/learn/case-studies/[slug]/`, `/learn/mech
 
 ## Case Studies
 
-`CASE_STUDY_LIST` in `src/lib/case-studies/index.ts` owns display, sitemap and static-param order. Authored JSON records use `src/lib/case-studies/types.ts`. The evergreen Start Here set is excluded from the remaining archive rows so an article appears only once; the archive is editorial, not an ordinal ranking.
+`CASE_STUDY_LIST` in `src/lib/case-studies/index.ts` owns display, sitemap and static-param order. Authored JSON records use `CaseStudyContentSchema` in `shared/types/editorial-content.ts`; root and nested TypeScript shapes derive from that schema through type-only readonly views, not a separate frontend model. The evergreen Start Here set is excluded from the remaining archive rows so an article appears only once; the archive is editorial, not an ordinal ranking.
 
 Visible article metadata credits Pharos, links to `/about/#editorial-ai-policy`, and displays authored `datePublished` in UTC alongside reading time. Article JSON-LD agrees with organization authorship. Git modification dates are not human review or substantive-update dates; no individual reviewer is implied. The hub emits ItemList JSON-LD; articles use `public/og-learn-case-<slug>.png`.
 

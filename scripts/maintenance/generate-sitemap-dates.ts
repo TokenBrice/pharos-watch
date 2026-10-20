@@ -36,7 +36,7 @@ const CASE_STUDY_DETAIL_SHARED_SOURCES = [
   join(__dirname, "../../src/app/learn/case-studies/case-study-json-ld.tsx"),
   join(__dirname, "../../src/app/learn/case-studies/case-study-page-shell.tsx"),
   join(__dirname, "../../src/app/learn/case-studies/case-study-timeline.tsx"),
-  join(__dirname, "../../src/lib/case-studies/types.ts"),
+  join(__dirname, "../../shared/types/editorial-content.ts"),
 ];
 const BLOG_DETAIL_SHARED_SOURCES = [
   join(__dirname, "../../src/app/blog/[slug]/page.tsx"),

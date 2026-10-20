@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import type { ChangelogEntry } from "@/data/changelogs/types";
+import type { ChangelogEntry } from "@shared/types/editorial-content";
 
 function toLocalMidnight(ymd: string): Date {
   return new Date(ymd + "T00:00:00");

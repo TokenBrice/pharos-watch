@@ -72,6 +72,7 @@ Tracked ownership handoffs and source-attribution corrections use `worker/script
 - Use `worker/scripts/yield-history-cleanup.ts` controls rather than ad hoc SQL. The script owns the `--arm-writer-pause`, `--clear-writer-pause`, `--execute`, `--confirm yield-history-cleanup`, and guarded restore paths.
 - If the pause key is stale and no cleanup operator owns it, clear it with the script's `--clear-writer-pause` path, then let the next post-V9 `sync-yield-data` cycle publish.
 - If cleanup failed after deleting rows, use the exported version-3 artifact and the script's guarded restore path. It includes `hourlyRows` and `dailyRows` with separate counts, each row's nullable `source_observed_at` observation clock, and each daily row's `snapshot_date` identity and publication fields. Both tiers are validated before restore starts; missing observation-clock fields, missing daily data, count mismatches, and older version-1/version-2 artifacts are rejected. Older artifacts cannot prove complete-row restoration; do not invent observation clocks from `recorded_at` or silently fill them with null. Remote restore requires `--execute --confirm yield-history-cleanup` and an armed writer pause.
+- The exported `YieldHistoryCleanupRow`, `YieldHistoryCleanupDailyRow`, and `YieldHistoryCleanupArtifact` types derive from the strict artifact schemas. SQL column inventories and hourly/daily restore identities remain explicit.
 
 ## Abort Conditions
 

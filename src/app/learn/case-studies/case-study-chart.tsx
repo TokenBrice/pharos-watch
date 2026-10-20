@@ -6,7 +6,7 @@ import { QueryErrorNotice } from "@/components/query-error-notice";
 import type {
   CaseStudyDataWidget,
   CaseStudyEventWindow,
-} from "@/lib/case-studies/types";
+} from "@shared/types/editorial-content";
 import { getCaseStudyChartDays } from "@/lib/case-study-event-window";
 
 /**

@@ -32,11 +32,11 @@ Selection shared with sibling panels belongs in the route client, not hidden ins
 
 Isometric metaphor scenes are assembled from the scene kit, extracted from the Cemetery plot map. Its consumers are the Cemetery, Harbor on `/chains/` (`src/components/harbor/`) and the PSI beacon (`src/components/psi-beacon/`), which draws the kit lighthouse. The kit is a library of functions, not a layout engine; scene-specific shapes, packing and cameras stay with the scene.
 
-The kit's three layers are pure geometry/marks in `shared/lib/scene/`, React rendering and material tokens in `src/components/scene/`, and atlas/OG build helpers in `scripts/lib/scene-atlas.ts` / `scripts/lib/scene-og.ts`. Read those owners for exported helpers. Scenes retain their own shapes, packing and cameras. Compose the kit's material tokens into the root and scene classes into each SVG; OG documents inline the kit sheet before the scene's own sheet.
+The kit's three layers are pure geometry/marks in `shared/lib/scene/`, React rendering and material tokens in `src/components/scene/`, and atlas/OG build helpers in `scripts/lib/scene-atlas.ts` / `scripts/lib/scene-og.ts`. Import generic helpers/types directly from those owners; cemetery entrypoints bind scene configuration, logo inputs, composition and build/check behavior. Compose the kit's material tokens into the root and scene classes into each SVG; OG documents inline the kit sheet before the scene's own sheet.
 
 Kit rules:
 
-- **Geometry is pure.** No DOM, clock or randomness; the only seed is `seededStream(fnv1a(id))`, so the same input in any order draws byte-identical marks.
+- **Geometry is pure.** No DOM, clock or randomness; the only seed is `seededStream(fnv1a32(id))`, using the frozen UTF-16 hash from `shared/lib/fnv1a.ts`, so the same input in any order draws byte-identical marks.
 - **Rounding is part of the contract.** Screen coordinates round to 0.1 SVG units, face-local data and matrix coefficients to 0.001, and −0 folds to 0.
 - **Geometry never carries colour.** Every mark has `cls`, a list of class tokens; `SceneMarks` requires `classOf`. Colour lives in custom properties behind the class.
 - **Paint servers are hosted once and never hidden.** `SceneDefs` renders a 0×0 host SVG (never `display: none`, which breaks every `url(#…)` reference while a scene is hidden) inside the element that sets the scene's tokens; IDs are `${idPrefix}-…`, one prefix per scene.

@@ -3,10 +3,9 @@ import { StructuredChangelogDetail } from "@/components/methodology-changelog-de
 import {
   formatMethodologyDisplayDate,
   toMethodologyVersionLabel,
-  type MethodologyChangelogEntry,
 } from "@shared/lib/methodology-versions/base";
 
-export type { MethodologyChangelogEntry };
+import type { MethodologyChangelogEntry } from "@shared/types/editorial-content";
 
 function Pill({ children }: { children: React.ReactNode }) {
   return (

@@ -6,7 +6,7 @@ import {
 import { buildArticleJsonLd, safeJsonLd } from "@/lib/json-ld";
 import { JsonLdScript } from "@/components/json-ld-script";
 import sitemapDates from "@/generated/sitemap-dates.json";
-import type { CaseStudy } from "@/lib/case-studies/types";
+import type { CaseStudy } from "@shared/types/editorial-content";
 import {
   caseStudyWordCount,
   estimateCaseStudyReadingMinutes,

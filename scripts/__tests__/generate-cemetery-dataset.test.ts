@@ -7,6 +7,7 @@ import { FROZEN_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { CAUSE_META } from "@shared/lib/cause-of-death";
+import { escapeCsvField } from "@shared/lib/csv";
 import { buildCemeteryDataset } from "../maintenance/generate-cemetery-dataset";
 import { z } from "zod";
 
@@ -125,5 +126,33 @@ describe("cemetery dataset schema 1.1", () => {
       expect(Object.keys(row).sort()).toEqual(describedFields);
     }
     expect(CSV_HEADER.split(",").sort()).toEqual(describedFields);
+  });
+});
+
+describe("cemetery CSV escaping", () => {
+  it.each([
+    ['He said "goodbye"', '"He said ""goodbye"""'],
+    ["One, two", '"One, two"'],
+    ["  Multiple\n lines\r\n\t here  ", "Multiple lines here"],
+    [null, ""],
+    [" =SUM(1,2) ", "\"'=SUM(1,2)\""],
+    [" +1 ", "'+1"],
+    [" -1 ", "'-1"],
+    [" @name ", "'@name"],
+  ])("normalizes and escapes %j with the shared CSV policy", (value, escaped) => {
+    const contracts = [{ chain: "ethereum", address: "0x123" }, { chain: "solana", address: "abc" }];
+    const { json, csv } = buildCemeteryDataset([{
+      ...CEMETERY_ENTRIES[0], epitaph: value ?? undefined, obituary: "  Multiline\n obituary\t text. ", contracts,
+    }]);
+    const row = JSON.parse(json).rows[0];
+    const expected = CSV_HEADER.split(",").map((column) => {
+      if (column === "epitaph") return escaped;
+      if (column === "obituary") return "Multiline obituary text.";
+      if (column === "contracts") return "ethereum:0x123; solana:abc";
+      const scalar = row[column];
+      return escapeCsvField(typeof scalar === "string" ? scalar.replace(/\s+/g, " ").trim() : String(scalar ?? ""));
+    });
+    expect(csv).toBe(`${CSV_HEADER}\n${expected.join(",")}\n`);
+    expect(escaped).toBe(escapeCsvField(value?.replace(/\s+/g, " ").trim()));
   });
 });

@@ -25,7 +25,7 @@ import { CaseStudyShare } from "./case-study-share";
 import { CaseStudyTimeline } from "./case-study-timeline";
 import { estimateCaseStudyReadingMinutes } from "./case-study-reading-time";
 import { CASE_STUDY_LIST } from "@/lib/case-studies";
-import type { CaseStudy } from "@/lib/case-studies/types";
+import type { CaseStudy } from "@shared/types/editorial-content";
 
 /** slug -> position in CASE_STUDY_LIST, built once so neighbour math avoids repeated O(n) scans. */
 const CASE_STUDY_INDEX_BY_SLUG = new Map(CASE_STUDY_LIST.map((study, index) => [study.slug, index]));

@@ -18,6 +18,8 @@ Every later task that says "verified against the harness runbook" means the proc
 | Before activating a score-neutral candidate stack in production | Pre-activation sweep                    | Both captures empty at both commits               |
 | Immediately after a score-neutral cutover deploy               | Post-deploy check                         | Replay at the pre-cutover commit matches the live publication |
 
+`npm run safety-score-v9:anchor-gate -- --replay <path>` is a calibration sniff check, not the production-acceptance gate. Its contract supports minimum-grade anchors (including publication-clock time boxes), archetype-set dominance and maximum-grade adverse pins; thresholds come from the supplied policy. Retired pair comparisons and numeric-score pins are not supported. Any future rule of either form needs explicit approval and its own acceptance tests. Gate-only simplifications must preserve the complete verdict JSON on the same pinned replay and clock; they do not change scoring methodology or release thresholds.
+
 ## Why the replay is a fair test
 
 `prepare-safety-score-v9-input` writes the publication-exact compiler input to the private D1 cache row `report-cards:fixed-input:exact` in the logical `16,46` slot (a 30-minute producer cycle). `compute-safety-score-v9` reads that row at `22,52` and publishes `report-cards:v9`.

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { CliUsageError, parseStrictCliArgs, parseCliInteger, runDirectCli } from "../lib/cli-args.mjs";
+import { getBrowserLaunchOptions, loadChromium } from "../lib/smoke-runtime.mjs";
 
 const DEFAULT_BASE_URL = process.env.SEO_RENDER_BUDGET_URL ?? "https://pharos.watch";
 const DEFAULT_ROUTES = [
@@ -159,29 +160,6 @@ async function fetchHtml(url) {
   };
 }
 
-async function loadChromium() {
-  try {
-    const { chromium } = await import("playwright");
-    return chromium;
-  } catch (error) {
-    throw new Error(
-      `Failed to load Playwright from workspace dependencies: ${
-        error instanceof Error ? error.message : String(error)
-      }`,
-    );
-  }
-}
-
-function getLaunchOptions() {
-  const executablePath = (process.env.SEO_AUDIT_BROWSER_EXECUTABLE_PATH ?? "").trim();
-  if (executablePath) return { executablePath, headless: true };
-
-  const channel = (process.env.SEO_AUDIT_BROWSER_CHANNEL ?? "").trim();
-  if (channel) return { channel, headless: true };
-
-  return { headless: true };
-}
-
 async function auditRoute(browser, baseUrl, route, waitMs) {
   const url = resolveRoute(baseUrl, route);
   const counters = emptyCounters();
@@ -292,7 +270,10 @@ async function main() {
   }
   const baseUrl = normalizeBaseUrl(args.baseUrl);
   const chromium = await loadChromium();
-  const browser = await chromium.launch(getLaunchOptions());
+  const browser = await chromium.launch(getBrowserLaunchOptions({
+    SMOKE_UI_BROWSER_EXECUTABLE_PATH: process.env.SEO_AUDIT_BROWSER_EXECUTABLE_PATH,
+    SMOKE_UI_BROWSER_CHANNEL: process.env.SEO_AUDIT_BROWSER_CHANNEL,
+  }));
 
   try {
     const rows = [];

@@ -8,7 +8,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const CHANGELOG_DIR = join(__dirname, "../../src/data/changelogs");
 const OUTPUT = join(CHANGELOG_DIR, "index.ts");
 const CHECK_MODE = process.argv.includes("--check");
-const SUPPORT_FILES = new Set(["index.ts", "types.ts"]);
+const SUPPORT_FILES = new Set(["index.ts"]);
 const CHANGELOG_ENTRY_FILE_RE = /^(?<date>\d{4}-\d{2}-\d{2})\.json$/;
 
 function listChangelogFiles(): string[] {
@@ -63,7 +63,7 @@ export function renderChangelogRegistry(fileNames: readonly string[] = listChang
   const entries = entryFiles.map((fileName) => `  ${entryIdentifier(fileName)},`);
 
   return [
-    'import type { ChangelogEntry } from "./types";',
+    'import type { ChangelogEntry } from "@shared/types/editorial-content";',
     "",
     ...imports,
     "",

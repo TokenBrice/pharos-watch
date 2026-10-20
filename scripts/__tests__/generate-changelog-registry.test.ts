@@ -31,5 +31,6 @@ describe("changelog registry generator", () => {
     expect(() => collectChangelogEntryFiles(["2026-08-23.json", "2026-8-24.json"])).toThrow(/malformed/i);
     expect(() => collectChangelogEntryFiles(["2026-02-30.json"])).toThrow(/malformed/i);
     expect(() => collectChangelogEntryFiles(["2026-08-23.ts"])).toThrow(/malformed/i);
+    expect(() => collectChangelogEntryFiles(["types.ts"])).toThrow(/malformed/i);
   });
 });

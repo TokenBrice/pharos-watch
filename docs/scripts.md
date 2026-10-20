@@ -9,6 +9,7 @@ CI/operational helpers in `scripts/` and Worker-bound tools importing `worker/sr
 Snapshot pulls using `scripts/lib/sync-from-api.ts` retain fixed-backoff retries for 5xx and caller-declared transient statuses. Before retrying they cancel the failed response body. One 30-second `AbortSignal.timeout` deadline (caller-overridable with `timeoutMs`, composed with caller cancellation) covers attempts, waits, and returned-body reads; aborts are not retried.
 
 `scripts/maintenance/audit-seo-render-budget.mjs` measures public-page resource budgets and defaults to the live site. It blocks Google Analytics collection requests before navigation so synthetic audit visits do not enter analytics, but retains GTM/gtag script downloads to measure their JavaScript cost. Each JSON row reports `blockedAnalyticsRequests`; the table labels that count `gaBlocked`. This suppression is specific to the audit and does not change intentional GA acceptance in `smoke-ui.mjs`.
+Browser loading/options reuse `scripts/lib/smoke-runtime.mjs`; only `SEO_AUDIT_BROWSER_EXECUTABLE_PATH` and `SEO_AUDIT_BROWSER_CHANNEL` are mapped in, with executable path taking precedence. The audit stays headless and does not inherit GitHub Actions' Chrome default or system-Chrome retry.
 
 ## Safety Score Map Refresh
 
@@ -17,6 +18,8 @@ Snapshot pulls using `scripts/lib/sync-from-api.ts` retain fixed-backoff retries
 Schema rejections use canonical diagnostics (the first failing field path and schema issue), rather than translating errors into historical map-specific wording. Valid payloads still pass the map's score/grade, duplicate-ID, supply-join, and geometry checks.
 
 The renderer in `scripts/maintenance/build-safety-score-map.ts` keeps every graded coin and fixed readable marker floors. It first tries one guide per outer grade band, then deterministically splits dense bands into adaptive rings (candidate maximum populations 120, 90, then 60), shrinking large bubbles only down to the existing floors. Geometry, annotation clearance, and composition checks still apply. Exhausting those layouts throws `SafetyMapCapacityError` with code `layout-capacity-exhausted`; capacity is not repaired by dropping coins, lowering legibility floors, or moving bubbles outside the canvas.
+
+The headline, supply key and provenance use three mandatory fixed panels, validated together against the complete circle/orbit/rectangle/reserved-region scene before rendering and against Firefox glyph bounds before capture. There is no candidate search or optional panel dropping; successful manifests retain `chipsDrawn: 3` and `chipsDropped: 0`.
 
 `.github/workflows/safety-map-refresh.yml` runs at 01:20, 03:20, 05:20 UTC and on `workflow_dispatch` (`mode`: `force` renders; `ensure` skips if today's map is live). Schedules start hours late, so the Worker's [producer kick](./safety-score-map.md#pre-digest-producer-kick) dispatches `ensure` from 06:20 to 08:00 UTC; the digest can reuse a recent map.
 
@@ -32,8 +35,10 @@ State-changing/release-control entrypoints use `scripts/lib/cli-args.mjs`, a str
 
 The OpenAPI generator uses the typed `runDirectCli` entrypoint wrapper from `scripts/lib/cli-args.mjs` (declared in `scripts/lib/cli-args.d.mts`). Importing its schema builders does not generate artifacts; direct-run failures use the wrapper's stderr message and runtime-failure exit code.
 
+Coverage-audit commands supply their domain Markdown renderer to `coverage-audit-cli.ts`; shared Markdown cells and tables live in `scripts/lib/markdown-report.ts`. The CLI helper owns argument dispatch and Markdown/JSON output selection, not a second document-rendering API.
+
 [`command-runner.mts`](../scripts/lib/command-runner.mts) reports cancelled nonempty command selections as `status: 130, aborted: true`, even when cancellation prevents any child from starting or leaves queued units after a successful child. A non-aborted command failure takes precedence; result arrays contain only executed units, never placeholder passes. Empty selections remain neutral, and active children settle before the coordinator returns.
-Static guard analysis, D1 envelope admission and packaged-runtime checks are documented in the [tool implementation appendix](#tool-implementation-appendix).
+`createD1Client` owns D1 queries/batches; envelope admission, static guards and packaged-runtime checks are in the [tool appendix](#tool-implementation-appendix).
 
 
 Every committed source file that reads `process.argv` is enrolled by exact path in `scripts/lib/cli-argv-policy.mjs`. Operator and production-mutating entrypoints must reach a parser that imports and calls the shared strict wrapper; read-only, build/local-artifact, and test/dev entrypoints require an explicit categorized exemption and audit reason. `npm run check:cli-args-policy` rejects unclassified additions, stale or duplicate declarations, strict/exempt overlaps, and strict-parser claims that are not reachable from the entrypoint. Entry ordering is not a safety requirement. Add or remove entries in the source-owned policy with the corresponding script change; there is no count baseline to update.
@@ -53,6 +58,8 @@ The pricing-provider and price-source-depth audits, live SEO render-budget audit
 Schema-v1 outputs are `report.json`, `report.md`, `samples.ndjson`, `exceeded-memory.ndjson` and `queries.json`, defaulting to `agents/worker-memory/<UTC-run>/`; the hourly main-only Worker Memory Monitor retains them 30 days and reports distinct heavy-kill/collection incidents. Memory is sampled shared-isolate evidence, not a live heap/headroom measurement. [Per-job resource evidence](./worker-and-api-limits.md#per-job-resource-evidence) owns sampling/freshness policy and [OOM triage](./runbooks/cron-slot-abandonment.md#first-checks) owns attribution and limitations. Tests retain sanitized Oct 14/15 Adaptive kills and the Oct 14 Scheduled row from the dated ProdEvidence capture; its missing per-second sample interval/P999 remain unknown, never reconstructed from daily sampling.
 
 `worker/scripts/one-shot-backfill.ts` runs historical rebuilds against Wrangler-authenticated D1 outside the Worker bundle. It defaults to remote `stablecoin-db`, accepts original job parameters through `--query`/`--body-json`, requires `--execute` unless a supported explicit preview is selected, and preserves job response bytes. Ordinary writes use commands; atomic jobs additionally require `--allow-atomic-import` to acknowledge live D1 availability impact. [One-shot backfills](./runbooks/one-shot-backfills.md#transport-safety) owns classification, transport gates and interrupted-run receipt reconciliation/cleanup.
+
+The mint/burn backfill uses `mintBurnConfigKey` directly for config selection, sync-state access, diagnostics and response keys; its key format is shared with the live pipeline.
 
 The Telegram adoption reporter publishes `alertsSent7d` / `alertsSent30d` as nullable totals with `alertsSent7dUnavailableReason` / `alertsSent30dUnavailableReason`. Current source evidence cannot prove whole-window `final_delivery_at` coverage: seven days reports `delivery-window-coverage-unproven`; thirty days reports `source-retention-shorter-than-window`. `retainedAlertsSent7d` / `retainedAlertsSent30d` count only currently retained accepted targets, including an observed empty-domain zero, never complete delivery totals. Neither row presence nor retention duration supplies missing coverage; usage-event counters are not a delivery fallback. See [Read the report](./runbooks/telegram-adoption-report.md#read-the-report).
 
@@ -188,9 +195,11 @@ Automatic selection matches source/output changes and propagates dependencies, t
 
 The compact catalog generator loads shared TypeScript classifiers through `tsx`: write with `node --import tsx scripts/build-data/build-client-registry.mjs` and check with `node --import tsx scripts/build-data/build-client-registry.mjs --check`. Both modes cover every output of the `stablecoin-client-registry` artifact, including per-coin details, not just the browser list; its registered output paths are the authoritative inventory.
 
+The editorial policy generator uses the runtime-neutral facade's readonly `EditorialPolicy` contract; raw JSON still passes its existing validation before hashing/rendering. See [Machine-readable policy](./editorial-style.md#machine-readable-policy).
+
 | Artifact family | Read its owner |
 | --- | --- |
-| Scene atlas/OG composition | [Scene Kit](./data-visualization.md#scene-kit), `scripts/lib/scene-atlas.ts` and `scripts/lib/scene-og.ts` |
+| Scene atlas/OG composition | [Scene Kit](./data-visualization.md#scene-kit); import generic helpers/types directly from `scripts/lib/scene-atlas.ts` and `scripts/lib/scene-og.ts`, not cemetery entrypoints |
 | V9 evaluation-build identity | `scripts/maintenance/generate-safety-score-v9-evaluation-build-manifest.ts`; exact runtime import/input graph, including dynamic imports, not capture-only observers. Reserve writes use cron-free `worker/src/lib/scheduled-checkpoint-primitives.ts`. |
 | Incident runtime projection/evidence digest | `shared/lib/safety-score-v9/reviewed-registry.ts`, `review-evidence.ts` and `shared/types/safety-score-v9-research-evidence.ts`; shared admission, not a Worker-import waiver |
 | OpenAPI/Postman/reference narrative | `scripts/lib/public-api-artifact-catalog.ts`; full external narrative and generated first-sentence reference preview. Author portable absolute `https://pharos.watch/...` links. Schema generation rejects empty nested array-item contracts. |
@@ -199,6 +208,8 @@ The compact catalog generator loads shared TypeScript classifiers through `tsx`:
 Build and release ordering is documented in [Deployment Process](./deployment-process.md#ci-deploy-sequence); failure diagnosis is documented in the [generated-artifact failure playbook](./testing.md#generated-artifact-failure-playbook); OG asset maintenance is documented in [OG Images](./og-images.md); font generation and licensing are documented in [Font Assets](./process/font-assets.md).
 
 Public dataset generation writes one coupled bundle: dated files in `public/datasets/`, the generated latest/Sheets alias block in `public/_redirects`, and frontend imports in `src/lib/datasets/public-dataset-current.ts`. The release refresh wrapper snapshots all three before invoking `generate:public-datasets` and restores their pre-refresh state on failure, including retention-pruned files and unrelated authored redirect rules. A failed restore remains release-blocking; successful sibling snapshot producers are not rolled back. Direct generator invocations do not provide this release-wrapper rollback boundary.
+
+The cemetery CSV keeps its own column order, contract-list serialization, whitespace normalization and trailing newline, then delegates scalar escaping to `shared/lib/csv.ts`. Normalized string cells beginning with `=`, `+`, `-` or `@` intentionally gain a leading apostrophe for spreadsheet formula safety; ordinary cells retain their prior bytes. Its JSON projection and provenance envelope are unchanged.
 
 `PHAROS_DETAIL_SNAPSHOT_SOURCE` defaults to `per-coin` (the Pages release sets `bulk`); `verify:detail-snapshot-sources` reports byte/field diffs and pass timings; `--keep-dir` retains evidence: [bulk source](./stablecoin-detail-page.md#build-snapshot-hydration).
 
@@ -211,6 +222,8 @@ Use [Pre-push readiness](./testing.md#pre-push-readiness) for local feedback and
 [Testing: CI Pipeline](./testing.md#ci-pipeline) owns adaptive selection, deterministic round-robin plans and hosted consumption; `npm test` is the canonical full suite. [Testing: V9 resource lane](./testing.md#v9-resource-lane) owns resource guard/calibration evidence. [Boundary waivers](./process/boundary-waivers.md) and the [focused hierarchy](./testing.md#smallest-adequate-check-per-area) own import exceptions and authoring checks.
 
 [`check-unused-code.ts`](../scripts/ci/check-unused-code.ts) owns export-consumption analysis. Property/literal member uses are narrow; escaping/computed namespaces and dynamic imports stay conservative and report uncertainty. Review newly exposed exports individually. Scanner fixtures use external temp roots, never this checkout. Keep useful test-only corpora in `*.test-support.ts`, not production DEBT or external-consumer exemptions; empty debt is not deletion proof. [Testing's commit-scoped deletion policy](./testing.md#ci-pipeline) applies.
+
+[`check-redemption-backstops.ts`](../scripts/ci/check-redemption-backstops.ts) has one asynchronous CLI path: arguments are parsed before importing the registry and shared validator, which receives the authored source files and owning docs as evidence. `--json` writes the report to stdout; `--report <path>` writes the same JSON to a local file, including failed validation reports. Findings retain exit status `1` for errors and `0` otherwise; domain fixtures call `validateRedemptionBackstopRegistry` directly rather than a synthetic CLI runner.
 
 `check:script-entrypoints` covers `.mts` and excludes declarations; textual reverse references are not an executable graph, and Markdown cannot retain a disconnected tool. `check:editorial-content` is a structural guard; [blog/changelog publishing](./process/blog-publishing.md#changelog) and [ADR-3](./architecture.md#adr-3) own editorial/methodology policy. Structured-log refactors preserve console versus durable-event distinctions and terminal failure accounting.
 
@@ -336,6 +349,8 @@ Forward credentials only to the origin the command documents and that you have v
 
 Treat backfills, remote D1 commands, registrations, uploads, and cleanup scripts as admin operations. Start with `--dry-run` or the command's read-only/check mode, inspect the exact target and planned changes, and use staging or development first when available. A dry run may read local or remote state, but it must not write files or call a mutating API.
 
+Destructive Worker CLIs use `parseDestructiveOperationArgs` from `worker/scripts/lib/destructive-operation-guard.ts`; its `.mode` supplies the guarded dry-run and D1 target alongside parsed arguments.
+
 For live mutation, use the script-specific execute and confirmation guards and follow the relevant runbook. Do not bypass a guard with ad hoc SQL or a raw deploy command. Abort when prerequisites such as a backup/export, writer pause, target identity, or rollback path cannot be proven.
 
 ### Artifact Destinations
@@ -351,6 +366,8 @@ Night Watch attributes D1 rows only to their explicit matching `schedule_key`; i
 ### Local Workspace Preparation
 
 The npm `prepare` script runs `scripts/maintenance/prepare-workspace.ts`. Local installs materialize bootstrap-safe generated inputs, then the history-derived projections with `npm run bootstrap:generated:history`. GitHub Actions skips implicit preparation and uses `.github/actions/setup-workspace/action.yml`, opting into full-history projections per job with `bootstrap-history`. `PHAROS_PREPARE_BOOTSTRAP=1` forces ordinary bootstrap in CI without enabling history bootstrap.
+
+Heading IDs use `rehype-slug`; keep its transitive `github-slugger` lockfile entry without declaring `github-slugger` as a direct dependency.
 
 There is no repository pre-commit or pre-push hook. Custom hook paths remain user-owned. Generated freshness is enforced by hosted checks, not automatic staging; use explicit generation and `npm run check:generated-artifacts` for local convergence. [Pre-push readiness](./testing.md#pre-push-readiness) defines local feedback and hosted readiness authority.
 

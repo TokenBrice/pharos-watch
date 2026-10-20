@@ -2,7 +2,7 @@ import DEPEG_RESOLVER_V1 from "../../data/methodology-changelogs/depeg-resolver/
 import DEPEG_RESOLVER_V2 from "../../data/methodology-changelogs/depeg-resolver/v2.json";
 import DEPEG_RESOLVER_V3 from "../../data/methodology-changelogs/depeg-resolver/v3.json";
 import DEPEG_RESOLVER_V4 from "../../data/methodology-changelogs/depeg-resolver/v4.json";
-import type { MethodologyChangelogEntry } from "./base";
+import type { MethodologyChangelogEntry } from "../../types/editorial-content";
 import { createMethodologyVersion } from "./base";
 import {
   DDR_METHODOLOGY_CHANGELOG_PATH,

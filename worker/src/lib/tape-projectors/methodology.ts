@@ -35,7 +35,7 @@ import {
   SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
   YIELD_METHODOLOGY_CHANGELOG_PATH,
 } from "@shared/lib/methodology-versions/constants";
-import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions/base";
+import type { MethodologyChangelogEntry } from "@shared/types/editorial-content";
 
 import {
   buildTapeEventId,

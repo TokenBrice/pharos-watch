@@ -1,8 +1,7 @@
-import { readFileSync } from "node:fs";
+import { cpSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { run as runRedemptionBackstopCli } from "../ci/check-redemption-backstops";
 import { validateRedemptionBackstopRegistry } from "../lib/redemption-backstop-validation";
 import { defineRecordEntries } from "@shared/lib/redemption-backstop-configs/factory";
 import type { RedemptionBackstopConfigManifestEntry } from "@shared/lib/redemption-backstop-configs";
@@ -31,7 +30,7 @@ const baseConfig: RedemptionBackstopConfig = {
   },
 };
 
-function runFixture(
+function validateFixture(
   configs: Record<string, RedemptionBackstopConfig>,
   manifestOverrides: Partial<RedemptionBackstopConfigManifestEntry> = {},
 ) {
@@ -44,21 +43,11 @@ function runFixture(
       ...manifestOverrides,
     },
   ];
-  return runRedemptionBackstopCli([], {
+  return validateRedemptionBackstopRegistry({
     manifest,
-    validate: validateRedemptionBackstopRegistry,
     mergedConfigs: configs,
     sourceTextByPath: new Map(),
   });
-}
-
-function validateFixture(
-  configs: Record<string, RedemptionBackstopConfig>,
-  manifestOverrides: Partial<RedemptionBackstopConfigManifestEntry> = {},
-) {
-  const result = runFixture(configs, manifestOverrides);
-  if (!result.validation) throw new Error("Fixture validation did not produce a result.");
-  return result.validation;
 }
 
 describe("check-redemption-backstops CLI", () => {
@@ -72,6 +61,7 @@ describe("check-redemption-backstops CLI", () => {
       stdio: ["ignore", "pipe", "pipe"],
     });
     expect(result.status, result.stderr || result.stdout).toBe(0);
+    expect(result.stderr).toBe("");
     const stdout = result.stdout;
 
     expect(readFileSync(reportPath, "utf8")).toBe(stdout);
@@ -84,6 +74,36 @@ describe("check-redemption-backstops CLI", () => {
     expect(report.auditRows).toHaveLength(report.summary.configuredCount);
     expect(new Set(report.auditRows.map((row) => row.stablecoinId)).size).toBe(report.auditRows.length);
     expect(report.findings.filter((finding) => finding.severity === "error")).toEqual([]);
+  }, GATE_LOAD_TIMEOUT_MS);
+
+  it.each([false, true])("retains failed status and report output (json=%s)", (json) => {
+    const root = makeRoot();
+    mkdirSync(join(root, "docs"));
+    writeFileSync(join(root, "docs/redemption-backstops.md"), "");
+    writeFileSync(join(root, "docs/api-reference.md"), "");
+    cpSync(
+      join(process.cwd(), "shared/lib/redemption-backstop-configs"),
+      join(root, "shared/lib/redemption-backstop-configs"),
+      { recursive: true },
+    );
+    const reportPath = join(root, "nested", "report.json");
+    const result = spawnSync(join(process.cwd(), "node_modules/.bin/tsx"), [
+      "--tsconfig", join(process.cwd(), "tsconfig.json"),
+      join(process.cwd(), "scripts/ci/check-redemption-backstops.ts"),
+      ...(json ? ["--json"] : []), "--report", reportPath,
+    ], { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+    expect(result.status, result.stderr || result.stdout).toBe(1);
+    const reportText = readFileSync(reportPath, "utf8");
+    const report = JSON.parse(reportText) as {
+      findings: Array<{ severity: string; code: string; message: string }>;
+    };
+    expect(report.findings).toContainEqual(expect.objectContaining({
+      severity: "error", code: "docs-configured-owner-missing",
+    }));
+    const errors = report.findings.filter((finding) => finding.severity === "error");
+    expect(result.stdout).toBe(json ? reportText : "");
+    expect(result.stderr).toBe(json ? "" :
+      `Redemption backstop registry checks failed:\n${errors.map((error) => `  ${error.message}\n`).join("")}`);
   }, GATE_LOAD_TIMEOUT_MS);
 
   it.each(["krusdc-keyrock", "steakusdg-steakhouse", "steakeurcv-steakhouse"])(

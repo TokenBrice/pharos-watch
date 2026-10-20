@@ -151,14 +151,3 @@ export function createD1Client(databaseName: string, options: D1ClientOptions = 
     },
   };
 }
-
-export function d1BatchExec(
-  databaseName: string,
-  statements: string[],
-  options?: { batchSize?: number; prefix?: string },
-): void {
-  createD1Client(databaseName, { batchSize: options?.batchSize }).executeStatements(
-    statements,
-    options?.prefix ?? "remote-d1",
-  );
-}
