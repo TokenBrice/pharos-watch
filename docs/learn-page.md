@@ -10,7 +10,7 @@ Contract for `/learn/case-studies/`, `/learn/case-studies/[slug]/`, `/learn/mech
 
 `CASE_STUDY_LIST` in `src/lib/case-studies/index.ts` owns display, sitemap and static-param order. Authored JSON records use `CaseStudyContentSchema` in `shared/types/editorial-content.ts`; root and nested TypeScript shapes derive from that schema through type-only readonly views, not a separate frontend model. The evergreen Start Here set is excluded from the remaining archive rows so an article appears only once; the archive is editorial, not an ordinal ranking.
 
-Visible article metadata credits Pharos, links to `/about/#editorial-ai-policy`, and displays authored `datePublished` in UTC alongside reading time. Article JSON-LD agrees with organization authorship. Git modification dates are not human review or substantive-update dates; no individual reviewer is implied. The hub emits ItemList JSON-LD; articles use `public/og-learn-case-<slug>.png`.
+Visible article metadata credits Pharos, links to `/about/#editorial-ai-policy`, and displays authored `datePublished` in UTC alongside reading time. Article JSON-LD agrees with organization authorship. Git modification dates are not human review or substantive-update dates; no individual reviewer is implied. The hub emits ItemList JSON-LD; articles and hub entries share `/og-editorial-learn.png`.
 
 `CASE_STUDY_BY_DEPEG_SLUG` and `caseStudySlugForEvent(coinId, tsMs)` provide reverse lookups. An optional `depegEventSlug` is a lookup key, not proof that the corresponding event route exists. Client surfaces must use generated `src/lib/case-study-client-index.ts`, not import the full content registry. Its compact coin-id and cemetery-id maps have no server-registry counterpart. Articles, chart widgets and ordinary links remain the supported surfaces; there is no live chart-annotation hook.
 
@@ -22,7 +22,7 @@ Tracked examples and lifecycle counts use `shared/lib/stablecoins/by-mechanism.t
 
 ### Diagram Scope
 
-`mechanismDiagramFor(archetype, "STBL")` supplies generic Learn/OG diagrams without coin facts. Algorithmic captions scope the historical pure mint/burn example; Treasury captions scope the NAV-accreting example. Introductions and metadata cover the wider families: algorithmic members may hold collateral, and Treasury tokens may accrue NAV or hold par with separate/retained yield.
+`mechanismDiagramFor(archetype, "STBL")` supplies generic Learn diagrams without coin facts. Algorithmic captions scope the historical pure mint/burn example; Treasury captions scope the NAV-accreting example. Introductions and metadata cover the wider families: algorithmic members may hold collateral, and Treasury tokens may accrue NAV or hold par with separate/retained yield.
 
 Coin pages instead use `resolveMechanismFlowTemplate` and `resolveWrapperLayer`: `navToken === false` selects par redemption, `liquidationEngine === false` selects CDP reserve copy, and credit funds imply no redemption cadence. Generic precedents never become coin facts; coin stress uses its structural path or its own dated override incident.
 
@@ -30,16 +30,16 @@ Native-family explainers distinguish proportional UCITS/TRS fund shares, shared-
 
 ### Metadata + SEO
 
-`MECHANISM_EXPLAINER_TITLES` in `src/lib/mechanism-explainer-registry.ts` owns titles and the OG roster; `DESCRIPTION_BY_ARCHETYPE` in the archetype route owns descriptions. Canonicals use `getMechanismExplainerPath`. Methodology links target current `METHODOLOGY_SECTIONS` anchors, including `#pegscore-dews-methodology` for PegScore/DEWS. The registry test checks fragments.
+`MECHANISM_EXPLAINER_TITLES` in `src/lib/mechanism-explainer-registry.ts` owns titles; `DESCRIPTION_BY_ARCHETYPE` in the archetype route owns descriptions. Canonicals use `getMechanismExplainerPath`. Methodology links target current `METHODOLOGY_SECTIONS` anchors, including `#pegscore-dews-methodology` for PegScore/DEWS. The registry test checks fragments.
 
-The shared shell emits Breadcrumb JSON-LD. The hub adds DefinedTermSet and distribution Dataset JSON-LD; archetype pages add Article JSON-LD through `buildArchetypeArticleJsonLd` in `src/lib/page-metadata.ts`. There is no quiz, simulator, archetype risk score, per-step SVG deep link, Worker OG handler or FAQ/Course schema. [OG images](./og-images.md#3-mechanism-explainer-cards-publicog-learn-png) owns per-archetype generation/review.
+The shared shell emits Breadcrumb JSON-LD. The hub adds DefinedTermSet and distribution Dataset JSON-LD; archetype pages add Article JSON-LD through `buildArchetypeArticleJsonLd` in `src/lib/page-metadata.ts`. Metadata uses `/og-editorial-learn.png`; [OG images](./og-images.md#3-mechanism-explainer-cards-publicog-learn-png) owns the inert legacy-image policy. There is no quiz, simulator, archetype risk score, per-step SVG deep link, Worker OG handler or FAQ/Course schema.
 
 ### How to Add a New Archetype
 
 1. Extend `MECHANISM_ARCHETYPE_VALUES` and the exhaustive `MECHANISM_ARCHETYPE_DESCRIPTORS` in `shared/lib/classification.ts`; derived labels and CTA nouns must stay consistent.
 2. Author `src/lib/mechanism-explainers/<slug>.ts`, register it, and add its title and route description.
 3. Prefer a `THREE_STEP_ARCHETYPE_CONFIG` entry in `src/components/stablecoin-detail/mechanism-diagrams/three-step-archetype-diagram.tsx` plus a `mechanismDiagramFor` branch. Add a dedicated diagram and `mechanism-template.ts` flow only for a genuinely different layout. Coin-fact variations add config, `MechanismTemplateFacts` and `resolveThreeStepConfig` handling, not per-coin entries in `coin-overrides.ts`.
-4. Generate and review OGs with `tsx scripts/maintenance/build-og-learn-images.ts`; run the content, exact-static-param, sitemap and generated-artifact checks below.
+4. Use the shared Learn card; run the content, exact-static-param, sitemap and generated-artifact checks below. Existing bespoke PNGs stay unchanged for old inbound URLs.
 
 ## Sitemap + Inbound Surfaces
 
@@ -52,5 +52,5 @@ Shared navigation links directly to Mechanisms and Case Studies. Mechanism pages
 - `src/app/__tests__/static-content-route-contracts.test.tsx`: exact registered static params; `src/app/__tests__/sitemap-frozen.test.ts`: canonical public route inventory.
 - `src/app/learn/case-studies/__tests__/content.test.ts`: coin references, chart reachability, chronology, deviation consistency, widget relationships and event lookups. `npm run check:editorial-content` owns metadata/body shapes, registration, filenames, tracked/cemetery identities and internal links.
 - `src/lib/__tests__/term-markup.test.ts`: glossary marker parsing/visible labels and AI-summary corpus integrity.
-- `npm run check:generated-artifacts -- --only=case-study-client-index`: client-safe projection. The `og-learn`, `og-case-studies` and `og-editorial` artifact IDs own their respective OG checks. Mechanism checking verifies SVG/font signatures and Firefox-rendered PNGs, not existence alone.
+- `npm run check:generated-artifacts -- --only=case-study-client-index`: client-safe projection. The `og-editorial` artifact owns the shared Learn card's SVG/font signatures and Firefox-rendered PNG checks; legacy bespoke PNGs are inert.
 - `npm run seo:check`: sitemap, OG references and crawlability after a Pages build.

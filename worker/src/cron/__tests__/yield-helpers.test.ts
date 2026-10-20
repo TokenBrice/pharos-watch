@@ -25,7 +25,8 @@ import {
 } from "../yield-helpers";
 import { computeTvlWeightedMedianApy } from "../yield-sync/evaluation";
 import { parseYieldWarningSignals as parseWarningSignals } from "../../lib/yield-utils";
-import { LENDING_PROTOCOL_ALLOWLIST, YIELD_VARIANT_MAP } from "../../lib/yield-config/yield-config";
+import { LENDING_PROTOCOL_ALLOWLIST } from "../../lib/yield-config/yield-config-lending-protocols";
+import { YIELD_VARIANT_MAP } from "../../lib/yield-config/yield-config-variants";
 import { makeDlYieldPool } from "./yield-resolve.test-support";
 
 afterEach(() => vi.restoreAllMocks());

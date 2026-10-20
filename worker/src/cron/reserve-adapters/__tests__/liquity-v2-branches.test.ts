@@ -7,6 +7,7 @@ import {
   buildLiquityV2RedemptionMetadata,
   fetchLiquityV2BranchReserves,
 } from "../liquity-v2-branches";
+import { defillamaAssetKey } from "../defillama";
 import {
   expectValidAdapterOutput,
   expectWarningEffect,
@@ -314,6 +315,54 @@ describe("buildLiquityV2RedemptionMetadata", () => {
         },
       ],
     })).toThrow(/active-pool debt/);
+  });
+});
+
+describe("reviewed plain-token branches", () => {
+  it.each([
+    ["feusd-felix", "WHYPE"],
+    ["bd-basedollar", "WETH"],
+  ])("values %s %s without probing WETH-style payable fallbacks", async (coinId, name) => {
+    const { config } = resolveAdapterCoin("liquity-v2-branches", coinId);
+    const params = parseLiveReserveAdapterParams("liquity-v2-branches", config.params);
+    const branch = params.branches.find((entry) => entry.name === name)!;
+    expect(branch.kind).toBe("plain-token");
+    const assetKey = defillamaAssetKey(branch.token.chain, branch.token.address);
+    const { result, network } = await runAdapter("liquity-v2-branches", coinId, {
+      params: { mechanismMetrics: undefined },
+      nowSec: NOW,
+      network: {
+        block: BLOCK,
+        rpc: {
+          "balanceOf(address)": (call) => call.contract === branch.token.address.toLowerCase() ? 2n * WAD : 0n,
+          [params.debtSelector ?? DEBT_SELECTOR]: 100n * WAD,
+          [params.shutdownSelector ?? SHUTDOWN_SELECTOR]: false,
+          [REDEMPTION_RATE_SELECTOR]: 5n * 10n ** 15n,
+          // A WETH-style fallback succeeds with empty bytes, not a reverted member.
+          "asset()": "0x",
+          "totalAssets()": "0x",
+        },
+        json: {
+          [`https://coins.llama.fi/prices/current/${assetKey}`]: {
+            coins: { [assetKey]: { price: 2_000, timestamp: NOW, confidence: 1 } },
+          },
+        },
+      },
+    });
+    expect(result.metadata?.valuationComplete).toBe(true);
+    expect(result.metadata?.details).toMatchObject({ knownReserveValueUsd: 4_000, unavailableBranches: [] });
+    expect(result.slices).toEqual([expect.objectContaining({ name, pct: 100 })]);
+    expectWarnings(result, []);
+    expect(network.rpcCalls.some((call) =>
+      call.selector === ERC4626_ASSET_SELECTOR || call.selector === ERC4626_TOTAL_ASSETS_SELECTOR
+    )).toBe(false);
+  });
+
+  it("rejects unreviewed kind values rather than treating them as plain tokens", () => {
+    expect(() => parseLiveReserveAdapterParams("liquity-v2-branches", {
+      ...boldParams,
+      branches: boldParams.branches.map((branch) => ({ ...branch, kind: "unknown" })),
+    })).toThrow();
   });
 });
 
@@ -775,6 +824,23 @@ describe("fetchLiquityV2BranchReserves Beraborrow branches", () => {
     network.rpc![`${contract}:${selector}`] = value;
     const { result } = await runAdapter("liquity-v2-branches", "nect-beraborrow", { network, nowSec: NOW });
 
+    expect(result.metadata).toMatchObject({ valuationComplete: false, unknownExposurePct: 100 });
+    expect(result.slices.some((slice) => slice.name === "pumpBTC")).toBe(false);
+    expectWarningEffect(result, "branch-reserve-book-partial", "degraded");
+  });
+
+  it.each([false, true])("withholds declared receipt identity on asset() failure with multicall=%s", async (multicall) => {
+    const network = beraborrowNetwork({ multicall });
+    network.rpc![`${pumpBtcBranch.token.address}:asset()`] = null;
+    const { result } = await runAdapter("liquity-v2-branches", "nect-beraborrow", {
+      network,
+      nowSec: NOW,
+      params: {
+        branches: nectParams.branches.map((branch) =>
+          branch.name === "pumpBTC" ? { ...branch, kind: "erc4626" } : branch
+        ),
+      },
+    });
     expect(result.metadata).toMatchObject({ valuationComplete: false, unknownExposurePct: 100 });
     expect(result.slices.some((slice) => slice.name === "pumpBTC")).toBe(false);
     expectWarningEffect(result, "branch-reserve-book-partial", "degraded");

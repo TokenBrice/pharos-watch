@@ -11,7 +11,7 @@ import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import type { ReserveSnapshotMetadataRecord } from "./live-reserves/store-shared";
 import { assessReserveSnapshotFreshness, evaluateLiveReserveAdmission, hasScoringEligibleLiveReserveFreshness } from "./live-reserves/store-snapshot-state";
 import { parseSnapshotMetadata, parseWarningsStrict } from "./live-reserves/store-row-decoding";
-import { decodeLiveReserveRedemptionTelemetry, LiveReserveDiagnosticsSchema } from "@shared/types/live-reserves";
+import { decodeLiveReserveRedemptionTelemetry, LiveReserveDiagnosticsSchema, type ReserveSyncStatus } from "@shared/types/live-reserves";
 import type { ScheduledCheckpointIdentity } from "./scheduled-checkpoint-primitives";
 import type { CronResult } from "./cron-logger";
 import { evaluateRedemptionCapacityEvidenceAdmission, readRedemptionBackstopLiveMetadata } from "./redemption-backstop/live-metadata";
@@ -48,7 +48,7 @@ interface ProjectedMemberRow {
   state_metadata: string | null; state_warnings: string | null;
   adapter_source_model: string | null; adapter_evidence_class: string | null; config_fingerprint: string | null;
   slice_count: number | null; last_success_at: number | null; last_success_attempt_id: string | null;
-  last_attempt_id: string | null; last_attempted_at: number | null; last_status: "ok" | "degraded" | "error" | "skipped" | null;
+  last_attempt_id: string | null; last_attempted_at: number | null; last_status: ReserveSyncStatus | null;
 }
 
 /** Only the lease-owned producer may publish. The child and acceptance share one D1 transaction. */

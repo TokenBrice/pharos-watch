@@ -4,6 +4,7 @@ import { mockWorkerRuntimeRegistry } from "../../test-helpers/cron";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import { loadPegAnalyticsCache, publishPegAnalyticsCache } from "../peg-analytics-cache";
+import type * as PegScoreModule from "@shared/lib/peg-score";
 
 const sqliteFixtures = createLatestSchemaFixtureTracker();
 afterEach(() => sqliteFixtures.closeAll());
@@ -300,6 +301,55 @@ describe("derivePegAnalyticsSnapshot", () => {
       activeDepeg: false,
       trackingSpanDays: 0,
     });
+  });
+
+  it.each([
+    { ageDays: null, expectedDays: 0, expectedScore: null },
+    { ageDays: 120, expectedDays: 120, expectedScore: 100 },
+    { ageDays: 3650, expectedDays: 1461, expectedScore: 100 },
+  ])("scores $ageDays-day history at the caller clock with NAV admission unchanged", async ({ ageDays, expectedDays, expectedScore }) => {
+    const now = 1_900_000_000;
+    const day = 86_400;
+    const real = await vi.importActual<typeof PegScoreModule>("@shared/lib/peg-score");
+    const coin = STABLECOINS_MOCK[0] as { launchDate?: string };
+    const launchDate = coin.launchDate;
+    const clock = vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    delete coin.launchDate;
+    vi.mocked(getFirstSeenDates).mockResolvedValue(new Map<string, number>(
+      ageDays == null ? [] : [["usdt-tether", now - ageDays * day]],
+    ));
+    const emptyHistory = mockD1([
+      { match: "pharos:depeg-event-projection:active-incidents", rows: [] },
+      { match: "depeg_events", rows: [] },
+    ]);
+    try {
+      await vi.mocked(coinTrackingStart).withImplementation(real.coinTrackingStart, async () => {
+        await vi.mocked(computePegScore).withImplementation(real.computePegScore, async () => {
+          const snapshot = await derivePegAnalyticsSnapshot(emptyHistory, {
+            peggedAssets: [],
+            methodologyAsOf: now - 60,
+            includeNavTokens: true,
+          });
+          expect(snapshot.nowSec).toBe(now);
+          expect(snapshot.pegDataById.get("usdt-tether")).toMatchObject({
+            pegScore: expectedScore,
+            trackingSpanDays: expectedDays,
+            eventCount: 0,
+            historyCoverage: ageDays == null ? null : {
+              startedAt: now - expectedDays * day,
+              source: "first-observation",
+              status: "assumed",
+            },
+          });
+          expect(snapshot.pegDataById.get("usdc-circle")).toMatchObject({
+            pegScore: null, trackingSpanDays: 0, historyCoverage: null, recent90d: null,
+          });
+        });
+      });
+    } finally {
+      coin.launchDate = launchDate;
+      clock.mockRestore();
+    }
   });
 
   it("uses current priced assets as first-seen observations for PegScore anchoring", async () => {

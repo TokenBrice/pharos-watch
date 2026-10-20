@@ -130,6 +130,19 @@ describe("buildV9DependencyEvaluationPlan", () => {
     ]);
   });
 
+  it("keeps distinct same-role holder slices and their complete plan deterministic", () => {
+    const edges = ["slice:z", "slice:a"].map((key) => roleEdge(key, "parent", "basket-exposure", 0.5));
+    const assets = [asset("parent"), asset("child", edges)];
+    const plan = buildV9DependencyEvaluationPlan({ activeAssetIds: ["child", "parent"], assets });
+    expect(plan.basketPaths.map((path) => ({ key: path.edgeKey, exposure: path.exposureKey, evidence: path.evidenceRefIds })))
+      .toEqual(["slice:a", "slice:z"].map((key) => ({ key, exposure: key, evidence: [`evidence:${key}`] })));
+    expect(plan.suppressedRoles).toEqual([]);
+    expect(buildV9DependencyEvaluationPlan({ activeAssetIds: ["parent", "child"],
+      assets: [asset("child", [...edges].reverse()), asset("parent")] })).toEqual(plan);
+    expect(() => buildV9DependencyEvaluationPlan({ activeAssetIds: ["child", "parent"],
+      assets: [asset("parent"), asset("child", [edges[0]!, edges[0]!])] })).toThrow(/duplicate/i);
+  });
+
   it("marks SCC members and serial descendants while leaving basket consumers bounded", () => {
     const plan = buildV9DependencyEvaluationPlan({
       activeAssetIds: ["a", "b", "basket", "serial"],

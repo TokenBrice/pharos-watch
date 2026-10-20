@@ -10,6 +10,7 @@ import reviewedEconomicSupplyPlans from "@shared/data/safety-score-v9/supply-att
 import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
 import type { BridgeRouteRiskProfile, StablecoinMeta } from "@shared/types/core";
 import { ReviewedEconomicSupplyPlanEnvelopeSchema, ReviewedEconomicSupplyPlanSchema, ReviewedEconomicDeploymentPartitionSchema, ReviewedProviderChainPartitionSchema, type ReviewedProviderChainPartition, type ReviewedEconomicSupplyPlan, type ReviewedEconomicDeploymentPartition, type EconomicSupplyObservation, type EconomicSupplyReference } from "@shared/types/safety-score-v9-supply-attribution";
+import type { ReviewedDeploymentSupplyObservation, ReviewedDeploymentSupplyRow, ReviewedDeploymentUnitPartitionV1 } from "@shared/types/safety-score-v9-supply-attribution";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { normalizeDeploymentId } from "@shared/types/deployment-id";
 import { createReviewedAssetRegistry, ReviewedRegistryEntryError } from "@shared/lib/safety-score-v9/reviewed-registry";
@@ -42,40 +43,6 @@ export interface ReviewedDeploymentRouteInventory {
   assetId: string;
   digest: string;
   routes: ReviewedDeploymentRouteInventoryRow[];
-}
-
-export interface ReviewedDeploymentSupplyObservation {
-  routeId: string;
-  chainId: string;
-  contractAddress: string;
-  decimals: number;
-  rawSupply: string;
-  blockNumberOrSlot: string;
-  blockTimeSec: number;
-  blockHash: string;
-  runtimeCodeSha256?: string;
-  implementationAddress?: string;
-  implementationCodeSha256?: string;
-  underlyingTokenAddress?: string;
-  controllerAddress?: string;
-  controllerProgramOwner?: string;
-  programOwner?: string;
-  mintAuthority?: string;
-}
-
-export interface ReviewedDeploymentSupplyRow extends ReviewedDeploymentSupplyObservation {
-  currentSupplyUsd: number;
-}
-
-export interface ReviewedDeploymentUnitPartitionV1 {
-  model: "reviewed-deployment-unit-partition-v1";
-  assetId: string;
-  observedAtSec: number;
-  captureStartedAtSec: number;
-  captureEndedAtSec: number;
-  registryFingerprint: string;
-  routeInventoryDigest: string;
-  deployments: ReviewedDeploymentSupplyRow[];
 }
 
 export interface ReviewedDeploymentObservationTimingIssue {

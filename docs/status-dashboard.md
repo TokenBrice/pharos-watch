@@ -240,6 +240,8 @@ policy, distinct from endpoint freshness and Telegram flow tolerated-context bud
 
 ## Cron health model
 
+Status reliability, hysteresis, evaluation and probes share the schema-derived `StatusHealthValue` from `shared/types/status/core.ts` through direct type imports. This health vocabulary is distinct from cron execution outcomes below; canonical imports do not change wire values or hysteresis thresholds.
+
 **Terminal status and publication evidence are separate (R4).** `degraded` means required work was incomplete;
 it does not prove either publication or absence of publication. A completed job with only input-quality findings
 returns `ok` with `metadata.quality` (including growth capacity warnings and Bluechip partial-cache merges).

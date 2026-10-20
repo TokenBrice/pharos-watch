@@ -9,14 +9,15 @@ describe("fetchBeefySources", () => {
   afterEach(cleanupYieldSourceTest);
 
   it("joins APY and vault metadata for stablecoin single-asset vaults", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(1_790_121_600_000);
     mockYieldSourceRoutes([
-      { match: "api.beefy.finance/apy", body: { "aave-usdc": 0.037 } },
-      { match: "api.beefy.finance/tvl", body: { "43114": { "aave-usdc": 12_500_000 } } },
+      { match: "api.beefy.finance/apy", body: { "Aave-USDC": 0.037 } },
+      { match: "api.beefy.finance/tvl", body: { "43114": { "Aave-USDC": 12_500_000 } } },
       {
         match: "api.beefy.finance/vaults",
         body: [
           {
-            id: "aave-usdc",
+            id: "Aave-USDC",
             name: "Aave USDC",
             token: "USDC",
             assets: ["USDC"],
@@ -35,19 +36,16 @@ describe("fetchBeefySources", () => {
     ]);
 
     const { candidates: results } = await fetchBeefySources();
-    expect(results.length).toBe(1);
-    expect(results[0]).toEqual(
-      expect.objectContaining({
-        chain: "avalanche",
-        symbol: "USDC",
-        yield: expect.objectContaining({
-          currentApy: expect.closeTo(3.7, 0),
-          dataSource: "protocol-api",
-          sourceKey: expect.stringContaining("protocol-api:beefy:"),
-          sourceTvlUsd: 12_500_000,
-        }),
-      }),
-    );
+    expect(results).toStrictEqual([{
+      symbol: "USDC", chain: "avalanche", address: "0x123",
+      yield: {
+        currentApy: 3.6999999999999997, apyBase: 3.6999999999999997, apyReward: null,
+        sourcePool: "Aave-USDC", sourceTvlUsd: 12_500_000, dataSource: "protocol-api",
+        exchangeRate: null, sourceKey: "protocol-api:beefy:avalanche:Aave-USDC",
+        yieldSource: "Beefy: Aave USDC", yieldType: "lending-opportunity",
+        sourceObservedAt: 1_790_121_600, comparisonAnchorObservedAt: null,
+      },
+    }]);
   });
 
   it.each([

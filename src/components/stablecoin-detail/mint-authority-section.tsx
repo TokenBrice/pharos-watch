@@ -14,7 +14,6 @@ import { MintAuthorityRail } from "@/components/stablecoin-detail/mint-authority
 import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
 import { ScoreBandSpectrum, type SpectrumBand } from "@/components/stablecoin-detail/score-band-spectrum";
 import { ScorePill } from "@/components/stablecoin-detail/score-pill";
-import { ScoringBreakdownDisclosure } from "@/components/stablecoin-detail/scoring-breakdown-disclosure";
 import { SECTION_SCROLL_MT } from "@/components/stablecoin-detail/section-title-class";
 import type { ControlPostureView } from "@/lib/control-posture";
 import type {
@@ -321,7 +320,7 @@ function MintAuthorityIncidentSources({
 
 function MintAuthorityScoreBreakdown({ score }: { score: MintAuthorityDetailScoreViewModel }) {
   return (
-    <ScoringBreakdownDisclosure>
+    <ModuleDisclosure label="Scoring breakdown">
       <div className="mt-2 grid gap-2 text-xs text-muted-foreground sm:grid-cols-2">
         <div className="rounded-lg border border-border/60 px-3 py-2">
           <span className="font-medium text-foreground">Derived posture</span>{" "}
@@ -345,7 +344,7 @@ function MintAuthorityScoreBreakdown({ score }: { score: MintAuthorityDetailScor
         ) : null}
         <p className="sm:col-span-2">{score.detail}</p>
       </div>
-    </ScoringBreakdownDisclosure>
+    </ModuleDisclosure>
   );
 }
 

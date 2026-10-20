@@ -9,7 +9,7 @@ import type { ContractEventConfig } from "../blacklist-contracts";
 import { type RateLimitedFetch } from "../evm-logs";
 import type { ChainRpcConfig } from "../chain-registry";
 import {
-  fetchEvmTokenCurrentBalance,
+  fetchEvmTokenBalance,
   fetchTronTokenCurrentBalance,
 } from "./balance-providers";
 import type { BlacklistRow } from "./shared";
@@ -74,9 +74,10 @@ async function fetchCurrentBalanceForAddress(
     );
   }
 
-  return fetchEvmTokenCurrentBalance(
+  return fetchEvmTokenBalance(
     config,
     address,
+    "latest",
     context.etherscanApiKey,
     context.drpcApiKey,
     context.etherscanLimiter,

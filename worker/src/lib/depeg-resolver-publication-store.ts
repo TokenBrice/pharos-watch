@@ -9,7 +9,18 @@ import {
   type DdrAssessmentCheckpoint,
 } from "./depeg-resolver-assessment-store";
 import type { DdrIncidentDirection, DdrLockHealthStatus } from "./depeg-resolver-incident-store";
-import type { DdrLockTrigger } from "@shared/types/depeg-resolver";
+import {
+  DdrForecastReadinessBackstopSchema,
+  DdrForecastReadinessSchema,
+  DdrPredictionMetaSchema,
+  DdrV2BaseRowSchema,
+  DdrV2FrozenPayloadSchema,
+  DdrV2NoCallPayloadSchema,
+  type DdrLockTrigger,
+  type DdrPredictionMeta,
+  type DdrV2PredictionRow,
+  type DdrV2ResponseRow,
+} from "@shared/types/depeg-resolver";
 import {
   DDR_LOCK_AUDIT_INSERT_COLUMNS_SQL,
   DDR_LOCK_METADATA_COLUMNS_SQL,
@@ -29,6 +40,11 @@ import {
 export type DdrPublicPredictionOutcomeKind = "prediction" | "no_call";
 const DDR_PUBLICATION_MAX_COMPRESSED_BYTES = 1_350_000;
 const DDR_PUBLICATION_MAX_UNCOMPRESSED_BYTES = 8_000_000;
+// Historical seals may predate fields added to the current readiness metadata.
+const sealedPredictionMetaSchema = DdrPredictionMetaSchema.partial().extend({
+  readiness: DdrForecastReadinessSchema.partial().nullable().optional(),
+  backstop: DdrForecastReadinessBackstopSchema.partial().nullable().optional(),
+});
 export type DdrPublicPredictionLockTiming = "on_time" | "late_confirmation" | "late_freeze" | "deferred";
 
 export interface DdrPublicAssessmentSealInput {
@@ -77,13 +93,19 @@ export interface DdrPublicAssessmentSealInput {
   backstopDelaySec?: number | null;
 }
 
-export interface DdrSealedPublicPrediction {
+type DdrSealedPayloadBase = Omit<DdrV2PredictionRow, "kind" | "prediction" | "frozen"> & {
+  prediction: Partial<DdrPredictionMeta>;
+};
+export type DdrSealedPayload = DdrSealedPayloadBase & (
+  | { kind: "prediction"; frozen: DdrV2PredictionRow["frozen"] }
+  | { kind: "no_call"; noCall: Extract<DdrV2ResponseRow, { kind: "no_call" }>["noCall"]; frozen: null }
+);
+
+interface DdrSealedPublicPredictionMetadata {
   id: number;
-  publicPredictionId: number;
   incidentKey: string;
   eventId: number;
   assessmentId: number;
-  outcomeKind: DdrPublicPredictionOutcomeKind;
   predictionPolicyVersion: string;
   predictionMethodologyVersion: string;
   predictionMethodologyVersionLabel: string;
@@ -103,10 +125,14 @@ export interface DdrSealedPublicPrediction {
   backstopAt: number | null;
   backstopDelaySec: number | null;
   sealedPayloadJson: string;
-  sealedPayload: Record<string, unknown>;
   rowHash: string;
   createdAt: number;
 }
+
+export type DdrSealedPublicPrediction = DdrSealedPublicPredictionMetadata & (
+  | { outcomeKind: "prediction"; sealedPayload: Extract<DdrSealedPayload, { kind: "prediction" }> }
+  | { outcomeKind: "no_call"; sealedPayload: Extract<DdrSealedPayload, { kind: "no_call" }> }
+);
 
 export interface LoadSealedPublicPredictionsFilters {
   publicPredictionIds?: number[];
@@ -274,14 +300,27 @@ function parseStringRecordJson(value: string, name: string): Record<string, stri
   return parsed as Record<string, string>;
 }
 
+function admitSealedPayload(payload: Record<string, unknown>, outcomeKind: DdrPublicPredictionOutcomeKind): DdrSealedPayload {
+  if (payload.kind !== outcomeKind) throw new Error("sealedPayload kind does not match outcomeKind");
+  DdrV2BaseRowSchema.parse(payload);
+  sealedPredictionMetaSchema.parse(payload.prediction);
+  if (outcomeKind === "prediction") DdrV2FrozenPayloadSchema.parse(payload.frozen);
+  else {
+    DdrV2NoCallPayloadSchema.parse(payload.noCall);
+    if (payload.frozen !== null) throw new Error("sealedPayload no_call must have a null frozen outcome");
+  }
+  // Validate only: parsed Zod outputs insert defaults and strip historical fields,
+  // changing immutable outcome hashes. Keep the admitted object and stored bytes.
+  return payload as DdrSealedPayload;
+}
+
 function mapSealedPublicPrediction(row: SealedPublicPredictionRow): DdrSealedPublicPrediction {
-  return {
+  const sealedPayload = admitSealedPayload(parseJsonObject(row.sealed_payload_json, "sealedPayloadJson"), row.outcome_kind);
+  const metadata: DdrSealedPublicPredictionMetadata = {
     id: row.id,
-    publicPredictionId: row.id,
     incidentKey: row.incident_key,
     eventId: row.event_id,
     assessmentId: row.assessment_id,
-    outcomeKind: row.outcome_kind,
     predictionPolicyVersion: row.prediction_policy_version,
     predictionMethodologyVersion: row.prediction_methodology_version,
     predictionMethodologyVersionLabel: row.prediction_methodology_version_label,
@@ -301,10 +340,12 @@ function mapSealedPublicPrediction(row: SealedPublicPredictionRow): DdrSealedPub
     backstopAt: row.backstop_at ?? null,
     backstopDelaySec: row.backstop_delay_sec ?? null,
     sealedPayloadJson: row.sealed_payload_json,
-    sealedPayload: parseJsonObject(row.sealed_payload_json, "sealedPayloadJson"),
     rowHash: row.row_hash,
     createdAt: row.created_at,
   };
+  return sealedPayload.kind === "prediction"
+    ? { ...metadata, outcomeKind: "prediction", sealedPayload }
+    : { ...metadata, outcomeKind: "no_call", sealedPayload };
 }
 
 function mapPublicationManifest(row: PublicationManifestRow): DdrPublicationManifest {
@@ -659,12 +700,15 @@ async function sealPublicOutcome(
   const existing = await loadSealedPublicPredictions(db, { incidentKeys: [input.incidentKey] });
   if (existing.length > 0) return existing[0];
 
+  const sealedPayload = readRecord(input.sealedPayload);
+  if (!sealedPayload) throw new Error("sealedPayload must be a JSON object");
+  admitSealedPayload(sealedPayload, outcomeKind);
   const canonicalRowHash = computeDdrPublicRowHash(input.sealedPayload);
   if (canonicalRowHash !== input.rowHash) {
     throw new Error("rowHash does not match canonical sealed public row payload");
   }
   const payloadJson = jsonString(
-    attachDdrPublicRowHash(input.sealedPayload as Record<string, unknown>, input.rowHash),
+    attachDdrPublicRowHash(sealedPayload, input.rowHash),
     "sealedPayload",
   );
   const results = await executeAtomicBatch(db, [

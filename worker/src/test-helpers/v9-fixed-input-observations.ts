@@ -1,5 +1,6 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { buildReviewedDeploymentRouteInventory, expectedWmDeploymentIdentity, type ReviewedDeploymentSupplyObservation, type WmDeploymentIdentity } from "../lib/safety-score-v9/supply-attribution-contract";
+import { buildReviewedDeploymentRouteInventory, expectedWmDeploymentIdentity, type WmDeploymentIdentity } from "../lib/safety-score-v9/supply-attribution-contract";
+import type { ReviewedDeploymentSupplyObservation, XautLockMintObservation } from "@shared/types/safety-score-v9-supply-attribution";
 import {
   buildXautTransparencySource,
   XAUT0_ADAPTER_ADDRESS, XAUT0_ADAPTER_IMPLEMENTATION_ADDRESS,
@@ -7,7 +8,6 @@ import {
   XAUT0_LAYERZERO_ENDPOINT_ADDRESS, XAUT_CANONICAL_IMPLEMENTATION_ADDRESS,
   XAUT_CANONICAL_IMPLEMENTATION_CODE_SHA256, XAUT_CANONICAL_RUNTIME_CODE_SHA256,
   XAUT_CANONICAL_TOKEN_ADDRESS, XAUT_TRANSPARENCY_SOURCE_ID, XAUT_TREASURY_ADDRESS,
-  type XautLockMintObservation,
 } from "../lib/safety-score-v9/xaut-supply-attribution-contract";
 
 /** Shared timeout for the V9 evaluation suites; a full candidate build is slow. */

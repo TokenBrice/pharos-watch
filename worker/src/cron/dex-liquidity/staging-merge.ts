@@ -14,7 +14,7 @@ import {
 import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import { DIRECT_API_POOL_MIN_TVL_USD } from "../../lib/dex-api-pool-shaping";
 import { QUALITY_MULTIPLIERS, STAGED_POOL_PRICE_MAX_AGE_HOURS } from "../../lib/dex-cron-constants";
-import { toFiniteNumber } from "../../lib/number-utils";
+import { coerceFiniteNumber } from "@shared/lib/type-guards";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import { mergeCgPools, mergeGtPools } from "./fetch-crawlers";
 import { buildCgTickerPriceObservations } from "./coingecko-tickers-shared";
@@ -27,7 +27,7 @@ import type {
   DexPriceObs,
   GtNewPool,
   LiquidityFallbackCounters,
-  LiquidityMetrics,
+  SourcePoolGraph,
   LiquidityPoolSourceFamily,
   PoolEntry,
 } from "./types";
@@ -108,21 +108,21 @@ function toStagedPool(row: StagedPoolRow): StagedPool {
     protocol: row.protocol,
     dexId: row.dex_id,
     symbol: row.symbol,
-    tvlUsd: toFiniteNumber(row.tvl_usd),
-    volume24h: toFiniteNumber(row.volume_24h),
-    qualityMultiplier: toFiniteNumber(row.quality_multiplier),
+    tvlUsd: coerceFiniteNumber(row.tvl_usd),
+    volume24h: coerceFiniteNumber(row.volume_24h),
+    qualityMultiplier: coerceFiniteNumber(row.quality_multiplier),
     poolType: row.pool_type,
-    feeTier: toFiniteNumber(row.fee_tier),
-    balanceRatio: toFiniteNumber(row.balance_ratio),
+    feeTier: coerceFiniteNumber(row.fee_tier),
+    balanceRatio: coerceFiniteNumber(row.balance_ratio),
     isStable: toBoolean(row.is_stable),
     baseToken: row.base_token,
     quoteToken: row.quote_token,
     quoteSymbol: row.quote_symbol,
-    priceUsd: toFiniteNumber(row.price_usd),
-    lockedLiqPct: toFiniteNumber(row.locked_liq_pct),
+    priceUsd: coerceFiniteNumber(row.price_usd),
+    lockedLiqPct: coerceFiniteNumber(row.locked_liq_pct),
     rawJson: row.raw_json ?? null,
-    discoveredAt: toFiniteNumber(row.discovered_at) ?? 0,
-    refreshedAt: toFiniteNumber(row.refreshed_at) ?? 0,
+    discoveredAt: coerceFiniteNumber(row.discovered_at) ?? 0,
+    refreshedAt: coerceFiniteNumber(row.refreshed_at) ?? 0,
   };
 }
 
@@ -196,11 +196,11 @@ function retainedPoolKey(stablecoinId: string, exactPoolKey: string): string {
  */
 function registerRetainedPoolExactStablecoins(
   knownPoolIndex: KnownPoolIdentityIndex,
-  metrics: Map<string, LiquidityMetrics>,
+  metrics: Map<string, SourcePoolGraph>,
 ): Map<string, PoolEntry> {
   const unreadLivePools = new Map<string, PoolEntry>();
   for (const [stablecoinId, metric] of metrics) {
-    for (const pool of metric.topPools ?? []) {
+    for (const pool of metric.pools ?? []) {
       const identity = buildPoolIdentity({
         chain: pool.chain,
         protocol: pool.project,
@@ -526,7 +526,7 @@ const STAGED_SOURCE_FAMILY: Record<StagedPool["source"], LiquidityPoolSourceFami
  */
 export async function mergeStagedPools(
   db: D1Database,
-  metrics: Map<string, LiquidityMetrics>,
+  metrics: Map<string, SourcePoolGraph>,
   knownPoolIndex: KnownPoolIdentityIndex,
   syncStartSec: number,
   trackedDeployments: ReadonlyMap<string, string>,
@@ -875,59 +875,19 @@ export async function mergeStagedPools(
       });
     }
 
-    const volumeReading = {
-      volume24hUsd: registryReading.volume24hUsd,
-      volumeObservedAtSec: registryReading.observedAtSec,
-      ...(registryReading.deadPoolSignature ? { volumeDeadPoolSignature: true as const } : {}),
-    };
-    const maturityDays = stagedPoolMaturityDays(stagedPool.discoveredAt, registryEvaluatedAtSec);
-
-    if (stagedPool.source === "cg_onchain") {
-      pushPool(cgPoolMap, stagedPool.stablecoinId, {
-        address,
-        chain: stagedPool.chain,
-        dexId,
-        name: stagedPool.symbol,
-        tvlUsd: adjustedTvl,
-        ...volumeReading,
-        qualityMultiplier,
-        maturityDays,
-        poolType,
-        // dex_prices → DDR/peg-summary must only see day-fresh prices, while the
-        // inventory TVL above may be two weeks old: an aged row keeps its decayed
-        // TVL but contributes no price.
-        price: priceEligible ? stagedPool.priceUsd ?? 0 : 0,
-        priceObservedAt: priceEligible ? view.price!.refreshedAt : null,
-        symbol: stagedPool.symbol,
-        sourceFamily: "cg_onchain",
-        ...(crossSourcePriceProvenance ?? {}),
-        balanceRatio: stagedPool.balanceRatio,
-        lockedLiquidityPct: stagedPool.lockedLiqPct,
-        feePercentage: stagedPool.feeTier ? stagedPool.feeTier / 100 : null,
-        measurement: {
-          tvlMeasured: true,
-          volumeMeasured: view.volume != null,
-          balanceMeasured: stagedPool.balanceRatio != null,
-          maturityMeasured: false,
-          priceMeasured: priceEligible && stagedPool.priceUsd != null && stagedPool.priceUsd > 0,
-          synthetic: false,
-          decayed: confidence < 1,
-        },
-        ...(evmV2ExecutionCandidate ? { evmV2ExecutionCandidate } : {}),
-      });
-      continue;
-    }
-
-    pushPool(gtPoolMap, stagedPool.stablecoinId, {
+    const pool: GtNewPool = {
       address,
       chain: stagedPool.chain,
       dexId,
       name: stagedPool.symbol,
       tvlUsd: adjustedTvl,
-      ...volumeReading,
+      volume24hUsd: registryReading.volume24hUsd,
+      volumeObservedAtSec: registryReading.observedAtSec,
+      ...(registryReading.deadPoolSignature ? { volumeDeadPoolSignature: true as const } : {}),
       qualityMultiplier,
-      maturityDays,
+      maturityDays: stagedPoolMaturityDays(stagedPool.discoveredAt, registryEvaluatedAtSec),
       poolType,
+      // Prices must stay day-fresh even when decayed inventory TVL is older.
       price: priceEligible ? stagedPool.priceUsd ?? 0 : 0,
       priceObservedAt: priceEligible ? view.price!.refreshedAt : null,
       symbol: stagedPool.symbol,
@@ -947,7 +907,15 @@ export async function mergeStagedPools(
         synthetic: false,
         decayed: confidence < 1,
       },
-    });
+    };
+    if (stagedPool.source === "cg_onchain") {
+      pushPool(cgPoolMap, stagedPool.stablecoinId, {
+        ...pool,
+        feePercentage: stagedPool.feeTier ? stagedPool.feeTier / 100 : null,
+      });
+    } else {
+      pushPool(gtPoolMap, stagedPool.stablecoinId, pool);
+    }
   }
   views.length = 0;
 

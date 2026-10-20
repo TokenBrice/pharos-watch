@@ -1,5 +1,6 @@
 import type { sha256HexFromBytes } from "@shared/lib/sha256";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import type { ReviewedDeploymentSupplyObservation, ReviewedDeploymentUnitPartitionV1 } from "@shared/types/safety-score-v9-supply-attribution";
 import { throwIfAborted } from "../abort";
 import {
   getChainRpc,
@@ -25,8 +26,6 @@ import {
   deriveReviewedDeploymentUnitPartition,
   normalizeReviewedDeploymentAddress,
   reviewedDeploymentObservationTimingIssue,
-  type ReviewedDeploymentSupplyObservation,
-  type ReviewedDeploymentUnitPartitionV1,
 } from "./supply-attribution-contract";
 
 const REVIEWED_DEPLOYMENT_MAX_SCORING_CLOCK_REWIND_BLOCKS = 128;

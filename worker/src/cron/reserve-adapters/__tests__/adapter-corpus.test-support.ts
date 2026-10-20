@@ -424,7 +424,6 @@ CORPUS_CASES.btcfi = {
 // values). The coin's real config is the chain=tron feed, so the replay also
 // answers the same-run TronGrid PSM probe from the adapter test's pinned words.
 const USDD_LATEST_ENDPOINT = "https://app-api.usdd.io/data-platform/latest-collateral?chain=tron";
-const USDD_HISTORY_ENDPOINT = "https://app-api.usdd.io/data-platform/collateral-history?interval=WEEKLY&chain=tron";
 const USDD_TRON_GRID_ENDPOINT = "https://api.trongrid.io/wallet/triggerconstantcontract";
 const USDD_LATEST_ITEMS = [
   { vaultType: "TRX-A", lockedValue: 201_173_223.24 },
@@ -435,7 +434,6 @@ const USDD_LATEST_ITEMS = [
   { vaultType: "PSM-USDT-A", lockedValue: 82_309_862.43 },
   { vaultType: "SA001-A", lockedValue: 519_698_996.0 },
 ];
-const USDD_HISTORY_CAPTURE = { code: 0, data: { items: [{ statisticTime: 1_774_281_600_000 }] } };
 const USDD_PSM_GEM_JOIN_WORD = "000000000000000000000000b50eb419ebeba06c80df5e9aaec494cef4297879";
 const USDD_PSM_USDD_WORD = "000000000000000000000000e91a7411e56ce79e83570570f49b9fc35b7727c5";
 const USDD_PSM_WORD = (value: bigint): string => value.toString(16).padStart(64, "0");
@@ -460,7 +458,6 @@ CORPUS_CASES["usdd-data-platform"] = {
   network: {
     json: {
       [USDD_LATEST_ENDPOINT]: { code: 0, data: { items: USDD_LATEST_ITEMS } },
-      [USDD_HISTORY_ENDPOINT]: USDD_HISTORY_CAPTURE,
       [USDD_TRON_GRID_ENDPOINT]: respondToUsddTronGrid,
     },
   },
@@ -475,7 +472,6 @@ CORPUS_CASES["usdd-data-platform"] = {
               index === 2 ? { vaultType: row.vaultType, lockedValue: "108,374,409.00" } : row),
           },
         },
-        [USDD_HISTORY_ENDPOINT]: USDD_HISTORY_CAPTURE,
         [USDD_TRON_GRID_ENDPOINT]: respondToUsddTronGrid,
       },
     },

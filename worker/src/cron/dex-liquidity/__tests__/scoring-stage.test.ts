@@ -1,11 +1,11 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, expectTypeOf, it, vi } from "vitest";
 import { DexMeasuredExecutionTargetSchema } from "@shared/types/measured-execution";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import type {
   DexLiquidityPoolState,
   DexLiquidityScoringSourceState,
 } from "../scoring-stage-contract";
-import { initMetrics } from "../pool-helpers";
+import { initSourcePoolGraph } from "../pool-helpers";
 import {
   MissingDexLiquidityScoringStageError,
   DEX_LIQUIDITY_SCORING_STAGE_MAX_CHUNK_BYTES,
@@ -19,7 +19,7 @@ import {
   pruneScoringStages,
   type DexLiquidityScoringStageChunk,
 } from "../scoring-stage";
-import type { LiquidityMetrics, PoolEntry } from "../types";
+import type { SourcePoolGraph, PoolEntry } from "../types";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 import archivedSolidly from "./fixtures/solidly-v2-2026-10-05-archive.json";
 import * as measuredExecutionJoin from "../../measured-execution/join";
@@ -146,23 +146,8 @@ function makePool(index: number): PoolEntry {
   };
 }
 
-function populateMetric(metric: LiquidityMetrics, pools: PoolEntry[]): LiquidityMetrics {
-  const totalTvlUsd = pools.reduce((sum, pool) => sum + pool.tvlUsd, 0);
-  const totalVolume24hUsd = pools.reduce((sum, pool) => sum + (pool.volumeUsd1d ?? 0), 0);
-  return {
-    ...metric,
-    totalTvlUsd,
-    totalVolume24hUsd,
-    totalVolume7dUsd: totalVolume24hUsd * 7,
-    poolCount: pools.length,
-    chains: new Set(["Ethereum", "Base"]),
-    pairs: new Set(["USDC", "USDT", "DAI"]),
-    protocolTvl: { curve: totalTvlUsd / 2, uniswap: totalTvlUsd / 2 },
-    chainTvl: { Ethereum: totalTvlUsd * 0.7, Base: totalTvlUsd * 0.3 },
-    qualityAdjustedTvl: totalTvlUsd * 0.9,
-    topPools: pools,
-    effectiveTvl: totalTvlUsd * 0.8,
-  };
+function populateMetric(metric: SourcePoolGraph, pools: PoolEntry[]): SourcePoolGraph {
+  return { ...metric, pools };
 }
 
 function sourceState(): DexLiquidityScoringSourceState {
@@ -211,9 +196,9 @@ function sourceState(): DexLiquidityScoringSourceState {
 function poolState(totalPools = 7_402): DexLiquidityPoolState {
   const pools = Array.from({ length: totalPools }, (_, index) => makePool(index));
   const majorCount = Math.min(6_181, totalPools);
-  const metrics = new Map<string, LiquidityMetrics>([
-    ["major", populateMetric(initMetrics("major", "MAJOR"), pools.slice(0, majorCount))],
-    ["minor", populateMetric(initMetrics("minor", "MINOR"), pools.slice(majorCount))],
+  const metrics = new Map<string, SourcePoolGraph>([
+    ["major", populateMetric(initSourcePoolGraph("major", "MAJOR"), pools.slice(0, majorCount))],
+    ["minor", populateMetric(initSourcePoolGraph("minor", "MINOR"), pools.slice(majorCount))],
   ]);
   return {
     registryEvaluatedAtSec: 1_087,
@@ -322,7 +307,7 @@ describe("DEX liquidity scoring stage", () => {
 
   it.each(archivedSolidly)("retains original state/reference clocks while retiring stored $poolId augmentation", (fixture) => {
     const pool = poolState(1);
-    const entry = pool.metrics.get("major")!.topPools[0]!;
+    const entry = pool.metrics.get("major")!.pools[0]!;
     const rawModel = {
       source: "solidly-v2", invariant: fixture.state.stable ? "solidly-stable" : "constant-product",
       trackedTokenIndex: 0, feeRate: Number(fixture.state.fee) / (fixture.state.variant === "shadow" ? 1_000_000 : 10_000),
@@ -343,7 +328,7 @@ describe("DEX liquidity scoring stage", () => {
     // Replay a stored pre-retirement wire shape, not a new producer model.
     entry.extra = JSON.parse(JSON.stringify({ ammExecutionModel: rawModel }));
     const decoded = decodeDexLiquidityScoringStageChunks([...encodeDexLiquidityScoringStageChunks(sourceState(), pool)]);
-    const decodedEntry = decoded.poolState.metrics.get("major")!.topPools[0]!;
+    const decodedEntry = decoded.poolState.metrics.get("major")!.pools[0]!;
     expect(decodedEntry.tvlUsd).toBe(entry.tvlUsd);
     const model = decodedEntry.extra!.ammExecutionModel!;
     expect(model.tokens[0]!.referencePriceObservedAt).toBe(940);
@@ -379,12 +364,12 @@ describe("DEX liquidity scoring stage", () => {
     const target = buildUniV3MeasuredExecutionTarget(input)!;
     expect(target).toMatchObject({ carriedFromSnapshot: true, tokenOut: { referencePriceUsd: 1.08 } });
     const pool = poolState(1);
-    pool.metrics.get("major")!.topPools[0]!.extra = { measuredExecutionTarget: target };
+    pool.metrics.get("major")!.pools[0]!.extra = { measuredExecutionTarget: target };
     const decoded = decodeDexLiquidityScoringStageChunks(
       [...encodeDexLiquidityScoringStageChunks(sourceState(), pool)],
     );
     const staged = DexMeasuredExecutionTargetSchema.parse(
-      decoded.poolState.metrics.get("major")!.topPools[0]!.extra!.measuredExecutionTarget,
+      decoded.poolState.metrics.get("major")!.pools[0]!.extra!.measuredExecutionTarget,
     );
     expect(staged.carriedFromSnapshot).toBe(true);
     expect(staged.tokenOut.referencePriceUsd).toBe(1.08);
@@ -401,10 +386,15 @@ describe("DEX liquidity scoring stage", () => {
   it("round-trips the production-shaped 7,402-pool graph in bounded ordered chunks", () => {
     const source = sourceState();
     const pool = poolState();
-    const opaquePool = pool.metrics.get("major")!.topPools[0]!;
+    const opaquePool = pool.metrics.get("major")!.pools[0]!;
     opaquePool.poolId = "ethereum:defillama:10000000-0000-4000-8000-000000000000";
     opaquePool.candidateFingerprint = "fp:ethereum:uniswap-v3:token-a:token-b";
     const chunks = [...encodeDexLiquidityScoringStageChunks(source, pool)];
+    const metricHeaders = chunks.flatMap((chunk) => chunk.payload.split("\n").map((line) => JSON.parse(line)))
+      .filter((record) => record.kind === "metric");
+    expect(metricHeaders.map((record) => Object.keys(record.metric))).toEqual([
+      ["stablecoinId", "symbol"], ["stablecoinId", "symbol"],
+    ]);
 
     expect(chunks.length).toBeGreaterThan(10);
     expect(chunks.every((chunk) => chunk.payloadBytes <= DEX_LIQUIDITY_SCORING_STAGE_MAX_CHUNK_BYTES))
@@ -423,14 +413,14 @@ describe("DEX liquidity scoring stage", () => {
 
     const originalMajor = pool.metrics.get("major")!;
     const decodedMajor = decoded.poolState.metrics.get("major")!;
-    expect(decodedMajor.topPools).toHaveLength(6_181);
-    expect(decodedMajor.topPools.every((entry, index) => entry.poolId === originalMajor.topPools[index]?.poolId))
+    expect(decodedMajor.pools).toHaveLength(6_181);
+    expect(decodedMajor.pools.every((entry, index) => entry.poolId === originalMajor.pools[index]?.poolId))
       .toBe(true);
-    expect(decodedMajor.topPools[0]?.candidateFingerprint).toBe(opaquePool.candidateFingerprint);
-    expect([...decodedMajor.chains]).toEqual([...originalMajor.chains]);
-    expect([...decodedMajor.pairs]).toEqual([...originalMajor.pairs]);
+    expect(decodedMajor.pools[0]?.candidateFingerprint).toBe(opaquePool.candidateFingerprint);
+    expect(Object.keys(decodedMajor)).toEqual(["stablecoinId", "symbol", "pools"]);
+    expectTypeOf<SourcePoolGraph>().toEqualTypeOf<{ stablecoinId: string; symbol: string; pools: PoolEntry[] }>();
 
-    const decodedPools = [...decoded.poolState.metrics.values()].flatMap((metric) => metric.topPools);
+    const decodedPools = [...decoded.poolState.metrics.values()].flatMap((metric) => metric.pools);
     expect(decodedPools).toHaveLength(7_402);
     expect(decodedPools.filter((entry) => entry.source === "dl")).toHaveLength(3_565);
     expect(decodedPools.filter((entry) => entry.source === "direct_api")).toHaveLength(1_486);
@@ -438,7 +428,7 @@ describe("DEX liquidity scoring stage", () => {
     // The consumer scores the dead-pool floor from signatures the staged merge wrote.
     const signedIds = (pools: readonly PoolEntry[]) =>
       pools.filter((entry) => entry.volumeReading?.deadPoolSignature === true).map((entry) => entry.poolId);
-    const originalPools = [...pool.metrics.values()].flatMap((metric) => metric.topPools);
+    const originalPools = [...pool.metrics.values()].flatMap((metric) => metric.pools);
     expect(signedIds(decodedPools)).toHaveLength(470);
     expect(signedIds(decodedPools)).toEqual(signedIds(originalPools));
   });
@@ -534,7 +524,7 @@ describe("DEX liquidity scoring stage", () => {
     const previousPool = poolState(40);
     const source = sourceState();
     const pool = poolState(40);
-    const expectedMajorPoolIds = pool.metrics.get("major")?.topPools.map((entry) => entry.poolId);
+    const expectedMajorPoolIds = pool.metrics.get("major")?.pools.map((entry) => entry.poolId);
     const sourceSlotStartedAt = 10_000;
     const previousSlotStartedAt = sourceSlotStartedAt - 30 * 60;
     const onChunkBatchPersisted = vi.fn(async (_progress: {
@@ -584,7 +574,7 @@ describe("DEX liquidity scoring stage", () => {
       sourceDateByPeg: { peggedEUR: "1970-01-01" },
       maxAgeSec: 21_600,
     });
-    expect(loaded.poolState.metrics.get("major")?.topPools.map((entry) => entry.poolId)).toEqual(
+    expect(loaded.poolState.metrics.get("major")?.pools.map((entry) => entry.poolId)).toEqual(
       expectedMajorPoolIds,
     );
 
@@ -863,7 +853,7 @@ describe("DEX liquidity scoring stage", () => {
       injected.chunkRunBindings().map((bindings) => `${String(bindings[0])}:${String(bindings[1])}`),
     ).size).toBe(stored.chunkCount);
     expect(loaded.generationId).toBe(stored.generationId);
-    expect(loaded.poolState.metrics.get("major")?.topPools).toHaveLength(40);
+    expect(loaded.poolState.metrics.get("major")?.pools).toHaveLength(40);
     expect(harness.sqlite.prepare(
       `SELECT state, expected_chunk_count, written_chunk_count
          FROM dex_liquidity_scoring_stages
@@ -918,7 +908,7 @@ describe("DEX liquidity scoring stage", () => {
     // Old payloads lack the current volume, registry, provider identity or
     // carried-reference/raw-TVL admission basis; never relabel their evidence.
     const [header, ...rest] = base[0]!.payload.split("\n");
-    for (const schemaVersion of [1, 2, 3, 4, 5]) {
+    for (const schemaVersion of [1, 2, 3, 4, 5, 6]) {
       expect(() =>
         decodeDexLiquidityScoringStageChunks([
           withPayload([JSON.stringify({ ...JSON.parse(header!), schemaVersion }), ...rest].join("\n")),
@@ -932,7 +922,7 @@ describe("DEX liquidity scoring stage", () => {
     ])).toThrow("registryEvaluatedAtSec");
 
     const invalidPool = poolState(1);
-    invalidPool.metrics.get("major")!.totalTvlUsd = Number.NaN;
+    invalidPool.metrics.get("major")!.pools[0]!.tvlUsd = Number.NaN;
     expect(() => [...encodeDexLiquidityScoringStageChunks(sourceState(), invalidPool)])
       .toThrow("non-finite");
   });

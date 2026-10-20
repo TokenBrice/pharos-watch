@@ -1,8 +1,6 @@
-import {
-  EXPLICIT_YIELD_SOURCE_POOL_MAP,
-  YIELD_POOL_MAP,
-  YIELD_VARIANT_MAP,
-} from "../../lib/yield-config/yield-config";
+import { EXPLICIT_YIELD_SOURCE_POOL_MAP } from "../../lib/yield-config/yield-config-explicit-pools";
+import { YIELD_POOL_MAP } from "../../lib/yield-config/yield-config-pools";
+import { YIELD_VARIANT_MAP } from "../../lib/yield-config/yield-config-variants";
 import type {
   DlPool,
   ResolvedYieldCandidate,
@@ -15,15 +13,13 @@ import type {
   YieldSourceInputMeta,
 } from "@shared/types/yield";
 import {
+  coerceFiniteNumber,
   isFiniteNumber,
   isRecord,
 } from "@shared/lib/type-guards";
 import {
   RISK_FREE_RATE_FALLBACK,
 } from "../../lib/constants";
-import {
-  toFiniteNumber,
-} from "../../lib/number-utils";
 import {
   buildHardcodedUsdBenchmark,
   getYieldBenchmarkStaticMeta,
@@ -75,7 +71,7 @@ function toNullableString(value: unknown): string | null {
 }
 
 export function toNonNegativeInteger(value: unknown): number {
-  const parsed = toFiniteNumber(value);
+  const parsed = coerceFiniteNumber(value);
   if (parsed == null || parsed < 0) return 0;
   return Math.floor(parsed);
 }
@@ -112,7 +108,7 @@ export function parseCachePayloadUpdatedAt(
   cacheUpdatedAt: number,
   nowSec: number,
 ): number | null {
-  const updatedAt = toFiniteNumber(value) ?? cacheUpdatedAt;
+  const updatedAt = coerceFiniteNumber(value) ?? cacheUpdatedAt;
   return updatedAt <= nowSec ? updatedAt : null;
 }
 
@@ -232,8 +228,8 @@ function parseRiskFreeRateRecord(
   legacyFallbackValue: unknown = parsed,
 ): ParsedYieldBenchmarkMeta | null {
   if (isRecord(parsed)) {
-    const rate = toFiniteNumber(parsed.rate);
-    const fetchedAt = toFiniteNumber(parsed.fetchedAt);
+    const rate = coerceFiniteNumber(parsed.rate);
+    const fetchedAt = coerceFiniteNumber(parsed.fetchedAt);
     if (rate != null) {
       const isFallback = parsed.isFallback === true;
       const source = toNullableString(parsed.source) ?? "unknown";
@@ -241,7 +237,7 @@ function parseRiskFreeRateRecord(
       const key = defaults?.key ?? parsedKey ?? "USD";
       const staticMeta = getYieldBenchmarkStaticMeta(key);
       const lastMarketRate =
-        toFiniteNumber(parsed.lastMarketRate) ??
+        coerceFiniteNumber(parsed.lastMarketRate) ??
         (!isFallback && source !== "hardcoded-fallback" ? rate : null);
       return {
         key,
@@ -259,7 +255,7 @@ function parseRiskFreeRateRecord(
         lastMarketRecordDate:
           toNullableString(parsed.lastMarketRecordDate) ??
           (lastMarketRate != null ? toNullableString(parsed.recordDate) : null),
-        lastMarketFetchedAt: toFiniteNumber(parsed.lastMarketFetchedAt),
+        lastMarketFetchedAt: coerceFiniteNumber(parsed.lastMarketFetchedAt),
         lastMarketSource:
           toNullableString(parsed.lastMarketSource) ??
           (lastMarketRate != null ? source : null),
@@ -267,7 +263,7 @@ function parseRiskFreeRateRecord(
     }
   }
 
-  const legacyRate = toFiniteNumber(legacyFallbackValue);
+  const legacyRate = coerceFiniteNumber(legacyFallbackValue);
   if (legacyRate == null) return null;
   const key = defaults?.key ?? "USD";
   const staticMeta = getYieldBenchmarkStaticMeta(key);
@@ -449,7 +445,7 @@ export function parseDeterministicOnChainHealthState(
     if (!isRecord(parsed)) {
       return getDefaultDeterministicOnChainHealthState();
     }
-    const cooldownUntil = toFiniteNumber(parsed.cooldownUntil);
+    const cooldownUntil = coerceFiniteNumber(parsed.cooldownUntil);
     if (
       cooldownUntil != null &&
       cooldownUntil > nowSec + DETERMINISTIC_ONCHAIN_COOLDOWN_SEC + YIELD_CACHE_MAX_FUTURE_SKEW_SEC
@@ -461,10 +457,10 @@ export function parseDeterministicOnChainHealthState(
       consecutiveAllFailRuns: toNonNegativeInteger(parsed.consecutiveAllFailRuns),
       consecutiveMaskedAllFailRuns: toNonNegativeInteger(parsed.consecutiveMaskedAllFailRuns),
       cooldownUntil,
-      lastAttemptedAt: toFiniteNumber(parsed.lastAttemptedAt),
-      lastAllFailedAt: toFiniteNumber(parsed.lastAllFailedAt),
-      lastSuccessAt: toFiniteNumber(parsed.lastSuccessAt),
-      lastSkippedAt: toFiniteNumber(parsed.lastSkippedAt),
+      lastAttemptedAt: coerceFiniteNumber(parsed.lastAttemptedAt),
+      lastAllFailedAt: coerceFiniteNumber(parsed.lastAllFailedAt),
+      lastSuccessAt: coerceFiniteNumber(parsed.lastSuccessAt),
+      lastSkippedAt: coerceFiniteNumber(parsed.lastSkippedAt),
       lastFailureMissingIds: toStringArray(parsed.lastFailureMissingIds),
     };
   } catch {

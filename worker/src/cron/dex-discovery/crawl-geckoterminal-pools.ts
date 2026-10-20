@@ -164,9 +164,8 @@ export async function crawlGeckoTerminalPoolsStage({
     );
   }
 
-  const gtObs = gtPriceObs.get(context.stablecoinId) ?? [];
-  for (const obs of gtObs) {
-    context.addPriceObs({ ...obs, stablecoinId: context.stablecoinId });
+  if ((gtPriceObs.get(context.stablecoinId)?.length ?? 0) > 0) {
+    context.hasUsablePoolPrice = true;
   }
   return { providerChecks };
 }

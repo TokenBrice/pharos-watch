@@ -3,16 +3,9 @@
 import { useMemo, useState } from "react";
 import { ArrowDown, ArrowUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { QueryErrorNotice } from "@/components/query-error-notice";
-import { StablecoinModuleTitle } from "@/components/stablecoin-detail/module-title";
-import {
-  DETAIL_MODULE_BODY_CLASS,
-  DETAIL_MODULE_HEADER_CLASS,
-  DETAIL_MODULE_SHELL_CLASS,
-  DETAIL_MODULE_TITLE_CLASS,
-} from "@/components/stablecoin-detail/section-title-class";
+import { DetailModuleCard } from "@/components/stablecoin-detail/module-title";
 import { FreshnessIndicator } from "@/components/status/freshness-indicator";
 import { SafetyGradeBadge } from "@/components/safety-grade-badge";
 import { useSafetyScoreHistory, useSafetyScoreHistoryV2 } from "@/hooks/api-hooks";
@@ -207,12 +200,9 @@ export function SafetyScoreHistorySection({ stablecoinId }: SafetyScoreHistorySe
   // --- render --------------------------------------------------------------
 
   return (
-    <Card className={DETAIL_MODULE_SHELL_CLASS}>
-      <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
-        <StablecoinModuleTitle className={DETAIL_MODULE_TITLE_CLASS}>
-          <MethodologyLabel topic="safetyScore">Grade History</MethodologyLabel>
-        </StablecoinModuleTitle>
-        {updatedAt > 0 ? (
+    <DetailModuleCard
+      title={<MethodologyLabel topic="safetyScore">Grade History</MethodologyLabel>}
+      headerRight={updatedAt > 0 ? (
           <FreshnessIndicator
             compact
             updatedAtMs={updatedAt * 1000}
@@ -220,8 +210,7 @@ export function SafetyScoreHistorySection({ stablecoinId }: SafetyScoreHistorySe
             labelPrefix="Updated"
           />
         ) : null}
-      </CardHeader>
-      <CardContent className={DETAIL_MODULE_BODY_CLASS}>
+    >
         {/* Summary stats strip */}
         {stats && (
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -326,7 +315,6 @@ export function SafetyScoreHistorySection({ stablecoinId }: SafetyScoreHistorySe
             </Button>
           </div>
         )}
-      </CardContent>
-    </Card>
+    </DetailModuleCard>
   );
 }

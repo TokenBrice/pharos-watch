@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import { addSecondaryPoolContribution } from "../pool-contribution";
-import type { GtNewPool, LiquidityMetrics } from "../types";
+import type { GtNewPool, SourcePoolGraph } from "../types";
 
 describe("P4 direct AMM execution model retention", () => {
   it("preserves the exact model in the retained PoolEntry", () => {
-    const metrics = new Map<string, LiquidityMetrics>();
+    const metrics = new Map<string, SourcePoolGraph>();
     const pool: GtNewPool = {
       address: "RaydiumPool",
       chain: "solana",
@@ -49,11 +49,11 @@ describe("P4 direct AMM execution model retention", () => {
 
     addSecondaryPoolContribution(metrics, "usdc-circle", "USDC", pool);
 
-    expect(metrics.get("usdc-circle")?.topPools[0]?.extra?.ammExecutionModel).toEqual(pool.ammExecutionModel);
+    expect(metrics.get("usdc-circle")?.pools[0]?.extra?.ammExecutionModel).toEqual(pool.ammExecutionModel);
   });
 
   it("retains case-distinct Solana pools as separate telemetry", () => {
-    const metrics = new Map<string, LiquidityMetrics>();
+    const metrics = new Map<string, SourcePoolGraph>();
     const basePool: GtNewPool = {
       address: "PoolCase",
       chain: "solana",
@@ -72,8 +72,8 @@ describe("P4 direct AMM execution model retention", () => {
     addSecondaryPoolContribution(metrics, "usdc-circle", "USDC", basePool);
     addSecondaryPoolContribution(metrics, "usdc-circle", "USDC", { ...basePool, address: "poolCase" });
 
-    expect(metrics.get("usdc-circle")?.topPools).toHaveLength(2);
-    expect(metrics.get("usdc-circle")?.topPools.map((pool) => pool.poolId)).toEqual([
+    expect(metrics.get("usdc-circle")?.pools).toHaveLength(2);
+    expect(metrics.get("usdc-circle")?.pools.map((pool) => pool.poolId)).toEqual([
       "solana:PoolCase",
       "solana:poolCase",
     ]);

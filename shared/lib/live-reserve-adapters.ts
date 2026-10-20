@@ -1,7 +1,7 @@
 import { z } from "zod";
 import {
-  LIVE_RESERVE_RPC_MODE_VALUES,
-  LIVE_RESERVE_SEMANTICS_VALUES,
+  baseLiveReserveConfigSchema,
+  LiveReserveInputSchemaByKind,
   type LiveReserveAdapterValidationPolicy,
   type LiveReserveInput,
 } from "../types/live-reserve-core";
@@ -22,62 +22,11 @@ export * from "../types/live-reserve-adapter-policy";
 
 export type LiveReserveInputKind = LiveReserveInput["kind"];
 
-const AbsoluteUrlSchema = z.string().url();
-const LiveReserveRpcModeSchema = z.enum(LIVE_RESERVE_RPC_MODE_VALUES);
-const LiveReserveSemanticsSchema = z.enum(LIVE_RESERVE_SEMANTICS_VALUES);
-
-const LiveReserveDisplaySchema = z
-  .object({
-    url: AbsoluteUrlSchema.optional(),
-    label: z.string().optional(),
-  })
-  .strict();
-
-const liveReserveScoringPolicySchema = z
-  .object({
-    maxSourceAgeSec: z.number().positive().optional(),
-    allowedDegradedWarningCodes: z.array(z.string().min(1)).optional(),
-  })
-  .strict();
-
-const LiveReserveInputSchemaByKind = {
-  "http-json": z.object({ kind: z.literal("http-json"), url: AbsoluteUrlSchema }).strict(),
-  "http-html": z.object({ kind: z.literal("http-html"), url: AbsoluteUrlSchema }).strict(),
-  indexer: z.object({ kind: z.literal("indexer"), url: AbsoluteUrlSchema }).strict(),
-  "onchain-solana": z.object({ kind: z.literal("onchain-solana") }).strict(),
-  "onchain-evm": z
-    .object({
-      kind: z.literal("onchain-evm"),
-      chain: z.string(),
-      rpcMode: LiveReserveRpcModeSchema,
-    })
-    .strict(),
-} as const satisfies Record<LiveReserveInputKind, z.ZodTypeAny>;
-
 function createLiveReserveInputSchemaForKinds(kinds: readonly LiveReserveInputKind[]): z.ZodTypeAny {
   const schemas = kinds.map((kind) => LiveReserveInputSchemaByKind[kind]);
   if (schemas.length === 1) return schemas[0];
   return z.union(schemas as unknown as [z.ZodTypeAny, ...z.ZodTypeAny[]]);
 }
-
-const baseLiveReserveConfigSchema = z.object({
-  version: z.number().int().positive(),
-  semantics: LiveReserveSemanticsSchema,
-  breakerScope: z.string().min(1).optional(),
-  display: LiveReserveDisplaySchema.optional(),
-  scoring: liveReserveScoringPolicySchema.optional(),
-  bootstrapForSupplyAdmission: z.object({
-    reviewBy: z.string().refine(isValidIsoDateOnly, "reviewBy must be a valid ISO calendar date"),
-  }).strict().optional(),
-  suspended: z
-    .object({
-      reason: z.string().min(1),
-      since: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "since must be an ISO date (YYYY-MM-DD)"),
-      reviewBy: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "reviewBy must be an ISO date (YYYY-MM-DD)").optional(),
-    })
-    .strict()
-    .optional(),
-});
 
 export function createLiveReserveInputsSchema(adapterKey: LiveReserveAdapterKey): z.ZodTypeAny {
   const inputSchema = createLiveReserveInputSchemaForKinds(LIVE_RESERVE_ADAPTER_DEFINITIONS[adapterKey].primaryInputKinds);
@@ -185,7 +134,6 @@ export {
   LIVE_RESERVE_ADAPTER_DEFINITIONS,
   LIVE_RESERVE_ADAPTER_STATUS_VALUES,
 };
-export { baseLiveReserveConfigSchema };
 
 export type { LiveReserveAdapterDefinitionMap } from "./live-reserve-adapter-descriptors";
 

@@ -1562,6 +1562,10 @@ const liquityV2MechanismMetricsSchema = z
 
 const liquityV2BranchesParamsSchema = evmBranchBalancesParamsSchema
   .extend({
+    branches: z.array(evmBranchBalanceBranchSchema.extend({
+      /** Only reviewed plain tokens bypass ERC4626 identity/conversion reads. */
+      kind: z.enum(["plain-token", "erc4626"]).optional(),
+    }).strict()).min(1),
     shutdownSelector: EvmSelectorSchema.optional(),
     mechanismMetrics: liquityV2MechanismMetricsSchema.optional(),
   })
@@ -2157,22 +2161,13 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     preferredFreshnessMode: "verified",
     validation: VERIFIED_ONLY_VALIDATION,
   }),
-  "leverup-lvusd": {
-    primaryInputKinds: ["onchain-evm"],
-    paramsSchema: noParamsSchema,
-    sourceModel: "dynamic-mix",
-    evidenceClass: "independent",
-    sourceOriginClass: "onchain-observation",
+  "leverup-lvusd": declareAdapter(noParamsSchema, ONCHAIN_DYNAMIC_MIX_NO_TELEMETRY_V1, {
     preferredFreshnessMode: "not-applicable",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
-    validation: LATEST_STATE_VALIDATION,
     provenance: {
       status: "active",
       rationale: "Bound to lvusd-leverup: reviewed LVUSD-only Monad vault census and pinned supply reconciliation exclude LVMON and MON staking, fail closed on registry or identity drift, and retain measured undercollateralization without allowlisting the deficit or inferring redemption capacity.",
     },
-  },
+  }),
   "hylo-solana": {
     primaryInputKinds: ["onchain-solana"],
     paramsSchema: hyloSolanaParamsSchema,
@@ -2199,15 +2194,8 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     anchorageAssuranceParamsSchema,
     HTTP_DISCLOSURE_ATTESTATION_V3,
   ),
-  accountable: {
-    primaryInputKinds: ["http-json"],
-    paramsSchema: accountableParamsSchema,
-    sourceModel: "dynamic-mix",
-    evidenceClass: "independent",
-    preferredFreshnessMode: "verified",
-    sharedSourceMode: "none",
+  accountable: declareAdapter(accountableParamsSchema, HTTP_DASHBOARD_COLLATERAL_V1, {
     configValidation: CONFIG_ACCOUNTABLE,
-    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: {
       // Ceiling only: every live-dashboard Accountable coin pins the 3-day
       // dashboard budget via `scoring.maxSourceAgeSec`. Yuzu's timestamped
@@ -2218,7 +2206,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
       maxSourceAgeSec: 1_209_600,
       allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
     },
-  },
+  }),
   "agora-independent-assurance": declareAdapter(agoraAssuranceParamsSchema, HTTP_DISCLOSURE_ATTESTATION_V3),
   "anzen-usdz": declareAdapter(noParamsSchema, ONCHAIN_SINGLE_ASSET_V2, {
     sourceOriginClass: "onchain-observation",
@@ -2226,17 +2214,9 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
   "moc-doc": declareAdapter(mocDocParamsSchema, ONCHAIN_SINGLE_ASSET_V1, {
     sourceOriginClass: "onchain-observation",
   }),
-  "moc-v3-buckets": {
-    primaryInputKinds: ["onchain-evm"],
-    paramsSchema: mocV3BucketsParamsSchema,
-    sourceModel: "dynamic-mix",
-    evidenceClass: "independent",
-    sourceOriginClass: "onchain-observation",
-    sharedSourceMode: "none",
+  "moc-v3-buckets": declareAdapter(mocV3BucketsParamsSchema, ONCHAIN_DYNAMIC_MIX_NO_TELEMETRY_V1, {
     configValidation: CONFIG_COLLATERAL_V2,
-    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
-    validation: LATEST_STATE_VALIDATION,
-  },
+  }),
   // asUSDF withdrawals are delayed rather than provably immediate, so the
   // net USDF balance backing the shares is composition evidence, not capacity.
   "astherus-earn-wrapper": declareAdapter(
@@ -2288,18 +2268,10 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
   // class mirrors the frax-balance-sheet / tether-transparency issuer
   // balance-sheet precedent: independent *measurement* of an issuer-published
   // feed, not third-party assurance, hence the issuer-attested origin class.
-  "bridge-transparency": {
-    primaryInputKinds: ["http-json"],
-    paramsSchema: bridgeTransparencyParamsSchema,
-    sourceModel: "dynamic-mix",
-    evidenceClass: "independent",
-    preferredFreshnessMode: "verified",
+  "bridge-transparency": declareAdapter(bridgeTransparencyParamsSchema, HTTP_DASHBOARD_COLLATERAL_V1, {
     sourceOriginClass: "issuer-attested",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: DASHBOARD_VALIDATION,
-  },
+  }),
   btcfi: {
     primaryInputKinds: ["http-json"],
     paramsSchema: btcfiParamsSchema,
@@ -2380,31 +2352,18 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: DASHBOARD_WITH_UNKNOWN_CAP_VALIDATION,
   },
-  "chronicle-nav": {
-    primaryInputKinds: ["onchain-evm"],
-    paramsSchema: chronicleNavParamsSchema,
-    sourceModel: "single-bucket",
+  "chronicle-nav": declareAdapter(chronicleNavParamsSchema, ONCHAIN_SINGLE_ASSET_NO_TELEMETRY_V1, {
     // P5: native fund-share exposure only (ACRDX/STAC/BUIDL); portfolio scope
     // emits a scoring-degraded warning like chainlink-nav.
-    evidenceClass: "independent",
     sourceOriginClass: "independent-assurance",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_SINGLE_ASSET_V1,
-    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: VERIFIED_ONLY_VALIDATION,
-  },
-  "chainlink-por": {
-    primaryInputKinds: ["onchain-evm"],
-    paramsSchema: chainlinkPorParamsSchema,
-    sourceModel: "single-bucket",
-    evidenceClass: "independent",
-    sharedSourceMode: "none",
+  }),
+  "chainlink-por": declareAdapter(chainlinkPorParamsSchema, ONCHAIN_SINGLE_ASSET_NO_TELEMETRY_V1, {
     // v3 clean cutover: exact liability roster and source-reviewed circulation
     // clock admission. Missing circulation temporal review withholds the ratio.
     configValidation: CONFIG_ATTESTATION_V3,
-    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: VERIFIED_ONLY_VALIDATION,
-  },
+  }),
   "circle-transparency": declareAdapter(
     circleTransparencyParamsSchema,
     HTTP_DISCLOSURE_ATTESTATION_V1,
@@ -2507,19 +2466,11 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     // rather than a proxy for the collateral basket.
     redemptionTelemetry: DIRECT_CAPACITY_TELEMETRY,
   }),
-  "ethena-whitelabel": {
-    primaryInputKinds: ["http-json"],
-    paramsSchema: ethenaWhitelabelParamsSchema,
-    sourceModel: "dynamic-mix",
-    evidenceClass: "independent",
-    preferredFreshnessMode: "verified",
+  "ethena-whitelabel": declareAdapter(ethenaWhitelabelParamsSchema, HTTP_DASHBOARD_COLLATERAL_V1, {
     sourceOriginClass: "issuer-attested",
     displayBadgeKind: "proof",
-    sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V2,
-    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
-    validation: DASHBOARD_WITH_UNKNOWN_CAP_VALIDATION,
-  },
+  }),
   "evm-branch-balances": {
     primaryInputKinds: ["onchain-evm"],
     paramsSchema: evmBranchBalancesParamsSchema,
@@ -2530,17 +2481,11 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     redemptionTelemetry: { capacity: "direct", capacityParamsGated: true, fee: "current-bps" },
     validation: LATEST_STATE_VALIDATION,
   },
-  "parallelizer-balances": {
-    primaryInputKinds: ["onchain-evm"],
-    paramsSchema: parallelizerBalancesParamsSchema,
-    sourceModel: "dynamic-mix",
-    evidenceClass: "independent",
-    sharedSourceMode: "none",
+  "parallelizer-balances": declareAdapter(parallelizerBalancesParamsSchema, ONCHAIN_DYNAMIC_MIX_DIRECT_CAPACITY_V1, {
     // V2 binds each deployment's dependent waves to one chain-local block.
     configValidation: CONFIG_COLLATERAL_V2,
-    redemptionTelemetry: DIRECT_CAPACITY_TELEMETRY,
     validation: LATEST_STATE_WITH_UNKNOWN_CAP_VALIDATION,
-  },
+  }),
   "europ-independent-assurance": declareAdapter(
     europAssuranceParamsSchema,
     HTTP_DISCLOSURE_ATTESTATION_V2,
@@ -2557,18 +2502,11 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     },
   ),
   "xdai-bridge": declareAdapter(xdaiBridgeParamsSchema, ONCHAIN_DYNAMIC_MIX_NO_TELEMETRY_V1),
-  "xpr-account-balances": {
-    primaryInputKinds: ["http-json"],
-    paramsSchema: xprAccountBalancesParamsSchema,
-    sourceModel: "dynamic-mix",
-    evidenceClass: "independent",
+  "xpr-account-balances": declareAdapter(xprAccountBalancesParamsSchema, HTTP_DASHBOARD_COLLATERAL_V1, {
     sourceOriginClass: "onchain-observation",
     preferredFreshnessMode: "not-applicable",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: LATEST_STATE_WITH_UNKNOWN_CAP_VALIDATION,
-  },
+  }),
   falcon: declareAdapter(noParamsSchema, HTTP_DASHBOARD_COLLATERAL_V1, {
     redemptionTelemetry: PROXY_CAPACITY_TELEMETRY,
   }),
@@ -2723,21 +2661,15 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     redemptionTelemetry: DIRECT_CAPACITY_TELEMETRY,
     validation: DASHBOARD_VALIDATION,
   },
-  "kava-cdp": {
-    primaryInputKinds: ["http-json"],
-    paramsSchema: noParamsSchema,
-    sourceModel: "dynamic-mix",
-    evidenceClass: "independent",
+  "kava-cdp": declareAdapter(noParamsSchema, HTTP_DASHBOARD_COLLATERAL_V1, {
     sourceOriginClass: "onchain-observation",
     preferredFreshnessMode: "not-applicable",
-    sharedSourceMode: "none",
     // Complete valuation and typed collateral amounts are required by v2.
     configValidation: CONFIG_COLLATERAL_V2,
     // The legacy CDP's exit is borrower repay-only (no holder-facing
-    // redemption route), so capacity/fee telemetry would fabricate a route.
-    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
+    // redemption route), so the profile's no-telemetry policy is intentional.
     validation: LATEST_STATE_WITH_UNKNOWN_CAP_VALIDATION,
-  },
+  }),
   "hliquity-hedera": {
     primaryInputKinds: ["http-json"],
     paramsSchema: noParamsSchema,
@@ -2773,18 +2705,9 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
       allowedFreshnessModes: VERIFIED_ONLY_FRESHNESS,
     },
   },
-  "krwq-custodian": {
-    primaryInputKinds: ["http-json"],
-    paramsSchema: noParamsSchema,
-    sourceModel: "dynamic-mix",
-    evidenceClass: "independent",
-    preferredFreshnessMode: "verified",
+  "krwq-custodian": declareAdapter(noParamsSchema, HTTP_DASHBOARD_COLLATERAL_V1, {
     sourceOriginClass: "onchain-observation",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
-    validation: DASHBOARD_WITH_UNKNOWN_CAP_VALIDATION,
-  },
+  }),
   "liquity-v1": declareAdapter(liquityV1ParamsSchema, ONCHAIN_SINGLE_ASSET_V2),
   "liquity-native-active-pool": {
     primaryInputKinds: ["onchain-evm"],
@@ -2842,18 +2765,10 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
       allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
     },
   },
-  "megausd-custody": {
-    primaryInputKinds: ["http-json"],
-    paramsSchema: noParamsSchema,
-    sourceModel: "dynamic-mix",
-    evidenceClass: "independent",
-    preferredFreshnessMode: "verified",
+  "megausd-custody": declareAdapter(noParamsSchema, HTTP_DASHBOARD_COLLATERAL_V1, {
     sourceOriginClass: "issuer-attested",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: DASHBOARD_VALIDATION,
-  },
+  }),
   mento: {
     primaryInputKinds: ["http-json"],
     paramsSchema: mentoParamsSchema,
@@ -2908,17 +2823,9 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     validation: DASHBOARD_VALIDATION,
   },
   "resupply-pairs": declareAdapter(resupplyPairsParamsSchema, ONCHAIN_DYNAMIC_MIX_DIRECT_CAPACITY_V1),
-  "reserve-protocol-dtf": {
-    primaryInputKinds: ["onchain-evm"],
-    paramsSchema: reserveProtocolDtfParamsSchema,
-    sourceModel: "dynamic-mix",
-    evidenceClass: "independent",
+  "reserve-protocol-dtf": declareAdapter(reserveProtocolDtfParamsSchema, ONCHAIN_DYNAMIC_MIX_DIRECT_CAPACITY_V1, {
     preferredFreshnessMode: "not-applicable",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: DIRECT_CAPACITY_TELEMETRY,
-    validation: LATEST_STATE_VALIDATION,
-  },
+  }),
   reservoir: {
     primaryInputKinds: ["http-json"],
     paramsSchema: noParamsSchema,
@@ -3034,18 +2941,11 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     validation: BUSINESS_DAY_VERIFIED_VALIDATION,
   },
 
-  "superstate-liquidity": {
-    primaryInputKinds: ["onchain-evm"],
-    paramsSchema: superstateLiquidityParamsSchema,
-    sourceModel: "single-bucket",
+  "superstate-liquidity": declareAdapter(superstateLiquidityParamsSchema, ONCHAIN_SINGLE_ASSET_V1, {
     // P5: USTB's single slice names the fund share, not its underlying securities.
-    evidenceClass: "independent",
     preferredFreshnessMode: "verified",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_SINGLE_ASSET_V1,
-    redemptionTelemetry: DIRECT_CAPACITY_TELEMETRY,
     validation: TIMESTAMPED_FEED_VALIDATION,
-  },
+  }),
   "paxos-independent-assurance": declareAdapter(paxosAssuranceParamsSchema, HTTP_DISCLOSURE_ATTESTATION_V3, {
     // PAXG/PYUSD/USDG/USDP resolve through the same paxos.com Framer site and
     // the identical script_main module, so one run's fetched payloads are
@@ -3067,17 +2967,11 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
   // configured static composition), but the totals here are Tether's own
   // self-published transparency.json rather than a third-party-audited feed.
   // Flagged for owner review of whether this should instead be "static-validated".
-  "tether-transparency": {
-    primaryInputKinds: ["http-json"],
-    paramsSchema: tetherTransparencyParamsSchema,
-    sourceModel: "dynamic-mix",
-    evidenceClass: "independent",
-    preferredFreshnessMode: "verified",
+  "tether-transparency": declareAdapter(tetherTransparencyParamsSchema, HTTP_DASHBOARD_COLLATERAL_V1, {
     sourceOriginClass: "issuer-attested",
     displayBadgeKind: "proof",
     sharedSourceMode: "source-invariant",
     configValidation: CONFIG_ATTESTATION_V1_V2,
-    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     // Measured 2026-08-25: 24 upstream publications in the retained 30-day
     // window (last 2026-08-21T23:30:02Z; the breach was detected at
     // 2026-08-25T00:11:34Z when warning_count rose from 1 to 2), with a
@@ -3091,7 +2985,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     // asset, so this bound protects strong backing evidence, not a scored
     // number.
     validation: DISCLOSURE_VALIDATION,
-  },
+  }),
   "tether-transparency-mxnt": {
     primaryInputKinds: ["http-json"],
     paramsSchema: tetherMxntTransparencyParamsSchema,
@@ -3122,38 +3016,26 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     configValidation: configPolicy(["attestation-mix"], [3]),
   }),
 
-  "usdai-proof-of-reserves": {
-    primaryInputKinds: ["http-json"],
-    paramsSchema: usdaiProofOfReservesParamsSchema,
-    sourceModel: "dynamic-mix",
-    evidenceClass: "independent",
+  "usdai-proof-of-reserves": declareAdapter(usdaiProofOfReservesParamsSchema, HTTP_DASHBOARD_COLLATERAL_V1, {
     preferredFreshnessMode: "not-applicable",
     sourceOriginClass: "issuer-attested",
     displayBadgeKind: "proof",
-    sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V2,
-    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: {
       maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
       maxSourceAgeSec: DISCLOSURE_SOURCE_MAX_AGE_SEC,
       allowedFreshnessModes: ["not-applicable", "unverified"],
     },
-  },
-  "usd1-bundle-oracle": {
-    primaryInputKinds: ["onchain-evm"],
-    paramsSchema: usd1BundleOracleParamsSchema,
-    sourceModel: "single-bucket",
-    evidenceClass: "independent",
-    sharedSourceMode: "none",
+  }),
+  "usd1-bundle-oracle": declareAdapter(usd1BundleOracleParamsSchema, ONCHAIN_SINGLE_ASSET_NO_TELEMETRY_V1, {
     // v3: required reviewed issuer-native `liabilityScope`; the ratio is
     // published as `collateralizationRatio` only within the skew bound.
     configValidation: CONFIG_SINGLE_ASSET_V3,
-    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: {
       maxSourceAgeSec: DISCLOSURE_SOURCE_MAX_AGE_SEC,
       allowedFreshnessModes: VERIFIED_ONLY_FRESHNESS,
     },
-  },
+  }),
   "usdd-data-platform": {
     primaryInputKinds: ["http-json"],
     paramsSchema: noParamsSchema,
@@ -3167,33 +3049,18 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     redemptionTelemetry: DIRECT_CAPACITY_CURRENT_FEE_TELEMETRY,
     validation: DASHBOARD_VALIDATION,
   },
-  "usdtb-transparency": {
-    primaryInputKinds: ["http-json"],
-    paramsSchema: noParamsSchema,
-    sourceModel: "dynamic-mix",
-    evidenceClass: "independent",
-    preferredFreshnessMode: "verified",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
+  "usdtb-transparency": declareAdapter(noParamsSchema, HTTP_DASHBOARD_COLLATERAL_V1, {
     validation: DASHBOARD_VALIDATION,
-  },
+  }),
   yamato: declareAdapter(yamatoParamsSchema, ONCHAIN_SINGLE_ASSET_V1),
-  "youves-tezos": {
-    primaryInputKinds: ["http-json"],
-    paramsSchema: noParamsSchema,
-    sourceModel: "dynamic-mix",
-    evidenceClass: "independent",
+  "youves-tezos": declareAdapter(noParamsSchema, HTTP_DASHBOARD_COLLATERAL_V1, {
     sourceOriginClass: "onchain-observation",
     preferredFreshnessMode: "not-applicable",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_COLLATERAL_V1,
     // The legacy CDP's exit is borrower repay-only (no holder-facing
-    // redemption route on a long-depegged token), so capacity/fee telemetry
-    // would fabricate a route.
-    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
+    // redemption route on a long-depegged token), so the profile's
+    // no-telemetry policy is intentional.
     validation: LATEST_STATE_WITH_UNKNOWN_CAP_VALIDATION,
-  },
+  }),
   // v3 retains v2's required supply and binds freshness to every used clock.
   // Older packets cannot distinguish capture time from material pricing time.
   "zephyr-scanner": declareAdapter(noParamsSchema, HTTP_PROTOCOL_V1, {
@@ -3212,17 +3079,11 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: LATEST_STATE_VALIDATION,
   },
-  "dgld-gold-mapper": {
-    primaryInputKinds: ["http-json"],
-    paramsSchema: dgldGoldMapperParamsSchema,
-    sourceModel: "single-bucket",
-    evidenceClass: "weak-live-probe",
+  "dgld-gold-mapper": declareAdapter(dgldGoldMapperParamsSchema, HTTP_PROTOCOL_V1, {
     sourceOriginClass: "issuer-attested",
-    sharedSourceMode: "none",
     configValidation: CONFIG_SINGLE_ASSET_V1,
-    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: DASHBOARD_VERIFIED_NO_UNKNOWN_VALIDATION,
-  },
+  }),
   "matrixdock-frs": {
     primaryInputKinds: ["onchain-evm"],
     paramsSchema: matrixdockFrsParamsSchema,
@@ -3286,18 +3147,12 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
       allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
     },
   },
-  "afi-proof": {
-    primaryInputKinds: ["http-json"],
-    paramsSchema: afiProofParamsSchema,
-    sourceModel: "single-bucket",
+  "afi-proof": declareAdapter(afiProofParamsSchema, HTTP_PROTOCOL_V1, {
     // Proof generation is not asset observation: the envelope verifies only
     // aggregate totals, so this stays a weak live probe with ratio telemetry.
-    evidenceClass: "weak-live-probe",
     sourceOriginClass: "issuer-attested",
     displayBadgeKind: "proof",
-    sharedSourceMode: "none",
     configValidation: CONFIG_SINGLE_ASSET_V1,
-    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     freshnessLimitation:
       "The AFI proof carries a generation timestamp, but proof generation does not establish the as-of dates of the underlying assets; ratio telemetry publishes as unverified.",
     validation: {
@@ -3306,7 +3161,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
       maxUnknownExposurePct: 100,
       allowedFreshnessModes: ["unverified"],
     },
-  },
+  }),
   "frnt-ledgerlens": {
     primaryInputKinds: ["http-json"],
     paramsSchema: noParamsSchema,
@@ -3324,22 +3179,16 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
       rationale: "FRNT LedgerLens supplemental dashboard JSON measures gross FBO composition and reconciled net reserve coverage. Unallocated administrative payable prevents net backing composition attribution; no AT-C 205 report verification or redemption capacity is claimed. Reviewed 2026-10-03.",
     },
   },
-  "coinbase-oned-por": {
-    primaryInputKinds: ["http-json"],
-    paramsSchema: noParamsSchema,
-    sourceModel: "single-bucket",
-    evidenceClass: "weak-live-probe",
+  "coinbase-oned-por": declareAdapter(noParamsSchema, HTTP_PROTOCOL_V1, {
     sourceOriginClass: "issuer-attested",
     preferredFreshnessMode: "verified",
-    sharedSourceMode: "none",
     configValidation: CONFIG_SINGLE_ASSET_V1,
-    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: DASHBOARD_VERIFIED_VALIDATION,
     provenance: {
       status: "active",
       rationale: "Ordinary public persisted GraphQL GET verified200 on 2026-10-03; exact Base ONED stock and complete published USDC wallets reconcile. Source-controlled query hash/schema drift fail closed with stable machine reasons, without HTML/stale/partial fallback. This remains issuer-attested telemetry, not independent financial assurance or funded redemption capacity.",
     },
-  },
+  }),
   "blackrock-brsrv-holdings": {
     primaryInputKinds: ["http-html"],
     paramsSchema: noParamsSchema,

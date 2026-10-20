@@ -167,7 +167,7 @@ In coordinated additions, specialists return their portion of this packet and la
 
 ### Always collect
 
-Always research `id`, `name`, `symbol`, target file, lifecycle, backing/peg/governance/yield/RWA/NAV flags, collateral, peg mechanism, links, contracts and reserves. `StablecoinMetaAssetSchemaShape` in `shared/lib/stablecoins/schema.ts` owns their field shapes; the [registry editing rules](../stablecoin-data.md#editing-rules) own authoring semantics. Record the evidence in the [handoff packet](#additionevidence-handoff-packet). Schema defaults do not replace Phase 3 research or the Phase 3.5 editorial gate.
+Always research `id`, `name`, `symbol`, target file, lifecycle, backing/peg/governance/yield/RWA/NAV flags, collateral, peg mechanism, links, contracts and reserves. `StablecoinMetaStructuralSchema` in `shared/types/stablecoin-meta-schemas.ts` owns their field shapes; `shared/lib/stablecoins/schema.ts` owns semantic catalog admission, and the [registry editing rules](../stablecoin-data.md#editing-rules) own authoring semantics. Record the evidence in the [handoff packet](#additionevidence-handoff-packet). Schema defaults do not replace Phase 3 research or the Phase 3.5 editorial gate.
 
 ### Collect when applicable
 
@@ -227,7 +227,6 @@ Use a nearby coin only as a structural example. The schemas and `npm run check:s
 - `pegReferenceId` requires `variantOf` and must equal it; it is not a standalone dependency or NAV-reference field.
 - `variantOf` / `variantKind` co-require and are allowed for post-launch readable children, not pre-launch entries. Active children require an active parent; inactive readable children require a readable parent. The parent must be non-variant and non-`navToken`, and `pegReferenceId` must equal `variantOf`. Use `VARIANT_KIND_VALUES` in `shared/types/core.ts` for supported kinds and `shared/lib/stablecoins/validate-variants.ts` plus `schema.ts` for admission rules: `pure-wrapper` keeps `navToken === false`; other kinds require `navToken === true`, and `risk-absorption` requires `wrapperOperator`. V9 evaluates wrapper strategy and parent caps; retired Selector ceilings do not apply. Review wrapper-local controls and parent exposure through the same [FreezeWatch procedure](../blacklist-tracker.md#freezewatch-decision-procedure), not a variant-specific status rule.
 - `tradedContracts` is for market-traded variants that matter for discovery/liquidity/yield identity but are not the canonical supply contracts.
-- `tags` is optional editorial metadata. Do not use it instead of a first-class field.
 
 ### Infrastructure taxonomy vs dependency graph
 
@@ -558,11 +557,9 @@ Current expectations:
 
 The `write-ai-summaries` skill (see Phase 2) is the standard path for drafting and refreshing these entries.
 
-### 6c. Notices and tags
+### 6c. Notices
 
 If the coin needs explicit user-facing caveats, add `notices`.
-
-Use `tags` sparingly for editorial categorization, not for core classification.
 
 ### 6d. Historical annotation corpus (optional)
 

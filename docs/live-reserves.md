@@ -25,6 +25,8 @@ Stable source keys identify upstream categories, contracts or fixed bucket IDs, 
 
 Equivalent complete descriptors may select explicit named profiles; shared telemetry objects are immutable exact capacity/fee combinations, not inferred capabilities. Per-adapter origin and no-capacity rationale remain explicit, and params-gated telemetry stays at its declaration so a generic profile cannot grant it accidentally. These authoring aids introduce no second schema surface or policy/fingerprint change.
 
+`shared/types/live-reserve-core.ts` owns reusable input-kind and base configuration schemas, deriving their TypeScript shapes with `z.output` without loading adapter declarations. `shared/lib/live-reserve-adapters.ts` composes adapter-key, supported-input and params variants plus policy refinements; suspension dates retain their supported format-only validation, while supply-bootstrap review dates require valid calendar dates.
+
 | Property              | Meaning                                                                                                      |
 | --------------------- | ------------------------------------------------------------------------------------------------------------ |
 | `sourceModel`         | Distinguishes `dynamic-mix`, `validated-static`, and `single-bucket` reserve shapes                          |
@@ -45,7 +47,7 @@ Instrument identity, complete measurement perimeter and matching units constrain
 
 Adapter-specific completeness, unit, source-clock and binding-version rules live in the [packet admission details](process/live-reserves-appendix.md#packet-admission-details); HCHF's [versioned ownership boundary](process/live-reserves-appendix.md#adapter-specific-evidence-boundaries) also governs retained-snapshot admission. Every class still obeys the shared gates below.
 
-Liquity V2 receipt introspection preserves executed `asset()` reverts separately from unavailable RPC results. Funded detected receipts require readable conversion totals and underlying decimals; missing evidence withholds whole-book valuation through the existing partial-book contract, never raw-share or share-decimal substitution. The adapter-specific boundary is documented in the appendix.
+Liquity V2 branches may declare reviewed `kind: plain-token` to value the configured direct balance/decimals without ERC4626 probes (including Felix WHYPE and Base Dollar WETH). Declared `erc4626` branches require readable asset identity even on an executed revert; undeclared branches retain strict introspection, where only an executed aggregate-member revert proves a nonreceipt. Funded receipts require readable conversion totals and underlying decimals; missing evidence withholds whole-book valuation through the existing partial-book contract, never raw-share or share-decimal substitution.
 
 ### Snapshot admission gates
 
@@ -65,6 +67,8 @@ The shared result is `{ eligible, reasons: LiveReserveAdmissionRejectionCode[], 
 `shared/lib/live-reserve-freshness.ts` owns `resolveLiveReserveSourceAgeBudget` and the 600-second `MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC`: scoring wins equal caps and the caller supplies the fallback. Producer validation, serving and nested redemption admission share this authority; `validate.ts` does not export a compatibility skew constant. Source skew and Worker fetch-clock integrity are independent.
 
 A later node-disagreement or other attempt error does not revoke a clean retained snapshot. Redemption capacity consumes the same structural, configuration-identity and freshness rejections, but retains its separate evidence-class and degraded-telemetry policy; independent reserve composition is not a prerequisite for valid same-run redemption telemetry.
+
+`ReserveSyncStatusSchema` and its derived `ReserveSyncStatus` in `shared/types/live-reserves.ts` own reserve-attempt status admission for detail wire views, accepted generations, Worker records/history and the Node coverage audit. Accepted-generation absence remains nullable, and unknown audit statuses remain unavailable. Scheduler execution/disposition vocabularies are independent even where literals coincide.
 
 The accepted metadata projection reuses `evaluateLiveReserveAdmission` with `sliceCount` instead of decoded slices. Producer writes validate composition; the seal is not a second composition validator. Direct scoring and sealing share strict warning integrity: malformed JSON, types, members or count discrepancies cannot become clean warnings. NULL/empty arrays and valid legacy members with absent severity/effect retain supported defaults. A decoded fatal warning still rejects admission; sealing retains that census member with `snapshot: null`, and detail falls back rather than presenting impossible accepted live evidence. Every consumer reassesses configuration, warnings and original clocks; sealing or fresh redemption never refreshes reserve evidence.
 

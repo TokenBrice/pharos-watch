@@ -555,9 +555,9 @@ function parseControlBreakdown(
     const best = Math.max(...scores);
     rows.push(makeRow({
       key: "bridge-composite",
-      label: "Bridge deployments",
+      label: "Bridge components",
       score: worst,
-      status: `${looseBridges.length} chains`,
+      status: `${looseBridges.length} bridge components`,
       detail: worst === best
         ? `All ${looseBridges.length} at ${worst.toFixed(0)} · not binding`
         : `Worst of ${looseBridges.length} · range ${worst.toFixed(0)}–${best.toFixed(0)} · not binding`,

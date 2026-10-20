@@ -43,22 +43,6 @@ export function coinTrackingStart(
   return null;
 }
 
-/**
- * Wrapper around computePegScore that applies a 4-year lookback window.
- * Used by the detail page to score a single coin from its depeg events.
- */
-export function computePegScoreWithWindow(
-  isNavToken: boolean,
-  events: DepegEvent[] | null,
-  earliestTrackingDate: number | null,
-): PegScoreResult | null {
-  if (isNavToken || !events) return null;
-  const nowSec = Math.floor(Date.now() / 1000);
-  const fourYearsAgo = nowSec - PEG_SCORE_LOOKBACK_SEC;
-  const firstSeenSec = earliestTrackingDate != null ? Math.floor(earliestTrackingDate) : null;
-  return computePegScore(events, coinTrackingStart(events, fourYearsAgo, firstSeenSec), nowSec);
-}
-
 export interface PegScoreResult {
   /** Composite score 0-100, or null if insufficient data (<7 days tracking) */
   pegScore: number | null;

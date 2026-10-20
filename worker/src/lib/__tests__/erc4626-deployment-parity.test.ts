@@ -28,9 +28,10 @@ function canonical(value: unknown): unknown {
 const digest = (value: unknown) => createHash("sha256").update(JSON.stringify(canonical(value))).digest("hex");
 
 describe("ERC-4626 deployment parity", () => {
-  it("preserves every rate field and deployment order, including Axis and independent precisions", () => {
+  it("preserves every rate field in deterministic source order, including Axis and independent precisions", () => {
     expect(ON_CHAIN_RATE_CONFIGS).toHaveLength(58);
-    expect(digest(ON_CHAIN_RATE_CONFIGS)).toBe("4ae6464d8bed053c45989df8ad6430db51e4c96e50839081719e4d224e8789a0");
+    // Source configs now own the stablecoin-ID ordering formerly applied by the registry.
+    expect(digest(ON_CHAIN_RATE_CONFIGS)).toBe("8bce15f88fcb44b8e92df8b85825076cc35b1be0a7d4076fcbea481f64e9bc9e");
   });
 
   it("preserves every NAV deployment triple, trust flag and route order", () => {

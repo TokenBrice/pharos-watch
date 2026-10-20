@@ -14,12 +14,11 @@ import {
   getTrackedContracts,
   getPairQuality,
   getQualityMultiplier,
-  initMetrics,
   isCryptoSwap,
   normalizeProtocol,
   parsePoolSymbols,
 } from "../dex-liquidity/pool-helpers";
-import { withCompleteVolume } from "../dex-liquidity/__tests__/scoring-test-builders";
+import { initMetrics, withCompleteVolume } from "../dex-liquidity/__tests__/scoring-test-builders";
 
 describe("dex-liquidity pool helpers", () => {
   afterEach(() => {

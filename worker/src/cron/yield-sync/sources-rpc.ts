@@ -29,9 +29,7 @@ import {
   encodeAddress,
   encodeUint256,
 } from "../../lib/evm-selectors";
-import {
-  ON_CHAIN_RATE_CONFIGS,
-} from "../../lib/yield-config/yield-config";
+import { ON_CHAIN_RATE_CONFIGS } from "../../lib/yield-config/yield-config-rate-sources";
 import type {
   ResolvedYield,
 } from "./types";
@@ -137,6 +135,15 @@ export async function runTimedOptionalSource<T>(
       logWorkerEventArgs("handler", "warn", `[yield] ${label} timed out; continuing without this source`);
       onOutcome?.({ label, outcome: "timeout" });
     } else {
+      logWorkerEvent({
+        scope: "lib",
+        level: "warn",
+        event: "optional_yield_source_failed",
+        job: "sync-yield-data",
+        source: label,
+        message: "Optional yield source failed",
+        error,
+      });
       onOutcome?.({ label, outcome: "failed" });
     }
     return fallback;

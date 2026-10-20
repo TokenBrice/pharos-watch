@@ -16,7 +16,7 @@ it("reads an Ethereum census larger than the former 4 MiB ceiling", async () => 
   const result = await crawlCurvePoolsStage({
     coinTargets: [{ chain: "ethereum", address, decimals: 18 }],
     context: createCrawlStageContext({
-      stablecoinId: "test", knownPoolIds: new Set(), nowSec: 1_800_000_000, pools: [], priceObs: [],
+      stablecoinId: "test", knownPoolIds: new Set(), nowSec: 1_800_000_000, pools: [],
     }),
   });
 

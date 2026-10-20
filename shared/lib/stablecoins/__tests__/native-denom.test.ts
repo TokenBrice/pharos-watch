@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ContractDeploymentSchema } from "../../../types/stablecoin-meta-schemas";
+import { ContractDeploymentSchema } from "../../../types/stablecoin-meta-primitives";
 import { CHAIN_META } from "../../../types/chain-identity";
 import { buildExplorerUrl } from "../../explorer";
 import { isFixedDecimalDeployment } from "../../deployment-amounts";

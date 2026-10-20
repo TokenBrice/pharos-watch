@@ -24,6 +24,7 @@ import { authorizeEventRepair, consumeEventRepairAuthorization } from "../depeg-
 import { DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC, DDR_FORECAST_READINESS_STRICT_EARLY_LOCK_THRESHOLD, DDR_FORECAST_READINESS_VERSION } from "@shared/lib/methodology-versions/depeg-resolver";
 import { coverageRowForIncident } from "../../cron/depeg-resolver-review/coverage-rows";
 import { toCanonicalIncidentInput } from "../../cron/depeg-resolver/utils";
+import { DEFAULT_DDR_V2_STORE_CONTRACTS } from "../../cron/depeg-resolver/storage-adapters";
 import {
   FLAP_MIGRATION_REPLAY_SCENARIOS,
   ensureIncident,
@@ -473,6 +474,13 @@ describe("DDRv2 storage contract cases", () => {
   it("seals idempotent predictions, stores readiness/backstop locks, and preserves no-call fields", async () => withSqliteD1(async (db) => {
     const { incident, prediction } = await sealPredictionFixture(db);
     expect(prediction).toMatchObject({ incidentKey: incident.incidentKey, rowHash: expect.stringMatching(/^[0-9a-f]{64}$/), lockTrigger: null, backstopAt: null });
+    const [throughPort] = await DEFAULT_DDR_V2_STORE_CONTRACTS.loadSealedPublicPredictions(db, { publicPredictionIds: [prediction.id] });
+    const persisted = row<{ sealed_payload_json: string; row_hash: string }>(db, "SELECT sealed_payload_json, row_hash FROM depeg_resolver_public_predictions WHERE id = ?", prediction.id);
+    expect(throughPort).toEqual(prediction);
+    expect(throughPort?.sealedPayloadJson).toBe(persisted.sealed_payload_json);
+    expect(throughPort?.rowHash).toBe(persisted.row_hash);
+    expect(throughPort?.sealedPayload).toEqual(JSON.parse(persisted.sealed_payload_json));
+    expect(throughPort).not.toHaveProperty("publicPredictionId");
     const duplicate = sealedPayloadWithHash(incident.incidentKey);
     expect((await sealPublicPrediction(db, { incidentKey: incident.incidentKey, eventId: 1, stablecoinId: "lusd-liquity", symbol: "LUSD", name: "Liquity USD", pegCurrency: "USD", governance: "decentralized", direction: "below", startedAt: 100000, assessedAt: 186500, eventAgeSec: 86500, methodologyVersion: "2.1", methodologyVersionLabel: "v2.1", resolutionRubricVersion: "resolution-rubric-v2", durationModelVersion: "duration-landmark-v2", incidentGroupingVersion: "incident-group-v2", supportRulesVersion: "support-rules-v2", resolutionTier: "recovery_likely", durationSuppressed: false, sealedPayload: duplicate.payload, rowHash: duplicate.rowHash, predictionPolicyVersion: "sticky-24h-v1", policyDelaySec: 86400, eligibleAt: 186400, lockedAt: 186500, eventAgeAtLockSec: 86500, lockTiming: "late_freeze", createdAt: 186501 })).id).toBe(prediction.id);
     expect(() => db.sqlite.exec("UPDATE depeg_resolver_assessments SET row_json = '{}' WHERE checkpoint = 'public_prediction'")).toThrow(/immutable/);

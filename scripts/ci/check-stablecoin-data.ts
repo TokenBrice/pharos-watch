@@ -14,12 +14,12 @@ import { findCollateralProseReserveDriftFindings } from "@shared/lib/stablecoins
 import { classifyPegClass, normalizePegTypeFromCurrency } from "@shared/lib/peg-price-bounds";
 import { hasRuntimeOnchainSupplyPath } from "@shared/lib/onchain-supply-probe";
 import type { DeadStablecoin, StablecoinMeta } from "@shared/types";
-import { NativeBankDenomSchema } from "@shared/types/stablecoin-meta-schemas";
+import { NativeBankDenomSchema } from "@shared/types/stablecoin-meta-primitives";
 import { isValidIsoDateOnly } from "@shared/types/date-primitives";
 import { MANIFEST_SOURCES } from "@shared/data/live-reserves/independent-assurance";
 import listingDecisionsAsset from "@shared/data/stablecoins/listing-decisions.json";
 import { RESERVE_COMPOSITION_TOTAL_TOLERANCE_PCT, validateReserveCompositionTotal } from "@shared/types/reserves";
-import { MechanismArchetypeReviewSchema } from "@shared/types/stablecoin-meta-schemas";
+import { MechanismArchetypeReviewSchema } from "@shared/types/stablecoin-meta-primitives";
 import { DependencyTypeSchema, defaultV9DependencyEconomicRole } from "@shared/types/dependency-types";
 import { findBlacklistabilityReviewIssues } from "../lib/blacklistability-review";
 import { analyzeOracleRiskCoverage, isBlockingOracleRiskCoverageFinding } from "../lib/oracle-risk-coverage";

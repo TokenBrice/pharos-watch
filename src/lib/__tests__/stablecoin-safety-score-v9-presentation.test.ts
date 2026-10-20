@@ -4,6 +4,8 @@ import { makeV9Card, makeV9Pillars } from "@/test/fixtures/safety-score-v9";
 import {
   buildStablecoinSafetyScoreV9Presentation,
 } from "@/lib/stablecoin-safety-score-v9-presentation";
+import { buildSafetyScoreV9AccessRows } from "@/lib/stablecoin-safety-score-v9-presentation-access";
+import { buildSafetyScoreV9Attribution } from "@/lib/stablecoin-safety-score-v9-presentation-attribution";
 
 // These suites author breakdowns whose published scores must match the
 // card pillars, so they declare the pillars instead of tracking the shared
@@ -108,30 +110,11 @@ describe("stablecoin V9 safety presentation", () => {
     weightedContribution: Number((scores[key] * weight).toFixed(6)),
   }));
 
-  it("derives honest score trace labels without recreating V8 dimensions", () => {
-    const card = makeV9Card({
-      score: 84,
-      grade: "A",
-      bindingCap: {
-        kind: "track-record",
-        limit: 84,
-        source: "structural",
-        reason: "Less than two years of implementation history.",
-        binding: true,
-      },
-    });
-    card.scoreTrace.stages.preCapScore = 86.9;
-    card.scoreTrace.stages.deploymentAdjustmentPoints = 0.3;
-    card.scoreTrace.stages.pegMultiplier = 0.99;
+  it("keeps the three named pillars without recreating V8 dimensions", () => {
+    const card = makeV9Card();
 
     const presentation = buildStablecoinSafetyScoreV9Presentation(card);
 
-    expect(presentation.traceParts).toEqual([
-      "Pre-cap 86.9",
-      "Track-record cap 84",
-      "Peg x0.990",
-      "Deployment -0.3",
-    ]);
     expect(presentation.pillars.map((pillar) => pillar.label)).toEqual([
       "Backing",
       "Exit",
@@ -152,9 +135,7 @@ describe("stablecoin V9 safety presentation", () => {
       },
     });
 
-    const presentation = buildStablecoinSafetyScoreV9Presentation(card);
-
-    expect(presentation.accessRows).toContainEqual({
+    expect(buildSafetyScoreV9AccessRows(card)).toContainEqual({
       key: "primaryExit",
       label: "Primary exit",
       value: "Incomplete exit surface",
@@ -191,7 +172,7 @@ describe("stablecoin V9 safety presentation", () => {
       },
     ];
 
-    const presentation = buildStablecoinSafetyScoreV9Presentation(card);
+    const presentation = buildSafetyScoreV9Attribution(card);
 
     // Six-decimal producer precision reads as noise in a sentence.
     expect(presentation.adverseMessages).toEqual(["Measured peg multiplier is 0.804."]);
@@ -420,9 +401,34 @@ describe("stablecoin V9 safety presentation", () => {
     const composite = rows[2];
     // Worst, not mean: the pillar rule is a minimum and an average would flatter it.
     expect(composite.score).toBe(50);
-    expect(composite.status).toBe("3 chains");
+    expect(composite.status).toBe("3 bridge components");
     expect(composite.detail).toBe("Worst of 3 · range 50–85 · not binding");
     expect(composite.children.map((child) => child.key)).toEqual(["flow", "abstract", "boba"]);
+  });
+
+  it("counts two same-chain bridge deployments as components, never as chains", () => {
+    const card = makeV9Card({ pillars: BREAKDOWN_PILLARS });
+    card.breakdowns = {
+      ...breakdownsFixture(),
+      control: {
+        ...breakdownsFixture().control,
+        components: [
+          { key: "bridge:base:canonical", label: "Base canonical bridge", kind: "bridge", score: 85, binding: false, posture: "distributed", effectiveScoringWeight: 0, cause: null, causeGapRefs: [], scoringDisposition: "included" },
+          { key: "bridge:base:oft", label: "Base OFT bridge", kind: "bridge", score: 65, binding: false, posture: "distributed", effectiveScoringWeight: 0, cause: null, causeGapRefs: [], scoringDisposition: "included" },
+          { key: "mint", label: "Mint authority", kind: "mint", score: 86, binding: true, posture: "concentrated", effectiveScoringWeight: 1, cause: null, causeGapRefs: [], scoringDisposition: "included" },
+        ],
+      },
+    };
+    const rows = buildStablecoinSafetyScoreV9Presentation(
+      SafetyScoreV9CurrentCardSchema.parse(card),
+    ).pillars[2].breakdown!.groups[0].rows;
+    const composite = rows.find((row) => row.key === "bridge-composite")!;
+    expect(composite).toMatchObject({
+      label: "Bridge components", status: "2 bridge components", score: 65,
+      detail: "Worst of 2 · range 65–85 · not binding",
+    });
+    expect(composite.children.map((child) => child.key)).toEqual(["bridge:base:oft", "bridge:base:canonical"]);
+    expect(JSON.stringify(composite)).not.toContain("2 chains");
   });
 
 });

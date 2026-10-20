@@ -2,6 +2,7 @@ import "../../test-helpers/reviewed-deployment-catalog.test-support";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import type { ReviewedDeploymentSupplyObservation, XautLockMintObservation } from "@shared/types/safety-score-v9-supply-attribution";
 import {
   SUPPLY_ATTRIBUTION_CAPTURE_BUDGET,
   SUPPLY_ATTRIBUTION_GENERATION_MAX_BYTES,
@@ -15,14 +16,12 @@ import {
 } from "../report-cards-fixed-input";
 import {
   deriveReviewedDeploymentUnitPartition,
-  type ReviewedDeploymentSupplyObservation,
   CENTRIFUGE_BURN_MINT_ASSET_IDS,
   REVIEWED_ECONOMIC_SUPPLY_PLANS,
 } from "../safety-score-v9/supply-attribution-contract";
 import {
   deriveXautRepresentationGroupSupplyAttribution,
   XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC,
-  type XautLockMintObservation,
 } from "../safety-score-v9/xaut-supply-attribution-contract";
 import {
   applySafetyScoreV9SupplyAttributionGeneration,

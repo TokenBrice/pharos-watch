@@ -6,7 +6,7 @@ import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 import { cn } from "@/lib/utils";
 import type { RedemptionBackstopEntry, SafetyScoreV9CurrentCard } from "@shared/types";
-import { SCORE_TIER_5_CLASSES } from "@shared/lib/classification";
+import { SCORE_TIER_5_CLASSES, SCORE_TIER_5_POLICY, resolveScoreTier5 } from "@shared/lib/classification";
 import {
   REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS,
   type RedemptionCoverageReasonCode,
@@ -74,17 +74,11 @@ const EXIT_COMPONENT_ROUTE_FIELDS: Record<ExitComponentKey, { label: string; fie
   cost: { label: "cost", field: "costScore" },
 };
 
-/** The view model's tone cutoffs (80/65/50/35) as a range track. The tiers
- *  have no published names, so each band is labelled by its score range.
- *  Worst → best, left → right. */
-const REDEMPTION_SCORE_BANDS: readonly SpectrumBand[] = [
-  { key: "t0", label: "<35", fillClass: SCORE_TIER_5_CLASSES.t0.fill, textClass: SCORE_TIER_5_CLASSES.t0.text },
-  { key: "t35", label: "35–49", fillClass: SCORE_TIER_5_CLASSES.t35.fill, textClass: SCORE_TIER_5_CLASSES.t35.text },
-  { key: "t50", label: "50–64", fillClass: SCORE_TIER_5_CLASSES.t50.fill, textClass: SCORE_TIER_5_CLASSES.t50.text },
-  { key: "t65", label: "65–79", fillClass: SCORE_TIER_5_CLASSES.t65.fill, textClass: SCORE_TIER_5_CLASSES.t65.text },
-  { key: "t80", label: "80+", fillClass: SCORE_TIER_5_CLASSES.t80.fill, textClass: SCORE_TIER_5_CLASSES.t80.text },
-];
-const REDEMPTION_SCORE_CUTOFFS = [0, 35, 50, 65, 80] as const;
+/** Numeric redemption bands, worst → best, from the shared display policy. */
+const REDEMPTION_SCORE_BANDS: readonly SpectrumBand[] = SCORE_TIER_5_POLICY.map(({ key, label }) => ({
+  key, label, fillClass: SCORE_TIER_5_CLASSES[key].fill, textClass: SCORE_TIER_5_CLASSES[key].text,
+}));
+const REDEMPTION_SCORE_CUTOFFS = SCORE_TIER_5_POLICY.map(({ min }) => min);
 
 const CHIP_CLASS = "border-border/60 bg-muted/30 text-xs";
 
@@ -110,14 +104,6 @@ const EXIT_EXCLUSION_CLAUSES: Record<string, (notional: string | null) => string
   "missing-runtime-route-evidence": () => "lacks current runtime evidence",
   "incomparable-route-requests": () => "was measured against a different request",
 };
-
-function redemptionScoreBandKey(score: number): string {
-  if (score >= 80) return "t80";
-  if (score >= 65) return "t65";
-  if (score >= 50) return "t50";
-  if (score >= 35) return "t35";
-  return "t0";
-}
 
 function MetadataBadgeList({ items }: { items: readonly { label: string; value: string }[] }) {
   return (
@@ -663,7 +649,7 @@ function RedemptionBackstopCard({
               mode="range"
               bands={REDEMPTION_SCORE_BANDS}
               cutoffs={REDEMPTION_SCORE_CUTOFFS}
-              activeKey={redemptionScoreBandKey(viewModel.score)}
+              activeKey={resolveScoreTier5(viewModel.score) ?? ""}
               score={viewModel.score}
               ariaLabel={`Route score ${viewModel.score} of 100 on the redemption score track.`}
             />

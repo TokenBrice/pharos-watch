@@ -39,6 +39,9 @@ describe("PharosWatchBotPage", () => {
       ),
     );
     expect([...publicCommands].sort()).toEqual(getTelegramPrivateBotCommands(true).map((entry) => entry.command).sort());
+    for (const retiredCommand of ["import", "export"]) {
+      expect(publicCommands.has(retiredCommand)).toBe(false);
+    }
   });
 
   it("builds the recommended setup deep link from a registry-valid start payload", () => {

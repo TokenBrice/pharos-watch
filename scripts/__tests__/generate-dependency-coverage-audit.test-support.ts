@@ -1,4 +1,4 @@
-import type { DependencyReview, ReserveReview } from "@shared/types/stablecoin-meta-schemas";
+import type { DependencyReview, ReserveReview } from "@shared/types/stablecoin-meta-primitives";
 import type { DependencyTargetDisposition } from "@shared/data/coverage-dispositions/dependency-target-dispositions";
 
 export function dependencyReview(relationships: DependencyReview["relationships"]): DependencyReview {

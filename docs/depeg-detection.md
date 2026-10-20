@@ -47,6 +47,8 @@ Confirmed events feed DDR's canonical incidents and immutable public forecasts o
 
 `getDepegThresholdBps(pegType)` returns 100 for `peggedUSD`, 150 for all other peg types.
 
+Runtime-neutral deviation and directional-signal primitives live in `shared/lib/depeg-signals.ts`; Worker detection, confirmation, analytics, and historical backfills import that authority directly via `@shared/lib/depeg-signals`.
+
 ## Database Schema
 
 Exact DDL and indexes are owned by `worker/migrations/0000_baseline.sql` plus the
@@ -490,6 +492,10 @@ producer contracts are unchanged.
 
 The [public PegScore methodology](https://pharos.watch/methodology/#pegscore-dews-methodology)
 owns the formula and components; `shared/lib/peg-score.ts` owns execution.
+`derivePegAnalyticsSnapshot()` resolves tracking coverage through `coinTrackingStart()`
+and passes its explicit scoring clock to `computePegScore()`. NAV admission stays
+at that caller: NAV rows are omitted by default or included with a null PegScore.
+Missing history without an anchor remains insufficient data, not a perfect score.
 Detection contributes eligible episodes, observed price intervals and audit provenance:
 
 - `false_positive` and `disputed` events are excluded. `no_data` remains eligible

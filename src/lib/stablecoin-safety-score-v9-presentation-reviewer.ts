@@ -5,18 +5,12 @@ import {
   type StablecoinSafetyScoreV9PillarBreakdown,
 } from "@/lib/stablecoin-safety-score-v9-presentation-breakdowns";
 import {
-  buildSafetyScoreV9TraceParts,
   describeSafetyScoreV9Components,
   humanizeSafetyScoreV9Value,
   isUnknownSafetyScoreV9Value,
   uniqueSafetyScoreV9Messages,
   type StablecoinSafetyScoreV9Component,
 } from "@/lib/stablecoin-safety-score-v9-presentation-helpers";
-import { buildSafetyScoreV9AccessRows } from "@/lib/stablecoin-safety-score-v9-presentation-access";
-import {
-  buildSafetyScoreV9Attribution,
-  type StablecoinSafetyScoreV9AttributionGroup,
-} from "@/lib/stablecoin-safety-score-v9-presentation-attribution";
 import { SAFETY_SCORE_V9_EVIDENCE_LEVEL_DESCRIPTIONS } from "@/lib/safety-score-v9-labels";
 
 const PILLARS = [
@@ -27,11 +21,7 @@ const PILLARS = [
 
 
 export interface StablecoinSafetyScoreV9Presentation {
-  accessRows: Array<{ key: string; label: string; value: string }>;
-  adverseMessages: string[];
-  boundedGroups: StablecoinSafetyScoreV9AttributionGroup[];
   evidenceSummary: string;
-  evidenceReasons: string[];
   pillars: Array<{
     key: "backing" | "exit" | "control";
     label: string;
@@ -42,10 +32,8 @@ export interface StablecoinSafetyScoreV9Presentation {
     components: StablecoinSafetyScoreV9Component[];
     breakdown: StablecoinSafetyScoreV9PillarBreakdown | null;
     reasons: string[];
-    isWeakest: boolean;
   }>;
   primaryReasons: string[];
-  traceParts: string[];
 }
 
 export function buildStablecoinSafetyScoreV9Presentation(
@@ -55,8 +43,6 @@ export function buildStablecoinSafetyScoreV9Presentation(
     (summary) => summary.reasonCodes?.includes("incomplete-dex-route-coverage"),
   );
   return {
-    traceParts: buildSafetyScoreV9TraceParts(card),
-    ...buildSafetyScoreV9Attribution(card),
     pillars: PILLARS.map(([key, label]) => {
       const pillar = card.pillars[key];
       // "Evidence: strong", not "Strong evidence": beside a D the latter reads
@@ -91,14 +77,11 @@ export function buildStablecoinSafetyScoreV9Presentation(
           const fallback = exitReasonFallback(pillar.score, card.breakdowns.exit);
           return fallback === null ? [] : [fallback];
         })(),
-        isWeakest: card.weakestPillar?.pillar === key,
       };
     }),
     evidenceSummary: isUnknownSafetyScoreV9Value(card.evidence.freshness)
       ? `${humanizeSafetyScoreV9Value(card.evidence.level)} coverage`
       : `${humanizeSafetyScoreV9Value(card.evidence.level)} coverage · ${humanizeSafetyScoreV9Value(card.evidence.freshness)}`,
-    evidenceReasons: uniqueSafetyScoreV9Messages(card.evidence.reasons.map((reason) => reason.message)),
-    accessRows: buildSafetyScoreV9AccessRows(card),
     primaryReasons: uniqueSafetyScoreV9Messages([
       ...card.nrReasons.map((reason) => reason.message),
       ...card.accessPosture.reasons.map((reason) => reason.message),

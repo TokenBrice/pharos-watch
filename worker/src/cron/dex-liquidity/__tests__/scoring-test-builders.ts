@@ -1,6 +1,23 @@
-import type { DexPriceObs, GtNewPool, LiquidityMetrics, PoolEntry } from "../types";
-import { summarizeRetainedPoolVolume } from "../scoring-helpers";
+import type { DexPriceObs, GtNewPool, LiquidityMetrics, SourcePoolGraph, PoolEntry } from "../types";
+import { rebuildMetricsFromPools, summarizeRetainedPoolVolume } from "../scoring-helpers";
 import { DEX_VOLUME_OBSERVATION_MAX_AGE_SEC } from "@shared/lib/dex-volume-availability";
+
+/** Scored fixtures are separate from source intake graphs. */
+export function initMetrics(id: string, symbol: string): LiquidityMetrics {
+  return {
+    stablecoinId: id, symbol, totalTvlUsd: 0, totalVolume24hUsd: null, totalVolume7dUsd: null,
+    volumeAvailability: null, poolCount: 0, chains: new Set(), pairs: new Set(),
+    protocolTvl: {}, chainTvl: {}, qualityAdjustedTvl: 0, topPools: [], effectiveTvl: 0,
+    organicTvlWeightedSum: 0, totalTvlForOrganic: 0, balanceRatioWeightedSum: 0,
+    totalTvlForBalance: 0, stressWeightedSum: 0, oldestPoolDays: 0,
+    lockedLiqWeightedSum: 0, totalTvlForLocked: 0,
+  };
+}
+
+export function scorePoolGraph(graph: SourcePoolGraph): LiquidityMetrics {
+  const rebuilt = rebuildMetricsFromPools(graph.pools);
+  return { ...initMetrics(graph.stablecoinId, graph.symbol), ...rebuilt, topPools: rebuilt.visiblePools };
+}
 
 export type PoolOverrides = Partial<PoolEntry> & Pick<PoolEntry, "poolId" | "project" | "chain" | "tvlUsd">;
 

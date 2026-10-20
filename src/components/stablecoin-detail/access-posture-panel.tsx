@@ -132,17 +132,13 @@ function DiagnosticsDisclosure({ rows }: { rows: readonly StablecoinSafetyScoreV
 export function AccessPosturePanel({
   rows,
   review = null,
-  variant,
-  compact = false,
+  variant = "strip",
   id,
   className,
 }: {
   rows: readonly StablecoinSafetyScoreV9AccessRow[];
   review?: TransferReviewView | null;
-  /** Defaults to `rail` when `compact`, otherwise `strip`. */
   variant?: AccessPostureVariant;
-  /** Legacy spelling of `variant="rail"`. */
-  compact?: boolean;
   /** Strip only: anchor id on the module. */
   id?: string;
   /** Strip only: lands on the module root, e.g. `xl:hidden` for the in-flow twin. */
@@ -153,7 +149,7 @@ export function AccessPosturePanel({
   const scored = rows.filter((row) => SCORED_ACCESS_KEYS[row.key] === true);
   const diagnostics = rows.filter((row) => SCORED_ACCESS_KEYS[row.key] !== true);
 
-  if ((variant ?? (compact ? "rail" : "strip")) === "rail") {
+  if (variant === "rail") {
     return (
       <RailCard
         title="Access posture"

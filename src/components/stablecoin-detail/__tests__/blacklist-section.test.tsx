@@ -1,7 +1,10 @@
 // @vitest-environment jsdom
 
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+afterEach(() => vi.useRealTimers());
+vi.mock("@/hooks/use-hydrated", () => ({ useHydrated: () => true }));
 
 vi.mock("next/link", async () => {
   const { createNextLinkMock } = await import("@/test-utils/frontend");
@@ -22,6 +25,7 @@ vi.mock("@/hooks/use-chart-container-ready", () => ({
 import { BlacklistHistorySection, BlacklistSection } from "@/components/stablecoin-detail/blacklist-section";
 import { useBlacklistEventsPage, useBlacklistSummary } from "@/hooks/use-blacklist-events";
 import type { BlacklistEvent } from "@shared/types";
+import type { ApiMeta } from "@/lib/api";
 
 type EventsPageResult = ReturnType<typeof useBlacklistEventsPage>;
 
@@ -233,4 +237,44 @@ describe("BlacklistSection", () => {
       expect(within(history).queryAllByTestId("stablecoin-blacklist-events-table")).toHaveLength(1);
     });
   });
+});
+
+it.each([
+  { meta: { updatedAt: Math.floor(Date.now() / 1000) - 86_400, status: "fresh", freshBudgetSec: 60, degradedBudgetSec: 120 }, state: "stale" },
+  { meta: { updatedAt: null, status: "unknown", ageSeconds: null }, state: "unavailable" },
+  { meta: { updatedAt: Math.floor(Date.now() / 1000), status: "fresh", warning: "Scan incomplete" }, state: "degraded" },
+] as { meta: ApiMeta; state: string }[])("keeps blacklist producer metadata authoritative after refetch ($state)", ({ meta, state }) => {
+  const receipt = Date.now();
+  const result = { ...summaryStub(), meta, dataUpdatedAt: receipt, error: null, refetch: vi.fn() };
+  vi.mocked(useBlacklistSummary).mockReturnValue(result);
+  const { container, rerender } = render(<BlacklistSection stablecoinId="usdc-circle" symbol="USDC" />);
+  const producerTime = meta.updatedAt != null ? new Date(meta.updatedAt * 1000).toISOString() : null;
+  expect(container.querySelector("time")?.getAttribute("datetime")).toBe(producerTime);
+  expect(container.querySelector(`[data-health-state="${state}"]`)).toBeTruthy();
+  vi.mocked(useBlacklistSummary).mockReturnValue({ ...result, dataUpdatedAt: receipt + 30_000 });
+  rerender(<BlacklistSection stablecoinId="usdc-circle" symbol="USDC" />);
+  expect(container.querySelector("time")?.getAttribute("datetime")).toBe(producerTime);
+  vi.mocked(useBlacklistSummary).mockReturnValue({ ...result, error: new Error("refresh failed") });
+  rerender(<BlacklistSection stablecoinId="usdc-circle" symbol="USDC" />);
+  expect(container.querySelector("time")?.getAttribute("datetime")).toBe(producerTime);
+  expect(screen.getByText(/refresh failed; showing the last available data/)).toBeTruthy();
+  expect(screen.getByText(/Frozen addresses/i)).toBeTruthy();
+});
+
+it("ages the saved blacklist generation without a query update", () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date("2026-10-20T12:00:00Z"));
+  const receipt = Date.now();
+  vi.mocked(useBlacklistSummary).mockReturnValue({
+    ...summaryStub(), dataUpdatedAt: receipt, error: null,
+    meta: { updatedAt: receipt / 1000, status: "fresh", freshBudgetSec: 60, degradedBudgetSec: 120 },
+  });
+  const { container } = render(<BlacklistSection stablecoinId="usdc-circle" symbol="USDC" />);
+  expect(container.querySelector("[data-health-state]")).toBeNull();
+  act(() => vi.advanceTimersByTime(50));
+  act(() => vi.advanceTimersByTime(60_001));
+  expect(container.querySelector('[data-health-state="degraded"]')).toBeTruthy();
+  act(() => vi.advanceTimersByTime(60_000));
+  expect(container.querySelector('[data-health-state="stale"]')).toBeTruthy();
+  expect(container.querySelector("time")?.getAttribute("datetime")).toBe(new Date(receipt).toISOString());
 });

@@ -30,7 +30,7 @@ import {
 } from "./evm-capture-helpers";
 import { normalizeProtocol } from "./pool-helpers";
 import { hasScoreFacingMeasuredExecution, resolveUniqueTrackedTokenIndex } from "./scoring-helpers";
-import type { LiquidityMetrics, PoolEntry, SymbolLookups } from "./types";
+import type { SourcePoolGraph, PoolEntry, SymbolLookups } from "./types";
 
 /**
  * Curve StableSwap-NG deployments whose pool inventory is only readable from
@@ -596,7 +596,7 @@ async function enrichDeployment(input: {
  * code hash has moved.
  */
 export async function enrichCurveStableswapFactoryExecutionModels(input: {
-  metrics: Map<string, LiquidityMetrics>;
+  metrics: Map<string, SourcePoolGraph>;
   chainAddressToId: SymbolLookups["chainAddressToId"];
   stablecoinPriceById: Map<string, number>;
   chainRpcs?: Map<string, ChainRpcConfig>;
@@ -611,7 +611,7 @@ export async function enrichCurveStableswapFactoryExecutionModels(input: {
   );
   const referencesByChain = new Map<string, FactoryReference[]>();
   for (const [stablecoinId, metric] of input.metrics) {
-    for (const pool of metric.topPools) {
+    for (const pool of metric.pools) {
       if (!isUnresolvedCurveStableswapJoin(pool) || hasScoreFacingMeasuredExecution(pool)) continue;
       if (normalizeProtocol(pool.project.trim().toLowerCase()) !== "curve") continue;
       const chain = canonicalExitRouteChain(pool.chain);

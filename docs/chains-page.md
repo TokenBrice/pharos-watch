@@ -46,6 +46,8 @@ Without an admitted finite nonnegative `chainDetail.totalUsd`, the profile hook 
 
 The API publishes composite and factor/evidence detail. Formula, weights, coverage gates, precedence, bands and versions belong to [chain-health.md](./chain-health.md) and `shared/lib/chains/health.ts`; band presentation belongs to `shared/lib/classification/chain-health.ts` for both frontend/Worker OG.
 
+L2BEAT stage and sentiment types derive from the evidence schemas in `shared/types/chains.ts`; snapshots, scoring and audits consume that vocabulary through type-only imports, retaining forward-compatible review/neutral values without a runtime schema dependency.
+
 Loaded null factors show NR (loading shows `—`). Partial peg coverage shows observed-only factors and a visible coverage/missing-reference note even if the composite clears its gate. Floor observed percentages so partial cannot read 100%; no observed reference means NR. Neutral-imputation explanation applies only to factors whose methodology explicitly permits it.
 
 ## API And Freshness

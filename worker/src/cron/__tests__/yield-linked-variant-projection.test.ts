@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildHardcodedUsdBenchmark } from "../yield-sync/benchmarks";
 import { deriveYieldSourceRole } from "../yield-sync/publication";
-import { evaluateYieldSources } from "../yield-sync/evaluation";
+import { evaluateYieldSourcesCooperative } from "../yield-sync/evaluation";
 import { appendLinkedVariantParentYieldSources } from "../yield-sync/resolve";
 import { buildYieldSourceRisk } from "../yield-sync/evaluation";
 import type { ResolvedYield, ResolvedYieldEntry } from "../yield-sync/types";
@@ -25,7 +25,7 @@ function source(overrides: Partial<ResolvedYield> = {}): ResolvedYield {
   };
 }
 
-function evaluate(resolved: ResolvedYieldEntry[]) {
+async function evaluate(resolved: ResolvedYieldEntry[]) {
   const input = baseEvaluationInput({
     resolved,
     startSec: START_SEC,
@@ -36,11 +36,11 @@ function evaluate(resolved: ResolvedYieldEntry[]) {
     },
     stablecoinSupplyById: new Map(resolved.map((entry) => [entry.id, 10_000_000])),
   });
-  return evaluateYieldSources(input);
+  return await evaluateYieldSourcesCooperative(input, { yieldToEventLoop: () => Promise.resolve() });
 }
 
 describe("appendLinkedVariantParentYieldSources", () => {
-  it("projects tracked variant yield onto the active parent as an external wrapper opportunity", () => {
+  it("projects tracked variant yield onto the active parent as an external wrapper opportunity", async () => {
     const resolved: ResolvedYieldEntry[] = [
       {
         id: "ybold-yearn",
@@ -80,7 +80,7 @@ describe("appendLinkedVariantParentYieldSources", () => {
     expect(resolved[0]?.yield?.yieldType).toBeUndefined();
     expect(resolved[0]?.yield?.sourceRisk).toBeUndefined();
 
-    const evaluatedProjection = evaluate(resolved).evaluatedSources.find(
+    const evaluatedProjection = (await evaluate(resolved)).evaluatedSources.find(
       (candidate) => candidate.id === "bold-liquity" && candidate.sourceKey === projected?.yield?.sourceKey,
     );
     expect(evaluatedProjection && deriveYieldSourceRole(evaluatedProjection, { isSelected: true })).toBe(
@@ -183,7 +183,7 @@ describe("appendLinkedVariantParentYieldSources", () => {
     });
   });
 
-  it("publishes a selected Maple projection as an external opportunity with child-owned evidence", () => {
+  it("publishes a selected Maple projection as an external opportunity with child-owned evidence", async () => {
     const resolved: ResolvedYieldEntry[] = [
       {
         id: "syrupusdc-maple",
@@ -200,7 +200,7 @@ describe("appendLinkedVariantParentYieldSources", () => {
     ];
     appendLinkedVariantParentYieldSources(resolved);
 
-    const evaluated = evaluate(resolved);
+    const evaluated = await evaluate(resolved);
     const selectedKey = evaluated.bestSourceKeyByCoin.get("usdc-circle");
     const selected = evaluated.evaluatedSources.find(
       (candidate) => candidate.id === "usdc-circle" && candidate.sourceKey === selectedKey,
@@ -225,7 +225,7 @@ describe("appendLinkedVariantParentYieldSources", () => {
     ).toBe("https://app.maple.finance/earn");
   });
 
-  it("keeps a lower-ranked linked wrapper external when retained as an alternate", () => {
+  it("keeps a lower-ranked linked wrapper external when retained as an alternate", async () => {
     const resolved: ResolvedYieldEntry[] = [
       {
         id: "usdc-circle",
@@ -255,7 +255,7 @@ describe("appendLinkedVariantParentYieldSources", () => {
     ];
     appendLinkedVariantParentYieldSources(resolved);
 
-    const evaluated = evaluate(resolved);
+    const evaluated = await evaluate(resolved);
     expect(evaluated.bestSourceKeyByCoin.get("usdc-circle")).toBe("onchain:usdc-circle");
     const alternate = evaluated.evaluatedSources.find(
       (candidate) => candidate.id === "usdc-circle" && candidate.sourceKey.startsWith("linked-variant:"),

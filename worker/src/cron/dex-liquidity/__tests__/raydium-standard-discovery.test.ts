@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { enrichRaydiumStandardDiscoveryExecutionModels, parseRaydiumStandardDiscoveryPool } from "../raydium-standard-discovery";
-import { initMetrics } from "../pool-helpers";
+import { initSourcePoolGraph } from "../pool-helpers";
 import type { PoolEntry } from "../types";
 import { buildP4DexExitRouteObservations } from "@shared/lib/p4-exit-route-capacity";
 
@@ -18,7 +18,7 @@ function nativePool() {
 }
 function harness() {
   const pool: PoolEntry = { poolId: `solana:${POOL}`, project: "raydium", chain: "solana", symbol: "USDC / USDT", poolType: "cg-amm", source: "cg_onchain", tvlUsd: 4_000_000, volumeUsd1d: 100_000 };
-  const metric = { ...initMetrics("usdc-circle", "USDC"), topPools: [pool] };
+  const metric = { ...initSourcePoolGraph("usdc-circle", "USDC"), pools: [pool] };
   const metrics = new Map([["usdc-circle", metric]]);
   const chainAddressToId = new Map([[`solana:${USDC}`, "usdc-circle"], [`solana:${USDT}`, "usdt-tether"]]);
   return { pool, metric, metrics, chainAddressToId, run: () => enrichRaydiumStandardDiscoveryExecutionModels({ metrics, chainAddressToId, stablecoinPriceById: new Map([["usdc-circle", 1], ["usdt-tether", 1]]), deadlineMs: Date.now() + 30_000 }) };
@@ -89,8 +89,8 @@ describe("Raydium standard discovery identity", () => {
   it("does not resolve duplicate retained identities", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ success: true, data: [nativePool()] }))));
     const h = harness();
-    h.metric.topPools.push({ ...h.pool });
+    h.metric.pools.push({ ...h.pool });
     await h.run();
-    expect(h.metric.topPools.every((pool) => pool.extra?.ammExecutionModel === undefined)).toBe(true);
+    expect(h.metric.pools.every((pool) => pool.extra?.ammExecutionModel === undefined)).toBe(true);
   });
 });

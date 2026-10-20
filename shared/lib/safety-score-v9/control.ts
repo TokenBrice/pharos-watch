@@ -42,9 +42,7 @@ import {
   type V9CompactControlReason,
   type V9ControlComponent,
   type V9ControlStructuralFailure,
-  type V9EconomicControlAssetSource,
   type V9EconomicControlResult,
-  type V9EconomicControlReviewExtension,
   type V9OracleBranchKind,
   type V9OracleBranchReview,
 } from "./control-primitives";
@@ -56,89 +54,57 @@ const ORACLE_BRANCHES = [
   "backstop",
   "shutdown-bad-debt",
 ] as const satisfies readonly V9OracleBranchKind[];
-/**
- * Canonically joins normalized asset facts to the explicit review extension.
- * The extension is mandatory: callers must not infer reconciliation or tiers.
- */
-export function projectV9EconomicControlEvaluation(
-  asset: V9EconomicControlAssetSource,
-  review: V9EconomicControlReviewExtension,
-  policy: V9ValidatedPolicyEnvelope,
-): EvaluateV9EconomicControlArgs {
-  assertV9ValidatedPolicyEnvelope(policy);
-  if (review.assetId !== asset.assetId) {
-    throw new Error(`Safety Score v9 control review ${review.assetId} does not match asset ${asset.assetId}`);
-  }
 
-  return {
-    policy,
-    facts: {
-      assetId: asset.assetId,
-      archetype: asset.archetype,
-      controlStatus: asset.controlStatus,
-      controls: [...asset.controls].sort((left, right) => compareText(left.controlKey, right.controlKey)),
-      ...(asset.issuanceFacts ? { issuanceFacts: asset.issuanceFacts } : {}),
-      ...(asset.gaps ? { gaps: asset.gaps } : {}),
-      supply: {
-        status: asset.supply.status,
-        selectedBridgeRoutes: [...asset.supply.selectedBridgeRoutes].sort((left, right) =>
-          compareText(left.deploymentRouteKey, right.deploymentRouteKey),
-        ),
-        selectedRouteSupplyShare: asset.supply.selectedRouteSupplyShare,
-        unknownRouteSupplyShare: asset.supply.unknownRouteSupplyShare,
-        unreviewedRouteSupplyShare: asset.supply.unreviewedRouteSupplyShare,
-        ...(asset.supply.providerRowExclusions === undefined ? {} : { providerRowExclusions: asset.supply.providerRowExclusions }),
-      },
-    },
-    mint: {
-      ...review.mint,
-      upgrade: { ...review.mint.upgrade },
-    },
-    ...(review.trackRecordMonths !== undefined ? { trackRecordMonths: review.trackRecordMonths } : {}),
-    ...(review.resolvedIncidentAgeMonths !== undefined
-      ? { resolvedIncidentAgeMonths: review.resolvedIncidentAgeMonths }
-      : {}),
-    oracle: {
-      ...review.oracle,
-      branches: [...review.oracle.branches].sort(
-        (left, right) =>
-          compareText(left.branch, right.branch) ||
-          compareText(left.controlKey ?? "", right.controlKey ?? "") ||
-          compareText(left.mechanismKey ?? "", right.mechanismKey ?? ""),
-      ),
-    },
-    bridge: {
-      ...review.bridge,
-      routes: [...review.bridge.routes].sort((left, right) => compareText(left.controlKey, right.controlKey)),
-    },
-  };
+type PendingControlComponent =
+  Omit<V9ControlComponent, "cause" | "causeGapIds" | "scoringDisposition" | "effectiveScoringWeight"> &
+  { causeStatuses?: readonly (V9FactStatusV2 | undefined)[] };
+
+interface ControlEvaluationContext {
+  args: EvaluateV9EconomicControlArgs;
+  policy: V9ValidatedPolicyEnvelope["policy"]["semantic"];
+  facts: EvaluateV9EconomicControlArgs["facts"];
+  controlsByKey: ReadonlyMap<string, V9DeploymentControlFactV2>;
+  components: PendingControlComponent[];
+  reasons: ReadonlyMap<string, V9CompactControlReason>;
+  materialShareThreshold: number;
+  unresolvedFullCeilingShareThreshold: number;
+  unresolvedCohortShare: number | null;
+  unresolvedCohortControlKeys: ReadonlySet<string>;
+  controlBinding: (control: V9DeploymentControlFactV2, bound?: number | null) => boolean;
+  addReason: (code: V9ReasonCode, pathKind: V9CompactControlReason["pathKind"],
+    path: string, controlKey?: string | null) => void;
+  addStructuralFailure: (failure: V9ControlStructuralFailure) => void;
 }
 
 export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): V9EconomicControlResult {
   assertV9ValidatedPolicyEnvelope(args.policy);
   const policy = args.policy.policy.semantic;
+  const { facts: inputFacts } = args;
+  const controls = [...inputFacts.controls].sort((left, right) => compareText(left.controlKey, right.controlKey));
+  const facts = { ...inputFacts, controls, supply: { ...inputFacts.supply,
+    selectedBridgeRoutes: [...inputFacts.supply.selectedBridgeRoutes].sort((left, right) =>
+      compareText(left.deploymentRouteKey, right.deploymentRouteKey)),
+  } };
   const materialShareThreshold = policy.materiality.deploymentMaterialSharePct / 100;
   const unresolvedFullCeilingShareThreshold = policy.materiality.unresolvedDeploymentFullCeilingSharePct / 100;
-  const unresolvedCohort = unresolvedDeploymentCohort(args.facts, args.facts.controls);
+  const unresolvedCohort = unresolvedDeploymentCohort(facts, facts.controls);
   const controlBinding = (control: V9DeploymentControlFactV2, bound: number | null = null) =>
     bindingByMateriality(
       control,
       unresolvedCohort.share !== null && unresolvedCohort.share < unresolvedFullCeilingShareThreshold &&
         unresolvedCohort.controlKeys.has(control.controlKey) &&
-        args.facts.supply.selectedBridgeRoutes.some(
+        facts.supply.selectedBridgeRoutes.some(
           (row) => row.deploymentRouteKey === control.deploymentKey && row.reviewState !== "unmatched",
         )
         ? unresolvedFullCeilingShareThreshold
         : materialShareThreshold,
       bound,
     );
-  const controls = [...args.facts.controls].sort((left, right) => compareText(left.controlKey, right.controlKey));
   const controlsByKey = new Map(controls.map((control) => [control.controlKey, control]));
-  const issuanceFacts = args.facts.issuanceFacts;
+  const issuanceFacts = facts.issuanceFacts;
   const processDiagnostics: V1005ProcessDiagnostic[] = controls.flatMap((control) =>
     isV9OperationallyGovernedIssuanceQualified(control, policy, issuanceFacts).diagnostics);
-  const components: (Omit<V9ControlComponent, "cause" | "causeGapIds" | "scoringDisposition" | "effectiveScoringWeight"> &
-    { causeStatuses?: readonly (V9FactStatusV2 | undefined)[] })[] = [];
+  const components: PendingControlComponent[] = [];
   const reasons = new Map<string, V9CompactControlReason>();
   const structuralFailures = new Map<string, V9ControlStructuralFailure>();
 
@@ -152,8 +118,8 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
       : path.startsWith("mint") ? args.mint.status
         : path.startsWith("oracle") ? code === "oracle-topology-undisclosed"
           ? args.oracle.factorStatuses?.tier ?? args.oracle.status : args.oracle.status
-          : path.startsWith("bridge") ? args.bridge.status : args.facts.controlStatus;
-    const causal = resolveV9StatusCauses([status], args.facts.gaps);
+          : path.startsWith("bridge") ? args.bridge.status : facts.controlStatus;
+    const causal = resolveV9StatusCauses([status], facts.gaps);
     const resolved = resolveV9ReasonTreatment(args.policy, code, causal.cause ?? "U");
     if (!resolved.reason.pathKinds.includes(pathKind)) {
       throw new Error(`Safety Score v9 reason ${code} cannot describe ${pathKind}`);
@@ -178,11 +144,107 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
     structuralFailures.set(key, { ...failure, controlKeys, failureDomains: domains });
   };
 
-  if (args.facts.controlStatus.applicability.state === "unresolved") {
+  const context: ControlEvaluationContext = {
+    args, policy, facts, controlsByKey, components, reasons, materialShareThreshold,
+    unresolvedFullCeilingShareThreshold, controlBinding, addReason, addStructuralFailure,
+    unresolvedCohortShare: unresolvedCohort.share, unresolvedCohortControlKeys: unresolvedCohort.controlKeys,
+  };
+  evaluateControlInventory(context);
+  evaluateMintPhase(context);
+  evaluateOraclePhase(context);
+  evaluateBridgePhase(context);
+  appendControlFallbacks(context);
+
+  const normalizedReasons = [...reasons.values()].sort(
+    (left, right) =>
+      compareText(left.code, right.code) ||
+      compareText(left.path, right.path) ||
+      compareText(left.controlKey ?? "", right.controlKey ?? ""),
+  );
+  assertV9ReasonCodesRegistered(
+    args.policy,
+    normalizedReasons.map((reason) => reason.code),
+  );
+  const normalizedStructuralFailures = [...structuralFailures.values()].sort(
+    (left, right) =>
+      compareText(left.kind, right.kind) || compareText(left.controlKeys.join("+"), right.controlKeys.join("+")),
+  );
+  const normalizedComponents = normalizeControlComponents(context, normalizedStructuralFailures);
+  const bindingControlFailureDomains = controls
+    .filter(isControlEconomicallyRelevant)
+    .filter((control) => isKnownRequired(control.status))
+    .filter((control) => controlBinding(control))
+    .flatMap((control) => control.failureDomains);
+  const failureDomains = canonicalDomains([
+    ...bindingControlFailureDomains,
+    ...normalizedComponents.filter((component) => component.binding).flatMap((component) => component.failureDomains),
+    ...normalizedStructuralFailures.filter((failure) => failure.binding).flatMap((failure) => failure.failureDomains),
+  ]);
+  const critical = normalizedReasons.some((reason) => reason.critical);
+  const inventoryCause = resolveV9StatusCauses(
+    normalizedReasons.some((reason) => reason.code === "unresolved-control-identity" && reason.path === "controls")
+      ? [facts.controlStatus] : [], facts.gaps,
+  );
+  // BASE did not price unresolved inventory as a separate control. Preserve
+  // that numeric treatment: disclose the actual gap without a new minimum.
+  const inventoryDiagnostic = inventoryCause.cause === "C" || inventoryCause.cause === "U";
+  if (inventoryDiagnostic || inventoryCause.excluded) {
+    normalizedComponents.push({
+      componentKey: "control:inventory", kind: "inventory", posture: "unknown",
+      score: inventoryCause.excluded ? null : policy.control.boundedUnknownQuality,
+      cause: inventoryCause.cause, causeGapIds: inventoryCause.causeGapIds,
+      scoringDisposition: v9ScoringDisposition(inventoryCause.cause),
+      effectiveScoringWeight: 0,
+      binding: false, controlKeys: [], failureDomains: [],
+    });
+    normalizedComponents.sort((left, right) => compareText(left.componentKey, right.componentKey));
+  }
+  const bindingScores = normalizedComponents
+    .filter((component) => component.binding && component.score !== null)
+    .map((component) => component.score!);
+  const neutralWithoutBindingControls =
+    normalizedComponents.length === 0 && args.oracle.status.applicability.state === "not-applicable";
+  const score = critical
+    ? null
+    : bindingScores.length > 0
+      ? Math.min(...bindingScores)
+      : neutralWithoutBindingControls ? V9_NEUTRAL_CONTROL_SCORE : null;
+
+  const excluded = normalizedComponents.filter((component) => component.score === null);
+  const aggregationDisposition = score === null && excluded.length > 0 &&
+    normalizedComponents.every((component) => component.effectiveScoringWeight === 0) ? "excluded-a-b" : "included";
+  return {
+    score,
+    aggregationDisposition,
+    causeGapIds: uniqueSorted([...inventoryCause.causeGapIds, ...normalizedComponents.flatMap((component) => component.causeGapIds)]),
+    limitedEvidenceCauses: uniqueSorted([
+      ...normalizedComponents.flatMap((component) =>
+        component.binding && component.score === score && (component.cause === "C" || component.cause === "U")
+          ? [component.cause] : []),
+    ]) as ("C" | "U" | "D")[],
+    supportedComponentKeys: normalizedComponents.filter((component) =>
+      component.score !== null && component.effectiveScoringWeight > 0).map((component) => component.componentKey),
+    state: score === null ? "not-rated" : "rated",
+    oracleApplicability: args.oracle.status.applicability.state,
+    components: normalizedComponents,
+    controlFacts: controls,
+    processDiagnostics,
+    ...(issuanceFacts ? { issuanceFacts } : {}),
+    reasons: normalizedReasons,
+    structuralFailures: normalizedStructuralFailures,
+    failureDomains,
+  };
+}
+
+function evaluateControlInventory(context: ControlEvaluationContext): void {
+  const { facts, unresolvedCohortShare, unresolvedCohortControlKeys, unresolvedFullCeilingShareThreshold, materialShareThreshold,
+    controlBinding, addReason, addStructuralFailure } = context;
+  const controls = facts.controls;
+  if (facts.controlStatus.applicability.state === "unresolved") {
     addReason("unresolved-control-identity", "local-component", "controls");
   } else if (
-    args.facts.controlStatus.applicability.state === "required" &&
-    args.facts.controlStatus.observationState !== "known"
+    facts.controlStatus.applicability.state === "required" &&
+    facts.controlStatus.observationState !== "known"
   ) {
     // An inventory demoted only by reviewer-scoped open questions inherits the
     // scoped ceiling; any unresolved control without one keeps the hard reason.
@@ -196,13 +258,13 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
     // Its still-bounded inventory is evidence, not a second whole-coin ceiling.
     // Any unresolved control outside that exact cohort keeps the aggregate gap.
     const inventoryPricedByDeployment =
-      unresolvedCohort.share !== null &&
-      unresolvedCohort.share < unresolvedFullCeilingShareThreshold &&
+      unresolvedCohortShare !== null &&
+      unresolvedCohortShare < unresolvedFullCeilingShareThreshold &&
       unresolvedControls.length > 0 &&
       controls.every((control) =>
         control.status.applicability.state === "not-applicable" ||
         isKnownRequired(control.status) ||
-        unresolvedCohort.controlKeys.has(control.controlKey));
+        unresolvedCohortControlKeys.has(control.controlKey));
     const allScoped = unresolvedControls.length > 0 && unresolvedControls.every(hasFreshScopedQuestion);
     if (!inventoryPricedByDeployment) {
       addReason(allScoped ? "scoped-control-question" : "unresolved-control-identity", "local-component", "controls");
@@ -212,7 +274,7 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
   for (const control of controls) {
     if (!isControlEconomicallyRelevant(control)) continue;
     if (control.status.applicability.state === "not-applicable") continue;
-    const nullShareBound = provenNullShareDeploymentBound(args.facts, control);
+    const nullShareBound = provenNullShareDeploymentBound(facts, control);
     const provenImmaterial = nullShareBound !== null && nullShareBound < materialShareThreshold;
     const binding = controlBinding(control, nullShareBound);
     const pathKind = control.controlKind === "bridge" ? "deployment-control" : "local-component";
@@ -244,7 +306,7 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
           control.materialSupplyShare === null
             ? null
             : v9StructuralSignalSharePct(
-                args.facts.assetId,
+                facts.assetId,
                 "structuralSignals[*].materialSharePct",
                 control.materialSupplyShare,
               ),
@@ -266,7 +328,12 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
       );
     }
   }
+}
 
+function evaluateMintPhase(context: ControlEvaluationContext): void {
+  const { args, policy, facts, controlsByKey, components, controlBinding, addReason, addStructuralFailure } = context;
+  const controls = facts.controls;
+  const issuanceFacts = facts.issuanceFacts;
   const mint = args.mint;
   const retainedAdverseMintControls =
     mint.status.applicability.state !== "not-applicable" &&
@@ -428,7 +495,7 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
         mintControl,
         args.resolvedIncidentAgeMonths,
         policy.control,
-        args.facts.gaps,
+        facts.gaps,
       );
       components.push({
         componentKey: "mint",
@@ -480,7 +547,7 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
               mintControl?.materialSupplyShare == null
                 ? null
                 : v9StructuralSignalSharePct(
-                    args.facts.assetId,
+                    facts.assetId,
                     "structuralSignals[*].materialSharePct",
                     mintControl.materialSupplyShare,
                   ),
@@ -501,7 +568,7 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
             mintControl?.materialSupplyShare == null
               ? null
               : v9StructuralSignalSharePct(
-                  args.facts.assetId,
+                  facts.assetId,
                   "structuralSignals[*].materialSharePct",
                   mintControl.materialSupplyShare,
                 ),
@@ -521,7 +588,7 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
             upgradeControl?.materialSupplyShare == null
               ? null
               : v9StructuralSignalSharePct(
-                  args.facts.assetId,
+                  facts.assetId,
                   "structuralSignals[*].materialSharePct",
                   upgradeControl.materialSupplyShare,
                 ),
@@ -531,7 +598,10 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
       }
     }
   }
+}
 
+function evaluateOraclePhase(context: ControlEvaluationContext): void {
+  const { args, policy, facts, controlsByKey, components, addReason, addStructuralFailure } = context;
   const oracle = args.oracle;
   const retainedOracleTier = oracle.status.applicability.state === "unresolved" &&
     oracle.paths?.some((path) => path.applicability.state === "required" && path.observationState === "known")
@@ -563,7 +633,10 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
   if (isKnownRequired(oracle.status) || retainedOracleTier !== null) {
     const oracleTier = retainedOracleTier ?? oracle.tier;
     const branchesByKind = new Map<V9OracleBranchKind, V9OracleBranchReview>();
-    for (const branch of oracle.branches) {
+    for (const branch of [...oracle.branches].sort((left, right) =>
+      compareText(left.branch, right.branch) ||
+      compareText(left.controlKey ?? "", right.controlKey ?? "") ||
+      compareText(left.mechanismKey ?? "", right.mechanismKey ?? ""))) {
       if (branchesByKind.has(branch.branch)) throw new Error(`Duplicate v9 oracle branch ${branch.branch}`);
       branchesByKind.set(branch.branch, branch);
     }
@@ -650,12 +723,17 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
           reason: `Weak oracle branches below the materiality threshold contribute a ${oracle.subMaterialWeakBand} diagnostic.`,
           materialSharePct: null,
           controlKeys: [],
-          failureDomains: [{ kind: "oracle-feed", key: `oracle:${args.facts.assetId}:sub-material-weak` }],
+          failureDomains: [{ kind: "oracle-feed", key: `oracle:${facts.assetId}:sub-material-weak` }],
         });
       }
     }
   }
+}
 
+function evaluateBridgePhase(context: ControlEvaluationContext): void {
+  const { args, policy, facts, controlsByKey, components, materialShareThreshold,
+    unresolvedFullCeilingShareThreshold, controlBinding, addReason, addStructuralFailure } = context;
+  const controls = facts.controls;
   // A bounded bridge review keeps the rows it did review only when the supply it
   // could not attribute is itself immaterial. An unavailable share fails closed:
   // an unknown residual cannot license scoring the known part.
@@ -666,11 +744,11 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
   // with an empty partition had null shares. "Partitioned but empty" is not a
   // reachable state, so treating null as zero would only ever license scoring an
   // inventory whose residual was never measured.
-  const excludedSupply = providerRowExclusionShares(args.facts.assetId, args.facts.supply);
-  const unknownRouteSupplyShare = args.facts.supply.unknownRouteSupplyShare === null ? null :
-    Math.max(0, args.facts.supply.unknownRouteSupplyShare - excludedSupply.unknown);
-  const unreviewedRouteSupplyShare = args.facts.supply.unreviewedRouteSupplyShare === null ? null :
-    Math.max(0, args.facts.supply.unreviewedRouteSupplyShare - excludedSupply.unreviewed);
+  const excludedSupply = providerRowExclusionShares(facts.assetId, facts.supply);
+  const unknownRouteSupplyShare = facts.supply.unknownRouteSupplyShare === null ? null :
+    Math.max(0, facts.supply.unknownRouteSupplyShare - excludedSupply.unknown);
+  const unreviewedRouteSupplyShare = facts.supply.unreviewedRouteSupplyShare === null ? null :
+    Math.max(0, facts.supply.unreviewedRouteSupplyShare - excludedSupply.unreviewed);
   const unattributedBridgeShare =
     unknownRouteSupplyShare === null || unreviewedRouteSupplyShare === null
       ? null
@@ -689,11 +767,11 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
       controlKeys: [],
       failureDomains: [],
     });
-  } else if (bridge.status.applicability.state === "unresolved" && !resolveV9StatusCauses([bridge.status], args.facts.gaps).excluded) {
+  } else if (bridge.status.applicability.state === "unresolved" && !resolveV9StatusCauses([bridge.status], facts.gaps).excluded) {
     addReason("runtime-bridge-materiality-unavailable", "deployment-control", "bridge");
-  } else if (bridge.status.observationState === "missing" && !resolveV9StatusCauses([bridge.status], args.facts.gaps).excluded) {
+  } else if (bridge.status.observationState === "missing" && !resolveV9StatusCauses([bridge.status], facts.gaps).excluded) {
     addReason("missing-bridge-routes", "deployment-control", "bridge");
-  } else if (bridge.status.observationState !== "known" && !boundedBridgeGapIsImmaterial && !resolveV9StatusCauses([bridge.status], args.facts.gaps).excluded) {
+  } else if (bridge.status.observationState !== "known" && !boundedBridgeGapIsImmaterial && !resolveV9StatusCauses([bridge.status], facts.gaps).excluded) {
     // Ownership is shape-specific: missing/invalid profiles and ambiguous joins
     // are integration-missing; stale chain input and rejected runtime capture
     // are producer-failed. The fact compiler persists that causal supply gap,
@@ -706,7 +784,7 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
     // A reconciled partition may prove a null-share deployment immaterial;
     // that join relief is not admission of an exact share for pricing.
     const completeSubthresholdUnresolvedJoins = evaluateV9SubthresholdUnresolvedBridgeJoins(
-      args.facts,
+      facts,
       controls,
       bridge.routes,
       materialShareThreshold,
@@ -722,7 +800,7 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
     const unresolvedBridgeResidueBinds =
       unattributedBridgeShare === null ||
       (unattributedBridgeShare > 0 && !completeSubthresholdUnresolvedJoins);
-    const hasUnresolvedSupplyRows = args.facts.supply.selectedBridgeRoutes.some(
+    const hasUnresolvedSupplyRows = facts.supply.selectedBridgeRoutes.some(
       (route) => route.reviewState !== "selected-reviewed",
     );
     if (bridge.routes.length === 0 && (unresolvedBridgeResidueBinds || !hasUnresolvedSupplyRows)) {
@@ -738,7 +816,7 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
         continue;
       }
       if (!isControlEconomicallyRelevant(control)) continue;
-      const nullShareBound = provenNullShareDeploymentBound(args.facts, control);
+      const nullShareBound = provenNullShareDeploymentBound(facts, control);
       const provenImmaterial = nullShareBound !== null && nullShareBound < materialShareThreshold;
       const binding = controlBinding(control, nullShareBound);
       if (!isKnownRequired(control.status)) {
@@ -755,10 +833,10 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
           route.controlKey,
         );
       }
-      const selectedSupplyRoute = args.facts.supply.selectedBridgeRoutes.find(
+      const selectedSupplyRoute = facts.supply.selectedBridgeRoutes.find(
         (supplyRoute) => supplyRoute.deploymentRouteKey === control.deploymentKey,
       );
-      if (args.facts.supply.selectedBridgeRoutes.length > 0 && !selectedSupplyRoute && binding) {
+      if (facts.supply.selectedBridgeRoutes.length > 0 && !selectedSupplyRoute && binding) {
         addReason("selected-bridge-route-missing", "deployment-control", "bridge:route:supply", route.controlKey);
       }
       if (selectedSupplyRoute?.reviewState === "selected-unresolved" && binding) {
@@ -793,7 +871,7 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
             control.materialSupplyShare === null
               ? null
               : v9StructuralSignalSharePct(
-                  args.facts.assetId,
+                  facts.assetId,
                   "structuralSignals[*].materialSharePct",
                   control.materialSupplyShare,
                 ),
@@ -822,7 +900,11 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
       addReason("nonmaterial-bridge-supply-unmatched", "deployment-control", "bridge:supply");
     }
   }
+}
 
+function appendControlFallbacks(context: ControlEvaluationContext): void {
+  const { args, policy, facts, controlsByKey, components, reasons } = context;
+  const issuanceFacts = facts.issuanceFacts;
   // An unavailable section remains diagnostic and uses its typed bounded rung
   // only when its cause is C/U. A/B never binds the minimum.
   const boundedFallbacks = [
@@ -832,7 +914,7 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
   ] as const;
   for (const fallback of boundedFallbacks) {
     const section = fallback.kind === "mint" ? args.mint : fallback.kind === "oracle" ? args.oracle : args.bridge;
-    const missingSection = resolveV9StatusCauses([section.status], args.facts.gaps);
+    const missingSection = resolveV9StatusCauses([section.status], facts.gaps);
     if (components.some((component) => component.kind === fallback.kind &&
       (!missingSection.excluded || component.posture === "unknown" || component.posture === "opaque-or-unknown"))) continue;
     // Aggregate inventory reasons are section-neutral. A control-specific
@@ -855,7 +937,7 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
         }
       }
       if (sectionMatch && (reason.path.includes("supply") || reason.path.includes("materiality"))) {
-        causeStatuses.push(args.facts.supply.status);
+        causeStatuses.push(facts.supply.status);
       }
       // LEVER 5 (2026-07-21): a gap raised by a statically-verified control row
       // (its authority is reviewed; only an adjacent fact such as exposure share
@@ -878,7 +960,7 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
     const score = gradeable
       ? Math.min(
           ...gradedControlKeys.map((controlKey) =>
-            gradeVerifiedControlAuthority(controlsByKey.get(controlKey)!, policy, args.facts.gaps, issuanceFacts),
+            gradeVerifiedControlAuthority(controlsByKey.get(controlKey)!, policy, facts.gaps, issuanceFacts),
           ),
         )
       : fallback.kind === "mint" ? policy.control.mintPostureQuality.unknown : policy.control.boundedUnknownQuality;
@@ -894,21 +976,14 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
       causeStatuses,
     });
   }
+}
 
-  const normalizedReasons = [...reasons.values()].sort(
-    (left, right) =>
-      compareText(left.code, right.code) ||
-      compareText(left.path, right.path) ||
-      compareText(left.controlKey ?? "", right.controlKey ?? ""),
-  );
-  assertV9ReasonCodesRegistered(
-    args.policy,
-    normalizedReasons.map((reason) => reason.code),
-  );
-  const normalizedStructuralFailures = [...structuralFailures.values()].sort(
-    (left, right) =>
-      compareText(left.kind, right.kind) || compareText(left.controlKeys.join("+"), right.controlKeys.join("+")),
-  );
+function normalizeControlComponents(
+  context: ControlEvaluationContext,
+  normalizedStructuralFailures: readonly V9ControlStructuralFailure[],
+): V9ControlComponent[] {
+  const { args, facts, controlsByKey, components, controlBinding } = context;
+  const controls = facts.controls;
   // Deployment-local adverse loss is owned by proportional deployment risk;
   // retain its component for publication even when it cannot bind the pillar.
   const pricedDeploymentControlKeys = new Set(
@@ -956,7 +1031,7 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
     if (reconciliationQuestion) uncertainty.push(args.mint.factorStatuses?.reconciliation);
     const causal = resolveV9StatusCauses(
       unknown ? [section.status, ...factorStatuses, ...uncertainty, ...(component.causeStatuses ?? [])] : uncertainty,
-      args.facts.gaps,
+      facts.gaps,
     );
     if (causal.cause === null && (unknown ||
       (component.kind === "mint" && linkedControls.some((control) => control.authority?.model === "multisig" &&
@@ -1011,76 +1086,5 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
     normalizedComponents.push({ ...worstBindingMint, componentKey: "mint:binding" });
   }
   normalizedComponents.sort((left, right) => compareText(left.componentKey, right.componentKey));
-  const bindingControlFailureDomains = controls
-    .filter(isControlEconomicallyRelevant)
-    .filter((control) => isKnownRequired(control.status))
-    .filter((control) => controlBinding(control))
-    .flatMap((control) => control.failureDomains);
-  const failureDomains = canonicalDomains([
-    ...bindingControlFailureDomains,
-    ...normalizedComponents.filter((component) => component.binding).flatMap((component) => component.failureDomains),
-    ...normalizedStructuralFailures.filter((failure) => failure.binding).flatMap((failure) => failure.failureDomains),
-  ]);
-  const critical = normalizedReasons.some((reason) => reason.critical);
-  const inventoryCause = resolveV9StatusCauses(
-    normalizedReasons.some((reason) => reason.code === "unresolved-control-identity" && reason.path === "controls")
-      ? [args.facts.controlStatus] : [], args.facts.gaps,
-  );
-  // BASE did not price unresolved inventory as a separate control. Preserve
-  // that numeric treatment: disclose the actual gap without a new minimum.
-  const inventoryDiagnostic = inventoryCause.cause === "C" || inventoryCause.cause === "U";
-  if (inventoryDiagnostic || inventoryCause.excluded) {
-    normalizedComponents.push({
-      componentKey: "control:inventory", kind: "inventory", posture: "unknown",
-      score: inventoryCause.excluded ? null : policy.control.boundedUnknownQuality,
-      cause: inventoryCause.cause, causeGapIds: inventoryCause.causeGapIds,
-      scoringDisposition: v9ScoringDisposition(inventoryCause.cause),
-      effectiveScoringWeight: 0,
-      binding: false, controlKeys: [], failureDomains: [],
-    });
-    normalizedComponents.sort((left, right) => compareText(left.componentKey, right.componentKey));
-  }
-  const bindingScores = normalizedComponents
-    .filter((component) => component.binding && component.score !== null)
-    .map((component) => component.score!);
-  const neutralWithoutBindingControls =
-    normalizedComponents.length === 0 && oracle.status.applicability.state === "not-applicable";
-  const score = critical
-    ? null
-    : bindingScores.length > 0
-      ? Math.min(...bindingScores)
-      : neutralWithoutBindingControls ? V9_NEUTRAL_CONTROL_SCORE : null;
-
-  const excluded = normalizedComponents.filter((component) => component.score === null);
-  const aggregationDisposition = score === null && excluded.length > 0 &&
-    normalizedComponents.every((component) => component.effectiveScoringWeight === 0) ? "excluded-a-b" : "included";
-  return {
-    score,
-    aggregationDisposition,
-    causeGapIds: uniqueSorted([...inventoryCause.causeGapIds, ...normalizedComponents.flatMap((component) => component.causeGapIds)]),
-    limitedEvidenceCauses: uniqueSorted([
-      ...normalizedComponents.flatMap((component) =>
-        component.binding && component.score === score && (component.cause === "C" || component.cause === "U")
-          ? [component.cause] : []),
-    ]) as ("C" | "U" | "D")[],
-    supportedComponentKeys: normalizedComponents.filter((component) =>
-      component.score !== null && component.effectiveScoringWeight > 0).map((component) => component.componentKey),
-    state: score === null ? "not-rated" : "rated",
-    oracleApplicability: oracle.status.applicability.state,
-    components: normalizedComponents,
-    controlFacts: controls,
-    processDiagnostics,
-    ...(issuanceFacts ? { issuanceFacts } : {}),
-    reasons: normalizedReasons,
-    structuralFailures: normalizedStructuralFailures,
-    failureDomains,
-  };
-}
-
-export function evaluateV9EconomicControlAssetFacts(
-  asset: V9EconomicControlAssetSource,
-  review: V9EconomicControlReviewExtension,
-  policy: V9ValidatedPolicyEnvelope,
-): V9EconomicControlResult {
-  return evaluateV9EconomicControl(projectV9EconomicControlEvaluation(asset, review, policy));
+  return normalizedComponents;
 }

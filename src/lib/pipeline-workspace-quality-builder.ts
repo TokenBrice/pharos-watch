@@ -7,14 +7,11 @@ import {
   STATUS_ONCHAIN_THRESHOLDS,
   hasRepresentativeOnchainRatioSample,
 } from "@shared/lib/status-thresholds";
+import { numberValue } from "@shared/lib/type-guards";
 import type { DataQuality, StatusResponse } from "@shared/types";
 import { formatAge } from "@/lib/pipeline-workspace-format";
 import { worstSeverity } from "@/lib/status/workspace-mode";
 import type { PipelineQualityModel, PipelineQualityRow, PipelineSeverity } from "@/lib/pipeline-workspace-model";
-
-function finiteNumber(value: unknown): number | null {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
-}
 
 function thresholdState(value: number, warning: number, stale: number, inclusive = false): PipelineSeverity {
   if (inclusive ? value >= stale : value > stale) return "critical";
@@ -24,8 +21,8 @@ function thresholdState(value: number, warning: number, stale: number, inclusive
 
 export function buildPipelineQualityModel(data: StatusResponse): PipelineQualityModel {
   const dq: Partial<DataQuality> = data.dataQuality ?? {};
-  const totalStablecoins = finiteNumber(dq.totalStablecoins);
-  const missingPrices = finiteNumber(dq.missingPrices);
+  const totalStablecoins = numberValue(dq.totalStablecoins);
+  const missingPrices = numberValue(dq.missingPrices);
   const missingRatio =
     totalStablecoins != null && totalStablecoins > 0 && missingPrices != null ? missingPrices / totalStablecoins : null;
   const missingUnknown = dq.stablecoinsCacheStatus === "error" || missingRatio == null;
@@ -38,10 +35,10 @@ export function buildPipelineQualityModel(data: StatusResponse): PipelineQuality
       );
   if (missingState === "healthy" && dq.stablecoinsCacheStatus === "degraded") missingState = "watch";
 
-  const blacklistTotal = finiteNumber(dq.blacklistTotal);
-  const blacklistMissing = finiteNumber(dq.blacklistMissingAmounts);
-  const blacklistRecent = finiteNumber(dq.blacklistRecentMissingAmounts);
-  const blacklistWindow = finiteNumber(dq.blacklistRecentWindowSec);
+  const blacklistTotal = numberValue(dq.blacklistTotal);
+  const blacklistMissing = numberValue(dq.blacklistMissingAmounts);
+  const blacklistRecent = numberValue(dq.blacklistRecentMissingAmounts);
+  const blacklistWindow = numberValue(dq.blacklistRecentWindowSec);
   const blacklistRatio =
     blacklistTotal != null && blacklistTotal > 0 && blacklistMissing != null
       ? blacklistMissing / blacklistTotal
@@ -65,14 +62,14 @@ export function buildPipelineQualityModel(data: StatusResponse): PipelineQuality
         ),
       ]);
 
-  const trackedCoins = finiteNumber(dq.onchainSupplyTrackedCoins);
+  const trackedCoins = numberValue(dq.onchainSupplyTrackedCoins);
   const onchainActive = dq.onchainSupplyQueryStatus === "ok" && dq.onchainSupplyMonitoring === "active";
   const ratioGateActive = trackedCoins != null && hasRepresentativeOnchainRatioSample(trackedCoins);
-  const onchainLatestAt = finiteNumber(dq.onchainSupplyLatestAt);
+  const onchainLatestAt = numberValue(dq.onchainSupplyLatestAt);
   const onchainAge = onchainLatestAt == null ? null : Math.max(0, data.timestamp - onchainLatestAt);
 
-  const divergenceCount = finiteNumber(dq.onchainSupplyDivergences);
-  const divergenceRatio = finiteNumber(dq.onchainDivergenceRatio);
+  const divergenceCount = numberValue(dq.onchainSupplyDivergences);
+  const divergenceRatio = numberValue(dq.onchainDivergenceRatio);
   const divergenceUnknown = !onchainActive || !ratioGateActive || divergenceCount == null || divergenceRatio == null;
   const divergenceState = divergenceUnknown
     ? "unknown"
@@ -86,8 +83,8 @@ export function buildPipelineQualityModel(data: StatusResponse): PipelineQuality
         divergenceCount >= STATUS_ONCHAIN_THRESHOLDS.divergenceAbsoluteStale ? "critical" : "healthy",
       ]);
 
-  const staleCount = finiteNumber(dq.staleOnchainSupply);
-  const staleRatio = finiteNumber(dq.onchainStaleRatio);
+  const staleCount = numberValue(dq.staleOnchainSupply);
+  const staleRatio = numberValue(dq.onchainStaleRatio);
   const staleUnknown = !onchainActive || !ratioGateActive || staleCount == null || staleRatio == null;
   const staleState = staleUnknown
     ? "unknown"
@@ -189,7 +186,7 @@ export function buildPipelineQualityModel(data: StatusResponse): PipelineQuality
     },
   ];
 
-  const activeDepegCount = finiteNumber(dq.activeDepegs);
+  const activeDepegCount = numberValue(dq.activeDepegs);
   const activeDepegUnavailable = dq.activeDepegStatus === "failed" || activeDepegCount == null;
 
   return {

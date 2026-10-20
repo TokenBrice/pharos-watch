@@ -139,10 +139,6 @@
       "message": "Chainlink Proof of Reserve was integrated on June 16, 2026 and now provides automated on-chain reserve verification for KRWQ. No traditional CPA-style monthly attestation report has yet been named or published."
     }
   ],
-  "tags": [
-    "korea",
-    "rwa"
-  ],
   "launchDate": "2025-10-30",
   "liveReservesConfig": {
     "adapter": "krwq-custodian",

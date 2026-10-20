@@ -67,20 +67,6 @@ export interface RateDerivedConfig {
   benchmarkOverrideKey?: YieldBenchmarkKey;
 }
 
-export interface YieldRegistryEntry {
-  stablecoinId: string;
-  variant?: YieldVariant;
-  nativePoolId?: string;
-  weightedPoolGroupSourceKey?: string;
-  onChainRate?: OnChainRateConfig;
-  directProtocolApiLabel?: string;
-  directProtocolApiSourceKey?: string;
-  priceDerivedFallback?: boolean;
-  rateDerived?: RateDerivedConfig;
-  autoLendingPoolId?: string;
-  bypassesAutoLendingSafety?: boolean;
-  intentionalGapReason?: string;
-}
 
 export type YieldStrategyKind =
   | "native-pool"
@@ -119,15 +105,14 @@ export interface YieldAdapterManifestEntry {
   bypassesAutoLendingSafety?: boolean;
 }
 
-export function deriveYieldRegistry(args: {
+export function buildYieldAdapterManifest(args: {
   yieldBearingIds: string[];
   navTokenIds: Set<string>;
   variantMap: Record<string, YieldVariant>;
   poolMap: Record<string, string>;
   weightedPoolGroups: Record<string, { sourceKey: string }>;
   onChainRateConfigs: OnChainRateConfig[];
-  directProtocolApiStrategies: Record<string, string>;
-  directProtocolApiSourceKeys: Record<string, string>;
+  directProtocolApiStrategies: Record<string, { label: string; sourceKey: string }>;
   priceDerivedFallbackIds: Set<string>;
   rateDerivedConfigs: RateDerivedConfig[];
   autoLendingPoolMap: Record<string, string>;
@@ -139,112 +124,47 @@ export function deriveYieldRegistry(args: {
    * structured reason for intentional gaps; the string map retains manifest copy.
    */
   adapterLifecycle: Record<string, YieldAdapterLifecycleEntry>;
-}): {
-  registry: YieldRegistryEntry[];
-  variantMap: Record<string, YieldVariant>;
-  poolMap: Record<string, string>;
-  onChainRateConfigs: OnChainRateConfig[];
-  priceDerivedFallbackIds: Set<string>;
-  rateDerivedConfigs: RateDerivedConfig[];
-  autoLendingPoolMap: Record<string, string>;
-  autoLendingSafetyBypassIds: Set<string>;
-  manifest: YieldAdapterManifestEntry[];
-} {
-  const configIds = new Set<string>([
-    ...args.yieldBearingIds,
-    ...Object.keys(args.variantMap),
-    ...Object.keys(args.poolMap),
-    ...Object.keys(args.weightedPoolGroups),
-    ...args.onChainRateConfigs.map((config) => config.stablecoinId),
-    ...Object.keys(args.directProtocolApiStrategies),
-    ...Object.keys(args.directProtocolApiSourceKeys),
-    ...args.priceDerivedFallbackIds,
-    ...args.rateDerivedConfigs.map((config) => config.stablecoinId),
-    ...Object.keys(args.autoLendingPoolMap),
-    ...args.autoLendingSafetyBypassIds,
-    ...Object.keys(args.intentionalGapReasons),
-  ]);
-
-  const registry = [...configIds]
-    .sort((a, b) => a.localeCompare(b))
-    .map((stablecoinId) => ({
-      stablecoinId,
-      variant: args.variantMap[stablecoinId],
-      nativePoolId: args.poolMap[stablecoinId],
-      weightedPoolGroupSourceKey: args.weightedPoolGroups[stablecoinId]?.sourceKey,
-      onChainRate: args.onChainRateConfigs.find((config) => config.stablecoinId === stablecoinId),
-      directProtocolApiLabel: args.directProtocolApiStrategies[stablecoinId],
-      directProtocolApiSourceKey: args.directProtocolApiSourceKeys[stablecoinId],
-      priceDerivedFallback: (args.priceDerivedFallbackIds.has(stablecoinId)
-        && isPriceDerivedYieldEligible(stablecoinId, args.intentionalGapReasons[stablecoinId])) || undefined,
-      rateDerived: args.rateDerivedConfigs.find((config) => config.stablecoinId === stablecoinId),
-      autoLendingPoolId: args.autoLendingPoolMap[stablecoinId],
-      bypassesAutoLendingSafety: args.autoLendingSafetyBypassIds.has(stablecoinId) || undefined,
-      intentionalGapReason: args.intentionalGapReasons[stablecoinId],
-    }));
-
-  const registryById = new Map(registry.map((entry) => [entry.stablecoinId, entry] as const));
-  const derivedVariantMap = Object.fromEntries(
-    registry
-      .filter((entry) => entry.variant)
-      .map((entry) => [entry.stablecoinId, entry.variant]),
-  ) as Record<string, YieldVariant>;
-  const derivedPoolMap = Object.fromEntries(
-    registry
-      .filter((entry) => entry.nativePoolId)
-      .map((entry) => [entry.stablecoinId, entry.nativePoolId]),
-  ) as Record<string, string>;
-  const derivedOnChainRateConfigs = registry.flatMap((entry) => entry.onChainRate ? [entry.onChainRate] : []);
-  const derivedPriceFallbackIds = new Set(
-    registry
-      .filter((entry) => entry.priceDerivedFallback)
-      .map((entry) => entry.stablecoinId),
-  );
-  const derivedRateConfigs = registry.flatMap((entry) => entry.rateDerived ? [entry.rateDerived] : []);
-  const derivedAutoLendingPoolMap = Object.fromEntries(
-    registry
-      .filter((entry) => entry.autoLendingPoolId)
-      .map((entry) => [entry.stablecoinId, entry.autoLendingPoolId]),
-  ) as Record<string, string>;
-  const derivedAutoLendingSafetyBypassIds = new Set(
-    registry
-      .filter((entry) => entry.bypassesAutoLendingSafety)
-      .map((entry) => entry.stablecoinId),
-  );
-
-  const manifest = args.yieldBearingIds
+}): YieldAdapterManifestEntry[] {
+  return args.yieldBearingIds
     .map((stablecoinId) => {
-      const entry = registryById.get(stablecoinId);
+      const variant = args.variantMap[stablecoinId];
+      const nativePoolId = args.poolMap[stablecoinId];
+      const weightedPoolGroupSourceKey = args.weightedPoolGroups[stablecoinId]?.sourceKey;
+      const onChainRate = args.onChainRateConfigs.find((config) => config.stablecoinId === stablecoinId);
+      const directProtocolApi = args.directProtocolApiStrategies[stablecoinId];
+      const rateDerived = args.rateDerivedConfigs.find((config) => config.stablecoinId === stablecoinId);
+      const autoLendingPoolId = args.autoLendingPoolMap[stablecoinId];
+      const intentionalGapReason = args.intentionalGapReasons[stablecoinId];
       const strategies: YieldStrategyDescriptor[] = [];
-      const priceDerivedEligible = (args.navTokenIds.has(stablecoinId) || !!entry?.priceDerivedFallback)
-        && isPriceDerivedYieldEligible(stablecoinId, entry?.intentionalGapReason);
+      const priceDerivedEligible = (args.navTokenIds.has(stablecoinId) || args.priceDerivedFallbackIds.has(stablecoinId))
+        && isPriceDerivedYieldEligible(stablecoinId, intentionalGapReason);
 
-      if (entry?.nativePoolId) {
+      if (nativePoolId) {
         strategies.push({
           kind: "native-pool",
           label: "Curated DeFiLlama pool UUID",
-          sourceKey: entry.nativePoolId,
+          sourceKey: nativePoolId,
           priority: 10,
         });
       }
-      if (entry?.variant) {
+      if (variant) {
         strategies.push({
           kind: "variant-pool",
-          label: entry.variant.variantSymbol,
+          label: variant.variantSymbol,
           sourceKey: null,
           sourceKeyPattern: "defillama:<runtime-pool-uuid>",
           priority: 20,
         });
       }
-      if (entry?.weightedPoolGroupSourceKey) {
+      if (weightedPoolGroupSourceKey) {
         strategies.push({
           kind: "weighted-pool",
           label: "TVL-weighted DeFiLlama pool group",
-          sourceKey: entry.weightedPoolGroupSourceKey,
+          sourceKey: weightedPoolGroupSourceKey,
           priority: 25,
         });
       }
-      if (entry?.onChainRate) {
+      if (onChainRate) {
         strategies.push({
           kind: "deterministic-onchain",
           label: "On-chain exchange-rate reader",
@@ -252,15 +172,15 @@ export function deriveYieldRegistry(args: {
           priority: 30,
         });
       }
-      if (entry?.directProtocolApiLabel) {
+      if (directProtocolApi) {
         strategies.push({
           kind: "protocol-api",
-          label: entry.directProtocolApiLabel,
-          sourceKey: entry.directProtocolApiSourceKey ?? null,
+          label: directProtocolApi.label,
+          sourceKey: directProtocolApi.sourceKey,
           priority: 40,
         });
       }
-      if (entry?.rateDerived) {
+      if (rateDerived) {
         strategies.push({
           kind: "rate-derived",
           label: "Benchmark-linked rate fallback",
@@ -276,21 +196,21 @@ export function deriveYieldRegistry(args: {
           priority: 60,
         });
       }
-      if (entry?.autoLendingPoolId) {
+      if (autoLendingPoolId) {
         strategies.push({
           kind: "auto-discovery-override",
           label: "Explicit lending override pool",
-          sourceKey: entry.autoLendingPoolId,
+          sourceKey: autoLendingPoolId,
           priority: 70,
         });
       }
-      if (entry?.intentionalGapReason) {
+      if (intentionalGapReason) {
         const lifecycleEntry = args.adapterLifecycle[stablecoinId] ?? { lifecycle: "active" };
         strategies.push({
           kind: "intentional-gap",
           label: "Intentional coverage gap",
           sourceKey: null,
-          rationale: entry.intentionalGapReason,
+          rationale: intentionalGapReason,
           lifecycle: "intentional-gap",
           lifecycleReason: lifecycleEntry.lifecycle === "intentional-gap" ? lifecycleEntry.reason : undefined,
           priority: 90,
@@ -299,29 +219,17 @@ export function deriveYieldRegistry(args: {
 
       return {
         stablecoinId,
-        status: entry?.intentionalGapReason ? "intentional-gap" as const : "covered" as const,
+        status: intentionalGapReason ? "intentional-gap" as const : "covered" as const,
         strategies: strategies.sort((a, b) => a.priority - b.priority),
-        variant: entry?.variant,
-        nativePoolId: entry?.nativePoolId,
-        weightedPoolGroupSourceKey: entry?.weightedPoolGroupSourceKey,
-        onChainRate: entry?.onChainRate,
+        variant,
+        nativePoolId,
+        weightedPoolGroupSourceKey,
+        onChainRate,
         priceDerivedFallback: priceDerivedEligible || undefined,
-        rateDerived: entry?.rateDerived,
-        autoLendingPoolId: entry?.autoLendingPoolId,
-        bypassesAutoLendingSafety: entry?.bypassesAutoLendingSafety,
+        rateDerived,
+        autoLendingPoolId,
+        bypassesAutoLendingSafety: args.autoLendingSafetyBypassIds.has(stablecoinId) || undefined,
       };
     })
     .sort((a, b) => a.stablecoinId.localeCompare(b.stablecoinId));
-
-  return {
-    registry,
-    variantMap: derivedVariantMap,
-    poolMap: derivedPoolMap,
-    onChainRateConfigs: derivedOnChainRateConfigs,
-    priceDerivedFallbackIds: derivedPriceFallbackIds,
-    rateDerivedConfigs: derivedRateConfigs,
-    autoLendingPoolMap: derivedAutoLendingPoolMap,
-    autoLendingSafetyBypassIds: derivedAutoLendingSafetyBypassIds,
-    manifest,
-  };
 }

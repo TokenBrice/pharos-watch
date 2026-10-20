@@ -16,6 +16,7 @@ Read the applicable owner anchors, not every background document; use [task rout
 ## Invariants
 
 - Treat evidence JSON as reviewed curation; never invent, extrapolate, or date-bump facts to satisfy schema or remove a gap.
+- Negative-incident reviews and gap classifications author ordered `sourcesRefs` / `searchedSurfacesRefs` into file-local `sourceObservations` / `searchedSurfaceObservations` tables of `{ id, value }`. Keep table values immutable: add a new record for a changed observation and rebind only intended reviews. IDs use `source:` / `surface:` plus the first 24 hex characters of SHA-256 over canonical JSON; retained repeated occurrences use `:2`, `:3`, etc. Exact observations may be shared, never review scopes, dates, windows, conclusions or gap assertions. URL equality alone is insufficient; inline/reference dual formats and dangling/duplicate refs are rejected.
 - Global publication-gate failures hold the last accepted ratings; asset-local failures may publish as quarantined pipeline gaps within the partial-publication allowance. `worker/src/lib/safety-score-v9/publication-assessment.ts` owns that distinction.
 - Never hand-edit `shared/data/safety-score-v9/evaluation-build-manifest-v1.ts`; artifact `safety-score-v9-evaluation-build` is registry-generated and checked.
 - Methodology version changes follow [ADR-3](../../../docs/architecture.md#architectural-decision-records) across every listed target.
@@ -26,6 +27,7 @@ Read the applicable owner anchors, not every background document; use [task rout
 ## Entrypoints & generation
 
 - `shared/data/safety-score-v9/methodology-policy-candidate-v1.json` owns policy; `shared/data/safety-score-v9/mechanism-measurements/` holds evidence governed by [shock coverage](../../../docs/process/shock-coverage-refresh.md) and [protocol API](../../../docs/process/protocol-api-mechanism-refresh.md) refresh procedures.
+- Incident source changes first regenerate `safety-score-v9-incident-runtime` with `node --import tsx scripts/build-data/generate-safety-score-v9-incident-runtime.ts`, then refresh the evaluation build. Representation-only changes retain exact expanded payloads, generated runtime bytes and evidence digests; prove those before proceeding from incident normalization to gap normalization. This is not a runtime memory/performance claim.
 - Regenerate with `npm run generate:safety-score-v9-evaluation-build`; verify artifact id with `npm run check:generated-artifacts -- --only=safety-score-v9-evaluation-build`.
 
 ## Tests

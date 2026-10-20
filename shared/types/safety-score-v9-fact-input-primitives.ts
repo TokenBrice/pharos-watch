@@ -6,6 +6,7 @@ import {
   FractionSchema,
   Sha256Schema,
   UnixSecondsSchema,
+  issue,
 } from "./safety-schema-primitives";
 import { canonicalArrayBy, V9FailureDomainRefSchema } from "./safety-score-v9-fact-primitives";
 
@@ -25,6 +26,24 @@ export const CanonicalFailureDomainsSchema = canonicalArrayBy(
   V9FailureDomainRefSchema,
   (domain) => `${domain.kind}:${domain.key}`,
 );
+
+export const V9PegReferenceKindSchema = z.enum(["fiat", "asset", "index", "nav", "other"]);
+
+export const V9BridgeSupplyRouteV2Schema = z
+  .object({
+    deploymentRouteKey: CanonicalTextSchema,
+    supplyUsd: NonNegativeUsdSchema,
+    supplyShare: FractionSchema,
+    reviewState: z.enum(["selected-reviewed", "selected-unresolved", "unmatched"]),
+    // Retained V2 facts/extensions predate the native/controlled discriminator.
+    reviewedRouteKind: z.enum(["native", "controlled"]).optional(),
+  })
+  .strict()
+  .superRefine((route, ctx) => {
+    if (route.reviewState !== "selected-reviewed" && route.reviewedRouteKind !== undefined) {
+      issue(ctx, ["reviewedRouteKind"], "Only selected-reviewed supply rows carry a reviewed route kind");
+    }
+  });
 
 export const V9ControlCapabilitySchema = z.enum([
   "mint",

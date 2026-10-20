@@ -9,7 +9,7 @@ import { capabilityForPool } from "@shared/lib/p4-exit-route-capability-policy";
 import { buildP4DexExitRouteObservations } from "@shared/lib/p4-exit-route-observation-assembly";
 import { attachEvmV2CandidateToRetainedPool, buildEvmV2ExecutionCandidate, enrichEvmV2ExecutionModels } from "../constant-product-v2";
 import { SOLIDLY_V2_ABI } from "../solidly-v2";
-import { initMetrics, normalizeProtocol } from "../pool-helpers";
+import { initSourcePoolGraph, normalizeProtocol } from "../pool-helpers";
 import type { PoolEntry } from "../types";
 import type { EvmMulticall3Call, EvmMulticall3Result } from "../../../lib/evm-rpc";
 import { normalizeTopPools } from "../../../lib/dex-liquidity-response";
@@ -45,7 +45,7 @@ function captureHarness(deploymentIndex = 0, tokenInIndex: 0 | 1 = 0, overrides:
     tvlUsd: Number(state.reserve0) / 10 ** state.decimals0 + Number(state.reserve1) / 10 ** state.decimals1,
     volumeUsd1d: 10_000, extra: { evmV2ExecutionCandidate: candidate } };
   const stablecoinId = tokenInIndex === 0 ? "input-id" : "output-id";
-  const metrics = new Map([[stablecoinId, { ...initMetrics(stablecoinId, "INPUT"), topPools: [pool] }]]);
+  const metrics = new Map([[stablecoinId, { ...initSourcePoolGraph(stablecoinId, "INPUT"), pools: [pool] }]]);
   const chainAddressToId = new Map([[`${deployment.chain}:${fixture.token0.toLowerCase()}`, "input-id"], [`${deployment.chain}:${fixture.token1.toLowerCase()}`, "output-id"]]);
   let headerReads = 0;
   const dependencies = {

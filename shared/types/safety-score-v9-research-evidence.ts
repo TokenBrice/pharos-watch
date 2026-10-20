@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { issue } from "./safety-schema-primitives";
 import { canonicalArrayBy } from "./safety-score-v9-fact-primitives";
 import { CanonicalTextSchema, Sha256Schema, UnixSecondsSchema } from "./safety-score-v9-fact-input-primitives";
 
@@ -17,11 +18,7 @@ export const ResearchEvidenceSchema = z
   .strict()
   .superRefine((evidence, ctx) => {
     if (evidence.publishedAtSec !== null && evidence.publishedAtSec < evidence.observedAtSec) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["publishedAtSec"],
-        message: "Research evidence publication cannot predate observation",
-      });
+      issue(ctx, ["publishedAtSec"], "Research evidence publication cannot predate observation");
     }
   });
 

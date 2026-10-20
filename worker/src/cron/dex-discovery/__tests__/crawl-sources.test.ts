@@ -111,7 +111,6 @@ function createCoinGeckoStageContext() {
     knownPoolIds: new Set(),
     nowSec: 1_800_000_000,
     pools: [],
-    priceObs: [],
   });
 }
 
@@ -159,7 +158,7 @@ describe("crawlCoin DexScreener hardening", () => {
       }],
     });
     const context = createCrawlStageContext({
-      stablecoinId: "test-coin", knownPoolIds: new Set(), nowSec: 1_800_000_000, pools: [], priceObs: [],
+      stablecoinId: "test-coin", knownPoolIds: new Set(), nowSec: 1_800_000_000, pools: [],
     });
     const result = await crawlDexScreenerPoolsStage({
       db: createMockDb(), targets: [["solana", "MintCase"]], context,
@@ -1111,6 +1110,49 @@ describe("crawlCoin DexScreener hardening", () => {
     expect(vi.mocked(fetchDsTokenPairsWithStatus).mock.calls.map(([chain]) => chain)).toEqual(["ethereum"]);
     expect(warnSpy).not.toHaveBeenCalledWith(expect.stringContaining('Chain "plasma"'));
   });
+
+  it.each(["coingecko", "dexscreener"] as const)(
+    "preserves %s ticker invocation across pool-price admission gates",
+    async (provider) => {
+      for (const { name, tvl, price, tickerCalls } of [
+        { name: "poolless", tvl: null, price: "1", tickerCalls: 1 },
+        { name: "unpriced", tvl: 75_000, price: "", tickerCalls: 1 },
+        { name: "below-price-TVL", tvl: 49_999, price: "1", tickerCalls: 1 },
+        { name: "valid-price", tvl: 50_000, price: "1", tickerCalls: 0 },
+        { name: "implausible-price", tvl: 75_000, price: "99", tickerCalls: 1 },
+      ]) {
+        vi.mocked(fetchJsonWithRetry).mockClear();
+        vi.mocked(fetchJsonWithRetry).mockResolvedValue({
+          response: new Response(null, { status: 200 }), body: { tickers: [], data: { poolData: [] } },
+        });
+        vi.mocked(fetchCgTokenPoolsWithStatus).mockResolvedValue({
+          transportOk: provider === "coingecko", schemaDegraded: false, complete: provider === "coingecko",
+          pools: provider === "coingecko" && tvl != null
+            ? [coinGeckoPool({ network: "eth", reserve: String(tvl), basePrice: price })]
+            : [],
+        });
+        vi.mocked(fetchDsTokenPairsWithStatus).mockResolvedValue({
+          ok: true,
+          pairs: tvl == null ? [] : [{
+            chainId: "ethereum", dexId: "uniswap-v3", pairAddress: "0xpool",
+            baseToken: { address: "0xabc", name: "USD Coin", symbol: "USDC" },
+            quoteToken: { address: "0xquote", name: "Tether", symbol: "USDT" },
+            priceUsd: price, liquidity: { usd: tvl, base: 0, quote: 0 },
+            volume: { h24: 1000, h6: 0, h1: 0, m5: 0 }, pairCreatedAt: null,
+          }],
+        });
+        const onProviderStage = vi.fn(async (_provider: string) => {});
+        await crawlCoin(
+          createMockDb(), "usdc-circle", [{ chain: "ethereum", address: "0xabc", decimals: 6 }],
+          "test-key", new Set(), undefined, undefined, undefined, undefined, onProviderStage,
+        );
+        expect(vi.mocked(fetchJsonWithRetry).mock.calls.filter(([url]) => String(url).includes("/tickers")), name)
+          .toHaveLength(tickerCalls);
+        expect(onProviderStage.mock.calls.filter(([stage]) => stage === "cg-tickers"), name)
+          .toHaveLength(tickerCalls);
+      }
+    },
+  );
 
   it("honors an early stop between the serial census stages", async () => {
     censusStageMocks.tezos.mockResolvedValueOnce({ providerChecks: [], stoppedEarly: true });

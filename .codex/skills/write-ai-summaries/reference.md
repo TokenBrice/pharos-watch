@@ -15,7 +15,7 @@ Stablecoin metadata lives in `shared/data/stablecoins/coins/*.json` (generated i
 - **Jurisdiction**: `jurisdiction.country`, `jurisdiction.regulator`, `jurisdiction.license`
 - **Proof of reserves**: `proofOfReserves.type` and `.provider`; read `PROOF_OF_RESERVES_TYPE_VALUES` in `shared/types/core.ts` for the current engagement vocabulary, and `latestReport` for the reviewed assurance scope
 - **Dependencies**: `dependencies[]` — upstream stablecoins with `weight` and `type`; `shared/types/dependency-types.ts` owns the vocabulary
-- **Blacklist exposure**: `blacklistabilityReview.reviewedStatus` in the base entry or risk-review sidecar; `shared/types/stablecoin-meta-schemas.ts` owns its vocabulary, including inherited exposure. The detail page uses the resolved `blacklistStatus`, not a `canBeBlacklisted` field
+- **Blacklist exposure**: `blacklistabilityReview.reviewedStatus` in the base entry or risk-review sidecar; `shared/types/stablecoin-meta-primitives.ts` owns its vocabulary, including inherited exposure. The detail page uses the resolved `blacklistStatus`, not a `canBeBlacklisted` field
 - **Yield config**: `yieldConfig.yieldSource`, `yieldConfig.yieldType`; `YIELD_TYPE_VALUES` in `shared/types/core.ts` owns the current vocabulary
 - **Deployment footprint**: `contracts[]` (count and chains), `tradedContracts[]`
 - **Notices**: `notices[]` — the page surfaces notice types from `COIN_NOTICE_TYPE_VALUES` in `shared/types/core.ts` (the source file wins)

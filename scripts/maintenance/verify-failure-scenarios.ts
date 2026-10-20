@@ -11,7 +11,7 @@ import { FailureScenariosByIdSchema } from "@shared/lib/failure-scenarios";
 import { FAILURE_SCENARIO_CHECKS } from "@shared/lib/failure-scenario-checks";
 import type {
   ScenarioCheckContext, ScenarioCheckVerdict, ScenarioDocument, ScenarioDocumentBaselines,
-} from "@shared/lib/failure-scenario-checks";
+} from "@shared/lib/failure-scenario-checks/context";
 import {
   assertCliUsage, parseCliInteger, parseStrictCliArgs, runDirectCli, writeCliHelpIfRequested,
 } from "../lib/cli-args.mjs";

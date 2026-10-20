@@ -3,15 +3,13 @@ import { compareCodeUnits } from "@shared/lib/compare";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { SafetyScoreV9PublicationIdentitySchema } from "@shared/types/safety-score-publication";
-import { NonNegativeFiniteSchema, ScoreSchema, Sha256Schema, UnixSecondsSchema } from "@shared/types/safety-schema-primitives";
-import { V9GradeSchema } from "@shared/types/safety-score-v9";
+import { Sha256Schema, UnixSecondsSchema } from "@shared/types/safety-schema-primitives";
 import { LenderCollateralBackingSchema, type LenderCollateralBacking } from "@shared/types/safety-score-v9-lender-book";
 import { resolveCauseGapId } from "@shared/types/safety-score-v9-public-cause-gaps";
 import type { SafetyScoreV9CurrentResponse } from "@shared/types/safety-score-v9-public";
 import { buildSafetyScoreV9PublicationIdentity } from "../report-cards-v9-cache";
 import { logWorkerEvent } from "../structured-log";
-import { buildSafetyScoreV9AcceptedPublicationBaseline } from "./publication-assessment";
-import type { SafetyScoreV9AcceptedCardBaseline, SafetyScoreV9AcceptedPublicationBaseline } from "./publication-assessment";
+import { AcceptedPublicationBaselineSchema, buildSafetyScoreV9AcceptedPublicationBaseline } from "./publication-assessment";
 
 // Prerequisite-E sizing (2026-10-15): real accepted baseline 111,663 B and
 // all-eligible lender inventory 250,179 B. Caps are >=4x the larger observed
@@ -34,29 +32,6 @@ const AcceptedProjectionHeaderSchema = z.strictObject({
 });
 export type AcceptedProjectionHeaderV1 = z.infer<typeof AcceptedProjectionHeaderSchema>;
 
-const AcceptedCardBaselineSchema = z.strictObject({
-  id: z.string().min(1), grade: V9GradeSchema.nullable(), score: ScoreSchema.nullable(),
-  primaryRouteKey: z.string().min(1).nullable(), diversificationRouteKey: z.string().min(1).nullable(),
-  primaryRouteCapacityUsd: NonNegativeFiniteSchema.nullable(),
-  pillarScores: z.strictObject({
-    backing: ScoreSchema.nullable(), exit: ScoreSchema.nullable(), control: ScoreSchema.nullable(),
-  }).nullable(),
-}) satisfies z.ZodType<SafetyScoreV9AcceptedCardBaseline>;
-
-const AcceptedPublicationBaselineSchema = z.strictObject({
-  publicationGenerationId: z.string().min(1), publishedAtSec: UnixSecondsSchema,
-  policyVersion: z.string().min(1), policyId: z.string().min(1), policyDigest: Sha256Schema,
-  evaluationBuildDigest: Sha256Schema, dexGenerationId: z.string().min(1).nullable(),
-  cards: z.array(AcceptedCardBaselineSchema),
-}).superRefine((value, ctx) => {
-  if (value.cards.some((card, index) => index > 0 && compareCodeUnits(value.cards[index - 1]!.id, card.id) >= 0)) {
-    ctx.addIssue({ code: "custom", path: ["cards"], message: "Baseline card IDs must be unique and sorted" });
-  }
-}) satisfies z.ZodType<SafetyScoreV9AcceptedPublicationBaseline>;
-
-export type SafetyScoreV9AcceptedBaselineProjectionV1 = AcceptedProjectionHeaderV1 & {
-  baseline: SafetyScoreV9AcceptedPublicationBaseline;
-};
 const SafetyScoreV9AcceptedBaselineProjectionSchema = AcceptedProjectionHeaderSchema.safeExtend({
   baseline: AcceptedPublicationBaselineSchema,
 }).superRefine((value, ctx) => {
@@ -71,11 +46,9 @@ const SafetyScoreV9AcceptedBaselineProjectionSchema = AcceptedProjectionHeaderSc
   if (baseline.cards.length !== value.expectedCount) {
     ctx.addIssue({ code: "custom", path: ["baseline", "cards"], message: "Baseline must retain every accepted card" });
   }
-}) satisfies z.ZodType<SafetyScoreV9AcceptedBaselineProjectionV1>;
+});
+export type SafetyScoreV9AcceptedBaselineProjectionV1 = z.infer<typeof SafetyScoreV9AcceptedBaselineProjectionSchema>;
 
-export type SafetyScoreV9LenderCollateralProjectionV1 = AcceptedProjectionHeaderV1 & {
-  byAssetId: LenderCollateralBacking["byAssetId"];
-};
 const SafetyScoreV9LenderCollateralProjectionSchema = AcceptedProjectionHeaderSchema.safeExtend({
   byAssetId: LenderCollateralBackingSchema.shape.byAssetId,
 }).superRefine((value, ctx) => {
@@ -86,7 +59,8 @@ const SafetyScoreV9LenderCollateralProjectionSchema = AcceptedProjectionHeaderSc
   for (const [key, row] of rows) {
     if (key !== row.assetId) ctx.addIssue({ code: "custom", path: ["byAssetId", key], message: "Eligible row key must match asset ID" });
   }
-}) satisfies z.ZodType<SafetyScoreV9LenderCollateralProjectionV1>;
+});
+export type SafetyScoreV9LenderCollateralProjectionV1 = z.infer<typeof SafetyScoreV9LenderCollateralProjectionSchema>;
 
 function projectionHeader(publication: Readonly<SafetyScoreV9CurrentResponse>): AcceptedProjectionHeaderV1 {
   return {

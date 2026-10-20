@@ -205,30 +205,6 @@ export function buildWatchlistImportPreview(
   };
 }
 
-export async function isWatchlistImportPreviewCurrent(
-  db: D1Database,
-  chatId: string,
-  input: {
-    expectedPreferenceGeneration: number;
-    registryVersion: string;
-    directEntries: readonly string[];
-    presetEntries: readonly string[];
-    preview: WatchlistImportPreview;
-  },
-): Promise<boolean> {
-  const direct = input.directEntries.map(unpackWatchlistDirectState);
-  const presets = input.presetEntries.map(unpackWatchlistPresetState);
-  if (direct.some((row) => row == null) || presets.some((row) => row == null)) return false;
-  const current = await loadWatchlistPortableState(db, chatId, input.registryVersion);
-  if (current.preferenceGeneration !== input.expectedPreferenceGeneration) return false;
-  const recomputed = buildWatchlistImportPreview(current.state, {
-    registryVersion: input.registryVersion,
-    direct: direct as WatchlistTokenDirectState[],
-    presets: presets as WatchlistTokenPresetState[],
-  });
-  return JSON.stringify(recomputed) === JSON.stringify(input.preview);
-}
-
 function prepareWatchlistDirectInsertStatements(
   db: D1Database,
   chatId: string,
@@ -582,17 +558,4 @@ export async function applyWatchlistDirectPatch(
       )]),
     ],
   });
-}
-
-export async function watchlistPortableStateMatches(
-  db: D1Database,
-  chatId: string,
-  directEntries: readonly string[],
-  presetEntries: readonly string[],
-): Promise<boolean> {
-  const { state } = await loadWatchlistPortableState(db, chatId, "comparison");
-  const currentDirect = state.direct.map(packWatchlistDirectState).sort();
-  const currentPresets = state.presets.map(packWatchlistPresetState).sort();
-  return JSON.stringify(currentDirect) === JSON.stringify([...directEntries].sort())
-    && JSON.stringify(currentPresets) === JSON.stringify([...presetEntries].sort());
 }

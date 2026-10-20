@@ -18,7 +18,8 @@ import { getCache } from "../../lib/db-cache";
 import { shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { getChainRpc } from "../../lib/chain-registry";
 import * as evmRpcModule from "../../lib/evm-rpc";
-import * as yieldConfigModule from "../../lib/yield-config/yield-config";
+import * as yieldRateSources from "../../lib/yield-config/yield-config-rate-sources";
+import * as yieldPools from "../../lib/yield-config/yield-config-pools";
 import {
   dlPoolsCacheRow,
   healthyRiskFreeRateCacheRow,
@@ -241,7 +242,7 @@ describe("syncYieldData", () => {
   it("does not carry forward legacy history when the current source family changed", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const configs =
-      yieldConfigModule.RATE_DERIVED_CONFIGS as typeof yieldConfigModule.RATE_DERIVED_CONFIGS;
+      yieldRateSources.RATE_DERIVED_CONFIGS as typeof yieldRateSources.RATE_DERIVED_CONFIGS;
     configs.push({ stablecoinId: "100", spreadBps: 25, label: "T-bill proxy (net of 0.25% fee)" });
 
     const db = makeYieldHistoryDb([
@@ -274,7 +275,7 @@ describe("syncYieldData", () => {
   it("resolves rate-derived yield from cached T-bill rate for configured tokens", async () => {
     // Temporarily inject a rate-derived config for sDAI (id "100")
     const configs =
-      yieldConfigModule.RATE_DERIVED_CONFIGS as typeof yieldConfigModule.RATE_DERIVED_CONFIGS;
+      yieldRateSources.RATE_DERIVED_CONFIGS as typeof yieldRateSources.RATE_DERIVED_CONFIGS;
     configs.push({ stablecoinId: "100", spreadBps: 25, label: "T-bill proxy (net of 0.25% fee)" });
 
     const db = makeYieldHistoryDb([], { createDb: yieldMockD1 });
@@ -306,7 +307,7 @@ describe("syncYieldData", () => {
 
   it("resolves OUSG rate-derived yield with 50bps spread", async () => {
     const configs =
-      yieldConfigModule.RATE_DERIVED_CONFIGS as typeof yieldConfigModule.RATE_DERIVED_CONFIGS;
+      yieldRateSources.RATE_DERIVED_CONFIGS as typeof yieldRateSources.RATE_DERIVED_CONFIGS;
     configs.push({ stablecoinId: "100", spreadBps: 50, label: "T-bill proxy (net of 0.50% fee)" });
 
     const db = makeYieldHistoryDb([], { createDb: yieldMockD1 });
@@ -333,7 +334,7 @@ describe("syncYieldData", () => {
   it("produces valid APY entry from expanded ON_CHAIN_RATE_CONFIGS", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const onChainConfigs =
-      yieldConfigModule.ON_CHAIN_RATE_CONFIGS as typeof yieldConfigModule.ON_CHAIN_RATE_CONFIGS;
+      yieldRateSources.ON_CHAIN_RATE_CONFIGS as typeof yieldRateSources.ON_CHAIN_RATE_CONFIGS;
     onChainConfigs.push({
       stablecoinId: "100",
       chain: "ethereum",
@@ -400,7 +401,7 @@ describe("syncYieldData", () => {
 
   it("publishes independent rows with a quality alarm when all deterministic on-chain sources fail", async () => {
     const onChainConfigs =
-      yieldConfigModule.ON_CHAIN_RATE_CONFIGS as typeof yieldConfigModule.ON_CHAIN_RATE_CONFIGS;
+      yieldRateSources.ON_CHAIN_RATE_CONFIGS as typeof yieldRateSources.ON_CHAIN_RATE_CONFIGS;
     onChainConfigs.push({
       stablecoinId: "100",
       chain: "ethereum",
@@ -440,10 +441,10 @@ describe("syncYieldData", () => {
 
   it("keeps the run healthy when deterministic on-chain reads fail but every affected coin has non-onchain coverage", async () => {
     const onChainConfigs =
-      yieldConfigModule.ON_CHAIN_RATE_CONFIGS as typeof yieldConfigModule.ON_CHAIN_RATE_CONFIGS;
+      yieldRateSources.ON_CHAIN_RATE_CONFIGS as typeof yieldRateSources.ON_CHAIN_RATE_CONFIGS;
     // Alternative coverage for an on-chain coin comes from its curated pool pin;
     // the base-symbol fallback never runs for a coin with an on-chain rate config.
-    const poolMap = yieldConfigModule.YIELD_POOL_MAP as Record<string, string>;
+    const poolMap = yieldPools.YIELD_POOL_MAP as Record<string, string>;
     poolMap["100"] = "pool-sdai-1";
     onChainConfigs.push({
       stablecoinId: "100",
@@ -502,7 +503,7 @@ describe("syncYieldData", () => {
   it("falls back to the secondary RPC URL before degrading the deterministic lane", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const onChainConfigs =
-      yieldConfigModule.ON_CHAIN_RATE_CONFIGS as typeof yieldConfigModule.ON_CHAIN_RATE_CONFIGS;
+      yieldRateSources.ON_CHAIN_RATE_CONFIGS as typeof yieldRateSources.ON_CHAIN_RATE_CONFIGS;
     onChainConfigs.push({
       stablecoinId: "100",
       chain: "ethereum",
@@ -569,7 +570,7 @@ describe("syncYieldData", () => {
   it("falls back to the Etherscan proxy when Worker RPC reads all fail", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const onChainConfigs =
-      yieldConfigModule.ON_CHAIN_RATE_CONFIGS as typeof yieldConfigModule.ON_CHAIN_RATE_CONFIGS;
+      yieldRateSources.ON_CHAIN_RATE_CONFIGS as typeof yieldRateSources.ON_CHAIN_RATE_CONFIGS;
     onChainConfigs.push({
       stablecoinId: "100",
       chain: "ethereum",
@@ -644,7 +645,7 @@ describe("syncYieldData", () => {
   it("records explorer fallback failures when deterministic RPC and explorer reads both return empty", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const onChainConfigs =
-      yieldConfigModule.ON_CHAIN_RATE_CONFIGS as typeof yieldConfigModule.ON_CHAIN_RATE_CONFIGS;
+      yieldRateSources.ON_CHAIN_RATE_CONFIGS as typeof yieldRateSources.ON_CHAIN_RATE_CONFIGS;
     onChainConfigs.push({
       stablecoinId: "100",
       chain: "ethereum",
@@ -708,7 +709,7 @@ describe("syncYieldData", () => {
   it("reuses legacy rate history without aliasing its source identity", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const onChainConfigs =
-      yieldConfigModule.ON_CHAIN_RATE_CONFIGS as typeof yieldConfigModule.ON_CHAIN_RATE_CONFIGS;
+      yieldRateSources.ON_CHAIN_RATE_CONFIGS as typeof yieldRateSources.ON_CHAIN_RATE_CONFIGS;
     onChainConfigs.push({
       stablecoinId: "100",
       chain: "ethereum",
@@ -822,8 +823,8 @@ describe("syncYieldData", () => {
   it("retains both on-chain and curated rows when the native pool overlaps with ON_CHAIN_RATE_CONFIGS", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const onChainConfigs =
-      yieldConfigModule.ON_CHAIN_RATE_CONFIGS as typeof yieldConfigModule.ON_CHAIN_RATE_CONFIGS;
-    const poolMap = yieldConfigModule.YIELD_POOL_MAP as Record<string, string>;
+      yieldRateSources.ON_CHAIN_RATE_CONFIGS as typeof yieldRateSources.ON_CHAIN_RATE_CONFIGS;
+    const poolMap = yieldPools.YIELD_POOL_MAP as Record<string, string>;
     onChainConfigs.push({
       stablecoinId: "100",
       chain: "ethereum",

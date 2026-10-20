@@ -129,7 +129,7 @@ Current support:
 This is intentionally narrower than the general classification system:
 
 - use `infrastructures` for concrete shared-foundation cohorts that deserve dedicated badges, filters, and discovery pages
-- keep `tags` for loose editorial labels that do not need first-class routing or filtering semantics
+- discovery filter tags derive from structured classification and variant metadata, not free-form editorial labels
 
 **Liquity v1** is the classic LUSD-style pattern:
 

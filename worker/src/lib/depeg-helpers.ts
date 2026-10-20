@@ -14,7 +14,7 @@ import {
   signalCrossesThreshold,
   type DepegDirection,
   type DepegSignal,
-} from "./depeg-signals";
+} from "@shared/lib/depeg-signals";
 import { isMissingTableError } from "./db";
 import { logMalformedJsonPath } from "./json-decode-observability";
 import { toErrorMessage } from "@shared/lib/error-utils";

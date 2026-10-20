@@ -39,3 +39,29 @@ The [architectural decisions](../architecture.md#adr-28) remain the authority fo
 ## ADR-35 applications
 
 - [Redemption](../redemption-backstops.md#cron-schedule) validates complete rows, persisted details and final dependency transforms before opening a run; invalid members become named failed placeholders and disclosures revalidate against that census. Global holds write no rows; post-manifest storage failure leaves an unreadable failed run. Supply repair/carry/quarantine remains solely [ADR-8(c)](../architecture.md#adr-8).
+
+## Shared Implementation Boundaries
+
+The [File Tree Guide](../architecture.md#file-tree-guide) owns repository layers and shared import boundaries. The following domain details supplement it; they do not authorize cross-layer imports.
+
+Reserve input/base configuration schemas and inferred shapes live in `shared/types/live-reserve-core.ts`, without the adapter registry graph; `shared/lib/live-reserve-adapters.ts` composes declaration-driven variants and refinements.
+Catalog field schemas live in `shared/types/stablecoin-meta-primitives.ts`; `stablecoin-meta-schemas.ts` composes the structural metadata, obituary and listing-review contracts and infers their public types. `core.ts` and the types barrel expose those types through erased links only. Catalog membership, adapter-specific configuration and cross-record admission remain in `shared/lib/stablecoins/schema.ts`. Failure scenarios follow the same split: structural schemas and inferred nested types in `shared/types/failure-scenarios.ts`, semantic admission, hashing and publication in `shared/lib/failure-scenarios.ts`.
+Digest producers/archive readers import map-only `shared/types/digest-safety-map-contract.ts` directly, avoiding the digest/V9 graph. Strict, canonical-reader and archive-reader profiles share shapes, not admission/projection rules.
+
+Mint/burn flow producer DTOs derive from `shared/types/mint-burn.ts`; the Worker strengthens required live coverage/valuation fields without mirroring the wire shape or declaring private reason extensions.
+
+`shared/types/status/` separates status domains; `shared/types/status.ts` remains the frontend/Worker compatibility barrel, including lazy schema loaders. Domain modules import lower-level siblings, never the barrel; internal primitives stay private.
+
+Stablecoin base records and whole-domain research sidecars merge through `scripts/lib/stablecoin-catalog-sources.ts` before full schema validation; generated registries consume only the merged projection. [Stablecoin Data](../stablecoin-data.md#source-files) owns authoring and source layout.
+
+Shared transport/identity primitives retain their own contracts: `shared/lib/drpc.ts` owns network slugs (research routes do not authorize runtime capability); `shared/lib/stable-json.ts` rejects undefined/sparse array entries in canonical output. Shared display policy belongs in `shared/lib/format.ts`, not consumer copies.
+
+Numeric admission reuses `shared/lib/type-guards.ts`: `numberValue` accepts only finite numbers; `coerceFiniteNumber` additionally accepts non-blank numeric strings. Both preserve zero and reject booleans/non-finite values. Callers retain domain-specific bounds and throwing policies.
+
+Compact numeric wrappers render non-finite observations as `N/A`, including counts; `abbreviateNumberParts` returns `null` instead of zero parts. Consumers retain their established unavailable glyphs. Observed finite zero and signed-negative formatting remain distinct and unchanged.
+
+The Cemetery dataset and integration artifacts are static Pages exports, not Worker routes; see [Exports](../exports.md). Cron aborts use `worker/src/lib/abort.ts`; a domain needing an abort result builds it beside its stage runner.
+
+Reserve freshness and reviewed suspension admission remain runtime-neutral (`shared/lib/live-reserve-freshness.ts`, `shared/lib/redemption-route-suspension.ts`); schemas/vocabulary remain in `shared/types/`. Malformed nested telemetry is quarantined as a whole claim. Reserve sync seals its full cohort before redemption consumes it; an independent executable observer cannot manufacture reserve composition or `reserveInput`. Owners: [reserve admission](../live-reserves.md#snapshot-admission-gates) and [Redemption Backstops](../redemption-backstops.md).
+
+Dependency diagnostics, look-through exposure and watershed layout share the runtime-neutral iterative SCC traversal in `shared/lib/strongly-connected-components.ts`. Callers retain their cycle policies: sorted multi-node diagnostics with separate self-edges, reachable-cycle unknown exposure propagated downstream, and first-cycle layout refusal with input-order self-loop precedence. Dependency derivation uses `deriveEffectiveDependencySet` (including `rejectionReasons`) or its dependency-only projection `deriveEffectiveDependencies`; mixed reserve/manual rejection is metadata, not a throwing facade.

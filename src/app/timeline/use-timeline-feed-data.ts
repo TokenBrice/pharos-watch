@@ -57,15 +57,14 @@ export function useTimelineFeedData({ queryParams, permalinkId, nowMs }: UseTime
   );
   const digestedDays = useMemo(() => mergeDigestedPages(perPageDigests), [perPageDigests]);
 
-  // Common case: an internal-link permalink follows from a tracker page and
-  // the event is already in the loaded window. Gate the 200-row buffer on
-  // the miss so we skip the extra round-trip.
+  // A permalink miss resolves one exact identity, never a capped latest page.
+  // Existing loaded events still avoid a redundant round-trip.
   const isInLoadedFeed = useMemo(
     () => (permalinkId ? rawEvents.some((e) => e.id === permalinkId) : false),
     [permalinkId, rawEvents],
   );
   const permalinkBuffer = useLatestEvents({
-    limit: 200,
+    eventId: permalinkId,
     enabled: !!permalinkId && !isInLoadedFeed,
   });
 

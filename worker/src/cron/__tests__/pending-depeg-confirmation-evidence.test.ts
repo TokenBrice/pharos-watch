@@ -6,7 +6,7 @@ import type { StablecoinMeta } from "@shared/types/core";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 
 import { normalizePendingDepegRow, type PendingDepegRow } from "../../lib/depeg-pending";
-import { deriveDepegSignal } from "../../lib/depeg-signals";
+import { deriveDepegSignal } from "@shared/lib/depeg-signals";
 import type { CollectedConfirmationEvidence, ConfirmationEvidenceInput, DexPoolChallengersByCoin, DexPriceRowsByCoin, DexPriceSourcesByCoin } from "../pending-depeg-confirmation";
 import { collectConfirmationEvidence } from "../pending-depeg-confirmation-evidence";
 import { emptyEvidence } from "./pending-depeg-confirmation.test-support";
@@ -84,6 +84,14 @@ describe("collectConfirmationEvidence source-family independence", () => {
     expect(evidence.confirmingSources).toContain("coingecko-confirm");
   });
 
+  it.each([NOW_SEC - 1_800, NOW_SEC + 300])("admits the fresh confirmation boundary at %s", async (observedAt) => {
+    const fetchSpy = mockFetch([{ match: "api.coingecko.com/api/v3/simple/price", body: { tether: { usd: 0.95, last_updated_at: observedAt } } }], { requireMatch: true });
+    const evidence = await collect(input(), fetchSpy);
+    expect(evidence.offchainStatus).toBe("confirm");
+    expect(evidence.confirmingSources).toContain("coingecko-confirm");
+    expect(evidence.unavailableSources).toEqual(["dex:aggregate", "pool:challenger"]);
+  });
+
   it("does not query the DefiLlama CoinGecko mirror for confirmation", async () => {
     const fetchSpy = mockFetch([], { requireMatch: true });
     const evidence = await collect(input({ asset: makeAsset({ id: COIN_ID, symbol: "USDT", geckoId: "tether", price: 0.95, priceSource: "defillama-list+coingecko", agreeSources: ["defillama-list", "coingecko"] }) }), fetchSpy);
@@ -112,6 +120,8 @@ describe("collectConfirmationEvidence source-family independence", () => {
     const evidence = await collect(input(), fetchSpy);
     expect(evidence.unavailableSources).toContain(expected);
     expect(evidence.offchainStatus).toBe("insufficient");
+    expect(evidence.confirmingSources).not.toContain("coingecko-confirm");
+    expect(evidence.offchainPeakCandidate).toBeNull();
   });
 
   it("preserves native-origin independence by marking USD-derived sources unavailable", async () => {

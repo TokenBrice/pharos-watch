@@ -21,6 +21,8 @@ export interface TapeEventRow {
   source_url: string | null;
   methodology_version: string | null;
   created_at: number;                // epoch seconds
+  suppressed_at: number | null;       // epoch seconds; never a public tombstone
+  suppression_reason: string | null;
 }
 
 /** Input to the projector batch-insert helper. */

@@ -4,7 +4,7 @@ import { admitSupplyBuckets } from "@shared/lib/supply";
 import { MAX_SUPPLY_SNAPSHOT_DISTANCE_SEC } from "@shared/lib/rate-series";
 import { binarySearchNearest } from "./binary-search";
 
-import { deriveDepegSignal } from "./depeg-signals";
+import { deriveDepegSignal } from "@shared/lib/depeg-signals";
 import {
   buildPriceValidationContext,
   type PriceReasonablenessOptions,

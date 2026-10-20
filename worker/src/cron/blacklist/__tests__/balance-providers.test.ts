@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import {
-  fetchEvmTokenCurrentBalance,
+  fetchEvmTokenBalance,
   fetchTronTokenCurrentBalance,
 } from "../../../lib/blacklist/balance-providers";
 import type { ContractEventConfig } from "../../../lib/blacklist-contracts";
@@ -96,7 +96,7 @@ describe("fetchTronTokenCurrentBalance", () => {
   });
 });
 
-describe("fetchEvmTokenCurrentBalance", () => {
+describe.each([100, "latest"] as const)("fetchEvmTokenBalance at %s", (blockNumberOrTag) => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
@@ -109,18 +109,18 @@ describe("fetchEvmTokenCurrentBalance", () => {
       position: "registry", stateHistory: "archive", logsHistory: "full",
     }, ...config.endpoints];
     const fetchMock = mockFetch([
-      { match: "chain-rpc.test", body: { result: "0x0f4240" } },
+      { match: "chain-rpc.test", body: { id: 1, result: "0x0f4240" } },
     ], { requireMatch: true });
-    const amount = await fetchEvmTokenCurrentBalance(
-      ethereumConfig, "0x0000000000000000000000000000000000000abc",
+    const amount = await fetchEvmTokenBalance(
+      ethereumConfig, "0x0000000000000000000000000000000000000abc", blockNumberOrTag,
       null, null, async (fn) => fn(), createBudget(10), undefined, rpcs,
     );
     expect(amount).toBe(1);
     expect(fetchMock.getHistory().map((call) => call.url)).toEqual(["https://chain-rpc.test/"]);
   });
 
-  it("reads the latest balance via the Etherscan proxy path", async () => {
-    mockFetch([{
+  it("reads the requested balance via the Etherscan proxy path", async () => {
+    const fetchMock = mockFetch([{
       match: "etherscan.io",
       body: {
         status: "1",
@@ -129,9 +129,10 @@ describe("fetchEvmTokenCurrentBalance", () => {
       },
     }]);
 
-    const amount = await fetchEvmTokenCurrentBalance(
+    const amount = await fetchEvmTokenBalance(
       ethereumConfig,
       "0x0000000000000000000000000000000000000abc",
+      blockNumberOrTag,
       "test-key",
       null, // no dRPC
       async (fn) => fn(),
@@ -139,16 +140,18 @@ describe("fetchEvmTokenCurrentBalance", () => {
     );
 
     expect(amount).toBe(50);
+    expect(new URL(fetchMock.getHistory()[0].url).searchParams.get("tag"))
+      .toBe(blockNumberOrTag === "latest" ? "latest" : "0x64");
   });
 
-  it.each([0, 1, 2])("selects the first successful current provider after %i failures", async (failures) => {
+  it.each([0, 1, 2])("selects the first successful provider after %i failures", async (failures) => {
     const fetchMock = mockFetch([
-      { match: "drpc.org", body: { result: failures > 0 ? null : "0x0f4240" } },
-      { match: "chain-rpc.test", body: { result: failures > 1 ? null : "0x1e8480" } },
+      { match: "drpc.org", body: { id: 1, result: failures > 0 ? null : "0x0f4240" } },
+      { match: "chain-rpc.test", body: { id: 1, result: failures > 1 ? null : "0x1e8480" } },
       { match: "etherscan.io", body: { result: "0x2dc6c0" } },
     ], { requireMatch: true });
-    const amount = await fetchEvmTokenCurrentBalance(
-      ethereumConfig, "0x0000000000000000000000000000000000000abc",
+    const amount = await fetchEvmTokenBalance(
+      ethereumConfig, "0x0000000000000000000000000000000000000abc", blockNumberOrTag,
       "etherscan-key", "drpc-key", async (fn) => fn(), createBudget(10), undefined,
       chainRpcFixture(["https://chain-rpc.test"]),
     );
@@ -159,7 +162,16 @@ describe("fetchEvmTokenCurrentBalance", () => {
     );
     for (const request of history) {
       expect(request.body ? JSON.parse(request.body).params[1] : new URL(request.url).searchParams.get("tag"))
-        .toBe("latest");
+        .toBe(blockNumberOrTag === "latest" ? "latest" : "0x64");
     }
+  });
+
+  it("retains an observed zero without consulting later providers", async () => {
+    const fetchMock = mockFetch([{ match: "drpc.org", body: { id: 1, result: `0x${"0".repeat(64)}` } }], { requireMatch: true });
+    expect(await fetchEvmTokenBalance(
+      ethereumConfig, "0x0000000000000000000000000000000000000abc", blockNumberOrTag,
+      "etherscan-key", "drpc-key", async (fn) => fn(), createBudget(10),
+    )).toBe(0);
+    expect(fetchMock.getHistory()).toHaveLength(1);
   });
 });

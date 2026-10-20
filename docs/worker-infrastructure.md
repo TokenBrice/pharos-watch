@@ -113,6 +113,10 @@ Derive Env/credentials per invocation, never during module initialization. Impor
 
 RPC inventory is not capability. Dwellir needs key, ledger/breaker admission and an enabled chain; preference cannot reorder incumbents or expand inventory. HTTP has no native capability. Native reads require exact pins, header credentials, ledger floors, manual redirects and non-2xx rejection. Admit history/finality evidence; never assume archives or fall back to latest/hash-to-number.
 
+Single-URL JSON-RPC transport shares authenticated POST/envelope validation, not provider policy: eligibility, failover/demotion, admission, credits and partial log-context recovery remain caller-owned. Parity diagnostics retain their independent measured transport.
+
+Economic-supply leaf readers retain no pin or result cache. The invocation-local orchestrator owns sequential phases, route rejection names and diagnostics; mandatory finalized-header freshness includes the reserved capture deadline before quantity reads, while optional finalized preference retains its reviewed-lag fallback.
+
 [Initialization/RPC details](process/worker-infrastructure-appendix.md#initialization-and-rpc-boundaries) owns implementation names, cache lifetimes, chain exceptions and the [memory boundary](process/worker-infrastructure-appendix.md#module-initialization-memory-evidence). [Read admission](process/worker-infrastructure-appendix.md#rpc-read-admission-details) governs decoding, recovery, timestamps, ancestry and capped-log completeness; failures cannot manufacture state.
 
 

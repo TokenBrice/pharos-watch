@@ -147,7 +147,6 @@ export const STABLECOIN_CLIENT_DETAIL_FIELDS = [
   "geckoId",
   "protocolSlug",
   "listingStatusReview",
-  "tags",
   "milestones",
   "dateHistory",
   "infrastructures",

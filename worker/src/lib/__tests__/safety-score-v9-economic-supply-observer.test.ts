@@ -7,6 +7,7 @@ import { ReviewedEconomicSupplyPlanSchema, type CcipPendingRead, type CurveLzPen
 import * as evmRpc from "../evm-rpc";
 import type { ChainRpcConfig } from "../chain-registry";
 import { ECONOMIC_SUPPLY_BODY_CAPS, observeCurveLzPending, observeEconomicSolanaMint, observeReviewedEconomicDeploymentPartitionAttempt } from "../safety-score-v9/economic-supply-observer";
+import { readEconomicXrplHolding } from "../safety-score-v9/economic-supply-observer-readers";
 import { REVIEWED_ECONOMIC_SUPPLY_PLANS, reviewedEconomicDeploymentAttributionValidationError } from "../safety-score-v9/supply-attribution-contract";
 import { makeV9FixedInput } from "../../test-helpers/v9-fixed-input";
 import { admissionCodeForSupplyAttributionRejection, computeSupplyAttributionJournalIdV1, createSupplyAttributionJournalV1, SupplyAttributionJournalV1Schema, withSupplyAttributionJournalDiagnosticV1, type SupplyAttributionJournalV1Payload } from "@shared/lib/safety-score-v9-supply-attribution-journal";
@@ -25,6 +26,13 @@ const apiSource = (sourceId: string) => ({ sourceId, url: `https://issuer.exampl
 const apiBody = (amount: unknown = "1", observedAt: unknown = CLOCK - 60) => ({ data: { amount, observedAt, generation: "issuer-snapshot" } });
 const word = (value: bigint): `0x${string}` => `0x${value.toString(16).padStart(64, "0")}`;
 const account = (supply = "100000000") => ({ context: { slot: 100 }, value: { owner: OWNER, data: { parsed: { type: "mint", info: { supply, decimals: 6 } } } } });
+const diagnosticFixture = (detail: Partial<SupplyAttributionAttemptDiagnostic>): SupplyAttributionAttemptDiagnostic => ({
+  observer: "economic-deployment", sourceId: "alpha", laneId: null, chainId: null, providerOrigin: null,
+  method: "partition-attempt", phase: "observation-rejected", beforeCursor: null, afterCursor: null,
+  targetCursor: null, pinObservedAtSec: null, finalizedLagBlocks: null, persisted: false,
+  authenticatedCursorAdvanced: false, incompleteBootstrap: false, hardEvidenceFailure: true,
+  failurePredicate: "deployment-state-unavailable", ...detail,
+});
 
 function fixture() {
   const address = `0x${"1".repeat(40)}`;
@@ -114,6 +122,7 @@ describe("reviewed economic supply observation", () => {
       observations: [expect.objectContaining({ anchor: "100" })],
     } });
     expect(vi.mocked(evmRpc.fetchEvmMulticall3Aggregate3AtBlock).mock.calls[0][3]?.recentStatePin).toBeUndefined();
+    expect(evmRpc.fetchEvmBlockHeader).toHaveBeenCalledWith("ethereum", "finalized", { chainRpcs: f.chainRpcs, signal: undefined });
   });
   it.each([1847, 1790])("rejects %is-old pins without enough capture headroom before reading quantities", async age => {
     const f = fixture();
@@ -418,7 +427,32 @@ describe("reviewed economic supply observation", () => {
     });
     expect(result.status).toBe("accepted");
     expect(evmRpc.fetchEvmBlockHeader).toHaveBeenCalledWith("ethereum", "finalized",
-      expect.objectContaining({ minTimestampSec: CLOCK + 30 - 1800 }));
+      { chainRpcs: f.chainRpcs, signal: undefined, minTimestampSec: CLOCK + 30 - 1800 });
+  });
+  it("rejects mandatory pins before quantities when the reserved capture window would expire them", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(CLOCK * 1000);
+    const f = pendingFixture(), onDiagnostic = vi.fn();
+    vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (_chain, number) =>
+      ({ number: number === "finalized" ? 100 : number, timestamp: CLOCK - 1790, hash: HASH }));
+    expect(await observeReviewedEconomicDeploymentPartitionAttempt({
+      ...f, onDiagnostic, assetDeadlineMs: CLOCK * 1000 + 30_000,
+    })).toEqual({ status: "rejected", rejectionCode: "deployment-state-unavailable",
+      failedRouteId: "anchor:ethereum:capture-freshness-window-insufficient" });
+    expect(onDiagnostic.mock.calls).toEqual([[diagnosticFixture({ laneId: null, chainId: "ethereum",
+      phase: "pinning", method: "capture-window", failurePredicate: "capture-freshness-window-insufficient",
+      pinObservedAtSec: CLOCK - 1790, operands: { freshnessClock: CLOCK + 30, maxAgeSec: 1800 } })]]);
+    expect(evmRpc.fetchEvmMulticall3Aggregate3AtBlock).not.toHaveBeenCalled();
+    expect(evmRpc.fetchEvmRpcBatch).not.toHaveBeenCalled();
+  });
+  it("keeps enumerable pending state escrow-only and rejects liability admission before acquisition", async () => {
+    const f = pendingFixture(), onDiagnostic = vi.fn();
+    f.plan.liabilityInFlightSource = f.plan.escrows[0]!.inFlightSource;
+    f.plan.escrows = []; f.plan.accountingFamily = "independent-liability";
+    expect(await observeReviewedEconomicDeploymentPartitionAttempt({ ...f, onDiagnostic }))
+      .toEqual({ status: "rejected", rejectionCode: "route-inventory-unavailable", failedRouteId: null });
+    expect(onDiagnostic.mock.calls).toEqual([[diagnosticFixture({ failurePredicate: "route-inventory-unavailable" })]]);
+    expect(evmRpc.fetchEvmBlockNumber).not.toHaveBeenCalled();
+    expect(evmRpc.fetchEvmRpcBatch).not.toHaveBeenCalled();
   });
   it("propagates only the existing finalized holding pin and original economic clock", async () => {
     const f = pendingFixture();
@@ -610,12 +644,25 @@ describe("reviewed economic supply observation", () => {
   });
 
   it.each([false, true])("fails closed on unauthenticated OFT runtime for liability=%s", async liability => {
-    const f = oftFixture(liability);
+    const f = oftFixture(liability), onDiagnostic = vi.fn(), onPhase = vi.fn();
     vi.mocked(evmRpc.fetchEvmRpcBatch).mockResolvedValue(["0x6001"]);
-    expect(await f.run()).toEqual({
+    expect(await observeReviewedEconomicDeploymentPartitionAttempt({ ...f, onDiagnostic, onPhase })).toEqual({
       status: "rejected", rejectionCode: "deployment-state-unavailable",
       failedRouteId: liability ? "in-flight:liability:runtime-mismatch" : "in-flight:bridge:runtime-mismatch",
     });
+    const context = { observer: "layerzero-oft" as const, sourceId: "oft", chainId: "ethereum",
+      pinObservedAtSec: CLOCK - 60, finalizedLagBlocks: 0,
+      operands: { pinNumber: 100, finalizedNumber: 100, finalizedObservedAtSec: CLOCK - 60 } };
+    expect(onDiagnostic.mock.calls).toEqual([
+      [diagnosticFixture({ ...context, phase: "pin-authentication", method: "eth_getBlockByNumber",
+        hardEvidenceFailure: false, failurePredicate: null })],
+      [diagnosticFixture({ ...context, phase: "rpc", method: "eth_getCode", failurePredicate: "runtime-mismatch" })],
+    ]);
+    expect(onPhase.mock.calls.flat()).toEqual(["reference", "holdings", "pinning", "holdings", "holdings",
+      ...(liability ? [] : ["holdings"]), "conversions", "pending", "pending-authentication"]);
+    const holdingCallOrder = vi.mocked(evmRpc.fetchEvmMulticall3Aggregate3AtBlock).mock.invocationCallOrder;
+    expect(holdingCallOrder[holdingCallOrder.length - 1])
+      .toBeLessThan(vi.mocked(evmRpc.fetchEvmRpcBatch).mock.invocationCallOrder[0]!);
   });
 
   it.each([false, true])("caps the shared CCIP holding pin at the actual finalized head for liability=%s instead of rejecting it", async liability => {
@@ -670,7 +717,7 @@ describe("reviewed economic supply observation", () => {
     expect(evmRpc.fetchEvmMulticall3Aggregate3AtBlock).not.toHaveBeenCalled();
   });
 
-  it("rejects an unavailable finalized canonical messenger head without substituting escrow surplus", async () => {
+  it.each([false, true])("keeps messenger pending escrow-only without substituting escrow surplus, liability=%s", async liability => {
     const f = pendingFixture(), [canonical, receipt] = f.plan.deployments;
     const address = (n: number) => `0x${n.toString(16).padStart(40, "0")}`;
     f.plan.escrows[0]!.inFlightSource = {
@@ -686,12 +733,16 @@ describe("reviewed economic supply observation", () => {
       ],
       identityReads: [{ chainId: "ethereum", address: address(10), method: "eth_call", data: "0x12345678", expected: word(1n) }],
     };
-    vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (_chain, number) =>
+    if (liability) {
+      f.plan.liabilityInFlightSource = f.plan.escrows[0]!.inFlightSource;
+      f.plan.escrows = []; f.plan.accountingFamily = "independent-liability";
+    } else vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (_chain, number) =>
       number === "finalized" ? null : { number, timestamp: CLOCK - 60, hash: HASH });
     expect(await f.run()).toEqual({
-      status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: canonical!.deploymentKey,
+      status: "rejected", rejectionCode: liability ? "route-inventory-unavailable" : "deployment-state-unavailable", failedRouteId: liability ? null : canonical!.deploymentKey,
     });
     expect(evmRpc.fetchEvmMulticall3Aggregate3AtBlock).not.toHaveBeenCalled();
+    if (liability) expect(evmRpc.fetchEvmBlockNumber).not.toHaveBeenCalled();
   });
 
   it.each(["number", "hash"])("rejects pending generations whose escrow block %s changed", async failure => {
@@ -801,29 +852,57 @@ describe("validated XRPL issued-currency observations", () => {
     });
     return f;
   }
+  it("refuses non-XRPL holding kinds at the leaf without network acquisition", async () => {
+    const f = fixture();
+    expect(await readEconomicXrplHolding({ row: f.plan.deployments[0]!, url: "https://xrpl.example/rpc",
+      bodyCaps: ECONOMIC_SUPPLY_BODY_CAPS, onBodyMethod: vi.fn() })).toBeNull();
+    expect(fetch).not.toHaveBeenCalled();
+  });
   it("reads liabilities and the pinned ledger close time, normalizing amount and hash", async () => {
     const result = await xrplFixture().run();
     expect(result.status).toBe("accepted");
     if (result.status !== "accepted") throw new Error("Expected accepted partition");
-    expect(result.attribution.observations[0]).toMatchObject({ amount: "100", anchor: "100", anchorHash: "a".repeat(64), observedAtSec: CLOCK - 60 });
-    expect(result.attribution.deployments[0]!.currentSupplyUsd).toBe(100);
     const hash = "A".repeat(64);
     const gatewayText = JSON.stringify({ result: { validated: true, ledger_index: 100, ledger_hash: hash, obligations: { USD: "1.00e2" } } });
     const ledgerText = JSON.stringify({ result: { ledger: { ledger_hash: hash, close_time: CLOCK - 60 - 946684800 } } });
-    expect(result.attribution.observations[0]!.responseSha256).toBe(sha256Hex(gatewayText + ledgerText));
+    expect(result.attribution.observations[0]).toEqual({
+      id: "xrpl:USD.rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh", deploymentKey: "xrpl:USD.rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh",
+      amount: "100", anchor: "100", anchorHash: "a".repeat(64), observedAtSec: CLOCK - 60,
+      responseSha256: sha256Hex(gatewayText + ledgerText),
+    });
+    expect(result.attribution.deployments[0]!.currentSupplyUsd).toBe(100);
+    expect(vi.mocked(fetch).mock.calls.map(([, init]) => JSON.parse(String(init?.body)))).toEqual([
+      { method: "gateway_balances", params: [{ account: "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh", ledger_index: "validated", strict: true }] },
+      { method: "ledger", params: [{ ledger_hash: hash }] },
+    ]);
   });
   it.each(["malformed", "negative", "unvalidated", "hash mismatch", "missing time", "stale time"])("rejects XRPL %s", async failure => {
-    expect(await xrplFixture(failure).run()).toMatchObject({ status: "rejected", rejectionCode: failure === "stale time" ? "deployment-observation-skew" : "deployment-state-unavailable" });
+    const f = xrplFixture(failure), onDiagnostic = vi.fn();
+    const rejectionCode = failure === "stale time" ? "deployment-observation-skew" : "deployment-state-unavailable";
+    const failedRouteId = f.plan.deployments[0]!.deploymentKey;
+    expect(await observeReviewedEconomicDeploymentPartitionAttempt({ ...f, onDiagnostic }))
+      .toEqual({ status: "rejected", rejectionCode, failedRouteId });
+    expect(onDiagnostic.mock.calls).toEqual([[diagnosticFixture({ laneId: failedRouteId, failurePredicate: rejectionCode })]]);
+    expect(vi.mocked(fetch).mock.calls.map(([, init]) => JSON.parse(String(init?.body)).method))
+      .toEqual(["gateway_balances", ...(["hash mismatch", "missing time", "stale time"].includes(failure) ? ["ledger"] : [])]);
   });
   it.each(["gateway_balances", "ledger"])("rejects capped XRPL %s bodies and cancels HTTP errors before parsing", async method => {
     for (const failure of ["overflow", "http-error"]) {
-      const f = xrplFixture(), original = vi.mocked(fetch).getMockImplementation()!, cancel = vi.fn();
+      const f = xrplFixture(), original = vi.mocked(fetch).getMockImplementation()!, cancel = vi.fn(), onDiagnostic = vi.fn();
       vi.mocked(fetch).mockImplementation(async (url, init) => {
         if (JSON.parse(String(init?.body)).method !== method) return original(url, init);
         const cap = method === "ledger" ? ECONOMIC_SUPPLY_BODY_CAPS.xrplLedger : ECONOMIC_SUPPLY_BODY_CAPS.xrplGatewayBalances;
         return new Response(new ReadableStream({ cancel }), { status: failure === "http-error" ? 503 : 200, headers: { "Content-Length": String(cap + 1) } });
       });
-      expect(await f.run()).toMatchObject({ status: "rejected", rejectionCode: failure === "overflow" ? "observer-body-over-cap" : "deployment-state-unavailable" });
+      const cap = method === "ledger" ? ECONOMIC_SUPPLY_BODY_CAPS.xrplLedger : ECONOMIC_SUPPLY_BODY_CAPS.xrplGatewayBalances;
+      const failedRouteId = f.plan.deployments[0]!.deploymentKey;
+      expect(await observeReviewedEconomicDeploymentPartitionAttempt({ ...f, onDiagnostic })).toEqual({
+        status: "rejected", rejectionCode: failure === "overflow" ? "observer-body-over-cap" : "deployment-state-unavailable", failedRouteId,
+      });
+      expect(onDiagnostic.mock.calls).toEqual([[diagnosticFixture(failure === "overflow" ? {
+        laneId: failedRouteId, phase: "body-intake", method, providerOrigin: "https://xrpl.example",
+        failurePredicate: "observer-body-over-cap", operands: { maxBytes: cap, observedBytes: cap + 1 },
+      } : { laneId: failedRouteId })]]);
       expect(cancel).toHaveBeenCalledOnce();
     }
   });
@@ -1052,5 +1131,15 @@ describe("nonce-authenticated Curve LayerZero pending history", () => {
     expect(result.attribution.deployments.map(row => row.currentSupplyUsd)).toEqual([80, 19]);
     expect(result.attribution.unattributedSupplyUsd).toBe(1);
     expect(result.attribution.inFlight[0]!.curvePendingProof).toBeDefined();
+  });
+  it("keeps Curve history escrow-only rather than widening independent-liability support", async () => {
+    const f = fixture(), history = curveFixture(), canonical = f.plan.deployments[0]!, onDiagnostic = vi.fn();
+    f.plan.deployments.push({ ...canonical, deploymentKey: `base:0x${"2".repeat(40)}`, chainId: "base", address: `0x${"2".repeat(40)}` });
+    f.plan.liabilityInFlightSource = history.input.source;
+    expect(await observeReviewedEconomicDeploymentPartitionAttempt({ ...f, onDiagnostic }))
+      .toEqual({ status: "rejected", rejectionCode: "route-inventory-unavailable", failedRouteId: null });
+    expect(onDiagnostic.mock.calls).toEqual([[diagnosticFixture({ failurePredicate: "route-inventory-unavailable" })]]);
+    expect(evmRpc.fetchEvmBlockNumber).not.toHaveBeenCalled();
+    expect(evmRpc.fetchEvmMulticall3Aggregate3AtBlock).not.toHaveBeenCalled();
   });
 });

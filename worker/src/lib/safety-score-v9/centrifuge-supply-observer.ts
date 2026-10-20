@@ -1,4 +1,5 @@
 import { sha256HexFromBytes } from "@shared/lib/sha256";
+import type { ReviewedDeploymentSupplyObservation } from "@shared/types/safety-score-v9-supply-attribution";
 import type { ChainRpcConfig } from "../chain-registry";
 import {
   fetchEvmBlockHeader,
@@ -11,8 +12,6 @@ import { encodeAddress } from "../evm-selectors";
 import {
   expectedCentrifugeDeploymentIdentity,
   reviewedDeploymentIdentityValidationError,
-  type ReviewedDeploymentSupplyObservation,
-  type ReviewedDeploymentUnitPartitionV1,
 } from "./supply-attribution-contract";
 import {
   decodeEvmUint256,
@@ -168,16 +167,4 @@ export async function observeCentrifugeReviewedDeploymentUnitPartitionAttempt(
     ),
     identityValidationError: (observation) => reviewedDeploymentIdentityValidationError(observation, input.assetId),
   });
-}
-
-export async function observeCentrifugeReviewedDeploymentUnitPartition(
-  input: Parameters<typeof observeCentrifugeReviewedDeploymentUnitPartitionAttempt>[0],
-  dependencyOverrides: Parameters<typeof observeCentrifugeReviewedDeploymentUnitPartitionAttempt>[1] = {},
-): Promise<ReviewedDeploymentUnitPartitionV1 | null> {
-  const attempt =
-    await observeCentrifugeReviewedDeploymentUnitPartitionAttempt(
-      input,
-      dependencyOverrides,
-    );
-  return attempt.status === "accepted" ? attempt.attribution : null;
 }

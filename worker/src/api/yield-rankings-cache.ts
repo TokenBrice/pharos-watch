@@ -13,15 +13,13 @@ import {
   type YieldRanking,
   type YieldRankingsResponse,
   type YieldSafetyReason,
-  type YieldVenueRiskTier,
 } from "@shared/types/yield";
-import { computePYSFromComponents, computePysComponents, yieldStabilityToApyVarianceScore, PYS_DEFAULT_SAFETY_SCORE as DEFAULT_SAFETY_SCORE } from "@shared/lib/yield-scoring";
-import { assessYieldEvidence } from "@shared/lib/yield-evidence";
+import { yieldStabilityToApyVarianceScore, PYS_DEFAULT_SAFETY_SCORE as DEFAULT_SAFETY_SCORE } from "@shared/lib/yield-scoring";
 import { projectYieldRankingsSummary } from "@shared/lib/yield-rankings-summary";
 import type { YieldRankingsSummaryResponse } from "@shared/types/yield-summary";
 import { numberValue as finiteNumber } from "@shared/lib/type-guards";
 import { resolveYieldRowSafety, stripSafetyDerivedSourceRisk } from "@shared/lib/yield-opportunity-risk";
-import { classifyYieldSourceAgeTier, classifyYieldSourceFreshness, derivePysNullReasonFromComponents, getRankingStaleThresholdMs, getRankingAgingThresholdMs, getComparisonAnchorStaleThresholdMs, resolveEvidenceNullReason } from "../lib/yield-ranking-helpers";
+import { classifyYieldSourceAgeTier, classifyYieldSourceFreshness, qualifyYieldEvidence, scoreYieldPys, getRankingStaleThresholdMs, getRankingAgingThresholdMs, getComparisonAnchorStaleThresholdMs, resolveEvidenceNullReason } from "../lib/yield-ranking-helpers";
 import {
   classifyYieldBenchmarkFreshness,
   YIELD_BENCHMARK_RECORD_MAX_AGE_SEC,
@@ -182,18 +180,8 @@ function ageYieldRankings(payload: YieldRankingsResponse, publishedAt: number): 
  * the same engine the yield-sync write path runs, so the read path re-bins
  * rather than re-deriving (ADR-19).
  */
-function resolveHydratedSafety(params: { row: YieldRanking; safety: { score: number; grade: string } | undefined }): {
-  score: number;
-  grade: YieldRanking["safetyGrade"];
-  sourceRisk: YieldRanking["sourceRisk"];
-  provenance: NonNullable<YieldRanking["provenance"]>["safetyProvenance"];
-  usedDefaultSafety: boolean;
-  reason: YieldSafetyReason | null;
-  safetyEvidenceObserved: boolean;
-  opportunityEvidenceComplete: boolean;
-  venueRiskTier: YieldVenueRiskTier;
-} {
-  const resolution = resolveYieldRowSafety({
+function resolveHydratedSafety(params: { row: YieldRanking; safety: { score: number; grade: string } | undefined }) {
+  return resolveYieldRowSafety({
     yieldType: params.row.yieldType,
     underlyingSafety: params.safety,
     defaultSafetyScore: DEFAULT_SAFETY_SCORE,
@@ -201,17 +189,6 @@ function resolveHydratedSafety(params: { row: YieldRanking; safety: { score: num
     sourceTvlUsd: params.row.sourceTvlUsd,
     ratedProvenance: "live-report-card",
   });
-  return {
-    score: resolution.safetyScore,
-    grade: resolution.safetyGrade as YieldRanking["safetyGrade"],
-    sourceRisk: resolution.sourceRisk,
-    provenance: resolution.safetyProvenance,
-    usedDefaultSafety: resolution.usedDefaultSafety,
-    reason: resolution.safetyReason,
-    safetyEvidenceObserved: resolution.safetyEvidenceObserved,
-    opportunityEvidenceComplete: resolution.opportunityEvidenceComplete,
-    venueRiskTier: resolution.venueRiskTier,
-  };
 }
 
 function hydrateAltSourcesWithLiveSafety(
@@ -404,70 +381,39 @@ function hydrateYieldRankingsWithLiveSafety(
       const resolvedSafety = resolveHydratedSafety({ row, safety });
       const hydratedSafety = preservePublishedSafety ? {
         ...resolvedSafety,
-        score: row.safetyScore ?? DEFAULT_SAFETY_SCORE,
-        grade: row.safetyGrade,
-        reason: row.safetyReason ?? null,
+        safetyScore: row.safetyScore ?? DEFAULT_SAFETY_SCORE,
+        safetyGrade: row.safetyGrade,
+        safetyReason: row.safetyReason ?? null,
         sourceRisk: row.sourceRisk,
-        provenance: row.provenance?.safetyProvenance,
+        safetyProvenance: row.provenance?.safetyProvenance,
         usedDefaultSafety: row.provenance?.usedDefaultSafety ?? true,
       } : resolvedSafety;
-      const safetyInputScore = hydratedSafety.score;
-      const opportunityEvidenceComplete = hydratedSafety.opportunityEvidenceComplete;
-      const safetyObserved = hydratedSafety.safetyEvidenceObserved;
-      const evidenceAssessment = assessYieldEvidence({
+      const safetyInputScore = hydratedSafety.safetyScore;
+      const evidenceAssessment = qualifyYieldEvidence({
+        safety: hydratedSafety,
         evidenceClass,
-        safetyObserved,
         sourceFreshness,
         benchmarkFreshness,
         referenceBenchmarkFreshness: rowReferenceBenchmarkFreshness,
-        hasSourceDepth: finiteNumber(hydratedSafety.sourceRisk?.sourceDepthRatio) != null,
-        hasVenueRisk: hydratedSafety.venueRiskTier !== "unknown",
-        hasHistory: (finiteNumber(hydratedSafety.sourceRisk?.observationCount30d) ?? 0) > 1,
-        hasYieldDecomposition: row.apyBase != null || row.apyReward != null,
-        opportunityEvidenceComplete,
+        sourceDepthRatio: finiteNumber(hydratedSafety.sourceRisk?.sourceDepthRatio),
+        observationCount30d: finiteNumber(hydratedSafety.sourceRisk?.observationCount30d),
+        apyBase: row.apyBase,
+        apyReward: row.apyReward,
+        warnings: independentWarnings,
       });
-      const safetyWarnings = independentWarnings.filter((signal) =>
-        (signal !== "safety-unrated" || !safetyObserved) &&
-        (signal !== "opportunity-evidence-missing" || !opportunityEvidenceComplete),
-      );
-      if (!safetyObserved && !safetyWarnings.includes("safety-unrated")) {
-        safetyWarnings.push("safety-unrated");
-      }
-      if (!opportunityEvidenceComplete && !safetyWarnings.includes("opportunity-evidence-missing")) {
-        safetyWarnings.push("opportunity-evidence-missing");
-      }
-      const evidenceNullReason = resolveEvidenceNullReason({
-        sourceFreshness,
-        benchmarkFreshness,
-        referenceBenchmarkFreshness: rowReferenceBenchmarkFreshness,
-        opportunityEvidenceComplete,
-      });
-      // B6: the response emits `hydratedSafety.sourceRisk`, so the score must be
-      // computed from that same penalty — a read-path score the emitted evidence
-      // cannot reproduce is not auditable.
-      const hydratedSourceRiskPenalty = hydratedSafety.sourceRisk?.sourceRiskPenalty ?? null;
-      const components = computePysComponents({
+      // Score from the emitted penalty so the served evidence remains replayable.
+      const { pharosYieldScore, pysNullReason } = scoreYieldPys({
         apy30d: row.apy30d,
         safetyScore: safetyInputScore,
         apyVarianceScore: yieldStabilityToApyVarianceScore(row.yieldStability),
+        scalingFactor: payload.scalingFactor,
         benchmarkRate: row.benchmarkRate ?? null,
-        // Same-currency USD benchmarks take no re-base credit (v8.43 B24); the
-        // published currency is the write path's `benchmarkMeta.currency ?? key`.
         benchmarkCurrency,
         usdBenchmarkRate,
-        sourceRiskPenalty: hydratedSourceRiskPenalty,
+        sourceRiskPenalty: hydratedSafety.sourceRisk?.sourceRiskPenalty ?? null,
+        nullReason: evidenceAssessment.evidenceNullReason ??
+          (preservePublishedSafety && row.safetyScore == null ? "safety-unrated" : null),
       });
-      const recomputedPharosYieldScore = computePYSFromComponents(row.apy30d, payload.scalingFactor, components);
-      const pysNullReason =
-        evidenceNullReason ??
-        (preservePublishedSafety && row.safetyScore == null ? "safety-unrated" as const : null) ??
-        (recomputedPharosYieldScore > 0
-          ? null
-          : derivePysNullReasonFromComponents(row.apy30d, payload.scalingFactor, components));
-      // B22: the served score is null whenever a reason is published. The UI's NR
-      // gate is `pharosYieldScore === null`, so a hard 0 next to a reason renders
-      // as a scored row and hides the reason.
-      const pharosYieldScore = pysNullReason == null ? recomputedPharosYieldScore : null;
 
       return {
         originalRow: row,
@@ -475,11 +421,11 @@ function hydrateYieldRankingsWithLiveSafety(
         row: {
           ...row,
           safetyScore: preservePublishedSafety ? row.safetyScore : safetyInputScore,
-          safetyGrade: hydratedSafety.grade,
-          safetyReason: hydratedSafety.reason,
+          safetyGrade: hydratedSafety.safetyGrade as YieldRanking["safetyGrade"],
+          safetyReason: hydratedSafety.safetyReason,
           pharosYieldScore,
           pysNullReason,
-          warningSignals: safetyWarnings,
+          warningSignals: evidenceAssessment.warnings,
           yieldToRisk: preservePublishedSafety ? row.yieldToRisk
             : 101 - safetyInputScore > 0 ? row.apy30d / (101 - safetyInputScore) : null,
           sourceRisk: hydratedSafety.sourceRisk,
@@ -488,8 +434,8 @@ function hydrateYieldRankingsWithLiveSafety(
             ? {
                 ...row.provenance,
                 usedDefaultSafety: hydratedSafety.usedDefaultSafety,
-                safetyProvenance: hydratedSafety.provenance,
-                safetyReason: hydratedSafety.reason,
+                safetyProvenance: hydratedSafety.safetyProvenance,
+                safetyReason: hydratedSafety.safetyReason,
                 safetyScoreIdentity: preservePublishedSafety ? row.provenance.safetyScoreIdentity : source.safetyScoreIdentity,
                 calculationMode: resolveHydratedCalculationMode(row),
                 evidenceClass,

@@ -10,7 +10,7 @@ vi.mock("@shared/lib/tracked-stablecoin-utils", async (importOriginal) => {
     ...actual,
     // Exercise the wrapper configuration contract explicitly even when current
     // catalog parents are not in the production yield-bearing cohort.
-    ACTIVE_YIELD_BEARING_STABLECOINS: ["ftusd-flying-tulip", "iusd-infinifi", "susde-ethena"]
+    ACTIVE_YIELD_BEARING_STABLECOINS: ["ftusd-flying-tulip", "iusd-infinifi", "susde-ethena", "ybold-yearn"]
       .map((id) => registry.TRACKED_META_BY_ID.get(id)!),
   };
 });
@@ -32,21 +32,25 @@ vi.mock("../yield-sync/state", async (importOriginal) => {
   };
 });
 
-import { YIELD_POOL_MAP, YIELD_VARIANT_MAP } from "../../lib/yield-config/yield-config";
+import { YIELD_POOL_MAP } from "../../lib/yield-config/yield-config-pools";
+import { YIELD_VARIANT_MAP } from "../../lib/yield-config/yield-config-variants";
 import { resolveTrackedYieldSources } from "../yield-sync/resolve";
 import { baseEvaluationInput } from "./yield-evaluation.test-support";
 import { makeDlYieldPool } from "./yield-resolve.test-support";
 import type { DlPool } from "../yield-sync/types";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
-import { evaluateYieldSources } from "../yield-sync/evaluation";
+import { evaluateYieldSourcesCooperative } from "../yield-sync/evaluation";
 import { buildPreviewYieldRankingsArtifacts, publishYieldCoordinatorResults } from "../yield-sync/publication";
 import { FIXED_NOW, makeBenchmarkMeta, makeBenchmarkRegistry, makeSafetySnapshotMeta, makeYieldSourceMeta } from "./yield-publication.test-support";
+import { TRACKED_OPTIONAL_SOURCE_REGISTRY, TRACKED_OPTIONAL_SOURCE_REGISTRY_BY_ID } from "../yield-sync/sources-optional";
+import * as fetchRetry from "../../lib/fetch-retry";
+import type { YieldOptionalSourceOutcome } from "../yield-sync/sources-rpc";
 
-async function resolvePools(dlPools: DlPool[]) {
+async function resolvePools(dlPools: DlPool[], onOptionalSourceOutcome?: (outcome: YieldOptionalSourceOutcome) => void) {
   const { startSec, sevenDaysAgoSec, riskFreeRates } = baseEvaluationInput();
   return resolveTrackedYieldSources({
     db: mockD1(), startSec, sevenDaysAgoSec, riskFreeRates, dlPools,
-    onChainRates: new Map(), safetyScores: new Map(),
+    onChainRates: new Map(), safetyScores: new Map(), onOptionalSourceOutcome,
   });
 }
 
@@ -83,26 +87,41 @@ describe("tracked holder source contracts", () => {
     });
   });
 
-  it("publishes a negative holder observation to current rows and history with apy-non-positive PYS", async () => {
+  it.each(["throw", "null"] as const)("publishes a negative holder observation to current rows and history with apy-non-positive PYS despite optional %s", async (mode) => {
     const { sqlite, db } = createLatestSchemaSqlite();
     vi.useFakeTimers();
     vi.setSystemTime(FIXED_NOW);
     try {
       const startSec = Math.floor(Date.now() / 1000);
+      const entry = TRACKED_OPTIONAL_SOURCE_REGISTRY.find((source) => source.stablecoinId === "ybold-yearn")!;
+      TRACKED_OPTIONAL_SOURCE_REGISTRY_BY_ID.set(entry.stablecoinId, [entry]);
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const fetchSource = vi.spyOn(fetchRetry, "fetchJsonWithRetry");
+      if (mode === "throw") fetchSource.mockRejectedValueOnce(new Error("Yearn unavailable"));
+      else fetchSource.mockResolvedValueOnce({ response: new Response("{}"), body: {} });
+      const onOutcome = vi.fn();
       const native = makeDlYieldPool({
         pool: YIELD_POOL_MAP["susde-ethena"], symbol: "sUSDe", apy: -5, apyBase: -5,
       });
-      const { resolved } = await resolvePools([native]);
+      const { resolved } = await resolvePools([native], onOutcome);
+      expect(onOutcome.mock.calls).toEqual(mode === "throw" ? [[{ label: "Yearn yBOLD source", outcome: "failed" }]] : []);
+      const failures = warn.mock.calls.map(([line]) => JSON.parse(line))
+        .filter((record) => record.event === "optional_yield_source_failed");
+      expect(failures).toHaveLength(mode === "throw" ? 1 : 0);
+      if (mode === "throw") expect(failures[0]).toMatchObject({
+        source: "Yearn yBOLD source", errorMessage: "Yearn unavailable",
+      });
+      expect(resolved.filter((source) => source.id === "ybold-yearn" && source.yield != null)).toEqual([]);
       const holder = resolved.find((entry) => entry.id === "susde-ethena");
       expect(holder?.yield).toMatchObject({ currentApy: -5 });
       const riskFreeRateMeta = makeBenchmarkMeta();
       const riskFreeRates = makeBenchmarkRegistry(riskFreeRateMeta);
-      const evaluation = evaluateYieldSources(baseEvaluationInput({
+      const evaluation = await evaluateYieldSourcesCooperative(baseEvaluationInput({
         startSec, riskFreeRates,
         resolved: [{ id: "susde-ethena", symbol: "sUSDe", yield: { ...holder!.yield!, sourceObservedAt: startSec } }],
         safetyScores: new Map([["susde-ethena", { score: 80, grade: "B+" }]]),
         stablecoinSupplyById: new Map([["susde-ethena", 10_000_000]]),
-      }));
+      }), { yieldToEventLoop: () => Promise.resolve() });
       expect(evaluation.evaluatedSources[0]).toMatchObject({
         currentApy: -5, pharosYieldScore: null, pysNullReason: "apy-non-positive", rejected: false,
       });
@@ -126,6 +145,8 @@ describe("tracked holder source contracts", () => {
         currentApy: -5, pharosYieldScore: null, pysNullReason: "apy-non-positive",
       });
     } finally {
+      TRACKED_OPTIONAL_SOURCE_REGISTRY_BY_ID.clear();
+      vi.restoreAllMocks();
       vi.useRealTimers();
       sqlite.close();
     }

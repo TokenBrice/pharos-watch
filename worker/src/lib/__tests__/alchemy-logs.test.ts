@@ -11,6 +11,9 @@ import {
 import { createBudget } from "../evm-logs";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
+import { fetchEvmBlockNumber, fetchEvmRpcBatch, requestJsonRpcAtUrl, usableCcipRpcEndpoints } from "../evm-rpc";
+import { registerRpcAuth, type ChainRpcConfig } from "../chain-registry";
+import * as rpcCredits from "../rpc-provider-budget";
 
 let fetchMock: ReturnType<typeof mockFetch>;
 
@@ -133,6 +136,104 @@ describe("getAlchemyBlockNumber", () => {
   });
 });
 
+describe("single-URL JSON-RPC transport contracts", () => {
+  beforeEach(() => { fetchMock = mockFetch([], { requireMatch: true }); });
+  afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); });
+
+  it.each(["generic", "alchemy"] as const)("retains authenticated payloads and rejects wrong identities for %s reads", async consumer => {
+    const url = buildAlchemyUrl("ethereum", "contract-key")!;
+    const network = vi.spyOn(globalThis, "fetch").mockImplementation(async (_url, init) => {
+      expect(new Headers(init?.headers).get("Authorization")).toBe("Bearer contract-key");
+      expect(JSON.parse(String(init?.body))).toEqual({ jsonrpc: "2.0", id: 1, method: "eth_blockNumber", params: [] });
+      return Response.json({ id: 2, result: "0x10" });
+    });
+    const read = () => consumer === "generic"
+      ? fetchEvmBlockNumber("ethereum", { extraRpcUrls: [url], maxRetries: 0 })
+      : getAlchemyBlockNumber(url, createBudget(1));
+    expect(await read()).toBeNull();
+    network.mockResolvedValueOnce(Response.json({ id: 1, result: "0x10" }));
+    expect(await read()).toBe(16);
+    expect(network).toHaveBeenCalledTimes(2);
+  });
+
+  it("distinguishes HTTP/RPC, text parse and unstarted control outcomes without hiding provider policy", async () => {
+    const network = vi.spyOn(globalThis, "fetch");
+    const payload = { jsonrpc: "2.0", id: 1, method: "eth_blockNumber", params: [] };
+    network.mockResolvedValueOnce(Response.json({ id: 1, error: { code: -32000, message: "busy" } }, { status: 403 }))
+      .mockResolvedValueOnce(Response.json({ id: 1, error: { code: -32000, message: "busy" } }))
+      .mockResolvedValueOnce(new Response("not JSON", { status: 503 }));
+    expect(await requestJsonRpcAtUrl("https://rpc.invalid", payload, {})).toMatchObject({ status: "http-error", response: { status: 403 } });
+    expect(await requestJsonRpcAtUrl("https://rpc.invalid", payload, {})).toMatchObject({ status: "rpc-error" });
+    expect(await requestJsonRpcAtUrl("https://rpc.invalid", payload, { responseMode: "text" })).toMatchObject({ status: "parse-error", response: { status: 503 } });
+    expect(await requestJsonRpcAtUrl("https://rpc.invalid", payload, { beforeRequest: () => false })).toMatchObject({ status: "control-error" });
+    expect(network).toHaveBeenCalledTimes(3);
+  });
+
+  it.each(["single", "batch", "noBatch"] as const)("preserves ordered admission/meter/network/demotion traces for %s", async mode => {
+    vi.useFakeTimers();
+    const primary = "https://trace.dwellir.invalid", fallback = "https://trace-public.invalid";
+    registerRpcAuth("dwellir", primary, { "X-Api-Key": "trace-key" });
+    const trace: string[] = [];
+    const chainRpcs = new Map<string, ChainRpcConfig>([["trace", {
+      chainId: "trace", chainName: "Trace", type: "evm", explorerUrl: "https://explorer.invalid",
+      endpoints: [
+        { url: primary, operator: "dwellir", keyed: true, position: "supplemental", stateHistory: "archive", logsHistory: "full", noBatch: mode === "noBatch" },
+        { url: fallback, operator: "public", keyed: false, position: "registry", stateHistory: "archive", logsHistory: "full" },
+      ],
+      onRpcRequest: ({ rpcCalls }) => trace.push(`admitted:${rpcCalls}`),
+    }]]);
+    vi.spyOn(rpcCredits, "recordDwellirCredits").mockImplementation(count => { trace.push(`meter:${count}`); });
+    let failure: "none" | "http" | "network" = "none", denyRetry = false, attempts = 0;
+    const network = vi.spyOn(globalThis, "fetch").mockImplementation(async (url, init) => {
+      const payload = JSON.parse(String(init?.body));
+      trace.push(`network:${url === primary ? "primary" : "fallback"}:${Array.isArray(payload) ? "batch" : payload.id}`);
+      if (url === primary) expect(new Headers(init?.headers).get("X-Api-Key")).toBe("trace-key");
+      if (failure === "network" && url === primary) throw new TypeError("network failure");
+      if (failure === "http" && url === primary) return Response.json({ error: "busy" }, { status: 503 });
+      const row = (request: { id: number }) => ({ id: request.id, result: "0x10" });
+      return Response.json(Array.isArray(payload) ? payload.map(row) : row(payload));
+    });
+    const invoke = () => {
+      const options = { chainRpcs, maxRetries: 1, beforeRequest: (url: string) => {
+        trace.push(`before:${url === primary ? "primary" : "fallback"}`);
+        trace.push(`demoted:${!usableCcipRpcEndpoints("trace", chainRpcs, { kind: "logs", fromBlock: 1, toBlock: 1 }).some(row => row.url === primary)}`);
+        return !denyRetry || attempts++ === 0;
+      } };
+      return mode === "single" ? fetchEvmBlockNumber("trace", options)
+        : fetchEvmRpcBatch("trace", [{ method: "eth_blockNumber", params: [] }, { method: "eth_chainId", params: [] }], options);
+    };
+    denyRetry = true;
+    attempts = 1;
+    expect(await invoke()).toBeNull();
+    expect(trace).toEqual(["before:primary", "demoted:false"]);
+    expect(network).not.toHaveBeenCalled();
+    trace.length = 0;
+    denyRetry = false;
+    attempts = 0;
+    expect(await invoke()).toEqual(mode === "single" ? 16 : ["0x10", "0x10"]);
+    const admitted = (id: number) => ["before:primary", "demoted:false", `meter:${mode === "batch" ? 2 : 1}`,
+      `admitted:${mode === "batch" ? 2 : 1}`, `network:primary:${mode === "batch" ? "batch" : id}`];
+    expect(trace).toEqual(mode === "noBatch" ? [...admitted(1), ...admitted(2)] : admitted(1));
+    trace.length = 0;
+    failure = "http";
+    expect(await invoke()).toEqual(mode === "single" ? 16 : ["0x10", "0x10"]);
+    expect(trace).toEqual([...admitted(1), "before:fallback", "demoted:false",
+      `admitted:${mode === "single" ? 1 : 2}`, `network:fallback:${mode === "single" ? 1 : "batch"}`]);
+    trace.length = 0;
+    failure = "network";
+    denyRetry = true;
+    const pending = invoke();
+    await vi.runAllTimersAsync();
+    expect(await pending).toBeNull();
+    expect(trace).toEqual([...admitted(1), "before:primary", "demoted:false"]);
+    trace.length = 0;
+    denyRetry = false;
+    expect(await invoke()).toEqual(mode === "single" ? 16 : ["0x10", "0x10"]);
+    expect(trace).toEqual(["before:fallback", "demoted:true", `admitted:${mode === "single" ? 1 : 2}`, `network:fallback:${mode === "single" ? 1 : "batch"}`]);
+    expect(network).toHaveBeenCalledTimes(mode === "noBatch" ? 6 : 5);
+  });
+});
+
 describe("fetchAlchemyLogs runtime deadline", () => {
   beforeEach(() => {
     fetchMock = mockFetch([], { requireMatch: true });
@@ -193,6 +294,17 @@ describe("getAlchemyTransactionContextBatchMany", () => {
     expect(budget.count).toBe(1);
     expect(result.get("0xaaa")?.tx?.hash).toBe("0xaaa");
     expect(result.get("0xbbb")?.receipt?.transactionHash).toBe("0xbbb");
+  });
+
+  it("rejects duplicate context identities while retaining uniquely identified peers", async () => {
+    const tx = { hash: "0xaaa", to: null, input: "0x" };
+    const receipt = { transactionHash: "0xaaa", to: null, logs: [] };
+    fetchMock.mockResolvedValueOnce(Response.json([
+      { id: 0, result: tx }, { id: 0, result: tx }, { id: 1, result: receipt },
+    ]));
+    const result = await getAlchemyTransactionContextBatchMany("https://rpc.invalid", ["0xaaa"], createBudget(1));
+    expect(result.get("0xaaa")).toEqual({ tx: null, receipt });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it("quarantines malformed transaction-context peers without dropping valid peers", async () => {

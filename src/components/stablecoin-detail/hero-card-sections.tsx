@@ -3,13 +3,9 @@
 import type { ReactNode } from "react";
 import { IntentLink } from "@/components/intent-link";
 import { BadgeCheck, Rocket } from "lucide-react";
-import type { Infrastructure, StablecoinMeta } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types";
 import type { DetailQuote } from "@/lib/stablecoin-detail-view-model-types";
-import type { V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
-import {
-  CLIENT_TRACKED_META_BY_ID,
-  type StablecoinClientMeta,
-} from "@shared/lib/stablecoins/client-registry";
+import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import type { StablecoinVerdict } from "@shared/lib/stablecoin-verdict";
 import type { HeroCardViewModel } from "@/lib/stablecoin-detail-view-model";
 import { buildPegLandingUrl } from "@/lib/peg-landing";
@@ -23,8 +19,8 @@ import {
 } from "@shared/lib/classification";
 import { InfrastructureBadge } from "./hero-card-identity";
 import { HeroMarketMetricGrid, HeroTertiaryMetrics } from "./hero-card-metrics";
-import type { HeroSignalRailItem, HeroTertiaryMetricConfig } from "./hero-card-metrics";
-export type { HeroSignalRailItem, HeroTertiaryMetricConfig } from "./hero-card-metrics";
+import type { HeroTertiaryMetricConfig } from "./hero-card-metrics";
+export type { HeroTertiaryMetricConfig } from "./hero-card-metrics";
 
 function formatChipLaunchDate(value: string | undefined): string | null {
   if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
@@ -100,12 +96,6 @@ export function HeroChipRail({ coin, verdict }: { coin: StablecoinMeta; verdict:
 export interface HeroSectionBaseProps {
   coin: StablecoinMeta;
   coinData: DetailQuote;
-  logoSrc?: string;
-  reportCard: V9ConsumerCard | null;
-  verdict: StablecoinVerdict;
-  variantParent?: StablecoinClientMeta | null;
-  variantChipClass?: string | null;
-  infrastructures: Infrastructure[];
   price: HeroCardViewModel["price"];
   market: HeroCardViewModel["market"];
   peg: HeroCardViewModel["peg"];
@@ -141,7 +131,6 @@ export function HeroCardDesktopSection({
   market,
   tertiaryMetrics,
 }: HeroSectionBaseProps & {
-  signalRailItems: HeroSignalRailItem[];
   tertiaryMetrics: HeroTertiaryMetricConfig[];
 }) {
   // The fourth slot preserves the live 30d excess-vs-T-bill metric even though

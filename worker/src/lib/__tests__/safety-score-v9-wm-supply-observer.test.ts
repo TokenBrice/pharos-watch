@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { sha256HexFromBytes } from "@shared/lib/sha256";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { StablecoinMeta } from "@shared/types/core";
+import type { ReviewedDeploymentSupplyObservation } from "@shared/types/safety-score-v9-supply-attribution";
 import currentWm from "@shared/data/stablecoins/coins/wm-m0.json";
 import currentWmRisk from "@shared/data/stablecoins/domains/risk-review/wm-m0.json";
 import { makeWmDeploymentObservations } from "../../test-helpers/v9-fixed-input";
@@ -11,11 +12,9 @@ import type { EvmMulticall3Call, EvmMulticall3Result } from "../evm-rpc";
 import {
   buildReviewedDeploymentRouteInventory,
   expectedWmDeploymentIdentity,
-  type ReviewedDeploymentSupplyObservation,
 } from "../safety-score-v9/supply-attribution-contract";
 import {
   fetchSolanaWmDeploymentObservation,
-  observeWmReviewedDeploymentUnitPartition,
   observeWmReviewedDeploymentUnitPartitionAttempt,
   type SolanaRpcFetcher,
   WM_EVM_SAFE_BLOCK_LAG_BY_CHAIN,
@@ -165,7 +164,7 @@ function dependencies() {
 }
 
 async function observe(overrides: ReturnType<typeof dependencies> = dependencies()) {
-  return observeWmReviewedDeploymentUnitPartition(
+  const attempt = await observeWmReviewedDeploymentUnitPartitionAttempt(
     {
       aggregateSupplyUsd: AGGREGATE_SUPPLY_USD,
       registryFingerprint: REGISTRY_FINGERPRINT,
@@ -174,6 +173,7 @@ async function observe(overrides: ReturnType<typeof dependencies> = dependencies
     },
     overrides,
   );
+  return attempt.status === "accepted" ? attempt.attribution : null;
 }
 
 function lineaSkewFixture(repairedTimeSec: number, initialTimeSec = CLOCK_SEC - 154) {
@@ -862,7 +862,7 @@ describe("wM reviewed deployment observer", () => {
     const controller = new AbortController();
     controller.abort();
     await expect(
-      observeWmReviewedDeploymentUnitPartition(
+      observeWmReviewedDeploymentUnitPartitionAttempt(
         {
           aggregateSupplyUsd: AGGREGATE_SUPPLY_USD,
           registryFingerprint: REGISTRY_FINGERPRINT,

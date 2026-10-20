@@ -1,4 +1,4 @@
-import type { DirectApiFetchPhaseResult } from "./direct-api";
+import type { DirectApiFetchPhaseEntry } from "./direct-api";
 
 export interface AuthoritativeStagedPoolConfirmationIndex {
   enforcedChainsByProtocol: Map<string, Set<string>>;
@@ -6,7 +6,7 @@ export interface AuthoritativeStagedPoolConfirmationIndex {
 }
 
 export function buildAuthoritativeStagedPoolConfirmationIndex(
-  results: DirectApiFetchPhaseResult["results"],
+  results: Array<Omit<DirectApiFetchPhaseEntry, "counts" | "measuredExecutionPools">>,
 ): AuthoritativeStagedPoolConfirmationIndex {
   const enforcedChainsByProtocol = new Map<string, Set<string>>();
   const confirmedExactKeysByProtocol = new Map<string, Set<string>>();

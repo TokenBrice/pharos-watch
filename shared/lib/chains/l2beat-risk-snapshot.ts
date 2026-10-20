@@ -1,3 +1,5 @@
+import type { L2BeatRiskSentiment, L2BeatStage } from "../../types/chains";
+
 export const L2BEAT_CHAIN_RISK_SNAPSHOT_META = {
   source: "https://l2beat.com/api/scaling/summary",
   fetchedAt: "2026-06-12",
@@ -22,10 +24,6 @@ export const L2BEAT_CHAIN_RISK_FIELD_LABELS: Record<L2BeatRiskField, string> = {
 };
 
 export type L2BeatRiskField = (typeof L2BEAT_CHAIN_RISK_FIELDS)[number];
-// "UnderReview"/"neutral" retained for live L2BEAT API ingestion (forward-compat; some snapshots carry them).
-export type L2BeatRiskSentiment = "good" | "warning" | "bad" | "UnderReview" | "neutral";
-// "Under review" retained for live L2BEAT API ingestion (forward-compat).
-export type L2BeatStage = "Stage 0" | "Stage 1" | "Stage 2" | "Not applicable" | "Under review";
 export type L2BeatScalingLayer = "layer2" | "layer3";
 
 export interface L2BeatRiskValue {

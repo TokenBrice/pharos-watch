@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
-import { evaluateV9EconomicControlAssetFacts } from "@shared/lib/safety-score-v9/control";
+import { evaluateV9EconomicControl } from "@shared/lib/safety-score-v9/control";
 import type { V9EconomicControlReviewV2 } from "@shared/types/safety-score-v9-facts";
 import { reviewedScope, weightedQuorum, SCOPE_CLOCK, SCOPE_CONTROLLER } from "@shared/lib/__tests__/safety-score-v9-control-scope.test-support";
 import { effectiveAuthoritySignatureRequirement } from "@shared/lib/safety-score-v9/control-scope";
@@ -45,13 +45,15 @@ vi.mock("@shared/data/safety-score-v9/evidence-gap-classifications-v1.json", () 
     scope: { pillar: "control", componentKey: "economic-control:mint", factorKey: "reconciliation",
       routeKey: null, exposureId: null, requiredDatum: "reconciliation" },
     reviewedAt: "1970-01-01T01:00:00Z", reviewer: "fixture-curator",
-    sources: [{ url: "https://example.com/issuer-report", observedAt: "1970-01-01T01:00:00Z",
-      datumAsOf: null, location: "issuance and reserve disclosures",
-      excerpt: "The report describes issuance but does not disclose whole-supply reconciliation.",
-      assertion: "The required whole-supply reconciliation cadence is not published in the reviewed report." }],
-    searchedSurfaces: ["https://example.com/issuer-report"],
+    sourcesRefs: ["issuer-report"],
+    searchedSurfacesRefs: ["issuer-report"],
     rationale: "Reviewed issuance and reserve disclosures do not establish the whole-supply reconciliation cadence.",
-  }] },
+  }], sourceObservations: [{ id: "issuer-report", value: {
+    url: "https://example.com/issuer-report", observedAt: "1970-01-01T01:00:00Z",
+    datumAsOf: null, location: "issuance and reserve disclosures",
+    excerpt: "The report describes issuance but does not disclose whole-supply reconciliation.",
+    assertion: "The required whole-supply reconciliation cadence is not published in the reviewed report.",
+  } }], searchedSurfaceObservations: [{ id: "issuer-report", value: "https://example.com/issuer-report" }] },
 }));
 
 const controlsOf = (asset: { controlReview: unknown }) => {
@@ -545,9 +547,7 @@ describe("v10.01 control atomic cause scopes", () => {
       const gap = asset.gaps.find((entry) => entry.gapId === gapId)!;
       const cause = assetId === "reviewed-issuer" ? "C" : "U";
       expect(gap.causeProof.cause).toBe(cause);
-      const result = evaluateV9EconomicControlAssetFacts(
-        asset, { assetId, ...asset.economicControlReview }, V9_CANDIDATE_POLICY_V1,
-      );
+      const result = evaluateV9EconomicControl({ facts: asset, ...asset.economicControlReview, policy: V9_CANDIDATE_POLICY_V1 });
       expect(result.components.find((component) => component.kind === "mint")).toMatchObject({
         posture: "unbounded-adverse", score: 25, cause, causeGapIds: [gapId],
       });
@@ -562,9 +562,7 @@ describe("v10.01 control atomic cause scopes", () => {
     (assetId) => {
       const asset = compileMint("unknown", "prudential", assetId);
       const gapId = asset.economicControlReview.mint.factorStatuses!.reconciliation!.gapIds[0]!;
-      const result = evaluateV9EconomicControlAssetFacts(
-        asset, { assetId, ...asset.economicControlReview }, V9_CANDIDATE_POLICY_V1,
-      );
+      const result = evaluateV9EconomicControl({ facts: asset, ...asset.economicControlReview, policy: V9_CANDIDATE_POLICY_V1 });
       expect(result.components.find((component) => component.kind === "mint")).toMatchObject({
         posture: "unbounded-reconciled", score: 55,
         cause: assetId === "reviewed-issuer" ? "C" : "U", causeGapIds: [gapId],

@@ -32,6 +32,7 @@ describe("P0-18 daily digest data correctness", () => {
     const db = mockTapeD1([
       { match: "FROM cache WHERE key = ?", rows: [] },
       { match: "FROM tape_events INDEXED BY idx_tape_type_ts", rows: [] },
+      { match: "FROM blacklist_events AS b", rows: [] },
       {
         match: "FROM blacklist_events",
         rows: [{

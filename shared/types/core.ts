@@ -1,15 +1,7 @@
 import { z } from "zod";
-import type { LiveReservesConfig } from "./live-reserves";
-import type { CauseOfDeath } from "./cause-of-death";
-import type { ReserveSlice } from "./reserves";
-import type { ParentBackingInheritance } from "./stablecoin-meta-schemas";
-import {
-  type GovernanceType,
-  type MechanismArchetype,
-  type StablecoinExitMechanism,
-  type StablecoinPriceBasis,
-  type StablecoinStatus,
-} from "./stablecoin-taxonomy";
+import type { StablecoinMeta } from "./stablecoin-meta-schemas";
+import type { GovernanceType } from "./stablecoin-taxonomy";
+export type { StablecoinMeta, StablecoinObituary, StablecoinListingStatusReview } from "./stablecoin-meta-schemas";
 export type { DependencyType } from "./dependency-types";
 export type { ReserveAssetClass, ReserveLiquidityHorizon, ReserveRisk, ReserveRiskFactor, ReserveSlice } from "./reserves";
 export {
@@ -81,7 +73,7 @@ export const PEG_CURRENCY_VALUES = [
 ] as const;
 export type PegCurrency = (typeof PEG_CURRENCY_VALUES)[number];
 
-export type StablecoinFlags = import("./stablecoin-meta-schemas").StablecoinFlags;
+export type StablecoinFlags = import("./stablecoin-meta-primitives").StablecoinFlags;
 
 /**
  * Engagement class of the proof-of-reserves artefact. `agreed-upon-procedures`
@@ -135,16 +127,16 @@ export const PROOF_ASSURANCE_METHOD_VALUES = [
 ] as const;
 export const PROOF_ASSURANCE_SCOPE_VALUES = ["assets-only", "assets-and-liabilities", "unknown"] as const;
 export const LIABILITY_RECONCILIATION_VALUES = ["full", "partial", "none", "unknown"] as const;
-export type ProofOfReservesLatestReport = import("./stablecoin-meta-schemas").ProofOfReservesLatestReport;
-export type ProofOfReserves = import("./stablecoin-meta-schemas").ProofOfReserves;
-export type StablecoinLink = import("./stablecoin-meta-schemas").StablecoinLink;
+export type ProofOfReservesLatestReport = import("./stablecoin-meta-primitives").ProofOfReservesLatestReport;
+export type ProofOfReserves = import("./stablecoin-meta-primitives").ProofOfReserves;
+export type StablecoinLink = import("./stablecoin-meta-primitives").StablecoinLink;
 
 export const RESEARCH_REVIEW_CONFIDENCE_VALUES = ["verified", "probable", "manual-review", "unknown"] as const;
 export type ResearchReviewConfidence = (typeof RESEARCH_REVIEW_CONFIDENCE_VALUES)[number];
 
 export const MECHANISM_ARCHETYPE_REVIEW_DISPOSITION_VALUES = ["resolved", "unresolved"] as const;
 /** Review record for a direct mechanism classification or a reason-coded unresolved design. */
-export type MechanismArchetypeReview = import("./stablecoin-meta-schemas").MechanismArchetypeReview;
+export type MechanismArchetypeReview = import("./stablecoin-meta-primitives").MechanismArchetypeReview;
 
 export const RESERVE_REVIEW_SCOPE_VALUES = ["full-composition", "classification-only", "dependency-relationships", "selected-slices"] as const;
 export const RESERVE_NON_LINK_DISPOSITION_VALUES = [
@@ -155,10 +147,10 @@ export const RESERVE_NON_LINK_DISPOSITION_VALUES = [
   "not-applicable",
 ] as const;
 export type ReserveNonLinkDisposition = (typeof RESERVE_NON_LINK_DISPOSITION_VALUES)[number];
-export type ReserveNonLinkReview = import("./stablecoin-meta-schemas").ReserveNonLinkReview;
-export type ReserveReview = import("./stablecoin-meta-schemas").ReserveReview;
-export type DependencyReviewRelationship = import("./stablecoin-meta-schemas").DependencyReviewRelationship;
-export type DependencyReview = import("./stablecoin-meta-schemas").DependencyReview;
+export type ReserveNonLinkReview = import("./stablecoin-meta-primitives").ReserveNonLinkReview;
+export type ReserveReview = import("./stablecoin-meta-primitives").ReserveReview;
+export type DependencyReviewRelationship = import("./stablecoin-meta-primitives").DependencyReviewRelationship;
+export type DependencyReview = import("./stablecoin-meta-primitives").DependencyReview;
 
 export const CUSTODY_PROVIDER_ROLE_VALUES = ["custodian", "subcustodian", "bank", "prime-broker", "other"] as const;
 export type CustodyProviderRole = (typeof CUSTODY_PROVIDER_ROLE_VALUES)[number];
@@ -171,8 +163,8 @@ export type CustodyBankruptcyRemoteness = (typeof CUSTODY_BANKRUPTCY_REMOTENESS_
 
 export const CUSTODY_REHYPOTHECATION_VALUES = ["prohibited", "permitted", "conditional", "unknown"] as const;
 export type CustodyRehypothecation = (typeof CUSTODY_REHYPOTHECATION_VALUES)[number];
-export type CustodyProviderReview = import("./stablecoin-meta-schemas").CustodyProviderReview;
-export type CustodyProfile = import("./stablecoin-meta-schemas").CustodyProfile;
+export type CustodyProviderReview = import("./stablecoin-meta-primitives").CustodyProviderReview;
+export type CustodyProfile = import("./stablecoin-meta-primitives").CustodyProfile;
 
 export const MINT_AUTHORITY_MINT_PATH_VALUES = [
   "immutable-user-collateralized",
@@ -435,8 +427,8 @@ export type GeniusForeignExceptionEvidence = import("./stablecoin-meta-complianc
 export type GeniusNegativeEvidenceReview = import("./stablecoin-meta-compliance-schemas").GeniusNegativeEvidenceReview;
 export type GeniusProfile = import("./stablecoin-meta-compliance-schemas").GeniusProfile;
 /** Includes explicit native-denom bank deployments alongside token contracts. */
-export type ContractDeployment = import("./stablecoin-meta-schemas").ContractDeployment;
-export type DependencyWeight = import("./stablecoin-meta-schemas").DependencyWeight;
+export type ContractDeployment = import("./stablecoin-meta-primitives").ContractDeployment;
+export type DependencyWeight = import("./stablecoin-meta-primitives").DependencyWeight;
 
 const COLLATERAL_QUALITY_VALUES = ["native", "rwa", "eth-lst", "alt-lst-bridged-or-mixed", "exotic"] as const;
 export type CollateralQuality = (typeof COLLATERAL_QUALITY_VALUES)[number];
@@ -585,7 +577,7 @@ export const OracleRiskTierSchema = z.enum(ORACLE_RISK_TIER_VALUES);
 export const BridgeRouteRiskTierSchema = z.enum(BRIDGE_ROUTE_RISK_TIER_VALUES);
 
 export const COIN_NOTICE_TYPE_VALUES = ["danger", "warning", "info"] as const;
-export type CoinNotice = import("./stablecoin-meta-schemas").CoinNotice;
+export type CoinNotice = import("./stablecoin-meta-primitives").CoinNotice;
 
 export const YIELD_TYPE_VALUES = [
   "lending-vault",
@@ -602,7 +594,7 @@ export const YIELD_TYPE_VALUES = [
 export type YieldType = (typeof YIELD_TYPE_VALUES)[number];
 
 export const YieldTypeSchema = z.enum(YIELD_TYPE_VALUES);
-export type YieldConfig = import("./stablecoin-meta-schemas").YieldConfig;
+export type YieldConfig = import("./stablecoin-meta-primitives").YieldConfig;
 
 export const LAUNCH_PHASE_VALUES = ["announced", "testnet", "auditing", "beta", "launching-soon"] as const;
 export type LaunchPhase = (typeof LAUNCH_PHASE_VALUES)[number];
@@ -617,11 +609,11 @@ export const LAUNCH_MILESTONE_TYPE_VALUES = [
   "testnet",
 ] as const;
 export type LaunchMilestoneType = (typeof LAUNCH_MILESTONE_TYPE_VALUES)[number];
-export type LaunchMilestone = import("./stablecoin-meta-schemas").LaunchMilestone;
-export type DateHistoryEntry = import("./stablecoin-meta-schemas").DateHistoryEntry;
+export type LaunchMilestone = import("./stablecoin-meta-primitives").LaunchMilestone;
+export type DateHistoryEntry = import("./stablecoin-meta-primitives").DateHistoryEntry;
 
 export const FEATURED_CONTENT_TYPE_VALUES = ["tweet", "blog", "video", "article"] as const;
-export type FeaturedContent = import("./stablecoin-meta-schemas").FeaturedContent;
+export type FeaturedContent = import("./stablecoin-meta-primitives").FeaturedContent;
 
 export const MARKET_AVAILABILITY_VALUES = [
   "market-traded",
@@ -635,116 +627,6 @@ export const DETAIL_PROVIDER_VALUES = ["defillama", "coingecko", "commodity"] as
 export type DetailProvider = (typeof DETAIL_PROVIDER_VALUES)[number];
 export const DetailProviderSchema = z.enum(DETAIL_PROVIDER_VALUES);
 
-export interface StablecoinObituary {
-  /** Cemetery cause-of-death enum, shared with `DeadStablecoin`. */
-  causeOfDeath: CauseOfDeath;
-  /** YYYY-MM or YYYY-MM-DD; precision must match `dead-stablecoins.json` entries. */
-  deathDate: string;
-  /** UTC YYYY-MM-DD cemetery entry date when it differs from frozenAt. */
-  recordedAt?: string;
-  /** Headline shown in the detail-page banner and on the cemetery's grave record card and register row. */
-  epitaph: string;
-  /** Full obituary paragraph — collapsible in the banner. */
-  obituary: string;
-  /** Computed at freeze time from `MAX(circulating_usd)` over preserved supply_history. */
-  peakMcap?: number;
-  sourceUrl: string;
-  sourceLabel: string;
-}
-
-export interface StablecoinListingStatusReview {
-  /** Date on which the lifecycle decision took effect. */
-  changedAt: string;
-  /** Concise public explanation for the quarantine or delisting. */
-  reason: string;
-  /** Required follow-up date for reversible quarantines. */
-  reviewBy?: string;
-  /** Primary evidence for an out-of-scope decision or runtime hold. */
-  source?: StablecoinLink;
-}
-
-export interface StablecoinMeta {
-  id: string;
-  llamaId?: string;
-  detailProvider?: DetailProvider;
-  marketAvailability?: MarketAvailability;
-  priceBasis?: StablecoinPriceBasis;
-  exitMechanism?: StablecoinExitMechanism;
-  name: string;
-  symbol: string;
-  oneLiner?: string;
-  flags: StablecoinFlags;
-  pegReferenceId?: string;
-  collateral?: string;
-  pegMechanism?: string;
-  mechanismArchetype?: MechanismArchetype;
-  mechanismArchetypeReview?: MechanismArchetypeReview;
-  /** Current mechanism implementation boundary; fuzzy dates use the conservative range-end policy. */
-  implementationLaunchDate?: string;
-  commodityOunces?: number;
-  geckoId?: string;
-  cmcSlug?: string;
-  protocolSlug?: string;
-  proofOfReserves?: ProofOfReserves;
-  links?: StablecoinLink[];
-  jurisdiction?: Jurisdiction;
-  mica?: MicaProfile;
-  genius?: GeniusProfile;
-  mintAuthority?: MintAuthorityProfile;
-  contracts?: ContractDeployment[];
-  tradedContracts?: ContractDeployment[];
-  dependencies?: DependencyWeight[];
-  dependencyReview?: DependencyReview;
-  blacklistabilityReview?: BlacklistabilityReview;
-  collateralQuality?: CollateralQuality;
-  custodyModel?: CustodyModel;
-  governanceQuality?: GovernanceQuality;
-  oracleRisk?: OracleRiskProfile;
-  bridgeRouteRisk?: BridgeRouteRiskProfile;
-  infrastructures?: Infrastructure[];
-  variantOf?: string;
-  variantKind?: VariantKind;
-  /** Required for risk-absorption variants, whose product taxonomy does not establish wrapper ownership. */
-  wrapperOperator?: WrapperOperator;
-  /** Reviewed adverse inheritance boundary; does not remove the serial parent or peg relationship. */
-  parentBackingInheritance?: ParentBackingInheritance;
-  /** When true, this coin's mechanismArchetype is an intentional departure from its parent's archetype. */
-  archetypeOverride?: boolean;
-  reserves?: ReserveSlice[];
-  reserveReview?: ReserveReview;
-  custodyProfile?: CustodyProfile;
-  liveReservesConfig?: LiveReservesConfig;
-  notices?: CoinNotice[];
-  tags?: string[];
-  yieldConfig?: YieldConfig;
-  status?: StablecoinStatus;
-  /** Required for quarantined and delisted assets; rendered on preserved detail pages. */
-  listingStatusReview?: StablecoinListingStatusReview;
-  /** YYYY-MM-DD; issuer's public wind-down or termination announcement for this token. */
-  windDownAnnouncedAt?: string;
-  /** Public source for the issuer's wind-down or termination announcement. */
-  windDownSourceUrl?: string;
-  /** YYYY-MM-DD; required when status === "frozen". */
-  frozenAt?: string;
-  /** Obituary content surfaced on the detail page banner and the cemetery plot map and register; required when status === "frozen". */
-  obituary?: StablecoinObituary;
-  launchDate?: string;
-  /** Reviewed lower bound for depeg-event coverage used as the PegScore denominator. */
-  pegScoreCoverage?: {
-    startDate: string;
-    basis: "audited-replay-and-live";
-    reviewedAt: string;
-    replayRunId?: string;
-    notes: string;
-  };
-  announcedDate?: string;
-  expectedLaunchDate?: string;
-  launchPhase?: LaunchPhase;
-  launchPhaseDetail?: string;
-  featuredContent?: FeaturedContent[];
-  milestones?: LaunchMilestone[];
-  dateHistory?: DateHistoryEntry[];
-}
 
 /** Lossless registry slice consumed by live-reserve adapters. */
 export type ReserveAdapterCoin = Pick<

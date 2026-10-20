@@ -4,12 +4,11 @@ import type {  StatusCause,
   StatusSectionError,
   StatusStateInfo,
 } from "@shared/types/status";
+import type { StatusHealthValue } from "@shared/types/status/core";
 import { clamp } from "@shared/lib/math";
 import { decodeJsonString } from "./cache-json";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import { logMalformedJsonPath } from "./json-decode-observability";
-
-export type StatusLevel = "healthy" | "degraded" | "stale";
 
 export const STATUS_SCOPE = "global" as const;
 
@@ -52,8 +51,8 @@ export type StatusPersistenceIssueReporter = (issue: StatusPersistenceIssue) => 
 
 export interface StatusStateRow {
   scope: string;
-  current_status: StatusLevel;
-  raw_status: StatusLevel;
+  current_status: StatusHealthValue;
+  raw_status: StatusHealthValue;
   last_evaluated_at: number;
   last_changed_at: number;
   consecutive_healthy: number;
@@ -66,9 +65,9 @@ export interface StatusStateRow {
 export interface StatusTransitionRow {
   id: number;
   scope: string;
-  previous_status: StatusLevel | null;
-  next_status: StatusLevel;
-  raw_status: StatusLevel;
+  previous_status: StatusHealthValue | null;
+  next_status: StatusHealthValue;
+  raw_status: StatusHealthValue;
   transition_type: "degrade" | "recover" | "init";
   reason: string;
   confidence: number;
@@ -76,9 +75,9 @@ export interface StatusTransitionRow {
   created_at: number;
 }
 
-export const SEVERITY: Record<StatusLevel, number> = { healthy: 0, degraded: 1, stale: 2 };
+export const SEVERITY: Record<StatusHealthValue, number> = { healthy: 0, degraded: 1, stale: 2 };
 
-export function maxStatus(a: StatusLevel, b: StatusLevel): StatusLevel {
+export function maxStatus(a: StatusHealthValue, b: StatusHealthValue): StatusHealthValue {
   return SEVERITY[a] >= SEVERITY[b] ? a : b;
 }
 
@@ -122,16 +121,16 @@ export function parseCauses(
   return decoded.payload;
 }
 
-export function transitionType(from: StatusLevel | null, to: StatusLevel): "degrade" | "recover" | "init" {
+export function transitionType(from: StatusHealthValue | null, to: StatusHealthValue): "degrade" | "recover" | "init" {
   if (!from) return "init";
   return SEVERITY[to] > SEVERITY[from] ? "degrade" : "recover";
 }
 
 export function buildStatusTransitionIdempotencyKey(input: {
   scope: string;
-  previousStatus: StatusLevel | null;
-  nextStatus: StatusLevel;
-  rawStatus: StatusLevel;
+  previousStatus: StatusHealthValue | null;
+  nextStatus: StatusHealthValue;
+  rawStatus: StatusHealthValue;
   transitionType: "degrade" | "recover" | "init";
   reason: string;
   confidence: number;
@@ -143,7 +142,7 @@ export function buildStatusTransitionIdempotencyKey(input: {
 
 export function buildStatusProbeRunIdempotencyKey(input: {
   createdAt: number;
-  status: StatusLevel;
+  status: StatusHealthValue;
   sampleCount: number;
   passCount: number;
   failCount: number;
@@ -222,7 +221,7 @@ export function toStateInfo(row: StatusStateRow): StatusStateInfo {
   };
 }
 
-export function buildFallbackStatusState(rawStatus: StatusLevel, now: number): StatusStateInfo {
+export function buildFallbackStatusState(rawStatus: StatusHealthValue, now: number): StatusStateInfo {
   return {
     scope: "global",
     currentStatus: rawStatus,

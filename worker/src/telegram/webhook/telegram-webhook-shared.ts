@@ -123,8 +123,6 @@ const HELP_COMMAND_SEQUENCE = [
   "unmutehours",
   "list",
   "cancel",
-  "export",
-  "import",
 ] as const satisfies readonly HelpCommand[];
 
 const HELP_COMMAND_ROWS = (
@@ -170,24 +168,6 @@ export type ConfirmBulkPayload = { flowId?: string } & (
       presetIds: string[];
       coinIds: string[];
       unsubscribeAll: boolean;
-    }
-  | {
-      kind: "watchlist-import-v2";
-      registryVersion: string;
-      directEntries: string[];
-      presetEntries: string[];
-      expectedPreferenceGeneration: number;
-      generationLease: number;
-      preview: {
-        directAdds: string[];
-        directRemoves: string[];
-        directChanges: string[];
-        directChangeBefore: string[];
-        presetAdds: string[];
-        presetRemoves: string[];
-        presetChanges: string[];
-        presetChangeBefore: string[];
-      };
     });
 
 /**

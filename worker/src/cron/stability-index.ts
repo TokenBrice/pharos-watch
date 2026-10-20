@@ -8,7 +8,7 @@ import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import type { CronResult } from "../lib/cron-logger";
 import { createCronResult } from "../lib/cron-result";
 import { getPriceCache } from "../lib/db-cache";
-import { deriveDepegSignal } from "../lib/depeg-signals";
+import { deriveDepegSignal } from "@shared/lib/depeg-signals";
 import { computeStabilityIndex, DEWS_STRESS_BREADTH_SCALE, getDepreciationFactor } from "../lib/stability-index";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { loadPublishedStressSignalGeneration } from "../lib/stress-signals-current-rows";

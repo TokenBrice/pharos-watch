@@ -61,6 +61,37 @@ function makeRow(overrides: Record<string, unknown> = {}) {
 }
 
 describe("handleEvents", () => {
+  it("excludes retracted freeze claims from lists, search and counts, returning an explicit permalink 404", async () => {
+    const db = eventDb([
+      makeRow({ id: 1, event_id: "valid", source_row_id: "valid", title: "needle valid" }),
+      makeRow({
+        id: 2, event_id: "retracted", source_row_id: "retracted", type: "freeze.blocked",
+        source_table: "blacklist_events", title: "needle retracted", suppressed_at: SEC,
+        suppression_reason: "freeze-claim-retracted",
+      }),
+    ]);
+    for (const suffix of ["?includeTotal=true", "?q=needle&includeTotal=true"]) {
+      const body = TapeEventsResponseSchema.parse(await readJsonResponse(
+        await handleEvents(db, new URL(`https://x/api/events${suffix}`)), 200,
+      ));
+      expect(body.events.map((event) => event.id)).toEqual(["valid"]);
+      expect(body.total).toBe(1);
+      expect(body.droppedRows).toBe(0);
+    }
+    const response = await handleEvents(db, new URL("https://x/api/events?event=retracted"));
+    expect(response.status).toBe(404);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(await response.json()).toEqual({ error: "Event not found", reason: "freeze-claim-retracted" });
+    expect(await readJsonResponse(await handleEvents(db, new URL("https://x/api/events?event=absent")), 404))
+      .toEqual({ error: "Event not found", reason: "event-not-found" });
+    const exact = TapeEventsResponseSchema.parse(await readJsonResponse(
+      await handleEvents(db, new URL("https://x/api/events?event=valid&type=freeze.blocked&q=absent&since=1800000000000")), 200,
+    ));
+    expect(exact.events.map((event) => event.id)).toEqual(["valid"]);
+    expect(exact.total).toBe(1);
+    expect(exact.nextCursor).toBeNull();
+  });
+
   it("starts the independent freshness read before the per-coin page settles", async () => {
     vi.useFakeTimers();
     try {

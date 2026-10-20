@@ -1,6 +1,6 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { logCronEvent, type CronEventInput } from "../../lib/cron-logger";
-import type { LiquidityFallbackCounters, LiquidityMetrics, PoolEntry, GtNewPool, CgNewPool } from "./types";
+import type { LiquidityFallbackCounters, SourcePoolGraph, PoolEntry, GtNewPool, CgNewPool } from "./types";
 import { addSecondaryPoolContribution } from "./pool-contribution";
 
 type DexCrawlerEvent = Omit<CronEventInput, "job">;
@@ -11,7 +11,7 @@ async function logDexCrawlerEvent(db: D1Database | undefined, event: DexCrawlerE
 }
 
 function mergeSecondaryPools<TPool extends GtNewPool | CgNewPool>(
-  metrics: Map<string, LiquidityMetrics>,
+  metrics: Map<string, SourcePoolGraph>,
   discoveredPools: Map<string, TPool[]>,
   options?: {
     onPoolMerged?: (pool: TPool) => void;
@@ -24,7 +24,7 @@ function mergeSecondaryPools<TPool extends GtNewPool | CgNewPool>(
     const meta = TRACKED_META_BY_ID.get(stablecoinId);
     if (!meta) continue;
     const poolIndex = new Map<string, PoolEntry>();
-    for (const pool of metrics.get(stablecoinId)?.topPools ?? []) {
+    for (const pool of metrics.get(stablecoinId)?.pools ?? []) {
       const poolId = pool.poolId;
       if (!poolIndex.has(poolId)) poolIndex.set(poolId, pool);
     }
@@ -39,10 +39,10 @@ function mergeSecondaryPools<TPool extends GtNewPool | CgNewPool>(
   return merged;
 }
 
-/** Merge CG-discovered new pools into existing LiquidityMetrics.
+/** Merge CG-discovered new pools into existing SourcePoolGraph.
  *  Unlike GT pools, CG pools can contribute real balance ratios and locked liquidity. */
 export async function mergeCgPools(
-  metrics: Map<string, LiquidityMetrics>,
+  metrics: Map<string, SourcePoolGraph>,
   cgNewPools: Map<string, CgNewPool[]>,
   db?: D1Database,
   fallbackCounters?: LiquidityFallbackCounters,
@@ -65,9 +65,9 @@ export async function mergeCgPools(
   }
 }
 
-/** Merge GT-discovered new pools into existing LiquidityMetrics. */
+/** Merge GT-discovered new pools into existing SourcePoolGraph. */
 export async function mergeGtPools(
-  metrics: Map<string, LiquidityMetrics>,
+  metrics: Map<string, SourcePoolGraph>,
   gtNewPools: Map<string, GtNewPool[]>,
   db?: D1Database,
   fallbackCounters?: LiquidityFallbackCounters,

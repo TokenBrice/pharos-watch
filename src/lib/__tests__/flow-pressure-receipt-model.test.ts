@@ -1,20 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { buildFlowPressureReceiptModel } from "@/lib/flow-pressure-receipt-model";
-import type { MintBurnCoinFlow, MintBurnGauge, MintBurnHourlyBucket } from "@shared/types";
+import type { MintBurnCoinFlow, MintBurnHourlyBucket } from "@shared/types";
 import {
   makeInactiveMintBurnFlowCoin as makeCoin,
   makeMintBurnCoinValuation as completeValuation,
 } from "@/test-utils/mint-burn-fixtures";
-
-const gauge: MintBurnGauge = {
-  score: 18,
-  band: "normal",
-  intensitySemantics: "signed-v2",
-  flightToQuality: false,
-  flightIntensity: 0,
-  trackedCoins: 3,
-  trackedMcapUsd: 120_000_000_000,
-};
 
 function makeCoverage(
   overrides: Partial<NonNullable<MintBurnCoinFlow["coverage"]>> = {},
@@ -66,22 +56,15 @@ describe("buildFlowPressureReceiptModel", () => {
     ];
 
     const model = buildFlowPressureReceiptModel({
-      gauge,
       coins,
       weeklyHourly,
       scopeLabel: "Configured issuance chains",
     });
 
     expect(model).toMatchObject({
-      trackedCoins: 3,
-      mint24hUsd: 93_000_000,
-      burn24hUsd: 52_000_000,
-      net24hUsd: 41_000_000,
-      mint7dUsd: 150,
-      burn7dUsd: 40,
-      net7dUsd: 75_000_000,
-      topMint: { symbol: "USDC", valueUsd: 75_000_000 },
-      topBurn: { symbol: "DAI", valueUsd: -22_000_000 },
+      scopeLabel: "Configured issuance chains",
+      topMint: { symbol: "USDC", valueUsd: 120_000_000 },
+      topBurn: { symbol: "DAI", valueUsd: -35_000_000 },
       coverageSummary: "1 lagging coin",
     });
     expect(model.coverageRows).toEqual([
@@ -90,32 +73,26 @@ describe("buildFlowPressureReceiptModel", () => {
       { status: "lagging", count: 1 },
     ]);
     expect(model.rows.map((row) => row.label)).toEqual([
-      "Printed 24h",
-      "Shredded 24h",
-      "Net 24h",
       "Printed 7d",
       "Shredded 7d",
       "Net 7d",
     ]);
+    expect(model.rows.map((row) => row.valueUsd)).toEqual([150, 40, 75_000_000]);
   });
 
   it("prioritizes sync warnings and handles missing weekly hourly data", () => {
     const model = buildFlowPressureReceiptModel({
-      gauge: null,
       coins: [makeCoin({ symbol: "USDT", netFlow24hUsd: 0 })],
       syncWarning: "Critical lane is delayed",
     });
 
-    expect(model.trackedCoins).toBe(1);
-    expect(model.mint7dUsd).toBeNull();
-    expect(model.burn7dUsd).toBeNull();
     expect(model.coverageSummary).toBe("Lag warning active");
     expect(model.rows.find((row) => row.id === "mint-7d")?.valueUsd).toBeNull();
+    expect(model.rows.find((row) => row.id === "burn-7d")?.valueUsd).toBeNull();
   });
 
   it("summarizes unknown coverage when chain-head metadata is unavailable", () => {
     const model = buildFlowPressureReceiptModel({
-      gauge,
       coins: [makeCoin({
         coverage: makeCoverage({ isPartial: true, status: "unknown" }),
       })],
@@ -125,9 +102,8 @@ describe("buildFlowPressureReceiptModel", () => {
     expect(model.coverageRows).toEqual([{ status: "unknown", count: 1 }]);
   });
 
-  it("never sums a partial or null coin net into the receipt totals or leaders", () => {
+  it.each(["upper", "lower"] as const)("never ranks a partial net and keeps its weekly %s bound", (kind) => {
     const model = buildFlowPressureReceiptModel({
-      gauge,
       coins: [
         makeCoin({
           symbol: "USDC",
@@ -147,7 +123,7 @@ describe("buildFlowPressureReceiptModel", () => {
             completeness: "partial",
             burnCompleteness: "partial",
             unpricedBurnEventCount: 4,
-          }),
+          }, { netFlow7d: "partial", netFlow7dBound: { kind, valueUsd: 900 } }),
         }),
       ],
       weeklyHourly: [
@@ -156,25 +132,19 @@ describe("buildFlowPressureReceiptModel", () => {
       ],
     });
 
-    expect(model.net24hUsd).toBeNull();
-    expect(model.net7dUsd).toBeNull();
-    // DAI's partial net is only an upper bound, so it cannot lead even though its known net is larger.
-    expect(model.topMint).toEqual({ symbol: "USDC", valueUsd: 50 });
+    // DAI's partial weekly net is only a bound, so it cannot lead.
+    expect(model.topMint).toEqual({ symbol: "USDC", valueUsd: 70 });
     const byId = Object.fromEntries(model.rows.map((row) => [row.id, row]));
-    expect(byId["net-24h"]).toMatchObject({ valueUsd: null, completeness: "partial" });
-    // Only burns are unpriced, so the summed net keeps a proven upper bound: 50 + 900.
-    expect(byId["net-24h"].bound).toEqual({ kind: "upper", valueUsd: 950 });
-    expect(byId["net-24h"].note).toMatch(/upper bound/i);
-    expect(byId["net-7d"].valueUsd).toBeNull();
-    expect(byId["burn-24h"]).toMatchObject({ completeness: "partial" });
-    expect(byId["burn-24h"].note).toBe("Known subtotal, lower bound: 4 events unpriced");
-    expect(byId["mint-24h"]).toMatchObject({ valueUsd: 950, completeness: "complete", note: null });
+    expect(byId["net-7d"]).toMatchObject({ valueUsd: null, completeness: "partial" });
+    expect(byId["net-7d"].bound).toEqual({ kind, valueUsd: 970 });
+    expect(byId["net-7d"].note).toContain(`${kind} bound`);
+    expect(byId["burn-7d"]).toMatchObject({ valueUsd: 3, completeness: "partial" });
+    expect(byId["burn-7d"].note).toMatch(/lower bound/i);
     expect(byId["mint-7d"]).toMatchObject({ valueUsd: 15, completeness: "partial" });
   });
 
-  it("keeps unknown scan-window nets unavailable while retaining observed gross subtotals", () => {
+  it("keeps unknown scan-window nets unavailable and out of weekly leaders", () => {
     const model = buildFlowPressureReceiptModel({
-      gauge: null,
       coins: [makeCoin({
         has24hActivity: null,
         netFlow24hUsd: null,
@@ -186,18 +156,14 @@ describe("buildFlowPressureReceiptModel", () => {
         valuation: completeValuation(),
       })],
     });
-    expect(model.net24hUsd).toBeNull();
-    expect(model.net7dUsd).toBeNull();
+    expect(model.rows.find((row) => row.id === "net-7d")?.valueUsd).toBeNull();
     expect(model.topMint).toBeNull();
     expect(model.topBurn).toBeNull();
-    expect(model.mint24hUsd).toBe(10);
-    expect(model.burn24hUsd).toBe(5);
-    expect(model.rows.find((row) => row.id === "net-24h")?.bound).toBeNull();
+    expect(model.rows.find((row) => row.id === "net-7d")?.bound).toBeNull();
   });
   it.each([0, 100])("keeps scan completeness independent for fully valued gross subtotals (%i)", (volume) => {
     const incomplete = { complete: false, unavailableReason: "scan-coverage-incomplete" as const };
     const model = buildFlowPressureReceiptModel({
-      gauge: null,
       coins: [makeCoin({
         has24hActivity: null, observed24hActivity: volume > 0,
         mintVolume24hUsd: volume, burnVolume24hUsd: 0,

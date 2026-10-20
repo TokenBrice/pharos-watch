@@ -73,6 +73,7 @@ import {
   makeV3Target,
 } from "./measured-execution.test-support";
 import {
+  makeFlatProvenanceCases,
   makeJoinPoints,
   makeJoinPool,
   makeJoinQuote,
@@ -84,6 +85,27 @@ import { seedGeneration } from "./persistence.test-support";
 
 
 describe("measured execution join activation", () => {
+  it.each(makeFlatProvenanceCases(makeV3LkgRoute([[1_000, 1_000], [100_000, 99_000]]).profile))(
+    "publishes only allowlisted $name provenance through the join", ({ proofs, provenance }) => {
+      const { measuredTarget, profile } = makeV3LkgRoute([[1_000, 1_000], [100_000, 99_000]]);
+      const pool = makeJoinPool(measuredTarget);
+      const diagnostics = joinDexMeasuredExecutionEvidence({
+        poolsByStablecoin: new Map([[measuredTarget.stablecoinId, [pool]]]),
+        evidence: { quoteGenerationId: profile.quoteGenerationId, targetGenerationId: profile.targetGenerationId,
+          publishedAt: 1_060, byTargetId: new Map([[measuredTarget.targetId,
+            makeJoinQuote(measuredTarget, { ...profile, ...proofs })]]) },
+        nowSec: 1_060,
+      });
+      expect(diagnostics).toMatchObject({ measuredCount: 1, gatedCount: 0 });
+      for (const [key, value] of Object.entries(provenance)) {
+        expect(JSON.stringify(pool.extra?.measuredExecution?.[key as keyof typeof provenance])).toBe(JSON.stringify(value));
+      }
+      expect(pool.extra?.measuredExecution).toMatchObject({
+        chain: profile.chain, blockNumber: profile.blockNumber, blockHash: profile.blockHash,
+      });
+      expect(JSON.stringify(pool.extra?.measuredExecution)).not.toMatch(/calldata|returndata|private-future-proof|quoteProof|BindingProof|PoolProof/i);
+    },
+  );
   it("keeps a selected fresh quote while expiring historical capacity and maturity at assessment", async () => {
     const { db, sqlite } = nativeFixtures.open();
     const { measuredTarget, profile } = makeV3LkgRoute([[1_000, 1_000], [100_000, 99_000]]);

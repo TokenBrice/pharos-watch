@@ -6,8 +6,9 @@ import { fetchGtTokenPools } from "../../dex-liquidity/geckoterminal-shared";
 import type { GtPool } from "../../dex-liquidity/types";
 import { crawlGeckoTerminalPoolsStage } from "../crawl-geckoterminal-pools";
 import { classifyDexDeploymentOutcomes } from "../deployment-outcomes";
-import { createCrawlStageContext } from "../staged-pool";
+import { createCrawlStageContext, knownPoolIdKey } from "../staged-pool";
 import type { StagedPool } from "../types";
+import { coinGeckoPool } from "./discovery.test-support";
 
 const STACKS_TOKEN = "SP000000000000000000002Q6VF78.usdh";
 afterEach(() => vi.restoreAllMocks());
@@ -18,7 +19,6 @@ function context(stablecoinId = "supplemental-fixture") {
     knownPoolIds: new Set(),
     nowSec: 1_800_000_000,
     pools: [],
-    priceObs: [],
   });
 }
 
@@ -34,6 +34,36 @@ function target(stablecoinId: string, chain: string): ContractDeployment {
 }
 
 describe("supplemental GeckoTerminal deployment discovery", () => {
+  it.each([
+    { tvl: null, price: "1", known: false, usable: false, poolCount: 0 },
+    { tvl: "75000", price: "", known: false, usable: false, poolCount: 1 },
+    { tvl: "49999", price: "1", known: false, usable: false, poolCount: 1 },
+    { tvl: "50000", price: "1", known: false, usable: true, poolCount: 1 },
+    { tvl: "75000", price: "99", known: false, usable: false, poolCount: 0 },
+    { tvl: "75000", price: "1", known: true, usable: true, poolCount: 0 },
+  ])("retains GT's helper price-admission decision: %j", async ({ tvl, price, known, usable, poolCount }) => {
+    const stageContext = context("usdc-circle");
+    if (known) stageContext.knownPoolIds.add(knownPoolIdKey("usdc-circle", "ethereum:0xpool"));
+    const result = await crawlGeckoTerminalPoolsStage({
+      coinTargets: [{ chain: "ethereum", address: "0xabc", decimals: 6 }],
+      cgPriceObservationTargets: new Set(),
+      context: stageContext,
+      dependencies: {
+        crawlTokenPools,
+        fetchGtTokenPools: vi.fn<typeof fetchGtTokenPools>(async () => ({
+          rows: tvl == null ? [] : [coinGeckoPool({ network: "eth", reserve: tvl, basePrice: price })],
+          complete: true, cappedAtMaxPages: false, failedAfterRows: null,
+        })),
+        sleepWithSignal: vi.fn<typeof sleepWithSignal>(async () => {}),
+      },
+    });
+    expect(stageContext.hasUsablePoolPrice).toBe(usable);
+    expect(stageContext.pools).toHaveLength(poolCount);
+    expect(result.providerChecks).toEqual([
+      expect.objectContaining({ status: "success", paginationComplete: true }),
+    ]);
+  });
+
   it.each([true, false])(
     "queries the exact Arc token and certifies empty only when pagination is complete (%s)",
     async (complete) => {
@@ -206,7 +236,6 @@ describe("supplemental GeckoTerminal deployment discovery", () => {
       knownPoolIds: new Set(),
       nowSec: 1_800_000_000,
       pools,
-      priceObs: [],
     });
     const providerPool: GtPool = {
       id: "hedera-hashgraph_0x3a2a68e8edf6c97b6b6f8fdd4c139f968040cf84",
@@ -281,7 +310,6 @@ describe("supplemental GeckoTerminal deployment discovery", () => {
       knownPoolIds: new Set(),
       nowSec: 1_800_000_000,
       pools,
-      priceObs: [],
     });
     const providerPool: GtPool = {
       id: "injective_inj19tynv2ufr2e6p5nn909z8rzp2apl3nj5zqseqj",

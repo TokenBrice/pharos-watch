@@ -595,6 +595,19 @@ describe("SafetyScoreV9ResponseSchema", () => {
     tiedParent.dependencies.serial[0]!.score = 40;
     expect(SafetyScoreV9CurrentCardSchema.parse(tiedParent).grade).toBe("D");
 
+    const unmatchedParentResponse = boundedResponse();
+    unmatchedParentResponse.cards = [tiedParent];
+    unmatchedParentResponse.foreignCauseGaps = ["higher:gap:mechanism", "lower:gap:mechanism"];
+    const result = SafetyScoreV9CurrentResponseSchema.safeParse(unmatchedParentResponse);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues).toContainEqual({
+        code: "custom",
+        path: ["cards"],
+        message: "asset: Parent adverse attribution does not reconcile to higher",
+      });
+    }
+
     const cycleBlockedParent = structuredClone(tiedParent);
     cycleBlockedParent.dependencies.cycleBlocked = true;
     expect(() => SafetyScoreV9CurrentCardSchema.parse(cycleBlockedParent)).toThrow(

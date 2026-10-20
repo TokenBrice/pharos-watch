@@ -5,7 +5,6 @@ import type {
   PressureShiftState,
 } from "@shared/lib/mint-burn-signals";
 
-type FlowSignalVariant = "summary";
 /** `unavailable`: partial valuation leaves the 24h direction unproven (`null` on the wire or proven-direction helper). */
 type FlowDirectionKey = NetFlowDirection24h | "unavailable";
 
@@ -21,7 +20,6 @@ interface FlowPressureBase {
 
 export interface FlowDirectionUi extends FlowDirectionBase {
   label: string;
-  helper: string;
 }
 
 export interface FlowPressureUi extends FlowPressureBase {
@@ -52,22 +50,12 @@ const FLOW_DIRECTION_BASE: Record<FlowDirectionKey, FlowDirectionBase> = {
   },
 };
 
-const FLOW_DIRECTION_LABELS: Record<FlowSignalVariant, Record<FlowDirectionKey, string>> = {
-  summary: {
-    minting: "Minting",
-    burning: "Burning",
-    flat: "Flat",
-    inactive: "No activity",
-    unavailable: "Direction unavailable",
-  },
-};
-
-const FLOW_DIRECTION_HELPERS: Record<FlowDirectionKey, string> = {
-  minting: "Net issuance dominates the last 24 hours.",
-  burning: "Net redemptions dominate the last 24 hours.",
-  flat: "Mints and burns offset each other in the active window.",
-  inactive: "No mint or burn events were recorded in the active window.",
-  unavailable: "Unpriced mint or burn events could change the 24h net direction, so none is claimed.",
+const FLOW_DIRECTION_LABELS: Record<FlowDirectionKey, string> = {
+  minting: "Minting",
+  burning: "Burning",
+  flat: "Flat",
+  inactive: "No activity",
+  unavailable: "Direction unavailable",
 };
 
 const FLOW_PRESSURE_BASE: Record<PressureShiftState, FlowPressureBase> = {
@@ -89,13 +77,11 @@ const FLOW_PRESSURE_BASE: Record<PressureShiftState, FlowPressureBase> = {
   },
 };
 
-const FLOW_PRESSURE_LABELS: Record<FlowSignalVariant, Record<PressureShiftState, string>> = {
-  summary: {
-    improving: "Improving",
-    stable: "Stable vs 30D",
-    worsening: "Worsening",
-    nr: "NR",
-  },
+const FLOW_PRESSURE_LABELS: Record<PressureShiftState, string> = {
+  improving: "Improving",
+  stable: "Stable vs 30D",
+  worsening: "Worsening",
+  nr: "NR",
 };
 
 const FLOW_PRESSURE_HELPERS: Record<PressureShiftState, string> = {
@@ -107,23 +93,20 @@ const FLOW_PRESSURE_HELPERS: Record<PressureShiftState, string> = {
 
 export function getFlowDirectionUi(
   direction: NetFlowDirection24h | null,
-  variant: FlowSignalVariant,
 ): FlowDirectionUi {
   const key: FlowDirectionKey = direction ?? "unavailable";
   return {
     ...FLOW_DIRECTION_BASE[key],
-    label: FLOW_DIRECTION_LABELS[variant][key],
-    helper: FLOW_DIRECTION_HELPERS[key],
+    label: FLOW_DIRECTION_LABELS[key],
   };
 }
 
 export function getFlowPressureUi(
   pressureState: PressureShiftState,
-  variant: FlowSignalVariant,
 ): FlowPressureUi {
   return {
     ...FLOW_PRESSURE_BASE[pressureState],
-    label: FLOW_PRESSURE_LABELS[variant][pressureState],
+    label: FLOW_PRESSURE_LABELS[pressureState],
     helper: FLOW_PRESSURE_HELPERS[pressureState],
   };
 }

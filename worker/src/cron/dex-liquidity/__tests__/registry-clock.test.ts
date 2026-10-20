@@ -9,7 +9,7 @@ import { persistDexLiquidityScoringStage, loadDexLiquidityScoringStage } from ".
 import type { DexLiquidityPoolState, DexLiquidityScoringSourceState } from "../scoring-stage-contract";
 import { makeStagedPoolRow } from "./staging-merge.test-support";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
-import type { LiquidityMetrics } from "../types";
+import type { SourcePoolGraph } from "../types";
 import { seedGeneration } from "../../measured-execution/__tests__/persistence.test-support";
 import { makeV3Target } from "../../measured-execution/__tests__/measured-execution.test-support";
 import { computeDexPrices } from "../dex-price-publisher";
@@ -43,7 +43,7 @@ async function merge(rows: StagedPoolRow[]) {
     wallClock = READ_CLOCK;
     return { results: rows };
   } }) }) });
-  const metrics = new Map<string, LiquidityMetrics>();
+  const metrics = new Map<string, SourcePoolGraph>();
   const result = await mergeStagedPools(db, metrics, createKnownPoolIdentityIndex(), SOURCE_CLOCK,
     new Map([[`base:${OWN}`, "usdc-circle"]]));
   return { metrics, result };
@@ -59,7 +59,7 @@ function sourceState(): DexLiquidityScoringSourceState {
   };
 }
 
-function poolState(metrics: Map<string, LiquidityMetrics>, registryEvaluatedAtSec: number): DexLiquidityPoolState {
+function poolState(metrics: Map<string, SourcePoolGraph>, registryEvaluatedAtSec: number): DexLiquidityPoolState {
   return {
     registryEvaluatedAtSec, metrics, fallback: { weakCoverageCoinsBeforeFallback: 0 }, poolRejections: [],
     pancakeMeasuredExecutionTargets: new Map(), slipstreamMeasuredExecutionTargets: new Map(),
@@ -75,7 +75,7 @@ function poolState(metrics: Map<string, LiquidityMetrics>, registryEvaluatedAtSe
   };
 }
 
-async function score(db: D1Database, metrics: Map<string, LiquidityMetrics>, registryEvaluatedAtSec: number) {
+async function score(db: D1Database, metrics: Map<string, SourcePoolGraph>, registryEvaluatedAtSec: number) {
   return computeStablecoinScores(db, metrics, new Map(), undefined, SOURCE_CLOCK,
     new Map(), undefined, new Map(), "none", registryEvaluatedAtSec);
 }
@@ -92,8 +92,8 @@ describe("registry read-consumption clock", () => {
       makePool({ poolId: "base:fresh1", project: "curve", price: 1, priceObservedAt: READ_CLOCK - 60 }),
       makePool({ poolId: "base:fresh2", project: "curve", price: 1, priceObservedAt: READ_CLOCK - 30 }),
     ];
-    await computeDexPrices(harness.db, new Map([["usdc-circle", pools]]), READ_CLOCK,
-      undefined, undefined, undefined, harness.generationId, new Map([["usdc-circle", 1]]));
+    await computeDexPrices({ db: harness.db, retainedPoolsByStablecoin: new Map([["usdc-circle", pools]]),
+      nowSec: READ_CLOCK, generationId: harness.generationId, primaryPrices: new Map([["usdc-circle", 1]]) });
     const row = harness.sqlite.prepare(
       "SELECT price_sources_json FROM dex_prices WHERE stablecoin_id = 'usdc-circle'",
     ).get() as { price_sources_json: string };
@@ -123,11 +123,11 @@ describe("registry read-consumption clock", () => {
       nowSec: READ_CLOCK, expectedSourceSlotStartedAt: SOURCE_CLOCK,
     });
     expect(loaded.sourceState.priceObservations.get("usdc-circle")?.[0]?.observedAt).toBe(quoteClock);
-    expect(loaded.poolState.metrics.get("usdc-circle")?.topPools[0]?.priceObservedAt).toBe(quoteClock);
+    expect(loaded.poolState.metrics.get("usdc-circle")?.pools[0]?.priceObservedAt).toBe(quoteClock);
     const scored = await score(harness.db, loaded.poolState.metrics, loaded.poolState.registryEvaluatedAtSec);
-    await computeDexPrices(harness.db, scored.retainedPoolsByStablecoin, READ_CLOCK,
-      undefined, undefined, loaded.sourceState.priceObservations, harness.generationId,
-      new Map([["usdc-circle", 1]]));
+    await computeDexPrices({ db: harness.db, retainedPoolsByStablecoin: scored.retainedPoolsByStablecoin,
+      nowSec: READ_CLOCK, exactPriceEvidenceByStablecoin: loaded.sourceState.priceObservations,
+      generationId: harness.generationId, primaryPrices: new Map([["usdc-circle", 1]]) });
     const row = harness.sqlite.prepare(
       "SELECT updated_at, price_sources_json FROM dex_prices WHERE stablecoin_id = 'usdc-circle'",
     ).get() as { updated_at: number; price_sources_json: string };

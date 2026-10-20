@@ -2,9 +2,9 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { V9ReviewedIncidentRegistryEnvelopeSchema, V9ReviewedIncidentSchema } from "../../shared/types/safety-score-v9-incidents";
+import { V9AuthoredIncidentRegistryEnvelopeSchema, V9ReviewedIncidentRegistryEnvelopeSchema, V9ReviewedIncidentSchema } from "../../shared/types/safety-score-v9-incidents";
 import { projectNegativeIncidentReview } from "../lib/safety-score-v9-incident-runtime";
-import { canonicalizeReviewedRegistryDigest, reviewedRegistryDigestKey, reviewedRegistryEnvelopeDigest } from "../../shared/lib/safety-score-v9/reviewed-registry";
+import { canonicalizeReviewedRegistryDigest, expandReviewedRegistryReferences, reviewedRegistryDigestKey, reviewedRegistryEnvelopeDigest } from "../../shared/lib/safety-score-v9/reviewed-registry";
 import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
 import { parseStrictCliArgs } from "../lib/cli-args.mjs";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
@@ -13,7 +13,10 @@ const ROOT = fileURLToPath(new URL("../../", import.meta.url));
 
 
 export function buildIncidentRuntime(value: unknown) {
-  const envelope = V9ReviewedIncidentRegistryEnvelopeSchema.parse(value);
+  const authored = V9AuthoredIncidentRegistryEnvelopeSchema.parse(value);
+  const envelope = V9ReviewedIncidentRegistryEnvelopeSchema.parse(expandReviewedRegistryReferences(authored, "negativeReviews", {
+    sources: "sourceObservations", searchedSurfaces: "searchedSurfaceObservations",
+  }));
   const canonical = canonicalizeReviewedRegistryDigest(envelope, {
     incidents: reviewedRegistryDigestKey("incidentId"),
     "incidents.*.primarySources": reviewedRegistryDigestKey("url"),

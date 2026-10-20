@@ -20,7 +20,8 @@ function network() {
   const fetcher = vi.fn(async (_url: unknown, init?: RequestInit) => {
     const payload: unknown = JSON.parse(String(init?.body));
     if (Array.isArray(payload)) return Response.json(payload.map((row: { id: number }) => ({ id: row.id, result: WORD })));
-    return Response.json({ result: WORD });
+    if (payload && typeof payload === "object" && "id" in payload) return Response.json({ id: payload.id, result: WORD });
+    throw new Error("Unexpected JSON-RPC request fixture");
   });
   vi.stubGlobal("fetch", fetcher);
   return fetcher;

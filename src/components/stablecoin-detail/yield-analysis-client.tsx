@@ -72,10 +72,10 @@ interface WarningSignalEvent {
   sourceLabel: string | null;
 }
 
-/** One timeline row: occurrences of the same signal from the same source that
- * sit inside one 24h bucket collapse into a single entry with a count and time
- * range, so hourly repeats — and two signals interleaved on the same points —
- * don't drown the timeline (E26). */
+/** One timeline row: occurrences of the same signal from the same source within
+ * 24h of the newest occurrence collapse into a single entry with a count and
+ * time range. The fixed anchor bounds the full span, even for hourly repeats
+ * and interleaved signals (E26). */
 interface WarningSignalGroup {
   signal: string;
   apy: number;
@@ -346,7 +346,7 @@ function deriveWarningEvents(history: YieldHistoryPoint[]): WarningSignalGroup[]
   for (const event of events) {
     const key = `${event.signal}\u0000${event.sourceLabel ?? ""}`;
     const group = latestGroupByKey.get(key);
-    if (group && group.earliestTimestamp - event.timestamp <= WARNING_EVENT_BUCKET_MS) {
+    if (group && group.latestTimestamp - event.timestamp <= WARNING_EVENT_BUCKET_MS) {
       group.count += 1;
       group.earliestTimestamp = event.timestamp;
     } else {

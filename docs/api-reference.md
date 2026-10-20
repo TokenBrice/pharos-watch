@@ -412,6 +412,13 @@ Tape keeps its 200-character normalized `q` limit (`400` above it); blacklist in
 
 Tape `type=freeze.*` and `class=freeze` select the literal dot-delimited prefix `freeze.` case-insensitively: they include `freeze.blacklisted`, not bare `freeze` or `freezeframe.blacklisted`. Underscores in admitted lowercase slug segments remain literal. Prefix matching does not impose a new length cap or use SQL pattern wildcards.
 
+## Exact Event Lookup And Retractions
+
+`GET /api/events?event=<id>` resolves one permalink independently of listing filters or pagination. Success keeps the normal events response with exactly one event, `nextCursor: null`, `total: 1` and `totalExact: true`; the ordinary listing mode is unchanged. The ID must contain 1–200 characters. Missing or invalid stored events return `404` with `{ "error": "Event not found", "reason": "event-not-found" }`.
+
+Source-retracted freeze claims are absent from lists, search and counts. Exact lookup returns `404`, `Cache-Control: no-store` and `{ "error": "Event not found", "reason": "freeze-claim-retracted" }`, without an event body. There is no public tombstone representation. Deploy this additive Worker query mode before Pages switches permalink resolution to it.
+
+
 ## Public Endpoints
 
 On `https://api.pharos.watch`, these routes require `X-API-Key` unless marked `Authentication: exempt`. [OpenAPI schemas](https://pharos.watch/openapi.json) describe bodies; `shared/lib/api-endpoints/definitions.ts` owns auth/cache flags.
@@ -445,7 +452,7 @@ Generated from `public/openapi.json` (`Pharos API` v1.0.0). Total OpenAPI operat
 
 | Method | Path | Summary | Tags | Auth | Parameters | Status codes |
 | ------ | ---- | ------- | ---- | ---- | ---------- | ------------ |
-| GET | `/api/events` | Tape events | Risk | `X-API-Key` required | `type` (query, optional, string); `class` (query, optional, string); `coin` (query, optional, string); `pegCurrency` (query, optional, string); `chain` (query, optional, string); `q` (query, optional, string); `severityFloor` (query, optional, string); `since` (query, optional, integer); `until` (query, optional, integer); `cursor` (query, optional, string); `limit` (query, optional, integer); `includeTotal` (query, optional, boolean) | 200, 400, 401, 429, 503 |
+| GET | `/api/events` | Tape events | Risk | `X-API-Key` required | `event` (query, optional, string); `type` (query, optional, string); `class` (query, optional, string); `coin` (query, optional, string); `pegCurrency` (query, optional, string); `chain` (query, optional, string); `q` (query, optional, string); `severityFloor` (query, optional, string); `since` (query, optional, integer); `until` (query, optional, integer); `cursor` (query, optional, string); `limit` (query, optional, integer); `includeTotal` (query, optional, boolean) | 200, 400, 401, 429, 503 |
 | GET | `/api/stablecoins` | List stablecoins | Stablecoins | `X-API-Key` required | — | 200, 400, 401, 429, 503 |
 | GET | `/api/stablecoin/{stablecoinId}` | Stablecoin detail | Stablecoins | `X-API-Key` required | `stablecoinId` (path, required, string) | 200, 400, 401, 429, 503 |
 | GET | `/api/stablecoin-summary/{stablecoinId}` | Stablecoin summary | Stablecoins | `X-API-Key` required | `stablecoinId` (path, required, string) | 200, 400, 401, 429, 503 |
@@ -494,7 +501,7 @@ Materialized chronological feed of typed events (depeg, freeze, score) backed by
 
 - **Operation ID:** `events`
 - **Path:** `/api/events`
-- **Parameters:** `type` (query, optional, string); `class` (query, optional, string); `coin` (query, optional, string); `pegCurrency` (query, optional, string); `chain` (query, optional, string); `q` (query, optional, string); `severityFloor` (query, optional, string); `since` (query, optional, integer); `until` (query, optional, integer); `cursor` (query, optional, string); `limit` (query, optional, integer); `includeTotal` (query, optional, boolean)
+- **Parameters:** `event` (query, optional, string); `type` (query, optional, string); `class` (query, optional, string); `coin` (query, optional, string); `pegCurrency` (query, optional, string); `chain` (query, optional, string); `q` (query, optional, string); `severityFloor` (query, optional, string); `since` (query, optional, integer); `until` (query, optional, integer); `cursor` (query, optional, string); `limit` (query, optional, integer); `includeTotal` (query, optional, boolean)
 - **Success response schema:** [`TapeEventsResponse`](https://pharos.watch/openapi.json#/components/schemas/TapeEventsResponse)
 - **Policy:** authentication `X-API-Key` required; shared endpoint caching allowed (`cacheBypass: false`).
 

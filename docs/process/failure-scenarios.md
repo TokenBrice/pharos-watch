@@ -1,6 +1,6 @@
 # Curated Failure Scenarios
 
-The dossier's **How does X break?** section is a curated, hypothetical failure chain, not a simulator, a prediction, an observed compromise, or a Safety Score input. Its editorial source is `data/failure-scenarios.json`, keyed by tracked catalog ID. The types live in `shared/types/failure-scenarios.ts`; schema, content identity, and publication selection live in `shared/lib/failure-scenarios.ts`.
+The dossier's **How does X break?** section is a curated, hypothetical failure chain, not a simulator, a prediction, an observed compromise, or a Safety Score input. Its editorial source is `data/failure-scenarios.json`, keyed by tracked catalog ID. Structural schemas and their inferred public types live in `shared/types/failure-scenarios.ts`, without a runtime catalog dependency. `shared/lib/failure-scenarios.ts` strengthens them with tracked-ID and EVM-address admission, cross-record reference checks, content identity, and publication selection. Structural parsing alone never authorizes publication.
 
 The lifecycle is **draft → verify → one-time maintainer approval → monthly re-verification**. Approval binds the exact content; the monthly `scenario-verification` skill reports changes to the recorded facts for a maintainer decision, rather than renewing approval automatically.
 
@@ -46,6 +46,8 @@ Malformed, edited, future-dated, or falsified approvals return no scenario and n
 ## Monthly re-verification and falsifier suspension
 
 Run the `scenario-verification` skill monthly to re-read the facts behind each note and report drift against its recorded falsifier conditions. Preserve falsifier IDs across checks. The report should distinguish a changed fact, a met condition, an unchanged condition, and an unverified read, with the chain, block, observation date, and evidence needed for the maintainer to assess the finding. A failed or unavailable read is not evidence that a condition remains unmet.
+
+The verifier selects checks and required chains from `shared/lib/failure-scenario-checks/index.ts`. Coin checks and verifier helper/type consumers import `failure-scenario-checks/context.ts` directly; that module has no runtime imports or dependency on the registry or coin modules. Its memo is per coin per pinned run (including rejected reads), and document watches remain advisory human-review evidence.
 
 Cap's on-chain checks require complete 32-byte Safe storage words: missing, empty, malformed or short reads are unavailable, while an explicitly read zero word remains an observation. The Yearn vault check authenticates the complete reviewed EIP-1167 minimal-proxy runtime and target; a valid but different runtime is changed, and absent or malformed bytecode is unavailable. Operator lending uses exact integer comparison against one quarter of cUSD supply (USDC scaled from six to eighteen decimals): at or below 25% is changed, strictly above is holds, even when the informational percentage displays as 25.00%. These advisory outcomes request maintainer review; they never edit scenario content, evidence pins, approval stamps or hashes.
 

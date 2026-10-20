@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
+import type * as YieldRateSourcesConfig from "../../lib/yield-config/yield-config-rate-sources";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { mockRegistry } from "../../test-helpers/cron";
 import { makeChainRpcConfig } from "../../test-helpers/chain-rpc-fixtures.test-support";
@@ -50,13 +51,14 @@ vi.mock("@shared/lib/stablecoins/registry", () => {
   });
 });
 
-vi.mock("../../lib/yield-config/yield-config", () => ({
-  YIELD_VARIANT_MAP: {},
-  YIELD_POOL_MAP: {
-    "susde-ethena": "pool-susde-native",
-  },
-  YIELD_WEIGHTED_POOL_GROUPS: {},
-  EXPLICIT_YIELD_SOURCE_POOL_MAP: {},
+vi.mock("../../lib/yield-config/yield-config-variants", () => ({ YIELD_VARIANT_MAP: {} }));
+vi.mock("../../lib/yield-config/yield-config-pools", () => ({
+  YIELD_POOL_MAP: { "susde-ethena": "pool-susde-native" },
+}));
+vi.mock("../../lib/yield-config/yield-config-weighted-pools", () => ({ YIELD_WEIGHTED_POOL_GROUPS: {} }));
+vi.mock("../../lib/yield-config/yield-config-explicit-pools", () => ({ EXPLICIT_YIELD_SOURCE_POOL_MAP: {} }));
+vi.mock("../../lib/yield-config/yield-config-rate-sources", async (importOriginal) => ({
+  ...await importOriginal<typeof YieldRateSourcesConfig>(),
   ON_CHAIN_RATE_CONFIGS: [
     {
       stablecoinId: "susde-ethena",
@@ -76,10 +78,12 @@ vi.mock("../../lib/yield-config/yield-config", () => ({
       tvlRead: { kind: "erc4626-total-assets", decimals: 18 },
     },
   ],
-  LENDING_PROTOCOL_ALLOWLIST: new Set(),
-  LENDING_PROTOCOL_LABELS: {},
   PRICE_DERIVED_FALLBACK_IDS: new Set(),
   RATE_DERIVED_CONFIGS: [],
+}));
+vi.mock("../../lib/yield-config/yield-config-lending-protocols", () => ({
+  LENDING_PROTOCOL_ALLOWLIST: new Set(),
+  LENDING_PROTOCOL_LABELS: {},
   AUTO_LENDING_POOL_MAP: {},
   AUTO_LENDING_SAFETY_BYPASS_IDS: new Set(),
   isAutoLendingCollisionBlockedForStablecoin: () => false,

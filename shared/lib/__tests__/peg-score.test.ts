@@ -1,8 +1,7 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { makePegEvent as makeEvent } from "@shared/test-utils/peg-fixtures";
 import {
   computePegScore,
-  computePegScoreWithWindow,
   computeRecentPegStats,
   coinTrackingStart,
   PEG_SCORE_LOOKBACK_SEC,
@@ -50,7 +49,7 @@ describe("computePegScore", () => {
   });
 
   it("returns null pegScore with stable defaults when no tracking start exists", () => {
-    const result = computePegScore([], null, NOW);
+    const result = computePegScore([], coinTrackingStart([], NOW - PEG_SCORE_LOOKBACK_SEC), NOW);
 
     expect(result).toMatchObject({
       pegScore: null,
@@ -71,6 +70,18 @@ describe("computePegScore", () => {
     expect(result.pegScore).toBe(100);
     expect(result.pegPct).toBeCloseTo(100);
     expect(result.severityScore).toBeCloseTo(100);
+  });
+
+  it("scores the explicit four-year window while preserving a younger first-seen anchor", () => {
+    const events = [makeEvent({ startedAt: NOW - 10 * DAY, endedAt: NOW - 9 * DAY, peakDeviationBps: -200 })];
+    for (const [firstSeen, trackingSpanDays] of [[NOW - 120 * DAY, 120], [NOW - 10 * 365 * DAY, 1461]]) {
+      const start = coinTrackingStart(events, NOW - PEG_SCORE_LOOKBACK_SEC, firstSeen);
+      expect(computePegScore(events, start, NOW)).toMatchObject({
+        eventCount: 1,
+        trackingSpanDays,
+        worstDeviationBps: -200,
+      });
+    }
   });
 
   it("penalizes active depeg events", () => {
@@ -235,50 +246,6 @@ describe("computePegScore", () => {
       const result = computePegScore([eventAtOffset(80, 1), eventAtOffset(40, 100_000)] as never, start, NOW);
       expect(result.spreadPenalty).toBe(15);
     });
-  });
-});
-
-describe("computePegScoreWithWindow", () => {
-  const windowNow = 1_700_000_000;
-
-  const nullCases = [
-    {
-      name: "returns null for NAV tokens",
-      isNavToken: true,
-      events: [],
-      earliestTrackingDate: windowNow - 30 * DAY,
-    },
-    {
-      name: "returns null when events are missing",
-      isNavToken: false,
-      events: null,
-      earliestTrackingDate: windowNow - 30 * DAY,
-    },
-  ];
-
-  it.each(nullCases)("$name", ({ isNavToken, events, earliestTrackingDate }) => {
-    expect(computePegScoreWithWindow(isNavToken, events as never, earliestTrackingDate)).toBeNull();
-  });
-
-  it("uses earliestTrackingDate when provided", () => {
-    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(windowNow * 1000);
-    try {
-      const events = [
-        makeEvent({
-          startedAt: windowNow - 10 * DAY,
-          endedAt: windowNow - 9 * DAY,
-          peakDeviationBps: -200,
-        }),
-      ];
-      const result = computePegScoreWithWindow(false, events as never, windowNow - 120 * DAY);
-
-      expect(result).not.toBeNull();
-      expect(result!.eventCount).toBe(1);
-      expect(result!.trackingSpanDays).toBe(120);
-      expect(result!.worstDeviationBps).toBe(-200);
-    } finally {
-      nowSpy.mockRestore();
-    }
   });
 });
 

@@ -304,6 +304,7 @@ export async function handleTelegramMessageUpdate(args: {
     }
     const resumeStoredCommand = Boolean(
       parsedCommand
+      && COMMAND_HANDLERS[parsedCommand.command]
       && effectFence?.storedIntent
       && (
         storedSelection

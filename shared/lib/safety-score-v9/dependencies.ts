@@ -68,7 +68,7 @@ export interface V9SuppressedDependencyRole {
   suppressedEdgeKey: string;
   selectedRole: V9DependencyEconomicRole;
   suppressedRole: V9DependencyEconomicRole;
-  reason: "serial-role-dominates" | "duplicate-serial-role" | "duplicate-role";
+  reason: "serial-role-dominates" | "duplicate-serial-role";
 }
 
 export interface V9CommonModeMember {
@@ -386,30 +386,8 @@ function selectDependencyRoles(assets: readonly V9DependencyPlanningAsset[]): {
         continue;
       }
 
-      const byRoleAndEdge = new Map<string, V9DependencyPlanningEdge[]>();
       for (const edge of edges) {
-        const key = `${edge.economicRole}\u0000${edge.edgeKey}`;
-        byRoleAndEdge.set(key, [...(byRoleAndEdge.get(key) ?? []), edge]);
-      }
-      for (const role of V9_DEPENDENCY_ECONOMIC_ROLES.filter((candidate) => candidate !== "serial-claim")) {
-        const edgeGroups = [...byRoleAndEdge.entries()]
-          .filter(([key]) => key.startsWith(`${role}\u0000`))
-          .sort(([left], [right]) => compareText(left, right));
-        for (const [, roleEdges] of edgeGroups) {
-          const path = coalescedPath(asset.assetId, upstreamAssetId, roleEdges);
-          paths.push(path);
-          for (const edge of roleEdges.slice(1)) {
-            suppressed.push({
-              assetId: asset.assetId,
-              upstreamAssetId,
-              selectedEdgeKey: path.edgeKey,
-              suppressedEdgeKey: edge.edgeKey,
-              selectedRole: path.role,
-              suppressedRole: edge.economicRole,
-              reason: "duplicate-role",
-            });
-          }
-        }
+        paths.push(coalescedPath(asset.assetId, upstreamAssetId, [edge]));
       }
     }
   }

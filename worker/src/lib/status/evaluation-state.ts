@@ -1,8 +1,9 @@
-import { clampConfidence, type StatusLevel } from "../status-reliability-shared";
+import type { StatusHealthValue } from "@shared/types/status/core";
+import { clampConfidence } from "../status-reliability-shared";
 
 export function scoreStatusConfidence(input: {
-  availabilityStatus: StatusLevel;
-  dataQualityStatus: StatusLevel;
+  availabilityStatus: StatusHealthValue;
+  dataQualityStatus: StatusHealthValue;
   unhealthyCrons: number;
   degradedCrons: number;
   diagnosticIssueCount: number;

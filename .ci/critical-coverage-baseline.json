@@ -210,6 +210,7 @@
     "worker/src/lib/safety-score-v9/consumer-freshness.ts": 100,
     "worker/src/lib/safety-score-v9/cosmos-bank-observer.ts": 98.1,
     "worker/src/lib/safety-score-v9/curated-single-route-supply.ts": 100,
+    "worker/src/lib/safety-score-v9/economic-supply-observer-readers.ts": 100,
     "worker/src/lib/safety-score-v9/economic-supply-observer.ts": 90.8,
     "worker/src/lib/safety-score-v9/extension-access-lookthrough.ts": 100,
     "worker/src/lib/safety-score-v9/extension-bridge.ts": 100,

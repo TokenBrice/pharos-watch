@@ -386,28 +386,6 @@ export function quarantineProtocolTvlOutliers(
   };
 }
 
-export function applyRebuiltMetrics(
-  metric: LiquidityMetrics,
-  rebuilt: ReturnType<typeof rebuildMetricsFromPools>,
-): void {
-  metric.protocolTvl = rebuilt.protocolTvl;
-  metric.chainTvl = rebuilt.chainTvl;
-  metric.totalTvlUsd = rebuilt.totalTvlUsd;
-  metric.poolCount = rebuilt.poolCount;
-  metric.chains = rebuilt.chains;
-  metric.pairs = rebuilt.pairs;
-  metric.qualityAdjustedTvl = rebuilt.qualityAdjustedTvl;
-  metric.effectiveTvl = rebuilt.effectiveTvl;
-  metric.balanceRatioWeightedSum = rebuilt.balanceRatioWeightedSum;
-  metric.totalTvlForBalance = rebuilt.totalTvlForBalance;
-  metric.organicTvlWeightedSum = rebuilt.organicTvlWeightedSum;
-  metric.totalTvlForOrganic = rebuilt.totalTvlForOrganic;
-  metric.stressWeightedSum = rebuilt.stressWeightedSum;
-  metric.oldestPoolDays = rebuilt.oldestPoolDays;
-  metric.lockedLiqWeightedSum = rebuilt.lockedLiqWeightedSum;
-  metric.totalTvlForLocked = rebuilt.totalTvlForLocked;
-  metric.topPools = rebuilt.visiblePools;
-}
 
 export interface GlobalPoolAggregateEntry {
   tvl: number;

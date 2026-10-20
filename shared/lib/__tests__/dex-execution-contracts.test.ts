@@ -13,6 +13,20 @@ import {
   type DexCensusAttemptResult,
 } from "../dex-deployment-coverage";
 import { CURVE_R3_METAPOOL_POLICIES, CURVE_DOLA_SUSDE_RATE_BEARING_POLICY, CURVE_USD1_METAPOOL_POLICY, CURVE_NXUSD_METAPOOL_POLICY } from "../curve-composite-policies";
+import { CURVE_POOL_CONFIGS } from "../curve-pool-configs";
+import curveExpandedPostA19 from "./fixtures/curve-expanded-post-a19.json";
+
+describe("Curve authored configuration equivalence", () => {
+  it("preserves every expanded post-A19 route and policy, including own optional keys and order", () => {
+    const policies = [CURVE_DOLA_SUSDE_RATE_BEARING_POLICY, CURVE_USD1_METAPOOL_POLICY,
+      CURVE_NXUSD_METAPOOL_POLICY, ...CURVE_R3_METAPOOL_POLICIES];
+    expect(CURVE_POOL_CONFIGS).toHaveLength(36);
+    expect(policies).toHaveLength(13);
+    // Strict equality distinguishes omitted optional keys from own undefined keys,
+    // including nested hop, token role, rate-provider and base-pool descriptors.
+    expect({ routes: CURVE_POOL_CONFIGS, policies }).toStrictEqual(curveExpandedPostA19);
+  });
+});
 
 describe("DEX capability gates", () => {
   it("keeps every exact composite policy shadow even under a profile-wide active registration", () => {
@@ -111,10 +125,16 @@ describe("DEX census contracts", () => {
     expect(isDexCensusAttemptComplete("current", "bounded_pending")).toBe(false);
   });
 
-  it("owns provider scope, pricing, order, timeout, and future leaf identities in one registry", () => {
+  it("owns unique provider identities, scope, request cost, execution order, and crawler leaves", () => {
     const ids = DEX_DISCOVERY_PROVIDER_REGISTRY.map((entry) => entry.providerId);
     expect(new Set(ids).size).toBe(ids.length);
-    expect(DEX_DISCOVERY_PROVIDER_REGISTRY.every((entry) => entry.requestCostMs >= 0 && entry.timeoutMs > 0)).toBe(true);
+    const orders = DEX_DISCOVERY_PROVIDER_REGISTRY.map((entry) => entry.executionOrder);
+    expect(new Set(orders).size).toBe(orders.length);
+    for (const entry of DEX_DISCOVERY_PROVIDER_REGISTRY) {
+      expect(entry.requestCostMs).toBeGreaterThanOrEqual(0);
+      expect(["exhaustive", "paginated-exhaustive", "supplemental"]).toContain(entry.scope);
+      expect(entry.crawlerLeaf).toBeTruthy();
+    }
     expect(ids).toContain("aquarius");
   });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { initMetrics } from "../pool-helpers";
+import { initSourcePoolGraph } from "../pool-helpers";
 import { createSlotDeadline, type SlotDeadline } from "../../../lib/cron-timeouts";
 import {
   EVM_V2_EXECUTION_DEPLOYMENTS,
@@ -54,9 +54,9 @@ function makeEnrichment(options: {
   run: (extra?: { deadline?: SlotDeadline }) => Promise<void>;
 } {
   const candidate = replayCandidate(REPLAY);
-  const metric = initMetrics(REPLAY.assetId, REPLAY.stablecoinSymbol);
+  const metric = initSourcePoolGraph(REPLAY.assetId, REPLAY.stablecoinSymbol);
   const pool = replayPool(REPLAY, candidate);
-  metric.topPools.push(pool);
+  metric.pools.push(pool);
   const { chainAddressToId, contractMetaByChainAddress } = replayTokenLookups(REPLAY);
   const deployment = EVM_V2_EXECUTION_DEPLOYMENTS.find(
     (entry) => entry.source === "pancakeswap-v2",

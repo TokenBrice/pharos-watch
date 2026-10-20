@@ -24,8 +24,9 @@ import type {
 import type { CurvePoolEntry, LlamaPool } from "../types";
 import { processPoolMetrics } from "../process-pools";
 import { computeLiquidityScore } from "../pool-helpers";
-import { applyRebuiltMetrics, rebuildMetricsFromPools, summarizeRetainedPoolVolume } from "../scoring-helpers";
+import { summarizeRetainedPoolVolume } from "../scoring-helpers";
 import { DEX_VOLUME_OBSERVATION_MAX_AGE_SEC } from "@shared/lib/dex-volume-availability";
+import { scorePoolGraph } from "./scoring-test-builders";
 
 const buildCurveStableswapExecutionModel = (
   curveData: CurvePoolEntry | undefined,
@@ -167,9 +168,8 @@ describe("buildCurveStableswapExecutionModel", () => {
         uniV3PoolFees: new Map(), uniV3SymbolFees: new Map(), volumeObservedAtSec: 1_000,
       });
       expect(rejections).toEqual([]);
-      const metric = metrics.get("usdc-circle")!;
+      const metric = scorePoolGraph(metrics.get("usdc-circle")!);
       expect(metric.topPools[0]?.extra?.measurement?.balanceMeasured).toBe(true);
-      applyRebuiltMetrics(metric, rebuildMetricsFromPools(metric.topPools));
       metric.volumeAvailability = summarizeRetainedPoolVolume(
         metric.topPools.map((pool) => ({ reading: pool.volumeReading, tvlUsd: pool.tvlUsd })),
         { asOfSec: 1_000, maxObservationAgeSec: DEX_VOLUME_OBSERVATION_MAX_AGE_SEC },
@@ -207,8 +207,7 @@ describe("buildCurveStableswapExecutionModel", () => {
       symbolToChainScopedIds: new Map(), curvePoolMap: new Map([[`ethereum:${poolAddress}`, curveData]]),
       uniV3PoolFees: new Map(), uniV3SymbolFees: new Map(), volumeObservedAtSec: 1_000,
     });
-    const metric = metrics.get("usdc-circle")!;
-    applyRebuiltMetrics(metric, rebuildMetricsFromPools(metric.topPools));
+    const metric = scorePoolGraph(metrics.get("usdc-circle")!);
     expect(metric.totalTvlUsd).toBe(2_000_000);
     expect(metric.qualityAdjustedTvl).toBe(1_700_000);
     expect(metric.effectiveTvl).toBe(1_700_000);

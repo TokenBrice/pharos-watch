@@ -6,7 +6,7 @@ import type { V9EconomicControlAssetFacts } from "@shared/lib/safety-score-v9/co
 import type { BridgeRouteRiskProfile } from "@shared/types/core";
 import type { SafetyScoreV9CompilerInput } from "../safety-score-v9/native-input";
 import type { SafetyScoreV9FactSetExtensionV2 } from "../safety-score-v9/fact-set-schema";
-import { evaluateV9EconomicControlAssetFacts } from "@shared/lib/safety-score-v9/control";
+import { evaluateV9EconomicControl } from "@shared/lib/safety-score-v9/control";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { boundedUnknown, makeDeploymentControl, makeEconomicControlFacts, noBridgeReview, noMintReview, noOracleReview, requiredKnown } from "@shared/lib/__tests__/safety-score-v9-fixtures.test-support";
 import { adaptBridgeReview } from "../safety-score-v9/extension-bridge";
@@ -125,9 +125,9 @@ describe("reviewed attribution-only provider-row exclusion", () => {
       supply: { ...supply, status: requiredKnown("supply") },
     };
     const review = { assetId: facts.assetId, mint: noMintReview(), oracle: noOracleReview(), bridge: noBridgeReview() };
-    const admitted = evaluateV9EconomicControlAssetFacts(facts, review, V9_CANDIDATE_POLICY_V1);
+    const admitted = evaluateV9EconomicControl({ facts: facts, ...review, policy: V9_CANDIDATE_POLICY_V1 });
     const { providerRowExclusions: _exclusions, ...baselineSupply } = facts.supply;
-    const baseline = evaluateV9EconomicControlAssetFacts({ ...facts, supply: baselineSupply }, review, V9_CANDIDATE_POLICY_V1);
+    const baseline = evaluateV9EconomicControl({ facts: { ...facts, supply: baselineSupply }, ...review, policy: V9_CANDIDATE_POLICY_V1 });
     expect(unresolvedDeploymentCohort(facts, controls).share).toBeCloseTo(0.1);
     expect(unresolvedDeploymentCohort({ ...facts, supply: baselineSupply }, controls).share).toBeCloseTo(0.2);
     expect(baseline.reasons).toContainEqual(expect.objectContaining({ code: "unresolved-control-identity", path: "controls", controlKey: null }));
@@ -160,8 +160,8 @@ describe("reviewed attribution-only provider-row exclusion", () => {
       supply: { ...supply, status: requiredKnown("supply") },
     };
     const review = { assetId: meta.id, mint: noMintReview(), oracle: noOracleReview(), bridge: baselineBridge.review };
-    const baseline = evaluateV9EconomicControlAssetFacts({ ...facts, supply: { ...baselineSupply, status: requiredKnown("supply") } }, review, V9_CANDIDATE_POLICY_V1);
-    const admitted = evaluateV9EconomicControlAssetFacts(facts, review, V9_CANDIDATE_POLICY_V1);
+    const baseline = evaluateV9EconomicControl({ facts: { ...facts, supply: { ...baselineSupply, status: requiredKnown("supply") } }, ...review, policy: V9_CANDIDATE_POLICY_V1 });
+    const admitted = evaluateV9EconomicControl({ facts: facts, ...review, policy: V9_CANDIDATE_POLICY_V1 });
     expect(baseline.reasons).toContainEqual(expect.objectContaining({
       code: unreviewed ? "runtime-bridge-materiality-unavailable" : "material-bridge-supply-unmatched",
     }));

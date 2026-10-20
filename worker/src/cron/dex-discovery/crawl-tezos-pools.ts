@@ -4,7 +4,7 @@ import {
   isTezosDiscoveryDeployment,
 } from "@shared/lib/dex-deployment-coverage";
 import type { ContractDeployment } from "@shared/types/core";
-import { DEX_PRICE_OBSERVATION_MIN_TVL_USD, USER_AGENT } from "../../lib/constants";
+import { USER_AGENT } from "../../lib/constants";
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import { isPlausibleDexObservationPrice } from "../dex-liquidity/price-sanity";
 import { DEX_LIQUIDITY_POOL_MIN_TVL_USD } from "../dex-liquidity/constants";
@@ -475,20 +475,6 @@ export async function crawlTezosPoolsStage(input: {
     observedPoolCount++;
     if (!input.context.hasKnownPool(evaluation.pool.poolId)) {
       input.context.addPool(evaluation.pool);
-    }
-    if (
-      evaluation.pool.priceUsd != null &&
-      evaluation.pool.tvlUsd != null &&
-      evaluation.pool.tvlUsd >= DEX_PRICE_OBSERVATION_MIN_TVL_USD
-    ) {
-      input.context.addPriceObs({
-        stablecoinId: input.context.stablecoinId,
-        price: evaluation.pool.priceUsd,
-        observedAt: evaluation.pool.refreshedAt,
-        tvl: evaluation.pool.tvlUsd,
-        chain: target.chain,
-        protocol: evaluation.pool.dexId ?? evaluation.pool.protocol,
-      });
     }
   }
 

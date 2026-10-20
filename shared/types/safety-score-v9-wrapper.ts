@@ -6,7 +6,7 @@ import {
   V9FactStatusV2Schema,
 } from "./safety-score-v9-fact-primitives";
 import { V9IncidentScopeSchema } from "./safety-score-v9-incidents";
-import { CanonicalTextSchema } from "./safety-schema-primitives";
+import { issue, CanonicalTextSchema } from "./safety-schema-primitives";
 
 export const V9WrapperFormSchema = z.enum(["pure", "native-staked", "strategy-vault"]);
 export type V9WrapperForm = z.infer<typeof V9WrapperFormSchema>;
@@ -65,10 +65,7 @@ const V9WrapperLocalDimensionFactSchema = z
             postures.findIndex((candidate) => candidate.incidentId === posture.incidentId) !== index,
         );
         if (duplicate !== undefined) {
-          ctx.addIssue({
-            code: "custom",
-            message: `Duplicate wrapper incident posture: ${duplicate.incidentId}`,
-          });
+          issue(ctx, undefined, `Duplicate wrapper incident posture: ${duplicate.incidentId}`);
         }
       })
       .transform((postures) =>
@@ -88,11 +85,7 @@ const V9WrapperLocalDimensionFactSchema = z
       return;
     }
     if (fact.assessment !== null) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["assessment"],
-        message: "Unavailable or not-applicable wrapper facts cannot claim a risk assessment",
-      });
+      issue(ctx, ["assessment"], "Unavailable or not-applicable wrapper facts cannot claim a risk assessment");
     }
   });
 export type V9WrapperLocalDimensionFact = z.infer<typeof V9WrapperLocalDimensionFactSchema>;
@@ -142,11 +135,7 @@ const V9WrapperRiskTransferFactSchema = z
         (fact.mechanism === "none") !==
         (fact.maximumParentLossAbsorptionPoints === 0)
       ) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["maximumParentLossAbsorptionPoints"],
-          message: "Reviewed risk-transfer credit requires an explicit loss-absorption mechanism",
-        });
+        issue(ctx, ["maximumParentLossAbsorptionPoints"], "Reviewed risk-transfer credit requires an explicit loss-absorption mechanism");
       }
       return;
     }
@@ -154,10 +143,7 @@ const V9WrapperRiskTransferFactSchema = z
       fact.mechanism !== (fact.disposition === "not-applicable" ? "none" : "unknown") ||
       fact.maximumParentLossAbsorptionPoints !== 0
     ) {
-      ctx.addIssue({
-        code: "custom",
-        message: "Unavailable risk transfer must be unknown and zero; not-applicable risk transfer must be none and zero",
-      });
+      issue(ctx, undefined, "Unavailable risk transfer must be unknown and zero; not-applicable risk transfer must be none and zero");
     }
   });
 
@@ -191,11 +177,7 @@ const V9ApplicableWrapperLocalFactsSchema = z
   .strict()
   .superRefine((facts, ctx) => {
     if (facts.formDisposition === "reviewed" && facts.formEvidenceRefIds.length === 0) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["formEvidenceRefIds"],
-        message: "Reviewed wrapper form requires evidence",
-      });
+      issue(ctx, ["formEvidenceRefIds"], "Reviewed wrapper form requires evidence");
     }
   });
 

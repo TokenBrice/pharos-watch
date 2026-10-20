@@ -1,12 +1,11 @@
+import type { L2BeatRiskSentiment, L2BeatStage } from "../../types/chains";
 import {
   L2BEAT_CHAIN_ALIASES,
   L2BEAT_CHAIN_RISK_FIELDS,
   L2BEAT_CHAIN_RISK_SNAPSHOT,
   type L2BeatChainRiskSnapshot,
   type L2BeatRiskField,
-  type L2BeatRiskSentiment,
   type L2BeatRiskValue,
-  type L2BeatStage,
 } from "./l2beat-risk-snapshot";
 
 export * from "./l2beat-risk-snapshot";

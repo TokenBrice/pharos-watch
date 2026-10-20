@@ -4,7 +4,6 @@ import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-sche
 import { persistPendingDisambiguationRow } from "../../store/disambiguation";
 import { resolveTicker } from "../../common/alerts-parser";
 import { TELEGRAM_SUBSCRIBABLE_STABLECOINS } from "../../store/subscription-eligibility";
-import { encodeWatchlistTokenV3, WATCHLIST_TOKEN_REGISTRY_VERSION } from "../../mini-app/watchlist-token";
 import {
   fetchSpy,
   handleTelegramWebhook,
@@ -14,7 +13,6 @@ import {
   resetTelegramWebhookTest,
   makeTelegramWebhookDb,
   fixtureTelegramApiCallBody,
-  encodeWatchlistToken,
   latestSendMessageBody,
   inlineButtons,
   mockTelegramMembership,
@@ -82,13 +80,12 @@ describe("handleTelegramWebhook", () => {
     expect(sqlite.prepare("SELECT feature, count FROM telegram_adoption_daily WHERE stage = 'first_follow'").all())
       .toEqual([{ feature: route.feature, count: 1 }]);
   });
-  it.each(["direct", "global", "import"] as const)("records a first %s follow on bulk confirmation, not preview or replay", async (kind) => {
+  it.each(["direct", "global"] as const)("records a first %s follow on bulk confirmation, not preview or replay", async (kind) => {
     const { sqlite, db } = fixtures.open();
     const now = 1_800_000_000;
     vi.spyOn(Date, "now").mockReturnValue(now * 1000);
-    const token = encodeWatchlistToken({ coinIds: ["usdc-circle"], alertTypes: ["dews"], presetIds: [] });
     const coins = TELEGRAM_SUBSCRIBABLE_STABLECOINS.slice(0, 11).map((coin) => coin.id).join(" ");
-    const text = kind === "import" ? `/import ${token}` : `/subscribe dews ${kind === "global" ? "all" : coins}`;
+    const text = `/subscribe dews ${kind === "global" ? "all" : coins}`;
     await handleTelegramWebhook(db, makeWebhookRequest(123, text, "test-secret", { updateId: 9801 }), "test-secret", "bot-token");
     expect(sqlite.prepare("SELECT count(*) AS count FROM telegram_adoption_daily WHERE stage = 'first_follow'").get()).toEqual({ count: 0 });
     const callback = callbackFromLatest("confirm:");
@@ -98,19 +95,14 @@ describe("handleTelegramWebhook", () => {
     expect(sqlite.prepare("SELECT feature, count FROM telegram_adoption_daily WHERE stage = 'first_follow'").all())
       .toEqual([{ feature: kind === "global" ? "global" : "direct", count: 1 }]);
   });
-  it.each(["unsubscribe", "import"] as const)("rejects a subscribe keyboard after replacement by %s and applies the fresh flow once", async (replacement) => {
+  it("rejects a subscribe keyboard after replacement by unsubscribe and applies the fresh flow once", async () => {
     const { sqlite, db } = fixtures.open();
     let now = 1_800_000_000;
     vi.spyOn(Date, "now").mockImplementation(() => now * 1000);
     await handleTelegramWebhook(db, makeWebhookRequest(123, "/subscribe dews all", "test-secret", { updateId: 9001 }), "test-secret", "bot-token");
     const oldConfirm = callbackFromLatest("confirm:");
-    const token = encodeWatchlistToken({ coinIds: ["usdt-tether"], alertTypes: ["depeg"], presetIds: [] });
     now += 31;
-    if (replacement === "import") {
-      // /import deliberately cannot escape a pending confirmation; cancel it first.
-      await handleTelegramWebhook(db, makeWebhookRequest(123, "/cancel", "test-secret", { updateId: 9006 }), "test-secret", "bot-token");
-    }
-    await handleTelegramWebhook(db, makeWebhookRequest(123, replacement === "import" ? `/import ${token}` : "/unsubscribe all",
+    await handleTelegramWebhook(db, makeWebhookRequest(123, "/unsubscribe all",
       "test-secret", { updateId: 9002 }), "test-secret", "bot-token");
     const freshConfirm = callbackFromLatest("confirm:");
     expect(freshConfirm).not.toBe(oldConfirm);
@@ -124,9 +116,7 @@ describe("handleTelegramWebhook", () => {
     expect(sqlite.prepare("SELECT * FROM telegram_subscriptions").all()).toEqual([]);
     expect(fixtureTelegramApiCallBody<{ text: string }>(fetchSpy, "answerCallbackQuery").text).toMatch(/re-run/i);
     await handleTelegramWebhook(db, makeCallbackRequest(freshConfirm, { updateId: 9004 }), "test-secret", "bot-token");
-    expect(sqlite.prepare("SELECT stablecoin_id, alert_depeg FROM telegram_subscriptions").all()).toEqual(
-      replacement === "import" ? [{ stablecoin_id: "usdt-tether", alert_depeg: 1 }] : [],
-    );
+    expect(sqlite.prepare("SELECT stablecoin_id, alert_depeg FROM telegram_subscriptions").all()).toEqual([]);
     expect(sqlite.prepare("SELECT * FROM telegram_pending_disambiguation").all()).toEqual([]);
     const after = sqlite.prepare("SELECT * FROM telegram_subscribers").all();
     await handleTelegramWebhook(db, makeCallbackRequest(freshConfirm, { updateId: 9004 }), "test-secret", "bot-token");
@@ -201,15 +191,7 @@ describe("handleTelegramWebhook", () => {
     await command("/unsubscribe all");
     await command("/forget");
     expect(callbackFromLatest("confirm:")).toMatch(/^confirm:forget:/);
-    await command("/cancel"); // Import retains pending reminders rather than replacing them.
-    await command(`/import ${encodeWatchlistToken({ coinIds: [longest.id], alertTypes: ["dews"], presetIds: [] })}`);
-    const portable = await encodeWatchlistTokenV3({
-      registryVersion: WATCHLIST_TOKEN_REGISTRY_VERSION, direct: [],
-      presets: [{ presetId: "usd-top25", alertDews: true, alertDepeg: true, alertSafety: false, depegWorseningBpsStep: null }],
-    });
     await command("/cancel");
-    await command(`/import ${portable}`);
-    expect(callbackFromLatest("confirm:")).toMatch(/^confirm:bulk:/);
     const ambiguous = TELEGRAM_SUBSCRIBABLE_STABLECOINS.map((coin) => resolveTicker(coin.symbol))
       .flatMap((match) => match.status === "ambiguous" && match.matches.length <= 5 ? [match] : [])
       .sort((left, right) => right.matches.length - left.matches.length)[0];

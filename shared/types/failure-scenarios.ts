@@ -5,141 +5,126 @@
  * its exact content (see `review`).
  */
 
-/** How strongly a claim is supported, kept separate from plausibility/severity. */
-export type FailureScenarioEvidence = "verified-onchain" | "documented" | "inferred" | "unverified";
+import { z } from "zod";
+import { CanonicalTextSchema, Sha256Schema, StrictIsoDateSchema } from "./safety-schema-primitives";
+import { HttpUrlSchema } from "./validators";
 
-export type FailureScenarioStageKind =
-  | "premise"
-  | "authority-capture"
-  | "governance"
-  | "mint-or-upgrade"
-  | "market-shock"
-  | "counterparty-failure"
-  | "redemption-blocked"
-  | "holder-outcome";
+const EvidenceSchema = z.enum(["verified-onchain", "documented", "inferred", "unverified"]);
+const TimestampSchema = z.iso.datetime({ offset: true });
+const ObservationDateSchema = z.union([StrictIsoDateSchema, TimestampSchema]);
+const BlockSchema = z.number().int().nonnegative();
+const ChainIdSchema = z.number().int().positive();
+const SourceIdsSchema = z.array(CanonicalTextSchema);
 
-export interface FailureScenarioTarget {
-  label: string;
-  address: `0x${string}`;
-  chainId: number;
-}
+export const FailureScenarioStageSchema = z.object({
+  id: CanonicalTextSchema,
+  kind: z.enum([
+    "premise", "authority-capture", "governance", "mint-or-upgrade", "market-shock",
+    "counterparty-failure", "redemption-blocked", "holder-outcome",
+  ]),
+  title: CanonicalTextSchema,
+  actor: CanonicalTextSchema,
+  action: CanonicalTextSchema,
+  actionIsCode: z.boolean().optional(),
+  targets: z.array(z.object({
+    label: CanonicalTextSchema,
+    address: z.templateLiteral(["0x", z.string()]),
+    chainId: ChainIdSchema,
+  }).strict()).optional(),
+  elapsed: CanonicalTextSchema,
+  cost: CanonicalTextSchema,
+  missingDefense: CanonicalTextSchema.optional(),
+  explanation: CanonicalTextSchema,
+  evidence: EvidenceSchema,
+  sourceIds: SourceIdsSchema,
+}).strict();
 
-export interface FailureScenarioStage {
-  id: string;
-  kind: FailureScenarioStageKind;
-  title: string;
-  actor: string;
-  /** Exact call or action; rendered monospace when `actionIsCode` is true. */
-  action: string;
-  actionIsCode?: boolean;
-  targets?: FailureScenarioTarget[];
-  /** Position on the scenario clock, e.g. "T+0", "T+7d". */
-  elapsed: string;
-  /** Duration or cost of this stage, e.g. "one transaction". */
-  cost: string;
-  /** The safeguard that is absent at this hop; rendered on the connector. */
-  missingDefense?: string;
-  explanation: string;
-  evidence: FailureScenarioEvidence;
-  sourceIds: string[];
-}
+export const FailureScenarioStructuralSchema = z.object({
+  coinId: CanonicalTextSchema,
+  title: CanonicalTextSchema,
+  thesis: CanonicalTextSchema,
+  premise: CanonicalTextSchema,
+  stages: z.array(FailureScenarioStageSchema).min(1),
+  branchPoint: z.object({
+    afterStageId: CanonicalTextSchema,
+    branches: z.array(z.object({
+      id: CanonicalTextSchema,
+      label: CanonicalTextSchema,
+      keys: CanonicalTextSchema,
+      premise: CanonicalTextSchema,
+      stages: z.array(FailureScenarioStageSchema).min(1),
+    }).strict()).min(2),
+  }).strict().optional(),
+  keyFigures: z.array(z.object({
+    value: CanonicalTextSchema,
+    label: CanonicalTextSchema,
+    evidence: EvidenceSchema,
+    sourceIds: SourceIdsSchema,
+  }).strict()),
+  window: z.object({
+    label: CanonicalTextSchema,
+    fromStageId: CanonicalTextSchema,
+    toStageId: CanonicalTextSchema,
+    duration: CanonicalTextSchema,
+    note: CanonicalTextSchema,
+  }).strict().optional(),
+  defenders: z.array(z.object({
+    name: CanonicalTextSchema,
+    verdict: z.enum(["cannot-stop", "partial", "can-stop", "unverified"]),
+    why: CanonicalTextSchema,
+    evidence: EvidenceSchema,
+    sourceIds: SourceIdsSchema,
+  }).strict()),
+  falsifiers: z.array(z.object({
+    id: CanonicalTextSchema,
+    condition: CanonicalTextSchema,
+    status: z.enum(["not-met", "met", "unverified"]),
+    checkedAtBlock: BlockSchema.optional(),
+  }).strict()),
+  exposure: z.array(z.object({
+    label: CanonicalTextSchema,
+    detail: CanonicalTextSchema,
+    evidence: EvidenceSchema,
+  }).strict()),
+  sources: z.array(z.object({
+    id: CanonicalTextSchema,
+    label: CanonicalTextSchema,
+    url: HttpUrlSchema.transform((value) => value as `http${string}`),
+    observedAt: ObservationDateSchema.optional(),
+    block: BlockSchema.optional(),
+  }).strict()),
+  evidencePin: z.object({
+    chainId: ChainIdSchema,
+    block: BlockSchema,
+    observedAt: ObservationDateSchema,
+  }).strict(),
+  review: z.discriminatedUnion("status", [
+    z.object({ status: z.literal("draft"), note: CanonicalTextSchema.optional() }).strict(),
+    z.object({
+      status: z.literal("approved"),
+      reviewedBy: CanonicalTextSchema,
+      reviewedAt: TimestampSchema,
+      contentSha256: Sha256Schema,
+    }).strict(),
+  ]),
+}).strict();
 
-export interface FailureScenarioWindow {
-  label: string;
-  /** Inclusive stage ids the window spans. */
-  fromStageId: string;
-  toStageId: string;
-  duration: string;
-  note: string;
-}
-
-export type FailureScenarioDefenderVerdict = "cannot-stop" | "partial" | "can-stop" | "unverified";
-
-export interface FailureScenarioDefender {
-  name: string;
-  verdict: FailureScenarioDefenderVerdict;
-  why: string;
-  evidence: FailureScenarioEvidence;
-  sourceIds: string[];
-}
-
-export type FailureScenarioFalsifierStatus = "not-met" | "met" | "unverified";
-
-export interface FailureScenarioFalsifier {
-  id: string;
-  condition: string;
-  status: FailureScenarioFalsifierStatus;
-  checkedAtBlock?: number;
-}
-
-export interface FailureScenarioExposure {
-  label: string;
-  detail: string;
-  evidence: FailureScenarioEvidence;
-}
-
-export interface FailureScenarioSource {
-  id: string;
-  label: string;
-  url: `http${string}`;
-  observedAt?: string;
-  block?: number;
-}
-
-/** One way into the shared chain, e.g. "one operator key" vs "3 of 5 Safe signers". */
-export interface FailureScenarioBranch {
-  id: string;
-  label: string;
-  /** Short key/threshold label shown on the fork, e.g. "1 key", "3 of 5". */
-  keys: string;
-  /** Hypothetical precondition specific to this route. */
-  premise: string;
-  stages: FailureScenarioStage[];
-}
-
-/**
- * Alternative routes inserted after `afterStageId` in the trunk; every branch
- * rejoins the trunk at the next trunk stage.
- */
-export interface FailureScenarioBranchPoint {
-  afterStageId: string;
-  branches: FailureScenarioBranch[];
-}
-
-/** Headline numbers for the at-a-glance strip. */
-export interface FailureScenarioKeyFigure {
-  value: string;
-  label: string;
-  evidence: FailureScenarioEvidence;
-  sourceIds: string[];
-}
-
-export type FailureScenarioReview =
-  | { status: "draft"; note?: string }
-  | {
-      status: "approved";
-      reviewedBy: string;
-      reviewedAt: string;
-      /** sha256 of the canonical record without `review`; any later edit invalidates approval. */
-      contentSha256: string;
-    };
-
-export interface FailureScenario {
-  coinId: string;
-  title: string;
-  thesis: string;
-  premise: string;
-  /** Trunk stages; `branchPoint` splices alternative routes into it after `afterStageId`. */
-  stages: FailureScenarioStage[];
-  branchPoint?: FailureScenarioBranchPoint;
-  keyFigures: FailureScenarioKeyFigure[];
-  window?: FailureScenarioWindow;
-  defenders: FailureScenarioDefender[];
-  falsifiers: FailureScenarioFalsifier[];
-  exposure: FailureScenarioExposure[];
-  sources: FailureScenarioSource[];
-  evidencePin: { chainId: number; block: number; observedAt: string };
-  review: FailureScenarioReview;
-}
-
+export type FailureScenario = z.output<typeof FailureScenarioStructuralSchema>;
+export type FailureScenarioStage = FailureScenario["stages"][number];
+export type FailureScenarioStageKind = FailureScenarioStage["kind"];
+export type FailureScenarioEvidence = FailureScenarioStage["evidence"];
+export type FailureScenarioTarget = NonNullable<FailureScenarioStage["targets"]>[number];
+export type FailureScenarioWindow = NonNullable<FailureScenario["window"]>;
+export type FailureScenarioDefender = FailureScenario["defenders"][number];
+export type FailureScenarioDefenderVerdict = FailureScenarioDefender["verdict"];
+export type FailureScenarioFalsifier = FailureScenario["falsifiers"][number];
+export type FailureScenarioFalsifierStatus = FailureScenarioFalsifier["status"];
+export type FailureScenarioExposure = FailureScenario["exposure"][number];
+export type FailureScenarioSource = FailureScenario["sources"][number];
+/** Alternative routes rejoin at the next trunk stage, never run sequentially. */
+export type FailureScenarioBranchPoint = NonNullable<FailureScenario["branchPoint"]>;
+export type FailureScenarioBranch = FailureScenarioBranchPoint["branches"][number];
+export type FailureScenarioKeyFigure = FailureScenario["keyFigures"][number];
+/** Approval binds canonical content excluding this review object. */
+export type FailureScenarioReview = FailureScenario["review"];
 export type FailureScenariosById = Record<string, FailureScenario>;

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-import type { DigestInputData } from "@shared/types/digest";
+import type { DigestEditorialCandidate, DigestInputData } from "@shared/types/digest";
 import { makeDigestSnapshotFixture } from "../../test-helpers/__fixtures__/digest-snapshots";
-import { buildEditorialCandidates } from "../daily-digest/editorial-candidates";
+import { buildEditorialCandidates, compareEditorialCandidates } from "../daily-digest/editorial-candidates";
 import { validateDigestModelOutput } from "../daily-digest/response";
 
 // Edition #179 (2026-08-21) led X and Telegram with "USDS bled 91% of its DEX
@@ -166,5 +166,83 @@ describe("liquidity lead gating", () => {
 
     const blocking = issues.find((issue) => issue.code === "suppressed-lead");
     expect(blocking?.severity).toBe("hard");
+  });
+});
+
+describe("editorial candidate total order", () => {
+  function candidate(
+    id: string,
+    artifactRisk: DigestEditorialCandidate["artifactRisk"],
+    impactScore: number,
+    extra: Partial<DigestEditorialCandidate> = {},
+  ): DigestEditorialCandidate {
+    return {
+      id, kind: "supply", title: id, symbols: [], artifactRisk, impactScore,
+      novelty: "new", confidence: "high", headlineFacts: [], whyItMatters: id, ...extra,
+    };
+  }
+
+  function permutations<T>(values: T[]): T[][] {
+    if (values.length <= 1) return [values];
+    return values.flatMap((value, index) =>
+      permutations(values.filter((_, other) => other !== index)).map((rest) => [value, ...rest]));
+  }
+
+  it("replaces the concrete 25-point preference cycle with risk tiers in every permutation", () => {
+    // Previously A beat B (20-point gap), B beat C (20), but C beat A (40).
+    const cycle = [candidate("a", "low", 30), candidate("b", "medium", 50), candidate("c", "high", 70)];
+    for (const order of permutations(cycle)) {
+      expect(order.sort(compareEditorialCandidates).map((entry) => entry.id)).toEqual(["a", "b", "c"]);
+    }
+  });
+
+  it("ranks eligibility, then none/low/medium/high risk, descending impact, then stable id", () => {
+    const candidates = [
+      candidate("suppressed", "none", 10_000, { suppressReason: "unverified" }),
+      candidate("high", "high", 10_000),
+      candidate("medium", "medium", 10_000, { kind: "liquidity" }),
+      candidate("low", "low", 10_000, { kind: "yield" }),
+      candidate("z", "none", 20),
+      candidate("a", "none", 20),
+      candidate("impact", "none", 21),
+    ];
+    expect(candidates.sort(compareEditorialCandidates).map((entry) => entry.id))
+      .toEqual(["impact", "a", "z", "low", "medium", "high", "suppressed"]);
+  });
+
+  it("satisfies reflexivity, antisymmetry and transitivity across kinds, tiers and suppression", () => {
+    const candidates = [
+      candidate("none", "none", 0), candidate("low", "low", 30),
+      candidate("medium", "medium", 50), candidate("high", "high", 70),
+      candidate("liquidity", "medium", 10_000, { kind: "liquidity" }),
+      candidate("yield", "low", 0, { kind: "yield" }),
+      candidate("tie-a", "low", 30), candidate("tie-z", "low", 30),
+      candidate("suppressed", "none", 10_000, { suppressReason: "unverified" }),
+    ];
+    for (const a of candidates) {
+      expect(compareEditorialCandidates(a, a)).toBe(0);
+      for (const b of candidates) {
+        expect(Math.sign(compareEditorialCandidates(a, b)) + Math.sign(compareEditorialCandidates(b, a))).toBe(0);
+        for (const c of candidates) {
+          if (compareEditorialCandidates(a, b) <= 0 && compareEditorialCandidates(b, c) <= 0) {
+            expect(compareEditorialCandidates(a, c)).toBeLessThanOrEqual(0);
+          }
+        }
+      }
+    }
+  });
+
+  it("builds the same lead and full ordering for every admitted supply permutation", () => {
+    const input = { ...BASE, supplyVelocity: [
+      { coin: "Z", change1d: 30_000_000, change7d: 0, signal: "accelerating" as const },
+      { coin: "A", change1d: 30_000_000, change7d: 0, signal: "accelerating" as const },
+      { coin: "B", change1d: 50_000_000, change7d: 0, signal: "accelerating" as const },
+    ] };
+    const expected = buildEditorialCandidates(input).map((entry) => entry.id);
+    for (const supplyVelocity of permutations(input.supplyVelocity)) {
+      expect(buildEditorialCandidates({ ...input, supplyVelocity }).map((entry) => entry.id)).toEqual(expected);
+    }
+    expect(buildEditorialCandidates(input).filter((entry) => entry.kind === "supply").map((entry) => entry.id))
+      .toEqual(["supply:b:accelerating", "supply:a:accelerating", "supply:z:accelerating"]);
   });
 });

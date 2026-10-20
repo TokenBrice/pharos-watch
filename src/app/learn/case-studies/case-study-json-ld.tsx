@@ -36,7 +36,7 @@ function buildCaseStudyArticleJsonLd(study: CaseStudy): Record<string, unknown> 
     description: study.metaDescription,
     url,
     mainEntityOfPage: url,
-    image: `${SITE_ORIGIN}/og-learn-case-${study.slug}.png`,
+    image: `${SITE_ORIGIN}/og-editorial-learn.png`,
     inLanguage: "en",
     keywords: [
       study.eyebrow,
@@ -94,7 +94,7 @@ function buildCaseStudyListJsonLd(
           "@id": url,
           name: study.title,
           description: study.subtitle,
-          image: `${SITE_ORIGIN}/og-learn-case-${study.slug}.png`,
+          image: `${SITE_ORIGIN}/og-editorial-learn.png`,
         },
       };
     }),

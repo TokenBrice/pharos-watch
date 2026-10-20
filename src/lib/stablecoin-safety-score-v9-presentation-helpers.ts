@@ -1,5 +1,3 @@
-import type { SafetyScoreV9CurrentCard } from "@shared/types";
-
 export function isUnknownSafetyScoreV9Value(value: string): boolean {
   return value.trim().toLowerCase() === "unknown";
 }
@@ -21,31 +19,6 @@ export function humanizeSafetyScoreV9Value(value: string): string {
     .filter(Boolean)
     .map((part, index) => index === 0 ? `${part.charAt(0).toUpperCase()}${part.slice(1)}` : part)
     .join(" ");
-}
-
-export function buildSafetyScoreV9TraceParts(card: SafetyScoreV9CurrentCard): string[] {
-  const { stages } = card.scoreTrace;
-  if (stages.preCapScore === null) return [];
-
-  const parts = [`Pre-cap ${stages.preCapScore.toFixed(1)}`];
-  if (card.bindingCap) {
-    const capLabel = card.bindingCap.kind.startsWith("track-record")
-      ? "Track-record"
-      : card.bindingCap.source === "active-depeg"
-        ? "Active-depeg"
-        : humanizeSafetyScoreV9Value(card.bindingCap.source);
-    parts.push(`${capLabel} cap ${card.bindingCap.limit.toFixed(0)}`);
-  }
-  if (stages.pegMultiplier !== null && Math.abs(stages.pegMultiplier - 1) >= 0.005) {
-    parts.push(`Peg x${stages.pegMultiplier.toFixed(3)}`);
-  }
-  if (stages.deploymentAdjustmentPoints !== null && stages.deploymentAdjustmentPoints >= 0.05) {
-    parts.push(`Deployment -${stages.deploymentAdjustmentPoints.toFixed(1)}`);
-  }
-  if (card.scoreTrace.wrapperParentLimit) {
-    parts.push(`Parent limit ${card.scoreTrace.wrapperParentLimit.limit.toFixed(0)}`);
-  }
-  return parts;
 }
 
 /** Round long measured fractions for display and preserve first occurrence order. */

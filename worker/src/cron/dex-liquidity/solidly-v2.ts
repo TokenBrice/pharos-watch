@@ -17,7 +17,7 @@ import {
 } from "./evm-capture-helpers";
 import { normalizeProtocol } from "./pool-helpers";
 import { resolveUniqueTrackedTokenIndex } from "./scoring-helpers";
-import type { EvmV2ExecutionCandidate, LiquidityMetrics, PoolEntry, SymbolLookups } from "./types";
+import type { EvmV2ExecutionCandidate, SourcePoolGraph, PoolEntry, SymbolLookups } from "./types";
 
 export const SOLIDLY_V2_ABI = parseAbi([
   "function getPool(address,address,bool) view returns (address)",
@@ -69,7 +69,7 @@ function applyGate(reference: Reference, reason: GateReason): void {
 }
 
 export async function enrichSolidlyV2ExecutionModels(input: {
-  metrics: Map<string, LiquidityMetrics>;
+  metrics: Map<string, SourcePoolGraph>;
   chainAddressToId: SymbolLookups["chainAddressToId"];
   contractMetaByChainAddress: SymbolLookups["contractMetaByChainAddress"];
   stablecoinPriceById: Map<string, number>;
@@ -83,7 +83,7 @@ export async function enrichSolidlyV2ExecutionModels(input: {
 }): Promise<void> {
   const references: Reference[] = [];
   for (const [stablecoinId, metric] of input.metrics) {
-    for (const pool of metric.topPools) {
+    for (const pool of metric.pools) {
       const candidate = pool.extra?.evmV2ExecutionCandidate;
       if (candidate?.source === "solidly-v2") references.push({ stablecoinId, pool, candidate });
     }

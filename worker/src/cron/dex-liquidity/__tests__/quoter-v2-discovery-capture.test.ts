@@ -4,7 +4,7 @@ import { captureQuoterV2Pools } from "../quoter-v2-pool-capture";
 import { enrichQuoterV2ExecutionTargets, selectQuoterV2EnrichmentCandidates } from "../enrich-quoter-v2-targets";
 import { getDexMeasuredExecutionDeployment, isDexMeasuredExecutionDeploymentScoreEligible } from "../../measured-execution/registry";
 import { encodeQuoterV2ExactInputSingle, encodeV3FactoryGetPool } from "../../measured-execution/quoter-v2";
-import type { LiquidityMetrics, PoolEntry } from "../types";
+import type { SourcePoolGraph, PoolEntry } from "../types";
 import { createSlotDeadline, type SlotDeadline } from "../../../lib/cron-timeouts";
 
 const rpc = vi.hoisted(() => ({ fetchEvmBlockNumber: vi.fn(), fetchEvmBlockHeader: vi.fn(), fetchEvmMulticall3Aggregate3AtBlock: vi.fn() }));
@@ -43,7 +43,7 @@ function row(project: string, chain: string, poolType: string, poolId = `${chain
 }
 async function enrich(pools: PoolEntry[], deadline?: SlotDeadline) {
   const options = input("uniswap-v3-quoter-v2", pools[0]!.chain);
-  return enrichQuoterV2ExecutionTargets({ metrics: new Map([["usdc-circle", { topPools: pools } as LiquidityMetrics]]),
+  return enrichQuoterV2ExecutionTargets({ metrics: new Map([["usdc-circle", { pools: pools } as SourcePoolGraph]]),
     chainAddressToId: options.chainAddressToId, stablecoinPriceById: options.trackedStablecoinPrices, capturedAt: 1_791_184_659,
     pancakeMeasuredTargets: new Map(), slipstreamMeasuredTargets: new Map(), deadline });
 }

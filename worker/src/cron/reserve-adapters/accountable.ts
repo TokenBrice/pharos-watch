@@ -16,7 +16,7 @@ import {
   sourceKeySlug,
 } from "./helpers";
 import { buildBrowserHeaders } from "./request";
-import { toFiniteNumber } from "../../lib/number-utils";
+import { coerceFiniteNumber } from "@shared/lib/type-guards";
 
 interface AccountableDashboardResponse {
   res: string;
@@ -81,17 +81,17 @@ function parseAccountableParams(config: LiveReservesConfig): AccountableParams {
  *  and throws; signed values resolve like any other and are reported downstream instead of
  *  failing the snapshot. */
 function extractAccountableBucketValue(value: unknown, depth = 0): number | null {
-  const direct = toFiniteNumber(value);
+  const direct = coerceFiniteNumber(value);
   if (direct != null) return direct;
   if (depth > 1) return null;
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
 
   const record = value as Record<string, unknown>;
   const keys = Object.keys(record);
-  if (keys.length === 1 && keys[0] === "") return toFiniteNumber(record[""]);
+  if (keys.length === 1 && keys[0] === "") return coerceFiniteNumber(record[""]);
 
   for (const key of ["value", "usd", "amount", "total"]) {
-    const numeric = toFiniteNumber(record[key]);
+    const numeric = coerceFiniteNumber(record[key]);
     if (numeric != null) return numeric;
   }
 
@@ -523,7 +523,7 @@ export function adaptAccountableDashboard(
   const signedBucketWarning = signedBuckets.length > 0
     ? buildSignedBucketWarning(signedBuckets, totalValue, signedResidual)
     : null;
-  const collateralizationRatio = toFiniteNumber(payload.data.collateralization);
+  const collateralizationRatio = coerceFiniteNumber(payload.data.collateralization);
   if (collateralizationRatio == null || collateralizationRatio < 0) {
     throw new Error(`Accountable dashboard returned invalid collateralization: ${String(payload.data.collateralization)}`);
   }

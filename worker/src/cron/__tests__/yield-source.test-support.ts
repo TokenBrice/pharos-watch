@@ -3,7 +3,7 @@ import { mockFetch, type MockFetchSpy, type MockRoute } from "@shared/test-utils
 import { mockFetchRetry } from "../../test-helpers/cron";
 
 export function mockYieldSourceFetchRetryModule() {
-  return mockFetchRetry();
+  return mockFetchRetry({ notOkAsNull: true });
 }
 
 export function mockYieldSourceRoutes(

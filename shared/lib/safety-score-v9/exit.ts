@@ -26,7 +26,6 @@ import { admitExitExecutionCertificate, exitExecutionInputGenerationId, resolveE
 
 export type V9ExitAccess = RedemptionAccessModel;
 export type V9ExitSettlement = RedemptionSettlementModel;
-export type V9ExitHorizon = "immediate" | "near-term" | "queued";
 export type V9ExitCapacityScoringHorizon = "immediate" | "daily" | "queued" | "eventual" | "unknown";
 export type V9ExitExecution = RedemptionExecutionModel;
 export type V9ExitOutputQuality = RedemptionOutputAssetType;
@@ -119,7 +118,6 @@ export interface V9ExitRouteTrace {
   observationHistory: ExitRouteObservationHistory | null;
   physicalToUsd?: PhysicalToUsdTrace;
   executionCertificate?: ExitExecutionCertificate;
-  horizon: V9ExitHorizon;
   capacityScoringHorizon: V9ExitCapacityScoringHorizon;
   settlementDelaySec: number;
   queueDepthUsd: number | null;
@@ -141,11 +139,6 @@ export interface V9ExitRouteTrace {
   capsApplied: readonly string[];
 }
 
-export interface V9ExitHorizonTrace {
-  primaryRouteKey: string | null;
-  score: number | null;
-}
-
 export interface V9ExitEvaluationResult {
   score: number | null;
   aggregationDisposition: "included" | "excluded-a-b";
@@ -156,16 +149,9 @@ export interface V9ExitEvaluationResult {
   primaryRouteKey: string | null;
   diversificationRouteKey: string | null;
   diversificationBonus: number;
-  horizons: Readonly<Record<V9ExitHorizon, V9ExitHorizonTrace>>;
   reasons: readonly V9ReasonCode[];
   routes: readonly V9ExitRouteTrace[];
 }
-
-const EMPTY_HORIZONS: Readonly<Record<V9ExitHorizon, V9ExitHorizonTrace>> = {
-  immediate: { primaryRouteKey: null, score: null },
-  "near-term": { primaryRouteKey: null, score: null },
-  queued: { primaryRouteKey: null, score: null },
-};
 
 /**
  * The pillar's view of the shared exit request: the same clamped supply share
@@ -279,22 +265,6 @@ function descendingThresholdMultiplier(
   bands: readonly { threshold: number; multiplier: number }[],
 ): number {
   return resolveExitThresholdBandMultiplier(value, bands) ?? 1;
-}
-
-function routeCapacityHorizon(
-  route: V9ExitEvaluationRoute,
-  request: V9ExitStressRequest,
-): V9ExitHorizon {
-  if (
-    route.settlement === "queued" ||
-    route.settlementDelaySec > 7 * 86_400 ||
-    route.capacityScoringHorizon === "queued" ||
-    route.capacityScoringHorizon === "eventual"
-  ) {
-    return "queued";
-  }
-  if (route.capacityScoringHorizon === "daily") return "near-term";
-  return route.settlementDelaySec <= request.comparisonWindowSec ? "immediate" : "near-term";
 }
 
 function queueServiceCapacityUsd(
@@ -618,7 +588,6 @@ function evaluateRoute(
   envelope: V9ValidatedPolicyEnvelope,
   preExitDangerHeld: boolean,
 ): V9ExitRouteTrace {
-  const horizon = routeCapacityHorizon(route, request);
   const attribution = {
     routeId: route.routeId,
     lane: route.lane,
@@ -639,7 +608,6 @@ function evaluateRoute(
     ...(route.routeSuspension ? { routeSuspension: route.routeSuspension } : {}),
     ...(route.physicalToUsd ? { physicalToUsd: route.physicalToUsd } : {}),
     ...(route.executionCertificate ? { executionCertificate: route.executionCertificate } : {}),
-    horizon,
     capacityScoringHorizon: route.capacityScoringHorizon,
     settlementDelaySec: route.settlementDelaySec,
     queueDepthUsd: route.queueDepthUsd,
@@ -1106,7 +1074,6 @@ export function evaluateV9Exit(
       primaryRouteKey: null,
       diversificationRouteKey: null,
       diversificationBonus: 0,
-      horizons: EMPTY_HORIZONS,
       reasons: ["missing-same-notional-route"],
       routes: [],
     };
@@ -1151,24 +1118,6 @@ export function evaluateV9Exit(
   };
   const excludedGap = (trace: V9ExitRouteTrace) => excludedCause(trace).excluded;
   const chargedDiagnosticReasons = traces.flatMap((trace) => trace.exclusionReason && !excludedGap(trace) ? [trace.exclusionReason] : []);
-  const horizons = Object.fromEntries(
-    (["immediate", "near-term", "queued"] as const).map((horizon) => {
-      const best = traces
-        .filter((trace) => trace.horizon === horizon && trace.score !== null)
-        .sort(
-          (left, right) =>
-            (right.score ?? 0) - (left.score ?? 0) ||
-            compareText(left.routeKey, right.routeKey),
-        )[0];
-      return [
-        horizon,
-        {
-          primaryRouteKey: best?.routeKey ?? null,
-          score: best?.score ?? null,
-        },
-      ];
-    }),
-  ) as Record<V9ExitHorizon, V9ExitHorizonTrace>;
   if (evaluated.length === 0) {
     const hasBoundedMissingRoute = diagnosticReasons.includes("missing-same-notional-route") ||
       routes.some((route) => route.routeSuspension !== undefined ||
@@ -1200,7 +1149,6 @@ export function evaluateV9Exit(
       primaryRouteKey: null,
       diversificationRouteKey: null,
       diversificationBonus: 0,
-      horizons,
       reasons: uniqueSorted([
         defaultReason,
         ...diagnosticReasons,
@@ -1222,7 +1170,7 @@ export function evaluateV9Exit(
     if (!overflow) throw new Error("route-inventory-over-limit requires the compiler's scoped reader rejection");
     return { ...pillarMetadata, aggregationDisposition: "excluded-a-b", supportedComponentKeys: [], limitedEvidenceCauses: [],
       score: null, stressRequest, primaryRouteKey: null, diversificationRouteKey: null, diversificationBonus: 0,
-      horizons: EMPTY_HORIZONS, reasons: ["missing-runtime-route-evidence"],
+      reasons: ["missing-runtime-route-evidence"],
       routes: traces.map((trace) => ({ ...trace, score: null, included: false, capacityPoint: null, components: null,
         cause: "A", causeGapIds: uniqueSorted([...trace.causeGapIds, overflow.gapId]),
         scoringDisposition: "excluded-pipeline", effectiveScoringWeight: 0, supportedComponentCeiling: null,
@@ -1316,7 +1264,6 @@ export function evaluateV9Exit(
     primaryRouteKey: boundedGapFloorApplies ? null : primary.route.routeKey,
     diversificationRouteKey: boundedGapFloorApplies ? null : independent?.route.routeKey ?? null,
     diversificationBonus: boundedGapFloorApplies ? 0 : roundTo(diversificationBonus, 2),
-    horizons,
     // Missing-evidence reasons follow the route evidence, not the numerical
     // floor comparison: raising an unknown rung must not activate a new cap.
     // Optional exclusions remain visible on their per-route traces.

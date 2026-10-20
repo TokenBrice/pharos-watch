@@ -6,6 +6,7 @@ import { resolveQueryViewState } from "@/lib/query-view-state";
 import { deriveSupplyFromMarketCap } from "@/lib/stablecoin-detail-derive";
 import type {
   DetailQueryResource,
+  DetailFlowsInput,
   StablecoinDetailFeatureState,
   StablecoinDetailFeatureStates,
   StablecoinDetailFeatureStatus,
@@ -221,6 +222,33 @@ function reserveStaleQuery(
   };
 }
 
+/** Coin totals do not consume the aggregate flight-to-quality classification. */
+export function resolveDetailFlowMeta(flows: Pick<DetailFlowsInput, "data" | "meta">) {
+  let meta = flows.meta;
+  if (meta?.dependencies?.[MINT_BURN_FTQ_DEPENDENCY_KEY]) {
+    // Remove only the typed FTQ dependency and matching advisory; preserve
+    // unknown warnings, flow clocks and other dependencies.
+    const dependencies = { ...meta.dependencies };
+    delete dependencies[MINT_BURN_FTQ_DEPENDENCY_KEY];
+    const classificationWarning = flows.data?.sync?.classificationWarning;
+    const warning = meta.warning && classificationWarning
+      ? parseDataHealthWarnings(meta.warning)
+        .filter((entry) => entry.message !== classificationWarning)
+        .map((entry) => entry.raw).join(", ") || null
+      : meta.warning;
+    meta = { ...meta, dependencies, warning };
+  }
+  const syncWarning = flows.data?.sync?.warning;
+  if (syncWarning) {
+    const warnings = meta?.warning ? parseDataHealthWarnings(meta.warning) : [];
+    if (!warnings.some((entry) => entry.message === syncWarning)) {
+      const warning = [...warnings.map((entry) => entry.raw), syncWarning].join(", ");
+      meta = meta ? { ...meta, warning } : { status: "degraded", warning };
+    }
+  }
+  return meta;
+}
+
 export function buildDetailStaleQueries(
   queries: StablecoinDetailViewModelQueryInputs,
   supplemental: StablecoinDetailViewModelSupplementalInputs,
@@ -273,29 +301,7 @@ export function buildDetailStaleQueries(
   const flows = supplemental.flows;
   const flowEntry = flows.data?.coins.find((coin) => coin.stablecoinId === stablecoinId);
   if (flows.enabled && (flowEntry != null || flows.isLoading || flows.error != null)) {
-    let meta = flows.meta;
-    if (meta?.dependencies?.[MINT_BURN_FTQ_DEPENDENCY_KEY]) {
-      // This section renders coin totals, not the market-wide FTQ verdict.
-      // Remove only its typed dependency and matching transport advisory; leave
-      // unknown/legacy warnings, flow clocks and other dependencies untouched.
-      const dependencies = { ...meta.dependencies };
-      delete dependencies[MINT_BURN_FTQ_DEPENDENCY_KEY];
-      const classificationWarning = flows.data?.sync?.classificationWarning;
-      const warning = meta.warning && classificationWarning
-        ? parseDataHealthWarnings(meta.warning)
-          .filter((entry) => entry.message !== classificationWarning)
-          .map((entry) => entry.raw).join(", ") || null
-        : meta.warning;
-      meta = { ...meta, dependencies, warning };
-    }
-    const syncWarning = flows.data?.sync?.warning;
-    if (syncWarning) {
-      const warnings = meta?.warning ? parseDataHealthWarnings(meta.warning) : [];
-      if (!warnings.some((entry) => entry.message === syncWarning)) {
-        const warning = [...warnings.map((entry) => entry.raw), syncWarning].join(", ");
-        meta = meta ? { ...meta, warning } : { status: "degraded", warning };
-      }
-    }
+    const meta = resolveDetailFlowMeta(flows);
     result.push({
       preset: "mintBurnFlows",
       dataUpdatedAt: flows.dataUpdatedAt,

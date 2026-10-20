@@ -71,6 +71,7 @@
       "branches": [
         {
           "name": "WHYPE",
+          "kind": "plain-token",
           "holder": "0x39ebba742b6917d49d4a9ac7cf5c70f84d34cc9e",
           "token": {
             "chain": "hyperevm",

@@ -336,4 +336,17 @@ describe("generate-reserve-coverage-audit", () => {
     ]);
   });
 
+  it.each(["ok", "degraded", "error", "skipped"])("retains admitted reserve status %s", (status) => {
+    expect(extractReserveStateRows({ reserves: [{ id: "coin", sync: { status } }] })).toEqual([
+      { id: "coin", syncStatus: status, scoringEligible: null, freshnessMode: null },
+    ]);
+  });
+  it.each([null, undefined, "", "running", "skipped_locked", 0, {}, ["ok"]])(
+    "retains unknown reserve status %j as unavailable", (status) => {
+      expect(extractReserveStateRows([{ id: "coin", sync: { status } }])).toEqual([
+        { id: "coin", syncStatus: null, scoringEligible: null, freshnessMode: null },
+      ]);
+    },
+  );
+
 });

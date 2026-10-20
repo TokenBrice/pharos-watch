@@ -6,10 +6,9 @@ import {
   computePoolPairQuality,
   computePoolQualityContribution,
   computePoolStress,
-  initMetrics,
   normalizeProtocol,
 } from "../pool-helpers";
-import { withCompleteVolume } from "./scoring-test-builders";
+import { initMetrics, withCompleteVolume } from "./scoring-test-builders";
 import { rebuildMetricsFromPools } from "../scoring-helpers";
 
 describe("normalizeProtocol", () => {

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { buildHistoryKey, pickHistoryRowsForSource } from "../yield-sync/history";
 import type { YieldHistorySnapshotRow } from "../yield-sync/history";
-import { evaluateYieldSources } from "../yield-sync/evaluation";
+import { evaluateYieldSourcesCooperative } from "../yield-sync/evaluation";
 import { baseEvaluationInput, resolvedYield } from "./yield-evaluation.test-support";
 
 // Legacy carry-forward decides whether a switched row inherits or empties its
@@ -106,7 +106,7 @@ describe("pickHistoryRowsForSource legacy carry-forward", () => {
 });
 
 describe("current anchor-only resolution", () => {
-  it.each(["onchain", "protocol-api"] as const)("excludes %s re-anchor seeds before statistics and arbitration", (dataSource) => {
+  it.each(["onchain", "protocol-api"] as const)("excludes %s re-anchor seeds before statistics and arbitration", async (dataSource) => {
     const input = baseEvaluationInput();
     const sourceKey = `${dataSource}:coin-a:nav`;
     const seed = { id: "coin-a", symbol: "A", yield: resolvedYield({
@@ -117,7 +117,7 @@ describe("current anchor-only resolution", () => {
     input.sourceHistory.set(buildHistoryKey("coin-a", sourceKey), [
       { ...legacyRow(input.startSec - DAY_SECONDS), stablecoin_id: "coin-a", source_key: sourceKey, apy: 6 },
     ]);
-    const anchorOnly = evaluateYieldSources(input);
+    const anchorOnly = await evaluateYieldSourcesCooperative(input, { yieldToEventLoop: () => Promise.resolve() });
     expect(anchorOnly.evaluatedSources).toEqual([]);
     expect(anchorOnly.bestSourceKeyByCoin.size).toBe(0);
     expect(anchorOnly.medianApy).toBeNull();
@@ -125,13 +125,13 @@ describe("current anchor-only resolution", () => {
 
     const measured = { id: "coin-a", symbol: "A", yield: resolvedYield({ currentApy: 4, apyBase: 4 }) };
     input.resolved = [seed, measured];
-    const withAlternative = evaluateYieldSources(input);
+    const withAlternative = await evaluateYieldSourcesCooperative(input, { yieldToEventLoop: () => Promise.resolve() });
     expect(withAlternative.evaluatedSources).toHaveLength(1);
     expect(withAlternative.bestSourceKeyByCoin.get("coin-a")).toBe(measured.yield.sourceKey);
     expect(withAlternative.evaluatedSources[0]).toMatchObject({ currentApy: 4, apy7d: 4, apy30d: 4 });
   });
 
-  it.each([0, -2])("keeps a genuinely measured %s%% return after an anchor-only observation", (apy) => {
+  it.each([0, -2])("keeps a genuinely measured %s%% return after an anchor-only observation", async (apy) => {
     const input = baseEvaluationInput();
     const sourceKey = "onchain:coin-a";
     input.resolved = [{ id: "coin-a", symbol: "A", yield: resolvedYield({
@@ -141,7 +141,7 @@ describe("current anchor-only resolution", () => {
       ...legacyRow(input.startSec - 7 * DAY_SECONDS), stablecoin_id: "coin-a", source_key: sourceKey,
       data_source: "onchain", apy: 0, apy_base: null, exchange_rate: 1,
     }]);
-    const result = evaluateYieldSources(input);
+    const result = await evaluateYieldSourcesCooperative(input, { yieldToEventLoop: () => Promise.resolve() });
     expect(result.evaluatedSources[0]).toMatchObject({ currentApy: apy, apy7d: apy, apy30d: apy });
     expect(result.bestSourceKeyByCoin.get("coin-a")).toBe(sourceKey);
   });

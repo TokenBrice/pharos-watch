@@ -1,5 +1,5 @@
 /**
- * Self-contained portable state for `/export` and `/import`.
+ * Self-contained portable watchlist state for the Mini App.
  *
  * Version 1 is the historical base64url JSON format and remains read-only
  * compatible. `pw2` and `pw3` are gzip payloads with a 96-bit SHA-256 digest;
@@ -30,8 +30,8 @@ const DIRECT_PACK_MAX = 0x3ffff;
 const PRESET_PACK_MAX = 0x1f;
 
 /**
- * Leaves headroom for both `/import <token>` (Telegram's 4096-char inbound
- * limit) and the export reply's `<pre>...</pre>` line (the 4000-char splitter).
+ * Retains the historical Telegram copy/paste envelope size so existing tokens
+ * and their codec limits remain compatible after command retirement.
  */
 export const MAX_WATCHLIST_TOKEN_CHARS = 3900;
 const LEGACY_V1_MAX_WATCHLIST_TOKEN_CHARS = 4000;

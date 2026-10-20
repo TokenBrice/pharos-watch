@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { issue } from "./safety-schema-primitives";
 import { ExitExecutionPublicCertificateSchema, ExitRouteFamilySchema, ExitRouteCapacityEvidenceTierSchema, PhysicalToUsdTraceSchema } from "./exit-route";
 import { RedemptionCapacityScoringHorizonSchema, RedemptionRouteSuspensionSchema } from "./redemption";
 import { V9ReasonCodeSchema } from "./safety-score-v9";
@@ -23,28 +24,16 @@ const SafetyScoreV9PillarAdjustmentSchema = z
   .strict()
   .superRefine((adjustment, ctx) => {
     if (!numbersAgree(adjustment.scoreAfter - adjustment.scoreBefore, adjustment.delta)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["delta"],
-        message: "V9 pillar adjustment delta must reconcile its score stages",
-      });
+      issue(ctx, ["delta"], "V9 pillar adjustment delta must reconcile its score stages");
     }
     if (
       adjustment.kind === "operational-resilience-credit" &&
       adjustment.delta <= 0
     ) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["delta"],
-        message: "V9 operational-resilience credit must increase the pillar score",
-      });
+      issue(ctx, ["delta"], "V9 operational-resilience credit must increase the pillar score");
     }
     if (adjustment.kind !== "operational-resilience-credit" && adjustment.delta >= 0) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["delta"],
-        message: "V9 deployment-share and dependency adjustments must reduce the pillar score",
-      });
+      issue(ctx, ["delta"], "V9 deployment-share and dependency adjustments must reduce the pillar score");
     }
   });
 export type SafetyScoreV9PillarAdjustment = z.infer<
@@ -87,29 +76,17 @@ function refineBreakdownAdjustments(
     new Set(kinds).size !== kinds.length ||
     JSON.stringify(kinds) !== JSON.stringify(canonicalKinds)
   ) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["adjustments"],
-      message: "V9 pillar adjustments must be unique and in score-stage order",
-    });
+    issue(ctx, ["adjustments"], "V9 pillar adjustments must be unique and in score-stage order");
   }
   let expectedScore = breakdown.evaluatedScore;
   for (const [index, adjustment] of breakdown.adjustments.entries()) {
     if (!numbersAgree(expectedScore, adjustment.scoreBefore)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["adjustments", index, "scoreBefore"],
-        message: "V9 pillar adjustment must begin at the preceding score stage",
-      });
+      issue(ctx, ["adjustments", index, "scoreBefore"], "V9 pillar adjustment must begin at the preceding score stage");
     }
     expectedScore = adjustment.scoreAfter;
   }
   if (!numbersAgree(expectedScore, breakdown.publishedScore)) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["publishedScore"],
-      message: "V9 pillar adjustments must reconcile evaluated and published scores",
-    });
+    issue(ctx, ["publishedScore"], "V9 pillar adjustments must reconcile evaluated and published scores");
   }
 }
 
@@ -158,19 +135,11 @@ const SafetyScoreV9BackingBreakdownSchema = z
       new Set(groupKeys).size !== groupKeys.length ||
       JSON.stringify(groupKeys) !== JSON.stringify(expectedGroupKeys)
     ) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["groups"],
-        message: "V9 backing groups must be unique and in canonical order",
-      });
+      issue(ctx, ["groups"], "V9 backing groups must be unique and in canonical order");
     }
     const componentKeys = breakdown.components.map((component) => component.key);
     if (!isUniqueSorted(componentKeys)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["components"],
-        message: "V9 backing components must be unique and sorted",
-      });
+      issue(ctx, ["components"], "V9 backing components must be unique and sorted");
     }
     const totalWeight = breakdown.components.reduce(
       (sum, component) => sum + resolveV9EffectiveScoringWeight(component),
@@ -184,11 +153,7 @@ const SafetyScoreV9BackingBreakdownSchema = z
       !numbersAgree(totalWeight, breakdown.evaluatedScore === null ? 0 : 1) ||
       !numbersAgree(totalContribution, breakdown.evaluatedScore ?? 0)
     ) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["components"],
-        message: "V9 backing components must reconcile effective weights and evaluated score",
-      });
+      issue(ctx, ["components"], "V9 backing components must reconcile effective weights and evaluated score");
     }
     breakdown.components.forEach((component, index) => {
       if (component.score === null && (resolveV9EffectiveScoringWeight(component) !== 0 ||
@@ -201,11 +166,7 @@ const SafetyScoreV9BackingBreakdownSchema = z
           (component.score ?? 0) * resolveV9EffectiveScoringWeight(component),
         )
       ) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["components", index, "weightedContribution"],
-          message: "V9 backing weighted contribution must equal score times effective weight",
-        });
+        issue(ctx, ["components", index, "weightedContribution"], "V9 backing weighted contribution must equal score times effective weight");
       }
     });
   });
@@ -337,38 +298,22 @@ function refineExitBreakdown(breakdown: ExitBreakdownRefinementInput, ctx: z.Ref
     if (breakdown.primaryRoute === null) return;
     const keys = breakdown.primaryRoute.components.map((component) => component.key);
     if (JSON.stringify(keys) !== JSON.stringify(EXIT_COMPONENT_KEYS)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["primaryRoute", "components"],
-        message: "V9 exit components must use canonical policy order",
-      });
+      issue(ctx, ["primaryRoute", "components"], "V9 exit components must use canonical policy order");
     }
     const totalWeight = breakdown.primaryRoute.components.reduce(
       (sum, component) => sum + resolveV9EffectiveScoringWeight(component),
       0,
     );
     if (!numbersAgree(totalWeight, breakdown.primaryRoute.score === null ? 0 : 1)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["primaryRoute", "components"],
-        message: "V9 exit component weights must sum to one",
-      });
+      issue(ctx, ["primaryRoute", "components"], "V9 exit component weights must sum to one");
     }
     breakdown.primaryRoute.components.forEach((component, index) => {
       if (!numbersAgree(component.weightedContribution, (component.score ?? 0) * resolveV9EffectiveScoringWeight(component))) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["primaryRoute", "components", index, "weightedContribution"],
-          message: "V9 exit weighted contribution must equal score times weight",
-        });
+        issue(ctx, ["primaryRoute", "components", index, "weightedContribution"], "V9 exit weighted contribution must equal score times weight");
       }
     });
     if (!isUniqueSorted(breakdown.primaryRoute.capsApplied)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["primaryRoute", "capsApplied"],
-        message: "V9 primary-route caps must be unique and sorted",
-      });
+      issue(ctx, ["primaryRoute", "capsApplied"], "V9 primary-route caps must be unique and sorted");
     }
     if (breakdown.primaryRoute.score === null) {
       if (breakdown.evaluatedScore !== null || breakdown.diversification !== null ||
@@ -399,28 +344,16 @@ function refineExitBreakdown(breakdown: ExitBreakdownRefinementInput, ctx: z.Ref
         ? Math.abs(breakdown.primaryRoute.score - preCapRouteScore) <= EXIT_SCORE_TOLERANCE
         : breakdown.primaryRoute.score <= preCapRouteScore + EXIT_SCORE_TOLERANCE;
     if (!routeScoreReconciles) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["primaryRoute", "score"],
-        message: "V9 primary-route score must reconcile its components, multipliers, and caps",
-      });
+      issue(ctx, ["primaryRoute", "score"], "V9 primary-route score must reconcile its components, multipliers, and caps");
     }
     const expectedEvaluatedScore =
       Math.min(100, breakdown.primaryRoute.score + (breakdown.diversification?.bonus ?? 0));
     if (breakdown.evaluatedScore === null || Math.abs(breakdown.evaluatedScore - expectedEvaluatedScore) > EXIT_SCORE_TOLERANCE) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["evaluatedScore"],
-        message: "V9 exit score must reconcile its primary route and diversification bonus",
-      });
+      issue(ctx, ["evaluatedScore"], "V9 exit score must reconcile its primary route and diversification bonus");
     }
     const alternativeKeys = breakdown.alternatives.map((route) => route.key);
     if (!isUniqueSorted(alternativeKeys) || alternativeKeys.includes(breakdown.primaryRoute.key)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["alternatives"],
-        message: "V9 alternative exit routes must be unique, sorted, and exclude the primary route",
-      });
+      issue(ctx, ["alternatives"], "V9 alternative exit routes must be unique, sorted, and exclude the primary route");
     }
 }
 
@@ -561,11 +494,7 @@ const SafetyScoreV9ControlBreakdownSchema = z
     refineBreakdownAdjustments(breakdown, ctx);
     const keys = breakdown.components.map((component) => component.key);
     if (!isUniqueSorted(keys)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["components"],
-        message: "V9 control components must be unique and sorted",
-      });
+      issue(ctx, ["components"], "V9 control components must be unique and sorted");
     }
     const binding = breakdown.components.filter((component) => component.binding && component.score !== null);
     const bindingScoreReconciles =
@@ -576,11 +505,7 @@ const SafetyScoreV9ControlBreakdownSchema = z
             breakdown.evaluatedScore,
           );
     if (!bindingScoreReconciles) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["components"],
-        message: "V9 binding controls, or the neutral empty set, must reconcile the evaluated score",
-      });
+      issue(ctx, ["components"], "V9 binding controls, or the neutral empty set, must reconcile the evaluated score");
     }
   });
 export type SafetyScoreV9ControlBreakdown = z.infer<

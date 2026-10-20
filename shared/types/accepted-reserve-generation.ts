@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { LiveReserveSnapshotMetadataSchema } from "./live-reserves";
+import { LiveReserveSnapshotMetadataSchema, ReserveSyncStatusSchema } from "./live-reserves";
 import { LIVE_RESERVE_EVIDENCE_CLASS_VALUES, LIVE_RESERVE_SOURCE_MODEL_VALUES, LIVE_RESERVE_WARNING_EFFECT_VALUES } from "./live-reserve-core";
 
 export const AcceptedReserveSnapshotSchema = z.object({
@@ -29,7 +29,7 @@ export const AcceptedReserveGenerationSchema = z.object({
   members: z.array(z.object({
     stablecoinId: z.string().min(1),
     snapshot: AcceptedReserveSnapshotSchema.nullable(),
-    latestAttempt: z.object({ attemptId: z.string().nullable(), attemptedAt: z.number().int().nullable(), status: z.enum(["ok", "degraded", "error", "skipped"]).nullable() }).strict(),
+    latestAttempt: z.object({ attemptId: z.string().nullable(), attemptedAt: z.number().int().nullable(), status: ReserveSyncStatusSchema.nullable() }).strict(),
   }).strict()),
 }).strict().superRefine((value, ctx) => {
   if (value.generationId !== `reserve:${value.root.slotStartedAt}:${value.root.queueHash}`) ctx.addIssue({ code: "custom", message: "Reserve root identity mismatch" });

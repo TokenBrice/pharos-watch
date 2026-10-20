@@ -83,6 +83,73 @@ function blacklistRow(overrides: Record<string, unknown> = {}): Record<string, u
 
 describe("freeze projector", () => {
   it.each([
+    { project: projectFreezeBlocked, eventType: "blacklist", severity: "severe" },
+    { project: projectFreezeDestroyed, eventType: "destroy", severity: "severe" },
+  ] as const)("reconciles recovered $eventType amounts without replacing old identities or replaying history", async ({ project, eventType, severity }) => {
+    const { db, sqlite } = fixtures.open();
+    const oldTime = SEC - 365 * 86400;
+    await insertBlacklistRows(db, [makeBlacklistRow({
+      id: "old-unknown", event_type: eventType, timestamp: oldTime,
+      chain_id: "ethereum", chain_name: "Ethereum", amount_usd_at_event: null,
+    })]);
+    await project(db, { since: 0 });
+    const original = sqlite.prepare("SELECT * FROM tape_events WHERE source_row_id = 'old-unknown'").get()!;
+    // An unrelated old source must not be backfilled by a recent recovery attempt.
+    await insertBlacklistRows(db, [makeBlacklistRow({
+      id: "unprojected-history", event_type: eventType, timestamp: oldTime - 1, tx_hash: "0xunprojected",
+    })]);
+    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM blacklist_events").get()).toEqual({ n: 2 });
+    sqlite.prepare(`UPDATE blacklist_events SET amount_usd_at_event = 50000000,
+      amount_last_attempted_at = ? WHERE id = 'old-unknown'`).run(SEC);
+    expect((await project(db, { dryRun: true })).projected).toBe(1);
+    expect(sqlite.prepare("SELECT * FROM tape_events").get()).toEqual(original);
+    await project(db);
+    const corrected = sqlite.prepare("SELECT * FROM tape_events").get()!;
+    for (const field of ["id", "event_id", "ts", "created_at", "source_row_id"]) {
+      expect(corrected[field]).toBe(original[field]);
+    }
+    expect(corrected.severity).toBe(severity);
+    expect(corrected.title).toContain("$50.0M");
+    expect(JSON.parse(String(corrected.payload_json))).toMatchObject({ amountUsdAtEvent: 50000000 });
+    expect(JSON.parse(String(corrected.payload_json))).not.toHaveProperty("amountUnknown");
+    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM tape_events").get()).toEqual({ n: 1 });
+    const beforeRepeat = sqlite.prepare("SELECT total_changes() AS n").get();
+    expect(await project(db)).toEqual({ projected: 0, advanced: null });
+    expect(sqlite.prepare("SELECT total_changes() AS n").get()).toEqual(beforeRepeat);
+  });
+
+  it("hard-suppresses mirror-zero recovery, preserves old-Worker writes and never re-inserts a retracted claim", async () => {
+    const { db, sqlite } = fixtures.open();
+    const oldTime = SEC - 365 * 86400;
+    await insertBlacklistRows(db, [makeBlacklistRow({
+      id: "mirror-zero", timestamp: oldTime, chain_id: "ethereum", chain_name: "Ethereum",
+      amount_usd_at_event: null,
+    })]);
+    // Named-column old-Worker insert/read fixture runs after latest migration 0283.
+    insertOldFreezeTapeRow(sqlite, "mirror-zero", "freeze.blocked", "ethereum", oldTime);
+    const original = sqlite.prepare("SELECT * FROM tape_events").get()!;
+    expect(original.suppressed_at).toBeNull();
+    expect(original.suppression_reason).toBeNull();
+    sqlite.prepare(`UPDATE blacklist_events SET amount_native = 0, amount_usd_at_event = NULL,
+      suppression_reason = 'circle_mirror_zero_balance', amount_last_attempted_at = ?
+      WHERE id = 'mirror-zero'`).run(SEC);
+    await projectFreezeBlocked(db, { dryRun: true });
+    expect(sqlite.prepare("SELECT * FROM tape_events").get()).toEqual(original);
+    await projectFreezeBlocked(db);
+    const suppressed = sqlite.prepare("SELECT * FROM tape_events").get()!;
+    expect(suppressed).toEqual({
+      ...original, suppressed_at: SEC, suppression_reason: "freeze-claim-retracted",
+    });
+    const beforeRepeat = sqlite.prepare("SELECT total_changes() AS n").get();
+    await projectFreezeBlocked(db);
+    expect(sqlite.prepare("SELECT total_changes() AS n").get()).toEqual(beforeRepeat);
+    // Even an explicit historical projection cannot undo the monotonic marker.
+    sqlite.prepare("UPDATE blacklist_events SET suppression_reason = NULL WHERE id = 'mirror-zero'").run();
+    expect(await projectFreezeBlocked(db, { since: 0 })).toEqual({ projected: 0, advanced: null });
+    expect(sqlite.prepare("SELECT * FROM tape_events").all()).toEqual([suppressed]);
+  });
+
+  it.each([
     ["blacklist", projectFreezeBlocked, "address frozen"],
     ["destroy", projectFreezeDestroyed, "funds destroyed"],
   ] as const)("preserves unavailable and finite amount presentation for %s", async (eventType, project, withoutAmount) => {
@@ -303,6 +370,7 @@ describe("freeze projector", () => {
     const db = mockTapeD1([
       { match: "FROM cache WHERE key", rows: [] },
       { match: "FROM tape_events INDEXED BY idx_tape_type_ts", rows: [] },
+      { match: "FROM blacklist_events AS b", rows: [] },
       { match: MATCH_BLACKLIST_EVENTS, matchBinds: [RECONCILIATION_SINCE, "blacklist", "opened", 2], rows: limitedRows },
       { match: MATCH_BLACKLIST_EVENTS, matchBinds: [RECONCILIATION_SINCE, SEC, "blacklist", "opened"], rows: expandedRows },
     ]) as MockD1Database;

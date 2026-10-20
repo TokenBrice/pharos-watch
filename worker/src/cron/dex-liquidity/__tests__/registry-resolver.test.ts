@@ -1,9 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { StagedPool } from "../../dex-discovery/types";
 import { resolveRegistryPools } from "../registry-resolver";
-import { DEX_VOLUME_ZERO_PROVENANCE_SINCE_SEC } from "../constants";
 
-const NOW = 1_710_000_000;
+const NOW = 1_800_000_000;
 function row(overrides: Partial<StagedPool> = {}): StagedPool {
   return {
     stablecoinId: "usdt-tether", poolId: "solana:MixedCasePool", source: "dl",
@@ -72,21 +71,19 @@ describe("resolveRegistryPools", () => {
     expect(resolveRegistryPools([future], NOW)).toEqual([]);
   });
 
-  it("treats a zero refreshed before the provenance cutover as absent and keeps positive legacy readings", () => {
-    const cutover = DEX_VOLUME_ZERO_PROVENANCE_SINCE_SEC;
-    const now = cutover + 3600;
-    const legacyZero = row({ volume24h: 0, refreshedAt: cutover - 1 });
-    const legacyPositive = row({ source: "dexscreener", volume24h: 700, refreshedAt: cutover - 1 });
-    expect(resolveRegistryPools([legacyZero, legacyPositive], now)[0].volume).toBe(legacyPositive);
-    expect(resolveRegistryPools([legacyZero], now)[0].volume).toBeNull();
-    const cutoverZero = row({ volume24h: 0, refreshedAt: cutover });
-    expect(resolveRegistryPools([cutoverZero, legacyPositive], now)[0].volume).toBe(cutoverZero);
+  it("keeps current explicit zeros measured while absent readings stay unavailable", () => {
+    const missing = row({ volume24h: null });
+    const zero = row({ source: "cg_onchain", volume24h: 0, refreshedAt: NOW - 1 });
+    expect(resolveRegistryPools([missing], NOW)[0].volume).toBeNull();
+    expect(resolveRegistryPools([missing, zero], NOW)[0].volume).toBe(zero);
+    expect(resolveRegistryPools([row({ volume24h: 0 })], NOW)[0].volume?.volume24h).toBe(0);
   });
 
-  it("trusts a pre-cutover CoinGecko onchain zero as measured", () => {
-    const now = DEX_VOLUME_ZERO_PROVENANCE_SINCE_SEC + 3600;
-    const cgZero = row({ source: "cg_onchain", volume24h: 0, refreshedAt: DEX_VOLUME_ZERO_PROVENANCE_SINCE_SEC - 1 });
-    expect(resolveRegistryPools([cgZero], now)[0].volume).toBe(cgZero);
+  it("does not let a stale September zero displace a current explicit zero", () => {
+    const stale = row({ volume24h: 0, refreshedAt: 1_790_580_553 });
+    const current = row({ source: "dexscreener", volume24h: 0, refreshedAt: NOW - 3600 });
+    expect(resolveRegistryPools([stale, current], NOW)[0].volume).toBe(current);
+    expect(resolveRegistryPools([stale], NOW)[0].volume).toBe(stale);
   });
 
   it("borrows the token tuple from one complete witness, not opposite partial orientations", () => {

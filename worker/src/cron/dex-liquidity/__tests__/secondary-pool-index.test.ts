@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import { mergeGtPools } from "../fetch-crawlers";
-import { initMetrics } from "../pool-helpers";
-import type { GtNewPool, LiquidityMetrics, PoolEntry } from "../types";
+import { initSourcePoolGraph } from "../pool-helpers";
+import type { GtNewPool, SourcePoolGraph, PoolEntry } from "../types";
 import { makeGtPool } from "./scoring-test-builders";
 
 function makePoolEntry(poolId: string): PoolEntry {
@@ -20,7 +20,7 @@ function makePoolEntry(poolId: string): PoolEntry {
 
 describe("secondary DEX pool merges", () => {
   it("retains duplicate execution evidence through the indexed merge path", async () => {
-    const metrics = new Map<string, LiquidityMetrics>();
+    const metrics = new Map<string, SourcePoolGraph>();
     const address = `0x${"1".repeat(40)}`;
     const basePool = makeGtPool(address);
     const executionModel: NonNullable<GtNewPool["ammExecutionModel"]> = {
@@ -54,13 +54,13 @@ describe("secondary DEX pool merges", () => {
     await mergeGtPools(metrics, new Map([["usdc-circle", [{ ...basePool, ammExecutionModel: executionModel }]]]));
 
     const result = metrics.get("usdc-circle");
-    expect(result?.topPools).toHaveLength(1);
-    expect(result?.topPools[0]?.extra?.ammExecutionModel).toEqual(executionModel);
+    expect(result?.pools).toHaveLength(1);
+    expect(result?.pools[0]?.extra?.ammExecutionModel).toEqual(executionModel);
   });
 
   it("indexes existing pool identities once for a large per-coin batch", async () => {
     const existingCount = 128;
-    const metrics = initMetrics("usdc-circle", "USDC");
+    const metrics = initSourcePoolGraph("usdc-circle", "USDC");
     let poolIdReads = 0;
 
     for (let index = 0; index < existingCount; index++) {
@@ -72,7 +72,7 @@ describe("secondary DEX pool merges", () => {
           return `ethereum:0x${index.toString(16).padStart(40, "0")}`;
         },
       });
-      metrics.topPools.push(entry);
+      metrics.pools.push(entry);
     }
 
     const incoming = Array.from({ length: existingCount }, (_, index) =>
@@ -82,6 +82,6 @@ describe("secondary DEX pool merges", () => {
     await mergeGtPools(new Map([["usdc-circle", metrics]]), new Map([["usdc-circle", incoming]]));
 
     expect(poolIdReads).toBe(existingCount);
-    expect(metrics.topPools).toHaveLength(existingCount * 2);
+    expect(metrics.pools).toHaveLength(existingCount * 2);
   });
 });

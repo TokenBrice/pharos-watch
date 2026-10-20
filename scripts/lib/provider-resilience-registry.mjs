@@ -49,7 +49,7 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
     id: "safety-score-economic-supply-observer",
     family: "safety-score-attribution",
     description: "Isolated reviewed economic partition API/validated-ledger observations.",
-    files: ["worker/src/lib/safety-score-v9/economic-supply-observer.ts"],
+    files: ["worker/src/lib/safety-score-v9/economic-supply-observer.ts", "worker/src/lib/safety-score-v9/economic-supply-observer-readers.ts"],
     tests: ["worker/src/lib/__tests__/safety-score-v9-transfer-materiality-observer.test.ts"],
     allowBareFetch: true,
     directFetchJustification: "Single-attempt reviewed observations under the isolated producer AbortSignal; no public-handler fetching or retry policy.",

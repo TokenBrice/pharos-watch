@@ -291,9 +291,9 @@ describe("hasDeployImpact", () => {
 describe("classifyDeployChanges", () => {
   it("requests Firefox only when changed sources select a browser-rendered artifact", () => {
     expect(classifyChangedFiles(["src/app/page.tsx"]).playwrightFirefoxRequired).toBe(true);
-    expect(classifyChangedFiles(["src/lib/mechanism-explainer-registry.ts"]).playwrightFirefoxRequired).toBe(true);
-    expect(classifyChangedFiles(["scripts/maintenance/build-og-learn-images.ts"]).playwrightFirefoxRequired).toBe(true);
-    expect(classifyChangedFiles(["src/components/stablecoin-detail/mechanism-diagrams/example.tsx"]).playwrightFirefoxRequired).toBe(true);
+    expect(classifyChangedFiles(["scripts/maintenance/build-og-editorial.mjs"]).playwrightFirefoxRequired).toBe(true);
+    expect(classifyChangedFiles(["src/lib/mechanism-explainer-registry.ts"]).playwrightFirefoxRequired).toBe(false);
+    expect(classifyChangedFiles(["src/components/stablecoin-detail/mechanism-diagrams/example.tsx"]).playwrightFirefoxRequired).toBe(false);
     expect(classifyChangedFiles(["worker/src/lib/auth.ts"]).playwrightFirefoxRequired).toBe(false);
   });
 

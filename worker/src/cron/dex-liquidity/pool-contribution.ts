@@ -1,10 +1,10 @@
 import { canonicalExitRouteAssetKey, canonicalExitRouteChain } from "@shared/types/exit-route-identity";
-import type { LiquidityFallbackCounters, LiquidityMetrics, PoolEntry, PoolMeasurementFlags, GtNewPool, CgNewPool } from "./types";
+import type { LiquidityFallbackCounters, SourcePoolGraph, PoolEntry, PoolMeasurementFlags, GtNewPool, CgNewPool } from "./types";
 import {
   computePoolPairQuality,
   computePoolQualityContribution,
   computePoolStress,
-  initMetrics,
+  initSourcePoolGraph,
   normalizeProtocol,
   parsePoolSymbols,
 } from "./pool-helpers";
@@ -13,7 +13,7 @@ import { STAGED_POOL_DEFAULTS } from "../dex-discovery/types";
 type SecondaryPool = GtNewPool | CgNewPool;
 
 export function addSecondaryPoolContribution(
-  metrics: Map<string, LiquidityMetrics>,
+  metrics: Map<string, SourcePoolGraph>,
   stablecoinId: string,
   stablecoinSymbol: string,
   pool: SecondaryPool,
@@ -22,7 +22,7 @@ export function addSecondaryPoolContribution(
 ): void {
   let m = metrics.get(stablecoinId);
   if (!m) {
-    m = initMetrics(stablecoinId, stablecoinSymbol);
+    m = initSourcePoolGraph(stablecoinId, stablecoinSymbol);
     metrics.set(stablecoinId, m);
   }
 
@@ -30,7 +30,7 @@ export function addSecondaryPoolContribution(
   const incomingPoolId = canonicalExitRouteAssetKey(chain, pool.address);
   const existingPool = existingPoolsById
     ? existingPoolsById.get(incomingPoolId)
-    : m.topPools.find((existing) => existing.poolId === incomingPoolId);
+    : m.pools.find((existing) => existing.poolId === incomingPoolId);
   if (existingPool) {
     if (pool.ammExecutionModel || pool.executionCapabilityGate || pool.evmV2ExecutionCandidate) {
       const exactEvidence = { ...(existingPool.extra ?? {}) };
@@ -132,6 +132,6 @@ export function addSecondaryPoolContribution(
       ...(pool.executionCapabilityGate ? { executionCapabilityGate: pool.executionCapabilityGate } : {}),
     },
   };
-  m.topPools.push(poolEntry);
+  m.pools.push(poolEntry);
   existingPoolsById?.set(incomingPoolId, poolEntry);
 }

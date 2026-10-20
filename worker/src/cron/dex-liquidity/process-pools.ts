@@ -1,7 +1,7 @@
 import { buildPrimaryPoolKey, samePrimaryPoolObservation } from "./pool-identity";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { DEX_LIQUIDITY_POOL_MIN_TVL_USD } from "./constants";
-import type { LiquidityMetrics } from "./types";
+import type { SourcePoolGraph } from "./types";
 import { accumulatePoolMetrics } from "./process-pool-accumulation";
 import { admitAndResolvePoolIdentity } from "./process-pool-admission-identity";
 import { buildPoolExecutionCapability } from "./process-pool-execution-capability";
@@ -90,7 +90,7 @@ export function processPoolMetrics(
   input: ProcessPoolMetricsInput,
 ): ProcessPoolMetricsResult {
   const context = buildProcessingContext(input);
-  const metrics = new Map<string, LiquidityMetrics>();
+  const metrics = new Map<string, SourcePoolGraph>();
   const rejectionMap = new Map<string, PoolProcessingRejection>();
   const observations: { identity: ResolvedPoolIdentity; enrichment: PoolProtocolEnrichment; key: string; providerKey: string }[] = [];
   const firstByKey = new Map<string, ResolvedPoolIdentity["pool"]>();

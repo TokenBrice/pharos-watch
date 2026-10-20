@@ -13,7 +13,7 @@ import type {
   DexLiquidityPoolState,
   DexLiquidityScoringSourceState,
 } from "./scoring-stage-contract";
-import type { DexPriceObs, LiquidityMetrics, PoolEntry } from "./types";
+import type { DexPriceObs, SourcePoolGraph, PoolEntry } from "./types";
 
 // Manifest layout version. D1 pins `dex_liquidity_scoring_stages.schema_version`
 // with CHECK (schema_version = 1); it versions the manifest/chunk table layout,
@@ -27,9 +27,9 @@ const DEX_LIQUIDITY_SCORING_STAGE_SCHEMA_VERSION = 1;
 // separate; exact repeats/conflicts are resolved before per-coin accumulation.
 // v6: carried UniV3 identity cannot imply USD references; crawler raw TVL uses
 // named quarantine rather than retained clamped values.
-// Older payloads lack the consumer's scoring basis and are rejected rather than
-// silently rescored under a different clock or methodology.
-const DEX_LIQUIDITY_SCORING_STAGE_PAYLOAD_VERSION = 6;
+// v7: source entries contain only identity and pools; aggregates are computed
+// by scoring, never staged as dormant placeholders. Older payloads fail closed.
+const DEX_LIQUIDITY_SCORING_STAGE_PAYLOAD_VERSION = 7;
 export const DEX_LIQUIDITY_SCORING_STAGE_MAX_CHUNK_BYTES = 192 * 1024;
 export const DEX_LIQUIDITY_SCORING_STAGE_PROGRESS_CHUNK_INTERVAL = 24;
 const DEX_LIQUIDITY_SCORING_STAGE_READ_PAGE_SIZE = 4;
@@ -77,10 +77,7 @@ type PoolHeader = Omit<
   | "slipstreamMeasuredExecutionTargets"
 >;
 
-type MetricHeader = Omit<LiquidityMetrics, "chains" | "pairs" | "topPools"> & {
-  chains: string[];
-  pairs: string[];
-};
+type MetricHeader = Pick<SourcePoolGraph, "stablecoinId" | "symbol">;
 
 type TargetLane = "pancake" | "slipstream";
 type ScoringStageChunkInsertRow = [
@@ -199,7 +196,7 @@ interface ScoringStageDecoder {
   stablecoinMcapById: Map<string, number>;
   protocolTvlCaps: Map<string, number>;
   priceObservations: Map<string, DexPriceObs[]>;
-  metrics: Map<string, LiquidityMetrics>;
+  metrics: Map<string, SourcePoolGraph>;
   pancakeMeasuredExecutionTargets: Map<string, DexMeasuredExecutionTarget>;
   slipstreamMeasuredExecutionTargets: Map<string, DexMeasuredExecutionTarget>;
   recordCount: number;
@@ -290,7 +287,7 @@ function* iterateScoringStageRecords(
     fallbackSignals: sourceState.fallbackSignals,
     directApiSourceSummary: sourceState.directApiSourceSummary,
   };
-  let metrics: Map<string, LiquidityMetrics> | null = poolState.metrics;
+  let metrics: Map<string, SourcePoolGraph> | null = poolState.metrics;
   let pancakeMeasuredExecutionTargets: Map<string, DexMeasuredExecutionTarget> | null =
     poolState.pancakeMeasuredExecutionTargets;
   let slipstreamMeasuredExecutionTargets: Map<string, DexMeasuredExecutionTarget> | null =
@@ -369,25 +366,19 @@ function* iterateScoringStageRecords(
   }
 
   for (const [stablecoinId, metric] of metrics) {
-    const { chains, pairs, topPools, ...scalarMetric } = metric;
+    const { pools } = metric;
     yield {
       kind: "metric",
       stablecoinId,
-      metric: {
-        ...scalarMetric,
-        chains: [...chains],
-        pairs: [...pairs],
-      },
+      metric: { stablecoinId: metric.stablecoinId, symbol: metric.symbol },
     };
-    for (let index = 0; index < topPools.length; index++) {
-      const poolEntry = topPools[index]!;
+    for (let index = 0; index < pools.length; index++) {
+      const poolEntry = pools[index]!;
       yield { kind: "pool", stablecoinId, pool: poolEntry };
-      if (consumeInput) topPools[index] = undefined as unknown as PoolEntry;
+      if (consumeInput) pools[index] = undefined as unknown as PoolEntry;
     }
     if (consumeInput) {
-      topPools.length = 0;
-      chains.clear();
-      pairs.clear();
+      pools.length = 0;
       metrics.delete(stablecoinId);
     }
   }
@@ -540,21 +531,15 @@ function decodeScoringStageRecord(decoder: ScoringStageDecoder, record: ScoringS
         typeof record.stablecoinId !== "string" ||
         !isRecord(record.metric) ||
         record.metric.stablecoinId !== record.stablecoinId ||
-        !Array.isArray(record.metric.chains) ||
-        !record.metric.chains.every((chain) => typeof chain === "string") ||
-        !Array.isArray(record.metric.pairs) ||
-        !record.metric.pairs.every((pair) => typeof pair === "string")
+        typeof record.metric.symbol !== "string"
       ) {
         throw new Error("DEX liquidity scoring stage contains an invalid metric");
       }
-      requireFiniteNumber(record.metric.totalTvlUsd, "metric TVL");
-      requireFiniteNumberOrNull(record.metric.totalVolume24hUsd, "metric 24h volume");
       assertUniqueMapKey(decoder.metrics, record.stablecoinId, "metric");
       decoder.metrics.set(record.stablecoinId, {
-        ...record.metric,
-        chains: new Set(record.metric.chains),
-        pairs: new Set(record.metric.pairs),
-        topPools: [],
+        stablecoinId: record.metric.stablecoinId,
+        symbol: record.metric.symbol,
+        pools: [],
       });
       return;
     }
@@ -584,7 +569,7 @@ function decodeScoringStageRecord(decoder: ScoringStageDecoder, record: ScoringS
         const retired = DexRetiredSolidlyLegacyModelSchema.safeParse(record.pool.extra.ammExecutionModel);
         if (retired.success) record.pool.extra.ammExecutionModel = retired.data;
       }
-      metric.topPools.push(record.pool);
+      metric.pools.push(record.pool);
       return;
     }
     case "target": {

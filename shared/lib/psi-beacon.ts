@@ -1,6 +1,7 @@
 import type { PsiConditionBand } from "../types/stability-constants";
 import { PSI_HEX_COLORS, PSI_UNKNOWN_BAND_HEX, isConditionBand } from "./classification/psi";
 import { PSI_CONDITION_BANDS } from "./psi-policy";
+import { numberValue } from "./type-guards";
 
 /**
  * Pure view-model for the PSI beacon: the lighthouse beam is a 0–100 ruler.
@@ -79,10 +80,6 @@ export const PSI_BEACON_SLIVER_FLOOR = 0.3;
 /** Score is published at one decimal; components at more. Allow rounding plus float noise. */
 const RECONCILE_TOLERANCE = 0.06;
 
-function finiteOrNull(value: number | null | undefined): number | null {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
-}
-
 export function derivePsiBeaconState(input: PsiBeaconStateInput): PsiBeaconState {
   const { current } = input;
   if (!current) {
@@ -100,12 +97,12 @@ export function derivePsiBeaconState(input: PsiBeaconStateInput): PsiBeaconState
   const named = new Set<PsiBeaconComponentKey>(current.componentsUnavailable ?? []);
   const components = {} as Record<PsiBeaconComponentKey, number | null>;
   for (const key of COMPONENT_KEYS) {
-    const value = named.has(key) ? null : finiteOrNull(raw?.[key]);
+    const value = named.has(key) ? null : numberValue(raw?.[key]);
     components[key] = value;
     if (value === null) named.add(key);
   }
 
-  const avg24h = finiteOrNull(current.avg24h);
+  const avg24h = numberValue(current.avg24h);
   const degradation = current.inputDegradation;
   const reading: PsiBeaconReading = {
     score: current.score,
@@ -115,7 +112,7 @@ export function derivePsiBeaconState(input: PsiBeaconStateInput): PsiBeaconState
     components,
     unavailableComponents: COMPONENT_KEYS.filter((key) => named.has(key)),
     severityLowerBound: degradation?.openDepegNoPrice
-      ? { unpricedCount: finiteOrNull(degradation.openDepegsWithoutPrice ?? null) }
+      ? { unpricedCount: numberValue(degradation.openDepegsWithoutPrice ?? null) }
       : null,
     computedAt: current.computedAt,
     methodologyVersion: current.methodologyVersion ?? null,

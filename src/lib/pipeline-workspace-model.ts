@@ -1,6 +1,7 @@
 import type { StatusResponse, StatusSectionKey } from "@shared/types";
 import { getPriceSourceHealthMissingCounts } from "@shared/lib/pricing-sources";
 import { getMissingPriceTileSeverity } from "@shared/lib/status-thresholds";
+import { numberValue } from "@shared/lib/type-guards";
 import { healthSeverity, pickInitialMode, worstSeverity, type WorkspaceSeverity } from "@/lib/status/workspace-mode";
 import { buildPipelineIntegrityModel } from "@/lib/pipeline-workspace-integrity-builder";
 import { buildPipelineQualityModel } from "@/lib/pipeline-workspace-quality-builder";
@@ -106,10 +107,6 @@ export function collectPipelineLoaderErrors(data: StatusResponse): PipelineLoade
     });
 }
 
-function finiteNumber(value: unknown): number | null {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
-}
-
 function payloadIssueCount(payloadPresent: boolean, count: number): number {
   return payloadPresent ? count : 1;
 }
@@ -129,7 +126,7 @@ export function buildPipelineModeSummaries(data: StatusResponse): PipelineModeSu
       marketStates.push("unknown");
       marketCount += 1;
     } else {
-      const missing = finiteNumber(priceHealth.sourceDistribution.missing);
+      const missing = numberValue(priceHealth.sourceDistribution.missing);
       if (missing == null) {
         marketStates.push("unknown");
         marketCount += 1;

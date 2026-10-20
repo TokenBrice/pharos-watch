@@ -1,6 +1,6 @@
 import { CURVE_STABLESWAP_NG_SHADOW_DEPLOYMENTS, QUOTER_V2_REVIEWED_RETAINED_POOLS } from "@shared/lib/measured-execution-deployment-policies";
 import { buildDexMeasuredExecutionTargetId, DEX_MEASURED_TARGET_SCHEMA_VERSION } from "@shared/types/measured-execution";
-import type { LiquidityMetrics } from "../types";
+import type { SourcePoolGraph } from "../types";
 import { getDexMeasuredExecutionDeployment, isDexMeasuredExecutionDeploymentScoreEligible } from "../../measured-execution/registry";
 
 // Static identity recovery only. Quote-time factory membership, bytecode,
@@ -27,14 +27,14 @@ const PINNED_REVIEWED_POOLS = [
 ] as const;
 
 export function attachPinnedReviewedExecutionTargets(input: {
-  metrics: Map<string, LiquidityMetrics>;
+  metrics: Map<string, SourcePoolGraph>;
   stablecoinPriceById: Map<string, number>;
   chainAddressToId: Map<string, string>;
   capturedAt: number;
 }): void {
   for (const policy of PINNED_REVIEWED_POOLS) {
     const poolId = `${policy.chain}:${policy.poolAddress}`;
-    const pool = input.metrics.get(policy.stablecoinId)?.topPools.find((row) =>
+    const pool = input.metrics.get(policy.stablecoinId)?.pools.find((row) =>
       row.poolId.toLowerCase() === poolId && row.chain.toLowerCase() === policy.chain && row.project === policy.protocol);
     if (!pool || pool.extra?.measuredExecutionTarget) continue;
     if (!Number.isFinite(pool.tvlUsd) || pool.tvlUsd <= 0 ||

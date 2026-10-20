@@ -12,6 +12,7 @@ import type {
   ReserveFreshnessView,
   ReserveProvenanceView,
   ReserveSyncStateView,
+  ReserveSyncStatus,
 } from "@shared/types/live-reserves";
 import { getReserveCompositionRow, getReserveSyncState } from "./store-read";
 import { matchReserveFeedReview } from "../reserve-feed-reviews";
@@ -21,7 +22,6 @@ import {
   hasFatalReserveWarnings,
   type ReserveCompositionRecord,
   type ReserveSyncStateRecord,
-  type ReserveSyncStatus,
   type SnapshotIntegrityIssue,
 } from "./store-shared";
 import {

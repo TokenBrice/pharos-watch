@@ -3,6 +3,7 @@ import { formatRelativeDurationSeconds } from "@shared/lib/relative-time";
 import type { RedemptionBackstopEntry } from "@shared/types";
 import { REDEMPTION_ACCESS_LABELS,
 SCORE_TIER_5_CLASSES,
+resolveScoreTier5,
 REDEMPTION_OUTPUT_ASSET_LABELS,
 REDEMPTION_SETTLEMENT_LABELS,
 formatRedemptionDocsProvenance,
@@ -10,7 +11,6 @@ formatRedemptionModelConfidence,
 formatRedemptionResolutionState,
 formatRedemptionRouteFamily,
 formatRedemptionRouteStatus, } from "@shared/lib/classification";
-import { scoreToColorClass } from "@/lib/severity-colors";
 
 type DocSource = NonNullable<NonNullable<RedemptionBackstopEntry["docs"]>["sources"]>[number];
 
@@ -53,27 +53,13 @@ type TelemetryContextItem = {
 };
 
 function scoreToneClass(score: number | null): string {
-  return scoreToColorClass(
-    score,
-    [
-      { min: 80, className: SCORE_TIER_5_CLASSES.t80.pill },
-      { min: 65, className: SCORE_TIER_5_CLASSES.t65.pill },
-      { min: 50, className: SCORE_TIER_5_CLASSES.t50.pill },
-      { min: 35, className: SCORE_TIER_5_CLASSES.t35.pill },
-      { min: Number.NEGATIVE_INFINITY, className: SCORE_TIER_5_CLASSES.t0.pill },
-    ],
-    "border-border/60 bg-muted/30 text-muted-foreground",
-  );
+  const tier = resolveScoreTier5(score);
+  return tier === null ? "border-border/60 bg-muted/30 text-muted-foreground" : SCORE_TIER_5_CLASSES[tier].pill;
 }
 
 function scoreTextClass(score: number | null): string {
-  return scoreToColorClass(score, [
-    { min: 80, className: SCORE_TIER_5_CLASSES.t80.text },
-    { min: 65, className: SCORE_TIER_5_CLASSES.t65.text },
-    { min: 50, className: SCORE_TIER_5_CLASSES.t50.text },
-    { min: 35, className: SCORE_TIER_5_CLASSES.t35.text },
-    { min: Number.NEGATIVE_INFINITY, className: SCORE_TIER_5_CLASSES.t0.text },
-  ]);
+  const tier = resolveScoreTier5(score);
+  return tier === null ? "text-muted-foreground" : SCORE_TIER_5_CLASSES[tier].text;
 }
 
 function getResolutionSummary(entry: RedemptionBackstopEntry): string | null {

@@ -564,7 +564,6 @@ export function buildAccessReview(
         bindingKey: binding, staleEvidenceError: `Access graph ${label} has inconsistent stale evidence`,
         gapId: `${context.asset.assetId}:gap:${label}`, reasonCode: "missing-access-review", ownerDomain: "control",
         componentKey: label, message: `Diagnostic reserve-access uncertainty: ${branch?.reason ?? "review incomplete"}.`,
-        responsibility: branch?.responsibility,
       }));
     }
     const summary = evaluateV9AccessLookthrough(graph);

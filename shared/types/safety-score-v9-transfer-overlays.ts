@@ -1,5 +1,5 @@
 import { z } from "zod";
-import {
+import { issue,
   CanonicalChainIdSchema,
   CanonicalTextSchema,
   StrictIsoDateSchema,
@@ -76,11 +76,7 @@ export const SafetyScoreV9ReviewedTransferFactSchema = z
       ctx.addIssue({ code: "custom", path: ["deployments"], message: "Duplicate reviewed transfer deployment" });
     }
     if (!review.deployments.some((deployment) => deployment.scope === "canonical")) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["deployments"],
-        message: "A reviewed transfer fact requires at least one canonical deployment",
-      });
+      issue(ctx, ["deployments"], "A reviewed transfer fact requires at least one canonical deployment");
     }
   });
 

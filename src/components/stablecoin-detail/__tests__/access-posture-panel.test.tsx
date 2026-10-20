@@ -66,7 +66,7 @@ function openSourcesFold(): HTMLDetailsElement {
 
 describe("AccessPosturePanel", () => {
   it("renders the scored rows and nothing else when no transfer review exists", () => {
-    render(<AccessPosturePanel rows={rows} compact />);
+    render(<AccessPosturePanel rows={rows} variant="rail" />);
 
     expect(screen.getByText("Transfer restriction")).toBeTruthy();
     expect(screen.getByText("Restrictable")).toBeTruthy();
@@ -74,7 +74,7 @@ describe("AccessPosturePanel", () => {
   });
 
   it("renders nothing without scored rows, in either variant", () => {
-    expect(render(<AccessPosturePanel rows={[]} review={review} compact />).container.firstChild).toBeNull();
+    expect(render(<AccessPosturePanel rows={[]} review={review} variant="rail" />).container.firstChild).toBeNull();
     expect(render(<AccessPosturePanel rows={[]} review={review} variant="strip" />).container.firstChild).toBeNull();
   });
 

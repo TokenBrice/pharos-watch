@@ -2,6 +2,7 @@ import "../../test-helpers/reviewed-deployment-catalog.test-support";
 import { describe, expect, it } from "vitest";
 import type { DexLiquidityData, ExitRouteObservation } from "@shared/types/market";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
+import type { ReviewedDeploymentSupplyObservation } from "@shared/types/safety-score-v9-supply-attribution";
 import {
   computeDexLiquidityPayloadFingerprint,
   computeRedemptionPayloadFingerprint,
@@ -20,7 +21,6 @@ import {
   buildReviewedDeploymentRouteInventory,
   deriveReviewedDeploymentUnitPartition,
   expectedWmDeploymentIdentity,
-  type ReviewedDeploymentSupplyObservation,
 } from "../safety-score-v9/supply-attribution-contract";
 import {
   buildXautTransparencySource,

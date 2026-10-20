@@ -2,15 +2,12 @@ import { describe, expect, it, vi } from "vitest";
 import { V9DeploymentControlFactBaseSchema, type V9DeploymentControlFactV2, type V9FactStatusV2, type V1005CompiledVotingControl, type V1005IssuanceProcess } from "../../types/safety-score-v9-facts";
 import {
   evaluateV9EconomicControl,
-  evaluateV9EconomicControlAssetFacts,
-  projectV9EconomicControlEvaluation,
 } from "../safety-score-v9/control";
 import { evaluateV9SubthresholdUnresolvedBridgeJoins } from "../safety-score-v9/control-bridge-join";
 import type {
   EvaluateV9EconomicControlArgs,
   V9BridgeControlReview,
   V9EconomicControlAssetFacts,
-  V9EconomicControlReviewExtension,
   V9MintMechanismReview,
   V9MintReconciliation,
   V9MintSupervision,
@@ -277,29 +274,42 @@ function chainLabelPoolResult(
 }
 
 describe("Safety Score v9 economic control", () => {
-  it("canonically projects normalized asset facts with an explicit review extension", () => {
+  it("canonically evaluates shuffled facts and reviews without mutating its input", () => {
     const mintControl = control("mint:z", "mint");
-    const custodyControl = control("custody:a", "custody");
-    const asset = facts([mintControl, custodyControl]);
-    const review: V9EconomicControlReviewExtension = {
-      assetId: asset.assetId,
+    const bridges = ["z", "a"].map((key) => control(`bridge:${key}`, "bridge", {
+      deploymentKey: `ethereum:${key}`, scope: "deployment", economicLossScope: "deployment",
+      materialSupplyShare: 0.5,
+    }));
+    const input = args({
+      facts: { ...facts([mintControl, ...bridges]), supply: makeSupplyPartition({
+        status: requiredKnown("supply"), selectedRouteSupplyShare: 1, unknownRouteSupplyShare: 0,
+        unreviewedRouteSupplyShare: 0, routes: bridges.map((item) => ({
+          deploymentRouteKey: item.deploymentKey, supplyUsd: 50, supplyShare: 0.5,
+          reviewState: "selected-reviewed", reviewedRouteKind: "controlled",
+        })),
+      }) },
       mint: boundedMint(mintControl.controlKey),
-      oracle: noOracle(),
-      bridge: noBridge(),
+      oracle: { status: requiredKnown("oracle"), tier: "single-source-or-laggy",
+        branches: (["liquidation", "feed"] as const).map((branch) => ({
+          branch, status: requiredKnown(`oracle.${branch}`), controlKey: null,
+          mechanismKey: "mechanism:core", inheritedFromAssetId: null,
+        })) },
+      bridge: { status: requiredKnown("bridge"), routes: bridges.map((item) => ({
+        controlKey: item.controlKey, tier: "issuer-native-burn-mint",
+      })) },
+    });
+    const before = structuredClone(input);
+    const shuffled = { ...input,
+      facts: { ...input.facts, controls: [...input.facts.controls].reverse(),
+        supply: { ...input.facts.supply, selectedBridgeRoutes: [...input.facts.supply.selectedBridgeRoutes].reverse() } },
+      oracle: { ...input.oracle, branches: [...input.oracle.branches].reverse() },
+      bridge: { ...input.bridge, routes: [...input.bridge.routes].reverse() },
     };
-    const projected = projectV9EconomicControlEvaluation(asset, review, V9_CANDIDATE_POLICY_V1);
-
-    expect(projected.facts.controls.map((item) => item.controlKey)).toEqual([
-      custodyControl.controlKey,
-      mintControl.controlKey,
-    ]);
-    expect(projected.mint).toEqual(review.mint);
-    expect(evaluateV9EconomicControlAssetFacts(asset, review, V9_CANDIDATE_POLICY_V1)).toEqual(
-      evaluateV9EconomicControl(projected),
-    );
-    expect(() =>
-      projectV9EconomicControlEvaluation(asset, { ...review, assetId: "different-asset" }, V9_CANDIDATE_POLICY_V1),
-    ).toThrow(/does not match asset/);
+    const shuffledBefore = structuredClone(shuffled);
+    expect(evaluateV9EconomicControl(input)).toEqual(evaluateV9EconomicControl(shuffled));
+    expect(input).toEqual(before);
+    expect(shuffled).toEqual(shuffledBefore);
+    expect(() => evaluateV9EconomicControl({ ...input, policy: {} as never })).toThrow();
   });
 
   it("bounds a control signal rounding tail without changing in-range or defective shares", () => {
@@ -2111,6 +2121,42 @@ describe("cause-aware Control minima", () => {
       observationState: "bounded-unknown", evidenceRefIds: [], gapIds: [gap.gapId] };
     return { status, gap };
   }
+
+  it("finalizes known oracle and native bridge components after mint fallback without pricing inventory twice", () => {
+    const inventory = missing("U", "inventory:phase-finalization");
+    const result = evaluateV9EconomicControl(args({
+      facts: facts([], { controlStatus: inventory.status, gaps: [inventory.gap] }),
+      mint: { ...noMint(), status: inventory.status },
+      oracle: { ...noOracle(), status: requiredKnown("oracle"),
+        tier: "single-source-or-laggy", liquidationBranchesApplicable: false },
+    }));
+
+    expect(result.components.map((component) => ({
+      key: component.componentKey, score: component.score, binding: component.binding,
+      cause: component.cause, weight: component.effectiveScoringWeight,
+    }))).toEqual([
+      { key: "bridge:native", score: 95, binding: true, cause: null, weight: 1 },
+      { key: "control:inventory", score: 45, binding: false, cause: "U", weight: 0 },
+      { key: "mint", score: 50, binding: true, cause: "U", weight: 1 },
+      { key: "oracle", score: 45, binding: true, cause: null, weight: 1 },
+    ]);
+    expect(result).toMatchObject({
+      score: 45, state: "rated", aggregationDisposition: "included",
+      causeGapIds: [inventory.gap.gapId], limitedEvidenceCauses: [],
+      supportedComponentKeys: ["bridge:native", "mint", "oracle"],
+    });
+    expect(result.reasons.map((reason) => [reason.code, reason.path])).toEqual([
+      ["unresolved-control-identity", "controls"],
+      ["unresolved-mint-authority", "mint"],
+    ]);
+    expect(result.structuralFailures).toEqual([{
+      kind: "weak-oracle-branch", severity: "high", binding: true,
+      reason: "Oracle control topology is single-source-or-laggy.",
+      materialSharePct: null, controlKeys: [], failureDomains: [],
+    }]);
+    expect(result.controlFacts).toEqual([]);
+    expect(result.failureDomains).toEqual([]);
+  });
 
   it("prices C/U unknown multisig topology at -6 while proof-backed A/B is neutral", () => {
     for (const cause of ["A", "B", "C", "U"] as const) {

@@ -16,6 +16,7 @@ import { handleYieldRankings, handleYieldRankingsCoin } from "../yield-rankings-
 import { handleSafetyGrades } from "../safety-grades";
 import { projectSafetyGrades } from "@shared/types/report-cards-v9";
 import * as opportunitySafety from "@shared/lib/yield-opportunity-risk";
+import { projectYieldRankingsSummary } from "@shared/lib/yield-rankings-summary";
 
 const NOW = Date.parse("2026-04-23T12:00:00Z") / 1000;
 const databases: DatabaseSync[] = [];
@@ -66,6 +67,27 @@ async function fixture(held = false, pipelineGap = false, safetyPublishedAt = NO
 }
 
 describe("rankings score-index hydration", () => {
+  it.each([false, true])("replays full/summary/coin qualification without changing published inputs (held=%s)", async held => {
+    const { db, sqlite } = await fixture(held);
+    const published = sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = 'yield-rankings'").get();
+    const full = await (await handleYieldRankings(db)).json() as YieldRankingsResponse;
+    const summary = await (await handleYieldRankings(db,
+      new URL("https://api.pharos.watch/api/yield-rankings?projection=summary"))).json() as YieldRankingsSummaryResponse;
+    expect(summary.rankings).toEqual(projectYieldRankingsSummary(full).rankings);
+    for (const row of full.rankings) {
+      const coin = YieldRankingsCoinResponseSchema.parse(await (await handleYieldRankingsCoin(db,
+        new URL(`https://site-api.pharos.watch/api/yield-rankings-coin?stablecoin=${row.id}`))).json());
+      expect(coin.rankings).toEqual([row]);
+      expect(coin.provenance).toEqual(full.provenance);
+    }
+    expect(full.rankings.find(row => row.id === "usdt-tether")).toMatchObject({
+      pharosYieldScore: null, pysNullReason: held ? "opportunity-evidence-missing" : "safety-unrated",
+      warningSignals: held ? ["safety-unrated", "opportunity-evidence-missing"] : ["safety-unrated"],
+      provenance: { scoreQualification: "NR", usedDefaultSafety: false },
+    });
+    expect(sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = 'yield-rankings'").get()).toEqual(published);
+  });
+
   it.each([false, true])("expires original current/held safety at 86401 while retaining fresh APY (held=%s)", async (held) => {
     const { db } = await fixture(held, false, NOW - 86400);
     const coinUrl = new URL("https://site-api.pharos.watch/api/yield-rankings-coin?stablecoin=usdc-circle");

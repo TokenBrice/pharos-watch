@@ -7,7 +7,7 @@ import {
   type ScenarioCheck,
   type ScenarioCheckContext,
   type ScenarioCheckVerdict,
-} from "./index";
+} from "./context";
 
 const ABI = parseAbi([
   "function owner() view returns (address)",

@@ -11,7 +11,7 @@ import {
   PriceObservedAtModeSchema,
   PriceSourceConfidenceProfileSchema,
 } from "./core";
-import { ContractDeploymentSchema } from "./stablecoin-meta-schemas";
+import { ContractDeploymentSchema } from "./stablecoin-meta-primitives";
 import {
   DexExitRouteObservationsSchema,
   ExitRouteObservationCoverageSchema,

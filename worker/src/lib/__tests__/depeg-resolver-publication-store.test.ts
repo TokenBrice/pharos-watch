@@ -1,11 +1,17 @@
 import { describe, expect, it, vi } from "vitest";
 import { DDR_HASH_DOMAINS, stableJsonHashV1 } from "@shared/lib/depeg-resolver/hash";
+import { computeDdrPublicRowHash } from "@shared/lib/depeg-resolver/public-contract";
+import { DdrForecastReadinessBackstopSchema, DdrForecastReadinessSchema } from "@shared/types/depeg-resolver";
 import {
+  loadSealedPublicPredictions,
   loadFirstPublicationMembership,
   loadLatestPublicationManifest,
   writePublicationManifest,
 } from "../depeg-resolver-publication-store";
 import {
+  ensureIncident,
+  insertOpenEvent,
+  sealPublicFixture,
   sealPredictionFixture,
   sealedPayloadWithHash,
   withSqliteD1,
@@ -35,6 +41,68 @@ function emptyBasePayload(clockSec: number) {
 }
 
 describe("DDR publication payload storage", () => {
+  it.each(["prediction", "no_call"] as const)("refuses malformed %s outcomes at sealed JSON admission", async (kind) => withSqliteD1(async (db) => {
+    insertOpenEvent(db);
+    const incident = await ensureIncident(db);
+    const sealed = await sealPublicFixture(db, incident.incidentKey, kind);
+    const payload = JSON.parse(sealed.sealedPayloadJson);
+    if (kind === "prediction") delete payload.frozen.duration.remainingAsOf;
+    else payload.noCall.missingReasons = [null, 17];
+    db.sqlite.exec("DROP TRIGGER trg_ddr_public_predictions_no_update");
+    db.sqlite.prepare("UPDATE depeg_resolver_public_predictions SET sealed_payload_json = ? WHERE id = ?")
+      .run(JSON.stringify(payload), sealed.id);
+    await expect(loadSealedPublicPredictions(db, { publicPredictionIds: [sealed.id] })).rejects.toThrow();
+    payload.kind = kind === "prediction" ? "no_call" : "prediction";
+    db.sqlite.exec("PRAGMA ignore_check_constraints = ON");
+    db.sqlite.prepare("UPDATE depeg_resolver_public_predictions SET sealed_payload_json = ? WHERE id = ?")
+      .run(JSON.stringify(payload), sealed.id);
+    await expect(loadSealedPublicPredictions(db, { publicPredictionIds: [sealed.id] })).rejects.toThrow(/kind does not match/);
+  }));
+
+  it.each(["prediction", "no_call"] as const)("retains historical %s bytes, optional fields and retired safety context", async (kind) => withSqliteD1(async (db) => {
+    insertOpenEvent(db);
+    const incident = await ensureIncident(db);
+    const sealed = await sealPublicFixture(db, incident.incidentKey, kind);
+    const payload = JSON.parse(sealed.sealedPayloadJson);
+    const outcome = kind === "prediction" ? payload.frozen : payload.noCall;
+    outcome.relatedContext.safetyContext = { status: "retired-identified", reason: null, identity: null };
+    outcome.archivedField = { retained: true };
+    payload.prediction.readiness = { score: 0.8, version: "historical-readiness", threshold: 0.75 };
+    payload.prediction.backstop = { backstopAt: 300000, delaySec: 259200 };
+    // Historical admission must not relax the current public metadata schemas.
+    expect(DdrForecastReadinessSchema.safeParse(payload.prediction.readiness).success).toBe(false);
+    expect(DdrForecastReadinessBackstopSchema.safeParse(payload.prediction.backstop).success).toBe(false);
+    const rowHash = computeDdrPublicRowHash(payload);
+    payload.prediction.rowHash = rowHash;
+    const json = JSON.stringify(payload, null, 2);
+    db.sqlite.exec("DROP TRIGGER trg_ddr_public_predictions_no_update");
+    db.sqlite.prepare("UPDATE depeg_resolver_public_predictions SET sealed_payload_json = ?, row_hash = ? WHERE id = ?")
+      .run(json, rowHash, sealed.id);
+    const [loaded] = await loadSealedPublicPredictions(db, { publicPredictionIds: [sealed.id] });
+    expect(loaded).toMatchObject({ outcomeKind: kind, sealedPayloadJson: json, rowHash });
+    expect(loaded?.sealedPayload).toEqual(payload);
+    expect(computeDdrPublicRowHash(loaded?.sealedPayload)).toBe(rowHash);
+  }));
+
+  it.each(["prediction", "no_call"] as const)("rejects invalid historical %s readiness and backstop values", async (kind) => withSqliteD1(async (db) => {
+    insertOpenEvent(db);
+    const incident = await ensureIncident(db);
+    const sealed = await sealPublicFixture(db, incident.incidentKey, kind);
+    db.sqlite.exec("DROP TRIGGER trg_ddr_public_predictions_no_update");
+    for (const metadata of [
+      { readiness: { score: 1.1 } },
+      { readiness: { strictEarlyLockReady: "true" } },
+      { backstop: { delaySec: -1 } },
+      { backstop: { reached: "true" } },
+    ]) {
+      const payload = JSON.parse(sealed.sealedPayloadJson);
+      Object.assign(payload.prediction, metadata);
+      db.sqlite.prepare("UPDATE depeg_resolver_public_predictions SET sealed_payload_json = ? WHERE id = ?")
+        .run(JSON.stringify(payload), sealed.id);
+      await expect(loadSealedPublicPredictions(db, { publicPredictionIds: [sealed.id] })).rejects.toThrow();
+    }
+  }));
+
   it("references the prior payload when only the publication clock advanced", async () => withSqliteD1(async (db) => {
     const first = await writePublicationManifest(db, {
       snapshotToken: "ddrpub:test:1",

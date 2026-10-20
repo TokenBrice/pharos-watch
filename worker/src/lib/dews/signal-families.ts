@@ -13,7 +13,7 @@ import { clamp } from "@shared/lib/math";
 import type { YieldRankChangeAttribution, YieldSourceRisk } from "@shared/types/yield";
 import type { DEWSInput, SignalResult, WorstPoolComponentStatus, WorstPoolUnavailableReason } from "./types";
 import { piecewiseLinear } from "./compatibility";
-import { deriveDepegSignal } from "../depeg-signals";
+import { deriveDepegSignal } from "@shared/lib/depeg-signals";
 
 // ---------------------------------------------------------------------------
 // Source-quality scoring tables

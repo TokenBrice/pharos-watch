@@ -8,7 +8,7 @@ import { appendLinkedVariantParentYieldSources, resolveTrackedYieldSources } fro
 import { getPriceDerivedApy } from "../state";
 import { buildHardcodedUsdBenchmark, type ParsedYieldBenchmarkMeta } from "../benchmarks";
 import { baseEvaluationInput, freshUsdBenchmark, resolvedYield } from "../../__tests__/yield-evaluation.test-support";
-import { evaluateYieldSources } from "../evaluation";
+import { evaluateYieldSourcesCooperative } from "../evaluation";
 import { parseRiskFreeRateCache } from "../cache";
 
 vi.mock("../sources-optional", async (importOriginal) => {
@@ -112,7 +112,7 @@ describe("derived source admission", () => {
     const result = await resolve(product);
     const entry = result.resolved.find((row) => row.id === "ustbl-spiko" && row.yield?.dataSource === "rate-derived");
     expect(entry?.yield?.sourceObservedAt).toBeNull();
-    const evaluated = evaluateYieldSources(baseEvaluationInput({ startSec: now, resolved: entry ? [entry] : [], riskFreeRates: result.riskFreeRates }));
+    const evaluated = await evaluateYieldSourcesCooperative(baseEvaluationInput({ startSec: now, resolved: entry ? [entry] : [], riskFreeRates: result.riskFreeRates }), { yieldToEventLoop: () => Promise.resolve() });
     expect(evaluated.evaluatedSources[0]).toMatchObject({ sourceFreshness: "stale", pharosYieldScore: null });
   });
 
@@ -143,7 +143,7 @@ describe("derived source admission", () => {
         yield_source: null, yield_type: null,
       }))]]),
     });
-    const evaluated = evaluateYieldSources(input);
+    const evaluated = await evaluateYieldSourcesCooperative(input, { yieldToEventLoop: () => Promise.resolve() });
     const row = evaluated.evaluatedSources[0];
     expect(row?.sourceFreshness).toBe(freshness === "stale" ? "stale" : "fresh");
     if (freshness === "stale") expect(row?.pharosYieldScore).toBeNull();
@@ -178,7 +178,7 @@ describe("derived source admission", () => {
             yield_source: null, yield_type: null,
           }))]]),
         });
-        const row = evaluateYieldSources(input).evaluatedSources[0];
+        const row = (await evaluateYieldSourcesCooperative(input, { yieldToEventLoop: () => Promise.resolve() })).evaluatedSources[0];
         const productKey = id === "usdgo-osl" ? "USD_EFFR" : id === "ustbl-spiko" ? "USD" : "EUR";
         const hurdleKey = id === "eutbl-spiko" ? "EUR" : "USD_EFFR";
         const reason = expired === productKey ? "source-stale"

@@ -12,6 +12,7 @@ import {
   isUnboundedMintPosture,
   resolveV9MintPostureBand,
 } from "../safety-score-v9/mint-posture";
+import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 
 describe("V9 mint posture bands", () => {
   it("bands every derived posture except the unresolved one", () => {
@@ -27,6 +28,9 @@ describe("V9 mint posture bands", () => {
     expect(resolveV9MintPostureBand("unbounded-adverse")).toBe("exposed");
     expect(resolveV9MintPostureBand("compromised")).toBe("exposed");
     expect(resolveV9MintPostureBand("unknown")).toBeNull();
+    for (const posture of Object.keys(V9_CANDIDATE_POLICY_V1.policy.semantic.control.mintPostureQuality)) {
+      if (posture !== "unknown") expect(resolveV9MintPostureBand(posture)).not.toBeNull();
+    }
   });
 
   it("renders NR rather than guessing for absent or unrecognized postures", () => {

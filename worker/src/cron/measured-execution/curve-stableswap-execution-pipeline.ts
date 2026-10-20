@@ -8,6 +8,7 @@ import {
 
 import {
   buildDexMeasuredExecutionTargetId,
+  DEX_MEASURED_FRESHNESS_MAX_SEC,
   type DexMeasuredExecutionProfile,
   type DexMeasuredExecutionTarget,
 } from "@shared/types/measured-execution";
@@ -26,7 +27,7 @@ import {
   makeCurveGetDyPlan,
   type CurveGetDyPlan,
 } from "./curve-get-dy-quote-engine";
-import { canonicalEvmAddress, decodeAddressResult as decodeEvmAddressResult } from "./evm-codecs";
+import { canonicalEvmAddress, canonicalEvmHash, decodeAddressResult as decodeEvmAddressResult } from "./evm-codecs";
 import { usdToRawAmount } from "./fixed-point";
 import {
   DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
@@ -98,6 +99,41 @@ export interface CurveStableSwapExecutionPolicy {
   poolAddress: `0x${string}`;
   expectedPoolCodeHash: `0x${string}`;
   poolTokens: readonly CurveStableSwapTokenPolicy[];
+}
+
+/** Preserve guard ordering while leaving registry/finality proof admission to each adapter. */
+export function findCurveStableSwapCommonEligibilityFailure<MissingTimeReason extends string>(input: {
+  endpointAddress: string;
+  blockNumber: number;
+  nowSec: number;
+  evidence?: { blockTimestamp: number; poolCodeHash: string };
+}, policy: CurveStableSwapExecutionPolicy, missingTimeReason: MissingTimeReason):
+  | MissingTimeReason | "execution-endpoint-mismatch" | "invalid-pinned-block"
+  | "future-pinned-block" | "stale-pinned-block" | "runtime-code-unavailable" | "runtime-code-hash-mismatch"
+  | null {
+  if (canonicalEvmAddress(input.endpointAddress) !== policy.poolAddress) {
+    return "execution-endpoint-mismatch";
+  }
+  if (!Number.isSafeInteger(input.blockNumber) || input.blockNumber < 0) {
+    return "invalid-pinned-block";
+  }
+  const evidence = input.evidence;
+  if (!evidence || !Number.isSafeInteger(evidence.blockTimestamp) || evidence.blockTimestamp <= 0) {
+    return missingTimeReason;
+  }
+  if (evidence.blockTimestamp > input.nowSec + 60) {
+    return "future-pinned-block";
+  }
+  if (input.nowSec - evidence.blockTimestamp > DEX_MEASURED_FRESHNESS_MAX_SEC) {
+    return "stale-pinned-block";
+  }
+  if (canonicalEvmHash(evidence.poolCodeHash) == null) {
+    return "runtime-code-unavailable";
+  }
+  if (evidence.poolCodeHash !== policy.expectedPoolCodeHash) {
+    return "runtime-code-hash-mismatch";
+  }
+  return null;
 }
 
 interface CurveStableSwapPinnedReaderInput<P extends CurveStableSwapExecutionPolicy> {

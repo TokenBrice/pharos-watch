@@ -1,5 +1,4 @@
 import type { PriceValidationReferences } from "../../lib/price-validation";
-import type { DexPriceObs } from "../dex-liquidity/types";
 import type { StagedPool } from "./types";
 
 export const DISCOVERY_STAGE_TIMEOUT_MS = {
@@ -11,14 +10,12 @@ export const DISCOVERY_STAGE_TIMEOUT_MS = {
   horizon: 8_000,
 } as const;
 
-export type StagedPriceObservation = DexPriceObs & { stablecoinId: string };
-
 export interface CrawlStageContext {
   stablecoinId: string;
   knownPoolIds: Set<string>;
   nowSec: number;
   pools: StagedPool[];
-  priceObs: StagedPriceObservation[];
+  hasUsablePoolPrice: boolean;
   signal?: AbortSignal;
   deadlineMs?: number;
   references?: PriceValidationReferences;
@@ -27,7 +24,6 @@ export interface CrawlStageContext {
   hasKnownPool(poolId: string): boolean;
   knownPoolIdsForStablecoin(): Set<string>;
   addPool(pool: StagedPool): void;
-  addPriceObs(obs: StagedPriceObservation): void;
 }
 
 interface CreateCrawlStageContextOptions {
@@ -35,7 +31,6 @@ interface CreateCrawlStageContextOptions {
   knownPoolIds: Set<string>;
   nowSec: number;
   pools: StagedPool[];
-  priceObs: StagedPriceObservation[];
   signal?: AbortSignal;
   deadlineMs?: number;
   references?: PriceValidationReferences;
@@ -81,7 +76,6 @@ export function createCrawlStageContext({
   knownPoolIds,
   nowSec,
   pools,
-  priceObs,
   signal,
   deadlineMs,
   references,
@@ -91,7 +85,7 @@ export function createCrawlStageContext({
     knownPoolIds,
     nowSec,
     pools,
-    priceObs,
+    hasUsablePoolPrice: false,
     signal,
     deadlineMs,
     references,
@@ -102,9 +96,6 @@ export function createCrawlStageContext({
     addPool(pool) {
       pools.push(pool);
       rememberKnownPoolId(knownPoolIds, stablecoinId, pool.poolId);
-    },
-    addPriceObs(obs) {
-      priceObs.push(obs);
     },
   };
 }

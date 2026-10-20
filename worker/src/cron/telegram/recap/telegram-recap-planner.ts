@@ -277,6 +277,7 @@ async function loadTapeFacts(
     SELECT id, event_id, type, severity, ts, coin_id, chain, payload_json
       FROM tape_events
      WHERE ts > ? AND ts <= ?
+       AND suppressed_at IS NULL
        AND type IN (${typeClause.sql})
      ORDER BY ts ASC, id ASC
      LIMIT ?

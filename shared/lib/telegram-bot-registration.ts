@@ -292,28 +292,6 @@ export const TELEGRAM_COMMAND_REFERENCE = {
     audience: "chat",
     variants: [{ syntax: "/cancel", help: "Cancel a pending selection", example: null }],
   },
-  export: {
-    description: "Copy your watchlist out as a shareable token",
-    audience: "chat",
-    variants: [
-      {
-        syntax: "/export",
-        help: "Copy your follows into a shareable portable token (quiet hours and snooze excluded)",
-        example: "/export",
-      },
-    ],
-  },
-  import: {
-    description: "Apply a watchlist token from /export (group admins only)",
-    audience: "chat",
-    variants: [
-      {
-        syntax: "/import <token>",
-        help: "Apply a watchlist token from /export behind a confirmation (group admins only)",
-        example: "/import eyJ2IjoxLC4uLn0",
-      },
-    ],
-  },
   forget: {
     description: "Delete all your subscriber data",
     audience: "private",
@@ -328,16 +306,10 @@ export const TELEGRAM_BOT_COMMANDS = Object.entries(TELEGRAM_COMMAND_REFERENCE).
   description: entry.description,
 }));
 
-// Derive the group command list from the same reference: "private"-audience
-// commands are excluded and /import's description is remapped to reflect that
-// group admins only can use it (the only intentional divergence).
+// Derive the group command list from the same reference, excluding private commands.
 export const TELEGRAM_BOT_GROUP_COMMANDS = Object.entries(TELEGRAM_COMMAND_REFERENCE)
   .filter(([, entry]) => entry.audience !== "private")
-  .map(([command, entry]) =>
-    command === "import"
-      ? { command, description: "Apply a watchlist token from /export (admins only)" }
-      : { command, description: entry.description },
-  );
+  .map(([command, entry]) => ({ command, description: entry.description }));
 
 /** `/recap` is only advertised after the rollout reaches the public mode. */
 export function getTelegramPrivateBotCommands(

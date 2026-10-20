@@ -12,7 +12,7 @@ import {
   V9ReasonOwnerDomainSchema,
   V9ReasonReleaseSeveritySchema,
 } from "./safety-score-v9";
-import {
+import { issue,
   BaseInputGenerationIdSchema,
   CanonicalTextSchema,
   Sha256Schema,
@@ -95,11 +95,7 @@ const V9EvidenceGapMaterialityV1Schema = z
       ]).has(materiality.basis) &&
       materiality.fractionOfAsset !== null
     ) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["fractionOfAsset"],
-        message: "This materiality basis cannot claim a numeric asset fraction",
-      });
+      issue(ctx, ["fractionOfAsset"], "This materiality basis cannot claim a numeric asset fraction");
     }
   });
 export type V9EvidenceGapMaterialityV1 = z.infer<typeof V9EvidenceGapMaterialityV1Schema>;
@@ -124,11 +120,7 @@ const V9EvidenceGapSupplyWeightV1Schema = z
       weight.materialityWeightedUsd !== null &&
       weight.materialityWeightedUsd > weight.canonicalUsd
     ) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["materialityWeightedUsd"],
-        message: "Materiality-weighted supply cannot exceed canonical supply",
-      });
+      issue(ctx, ["materialityWeightedUsd"], "Materiality-weighted supply cannot exceed canonical supply");
     }
   });
 export type V9EvidenceGapSupplyWeightV1 = z.infer<typeof V9EvidenceGapSupplyWeightV1Schema>;
@@ -178,22 +170,14 @@ function addEntryConsistencyIssues(entry: V9EvidenceGapQueueEntryBase, ctx: z.Re
   const fraction = entry.materiality.fractionOfAsset;
   const weightedUsd = entry.supplyWeight.materialityWeightedUsd;
   if ((fraction === null) !== (weightedUsd === null)) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["supplyWeight", "materialityWeightedUsd"],
-      message: "Weighted supply requires an established materiality fraction",
-    });
+    issue(ctx, ["supplyWeight", "materialityWeightedUsd"], "Weighted supply requires an established materiality fraction");
   } else if (
     fraction !== null &&
     weightedUsd !== null &&
     entry.supplyWeight.canonicalUsd !== null &&
     Math.abs(weightedUsd - entry.supplyWeight.canonicalUsd * fraction) > 0.000001
   ) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["supplyWeight", "materialityWeightedUsd"],
-      message: "Weighted supply is inconsistent with materiality",
-    });
+    issue(ctx, ["supplyWeight", "materialityWeightedUsd"], "Weighted supply is inconsistent with materiality");
   }
 }
 
@@ -409,11 +393,7 @@ const V9EvidenceGapQueueFactsV2Schema = z
   .superRefine((facts, ctx) => {
     const digestsMatch = facts.sourceFactSetDigest === facts.evaluationFactSetDigest;
     if (!digestsMatch) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["evaluationFactSetDigest"],
-        message: "Current proof-bearing source and evaluation fact-set digests must match",
-      });
+      issue(ctx, ["evaluationFactSetDigest"], "Current proof-bearing source and evaluation fact-set digests must match");
     }
   });
 
@@ -441,11 +421,7 @@ function addQueueV2ConsistencyIssues(
   const actualResponsibilities = queue.summary.responsibilityCounts.map((entry) => entry.responsibility);
   addCanonicalStringArrayIssues(actualResponsibilities, ctx, ["summary", "responsibilityCounts"]);
   if (JSON.stringify(actualResponsibilities) !== JSON.stringify(expectedResponsibilities)) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["summary", "responsibilityCounts"],
-      message: "Responsibility counts must distinguish every registered responsibility",
-    });
+    issue(ctx, ["summary", "responsibilityCounts"], "Responsibility counts must distinguish every registered responsibility");
   }
   const counts = new Map(expectedResponsibilities.map((responsibility) => [responsibility, 0]));
   for (const entry of queue.entries) {
@@ -453,11 +429,7 @@ function addQueueV2ConsistencyIssues(
   }
   for (const entry of queue.summary.responsibilityCounts) {
     if (entry.count !== counts.get(entry.responsibility)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["summary", "responsibilityCounts"],
-        message: `Count mismatch for ${entry.responsibility}`,
-      });
+      issue(ctx, ["summary", "responsibilityCounts"], `Count mismatch for ${entry.responsibility}`);
     }
   }
 }

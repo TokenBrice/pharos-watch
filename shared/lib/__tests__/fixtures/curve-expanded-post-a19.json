@@ -1,0 +1,1385 @@
+{
+  "routes": [
+    {
+      "stablecoinId": "usdt-tether",
+      "poolAddress": "0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7",
+      "inputIndex": 1,
+      "outputIndex": 2,
+      "inputDecimals": 6,
+      "outputDecimals": 6,
+      "chain": "ethereum"
+    },
+    {
+      "stablecoinId": "dai-makerdao",
+      "poolAddress": "0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7",
+      "inputIndex": 1,
+      "outputIndex": 0,
+      "inputDecimals": 6,
+      "outputDecimals": 18,
+      "chain": "ethereum"
+    },
+    {
+      "stablecoinId": "crvusd-curve",
+      "poolAddress": "0x4DEcE678ceceb27446b35C672dC7d61F30bAD69E",
+      "inputIndex": 0,
+      "outputIndex": 1,
+      "inputDecimals": 6,
+      "outputDecimals": 18,
+      "chain": "ethereum"
+    },
+    {
+      "stablecoinId": "pyusd-paypal",
+      "poolAddress": "0x383E6b4437b59fff47B619CBA855CA29342A8559",
+      "inputIndex": 1,
+      "outputIndex": 0,
+      "inputDecimals": 6,
+      "outputDecimals": 6,
+      "chain": "ethereum"
+    },
+    {
+      "stablecoinId": "frax-frax",
+      "poolAddress": "0xDcEF968d416a41Cdac0ED8702fAC8128A64241A2",
+      "inputIndex": 1,
+      "outputIndex": 0,
+      "inputDecimals": 6,
+      "outputDecimals": 18,
+      "chain": "ethereum"
+    },
+    {
+      "stablecoinId": "usde-ethena",
+      "poolAddress": "0x02950460E2b9529D0E00284A5fA2d7bDF3fA4d72",
+      "inputIndex": 1,
+      "outputIndex": 0,
+      "inputDecimals": 6,
+      "outputDecimals": 18,
+      "chain": "ethereum"
+    },
+    {
+      "stablecoinId": "rlusd-ripple",
+      "poolAddress": "0xD001aE433f254283FeCE51d4ACcE8c53263aa186",
+      "inputIndex": 0,
+      "outputIndex": 1,
+      "inputDecimals": 6,
+      "outputDecimals": 18,
+      "chain": "ethereum"
+    },
+    {
+      "stablecoinId": "ausd-agora",
+      "poolAddress": "0xE79C1C7E24755574438A26D5e062Ad2626C04662",
+      "inputIndex": 0,
+      "outputIndex": 1,
+      "inputDecimals": 6,
+      "outputDecimals": 6,
+      "chain": "ethereum"
+    },
+    {
+      "stablecoinId": "usdtb-ethena",
+      "poolAddress": "0xC2921134073151490193AC7369313c8e0b08e1E7",
+      "inputIndex": 0,
+      "outputIndex": 1,
+      "inputDecimals": 6,
+      "outputDecimals": 18,
+      "chain": "ethereum"
+    },
+    {
+      "stablecoinId": "bold-liquity",
+      "poolAddress": "0xEFc6516323FbD28e80B85A497B65A86243a54B3E",
+      "inputIndex": 1,
+      "outputIndex": 0,
+      "inputDecimals": 6,
+      "outputDecimals": 18,
+      "chain": "ethereum"
+    },
+    {
+      "stablecoinId": "fxusd-f-x-protocol",
+      "poolAddress": "0x5018BE882DccE5E3F2f3B0913AE2096B9b3fB61f",
+      "inputIndex": 0,
+      "outputIndex": 1,
+      "inputDecimals": 6,
+      "outputDecimals": 18,
+      "chain": "ethereum"
+    },
+    {
+      "stablecoinId": "ousd-origin-protocol",
+      "poolAddress": "0x6d18E1a7faeB1F0467A77C0d293872ab685426dc",
+      "inputIndex": 1,
+      "outputIndex": 0,
+      "inputDecimals": 6,
+      "outputDecimals": 18,
+      "chain": "ethereum"
+    },
+    {
+      "stablecoinId": "usg-tangent",
+      "poolAddress": "0x97BA10115da528c113462EDE9C20D7adc806D93f",
+      "inputIndex": 0,
+      "outputIndex": 1,
+      "inputDecimals": 6,
+      "outputDecimals": 18,
+      "chain": "ethereum"
+    },
+    {
+      "stablecoinId": "usdat-saturn",
+      "poolAddress": "0xF4d0CF32908b2C7f1021339c43Df0F77f06896d7",
+      "inputIndex": 0,
+      "outputIndex": 1,
+      "inputDecimals": 6,
+      "outputDecimals": 6,
+      "chain": "ethereum",
+      "routeType": "direct"
+    },
+    {
+      "stablecoinId": "apxusd-apyx",
+      "poolAddress": "0xE1B96555BbecA40E583BbB41a11C68Ca4706A414",
+      "inputIndex": 1,
+      "outputIndex": 0,
+      "inputDecimals": 6,
+      "outputDecimals": 18,
+      "chain": "ethereum",
+      "routeType": "direct"
+    },
+    {
+      "stablecoinId": "usat-tether",
+      "poolAddress": "0x0Bdb2c3AF83EE1d3196FA64d3162e54624B5f6b0",
+      "inputIndex": 1,
+      "outputIndex": 0,
+      "inputDecimals": 6,
+      "outputDecimals": 6,
+      "chain": "ethereum",
+      "hop": {
+        "viaStablecoinId": "usdt-tether"
+      },
+      "routeType": "one-hop"
+    },
+    {
+      "stablecoinId": "usdg-paxos",
+      "poolAddress": "0xc061caa073f3d95F80f8e5428d32D2d76F5e1622",
+      "inputIndex": 1,
+      "outputIndex": 0,
+      "inputDecimals": 6,
+      "outputDecimals": 6,
+      "chain": "ethereum",
+      "routeType": "direct"
+    },
+    {
+      "stablecoinId": "nusd-neutrl",
+      "poolAddress": "0x7E19F0253A564e026C63eeAA9338d6DBddeF3b09",
+      "inputIndex": 1,
+      "outputIndex": 0,
+      "inputDecimals": 6,
+      "outputDecimals": 18,
+      "chain": "ethereum",
+      "routeType": "direct"
+    },
+    {
+      "stablecoinId": "usdf-falcon",
+      "poolAddress": "0x72310DAAed61321b02B08A547150c07522c6a976",
+      "inputIndex": 0,
+      "outputIndex": 1,
+      "inputDecimals": 6,
+      "outputDecimals": 18,
+      "chain": "ethereum",
+      "routeType": "direct"
+    },
+    {
+      "stablecoinId": "eusd-electronic-usd",
+      "poolAddress": "0x08BfA22bB3e024CDfEB3eca53c0cb93bF59c4147",
+      "inputIndex": 1,
+      "outputIndex": 0,
+      "inputDecimals": 6,
+      "outputDecimals": 18,
+      "chain": "ethereum",
+      "routeType": "direct"
+    },
+    {
+      "stablecoinId": "fidd-fidelity",
+      "poolAddress": "0xE47E8Ced9D94AA43C922627782E29b41a93202AF",
+      "inputIndex": 1,
+      "outputIndex": 0,
+      "inputDecimals": 6,
+      "outputDecimals": 18,
+      "chain": "ethereum",
+      "routeType": "direct"
+    },
+    {
+      "stablecoinId": "usdq-quantoz",
+      "poolAddress": "0x5a8C7623FEe10542614e492c670a67e3DfE922F8",
+      "inputIndex": 1,
+      "outputIndex": 0,
+      "inputDecimals": 6,
+      "outputDecimals": 6,
+      "chain": "ethereum",
+      "hop": {
+        "viaStablecoinId": "usdt-tether"
+      },
+      "routeType": "one-hop"
+    },
+    {
+      "stablecoinId": "susds-sky",
+      "poolAddress": "0x00836Fe54625BE242BcFA286207795405ca4fD10",
+      "inputIndex": 1,
+      "outputIndex": 0,
+      "inputDecimals": 6,
+      "outputDecimals": 18,
+      "chain": "ethereum",
+      "hop": {
+        "viaStablecoinId": "usdt-tether"
+      },
+      "routeType": "one-hop"
+    },
+    {
+      "stablecoinId": "pmusd-precious-metals",
+      "poolAddress": "0xEcb0F0d68C19BdAaDAEbE24f6752A4Db34e2c2cb",
+      "inputIndex": 1,
+      "outputIndex": 0,
+      "inputDecimals": 18,
+      "outputDecimals": 18,
+      "chain": "ethereum",
+      "hop": {
+        "viaStablecoinId": "crvusd-curve"
+      },
+      "routeType": "one-hop"
+    },
+    {
+      "stablecoinId": "frxusd-frax",
+      "poolAddress": "0x13e12BB0E6A2f1A3d6901a59a9d585e89A6243e1",
+      "inputIndex": 1,
+      "outputIndex": 0,
+      "inputDecimals": 18,
+      "outputDecimals": 18,
+      "chain": "ethereum",
+      "hop": {
+        "viaStablecoinId": "crvusd-curve"
+      },
+      "routeType": "one-hop"
+    },
+    {
+      "stablecoinId": "gho-aave",
+      "poolAddress": "0x635EF0056A597D13863B73825CcA297236578595",
+      "inputIndex": 1,
+      "outputIndex": 0,
+      "inputDecimals": 18,
+      "outputDecimals": 18,
+      "chain": "ethereum",
+      "hop": {
+        "viaStablecoinId": "crvusd-curve"
+      },
+      "routeType": "one-hop"
+    },
+    {
+      "stablecoinId": "usds-sky",
+      "poolAddress": "0xA632D59b9B804a956BfaA9b48Af3A1b74808FC1f",
+      "inputIndex": 0,
+      "outputIndex": 1,
+      "inputDecimals": 6,
+      "outputDecimals": 18,
+      "chain": "ethereum",
+      "hop": {
+        "viaStablecoinId": "pyusd-paypal"
+      },
+      "routeType": "one-hop"
+    },
+    {
+      "stablecoinId": "apyusd-apyx",
+      "poolAddress": "0xe41be7B340f7c2EDA4DA1e99b42Ee1b228b526b7",
+      "inputIndex": 1,
+      "outputIndex": 0,
+      "inputDecimals": 18,
+      "outputDecimals": 18,
+      "chain": "ethereum",
+      "hop": {
+        "viaStablecoinId": "apxusd-apyx"
+      },
+      "routeType": "one-hop"
+    },
+    {
+      "stablecoinId": "dola-inverse-finance",
+      "poolAddress": "0x8b83c4aA949254895507D09365229BC3a8c7f710",
+      "inputIndex": 1,
+      "outputIndex": 0,
+      "inputDecimals": 18,
+      "outputDecimals": 18,
+      "chain": "ethereum",
+      "hop": {
+        "viaStablecoinId": "susds-sky"
+      },
+      "routeType": "chained-hop",
+      "maxHopDepth": 2
+    },
+    {
+      "stablecoinId": "msusd-metronome",
+      "poolAddress": "0x9A9e2e70919c75D80aAaA1D483c46CdBb8ac4d1b",
+      "inputIndex": 0,
+      "outputIndex": 1,
+      "inputDecimals": 18,
+      "outputDecimals": 18,
+      "chain": "ethereum",
+      "hop": {
+        "viaStablecoinId": "frxusd-frax"
+      },
+      "routeType": "chained-hop",
+      "maxHopDepth": 2
+    },
+    {
+      "stablecoinId": "sfrxusd-frax",
+      "poolAddress": "0xF292eB6c5dcb693Eaaf392D0562a01C3710E5978",
+      "inputIndex": 1,
+      "outputIndex": 0,
+      "inputDecimals": 18,
+      "outputDecimals": 18,
+      "chain": "ethereum",
+      "hop": {
+        "viaStablecoinId": "frxusd-frax"
+      },
+      "routeType": "chained-hop",
+      "maxHopDepth": 2
+    },
+    {
+      "stablecoinId": "stusds-sky",
+      "poolAddress": "0x2C7C98A3b1582D83c43987202aEFf638312478aE",
+      "inputIndex": 0,
+      "outputIndex": 1,
+      "inputDecimals": 18,
+      "outputDecimals": 18,
+      "chain": "ethereum",
+      "hop": {
+        "viaStablecoinId": "usds-sky"
+      },
+      "routeType": "chained-hop",
+      "maxHopDepth": 2
+    },
+    {
+      "stablecoinId": "alusd-alchemix",
+      "poolAddress": "0x17F9682c9cd1a448b31C0428F1D0783eD13a9Fa3",
+      "inputIndex": 1,
+      "outputIndex": 0,
+      "inputDecimals": 18,
+      "outputDecimals": 18,
+      "chain": "ethereum",
+      "hop": {
+        "viaStablecoinId": "frxusd-frax"
+      },
+      "routeType": "chained-hop",
+      "maxHopDepth": 2
+    },
+    {
+      "stablecoinId": "avusd-avant",
+      "poolAddress": "0xf76329c6dc10FdfbEe6CA520d0BF4d474E95E46E",
+      "inputIndex": 0,
+      "outputIndex": 1,
+      "inputDecimals": 18,
+      "outputDecimals": 18,
+      "chain": "ethereum",
+      "hop": {
+        "viaStablecoinId": "frxusd-frax"
+      },
+      "routeType": "chained-hop",
+      "maxHopDepth": 2
+    },
+    {
+      "stablecoinId": "lusd-liquity",
+      "poolAddress": "0xEd279fDD11cA84bEef15AF5D39BB4d4bEE23F0cA",
+      "inputIndex": 2,
+      "outputIndex": 0,
+      "inputDecimals": 6,
+      "outputDecimals": 18,
+      "chain": "ethereum",
+      "useUnderlying": true
+    },
+    {
+      "stablecoinId": "gusd-gemini",
+      "poolAddress": "0x4f062658EaAF2C1ccf8C8e36D6824CDf41167956",
+      "inputIndex": 2,
+      "outputIndex": 0,
+      "inputDecimals": 6,
+      "outputDecimals": 2,
+      "chain": "ethereum",
+      "useUnderlying": true
+    }
+  ],
+  "policies": [
+    {
+      "chain": "ethereum",
+      "stablecoinId": "susde-ethena",
+      "adapterProfileId": "curve-stableswap-ng-rate-bearing-get-dy-v1",
+      "poolAddress": "0x744793b5110f6ca9cc7cdfe1ce16677c3eb192ef",
+      "expectedPoolCodeHash": "0x94804f252de72c79ef819798e3149d5d461d4fbc8417aa0f5e314070c3cb599f",
+      "factoryAddress": "0x6a8cbed756804b16e05e741edabd5cb544ae21bf",
+      "expectedFactoryCodeHash": "0xb78c1b32cd364260f3fa497ccc7e98c73cdc26bdae2d3635e763ee8b59a1d6fd",
+      "factoryPoolIndex": 298,
+      "expectedRegistryId": "factory-stable-ng",
+      "factoryArrayEncoding": "dynamic",
+      "implementationBinding": "factory-lookup",
+      "implementationAddress": "0xdcc91f930b42619377c200ba05b7513f2958b202",
+      "expectedImplementationCodeHash": "0xe2a3dd8d583b86eb7f562b4307aab6e5a373ddb5c6b348e4cf63d41914f35a9f",
+      "poolTokens": [
+        {
+          "address": "0x865377367054516e17014ccded1e7d814edc9ce4",
+          "symbol": "DOLA",
+          "decimals": 18,
+          "trackedAssetId": "dola-inverse-finance"
+        },
+        {
+          "address": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+          "symbol": "sUSDe",
+          "decimals": 18,
+          "trackedAssetId": "susde-ethena"
+        }
+      ],
+      "executionTokens": [
+        {
+          "address": "0x865377367054516e17014ccded1e7d814edc9ce4",
+          "symbol": "DOLA",
+          "decimals": 18,
+          "trackedAssetId": "dola-inverse-finance"
+        },
+        {
+          "address": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+          "symbol": "sUSDe",
+          "decimals": 18,
+          "trackedAssetId": "susde-ethena"
+        }
+      ],
+      "inputIndex": 1,
+      "outputIndex": 0,
+      "quoteFunction": "get_dy",
+      "expectedAssetTypes": [
+        0,
+        3
+      ],
+      "rateProvider": {
+        "kind": "erc4626",
+        "tokenIndex": 1,
+        "providerAddress": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+        "expectedProviderCodeHash": "0xadc4989c92fab525a1a22b3f60f5b61b77f9eb11b693e8afeba5736ea4b502e3",
+        "underlyingAddress": "0x4c9edd5852cd905f086c759e8383e09bff1e68b3"
+      },
+      "mode": "shadow",
+      "scoreEligible": false
+    },
+    {
+      "chain": "ethereum",
+      "stablecoinId": "usd1-world-liberty-financial",
+      "adapterProfileId": "curve-stableswap-ng-metapool-underlying-v1",
+      "poolAddress": "0xc09e82f81cb811db0922dd48206fc2e212322caf",
+      "expectedPoolCodeHash": "0x25478b25c12a81937ddb75e0c5ed8ca8ab248a102316873d092f49ca870b8cca",
+      "factoryAddress": "0x6a8cbed756804b16e05e741edabd5cb544ae21bf",
+      "expectedFactoryCodeHash": "0xb78c1b32cd364260f3fa497ccc7e98c73cdc26bdae2d3635e763ee8b59a1d6fd",
+      "factoryPoolIndex": 553,
+      "expectedRegistryId": "factory-stable-ng",
+      "factoryArrayEncoding": "dynamic",
+      "implementationBinding": "factory-lookup",
+      "implementationAddress": "0xede71f77d7c900dca5892720e76316c6e575f0f7",
+      "expectedImplementationCodeHash": "0x9d37af7ff5467ed7db9fe783986e9d7dabbb9dbb5a74e1da50cea67478a584bc",
+      "poolTokens": [
+        {
+          "address": "0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d",
+          "symbol": "USD1",
+          "decimals": 18,
+          "trackedAssetId": "usd1-world-liberty-financial"
+        },
+        {
+          "address": "0x4f493b7de8aac7d55f71853688b1f7c8f0243c85",
+          "symbol": "crv2pool",
+          "decimals": 18
+        }
+      ],
+      "executionTokens": [
+        {
+          "address": "0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d",
+          "symbol": "USD1",
+          "decimals": 18,
+          "trackedAssetId": "usd1-world-liberty-financial"
+        },
+        {
+          "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+          "symbol": "USDC",
+          "decimals": 6,
+          "trackedAssetId": "usdc-circle"
+        },
+        {
+          "address": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+          "symbol": "USDT",
+          "decimals": 6,
+          "trackedAssetId": "usdt-tether"
+        }
+      ],
+      "inputIndex": 0,
+      "outputIndex": 1,
+      "quoteFunction": "get_dy_underlying",
+      "metapool": {
+        "basePoolBinding": "factory-get-base-pool",
+        "basePoolAddress": "0x4f493b7de8aac7d55f71853688b1f7c8f0243c85",
+        "expectedBasePoolCodeHash": "0x5f0f1709fa823592ad75b27e32af00a8715d620dcb269be7c26fd5c873c1ce0e",
+        "basePoolTokens": [
+          {
+            "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+            "symbol": "USDC",
+            "decimals": 6,
+            "trackedAssetId": "usdc-circle"
+          },
+          {
+            "address": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+            "symbol": "USDT",
+            "decimals": 6,
+            "trackedAssetId": "usdt-tether"
+          }
+        ]
+      },
+      "mode": "shadow",
+      "scoreEligible": false
+    },
+    {
+      "chain": "avalanche",
+      "stablecoinId": "nxusd-nereus",
+      "adapterProfileId": "curve-stableswap-ng-metapool-underlying-v1",
+      "poolAddress": "0x6bf6fc7eaf84174bb7e1610efd865f0ebd2aa96d",
+      "expectedPoolCodeHash": "0x189567179f11c501b47c595502e59f75c31e36e0a8cf95ba5f73ef6fff5d74a3",
+      "factoryAddress": "0xb17b674d9c5cb2e441f8e196a2f048a81355d031",
+      "expectedFactoryCodeHash": "0x7b76a635c41c7b2a6bbdd9e3a5d2df9f9c662c9292f97dd9a2a847652f5f4359",
+      "factoryPoolIndex": 66,
+      "expectedRegistryId": "factory",
+      "factoryArrayEncoding": "legacy-fixed",
+      "implementationBinding": "factory-lookup",
+      "implementationAddress": "0xa237034249290de2b07988ac64b96f22c0e76fe0",
+      "expectedImplementationCodeHash": "0xa14fbe91ed30d41ab822e2d3ef28a1ae375f3e60da77348fca77b7dd0a0b8641",
+      "poolTokens": [
+        {
+          "address": "0xf14f4ce569cb3679e99d5059909e23b07bd2f387",
+          "symbol": "NXUSD",
+          "decimals": 18,
+          "trackedAssetId": "nxusd-nereus"
+        },
+        {
+          "address": "0x1337bedc9d22ecbe766df105c9623922a27963ec",
+          "symbol": "av3CRV",
+          "decimals": 18
+        }
+      ],
+      "executionTokens": [
+        {
+          "address": "0xf14f4ce569cb3679e99d5059909e23b07bd2f387",
+          "symbol": "NXUSD",
+          "decimals": 18,
+          "trackedAssetId": "nxusd-nereus"
+        },
+        {
+          "address": "0x47afa96cdc9fab46904a55a6ad4bf6660b53c38a",
+          "symbol": "avDAI",
+          "decimals": 18
+        },
+        {
+          "address": "0x46a51127c3ce23fb7ab1de06226147f446e4a857",
+          "symbol": "avUSDC",
+          "decimals": 6,
+          "referenceAssetId": "usdc-circle"
+        },
+        {
+          "address": "0x532e6537fea298397212f09a61e03311686f548e",
+          "symbol": "avUSDT",
+          "decimals": 6
+        }
+      ],
+      "inputIndex": 0,
+      "outputIndex": 2,
+      "quoteFunction": "get_dy_underlying",
+      "metapool": {
+        "basePoolBinding": "factory-get-base-pool",
+        "basePoolAddress": "0x7f90122bf0700f9e7e1f688fe926940e8839f353",
+        "expectedBasePoolCodeHash": "0xa3fc544c3d02269e8a5d1fef9bda368f32ed62e6da938e202549aa1b5fc520c8",
+        "basePoolTokens": [
+          {
+            "address": "0x47afa96cdc9fab46904a55a6ad4bf6660b53c38a",
+            "symbol": "avDAI",
+            "decimals": 18
+          },
+          {
+            "address": "0x46a51127c3ce23fb7ab1de06226147f446e4a857",
+            "symbol": "avUSDC",
+            "decimals": 6
+          },
+          {
+            "address": "0x532e6537fea298397212f09a61e03311686f548e",
+            "symbol": "avUSDT",
+            "decimals": 6
+          }
+        ]
+      },
+      "mode": "shadow",
+      "scoreEligible": false
+    },
+    {
+      "chain": "ethereum",
+      "stablecoinId": "alusd-alchemix",
+      "poolAddress": "0x43b4fdfd4ff969587185cdb6f0bd875c5fc83f8c",
+      "expectedPoolCodeHash": "0x156700a4060f3d62786914b50cc60b2b840e6440401bea9a99c0acce0b58beda",
+      "factoryAddress": "0xb9fc157394af804a3578134a6585c0dc9cc990d4",
+      "expectedFactoryCodeHash": "0xd1b02d8c066dc343522d6aa5f6427b5245dc1f3276841ea48180cb0d0387e2ca",
+      "factoryPoolIndex": 12,
+      "expectedRegistryId": "factory",
+      "factoryArrayEncoding": "legacy-fixed",
+      "implementationBinding": "factory-lookup",
+      "implementationAddress": "0x5f890841f657d90e081babdb532a05996af79fe6",
+      "expectedImplementationCodeHash": "0x260a286cc14e91f4a2d4a966e2e5f5030543a7d2f090a623f5fa15ba174a50f3",
+      "poolTokens": [
+        {
+          "address": "0xbc6da0fe9ad5f3b0d58160288917aa56653660e9",
+          "symbol": "alUSD",
+          "decimals": 18,
+          "trackedAssetId": "alusd-alchemix"
+        },
+        {
+          "address": "0x6c3f90f043a72fa612cbac8115ee7e52bde6e490",
+          "symbol": "3Crv",
+          "decimals": 18
+        }
+      ],
+      "executionTokens": [
+        {
+          "address": "0xbc6da0fe9ad5f3b0d58160288917aa56653660e9",
+          "symbol": "alUSD",
+          "decimals": 18,
+          "trackedAssetId": "alusd-alchemix"
+        },
+        {
+          "address": "0x6b175474e89094c44da98b954eedeac495271d0f",
+          "symbol": "DAI",
+          "decimals": 18
+        },
+        {
+          "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+          "symbol": "USDC",
+          "decimals": 6,
+          "trackedAssetId": "usdc-circle"
+        },
+        {
+          "address": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+          "symbol": "USDT",
+          "decimals": 6,
+          "trackedAssetId": "usdt-tether"
+        }
+      ],
+      "inputIndex": 0,
+      "outputIndex": 2,
+      "metapool": {
+        "basePoolBinding": "factory-get-base-pool",
+        "basePoolAddress": "0xbebc44782c7db0a1a60cb6fe97d0b483032ff1c7",
+        "expectedBasePoolCodeHash": "0x954a1e212c557c85043985931498ffa3e2fcbe7dfe9cd61513f36eb47d6f4dfc",
+        "basePoolTokens": [
+          {
+            "address": "0x6b175474e89094c44da98b954eedeac495271d0f",
+            "symbol": "DAI",
+            "decimals": 18,
+            "trackedAssetId": "dai-makerdao"
+          },
+          {
+            "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+            "symbol": "USDC",
+            "decimals": 6,
+            "trackedAssetId": "usdc-circle"
+          },
+          {
+            "address": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+            "symbol": "USDT",
+            "decimals": 6,
+            "trackedAssetId": "usdt-tether"
+          }
+        ]
+      },
+      "adapterProfileId": "curve-stableswap-ng-metapool-underlying-v1",
+      "quoteFunction": "get_dy_underlying",
+      "mode": "shadow",
+      "scoreEligible": false
+    },
+    {
+      "chain": "ethereum",
+      "stablecoinId": "dola-inverse-finance",
+      "poolAddress": "0xe57180685e3348589e9521aa53af0bcd497e884d",
+      "expectedPoolCodeHash": "0xd1ea5822210a78c174b99e58a8d3803d68a3694868c6d796fee2b5cebe383f62",
+      "factoryAddress": "0xb9fc157394af804a3578134a6585c0dc9cc990d4",
+      "expectedFactoryCodeHash": "0xd1b02d8c066dc343522d6aa5f6427b5245dc1f3276841ea48180cb0d0387e2ca",
+      "factoryPoolIndex": 176,
+      "expectedRegistryId": "factory",
+      "factoryArrayEncoding": "legacy-fixed",
+      "implementationBinding": "factory-lookup",
+      "implementationAddress": "0x33bb0e62d5e8c688e645dd46dfb48cd613250067",
+      "expectedImplementationCodeHash": "0x2c67f0058c5bebafdab722f691a698a56d1480b5dbaf9bca64bb036e9f24cf4a",
+      "poolTokens": [
+        {
+          "address": "0x865377367054516e17014ccded1e7d814edc9ce4",
+          "symbol": "DOLA",
+          "decimals": 18,
+          "trackedAssetId": "dola-inverse-finance"
+        },
+        {
+          "address": "0x3175df0976dfa876431c2e9ee6bc45b65d3473cc",
+          "symbol": "FRAXBP",
+          "decimals": 18
+        }
+      ],
+      "executionTokens": [
+        {
+          "address": "0x865377367054516e17014ccded1e7d814edc9ce4",
+          "symbol": "DOLA",
+          "decimals": 18,
+          "trackedAssetId": "dola-inverse-finance"
+        },
+        {
+          "address": "0x853d955acef822db058eb8505911ed77f175b99e",
+          "symbol": "FRAX",
+          "decimals": 18
+        },
+        {
+          "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+          "symbol": "USDC",
+          "decimals": 6,
+          "trackedAssetId": "usdc-circle"
+        }
+      ],
+      "inputIndex": 0,
+      "outputIndex": 2,
+      "metapool": {
+        "basePoolBinding": "factory-get-base-pool",
+        "basePoolAddress": "0xdcef968d416a41cdac0ed8702fac8128a64241a2",
+        "expectedBasePoolCodeHash": "0x304e2199bfe57413d95a53efb2f3df8ed69be12f7df5770b874c9b3a30d9cafd",
+        "basePoolTokens": [
+          {
+            "address": "0x853d955acef822db058eb8505911ed77f175b99e",
+            "symbol": "FRAX",
+            "decimals": 18
+          },
+          {
+            "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+            "symbol": "USDC",
+            "decimals": 6,
+            "trackedAssetId": "usdc-circle"
+          }
+        ]
+      },
+      "adapterProfileId": "curve-stableswap-ng-metapool-underlying-v1",
+      "quoteFunction": "get_dy_underlying",
+      "mode": "shadow",
+      "scoreEligible": false
+    },
+    {
+      "chain": "ethereum",
+      "stablecoinId": "eusd-electronic-usd",
+      "poolAddress": "0xaeda92e6a3b1028edc139a4ae56ec881f3064d4f",
+      "expectedPoolCodeHash": "0xd1ea5822210a78c174b99e58a8d3803d68a3694868c6d796fee2b5cebe383f62",
+      "factoryAddress": "0xb9fc157394af804a3578134a6585c0dc9cc990d4",
+      "expectedFactoryCodeHash": "0xd1b02d8c066dc343522d6aa5f6427b5245dc1f3276841ea48180cb0d0387e2ca",
+      "factoryPoolIndex": 277,
+      "expectedRegistryId": "factory",
+      "factoryArrayEncoding": "legacy-fixed",
+      "implementationBinding": "factory-lookup",
+      "implementationAddress": "0x33bb0e62d5e8c688e645dd46dfb48cd613250067",
+      "expectedImplementationCodeHash": "0x2c67f0058c5bebafdab722f691a698a56d1480b5dbaf9bca64bb036e9f24cf4a",
+      "poolTokens": [
+        {
+          "address": "0xa0d69e286b938e21cbf7e51d71f6a4c8918f482f",
+          "symbol": "eUSD",
+          "decimals": 18,
+          "trackedAssetId": "eusd-electronic-usd"
+        },
+        {
+          "address": "0x3175df0976dfa876431c2e9ee6bc45b65d3473cc",
+          "symbol": "FRAXBP",
+          "decimals": 18
+        }
+      ],
+      "executionTokens": [
+        {
+          "address": "0xa0d69e286b938e21cbf7e51d71f6a4c8918f482f",
+          "symbol": "eUSD",
+          "decimals": 18,
+          "trackedAssetId": "eusd-electronic-usd"
+        },
+        {
+          "address": "0x853d955acef822db058eb8505911ed77f175b99e",
+          "symbol": "FRAX",
+          "decimals": 18
+        },
+        {
+          "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+          "symbol": "USDC",
+          "decimals": 6,
+          "trackedAssetId": "usdc-circle"
+        }
+      ],
+      "inputIndex": 0,
+      "outputIndex": 2,
+      "metapool": {
+        "basePoolBinding": "factory-get-base-pool",
+        "basePoolAddress": "0xdcef968d416a41cdac0ed8702fac8128a64241a2",
+        "expectedBasePoolCodeHash": "0x304e2199bfe57413d95a53efb2f3df8ed69be12f7df5770b874c9b3a30d9cafd",
+        "basePoolTokens": [
+          {
+            "address": "0x853d955acef822db058eb8505911ed77f175b99e",
+            "symbol": "FRAX",
+            "decimals": 18
+          },
+          {
+            "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+            "symbol": "USDC",
+            "decimals": 6,
+            "trackedAssetId": "usdc-circle"
+          }
+        ]
+      },
+      "adapterProfileId": "curve-stableswap-ng-metapool-underlying-v1",
+      "quoteFunction": "get_dy_underlying",
+      "mode": "shadow",
+      "scoreEligible": false
+    },
+    {
+      "chain": "ethereum",
+      "stablecoinId": "gusd-gemini",
+      "poolAddress": "0x4f062658eaaf2c1ccf8c8e36d6824cdf41167956",
+      "expectedPoolCodeHash": "0xce79330162abf07fc163331f9d9d1553b93dbf509eeafa1215fafa6113c5088e",
+      "factoryAddress": "0x90e00ace148ca3b23ac1bc8c240c2a7dd9c2d7f5",
+      "expectedFactoryCodeHash": "0x13d7cfcf1cef4bf310fa544567a427771c9be2c16bbf2c6be845d3d5f4cc5f22",
+      "factoryPoolIndex": 19,
+      "expectedRegistryId": "main",
+      "factoryArrayEncoding": "registry-fixed",
+      "implementationBinding": "standalone-runtime",
+      "implementationAddress": "0x4f062658eaaf2c1ccf8c8e36d6824cdf41167956",
+      "expectedImplementationCodeHash": "0xce79330162abf07fc163331f9d9d1553b93dbf509eeafa1215fafa6113c5088e",
+      "poolTokens": [
+        {
+          "address": "0x056fd409e1d7a124bd7017459dfea2f387b6d5cd",
+          "symbol": "GUSD",
+          "decimals": 2,
+          "trackedAssetId": "gusd-gemini"
+        },
+        {
+          "address": "0x6c3f90f043a72fa612cbac8115ee7e52bde6e490",
+          "symbol": "3Crv",
+          "decimals": 18
+        }
+      ],
+      "executionTokens": [
+        {
+          "address": "0x056fd409e1d7a124bd7017459dfea2f387b6d5cd",
+          "symbol": "GUSD",
+          "decimals": 2,
+          "trackedAssetId": "gusd-gemini"
+        },
+        {
+          "address": "0x6b175474e89094c44da98b954eedeac495271d0f",
+          "symbol": "DAI",
+          "decimals": 18
+        },
+        {
+          "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+          "symbol": "USDC",
+          "decimals": 6,
+          "trackedAssetId": "usdc-circle"
+        },
+        {
+          "address": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+          "symbol": "USDT",
+          "decimals": 6,
+          "trackedAssetId": "usdt-tether"
+        }
+      ],
+      "inputIndex": 0,
+      "outputIndex": 2,
+      "metapool": {
+        "basePoolBinding": "registry-lp-token",
+        "basePoolAddress": "0xbebc44782c7db0a1a60cb6fe97d0b483032ff1c7",
+        "expectedBasePoolCodeHash": "0x954a1e212c557c85043985931498ffa3e2fcbe7dfe9cd61513f36eb47d6f4dfc",
+        "basePoolTokens": [
+          {
+            "address": "0x6b175474e89094c44da98b954eedeac495271d0f",
+            "symbol": "DAI",
+            "decimals": 18,
+            "trackedAssetId": "dai-makerdao"
+          },
+          {
+            "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+            "symbol": "USDC",
+            "decimals": 6,
+            "trackedAssetId": "usdc-circle"
+          },
+          {
+            "address": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+            "symbol": "USDT",
+            "decimals": 6,
+            "trackedAssetId": "usdt-tether"
+          }
+        ]
+      },
+      "adapterProfileId": "curve-stableswap-ng-metapool-underlying-v1",
+      "quoteFunction": "get_dy_underlying",
+      "mode": "shadow",
+      "scoreEligible": false
+    },
+    {
+      "chain": "ethereum",
+      "stablecoinId": "lusd-liquity",
+      "poolAddress": "0xed279fdd11ca84beef15af5d39bb4d4bee23f0ca",
+      "expectedPoolCodeHash": "0x156700a4060f3d62786914b50cc60b2b840e6440401bea9a99c0acce0b58beda",
+      "factoryAddress": "0xb9fc157394af804a3578134a6585c0dc9cc990d4",
+      "expectedFactoryCodeHash": "0xd1b02d8c066dc343522d6aa5f6427b5245dc1f3276841ea48180cb0d0387e2ca",
+      "factoryPoolIndex": 16,
+      "expectedRegistryId": "factory",
+      "factoryArrayEncoding": "legacy-fixed",
+      "implementationBinding": "factory-lookup",
+      "implementationAddress": "0x5f890841f657d90e081babdb532a05996af79fe6",
+      "expectedImplementationCodeHash": "0x260a286cc14e91f4a2d4a966e2e5f5030543a7d2f090a623f5fa15ba174a50f3",
+      "poolTokens": [
+        {
+          "address": "0x5f98805a4e8be255a32880fdec7f6728c6568ba0",
+          "symbol": "LUSD",
+          "decimals": 18,
+          "trackedAssetId": "lusd-liquity"
+        },
+        {
+          "address": "0x6c3f90f043a72fa612cbac8115ee7e52bde6e490",
+          "symbol": "3Crv",
+          "decimals": 18
+        }
+      ],
+      "executionTokens": [
+        {
+          "address": "0x5f98805a4e8be255a32880fdec7f6728c6568ba0",
+          "symbol": "LUSD",
+          "decimals": 18,
+          "trackedAssetId": "lusd-liquity"
+        },
+        {
+          "address": "0x6b175474e89094c44da98b954eedeac495271d0f",
+          "symbol": "DAI",
+          "decimals": 18
+        },
+        {
+          "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+          "symbol": "USDC",
+          "decimals": 6,
+          "trackedAssetId": "usdc-circle"
+        },
+        {
+          "address": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+          "symbol": "USDT",
+          "decimals": 6,
+          "trackedAssetId": "usdt-tether"
+        }
+      ],
+      "inputIndex": 0,
+      "outputIndex": 2,
+      "metapool": {
+        "basePoolBinding": "factory-get-base-pool",
+        "basePoolAddress": "0xbebc44782c7db0a1a60cb6fe97d0b483032ff1c7",
+        "expectedBasePoolCodeHash": "0x954a1e212c557c85043985931498ffa3e2fcbe7dfe9cd61513f36eb47d6f4dfc",
+        "basePoolTokens": [
+          {
+            "address": "0x6b175474e89094c44da98b954eedeac495271d0f",
+            "symbol": "DAI",
+            "decimals": 18,
+            "trackedAssetId": "dai-makerdao"
+          },
+          {
+            "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+            "symbol": "USDC",
+            "decimals": 6,
+            "trackedAssetId": "usdc-circle"
+          },
+          {
+            "address": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+            "symbol": "USDT",
+            "decimals": 6,
+            "trackedAssetId": "usdt-tether"
+          }
+        ]
+      },
+      "adapterProfileId": "curve-stableswap-ng-metapool-underlying-v1",
+      "quoteFunction": "get_dy_underlying",
+      "mode": "shadow",
+      "scoreEligible": false
+    },
+    {
+      "chain": "polygon",
+      "stablecoinId": "mai-qidao",
+      "poolAddress": "0x447646e84498552e62ecf097cc305eabfff09308",
+      "expectedPoolCodeHash": "0x3e54554b2fcc52bfb0487a66d242ad697094e4f9a0a6565c5ff61827e6467c79",
+      "factoryAddress": "0x722272d36ef0da72ff51c5a65db7b870e2e8d4ee",
+      "expectedFactoryCodeHash": "0x7b76a635c41c7b2a6bbdd9e3a5d2df9f9c662c9292f97dd9a2a847652f5f4359",
+      "factoryPoolIndex": 107,
+      "expectedRegistryId": "factory",
+      "factoryArrayEncoding": "legacy-fixed",
+      "implementationBinding": "factory-lookup",
+      "implementationAddress": "0x4fb93d7d320e8a263f22f62c2059dfc2a8bcbc4c",
+      "expectedImplementationCodeHash": "0x9afd1238323750dbcd66006d7a82c835f15924a16f635377422b05ce8f28406a",
+      "poolTokens": [
+        {
+          "address": "0xa3fa99a148fa48d14ed51d610c367c61876997f1",
+          "symbol": "miMATIC",
+          "decimals": 18,
+          "trackedAssetId": "mai-qidao"
+        },
+        {
+          "address": "0xe7a24ef0c5e95ffb0f6684b813a78f2a3ad7d171",
+          "symbol": "am3CRV",
+          "decimals": 18
+        }
+      ],
+      "executionTokens": [
+        {
+          "address": "0xa3fa99a148fa48d14ed51d610c367c61876997f1",
+          "symbol": "miMATIC",
+          "decimals": 18,
+          "trackedAssetId": "mai-qidao"
+        },
+        {
+          "address": "0x27f8d03b3a2196956ed754badc28d73be8830a6e",
+          "symbol": "amDAI",
+          "decimals": 18
+        },
+        {
+          "address": "0x1a13f4ca1d028320a707d99520abfefca3998b7f",
+          "symbol": "amUSDC",
+          "decimals": 6,
+          "referenceAssetId": "usdc-circle"
+        },
+        {
+          "address": "0x60d55f02a771d515e077c9c2403a1ef324885cec",
+          "symbol": "amUSDT",
+          "decimals": 6
+        }
+      ],
+      "inputIndex": 0,
+      "outputIndex": 2,
+      "metapool": {
+        "basePoolBinding": "factory-get-base-pool",
+        "basePoolAddress": "0x445fe580ef8d70ff569ab36e80c647af338db351",
+        "expectedBasePoolCodeHash": "0xd6eed64965cb4079ed779ee585297302ae36ec12626b69ae318c836df371165b",
+        "basePoolTokens": [
+          {
+            "address": "0x27f8d03b3a2196956ed754badc28d73be8830a6e",
+            "symbol": "amDAI",
+            "decimals": 18
+          },
+          {
+            "address": "0x1a13f4ca1d028320a707d99520abfefca3998b7f",
+            "symbol": "amUSDC",
+            "decimals": 6,
+            "referenceAssetId": "usdc-circle"
+          },
+          {
+            "address": "0x60d55f02a771d515e077c9c2403a1ef324885cec",
+            "symbol": "amUSDT",
+            "decimals": 6
+          }
+        ]
+      },
+      "adapterProfileId": "curve-stableswap-ng-metapool-underlying-v1",
+      "quoteFunction": "get_dy_underlying",
+      "mode": "shadow",
+      "scoreEligible": false
+    },
+    {
+      "chain": "ethereum",
+      "stablecoinId": "meusd-mezo",
+      "poolAddress": "0xb5571e76693ba60110b5811dd650ffefce1c955f",
+      "expectedPoolCodeHash": "0xfeb82e1a7ec3cc0f6773f0ea2d12acaadfa4f8b979a94a23c02626fefd5f9eb0",
+      "factoryAddress": "0x6a8cbed756804b16e05e741edabd5cb544ae21bf",
+      "expectedFactoryCodeHash": "0xb78c1b32cd364260f3fa497ccc7e98c73cdc26bdae2d3635e763ee8b59a1d6fd",
+      "factoryPoolIndex": 518,
+      "expectedRegistryId": "factory-stable-ng",
+      "factoryArrayEncoding": "dynamic",
+      "implementationBinding": "factory-lookup",
+      "implementationAddress": "0xede71f77d7c900dca5892720e76316c6e575f0f7",
+      "expectedImplementationCodeHash": "0x9d37af7ff5467ed7db9fe783986e9d7dabbb9dbb5a74e1da50cea67478a584bc",
+      "poolTokens": [
+        {
+          "address": "0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186",
+          "symbol": "MUSD",
+          "decimals": 18,
+          "trackedAssetId": "meusd-mezo"
+        },
+        {
+          "address": "0x4f493b7de8aac7d55f71853688b1f7c8f0243c85",
+          "symbol": "crv2pool",
+          "decimals": 18
+        }
+      ],
+      "executionTokens": [
+        {
+          "address": "0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186",
+          "symbol": "MUSD",
+          "decimals": 18,
+          "trackedAssetId": "meusd-mezo"
+        },
+        {
+          "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+          "symbol": "USDC",
+          "decimals": 6,
+          "trackedAssetId": "usdc-circle"
+        },
+        {
+          "address": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+          "symbol": "USDT",
+          "decimals": 6,
+          "trackedAssetId": "usdt-tether"
+        }
+      ],
+      "inputIndex": 0,
+      "outputIndex": 1,
+      "metapool": {
+        "basePoolBinding": "factory-get-base-pool",
+        "basePoolAddress": "0x4f493b7de8aac7d55f71853688b1f7c8f0243c85",
+        "expectedBasePoolCodeHash": "0x5f0f1709fa823592ad75b27e32af00a8715d620dcb269be7c26fd5c873c1ce0e",
+        "basePoolTokens": [
+          {
+            "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+            "symbol": "USDC",
+            "decimals": 6,
+            "trackedAssetId": "usdc-circle"
+          },
+          {
+            "address": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+            "symbol": "USDT",
+            "decimals": 6,
+            "trackedAssetId": "usdt-tether"
+          }
+        ]
+      },
+      "adapterProfileId": "curve-stableswap-ng-metapool-underlying-v1",
+      "quoteFunction": "get_dy_underlying",
+      "mode": "shadow",
+      "scoreEligible": false
+    },
+    {
+      "chain": "ethereum",
+      "stablecoinId": "msusd-metronome",
+      "poolAddress": "0xc3b19502f8c02be75f3f77fd673503520deb51dd",
+      "expectedPoolCodeHash": "0xd1ea5822210a78c174b99e58a8d3803d68a3694868c6d796fee2b5cebe383f62",
+      "factoryAddress": "0xb9fc157394af804a3578134a6585c0dc9cc990d4",
+      "expectedFactoryCodeHash": "0xd1b02d8c066dc343522d6aa5f6427b5245dc1f3276841ea48180cb0d0387e2ca",
+      "factoryPoolIndex": 251,
+      "expectedRegistryId": "factory",
+      "factoryArrayEncoding": "legacy-fixed",
+      "implementationBinding": "factory-lookup",
+      "implementationAddress": "0x33bb0e62d5e8c688e645dd46dfb48cd613250067",
+      "expectedImplementationCodeHash": "0x2c67f0058c5bebafdab722f691a698a56d1480b5dbaf9bca64bb036e9f24cf4a",
+      "poolTokens": [
+        {
+          "address": "0xab5eb14c09d416f0ac63661e57edb7aecdb9befa",
+          "symbol": "msUSD",
+          "decimals": 18,
+          "trackedAssetId": "msusd-metronome"
+        },
+        {
+          "address": "0x3175df0976dfa876431c2e9ee6bc45b65d3473cc",
+          "symbol": "FRAXBP",
+          "decimals": 18
+        }
+      ],
+      "executionTokens": [
+        {
+          "address": "0xab5eb14c09d416f0ac63661e57edb7aecdb9befa",
+          "symbol": "msUSD",
+          "decimals": 18,
+          "trackedAssetId": "msusd-metronome"
+        },
+        {
+          "address": "0x853d955acef822db058eb8505911ed77f175b99e",
+          "symbol": "FRAX",
+          "decimals": 18
+        },
+        {
+          "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+          "symbol": "USDC",
+          "decimals": 6,
+          "trackedAssetId": "usdc-circle"
+        }
+      ],
+      "inputIndex": 0,
+      "outputIndex": 2,
+      "metapool": {
+        "basePoolBinding": "factory-get-base-pool",
+        "basePoolAddress": "0xdcef968d416a41cdac0ed8702fac8128a64241a2",
+        "expectedBasePoolCodeHash": "0x304e2199bfe57413d95a53efb2f3df8ed69be12f7df5770b874c9b3a30d9cafd",
+        "basePoolTokens": [
+          {
+            "address": "0x853d955acef822db058eb8505911ed77f175b99e",
+            "symbol": "FRAX",
+            "decimals": 18
+          },
+          {
+            "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+            "symbol": "USDC",
+            "decimals": 6,
+            "trackedAssetId": "usdc-circle"
+          }
+        ]
+      },
+      "adapterProfileId": "curve-stableswap-ng-metapool-underlying-v1",
+      "quoteFunction": "get_dy_underlying",
+      "mode": "shadow",
+      "scoreEligible": false
+    },
+    {
+      "chain": "ethereum",
+      "stablecoinId": "ousd-origin-protocol",
+      "poolAddress": "0x87650d7bbfc3a9f10587d7778206671719d9910d",
+      "expectedPoolCodeHash": "0x156700a4060f3d62786914b50cc60b2b840e6440401bea9a99c0acce0b58beda",
+      "factoryAddress": "0xb9fc157394af804a3578134a6585c0dc9cc990d4",
+      "expectedFactoryCodeHash": "0xd1b02d8c066dc343522d6aa5f6427b5245dc1f3276841ea48180cb0d0387e2ca",
+      "factoryPoolIndex": 9,
+      "expectedRegistryId": "factory",
+      "factoryArrayEncoding": "legacy-fixed",
+      "implementationBinding": "factory-lookup",
+      "implementationAddress": "0x5f890841f657d90e081babdb532a05996af79fe6",
+      "expectedImplementationCodeHash": "0x260a286cc14e91f4a2d4a966e2e5f5030543a7d2f090a623f5fa15ba174a50f3",
+      "poolTokens": [
+        {
+          "address": "0x2a8e1e676ec238d8a992307b495b45b3feaa5e86",
+          "symbol": "OUSD",
+          "decimals": 18,
+          "trackedAssetId": "ousd-origin-protocol"
+        },
+        {
+          "address": "0x6c3f90f043a72fa612cbac8115ee7e52bde6e490",
+          "symbol": "3Crv",
+          "decimals": 18
+        }
+      ],
+      "executionTokens": [
+        {
+          "address": "0x2a8e1e676ec238d8a992307b495b45b3feaa5e86",
+          "symbol": "OUSD",
+          "decimals": 18,
+          "trackedAssetId": "ousd-origin-protocol"
+        },
+        {
+          "address": "0x6b175474e89094c44da98b954eedeac495271d0f",
+          "symbol": "DAI",
+          "decimals": 18
+        },
+        {
+          "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+          "symbol": "USDC",
+          "decimals": 6,
+          "trackedAssetId": "usdc-circle"
+        },
+        {
+          "address": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+          "symbol": "USDT",
+          "decimals": 6,
+          "trackedAssetId": "usdt-tether"
+        }
+      ],
+      "inputIndex": 0,
+      "outputIndex": 2,
+      "metapool": {
+        "basePoolBinding": "factory-get-base-pool",
+        "basePoolAddress": "0xbebc44782c7db0a1a60cb6fe97d0b483032ff1c7",
+        "expectedBasePoolCodeHash": "0x954a1e212c557c85043985931498ffa3e2fcbe7dfe9cd61513f36eb47d6f4dfc",
+        "basePoolTokens": [
+          {
+            "address": "0x6b175474e89094c44da98b954eedeac495271d0f",
+            "symbol": "DAI",
+            "decimals": 18,
+            "trackedAssetId": "dai-makerdao"
+          },
+          {
+            "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+            "symbol": "USDC",
+            "decimals": 6,
+            "trackedAssetId": "usdc-circle"
+          },
+          {
+            "address": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+            "symbol": "USDT",
+            "decimals": 6,
+            "trackedAssetId": "usdt-tether"
+          }
+        ]
+      },
+      "adapterProfileId": "curve-stableswap-ng-metapool-underlying-v1",
+      "quoteFunction": "get_dy_underlying",
+      "mode": "shadow",
+      "scoreEligible": false
+    },
+    {
+      "chain": "polygon",
+      "stablecoinId": "tusd-trueusd",
+      "poolAddress": "0xadf577b69eeac9df325536cf1af106372f2da263",
+      "expectedPoolCodeHash": "0x3e54554b2fcc52bfb0487a66d242ad697094e4f9a0a6565c5ff61827e6467c79",
+      "factoryAddress": "0x722272d36ef0da72ff51c5a65db7b870e2e8d4ee",
+      "expectedFactoryCodeHash": "0x7b76a635c41c7b2a6bbdd9e3a5d2df9f9c662c9292f97dd9a2a847652f5f4359",
+      "factoryPoolIndex": 152,
+      "expectedRegistryId": "factory",
+      "factoryArrayEncoding": "legacy-fixed",
+      "implementationBinding": "factory-lookup",
+      "implementationAddress": "0x4fb93d7d320e8a263f22f62c2059dfc2a8bcbc4c",
+      "expectedImplementationCodeHash": "0x9afd1238323750dbcd66006d7a82c835f15924a16f635377422b05ce8f28406a",
+      "poolTokens": [
+        {
+          "address": "0x2e1ad108ff1d8c782fcbbb89aad783ac49586756",
+          "symbol": "TUSD",
+          "decimals": 18,
+          "trackedAssetId": "tusd-trueusd"
+        },
+        {
+          "address": "0xe7a24ef0c5e95ffb0f6684b813a78f2a3ad7d171",
+          "symbol": "am3CRV",
+          "decimals": 18
+        }
+      ],
+      "executionTokens": [
+        {
+          "address": "0x2e1ad108ff1d8c782fcbbb89aad783ac49586756",
+          "symbol": "TUSD",
+          "decimals": 18,
+          "trackedAssetId": "tusd-trueusd"
+        },
+        {
+          "address": "0x27f8d03b3a2196956ed754badc28d73be8830a6e",
+          "symbol": "amDAI",
+          "decimals": 18
+        },
+        {
+          "address": "0x1a13f4ca1d028320a707d99520abfefca3998b7f",
+          "symbol": "amUSDC",
+          "decimals": 6,
+          "referenceAssetId": "usdc-circle"
+        },
+        {
+          "address": "0x60d55f02a771d515e077c9c2403a1ef324885cec",
+          "symbol": "amUSDT",
+          "decimals": 6
+        }
+      ],
+      "inputIndex": 0,
+      "outputIndex": 2,
+      "metapool": {
+        "basePoolBinding": "factory-get-base-pool",
+        "basePoolAddress": "0x445fe580ef8d70ff569ab36e80c647af338db351",
+        "expectedBasePoolCodeHash": "0xd6eed64965cb4079ed779ee585297302ae36ec12626b69ae318c836df371165b",
+        "basePoolTokens": [
+          {
+            "address": "0x27f8d03b3a2196956ed754badc28d73be8830a6e",
+            "symbol": "amDAI",
+            "decimals": 18
+          },
+          {
+            "address": "0x1a13f4ca1d028320a707d99520abfefca3998b7f",
+            "symbol": "amUSDC",
+            "decimals": 6,
+            "referenceAssetId": "usdc-circle"
+          },
+          {
+            "address": "0x60d55f02a771d515e077c9c2403a1ef324885cec",
+            "symbol": "amUSDT",
+            "decimals": 6
+          }
+        ]
+      },
+      "adapterProfileId": "curve-stableswap-ng-metapool-underlying-v1",
+      "quoteFunction": "get_dy_underlying",
+      "mode": "shadow",
+      "scoreEligible": false
+    }
+  ]
+}

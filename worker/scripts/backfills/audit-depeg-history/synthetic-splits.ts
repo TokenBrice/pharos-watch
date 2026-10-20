@@ -1,6 +1,6 @@
 import { getDepegThresholdBps } from "../../../src/lib/constants";
 import type { DepegRow } from "../../../src/lib/depeg-helpers";
-import { deriveDepegSignal } from "../../../src/lib/depeg-signals";
+import { deriveDepegSignal } from "@shared/lib/depeg-signals";
 import type { PsiDepegEventRow } from "../../../src/lib/psi-recompute";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 

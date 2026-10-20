@@ -24,19 +24,7 @@ import { sortV1005ProcessDiagnostics } from "./control-scope";
 
 export type V9MintReconciliation = V9EconomicControlReviewV2["mint"]["reconciliation"];
 export type V9MintSupervision = V9EconomicControlReviewV2["mint"]["supervision"];
-export type V9MintPosture =
-  | "none-resolved"
-  | "bounded-admin"
-  | "partially-bounded-admin"
-  | "concentrated-admin"
-  | "collateral-gated"
-  | "unbounded-reconciled"
-  | "unbounded-governed"
-  | "unbounded-veto-guarded"
-  | "unbounded-operationally-governed"
-  | "unbounded-adverse"
-  | "compromised"
-  | "unknown";
+export type V9MintPosture = keyof V9MethodologySemantic["control"]["mintPostureQuality"];
 export type V9OracleTier = OracleRiskTier;
 export type V9BridgeTier = BridgeRouteRiskTier;
 
@@ -89,20 +77,6 @@ export interface V9EconomicControlAssetFacts {
 export interface EvaluateV9EconomicControlArgs {
   policy: V9ValidatedPolicyEnvelope;
   facts: V9EconomicControlAssetFacts;
-  mint: V9MintMechanismReview;
-  oracle: V9OracleControlReview;
-  bridge: V9BridgeControlReview;
-  /** See {@link V9EconomicControlReviewExtension.trackRecordMonths}. */
-  trackRecordMonths?: number;
-  /** See {@link V9EconomicControlReviewExtension.resolvedIncidentAgeMonths}. */
-  resolvedIncidentAgeMonths?: number;
-}
-
-export type V9EconomicControlAssetSource = V9EconomicControlAssetFacts;
-
-/** Facts still awaiting a first-class home in the shared asset-fact base. */
-export interface V9EconomicControlReviewExtension {
-  assetId: V9AssetFactsBase["assetId"];
   mint: V9MintMechanismReview;
   oracle: V9OracleControlReview;
   bridge: V9BridgeControlReview;

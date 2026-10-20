@@ -18,7 +18,7 @@ import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { derivePegAnalyticsSnapshot } from "../lib/peg-analytics";
 import { loadPegAnalyticsCache } from "../lib/peg-analytics-cache";
 import { classifyPrimaryDepegTrust, isTrustedDexPriceRow } from "../lib/depeg-trust-policy";
-import { deriveDepegSignal, signalCrossesThreshold } from "../lib/depeg-signals";
+import { deriveDepegSignal, signalCrossesThreshold } from "@shared/lib/depeg-signals";
 import { deriveCurrentPegObservationMap } from "../lib/current-peg-observations";
 import { IncidentProjectionUnavailableError } from "../lib/depeg-event-projection";
 import {

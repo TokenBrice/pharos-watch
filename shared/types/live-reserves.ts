@@ -3,8 +3,8 @@ import { ReserveObservationEnvelopeSchema, ReserveBoundedFactsGenerationSchema }
 import { LenderBookObservationSchema, LenderBookFailedAttemptSchema } from "./safety-score-v9-lender-book";
 import { LIVE_RESERVE_ADAPTER_KEYS, type LiveReserveAdapterKey } from "./live-reserve-adapter-declarations";
 import type {
+  BaseLiveReserveConfig,
   LiveReserveInput,
-  LiveReserveSemantics,
   LiveReserveWarningEffect,
 } from "./live-reserve-core";
 import {
@@ -91,39 +91,8 @@ export const LiveReserveRedemptionOutputValuationSchema = /* @__PURE__ */ (() =>
   .strict())();
 export type LiveReserveRedemptionOutputValuation = z.output<typeof LiveReserveRedemptionOutputValuationSchema>;
 
-export interface LiveReserveScoringPolicy {
-  maxSourceAgeSec?: number;
-  allowedDegradedWarningCodes?: string[];
-}
-
-export interface LiveReserveDisplay {
-  url?: string;
-  label?: string;
-}
-
-/**
- * Explicit operator suspension of a live reserve feed. A suspended config is
- * stripped from runtime metadata at registry load, so every consumer (sync
- * queue, scoring, presentation) behaves as if the coin has no live feed and
- * falls back to curated reserve evidence. The source file keeps the full
- * adapter config so re-enabling is a one-line revert.
- */
-export interface LiveReserveSuspension {
-  reason: string;
-  since: string;
-  reviewBy?: string;
-}
-
-export interface LiveReservesConfig {
+export interface LiveReservesConfig extends BaseLiveReserveConfig {
   adapter: LiveReserveAdapterKey;
-  version: number;
-  semantics: LiveReserveSemantics;
-  breakerScope?: string;
-  display?: LiveReserveDisplay;
-  scoring?: LiveReserveScoringPolicy;
-  suspended?: LiveReserveSuspension;
-  /** One bounded reserve-only prerequisite attempt; never authorizes listing. */
-  bootstrapForSupplyAdmission?: { reviewBy: string };
   inputs: {
     primary: LiveReserveInput;
     fallbacks?: LiveReserveInput[];
@@ -132,6 +101,9 @@ export interface LiveReservesConfig {
 }
 
 const UnknownRecordSchema: z.ZodType<Record<string, unknown>> = /* @__PURE__ */ (() => z.record(z.string(), z.unknown()))();
+
+export const ReserveSyncStatusSchema = /* @__PURE__ */ (() => z.enum(["ok", "degraded", "error", "skipped"]))();
+export type ReserveSyncStatus = z.output<typeof ReserveSyncStatusSchema>;
 
 export const ReserveSyncAdapterReliabilitySchema = /* @__PURE__ */ (() => z.object({
   adapterKey: z.string(),
@@ -481,7 +453,7 @@ export type ReserveCollectionEligibility = z.output<typeof ReserveCollectionElig
 export const ReserveSyncStateViewSchema = /* @__PURE__ */ (() => z
   .object({
     enabled: z.boolean(),
-    status: z.enum(["ok", "degraded", "error", "skipped"]),
+    status: ReserveSyncStatusSchema,
     stale: z.boolean(),
     bootstrap: z.boolean(),
     collectionEligibility: ReserveCollectionEligibilitySchema.optional(),

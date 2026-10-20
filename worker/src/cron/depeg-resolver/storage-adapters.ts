@@ -4,10 +4,8 @@ import {
 } from "@shared/lib/depeg-resolver/public-contract";
 import { DDR_PUBLIC_PREDICTION_BACKSTOP_DELAY_SEC } from "@shared/lib/methodology-versions/depeg-resolver";
 import {
-  type DdrCanonicalIncident,
   type DdrCanonicalIncidentInput,
   type DdrFirstPublicationMembership,
-  type DdrPublicationManifest,
   type DdrSealedPublicPrediction,
   type DdrSealInput,
   type DdrV2StoreContracts,
@@ -18,8 +16,6 @@ import {
   loadCanonicalIncidents as loadCanonicalIncidentsStore,
   recordLockDeferral as recordLockDeferralStore,
   recordLockOpportunity as recordLockOpportunityStore,
-  type DdrCanonicalIncident as StoreDdrCanonicalIncident,
-  type DdrCanonicalIncidentEventInput as StoreDdrCanonicalIncidentEventInput,
 } from "../../lib/depeg-resolver-incident-store";
 import {
   loadFirstPublicationMembership as loadFirstPublicationMembershipStore,
@@ -28,18 +24,11 @@ import {
   sealPublicNoCall as sealPublicNoCallStore,
   sealPublicPrediction as sealPublicPredictionStore,
   writePublicationManifest as writePublicationManifestStore,
-  type DdrFirstPublicationMembership as StoreDdrFirstPublicationMembership,
   type DdrPublicAssessmentSealInput as StoreDdrPublicAssessmentSealInput,
-  type DdrPublicationManifest as StoreDdrPublicationManifest,
-  type DdrSealedPublicPrediction as StoreDdrSealedPublicPrediction,
 } from "../../lib/depeg-resolver-publication-store";
 import {
   loadPredictionErrata as loadPredictionErrataStore,
 } from "../../lib/depeg-resolver-errata-store";
-
-export function publicPredictionIdOf(row: DdrSealedPublicPrediction | StoreDdrSealedPublicPrediction): number {
-  return "publicPredictionId" in row && row.publicPredictionId != null ? row.publicPredictionId : row.id;
-}
 
 export function sealedByIncident(rows: readonly DdrSealedPublicPrediction[]): Map<string, DdrSealedPublicPrediction> {
   const out = new Map<string, DdrSealedPublicPrediction>();
@@ -53,98 +42,17 @@ export function firstPublicationByPredictionId(
   return new Map(rows.map((row) => [row.publicPredictionId, row]));
 }
 
-function mapStoreIncident(row: StoreDdrCanonicalIncident): DdrCanonicalIncident {
-  return {
-    incidentKey: row.incidentKey,
-    eventId: row.eventId,
-    currentEventId: row.currentEventId,
-    stablecoinId: row.stablecoinId,
-    pegCurrency: row.pegCurrency,
-    direction: row.direction,
-    startedAt: row.startedAt,
-    eligibleAt: row.eligibleAt,
-    policyUniverseIncluded: row.policyUniverseIncluded,
-    rolloutActiveAtEnablement: row.rolloutActiveAtEnablement,
-    incidentState: row.incidentState,
-    closedPreLockAt: row.closedPreLockAt,
-    supersededByIncidentKey: row.supersededByIncidentKey,
-    confirmedAt: row.confirmedAt,
-    lockState: row.lockState,
-  };
-}
-
-function mapStoreSealedPublicPrediction(row: StoreDdrSealedPublicPrediction): DdrSealedPublicPrediction {
-  return {
-    id: row.id,
-    publicPredictionId: row.id,
-    incidentKey: row.incidentKey,
-    eventId: row.eventId,
-    assessmentId: row.assessmentId,
-    outcomeKind: row.outcomeKind,
-    predictionPolicyVersion: row.predictionPolicyVersion,
-    predictionMethodologyVersion: row.predictionMethodologyVersion,
-    policyDelaySec: row.policyDelaySec,
-    eligibleAt: row.eligibleAt,
-    lockedAt: row.lockedAt,
-    eventAgeAtLockSec: row.eventAgeAtLockSec,
-    lockTiming: row.lockTiming,
-    lockTrigger: row.lockTrigger,
-    forecastReadinessScore: row.forecastReadinessScore,
-    forecastReadinessVersion: row.forecastReadinessVersion,
-    readinessThreshold: row.readinessThreshold,
-    backstopAt: row.backstopAt,
-    backstopDelaySec: row.backstopDelaySec,
-    rowHash: row.rowHash,
-    sealedPayload: row.sealedPayload,
-  };
-}
-
-function mapStoreFirstPublication(row: StoreDdrFirstPublicationMembership): DdrFirstPublicationMembership {
-  return {
-    publicPredictionId: row.publicPredictionId,
-    incidentKey: row.incidentKey,
-    snapshotToken: row.snapshotToken,
-    snapshotGeneration: row.snapshotGeneration,
-    publishedAt: row.publishedAt,
-  };
-}
-
-function mapStorePublicationManifest(row: StoreDdrPublicationManifest): DdrPublicationManifest {
-  return {
-    snapshotToken: row.snapshotToken,
-    snapshotGeneration: row.snapshotGeneration,
-    snapshotSequence: row.snapshotSequence,
-    publishedAt: row.publishedAt,
-    basePayloadHash: row.basePayloadHash,
-    publicPredictionIds: row.publicPredictionIds,
-  };
-}
-
-function toStoreCanonicalIncidentInput(input: DdrCanonicalIncidentInput): StoreDdrCanonicalIncidentEventInput {
+function normalizeIncidentSourceFingerprint(input: DdrCanonicalIncidentInput): DdrCanonicalIncidentInput {
   const sourceFingerprint = input.sourceFingerprint?.trim().toLowerCase();
   return {
-    eventId: input.eventId,
-    stablecoinId: input.stablecoinId,
-    pegCurrency: input.pegCurrency,
-    direction: input.direction,
-    startedAt: input.startedAt,
-    endedAt: input.endedAt,
-    peakDeviationBps: input.peakDeviationBps,
-    source: input.source,
+    ...input,
     sourceFingerprint: sourceFingerprint && /^[0-9a-f]{64}$/.test(sourceFingerprint) ? sourceFingerprint : null,
-    publicTrackedAtFirstSeen: input.publicTrackedAtFirstSeen,
-    psiOffCatalogAtFirstSeen: input.psiOffCatalogAtFirstSeen,
-    registrySnapshot: input.registrySnapshot,
   };
-}
-
-function buildStoreRowHash(input: DdrSealInput): string {
-  return computeDdrPublicRowHash(input.sealedPayload);
 }
 
 function toStoreSealInput(input: DdrSealInput): StoreDdrPublicAssessmentSealInput {
   const iqrSec = input.row.duration.iqrSec ?? null;
-  const rowHash = buildStoreRowHash(input);
+  const rowHash = computeDdrPublicRowHash(input.sealedPayload);
   return {
     incidentKey: input.incidentKey,
     eventId: input.eventId,
@@ -196,125 +104,51 @@ export const DEFAULT_DDR_V2_STORE_CONTRACTS: DdrV2StoreContracts = {
   async closeRecoveredPreLockIncidents(db, input) {
     return closeRecoveredPreLockIncidentsStore(db, input.nowSec);
   },
-  async ensureCanonicalIncidents(db, events, options) {
-    const incidents = await ensureCanonicalIncidentsStore(
-      db,
-      events.map(toStoreCanonicalIncidentInput),
-      {
-        runAt: options.runAt,
-        runId: options.runId,
-        predictionPolicyVersion: options.predictionPolicyVersion,
-        policyDelaySec: options.policyDelaySec,
-        policyEffectiveAt: options.policyEffectiveAt,
-        createdBy: "ddr-worker",
-        onRepairRequired: options.onRepairRequired,
-      },
-    );
-    return incidents.map(mapStoreIncident);
-  },
-  async loadCanonicalIncidents(db, filters) {
-    const incidents = await loadCanonicalIncidentsStore(db, {
-      incidentKeys: filters.incidentKeys,
-      eventIds: filters.eventIds,
-      predictionPolicyVersion: filters.predictionPolicyVersion,
-      policyUniverseIncluded: filters.policyUniverseIncluded,
-      includeSuperseded: filters.includeSuperseded,
-      policyDelaySec: filters.policyDelaySec ?? DDR_PUBLIC_PREDICTION_BACKSTOP_DELAY_SEC,
-      limit: filters.limit,
+  ensureCanonicalIncidents(db, events, options) {
+    return ensureCanonicalIncidentsStore(db, events.map(normalizeIncidentSourceFingerprint), {
+      ...options,
+      createdBy: "ddr-worker",
     });
-    return incidents.map(mapStoreIncident);
   },
-  async recordLockDeferral(db, input) {
-    if (input.action !== "deferred") {
-      await recordLockOpportunityStore(db, {
-        incidentKey: input.incidentKey,
-        eventId: input.eventId,
-        predictionPolicyVersion: input.predictionPolicyVersion,
-        eligibleAt: input.eligibleAt,
-        runAt: input.runAt,
-        createdAt: input.runAt,
-        runId: input.runId,
-        reason: input.reason,
-        healthStatus: input.healthStatus,
-        action: input.action,
-        confirmationAt: input.confirmationAt,
-        outcomeAt: input.outcomeAt,
-        lockTrigger: input.lockTrigger ?? null,
-        forecastReadinessScore: input.forecastReadinessScore ?? null,
-        forecastReadinessVersion: input.forecastReadinessVersion ?? null,
-        readinessThreshold: input.readinessThreshold ?? null,
-        backstopAt: input.backstopAt ?? null,
-        backstopDelaySec: input.backstopDelaySec ?? null,
-      });
-      return;
-    }
-    await recordLockDeferralStore(db, {
-      incidentKey: input.incidentKey,
-      eventId: input.eventId,
-      predictionPolicyVersion: input.predictionPolicyVersion,
-      eligibleAt: input.eligibleAt,
-      runAt: input.runAt,
+  loadCanonicalIncidents(db, filters) {
+    return loadCanonicalIncidentsStore(db, {
+      ...filters,
+      policyDelaySec: filters.policyDelaySec ?? DDR_PUBLIC_PREDICTION_BACKSTOP_DELAY_SEC,
+    });
+  },
+  recordLockDeferral(db, input) {
+    const record = {
+      ...input,
       createdAt: input.runAt,
-      runId: input.runId,
-      reason: input.reason,
-      healthStatus: input.healthStatus,
-      action: input.action,
       lockTrigger: input.lockTrigger ?? null,
       forecastReadinessScore: input.forecastReadinessScore ?? null,
       forecastReadinessVersion: input.forecastReadinessVersion ?? null,
       readinessThreshold: input.readinessThreshold ?? null,
       backstopAt: input.backstopAt ?? null,
       backstopDelaySec: input.backstopDelaySec ?? null,
-    });
+    };
+    return input.action === "deferred"
+      ? recordLockDeferralStore(db, record)
+      : recordLockOpportunityStore(db, record);
   },
-  async sealPublicPrediction(db, input) {
-    const result = await sealPublicPredictionStore(db, toStoreSealInput(input));
-    return mapStoreSealedPublicPrediction(result);
+  sealPublicPrediction(db, input) {
+    return sealPublicPredictionStore(db, toStoreSealInput(input));
   },
-  async sealPublicNoCall(db, input) {
-    const result = await sealPublicNoCallStore(db, {
+  sealPublicNoCall(db, input) {
+    return sealPublicNoCallStore(db, {
       ...toStoreSealInput(input),
       resolutionTier: "insufficient_signal",
     });
-    return mapStoreSealedPublicPrediction(result);
   },
-  async loadSealedPublicPredictions(db, filters) {
-    const rows = await loadSealedPublicPredictionsStore(db, {
-      publicPredictionIds: filters.publicPredictionIds,
-      incidentKeys: filters.incidentKeys,
-      eventIds: filters.eventIds,
-      predictionPolicyVersion: filters.predictionPolicyVersion,
-    });
-    return rows.map(mapStoreSealedPublicPrediction);
-  },
-  async loadFirstPublicationMembership(db, filters) {
-    const rows = await loadFirstPublicationMembershipStore(db, {
-      publicPredictionIds: filters.publicPredictionIds,
-      incidentKeys: filters.incidentKeys,
-    });
-    return rows.map(mapStoreFirstPublication);
-  },
-  async writePublicationManifest(db, input) {
-    const manifest = await writePublicationManifestStore(db, {
-      snapshotToken: input.snapshotToken,
-      publishedAt: input.publishedAt,
+  loadSealedPublicPredictions: loadSealedPublicPredictionsStore,
+  loadFirstPublicationMembership: loadFirstPublicationMembershipStore,
+  writePublicationManifest(db, input) {
+    return writePublicationManifestStore(db, {
+      ...input,
       createdAt: input.publishedAt,
-      snapshotGeneration: input.snapshotGeneration,
       validatorVersion: "ddr-worker-v2",
-      basePayload: input.basePayload,
-      publicPredictionIds: input.publicPredictionIds,
-      publicPredictionRowHashes: input.publicPredictionRowHashes,
-    });
-    return mapStorePublicationManifest(manifest);
-  },
-  async loadLatestPublicationManifest(db) {
-    const manifest = await loadLatestPublicationManifestStore(db);
-    return manifest ? mapStorePublicationManifest(manifest) : null;
-  },
-  async loadPredictionErrata(db, filters) {
-    return loadPredictionErrataStore(db, {
-      incidentKeys: filters.incidentKeys,
-      publicPredictionIds: filters.publicPredictionIds,
     });
   },
+  loadLatestPublicationManifest: loadLatestPublicationManifestStore,
+  loadPredictionErrata: loadPredictionErrataStore,
 };

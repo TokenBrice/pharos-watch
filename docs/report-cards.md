@@ -37,6 +37,8 @@ V10 evaluates three pillars:
 
 The Economic Control mint component evaluates native issuance posture, process certification and seasoning, not a second standalone Mint Authority score. It distinguishes affirmative governance and veto constraints from unrestricted operator discretion, and preserves measured adverse reach when evidence is incomplete. The [public methodology](https://pharos.watch/methodology/#safety-scores-methodology) explains the active model; exact ladders and D33 availability rules are maintained in `docs/mint-authority-scoring.md`.
 
+Economic Control consumes the normalized asset facts and admitted mint/oracle/bridge reviews directly at one evaluator seam; canonical ordering and policy validation remain evaluator-owned. Private mint, oracle and bridge phases share one evaluation-local context; inventory checks and section fallbacks remain explicit, and final component normalization preserves causal metadata, canonical traces and the same binding minimum. See `docs/process/report-cards-appendix.md#scoped-evidence-and-exit-evaluation` for the internal contract.
+
 Custody, bridge, incident, oracle and reserve-review credit is scope-bound: identity, current primary evidence and the relevant denominator must be established independently. One favorable review cannot close sibling controls or grant unmeasured capacity. Detailed maintainer admission gates live in `docs/process/report-cards-appendix.md#campaign-admission-rules`.
 
 Issuer keys retain complete normalized phrases. Exact reviewed aliases cover governance identity (MakerDAO/Sky) or an explicitly approved issuer group: StraitsX SGD Issuance Pte. Ltd. and StraitsX USD Issuance Pte. Ltd. share the StraitsX common-mode-control group, not a single legal issuer or reserve pool. Other leading-name matches do not merge; crossed/unresolved groups retain the constraint. See the [issuer-identity contract](https://github.com/TokenBrice/pharos-watch/blob/main/docs/process/report-cards-appendix.md#scoped-evidence-and-exit-evaluation).
@@ -48,6 +50,8 @@ Mechanism-review overlays and independently reviewed components accept a strict 
 Evaluated upstream constraints survive C/U provenance: same-slice known and unresolved losses combine as `max(K,U)`, not their sum. Supported profile constraints survive unavailable sibling obligations; inherited Backing alone does not establish a wrapper.
 
 The broader whole-liability supply-attribution change (WS04-A08) and independent ordinary bridge-route clock change (WS04-A09) are deferred from T1. Existing supply denominators, aggregate fallback, bridge applicability, route-clock semantics and mint-scope behavior remain in force. The deferred route-clock implementation must preserve independently admitted active incidents before it can be reconsidered.
+
+Reviewed XRPL liabilities bind obligations to the exact validated ledger hash and its true close time. Pending proofs remain scoped to their accounting role: an escrow-supported protocol is not automatically eligible for independent liabilities. Missing or rejected reads never establish zero pending supply.
 
 Independently admitted same-resource observations remain selectable alternatives. Exit chooses the best feasible singleton or independent pair; overlapping inventory earns no diversification credit and contributes at most its maximum admitted executable capacity. Diagnostic or expired observations cannot reserve resources against current alternatives.
 
@@ -73,6 +77,8 @@ For collateral quality `q` and LLTV fraction `l`, transmitted lender quality is 
 ### Report schema v8
 
 The outer API report is schema v8 (`model: "v9"`), carrying public publication schema v7 with typed exact exit identity. Cause-bearing exclusions, partial weights and pipeline-gap/null-grade remain distinct from NR. `ratingStatus`, full `partialEvidence`, separate `confidenceDimensions` and `completeness.pipelineGapCount/pipelineGapIds` reconcile to the cards. Existing supply/shared-book fields retain their meanings.
+
+The publication envelope cross-checks inherited parent attribution against the referenced parents. A mismatch is a normal schema validation failure at `cards`, including for `safeParse` callers, rather than an exception escaping validation.
 
 Lossless witness interning preserves evidence, while obligation counts distinguish source questions from repeated witnesses. Supply/dependency projections and common-mode effects retain exact identities and clocks; implementation details live in `docs/process/report-cards-appendix.md#report-schema-v8`.
 

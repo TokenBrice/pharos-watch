@@ -28,6 +28,7 @@ import {
   decodeCurveStableSwapGetDyResult,
   encodeCurveStableSwapGetDyCall,
   executeCurveGetDyMulticall,
+  findCurveStableSwapCommonEligibilityFailure,
   findCurveStableSwapTokenBindingFailure,
   validateCurveStableSwapExecutionProfile,
   type CurveFamilyVerificationDependencies,
@@ -114,28 +115,9 @@ export function evaluateCurveStableSwapEligibility(input: {
 }): CurveStableSwapEligibility {
   const policy = getCurveStableSwapPolicy(input.chain, input.endpointAddress);
   if (!policy) return { ok: false, reason: "pool-not-reviewed" };
-  if (canonicalEvmAddress(input.endpointAddress) !== policy.poolAddress) {
-    return { ok: false, reason: "execution-endpoint-mismatch" };
-  }
-  if (!Number.isSafeInteger(input.blockNumber) || input.blockNumber < 0) {
-    return { ok: false, reason: "invalid-pinned-block" };
-  }
-  const evidence = input.evidence;
-  if (!evidence || !Number.isSafeInteger(evidence.blockTimestamp) || evidence.blockTimestamp <= 0) {
-    return { ok: false, reason: "block-timestamp-unavailable" };
-  }
-  if (evidence.blockTimestamp > input.nowSec + 60) {
-    return { ok: false, reason: "future-pinned-block" };
-  }
-  if (input.nowSec - evidence.blockTimestamp > DEX_MEASURED_FRESHNESS_MAX_SEC) {
-    return { ok: false, reason: "stale-pinned-block" };
-  }
-  if (canonicalEvmHash(evidence.poolCodeHash) == null) {
-    return { ok: false, reason: "runtime-code-unavailable" };
-  }
-  if (evidence.poolCodeHash !== policy.expectedPoolCodeHash) {
-    return { ok: false, reason: "runtime-code-hash-mismatch" };
-  }
+  const commonFailure = findCurveStableSwapCommonEligibilityFailure(input, policy, "block-timestamp-unavailable");
+  if (commonFailure) return { ok: false, reason: commonFailure };
+  const evidence = input.evidence!; // The common guard admitted the source timestamp and pool code.
   const proof = evidence.registryBindingProof;
   if (canonicalEvmHash(proof.registryCodeHash) == null) {
     return { ok: false, reason: "registry-code-unavailable" };

@@ -65,16 +65,18 @@ import {
 import {
   AUTO_LENDING_POOL_MAP,
   AUTO_LENDING_SAFETY_BYPASS_IDS,
-  EXPLICIT_YIELD_SOURCE_POOL_MAP,
   isAutoLendingCollisionBlockedForStablecoin,
   LENDING_PROTOCOL_ALLOWLIST,
+} from "../../lib/yield-config/yield-config-lending-protocols";
+import { EXPLICIT_YIELD_SOURCE_POOL_MAP } from "../../lib/yield-config/yield-config-explicit-pools";
+import {
   ON_CHAIN_RATE_CONFIGS,
-  YIELD_POOL_MAP,
-  YIELD_VARIANT_MAP,
   PRICE_DERIVED_FALLBACK_IDS,
   RATE_DERIVED_CONFIGS,
-  YIELD_WEIGHTED_POOL_GROUPS,
-} from "../../lib/yield-config/yield-config";
+} from "../../lib/yield-config/yield-config-rate-sources";
+import { YIELD_POOL_MAP } from "../../lib/yield-config/yield-config-pools";
+import { YIELD_VARIANT_MAP } from "../../lib/yield-config/yield-config-variants";
+import { YIELD_WEIGHTED_POOL_GROUPS } from "../../lib/yield-config/yield-config-weighted-pools";
 import {
   DAY_SECONDS,
 } from "@shared/lib/time-constants";
@@ -1098,7 +1100,7 @@ function appendDeterministicAutoLending(params: {
 }): number {
   let deterministicCount = 0;
 
-  for (const [stablecoinId, poolId] of Object.entries(AUTO_LENDING_POOL_MAP)) {
+  for (const [stablecoinId, poolId] of Object.entries(AUTO_LENDING_POOL_MAP).sort(([a], [b]) => a.localeCompare(b))) {
     if (params.autoDiscoveredIds.has(stablecoinId)) continue;
 
     const pool = params.dlPools.find((entry) => entry.pool === poolId);

@@ -16,7 +16,7 @@ import { causeGapRefs, V9EvidenceCauseSchema, V9PillarCauseShape, V9ScoringDispo
 import methodologyPolicy from "../data/safety-score-v9/methodology-policy-candidate-v1.json";
 
 // Canonical ordering is a determinism-digest input; it has one definition.
-import { BaseInputGenerationIdSchema, ScoreSchema, Sha256Schema } from "./safety-schema-primitives";
+import { issue, BaseInputGenerationIdSchema, ScoreSchema, Sha256Schema } from "./safety-schema-primitives";
 export { BaseInputGenerationIdSchema, ScoreSchema, Sha256Schema };
 export const V9PolicyVersionSchema = z.string().regex(/^\d+\.\d+$/);
 export const RESPONSIBILITIES = V9_PUBLIC_EVIDENCE_RESPONSIBILITIES;
@@ -82,11 +82,7 @@ export const SafetyScoreV9PublicReasonListSchema = z
     reasons.forEach((reason, index) => {
       const identity = `${reason.code}\u0000${reason.path ?? ""}`;
       if (identities.has(identity)) {
-        ctx.addIssue({
-          code: "custom",
-          path: [index],
-          message: "V9 public reasons must have unique code/path identities",
-        });
+        issue(ctx, [index], "V9 public reasons must have unique code/path identities");
       }
       identities.add(identity);
     });
@@ -159,11 +155,7 @@ export const SafetyScoreV9AccessPostureSchema = z
       .filter((field) => posture[field] === "unknown")
       .sort(compareText);
     if (JSON.stringify(posture.unknownFields) !== JSON.stringify(expectedUnknown)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["unknownFields"],
-        message: "V9 access unknown fields must exactly match unknown posture values",
-      });
+      issue(ctx, ["unknownFields"], "V9 access unknown fields must exactly match unknown posture values");
     }
     if (!isUniqueSorted(posture.signals)) {
       ctx.addIssue({ code: "custom", path: ["signals"], message: "V9 access signals must be unique and sorted" });

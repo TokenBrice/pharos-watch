@@ -1,5 +1,7 @@
 import type { TelegramAlertType } from "@shared/types/status";
 import { TELEGRAM_ALERT_PERSISTENCE } from "@shared/lib/telegram-alert-families";
+import { FREEZE_CLAIM_RETRACTED_REASON } from "@shared/types/tape-event-constants";
+import { loadRetractedFreezeAlertIds } from "../freeze/telegram-alert-freeze";
 import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
 import { buildInClause, chunkArray } from "../../../lib/db";
 import {
@@ -403,7 +405,14 @@ export async function revalidatePendingAlertPreferences(
   const outcomes = new Map<number, PendingPreferenceRevalidation>();
   let intents: ParsedPendingIntent[] = [];
   const recapIntents: ParsedRecapIntent[] = [];
+  const retracted = await loadRetractedFreezeAlertIds(db, rows
+    .filter((row) => row.alert_type === "freeze" && row.delivery_state === "pending")
+    .flatMap((row) => row.source_event_id == null ? [] : [row.source_event_id]));
   for (const row of rows) {
+    if (row.source_event_id != null && retracted.has(row.source_event_id)) {
+      outcomes.set(row.id, { kind: "cancel", row, reason: FREEZE_CLAIM_RETRACTED_REASON });
+      continue;
+    }
     const parsed = parseIntent(row, nowSec);
     if ("scope" in parsed) intents.push(parsed);
     else if ("recapKey" in parsed) recapIntents.push(parsed);

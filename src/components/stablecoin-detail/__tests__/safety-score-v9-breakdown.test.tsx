@@ -19,7 +19,6 @@ function pillar(score: number | null): Pillar {
     components: [],
     breakdown: null,
     reasons: [],
-    isWeakest: false,
   };
 }
 

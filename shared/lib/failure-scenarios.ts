@@ -1,115 +1,31 @@
 import { z } from "zod";
 import type { FailureScenario, FailureScenariosById } from "../types/failure-scenarios";
-import { CanonicalTextSchema, Sha256Schema, StrictIsoDateSchema } from "../types/safety-schema-primitives";
-import { HttpUrlSchema } from "../types/validators";
+import { FailureScenarioStructuralSchema, FailureScenarioStageSchema } from "../types/failure-scenarios";
+import { CanonicalTextSchema } from "../types/safety-schema-primitives";
 import { canonicalEvmAddress } from "./evm-address";
 import { sha256HexFromUtf8Chunks } from "./sha256";
 import { stableJsonStringifyChunksV1 } from "./stable-json";
 import { CLIENT_TRACKED_IDS } from "./stablecoins/client-registry";
 
-const EvidenceSchema = z.enum(["verified-onchain", "documented", "inferred", "unverified"]);
-const TimestampSchema = z.iso.datetime({ offset: true });
-const ObservationDateSchema = z.union([StrictIsoDateSchema, TimestampSchema]);
-const BlockSchema = z.number().int().nonnegative();
-const ChainIdSchema = z.number().int().positive();
-const SourceIdsSchema = z.array(CanonicalTextSchema);
 const AddressSchema = z.string().refine(
   (value) => value.trim() === value && canonicalEvmAddress(value) !== null,
   "Expected a 20-byte hex EVM address",
 ).transform((value) => value as `0x${string}`);
-
-const StageSchema = z.object({
-  id: CanonicalTextSchema,
-  kind: z.enum([
-    "premise", "authority-capture", "governance", "mint-or-upgrade", "market-shock",
-    "counterparty-failure", "redemption-blocked", "holder-outcome",
-  ]),
-  title: CanonicalTextSchema,
-  actor: CanonicalTextSchema,
-  action: CanonicalTextSchema,
-  actionIsCode: z.boolean().optional(),
-  targets: z.array(z.object({
-    label: CanonicalTextSchema,
+const StageSchema = FailureScenarioStageSchema.extend({
+  targets: z.array(FailureScenarioStageSchema.shape.targets.unwrap().element.extend({
     address: AddressSchema,
-    chainId: ChainIdSchema,
-  }).strict()).optional(),
-  elapsed: CanonicalTextSchema,
-  cost: CanonicalTextSchema,
-  missingDefense: CanonicalTextSchema.optional(),
-  explanation: CanonicalTextSchema,
-  evidence: EvidenceSchema,
-  sourceIds: SourceIdsSchema,
-}).strict();
+  })).optional(),
+});
 
-export const FailureScenarioSchema: z.ZodType<FailureScenario> = z.object({
+export const FailureScenarioSchema = FailureScenarioStructuralSchema.extend({
   coinId: CanonicalTextSchema.refine((id) => CLIENT_TRACKED_IDS.has(id), "Unknown tracked stablecoin id"),
-  title: CanonicalTextSchema,
-  thesis: CanonicalTextSchema,
-  premise: CanonicalTextSchema,
   stages: z.array(StageSchema).min(1),
-  branchPoint: z.object({
-    afterStageId: CanonicalTextSchema,
-    branches: z.array(z.object({
-      id: CanonicalTextSchema,
-      label: CanonicalTextSchema,
-      keys: CanonicalTextSchema,
-      premise: CanonicalTextSchema,
+  branchPoint: FailureScenarioStructuralSchema.shape.branchPoint.unwrap().extend({
+    branches: z.array(FailureScenarioStructuralSchema.shape.branchPoint.unwrap().shape.branches.element.extend({
       stages: z.array(StageSchema).min(1),
-    }).strict()).min(2),
-  }).strict().optional(),
-  keyFigures: z.array(z.object({
-    value: CanonicalTextSchema,
-    label: CanonicalTextSchema,
-    evidence: EvidenceSchema,
-    sourceIds: SourceIdsSchema,
-  }).strict()),
-  window: z.object({
-    label: CanonicalTextSchema,
-    fromStageId: CanonicalTextSchema,
-    toStageId: CanonicalTextSchema,
-    duration: CanonicalTextSchema,
-    note: CanonicalTextSchema,
-  }).strict().optional(),
-  defenders: z.array(z.object({
-    name: CanonicalTextSchema,
-    verdict: z.enum(["cannot-stop", "partial", "can-stop", "unverified"]),
-    why: CanonicalTextSchema,
-    evidence: EvidenceSchema,
-    sourceIds: SourceIdsSchema,
-  }).strict()),
-  falsifiers: z.array(z.object({
-    id: CanonicalTextSchema,
-    condition: CanonicalTextSchema,
-    status: z.enum(["not-met", "met", "unverified"]),
-    checkedAtBlock: BlockSchema.optional(),
-  }).strict()),
-  exposure: z.array(z.object({
-    label: CanonicalTextSchema,
-    detail: CanonicalTextSchema,
-    evidence: EvidenceSchema,
-  }).strict()),
-  sources: z.array(z.object({
-    id: CanonicalTextSchema,
-    label: CanonicalTextSchema,
-    url: HttpUrlSchema.transform((value) => value as `http${string}`),
-    observedAt: ObservationDateSchema.optional(),
-    block: BlockSchema.optional(),
-  }).strict()),
-  evidencePin: z.object({
-    chainId: ChainIdSchema,
-    block: BlockSchema,
-    observedAt: ObservationDateSchema,
-  }).strict(),
-  review: z.discriminatedUnion("status", [
-    z.object({ status: z.literal("draft"), note: CanonicalTextSchema.optional() }).strict(),
-    z.object({
-      status: z.literal("approved"),
-      reviewedBy: CanonicalTextSchema,
-      reviewedAt: TimestampSchema,
-      contentSha256: Sha256Schema,
-    }).strict(),
-  ]),
-}).strict().superRefine((scenario, ctx) => {
+    })).min(2),
+  }).optional(),
+}).superRefine((scenario, ctx) => {
   const falsifierIds = new Set<string>();
   scenario.falsifiers.forEach((falsifier, index) => {
     if (falsifierIds.has(falsifier.id)) {
@@ -191,7 +107,7 @@ export const FailureScenarioSchema: z.ZodType<FailureScenario> = z.object({
   }
 });
 
-export const FailureScenariosByIdSchema: z.ZodType<FailureScenariosById> = z
+export const FailureScenariosByIdSchema = z
   .record(z.string(), FailureScenarioSchema)
   .superRefine((all, ctx) => {
     for (const [key, scenario] of Object.entries(all)) {

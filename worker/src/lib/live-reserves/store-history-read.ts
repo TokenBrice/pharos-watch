@@ -1,7 +1,7 @@
-import type { ReserveSyncAdapterReliability } from "@shared/types/live-reserves";
+import type { ReserveSyncAdapterReliability, ReserveSyncStatus } from "@shared/types/live-reserves";
 import { runWithOverloadRetry } from "../d1-overload-retry";
 import { parseJsonObject } from "../json-parse";
-import { LIVE_RESERVE_HISTORY_RETENTION_SEC, type ReserveSyncStatus } from "./store-shared";
+import { LIVE_RESERVE_HISTORY_RETENTION_SEC } from "./store-shared";
 
 /**
  * Read surfaces for `reserve_sync_attempt_history`, the append-only per-attempt

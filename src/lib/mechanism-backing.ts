@@ -68,8 +68,8 @@ interface MetricSpec {
 
 /**
  * Ordered per archetype: the first metric that resolves to a number leads the
- * card. Keys and archetype membership mirror `OVERLAY_ARCHETYPE_METRICS` in
- * `worker/src/lib/safety-score-v9/extension-mechanism.ts`.
+ * card. Metric identities come from `V9_MECHANISM_FIELDS` in
+ * `shared/lib/safety-score-v9/mechanism-fields.ts`; display order stays local.
  */
 const METRIC_SPECS: Partial<Record<MechanismArchetype, readonly MetricSpec[]>> = {
   "synthetic-delta-neutral": [

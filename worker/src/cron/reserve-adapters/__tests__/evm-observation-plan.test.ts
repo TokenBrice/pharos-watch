@@ -37,7 +37,7 @@ describe("pinnedBlockPlan", () => {
   it("pins the number and timestamp from one validated latest header request", async () => {
     fetchJsonWithRetryMock.mockResolvedValueOnce({
       response: new Response(),
-      body: { result: { number: "0x10", timestamp: "0x64", hash } },
+      body: { id: 1, result: { number: "0x10", timestamp: "0x64", hash } },
     });
 
     const plan = await pinnedBlockPlan(options);
@@ -49,7 +49,7 @@ describe("pinnedBlockPlan", () => {
     ]);
     fetchJsonWithRetryMock.mockResolvedValueOnce({
       response: new Response(),
-      body: { result: word(7n) },
+      body: { id: 1, result: word(7n) },
     });
     await expect(fetchOnchainUint256({
       ...options,
@@ -71,7 +71,7 @@ describe("pinnedBlockPlan", () => {
     { number: "0x10", timestamp: "0x20000000000000", hash },
   ])("rejects unusable headers without substituting another clock: %j", async (header) => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
-    fetchJsonWithRetryMock.mockResolvedValueOnce({ response: new Response(), body: { result: header } });
+    fetchJsonWithRetryMock.mockResolvedValueOnce({ response: new Response(), body: { id: 1, result: header } });
 
     await expect(pinnedBlockPlan(options)).rejects.toThrow(/observation block header/);
     expect(fetchJsonWithRetryMock).toHaveBeenCalledTimes(1);
@@ -82,11 +82,11 @@ describe("pinnedBlockPlan", () => {
     fetchJsonWithRetryMock
       .mockResolvedValueOnce({
         response: new Response(),
-        body: { result: { number: "invalid", timestamp: "0xc8", hash } },
+        body: { id: 1, result: { number: "invalid", timestamp: "0xc8", hash } },
       })
       .mockResolvedValueOnce({
         response: new Response(),
-        body: { result: { number: "0x10", timestamp: "0x64", hash: `0x${"b".repeat(64)}` } },
+        body: { id: 1, result: { number: "0x10", timestamp: "0x64", hash: `0x${"b".repeat(64)}` } },
       });
 
     const plan = await pinnedBlockPlan({ ...options, fallbackRpcUrl: "https://fallback.example" });
@@ -113,6 +113,7 @@ describe("pinnedBlockPlan", () => {
       .mockResolvedValueOnce({
         response: new Response(),
         body: {
+          id: 1,
           result: {
             number: `0x${retained.number.toString(16)}`,
             timestamp: `0x${(1791404113).toString(16)}`,

@@ -106,11 +106,7 @@ describe("buildStablecoinDetailClientCoin display gating", () => {
         if (control.keyCustodyAttestation) expect(Object.keys(control.keyCustodyAttestation)).toEqual(["kind", "sources"]);
       }
       expect(new Set(summary.sources?.map((source) => source.url)).size).toBe(summary.sources?.length ?? 0);
-      if (profile.inheritedFrom && TRACKED_META_BY_ID.get(profile.inheritedFrom)?.mintAuthority) {
-        expect(client.mintAuthorityParentSummaries?.[profile.inheritedFrom]).toEqual(
-          buildStablecoinDetailClientCoin(TRACKED_META_BY_ID.get(profile.inheritedFrom)!).mintAuthoritySummary,
-        );
-      }
+      expect(client).not.toHaveProperty("mintAuthorityParentSummaries");
       checked++;
     }
     expect(checked).toBeGreaterThan(100);

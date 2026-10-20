@@ -69,6 +69,8 @@ The `/stablecoin/[id]/yield/` subroute is statically generated only for active c
 
 The query contract carries `liveSummary: DetailQueryResource<StablecoinLiveSummary>` directly, not a synthetic one-row stablecoin list. Market metrics consume that admitted summary; presentation receives only its quote/restored-supply fields plus registry-derived peg type and contract chains. Live, retained and frozen-archive selection preserves the original metadata and source clocks. The archive remains outside live health, and annual price history remains independent.
 
+The Safety presentation facade exposes rendered pillar details, evidence summary and primary reasons only. Construction and Access posture call the canonical attribution/access builders directly; they do not depend on duplicate facade payloads or a separate weakest-pillar flag.
+
 The health banner distinguishes an old producer snapshot, a failed refresh using saved data, and a source/quality advisory on otherwise fresh data. Liquidity advisories use the selected coin's nullable `warning` field; an unrelated coin's TVL cliff does not degrade this page. Global source failures and legacy responses without coin-scoped metadata remain visible, and suppressing an unrelated advisory never resets the producer clock.
 
 Mint/Burn health likewise follows the rendered coin lane: a successful aggregate with no matching coin row contributes no nonexistent flow section. Loading/failure and retained coin flow totals remain monitored. The card does not render market-wide flight-to-quality, so its health projection removes only the typed `flightToQuality` Safety Score dependency and its matching advisory; all other warnings, transport failures and original flow clocks/budgets survive. FTQ's independent accepted-publication clock and 1h consumer budget belong to the flows-page FTQ disclosure, not per-coin ingestion health.
@@ -125,6 +127,8 @@ The client `loading` state now mirrors the server fallback more closely: it keep
 
 Shared shell, summary, fold and provenance rules live in [Design Language](./design-language.md#stablecoin-detail-module-contract); visual encodings and unavailable-state behavior live in [Data Visualization](./data-visualization.md#stablecoin-detail-primitives).
 
+Plain non-folding cards use `DetailModuleCard` in `module-title.tsx`, retaining their existing Card/header/title/body elements and caller-owned section anchors. This shell does not adopt EvidenceModule folding or rail density. Access posture selects `variant="rail"` or `variant="strip"` explicitly; Mint Authority's scoring fold uses `ModuleDisclosure` directly.
+
 The Risk spine reads Mechanism → Safety Score ‖ Reserves → DEWS → `#backing-evidence`, `#exit-evidence`, `#control-evidence` → Mint & Burn Flows. Safety Score and Reserves share an `items-start` row so expanding reserves never stretches the score card. DEWS is the live stress layer; NAV tokens and frozen archives receive a Not applicable strip. Each board opens with a plain `h2` kicker and trailing hairline; its grade/decomposition stays on Safety Score. Board contents run full-width signature modules → tile grid → full-width strip/absence lines. `resolveBoardGridPlacement` leaves no empty final-row track at one, two or three columns; hide a board only when no child is visible at the current breakpoint.
 
 Mount each evidence module once in flow under its scoring pillar: mechanism/reserves in Backing, access enums in Exit, oracle/bridge evidence in Control. The `xl` rail is a normal-flow compact companion with its tail bottom-sticky (`xl:sticky xl:bottom-4 xl:self-end`), never top-sticky or nested-scroll. Its order is Safety summary → Backing KPI → Access posture → Regulatory standing → Price Transparency → Key Links → Contracts → News → Evidence index. The index is last, lists modules in pillar order and flags limiting Control inputs. Below `xl`, Backing KPI and Regulatory standing mount in-flow anchor-owning EvidenceModule tiles, Access posture becomes a strip, the index disappears, and reference cards follow pillar evidence rather than precede Safety Score. The rail twins carry `data-anchor-twin`, not a duplicate anchor id.
@@ -135,7 +139,11 @@ Whole-module folding is phone-only: below `md`, a tile/strip uses the APG headin
 
 Economic Control is minimum-binding-component scoring: `binding: true` means eligible, not necessarily limiting. Compute `resolveControlComponentRoles` once per render and share it across Mint Authority, Price feed, Bridging and the rail index. All eligible scored components at the pre-adjustment minimum are limiting (including ties, outlined); eligible components above it stay solid without a tag. `binding: false` is diagnostic (muted/dashed, never outlined); null scores are excluded and read “–”; an empty eligible set outlines nothing. Use `ControlRoleTag` and `CONTROL_COMPONENT_ROLE_LABELS`, default size in module headers and compact in the index/deployment legend; never invent a local marker.
 
+Non-binding scored bridges may collapse into a worst-score composite. Its count names bridge components, not chains: several components can share one chain, and opaque component keys are not chain identities.
+
 Keep each scoring scale distinct. Mint uses posture bands with the band beside the numeric score (no retired numeric cutoffs); Redemption uses 80/65/50/35 thresholds; Safety pillars use letter grades. Tooltips identify the scale. Mint and oracle spectra are ordinal, without an invented score marker; Redemption's range spectrum may mark its real score. Both read right = safer. Generated/authored summaries follow `shared/lib/summary-budget.ts`; the shared module contract owns word budgets, current-state-only callouts and raw-identifier disclosure rules.
+
+Redemption pill/text tones and spectrum ranges share `SCORE_TIER_5_POLICY` and `resolveScoreTier5` from the classification authority; unavailable scores stay neutral and have no score track.
 
 `src/app/stablecoin/[id]/detail-content.tsx` owns composition, conditional mounts and rail placement. The route reads identity/health → Risk → Context → Market (`#liquidity`) → Activity → History → Explore → FAQ. Feature methodology stays in its owning guide; this section owns evidence admission, visible destinations and route-specific qualifications, not a second component tree.
 
@@ -230,6 +238,8 @@ Pure/savings pass-through wrappers without an archetype override may use the ser
 
 Visual semantics come from [detail primitives](./data-visualization.md#stablecoin-detail-primitives): ratio/hedge coverage is against par, not a share; MCR/shutdown markers require dated applicable oracle review. Thin buffers remain figures rather than misleading empty 0–100 bars. Reviewed gaps stay sourced and explicit.
 
+Coverage badges and ratio gauges classify the same unrounded percentage at the existing 99.5%/100.5% cutoffs. Text may round for readability; rounded text never determines the risk band.
+
 ### Classification taxonomy pills
 
 Taxonomy URLs come only from `buildGovernanceTaxonomyUrl`, `buildBackingTaxonomyUrl` and `buildPegLandingUrl`/`PEG_SLUGS`; no handwritten slugs.
@@ -265,9 +275,15 @@ Curated identifiers use reviewed obligor labels when needed. Live source freshne
 
 Market history, distribution and DEX liquidity are separate from review evidence. Chain distribution retains valid unresolved labels and escrow residuals as Unattributed, including below the ordinary Other threshold, in the total/share denominator. Any unavailable current chain balance withholds the entire distribution rather than renormalizing observed chains. Positive pool/TVL observations without protocol entries mean breakdown unavailable/retry, not no pools; genuinely empty aggregates may omit the distribution. Aggregate DEX liquidity is not V9's single-route Exit test; unobserved rows retain explicit no-direct-market and unobserved-history states.
 
+Distribution figure labels count positive source categories before the 2% Other grouping: protocols retain their full count, chains count canonical identities, and Unattributed supply is named separately rather than counted as a known chain. Grouping does not change totals or share denominators.
+
+Distribution and freeze-ledger usage keep the producer generation in their freshness chips across successful and failed refetches. HTTP-200 stale metadata, unavailable clocks and source/dependency warnings remain locally qualified without changing observed values or the distinction between observed zero usage and missing usage.
+
 Market data keeps the selected `1Y`/`All` range while expansion loads or fails. Useful 90-day seed observations stay visible with an explicit available-window caption, never as an unqualified complete range. Successful empty expansion is labelled separately from transport failure. Retained expanded observations disclose their date span and stale/unknown freshness; a failed refresh keeps that generation's producer clock. Component-local retry refetches only the selected expanded key. The standalone expandable market-cap chart uses the same annual-bound versus retained-all query contract.
 
 Yield can render for a published lending opportunity on a non-yield-bearing coin; static yield metadata is not the sole gate. Unsupported flow sections return no module; Risk owns summaries and History owns events. DepegHistory is absent for NAV but History remains for score/timeline content. Active resolver healthy-empty is omitted; failed/degraded-empty evidence shows reason/retry and retained stale rows keep their qualification.
+
+The yield workbench groups warning occurrences only by matching signal and source within 24 hours of the newest occurrence in each group (inclusive boundary), not by chained adjacent gaps or UTC calendar days. Every occurrence remains counted and each displayed time range spans at most 24 hours; producer warnings, source selection and scoring are unchanged.
 
 Depeg incident totals are exact only with cursor `totalExact` or complete pagination; otherwise show `<loaded>+`, never a capped/partial total. Keep public incidents separate from raw threshold crossings, coverage-aware 90-day peg metrics and reviewed-or-assumed observation anchor. The score-window incident count is not all-time history, and zero cannot prove stability before observation began. Worst depeg uses complete eligible history, not visible folds or chart seeds (see [Query inputs](#query-inputs)).
 
@@ -315,6 +331,8 @@ For USD-to-native history conversion (D1 supply history, cached checkpoints, Coi
 Both D1 supply-history and stablecoins-cache detail fallbacks retain finite nonnegative observations, including zero-only histories and a newer zero after positive supply. Missing or invalid supply remains unavailable and cannot displace the latest measured zero checkpoint.
 
 ### Build snapshot hydration
+
+The server-to-client coin projection includes only the current coin's mint-authority summary, not parent summary payloads. Inheritance retains the parent ID for its symbol/link; server-side parent lookups still support archetype resolution, reserve look-through and inherited blacklistability.
 
 The post-refresh generator `scripts/build-data/build-stablecoin-detail-snapshots.ts` validates `/api/stablecoin/:id`, projects current price, four USD supply checkpoints, three native token-count checkpoints and timestamps, and fetches 90-day supply history. Acquisition covers active/frozen coins only; other tracked lifecycle states receive empty envelopes without provider reads. A lane's `404`/`410` omits that lane, but both lanes missing for an acquired coin fails generation. Provider token history and passthrough research fields never enter the compact summary, and no global list or peg-summary cache is seeded. One gitignored JSON file per tracked coin is written under `src/generated/stablecoin-detail-snapshots/`. The 8 KiB hard serialized-envelope cap drops supply history first, then live summary; a size-capped empty envelope remains valid. Pages preparation runs only `compile-input`; release acquires snapshots once after the Worker gate and release-data refresh. Standalone `npm run prebuild` runs `compile-input,post-refresh`. The initial charts select 90 days; selecting `1Y` enables a distinct 365-day query, while `All` requests `range=all` with no sliding cutoff. Both charts switch to available expanded observations when they arrive, without a first-paint complete-history request.
 
@@ -391,6 +409,8 @@ The page-level stale banner starts with the five page-defining shared presets:
 - `redemptionBackstops`
 
 It also tracks supply history, enabled annual price history, yield rankings, stress signals, and enabled mint/burn flow, blacklist, and live-reserve sources. Optional section components use the same source status to show unavailable or stale-with-data notices with retry actions; supported zero-result and unsupported states remain distinct. Depeg history manages its own local loading and error state.
+
+Local distribution, blacklist, freeze-usage and flow notices reuse that health projection and its hydration-safe budget-boundary aging. A null producer timestamp never becomes “just now”; only missing legacy metadata permits the receipt fallback. Failed refreshes retain both the data and its original generation, with the existing retry notice; compact chips retain their separate 2× grace.
 
 Expanded market history is owned by the Market data block, not the page's 90-day seed lane. Its loading, failed, healthy-empty and retained-stale states remain locally visible with bounded-coverage disclosure and a selected-key retry; a healthy seed never masks an expanded-read failure.
 

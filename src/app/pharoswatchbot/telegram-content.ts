@@ -273,14 +273,6 @@ export const TELEGRAM_COMMAND_GROUPS = [
         singleCommandVariant("forget"),
         "Private-chat-only, two-step deletion of subscriber data, alert settings, quiet hours, snooze state, live delivery diagnostics, and chat-linked delivery audit rows.",
       ),
-      commandRow(
-        singleCommandVariant("export"),
-        "Create a portable watchlist token containing explicit follows, alert types, and followed presets. Quiet hours and snooze are excluded.",
-      ),
-      commandRow(
-        singleCommandVariant("import"),
-        "Validate a token from /export and stage its watchlist behind a confirmation. Group imports require an admin.",
-      ),
     ],
   },
 ] as const;

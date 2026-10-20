@@ -7,7 +7,7 @@ import {
   type ScenarioCheckContext,
   type ScenarioCheckVerdict,
   type ScenarioCheckValue,
-} from "./index";
+} from "./context";
 
 const ABI = parseAbi([
   "function hat() view returns (address)",

@@ -312,6 +312,22 @@ describe("buildBackingMetricsView", () => {
 });
 
 describe("BackingMetricsCard", () => {
+  it.each([
+    [99.495, "under"], [99.499, "under"], [99.5, "par"],
+    [100.495, "par"], [100.499, "par"], [100.5, "over"],
+  ] as const)("keeps badge and gauge on the raw %s %% band (%s), for live and reviewed ratios", (pct, tone) => {
+    for (const input of [{ liveRatio: pct / 100 }, { collateralization: { ...reviewed, ratio: pct / 100 } }]) {
+      const view = build(input)!;
+      expect(view.visual).toMatchObject({ kind: "coverage-ratio", valuePct: (pct / 100) * 100 });
+      expect(view.coverage?.tone).toBe(tone);
+      const { container } = render(<BackingMetricsCard view={view} />);
+      expect(within(container).getByText(view.coverage!.label)).toBeTruthy();
+      expect(container.querySelector('[role="img"][data-tone]')?.getAttribute("data-tone")).toBe(tone);
+      expect(view.headline.value).toBe(`${(Math.round(pct * 100) / 100).toFixed(1)}%`);
+      cleanup();
+    }
+  });
+
   it("states a not-applicable ratio once, folded with its rationale, never as the headline", () => {
     const rationale = notApplicableRatio.notApplicableRationale!;
     const view = build({

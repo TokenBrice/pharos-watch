@@ -10,7 +10,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { z } from "zod";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { resolveReviewedReserveRows } from "../src/lib/safety-score-v9/extension";
+import { resolveReviewedReserveAdmission } from "../src/lib/safety-score-v9/extension-reserves";
 import {
   assertCliUsage,
   parseCliInteger,
@@ -87,11 +87,11 @@ export function buildCurationExpiryQueue(
     const liveRows = fixedInput.liveReserveMap[assetId];
     if (Array.isArray(liveRows) && liveRows.length > 0) continue;
     const admitAt = (clockSec: number) =>
-      resolveReviewedReserveRows({
+      resolveReviewedReserveAdmission({
         meta,
         clockSec,
         liveReserveRows: [],
-      });
+      }).projected;
     // Currently-inadmissible compositions already surface in the worklist's
     // RESV/DEP streams; this queue is preventive and lists only admitted
     // compositions that stop being admitted within the lookahead.

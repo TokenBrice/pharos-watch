@@ -55,7 +55,7 @@ describe("expanded transfer census capacity", () => {
         const data = body.params[0].data as string;
         const count = Number(BigInt(`0x${data.slice(74, 138)}`));
         chunkShapes.push(count);
-        return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: aggregateReturn(count) }));
+        return new Response(JSON.stringify({ jsonrpc: "2.0", id: body.id, result: aggregateReturn(count) }));
       } finally { active--; }
     }));
     const started = Date.now();
@@ -104,15 +104,15 @@ describe("expanded transfer census capacity", () => {
       peak = Math.max(peak, ++active);
       try {
         await sleepWithSignal(100, init.signal ?? undefined);
-        if (body.method === "eth_getCode") return new Response(JSON.stringify({ result: "0x" }));
-        if (body.method === "eth_getBlockByNumber") return new Response(JSON.stringify({ result: {
+        if (body.method === "eth_getCode") return new Response(JSON.stringify({ id: body.id, result: "0x" }));
+        if (body.method === "eth_getBlockByNumber") return new Response(JSON.stringify({ id: body.id, result: {
           number: "0x64", timestamp: `0x${(CLOCK - 10).toString(16)}`, hash: `0x${"1".repeat(64)}`,
         } }));
         if (body.params[0].data.startsWith("0x82ad56cb")) {
-          return new Response(JSON.stringify({ error: { code: -32000, message: "fixture aggregate unavailable" } }));
+          return new Response(JSON.stringify({ id: body.id, error: { code: -32000, message: "fixture aggregate unavailable" } }));
         }
         const value = body.params[0].data === "0x313ce567" ? 18 : 100;
-        return new Response(JSON.stringify({ result: `0x${value.toString(16).padStart(64, "0")}` }));
+        return new Response(JSON.stringify({ id: body.id, result: `0x${value.toString(16).padStart(64, "0")}` }));
       } finally { active--; }
     }));
     const started = Date.now();

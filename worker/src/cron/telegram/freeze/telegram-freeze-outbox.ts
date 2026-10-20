@@ -101,8 +101,14 @@ export async function dispatchFreezeAlertOutbox(db: D1Database, nowSec: number):
   }
 
   const resumable = await db.prepare(
-    `SELECT payload_json FROM telegram_freeze_alert_events
+    `SELECT payload_json FROM telegram_freeze_alert_events AS event
       WHERE status IN ('planning', 'queued') AND expires_at > ?
+        AND NOT EXISTS (
+          SELECT 1 FROM tape_events AS t
+            LEFT JOIN blacklist_events AS b ON t.source_table = 'blacklist_events' AND b.id = t.source_row_id
+           WHERE t.event_id = event.tape_event_id
+             AND (t.suppressed_at IS NOT NULL OR b.suppression_reason IS NOT NULL)
+        )
       ORDER BY detected_at ASC, source_event_id ASC
       LIMIT 32`,
   ).bind(nowSec).all<{ payload_json: string }>();

@@ -16,12 +16,12 @@ import {
 } from "../../types/safety-score-v9-evidence-queue";
 import {
   isUsdDenominatedSupplyKind,
+  factStatuses,
   type V9AssetFactsV3,
   type V9FactGapV3,
-  type V9FactStatusV2,
+  type V9FactApplicability,
 } from "../../types/safety-score-v9-facts";
 import { V9EvidenceResponsibilitySchema } from "../../types/safety-score-v9-fact-primitives";
-import type { V9MechanismFactV1 } from "../../types/safety-score-v9-backing";
 import type { V9ValidatedPolicyEnvelope } from "../../types/safety-score-v9";
 import { sha256Hex } from "../sha256";
 import { stableJsonStringifyV1 } from "../stable-json";
@@ -30,71 +30,21 @@ import { assertV9ValidatedPolicyEnvelope, resolveV9ReasonTreatment } from "./pol
 import { evaluateV9SubthresholdUnresolvedBridgeJoins } from "./control-bridge-join";
 import { compareText } from "./primitives";
 import { deepFreeze } from "../../types/safety-score-v9-immutable";
-import { v9AccessClaimGraphStatuses } from "../../types/safety-score-v9-access-lookthrough";
 
 const V9_EVIDENCE_GAP_QUEUE_DIGEST_DOMAIN_V1 = "safety-score-v9.evidence-gap-queue.v1";
 const V9_EVIDENCE_GAP_QUEUE_DIGEST_DOMAIN_V3 = "safety-score-v9.evidence-gap-queue.v3";
 const V9_EVIDENCE_GAP_QUEUE_KEY_DOMAIN_V3 = "safety-score-v9.evidence-gap-key.v3";
 
-function statusesForAsset(asset: V9AssetFactsV3): V9FactStatusV2[] {
-  const mechanismStatuses = asset.mechanismRiskReview.review
-    ? Object.values<unknown>(asset.mechanismRiskReview.review).flatMap((value) => {
-        if (value === null || typeof value !== "object" || !("status" in value)) return [];
-        // The asset schema has already validated mechanism component facts.
-        const fact = value as V9MechanismFactV1;
-        return [fact.status, ...(fact.scopedAssessments ?? []).map((fragment) => fragment.status),
-          ...(fact.constraints ?? []).map((constraint) => constraint.status)];
-      })
-    : [];
-  return [
-    asset.implementation.status,
-    asset.mechanismRiskReview.status,
-    ...mechanismStatuses,
-    asset.dependencies.status,
-    asset.reserveStatus,
-    ...asset.reserveExposures.flatMap((exposure) => [exposure.status, ...Object.values(exposure.factorStatuses ?? {})]),
-    ...asset.reserveResiduals.map((residual) => residual.status),
-    ...(asset.reserveBoundFacts ?? []).map(row => row.status),
-    ...(asset.lenderBook ? [
-      asset.lenderBook.status,
-      ...(asset.lenderBook.acceptedSourceStatus ? [asset.lenderBook.acceptedSourceStatus] : []),
-      ...(asset.lenderBook.latestAttemptStatus ? [asset.lenderBook.latestAttemptStatus] : []),
-    ] : []),
-    asset.exitStatus,
-    ...asset.exitRoutes.flatMap((route) => [route.status, route.output.status, ...Object.values(route.factorStatuses ?? {})]),
-    asset.controlStatus,
-    ...asset.controls.flatMap((control) => [control.status, ...Object.values(control.factorStatuses ?? {})]),
-    ...(asset.operationalResilienceStatus ? [asset.operationalResilienceStatus] : []),
-    ...(asset.wrapperLocalFacts.applicability === "wrapper" ? [
-      ...(asset.wrapperLocalFacts.formStatus ? [asset.wrapperLocalFacts.formStatus] : []),
-      ...Object.values(asset.wrapperLocalFacts.facts).flatMap(fact => fact.status ? [fact.status] : []),
-      ...(asset.wrapperLocalFacts.riskTransfer.status ? [asset.wrapperLocalFacts.riskTransfer.status] : []),
-    ] : []),
-    asset.economicControlReview.mint.status,
-    ...Object.values(asset.economicControlReview.mint.factorStatuses ?? {}),
-    asset.economicControlReview.oracle.status,
-    ...Object.values(asset.economicControlReview.oracle.factorStatuses ?? {}),
-    ...asset.economicControlReview.oracle.branches.map((branch) => branch.status),
-    asset.economicControlReview.bridge.status,
-    ...Object.values(asset.economicControlReview.bridge.factorStatuses ?? {}),
-    ...asset.economicControlReview.bridge.routes.flatMap(route => Object.values(route.factorStatuses ?? {})),
-    asset.accessReview.transfer.status,
-    asset.accessReview.freeze.status,
-    ...asset.accessReview.freeze.reviews.map((review) => review.status),
-    ...v9AccessClaimGraphStatuses(asset.accessReview.freeze.claimGraph).map((row) => row.status),
-    asset.peg.status,
-    asset.supply.status,
-  ];
-}
-
-function gapApplicability(asset: V9AssetFactsV3, gap: V9FactGapV3): "required" | "unresolved" {
-  const references = statusesForAsset(asset).filter((status) => status.gapIds.includes(gap.gapId));
-  if (references.length === 0) throw new Error(`Safety Score v9 gap ${gap.gapId} is not referenced by a fact status`);
-  const states = [...new Set(references.map((status) => status.applicability.state))];
-  if (states.includes("not-applicable")) {
+function gapApplicability(
+  applicabilityByGap: ReadonlyMap<string, V9FactApplicability["state"]>,
+  gap: V9FactGapV3,
+): "required" | "unresolved" {
+  const state = applicabilityByGap.get(gap.gapId);
+  if (state === undefined) throw new Error(`Safety Score v9 gap ${gap.gapId} is not referenced by a fact status`);
+  if (state === "not-applicable") {
     throw new Error(`Safety Score v9 gap ${gap.gapId} is attached to a reviewed not-applicable fact`);
   }
-  return states.includes("unresolved") ? "unresolved" : "required";
+  return state;
 }
 
 function materialityForGap(asset: V9AssetFactsV3, gap: V9FactGapV3): V9EvidenceGapMaterialityV1 {
@@ -127,13 +77,9 @@ function materialityForGap(asset: V9AssetFactsV3, gap: V9FactGapV3): V9EvidenceG
 function supplyWeightForGap(
   asset: V9AssetFactsV3,
   materiality: V9EvidenceGapMaterialityV1,
+  currentEvidence: boolean,
 ): V9EvidenceGapSupplyWeightV1 {
   const canonicalUsd = asset.supply.circulatingUsd;
-  const evidenceById = new Map(asset.evidence.map((evidence) => [evidence.evidenceId, evidence]));
-  const currentEvidence = asset.supply.status.evidenceRefIds.every((evidenceId) => {
-    const evidence = evidenceById.get(evidenceId);
-    return evidence?.disposition !== "rejected" && evidence?.freshness.state === "current";
-  });
   if (
     asset.supply.status.observationState !== "known" ||
     !isUsdDenominatedSupplyKind(asset.supply.sourceKind) ||
@@ -318,6 +264,21 @@ export function buildV9EvidenceGapQueue(args: {
   const materiality = args.policy.policy.semantic.materiality;
   const materialShareThreshold = materiality.deploymentMaterialSharePct / 100;
   const unordered = factSet.assets.flatMap((asset) => {
+    const applicabilityByGap = new Map<string, V9FactApplicability["state"]>();
+    for (const { status } of factStatuses(asset)) {
+      for (const gapId of status.gapIds) {
+        const previous = applicabilityByGap.get(gapId);
+        const state = status.applicability.state;
+        applicabilityByGap.set(gapId,
+          previous === "not-applicable" || state === "not-applicable" ? "not-applicable"
+            : previous === "unresolved" || state === "unresolved" ? "unresolved" : "required");
+      }
+    }
+    const evidenceById = new Map(asset.evidence.map((evidence) => [evidence.evidenceId, evidence]));
+    const currentSupplyEvidence = asset.supply.status.evidenceRefIds.every((evidenceId) => {
+      const evidence = evidenceById.get(evidenceId);
+      return evidence?.disposition !== "rejected" && evidence?.freshness.state === "current";
+    });
     // One join evaluation per asset, shared by every bridge-scoped gap on it.
     let assetBridgeJoin: V9EvidenceGapBridgeJoinV1 | null = null;
     const bridgeJoin = (): V9EvidenceGapBridgeJoinV1 =>
@@ -345,7 +306,7 @@ export function buildV9EvidenceGapQueue(args: {
         policyBindingIssues.push("archetype-not-permitted");
       }
       policyBindingIssues.sort(compareText);
-      const applicability = gapApplicability(asset, gap);
+      const applicability = gapApplicability(applicabilityByGap, gap);
       const materiality = materialityForGap(asset, gap);
       const entry = {
         queueKey: queueKey(asset, gap),
@@ -361,7 +322,7 @@ export function buildV9EvidenceGapQueue(args: {
         observationState: gap.observationState,
         path: gap.path,
         materiality,
-        supplyWeight: supplyWeightForGap(asset, materiality),
+        supplyWeight: supplyWeightForGap(asset, materiality, currentSupplyEvidence),
         action: actionForGap(gap, applicability, policyBindingIssues),
         releaseSeverity: reasonPolicy.reason.releaseSeverity,
         auditClassification: reasonPolicy.reason.auditClassification,

@@ -153,6 +153,61 @@ describe("latest-schema fixture equivalence", () => {
       expect(sqlite.prepare("SELECT name FROM sqlite_schema WHERE type = 'index' AND name = ?").get(name)).toEqual({ name });
     }
   });
+
+  it.each([false, true])("retains unique access paths for the four queued duplicate indexes (ANALYZE=%s)", (analyze) => {
+    const { sqlite } = fixtures.open();
+    sqlite.exec(`
+      INSERT INTO telegram_alert_source_events (
+        source_event_id, status, detected_at, expires_at,
+        event_payload, baseline_payload, target_plan_state, target_plan_generation
+      ) VALUES ('event', 'planned', 1, 3, '{}', '{}', 'capturing', 1)
+    `);
+    const cases = [
+      {
+        table: "dex_liquidity_history", candidate: "idx_dex_hist_coin_date", origin: "c",
+        columns: ["stablecoin_id", "snapshot_date"], value: "snapshot_date", expected: 2,
+        predicate: "WHERE stablecoin_id = 'coin' AND snapshot_date >= 1 ORDER BY snapshot_date DESC",
+        seed: "INSERT INTO dex_liquidity_history (stablecoin_id, snapshot_date, total_tvl_usd) VALUES ('coin', 2, 100)",
+      },
+      {
+        table: "dex_liquidity_scoring_stages", candidate: "idx_dex_liquidity_scoring_stages_slot", origin: "u",
+        columns: ["source_slot_started_at"], value: "source_slot_started_at", expected: 2,
+        predicate: "WHERE source_slot_started_at >= 1 ORDER BY source_slot_started_at DESC",
+        seed: "INSERT INTO dex_liquidity_scoring_stages (generation_id, schema_version, state, source_slot_started_at, sync_started_at, created_at) VALUES ('gen', 1, 'ready', 2, 2, 2)",
+      },
+      {
+        table: "telegram_alert_planning_subscribers", candidate: "idx_taps_scan", origin: "pk",
+        columns: ["source_event_id", "plan_generation", "chat_id"], value: "chat_id", expected: "b",
+        predicate: "WHERE source_event_id = 'event' AND plan_generation = 1 AND chat_id > 'a' ORDER BY chat_id",
+        seed: "INSERT INTO telegram_alert_planning_subscribers (source_event_id, plan_generation, chat_id, preference_generation, last_active_at, captured_at) VALUES ('event', 1, 'b', 1, 2, 2)",
+      },
+      {
+        table: "yield_source_decisions", candidate: "idx_yield_source_decisions_generation", origin: "pk",
+        columns: ["generation_id", "stablecoin_id"], value: "stablecoin_id", expected: "coin",
+        predicate: "WHERE generation_id = 'gen' ORDER BY stablecoin_id",
+        seed: "INSERT INTO yield_source_decisions (generation_id, stablecoin_id, selected_source_key, selected_confidence_tier, selected_data_source, selected_apy_30d, selected_reason, alternatives_json, created_at) VALUES ('gen', 'coin', 'source', 'tier', 'test', 1, 'selected', '[]', 2)",
+      },
+    ];
+    for (const { table, candidate, origin, columns, value, expected, predicate, seed } of cases) {
+      sqlite.exec(seed);
+      if (analyze) sqlite.exec("ANALYZE");
+      const indexes = sqlite.prepare(`PRAGMA index_list("${table}")`).all();
+      // Queue admission must not silently contract today's fresh schema.
+      expect(indexes).toContainEqual(expect.objectContaining({ name: candidate, unique: 0 }));
+      const survivor = indexes.find((index) => index.unique === 1 && index.origin === origin
+        && sqlite.prepare(`PRAGMA index_info("${index.name}")`).all().map((column) => String(column.name)).join(",") === columns.join(","));
+      expect(survivor).toBeDefined();
+      const query = `SELECT ${value} AS value FROM ${table}`;
+      const retainedQuery = `${query} INDEXED BY "${survivor?.name}" ${predicate}`;
+      const details = sqlite.prepare(`EXPLAIN QUERY PLAN ${retainedQuery}`).all().map((row) => String(row.detail)).join("\n");
+      expect(details).toContain(`INDEX ${survivor?.name}`);
+      expect(details).toMatch(/SEARCH /);
+      expect(details).not.toMatch(/TEMP B-TREE/);
+      expect(sqlite.prepare(retainedQuery).all()).toEqual([{ value: expected }]);
+      expect(sqlite.prepare(`${query} ${predicate}`).all()).toEqual([{ value: expected }]);
+      expect(() => sqlite.exec(seed)).toThrow(/UNIQUE/);
+    }
+  });
 });
 
 describe("latest-schema fixture rollback", () => {

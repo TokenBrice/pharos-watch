@@ -16,11 +16,11 @@ The [Tape special](./design-language.md#tape-special) pointer delegates the rout
 
 `TIMELINE_URL_SCHEMA` and shared URL codec own validation/defaults for type, severity, coin, peg, chain, window, search and event target. Types allow exact and prefix wildcard; canonical coin/chain/peg registries own IDs. Defaults are omitted; clearing restores them. `alltime` is canonical and legacy `all` remains accepted. `notice+` is the default floor; Info drops it. Search is debounced/server-side. Default omission must not lose decoded severity/peg/chain/window values.
 
-An event permalink may be outside ordinary filters. Resolve through the bounded latest buffer, pin inside the feed even with zero normal rows, and show filtered-empty explanation separately. Successful resolution scrolls, focuses and briefly highlights with reduced-motion support. Do not silently replace an unresolved target with a different event.
+An event permalink may be outside ordinary filters. Resolve a loaded-feed miss through the exact `event` API query, pin inside the feed even with zero normal rows, and show filtered-empty explanation separately. Successful resolution scrolls, focuses and briefly highlights with reduced-motion support. Retracted freeze claims return `404` with reason `freeze-claim-retracted`, never an empty event or a substitute target.
 
 ## API Contract
 
-[API reference](./api-reference.md) and `worker/src/api/events.ts` own query/cursor/limit/HTTP details; route requests remain bounded. `useEvents()` is infinite-query; `useLatestEvents()` serves the homepage/permalink buffer. No duplicated wire table belongs here.
+[API reference](./api-reference.md) and `worker/src/api/events.ts` own query/cursor/limit/HTTP details; route requests remain bounded. `useEvents()` is infinite-query; `useLatestEvents()` serves homepage lists and exact permalink lookups. No duplicated wire table belongs here.
 
 Freshness follows confirmed `project-tape` publication, not newest event time. TTL cannot exceed fresh runway; stale uses no-store/Warning 110. Missing/invalid producer history or failed freshness lookup uses no-store/Warning 199 plus named reason. Shared producer budgets/ratios own numeric windows.
 
@@ -32,7 +32,7 @@ Read rows must pass JSON/object and `TapeEventSchema` validation. Invalid payloa
 
 `tape_events` is a permanent product archive. Filters/cursors/windows/severity bound reads, not retention: all-time browsing, permalinks, homepage reads and DDRR review need historical events. The baseline migration owns table schema; event IDs remain `${ts_ms}-${type}-${hash8}` for permalinks.
 
-Peak-worsened observations are insert-if-absent on their source key: identical-peak replay retains the first permalink, numeric ingestion ID, observation timestamp, creation time and payload. A genuinely larger peak has a distinct source identity. Other event classes retain their source-correction replacement behavior.
+Peak-worsened observations are insert-if-absent on their source key: identical-peak replay retains the first permalink, numeric ingestion ID, observation timestamp, creation time and payload. A genuinely larger peak has a distinct source identity. Freeze amount corrections retain those same identity/clock fields through guarded updates; other event classes retain source-correction replacement behavior.
 
 Historical flow, yield and DEWS events use the persisted source methodology identity where the source retains it, otherwise the domain registry at the source timestamp, never the projector's current version. Static catalogs build their authoritative source identity into each event; the shared helper only probes/inserts those events.
 
@@ -40,9 +40,11 @@ Archive methodology correction is a separately reviewed metadata operation, not 
 
 ### Source Reconciliation
 
-Depeg open/recovery, freeze and large-flow projectors reconcile immutable source identities independent of watermark. Scheduled reconciliation uses the source-owned trailing event-time window; older repair uses explicit admin bounds (`since=0` for all history). Exclude already-projected identities/non-recovery closures before limiting. Source clocks own presentation; watermarks never regress. Freeze historical alerts retain the 24-hour recovery gate. Depeg alerts use active source episodes/exact prior episode IDs, not Tape insert IDs; backfills cannot replay historical depegs live.
+Depeg open/recovery, freeze and large-flow projectors reconcile immutable source identities independent of watermark. Scheduled reconciliation uses the source-owned trailing event-time window; older repair uses explicit admin bounds (`since=0` for all history). New-identity selection excludes already-projected identities/non-recovery closures before limiting. Freeze additionally reconciles already-projected claims with changed amounts or source suppression inside the event-time or recent amount-attempt window, without backfilling unrelated old sources. Source clocks own presentation; watermarks never regress. Freeze historical alerts retain the 24-hour recovery gate. Depeg alerts use active source episodes/exact prior episode IDs, not Tape insert IDs; backfills cannot replay historical depegs live.
 
 Forced time seeks plus source-key existence probes bound freeze/flow candidates. Depeg opens use source start indexes; resolutions can read beyond candidate-window cost. Ties may expand result caps. Observe post-deploy rows_read over comparable windows; drain historical admin bounds separately. Static-catalog source-key probes and inserts use bounded D1-overload retry.
+
+Migration `0283` adds only nullable suppression markers. A source-retracted freeze claim is hard-suppressed from list/search/counts, page/feed grouping, recap selection and alert admission; no tombstone payload or archived permalink representation is published. Its retained source identity prevents re-insertion, even on explicit replay. Queued-unsent freeze alerts recheck current source suppression and cancel with `freeze-claim-retracted`; the final send fence repeats that guard. Already-sent or uncertain effects are never edited, deleted or replayed. Apply the migration before the Worker; keep suppression-aware readers as the rollback floor once markers exist.
 
 ### Split-Scan Determinism
 

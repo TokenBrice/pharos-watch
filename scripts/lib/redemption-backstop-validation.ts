@@ -147,7 +147,6 @@ const UNCONFIGURED_ACTIVE_BASELINE = 62;
 const DAILY_LIMIT_CONTEXT_WINDOW = 80;
 const DAILY_LIMIT_TIME_TERMS = ["daily", "per-day", "per day"] as const;
 const DAILY_LIMIT_BOUND_TERMS = ["limit", "cap", "maximum", "max"] as const;
-const LIVE_ONLY_STATIC_CAPACITY_CONFIDENCES = new Set(["live-direct", "live-proxy"]);
 
 const ROUTE_FAMILY_ORDER: RedemptionRouteFamily[] = [
   "offchain-issuer",
@@ -511,59 +510,12 @@ function validateConfigInvariants(
       context,
     );
   }
-  if (config.costModel.kind === "fee-bps" && config.costModel.feeBps < 0) {
-    addFinding(findings, "error", "negative-fee-bps", `${id}: negative feeBps (${config.costModel.feeBps})`, context);
-  }
-  if (
-    config.capacityModel.kind === "supply-ratio" &&
-    (config.capacityModel.ratio <= 0 || config.capacityModel.ratio > 1)
-  ) {
-    addFinding(
-      findings,
-      "error",
-      "supply-ratio-out-of-range",
-      `${id}: supply-ratio out of range (${config.capacityModel.ratio})`,
-      context,
-    );
-  }
-  const rawCapacityConfidence = (config.capacityModel as { confidence?: string }).confidence;
-  if (rawCapacityConfidence && LIVE_ONLY_STATIC_CAPACITY_CONFIDENCES.has(rawCapacityConfidence)) {
-    addFinding(
-      findings,
-      "error",
-      "static-live-capacity-confidence",
-      `${id}: static config capacity confidence cannot be ${rawCapacityConfidence}; live-direct/live-proxy are runtime-only evidence.`,
-      context,
-    );
-  }
-  if (
-    config.capacityModel.kind === "reserve-sync-metadata" &&
-    config.capacityModel.fallbackRatio != null &&
-    (config.capacityModel.fallbackRatio <= 0 || config.capacityModel.fallbackRatio > 1)
-  ) {
-    addFinding(
-      findings,
-      "error",
-      "reserve-sync-fallback-ratio-out-of-range",
-      `${id}: reserve-sync fallbackRatio out of range (${config.capacityModel.fallbackRatio})`,
-      context,
-    );
-  }
   if (mentionsNumericDailyLimit(config) && !hasConfiguredDailyLimit(config.capacityModel)) {
     addFinding(
       findings,
       "error",
       "daily-limit-mentioned-without-capacity-limit",
       `${id}: notes or fee text mention a numeric daily limit but capacityModel.dailyLimitUsd is not configured.`,
-      context,
-    );
-  }
-  if (config.totalScoreCap != null && (config.totalScoreCap <= 0 || config.totalScoreCap > 100)) {
-    addFinding(
-      findings,
-      "error",
-      "total-score-cap-out-of-range",
-      `${id}: totalScoreCap out of range (${config.totalScoreCap})`,
       context,
     );
   }

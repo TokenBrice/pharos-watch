@@ -212,7 +212,7 @@ describe("evaluateV9Exit", () => {
     expect(result.reasons).not.toContain("no-viable-exit-path");
   });
 
-  it("keeps immediate, near-term, and queued capacity in explicit horizon lanes", () => {
+  it("preserves route settlement delays and queue caps independently of the request window", () => {
     const immediate = route({ routeKey: "redemption:immediate" });
     const nearTerm = route({
       routeKey: "redemption:near-term",
@@ -231,12 +231,11 @@ describe("evaluateV9Exit", () => {
     );
 
     expect(result.stressRequest?.comparisonWindowSec).toBe(300);
-    expect(result.horizons).toEqual({
-      immediate: expect.objectContaining({ primaryRouteKey: "redemption:immediate" }),
-      "near-term": expect.objectContaining({ primaryRouteKey: "redemption:near-term" }),
-      queued: expect.objectContaining({ primaryRouteKey: "redemption:queued" }),
-    });
-    expect(result.routes.find((entry) => entry.routeKey === "redemption:queued")?.horizon).toBe("queued");
+    expect(result.primaryRouteKey).toBe(immediate.routeKey);
+    const queuedTrace = result.routes.find((entry) => entry.routeKey === queued.routeKey)!;
+    expect(queuedTrace.settlementDelaySec).toBe(30 * 86_400);
+    expect(queuedTrace.score).toBeLessThanOrEqual(V9_CANDIDATE_POLICY_V1.policy.semantic.exit.routeFamilyCaps.queueRedeem);
+    expect(result.routes.find((entry) => entry.routeKey === nearTerm.routeKey)?.settlementDelaySec).toBe(86_400);
   });
 
   it("credits a 30-day queue without treating it as immediate capacity", () => {
@@ -256,8 +255,8 @@ describe("evaluateV9Exit", () => {
     );
 
     expect(result.score).toBeGreaterThan(0);
-    expect(result.horizons.immediate).toEqual({ primaryRouteKey: null, score: null });
-    expect(result.horizons.queued.primaryRouteKey).toBe("redemption:30-day-queue");
+    expect(result.primaryRouteKey).toBe("redemption:30-day-queue");
+    expect(result.routes[0]?.settlementDelaySec).toBe(30 * 86_400);
   });
 
   it("treats an eEARN-like route with an unproven settlement bound as a bounded gap", () => {
@@ -287,7 +286,6 @@ describe("evaluateV9Exit", () => {
 
     expect(result.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore);
     expect(result.primaryRouteKey).toBeNull();
-    expect(result.horizons.queued).toEqual({ primaryRouteKey: null, score: null });
     expect(result.reasons).toContain("unproven-settlement-bound");
     expect(result.reasons).not.toContain("no-viable-exit-path");
     expect(result.routes[0]).toMatchObject({
@@ -364,7 +362,7 @@ describe("evaluateV9Exit", () => {
     });
   });
 
-  it("keeps daily capacity in the bounded near-term lane even when transfers settle atomically", () => {
+  it("caps daily capacity even when transfers settle atomically", () => {
     const result = evaluateV9Exit(
       {
         circulatingUsd: 20_000_000,
@@ -383,8 +381,8 @@ describe("evaluateV9Exit", () => {
     expect(result.score).toBeLessThanOrEqual(
       V9_CANDIDATE_POLICY_V1.policy.semantic.exit.routeFamilyCaps.queueRedeem,
     );
-    expect(result.horizons.immediate).toEqual({ primaryRouteKey: null, score: null });
-    expect(result.horizons["near-term"].primaryRouteKey).toBe("redemption:daily-capacity");
+    expect(result.primaryRouteKey).toBe("redemption:daily-capacity");
+    expect(result.routes[0]?.capacityScoringHorizon).toBe("daily");
   });
 
   it("prices queue backlog and minimum redemption gates through the reviewed constraint bands", () => {
@@ -417,7 +415,6 @@ describe("evaluateV9Exit", () => {
 
     expect(constrained.score!).toBeLessThan(unconstrained.score!);
     expect(constrained.routes[0]).toMatchObject({
-      horizon: "queued",
       capacityScoringHorizon: "queued",
       settlementDelaySec: 30 * 86_400,
       queueDepthUsd: 1_500_000,

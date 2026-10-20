@@ -6,7 +6,7 @@ import {
   pickMoreSevereBps,
   signalCrossesThreshold,
   signalsShareDirection,
-} from "../depeg-signals";
+} from "@shared/lib/depeg-signals";
 
 describe("deriveDepegSignal", () => {
   it("derives signed deviation and direction from price and peg", () => {

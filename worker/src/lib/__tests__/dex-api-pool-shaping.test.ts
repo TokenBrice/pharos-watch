@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { DexAmmExecutionModelSchema } from "@shared/types/market";
 import { buildP4DexExitRouteObservations } from "@shared/lib/p4-exit-route-capacity";
 import { addSecondaryPoolContribution } from "../../cron/dex-liquidity/pool-contribution";
-import { initMetrics } from "../../cron/dex-liquidity/pool-helpers";
+import { initSourcePoolGraph } from "../../cron/dex-liquidity/pool-helpers";
 import { convertToGtNewPools, isPreferredDirectApiPool } from "../dex-api-pool-shaping";
 import type { DexApiPool } from "../dex-api-types";
 
@@ -66,9 +66,9 @@ describe("Fluid reserve evidence", () => {
     expect(partial).toMatchObject({ tvlUsd: 1_000_000, measurement: { balanceMeasured: false } });
     expect(partial.balanceRatio).toBeUndefined();
     expect(partial.balanceDetails).toBeUndefined();
-    const metric = initMetrics("usdc-circle", "USDC");
+    const metric = initSourcePoolGraph("usdc-circle", "USDC");
     addSecondaryPoolContribution(new Map([["usdc-circle", metric]]), "usdc-circle", "USDC", partial);
-    expect(metric.topPools[0]?.extra?.measurement?.balanceMeasured).toBe(false);
+    expect(metric.pools[0]?.extra?.measurement?.balanceMeasured).toBe(false);
     expect(shape({ ...pool, balances: [0, 100], balancesNormalized: true })).toMatchObject({
       balanceRatio: 0, measurement: { balanceMeasured: true },
     });
@@ -150,7 +150,7 @@ describe("Balancer stableswap execution model", () => {
     expect(candidate, "reviewed candidate must survive direct-API shaping").toBeDefined();
     const metrics = new Map();
     addSecondaryPoolContribution(metrics, "usdc-circle", "USDC", candidate!);
-    const retained = metrics.get("usdc-circle")?.topPools[0];
+    const retained = metrics.get("usdc-circle")?.pools[0];
     expect(retained, "reviewed candidate must survive retained-pool merge").toBeDefined();
     return retained!;
   }
@@ -279,8 +279,8 @@ describe("Balancer stableswap execution model", () => {
   });
 
   it("enriches an exact duplicate with the gate instead of leaving generic direct evidence", () => {
-    const metrics = initMetrics("usdc-circle", "USDC");
-    metrics.topPools.push({
+    const metrics = initSourcePoolGraph("usdc-circle", "USDC");
+    metrics.pools.push({
       poolId: `ethereum:${POOL_ADDRESS}`,
       project: "balancer",
       chain: "Ethereum",
@@ -303,8 +303,8 @@ describe("Balancer stableswap execution model", () => {
       shaped,
     );
 
-    expect(metrics.topPools).toHaveLength(1);
-    expect(metrics.topPools[0]?.extra?.executionCapabilityGate).toEqual({
+    expect(metrics.pools).toHaveLength(1);
+    expect(metrics.pools[0]?.extra?.executionCapabilityGate).toEqual({
       family: "balancer-amm",
       reason: "rate-bearing-inputs",
     });
@@ -353,7 +353,7 @@ describe("Raydium standard AMM execution gates", () => {
       ).get("usdc-circle")![0]!;
       const metrics = new Map();
       addSecondaryPoolContribution(metrics, "usdc-circle", "USDC", shaped);
-      const retained = metrics.get("usdc-circle")!.topPools[0]!;
+      const retained = metrics.get("usdc-circle")!.pools[0]!;
       expect(retained.extra?.executionCapabilityGate).toEqual({
         family: "raydium-amm",
         reason: testCase.reason,
@@ -457,7 +457,7 @@ describe("Raydium pool-implied counter-asset reference", () => {
     expect(DexAmmExecutionModelSchema.safeParse(shaped!.ammExecutionModel).success).toBe(true);
     const metrics = new Map();
     addSecondaryPoolContribution(metrics, "usdc-circle", "USDC", shaped!);
-    const retained = metrics.get("usdc-circle")!.topPools[0]!;
+    const retained = metrics.get("usdc-circle")!.pools[0]!;
     const p4 = buildP4DexExitRouteObservations({
       stablecoinId: "usdc-circle",
       retainedPools: [retained],

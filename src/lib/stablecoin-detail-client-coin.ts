@@ -47,7 +47,6 @@ export type StablecoinDetailCoinMeta = Omit<StablecoinMeta, StablecoinDetailServ
   reserveQualitySummary?: ReserveQualityClientSummary | null;
   reserveLookThrough?: ReserveLookThroughClientSummary | null;
   mintAuthoritySummary?: MintAuthorityClientSummary | null;
-  mintAuthorityParentSummaries?: Record<string, MintAuthorityClientSummary>;
 };
 
 interface BuildStablecoinDetailClientCoinOptions {
@@ -55,29 +54,6 @@ interface BuildStablecoinDetailClientCoinOptions {
 }
 
 const EMPTY_ARCHETYPE_REGISTRY: ReadonlyMap<string, StablecoinMeta> = new Map();
-
-function collectMintAuthorityParentSummaries(
-  summary: MintAuthorityClientSummary | null,
-  parentById: ReadonlyMap<string, StablecoinMeta> | undefined,
-): Record<string, MintAuthorityClientSummary> | undefined {
-  if (!summary?.inheritedFrom || !parentById) return undefined;
-
-  const parents: Record<string, MintAuthorityClientSummary> = {};
-  const seen = new Set<string>();
-  let inheritedFrom: string | undefined = summary.inheritedFrom;
-
-  while (inheritedFrom && !seen.has(inheritedFrom)) {
-    seen.add(inheritedFrom);
-    const parentCoin = parentById.get(inheritedFrom);
-    if (!parentCoin) break;
-    const parentSummary = projectMintAuthorityClientSummary(parentCoin);
-    if (!parentSummary) break;
-    parents[inheritedFrom] = parentSummary;
-    inheritedFrom = parentSummary.inheritedFrom;
-  }
-
-  return Object.keys(parents).length > 0 ? parents : undefined;
-}
 
 export function buildStablecoinDetailClientCoin(
   coin: StablecoinMeta,
@@ -96,7 +72,6 @@ export function buildStablecoinDetailClientCoin(
     ...clientCoin
   } = coin;
   const mintAuthoritySummary = projectMintAuthorityClientSummary(coin);
-  const mintAuthorityParentSummaries = collectMintAuthorityParentSummaries(mintAuthoritySummary, options.parentById);
   const bridgeRouteRiskSummary = projectBridgeRouteRiskClientSummary(coin);
   const resolvedArchetype = resolveMechanismArchetype(coin, options.parentById ?? EMPTY_ARCHETYPE_REGISTRY);
   const custodyProfileSummary = shouldDisplayCustodyModule(coin, resolvedArchetype)
@@ -115,6 +90,5 @@ export function buildStablecoinDetailClientCoin(
     ...(reserveQualitySummary ? { reserveQualitySummary } : {}),
     ...(reserveLookThrough ? { reserveLookThrough } : {}),
     ...(mintAuthoritySummary ? { mintAuthoritySummary } : {}),
-    ...(mintAuthorityParentSummaries ? { mintAuthorityParentSummaries } : {}),
   };
 }

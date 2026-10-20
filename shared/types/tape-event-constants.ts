@@ -1,6 +1,9 @@
 // Zod-free wire vocabulary and ordering for tape events. Schemas live in
 // `tape-event.ts`; presentation lives in `../lib/classification/tape.ts`.
 
+/** A retracted freeze claim has no public event representation. */
+export const FREEZE_CLAIM_RETRACTED_REASON = "freeze-claim-retracted";
+
 export const TAPE_EVENT_SEVERITY_VALUES = [
   "info",
   "notice",

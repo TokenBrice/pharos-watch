@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { encodeFunctionResult, keccak256, parseAbi, toHex } from "viem/utils";
 
-import { initMetrics } from "../pool-helpers";
+import { initSourcePoolGraph } from "../pool-helpers";
 import {
   CURVE_STABLESWAP_FACTORY_DEPLOYMENTS,
   enrichCurveStableswapFactoryExecutionModels,
@@ -204,8 +204,8 @@ function poolEntry(overrides: Partial<NonNullable<PoolEntry["extra"]>> = {}): Po
 }
 
 function metrics(pool: PoolEntry) {
-  const metric = initMetrics("yzusd-yuzu", "YZUSD");
-  metric.topPools.push(pool);
+  const metric = initSourcePoolGraph("yzusd-yuzu", "YZUSD");
+  metric.pools.push(pool);
   return new Map([[metric.stablecoinId, metric]]);
 }
 

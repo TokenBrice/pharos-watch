@@ -6,7 +6,8 @@ import { hasRegistryRpc, supplementalRpcEndpoints, registryRpcUrls, type ChainRp
 import { fetchEvmBlockNumber, fetchEvmBlockHeader, fetchEvmMulticall3Aggregate3AtBlock, resolveClosestBlockAtOrBeforeTimestamp } from "../evm-rpc";
 import { DECIMALS_SELECTOR, TOTAL_SUPPLY_SELECTOR } from "../evm-selectors";
 import { getPublicRpcUrl, getSecondaryFallbackRpcUrl } from "../public-rpc-registry";
-import { normalizeReviewedDeploymentAddress, reviewedDeploymentIdentityValidationError, reviewedDeploymentObservationTimingIssue, type ReviewedDeploymentSupplyObservation } from "./supply-attribution-contract";
+import { normalizeReviewedDeploymentAddress, reviewedDeploymentIdentityValidationError, reviewedDeploymentObservationTimingIssue } from "./supply-attribution-contract";
+import type { ReviewedDeploymentSupplyObservation } from "@shared/types/safety-score-v9-supply-attribution";
 import { decodeEvmUint256 } from "./supply-observation-primitives";
 import { SAFETY_SCORE_V9_TRANSFER_MATERIALITY_ASSET_IDS, createSafetyScoreV9TransferMaterialityGeneration, type SafetyScoreV9TransferMaterialityGeneration, type SafetyScoreV9TransferMaterialityObservation } from "./transfer-materiality";
 import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";

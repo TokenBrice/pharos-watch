@@ -212,10 +212,7 @@ function finiteNonNegative(value: number | null | undefined): number | null {
   return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : null;
 }
 
-/**
- * A ratio as a percentage, rounded to hundredths of a point so meters and
- * their aria values never carry float noise (0.575 × 100 = 57.49999…).
- */
+/** Rounded display/share percentage; coverage decisions keep the raw ratio. */
 function ratioToPct(ratio: number): number {
   return Math.round(ratio * 10_000) / 100;
 }
@@ -440,7 +437,7 @@ export function buildBackingMetricsView(input: BackingMetricsInput): BackingMetr
     coverage = coverageFor(live);
     visual = {
       kind: "coverage-ratio",
-      valuePct: ratioToPct(live),
+      valuePct: live * 100,
       ariaLabel: `Collateral ratio ${basis}`,
       threshold: markers.threshold,
       shutdown: markers.shutdown,
@@ -451,7 +448,7 @@ export function buildBackingMetricsView(input: BackingMetricsInput): BackingMetr
     coverage = coverageFor(collateralization.ratio);
     visual = {
       kind: "coverage-ratio",
-      valuePct: ratioToPct(collateralization.ratio),
+      valuePct: collateralization.ratio * 100,
       ariaLabel: `Collateral ratio ${REVIEWED_RATIO_BASIS}`,
       threshold: markers.threshold,
       shutdown: markers.shutdown,

@@ -11,7 +11,7 @@ import { insertBlacklistRows } from "../persistence";
 import { makeCacheRow, ethereumConfig } from "./balance.test-support";
 
 vi.mock("../../../lib/blacklist/balance-providers", () => ({
-  fetchEvmTokenCurrentBalance: vi.fn(async () => 125),
+  fetchEvmTokenBalance: vi.fn(async () => 125),
   fetchTronTokenCurrentBalance: vi.fn(async () => 250),
 }));
 vi.mock("../../../lib/blacklist/tron-replay-provider", () => ({

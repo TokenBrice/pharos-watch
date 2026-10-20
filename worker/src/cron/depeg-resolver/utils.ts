@@ -133,21 +133,6 @@ export function allocateDdrRunId(slot: string, runAt: number): string {
 }
 
 
-export function payloadString(value: unknown, fallback: string): string {
-  return typeof value === "string" ? value : fallback;
-}
-
-export function payloadNullableString(value: unknown, fallback: string | null): string | null {
-  return value == null || typeof value === "string" ? (value ?? fallback) : fallback;
-}
-
-export function payloadNumber(value: unknown, fallback: number): number {
-  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
-}
-
-export function payloadNullableNumber(value: unknown): number | null {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
-}
 
 function toDirection(value: string): DdrDirection {
   return value === "above" ? "above" : "below";

@@ -16,7 +16,9 @@ import {
 } from "@shared/types/dependency-types";
 import {
   V9AccessReviewV2Schema,
-  V9DependencyRejectionReasonsSchema,
+  V9EffectiveDependenciesInputFields,
+  V9DependencyEdgeInputSchema,
+  validateV9DependencyRole,
   V9DeploymentControlFactBaseSchema,
   V1005InProcessAssetIssuanceFactsSchema,
   V9EconomicControlReviewV2Schema,
@@ -36,10 +38,10 @@ import {
   ExitRouteObservationSchema,
   RedemptionExitRouteObservationSchema,
 } from "@shared/types/exit-route";
-import { ReserveSliceSchema, ReserveIntermediarySchema } from "@shared/types/reserves";
+import { ReserveSliceSchema } from "@shared/types/reserves";
 import type { ReserveSlice } from "@shared/types/reserves";
 import { CustodyModelSchema, WRAPPER_OPERATOR_VALUES } from "@shared/types/core";
-import { ParentBackingInheritanceSchema } from "@shared/types/stablecoin-meta-schemas";
+import { ParentBackingInheritanceSchema } from "@shared/types/stablecoin-meta-primitives";
 import { SafetyScoreV9WrapperAllocationReviewSchema, V9AllocationScopeIdentityReviewSchema } from "@shared/types/safety-score-v9-allocation";
 import { SafetyScoreV9WrapperLocalReviewSchema } from "@shared/types/safety-score-v9-wrapper-local-review";
 import { canonicalArrayBy } from "@shared/types/safety-score-v9-fact-primitives";
@@ -49,6 +51,8 @@ import {
   FractionSchema,
   Sha256Schema,
   UnixSecondsSchema,
+  V9BridgeSupplyRouteV2Schema,
+  V9PegReferenceKindSchema,
   V9MechanismExitDispositionSchema,
   V9MechanismExitFactKeySchema,
   V9MechanismQualitySchema,
@@ -108,12 +112,12 @@ const ReserveClassificationSchema = z
 
 const DependencyEdgeOverlaySchema = z
   .object({
-    upstreamAssetId: CanonicalTextSchema,
-    dependencyType: z.enum(["wrapper", "mechanism", "collateral"]),
-    weight: z.number().finite().positive().max(1),
+    upstreamAssetId: V9DependencyEdgeInputSchema.shape.upstreamAssetId,
+    dependencyType: V9DependencyEdgeInputSchema.shape.dependencyType,
+    weight: V9DependencyEdgeInputSchema.shape.weight,
     economicRole: V9DependencyEconomicRoleSchema.optional(),
-    failureDomains: CanonicalFailureDomainsSchema,
-    intermediary: ReserveIntermediarySchema.optional(),
+    failureDomains: V9DependencyEdgeInputSchema.shape.failureDomains,
+    intermediary: V9DependencyEdgeInputSchema.shape.intermediary,
   })
   .strict()
   .superRefine((edge, ctx) => {
@@ -121,41 +125,16 @@ const DependencyEdgeOverlaySchema = z
     if (role === "serial-claim" && edge.weight !== 1) {
       ctx.addIssue({ code: "custom", path: ["weight"], message: "Serial dependencies must have weight 1" });
     }
-    if (role === "serial-claim" && edge.dependencyType === "collateral") {
-      ctx.addIssue({ code: "custom", path: ["dependencyType"], message: "Serial claims cannot be collateral edges" });
-    }
-    if (role === "basket-exposure" && edge.dependencyType !== "collateral") {
-      ctx.addIssue({ code: "custom", path: ["dependencyType"], message: "Basket exposures must be collateral edges" });
-    }
-    if (role !== "serial-claim" && role !== "basket-exposure" && edge.dependencyType === "wrapper") {
-      ctx.addIssue({ code: "custom", path: ["dependencyType"], message: "Wrapper edges must be serial claims" });
-    }
-    if (role !== "serial-claim" && role !== "basket-exposure" && edge.failureDomains.length === 0) {
-      ctx.addIssue({ code: "custom", path: ["failureDomains"], message: "Role dependencies require a failure domain" });
-    }
+    validateV9DependencyRole(edge, ctx, "Basket exposures must be collateral edges");
   });
 
 const EffectiveDependenciesOverlaySchema = z
   .object({
-    source: z.enum(["live-reserve", "live-unmapped", "curated-reserve", "manual", "none", "variant"]),
-    baseSource: z.enum(["live-reserve", "live-unmapped", "curated-reserve", "manual", "none"]),
-    dependencyFromLive: z.boolean(),
-    mappedLiveReserveWeight: FractionSchema.nullable(),
-    fallbackReason: z
-      .enum(["live-unmapped-to-curated-reserve", "live-unmapped-to-manual", "live-cycle-to-curated"])
-      .nullable(),
-    rejectionReasons: V9DependencyRejectionReasonsSchema.optional(),
+    ...V9EffectiveDependenciesInputFields,
     edges: canonicalArrayBy(DependencyEdgeOverlaySchema, (edge) => {
       const role = edge.economicRole ?? defaultV9DependencyEconomicRole(edge.dependencyType);
       return canonicalV9DependencyEdgeKey(edge.dependencyType, edge.upstreamAssetId, role);
     }),
-    diagnostics: z
-      .object({
-        graphState: z.enum(["valid", "cycle", "invalid", "unresolved"]),
-        issueCodes: canonicalArrayBy(CanonicalTextSchema, (value) => value),
-        sccMemberAssetIds: canonicalArrayBy(CanonicalTextSchema, (value) => value),
-      })
-      .strict(),
   })
   .strict();
 
@@ -278,7 +257,7 @@ const ControlReviewSchema = z.discriminatedUnion("state", [
 
 const PegReferenceSchema = z
   .object({
-    referenceKind: z.enum(["fiat", "asset", "index", "nav", "other"]),
+    referenceKind: V9PegReferenceKindSchema,
     referenceKey: CanonicalTextSchema,
     failureDomains: CanonicalFailureDomainsSchema,
   })
@@ -287,26 +266,7 @@ const PegReferenceSchema = z
 const SupplyReviewSchema = z
   .object({
     selectedBridgeRoutes: canonicalArrayBy(
-      z
-        .object({
-          deploymentRouteKey: CanonicalTextSchema,
-          supplyUsd: z.number().finite().nonnegative(),
-          supplyShare: FractionSchema,
-          reviewState: z.enum(["selected-reviewed", "selected-unresolved", "unmatched"]),
-          // Optional only for retained V2 extension compatibility. Current
-          // producers always distinguish reviewed native from controlled rows.
-          reviewedRouteKind: z.enum(["native", "controlled"]).optional(),
-        })
-        .strict()
-        .superRefine((route, ctx) => {
-          if (route.reviewState !== "selected-reviewed" && route.reviewedRouteKind !== undefined) {
-            ctx.addIssue({
-              code: "custom",
-              path: ["reviewedRouteKind"],
-              message: "Only selected-reviewed supply rows carry a reviewed route kind",
-            });
-          }
-        }),
+      V9BridgeSupplyRouteV2Schema,
       (route) => route.deploymentRouteKey,
     ),
     selectedRouteSupplyShare: FractionSchema,

@@ -3,15 +3,8 @@
 import { useMemo, type ReactNode } from "react";
 import { PieChart, Pie, Cell, Tooltip, Sector } from "recharts";
 import type { PieSectorDataItem } from "recharts";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { StablecoinModuleTitle } from "@/components/stablecoin-detail/module-title";
-import {
-  DETAIL_MODULE_BODY_CLASS,
-  DETAIL_MODULE_HEADER_CLASS,
-  DETAIL_MODULE_SHELL_CLASS,
-  DETAIL_MODULE_TITLE_CLASS,
-} from "@/components/stablecoin-detail/section-title-class";
+import { DetailModuleCard } from "@/components/stablecoin-detail/module-title";
 import { MethodologyLabel } from "@/components/methodology-hint";
 import { PharosChartTooltip, TooltipRow } from "@/components/pharos-chart-tooltip";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
@@ -23,11 +16,13 @@ import { formatCurrency } from "@shared/lib/format";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { CHART_PALETTE, CHART_SLATE } from "@/lib/chart-colors";
 import { CHAIN_HEX, PROTOCOL_HEX, normalizeChain, prettifyProtocol, protocolLogo } from "@/lib/dex-display-constants";
-import { cn } from "@/lib/utils";
 import { resolveCompactLogoSrc } from "@/lib/logo-variants";
 import { QueryStateNotice } from "@/components/query-state-notice";
 import { FreshnessIndicator } from "@/components/status/freshness-indicator";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import { StaleDataBanner } from "@/components/stale-data-banner";
+import { deriveDataHealth } from "@/lib/data-health";
+import { DATA_HEALTH_PRESETS } from "@/lib/data-health-config";
 
 /* ── Types ── */
 
@@ -51,19 +46,21 @@ function buildDonutData(
     logoForKey?: (key: string) => { path: string; darkInvert?: boolean } | null;
     ungroupedKey?: string;
   },
-): { data: DonutDatum[]; total: number } {
+): { data: DonutDatum[]; total: number; categoryCount: number } {
   const entries = Object.entries(raw)
     .map(([key, value]) => ({ key, value }))
     .filter((e) => e.value > 0)
     .sort((a, b) => b.value - a.value);
 
   const total = entries.reduce((sum, e) => sum + e.value, 0);
-  if (total === 0) return { data: [], total: 0 };
+  if (total === 0) return { data: [], total: 0, categoryCount: 0 };
 
   const data: DonutDatum[] = [];
   let otherValue = 0;
+  let categoryCount = 0;
 
   for (const e of entries) {
+    if (e.key !== opts.ungroupedKey && Number.isFinite(e.value)) categoryCount += 1;
     if (e.key !== opts.ungroupedKey && e.value / total < OTHER_THRESHOLD) {
       otherValue += e.value;
     } else {
@@ -82,7 +79,7 @@ function buildDonutData(
     data.push({ name: "Other", value: otherValue, hex: CHART_SLATE });
   }
 
-  return { data, total };
+  return { data, total, categoryCount };
 }
 
 /* ── Donut card ── */
@@ -180,12 +177,7 @@ function DonutCard({
   const { ref, ready, width, height } = useChartContainerReady<HTMLDivElement>();
 
   return (
-    <Card className={DETAIL_MODULE_SHELL_CLASS}>
-      <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
-        <StablecoinModuleTitle className={DETAIL_MODULE_TITLE_CLASS}>{title}</StablecoinModuleTitle>
-        {headerEnd}
-      </CardHeader>
-      <CardContent className={cn(DETAIL_MODULE_BODY_CLASS, "space-y-3")}>
+    <DetailModuleCard title={title} headerRight={headerEnd} bodyClassName="space-y-3">
         {notice}
         {data.length === 1 ? (
           <SingleCategoryFigure datum={data[0]!} total={total} subtitle={subtitle} ariaLabel={ariaLabel} />
@@ -245,8 +237,7 @@ function DonutCard({
             </div>
           </>
         )}
-      </CardContent>
-    </Card>
+    </DetailModuleCard>
   );
 }
 
@@ -260,27 +251,17 @@ function DistributionUnavailableCard({
   onRetry: () => void;
 }) {
   return (
-    <Card className={DETAIL_MODULE_SHELL_CLASS}>
-      <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
-        <StablecoinModuleTitle className={DETAIL_MODULE_TITLE_CLASS}>{title}</StablecoinModuleTitle>
-      </CardHeader>
-      <CardContent className={DETAIL_MODULE_BODY_CLASS}>
+    <DetailModuleCard title={title}>
         <QueryStateNotice state="unavailable" label={label} onRetry={onRetry} />
-      </CardContent>
-    </Card>
+    </DetailModuleCard>
   );
 }
 
 function DonutCardSkeleton({ title }: { title: ReactNode }) {
   return (
-    <Card className={DETAIL_MODULE_SHELL_CLASS}>
-      <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
-        <StablecoinModuleTitle className={DETAIL_MODULE_TITLE_CLASS}>{title}</StablecoinModuleTitle>
-      </CardHeader>
-      <CardContent className={DETAIL_MODULE_BODY_CLASS}>
+    <DetailModuleCard title={title}>
         <Skeleton className="h-[200px] sm:h-[250px] rounded-xl" />
-      </CardContent>
-    </Card>
+    </DetailModuleCard>
   );
 }
 
@@ -289,10 +270,20 @@ function DonutCardSkeleton({ title }: { title: ReactNode }) {
 function ChainDistributionCard({ stablecoinId }: { stablecoinId: string }) {
   const query = useStablecoins();
   const { data: listData, isLoading } = query;
+  const healthInput = {
+    ...DATA_HEALTH_PRESETS.stablecoins,
+    label: "Chain distribution data",
+    dataUpdatedAt: query.dataUpdatedAt,
+    meta: query.meta,
+    error: query.error,
+    isLoading,
+    hasData: !!listData,
+  };
+  const health = deriveDataHealth(healthInput, query.dataUpdatedAt);
 
-  const { data, total, unavailable } = useMemo(() => {
+  const { data, total, categoryCount, unattributed, unavailable } = useMemo(() => {
     const coin = listData?.peggedAssets.find((a) => a.id === stablecoinId);
-    if (!coin?.chainCirculating) return { data: [], total: 0, unavailable: false };
+    if (!coin?.chainCirculating) return { data: [], total: 0, categoryCount: 0, unattributed: 0, unavailable: false };
 
     const raw: Record<string, number> = {};
     // Check before canonicalization: unregistered labels are dropped there, not proven zero.
@@ -311,7 +302,7 @@ function ChainDistributionCard({ stablecoinId }: { stablecoinId: string }) {
         raw.unattributed = (raw.unattributed ?? 0) + remainder;
       }
     }
-    if (unavailable) return { data: [], total: 0, unavailable: true };
+    if (unavailable) return { data: [], total: 0, categoryCount: 0, unattributed: 0, unavailable: true };
 
     return { ...buildDonutData(raw, {
       ungroupedKey: "unattributed",
@@ -321,7 +312,7 @@ function ChainDistributionCard({ stablecoinId }: { stablecoinId: string }) {
         const meta = CHAIN_META[key];
         return meta?.logoPath ? { path: meta.logoPath, darkInvert: meta.darkInvert } : null;
       },
-    }), unavailable: false };
+    }), unattributed: raw.unattributed ?? 0, unavailable: false };
   }, [listData, stablecoinId]);
 
   if (isLoading && !listData) {
@@ -350,13 +341,13 @@ function ChainDistributionCard({ stablecoinId }: { stablecoinId: string }) {
       headerEnd={
         <FreshnessIndicator
           compact
-          updatedAtMs={query.dataUpdatedAt}
+          updatedAtMs={health.dataUpdatedAt}
           staleAfterMs={API_FRESHNESS_MAX_AGE_SEC.stablecoins * 1000}
           labelPrefix="Updated"
         />
       }
       subtitle="Circulating"
-      ariaLabel={`Circulating supply distribution across ${data.length} ${data.length === 1 ? "chain" : "chains"}`}
+      ariaLabel={`Circulating supply distribution across ${categoryCount} ${categoryCount === 1 ? "chain" : "chains"}${unattributed > 0 ? `, plus ${formatCurrency(unattributed)} Unattributed supply` : ""}`}
       data={data}
       total={total}
       notice={
@@ -364,11 +355,11 @@ function ChainDistributionCard({ stablecoinId }: { stablecoinId: string }) {
           <QueryStateNotice
             state="stale-with-data"
             label="Chain distribution data"
-            dataUpdatedAt={query.dataUpdatedAt}
+            dataUpdatedAt={health.dataUpdatedAt}
             onRetry={() => void query.refetch()}
             compact
           />
-        ) : null
+        ) : <StaleDataBanner queries={[healthInput]} />
       }
     />
   );
@@ -377,12 +368,22 @@ function ChainDistributionCard({ stablecoinId }: { stablecoinId: string }) {
 function DexDistributionCard({ stablecoinId }: { stablecoinId: string }) {
   const query = useDexLiquidityCoin(stablecoinId);
   const { data: liquidityMap, isLoading } = query;
+  const healthInput = {
+    ...DATA_HEALTH_PRESETS.dexLiquidity,
+    label: "DEX distribution data",
+    dataUpdatedAt: query.dataUpdatedAt,
+    meta: query.meta,
+    error: query.error,
+    isLoading,
+    hasData: !!liquidityMap,
+  };
+  const health = deriveDataHealth(healthInput, query.dataUpdatedAt);
 
   const liq = liquidityMap?.[stablecoinId];
   const isEmpty = !isLoading && !hasMeaningfulDexData(liq);
 
-  const { data, total } = useMemo(() => {
-    if (!liq?.protocolTvl) return { data: [], total: 0 };
+  const { data, total, categoryCount } = useMemo(() => {
+    if (!liq?.protocolTvl) return { data: [], total: 0, categoryCount: 0 };
 
     return buildDonutData(liq.protocolTvl, {
       labelForKey: prettifyProtocol,
@@ -423,13 +424,13 @@ function DexDistributionCard({ stablecoinId }: { stablecoinId: string }) {
       headerEnd={
         <FreshnessIndicator
           compact
-          updatedAtMs={query.dataUpdatedAt}
+          updatedAtMs={health.dataUpdatedAt}
           staleAfterMs={API_FRESHNESS_MAX_AGE_SEC.dexLiquidity * 1000}
           labelPrefix="Updated"
         />
       }
       subtitle="DEX TVL"
-      ariaLabel={`DEX liquidity TVL distribution across ${data.length} ${data.length === 1 ? "protocol" : "protocols"}`}
+      ariaLabel={`DEX liquidity TVL distribution across ${categoryCount} ${categoryCount === 1 ? "protocol" : "protocols"}`}
       data={data}
       total={total}
       notice={
@@ -437,11 +438,11 @@ function DexDistributionCard({ stablecoinId }: { stablecoinId: string }) {
           <QueryStateNotice
             state="stale-with-data"
             label="DEX distribution data"
-            dataUpdatedAt={query.dataUpdatedAt}
+            dataUpdatedAt={health.dataUpdatedAt}
             onRetry={() => void query.refetch()}
             compact
           />
-        ) : null
+        ) : <StaleDataBanner queries={[healthInput]} />
       }
     />
   );

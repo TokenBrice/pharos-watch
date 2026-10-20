@@ -8,7 +8,7 @@ import { cgHeaders, cgUrl } from "../../../src/lib/coingecko";
 import { mapWithConcurrency } from "../../../src/lib/concurrency";
 import { getDepegThresholdBps, USER_AGENT } from "../../../src/lib/constants";
 import type { DepegRow } from "../../../src/lib/depeg-helpers";
-import { deriveDepegSignal } from "../../../src/lib/depeg-signals";
+import { deriveDepegSignal } from "@shared/lib/depeg-signals";
 import { fetchJsonWithRetry } from "../../../src/lib/fetch-retry";
 import {
   buildPriceValidationContext,

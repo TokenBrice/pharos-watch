@@ -3,16 +3,9 @@
 import { useState } from "react";
 import Image from "next/image";
 import { ChevronDown, CircleCheck, Maximize2, RefreshCw, TriangleAlert, XIcon } from "lucide-react";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Dialog, DialogClose, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { StablecoinModuleTitle } from "@/components/stablecoin-detail/module-title";
-import {
-  DETAIL_MODULE_BODY_CLASS,
-  DETAIL_MODULE_HEADER_CLASS,
-  DETAIL_MODULE_SHELL_CLASS,
-  DETAIL_MODULE_TITLE_CLASS,
-} from "@/components/stablecoin-detail/section-title-class";
+import { DetailModuleCard } from "@/components/stablecoin-detail/module-title";
 import { MethodologyLabel } from "@/components/methodology-hint";
 import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
 import { RailCard, RailStamp } from "@/components/stablecoin-detail/rail-card";
@@ -491,13 +484,11 @@ export function PriceTransparencyCard({
   }
 
   return (
-    <Card className={DETAIL_MODULE_SHELL_CLASS} id="price-transparency">
-      <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
-        <StablecoinModuleTitle className={DETAIL_MODULE_TITLE_CLASS}>
-          <MethodologyLabel topic="pegScore">Price Transparency</MethodologyLabel>
-        </StablecoinModuleTitle>
-      </CardHeader>
-      <CardContent className={cn(DETAIL_MODULE_BODY_CLASS, "space-y-4")}>
+    <DetailModuleCard
+      id="price-transparency"
+      title={<MethodologyLabel topic="pegScore">Price Transparency</MethodologyLabel>}
+      bodyClassName="space-y-4"
+    >
         {/* Summary Bar */}
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-baseline gap-2">
@@ -604,7 +595,6 @@ export function PriceTransparencyCard({
         </div>
 
         <EvidenceFooter topic="pegScore" />
-      </CardContent>
-    </Card>
+    </DetailModuleCard>
   );
 }

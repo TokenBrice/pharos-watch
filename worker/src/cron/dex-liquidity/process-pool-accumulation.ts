@@ -4,10 +4,10 @@ import {
   computePoolPairQuality,
   computePoolQualityContribution,
   computePoolStress,
-  initMetrics,
+  initSourcePoolGraph,
 } from "./pool-helpers";
 import { buildPrimaryPoolKey } from "./pool-identity";
-import type { LiquidityFallbackCounters, LiquidityMetrics } from "./types";
+import type { LiquidityFallbackCounters, SourcePoolGraph } from "./types";
 import type {
   PoolExecutionCapability,
   PoolProtocolEnrichment,
@@ -15,7 +15,7 @@ import type {
 } from "./process-pool-types";
 
 export function accumulatePoolMetrics(
-  metrics: Map<string, LiquidityMetrics>,
+  metrics: Map<string, SourcePoolGraph>,
   identity: ResolvedPoolIdentity,
   enrichment: PoolProtocolEnrichment,
   capability: PoolExecutionCapability,
@@ -40,7 +40,7 @@ export function accumulatePoolMetrics(
   } = enrichment;
   let metric = metrics.get(stablecoinId);
   if (!metric) {
-    metric = initMetrics(stablecoinId, meta.symbol);
+    metric = initSourcePoolGraph(stablecoinId, meta.symbol);
     metrics.set(stablecoinId, metric);
   }
 
@@ -71,7 +71,7 @@ export function accumulatePoolMetrics(
   // Preserve the native physical identity after a proven address/unique-token join.
   // A two-token discovery row cannot dedupe a three-token Curve fingerprint.
   const exactCurveAddress = enrichment.curveAddressMatch ? curveData?.poolAddress : undefined;
-  metric.topPools.push({
+  metric.pools.push({
     poolId: buildPrimaryPoolKey(chainNorm, pool.pool, pool.project, exactCurveAddress),
     candidateFingerprint: buildPoolFingerprint(chainNorm, pool.project, pool.underlyingTokens ?? []) ?? undefined,
     project: protocol,

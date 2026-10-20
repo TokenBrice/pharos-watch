@@ -2,11 +2,12 @@ import operationalResilienceOverlaysAsset from "@shared/data/safety-score-v9/ope
 import { describe, expect, it } from "vitest";
 import {
   getSafetyScoreV9OperationalResilienceOverlay,
-  getSafetyScoreV9OperationalResilienceOverlayEvidence,
   SAFETY_SCORE_V9_OPERATIONAL_RESILIENCE_OVERLAYS_DIGEST,
+} from "../safety-score-v9/extension-operational-resilience";
+import {
   SafetyScoreV9OperationalResilienceOverlayFileSchema,
   SafetyScoreV9OperationalResilienceOverlaySchema,
-} from "../safety-score-v9/extension-operational-resilience";
+} from "@shared/types/safety-score-v9-operational-resilience-overlays";
 import { createAssetBuildContext, createRuntimeGapVerdict } from "../safety-score-v9/fact-set-context";
 import { buildOperationalResilienceFact } from "../safety-score-v9/fact-set-operational-resilience";
 import { makeV9Extension, makeV9FixedInput } from "../../test-helpers/v9-fixed-input";
@@ -34,13 +35,6 @@ describe("Safety Score v9 operational-resilience overlays", () => {
     );
     expect(getSafetyScoreV9OperationalResilienceOverlay("usdt-tether", EXPIRES_AT_SEC)).toBeNull();
     expect(getSafetyScoreV9OperationalResilienceOverlay("unknown", CURRENT_CLOCK_SEC)).toBeNull();
-    expect(getSafetyScoreV9OperationalResilienceOverlayEvidence("usdt-tether", CURRENT_CLOCK_SEC)).toEqual(
-      expect.objectContaining({
-        reviewedAt: "2026-07-23T12:37:19Z",
-        expiresAt: "2027-07-23T12:37:19Z",
-        payloadSha256: SAFETY_SCORE_V9_OPERATIONAL_RESILIENCE_OVERLAYS_DIGEST,
-      }),
-    );
   });
 
   it("keeps live history eligibility-only and the May 2022 redemption claim issuer-reported", () => {

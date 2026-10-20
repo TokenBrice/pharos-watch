@@ -2,7 +2,7 @@ import { keccak256, parseAbi } from "viem";
 import {
   requireScenarioChain, scenarioSourceAddress,
   type ScenarioCheck, type ScenarioCheckContext, type ScenarioCheckValue, type ScenarioCheckVerdict,
-} from "./index";
+} from "./context";
 
 const ABI = parseAbi([
   "function owner() view returns (address)",

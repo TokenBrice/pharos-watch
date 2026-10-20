@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import type { L2BeatRiskSentiment, L2BeatStage } from "../../types/chains";
 import {
   computeConcentrationScore,
   computeBackingDiversityScore,
@@ -15,8 +16,6 @@ import {
   getL2BeatChainEnvironmentAssessment,
   resolveL2BeatProjectId,
   type L2BeatChainRiskSnapshot,
-  type L2BeatRiskSentiment,
-  type L2BeatStage,
 } from "../chains/l2beat-risk";
 
 function l2beatSnapshotFixture(input: {

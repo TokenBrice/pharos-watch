@@ -10,7 +10,7 @@ import { computeUniswapV4PoolId, getUniswapV4Deployment, UNISWAP_V4_ADAPTER_PROF
 import { createDexMeasuredExecutionRpcBudget } from "../measured-execution/profiles";
 import type { UniswapV4ExecutionCandidate } from "../measured-execution/candidate-types";
 import { normalizeProtocol } from "./pool-helpers";
-import type { LiquidityMetrics, PoolEntry, SymbolLookups } from "./types";
+import type { SourcePoolGraph, PoolEntry, SymbolLookups } from "./types";
 import { incrementReason, type TargetEnrichmentTelemetry } from "./route-telemetry";
 
 const INITIALIZE_ABI = parseAbi([
@@ -190,7 +190,7 @@ export async function readUniswapV4ExecutionCandidate(input: {
  * still pass the ordinary quote-time deployment/state proof and maturity gates.
  */
 export async function enrichUniswapV4ExecutionTargets(input: {
-  metrics: Map<string, LiquidityMetrics>;
+  metrics: Map<string, SourcePoolGraph>;
   chainAddressToId: SymbolLookups["chainAddressToId"];
   stablecoinPriceById: Map<string, number>;
   chainRpcs?: Map<string, ChainRpcConfig>;
@@ -200,7 +200,7 @@ export async function enrichUniswapV4ExecutionTargets(input: {
 }): Promise<TargetEnrichmentTelemetry> {
   const probes = new Map<string, PoolProbe>();
   for (const [stablecoinId, metric] of input.metrics) {
-    for (const pool of metric.topPools) {
+    for (const pool of metric.pools) {
       if (normalizeProtocol(pool.project) !== "uniswap-v4" || pool.extra?.measuredExecutionTarget ||
         pool.extra?.measurement?.synthetic || pool.extra?.measurement?.decayed || !Number.isFinite(pool.tvlUsd) || pool.tvlUsd <= 0) continue;
       const chain = canonicalExitRouteChain(pool.chain);

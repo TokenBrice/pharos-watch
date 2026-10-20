@@ -76,7 +76,6 @@ function uniqueEvidenceRefIds(values: readonly string[]): string[] {
 function wrapperFactDisposition(
   context: AssetBuildContext,
   statuses: readonly V9FactStatusV2[],
-  _fallback: Exclude<V9WrapperFactDisposition, "reviewed" | "not-applicable"> = "unresearched",
 ): Exclude<V9WrapperFactDisposition, "reviewed" | "not-applicable"> {
   const responsibilities = statuses.flatMap((status) =>
     status.gapIds.flatMap((gapId) => {
@@ -515,7 +514,7 @@ function buildWrapperStructuralDimensions(
     );
   } else {
     custodyEscrow = unavailableWrapperFact(
-      wrapperFactDisposition(context, [input.reserveStatus], "issuer-undisclosed"),
+      wrapperFactDisposition(context, [input.reserveStatus]),
       "wrapper-custody-or-escrow-review-unavailable",
       reserveEvidenceRefIds,
     );
@@ -620,7 +619,7 @@ function buildWrapperStructuralDimensions(
         );
   } else {
     leverage = unavailableWrapperFact(
-      wrapperFactDisposition(context, [input.reserveStatus], "issuer-undisclosed"),
+      wrapperFactDisposition(context, [input.reserveStatus]),
       "wrapper-leverage-review-unavailable",
       reserveEvidenceRefIds,
     );
@@ -678,7 +677,7 @@ function buildWrapperStructuralDimensions(
     );
   } else {
     rehypothecationCorrelation = unavailableWrapperFact(
-      wrapperFactDisposition(context, [input.reserveStatus], "issuer-undisclosed"),
+      wrapperFactDisposition(context, [input.reserveStatus]),
       "wrapper-rehypothecation-correlation-review-unavailable",
       reserveEvidenceRefIds,
     );
@@ -757,7 +756,6 @@ function buildWrapperStructuralDimensions(
       wrapperFactDisposition(
         context,
         [input.peg.status, input.economicControlReview.mint.status],
-        "integration-missing",
       ),
       "wrapper-share-accounting-or-nav-oracle-review-unavailable",
       [...input.peg.status.evidenceRefIds, ...input.economicControlReview.mint.status.evidenceRefIds],
@@ -939,7 +937,7 @@ function buildWrapperExitDimensions(
     );
   } else {
     measuredUnwind = unavailableWrapperFact(
-      wrapperFactDisposition(context, [input.exitStatus], "producer-failed"),
+      wrapperFactDisposition(context, [input.exitStatus]),
       "wrapper-measured-unwind-unavailable",
       routeEvidenceRefIds,
     );

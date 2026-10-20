@@ -9,23 +9,7 @@ import {
 import { formatCurrency, formatSignedCurrency, getNetColor } from "@shared/lib/format";
 import { formatMintBurnVolume } from "@shared/lib/mint-burn-valuation-display";
 import { FlowSignedNetValue } from "@/components/flow-valuation-value";
-import { resolveCoinNetFlow } from "@shared/lib/mint-burn-coin-helpers";
 import type { MintBurnCoinFlow, MintBurnHourlyBucket } from "@shared/types";
-
-/** Leaders over the same 7-day window as the fold; only displayable nets rank, never an unavailable one as 0. */
-function weekLeaders(coins: readonly MintBurnCoinFlow[]) {
-  const ranked = coins.flatMap((coin) => {
-    const valueUsd = resolveCoinNetFlow(coin, "7d").valueUsd;
-    return valueUsd == null ? [] : [{ symbol: coin.symbol, valueUsd }];
-  });
-  return {
-    topMint: ranked.filter((entry) => entry.valueUsd > 0).sort((a, b) => b.valueUsd - a.valueUsd)[0] ?? null,
-    topBurn: ranked.filter((entry) => entry.valueUsd < 0).sort((a, b) => a.valueUsd - b.valueUsd)[0] ?? null,
-  };
-}
-
-/** The hero already prints the 24h receipt; this fold carries the week. */
-const WEEK_ROW_IDS = new Set(["mint-7d", "burn-7d", "net-7d"]);
 
 interface FlowWeekReceiptProps {
   coins: MintBurnCoinFlow[];
@@ -72,14 +56,13 @@ export function FlowWeekReceipt({ coins, weeklyHourly, scopeLabel, isLoading }: 
   if (isLoading) {
     return <p className="text-sm text-muted-foreground">Loading the weekly receipt…</p>;
   }
-  const model = buildFlowPressureReceiptModel({ gauge: null, coins, weeklyHourly, scopeLabel });
-  const rows = model.rows.filter((row) => WEEK_ROW_IDS.has(row.id));
-  const { topMint, topBurn } = weekLeaders(coins);
+  const model = buildFlowPressureReceiptModel({ coins, weeklyHourly, scopeLabel });
+  const { topMint, topBurn } = model;
 
   return (
     <div className="space-y-4">
       <dl className="grid divide-y divide-border/50 border-y border-border/50 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-        {rows.map((row) => (
+        {model.rows.map((row) => (
           <div key={row.id} className="space-y-1 py-3 sm:px-4 sm:first:pl-0">
             <dt className="text-sm text-muted-foreground">{row.label}</dt>
             <dd>

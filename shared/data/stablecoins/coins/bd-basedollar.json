@@ -111,6 +111,7 @@
       "branches": [
         {
           "name": "WETH",
+          "kind": "plain-token",
           "holder": "0x254a8267d4e12a8c0f283274632a18a33e49f7c0",
           "token": {
             "chain": "base",

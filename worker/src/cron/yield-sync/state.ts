@@ -55,9 +55,7 @@ import {
 import type {
   ChainRpcConfig,
 } from "../../lib/chain-registry";
-import {
-  ON_CHAIN_RATE_CONFIGS,
-} from "../../lib/yield-config/yield-config";
+import { ON_CHAIN_RATE_CONFIGS } from "../../lib/yield-config/yield-config-rate-sources";
 import {
   fetchOnChainRates,
 } from "./sources-rpc";
@@ -144,13 +142,6 @@ function emptyBenchmarkRegistry(usd: ParsedYieldBenchmarkMeta): ParsedYieldBench
   };
 }
 
-export async function loadRiskFreeRateRegistry(
-  db: D1Database,
-  nowSec = Math.floor(Date.now() / 1000),
-): Promise<ParsedYieldBenchmarkRegistry> {
-  return (await loadRiskFreeRateRegistryWithState(db, nowSec)).registry;
-}
-
 /**
  * Readability of the cached `risk_free_rates` row this load started from.
  * `invalid` means the row or its required USD member could not be parsed;
@@ -165,8 +156,8 @@ export interface LoadedRiskFreeRateRegistry {
 }
 
 /**
- * Same read as `loadRiskFreeRateRegistry`, plus the state of the cache row it
- * came from. A USD sub-entry that does not parse degrades USD alone — every
+ * Load the benchmark registry and the readability state of its cache row.
+ * A USD sub-entry that does not parse degrades USD alone — every
  * other readable key is kept, and USD prefers the readable legacy scalar row
  * over the hardcoded fallback.
  */

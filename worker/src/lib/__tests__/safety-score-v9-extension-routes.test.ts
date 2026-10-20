@@ -1495,6 +1495,40 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
   });
 
   it.each([
+    { pin: {}, valid: true },
+    { pin: { outputUnitValueUsd: undefined }, valid: false },
+    { pin: { outputUnitValueSourceId: undefined }, valid: false },
+    { pin: { outputUnitValueSourceId: "protocol-par" }, valid: false },
+    { pin: { outputUnitValueObservedAt: undefined }, valid: false },
+    { pin: { outputUnitValueObservedAt: NOW - 1801 }, valid: false },
+    { pin: { outputUnitValueObservedAt: NOW + 1 }, valid: false },
+    { pin: { observedAt: NOW - 61 }, valid: false },
+    { pin: { outputUnitValueUsd: 2.01 }, valid: false },
+    { pin: { outputUnitValueSourceId: "dex-amm-output-reference:curve:source-token-usd" }, valid: true, dexOnlyRejection: true },
+  ])("shares tracked pin admission without sharing lane precedence: %o", ({ pin, valid, dexOnlyRejection }) => {
+    for (const lane of ["dex", "redemption"] as const) {
+      const output = { kind: "tracked-stablecoin" as const, trackedAssetIds: ["usdt-tether"] };
+      const pegDataById = { "usdt-tether": { pegCurrency: "USD", currentDeviationBps: null } };
+      const dex = lane === "dex" ? dexPegFixture({
+        assetId: "dai-makerdao", routeOverrides: { routeId: "dex:dai-makerdao:pin", output }, pegDataById,
+      }) : null;
+      const redemption = lane === "redemption" ? redemptionPegFixture({
+        rowOverrides: { stablecoinId: "dai-makerdao" }, output, pegDataById,
+      }) : null;
+      const fixedInput = dex?.fixedInput ?? redemption!.fixedInput;
+      const observation = dex?.route ?? redemption!.row.capacityProfile!.exitRouteObservations![0]!;
+      Object.assign(observation, { outputUnitValueUsd: 0.99,
+        outputUnitValueSourceId: "dex-amm-output-reference:curve:tracked-market",
+        outputUnitValueObservedAt: NOW, observedAt: NOW }, pin);
+      const valuation = buildSafetyScoreV9RouteReviews(fixedInput, "dai-makerdao")[0]?.output?.valuation ?? null;
+      if (valid && !(dexOnlyRejection && lane === "dex")) {
+        expect(valuation).toMatchObject({ basis: "price", unitValueUsd: 0.99, expectedUnitValueUsd: 1,
+          observedAtSec: NOW, sourceId: observation.outputUnitValueSourceId });
+      } else expect(valuation).toBeNull();
+    }
+  });
+
+  it.each([
     { outputPinSource: "source-token-usd" },
   ] as const)(
     "rejects persisted $outputPinSource DEX output pins without independent valuation",

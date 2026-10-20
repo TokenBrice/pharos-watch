@@ -17,6 +17,7 @@ import { evaluateV9AlgorithmicBacking } from "./algorithmic";
 import { evaluateV9CdpBacking } from "./cdp";
 import { evaluateV9RwaCreditFundBacking } from "./rwa-credit-fund";
 import { evaluateV9SyntheticDeltaNeutralBacking } from "./synthetic-delta-neutral";
+import { V9_MECHANISM_FIELDS, type V9SimpleReview } from "../mechanism-fields";
 
 
 export type { V9MechanismRiskReview } from "../../../types/safety-score-v9-backing";
@@ -28,66 +29,11 @@ export interface V9UnknownMechanismRiskReview {
 /**
  * Archetypes this dispatcher evaluates. Identical by construction to the
  * `V9MechanismRiskReviewSchema` discriminated-union members — asserted in
- * `shared/lib/__tests__/safety-score-v9-archetypes.test.ts` — so membership is a
- * plain `Set` lookup rather than a walk of Zod's internal `options`/`shape`.
+ * `worker/src/lib/__tests__/safety-score-v9-extension-mechanism.test.ts` — so
+ * membership is a plain `Set` lookup rather than Zod `options`/`shape` access.
  */
 const SUPPORTED_MECHANISM_ARCHETYPES: ReadonlySet<string> = new Set(MECHANISM_ARCHETYPE_VALUES);
 
-type V9SimpleArchetype =
-  | "fiat-cash" | "commodity-claim" | "tbill"
-  | "ucits-trs-fund" | "shared-reserve" | "protocol-position";
-type V9SimpleReview = Extract<V9MechanismRiskReview, { archetype: V9SimpleArchetype }>;
-type V9MechanismFactKey<T> = {
-  [K in keyof T]-?: T[K] extends V9MechanismFactV1 ? K : never;
-}[keyof T];
-type V9SimpleArchetypeDescriptor<A extends V9SimpleArchetype> = readonly [
-  componentKey: string,
-  factKey: V9MechanismFactKey<Extract<V9SimpleReview, { archetype: A }>>,
-];
-
-const V9_SIMPLE_ARCHETYPE_DESCRIPTORS: {
-  readonly [A in V9SimpleArchetype]: readonly V9SimpleArchetypeDescriptor<A>[];
-} = {
-  "fiat-cash": [
-    ["claim-and-segregation", "claimAndSegregation"],
-    ["custody-continuity", "custodyContinuity"],
-    ["assurance-and-reconciliation", "assuranceAndReconciliation"],
-  ],
-  "commodity-claim": [
-    ["title-and-allocation", "titleAndAllocation"],
-    ["custody-continuity", "custodyContinuity"],
-    ["assurance-and-reconciliation", "assuranceAndReconciliation"],
-    ["physical-redemption", "physicalRedemption"],
-  ],
-  tbill: [
-    ["fund-claim-and-seniority", "fundClaimAndSeniority"],
-    ["nav-valuation", "navValuation"],
-    ["duration-and-liquidity", "durationAndLiquidity"],
-    ["loss-recovery-design", "lossRecoveryDesign"],
-  ],
-  "ucits-trs-fund": [
-    ["fund-claim-and-segregation", "fundClaimAndSegregation"],
-    ["nav-and-reconciliation", "navAndReconciliation"],
-    ["portfolio-hedge", "portfolioHedge"],
-    ["counterparty-and-collateral", "counterpartyAndCollateral"],
-    ["custody-continuity", "custodyContinuity"],
-    ["default-recovery", "defaultRecovery"],
-  ],
-  "shared-reserve": [
-    ["holder-claim", "holderClaim"],
-    ["liability-conservation", "liabilityConservation"],
-    ["reserve-custody", "reserveCustody"],
-    ["encumbrance-and-allocation", "encumbranceAndAllocation"],
-    ["default-recovery", "defaultRecovery"],
-  ],
-  "protocol-position": [
-    ["holder-claim", "holderClaim"],
-    ["liability-conservation", "liabilityConservation"],
-    ["position-custody", "positionCustody"],
-    ["encumbrance-and-allocation", "encumbranceAndAllocation"],
-    ["default-recovery", "defaultRecovery"],
-  ],
-};
 
 function evaluateV9SimpleArchetypeBacking(
   asset: V9BackingAssetInput,
@@ -102,7 +48,7 @@ function evaluateV9SimpleArchetypeBacking(
     {
       archetype: review.archetype,
       asset,
-      components: V9_SIMPLE_ARCHETYPE_DESCRIPTORS[review.archetype].map(
+      components: V9_MECHANISM_FIELDS[review.archetype].components.map(
         ([componentKey, factKey]) => ({ componentKey, fact: facts[factKey] }),
       ),
     },

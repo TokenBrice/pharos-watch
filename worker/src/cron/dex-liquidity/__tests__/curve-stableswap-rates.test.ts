@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { encodeFunctionResult, parseAbi } from "viem/utils";
 
-import { initMetrics } from "../pool-helpers";
+import { initSourcePoolGraph } from "../pool-helpers";
 import {
   CURVE_STABLESWAP_RATE_CAPTURE_MAX_AGE_SEC,
   enrichCurveStableswapRateInputExecutionModels,
@@ -126,8 +126,8 @@ function poolEntry(overrides: Partial<PoolEntry["extra"]> = {}): PoolEntry {
 }
 
 function metrics(pool = poolEntry()) {
-  const metric = initMetrics("frxusd-frax", "frxUSD");
-  metric.topPools.push(pool);
+  const metric = initSourcePoolGraph("frxusd-frax", "frxUSD");
+  metric.pools.push(pool);
   return new Map([[metric.stablecoinId, metric]]);
 }
 

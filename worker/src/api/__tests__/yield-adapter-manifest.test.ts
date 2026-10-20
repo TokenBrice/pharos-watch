@@ -5,12 +5,10 @@ import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-prof
 import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { YIELD_METHODOLOGY_CHANGELOG } from "@shared/lib/methodology-versions/registry";
 import { YIELD_ADAPTER_MANIFEST } from "../../lib/yield-config/yield-config";
-import {
-  RATE_DERIVED_CONFIGS,
-  YIELD_POOL_MAP,
-  YIELD_VARIANT_MAP,
-  YIELD_WEIGHTED_POOL_GROUPS,
-} from "../../lib/yield-config/yield-config";
+import { RATE_DERIVED_CONFIGS } from "../../lib/yield-config/yield-config-rate-sources";
+import { YIELD_POOL_MAP } from "../../lib/yield-config/yield-config-pools";
+import { YIELD_VARIANT_MAP } from "../../lib/yield-config/yield-config-variants";
+import { YIELD_WEIGHTED_POOL_GROUPS } from "../../lib/yield-config/yield-config-weighted-pools";
 import {
   YieldAdapterManifestResponseSchema,
   type YieldAdapterManifestResponse,

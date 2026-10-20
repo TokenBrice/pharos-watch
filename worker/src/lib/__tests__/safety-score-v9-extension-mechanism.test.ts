@@ -3,6 +3,8 @@ import mechanismReviewOverlaysAsset from "@shared/data/safety-score-v9/mechanism
 import xdaiMetaSource from "@shared/data/stablecoins/coins/xdai-gnosis.json";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { evaluateV9Backing } from "@shared/lib/safety-score-v9/archetypes";
+import { V9_MECHANISM_FIELDS } from "@shared/lib/safety-score-v9/mechanism-fields";
+import { V9MechanismRiskReviewSchema } from "@shared/types/safety-score-v9-backing";
 import { asset as backingAsset, exposure, knownStatus } from "@shared/lib/__tests__/safety-score-v9-backing.test-support";
 import type { ProofOfReservesLatestReport, StablecoinMeta } from "@shared/types/core";
 import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
@@ -62,6 +64,23 @@ const ATTESTED_META = {
 } satisfies MechanismMeta;
 
 describe("buildSafetyScoreV9MechanismReview", () => {
+  it("covers every schema component and metric with one typed field descriptor", () => {
+    expect(Object.keys(V9_MECHANISM_FIELDS).sort()).toEqual(
+      V9MechanismRiskReviewSchema.options.map(option => option.shape.archetype.value).sort(),
+    );
+    for (const option of V9MechanismRiskReviewSchema.options) {
+      const fields = V9_MECHANISM_FIELDS[option.shape.archetype.value];
+      const descriptorFields = [...fields.components.map(([, field]) => field), ...fields.metrics];
+      const schemaFields = Object.keys(option.shape).filter(field =>
+        !["archetype", "collateralizationMeasurement", "metricApplicability", "venueShares"].includes(field));
+      expect(descriptorFields.slice().sort()).toEqual(schemaFields.sort());
+      expect(new Set(descriptorFields).size).toBe(descriptorFields.length);
+      for (const [key, field] of fields.components) {
+        expect(key).toBe(field.replace(/[A-Z]/g, char => `-${char.toLowerCase()}`));
+      }
+    }
+  });
+
   it.each(["ucits-trs-fund", "shared-reserve", "protocol-position"] as const)(
     "keeps every %s residual bounded despite generic assurance and reserve totals",
     (archetype) => {

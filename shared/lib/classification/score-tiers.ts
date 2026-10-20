@@ -37,6 +37,23 @@ export const SCORE_TIER_5_CLASSES = {
   },
 } as const satisfies Record<ScoreTier5, { pill: string; text: string; fill: string }>;
 
+/** Numeric redemption display bands, worst → best; not the ordinal mint scale. */
+export const SCORE_TIER_5_POLICY = [
+  { key: "t0", min: 0, label: "<35" },
+  { key: "t35", min: 35, label: "35–49" },
+  { key: "t50", min: 50, label: "50–64" },
+  { key: "t65", min: 65, label: "65–79" },
+  { key: "t80", min: 80, label: "80+" },
+] as const satisfies readonly { key: ScoreTier5; min: number; label: string }[];
+
+export function resolveScoreTier5(score: number | null): ScoreTier5 | null {
+  if (score == null || Number.isNaN(score)) return null;
+  for (let index = SCORE_TIER_5_POLICY.length - 1; index > 0; index--) {
+    if (score >= SCORE_TIER_5_POLICY[index].min) return SCORE_TIER_5_POLICY[index].key;
+  }
+  return "t0";
+}
+
 export type ScoreTier4 = "t80" | "t60" | "t40" | "t0";
 
 /** Four-step score ramp (liquidity 80/60/40, Bluechip grade order). */

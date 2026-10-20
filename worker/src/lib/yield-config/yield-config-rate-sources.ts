@@ -126,6 +126,7 @@ export const ON_CHAIN_RATE_CONFIGS: OnChainRateConfig[] = [
   // USDat-denominated credit-vault NAV includes preferred-note gains and losses.
   erc4626Rate("susdat-saturn", "ethereum", "0xd166337499e176bbc38a1fbd113ab144e5bd2df7", 18, 6, 6),
 ];
+ON_CHAIN_RATE_CONFIGS.sort((a, b) => a.stablecoinId.localeCompare(b.stablecoinId));
 
 export const PRICE_DERIVED_FALLBACK_IDS = new Set([
   "usdb-blast",
@@ -164,32 +165,20 @@ export const RATE_DERIVED_CONFIGS: RateDerivedConfig[] = [
   { stablecoinId: "witry-brix", spreadBps: 0, label: "BIST TLREF overnight proxy (TRY)", benchmarkCurrency: "TRY" },
   { stablecoinId: "a7a5-old-vector", spreadBps: 100, label: "CBR key-rate reserve-yield proxy (net of 1.00pp)", benchmarkCurrency: "RUB", benchmarkOverrideKey: "RUB" },
 ];
+RATE_DERIVED_CONFIGS.sort((a, b) => a.stablecoinId.localeCompare(b.stablecoinId));
 
 
-export const DIRECT_PROTOCOL_API_STRATEGIES: Record<string, string> = {
-  "scrvusd-curve": "Curve scrvUSD current-rate reader",
-  "lusd-liquity": "B.Protocol LQTY-only",
-  "bd-basedollar": "Base Dollar Stability Pools (interest-only)",
-  "bold-liquity": "Liquity V2 Stability Pools (interest-only)",
-  "ybold-yearn": "Yearn yBOLD Stability Pool vault",
-  "usyc-hashnote": "Hashnote NAV feed",
-  "mmev-midas": "Midas mMEV NAV oracle",
-  "usdy-ondo-finance": "Ondo USDY oracle",
-  "reusd-re-protocol": "Re Protocol Basis-Plus (reUSD)",
-  "zys-zephyr-protocol": "Zephyr Scanner ZYS returns",
-};
-
-export const DIRECT_PROTOCOL_API_SOURCE_KEYS: Record<string, string> = {
-  "scrvusd-curve": "onchain:scrvusd-curve:scrvusd-current-rate",
-  "lusd-liquity": buildOnChainSourceKey("lusd-liquity"),
-  "bd-basedollar": buildOnChainSourceKey("bd-basedollar"),
-  "bold-liquity": buildOnChainSourceKey("bold-liquity"),
-  "ybold-yearn": "protocol-api:yearn:ybold",
-  "usyc-hashnote": "protocol-api:hashnote-usyc",
-  "mmev-midas": "protocol-api:midas-mmev-nav-oracle",
-  "usdy-ondo-finance": "protocol-api:ondo-usdy-oracle",
-  "reusd-re-protocol": "protocol-api:re-protocol-reusd",
-  "zys-zephyr-protocol": "protocol-api:zys-zephyr-protocol",
+export const DIRECT_PROTOCOL_API_STRATEGIES: Record<string, { label: string; sourceKey: string }> = {
+  "scrvusd-curve": { label: "Curve scrvUSD current-rate reader", sourceKey: "onchain:scrvusd-curve:scrvusd-current-rate" },
+  "lusd-liquity": { label: "B.Protocol LQTY-only", sourceKey: buildOnChainSourceKey("lusd-liquity") },
+  "bd-basedollar": { label: "Base Dollar Stability Pools (interest-only)", sourceKey: buildOnChainSourceKey("bd-basedollar") },
+  "bold-liquity": { label: "Liquity V2 Stability Pools (interest-only)", sourceKey: buildOnChainSourceKey("bold-liquity") },
+  "ybold-yearn": { label: "Yearn yBOLD Stability Pool vault", sourceKey: "protocol-api:yearn:ybold" },
+  "usyc-hashnote": { label: "Hashnote NAV feed", sourceKey: "protocol-api:hashnote-usyc" },
+  "mmev-midas": { label: "Midas mMEV NAV oracle", sourceKey: "protocol-api:midas-mmev-nav-oracle" },
+  "usdy-ondo-finance": { label: "Ondo USDY oracle", sourceKey: "protocol-api:ondo-usdy-oracle" },
+  "reusd-re-protocol": { label: "Re Protocol Basis-Plus (reUSD)", sourceKey: "protocol-api:re-protocol-reusd" },
+  "zys-zephyr-protocol": { label: "Zephyr Scanner ZYS returns", sourceKey: "protocol-api:zys-zephyr-protocol" },
 };
 
 const INTENTIONAL_GAP_REASONS_TYPED: Record<string, YieldAdapterLifecycleReason> = {
@@ -326,8 +315,7 @@ const INTENTIONAL_GAP_REASONS_TYPED: Record<string, YieldAdapterLifecycleReason>
 };
 
 /**
- * Legacy free-form rationale map kept for backward compatibility with
- * `deriveYieldRegistry` and existing manifest `rationale` fields.
+ * Manifest rationale copy projected from the typed lifecycle evidence.
  */
 export const INTENTIONAL_GAP_REASONS: Record<string, string> = Object.fromEntries(
   Object.entries(INTENTIONAL_GAP_REASONS_TYPED).map(([id, reason]) => [id, reason.note ?? reason.code]),
@@ -337,8 +325,7 @@ export const INTENTIONAL_GAP_REASONS: Record<string, string> = Object.fromEntrie
  * Typed lifecycle entries for real intentional coverage gaps. Active dedicated
  * sources default to active; incompatible generic readers are final exclusions.
  *
- * Built eagerly as a plain const: `deriveYieldRegistry` takes it as a parameter,
- * so there is no import-order hazard between this module and the registry.
+ * Built eagerly as a plain const, independently of the manifest builder.
  */
 export const YIELD_ADAPTER_LIFECYCLE: Record<string, YieldAdapterLifecycleEntry> = {
   ...Object.fromEntries(

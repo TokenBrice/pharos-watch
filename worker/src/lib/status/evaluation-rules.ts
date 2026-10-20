@@ -14,8 +14,9 @@ import { API_FRESHNESS_MAX_AGE_SEC, CACHE_FRESHNESS_LANES } from "@shared/lib/ap
 import { D1_QUOTA_THRESHOLDS } from "@shared/lib/d1-capacity";
 import { formatPercentFromRatio } from "@shared/lib/format";
 import type { DataQuality, D1QuotaAssessment, D1QuotaMetric, StatusCause, StatusResponse } from "@shared/types/status";
+import type { StatusHealthValue } from "@shared/types/status/core";
 import type { PublicHealthAssessment } from "../public-health-assessment";
-import { maxStatus, SEVERITY, type StatusLevel } from "../status-reliability-shared";
+import { maxStatus, SEVERITY } from "../status-reliability-shared";
 import type { OnchainDataQualityAssessment } from "./onchain-data-quality";
 import type { CronFindingJobs } from "./cron-health";
 import { getSourceFailureMessage } from "./section-errors";
@@ -73,7 +74,7 @@ export function evaluateReserveCompositionStatus(
 }
 
 export interface StatusRuleEvaluation {
-  status: StatusLevel;
+  status: StatusHealthValue;
   causes: StatusCause[];
 }
 
@@ -82,7 +83,7 @@ export type StatusRule<Input> = (input: Input) => Partial<StatusRuleEvaluation> 
 function evaluateStatusRuleSet<Input>(
   input: Input,
   rules: readonly StatusRule<Input>[],
-  initialStatus: StatusLevel = "healthy",
+  initialStatus: StatusHealthValue = "healthy",
 ): StatusRuleEvaluation {
   let status = initialStatus;
   const causes: StatusCause[] = [];
@@ -150,7 +151,7 @@ export interface DataQualityEvaluationInput {
   reserveComposition: StatusResponse["reserveComposition"];
 }
 
-function ruleResult(status: StatusLevel, causes: StatusCause[] = []): Partial<StatusRuleEvaluation> | null {
+function ruleResult(status: StatusHealthValue, causes: StatusCause[] = []): Partial<StatusRuleEvaluation> | null {
   return status === "healthy" && causes.length === 0 ? null : { status, causes };
 }
 
@@ -442,7 +443,7 @@ export function rebuildCronDerivedAvailabilityCauses(
 
 export function evaluateSchedulerLiveness(scheduler: PublicHealthAssessment["schedulerLiveness"]): StatusRuleEvaluation {
   const causes: StatusCause[] = [];
-  let status: StatusLevel = "healthy";
+  let status: StatusHealthValue = "healthy";
   if (scheduler.status !== "healthy") {
     const unavailable = scheduler.status === "unavailable";
     status = scheduler.status === "unavailable" ? "degraded" : scheduler.status;
@@ -457,7 +458,7 @@ export function evaluateSchedulerLiveness(scheduler: PublicHealthAssessment["sch
   const heavy = scheduler.heavy;
   if (heavy.status !== "healthy") {
     const unavailable = heavy.status === "unavailable";
-    const heavyStatus: StatusLevel = heavy.status === "unavailable" ? "degraded" : heavy.status;
+    const heavyStatus: StatusHealthValue = heavy.status === "unavailable" ? "degraded" : heavy.status;
     status = maxStatus(status, heavyStatus);
     causes.push(makeCause(
       "availability", unavailable ? "heavy_scheduler_liveness_unavailable" : "heavy_scheduled_delivery_stalled",

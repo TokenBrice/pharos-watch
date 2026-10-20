@@ -54,6 +54,7 @@ describe("fetchPendleMarketSources", () => {
   });
 
   it("extracts stablecoin market yields from Pendle REST API", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(1_790_121_600_000);
     const futureExpiry = new Date(Date.now() + 30 * 86400 * 1000).toISOString();
     mockYieldSourceRoutes([
       {
@@ -65,7 +66,7 @@ describe("fetchPendleMarketSources", () => {
           results: [
             {
               id: "1-0xabc",
-              address: "0xabc",
+              address: "0xAbC",
               chainId: 1,
               isActive: true,
               expiry: futureExpiry,
@@ -86,16 +87,16 @@ describe("fetchPendleMarketSources", () => {
     ]);
 
     const { candidates: results } = await fetchPendleMarketSources();
-    expect(results.map((result) => result.yield.sourceKey)).toEqual(["protocol-api:pendle:ethereum:0xabc"]);
-    expect(results[0].yield).toEqual(
-      expect.objectContaining({
-        currentApy: expect.closeTo(5.2, 0),
-        dataSource: "protocol-api",
-        sourceKey: expect.stringContaining("protocol-api:pendle:"),
-        yieldSource: "Pendle fixed yield: Global Dollar USDG",
-        yieldType: "fixed-yield",
-      }),
-    );
+    expect(results[0]).toStrictEqual({
+      symbol: "USDG", chain: "ethereum", address: "0xdef",
+      yield: {
+        currentApy: 5.2, apyBase: 5.2, apyReward: null, sourcePool: "0xAbC",
+        sourceTvlUsd: 82_000_000, dataSource: "protocol-api", exchangeRate: null,
+        sourceKey: "protocol-api:pendle:ethereum:0xabc",
+        yieldSource: "Pendle fixed yield: Global Dollar USDG", yieldType: "fixed-yield",
+        sourceObservedAt: 1_790_121_600, comparisonAnchorObservedAt: null,
+      },
+    });
   });
 
   it("filters out non-stablecoin markets", async () => {
@@ -209,5 +210,26 @@ describe("fetchPendleMarketSources", () => {
     ]);
 
     await expect(fetchPendleMarketSources()).resolves.toEqual({ candidates: [], degraded: true });
+  });
+
+  it("keeps first-chain rows and continues after a second-chain parse failure", async () => {
+    const market = {
+      address: "0xAbC", chainId: 1, isActive: true,
+      expiry: new Date(Date.now() + 30 * 86400 * 1000).toISOString(),
+      impliedApy: 0.05, underlyingAsset: { symbol: "USDC", address: "0xdef" },
+      assetRepresentation: "USDC", protocol: "Test", liquidity: { usd: 2_000_000 },
+      categoryIds: ["stables"],
+    };
+    const fetch = mockYieldSourceRoutes([
+      { match: "/core/v1/1/markets?", body: { results: [market] } },
+      { match: "/core/v1/42161/markets?", respond: () => new Response("{") },
+      { match: "/core/v1/8453/markets?", body: { results: [{ ...market, chainId: 8453 }] } },
+    ], { requireMatch: true });
+    const result = await fetchPendleMarketSources();
+    expect(result.degraded).toBe(true);
+    expect(result.candidates.map((row) => row.yield.sourceKey)).toEqual([
+      "protocol-api:pendle:ethereum:0xabc", "protocol-api:pendle:base:0xabc",
+    ]);
+    expect(fetch).toHaveBeenCalledTimes(3);
   });
 });

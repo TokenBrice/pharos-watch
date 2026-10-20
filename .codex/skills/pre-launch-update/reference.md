@@ -7,7 +7,7 @@ Material moved verbatim from `SKILL.md`: field-level scope table, promotion rati
 | Field | What to update | Source priority |
 |---|---|---|
 | `launchPhase` | Advance only on evidence; `LAUNCH_PHASE_VALUES` in `shared/types/core.ts` owns the vocabulary (the source file wins) | Official announcements, docs, testnet/mainnet explorers |
-| `expectedLaunchDate` | Update if shifted; `FuzzyDateSchema` in `shared/types/stablecoin-meta-schemas.ts` owns the supported date formats | Official comms, news articles |
+| `expectedLaunchDate` | Update if shifted; `FuzzyDateSchema` in `shared/types/stablecoin-meta-primitives.ts` owns the supported date formats | Official comms, news articles |
 | `announcedDate` | Backfill only when missing and a credible first-announcement date surfaces; never overwrite an existing value | Original press release, first official tweet |
 | `launchPhaseDetail` | Refresh free-text status line | Latest official communication |
 | `milestones[]` | Add new events with date, type, title, description, sourceUrl | Twitter/X, official blog, news, regulatory filings |

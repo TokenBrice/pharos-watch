@@ -8,6 +8,7 @@ import type {
   LiveReserveSnapshotMetadata,
   LiveReserveSourceModel,
   LiveReserveWarning,
+  ReserveSyncStatus,
 } from "@shared/types/live-reserves";
 import type { LiveReserveAdmissionResult } from "./store-snapshot-state";
 export type { ReserveCompositionOverview } from "@shared/types/live-reserves";
@@ -40,8 +41,6 @@ export const RESERVE_COMPOSITION_CONFLICT_ASSIGNMENTS = RESERVE_COMPOSITION_COLU
 )
   .map((column) => `         ${column} = excluded.${column}`)
   .join(",\n");
-
-export type ReserveSyncStatus = "ok" | "degraded" | "error" | "skipped";
 
 export interface ReserveCompositionRow {
   stablecoin_id: string;

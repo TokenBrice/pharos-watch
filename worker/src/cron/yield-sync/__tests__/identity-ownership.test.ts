@@ -4,11 +4,11 @@ import { appendLinkedVariantParentYieldSources, appendPoolFamilyYieldSources, en
 import { resolveYieldTypeLabel } from "../evaluation";
 import { deriveYieldSourceRole } from "../publication";
 import { matchAllDlPools } from "../../yield-helpers";
-import { YIELD_POOL_MAP } from "../../../lib/yield-config/yield-config";
+import { YIELD_POOL_MAP } from "../../../lib/yield-config/yield-config-pools";
 import type { DlPool, ResolvedYield, ResolvedYieldCandidate, ResolvedYieldEntry } from "../types";
 import type { EvaluatedYieldSource } from "../evaluation";
 import { buildHistoryKey } from "../history";
-import { evaluateYieldSources } from "../evaluation";
+import { evaluateYieldSourcesCooperative } from "../evaluation";
 import { baseEvaluationInput } from "../../__tests__/yield-evaluation.test-support";
 
 function pool(overrides: Partial<DlPool> = {}): DlPool {
@@ -22,14 +22,14 @@ function resolve(dlPools: DlPool[], supplementalCandidates: ResolvedYieldCandida
   appendPoolFamilyYieldSources({ resolved, dlPools, supplementalCandidates, safetyScores: new Map(), safetySnapshotAvailable: false, stablecoinSupplyById: supplies, stablecoinSupplyMapState: "ok" });
   return resolved;
 }
-function evaluated(entry: ResolvedYieldEntry): EvaluatedYieldSource {
+async function evaluated(entry: ResolvedYieldEntry): Promise<EvaluatedYieldSource> {
   const startSec = Math.floor(Date.now() / 1000);
-  return evaluateYieldSources(baseEvaluationInput({
+  return (await evaluateYieldSourcesCooperative(baseEvaluationInput({
     startSec,
     resolved: [{ ...entry, yield: { ...entry.yield!, sourceObservedAt: startSec } }],
     safetyScores: new Map([[entry.id, { score: 80, grade: "B+" }]]),
     stablecoinSupplyById: new Map([[entry.id, 1_000_000]]),
-  })).evaluatedSources[0];
+  }), { yieldToEventLoop: () => Promise.resolve() })).evaluatedSources[0];
 }
 
 describe("yield identity and ownership boundaries", () => {
@@ -83,13 +83,13 @@ describe("yield identity and ownership boundaries", () => {
     expect(resolved.map((entry) => [entry.id, entry.yield?.chain])).toEqual([["native", "Ethereum"], ["deposit", "Solana"]]);
   });
 
-  it("keeps a symbol-only receipt pool external until holder ownership is curated", () => {
+  it("keeps a symbol-only receipt pool external until holder ownership is curated", async () => {
     const receipt = pool({ symbol: "GTUSDCP", project: "morpho-blue" });
     const entries = resolve([receipt]);
     const own = entries.find((entry) => entry.id === "gtusdcp-gauntlet")!;
     expect(own.yield?.yieldType).toBe("lending-opportunity");
     expect(own.yield?.yieldSource).toBe("Morpho Blue");
-    expect(deriveYieldSourceRole(evaluated(own), { isSelected: true })).not.toBe("canonical-holder");
+    expect(deriveYieldSourceRole(await evaluated(own), { isSelected: true })).not.toBe("canonical-holder");
     expect(resolveYieldTypeLabel({ id: own.id, dataSource: "defillama", pool: receipt })).toBe("lending-vault");
     expect(resolveYieldTypeLabel({ id: own.id, dataSource: "defillama-auto", explicitType: "lending-vault", pool: receipt })).toBe("lending-vault");
     expect(resolveYieldTypeLabel({ id: "usdc-circle", dataSource: "defillama-auto", pool: receipt })).toBe("lending-opportunity");
@@ -112,17 +112,17 @@ describe("yield identity and ownership boundaries", () => {
     expect(matchAllDlPools("steakusdt-steakhouse", "steakUSDT", [other, correct], YIELD_POOL_MAP, {}).map((entry) => entry.pool)).toEqual([correct.pool]);
   });
 
-  it("keeps sDOLA native and projects its yield to DOLA only as a deposit opportunity", () => {
+  it("keeps sDOLA native and projects its yield to DOLA only as a deposit opportunity", async () => {
     const own = pool({ pool: YIELD_POOL_MAP["sdola-inverse-finance"], symbol: "SDOLA", project: "inverse-finance-firm" });
     const collateralMarket = pool({ pool: "curve-market", symbol: "SDOLA", project: "curve-llamalend", apy: 0, underlyingTokens: ["0xb45ad160634c528cc3d2926d9807104fa3157305"] });
     expect(matchAllDlPools("sdola-inverse-finance", "sDOLA", [collateralMarket, own], YIELD_POOL_MAP, {}).map((entry) => entry.pool)).toEqual([own.pool]);
     const entries: ResolvedYieldEntry[] = [{ id: "sdola-inverse-finance", symbol: "sDOLA", yield: source({ sourceKey: own.pool, sourcePool: own.pool, yieldType: resolveYieldTypeLabel({ id: "sdola-inverse-finance", dataSource: "defillama" }) }) }];
     appendLinkedVariantParentYieldSources(entries);
-    expect(deriveYieldSourceRole(evaluated(entries[0]), { isSelected: true })).toBe("canonical-holder");
+    expect(deriveYieldSourceRole(await evaluated(entries[0]), { isSelected: true })).toBe("canonical-holder");
     expect(entries.find((entry) => entry.id === "dola-inverse-finance")?.yield?.yieldType).toBe("lending-opportunity");
   });
 
-  it("resolves Ethereum Frankencoin Savings as external and keeps Gnosis as an alternative", () => {
+  it("resolves Ethereum Frankencoin Savings as external and keeps Gnosis as an alternative", async () => {
     expect(TRACKED_META_BY_ID.get("zchf-frankencoin")?.flags.yieldBearing).not.toBe(true);
     const entries = resolve([
       pool({ pool: "8b427366-7bfb-4c61-88be-8dc004fdc3da", symbol: "ZCHF", project: "frankencoin", apy: 3.5, tvlUsd: 14_100_000 }),
@@ -133,7 +133,7 @@ describe("yield identity and ownership boundaries", () => {
     const startSec = Math.floor(Date.now() / 1000);
     const resolved = entries.filter((entry) => entry.id === id)
       .map((entry) => ({ ...entry, yield: { ...entry.yield!, sourceObservedAt: startSec } }));
-    const result = evaluateYieldSources(baseEvaluationInput({
+    const result = await evaluateYieldSourcesCooperative(baseEvaluationInput({
       startSec,
       resolved,
       safetyScores: new Map([[id, { score: 80, grade: "B+" }]]),
@@ -150,7 +150,7 @@ describe("yield identity and ownership boundaries", () => {
           yield_type: entry.yield.yieldType ?? null,
         })),
       ])),
-    }));
+    }), { yieldToEventLoop: () => Promise.resolve() });
     const candidates = result.evaluatedSources;
     const winner = result.bestSourceKeyByCoin.get(id);
     expect(winner).toBe("8b427366-7bfb-4c61-88be-8dc004fdc3da");

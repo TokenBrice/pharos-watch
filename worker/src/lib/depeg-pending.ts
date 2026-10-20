@@ -1,6 +1,5 @@
-import type { DepegDirection } from "./depeg-signals";
 import { DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC } from "@shared/lib/depeg-closure";
-import { coerceDepegDirection, pickMoreSevereBps } from "./depeg-signals";
+import { coerceDepegDirection, pickMoreSevereBps, type DepegDirection } from "@shared/lib/depeg-signals";
 import { NATIVE_ORIGIN_PENDING_REASON_FLAG, type PendingDepegReason } from "./depeg-helpers";
 
 export interface PendingDepegRow {

@@ -3,7 +3,6 @@ export {
   STATUS_HYSTERESIS,
   STATUS_SYSTEM_FRESHNESS_SEC,
   summarizeStatusPersistenceIssues,
-  type StatusLevel,
   type StatusPersistenceIssue,
 } from "./status-reliability-shared";
 export {

@@ -222,7 +222,7 @@ describe("Kava swap pool discovery", () => {
     });
     vi.stubGlobal("fetch", fetch);
     const stage = createCrawlStageContext({
-      stablecoinId: "usdx-kava", knownPoolIds: new Set(), nowSec: 1, pools: [], priceObs: [], deadlineMs: 1500,
+      stablecoinId: "usdx-kava", knownPoolIds: new Set(), nowSec: 1, pools: [], deadlineMs: 1500,
     });
     expect(await crawlKavaSwapPoolsStage({ coinTargets: [target()], context: stage })).toEqual({
       providerChecks: [], stoppedEarly: true,
@@ -240,7 +240,7 @@ describe("Kava swap pool discovery", () => {
     });
     vi.stubGlobal("fetch", fetch);
     const stage = createCrawlStageContext({
-      stablecoinId: "usdx-kava", knownPoolIds: new Set(), nowSec: 1, pools: [], priceObs: [], signal: controller.signal,
+      stablecoinId: "usdx-kava", knownPoolIds: new Set(), nowSec: 1, pools: [], signal: controller.signal,
     });
     await expect(crawlKavaSwapPoolsStage({ coinTargets: [target()], context: stage })).rejects.toBe(reason);
     expect(fetch).toHaveBeenCalledTimes(1);

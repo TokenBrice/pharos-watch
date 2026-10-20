@@ -235,14 +235,7 @@ export async function crawlDexScreenerPoolsStage({
           tvl >= DEX_PRICE_OBSERVATION_MIN_TVL_USD &&
           isPlausibleDexObservationPrice(context.stablecoinId, priceUsd, context.references)
         ) {
-          context.addPriceObs({
-            stablecoinId: context.stablecoinId,
-            price: priceUsd,
-            observedAt: context.nowSec,
-            tvl,
-            chain,
-            protocol: `dexscreener-${dexId}`,
-          });
+          context.hasUsablePoolPrice = true;
         }
       }
       providerChecks.push(makeDexDeploymentProviderCheck(

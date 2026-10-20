@@ -36,8 +36,8 @@ export function CoinFlowCard({
   netFlowDirection24h,
   pressureShiftState,
 }: CoinFlowCardProps) {
-  const directionUi = getFlowDirectionUi(netFlowDirection24h, "summary");
-  const pressureUi = getFlowPressureUi(pressureShiftState, "summary");
+  const directionUi = getFlowDirectionUi(netFlowDirection24h);
+  const pressureUi = getFlowPressureUi(pressureShiftState);
   const pressureDisplay = pressureShiftScore != null
     ? getPressureShiftDisplay(pressureShiftScore)
     : null;

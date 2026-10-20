@@ -5,7 +5,7 @@ import {
   filterDependencyGraphEdgesToLive,
   orderDependencyGraphNodes,
 } from "../dependency-graph";
-import { deriveDependencies, deriveEffectiveDependencies, deriveEffectiveDependencySet } from "../dependency-derivation";
+import { deriveEffectiveDependencies, deriveEffectiveDependencySet } from "../dependency-derivation";
 import type { StablecoinMeta } from "../../types/core";
 import { ReserveSliceSchema } from "../../types/reserves";
 import { StablecoinReservesResponseSchema } from "../../types/live-reserves";
@@ -215,7 +215,9 @@ describe("dependency-graph", () => {
       { name: "Small holding B", pct: 0.000148, risk: "low" as const, coinId: "upstream", depType: "collateral" as const },
     ];
     const meta = makeMeta({ id: "dependent", reserves });
-    expect(deriveDependencies(meta)[0].weight).toBeCloseTo(0.00000296, 14);
+    const curated = deriveEffectiveDependencySet(meta);
+    expect(curated.dependencies[0].weight).toBeCloseTo(0.00000296, 14);
+    expect(curated.rejectionReasons).toEqual([]);
     const live = deriveEffectiveDependencySet(meta, { liveReserveSlices: reserves });
     expect(live.dependencies[0].weight).toBeCloseTo(0.00000296, 14);
     expect(live.mappedLiveReserveWeight).toBeCloseTo(0.00000296, 14);
@@ -249,9 +251,6 @@ describe("dependency-graph", () => {
     expect(deriveEffectiveDependencySet(meta, { liveReserveSlices: meta.reserves })).toMatchObject({
       rejectionReasons: [rejection],
     });
-    expect(() => deriveDependencies(meta)).toThrow(expect.objectContaining({
-      code: "manual-collateral-not-in-reserves", rejectionReasons: [rejection],
-    }));
   });
 
   it("retains intermediary provenance on reserve-derived basket and wrapper claims", () => {
@@ -295,8 +294,7 @@ describe("dependency-graph", () => {
         risk: "low", coinId: "upstream", depType,
       });
       const meta = makeMeta({ id: "dependent", reserves: [reserve] });
-      expect(deriveDependencies(meta)).toEqual([]);
-      expect(deriveEffectiveDependencySet(meta).dependencies).toEqual([]);
+      expect(deriveEffectiveDependencySet(meta)).toMatchObject({ dependencies: [], rejectionReasons: [] });
       expect(deriveEffectiveDependencySet(meta, { liveReserveSlices: [reserve] }).dependencies).toEqual([]);
     }
     expect(ReserveSliceSchema.safeParse({
@@ -504,6 +502,16 @@ describe("dependency-graph", () => {
     ]);
     expect(diagnostics.stronglyConnectedComponents).toEqual([["a", "b"]]);
     expect(diagnoseDependencyGraph([...edges].reverse())).toEqual(diagnostics);
+  });
+
+  it("sorts separate SCC diagnostics and preserves self-edge policy across permutations", () => {
+    const edges = [["z", "y"], ["y", "z"], ["a", "b"], ["b", "a"], ["self", "self"]]
+      .map(([from, to]) => ({ from, to, weight: 1, type: "wrapper" as const }));
+    for (const permutation of [edges, [...edges].reverse(), [...edges.slice(2), ...edges.slice(0, 2)]]) {
+      expect(diagnoseDependencyGraph(permutation)).toEqual({
+        selfEdges: [edges[4]], duplicateEdges: [], stronglyConnectedComponents: [["a", "b"], ["y", "z"]],
+      });
+    }
   });
 
   it("orders the SCC-collapsed graph without hiding cyclic components", () => {

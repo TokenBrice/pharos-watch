@@ -314,6 +314,44 @@ export const DexMeasuredExecutionProfileSchema = /* @__PURE__ */ (() => z.object
 }))();
 export type DexMeasuredExecutionProfile = z.infer<typeof DexMeasuredExecutionProfileSchema>;
 
+// Explicit picks keep future private proof fields out of the public wire shape.
+const DexMeasuredExecutionPoolProvenanceSchema = /* @__PURE__ */ (() => DexMeasuredExecutionPoolBindingProofSchema.pick({
+  factoryAddress: true,
+  factoryCodeHash: true,
+  resolvedPoolAddress: true,
+}))();
+const DexMeasuredExecutionRegistryProvenanceSchema = /* @__PURE__ */ (() => DexMeasuredExecutionRegistryBindingProofSchema.pick({
+  registryAddress: true,
+  registryCodeHash: true,
+  registeredPoolAddress: true,
+  lpTokenAddress: true,
+  poolTokenAddresses: true,
+}))();
+const DexMeasuredExecutionStableSwapNgFactoryProvenanceSchema = /* @__PURE__ */ (() => DexMeasuredExecutionStableSwapNgFactoryBindingProofSchema.pick({
+  blockNumber: true,
+  blockHash: true,
+  blockCommitment: true,
+  factoryAddress: true,
+  factoryCodeHash: true,
+  poolIndex: true,
+  registeredPoolAddress: true,
+  poolTokenAddresses: true,
+}))();
+const DexMeasuredExecutionUniswapV4PoolProvenanceSchema = /* @__PURE__ */ (() => DexMeasuredExecutionUniswapV4PoolProofSchema.pick({
+  blockNumber: true,
+  blockHash: true,
+  poolId: true,
+  poolManagerAddress: true,
+  poolManagerCodeHash: true,
+  stateViewAddress: true,
+  stateViewCodeHash: true,
+  sqrtPriceX96: true,
+  tick: true,
+  protocolFee: true,
+  lpFee: true,
+  liquidity: true,
+}))();
+
 /** Public, proof-free projection retained on DEX pool rows. */
 export const DexMeasuredExecutionPublicProfileSchema = /* @__PURE__ */ (() => DexMeasuredExecutionProfileSchema.omit({
   quoteProof: true,
@@ -324,28 +362,9 @@ export const DexMeasuredExecutionPublicProfileSchema = /* @__PURE__ */ (() => De
   uniswapV4PoolProof: true,
 }).extend({
   observationHistory: DexMeasuredExecutionObservationHistorySchema.optional(),
-  poolProvenance: z.object({
-    factoryAddress: CanonicalEvmAddressSchema,
-    factoryCodeHash: z.string().regex(/^0x[a-f0-9]{64}$/),
-    resolvedPoolAddress: CanonicalEvmAddressSchema,
-  }).optional(),
-  registryProvenance: z.object({
-    registryAddress: CanonicalEvmAddressSchema,
-    registryCodeHash: z.string().regex(/^0x[a-f0-9]{64}$/),
-    registeredPoolAddress: CanonicalEvmAddressSchema,
-    lpTokenAddress: CanonicalEvmAddressSchema,
-    poolTokenAddresses: z.array(CanonicalEvmAddressSchema).min(2).max(8),
-  }).optional(),
-  stableSwapNgFactoryProvenance: z.object({
-    blockNumber: z.number().int().nonnegative(),
-    blockHash: z.string().regex(/^0x[a-f0-9]{64}$/),
-    blockCommitment: z.literal("finalized"),
-    factoryAddress: CanonicalEvmAddressSchema,
-    factoryCodeHash: z.string().regex(/^0x[a-f0-9]{64}$/),
-    poolIndex: z.number().int().nonnegative(),
-    registeredPoolAddress: CanonicalEvmAddressSchema,
-    poolTokenAddresses: z.array(CanonicalEvmAddressSchema).length(2),
-  }).optional(),
+  poolProvenance: DexMeasuredExecutionPoolProvenanceSchema.optional(),
+  registryProvenance: DexMeasuredExecutionRegistryProvenanceSchema.optional(),
+  stableSwapNgFactoryProvenance: DexMeasuredExecutionStableSwapNgFactoryProvenanceSchema.optional(),
   curveCompositeProvenance: z.object({
     blockNumber: z.number().int().nonnegative(),
     blockHash: CanonicalBytes32Schema,
@@ -366,20 +385,7 @@ export const DexMeasuredExecutionPublicProfileSchema = /* @__PURE__ */ (() => De
     basePoolCodeHash: CanonicalBytes32Schema.optional(),
     basePoolTokenAddresses: z.array(CanonicalEvmAddressSchema).min(2).max(8).optional(),
   }).optional(),
-  uniswapV4PoolProvenance: z.object({
-    blockNumber: z.number().int().nonnegative(),
-    blockHash: CanonicalBytes32Schema,
-    poolId: CanonicalBytes32Schema,
-    poolManagerAddress: CanonicalEvmAddressSchema,
-    poolManagerCodeHash: CanonicalBytes32Schema,
-    stateViewAddress: CanonicalEvmAddressSchema,
-    stateViewCodeHash: CanonicalBytes32Schema,
-    sqrtPriceX96: z.string().regex(/^[1-9][0-9]*$/),
-    tick: z.number().int().min(-8_388_608).max(8_388_607),
-    protocolFee: z.number().int().min(0).max(0xffffff),
-    lpFee: z.number().int().min(0).max(0xffffff),
-    liquidity: z.string().regex(/^[1-9][0-9]*$/),
-  }).optional(),
+  uniswapV4PoolProvenance: DexMeasuredExecutionUniswapV4PoolProvenanceSchema.optional(),
 }))();
 export type DexMeasuredExecutionPublicProfile = z.infer<typeof DexMeasuredExecutionPublicProfileSchema>;
 
@@ -402,36 +408,17 @@ export function toDexMeasuredExecutionPublicProfile(
     ...(options.observationHistory ? { observationHistory: options.observationHistory } : {}),
     ...(poolBindingProof
       ? {
-          poolProvenance: {
-            factoryAddress: poolBindingProof.factoryAddress,
-            factoryCodeHash: poolBindingProof.factoryCodeHash,
-            resolvedPoolAddress: poolBindingProof.resolvedPoolAddress,
-          },
+          poolProvenance: poolBindingProof,
         }
       : {}),
     ...(registryBindingProof
       ? {
-          registryProvenance: {
-            registryAddress: registryBindingProof.registryAddress,
-            registryCodeHash: registryBindingProof.registryCodeHash,
-            registeredPoolAddress: registryBindingProof.registeredPoolAddress,
-            lpTokenAddress: registryBindingProof.lpTokenAddress,
-            poolTokenAddresses: registryBindingProof.poolTokenAddresses,
-          },
+          registryProvenance: registryBindingProof,
         }
       : {}),
     ...(stableSwapNgFactoryBindingProof
       ? {
-          stableSwapNgFactoryProvenance: {
-            blockNumber: stableSwapNgFactoryBindingProof.blockNumber,
-            blockHash: stableSwapNgFactoryBindingProof.blockHash,
-            blockCommitment: stableSwapNgFactoryBindingProof.blockCommitment,
-            factoryAddress: stableSwapNgFactoryBindingProof.factoryAddress,
-            factoryCodeHash: stableSwapNgFactoryBindingProof.factoryCodeHash,
-            poolIndex: stableSwapNgFactoryBindingProof.poolIndex,
-            registeredPoolAddress: stableSwapNgFactoryBindingProof.registeredPoolAddress,
-            poolTokenAddresses: stableSwapNgFactoryBindingProof.poolTokenAddresses,
-          },
+          stableSwapNgFactoryProvenance: stableSwapNgFactoryBindingProof,
         }
       : {}),
     ...(curveCompositeProof
@@ -468,20 +455,7 @@ export function toDexMeasuredExecutionPublicProfile(
       : {}),
     ...(uniswapV4PoolProof
       ? {
-          uniswapV4PoolProvenance: {
-            blockNumber: uniswapV4PoolProof.blockNumber,
-            blockHash: uniswapV4PoolProof.blockHash,
-            poolId: uniswapV4PoolProof.poolId,
-            poolManagerAddress: uniswapV4PoolProof.poolManagerAddress,
-            poolManagerCodeHash: uniswapV4PoolProof.poolManagerCodeHash,
-            stateViewAddress: uniswapV4PoolProof.stateViewAddress,
-            stateViewCodeHash: uniswapV4PoolProof.stateViewCodeHash,
-            sqrtPriceX96: uniswapV4PoolProof.sqrtPriceX96,
-            tick: uniswapV4PoolProof.tick,
-            protocolFee: uniswapV4PoolProof.protocolFee,
-            lpFee: uniswapV4PoolProof.lpFee,
-            liquidity: uniswapV4PoolProof.liquidity,
-          },
+          uniswapV4PoolProvenance: uniswapV4PoolProof,
         }
       : {}),
   });

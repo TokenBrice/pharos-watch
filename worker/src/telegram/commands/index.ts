@@ -21,8 +21,6 @@ import { handleUnmuteHours } from "./unmutehours";
 import { handleUnsnooze } from "./unsnooze";
 import { handleCancel } from "./cancel";
 import { handleForget } from "./forget";
-import { handleExport } from "./export";
-import { handleImport } from "./import";
 import { handleRecap } from "./recap";
 
 export type { WebhookCommandContext, WebhookCommandHandler } from "./context";
@@ -59,7 +57,5 @@ export const COMMAND_HANDLERS: Record<string, WebhookCommandHandler> = {
   "/unsnooze": handleUnsnooze,
   "/cancel": handleCancel,
   "/forget": handleForget,
-  "/export": handleExport,
-  "/import": handleImport,
   "/recap": handleRecap,
 };

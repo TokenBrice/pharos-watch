@@ -18,6 +18,8 @@ import {
 import type { ControlOverlay } from "../safety-score-v9/extension-shared";
 import { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
 import { getSafetyScoreV9OperationalResilienceOverlay } from "../safety-score-v9/extension-operational-resilience";
+import { expandReviewedRegistryReferences } from "@shared/lib/safety-score-v9/reviewed-registry";
+import { V9ReviewedIncidentRegistrySchema } from "@shared/types/safety-score-v9-incidents";
 
 const CLOCK_SEC = Date.parse("2026-08-24T23:59:59.000Z") / 1_000;
 
@@ -185,8 +187,9 @@ describe("Safety Score v9 independent negative incident routing", () => {
   it("rebuilds the full-payload evidence identity of two-digit source indexes from the runtime projection", () => {
     // Keys embed the sorted-source index, so indexes 10+ order before 2 in the
     // finished evidence list; every review with 11+ sources exercises that.
-    const reviews = incidentRegistry.negativeReviews
-      .map((value) => V9NegativeIncidentReviewSchema.parse(value))
+    const reviews = V9ReviewedIncidentRegistrySchema.parse(expandReviewedRegistryReferences(incidentRegistry, "negativeReviews", {
+      sources: "sourceObservations", searchedSurfaces: "searchedSurfaceObservations",
+    })).negativeReviews!
       .filter((review) => review.sources.length >= 11);
     expect(reviews.length).toBeGreaterThan(0);
     for (const review of reviews) {

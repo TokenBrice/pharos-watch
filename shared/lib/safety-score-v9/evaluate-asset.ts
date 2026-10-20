@@ -24,7 +24,7 @@ import {
 } from "./backing-primitives";
 import { evaluateV9Backing } from "./archetypes";
 import { selectV9CdpLiquidationCapacity } from "./archetypes/cdp";
-import { evaluateV9EconomicControlAssetFacts } from "./control";
+import { evaluateV9EconomicControl } from "./control";
 import { unresolvedDeploymentCohort } from "./control-bridge-join";
 import { deriveV9MintPosture, resolveV9StatusCauses, type V9EconomicControlResult } from "./control-primitives";
 import { isUnboundedMintPosture } from "./mint-posture";
@@ -1682,22 +1682,19 @@ export function evaluateV9Asset({
     asset.mechanismRiskReview.review === null
       ? createUnavailableV9BackingResult(backingAsset, asset, envelope)
       : evaluateV9Backing(backingAsset, asset.mechanismRiskReview.review, envelope);
-  const control = evaluateV9EconomicControlAssetFacts(
-    asset,
-    {
-      assetId: asset.assetId,
-      trackRecordMonths,
-      ...asset.economicControlReview,
-      ...(() => {
-        const ageMonths = conservativeResolvedIncidentAgeMonths(
-          asset.economicControlReview.mint.latestResolvedIncidentAtSec,
-          identity.asOfSec,
-        );
-        return ageMonths === undefined ? {} : { resolvedIncidentAgeMonths: ageMonths };
-      })(),
-    },
-    envelope,
-  );
+  const control = evaluateV9EconomicControl({
+    facts: asset,
+    ...asset.economicControlReview,
+    trackRecordMonths,
+    ...(() => {
+      const ageMonths = conservativeResolvedIncidentAgeMonths(
+        asset.economicControlReview.mint.latestResolvedIncidentAtSec,
+        identity.asOfSec,
+      );
+      return ageMonths === undefined ? {} : { resolvedIncidentAgeMonths: ageMonths };
+    })(),
+    policy: envelope,
+  });
   const access = evaluateV9AccessPosture({
     policy: envelope,
     facts: asset,

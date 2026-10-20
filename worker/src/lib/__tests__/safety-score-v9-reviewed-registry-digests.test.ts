@@ -4,6 +4,10 @@ import incidents from "@shared/data/safety-score-v9/incident-reviews-v1.json";
 import mechanism from "@shared/data/safety-score-v9/mechanism-review-overlays-v1.json";
 import operational from "@shared/data/safety-score-v9/operational-resilience-overlays-v1.json";
 import transfer from "@shared/data/safety-score-v9/transfer-review-overlays-v1.json";
+import gaps from "@shared/data/safety-score-v9/evidence-gap-classifications-v1.json";
+import {
+  V9AuthoredEvidenceGapClassificationsEnvelopeSchema, V9EvidenceGapClassificationsV1Schema, V9EvidenceGapClassificationSchema,
+} from "@shared/types/safety-score-v9-causes";
 import { V9AccessLookthroughOverlaySchema } from "@shared/types/safety-score-v9-access-lookthrough";
 import { V9ReviewedIncidentRegistrySchema } from "@shared/types/safety-score-v9-incidents";
 import { SafetyScoreV9MechanismReviewOverlayFileSchema } from "@shared/types/safety-score-v9-mechanism-overlays";
@@ -17,12 +21,15 @@ import { SAFETY_SCORE_V9_INCIDENT_REVIEWS_DIGEST } from "../safety-score-v9/exte
 import { SAFETY_SCORE_V9_MECHANISM_REVIEW_OVERLAYS_DIGEST } from "../safety-score-v9/extension-mechanism";
 import { SAFETY_SCORE_V9_OPERATIONAL_RESILIENCE_OVERLAYS_DIGEST } from "../safety-score-v9/extension-operational-resilience";
 import { computeSafetyScoreV9ReviewedTransferFactsDigest } from "../safety-score-v9/extension-transfer";
-import { canonicalizeReviewedRegistryDigest, reviewedRegistryDigestKey } from "@shared/lib/safety-score-v9/reviewed-registry";
+import { canonicalizeReviewedRegistryDigest, createReviewedAssetRegistry, createReviewedRegistryReferenceExpander, expandReviewedRegistryReferences, reviewedRegistryDigestKey } from "@shared/lib/safety-score-v9/reviewed-registry";
 
 describe("reviewed registry provenance identity", () => {
   it("keeps all five full-file digest identities from eager schema admission", () => {
     expect(computeSafetyScoreV9AccessClaimGraphReviewsDigest()).toBe(domainDigest("safety-score-v9.access-lookthrough-reviews.v1", V9AccessLookthroughOverlaySchema.parse(access)));
-    expect(SAFETY_SCORE_V9_INCIDENT_REVIEWS_DIGEST).toBe(sha256Hex(stableJsonStringifyV1({ domain: "safety-score-v9.incident-reviews.v1", payload: V9ReviewedIncidentRegistrySchema.parse(incidents) })));
+    const expandedIncidents = expandReviewedRegistryReferences(incidents, "negativeReviews", {
+      sources: "sourceObservations", searchedSurfaces: "searchedSurfaceObservations",
+    });
+    expect(SAFETY_SCORE_V9_INCIDENT_REVIEWS_DIGEST).toBe(sha256Hex(stableJsonStringifyV1({ domain: "safety-score-v9.incident-reviews.v1", payload: V9ReviewedIncidentRegistrySchema.parse(expandedIncidents) })));
     expect(SAFETY_SCORE_V9_MECHANISM_REVIEW_OVERLAYS_DIGEST).toBe(sha256Hex(stableJsonStringifyV1({ domain: "safety-score-v9.mechanism-review-overlays.v1", overlays: SafetyScoreV9MechanismReviewOverlayFileSchema.parse(mechanism) })));
     expect(SAFETY_SCORE_V9_OPERATIONAL_RESILIENCE_OVERLAYS_DIGEST).toBe(sha256Hex(stableJsonStringifyV1({ domain: "safety-score-v9.operational-resilience-overlays.v1", payload: SafetyScoreV9OperationalResilienceOverlayFileSchema.parse(operational) })));
     expect(computeSafetyScoreV9ReviewedTransferFactsDigest()).toBe(sha256Hex(stableJsonStringifyV1({ domain: "safety-score-v9.reviewed-transfer-overlays.v1", schemaVersion: 1, reviews: SafetyScoreV9ReviewedTransferFileSchema.parse(transfer).reviews.sort((a, b) => compareText(a.assetId, b.assetId)) })));
@@ -42,5 +49,71 @@ describe("reviewed registry provenance identity", () => {
     const digestValue = canonicalizeReviewedRegistryDigest(damaged, { incidents: reviewedRegistryDigestKey("incidentId") });
     expect(digestValue).toEqual({ incidents: [damaged.incidents[1], damaged.incidents[0]] });
     expect(domainDigest("fixture", digestValue)).not.toBe(domainDigest("fixture", { incidents: [damaged.incidents[1]] }));
+  });
+
+  it("expands the exact ordered pre-normalization gap payload before strict admission", () => {
+    const expanded = expandReviewedRegistryReferences(V9AuthoredEvidenceGapClassificationsEnvelopeSchema.parse(gaps), "entries", {
+      sources: "sourceObservations", searchedSurfaces: "searchedSurfaceObservations",
+    });
+    expect(sha256Hex(stableJsonStringifyV1(expanded))).toBe("45571e6ade9217a5f09bee8fb0ad7d8715a81bab8bb087ca0fe4fd6191aa8428");
+    expect(V9EvidenceGapClassificationsV1Schema.parse(expanded).entries).toHaveLength(gaps.entries.length);
+    expect(V9EvidenceGapClassificationsV1Schema.safeParse(gaps).success).toBe(false);
+  });
+
+  it("keeps shared observations independent by review scope and isolates a dangling asset", () => {
+    const source = { url: "https://example.com/source", observedAt: "1970-01-01T00:00:00Z",
+      datumAsOf: null, location: "Report", excerpt: "Published report", assertion: "Required datum is public." };
+    const entry = { id: "first", assetId: "alpha", cause: "B", assertion: "required-data-public",
+      reviewedAt: "1970-01-01T01:00:00Z", reviewer: "Reviewer", sourcesRefs: ["shared"],
+      scope: { pillar: "control", componentKey: "mint", factorKey: null, routeKey: null,
+        exposureId: null, requiredDatum: "mint" } };
+    const rows = [entry,
+      { ...entry, id: "second", reviewedAt: "1970-01-01T02:00:00Z", scope: { ...entry.scope, componentKey: "upgrade", requiredDatum: "upgrade" } },
+      { ...entry, id: "broken", assetId: "beta", sourcesRefs: ["missing"] }];
+    const registry = createReviewedAssetRegistry({
+      rows, schema: V9EvidenceGapClassificationSchema, path: "classifications.entries",
+      keyOf: (row) => String(row.id),
+      expandRow: createReviewedRegistryReferenceExpander({ sources: [{ id: "shared", value: source }] }, "classifications.entries"),
+    });
+    expect(() => registry.getAll("beta")).toThrow(/Dangling observation reference/);
+    const admitted = registry.getAll("alpha");
+    expect(admitted).toHaveLength(2);
+    expect(admitted.map((row) => [row.id, row.scope.requiredDatum, row.reviewedAt])).toEqual([
+      ["first", "mint", "1970-01-01T01:00:00Z"], ["second", "upgrade", "1970-01-01T02:00:00Z"],
+    ]);
+    expect(admitted[0]!.sources).toEqual(admitted[1]!.sources);
+    expect(Object.isFrozen(source)).toBe(true);
+    expect(rows[0]).not.toHaveProperty("sources");
+  });
+
+  it.each(["sources", "searchedSurfaces"] as const)("isolates duplicate %s table IDs to referencing assets", (field) => {
+    const source = { url: "https://example.com/source", observedAt: "1970-01-01T00:00:00Z",
+      datumAsOf: null, location: "Report", excerpt: "Published report", assertion: "Required datum is not disclosed." };
+    const tables = {
+      sources: [{ id: "shared", value: source }],
+      searchedSurfaces: [{ id: "shared", value: "https://example.com/source" }],
+    };
+    const duplicateValue = field === "sources" ? source : "https://example.com/source";
+    const duplicates = [{ id: "ambiguous", value: duplicateValue }, { id: "ambiguous", value: duplicateValue },
+      { id: "unused", value: duplicateValue }, { id: "unused", value: duplicateValue }];
+    const entry = { id: "first", assetId: "alpha", cause: "C", assertion: "researched-nondisclosure",
+      reviewedAt: "1970-01-01T01:00:00Z", reviewer: "Reviewer",
+      sourcesRefs: ["shared"], searchedSurfacesRefs: ["shared"], rationale: "Required datum is not disclosed.",
+      scope: { pillar: "control", componentKey: "mint", factorKey: null, routeKey: null,
+        exposureId: null, requiredDatum: "mint" } };
+    const rows = [entry, { ...entry, id: "broken", assetId: "beta", [`${field}Refs`]: ["ambiguous"] }];
+    const registry = createReviewedAssetRegistry({
+      rows, schema: V9EvidenceGapClassificationSchema, path: "classifications.entries",
+      keyOf: (row) => String(row.id),
+      expandRow: createReviewedRegistryReferenceExpander({
+        ...tables, [field]: [...tables[field], ...duplicates],
+      }, "classifications.entries"),
+    });
+    const unaffected = registry.getAll("alpha");
+    expect(unaffected).toHaveLength(1);
+    expect(unaffected[0]!.sources).toEqual([source]);
+    expect(() => registry.getAll("beta")).toThrow(/Duplicate observation reference: ambiguous/);
+    expect(registry.getAll("alpha")).toBe(unaffected);
+    expect(registry.getAll("not-reviewed")).toEqual([]);
   });
 });

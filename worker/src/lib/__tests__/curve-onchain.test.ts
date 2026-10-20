@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { CURVE_POOL_CONFIGS, type CurvePoolConfig } from "@shared/lib/curve-pool-configs";
 import { fetchCurveOnchainPrices } from "../curve-onchain";
+import curveExpandedPostA19 from "@shared/lib/__tests__/fixtures/curve-expanded-post-a19.json";
 
 vi.mock("../evm-rpc", () => ({
   fetchEvmBlockNumber: vi.fn(),
@@ -43,6 +44,28 @@ afterEach(() => {
 });
 
 describe("fetchCurveOnchainPrices", () => {
+  it("preserves all post-A19 RPC calldata, pinned blocks and route clocks", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_800_000_000_000);
+    mockBlockTimestamp.mockResolvedValue(1_799_999_970);
+    const baselineRoutes = curveExpandedPostA19.routes as CurvePoolConfig[];
+    mockEvmCall.mockImplementation(async (_chain, address, calldata) => {
+      const outputIndex = Number(BigInt(`0x${calldata.slice(74, 138)}`));
+      const route = baselineRoutes.find((config) =>
+        config.poolAddress === address && config.outputIndex === outputIndex)!;
+      return hexWord((route.outputDecimals === 2 ? 100n : 1n) * 10n ** BigInt(route.outputDecimals));
+    });
+    const baseline = await fetchCurveOnchainPrices(baselineRoutes);
+    const baselineCalls = [...mockEvmCall.mock.calls];
+    mockEvmCall.mockClear();
+    const candidate = await fetchCurveOnchainPrices(CURVE_POOL_CONFIGS);
+    expect(baseline.kind).toBe("ok");
+    expect(baseline.value.prices.size).toBe(36);
+    expect(mockEvmCall.mock.calls).toStrictEqual(baselineCalls);
+    expect(candidate).toStrictEqual(baseline);
+    expect([...candidate.value.observedAtByCoinId.values()]).toEqual(Array(36).fill(1_799_999_970));
+  });
+
   it("includes verified Curve configs with explicit indices, decimals and USD dependencies", () => {
     const byId = new Map(CURVE_POOL_CONFIGS.map((config) => [config.stablecoinId, config]));
     const expectedConfigs = [

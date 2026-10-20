@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ChainRpcConfig, RpcEndpoint } from "../../../lib/chain-registry";
 import { registryRpcEndpoint } from "../../../test-helpers/chain-rpc-fixtures.test-support";
-import { createOptionalSourceBudget, resolveRpcUrls } from "../sources-rpc";
+import { createOptionalSourceBudget, resolveRpcUrls, runTimedOptionalSource } from "../sources-rpc";
 
 function supplementalEndpoint(url: string): RpcEndpoint {
   return {
@@ -178,5 +178,48 @@ describe("createOptionalSourceBudget", () => {
 
     expect(budget.budgetController.signal.aborted).toBe(false);
     expect(budget.signal.aborted).toBe(false);
+  });
+});
+
+describe("runTimedOptionalSource", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+  });
+
+  it.each(["throw", "null", "abort"] as const)("isolates %s with one outcome only for a source exception", async (mode) => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const onOutcome = vi.fn();
+    const parent = new AbortController();
+    const error = new Error("reader failed");
+    const result = runTimedOptionalSource("fixture source", parent.signal, async (signal) => {
+      if (mode === "null") return null;
+      if (mode === "abort") parent.abort(error);
+      expect(signal.aborted).toBe(mode === "abort");
+      throw error;
+    }, null, onOutcome);
+    if (mode === "abort") await expect(result).rejects.toBe(error);
+    else await expect(result).resolves.toBeNull();
+    expect(onOutcome.mock.calls).toEqual(mode === "throw" ? [[{ label: "fixture source", outcome: "failed" }]] : []);
+    expect(warn).toHaveBeenCalledTimes(mode === "throw" ? 1 : 0);
+    if (mode === "throw") expect(JSON.parse(warn.mock.calls[0][0])).toMatchObject({
+      event: "optional_yield_source_failed", job: "sync-yield-data", source: "fixture source", errorMessage: error.message,
+    });
+  });
+
+  it("reports an exhausted source budget once without aborting its parent", async () => {
+    vi.useFakeTimers();
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const onOutcome = vi.fn();
+    const parent = new AbortController();
+    const result = runTimedOptionalSource("fixture source", parent.signal, (signal) =>
+      new Promise<null>((_resolve, reject) => signal.addEventListener("abort", () => reject(signal.reason), { once: true })),
+    null, onOutcome);
+    await vi.advanceTimersByTimeAsync(12_000);
+    await expect(result).resolves.toBeNull();
+    expect(parent.signal.aborted).toBe(false);
+    expect(onOutcome.mock.calls).toEqual([[{ label: "fixture source", outcome: "timeout" }]]);
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(vi.getTimerCount()).toBe(0);
   });
 });

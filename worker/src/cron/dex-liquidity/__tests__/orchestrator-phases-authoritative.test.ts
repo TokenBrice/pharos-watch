@@ -3,7 +3,6 @@ import { buildAuthoritativeStagedPoolConfirmationIndex } from "../orchestrator-p
 import {
   buildDexDirectApiFetchers,
   type DirectApiCensusScope,
-  type DirectApiFetchPhaseEntry,
 } from "../orchestrator-phases/direct-api";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 
@@ -11,7 +10,7 @@ const ETHEREUM_POOL_KEY = "ethereum:0x4ba45fb7de134bcb24a6053bbe21c3a4be9f85ea";
 
 describe("buildAuthoritativeStagedPoolConfirmationIndex", () => {
   it("requires positive exhaustive authority even when raw identities and a healthy result exist", () => {
-    const entry: DirectApiFetchPhaseEntry = {
+    const entry: Parameters<typeof buildAuthoritativeStagedPoolConfirmationIndex>[0][number] = {
       name: "Undeclared",
       circuitKey: "undeclared-api",
       normalizedProtocol: "undeclared",

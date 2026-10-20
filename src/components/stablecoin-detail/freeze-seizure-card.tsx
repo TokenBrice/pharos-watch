@@ -13,6 +13,10 @@ import {
   type RailStationTone,
 } from "@/components/stablecoin-detail/rail-station";
 import { FreshnessIndicator } from "@/components/status/freshness-indicator";
+import { QueryStateNotice } from "@/components/query-state-notice";
+import { StaleDataBanner } from "@/components/stale-data-banner";
+import { deriveDataHealth } from "@/lib/data-health";
+import { DATA_HEALTH_PRESETS } from "@/lib/data-health-config";
 import { Badge } from "@/components/ui/badge";
 import { useBlacklistSummary } from "@/hooks/use-blacklist-events";
 import { useNearViewport } from "@/hooks/use-near-viewport";
@@ -26,6 +30,7 @@ import { cn } from "@/lib/utils";
 import { formatBlacklistValuation } from "@/lib/blacklist-valuation";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { formatCompactUsdShort } from "@shared/lib/format";
+import { numberValue } from "@shared/lib/type-guards";
 import type { BlacklistSummaryResponse } from "@shared/types";
 import { BLACKLIST_STABLECOINS } from "@shared/types/market";
 
@@ -181,10 +186,6 @@ function buildScopeStation(review: TransferReviewView): Station {
   };
 }
 
-function finiteOrNull(value: number | null | undefined): number | null {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
-}
-
 /**
  * Observed use of the power, from the freeze tracker. Returns null when the
  * tracker publishes nothing usable for this coin. Measured zero remains zero;
@@ -192,10 +193,10 @@ function finiteOrNull(value: number | null | undefined): number | null {
  * observations are partial. A watched coin with no events reads "None recorded".
  */
 function buildUsedStation(stats: BlacklistSummaryResponse["stats"], symbol: string): Station | null {
-  const events = finiteOrNull(stats.perCoinTotalEvents[symbol]);
-  const addresses = finiteOrNull(stats.perCoinFrozenAddressCount[symbol]);
-  const frozenUsd = finiteOrNull(stats.perCoinFrozenTotal[symbol]);
-  const destroyedUsd = finiteOrNull(stats.perCoinDestroyedTotal[symbol]);
+  const events = numberValue(stats.perCoinTotalEvents[symbol]);
+  const addresses = numberValue(stats.perCoinFrozenAddressCount[symbol]);
+  const frozenUsd = numberValue(stats.perCoinFrozenTotal[symbol]);
+  const destroyedUsd = numberValue(stats.perCoinDestroyedTotal[symbol]);
 
   if (events === 0) {
     return {
@@ -327,6 +328,16 @@ export function FreezeSeizureModule({
   const tracked = (BLACKLIST_STABLECOINS as readonly string[]).includes(symbol);
   const { ref: usageGateRef, near } = useNearViewport<HTMLDivElement>("600px");
   const usageQuery = useBlacklistSummary({ enabled: tracked && near && summary != null });
+  const healthInput = {
+    ...DATA_HEALTH_PRESETS.blacklist,
+    label: "Freeze usage data",
+    dataUpdatedAt: usageQuery.dataUpdatedAt,
+    meta: usageQuery.meta,
+    error: usageQuery.error,
+    isLoading: usageQuery.isLoading,
+    hasData: !!usageQuery.data,
+  };
+  const health = deriveDataHealth(healthInput, usageQuery.dataUpdatedAt);
 
   if (!summary) return null;
 
@@ -396,7 +407,7 @@ export function FreezeSeizureModule({
           {usedStation ? (
             <FreshnessIndicator
               compact
-              updatedAtMs={usageQuery.dataUpdatedAt}
+              updatedAtMs={health.dataUpdatedAt}
               staleAfterMs={API_FRESHNESS_MAX_AGE_SEC.blacklistSummary * 1000}
               labelPrefix="Usage updated"
             />
@@ -404,6 +415,15 @@ export function FreezeSeizureModule({
         </EvidenceFooter>
       }
     >
+      {usedStation ? usageQuery.error ? (
+        <QueryStateNotice
+          state="stale-with-data"
+          label="Freeze usage data"
+          dataUpdatedAt={health.dataUpdatedAt}
+          onRetry={() => void usageQuery.refetch()}
+          compact
+        />
+      ) : <StaleDataBanner queries={[healthInput]} /> : null}
       {transferReview && transferReview.deployments.length > 0 ? (
         <ModuleDisclosure label="Reviewed deployments" count={transferReview.deployments.length}>
           <div className="mt-2 space-y-2 pb-1 text-xs">

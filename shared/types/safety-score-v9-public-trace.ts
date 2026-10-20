@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { issue } from "./safety-schema-primitives";
 import { isV9WitnessTextReference } from "./safety-score-v9-public-witness-texts";
 import { AdmittedProviderRowExclusionSchema } from "./safety-score-v9-supply-attribution";
 import {
@@ -60,11 +61,7 @@ const SafetyScoreV9AggregationTraceSchema = z
       aggregation.score < aggregation.weakestScore - SCORE_TOLERANCE ||
       aggregation.score > aggregation.weightedPillarMean + SCORE_TOLERANCE
     ) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["score"],
-        message: "V9 aggregation score must remain between the weakest pillar and weighted pillar mean",
-      });
+      issue(ctx, ["score"], "V9 aggregation score must remain between the weakest pillar and weighted pillar mean");
     }
   });
 
@@ -87,11 +84,7 @@ const SafetyScoreV9DeploymentAdjustmentSchema = z
   .strict()
   .superRefine((adjustment, ctx) => {
     if (!isUniqueSorted(adjustment.sourceSignalKeys)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["sourceSignalKeys"],
-        message: "V9 deployment source signals must be unique and sorted",
-      });
+      issue(ctx, ["sourceSignalKeys"], "V9 deployment source signals must be unique and sorted");
     }
     if (
       adjustment.scoreAfter > adjustment.scoreBefore + SCORE_TOLERANCE ||
@@ -102,11 +95,7 @@ const SafetyScoreV9DeploymentAdjustmentSchema = z
       ) ||
       adjustment.exposureShare > adjustment.nominalExposureShare + SCORE_TOLERANCE
     ) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["adjustmentPoints"],
-        message: "V9 deployment adjustment must reconcile its modeled loss, applied points, and score stages",
-      });
+      issue(ctx, ["adjustmentPoints"], "V9 deployment adjustment must reconcile its modeled loss, applied points, and score stages");
     }
   });
 
@@ -124,11 +113,7 @@ const SafetyScoreV9UnresolvedDeploymentExposureSchema = z
   .strict()
   .superRefine((signal, ctx) => {
     if (!isUniqueSorted(signal.failureDomainKeys)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["failureDomainKeys"],
-        message: "V9 unresolved deployment failure domains must be unique and sorted",
-      });
+      issue(ctx, ["failureDomainKeys"], "V9 unresolved deployment failure domains must be unique and sorted");
     }
   });
 
@@ -146,22 +131,14 @@ const SafetyScoreV9DeploymentRiskTraceSchema = z
         `${adjustment.exposureKey}\u0000${adjustment.riskEventKey}\u0000${adjustment.signalKey}`,
     );
     if (!isUniqueSorted(adjustmentKeys)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["adjustments"],
-        message: "V9 deployment adjustments must have unique, sorted failure-domain attribution",
-      });
+      issue(ctx, ["adjustments"], "V9 deployment adjustments must have unique, sorted failure-domain attribution");
     }
     const unresolvedKeys = deployment.unresolvedExposures.map(
       (signal) =>
         `${signal.exposureKey}\u0000${signal.riskEventKey}\u0000${signal.failureDomainKeys.join("+")}\u0000${signal.signalKey}`,
     );
     if (!isUniqueSorted(unresolvedKeys)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["unresolvedExposures"],
-        message: "V9 unresolved deployment exposures must have unique, sorted exposure attribution",
-      });
+      issue(ctx, ["unresolvedExposures"], "V9 unresolved deployment exposures must have unique, sorted exposure attribution");
     }
     const expectedTotal = deployment.adjustments.reduce(
       (sum, adjustment) => sum + adjustment.adjustmentPoints,
@@ -172,21 +149,13 @@ const SafetyScoreV9DeploymentRiskTraceSchema = z
       0,
     );
     if (effectiveExposureShare > 1 + SCORE_TOLERANCE) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["adjustments"],
-        message: "V9 deployment adjustment exposure shares must form a bounded holder partition",
-      });
+      issue(ctx, ["adjustments"], "V9 deployment adjustment exposure shares must form a bounded holder partition");
     }
     if (
       deployment.totalAdjustmentPoints !== null &&
       !numbersAgree(deployment.totalAdjustmentPoints, expectedTotal)
     ) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["totalAdjustmentPoints"],
-        message: "V9 total deployment adjustment must equal its attributed adjustments",
-      });
+      issue(ctx, ["totalAdjustmentPoints"], "V9 total deployment adjustment must equal its attributed adjustments");
     }
   });
 
@@ -218,11 +187,7 @@ const SafetyScoreV9AdverseAttributionTraceSchema = z
     if (attribution.items.some((item) => isV9WitnessTextReference(item.path) || isV9WitnessTextReference(item.message))) return;
     const keys = attribution.items.map((item) => `${item.source}\u0000${item.path}\u0000${item.message}`);
     if (!isUniqueSorted(keys)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["items"],
-        message: "V9 adverse attribution must be unique and sorted",
-      });
+      issue(ctx, ["items"], "V9 adverse attribution must be unique and sorted");
     }
   });
 
@@ -239,25 +204,13 @@ const SafetyScoreV9BoundedUncertaintyAttributionItemSchema = z
   .strict()
   .superRefine((item, ctx) => {
     if (!V9_BOUNDED_ATTRIBUTION_REASON_CODE_SET.has(item.code)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["code"],
-        message: "V9 bounded-uncertainty attribution requires a policy-bounded reason code",
-      });
+      issue(ctx, ["code"], "V9 bounded-uncertainty attribution requires a policy-bounded reason code");
     }
     if (item.source === "parent-score" && !isV9WitnessTextReference(item.path) && !item.path.startsWith("parent:")) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["path"],
-        message: "V9 parent bounded-uncertainty attribution requires a parent-prefixed path",
-      });
+      issue(ctx, ["path"], "V9 parent bounded-uncertainty attribution requires a parent-prefixed path");
     }
     if (item.source === "wrapper-local" && !isV9WitnessTextReference(item.path) && !item.path.startsWith("wrapper-local:")) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["path"],
-        message: "V9 wrapper bounded-uncertainty attribution requires a wrapper-local path",
-      });
+      issue(ctx, ["path"], "V9 wrapper bounded-uncertainty attribution requires a wrapper-local path");
     }
   });
 
@@ -279,11 +232,7 @@ const SafetyScoreV9BoundedUncertaintyAttributionTraceSchema = z
       ].join("\u0000"),
     );
     if (!isUniqueSorted(keys)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["items"],
-        message: "V9 bounded-uncertainty attribution must be unique and sorted",
-      });
+      issue(ctx, ["items"], "V9 bounded-uncertainty attribution must be unique and sorted");
     }
   });
 
@@ -297,18 +246,10 @@ const SafetyScoreV9EvidenceResponsibilityItemSchema = z
   .strict()
   .superRefine((summary, ctx) => {
     if ((summary.criticalFactCount ?? 0) > (summary.factCount ?? 0)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["criticalFactCount"],
-        message: "V9 critical responsibility count cannot exceed its fact count",
-      });
+      issue(ctx, ["criticalFactCount"], "V9 critical responsibility count cannot exceed its fact count");
     }
     if (summary.reasonCodes !== undefined && !isUniqueSorted(summary.reasonCodes)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["reasonCodes"],
-        message: "V9 responsibility reason codes must be unique and sorted",
-      });
+      issue(ctx, ["reasonCodes"], "V9 responsibility reason codes must be unique and sorted");
     }
   });
 
@@ -421,65 +362,37 @@ const SafetyScoreV9WrapperParentLimitSchema = z
     const adjustmentKeys = limit.adjustments.map((adjustment) => adjustment.factKey);
     const expectedAdjustmentKeys = [...V9_WRAPPER_LOCAL_FACT_KEYS];
     if (JSON.stringify(adjustmentKeys) !== JSON.stringify(expectedAdjustmentKeys)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["adjustments"],
-        message: "V9 wrapper adjustments must cover every local fact in canonical order",
-      });
+      issue(ctx, ["adjustments"], "V9 wrapper adjustments must cover every local fact in canonical order");
     }
     const expectedLocalRiskDiscount = limit.adjustments.reduce(
       (sum, adjustment) => sum + adjustment.discountPoints,
       0,
     );
     if (!numbersAgree(limit.localRiskDiscount, expectedLocalRiskDiscount)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["localRiskDiscount"],
-        message: "V9 wrapper local-risk discount must reconcile its fact adjustments",
-      });
+      issue(ctx, ["localRiskDiscount"], "V9 wrapper local-risk discount must reconcile its fact adjustments");
     }
     if (limit.factsComplete !== (limit.missingFacts.length === 0)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["factsComplete"],
-        message: "V9 wrapper completeness must exactly match its missing facts",
-      });
+      issue(ctx, ["factsComplete"], "V9 wrapper completeness must exactly match its missing facts");
     }
     const expectedAppliedDiscount = limit.factsComplete
       ? limit.localRiskDiscount
       : Math.max(limit.localRiskDiscount, limit.fallbackDiscount);
     if (!numbersAgree(limit.appliedDiscount, expectedAppliedDiscount)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["appliedDiscount"],
-        message: "V9 wrapper discount must use local risk when complete and the conservative maximum when incomplete",
-      });
+      issue(ctx, ["appliedDiscount"], "V9 wrapper discount must use local risk when complete and the conservative maximum when incomplete");
     }
     if (limit.riskTransfer.appliedCredit > limit.riskTransfer.requestedCredit + SCORE_TOLERANCE) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["riskTransfer", "appliedCredit"],
-        message: "V9 wrapper cannot apply more risk-transfer credit than documented",
-      });
+      issue(ctx, ["riskTransfer", "appliedCredit"], "V9 wrapper cannot apply more risk-transfer credit than documented");
     }
     const expectedLimit =
       Math.max(0, limit.parentScore - limit.appliedDiscount) + limit.riskTransfer.appliedCredit;
     if (!numbersAgree(limit.limit, expectedLimit)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["limit"],
-        message: "V9 wrapper limit must apply parent risk, local discount, and documented credit exactly once",
-      });
+      issue(ctx, ["limit"], "V9 wrapper limit must apply parent risk, local discount, and documented credit exactly once");
     }
     if (
       (limit.treatment === "fallback-discount") !== (!limit.factsComplete && limit.fallbackDiscount > 0) ||
       (limit.treatment === "documented-risk-transfer") !== (limit.riskTransfer.appliedCredit > 0)
     ) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["treatment"],
-        message: "V9 wrapper treatment must match applied fallback eligibility and risk-transfer credit",
-      });
+      issue(ctx, ["treatment"], "V9 wrapper treatment must match applied fallback eligibility and risk-transfer credit");
     }
   });
 
@@ -506,56 +419,28 @@ const SafetyScoreV9ScoreAdjustmentSchema = z
   .strict()
   .superRefine((adjustment, ctx) => {
     if (!numbersAgree(adjustment.scoreAfter - adjustment.scoreBefore, adjustment.appliedPoints)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["appliedPoints"],
-        message: "V9 score adjustment points must reconcile its score stages",
-      });
+      issue(ctx, ["appliedPoints"], "V9 score adjustment points must reconcile its score stages");
     }
     if (adjustment.appliedPoints > adjustment.configuredPoints + SCORE_TOLERANCE) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["appliedPoints"],
-        message: "V9 score adjustment cannot exceed its configured points",
-      });
+      issue(ctx, ["appliedPoints"], "V9 score adjustment cannot exceed its configured points");
     }
     if (adjustment.capRelief.fromLimit >= adjustment.capRelief.toLimit) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["capRelief"],
-        message: "V9 score adjustment cap relief must increase the named limit",
-      });
+      issue(ctx, ["capRelief"], "V9 score adjustment cap relief must increase the named limit");
     }
     if (
       adjustment.publishedScoreBefore >
       adjustment.scoreBefore + PUBLIC_SCORE_ROUNDING_HEADROOM + SCORE_TOLERANCE
     ) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["publishedScoreBefore"],
-        message: "V9 ordinary published score exceeds its permitted rounding headroom",
-      });
+      issue(ctx, ["publishedScoreBefore"], "V9 ordinary published score exceeds its permitted rounding headroom");
     }
     if (adjustment.publishedScoreBefore > adjustment.capRelief.fromLimit + SCORE_TOLERANCE) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["publishedScoreBefore"],
-        message: "V9 ordinary published score cannot exceed the original cap limit",
-      });
+      issue(ctx, ["publishedScoreBefore"], "V9 ordinary published score cannot exceed the original cap limit");
     }
     if (adjustment.publishedScoreAfter + SCORE_TOLERANCE < adjustment.publishedScoreBefore) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["publishedScoreAfter"],
-        message: "V9 score adjustment cannot reduce the published score",
-      });
+      issue(ctx, ["publishedScoreAfter"], "V9 score adjustment cannot reduce the published score");
     }
     if (adjustment.publishedScoreAfter > adjustment.capRelief.toLimit + SCORE_TOLERANCE) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["publishedScoreAfter"],
-        message: "V9 score adjustment cannot publish above its relieved cap",
-      });
+      issue(ctx, ["publishedScoreAfter"], "V9 score adjustment cannot publish above its relieved cap");
     }
   });
 
@@ -604,36 +489,20 @@ function refineScoreTraceBaseStages(
 ): void {
   const aggregationScore = trace.aggregation?.score ?? null;
   if ((trace.aggregation === null) !== (trace.stages.weightedPillarMean === null)) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["aggregation"],
-      message: "V9 score-bearing pillars require an explicit aggregation method and trace",
-    });
+    issue(ctx, ["aggregation"], "V9 score-bearing pillars require an explicit aggregation method and trace");
   }
   if (!numbersAgree(trace.stages.aggregatedQualityScore, aggregationScore)) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["stages", "aggregatedQualityScore"],
-      message: "V9 aggregated quality stage must match the aggregation trace",
-    });
+    issue(ctx, ["stages", "aggregatedQualityScore"], "V9 aggregated quality stage must match the aggregation trace");
   }
   const expectedDeploymentAdjustment =
     trace.stages.baseAssetScore === null || trace.stages.deploymentAdjustedScore === null
       ? null
       : trace.stages.baseAssetScore - trace.stages.deploymentAdjustedScore;
   if (!numbersAgree(trace.stages.deploymentAdjustmentPoints, expectedDeploymentAdjustment)) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["stages", "deploymentAdjustmentPoints"],
-      message: "V9 deployment stage delta must reconcile base and post-deployment scores",
-    });
+    issue(ctx, ["stages", "deploymentAdjustmentPoints"], "V9 deployment stage delta must reconcile base and post-deployment scores");
   }
   if (!numbersAgree(trace.stages.deploymentAdjustmentPoints, trace.deploymentRisk.totalAdjustmentPoints)) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["deploymentRisk", "totalAdjustmentPoints"],
-      message: "V9 deployment trace total must match the score-stage adjustment",
-    });
+    issue(ctx, ["deploymentRisk", "totalAdjustmentPoints"], "V9 deployment trace total must match the score-stage adjustment");
   }
 }
 
@@ -645,20 +514,12 @@ function refineAdjustedScoreTrace(
   let expectedPreCapScore = trace.stages.deploymentAdjustedScore;
   for (const [index, adjustment] of trace.scoreAdjustments.entries()) {
     if (!numbersAgree(expectedPreCapScore, adjustment.scoreBefore)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["scoreAdjustments", index, "scoreBefore"],
-        message: "V9 score adjustment must start from the preceding score stage",
-      });
+      issue(ctx, ["scoreAdjustments", index, "scoreBefore"], "V9 score adjustment must start from the preceding score stage");
     }
     expectedPreCapScore = adjustment.scoreAfter;
   }
   if (!numbersAgree(expectedPreCapScore, trace.stages.preCapScore)) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["stages", "preCapScore"],
-      message: "V9 pre-cap score must match the final score-adjustment stage",
-    });
+    issue(ctx, ["stages", "preCapScore"], "V9 pre-cap score must match the final score-adjustment stage");
   }
   const finalAdjustment =
     trace.scoreAdjustments[trace.scoreAdjustments.length - 1];
@@ -666,11 +527,7 @@ function refineAdjustedScoreTrace(
     finalAdjustment !== undefined &&
     !numbersAgree(trace.stages.publishedScore, finalAdjustment.publishedScoreAfter)
   ) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["stages", "publishedScore"],
-      message: "V9 published score must match the final score adjustment",
-    });
+    issue(ctx, ["stages", "publishedScore"], "V9 published score must match the final score adjustment");
   }
 }
 
@@ -699,12 +556,7 @@ function refineBoundedUncertaintyTrace(
       (summary.factCount ?? 0) === 0 ||
       !summary.reasonCodes?.includes(item.code)
     ) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["boundedUncertaintyAttribution", "items"],
-        message:
-          "V9 direct bounded-uncertainty attribution must reconcile to an owned unresolved fact",
-      });
+      issue(ctx, ["boundedUncertaintyAttribution", "items"], "V9 direct bounded-uncertainty attribution must reconcile to an owned unresolved fact");
     }
   }
 }

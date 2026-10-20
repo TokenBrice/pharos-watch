@@ -1,15 +1,8 @@
 "use client";
 
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { StablecoinModuleTitle } from "@/components/stablecoin-detail/module-title";
-import {
-  DETAIL_MODULE_BODY_CLASS,
-  DETAIL_MODULE_HEADER_CLASS,
-  DETAIL_MODULE_SHELL_CLASS,
-  DETAIL_MODULE_TITLE_CLASS,
-  SECTION_SCROLL_MT,
-} from "@/components/stablecoin-detail/section-title-class";
+import { DetailModuleCard } from "@/components/stablecoin-detail/module-title";
+import { SECTION_SCROLL_MT } from "@/components/stablecoin-detail/section-title-class";
 import { MethodologyLabel } from "@/components/methodology-hint";
 import { BlacklistDetailStats } from "./blacklist-detail-stats";
 import { BlacklistDetailChart } from "./blacklist-detail-chart";
@@ -20,6 +13,9 @@ import { BLACKLIST_STABLECOINS } from "@shared/types/market";
 import { QueryStateNotice } from "@/components/query-state-notice";
 import { FreshnessIndicator } from "@/components/status/freshness-indicator";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import { StaleDataBanner } from "@/components/stale-data-banner";
+import { deriveDataHealth } from "@/lib/data-health";
+import { DATA_HEALTH_PRESETS } from "@/lib/data-health-config";
 
 interface BlacklistSectionProps {
   stablecoinId: string;
@@ -30,6 +26,16 @@ function useBlacklistVisibility(symbol: BlacklistStablecoin) {
   const isSupported = (BLACKLIST_STABLECOINS as readonly string[]).includes(symbol);
   const query = useBlacklistSummary();
   const { data: summary, isLoading } = query;
+  const healthInput = {
+    ...DATA_HEALTH_PRESETS.blacklist,
+    label: "Blacklist activity data",
+    dataUpdatedAt: query.dataUpdatedAt,
+    meta: query.meta,
+    error: query.error,
+    isLoading,
+    hasData: !!summary,
+  };
+  const health = deriveDataHealth(healthInput, query.dataUpdatedAt);
 
   if (!isSupported) return { visible: false } as const;
   if (!isLoading && !query.error && summary && (summary.stats.perCoinTotalEvents[symbol] ?? 0) === 0) {
@@ -42,7 +48,8 @@ function useBlacklistVisibility(symbol: BlacklistStablecoin) {
     isLoading,
     state: query.error ? (summary ? "stale-with-data" : "unavailable") : "ready",
     error: query.error,
-    dataUpdatedAt: query.dataUpdatedAt,
+    dataUpdatedAt: health.dataUpdatedAt,
+    healthInput,
     refetch: query.refetch,
   } as const;
 }
@@ -54,19 +61,16 @@ export function BlacklistSection({ symbol }: BlacklistSectionProps) {
 
   return (
     <section id="blacklist" className={SECTION_SCROLL_MT}>
-      <Card className={DETAIL_MODULE_SHELL_CLASS}>
-        <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
-          <StablecoinModuleTitle className={DETAIL_MODULE_TITLE_CLASS}>
-            <MethodologyLabel topic="blacklistTracker">Blacklist activity</MethodologyLabel>
-          </StablecoinModuleTitle>
-          <FreshnessIndicator
+      <DetailModuleCard
+        title={<MethodologyLabel topic="blacklistTracker">Blacklist activity</MethodologyLabel>}
+        bodyClassName="space-y-4"
+        headerRight={<FreshnessIndicator
             compact
             updatedAtMs={state.dataUpdatedAt}
             staleAfterMs={API_FRESHNESS_MAX_AGE_SEC.blacklistSummary * 1000}
             labelPrefix="Updated"
-          />
-        </CardHeader>
-        <CardContent className={`${DETAIL_MODULE_BODY_CLASS} space-y-4`}>
+          />}
+      >
           <p className="mt-1 text-sm text-muted-foreground">
             Addresses the issuer has frozen, released, or destroyed on this asset.
           </p>
@@ -77,7 +81,7 @@ export function BlacklistSection({ symbol }: BlacklistSectionProps) {
               dataUpdatedAt={state.dataUpdatedAt}
               onRetry={() => void state.refetch()}
             />
-          ) : null}
+          ) : state.state === "ready" ? <StaleDataBanner queries={[state.healthInput]} /> : null}
           {state.state === "unavailable" ? (
             <QueryStateNotice
               state="unavailable"
@@ -95,8 +99,7 @@ export function BlacklistSection({ symbol }: BlacklistSectionProps) {
               <BlacklistDetailChart data={summary.stats.perCoinQuarterlyEventTypes[symbol]} isLoading={false} />
             </>
           )}
-        </CardContent>
-      </Card>
+      </DetailModuleCard>
     </section>
   );
 }
@@ -114,19 +117,15 @@ export function BlacklistHistorySection({ symbol }: BlacklistSectionProps) {
 
   return (
     <section id="blacklist-history">
-      <Card className={DETAIL_MODULE_SHELL_CLASS}>
-        <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
-          <StablecoinModuleTitle className={DETAIL_MODULE_TITLE_CLASS}>
-            <MethodologyLabel topic="blacklistTracker">Recent blacklist events</MethodologyLabel>
-          </StablecoinModuleTitle>
-        </CardHeader>
-        <CardContent className={`${DETAIL_MODULE_BODY_CLASS} space-y-4`}>
+      <DetailModuleCard
+        title={<MethodologyLabel topic="blacklistTracker">Recent blacklist events</MethodologyLabel>}
+        bodyClassName="space-y-4"
+      >
           <p className="mt-1 text-sm text-muted-foreground">
             Latest 10 freeze-ledger actions on this asset across all supported chains.
           </p>
           <BlacklistDetailEventFeed symbol={symbol} limit={10} />
-        </CardContent>
-      </Card>
+      </DetailModuleCard>
     </section>
   );
 }

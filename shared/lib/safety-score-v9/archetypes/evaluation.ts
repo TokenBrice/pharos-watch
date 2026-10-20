@@ -2,8 +2,6 @@ import type { V9AssetFactsBase } from "../../../types/safety-score-v9-facts";
 import type { V9MechanismRiskReview } from "../../../types/safety-score-v9-backing";
 import { parseIsoDateOrUtcInstantSec, reviewAdmissionSec } from "../../../types/date-primitives";
 import { clampScore } from "../../math";
-import { sha256Hex } from "../../sha256";
-import { stableJsonStringifyV1 } from "../../stable-json";
 import { evaluateV9ReserveExposures } from "../backing";
 import { verifiedLiveInheritedExposures } from "../backing-inheritance";
 import {
@@ -53,7 +51,7 @@ function effectiveBackingContributions(
   });
 }
 
-function finalizeBackingResult(result: Omit<V9BackingResult, "traceDigest" | "aggregationDisposition" |
+function finalizeBackingResult(result: Omit<V9BackingResult, "aggregationDisposition" |
   "causeGapIds" | "limitedEvidenceCauses" | "supportedComponentKeys">): V9BackingResult {
   const unresolved = canonicalUniqueBy(
     result.unresolved.map((reason) => ({ ...reason, gapIds: uniqueSorted(reason.gapIds) })),
@@ -73,7 +71,7 @@ function finalizeBackingResult(result: Omit<V9BackingResult, "traceDigest" | "ag
       compareText(left.responsibility ?? "", right.responsibility ?? ""),
     "last",
   );
-  const canonical = {
+  return {
     ...result,
     aggregationDisposition: result.score === null && result.rateability === "rateable" ? "excluded-a-b" as const : "included" as const,
     causeGapIds: uniqueSorted(result.contributions.flatMap(row => row.causeGapIds)),
@@ -93,10 +91,6 @@ function finalizeBackingResult(result: Omit<V9BackingResult, "traceDigest" | "ag
       ...(result.collateralizationApplications ?? []).flatMap((application) => application.evidenceRefIds),
     ]),
     failureDomains: canonicalDomains(result.failureDomains),
-  };
-  return {
-    ...canonical,
-    traceDigest: sha256Hex(stableJsonStringifyV1({ domain: "safety-score-v9.backing-trace.v1", trace: canonical })),
   };
 }
 
@@ -135,9 +129,8 @@ export function applyV9MeasuredCollateralization(
   const ratio = measurement.ratio;
   const score = result.score * ratio;
   const evidenceRefIds = measurement.status.evidenceRefIds;
-  const { traceDigest: _traceDigest, ...trace } = result;
   return finalizeBackingResult({
-    ...trace,
+    ...result,
     score,
     pillarCeiling: Math.min(result.pillarCeiling ?? score, score),
     collateralizationApplications: [
@@ -233,8 +226,6 @@ function evaluateV9ArchetypeBackingInternal(
     return finalizeBackingResult({
       assetId: input.asset.assetId,
       archetype: input.archetype,
-      policyId: policy.policy.policyId,
-      policySemanticDigest: policy.semanticDigest,
       rateability: reserve.rateability,
       score: reserve.score,
       ...(inheritedApplications === undefined ? {} : { collateralizationApplications: inheritedApplications }),
@@ -387,8 +378,6 @@ function evaluateV9ArchetypeBackingInternal(
   return finalizeBackingResult({
     assetId: input.asset.assetId,
     archetype: input.archetype,
-    policyId: policy.policy.policyId,
-    policySemanticDigest: policy.semanticDigest,
     rateability,
     score,
     ...(inheritedApplications === undefined ? {} : { collateralizationApplications: inheritedApplications }),
@@ -425,8 +414,6 @@ export function createUnknownArchetypeV9BackingResult(
   return finalizeBackingResult({
     assetId,
     archetype,
-    policyId: policy.policy.policyId,
-    policySemanticDigest: policy.semanticDigest,
     rateability: "rateable",
     score: backingPolicy(policy).boundedUnknownQuality,
     pillarCeiling: null,
@@ -463,8 +450,6 @@ export function createUnavailableV9BackingResult(
   const shared = {
     assetId: asset.assetId,
     archetype: unavailableReview.archetype,
-    policyId: policy.policy.policyId,
-    policySemanticDigest: policy.semanticDigest,
     structuralReasons: [],
     unresolved,
     evidenceRefIds: uniqueSorted(unavailableReview.mechanismRiskReview.status.evidenceRefIds),

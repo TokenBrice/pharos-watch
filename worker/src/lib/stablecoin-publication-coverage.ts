@@ -2,6 +2,7 @@ import { logWorkerEventArgs } from "./structured-log";
 import { WORKER_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
+import { numberValue } from "@shared/lib/type-guards";
 import { ActivePriceCoverageHealthSchema } from "@shared/types/status/core";
 import { NominalPriceReferenceSchema, type NominalPriceReference } from "@shared/types/core";
 import { STATUS_LAST_KNOWN_MARKET_CAP_MAX_AGE_SEC, getActivePriceGapMaterialityMarketCapUsd } from "@shared/lib/status-thresholds";
@@ -584,17 +585,13 @@ export function classifyStablecoinPublicationGap(
   return missingShare < STABLECOIN_PUBLICATION_GAP_ROUTINE_MAX_SHARE ? "routine" : "elevated";
 }
 
-function finiteNumberOrNull(value: unknown): number | null {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
-}
-
 function positiveFiniteNumberOrNull(value: unknown): number | null {
-  const parsed = finiteNumberOrNull(value);
+  const parsed = numberValue(value);
   return parsed != null && parsed > 0 ? parsed : null;
 }
 
 function dateSecondsOrNull(value: unknown): number | null {
-  const parsed = finiteNumberOrNull(value);
+  const parsed = numberValue(value);
   return parsed != null && Math.abs(parsed) <= MAX_VALID_DATE_SECONDS ? parsed : null;
 }
 
@@ -634,7 +631,7 @@ export function parseMissingActivePriceDetail(
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const entry = value as Record<string, unknown>;
   if (typeof entry.stablecoinId !== "string") return null;
-  const streak = finiteNumberOrNull(entry.consecutiveMissingGenerations);
+  const streak = numberValue(entry.consecutiveMissingGenerations);
   const consecutiveMissingGenerations = streak != null && Number.isInteger(streak) && streak >= 1 ? streak : null;
   // Registry truth at read time: a persisted acknowledgement is never trusted,
   // so a registry edit or an expired review takes effect immediately.
@@ -646,12 +643,12 @@ export function parseMissingActivePriceDetail(
   return {
     stablecoinId: entry.stablecoinId,
     symbol: stringOrNull(entry.symbol) ?? entry.stablecoinId,
-    marketCapUsd: finiteNumberOrNull(entry.marketCapUsd),
-    lastKnownMarketCapUsd: finiteNumberOrNull(entry.lastKnownMarketCapUsd),
+    marketCapUsd: numberValue(entry.marketCapUsd),
+    lastKnownMarketCapUsd: numberValue(entry.lastKnownMarketCapUsd),
     lastKnownMarketCapObservedAt: dateSecondsOrNull(entry.lastKnownMarketCapObservedAt),
     lastKnownMarketCapSource: entry.lastKnownMarketCapSource === "publication" || entry.lastKnownMarketCapSource === "supply_history"
       ? entry.lastKnownMarketCapSource : null,
-    currentPrice: finiteNumberOrNull(entry.currentPrice),
+    currentPrice: numberValue(entry.currentPrice),
     currentSource: stringOrNull(entry.currentSource),
     currentObservedAt: dateSecondsOrNull(entry.currentObservedAt),
     currentConfidence: stringOrNull(entry.currentConfidence),
@@ -894,7 +891,7 @@ export function evaluateStablecoinActivePriceCoverage(
     const asset = assetsById.get(stablecoinId);
     if (asset) presentActiveCount++;
 
-    const currentPrice = asset && isObservedPrice(asset) ? finiteNumberOrNull(asset.price) : null;
+    const currentPrice = asset && isObservedPrice(asset) ? numberValue(asset.price) : null;
     if (currentPrice != null && currentPrice > 0) {
       pricedActiveIds.push(stablecoinId);
       continue;

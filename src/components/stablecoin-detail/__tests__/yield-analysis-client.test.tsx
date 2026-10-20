@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import YieldAnalysisClient from "@/components/stablecoin-detail/yield-analysis-client";
 import { makeYieldDetailRanking, makeYieldDetailResponse } from "@/components/__tests__/yield-detail.test-support";
 import type { StablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
+import { formatChartDate } from "@shared/lib/format";
 import type { YieldHistoryPoint, YieldRanking, YieldRankingsResponse } from "@shared/types";
 
 const { useYieldRankingsMock, useYieldHistoryMock, replaceParamsMock, loadClientStablecoinDetailMock } = vi.hoisted(() => ({
@@ -271,13 +272,52 @@ describe("YieldAnalysisClient", () => {
     );
 
     const rows = Array.from(document.getElementById("warning-signals")!.querySelectorAll("li"));
-    expect(rows).toHaveLength(2);
+    expect(rows).toHaveLength(3);
     expect(rows[0]!.textContent).toContain("Yield divergence");
     expect(rows[0]!.textContent).toContain("Alt Source at 0.06%");
     expect(rows[1]!.textContent).toContain("Yield spike");
-    expect(rows[1]!.textContent).toContain("×3");
+    expect(rows[1]!.textContent).toContain("×2");
     expect(rows[1]!.textContent).toContain("Primary Source at 0.06%");
     expect(rows[1]!.textContent).toContain("–");
+    expect(rows[2]!.textContent).toContain("Primary Source at 0.05%");
+    expect(rows[2]!.textContent).not.toContain("×");
+  });
+
+  it("bounds every repeated warning group to 24h while retaining all seven interleaved occurrences", () => {
+    const start = Date.parse("2026-08-01T00:00:00Z");
+    const hourMs = 60 * 60 * 1000;
+    setRankingsQuery({ data: makeResponse([makeRanking()]) });
+    setHistoryQuery([
+      ...[0, 12, 24, 36, 48].map((hour) => makeHistoryPoint({
+        date: new Date(start + hour * hourMs).toISOString(),
+        apy: 0.05, yieldSource: "Primary Source", warningSignals: ["yield-spike"],
+      })),
+      makeHistoryPoint({ date: new Date(start + 12 * hourMs).toISOString(), apy: 0.05, yieldSource: "Primary Source", warningSignals: ["yield-divergence"] }),
+      makeHistoryPoint({ date: new Date(start + 36 * hourMs).toISOString(), apy: 0.05, yieldSource: "Alt Source", warningSignals: ["yield-spike"] }),
+    ]);
+    render(<YieldAnalysisClient id="usdn-smardex" staticCoin={staticCoin("usdn-smardex", "SMARDEX USDN", "USDN", true)} />);
+
+    const rows = Array.from(document.getElementById("warning-signals")!.querySelectorAll("li"));
+    const expectedGroups = [
+      { first: 24, last: 48, count: 3, signal: "Yield spike", source: "Primary Source" },
+      { first: 36, last: 36, count: 1, signal: "Yield spike", source: "Alt Source" },
+      { first: 0, last: 12, count: 2, signal: "Yield spike", source: "Primary Source" },
+      { first: 12, last: 12, count: 1, signal: "Yield divergence", source: "Primary Source" },
+    ];
+    expect(rows).toHaveLength(expectedGroups.length);
+    let totalCount = 0;
+    rows.forEach((row, index) => {
+      const expected = expectedGroups[index]!;
+      const count = Number(row.textContent?.match(/×(\d+)/)?.[1] ?? 1);
+      totalCount += count;
+      expect(count).toBe(expected.count);
+      expect(expected.last - expected.first).toBeLessThanOrEqual(24);
+      expect(row.textContent).toContain(formatChartDate(start + expected.first * hourMs, "with-time"));
+      expect(row.textContent).toContain(formatChartDate(start + expected.last * hourMs, "with-time"));
+      expect(row.textContent).toContain(expected.signal);
+      expect(row.textContent).toContain(`${expected.source} at`);
+    });
+    expect(totalCount).toBe(7);
   });
 
   it("renders the source transition once and omits a switch stamped with an invalid date", () => {
